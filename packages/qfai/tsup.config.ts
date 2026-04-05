@@ -23,6 +23,7 @@ export default defineConfig({
   clean: true,
   target: "node18",
   splitting: false,
+  external: ["playwright"],
   outExtension({ format }) {
     return { js: format === "esm" ? ".mjs" : ".cjs" };
   },

@@ -1205,11 +1205,12 @@ describe("report artifact-first recommendation", () => {
 
       const data = await createReportData(root, validation);
       expect(data.prototyping).toBeDefined();
-      expect(data.prototyping!.recommendationArtifact?.status).toBe("invalid");
+      if (!data.prototyping) throw new Error("prototyping should be defined");
+      expect(data.prototyping.recommendationArtifact?.status).toBe("invalid");
 
       // Embedded fallback must NOT be used — no discussion recommendation in canonical summary
-      expect(data.prototyping!.mode.discussionRecommendation).toBeUndefined();
-      expect(data.prototyping!.mode.allowedModes).toBeUndefined();
+      expect(data.prototyping.mode.discussionRecommendation).toBeUndefined();
+      expect(data.prototyping.mode.allowedModes).toBeUndefined();
 
       const markdown = formatReportMarkdown(data);
       expect(markdown).toContain("### prototyping.recommendationArtifact");

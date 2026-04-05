@@ -3,18 +3,36 @@ import path from "node:path";
 
 import type { RenderCaptureAdapter, RenderCaptureTarget } from "./types.js";
 
-type BrowserModule = typeof import("playwright");
+interface PlaywrightPage {
+  goto(url: string, options?: { waitUntil?: string }): Promise<unknown>;
+  content(): Promise<string>;
+  screenshot(options?: { path?: string; fullPage?: boolean }): Promise<Buffer>;
+  close(): Promise<void>;
+}
+
+interface PlaywrightBrowser {
+  newPage(options?: { viewport?: { width: number; height: number } }): Promise<PlaywrightPage>;
+  close(): Promise<void>;
+}
+
+interface PlaywrightBrowserType {
+  launch(options?: Record<string, unknown>): Promise<PlaywrightBrowser>;
+}
+
+interface PlaywrightModule {
+  chromium: PlaywrightBrowserType;
+}
 
 function sanitizeName(value: string): string {
   return value.replace(/[^a-zA-Z0-9_-]+/g, "-");
 }
 
-async function loadPlaywright(): Promise<BrowserModule> {
-  return import("playwright");
+async function loadPlaywright(): Promise<PlaywrightModule> {
+  return import("playwright") as Promise<PlaywrightModule>;
 }
 
 export function createPlaywrightRenderAdapter(input: { targetUrl?: string }): RenderCaptureAdapter {
-  async function renderTarget(target: RenderCaptureTarget): Promise<{
+  async function _renderTarget(target: RenderCaptureTarget): Promise<{
     screenshotPath: string;
     htmlPath: string;
   }> {

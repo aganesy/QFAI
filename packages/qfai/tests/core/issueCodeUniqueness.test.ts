@@ -40,7 +40,8 @@ function extractCodesWithRules(content: string): Map<string, Set<string>> {
     if (!codeRuleMap.has(code)) {
       codeRuleMap.set(code, new Set());
     }
-    codeRuleMap.get(code)!.add(rule);
+    const ruleSet = codeRuleMap.get(code);
+    if (ruleSet) ruleSet.add(rule);
   }
 
   return codeRuleMap;
@@ -78,8 +79,9 @@ describe("issue code uniqueness", () => {
         if (!globalCodeRuleMap.has(code)) {
           globalCodeRuleMap.set(code, new Set());
         }
+        const globalRuleSet = globalCodeRuleMap.get(code);
         for (const rule of rules) {
-          globalCodeRuleMap.get(code)!.add(rule);
+          if (globalRuleSet) globalRuleSet.add(rule);
         }
       }
     }

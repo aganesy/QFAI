@@ -5,11 +5,34 @@ import type {
 } from "../browserQa/types.js";
 import { isUiBearingSurfaceType } from "../detection/surfaceType.js";
 
-type BrowserModule = typeof import("playwright");
+interface PlaywrightPage {
+  goto(url: string, options?: { waitUntil?: string }): Promise<unknown>;
+  setContent(html: string, options?: { waitUntil?: string }): Promise<void>;
+  title(): Promise<string>;
+  locator(selector: string): {
+    count(): Promise<number>;
+    getAttribute(name: string): Promise<string | null>;
+  };
+  viewportSize(): Promise<{ width: number; height: number } | null>;
+  close(): Promise<void>;
+}
 
-async function loadPlaywright(): Promise<BrowserModule> {
+interface PlaywrightBrowser {
+  newPage(): Promise<PlaywrightPage>;
+  close(): Promise<void>;
+}
+
+interface PlaywrightBrowserType {
+  launch(options?: Record<string, unknown>): Promise<PlaywrightBrowser>;
+}
+
+interface PlaywrightModule {
+  chromium: PlaywrightBrowserType;
+}
+
+async function loadPlaywright(): Promise<PlaywrightModule> {
   try {
-    return await import("playwright");
+    return await (import("playwright") as Promise<PlaywrightModule>);
   } catch {
     throw new Error("Playwright is not installed. Install it with: npm install playwright");
   }
@@ -17,9 +40,7 @@ async function loadPlaywright(): Promise<BrowserModule> {
 
 async function withPage<T>(
   input: BrowserQaInput,
-  task: (
-    page: Awaited<ReturnType<Awaited<ReturnType<BrowserModule["chromium"]["launch"]>>["newPage"]>>,
-  ) => Promise<T>,
+  task: (page: PlaywrightPage) => Promise<T>,
 ): Promise<T> {
   const playwright = await loadPlaywright();
   const browser = await playwright.chromium.launch();

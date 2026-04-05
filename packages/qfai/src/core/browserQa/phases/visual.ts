@@ -3,17 +3,17 @@
  */
 import type { BrowserQaInput, BrowserQaPhaseResult, BrowserQaFinding } from "../types.js";
 
-export async function runVisualPhase(input: BrowserQaInput): Promise<BrowserQaPhaseResult> {
+export function runVisualPhase(input: BrowserQaInput): Promise<BrowserQaPhaseResult> {
   const findings: BrowserQaFinding[] = [];
   const html = input.htmlContent ?? "";
 
   if (!html || html.trim().length === 0) {
-    return {
+    return Promise.resolve({
       phase: "visual",
       status: "skipped",
       findings: [],
       skippedReason: "No HTML content provided",
-    };
+    });
   }
 
   // Check for inline styles (which hinder visual consistency)
@@ -37,9 +37,9 @@ export async function runVisualPhase(input: BrowserQaInput): Promise<BrowserQaPh
     });
   }
 
-  return {
+  return Promise.resolve({
     phase: "visual",
     status: "executed",
     findings,
-  };
+  });
 }

@@ -55,6 +55,8 @@ import { validateProject } from "./validate.js";
 import { resolveToolVersion } from "./version.js";
 import { readRenderEvidenceBundle, summarizeRenderEvidence } from "./uiux/renderEvidence.js";
 import { readBrowserQaBundle } from "./browserQa/index.js";
+import type { DiscussionModeRecommendation } from "./prototyping/types.js";
+import type { SurfaceType } from "./detection/surfaceType.js";
 
 export type ReportSummary = {
   specs: number;
@@ -1376,6 +1378,7 @@ export function formatReportMarkdown(
     lines.push("");
     lines.push("- status: foundation-only (not integrated into blocking validation in v1.7.13)");
     // Warnings
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
     if (data.prototyping.warnings && data.prototyping.warnings.length > 0) {
       lines.push("");
       lines.push("### prototyping.warnings");
@@ -1703,7 +1706,7 @@ async function collectPrototypingSummary(
   const discussionRec =
     resolvedArtifact.status === "valid" ? resolvedArtifact.recommendation : null;
 
-  const effectiveRec: import("./prototyping/types.js").DiscussionModeRecommendation | undefined =
+  const effectiveRec: DiscussionModeRecommendation | undefined =
     discussionRec ?? undefined;
 
   const modeSummary = summarizeResolvedMode({
@@ -1723,19 +1726,25 @@ async function collectPrototypingSummary(
   const surface = inferSurfaceFromRecommendationAndEvidence({
     evidenceSurface: isValidPrototypingSurface(record.surface) ? record.surface : undefined,
     recommendationSurface: effectiveRec?.surface,
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
     hasUiFidelity: asRecord(record.uiFidelity) !== null,
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
     hasRenderBundle: asRecord(record.renderEvidence) !== null,
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
     hasBrowserQaBundle: asRecord(record.browserQa) !== null,
     hasUiRoutes:
       Array.isArray(record.specs) &&
       record.specs.some(
         (spec: unknown) =>
+          // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
           asRecord(spec) !== null &&
+          // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
           asRecord(asRecord(spec)?.declared) !== null &&
           typeof asRecord(asRecord(spec)?.declared)?.uiRoutes === "number" &&
           (asRecord(asRecord(spec)?.declared)?.uiRoutes as number) > 0,
       ),
     hasRuntimeGateUi:
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
       asRecord(record.runtimeGate) !== null &&
       Array.isArray(asRecord(record.runtimeGate)?.ui) &&
       (asRecord(record.runtimeGate)?.ui as unknown[]).length > 0,
@@ -1757,8 +1766,10 @@ async function collectPrototypingSummary(
   const expectedSpecIds = specEntries.map((entry) => `spec-${entry.specNumber}`.toLowerCase());
   const observedSpecIds = specs
     .filter(
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
       (spec: unknown) => asRecord(spec) !== null && typeof asRecord(spec)?.specId === "string",
     )
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     .map((spec: unknown) => (asRecord(spec)!.specId as string).toLowerCase());
   const missingSpecIds = expectedSpecIds.filter((id) => !observedSpecIds.includes(id));
   const unexpectedSpecIds = observedSpecIds.filter((id) => !expectedSpecIds.includes(id));
@@ -1799,6 +1810,7 @@ async function collectPrototypingSummary(
   if (browserQaBundle?.findings) {
     for (const finding of browserQaBundle.findings) {
       browserQaCounts[finding.severity] += 1;
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
       if (finding.category) {
         browserQaCategoryCounts[finding.category] =
           (browserQaCategoryCounts[finding.category] ?? 0) + 1;
@@ -1840,8 +1852,10 @@ async function collectPrototypingSummary(
             ? {
                 belowThresholdWarning: scoringTrace.some(
                   (row: unknown) =>
+                    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
                     asRecord(row) !== null &&
                     typeof asRecord(row)?.weightedTotal === "number" &&
+                    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
                     (asRecord(row)!.weightedTotal as number) <
                       (calibrationConfig.thresholds?.accept ?? 0.8),
                 ),
@@ -1856,7 +1870,8 @@ async function collectPrototypingSummary(
   const classificationBlock = await readClassificationBlock(root);
   const surfaceClassification: ReportPrototypingSummary["surfaceClassification"] = {
     primarySurface: surface,
-    uiBearing: isUiBearingSurfaceType(surface as import("./detection/surfaceType.js").SurfaceType),
+    uiBearing: isUiBearingSurfaceType(surface as SurfaceType),
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
     ...(classificationBlock?.secondary_surfaces?.length
       ? { secondarySurfaces: classificationBlock.secondary_surfaces }
       : {}),

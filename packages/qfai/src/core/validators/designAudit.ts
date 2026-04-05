@@ -94,7 +94,7 @@ export function findingToIssue(
 // Section Extraction
 // ---------------------------------------------------------------------------
 
-function extractSection(content: string, heading: string): string | null {
+function _extractSection(content: string, heading: string): string | null {
   const idx = content.indexOf(heading);
   if (idx === -1) return null;
   const start = idx + heading.length;

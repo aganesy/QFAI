@@ -1,4 +1,3 @@
-import { readFile } from "node:fs/promises";
 import path from "node:path";
 
 import type { QfaiConfig } from "../config.js";
@@ -266,16 +265,16 @@ async function collectUiContractScreens(
         route,
         expected: {
           elements: elements.filter(
-            (item) => typeof item?.id === "string" && item.id.trim().length > 0,
+            (item) => typeof item.id === "string" && item.id.trim().length > 0,
           ).length,
           actions: actions.filter(
-            (item) => typeof item?.id === "string" && item.id.trim().length > 0,
+            (item) => typeof item.id === "string" && item.id.trim().length > 0,
           ).length,
           labels: elements
-            .map((item) => (typeof item?.label === "string" ? item.label.trim() : ""))
+            .map((item) => (typeof item.label === "string" ? item.label.trim() : ""))
             .filter((item) => item.length > 0),
           ids: actions
-            .map((item) => (typeof item?.id === "string" ? item.id.trim() : ""))
+            .map((item) => (typeof item.id === "string" ? item.id.trim() : ""))
             .filter((item) => item.length > 0),
         },
       });

@@ -50,8 +50,9 @@ describe("prototyping execution production path", () => {
     it("runtime gate is populated when targetUrl is present for UI-bearing", () => {
       const gate = buildRuntimeGate({ surface: "web", targetUrl: "http://localhost:3000" });
       expect(gate).toBeDefined();
-      expect(gate!.ui).toHaveLength(1);
-      expect(gate!.ui[0].route).toBe("http://localhost:3000");
+      if (!gate) throw new Error("gate should be defined");
+      expect(gate.ui).toHaveLength(1);
+      expect(gate.ui[0].route).toBe("http://localhost:3000");
     });
   });
 
@@ -71,8 +72,9 @@ describe("prototyping execution production path", () => {
     it("runtime gate returns empty arrays for non-ui", () => {
       const gate = buildRuntimeGate({ surface: "non-ui" });
       expect(gate).toBeDefined();
-      expect(gate!.ui).toEqual([]);
-      expect(gate!.api).toEqual([]);
+      if (!gate) throw new Error("gate should be defined");
+      expect(gate.ui).toEqual([]);
+      expect(gate.api).toEqual([]);
     });
 
     it("isUiBearingSurface returns false for non-ui", () => {

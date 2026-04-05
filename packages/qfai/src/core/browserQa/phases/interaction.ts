@@ -3,17 +3,17 @@
  */
 import type { BrowserQaInput, BrowserQaPhaseResult, BrowserQaFinding } from "../types.js";
 
-export async function runInteractionPhase(input: BrowserQaInput): Promise<BrowserQaPhaseResult> {
+export function runInteractionPhase(input: BrowserQaInput): Promise<BrowserQaPhaseResult> {
   const findings: BrowserQaFinding[] = [];
   const html = input.htmlContent ?? "";
 
   if (!html || html.trim().length === 0) {
-    return {
+    return Promise.resolve({
       phase: "interaction",
       status: "skipped",
       findings: [],
       skippedReason: "No HTML content provided",
-    };
+    });
   }
 
   // Check for forms without action
@@ -46,9 +46,9 @@ export async function runInteractionPhase(input: BrowserQaInput): Promise<Browse
     });
   }
 
-  return {
+  return Promise.resolve({
     phase: "interaction",
     status: "executed",
     findings,
-  };
+  });
 }

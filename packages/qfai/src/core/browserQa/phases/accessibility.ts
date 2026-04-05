@@ -3,17 +3,17 @@
  */
 import type { BrowserQaInput, BrowserQaPhaseResult, BrowserQaFinding } from "../types.js";
 
-export async function runAccessibilityPhase(input: BrowserQaInput): Promise<BrowserQaPhaseResult> {
+export function runAccessibilityPhase(input: BrowserQaInput): Promise<BrowserQaPhaseResult> {
   const findings: BrowserQaFinding[] = [];
   const html = input.htmlContent ?? "";
 
   if (!html || html.trim().length === 0) {
-    return {
+    return Promise.resolve({
       phase: "accessibility",
       status: "skipped",
       findings: [],
       skippedReason: "No HTML content provided",
-    };
+    });
   }
 
   // Check for images without alt
@@ -56,9 +56,9 @@ export async function runAccessibilityPhase(input: BrowserQaInput): Promise<Brow
     });
   }
 
-  return {
+  return Promise.resolve({
     phase: "accessibility",
     status: "executed",
     findings,
-  };
+  });
 }

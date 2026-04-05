@@ -439,6 +439,7 @@ export async function validatePrototypingEvidence(
       // QFAI-PROT-236: requested mode is not allowed by discussion artifact
       if (
         parsed.value.mode.requested &&
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
         rec.allowedModes &&
         rec.allowedModes.length > 0 &&
         !rec.allowedModes.includes(parsed.value.mode.requested)
@@ -463,6 +464,7 @@ export async function validatePrototypingEvidence(
     const evidenceSource = parsed.value.mode.source;
 
     // QFAI-PROT-234: discussion recommendation exists but mode.source=default
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
     if (evidenceSource === "system-default" && rec.recommendedMode) {
       issues.push(
         issue(
@@ -481,6 +483,7 @@ export async function validatePrototypingEvidence(
     // QFAI-PROT-236: requested mode not in allowed_modes
     if (
       parsed.value.mode.requested &&
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
       rec.allowedModes &&
       rec.allowedModes.length > 0 &&
       !rec.allowedModes.includes(parsed.value.mode.requested)
@@ -512,6 +515,7 @@ export async function validatePrototypingEvidence(
     // QFAI-PROT-254: render evidence bundle contradicts non-ui surface/mode
     if (
       !isUiBearingSurface(surfaceResult.surface) &&
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
       renderBundle.renderEvidence?.status === "captured"
     ) {
       issues.push(
@@ -534,9 +538,9 @@ export async function validatePrototypingEvidence(
       for (const screen of renderBundle.screens) {
         if (isRecord(screen) && screen.status === "captured") {
           if (typeof screen.imagePath === "string" && screen.imagePath.trim().length > 0) {
-            const imgFullPath = path.isAbsolute(screen.imagePath as string)
-              ? (screen.imagePath as string)
-              : path.join(bundleDir, screen.imagePath as string);
+            const imgFullPath = path.isAbsolute(screen.imagePath)
+              ? (screen.imagePath)
+              : path.join(bundleDir, screen.imagePath);
             try {
               await access(imgFullPath);
             } catch {
@@ -555,9 +559,9 @@ export async function validatePrototypingEvidence(
             }
           }
           if (typeof screen.htmlPath === "string" && screen.htmlPath.trim().length > 0) {
-            const htmlFullPath = path.isAbsolute(screen.htmlPath as string)
-              ? (screen.htmlPath as string)
-              : path.join(bundleDir, screen.htmlPath as string);
+            const htmlFullPath = path.isAbsolute(screen.htmlPath)
+              ? (screen.htmlPath)
+              : path.join(bundleDir, screen.htmlPath);
             try {
               await access(htmlFullPath);
             } catch {
@@ -581,10 +585,10 @@ export async function validatePrototypingEvidence(
           const hasReason =
             (screen.status === "skipped" &&
               typeof screen.skippedReason === "string" &&
-              (screen.skippedReason as string).trim().length > 0) ||
+              (screen.skippedReason).trim().length > 0) ||
             (screen.status === "failed" &&
               typeof screen.error === "string" &&
-              (screen.error as string).trim().length > 0);
+              (screen.error).trim().length > 0);
           if (!hasReason) {
             issues.push(
               issue(
@@ -1218,6 +1222,7 @@ function validateModeMetadata(evidence: PrototypingEvidence, evidenceJsonPath: s
       );
     }
     if (
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
       recommendation.allowedModes &&
       !recommendation.allowedModes.includes(recommendation.recommendedMode)
     ) {
@@ -1308,7 +1313,7 @@ async function validateUiFidelity(
   evidenceJsonPath: string,
   evidence: PrototypingEvidence,
   surface: PrototypingSurface,
-  obligations: PrototypingObligations,
+  _obligations: PrototypingObligations,
 ): Promise<Issue[]> {
   const issues: Issue[] = [];
   const uiFidelity = evidence.uiFidelity;
@@ -1392,9 +1397,11 @@ async function validateUiFidelity(
     if (!screen.route) {
       missingFields.push("route");
     }
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
     if (!screen.expected) {
       missingFields.push("expected");
     }
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
     if (!screen.observed) {
       missingFields.push("observed");
     }
@@ -1402,6 +1409,7 @@ async function validateUiFidelity(
       issues.push(
         issue(
           "QFAI-PROT-272",
+          // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
           `QFAI-PROT-272: uiFidelity screen for route "${screen.route ?? "(missing)"}" is missing required fields: ${missingFields.join(", ")}.`,
           "error",
           evidenceJsonPath,
@@ -2321,12 +2329,12 @@ function normalizeDiscussionRecommendation(
     value.allowedModes.every((item) => typeof item === "string" && isValidMode(item))
       ? (Array.from(
           new Set(value.allowedModes),
-        ) as import("../prototyping/types.js").PrototypingMode[])
-      : [value.recommendedMode as import("../prototyping/types.js").PrototypingMode];
+        ))
+      : [value.recommendedMode];
 
   const surface =
     typeof value.surface === "string" && VALID_PROTOTYPING_SURFACES.has(value.surface)
-      ? (value.surface as import("../prototyping/types.js").PrototypingSurface)
+      ? (value.surface as PrototypingSurface)
       : ("non-ui" as const);
 
   return {

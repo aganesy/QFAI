@@ -7,11 +7,7 @@ import {
   runBrowserQaOrchestrated,
   summarizeBrowserQaResult,
 } from "../../src/core/browserQa/runner.js";
-import type {
-  BrowserQaProvider,
-  BrowserQaInput,
-  BrowserQaPhaseResult,
-} from "../../src/core/browserQa/types.js";
+import type { BrowserQaProvider, BrowserQaInput } from "../../src/core/browserQa/types.js";
 import { BROWSER_QA_PHASES } from "../../src/core/browserQa/types.js";
 
 const MINIMAL_HTML = `<!doctype html><html lang="en"><head><title>Test</title><meta name="viewport" content="width=device-width"></head><body><h1>Hello</h1></body></html>`;
@@ -20,10 +16,10 @@ function makeProvider(overrides: Partial<BrowserQaProvider> = {}): BrowserQaProv
   return {
     providerId: "test-provider",
     canRun: () => true,
-    runSmoke: async (input) => ({ phase: "smoke", status: "executed", findings: [] }),
-    runInteraction: async (input) => ({ phase: "interaction", status: "executed", findings: [] }),
-    runVisual: async (input) => ({ phase: "visual", status: "executed", findings: [] }),
-    runAccessibility: async (input) => ({
+    runSmoke: async (_input) => ({ phase: "smoke", status: "executed", findings: [] }),
+    runInteraction: async (_input) => ({ phase: "interaction", status: "executed", findings: [] }),
+    runVisual: async (_input) => ({ phase: "visual", status: "executed", findings: [] }),
+    runAccessibility: async (_input) => ({
       phase: "accessibility",
       status: "executed",
       findings: [],
@@ -45,7 +41,8 @@ describe("runBrowserQaOrchestrated", () => {
     for (const phase of BROWSER_QA_PHASES) {
       const p = result.phases.find((r) => r.phase === phase);
       expect(p).toBeDefined();
-      expect(p!.status).toBe("executed");
+      if (!p) throw new Error(`phase ${phase} not found`);
+      expect(p.status).toBe("executed");
     }
   });
 

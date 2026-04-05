@@ -144,7 +144,7 @@ export function validateRenderEvidenceBundle(
   if (status === "skipped") {
     if (
       typeof renderEvidence.skippedReason !== "string" ||
-      (renderEvidence.skippedReason as string).trim().length === 0
+      (renderEvidence.skippedReason).trim().length === 0
     ) {
       issues.push(
         makeIssue(
@@ -159,7 +159,7 @@ export function validateRenderEvidenceBundle(
   if (status === "failed") {
     if (
       typeof renderEvidence.error !== "string" ||
-      (renderEvidence.error as string).trim().length === 0
+      (renderEvidence.error).trim().length === 0
     ) {
       issues.push(
         makeIssue("QFAI-PROT-252", "`renderEvidence.status=failed` requires `error`", file, rule),
@@ -169,7 +169,7 @@ export function validateRenderEvidenceBundle(
 
   // WS-4: path-only enforcement on outputPath
   if (typeof renderEvidence.outputPath === "string") {
-    if (looksLikeInlineRenderPayload(renderEvidence.outputPath as string)) {
+    if (looksLikeInlineRenderPayload(renderEvidence.outputPath)) {
       issues.push(
         makeIssue(
           "QFAI-PROT-251",
@@ -253,16 +253,16 @@ function validateRenderEvidenceScreen(screen: unknown): Array<{ code?: string; m
       });
     } else {
       // WS-4: path-only enforcement
-      if (looksLikeInlineRenderPayload(screen.imagePath as string)) {
+      if (looksLikeInlineRenderPayload(screen.imagePath)) {
         errors.push({
           code: "QFAI-PROT-251",
-          message: `\`screens[].imagePath\` contains inline payload — path-only required (route=${screen.route})`,
+          message: `\`screens[].imagePath\` contains inline payload — path-only required (route=${String(screen.route)})`,
         });
       }
-      if (looksLikeInlineRenderPayload(screen.htmlPath as string)) {
+      if (looksLikeInlineRenderPayload(screen.htmlPath)) {
         errors.push({
           code: "QFAI-PROT-251",
-          message: `\`screens[].htmlPath\` contains inline payload — path-only required (route=${screen.route})`,
+          message: `\`screens[].htmlPath\` contains inline payload — path-only required (route=${String(screen.route)})`,
         });
       }
     }
@@ -308,10 +308,10 @@ export function summarizeRenderEvidence(
       if (isRecord(screen)) {
         const s = screen as Record<string, unknown>;
         if (s.status === "captured" || s.status === "skipped" || s.status === "failed") {
-          counts[s.status as "captured" | "skipped" | "failed"] += 1;
+          counts[s.status] += 1;
         }
         for (const field of ["imagePath", "htmlPath", "path"] as const) {
-          if (typeof s[field] === "string" && looksLikeInlineRenderPayload(s[field] as string)) {
+          if (typeof s[field] === "string" && looksLikeInlineRenderPayload(s[field])) {
             inlinePayloadViolation = true;
           }
         }
@@ -319,6 +319,7 @@ export function summarizeRenderEvidence(
     }
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
   const topStatus = bundle?.renderEvidence?.status;
   let statusContradiction = false;
   if (topStatus === "captured" && counts.captured === 0 && bundle?.screens !== undefined) {

@@ -3,17 +3,17 @@
  */
 import type { BrowserQaInput, BrowserQaPhaseResult, BrowserQaFinding } from "../types.js";
 
-export async function runSmokePhase(input: BrowserQaInput): Promise<BrowserQaPhaseResult> {
+export function runSmokePhase(input: BrowserQaInput): Promise<BrowserQaPhaseResult> {
   const findings: BrowserQaFinding[] = [];
   const html = input.htmlContent ?? "";
 
   if (!html || html.trim().length === 0) {
-    return {
+    return Promise.resolve({
       phase: "smoke",
       status: "skipped",
       findings: [],
       skippedReason: "No HTML content provided",
-    };
+    });
   }
 
   if (!/<html/i.test(html) && !/<!doctype/i.test(html)) {
@@ -52,9 +52,9 @@ export async function runSmokePhase(input: BrowserQaInput): Promise<BrowserQaPha
     });
   }
 
-  return {
+  return Promise.resolve({
     phase: "smoke",
     status: "executed",
     findings,
-  };
+  });
 }

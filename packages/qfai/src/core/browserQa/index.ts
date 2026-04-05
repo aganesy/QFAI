@@ -119,6 +119,7 @@ export function validateBrowserQaFindings(result: BrowserQaResult): {
       finding.message.toLowerCase().includes("placeholder") ||
       finding.message.toLowerCase().includes("tbd")
     ) {
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
       warnings.push(`Finding "${finding.rule ?? "unknown"}" appears to contain placeholder text.`);
     }
   }

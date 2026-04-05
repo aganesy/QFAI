@@ -6,7 +6,8 @@ import { readClassificationBlock } from "../detection/surfaceType.js";
 import type { SurfaceType } from "../detection/surfaceType.js";
 import { writeEvidenceBundles, type PrototypingSummaryBundle } from "../evidence/bundleWriter.js";
 import { runRenderCapture } from "../evidence/renderRunner.js";
-import type { RenderCaptureAdapter, RenderCaptureTarget } from "../evidence/types.js";
+import type { RenderCaptureAdapter, RenderCaptureTarget, RenderRunnerResult } from "../evidence/types.js";
+import type { BrowserQaInput } from "../browserQa/types.js";
 import { findLatestDiscussionPackDir } from "../discussionPack.js";
 import { runFullHarness } from "../harness/runtime.js";
 import type { CritiqueAdapter } from "../critique/adapter.js";
@@ -147,9 +148,11 @@ export async function runPrototypingExecution(
       adapters: {
         surface: surface as SurfaceType,
         render: {
+          // eslint-disable-next-line @typescript-eslint/require-await
           captureEvidence: async () => renderResult,
         },
         browserQa: {
+          // eslint-disable-next-line @typescript-eslint/require-await
           runQa: async () => browserQaResult,
         },
         observability: createObservabilityAdapter(request.root),
@@ -236,11 +239,11 @@ async function buildPrototypingSummaryBundle(input: {
 }
 
 async function buildBrowserQaInput(input: {
-  renderResult: import("../evidence/types.js").RenderRunnerResult;
+  renderResult: RenderRunnerResult;
   targetUrl?: string;
   surface: SurfaceType;
   required: boolean;
-}): Promise<import("../browserQa/types.js").BrowserQaInput> {
+}): Promise<BrowserQaInput> {
   const capturedHtmlPath = input.renderResult.entries.find(
     (entry) => entry.status === "captured" && typeof entry.html_path === "string",
   )?.html_path;

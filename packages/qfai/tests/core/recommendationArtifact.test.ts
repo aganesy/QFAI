@@ -94,9 +94,10 @@ describe("resolveLatestRecommendationArtifact", () => {
       const result = await resolveLatestRecommendationArtifact(root, defaultConfig);
       expect(result.status).toBe("valid");
       expect(result.recommendation).not.toBeNull();
-      expect(result.recommendation!.recommendedMode).toBe("standard");
-      expect(result.recommendation!.surface).toBe("non-ui");
-      expect(result.recommendation!.allowedModes).toEqual(["low-cost", "standard"]);
+      if (!result.recommendation) throw new Error("recommendation should not be null");
+      expect(result.recommendation.recommendedMode).toBe("standard");
+      expect(result.recommendation.surface).toBe("non-ui");
+      expect(result.recommendation.allowedModes).toEqual(["low-cost", "standard"]);
       expect(result.path).toContain("prototyping.yaml");
     });
   });
@@ -121,7 +122,8 @@ describe("resolveLatestRecommendationArtifact", () => {
       const result = await resolveLatestRecommendationArtifact(root, defaultConfig);
       expect(result.status).toBe("valid");
       expect(result.recommendation).not.toBeNull();
-      expect(result.recommendation!.surface).toBe("web-ui");
+      if (!result.recommendation) throw new Error("recommendation should not be null");
+      expect(result.recommendation.surface).toBe("web-ui");
       expect(result.warnings.some((w) => w.includes("QFAI-PROT-231"))).toBe(true);
     });
   });

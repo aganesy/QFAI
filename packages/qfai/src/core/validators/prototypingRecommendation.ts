@@ -121,7 +121,7 @@ export async function validatePrototypingRecommendation(
   }
 
   const namespacedBlock = hasNamespaced ? (parsed.prototyping as Record<string, unknown>) : null;
-  const block = hasNamespaced ? namespacedBlock! : parsed;
+  const block = namespacedBlock ?? parsed;
   const isLegacy = !hasNamespaced && hasTopLevel;
 
   if (isLegacy) {
