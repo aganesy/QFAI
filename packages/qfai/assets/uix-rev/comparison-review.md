@@ -15,3 +15,4 @@ Review only `30_option_comparison.md` as the option comparison artifact.
 
 - Trend scan results are converted to comparison axes
 - Stale / overused AI slop avoidance is reflected in comparison criteria
+- Keep selected-anchor ownership in `31_selected_anchor_screen.md` and scoring-ready field ownership in `50_review_input_bundle.md`

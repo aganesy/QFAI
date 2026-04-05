@@ -25,3 +25,4 @@ Review screen contracts for canonical 11-field schema completeness.
 - Screen contracts must stay consistent with `31_selected_anchor_screen.md`
 - Screen contracts must stay consistent with Browser QA findings and screen-linked evidence
 - Do not reference legacy filenames such as `40_contracts.md`
+- Keep wording aligned with scoring-ready canonical fields and avoid stale migration vocabulary

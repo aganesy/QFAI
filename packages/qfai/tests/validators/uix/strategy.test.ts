@@ -82,6 +82,13 @@ describe("validateStrategyStrong", () => {
     await expect(validateStrategyStrong(root, defaultConfig)).resolves.toEqual([]);
   });
 
+  it("skips non-ui pack when no strategy sidecar exists", async () => {
+    const root = await newTempDir();
+    await writeFile(path.join(root, "01_Spec.md"), "# Spec\n\n- surface: backend\n", "utf-8");
+
+    await expect(validateStrategyStrong(root, defaultConfig)).resolves.toEqual([]);
+  });
+
   it("errors when only legacy filename exists", async () => {
     const root = await newTempDir();
     await createUiBearingPack(root);
@@ -91,17 +98,19 @@ describe("validateStrategyStrong", () => {
     expect(issues.some((issue) => issue.code === "UIX-VAL-STRATEGY-LEGACY-FILENAME")).toBe(true);
   });
 
-  it("warns when decision and chosen_option diverge", async () => {
+  it("errors when selection_required=true and decision=none", async () => {
     const root = await newTempDir();
     await createUiBearingPack(root);
     await writeFile(
       path.join(root, "uiux", "10_implementation_strategy.md"),
-      strategyContent({ decision: "design-system" }),
+      strategyContent({ decision: "none" }),
       "utf-8",
     );
 
     const issues = await validateStrategyStrong(root, defaultConfig);
-    expect(issues.some((issue) => issue.code === "UIX-VAL-STRATEGY-DECISION-MISMATCH")).toBe(true);
+    expect(
+      issues.some((issue) => issue.code === "UIX-VAL-STRATEGY-SELECTION-REQUIRES-DECISION"),
+    ).toBe(true);
   });
 
   it("errors on invalid surface enum", async () => {
@@ -130,11 +139,26 @@ describe("validateStrategyStrong", () => {
     expect(issues.some((issue) => issue.code === "UIX-VAL-STRATEGY-CHOSEN-OPTION")).toBe(true);
   });
 
-  it("non-UI skip", async () => {
+  it("errors when selection_required=false but canonical none contract is violated", async () => {
     const root = await newTempDir();
-    await writeFile(path.join(root, "01_Spec.md"), "# Spec\n\n- surface: non-ui\n", "utf-8");
+    await createUiBearingPack(root);
+    await writeFile(
+      path.join(root, "uiux", "10_implementation_strategy.md"),
+      strategyContent({
+        selection_required: "false",
+        decision: "bespoke",
+        candidate_options: ["component-library"],
+        chosen_option: "component-library",
+      }),
+      "utf-8",
+    );
 
     const issues = await validateStrategyStrong(root, defaultConfig);
-    expect(issues).toEqual([]);
+    expect(issues.some((issue) => issue.code === "UIX-VAL-STRATEGY-NONE-DECISION-REQUIRED")).toBe(
+      true,
+    );
+    expect(issues.some((issue) => issue.code === "UIX-VAL-STRATEGY-NONE-CHOSEN-REQUIRED")).toBe(
+      true,
+    );
   });
 });

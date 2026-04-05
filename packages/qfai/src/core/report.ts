@@ -1384,7 +1384,7 @@ export function formatReportMarkdown(
     lines.push("");
     lines.push("### prototyping.observability");
     lines.push("");
-    lines.push("- status: foundation-only (not integrated into blocking validation in v1.7.13)");
+    lines.push("- status: foundation-only (not integrated into blocking validation in v1.7.14)");
     // Warnings
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
     if (data.prototyping.warnings && data.prototyping.warnings.length > 0) {
@@ -1756,10 +1756,16 @@ async function collectPrototypingSummary(
       Array.isArray(asRecord(record.runtimeGate)?.ui) &&
       (asRecord(record.runtimeGate)?.ui as unknown[]).length > 0,
   });
+  const effectiveSurface = surface ?? effectiveRec?.surface ?? "mixed";
+  if (!surface) {
+    warnings.push(
+      "prototyping surface could not be derived from evidence or recommendation; report defaulted to mixed.",
+    );
+  }
   const effectiveMode = mode.effective;
 
   // WS-3: Use shared obligation matrix
-  const obligations = derivePrototypingObligations({ surface, effectiveMode });
+  const obligations = derivePrototypingObligations({ surface: effectiveSurface, effectiveMode });
 
   const fullHarness = asRecord(record.fullHarness);
   const runtimeGate = asRecord(record.runtimeGate);
@@ -1873,8 +1879,8 @@ async function collectPrototypingSummary(
   const { isUiBearingSurfaceType } = await import("./detection/surfaceType.js");
   const classificationBlock = await readClassificationBlock(root);
   const surfaceClassification: ReportPrototypingSummary["surfaceClassification"] = {
-    primarySurface: surface,
-    uiBearing: isUiBearingSurfaceType(surface),
+    primarySurface: effectiveSurface,
+    uiBearing: isUiBearingSurfaceType(effectiveSurface),
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
     ...(classificationBlock?.secondary_surfaces?.length
       ? { secondarySurfaces: classificationBlock.secondary_surfaces }
@@ -1897,7 +1903,7 @@ async function collectPrototypingSummary(
           : modeSummary.rationale,
       ...(discussionSummary ? { discussionRecommendation: discussionSummary } : {}),
       ...(effectiveRec?.allowedModes ? { allowedModes: effectiveRec.allowedModes } : {}),
-      surface,
+      surface: effectiveSurface,
       ...(effectiveRec?.sourceSchema ? { sourceSchema: effectiveRec.sourceSchema } : {}),
     },
     evidence: {
@@ -1915,7 +1921,7 @@ async function collectPrototypingSummary(
         present: Boolean(browserQaBundle),
         required: obligations.requireBrowserQaBundle,
       },
-      obligationProfile: `${surface}/${effectiveMode}`,
+      obligationProfile: `${effectiveSurface}/${effectiveMode}`,
     },
     ...(fullHarness
       ? {

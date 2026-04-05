@@ -1,4 +1,4 @@
-import type { CanonicalSurface } from "../domain/surface.js";
+import type { CanonicalPrototypingSurface } from "../domain/surface.js";
 
 export type PrototypingMode = "low-cost" | "standard" | "full-harness";
 
@@ -7,7 +7,7 @@ export type ModeSelectionSource =
   | "discussion-recommendation"
   | "system-default";
 
-export type PrototypingSurface = CanonicalSurface;
+export type PrototypingSurface = CanonicalPrototypingSurface;
 
 export type DiscussionRecommendationSourceSchema = "canonical-namespaced";
 

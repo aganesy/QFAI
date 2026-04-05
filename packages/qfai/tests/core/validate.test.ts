@@ -271,7 +271,7 @@ describe("validateProject (spec pack)", { timeout: 15000 }, () => {
     });
   });
 
-  it("does not elevate OQ gate from legacy status JSON", async () => {
+  it("ignores legacy status JSON for OQ gate decisions", async () => {
     await withProject(async (root) => {
       const statusPath = path.join(root, ".qfai", "status", "release.json");
       await mkdir(path.dirname(statusPath), { recursive: true });
@@ -283,13 +283,10 @@ describe("validateProject (spec pack)", { timeout: 15000 }, () => {
 
       const result = await validateProject(root);
       const oqIssue = result.issues.find((item) => item.code === "E_OQ_OPEN_RELEASE_BLOCK");
-      const legacyIssue = result.issues.find((item) => item.code === "LEGACY_STATUS_DIR_NONEMPTY");
 
       expect(oqIssue).toBeDefined();
       expect(oqIssue?.severity).toBe("warning");
       expect(oqIssue?.refs).toContain("OQ-0001");
-      expect(legacyIssue).toBeDefined();
-      expect(legacyIssue?.severity).toBe("warning");
     });
   });
 
@@ -338,22 +335,18 @@ describe("validateProject (spec pack)", { timeout: 15000 }, () => {
     });
   });
 
-  it("warns when legacy status directory exists", async () => {
+  it("does not emit legacy status directory warnings anymore", async () => {
     await withProject(async (root) => {
       const statusDir = path.join(root, ".qfai", "status");
       await mkdir(statusDir, { recursive: true });
       await writeFile(path.join(statusDir, "README.md"), "# status\n", "utf-8");
 
       const result = await validateProject(root);
-      const issue = result.issues.find((item) => item.code === "LEGACY_STATUS_DIR");
-
-      expect(issue).toBeDefined();
-      expect(issue?.severity).toBe("warning");
-      expect(issue?.file).toBe(statusDir);
+      expect(result.issues.some((item) => item.code === "LEGACY_STATUS_DIR")).toBe(false);
     });
   });
 
-  it("warns stronger when legacy status directory is non-empty", async () => {
+  it("does not emit legacy status directory non-empty warnings anymore", async () => {
     await withProject(async (root) => {
       const statusDir = path.join(root, ".qfai", "status");
       await mkdir(statusDir, { recursive: true });
@@ -364,11 +357,7 @@ describe("validateProject (spec pack)", { timeout: 15000 }, () => {
       );
 
       const result = await validateProject(root);
-      const issue = result.issues.find((item) => item.code === "LEGACY_STATUS_DIR_NONEMPTY");
-
-      expect(issue).toBeDefined();
-      expect(issue?.severity).toBe("warning");
-      expect(issue?.refs).toContain("release.json");
+      expect(result.issues.some((item) => item.code === "LEGACY_STATUS_DIR_NONEMPTY")).toBe(false);
     });
   });
 
@@ -1224,7 +1213,8 @@ async function seedDiscussionPackFixtures(root: string): Promise<void> {
         "- observation: Tonal palette and surface elevation patterns",
         "- freshness_date: 2026-02-16",
         "- confidence: high",
-        "- source_translation: Apply tonal palette for visual hierarchy",
+        "- decision_connection: Reinforces a card hierarchy with clear emphasis on the primary action.",
+        "- evaluation_connection: Adds a scoring lens for hierarchy clarity and tonal separation.",
         "- local_implication: Use tonal elevation for card hierarchy in dashboard",
         "",
         "### Layout / Composition Trends",
@@ -1235,7 +1225,8 @@ async function seedDiscussionPackFixtures(root: string): Promise<void> {
         "- observation: Single-column hero layout for focused actions",
         "- freshness_date: 2026-02-16",
         "- confidence: high",
-        "- source_translation: Adopt hero-action layout pattern",
+        "- decision_connection: Favors a single dominant action above the fold.",
+        "- evaluation_connection: Adds comparison pressure toward focused hero-action layouts.",
         "- local_implication: Apply single hero CTA for dashboard entry point",
         "",
         "### Density / Hierarchy Trends",
@@ -1246,7 +1237,8 @@ async function seedDiscussionPackFixtures(root: string): Promise<void> {
         "- observation: Medium density with clear CTA hierarchy",
         "- freshness_date: 2026-02-16",
         "- confidence: high",
-        "- source_translation: Medium density layouts improve scan speed",
+        "- decision_connection: Pushes against overcrowded dashboards with competing CTAs.",
+        "- evaluation_connection: Adds an evaluation lens for scan speed and CTA hierarchy.",
         "- local_implication: Keep dashboard density moderate with clear primary action",
         "",
         "### Interaction / Motion Trends",
@@ -1257,7 +1249,8 @@ async function seedDiscussionPackFixtures(root: string): Promise<void> {
         "- observation: Motion supports state change, not decoration",
         "- freshness_date: 2026-02-16",
         "- confidence: high",
-        "- source_translation: Motion pattern translated for the current dashboard workflow",
+        "- decision_connection: Limits motion to state-change reinforcement only.",
+        "- evaluation_connection: Adds explicit review checks for purposeful motion usage.",
         "- local_implication: State transitions use purposeful animation only",
         "",
         "### Component Styling Trends",
@@ -1268,7 +1261,8 @@ async function seedDiscussionPackFixtures(root: string): Promise<void> {
         "- observation: Unstyled accessible primitives with customizable theming",
         "- freshness_date: 2026-02-16",
         "- confidence: high",
-        "- source_translation: Adopt primitive-based approach for consistent styling",
+        "- decision_connection: Prefers composable primitives over bespoke one-off widgets.",
+        "- evaluation_connection: Adds a criterion for consistency through reusable primitives.",
         "- local_implication: Use composable primitives for dashboard components",
         "",
         "### Stale / Overused AI Slop Patterns",
@@ -1279,7 +1273,8 @@ async function seedDiscussionPackFixtures(root: string): Promise<void> {
         "- observation: Generic gradient hero sections with stock illustrations",
         "- freshness_date: 2026-02-16",
         "- confidence: high",
-        "- source_translation: Avoid generic AI-generated hero patterns",
+        "- decision_connection: Rejects generic hero sections that dilute product specificity.",
+        "- evaluation_connection: Adds explicit anti-pattern checks for AI-slop hero treatments.",
         "- local_implication: Use product-specific content instead of generic hero sections",
         "",
         "## Competitive Reference Registry",
@@ -1465,10 +1460,10 @@ async function seedDiscussionPackFixtures(root: string): Promise<void> {
         "- selection_required: true",
         "- decision: component-library",
         "- candidate_options:",
-        "  - Option A",
-        "  - Option B",
-        "- chosen_option: Option A",
-        "- rationale: Option A provides the clearest primary action for the dashboard workflow.",
+        "  - component-library",
+        "  - bespoke",
+        "- chosen_option: component-library",
+        "- rationale: component-library provides the clearest primary action for the dashboard workflow.",
         "- why_this_strategy: Component-library strategy leverages proven accessible primitives and reduces custom styling overhead.",
         "- expected_strengths: Consistent styling, built-in accessibility, fast iteration on new screens.",
         "- known_risks: Limited customization for highly bespoke brand expression; dependency on library release cadence.",
@@ -1690,6 +1685,12 @@ async function seedDiscussionPackFixtures(root: string): Promise<void> {
         "",
         "- selected_option: Option A",
         "- why_selected: best fit for the current workflow and review criteria",
+        "",
+        "## rejected_or_deferred_options",
+        "",
+        "- option: Option B",
+        "- disposition: rejected",
+        "- reason: dense table-first presentation weakens first-run task focus and increases initial cognitive load",
       ],
     },
     {

@@ -3,9 +3,9 @@ import { readFile } from "node:fs/promises";
 import { parse as parseYaml } from "yaml";
 
 import {
-  CANONICAL_SURFACES,
-  isCanonicalSurface,
-  isUiBearingSurface as isCanonicalUiBearingSurface,
+  CANONICAL_PROTOTYPING_SURFACES,
+  isCanonicalPrototypingSurface,
+  isUiBearingPrototypingSurface,
 } from "../domain/surface.js";
 import { hasNamespacedRecommendationBlock, isPlainRecord } from "./recommendationSchema.js";
 import type {
@@ -21,7 +21,7 @@ import type {
 } from "./types.js";
 
 const VALID_MODES = new Set<PrototypingMode>(["low-cost", "standard", "full-harness"]);
-const VALID_SURFACES = new Set<PrototypingSurface>(CANONICAL_SURFACES);
+const VALID_SURFACES = new Set<PrototypingSurface>(CANONICAL_PROTOTYPING_SURFACES);
 
 // ---------------------------------------------------------------------------
 // Discussion recommendation parsing (canonical namespaced only)
@@ -228,14 +228,14 @@ export function inferSurfaceFromRecommendationAndEvidence(input: {
   hasBrowserQaBundle?: boolean | undefined;
   hasUiRoutes?: boolean | undefined;
   hasRuntimeGateUi?: boolean | undefined;
-}): PrototypingSurface {
+}): PrototypingSurface | null {
   if (input.evidenceSurface && isValidPrototypingSurface(input.evidenceSurface)) {
     return input.evidenceSurface;
   }
   if (input.recommendationSurface && isValidPrototypingSurface(input.recommendationSurface)) {
     return input.recommendationSurface;
   }
-  return "non-ui";
+  return null;
 }
 
 // ---------------------------------------------------------------------------
@@ -295,11 +295,11 @@ export function isValidPrototypingMode(value: unknown): value is PrototypingMode
 }
 
 export function isValidPrototypingSurface(value: unknown): value is PrototypingSurface {
-  return typeof value === "string" && isCanonicalSurface(value);
+  return typeof value === "string" && isCanonicalPrototypingSurface(value);
 }
 
 export function isUiBearingSurface(surface: PrototypingSurface): boolean {
-  return isCanonicalUiBearingSurface(surface);
+  return isUiBearingPrototypingSurface(surface);
 }
 
 export function normalizeAllowedModes(modes?: string[]): PrototypingMode[] {

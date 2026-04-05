@@ -55,7 +55,7 @@ export const CANONICAL_REVIEW_ITEMS: readonly ReviewItem[] = [
     evaluationCriteria: [
       "Freshness date check against configurable window",
       "Domain alignment between trend and project context",
-      "Source translation quality assessment",
+      "source_refs quality assessment",
       "Confidence level appropriateness for use case",
     ],
   },
@@ -99,7 +99,7 @@ export const CANONICAL_REVIEW_ITEMS: readonly ReviewItem[] = [
     description:
       "Evaluates whether scoring-ready evaluation axes have all canonical fields populated.",
     evaluationCriteria: [
-      "All 16 per-axis fields present (axis_id through review_questions)",
+      "Canonical scoring-ready fields present (origin, layer, source_refs, goal_refs, evidence_required, review_questions)",
       "Aggregate thresholds defined (accept/refine/pivot)",
       "Plateau and disagreement rules documented",
     ],
@@ -159,7 +159,7 @@ export function getReviewItem(id: ReviewItemId): ReviewItem | undefined {
 export function detectGenericFallbackAxes(axesContent: string): string[] {
   const genericPatterns = [
     /\bvisual\s+consistency\b/i,
-    /\busability\b(?!.*source_translation)/i,
+    /\busability\b/i,
     /\bgeneral\s+accessibility\b/i,
   ];
 

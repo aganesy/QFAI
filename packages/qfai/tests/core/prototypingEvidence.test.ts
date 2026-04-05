@@ -25,11 +25,11 @@ describe("validatePrototypingEvidence", () => {
     });
   });
 
-  it("accepts non-ui standard evidence without ui-specific payloads", async () => {
+  it("accepts cli standard evidence without ui-specific payloads", async () => {
     await withTempRoot(async (root) => {
       await seedSpecs(root, ["0001"]);
       await seedEvidence(root, {
-        surface: "non-ui",
+        surface: "cli",
         specs: [buildSpecRow("spec-0001", { ui: 0, api: 1, db: 1 })],
         mode: {
           effective: "standard",
@@ -43,11 +43,11 @@ describe("validatePrototypingEvidence", () => {
     });
   });
 
-  it("flags contradictory UI-only evidence on non-ui surface", async () => {
+  it("flags contradictory UI-only evidence on cli surface", async () => {
     await withTempRoot(async (root) => {
       await seedSpecs(root, ["0001"]);
       await seedEvidence(root, {
-        surface: "non-ui",
+        surface: "cli",
         specs: [buildSpecRow("spec-0001", { ui: 0, api: 1, db: 1 })],
         mode: {
           effective: "standard",
@@ -177,7 +177,7 @@ describe("validatePrototypingEvidence", () => {
       await seedSpecs(root, ["0001"]);
       // No discussion pack at all — just evidence claiming discussion-recommendation source
       await seedEvidence(root, {
-        surface: "non-ui",
+        surface: "cli",
         specs: [buildSpecRow("spec-0001", { ui: 0, api: 1, db: 1 })],
         mode: {
           effective: "standard",
@@ -199,7 +199,7 @@ describe("validatePrototypingEvidence", () => {
         recursive: true,
       });
       await seedEvidence(root, {
-        surface: "non-ui",
+        surface: "cli",
         specs: [buildSpecRow("spec-0001", { ui: 0, api: 1, db: 1 })],
         mode: {
           effective: "standard",
@@ -225,7 +225,7 @@ describe("validatePrototypingEvidence", () => {
         "utf-8",
       );
       await seedEvidence(root, {
-        surface: "non-ui",
+        surface: "cli",
         specs: [buildSpecRow("spec-0001", { ui: 0, api: 1, db: 1 })],
         mode: {
           effective: "standard",
@@ -252,14 +252,14 @@ describe("validatePrototypingEvidence", () => {
           "rationale: valid legacy",
           "allowed_modes:",
           "  - standard",
-          "surface: non-ui",
+          "surface: cli",
           "prototyping: invalid",
           "",
         ].join("\n"),
         "utf-8",
       );
       await seedEvidence(root, {
-        surface: "non-ui",
+        surface: "cli",
         specs: [buildSpecRow("spec-0001", { ui: 0, api: 1, db: 1 })],
         mode: {
           effective: "standard",
@@ -286,13 +286,13 @@ describe("validatePrototypingEvidence", () => {
           "  rationale: validated recommendation",
           "  allowed_modes:",
           "    - standard",
-          "  surface: non-ui",
+          "  surface: cli",
           "",
         ].join("\n"),
         "utf-8",
       );
       await seedEvidence(root, {
-        surface: "non-ui",
+        surface: "cli",
         specs: [buildSpecRow("spec-0001", { ui: 0, api: 1, db: 1 })],
         mode: {
           effective: "standard",
@@ -310,7 +310,7 @@ describe("validatePrototypingEvidence", () => {
   // Artifact-first regression tests (v1.7.13 correction)
   // --------------------------------------------------------------------------
 
-  // Case A: invalid artifact + embedded web-ui surface — embedded must not influence obligations
+  // Case A: invalid artifact + embedded web surface — embedded must not influence obligations
   it("does not use embedded recommendation surface for obligations when artifact is invalid", async () => {
     await withTempRoot(async (root) => {
       await seedSpecs(root, ["0001"]);
@@ -323,7 +323,7 @@ describe("validatePrototypingEvidence", () => {
         "utf-8",
       );
 
-      // Evidence has no explicit surface but embedded recommendation has web-ui
+      // Evidence has no explicit surface but embedded recommendation has web
       await seedEvidence(root, {
         specs: [buildSpecRow("spec-0001", { ui: 0, api: 1, db: 1 })],
         mode: {
@@ -343,16 +343,16 @@ describe("validatePrototypingEvidence", () => {
       // QFAI-PROT-235 must fire because artifact is invalid
       expect(issues.some((item) => item.code === "QFAI-PROT-235")).toBe(true);
       // QFAI-PROT-176 (uiFidelity required for ui-bearing standard) must NOT fire
-      // because embedded web-ui surface must not be used for obligation derivation
+      // because embedded web surface must not be used for obligation derivation
       expect(issues.some((item) => item.code === "QFAI-PROT-176")).toBe(false);
     });
   });
 
-  // Case B: valid artifact (non-ui) + embedded conflicting surface (web-ui) — artifact surface wins
+  // Case B: valid artifact (cli) + embedded conflicting surface (web) — artifact surface wins
   it("uses artifact surface over embedded conflicting surface", async () => {
     await withTempRoot(async (root) => {
       await seedSpecs(root, ["0001"]);
-      // Create valid artifact with non-ui surface
+      // Create valid artifact with cli surface
       const packDir = path.join(root, ".qfai", "discussion", "discussion-20260404000000000");
       await mkdir(packDir, { recursive: true });
       await writeFile(
@@ -360,16 +360,16 @@ describe("validatePrototypingEvidence", () => {
         [
           "prototyping:",
           "  recommended_mode: standard",
-          "  rationale: artifact says non-ui",
+          "  rationale: artifact says cli",
           "  allowed_modes:",
           "    - standard",
-          "  surface: non-ui",
+          "  surface: cli",
           "",
         ].join("\n"),
         "utf-8",
       );
 
-      // Evidence has no explicit surface but embedded says web-ui
+      // Evidence has no explicit surface but embedded says web
       await seedEvidence(root, {
         specs: [buildSpecRow("spec-0001", { ui: 0, api: 1, db: 1 })],
         mode: {
@@ -388,7 +388,7 @@ describe("validatePrototypingEvidence", () => {
       const issues = await validatePrototypingEvidence(root, defaultConfig);
       // No QFAI-PROT-235 because artifact is valid
       expect(issues.some((item) => item.code === "QFAI-PROT-235")).toBe(false);
-      // No uiFidelity requirement because artifact surface is non-ui (not embedded web-ui)
+      // No uiFidelity requirement because artifact surface is cli (not embedded web)
       expect(issues.some((item) => item.code === "QFAI-PROT-176")).toBe(false);
     });
   });
@@ -397,7 +397,7 @@ describe("validatePrototypingEvidence", () => {
   it("prefers explicit evidence.surface over artifact surface", async () => {
     await withTempRoot(async (root) => {
       await seedSpecs(root, ["0001"]);
-      // Create valid artifact with web-ui surface
+      // Create valid artifact with web surface
       const packDir = path.join(root, ".qfai", "discussion", "discussion-20260404000000000");
       await mkdir(packDir, { recursive: true });
       await writeFile(
@@ -414,9 +414,9 @@ describe("validatePrototypingEvidence", () => {
         "utf-8",
       );
 
-      // Evidence has explicit non-ui surface
+      // Evidence has explicit cli surface
       await seedEvidence(root, {
-        surface: "non-ui",
+        surface: "cli",
         specs: [buildSpecRow("spec-0001", { ui: 0, api: 1, db: 1 })],
         mode: {
           effective: "standard",
@@ -426,7 +426,7 @@ describe("validatePrototypingEvidence", () => {
       });
 
       const issues = await validatePrototypingEvidence(root, defaultConfig);
-      // evidence.surface=non-ui should take priority — no uiFidelity requirement
+      // evidence.surface=cli should take priority — no uiFidelity requirement
       expect(issues.some((item) => item.code === "QFAI-PROT-176")).toBe(false);
     });
   });

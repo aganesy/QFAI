@@ -19,6 +19,7 @@ import {
   isUiBearingSurface,
   isValidPrototypingSurface,
 } from "../prototyping/mode.js";
+import { CANONICAL_PROTOTYPING_SURFACES } from "../domain/surface.js";
 import {
   resolveLatestRecommendationArtifact,
   type ResolvedRecommendationArtifact,
@@ -258,24 +259,26 @@ export async function validatePrototypingEvidence(
   const recommendationArtifact = await resolveLatestRecommendationArtifact(root, config);
   const surfaceResult = resolvePrototypingSurface(parsed.value, recommendationArtifact);
   const effectiveMode = parsed.value.mode?.effective ?? "standard";
-  const obligations = derivePrototypingObligations({
-    surface: surfaceResult.surface,
-    effectiveMode,
-  });
 
   const issues: Issue[] = [];
   issues.push(...validateSurface(surfaceResult, evidenceJsonPath));
   issues.push(...validateModeMetadata(parsed.value, evidenceJsonPath));
-  issues.push(
-    ...validatePrototypingObligationMatrix(
-      parsed.value,
-      evidenceJsonPath,
-      surfaceResult.surface,
-      obligations,
-      renderBundle,
-      browserQaBundle,
-    ),
-  );
+  if (surfaceResult.surface) {
+    const obligations = derivePrototypingObligations({
+      surface: surfaceResult.surface,
+      effectiveMode,
+    });
+    issues.push(
+      ...validatePrototypingObligationMatrix(
+        parsed.value,
+        evidenceJsonPath,
+        surfaceResult.surface,
+        obligations,
+        renderBundle,
+        browserQaBundle,
+      ),
+    );
+  }
   if (missingSpecIds.length > 0) {
     issues.push(
       issue(
@@ -512,8 +515,9 @@ export async function validatePrototypingEvidence(
     });
     issues.push(...renderIssuesFromBundle);
 
-    // QFAI-PROT-254: render evidence bundle contradicts non-ui surface/mode
+    // QFAI-PROT-254: render evidence bundle contradicts a non-UI prototyping surface
     if (
+      surfaceResult.surface &&
       !isUiBearingSurface(surfaceResult.surface) &&
       // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
       renderBundle.renderEvidence?.status === "captured"
@@ -521,13 +525,13 @@ export async function validatePrototypingEvidence(
       issues.push(
         issue(
           "QFAI-PROT-254",
-          `render evidence bundle has captured status but surface is non-ui.`,
+          `render evidence bundle has captured status but surface is ${surfaceResult.surface}.`,
           "warning",
           renderBundlePath,
           "prototypingEvidence.renderBundleSurfaceContradiction",
           [`surface=${surfaceResult.surface}`],
           "compatibility",
-          "non-ui project では render evidence は不要です。surface を見直すか render bundle を削除してください。",
+          `${surfaceResult.surface} surface では render evidence は不要です。surface を見直すか render bundle を削除してください。`,
         ),
       );
     }
@@ -663,7 +667,12 @@ export async function validatePrototypingEvidence(
 
     // QFAI-PROT-263: browser QA bundle required but missing for full-harness ui-bearing
     // (already handled by obligation matrix above — this covers executed=false case)
-    if (obligations.requireBrowserQaBundle && !browserQaBundle.browserQa.executed) {
+    if (
+      surfaceResult.surface &&
+      derivePrototypingObligations({ surface: surfaceResult.surface, effectiveMode })
+        .requireBrowserQaBundle &&
+      !browserQaBundle.browserQa.executed
+    ) {
       issues.push(
         issue(
           "QFAI-PROT-263",
@@ -714,15 +723,17 @@ export async function validatePrototypingEvidence(
     );
   }
 
-  const uiFidelityIssues = await validateUiFidelity(
-    root,
-    config,
-    evidenceJsonPath,
-    parsed.value,
-    surfaceResult.surface,
-    obligations,
-  );
-  issues.push(...uiFidelityIssues);
+  if (surfaceResult.surface) {
+    const uiFidelityIssues = await validateUiFidelity(
+      root,
+      config,
+      evidenceJsonPath,
+      parsed.value,
+      surfaceResult.surface,
+      derivePrototypingObligations({ surface: surfaceResult.surface, effectiveMode }),
+    );
+    issues.push(...uiFidelityIssues);
+  }
 
   return issues;
 }
@@ -755,10 +766,10 @@ function resolvePrototypingSurface(
   evidence: PrototypingEvidence,
   artifact: ResolvedRecommendationArtifact,
 ): {
-  surface: PrototypingSurface;
+  surface?: PrototypingSurface;
   raw?: string;
   inferred: boolean;
-  source: "evidence.surface" | "recommendationArtifact" | "heuristic";
+  source?: "evidence.surface" | "recommendationArtifact";
 } {
   if (isValidPrototypingSurface(evidence.surface)) {
     return {
@@ -780,12 +791,20 @@ function resolvePrototypingSurface(
     hasUiRoutes: evidence.specs.some((spec) => spec.declared.uiRoutes > 0),
     hasRuntimeGateUi: (evidence.runtimeGate?.ui.length ?? 0) > 0,
   });
+  if (inferred) {
+    return {
+      surface: inferred,
+      ...(typeof evidence.surface === "string" ? { raw: evidence.surface } : {}),
+      inferred: true,
+      source: "recommendationArtifact",
+    };
+  }
 
   return {
-    surface: inferred,
     ...(typeof evidence.surface === "string" ? { raw: evidence.surface } : {}),
-    inferred: !recommendationSurface,
-    source: recommendationSurface ? "recommendationArtifact" : "heuristic",
+    inferred: false,
+    ...(recommendationSurface ? { surface: recommendationSurface } : {}),
+    ...(recommendationSurface ? { source: "recommendationArtifact" as const } : {}),
   };
 }
 
@@ -807,7 +826,21 @@ function validateSurface(
         "prototypingEvidence.surface",
         [surfaceResult.raw],
         "compatibility",
-        "surface は web-ui|mobile-ui|desktop-ui|mixed|non-ui のいずれかにしてください。",
+        `surface field must be one of: ${CANONICAL_PROTOTYPING_SURFACES.join(", ")}.`,
+      ),
+    ];
+  }
+  if (!surfaceResult.surface) {
+    return [
+      issue(
+        "QFAI-PROT-171",
+        "surface が不足しています。",
+        "error",
+        evidenceJsonPath,
+        "prototypingEvidence.surface",
+        undefined,
+        "compatibility",
+        `surface field must be one of: ${CANONICAL_PROTOTYPING_SURFACES.join(", ")}.`,
       ),
     ];
   }
@@ -838,13 +871,13 @@ function validatePrototypingObligationMatrix(
       issues.push(
         issue(
           "QFAI-PROT-175",
-          `surface=non-ui に UI 専用 evidence が含まれています: ${contradictions.join(", ")}`,
+          `surface=${surface} に UI 専用 evidence が含まれています: ${contradictions.join(", ")}`,
           "error",
           evidenceJsonPath,
           "prototypingEvidence.nonUiContradiction",
           contradictions,
           "compatibility",
-          "non-ui では uiFidelity / render evidence / browser QA / runtimeGate.ui を省略してください。",
+          "UI を持たない surface では uiFidelity / render evidence / browser QA / runtimeGate.ui を省略してください。",
         ),
       );
     }
@@ -2256,13 +2289,7 @@ function normalizeSpecEvidence(
 }
 
 const VALID_PROTOTYPING_MODES = new Set<PrototypingMode>(["low-cost", "standard", "full-harness"]);
-const VALID_PROTOTYPING_SURFACES = new Set([
-  "web-ui",
-  "mobile-ui",
-  "desktop-ui",
-  "mixed",
-  "non-ui",
-]);
+const VALID_PROTOTYPING_SURFACES = new Set(CANONICAL_PROTOTYPING_SURFACES);
 const VALID_MODE_SOURCES = new Set<ModeSelectionSource>([
   "explicit-request",
   "discussion-recommendation",
@@ -2331,9 +2358,14 @@ function normalizeDiscussionRecommendation(
       : [value.recommendedMode];
 
   const surface =
-    typeof value.surface === "string" && VALID_PROTOTYPING_SURFACES.has(value.surface)
+    typeof value.surface === "string" &&
+    VALID_PROTOTYPING_SURFACES.has(value.surface as PrototypingSurface)
       ? (value.surface as PrototypingSurface)
-      : ("non-ui" as const);
+      : undefined;
+
+  if (!surface) {
+    return { ok: false, reason: "`mode.discussionRecommendation.surface` is invalid" };
+  }
 
   return {
     ok: true,

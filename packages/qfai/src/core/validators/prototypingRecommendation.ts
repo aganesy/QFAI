@@ -5,7 +5,7 @@ import { parse as parseYaml } from "yaml";
 
 import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
-import { CANONICAL_SURFACES } from "../domain/surface.js";
+import { CANONICAL_PROTOTYPING_SURFACES } from "../domain/surface.js";
 import { findLatestDiscussionPackDir } from "../discussionPack.js";
 import {
   hasNamespacedRecommendationBlock,
@@ -15,7 +15,7 @@ import type { Issue } from "../types.js";
 import { issue } from "./utils.js";
 
 const VALID_MODES = new Set(["low-cost", "standard", "full-harness"]);
-const VALID_SURFACES = new Set(CANONICAL_SURFACES);
+const VALID_SURFACES = new Set(CANONICAL_PROTOTYPING_SURFACES);
 
 export async function validatePrototypingRecommendation(
   root: string,
@@ -190,12 +190,12 @@ export async function validatePrototypingRecommendation(
         "prototypingRecommendation.surfaceRequired",
         undefined,
         "canonical",
-        `surface は ${CANONICAL_SURFACES.join("|")} のいずれかで必須です。`,
+        `surface は ${CANONICAL_PROTOTYPING_SURFACES.join("|")} のいずれかで必須です。`,
       ),
     );
   } else if (
     typeof surface !== "string" ||
-    !VALID_SURFACES.has(surface as (typeof CANONICAL_SURFACES)[number])
+    !VALID_SURFACES.has(surface as (typeof CANONICAL_PROTOTYPING_SURFACES)[number])
   ) {
     issues.push(
       issue(
@@ -206,7 +206,7 @@ export async function validatePrototypingRecommendation(
         "prototypingRecommendation.surface",
         undefined,
         "canonical",
-        `surface は ${CANONICAL_SURFACES.join("|")} のいずれかにしてください。`,
+        `surface は ${CANONICAL_PROTOTYPING_SURFACES.join("|")} のいずれかにしてください。`,
       ),
     );
   }

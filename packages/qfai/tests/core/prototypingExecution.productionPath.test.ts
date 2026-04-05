@@ -56,10 +56,10 @@ describe("prototyping execution production path", () => {
     });
   });
 
-  describe("non-ui + standard", () => {
+  describe("cli + standard", () => {
     it("derives obligations with UI-specific evidence not required", () => {
       const obligations = derivePrototypingObligations({
-        surface: "non-ui",
+        surface: "cli",
         effectiveMode: "standard",
       });
       expect(obligations.requireUiFidelity).toBe(false);
@@ -69,23 +69,23 @@ describe("prototyping execution production path", () => {
       expect(obligations.requireRuntimeGate).toBe(false);
     });
 
-    it("runtime gate returns empty arrays for non-ui", () => {
-      const gate = buildRuntimeGate({ surface: "non-ui" });
+    it("runtime gate returns empty arrays for cli", () => {
+      const gate = buildRuntimeGate({ surface: "cli" });
       expect(gate).toBeDefined();
       if (!gate) throw new Error("gate should be defined");
       expect(gate.ui).toEqual([]);
       expect(gate.api).toEqual([]);
     });
 
-    it("isUiBearingSurface returns false for non-ui", () => {
-      expect(isUiBearingSurface("non-ui")).toBe(false);
+    it("isUiBearingSurface returns false for cli", () => {
+      expect(isUiBearingSurface("cli")).toBe(false);
     });
   });
 
-  describe("non-ui + full-harness", () => {
+  describe("cli + full-harness", () => {
     it("requires fullHarness but not UI evidence", () => {
       const obligations = derivePrototypingObligations({
-        surface: "non-ui",
+        surface: "cli",
         effectiveMode: "full-harness",
       });
       expect(obligations.requireFullHarness).toBe(true);
@@ -97,7 +97,7 @@ describe("prototyping execution production path", () => {
 
   describe("surface detection", () => {
     const uiBearingSurfaces: PrototypingSurface[] = ["web", "mobile", "desktop", "mixed"];
-    const nonUiSurfaces: PrototypingSurface[] = ["cli", "non-ui"];
+    const nonUiSurfaces: PrototypingSurface[] = ["cli"];
 
     for (const surface of uiBearingSurfaces) {
       it(`${surface} is UI-bearing`, () => {
@@ -114,7 +114,7 @@ describe("prototyping execution production path", () => {
 
   describe("obligation matrix completeness", () => {
     const modes: PrototypingMode[] = ["low-cost", "standard", "full-harness"];
-    const surfaces: PrototypingSurface[] = ["web", "non-ui"];
+    const surfaces: PrototypingSurface[] = ["web", "cli"];
 
     for (const mode of modes) {
       for (const surface of surfaces) {

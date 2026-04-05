@@ -85,7 +85,7 @@ describe("resolveLatestRecommendationArtifact", () => {
           "  allowed_modes:",
           "    - standard",
           "    - low-cost",
-          "  surface: non-ui",
+          "  surface: cli",
           "",
         ].join("\n"),
         "utf-8",
@@ -96,7 +96,7 @@ describe("resolveLatestRecommendationArtifact", () => {
       expect(result.recommendation).not.toBeNull();
       if (!result.recommendation) throw new Error("recommendation should not be null");
       expect(result.recommendation.recommendedMode).toBe("standard");
-      expect(result.recommendation.surface).toBe("non-ui");
+      expect(result.recommendation.surface).toBe("cli");
       expect(result.recommendation.allowedModes).toEqual(["low-cost", "standard"]);
       expect(result.path).toContain("prototyping.yaml");
     });

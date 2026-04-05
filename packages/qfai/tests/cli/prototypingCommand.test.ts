@@ -17,6 +17,20 @@ describe("runPrototypingCommand", () => {
         "paths:\n  discussionDir: .qfai/discussion\n",
         "utf-8",
       );
+      await writeFile(
+        path.join(root, "01_Context.md"),
+        [
+          "# Context",
+          "",
+          "- ui_bearing: true",
+          "- primary_surface: web",
+          "- secondary_surfaces:",
+          "  - cli",
+          "- classification_rationale: cli prototyping command fixture",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
 
       const output = await captureStdout(async () => {
         await runPrototypingCommand({ root, mode: "standard" });

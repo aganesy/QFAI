@@ -1,5 +1,5 @@
 /**
- * Canonical UIX aggregate validator — v1.7.13
+ * Canonical UIX aggregate validator — v1.7.14
  *
  * This is the package's production-path UIX validator entrypoint.
  * All validators are owned by canonical modules under uix/.

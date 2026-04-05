@@ -1,5 +1,5 @@
 /**
- * Canonical UIX foundation validator — v1.7.13
+ * Canonical UIX foundation validator — v1.7.14
  *
  * Validates sidecar directory presence for UI-bearing specs.
  * Moved from legacy/uixCompatibility.ts to establish canonical ownership.

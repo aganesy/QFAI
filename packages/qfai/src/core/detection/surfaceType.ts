@@ -1,14 +1,11 @@
 import { readdir } from "node:fs/promises";
 import path from "node:path";
 
-import {
-  isCanonicalSurface,
-  isUiBearingSurface as isCanonicalUiBearingSurface,
-} from "../domain/surface.js";
-import type { CanonicalSurface } from "../domain/surface.js";
+import { isCanonicalPrototypingSurface, isUiBearingPrototypingSurface } from "../domain/surface.js";
+import type { CanonicalPrototypingSurface } from "../domain/surface.js";
 import { readSafe } from "../validators/utils.js";
 
-export type SurfaceType = CanonicalSurface;
+export type SurfaceType = CanonicalPrototypingSurface | "non-ui";
 
 export const UI_BEARING_SURFACES = new Set<SurfaceType>(["web", "mobile", "desktop", "mixed"]);
 export const NON_UI_SURFACES = new Set<SurfaceType>(["cli", "non-ui"]);
@@ -115,7 +112,7 @@ const SCREEN_CONTRACT_YAML_RE = /screens:\s*\n\s*-\s*route:/;
 
 function parseSurface(raw: string): SurfaceType | undefined {
   const lower = raw.trim().toLowerCase();
-  return isCanonicalSurface(lower) ? lower : undefined;
+  return lower === "non-ui" || isCanonicalPrototypingSurface(lower) ? lower : undefined;
 }
 
 export async function detectSurfaceType(root: string): Promise<SurfaceType> {
@@ -178,7 +175,7 @@ export async function isUiBearingSurface(root: string): Promise<boolean> {
 }
 
 export function isUiBearingSurfaceType(surface: SurfaceType): boolean {
-  return isCanonicalUiBearingSurface(surface);
+  return surface !== "non-ui" && isUiBearingPrototypingSurface(surface);
 }
 
 export async function readClassificationBlock(

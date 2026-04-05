@@ -17,8 +17,8 @@ The agent reads the repository, produces the required artifacts, and iterates un
 
 ## Release status
 
-- Current package version: `1.7.13`
-- Release posture: v1.7.13 converges init assets, validators, and docs on the canonical sidecar model.
+- Current package version: `1.7.14`
+- Release posture: v1.7.14 converges init assets, validators, and docs on the canonical sidecar model.
 - Current repo note: some repo-wide `qfai validate --fail-on error` blockers still come from historical review/evidence/ATDD/TDD artifacts and are being cleaned incrementally.
 
 ## Quick start
@@ -190,7 +190,7 @@ Notes.
 - `validate.json`, `report.json`, `doctor.json`, and `run-*` JSON logs are internal exports and are not a stable external contract; prefer `report.md` for integrations that must survive tool upgrades.
 - Scenario files are expected to use the Gherkin extension `*.feature` (not `*.md`).
 - `prototyping.calibration` in `qfai.config.yaml` connects full-harness scoring thresholds to the report and validator.
-- Observability modules (`src/core/observability/`) exist as foundation code but are **not integrated into blocking validation** in v1.7.13. They are reserved for future operational instrumentation.
+- Observability modules (`src/core/observability/`) exist as foundation code but are **not integrated into blocking validation** in v1.7.14. They are reserved for future operational instrumentation.
 
 ## Specifications and contracts (SDD)
 

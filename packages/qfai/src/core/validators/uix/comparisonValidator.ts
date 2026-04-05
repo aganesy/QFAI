@@ -1,5 +1,5 @@
 /**
- * Canonical UIX comparison validator — v1.7.13
+ * Canonical UIX comparison validator — v1.7.14
  *
  * Validates option comparison in 30_option_comparison.md and
  * selected anchor in 31_selected_anchor_screen.md.

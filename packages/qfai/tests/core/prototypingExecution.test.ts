@@ -15,6 +15,20 @@ async function withRoot(task: (root: string) => Promise<void>): Promise<void> {
       "paths:\n  discussionDir: .qfai/discussion\n",
       "utf-8",
     );
+    await writeFile(
+      path.join(root, "01_Context.md"),
+      [
+        "# Context",
+        "",
+        "- ui_bearing: true",
+        "- primary_surface: web",
+        "- secondary_surfaces:",
+        "  - cli",
+        "- classification_rationale: default web execution fixture",
+        "",
+      ].join("\n"),
+      "utf-8",
+    );
     await task(root);
   } finally {
     await rm(root, { recursive: true, force: true });

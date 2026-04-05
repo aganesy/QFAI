@@ -301,13 +301,13 @@ const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-PROT-151": "mode.effective must be low-cost|standard|full-harness.",
   "QFAI-PROT-152":
     "mode.source must be explicit-request|discussion-recommendation|default and rationale must be non-empty.",
-  "QFAI-PROT-171": "surface field must be web-ui|mobile-ui|desktop-ui|mixed|non-ui.",
+  "QFAI-PROT-171": "surface field must be one of: web, mobile, desktop, cli, mixed.",
   "QFAI-PROT-172":
     "surface/mode obligation matrix mismatch — required evidence bundles are missing.",
   "QFAI-PROT-173": "required render evidence bundle is missing.",
   "QFAI-PROT-174": "required browser QA bundle is missing.",
   "QFAI-PROT-175":
-    "surface=non-ui but UI-only evidence present (runtimeGate.ui, uiFidelity, render, browserQa).",
+    "non-UI prototyping surface but UI-only evidence present (runtimeGate.ui, uiFidelity, render, browserQa).",
   "QFAI-PROT-176": "ui-bearing standard/full-harness mode requires uiFidelity.",
   "QFAI-PROT-177": "ui-bearing full-harness mode requires runtimeGate.",
   "QFAI-PROT-111":
@@ -352,7 +352,7 @@ const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "render evidence status requires accompanying field (skippedReason for skipped, error for failed, imagePath/htmlPath for captured).",
   "QFAI-PROT-253":
     "render evidence top-level status contradicts screen-level statuses (e.g. status=captured but no captured screens).",
-  "QFAI-PROT-254": "render bundle contradicts non-ui surface / mode expectation.",
+  "QFAI-PROT-254": "render bundle contradicts non-UI prototyping surface / mode expectation.",
   "QFAI-PROT-255": "captured render evidence screen references a file that does not exist on disk.",
   "QFAI-PROT-256": "skipped/failed render evidence screen is missing required reason/error field.",
   "QFAI-PROT-261": "browser QA bundle mode does not match prototyping effective mode.",

@@ -1,5 +1,5 @@
 /**
- * Canonical UIX rollout validators — v1.7.13
+ * Canonical UIX rollout validators — v1.7.14
  *
  * Validates migration shape and applies the phase-1 ratchet.
  * Moved from legacy/uixCompatibility.ts to establish canonical ownership.

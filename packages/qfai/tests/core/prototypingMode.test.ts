@@ -71,7 +71,6 @@ describe("prototyping mode resolver", () => {
     expect(isUiBearingSurface("desktop")).toBe(true);
     expect(isUiBearingSurface("mixed")).toBe(true);
     expect(isUiBearingSurface("cli")).toBe(false);
-    expect(isUiBearingSurface("non-ui")).toBe(false);
   });
 
   it("recommendation overrides default", () => {
@@ -371,16 +370,16 @@ describe("obligation matrix (shared)", () => {
     expect(o.requireFullHarness).toBe(false);
   });
 
-  it("non-ui + standard requires nothing", () => {
-    const o = derivePrototypingObligations({ surface: "non-ui", effectiveMode: "standard" });
+  it("cli + standard requires nothing", () => {
+    const o = derivePrototypingObligations({ surface: "cli", effectiveMode: "standard" });
     expect(o.requireUiFidelity).toBe(false);
     expect(o.requireRenderBundle).toBe(false);
     expect(o.requireBrowserQaBundle).toBe(false);
     expect(o.requireFullHarness).toBe(false);
   });
 
-  it("non-ui + full-harness requires fullHarness only", () => {
-    const o = derivePrototypingObligations({ surface: "non-ui", effectiveMode: "full-harness" });
+  it("cli + full-harness requires fullHarness only", () => {
+    const o = derivePrototypingObligations({ surface: "cli", effectiveMode: "full-harness" });
     expect(o.requireFullHarness).toBe(true);
     expect(o.requireUiFidelity).toBe(false);
     expect(o.requireRenderBundle).toBe(false);
@@ -431,15 +430,15 @@ describe("surface inference (shared)", () => {
     ).toBe("desktop");
   });
 
-  it("infers non-ui when no signals (no implicit web inference)", () => {
+  it("returns null when no canonical surface can be inferred", () => {
     expect(
       inferSurfaceFromRecommendationAndEvidence({
         hasUiFidelity: true,
       }),
-    ).toBe("non-ui");
+    ).toBeNull();
   });
 
-  it("infers non-ui when no signals", () => {
-    expect(inferSurfaceFromRecommendationAndEvidence({})).toBe("non-ui");
+  it("returns null when no signals are present", () => {
+    expect(inferSurfaceFromRecommendationAndEvidence({})).toBeNull();
   });
 });

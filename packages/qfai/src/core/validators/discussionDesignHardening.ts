@@ -374,7 +374,7 @@ export async function validateInteractionPriorityHandoff(packRoot: string): Prom
         ),
     )
     .join("\n");
-  // Canonical interaction signals (current v1.7.13 naming only)
+  // Canonical interaction signals (current v1.7.14 naming only)
   const signalsMainAction =
     /\bprimary\s+(?:task|action|operation)\b/i.test(meaningfulActionHandoff) ||
     /\bkey\s+(?:action|actions|operation|operations)\b/i.test(meaningfulActionHandoff) ||
@@ -575,7 +575,7 @@ export async function validateDesignAntiGoals(packRoot: string): Promise<Issue[]
  * Main entry point for discussion design hardening validators.
  * Called from validate.ts orchestrator.
  *
- * v1.7.13: Rewritten for sidecar-first model.
+ * v1.7.14: Rewritten for sidecar-first model.
  * - Sidecar family primary truth
  * - Option comparison (30_option_comparison.md)
  * - Selected direction (30_option_comparison.md)

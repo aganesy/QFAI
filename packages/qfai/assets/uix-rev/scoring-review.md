@@ -25,9 +25,11 @@ Each evaluation axis must include:
 
 ## Evaluation Axes Quality
 
-- Each trend-derived row must include source_translation
 - Axes must be measurable and verifiable
 - No generic/boilerplate axes without taste/trend derivation
+- Each axis must define `origin`, `intent`, `why_it_matters`, `score_scale`, `score_anchors.low/mid/high`
+- Each axis must define `positive_signals`, `negative_signals`, `anti_patterns`, `evidence_required`, `minimum_floor`
+- Each axis must define `source_refs`, `goal_refs`, and `review_questions`
 
 ## Aggregate Scoring Rules
 

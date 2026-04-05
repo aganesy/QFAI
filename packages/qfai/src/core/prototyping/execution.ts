@@ -18,6 +18,7 @@ import type { CritiqueAdapter } from "../critique/adapter.js";
 import { resolveLatestRecommendationArtifact } from "./recommendationArtifact.js";
 import { derivePrototypingObligations, resolvePrototypingMode } from "./mode.js";
 import type { PrototypingMode, PrototypingSurface } from "./types.js";
+import { assertCanonicalPrototypingSurface } from "../domain/surface.js";
 import type { ProviderRegistry } from "../providers/registry.js";
 import { runBrowserQaOrchestrated } from "../browserQa/runner.js";
 import {
@@ -61,8 +62,18 @@ export async function runPrototypingExecution(
   const latestPack = await findLatestDiscussionPackDir(discussionRoot);
   const recommendation = await resolveLatestRecommendationArtifact(request.root, config);
   const classification = await readClassificationBlock(latestPack ?? request.root);
-  const surface: PrototypingSurface =
-    classification?.primary_surface ?? recommendation.recommendation?.surface ?? "non-ui";
+  const recommendationSurface = recommendation.recommendation?.surface;
+  const classifiedSurface =
+    classification?.primary_surface && classification.primary_surface !== "non-ui"
+      ? classification.primary_surface
+      : undefined;
+  const resolvedSurface = recommendationSurface ?? classifiedSurface;
+  if (!resolvedSurface) {
+    throw new Error(
+      "surface field must be one of: web, mobile, desktop, cli, mixed. Non-UI targets must not run prototyping execution.",
+    );
+  }
+  const surface: PrototypingSurface = assertCanonicalPrototypingSurface(resolvedSurface);
   const modeSummary = resolvePrototypingMode({
     explicitMode: request.requestedMode,
     discussionRecommendation: recommendation.recommendation,
@@ -254,7 +265,7 @@ async function buildPrototypingSummaryBundle(input: {
     },
     meta: {
       generatedAt: input.generatedAt,
-      toolVersion: "1.7.13",
+      toolVersion: "1.7.14",
       commands: [`qfai prototyping run --mode ${input.mode.effective}`],
       generatedBy: "qfai prototyping run",
       providerIds: input.providerIds,
