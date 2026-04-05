@@ -117,23 +117,8 @@ prototyping:
     - low-cost
     - standard
     - full-harness
-  surface: web-ui
+  surface: web
 ```
-
-### Legacy top-level schema (deprecated — read-only backward compatibility)
-
-The following top-level form is accepted by the parser for backward compatibility but produces a deprecation warning (`QFAI-PROT-231`). New artifacts MUST NOT emit this form; use the namespaced canonical schema above.
-
-```yaml
-recommended_mode: standard
-rationale: ...
-allowed_modes:
-  - low-cost
-  - standard
-surface: web-ui
-```
-
-If both forms are present in the same file, the namespaced form takes precedence and a conflict warning (`QFAI-PROT-232`) is emitted.
 
 ### Field reference
 
@@ -144,7 +129,7 @@ All 4 fields are **required**. An artifact missing any field will fail validatio
 | `recommended_mode` | yes      | `low-cost`, `standard`, or `full-harness`                    |
 | `rationale`        | yes      | Non-empty string explaining the recommendation               |
 | `allowed_modes`    | yes      | Unique array of valid modes; must include `recommended_mode` |
-| `surface`          | yes      | `web-ui`, `mobile-ui`, `desktop-ui`, `mixed`, or `non-ui`    |
+| `surface`          | yes      | `web`, `mobile`, `desktop`, `cli`, or `mixed`                |
 
 ## Suggested naming
 

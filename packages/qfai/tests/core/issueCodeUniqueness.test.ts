@@ -219,12 +219,7 @@ describe("issue code uniqueness", () => {
       descriptionCodes.add(match[1]);
     }
 
-    // v1.7.14: QFAI-PROT-231/232 descriptions are kept in validate.ts for backward
-    // compatibility with older evidence files even though validators no longer emit them.
-    const KNOWN_LEGACY_DESCRIPTION_CODES = new Set(["QFAI-PROT-231", "QFAI-PROT-232"]);
-    const staleDescriptions = [...descriptionCodes]
-      .filter((c) => !allCodes.has(c) && !KNOWN_LEGACY_DESCRIPTION_CODES.has(c))
-      .sort();
+    const staleDescriptions = [...descriptionCodes].filter((c) => !allCodes.has(c)).sort();
     expect(staleDescriptions).toEqual([]);
   });
 
@@ -249,7 +244,6 @@ describe("issue code uniqueness", () => {
       min: number;
       max: number;
     }> = [
-      { label: "recommendation schema compatibility", min: 231, max: 232 },
       { label: "recommendation/mode precedence + uiFidelity contract", min: 233, max: 238 },
       { label: "uiFidelity semantic quality + render presence/coverage", min: 241, max: 245 },
       { label: "render bundle structure + file existence", min: 251, max: 256 },

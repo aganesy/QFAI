@@ -304,7 +304,7 @@ describe("report contract coverage", () => {
         source: "explicit-request",
         rationale: "runtime proof requested",
         discussionRecommendation: "standard (customer presentable)",
-        surface: "web-ui",
+        surface: "web",
       },
       evidence: {
         specsCoverageStatus: "complete",
@@ -312,7 +312,7 @@ describe("report contract coverage", () => {
         uiFidelity: { present: true, required: true },
         renderBundle: { present: true, required: true },
         browserQaBundle: { present: true, required: true },
-        obligationProfile: "web-ui/full-harness",
+        obligationProfile: "web/full-harness",
       },
       fullHarness: {
         enabled: true,
@@ -346,7 +346,7 @@ describe("report contract coverage", () => {
     expect(markdown).toContain("- source: explicit-request");
     expect(markdown).toContain("- discussion recommendation: standard (customer presentable)");
     expect(markdown).toContain("### prototyping.evidence");
-    expect(markdown).toContain("- obligation profile: web-ui/full-harness");
+    expect(markdown).toContain("- obligation profile: web/full-harness");
     expect(markdown).toContain("### prototyping.fullHarness");
     expect(markdown).toContain("- terminationReason: converged");
   });
@@ -371,7 +371,7 @@ describe("report contract coverage", () => {
         "rationale: valid legacy",
         "allowed_modes:",
         "  - standard",
-        "surface: web-ui",
+        "surface: web",
         "prototyping: invalid",
         "",
       ].join("\n"),
@@ -385,7 +385,7 @@ describe("report contract coverage", () => {
     await writeFile(
       path.join(evidenceRoot, "prototyping.json"),
       JSON.stringify({
-        surface: "web-ui",
+        surface: "web",
         specs: [
           {
             specId: "spec-0001",
@@ -1043,7 +1043,7 @@ describe("report artifact-first recommendation", () => {
           ? { discussionRecommendation: overrides.discussionRecommendation }
           : {}),
         ...(overrides.allowedModes ? { allowedModes: overrides.allowedModes } : {}),
-        surface: overrides.surface ?? "non-ui",
+        surface: overrides.surface ?? "cli",
         ...(overrides.sourceSchema ? { sourceSchema: overrides.sourceSchema } : {}),
       },
       evidence: {
@@ -1052,7 +1052,7 @@ describe("report artifact-first recommendation", () => {
         uiFidelity: { present: false, required: false },
         renderBundle: { present: false, required: false },
         browserQaBundle: { present: false, required: false },
-        obligationProfile: "non-ui/standard",
+        obligationProfile: "cli/standard",
       },
       warnings: [],
     };
@@ -1121,7 +1121,7 @@ describe("report artifact-first recommendation", () => {
       artifactPath: ".qfai/discussion/discussion-20260404000000000/prototyping.yaml",
       discussionRecommendation: "standard (validated recommendation)",
       allowedModes: ["low-cost", "standard"],
-      surface: "non-ui",
+      surface: "cli",
       sourceSchema: "canonical-namespaced",
     });
     const data = buildReportDataWithPrototyping(proto);
@@ -1154,7 +1154,7 @@ describe("report artifact-first recommendation", () => {
       await writeFile(
         path.join(evidenceRoot, "prototyping.json"),
         JSON.stringify({
-          surface: "non-ui",
+          surface: "cli",
           specs: [
             {
               specId: "spec-0001",
@@ -1171,7 +1171,7 @@ describe("report artifact-first recommendation", () => {
               recommendedMode: "full-harness",
               rationale: "stale embedded payload",
               allowedModes: ["full-harness", "standard"],
-              surface: "web-ui",
+              surface: "web",
             },
           },
           meta: { generatedAt: "2026-04-04T00:00:00.000Z", toolVersion: "1.7.13", commands: [] },

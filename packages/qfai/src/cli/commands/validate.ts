@@ -323,10 +323,6 @@ const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-PROT-154": "prototyping.yaml allowed_modes must include recommended_mode.",
   "QFAI-PROT-155": "prototyping.yaml requires allowed_modes field.",
   "QFAI-PROT-156": "prototyping.yaml requires surface field.",
-  "QFAI-PROT-231":
-    "prototyping.yaml uses deprecated top-level schema; migrate to namespaced `prototyping.*` form.",
-  "QFAI-PROT-232":
-    "prototyping.yaml contains both namespaced and legacy top-level schema; namespaced takes precedence.",
   "QFAI-PROT-233":
     "evidence effective mode differs from resolved discussion recommendation precedence.",
   "QFAI-PROT-234": "discussion recommendation exists but evidence mode.source is default.",

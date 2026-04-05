@@ -57,7 +57,7 @@ describe("US-0002-0001: UI-bearing pack detection", () => {
     expect(c).toMatch(/UI-bearing Detection/i);
     expect(c).toMatch(/Surface Classification/i);
     expect(c).toMatch(/\|\s*Surface Type\s*\|/i);
-    expect(c).toMatch(/\|\s*(?:web-ui|mobile-ui|desktop-ui|mixed|non-ui)\s*\|/i);
+    expect(c).toMatch(/\|\s*(?:web|mobile|desktop|cli|mixed)\s*\|/i);
   });
 
   it("SKILL.md describes detection signals for UI-bearing packs", async () => {

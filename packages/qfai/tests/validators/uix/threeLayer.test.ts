@@ -24,7 +24,7 @@ async function newTempDir(): Promise<string> {
 }
 
 async function createUiBearingPack(root: string): Promise<void> {
-  await writeFile(path.join(root, "01_Spec.md"), "# Spec\n\n- surface: web-ui\n", "utf-8");
+  await writeFile(path.join(root, "01_Spec.md"), "# Spec\n\n- surface: web\n", "utf-8");
   await mkdir(path.join(root, "uiux"), { recursive: true });
 }
 
@@ -49,7 +49,7 @@ describe("3-layer validator", () => {
       "",
       "## trend-derived",
       "",
-      "- micro_interaction: source_translation: Adopted from 2025 motion trends",
+      "- micro_interaction: local_translation: Adopted from 2025 motion trends",
       "",
       "## product-specific",
       "",
@@ -107,7 +107,7 @@ describe("3-layer validator", () => {
       "",
       "## trend-derived",
       "",
-      "- micro_interaction: source_translation: Trends",
+      "- micro_interaction: local_translation: Trends",
       "",
       "## delight",
       "",

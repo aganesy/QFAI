@@ -61,7 +61,9 @@ export type SkillValidationResult = {
   aspirationalClaims: string[];
   modesPresent: string[];
   modesMissing: string[];
-  hasNonUiNaPath: boolean;
+  hasCanonicalSurfaces: boolean;
+  hasCliSurface: boolean;
+  hasUiBearingFalseExcl: boolean;
   isStaticFirstAligned: boolean;
   hasModeSurfaceMatrix: boolean;
   issues: Issue[];
@@ -86,19 +88,24 @@ export function checkModeHeadings(content: string): { present: string[]; missing
   return { present, missing };
 }
 
-export function hasNonUiNaDocumentation(content: string): boolean {
+const CANONICAL_SURFACES = ["web", "mobile", "desktop", "cli", "mixed"] as const;
+
+export function hasCanonicalSurfaceDocumentation(content: string): boolean {
   const lower = content.toLowerCase();
-  return (
-    (lower.includes("non-ui") || lower.includes("non_ui")) &&
-    (lower.includes("n/a") ||
-      lower.includes("absent is normal") ||
-      lower.includes("skip semantics"))
-  );
+  return CANONICAL_SURFACES.every((s) => lower.includes(s));
 }
 
-export function isStaticFirstAligned(content: string): boolean {
+export function hasCliSurfaceDocumentation(content: string): boolean {
   const lower = content.toLowerCase();
-  return STATIC_FIRST_INDICATORS.some((indicator) => lower.includes(indicator));
+  return lower.includes("cli") && (lower.includes("n/a") || lower.includes("not required"));
+}
+
+export function hasUiBearingFalseExclusion(content: string): boolean {
+  const lower = content.toLowerCase();
+  return (
+    (lower.includes("ui_bearing: false") || lower.includes("ui_bearing:false")) &&
+    (lower.includes("not") || lower.includes("exempt") || lower.includes("excluded"))
+  );
 }
 
 export function hasModeSurfaceMatrix(content: string): boolean {
@@ -109,9 +116,13 @@ export function hasModeSurfaceMatrix(content: string): boolean {
     lower.includes("low-cost") &&
     lower.includes("standard") &&
     lower.includes("full-harness") &&
-    lower.includes("non-ui") &&
-    lower.includes("ui-bearing")
+    CANONICAL_SURFACES.every((s) => lower.includes(s))
   );
+}
+
+export function isStaticFirstAligned(content: string): boolean {
+  const lower = content.toLowerCase();
+  return STATIC_FIRST_INDICATORS.some((indicator) => lower.includes(indicator));
 }
 
 export function detectAspirationalClaims(content: string): string[] {
@@ -164,7 +175,9 @@ export function validatePrototypingSkillContent(content: string): SkillValidatio
   const bannedPhraseMatches = scanBannedPhrases(content);
   const aspirationalClaims = detectAspirationalClaims(content);
   const { present: modesPresent, missing: modesMissing } = checkModeHeadings(content);
-  const hasNonUiNaPath = hasNonUiNaDocumentation(content);
+  const canonicalSurfaces = hasCanonicalSurfaceDocumentation(content);
+  const cliSurface = hasCliSurfaceDocumentation(content);
+  const uiBearingFalseExcl = hasUiBearingFalseExclusion(content);
   const staticFirst = isStaticFirstAligned(content);
   const matrix = hasModeSurfaceMatrix(content);
   const issues: Issue[] = [];
@@ -202,13 +215,35 @@ export function validatePrototypingSkillContent(content: string): SkillValidatio
     );
   }
 
-  if (!hasNonUiNaPath) {
+  if (!canonicalSurfaces) {
     issues.push(
       skillIssue(
-        "UIX-VAL-SKILL-NON-UI",
-        "Prototyping skill is missing non-ui skip semantics.",
+        "UIX-VAL-SKILL-CANONICAL-SURFACE",
+        "Prototyping skill must document all canonical surfaces: web, mobile, desktop, cli, mixed.",
         "error",
-        "non-ui では UI 固有 evidence absent を正常扱いする文言を追加してください。",
+        "canonical 5 surface (web, mobile, desktop, cli, mixed) を明記してください。",
+      ),
+    );
+  }
+
+  if (!cliSurface) {
+    issues.push(
+      skillIssue(
+        "UIX-VAL-SKILL-CLI-SURFACE",
+        "Prototyping skill must document cli surface obligations.",
+        "error",
+        "cli surface の obligation (render/browser QA は n/a) を明記してください。",
+      ),
+    );
+  }
+
+  if (!uiBearingFalseExcl) {
+    issues.push(
+      skillIssue(
+        "UIX-VAL-SKILL-UI-BEARING-FALSE",
+        "Prototyping skill must document that ui_bearing: false specs are excluded from prototyping execution.",
+        "error",
+        "ui_bearing: false spec は prototyping execution 対象外であることを明記してください。",
       ),
     );
   }
@@ -230,7 +265,7 @@ export function validatePrototypingSkillContent(content: string): SkillValidatio
         "UIX-VAL-SKILL-MATRIX",
         "Prototyping skill is missing a mode/surface obligation matrix.",
         "error",
-        "low-cost / standard / full-harness と non-ui / ui-bearing の obligation matrix を追加してください。",
+        "canonical 5 surface (web, mobile, desktop, cli, mixed) と low-cost / standard / full-harness の obligation matrix を追加してください。",
       ),
     );
   }
@@ -240,7 +275,9 @@ export function validatePrototypingSkillContent(content: string): SkillValidatio
     aspirationalClaims,
     modesPresent,
     modesMissing,
-    hasNonUiNaPath,
+    hasCanonicalSurfaces: canonicalSurfaces,
+    hasCliSurface: cliSurface,
+    hasUiBearingFalseExcl: uiBearingFalseExcl,
     isStaticFirstAligned: staticFirst,
     hasModeSurfaceMatrix: matrix,
     issues,

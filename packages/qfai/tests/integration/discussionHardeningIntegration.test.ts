@@ -93,7 +93,7 @@ afterEach(async () => {
 // ---------------------------------------------------------------------------
 
 async function _createUiBearingPack(root: string): Promise<void> {
-  await writeFile(path.join(root, "01_Spec.md"), "# Spec\n\n- surface: web-ui\n", "utf-8");
+  await writeFile(path.join(root, "01_Spec.md"), "# Spec\n\n- surface: web\n", "utf-8");
   await mkdir(path.join(root, "uiux"), { recursive: true });
 }
 
@@ -757,7 +757,7 @@ describe("SKILL.md and template documentation", () => {
 });
 
 // ---------------------------------------------------------------------------
-// TC-0002-0029..0031: Integration pipeline and backward compatibility
+// TC-0002-0029..0031: Integration pipeline validation
 // ---------------------------------------------------------------------------
 
 describe("Validation pipeline integration", () => {

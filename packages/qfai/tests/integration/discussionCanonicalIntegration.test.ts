@@ -576,7 +576,7 @@ describe("3-layer evaluation model", () => {
       "",
       "## trend-derived",
       "",
-      "- micro_interaction: source_translation: Adopted from 2025 motion trends",
+      "- micro_interaction: local_translation: Adopted from 2025 motion trends",
       "",
       "## product-specific",
       "",

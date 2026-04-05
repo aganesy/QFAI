@@ -138,7 +138,7 @@ Every major artifact in this stage MUST include this table schema:
     - `uiux/31_selected_anchor_screen.md` — selected anchor screen (Selected Direction single source of truth)
     - `uiux/40_screen_contracts.md` — screen contracts (strong schema)
     - `uiux/50_review_input_bundle.md` — review input bundle
-  - `04_Sources.md` `## Trend Scan` must include all required categories, and each entry must include: `reference`, `observation`, `freshness_date`, `confidence`, `source_translation`, `local_implication`
+  - `04_Sources.md` `## Trend Scan` must include all required categories, and each entry must include: `reference`, `observation`, `decision_connection`, `evaluation_connection`, `local_implication`
   - `04_Sources.md` `## Competitive Reference Registry` entries must include:
     - `adopted_points`: what was adopted and why
     - `rejected_points`: what was not adopted and why

@@ -266,7 +266,7 @@ Recommended baseline.
 
 Waiver policy.
 
-- Use waivers only for `warning` / `info` findings (false positives, phased migration noise).
+- Use waivers only for `warning` / `info` findings (false positives).
 - Waivers that target `error` findings are invalid and fail validation (`QFAI-WAIVER-002`).
 - Expired waivers are reported as warnings (`QFAI-WAIVER-003`) and must be renewed or removed with evidence.
 - Suppressed findings remain visible in reports as `suppressed=true`; waivers do not erase findings.

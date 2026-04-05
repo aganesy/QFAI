@@ -2,7 +2,6 @@
  * Canonical UIX OQ closure validator — v1.7.14
  *
  * Validates that no critical/blocking OQs remain open.
- * Moved from legacy/uixCompatibility.ts to establish canonical ownership.
  */
 import path from "node:path";
 

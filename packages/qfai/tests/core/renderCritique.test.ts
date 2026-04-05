@@ -65,7 +65,7 @@ describe("Render Critique Loop validation (SPEC-0021)", { timeout: 15000 }, () =
     await mkdir(path.join(dir, "uiux"), { recursive: true });
     await writeFile(
       path.join(dir, "uiux", "10_implementation_strategy.md"),
-      "# Strategy\n\n- surface: web-ui\n- selection_required: true\n- decision: Choose Option A\n- candidate_options: Option A, Option B\n- chosen_option: Option A\n- rationale: Clear primary path\n- verification_expectations: Review responsive behavior\n- notes_for_reviewer: Focus on current sidecar family\n",
+      "# Strategy\n\n- surface: web\n- selection_required: true\n- decision: component-library\n- candidate_options: component-library, design-system\n- chosen_option: component-library\n- rationale: Clear primary path\n- verification_expectations: Review responsive behavior\n- notes_for_reviewer: Focus on current sidecar family\n",
       "utf-8",
     );
     await writeFile(

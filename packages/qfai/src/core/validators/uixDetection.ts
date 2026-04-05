@@ -2,7 +2,6 @@
  * UIX-VAL UI-bearing spec detection.
  *
  * Delegates to the shared surface type detection module (spec-0035).
- * Maintains the public `isUiBearingSpec` API for backward compatibility.
  *
  * BR-0027-0001, BR-0027-0002, BR-0027-0012
  */

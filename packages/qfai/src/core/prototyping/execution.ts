@@ -70,7 +70,8 @@ export async function runPrototypingExecution(
   const resolvedSurface = recommendationSurface ?? classifiedSurface;
   if (!resolvedSurface) {
     throw new Error(
-      "surface field must be one of: web, mobile, desktop, cli, mixed. Non-UI targets must not run prototyping execution.",
+      "ui_bearing: false specs must not invoke prototyping execution. " +
+        "surface field must be one of: web, mobile, desktop, cli, mixed.",
     );
   }
   const surface: PrototypingSurface = assertCanonicalPrototypingSurface(resolvedSurface);
