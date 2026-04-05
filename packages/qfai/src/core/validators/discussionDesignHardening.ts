@@ -18,7 +18,7 @@ const PLACEHOLDER_RE = /^(?:tbd|todo|n\/a|na|xxx|\?\?\?|placeholder)$/i;
 
 const DDH_SIDECAR_PRIMARY_TRUTH = "UIX-VAL-DDH-SIDECAR-PRIMARY-TRUTH";
 const DDH_OPTION_COMPARISON = "UIX-VAL-DDH-OPTION-COMPARISON";
-const DDH_SELECTED_DIRECTION = "UIX-VAL-DDH-SELECTED-DIRECTION";
+const DDH_SELECTED_ANCHOR = "UIX-VAL-DDH-SELECTED-ANCHOR";
 const DDH_COMPETITIVE_REFERENCES = "UIX-VAL-DDH-COMPETITIVE-REFERENCES";
 const DDH_INTERACTION_HANDOFF = "UIX-VAL-DDH-INTERACTION-HANDOFF";
 const DDH_STATE_COVERAGE = "UIX-VAL-DDH-STATE-COVERAGE";
@@ -179,25 +179,25 @@ export async function validateOptionComparison(packRoot: string): Promise<Issue[
 }
 
 // ---------------------------------------------------------------------------
-// Discussion hardening: Selected direction
+// Discussion hardening: Selected anchor
 // ---------------------------------------------------------------------------
 
 /**
  * Validate that 31_selected_anchor_screen.md contains the selected option
  * and rationale. Direction selection has moved from 30 to 31.
  */
-export async function validateSelectedDirection(packRoot: string): Promise<Issue[]> {
+export async function validateSelectedAnchor(packRoot: string): Promise<Issue[]> {
   const issues: Issue[] = [];
   const anchorPath = path.join(packRoot, "uiux", "31_selected_anchor_screen.md");
   const content = await readSafe(anchorPath);
   if (!content) {
     issues.push(
       canonicalIssue(
-        DDH_SELECTED_DIRECTION,
+        DDH_SELECTED_ANCHOR,
         "Selected Anchor: 31_selected_anchor_screen.md not found or empty. Create the file with selected_option, why_selected, and rejected/deferred options",
         "error",
         "uiux/31_selected_anchor_screen.md",
-        "ddh.selectedDirection",
+        "ddh.selectedAnchor",
       ),
     );
     return issues;
@@ -206,11 +206,11 @@ export async function validateSelectedDirection(packRoot: string): Promise<Issue
   if (!/selected_option\s*:/i.test(content)) {
     issues.push(
       canonicalIssue(
-        DDH_SELECTED_DIRECTION,
+        DDH_SELECTED_ANCHOR,
         "Selected Anchor: selected_option field not found in 31_selected_anchor_screen.md",
         "error",
         "uiux/31_selected_anchor_screen.md",
-        "ddh.selectedDirection.noOption",
+        "ddh.selectedAnchor.noOption",
       ),
     );
   }
@@ -218,11 +218,11 @@ export async function validateSelectedDirection(packRoot: string): Promise<Issue
   if (!/why_selected\s*:/i.test(content)) {
     issues.push(
       canonicalIssue(
-        DDH_SELECTED_DIRECTION,
+        DDH_SELECTED_ANCHOR,
         "Selected Anchor: why_selected field not found in 31_selected_anchor_screen.md",
         "error",
         "uiux/31_selected_anchor_screen.md",
-        "ddh.selectedDirection.noRationale",
+        "ddh.selectedAnchor.noRationale",
       ),
     );
   }
@@ -578,7 +578,7 @@ export async function validateDesignAntiGoals(packRoot: string): Promise<Issue[]
  * v1.7.14: Rewritten for sidecar-first model.
  * - Sidecar family primary truth
  * - Option comparison (30_option_comparison.md)
- * - Selected direction (30_option_comparison.md)
+ * - Selected anchor (31_selected_anchor_screen.md)
  * - Competitive references (04_Sources.md)
  * - Primary action handoff clarity (Behavior Obligations discovery surface)
  * - State handoff quality (Behavior Obligations -> 40_screen_contracts.md SSOT)
@@ -603,7 +603,7 @@ export async function validateDiscussionDesignHardening(
   const issues: Issue[] = [];
   issues.push(...(await validateSidecarPrimaryTruth(packRoot)));
   issues.push(...(await validateOptionComparison(packRoot)));
-  issues.push(...(await validateSelectedDirection(packRoot)));
+  issues.push(...(await validateSelectedAnchor(packRoot)));
   issues.push(...(await validateCompetitiveRefs(packRoot)));
   issues.push(...(await validateInteractionPriorityHandoff(packRoot)));
   issues.push(...(await validateStateCoverage(packRoot)));

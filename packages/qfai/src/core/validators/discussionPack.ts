@@ -3,6 +3,7 @@ import path from "node:path";
 
 import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
+import { readClassificationBlock } from "../detection/surfaceType.js";
 import { inspectLatestDiscussionPack } from "../discussionPack.js";
 import type { Issue } from "../types.js";
 import { issue } from "./utils.js";
@@ -72,19 +73,29 @@ export async function validateDiscussionPackReadiness(
   }
 
   if (readiness.missingFiles.length > 0 || readiness.missingSideArtifacts.length > 0) {
-    const allMissing = [...readiness.missingFiles, ...readiness.missingSideArtifacts];
-    issues.push(
-      issue(
-        "QFAI-DPACK-002",
-        `discussion-pack の必須ファイルが不足しています: ${allMissing.join(", ")}`,
-        "error",
-        readiness.latestPackDir,
-        "discussionPack.requiredFiles",
-        allMissing,
-        "change",
-        `不足ファイルを作成してください: ${allMissing.join(", ")}。prototyping.yaml は必須サイドアーティファクトです。`,
-      ),
-    );
+    // Classification-aware: skip prototyping.yaml check for non-UI packs
+    let effectiveMissingSideArtifacts: readonly string[] = readiness.missingSideArtifacts;
+    if (readiness.latestPackDir) {
+      const classification = await readClassificationBlock(readiness.latestPackDir);
+      if (classification && !classification.ui_bearing) {
+        effectiveMissingSideArtifacts = [];
+      }
+    }
+    const allMissing = [...readiness.missingFiles, ...effectiveMissingSideArtifacts];
+    if (allMissing.length > 0) {
+      issues.push(
+        issue(
+          "QFAI-DPACK-002",
+          `discussion-pack の必須ファイルが不足しています: ${allMissing.join(", ")}`,
+          "error",
+          readiness.latestPackDir,
+          "discussionPack.requiredFiles",
+          allMissing,
+          "change",
+          `不足ファイルを作成してください: ${allMissing.join(", ")}。UI-bearing latest discussion packs require prototyping.yaml.`,
+        ),
+      );
+    }
   }
 
   if (readiness.incompleteFiles.length > 0) {

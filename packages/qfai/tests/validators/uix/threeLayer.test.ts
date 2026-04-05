@@ -62,7 +62,7 @@ describe("3-layer validator", () => {
     expect(issues).toHaveLength(0);
   });
 
-  it("legacy warning", async () => {
+  it("legacy 4-axis format is error", async () => {
     const root = await newTempDir();
     await createUiBearingPack(root);
     // v1.7.6 style 4-axis format
@@ -91,7 +91,7 @@ describe("3-layer validator", () => {
 
     expect(issues.length).toBeGreaterThan(0);
     expect(issues[0]?.code).toBe("UIX-VAL-3LAYER-LEGACY-FORMAT");
-    expect(issues[0]?.severity).toBe("warning");
+    expect(issues[0]?.severity).toBe("error");
   });
 
   it("mixed error", async () => {

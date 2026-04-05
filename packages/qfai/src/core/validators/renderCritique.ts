@@ -110,7 +110,7 @@ export async function validateRenderCritique(root: string, config: QfaiConfig): 
           "renderCritique.sidecarMissing",
           undefined,
           "change",
-          "Reference selected direction/comparison, strategy, and screen contracts in the downstream skill prompt.",
+          "Reference selected anchor/comparison, strategy, and screen contracts in the downstream skill prompt.",
         ),
       );
     }
@@ -159,7 +159,7 @@ export async function validateRenderCritique(root: string, config: QfaiConfig): 
 
   // --- TDD-0003: Read order (QFAI-CRIT-005) ---
   // Sidecar-first model: require semantic tokens for strategy, taste/trend/evaluation inputs,
-  // selected direction, and screen contracts instead of old DDP-first wording.
+  // selected anchor, and screen contracts instead of old DDP-first wording.
   for (const sf of skillFiles) {
     const content = await readSafe(sf);
     if (content.length > 0) {
@@ -170,7 +170,7 @@ export async function validateRenderCritique(root: string, config: QfaiConfig): 
         (TASTE_RE.test(content) || TREND_RE.test(content)) && EVAL_FAMILY_RE.test(content);
       if (!hasSidecar || !hasStrategy || !hasContracts || !hasTasteTrendFamily) {
         const missing: string[] = [];
-        if (!hasSidecar) missing.push("sidecar/selected direction");
+        if (!hasSidecar) missing.push("sidecar/selected anchor");
         if (!hasStrategy) missing.push("strategy");
         if (!hasTasteTrendFamily) missing.push("taste/trend/3-layer evaluation family");
         if (!hasContracts) missing.push("contracts");
@@ -183,7 +183,7 @@ export async function validateRenderCritique(root: string, config: QfaiConfig): 
             "renderCritique.readOrder",
             undefined,
             "change",
-            "Specify read order with strategy, taste/trend plus 3-layer evaluation family, selected direction, and screen contracts.",
+            "Specify read order with strategy, taste/trend plus 3-layer evaluation family, selected anchor, and screen contracts.",
           ),
         );
       }

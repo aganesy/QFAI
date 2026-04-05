@@ -63,7 +63,7 @@ export type ValidationWaiverEntry = {
   expires: string;
   evidence: string;
   owner?: string;
-  // backward-compatible aliases for historical report consumers
+  // optional aliases emitted in waiver serialization
   rule_id?: string;
   expires_on?: string;
 };
@@ -81,7 +81,7 @@ export type ValidationWaivers = {
 
 export type ValidationResult = {
   toolVersion: string;
-  // optional to keep backward compatibility with validate.json from older versions
+  // optional because this report section is emitted only when phase is specified
   phase?: ValidationPhase;
   issues: Issue[];
   counts: ValidationCounts;

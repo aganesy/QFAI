@@ -48,7 +48,7 @@ Canonical field names (must match `23_design_eval_aggregate.md`):
 ### Trend-derived conversion check
 
 - Trend scan results are converted to scoring axes
-- Trend scan results are reflected in selected direction
+- Trend scan results are reflected in selected anchor
 - Stale / overused AI slop avoidance is reflected in comparison and selection
 
 ## Aggregate Review Focus

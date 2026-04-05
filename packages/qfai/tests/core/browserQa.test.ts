@@ -78,7 +78,7 @@ describe("runBrowserQaOrchestrated", () => {
     expect(result.phases).toHaveLength(4);
     for (const p of result.phases) {
       expect(p.status).toBe("skipped");
-      expect(p.skippedReason).toContain("non-ui");
+      expect(p.skippedReason).toContain("does not require Browser QA");
     }
   });
 

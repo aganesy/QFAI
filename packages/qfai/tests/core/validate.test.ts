@@ -1419,8 +1419,8 @@ async function seedDiscussionPackFixtures(root: string): Promise<void> {
         "",
         "Review request for discussion pack baseline validator fixtures.",
         "This file captures the review scope and expected reviewers.",
-        "Selected direction: verify `uiux/31_selected_anchor_screen.md` selected_option is populated and references a compared option.",
-        "Strategy alignment: verify `uiux/10_implementation_strategy.md` chosen_option matches the selected direction.",
+        "Selected anchor: verify `uiux/31_selected_anchor_screen.md` selected_option is populated and references a compared option.",
+        "Strategy alignment: verify `uiux/10_implementation_strategy.md` chosen_option matches the selected anchor.",
         "Verify screen contracts use all 4 required states (default/loading/empty/error).",
         "",
       ],
@@ -1469,7 +1469,7 @@ async function seedDiscussionPackFixtures(root: string): Promise<void> {
         "- known_risks: Limited customization for highly bespoke brand expression; dependency on library release cadence.",
         "- fit_for_this_product: Dashboard-focused product benefits from pre-built data display and action components.",
         "- verification_expectations: Check responsive layout and task completion behavior.",
-        "- notes_for_reviewer: Focus on selected direction consistency.",
+        "- notes_for_reviewer: Focus on selected anchor consistency.",
       ],
     },
     {
@@ -1505,7 +1505,7 @@ async function seedDiscussionPackFixtures(root: string): Promise<void> {
         "Confirm dashboard density on smaller screens.",
         "",
         "## taste_reflection_depth",
-        "These answers should be reflected in selected direction and contracts.",
+        "These answers should be reflected in selected anchor and contracts.",
       ],
     },
     {

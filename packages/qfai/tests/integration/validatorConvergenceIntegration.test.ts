@@ -90,12 +90,12 @@ describe("TC-0004-0018: 3-layer family filename expectations", () => {
 });
 
 // ---------------------------------------------------------------------------
-// TC-0004-0019: Old 4-axis file migration warning
+// TC-0004-0019: Old 4-axis format is error
 // ---------------------------------------------------------------------------
 
 // QFAI:SPEC-0004:TC-0004-0019
-describe("TC-0004-0019: Old 4-axis file migration warning", () => {
-  it("4-axis content in eval files triggers legacy format warning", async () => {
+describe("TC-0004-0019: Old 4-axis format is error", () => {
+  it("4-axis content in eval files triggers legacy format error", async () => {
     const root = await newTempDir();
     await createUiBearingPack(root);
 
@@ -111,7 +111,9 @@ describe("TC-0004-0019: Old 4-axis file migration warning", () => {
     }
 
     const issues = await validateThreeLayerModel(root, defaultConfig);
-    expect(issues.some((i) => i.code === "UIX-VAL-3LAYER-LEGACY-FORMAT")).toBe(true);
+    const legacyIssue = issues.find((i) => i.code === "UIX-VAL-3LAYER-LEGACY-FORMAT");
+    expect(legacyIssue).toBeDefined();
+    expect(legacyIssue?.severity).toBe("error");
   });
 });
 

@@ -14,11 +14,11 @@ const CONTEXT_FILES = {
 const DISCUSSION_PACK_PATTERN = /^discussion-(\d{17}|\d{4})$/i;
 
 /**
- * requirements context validator (legacy + v1.4.2 package mode).
+ * requirements context validator (v1.4.2+ package mode).
  *
  * Goals:
  * - Treat REQUIRE-XXXX packages as first-class inputs.
- * - Keep legacy glossary/actors/business-flows checks for backward compatibility.
+ * - Validate required glossary, actors, and business-flow inputs used by the current report contract.
  */
 export async function validateRequirementsContext(
   root: string,

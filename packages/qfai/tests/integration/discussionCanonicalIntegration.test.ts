@@ -590,7 +590,7 @@ describe("3-layer evaluation model", () => {
   });
 
   // TC-0002-0011
-  it("TC-0002-0011: v1.7.6 4-axis format emits deprecation warning", async () => {
+  it("TC-0002-0011: v1.7.6 4-axis format emits error", async () => {
     const root = await newTempDir();
     await createUiBearingPack(root);
     const content = [
@@ -616,10 +616,10 @@ describe("3-layer evaluation model", () => {
 
     const issues = await validateThreeLayerModel(root, defaultConfig);
 
-    const warnings = issues.filter((i) => i.severity === "warning");
-    expect(warnings.length).toBeGreaterThan(0);
-    const deprecation = warnings.find((i) => i.message.match(/4-axis|deprecat/i));
-    expect(deprecation).toBeDefined();
+    const errors = issues.filter((i) => i.severity === "error");
+    expect(errors.length).toBeGreaterThan(0);
+    const legacyErr = errors.find((i) => i.message.match(/4-axis|not allowed/i));
+    expect(legacyErr).toBeDefined();
   });
 
   // TC-0002-0012

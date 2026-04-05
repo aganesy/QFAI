@@ -87,15 +87,14 @@ export async function validateThreeLayerModel(root: string, _config: QfaiConfig)
     ];
   }
 
-  // Pure 4-axis format is downgraded to warning because existing packs
-  // created before the 3-layer model may still use it. New packs generated
-  // by current init assets always use the 3-layer model.
+  // Pure 4-axis format is a canonical violation in v1.7.14.
+  // Use the 3-layer model (invariant / trend-derived / product-specific).
   if (hasFourAxis && !hasThreeLayer) {
     return [
       threeLayerIssue(
         "UIX-VAL-3LAYER-LEGACY-FORMAT",
-        "4-axis evaluation format detected (usability/consistency/accessibility/delight). Upgrade to 3-layer model.",
-        "warning",
+        "Legacy 4-axis evaluation format is not allowed in v1.7.14; use canonical 3-layer evaluation.",
+        "error",
         relPath,
         "Migrate evaluation axes to 3-layer model: invariant, trend-derived, product-specific.",
       ),

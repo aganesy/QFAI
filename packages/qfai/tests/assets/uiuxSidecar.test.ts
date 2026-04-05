@@ -194,14 +194,14 @@ describe("uiux sidecar templates", { timeout: 15000 }, () => {
     const content = await readFile(skillMdPath, "utf-8");
     expect(content).toContain("strategy");
     expect(content).toMatch(/scoring ax[ei]s/i);
-    expect(content).toMatch(/comparison completed|selected direction/i);
+    expect(content).toMatch(/comparison completed|selected anchor/i);
     expect(content).toMatch(/contracts?\s+(drafted|defined|contains)/i);
   });
 
-  // TDD-0012: TC-0002-0010 — non-UI completion unchanged
-  it("SKILL.md states non-UI completion conditions unchanged from v1.7.2", async () => {
+  // TDD-0012: TC-0002-0010 — non-UI completion
+  it("SKILL.md states non-UI completion conditions", async () => {
     const content = await readFile(skillMdPath, "utf-8");
-    expect(content).toMatch(/non-ui.*unchanged|non-ui.*same.*completion|non-ui.*no additional/is);
+    expect(content).toMatch(/non-UI.*no.*completion.*conditions.*apply|non-UI.*not.*required/is);
   });
 
   // TDD-0023: TC-0002-0003 — non-UI skip documented

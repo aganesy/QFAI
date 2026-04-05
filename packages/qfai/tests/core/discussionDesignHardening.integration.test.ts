@@ -237,14 +237,14 @@ async function seedNonUiDiscussionPack(root: string): Promise<void> {
 
 describe("Discussion Design Hardening — Integration", { timeout: 30000 }, () => {
   // TDD-0025: TC-0002-0025
-  it("Review-Request template has Selected Direction Consistency section", async () => {
+  it("Review-Request template has Selected Anchor Consistency section", async () => {
     const templatePath = path.resolve(
       process.cwd(),
       "assets/init/.qfai/assistant/skills/qfai-discussion/templates/14_Review-Request.md",
     );
     const content = await readFile(templatePath, "utf-8");
-    expect(content).toContain("## Selected Direction Consistency");
-    expect(content).toMatch(/selected direction/i);
+    expect(content).toContain("## Selected Anchor Consistency");
+    expect(content).toMatch(/selected anchor/i);
     expect(content).toMatch(/strategy alignment/i);
     expect(content).toMatch(/evaluation traceability/i);
   });
@@ -307,7 +307,7 @@ describe("Discussion Design Hardening — Integration", { timeout: 30000 }, () =
         (i) =>
           i.code === "UIX-VAL-DDH-SIDECAR-PRIMARY-TRUTH" ||
           i.code === "UIX-VAL-DDH-OPTION-COMPARISON" ||
-          i.code === "UIX-VAL-DDH-SELECTED-DIRECTION" ||
+          i.code === "UIX-VAL-DDH-SELECTED-ANCHOR" ||
           i.code === "UIX-VAL-DDH-COMPETITIVE-REFERENCES" ||
           i.code === "UIX-VAL-DDH-INTERACTION-HANDOFF" ||
           i.code === "UIX-VAL-DDH-STATE-COVERAGE" ||
@@ -346,7 +346,7 @@ describe("Discussion Design Hardening — Integration", { timeout: 30000 }, () =
         [
           "UIX-VAL-DDH-SIDECAR-PRIMARY-TRUTH",
           "UIX-VAL-DDH-OPTION-COMPARISON",
-          "UIX-VAL-DDH-SELECTED-DIRECTION",
+          "UIX-VAL-DDH-SELECTED-ANCHOR",
           "UIX-VAL-DDH-COMPETITIVE-REFERENCES",
           "UIX-VAL-DDH-INTERACTION-HANDOFF",
           "UIX-VAL-DDH-STATE-COVERAGE",

@@ -62,7 +62,7 @@ import {
   isUiBearing,
   validateSidecarPrimaryTruth,
   validateOptionComparison,
-  validateSelectedDirection,
+  validateSelectedAnchor,
   validateCompetitiveRefs,
   validateInteractionPriorityHandoff,
   validateStateCoverage,
@@ -386,10 +386,10 @@ describe("UIX-VAL-DDH-OPTION-COMPARISON: Option comparison", () => {
 });
 
 // ---------------------------------------------------------------------------
-// TC-0002-0010..0011: validateSelectedDirection (UIX-VAL-DDH-SELECTED-DIRECTION)
+// TC-0002-0010..0011: validateSelectedAnchor (UIX-VAL-DDH-SELECTED-ANCHOR)
 // ---------------------------------------------------------------------------
 
-describe("UIX-VAL-DDH-SELECTED-DIRECTION: Selected direction", () => {
+describe("UIX-VAL-DDH-SELECTED-ANCHOR: Selected anchor", () => {
   // TC-0002-0010
   it("TC-0002-0010: valid 31_selected_anchor_screen.md with selected_option and why_selected passes", async () => {
     const root = await newTempDir();
@@ -400,7 +400,7 @@ describe("UIX-VAL-DDH-SELECTED-DIRECTION: Selected direction", () => {
       "utf-8",
     );
 
-    const issues = await validateSelectedDirection(root);
+    const issues = await validateSelectedAnchor(root);
 
     expect(issues).toHaveLength(0);
   });
@@ -411,10 +411,10 @@ describe("UIX-VAL-DDH-SELECTED-DIRECTION: Selected direction", () => {
     await mkdir(path.join(root, "uiux"), { recursive: true });
     // No 31_selected_anchor_screen.md created
 
-    const issues = await validateSelectedDirection(root);
+    const issues = await validateSelectedAnchor(root);
 
     expect(issues.length).toBeGreaterThan(0);
-    expect(issues[0]?.code).toBe("UIX-VAL-DDH-SELECTED-DIRECTION");
+    expect(issues[0]?.code).toBe("UIX-VAL-DDH-SELECTED-ANCHOR");
   });
 });
 
@@ -669,7 +669,7 @@ describe("Review-Request and Delta log content", () => {
       "",
       "## Design Direction Decisions",
       "",
-      "- Selected Direction: Option A (tab navigation) chosen for mobile familiarity",
+      "- Selected Anchor: Option A (tab navigation) chosen for mobile familiarity",
       "- Rejection: Option B (drawer) rejected — hidden navigation increases onboarding time",
       "- Adopted: Competitor Alpha onboarding flow adapted for single-page layout",
     ].join("\n");
@@ -678,7 +678,7 @@ describe("Review-Request and Delta log content", () => {
     const content = await readFile(path.join(root, "14_Review-Request.md"), "utf-8");
 
     expect(content).toMatch(/Design Direction Decisions/);
-    expect(content).toMatch(/Selected Direction/);
+    expect(content).toMatch(/Selected Anchor/);
     expect(content).toMatch(/[Rr]ejection|[Rr]ejected/);
     expect(content).toMatch(/[Aa]dopted/);
   });
@@ -735,7 +735,7 @@ describe("SKILL.md and template documentation", () => {
     expect(content).toMatch(/30_option_comparison\.md/);
     expect(content).toMatch(/31_selected_anchor_screen\.md/);
     expect(content).toMatch(/40_screen_contracts\.md/);
-    expect(content).toMatch(/Selected Direction|selected direction|selected_option/i);
+    expect(content).toMatch(/Selected Anchor|selected anchor|selected_option/i);
     expect(content).toMatch(/Competitive Reference Registry/);
   });
 
@@ -772,7 +772,7 @@ describe("Validation pipeline integration", () => {
     const allIssues = [
       ...(await validateSidecarPrimaryTruth(root)),
       ...(await validateOptionComparison(root)),
-      ...(await validateSelectedDirection(root)),
+      ...(await validateSelectedAnchor(root)),
       ...(await validateCompetitiveRefs(root)),
       ...(await validateInteractionPriorityHandoff(root)),
       ...(await validateStateCoverage(root)),
@@ -809,7 +809,7 @@ describe("Validation pipeline integration", () => {
     await Promise.all([
       validateSidecarPrimaryTruth(root),
       validateOptionComparison(root),
-      validateSelectedDirection(root),
+      validateSelectedAnchor(root),
       validateCompetitiveRefs(root),
       validateInteractionPriorityHandoff(root),
       validateStateCoverage(root),
@@ -1042,6 +1042,6 @@ describe("SKILL.md 3-layer model verification", () => {
 
     // Verify non-ui section explicitly states exemption
     expect(content).toMatch(/[Nn]on-ui.*completion|[Nn]on-UI Completion/i);
-    expect(content).toMatch(/[Nn]o additional UI\/UX conditions|unchanged from prior/i);
+    expect(content).toMatch(/[Nn]o additional UI\/UX.*conditions|unchanged from prior/i);
   });
 });

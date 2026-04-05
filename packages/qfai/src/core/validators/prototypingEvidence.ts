@@ -1576,8 +1576,8 @@ async function validateUiFidelity(
   }
 
   // QFAI-PROT-242: missing markers (error when expected.elements > 0 and markers are present)
-  // v1.4.38: autogen now handles backward-compatible marker matching (both id-based and
-  // label-based forms) during evidence generation. The validator simply checks missing.markers.
+  // v1.4.38: autogen handles both id-based and label-based marker matching during
+  // evidence generation. The validator simply checks missing.markers.
   const screensWithMissingMarkers = uiFidelity.screens.filter(
     (screen) =>
       screen.expected.elements > 0 && screen.missing?.markers && screen.missing.markers.length > 0,
@@ -1807,7 +1807,7 @@ function collectUiFidelityMismatchRefs(mismatches: UiFidelityMismatch[]): string
       const labels = mismatch.contractElementLabels.join("|");
       refs.add(`contract_element_labels=${labels}`);
       refs.add(`contract_element_labels_by_contract_route=${contractRoute}:${labels}`);
-      // backward-compatible alias: historical consumers parse missing_labels.
+      // alias: downstream consumers parse missing_labels.
       refs.add(`missing_labels=${labels}`);
       refs.add(`missing_labels_by_contract_route=${contractRoute}:${labels}`);
     }

@@ -47,9 +47,9 @@ describe("init assistant guidance: canonical model alignment", () => {
     expect(content).not.toMatch(/\bDDP\b/);
   });
 
-  it("frontend-engineer.md references selected direction and strategy", async () => {
+  it("frontend-engineer.md references selected anchor and strategy", async () => {
     const content = await readFile(path.join(agentsDir, "frontend-engineer.md"), "utf-8");
-    expect(content).toMatch(/selected direction/i);
+    expect(content).toMatch(/selected anchor/i);
     expect(content).toMatch(/strategy/i);
     expect(content).toMatch(/screen contracts/i);
   });
@@ -57,7 +57,7 @@ describe("init assistant guidance: canonical model alignment", () => {
   it("frontend-engineer.md mission uses sidecar-first wording instead of UI contracts as primary truth", async () => {
     const content = await readFile(path.join(agentsDir, "frontend-engineer.md"), "utf-8");
     expect(content).toMatch(
-      /Implement frontend behavior aligned with selected direction, strategy, screen contracts, and product experience decisions\./i,
+      /Implement frontend behavior aligned with selected anchor, strategy, screen contracts, and product experience decisions\./i,
     );
     expect(content).not.toMatch(
       /Implement frontend behavior aligned with specs, UI contracts, and product experience decisions\./i,
@@ -82,7 +82,7 @@ describe("init assistant guidance: canonical model alignment", () => {
       path.join(agentsDir, "product-experience-architect.md"),
       "utf-8",
     );
-    expect(content).toMatch(/selected direction/i);
+    expect(content).toMatch(/selected anchor/i);
     expect(content).toMatch(/strategy/i);
     expect(content).toMatch(/screen contracts/i);
     expect(content).toMatch(/evaluation sidecars/i);
@@ -101,7 +101,7 @@ describe("init assistant guidance: canonical model alignment", () => {
   it("agent-catalog.yml uses sidecar-first mission wording for frontend-engineer", async () => {
     const content = await readFile(path.join(steeringDir, "agent-catalog.yml"), "utf-8");
     expect(content).toMatch(
-      /mission:\s*Implement frontend behavior aligned with selected direction, strategy, screen contracts, and product-surface decisions\./i,
+      /mission:\s*Implement frontend behavior aligned with selected anchor, strategy, screen contracts, and product-surface decisions\./i,
     );
     expect(content).not.toMatch(
       /mission:\s*Implement frontend behavior aligned with specs, UI contracts, and product-surface decisions\./i,

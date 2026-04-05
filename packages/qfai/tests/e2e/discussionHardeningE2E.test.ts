@@ -110,14 +110,14 @@ describe("US-0002-0003: Option comparison validation", () => {
 });
 
 // ---------------------------------------------------------------------------
-// US-0002-0004: Selected direction
+// US-0002-0004: Selected anchor
 // ---------------------------------------------------------------------------
 
 // QFAI:SPEC-0002:US-0002-0004
-describe("US-0002-0004: Selected direction", () => {
-  it("SKILL.md documents Selected Direction in uiux/31_selected_anchor_screen.md", async () => {
+describe("US-0002-0004: Selected anchor", () => {
+  it("SKILL.md documents selected anchor in uiux/31_selected_anchor_screen.md", async () => {
     const c = await loadSkill();
-    expect(c).toMatch(/Selected Direction/);
+    expect(c).toMatch(/selected anchor/i);
     expect(c).toMatch(/31_selected_anchor_screen\.md/);
   });
 });
@@ -146,11 +146,11 @@ describe("US-0002-0005: Competitive reference validation", () => {
 // ---------------------------------------------------------------------------
 
 // QFAI:SPEC-0002:US-0002-0006
-describe("US-0002-0006: Review-Request selected direction consistency", () => {
-  it("SKILL.md requires selected direction review in 14_Review-Request.md", async () => {
+describe("US-0002-0006: Review-Request selected anchor consistency", () => {
+  it("SKILL.md requires selected anchor review in 14_Review-Request.md", async () => {
     const c = await loadSkill();
     expect(c).toMatch(/14_Review-Request\.md/);
-    expect(c).toMatch(/selected direction|chosen_option/i);
+    expect(c).toMatch(/selected anchor|chosen_option/i);
   });
 });
 

@@ -30,18 +30,18 @@ export const CANONICAL_REVIEW_ITEMS: readonly ReviewItem[] = [
     id: "taste-reflection-quality",
     name: "Taste Reflection Quality",
     description:
-      "Evaluates whether taste interview responses are reflected in selected direction, strategy, and evaluation artifacts.",
+      "Evaluates whether taste interview responses are reflected in selected anchor, strategy, and evaluation artifacts.",
     evaluationCriteria: [
-      "Presence of taste themes in selected direction / 3-layer evaluation family",
+      "Presence of taste themes in selected anchor / 3-layer evaluation family",
       "Specificity of reflection vs generic parroting",
-      "Taste interview sections are reflected across selected direction, strategy, and evaluation layers",
+      "Taste interview sections are reflected across selected anchor, strategy, and evaluation layers",
     ],
   },
   {
     id: "anti-preference-enforcement",
     name: "Anti-Preference Enforcement",
     description:
-      "Verifies anti-preferences from the taste interview are excluded from selected direction and strategy decisions.",
+      "Verifies anti-preferences from the taste interview are excluded from selected anchor and strategy decisions.",
     evaluationCriteria: [
       "No anti-preference themes appear as positive design direction",
       "Explicit exclusion documentation present",

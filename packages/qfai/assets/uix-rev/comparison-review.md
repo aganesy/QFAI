@@ -9,7 +9,7 @@ Review only `30_option_comparison.md` as the option comparison artifact.
 - Evaluation criteria must reference the 3-layer evaluation family
 - Rejected/deferred options must have explicit rationale
 - Reconsideration conditions must be documented for deferred options
-- Do not move selected direction ownership back into `30_option_comparison.md`
+- Do not move selected anchor ownership back into `30_option_comparison.md`
 
 ### Trend-derived conversion check
 

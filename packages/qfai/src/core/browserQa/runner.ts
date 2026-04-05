@@ -80,7 +80,7 @@ export async function runBrowserQaOrchestrated(
         checks_performed: [
           `skipped Browser QA because surface '${input.surface}' is not UI-bearing`,
         ],
-        skippedReason: `non-ui surface '${input.surface}'`,
+        skippedReason: `surface '${input.surface}' does not require Browser QA`,
       })),
       provider: "none",
       timestamp,

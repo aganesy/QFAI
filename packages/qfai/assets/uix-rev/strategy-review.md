@@ -2,7 +2,7 @@
 
 Review the UI/UX strategy document (`10_implementation_strategy.md`) for completeness and quality.
 
-This review is scoped to strategy completeness only. Selected direction evaluation belongs to `comparison-review.md`.
+This review is scoped to strategy completeness only. Selected anchor evaluation belongs to `comparison-review.md`.
 
 ## Required Fields
 
@@ -19,7 +19,7 @@ This review is scoped to strategy completeness only. Selected direction evaluati
 
 - `chosen_option` must exist in `candidate_options`
 - `decision` and `chosen_option` should use coherent vocabulary
-- Strategy `decision` must be consistent with the selected direction in `31_selected_anchor_screen.md` (cross-reference only; SSOT judgment is in comparison-review)
+- Strategy `decision` must be consistent with the selected anchor in `31_selected_anchor_screen.md` (cross-reference only; SSOT judgment is in comparison-review)
 - Strategy must not contradict screen contracts in `40_screen_contracts.md`
 - `selection_required=false` with multiple `candidate_options` should be treated as a warning
 

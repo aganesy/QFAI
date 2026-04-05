@@ -5,6 +5,7 @@ import { parse as parseYaml } from "yaml";
 
 import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
+import { readClassificationBlock } from "../detection/surfaceType.js";
 import { CANONICAL_PROTOTYPING_SURFACES } from "../domain/surface.js";
 import { findLatestDiscussionPackDir } from "../discussionPack.js";
 import {
@@ -32,10 +33,15 @@ export async function validatePrototypingRecommendation(
   try {
     raw = await readFile(targetPath, "utf-8");
   } catch {
+    // Classification-aware: non-UI packs do not require prototyping.yaml
+    const classification = await readClassificationBlock(latestPackDir);
+    if (classification && !classification.ui_bearing) {
+      return [];
+    }
     return [
       issue(
         "QFAI-PROT-153",
-        "prototyping.yaml が discussion pack に見つかりません。15 required markdown files + required prototyping.yaml で discussion pack を完成させてください。",
+        "UI-bearing latest discussion packs require prototyping.yaml.",
         "error",
         latestPackDir,
         "prototypingRecommendation.missing",

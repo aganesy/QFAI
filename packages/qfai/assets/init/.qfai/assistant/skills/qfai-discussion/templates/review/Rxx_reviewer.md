@@ -14,9 +14,9 @@
 - [ ] Mermaid diagrams are sufficient for decisions (scope/AC/risk consistency)
 - [ ] Mermaid diagrams use ` ```mermaid ` fences only
 - [ ] Taste interview completeness (when UI-bearing)
-- [ ] Trend freshness and translation quality (when UI-bearing)
+- [ ] Trend freshness and evidence traceability (when UI-bearing)
 - [ ] 3-layer evaluation quality and traceability (when UI-bearing)
-- [ ] Option comparison integrity and selected direction clarity (when UI-bearing)
+- [ ] Option comparison integrity and selected anchor clarity (when UI-bearing)
 - [ ] Strong screen contract completeness (when UI-bearing)
 - [ ] OQ register exit condition (open count = 0)
 - [ ] Deferred items have full metadata
