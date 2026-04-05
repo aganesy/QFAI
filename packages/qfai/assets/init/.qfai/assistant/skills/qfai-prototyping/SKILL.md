@@ -132,6 +132,12 @@ Interpretation:
 - `.qfai/evidence/prototyping.json`
 - `.qfai/evidence/render.json` when render evidence is emitted or required by mode
 - `.qfai/evidence/browser-qa.json` when browser QA evidence is emitted or required by mode
+- `.qfai/evidence/browserQa.summary.json` when browser QA evidence is emitted or required by mode
+- `.qfai/evidence/browserQa.findings.json` when browser QA evidence is emitted or required by mode
+- `.qfai/evidence/browserQa.repairs.json` when browser QA evidence is emitted or required by mode
+- `.qfai/evidence/fullHarness.exit.json` when `mode.effective = full-harness`
+- `.qfai/evidence/fullHarness.handoff.json` when `mode.effective = full-harness`
+- `.qfai/evidence/fullHarness.fakeUiDetection.json` when `mode.effective = full-harness`
 - `Coverage Matrix` covering all specs
 - critique summary with `L1` / `L2` findings and disposition
 
@@ -151,7 +157,7 @@ Interpretation:
 ### full-harness obligations
 
 - always: `specs[]`, `meta.*`, `mode.*`, `fullHarness`
-- ui-bearing: `runtimeGate`, `.qfai/evidence/render.json`, `.qfai/evidence/browser-qa.json`, `uiFidelity`
+- ui-bearing: `runtimeGate`, `.qfai/evidence/render.json`, Browser QA bundle trio, `uiFidelity`
 - non-ui: UI-specific evidence remains n/a
 
 ## Full-harness minimum completeness
@@ -166,11 +172,20 @@ When `mode.effective = full-harness`, record:
 - `fullHarness.terminationReason`
 - `fullHarness.reviewerSignoff`
 - `fullHarness.scoringTrace`
+- `fullHarness.exit`
+- `fullHarness.handoff`
+- `fullHarness.fakeUiDetection`
 
 ## Canonical Bundles
 
 - render bundle: `.qfai/evidence/render.json`
 - browser QA bundle: `.qfai/evidence/browser-qa.json`
+- browser QA summary: `.qfai/evidence/browserQa.summary.json`
+- browser QA findings: `.qfai/evidence/browserQa.findings.json`
+- browser QA repairs: `.qfai/evidence/browserQa.repairs.json`
+- full-harness exit: `.qfai/evidence/fullHarness.exit.json`
+- full-harness handoff: `.qfai/evidence/fullHarness.handoff.json`
+- full-harness fake-UI detection: `.qfai/evidence/fullHarness.fakeUiDetection.json`
 
 Render bundle uses `captured | skipped | failed`.
 Browser QA bundle uses `completed | skipped | failed`.
