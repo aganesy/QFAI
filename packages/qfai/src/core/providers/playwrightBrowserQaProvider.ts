@@ -60,7 +60,14 @@ async function withPage<T>(
 }
 
 function completed(phase: BrowserQaPhaseResult["phase"]): BrowserQaPhaseResult {
-  return { phase, status: "executed", findings: [] };
+  return {
+    phase,
+    status: "executed",
+    findings: [],
+    repair_suggestions: [],
+    evidence_refs: [`provider:playwright:${phase}`],
+    checks_performed: [`playwright executed ${phase} checks`],
+  };
 }
 
 export function createPlaywrightBrowserQaProvider(): BrowserQaProvider {

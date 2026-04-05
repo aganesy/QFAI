@@ -1,3 +1,5 @@
+import type { CanonicalSurface } from "../domain/surface.js";
+
 export type PrototypingMode = "low-cost" | "standard" | "full-harness";
 
 export type ModeSelectionSource =
@@ -5,12 +7,9 @@ export type ModeSelectionSource =
   | "discussion-recommendation"
   | "system-default";
 
-export type PrototypingSurface = "web" | "mobile" | "desktop" | "cli" | "mixed" | "non-ui";
+export type PrototypingSurface = CanonicalSurface;
 
-/** @deprecated Legacy surface values — use canonical PrototypingSurface instead */
-export type LegacyPrototypingSurface = "web-ui" | "mobile-ui" | "desktop-ui";
-
-export type DiscussionRecommendationSourceSchema = "canonical-namespaced" | "legacy-top-level";
+export type DiscussionRecommendationSourceSchema = "canonical-namespaced";
 
 /**
  * Canonical validated recommendation — all 4 fields required.

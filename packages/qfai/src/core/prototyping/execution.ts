@@ -61,9 +61,8 @@ export async function runPrototypingExecution(
   const latestPack = await findLatestDiscussionPackDir(discussionRoot);
   const recommendation = await resolveLatestRecommendationArtifact(request.root, config);
   const classification = await readClassificationBlock(latestPack ?? request.root);
-  const surface = (classification?.primary_surface ??
-    recommendation.recommendation?.surface ??
-    "non-ui") as PrototypingSurface;
+  const surface: PrototypingSurface =
+    classification?.primary_surface ?? recommendation.recommendation?.surface ?? "non-ui";
   const modeSummary = resolvePrototypingMode({
     explicitMode: request.requestedMode,
     discussionRecommendation: recommendation.recommendation,
@@ -108,7 +107,7 @@ export async function runPrototypingExecution(
   const browserQaInput = await buildBrowserQaInput({
     renderResult,
     ...(targetUrl !== undefined ? { targetUrl } : {}),
-    surface: surface as SurfaceType,
+    surface,
     required: obligations.requireBrowserQaBundle,
   });
   const browserQaResult = await runBrowserQaOrchestrated(browserQaInput, browserQaProvider);
@@ -150,7 +149,7 @@ export async function runPrototypingExecution(
         requirements: ["Generated from qfai prototyping run"],
       },
       adapters: {
-        surface: surface as SurfaceType,
+        surface,
         render: {
           // eslint-disable-next-line @typescript-eslint/require-await
           captureEvidence: async () => renderResult,
@@ -180,6 +179,28 @@ export async function runPrototypingExecution(
         weightedTotal: entry.score,
         decision: entry.decision,
       })),
+    };
+    const evidencePaths = await writeEvidenceBundles({
+      root: request.root,
+      render: { result: renderResult, surface, mode: modeSummary.effective, generatedAt },
+      browserQa: { result: browserQaResult, mode: modeSummary.effective },
+      prototyping: summary,
+      fullHarnessArtifacts: {
+        fakeUiDetection: fullHarness.fakeUiDetection,
+        handoff: fullHarness.handoff,
+        exitReason: fullHarness.exitReason,
+      },
+    });
+
+    return {
+      mode: modeSummary.effective,
+      surface,
+      evidencePaths: {
+        prototyping: evidencePaths.prototypingPath,
+        render: evidencePaths.renderPath,
+        browserQa: evidencePaths.browserQaPath,
+      },
+      generatedAt,
     };
   }
 

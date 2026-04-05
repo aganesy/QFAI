@@ -56,7 +56,6 @@ import { resolveToolVersion } from "./version.js";
 import { readRenderEvidenceBundle, summarizeRenderEvidence } from "./uiux/renderEvidence.js";
 import { readBrowserQaBundle } from "./browserQa/index.js";
 import type { DiscussionModeRecommendation } from "./prototyping/types.js";
-import type { SurfaceType } from "./detection/surfaceType.js";
 
 export type ReportSummary = {
   specs: number;
@@ -289,7 +288,16 @@ export type ReportPrototypingSummary = {
       totalPassed: number;
       totalFailed: number;
     };
-    phaseSummary?: Record<string, { passed: number; failed: number }>;
+    phaseSummary?: Record<
+      string,
+      {
+        status: string;
+        findingsCount: number;
+        checksCount: number;
+        passed?: number;
+        failed?: number;
+      }
+    >;
     modeMismatch?: boolean;
   };
   calibration?: {
@@ -1808,22 +1816,19 @@ async function collectPrototypingSummary(
   let browserQaTotalFailed = 0;
   if (browserQaBundle?.findings) {
     for (const finding of browserQaBundle.findings) {
-      browserQaCounts[finding.severity] += 1;
-      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-      if (finding.category) {
-        browserQaCategoryCounts[finding.category] =
-          (browserQaCategoryCounts[finding.category] ?? 0) + 1;
-      }
+      const severity = finding.severity === "warn" ? "warning" : finding.severity;
+      browserQaCounts[severity] += 1;
+      const category = finding.category ?? finding.phase;
+      browserQaCategoryCounts[category] = (browserQaCategoryCounts[category] ?? 0) + 1;
     }
   }
   if (browserQaBundle?.browserQa.summary) {
     const summary = browserQaBundle.browserQa.summary;
     for (const category of ["smoke", "interaction", "visual", "accessibility"] as const) {
       const bucket = summary[category];
-      if (bucket) {
-        browserQaTotalPassed += bucket.passed;
-        browserQaTotalFailed += bucket.failed;
-      }
+      browserQaTotalPassed +=
+        bucket.passed ?? (bucket.status === "passed" || bucket.status === "executed" ? 1 : 0);
+      browserQaTotalFailed += bucket.failed ?? (bucket.status === "failed" ? 1 : 0);
     }
   }
   const browserQaModeMismatch =
@@ -1869,7 +1874,7 @@ async function collectPrototypingSummary(
   const classificationBlock = await readClassificationBlock(root);
   const surfaceClassification: ReportPrototypingSummary["surfaceClassification"] = {
     primarySurface: surface,
-    uiBearing: isUiBearingSurfaceType(surface as SurfaceType),
+    uiBearing: isUiBearingSurfaceType(surface),
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
     ...(classificationBlock?.secondary_surfaces?.length
       ? { secondarySurfaces: classificationBlock.secondary_surfaces }

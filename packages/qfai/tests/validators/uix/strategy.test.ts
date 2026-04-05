@@ -16,29 +16,49 @@ async function newTempDir(): Promise<string> {
 }
 
 async function createUiBearingPack(root: string): Promise<void> {
-  await writeFile(path.join(root, "01_Spec.md"), "# Spec\n\n- surface: web-ui\n", "utf-8");
+  await writeFile(path.join(root, "01_Spec.md"), "# Spec\n\n- surface: web\n", "utf-8");
   await mkdir(path.join(root, "uiux"), { recursive: true });
 }
 
-function strategyContent(overrides: Record<string, string> = {}): string {
+function strategyContent(
+  overrides: Partial<{
+    surface: string;
+    selection_required: string;
+    decision: string;
+    candidate_options: string[];
+    chosen_option: string;
+    rationale: string[];
+    verification_expectations: string[];
+    notes_for_reviewer: string[];
+  }> = {},
+): string {
   const base = {
     surface: "web",
+    selection_required: "true",
     decision: "component-library",
-    why_this_strategy: "Matches the current product constraints and shipping needs.",
-    expected_strengths: "Predictable delivery speed and reuse of proven patterns.",
-    known_risks: "Can constrain visual originality if left ungoverned.",
-    fit_for_this_product: "Supports the existing web surface and review process.",
+    candidate_options: ["component-library", "bespoke"],
+    chosen_option: "component-library",
+    rationale: ["Matches the current product constraints and shipping needs."],
+    verification_expectations: ["Primary task should stay obvious on first view."],
+    notes_for_reviewer: ["Focus on anchor-screen alignment and non-generic hierarchy."],
     ...overrides,
   };
+
   return [
     "# Strategy",
     "",
     `- surface: ${base.surface}`,
+    `- selection_required: ${base.selection_required}`,
     `- decision: ${base.decision}`,
-    `- why_this_strategy: ${base.why_this_strategy}`,
-    `- expected_strengths: ${base.expected_strengths}`,
-    `- known_risks: ${base.known_risks}`,
-    `- fit_for_this_product: ${base.fit_for_this_product}`,
+    "- candidate_options:",
+    ...base.candidate_options.map((value) => `  - ${value}`),
+    `- chosen_option: ${base.chosen_option}`,
+    "- rationale:",
+    ...base.rationale.map((value) => `  - ${value}`),
+    "- verification_expectations:",
+    ...base.verification_expectations.map((value) => `  - ${value}`),
+    "- notes_for_reviewer:",
+    ...base.notes_for_reviewer.map((value) => `  - ${value}`),
   ].join("\n");
 }
 
@@ -71,19 +91,17 @@ describe("validateStrategyStrong", () => {
     expect(issues.some((issue) => issue.code === "UIX-VAL-STRATEGY-LEGACY-FILENAME")).toBe(true);
   });
 
-  it("errors on invalid decision enum", async () => {
+  it("warns when decision and chosen_option diverge", async () => {
     const root = await newTempDir();
     await createUiBearingPack(root);
     await writeFile(
       path.join(root, "uiux", "10_implementation_strategy.md"),
-      strategyContent({ decision: "custom-framework" }),
+      strategyContent({ decision: "design-system" }),
       "utf-8",
     );
 
     const issues = await validateStrategyStrong(root, defaultConfig);
-    expect(issues.some((issue) => issue.code === "UIX-VAL-STRATEGY-NONCANONICAL-DECISION")).toBe(
-      true,
-    );
+    expect(issues.some((issue) => issue.code === "UIX-VAL-STRATEGY-DECISION-MISMATCH")).toBe(true);
   });
 
   it("errors on invalid surface enum", async () => {
@@ -96,7 +114,20 @@ describe("validateStrategyStrong", () => {
     );
 
     const issues = await validateStrategyStrong(root, defaultConfig);
-    expect(issues.some((issue) => issue.code === "UIX-VAL-STRATEGY-LEGACY-SURFACE")).toBe(true);
+    expect(issues.some((issue) => issue.code === "UIX-VAL-STRATEGY-INVALID-SURFACE")).toBe(true);
+  });
+
+  it("errors when chosen_option is not in candidate_options", async () => {
+    const root = await newTempDir();
+    await createUiBearingPack(root);
+    await writeFile(
+      path.join(root, "uiux", "10_implementation_strategy.md"),
+      strategyContent({ chosen_option: "native-pattern" }),
+      "utf-8",
+    );
+
+    const issues = await validateStrategyStrong(root, defaultConfig);
+    expect(issues.some((issue) => issue.code === "UIX-VAL-STRATEGY-CHOSEN-OPTION")).toBe(true);
   });
 
   it("non-UI skip", async () => {

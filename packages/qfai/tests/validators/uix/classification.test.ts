@@ -52,6 +52,20 @@ describe("validateClassification", () => {
     );
   });
 
+  it("rejects ui_bearing=true with non-ui surface", async () => {
+    const root = await newTempDir();
+    await writeFile(
+      path.join(root, "01_Context.md"),
+      completeContext().replace("- primary_surface: web", "- primary_surface: non-ui"),
+      "utf-8",
+    );
+
+    const issues = await validateClassification(root, defaultConfig);
+    expect(issues.some((issue) => issue.code === "UIX-VAL-CLASSIFICATION-CONTRADICTION")).toBe(
+      true,
+    );
+  });
+
   it("rejects empty classification_rationale", async () => {
     const root = await newTempDir();
     await writeFile(

@@ -1,45 +1,45 @@
-/**
- * Visual phase — validates visual consistency and layout concerns.
- */
-import type { BrowserQaInput, BrowserQaPhaseResult, BrowserQaFinding } from "../types.js";
+import { createBrowserQaFinding } from "../findings.js";
+import { collectRepairSuggestions } from "../repairSuggestions.js";
+import type { BrowserQaInput, BrowserQaPhaseResult } from "../types.js";
 
 export function runVisualPhase(input: BrowserQaInput): Promise<BrowserQaPhaseResult> {
-  const findings: BrowserQaFinding[] = [];
   const html = input.htmlContent ?? "";
+  const findings = [];
+  const checksPerformed = ["checked inline style density", "checked viewport meta tag"];
 
-  if (!html || html.trim().length === 0) {
-    return Promise.resolve({
-      phase: "visual",
-      status: "skipped",
-      findings: [],
-      skippedReason: "No HTML content provided",
-    });
-  }
-
-  // Check for inline styles (which hinder visual consistency)
   const inlineStyleCount = (html.match(/\bstyle="[^"]*"/gi) ?? []).length;
   if (inlineStyleCount > 5) {
-    findings.push({
-      phase: "visual",
-      severity: "warning",
-      message: `Excessive inline styles detected (${inlineStyleCount}). Consider using CSS classes for visual consistency.`,
-      target: "document",
-    });
+    findings.push(
+      createBrowserQaFinding(input, {
+        phase: "visual",
+        severity: "warning",
+        summary: "Inline style usage is excessive.",
+        detail: `Detected ${inlineStyleCount} inline style attributes, which weakens visual consistency.`,
+        evidenceRefs: ["html:style-attributes"],
+        repairSuggestions: ["Move repeated visual styling into shared CSS classes or tokens."],
+      }),
+    );
   }
-
-  // Check for viewport meta tag
   if (!/<meta[^>]*name=["']viewport["'][^>]*>/i.test(html)) {
-    findings.push({
-      phase: "visual",
-      severity: "warning",
-      message: "Missing viewport meta tag — may cause layout issues on mobile devices.",
-      selector: "meta[name=viewport]",
-    });
+    findings.push(
+      createBrowserQaFinding(input, {
+        phase: "visual",
+        severity: "warning",
+        summary: "Viewport meta tag is missing.",
+        detail: "Responsive rendering checks are unreliable without a viewport meta tag.",
+        selector: "meta[name=viewport]",
+        evidenceRefs: ["html:meta-viewport"],
+        repairSuggestions: ["Add a responsive viewport meta tag to the rendered document."],
+      }),
+    );
   }
 
   return Promise.resolve({
     phase: "visual",
-    status: "executed",
+    status: findings.some((finding) => finding.severity === "error") ? "failed" : "executed",
+    repair_suggestions: collectRepairSuggestions(findings),
+    evidence_refs: Array.from(new Set(findings.flatMap((finding) => finding.evidence_refs))),
+    checks_performed: checksPerformed,
     findings,
   });
 }

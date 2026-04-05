@@ -1,54 +1,65 @@
-/**
- * Interaction phase — validates interactive elements and form semantics.
- */
-import type { BrowserQaInput, BrowserQaPhaseResult, BrowserQaFinding } from "../types.js";
+import { createBrowserQaFinding } from "../findings.js";
+import { collectRepairSuggestions } from "../repairSuggestions.js";
+import type { BrowserQaInput, BrowserQaPhaseResult } from "../types.js";
 
 export function runInteractionPhase(input: BrowserQaInput): Promise<BrowserQaPhaseResult> {
-  const findings: BrowserQaFinding[] = [];
   const html = input.htmlContent ?? "";
+  const findings = [];
+  const checksPerformed = [
+    "checked forms for action wiring",
+    "checked buttons for explicit type",
+    "checked inputs for labeling",
+  ];
 
-  if (!html || html.trim().length === 0) {
-    return Promise.resolve({
-      phase: "interaction",
-      status: "skipped",
-      findings: [],
-      skippedReason: "No HTML content provided",
-    });
-  }
-
-  // Check for forms without action
   if (/<form(?![^>]*\baction=)[^>]*>/i.test(html)) {
-    findings.push({
-      phase: "interaction",
-      severity: "warning",
-      message: "Form element found without an action attribute.",
-      selector: "form",
-    });
+    findings.push(
+      createBrowserQaFinding(input, {
+        phase: "interaction",
+        severity: "warning",
+        summary: "Form action wiring is missing.",
+        detail:
+          "A form element was detected without an action attribute, which may break primary task completion.",
+        selector: "form",
+        evidenceRefs: ["html:form"],
+        repairSuggestions: [
+          "Provide a concrete action or an equivalent wired submit handler for the form.",
+        ],
+      }),
+    );
   }
-
-  // Check for buttons without type
   if (/<button(?![^>]*\btype=)[^>]*>/i.test(html)) {
-    findings.push({
-      phase: "interaction",
-      severity: "info",
-      message: "Button element found without explicit type attribute.",
-      selector: "button",
-    });
+    findings.push(
+      createBrowserQaFinding(input, {
+        phase: "interaction",
+        severity: "info",
+        summary: "Button type is implicit.",
+        detail: "A button was found without an explicit type attribute.",
+        selector: "button",
+        evidenceRefs: ["html:button"],
+        repairSuggestions: ["Add explicit type attributes to interactive buttons."],
+      }),
+    );
   }
-
-  // Check for inputs without labels
   if (/<input/i.test(html) && !/<label/i.test(html)) {
-    findings.push({
-      phase: "interaction",
-      severity: "warning",
-      message: "Input elements found but no label elements detected.",
-      selector: "input",
-    });
+    findings.push(
+      createBrowserQaFinding(input, {
+        phase: "interaction",
+        severity: "warning",
+        summary: "Inputs are missing labels.",
+        detail: "Input elements were detected but no label elements were found.",
+        selector: "input",
+        evidenceRefs: ["html:input", "html:label"],
+        repairSuggestions: ["Associate every input with a visible label or accessible name."],
+      }),
+    );
   }
 
   return Promise.resolve({
     phase: "interaction",
-    status: "executed",
+    status: findings.some((finding) => finding.severity === "error") ? "failed" : "executed",
+    repair_suggestions: collectRepairSuggestions(findings),
+    evidence_refs: Array.from(new Set(findings.flatMap((finding) => finding.evidence_refs))),
+    checks_performed: checksPerformed,
     findings,
   });
 }

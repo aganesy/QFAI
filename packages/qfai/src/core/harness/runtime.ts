@@ -8,6 +8,9 @@
 
 import { isUiBearingSurfaceType } from "../detection/surfaceType.js";
 import type { CritiqueAdapter } from "../critique/adapter.js";
+import { createFullHarnessHandoff, type FullHarnessHandoff } from "./handoff.js";
+import { detectFakeUi, type FakeUiDetectionResult } from "./fakeUiDetection.js";
+import { mapLoopStatusToExitReason, type FullHarnessExitReason } from "./exitReason.js";
 import { HarnessLoop } from "./loop.js";
 import type { HarnessConfig, LoopResult, SpecInputs } from "./types.js";
 import type { FullHarnessAdapters } from "./adapters.js";
@@ -28,6 +31,9 @@ export type FullHarnessResult = {
   output: FullHarnessOutput;
   evidence: ReturnType<typeof generateEvidence>;
   reviewSummary: ReturnType<typeof generateReviewSummary>;
+  fakeUiDetection: FakeUiDetectionResult;
+  exitReason: FullHarnessExitReason;
+  handoff: FullHarnessHandoff;
 };
 
 /**
@@ -94,6 +100,22 @@ export async function runFullHarness(request: FullHarnessRequest): Promise<FullH
 
   const evidence = generateEvidence(loopResult);
   const reviewSummary = generateReviewSummary(loopResult);
+  const fakeUiDetection = detectFakeUi({ renderResults, browserQaResults });
+  const exitReason = fakeUiDetection.detected
+    ? "fake-ui-detected"
+    : mapLoopStatusToExitReason(loopResult.terminationReason);
+  const handoff = createFullHarnessHandoff({
+    selectedBuild: loopResult.finalOutput.content,
+    artifactRefs: [
+      `run:${evidence.runId}`,
+      ...renderResults.flatMap((result) => result.filesWritten),
+    ],
+    exitReason,
+    outstandingIssues: fakeUiDetection.reasons,
+    requiredHumanReviewPoints: fakeUiDetection.detected
+      ? ["Verify that the selected build performs real state and route changes."]
+      : [],
+  });
 
-  return { loopResult, output, evidence, reviewSummary };
+  return { loopResult, output, evidence, reviewSummary, fakeUiDetection, exitReason, handoff };
 }

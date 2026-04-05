@@ -48,3 +48,9 @@ Canonical field names (must match `23_design_eval_aggregate.md`):
 - Trend scan results are converted to scoring axes
 - Trend scan results are reflected in selected direction
 - Stale / overused AI slop avoidance is reflected in comparison and selection
+
+## Aggregate Review Focus
+
+- Review axis quality, overlap, and minimum floors as a single aggregate system
+- Review `source_refs` and `goal_refs` linkage for every scored axis
+- Remove old aggregate vocabulary and keep wording aligned with `23_design_eval_aggregate.md`
