@@ -1,5 +1,6 @@
 name = "architecture-reviewer"
 description = "Review architecture and contract decisions for correctness, consistency, and rejected-option safety."
+sandbox_mode = "read-only"
 
 developer_instructions = '''
 ## Mission
@@ -58,5 +59,3 @@ developer_instructions = '''
 - Do not use as a substitute for implementation or planning work.
 - Do not use when another reviewer domain is the primary concern.
 '''
-
-sandbox_mode = "read-only"

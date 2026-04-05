@@ -83,3 +83,10 @@ CAP-0002 の多くは既に実装済みである。本 spec は設計意図と�
 
 - Vitest unit tests for sidecar structure validation
 - Parity tests for dogfood/init sync
+
+## v1.7.13 Implementation Notes
+
+- prototyping.yaml side artifact: `packages/qfai/src/core/discussionPack.ts` — REQUIRED_DISCUSSION_PACK_SIDE_ARTIFACTS, DiscussionPackReadiness.missingSideArtifacts
+- Discussion design hardening sidecar-first rewrite: `packages/qfai/src/core/validators/discussionDesignHardening.ts` — all 7 validators rewritten for uiux/ sidecar primary truth
+- Issue code migration: QFAI-DDP-019~025 → UIX-VAL-DDH-\* canonical codes
+- Status: implemented (v1.7.13-18..22)

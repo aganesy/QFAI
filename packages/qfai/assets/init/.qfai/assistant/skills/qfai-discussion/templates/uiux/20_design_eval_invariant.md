@@ -1,56 +1,68 @@
-# Evaluation Axis: Usability
+# Evaluation Layer: Invariant
 
 ## Layer Classification
 
 - Layer: invariant
 - Source: Universal UX heuristic (Nielsen)
 
-## Evaluation Criteria
+## Axes
 
-| Criterion        | Description                                      | Weight |
-| ---------------- | ------------------------------------------------ | ------ |
-| Learnability     | Time to complete core tasks for first-time users | High   |
-| Efficiency       | Steps required for frequent operations           | High   |
-| Error prevention | Safeguards against user mistakes                 | Medium |
-| Recovery         | Ease of recovering from errors                   | Medium |
+### Axis: [INV-01]
 
-## Measurement Approach
+- axis_id: INV-01
+- axis_name: [e.g., Learnability]
+- layer: invariant
+- origin: [e.g., Nielsen heuristic #2]
+- intent: [what this axis measures and why]
+- why_it_matters: [business/user impact of this axis]
+- score_scale: 1-5
+- score_anchors:
+  - low: [1 — description of poor performance]
+  - mid: [3 — description of acceptable performance]
+  - high: [5 — description of excellent performance]
+- positive_signals:
+  - [signal that indicates good performance on this axis]
+- negative_signals:
+  - [signal that indicates poor performance on this axis]
+- anti_patterns:
+  - [known anti-pattern to avoid]
+- evidence_required: [what evidence must be gathered to score this axis]
+- weight: [e.g., 0.20]
+- minimum_floor: [minimum acceptable score, e.g., 2]
+- source_refs:
+  - [reference to source material]
+- goal_refs:
+  - [reference to project goals this axis supports]
+- review_questions:
+  - [question a reviewer should ask when evaluating this axis]
 
-| Metric               | Method                   | Target             |
-| -------------------- | ------------------------ | ------------------ |
-| Task completion rate | Usability test (5 users) | >= 90%             |
-| Error rate           | Observation during tasks | <= 10%             |
-| Time on task         | Stopwatch measurement    | <= baseline \* 1.2 |
+### Axis: [INV-02]
 
-## Scoring Guide
+<!-- Repeat the schema above for each invariant axis -->
 
-- 5: Exceeds all targets with measurable margin
-- 4: Meets all targets
-- 3: Meets most targets with minor gaps
-- 2: Significant gaps in multiple criteria
-- 1: Fails most criteria
-
-## Trend-derived Axes
-
-<!-- Add trend-derived axes below. Each requires source_translation from research findings. -->
-
-| Criterion       | Source Translation                        | Description   | Weight   |
-| --------------- | ----------------------------------------- | ------------- | -------- |
-| (trend-derived) | (research finding → evaluation criterion) | (description) | (weight) |
-
-## Product-specific Axes
-
-<!-- Add product-specific axes below. These are unique to the project's domain. -->
-
-| Criterion          | Description   | Weight   |
-| ------------------ | ------------- | -------- |
-| (project-specific) | (description) | (weight) |
-
-## Aggregate Scoring Rules
-
-| Element       | Value                                            |
-| ------------- | ------------------------------------------------ |
-| Weights       | Invariant: 60%, Trend-derived: 25%, Product: 15% |
-| Normalization | Linear 1-5 scale per axis, weighted sum          |
-| Thresholds    | Accept >= 3.5, Refine 2.5-3.4, Pivot < 2.5       |
-| Stopping      | Stop when all axes scored and aggregate computed |
+- axis_id: INV-02
+- axis_name: [e.g., Error Prevention]
+- layer: invariant
+- origin: [source]
+- intent: [what this measures]
+- why_it_matters: [impact]
+- score_scale: 1-5
+- score_anchors:
+  - low: [1 — poor]
+  - mid: [3 — acceptable]
+  - high: [5 — excellent]
+- positive_signals:
+  - [signal]
+- negative_signals:
+  - [signal]
+- anti_patterns:
+  - [pattern]
+- evidence_required: [evidence]
+- weight: [weight]
+- minimum_floor: [floor]
+- source_refs:
+  - [ref]
+- goal_refs:
+  - [ref]
+- review_questions:
+  - [question]

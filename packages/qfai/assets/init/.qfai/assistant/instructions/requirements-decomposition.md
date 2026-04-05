@@ -18,9 +18,9 @@ This document is the decision rule SSOT for AI and humans when answering:
 
 ## Canonical order (top -> down)
 
-1. **Source registry** (`.qfai/require/require-*/01_Sources.md`)
-2. **Requirement index** (`.qfai/require/require-*/03_REQ.md`)
-3. **Input gaps / Open Questions** (`.qfai/require/require-*/08_OQ.md`)
+1. **Source registry** (`.qfai/discussion/discussion-*/04_Sources.md`)
+2. **Requirement index** (`.qfai/discussion/discussion-*/06_REQ.md`)
+3. **Input gaps / Open Questions** (`.qfai/discussion/discussion-*/11_OQ-Register.md`)
 4. **Policy layer** (`.qfai/specs/_policies/01..11`, including Slice Policy SSOT)
 5. **Capability slices** (`.qfai/specs/spec-*/01..05` minimum)
 6. **ATDD / TDD** (tests + code)
@@ -34,9 +34,9 @@ This document is the decision rule SSOT for AI and humans when answering:
 
 ### Rule 2 - Preserve layered ownership
 
-- `.qfai/require/` stores only source/index/gap inputs.
+- `.qfai/discussion/` stores only source/index/gap inputs.
 - `.qfai/specs/` is the SSOT for detailed behavior and design decisions.
-- Do not duplicate detailed spec text in `.qfai/require/`.
+- Do not duplicate detailed spec text in `.qfai/discussion/`.
 
 ### Rule 3 - Keep ambiguity explicit
 
@@ -45,9 +45,9 @@ This document is the decision rule SSOT for AI and humans when answering:
 
 ## How to decompose (mechanical procedure)
 
-1. Register source documents and assumptions in `.qfai/require/require-*/01_Sources.md`.
-2. Extract concise requirement index entries in `.qfai/require/require-*/03_REQ.md`.
-3. Capture missing information in `.qfai/require/require-*/08_OQ.md`.
+1. Register source documents and assumptions in `.qfai/discussion/discussion-*/04_Sources.md`.
+2. Extract concise requirement index entries in `.qfai/discussion/discussion-*/06_REQ.md`.
+3. Capture missing information in `.qfai/discussion/discussion-*/11_OQ-Register.md`.
 4. Build `_policies` layer (`Objective`, `Initiative`, `Capabilities`, `Business Flow`, and `11_Slice-Policy.md`).
 5. Define or refresh `_policies/11_Slice-Policy.md` before any create/update/delete slice decision.
 6. Split by the approved slice policy and produce slice files.
@@ -62,5 +62,5 @@ This document is the decision rule SSOT for AI and humans when answering:
 ## Non-goals
 
 - Managing release status flags in specs.
-- Keeping full requirement prose in `.qfai/require/`.
+- Keeping full requirement prose in `.qfai/discussion/`.
 - Treating diagrams as mandatory at require stage.

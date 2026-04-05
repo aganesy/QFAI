@@ -20,7 +20,10 @@
 - US-0004-0016: Canonical UIX validator aggregation - runAllUixValidators() を canonical aggregator 化（REQ-0011）
 - US-0004-0017: 3-layer テンプレートファミリーバリデータ整合 - 新 3-layer ファイル名・スキーマ期待（REQ-0012）
 - US-0004-0018: Truthful render-evidence state handling - プレースホルダー排除、truthful state 返却（REQ-0013）
-- US-0004-0019: Browser QA truthful implementation - minimal runner で truthful 報告（REQ-0014）
+- US-0004-0019: Browser QA truthful implementation - minimal runner で truthful 報告
+- US-0004-0020: Canonical/Legacy Validator Separation
+- US-0004-0021: IssueCategory Discrimination
+- US-0004-0022: Prototyping Recommendation Validation（REQ-0014）
 
 ## US-0004-0001: バリデーション実行
 
@@ -143,3 +146,15 @@
 - Goal: Browser QA バリデータが minimal runner を維持しつつ、fake-complete ではなく実際のテスト実行状態を truthful に報告する
 - Non-goals: フル Browser QA フレームワークの実装
 - Notes: REQ-0014。minimal runner のスコープを明確にし、未実行テストを pass と偽らない
+
+## US-0004-0020: Canonical/Legacy Validator Separation
+
+As a QFAI user, I want the validate pipeline to use only canonical validators in production, with legacy validators available only for migration tooling, so that validation results are accurate and not polluted by deprecated rules.
+
+## US-0004-0021: IssueCategory Discrimination
+
+As a CI/CD engineer, I want validator issues tagged with `category: "canonical"` or `"compatibility"` or `"change"`, so that I can filter and prioritize findings by their source.
+
+## US-0004-0022: Prototyping Recommendation Validation
+
+As a QFAI user, I want `qfai validate` to check prototyping.yaml schema (required fields, mode validity, allowed_modes consistency), so that invalid prototyping recommendations are caught early.

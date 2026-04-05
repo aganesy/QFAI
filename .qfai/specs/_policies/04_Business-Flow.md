@@ -419,8 +419,8 @@ flowchart TD
     L --> M
 ```
 
-- UI-bearing 検出: SKILL.md のヒューリスティックで surface type (web-ui, mobile-ui, desktop-ui, mixed, non-ui) を分類
-- サイドカー: 00_index, 10_strategy, 20-23_eval axes, 30_comparison, 31_anchor, 40_contracts, 50_review_bundle, 60_critique_loop
+- UI-bearing 検出: SKILL.md のヒューリスティックで surface type (web, mobile, desktop, mixed, non-ui) を分類
+- サイドカー: 00_index, 10_strategy, 11_design_taste_interview, 20_design_eval_invariant, 21_design_eval_trend_derived, 22_design_eval_product_specific, 23_design_eval_aggregate, 24_design_eval_dynamic_overrides (OPTIONAL), 30_option_comparison, 31_selected_anchor_screen, 40_screen_contracts, 50_review_input_bundle
 - 非 UI プロジェクト: サイドカーは生成されず、既存15ファイルパックのみ出力
 
 ## v1.7.4 UIX-VAL/UIX-REV Validation Flow
@@ -589,3 +589,36 @@ flowchart TD
 | Loop exit         | Accept, plateau, or max cap reached             |
 | Fail-open         | Adapter-level; provider failure never blocks    |
 | Cost ceiling      | Deferred to post-implementation (OQ-0005)       |
+
+## v1.7.13 Canonical Sidecar Convergence
+
+```mermaid
+flowchart TD
+    A[validate.ts pipeline] --> B{Canonical or Legacy?}
+    B -->|Canonical| C[runCanonicalUixValidators]
+    B -->|Legacy/Migration| D[legacy/ddpCompatibility.ts]
+    C --> E[12 modular validators in uix/]
+    E --> F{prototyping.yaml exists?}
+    F -->|Yes| G[validatePrototypingRecommendation]
+    F -->|No| H[QFAI-PROT-153 error]
+    G --> I[sddPreflight gates]
+    I --> J[report.ts prototyping section]
+```
+
+**Canonical/Legacy Separation:**
+
+- Production path: `runCanonicalUixValidators()` in `uix/canonical.ts` runs 12 modular validators
+- Legacy path: `legacy/ddpCompatibility.ts` and `legacy/uixCompatibility.ts` for migration tooling only
+- `validateDdpFields` removed from `validate.ts` pipeline
+
+**Prototyping Module:**
+
+- `prototyping/mode.ts`: mode resolution with existence-based precedence (D-5)
+- `prototyping/recommendationArtifact.ts`: single source of truth for recommendation artifact status
+- `prototyping/recommendationSchema.ts`: key existence checks for precedence decisions
+- SDD preflight gates on valid `prototyping.yaml`
+
+**Report Observability:**
+
+- `report.ts` now includes `## Prototyping` section with mode, obligations, evidence, harness, render, browserQa, calibration subsections
+- Marked as "foundation-only (not integrated into blocking validation in v1.7.13)"

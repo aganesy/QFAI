@@ -33,6 +33,13 @@ export default defineWorkspace([
   {
     test: {
       ...shared,
+      name: "compatibility",
+      include: ["tests/compatibility/**/*.test.ts"],
+    },
+  },
+  {
+    test: {
+      ...shared,
       name: "e2e",
       include: ["tests/e2e/**/*.test.ts", "tests/assets/**/*.test.ts"],
     },

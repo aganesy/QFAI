@@ -63,3 +63,80 @@
 - Given Browser QA テスト対象が定義されているが未実行である
 - When Browser QA バリデータを実行する
 - Then 未実行テストが not-run として報告され、pass として偽装されない
+
+## EX-0004-0019: Canonical Validator Registration
+
+- BR-Ref: BR-0004-0018
+
+| Input                           | Expected                                                       |
+| ------------------------------- | -------------------------------------------------------------- |
+| validate.ts pipeline inspection | runCanonicalUixValidators registered, validateDdpFields absent |
+
+## EX-0004-0020: IssueCategory Values
+
+- BR-Ref: BR-0004-0019
+
+| Input                                    | Expected                           |
+| ---------------------------------------- | ---------------------------------- |
+| Canonical UIX validator finding          | issue.category === "canonical"     |
+| Legacy DDP validator finding (migration) | issue.category === "compatibility" |
+
+## EX-0004-0021: Canonical Production Path Verification
+
+- BR-Ref: BR-0004-0020
+
+| Input                                                | Expected                                                                               |
+| ---------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| Inspect validate.ts registered validators at runtime | runCanonicalUixValidators present, validateDdpFields absent, legacy namespace isolated |
+
+## EX-0004-0022: Phase1 Ratchet Active
+
+- BR-Ref: BR-0004-0021
+
+| Input                                                      | Expected                              |
+| ---------------------------------------------------------- | ------------------------------------- |
+| phase1ReleaseDate set to 10 days ago, UIX-VAL error exists | Error downgraded to warning           |
+| phase1ReleaseDate set to 40 days ago, UIX-VAL error exists | Error remains as-is (ratchet expired) |
+| phase1ReleaseDate not set                                  | All UIX-VAL severities unchanged      |
+
+## EX-0004-0023: QFAI-AUD-021 Selected Direction
+
+- BR-Ref: BR-0004-0024
+
+| Input                                                                  | Expected           |
+| ---------------------------------------------------------------------- | ------------------ |
+| uiux/31_selected_anchor_screen.md with `## Selected Direction` present | No QFAI-AUD-021    |
+| uiux/31_selected_anchor_screen.md without `## Selected Direction`      | QFAI-AUD-021 error |
+
+## EX-0004-0024: Canonical Validator Enumeration
+
+- BR-Ref: BR-0004-0022
+
+| Input                           | Expected                          |
+| ------------------------------- | --------------------------------- |
+| Run runCanonicalUixValidators() | 12 validators execute in parallel |
+
+## EX-0004-0025: QFAI-VIS-002 Info Severity
+
+- BR-Ref: BR-0004-0023
+
+| Input                                         | Expected                                          |
+| --------------------------------------------- | ------------------------------------------------- |
+| HTML+CSS mock absent in sidecar-first project | QFAI-VIS-002 with severity "info" (not "warning") |
+
+## EX-0004-0026: Canonical Barrel Isolation
+
+- BR-Ref: BR-0004-0025
+
+| Input                           | Expected                   |
+| ------------------------------- | -------------------------- |
+| Import from validators/index.ts | No legacy/ exports present |
+
+## EX-0004-0027: CRIT-005 4-Category Read-Order
+
+- BR-Ref: BR-0004-0026
+
+| Input                                                                      | Expected              |
+| -------------------------------------------------------------------------- | --------------------- |
+| Critique evidence referencing sidecar + strategy + contracts + eval tokens | QFAI-CRIT-005 passes  |
+| Critique evidence missing eval family tokens                               | QFAI-CRIT-005 warning |

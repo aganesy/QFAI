@@ -12,7 +12,7 @@
 // QFAI:SPEC-0014:TC-0014-0016
 // QFAI:SPEC-0014:TC-0014-0017
 
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -52,8 +52,6 @@ async function createUiBearingPack(root: string): Promise<void> {
   await writeFile(path.join(root, "01_Spec.md"), "# Spec\n\n- surface: web-ui\n", "utf-8");
   await mkdir(path.join(root, "uiux"), { recursive: true });
 }
-
-const repoRoot = path.resolve(process.cwd(), "..", "..");
 
 // ---------------------------------------------------------------------------
 // TC-0014-0012: Truthful evidence state
@@ -215,17 +213,6 @@ describe("TC-0014-0016: Canonical validator set enforcement (3-layer family)", (
 
     const issues = await validateThreeLayerModel(root, defaultConfig);
     expect(issues).toHaveLength(0);
-  });
-
-  it("uixValidators.ts includes canonical validators in the runner list", async () => {
-    const src = await readFile(
-      path.join(repoRoot, "packages", "qfai", "src", "core", "validators", "uixValidators.ts"),
-      "utf-8",
-    );
-    expect(src).toMatch(/runAllUixValidators/);
-    expect(src).toMatch(/validateScoringAxes/);
-    expect(src).toMatch(/validateStrategyCompleteness/);
-    expect(src).toMatch(/validateScreenContracts/);
   });
 });
 

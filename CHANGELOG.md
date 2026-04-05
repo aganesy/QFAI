@@ -8,6 +8,32 @@
 
 - なし
 
+## [1.7.13] - 2026-04-04
+
+### Added
+
+- CLI flags for prototyping production path: --target-url, --browser-provider, --render-provider, --reviewer
+- Built-in Playwright render adapter and browser QA provider (optionalDependencies)
+- uiFidelity validator error codes: QFAI-PROT-270 (absent), QFAI-PROT-271 (skeleton rejection), QFAI-PROT-272 (missing fields)
+- prototyping.execution config section with reviewer field and priority cascade (CLI > config > env)
+- Production path test suites: CLI flag parsing, obligation matrix, uiFidelity validator
+
+### Changed
+
+- uiFidelity.mode=skeleton rejected in standard/full-harness for UI-bearing surfaces (truthfulization)
+- Calibration error codes relocated: QFAI-PROT-271/272 → QFAI-PROT-265/266
+- Review assets (scoring/comparison/strategy-review) aligned to canonical vocabulary and responsibility split
+- comparison-review split into Comparison Quality (30_option_comparison) + Selected Direction Quality (31_selected_anchor_screen)
+- SKILL.md: "not a public CLI command" → "auxiliary generate-side command"
+
+### Fixed
+
+- SSOT contradictions across README, SKILL.md, steering, product note
+- Stale filenames in ui-definition-protocol.md (30_comparison→30_option_comparison, etc.)
+- Stale filenames in canonical test suite (integration/e2e/core/assets)
+- exactOptionalPropertyTypes issues in prototyping execution pipeline
+- 23_design_eval_aggregate.md total_score_formula formatting
+
 ## [1.7.12] - 2026-04-02
 
 ### Added

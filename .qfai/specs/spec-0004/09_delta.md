@@ -110,3 +110,24 @@
 | 22_design_eval_product_specific.md  | product-specific validation   |
 | 23_design_eval_aggregate.md         | aggregate/rubric completeness |
 | 24_design_eval_dynamic_overrides.md | dynamic overrides validation  |
+
+---
+
+## v1.7.13 (2026-04-04) — Canonical Sidecar Convergence
+
+- adopted: REQ-0113~0117 追加（canonical/legacy separation, IssueCategory, prototypingRecommendation, DDP removal, new UIX validators）
+- adopted: US-0004-0020~0022, AC-0004-0022~0024, BR-0004-0018~0020, EX-0004-0019~0020, TC-0004-0023~0026 追加
+- rationale: v1.7.13 実装（canonical/legacy validator 分離、prototypingRecommendation 新規登録）の仕様反映
+
+### v1.7.13 補完 (2026-04-04)
+
+- adopted: BR-0004-0021~0026, EX-0004-0022~0023, TC-0004-0028~0030 追加
+- rationale: コミット履歴分析で特定された設計意図の補完（phase1 ratchet, validator enumeration, VIS-002 downgrade, AUD-021, barrel isolation, CRIT-005 read-order）
+
+### v1.7.13 収束 (2026-04-05)
+
+- adopted: REQ-0117 拡張（canonical validator リストを完全化: 5→12 modular validators）, REQ-0118 追加（Surface Type Detection Module）
+- adopted: US range 更新 US-0004-0001..US-0004-0023
+- rationale: 実装分析で特定された未文書化の v1.7.13 変更:
+  - REQ-0117 が列挙していなかった 7 バリデータ（classification, scoringReady, strategy, screenContract, trend, threeLayer + canonical aggregator）を追加
+  - `detection/surfaceType.ts` の明示的分類ブロック優先ルールを REQ-0118 として新規登録

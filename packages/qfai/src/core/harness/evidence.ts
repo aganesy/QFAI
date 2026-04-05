@@ -22,7 +22,7 @@ export function generateReviewSummary(result: LoopResult): ReviewSummary {
   return {
     finalScore: result.finalScore,
     recommendation:
-      result.status === "accepted"
+      result.status === "converged"
         ? "Output meets acceptance criteria"
         : result.status === "plateau"
           ? "Output plateaued; best result from iteration history"

@@ -27,3 +27,7 @@ As a QFAI user, I want `qfai validate --fail-on error` to pass with error=0 befo
 ## US-0013-0007: Delta Phase with Rejected Guardrails
 
 As a QFAI user, I want `09_delta.md` to include adoption/rejection rationale with DO NOT and Temptation sections, so that rejected options are guarded against reintroduction.
+
+## US-0013-0008: Prototyping Recommendation Preflight
+
+As a QFAI user, I want SDD preflight to validate that prototyping.yaml exists and has a valid schema before allowing SDD to proceed, so that downstream prototyping has a valid mode recommendation.

@@ -1,5 +1,5 @@
 /**
- * Full-harness premium mode types.
+ * Full-harness mode types.
  *
  * Defines the planner/generator/evaluator loop interfaces
  * and evidence structures for /qfai-prototyping full-harness mode.
@@ -62,7 +62,7 @@ export type IterationRecord = {
   critiqueResult?: CritiqueResult | undefined;
 };
 
-export type LoopStatus = "accepted" | "cap-reached" | "plateau";
+export type LoopStatus = "converged" | "max-iterations" | "plateau";
 
 export type LoopResult = {
   status: LoopStatus;

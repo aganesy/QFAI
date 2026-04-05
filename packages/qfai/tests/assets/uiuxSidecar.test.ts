@@ -3,7 +3,6 @@ import path from "node:path";
 
 import fg from "fast-glob";
 import { describe, expect, it } from "vitest";
-import YAML from "yaml";
 
 describe("uiux sidecar templates", { timeout: 15000 }, () => {
   const repoRoot = path.resolve(process.cwd(), "..", "..");
@@ -48,54 +47,44 @@ describe("uiux sidecar templates", { timeout: 15000 }, () => {
     return readFile(path.join(templateDir, filename), "utf-8");
   }
 
-  // TDD-0001: TC-0002-0001 — 11 sidecar files present
-  it("has exactly 11 sidecar files", async () => {
+  // TDD-0001: TC-0002-0001 — 12 sidecar files present
+  it("has exactly 12 sidecar files", async () => {
     const files = await fg(["*.md"], { cwd: uiuxDir, absolute: false });
     expect(files.sort()).toEqual([
       "00_index.md",
-      "10_strategy.md",
+      "10_implementation_strategy.md",
       "11_design_taste_interview.md",
       "20_design_eval_invariant.md",
       "21_design_eval_trend_derived.md",
       "22_design_eval_product_specific.md",
       "23_design_eval_aggregate.md",
       "24_design_eval_dynamic_overrides.md",
-      "30_comparison.md",
-      "40_contracts.md",
-      "50_review_bundle.md",
+      "30_option_comparison.md",
+      "31_selected_anchor_screen.md",
+      "40_screen_contracts.md",
+      "50_review_input_bundle.md",
     ]);
   });
 
-  // TDD-0002: TC-0002-0002 — strategy YAML schema conformance
-  it("10_strategy.md contains valid YAML with required schema keys", async () => {
-    const content = await readTemplate("10_strategy.md");
-    // Extract fenced ```yaml block
-    const yamlMatch = content.match(/```yaml\s*\r?\n([\s\S]*?)```/);
-    expect(yamlMatch).not.toBeNull();
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- guarded by assertion above
-    const parsed = YAML.parse(yamlMatch![1]);
-    // Root is an object
-    expect(typeof parsed).toBe("object");
-    expect(parsed).not.toBeNull();
-    // Required top-level keys
-    expect(parsed).toHaveProperty("version", "0.1");
-    expect(parsed).toHaveProperty("surface_type");
-    expect(parsed).toHaveProperty("strategy");
-    // Strategy nested structure
-    expect(typeof parsed.strategy).toBe("object");
-    expect(parsed.strategy).toHaveProperty("approach");
-    expect(parsed.strategy).toHaveProperty("rationale");
-    expect(parsed.strategy).toHaveProperty("constraints");
-    expect(parsed.strategy).toHaveProperty("risks");
-    expect(Array.isArray(parsed.strategy.risks)).toBe(true);
+  // TDD-0002: TC-0002-0002 — strategy strong 8-field schema conformance
+  it("10_implementation_strategy.md contains canonical schema keys", async () => {
+    const content = await readTemplate("10_implementation_strategy.md");
+    // Strong schema uses bullet-style fields, not YAML block
+    expect(content).toMatch(/- surface:/);
+    expect(content).toMatch(/- decision:/);
+    expect(content).toMatch(/- why_this_strategy:/);
+    expect(content).toMatch(/- expected_strengths:/);
+    expect(content).toMatch(/- known_risks:/);
+    expect(content).toMatch(/- fit_for_this_product:/);
+    // Must NOT contain weak-format surface_type
+    expect(content).not.toMatch(/surface_type/);
   });
 
   // TDD-0003: TC-0002-0023 — minimal-but-complete verbosity
-  it("10_strategy.md has one complete example, no verbose alternatives", async () => {
-    const content = await readTemplate("10_strategy.md");
-    const yamlBlocks = content.match(/```yaml/g) ?? [];
-    expect(yamlBlocks.length).toBe(1);
-    expect(content).toContain("Strategy Selection Guidance");
+  it("10_implementation_strategy.md explains canonical constraints", async () => {
+    const content = await readTemplate("10_implementation_strategy.md");
+    expect(content).toContain("## Constraints");
+    expect(content).toContain("### Strategy");
   });
 
   // TDD-0004: TC-0002-0020 — eval files define 3-layer model and aggregate scoring rules
@@ -111,22 +100,23 @@ describe("uiux sidecar templates", { timeout: 15000 }, () => {
       expect(content).toContain("## Layer Classification");
       expect(content).toMatch(new RegExp(`Layer:\\s*${expectedLayer}`, "i"));
     }
-    // 23_design_eval_aggregate.md carries the 3-layer model completeness:
-    // trend-derived, product-specific, and aggregate scoring rules
+    // 23_design_eval_aggregate.md carries the aggregate scoring rules
     const aggregate = await readTemplate("23_design_eval_aggregate.md");
-    expect(aggregate).toContain("## Trend-derived Axes");
-    expect(aggregate).toMatch(/source.?translation/i);
-    expect(aggregate).toContain("## Product-specific Axes");
     expect(aggregate).toContain("## Aggregate Scoring Rules");
-    expect(aggregate).toMatch(/Weights/i);
-    expect(aggregate).toMatch(/Normalization/i);
-    expect(aggregate).toMatch(/Thresholds/i);
-    expect(aggregate).toMatch(/Stopping/i);
+    expect(aggregate).toMatch(/total_score_formula/i);
+    expect(aggregate).toMatch(/layer_weights/i);
+    expect(aggregate).toMatch(/accept_threshold/i);
+    expect(aggregate).toMatch(/refine_band/i);
+    expect(aggregate).toMatch(/pivot_band/i);
+    expect(aggregate).toMatch(/max_iterations/i);
+    expect(aggregate).toMatch(/plateau_rule/i);
+    expect(aggregate).toMatch(/missing_score_policy/i);
+    expect(aggregate).toMatch(/disagreement_rule/i);
   });
 
   // TDD-0005: TC-0002-0021 — comparison template 2+ options against 3-layer axes
-  it("30_comparison.md compares 2+ options against 3-layer scoring axes", async () => {
-    const content = await readTemplate("30_comparison.md");
+  it("30_option_comparison.md compares 2+ options against 3-layer scoring axes", async () => {
+    const content = await readTemplate("30_option_comparison.md");
     expect(content).toContain("Option A");
     expect(content).toContain("Option B");
     // 3-layer structure in comparison matrix
@@ -139,42 +129,48 @@ describe("uiux sidecar templates", { timeout: 15000 }, () => {
     expect(content).toMatch(/Threshold/i);
   });
 
-  // TDD-0006: TC-0002-0022 — contracts template minimum schema
-  it("40_contracts.md has screen contract with route, actor, purpose, tasks, states, transitions, outcomes", async () => {
-    const content = await readTemplate("40_contracts.md");
-    expect(content).toContain("Anchor Screen Contract");
-    // Required fields per BR-0026-0016 / TC-0002-0022
-    expect(content).toMatch(/Route:/i);
-    expect(content).toMatch(/Actor:/i);
-    expect(content).toMatch(/Purpose:/i);
-    expect(content).toContain("Primary Tasks");
-    expect(content).toContain("Required States");
-    expect(content).toContain("Transitions");
-    expect(content).toContain("Observable Outcomes");
+  // TDD-0006: TC-0002-0022 — contracts template strong schema
+  it("40_screen_contracts.md has screen contract with strong schema fields", async () => {
+    const content = await readTemplate("40_screen_contracts.md");
+    expect(content).toContain("### Screen:");
+    // Strong schema 11 required fields
+    expect(content).toMatch(/- screen_id:/);
+    expect(content).toMatch(/- route:/);
+    expect(content).toMatch(/- purpose:/);
+    expect(content).toMatch(/- actor:/);
+    expect(content).toMatch(/- primary_tasks:/);
+    expect(content).toMatch(/- secondary_tasks:/);
+    expect(content).toMatch(/- required_states:/);
+    expect(content).toMatch(/- transitions:/);
+    expect(content).toMatch(/- observable_outcomes:/);
+    expect(content).toMatch(/- notes_for_verify:/);
+    expect(content).toMatch(/- notes_for_reviewer:/);
     // State coverage
     expect(content).toContain("empty");
     expect(content).toContain("loading");
     expect(content).toContain("error");
-    expect(content).toContain("populated");
+    // No stale 31_anchor.md reference
+    expect(content).not.toContain("31_anchor.md");
   });
 
   // --- Slice 2: SKILL.md tests ---
 
-  // TDD-0007: TC-0002-0007 — SKILL.md detection section 5 surface categories
-  it("SKILL.md has UI-bearing detection with 5 surface categories", async () => {
+  // TDD-0007: TC-0002-0007 — SKILL.md detection section 6 surface categories
+  it("SKILL.md has UI-bearing detection with 6 surface categories", async () => {
     const content = await readFile(skillMdPath, "utf-8");
     expect(content).toContain("## UI-bearing Detection");
-    expect(content).toContain("web-ui");
-    expect(content).toContain("mobile-ui");
-    expect(content).toContain("desktop-ui");
+    expect(content).toContain("web");
+    expect(content).toContain("mobile");
+    expect(content).toContain("desktop");
+    expect(content).toContain("cli");
     expect(content).toContain("mixed");
     expect(content).toContain("non-ui");
   });
 
-  // TDD-0008: TC-0002-0004 — surface classification: web-ui documented
-  it("SKILL.md documents web-ui as UI-bearing", async () => {
+  // TDD-0008: TC-0002-0004 — surface classification: web documented
+  it("SKILL.md documents web as UI-bearing", async () => {
     const content = await readFile(skillMdPath, "utf-8");
-    expect(content).toMatch(/web-ui.*UI-bearing/is);
+    expect(content).toMatch(/\bweb\b.*UI-bearing/is);
   });
 
   // TDD-0009: TC-0002-0005 — surface classification: non-ui documented
@@ -195,8 +191,8 @@ describe("uiux sidecar templates", { timeout: 15000 }, () => {
     const content = await readFile(skillMdPath, "utf-8");
     expect(content).toContain("strategy");
     expect(content).toMatch(/scoring ax[ei]s/i);
-    expect(content).toMatch(/anchor screen/i);
-    expect(content).toMatch(/contracts?\s+(drafted|defined)/i);
+    expect(content).toMatch(/comparison completed|selected direction/i);
+    expect(content).toMatch(/contracts?\s+(drafted|defined|contains)/i);
   });
 
   // TDD-0012: TC-0002-0010 — non-UI completion unchanged
@@ -227,12 +223,11 @@ describe("uiux sidecar templates", { timeout: 15000 }, () => {
     expect(content).toMatch(/behavior obligation/i);
   });
 
-  // TDD-0014: TC-0002-0024 — 03 HTML/CSS mock fallback demotion
-  it("03_Story-Workshop.md demotes HTML/CSS mock to secondary fallback", async () => {
+  // TDD-0014: TC-0002-0024 — 03 HTML/CSS mock optional fallback demotion
+  it("03_Story-Workshop.md demotes HTML/CSS mock to optional fallback appendix", async () => {
     const content = await readCoreTemplate("03_Story-Workshop.md");
-    expect(content).toMatch(/secondary/i);
-    expect(content).toMatch(/subordinate/i);
-    expect(content).toMatch(/fallback/i);
+    expect(content).toMatch(/optional fallback/i);
+    expect(content).toMatch(/appendix/i);
     // HTML mock section should come after behavior obligations
     const behaviorIdx = content.search(/behavior obligation/i);
     const mockIdx = content.search(/Screen Mock|HTML.*CSS/i);
@@ -241,15 +236,15 @@ describe("uiux sidecar templates", { timeout: 15000 }, () => {
     }
   });
 
-  // TDD-0028: TC-0002-0028 — 03 DDS State Coverage has 4 required state bullets (QFAI-DDP-024)
-  it("03_Story-Workshop.md DDS State Coverage has 4 required state bullets", async () => {
+  // TDD-0028: TC-0002-0028 — 03 Behavior Obligations State Coverage has 4 required states
+  it("03_Story-Workshop.md Behavior Obligations State Coverage has 4 required states", async () => {
     const content = await readCoreTemplate("03_Story-Workshop.md");
-    const ddsMatch = content.match(/## Design Direction Summary[\s\S]*$/);
-    expect(ddsMatch).not.toBeNull();
-    const dds = ddsMatch?.[0] ?? "";
-    // Align with validator regex: /^\s*-\s+${state}\b/im (word boundary, no colon required)
-    for (const state of ["empty", "loading", "error", "populated"]) {
-      expect(dds).toMatch(new RegExp(`^\\s*-\\s+${state}\\b`, "im"));
+    const behaviorMatch = content.match(/## Behavior Obligations[\s\S]*$/);
+    expect(behaviorMatch).not.toBeNull();
+    const behavior = behaviorMatch?.[0] ?? "";
+    // State Coverage table should include all 4 required states
+    for (const state of ["default", "loading", "empty", "error"]) {
+      expect(behavior).toMatch(new RegExp(`\\b${state}\\b`, "im"));
     }
   });
 
@@ -323,7 +318,7 @@ describe("uiux sidecar templates", { timeout: 15000 }, () => {
       cwd: initAssetsDir,
       absolute: false,
     });
-    expect(uiuxFiles.length).toBe(11);
+    expect(uiuxFiles.length).toBe(12);
   });
 
   // TDD-0022: TC-0002-0019 — verify-pack: existing asset tests pass

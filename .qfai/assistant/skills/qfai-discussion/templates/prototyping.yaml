@@ -1,0 +1,9 @@
+prototyping:
+  recommended_mode: standard
+  rationale: >
+    Fill this with a concrete reason tied to evidence obligations.
+  allowed_modes:
+    - low-cost
+    - standard
+    - full-harness
+  surface: web

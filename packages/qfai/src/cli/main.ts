@@ -1,6 +1,7 @@
 import { runDoctor } from "./commands/doctor.js";
 import { runGuardrails } from "./commands/guardrails.js";
 import { runInit } from "./commands/init.js";
+import { runPrototypingCommand } from "./commands/prototyping.js";
 import { runReport } from "./commands/report.js";
 import { runValidate } from "./commands/validate.js";
 import { parseArgs } from "./lib/args.js";
@@ -66,6 +67,23 @@ export async function run(argv: string[], cwd: string): Promise<void> {
         process.exitCode = exitCode;
       }
       return;
+    case "prototyping":
+      {
+        const resolvedRoot = await resolveRoot(options);
+        await runPrototypingCommand({
+          root: resolvedRoot,
+          ...(options.prototypingMode ? { mode: options.prototypingMode } : {}),
+          ...(options.prototypingTargetUrl ? { targetUrl: options.prototypingTargetUrl } : {}),
+          ...(options.prototypingBrowserProvider
+            ? { browserProvider: options.prototypingBrowserProvider }
+            : {}),
+          ...(options.prototypingRenderProvider
+            ? { renderProvider: options.prototypingRenderProvider }
+            : {}),
+          ...(options.prototypingReviewer ? { reviewer: options.prototypingReviewer } : {}),
+        });
+      }
+      return;
     case "guardrails":
       {
         const resolvedRoot = await resolveRoot(options);
@@ -98,6 +116,7 @@ Commands:
   report      検証結果と集計を出力
   doctor      設定/パス/出力前提の診断
   guardrails  Decision Guardrails の抽出/検査（list|extract|check）
+  prototyping Evidence bundle を package 自身で生成
 
 Options:
   --root <path>   対象ディレクトリ
@@ -118,6 +137,11 @@ Options:
   --run-validate                report: validate を実行してから report を生成
   --base-url <url>              report: 基準URL
   --path <path>                 guardrails: 対象ファイル/ディレクトリ（複数指定可）
+  --mode <low-cost|standard|full-harness>  prototyping: 実行モード
+  --target-url <url>            prototyping: Browser QA / render 対象 URL
+  --browser-provider <id>       prototyping: Browser QA provider ID
+  --render-provider <id>        prototyping: render provider ID
+  --reviewer <name>             prototyping: full-harness reviewer 名
   --max <number>                guardrails extract: 最大件数
   --keyword <text>              guardrails list/extract: キーワードフィルタ
   -h, --help      ヘルプ表示

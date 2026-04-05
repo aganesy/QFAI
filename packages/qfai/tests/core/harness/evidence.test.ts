@@ -8,10 +8,10 @@ import type { LoopResult } from "../../../src/core/harness/types.js";
 
 function makeLoopResult(overrides?: Partial<LoopResult>): LoopResult {
   return {
-    status: "accepted",
+    status: "converged",
     finalOutput: { content: "final output" },
     finalScore: 0.85,
-    terminationReason: "accepted",
+    terminationReason: "converged",
     iterationCount: 3,
     bestIteration: 3,
     iterations: [
@@ -51,30 +51,30 @@ function makeLoopResult(overrides?: Partial<LoopResult>): LoopResult {
 
 describe("Harness Evidence", () => {
   describe("evidence accept (TC-0012-0014)", () => {
-    it("generates evidence with iteration history and accepted termination", () => {
+    it("generates evidence with iteration history and converged termination", () => {
       const result = makeLoopResult();
       const evidence = generateEvidence(result, "test-run-001");
 
       expect(evidence.runId).toBe("test-run-001");
-      expect(evidence.status).toBe("accepted");
-      expect(evidence.terminationReason).toBe("accepted");
+      expect(evidence.status).toBe("converged");
+      expect(evidence.terminationReason).toBe("converged");
       expect(evidence.iterationCount).toBe(3);
       expect(evidence.iterations).toHaveLength(3);
       expect(evidence.finalScore).toBe(0.85);
     });
   });
 
-  describe("evidence cap-reached (TC-0012-0015)", () => {
-    it("generates evidence with cap-reached termination", () => {
+  describe("evidence max-iterations (TC-0012-0015)", () => {
+    it("generates evidence with max-iterations termination", () => {
       const result = makeLoopResult({
-        status: "cap-reached",
-        terminationReason: "cap-reached",
+        status: "max-iterations",
+        terminationReason: "max-iterations",
         iterationCount: 15,
       });
       const evidence = generateEvidence(result);
 
-      expect(evidence.status).toBe("cap-reached");
-      expect(evidence.terminationReason).toBe("cap-reached");
+      expect(evidence.status).toBe("max-iterations");
+      expect(evidence.terminationReason).toBe("max-iterations");
       expect(evidence.iterationCount).toBe(15);
     });
   });

@@ -25,4 +25,4 @@
 ## Notes
 
 - This file is a pointer artifact for preflight, not requirement/spec SSOT.
-- Reflect unresolved items into require/spec Open Questions.
+- Reflect unresolved items into discussion/spec Open Questions.

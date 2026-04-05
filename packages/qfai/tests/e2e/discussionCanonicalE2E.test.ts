@@ -136,11 +136,71 @@ function completeTrendContent(): string {
     "",
     "## Trend Scan",
     "",
-    "| reference | confidence | freshness_date | source_translation |",
-    "| --------- | ---------- | -------------- | ------------------ |",
-    "| Ref A     | high       | 2025-12-01     | Adopted micro-interaction pattern |",
-    "| Ref B     | medium     | 2025-11-15     | Adopted card layout trend |",
-    "| Ref C     | low        | 2025-10-01     | Adopted minimalist approach |",
+    "### Visual Tone Trends",
+    "",
+    "#### Entry",
+    "",
+    "- reference: Modern Design System Report 2025",
+    "- observation: Shift toward muted pastel palettes",
+    "- freshness_date: 2025-12-01",
+    "- confidence: high",
+    "- source_translation: Adopted muted color approach for brand warmth",
+    "- local_implication: Apply muted palette to primary surfaces",
+    "",
+    "### Layout / Composition Trends",
+    "",
+    "#### Entry",
+    "",
+    "- reference: Layout Patterns Survey Q4",
+    "- observation: Bento grid layouts gaining traction",
+    "- freshness_date: 2025-11-15",
+    "- confidence: medium",
+    "- source_translation: Adopted bento grid for dashboard",
+    "- local_implication: Use bento grid on main dashboard view",
+    "",
+    "### Density / Hierarchy Trends",
+    "",
+    "#### Entry",
+    "",
+    "- reference: Information Density Study 2025",
+    "- observation: Progressive disclosure preferred",
+    "- freshness_date: 2025-10-01",
+    "- confidence: high",
+    "- source_translation: Adopted progressive disclosure for settings",
+    "- local_implication: Apply progressive disclosure to complex forms",
+    "",
+    "### Interaction / Motion Trends",
+    "",
+    "#### Entry",
+    "",
+    "- reference: Motion Design Trends 2025",
+    "- observation: Micro-interactions for feedback",
+    "- freshness_date: 2025-11-20",
+    "- confidence: high",
+    "- source_translation: Adopted subtle micro-interactions for save actions",
+    "- local_implication: Add feedback animations on form submit",
+    "",
+    "### Component Styling Trends",
+    "",
+    "#### Entry",
+    "",
+    "- reference: Component Library Benchmark 2025",
+    "- observation: Rounded corners and soft shadows standard",
+    "- freshness_date: 2025-12-05",
+    "- confidence: high",
+    "- source_translation: Adopted soft shadow and rounded corner tokens",
+    "- local_implication: Standardize border-radius and shadow tokens",
+    "",
+    "### Stale / Overused AI Slop Patterns",
+    "",
+    "#### Entry",
+    "",
+    "- reference: Anti-pattern Catalog 2025",
+    "- observation: Generic hero gradients overused",
+    "- freshness_date: 2025-10-15",
+    "- confidence: medium",
+    "- source_translation: Avoided generic gradient hero patterns",
+    "- local_implication: Use branded illustration instead of gradient hero",
   ].join("\n");
 }
 
@@ -163,61 +223,75 @@ function completeThreeLayerContent(): string {
   ].join("\n");
 }
 
-const ALL_16_SCORING_FIELDS = [
+const ALL_SCORING_FIELDS = [
   "axis_id",
   "axis_name",
   "layer",
-  "definition",
-  "rationale",
-  "scoring_rubric",
+  "origin",
+  "intent",
+  "why_it_matters",
+  "score_scale",
+  "score_anchors",
+  "positive_signals",
+  "negative_signals",
+  "anti_patterns",
+  "evidence_required",
   "weight",
-  "min_score",
-  "max_score",
-  "pass_threshold",
-  "evidence_type",
-  "evidence_source",
-  "review_prompt",
-  "calibration_anchor",
-  "dependencies",
+  "minimum_floor",
+  "source_refs",
+  "goal_refs",
   "review_questions",
 ] as const;
 
 function completeScoringContent(): string {
   const lines = ["# Scoring Axes", "", "## Axis: accessibility", ""];
-  for (const field of ALL_16_SCORING_FIELDS) {
-    lines.push(`- ${field}: Valid value for ${field}`);
+  for (const field of ALL_SCORING_FIELDS) {
+    if (field === "score_anchors") {
+      lines.push("- score_anchors:");
+      lines.push("  - low: Poor performance");
+      lines.push("  - mid: Adequate performance");
+      lines.push("  - high: Excellent performance");
+    } else {
+      lines.push(`- ${field}: Valid value for ${field}`);
+    }
   }
   lines.push("");
   lines.push("# Aggregate Scoring Rules");
   lines.push("");
-  lines.push("- thresholds: min 70 overall");
-  lines.push("- floors: no axis below 50");
-  lines.push("- plateau: diminishing returns above 90");
+  lines.push("- total_score_formula: weighted_sum");
+  lines.push("- layer_weights:");
+  lines.push("  - invariant: 0.60");
+  lines.push("  - trend_derived: 0.25");
+  lines.push("  - product_specific: 0.15");
+  lines.push("- accept_threshold: 3.5");
+  lines.push("- refine_band: 2.5-3.4");
+  lines.push("- pivot_band: < 2.5");
+  lines.push("- max_iterations: 3");
+  lines.push("- plateau_rule: 3 consecutive iterations with delta < 0.1");
   lines.push("- missing_score_policy: exclude from aggregate");
+  lines.push("- disagreement_rule: average scores, escalate if delta > 1.0");
   return lines.join("\n");
 }
 
 const STRONG_STRATEGY_FIELDS = [
   "surface",
-  "selection_required",
   "decision",
-  "candidate_options",
-  "chosen_option",
-  "rationale",
-  "verification_expectations",
-  "notes_for_reviewer",
+  "why_this_strategy",
+  "expected_strengths",
+  "known_risks",
+  "fit_for_this_product",
 ] as const;
 
 function completeStrategyContent(): string {
   const defaults: Record<string, string> = {
-    surface: "web-ui",
-    selection_required: "true",
-    decision: "Chose Option A for better accessibility",
-    candidate_options: "Option A, Option B, Option C",
-    chosen_option: "Option A",
-    rationale: "Option A provides better accessibility compliance",
-    verification_expectations: "All WCAG AA checks pass in smoke testing",
-    notes_for_reviewer: "Focus on mobile viewport behavior",
+    surface: "web",
+    decision: "component-library",
+    why_this_strategy:
+      "Component library provides consistent UI patterns and accessibility out of the box",
+    expected_strengths: "Rapid development, consistent design language, built-in a11y",
+    known_risks: "Customization overhead for non-standard patterns",
+    fit_for_this_product:
+      "Web dashboard with standard CRUD patterns matches component library strengths",
   };
   const lines = ["# Strategy", ""];
   for (const f of STRONG_STRATEGY_FIELDS) {
@@ -235,6 +309,7 @@ function completeScreenEntry(id: string, states = "default, loading, empty, erro
     `- purpose: Main ${id} view`,
     `- actor: end-user`,
     `- primary_tasks: View data, Edit entries`,
+    `- secondary_tasks: Export data, Filter results`,
     `- required_states: ${states}`,
     `- transitions: Navigate to detail, Back to list`,
     `- observable_outcomes: Data displayed, Changes saved`,
@@ -353,10 +428,14 @@ describe("US-0002-0004: Scoring-Ready Schema", () => {
 
 // QFAI:SPEC-0002:US-0002-0005
 describe("US-0002-0005: Strategy Artifact strong schema", () => {
-  it("strategy with all 8 strong fields passes", async () => {
+  it("strategy with all 6 strong fields passes", async () => {
     const root = await newTempDir();
     await createUiBearingPack(root);
-    await writeFile(path.join(root, "uiux", "10_strategy.md"), completeStrategyContent(), "utf-8");
+    await writeFile(
+      path.join(root, "uiux", "10_implementation_strategy.md"),
+      completeStrategyContent(),
+      "utf-8",
+    );
 
     const issues = await validateStrategyStrong(root, defaultConfig);
 
@@ -392,7 +471,7 @@ describe("US-0002-0006: Screen Contract multi-screen schema", () => {
       "",
       completeScreenEntry("profile"),
     ].join("\n");
-    await writeFile(path.join(root, "uiux", "40_contracts.md"), content, "utf-8");
+    await writeFile(path.join(root, "uiux", "40_screen_contracts.md"), content, "utf-8");
 
     const issues = await validateScreenContractSchema(root, defaultConfig);
 
@@ -468,7 +547,7 @@ describe("US-0002-0011: 3-layer template family replacement", () => {
     await createUiBearingPack(dir);
     const uiux = path.join(dir, "uiux");
     // Create forbidden legacy files
-    await writeFile(path.join(uiux, "31_anchor.md"), "# Anchor\n\nContent\n", "utf-8");
+    await writeFile(path.join(uiux, "31_anchor.md"), "# Legacy Artifact\n\nContent\n", "utf-8");
     await writeFile(path.join(uiux, "60_critique_loop.md"), "# Critique\n\nContent\n", "utf-8");
     const issues = await validateForbiddenLegacyFiles(dir, defaultConfig);
     expect(issues.length).toBeGreaterThanOrEqual(2);
@@ -550,7 +629,7 @@ describe("US-0002-0012: 00_index.md canonical rewrite", () => {
 describe("US-0010-0009: SKILL.md 3-layer exclusivity", () => {
   it("SKILL.md does not contain 4-axis references and uses 3-layer model", async () => {
     const content = await readFile(path.join(templateDir, "..", "SKILL.md"), "utf-8");
-    // SKILL.md should not reference old anchor file
+    // SKILL.md should not reference the forbidden legacy file
     expect(content).not.toMatch(/31_anchor\.md/);
     // SKILL.md should reference 3-layer model artifacts
     expect(content).toMatch(/3-layer|three.layer|invariant.*trend-derived.*product-specific/i);
@@ -577,20 +656,26 @@ describe("US-0010-0010: 3-layer template init generation", () => {
 });
 
 // -----------------------------------------------------------------------
-// US-0010-0011: Canonical 00_index.md and 10_strategy.md
+// US-0010-0011: Canonical 00_index.md and 10_implementation_strategy.md
 // -----------------------------------------------------------------------
 
 // QFAI:SPEC-0010:US-0010-0011
-describe("US-0010-0011: Canonical 00_index.md and 10_strategy.md", () => {
+describe("US-0010-0011: Canonical 00_index.md and 10_implementation_strategy.md", () => {
   it("00_index.md exists in uiux templates with file inventory", async () => {
     const content = await readFile(path.join(templateDir, "uiux", "00_index.md"), "utf-8");
     expect(content).toMatch(/File Inventory|Sidecar Index/i);
   });
 
-  it("10_strategy.md exists in uiux templates with YAML strategy", async () => {
-    const content = await readFile(path.join(templateDir, "uiux", "10_strategy.md"), "utf-8");
+  it("10_implementation_strategy.md exists in uiux templates with YAML strategy", async () => {
+    const content = await readFile(
+      path.join(templateDir, "uiux", "10_implementation_strategy.md"),
+      "utf-8",
+    );
     expect(content).toMatch(/Strategy/);
-    expect(content).toMatch(/surface_type|approach|rationale/);
+    expect(content).toMatch(/- surface:/);
+    expect(content).toMatch(/- decision:/);
+    expect(content).toMatch(/- why_this_strategy:/);
+    expect(content).not.toMatch(/surface_type/);
   });
 });
 
@@ -628,15 +713,20 @@ describe("US-0010-0013: HTML/CSS mock optional", () => {
 });
 
 // -----------------------------------------------------------------------
-// US-0010-0014: 40_contracts.md screen-obligation schema
+// US-0010-0014: 40_screen_contracts.md screen-obligation schema
 // -----------------------------------------------------------------------
 
 // QFAI:SPEC-0010:US-0010-0014
-describe("US-0010-0014: 40_contracts.md screen-obligation schema", () => {
-  it("40_contracts.md has screen-obligation structure with required states", async () => {
-    const content = await readFile(path.join(templateDir, "uiux", "40_contracts.md"), "utf-8");
+describe("US-0010-0014: 40_screen_contracts.md screen-obligation schema", () => {
+  it("40_screen_contracts.md has screen-obligation structure with strong schema", async () => {
+    const content = await readFile(
+      path.join(templateDir, "uiux", "40_screen_contracts.md"),
+      "utf-8",
+    );
     expect(content).toMatch(/Screen Contracts/);
-    expect(content).toMatch(/Required States/);
-    expect(content).toMatch(/Primary Tasks/);
+    expect(content).toMatch(/- required_states:/);
+    expect(content).toMatch(/- primary_tasks:/);
+    expect(content).toMatch(/### Screen:/);
+    expect(content).not.toContain("31_anchor.md");
   });
 });

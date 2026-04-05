@@ -27,6 +27,7 @@
   - Competitive Reference Registry with adopted/rejected/local_translation fields
   - Review Cycle Protocol (RCP) with 12-reviewer roster (10 standard + devils-advocate + pattern-doubler)
   - Drift Protocol enforcement
+  - prototyping.yaml 生成（prototyping mode recommendation の構造化キャプチャ）
 - Out:
   - Editing `.qfai/specs/**` directly (belongs to `/qfai-sdd`)
   - Writing implementation-level details
@@ -62,17 +63,18 @@
 - REQ-0006: OQ Register -- 11-column data model, OQ-driven exit (zero open count)
 - REQ-0007: Deferred metadata -- 11-column data model with severity, impact, mitigation
 - REQ-0008: DDP authoring -- Design Direction Pack for UI-bearing projects (theme, mood, CTA hierarchy, anti-goals)
-- REQ-0009: UI-bearing detection -- surface type classification (web-ui, mobile-ui, desktop-ui, mixed, non-ui)
+- REQ-0009: UI-bearing detection -- surface type classification (web, mobile, desktop, mixed, non-ui)
 - REQ-0010: uiux/ sidecar generation -- 11-file sidecar for UI-bearing packs
 - REQ-0011: Competitive Reference Registry -- 3+ references with adopt/reject/translation fields
 - REQ-0012: RCP execution -- 12-reviewer roster (10 standard + devils-advocate + pattern-doubler)
 - REQ-0013: Source traceability -- SRC-XXXX identifiers in `04_Sources.md`
 - REQ-0014: Functional requirements -- REQ-0001 format in `06_REQ.md`
 - REQ-0015: Non-functional requirements -- NFR-0001 format in `07_NFR.md` with measurable targets
+- REQ-0016: prototyping.yaml 生成 — discussion-pack 完了時に prototyping.yaml（recommended_mode, rationale, allowed_modes, surface）を生成する。15 markdown ファイルとともに必須サイドアーティファクトとして扱う
 
 ## Entry points
 
-- US range in this spec: US-0010-0001..US-0010-0014
+- US range in this spec: US-0010-0001..US-0010-0015
 - Primary actors: QFAI user (product owner/developer), AI Agent (discovery-analyst, requirements-analyst)
 - Notes: This is the entry point for new projects. Output feeds `/qfai-sdd`.
 

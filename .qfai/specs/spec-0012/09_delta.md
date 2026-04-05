@@ -72,3 +72,26 @@ REQ-0013 → US-0012-0009 → AC-0012-0010 → BR-0012-0008 → EX-0012-0011, EX
 REQ-0014 → US-0012-0008 → AC-0012-0011 → BR-0012-0009 → EX-0012-0010 → TC-0012-0015
 REQ-0015 → US-0012-0010 → AC-0012-0012 → BR-0012-0010 → EX-0012-0013 → TC-0012-0016
 ```
+
+## v1.7.13 (2026-04-04) — Canonical Sidecar Convergence
+
+- adopted: REQ-0016~0021 追加（prototyping mode module, existence-based precedence, recommendation artifact, recommendation schema, calibration config, report integration）
+- adopted: US-0012-0011~0016, AC-0012-0013~0019, BR-0012-0011~0015, EX-0012-0014~0016, TC-0012-0017~0022 追加
+- rationale: v1.7.13 で prototyping/ モジュール新設、mode resolution engine 実装、existence-based precedence 導入、calibration config 追加の実装の仕様反映
+
+### v1.7.13 補完 (2026-04-04)
+
+- adopted: BR-0012-0016~0019, EX-0012-0019~0020, TC-0012-0026~0027 追加
+- rationale: コミット履歴分析で特定された fullHarness schema, calibration config fields, mode provenance, surface inference の設計意図補完
+
+### v1.7.13 収束 (2026-04-05)
+
+- adopted: REQ-0022~0027 追加（Browser QA 4-phase model, evidence bundle persistence, render evidence capture, provider registry, UI fidelity builder, prototyping execution orchestrator）
+- adopted: Scope 拡張: Browser QA phases, evidence bundling, render capture, provider registry, full-harness runtime, uiFidelityBuilder, execution orchestrator
+- rationale: 実装分析で特定された v1.7.13 の主要新規モジュール群の仕様反映:
+  - `browserQa/` 4-phase model（smoke/interaction/visual/accessibility）
+  - `evidence/` bundling system（bundleWriter, fsEvidenceWriter, playwrightRenderAdapter, renderRunner）
+  - `providers/` registry pattern（config → concrete provider 依存逆転）
+  - `prototyping/uiFidelityBuilder.ts`（QFAI-PROT-270/271/272 emit）
+  - `prototyping/execution.ts`（本番パスオーケストレータ）
+  - `harness/` runtime（runtime.ts, adapters.ts, resultWriter.ts）

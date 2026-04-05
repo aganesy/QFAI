@@ -234,52 +234,26 @@ describe("E2E: Mermaid diagram validation (US-0004-0014)", () => {
 
 // QFAI:SPEC-0004:US-0004-0015
 describe("E2E: canonical validator entrypoint wiring (US-0004-0015)", () => {
-  it("validateProject calls runAllUixValidators (canonical path)", async () => {
+  it("validateProject calls runCanonicalUixValidators (canonical path)", async () => {
     const src = await readFile(
       path.join(repoRoot, "packages", "qfai", "src", "core", "validate.ts"),
       "utf-8",
     );
-    expect(src).toContain("runAllUixValidators");
-  });
-
-  it("validators index exports runAllUixValidators", async () => {
-    const indexPath = path.join(
-      repoRoot,
-      "packages",
-      "qfai",
-      "src",
-      "core",
-      "validators",
-      "index.ts",
-    );
-    const src = await readFile(indexPath, "utf-8");
-    expect(src).toContain("runAllUixValidators");
-  });
-});
-
-// QFAI:SPEC-0004:US-0004-0016
-describe("E2E: canonical UIX validator aggregation (US-0004-0016)", () => {
-  it("uixValidators exports runAllUixValidators that aggregates validators", async () => {
-    const src = await readFile(
-      path.join(repoRoot, "packages", "qfai", "src", "core", "validators", "uixValidators.ts"),
-      "utf-8",
-    );
-    expect(src).toMatch(/export\s+async\s+function\s+runAllUixValidators/);
-    // Should not reference legacy 4-axis validator wrapper names
-    expect(src).not.toMatch(/validate4Axis|fourAxisValidator/);
+    expect(src).toContain("runCanonicalUixValidators");
   });
 });
 
 // QFAI:SPEC-0004:US-0004-0017
 describe("E2E: 3-layer template family validator alignment (US-0004-0017)", () => {
-  it("validators index re-exports UIX validators including runAllUixValidators", async () => {
+  it("validators index exposes canonical UIX validators only", async () => {
     const src = await readFile(
       path.join(repoRoot, "packages", "qfai", "src", "core", "validators", "index.ts"),
       "utf-8",
     );
-    expect(src).toContain("runAllUixValidators");
-    expect(src).toContain("validateScoringAxes");
-    expect(src).toContain("validateStrategyCompleteness");
+    expect(src).toContain("runCanonicalUixValidators");
+    expect(src).not.toContain("runLegacyUixCompatibilityValidators");
+    expect(src).not.toContain("validateScoringAxes");
+    expect(src).not.toContain("validateStrategyCompleteness");
   });
 });
 

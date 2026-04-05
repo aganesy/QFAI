@@ -170,28 +170,56 @@ Scenario: Browser QA minimal runner が truthful に報告する
   Then minimal runner が実際の実行状態を報告し、未実行テストを pass として偽らない
 ```
 
+```gherkin
+# AC-0004-0022
+Scenario: Canonical-only production path
+  Given validate pipeline is running
+  When validators are registered
+  Then runCanonicalUixValidators is registered (not runAllUixValidators)
+  And validateDdpFields is NOT registered
+```
+
+```gherkin
+# AC-0004-0023
+Scenario: IssueCategory on canonical issues
+  Given a canonical validator emits an issue
+  When the issue is collected
+  Then issue.category === "canonical"
+```
+
+```gherkin
+# AC-0004-0024
+Scenario: prototypingRecommendation validation
+  Given a discussion-pack with invalid prototyping.yaml
+  When `qfai validate` runs
+  Then QFAI-PROT-153/154/155/156 issues are emitted
+```
+
 ## AC Catalog (optional)
 
-| AC_ID        | Title                              | Notes        | Priority |
-| ------------ | ---------------------------------- | ------------ | -------- |
-| AC-0004-0001 | 全バリデータ実行                   | REQ-0010     | P1       |
-| AC-0004-0002 | --phase スコープ制御               | REQ-0011     | P1       |
-| AC-0004-0003 | --fail-on error                    | REQ-0012     | P1       |
-| AC-0004-0004 | --fail-on warning                  | REQ-0012     | P1       |
-| AC-0004-0005 | --format github                    | REQ-0013     | P1       |
-| AC-0004-0006 | validate.json 出力                 | REQ-0014     | P1       |
-| AC-0004-0007 | ランログ生成                       | REQ-0015     | P2       |
-| AC-0004-0008 | ウェイバー suppress                | REQ-0110     | P1       |
-| AC-0004-0009 | 必須ファイル欠落                   | REQ-0100     | P1       |
-| AC-0004-0010 | ID フォーマット不正                | REQ-0101     | P1       |
-| AC-0004-0011 | トレーサビリティ欠落               | REQ-0102     | P1       |
-| AC-0004-0012 | ATDD アノテーション                | REQ-0103     | P1       |
-| AC-0004-0013 | blocking OQ 検出                   | REQ-0104     | P1       |
-| AC-0004-0014 | 冪等性確認                         | NFR-0012     | P1       |
-| AC-0004-0015 | phase guard                        | phase policy | P1       |
-| AC-0004-0016 | Canonical UIX aggregator           | REQ-0011     | P1       |
-| AC-0004-0017 | 3-layer テンプレートファイル名期待 | REQ-0012     | P1       |
-| AC-0004-0018 | 旧 4-axis ファイルエラー           | REQ-0012     | P1       |
-| AC-0004-0019 | Non-UI パック UIX スキップ         | REQ-0012     | P2       |
-| AC-0004-0020 | render-evidence truthful state     | REQ-0013     | P1       |
-| AC-0004-0021 | Browser QA truthful runner         | REQ-0014     | P1       |
+| AC_ID        | Title                                | Notes         | Priority |
+| ------------ | ------------------------------------ | ------------- | -------- |
+| AC-0004-0001 | 全バリデータ実行                     | REQ-0010      | P1       |
+| AC-0004-0002 | --phase スコープ制御                 | REQ-0011      | P1       |
+| AC-0004-0003 | --fail-on error                      | REQ-0012      | P1       |
+| AC-0004-0004 | --fail-on warning                    | REQ-0012      | P1       |
+| AC-0004-0005 | --format github                      | REQ-0013      | P1       |
+| AC-0004-0006 | validate.json 出力                   | REQ-0014      | P1       |
+| AC-0004-0007 | ランログ生成                         | REQ-0015      | P2       |
+| AC-0004-0008 | ウェイバー suppress                  | REQ-0110      | P1       |
+| AC-0004-0009 | 必須ファイル欠落                     | REQ-0100      | P1       |
+| AC-0004-0010 | ID フォーマット不正                  | REQ-0101      | P1       |
+| AC-0004-0011 | トレーサビリティ欠落                 | REQ-0102      | P1       |
+| AC-0004-0012 | ATDD アノテーション                  | REQ-0103      | P1       |
+| AC-0004-0013 | blocking OQ 検出                     | REQ-0104      | P1       |
+| AC-0004-0014 | 冪等性確認                           | NFR-0012      | P1       |
+| AC-0004-0015 | phase guard                          | phase policy  | P1       |
+| AC-0004-0016 | Canonical UIX aggregator             | REQ-0011      | P1       |
+| AC-0004-0017 | 3-layer テンプレートファイル名期待   | REQ-0012      | P1       |
+| AC-0004-0018 | 旧 4-axis ファイルエラー             | REQ-0012      | P1       |
+| AC-0004-0019 | Non-UI パック UIX スキップ           | REQ-0012      | P2       |
+| AC-0004-0020 | render-evidence truthful state       | REQ-0013      | P1       |
+| AC-0004-0021 | Browser QA truthful runner           | REQ-0014      | P1       |
+| AC-0004-0022 | Canonical-only production path       | REQ-0113,0116 | P1       |
+| AC-0004-0023 | IssueCategory on canonical issues    | REQ-0114      | P1       |
+| AC-0004-0024 | prototypingRecommendation validation | REQ-0115      | P1       |

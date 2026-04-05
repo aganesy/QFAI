@@ -20,7 +20,7 @@
   - `qfai init` generates new 3-layer family only (REQ-0002)
   - `00_index.md` updated to list canonical family only (REQ-0003)
   - `10_strategy.md` upgraded to strong schema (surface classification, strategy, rationale) (REQ-0004)
-  - `40_contracts.md` upgraded to screen-obligation schema (REQ-0005)
+  - `40_screen_contracts.md` upgraded to screen-obligation schema with secondary_tasks (REQ-0005)
   - `04_Sources.md` upgraded for trend/reference translation (REQ-0006)
 - AD-0010-0007: HTML/CSS mock demotion -- HTML/CSS visual mocks demoted from required completion gate to optional/fallback reference material per DR-0107 (discussion-20260401215536131 D-002) (REQ-0007)
 - AD-0010-0008: Acceptance criteria update -- AC/TC/EX updated for new 3-layer artifact family and HTML/CSS optional status (REQ-0008)
@@ -90,7 +90,7 @@
 | TC-0010-0020 | TC       | HTML/CSS mock not blocking completion               |
 | TC-0010-0021 | TC       | 00_index.md canonical family listing                |
 | TC-0010-0022 | TC       | 10_strategy.md strong schema validation             |
-| TC-0010-0023 | TC       | 40_contracts.md screen-obligation schema            |
+| TC-0010-0023 | TC       | 40_screen_contracts.md screen-obligation schema     |
 | TC-0010-0024 | TC       | 04_Sources.md trend evaluation support              |
 | TC-0010-0025 | TC       | No 4-axis files in active generation                |
 | TC-0010-0026 | TC       | Init vs dogfood semantic parity                     |
@@ -98,3 +98,10 @@
 | TC-0010-0028 | TC       | Trend-derived axis missing source translation fails |
 | SD-0010-0001 | Decision | 3-layer canonical replaces 4-axis (DR-0106)         |
 | SD-0010-0002 | Decision | HTML/CSS mock optional/fallback (DR-0107)           |
+
+## v1.7.13 (2026-04-04) — Canonical Sidecar Convergence
+
+- adopted: REQ-0016 (prototyping.yaml generation) 追加
+- adopted: US-0010-0015, AC-0010-0015~0016 追加
+- adopted: US range 更新 US-0010-0001..US-0010-0015
+- rationale: v1.7.13 で prototyping.yaml が discussion-pack の必須サイドアーティファクトになった実装の仕様反映

@@ -145,67 +145,128 @@ function antiPreferenceTasteContent(): string {
   return TASTE_SECTIONS.map((s) => `## ${s}\n\nno preference\n`).join("\n");
 }
 
-function completeTrendContent(): string {
+function trendEntry(
+  ref: string,
+  obs: string,
+  date: string,
+  conf: string,
+  trans: string,
+  imp: string,
+): string {
   return [
-    "# Sources",
+    "#### Entry 1",
     "",
-    "## Trend Scan",
-    "",
-    "| reference | confidence | freshness_date | source_translation |",
-    "| --------- | ---------- | -------------- | ------------------ |",
-    "| Ref A     | high       | 2025-12-01     | Adopted micro-interaction pattern |",
-    "| Ref B     | medium     | 2025-11-15     | Adopted card layout trend |",
-    "| Ref C     | low        | 2025-10-01     | Adopted minimalist approach |",
+    `- reference: ${ref}`,
+    `- observation: ${obs}`,
+    `- freshness_date: ${date}`,
+    `- confidence: ${conf}`,
+    `- source_translation: ${trans}`,
+    `- local_implication: ${imp}`,
   ].join("\n");
+}
+
+function completeTrendContent(): string {
+  const categories = [
+    "Visual Tone Trends",
+    "Layout / Composition Trends",
+    "Density / Hierarchy Trends",
+    "Interaction / Motion Trends",
+    "Component Styling Trends",
+    "Stale / Overused AI Slop Patterns",
+  ];
+  const lines = ["# Sources", "", "## Trend Scan", ""];
+  for (const cat of categories) {
+    lines.push(`### ${cat}`, "");
+    lines.push(
+      trendEntry(
+        "Ref A",
+        `Observed signal in ${cat}`,
+        "2025-12-01",
+        "high",
+        `Adopted pattern from ${cat}`,
+        `Apply locally for ${cat}`,
+      ),
+    );
+    lines.push("");
+  }
+  return lines.join("\n");
 }
 
 function allLowConfidenceTrendContent(): string {
-  return [
-    "# Sources",
-    "",
-    "## Trend Scan",
-    "",
-    "| reference | confidence | freshness_date | source_translation |",
-    "| --------- | ---------- | -------------- | ------------------ |",
-    "| Ref A     | low        | 2025-12-01     | Adopted micro-interaction pattern |",
-    "| Ref B     | low        | 2025-11-15     | Adopted card layout trend |",
-    "| Ref C     | low        | 2025-10-01     | Adopted minimalist approach |",
-  ].join("\n");
+  const categories = [
+    "Visual Tone Trends",
+    "Layout / Composition Trends",
+    "Density / Hierarchy Trends",
+    "Interaction / Motion Trends",
+    "Component Styling Trends",
+    "Stale / Overused AI Slop Patterns",
+  ];
+  const lines = ["# Sources", "", "## Trend Scan", ""];
+  for (const cat of categories) {
+    lines.push(`### ${cat}`, "");
+    lines.push(
+      trendEntry(
+        "Ref A",
+        `Observed signal in ${cat}`,
+        "2025-12-01",
+        "low",
+        `Adopted pattern from ${cat}`,
+        `Apply locally for ${cat}`,
+      ),
+    );
+    lines.push("");
+  }
+  return lines.join("\n");
 }
 
-const ALL_16_SCORING_FIELDS = [
+const ALL_SCORING_FIELDS = [
   "axis_id",
   "axis_name",
   "layer",
-  "definition",
-  "rationale",
-  "scoring_rubric",
+  "origin",
+  "intent",
+  "why_it_matters",
+  "score_scale",
+  "score_anchors",
+  "positive_signals",
+  "negative_signals",
+  "anti_patterns",
+  "evidence_required",
   "weight",
-  "min_score",
-  "max_score",
-  "pass_threshold",
-  "evidence_type",
-  "evidence_source",
-  "review_prompt",
-  "calibration_anchor",
-  "dependencies",
+  "minimum_floor",
+  "source_refs",
+  "goal_refs",
   "review_questions",
 ] as const;
 
 function completeScoringContent(): string {
   const lines = ["# Scoring Axes", "", "## Axis: accessibility", ""];
-  for (const field of ALL_16_SCORING_FIELDS) {
-    lines.push(`- ${field}: Valid value for ${field}`);
+  for (const field of ALL_SCORING_FIELDS) {
+    if (field === "score_anchors") {
+      lines.push("- score_anchors:");
+      lines.push("  - low: Poor performance");
+      lines.push("  - mid: Adequate performance");
+      lines.push("  - high: Excellent performance");
+    } else {
+      lines.push(`- ${field}: Valid value for ${field}`);
+    }
   }
   return lines.join("\n");
 }
 
 function incompleteScoringContent(): string {
   const lines = ["# Scoring Axes", "", "## Axis: accessibility", ""];
-  // Only include 14 of 16 fields (missing scoring_rubric and calibration_anchor)
-  for (const field of ALL_16_SCORING_FIELDS) {
-    if (field === "scoring_rubric" || field === "calibration_anchor") continue;
-    lines.push(`- ${field}: Valid value for ${field}`);
+  // Missing origin and why_it_matters
+  for (const field of ALL_SCORING_FIELDS) {
+    if (field === "origin" || field === "why_it_matters") continue;
+    if (field === "score_anchors") {
+      lines.push("- score_anchors:");
+      lines.push("  - low: Poor performance");
+      lines.push("  - mid: Adequate performance");
+      lines.push("  - high: Excellent performance");
+    } else {
+      lines.push(`- ${field}: Valid value for ${field}`);
+    }
   }
   return lines.join("\n");
 }
@@ -214,10 +275,18 @@ function aggregateScoringContent(): string {
   return [
     "# Aggregate Scoring Rules",
     "",
-    "- thresholds: min 70 overall",
-    "- floors: no axis below 50",
-    "- plateau: diminishing returns above 90",
+    "- total_score_formula: weighted_sum",
+    "- layer_weights:",
+    "  - invariant: 0.60",
+    "  - trend_derived: 0.25",
+    "  - product_specific: 0.15",
+    "- accept_threshold: 3.5",
+    "- refine_band: 2.5-3.4",
+    "- pivot_band: < 2.5",
+    "- max_iterations: 3",
+    "- plateau_rule: 3 consecutive iterations with delta < 0.1",
     "- missing_score_policy: exclude from aggregate",
+    "- disagreement_rule: average scores, escalate if delta > 1.0",
   ].join("\n");
 }
 
@@ -225,39 +294,41 @@ function fullMandatoryScoringContent(): string {
   return completeScoringContent() + "\n\n" + aggregateScoringContent();
 }
 
-const STRONG_8_FIELDS = [
+const STRONG_FIELDS = [
   "surface",
-  "selection_required",
   "decision",
-  "candidate_options",
-  "chosen_option",
-  "rationale",
-  "verification_expectations",
-  "notes_for_reviewer",
+  "why_this_strategy",
+  "expected_strengths",
+  "known_risks",
+  "fit_for_this_product",
 ] as const;
 
 function strongStrategyContent(overrides: Record<string, string> = {}): string {
   const defaults: Record<string, string> = {
-    surface: "web-ui",
-    selection_required: "true",
-    decision: "Chose Option A for better accessibility",
-    candidate_options: "Option A, Option B, Option C",
-    chosen_option: "Option A",
-    rationale: "Option A provides better accessibility compliance",
-    verification_expectations: "All WCAG AA checks pass",
-    notes_for_reviewer: "Focus on mobile viewport behavior",
+    surface: "web",
+    decision: "component-library",
+    why_this_strategy: "Component library provides consistent, accessible UI building blocks",
+    expected_strengths: "Rapid prototyping, consistent styling, accessibility compliance",
+    known_risks: "Vendor lock-in, limited customization for bespoke interactions",
+    fit_for_this_product: "Web dashboard with standard CRUD patterns fits component-library well",
   };
   const merged = { ...defaults, ...overrides };
-  return "# Strategy\n\n" + STRONG_8_FIELDS.map((f) => `- ${f}: ${merged[f]}`).join("\n");
+  return "# Strategy\n\n" + STRONG_FIELDS.map((f) => `- ${f}: ${merged[f]}`).join("\n");
 }
 
-function weakStrategyContent(): string {
+/**
+ * Strategy with legacy surface value (web-ui instead of web).
+ */
+function legacySurfaceStrategyContent(): string {
   return [
     "# Strategy",
     "",
-    "- surface_type: web-ui",
-    "- approach: Use a card-based layout",
-    "- rationale: Cards are familiar and scalable",
+    "- surface: web-ui",
+    "- decision: component-library",
+    "- why_this_strategy: Component library provides consistent UI building blocks",
+    "- expected_strengths: Rapid prototyping, consistent styling",
+    "- known_risks: Vendor lock-in, limited customization",
+    "- fit_for_this_product: Standard CRUD web app fits well",
   ].join("\n");
 }
 
@@ -270,6 +341,7 @@ function completeScreenEntry(id: string, states = "default, loading, empty, erro
     `- purpose: Main ${id} view`,
     `- actor: end-user`,
     `- primary_tasks: View data, Edit entries`,
+    `- secondary_tasks: Export data, Filter results`,
     `- required_states: ${states}`,
     `- transitions: Navigate to detail, Back to list`,
     `- observable_outcomes: Data displayed, Changes saved`,
@@ -397,7 +469,7 @@ describe("Trend validator", () => {
   });
 
   // TC-0002-0008
-  it("TC-0002-0008: trend scan missing source_translation emits FRESHNESS-MISSING", async () => {
+  it("TC-0002-0008: trend scan missing source_translation emits FIELD-MISSING", async () => {
     const root = await newTempDir();
     await createUiBearingPack(root);
     const content = [
@@ -405,16 +477,77 @@ describe("Trend validator", () => {
       "",
       "## Trend Scan",
       "",
-      "| reference | confidence | freshness_date |",
-      "| --------- | ---------- | -------------- |",
-      "| Ref A     | high       | 2025-12-01     |",
+      "### Visual Tone Trends",
+      "",
+      "#### Entry 1",
+      "",
+      "- reference: Ref A",
+      "- observation: Observed a minimalist tone signal",
+      "- freshness_date: 2025-12-01",
+      "- confidence: high",
+      "- local_implication: Apply minimalist tone locally",
+      "",
+      "### Layout / Composition Trends",
+      "",
+      "#### Entry 1",
+      "",
+      "- reference: Ref B",
+      "- observation: Observed grid layout signal",
+      "- freshness_date: 2025-11-15",
+      "- confidence: medium",
+      "- source_translation: Adopted grid layout",
+      "- local_implication: Apply grid layout locally",
+      "",
+      "### Density / Hierarchy Trends",
+      "",
+      "#### Entry 1",
+      "",
+      "- reference: Ref C",
+      "- observation: Observed density signal",
+      "- freshness_date: 2025-10-01",
+      "- confidence: low",
+      "- source_translation: Adopted flat hierarchy",
+      "- local_implication: Apply flat hierarchy locally",
+      "",
+      "### Interaction / Motion Trends",
+      "",
+      "#### Entry 1",
+      "",
+      "- reference: Ref D",
+      "- observation: Observed motion signal",
+      "- freshness_date: 2025-09-01",
+      "- confidence: high",
+      "- source_translation: Adopted subtle transitions",
+      "- local_implication: Apply subtle transitions locally",
+      "",
+      "### Component Styling Trends",
+      "",
+      "#### Entry 1",
+      "",
+      "- reference: Ref E",
+      "- observation: Observed component styling signal",
+      "- freshness_date: 2025-08-01",
+      "- confidence: medium",
+      "- source_translation: Adopted rounded corners",
+      "- local_implication: Apply rounded corners locally",
+      "",
+      "### Stale / Overused AI Slop Patterns",
+      "",
+      "#### Entry 1",
+      "",
+      "- reference: Ref F",
+      "- observation: Observed stale pattern",
+      "- freshness_date: 2025-07-01",
+      "- confidence: low",
+      "- source_translation: Avoid overused gradient pattern",
+      "- local_implication: Explicitly avoid gradient usage",
     ].join("\n");
     await writeFile(path.join(root, "04_Sources.md"), content, "utf-8");
 
     const issues = await validateTrendScan(root, defaultConfig);
 
-    const freshness = issues.filter((i) => i.code === "UIX-VAL-TREND-FRESHNESS-MISSING");
-    expect(freshness.length).toBeGreaterThan(0);
+    const fieldMissing = issues.filter((i) => i.code === "UIX-VAL-TREND-FIELD-MISSING");
+    expect(fieldMissing.length).toBeGreaterThan(0);
   });
 
   // TC-0002-0009
@@ -464,7 +597,7 @@ describe("3-layer evaluation model", () => {
       "",
       "- brand_alignment: Unique to this product context",
     ].join("\n");
-    await writeFile(path.join(root, "uiux", "20_eval_axes.md"), content, "utf-8");
+    await writeFile(path.join(root, "uiux", "20_design_eval_invariant.md"), content, "utf-8");
 
     const issues = await validateThreeLayerModel(root, defaultConfig);
 
@@ -494,7 +627,7 @@ describe("3-layer evaluation model", () => {
       "",
       "- animation: Smooth transitions",
     ].join("\n");
-    await writeFile(path.join(root, "uiux", "20_eval_axes.md"), content, "utf-8");
+    await writeFile(path.join(root, "uiux", "20_design_eval_invariant.md"), content, "utf-8");
 
     const issues = await validateThreeLayerModel(root, defaultConfig);
 
@@ -519,7 +652,7 @@ describe("3-layer evaluation model", () => {
       "",
       "- task_completion: Can users finish core tasks?",
     ].join("\n");
-    await writeFile(path.join(root, "uiux", "20_eval_axes.md"), content, "utf-8");
+    await writeFile(path.join(root, "uiux", "20_design_eval_invariant.md"), content, "utf-8");
 
     const issues = await validateThreeLayerModel(root, defaultConfig);
 
@@ -547,7 +680,7 @@ describe("3-layer evaluation model", () => {
       "",
       "- brand: alignment",
     ].join("\n");
-    await writeFile(path.join(root, "uiux", "20_eval_axes.md"), content, "utf-8");
+    await writeFile(path.join(root, "uiux", "20_design_eval_invariant.md"), content, "utf-8");
 
     const issues = await validateThreeLayerModel(root, defaultConfig);
 
@@ -565,7 +698,11 @@ describe("Scoring-ready validator", () => {
   it("TC-0002-0013: axis with all 16 scoring fields passes", async () => {
     const root = await newTempDir();
     await createUiBearingPack(root);
-    await writeFile(path.join(root, "uiux", "20_eval_axes.md"), completeScoringContent(), "utf-8");
+    await writeFile(
+      path.join(root, "uiux", "20_design_eval_invariant.md"),
+      completeScoringContent(),
+      "utf-8",
+    );
 
     const issues = await validateScoringReady(root, defaultConfig);
 
@@ -578,7 +715,7 @@ describe("Scoring-ready validator", () => {
     const root = await newTempDir();
     await createUiBearingPack(root);
     await writeFile(
-      path.join(root, "uiux", "20_eval_axes.md"),
+      path.join(root, "uiux", "20_design_eval_invariant.md"),
       incompleteScoringContent(),
       "utf-8",
     );
@@ -604,7 +741,7 @@ describe("Scoring-ready validator", () => {
     const root = await newTempDir();
     await createUiBearingPack(root);
     await writeFile(
-      path.join(root, "uiux", "20_eval_axes.md"),
+      path.join(root, "uiux", "20_design_eval_invariant.md"),
       fullMandatoryScoringContent(),
       "utf-8",
     );
@@ -620,7 +757,7 @@ describe("Scoring-ready validator", () => {
     const root = await newTempDir();
     await createUiBearingPack(root);
     await writeFile(
-      path.join(root, "uiux", "20_eval_axes.md"),
+      path.join(root, "uiux", "20_design_eval_invariant.md"),
       fullMandatoryScoringContent(),
       "utf-8",
     );
@@ -641,7 +778,11 @@ describe("Strategy validator", () => {
   it("TC-0002-0016: strategy with all 8 strong fields passes", async () => {
     const root = await newTempDir();
     await createUiBearingPack(root);
-    await writeFile(path.join(root, "uiux", "10_strategy.md"), strongStrategyContent(), "utf-8");
+    await writeFile(
+      path.join(root, "uiux", "10_implementation_strategy.md"),
+      strongStrategyContent(),
+      "utf-8",
+    );
 
     const issues = await validateStrategyStrong(root, defaultConfig);
 
@@ -649,16 +790,20 @@ describe("Strategy validator", () => {
   });
 
   // TC-0002-0017
-  it("TC-0002-0017: weak format strategy emits legacy warning", async () => {
+  it("TC-0002-0017: weak format strategy emits legacy surface warning", async () => {
     const root = await newTempDir();
     await createUiBearingPack(root);
-    await writeFile(path.join(root, "uiux", "10_strategy.md"), weakStrategyContent(), "utf-8");
+    await writeFile(
+      path.join(root, "uiux", "10_implementation_strategy.md"),
+      legacySurfaceStrategyContent(),
+      "utf-8",
+    );
 
     const issues = await validateStrategyStrong(root, defaultConfig);
 
-    const legacy = issues.filter((i) => i.code === "UIX-VAL-STRATEGY-WEAK-LEGACY");
+    const legacy = issues.filter((i) => i.code === "UIX-VAL-STRATEGY-LEGACY-SURFACE");
     expect(legacy.length).toBeGreaterThan(0);
-    expect(legacy[0]?.severity).toBe("warning");
+    expect(legacy[0]?.severity).toBe("error");
   });
 
   // TC-0002-0018
@@ -672,12 +817,12 @@ describe("Strategy validator", () => {
   });
 
   // TC-0002-0019
-  it("TC-0002-0019: selection_required=true with 1 candidate fails", async () => {
+  it("TC-0002-0019: strategy with placeholder value fails", async () => {
     const root = await newTempDir();
     await createUiBearingPack(root);
     await writeFile(
-      path.join(root, "uiux", "10_strategy.md"),
-      strongStrategyContent({ candidate_options: "Only One Option" }),
+      path.join(root, "uiux", "10_implementation_strategy.md"),
+      strongStrategyContent({ why_this_strategy: "TBD" }),
       "utf-8",
     );
 
@@ -708,7 +853,7 @@ describe("Screen contract validator", () => {
       "",
       completeScreenEntry("profile"),
     ].join("\n");
-    await writeFile(path.join(root, "uiux", "40_contracts.md"), content, "utf-8");
+    await writeFile(path.join(root, "uiux", "40_screen_contracts.md"), content, "utf-8");
 
     const issues = await validateScreenContractSchema(root, defaultConfig);
 
@@ -720,7 +865,7 @@ describe("Screen contract validator", () => {
     const root = await newTempDir();
     await createUiBearingPack(root);
     const content = ["# Screen Contracts", "", incompleteScreenEntry("dashboard")].join("\n");
-    await writeFile(path.join(root, "uiux", "40_contracts.md"), content, "utf-8");
+    await writeFile(path.join(root, "uiux", "40_screen_contracts.md"), content, "utf-8");
 
     const issues = await validateScreenContractSchema(root, defaultConfig);
 
@@ -749,7 +894,7 @@ describe("Screen contract validator", () => {
       "",
       completeScreenEntry("dashboard"), // duplicate
     ].join("\n");
-    await writeFile(path.join(root, "uiux", "40_contracts.md"), content, "utf-8");
+    await writeFile(path.join(root, "uiux", "40_screen_contracts.md"), content, "utf-8");
 
     const issues = await validateScreenContractSchema(root, defaultConfig);
 
@@ -768,7 +913,7 @@ describe("Screen contract validator", () => {
       "",
       completeScreenEntry("dashboard", "default, loading"), // missing empty, error
     ].join("\n");
-    await writeFile(path.join(root, "uiux", "40_contracts.md"), content, "utf-8");
+    await writeFile(path.join(root, "uiux", "40_screen_contracts.md"), content, "utf-8");
 
     const issues = await validateScreenContractSchema(root, defaultConfig);
 
@@ -858,10 +1003,10 @@ describe("SKILL.md completion conditions", () => {
 });
 
 // ---------------------------------------------------------------------------
-// TC-0002-0034..0039: v1.7.12 3-layer canonical model enforcement
+// TC-0002-0034..0039: 3-layer canonical model enforcement
 // ---------------------------------------------------------------------------
 
-describe("3-layer canonical model enforcement (v1.7.12)", () => {
+describe("3-layer canonical model enforcement", () => {
   // TC-0002-0034
   it("TC-0002-0034: 00_index.md with 3-layer canonical file list (11 files) → validator pass", async () => {
     const root = await newTempDir();
@@ -873,15 +1018,15 @@ describe("3-layer canonical model enforcement (v1.7.12)", () => {
       "| File | Purpose | Required |",
       "| ---- | ------- | -------- |",
       "| 00_index.md | Manifest | Yes |",
-      "| 10_strategy.md | Strategy | Yes |",
+      "| 10_implementation_strategy.md | Strategy | Yes |",
       "| 20_design_eval_invariant.md | Invariant layer | Yes |",
       "| 21_design_eval_trend_derived.md | Trend-derived layer | Yes |",
       "| 22_design_eval_product_specific.md | Product-specific layer | Yes |",
       "| 23_design_eval_aggregate.md | Aggregate layer | Yes |",
-      "| 30_comparison.md | Comparison | Yes |",
+      "| 30_option_comparison.md | Comparison | Yes |",
       "| 11_design_taste_interview.md | Design taste interview | Yes |",
-      "| 40_contracts.md | Screen contracts | Yes |",
-      "| 50_review_bundle.md | Review bundle | Yes |",
+      "| 40_screen_contracts.md | Screen contracts | Yes |",
+      "| 50_review_input_bundle.md | Review bundle | Yes |",
       "| 24_design_eval_dynamic_overrides.md | Dynamic overrides | Yes |",
     ].join("\n");
     await writeFile(path.join(root, "uiux", "00_index.md"), indexContent, "utf-8");
@@ -922,11 +1067,11 @@ describe("3-layer canonical model enforcement (v1.7.12)", () => {
   });
 
   // TC-0002-0036
-  it("TC-0002-0036: uiux/ has 30_comparison.md without 31_anchor.md → threeLayer validator pass", async () => {
+  it("TC-0002-0036: uiux/ has 30_option_comparison.md without 31_anchor.md → threeLayer validator pass", async () => {
     const root = await newTempDir();
     await createUiBearingPack(root);
     await writeFile(
-      path.join(root, "uiux", "30_comparison.md"),
+      path.join(root, "uiux", "30_option_comparison.md"),
       "# Comparison\n\nContent.\n",
       "utf-8",
     );

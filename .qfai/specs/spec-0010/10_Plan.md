@@ -37,7 +37,7 @@
 1. Rewrite SKILL.md to teach 3-layer model (both dogfood and init copies)
 2. Replace template family files (delete old 4-axis, create new 3-layer)
 3. Strengthen 10_strategy.md schema (surface classification, direction, rationale, risks)
-4. Rewrite 40_contracts.md as screen-obligation schema
+4. Rewrite 40_screen_contracts.md as screen-obligation schema (11 fields including secondary_tasks)
 5. Upgrade 04_Sources.md for trend/reference translation
 6. Demote HTML/CSS mock to optional/fallback in all completion conditions
 
@@ -45,3 +45,10 @@
 
 - Vitest for template validation
 - Discussion pack generation tests
+
+## v1.7.13 Implementation Notes
+
+- prototyping.yaml generation: discussion skill produces prototyping.yaml alongside 15 markdown files
+- Template: `packages/qfai/assets/init/.qfai/assistant/skills/qfai-discussion/templates/prototyping.yaml`
+- Sidecar-first model: DDS → uiux/ sidecar as primary truth for UI-bearing detection
+- Status: implemented (v1.7.13 template addition)

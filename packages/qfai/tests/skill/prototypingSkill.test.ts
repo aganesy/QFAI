@@ -1,15 +1,8 @@
-/**
- * Prototyping skill validator tests — spec-0035 TDD-0007..TDD-0009, TDD-0015
- *
- * QFAI:SPEC-0012:TC-0012-0007
- * QFAI:SPEC-0012:TC-0012-0008
- * QFAI:SPEC-0012:TC-0012-0009
- * QFAI:SPEC-0012:TC-0012-0015
- */
 import { describe, expect, it } from "vitest";
 
 import {
   checkModeHeadings,
+  hasModeSurfaceMatrix,
   hasNonUiNaDocumentation,
   isStaticFirstAligned,
   scanBannedPhrases,
@@ -18,50 +11,46 @@ import {
 const VALID_SKILL_CONTENT = [
   "# Prototyping Skill",
   "",
-  "Static-first architecture ensures prototyping completes without browser or backend.",
-  "Static checks are the default obligation set. No runtime infrastructure needed.",
+  "This workflow is static-first and file-based by default.",
   "",
-  "## Low-cost Mode",
+  "## Low-cost",
+  "Static checks only. UI-bearing projects may keep skeleton evidence.",
   "",
-  "Obligations: static checks only, no evidence loop.",
-  "Non-UI projects: visual-review steps are n/a for non-ui surface type.",
+  "## Standard",
+  "Static checks plus optional light validation.",
   "",
-  "## Standard Mode",
+  "## Full-harness",
+  "Explicit request only. Never full-harness by default.",
   "",
-  "Obligations: static checks + basic evidence, single iteration.",
-  "Non-UI projects: UI-specific steps are n/a for non-ui surface type.",
+  "## Obligation Matrix",
+  "| surface / mode | specs | runtimeGate | uiFidelity | render evidence | browser QA | fullHarness |",
+  "| non-ui / low-cost | required | optional | n/a | n/a | n/a | absent |",
+  "| ui-bearing / standard | required | optional | required | optional | optional | absent |",
+  "| ui-bearing / full-harness | required | required | required | required | required | required |",
   "",
-  "## Full-harness Mode",
-  "",
-  "Obligations: evidence loop + reviewer + calibration, multi-iteration.",
-  "Non-UI projects: visual-review and UI calibration are n/a for non-ui surface type.",
+  "Non-UI projects: absent is normal success and n/a semantics apply.",
 ].join("\n");
 
-describe("skill rewrite", () => {
-  it("banned phrase scan zero matches", () => {
-    const matches = scanBannedPhrases(VALID_SKILL_CONTENT);
-
-    expect(matches).toHaveLength(0);
-  });
-
-  it("mode section headings present", () => {
+describe("prototyping skill validator", () => {
+  it("has all mode section headings", () => {
     const result = checkModeHeadings(VALID_SKILL_CONTENT);
-
-    expect(result.present).toContain("low-cost");
-    expect(result.present).toContain("standard");
-    expect(result.present).toContain("full-harness");
     expect(result.missing).toHaveLength(0);
   });
 
-  it("non-UI steps marked n/a", () => {
-    const result = hasNonUiNaDocumentation(VALID_SKILL_CONTENT);
-
-    expect(result).toBe(true);
+  it("documents non-ui n/a semantics", () => {
+    expect(hasNonUiNaDocumentation(VALID_SKILL_CONTENT)).toBe(true);
   });
 
-  it("static-first alignment", () => {
-    const result = isStaticFirstAligned(VALID_SKILL_CONTENT);
+  it("documents static-first semantics", () => {
+    expect(isStaticFirstAligned(VALID_SKILL_CONTENT)).toBe(true);
+  });
 
-    expect(result).toBe(true);
+  it("documents mode/surface obligation matrix", () => {
+    expect(hasModeSurfaceMatrix(VALID_SKILL_CONTENT)).toBe(true);
+  });
+
+  it("flags banned phrases when full-harness is defaulted", () => {
+    const invalid = `${VALID_SKILL_CONTENT}\nfull-harness by default`;
+    expect(scanBannedPhrases(invalid)).toContain("full-harness by default");
   });
 });

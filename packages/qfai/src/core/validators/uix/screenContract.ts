@@ -19,6 +19,7 @@ const REQUIRED_FIELDS = [
   "purpose",
   "actor",
   "primary_tasks",
+  "secondary_tasks",
   "required_states",
   "transitions",
   "observable_outcomes",
@@ -28,7 +29,7 @@ const REQUIRED_FIELDS = [
 
 const MANDATORY_STATES = ["default", "loading", "empty", "error"] as const;
 
-const RELPATH = "uiux/40_contracts.md";
+const RELPATH = "uiux/40_screen_contracts.md";
 
 function contractIssue(
   code: string,
@@ -46,33 +47,176 @@ function contractIssue(
   };
 }
 
+/** Nested field names that use typed properties instead of flat fields. */
+const NESTED_FIELD_NAMES = [
+  "primary_tasks",
+  "secondary_tasks",
+  "required_states",
+  "transitions",
+  "observable_outcomes",
+];
+
 type ScreenBlock = {
   name: string;
+  /** Flat scalar fields (screen_id, route, purpose, actor, notes_for_verify, notes_for_reviewer). */
   fields: Record<string, string>;
+  /** Nested: primary_tasks list. */
+  primaryTasks: string[];
+  /** Nested: secondary_tasks list. */
+  secondaryTasks: string[];
+  /** Nested: required_states as key→description map. */
+  requiredStates: Record<string, string>;
+  /** Nested: transitions list. */
+  transitions: string[];
+  /** Nested: observable_outcomes list. */
+  observableOutcomes: string[];
 };
 
+function newScreenBlock(name: string): ScreenBlock {
+  return {
+    name,
+    fields: {},
+    primaryTasks: [],
+    secondaryTasks: [],
+    requiredStates: {},
+    transitions: [],
+    observableOutcomes: [],
+  };
+}
+
+/**
+ * Section-aware screen block parser supporting both flat and nested bullet formats.
+ *
+ * Canonical format uses nested bullets:
+ *   - primary_tasks:
+ *     - task 1
+ *   - required_states:
+ *     - default: description
+ *     - loading: description
+ *
+ * Legacy flat CSV format is accepted for compatibility:
+ *   - primary_tasks: task 1, task 2
+ *   - required_states: default, loading, empty, error
+ */
 function parseScreenBlocks(content: string): ScreenBlock[] {
   const blocks: ScreenBlock[] = [];
   const lines = content.split("\n");
+  const headingRe = /^###\s+Screen:\s*(.+)/;
+  const topFieldRe = /^\s*-\s+(\w[\w_]*):\s*(.*)/;
+  const nestedChildRe = /^\s{2,}-\s+(.+)/;
   let current: ScreenBlock | null = null;
 
-  for (const line of lines) {
-    const headingMatch = /^###\s+Screen:\s*(.+)/.exec(line);
+  let i = 0;
+  while (i < lines.length) {
+    const line = lines[i] ?? "";
+
+    const headingMatch = headingRe.exec(line);
     if (headingMatch?.[1]) {
       if (current) blocks.push(current);
-      current = { name: headingMatch[1].trim(), fields: {} };
+      current = newScreenBlock(headingMatch[1].trim());
+      i += 1;
       continue;
     }
-    if (current) {
-      const fieldMatch = /^\s*-\s+(\w[\w_]*):\s*(.+)/.exec(line);
-      if (fieldMatch?.[1] && fieldMatch[2]) {
-        current.fields[fieldMatch[1].toLowerCase()] = fieldMatch[2].trim();
+
+    if (!current) {
+      i += 1;
+      continue;
+    }
+
+    const fieldMatch = topFieldRe.exec(line);
+    if (fieldMatch?.[1]) {
+      const key = fieldMatch[1].toLowerCase();
+      const inlineValue = (fieldMatch[2] ?? "").trim();
+
+      if (NESTED_FIELD_NAMES.includes(key) && inlineValue === "") {
+        // Nested bullet list: collect indented children
+        i += 1;
+        while (i < lines.length) {
+          const child = lines[i] ?? "";
+          const childMatch = nestedChildRe.exec(child);
+          if (childMatch?.[1]) {
+            const childValue = childMatch[1].trim();
+            assignNestedChild(current, key, childValue);
+            i += 1;
+          } else if (child.trim() === "") {
+            i += 1;
+          } else {
+            break;
+          }
+        }
+      } else if (NESTED_FIELD_NAMES.includes(key) && inlineValue !== "") {
+        // Compat: flat CSV for nested fields
+        assignFlatCompat(current, key, inlineValue);
+        i += 1;
+      } else {
+        // Regular flat field
+        if (inlineValue) {
+          current.fields[key] = inlineValue;
+        }
+        i += 1;
       }
+    } else {
+      i += 1;
     }
   }
   if (current) blocks.push(current);
 
   return blocks;
+}
+
+function assignNestedChild(block: ScreenBlock, key: string, value: string): void {
+  switch (key) {
+    case "primary_tasks":
+      block.primaryTasks.push(value);
+      break;
+    case "secondary_tasks":
+      block.secondaryTasks.push(value);
+      break;
+    case "required_states": {
+      // Parse "state_key: description" or plain "state_key"
+      const colonIdx = value.indexOf(":");
+      if (colonIdx !== -1) {
+        const stateKey = value.slice(0, colonIdx).trim().toLowerCase();
+        const stateDesc = value.slice(colonIdx + 1).trim();
+        block.requiredStates[stateKey] = stateDesc;
+      } else {
+        block.requiredStates[value.trim().toLowerCase()] = "";
+      }
+      break;
+    }
+    case "transitions":
+      block.transitions.push(value);
+      break;
+    case "observable_outcomes":
+      block.observableOutcomes.push(value);
+      break;
+  }
+}
+
+function assignFlatCompat(block: ScreenBlock, key: string, csvValue: string): void {
+  const parts = csvValue
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+  switch (key) {
+    case "primary_tasks":
+      block.primaryTasks.push(...parts);
+      break;
+    case "secondary_tasks":
+      block.secondaryTasks.push(...parts);
+      break;
+    case "required_states":
+      for (const part of parts) {
+        block.requiredStates[part.toLowerCase()] = "";
+      }
+      break;
+    case "transitions":
+      block.transitions.push(...parts);
+      break;
+    case "observable_outcomes":
+      block.observableOutcomes.push(...parts);
+      break;
+  }
 }
 
 export async function validateScreenContractSchema(
@@ -81,7 +225,7 @@ export async function validateScreenContractSchema(
 ): Promise<Issue[]> {
   if (!(await isUiBearingSpec(root))) return [];
 
-  const contractsPath = path.join(root, "uiux", "40_contracts.md");
+  const contractsPath = path.join(root, "uiux", "40_screen_contracts.md");
   const content = await readSafe(contractsPath);
   if (!content) return [];
 
@@ -113,8 +257,15 @@ export async function validateScreenContractSchema(
   for (const screen of screens) {
     const screenId = screen.fields["screen_id"] ?? screen.name;
 
-    // Check required fields
-    const missing = REQUIRED_FIELDS.filter((f) => !screen.fields[f]);
+    // Check required fields (dispatch to typed properties for nested fields)
+    const missing = REQUIRED_FIELDS.filter((f) => {
+      if (f === "primary_tasks") return screen.primaryTasks.length === 0;
+      if (f === "secondary_tasks") return screen.secondaryTasks.length === 0;
+      if (f === "required_states") return Object.keys(screen.requiredStates).length === 0;
+      if (f === "transitions") return screen.transitions.length === 0;
+      if (f === "observable_outcomes") return screen.observableOutcomes.length === 0;
+      return !screen.fields[f];
+    });
     if (missing.length > 0) {
       issues.push(
         contractIssue(
@@ -127,10 +278,9 @@ export async function validateScreenContractSchema(
     }
 
     // Check state coverage
-    const states = screen.fields["required_states"];
-    if (states) {
-      const stateList = states.split(",").map((s) => s.trim().toLowerCase());
-      const missingStates = MANDATORY_STATES.filter((s) => !stateList.includes(s));
+    const stateKeys = Object.keys(screen.requiredStates).map((s) => s.toLowerCase());
+    if (stateKeys.length > 0) {
+      const missingStates = MANDATORY_STATES.filter((s) => !stateKeys.includes(s));
       if (missingStates.length > 0) {
         issues.push(
           contractIssue(

@@ -212,7 +212,7 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     expect(readme).toContain("inspection-target text");
     expect(readme).toContain("L2 `actions[]` minimum set");
     expect(readme).toContain("FAQ");
-    expect(readme).toContain("QFAI-PROT-232");
+    expect(readme).toContain("QFAI-PROT-238");
 
     expect(example).toContain("QFAI-CONTRACT-ID");
     expect(example).toContain("prototype:");
@@ -526,6 +526,15 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     expect(sanitized).not.toContain("docs/examples");
   });
 
+  it("keeps package README aligned with discussion completion contract", async () => {
+    const readmePath = path.join(repoRoot, "packages", "qfai", "README.md");
+    const readme = await readFile(readmePath, "utf-8");
+
+    // W-3: README must express canonical discussion completion contract
+    expect(readme).toContain("15 required markdown files plus required prototyping.yaml");
+    expect(readme).toMatch(/discussion-YYYYMMDDhhmmssSSS[\s\S]*prototyping\.yaml/);
+  });
+
   it("keeps root README aligned with npm README", async () => {
     const rootReadmePath = path.join(repoRoot, "README.md");
     const npmReadmePath = path.join(repoRoot, "packages", "qfai", "README.md");
@@ -704,6 +713,35 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     expect(content).toContain("02_Inception-Deck.md");
     expect(content).toMatch(/HTML\+CSS/i);
     expect(content).toContain(".qfai/discussion/discussion-");
+
+    // W-5: canonical discussion pack wording guardrail
+    expect(content).toContain("15-file discussion pack");
+    expect(content).toContain("prototyping.yaml");
+  });
+
+  it("ensures qfai-discussion skill and discussion README use canonical pack wording", async () => {
+    const skillPath = path.join(
+      templateQfaiDir,
+      "assistant",
+      "skills",
+      "qfai-discussion",
+      "SKILL.md",
+    );
+    const readmePath = path.join(templateQfaiDir, "discussion", "README.md");
+    const packageReadmePath = path.join(repoRoot, "packages", "qfai", "README.md");
+
+    const [skill, readme, packageReadme] = await Promise.all([
+      readFile(skillPath, "utf-8"),
+      readFile(readmePath, "utf-8"),
+      readFile(packageReadmePath, "utf-8"),
+    ]);
+
+    // All three must express the canonical completion contract wording
+    const canonicalPhrase = "15 required markdown files plus required prototyping.yaml";
+    expect(readme).toContain(canonicalPhrase);
+    expect(packageReadme).toContain(canonicalPhrase);
+    // SKILL uses "15-file ... plus required prototyping.yaml" which is equivalent
+    expect(skill).toContain("plus required prototyping.yaml");
   });
 
   it("ensures qfai-discussion includes localized completion handoff guidance", async () => {
@@ -783,7 +821,7 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     ]);
 
     expect(inceptionTemplate).toContain("```mermaid");
-    expect(storyTemplate).toMatch(/## Screen Mock(?:\s*[\u2014\-—]+\s*Fallback)?\s*\(HTML\+CSS\)/);
+    expect(storyTemplate).toMatch(/Screen Mock.*Optional Fallback.*HTML\+CSS/i);
     expect(storyTemplate).toContain("```html");
     expect(storyTemplate).toContain("```css");
   });
@@ -1001,6 +1039,70 @@ describe("assets guardrails", { timeout: 30000 }, () => {
 
     expect(content).toContain("## Stop conditions");
     expect(content).toContain("## Sign-off");
+  });
+
+  // W5: SSOT alignment tests
+  it("discussion README declares prototyping.yaml as required (not optional)", async () => {
+    const discussionReadmePath = path.join(templateQfaiDir, "discussion", "README.md");
+    const content = await readFile(discussionReadmePath, "utf-8");
+
+    // Must NOT say "may include"
+    expect(content).not.toMatch(/may include a prototyping\.yaml/i);
+    // Must declare it as required/mandatory
+    expect(content).toMatch(/must.*include.*prototyping\.yaml/i);
+    // Directory map must list prototyping.yaml
+    expect(content).toContain("prototyping.yaml");
+  });
+
+  it("workspace README directory map includes prototyping.yaml", async () => {
+    const workspaceReadmePath = path.join(templateQfaiDir, "README.md");
+    const content = await readFile(workspaceReadmePath, "utf-8");
+
+    expect(content).toContain("prototyping.yaml");
+  });
+
+  it("discussion README and SKILL.md use consistent OQ Gate enum", async () => {
+    const discussionReadmePath = path.join(templateQfaiDir, "discussion", "README.md");
+    const skillPath = path.join(
+      templateQfaiDir,
+      "assistant",
+      "skills",
+      "qfai-discussion",
+      "SKILL.md",
+    );
+
+    const [readmeContent, skillContent] = await Promise.all([
+      readFile(discussionReadmePath, "utf-8"),
+      readFile(skillPath, "utf-8"),
+    ]);
+
+    // Both should use canonical gate enum: discussion|sdd|atdd|tdd|ops
+    const canonicalGates = ["discussion", "sdd", "atdd", "tdd", "ops"];
+
+    // SKILL.md already uses canonical form
+    expect(skillContent).toContain("discussion|sdd|atdd|tdd|ops");
+
+    // README should NOT use deprecated discuss|require|sdd
+    expect(readmeContent).not.toMatch(/`discuss`.*`require`.*`sdd`/);
+    // README should include canonical gates
+    for (const gate of canonicalGates) {
+      expect(readmeContent).toContain(gate);
+    }
+  });
+
+  it("discussion README and SKILL.md agree on prototyping.yaml requiredness", async () => {
+    const skillPath = path.join(
+      templateQfaiDir,
+      "assistant",
+      "skills",
+      "qfai-discussion",
+      "SKILL.md",
+    );
+    const content = await readFile(skillPath, "utf-8");
+
+    // SKILL.md must reference prototyping.yaml as required
+    expect(content).toContain("prototyping.yaml");
+    expect(content).toMatch(/15-file.*plus.*required.*prototyping\.yaml/i);
   });
 });
 

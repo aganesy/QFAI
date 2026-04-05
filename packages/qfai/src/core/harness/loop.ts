@@ -161,10 +161,10 @@ export class HarnessLoop {
       // Accept — exit immediately
       if (evalResult.decision === "accept") {
         return {
-          status: "accepted",
+          status: "converged",
           finalOutput: output,
           finalScore: evalResult.weightedTotal,
-          terminationReason: "accepted",
+          terminationReason: "converged",
           iterationCount: i,
           iterations,
           bestIteration: i,
@@ -196,10 +196,10 @@ export class HarnessLoop {
 
     // Cap reached
     return {
-      status: "cap-reached",
+      status: "max-iterations",
       finalOutput: bestOutput,
       finalScore: bestScore,
-      terminationReason: "cap-reached",
+      terminationReason: "max-iterations",
       iterationCount: this.config.maxIterations,
       iterations,
       bestIteration,

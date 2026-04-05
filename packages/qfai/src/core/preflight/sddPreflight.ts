@@ -4,6 +4,8 @@ import path from "node:path";
 import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
 import { inspectLatestDiscussionPack } from "../discussionPack.js";
+import type { Issue } from "../types.js";
+import { validatePrototypingRecommendation } from "../validators/prototypingRecommendation.js";
 
 const REQ_ID_RE = /\bREQ-\d{4}\b/g;
 
@@ -40,6 +42,10 @@ export async function runSddPreflight(
   const nextCommands = ["/qfai-discussion"];
   const carryOverOpenQuestions = normalizeTextList(options.assumptions);
   const blockers = resolvePreflightBlockers(readiness);
+
+  // W-1: schema-validity gate — invalid prototyping.yaml blocks preflight
+  const recommendationBlockers = await resolveRecommendationBlockers(root, config);
+  blockers.push(...recommendationBlockers);
 
   if (blockers.length > 0) {
     await writeFile(
@@ -95,6 +101,7 @@ function resolvePreflightBlockers(readiness: {
   latestPackDir: string | null;
   dangerousPackNames: string[];
   missingFiles: string[];
+  missingSideArtifacts: string[];
   incompleteFiles: string[];
   blockingOqIds: string[];
 }): string[] {
@@ -112,8 +119,9 @@ function resolvePreflightBlockers(readiness: {
     );
   }
 
-  if (readiness.missingFiles.length > 0) {
-    blockers.push(`必須ファイル不足: ${readiness.missingFiles.join(", ")}`);
+  if (readiness.missingFiles.length > 0 || readiness.missingSideArtifacts.length > 0) {
+    const allMissing = [...readiness.missingFiles, ...readiness.missingSideArtifacts];
+    blockers.push(`必須ファイル不足: ${allMissing.join(", ")}`);
   }
 
   if (readiness.incompleteFiles.length > 0) {
@@ -192,4 +200,22 @@ async function readSafe(filePath: string): Promise<string> {
   } catch {
     return "";
   }
+}
+
+async function resolveRecommendationBlockers(root: string, config: QfaiConfig): Promise<string[]> {
+  const issues = await validatePrototypingRecommendation(root, config);
+  const errorIssues = issues.filter((issue) => issue.severity === "error");
+  if (errorIssues.length === 0) {
+    return [];
+  }
+  return [formatRecommendationBlocker(errorIssues)];
+}
+
+function summarizeIssueCodes(issues: Issue[]): string[] {
+  return Array.from(new Set(issues.map((issue) => issue.code)));
+}
+
+function formatRecommendationBlocker(issues: Issue[]): string {
+  const codes = summarizeIssueCodes(issues);
+  return `latest discussion pack の prototyping.yaml が schema-invalid です: ${codes.join(", ")}`;
 }

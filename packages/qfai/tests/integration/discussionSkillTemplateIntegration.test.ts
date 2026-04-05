@@ -97,17 +97,31 @@ function completeTasteContent(): string {
 }
 
 function completeTrendContent(): string {
-  return [
-    "# Sources",
-    "",
-    "## Trend Scan",
-    "",
-    "| reference | confidence | freshness_date | source_translation |",
-    "| --------- | ---------- | -------------- | ------------------ |",
-    "| Ref A     | high       | 2025-12-01     | Adopted micro-interaction pattern |",
-    "| Ref B     | medium     | 2025-11-15     | Adopted card layout trend |",
-    "| Ref C     | low        | 2025-10-01     | Adopted minimalist approach |",
-  ].join("\n");
+  const categories = [
+    "Visual Tone Trends",
+    "Layout / Composition Trends",
+    "Density / Hierarchy Trends",
+    "Interaction / Motion Trends",
+    "Component Styling Trends",
+    "Stale / Overused AI Slop Patterns",
+  ];
+  const lines = ["# Sources", "", "## Trend Scan", ""];
+  for (const cat of categories) {
+    lines.push(
+      `### ${cat}`,
+      "",
+      "#### Entry 1",
+      "",
+      `- reference: Ref for ${cat}`,
+      `- observation: Observed signal in ${cat}`,
+      "- freshness_date: 2025-12-01",
+      "- confidence: high",
+      `- source_translation: Adopted pattern from ${cat}`,
+      `- local_implication: Apply locally for ${cat}`,
+      "",
+    );
+  }
+  return lines.join("\n");
 }
 
 // ---------------------------------------------------------------------------
@@ -164,21 +178,22 @@ describe("TC-0010-0020: HTML/CSS mock is NOT blocking completion", () => {
 
 // QFAI:SPEC-0010:TC-0010-0021
 describe("TC-0010-0021: 00_index.md has canonical 3-layer family listing", () => {
-  it("00_index.md lists all 11 canonical files", async () => {
+  it("00_index.md lists all 12 canonical files", async () => {
     const content = await readFile(path.join(uiuxTemplateDir, "00_index.md"), "utf-8");
 
     const expectedFiles = [
       "00_index.md",
-      "10_strategy.md",
+      "10_implementation_strategy.md",
       "20_design_eval_invariant.md",
       "21_design_eval_trend_derived.md",
       "22_design_eval_product_specific.md",
       "23_design_eval_aggregate.md",
-      "30_comparison.md",
-      "31_anchor.md",
-      "40_contracts.md",
-      "50_review_bundle.md",
-      "60_critique_loop.md",
+      "30_option_comparison.md",
+      "31_selected_anchor_screen.md",
+      "11_design_taste_interview.md",
+      "24_design_eval_dynamic_overrides.md",
+      "40_screen_contracts.md",
+      "50_review_input_bundle.md",
     ];
     for (const f of expectedFiles) {
       expect(content).toContain(f);
@@ -187,32 +202,41 @@ describe("TC-0010-0021: 00_index.md has canonical 3-layer family listing", () =>
 });
 
 // ---------------------------------------------------------------------------
-// TC-0010-0022: 10_strategy.md has strong schema
+// TC-0010-0022: 10_implementation_strategy.md has strong schema
 // ---------------------------------------------------------------------------
 
 // QFAI:SPEC-0010:TC-0010-0022
-describe("TC-0010-0022: 10_strategy.md has strong schema", () => {
-  it("contains surface_type, approach, rationale, and risks fields", async () => {
-    const content = await readFile(path.join(uiuxTemplateDir, "10_strategy.md"), "utf-8");
-    expect(content).toMatch(/surface_type/);
-    expect(content).toMatch(/approach/);
-    expect(content).toMatch(/rationale/);
-    expect(content).toMatch(/risks/);
+describe("TC-0010-0022: 10_implementation_strategy.md has strong schema", () => {
+  it("contains strong 6-field schema (surface, decision, why_this_strategy, etc.)", async () => {
+    const content = await readFile(
+      path.join(uiuxTemplateDir, "10_implementation_strategy.md"),
+      "utf-8",
+    );
+    expect(content).toMatch(/- surface:/);
+    expect(content).toMatch(/- decision:/);
+    expect(content).toMatch(/- why_this_strategy:/);
+    expect(content).toMatch(/- expected_strengths:/);
+    expect(content).toMatch(/- known_risks:/);
+    expect(content).toMatch(/- fit_for_this_product:/);
+    expect(content).not.toMatch(/surface_type/);
   });
 });
 
 // ---------------------------------------------------------------------------
-// TC-0010-0023: 40_contracts.md has screen-obligation schema
+// TC-0010-0023: 40_screen_contracts.md has screen-obligation schema
 // ---------------------------------------------------------------------------
 
 // QFAI:SPEC-0010:TC-0010-0023
-describe("TC-0010-0023: 40_contracts.md has screen-obligation schema", () => {
-  it("contains Primary Tasks, Required States, Transitions, Observable Outcomes", async () => {
-    const content = await readFile(path.join(uiuxTemplateDir, "40_contracts.md"), "utf-8");
-    expect(content).toMatch(/Primary Tasks/i);
-    expect(content).toMatch(/Required States/i);
-    expect(content).toMatch(/Transitions/i);
-    expect(content).toMatch(/Observable Outcomes/i);
+describe("TC-0010-0023: 40_screen_contracts.md has screen-obligation schema", () => {
+  it("contains strong screen contract schema fields", async () => {
+    const content = await readFile(path.join(uiuxTemplateDir, "40_screen_contracts.md"), "utf-8");
+    expect(content).toMatch(/- screen_id:/);
+    expect(content).toMatch(/- primary_tasks:/);
+    expect(content).toMatch(/- secondary_tasks:/);
+    expect(content).toMatch(/- required_states:/);
+    expect(content).toMatch(/- transitions:/);
+    expect(content).toMatch(/- observable_outcomes:/);
+    expect(content).not.toContain("31_anchor.md");
   });
 });
 
@@ -291,7 +315,11 @@ describe("TC-0010-0026: Init template vs dogfood SKILL.md semantic parity", () =
     expect(dogfoodMatch).toBeTruthy();
 
     if (templateMatch?.[1] && dogfoodMatch?.[1]) {
-      for (const f of ["10_strategy.md", "31_anchor.md", "40_contracts.md"]) {
+      for (const f of [
+        "10_implementation_strategy.md",
+        "30_option_comparison.md",
+        "40_screen_contracts.md",
+      ]) {
         expect(templateMatch[1]).toContain(f);
         expect(dogfoodMatch[1]).toContain(f);
       }

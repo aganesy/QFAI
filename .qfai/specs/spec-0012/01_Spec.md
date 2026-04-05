@@ -26,6 +26,19 @@
   - Visual Review Guard (DDP -> Design Token -> UI Contract -> HTML Mock -> Flow)
   - Evidence production: markdown + JSON artifacts under `.qfai/evidence/`
   - `prototyping.json` with `uiFidelity` for L2 reporting
+  - Browser QA 4-phase model（smoke → interaction → visual → accessibility）: `browserQa/runner.ts` が順次実行し `BrowserQaRunResult` を集約
+  - Evidence bundling system（`evidence/bundleWriter.ts`, `evidence/fsEvidenceWriter.ts`）: render + Browser QA 結果を `.qfai/evidence/` に JSON バンドルとして永続化
+  - Render evidence capture（`evidence/renderRunner.ts`, `evidence/playwrightRenderAdapter.ts`）: Playwright アダプタ経由で PNG + HTML キャプチャ
+  - Provider registry pattern（`providers/registry.ts`, `providers/types.ts`）: config → concrete provider の依存逆転
+  - Full-harness runtime（`harness/runtime.ts`, `harness/adapters.ts`, `harness/resultWriter.ts`）: Planner→Generator→Evaluator ループの本番パス実装
+  - UI fidelity builder（`prototyping/uiFidelityBuilder.ts`）: render evidence + Browser QA から UI fidelity artifact を合成し QFAI-PROT-270/271/272 で欠落を検出
+  - Prototyping execution orchestrator（`prototyping/execution.ts`）: mode resolution → evidence → Browser QA → full-harness の本番パスエントリポイント
+  - Prototyping mode module (`prototyping/mode.ts`): mode resolution engine with existence-based precedence
+  - Recommendation artifact resolver (`prototyping/recommendationArtifact.ts`): single source of truth for recommendation status
+  - Recommendation schema (`prototyping/recommendationSchema.ts`): key existence checks for precedence decisions
+  - Prototyping types (`prototyping/types.ts`): canonical type set (PrototypingMode, PrototypingSurface, PrototypingObligations, etc.)
+  - prototyping.calibration config block (`qfai.config.yaml` の prototyping stanza)
+  - Report prototyping observability integration (mode, obligations, evidence, harness, render, browserQa, calibration)
 - Out:
   - CLI command `qfai prototyping` (REMOVED — no active document may reference it as a valid interface)
   - Acceptance test automation (belongs to `/qfai-atdd`)
@@ -69,10 +82,22 @@
 - REQ-0013: Archive/label superseded spec content that references CLI command (v1.7.12)
 - REQ-0014: Eliminate responsibility leakage between skill and CLI (v1.7.12)
 - REQ-0015: Normalize static-first/mode-aware prototyping contract (v1.7.12)
+- REQ-0016: Prototyping Mode Module — `prototyping/mode.ts` に mode resolution engine を実装。parseDiscussionModeRecommendationWithWarnings(), resolvePrototypingMode(), derivePrototypingObligations(), inferSurfaceFromRecommendationAndEvidence() を提供
+- REQ-0017: Existence-Based Precedence (D-5) — prototyping.yaml 内の `prototyping` key の存在自体で namespaced contract を権威的とする。値の妥当性ではなく key の有無で判定し、legacy fallback を防止
+- REQ-0018: Recommendation Artifact Resolver — `resolveLatestRecommendationArtifact()` が recommendation artifact の status（valid/invalid/missing/no-pack）を一元管理。report.ts と prototypingEvidence.ts が共有
+- REQ-0019: Recommendation Schema Validation — `validatePrototypingRecommendation()` が prototyping.yaml の schema を検証（必須フィールド、mode 妥当性、allowed_modes 整合性）し、SDD preflight blocker として機能
+- REQ-0020: Prototyping Calibration Config — `qfai.config.yaml` に prototyping.calibration stanza を追加。accept: 0.8, refine: 0.5, maxIterations: 15 のデフォルト値。プロジェクト固有のチューニング可能
+- REQ-0021: Report Prototyping Integration — report.ts に ReportPrototypingSummary 型で prototyping data を収集。recommendationArtifact, mode, evidence, fullHarness, render, browserQa, calibration を含む。v1.7.13 では foundation-only
+- REQ-0022: Browser QA 4-Phase Model — `browserQa/runner.ts` が smoke→interaction→visual→accessibility の 4 フェーズを順次実行。各フェーズは独立した `BrowserQaPhaseResult` を返し、runner が `BrowserQaRunResult` に集約。Playwright provider 経由で実行
+- REQ-0023: Evidence Bundle Persistence — `evidence/bundleWriter.ts` が render capture + Browser QA 結果 + prototyping summary を `.qfai/evidence/` に JSON バンドルとして永続化。full-harness correlation ID を含む
+- REQ-0024: Render Evidence Capture — `evidence/renderRunner.ts` が `RenderCaptureAdapter`（Playwright 実装: `playwrightRenderAdapter.ts`）経由で各 route の PNG + HTML をキャプチャ。キャプチャ結果は `RenderRunnerResult` 型で返却
+- REQ-0025: Provider Registry — `providers/registry.ts` が `QfaiPrototypingConfig` から concrete provider（Playwright/custom）を解決。依存逆転パターンで harness・runner が provider 実装に依存しない
+- REQ-0026: UI Fidelity Builder — `prototyping/uiFidelityBuilder.ts` が render evidence + Browser QA 結果から UI fidelity artifact を合成。required evidence 欠落時は QFAI-PROT-270（render missing）, QFAI-PROT-271（browserQa missing）, QFAI-PROT-272（both missing）を emit
+- REQ-0027: Prototyping Execution Orchestrator — `prototyping/execution.ts` が mode resolution → evidence capture → Browser QA → full-harness の本番パスを統合実行。mode=low-cost/standard/full-harness の各パスを mode.ts の obligation matrix に基づいて制御
 
 ## Entry points
 
-- US range in this spec: US-0012-0001..US-0012-0010
+- US range in this spec: US-0012-0001..US-0012-0016
 - Primary actors: Developer, AI Agent (FullStackEngineer, RuntimeGatekeeper), CI/CD pipeline
 - Notes: No CLI command exists. This is a skill-only spec for `/qfai-prototyping`.
 

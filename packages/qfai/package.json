@@ -1,6 +1,6 @@
 {
   "name": "qfai",
-  "version": "1.7.12",
+  "version": "1.7.13",
   "description": "Quality-first AI-driven development toolkit (SDD × ATDD × TDD).",
   "license": "MIT",
   "repository": {
@@ -51,6 +51,9 @@
     "fast-glob": "^3.3.2",
     "jsdom": "^26.1.0",
     "yaml": "^2.5.1"
+  },
+  "optionalDependencies": {
+    "playwright": "^1.52.0"
   },
   "devDependencies": {
     "@types/jsdom": "^21.1.7",

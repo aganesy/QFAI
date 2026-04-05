@@ -101,3 +101,49 @@
 - EX-Ref: EX-0014-0013
 - AC-Refs: AC-0014-0011
 - Verify that a validator not registered in the canonical set is rejected with an error.
+
+## TC-0014-0012: Canonical UIX in Verify Path
+
+- EX-Ref: EX-0014-0001
+- AC-Refs: AC-0014-0012
+- Type: normal
+
+| Step | Action                                                               | Expected                          |
+| ---- | -------------------------------------------------------------------- | --------------------------------- |
+| 1    | Run qfai validate on a well-formed project                           | Validation completes              |
+| 2    | Check validator pipeline for UIX entrypoint                          | runCanonicalUixValidators invoked |
+| 3    | Check for runAllUixValidators or runLegacyUixCompatibilityValidators | Neither invoked                   |
+
+## TC-0014-0013: Legacy Validators Excluded from Production
+
+- EX-Ref: EX-0014-0001
+- AC-Refs: AC-0014-0013
+- Type: boundary
+
+| Step | Action                                 | Expected                                     |
+| ---- | -------------------------------------- | -------------------------------------------- |
+| 1    | Import from validators/index.ts        | validateDdpFields NOT exported               |
+| 2    | Import from validators/legacy/index.ts | validateDdpFields available (migration only) |
+| 3    | Run qfai validate                      | No DDP-era issue codes (QFAI-DDP-\*) emitted |
+
+## TC-0014-0014: Phase1 Ratchet in Verify
+
+- EX-Ref: EX-0014-0014
+- AC-Refs: AC-0014-0012
+- Type: normal
+
+| Step | Action                               | Expected                    |
+| ---- | ------------------------------------ | --------------------------- |
+| 1    | Set phase1ReleaseDate to 10 days ago | Config ready                |
+| 2    | Run verify with UIX-VAL error        | Error downgraded to warning |
+
+## TC-0014-0015: Verify Canonical Validator Set
+
+- EX-Ref: EX-0014-0015
+- AC-Refs: AC-0014-0012
+- Type: normal
+
+| Step | Action                      | Expected                        |
+| ---- | --------------------------- | ------------------------------- |
+| 1    | Run verify                  | 12 canonical validators execute |
+| 2    | Check for legacy validators | None invoked                    |

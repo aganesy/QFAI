@@ -61,12 +61,12 @@ const repoRoot = path.resolve(process.cwd(), "..", "..");
 
 // QFAI:SPEC-0004:TC-0004-0017
 describe("TC-0004-0017: Canonical UIX aggregator path verification", () => {
-  it("validate.ts calls runAllUixValidators (not a legacy wrapper)", async () => {
+  it("validate.ts calls runCanonicalUixValidators (not a legacy wrapper)", async () => {
     const validateSrc = await readFile(
       path.join(repoRoot, "packages", "qfai", "src", "core", "validate.ts"),
       "utf-8",
     );
-    expect(validateSrc).toContain("runAllUixValidators");
+    expect(validateSrc).toContain("runCanonicalUixValidators");
     expect(validateSrc).not.toMatch(/legacyUixAggregator/);
   });
 });

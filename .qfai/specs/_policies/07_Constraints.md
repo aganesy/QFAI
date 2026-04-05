@@ -72,6 +72,15 @@
 | TC-66 | v1.7.6/v1.7.7 pack を即座に壊さない（backward compatible migration）                                                 | migration window 内は warning level で段階的に移行                                                                   | 後方互換性の制約                                                       |
 | TC-67 | non-UI project で新 validator が over-fire しない（全新 validator に surface type guard）                            | non-UI project の安全性保証                                                                                          | バリデータ安全性の制約                                                 |
 
+### v1.7.13 追加制約
+
+- TC-68: prototyping.yaml は discussion-pack の必須サイドアーティファクトであり、15 markdown ファイルとともに存在チェックされる
+- TC-69: Existence-based precedence — prototyping key の存在自体が namespaced contract の権威性を決定する（値の妥当性ではなく key の有無）
+- TC-70: Canonical/legacy validator 分離 — production path は runCanonicalUixValidators のみ、legacy path は migration tooling 専用
+- TC-71: IssueCategory "canonical" は全新規 canonical validator が emit する category 値
+- TC-72: prototypingRecommendation validator は SDD preflight のブロッカーとして機能する
+- TC-73: prototyping.calibration config block はデフォルト値を持ち、未設定でも正常動作する
+
 ## Operational Constraints
 
 | ID    | Constraint                                                                                                 | Rationale                                                        | Impact                                   |
@@ -120,6 +129,10 @@
 | OC-42 | render evidence は `captured/skipped/failed` を固定し fake success を許容しない                            | truthful runtime reporting を維持                                | runtime evidence の制約                  |
 | OC-43 | full-harness は explicit non-default path を維持し、standard path に暗黙昇格させない                       | premium path のコスト/複雑さを opt-in に限定する                 | mode/posture の制約                      |
 | OC-44 | docs / steering / changelog は implemented / foundation-only / deferred の語彙で成熟度を表現する           | release truthfulness と reviewer 判断の一貫性を維持              | 文書整合性の制約                         |
+
+- OC-45: report の prototyping セクションは v1.7.13 では foundation-only（blocking validation には統合しない）
+- OC-46: harness loop の termination status は "converged" / "max-iterations" に正規化される（旧 "accepted" / "cap-reached" は非推奨）
+- OC-47: ModeGuidance の recommendation は有効な PrototypingMode 値を返す（"full-harness"、旧 "premium" は削除）
 
 ## Business Constraints
 

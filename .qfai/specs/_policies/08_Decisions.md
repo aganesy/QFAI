@@ -2,7 +2,7 @@
 
 ## Decisions
 
-92 items — discussion-20260312143000000（symlink アーキテクチャ移行）、
+108 items — discussion-20260312143000000（symlink アーキテクチャ移行）、
 discussion-20260313143000000（SDP）、discussion-20260314053646704（AskUserQuestion MUST 化）、
 discussion-20260317102145554（実装フェーズ統一）、discussion-20260322091309602（Copilot レビューインストラクション配布）、
 discussion-20260323111959112（Codex サブエージェント）、discussion-20260324054332396（デザインディレクション＆UI品質強化）、
@@ -513,7 +513,7 @@ discussion-20260329195516830（v1.7.6 Audit Remediation）、
 
 ### DR-0057: UI-bearing 分類は surface type のみで判定する（OQ-0002 discussion-20260328120000000）
 
-- Decision: UI-bearing 分類は surface type (web-ui, mobile-ui, desktop-ui, mixed, non-ui) のみで判定し、interaction complexity は使用しない
+- Decision: UI-bearing 分類は surface type (web, mobile, desktop, mixed, non-ui) のみで判定し、interaction complexity は使用しない
 - Context: discussion-20260328120000000 OQ-0002 で3つの選択肢を比較
 - Rationale: surface type は決定論的に判定可能であり、interaction complexity は主観的で自動化が困難
 - Rejected-A: Interaction complexity ベースの分類（主観的、自動化困難）
@@ -1003,3 +1003,103 @@ discussion-20260329195516830（v1.7.6 Audit Remediation）、
   - (a) prototyping command 復活で 6 に: DR-0108 と矛盾。DO NOT: 未実装コマンドを数に含めない。Temptation: ドキュメントの数字が大きい方が印象が良い
 - Consequence: docs/steering 修正
 - Evidence: discussion-20260401215536131 D-005
+
+### v1.7.13 Canonical Sidecar Convergence (implementation-derived, 2026-04-04)
+
+### DR-0093: Canonical/Legacy Validator Separation
+
+- Decision: production-path `validate.ts` に `runCanonicalUixValidators()` のみを登録し、DDP validators を `legacy/` namespace に移動する
+- Context: 旧 monolithic `uixValidators.ts` が canonical と legacy の責務を混在させていた
+- Rationale: production path の信頼性向上と legacy migration tooling の分離。canonical validators は `category: "canonical"` を emit し、downstream tooling で区別可能
+- Rejected: legacy validators を production path に残す（canonical contract 違反の検出精度が下がる）
+  - DO NOT: legacy validator を validate.ts pipeline に登録しない。Temptation: 後方互換性のために残したい
+
+### DR-0094: prototyping.yaml as Required Side Artifact
+
+- Decision: discussion-pack の必須アーティファクトとして prototyping.yaml を追加し、SDD preflight のブロッカーとする
+- Context: prototyping mode recommendation が discussion-pack 内に構造化されておらず、mode 選択の根拠がトレースできなかった
+- Rationale: prototyping.yaml により mode selection の根拠が明示的にキャプチャされ、SDD preflight で schema validation が可能になる
+- Rejected: prototyping.yaml を optional にする（mode recommendation の欠落を検出できない）
+  - DO NOT: prototyping.yaml を optional にしない。Temptation: 非 UI プロジェクトでは不要に見える
+
+### DR-0095: Existence-Based Precedence (D-5)
+
+- Decision: prototyping.yaml 内の `prototyping` key の存在自体（値の妥当性ではなく）で namespaced contract を権威的とする
+- Context: 旧実装では値の妥当性チェックで legacy fallback が発動し、意図しない mode 選択が発生していた
+- Rationale: key existence check により、malformed な namespaced block でも legacy fallback を防止し、明示的なエラーを表示する
+- Rejected: 値の妥当性に基づく precedence（legacy fallback が silent に発動する）
+  - DO NOT: 値ベースの precedence を使わない。Temptation: 空の prototyping block でもデフォルトにフォールバックしたい
+
+### DR-0096: IssueCategory "canonical" 追加
+
+- Decision: IssueCategory type に "canonical" を追加し、新規 canonical validator が emit する issue の category とする
+- Context: "compatibility" と "change" の 2 値では canonical contract violation と legacy warning を区別できなかった
+- Rationale: downstream tooling（report, CI checks）が canonical vs compatibility vs change を区別可能になる
+
+### DR-0097: Report Prototyping Section as Foundation-Only
+
+- Decision: report.ts に prototyping observability section を追加するが、v1.7.13 では blocking validation には統合しない
+- Context: prototyping data の品質が安定するまで、observability としてのみ提供する
+- Rationale: foundation-only として段階的に導入し、将来の validation 統合に向けた data model を確立する
+
+### DR-0098: Harness Loop Status Normalization
+
+- Decision: harness loop の termination status を "converged" / "max-iterations" に正規化する（旧 "accepted" / "cap-reached" を置換）
+- Context: evidence summary が "accepted" を参照していたが、loop が "converged" を emit していたため、switch case が一致しなかった（バグ）
+- Rationale: terminology alignment + bug fix
+
+### DR-0099: ModeGuidance "premium" → "full-harness"
+
+- Decision: ModeGuidance.recommend() が返す mode を "premium" から "full-harness" に変更し、有効な PrototypingMode 値にする
+- Context: "premium" は PrototypingMode の有効値ではなく、type mismatch が silent に発生していた
+- Rationale: type safety + terminology alignment
+
+### DR-0100: Prototyping Calibration Config Block
+
+- Decision: qfai.config.yaml に prototyping.calibration stanza を追加し、デフォルト値（accept: 0.8, refine: 0.5, maxIterations: 15）を設定する
+- Context: calibration thresholds がハードコードされており、プロジェクト固有の調整ができなかった
+- Rationale: config-driven calibration により、プロジェクトごとのチューニングが可能になる
+
+### v1.7.13 補完 (コミット履歴分析由来, 2026-04-04)
+
+### DR-0101: Phase1 Ratchet Mechanism
+
+- Decision: config.uiux.phase1ReleaseDate 設定時、リリース日から 30 日以内の UIX-VAL-\* エラーを warning に降格する
+- Context: canonical UIX validator の初期ロールアウト期間中に hard failure が多発すると採用障壁が高くなる
+- Rationale: 30 日の grace period で段階的な移行を可能にし、期限後は full enforcement に移行
+
+### DR-0102: DDH Validator Sidecar Source Mapping
+
+- Decision: discussionDesignHardening の 7 バリデータを sidecar-first モデルに完全書き換え。読み取り先を 03_Story-Workshop.md DDS セクションから uiux/ sidecar ファイルに変更
+- Context: DDS セクションは monolithic で保守性が低く、sidecar ファイルは modular
+- Rationale: 各バリデータが明確な sidecar ファイルを primary source として参照することで、責務分離と保守性向上
+
+### DR-0103: State Coverage Required States Change
+
+- Decision: state coverage 必須状態を ["empty","loading","error","populated"] から ["default","loading","empty","error"] に変更
+- Context: "populated" は "default" の部分集合であり、"default" が初期表示状態としてより正確
+- Rationale: "default" は画面の初期表示を意味し、populated/empty は default の variant として扱う方が概念的に正しい
+
+### DR-0104: Nested Bullet Canonical Format with CSV Fallback
+
+- Decision: strategy と screen contract の list-type フィールドに nested bullet list を canonical format とし、CSV inline を legacy fallback として維持
+- Context: CSV format では複雑なデータ構造の表現力が不足
+- Rationale: nested bullet は可読性と構造化に優れ、CSV fallback は既存パックの後方互換性を維持
+
+### DR-0105: QFAI-VIS-002 Severity Downgrade to Info
+
+- Decision: HTML+CSS visual mock 不在の QFAI-VIS-002 を warning → info に降格
+- Context: sidecar-first モデルで HTML mock は primary truth ではなく optional fallback
+- Rationale: sidecar artifacts が primary UI definition となり、HTML mock の不在は品質問題ではなくなった
+
+### DR-0106-A: QFAI-AUD-021 Selected Direction Audit Rule
+
+- Decision: uiux/31_selected_anchor_screen.md に `## Selected Direction` セクションが存在しない場合に QFAI-AUD-021 error を追加
+- Context: selected direction は sidecar-first モデルの中核的 design decision。v1.7.13 で 30_comparison.md から 31_selected_anchor_screen.md に分離
+- Rationale: design audit で selected direction の存在を強制し、設計意思決定の欠落を防止
+
+### DR-0107-A: Canonical Barrel Isolation
+
+- Decision: validators/index.ts（canonical barrel）からの legacy/ re-export を禁止
+- Context: barrel export に legacy validator が混入すると production path の信頼性が低下
+- Rationale: 明確な module boundary により、意図しない legacy validator の production path 混入を構造的に防止

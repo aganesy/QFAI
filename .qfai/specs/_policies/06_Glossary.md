@@ -122,7 +122,7 @@
 | Quality Profile | qfai.config.yaml で宣言するプロジェクト固有の UI/UX 方針。b2b-dense / consumer / mobile-first 等のプリセット |
 | max_primary_steps | primary task を完遂するための最大許容ステップ数。デフォルト 3 |
 | BP/AP Rule DB | contracts/design 配下に配置するベストプラクティス/アンチパターンの実データ YAML。schema だけでなく実ルールを持つ |
-| UI-bearing discussion pack | UI アーティファクト（taste interview、trend/reference scan、3-layer evaluation 等）を含むディスカッションパック。v1.7.0 で DDS 必須化、v1.7.12 で 3-layer canonical model に統一 |
+| UI-bearing discussion pack | UI アーティファクト（taste interview、trend/reference scan、3-layer evaluation 等）を含むディスカッションパック。v1.7.0 で DDS 必須化、v1.7.12 で 3-layer canonical model に統一、v1.7.13 で canonical file rename (30_option_comparison, 31_selected_anchor_screen, 40_screen_contracts, 50_review_input_bundle) |
 | Design Direction Summary (DDS) | 03_Story-Workshop.md に配置される設計方向性セクション。ビジュアルテーゼ、オプション比較、アンカースクリーン、CTA 階層、ステート網羅性、アンチゴールを含む |
 | Competitive Reference Registry | 04_Sources.md に配置される競合参考 UI の構造化レジストリ。adopted_points, rejected_points, local_translation の 3 フィールドが必須 |
 | Structural check | プレゼンス（存在/不在）を検証するバイナリチェック。v1.7.0 で error 重大度が割り当てられる |
@@ -137,14 +137,16 @@
 | Quality Profile (v1.7.2) | Rule Tier から severity へのマッピングを制御するプロファイル。default, high, strict の 3 種。Context: config.uiux.qualityProfile |
 | Token Drift | design token 定義があるにもかかわらず contracts/mocks で raw 値が繰り返し使用される状態。Context: tokenDiscipline dimension の検査対象 |
 | uiux/ サイドカー (uiux/ sidecar) | UI-bearing プロジェクト向けに qfai-discussion が生成する補助アーティファクトディレクトリ。11ファイルで構成される |
-| Surface Classification (サーフェス分類) | プロジェクトの UI surface type (web-ui, mobile-ui, desktop-ui, mixed, non-ui) を分類する仕組み |
+| Surface Classification (サーフェス分類) | プロジェクトの UI surface type (web, mobile, desktop, mixed, non-ui) を分類する仕組み。01_Context.md に explicit classification block として記載される |
 | Implementation Strategy (実装戦略) | UI/UX 実装アプローチを YAML で定義するサイドカーアーティファクト (10_strategy.md) |
 | Scoring Axes (スコアリング軸) | invariant, trend-derived, product-specific の3層評価フレームワーク |
-| Anchor Screen (アンカースクリーン) | オプション比較から選定される参照画面デザイン |
-| Screen Contract (スクリーンコントラクト) | 画面レベルの UI 義務を構造化 Markdown（表形式）で定義するサイドカーアーティファクト (uiux/40_contracts.md)。将来 YAML 化される可能性がある |
-| Option Comparison (オプション比較) | 2つ以上のデザイン代替案をスコアリング軸に沿って構造化比較すること |
-| Review Input Bundle (レビュー入力バンドル) | サイドカー出力をまとめた統合アーティファクトパッケージ |
-| Critique Loop (クリティークループ) | デザイン批評サイクルを追跡する反復レビューアーティファクト |
+| Anchor Screen (アンカースクリーン) | オプション比較から選定される参照画面デザイン。canonical record は uiux/31_selected_anchor_screen.md |
+| Screen Contract (スクリーンコントラクト) | 画面レベルの UI 義務を構造化 Markdown（表形式）で定義するサイドカーアーティファクト (uiux/40_screen_contracts.md)。11 required fields（secondary_tasks 含む）。将来 YAML 化される可能性がある |
+| Option Comparison (オプション比較) | 2つ以上のデザイン代替案をスコアリング軸に沿って構造化比較すること。canonical file は uiux/30_option_comparison.md（Selected Direction は含まず、31_selected_anchor_screen.md に分離） |
+| Selected Anchor (選択アンカー) | オプション比較から選定された方向性とアンカースクリーンの canonical record。uiux/31_selected_anchor_screen.md に記載 |
+| Review Input Bundle (レビュー入力バンドル) | サイドカー出力をまとめた統合アーティファクトパッケージ (uiux/50_review_input_bundle.md) |
+| Dynamic Overrides (動的オーバーライド) | 3-layer evaluation の動的上書き定義 (uiux/24_design_eval_dynamic_overrides.md)。OPTIONAL — 存在しなくてもファミリ完全性エラーにはならない |
+| UI-bearing Classification (UI-bearing 分類) | 01_Context.md に配置される explicit classification block。surface type (web, mobile, desktop, mixed, non-ui) を宣言し、UI-bearing 判定の primary SSOT となる |
 | Direct Template (ダイレクトテンプレート) | v1.7.3 で置換される3テンプレート (03, 04, 14) |
 | Batch A/B Templates (バッチA/Bテンプレート) | UX intent クロスリファレンスで拡張されるコアテンプレート群 (01, 02, 05-12, 99) |
 | UIX-VAL | Deterministic validator rule family for UI/UX artifacts。Shape/completeness/contradiction checks のみ。LLM 非依存。Context: v1.7.4 新機能 |
@@ -195,6 +197,21 @@
 | Traceability Drift | specのBR/ACが変更されたのに対応する実装コードに変更がない状態（トレーサビリティ断絶） | validation | discussion-20260330183225659 |
 | Implementation State | 各specの実装状態分類: implemented（実装済み）, missing（未実装）, stale（古い実装）, unchanged（変更なし） | diff detection | spec-0011 |
 | Diff Context | evidenceファイルに記録される差分検出の実行コンテキスト（last_commit_sha, last_run_timestamp, changed_specs, execution_mode） | evidence | spec-0011 |
+| Canonical Validator | production-path validator registered in `validate.ts` pipeline. Distinguished from legacy/compatibility validators by `category: "canonical"` in emitted issues. |
+| Existence-Based Precedence (D-5) | mode resolution rule where the mere existence of the `prototyping` key in `prototyping.yaml` makes the namespaced contract authoritative, regardless of value validity. |
+| IssueCategory | type discriminator for validator findings — `"canonical"` (production contract violations), `"compatibility"` (migration/legacy warnings), `"change"` (change-related findings). |
+| Legacy Validator | validator in `validators/legacy/` namespace, excluded from production `validate.ts` pipeline. Available for migration tooling only. |
+| prototyping.yaml | required side artifact in discussion-pack alongside 15 markdown files. Contains `prototyping.recommended_mode`, `rationale`, `allowed_modes`, `surface` fields. |
+| Prototyping Mode | one of `low-cost` (static only), `standard` (default), `full-harness` (opt-in runtime-heavy). Resolved via precedence: user-specified > discussion recommendation > system default. |
+| Recommendation Artifact | `prototyping.yaml` file in discussion-pack. Status: valid/invalid/missing/no-pack. Resolved by `resolveLatestRecommendationArtifact()`. |
+| runCanonicalUixValidators | production-path UIX validator entrypoint replacing `runAllUixValidators`. Runs 12 modular validators in parallel from `uix/canonical.ts`. |
+| Browser QA 4-Phase Model | browser-level QA を smoke → interaction → visual → accessibility の 4 フェーズで順次実行するモデル。`browserQa/runner.ts` が orchestrate し `BrowserQaRunResult` を集約。|
+| Evidence Bundle | render capture + Browser QA 結果 + prototyping summary を `.qfai/evidence/` に JSON バンドルとして永続化する単位。`evidence/bundleWriter.ts` が生成。|
+| UI Fidelity Builder | render evidence + Browser QA 結果から UI fidelity artifact を合成するモジュール。required evidence 欠落時は QFAI-PROT-270/271/272 を emit。|
+| Prototyping Execution Orchestrator | `prototyping/execution.ts` — mode resolution → evidence capture → Browser QA → full-harness の本番パスを統合実行するエントリポイント。|
+| Provider Registry | `providers/registry.ts` — `QfaiPrototypingConfig` から concrete provider（Playwright/custom）を解決する依存逆転パターン。|
+| Surface Type Detection | `detection/surfaceType.ts` — 01_Context.md の明示的分類ブロック（ui_bearing/primary_surface）を優先し、フォールバックとして surface_type フィールドを使用する判定モジュール。|
+| Classification Block | 01_Context.md に記載する構造化ブロック。`ui_bearing`, `primary_surface`, `secondary_surfaces`, `classification_rationale` の 4 フィールドで構成。`classification.ts` バリデータが検証。|
 
 ## 略語一覧
 

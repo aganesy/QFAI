@@ -41,7 +41,7 @@ QFAI Skill Body (SSOT)
 ## FORMAT SSOT (Mandatory)
 
 - **Before writing or editing any `.qfai/**` artifact\*\*, read and follow the relevant directory README template and sample:
-  - `.qfai/require/README.md`
+  - `.qfai/discussion/README.md`
   - `.qfai/specs/README.md`
   - `.qfai/contracts/**/README.md`
   - `.qfai/evidence/README.md`

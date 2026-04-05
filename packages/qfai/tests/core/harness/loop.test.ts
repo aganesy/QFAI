@@ -22,7 +22,7 @@ const validInputs = {
 };
 
 describe("HarnessLoop", () => {
-  describe("premium invocation happy path (TC-0012-0001)", () => {
+  describe("full-harness invocation happy path (TC-0012-0001)", () => {
     it("initializes loop and starts iteration at 1", async () => {
       const loop = new HarnessLoop({ maxIterations: 5 });
       const result = await loop.run(validInputs);
@@ -47,7 +47,7 @@ describe("HarnessLoop", () => {
   });
 
   describe("accept termination (TC-0012-0007)", () => {
-    it("terminates with accepted status on accept decision", async () => {
+    it("terminates with converged status on accept decision", async () => {
       // Use high default scores to get accept
       const loop = new HarnessLoop({
         maxIterations: 5,
@@ -55,8 +55,8 @@ describe("HarnessLoop", () => {
       });
       const result = await loop.run(validInputs);
 
-      expect(result.status).toBe("accepted");
-      expect(result.terminationReason).toBe("accepted");
+      expect(result.status).toBe("converged");
+      expect(result.terminationReason).toBe("converged");
     });
   });
 
@@ -106,8 +106,8 @@ describe("HarnessLoop", () => {
       const result = await loop.run(validInputs);
 
       expect(result.iterationCount).toBe(15);
-      expect(result.status).toBe("cap-reached");
-      expect(result.terminationReason).toBe("cap-reached");
+      expect(result.status).toBe("max-iterations");
+      expect(result.terminationReason).toBe("max-iterations");
     });
   });
 
@@ -121,7 +121,7 @@ describe("HarnessLoop", () => {
       const result = await loop.run(validInputs);
 
       expect(result.iterationCount).toBe(8);
-      expect(result.status).toBe("cap-reached");
+      expect(result.status).toBe("max-iterations");
     });
   });
 
@@ -140,7 +140,7 @@ describe("HarnessLoop", () => {
   });
 
   describe("best-so-far selection (TC-0012-0022)", () => {
-    it("selects best scoring iteration on cap-reached", async () => {
+    it("selects best scoring iteration on max-iterations", async () => {
       const loop = new HarnessLoop({
         maxIterations: 5,
         thresholds: { accept: 0.99, refine: 0.98 },

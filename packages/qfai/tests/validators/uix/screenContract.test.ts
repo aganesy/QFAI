@@ -33,23 +33,6 @@ async function createNonUiPack(root: string): Promise<void> {
   await writeFile(path.join(root, "01_Spec.md"), "# Spec\n\n- surface: non-ui\n", "utf-8");
 }
 
-function completeScreenEntry(id: string, states = "default, loading, empty, error"): string {
-  return [
-    `### Screen: ${id}`,
-    "",
-    `- screen_id: ${id}`,
-    `- route: /app/${id}`,
-    `- purpose: Main ${id} view`,
-    `- actor: end-user`,
-    `- primary_tasks: View data, Edit entries`,
-    `- required_states: ${states}`,
-    `- transitions: Navigate to detail, Back to list`,
-    `- observable_outcomes: Data displayed, Changes saved`,
-    `- notes_for_verify: Check responsive layout`,
-    `- notes_for_reviewer: Focus on loading state`,
-  ].join("\n");
-}
-
 afterEach(async () => {
   while (tempDirs.length > 0) {
     const dir = tempDirs.pop();
@@ -57,24 +40,96 @@ afterEach(async () => {
   }
 });
 
+function completeScreenEntryNested(
+  id: string,
+  opts?: { missingStates?: string[]; skipTransitions?: boolean },
+): string {
+  const lines = [
+    `### Screen: ${id}`,
+    "",
+    `- screen_id: ${id}`,
+    `- route: /app/${id}`,
+    `- purpose: Main ${id} view`,
+    `- actor: end-user`,
+    "- primary_tasks:",
+    "  - View data: click list → data table displayed",
+    "  - Edit entries: click edit → form opens",
+    "- secondary_tasks:",
+    "  - Export data: click export → file downloaded",
+    "  - Filter results: use filter bar → table filtered",
+    "- required_states:",
+  ];
+  const allStates = ["default", "loading", "empty", "error"];
+  const includeStates = allStates.filter((s) => !(opts?.missingStates ?? []).includes(s));
+  for (const s of includeStates) {
+    lines.push(`  - ${s}: ${s} state description`);
+  }
+  if (!opts?.skipTransitions) {
+    lines.push(
+      "- transitions:",
+      "  - empty → loading: data fetch initiated",
+      "  - loading → default: data received",
+      "  - loading → error: fetch failure",
+      "  - error → loading: retry action",
+    );
+  }
+  lines.push(
+    "- observable_outcomes:",
+    "  - Data displayed → visible in table",
+    "  - Changes saved → toast notification",
+    `- notes_for_verify: Check responsive layout`,
+    `- notes_for_reviewer: Focus on loading state`,
+  );
+  return lines.join("\n");
+}
+
 describe("screen contract validator", () => {
-  it("complete pass", async () => {
+  it("nested bullet canonical pass", async () => {
+    const root = await newTempDir();
+    await createUiBearingPack(root);
+    const content = ["# Screen Contracts", "", completeScreenEntryNested("dashboard")].join("\n");
+    await writeFile(path.join(root, "uiux", "40_screen_contracts.md"), content, "utf-8");
+
+    const issues = await validateScreenContractSchema(root, defaultConfig);
+
+    expect(issues).toHaveLength(0);
+  });
+
+  it("nested bullet state coverage edge", async () => {
     const root = await newTempDir();
     await createUiBearingPack(root);
     const content = [
       "# Screen Contracts",
       "",
-      completeScreenEntry("dashboard"),
-      "",
-      completeScreenEntry("settings"),
-      "",
-      completeScreenEntry("profile"),
+      completeScreenEntryNested("dashboard", { missingStates: ["empty", "error"] }),
     ].join("\n");
-    await writeFile(path.join(root, "uiux", "40_contracts.md"), content, "utf-8");
+    await writeFile(path.join(root, "uiux", "40_screen_contracts.md"), content, "utf-8");
 
     const issues = await validateScreenContractSchema(root, defaultConfig);
 
-    expect(issues).toHaveLength(0);
+    const stateIssue = issues.find((i) => i.code === "UIX-VAL-SCREEN-CONTRACT-STATE-COVERAGE");
+    expect(stateIssue).toBeDefined();
+    expect(stateIssue?.message).toContain("empty");
+    expect(stateIssue?.message).toContain("error");
+  });
+
+  it("nested bullet incomplete (missing transitions)", async () => {
+    const root = await newTempDir();
+    await createUiBearingPack(root);
+    const content = [
+      "# Screen Contracts",
+      "",
+      completeScreenEntryNested("dashboard", { skipTransitions: true }),
+    ].join("\n");
+    await writeFile(path.join(root, "uiux", "40_screen_contracts.md"), content, "utf-8");
+
+    const issues = await validateScreenContractSchema(root, defaultConfig);
+
+    const incompleteIssue = issues.find(
+      (i) => i.code === "UIX-VAL-SCREEN-CONTRACT-SCHEMA-INCOMPLETE",
+    );
+    expect(incompleteIssue).toBeDefined();
+    expect(incompleteIssue?.message).toContain("transitions");
   });
 
   it("incomplete fail", async () => {
@@ -90,12 +145,19 @@ describe("screen contract validator", () => {
       "- route: /app/dashboard",
       "- purpose: Main view",
       "- actor: end-user",
-      "- primary_tasks: View data",
-      "- required_states: default, loading, empty, error",
+      "- primary_tasks:",
+      "  - View data: open dashboard summary",
+      "- secondary_tasks:",
+      "  - Export data: download CSV",
+      "- required_states:",
+      "  - default: Ready state",
+      "  - loading: Spinner state",
+      "  - empty: Empty list state",
+      "  - error: Retry state",
       "- notes_for_verify: Check layout",
       "- notes_for_reviewer: Focus on states",
     ].join("\n");
-    await writeFile(path.join(root, "uiux", "40_contracts.md"), content, "utf-8");
+    await writeFile(path.join(root, "uiux", "40_screen_contracts.md"), content, "utf-8");
 
     const issues = await validateScreenContractSchema(root, defaultConfig);
 
@@ -118,11 +180,11 @@ describe("screen contract validator", () => {
     const content = [
       "# Screen Contracts",
       "",
-      completeScreenEntry("main-dashboard"),
+      completeScreenEntryNested("main-dashboard"),
       "",
-      completeScreenEntry("main-dashboard"), // duplicate
+      completeScreenEntryNested("main-dashboard"), // duplicate
     ].join("\n");
-    await writeFile(path.join(root, "uiux", "40_contracts.md"), content, "utf-8");
+    await writeFile(path.join(root, "uiux", "40_screen_contracts.md"), content, "utf-8");
 
     const issues = await validateScreenContractSchema(root, defaultConfig);
 
@@ -138,9 +200,9 @@ describe("screen contract validator", () => {
     const content = [
       "# Screen Contracts",
       "",
-      completeScreenEntry("dashboard", "default, loading"),
+      completeScreenEntryNested("dashboard", { missingStates: ["empty", "error"] }),
     ].join("\n");
-    await writeFile(path.join(root, "uiux", "40_contracts.md"), content, "utf-8");
+    await writeFile(path.join(root, "uiux", "40_screen_contracts.md"), content, "utf-8");
 
     const issues = await validateScreenContractSchema(root, defaultConfig);
 

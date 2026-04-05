@@ -5,30 +5,64 @@
 - Layer: trend-derived
 - Source: Industry trend analysis and research synthesis
 
-## Evaluation Criteria
+## Axes
 
-| Criterion              | Source Translation             | Description                     | Weight |
-| ---------------------- | ------------------------------ | ------------------------------- | ------ |
-| [trend-derived axis 1] | [research finding → criterion] | [description based on research] | High   |
-| [trend-derived axis 2] | [research finding → criterion] | [description based on research] | Medium |
+### Axis: [TRD-01]
 
-## Measurement Approach
+- axis_id: TRD-01
+- axis_name: [e.g., Progressive Disclosure]
+- layer: trend-derived
+- origin: [research source / industry trend]
+- intent: [what this axis measures]
+- why_it_matters: [business/user impact]
+- score_scale: 1-5
+- score_anchors:
+  - low: [1 — description of poor performance]
+  - mid: [3 — description of acceptable performance]
+  - high: [5 — description of excellent performance]
+- positive_signals:
+  - [signal that indicates good performance]
+- negative_signals:
+  - [signal that indicates poor performance]
+- anti_patterns:
+  - [anti-pattern to avoid]
+- evidence_required: [what evidence must be gathered]
+- weight: [e.g., 0.15]
+- minimum_floor: [minimum acceptable score]
+- source_refs:
+  - [research source with freshness_date and confidence]
+- goal_refs:
+  - [project goal this axis supports]
+- review_questions:
+  - [question for reviewer]
 
-| Metric            | Method                                    | Target                |
-| ----------------- | ----------------------------------------- | --------------------- |
-| Research coverage | Audit of trend sources cited              | >= 2 sources per axis |
-| Criterion clarity | Review of source_translation traceability | 100% criteria traced  |
+### Axis: [TRD-02]
 
-## Scoring Guide
+<!-- Repeat the schema above for each trend-derived axis -->
 
-- 5: All trend-derived criteria backed by research with clear traceability
-- 4: Most criteria traced, minor gaps documented
-- 3: Research basis present but traceability incomplete
-- 2: Criteria lack research backing
-- 1: No research-derived criteria defined
-
-## Trend-derived Axes
-
-<!-- Add trend-derived axes below. Each requires source_translation from research findings. -->
-
-- criterion: (trend-derived axis name); source_translation: (research finding → evaluation criterion); description: (description); weight: (weight)
+- axis_id: TRD-02
+- axis_name: [axis name]
+- layer: trend-derived
+- origin: [source]
+- intent: [measurement intent]
+- why_it_matters: [impact]
+- score_scale: 1-5
+- score_anchors:
+  - low: [1 — poor]
+  - mid: [3 — acceptable]
+  - high: [5 — excellent]
+- positive_signals:
+  - [signal]
+- negative_signals:
+  - [signal]
+- anti_patterns:
+  - [pattern]
+- evidence_required: [evidence]
+- weight: [weight]
+- minimum_floor: [floor]
+- source_refs:
+  - [ref]
+- goal_refs:
+  - [ref]
+- review_questions:
+  - [question]

@@ -1,3 +1,7 @@
+// ---------------------------------------------------------------------------
+// Canonical validators — production path
+// ---------------------------------------------------------------------------
+
 export { validateDiscussionPackReadiness } from "./discussionPack.js";
 export { validateDiscussionVisuals } from "./discussionVisuals.js";
 export { validateDensityHints } from "./densityHints.js";
@@ -10,6 +14,7 @@ export { validateContractReferences } from "./contractReferences.js";
 export { validateAtddCodeTraceability } from "./atddCodeTraceability.js";
 export { validateOrphanProhibition } from "./orphanProhibition.js";
 export { validatePrototypingEvidence } from "./prototypingEvidence.js";
+export { validatePrototypingRecommendation } from "./prototypingRecommendation.js";
 export { validateRequireIndexShape } from "./requireIndex.js";
 export { validateRepositoryHygiene } from "./repositoryHygiene.js";
 export { validateReviewArtifacts } from "./reviewArtifacts.js";
@@ -24,31 +29,23 @@ export { validateUiDefinitionConsistency } from "./uiDefinitionConsistency.js";
 export { validateResearchSummary } from "./researchSummary.js";
 export { validateAgentDefinition } from "./agentDefinition.js";
 export { validateTddList } from "./tddList.js";
-export { validateDdpFields } from "./ddpValidation.js";
 export { validateNavigationFlow } from "./navigationFlow.js";
 export { validateRenderCritique } from "./renderCritique.js";
 export { validateDesignFidelity } from "./designFidelity.js";
 export { validateDiscussionDesignHardening } from "./discussionDesignHardening.js";
 export { validateDesignAudit } from "./designAudit.js";
 export { validateDesignSlop } from "./designSlop.js";
-export {
-  validateSidecarMissing,
-  validateStrategyCompleteness,
-  validateScoringAxes,
-  validateAggregateScoringRules,
-  validateOptionComparison,
-  validateScreenContracts,
-  validateOqClosure,
-  validateMigration,
-  runAllUixValidators,
-  reviewStrategy,
-  applyPhase1Ratchet,
-} from "./uixValidators.js";
 export { isUiBearingSpec } from "./uixDetection.js";
 export {
   validateThreeLayerModel,
   validateForbiddenLegacyFiles,
   validateThreeLayerFamilyCompleteness,
 } from "./uix/threeLayer.js";
+export { validateTasteInterview } from "./uix/taste.js";
+export { validateTrendScan } from "./uix/trend.js";
+export { validateScoringReady } from "./uix/scoringReady.js";
+export { validateStrategyStrong } from "./uix/strategy.js";
+export { validateScreenContractSchema } from "./uix/screenContract.js";
+export { runCanonicalUixValidators } from "./uix/canonical.js";
 export { validateTraceabilityIntegrity } from "./traceabilityIntegrity.js";
 export { validatePrototypingSkillContent } from "./skill/prototypingSkill.js";

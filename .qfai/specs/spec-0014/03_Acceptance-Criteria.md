@@ -43,3 +43,11 @@ Given the browser QA gate executes, when the runner completes, then it runs actu
 ## AC-0014-0011: Canonical Validator Set Enforcement
 
 Given the verify workflow uses the 3-layer evaluation model (D-001), when validators are selected, then only the canonical validator family is used and non-canonical validators are rejected.
+
+## AC-0014-0012: Canonical UIX in Verify Production Path
+
+Given verify runs qfai validate, when UIX validation executes, then runCanonicalUixValidators() is invoked (not legacy runAllUixValidators or runLegacyUixCompatibilityValidators).
+
+## AC-0014-0013: Legacy Validators Not in Production
+
+Given verify runs qfai validate, when the validator pipeline executes, then no validators from validators/legacy/ namespace are invoked.

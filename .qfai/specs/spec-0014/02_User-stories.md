@@ -41,3 +41,11 @@ As a QFAI user, I want browser QA to run with a minimal truthful runner that rep
 As a QFAI user, I want the verify workflow to enforce the canonical validator family defined by the 3-layer evaluation model, so that only sanctioned validators are used and results are consistent.
 
 - Refs: REQ-0011, D-001
+
+## US-0014-0010: Canonical UIX Validator Production Path
+
+As a QA engineer, I want verify to use only canonical UIX validators (12 modular validators) in production, so that verification results are not polluted by legacy DDP-era rules.
+
+## US-0014-0011: Legacy Validator Isolation
+
+As a QFAI maintainer, I want legacy DDP validators isolated in the `validators/legacy/` namespace and excluded from the production verify path, so that they remain available for migration tooling without affecting new projects.

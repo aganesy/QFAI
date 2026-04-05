@@ -1,5 +1,6 @@
 name = "implementation-reviewer"
 description = "Review implementation changes for correctness, maintainability, backend safety, and code-level risk."
+sandbox_mode = "read-only"
 
 developer_instructions = '''
 ## Mission
@@ -59,5 +60,3 @@ developer_instructions = '''
 - Do not use as a substitute for implementation or planning work.
 - Do not use when another reviewer domain is the primary concern.
 '''
-
-sandbox_mode = "read-only"

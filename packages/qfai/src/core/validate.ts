@@ -36,13 +36,13 @@ import {
   validateMermaidEnforcement,
   validateOrphanProhibition,
   validatePrototypingEvidence,
+  validatePrototypingRecommendation,
   validateResearchSummary,
   validateRepositoryHygiene,
   validateSpecSplitByCapability,
   validateStatusInSpecs,
   validateTddList,
   validateUiDefinitionConsistency,
-  validateDdpFields,
   validateDesignAudit,
   validateDesignSlop,
   validateDiscussionDesignHardening,
@@ -50,7 +50,7 @@ import {
   validateRenderCritique,
   validateDesignFidelity,
   validatePrototypingSkillContent,
-  runAllUixValidators,
+  runCanonicalUixValidators,
   validateTraceabilityIntegrity,
 } from "./validators/index.js";
 import { readSafe } from "./validators/utils.js";
@@ -90,7 +90,7 @@ export async function validateProject(
     () => validateAgentDefinition(root, config),
     () => validateDesignAudit(root, config),
     () => validateDesignSlop(root, config),
-    () => runAllUixValidators(root, config),
+    () => runCanonicalUixValidators(root, config),
   ];
   const uiuxIssueGroups = await Promise.all(uiuxValidators.map((validator) => validator()));
   const uiuxIssues: Issue[] = [...platformResult.issues, ...uiuxIssueGroups.flat()];
@@ -129,6 +129,7 @@ export async function validateProject(
     ...(await validateStatusInSpecs(root, config)),
     ...(await validateDensityHints(root, config)),
     ...(await validateReviewArtifacts(root)),
+    ...(await validatePrototypingRecommendation(root, config)),
     ...(await validatePrototypingEvidence(root, config)),
     ...(await validateSpecSplitByCapability(root, config)),
     ...(await validateLayeredTraceability(root, config)),
@@ -140,7 +141,6 @@ export async function validateProject(
     ...(await validateDefinedIds(root, config)),
     ...(await validateContracts(root, config)),
     ...(await validateTddList(root, config)),
-    ...(await validateDdpFields(root, config)),
     ...(await validateDiscussionDesignHardening(root, config)),
     ...(await validateNavigationFlow(root, config)),
     ...(await validateRenderCritique(root, config)),

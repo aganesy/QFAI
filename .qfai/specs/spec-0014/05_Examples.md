@@ -90,3 +90,20 @@
 - Given a validator not registered in the canonical set attempts to execute
 - When the verify workflow checks validator registration
 - Then the validator is rejected with: "Validator not in canonical family; register or remove"
+
+## EX-0014-0014: Phase1 Ratchet in Verify
+
+- BR-Ref: BR-0014-0013
+
+| Input                                         | Expected                                  |
+| --------------------------------------------- | ----------------------------------------- |
+| phase1ReleaseDate 10 days ago + UIX-VAL error | Error downgraded to warning during verify |
+| phase1ReleaseDate 40 days ago + UIX-VAL error | Error stays as error                      |
+
+## EX-0014-0015: Verify Canonical Validator Set
+
+- BR-Ref: BR-0014-0014
+
+| Input                             | Expected                                              |
+| --------------------------------- | ----------------------------------------------------- |
+| Run verify on well-formed project | 12 canonical validators execute, no legacy validators |

@@ -1,5 +1,6 @@
 name = "completion-reviewer"
 description = "Independently audit Completion Contract, prompt DoD, and drift-protocol compliance."
+sandbox_mode = "read-only"
 
 developer_instructions = '''
 ## Mission
@@ -49,5 +50,3 @@ developer_instructions = '''
 - Do not use as a substitute for implementation or planning work.
 - Do not use when another reviewer domain is the primary concern.
 '''
-
-sandbox_mode = "read-only"
