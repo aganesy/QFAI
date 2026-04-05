@@ -97,17 +97,31 @@ function completeTasteContent(): string {
 }
 
 function completeTrendContent(): string {
-  return [
-    "# Sources",
-    "",
-    "## Trend Scan",
-    "",
-    "| reference | confidence | freshness_date | source_translation |",
-    "| --------- | ---------- | -------------- | ------------------ |",
-    "| Ref A     | high       | 2025-12-01     | Adopted micro-interaction pattern |",
-    "| Ref B     | medium     | 2025-11-15     | Adopted card layout trend |",
-    "| Ref C     | low        | 2025-10-01     | Adopted minimalist approach |",
-  ].join("\n");
+  const categories = [
+    "Visual Tone Trends",
+    "Layout / Composition Trends",
+    "Density / Hierarchy Trends",
+    "Interaction / Motion Trends",
+    "Component Styling Trends",
+    "Stale / Overused AI Slop Patterns",
+  ];
+  const lines = ["# Sources", "", "## Trend Scan", ""];
+  for (const cat of categories) {
+    lines.push(
+      `### ${cat}`,
+      "",
+      "#### Entry 1",
+      "",
+      `- reference: Ref for ${cat}`,
+      `- observation: Observed signal in ${cat}`,
+      "- freshness_date: 2025-12-01",
+      "- confidence: high",
+      `- source_translation: Adopted pattern from ${cat}`,
+      `- local_implication: Apply locally for ${cat}`,
+      "",
+    );
+  }
+  return lines.join("\n");
 }
 
 // ---------------------------------------------------------------------------
@@ -193,15 +207,17 @@ describe("TC-0010-0021: 00_index.md has canonical 3-layer family listing", () =>
 
 // QFAI:SPEC-0010:TC-0010-0022
 describe("TC-0010-0022: 10_implementation_strategy.md has strong schema", () => {
-  it("contains strong 8-field schema (surface, selection_required, etc.)", async () => {
+  it("contains strong 6-field schema (surface, decision, why_this_strategy, etc.)", async () => {
     const content = await readFile(
       path.join(uiuxTemplateDir, "10_implementation_strategy.md"),
       "utf-8",
     );
     expect(content).toMatch(/- surface:/);
-    expect(content).toMatch(/- selection_required:/);
     expect(content).toMatch(/- decision:/);
-    expect(content).toMatch(/- rationale:/);
+    expect(content).toMatch(/- why_this_strategy:/);
+    expect(content).toMatch(/- expected_strengths:/);
+    expect(content).toMatch(/- known_risks:/);
+    expect(content).toMatch(/- fit_for_this_product:/);
     expect(content).not.toMatch(/surface_type/);
   });
 });

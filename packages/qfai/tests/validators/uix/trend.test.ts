@@ -91,4 +91,12 @@ describe("validateTrendScan", () => {
     const issues = await validateTrendScan(root, defaultConfig);
     expect(issues.some((issue) => issue.code === "UIX-VAL-TREND-FIELD-MISSING")).toBe(true);
   });
+
+  it("non-UI skip", async () => {
+    const root = await newTempDir();
+    await writeFile(path.join(root, "01_Spec.md"), "# Spec\n\n- surface: non-ui\n", "utf-8");
+
+    const issues = await validateTrendScan(root, defaultConfig);
+    expect(issues).toEqual([]);
+  });
 });

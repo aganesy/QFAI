@@ -81,6 +81,7 @@ async function seedUiBearingDiscussionPack(root: string): Promise<void> {
     "## Competitive Reference Registry",
     "",
     "### Reference: Notion",
+    "- reference: https://notion.so/design-system",
     "- adopted_points: Clean card layout with hierarchy",
     "- rejected_points: Complex sidebar navigation",
     "- local_translation: Adapted card sizes for Japanese text",
@@ -180,6 +181,11 @@ async function seedUiBearingDiscussionPack(root: string): Promise<void> {
     "utf-8",
   );
   await writeFile(path.join(uiuxDir, "40_screen_contracts.md"), contractsContent, "utf-8");
+  await writeFile(
+    path.join(uiuxDir, "50_review_input_bundle.md"),
+    "# Review Input Bundle\n\n## Trend-derived review focus\n\nReview focus items derived from trends.\n",
+    "utf-8",
+  );
 }
 
 async function seedNonUiDiscussionPack(root: string): Promise<void> {

@@ -98,4 +98,12 @@ describe("validateStrategyStrong", () => {
     const issues = await validateStrategyStrong(root, defaultConfig);
     expect(issues.some((issue) => issue.code === "UIX-VAL-STRATEGY-LEGACY-SURFACE")).toBe(true);
   });
+
+  it("non-UI skip", async () => {
+    const root = await newTempDir();
+    await writeFile(path.join(root, "01_Spec.md"), "# Spec\n\n- surface: non-ui\n", "utf-8");
+
+    const issues = await validateStrategyStrong(root, defaultConfig);
+    expect(issues).toEqual([]);
+  });
 });

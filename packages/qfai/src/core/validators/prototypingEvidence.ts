@@ -539,7 +539,7 @@ export async function validatePrototypingEvidence(
         if (isRecord(screen) && screen.status === "captured") {
           if (typeof screen.imagePath === "string" && screen.imagePath.trim().length > 0) {
             const imgFullPath = path.isAbsolute(screen.imagePath)
-              ? (screen.imagePath)
+              ? screen.imagePath
               : path.join(bundleDir, screen.imagePath);
             try {
               await access(imgFullPath);
@@ -560,7 +560,7 @@ export async function validatePrototypingEvidence(
           }
           if (typeof screen.htmlPath === "string" && screen.htmlPath.trim().length > 0) {
             const htmlFullPath = path.isAbsolute(screen.htmlPath)
-              ? (screen.htmlPath)
+              ? screen.htmlPath
               : path.join(bundleDir, screen.htmlPath);
             try {
               await access(htmlFullPath);
@@ -585,10 +585,10 @@ export async function validatePrototypingEvidence(
           const hasReason =
             (screen.status === "skipped" &&
               typeof screen.skippedReason === "string" &&
-              (screen.skippedReason).trim().length > 0) ||
+              screen.skippedReason.trim().length > 0) ||
             (screen.status === "failed" &&
               typeof screen.error === "string" &&
-              (screen.error).trim().length > 0);
+              screen.error.trim().length > 0);
           if (!hasReason) {
             issues.push(
               issue(
@@ -2327,9 +2327,7 @@ function normalizeDiscussionRecommendation(
   const allowedModes =
     Array.isArray(value.allowedModes) &&
     value.allowedModes.every((item) => typeof item === "string" && isValidMode(item))
-      ? (Array.from(
-          new Set(value.allowedModes),
-        ))
+      ? Array.from(new Set(value.allowedModes))
       : [value.recommendedMode];
 
   const surface =

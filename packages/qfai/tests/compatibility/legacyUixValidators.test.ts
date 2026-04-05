@@ -73,7 +73,7 @@ function buildCompleteUiPack(): Record<string, string> {
   return {
     "01_Spec.md": "# Spec\n\n- surface: web-ui\n",
     "uiux/00_index.md": "# uiux Index\n\n- canonical sidecar family",
-    "uiux/10_strategy.md": [
+    "uiux/10_implementation_strategy.md": [
       "# Strategy",
       "selection_required: yes",
       "candidate_options: A, B, C",
@@ -82,6 +82,12 @@ function buildCompleteUiPack(): Record<string, string> {
       "none_as_legitimate_outcome: false",
       "rationale: This is a sufficiently long and detailed rationale for the decision",
       "approach: This is a sufficiently long and detailed approach description here",
+      "surface: web",
+      "decision: component-library",
+      "why_this_strategy: Component-library approach leverages proven accessible primitives and consistent design tokens.",
+      "expected_strengths: Fast iteration, consistent styling, built-in accessibility patterns from the component library.",
+      "known_risks: Limited customization for highly bespoke brand expression; dependency on library release cadence.",
+      "fit_for_this_product: Dashboard-focused product benefits from pre-built data display and action components.",
     ].join("\n"),
     "uiux/11_design_taste_interview.md": [
       "# Taste Interview",
@@ -216,7 +222,19 @@ function buildCompleteUiPack(): Record<string, string> {
       "- notes_for_verify: Check login flow",
       "- notes_for_reviewer: Focus on auth",
     ].join("\n"),
-    "uiux/50_review_input_bundle.md": "# Review Input Bundle\n\n- strategy\n- contracts",
+    "uiux/50_review_input_bundle.md": [
+      "# Review Input Bundle",
+      "",
+      "## Trend-derived review focus",
+      "",
+      "- Visual tone: Verify tonal palette hierarchy in card layout.",
+      "- Layout: Confirm single hero CTA is dominant on entry.",
+      "",
+      "## Strategy summary",
+      "",
+      "- strategy",
+      "- contracts",
+    ].join("\n"),
     "uiux/11_OQ-Register.md": [
       "# OQ Register",
       "",
@@ -294,7 +312,7 @@ describe("US-0014-0001: UIX-VAL deterministic validation journey", { timeout: 15
     await withSpecDir(
       {
         ...baseFiles,
-        "uiux/10_strategy.md": [
+        "uiux/10_implementation_strategy.md": [
           "# Strategy",
           "selection_required: yes",
           "candidate_options: A, B",
@@ -316,7 +334,7 @@ describe("US-0014-0001: UIX-VAL deterministic validation journey", { timeout: 15
     await withSpecDir(
       {
         ...baseFiles,
-        "uiux/10_strategy.md": [
+        "uiux/10_implementation_strategy.md": [
           "# Strategy",
           "selection_required: yes",
           "candidate_options: A, B",
@@ -600,7 +618,7 @@ describe("US-0014-0006: Verify-pack integration journey", () => {
     await withSpecDir(
       {
         "01_Spec.md": "# Spec\n\n- surface: web-ui\n",
-        "uiux/10_strategy.md": strategyContent,
+        "uiux/10_implementation_strategy.md": strategyContent,
       },
       [],
       async (specRoot) => {

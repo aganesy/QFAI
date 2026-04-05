@@ -153,6 +153,7 @@ function makeStoryWorkshopContent(
 
 function makeCompetitiveRefsContent(
   entries: Array<{
+    reference?: string;
     adopted_points?: string;
     rejected_points?: string;
     local_translation?: string;
@@ -161,6 +162,9 @@ function makeCompetitiveRefsContent(
   const lines = ["# 04 Sources", "", "## Competitive Reference Registry", ""];
   for (const entry of entries) {
     lines.push("### Reference");
+    if (entry.reference !== undefined) {
+      lines.push(`- reference: ${entry.reference}`);
+    }
     if (entry.adopted_points !== undefined) {
       lines.push(`- adopted_points: ${entry.adopted_points}`);
     }
@@ -185,6 +189,8 @@ function sidecarFiles(overrides: Record<string, string> = {}): Record<string, st
     "uiux/31_selected_anchor_screen.md": makeSelectedAnchorContent(),
     "uiux/40_screen_contracts.md":
       "# Screen Contracts\n\n### Screen: Dashboard\n- screen_id: dashboard\n- route: /dashboard\n- purpose: Main view\n- actor: user\n- primary_tasks: View dashboard\n- secondary_tasks: Export data\n- required_states: default, loading, empty, error\n- transitions: navigate to detail\n- observable_outcomes: Data displayed\n- notes_for_verify: Check states\n- notes_for_reviewer: None",
+    "uiux/50_review_input_bundle.md":
+      "# Review Input Bundle\n\n## Trend-derived review focus\n\nReview focus items derived from trends.\n",
     ...overrides,
   };
 }
@@ -287,7 +293,7 @@ describe(
         },
         async (packRoot) => {
           const issues = await validateSidecarPrimaryTruth(packRoot);
-          expect(issues.length).toBe(4);
+          expect(issues.length).toBe(5);
           expect(issues.every((i) => i.code === "UIX-VAL-DDH-SIDECAR-PRIMARY-TRUTH")).toBe(true);
         },
       );
@@ -362,6 +368,7 @@ describe("validateCompetitiveRefs (UIX-VAL-DDH-COMPETITIVE-REFERENCES)", { timeo
   it("pass — all 3 fields populated with substantive content", async () => {
     const sources = makeCompetitiveRefsContent([
       {
+        reference: "https://example.com/competitor-dashboard",
         adopted_points: "Clean card layout with clear hierarchy",
         rejected_points: "Overly complex navigation structure",
         local_translation: "Adapted card sizes for Japanese text density",
@@ -377,6 +384,7 @@ describe("validateCompetitiveRefs (UIX-VAL-DDH-COMPETITIVE-REFERENCES)", { timeo
   it("fail — rejected_points field missing", async () => {
     const sources = makeCompetitiveRefsContent([
       {
+        reference: "https://example.com/competitor",
         adopted_points: "Clean card layout",
         local_translation: "Adapted for JP",
       },
@@ -384,9 +392,10 @@ describe("validateCompetitiveRefs (UIX-VAL-DDH-COMPETITIVE-REFERENCES)", { timeo
     await withPackDir({ "04_Sources.md": sources }, async (packRoot) => {
       const issues = await validateCompetitiveRefs(packRoot);
       expect(issues.length).toBeGreaterThan(0);
-      expect(issues[0]?.code).toBe("UIX-VAL-DDH-COMPETITIVE-REFERENCES");
-      expect(issues[0]?.severity).toBe("error");
-      expect(issues[0]?.message).toContain("rejected_points");
+      const rejectedIssue = issues.find((i) => i.message.includes("rejected_points"));
+      expect(rejectedIssue).toBeDefined();
+      expect(rejectedIssue?.code).toBe("UIX-VAL-DDH-COMPETITIVE-REFERENCES");
+      expect(rejectedIssue?.severity).toBe("error");
     });
   });
 
@@ -394,6 +403,7 @@ describe("validateCompetitiveRefs (UIX-VAL-DDH-COMPETITIVE-REFERENCES)", { timeo
   it("fail — placeholder TBD in local_translation", async () => {
     const sources = makeCompetitiveRefsContent([
       {
+        reference: "https://example.com/competitor",
         adopted_points: "Clean card layout",
         rejected_points: "Complex nav",
         local_translation: "TBD",
@@ -415,6 +425,7 @@ describe("validateCompetitiveRefs (UIX-VAL-DDH-COMPETITIVE-REFERENCES)", { timeo
   it("fail — empty string in adopted_points", async () => {
     const sources = makeCompetitiveRefsContent([
       {
+        reference: "https://example.com/competitor",
         adopted_points: "",
         rejected_points: "Complex nav",
         local_translation: "Adapted for JP",
@@ -431,6 +442,7 @@ describe("validateCompetitiveRefs (UIX-VAL-DDH-COMPETITIVE-REFERENCES)", { timeo
   it("fail — placeholder N/A in rejected_points", async () => {
     const sources = makeCompetitiveRefsContent([
       {
+        reference: "https://example.com/competitor",
         adopted_points: "Clean card layout",
         rejected_points: "N/A",
         local_translation: "Adapted for JP",
@@ -609,6 +621,7 @@ describe("Cross-cutting validators", { timeout: 10000 }, () => {
   it("error messages contain 3-part format (field, reason, fix)", async () => {
     const sources = makeCompetitiveRefsContent([
       {
+        reference: "https://example.com/competitor",
         adopted_points: "Clean card layout",
         local_translation: "Adapted for JP",
         // rejected_points missing
@@ -617,7 +630,9 @@ describe("Cross-cutting validators", { timeout: 10000 }, () => {
     await withPackDir({ "04_Sources.md": sources }, async (packRoot) => {
       const issues = await validateCompetitiveRefs(packRoot);
       expect(issues.length).toBeGreaterThan(0);
-      const msg = issues[0]?.message;
+      const rejectedIssue = issues.find((i) => i.message.includes("rejected_points"));
+      expect(rejectedIssue).toBeDefined();
+      const msg = rejectedIssue?.message ?? "";
       // 3-part: field name, reason, fix — separated by ". " or ":"
       expect(msg).toContain("rejected_points");
       expect(msg).toContain("missing");
@@ -664,13 +679,13 @@ describe("Cross-cutting validators", { timeout: 10000 }, () => {
 // ---------------------------------------------------------------------------
 
 describe("Post-merge edge cases", { timeout: 10000 }, () => {
-  // Fix #1: no sidecar files at all → 4 canonical sidecar-primary-truth errors
-  it("no sidecar files → 4 canonical sidecar-primary-truth errors", async () => {
+  // Fix #1: no sidecar files at all → 5 canonical sidecar-primary-truth errors
+  it("no sidecar files → 5 canonical sidecar-primary-truth errors", async () => {
     await withPackDir(
       { "03_Story-Workshop.md": "<style>.screen { background: #fff; }</style>\nContent." },
       async (packRoot) => {
         const issues = await validateSidecarPrimaryTruth(packRoot);
-        expect(issues.length).toBe(4);
+        expect(issues.length).toBe(5);
         expect(issues.every((i) => i.code === "UIX-VAL-DDH-SIDECAR-PRIMARY-TRUTH")).toBe(true);
       },
     );
@@ -779,8 +794,8 @@ describe("Post-merge edge cases", { timeout: 10000 }, () => {
     });
   });
 
-  // Fix #4: Reference heading with zero fields → 3 canonical competitive-references errors
-  it("Reference heading with zero fields → 3 canonical competitive-references errors", async () => {
+  // Fix #4: Reference heading with zero fields → 4 canonical competitive-references errors
+  it("Reference heading with zero fields → 4 canonical competitive-references errors", async () => {
     const sources = [
       "# 04 Sources",
       "",
@@ -791,7 +806,7 @@ describe("Post-merge edge cases", { timeout: 10000 }, () => {
     ].join("\n");
     await withPackDir({ "04_Sources.md": sources }, async (packRoot) => {
       const issues = await validateCompetitiveRefs(packRoot);
-      expect(issues.length).toBe(3);
+      expect(issues.length).toBe(4);
       expect(issues.every((i) => i.code === "UIX-VAL-DDH-COMPETITIVE-REFERENCES")).toBe(true);
       const fields = issues.map((i) => i.message);
       expect(fields.some((m) => m.includes("adopted_points"))).toBe(true);

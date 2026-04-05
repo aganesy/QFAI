@@ -12,7 +12,7 @@ const repoRoot = path.resolve(process.cwd(), "..", "..");
 
 // ── US-0008-0001: prototyping 自動 spec 検出 ─────────────────────────────────
 // QFAI:SPEC-0008:US-0008-0001
-describe("E2E: prototyping SKILL.md defines Spec Auto-Discovery Protocol", () => {
+describe("E2E: prototyping SKILL.md defines Mode Selection Protocol", () => {
   const skillPath = path.join(
     repoRoot,
     ".qfai",
@@ -28,33 +28,30 @@ describe("E2E: prototyping SKILL.md defines Spec Auto-Discovery Protocol", () =>
     return content;
   }
 
-  it("contains Spec Auto-Discovery Protocol section", async () => {
+  it("contains Mode Selection Protocol section", async () => {
     const c = await load();
-    expect(c).toMatch(/## Spec Auto-Discovery Protocol/);
+    expect(c).toMatch(/## Mode Selection Protocol/);
   });
 
-  it("contains 4-source detection table with Sources A, B, C, D", async () => {
+  it("contains Obligation Matrix with surface/mode entries", async () => {
     const c = await load();
-    expect(c).toMatch(/\|\s*Source\s*\|\s*Method\s*\|\s*Fallback\s*\|/);
-    expect(c).toContain("**A: Branch Diff**");
-    expect(c).toContain("**B: Local Changes**");
-    expect(c).toContain("**C: Evidence Mtime**");
-    expect(c).toContain("**D: delta.md Parse**");
+    expect(c).toMatch(/## Obligation Matrix/);
+    expect(c).toMatch(/\|\s*surface\s*\/\s*mode/);
+    expect(c).toContain("non-ui / low-cost");
+    expect(c).toContain("ui-bearing / standard");
   });
 
-  it("contains fallback behavior documentation", async () => {
+  it("contains Surface Semantics for non-ui skip", async () => {
     const c = await load();
-    expect(c).toMatch(/### Fallback Behavior/);
-    expect(c).toContain("git unavailable");
-    expect(c).toContain("Zero specs detected");
-    expect(c).toContain("Policy changes detected");
+    expect(c).toMatch(/## Surface Semantics/);
+    expect(c).toContain("non-ui");
+    expect(c).toContain("uiFidelity");
   });
 
-  it("contains user confirmation flow", async () => {
+  it("contains Required Process section", async () => {
     const c = await load();
-    expect(c).toMatch(/### User Confirmation Flow/);
-    expect(c).toContain("Display detected specs with status and source attribution");
-    expect(c).toContain("user confirms scope");
+    expect(c).toMatch(/## Required Process/);
+    expect(c).toContain("qfai validate");
   });
 });
 

@@ -144,7 +144,7 @@ export function validateRenderEvidenceBundle(
   if (status === "skipped") {
     if (
       typeof renderEvidence.skippedReason !== "string" ||
-      (renderEvidence.skippedReason).trim().length === 0
+      renderEvidence.skippedReason.trim().length === 0
     ) {
       issues.push(
         makeIssue(
@@ -157,10 +157,7 @@ export function validateRenderEvidenceBundle(
     }
   }
   if (status === "failed") {
-    if (
-      typeof renderEvidence.error !== "string" ||
-      (renderEvidence.error).trim().length === 0
-    ) {
+    if (typeof renderEvidence.error !== "string" || renderEvidence.error.trim().length === 0) {
       issues.push(
         makeIssue("QFAI-PROT-252", "`renderEvidence.status=failed` requires `error`", file, rule),
       );

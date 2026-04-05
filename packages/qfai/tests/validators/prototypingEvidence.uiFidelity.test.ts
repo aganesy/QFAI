@@ -5,7 +5,7 @@
  * uiFidelity mode policy per the obligation matrix.
  */
 
-import { describe, it, expect } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { mkdir, writeFile, rm } from "node:fs/promises";
 import path from "node:path";
 import { tmpdir } from "node:os";
@@ -56,7 +56,9 @@ async function runValidation(
   evidence: Record<string, unknown>,
 ): Promise<Array<{ code: string; severity: string; message: string }>> {
   const evidencePath = path.join(root, ".qfai", "evidence", "prototyping.json");
+  const markdownPath = path.join(root, ".qfai", "evidence", "prototyping.md");
   await writeFile(evidencePath, JSON.stringify(evidence, null, 2));
+  await writeFile(markdownPath, "# Prototyping Evidence\n\nAuto-generated for test.\n");
   const issues = await validatePrototypingEvidence(root, defaultConfig);
   return issues.map((issue) => ({
     code: issue.code,

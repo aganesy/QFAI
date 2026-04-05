@@ -82,7 +82,7 @@ describe("US-0002-0002: Sidecar primary truth for design direction", () => {
   it("SKILL.md references sidecar family as primary truth for UI-bearing packs", async () => {
     const c = await loadSkill();
     expect(c).toMatch(/canonical sidecar family|sidecar.*primary truth/i);
-    expect(c).toMatch(/uiux\/10_strategy\.md/);
+    expect(c).toMatch(/uiux\/10_implementation_strategy\.md/);
   });
 
   it("SKILL.md lists key sidecar artifacts for design direction", async () => {
@@ -90,7 +90,7 @@ describe("US-0002-0002: Sidecar primary truth for design direction", () => {
     expect(c).toMatch(/30_option_comparison\.md/);
     expect(c).toMatch(/40_screen_contracts\.md/);
     expect(c).toMatch(/Competitive Reference Registry/);
-    expect(c).toMatch(/10_strategy\.md/);
+    expect(c).toMatch(/10_implementation_strategy\.md/);
     expect(c).toMatch(/50_review_input_bundle\.md/);
     expect(c).toMatch(/Rejected Visual Directions/);
   });

@@ -1706,8 +1706,7 @@ async function collectPrototypingSummary(
   const discussionRec =
     resolvedArtifact.status === "valid" ? resolvedArtifact.recommendation : null;
 
-  const effectiveRec: DiscussionModeRecommendation | undefined =
-    discussionRec ?? undefined;
+  const effectiveRec: DiscussionModeRecommendation | undefined = discussionRec ?? undefined;
 
   const modeSummary = summarizeResolvedMode({
     explicitMode: isValidPrototypingMode(mode.requested) ? mode.requested : undefined,

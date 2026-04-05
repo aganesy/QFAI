@@ -6,7 +6,11 @@ import { readClassificationBlock } from "../detection/surfaceType.js";
 import type { SurfaceType } from "../detection/surfaceType.js";
 import { writeEvidenceBundles, type PrototypingSummaryBundle } from "../evidence/bundleWriter.js";
 import { runRenderCapture } from "../evidence/renderRunner.js";
-import type { RenderCaptureAdapter, RenderCaptureTarget, RenderRunnerResult } from "../evidence/types.js";
+import type {
+  RenderCaptureAdapter,
+  RenderCaptureTarget,
+  RenderRunnerResult,
+} from "../evidence/types.js";
 import type { BrowserQaInput } from "../browserQa/types.js";
 import { findLatestDiscussionPackDir } from "../discussionPack.js";
 import { runFullHarness } from "../harness/runtime.js";

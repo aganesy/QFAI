@@ -145,32 +145,78 @@ function antiPreferenceTasteContent(): string {
   return TASTE_SECTIONS.map((s) => `## ${s}\n\nno preference\n`).join("\n");
 }
 
-function completeTrendContent(): string {
+function trendEntry(
+  ref: string,
+  obs: string,
+  date: string,
+  conf: string,
+  trans: string,
+  imp: string,
+): string {
   return [
-    "# Sources",
+    "#### Entry 1",
     "",
-    "## Trend Scan",
-    "",
-    "| reference | confidence | freshness_date | source_translation |",
-    "| --------- | ---------- | -------------- | ------------------ |",
-    "| Ref A     | high       | 2025-12-01     | Adopted micro-interaction pattern |",
-    "| Ref B     | medium     | 2025-11-15     | Adopted card layout trend |",
-    "| Ref C     | low        | 2025-10-01     | Adopted minimalist approach |",
+    `- reference: ${ref}`,
+    `- observation: ${obs}`,
+    `- freshness_date: ${date}`,
+    `- confidence: ${conf}`,
+    `- source_translation: ${trans}`,
+    `- local_implication: ${imp}`,
   ].join("\n");
 }
 
+function completeTrendContent(): string {
+  const categories = [
+    "Visual Tone Trends",
+    "Layout / Composition Trends",
+    "Density / Hierarchy Trends",
+    "Interaction / Motion Trends",
+    "Component Styling Trends",
+    "Stale / Overused AI Slop Patterns",
+  ];
+  const lines = ["# Sources", "", "## Trend Scan", ""];
+  for (const cat of categories) {
+    lines.push(`### ${cat}`, "");
+    lines.push(
+      trendEntry(
+        "Ref A",
+        `Observed signal in ${cat}`,
+        "2025-12-01",
+        "high",
+        `Adopted pattern from ${cat}`,
+        `Apply locally for ${cat}`,
+      ),
+    );
+    lines.push("");
+  }
+  return lines.join("\n");
+}
+
 function allLowConfidenceTrendContent(): string {
-  return [
-    "# Sources",
-    "",
-    "## Trend Scan",
-    "",
-    "| reference | confidence | freshness_date | source_translation |",
-    "| --------- | ---------- | -------------- | ------------------ |",
-    "| Ref A     | low        | 2025-12-01     | Adopted micro-interaction pattern |",
-    "| Ref B     | low        | 2025-11-15     | Adopted card layout trend |",
-    "| Ref C     | low        | 2025-10-01     | Adopted minimalist approach |",
-  ].join("\n");
+  const categories = [
+    "Visual Tone Trends",
+    "Layout / Composition Trends",
+    "Density / Hierarchy Trends",
+    "Interaction / Motion Trends",
+    "Component Styling Trends",
+    "Stale / Overused AI Slop Patterns",
+  ];
+  const lines = ["# Sources", "", "## Trend Scan", ""];
+  for (const cat of categories) {
+    lines.push(`### ${cat}`, "");
+    lines.push(
+      trendEntry(
+        "Ref A",
+        `Observed signal in ${cat}`,
+        "2025-12-01",
+        "low",
+        `Adopted pattern from ${cat}`,
+        `Apply locally for ${cat}`,
+      ),
+    );
+    lines.push("");
+  }
+  return lines.join("\n");
 }
 
 const ALL_SCORING_FIELDS = [
@@ -248,39 +294,41 @@ function fullMandatoryScoringContent(): string {
   return completeScoringContent() + "\n\n" + aggregateScoringContent();
 }
 
-const STRONG_8_FIELDS = [
+const STRONG_FIELDS = [
   "surface",
-  "selection_required",
   "decision",
-  "candidate_options",
-  "chosen_option",
-  "rationale",
-  "verification_expectations",
-  "notes_for_reviewer",
+  "why_this_strategy",
+  "expected_strengths",
+  "known_risks",
+  "fit_for_this_product",
 ] as const;
 
 function strongStrategyContent(overrides: Record<string, string> = {}): string {
   const defaults: Record<string, string> = {
     surface: "web",
-    selection_required: "true",
     decision: "component-library",
-    candidate_options: "Option A, Option B, Option C",
-    chosen_option: "Option A",
-    rationale: "Option A provides better accessibility compliance",
-    verification_expectations: "All WCAG AA checks pass",
-    notes_for_reviewer: "Focus on mobile viewport behavior",
+    why_this_strategy: "Component library provides consistent, accessible UI building blocks",
+    expected_strengths: "Rapid prototyping, consistent styling, accessibility compliance",
+    known_risks: "Vendor lock-in, limited customization for bespoke interactions",
+    fit_for_this_product: "Web dashboard with standard CRUD patterns fits component-library well",
   };
   const merged = { ...defaults, ...overrides };
-  return "# Strategy\n\n" + STRONG_8_FIELDS.map((f) => `- ${f}: ${merged[f]}`).join("\n");
+  return "# Strategy\n\n" + STRONG_FIELDS.map((f) => `- ${f}: ${merged[f]}`).join("\n");
 }
 
-function weakStrategyContent(): string {
+/**
+ * Strategy with legacy surface value (web-ui instead of web).
+ */
+function legacySurfaceStrategyContent(): string {
   return [
     "# Strategy",
     "",
-    "- surface_type: web",
-    "- approach: Use a card-based layout",
-    "- rationale: Cards are familiar and scalable",
+    "- surface: web-ui",
+    "- decision: component-library",
+    "- why_this_strategy: Component library provides consistent UI building blocks",
+    "- expected_strengths: Rapid prototyping, consistent styling",
+    "- known_risks: Vendor lock-in, limited customization",
+    "- fit_for_this_product: Standard CRUD web app fits well",
   ].join("\n");
 }
 
@@ -421,7 +469,7 @@ describe("Trend validator", () => {
   });
 
   // TC-0002-0008
-  it("TC-0002-0008: trend scan missing source_translation emits FRESHNESS-MISSING", async () => {
+  it("TC-0002-0008: trend scan missing source_translation emits FIELD-MISSING", async () => {
     const root = await newTempDir();
     await createUiBearingPack(root);
     const content = [
@@ -429,16 +477,77 @@ describe("Trend validator", () => {
       "",
       "## Trend Scan",
       "",
-      "| reference | confidence | freshness_date |",
-      "| --------- | ---------- | -------------- |",
-      "| Ref A     | high       | 2025-12-01     |",
+      "### Visual Tone Trends",
+      "",
+      "#### Entry 1",
+      "",
+      "- reference: Ref A",
+      "- observation: Observed a minimalist tone signal",
+      "- freshness_date: 2025-12-01",
+      "- confidence: high",
+      "- local_implication: Apply minimalist tone locally",
+      "",
+      "### Layout / Composition Trends",
+      "",
+      "#### Entry 1",
+      "",
+      "- reference: Ref B",
+      "- observation: Observed grid layout signal",
+      "- freshness_date: 2025-11-15",
+      "- confidence: medium",
+      "- source_translation: Adopted grid layout",
+      "- local_implication: Apply grid layout locally",
+      "",
+      "### Density / Hierarchy Trends",
+      "",
+      "#### Entry 1",
+      "",
+      "- reference: Ref C",
+      "- observation: Observed density signal",
+      "- freshness_date: 2025-10-01",
+      "- confidence: low",
+      "- source_translation: Adopted flat hierarchy",
+      "- local_implication: Apply flat hierarchy locally",
+      "",
+      "### Interaction / Motion Trends",
+      "",
+      "#### Entry 1",
+      "",
+      "- reference: Ref D",
+      "- observation: Observed motion signal",
+      "- freshness_date: 2025-09-01",
+      "- confidence: high",
+      "- source_translation: Adopted subtle transitions",
+      "- local_implication: Apply subtle transitions locally",
+      "",
+      "### Component Styling Trends",
+      "",
+      "#### Entry 1",
+      "",
+      "- reference: Ref E",
+      "- observation: Observed component styling signal",
+      "- freshness_date: 2025-08-01",
+      "- confidence: medium",
+      "- source_translation: Adopted rounded corners",
+      "- local_implication: Apply rounded corners locally",
+      "",
+      "### Stale / Overused AI Slop Patterns",
+      "",
+      "#### Entry 1",
+      "",
+      "- reference: Ref F",
+      "- observation: Observed stale pattern",
+      "- freshness_date: 2025-07-01",
+      "- confidence: low",
+      "- source_translation: Avoid overused gradient pattern",
+      "- local_implication: Explicitly avoid gradient usage",
     ].join("\n");
     await writeFile(path.join(root, "04_Sources.md"), content, "utf-8");
 
     const issues = await validateTrendScan(root, defaultConfig);
 
-    const freshness = issues.filter((i) => i.code === "UIX-VAL-TREND-FRESHNESS-MISSING");
-    expect(freshness.length).toBeGreaterThan(0);
+    const fieldMissing = issues.filter((i) => i.code === "UIX-VAL-TREND-FIELD-MISSING");
+    expect(fieldMissing.length).toBeGreaterThan(0);
   });
 
   // TC-0002-0009
@@ -681,20 +790,20 @@ describe("Strategy validator", () => {
   });
 
   // TC-0002-0017
-  it("TC-0002-0017: weak format strategy emits legacy warning", async () => {
+  it("TC-0002-0017: weak format strategy emits legacy surface warning", async () => {
     const root = await newTempDir();
     await createUiBearingPack(root);
     await writeFile(
       path.join(root, "uiux", "10_implementation_strategy.md"),
-      weakStrategyContent(),
+      legacySurfaceStrategyContent(),
       "utf-8",
     );
 
     const issues = await validateStrategyStrong(root, defaultConfig);
 
-    const legacy = issues.filter((i) => i.code === "UIX-VAL-STRATEGY-WEAK-LEGACY");
+    const legacy = issues.filter((i) => i.code === "UIX-VAL-STRATEGY-LEGACY-SURFACE");
     expect(legacy.length).toBeGreaterThan(0);
-    expect(legacy[0]?.severity).toBe("warning");
+    expect(legacy[0]?.severity).toBe("error");
   });
 
   // TC-0002-0018
@@ -708,12 +817,12 @@ describe("Strategy validator", () => {
   });
 
   // TC-0002-0019
-  it("TC-0002-0019: selection_required=true with 1 candidate fails", async () => {
+  it("TC-0002-0019: strategy with placeholder value fails", async () => {
     const root = await newTempDir();
     await createUiBearingPack(root);
     await writeFile(
       path.join(root, "uiux", "10_implementation_strategy.md"),
-      strongStrategyContent({ candidate_options: "Only One Option" }),
+      strongStrategyContent({ why_this_strategy: "TBD" }),
       "utf-8",
     );
 

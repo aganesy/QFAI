@@ -290,7 +290,7 @@ describe("report contract coverage", () => {
 
     expect(markdown).toContain("render evidence が不足または不完全です");
     expect(markdown).toContain(
-      "`/qfai-prototyping` skill を実行し、`.qfai/evidence/prototyping.json` と render bundle を更新します。",
+      "recover: `qfai prototyping run --mode standard` を実行し、`.qfai/evidence/prototyping.json` / `render.json` / `browser-qa.json` を再生成します。",
     );
     expect(markdown).toContain("why it matters");
   });

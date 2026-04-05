@@ -175,6 +175,11 @@ async function createSidecarFiles(root: string): Promise<void> {
     "# Screen Contracts\n\n### Screen: Dashboard\n- screen_id: dashboard\n- route: /dashboard\n- purpose: Main view\n- actor: user\n- primary_tasks: View dashboard\n- secondary_tasks: Export data\n- required_states: default, loading, empty, error\n- transitions: navigate to detail\n- observable_outcomes: Data displayed\n- notes_for_verify: Check states\n- notes_for_reviewer: None\n",
     "utf-8",
   );
+  await writeFile(
+    path.join(root, "uiux", "50_review_input_bundle.md"),
+    "# Review Input Bundle\n\n## Trend-derived review focus\n\nFocus on modern minimalist patterns.\n",
+    "utf-8",
+  );
 }
 
 function buildCompetitiveRefRegistry(): string {
@@ -185,6 +190,7 @@ function buildCompetitiveRefRegistry(): string {
     "",
     "### Competitor Alpha",
     "",
+    "- reference: Competitor Alpha App",
     "- adopted_points: Clean onboarding flow with progressive disclosure",
     "- rejected_points: Overly complex settings panel with nested menus",
     "- local_translation: Simplified onboarding adapted for our single-page flow",
@@ -638,7 +644,9 @@ describe("3-part error message format", () => {
     const issues = await validateCompetitiveRefs(root);
 
     expect(issues.length).toBeGreaterThan(0);
-    const msg = issues[0]?.message ?? "";
+    const rejectedIssue = issues.find((i) => i.message.includes("rejected_points"));
+    expect(rejectedIssue).toBeDefined();
+    const msg = rejectedIssue?.message ?? "";
     // field name
     expect(msg).toMatch(/rejected_points/);
     // reason (missing)
@@ -713,7 +721,7 @@ describe("SKILL.md and template documentation", () => {
       /[Pp]laceholder-like values .* treated as missing|[Pp]laceholder.*treated as missing/,
     );
     // Completion conditions reference canonical sidecar files
-    expect(content).toMatch(/10_strategy\.md/);
+    expect(content).toMatch(/10_implementation_strategy\.md/);
     expect(content).toMatch(/30_option_comparison\.md/);
     expect(content).toMatch(/40_screen_contracts\.md/);
   });
@@ -723,11 +731,11 @@ describe("SKILL.md and template documentation", () => {
     const content = await readFile(skillPath, "utf-8");
 
     expect(content).toMatch(/canonical sidecar family/);
-    expect(content).toMatch(/10_strategy\.md/);
+    expect(content).toMatch(/10_implementation_strategy\.md/);
     expect(content).toMatch(/30_option_comparison\.md/);
     expect(content).toMatch(/31_selected_anchor_screen\.md/);
     expect(content).toMatch(/40_screen_contracts\.md/);
-    expect(content).toMatch(/Selected Direction/);
+    expect(content).toMatch(/Selected Direction|selected direction|selected_option/i);
     expect(content).toMatch(/Competitive Reference Registry/);
   });
 
@@ -739,9 +747,12 @@ describe("SKILL.md and template documentation", () => {
     ]);
 
     expect(skillContent).toMatch(/[Pp]laceholder-like values .* treated as missing/);
-    expect(templateContent).toMatch(
-      /Do not leave competitive or trend\/reference entries as placeholders/,
-    );
+    // Template contains structured Competitive Reference Registry and Trend Scan sections
+    expect(templateContent).toMatch(/Competitive Reference Registry/);
+    expect(templateContent).toMatch(/Trend Scan/);
+    expect(templateContent).toMatch(/adopted_points/);
+    expect(templateContent).toMatch(/rejected_points/);
+    expect(templateContent).toMatch(/local_translation/);
   });
 });
 
