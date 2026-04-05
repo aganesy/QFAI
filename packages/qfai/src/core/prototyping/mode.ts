@@ -185,7 +185,7 @@ export function resolvePrototypingMode(input: ModeResolutionInput): ModeResoluti
 
   return {
     effective: defaultMode,
-    source: "default",
+    source: "system-default",
     rationale: `No explicit request or discussion recommendation was provided, so ${defaultMode} is used by default.`,
   };
 }

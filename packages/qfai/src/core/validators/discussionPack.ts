@@ -82,7 +82,7 @@ export async function validateDiscussionPackReadiness(
         "discussionPack.requiredFiles",
         allMissing,
         "change",
-        "latest discussion-pack に 15 required markdown files + required prototyping.yaml を揃えてください。",
+        `不足ファイルを作成してください: ${allMissing.join(", ")}。prototyping.yaml は必須サイドアーティファクトです。`,
       ),
     );
   }

@@ -396,7 +396,7 @@ describe("report contract coverage", () => {
         ],
         mode: {
           effective: "standard",
-          source: "default",
+          source: "system-default",
           rationale: "default standard mode",
         },
         meta: { generatedAt: "2026-04-04T00:00:00Z", toolVersion: "test", commands: [] },
@@ -1037,7 +1037,7 @@ describe("report artifact-first recommendation", () => {
       },
       mode: {
         effective: "standard",
-        source: "default",
+        source: "system-default",
         rationale: "default standard mode",
         ...(overrides.discussionRecommendation
           ? { discussionRecommendation: overrides.discussionRecommendation }
@@ -1165,7 +1165,7 @@ describe("report artifact-first recommendation", () => {
           ],
           mode: {
             effective: "standard",
-            source: "default",
+            source: "system-default",
             rationale: "default",
             discussionRecommendation: {
               recommendedMode: "full-harness",

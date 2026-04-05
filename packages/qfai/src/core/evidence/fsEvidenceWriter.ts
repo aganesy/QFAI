@@ -58,6 +58,8 @@ export async function writeRenderArtifacts(
     const htmlResult = await writeEvidenceFile(htmlPath, html);
     if (htmlResult.written) {
       filesWritten.push(htmlResult.path);
+    } else {
+      throw new Error(`Failed to write HTML: ${htmlResult.error}`);
     }
   }
 

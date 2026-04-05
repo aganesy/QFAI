@@ -8,7 +8,6 @@
  * BrowserProvider is the legacy render-capture provider interface.
  */
 
-import type { SurfaceType } from "../detection/surfaceType.js";
 import type {
   BrowserQaInput,
   BrowserQaPhaseResult,

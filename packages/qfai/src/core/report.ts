@@ -1766,9 +1766,9 @@ async function collectPrototypingSummary(
     expectedSpecIds.length > 0 && missingSpecIds.length === 0 ? "complete" : "incomplete";
 
   // WS-2: Mode precedence mismatch warning
-  if (mode.source === "default" && effectiveRec) {
+  if (mode.source === "system-default" && effectiveRec) {
     warnings.push(
-      `evidence mode source is "default" but discussion recommendation exists (${effectiveRec.recommendedMode})`,
+      `evidence mode source is "system-default" but discussion recommendation exists (${effectiveRec.recommendedMode})`,
     );
   }
   if (

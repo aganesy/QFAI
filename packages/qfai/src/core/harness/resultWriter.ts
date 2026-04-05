@@ -24,6 +24,7 @@ export type FullHarnessOutput = {
   };
   browserQaSummary: {
     phasesExecuted: number;
+    phasesFailed: number;
     phasesSkipped: number;
     totalFindings: number;
   };
@@ -51,10 +52,12 @@ export function buildFullHarnessResult(
 
   let phasesExecuted = 0;
   let phasesSkipped = 0;
+  let phasesFailed = 0;
   let totalFindings = 0;
   for (const bqa of browserQaResults) {
     for (const phase of bqa.phases) {
       if (phase.status === "executed") phasesExecuted++;
+      else if (phase.status === "failed") phasesFailed++;
       else phasesSkipped++;
       totalFindings += phase.findings.length;
     }
@@ -79,6 +82,7 @@ export function buildFullHarnessResult(
     },
     browserQaSummary: {
       phasesExecuted,
+      phasesFailed,
       phasesSkipped,
       totalFindings,
     },

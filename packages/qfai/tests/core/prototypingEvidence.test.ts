@@ -33,7 +33,7 @@ describe("validatePrototypingEvidence", () => {
         specs: [buildSpecRow("spec-0001", { ui: 0, api: 1, db: 1 })],
         mode: {
           effective: "standard",
-          source: "default",
+          source: "system-default",
           rationale: "default standard mode",
         },
       });
@@ -51,7 +51,7 @@ describe("validatePrototypingEvidence", () => {
         specs: [buildSpecRow("spec-0001", { ui: 0, api: 1, db: 1 })],
         mode: {
           effective: "standard",
-          source: "default",
+          source: "system-default",
           rationale: "default standard mode",
         },
         runtimeGate: { ui: [{ route: "/orders", status: 200 }], api: [] },
@@ -70,7 +70,7 @@ describe("validatePrototypingEvidence", () => {
         specs: [buildSpecRow("spec-0001", { ui: 1, api: 1, db: 1 })],
         mode: {
           effective: "standard",
-          source: "default",
+          source: "system-default",
           rationale: "default standard mode",
         },
       });
@@ -549,7 +549,7 @@ async function seedEvidence(root: string, payload: EvidencePayload): Promise<voi
         specs: payload.specs,
         mode: payload.mode ?? {
           effective: "standard",
-          source: "default",
+          source: "system-default",
           rationale: "default standard mode",
         },
         ...(payload.fullHarness ? { fullHarness: payload.fullHarness } : {}),

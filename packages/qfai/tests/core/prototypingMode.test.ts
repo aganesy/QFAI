@@ -52,7 +52,7 @@ describe("prototyping mode resolver", () => {
   it("falls back to standard default", () => {
     const result = resolvePrototypingMode({});
     expect(result.effective).toBe("standard");
-    expect(result.source).toBe("default");
+    expect(result.source).toBe("system-default");
   });
 
   it("normalizes allowed modes by de-duplicating valid entries", () => {

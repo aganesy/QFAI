@@ -8,7 +8,11 @@ import { isUiBearingSurfaceType } from "../detection/surfaceType.js";
 type BrowserModule = typeof import("playwright");
 
 async function loadPlaywright(): Promise<BrowserModule> {
-  return import("playwright");
+  try {
+    return await import("playwright");
+  } catch {
+    throw new Error("Playwright is not installed. Install it with: npm install playwright");
+  }
 }
 
 async function withPage<T>(

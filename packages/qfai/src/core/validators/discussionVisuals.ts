@@ -53,13 +53,13 @@ export async function validateDiscussionVisuals(root: string): Promise<Issue[]> 
     issues.push(
       issue(
         "QFAI-VIS-002",
-        "03_Story-Workshop.md references an HTML+CSS mock, but the optional fallback artifact is missing. HTML+CSS mock is not required by the canonical discussion flow and is only relevant when explicitly referenced or selected.",
+        "03_Story-Workshop.md に HTML+CSS モックの参照がありますが、オプションのフォールバックアーティファクトがありません。HTML+CSS モックは canonical discussion フローでは必須ではなく、明示的に参照された場合にのみ関連します。",
         "info",
         storyWorkshopPath,
         "discussionVisuals.storyWorkshopMock",
         undefined,
         "change",
-        "When Story Workshop explicitly references an HTML+CSS mock, add the optional fallback artifact or remove the reference. Sidecar artifacts (uiux/) remain the primary UI definition source.",
+        "Story Workshop が HTML+CSS モックを参照している場合、フォールバックアーティファクトを追加するか参照を削除してください。サイドカー（uiux/）が UI 定義の主要ソースです。",
       ),
     );
   }

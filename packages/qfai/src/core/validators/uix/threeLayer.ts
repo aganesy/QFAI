@@ -169,6 +169,11 @@ const CANONICAL_REQUIRED_SIDECAR_FILES = [
 
 /**
  * Validate canonical sidecar family completeness — all required files must exist.
+ * Note: despite the function name, this validates the entire canonical sidecar
+ * family, not just the 3-layer evaluation files. The name is retained for
+ * backward compatibility with existing call sites.
+ *
+ * @see validateCanonicalSidecarFamilyCompleteness — preferred alias
  */
 export async function validateThreeLayerFamilyCompleteness(
   root: string,
@@ -197,3 +202,6 @@ export async function validateThreeLayerFamilyCompleteness(
   }
   return issues;
 }
+
+/** Preferred alias - validates the full canonical sidecar family, not just 3-layer. */
+export const validateCanonicalSidecarFamilyCompleteness = validateThreeLayerFamilyCompleteness;

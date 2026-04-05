@@ -42,15 +42,23 @@ export async function validateSidecarMissing(root: string, _config: QfaiConfig):
   try {
     await readdir(path.join(root, "uiux"));
     return [];
-  } catch {
-    return [
-      canonicalIssue(
-        "UIX-VAL-SIDECAR-MISSING",
-        "UI-bearing spec detected but uiux/ sidecar directory is missing.",
-        "error",
-        "uiux/",
-        "Create the uiux/ directory and populate it with the sidecar template files.",
-      ),
-    ];
+  } catch (err: unknown) {
+    if (
+      typeof err === "object" &&
+      err !== null &&
+      "code" in err &&
+      (err as NodeJS.ErrnoException).code === "ENOENT"
+    ) {
+      return [
+        canonicalIssue(
+          "UIX-VAL-SIDECAR-MISSING",
+          "UI-bearing spec detected but uiux/ sidecar directory is missing.",
+          "error",
+          "uiux/",
+          "Create the uiux/ directory and populate it with the sidecar template files.",
+        ),
+      ];
+    }
+    throw err;
   }
 }

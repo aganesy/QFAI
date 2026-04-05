@@ -463,11 +463,11 @@ export async function validatePrototypingEvidence(
     const evidenceSource = parsed.value.mode.source;
 
     // QFAI-PROT-234: discussion recommendation exists but mode.source=default
-    if (evidenceSource === "default" && rec.recommendedMode) {
+    if (evidenceSource === "system-default" && rec.recommendedMode) {
       issues.push(
         issue(
           "QFAI-PROT-234",
-          `evidence mode source is "default" but discussion recommendation exists (${rec.recommendedMode}).`,
+          `evidence mode source is "system-default" but discussion recommendation exists (${rec.recommendedMode}).`,
           "warning",
           evidenceJsonPath,
           "prototypingEvidence.modeSourceDefaultContradiction",
@@ -2258,7 +2258,7 @@ const VALID_PROTOTYPING_SURFACES = new Set([
 const VALID_MODE_SOURCES = new Set<ModeSelectionSource>([
   "explicit-request",
   "discussion-recommendation",
-  "default",
+  "system-default",
 ]);
 const VALID_FULL_HARNESS_TERMINATION_REASONS = new Set([
   "converged",

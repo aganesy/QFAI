@@ -1,6 +1,9 @@
 export type PrototypingMode = "low-cost" | "standard" | "full-harness";
 
-export type ModeSelectionSource = "explicit-request" | "discussion-recommendation" | "default";
+export type ModeSelectionSource =
+  | "explicit-request"
+  | "discussion-recommendation"
+  | "system-default";
 
 export type PrototypingSurface = "web" | "mobile" | "desktop" | "cli" | "mixed" | "non-ui";
 
