@@ -113,6 +113,33 @@ describe("screen contract validator", () => {
     expect(stateIssue?.message).toContain("error");
   });
 
+  it("rejects legacy flat nested fields", async () => {
+    const root = await newTempDir();
+    await createUiBearingPack(root);
+    const content = [
+      "# Screen Contracts",
+      "",
+      "### Screen: dashboard",
+      "",
+      "- screen_id: dashboard",
+      "- route: /app/dashboard",
+      "- purpose: Main dashboard view",
+      "- actor: end-user",
+      "- primary_tasks: View data, Edit entries",
+      "- secondary_tasks: Export data",
+      "- required_states: default, loading, empty, error",
+      "- transitions: default -> loading",
+      "- observable_outcomes: Data displayed",
+      "- notes_for_verify: Check layout",
+      "- notes_for_reviewer: Focus on states",
+    ].join("\n");
+    await writeFile(path.join(root, "uiux", "40_screen_contracts.md"), content, "utf-8");
+
+    const issues = await validateScreenContractSchema(root, defaultConfig);
+
+    expect(issues.some((i) => i.code === "UIX-VAL-SCREEN-CONTRACT-LEGACY-FORMAT")).toBe(true);
+  });
+
   it("nested bullet incomplete (missing transitions)", async () => {
     const root = await newTempDir();
     await createUiBearingPack(root);

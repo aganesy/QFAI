@@ -1344,7 +1344,7 @@ async function seedDiscussionPackFixtures(root: string): Promise<void> {
         "",
         "| Term | Definition | Synonyms | Source refs |",
         "| ---- | ---------- | -------- | ----------- |",
-        "| Discussion-pack | A timestamped discussion pack consisting of 15 required markdown files plus required prototyping.yaml under `.qfai/discussion/discussion-<ts>/`. | discussion pack | SRC-0001 |",
+        "| Discussion-pack | A timestamped discussion pack consisting of 15 required markdown files under `.qfai/discussion/discussion-<ts>/`; `prototyping.yaml` is required only when the latest pack is ui_bearing=true. | discussion pack | SRC-0001 |",
         "",
       ],
     },

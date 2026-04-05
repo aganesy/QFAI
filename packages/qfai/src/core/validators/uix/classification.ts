@@ -3,8 +3,8 @@ import path from "node:path";
 import type { QfaiConfig } from "../../config.js";
 import {
   type SurfaceType,
-  NON_UI_SURFACES,
-  UI_BEARING_SURFACES,
+  DISCUSSION_NON_UI_SURFACES,
+  DISCUSSION_UI_BEARING_SURFACES,
   parseClassificationBlock,
 } from "../../detection/surfaceType.js";
 import type { Issue, IssueSeverity } from "../../types.js";
@@ -100,11 +100,11 @@ export async function validateClassification(root: string, _config: QfaiConfig):
 
   const primarySurface = classification.primarySurface;
   const uiBearing = classification.uiBearing;
-  if (uiBearing === true && primarySurface && NON_UI_SURFACES.has(primarySurface)) {
+  if (uiBearing === true && primarySurface && DISCUSSION_NON_UI_SURFACES.has(primarySurface)) {
     issues.push(
       classificationIssue(
         "UIX-VAL-CLASSIFICATION-CONTRADICTION",
-        `ui_bearing is true but primary_surface is '${primarySurface}'. ui_bearing=true requires a UI-bearing surface (${[...UI_BEARING_SURFACES].join(", ")}).`,
+        `ui_bearing is true but primary_surface is '${primarySurface}'. ui_bearing=true requires a discussion UI-bearing surface (${[...DISCUSSION_UI_BEARING_SURFACES].join(", ")}).`,
         "error",
         "01_Context.md",
         "Set primary_surface to a UI-bearing surface or change ui_bearing to false.",
@@ -112,14 +112,14 @@ export async function validateClassification(root: string, _config: QfaiConfig):
     );
   }
 
-  if (uiBearing === false && primarySurface && UI_BEARING_SURFACES.has(primarySurface)) {
+  if (uiBearing === false && primarySurface && DISCUSSION_UI_BEARING_SURFACES.has(primarySurface)) {
     issues.push(
       classificationIssue(
         "UIX-VAL-CLASSIFICATION-CONTRADICTION",
-        `ui_bearing is false but primary_surface is '${primarySurface}'. ui_bearing=false requires a non-UI surface (${[...NON_UI_SURFACES].join(", ")}).`,
+        `ui_bearing is false but primary_surface is '${primarySurface}'. ui_bearing=false requires primary_surface 'non-ui'.`,
         "error",
         "01_Context.md",
-        "Set primary_surface to cli/non-ui or change ui_bearing to true.",
+        "Set primary_surface to non-ui or change ui_bearing to true.",
       ),
     );
   }

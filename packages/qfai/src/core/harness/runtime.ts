@@ -6,7 +6,7 @@
  * render evidence, Browser QA, critique, and observability.
  */
 
-import { isUiBearingSurfaceType } from "../detection/surfaceType.js";
+import { requiresVisualBrowserEvidence } from "../detection/surfaceType.js";
 import type { CritiqueAdapter } from "../critique/adapter.js";
 import { createFullHarnessHandoff, type FullHarnessHandoff } from "./handoff.js";
 import { detectFakeUi, type FakeUiDetectionResult } from "./fakeUiDetection.js";
@@ -55,10 +55,10 @@ export async function runFullHarness(request: FullHarnessRequest): Promise<FullH
   const browserQaResults: BrowserQaRunResult[] = [];
 
   const surface = adapters?.surface;
-  const isUiBearing = surface ? isUiBearingSurfaceType(surface) : false;
+  const requiresVisualEvidence = surface ? requiresVisualBrowserEvidence(surface) : false;
 
   // Post-loop: render evidence (UI-bearing only)
-  if (isUiBearing && adapters?.render) {
+  if (requiresVisualEvidence && adapters?.render) {
     try {
       const renderResult = await adapters.render.captureEvidence(loopResult.iterationCount);
       renderResults.push(renderResult);
@@ -68,7 +68,7 @@ export async function runFullHarness(request: FullHarnessRequest): Promise<FullH
   }
 
   // Post-loop: Browser QA (UI-bearing only)
-  if (isUiBearing && adapters?.browserQa) {
+  if (requiresVisualEvidence && adapters?.browserQa) {
     try {
       const qaResult = await adapters.browserQa.runQa(loopResult.iterationCount);
       browserQaResults.push(qaResult);

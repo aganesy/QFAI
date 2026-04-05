@@ -1,5 +1,5 @@
 import type { PrototypingSurface } from "./types.js";
-import { isUiBearingSurfaceType } from "../detection/surfaceType.js";
+import { requiresVisualBrowserEvidence } from "../detection/surfaceType.js";
 
 export function buildRuntimeGate(input: { surface: PrototypingSurface; targetUrl?: string }):
   | {
@@ -7,7 +7,7 @@ export function buildRuntimeGate(input: { surface: PrototypingSurface; targetUrl
       api: Array<{ method: string; path: string; status: number }>;
     }
   | undefined {
-  if (!isUiBearingSurfaceType(input.surface)) {
+  if (!requiresVisualBrowserEvidence(input.surface)) {
     return {
       ui: [],
       api: [],

@@ -1875,12 +1875,12 @@ async function collectPrototypingSummary(
       : undefined;
 
   // WS-F: Surface classification summary
-  const { readClassificationBlock } = await import("./detection/surfaceType.js");
-  const { isUiBearingSurfaceType } = await import("./detection/surfaceType.js");
+  const { readClassificationBlock, isDiscussionUiBearingSurfaceType } =
+    await import("./detection/surfaceType.js");
   const classificationBlock = await readClassificationBlock(root);
   const surfaceClassification: ReportPrototypingSummary["surfaceClassification"] = {
     primarySurface: effectiveSurface,
-    uiBearing: isUiBearingSurfaceType(effectiveSurface),
+    uiBearing: isDiscussionUiBearingSurfaceType(effectiveSurface),
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
     ...(classificationBlock?.secondary_surfaces?.length
       ? { secondarySurfaces: classificationBlock.secondary_surfaces }

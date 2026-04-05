@@ -7,8 +7,15 @@ import { readSafe } from "../validators/utils.js";
 
 export type SurfaceType = CanonicalPrototypingSurface | "non-ui";
 
-export const UI_BEARING_SURFACES = new Set<SurfaceType>(["web", "mobile", "desktop", "mixed"]);
-export const NON_UI_SURFACES = new Set<SurfaceType>(["cli", "non-ui"]);
+export const DISCUSSION_UI_BEARING_SURFACES = new Set<SurfaceType>([
+  "web",
+  "mobile",
+  "desktop",
+  "cli",
+  "mixed",
+]);
+export const DISCUSSION_NON_UI_SURFACES = new Set<SurfaceType>(["non-ui"]);
+export const VISUAL_BROWSER_SURFACES = new Set<SurfaceType>(["web", "mobile", "desktop", "mixed"]);
 
 export type UiBearingClassification = {
   ui_bearing: boolean;
@@ -169,12 +176,24 @@ export async function detectSurfaceType(root: string): Promise<SurfaceType> {
   return "non-ui";
 }
 
-export async function isUiBearingSurface(root: string): Promise<boolean> {
+export async function isDiscussionUiBearingSurface(root: string): Promise<boolean> {
   const surface = await detectSurfaceType(root);
-  return UI_BEARING_SURFACES.has(surface);
+  return isDiscussionUiBearingSurfaceType(surface);
 }
 
-export function isUiBearingSurfaceType(surface: SurfaceType): boolean {
+export async function isUiBearingSurface(root: string): Promise<boolean> {
+  return isDiscussionUiBearingSurface(root);
+}
+
+export function isDiscussionUiBearingSurfaceType(surface: SurfaceType): boolean {
+  return DISCUSSION_UI_BEARING_SURFACES.has(surface);
+}
+
+export function isNonUiDiscussionSurface(surface: SurfaceType): boolean {
+  return DISCUSSION_NON_UI_SURFACES.has(surface);
+}
+
+export function requiresVisualBrowserEvidence(surface: SurfaceType): boolean {
   return surface !== "non-ui" && isUiBearingPrototypingSurface(surface);
 }
 

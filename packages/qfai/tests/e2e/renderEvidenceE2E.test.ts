@@ -311,7 +311,7 @@ describe("E2E: US-0012-0004 — qualityProfile severity for render evidence", ()
 });
 
 // QFAI:SPEC-0012:US-0012-0005
-describe("E2E: US-0012-0005 — legacy critique backward compatibility", () => {
+describe("E2E: US-0012-0005 — legacy critique artifact parsing", () => {
   it("evidence without renders does not produce QFAI-PROT-244/245 errors", async () => {
     await withTempProject(async (root) => {
       await seedSpecDir(root, "spec-0001");

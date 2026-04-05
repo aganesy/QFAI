@@ -1,4 +1,4 @@
-import { isUiBearingSurfaceType } from "../detection/surfaceType.js";
+import { requiresVisualBrowserEvidence } from "../detection/surfaceType.js";
 import { runAccessibilityPhase } from "./phases/accessibility.js";
 import { runInteractionPhase } from "./phases/interaction.js";
 import { runSmokePhase } from "./phases/smoke.js";
@@ -69,7 +69,7 @@ export async function runBrowserQaOrchestrated(
 ): Promise<BrowserQaRunResult> {
   const timestamp = new Date().toISOString();
 
-  if (!isUiBearingSurfaceType(input.surface)) {
+  if (!requiresVisualBrowserEvidence(input.surface)) {
     return {
       phases: BROWSER_QA_PHASES.map((phase) => ({
         phase,
@@ -78,7 +78,7 @@ export async function runBrowserQaOrchestrated(
         repair_suggestions: [],
         evidence_refs: [`surface:${input.surface}`],
         checks_performed: [
-          `skipped Browser QA because surface '${input.surface}' is not UI-bearing`,
+          `skipped Browser QA because surface '${input.surface}' does not require visual/browser evidence`,
         ],
         skippedReason: `surface '${input.surface}' does not require Browser QA`,
       })),

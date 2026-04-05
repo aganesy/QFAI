@@ -1,7 +1,7 @@
 ---
 name: qfai-discussion
 title: QFAI Discussion (Unified Discuss + Require)
-description: "Run structured discussion that merges discuss and require into a single 15-file discussion pack with required prototyping.yaml and OQ-driven exit."
+description: "Run structured discussion that merges discuss and require into a single 15-file discussion pack with classification-aware prototyping.yaml requiredness and OQ-driven exit."
 argument-hint: "<idea-or-problem> [--auto]"
 allowed-tools: [Read, Glob, Write, TodoWrite, Task, Bash]
 roles:
@@ -226,7 +226,7 @@ For non-UI projects (`classification.ui_bearing: false`), no UI/UX completion co
 
 ## Goal
 
-Produce a unified 15-file discussion pack plus required prototyping.yaml with explicit decisions, requirements, OQ states, and rationale so `/qfai-sdd` starts without unresolved blockers.
+Produce a unified 15-file discussion pack with explicit decisions, requirements, OQ states, and rationale so `/qfai-sdd` starts without unresolved blockers. The latest discussion pack must include `prototyping.yaml` when `ui_bearing: true`, and must not require it when `ui_bearing: false`.
 
 ## Non-goals
 
@@ -252,7 +252,7 @@ Produce a unified 15-file discussion pack plus required prototyping.yaml with ex
 - `.qfai/discussion/discussion-*/14_Review-Request.md`
 - `.qfai/discussion/discussion-*/99_delta.md`
 - review artifacts under `.qfai/review/review-YYYYMMDDhhmmssSSS/`
-- `.qfai/discussion/discussion-*/prototyping.yaml`
+- `.qfai/discussion/discussion-*/prototyping.yaml` when the latest discussion pack is `ui_bearing: true`
 - Evidence file: `.qfai/evidence/discussion-YYYYMMDDhhmmssSSS.md`
 - Reviewer notes (`PASS` or `REVISE`)
 
@@ -273,9 +273,8 @@ Produce a unified 15-file discussion pack plus required prototyping.yaml with ex
 13. Run OQ resolution hearing repeatedly until open count is zero.
 14. Move deferred items to `13_Deferred.md` with all mandatory metadata columns.
 15. Update `12_OQ-Resolution-Log.md`, `14_Review-Request.md`, and `99_delta.md`.
-16. Generate `prototyping.yaml` at the discussion pack top level for downstream prototyping recommendation.
+16. Generate `prototyping.yaml` at the discussion pack top level for downstream prototyping recommendation only when the latest discussion pack is `ui_bearing: true`.
     - MUST use the **namespaced canonical schema** with `prototyping.recommended_mode` (not top-level `recommended_mode`).
-    - Top-level `recommended_mode` is legacy compatibility only and MUST NOT be emitted in new artifacts.
     - All fields (`recommended_mode`, `rationale`, `allowed_modes`, `surface`) are required under the `prototyping:` key.
 17. Choose `recommended_mode` with these defaults:
 

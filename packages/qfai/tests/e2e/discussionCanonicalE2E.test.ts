@@ -281,7 +281,10 @@ function completeStrategyContent(): string {
   return lines.join("\n");
 }
 
-function completeScreenEntry(id: string, states = "default, loading, empty, error"): string {
+function completeScreenEntry(
+  id: string,
+  states = ["default", "loading", "empty", "error"],
+): string {
   return [
     `### Screen: ${id}`,
     "",
@@ -289,11 +292,20 @@ function completeScreenEntry(id: string, states = "default, loading, empty, erro
     `- route: /app/${id}`,
     `- purpose: Main ${id} view`,
     `- actor: end-user`,
-    `- primary_tasks: View data, Edit entries`,
-    `- secondary_tasks: Export data, Filter results`,
-    `- required_states: ${states}`,
-    `- transitions: Navigate to detail, Back to list`,
-    `- observable_outcomes: Data displayed, Changes saved`,
+    `- primary_tasks:`,
+    `  - View data: open the main content`,
+    `  - Edit entries: update a record`,
+    `- secondary_tasks:`,
+    `  - Export data: download a report`,
+    `  - Filter results: narrow the current results`,
+    `- required_states:`,
+    ...states.map((state) => `  - ${state}: ${state} state is available`),
+    `- transitions:`,
+    `  - load -> success: content loaded`,
+    `  - load -> error: request failed`,
+    `- observable_outcomes:`,
+    `  - Data displayed: primary content is visible`,
+    `  - Changes saved: success feedback is visible`,
     `- notes_for_verify: Check responsive layout`,
     `- notes_for_reviewer: Focus on loading state`,
   ].join("\n");

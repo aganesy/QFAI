@@ -102,7 +102,7 @@ describe("config compatibility (promptsDir -> skillsDir)", () => {
     }
   });
 
-  it("keeps backward compatibility when prototyping block is absent", async () => {
+  it("keeps canonical defaults when prototyping block is absent", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-config-prototyping-compat-"));
     try {
       await writeFile(path.join(root, "qfai.config.yaml"), "{}\n", "utf-8");

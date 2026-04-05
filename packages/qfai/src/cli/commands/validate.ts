@@ -267,7 +267,7 @@ const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-DPACK-001":
     "A latest discussion-pack directory exists under `.qfai/discussion/discussion-<timestamp>/`.",
   "QFAI-DPACK-002":
-    "The latest discussion-pack contains 15 required markdown files plus required prototyping.yaml.",
+    "The latest discussion-pack contains 15 required markdown files, and prototyping.yaml is required only when the latest pack is ui_bearing=true.",
   "QFAI-DPACK-003": "The latest discussion-pack files contain minimum substantive content.",
   "QFAI-DPACK-004":
     "No open OQ remains in `11_OQ-Register.md` (`Disposition: open` blocks discussion completion).",

@@ -2,7 +2,7 @@
 
 ## Purpose
 
-`discussion/` stores the unified discussion pack that merges interview outputs (discuss) and requirement intake (require). Discussion packs use 15 required markdown files plus required prototyping.yaml.
+`discussion/` stores the unified discussion pack that merges interview outputs (discuss) and requirement intake (require). Discussion packs use 15 required markdown files. When the latest pack is `ui_bearing: true`, it must also include `prototyping.yaml`; when `ui_bearing: false`, `prototyping.yaml` is not required.
 
 This directory does not directly update `specs/`; it prepares decisions, requirements, open questions, and rationale as inputs for `/qfai-sdd`.
 
@@ -29,7 +29,7 @@ discussion/
     ├── 13_Deferred.md
     ├── 14_Review-Request.md
     ├── 99_delta.md
-    └── prototyping.yaml
+    └── prototyping.yaml  # required only when ui_bearing: true
 ```
 
 ## File responsibilities
@@ -103,9 +103,9 @@ discussion/
 - Use timestamp directory naming for new outputs: `discussion-YYYYMMDDhhmmssSSS`.
 - `14_Review-Request.md` must reference routing SSOT: `.qfai/assistant/steering/agent-routing.yml` and `.qfai/assistant/steering/review-profiles.yml`.
 
-## prototyping.yaml (Required Recommendation Artifact)
+## prototyping.yaml (Classification-aware Recommendation Artifact)
 
-Each discussion pack **must** include a `prototyping.yaml` file that recommends the prototyping mode for the project. This is a required side artifact of the 15-file discussion pack plus required prototyping.yaml completion contract.
+Each UI-bearing discussion pack (`ui_bearing: true`) **must** include a `prototyping.yaml` file that recommends the prototyping mode for the project. Non-UI discussion packs (`ui_bearing: false`) do not require `prototyping.yaml`.
 
 ### Canonical namespaced schema (recommended)
 

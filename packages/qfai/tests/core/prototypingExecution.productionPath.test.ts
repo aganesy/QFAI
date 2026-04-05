@@ -77,7 +77,7 @@ describe("prototyping execution production path", () => {
       expect(gate.api).toEqual([]);
     });
 
-    it("isUiBearingSurface returns false for cli", () => {
+    it("isUiBearingSurface returns false for cli prototyping surface", () => {
       expect(isUiBearingSurface("cli")).toBe(false);
     });
   });
@@ -106,7 +106,7 @@ describe("prototyping execution production path", () => {
     }
 
     for (const surface of nonUiSurfaces) {
-      it(`${surface} is not UI-bearing`, () => {
+      it(`${surface} is not a visual/browser prototyping surface`, () => {
         expect(isUiBearingSurface(surface)).toBe(false);
       });
     }

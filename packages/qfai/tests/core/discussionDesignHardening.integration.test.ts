@@ -164,11 +164,19 @@ async function seedUiBearingDiscussionPack(root: string): Promise<void> {
     "- route: /dashboard",
     "- purpose: Main dashboard view",
     "- actor: user",
-    "- primary_tasks: View overview",
-    "- secondary_tasks: Export data",
-    "- required_states: default, loading, empty, error",
-    "- transitions: navigate to detail",
-    "- observable_outcomes: Data displayed",
+    "- primary_tasks:",
+    "  - View overview: open dashboard summary",
+    "- secondary_tasks:",
+    "  - Export data: download a report",
+    "- required_states:",
+    "  - default: Main dashboard data is visible",
+    "  - loading: Loading skeleton is visible",
+    "  - empty: Empty state explains next steps",
+    "  - error: Retry action is visible",
+    "- transitions:",
+    "  - default -> loading: refresh requested",
+    "- observable_outcomes:",
+    "  - Data displayed: summary cards are visible",
     "- notes_for_verify: Check states",
     "- notes_for_reviewer: None",
   ].join("\n");
@@ -299,7 +307,7 @@ describe("Discussion Design Hardening — Integration", { timeout: 30000 }, () =
   });
 
   // TDD-0030: TC-0002-0030
-  it("non-UI pack backward compatibility — zero new discussion hardening issues", async () => {
+  it("non-UI pack keeps zero discussion hardening issues", async () => {
     await withProject(async (root) => {
       await seedNonUiDiscussionPack(root);
       const result = await validateProject(root);

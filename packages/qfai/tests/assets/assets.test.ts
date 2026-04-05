@@ -531,7 +531,9 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     const readme = await readFile(readmePath, "utf-8");
 
     // W-3: README must express canonical discussion completion contract
-    expect(readme).toContain("15 required markdown files plus required prototyping.yaml");
+    expect(readme).toContain(
+      "UI-bearing discussion packs require `prototyping.yaml`; non-ui discussion packs do not.",
+    );
     expect(readme).toMatch(/discussion-YYYYMMDDhhmmssSSS[\s\S]*prototyping\.yaml/);
   });
 
@@ -737,11 +739,11 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     ]);
 
     // All three must express the canonical completion contract wording
-    const canonicalPhrase = "15 required markdown files plus required prototyping.yaml";
-    expect(readme).toContain(canonicalPhrase);
+    const canonicalPhrase =
+      "UI-bearing discussion packs require `prototyping.yaml`; non-ui discussion packs do not.";
     expect(packageReadme).toContain(canonicalPhrase);
-    // SKILL uses "15-file ... plus required prototyping.yaml" which is equivalent
-    expect(skill).toContain("plus required prototyping.yaml");
+    expect(readme).toMatch(/ui_bearing:\s*true[\s\S]*must also include `prototyping\.yaml`/i);
+    expect(skill).toMatch(/ui_bearing:\s*true[\s\S]*prototyping\.yaml/i);
   });
 
   it("ensures qfai-discussion includes localized completion handoff guidance", async () => {
@@ -1042,15 +1044,12 @@ describe("assets guardrails", { timeout: 30000 }, () => {
   });
 
   // W5: SSOT alignment tests
-  it("discussion README declares prototyping.yaml as required (not optional)", async () => {
+  it("discussion README declares prototyping.yaml as classification-aware", async () => {
     const discussionReadmePath = path.join(templateQfaiDir, "discussion", "README.md");
     const content = await readFile(discussionReadmePath, "utf-8");
 
-    // Must NOT say "may include"
-    expect(content).not.toMatch(/may include a prototyping\.yaml/i);
-    // Must declare it as required/mandatory
-    expect(content).toMatch(/must.*include.*prototyping\.yaml/i);
-    // Directory map must list prototyping.yaml
+    expect(content).toMatch(/ui-bearing discussion pack/i);
+    expect(content).toMatch(/ui_bearing:\s*false[\s\S]*do not require `prototyping\.yaml`/i);
     expect(content).toContain("prototyping.yaml");
   });
 
@@ -1100,9 +1099,9 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     );
     const content = await readFile(skillPath, "utf-8");
 
-    // SKILL.md must reference prototyping.yaml as required
     expect(content).toContain("prototyping.yaml");
-    expect(content).toMatch(/15-file.*plus.*required.*prototyping\.yaml/i);
+    expect(content).toMatch(/ui_bearing:\s*true[\s\S]*prototyping\.yaml/i);
+    expect(content).toMatch(/ui_bearing:\s*false[\s\S]*not required/i);
   });
 });
 

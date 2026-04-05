@@ -41,13 +41,13 @@ export async function validatePrototypingRecommendation(
     return [
       issue(
         "QFAI-PROT-153",
-        "UI-bearing latest discussion packs require prototyping.yaml.",
+        "latest discussion pack が ui_bearing=true の場合、prototyping.yaml が必須です。",
         "error",
         latestPackDir,
         "prototypingRecommendation.missing",
         undefined,
         "canonical",
-        "latest discussion pack に prototyping.yaml を追加してください。",
+        "latest discussion pack の classification を確認し、ui_bearing=true なら prototyping.yaml を追加してください。",
       ),
     ];
   }
