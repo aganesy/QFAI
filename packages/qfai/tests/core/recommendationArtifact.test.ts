@@ -124,4 +124,92 @@ describe("resolveLatestRecommendationArtifact", () => {
       expect(result.recommendation).toBeNull();
     });
   });
+
+  it("returns invalid when valid namespaced block coexists with stale top-level keys", async () => {
+    await withTempRoot(async (root) => {
+      const packDir = path.join(root, ".qfai", "discussion", "discussion-20260404000000000");
+      await mkdir(packDir, { recursive: true });
+      await writeFile(
+        path.join(packDir, "prototyping.yaml"),
+        [
+          "recommended_mode: low-cost",
+          "rationale: stale top-level rationale",
+          "allowed_modes:",
+          "  - low-cost",
+          "surface: web",
+          "prototyping:",
+          "  recommended_mode: standard",
+          "  rationale: valid namespaced rationale",
+          "  allowed_modes:",
+          "    - standard",
+          "  surface: web",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+
+      const result = await resolveLatestRecommendationArtifact(root, defaultConfig);
+      expect(result.status).toBe("invalid");
+      expect(result.recommendation).toBeNull();
+      expect(result.warnings).toEqual(
+        expect.arrayContaining([
+          expect.stringContaining("Legacy top-level recommendation keys are not supported"),
+        ]),
+      );
+    });
+  });
+
+  it("warnings may exist but status remains invalid for stale coexist", async () => {
+    await withTempRoot(async (root) => {
+      const packDir = path.join(root, ".qfai", "discussion", "discussion-20260404000000000");
+      await mkdir(packDir, { recursive: true });
+      await writeFile(
+        path.join(packDir, "prototyping.yaml"),
+        [
+          "recommended_mode: standard",
+          "surface: web",
+          "prototyping:",
+          "  recommended_mode: standard",
+          "  rationale: valid namespaced",
+          "  allowed_modes:",
+          "    - standard",
+          "  surface: web",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+
+      const result = await resolveLatestRecommendationArtifact(root, defaultConfig);
+      expect(result.status).toBe("invalid");
+      expect(result.recommendation).toBeNull();
+      expect(result.warnings.length).toBeGreaterThan(0);
+    });
+  });
+
+  it("returns valid only for namespaced-only artifact", async () => {
+    await withTempRoot(async (root) => {
+      const packDir = path.join(root, ".qfai", "discussion", "discussion-20260404000000000");
+      await mkdir(packDir, { recursive: true });
+      await writeFile(
+        path.join(packDir, "prototyping.yaml"),
+        [
+          "prototyping:",
+          "  recommended_mode: standard",
+          "  rationale: namespaced-only artifact",
+          "  allowed_modes:",
+          "    - standard",
+          "    - low-cost",
+          "  surface: web",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+
+      const result = await resolveLatestRecommendationArtifact(root, defaultConfig);
+      expect(result.status).toBe("valid");
+      expect(result.recommendation).not.toBeNull();
+      expect(result.recommendation?.recommendedMode).toBe("standard");
+      expect(result.warnings).toEqual([]);
+    });
+  });
 });

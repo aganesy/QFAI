@@ -107,7 +107,7 @@ discussion/
 
 Each UI-bearing discussion pack (`ui_bearing: true`) **must** include a `prototyping.yaml` file that recommends the prototyping mode for the project. Non-UI discussion packs (`ui_bearing: false`) do not require `prototyping.yaml`.
 
-### Canonical namespaced schema (recommended)
+### Canonical namespaced schema (required)
 
 ```yaml
 prototyping:

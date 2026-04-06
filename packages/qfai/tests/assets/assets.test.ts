@@ -1148,6 +1148,36 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     expect(content).toMatch(/ui_bearing:\s*true[\s\S]*prototyping\.yaml/i);
     expect(content).toMatch(/ui_bearing:\s*false[\s\S]*not required/i);
   });
+
+  it("discussion README contains prototyping: namespaced example", async () => {
+    const discussionReadmePath = path.join(templateQfaiDir, "discussion", "README.md");
+    const content = await readFile(discussionReadmePath, "utf-8");
+
+    expect(content).toContain("prototyping:");
+    expect(content).toContain("recommended_mode:");
+    expect(content).toContain("rationale:");
+    expect(content).toContain("allowed_modes:");
+    expect(content).toContain("surface:");
+  });
+
+  it("discussion README says namespaced schema is required, not recommended", async () => {
+    const discussionReadmePath = path.join(templateQfaiDir, "discussion", "README.md");
+    const content = await readFile(discussionReadmePath, "utf-8");
+
+    // Must say required/accepted only
+    expect(content).toMatch(/namespaced schema \(required\)/i);
+    // Must NOT use wording that implies the schema is optional or merely recommended
+    expect(content).not.toMatch(/namespaced schema \(recommended\)/i);
+  });
+
+  it("discussion README does not contain legacy-permissive wording", async () => {
+    const discussionReadmePath = path.join(templateQfaiDir, "discussion", "README.md");
+    const content = await readFile(discussionReadmePath, "utf-8");
+
+    expect(content).not.toContain("legacy keys ignored");
+    expect(content).not.toContain("legacy keys may be ignored");
+    expect(content).not.toContain("accepted with warning");
+  });
 });
 
 function extractPathReferences(content: string): Set<string> {

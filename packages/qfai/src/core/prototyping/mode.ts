@@ -73,14 +73,14 @@ export async function parseDiscussionModeRecommendationWithWarnings(
 
 export function parseDiscussionFromObject(parsed: Record<string, unknown>): ParseDiscussionResult {
   const warnings: string[] = [];
+  const hasStaleTopLevelKeys = hasLegacyRecommendationKeys(parsed);
 
-  if (hasLegacyRecommendationKeys(parsed)) {
+  if (hasStaleTopLevelKeys) {
     warnings.push(
       "prototyping.yaml must use the canonical namespaced schema under 'prototyping:' only. Legacy top-level recommendation keys are not supported.",
     );
-    if (!hasNamespacedRecommendationBlock(parsed)) {
-      return { recommendation: null, warnings };
-    }
+    // Stale top-level keys coexist is hard invalid regardless of namespaced block validity
+    return { recommendation: null, warnings };
   }
 
   const hasNamespaced = hasNamespacedRecommendationBlock(parsed);
@@ -93,7 +93,6 @@ export function parseDiscussionFromObject(parsed: Record<string, unknown>): Pars
     if (rec) {
       return { recommendation: rec, warnings };
     }
-    // Invalid namespaced block — return null (do not silently fall back to legacy)
     return { recommendation: null, warnings };
   }
 

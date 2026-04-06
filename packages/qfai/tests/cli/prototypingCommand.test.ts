@@ -144,4 +144,140 @@ describe("runPrototypingCommand", () => {
       await rm(root, { recursive: true, force: true });
     }
   });
+
+  it("CLI rejects stale coexist artifact and proceeds with explicit mode", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-cli-prototyping-"));
+    try {
+      await mkdir(path.join(root, ".qfai", "specs", "spec-0001"), { recursive: true });
+      await writeFile(
+        path.join(root, "qfai.config.yaml"),
+        "paths:\n  discussionDir: .qfai/discussion\n",
+        "utf-8",
+      );
+      await writeFile(
+        path.join(root, "01_Context.md"),
+        [
+          "# Context",
+          "",
+          "- ui_bearing: true",
+          "- primary_surface: web",
+          "- secondary_surfaces:",
+          "  - cli",
+          "- classification_rationale: stale coexist CLI fixture",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+
+      const packDir = path.join(root, ".qfai", "discussion", "discussion-20260406000000000");
+      await mkdir(packDir, { recursive: true });
+      await writeFile(
+        path.join(packDir, "01_Context.md"),
+        [
+          "# Context",
+          "",
+          "- ui_bearing: true",
+          "- primary_surface: web",
+          "- secondary_surfaces:",
+          "  - cli",
+          "- classification_rationale: stale coexist CLI fixture",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+      await writeFile(
+        path.join(packDir, "prototyping.yaml"),
+        [
+          "recommended_mode: low-cost",
+          "rationale: stale top-level",
+          "allowed_modes:",
+          "  - low-cost",
+          "surface: web",
+          "prototyping:",
+          "  recommended_mode: standard",
+          "  rationale: valid namespaced",
+          "  allowed_modes:",
+          "    - standard",
+          "  surface: web",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+
+      // CLI should still work with explicit mode; stale coexist recommendation is rejected
+      const output = await captureStdout(async () => {
+        await runPrototypingCommand({ root, mode: "standard" });
+      });
+
+      expect(output).toContain("mode: standard");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("CLI accepts namespaced-only valid artifact", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-cli-prototyping-"));
+    try {
+      await mkdir(path.join(root, ".qfai", "specs", "spec-0001"), { recursive: true });
+      await writeFile(
+        path.join(root, "qfai.config.yaml"),
+        "paths:\n  discussionDir: .qfai/discussion\n",
+        "utf-8",
+      );
+      await writeFile(
+        path.join(root, "01_Context.md"),
+        [
+          "# Context",
+          "",
+          "- ui_bearing: true",
+          "- primary_surface: web",
+          "- secondary_surfaces:",
+          "  - cli",
+          "- classification_rationale: namespaced-only CLI fixture",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+
+      const packDir = path.join(root, ".qfai", "discussion", "discussion-20260406000000000");
+      await mkdir(packDir, { recursive: true });
+      await writeFile(
+        path.join(packDir, "01_Context.md"),
+        [
+          "# Context",
+          "",
+          "- ui_bearing: true",
+          "- primary_surface: web",
+          "- secondary_surfaces:",
+          "  - cli",
+          "- classification_rationale: namespaced-only CLI fixture",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+      await writeFile(
+        path.join(packDir, "prototyping.yaml"),
+        [
+          "prototyping:",
+          "  recommended_mode: low-cost",
+          "  rationale: namespaced-only recommendation",
+          "  allowed_modes:",
+          "    - low-cost",
+          "    - standard",
+          "  surface: web",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+
+      const output = await captureStdout(async () => {
+        await runPrototypingCommand({ root });
+      });
+
+      // Should adopt the namespaced recommendation
+      expect(output).toContain("mode: low-cost");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
 });

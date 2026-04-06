@@ -177,7 +177,7 @@ describe("canonical-namespaced-only parser", () => {
     }
   });
 
-  it("uses namespaced when both schemas are present (legacy keys ignored)", () => {
+  it("rejects valid namespaced when stale top-level keys coexist (hard invalid)", () => {
     const result = parseDiscussionFromObject({
       recommended_mode: "low-cost",
       rationale: "top-level rationale",
@@ -190,8 +190,12 @@ describe("canonical-namespaced-only parser", () => {
         surface: "web",
       },
     });
-    expect(result.recommendation?.recommendedMode).toBe("standard");
-    expect(result.recommendation?.sourceSchema).toBe("canonical-namespaced");
+    expect(result.recommendation).toBeNull();
+    expect(result.warnings).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining("Legacy top-level recommendation keys are not supported"),
+      ]),
+    );
   });
 
   it("returns null for legacy top-level only (no prototyping key)", () => {
@@ -233,7 +237,7 @@ describe("canonical-namespaced-only parser", () => {
     expect(result.recommendation).toBeNull();
   });
 
-  it("invalid namespaced -> recommendation null (legacy keys ignored)", () => {
+  it("invalid namespaced + stale top-level keys -> recommendation null (stale keys cause hard invalid)", () => {
     const result = parseDiscussionFromObject({
       recommended_mode: "standard",
       rationale: "valid legacy",
@@ -247,9 +251,14 @@ describe("canonical-namespaced-only parser", () => {
       },
     });
     expect(result.recommendation).toBeNull();
+    expect(result.warnings).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining("Legacy top-level recommendation keys are not supported"),
+      ]),
+    );
   });
 
-  it("valid namespaced only -> namespaced adopted", () => {
+  it("valid namespaced only -> recommendation returned", () => {
     const result = parseDiscussionFromObject({
       prototyping: {
         recommended_mode: "standard",
@@ -263,7 +272,7 @@ describe("canonical-namespaced-only parser", () => {
     expect(result.warnings).toEqual([]);
   });
 
-  it("valid namespaced + legacy keys -> namespaced adopted", () => {
+  it("valid namespaced + stale top-level keys -> recommendation is null", () => {
     const result = parseDiscussionFromObject({
       recommended_mode: "invalid-mode",
       rationale: "stale legacy block",
@@ -276,11 +285,30 @@ describe("canonical-namespaced-only parser", () => {
         surface: "web",
       },
     });
-    expect(result.recommendation?.recommendedMode).toBe("standard");
-    expect(result.recommendation?.sourceSchema).toBe("canonical-namespaced");
+    expect(result.recommendation).toBeNull();
+    expect(result.warnings).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining("Legacy top-level recommendation keys are not supported"),
+      ]),
+    );
   });
 
-  it("invalid namespaced + legacy keys -> does NOT fall back, recommendation is null", () => {
+  it("stale top-level keys alone -> recommendation is null", () => {
+    const result = parseDiscussionFromObject({
+      recommended_mode: "standard",
+      rationale: "stale only",
+      allowed_modes: ["standard"],
+      surface: "web",
+    });
+    expect(result.recommendation).toBeNull();
+    expect(result.warnings).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining("Legacy top-level recommendation keys are not supported"),
+      ]),
+    );
+  });
+
+  it("invalid namespaced + stale legacy keys -> recommendation is null (stale coexist hard invalid)", () => {
     const result = parseDiscussionFromObject({
       recommended_mode: "standard",
       rationale: "valid legacy",
@@ -294,6 +322,11 @@ describe("canonical-namespaced-only parser", () => {
       },
     });
     expect(result.recommendation).toBeNull();
+    expect(result.warnings).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining("Legacy top-level recommendation keys are not supported"),
+      ]),
+    );
   });
 
   it("scalar namespaced -> recommendation null", () => {
