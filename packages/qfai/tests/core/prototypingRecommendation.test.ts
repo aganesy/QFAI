@@ -271,7 +271,7 @@ describe("validatePrototypingRecommendation", () => {
     });
   });
 
-  it("accepts namespaced schema even when stale legacy keys coexist (legacy ignored)", async () => {
+  it("rejects stale top-level keys coexisting with namespaced block", async () => {
     await withRoot(async (root) => {
       const packDir = path.join(root, ".qfai", "discussion", "discussion-20260404000000000");
       await mkdir(packDir, { recursive: true });
@@ -295,7 +295,8 @@ describe("validatePrototypingRecommendation", () => {
       );
 
       const issues = await validatePrototypingRecommendation(root, defaultConfig);
-      expect(issues.filter((i) => i.severity === "error")).toEqual([]);
+      expect(issues.some((i) => i.severity === "error")).toBe(true);
+      expect(issues.some((i) => i.code === "QFAI-PROT-153")).toBe(true);
     });
   });
 
@@ -358,14 +359,14 @@ describe("validatePrototypingRecommendation", () => {
     });
   });
 
-  it("valid namespaced coexists with stale legacy keys -> no error (legacy keys ignored)", async () => {
+  it("rejects stale top-level keys even when namespaced block is valid", async () => {
     await withRoot(async (root) => {
       const packDir = path.join(root, ".qfai", "discussion", "discussion-20260404000000000");
       await mkdir(packDir, { recursive: true });
       await writeFile(
         path.join(packDir, "prototyping.yaml"),
         [
-          "# stale legacy keys at top level (ignored)",
+          "# stale legacy keys at top level",
           "recommended_mode: invalid-mode",
           "rationale: stale legacy block",
           "allowed_modes:",
@@ -384,7 +385,128 @@ describe("validatePrototypingRecommendation", () => {
       );
 
       const issues = await validatePrototypingRecommendation(root, defaultConfig);
-      // namespaced is primary — no error from namespaced path
+      expect(issues.some((i) => i.severity === "error")).toBe(true);
+      expect(issues.some((i) => i.code === "QFAI-PROT-153")).toBe(true);
+    });
+  });
+
+  it("rejects stale top-level recommended_mode beside namespaced block", async () => {
+    await withRoot(async (root) => {
+      const packDir = path.join(root, ".qfai", "discussion", "discussion-20260404000000000");
+      await mkdir(packDir, { recursive: true });
+      await writeFile(
+        path.join(packDir, "prototyping.yaml"),
+        [
+          "recommended_mode: standard",
+          "prototyping:",
+          "  recommended_mode: standard",
+          "  rationale: canonical",
+          "  allowed_modes:",
+          "    - standard",
+          "  surface: web",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+
+      const issues = await validatePrototypingRecommendation(root, defaultConfig);
+      expect(issues.some((i) => i.severity === "error")).toBe(true);
+    });
+  });
+
+  it("rejects stale top-level rationale beside namespaced block", async () => {
+    await withRoot(async (root) => {
+      const packDir = path.join(root, ".qfai", "discussion", "discussion-20260404000000000");
+      await mkdir(packDir, { recursive: true });
+      await writeFile(
+        path.join(packDir, "prototyping.yaml"),
+        [
+          "rationale: stale",
+          "prototyping:",
+          "  recommended_mode: standard",
+          "  rationale: canonical",
+          "  allowed_modes:",
+          "    - standard",
+          "  surface: web",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+
+      const issues = await validatePrototypingRecommendation(root, defaultConfig);
+      expect(issues.some((i) => i.severity === "error")).toBe(true);
+    });
+  });
+
+  it("rejects stale top-level allowed_modes beside namespaced block", async () => {
+    await withRoot(async (root) => {
+      const packDir = path.join(root, ".qfai", "discussion", "discussion-20260404000000000");
+      await mkdir(packDir, { recursive: true });
+      await writeFile(
+        path.join(packDir, "prototyping.yaml"),
+        [
+          "allowed_modes:",
+          "  - low-cost",
+          "prototyping:",
+          "  recommended_mode: standard",
+          "  rationale: canonical",
+          "  allowed_modes:",
+          "    - standard",
+          "  surface: web",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+
+      const issues = await validatePrototypingRecommendation(root, defaultConfig);
+      expect(issues.some((i) => i.severity === "error")).toBe(true);
+    });
+  });
+
+  it("rejects stale top-level surface beside namespaced block", async () => {
+    await withRoot(async (root) => {
+      const packDir = path.join(root, ".qfai", "discussion", "discussion-20260404000000000");
+      await mkdir(packDir, { recursive: true });
+      await writeFile(
+        path.join(packDir, "prototyping.yaml"),
+        [
+          "surface: mobile",
+          "prototyping:",
+          "  recommended_mode: standard",
+          "  rationale: canonical",
+          "  allowed_modes:",
+          "    - standard",
+          "  surface: web",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+
+      const issues = await validatePrototypingRecommendation(root, defaultConfig);
+      expect(issues.some((i) => i.severity === "error")).toBe(true);
+    });
+  });
+
+  it("accepts canonical namespaced-only schema", async () => {
+    await withRoot(async (root) => {
+      const packDir = path.join(root, ".qfai", "discussion", "discussion-20260404000000000");
+      await mkdir(packDir, { recursive: true });
+      await writeFile(
+        path.join(packDir, "prototyping.yaml"),
+        [
+          "prototyping:",
+          "  recommended_mode: standard",
+          "  rationale: canonical namespaced only",
+          "  allowed_modes:",
+          "    - low-cost",
+          "    - standard",
+          "  surface: web",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+
+      const issues = await validatePrototypingRecommendation(root, defaultConfig);
       expect(issues.filter((i) => i.severity === "error")).toEqual([]);
     });
   });

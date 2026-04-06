@@ -55,7 +55,11 @@ describe("validateDiscussionPackReadiness — current-only wording", () => {
       const canonicalPack = path.join(discussionDir, "discussion-20260406000000000");
       await mkdir(canonicalPack, { recursive: true });
       for (const f of MINIMAL_PACK_FILES) {
-        await writeFile(path.join(canonicalPack, f), `# ${f}\n\nMinimal content for testing purposes. This text satisfies the minimum character requirement.\n`, "utf-8");
+        await writeFile(
+          path.join(canonicalPack, f),
+          `# ${f}\n\nMinimal content for testing purposes. This text satisfies the minimum character requirement.\n`,
+          "utf-8",
+        );
       }
       await mkdir(path.join(discussionDir, "discussion-latest"), { recursive: true });
 

@@ -367,10 +367,15 @@ describe("assets guardrails", { timeout: 30000 }, () => {
       "Breaking changes deferred until v2.0",
       "Migration guide required",
       "Migration guide (docs/migrations/) required",
+      "deferred to v2.0",
+      "legacy deprecation",
+      "reconsidered in v2.0",
+      "accepted for backward compatibility",
     ];
     for (const phrase of bannedPhrases) {
-      expect(content).not.toContain(phrase);
+      expect(content, `product.md must not contain "${phrase}"`).not.toContain(phrase);
     }
+    expect(content).not.toMatch(/deferred\s+to\s+v2/i);
   });
 
   it("ensures manifest.md has no v2.0 defer or migration guide posture", async () => {
@@ -379,19 +384,21 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     const bannedPhrases = [
       "Breaking changes deferred until v2.0",
       "Migration guide required",
+      "deferred to v2.0",
+      "legacy deprecation",
+      "reconsidered in v2.0",
+      "accepted for backward compatibility",
     ];
     for (const phrase of bannedPhrases) {
-      expect(content).not.toContain(phrase);
+      expect(content, `manifest.md must not contain "${phrase}"`).not.toContain(phrase);
     }
+    expect(content).not.toMatch(/reconsidered\s+in\s+v2/i);
   });
 
   it("ensures contracts/ui/README.md has no legacy acceptance wording", async () => {
     const uiReadmePath = path.join(templateQfaiDir, "contracts", "ui", "README.md");
     const content = await readFile(uiReadmePath, "utf-8");
-    const bannedPhrases = [
-      "accepted for backward compatibility",
-      "backward compatibility",
-    ];
+    const bannedPhrases = ["accepted for backward compatibility", "backward compatibility"];
     for (const phrase of bannedPhrases) {
       expect(content).not.toContain(phrase);
     }

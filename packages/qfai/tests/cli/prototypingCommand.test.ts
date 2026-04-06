@@ -47,4 +47,101 @@ describe("runPrototypingCommand", () => {
       await rm(root, { recursive: true, force: true });
     }
   });
+
+  it("rejects invalid classification via CLI", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-cli-prototyping-"));
+    try {
+      await mkdir(path.join(root, ".qfai", "specs", "spec-0001"), { recursive: true });
+      await writeFile(
+        path.join(root, "qfai.config.yaml"),
+        "paths:\n  discussionDir: .qfai/discussion\n",
+        "utf-8",
+      );
+      await writeFile(
+        path.join(root, "01_Context.md"),
+        [
+          "# Context",
+          "",
+          "- ui_bearing: true",
+          "- primary_surface: non-ui",
+          "- secondary_surfaces:",
+          "- classification_rationale: invalid ui-bearing with non-ui primary",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+
+      await expect(runPrototypingCommand({ root, mode: "standard" })).rejects.toThrow(
+        /invalid|contradictory/i,
+      );
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("rejects contradictory non-ui classification via CLI", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-cli-prototyping-"));
+    try {
+      await mkdir(path.join(root, ".qfai", "specs", "spec-0001"), { recursive: true });
+      await writeFile(
+        path.join(root, "qfai.config.yaml"),
+        "paths:\n  discussionDir: .qfai/discussion\n",
+        "utf-8",
+      );
+      await writeFile(
+        path.join(root, "01_Context.md"),
+        [
+          "# Context",
+          "",
+          "- ui_bearing: false",
+          "- primary_surface: non-ui",
+          "- secondary_surfaces:",
+          "  - web",
+          "- classification_rationale: contradictory non-ui with web secondary",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+
+      await expect(runPrototypingCommand({ root, mode: "standard" })).rejects.toThrow(
+        /invalid|contradictory/i,
+      );
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("valid UI-bearing classification proceeds via CLI", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-cli-prototyping-"));
+    try {
+      await mkdir(path.join(root, ".qfai", "specs", "spec-0001"), { recursive: true });
+      await writeFile(
+        path.join(root, "qfai.config.yaml"),
+        "paths:\n  discussionDir: .qfai/discussion\n",
+        "utf-8",
+      );
+      await writeFile(
+        path.join(root, "01_Context.md"),
+        [
+          "# Context",
+          "",
+          "- ui_bearing: true",
+          "- primary_surface: web",
+          "- secondary_surfaces:",
+          "  - cli",
+          "- classification_rationale: valid ui-bearing web fixture",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+
+      const output = await captureStdout(async () => {
+        await runPrototypingCommand({ root, mode: "standard" });
+      });
+
+      expect(output).toContain("mode: standard");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
 });

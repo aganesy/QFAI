@@ -2,7 +2,7 @@ import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 
 import { loadConfig, resolvePath } from "../config.js";
-import { readClassificationBlock } from "../detection/surfaceType.js";
+import { readValidatedClassification } from "../detection/surfaceType.js";
 import type { SurfaceType } from "../detection/surfaceType.js";
 import { writeEvidenceBundles, type PrototypingSummaryBundle } from "../evidence/bundleWriter.js";
 import { runRenderCapture } from "../evidence/renderRunner.js";
@@ -61,19 +61,23 @@ export async function runPrototypingExecution(
   const discussionRoot = resolvePath(request.root, config, "discussionDir");
   const latestPack = await findLatestDiscussionPackDir(discussionRoot);
   const recommendation = await resolveLatestRecommendationArtifact(request.root, config);
-  const classification = await readClassificationBlock(latestPack ?? request.root);
-  const recommendationSurface = recommendation.recommendation?.surface;
-  const classifiedSurface =
-    classification?.primary_surface && classification.primary_surface !== "non-ui"
-      ? classification.primary_surface
-      : undefined;
-  const resolvedSurface = recommendationSurface ?? classifiedSurface;
-  if (!resolvedSurface) {
+  const classification = await readValidatedClassification(latestPack ?? request.root);
+  if (classification === null) {
     throw new Error(
-      "ui_bearing: false specs must not invoke prototyping execution. " +
+      "Classification is invalid or contradictory. " +
+        "Prototyping execution requires a valid classification in 01_Context.md. " +
+        "Fix the classification block before running prototyping.",
+    );
+  }
+  if (!classification.ui_bearing || classification.primary_surface === "non-ui") {
+    throw new Error(
+      "Non-UI classification is not a prototyping execution target. " +
         "surface field must be one of: web, mobile, desktop, cli, mixed.",
     );
   }
+  const recommendationSurface = recommendation.recommendation?.surface;
+  const classifiedSurface = classification.primary_surface;
+  const resolvedSurface = recommendationSurface ?? classifiedSurface;
   const surface: PrototypingSurface = assertCanonicalPrototypingSurface(resolvedSurface);
   const modeSummary = resolvePrototypingMode({
     explicitMode: request.requestedMode,

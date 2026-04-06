@@ -319,8 +319,7 @@ describe("runSddPreflight", () => {
       expect(result.status).toBe("blocked");
       expect(
         result.blockers.some(
-          (item) =>
-            item.includes("prototyping.yaml") || item.includes("UI-bearing"),
+          (item) => item.includes("prototyping.yaml") || item.includes("UI-bearing"),
         ),
       ).toBe(true);
     } finally {

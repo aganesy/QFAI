@@ -7,7 +7,11 @@ import {
   isCanonicalPrototypingSurface,
   requiresVisualBrowserEvidenceSurface,
 } from "../domain/surface.js";
-import { hasNamespacedRecommendationBlock, isPlainRecord } from "./recommendationSchema.js";
+import {
+  hasLegacyRecommendationKeys,
+  hasNamespacedRecommendationBlock,
+  isPlainRecord,
+} from "./recommendationSchema.js";
 import type {
   DiscussionModeRecommendation,
   DiscussionRecommendationSourceSchema,
@@ -69,6 +73,15 @@ export async function parseDiscussionModeRecommendationWithWarnings(
 
 export function parseDiscussionFromObject(parsed: Record<string, unknown>): ParseDiscussionResult {
   const warnings: string[] = [];
+
+  if (hasLegacyRecommendationKeys(parsed)) {
+    warnings.push(
+      "prototyping.yaml must use the canonical namespaced schema under 'prototyping:' only. Legacy top-level recommendation keys are not supported.",
+    );
+    if (!hasNamespacedRecommendationBlock(parsed)) {
+      return { recommendation: null, warnings };
+    }
+  }
 
   const hasNamespaced = hasNamespacedRecommendationBlock(parsed);
 

@@ -240,9 +240,13 @@ export async function readClassificationBlock(
 }
 
 /**
- * Strict validated classification API for requiredness decisions.
+ * Strict validated classification API for execution and requiredness decisions.
  * Returns a semantically valid classification only.
  * Invalid or contradictory classifications return null.
+ *
+ * This is the only API that execution / requiredness paths may use.
+ * Raw parse helpers (readClassificationBlock, parseClassificationBlock) must not
+ * be used to bypass validation in production execution paths.
  *
  * Strict rules:
  * 1. ui_bearing=false requires primary_surface=non-ui and empty secondary_surfaces
@@ -250,9 +254,7 @@ export async function readClassificationBlock(
  *    secondary_surfaces must not contain non-ui or primary_surface duplicates
  * 3. No missing fields, invalid tokens, or duplicates allowed
  */
-export function readValidatedClassificationBlock(
-  content: string,
-): UiBearingClassification | null {
+export function readValidatedClassificationBlock(content: string): UiBearingClassification | null {
   const parsed = parseClassificationBlock(content);
   if (!parsed) {
     return null;
@@ -308,7 +310,7 @@ export function readValidatedClassificationBlock(
 
 /**
  * Async wrapper for readValidatedClassificationBlock that reads 01_Context.md from disk.
- * Use this for requiredness exemption decisions instead of readClassificationBlock.
+ * Use this for execution and requiredness decisions instead of readClassificationBlock.
  */
 export async function readValidatedClassification(
   root: string,

@@ -12,6 +12,7 @@ import {
   isPrototypingRequiredForDiscussionPack,
 } from "../discussionPack.js";
 import {
+  hasLegacyRecommendationKeys,
   hasNamespacedRecommendationBlock,
   isPlainRecord,
 } from "../prototyping/recommendationSchema.js";
@@ -98,6 +99,21 @@ export async function validatePrototypingRecommendation(
         undefined,
         "canonical",
         "top-level schema を削除し、`prototyping.recommended_mode / rationale / allowed_modes / surface` を定義してください。",
+      ),
+    ];
+  }
+
+  if (hasLegacyRecommendationKeys(parsed)) {
+    return [
+      issue(
+        "QFAI-PROT-153",
+        "prototyping.yaml must use the canonical namespaced schema under 'prototyping:' only. Legacy top-level recommendation keys are not supported.",
+        "error",
+        targetPath,
+        "prototypingRecommendation.schema",
+        undefined,
+        "canonical",
+        "top-level の recommended_mode / rationale / allowed_modes / surface を削除し、`prototyping:` block のみに統一してください。",
       ),
     ];
   }

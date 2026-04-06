@@ -63,4 +63,119 @@ describe("runPrototypingExecution", () => {
       expect(payload.fullHarness?.reviewerSignoff?.reviewer).toBe("qfai");
     });
   });
+
+  it("contradictory non-ui classification rejects execution", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-prototyping-run-"));
+    try {
+      await mkdir(path.join(root, ".qfai", "specs", "spec-0001"), { recursive: true });
+      await writeFile(
+        path.join(root, "qfai.config.yaml"),
+        "paths:\n  discussionDir: .qfai/discussion\n",
+        "utf-8",
+      );
+      await writeFile(
+        path.join(root, "01_Context.md"),
+        [
+          "# Context",
+          "",
+          "- ui_bearing: false",
+          "- primary_surface: non-ui",
+          "- secondary_surfaces:",
+          "  - web",
+          "- classification_rationale: contradictory non-ui with web secondary",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+
+      // valid namespaced prototyping.yaml should not save execution from invalid classification
+      const packDir = path.join(root, ".qfai", "discussion", "discussion-20260406000000000");
+      await mkdir(packDir, { recursive: true });
+      await writeFile(
+        path.join(packDir, "prototyping.yaml"),
+        [
+          "prototyping:",
+          "  recommended_mode: standard",
+          "  rationale: should not matter",
+          "  allowed_modes:",
+          "    - standard",
+          "  surface: web",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+
+      await expect(runPrototypingExecution({ root })).rejects.toThrow(/invalid|contradictory/i);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("invalid ui-bearing classification rejects execution", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-prototyping-run-"));
+    try {
+      await mkdir(path.join(root, ".qfai", "specs", "spec-0001"), { recursive: true });
+      await writeFile(
+        path.join(root, "qfai.config.yaml"),
+        "paths:\n  discussionDir: .qfai/discussion\n",
+        "utf-8",
+      );
+      await writeFile(
+        path.join(root, "01_Context.md"),
+        [
+          "# Context",
+          "",
+          "- ui_bearing: true",
+          "- primary_surface: non-ui",
+          "- secondary_surfaces:",
+          "- classification_rationale: invalid ui-bearing with non-ui primary",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+
+      await expect(runPrototypingExecution({ root })).rejects.toThrow(/invalid|contradictory/i);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("valid non-ui classification is not an execution target", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-prototyping-run-"));
+    try {
+      await mkdir(path.join(root, ".qfai", "specs", "spec-0001"), { recursive: true });
+      await writeFile(
+        path.join(root, "qfai.config.yaml"),
+        "paths:\n  discussionDir: .qfai/discussion\n",
+        "utf-8",
+      );
+      await writeFile(
+        path.join(root, "01_Context.md"),
+        [
+          "# Context",
+          "",
+          "- ui_bearing: false",
+          "- primary_surface: non-ui",
+          "- secondary_surfaces:",
+          "- classification_rationale: pure API workflow",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+
+      await expect(runPrototypingExecution({ root })).rejects.toThrow(
+        /not a prototyping execution target/i,
+      );
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("valid ui-bearing classification proceeds", async () => {
+    await withRoot(async (root) => {
+      const result = await runPrototypingExecution({ root, requestedMode: "standard" });
+      expect(result.mode).toBe("standard");
+      expect(result.surface).toBe("web");
+    });
+  });
 });
