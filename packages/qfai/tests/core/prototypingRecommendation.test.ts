@@ -67,6 +67,79 @@ describe("validatePrototypingRecommendation", () => {
     });
   });
 
+  it("reports missing prototyping.yaml for contradictory non-ui classification", async () => {
+    await withRoot(async (root) => {
+      const packDir = path.join(root, ".qfai", "discussion", "discussion-20260404000000010");
+      await mkdir(packDir, { recursive: true });
+      await writeFile(
+        path.join(packDir, "01_Context.md"),
+        [
+          "# Context",
+          "",
+          "## UI-bearing Classification",
+          "",
+          "- ui_bearing: false",
+          "- primary_surface: non-ui",
+          "- secondary_surfaces:",
+          "  - web",
+          "- classification_rationale: Contradictory — non-ui with web secondary.",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+      const issues = await validatePrototypingRecommendation(root, defaultConfig);
+      expect(issues.some((issue) => issue.code === "QFAI-PROT-153")).toBe(true);
+    });
+  });
+
+  it("does not exempt invalid UI-bearing classification from prototyping requirement", async () => {
+    await withRoot(async (root) => {
+      const packDir = path.join(root, ".qfai", "discussion", "discussion-20260404000000011");
+      await mkdir(packDir, { recursive: true });
+      await writeFile(
+        path.join(packDir, "01_Context.md"),
+        [
+          "# Context",
+          "",
+          "## UI-bearing Classification",
+          "",
+          "- ui_bearing: true",
+          "- primary_surface: non-ui",
+          "- secondary_surfaces:",
+          "- classification_rationale: Invalid — ui_bearing=true with non-ui primary.",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+      const issues = await validatePrototypingRecommendation(root, defaultConfig);
+      expect(issues.some((issue) => issue.code === "QFAI-PROT-153")).toBe(true);
+    });
+  });
+
+  it("exempts valid non-ui classification from prototyping requirement", async () => {
+    await withRoot(async (root) => {
+      const packDir = path.join(root, ".qfai", "discussion", "discussion-20260404000000012");
+      await mkdir(packDir, { recursive: true });
+      await writeFile(
+        path.join(packDir, "01_Context.md"),
+        [
+          "# Context",
+          "",
+          "## UI-bearing Classification",
+          "",
+          "- ui_bearing: false",
+          "- primary_surface: non-ui",
+          "- secondary_surfaces:",
+          "- classification_rationale: Pure API workflow with no UI.",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+      const issues = await validatePrototypingRecommendation(root, defaultConfig);
+      expect(issues).toEqual([]);
+    });
+  });
+
   it("reports malformed recommendation (no prototyping namespace)", async () => {
     await withRoot(async (root) => {
       const packDir = path.join(root, ".qfai", "discussion", "discussion-20260404000000000");

@@ -239,6 +239,87 @@ export async function readClassificationBlock(
   };
 }
 
+/**
+ * Strict validated classification API for requiredness decisions.
+ * Returns a semantically valid classification only.
+ * Invalid or contradictory classifications return null.
+ *
+ * Strict rules:
+ * 1. ui_bearing=false requires primary_surface=non-ui and empty secondary_surfaces
+ * 2. ui_bearing=true requires primary_surface in web|mobile|desktop|cli|mixed,
+ *    secondary_surfaces must not contain non-ui or primary_surface duplicates
+ * 3. No missing fields, invalid tokens, or duplicates allowed
+ */
+export function readValidatedClassificationBlock(
+  content: string,
+): UiBearingClassification | null {
+  const parsed = parseClassificationBlock(content);
+  if (!parsed) {
+    return null;
+  }
+
+  if (parsed.missingFields.length > 0) {
+    return null;
+  }
+  if (parsed.uiBearing === undefined) {
+    return null;
+  }
+  if (!parsed.primarySurface) {
+    return null;
+  }
+  if (parsed.invalidSecondarySurfaces.length > 0) {
+    return null;
+  }
+  if (parsed.duplicateSecondarySurfaces.length > 0) {
+    return null;
+  }
+
+  if (parsed.uiBearing === false) {
+    if (parsed.primarySurface !== "non-ui") {
+      return null;
+    }
+    if (parsed.secondarySurfacesRawEntries.length > 0) {
+      return null;
+    }
+  }
+
+  if (parsed.uiBearing === true) {
+    if (parsed.primarySurface === "non-ui") {
+      return null;
+    }
+    if (!DISCUSSION_UI_BEARING_SURFACES.has(parsed.primarySurface)) {
+      return null;
+    }
+    if (parsed.secondarySurfaces.includes("non-ui" as SurfaceType)) {
+      return null;
+    }
+    if (parsed.secondarySurfaces.includes(parsed.primarySurface)) {
+      return null;
+    }
+  }
+
+  return {
+    ui_bearing: parsed.uiBearing,
+    primary_surface: parsed.primarySurface,
+    secondary_surfaces: parsed.secondarySurfaces,
+    classification_rationale: parsed.classificationRationale ?? "",
+  };
+}
+
+/**
+ * Async wrapper for readValidatedClassificationBlock that reads 01_Context.md from disk.
+ * Use this for requiredness exemption decisions instead of readClassificationBlock.
+ */
+export async function readValidatedClassification(
+  root: string,
+): Promise<UiBearingClassification | null> {
+  const content = await readSafe(path.join(root, "01_Context.md"));
+  if (!content) {
+    return null;
+  }
+  return readValidatedClassificationBlock(content);
+}
+
 function collectDuplicateValues(values: string[]): string[] {
   const seen = new Set<string>();
   const duplicates = new Set<string>();

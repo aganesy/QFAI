@@ -359,6 +359,44 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     expect(matches).toEqual([]);
   });
 
+  it("ensures product.md has no backward compatibility posture", async () => {
+    const productPath = path.join(templateQfaiDir, "assistant", "steering", "product.md");
+    const content = await readFile(productPath, "utf-8");
+    const bannedPhrases = [
+      "Maintain backward compatibility",
+      "Breaking changes deferred until v2.0",
+      "Migration guide required",
+      "Migration guide (docs/migrations/) required",
+    ];
+    for (const phrase of bannedPhrases) {
+      expect(content).not.toContain(phrase);
+    }
+  });
+
+  it("ensures manifest.md has no v2.0 defer or migration guide posture", async () => {
+    const manifestPath = path.join(templateQfaiDir, "assistant", "steering", "manifest.md");
+    const content = await readFile(manifestPath, "utf-8");
+    const bannedPhrases = [
+      "Breaking changes deferred until v2.0",
+      "Migration guide required",
+    ];
+    for (const phrase of bannedPhrases) {
+      expect(content).not.toContain(phrase);
+    }
+  });
+
+  it("ensures contracts/ui/README.md has no legacy acceptance wording", async () => {
+    const uiReadmePath = path.join(templateQfaiDir, "contracts", "ui", "README.md");
+    const content = await readFile(uiReadmePath, "utf-8");
+    const bannedPhrases = [
+      "accepted for backward compatibility",
+      "backward compatibility",
+    ];
+    for (const phrase of bannedPhrases) {
+      expect(content).not.toContain(phrase);
+    }
+  });
+
   // .npmignore files removed — gitignore entries now live in root .gitignore
   // (see ensureRootGitignoreEntries in init.ts)
 

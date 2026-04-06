@@ -37,8 +37,9 @@
 
 ## Release posture
 
-- Compatibility policy: semver. Maintain backward compatibility of the CLI command system.
-- Breaking change policy: Breaking changes deferred until v2.0. Migration guide (docs/migrations/) required.
+- Compatibility policy: current canonical contract only.
+- Breaking changes are allowed when required to restore canonical consistency.
+- CLI/skill/docs/validator must match current package semantics.
 - Evidence: CHANGELOG.md, 09_Constraints.md (DL-02)
 
 ## Milestones

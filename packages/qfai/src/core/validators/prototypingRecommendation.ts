@@ -5,7 +5,7 @@ import { parse as parseYaml } from "yaml";
 
 import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
-import { readClassificationBlock } from "../detection/surfaceType.js";
+import { readValidatedClassification } from "../detection/surfaceType.js";
 import { CANONICAL_PROTOTYPING_SURFACES } from "../domain/surface.js";
 import {
   findLatestDiscussionPackDir,
@@ -36,7 +36,7 @@ export async function validatePrototypingRecommendation(
   try {
     raw = await readFile(targetPath, "utf-8");
   } catch {
-    const classification = await readClassificationBlock(latestPackDir);
+    const classification = await readValidatedClassification(latestPackDir);
     if (!isPrototypingRequiredForDiscussionPack(classification)) {
       return [];
     }

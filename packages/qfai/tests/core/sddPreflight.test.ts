@@ -288,6 +288,75 @@ describe("runSddPreflight", () => {
     }
   });
 
+  it("blocks when contradictory non-ui classification should not exempt prototyping", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-preflight-"));
+    try {
+      const packDir = path.join(root, ".qfai", "discussion", "discussion-20260216010203020");
+      await mkdir(packDir, { recursive: true });
+
+      for (const fileName of DISCUSSION_PACK_FILES) {
+        const content =
+          fileName === "01_Context.md"
+            ? [
+                "# 01_Context.md",
+                "",
+                "## UI-bearing Classification",
+                "",
+                "- ui_bearing: false",
+                "- primary_surface: non-ui",
+                "- secondary_surfaces:",
+                "  - web",
+                "- classification_rationale: Contradictory classification.",
+                "",
+              ].join("\n")
+            : defaultDiscussionPackContent(fileName);
+        await writeFile(path.join(packDir, fileName), `${content}\n`, "utf-8");
+      }
+      // Do NOT write prototyping.yaml
+
+      const result = await runSddPreflight(root, defaultConfig);
+
+      expect(result.status).toBe("blocked");
+      expect(
+        result.blockers.some(
+          (item) =>
+            item.includes("prototyping.yaml") || item.includes("UI-bearing"),
+        ),
+      ).toBe(true);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("blocks when classification is missing and prototyping.yaml is absent", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-preflight-"));
+    try {
+      const packDir = path.join(root, ".qfai", "discussion", "discussion-20260216010203021");
+      await mkdir(packDir, { recursive: true });
+
+      for (const fileName of DISCUSSION_PACK_FILES) {
+        const content =
+          fileName === "01_Context.md"
+            ? [
+                "# 01_Context.md",
+                "",
+                "This context file has no classification block at all.",
+                "The validator should treat this as prototyping-required.",
+                "",
+              ].join("\n")
+            : defaultDiscussionPackContent(fileName);
+        await writeFile(path.join(packDir, fileName), `${content}\n`, "utf-8");
+      }
+      // Do NOT write prototyping.yaml
+
+      const result = await runSddPreflight(root, defaultConfig);
+
+      expect(result.status).toBe("blocked");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("returns blocked with dangerous naming details when canonical pack is missing", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-preflight-"));
     try {

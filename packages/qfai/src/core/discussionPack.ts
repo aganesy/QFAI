@@ -2,7 +2,7 @@ import { readFile, stat } from "node:fs/promises";
 import path from "node:path";
 
 import type { UiBearingClassification } from "./detection/surfaceType.js";
-import { readClassificationBlock } from "./detection/surfaceType.js";
+import { readValidatedClassification } from "./detection/surfaceType.js";
 import { findPacks, latestPack as selectLatestPack } from "./packLocator.js";
 
 export const DISCUSSION_PACK_DIR_RE = /^discussion-(\d{17})$/;
@@ -101,7 +101,7 @@ export async function inspectLatestDiscussionPack(
   const incompleteFiles: RequiredDiscussionPackMarkdownFile[] = [];
   let blockingOqIds: string[] = [];
   let deferredWithoutDetails: string[] = [];
-  const classification = await readClassificationBlock(latestPackDir);
+  const classification = await readValidatedClassification(latestPackDir);
   const prototypingRequired = isPrototypingRequiredForDiscussionPack(classification);
 
   for (const fileName of REQUIRED_DISCUSSION_PACK_MARKDOWN_FILES) {

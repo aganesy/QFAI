@@ -19,7 +19,7 @@
 ## Compatibility vs Change Rubric
 
 - Criteria (Compatibility): validate.json is an internal contract (not a stable API). CLI command system follows semver.
-- Criteria (Change): Breaking changes deferred until v2.0. Migration guide required.
+- Criteria (Change): canonical consistency, validator alignment, and shipped SSOT alignment take priority. Breaking changes are allowed when required to restore canonical consistency.
 - Examples: `_shared/` -> `_policies/` rename (v1.5.3), spec-pack -> layered migration (v1.4.17)
 - Evidence: CHANGELOG.md, OQ-0003 (validate.json), OQ-0004 (legacy deprecation)
 

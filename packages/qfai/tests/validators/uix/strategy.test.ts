@@ -139,6 +139,48 @@ describe("validateStrategyStrong", () => {
     expect(issues.some((issue) => issue.code === "UIX-VAL-STRATEGY-CHOSEN-OPTION")).toBe(true);
   });
 
+  it("accepts surface: cli as valid canonical strategy", async () => {
+    const root = await newTempDir();
+    await createUiBearingPack(root);
+    await writeFile(
+      path.join(root, "uiux", "10_implementation_strategy.md"),
+      strategyContent({ surface: "cli" }),
+      "utf-8",
+    );
+
+    const issues = await validateStrategyStrong(root, defaultConfig);
+    expect(issues.some((issue) => issue.code === "UIX-VAL-STRATEGY-INVALID-SURFACE")).toBe(false);
+  });
+
+  it("does not emit NONUI-WARN for surface: cli with UI-centric narrative", async () => {
+    const root = await newTempDir();
+    await createUiBearingPack(root);
+    await writeFile(
+      path.join(root, "uiux", "10_implementation_strategy.md"),
+      strategyContent({
+        surface: "cli",
+        rationale: ["Screen layout with navigation flow for the dashboard."],
+      }),
+      "utf-8",
+    );
+
+    const issues = await validateStrategyStrong(root, defaultConfig);
+    expect(issues.some((issue) => issue.code === "UIX-VAL-STRATEGY-NONUI-WARN")).toBe(false);
+  });
+
+  it("rejects surface: web-ui as invalid", async () => {
+    const root = await newTempDir();
+    await createUiBearingPack(root);
+    await writeFile(
+      path.join(root, "uiux", "10_implementation_strategy.md"),
+      strategyContent({ surface: "web-ui" }),
+      "utf-8",
+    );
+
+    const issues = await validateStrategyStrong(root, defaultConfig);
+    expect(issues.some((issue) => issue.code === "UIX-VAL-STRATEGY-INVALID-SURFACE")).toBe(true);
+  });
+
   it("errors when selection_required=false but canonical none contract is violated", async () => {
     const root = await newTempDir();
     await createUiBearingPack(root);
