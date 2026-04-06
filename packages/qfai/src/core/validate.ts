@@ -99,7 +99,7 @@ export async function validateProject(
     uiuxIssues.push({
       code: "QFAI-UIUX-PERF",
       severity: "warning",
-      category: "compatibility",
+      category: "canonical",
       message: `UI/UX validation exceeded budget (${UIUX_VALIDATION_BUDGET_MS}ms). All validators were executed.`,
       rule: "uiux.performanceBudget",
     });

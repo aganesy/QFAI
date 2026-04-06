@@ -197,7 +197,7 @@ describe("findingToIssue", () => {
     expect(result.suggested_action).toBe("Reduce to a single primary task");
     expect(result.file).toBe("03_Story-Workshop.md");
     expect(result.refs).toEqual(["button.primary x3"]);
-    expect(result.category).toBe("compatibility");
+    expect(result.category).toBe("canonical");
   });
 
   it("omits refs when evidence is empty", () => {
@@ -208,7 +208,7 @@ describe("findingToIssue", () => {
 });
 
 // ---------------------------------------------------------------------------
-// TDD-0005 (TC-0010-0009): Profile T1 default → error
+// TDD-0005 (TC-0010-0009): Profile T1 default ↁEerror
 // ---------------------------------------------------------------------------
 
 describe("mapSeverity", () => {
@@ -225,7 +225,7 @@ describe("mapSeverity", () => {
   });
 
   // ---------------------------------------------------------------------------
-  // TDD-0006 (TC-0010-0010): Profile T2 default → warning
+  // TDD-0006 (TC-0010-0010): Profile T2 default ↁEwarning
   // ---------------------------------------------------------------------------
 
   it("returns warning for tier 2 with default profile", () => {
@@ -237,7 +237,7 @@ describe("mapSeverity", () => {
   });
 
   // ---------------------------------------------------------------------------
-  // TDD-0007 (TC-0010-0011): Profile T2 strict → error
+  // TDD-0007 (TC-0010-0011): Profile T2 strict ↁEerror
   // ---------------------------------------------------------------------------
 
   it("returns error for tier 2 with strict profile", () => {
@@ -270,13 +270,13 @@ describe("mapSeverity", () => {
 
 // ---------------------------------------------------------------------------
 // TDD-0012 (TC-0010-0002): Clean UI-bearing all pass
-// TDD-0013 (TC-0010-0003): Missing primary task → QFAI-AUD-001
-// TDD-0014 (TC-0010-0004): Token drift over threshold → QFAI-AUD-004
+// TDD-0013 (TC-0010-0003): Missing primary task ↁEQFAI-AUD-001
+// TDD-0014 (TC-0010-0004): Token drift over threshold ↁEQFAI-AUD-004
 // TDD-0015 (TC-0010-0005): Token drift under threshold (boundary)
-// TDD-0016 (TC-0010-0006): Multiple primary tasks → QFAI-AUD-020 warning
+// TDD-0016 (TC-0010-0006): Multiple primary tasks ↁEQFAI-AUD-020 warning
 // ---------------------------------------------------------------------------
 
-describe("validateDesignAudit — audit rules", { timeout: 10000 }, () => {
+describe("validateDesignAudit  Eaudit rules", { timeout: 10000 }, () => {
   let root: string;
 
   beforeEach(async () => {
@@ -362,7 +362,7 @@ describe("validateDesignAudit — audit rules", { timeout: 10000 }, () => {
     expect(issues).toEqual([]);
   });
 
-  it("TDD-0013: missing primary task → QFAI-AUD-001 error", async () => {
+  it("TDD-0013: missing primary task ↁEQFAI-AUD-001 error", async () => {
     await createUiBearingPack(["# 03 Story Workshop", "<div>UI content</div>"].join("\n"));
     await writeCanonicalAuditArtifacts([
       "# Screen Contracts",
@@ -393,7 +393,7 @@ describe("validateDesignAudit — audit rules", { timeout: 10000 }, () => {
     expect(ctaIssue?.severity).toBe("error");
   });
 
-  it("TDD-0014: token drift over threshold → QFAI-AUD-004", async () => {
+  it("TDD-0014: token drift over threshold ↁEQFAI-AUD-004", async () => {
     await createUiBearingPack(["# 03 Story Workshop", "<div>UI content</div>"].join("\n"));
     await writeCanonicalAuditArtifacts([
       "# Screen Contracts",
@@ -447,7 +447,7 @@ describe("validateDesignAudit — audit rules", { timeout: 10000 }, () => {
     expect(tokenIssue?.severity).toBe("error");
   });
 
-  it("TDD-0015: token drift under threshold → no QFAI-AUD-004", async () => {
+  it("TDD-0015: token drift under threshold ↁEno QFAI-AUD-004", async () => {
     await createUiBearingPack(["# 03 Story Workshop", "<div>UI content</div>"].join("\n"));
     await writeCanonicalAuditArtifacts([
       "# Screen Contracts",
@@ -498,7 +498,7 @@ describe("validateDesignAudit — audit rules", { timeout: 10000 }, () => {
     expect(tokenIssue).toBeUndefined();
   });
 
-  it("TDD-0016: multiple primary tasks → QFAI-AUD-020 warning", async () => {
+  it("TDD-0016: multiple primary tasks ↁEQFAI-AUD-020 warning", async () => {
     await createUiBearingPack(["# 03 Story Workshop", "<div>UI content</div>"].join("\n"));
     await writeCanonicalAuditArtifacts([
       "# Screen Contracts",
@@ -552,7 +552,7 @@ describe("deduplicateFindings", () => {
     return {
       code,
       severity: "warning",
-      category: "compatibility",
+      category: "canonical",
       message,
     };
   }

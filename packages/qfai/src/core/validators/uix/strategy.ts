@@ -4,7 +4,7 @@ import type { QfaiConfig } from "../../config.js";
 import {
   CANONICAL_PROTOTYPING_SURFACES,
   isCanonicalPrototypingSurface,
-  isUiBearingPrototypingSurface,
+  requiresVisualBrowserEvidenceSurface,
 } from "../../domain/surface.js";
 import {
   CANONICAL_STRATEGY_DECISIONS,
@@ -391,9 +391,12 @@ export async function validateStrategyStrong(root: string, _config: QfaiConfig):
     );
   }
 
+  const isVisualBrowserSurface =
+    isCanonicalPrototypingSurface(surfaceVal) && requiresVisualBrowserEvidenceSurface(surfaceVal);
+  const isNonUiSurface = surfaceVal === "non-ui";
   if (
-    isCanonicalPrototypingSurface(surfaceVal) &&
-    !isUiBearingPrototypingSurface(surfaceVal) &&
+    isNonUiSurface &&
+    !isVisualBrowserSurface &&
     [parsed.decision, parsed.rationale, parsed.verification_expectations, parsed.notes_for_reviewer]
       .map((value) => (Array.isArray(value) ? value.join(" ") : (value ?? "")))
       .join(" ")
@@ -404,9 +407,9 @@ export async function validateStrategyStrong(root: string, _config: QfaiConfig):
     issues.push(
       strategyIssue(
         "UIX-VAL-STRATEGY-NONUI-WARN",
-        `surface='${surfaceVal}' but the strategy text is heavily UI-centric.`,
+        `surface='${surfaceVal}' but the strategy text is heavily visual/browser-oriented.`,
         "warning",
-        "Reframe the strategy around CLI behavior when the surface is cli.",
+        "Reframe the strategy around non-UI behavior and remove visual/browser-only expectations.",
       ),
     );
   }

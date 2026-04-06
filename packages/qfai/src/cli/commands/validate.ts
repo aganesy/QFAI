@@ -297,10 +297,10 @@ const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "HTML+CSS visual mock is an optional fallback aid and should only be referenced when intentionally selected. Sidecar artifacts (uiux/) are the primary UI definition.",
   "QFAI-PROT-101":
     "Both prototyping evidence files exist and prototyping.json follows the required schema.",
-  "QFAI-PROT-150": "prototyping.json missing mode block (v1.7.14+ will be error).",
+  "QFAI-PROT-150": "prototyping.json is missing the canonical mode block.",
   "QFAI-PROT-151": "mode.effective must be low-cost|standard|full-harness.",
   "QFAI-PROT-152":
-    "mode.source must be explicit-request|discussion-recommendation|default and rationale must be non-empty.",
+    "mode.source must be explicit-request|discussion-recommendation|system-default and rationale must be non-empty.",
   "QFAI-PROT-171": "surface field must be one of: web, mobile, desktop, cli, mixed.",
   "QFAI-PROT-172":
     "surface/mode obligation matrix mismatch — required evidence bundles are missing.",
@@ -325,7 +325,7 @@ const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-PROT-156": "prototyping.yaml requires surface field.",
   "QFAI-PROT-233":
     "evidence effective mode differs from resolved discussion recommendation precedence.",
-  "QFAI-PROT-234": "discussion recommendation exists but evidence mode.source is default.",
+  "QFAI-PROT-234": "discussion recommendation exists but evidence mode.source is system-default.",
   "QFAI-PROT-235":
     "evidence mode.source is discussion-recommendation but recommendation artifact is missing or invalid.",
   "QFAI-PROT-236": "explicit requested mode is not allowed by discussion allowed_modes.",

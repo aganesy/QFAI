@@ -415,7 +415,7 @@ export async function validatePrototypingEvidence(
           evidenceJsonPath,
           "prototypingEvidence.modeSourceArtifactMissing",
           [`source=${parsed.value.mode.source}`],
-          "compatibility",
+          "canonical",
           "discussion pack に有効な prototyping.yaml を追加するか、mode.source を修正してください。",
         ),
       );
@@ -433,7 +433,7 @@ export async function validatePrototypingEvidence(
             evidenceJsonPath,
             "prototypingEvidence.modePrecedenceMismatch",
             [`effective=${evidenceEffective}`, `recommended=${rec.recommendedMode}`],
-            "compatibility",
+            "canonical",
             "evidence の mode.effective を discussion recommendation に合わせるか、mode.source を修正してください。",
           ),
         );
@@ -455,7 +455,7 @@ export async function validatePrototypingEvidence(
             evidenceJsonPath,
             "prototypingEvidence.requestedModeNotAllowed",
             [`requested=${parsed.value.mode.requested}`, `allowed=${rec.allowedModes.join(",")}`],
-            "compatibility",
+            "canonical",
             "requested mode を allowed_modes 内の mode に変更するか、discussion artifact の allowed_modes を更新してください。",
           ),
         );
@@ -477,7 +477,7 @@ export async function validatePrototypingEvidence(
           evidenceJsonPath,
           "prototypingEvidence.modeSourceDefaultContradiction",
           [`source=${evidenceSource}`, `recommended=${rec.recommendedMode}`],
-          "compatibility",
+          "canonical",
           "discussion recommendation が存在する場合、mode.source は discussion-recommendation であるべきです。",
         ),
       );
@@ -499,7 +499,7 @@ export async function validatePrototypingEvidence(
           evidenceJsonPath,
           "prototypingEvidence.requestedModeNotAllowed",
           [`requested=${parsed.value.mode.requested}`, `allowed=${rec.allowedModes.join(",")}`],
-          "compatibility",
+          "canonical",
           "requested mode を allowed_modes 内の mode に変更するか、discussion artifact の allowed_modes を更新してください。",
         ),
       );
@@ -530,7 +530,7 @@ export async function validatePrototypingEvidence(
           renderBundlePath,
           "prototypingEvidence.renderBundleSurfaceContradiction",
           [`surface=${surfaceResult.surface}`],
-          "compatibility",
+          "canonical",
           `${surfaceResult.surface} surface では render evidence は不要です。surface を見直すか render bundle を削除してください。`,
         ),
       );
@@ -556,7 +556,7 @@ export async function validatePrototypingEvidence(
                   renderBundlePath,
                   "prototypingEvidence.renderFileExistence",
                   [`imagePath=${screen.imagePath}`],
-                  "compatibility",
+                  "canonical",
                   "captured status は実ファイルの存在を前提とします。screenshot を再生成するか、status を skipped/failed に変更してください。",
                 ),
               );
@@ -577,7 +577,7 @@ export async function validatePrototypingEvidence(
                   renderBundlePath,
                   "prototypingEvidence.renderFileExistence",
                   [`htmlPath=${screen.htmlPath}`],
-                  "compatibility",
+                  "canonical",
                   "captured の HTML ref が見つかりません。ファイルを再生成するか、htmlPath を削除してください。",
                 ),
               );
@@ -602,7 +602,7 @@ export async function validatePrototypingEvidence(
                 renderBundlePath,
                 "prototypingEvidence.renderMissingReason",
                 [],
-                "compatibility",
+                "canonical",
                 `status=${screen.status} の screen には reason/error フィールドが必須です。`,
               ),
             );
@@ -638,7 +638,7 @@ export async function validatePrototypingEvidence(
             `browserQa.mode=${browserQaBundle.browserQa.mode}`,
             `effective=${parsed.value.mode.effective}`,
           ],
-          "compatibility",
+          "canonical",
           "browser QA bundle の mode を prototyping.json の mode.effective に合わせてください。",
         ),
       );
@@ -659,7 +659,7 @@ export async function validatePrototypingEvidence(
           browserQaBundlePath,
           "prototypingEvidence.browserQaEmptyCompleted",
           undefined,
-          "compatibility",
+          "canonical",
           "browser QA が completed なら summary または findings を記録してください。",
         ),
       );
@@ -681,7 +681,7 @@ export async function validatePrototypingEvidence(
           browserQaBundlePath,
           "prototypingEvidence.browserQaNotExecuted",
           [`surface=${surfaceResult.surface}`, `mode=${effectiveMode}`],
-          "compatibility",
+          "canonical",
           "full-harness ui-bearing では browser QA を実行し、executed=true にしてください。",
         ),
       );
@@ -698,7 +698,7 @@ export async function validatePrototypingEvidence(
         evidenceJsonPath,
         "prototypingEvidence.calibrationMissing",
         undefined,
-        "compatibility",
+        "canonical",
         "qfai.config.yaml に prototyping.calibration セクションを追加してください。",
       ),
     );
@@ -717,7 +717,7 @@ export async function validatePrototypingEvidence(
         evidenceJsonPath,
         "prototypingEvidence.calibrationScoringTraceMissing",
         undefined,
-        "compatibility",
+        "canonical",
         "fullHarness.scoringTrace に iteration ごとの score を追加してください。",
       ),
     );
@@ -825,7 +825,7 @@ function validateSurface(
         evidenceJsonPath,
         "prototypingEvidence.surface",
         [surfaceResult.raw],
-        "compatibility",
+        "canonical",
         `surface field must be one of: ${CANONICAL_PROTOTYPING_SURFACES.join(", ")}.`,
       ),
     ];
@@ -839,7 +839,7 @@ function validateSurface(
         evidenceJsonPath,
         "prototypingEvidence.surface",
         undefined,
-        "compatibility",
+        "canonical",
         `surface field must be one of: ${CANONICAL_PROTOTYPING_SURFACES.join(", ")}.`,
       ),
     ];
@@ -876,7 +876,7 @@ function validatePrototypingObligationMatrix(
           evidenceJsonPath,
           "prototypingEvidence.nonUiContradiction",
           contradictions,
-          "compatibility",
+          "canonical",
           "UI を持たない surface では uiFidelity / render evidence / browser QA / runtimeGate.ui を省略してください。",
         ),
       );
@@ -893,7 +893,7 @@ function validatePrototypingObligationMatrix(
         evidenceJsonPath,
         "prototypingEvidence.uiFidelityRequiredByMode",
         [`surface=${surface}`, `mode=${evidence.mode?.effective ?? "standard"}`],
-        "compatibility",
+        "canonical",
         "uiFidelity.screens[] を追加し、UI contract 対応の evidence を記録してください。",
       ),
     );
@@ -909,7 +909,7 @@ function validatePrototypingObligationMatrix(
         evidenceJsonPath,
         "prototypingEvidence.runtimeGateRequiredByMode",
         [`surface=${surface}`, `mode=${evidence.mode?.effective ?? "standard"}`],
-        "compatibility",
+        "canonical",
         "runtimeGate.ui / runtimeGate.api を追加して full-harness の観測結果を記録してください。",
       ),
     );
@@ -925,7 +925,7 @@ function validatePrototypingObligationMatrix(
         evidenceJsonPath,
         "prototypingEvidence.renderBundleRequired",
         [`surface=${surface}`, `mode=${evidence.mode?.effective ?? "standard"}`],
-        "compatibility",
+        "canonical",
         "`.qfai/evidence/render.json` を追加し、captured/skipped/failed の bundle を記録してください。",
       ),
     );
@@ -941,7 +941,7 @@ function validatePrototypingObligationMatrix(
         evidenceJsonPath,
         "prototypingEvidence.browserQaBundleRequired",
         [`surface=${surface}`, `mode=${evidence.mode?.effective ?? "standard"}`],
-        "compatibility",
+        "canonical",
         "`.qfai/evidence/browser-qa.json` を追加し、browser QA summary/findings を記録してください。",
       ),
     );
@@ -960,7 +960,7 @@ function validatePrototypingObligationMatrix(
         evidenceJsonPath,
         "prototypingEvidence.obligationMatrix",
         [`surface=${surface}`, `mode=${evidence.mode?.effective ?? "standard"}`, ...mismatches],
-        "compatibility",
+        "canonical",
         "surface と mode.effective に応じた required evidence を揃えてください。",
       ),
     );
@@ -1180,12 +1180,12 @@ function validateModeMetadata(evidence: PrototypingEvidence, evidenceJsonPath: s
     issues.push(
       issue(
         "QFAI-PROT-150",
-        "prototyping.json に mode block がありません。v1.7.14 以降は error になります。",
-        "warning",
+        "prototyping.json に canonical mode block がありません。",
+        "error",
         evidenceJsonPath,
-        "prototypingEvidence.modeMigration",
+        "prototypingEvidence.modeRequired",
         undefined,
-        "compatibility",
+        "canonical",
         "mode.effective / mode.source / mode.rationale を持つ mode block を追加してください。",
       ),
     );
@@ -1201,7 +1201,7 @@ function validateModeMetadata(evidence: PrototypingEvidence, evidenceJsonPath: s
         evidenceJsonPath,
         "prototypingEvidence.modeEffective",
         undefined,
-        "compatibility",
+        "canonical",
         "mode.effective を low-cost|standard|full-harness のいずれかにしてください。",
       ),
     );
@@ -1215,8 +1215,8 @@ function validateModeMetadata(evidence: PrototypingEvidence, evidenceJsonPath: s
         evidenceJsonPath,
         "prototypingEvidence.modeSource",
         undefined,
-        "compatibility",
-        "mode.source を explicit-request|discussion-recommendation|default のいずれかにしてください。",
+        "canonical",
+        "mode.source を explicit-request|discussion-recommendation|system-default のいずれかにしてください。",
       ),
     );
   }
@@ -1229,7 +1229,7 @@ function validateModeMetadata(evidence: PrototypingEvidence, evidenceJsonPath: s
         evidenceJsonPath,
         "prototypingEvidence.modeRationale",
         undefined,
-        "compatibility",
+        "canonical",
         "mode.rationale に mode 選択理由を記録してください。",
       ),
     );
@@ -1249,7 +1249,7 @@ function validateModeMetadata(evidence: PrototypingEvidence, evidenceJsonPath: s
           evidenceJsonPath,
           "prototypingEvidence.discussionRecommendation",
           undefined,
-          "compatibility",
+          "canonical",
           "discussionRecommendation の recommendedMode / rationale / allowedModes を schema に合わせて修正してください。",
         ),
       );
@@ -1267,7 +1267,7 @@ function validateModeMetadata(evidence: PrototypingEvidence, evidenceJsonPath: s
           evidenceJsonPath,
           "prototypingEvidence.discussionRecommendationAllowedModes",
           [`recommendedMode=${recommendation.recommendedMode}`],
-          "compatibility",
+          "canonical",
           "discussionRecommendation.allowedModes に recommendedMode を追加してください。",
         ),
       );
@@ -1284,7 +1284,7 @@ function validateModeMetadata(evidence: PrototypingEvidence, evidenceJsonPath: s
           evidenceJsonPath,
           "prototypingEvidence.fullHarnessRequired",
           undefined,
-          "compatibility",
+          "canonical",
           "fullHarness.enabled / terminationReason / scoringTrace / reviewerSignoff を追加してください。",
         ),
       );
@@ -1299,7 +1299,7 @@ function validateModeMetadata(evidence: PrototypingEvidence, evidenceJsonPath: s
           evidenceJsonPath,
           "prototypingEvidence.fullHarnessTerminationReason",
           undefined,
-          "compatibility",
+          "canonical",
           "terminationReason は converged|max-iterations|plateau|manual-stop のいずれかにしてください。",
         ),
       );
@@ -1313,7 +1313,7 @@ function validateModeMetadata(evidence: PrototypingEvidence, evidenceJsonPath: s
           evidenceJsonPath,
           "prototypingEvidence.fullHarnessScoringTrace",
           undefined,
-          "compatibility",
+          "canonical",
           "fullHarness.scoringTrace に iteration ごとの score を追加してください。",
         ),
       );
@@ -1330,7 +1330,7 @@ function validateModeMetadata(evidence: PrototypingEvidence, evidenceJsonPath: s
           evidenceJsonPath,
           "prototypingEvidence.fullHarnessReviewerSignoff",
           undefined,
-          "compatibility",
+          "canonical",
           "reviewerSignoff に reviewer / timestamp / status を記録してください。",
         ),
       );

@@ -21,7 +21,7 @@ export function issue(
   file?: string,
   rule?: string,
   refs?: string[],
-  category: IssueCategory = "compatibility",
+  category: IssueCategory = "canonical",
   suggested_action?: string,
   details?: {
     dl_id?: string;

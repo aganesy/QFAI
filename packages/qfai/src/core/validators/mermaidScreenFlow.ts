@@ -65,7 +65,7 @@ export async function validateMermaidScreenFlow(
             rel,
             "mermaidScreenFlow.v1Migration",
             undefined,
-            "compatibility",
+            "canonical",
             "Replace 'stateDiagram' with 'stateDiagram-v2' at the first line of the diagram.",
           ),
         );

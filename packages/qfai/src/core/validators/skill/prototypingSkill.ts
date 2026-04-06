@@ -38,7 +38,7 @@ function skillIssue(
   return {
     code,
     severity,
-    category: "compatibility",
+    category: "canonical",
     message,
     file: "SKILL.md",
     suggested_action: suggestedAction,

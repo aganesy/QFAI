@@ -1,5 +1,5 @@
 /**
- * UIX-VAL scoring-ready schema validator — spec-0034
+ * UIX-VAL scoring-ready schema validator - spec-0034
  *
  * Validates that each evaluation axis in the split 3-layer family files
  * has all mandatory fields per the canonical design spec and that aggregate
@@ -22,7 +22,7 @@ import { isUiBearingSpec } from "../uixDetection.js";
 import { readSafe } from "../utils.js";
 
 /**
- * Canonical axis fields — matches the design spec exactly.
+ * Canonical axis fields - matches the design spec exactly.
  * Includes flat bullet fields, nested object fields (score_anchors.*),
  * and list fields.
  */
@@ -50,7 +50,7 @@ const REQUIRED_AXIS_FIELDS = [
 const SCORE_ANCHOR_SUBFIELDS = ["low", "mid", "high"] as const;
 
 /**
- * Canonical aggregate scoring fields — matches the design spec exactly.
+ * Canonical aggregate scoring fields - matches the design spec exactly.
  */
 const AGGREGATE_REQUIRED = [
   "total_score_formula",
@@ -81,7 +81,7 @@ function scoringIssue(
   return {
     code,
     severity,
-    category: "compatibility",
+    category: "canonical",
     message,
     file,
     suggested_action: suggestedAction,

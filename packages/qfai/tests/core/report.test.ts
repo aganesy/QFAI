@@ -279,7 +279,7 @@ describe("report contract coverage", () => {
     data.issues.push({
       code: "QFAI-PROT-245",
       severity: "warning",
-      category: "compatibility",
+      category: "canonical",
       message: "render coverage is incomplete",
       file: ".qfai/evidence/prototyping.json",
       suggested_action: "rerun prototyping with render evidence",
@@ -417,7 +417,7 @@ describe("report contract coverage", () => {
       {
         code: "QFAI-TEST-000",
         severity: "warning",
-        category: "compatibility",
+        category: "canonical",
         message: "suppressed link test",
         file: "specs/with space/テスト.md",
         loc: { line: 12 },
@@ -426,7 +426,7 @@ describe("report contract coverage", () => {
     ];
 
     const markdown = formatReportMarkdown(data);
-    expect(markdown).toContain("- issues(compatibility): info 0 / warning 0 / error 0");
+    expect(markdown).toContain("- issues(canonical): info 0 / warning 0 / error 0");
     expect(markdown).not.toContain("| warning | QFAI-TEST-000 | 1 |");
   });
 
@@ -749,14 +749,14 @@ describe("report design audit / slop sections", () => {
       {
         code: "QFAI-AUD-001",
         severity: "error",
-        category: "compatibility",
+        category: "canonical",
         message: "No primary task",
         rule: "audit.visualHierarchy",
       },
       {
         code: "QFAI-AUD-004",
         severity: "warning",
-        category: "compatibility",
+        category: "canonical",
         message: "Token drift",
         rule: "audit.tokenDiscipline",
       },
@@ -776,14 +776,14 @@ describe("report design audit / slop sections", () => {
       {
         code: "SLP-01",
         severity: "info",
-        category: "compatibility",
+        category: "canonical",
         message: "Generic shell detected",
         rule: "slop.generic-shell",
       },
       {
         code: "SLP-03",
         severity: "warning",
-        category: "compatibility",
+        category: "canonical",
         message: "Dark pattern detected",
         rule: "slop.dark-pattern",
       },
@@ -803,7 +803,7 @@ describe("report design audit / slop sections", () => {
       {
         code: "QFAI-COMPAT-001",
         severity: "warning",
-        category: "compatibility",
+        category: "canonical",
         message: "Unrelated issue",
       },
     ];
@@ -1008,7 +1008,7 @@ function createReportDataForLinks(): ReportData {
       {
         code: "QFAI-TEST-000",
         severity: "warning",
-        category: "compatibility",
+        category: "canonical",
         message: "link test",
         file: "specs/with space/テスト.md",
         loc: { line: 12 },

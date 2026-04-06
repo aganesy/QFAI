@@ -2,7 +2,7 @@ import type { ScCoverage, TestFileScan } from "./traceability.js";
 
 export type IssueSeverity = "info" | "warning" | "error";
 
-export type IssueCategory = "canonical" | "compatibility" | "change";
+export type IssueCategory = "canonical" | "change";
 
 export type IssueLocation = {
   line: number;
@@ -12,6 +12,7 @@ export type IssueLocation = {
 export type Issue = {
   code: string;
   severity: IssueSeverity;
+  // current-only issue model: canonical contract violations or explicit change advisories
   category: IssueCategory;
   message: string;
   suppressed?: boolean;

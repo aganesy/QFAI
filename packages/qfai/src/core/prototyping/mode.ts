@@ -246,6 +246,7 @@ export function derivePrototypingObligations(input: {
   surface: PrototypingSurface;
   effectiveMode: PrototypingMode;
 }): PrototypingObligations {
+  // This check is only for visual/browser evidence obligations, not discussion UI-bearing.
   const needsVisualBrowserEvidence = requiresVisualBrowserEvidence(input.surface);
   if (!needsVisualBrowserEvidence) {
     return {

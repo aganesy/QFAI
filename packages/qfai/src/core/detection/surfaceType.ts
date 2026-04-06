@@ -1,7 +1,10 @@
 import { readdir } from "node:fs/promises";
 import path from "node:path";
 
-import { isCanonicalPrototypingSurface, isUiBearingPrototypingSurface } from "../domain/surface.js";
+import {
+  isCanonicalPrototypingSurface,
+  requiresVisualBrowserEvidenceSurface,
+} from "../domain/surface.js";
 import type { CanonicalPrototypingSurface } from "../domain/surface.js";
 import { readSafe } from "../validators/utils.js";
 
@@ -206,7 +209,7 @@ export function isNonUiDiscussionSurface(surface: SurfaceType): boolean {
 }
 
 export function requiresVisualBrowserEvidence(surface: SurfaceType): boolean {
-  return surface !== "non-ui" && isUiBearingPrototypingSurface(surface);
+  return surface !== "non-ui" && requiresVisualBrowserEvidenceSurface(surface);
 }
 
 export async function readClassificationBlock(

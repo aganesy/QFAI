@@ -7,6 +7,7 @@ const UI_BEARING_PROTOTYPING_SURFACE_SET = new Set<CanonicalPrototypingSurface>(
   "web",
   "mobile",
   "desktop",
+  "cli",
   "mixed",
 ]);
 
@@ -21,7 +22,9 @@ export function assertCanonicalPrototypingSurface(value: string): CanonicalProto
   return value;
 }
 
-export function isUiBearingPrototypingSurface(value: CanonicalPrototypingSurface): boolean {
+export function isDiscussionUiBearingPrototypingSurface(
+  value: CanonicalPrototypingSurface,
+): boolean {
   return UI_BEARING_PROTOTYPING_SURFACE_SET.has(value);
 }
 
@@ -30,10 +33,11 @@ export function isPrototypingSurface(value: string): value is CanonicalPrototypi
 }
 
 /**
- * CLI is discussion UI-bearing, but it does not require visual/browser evidence.
+ * Discussion UI-bearing and visual/browser evidence are intentionally separate.
+ * CLI is discussion UI-bearing, but only web/mobile/desktop/mixed require visual/browser evidence.
  */
 export function requiresVisualBrowserEvidenceSurface(value: CanonicalPrototypingSurface): boolean {
-  return isUiBearingPrototypingSurface(value);
+  return value !== "cli" && isDiscussionUiBearingPrototypingSurface(value);
 }
 
 export const CANONICAL_SURFACES = CANONICAL_PROTOTYPING_SURFACES;

@@ -6,7 +6,7 @@ import { describe, expect, it } from "vitest";
 
 import { defaultConfig, loadConfig } from "../../src/core/config.js";
 
-describe("config compatibility (promptsDir -> skillsDir)", () => {
+describe("config legacy promptsDir alias (promptsDir -> skillsDir)", () => {
   it("falls back skillsDir to promptsDir when skillsDir is omitted", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-config-compat-"));
     try {

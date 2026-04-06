@@ -607,12 +607,12 @@ export function formatReportMarkdown(
     info: 2,
   };
   const categoryOrder: Record<string, number> = {
-    compatibility: 0,
+    canonical: 0,
     change: 1,
   };
 
   const issuesByCategory = {
-    compatibility: [] as Issue[],
+    canonical: [] as Issue[],
     change: [] as Issue[],
   };
   for (const issue of data.issues) {
@@ -620,7 +620,7 @@ export function formatReportMarkdown(
     if (cat === "change") {
       issuesByCategory.change.push(issue);
     } else {
-      issuesByCategory.compatibility.push(issue);
+      issuesByCategory.canonical.push(issue);
     }
   }
 
@@ -644,7 +644,7 @@ export function formatReportMarkdown(
       { info: 0, warning: 0, error: 0 },
     );
 
-  const compatCounts = countIssuesBySeverity(issuesByCategory.compatibility);
+  const canonicalCounts = countIssuesBySeverity(issuesByCategory.canonical);
   const changeCounts = countIssuesBySeverity(issuesByCategory.change);
   const compatFindingCounts = countFindingsBySeverity(data.changeType.compatFindings);
   const scopeMismatchCounts = countFindingsBySeverity(data.changeType.scopeMismatches);
@@ -664,7 +664,7 @@ export function formatReportMarkdown(
     `- issues(total): info ${data.summary.counts.info} / warning ${data.summary.counts.warning} / error ${data.summary.counts.error}`,
   );
   lines.push(
-    `- issues(compatibility): info ${compatCounts.info} / warning ${compatCounts.warning} / error ${compatCounts.error}`,
+    `- issues(canonical): info ${canonicalCounts.info} / warning ${canonicalCounts.warning} / error ${canonicalCounts.error}`,
   );
   lines.push(
     `- issues(change): info ${changeCounts.info} / warning ${changeCounts.warning} / error ${changeCounts.error}`,
@@ -712,7 +712,7 @@ export function formatReportMarkdown(
 
   lines.push("### Index");
   lines.push("");
-  lines.push("- [Compatibility Issues](#compatibility-issues)");
+  lines.push("- [Canonical Issues](#canonical-issues)");
   lines.push("- [Change Issues](#change-issues)");
   lines.push("- [Design Audit Findings](#design-audit-findings)");
   lines.push("- [Slop Guardrails Findings](#slop-guardrails-findings)");
@@ -867,15 +867,15 @@ export function formatReportMarkdown(
     return rows.map(([key, count]) => `- ${key}: ${count}`);
   };
 
-  lines.push("## Compatibility Issues");
+  lines.push("## Canonical Issues");
   lines.push("");
   lines.push("### Summary");
   lines.push("");
-  lines.push(...formatIssueSummaryTable(issuesByCategory.compatibility));
+  lines.push(...formatIssueSummaryTable(issuesByCategory.canonical));
   lines.push("");
   lines.push("### Issues");
   lines.push("");
-  lines.push(...formatIssueCards(issuesByCategory.compatibility));
+  lines.push(...formatIssueCards(issuesByCategory.canonical));
 
   lines.push("## Change Issues");
   lines.push("");
