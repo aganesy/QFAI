@@ -3,7 +3,6 @@ import path from "node:path";
 
 import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
-import { readClassificationBlock } from "../detection/surfaceType.js";
 import { inspectLatestDiscussionPack } from "../discussionPack.js";
 import type { Issue } from "../types.js";
 import { issue } from "./utils.js";
@@ -73,15 +72,7 @@ export async function validateDiscussionPackReadiness(
   }
 
   if (readiness.missingFiles.length > 0 || readiness.missingSideArtifacts.length > 0) {
-    // Classification-aware: skip prototyping.yaml check for non-UI packs
-    let effectiveMissingSideArtifacts: readonly string[] = readiness.missingSideArtifacts;
-    if (readiness.latestPackDir) {
-      const classification = await readClassificationBlock(readiness.latestPackDir);
-      if (classification && !classification.ui_bearing) {
-        effectiveMissingSideArtifacts = [];
-      }
-    }
-    const allMissing = [...readiness.missingFiles, ...effectiveMissingSideArtifacts];
+    const allMissing = [...readiness.missingFiles, ...readiness.missingSideArtifacts];
     if (allMissing.length > 0) {
       issues.push(
         issue(
@@ -92,7 +83,9 @@ export async function validateDiscussionPackReadiness(
           "discussionPack.requiredFiles",
           allMissing,
           "change",
-          `不足ファイルを作成してください: ${allMissing.join(", ")}。latest discussion pack が ui_bearing=true の場合のみ prototyping.yaml が必須です。`,
+          readiness.prototypingRequired
+            ? `不足ファイルを作成してください: ${allMissing.join(", ")}。latest UI-bearing discussion pack では prototyping.yaml が必須です。`
+            : `不足ファイルを作成してください: ${allMissing.join(", ")}。non-ui discussion pack では prototyping.yaml は不要です。`,
         ),
       );
     }

@@ -8,7 +8,7 @@
 import { describe, it, expect } from "vitest";
 import {
   derivePrototypingObligations,
-  isUiBearingSurface,
+  requiresVisualBrowserEvidence,
 } from "../../src/core/prototyping/mode.js";
 import { buildRuntimeGate } from "../../src/core/prototyping/runtimeGateBuilder.js";
 import type { PrototypingMode, PrototypingSurface } from "../../src/core/prototyping/types.js";
@@ -77,8 +77,8 @@ describe("prototyping execution production path", () => {
       expect(gate.api).toEqual([]);
     });
 
-    it("isUiBearingSurface returns false for cli prototyping surface", () => {
-      expect(isUiBearingSurface("cli")).toBe(false);
+    it("requiresVisualBrowserEvidence returns false for cli prototyping surface", () => {
+      expect(requiresVisualBrowserEvidence("cli")).toBe(false);
     });
   });
 
@@ -101,13 +101,13 @@ describe("prototyping execution production path", () => {
 
     for (const surface of uiBearingSurfaces) {
       it(`${surface} is UI-bearing`, () => {
-        expect(isUiBearingSurface(surface)).toBe(true);
+        expect(requiresVisualBrowserEvidence(surface)).toBe(true);
       });
     }
 
     for (const surface of nonUiSurfaces) {
       it(`${surface} is not a visual/browser prototyping surface`, () => {
-        expect(isUiBearingSurface(surface)).toBe(false);
+        expect(requiresVisualBrowserEvidence(surface)).toBe(false);
       });
     }
   });

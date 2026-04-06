@@ -5,7 +5,7 @@ import { parse as parseYaml } from "yaml";
 import {
   CANONICAL_PROTOTYPING_SURFACES,
   isCanonicalPrototypingSurface,
-  isUiBearingPrototypingSurface,
+  requiresVisualBrowserEvidenceSurface,
 } from "../domain/surface.js";
 import { hasNamespacedRecommendationBlock, isPlainRecord } from "./recommendationSchema.js";
 import type {
@@ -246,8 +246,8 @@ export function derivePrototypingObligations(input: {
   surface: PrototypingSurface;
   effectiveMode: PrototypingMode;
 }): PrototypingObligations {
-  const uiBearing = isUiBearingSurface(input.surface);
-  if (!uiBearing) {
+  const needsVisualBrowserEvidence = requiresVisualBrowserEvidence(input.surface);
+  if (!needsVisualBrowserEvidence) {
     return {
       requireRuntimeGate: false,
       requireUiFidelity: false,
@@ -298,8 +298,8 @@ export function isValidPrototypingSurface(value: unknown): value is PrototypingS
   return typeof value === "string" && isCanonicalPrototypingSurface(value);
 }
 
-export function isUiBearingSurface(surface: PrototypingSurface): boolean {
-  return isUiBearingPrototypingSurface(surface);
+export function requiresVisualBrowserEvidence(surface: PrototypingSurface): boolean {
+  return requiresVisualBrowserEvidenceSurface(surface);
 }
 
 export function normalizeAllowedModes(modes?: string[]): PrototypingMode[] {

@@ -16,7 +16,7 @@ import type {
 import {
   derivePrototypingObligations,
   inferSurfaceFromRecommendationAndEvidence,
-  isUiBearingSurface,
+  requiresVisualBrowserEvidence,
   isValidPrototypingSurface,
 } from "../prototyping/mode.js";
 import { CANONICAL_PROTOTYPING_SURFACES } from "../domain/surface.js";
@@ -518,7 +518,7 @@ export async function validatePrototypingEvidence(
     // QFAI-PROT-254: render evidence bundle contradicts a non-UI prototyping surface
     if (
       surfaceResult.surface &&
-      !isUiBearingSurface(surfaceResult.surface) &&
+      !requiresVisualBrowserEvidence(surfaceResult.surface) &&
       // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
       renderBundle.renderEvidence?.status === "captured"
     ) {
@@ -859,9 +859,9 @@ function validatePrototypingObligationMatrix(
 ): Issue[] {
   const issues: Issue[] = [];
   const mismatches: string[] = [];
-  const uiBearing = isUiBearingSurface(surface);
+  const needsVisualBrowserEvidence = requiresVisualBrowserEvidence(surface);
 
-  if (!uiBearing) {
+  if (!needsVisualBrowserEvidence) {
     const contradictions: string[] = [];
     if ((evidence.runtimeGate?.ui.length ?? 0) > 0) contradictions.push("runtimeGate.ui");
     if (evidence.uiFidelity) contradictions.push("uiFidelity");
@@ -1350,11 +1350,11 @@ async function validateUiFidelity(
 ): Promise<Issue[]> {
   const issues: Issue[] = [];
   const uiFidelity = evidence.uiFidelity;
-  const uiBearing = isUiBearingSurface(surface);
+  const needsVisualBrowserEvidence = requiresVisualBrowserEvidence(surface);
   const effectiveMode = evidence.mode?.effective;
   const isStandardOrFull = effectiveMode === "standard" || effectiveMode === "full-harness";
 
-  if (!uiBearing) {
+  if (!needsVisualBrowserEvidence) {
     return issues;
   }
 

@@ -38,6 +38,14 @@ function completeContext(): string {
 }
 
 describe("validateClassification", () => {
+  it("passes canonical UI-bearing classification", async () => {
+    const root = await newTempDir();
+    await writeFile(path.join(root, "01_Context.md"), completeContext(), "utf-8");
+
+    const issues = await validateClassification(root, defaultConfig);
+    expect(issues).toEqual([]);
+  });
+
   it("requires primary_surface", async () => {
     const root = await newTempDir();
     await writeFile(
@@ -93,6 +101,72 @@ describe("validateClassification", () => {
 
     const issues = await validateClassification(root, defaultConfig);
     expect(issues.some((issue) => issue.code === "UIX-VAL-CLASSIFICATION-REQUIRED-FIELD")).toBe(
+      true,
+    );
+  });
+
+  it("rejects invalid secondary_surfaces values", async () => {
+    const root = await newTempDir();
+    await writeFile(
+      path.join(root, "01_Context.md"),
+      completeContext().replace("  - mobile", "  - web-ui"),
+      "utf-8",
+    );
+
+    const issues = await validateClassification(root, defaultConfig);
+    expect(
+      issues.some((issue) => issue.code === "UIX-VAL-CLASSIFICATION-INVALID-SECONDARY-SURFACE"),
+    ).toBe(true);
+  });
+
+  it("rejects duplicate secondary_surfaces values", async () => {
+    const root = await newTempDir();
+    await writeFile(
+      path.join(root, "01_Context.md"),
+      completeContext().replace("  - mobile", ["  - desktop", "  - desktop"].join("\n")),
+      "utf-8",
+    );
+
+    const issues = await validateClassification(root, defaultConfig);
+    expect(
+      issues.some((issue) => issue.code === "UIX-VAL-CLASSIFICATION-DUPLICATE-SECONDARY-SURFACE"),
+    ).toBe(true);
+  });
+
+  it("rejects secondary_surfaces when ui_bearing is false", async () => {
+    const root = await newTempDir();
+    await writeFile(
+      path.join(root, "01_Context.md"),
+      [
+        "# Context",
+        "",
+        "## UI-bearing Classification",
+        "",
+        "- ui_bearing: false",
+        "- primary_surface: non-ui",
+        "- secondary_surfaces:",
+        "  - cli",
+        "- classification_rationale: API-only workflow.",
+      ].join("\n"),
+      "utf-8",
+    );
+
+    const issues = await validateClassification(root, defaultConfig);
+    expect(issues.some((issue) => issue.code === "UIX-VAL-CLASSIFICATION-CONTRADICTION")).toBe(
+      true,
+    );
+  });
+
+  it("rejects non-ui in secondary_surfaces when ui_bearing is true", async () => {
+    const root = await newTempDir();
+    await writeFile(
+      path.join(root, "01_Context.md"),
+      completeContext().replace("  - mobile", "  - non-ui"),
+      "utf-8",
+    );
+
+    const issues = await validateClassification(root, defaultConfig);
+    expect(issues.some((issue) => issue.code === "UIX-VAL-CLASSIFICATION-CONTRADICTION")).toBe(
       true,
     );
   });

@@ -17,15 +17,53 @@ describe("validatePrototypingRecommendation", () => {
     }
   }
 
-  // W1: prototyping.yaml is now required when pack exists
-  it("reports missing prototyping.yaml when discussion pack exists", async () => {
+  it("reports missing prototyping.yaml for latest UI-bearing discussion pack", async () => {
     await withRoot(async (root) => {
-      await mkdir(path.join(root, ".qfai", "discussion", "discussion-20260404000000000"), {
-        recursive: true,
-      });
+      const packDir = path.join(root, ".qfai", "discussion", "discussion-20260404000000000");
+      await mkdir(packDir, { recursive: true });
+      await writeFile(
+        path.join(packDir, "01_Context.md"),
+        [
+          "# Context",
+          "",
+          "## UI-bearing Classification",
+          "",
+          "- ui_bearing: true",
+          "- primary_surface: web",
+          "- secondary_surfaces:",
+          "  - mobile",
+          "- classification_rationale: Screen-based workflow.",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
       const issues = await validatePrototypingRecommendation(root, defaultConfig);
       expect(issues.some((issue) => issue.code === "QFAI-PROT-153")).toBe(true);
       expect(issues.some((i) => i.message.includes("prototyping.yaml"))).toBe(true);
+    });
+  });
+
+  it("does not report missing prototyping.yaml for latest non-ui discussion pack", async () => {
+    await withRoot(async (root) => {
+      const packDir = path.join(root, ".qfai", "discussion", "discussion-20260404000000001");
+      await mkdir(packDir, { recursive: true });
+      await writeFile(
+        path.join(packDir, "01_Context.md"),
+        [
+          "# Context",
+          "",
+          "## UI-bearing Classification",
+          "",
+          "- ui_bearing: false",
+          "- primary_surface: non-ui",
+          "- secondary_surfaces:",
+          "- classification_rationale: API-only workflow.",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+      const issues = await validatePrototypingRecommendation(root, defaultConfig);
+      expect(issues).toEqual([]);
     });
   });
 
@@ -210,7 +248,6 @@ describe("validatePrototypingRecommendation", () => {
     });
   });
 
-  // W1: additional cases for missing/invalid YAML
   it("reports YAML parse error in prototyping.yaml", async () => {
     await withRoot(async (root) => {
       const packDir = path.join(root, ".qfai", "discussion", "discussion-20260404000000000");

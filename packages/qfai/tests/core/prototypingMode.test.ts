@@ -7,11 +7,11 @@ import { describe, expect, it } from "vitest";
 import {
   derivePrototypingObligations,
   inferSurfaceFromRecommendationAndEvidence,
-  isUiBearingSurface,
   normalizeAllowedModes,
   parseDiscussionFromObject,
   parseDiscussionModeRecommendation,
   parseDiscussionModeRecommendationWithWarnings,
+  requiresVisualBrowserEvidence,
   resolvePrototypingMode,
   summarizeResolvedMode,
 } from "../../src/core/prototyping/mode.js";
@@ -65,12 +65,12 @@ describe("prototyping mode resolver", () => {
     ]);
   });
 
-  it("detects ui-bearing surfaces (canonical)", () => {
-    expect(isUiBearingSurface("web")).toBe(true);
-    expect(isUiBearingSurface("mobile")).toBe(true);
-    expect(isUiBearingSurface("desktop")).toBe(true);
-    expect(isUiBearingSurface("mixed")).toBe(true);
-    expect(isUiBearingSurface("cli")).toBe(false);
+  it("detects visual/browser evidence surfaces", () => {
+    expect(requiresVisualBrowserEvidence("web")).toBe(true);
+    expect(requiresVisualBrowserEvidence("mobile")).toBe(true);
+    expect(requiresVisualBrowserEvidence("desktop")).toBe(true);
+    expect(requiresVisualBrowserEvidence("mixed")).toBe(true);
+    expect(requiresVisualBrowserEvidence("cli")).toBe(false);
   });
 
   it("recommendation overrides default", () => {

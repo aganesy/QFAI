@@ -40,7 +40,7 @@ function contractIssue(
   return {
     code,
     severity,
-    category: "compatibility",
+    category: "canonical",
     message,
     file: RELPATH,
     suggested_action: suggestedAction,

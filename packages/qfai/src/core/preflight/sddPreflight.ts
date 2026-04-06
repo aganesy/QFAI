@@ -104,6 +104,7 @@ function resolvePreflightBlockers(readiness: {
   missingSideArtifacts: string[];
   incompleteFiles: string[];
   blockingOqIds: string[];
+  prototypingRequired: boolean;
 }): string[] {
   const blockers: string[] = [];
 
@@ -120,8 +121,18 @@ function resolvePreflightBlockers(readiness: {
   }
 
   if (readiness.missingFiles.length > 0 || readiness.missingSideArtifacts.length > 0) {
-    const allMissing = [...readiness.missingFiles, ...readiness.missingSideArtifacts];
-    blockers.push(`必須ファイル不足: ${allMissing.join(", ")}`);
+    const fileMissing = [...readiness.missingFiles];
+    const sideArtifactMissing = [...readiness.missingSideArtifacts];
+
+    if (fileMissing.length > 0) {
+      blockers.push(`必須ファイル不足: ${fileMissing.join(", ")}`);
+    }
+    if (sideArtifactMissing.length > 0) {
+      const message = readiness.prototypingRequired
+        ? `latest UI-bearing discussion pack is missing ${sideArtifactMissing.join(", ")}`
+        : `必須 side artifact 不足: ${sideArtifactMissing.join(", ")}`;
+      blockers.push(message);
+    }
   }
 
   if (readiness.incompleteFiles.length > 0) {

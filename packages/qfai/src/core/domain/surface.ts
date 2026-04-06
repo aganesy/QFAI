@@ -25,7 +25,17 @@ export function isUiBearingPrototypingSurface(value: CanonicalPrototypingSurface
   return UI_BEARING_PROTOTYPING_SURFACE_SET.has(value);
 }
 
+export function isPrototypingSurface(value: string): value is CanonicalPrototypingSurface {
+  return isCanonicalPrototypingSurface(value);
+}
+
+/**
+ * CLI is discussion UI-bearing, but it does not require visual/browser evidence.
+ */
+export function requiresVisualBrowserEvidenceSurface(value: CanonicalPrototypingSurface): boolean {
+  return isUiBearingPrototypingSurface(value);
+}
+
 export const CANONICAL_SURFACES = CANONICAL_PROTOTYPING_SURFACES;
 export type CanonicalSurface = CanonicalPrototypingSurface;
 export const isCanonicalSurface = isCanonicalPrototypingSurface;
-export const isUiBearingSurface = isUiBearingPrototypingSurface;

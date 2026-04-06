@@ -7,7 +7,10 @@ import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
 import { readClassificationBlock } from "../detection/surfaceType.js";
 import { CANONICAL_PROTOTYPING_SURFACES } from "../domain/surface.js";
-import { findLatestDiscussionPackDir } from "../discussionPack.js";
+import {
+  findLatestDiscussionPackDir,
+  isPrototypingRequiredForDiscussionPack,
+} from "../discussionPack.js";
 import {
   hasNamespacedRecommendationBlock,
   isPlainRecord,
@@ -33,21 +36,20 @@ export async function validatePrototypingRecommendation(
   try {
     raw = await readFile(targetPath, "utf-8");
   } catch {
-    // Classification-aware: non-UI packs do not require prototyping.yaml
     const classification = await readClassificationBlock(latestPackDir);
-    if (classification && !classification.ui_bearing) {
+    if (!isPrototypingRequiredForDiscussionPack(classification)) {
       return [];
     }
     return [
       issue(
         "QFAI-PROT-153",
-        "latest discussion pack が ui_bearing=true の場合、prototyping.yaml が必須です。",
+        "latest UI-bearing discussion pack では prototyping.yaml が必須です。",
         "error",
         latestPackDir,
         "prototypingRecommendation.missing",
         undefined,
         "canonical",
-        "latest discussion pack の classification を確認し、ui_bearing=true なら prototyping.yaml を追加してください。",
+        "latest discussion pack の classification を確認し、UI-bearing pack なら prototyping.yaml を追加してください。",
       ),
     ];
   }

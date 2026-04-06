@@ -83,6 +83,8 @@ export async function runPrototypingExecution(
     surface,
     effectiveMode: modeSummary.effective,
   });
+  // Prototyping execution decides only visual/browser evidence obligations here.
+  // Discussion-side UI-bearing classification is handled separately.
   const targetUrl = resolvePrototypingExecutionTargetUrl({
     ...(request.targetUrl !== undefined ? { requestTargetUrl: request.targetUrl } : {}),
     config,

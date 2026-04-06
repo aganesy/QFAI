@@ -1,6 +1,8 @@
 import { readFile, stat } from "node:fs/promises";
 import path from "node:path";
 
+import type { UiBearingClassification } from "./detection/surfaceType.js";
+import { readClassificationBlock } from "./detection/surfaceType.js";
 import { findPacks, latestPack as selectLatestPack } from "./packLocator.js";
 
 export const DISCUSSION_PACK_DIR_RE = /^discussion-(\d{17})$/;
@@ -51,7 +53,14 @@ export type DiscussionPackReadiness = {
   incompleteFiles: RequiredDiscussionPackMarkdownFile[];
   blockingOqIds: string[];
   deferredWithoutDetails: string[];
+  prototypingRequired: boolean;
 };
+
+export function isPrototypingRequiredForDiscussionPack(
+  classification: Pick<UiBearingClassification, "ui_bearing" | "primary_surface"> | null,
+): boolean {
+  return !(classification?.ui_bearing === false && classification.primary_surface === "non-ui");
+}
 
 const PLACEHOLDER_LINE_RE =
   /^(?:[-*]\s*)?(?:tbd|todo|none|n\/a|placeholder|\(placeholder\)|to be defined|to be updated|<[^>]+>)\.?$/i;
@@ -83,6 +92,7 @@ export async function inspectLatestDiscussionPack(
       incompleteFiles: [],
       blockingOqIds: [],
       deferredWithoutDetails: [],
+      prototypingRequired: true,
     };
   }
 
@@ -91,6 +101,8 @@ export async function inspectLatestDiscussionPack(
   const incompleteFiles: RequiredDiscussionPackMarkdownFile[] = [];
   let blockingOqIds: string[] = [];
   let deferredWithoutDetails: string[] = [];
+  const classification = await readClassificationBlock(latestPackDir);
+  const prototypingRequired = isPrototypingRequiredForDiscussionPack(classification);
 
   for (const fileName of REQUIRED_DISCUSSION_PACK_MARKDOWN_FILES) {
     const target = path.join(latestPackDir, fileName);
@@ -109,6 +121,9 @@ export async function inspectLatestDiscussionPack(
 
   // Check required side artifacts
   for (const artifact of REQUIRED_DISCUSSION_PACK_SIDE_ARTIFACTS) {
+    if (!prototypingRequired) {
+      continue;
+    }
     const artifactPath = path.join(latestPackDir, artifact);
     const content = await readSafe(artifactPath);
     if (content === null) {
@@ -134,6 +149,7 @@ export async function inspectLatestDiscussionPack(
     incompleteFiles,
     blockingOqIds,
     deferredWithoutDetails,
+    prototypingRequired,
   };
 }
 

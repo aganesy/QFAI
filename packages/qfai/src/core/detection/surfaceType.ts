@@ -31,7 +31,10 @@ export type ParsedClassificationBlock = {
   classificationRationaleRaw?: string;
   uiBearing?: boolean;
   primarySurface?: SurfaceType;
+  secondarySurfacesRawEntries: string[];
   secondarySurfaces: SurfaceType[];
+  invalidSecondarySurfaces: string[];
+  duplicateSecondarySurfaces: string[];
   classificationRationale?: string;
   missingFields: Array<
     "ui_bearing" | "primary_surface" | "secondary_surfaces" | "classification_rationale"
@@ -70,7 +73,9 @@ export function parseClassificationBlock(content: string): ParsedClassificationB
   }
 
   const primarySurface = primarySurfaceRaw ? parseSurface(primarySurfaceRaw) : undefined;
+  const secondarySurfacesRawEntries: string[] = [];
   const secondarySurfaces: SurfaceType[] = [];
+  const invalidSecondarySurfaces: string[] = [];
   const lines = content.split("\n");
   let inSecondary = false;
   for (const line of lines) {
@@ -84,9 +89,13 @@ export function parseClassificationBlock(content: string): ParsedClassificationB
 
     const childMatch = /^\s{2,}-\s+(\S+)/.exec(line);
     if (childMatch?.[1] && childMatch[1] !== "[optional]") {
-      const parsed = parseSurface(childMatch[1]);
+      const rawEntry = childMatch[1].trim();
+      secondarySurfacesRawEntries.push(rawEntry);
+      const parsed = parseSurface(rawEntry);
       if (parsed) {
         secondarySurfaces.push(parsed);
+      } else {
+        invalidSecondarySurfaces.push(rawEntry);
       }
       continue;
     }
@@ -95,6 +104,10 @@ export function parseClassificationBlock(content: string): ParsedClassificationB
     }
   }
 
+  const duplicateSecondarySurfaces = collectDuplicateValues(
+    secondarySurfacesRawEntries.map((entry) => entry.toLowerCase()),
+  );
+
   return {
     ...(uiBearingRaw ? { uiBearingRaw } : {}),
     ...(primarySurfaceRaw ? { primarySurfaceRaw } : {}),
@@ -102,7 +115,10 @@ export function parseClassificationBlock(content: string): ParsedClassificationB
     ...(classificationRationaleRaw !== undefined ? { classificationRationaleRaw } : {}),
     ...(uiBearing !== undefined ? { uiBearing } : {}),
     ...(primarySurface ? { primarySurface } : {}),
+    secondarySurfacesRawEntries,
     secondarySurfaces,
+    invalidSecondarySurfaces,
+    duplicateSecondarySurfaces,
     ...(classificationRationaleRaw !== undefined && classificationRationaleRaw.length > 0
       ? { classificationRationale: classificationRationaleRaw }
       : {}),
@@ -176,13 +192,9 @@ export async function detectSurfaceType(root: string): Promise<SurfaceType> {
   return "non-ui";
 }
 
-export async function isDiscussionUiBearingSurface(root: string): Promise<boolean> {
+export async function isDiscussionUiBearingPack(root: string): Promise<boolean> {
   const surface = await detectSurfaceType(root);
   return isDiscussionUiBearingSurfaceType(surface);
-}
-
-export async function isUiBearingSurface(root: string): Promise<boolean> {
-  return isDiscussionUiBearingSurface(root);
 }
 
 export function isDiscussionUiBearingSurfaceType(surface: SurfaceType): boolean {
@@ -210,7 +222,9 @@ export async function readClassificationBlock(
     !parsed.primarySurface ||
     parsed.secondarySurfacesRaw === undefined ||
     parsed.classificationRationaleRaw === undefined ||
-    parsed.uiBearing === undefined
+    parsed.uiBearing === undefined ||
+    parsed.invalidSecondarySurfaces.length > 0 ||
+    parsed.duplicateSecondarySurfaces.length > 0
   ) {
     return null;
   }
@@ -220,4 +234,17 @@ export async function readClassificationBlock(
     secondary_surfaces: parsed.secondarySurfaces,
     classification_rationale: parsed.classificationRationale ?? "",
   };
+}
+
+function collectDuplicateValues(values: string[]): string[] {
+  const seen = new Set<string>();
+  const duplicates = new Set<string>();
+  for (const value of values) {
+    if (seen.has(value)) {
+      duplicates.add(value);
+      continue;
+    }
+    seen.add(value);
+  }
+  return [...duplicates].sort((left, right) => left.localeCompare(right));
 }

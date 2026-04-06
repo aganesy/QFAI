@@ -124,7 +124,7 @@ describe("runSddPreflight", () => {
     }
   });
 
-  it("blocks when prototyping.yaml is missing from latest discussion pack", async () => {
+  it("blocks when latest UI-bearing discussion pack is missing prototyping.yaml", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-preflight-"));
     try {
       const packDir = path.join(root, ".qfai", "discussion", "discussion-20260216010203010");
@@ -139,7 +139,45 @@ describe("runSddPreflight", () => {
       const result = await runSddPreflight(root, defaultConfig);
 
       expect(result.status).toBe("blocked");
-      expect(result.blockers.some((item) => item.includes("prototyping.yaml"))).toBe(true);
+      expect(
+        result.blockers.some((item) =>
+          item.includes("latest UI-bearing discussion pack is missing prototyping.yaml"),
+        ),
+      ).toBe(true);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("does not block when latest non-ui discussion pack omits prototyping.yaml", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-preflight-"));
+    try {
+      const packDir = path.join(root, ".qfai", "discussion", "discussion-20260216010203016");
+      await mkdir(packDir, { recursive: true });
+
+      for (const fileName of DISCUSSION_PACK_FILES) {
+        const content =
+          fileName === "01_Context.md"
+            ? [
+                "# 01_Context.md",
+                "",
+                "## UI-bearing Classification",
+                "",
+                "- ui_bearing: false",
+                "- primary_surface: non-ui",
+                "- secondary_surfaces:",
+                "- classification_rationale: This pack documents a non-UI workflow.",
+                "",
+                "補足: non-ui latest discussion pack では prototyping.yaml は不要。",
+              ].join("\n")
+            : defaultDiscussionPackContent(fileName);
+        await writeFile(path.join(packDir, fileName), `${content}\n`, "utf-8");
+      }
+
+      const result = await runSddPreflight(root, defaultConfig);
+
+      expect(result.status).toBe("ready");
+      expect(result.blockers).toHaveLength(0);
     } finally {
       await rm(root, { recursive: true, force: true });
     }

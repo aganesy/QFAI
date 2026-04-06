@@ -100,6 +100,30 @@ export async function validateClassification(root: string, _config: QfaiConfig):
 
   const primarySurface = classification.primarySurface;
   const uiBearing = classification.uiBearing;
+  if (classification.invalidSecondarySurfaces.length > 0) {
+    issues.push(
+      classificationIssue(
+        "UIX-VAL-CLASSIFICATION-INVALID-SECONDARY-SURFACE",
+        `secondary_surfaces contains invalid value(s): ${classification.invalidSecondarySurfaces.join(", ")}. Valid values: ${VALID_PRIMARY_SURFACES.join(", ")}`,
+        "error",
+        "01_Context.md",
+        `Replace invalid secondary_surfaces values with canonical values: ${VALID_PRIMARY_SURFACES.join(", ")}`,
+      ),
+    );
+  }
+
+  if (classification.duplicateSecondarySurfaces.length > 0) {
+    issues.push(
+      classificationIssue(
+        "UIX-VAL-CLASSIFICATION-DUPLICATE-SECONDARY-SURFACE",
+        `secondary_surfaces contains duplicate value(s): ${classification.duplicateSecondarySurfaces.join(", ")}`,
+        "error",
+        "01_Context.md",
+        "Remove duplicate entries from secondary_surfaces.",
+      ),
+    );
+  }
+
   if (uiBearing === true && primarySurface && DISCUSSION_NON_UI_SURFACES.has(primarySurface)) {
     issues.push(
       classificationIssue(
@@ -132,6 +156,54 @@ export async function validateClassification(root: string, _config: QfaiConfig):
         "error",
         "01_Context.md",
         `Remove '${primarySurface}' from secondary_surfaces.`,
+      ),
+    );
+  }
+
+  if (uiBearing === false && primarySurface && !DISCUSSION_NON_UI_SURFACES.has(primarySurface)) {
+    issues.push(
+      classificationIssue(
+        "UIX-VAL-CLASSIFICATION-CONTRADICTION",
+        `ui_bearing is false but primary_surface is '${primarySurface}'. primary_surface must be 'non-ui' when ui_bearing=false.`,
+        "error",
+        "01_Context.md",
+        "Set primary_surface to non-ui when ui_bearing=false.",
+      ),
+    );
+  }
+
+  if (uiBearing === false && classification.secondarySurfacesRawEntries.length > 0) {
+    issues.push(
+      classificationIssue(
+        "UIX-VAL-CLASSIFICATION-CONTRADICTION",
+        `ui_bearing is false but secondary_surfaces is not empty: ${classification.secondarySurfacesRawEntries.join(", ")}`,
+        "error",
+        "01_Context.md",
+        "Set secondary_surfaces to an explicit empty list when ui_bearing=false.",
+      ),
+    );
+  }
+
+  if (uiBearing === true && primarySurface === "non-ui") {
+    issues.push(
+      classificationIssue(
+        "UIX-VAL-CLASSIFICATION-CONTRADICTION",
+        "ui_bearing is true but primary_surface is 'non-ui'.",
+        "error",
+        "01_Context.md",
+        "Set primary_surface to web, mobile, desktop, cli, or mixed when ui_bearing=true.",
+      ),
+    );
+  }
+
+  if (uiBearing === true && classification.secondarySurfaces.includes("non-ui")) {
+    issues.push(
+      classificationIssue(
+        "UIX-VAL-CLASSIFICATION-CONTRADICTION",
+        "ui_bearing is true but secondary_surfaces contains 'non-ui'.",
+        "error",
+        "01_Context.md",
+        "Remove non-ui from secondary_surfaces when ui_bearing=true.",
       ),
     );
   }

@@ -27,7 +27,7 @@ function threeLayerIssue(
   return {
     code,
     severity,
-    category: "compatibility",
+    category: "canonical",
     message,
     file,
     suggested_action: suggestedAction,
