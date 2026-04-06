@@ -319,7 +319,7 @@ const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-PROT-114":
     "Per-spec DB checks satisfy declared object counts and leave no unresolved DB objects.",
   "QFAI-PROT-153":
-    "prototyping.yaml recommendation schema invalid (recommended_mode or rationale missing/invalid).",
+    "prototyping.yaml invalid; canonical namespaced prototyping block is required and top-level recommendation keys are not supported.",
   "QFAI-PROT-154": "prototyping.yaml allowed_modes must include recommended_mode.",
   "QFAI-PROT-155": "prototyping.yaml requires allowed_modes field.",
   "QFAI-PROT-156": "prototyping.yaml requires surface field.",
