@@ -12,6 +12,7 @@ import {
   hasNamespacedRecommendationBlock,
   isPlainRecord,
 } from "./recommendationSchema.js";
+import { validateRecommendationSemantics } from "./recommendationSemantics.js";
 import type {
   DiscussionModeRecommendation,
   DiscussionRecommendationSourceSchema,
@@ -89,51 +90,68 @@ export function parseDiscussionFromObject(parsed: Record<string, unknown>): Pars
     if (!isPlainRecord(parsed.prototyping)) {
       return { recommendation: null, warnings };
     }
-    const rec = extractRecommendation(parsed.prototyping, "canonical-namespaced");
-    if (rec) {
-      return { recommendation: rec, warnings };
-    }
-    return { recommendation: null, warnings };
+    const result = extractRecommendation(parsed.prototyping, "canonical-namespaced");
+    warnings.push(...result.warnings);
+    return { recommendation: result.recommendation, warnings };
   }
 
   return { recommendation: null, warnings };
 }
 
+type ExtractRecommendationResult = {
+  recommendation: DiscussionModeRecommendation | null;
+  warnings: string[];
+};
+
 function extractRecommendation(
   obj: Record<string, unknown>,
   _sourceSchema: DiscussionRecommendationSourceSchema,
-): DiscussionModeRecommendation | null {
+): ExtractRecommendationResult {
   if (!isValidPrototypingMode(obj.recommended_mode)) {
-    return null;
+    return { recommendation: null, warnings: [] };
   }
   const rationale = asNonEmptyString(obj.rationale);
   if (!rationale) {
-    return null;
+    return { recommendation: null, warnings: [] };
   }
 
   if (!Array.isArray(obj.allowed_modes)) {
-    return null;
+    return { recommendation: null, warnings: [] };
   }
   const allowedModes = normalizeAllowedModes(
     obj.allowed_modes.filter((value): value is string => typeof value === "string"),
   );
   if (allowedModes.length === 0) {
-    return null;
+    return { recommendation: null, warnings: [] };
   }
 
   if (!isValidSurface(obj.surface)) {
-    return null;
+    return { recommendation: null, warnings: [] };
   }
   const surface = obj.surface;
   const updatedAt = asNonEmptyString(obj.updated_at);
 
-  return {
+  const semanticResult = validateRecommendationSemantics({
     recommendedMode: obj.recommended_mode,
-    rationale,
     allowedModes,
-    surface,
-    ...(updatedAt ? { updatedAt } : {}),
-    sourceSchema: "canonical-namespaced",
+  });
+  if (!semanticResult.valid) {
+    return {
+      recommendation: null,
+      warnings: [`${semanticResult.code}: ${semanticResult.message}`],
+    };
+  }
+
+  return {
+    recommendation: {
+      recommendedMode: obj.recommended_mode,
+      rationale,
+      allowedModes,
+      surface,
+      ...(updatedAt ? { updatedAt } : {}),
+      sourceSchema: "canonical-namespaced",
+    },
+    warnings: [],
   };
 }
 

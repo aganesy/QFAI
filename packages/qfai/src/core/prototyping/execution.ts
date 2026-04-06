@@ -69,6 +69,7 @@ export async function runPrototypingExecution(
       "Prototyping recommendation artifact is invalid. " +
         "Canonical namespaced schema is required under 'prototyping:' key. " +
         "Top-level recommendation keys are not supported. " +
+        "recommended_mode must be included in allowed_modes. " +
         "Fix prototyping.yaml before running prototyping execution.",
     );
   }

@@ -338,4 +338,83 @@ describe("runPrototypingExecution", () => {
       expect(result.mode).toBe("standard");
     });
   });
+
+  it("rejects semantic mismatch artifact (recommended_mode not in allowed_modes)", async () => {
+    await withRoot(async (root) => {
+      const packDir = path.join(root, ".qfai", "discussion", "discussion-20260406000000000");
+      await mkdir(packDir, { recursive: true });
+      await writeFile(
+        path.join(packDir, "01_Context.md"),
+        [
+          "# Context",
+          "",
+          "- ui_bearing: true",
+          "- primary_surface: web",
+          "- secondary_surfaces:",
+          "  - cli",
+          "- classification_rationale: semantic mismatch execution fixture",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+      await writeFile(
+        path.join(packDir, "prototyping.yaml"),
+        [
+          "prototyping:",
+          "  recommended_mode: standard",
+          "  rationale: semantic mismatch test",
+          "  allowed_modes:",
+          "    - low-cost",
+          "    - full-harness",
+          "  surface: web",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+
+      await expect(runPrototypingExecution({ root })).rejects.toThrow(
+        /recommendation artifact is invalid/i,
+      );
+    });
+  });
+
+  it("rejects semantic mismatch artifact even with explicit requestedMode", async () => {
+    await withRoot(async (root) => {
+      const packDir = path.join(root, ".qfai", "discussion", "discussion-20260406000000000");
+      await mkdir(packDir, { recursive: true });
+      await writeFile(
+        path.join(packDir, "01_Context.md"),
+        [
+          "# Context",
+          "",
+          "- ui_bearing: true",
+          "- primary_surface: web",
+          "- secondary_surfaces:",
+          "  - cli",
+          "- classification_rationale: semantic mismatch with explicit mode fixture",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+      await writeFile(
+        path.join(packDir, "prototyping.yaml"),
+        [
+          "prototyping:",
+          "  recommended_mode: standard",
+          "  rationale: semantic mismatch with explicit mode",
+          "  allowed_modes:",
+          "    - low-cost",
+          "    - full-harness",
+          "  surface: web",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+
+      // Even with explicit mode, semantic mismatch must be hard rejected
+      await expect(runPrototypingExecution({ root, requestedMode: "standard" })).rejects.toThrow(
+        /recommendation artifact is invalid/i,
+      );
+    });
+  });
 });

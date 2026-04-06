@@ -135,7 +135,8 @@ All 4 fields are **required**. An artifact missing any field will fail validatio
 
 - Only the canonical namespaced schema under the `prototyping:` key is accepted. Top-level recommendation keys (`recommended_mode`, `rationale`, `allowed_modes`, `surface` at root level) are not supported and will cause validation failure.
 - Coexistence of top-level recommendation keys with the namespaced `prototyping:` block is invalid.
-- An artifact that does not conform to the canonical namespaced schema is invalid and will be rejected by both validation and execution.
+- `recommended_mode` must be included in `allowed_modes`. An artifact where `recommended_mode` is not in `allowed_modes` is invalid.
+- An artifact that does not conform to the canonical namespaced schema is invalid and will be rejected by both validation and execution/CLI. No fallback to explicit mode or default mode is performed for invalid artifacts.
 
 ## Suggested naming
 

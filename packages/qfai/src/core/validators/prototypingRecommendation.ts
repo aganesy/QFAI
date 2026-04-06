@@ -16,6 +16,8 @@ import {
   hasNamespacedRecommendationBlock,
   isPlainRecord,
 } from "../prototyping/recommendationSchema.js";
+import { validateRecommendationSemantics } from "../prototyping/recommendationSemantics.js";
+import type { PrototypingMode } from "../prototyping/types.js";
 import type { Issue } from "../types.js";
 import { issue } from "./utils.js";
 
@@ -238,21 +240,26 @@ export async function validatePrototypingRecommendation(
   if (
     normalizedAllowedModes &&
     typeof recommendedMode === "string" &&
-    VALID_MODES.has(recommendedMode) &&
-    !normalizedAllowedModes.includes(recommendedMode)
+    VALID_MODES.has(recommendedMode)
   ) {
-    issues.push(
-      issue(
-        "QFAI-PROT-154",
-        "allowed_modes は recommended_mode を含む必要があります。",
-        "error",
-        targetPath,
-        "prototypingRecommendation.allowedModesContainsRecommended",
-        [`recommended_mode=${recommendedMode}`],
-        "canonical",
-        "allowed_modes に recommended_mode を追加してください。",
-      ),
-    );
+    const semanticResult = validateRecommendationSemantics({
+      recommendedMode: recommendedMode as PrototypingMode,
+      allowedModes: normalizedAllowedModes as PrototypingMode[],
+    });
+    if (!semanticResult.valid) {
+      issues.push(
+        issue(
+          semanticResult.code,
+          "allowed_modes は recommended_mode を含む必要があります。",
+          "error",
+          targetPath,
+          "prototypingRecommendation.allowedModesContainsRecommended",
+          [`recommended_mode=${recommendedMode}`],
+          "canonical",
+          "allowed_modes に recommended_mode を追加してください。",
+        ),
+      );
+    }
   }
 
   return issues;

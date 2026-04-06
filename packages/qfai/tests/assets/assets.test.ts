@@ -1246,6 +1246,21 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     expect(readme).not.toMatch(/namespaced schema \(recommended\)/i);
     expect(skill).not.toMatch(/namespaced schema \(recommended\)/i);
   });
+
+  it("discussion README declares recommended_mode must be included in allowed_modes", async () => {
+    const discussionReadmePath = path.join(templateQfaiDir, "discussion", "README.md");
+    const content = await readFile(discussionReadmePath, "utf-8");
+
+    expect(content).toMatch(/recommended_mode.*must be included in.*allowed_modes/i);
+  });
+
+  it("discussion README declares invalid artifacts are rejected by execution/CLI", async () => {
+    const discussionReadmePath = path.join(templateQfaiDir, "discussion", "README.md");
+    const content = await readFile(discussionReadmePath, "utf-8");
+
+    expect(content).toMatch(/rejected by both validation and execution\/CLI/i);
+    expect(content).toMatch(/no fallback/i);
+  });
 });
 
 function extractPathReferences(content: string): Set<string> {

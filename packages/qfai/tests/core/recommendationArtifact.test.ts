@@ -212,4 +212,32 @@ describe("resolveLatestRecommendationArtifact", () => {
       expect(result.warnings).toEqual([]);
     });
   });
+
+  it("returns invalid with QFAI-PROT-154 warning for semantic mismatch (recommended_mode not in allowed_modes)", async () => {
+    await withTempRoot(async (root) => {
+      const packDir = path.join(root, ".qfai", "discussion", "discussion-20260404000000000");
+      await mkdir(packDir, { recursive: true });
+      await writeFile(
+        path.join(packDir, "prototyping.yaml"),
+        [
+          "prototyping:",
+          "  recommended_mode: standard",
+          "  rationale: semantic mismatch resolver test",
+          "  allowed_modes:",
+          "    - low-cost",
+          "    - full-harness",
+          "  surface: web",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+
+      const result = await resolveLatestRecommendationArtifact(root, defaultConfig);
+      expect(result.status).toBe("invalid");
+      expect(result.recommendation).toBeNull();
+      expect(result.warnings).toEqual(
+        expect.arrayContaining([expect.stringContaining("QFAI-PROT-154")]),
+      );
+    });
+  });
 });

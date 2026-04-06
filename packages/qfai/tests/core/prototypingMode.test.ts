@@ -382,6 +382,35 @@ describe("canonical-namespaced-only parser", () => {
     });
     expect(result.recommendation).toBeNull();
   });
+
+  it("returns null with QFAI-PROT-154 warning when recommended_mode is not in allowed_modes (semantic mismatch)", () => {
+    const result = parseDiscussionFromObject({
+      prototyping: {
+        recommended_mode: "standard",
+        rationale: "semantic mismatch test",
+        allowed_modes: ["low-cost", "full-harness"],
+        surface: "web",
+      },
+    });
+    expect(result.recommendation).toBeNull();
+    expect(result.warnings).toEqual(
+      expect.arrayContaining([expect.stringContaining("QFAI-PROT-154")]),
+    );
+  });
+
+  it("returns valid recommendation when recommended_mode is in allowed_modes", () => {
+    const result = parseDiscussionFromObject({
+      prototyping: {
+        recommended_mode: "standard",
+        rationale: "semantic valid test",
+        allowed_modes: ["low-cost", "standard", "full-harness"],
+        surface: "web",
+      },
+    });
+    expect(result.recommendation).not.toBeNull();
+    expect(result.recommendation?.recommendedMode).toBe("standard");
+    expect(result.warnings).toEqual([]);
+  });
 });
 
 describe("obligation matrix (shared)", () => {
