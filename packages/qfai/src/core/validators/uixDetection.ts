@@ -5,7 +5,7 @@
  *
  * BR-0027-0001, BR-0027-0002, BR-0027-0012
  */
-import { isDiscussionUiBearingSurface } from "../detection/surfaceType.js";
+import { isDiscussionUiBearingPack } from "../detection/surfaceType.js";
 
 /**
  * Determine if a spec/discussion pack is UI-bearing using the shared
@@ -15,5 +15,5 @@ import { isDiscussionUiBearingSurface } from "../detection/surfaceType.js";
  * @returns true if UI-bearing, false otherwise
  */
 export async function isUiBearingSpec(root: string): Promise<boolean> {
-  return isDiscussionUiBearingSurface(root);
+  return isDiscussionUiBearingPack(root);
 }

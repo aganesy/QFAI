@@ -1,7 +1,7 @@
 import path from "node:path";
 
 import type { QfaiConfig } from "../config.js";
-import { isUiBearingSurface } from "../detection/surfaceType.js";
+import { isDiscussionUiBearingPack } from "../detection/surfaceType.js";
 import { findLatestDiscussionPackDir } from "../discussionPack.js";
 import type { Issue, IssueSeverity } from "../types.js";
 import { issue, readSafe } from "./utils.js";
@@ -36,7 +36,7 @@ const DDH_TREND_REVIEW_FOCUS = "UIX-VAL-DDH-TREND-REVIEW-FOCUS";
  * Returns false on missing file (safe-side fallback via shared module default).
  */
 export async function isUiBearing(packRoot: string): Promise<boolean> {
-  return isUiBearingSurface(packRoot);
+  return isDiscussionUiBearingPack(packRoot);
 }
 
 // ---------------------------------------------------------------------------
