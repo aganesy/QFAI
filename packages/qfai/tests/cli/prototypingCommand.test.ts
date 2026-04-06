@@ -145,7 +145,7 @@ describe("runPrototypingCommand", () => {
     }
   });
 
-  it("CLI rejects stale coexist artifact and proceeds with explicit mode", async () => {
+  it("CLI rejects stale coexist artifact", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-cli-prototyping-"));
     try {
       await mkdir(path.join(root, ".qfai", "specs", "spec-0001"), { recursive: true });
@@ -204,12 +204,10 @@ describe("runPrototypingCommand", () => {
         "utf-8",
       );
 
-      // CLI should still work with explicit mode; stale coexist recommendation is rejected
-      const output = await captureStdout(async () => {
-        await runPrototypingCommand({ root, mode: "standard" });
-      });
-
-      expect(output).toContain("mode: standard");
+      // CLI must hard reject stale coexist artifact — no fallback to explicit mode
+      await expect(runPrototypingCommand({ root, mode: "standard" })).rejects.toThrow(
+        /recommendation artifact is invalid/i,
+      );
     } finally {
       await rm(root, { recursive: true, force: true });
     }

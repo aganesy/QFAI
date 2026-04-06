@@ -61,6 +61,18 @@ export async function runPrototypingExecution(
   const discussionRoot = resolvePath(request.root, config, "discussionDir");
   const latestPack = await findLatestDiscussionPackDir(discussionRoot);
   const recommendation = await resolveLatestRecommendationArtifact(request.root, config);
+
+  // Hard gate: invalid recommendation artifact must reject execution immediately.
+  // No fallback to explicit mode, default mode, or warning-only continuation.
+  if (recommendation.status === "invalid") {
+    throw new Error(
+      "Prototyping recommendation artifact is invalid. " +
+        "Canonical namespaced schema is required under 'prototyping:' key. " +
+        "Top-level recommendation keys are not supported. " +
+        "Fix prototyping.yaml before running prototyping execution.",
+    );
+  }
+
   const classification = await readValidatedClassification(latestPack ?? request.root);
   if (classification === null) {
     throw new Error(

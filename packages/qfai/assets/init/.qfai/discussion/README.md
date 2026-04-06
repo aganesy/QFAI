@@ -131,6 +131,12 @@ All 4 fields are **required**. An artifact missing any field will fail validatio
 | `allowed_modes`    | yes      | Unique array of valid modes; must include `recommended_mode` |
 | `surface`          | yes      | `web`, `mobile`, `desktop`, `cli`, or `mixed`                |
 
+### Validation rules
+
+- Only the canonical namespaced schema under the `prototyping:` key is accepted. Top-level recommendation keys (`recommended_mode`, `rationale`, `allowed_modes`, `surface` at root level) are not supported and will cause validation failure.
+- Coexistence of top-level recommendation keys with the namespaced `prototyping:` block is invalid.
+- An artifact that does not conform to the canonical namespaced schema is invalid and will be rejected by both validation and execution.
+
 ## Suggested naming
 
 - `discussion-20260303120000000`

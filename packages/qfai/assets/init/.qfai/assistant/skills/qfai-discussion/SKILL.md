@@ -276,6 +276,8 @@ Produce a unified 15-file discussion pack with explicit decisions, requirements,
 16. Generate `prototyping.yaml` at the discussion pack top level for downstream prototyping recommendation only when the latest discussion pack is `ui_bearing: true`.
     - MUST use the **namespaced canonical schema** with `prototyping.recommended_mode` (not top-level `recommended_mode`).
     - All fields (`recommended_mode`, `rationale`, `allowed_modes`, `surface`) are required under the `prototyping:` key.
+    - Top-level recommendation keys are not supported; only the namespaced `prototyping:` block is accepted.
+    - Coexistence of top-level recommendation keys with the namespaced block is invalid and will be rejected by validation and execution.
 17. Choose `recommended_mode` with these defaults:
 
 - `low-cost`: rough draft or strong cost priority

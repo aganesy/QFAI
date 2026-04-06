@@ -1178,6 +1178,74 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     expect(content).not.toContain("legacy keys may be ignored");
     expect(content).not.toContain("accepted with warning");
   });
+
+  it("discussion README enforces current-only posture for prototyping.yaml", async () => {
+    const discussionReadmePath = path.join(templateQfaiDir, "discussion", "README.md");
+    const content = await readFile(discussionReadmePath, "utf-8");
+
+    // Must express required / accepted only / invalid otherwise
+    expect(content).toMatch(/required/i);
+    expect(content).toMatch(/accepted only in namespaced form|canonical namespaced schema/i);
+    expect(content).toMatch(/top-level recommendation keys.*not supported/i);
+    expect(content).toMatch(/coexist\w*.*invalid/i);
+
+    // Forbidden wording (schema choice context)
+    expect(content).not.toMatch(/\bone option\b/i);
+    expect(content).not.toContain("backward compatible");
+  });
+
+  it("SKILL.md does not contain legacy-permissive wording", async () => {
+    const skillPath = path.join(
+      templateQfaiDir,
+      "assistant",
+      "skills",
+      "qfai-discussion",
+      "SKILL.md",
+    );
+    const content = await readFile(skillPath, "utf-8");
+
+    expect(content).not.toContain("legacy keys ignored");
+    expect(content).not.toContain("legacy keys may be ignored");
+    expect(content).not.toContain("accepted with warning");
+    expect(content).not.toMatch(/\bone option\b/i);
+    expect(content).not.toContain("backward compatible");
+
+    // Must express that top-level keys are not supported and coexist is invalid
+    expect(content).toMatch(/top-level recommendation keys.*not supported/i);
+    expect(content).toMatch(/coexist\w*.*invalid/i);
+  });
+
+  it("README and SKILL.md share namespaced-only semantics for prototyping.yaml", async () => {
+    const discussionReadmePath = path.join(templateQfaiDir, "discussion", "README.md");
+    const skillPath = path.join(
+      templateQfaiDir,
+      "assistant",
+      "skills",
+      "qfai-discussion",
+      "SKILL.md",
+    );
+
+    const [readme, skill] = await Promise.all([
+      readFile(discussionReadmePath, "utf-8"),
+      readFile(skillPath, "utf-8"),
+    ]);
+
+    // Both must mention canonical namespaced schema
+    expect(readme).toMatch(/namespaced/i);
+    expect(skill).toMatch(/namespaced/i);
+
+    // Both must reference required fields under prototyping: key
+    expect(readme).toContain("recommended_mode");
+    expect(skill).toContain("recommended_mode");
+
+    // Both must express that top-level keys are not supported
+    expect(readme).toMatch(/top-level.*not supported/i);
+    expect(skill).toMatch(/top-level.*not supported/i);
+
+    // Neither should allow top-level recommendation keys
+    expect(readme).not.toMatch(/namespaced schema \(recommended\)/i);
+    expect(skill).not.toMatch(/namespaced schema \(recommended\)/i);
+  });
 });
 
 function extractPathReferences(content: string): Set<string> {
