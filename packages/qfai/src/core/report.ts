@@ -1832,6 +1832,7 @@ async function collectPrototypingSummary(
     const summary = browserQaBundle.browserQa.summary;
     for (const category of ["smoke", "interaction", "visual", "accessibility"] as const) {
       const bucket = summary[category];
+      if (!bucket || typeof bucket !== "object") continue;
       browserQaTotalPassed +=
         bucket.passed ?? (bucket.status === "passed" || bucket.status === "executed" ? 1 : 0);
       browserQaTotalFailed += bucket.failed ?? (bucket.status === "failed" ? 1 : 0);
