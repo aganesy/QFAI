@@ -1836,8 +1836,7 @@ async function collectPrototypingSummary(
       const passed = typeof bucket.passed === "number" ? bucket.passed : 0;
       const failed = typeof bucket.failed === "number" ? bucket.failed : 0;
       const status = typeof bucket.status === "string" ? bucket.status : "";
-      browserQaTotalPassed +=
-        passed || (status === "passed" || status === "executed" ? 1 : 0);
+      browserQaTotalPassed += passed || (status === "passed" || status === "executed" ? 1 : 0);
       browserQaTotalFailed += failed || (status === "failed" ? 1 : 0);
     }
   }
