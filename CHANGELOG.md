@@ -8,6 +8,46 @@
 
 - なし
 
+## [1.7.14] - 2026-04-07
+
+### Added
+
+- Full-harness iteration protocol: 4-step cycle (Evaluate→Identify→Fix→Re-evaluate), MIN_ITERATIONS=5, 4 termination conditions (converged/max-iterations/plateau/manual-stop)
+- Independent evaluator panel: 3-layer structure (product-surface-reviewer L1, product-experience-architect L2, qa-gatekeeper L3) with background mode invocation
+- Score scope separation: discussion 3-layer scores ≠ prototyping scoringTrace, copy prohibition
+- Evaluation rigor rules: 3-tier rubric (existence_gate/quality_criteria/excellence_criteria), L1/L2/L1-manual finding classification
+- Asset acquisition strategy: free assets MUST, emoji prohibition (U+1F000–U+1FAFF, U+2600–U+27BF), placeholder prohibition, WCAG 2.1 AA checklist
+- Reviewer gate strengthening: 6 full-harness-specific checks, Limitations section obligation
+- Full-harness validator rules QFAI-PROT-290~294: iteration integrity validators (single-pass convergence, scoringTrace count, terminationReason cross-check, maxIterations cap, score progression)
+- Full-harness review profile in review-profiles.yml (always_required: completion-reviewer, product-surface-reviewer, qa-gatekeeper)
+- product-experience-architect added to agent-routing.yml prototyping evidence phase
+- Semantic invariant SSOT: validateRecommendationSemantics() shared across parser/resolver/execution/CLI/validator/preflight
+- Canonical strategy decision vocabulary (template, component-library, design-system, native-pattern, bespoke, none)
+
+### Changed
+
+- PrototypingSurface canonical names: web-ui/mobile-ui/desktop-ui → web/mobile/desktop, cli/mixed added
+- IssueCategory simplified: "compatibility" removed, "canonical" | "change" only
+- prototyping.yaml schema: namespaced-only (`prototyping:` block mandatory), legacy top-level keys hard-rejected
+- Classification separation: isUiBearingSurface() split into isDiscussionUiBearingPrototypingSurface() + requiresVisualBrowserEvidenceSurface()
+- Surface inference: null default (was "non-ui"), explicit surface specification promoted
+- fullHarness schema: reviewerSignoff boolean→object, scoringTrace boolean→array, terminationReason +plateau/manual-stop
+- Validator taxonomy: fullHarness reserved range 281-283 → 281-294, TAXONOMY_RANGE_MAX 283 → 294
+- "selected direction" → "selected anchor" wording normalization
+
+### Removed
+
+- Legacy validator infrastructure: legacy/ directory, legacyStatusDir.ts, migration/formatDetection.ts, uix/rollout.ts
+- IssueCategory "compatibility" from union type
+- Legacy top-level prototyping.yaml keys support (QFAI-PROT-231/232 warnings removed)
+- Compatibility test files (ddpCompatibility, uixCompatibility)
+
+### Fixed
+
+- Strict classification validation: semantic contradictions in classification block detected as hard errors
+- Execution hard gates: invalid classification/recommendation immediately rejected
+- readValidatedClassification() enforced in execution path (readClassificationBlock non-strict prohibited)
+
 ## [1.7.13] - 2026-04-04
 
 ### Added
