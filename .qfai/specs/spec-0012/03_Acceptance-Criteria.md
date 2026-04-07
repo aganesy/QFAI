@@ -75,3 +75,31 @@ Given qfai.config.yaml with no `prototyping` stanza, when config normalization r
 ## AC-0012-0019: Report Prototyping Section
 
 Given valid prototyping evidence, when qfai report runs, then the report includes a `## Prototyping` section with mode, obligations, evidence, harness, render, browserQa, calibration subsections.
+
+## AC-0012-0020: Canonical Prototyping Surface Names
+
+Given prototyping configuration with surface "web", when execution validates the surface, then it is accepted. Given surface "web-ui", then it is rejected with an error indicating the canonical name.
+
+## AC-0012-0021: Execution Rejects Invalid Classification
+
+Given a discussion-pack with contradictory classification (ui_bearing=true but primary_surface=non-ui), when execution.ts runs, then a hard error is thrown immediately without fallback or continuation.
+
+## AC-0012-0022: Execution Rejects Non-UI Packs
+
+Given a discussion-pack classified as non-UI (ui_bearing=false, primary_surface=non-ui), when execution.ts runs, then it is rejected with "Non-UI classification is not a prototyping execution target".
+
+## AC-0012-0023: Legacy Top-Level Keys Hard-Rejected
+
+Given a prototyping.yaml with legacy top-level keys (recommended_mode at root level), when mode resolution runs, then a hard error is returned (not a warning or fallback to namespaced block).
+
+## AC-0012-0024: Semantic Invariant Enforced at Parser
+
+Given a prototyping.yaml where recommended_mode is "full-harness" but allowed_modes is ["low-cost", "standard"], when extractRecommendation() runs, then it returns null with a semantic mismatch warning.
+
+## AC-0012-0025: CLI Surface Skips Browser Evidence
+
+Given a discussion-pack with surface "cli" and mode "standard", when derivePrototypingObligations() runs, then requireRenderBundle=false and requireBrowserQaBundle=false, but requireRuntimeGate=true.
+
+## AC-0012-0026: Surface Inference Returns Null
+
+Given a prototyping.yaml with no surface field and no evidence signals, when inferSurfaceFromRecommendationAndEvidence() runs, then it returns null (not "non-ui").

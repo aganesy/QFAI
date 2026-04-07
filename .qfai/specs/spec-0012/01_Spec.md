@@ -94,10 +94,16 @@
 - REQ-0025: Provider Registry — `providers/registry.ts` が `QfaiPrototypingConfig` から concrete provider（Playwright/custom）を解決。依存逆転パターンで harness・runner が provider 実装に依存しない
 - REQ-0026: UI Fidelity Builder — `prototyping/uiFidelityBuilder.ts` が render evidence + Browser QA 結果から UI fidelity artifact を合成。required evidence 欠落時は QFAI-PROT-270（render missing）, QFAI-PROT-271（browserQa missing）, QFAI-PROT-272（both missing）を emit
 - REQ-0027: Prototyping Execution Orchestrator — `prototyping/execution.ts` が mode resolution → evidence capture → Browser QA → full-harness の本番パスを統合実行。mode=low-cost/standard/full-harness の各パスを mode.ts の obligation matrix に基づいて制御
+- REQ-0028: Canonical Prototyping Surfaces (v1.7.14, DR-0109) — PrototypingSurface を web/mobile/desktop/cli/mixed の 5 値に正規化。旧 web-ui/mobile-ui/desktop-ui の -ui suffix を廃止。"non-ui" は prototyping surface 外の分類として明示的に分離
+- REQ-0029: Execution Hard Gates (v1.7.14, DR-0111) — execution.ts が readValidatedClassification() を使用し、invalid/矛盾した classification を即座に reject。non-UI classification は「prototyping execution の対象外」として明示的に拒否。invalid recommendation artifact も hard error
+- REQ-0030: Namespaced-Only Schema (v1.7.14, DR-0112) — prototyping.yaml の legacy top-level recommendation keys の存在を hard error とする。namespaced `prototyping:` ブロックのみを受け付け、legacy keys との共存を禁止
+- REQ-0031: Semantic Invariant SSOT (v1.7.14, DR-0113) — validateRecommendationSemantics() を recommendationSemantics.ts に集約し、recommended_mode ∈ allowed_modes の不変条件を parser/resolver/execution/CLI/validator/preflight の全レイヤーで共有
+- REQ-0032: Classification Separation (v1.7.14, DR-0110) — "discussion UI-bearing"（web/mobile/desktop/cli/mixed）と "visual/browser evidence required"（web/mobile/desktop/mixed、cli 除外）を独立した判定関数に分離。derivePrototypingObligations() は後者のみで evidence 義務を判定
+- REQ-0033: Surface Inference Nullable (v1.7.14) — inferSurfaceFromRecommendationAndEvidence() が surface 推定不能時に null を返す（旧: "non-ui" デフォルト）。明示的な surface 指定を促進し、silent default を排除
 
 ## Entry points
 
-- US range in this spec: US-0012-0001..US-0012-0016
+- US range in this spec: US-0012-0001..US-0012-0021
 - Primary actors: Developer, AI Agent (FullStackEngineer, RuntimeGatekeeper), CI/CD pipeline
 - Notes: No CLI command exists. This is a skill-only spec for `/qfai-prototyping`.
 

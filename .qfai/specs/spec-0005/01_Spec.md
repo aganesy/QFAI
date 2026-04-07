@@ -40,6 +40,7 @@
 - REQ-0026: spec-pack レポート生成 - writeSpecPackReports() で spec 単位のレポートも出力する
 - REQ-0027: phase guard 統合 - --run-validate + --phase refinement の場合に phase guard を適用する
 - REQ-0028: Prototyping レポートセクション — report.ts に ## Prototyping セクションを追加。recommendationArtifact status, mode resolution, evidence coverage, fullHarness, render bundle, browserQa bundle, calibration block を含む。v1.7.13 では foundation-only（blocking validation 非統合）
+- REQ-0029: Report Terminology Canonical 統一 (v1.7.14, DR-0108) — レポートの issue カテゴリセクション名を "Compatibility Issues" → "Canonical Issues" に変更。issuesByCategory のキーも "compatibility" → "canonical" に統一。surface inference が不能な場合は "mixed" にフォールバックし warning を付与
 
 ## Entry points
 

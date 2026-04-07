@@ -71,6 +71,8 @@
 - REQ-0014: Functional requirements -- REQ-0001 format in `06_REQ.md`
 - REQ-0015: Non-functional requirements -- NFR-0001 format in `07_NFR.md` with measurable targets
 - REQ-0016: prototyping.yaml 生成 — discussion-pack 完了時に prototyping.yaml（recommended_mode, rationale, allowed_modes, surface）を生成する。15 markdown ファイルとともに必須サイドアーティファクトとして扱う
+- REQ-0017: Classification-Aware prototyping.yaml Requiredness (v1.7.14, DR-0110) — prototyping.yaml の必須性を classification に基づいて判定。ui_bearing=true のパックのみ prototyping.yaml を必須とし、ui_bearing=false（non-UI）のパックは prototyping.yaml 不要
+- REQ-0018: Namespaced-Only Schema Mandatory (v1.7.14, DR-0112) — prototyping.yaml 生成時は必ず `prototyping:` namespaced block を使用。legacy top-level keys（recommended_mode 等をルートに配置）は生成禁止
 
 ## Entry points
 

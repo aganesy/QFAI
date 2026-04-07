@@ -95,3 +95,51 @@ REQ-0015 → US-0012-0010 → AC-0012-0012 → BR-0012-0010 → EX-0012-0013 →
   - `prototyping/uiFidelityBuilder.ts`（QFAI-PROT-270/271/272 emit）
   - `prototyping/execution.ts`（本番パスオーケストレータ）
   - `harness/` runtime（runtime.ts, adapters.ts, resultWriter.ts）
+
+## v1.7.14 (2026-04-07) — Current-Only SSOT & Strict Semantic Enforcement
+
+- adopted: REQ-0028（Canonical Prototyping Surfaces）, REQ-0029（Execution Hard Gates）, REQ-0030（Namespaced-Only Schema）, REQ-0031（Semantic Invariant SSOT）, REQ-0032（Classification Separation）, REQ-0033（Surface Inference Nullable）追加
+- adopted: US-0012-0017~0021, AC-0012-0020~0026, BR-0012-0020~0023 追加
+- adopted: DR-0012-0002~0005 追加
+- adopted: BR-0012-0012 更新（QFAI-PROT-231/232 warning → hard error）, BR-0012-0018 更新（sourceSchema "top-level" 廃止）, BR-0012-0019 更新（surface inference null default）
+- adopted: US range 更新 US-0012-0001..US-0012-0021
+- rationale: v1.7.14 は QFAI の current-only SSOT リリース。以下の破壊的変更を仕様に反映:
+  - **Canonical surfaces**: web-ui/mobile-ui/desktop-ui → web/mobile/desktop。cli/mixed 追加。non-ui を prototyping surface 外に分離（DR-0109）
+  - **Execution hard gates**: invalid classification/recommendation を即座に reject。non-UI パックを prototyping execution 対象外として明示拒否（DR-0111）
+  - **Namespaced-only schema**: legacy top-level keys の存在を hard error に昇格。QFAI-PROT-231/232 warning 廃止（DR-0112）
+  - **Semantic invariant SSOT**: recommendationSemantics.ts に recommended_mode ∈ allowed_modes 検証を集約。parser/resolver/execution/CLI/validator/preflight 全レイヤーで共有（DR-0113）
+  - **Classification separation**: isUiBearingSurface() → isDiscussionUiBearingPrototypingSurface() + requiresVisualBrowserEvidenceSurface() に分割。cli は discussion UI-bearing だが browser evidence は不要（DR-0110）
+  - **Surface inference nullable**: inferSurfaceFromRecommendationAndEvidence() が推定不能時に null を返す（旧 "non-ui" デフォルト廃止）
+  - **Legacy infrastructure 完全削除**: rollout.ts, legacy/ validators, migration/ validators, compatibility tests をソースツリーから完全除去
+
+### Traceability Chain (v1.7.14 additions)
+
+```text
+REQ-0028 → US-0012-0017 → AC-0012-0020 → BR-0012-0020 → DR-0012-0002
+REQ-0029 → US-0012-0018 → AC-0012-0021, AC-0012-0022 → BR-0012-0021 → DR-0012-0002, DR-0012-0005
+REQ-0030 → US-0012-0019 → AC-0012-0023 → BR-0012-0012 (updated) → DR-0012-0003
+REQ-0031 → US-0012-0020 → AC-0012-0024 → BR-0012-0022 → DR-0012-0004
+REQ-0032 → US-0012-0021 → AC-0012-0025 → BR-0012-0023 → DR-0012-0005
+REQ-0033 → US-0012-0021 → AC-0012-0026 → BR-0012-0019 (updated)
+```
+
+### Deleted Source Files (v1.7.14)
+
+| File | Reason |
+| --- | --- |
+| `validators/legacy/ddpCompatibility.ts` | Legacy DDP compatibility path 不要（current-only SSOT） |
+| `validators/legacy/uixCompatibility.ts` | Legacy UIX compatibility path 不要 |
+| `validators/legacy/index.ts` | Legacy barrel 不要 |
+| `validators/legacyStatusDir.ts` | Legacy status directory check 不要 |
+| `validators/migration/formatDetection.ts` | Migration format detection 不要 |
+| `validators/uix/rollout.ts` | Rollout/phase-1 ratchet infrastructure 不要 |
+| `assets/uix-rev/migration-review.md` | Migration review asset 不要 |
+
+### Added Source Files (v1.7.14)
+
+| File | Purpose |
+| --- | --- |
+| `core/domain/strategyDecision.ts` | Canonical strategy decision vocabulary (DR-0114) |
+| `core/prototyping/recommendationSemantics.ts` | Semantic invariant SSOT helper (DR-0113) |
+| `core/validators/uix/types.ts` | UIX validator shared types |
+| `core/validators/uix/index.ts` | UIX validator barrel refactoring |

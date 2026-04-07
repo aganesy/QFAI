@@ -81,13 +81,12 @@
 
 ## BR-0012-0012: Existence-Based Precedence (D-5)
 
-- AC-Refs: AC-0012-0014
+- AC-Refs: AC-0012-0014, AC-0012-0023
 
 - If the `prototyping` key exists at any level in prototyping.yaml (even as a scalar), the namespaced contract is authoritative
 - hasNamespacedRecommendationBlock() checks key existence only, not value validity
 - Non-object namespaced block is a hard error with no legacy fallback
-- Deprecated top-level schema emits QFAI-PROT-231 (warning)
-- Namespaced vs top-level conflict emits QFAI-PROT-232 (warning)
+- v1.7.14: Legacy top-level keys の存在自体が hard error（DR-0112）。QFAI-PROT-231/232 warning は廃止され、legacy keys は warning ではなく即座に reject される
 
 ## BR-0012-0013: Recommendation Artifact Resolution
 
@@ -152,15 +151,56 @@
   - source: "explicit-request" | "discussion-recommendation" | "system-default"
   - rationale: discussion-pack の推奨理由テキスト
   - discussionRecommendation: discussion-pack からの完全な推奨オブジェクト
-  - sourceSchema: "namespaced" | "top-level" | null（prototyping.yaml のスキーマ形式）
+  - sourceSchema: "namespaced" | null（v1.7.14: "top-level" は廃止。namespaced-only schema のため常に "namespaced" または null）
 - この追跡情報は report.ts と evidence 双方で利用される
 
 ## BR-0012-0019: Surface Inference from Evidence
 
-- AC-Refs: AC-0012-0016, AC-0012-0017
+- AC-Refs: AC-0012-0016, AC-0012-0017, AC-0012-0026
 
 - inferSurfaceFromRecommendationAndEvidence() は以下の優先順位で surface を推定する:
   1. prototyping.yaml の surface フィールド（明示的）
   2. Evidence signals（uiRoutes > 0 → web 推定、等）
-  3. デフォルト: "non-ui"
+  3. v1.7.14: デフォルト: null（旧 "non-ui" デフォルトを廃止。明示的 surface 指定を促進）
 - 推定結果は obligation matrix の入力として使用される
+
+## BR-0012-0020: Canonical Prototyping Surfaces (v1.7.14)
+
+- AC-Refs: AC-0012-0020
+
+- PrototypingSurface は web/mobile/desktop/cli/mixed の 5 値のみ。旧 -ui suffix（web-ui 等）は不正値として reject
+- "non-ui" は PrototypingSurface 外。execution.ts が non-ui を受け取った場合は prototyping 対象外として reject
+- assertCanonicalPrototypingSurface() で型安全に検証
+
+## BR-0012-0021: Execution Hard Gates (v1.7.14)
+
+- AC-Refs: AC-0012-0021, AC-0012-0022
+
+- execution.ts は以下の条件で即座に hard error を投げる:
+  1. recommendation.status === "invalid" → "Invalid recommendation artifact"
+  2. classification === null → "Classification block is required"
+  3. !classification.ui_bearing || primary_surface === "non-ui" → "Non-UI classification is not a prototyping execution target"
+- readValidatedClassification()（strict API）のみを使用し、readClassificationBlock()（non-strict）は禁止
+
+## BR-0012-0022: Semantic Invariant Enforcement (v1.7.14)
+
+- AC-Refs: AC-0012-0024
+
+- validateRecommendationSemantics() が recommended_mode ∈ allowed_modes の不変条件を検証
+- この helper は recommendationSemantics.ts に定義され、以下の全レイヤーから参照される:
+  - extractRecommendation()（parser）: semantic mismatch → recommendation: null + warning
+  - resolveLatestRecommendationArtifact()（resolver）: semantic-invalid → status: invalid
+  - runPrototypingExecution()（execution）: invalid artifact → hard error
+  - CLI: error propagation（permissive 変換なし）
+  - prototypingRecommendation validator: semantic error issue
+  - sddPreflight: preflight blocker
+- 各レイヤーが独自に semantic check を実装することは禁止（SSOT 違反）
+
+## BR-0012-0023: Classification Separation for Obligations (v1.7.14)
+
+- AC-Refs: AC-0012-0025
+
+- derivePrototypingObligations() は needsVisualBrowserEvidence フラグで evidence 義務を判定
+- requiresVisualBrowserEvidenceSurface()（web/mobile/desktop/mixed）が true の場合のみ、requireRenderBundle と requireBrowserQaBundle を有効化
+- isDiscussionUiBearingPrototypingSurface()（web/mobile/desktop/cli/mixed）は discussion pack の構造要件にのみ使用し、evidence 義務の判定には使用しない
+- cli surface: discussion UI-bearing = true, visual/browser evidence = false

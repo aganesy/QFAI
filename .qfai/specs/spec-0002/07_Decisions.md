@@ -20,3 +20,24 @@
 - Context: 旧 spec-0034 で invariant / trend-derived / product-specific の 3-layer が canonical model として定義。旧 4-axis（usability/consistency/accessibility/delight）は非推奨
 - Adopted: 3-layer model を canonical とし、4-axis は migration window（v1.7.8 warning → v1.8.0 error）で段階的に廃止
 - Why: 3-layer は評価軸の性質をより正確に反映し、trend research との統合が自然
+
+### DR-0002-0003: Surface Classification 二分割 (v1.7.14, DR-0110)
+
+- Date: 2026-04-07
+- Context: v1.7.13 の単一 isUiBearingSurface() では cli surface が discussion UI-bearing と browser evidence required の両方に分類され、cli パックに不要な browser QA 義務が課される
+- Adopted: isDiscussionUiBearingPrototypingSurface()（cli 含む）と requiresVisualBrowserEvidenceSurface()（cli 除外）に分割
+- Why: cli は UI 設計意図の文書化が必要だが、Playwright 等による browser evidence は不要。関心事の分離により誤った義務付けを防止
+
+### DR-0002-0004: Strategy Decision Canonical Vocabulary (v1.7.14, DR-0114)
+
+- Date: 2026-04-07
+- Context: v1.7.13 の strategy validator は 8 フィールド構造チェックのみで、decision 値は任意文字列。比較・集計が困難
+- Adopted: canonical enum（template, component-library, design-system, native-pattern, bespoke, none）を導入し、selection_required に対応する状態機械を強制
+- Why: canonical vocabulary により strategy 意思決定の自動分析が可能。状態機械の強制により意味的整合性を保証
+
+### DR-0002-0005: "selected anchor" Wording 正規化 (v1.7.14)
+
+- Date: 2026-04-07
+- Context: "selected direction" と "selected anchor" が混在し、用語の不統一がバリデータとテンプレートの整合性を阻害
+- Adopted: "selected anchor" に統一。エラーコード DDH-SELECTED-DIRECTION → DDH-SELECTED-ANCHOR に変更
+- Why: "anchor screen" は設計意思決定の具体的なアウトプットを指す用語としてより正確

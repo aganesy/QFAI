@@ -1103,3 +1103,67 @@ discussion-20260329195516830（v1.7.6 Audit Remediation）、
 - Decision: validators/index.ts（canonical barrel）からの legacy/ re-export を禁止
 - Context: barrel export に legacy validator が混入すると production path の信頼性が低下
 - Rationale: 明確な module boundary により、意図しない legacy validator の production path 混入を構造的に防止
+
+### DR-0108: compatibility IssueCategory 完全削除 (v1.7.14)
+
+- Decision: IssueCategory union type から "compatibility" を完全削除し、"canonical" | "change" のみとする
+- Context: v1.7.13 で canonical/legacy validator 分離を導入したが、IssueCategory に "compatibility" が残存しており意味が曖昧だった
+- Rationale: QFAI v1.7.14 は current-only SSOT を宣言するリリース。legacy/compatibility の概念を型レベルで排除し、全 issue を "canonical"（仕様準拠性）または "change"（変更追跡）に二分することで、レポート出力とバリデータのカテゴリ体系を単純化する
+- Rejected-A: "compatibility" を "legacy" にリネームして残す（legacy 自体が current-only SSOT に反する）
+  - DO NOT: IssueCategory に compatibility/legacy/migration を意味するカテゴリを再導入しない。Temptation: 後方互換チェックのためにカテゴリを残したい
+
+### DR-0109: Canonical Prototyping Surfaces — -ui suffix 廃止 (v1.7.14)
+
+- Decision: PrototypingSurface を web-ui/mobile-ui/desktop-ui から web/mobile/desktop/cli/mixed の 5 値に変更。"non-ui" は prototyping surface 外の分類とする
+- Context: v1.7.13 では web-ui 等の -ui suffix 付き surface が存在し、"non-ui" も prototyping surface に含まれていた
+- Rationale: -ui suffix は冗長（prototyping 自体が UI 関連前提）。cli を新規追加し、non-ui を prototyping surface 外に明示的に分離することで、discussion UI-bearing 判定と prototyping surface 列挙の混同を解消する
+- Rejected-A: -ui suffix を維持し cli だけ追加（suffix の不統一が拡大する）
+  - DO NOT: prototyping surface 名に -ui suffix を復帰させない。Temptation: 既存パックとの互換性のため
+
+### DR-0110: Surface Classification 二分割 — discussion UI-bearing vs visual/browser evidence (v1.7.14)
+
+- Decision: "UI-bearing" 判定を 2 つの独立した関数に分割: isDiscussionUiBearingPrototypingSurface()（web/mobile/desktop/cli/mixed）と requiresVisualBrowserEvidenceSurface()（web/mobile/desktop/mixed、cli 除外）
+- Context: v1.7.13 では単一の isUiBearingSurface() で discussion pack 構造要件と prototyping evidence 義務の両方を判定していた。cli は discussion UI-bearing だが browser evidence は不要
+- Rationale: cli surface は UI 定義ファイル（sidecar 等）を必要とするが、screenshot/Playwright による visual evidence は不要。関心事の分離により、cli パックが誤って browser QA 義務を課されることを防止する
+- Rejected-A: cli を非 UI-bearing に分類する（cli も UI 設計意図の文書化が必要）
+  - DO NOT: cli を discussion UI-bearing から除外しない。Temptation: cli は CUI だから UI-bearing ではないと思う
+
+### DR-0111: Strict Classification Validation — 矛盾検出ゲート (v1.7.14)
+
+- Decision: readValidatedClassificationBlock() を新設し、分類ブロック内の意味的矛盾（ui_bearing=false + 空でない secondary_surfaces、ui_bearing=true + primary_surface=non-ui 等）を hard error とする
+- Context: v1.7.13 の readClassificationBlock() はパース結果を返すのみで、矛盾チェックは各 validator が個別に実施していた
+- Rationale: execution.ts 等の本番パスが invalid classification で動作継続するリスクを排除。矛盾検出を parser 層の共通ゲートに集約し、全消費者が一貫した strict validation を受ける
+- Rejected-A: validator 個別チェックを維持（重複実装と不整合リスク）
+  - DO NOT: execution path で readClassificationBlock()（non-strict）を使用しない。Temptation: strict validation が重すぎるケースがあるかも
+
+### DR-0112: Namespaced-Only Schema — legacy top-level keys hard-reject (v1.7.14)
+
+- Decision: prototyping.yaml の legacy top-level recommendation keys（recommended_mode, allowed_modes 等）が存在する場合、namespaced `prototyping:` ブロックの有無に関わらず hard error とする
+- Context: v1.7.13 の existence-based precedence（DR-0095）では namespaced block 優先だが legacy keys は warning（QFAI-PROT-231/232）で許容していた
+- Rationale: current-only SSOT リリースとして、legacy schema の存在自体を構造的に禁止する。warning→error 昇格により、migration 期間を明確に終了させる
+- Rejected-A: warning を維持し v1.8.0 で error に昇格（migration 延長は convergence を遅延させる）
+  - DO NOT: legacy top-level keys の存在を warning で許容しない。Temptation: 既存プロジェクトへの影響を緩和したい
+
+### DR-0113: Semantic Invariant SSOT — recommended_mode ∈ allowed_modes (v1.7.14)
+
+- Decision: validateRecommendationSemantics() を recommendationSemantics.ts に新設し、recommended_mode が allowed_modes に含まれることを validator/runtime/execution/CLI の全レイヤーで共有する SSOT とする（QFAI-PROT-154）
+- Context: v1.7.13 では semantic mismatch チェックが validator（prototypingRecommendation.ts）のみに存在し、execution/CLI パスは未検証だった
+- Rationale: semantic invariant の検証漏れは runtime error に直結する。shared helper を単一の真実源とし、parser（extractRecommendation）、resolver、execution、CLI、validator、preflight の全レイヤーが同一ロジックを参照する
+- Rejected-A: execution.ts に個別チェックを追加（重複実装、不整合リスク）
+  - DO NOT: semantic invariant チェックを helper 以外の場所に実装しない。Temptation: 各レイヤーに inline で書く方が早い
+
+### DR-0114: Canonical Strategy Decision Vocabulary (v1.7.14)
+
+- Decision: strategy decision フィールド（decision, chosen_option, candidate_options）に canonical enum（template, component-library, design-system, native-pattern, bespoke, none）を導入し、free-form text を禁止する
+- Context: v1.7.13 の strategy validator は 8 フィールドの構造チェックのみで、decision の値は任意文字列だった
+- Rationale: canonical vocabulary により、strategy 意思決定の比較・集計・自動分析が可能になる。selection_required=true → ≥2 candidates + non-"none" decision、selection_required=false → decision="none" の状態機械を強制し、意味的整合性を保証する
+- Rejected-A: free-form を許容し enum は推奨のみとする（比較・集計が困難）
+  - DO NOT: strategy decision フィールドに canonical enum 外の値を許容しない。Temptation: プロジェクト固有の選択肢を自由入力したい
+
+### DR-0115: Current-Only SSOT — migration/defer wording 完全削除 (v1.7.14)
+
+- Decision: product.md, manifest.md 等の steering ドキュメントから v2.0 defer、legacy deprecation、reconsidered-in-v2.0、migration guide 等の wording を完全削除する
+- Context: v1.7.13 までの steering docs には「v2.0 で再検討」「legacy は deprecated」等の migration 期間の名残が存在
+- Rationale: v1.7.14 は current-only SSOT リリース。shipped ドキュメントは現在の仕様のみを記述し、将来の移行や過去の互換性に関する言及を排除する。これにより、ドキュメント読者が migration status を誤解するリスクを排除する
+- Rejected-A: migration 履歴を appendix として残す（current-only 原則に反する）
+  - DO NOT: steering/product/manifest に migration/defer/reconsidered wording を再導入しない。Temptation: 経緯を残したい
