@@ -475,17 +475,8 @@ const seededDiscussionPackFiles = {
   ],
 };
 
-// prototyping.yaml is a required sidecar artifact since v1.7.13 (QFAI-DPACK-002 / QFAI-PROT-153)
-const prototypingYamlContent = [
-  "prototyping:",
-  "  recommended_mode: low-cost",
-  '  rationale: "Minimal smoke-test seed for verify-pack packaging validation."',
-  "  allowed_modes:",
-  "    - low-cost",
-  "  surface: cli",
-  "",
-].join("\n");
-writeFileSync(path.join(seededDiscussionPackDir, "prototyping.yaml"), prototypingYamlContent);
+// prototyping.yaml is only required for UI-bearing packs (v1.7.14).
+// This fixture is ui_bearing: false / primary_surface: non-ui, so omit it.
 
 for (const [fileName, lines] of Object.entries(seededDiscussionPackFiles)) {
   writeFileSync(path.join(seededDiscussionPackDir, fileName), lines.join("\n"));

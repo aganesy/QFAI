@@ -26,8 +26,8 @@ export async function validateDiscussionPackReadiness(
         readiness.dangerousPackNames,
         "change",
         [
-          "Only current canonical discussion-pack naming (`discussion-YYYYMMDDhhmmssSSS/`) is supported.",
-          "Remove or rename the non-canonical discussion directory.",
+          "現在の正規命名 (`discussion-YYYYMMDDhhmmssSSS/`) のみサポートされています。不正なディレクトリを削除またはリネームしてください。",
+          "Only canonical naming is supported. Remove or rename the non-canonical discussion directory.",
         ].join("\n"),
       ),
     );
@@ -44,8 +44,8 @@ export async function validateDiscussionPackReadiness(
         readiness.legacyPackNames,
         "change",
         [
-          "Only current canonical discussion-pack layout is supported.",
-          "Remove or rename the non-canonical discussion directory.",
+          "現在の正規レイアウトのみサポートされています。不正なディレクトリを削除またはリネームしてください。",
+          "Only canonical layout is supported. Remove or rename the non-canonical discussion directory.",
         ].join("\n"),
       ),
     );

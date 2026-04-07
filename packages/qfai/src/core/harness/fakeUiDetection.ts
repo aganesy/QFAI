@@ -29,14 +29,18 @@ export function detectFakeUi(input: {
   }
 
   // Only evaluate Browser QA when it was actually attempted (non-empty).
+  // Use execution evidence (status + checks_performed) rather than findings count,
+  // because findings=0 is normal for a healthy UI.
   if (input.browserQaResults.length > 0) {
-    const interactionFindings = input.browserQaResults
+    const interactionPhases = input.browserQaResults
       .flatMap((result) => result.phases)
-      .filter((phase) => phase.phase === "interaction")
-      .flatMap((phase) => phase.findings);
-    if (interactionFindings.length === 0) {
-      reasons.push("Browser QA interaction phase did not confirm actionable behavior");
-      evidenceRefs.push("browserQa:interaction-empty");
+      .filter((phase) => phase.phase === "interaction");
+    const hasExecutedWithChecks = interactionPhases.some(
+      (phase) => phase.status !== "skipped" && phase.checks_performed.length > 0,
+    );
+    if (!hasExecutedWithChecks) {
+      reasons.push("Browser QA interaction phase was skipped or produced no checks");
+      evidenceRefs.push("browserQa:interaction-no-checks");
     }
   }
 
