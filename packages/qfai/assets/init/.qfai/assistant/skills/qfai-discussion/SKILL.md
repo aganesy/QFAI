@@ -287,7 +287,6 @@ The latest discussion pack must include `prototyping.yaml` when `ui_bearing: tru
     - Top-level recommendation keys are not supported; only the namespaced `prototyping:` block is accepted.
     - Coexistence of top-level recommendation keys with the namespaced block is invalid and will be rejected by validation and execution.
 17. Choose `recommended_mode` with these defaults:
-
     - `low-cost`: rough draft or strong cost priority
     - `standard`: normal customer-presentable path
     - `full-harness`: only when the premium runtime loop is justified
