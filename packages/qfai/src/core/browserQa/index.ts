@@ -182,12 +182,13 @@ export function validateBrowserQaBundle(
           finding.detail.trim().length === 0 ||
           !Array.isArray(finding.evidence_refs) ||
           finding.evidence_refs.length === 0 ||
-          !Array.isArray(finding.repair_suggestions)
+          !Array.isArray(finding.repair_suggestions) ||
+          typeof finding.severity !== "string"
         ) {
           issues.push(
             makeIssue(
               BROWSER_QA_ISSUE_CODES.findings,
-              "`findings[]` requires summary/detail/evidence_refs/repair_suggestions",
+              "`findings[]` requires summary/detail/severity/evidence_refs/repair_suggestions",
               file,
               rule,
             ),

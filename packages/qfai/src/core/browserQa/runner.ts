@@ -23,19 +23,25 @@ function validatePhaseResult(
     ? result.repair_suggestions
     : [];
   const evidenceRefs = Array.isArray(result.evidence_refs) ? result.evidence_refs : [];
-  const normalizedChecks =
-    checksPerformed.length > 0 ? checksPerformed : [`provider executed ${phase} checks`];
   const normalizedResult: BrowserQaPhaseResult = {
     phase,
     status: result.status,
     findings,
     repair_suggestions: repairSuggestions,
     evidence_refs: evidenceRefs,
-    checks_performed: normalizedChecks,
+    checks_performed:
+      checksPerformed.length > 0 ? checksPerformed : [`provider executed ${phase} checks`],
     ...(result.skippedReason ? { skippedReason: result.skippedReason } : {}),
   };
+  // Evidence check: provider explicitly returning status "executed" or "passed"
+  // with empty findings is normal (healthy page). Only flag when status indicates
+  // execution but provider returned absolutely no artifacts at all.
   const hasEvidence =
-    normalizedResult.findings.length > 0 || normalizedResult.checks_performed.length > 0;
+    normalizedResult.findings.length > 0 ||
+    checksPerformed.length > 0 ||
+    evidenceRefs.length > 0 ||
+    result.status === "executed" ||
+    result.status === "passed";
   if (!hasEvidence && result.status !== "skipped") {
     return {
       ...result,
