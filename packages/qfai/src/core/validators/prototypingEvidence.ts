@@ -1417,9 +1417,7 @@ function validateModeMetadata(
     // QFAI-PROT-294: scoringTrace improvement progression (info)
     if (evidence.fullHarness.scoringTrace.length >= 2) {
       const scores = evidence.fullHarness.scoringTrace.map((s) => s.weightedTotal);
-      const isNonProgressing = scores.every(
-        (s, i) => i === 0 || s <= (scores[i - 1] ?? s),
-      );
+      const isNonProgressing = scores.every((s, i) => i === 0 || s <= (scores[i - 1] ?? s));
       if (isNonProgressing) {
         issues.push(
           issue(

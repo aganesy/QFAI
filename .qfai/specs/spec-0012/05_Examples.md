@@ -104,9 +104,9 @@
 
 - BR-Ref: BR-0012-0012
 
-| Input                                                                       | Expected                                |
-| --------------------------------------------------------------------------- | --------------------------------------- |
-| prototyping.yaml: `prototyping: null` (key exists, value null)              | Error: non-object namespaced block      |
+| Input                                                                       | Expected                                                      |
+| --------------------------------------------------------------------------- | ------------------------------------------------------------- |
+| prototyping.yaml: `prototyping: null` (key exists, value null)              | Error: non-object namespaced block                            |
 | prototyping.yaml: no `prototyping` key, has `recommended_mode` at top level | Hard error: legacy top-level keys rejected (v1.7.14, DR-0112) |
 
 ## EX-0012-0016: Obligation Matrix
@@ -177,8 +177,8 @@
 
 - BR-Ref: BR-0012-0019
 
-| Input                                       | Expected                   |
-| ------------------------------------------- | -------------------------- |
-| prototyping.yaml surface="web"              | surface="web" (explicit)   |
-| No surface field, evidence has uiRoutes > 0 | surface="web" (inferred)   |
+| Input                                       | Expected                                         |
+| ------------------------------------------- | ------------------------------------------------ |
+| prototyping.yaml surface="web"              | surface="web" (explicit)                         |
+| No surface field, evidence has uiRoutes > 0 | surface="web" (inferred)                         |
 | No surface field, no evidence signals       | surface=null (v1.7.14: no default, returns null) |

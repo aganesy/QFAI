@@ -101,12 +101,12 @@
 - AC-Refs: AC-0002-0024
 - Type: normal
 
-| Step | Action                                                                                   | Expected                                 |
-| ---- | ---------------------------------------------------------------------------------------- | ---------------------------------------- |
-| 1    | Create uiux/31_selected_anchor_screen.md with `## Selected Anchor` + `Selected: Option A` | File ready                               |
-| 2    | Run discussion design hardening validators                                               | UIX-VAL-DDH-SELECTED-ANCHOR passes       |
-| 3    | Remove `## Selected Anchor` section                                                      | Section removed                          |
-| 4    | Run validators again                                                                     | UIX-VAL-DDH-SELECTED-ANCHOR error emitted |
+| Step | Action                                                                                    | Expected                                  |
+| ---- | ----------------------------------------------------------------------------------------- | ----------------------------------------- |
+| 1    | Create uiux/31_selected_anchor_screen.md with `## Selected Anchor` + `Selected: Option A` | File ready                                |
+| 2    | Run discussion design hardening validators                                                | UIX-VAL-DDH-SELECTED-ANCHOR passes        |
+| 3    | Remove `## Selected Anchor` section                                                       | Section removed                           |
+| 4    | Run validators again                                                                      | UIX-VAL-DDH-SELECTED-ANCHOR error emitted |
 
 ## TC-0002-0045: Screen Contract Nested Bullet Parse
 
@@ -153,7 +153,7 @@
 - AC-Refs: AC-0002-0024
 - Type: normal
 
-| Step | Action                                              | Expected   |
-| ---- | --------------------------------------------------- | ---------- |
-| 1    | Create 14_Review-Request.md with "Selected Anchor"  | File ready |
-| 2    | Validate review request template                    | Pass       |
+| Step | Action                                             | Expected   |
+| ---- | -------------------------------------------------- | ---------- |
+| 1    | Create 14_Review-Request.md with "Selected Anchor" | File ready |
+| 2    | Validate review request template                   | Pass       |

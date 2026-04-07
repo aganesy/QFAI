@@ -217,12 +217,12 @@ Verify:
 - AC-Refs: AC-0004-0016
 - Type: normal
 
-| Step | Action                                                               | Expected                   |
-| ---- | -------------------------------------------------------------------- | -------------------------- |
-| 1    | Create 31_selected_anchor_screen.md with selected_option field       | File ready                 |
-| 2    | Run design audit validators                                          | No QFAI-AUD-021            |
-| 3    | Remove selected_option field                                         | Field removed              |
-| 4    | Run audit validators                                                 | QFAI-AUD-021 error emitted |
+| Step | Action                                                         | Expected                   |
+| ---- | -------------------------------------------------------------- | -------------------------- |
+| 1    | Create 31_selected_anchor_screen.md with selected_option field | File ready                 |
+| 2    | Run design audit validators                                    | No QFAI-AUD-021            |
+| 3    | Remove selected_option field                                   | Field removed              |
+| 4    | Run audit validators                                           | QFAI-AUD-021 error emitted |
 
 ## TC-0004-0030: Canonical Barrel No Legacy Re-export
 

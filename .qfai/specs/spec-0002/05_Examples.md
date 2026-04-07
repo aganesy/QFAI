@@ -61,19 +61,19 @@
 
 - BR-Ref: BR-0002-0032
 
-| Input                                                                           | Expected                                          |
-| ------------------------------------------------------------------------------- | ------------------------------------------------- |
+| Input                                                                        | Expected                                       |
+| ---------------------------------------------------------------------------- | ---------------------------------------------- |
 | UI-bearing pack with missing selected anchor in 31_selected_anchor_screen.md | UIX-VAL-DDH-SELECTED-ANCHOR (not QFAI-DDP-021) |
 
 ## EX-0002-0042: DDH Validator Source Mapping
 
 - BR-Ref: BR-0002-0033
 
-| Code                           | Source File                                        | Check                                      |
-| ------------------------------ | -------------------------------------------------- | ------------------------------------------ |
+| Code                          | Source File                                        | Check                                                      |
+| ----------------------------- | -------------------------------------------------- | ---------------------------------------------------------- |
 | UIX-VAL-DDH-SELECTED-ANCHOR   | uiux/31_selected_anchor_screen.md                  | `## Selected Anchor` + `Selected:` 宣言 (v1.7.14 リネーム) |
-| UIX-VAL-DDH-OPTION-COMPARISON  | uiux/30_option_comparison.md                       | 2+ option comparison                       |
-| UIX-VAL-DDH-STATE-COVERAGE     | 03_Story-Workshop.md + uiux/40_screen_contracts.md | state-risk signal + contract handoff       |
+| UIX-VAL-DDH-OPTION-COMPARISON | uiux/30_option_comparison.md                       | 2+ option comparison                                       |
+| UIX-VAL-DDH-STATE-COVERAGE    | 03_Story-Workshop.md + uiux/40_screen_contracts.md | state-risk signal + contract handoff                       |
 
 ## EX-0002-0043: Nested Bullet vs CSV Parsing
 
@@ -106,7 +106,7 @@
 
 - BR-Ref: BR-0002-0037
 
-| Input                                                                      | Expected                 |
-| -------------------------------------------------------------------------- | ------------------------ |
-| 14_Review-Request.md with "Selected Anchor" in Design Direction Decisions  | Validator pass           |
-| 14_Review-Request.md with "Direction" instead of "Selected Anchor"         | Warning: deprecated term |
+| Input                                                                     | Expected                 |
+| ------------------------------------------------------------------------- | ------------------------ |
+| 14_Review-Request.md with "Selected Anchor" in Design Direction Decisions | Validator pass           |
+| 14_Review-Request.md with "Direction" instead of "Selected Anchor"        | Warning: deprecated term |

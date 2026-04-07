@@ -125,24 +125,24 @@ REQ-0033 → US-0012-0021 → AC-0012-0026 → BR-0012-0019 (updated)
 
 ### Deleted Source Files (v1.7.14)
 
-| File | Reason |
-| --- | --- |
-| `validators/legacy/ddpCompatibility.ts` | Legacy DDP compatibility path 不要（current-only SSOT） |
-| `validators/legacy/uixCompatibility.ts` | Legacy UIX compatibility path 不要 |
-| `validators/legacy/index.ts` | Legacy barrel 不要 |
-| `validators/legacyStatusDir.ts` | Legacy status directory check 不要 |
-| `validators/migration/formatDetection.ts` | Migration format detection 不要 |
-| `validators/uix/rollout.ts` | Rollout/phase-1 ratchet infrastructure 不要 |
-| `assets/uix-rev/migration-review.md` | Migration review asset 不要 |
+| File                                      | Reason                                                  |
+| ----------------------------------------- | ------------------------------------------------------- |
+| `validators/legacy/ddpCompatibility.ts`   | Legacy DDP compatibility path 不要（current-only SSOT） |
+| `validators/legacy/uixCompatibility.ts`   | Legacy UIX compatibility path 不要                      |
+| `validators/legacy/index.ts`              | Legacy barrel 不要                                      |
+| `validators/legacyStatusDir.ts`           | Legacy status directory check 不要                      |
+| `validators/migration/formatDetection.ts` | Migration format detection 不要                         |
+| `validators/uix/rollout.ts`               | Rollout/phase-1 ratchet infrastructure 不要             |
+| `assets/uix-rev/migration-review.md`      | Migration review asset 不要                             |
 
 ### Added Source Files (v1.7.14)
 
-| File | Purpose |
-| --- | --- |
-| `core/domain/strategyDecision.ts` | Canonical strategy decision vocabulary (DR-0114) |
-| `core/prototyping/recommendationSemantics.ts` | Semantic invariant SSOT helper (DR-0113) |
-| `core/validators/uix/types.ts` | UIX validator shared types |
-| `core/validators/uix/index.ts` | UIX validator barrel refactoring |
+| File                                          | Purpose                                          |
+| --------------------------------------------- | ------------------------------------------------ |
+| `core/domain/strategyDecision.ts`             | Canonical strategy decision vocabulary (DR-0114) |
+| `core/prototyping/recommendationSemantics.ts` | Semantic invariant SSOT helper (DR-0113)         |
+| `core/validators/uix/types.ts`                | UIX validator shared types                       |
+| `core/validators/uix/index.ts`                | UIX validator barrel refactoring                 |
 
 ### v1.7.14 Full-Harness Iteration Protocol & Validator Rules (2026-04-08)
 
@@ -174,14 +174,14 @@ REQ-0040 → US-0012-0025 → AC-0012-0033 → BR-0012-0030
 
 ### Modified Skill/Steering Files (v1.7.14 Full-Harness)
 
-| File | Change |
-| --- | --- |
-| `assets/init/.qfai/assistant/skills/qfai-prototyping/SKILL.md` | +200行: Iteration Protocol, Evaluation Rigor, Asset Strategy, Reviewer Gate 追加 |
-| `assets/init/.qfai/assistant/skills/qfai-discussion/SKILL.md` | Score Scope 注記 + iteration_expectations ブロック追加 |
-| `assets/init/.qfai/assistant/skills/qfai-discussion/templates/uiux/23_design_eval_aggregate.md` | Score Scope Limitation セクション追加 |
-| `assets/init/.qfai/assistant/steering/review-profiles.yml` | full-harness プロファイル追加 |
-| `assets/init/.qfai/assistant/steering/agent-routing.yml` | prototyping evidence phase に product-experience-architect 追加 |
-| `core/validators/prototypingEvidence.ts` | QFAI-PROT-290~294 追加（+104行） |
-| `cli/commands/validate.ts` | PROT-290~294 description 追加 |
-| `tests/core/prototypingEvidence.test.ts` | 5 test cases 追加（+270行） |
-| `tests/core/issueCodeUniqueness.test.ts` | TAXONOMY_RANGE_MAX 283→294, fullHarness range 281→294 |
+| File                                                                                            | Change                                                                           |
+| ----------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| `assets/init/.qfai/assistant/skills/qfai-prototyping/SKILL.md`                                  | +200行: Iteration Protocol, Evaluation Rigor, Asset Strategy, Reviewer Gate 追加 |
+| `assets/init/.qfai/assistant/skills/qfai-discussion/SKILL.md`                                   | Score Scope 注記 + iteration_expectations ブロック追加                           |
+| `assets/init/.qfai/assistant/skills/qfai-discussion/templates/uiux/23_design_eval_aggregate.md` | Score Scope Limitation セクション追加                                            |
+| `assets/init/.qfai/assistant/steering/review-profiles.yml`                                      | full-harness プロファイル追加                                                    |
+| `assets/init/.qfai/assistant/steering/agent-routing.yml`                                        | prototyping evidence phase に product-experience-architect 追加                  |
+| `core/validators/prototypingEvidence.ts`                                                        | QFAI-PROT-290~294 追加（+104行）                                                 |
+| `cli/commands/validate.ts`                                                                      | PROT-290~294 description 追加                                                    |
+| `tests/core/prototypingEvidence.test.ts`                                                        | 5 test cases 追加（+270行）                                                      |
+| `tests/core/issueCodeUniqueness.test.ts`                                                        | TAXONOMY_RANGE_MAX 283→294, fullHarness range 281→294                            |
