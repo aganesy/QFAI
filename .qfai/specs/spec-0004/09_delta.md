@@ -143,3 +143,15 @@
   - **Strict classification validation**: classification.ts が分類ブロック内の意味的矛盾を hard error として検出（ui_bearing vs primary_surface 矛盾、invalid/duplicate secondary surfaces 等）（DR-0111）
   - **Strategy semantic validation**: strategy.ts が canonical strategy decision enum を強制。selection_required 状態機械を検証（DR-0114）
   - **rollout.ts 削除**: phase-1 ratchet mechanism（DR-0101）のインフラ完全削除。migration/rollout の概念を validation pipeline から排除
+
+### v1.7.14 Full-Harness Validator Rules (2026-04-08)
+
+- adopted: REQ-0123（Full-Harness Iteration Integrity Validators QFAI-PROT-290~294）追加
+- rationale: full-harness インシデントレポートに基づく iteration integrity validator の追加:
+  - **QFAI-PROT-290**: iterationCount==1 + converged → warning（single-pass convergence は通常ありえない）
+  - **QFAI-PROT-291**: scoringTrace.length ≠ iterationCount → warning（trace count 不整合）
+  - **QFAI-PROT-292**: terminationReason==max-iterations but count < maxIterations → warning（終了条件矛盾）
+  - **QFAI-PROT-293**: iterationCount > maxIterations → warning（上限超過）
+  - **QFAI-PROT-294**: non-increasing scoringTrace → info（改善が見られない）
+  - **Taxonomy range 拡張**: fullHarness reserved range 281-283 → 281-294, TAXONOMY_RANGE_MAX 283 → 294
+  - **validate.ts**: PROT-290~294 description を issue code description map に追加

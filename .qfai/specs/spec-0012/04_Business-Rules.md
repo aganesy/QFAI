@@ -117,15 +117,15 @@
 
 - AC-Refs: AC-0012-0019
 
-- fullHarness セクションは以下の 8 フィールドスキーマに準拠する:
+- fullHarness セクションは以下のスキーマに準拠する:
   - enabled: boolean（mode が full-harness か）
   - available: boolean（full-harness infrastructure が利用可能か）
   - runId: string | null（一意の実行識別子）
-  - iterationCount: number（実行された反復回数）
+  - iterationCount: number（実行された反復回数、v1.7.14: MIN_ITERATIONS=5 制約）
   - bestIteration: number | null（最高スコアの反復）
-  - terminationReason: "converged" | "max-iterations" | null（v1.7.13 で正規化。旧 "accepted" / "cap-reached" は使用禁止）
-  - reviewerSignoff: boolean（レビュアー承認済みか）
-  - scoringTrace: boolean（キャリブレーション用スコアリングトレースが利用可能か）
+  - terminationReason: "converged" | "max-iterations" | "plateau" | "manual-stop" | null（v1.7.14 で "plateau"/"manual-stop" を追加。旧 "accepted" / "cap-reached" は使用禁止）
+  - reviewerSignoff: { status: "approved" | "rejected", reviewer: string, timestamp: string }（v1.7.14: boolean から object に拡張）
+  - scoringTrace: Array<{ iteration: number, weightedTotal: number, decision: string, evaluators?: string[], axisDelta?: Record<string, number>, maxDeltaCap?: number }>（v1.7.14: boolean から配列に拡張。各イテレーションの評価記録を保持）
 
 ## BR-0012-0017: Calibration Config Schema Fields
 
@@ -204,3 +204,97 @@
 - requiresVisualBrowserEvidenceSurface()（web/mobile/desktop/mixed）が true の場合のみ、requireRenderBundle と requireBrowserQaBundle を有効化
 - isDiscussionUiBearingPrototypingSurface()（web/mobile/desktop/cli/mixed）は discussion pack の構造要件にのみ使用し、evidence 義務の判定には使用しない
 - cli surface: discussion UI-bearing = true, visual/browser evidence = false
+
+## BR-0012-0024: Full-Harness Iteration Protocol (v1.7.14)
+
+- AC-Refs: AC-0012-0027
+
+- full-harness mode は反復改善ループであり、単一パス evidence 生成ではない
+- 各イテレーションは 4 ステップで構成: Evaluate → Identify → Fix → Re-evaluate
+- calibration パラメータは `qfai.config.yaml > prototyping.calibration` から読み取る
+- 終了条件:
+  - converged: weightedTotal >= thresholds.accept AND iterationCount >= MIN_ITERATIONS(5)
+  - max-iterations: iterationCount >= maxIterations(default 15)
+  - plateau: score delta < plateauDelta(0.02) for plateauLookback(3) consecutive iterations
+  - manual-stop: ユーザーの明示的な終了指示
+- converged with iterationCount==1 は矛盾であり、QFAI-PROT-290 warning を発行
+
+## BR-0012-0025: Independent Evaluator Panel (v1.7.14)
+
+- AC-Refs: AC-0012-0028
+
+- 自己評価バイアス防止のため、evaluator は generator から独立していなければならない
+- 3 層構成:
+  - L1（product-surface-reviewer）: UI/UX/ビジュアル一貫性のスコアリング。入力はスクリーンショット + 評価軸定義のみ
+  - L2（product-experience-architect）: ユーザージャーニー/IA/画面遷移の一貫性。入力は L1 と同等 + screen contracts + selected anchor
+  - L3（qa-gatekeeper）: iterationCount/scoringTrace/terminationReason の整合性検証。fullHarness evidence block のみ
+- L1/L2 は `task` tool の `background` mode で起動し、改善履歴・前回スコア・generator 計画を渡さない
+- イテレーションの weightedTotal は L1 と L2 の最小値。いずれかが thresholds.refine 未満なら decision=pivot
+- product-experience-architect は `kind: worker` のため review-profiles.yml には登録せず、agent-routing.yml の evidence phase conditional_agents に配置
+
+## BR-0012-0026: Score Scope Separation (v1.7.14)
+
+- AC-Refs: AC-0012-0029
+
+- discussion 3-layer scores は design direction quality（option 比較・選定）を測定する
+- prototyping scoringTrace は implementation fidelity（selected anchor に対する実装品質）を測定する
+- これらは異なる評価対象であり、discussion scores を scoringTrace にコピーすることは禁止
+- SKILL.md と aggregate テンプレートに score scope limitation を明記
+
+## BR-0012-0027: Evaluation Rigor Rules (v1.7.14)
+
+- AC-Refs: AC-0012-0030
+
+- 各評価軸は 3-tier rubric を使用:
+  - existence_gate（0.0-0.3）: 要素が存在するか
+  - quality_criteria（0.3-0.7）: 基準品質を満たすか
+  - excellence_criteria（0.7-1.0）: 期待を超えるか
+- existence_gate を失敗した軸は 0.3 を超えるスコアを付けてはならない
+- Finding 分類: L1（構造的欠陥、agent-fixable、即修正）、L2（品質不足、条件付き修正）、L1-manual（人間判断必要）
+- Lighthouse automated gate（SHOULD）: web surface + dev server 利用可能時、Performance/Accessibility/Best Practices/SEO で <70 は L1
+
+## BR-0012-0028: Asset Acquisition Strategy (v1.7.14)
+
+- AC-Refs: AC-0012-0031
+
+- full-harness mode では professional-quality visual assets が必須
+- free asset sources（Unsplash, Pexels, Google Fonts, Heroicons 等）の使用を MUST とし、ソース URL とライセンスを evidence に記録
+- emoji 文字（U+1F000–U+1FAFF, U+2600–U+27BF）を UI の装飾要素として使用することを禁止。機能目的の Unicode シンボル（✓ 等）は許可
+- placeholder コンテンツ（"Lorem ipsum", placeholder.com images, gray boxes）は full-harness 最終出力に不可
+- accessibility checklist（WCAG 2.1 AA）: color contrast ≥4.5:1（通常テキスト）, keyboard navigable, alt attributes, form labels, focus indicators
+- trust signal checklist（SHOULD）: typography hierarchy, spacing rhythm, professional color palette, loading/error states, no broken images
+
+## BR-0012-0029: Reviewer Gate Strengthening (v1.7.14)
+
+- AC-Refs: AC-0012-0032
+
+- full-harness evidence に対する reviewer は以下 6 項目を検証 MUST:
+  1. iterationCount > 1（または single-iteration convergence の明示的正当化）
+  2. scoringTrace のエントリ数が iterationCount と一致
+  3. scoringTrace がスコア改善を示す（全同一スコアではない）
+  4. terminationReason がスコア軌跡と整合
+  5. 独立評価者が実際に起動された（fabricated names ではない）
+  6. limitations セクションが存在し、既知の品質不足を正直に文書化
+- Limitations section: full-harness MUST。未解決の品質不足、accept 未達の軸、agent 判断不足の領域、技術制約を文書化
+
+## BR-0012-0030: Full-Harness Validator Rules QFAI-PROT-290~294 (v1.7.14)
+
+- AC-Refs: AC-0012-0033
+
+- prototypingEvidence.ts に 5 つの新規 validator rule を追加:
+  - QFAI-PROT-290（warning）: iterationCount==1 + terminationReason=="converged" → single-iteration convergence は通常ありえない
+  - QFAI-PROT-291（warning）: scoringTrace.length ≠ iterationCount → trace count 不整合
+  - QFAI-PROT-292（warning）: terminationReason=="max-iterations" but iterationCount < config.maxIterations → 終了条件矛盾
+  - QFAI-PROT-293（warning）: iterationCount > config.maxIterations → 上限超過
+  - QFAI-PROT-294（info）: scoringTrace が non-increasing → 改善が見られない
+- validator taxonomy 範囲: fullHarness reserved range 281-294（旧 281-283 から拡張）
+- TAXONOMY_RANGE_MAX: 294（旧 283 から更新）
+- scoringTrace の `scores[i-1]` アクセスは nullish coalescing で安全化
+
+## BR-0012-0031: Maximum Delta Cap (v1.7.14)
+
+- AC-Refs: AC-0012-0027
+
+- 各評価軸のイテレーションあたりスコア改善上限: maxDeltaPerAxisPerIteration = 0.15
+- この上限を超える delta は再評価または正当化を必須とする
+- single-iteration score inflation を防止する仕組み

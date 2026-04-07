@@ -143,3 +143,45 @@ REQ-0033 → US-0012-0021 → AC-0012-0026 → BR-0012-0019 (updated)
 | `core/prototyping/recommendationSemantics.ts` | Semantic invariant SSOT helper (DR-0113) |
 | `core/validators/uix/types.ts` | UIX validator shared types |
 | `core/validators/uix/index.ts` | UIX validator barrel refactoring |
+
+### v1.7.14 Full-Harness Iteration Protocol & Validator Rules (2026-04-08)
+
+- adopted: REQ-0034（Full-Harness Iteration Protocol）, REQ-0035（Independent Evaluator Panel）, REQ-0036（Score Scope Separation）, REQ-0037（Evaluation Rigor Rules）, REQ-0038（Asset Acquisition Strategy）, REQ-0039（Reviewer Gate Strengthening）, REQ-0040（Full-Harness Validator Rules QFAI-PROT-290~294）追加
+- adopted: US-0012-0022~0025, AC-0012-0027~0033, BR-0012-0024~0031 追加
+- adopted: DR-0012-0006~0009 追加
+- adopted: BR-0012-0016 更新（fullHarness schema: reviewerSignoff boolean→object, scoringTrace boolean→array, terminationReason に "plateau"/"manual-stop" 追加）
+- adopted: US range 更新 US-0012-0001..US-0012-0025
+- rationale: 2 つの full-harness インシデントレポートに基づく改善:
+  - **Iteration Protocol**: single-pass evidence dump を反復改善ループに拡張。4-step cycle, MIN_ITERATIONS=5, 4 termination conditions
+  - **Independent Evaluator Panel**: 3-layer（product-surface-reviewer/product-experience-architect/qa-gatekeeper）で self-evaluation bias を構造的に排除
+  - **Score Scope Separation**: discussion 3-layer scores ≠ prototyping scoringTrace を明確化。コピー禁止
+  - **Evaluation Rigor**: 3-tier rubric（existence_gate/quality_criteria/excellence_criteria）, L1/L2/L1-manual finding 分類
+  - **Asset Strategy**: free assets MUST, emoji/placeholder prohibition, WCAG 2.1 AA checklist
+  - **Reviewer Gate**: 6 full-harness-specific checks, Limitations section obligation
+  - **QFAI-PROT-290~294**: 5 新規 validator rules（iteration integrity）。taxonomy range 281-294 に拡張
+
+### Traceability Chain (v1.7.14 Full-Harness additions)
+
+```text
+REQ-0034 → US-0012-0022 → AC-0012-0027 → BR-0012-0024, BR-0012-0031 → DR-0012-0006
+REQ-0035 → US-0012-0023 → AC-0012-0028 → BR-0012-0025 → DR-0012-0006, DR-0012-0009
+REQ-0036 → US-0012-0024 → AC-0012-0029 → BR-0012-0026 → DR-0012-0007
+REQ-0037 → US-0012-0022 → AC-0012-0030 → BR-0012-0027 → DR-0012-0008
+REQ-0038 → US-0012-0022 → AC-0012-0031 → BR-0012-0028
+REQ-0039 → US-0012-0022 → AC-0012-0032 → BR-0012-0029
+REQ-0040 → US-0012-0025 → AC-0012-0033 → BR-0012-0030
+```
+
+### Modified Skill/Steering Files (v1.7.14 Full-Harness)
+
+| File | Change |
+| --- | --- |
+| `assets/init/.qfai/assistant/skills/qfai-prototyping/SKILL.md` | +200行: Iteration Protocol, Evaluation Rigor, Asset Strategy, Reviewer Gate 追加 |
+| `assets/init/.qfai/assistant/skills/qfai-discussion/SKILL.md` | Score Scope 注記 + iteration_expectations ブロック追加 |
+| `assets/init/.qfai/assistant/skills/qfai-discussion/templates/uiux/23_design_eval_aggregate.md` | Score Scope Limitation セクション追加 |
+| `assets/init/.qfai/assistant/steering/review-profiles.yml` | full-harness プロファイル追加 |
+| `assets/init/.qfai/assistant/steering/agent-routing.yml` | prototyping evidence phase に product-experience-architect 追加 |
+| `core/validators/prototypingEvidence.ts` | QFAI-PROT-290~294 追加（+104行） |
+| `cli/commands/validate.ts` | PROT-290~294 description 追加 |
+| `tests/core/prototypingEvidence.test.ts` | 5 test cases 追加（+270行） |
+| `tests/core/issueCodeUniqueness.test.ts` | TAXONOMY_RANGE_MAX 283→294, fullHarness range 281→294 |

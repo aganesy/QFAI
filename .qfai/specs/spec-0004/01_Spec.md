@@ -60,6 +60,7 @@
 - REQ-0120: IssueCategory 簡素化 (v1.7.14, DR-0108) — IssueCategory union type から "compatibility" を削除し、"canonical" | "change" のみとする。全バリデータの category 出力を "canonical" に統一
 - REQ-0121: Strict Classification Validation (v1.7.14, DR-0111) — classification.ts バリデータが分類ブロック内の意味的矛盾（ui_bearing=false + 空でない secondary_surfaces、ui_bearing=true + primary_surface=non-ui、invalid/duplicate secondary surfaces 等）を hard error として検出
 - REQ-0122: Strategy Semantic Validation (v1.7.14, DR-0114) — strategy.ts バリデータが canonical strategy decision enum を強制。selection_required=true → ≥2 candidates + non-"none" decision、selection_required=false → decision="none" の状態機械を検証。invalid surface/decision/candidates を reject
+- REQ-0123: Full-Harness Iteration Integrity Validators QFAI-PROT-290~294 (v1.7.14) — prototypingEvidence.ts に 5 つの full-harness iteration integrity validator を追加: PROT-290（iterationCount=1 + converged warning）、PROT-291（scoringTrace count mismatch warning）、PROT-292（terminationReason cross-check warning）、PROT-293（maxIterations 超過 warning）、PROT-294（non-increasing scoringTrace info）。fullHarness validator taxonomy reserved range: 281-294
 
 ## Entry points
 

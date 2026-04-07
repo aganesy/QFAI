@@ -172,3 +172,11 @@
   - **selected anchor wording**: "selected direction" → "selected anchor" に全アーティファクトで統一。エラーコード DDH-SELECTED-DIRECTION → DDH-SELECTED-ANCHOR に変更
   - **threeLayer 4-axis severity**: 旧 4-axis 評価テンプレート検出時の severity を warning → error に昇格
   - **"translation quality" → "evidence traceability"**: ソーステンプレートの用語正規化
+
+### v1.7.14 Score Scope Separation (2026-04-08)
+
+- adopted: REQ-0027（Score Scope Separation）追加
+- rationale: full-harness インシデントレポートに基づく改善:
+  - 3-layer evaluation aggregate scores が prototyping scoringTrace にそのままコピーされるケースが確認された
+  - `23_design_eval_aggregate.md` テンプレートに Score Scope Limitation セクションを追加
+  - discussion scores は design direction quality（which option）、prototyping scores は implementation fidelity（how well）として明確に分離

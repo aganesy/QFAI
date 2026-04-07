@@ -73,6 +73,7 @@
 - REQ-0016: prototyping.yaml 生成 — discussion-pack 完了時に prototyping.yaml（recommended_mode, rationale, allowed_modes, surface）を生成する。15 markdown ファイルとともに必須サイドアーティファクトとして扱う
 - REQ-0017: Classification-Aware prototyping.yaml Requiredness (v1.7.14, DR-0110) — prototyping.yaml の必須性を classification に基づいて判定。ui_bearing=true のパックのみ prototyping.yaml を必須とし、ui_bearing=false（non-UI）のパックは prototyping.yaml 不要
 - REQ-0018: Namespaced-Only Schema Mandatory (v1.7.14, DR-0112) — prototyping.yaml 生成時は必ず `prototyping:` namespaced block を使用。legacy top-level keys（recommended_mode 等をルートに配置）は生成禁止
+- REQ-0019: Score Scope Annotation (v1.7.14) — discussion 3-layer scores は design direction quality を測定する旨を SKILL.md に明記。prototyping.yaml 生成時に `recommended_mode: full-harness` の場合は `iteration_expectations` ブロック（min_iterations, evaluation_axes_source, score_scope, note）を追加し、スコア射程の違いを明示
 
 ## Entry points
 

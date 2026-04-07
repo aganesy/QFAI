@@ -85,3 +85,19 @@ As a QFAI developer, I want the recommended_mode ∈ allowed_modes invariant to 
 ## US-0012-0021: Classification-Aware Evidence Obligations
 
 As a QFAI developer, I want obligation derivation to distinguish "discussion UI-bearing" (includes cli) from "visual/browser evidence required" (excludes cli), so that cli-surface packs are not incorrectly required to produce browser screenshots or Playwright-based evidence.
+
+## US-0012-0022: Full-Harness Iteration Protocol
+
+As a developer, I want full-harness mode to execute a multi-iteration improvement loop (Evaluate→Identify→Fix→Re-evaluate) with configurable termination conditions (converged/max-iterations/plateau/manual-stop), so that prototyping quality is iteratively refined rather than accepted in a single pass.
+
+## US-0012-0023: Independent Evaluator Panel
+
+As a developer, I want full-harness evaluation to be performed by an independent 3-layer panel (product-surface-reviewer for design quality, product-experience-architect for product experience, qa-gatekeeper for process audit), so that self-evaluation bias is structurally prevented.
+
+## US-0012-0024: Score Scope Separation
+
+As a developer, I want discussion 3-layer scores (design direction quality) to be explicitly separated from prototyping scoringTrace (implementation fidelity), so that scores from different evaluation contexts are never confused or copied between phases.
+
+## US-0012-0025: Full-Harness Validator Rules
+
+As a QFAI developer, I want prototypingEvidence.ts to include QFAI-PROT-290~294 validator rules checking iteration integrity (single-iteration convergence, scoringTrace count, terminationReason cross-check, maxIterations cap, score progression), so that full-harness evidence quality is automatically verified.

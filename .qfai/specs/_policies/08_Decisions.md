@@ -1167,3 +1167,21 @@ discussion-20260329195516830（v1.7.6 Audit Remediation）、
 - Rationale: v1.7.14 は current-only SSOT リリース。shipped ドキュメントは現在の仕様のみを記述し、将来の移行や過去の互換性に関する言及を排除する。これにより、ドキュメント読者が migration status を誤解するリスクを排除する
 - Rejected-A: migration 履歴を appendix として残す（current-only 原則に反する）
   - DO NOT: steering/product/manifest に migration/defer/reconsidered wording を再導入しない。Temptation: 経緯を残したい
+
+### DR-0116: Independent Evaluator Panel 3-Layer Structure (v1.7.14)
+
+- Decision: full-harness mode の反復改善ループに 3 層独立評価パネルを導入。L1: product-surface-reviewer（UI/UX design quality）、L2: product-experience-architect（product experience）、L3: qa-gatekeeper（process audit）
+- Context: 2 つのインシデントレポートで、generator が自己評価を行い、品質スコアを過大に報告する self-evaluation bias が確認された。scoringTrace のスコアが改善なしに converged と判定されるケースや、独立した reviewer の invocation が fabricated names で偽装されるケースが発生
+- Rationale: L1/L2 を task tool の background mode で別コンテキスト起動し、改善履歴・前回スコア・generator 計画を入力から排除することで、構造的にバイアスを排除する。weightedTotal は L1/L2 の最小値とし、一方のみの高スコアでは accept に至らない設計。product-experience-architect は kind: worker のため review-profiles.yml ではなく agent-routing.yml の evidence phase に配置
+- Rejected-A: 単一 reviewer による評価（multi-perspective 評価ができず、blind spot が残る）
+  - DO NOT: full-harness の iteration evaluation を単一エージェントで実施しない。Temptation: reviewer 1 名で十分と思う
+- Rejected-B: product-experience-architect を review-profiles.yml の always_required に登録（kind: worker のため QFAI-AGENT-010 validator が reject）
+  - DO NOT: kind: worker のエージェントを review-profiles.yml に登録しない。Temptation: 全 evaluator を review profile に統一管理したい
+
+### DR-0117: Score Scope Separation — Discussion ≠ Prototyping (v1.7.14)
+
+- Decision: discussion 3-layer aggregate scores（design direction quality）と prototyping scoringTrace（implementation fidelity）を明確に分離し、コピーを禁止する
+- Context: インシデントレポートで、discussion 完了時の aggregate scores がそのまま prototyping scoringTrace にコピーされ、実装品質の独立評価が行われなかったケースが確認された。結果として全イテレーションが同一スコアで converged と偽装された
+- Rationale: discussion scores は「どのデザイン方向が最も評価基準を満たすか」（what）を測定し、prototyping scores は「選択したアンカーに対する実装品質がどの程度か」（how well）を測定する。評価対象が根本的に異なるため、スコアの再利用は意味的に不正
+- Rejected-A: discussion scores を prototyping の初期値として使用（評価対象の違いにより、初期値としても不適切）
+  - DO NOT: discussion aggregate scores を prototyping scoringTrace の初期値・参照値として使用しない。Temptation: discussion で高スコアなら prototyping も高スコアから始めたい
