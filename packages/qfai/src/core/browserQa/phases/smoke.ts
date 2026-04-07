@@ -4,7 +4,8 @@ import type { BrowserQaInput, BrowserQaPhaseResult } from "../types.js";
 
 export function runSmokePhase(input: BrowserQaInput): Promise<BrowserQaPhaseResult> {
   const html = input.htmlContent ?? "";
-  if (!html.trim()) {
+  const hasTargetUrl = typeof input.targetUrl === "string" && input.targetUrl.trim().length > 0;
+  if (!html.trim() && !hasTargetUrl) {
     return Promise.resolve({
       phase: "smoke",
       status: "failed",

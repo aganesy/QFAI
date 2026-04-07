@@ -4,6 +4,20 @@ import type { BrowserQaInput, BrowserQaPhaseResult } from "../types.js";
 
 export function runVisualPhase(input: BrowserQaInput): Promise<BrowserQaPhaseResult> {
   const html = input.htmlContent ?? "";
+
+  // Content-based visual checks require htmlContent; skip when only targetUrl is provided.
+  if (!html.trim()) {
+    return Promise.resolve({
+      phase: "visual",
+      status: "skipped",
+      findings: [],
+      repair_suggestions: [],
+      evidence_refs: [],
+      checks_performed: [],
+      skippedReason: "htmlContent not provided; visual content checks cannot run",
+    });
+  }
+
   const findings = [];
   const checksPerformed = ["checked inline style density", "checked viewport meta tag"];
 

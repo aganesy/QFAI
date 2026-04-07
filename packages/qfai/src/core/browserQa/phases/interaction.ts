@@ -4,6 +4,20 @@ import type { BrowserQaInput, BrowserQaPhaseResult } from "../types.js";
 
 export function runInteractionPhase(input: BrowserQaInput): Promise<BrowserQaPhaseResult> {
   const html = input.htmlContent ?? "";
+
+  // DOM-based checks require htmlContent; skip when only targetUrl is provided.
+  if (!html.trim()) {
+    return Promise.resolve({
+      phase: "interaction",
+      status: "skipped",
+      findings: [],
+      repair_suggestions: [],
+      evidence_refs: [],
+      checks_performed: [],
+      skippedReason: "htmlContent not provided; DOM-based interaction checks cannot run",
+    });
+  }
+
   const findings = [];
   const checksPerformed = [
     "checked forms for action wiring",
