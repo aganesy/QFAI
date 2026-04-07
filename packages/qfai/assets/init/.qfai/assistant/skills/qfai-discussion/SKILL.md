@@ -134,6 +134,7 @@ Every major artifact in this stage MUST include this table schema:
     - `uiux/11_design_taste_interview.md` — design taste interview (10 sections)
     - `04_Sources.md#Trend Scan` — trend scan with required category coverage and per-entry completeness
     - `uiux/20-24` — 3-layer evaluation family (invariant, trend-derived, product-specific, aggregate, dynamic overrides)
+      - **Score Scope**: 3-layer evaluation scores measure **design direction quality** (which option best satisfies evaluation criteria). These scores are NOT implementation quality scores. When prototyping.yaml recommends `full-harness`, the prototyping skill will independently evaluate **implementation fidelity** using different scoring criteria. Do not reuse 3-layer aggregate scores as prototyping iteration scores.
     - `uiux/30_option_comparison.md` — option comparison
     - `uiux/31_selected_anchor_screen.md` — selected anchor screen (selected anchor single source of truth)
     - `uiux/40_screen_contracts.md` — screen contracts (strong schema)
@@ -283,6 +284,18 @@ Produce a unified 15-file discussion pack with explicit decisions, requirements,
 - `low-cost`: rough draft or strong cost priority
 - `standard`: normal customer-presentable path
 - `full-harness`: only when the premium runtime loop is justified
+
+  When `recommended_mode: full-harness`, add an `iteration_expectations` block to `prototyping.yaml`:
+
+  ```yaml
+  prototyping:
+    recommended_mode: full-harness
+    iteration_expectations:
+      min_iterations: 5
+      evaluation_axes_source: "uiux/20-23 (3-layer evaluation family)"
+      score_scope: "implementation_fidelity"
+      note: "Discussion 3-layer scores measure design-direction quality. Prototyping scores measure implementation fidelity. Do not copy."
+  ```
 
 18. Request review and record Reviewer result.
 

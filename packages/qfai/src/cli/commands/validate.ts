@@ -375,6 +375,13 @@ const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-PROT-282":
     "fullHarness.terminationReason is invalid; must be converged|max-iterations|plateau|manual-stop.",
   "QFAI-PROT-283": "fullHarness.scoringTrace must contain at least one entry.",
+  "QFAI-PROT-290":
+    "fullHarness.iterationCount is 1 with converged; single-iteration convergence is suspicious.",
+  "QFAI-PROT-291": "fullHarness.scoringTrace entry count does not match iterationCount.",
+  "QFAI-PROT-292":
+    "terminationReason is max-iterations but iterationCount is below configured maxIterations.",
+  "QFAI-PROT-293": "fullHarness.iterationCount exceeds configured maxIterations.",
+  "QFAI-PROT-294": "fullHarness.scoringTrace shows no improvement across iterations.",
   "QFAI-CONTRACT-030":
     "Contract index references must match declared contract IDs in .qfai/contracts/**.",
 };

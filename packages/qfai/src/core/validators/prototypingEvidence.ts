@@ -262,7 +262,7 @@ export async function validatePrototypingEvidence(
 
   const issues: Issue[] = [];
   issues.push(...validateSurface(surfaceResult, evidenceJsonPath));
-  issues.push(...validateModeMetadata(parsed.value, evidenceJsonPath));
+  issues.push(...validateModeMetadata(parsed.value, evidenceJsonPath, config));
   if (surfaceResult.surface) {
     const obligations = derivePrototypingObligations({
       surface: surfaceResult.surface,
@@ -1173,7 +1173,11 @@ function parseEvidence(
   };
 }
 
-function validateModeMetadata(evidence: PrototypingEvidence, evidenceJsonPath: string): Issue[] {
+function validateModeMetadata(
+  evidence: PrototypingEvidence,
+  evidenceJsonPath: string,
+  config: QfaiConfig,
+): Issue[] {
   const issues: Issue[] = [];
 
   if (!evidence.mode) {
@@ -1334,6 +1338,102 @@ function validateModeMetadata(evidence: PrototypingEvidence, evidenceJsonPath: s
           "reviewerSignoff に reviewer / timestamp / status を記録してください。",
         ),
       );
+    }
+
+    // QFAI-PROT-290: iterationCount == 1 with converged is suspicious
+    if (
+      evidence.fullHarness.iterationCount === 1 &&
+      evidence.fullHarness.terminationReason === "converged"
+    ) {
+      issues.push(
+        issue(
+          "QFAI-PROT-290",
+          "fullHarness.iterationCount is 1 with terminationReason 'converged'. Full-harness is an iterative loop; single-iteration convergence is suspicious.",
+          "warning",
+          evidenceJsonPath,
+          "prototypingEvidence.fullHarnessSingleIterationConverged",
+          undefined,
+          "canonical",
+          "full-harness は反復改善ループです。1回で converged は通常ありえません。iterationCount を確認してください。",
+        ),
+      );
+    }
+
+    // QFAI-PROT-291: scoringTrace length should match iterationCount
+    if (evidence.fullHarness.scoringTrace.length !== evidence.fullHarness.iterationCount) {
+      issues.push(
+        issue(
+          "QFAI-PROT-291",
+          `fullHarness.scoringTrace has ${evidence.fullHarness.scoringTrace.length} entries but iterationCount is ${evidence.fullHarness.iterationCount}.`,
+          "warning",
+          evidenceJsonPath,
+          "prototypingEvidence.fullHarnessScoringTraceCountMismatch",
+          undefined,
+          "canonical",
+          "scoringTrace のエントリ数と iterationCount を一致させてください。",
+        ),
+      );
+    }
+
+    // QFAI-PROT-292: terminationReason / iterationCount cross-check
+    if (
+      evidence.fullHarness.terminationReason === "max-iterations" &&
+      config.prototyping?.calibration?.maxIterations !== undefined &&
+      evidence.fullHarness.iterationCount < config.prototyping.calibration.maxIterations
+    ) {
+      issues.push(
+        issue(
+          "QFAI-PROT-292",
+          `terminationReason is 'max-iterations' but iterationCount (${evidence.fullHarness.iterationCount}) < configured maxIterations (${config.prototyping.calibration.maxIterations}).`,
+          "warning",
+          evidenceJsonPath,
+          "prototypingEvidence.fullHarnessTerminationReasonMismatch",
+          undefined,
+          "canonical",
+          "terminationReason と iterationCount の整合性を確認してください。",
+        ),
+      );
+    }
+
+    // QFAI-PROT-293: calibration maxIterations consistency
+    if (
+      config.prototyping?.calibration?.maxIterations !== undefined &&
+      evidence.fullHarness.iterationCount > config.prototyping.calibration.maxIterations
+    ) {
+      issues.push(
+        issue(
+          "QFAI-PROT-293",
+          `fullHarness.iterationCount (${evidence.fullHarness.iterationCount}) exceeds configured maxIterations (${config.prototyping.calibration.maxIterations}).`,
+          "warning",
+          evidenceJsonPath,
+          "prototypingEvidence.fullHarnessExceedsMaxIterations",
+          undefined,
+          "canonical",
+          "iterationCount が maxIterations を超えています。設定を確認してください。",
+        ),
+      );
+    }
+
+    // QFAI-PROT-294: scoringTrace improvement progression (info)
+    if (evidence.fullHarness.scoringTrace.length >= 2) {
+      const scores = evidence.fullHarness.scoringTrace.map((s) => s.weightedTotal);
+      const isNonProgressing = scores.every(
+        (s, i) => i === 0 || s <= (scores[i - 1] ?? s),
+      );
+      if (isNonProgressing) {
+        issues.push(
+          issue(
+            "QFAI-PROT-294",
+            "fullHarness.scoringTrace shows no improvement across iterations. Scores are non-increasing.",
+            "info",
+            evidenceJsonPath,
+            "prototypingEvidence.fullHarnessNoProgression",
+            undefined,
+            "canonical",
+            "scoringTrace のスコアが改善していません。反復改善ループが機能しているか確認してください。",
+          ),
+        );
+      }
     }
   }
 

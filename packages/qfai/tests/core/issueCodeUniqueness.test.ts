@@ -51,7 +51,7 @@ function extractCodesWithRules(content: string): Map<string, Set<string>> {
 // Codes outside this range (101-177) may intentionally share a code across related sub-rules
 // within the same validator category.
 const TAXONOMY_RANGE_MIN = 231;
-const TAXONOMY_RANGE_MAX = 283; // Note: browser QA bundle taxonomy codes 273-276 are also in range
+const TAXONOMY_RANGE_MAX = 294; // Note: browser QA bundle taxonomy codes 273-276, fullHarness iteration codes 290-294 are also in range
 
 // Some codes intentionally serve the same semantic purpose from multiple validation call sites.
 // These are allowed to map to more than one rule name as long as the rules share the same category.
@@ -134,7 +134,12 @@ describe("issue code uniqueness", () => {
         if (
           lines[j].includes("fullHarnessRequired") ||
           lines[j].includes("fullHarnessTerminationReason") ||
-          lines[j].includes("fullHarnessScoringTrace")
+          lines[j].includes("fullHarnessScoringTrace") ||
+          lines[j].includes("fullHarnessSingleIteration") ||
+          lines[j].includes("fullHarnessScoringTraceCount") ||
+          lines[j].includes("fullHarnessTerminationReasonMismatch") ||
+          lines[j].includes("fullHarnessExceedsMaxIterations") ||
+          lines[j].includes("fullHarnessNoProgression")
         ) {
           context = "fullHarness";
           break;
@@ -157,7 +162,7 @@ describe("issue code uniqueness", () => {
     for (const code of fullHarnessCodes) {
       const num = parseInt(code.replace("QFAI-PROT-", ""), 10);
       expect(num).toBeGreaterThanOrEqual(281);
-      expect(num).toBeLessThanOrEqual(283);
+      expect(num).toBeLessThanOrEqual(294);
     }
   });
 
@@ -250,7 +255,7 @@ describe("issue code uniqueness", () => {
       { label: "browser QA + fullHarness signoff + calibration", min: 261, max: 266 },
       { label: "uiFidelity truthfulization", min: 270, max: 272 },
       { label: "browser QA bundle taxonomy", min: 273, max: 276 },
-      { label: "fullHarness", min: 281, max: 283 },
+      { label: "fullHarness", min: 281, max: 294 },
     ];
 
     const protCodes = [...allCodes]
