@@ -199,12 +199,12 @@
 | Diff Context | evidenceファイルに記録される差分検出の実行コンテキスト（last_commit_sha, last_run_timestamp, changed_specs, execution_mode） | evidence | spec-0011 |
 | Canonical Validator | production-path validator registered in `validate.ts` pipeline. Distinguished from legacy/compatibility validators by `category: "canonical"` in emitted issues. |
 | Existence-Based Precedence (D-5) | mode resolution rule where the mere existence of the `prototyping` key in `prototyping.yaml` makes the namespaced contract authoritative, regardless of value validity. |
-| IssueCategory | type discriminator for validator findings — `"canonical"` (production contract violations), `"compatibility"` (migration/legacy warnings), `"change"` (change-related findings). |
-| Legacy Validator | validator in `validators/legacy/` namespace, excluded from production `validate.ts` pipeline. Available for migration tooling only. |
+| IssueCategory | type discriminator for validator findings — `"canonical"` (production contract violations), `"change"` (change-related findings). v1.7.14: `"compatibility"` は削除済み（DR-0108）。 |
+| Legacy Validator | [REMOVED v1.7.14] `validators/legacy/` namespace は v1.7.14 で完全削除済み（DR-0115）。 |
 | prototyping.yaml | required side artifact in discussion-pack alongside 15 markdown files. Contains `prototyping.recommended_mode`, `rationale`, `allowed_modes`, `surface` fields. |
 | Prototyping Mode | one of `low-cost` (static only), `standard` (default), `full-harness` (opt-in runtime-heavy). Resolved via precedence: user-specified > discussion recommendation > system default. |
 | Recommendation Artifact | `prototyping.yaml` file in discussion-pack. Status: valid/invalid/missing/no-pack. Resolved by `resolveLatestRecommendationArtifact()`. |
-| runCanonicalUixValidators | production-path UIX validator entrypoint replacing `runAllUixValidators`. Runs 12 modular validators in parallel from `uix/canonical.ts`. |
+| runCanonicalUixValidators | production-path UIX validator entrypoint replacing `runAllUixValidators`. Runs 11 modular validators in parallel from `uix/canonical.ts`（v1.7.14: rollout.ts 削除により 12→11）。 |
 | Browser QA 4-Phase Model | browser-level QA を smoke → interaction → visual → accessibility の 4 フェーズで順次実行するモデル。`browserQa/runner.ts` が orchestrate し `BrowserQaRunResult` を集約。|
 | Evidence Bundle | render capture + Browser QA 結果 + prototyping summary を `.qfai/evidence/` に JSON バンドルとして永続化する単位。`evidence/bundleWriter.ts` が生成。|
 | UI Fidelity Builder | render evidence + Browser QA 結果から UI fidelity artifact を合成するモジュール。required evidence 欠落時は QFAI-PROT-270/271/272 を emit。|

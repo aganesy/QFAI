@@ -211,18 +211,18 @@ Verify:
 | 3    | Set phase1ReleaseDate to 40 days ago             | Config updated              |
 | 4    | Run validators again                             | Error remains as error      |
 
-## TC-0004-0029: QFAI-AUD-021 Selected Direction Check
+## TC-0004-0029: QFAI-AUD-021 Selected Anchor Check
 
 - EX-Ref: EX-0004-0023
 - AC-Refs: AC-0004-0016
 - Type: normal
 
-| Step | Action                                                           | Expected                   |
-| ---- | ---------------------------------------------------------------- | -------------------------- |
-| 1    | Create 31_selected_anchor_screen.md with `## Selected Direction` | File ready                 |
-| 2    | Run design audit validators                                      | No QFAI-AUD-021            |
-| 3    | Remove `## Selected Direction`                                   | Section removed            |
-| 4    | Run audit validators                                             | QFAI-AUD-021 error emitted |
+| Step | Action                                                               | Expected                   |
+| ---- | -------------------------------------------------------------------- | -------------------------- |
+| 1    | Create 31_selected_anchor_screen.md with selected_option field       | File ready                 |
+| 2    | Run design audit validators                                          | No QFAI-AUD-021            |
+| 3    | Remove selected_option field                                         | Field removed              |
+| 4    | Run audit validators                                                 | QFAI-AUD-021 error emitted |
 
 ## TC-0004-0030: Canonical Barrel No Legacy Re-export
 

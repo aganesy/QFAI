@@ -26,8 +26,8 @@
   - Migration/upgrade support (old/intermediate/final version paths)
   - Feature maturity vocabulary normalization (from spec-0037)
   - Waiver handling: waivers for warning/info only, error waivers rejected
-  - Canonical UIX validators (runCanonicalUixValidators — 12 modular validators)
-  - Legacy compatibility path (validators/legacy/ namespace, migration tooling only)
+  - Canonical UIX validators (runCanonicalUixValidators — 11 modular validators, v1.7.14: rollout.ts 削除により 12→11)
+  - [REMOVED v1.7.14] Legacy compatibility path — validators/legacy/ namespace は完全削除済み（DR-0115）
 - Out:
   - Incremental/diff-only verification (DR-0007: verify is always full-scan)
   - Spec artifact authoring (belongs to `/qfai-sdd`)
@@ -67,12 +67,12 @@
 - REQ-0010: Migration support -- old/intermediate/final version detection and upgrade guidance
 - REQ-0011: Feature maturity normalization -- canonical vocabulary across README/CHANGELOG/steering/source
 - REQ-0012: Waiver handling -- warning/info waivers accepted, error waivers rejected
-- REQ-0013: Canonical UIX Validators — verify は runCanonicalUixValidators() を使用。12 modular validators:
+- REQ-0013: Canonical UIX Validators — verify は runCanonicalUixValidators() を使用。11 modular validators（v1.7.14: rollout.ts 削除により 12→11）:
   canonical.ts（aggregator）, classification.ts（明示的 UI 分類検証）, foundation.ts（サイドカー存在検証）,
-  comparisonValidator.ts（option comparison + selected direction）, oqClosure.ts（OQ 参照解決）, rollout.ts（migration 検出）,
+  comparisonValidator.ts（option comparison + selected anchor）, oqClosure.ts（OQ 参照解決）,
   scoringReady.ts（scoring schema 完全性）, strategy.ts（strategy artifact 完全性）, screenContract.ts（screen contract schema）,
   trend.ts（trend research 検証）, threeLayer.ts（3-layer evaluation 完全性）を canonical.ts が順次実行
-- REQ-0014: Legacy Compatibility Path — legacy/ddpCompatibility.ts と legacy/uixCompatibility.ts は migration tooling 専用。verify の production path には含まれない。IssueCategory "compatibility" で区別
+- REQ-0014: [REMOVED v1.7.14] Legacy Compatibility Path — v1.7.14 で legacy/ ディレクトリおよび IssueCategory "compatibility" は完全削除済み（DR-0108, DR-0115）
 
 ## Entry points
 

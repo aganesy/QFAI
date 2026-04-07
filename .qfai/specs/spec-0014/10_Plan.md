@@ -47,7 +47,7 @@
 
 ## v1.7.13 Implementation Notes
 
-- Canonical UIX validators: verify uses runCanonicalUixValidators() (12 modular validators)
-- Legacy isolation: `packages/qfai/src/core/validators/legacy/` — ddpCompatibility.ts, uixCompatibility.ts
-- Rollout ratchet: `packages/qfai/src/core/validators/uix/rollout.ts` — phase-1 ratchet within 30 days of release
-- Status: implemented (v1.7.13 canonical/legacy separation)
+- Canonical UIX validators: verify uses runCanonicalUixValidators() (11 modular validators, v1.7.14: rollout.ts 削除により 12→11)
+- [REMOVED v1.7.14] Legacy isolation: `validators/legacy/` ディレクトリは v1.7.14 で完全削除（DR-0115）
+- [REMOVED v1.7.14] Rollout ratchet: `uix/rollout.ts` は v1.7.14 で完全削除（DR-0115）
+- Status: implemented (v1.7.13 canonical/legacy separation → v1.7.14 legacy infrastructure 完全削除)

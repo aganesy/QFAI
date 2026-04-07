@@ -95,18 +95,18 @@
 | 1    | Create prototyping.yaml with missing required fields | File created                             |
 | 2    | Run validatePrototypingRecommendation()              | QFAI-PROT-153/154/155/156 errors emitted |
 
-## TC-0002-0044: DDH Validator Selected Direction Source
+## TC-0002-0044: DDH Validator Selected Anchor Source
 
 - EX-Ref: EX-0002-0042
 - AC-Refs: AC-0002-0024
 - Type: normal
 
-| Step | Action                                                                                       | Expected                                     |
-| ---- | -------------------------------------------------------------------------------------------- | -------------------------------------------- |
-| 1    | Create uiux/31_selected_anchor_screen.md with `## Selected Direction` + `Selected: Option A` | File ready                                   |
-| 2    | Run discussion design hardening validators                                                   | UIX-VAL-DDH-SELECTED-DIRECTION passes        |
-| 3    | Remove `## Selected Direction` section                                                       | Section removed                              |
-| 4    | Run validators again                                                                         | UIX-VAL-DDH-SELECTED-DIRECTION error emitted |
+| Step | Action                                                                                   | Expected                                 |
+| ---- | ---------------------------------------------------------------------------------------- | ---------------------------------------- |
+| 1    | Create uiux/31_selected_anchor_screen.md with `## Selected Anchor` + `Selected: Option A` | File ready                               |
+| 2    | Run discussion design hardening validators                                               | UIX-VAL-DDH-SELECTED-ANCHOR passes       |
+| 3    | Remove `## Selected Anchor` section                                                      | Section removed                          |
+| 4    | Run validators again                                                                     | UIX-VAL-DDH-SELECTED-ANCHOR error emitted |
 
 ## TC-0002-0045: Screen Contract Nested Bullet Parse
 
@@ -147,13 +147,13 @@
 | 3    | Replace with CSV format                                    | File updated                      |
 | 4    | Run validator again                                        | CSV parsed correctly              |
 
-## TC-0002-0048: Review Request Selected Direction
+## TC-0002-0048: Review Request Selected Anchor
 
 - EX-Ref: EX-0002-0046
 - AC-Refs: AC-0002-0024
 - Type: normal
 
-| Step | Action                                                | Expected   |
-| ---- | ----------------------------------------------------- | ---------- |
-| 1    | Create 14_Review-Request.md with "Selected Direction" | File ready |
-| 2    | Validate review request template                      | Pass       |
+| Step | Action                                              | Expected   |
+| ---- | --------------------------------------------------- | ---------- |
+| 1    | Create 14_Review-Request.md with "Selected Anchor"  | File ready |
+| 2    | Validate review request template                    | Pass       |

@@ -54,7 +54,7 @@
 - REQ-0114: IssueCategory "canonical" — 全新規 canonical validator が category: "canonical" を emit
 - REQ-0115: prototypingRecommendation バリデータ — prototyping.yaml schema validation を validate pipeline に登録
 - REQ-0116: DDP バリデータ除去 — validateDdpFields を production path から削除（legacy namespace に移動）
-- REQ-0117: 新規 UIX canonical バリデータ — 12 modular validators を production path に登録: canonical.ts（aggregator）, classification.ts, foundation.ts, comparisonValidator.ts, oqClosure.ts, rollout.ts, scoringReady.ts, strategy.ts, screenContract.ts, trend.ts, threeLayer.ts。canonical.ts が各バリデータを順次実行し Issue[] を集約
+- REQ-0117: 新規 UIX canonical バリデータ — 11 modular validators を production path に登録（v1.7.14: rollout.ts 削除により 12→11）: canonical.ts（aggregator）, classification.ts, foundation.ts, comparisonValidator.ts, oqClosure.ts, scoringReady.ts, strategy.ts, screenContract.ts, trend.ts, threeLayer.ts。canonical.ts が各バリデータを順次実行し Issue[] を集約
 - REQ-0118: Surface Type Detection Module — `detection/surfaceType.ts` が 01_Context.md の明示的分類ブロック（ui_bearing/primary_surface）を優先し、フォールバックとして surface_type フィールドを使用。非 UI プロジェクトでは UIX バリデータを安全にスキップ
 - REQ-0119: Legacy Validator 完全削除 (v1.7.14, DR-0115) — legacy/ ディレクトリ（ddpCompatibility.ts, uixCompatibility.ts, index.ts）、legacyStatusDir.ts、migration/formatDetection.ts、uix/rollout.ts を production ソースツリーから完全削除。migration tooling パスも廃止
 - REQ-0120: IssueCategory 簡素化 (v1.7.14, DR-0108) — IssueCategory union type から "compatibility" を削除し、"canonical" | "change" のみとする。全バリデータの category 出力を "canonical" に統一
