@@ -35,4 +35,4 @@
 ## Notes for Reviewer
 
 - notes_for_reviewer:
-  - Check that the chosen direction stays aligned with the anchor screen and screen contracts.
+  - Check that the selected anchor stays aligned with the anchor screen and screen contracts.
