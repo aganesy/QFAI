@@ -17,6 +17,8 @@ export function mapLoopStatusToExitReason(status: string): FullHarnessExitReason
       return "plateau";
     case "max-iterations":
       return "budget-exhausted";
+    case "manual-stop":
+      return "human-review-required";
     default:
       return "runtime-failure";
   }

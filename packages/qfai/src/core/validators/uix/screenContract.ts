@@ -239,6 +239,8 @@ export async function validateScreenContractSchema(
           `Rewrite ${screen.invalidInlineNestedFields.join(", ")} as nested canonical bullets in ${RELPATH}.`,
         ),
       );
+      // Skip nested-field checks for legacy-format screens to avoid duplicate noise
+      continue;
     }
 
     // Check required fields (dispatch to typed properties for nested fields)
