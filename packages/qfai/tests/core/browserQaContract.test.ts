@@ -71,7 +71,9 @@ describe("browser QA bundle contract", () => {
     expect(issues.length).toBeGreaterThan(0);
     expect(issues.some((i) => i.code === BROWSER_QA_ISSUE_CODES.findings)).toBe(true);
     const findingsIssue = issues.find((i) => i.code === BROWSER_QA_ISSUE_CODES.findings);
-    expect(findingsIssue?.message).toContain("summary/detail/severity/evidence_refs/repair_suggestions");
+    expect(findingsIssue?.message).toContain(
+      "summary/detail/severity/evidence_refs/repair_suggestions",
+    );
   });
 
   it("rejects executed/status contradiction with QFAI-PROT-274", () => {
