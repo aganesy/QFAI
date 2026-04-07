@@ -90,6 +90,25 @@ export async function runBrowserQaOrchestrated(
   const hasHtml = typeof input.htmlContent === "string" && input.htmlContent.trim().length > 0;
   const hasTargetUrl = typeof input.targetUrl === "string" && input.targetUrl.trim().length > 0;
   if (!hasHtml && !hasTargetUrl) {
+    // When browser QA is not required (standard/low-cost), missing input is a
+    // normal skip — not a smoke failure.
+    if (input.required === false) {
+      return {
+        phases: BROWSER_QA_PHASES.map((phase) => ({
+          phase,
+          status: "skipped" as const,
+          findings: [],
+          repair_suggestions: [],
+          evidence_refs: [],
+          checks_performed: [
+            "skipped Browser QA: input not provided and browserQa is not required for this mode",
+          ],
+          skippedReason: "Browser QA input not provided (not required)",
+        })),
+        provider: provider?.providerId ?? "qfai-builtin",
+        timestamp,
+      };
+    }
     const smoke = await runSmokePhase(input);
     return {
       phases: [

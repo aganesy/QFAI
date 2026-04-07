@@ -82,9 +82,8 @@ describe("browser QA bundle contract", () => {
       },
     });
 
-    // v1.7.14: executed=false + status=completed is not a contradiction;
-    // the contradiction code fires only when executed=true + status!=completed
-    expect(issues.some((i) => i.code === BROWSER_QA_ISSUE_CODES.contradiction)).toBe(false);
+    // executed=false + status=completed is a contradiction in both directions
+    expect(issues.some((i) => i.code === BROWSER_QA_ISSUE_CODES.contradiction)).toBe(true);
   });
 
   it("rejects executed=true with non-completed status via contradiction code", () => {

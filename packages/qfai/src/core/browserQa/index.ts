@@ -121,6 +121,17 @@ export function validateBrowserQaBundle(
     );
   }
 
+  if (browserQa.executed === false && browserQa.status === "completed") {
+    issues.push(
+      makeIssue(
+        BROWSER_QA_ISSUE_CODES.contradiction,
+        "`browserQa.executed=false` contradicts `status=completed`",
+        file,
+        rule,
+      ),
+    );
+  }
+
   if (browserQa.summary !== undefined) {
     if (!isRecord(browserQa.summary)) {
       issues.push(
