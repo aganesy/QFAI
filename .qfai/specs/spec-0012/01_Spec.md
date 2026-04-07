@@ -113,9 +113,11 @@
 - REQ-0035: Independent Evaluator Panel (v1.7.14) — full-harness の自己評価バイアスを防止するため、3 層独立評価パネルを導入。L1: product-surface-reviewer（UI/UX 品質）、L2: product-experience-architect（プロダクト体験）、L3: qa-gatekeeper（プロセス監査）。L1/L2 は `task` tool の `background` mode で個別コンテキスト起動必須。イテレーションの weightedTotal は L1/L2 の最小値
 - REQ-0036: Score Scope Separation (v1.7.14) — discussion 3-layer scores（design direction quality）と prototyping scoringTrace（implementation fidelity）を明確に分離。discussion aggregate scores の scoringTrace へのコピーを禁止。SKILL.md と aggregate テンプレートに score scope limitation を明記
 - REQ-0037: Evaluation Rigor Rules (v1.7.14) — 3-tier rubric（existence_gate 0-0.3, quality_criteria 0.3-0.7, excellence_criteria 0.7-1.0）を全評価軸に義務化。L1/L2/L1-manual の finding 分類体系。Lighthouse automated gate（SHOULD: scores <70 = L1 finding）
-- REQ-0038: Asset Acquisition Strategy (v1.7.14) — full-harness mode で professional-quality visual assets を必須化。free asset sources MUST, emoji prohibition（U+1F000–U+1FAFF, U+2600–U+27BF）, placeholder prohibition, accessibility checklist（WCAG 2.1 AA）, trust signal checklist（SHOULD）, dev server management protocol
+- REQ-0038: Asset Acquisition Strategy (v1.7.14) — full-harness mode で professional-quality visual assets を必須化。free asset sources MUST, emoji prohibition（U+1F000–U+1FAFF, U+2600–U+27BF）, placeholder prohibition,
+  accessibility checklist（WCAG 2.1 AA）, trust signal checklist（SHOULD）, dev server management protocol
 - REQ-0039: Reviewer Gate Strengthening (v1.7.14) — full-harness 専用の 6 項目検証（iterationCount>1, scoringTrace count 一致, score progression, terminationReason 整合, 独立評価者実行確認, limitations セクション存在）。Limitations section の full-harness MUST 義務化
-- REQ-0040: Full-Harness Validator Rules QFAI-PROT-290~294 (v1.7.14) — 5 つの新規 validator rule を prototypingEvidence.ts に追加。PROT-290（iterationCount=1+converged warning）、PROT-291（scoringTrace count mismatch warning）、PROT-292（terminationReason cross-check warning）、PROT-293（maxIterations 超過 warning）、PROT-294（non-increasing scoringTrace info）
+- REQ-0040: Full-Harness Validator Rules QFAI-PROT-290~294 (v1.7.14) — 5 つの新規 validator rule を prototypingEvidence.ts に追加。PROT-290（iterationCount=1+converged warning）、PROT-291（scoringTrace count mismatch warning）、
+  PROT-292（terminationReason cross-check warning）、PROT-293（maxIterations 超過 warning）、PROT-294（non-increasing scoringTrace info）
 
 ## Entry points
 

@@ -100,4 +100,6 @@ As a developer, I want discussion 3-layer scores (design direction quality) to b
 
 ## US-0012-0025: Full-Harness Validator Rules
 
-As a QFAI developer, I want prototypingEvidence.ts to include QFAI-PROT-290~294 validator rules checking iteration integrity (single-iteration convergence, scoringTrace count, terminationReason cross-check, maxIterations cap, score progression), so that full-harness evidence quality is automatically verified.
+As a QFAI developer, I want prototypingEvidence.ts to include QFAI-PROT-290~294 validator rules checking iteration integrity
+(single-iteration convergence, scoringTrace count, terminationReason cross-check, maxIterations cap, score progression),
+so that full-harness evidence quality is automatically verified.

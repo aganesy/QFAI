@@ -110,7 +110,8 @@ Given full-harness mode, when the iteration protocol runs, then each iteration e
 
 ## AC-0012-0028: Independent Evaluator Invocation
 
-Given full-harness mode, when evaluation is performed, then product-surface-reviewer and product-experience-architect are launched via `task` tool in `background` mode with separate contexts receiving only screenshots/HTML snapshots and evaluation axis definitions (no improvement history or previous scores).
+Given full-harness mode, when evaluation is performed, then product-surface-reviewer and product-experience-architect are launched via `task` tool in `background` mode
+with separate contexts receiving only screenshots/HTML snapshots and evaluation axis definitions (no improvement history or previous scores).
 
 ## AC-0012-0029: Score Scope Enforcement
 
@@ -122,7 +123,8 @@ Given full-harness evaluation, when an evaluator scores an axis, then the score 
 
 ## AC-0012-0031: Asset Quality Gates
 
-Given full-harness mode with surface=web, when final output is evaluated, then no emoji characters (U+1F000–U+1FAFF, U+2600–U+27BF) appear as decorative elements, no placeholder content (lorem ipsum, placeholder.com images) exists, and color contrast ratios meet WCAG 2.1 AA (≥4.5:1 normal text, ≥3:1 large text).
+Given full-harness mode with surface=web, when final output is evaluated, then no emoji characters (U+1F000–U+1FAFF, U+2600–U+27BF) appear as decorative elements,
+no placeholder content (lorem ipsum, placeholder.com images) exists, and color contrast ratios meet WCAG 2.1 AA (≥4.5:1 normal text, ≥3:1 large text).
 
 ## AC-0012-0032: Reviewer Gate Full-Harness Checks
 
@@ -130,4 +132,6 @@ Given full-harness evidence, when the reviewer evaluates, then it verifies: iter
 
 ## AC-0012-0033: PROT-290~294 Validator Rules
 
-Given full-harness evidence with iterationCount=1 and terminationReason=converged, when prototypingEvidence validator runs, then QFAI-PROT-290 warning is emitted. Given scoringTrace.length≠iterationCount, then QFAI-PROT-291 warning. Given terminationReason=max-iterations but count<maxIterations, then QFAI-PROT-292 warning. Given iterationCount>maxIterations, then QFAI-PROT-293 warning. Given non-increasing scoringTrace, then QFAI-PROT-294 info.
+Given full-harness evidence with iterationCount=1 and terminationReason=converged, when prototypingEvidence validator runs, then QFAI-PROT-290 warning is emitted.
+Given scoringTrace.length≠iterationCount, then QFAI-PROT-291 warning. Given terminationReason=max-iterations but count<maxIterations, then QFAI-PROT-292 warning.
+Given iterationCount>maxIterations, then QFAI-PROT-293 warning. Given non-increasing scoringTrace, then QFAI-PROT-294 info.
