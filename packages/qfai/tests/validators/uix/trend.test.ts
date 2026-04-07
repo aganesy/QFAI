@@ -16,37 +16,32 @@ async function newTempDir(): Promise<string> {
 }
 
 async function createUiBearingPack(root: string): Promise<void> {
-  await writeFile(path.join(root, "01_Spec.md"), "# Spec\n\n- surface: web-ui\n", "utf-8");
+  await writeFile(path.join(root, "01_Spec.md"), "# Spec\n\n- surface: web\n", "utf-8");
   await mkdir(path.join(root, "uiux"), { recursive: true });
 }
 
-function completeSources(): string {
+function completeTrendScan(): string {
   const category = (name: string) =>
     [
-      `### ${name}`,
+      `## ${name}`,
       "",
-      "#### Entry 1",
+      "### Entry 1",
       "",
       "- reference: https://example.com",
       "- observation: Concrete trend observation.",
-      "- freshness_date: 2026-04-01",
-      "- confidence: high",
-      "- source_translation: Project-specific translation.",
+      "- decision_connection: Influences which option should be selected.",
+      "- evaluation_connection: Creates a concrete scoring/checking lens.",
       "- local_implication: Concrete local implication.",
       "",
     ].join("\n");
 
   return [
-    "# Sources",
+    "# Trend Scan",
     "",
-    "## Trend Scan",
-    "",
-    category("Visual Tone Trends"),
-    category("Layout / Composition Trends"),
-    category("Density / Hierarchy Trends"),
-    category("Interaction / Motion Trends"),
-    category("Component Styling Trends"),
-    category("Stale / Overused AI Slop Patterns"),
+    category("user expectation / market norm"),
+    category("product neighbor / comparable flow"),
+    category("platform convention"),
+    category("accessibility / compliance relevant signal"),
   ].join("\n");
 }
 
@@ -61,7 +56,7 @@ describe("validateTrendScan", () => {
   it("passes when all categories and fields are present", async () => {
     const root = await newTempDir();
     await createUiBearingPack(root);
-    await writeFile(path.join(root, "04_Sources.md"), completeSources(), "utf-8");
+    await writeFile(path.join(root, "uiux", "20_trend_scan.md"), completeTrendScan(), "utf-8");
 
     await expect(validateTrendScan(root, defaultConfig)).resolves.toEqual([]);
   });
@@ -70,8 +65,8 @@ describe("validateTrendScan", () => {
     const root = await newTempDir();
     await createUiBearingPack(root);
     await writeFile(
-      path.join(root, "04_Sources.md"),
-      completeSources().replace(/### Stale \/ Overused AI Slop Patterns[\s\S]*$/, ""),
+      path.join(root, "uiux", "20_trend_scan.md"),
+      completeTrendScan().replace(/## accessibility \/ compliance relevant signal[\s\S]*$/, ""),
       "utf-8",
     );
 
@@ -79,12 +74,15 @@ describe("validateTrendScan", () => {
     expect(issues.some((issue) => issue.code === "UIX-VAL-TREND-CATEGORY-MISSING")).toBe(true);
   });
 
-  it("fails when freshness_date is missing", async () => {
+  it("fails when decision_connection is missing", async () => {
     const root = await newTempDir();
     await createUiBearingPack(root);
     await writeFile(
-      path.join(root, "04_Sources.md"),
-      completeSources().replace("- freshness_date: 2026-04-01", ""),
+      path.join(root, "uiux", "20_trend_scan.md"),
+      completeTrendScan().replace(
+        "- decision_connection: Influences which option should be selected.",
+        "",
+      ),
       "utf-8",
     );
 

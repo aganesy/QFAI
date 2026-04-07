@@ -74,6 +74,9 @@
 - REQ-0010: RCP footer update -- skill-specific RCP footers follow routed reviewers
 - REQ-0011: Gate rules update -- `review-gate.rules.yml` references catalog + routing + review profiles
 - REQ-0012: All-reviewer FAIL obligation -- every reviewer must provide concrete alternative on FAIL
+- REQ-0013: Full-Harness Review Profile (v1.7.14) — `review-profiles.yml` に full-harness プロファイルを追加。always_required: [completion-reviewer, product-surface-reviewer, qa-gatekeeper]。
+  product-experience-architect は `kind: worker` のため review-profiles.yml ではなく `agent-routing.yml` の prototyping evidence phase conditional_agents に配置
+- REQ-0014: Prototyping Evidence Phase Routing (v1.7.14) — `agent-routing.yml` の prototyping evidence phase に product-experience-architect を conditional_agents として追加。full-harness 独立評価パネルの L2 レイヤーとして、別コンテキストで implementation fidelity を評価
 
 ## Entry points
 

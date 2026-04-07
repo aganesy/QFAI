@@ -131,3 +131,27 @@
 - rationale: 実装分析で特定された未文書化の v1.7.13 変更:
   - REQ-0117 が列挙していなかった 7 バリデータ（classification, scoringReady, strategy, screenContract, trend, threeLayer + canonical aggregator）を追加
   - `detection/surfaceType.ts` の明示的分類ブロック優先ルールを REQ-0118 として新規登録
+
+## v1.7.14 (2026-04-07) — Current-Only SSOT & Legacy Complete Removal
+
+- adopted: REQ-0119（Legacy Validator 完全削除）, REQ-0120（IssueCategory 簡素化）, REQ-0121（Strict Classification Validation）, REQ-0122（Strategy Semantic Validation）追加
+- adopted: DR-0004-0003~0005 追加
+- adopted: REQ-0117 更新（rollout.ts をバリデータリストから削除: 12→11 modular validators）
+- rationale: v1.7.14 の破壊的変更を仕様に反映:
+  - **Legacy validator 完全削除**: legacy/ ディレクトリ、legacyStatusDir.ts、migration/ ディレクトリ、uix/rollout.ts を production ソースツリーから完全除去。compatibility テストファイルも全削除（DR-0115）
+  - **IssueCategory "compatibility" 削除**: "canonical" | "change" のみとし、全バリデータの category 出力を "canonical" に統一（DR-0108）
+  - **Strict classification validation**: classification.ts が分類ブロック内の意味的矛盾を hard error として検出（ui_bearing vs primary_surface 矛盾、invalid/duplicate secondary surfaces 等）（DR-0111）
+  - **Strategy semantic validation**: strategy.ts が canonical strategy decision enum を強制。selection_required 状態機械を検証（DR-0114）
+  - **rollout.ts 削除**: phase-1 ratchet mechanism（DR-0101）のインフラ完全削除。migration/rollout の概念を validation pipeline から排除
+
+### v1.7.14 Full-Harness Validator Rules (2026-04-08)
+
+- adopted: REQ-0123（Full-Harness Iteration Integrity Validators QFAI-PROT-290~294）追加
+- rationale: full-harness インシデントレポートに基づく iteration integrity validator の追加:
+  - **QFAI-PROT-290**: iterationCount==1 + converged → warning（single-pass convergence は通常ありえない）
+  - **QFAI-PROT-291**: scoringTrace.length ≠ iterationCount → warning（trace count 不整合）
+  - **QFAI-PROT-292**: terminationReason==max-iterations but count < maxIterations → warning（終了条件矛盾）
+  - **QFAI-PROT-293**: iterationCount > maxIterations → warning（上限超過）
+  - **QFAI-PROT-294**: non-increasing scoringTrace → info（改善が見られない）
+  - **Taxonomy range 拡張**: fullHarness reserved range 281-283 → 281-294, TAXONOMY_RANGE_MAX 283 → 294
+  - **validate.ts**: PROT-290~294 description を issue code description map に追加

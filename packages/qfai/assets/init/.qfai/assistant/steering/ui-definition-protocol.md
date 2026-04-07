@@ -9,7 +9,7 @@ spec-0013 (CAP-0013) で定義された、下流 skill（prototyping / ATDD / TD
 
 1. **Discussion-side UI/UX Sidecar Artifacts** (`discussion-*/uiux/`) — **primary source of truth**
    - `30_option_comparison.md` — オプション比較（比較 artifact）
-   - `31_selected_anchor_screen.md` — 選定結果 + selected direction の SSOT
+   - `31_selected_anchor_screen.md` — 選定結果 + selected anchor の SSOT
    - `10_implementation_strategy.md` — 実装戦略（strict canonical schema）
    - `11_design_taste_interview.md` — デザインテイストインタビュー
    - `20-24` — 3-layer 評価ファミリー（invariant / trend-derived / product-specific / aggregate / dynamic overrides）
@@ -47,7 +47,7 @@ spec-0013 (CAP-0013) で定義された、下流 skill（prototyping / ATDD / TD
 
 ## Priority and Override Semantics
 
-- sidecar artifacts（selected direction / strategy / contracts）が **primary truth**
+- sidecar artifacts（selected anchor / strategy / contracts）が **primary truth**
 - UI Contracts と Design Token は **存在する場合のみ読む supporting input**（primary truth ではない）
 - Optional fallback mock はさらに後順位の **fallback**
 - Design Token の値と HTML Mock の fallback 値が矛盾する場合は warning を発行

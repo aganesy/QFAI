@@ -25,11 +25,11 @@ describe("validatePrototypingEvidence", () => {
     });
   });
 
-  it("accepts non-ui standard evidence without ui-specific payloads", async () => {
+  it("accepts cli standard evidence without ui-specific payloads", async () => {
     await withTempRoot(async (root) => {
       await seedSpecs(root, ["0001"]);
       await seedEvidence(root, {
-        surface: "non-ui",
+        surface: "cli",
         specs: [buildSpecRow("spec-0001", { ui: 0, api: 1, db: 1 })],
         mode: {
           effective: "standard",
@@ -43,11 +43,11 @@ describe("validatePrototypingEvidence", () => {
     });
   });
 
-  it("flags contradictory UI-only evidence on non-ui surface", async () => {
+  it("flags contradictory UI-only evidence on cli surface", async () => {
     await withTempRoot(async (root) => {
       await seedSpecs(root, ["0001"]);
       await seedEvidence(root, {
-        surface: "non-ui",
+        surface: "cli",
         specs: [buildSpecRow("spec-0001", { ui: 0, api: 1, db: 1 })],
         mode: {
           effective: "standard",
@@ -66,7 +66,7 @@ describe("validatePrototypingEvidence", () => {
     await withTempRoot(async (root) => {
       await seedSpecs(root, ["0001"]);
       await seedEvidence(root, {
-        surface: "web-ui",
+        surface: "web",
         specs: [buildSpecRow("spec-0001", { ui: 1, api: 1, db: 1 })],
         mode: {
           effective: "standard",
@@ -85,7 +85,7 @@ describe("validatePrototypingEvidence", () => {
     await withTempRoot(async (root) => {
       await seedSpecs(root, ["0001"]);
       await seedEvidence(root, {
-        surface: "web-ui",
+        surface: "web",
         specs: [buildSpecRow("spec-0001", { ui: 1, api: 1, db: 1 })],
         mode: {
           effective: "full-harness",
@@ -110,7 +110,7 @@ describe("validatePrototypingEvidence", () => {
     await withTempRoot(async (root) => {
       await seedSpecs(root, ["0001"]);
       await seedEvidence(root, {
-        surface: "web-ui",
+        surface: "web",
         specs: [buildSpecRow("spec-0001", { ui: 1, api: 1, db: 1 })],
         mode: {
           requested: "full-harness",
@@ -122,15 +122,21 @@ describe("validatePrototypingEvidence", () => {
           enabled: true,
           available: true,
           runId: "fh-1",
-          iterationCount: 1,
-          bestIteration: 1,
+          iterationCount: 5,
+          bestIteration: 5,
           terminationReason: "converged",
           reviewerSignoff: {
             status: "approved",
             reviewer: "qa",
             timestamp: "2026-04-04T00:00:00.000Z",
           },
-          scoringTrace: [{ iteration: 1, weightedTotal: 0.8, decision: "done" }],
+          scoringTrace: [
+            { iteration: 1, weightedTotal: 0.5, decision: "refine" },
+            { iteration: 2, weightedTotal: 0.6, decision: "refine" },
+            { iteration: 3, weightedTotal: 0.7, decision: "refine" },
+            { iteration: 4, weightedTotal: 0.75, decision: "refine" },
+            { iteration: 5, weightedTotal: 0.85, decision: "accept" },
+          ],
         },
         runtimeGate: {
           ui: [{ route: "/orders", status: 200 }],
@@ -158,6 +164,264 @@ describe("validatePrototypingEvidence", () => {
     });
   });
 
+  it("warns when full-harness has iterationCount=1 and converged (QFAI-PROT-290)", async () => {
+    await withTempRoot(async (root) => {
+      await seedSpecs(root, ["0001"]);
+      await seedEvidence(root, {
+        surface: "web",
+        specs: [buildSpecRow("spec-0001", { ui: 1, api: 1, db: 1 })],
+        mode: {
+          requested: "full-harness",
+          effective: "full-harness",
+          source: "explicit-request",
+          rationale: "runtime proof requested",
+        },
+        fullHarness: {
+          enabled: true,
+          available: true,
+          runId: "fh-290",
+          iterationCount: 1,
+          bestIteration: 1,
+          terminationReason: "converged",
+          reviewerSignoff: {
+            status: "approved",
+            reviewer: "qa",
+            timestamp: "2026-01-01T00:00:00Z",
+          },
+          scoringTrace: [{ iteration: 1, weightedTotal: 0.85, decision: "accept" }],
+        },
+        runtimeGate: { ui: [{ route: "/", status: 200 }], api: [] },
+        uiFidelity: {
+          mode: "interactive",
+          screens: [
+            {
+              route: "/",
+              uiContractId: "CON-UI-0001",
+              expected: { elements: 1, actions: 1 },
+              observed: { elementsPlaced: 1, actionsWired: 1 },
+              mockPaths: [],
+            },
+          ],
+        },
+      });
+      await seedUiContract(root);
+      await seedRenderBundle(root);
+      await seedBrowserQaBundle(root);
+      const issues = await validatePrototypingEvidence(root, defaultConfig);
+      expect(issues.some((i) => i.code === "QFAI-PROT-290")).toBe(true);
+      expect(issues.find((i) => i.code === "QFAI-PROT-290")?.severity).toBe("warning");
+    });
+  });
+
+  it("warns when scoringTrace count mismatches iterationCount (QFAI-PROT-291)", async () => {
+    await withTempRoot(async (root) => {
+      await seedSpecs(root, ["0001"]);
+      await seedEvidence(root, {
+        surface: "web",
+        specs: [buildSpecRow("spec-0001", { ui: 1, api: 1, db: 1 })],
+        mode: {
+          requested: "full-harness",
+          effective: "full-harness",
+          source: "explicit-request",
+          rationale: "test",
+        },
+        fullHarness: {
+          enabled: true,
+          available: true,
+          runId: "fh-291",
+          iterationCount: 3,
+          bestIteration: 3,
+          terminationReason: "plateau",
+          reviewerSignoff: {
+            status: "approved",
+            reviewer: "qa",
+            timestamp: "2026-01-01T00:00:00Z",
+          },
+          scoringTrace: [
+            { iteration: 1, weightedTotal: 0.5, decision: "refine" },
+            { iteration: 2, weightedTotal: 0.6, decision: "refine" },
+          ],
+        },
+        runtimeGate: { ui: [{ route: "/", status: 200 }], api: [] },
+        uiFidelity: {
+          mode: "interactive",
+          screens: [
+            {
+              route: "/",
+              uiContractId: "CON-UI-0001",
+              expected: { elements: 1, actions: 1 },
+              observed: { elementsPlaced: 1, actionsWired: 1 },
+              mockPaths: [],
+            },
+          ],
+        },
+      });
+      await seedUiContract(root);
+      await seedRenderBundle(root);
+      await seedBrowserQaBundle(root);
+      const issues = await validatePrototypingEvidence(root, defaultConfig);
+      expect(issues.some((i) => i.code === "QFAI-PROT-291")).toBe(true);
+    });
+  });
+
+  it("warns when terminationReason=max-iterations but count < maxIterations (QFAI-PROT-292)", async () => {
+    await withTempRoot(async (root) => {
+      await seedSpecs(root, ["0001"]);
+      await seedEvidence(root, {
+        surface: "web",
+        specs: [buildSpecRow("spec-0001", { ui: 1, api: 1, db: 1 })],
+        mode: {
+          requested: "full-harness",
+          effective: "full-harness",
+          source: "explicit-request",
+          rationale: "test",
+        },
+        fullHarness: {
+          enabled: true,
+          available: true,
+          runId: "fh-292",
+          iterationCount: 3,
+          bestIteration: 3,
+          terminationReason: "max-iterations",
+          reviewerSignoff: {
+            status: "approved",
+            reviewer: "qa",
+            timestamp: "2026-01-01T00:00:00Z",
+          },
+          scoringTrace: [
+            { iteration: 1, weightedTotal: 0.5, decision: "refine" },
+            { iteration: 2, weightedTotal: 0.6, decision: "refine" },
+            { iteration: 3, weightedTotal: 0.65, decision: "refine" },
+          ],
+        },
+        runtimeGate: { ui: [{ route: "/", status: 200 }], api: [] },
+        uiFidelity: {
+          mode: "interactive",
+          screens: [
+            {
+              route: "/",
+              uiContractId: "CON-UI-0001",
+              expected: { elements: 1, actions: 1 },
+              observed: { elementsPlaced: 1, actionsWired: 1 },
+              mockPaths: [],
+            },
+          ],
+        },
+      });
+      await seedUiContract(root);
+      await seedRenderBundle(root);
+      await seedBrowserQaBundle(root);
+      const issues = await validatePrototypingEvidence(root, defaultConfig);
+      expect(issues.some((i) => i.code === "QFAI-PROT-292")).toBe(true);
+    });
+  });
+
+  it("warns when iterationCount exceeds maxIterations (QFAI-PROT-293)", async () => {
+    await withTempRoot(async (root) => {
+      await seedSpecs(root, ["0001"]);
+      const scoringTrace = Array.from({ length: 20 }, (_, i) => ({
+        iteration: i + 1,
+        weightedTotal: 0.4 + i * 0.02,
+        decision: "refine",
+      }));
+      await seedEvidence(root, {
+        surface: "web",
+        specs: [buildSpecRow("spec-0001", { ui: 1, api: 1, db: 1 })],
+        mode: {
+          requested: "full-harness",
+          effective: "full-harness",
+          source: "explicit-request",
+          rationale: "test",
+        },
+        fullHarness: {
+          enabled: true,
+          available: true,
+          runId: "fh-293",
+          iterationCount: 20,
+          bestIteration: 20,
+          terminationReason: "manual-stop",
+          reviewerSignoff: {
+            status: "approved",
+            reviewer: "qa",
+            timestamp: "2026-01-01T00:00:00Z",
+          },
+          scoringTrace,
+        },
+        runtimeGate: { ui: [{ route: "/", status: 200 }], api: [] },
+        uiFidelity: {
+          mode: "interactive",
+          screens: [
+            {
+              route: "/",
+              uiContractId: "CON-UI-0001",
+              expected: { elements: 1, actions: 1 },
+              observed: { elementsPlaced: 1, actionsWired: 1 },
+              mockPaths: [],
+            },
+          ],
+        },
+      });
+      await seedUiContract(root);
+      await seedRenderBundle(root);
+      await seedBrowserQaBundle(root);
+      const issues = await validatePrototypingEvidence(root, defaultConfig);
+      expect(issues.some((i) => i.code === "QFAI-PROT-293")).toBe(true);
+    });
+  });
+
+  it("reports info when scoringTrace shows no progression (QFAI-PROT-294)", async () => {
+    await withTempRoot(async (root) => {
+      await seedSpecs(root, ["0001"]);
+      await seedEvidence(root, {
+        surface: "web",
+        specs: [buildSpecRow("spec-0001", { ui: 1, api: 1, db: 1 })],
+        mode: {
+          requested: "full-harness",
+          effective: "full-harness",
+          source: "explicit-request",
+          rationale: "test",
+        },
+        fullHarness: {
+          enabled: true,
+          available: true,
+          runId: "fh-294",
+          iterationCount: 3,
+          bestIteration: 1,
+          terminationReason: "plateau",
+          reviewerSignoff: {
+            status: "approved",
+            reviewer: "qa",
+            timestamp: "2026-01-01T00:00:00Z",
+          },
+          scoringTrace: [
+            { iteration: 1, weightedTotal: 0.6, decision: "refine" },
+            { iteration: 2, weightedTotal: 0.6, decision: "refine" },
+            { iteration: 3, weightedTotal: 0.59, decision: "refine" },
+          ],
+        },
+        runtimeGate: { ui: [{ route: "/", status: 200 }], api: [] },
+        uiFidelity: {
+          mode: "interactive",
+          screens: [
+            {
+              route: "/",
+              uiContractId: "CON-UI-0001",
+              expected: { elements: 1, actions: 1 },
+              observed: { elementsPlaced: 1, actionsWired: 1 },
+              mockPaths: [],
+            },
+          ],
+        },
+      });
+      await seedUiContract(root);
+      await seedRenderBundle(root);
+      await seedBrowserQaBundle(root);
+      const issues = await validatePrototypingEvidence(root, defaultConfig);
+      expect(issues.some((i) => i.code === "QFAI-PROT-294")).toBe(true);
+      expect(issues.find((i) => i.code === "QFAI-PROT-294")?.severity).toBe("info");
+    });
+  });
+
   it("reports invalid surface with QFAI-PROT-171", async () => {
     await withTempRoot(async (root) => {
       await seedSpecs(root, ["0001"]);
@@ -177,7 +441,7 @@ describe("validatePrototypingEvidence", () => {
       await seedSpecs(root, ["0001"]);
       // No discussion pack at all — just evidence claiming discussion-recommendation source
       await seedEvidence(root, {
-        surface: "non-ui",
+        surface: "cli",
         specs: [buildSpecRow("spec-0001", { ui: 0, api: 1, db: 1 })],
         mode: {
           effective: "standard",
@@ -199,7 +463,7 @@ describe("validatePrototypingEvidence", () => {
         recursive: true,
       });
       await seedEvidence(root, {
-        surface: "non-ui",
+        surface: "cli",
         specs: [buildSpecRow("spec-0001", { ui: 0, api: 1, db: 1 })],
         mode: {
           effective: "standard",
@@ -225,7 +489,7 @@ describe("validatePrototypingEvidence", () => {
         "utf-8",
       );
       await seedEvidence(root, {
-        surface: "non-ui",
+        surface: "cli",
         specs: [buildSpecRow("spec-0001", { ui: 0, api: 1, db: 1 })],
         mode: {
           effective: "standard",
@@ -252,14 +516,14 @@ describe("validatePrototypingEvidence", () => {
           "rationale: valid legacy",
           "allowed_modes:",
           "  - standard",
-          "surface: non-ui",
+          "surface: cli",
           "prototyping: invalid",
           "",
         ].join("\n"),
         "utf-8",
       );
       await seedEvidence(root, {
-        surface: "non-ui",
+        surface: "cli",
         specs: [buildSpecRow("spec-0001", { ui: 0, api: 1, db: 1 })],
         mode: {
           effective: "standard",
@@ -286,13 +550,13 @@ describe("validatePrototypingEvidence", () => {
           "  rationale: validated recommendation",
           "  allowed_modes:",
           "    - standard",
-          "  surface: non-ui",
+          "  surface: cli",
           "",
         ].join("\n"),
         "utf-8",
       );
       await seedEvidence(root, {
-        surface: "non-ui",
+        surface: "cli",
         specs: [buildSpecRow("spec-0001", { ui: 0, api: 1, db: 1 })],
         mode: {
           effective: "standard",
@@ -310,7 +574,7 @@ describe("validatePrototypingEvidence", () => {
   // Artifact-first regression tests (v1.7.13 correction)
   // --------------------------------------------------------------------------
 
-  // Case A: invalid artifact + embedded web-ui surface — embedded must not influence obligations
+  // Case A: invalid artifact + embedded web surface — embedded must not influence obligations
   it("does not use embedded recommendation surface for obligations when artifact is invalid", async () => {
     await withTempRoot(async (root) => {
       await seedSpecs(root, ["0001"]);
@@ -323,7 +587,7 @@ describe("validatePrototypingEvidence", () => {
         "utf-8",
       );
 
-      // Evidence has no explicit surface but embedded recommendation has web-ui
+      // Evidence has no explicit surface but embedded recommendation has web
       await seedEvidence(root, {
         specs: [buildSpecRow("spec-0001", { ui: 0, api: 1, db: 1 })],
         mode: {
@@ -334,7 +598,7 @@ describe("validatePrototypingEvidence", () => {
             recommendedMode: "standard",
             rationale: "stale embedded",
             allowedModes: ["standard"],
-            surface: "web-ui",
+            surface: "web",
           },
         },
       });
@@ -343,16 +607,16 @@ describe("validatePrototypingEvidence", () => {
       // QFAI-PROT-235 must fire because artifact is invalid
       expect(issues.some((item) => item.code === "QFAI-PROT-235")).toBe(true);
       // QFAI-PROT-176 (uiFidelity required for ui-bearing standard) must NOT fire
-      // because embedded web-ui surface must not be used for obligation derivation
+      // because embedded web surface must not be used for obligation derivation
       expect(issues.some((item) => item.code === "QFAI-PROT-176")).toBe(false);
     });
   });
 
-  // Case B: valid artifact (non-ui) + embedded conflicting surface (web-ui) — artifact surface wins
+  // Case B: valid artifact (cli) + embedded conflicting surface (web) — artifact surface wins
   it("uses artifact surface over embedded conflicting surface", async () => {
     await withTempRoot(async (root) => {
       await seedSpecs(root, ["0001"]);
-      // Create valid artifact with non-ui surface
+      // Create valid artifact with cli surface
       const packDir = path.join(root, ".qfai", "discussion", "discussion-20260404000000000");
       await mkdir(packDir, { recursive: true });
       await writeFile(
@@ -360,16 +624,16 @@ describe("validatePrototypingEvidence", () => {
         [
           "prototyping:",
           "  recommended_mode: standard",
-          "  rationale: artifact says non-ui",
+          "  rationale: artifact says cli",
           "  allowed_modes:",
           "    - standard",
-          "  surface: non-ui",
+          "  surface: cli",
           "",
         ].join("\n"),
         "utf-8",
       );
 
-      // Evidence has no explicit surface but embedded says web-ui
+      // Evidence has no explicit surface but embedded says web
       await seedEvidence(root, {
         specs: [buildSpecRow("spec-0001", { ui: 0, api: 1, db: 1 })],
         mode: {
@@ -380,7 +644,7 @@ describe("validatePrototypingEvidence", () => {
             recommendedMode: "standard",
             rationale: "stale embedded",
             allowedModes: ["standard"],
-            surface: "web-ui",
+            surface: "web",
           },
         },
       });
@@ -388,7 +652,7 @@ describe("validatePrototypingEvidence", () => {
       const issues = await validatePrototypingEvidence(root, defaultConfig);
       // No QFAI-PROT-235 because artifact is valid
       expect(issues.some((item) => item.code === "QFAI-PROT-235")).toBe(false);
-      // No uiFidelity requirement because artifact surface is non-ui (not embedded web-ui)
+      // No uiFidelity requirement because artifact surface is cli (not embedded web)
       expect(issues.some((item) => item.code === "QFAI-PROT-176")).toBe(false);
     });
   });
@@ -397,7 +661,7 @@ describe("validatePrototypingEvidence", () => {
   it("prefers explicit evidence.surface over artifact surface", async () => {
     await withTempRoot(async (root) => {
       await seedSpecs(root, ["0001"]);
-      // Create valid artifact with web-ui surface
+      // Create valid artifact with web surface
       const packDir = path.join(root, ".qfai", "discussion", "discussion-20260404000000000");
       await mkdir(packDir, { recursive: true });
       await writeFile(
@@ -405,18 +669,18 @@ describe("validatePrototypingEvidence", () => {
         [
           "prototyping:",
           "  recommended_mode: standard",
-          "  rationale: artifact says web-ui",
+          "  rationale: artifact says web",
           "  allowed_modes:",
           "    - standard",
-          "  surface: web-ui",
+          "  surface: web",
           "",
         ].join("\n"),
         "utf-8",
       );
 
-      // Evidence has explicit non-ui surface
+      // Evidence has explicit cli surface
       await seedEvidence(root, {
-        surface: "non-ui",
+        surface: "cli",
         specs: [buildSpecRow("spec-0001", { ui: 0, api: 1, db: 1 })],
         mode: {
           effective: "standard",
@@ -426,7 +690,7 @@ describe("validatePrototypingEvidence", () => {
       });
 
       const issues = await validatePrototypingEvidence(root, defaultConfig);
-      // evidence.surface=non-ui should take priority — no uiFidelity requirement
+      // evidence.surface=cli should take priority — no uiFidelity requirement
       expect(issues.some((item) => item.code === "QFAI-PROT-176")).toBe(false);
     });
   });
@@ -503,10 +767,10 @@ async function seedBrowserQaBundle(root: string): Promise<void> {
           status: "completed",
           mode: "full-harness",
           summary: {
-            smoke: { passed: 1, failed: 0 },
-            interaction: { passed: 1, failed: 0 },
-            visual: { passed: 1, failed: 0 },
-            accessibility: { passed: 1, failed: 0 },
+            smoke: { status: "passed", findingsCount: 0, checksCount: 1 },
+            interaction: { status: "passed", findingsCount: 0, checksCount: 1 },
+            visual: { status: "passed", findingsCount: 0, checksCount: 1 },
+            accessibility: { status: "passed", findingsCount: 0, checksCount: 1 },
           },
         },
         findings: [],

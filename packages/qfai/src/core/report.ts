@@ -56,7 +56,6 @@ import { resolveToolVersion } from "./version.js";
 import { readRenderEvidenceBundle, summarizeRenderEvidence } from "./uiux/renderEvidence.js";
 import { readBrowserQaBundle } from "./browserQa/index.js";
 import type { DiscussionModeRecommendation } from "./prototyping/types.js";
-import type { SurfaceType } from "./detection/surfaceType.js";
 
 export type ReportSummary = {
   specs: number;
@@ -289,7 +288,16 @@ export type ReportPrototypingSummary = {
       totalPassed: number;
       totalFailed: number;
     };
-    phaseSummary?: Record<string, { passed: number; failed: number }>;
+    phaseSummary?: Record<
+      string,
+      {
+        status: string;
+        findingsCount: number;
+        checksCount: number;
+        passed?: number;
+        failed?: number;
+      }
+    >;
     modeMismatch?: boolean;
   };
   calibration?: {
@@ -599,12 +607,12 @@ export function formatReportMarkdown(
     info: 2,
   };
   const categoryOrder: Record<string, number> = {
-    compatibility: 0,
+    canonical: 0,
     change: 1,
   };
 
   const issuesByCategory = {
-    compatibility: [] as Issue[],
+    canonical: [] as Issue[],
     change: [] as Issue[],
   };
   for (const issue of data.issues) {
@@ -612,7 +620,7 @@ export function formatReportMarkdown(
     if (cat === "change") {
       issuesByCategory.change.push(issue);
     } else {
-      issuesByCategory.compatibility.push(issue);
+      issuesByCategory.canonical.push(issue);
     }
   }
 
@@ -636,7 +644,7 @@ export function formatReportMarkdown(
       { info: 0, warning: 0, error: 0 },
     );
 
-  const compatCounts = countIssuesBySeverity(issuesByCategory.compatibility);
+  const canonicalCounts = countIssuesBySeverity(issuesByCategory.canonical);
   const changeCounts = countIssuesBySeverity(issuesByCategory.change);
   const compatFindingCounts = countFindingsBySeverity(data.changeType.compatFindings);
   const scopeMismatchCounts = countFindingsBySeverity(data.changeType.scopeMismatches);
@@ -656,7 +664,7 @@ export function formatReportMarkdown(
     `- issues(total): info ${data.summary.counts.info} / warning ${data.summary.counts.warning} / error ${data.summary.counts.error}`,
   );
   lines.push(
-    `- issues(compatibility): info ${compatCounts.info} / warning ${compatCounts.warning} / error ${compatCounts.error}`,
+    `- issues(canonical): info ${canonicalCounts.info} / warning ${canonicalCounts.warning} / error ${canonicalCounts.error}`,
   );
   lines.push(
     `- issues(change): info ${changeCounts.info} / warning ${changeCounts.warning} / error ${changeCounts.error}`,
@@ -704,7 +712,7 @@ export function formatReportMarkdown(
 
   lines.push("### Index");
   lines.push("");
-  lines.push("- [Compatibility Issues](#compatibility-issues)");
+  lines.push("- [Canonical Issues](#canonical-issues)");
   lines.push("- [Change Issues](#change-issues)");
   lines.push("- [Design Audit Findings](#design-audit-findings)");
   lines.push("- [Slop Guardrails Findings](#slop-guardrails-findings)");
@@ -859,15 +867,15 @@ export function formatReportMarkdown(
     return rows.map(([key, count]) => `- ${key}: ${count}`);
   };
 
-  lines.push("## Compatibility Issues");
+  lines.push("## Canonical Issues");
   lines.push("");
   lines.push("### Summary");
   lines.push("");
-  lines.push(...formatIssueSummaryTable(issuesByCategory.compatibility));
+  lines.push(...formatIssueSummaryTable(issuesByCategory.canonical));
   lines.push("");
   lines.push("### Issues");
   lines.push("");
-  lines.push(...formatIssueCards(issuesByCategory.compatibility));
+  lines.push(...formatIssueCards(issuesByCategory.canonical));
 
   lines.push("## Change Issues");
   lines.push("");
@@ -1376,7 +1384,7 @@ export function formatReportMarkdown(
     lines.push("");
     lines.push("### prototyping.observability");
     lines.push("");
-    lines.push("- status: foundation-only (not integrated into blocking validation in v1.7.13)");
+    lines.push("- status: foundation-only (not integrated into blocking validation in v1.7.14)");
     // Warnings
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
     if (data.prototyping.warnings && data.prototyping.warnings.length > 0) {
@@ -1748,10 +1756,16 @@ async function collectPrototypingSummary(
       Array.isArray(asRecord(record.runtimeGate)?.ui) &&
       (asRecord(record.runtimeGate)?.ui as unknown[]).length > 0,
   });
+  const effectiveSurface = surface ?? effectiveRec?.surface ?? "mixed";
+  if (!surface) {
+    warnings.push(
+      "prototyping surface could not be derived from evidence or recommendation; report defaulted to mixed.",
+    );
+  }
   const effectiveMode = mode.effective;
 
   // WS-3: Use shared obligation matrix
-  const obligations = derivePrototypingObligations({ surface, effectiveMode });
+  const obligations = derivePrototypingObligations({ surface: effectiveSurface, effectiveMode });
 
   const fullHarness = asRecord(record.fullHarness);
   const runtimeGate = asRecord(record.runtimeGate);
@@ -1808,22 +1822,22 @@ async function collectPrototypingSummary(
   let browserQaTotalFailed = 0;
   if (browserQaBundle?.findings) {
     for (const finding of browserQaBundle.findings) {
-      browserQaCounts[finding.severity] += 1;
-      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-      if (finding.category) {
-        browserQaCategoryCounts[finding.category] =
-          (browserQaCategoryCounts[finding.category] ?? 0) + 1;
-      }
+      const severity = finding.severity === "warn" ? "warning" : finding.severity;
+      browserQaCounts[severity] += 1;
+      const category = finding.category ?? finding.phase;
+      browserQaCategoryCounts[category] = (browserQaCategoryCounts[category] ?? 0) + 1;
     }
   }
   if (browserQaBundle?.browserQa.summary) {
     const summary = browserQaBundle.browserQa.summary;
     for (const category of ["smoke", "interaction", "visual", "accessibility"] as const) {
-      const bucket = summary[category];
-      if (bucket) {
-        browserQaTotalPassed += bucket.passed;
-        browserQaTotalFailed += bucket.failed;
-      }
+      const bucket = summary[category] as Record<string, unknown> | undefined;
+      if (!bucket || typeof bucket !== "object") continue;
+      const passed = typeof bucket.passed === "number" ? bucket.passed : 0;
+      const failed = typeof bucket.failed === "number" ? bucket.failed : 0;
+      const status = typeof bucket.status === "string" ? bucket.status : "";
+      browserQaTotalPassed += passed || (status === "passed" || status === "executed" ? 1 : 0);
+      browserQaTotalFailed += failed || (status === "failed" ? 1 : 0);
     }
   }
   const browserQaModeMismatch =
@@ -1864,12 +1878,12 @@ async function collectPrototypingSummary(
       : undefined;
 
   // WS-F: Surface classification summary
-  const { readClassificationBlock } = await import("./detection/surfaceType.js");
-  const { isUiBearingSurfaceType } = await import("./detection/surfaceType.js");
+  const { readClassificationBlock, isDiscussionUiBearingSurfaceType } =
+    await import("./detection/surfaceType.js");
   const classificationBlock = await readClassificationBlock(root);
   const surfaceClassification: ReportPrototypingSummary["surfaceClassification"] = {
-    primarySurface: surface,
-    uiBearing: isUiBearingSurfaceType(surface as SurfaceType),
+    primarySurface: effectiveSurface,
+    uiBearing: isDiscussionUiBearingSurfaceType(effectiveSurface),
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
     ...(classificationBlock?.secondary_surfaces?.length
       ? { secondarySurfaces: classificationBlock.secondary_surfaces }
@@ -1892,7 +1906,7 @@ async function collectPrototypingSummary(
           : modeSummary.rationale,
       ...(discussionSummary ? { discussionRecommendation: discussionSummary } : {}),
       ...(effectiveRec?.allowedModes ? { allowedModes: effectiveRec.allowedModes } : {}),
-      surface,
+      surface: effectiveSurface,
       ...(effectiveRec?.sourceSchema ? { sourceSchema: effectiveRec.sourceSchema } : {}),
     },
     evidence: {
@@ -1910,7 +1924,7 @@ async function collectPrototypingSummary(
         present: Boolean(browserQaBundle),
         required: obligations.requireBrowserQaBundle,
       },
-      obligationProfile: `${surface}/${effectiveMode}`,
+      obligationProfile: `${effectiveSurface}/${effectiveMode}`,
     },
     ...(fullHarness
       ? {

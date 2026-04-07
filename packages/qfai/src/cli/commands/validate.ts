@@ -267,7 +267,7 @@ const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-DPACK-001":
     "A latest discussion-pack directory exists under `.qfai/discussion/discussion-<timestamp>/`.",
   "QFAI-DPACK-002":
-    "The latest discussion-pack contains 15 required markdown files plus required prototyping.yaml.",
+    "The latest discussion-pack contains 15 required markdown files, and prototyping.yaml is required only when the latest pack is ui_bearing=true.",
   "QFAI-DPACK-003": "The latest discussion-pack files contain minimum substantive content.",
   "QFAI-DPACK-004":
     "No open OQ remains in `11_OQ-Register.md` (`Disposition: open` blocks discussion completion).",
@@ -297,17 +297,17 @@ const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "HTML+CSS visual mock is an optional fallback aid and should only be referenced when intentionally selected. Sidecar artifacts (uiux/) are the primary UI definition.",
   "QFAI-PROT-101":
     "Both prototyping evidence files exist and prototyping.json follows the required schema.",
-  "QFAI-PROT-150": "prototyping.json missing mode block (v1.7.14+ will be error).",
+  "QFAI-PROT-150": "prototyping.json is missing the canonical mode block.",
   "QFAI-PROT-151": "mode.effective must be low-cost|standard|full-harness.",
   "QFAI-PROT-152":
-    "mode.source must be explicit-request|discussion-recommendation|default and rationale must be non-empty.",
-  "QFAI-PROT-171": "surface field must be web-ui|mobile-ui|desktop-ui|mixed|non-ui.",
+    "mode.source must be explicit-request|discussion-recommendation|system-default and rationale must be non-empty.",
+  "QFAI-PROT-171": "surface field must be one of: web, mobile, desktop, cli, mixed.",
   "QFAI-PROT-172":
     "surface/mode obligation matrix mismatch — required evidence bundles are missing.",
   "QFAI-PROT-173": "required render evidence bundle is missing.",
   "QFAI-PROT-174": "required browser QA bundle is missing.",
   "QFAI-PROT-175":
-    "surface=non-ui but UI-only evidence present (runtimeGate.ui, uiFidelity, render, browserQa).",
+    "non-UI prototyping surface but UI-only evidence present (runtimeGate.ui, uiFidelity, render, browserQa).",
   "QFAI-PROT-176": "ui-bearing standard/full-harness mode requires uiFidelity.",
   "QFAI-PROT-177": "ui-bearing full-harness mode requires runtimeGate.",
   "QFAI-PROT-111":
@@ -319,17 +319,13 @@ const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-PROT-114":
     "Per-spec DB checks satisfy declared object counts and leave no unresolved DB objects.",
   "QFAI-PROT-153":
-    "prototyping.yaml recommendation schema invalid (recommended_mode or rationale missing/invalid).",
+    "prototyping.yaml invalid; canonical namespaced prototyping block is required, top-level recommendation keys are not supported, and semantic mismatch (recommended_mode not in allowed_modes) is invalid.",
   "QFAI-PROT-154": "prototyping.yaml allowed_modes must include recommended_mode.",
   "QFAI-PROT-155": "prototyping.yaml requires allowed_modes field.",
   "QFAI-PROT-156": "prototyping.yaml requires surface field.",
-  "QFAI-PROT-231":
-    "prototyping.yaml uses deprecated top-level schema; migrate to namespaced `prototyping.*` form.",
-  "QFAI-PROT-232":
-    "prototyping.yaml contains both namespaced and legacy top-level schema; namespaced takes precedence.",
   "QFAI-PROT-233":
     "evidence effective mode differs from resolved discussion recommendation precedence.",
-  "QFAI-PROT-234": "discussion recommendation exists but evidence mode.source is default.",
+  "QFAI-PROT-234": "discussion recommendation exists but evidence mode.source is system-default.",
   "QFAI-PROT-235":
     "evidence mode.source is discussion-recommendation but recommendation artifact is missing or invalid.",
   "QFAI-PROT-236": "explicit requested mode is not allowed by discussion allowed_modes.",
@@ -352,7 +348,7 @@ const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "render evidence status requires accompanying field (skippedReason for skipped, error for failed, imagePath/htmlPath for captured).",
   "QFAI-PROT-253":
     "render evidence top-level status contradicts screen-level statuses (e.g. status=captured but no captured screens).",
-  "QFAI-PROT-254": "render bundle contradicts non-ui surface / mode expectation.",
+  "QFAI-PROT-254": "render bundle contradicts non-UI prototyping surface / mode expectation.",
   "QFAI-PROT-255": "captured render evidence screen references a file that does not exist on disk.",
   "QFAI-PROT-256": "skipped/failed render evidence screen is missing required reason/error field.",
   "QFAI-PROT-261": "browser QA bundle mode does not match prototyping effective mode.",
@@ -379,6 +375,13 @@ const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-PROT-282":
     "fullHarness.terminationReason is invalid; must be converged|max-iterations|plateau|manual-stop.",
   "QFAI-PROT-283": "fullHarness.scoringTrace must contain at least one entry.",
+  "QFAI-PROT-290":
+    "fullHarness.iterationCount is 1 with converged; single-iteration convergence is suspicious.",
+  "QFAI-PROT-291": "fullHarness.scoringTrace entry count does not match iterationCount.",
+  "QFAI-PROT-292":
+    "terminationReason is max-iterations but iterationCount is below configured maxIterations.",
+  "QFAI-PROT-293": "fullHarness.iterationCount exceeds configured maxIterations.",
+  "QFAI-PROT-294": "fullHarness.scoringTrace shows no improvement across iterations.",
   "QFAI-CONTRACT-030":
     "Contract index references must match declared contract IDs in .qfai/contracts/**.",
 };

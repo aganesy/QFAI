@@ -20,9 +20,12 @@ export * from "./validators/traceability.js";
 
 // WS-A: Canonical surface type detection (shared truth)
 export {
-  UI_BEARING_SURFACES,
-  NON_UI_SURFACES,
-  isUiBearingSurfaceType,
+  DISCUSSION_UI_BEARING_SURFACES,
+  DISCUSSION_NON_UI_SURFACES,
+  VISUAL_BROWSER_SURFACES,
+  isDiscussionUiBearingSurfaceType,
+  isNonUiDiscussionSurface,
+  requiresVisualBrowserEvidence,
 } from "./detection/surfaceType.js";
 // WS-B: Browser QA 4-phase orchestration
 export { runBrowserQaOrchestrated, summarizeBrowserQaResult } from "./browserQa/runner.js";

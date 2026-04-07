@@ -384,7 +384,7 @@ async function loadWaivers(
       ...(downgradeTo ? { downgrade_to: downgradeTo } : {}),
       ...(severity ? { severity } : {}),
       ...(owner ? { owner } : {}),
-      // backward-compatible aliases for downstream readers
+      // aliases emitted for downstream readers
       rule_id: ruleId,
       expires_on: expiresOn,
     };

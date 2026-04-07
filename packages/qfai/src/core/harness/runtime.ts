@@ -6,8 +6,11 @@
  * render evidence, Browser QA, critique, and observability.
  */
 
-import { isUiBearingSurfaceType } from "../detection/surfaceType.js";
+import { requiresVisualBrowserEvidence } from "../detection/surfaceType.js";
 import type { CritiqueAdapter } from "../critique/adapter.js";
+import { createFullHarnessHandoff, type FullHarnessHandoff } from "./handoff.js";
+import { detectFakeUi, type FakeUiDetectionResult } from "./fakeUiDetection.js";
+import { mapLoopStatusToExitReason, type FullHarnessExitReason } from "./exitReason.js";
 import { HarnessLoop } from "./loop.js";
 import type { HarnessConfig, LoopResult, SpecInputs } from "./types.js";
 import type { FullHarnessAdapters } from "./adapters.js";
@@ -28,6 +31,9 @@ export type FullHarnessResult = {
   output: FullHarnessOutput;
   evidence: ReturnType<typeof generateEvidence>;
   reviewSummary: ReturnType<typeof generateReviewSummary>;
+  fakeUiDetection: FakeUiDetectionResult;
+  exitReason: FullHarnessExitReason;
+  handoff: FullHarnessHandoff;
 };
 
 /**
@@ -49,10 +55,10 @@ export async function runFullHarness(request: FullHarnessRequest): Promise<FullH
   const browserQaResults: BrowserQaRunResult[] = [];
 
   const surface = adapters?.surface;
-  const isUiBearing = surface ? isUiBearingSurfaceType(surface) : false;
+  const requiresVisualEvidence = surface ? requiresVisualBrowserEvidence(surface) : false;
 
   // Post-loop: render evidence (UI-bearing only)
-  if (isUiBearing && adapters?.render) {
+  if (requiresVisualEvidence && adapters?.render) {
     try {
       const renderResult = await adapters.render.captureEvidence(loopResult.iterationCount);
       renderResults.push(renderResult);
@@ -62,7 +68,7 @@ export async function runFullHarness(request: FullHarnessRequest): Promise<FullH
   }
 
   // Post-loop: Browser QA (UI-bearing only)
-  if (isUiBearing && adapters?.browserQa) {
+  if (requiresVisualEvidence && adapters?.browserQa) {
     try {
       const qaResult = await adapters.browserQa.runQa(loopResult.iterationCount);
       browserQaResults.push(qaResult);
@@ -94,6 +100,27 @@ export async function runFullHarness(request: FullHarnessRequest): Promise<FullH
 
   const evidence = generateEvidence(loopResult);
   const reviewSummary = generateReviewSummary(loopResult);
+  // Only run fake-UI detection when visual evidence was required and attempted.
+  // CLI / non-UI surfaces never collect render/browserQa evidence, so checking
+  // empty arrays would always produce a false positive.
+  const fakeUiDetection = requiresVisualEvidence
+    ? detectFakeUi({ renderResults, browserQaResults })
+    : { detected: false, reasons: [], evidence_refs: [], confidence: "low" as const };
+  const exitReason = fakeUiDetection.detected
+    ? "fake-ui-detected"
+    : mapLoopStatusToExitReason(loopResult.terminationReason);
+  const handoff = createFullHarnessHandoff({
+    selectedBuild: loopResult.finalOutput.content,
+    artifactRefs: [
+      `run:${evidence.runId}`,
+      ...renderResults.flatMap((result) => result.filesWritten),
+    ],
+    exitReason,
+    outstandingIssues: fakeUiDetection.reasons,
+    requiredHumanReviewPoints: fakeUiDetection.detected
+      ? ["Verify that the selected build performs real state and route changes."]
+      : [],
+  });
 
-  return { loopResult, output, evidence, reviewSummary };
+  return { loopResult, output, evidence, reviewSummary, fakeUiDetection, exitReason, handoff };
 }

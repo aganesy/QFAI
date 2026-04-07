@@ -25,9 +25,11 @@ Each evaluation axis must include:
 
 ## Evaluation Axes Quality
 
-- Each trend-derived row must include source_translation
 - Axes must be measurable and verifiable
 - No generic/boilerplate axes without taste/trend derivation
+- Each axis must define `origin`, `intent`, `why_it_matters`, `score_scale`, `score_anchors.low/mid/high`
+- Each axis must define `positive_signals`, `negative_signals`, `anti_patterns`, `evidence_required`, `minimum_floor`
+- Each axis must define `source_refs`, `goal_refs`, and `review_questions`
 
 ## Aggregate Scoring Rules
 
@@ -46,5 +48,11 @@ Canonical field names (must match `23_design_eval_aggregate.md`):
 ### Trend-derived conversion check
 
 - Trend scan results are converted to scoring axes
-- Trend scan results are reflected in selected direction
+- Trend scan results are reflected in selected anchor
 - Stale / overused AI slop avoidance is reflected in comparison and selection
+
+## Aggregate Review Focus
+
+- Review axis quality, overlap, and minimum floors as a single aggregate system
+- Review `source_refs` and `goal_refs` linkage for every scored axis
+- Remove old aggregate vocabulary and keep wording aligned with `23_design_eval_aggregate.md`

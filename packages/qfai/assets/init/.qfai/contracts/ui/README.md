@@ -35,11 +35,11 @@ The contract must describe both screen structure and minimum mockable behavior.
 
 ### `data-qfai` marker convention
 
-- Recommended marker value: `CONTRACT_ID:ELEMENT_ID` (example: `data-qfai="CON-UI-0001:search_input"`).
+- Canonical marker value: `CONTRACT_ID:ELEMENT_ID` (example: `data-qfai="CON-UI-0001:search_input"`).
 - Use `elements[].id` (stable ID) for the marker suffix, not `elements[].label`.
 - Even when label text is not visible in the UI, markers ensure fidelity coverage.
 - autogen generates expected markers from `elements[].id` automatically.
-- Legacy format (`CONTRACT_ID:ELEMENT_LABEL`) is accepted for backward compatibility but new implementations should use the id-based format.
+- The id-based format (`CONTRACT_ID:ELEMENT_ID`) is the only canonical marker format.
 
 ## Mockable prototype minimum (L2)
 

@@ -17,8 +17,8 @@ The agent reads the repository, produces the required artifacts, and iterates un
 
 ## Release status
 
-- Current package version: `1.7.13`
-- Release posture: v1.7.13 converges init assets, validators, and docs on the canonical sidecar model.
+- Current package version: `1.7.14`
+- Release posture: v1.7.14 converges init assets, validators, and docs on the canonical sidecar model.
 - Current repo note: some repo-wide `qfai validate --fail-on error` blockers still come from historical review/evidence/ATDD/TDD artifacts and are being cleaned incrementally.
 
 ## Quick start
@@ -85,7 +85,9 @@ QFAI includes a small set of custom skills (stored under `.qfai/assistant/skills
 - **qfai-configure**: Analyze the repository (language, frameworks, test layout, directory structure)
   and tailor `qfai.config.yaml` accordingly (especially `testFileGlobs`).
   Run this once right after `npx qfai init`, and re-run it when the repository structure changes.
-- **qfai-discussion**: Run a unified structured discussion that produces and maintains the latest discussion pack as 15 required markdown files plus required prototyping.yaml under `.qfai/discussion/discussion-<ts>/`.
+- **qfai-discussion**: Run a unified structured discussion that produces and maintains the latest discussion pack
+  as 15 required markdown files under `.qfai/discussion/discussion-<ts>/`.
+  UI-bearing discussion packs require `prototyping.yaml`; non-ui discussion packs do not.
 - **qfai-sdd**: Unified SDD entrypoint with discussion-pack preflight guard (missing/incomplete/blocking OQ causes stop + next action guidance).
 - **qfai-prototyping**: Build a contract-aligned implementation skeleton with static-first evidence by default, and escalate to full-harness only when explicitly justified.
 - **qfai-atdd**: Implement acceptance tests driven by specs/scenarios.
@@ -190,7 +192,7 @@ Notes.
 - `validate.json`, `report.json`, `doctor.json`, and `run-*` JSON logs are internal exports and are not a stable external contract; prefer `report.md` for integrations that must survive tool upgrades.
 - Scenario files are expected to use the Gherkin extension `*.feature` (not `*.md`).
 - `prototyping.calibration` in `qfai.config.yaml` connects full-harness scoring thresholds to the report and validator.
-- Observability modules (`src/core/observability/`) exist as foundation code but are **not integrated into blocking validation** in v1.7.13. They are reserved for future operational instrumentation.
+- Observability modules (`src/core/observability/`) exist as foundation code but are **not integrated into blocking validation** in v1.7.14. They are reserved for future operational instrumentation.
 
 ## Specifications and contracts (SDD)
 
@@ -266,7 +268,7 @@ Recommended baseline.
 
 Waiver policy.
 
-- Use waivers only for `warning` / `info` findings (false positives, phased migration noise).
+- Use waivers only for `warning` / `info` findings (false positives).
 - Waivers that target `error` findings are invalid and fail validation (`QFAI-WAIVER-002`).
 - Expired waivers are reported as warnings (`QFAI-WAIVER-003`) and must be renewed or removed with evidence.
 - Suppressed findings remain visible in reports as `suppressed=true`; waivers do not erase findings.

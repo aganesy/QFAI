@@ -47,14 +47,15 @@ describe("uiux sidecar templates", { timeout: 15000 }, () => {
     return readFile(path.join(templateDir, filename), "utf-8");
   }
 
-  // TDD-0001: TC-0002-0001 — 12 sidecar files present
-  it("has exactly 12 sidecar files", async () => {
+  // TDD-0001: TC-0002-0001 — 13 sidecar files present
+  it("has exactly 13 sidecar files", async () => {
     const files = await fg(["*.md"], { cwd: uiuxDir, absolute: false });
     expect(files.sort()).toEqual([
       "00_index.md",
       "10_implementation_strategy.md",
       "11_design_taste_interview.md",
       "20_design_eval_invariant.md",
+      "20_trend_scan.md",
       "21_design_eval_trend_derived.md",
       "22_design_eval_product_specific.md",
       "23_design_eval_aggregate.md",
@@ -71,11 +72,13 @@ describe("uiux sidecar templates", { timeout: 15000 }, () => {
     const content = await readTemplate("10_implementation_strategy.md");
     // Strong schema uses bullet-style fields, not YAML block
     expect(content).toMatch(/- surface:/);
+    expect(content).toMatch(/- selection_required:/);
     expect(content).toMatch(/- decision:/);
-    expect(content).toMatch(/- why_this_strategy:/);
-    expect(content).toMatch(/- expected_strengths:/);
-    expect(content).toMatch(/- known_risks:/);
-    expect(content).toMatch(/- fit_for_this_product:/);
+    expect(content).toMatch(/- candidate_options:/);
+    expect(content).toMatch(/- chosen_option:/);
+    expect(content).toMatch(/- rationale:/);
+    expect(content).toMatch(/- verification_expectations:/);
+    expect(content).toMatch(/- notes_for_reviewer:/);
     // Must NOT contain weak-format surface_type
     expect(content).not.toMatch(/surface_type/);
   });
@@ -83,8 +86,8 @@ describe("uiux sidecar templates", { timeout: 15000 }, () => {
   // TDD-0003: TC-0002-0023 — minimal-but-complete verbosity
   it("10_implementation_strategy.md explains canonical constraints", async () => {
     const content = await readTemplate("10_implementation_strategy.md");
-    expect(content).toContain("## Constraints");
-    expect(content).toContain("### Strategy");
+    expect(content).toContain("## Surface");
+    expect(content).toContain("## Decision");
   });
 
   // TDD-0004: TC-0002-0020 — eval files define 3-layer model and aggregate scoring rules
@@ -191,14 +194,14 @@ describe("uiux sidecar templates", { timeout: 15000 }, () => {
     const content = await readFile(skillMdPath, "utf-8");
     expect(content).toContain("strategy");
     expect(content).toMatch(/scoring ax[ei]s/i);
-    expect(content).toMatch(/comparison completed|selected direction/i);
+    expect(content).toMatch(/comparison completed|selected anchor/i);
     expect(content).toMatch(/contracts?\s+(drafted|defined|contains)/i);
   });
 
-  // TDD-0012: TC-0002-0010 — non-UI completion unchanged
-  it("SKILL.md states non-UI completion conditions unchanged from v1.7.2", async () => {
+  // TDD-0012: TC-0002-0010 — non-UI completion
+  it("SKILL.md states non-UI completion conditions", async () => {
     const content = await readFile(skillMdPath, "utf-8");
-    expect(content).toMatch(/non-ui.*unchanged|non-ui.*same.*completion|non-ui.*no additional/is);
+    expect(content).toMatch(/non-UI.*no.*completion.*conditions.*apply|non-UI.*not.*required/is);
   });
 
   // TDD-0023: TC-0002-0003 — non-UI skip documented
@@ -318,7 +321,7 @@ describe("uiux sidecar templates", { timeout: 15000 }, () => {
       cwd: initAssetsDir,
       absolute: false,
     });
-    expect(uiuxFiles.length).toBe(12);
+    expect(uiuxFiles.length).toBe(13);
   });
 
   // TDD-0022: TC-0002-0019 — verify-pack: existing asset tests pass

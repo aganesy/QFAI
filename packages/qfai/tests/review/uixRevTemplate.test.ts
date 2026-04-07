@@ -83,7 +83,7 @@ describe("uix-rev template", () => {
       "",
       "## trend-derived",
       "",
-      "- micro_interaction: source_translation: From 2025 trends",
+      "- micro_interaction: local_translation: From 2025 trends",
     ].join("\n");
 
     const genericAxes = detectGenericFallbackAxes(axesWithGeneric);

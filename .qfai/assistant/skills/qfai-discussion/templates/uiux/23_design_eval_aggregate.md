@@ -39,3 +39,15 @@ This file defines how scores from invariant, trend-derived, and product-specific
 - Product-specific axes: `22_design_eval_product_specific.md`
 - Dynamic overrides (optional): `24_design_eval_dynamic_overrides.md`
 - Option comparison: `30_option_comparison.md`
+
+## Score Scope Limitation
+
+**IMPORTANT**: Scores produced by this aggregate evaluation measure **design direction quality** — i.e., how well each design option satisfies the evaluation criteria for option comparison and selection.
+
+These scores are **NOT** implementation quality scores. When the selected design direction proceeds to `/qfai-prototyping` in full-harness mode:
+
+- Prototyping evaluates **implementation fidelity** against the selected anchor.
+- Prototyping uses its own scoring criteria (calibration baselines, dimension weights).
+- Discussion aggregate scores MUST NOT be copied into `fullHarness.scoringTrace`.
+
+The boundary is: discussion scores inform the **what** (which direction); prototyping scores measure the **how well** (implementation quality).

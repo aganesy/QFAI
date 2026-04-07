@@ -23,9 +23,9 @@
   - Security/operations risks are reflected in diagrams where relevant
 - Mermaid diagrams use ` ```mermaid ` fences only (no ` ```text ` or language-less fences)
 - Taste interview completeness and clarity (when UI-bearing)
-- Trend freshness and source translation quality (when UI-bearing)
+- Trend freshness and evidence traceability (when UI-bearing)
 - 3-layer evaluation quality and traceability (when UI-bearing)
-- Option comparison integrity and selected direction clarity (when UI-bearing)
+- Option comparison integrity and selected anchor clarity (when UI-bearing)
 - Strong screen contract completeness (when UI-bearing)
 - OQ register exit condition (open count = 0)
 - Deferred items have full metadata in `13_Deferred.md`

@@ -16,7 +16,7 @@ roles:
     product-surface-reviewer,
     qa-gatekeeper,
   ]
-routing-profile: ui-bearing
+routing-profile: ui-surface-aware
 mode: execution-focused
 ---
 
@@ -38,13 +38,24 @@ This skill is **static-first**. File-based checks and evidence are the default. 
 - If a required API endpoint still returns `404`, the run is incomplete.
 - `L1` and `L2` critique findings must be reflected in the evidence pack or justified as `REVISE`.
 - `uiFidelity` is the canonical UI evidence block for UI-bearing surfaces.
-- non-ui skip semantics must be preserved. UI-only placeholders are not required when the surface is non-ui.
+- `ui_bearing: false` specs are not prototyping execution targets. UI-only placeholders are not required for such specs.
 - Review rendered output, screenshot evidence, HTML snapshots, or preview artifacts before closing any UI-affecting run.
-- Read the canonical sidecar family first: option comparison / `30_option_comparison.md` -> selected anchor screen / `31_selected_anchor_screen.md` -> strategy / `10_implementation_strategy.md` -> taste interview / `11_design_taste_interview.md` -> trend scan / `04_Sources.md` -> 3-layer evaluation family (`20/21/22/23` + optional `24`) -> screen contracts / `40_screen_contracts.md` -> review input bundle / `50_review_input_bundle.md`.
+- Read the canonical sidecar family first: option comparison / `30_option_comparison.md` -> selected anchor screen / `31_selected_anchor_screen.md` ->
+  strategy / `10_implementation_strategy.md` -> taste interview / `11_design_taste_interview.md` ->
+  trend scan / `04_Sources.md` -> 3-layer evaluation family (`20/21/22/23` + optional `24`) ->
+  screen contracts / `40_screen_contracts.md` -> review input bundle / `50_review_input_bundle.md`.
 
 ## Goal
 
 Build the minimum runnable vertical slice for **ALL specs** and produce canonical prototyping evidence under `.qfai/evidence/`.
+
+### Mode-specific Goals
+
+| Mode         | Goal                                                                                                                                                                            |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| low-cost     | Static structure proof. Skeleton + evidence files only.                                                                                                                         |
+| standard     | Customer-presentable vertical slice. UI fidelity + static evidence.                                                                                                             |
+| full-harness | **Iterative design-improvement loop.** Evaluate → Identify → Fix → Re-evaluate until convergence, plateau, or max-iterations. Each iteration produces measurable quality delta. |
 
 ## Non-goals
 
@@ -70,10 +81,12 @@ Record in `prototyping.json`:
 
 ## Surface Semantics
 
-- `surface: non-ui` means UI-specific evidence is `n/a`.
-- For non-ui projects, `uiFidelity`, render evidence, browser QA, and `runtimeGate.ui` may be absent.
-- Absent is normal for non-ui. Do not force skipped placeholders unless the project intentionally emits them.
-- For UI-bearing projects, route/contract fidelity must be captured when `uiFidelity` is required by mode.
+Canonical prototyping surfaces are: `web`, `mobile`, `desktop`, `cli`, `mixed`.
+
+- `ui_bearing: false` specs are **not** prototyping execution targets. Prototyping execution is only invoked for `ui_bearing: true` or `mixed` classifications.
+- For `cli` surface: render screenshot evidence is not required; browser QA is not required. Only output / interaction / structured evidence is expected.
+- For `web`, `mobile`, `desktop` surfaces: route/contract fidelity must be captured when `uiFidelity` is required by mode.
+- `mixed` surface inherits the union of obligations from the constituent surfaces.
 
 ## Prototyping Modes
 
@@ -81,42 +94,57 @@ Record in `prototyping.json`:
 
 - Static checks only.
 - Suitable for early skeleton work.
-- UI-bearing projects may include `uiFidelity` and render/browser artifacts, but they are optional.
+- `web`, `mobile`, `desktop`, `mixed` surfaces may include `uiFidelity` and render/browser artifacts, but they are optional.
+- `cli` surface does not require `uiFidelity`, render evidence, or browser QA.
 - `skeleton` mode is allowed for lightweight UI proof.
 
 ### Standard
 
 - Static checks plus optional light validation.
 - This is the default mode.
-- UI-bearing projects require `uiFidelity`.
+- `web`, `mobile`, `desktop`, `mixed` surfaces require `uiFidelity`.
+- `cli` surface does not require `uiFidelity`, render evidence, or browser QA.
 - Runtime gate, render bundle, and browser QA bundle are optional.
 
 ### Full-harness
 
 - Explicit opt-in only. Never auto-activate.
 - Adds runtime-heavy obligations and full-harness audit metadata.
-- UI-bearing projects require runtime gate, render bundle, browser QA bundle, and `fullHarness`.
-- Non-ui projects require `fullHarness`, but UI-specific bundles remain n/a.
+- `web`, `mobile`, `desktop`, `mixed` surfaces require runtime gate, render bundle, browser QA bundle, and `fullHarness`.
+- `cli` surface requires `fullHarness` but not `uiFidelity`, render evidence, or browser QA.
+- `ui_bearing: false` specs are not prototyping execution targets.
+- Full-harness is an **iterative design-improvement loop**, not a single evidence-generation pass. See `## Full-Harness Iteration Protocol` below.
+- The discussion 3-layer evaluation score measures **design direction quality** and MUST NOT be copied into `fullHarness.scoringTrace`.
+  Prototyping scores measure **implementation fidelity** against the selected anchor.
 
 ## Obligation Matrix
 
 ### surface / mode
 
-| surface / mode            | specs    | runtimeGate | uiFidelity                        | render evidence                      | browser QA   | fullHarness  |
-| ------------------------- | -------- | ----------- | --------------------------------- | ------------------------------------ | ------------ | ------------ |
-| non-ui / low-cost         | required | optional    | n/a                               | n/a                                  | n/a          | absent       |
-| non-ui / standard         | required | optional    | n/a                               | n/a                                  | n/a          | absent       |
-| non-ui / full-harness     | required | optional    | n/a                               | n/a                                  | n/a          | required     |
-| ui-bearing / low-cost     | required | optional    | optional (`skeleton` allowed)     | optional (`captured/skipped/failed`) | optional     | absent       |
-| ui-bearing / standard     | required | optional    | **required** (`interactive` only) | optional (`captured/skipped/failed`) | optional     | absent       |
-| ui-bearing / full-harness | required | required    | **required** (`interactive` only) | **required**                         | **required** | **required** |
+| surface / mode         | specs    | runtimeGate | uiFidelity                        | render evidence                      | browser QA   | fullHarness  |
+| ---------------------- | -------- | ----------- | --------------------------------- | ------------------------------------ | ------------ | ------------ |
+| web / low-cost         | required | optional    | optional (`skeleton` allowed)     | optional (`captured/skipped/failed`) | optional     | absent       |
+| web / standard         | required | optional    | **required** (`interactive` only) | optional (`captured/skipped/failed`) | optional     | absent       |
+| web / full-harness     | required | required    | **required** (`interactive` only) | **required**                         | **required** | **required** |
+| mobile / low-cost      | required | optional    | optional (`skeleton` allowed)     | optional (`captured/skipped/failed`) | optional     | absent       |
+| mobile / standard      | required | optional    | **required** (`interactive` only) | optional (`captured/skipped/failed`) | optional     | absent       |
+| mobile / full-harness  | required | required    | **required** (`interactive` only) | **required**                         | **required** | **required** |
+| desktop / low-cost     | required | optional    | optional (`skeleton` allowed)     | optional (`captured/skipped/failed`) | optional     | absent       |
+| desktop / standard     | required | optional    | **required** (`interactive` only) | optional (`captured/skipped/failed`) | optional     | absent       |
+| desktop / full-harness | required | required    | **required** (`interactive` only) | **required**                         | **required** | **required** |
+| cli / low-cost         | required | optional    | n/a                               | n/a                                  | n/a          | absent       |
+| cli / standard         | required | optional    | n/a                               | n/a                                  | n/a          | absent       |
+| cli / full-harness     | required | optional    | n/a                               | n/a                                  | n/a          | **required** |
+| mixed / low-cost       | required | optional    | optional (`skeleton` allowed)     | optional (`captured/skipped/failed`) | optional     | absent       |
+| mixed / standard       | required | optional    | **required** (`interactive` only) | optional (`captured/skipped/failed`) | optional     | absent       |
+| mixed / full-harness   | required | required    | **required** (`interactive` only) | **required**                         | **required** | **required** |
 
 `uiFidelity.mode` policy:
 
 - `low-cost`: `skeleton` or `interactive`
 - `standard`: `interactive` only — `skeleton` is rejected by the validator
 - `full-harness`: `interactive` only — `skeleton` is rejected; render evidence, Browser QA, runtimeGate, and fullHarness block are all required
-- `non-ui`: `uiFidelity` is not emitted
+- `cli`: `uiFidelity` is not emitted; render and browser QA are not required
 
 Interpretation:
 
@@ -132,27 +160,33 @@ Interpretation:
 - `.qfai/evidence/prototyping.json`
 - `.qfai/evidence/render.json` when render evidence is emitted or required by mode
 - `.qfai/evidence/browser-qa.json` when browser QA evidence is emitted or required by mode
+- `.qfai/evidence/browserQa.summary.json` when browser QA evidence is emitted or required by mode
+- `.qfai/evidence/browserQa.findings.json` when browser QA evidence is emitted or required by mode
+- `.qfai/evidence/browserQa.repairs.json` when browser QA evidence is emitted or required by mode
+- `.qfai/evidence/fullHarness.exit.json` when `mode.effective = full-harness`
+- `.qfai/evidence/fullHarness.handoff.json` when `mode.effective = full-harness`
+- `.qfai/evidence/fullHarness.fakeUiDetection.json` when `mode.effective = full-harness`
 - `Coverage Matrix` covering all specs
 - critique summary with `L1` / `L2` findings and disposition
 
 ### low-cost obligations
 
 - always: `specs[]`, `meta.generatedAt`, `meta.toolVersion`, `meta.commands[]`, `mode.*`
-- ui-bearing: `uiFidelity` optional, render/browser optional
-- non-ui: UI-specific evidence is n/a
+- `web`, `mobile`, `desktop`, `mixed`: `uiFidelity` optional, render/browser optional
+- `cli`: UI-specific evidence is n/a
 
 ### standard obligations
 
 - always: `specs[]`, `meta.*`, `mode.*`
-- ui-bearing: `uiFidelity` required
-- non-ui: UI-specific evidence is n/a
+- `web`, `mobile`, `desktop`, `mixed`: `uiFidelity` required
+- `cli`: UI-specific evidence is n/a
 - runtime gate and browser QA remain optional
 
 ### full-harness obligations
 
 - always: `specs[]`, `meta.*`, `mode.*`, `fullHarness`
-- ui-bearing: `runtimeGate`, `.qfai/evidence/render.json`, `.qfai/evidence/browser-qa.json`, `uiFidelity`
-- non-ui: UI-specific evidence remains n/a
+- `web`, `mobile`, `desktop`, `mixed`: `runtimeGate`, `.qfai/evidence/render.json`, Browser QA bundle trio, `uiFidelity`
+- `cli`: UI-specific evidence remains n/a
 
 ## Full-harness minimum completeness
 
@@ -161,31 +195,208 @@ When `mode.effective = full-harness`, record:
 - `fullHarness.enabled = true`
 - `fullHarness.available`
 - `fullHarness.runId`
-- `fullHarness.iterationCount >= 1`
+- `fullHarness.iterationCount >= 1` (validator warns if `== 1` with `terminationReason: converged` — see QFAI-PROT-290)
+- `fullHarness.scoringTrace` entries MUST equal `iterationCount` (validator warns on mismatch — see QFAI-PROT-291)
+- `fullHarness.scoringTrace` SHOULD show measurable progression (non-monotonic traces are flagged as info — see QFAI-PROT-294)
 - `fullHarness.bestIteration >= 1`
 - `fullHarness.terminationReason`
 - `fullHarness.reviewerSignoff`
 - `fullHarness.scoringTrace`
+- `fullHarness.exit`
+- `fullHarness.handoff`
+- `fullHarness.fakeUiDetection`
 
 ## Canonical Bundles
 
 - render bundle: `.qfai/evidence/render.json`
 - browser QA bundle: `.qfai/evidence/browser-qa.json`
+- browser QA summary: `.qfai/evidence/browserQa.summary.json`
+- browser QA findings: `.qfai/evidence/browserQa.findings.json`
+- browser QA repairs: `.qfai/evidence/browserQa.repairs.json`
+- full-harness exit: `.qfai/evidence/fullHarness.exit.json`
+- full-harness handoff: `.qfai/evidence/fullHarness.handoff.json`
+- full-harness fake-UI detection: `.qfai/evidence/fullHarness.fakeUiDetection.json`
 
 Render bundle uses `captured | skipped | failed`.
 Browser QA bundle uses `completed | skipped | failed`.
+
+## Full-Harness Iteration Protocol
+
+Full-harness mode executes a **multi-iteration improvement loop**. A single-pass evidence dump is not full-harness.
+
+### Iteration Cycle Definition
+
+Each iteration consists of exactly 4 steps:
+
+1. **Evaluate**: Score the current implementation against the evaluation axes defined in `uiux/20-23` (3-layer evaluation family). Use the calibration baselines from `qfai.config.yaml > prototyping.calibration`.
+2. **Identify**: List concrete deficiencies with L1/L2 classification. Each finding MUST reference a specific evaluation axis and criterion.
+3. **Fix**: Apply targeted improvements to the identified deficiencies. Record what was changed and why.
+4. **Re-evaluate**: Re-score using the same evaluation axes. Record the delta per axis.
+
+### Calibration Configuration Reference
+
+The iteration loop MUST read calibration parameters from `qfai.config.yaml`:
+
+```yaml
+prototyping:
+  calibration:
+    packPath: ".qfai/evidence/calibration.yaml" # evaluation criteria source
+    thresholds:
+      accept: 0.8 # weighted total >= accept → converged
+      refine: 0.5 # weighted total >= refine → continue improving
+    maxIterations: 15 # hard ceiling on iteration count
+    plateauDelta: 0.02 # delta < this for N consecutive iterations → plateau
+    plateauLookback: 3 # N for plateau detection window
+```
+
+Runtime constants (harness types): `MIN_ITERATIONS = 5`, `MAX_ITERATIONS = 15`.
+
+### Termination Conditions
+
+The loop terminates when **any** of these conditions is met:
+
+| Condition              | `terminationReason` | Description                                                                 |
+| ---------------------- | ------------------- | --------------------------------------------------------------------------- |
+| Accept threshold met   | `converged`         | `weightedTotal >= thresholds.accept` AND `iterationCount >= MIN_ITERATIONS` |
+| Max iterations reached | `max-iterations`    | `iterationCount >= maxIterations`                                           |
+| Score plateau detected | `plateau`           | Score delta < `plateauDelta` for `plateauLookback` consecutive iterations   |
+| User manual stop       | `manual-stop`       | User explicitly requests termination                                        |
+
+**IMPORTANT**: `converged` with `iterationCount == 1` is a contradiction and will trigger a validator warning (QFAI-PROT-290).
+
+### Independent Evaluator Panel (MUST)
+
+To prevent self-evaluation bias, the evaluator MUST be independent from the generator:
+
+| Layer                  | Agent                          | Input Scope                                                 | Role                                                    |
+| ---------------------- | ------------------------------ | ----------------------------------------------------------- | ------------------------------------------------------- |
+| L1: Design Quality     | `product-surface-reviewer`     | Screenshot/HTML snapshot + evaluation axis definitions ONLY | UI/UX/visual coherence scoring                          |
+| L2: Product Experience | `product-experience-architect` | Same as L1 + screen contracts + selected anchor             | User journey / IA / transition coherence                |
+| L3: Process Audit      | `qa-gatekeeper`                | `fullHarness` evidence block ONLY                           | iterationCount/scoringTrace/terminationReason integrity |
+
+**Operational Rules:**
+
+- L1 and L2 MUST be launched via `task` tool in `background` mode with a separate context. They MUST NOT receive improvement history, previous scores, or generator plans.
+- L3 operates on the final evidence file and does not need a separate context.
+- The iteration's `weightedTotal` is the **minimum** of L1 and L2 scores. If either returns below `thresholds.refine`, the iteration decision is `pivot`.
+- Fabricated reviewer names (e.g., `"completion-reviewer"` without actual agent invocation) are a process integrity violation.
+
+### scoringTrace Recording
+
+Each iteration MUST produce a `scoringTrace` entry:
+
+```json
+{
+  "iteration": 3,
+  "weightedTotal": 0.72,
+  "decision": "refine",
+  "evaluators": ["product-surface-reviewer", "product-experience-architect"],
+  "axisDelta": { "visual_coherence": 0.05, "navigation": 0.08, "accessibility": -0.01 },
+  "maxDeltaCap": 0.15
+}
+```
+
+**Score Scope Separation:**
+
+- Discussion 3-layer scores evaluate **design direction quality** (option comparison).
+- Prototyping scoringTrace evaluates **implementation fidelity** against the selected anchor.
+- These are different evaluation targets. Copying discussion scores into `scoringTrace` is prohibited.
+
+### Maximum Delta Cap
+
+Per-axis score improvement per iteration is capped at `maxDeltaPerAxisPerIteration: 0.15`.
+Any reported delta exceeding this cap MUST trigger re-evaluation or justification.
+This prevents single-iteration score inflation.
+
+## Evaluation Rigor Rules (Full-Harness)
+
+### Rubric-Based Scoring Structure
+
+Each evaluation axis MUST use a 3-tier rubric:
+
+| Tier                  | Criteria                                 | Score Range |
+| --------------------- | ---------------------------------------- | ----------- |
+| `existence_gate`      | Is the element present at all?           | 0.0-0.3     |
+| `quality_criteria`    | Does it meet baseline quality standards? | 0.3-0.7     |
+| `excellence_criteria` | Does it exceed expectations?             | 0.7-1.0     |
+
+An axis that fails `existence_gate` cannot score above 0.3 regardless of other qualities.
+
+### L1/L2 Classification and Agent-Fixable Assessment
+
+| Level     | Definition                                                                          | Agent-fixable?                      | Action                                |
+| --------- | ----------------------------------------------------------------------------------- | ----------------------------------- | ------------------------------------- |
+| L1        | Structural deficiency (missing element, broken navigation, accessibility violation) | Yes — must fix in current iteration | Fix immediately                       |
+| L2        | Quality shortfall (suboptimal spacing, weak contrast, inconsistent tone)            | Yes if clearly defined              | Fix or justify deferral with evidence |
+| L1-manual | Requires human judgment (brand alignment, business logic correctness)               | No                                  | Record in `limitations` section       |
+
+### Lighthouse Automated Gate (SHOULD)
+
+When the surface is `web` and a dev server is available:
+
+- Run Lighthouse audit (Performance, Accessibility, Best Practices, SEO).
+- Record scores in evidence. Scores below 70 in any category are flagged as L1 findings.
+- This is SHOULD (not MUST) because dev server availability is not guaranteed.
+
+## Asset Acquisition Strategy (Full-Harness)
+
+When `mode.effective = full-harness`, professional-quality visual assets are REQUIRED (not optional).
+
+### Asset Rules
+
+| Rule                    | Level  | Description                                                                                                                                                                          |
+| ----------------------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Free asset sources      | MUST   | Use only properly licensed free assets (Unsplash, Pexels, Google Fonts, Heroicons, etc.). Record source URL and license in evidence.                                                 |
+| Emoji prohibition       | MUST   | Emoji characters (U+1F000–U+1FAFF, U+2600–U+27BF) MUST NOT appear in UI output as decorative elements. Unicode symbols for functional purposes (e.g., ✓ for checkmarks) are allowed. |
+| Placeholder prohibition | MUST   | "Lorem ipsum", `placeholder.com` images, and gray boxes are not acceptable in full-harness final output.                                                                             |
+| Attribution             | SHOULD | Record asset attributions in `prototyping.md` or a dedicated `assets.md`.                                                                                                            |
+
+### Accessibility Checklist (Full-Harness MUST)
+
+- Color contrast ratio ≥ 4.5:1 for normal text, ≥ 3:1 for large text (WCAG 2.1 AA)
+- All interactive elements are keyboard-navigable
+- Images have `alt` attributes (decorative images use `alt=""`)
+- Form inputs have associated labels
+- Focus indicators are visible
+
+### Trust Signal Checklist (Full-Harness SHOULD)
+
+- Consistent typography hierarchy (h1 > h2 > h3 > body)
+- Consistent spacing rhythm (4px/8px grid or equivalent)
+- Professional color palette (not random/clashing colors)
+- Loading states and error states are designed (not browser defaults)
+- No broken images or missing resources in rendered output
+
+### Dev Server Management Protocol
+
+When a dev server is started for evidence collection:
+
+1. Record the process PID and port in evidence metadata.
+2. After evidence collection, terminate the dev server explicitly.
+3. Do not leave orphaned dev server processes running.
 
 ## Required Process
 
 1. Read `.qfai/specs/spec-*` and determine the surface and requested mode.
 2. Build the minimum runnable slice across **ALL specs**.
 3. Produce `prototyping.md` and `prototyping.json` with a complete Coverage Matrix.
-4. If UI-bearing, capture `uiFidelity`; if full-harness, capture runtime gate, render bundle, and browser QA bundle.
+4. If `web`, `mobile`, `desktop`, or `mixed` surface, capture `uiFidelity`; if full-harness, capture runtime gate, render bundle, and browser QA bundle.
 5. Review rendered output, screenshot evidence, HTML snapshots, or preview artifacts against the canonical sidecar family.
-6. Record critique findings, classify each as `L1` or `L2`, and either fix or mark the result `REVISE`.
-7. Use the read order `option comparison (30_option_comparison.md) -> selected anchor screen (31_selected_anchor_screen.md) -> strategy (10_implementation_strategy.md) -> taste interview (11_design_taste_interview.md) -> trend scan (04_Sources.md) -> 3-layer evaluation family (20/21/22/23 + optional 24) -> screen contracts (40_screen_contracts.md) -> review input bundle (50_review_input_bundle.md)` when the project is UI-bearing.
-8. Run `qfai validate --fail-on error`.
-9. Route reviewer gate and do not declare completion until the result is `PASS`.
+6. **[full-harness only]** Execute the Full-Harness Iteration Protocol:
+   a. Initialize calibration from `qfai.config.yaml > prototyping.calibration`.
+   b. Run Evaluate → Identify → Fix → Re-evaluate cycle.
+   c. Launch independent evaluators (product-surface-reviewer, product-experience-architect) per iteration.
+   d. Record each iteration in `scoringTrace`.
+   e. Continue until termination condition is met.
+   f. Record `terminationReason`, `iterationCount`, `bestIteration`.
+7. Record critique findings, classify each as `L1` or `L2`, and either fix or mark the result `REVISE`.
+8. Use the following read order when the surface is `web`, `mobile`, `desktop`, or `mixed`:
+   option comparison (`30_option_comparison.md`) -> selected anchor screen (`31_selected_anchor_screen.md`) ->
+   strategy (`10_implementation_strategy.md`) -> taste interview (`11_design_taste_interview.md`) ->
+   trend scan (`04_Sources.md`) -> 3-layer evaluation family (`20/21/22/23` + optional `24`) ->
+   screen contracts (`40_screen_contracts.md`) -> review input bundle (`50_review_input_bundle.md`).
+9. Run `qfai validate --fail-on error`.
+10. Route reviewer gate and do not declare completion until the result is `PASS`.
 
 ## Sub-agent Delegation (MANDATORY)
 
@@ -223,6 +434,24 @@ Every major artifact in this stage MUST include this table schema:
 - Test volume floors/ratios are not gates; they are signals.
 - Reviewer must verify evidence obligations for the chosen `surface / mode`.
 - Do not declare DONE until Reviewer returns `PASS`; otherwise apply `REVISE`.
+- **[full-harness only]** Reviewer MUST verify:
+  - `iterationCount > 1` (or explicit justification for single-iteration convergence).
+  - `scoringTrace` contains entries equal to `iterationCount`.
+  - `scoringTrace` shows measurable score progression (not all identical scores).
+  - `terminationReason` is consistent with the scoring trajectory.
+  - Independent evaluators were actually invoked (not fabricated names).
+  - `limitations` section is present and documents known shortcomings honestly.
+
+### Limitations Section (Full-Harness MUST)
+
+When `mode.effective = full-harness`, the evidence MUST include a `## Limitations` section in `prototyping.md` that documents:
+
+- Known quality shortcomings that were not resolved by the iteration loop.
+- Evaluation axes where scores did not reach `accept` threshold.
+- Areas where agent judgment is insufficient (requires human review).
+- Technical constraints that prevented further improvement (e.g., asset licensing, browser API limitations).
+
+Omitting limitations or recording an empty limitations section when `iterationCount < maxIterations` is a process integrity concern.
 
 ## Completion Contract (Shared)
 
@@ -231,8 +460,9 @@ Before DONE:
 - package assets and generated evidence must match the obligation matrix
 - `qfai validate --fail-on error` must pass
 - reviewer gate must return PASS
-- UI-bearing runs must reconcile `uiFidelity`, render evidence, and critique outputs
-- non-ui runs must preserve `n/a` semantics without fake placeholders
+- `web`, `mobile`, `desktop`, `mixed` surface runs must reconcile `uiFidelity`, render evidence, and critique outputs
+- `cli` surface runs preserve n/a semantics for render and browser QA without fake placeholders
+- `ui_bearing: false` specs are not prototyping execution targets
 
 ## FINAL CHECKLIST (Check Last)
 

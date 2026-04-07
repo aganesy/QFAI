@@ -60,10 +60,6 @@ export type QfaiUiuxAuditConfig = {
   maxDuplicateFindingsPerRule?: number;
 };
 
-export type QfaiUiuxMigrationConfig = {
-  strict?: boolean;
-};
-
 export type QfaiUiuxConfig = {
   platform?: string;
   designTokensDir?: string;
@@ -72,10 +68,8 @@ export type QfaiUiuxConfig = {
   requireResearchSummary?: boolean;
   competitive_refs_min?: number;
   warning_as_error_override?: string[];
-  phase1ReleaseDate?: string;
   renderEvidence?: RenderEvidenceConfig;
   audit?: QfaiUiuxAuditConfig;
-  migration?: QfaiUiuxMigrationConfig;
 };
 
 export type QfaiPrototypingCalibrationConfig = {
@@ -265,7 +259,7 @@ function normalizePaths(raw: unknown, configPath: string, issues: Issue[]): Qfai
 
   const promptsDir = readString(
     raw.promptsDir,
-    // eslint-disable-next-line @typescript-eslint/no-deprecated -- backward compat: read deprecated promptsDir for migration
+    // eslint-disable-next-line @typescript-eslint/no-deprecated -- read deprecated promptsDir
     base.promptsDir,
     "paths.promptsDir",
     configPath,
@@ -926,18 +920,6 @@ function normalizeUiux(
       );
     }
   }
-  if (raw.phase1ReleaseDate !== undefined) {
-    if (
-      typeof raw.phase1ReleaseDate === "string" &&
-      !isNaN(new Date(raw.phase1ReleaseDate).getTime())
-    ) {
-      result.phase1ReleaseDate = raw.phase1ReleaseDate;
-    } else {
-      issues.push(
-        configIssue(configPath, "uiux.phase1ReleaseDate は有効な日付文字列である必要があります。"),
-      );
-    }
-  }
   if (raw.warning_as_error_override !== undefined) {
     if (
       Array.isArray(raw.warning_as_error_override) &&
@@ -963,12 +945,6 @@ function normalizeUiux(
     const audit = normalizeUiuxAudit(raw.audit, configPath, issues);
     if (audit) {
       result.audit = audit;
-    }
-  }
-  if (raw.migration !== undefined) {
-    const migration = normalizeUiuxMigration(raw.migration, configPath, issues);
-    if (migration) {
-      result.migration = migration;
     }
   }
   return Object.keys(result).length > 0 ? result : undefined;
@@ -1042,28 +1018,6 @@ function normalizeUiuxAudit(
           configPath,
           "uiux.audit.maxDuplicateFindingsPerRule は0以上の数値である必要があります。",
         ),
-      );
-    }
-  }
-  return Object.keys(result).length > 0 ? result : undefined;
-}
-
-function normalizeUiuxMigration(
-  raw: unknown,
-  configPath: string,
-  issues: Issue[],
-): QfaiUiuxMigrationConfig | undefined {
-  if (!isRecord(raw)) {
-    issues.push(configIssue(configPath, "uiux.migration はオブジェクトである必要があります。"));
-    return undefined;
-  }
-  const result: QfaiUiuxMigrationConfig = {};
-  if (raw.strict !== undefined) {
-    if (typeof raw.strict === "boolean") {
-      result.strict = raw.strict;
-    } else {
-      issues.push(
-        configIssue(configPath, "uiux.migration.strict はブール値である必要があります。"),
       );
     }
   }
@@ -1144,7 +1098,7 @@ function configIssue(file: string, message: string): Issue {
   return {
     code: "QFAI_CONFIG_INVALID",
     severity: "error",
-    category: "compatibility",
+    category: "canonical",
     message,
     file,
     rule: "config.invalid",

@@ -703,7 +703,7 @@ describe("TC-0013-0016: config baseBranch — loadConfig reads baseBranch from y
 
 // TC-0013-0017
 // QFAI:SPEC-0013:TC-0013-0017
-describe("TC-0013-0017: backward compatibility — old evidence without Diff Context", () => {
+describe("TC-0013-0017: old evidence without Diff Context remains parseable", () => {
   let tmpRoot: string;
 
   beforeEach(async () => {
@@ -738,7 +738,7 @@ describe("TC-0013-0017: backward compatibility — old evidence without Diff Con
       throw new Error("git not found");
     });
 
-    // Should not throw — backward compatible
+    // Should not throw for current parser behavior
     const result = await detectSpecChanges(tmpRoot, stubConfig);
     expect(result).toBeDefined();
     expect(result.entries.length).toBeGreaterThanOrEqual(0);

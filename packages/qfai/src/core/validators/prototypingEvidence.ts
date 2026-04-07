@@ -16,9 +16,10 @@ import type {
 import {
   derivePrototypingObligations,
   inferSurfaceFromRecommendationAndEvidence,
-  isUiBearingSurface,
+  requiresVisualBrowserEvidence,
   isValidPrototypingSurface,
 } from "../prototyping/mode.js";
+import { CANONICAL_PROTOTYPING_SURFACES } from "../domain/surface.js";
 import {
   resolveLatestRecommendationArtifact,
   type ResolvedRecommendationArtifact,
@@ -258,24 +259,26 @@ export async function validatePrototypingEvidence(
   const recommendationArtifact = await resolveLatestRecommendationArtifact(root, config);
   const surfaceResult = resolvePrototypingSurface(parsed.value, recommendationArtifact);
   const effectiveMode = parsed.value.mode?.effective ?? "standard";
-  const obligations = derivePrototypingObligations({
-    surface: surfaceResult.surface,
-    effectiveMode,
-  });
 
   const issues: Issue[] = [];
   issues.push(...validateSurface(surfaceResult, evidenceJsonPath));
-  issues.push(...validateModeMetadata(parsed.value, evidenceJsonPath));
-  issues.push(
-    ...validatePrototypingObligationMatrix(
-      parsed.value,
-      evidenceJsonPath,
-      surfaceResult.surface,
-      obligations,
-      renderBundle,
-      browserQaBundle,
-    ),
-  );
+  issues.push(...validateModeMetadata(parsed.value, evidenceJsonPath, config));
+  if (surfaceResult.surface) {
+    const obligations = derivePrototypingObligations({
+      surface: surfaceResult.surface,
+      effectiveMode,
+    });
+    issues.push(
+      ...validatePrototypingObligationMatrix(
+        parsed.value,
+        evidenceJsonPath,
+        surfaceResult.surface,
+        obligations,
+        renderBundle,
+        browserQaBundle,
+      ),
+    );
+  }
   if (missingSpecIds.length > 0) {
     issues.push(
       issue(
@@ -412,7 +415,7 @@ export async function validatePrototypingEvidence(
           evidenceJsonPath,
           "prototypingEvidence.modeSourceArtifactMissing",
           [`source=${parsed.value.mode.source}`],
-          "compatibility",
+          "canonical",
           "discussion pack に有効な prototyping.yaml を追加するか、mode.source を修正してください。",
         ),
       );
@@ -430,7 +433,7 @@ export async function validatePrototypingEvidence(
             evidenceJsonPath,
             "prototypingEvidence.modePrecedenceMismatch",
             [`effective=${evidenceEffective}`, `recommended=${rec.recommendedMode}`],
-            "compatibility",
+            "canonical",
             "evidence の mode.effective を discussion recommendation に合わせるか、mode.source を修正してください。",
           ),
         );
@@ -452,7 +455,7 @@ export async function validatePrototypingEvidence(
             evidenceJsonPath,
             "prototypingEvidence.requestedModeNotAllowed",
             [`requested=${parsed.value.mode.requested}`, `allowed=${rec.allowedModes.join(",")}`],
-            "compatibility",
+            "canonical",
             "requested mode を allowed_modes 内の mode に変更するか、discussion artifact の allowed_modes を更新してください。",
           ),
         );
@@ -474,7 +477,7 @@ export async function validatePrototypingEvidence(
           evidenceJsonPath,
           "prototypingEvidence.modeSourceDefaultContradiction",
           [`source=${evidenceSource}`, `recommended=${rec.recommendedMode}`],
-          "compatibility",
+          "canonical",
           "discussion recommendation が存在する場合、mode.source は discussion-recommendation であるべきです。",
         ),
       );
@@ -496,7 +499,7 @@ export async function validatePrototypingEvidence(
           evidenceJsonPath,
           "prototypingEvidence.requestedModeNotAllowed",
           [`requested=${parsed.value.mode.requested}`, `allowed=${rec.allowedModes.join(",")}`],
-          "compatibility",
+          "canonical",
           "requested mode を allowed_modes 内の mode に変更するか、discussion artifact の allowed_modes を更新してください。",
         ),
       );
@@ -512,22 +515,23 @@ export async function validatePrototypingEvidence(
     });
     issues.push(...renderIssuesFromBundle);
 
-    // QFAI-PROT-254: render evidence bundle contradicts non-ui surface/mode
+    // QFAI-PROT-254: render evidence bundle contradicts a non-UI prototyping surface
     if (
-      !isUiBearingSurface(surfaceResult.surface) &&
+      surfaceResult.surface &&
+      !requiresVisualBrowserEvidence(surfaceResult.surface) &&
       // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
       renderBundle.renderEvidence?.status === "captured"
     ) {
       issues.push(
         issue(
           "QFAI-PROT-254",
-          `render evidence bundle has captured status but surface is non-ui.`,
+          `render evidence bundle has captured status but surface is ${surfaceResult.surface}.`,
           "warning",
           renderBundlePath,
           "prototypingEvidence.renderBundleSurfaceContradiction",
           [`surface=${surfaceResult.surface}`],
-          "compatibility",
-          "non-ui project では render evidence は不要です。surface を見直すか render bundle を削除してください。",
+          "canonical",
+          `${surfaceResult.surface} surface では render evidence は不要です。surface を見直すか render bundle を削除してください。`,
         ),
       );
     }
@@ -552,7 +556,7 @@ export async function validatePrototypingEvidence(
                   renderBundlePath,
                   "prototypingEvidence.renderFileExistence",
                   [`imagePath=${screen.imagePath}`],
-                  "compatibility",
+                  "canonical",
                   "captured status は実ファイルの存在を前提とします。screenshot を再生成するか、status を skipped/failed に変更してください。",
                 ),
               );
@@ -573,7 +577,7 @@ export async function validatePrototypingEvidence(
                   renderBundlePath,
                   "prototypingEvidence.renderFileExistence",
                   [`htmlPath=${screen.htmlPath}`],
-                  "compatibility",
+                  "canonical",
                   "captured の HTML ref が見つかりません。ファイルを再生成するか、htmlPath を削除してください。",
                 ),
               );
@@ -598,7 +602,7 @@ export async function validatePrototypingEvidence(
                 renderBundlePath,
                 "prototypingEvidence.renderMissingReason",
                 [],
-                "compatibility",
+                "canonical",
                 `status=${screen.status} の screen には reason/error フィールドが必須です。`,
               ),
             );
@@ -634,7 +638,7 @@ export async function validatePrototypingEvidence(
             `browserQa.mode=${browserQaBundle.browserQa.mode}`,
             `effective=${parsed.value.mode.effective}`,
           ],
-          "compatibility",
+          "canonical",
           "browser QA bundle の mode を prototyping.json の mode.effective に合わせてください。",
         ),
       );
@@ -655,7 +659,7 @@ export async function validatePrototypingEvidence(
           browserQaBundlePath,
           "prototypingEvidence.browserQaEmptyCompleted",
           undefined,
-          "compatibility",
+          "canonical",
           "browser QA が completed なら summary または findings を記録してください。",
         ),
       );
@@ -663,7 +667,12 @@ export async function validatePrototypingEvidence(
 
     // QFAI-PROT-263: browser QA bundle required but missing for full-harness ui-bearing
     // (already handled by obligation matrix above — this covers executed=false case)
-    if (obligations.requireBrowserQaBundle && !browserQaBundle.browserQa.executed) {
+    if (
+      surfaceResult.surface &&
+      derivePrototypingObligations({ surface: surfaceResult.surface, effectiveMode })
+        .requireBrowserQaBundle &&
+      !browserQaBundle.browserQa.executed
+    ) {
       issues.push(
         issue(
           "QFAI-PROT-263",
@@ -672,7 +681,7 @@ export async function validatePrototypingEvidence(
           browserQaBundlePath,
           "prototypingEvidence.browserQaNotExecuted",
           [`surface=${surfaceResult.surface}`, `mode=${effectiveMode}`],
-          "compatibility",
+          "canonical",
           "full-harness ui-bearing では browser QA を実行し、executed=true にしてください。",
         ),
       );
@@ -689,7 +698,7 @@ export async function validatePrototypingEvidence(
         evidenceJsonPath,
         "prototypingEvidence.calibrationMissing",
         undefined,
-        "compatibility",
+        "canonical",
         "qfai.config.yaml に prototyping.calibration セクションを追加してください。",
       ),
     );
@@ -708,21 +717,23 @@ export async function validatePrototypingEvidence(
         evidenceJsonPath,
         "prototypingEvidence.calibrationScoringTraceMissing",
         undefined,
-        "compatibility",
+        "canonical",
         "fullHarness.scoringTrace に iteration ごとの score を追加してください。",
       ),
     );
   }
 
-  const uiFidelityIssues = await validateUiFidelity(
-    root,
-    config,
-    evidenceJsonPath,
-    parsed.value,
-    surfaceResult.surface,
-    obligations,
-  );
-  issues.push(...uiFidelityIssues);
+  if (surfaceResult.surface) {
+    const uiFidelityIssues = await validateUiFidelity(
+      root,
+      config,
+      evidenceJsonPath,
+      parsed.value,
+      surfaceResult.surface,
+      derivePrototypingObligations({ surface: surfaceResult.surface, effectiveMode }),
+    );
+    issues.push(...uiFidelityIssues);
+  }
 
   return issues;
 }
@@ -755,10 +766,10 @@ function resolvePrototypingSurface(
   evidence: PrototypingEvidence,
   artifact: ResolvedRecommendationArtifact,
 ): {
-  surface: PrototypingSurface;
+  surface?: PrototypingSurface;
   raw?: string;
   inferred: boolean;
-  source: "evidence.surface" | "recommendationArtifact" | "heuristic";
+  source?: "evidence.surface" | "recommendationArtifact";
 } {
   if (isValidPrototypingSurface(evidence.surface)) {
     return {
@@ -780,12 +791,20 @@ function resolvePrototypingSurface(
     hasUiRoutes: evidence.specs.some((spec) => spec.declared.uiRoutes > 0),
     hasRuntimeGateUi: (evidence.runtimeGate?.ui.length ?? 0) > 0,
   });
+  if (inferred) {
+    return {
+      surface: inferred,
+      ...(typeof evidence.surface === "string" ? { raw: evidence.surface } : {}),
+      inferred: true,
+      source: "recommendationArtifact",
+    };
+  }
 
   return {
-    surface: inferred,
     ...(typeof evidence.surface === "string" ? { raw: evidence.surface } : {}),
-    inferred: !recommendationSurface,
-    source: recommendationSurface ? "recommendationArtifact" : "heuristic",
+    inferred: false,
+    ...(recommendationSurface ? { surface: recommendationSurface } : {}),
+    ...(recommendationSurface ? { source: "recommendationArtifact" as const } : {}),
   };
 }
 
@@ -806,8 +825,22 @@ function validateSurface(
         evidenceJsonPath,
         "prototypingEvidence.surface",
         [surfaceResult.raw],
-        "compatibility",
-        "surface は web-ui|mobile-ui|desktop-ui|mixed|non-ui のいずれかにしてください。",
+        "canonical",
+        `surface field must be one of: ${CANONICAL_PROTOTYPING_SURFACES.join(", ")}.`,
+      ),
+    ];
+  }
+  if (!surfaceResult.surface) {
+    return [
+      issue(
+        "QFAI-PROT-171",
+        "surface が不足しています。",
+        "error",
+        evidenceJsonPath,
+        "prototypingEvidence.surface",
+        undefined,
+        "canonical",
+        `surface field must be one of: ${CANONICAL_PROTOTYPING_SURFACES.join(", ")}.`,
       ),
     ];
   }
@@ -826,9 +859,9 @@ function validatePrototypingObligationMatrix(
 ): Issue[] {
   const issues: Issue[] = [];
   const mismatches: string[] = [];
-  const uiBearing = isUiBearingSurface(surface);
+  const needsVisualBrowserEvidence = requiresVisualBrowserEvidence(surface);
 
-  if (!uiBearing) {
+  if (!needsVisualBrowserEvidence) {
     const contradictions: string[] = [];
     if ((evidence.runtimeGate?.ui.length ?? 0) > 0) contradictions.push("runtimeGate.ui");
     if (evidence.uiFidelity) contradictions.push("uiFidelity");
@@ -838,13 +871,13 @@ function validatePrototypingObligationMatrix(
       issues.push(
         issue(
           "QFAI-PROT-175",
-          `surface=non-ui に UI 専用 evidence が含まれています: ${contradictions.join(", ")}`,
+          `surface=${surface} に UI 専用 evidence が含まれています: ${contradictions.join(", ")}`,
           "error",
           evidenceJsonPath,
           "prototypingEvidence.nonUiContradiction",
           contradictions,
-          "compatibility",
-          "non-ui では uiFidelity / render evidence / browser QA / runtimeGate.ui を省略してください。",
+          "canonical",
+          "UI を持たない surface では uiFidelity / render evidence / browser QA / runtimeGate.ui を省略してください。",
         ),
       );
     }
@@ -860,7 +893,7 @@ function validatePrototypingObligationMatrix(
         evidenceJsonPath,
         "prototypingEvidence.uiFidelityRequiredByMode",
         [`surface=${surface}`, `mode=${evidence.mode?.effective ?? "standard"}`],
-        "compatibility",
+        "canonical",
         "uiFidelity.screens[] を追加し、UI contract 対応の evidence を記録してください。",
       ),
     );
@@ -876,7 +909,7 @@ function validatePrototypingObligationMatrix(
         evidenceJsonPath,
         "prototypingEvidence.runtimeGateRequiredByMode",
         [`surface=${surface}`, `mode=${evidence.mode?.effective ?? "standard"}`],
-        "compatibility",
+        "canonical",
         "runtimeGate.ui / runtimeGate.api を追加して full-harness の観測結果を記録してください。",
       ),
     );
@@ -892,7 +925,7 @@ function validatePrototypingObligationMatrix(
         evidenceJsonPath,
         "prototypingEvidence.renderBundleRequired",
         [`surface=${surface}`, `mode=${evidence.mode?.effective ?? "standard"}`],
-        "compatibility",
+        "canonical",
         "`.qfai/evidence/render.json` を追加し、captured/skipped/failed の bundle を記録してください。",
       ),
     );
@@ -908,7 +941,7 @@ function validatePrototypingObligationMatrix(
         evidenceJsonPath,
         "prototypingEvidence.browserQaBundleRequired",
         [`surface=${surface}`, `mode=${evidence.mode?.effective ?? "standard"}`],
-        "compatibility",
+        "canonical",
         "`.qfai/evidence/browser-qa.json` を追加し、browser QA summary/findings を記録してください。",
       ),
     );
@@ -927,7 +960,7 @@ function validatePrototypingObligationMatrix(
         evidenceJsonPath,
         "prototypingEvidence.obligationMatrix",
         [`surface=${surface}`, `mode=${evidence.mode?.effective ?? "standard"}`, ...mismatches],
-        "compatibility",
+        "canonical",
         "surface と mode.effective に応じた required evidence を揃えてください。",
       ),
     );
@@ -1140,19 +1173,23 @@ function parseEvidence(
   };
 }
 
-function validateModeMetadata(evidence: PrototypingEvidence, evidenceJsonPath: string): Issue[] {
+function validateModeMetadata(
+  evidence: PrototypingEvidence,
+  evidenceJsonPath: string,
+  config: QfaiConfig,
+): Issue[] {
   const issues: Issue[] = [];
 
   if (!evidence.mode) {
     issues.push(
       issue(
         "QFAI-PROT-150",
-        "prototyping.json に mode block がありません。v1.7.14 以降は error になります。",
-        "warning",
+        "prototyping.json に canonical mode block がありません。",
+        "error",
         evidenceJsonPath,
-        "prototypingEvidence.modeMigration",
+        "prototypingEvidence.modeRequired",
         undefined,
-        "compatibility",
+        "canonical",
         "mode.effective / mode.source / mode.rationale を持つ mode block を追加してください。",
       ),
     );
@@ -1168,7 +1205,7 @@ function validateModeMetadata(evidence: PrototypingEvidence, evidenceJsonPath: s
         evidenceJsonPath,
         "prototypingEvidence.modeEffective",
         undefined,
-        "compatibility",
+        "canonical",
         "mode.effective を low-cost|standard|full-harness のいずれかにしてください。",
       ),
     );
@@ -1182,8 +1219,8 @@ function validateModeMetadata(evidence: PrototypingEvidence, evidenceJsonPath: s
         evidenceJsonPath,
         "prototypingEvidence.modeSource",
         undefined,
-        "compatibility",
-        "mode.source を explicit-request|discussion-recommendation|default のいずれかにしてください。",
+        "canonical",
+        "mode.source を explicit-request|discussion-recommendation|system-default のいずれかにしてください。",
       ),
     );
   }
@@ -1196,7 +1233,7 @@ function validateModeMetadata(evidence: PrototypingEvidence, evidenceJsonPath: s
         evidenceJsonPath,
         "prototypingEvidence.modeRationale",
         undefined,
-        "compatibility",
+        "canonical",
         "mode.rationale に mode 選択理由を記録してください。",
       ),
     );
@@ -1216,7 +1253,7 @@ function validateModeMetadata(evidence: PrototypingEvidence, evidenceJsonPath: s
           evidenceJsonPath,
           "prototypingEvidence.discussionRecommendation",
           undefined,
-          "compatibility",
+          "canonical",
           "discussionRecommendation の recommendedMode / rationale / allowedModes を schema に合わせて修正してください。",
         ),
       );
@@ -1234,7 +1271,7 @@ function validateModeMetadata(evidence: PrototypingEvidence, evidenceJsonPath: s
           evidenceJsonPath,
           "prototypingEvidence.discussionRecommendationAllowedModes",
           [`recommendedMode=${recommendation.recommendedMode}`],
-          "compatibility",
+          "canonical",
           "discussionRecommendation.allowedModes に recommendedMode を追加してください。",
         ),
       );
@@ -1251,7 +1288,7 @@ function validateModeMetadata(evidence: PrototypingEvidence, evidenceJsonPath: s
           evidenceJsonPath,
           "prototypingEvidence.fullHarnessRequired",
           undefined,
-          "compatibility",
+          "canonical",
           "fullHarness.enabled / terminationReason / scoringTrace / reviewerSignoff を追加してください。",
         ),
       );
@@ -1266,7 +1303,7 @@ function validateModeMetadata(evidence: PrototypingEvidence, evidenceJsonPath: s
           evidenceJsonPath,
           "prototypingEvidence.fullHarnessTerminationReason",
           undefined,
-          "compatibility",
+          "canonical",
           "terminationReason は converged|max-iterations|plateau|manual-stop のいずれかにしてください。",
         ),
       );
@@ -1280,7 +1317,7 @@ function validateModeMetadata(evidence: PrototypingEvidence, evidenceJsonPath: s
           evidenceJsonPath,
           "prototypingEvidence.fullHarnessScoringTrace",
           undefined,
-          "compatibility",
+          "canonical",
           "fullHarness.scoringTrace に iteration ごとの score を追加してください。",
         ),
       );
@@ -1297,10 +1334,104 @@ function validateModeMetadata(evidence: PrototypingEvidence, evidenceJsonPath: s
           evidenceJsonPath,
           "prototypingEvidence.fullHarnessReviewerSignoff",
           undefined,
-          "compatibility",
+          "canonical",
           "reviewerSignoff に reviewer / timestamp / status を記録してください。",
         ),
       );
+    }
+
+    // QFAI-PROT-290: iterationCount == 1 with converged is suspicious
+    if (
+      evidence.fullHarness.iterationCount === 1 &&
+      evidence.fullHarness.terminationReason === "converged"
+    ) {
+      issues.push(
+        issue(
+          "QFAI-PROT-290",
+          "fullHarness.iterationCount is 1 with terminationReason 'converged'. Full-harness is an iterative loop; single-iteration convergence is suspicious.",
+          "warning",
+          evidenceJsonPath,
+          "prototypingEvidence.fullHarnessSingleIterationConverged",
+          undefined,
+          "canonical",
+          "full-harness は反復改善ループです。1回で converged は通常ありえません。iterationCount を確認してください。",
+        ),
+      );
+    }
+
+    // QFAI-PROT-291: scoringTrace length should match iterationCount
+    if (evidence.fullHarness.scoringTrace.length !== evidence.fullHarness.iterationCount) {
+      issues.push(
+        issue(
+          "QFAI-PROT-291",
+          `fullHarness.scoringTrace has ${evidence.fullHarness.scoringTrace.length} entries but iterationCount is ${evidence.fullHarness.iterationCount}.`,
+          "warning",
+          evidenceJsonPath,
+          "prototypingEvidence.fullHarnessScoringTraceCountMismatch",
+          undefined,
+          "canonical",
+          "scoringTrace のエントリ数と iterationCount を一致させてください。",
+        ),
+      );
+    }
+
+    // QFAI-PROT-292: terminationReason / iterationCount cross-check
+    if (
+      evidence.fullHarness.terminationReason === "max-iterations" &&
+      config.prototyping?.calibration?.maxIterations !== undefined &&
+      evidence.fullHarness.iterationCount < config.prototyping.calibration.maxIterations
+    ) {
+      issues.push(
+        issue(
+          "QFAI-PROT-292",
+          `terminationReason is 'max-iterations' but iterationCount (${evidence.fullHarness.iterationCount}) < configured maxIterations (${config.prototyping.calibration.maxIterations}).`,
+          "warning",
+          evidenceJsonPath,
+          "prototypingEvidence.fullHarnessTerminationReasonMismatch",
+          undefined,
+          "canonical",
+          "terminationReason と iterationCount の整合性を確認してください。",
+        ),
+      );
+    }
+
+    // QFAI-PROT-293: calibration maxIterations consistency
+    if (
+      config.prototyping?.calibration?.maxIterations !== undefined &&
+      evidence.fullHarness.iterationCount > config.prototyping.calibration.maxIterations
+    ) {
+      issues.push(
+        issue(
+          "QFAI-PROT-293",
+          `fullHarness.iterationCount (${evidence.fullHarness.iterationCount}) exceeds configured maxIterations (${config.prototyping.calibration.maxIterations}).`,
+          "warning",
+          evidenceJsonPath,
+          "prototypingEvidence.fullHarnessExceedsMaxIterations",
+          undefined,
+          "canonical",
+          "iterationCount が maxIterations を超えています。設定を確認してください。",
+        ),
+      );
+    }
+
+    // QFAI-PROT-294: scoringTrace improvement progression (info)
+    if (evidence.fullHarness.scoringTrace.length >= 2) {
+      const scores = evidence.fullHarness.scoringTrace.map((s) => s.weightedTotal);
+      const isNonProgressing = scores.every((s, i) => i === 0 || s <= (scores[i - 1] ?? s));
+      if (isNonProgressing) {
+        issues.push(
+          issue(
+            "QFAI-PROT-294",
+            "fullHarness.scoringTrace shows no improvement across iterations. Scores are non-increasing.",
+            "info",
+            evidenceJsonPath,
+            "prototypingEvidence.fullHarnessNoProgression",
+            undefined,
+            "canonical",
+            "scoringTrace のスコアが改善していません。反復改善ループが機能しているか確認してください。",
+          ),
+        );
+      }
     }
   }
 
@@ -1317,11 +1448,11 @@ async function validateUiFidelity(
 ): Promise<Issue[]> {
   const issues: Issue[] = [];
   const uiFidelity = evidence.uiFidelity;
-  const uiBearing = isUiBearingSurface(surface);
+  const needsVisualBrowserEvidence = requiresVisualBrowserEvidence(surface);
   const effectiveMode = evidence.mode?.effective;
   const isStandardOrFull = effectiveMode === "standard" || effectiveMode === "full-harness";
 
-  if (!uiBearing) {
+  if (!needsVisualBrowserEvidence) {
     return issues;
   }
 
@@ -1543,8 +1674,8 @@ async function validateUiFidelity(
   }
 
   // QFAI-PROT-242: missing markers (error when expected.elements > 0 and markers are present)
-  // v1.4.38: autogen now handles backward-compatible marker matching (both id-based and
-  // label-based forms) during evidence generation. The validator simply checks missing.markers.
+  // v1.4.38: autogen handles both id-based and label-based marker matching during
+  // evidence generation. The validator simply checks missing.markers.
   const screensWithMissingMarkers = uiFidelity.screens.filter(
     (screen) =>
       screen.expected.elements > 0 && screen.missing?.markers && screen.missing.markers.length > 0,
@@ -1774,7 +1905,7 @@ function collectUiFidelityMismatchRefs(mismatches: UiFidelityMismatch[]): string
       const labels = mismatch.contractElementLabels.join("|");
       refs.add(`contract_element_labels=${labels}`);
       refs.add(`contract_element_labels_by_contract_route=${contractRoute}:${labels}`);
-      // backward-compatible alias: historical consumers parse missing_labels.
+      // alias: downstream consumers parse missing_labels.
       refs.add(`missing_labels=${labels}`);
       refs.add(`missing_labels_by_contract_route=${contractRoute}:${labels}`);
     }
@@ -2256,13 +2387,7 @@ function normalizeSpecEvidence(
 }
 
 const VALID_PROTOTYPING_MODES = new Set<PrototypingMode>(["low-cost", "standard", "full-harness"]);
-const VALID_PROTOTYPING_SURFACES = new Set([
-  "web-ui",
-  "mobile-ui",
-  "desktop-ui",
-  "mixed",
-  "non-ui",
-]);
+const VALID_PROTOTYPING_SURFACES = new Set(CANONICAL_PROTOTYPING_SURFACES);
 const VALID_MODE_SOURCES = new Set<ModeSelectionSource>([
   "explicit-request",
   "discussion-recommendation",
@@ -2331,9 +2456,14 @@ function normalizeDiscussionRecommendation(
       : [value.recommendedMode];
 
   const surface =
-    typeof value.surface === "string" && VALID_PROTOTYPING_SURFACES.has(value.surface)
+    typeof value.surface === "string" &&
+    VALID_PROTOTYPING_SURFACES.has(value.surface as PrototypingSurface)
       ? (value.surface as PrototypingSurface)
-      : ("non-ui" as const);
+      : undefined;
+
+  if (!surface) {
+    return { ok: false, reason: "`mode.discussionRecommendation.surface` is invalid" };
+  }
 
   return {
     ok: true,

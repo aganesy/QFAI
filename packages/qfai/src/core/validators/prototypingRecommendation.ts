@@ -5,17 +5,24 @@ import { parse as parseYaml } from "yaml";
 
 import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
-import { findLatestDiscussionPackDir } from "../discussionPack.js";
+import { readValidatedClassification } from "../detection/surfaceType.js";
+import { CANONICAL_PROTOTYPING_SURFACES } from "../domain/surface.js";
+import {
+  findLatestDiscussionPackDir,
+  isPrototypingRequiredForDiscussionPack,
+} from "../discussionPack.js";
 import {
   hasLegacyRecommendationKeys,
   hasNamespacedRecommendationBlock,
   isPlainRecord,
 } from "../prototyping/recommendationSchema.js";
+import { validateRecommendationSemantics } from "../prototyping/recommendationSemantics.js";
+import type { PrototypingMode } from "../prototyping/types.js";
 import type { Issue } from "../types.js";
 import { issue } from "./utils.js";
 
 const VALID_MODES = new Set(["low-cost", "standard", "full-harness"]);
-const VALID_SURFACES = new Set(["web-ui", "mobile-ui", "desktop-ui", "mixed", "non-ui"]);
+const VALID_SURFACES = new Set(CANONICAL_PROTOTYPING_SURFACES);
 
 export async function validatePrototypingRecommendation(
   root: string,
@@ -32,17 +39,20 @@ export async function validatePrototypingRecommendation(
   try {
     raw = await readFile(targetPath, "utf-8");
   } catch {
-    // W1: prototyping.yaml is now required when a discussion pack exists
+    const classification = await readValidatedClassification(latestPackDir);
+    if (!isPrototypingRequiredForDiscussionPack(classification)) {
+      return [];
+    }
     return [
       issue(
         "QFAI-PROT-153",
-        "prototyping.yaml が discussion pack に見つかりません。15 required markdown files + required prototyping.yaml で discussion pack を完成させてください。",
+        "latest UI-bearing discussion pack では prototyping.yaml が必須です。",
         "error",
         latestPackDir,
         "prototypingRecommendation.missing",
         undefined,
-        "compatibility",
-        "latest discussion pack に prototyping.yaml を追加してください。",
+        "canonical",
+        "latest discussion pack の classification を確認し、UI-bearing pack なら prototyping.yaml を追加してください。",
       ),
     ];
   }
@@ -59,7 +69,7 @@ export async function validatePrototypingRecommendation(
         targetPath,
         "prototypingRecommendation.schema",
         undefined,
-        "compatibility",
+        "canonical",
         "latest discussion pack の prototyping.yaml を schema に合わせて修正してください。",
       ),
     ];
@@ -74,38 +84,44 @@ export async function validatePrototypingRecommendation(
         targetPath,
         "prototypingRecommendation.schema",
         undefined,
-        "compatibility",
-        "prototyping.recommended_mode / prototyping.rationale / prototyping.allowed_modes を持つ namespaced object に修正してください。",
+        "canonical",
+        "prototyping.recommended_mode / prototyping.rationale / prototyping.allowed_modes / prototyping.surface を持つ namespaced object に修正してください。",
       ),
     ];
   }
 
-  const issues: Issue[] = [];
-
-  // D-5: Detect schema type — existence-based precedence (not validness-based)
-  const hasNamespaced = hasNamespacedRecommendationBlock(parsed);
-  const hasTopLevel = hasLegacyRecommendationKeys(parsed);
-
-  if (hasNamespaced && hasTopLevel) {
-    issues.push(
+  if (!hasNamespacedRecommendationBlock(parsed)) {
+    return [
       issue(
-        "QFAI-PROT-232",
-        "prototyping.yaml に namespaced と top-level の両方の recommendation block があります。namespaced が優先されます。",
-        "warning",
+        "QFAI-PROT-153",
+        "prototyping.yaml は canonical namespaced schema (`prototyping.*`) を必須とします。",
+        "error",
         targetPath,
-        "prototypingRecommendation.conflictingSchemas",
+        "prototypingRecommendation.schema",
         undefined,
-        "compatibility",
-        "top-level の recommended_mode / rationale / allowed_modes / surface を削除し、prototyping.* namespaced 形式に統一してください。",
+        "canonical",
+        "top-level schema を削除し、`prototyping.recommended_mode / rationale / allowed_modes / surface` を定義してください。",
       ),
-    );
+    ];
   }
 
-  // D-5: When namespaced key exists, always use it (even if invalid).
-  // Valid legacy fallback is only allowed when namespaced key does not exist.
-  if (hasNamespaced && !isPlainRecord(parsed.prototyping)) {
-    // Non-object namespaced block — invalid, no legacy fallback
-    issues.push(
+  if (hasLegacyRecommendationKeys(parsed)) {
+    return [
+      issue(
+        "QFAI-PROT-153",
+        "prototyping.yaml must use the canonical namespaced schema under 'prototyping:' only. Legacy top-level recommendation keys are not supported.",
+        "error",
+        targetPath,
+        "prototypingRecommendation.schema",
+        undefined,
+        "canonical",
+        "top-level の recommended_mode / rationale / allowed_modes / surface を削除し、`prototyping:` block のみに統一してください。",
+      ),
+    ];
+  }
+
+  if (!isPlainRecord(parsed.prototyping)) {
+    return [
       issue(
         "QFAI-PROT-153",
         "prototyping.yaml の prototyping キーが object ではありません。namespaced block は plain object である必要があります。",
@@ -113,36 +129,18 @@ export async function validatePrototypingRecommendation(
         targetPath,
         "prototypingRecommendation.schema",
         undefined,
-        "compatibility",
+        "canonical",
         "prototyping:\n  recommended_mode: ...\n  rationale: ...\n  allowed_modes: [...]\n  surface: ...\nの形式に書き換えてください。",
       ),
-    );
-    return issues;
+    ];
   }
 
-  const namespacedBlock = hasNamespaced ? (parsed.prototyping as Record<string, unknown>) : null;
-  const block = namespacedBlock ?? parsed;
-  const isLegacy = !hasNamespaced && hasTopLevel;
-
-  if (isLegacy) {
-    issues.push(
-      issue(
-        "QFAI-PROT-231",
-        "prototyping.yaml が deprecated な top-level schema を使用しています。prototyping.* namespaced 形式に移行してください。",
-        "warning",
-        targetPath,
-        "prototypingRecommendation.deprecatedTopLevel",
-        undefined,
-        "compatibility",
-        "prototyping:\n  recommended_mode: ...\n  rationale: ...\n  allowed_modes: [...]\n  surface: ...\nの形式に書き換えてください。",
-      ),
-    );
-  }
-
+  const block = parsed.prototyping;
   const recommendedMode = block.recommended_mode;
   const rationale = block.rationale;
   const allowedModes = block.allowed_modes;
   const surface = block.surface;
+  const issues: Issue[] = [];
 
   if (typeof recommendedMode !== "string" || !VALID_MODES.has(recommendedMode)) {
     issues.push(
@@ -153,11 +151,12 @@ export async function validatePrototypingRecommendation(
         targetPath,
         "prototypingRecommendation.recommendedMode",
         undefined,
-        "compatibility",
+        "canonical",
         "recommended_mode は low-cost|standard|full-harness のいずれかにしてください。",
       ),
     );
   }
+
   if (typeof rationale !== "string" || rationale.trim().length === 0) {
     issues.push(
       issue(
@@ -167,7 +166,7 @@ export async function validatePrototypingRecommendation(
         targetPath,
         "prototypingRecommendation.rationale",
         undefined,
-        "compatibility",
+        "canonical",
         "rationale を非空文字列で記載してください。",
       ),
     );
@@ -183,7 +182,7 @@ export async function validatePrototypingRecommendation(
         targetPath,
         "prototypingRecommendation.allowedModesRequired",
         undefined,
-        "compatibility",
+        "canonical",
         "allowed_modes は low-cost|standard|full-harness の重複なし配列で必須です。",
       ),
     );
@@ -199,7 +198,7 @@ export async function validatePrototypingRecommendation(
         targetPath,
         "prototypingRecommendation.allowedModes",
         undefined,
-        "compatibility",
+        "canonical",
         "allowed_modes は low-cost|standard|full-harness の重複なし配列にしてください。",
       ),
     );
@@ -216,11 +215,14 @@ export async function validatePrototypingRecommendation(
         targetPath,
         "prototypingRecommendation.surfaceRequired",
         undefined,
-        "compatibility",
-        "surface は web-ui|mobile-ui|desktop-ui|mixed|non-ui のいずれかで必須です。",
+        "canonical",
+        `surface は ${CANONICAL_PROTOTYPING_SURFACES.join("|")} のいずれかで必須です。`,
       ),
     );
-  } else if (typeof surface !== "string" || !VALID_SURFACES.has(surface)) {
+  } else if (
+    typeof surface !== "string" ||
+    !VALID_SURFACES.has(surface as (typeof CANONICAL_PROTOTYPING_SURFACES)[number])
+  ) {
     issues.push(
       issue(
         "QFAI-PROT-153",
@@ -229,8 +231,8 @@ export async function validatePrototypingRecommendation(
         targetPath,
         "prototypingRecommendation.surface",
         undefined,
-        "compatibility",
-        "surface は web-ui|mobile-ui|desktop-ui|mixed|non-ui のいずれかにしてください。",
+        "canonical",
+        `surface は ${CANONICAL_PROTOTYPING_SURFACES.join("|")} のいずれかにしてください。`,
       ),
     );
   }
@@ -238,21 +240,26 @@ export async function validatePrototypingRecommendation(
   if (
     normalizedAllowedModes &&
     typeof recommendedMode === "string" &&
-    VALID_MODES.has(recommendedMode) &&
-    !normalizedAllowedModes.includes(recommendedMode)
+    VALID_MODES.has(recommendedMode)
   ) {
-    issues.push(
-      issue(
-        "QFAI-PROT-154",
-        "allowed_modes は recommended_mode を含む必要があります。",
-        "error",
-        targetPath,
-        "prototypingRecommendation.allowedModesContainsRecommended",
-        [`recommended_mode=${recommendedMode}`],
-        "compatibility",
-        "allowed_modes に recommended_mode を追加してください。",
-      ),
-    );
+    const semanticResult = validateRecommendationSemantics({
+      recommendedMode: recommendedMode as PrototypingMode,
+      allowedModes: normalizedAllowedModes as PrototypingMode[],
+    });
+    if (!semanticResult.valid) {
+      issues.push(
+        issue(
+          semanticResult.code,
+          "allowed_modes は recommended_mode を含む必要があります。",
+          "error",
+          targetPath,
+          "prototypingRecommendation.allowedModesContainsRecommended",
+          [`recommended_mode=${recommendedMode}`],
+          "canonical",
+          "allowed_modes に recommended_mode を追加してください。",
+        ),
+      );
+    }
   }
 
   return issues;

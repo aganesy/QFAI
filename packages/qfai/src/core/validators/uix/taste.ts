@@ -1,5 +1,5 @@
 /**
- * UIX-VAL taste interview validator — spec-0034
+ * UIX-VAL taste interview validator - spec-0034
  *
  * Validates that the design taste interview artifact exists
  * and contains all 10 required sections with non-empty content.
@@ -38,7 +38,7 @@ function tasteIssue(
   return {
     code,
     severity,
-    category: "compatibility",
+    category: "canonical",
     message,
     file: TASTE_ARTIFACT,
     suggested_action: suggestedAction,

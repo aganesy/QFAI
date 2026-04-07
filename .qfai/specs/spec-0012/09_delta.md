@@ -95,3 +95,93 @@ REQ-0015 → US-0012-0010 → AC-0012-0012 → BR-0012-0010 → EX-0012-0013 →
   - `prototyping/uiFidelityBuilder.ts`（QFAI-PROT-270/271/272 emit）
   - `prototyping/execution.ts`（本番パスオーケストレータ）
   - `harness/` runtime（runtime.ts, adapters.ts, resultWriter.ts）
+
+## v1.7.14 (2026-04-07) — Current-Only SSOT & Strict Semantic Enforcement
+
+- adopted: REQ-0028（Canonical Prototyping Surfaces）, REQ-0029（Execution Hard Gates）, REQ-0030（Namespaced-Only Schema）, REQ-0031（Semantic Invariant SSOT）, REQ-0032（Classification Separation）, REQ-0033（Surface Inference Nullable）追加
+- adopted: US-0012-0017~0021, AC-0012-0020~0026, BR-0012-0020~0023 追加
+- adopted: DR-0012-0002~0005 追加
+- adopted: BR-0012-0012 更新（QFAI-PROT-231/232 warning → hard error）, BR-0012-0018 更新（sourceSchema "top-level" 廃止）, BR-0012-0019 更新（surface inference null default）
+- adopted: US range 更新 US-0012-0001..US-0012-0021
+- rationale: v1.7.14 は QFAI の current-only SSOT リリース。以下の破壊的変更を仕様に反映:
+  - **Canonical surfaces**: web-ui/mobile-ui/desktop-ui → web/mobile/desktop。cli/mixed 追加。non-ui を prototyping surface 外に分離（DR-0109）
+  - **Execution hard gates**: invalid classification/recommendation を即座に reject。non-UI パックを prototyping execution 対象外として明示拒否（DR-0111）
+  - **Namespaced-only schema**: legacy top-level keys の存在を hard error に昇格。QFAI-PROT-231/232 warning 廃止（DR-0112）
+  - **Semantic invariant SSOT**: recommendationSemantics.ts に recommended_mode ∈ allowed_modes 検証を集約。parser/resolver/execution/CLI/validator/preflight 全レイヤーで共有（DR-0113）
+  - **Classification separation**: isUiBearingSurface() → isDiscussionUiBearingPrototypingSurface() + requiresVisualBrowserEvidenceSurface() に分割。cli は discussion UI-bearing だが browser evidence は不要（DR-0110）
+  - **Surface inference nullable**: inferSurfaceFromRecommendationAndEvidence() が推定不能時に null を返す（旧 "non-ui" デフォルト廃止）
+  - **Legacy infrastructure 完全削除**: rollout.ts, legacy/ validators, migration/ validators, compatibility tests をソースツリーから完全除去
+
+### Traceability Chain (v1.7.14 additions)
+
+```text
+REQ-0028 → US-0012-0017 → AC-0012-0020 → BR-0012-0020 → DR-0012-0002
+REQ-0029 → US-0012-0018 → AC-0012-0021, AC-0012-0022 → BR-0012-0021 → DR-0012-0002, DR-0012-0005
+REQ-0030 → US-0012-0019 → AC-0012-0023 → BR-0012-0012 (updated) → DR-0012-0003
+REQ-0031 → US-0012-0020 → AC-0012-0024 → BR-0012-0022 → DR-0012-0004
+REQ-0032 → US-0012-0021 → AC-0012-0025 → BR-0012-0023 → DR-0012-0005
+REQ-0033 → US-0012-0021 → AC-0012-0026 → BR-0012-0019 (updated)
+```
+
+### Deleted Source Files (v1.7.14)
+
+| File                                      | Reason                                                  |
+| ----------------------------------------- | ------------------------------------------------------- |
+| `validators/legacy/ddpCompatibility.ts`   | Legacy DDP compatibility path 不要（current-only SSOT） |
+| `validators/legacy/uixCompatibility.ts`   | Legacy UIX compatibility path 不要                      |
+| `validators/legacy/index.ts`              | Legacy barrel 不要                                      |
+| `validators/legacyStatusDir.ts`           | Legacy status directory check 不要                      |
+| `validators/migration/formatDetection.ts` | Migration format detection 不要                         |
+| `validators/uix/rollout.ts`               | Rollout/phase-1 ratchet infrastructure 不要             |
+| `assets/uix-rev/migration-review.md`      | Migration review asset 不要                             |
+
+### Added Source Files (v1.7.14)
+
+| File                                          | Purpose                                          |
+| --------------------------------------------- | ------------------------------------------------ |
+| `core/domain/strategyDecision.ts`             | Canonical strategy decision vocabulary (DR-0114) |
+| `core/prototyping/recommendationSemantics.ts` | Semantic invariant SSOT helper (DR-0113)         |
+| `core/validators/uix/types.ts`                | UIX validator shared types                       |
+| `core/validators/uix/index.ts`                | UIX validator barrel refactoring                 |
+
+### v1.7.14 Full-Harness Iteration Protocol & Validator Rules (2026-04-08)
+
+- adopted: REQ-0034（Full-Harness Iteration Protocol）, REQ-0035（Independent Evaluator Panel）, REQ-0036（Score Scope Separation）, REQ-0037（Evaluation Rigor Rules）, REQ-0038（Asset Acquisition Strategy）, REQ-0039（Reviewer Gate Strengthening）, REQ-0040（Full-Harness Validator Rules QFAI-PROT-290~294）追加
+- adopted: US-0012-0022~0025, AC-0012-0027~0033, BR-0012-0024~0031 追加
+- adopted: DR-0012-0006~0009 追加
+- adopted: BR-0012-0016 更新（fullHarness schema: reviewerSignoff boolean→object, scoringTrace boolean→array, terminationReason に "plateau"/"manual-stop" 追加）
+- adopted: US range 更新 US-0012-0001..US-0012-0025
+- rationale: 2 つの full-harness インシデントレポートに基づく改善:
+  - **Iteration Protocol**: single-pass evidence dump を反復改善ループに拡張。4-step cycle, MIN_ITERATIONS=5, 4 termination conditions
+  - **Independent Evaluator Panel**: 3-layer（product-surface-reviewer/product-experience-architect/qa-gatekeeper）で self-evaluation bias を構造的に排除
+  - **Score Scope Separation**: discussion 3-layer scores ≠ prototyping scoringTrace を明確化。コピー禁止
+  - **Evaluation Rigor**: 3-tier rubric（existence_gate/quality_criteria/excellence_criteria）, L1/L2/L1-manual finding 分類
+  - **Asset Strategy**: free assets MUST, emoji/placeholder prohibition, WCAG 2.1 AA checklist
+  - **Reviewer Gate**: 6 full-harness-specific checks, Limitations section obligation
+  - **QFAI-PROT-290~294**: 5 新規 validator rules（iteration integrity）。taxonomy range 281-294 に拡張
+
+### Traceability Chain (v1.7.14 Full-Harness additions)
+
+```text
+REQ-0034 → US-0012-0022 → AC-0012-0027 → BR-0012-0024, BR-0012-0031 → DR-0012-0006
+REQ-0035 → US-0012-0023 → AC-0012-0028 → BR-0012-0025 → DR-0012-0006, DR-0012-0009
+REQ-0036 → US-0012-0024 → AC-0012-0029 → BR-0012-0026 → DR-0012-0007
+REQ-0037 → US-0012-0022 → AC-0012-0030 → BR-0012-0027 → DR-0012-0008
+REQ-0038 → US-0012-0022 → AC-0012-0031 → BR-0012-0028
+REQ-0039 → US-0012-0022 → AC-0012-0032 → BR-0012-0029
+REQ-0040 → US-0012-0025 → AC-0012-0033 → BR-0012-0030
+```
+
+### Modified Skill/Steering Files (v1.7.14 Full-Harness)
+
+| File                                                                                            | Change                                                                           |
+| ----------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| `assets/init/.qfai/assistant/skills/qfai-prototyping/SKILL.md`                                  | +200行: Iteration Protocol, Evaluation Rigor, Asset Strategy, Reviewer Gate 追加 |
+| `assets/init/.qfai/assistant/skills/qfai-discussion/SKILL.md`                                   | Score Scope 注記 + iteration_expectations ブロック追加                           |
+| `assets/init/.qfai/assistant/skills/qfai-discussion/templates/uiux/23_design_eval_aggregate.md` | Score Scope Limitation セクション追加                                            |
+| `assets/init/.qfai/assistant/steering/review-profiles.yml`                                      | full-harness プロファイル追加                                                    |
+| `assets/init/.qfai/assistant/steering/agent-routing.yml`                                        | prototyping evidence phase に product-experience-architect 追加                  |
+| `core/validators/prototypingEvidence.ts`                                                        | QFAI-PROT-290~294 追加（+104行）                                                 |
+| `cli/commands/validate.ts`                                                                      | PROT-290~294 description 追加                                                    |
+| `tests/core/prototypingEvidence.test.ts`                                                        | 5 test cases 追加（+270行）                                                      |
+| `tests/core/issueCodeUniqueness.test.ts`                                                        | TAXONOMY_RANGE_MAX 283→294, fullHarness range 281→294                            |

@@ -30,18 +30,18 @@ export const CANONICAL_REVIEW_ITEMS: readonly ReviewItem[] = [
     id: "taste-reflection-quality",
     name: "Taste Reflection Quality",
     description:
-      "Evaluates whether taste interview responses are reflected in selected direction, strategy, and evaluation artifacts.",
+      "Evaluates whether taste interview responses are reflected in selected anchor, strategy, and evaluation artifacts.",
     evaluationCriteria: [
-      "Presence of taste themes in selected direction / 3-layer evaluation family",
+      "Presence of taste themes in selected anchor / 3-layer evaluation family",
       "Specificity of reflection vs generic parroting",
-      "Taste interview sections are reflected across selected direction, strategy, and evaluation layers",
+      "Taste interview sections are reflected across selected anchor, strategy, and evaluation layers",
     ],
   },
   {
     id: "anti-preference-enforcement",
     name: "Anti-Preference Enforcement",
     description:
-      "Verifies anti-preferences from the taste interview are excluded from selected direction and strategy decisions.",
+      "Verifies anti-preferences from the taste interview are excluded from selected anchor and strategy decisions.",
     evaluationCriteria: [
       "No anti-preference themes appear as positive design direction",
       "Explicit exclusion documentation present",
@@ -55,7 +55,7 @@ export const CANONICAL_REVIEW_ITEMS: readonly ReviewItem[] = [
     evaluationCriteria: [
       "Freshness date check against configurable window",
       "Domain alignment between trend and project context",
-      "Source translation quality assessment",
+      "source_refs quality assessment",
       "Confidence level appropriateness for use case",
     ],
   },
@@ -99,7 +99,7 @@ export const CANONICAL_REVIEW_ITEMS: readonly ReviewItem[] = [
     description:
       "Evaluates whether scoring-ready evaluation axes have all canonical fields populated.",
     evaluationCriteria: [
-      "All 16 per-axis fields present (axis_id through review_questions)",
+      "Canonical scoring-ready fields present (origin, layer, source_refs, goal_refs, evidence_required, review_questions)",
       "Aggregate thresholds defined (accept/refine/pivot)",
       "Plateau and disagreement rules documented",
     ],
@@ -159,7 +159,7 @@ export function getReviewItem(id: ReviewItemId): ReviewItem | undefined {
 export function detectGenericFallbackAxes(axesContent: string): string[] {
   const genericPatterns = [
     /\bvisual\s+consistency\b/i,
-    /\busability\b(?!.*source_translation)/i,
+    /\busability\b/i,
     /\bgeneral\s+accessibility\b/i,
   ];
 

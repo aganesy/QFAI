@@ -161,3 +161,22 @@
   - `detection/surfaceType.ts` が 01_Context.md の ui_bearing/primary_surface 分類ブロックを優先する判定ルール
   - `classification.ts` バリデータが分類ブロックの構造を検証
   - サイドカーテンプレートファイル名の正規化（10_strategy→10_implementation_strategy 等 3 件）
+
+## v1.7.14 (2026-04-07) — Current-Only SSOT & Canonical Convergence
+
+- adopted: REQ-0024（Classification 二分割）, REQ-0025（Strategy Decision Canonical Vocabulary）, REQ-0026（selected anchor wording 正規化）追加
+- adopted: DR-0002-0003~0005 追加
+- rationale: v1.7.14 の破壊的変更を仕様に反映:
+  - **Classification 二分割**: isUiBearingSurface() を isDiscussionUiBearingPrototypingSurface() と requiresVisualBrowserEvidenceSurface() に分割。cli は discussion UI-bearing だが browser evidence 免除（DR-0110）
+  - **Strategy canonical vocabulary**: strategy decision/chosen_option/candidate_options に canonical enum 導入。free-form text 禁止。selection_required に対応する状態機械を強制（DR-0114）
+  - **selected anchor wording**: "selected direction" → "selected anchor" に全アーティファクトで統一。エラーコード DDH-SELECTED-DIRECTION → DDH-SELECTED-ANCHOR に変更
+  - **threeLayer 4-axis severity**: 旧 4-axis 評価テンプレート検出時の severity を warning → error に昇格
+  - **"translation quality" → "evidence traceability"**: ソーステンプレートの用語正規化
+
+### v1.7.14 Score Scope Separation (2026-04-08)
+
+- adopted: REQ-0027（Score Scope Separation）追加
+- rationale: full-harness インシデントレポートに基づく改善:
+  - 3-layer evaluation aggregate scores が prototyping scoringTrace にそのままコピーされるケースが確認された
+  - `23_design_eval_aggregate.md` テンプレートに Score Scope Limitation セクションを追加
+  - discussion scores は design direction quality（which option）、prototyping scores は implementation fidelity（how well）として明確に分離

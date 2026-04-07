@@ -2,11 +2,10 @@
  * UIX-VAL UI-bearing spec detection.
  *
  * Delegates to the shared surface type detection module (spec-0035).
- * Maintains the public `isUiBearingSpec` API for backward compatibility.
  *
  * BR-0027-0001, BR-0027-0002, BR-0027-0012
  */
-import { isUiBearingSurface } from "../detection/surfaceType.js";
+import { isDiscussionUiBearingPack } from "../detection/surfaceType.js";
 
 /**
  * Determine if a spec/discussion pack is UI-bearing using the shared
@@ -16,5 +15,5 @@ import { isUiBearingSurface } from "../detection/surfaceType.js";
  * @returns true if UI-bearing, false otherwise
  */
 export async function isUiBearingSpec(root: string): Promise<boolean> {
-  return isUiBearingSurface(root);
+  return isDiscussionUiBearingPack(root);
 }

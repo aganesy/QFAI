@@ -46,7 +46,7 @@ export async function validateContractReferences(
           filePath,
           "contracts.referenceExists",
           [contractId],
-          "compatibility",
+          "canonical",
           "契約IDに対応するファイルを `.qfai/contracts/**` に追加し、`QFAI-CONTRACT-ID` 宣言を一致させてください。",
         ),
       );

@@ -5,7 +5,7 @@
  * absence is a valid state with fail-open semantics.
  *
  * WS-B: BrowserQaProvider is the canonical interface for 4-phase Browser QA.
- * BrowserProvider is the legacy render-capture provider interface.
+ * BrowserProvider defines the browser QA and capture provider interface.
  */
 
 import type {
@@ -22,7 +22,7 @@ export type ProviderCapability =
   | "visual"
   | "accessibility";
 
-/** Legacy render-capture provider. */
+/** Browser QA and capture provider. */
 export type BrowserProvider = {
   name: string;
   capabilities: ProviderCapability[];

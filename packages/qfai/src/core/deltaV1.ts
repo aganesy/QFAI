@@ -131,7 +131,7 @@ export function normalizeCompat(value: string | null | undefined): DeltaCompat |
     return null;
   }
   const normalized = value.trim().toLowerCase();
-  if (normalized === "compatibility") return "Compatibility";
+  if (/^compat(?:ibility)?$/i.test(normalized)) return "Compatibility";
   if (normalized === "improvement") return "Improvement";
   if (normalized === "change") return "Change";
   if (normalized === "bug-for-bug") return "Bug-for-bug";

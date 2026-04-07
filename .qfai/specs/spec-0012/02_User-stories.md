@@ -65,3 +65,41 @@ As a QFAI user, I want `qfai.config.yaml` to support a `prototyping.calibration`
 ## US-0012-0016: Report Prototyping Observability
 
 As a project lead, I want report.ts to collect prototyping data (mode, evidence, harness, render, browserQa, calibration) into a `## Prototyping` section, so that prototyping state is visible in reports even when not yet used as a blocking gate.
+
+## US-0012-0017: Canonical Prototyping Surfaces
+
+As a QFAI user, I want prototyping surfaces to use canonical names (web/mobile/desktop/cli/mixed) without the -ui suffix, so that surface identifiers are concise and consistent across all QFAI modules.
+
+## US-0012-0018: Execution Hard Gates for Invalid Input
+
+As a QFAI developer, I want execution.ts to hard-reject invalid classification, invalid recommendation artifacts, and non-UI packs at the entry gate, so that no prototyping execution proceeds with semantically invalid inputs.
+
+## US-0012-0019: Namespaced-Only prototyping.yaml Schema
+
+As a QFAI user, I want prototyping.yaml to require the namespaced `prototyping:` block exclusively, with legacy top-level keys hard-rejected, so that there is only one valid schema format and no migration ambiguity.
+
+## US-0012-0020: Semantic Invariant Shared Across All Layers
+
+As a QFAI developer, I want the recommended_mode ∈ allowed_modes invariant to be enforced by a single shared helper (recommendationSemantics.ts) at all layers (parser, resolver, execution, CLI, validator, preflight), so that semantic mismatch is never silently accepted at any layer.
+
+## US-0012-0021: Classification-Aware Evidence Obligations
+
+As a QFAI developer, I want obligation derivation to distinguish "discussion UI-bearing" (includes cli) from "visual/browser evidence required" (excludes cli), so that cli-surface packs are not incorrectly required to produce browser screenshots or Playwright-based evidence.
+
+## US-0012-0022: Full-Harness Iteration Protocol
+
+As a developer, I want full-harness mode to execute a multi-iteration improvement loop (Evaluate→Identify→Fix→Re-evaluate) with configurable termination conditions (converged/max-iterations/plateau/manual-stop), so that prototyping quality is iteratively refined rather than accepted in a single pass.
+
+## US-0012-0023: Independent Evaluator Panel
+
+As a developer, I want full-harness evaluation to be performed by an independent 3-layer panel (product-surface-reviewer for design quality, product-experience-architect for product experience, qa-gatekeeper for process audit), so that self-evaluation bias is structurally prevented.
+
+## US-0012-0024: Score Scope Separation
+
+As a developer, I want discussion 3-layer scores (design direction quality) to be explicitly separated from prototyping scoringTrace (implementation fidelity), so that scores from different evaluation contexts are never confused or copied between phases.
+
+## US-0012-0025: Full-Harness Validator Rules
+
+As a QFAI developer, I want prototypingEvidence.ts to include QFAI-PROT-290~294 validator rules checking iteration integrity
+(single-iteration convergence, scoringTrace count, terminationReason cross-check, maxIterations cap, score progression),
+so that full-harness evidence quality is automatically verified.

@@ -63,6 +63,7 @@ async function seedSpecDir(root: string, specId: string): Promise<void> {
 
 function buildMinimalPrototypingEvidence(specIds: string[]): object {
   return {
+    surface: "web",
     specs: specIds.map((id) => ({
       specId: id,
       declared: { uiRoutes: 1, apiEndpoints: 0, dbObjects: 0 },
@@ -72,7 +73,7 @@ function buildMinimalPrototypingEvidence(specIds: string[]): object {
     runtimeGate: { ui: [{ route: "/", status: 200 }], api: [] },
     meta: {
       generatedAt: "2026-03-31T00:00:00Z",
-      toolVersion: "1.7.11",
+      toolVersion: "1.7.14",
       commands: ["prototyping"],
     },
   };
@@ -310,7 +311,7 @@ describe("E2E: US-0012-0004 — qualityProfile severity for render evidence", ()
 });
 
 // QFAI:SPEC-0012:US-0012-0005
-describe("E2E: US-0012-0005 — legacy critique backward compatibility", () => {
+describe("E2E: US-0012-0005 — legacy critique artifact parsing", () => {
   it("evidence without renders does not produce QFAI-PROT-244/245 errors", async () => {
     await withTempProject(async (root) => {
       await seedSpecDir(root, "spec-0001");

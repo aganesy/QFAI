@@ -3,7 +3,7 @@ import type {
   BrowserQaPhaseResult,
   BrowserQaProvider,
 } from "../browserQa/types.js";
-import { isUiBearingSurfaceType } from "../detection/surfaceType.js";
+import { requiresVisualBrowserEvidence } from "../detection/surfaceType.js";
 
 interface PlaywrightPage {
   goto(url: string, options?: { waitUntil?: string }): Promise<unknown>;
@@ -60,14 +60,21 @@ async function withPage<T>(
 }
 
 function completed(phase: BrowserQaPhaseResult["phase"]): BrowserQaPhaseResult {
-  return { phase, status: "executed", findings: [] };
+  return {
+    phase,
+    status: "executed",
+    findings: [],
+    repair_suggestions: [],
+    evidence_refs: [`provider:playwright:${phase}`],
+    checks_performed: [`playwright executed ${phase} checks`],
+  };
 }
 
 export function createPlaywrightBrowserQaProvider(): BrowserQaProvider {
   return {
     providerId: "playwright",
     canRun(surface) {
-      return isUiBearingSurfaceType(surface);
+      return requiresVisualBrowserEvidence(surface);
     },
     async runSmoke(input) {
       return withPage(input, async (page) => {

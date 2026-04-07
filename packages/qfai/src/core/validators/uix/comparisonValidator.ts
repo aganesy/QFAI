@@ -1,11 +1,10 @@
 /**
- * Canonical UIX comparison validator — v1.7.13
+ * Canonical UIX comparison validator — v1.7.14
  *
  * Validates option comparison in 30_option_comparison.md and
  * selected anchor in 31_selected_anchor_screen.md.
  *
- * The old 30_comparison.md with embedded "Selected Direction" is no longer
- * the canonical format. Comparison and selection are now split across two files.
+ * Comparison and selection are split across two files.
  */
 import path from "node:path";
 

@@ -92,7 +92,7 @@ async function newTempDir(): Promise<string> {
 }
 
 async function createUiBearingPack(root: string): Promise<void> {
-  await writeFile(path.join(root, "01_Spec.md"), "# Spec\n\n- surface: web-ui\n", "utf-8");
+  await writeFile(path.join(root, "01_Spec.md"), "# Spec\n\n- surface: web\n", "utf-8");
   await mkdir(path.join(root, "uiux"), { recursive: true });
 }
 
@@ -132,75 +132,47 @@ function completeTasteContent(): string {
 
 function completeTrendContent(): string {
   return [
-    "# Sources",
+    "# Trend Scan",
     "",
-    "## Trend Scan",
+    "## user expectation / market norm",
     "",
-    "### Visual Tone Trends",
-    "",
-    "#### Entry",
+    "### Entry",
     "",
     "- reference: Modern Design System Report 2025",
     "- observation: Shift toward muted pastel palettes",
-    "- freshness_date: 2025-12-01",
-    "- confidence: high",
-    "- source_translation: Adopted muted color approach for brand warmth",
+    "- decision_connection: Adopted muted color approach for brand warmth",
+    "- evaluation_connection: Supports invariant layer accessibility compliance",
     "- local_implication: Apply muted palette to primary surfaces",
     "",
-    "### Layout / Composition Trends",
+    "## product neighbor / comparable flow",
     "",
-    "#### Entry",
+    "### Entry",
     "",
     "- reference: Layout Patterns Survey Q4",
     "- observation: Bento grid layouts gaining traction",
-    "- freshness_date: 2025-11-15",
-    "- confidence: medium",
-    "- source_translation: Adopted bento grid for dashboard",
+    "- decision_connection: Adopted bento grid for dashboard",
+    "- evaluation_connection: Aligns with trend-derived layer layout scoring",
     "- local_implication: Use bento grid on main dashboard view",
     "",
-    "### Density / Hierarchy Trends",
+    "## platform convention",
     "",
-    "#### Entry",
+    "### Entry",
     "",
     "- reference: Information Density Study 2025",
     "- observation: Progressive disclosure preferred",
-    "- freshness_date: 2025-10-01",
-    "- confidence: high",
-    "- source_translation: Adopted progressive disclosure for settings",
+    "- decision_connection: Adopted progressive disclosure for settings",
+    "- evaluation_connection: Improves product-specific density scoring",
     "- local_implication: Apply progressive disclosure to complex forms",
     "",
-    "### Interaction / Motion Trends",
+    "## accessibility / compliance relevant signal",
     "",
-    "#### Entry",
+    "### Entry",
     "",
-    "- reference: Motion Design Trends 2025",
-    "- observation: Micro-interactions for feedback",
-    "- freshness_date: 2025-11-20",
-    "- confidence: high",
-    "- source_translation: Adopted subtle micro-interactions for save actions",
-    "- local_implication: Add feedback animations on form submit",
-    "",
-    "### Component Styling Trends",
-    "",
-    "#### Entry",
-    "",
-    "- reference: Component Library Benchmark 2025",
-    "- observation: Rounded corners and soft shadows standard",
-    "- freshness_date: 2025-12-05",
-    "- confidence: high",
-    "- source_translation: Adopted soft shadow and rounded corner tokens",
-    "- local_implication: Standardize border-radius and shadow tokens",
-    "",
-    "### Stale / Overused AI Slop Patterns",
-    "",
-    "#### Entry",
-    "",
-    "- reference: Anti-pattern Catalog 2025",
-    "- observation: Generic hero gradients overused",
-    "- freshness_date: 2025-10-15",
-    "- confidence: medium",
-    "- source_translation: Avoided generic gradient hero patterns",
-    "- local_implication: Use branded illustration instead of gradient hero",
+    "- reference: WCAG 2.2 Compliance Guide",
+    "- observation: Color contrast minimums enforced by new regulations",
+    "- decision_connection: Adopted high-contrast token set for all text",
+    "- evaluation_connection: Directly validates invariant accessibility axis",
+    "- local_implication: Standardize contrast ratios across all components",
   ].join("\n");
 }
 
@@ -215,7 +187,7 @@ function completeThreeLayerContent(): string {
     "",
     "## trend-derived",
     "",
-    "- micro_interaction: source_translation: Adopted from 2025 motion trends",
+    "- micro_interaction: local_translation: Adopted from 2025 motion trends",
     "",
     "## product-specific",
     "",
@@ -275,32 +247,44 @@ function completeScoringContent(): string {
 
 const STRONG_STRATEGY_FIELDS = [
   "surface",
+  "selection_required",
   "decision",
-  "why_this_strategy",
-  "expected_strengths",
-  "known_risks",
-  "fit_for_this_product",
+  "candidate_options",
+  "chosen_option",
+  "rationale",
+  "verification_expectations",
+  "notes_for_reviewer",
 ] as const;
 
 function completeStrategyContent(): string {
   const defaults: Record<string, string> = {
     surface: "web",
+    selection_required: "true",
     decision: "component-library",
-    why_this_strategy:
-      "Component library provides consistent UI patterns and accessibility out of the box",
-    expected_strengths: "Rapid development, consistent design language, built-in a11y",
-    known_risks: "Customization overhead for non-standard patterns",
-    fit_for_this_product:
-      "Web dashboard with standard CRUD patterns matches component library strengths",
+    candidate_options: "",
+    chosen_option: "component-library",
+    rationale: "Component library provides consistent UI patterns and accessibility out of the box",
+    verification_expectations: "Primary tasks remain obvious without generic dashboard drift",
+    notes_for_reviewer:
+      "Check that the chosen direction stays aligned with the anchor screen and screen contracts",
   };
-  const lines = ["# Strategy", ""];
+  const lines = ["# Implementation Strategy", ""];
   for (const f of STRONG_STRATEGY_FIELDS) {
-    lines.push(`- ${f}: ${defaults[f]}`);
+    if (f === "candidate_options") {
+      lines.push("- candidate_options:");
+      lines.push("  - component-library");
+      lines.push("  - bespoke");
+    } else {
+      lines.push(`- ${f}: ${defaults[f]}`);
+    }
   }
   return lines.join("\n");
 }
 
-function completeScreenEntry(id: string, states = "default, loading, empty, error"): string {
+function completeScreenEntry(
+  id: string,
+  states = ["default", "loading", "empty", "error"],
+): string {
   return [
     `### Screen: ${id}`,
     "",
@@ -308,11 +292,20 @@ function completeScreenEntry(id: string, states = "default, loading, empty, erro
     `- route: /app/${id}`,
     `- purpose: Main ${id} view`,
     `- actor: end-user`,
-    `- primary_tasks: View data, Edit entries`,
-    `- secondary_tasks: Export data, Filter results`,
-    `- required_states: ${states}`,
-    `- transitions: Navigate to detail, Back to list`,
-    `- observable_outcomes: Data displayed, Changes saved`,
+    `- primary_tasks:`,
+    `  - View data: open the main content`,
+    `  - Edit entries: update a record`,
+    `- secondary_tasks:`,
+    `  - Export data: download a report`,
+    `  - Filter results: narrow the current results`,
+    `- required_states:`,
+    ...states.map((state) => `  - ${state}: ${state} state is available`),
+    `- transitions:`,
+    `  - load -> success: content loaded`,
+    `  - load -> error: request failed`,
+    `- observable_outcomes:`,
+    `  - Data displayed: primary content is visible`,
+    `  - Changes saved: success feedback is visible`,
     `- notes_for_verify: Check responsive layout`,
     `- notes_for_reviewer: Focus on loading state`,
   ].join("\n");
@@ -357,7 +350,7 @@ describe("US-0002-0002: Trend/Reference Research mandatory", () => {
   it("complete trend scan with freshness metadata passes", async () => {
     const root = await newTempDir();
     await createUiBearingPack(root);
-    await writeFile(path.join(root, "04_Sources.md"), completeTrendContent(), "utf-8");
+    await writeFile(path.join(root, "uiux", "20_trend_scan.md"), completeTrendContent(), "utf-8");
 
     const issues = await validateTrendScan(root, defaultConfig);
 
@@ -674,7 +667,7 @@ describe("US-0010-0011: Canonical 00_index.md and 10_implementation_strategy.md"
     expect(content).toMatch(/Strategy/);
     expect(content).toMatch(/- surface:/);
     expect(content).toMatch(/- decision:/);
-    expect(content).toMatch(/- why_this_strategy:/);
+    expect(content).toMatch(/- rationale:/);
     expect(content).not.toMatch(/surface_type/);
   });
 });

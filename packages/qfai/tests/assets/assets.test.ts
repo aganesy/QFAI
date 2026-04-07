@@ -359,6 +359,51 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     expect(matches).toEqual([]);
   });
 
+  it("ensures product.md has no backward compatibility posture", async () => {
+    const productPath = path.join(templateQfaiDir, "assistant", "steering", "product.md");
+    const content = await readFile(productPath, "utf-8");
+    const bannedPhrases = [
+      "Maintain backward compatibility",
+      "Breaking changes deferred until v2.0",
+      "Migration guide required",
+      "Migration guide (docs/migrations/) required",
+      "deferred to v2.0",
+      "legacy deprecation",
+      "reconsidered in v2.0",
+      "accepted for backward compatibility",
+    ];
+    for (const phrase of bannedPhrases) {
+      expect(content, `product.md must not contain "${phrase}"`).not.toContain(phrase);
+    }
+    expect(content).not.toMatch(/deferred\s+to\s+v2/i);
+  });
+
+  it("ensures manifest.md has no v2.0 defer or migration guide posture", async () => {
+    const manifestPath = path.join(templateQfaiDir, "assistant", "steering", "manifest.md");
+    const content = await readFile(manifestPath, "utf-8");
+    const bannedPhrases = [
+      "Breaking changes deferred until v2.0",
+      "Migration guide required",
+      "deferred to v2.0",
+      "legacy deprecation",
+      "reconsidered in v2.0",
+      "accepted for backward compatibility",
+    ];
+    for (const phrase of bannedPhrases) {
+      expect(content, `manifest.md must not contain "${phrase}"`).not.toContain(phrase);
+    }
+    expect(content).not.toMatch(/reconsidered\s+in\s+v2/i);
+  });
+
+  it("ensures contracts/ui/README.md has no legacy acceptance wording", async () => {
+    const uiReadmePath = path.join(templateQfaiDir, "contracts", "ui", "README.md");
+    const content = await readFile(uiReadmePath, "utf-8");
+    const bannedPhrases = ["accepted for backward compatibility", "backward compatibility"];
+    for (const phrase of bannedPhrases) {
+      expect(content).not.toContain(phrase);
+    }
+  });
+
   // .npmignore files removed — gitignore entries now live in root .gitignore
   // (see ensureRootGitignoreEntries in init.ts)
 
@@ -531,7 +576,9 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     const readme = await readFile(readmePath, "utf-8");
 
     // W-3: README must express canonical discussion completion contract
-    expect(readme).toContain("15 required markdown files plus required prototyping.yaml");
+    expect(readme).toContain(
+      "UI-bearing discussion packs require `prototyping.yaml`; non-ui discussion packs do not.",
+    );
     expect(readme).toMatch(/discussion-YYYYMMDDhhmmssSSS[\s\S]*prototyping\.yaml/);
   });
 
@@ -737,11 +784,11 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     ]);
 
     // All three must express the canonical completion contract wording
-    const canonicalPhrase = "15 required markdown files plus required prototyping.yaml";
-    expect(readme).toContain(canonicalPhrase);
+    const canonicalPhrase =
+      "UI-bearing discussion packs require `prototyping.yaml`; non-ui discussion packs do not.";
     expect(packageReadme).toContain(canonicalPhrase);
-    // SKILL uses "15-file ... plus required prototyping.yaml" which is equivalent
-    expect(skill).toContain("plus required prototyping.yaml");
+    expect(readme).toMatch(/ui_bearing:\s*true[\s\S]*must also include `prototyping\.yaml`/i);
+    expect(skill).toMatch(/ui_bearing:\s*true[\s\S]*prototyping\.yaml/i);
   });
 
   it("ensures qfai-discussion includes localized completion handoff guidance", async () => {
@@ -1042,15 +1089,12 @@ describe("assets guardrails", { timeout: 30000 }, () => {
   });
 
   // W5: SSOT alignment tests
-  it("discussion README declares prototyping.yaml as required (not optional)", async () => {
+  it("discussion README declares prototyping.yaml as classification-aware", async () => {
     const discussionReadmePath = path.join(templateQfaiDir, "discussion", "README.md");
     const content = await readFile(discussionReadmePath, "utf-8");
 
-    // Must NOT say "may include"
-    expect(content).not.toMatch(/may include a prototyping\.yaml/i);
-    // Must declare it as required/mandatory
-    expect(content).toMatch(/must.*include.*prototyping\.yaml/i);
-    // Directory map must list prototyping.yaml
+    expect(content).toMatch(/ui-bearing discussion pack/i);
+    expect(content).toMatch(/ui_bearing:\s*false[\s\S]*do not require `prototyping\.yaml`/i);
     expect(content).toContain("prototyping.yaml");
   });
 
@@ -1100,9 +1144,122 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     );
     const content = await readFile(skillPath, "utf-8");
 
-    // SKILL.md must reference prototyping.yaml as required
     expect(content).toContain("prototyping.yaml");
-    expect(content).toMatch(/15-file.*plus.*required.*prototyping\.yaml/i);
+    expect(content).toMatch(/ui_bearing:\s*true[\s\S]*prototyping\.yaml/i);
+    expect(content).toMatch(/ui_bearing:\s*false[\s\S]*not required/i);
+  });
+
+  it("discussion README contains prototyping: namespaced example", async () => {
+    const discussionReadmePath = path.join(templateQfaiDir, "discussion", "README.md");
+    const content = await readFile(discussionReadmePath, "utf-8");
+
+    expect(content).toContain("prototyping:");
+    expect(content).toContain("recommended_mode:");
+    expect(content).toContain("rationale:");
+    expect(content).toContain("allowed_modes:");
+    expect(content).toContain("surface:");
+  });
+
+  it("discussion README says namespaced schema is required, not recommended", async () => {
+    const discussionReadmePath = path.join(templateQfaiDir, "discussion", "README.md");
+    const content = await readFile(discussionReadmePath, "utf-8");
+
+    // Must say required/accepted only
+    expect(content).toMatch(/namespaced schema \(required\)/i);
+    // Must NOT use wording that implies the schema is optional or merely recommended
+    expect(content).not.toMatch(/namespaced schema \(recommended\)/i);
+  });
+
+  it("discussion README does not contain legacy-permissive wording", async () => {
+    const discussionReadmePath = path.join(templateQfaiDir, "discussion", "README.md");
+    const content = await readFile(discussionReadmePath, "utf-8");
+
+    expect(content).not.toContain("legacy keys ignored");
+    expect(content).not.toContain("legacy keys may be ignored");
+    expect(content).not.toContain("accepted with warning");
+  });
+
+  it("discussion README enforces current-only posture for prototyping.yaml", async () => {
+    const discussionReadmePath = path.join(templateQfaiDir, "discussion", "README.md");
+    const content = await readFile(discussionReadmePath, "utf-8");
+
+    // Must express required / accepted only / invalid otherwise
+    expect(content).toMatch(/required/i);
+    expect(content).toMatch(/accepted only in namespaced form|canonical namespaced schema/i);
+    expect(content).toMatch(/top-level recommendation keys.*not supported/i);
+    expect(content).toMatch(/coexist\w*.*invalid/i);
+
+    // Forbidden wording (schema choice context)
+    expect(content).not.toMatch(/\bone option\b/i);
+    expect(content).not.toContain("backward compatible");
+  });
+
+  it("SKILL.md does not contain legacy-permissive wording", async () => {
+    const skillPath = path.join(
+      templateQfaiDir,
+      "assistant",
+      "skills",
+      "qfai-discussion",
+      "SKILL.md",
+    );
+    const content = await readFile(skillPath, "utf-8");
+
+    expect(content).not.toContain("legacy keys ignored");
+    expect(content).not.toContain("legacy keys may be ignored");
+    expect(content).not.toContain("accepted with warning");
+    expect(content).not.toMatch(/\bone option\b/i);
+    expect(content).not.toContain("backward compatible");
+
+    // Must express that top-level keys are not supported and coexist is invalid
+    expect(content).toMatch(/top-level recommendation keys.*not supported/i);
+    expect(content).toMatch(/coexist\w*.*invalid/i);
+  });
+
+  it("README and SKILL.md share namespaced-only semantics for prototyping.yaml", async () => {
+    const discussionReadmePath = path.join(templateQfaiDir, "discussion", "README.md");
+    const skillPath = path.join(
+      templateQfaiDir,
+      "assistant",
+      "skills",
+      "qfai-discussion",
+      "SKILL.md",
+    );
+
+    const [readme, skill] = await Promise.all([
+      readFile(discussionReadmePath, "utf-8"),
+      readFile(skillPath, "utf-8"),
+    ]);
+
+    // Both must mention canonical namespaced schema
+    expect(readme).toMatch(/namespaced/i);
+    expect(skill).toMatch(/namespaced/i);
+
+    // Both must reference required fields under prototyping: key
+    expect(readme).toContain("recommended_mode");
+    expect(skill).toContain("recommended_mode");
+
+    // Both must express that top-level keys are not supported
+    expect(readme).toMatch(/top-level.*not supported/i);
+    expect(skill).toMatch(/top-level.*not supported/i);
+
+    // Neither should allow top-level recommendation keys
+    expect(readme).not.toMatch(/namespaced schema \(recommended\)/i);
+    expect(skill).not.toMatch(/namespaced schema \(recommended\)/i);
+  });
+
+  it("discussion README declares recommended_mode must be included in allowed_modes", async () => {
+    const discussionReadmePath = path.join(templateQfaiDir, "discussion", "README.md");
+    const content = await readFile(discussionReadmePath, "utf-8");
+
+    expect(content).toMatch(/recommended_mode.*must be included in.*allowed_modes/i);
+  });
+
+  it("discussion README declares invalid artifacts are rejected by execution/CLI", async () => {
+    const discussionReadmePath = path.join(templateQfaiDir, "discussion", "README.md");
+    const content = await readFile(discussionReadmePath, "utf-8");
+
+    expect(content).toMatch(/rejected by both validation and execution\/CLI/i);
+    expect(content).toMatch(/no fallback/i);
   });
 });
 

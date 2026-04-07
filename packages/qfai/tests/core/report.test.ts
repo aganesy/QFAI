@@ -279,7 +279,7 @@ describe("report contract coverage", () => {
     data.issues.push({
       code: "QFAI-PROT-245",
       severity: "warning",
-      category: "compatibility",
+      category: "canonical",
       message: "render coverage is incomplete",
       file: ".qfai/evidence/prototyping.json",
       suggested_action: "rerun prototyping with render evidence",
@@ -304,7 +304,7 @@ describe("report contract coverage", () => {
         source: "explicit-request",
         rationale: "runtime proof requested",
         discussionRecommendation: "standard (customer presentable)",
-        surface: "web-ui",
+        surface: "web",
       },
       evidence: {
         specsCoverageStatus: "complete",
@@ -312,7 +312,7 @@ describe("report contract coverage", () => {
         uiFidelity: { present: true, required: true },
         renderBundle: { present: true, required: true },
         browserQaBundle: { present: true, required: true },
-        obligationProfile: "web-ui/full-harness",
+        obligationProfile: "web/full-harness",
       },
       fullHarness: {
         enabled: true,
@@ -346,7 +346,7 @@ describe("report contract coverage", () => {
     expect(markdown).toContain("- source: explicit-request");
     expect(markdown).toContain("- discussion recommendation: standard (customer presentable)");
     expect(markdown).toContain("### prototyping.evidence");
-    expect(markdown).toContain("- obligation profile: web-ui/full-harness");
+    expect(markdown).toContain("- obligation profile: web/full-harness");
     expect(markdown).toContain("### prototyping.fullHarness");
     expect(markdown).toContain("- terminationReason: converged");
   });
@@ -371,7 +371,7 @@ describe("report contract coverage", () => {
         "rationale: valid legacy",
         "allowed_modes:",
         "  - standard",
-        "surface: web-ui",
+        "surface: web",
         "prototyping: invalid",
         "",
       ].join("\n"),
@@ -385,7 +385,7 @@ describe("report contract coverage", () => {
     await writeFile(
       path.join(evidenceRoot, "prototyping.json"),
       JSON.stringify({
-        surface: "web-ui",
+        surface: "web",
         specs: [
           {
             specId: "spec-0001",
@@ -417,7 +417,7 @@ describe("report contract coverage", () => {
       {
         code: "QFAI-TEST-000",
         severity: "warning",
-        category: "compatibility",
+        category: "canonical",
         message: "suppressed link test",
         file: "specs/with space/テスト.md",
         loc: { line: 12 },
@@ -426,7 +426,7 @@ describe("report contract coverage", () => {
     ];
 
     const markdown = formatReportMarkdown(data);
-    expect(markdown).toContain("- issues(compatibility): info 0 / warning 0 / error 0");
+    expect(markdown).toContain("- issues(canonical): info 0 / warning 0 / error 0");
     expect(markdown).not.toContain("| warning | QFAI-TEST-000 | 1 |");
   });
 
@@ -749,14 +749,14 @@ describe("report design audit / slop sections", () => {
       {
         code: "QFAI-AUD-001",
         severity: "error",
-        category: "compatibility",
+        category: "canonical",
         message: "No primary task",
         rule: "audit.visualHierarchy",
       },
       {
         code: "QFAI-AUD-004",
         severity: "warning",
-        category: "compatibility",
+        category: "canonical",
         message: "Token drift",
         rule: "audit.tokenDiscipline",
       },
@@ -776,14 +776,14 @@ describe("report design audit / slop sections", () => {
       {
         code: "SLP-01",
         severity: "info",
-        category: "compatibility",
+        category: "canonical",
         message: "Generic shell detected",
         rule: "slop.generic-shell",
       },
       {
         code: "SLP-03",
         severity: "warning",
-        category: "compatibility",
+        category: "canonical",
         message: "Dark pattern detected",
         rule: "slop.dark-pattern",
       },
@@ -803,7 +803,7 @@ describe("report design audit / slop sections", () => {
       {
         code: "QFAI-COMPAT-001",
         severity: "warning",
-        category: "compatibility",
+        category: "canonical",
         message: "Unrelated issue",
       },
     ];
@@ -1008,7 +1008,7 @@ function createReportDataForLinks(): ReportData {
       {
         code: "QFAI-TEST-000",
         severity: "warning",
-        category: "compatibility",
+        category: "canonical",
         message: "link test",
         file: "specs/with space/テスト.md",
         loc: { line: 12 },
@@ -1043,7 +1043,7 @@ describe("report artifact-first recommendation", () => {
           ? { discussionRecommendation: overrides.discussionRecommendation }
           : {}),
         ...(overrides.allowedModes ? { allowedModes: overrides.allowedModes } : {}),
-        surface: overrides.surface ?? "non-ui",
+        surface: overrides.surface ?? "cli",
         ...(overrides.sourceSchema ? { sourceSchema: overrides.sourceSchema } : {}),
       },
       evidence: {
@@ -1052,7 +1052,7 @@ describe("report artifact-first recommendation", () => {
         uiFidelity: { present: false, required: false },
         renderBundle: { present: false, required: false },
         browserQaBundle: { present: false, required: false },
-        obligationProfile: "non-ui/standard",
+        obligationProfile: "cli/standard",
       },
       warnings: [],
     };
@@ -1121,7 +1121,7 @@ describe("report artifact-first recommendation", () => {
       artifactPath: ".qfai/discussion/discussion-20260404000000000/prototyping.yaml",
       discussionRecommendation: "standard (validated recommendation)",
       allowedModes: ["low-cost", "standard"],
-      surface: "non-ui",
+      surface: "cli",
       sourceSchema: "canonical-namespaced",
     });
     const data = buildReportDataWithPrototyping(proto);
@@ -1154,7 +1154,7 @@ describe("report artifact-first recommendation", () => {
       await writeFile(
         path.join(evidenceRoot, "prototyping.json"),
         JSON.stringify({
-          surface: "non-ui",
+          surface: "cli",
           specs: [
             {
               specId: "spec-0001",
@@ -1171,7 +1171,7 @@ describe("report artifact-first recommendation", () => {
               recommendedMode: "full-harness",
               rationale: "stale embedded payload",
               allowedModes: ["full-harness", "standard"],
-              surface: "web-ui",
+              surface: "web",
             },
           },
           meta: { generatedAt: "2026-04-04T00:00:00.000Z", toolVersion: "1.7.13", commands: [] },

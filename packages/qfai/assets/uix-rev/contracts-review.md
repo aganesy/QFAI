@@ -1,4 +1,4 @@
-# UIX-REV: Screen Contracts Review (40_screen_contracts.md)
+# UIX-REV: Screen Contracts Review (`40_screen_contracts.md`)
 
 Review screen contracts for canonical 11-field schema completeness.
 
@@ -22,4 +22,7 @@ Review screen contracts for canonical 11-field schema completeness.
 - Routes must be unique across all contracts
 - Required states must include `default`, `loading`, `empty`, and `error`
 - All 11 fields must be present and non-empty for each screen
-- Screen contracts must be consistent with 50_review_input_bundle.md
+- Screen contracts must stay consistent with `31_selected_anchor_screen.md`
+- Screen contracts must stay consistent with Browser QA findings and screen-linked evidence
+- Do not reference legacy filenames such as `40_contracts.md`
+- Keep wording aligned with scoring-ready canonical fields and avoid stale migration vocabulary

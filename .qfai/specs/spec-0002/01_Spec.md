@@ -62,6 +62,10 @@
 - REQ-0021: DDS バリデータ canonical コード移行 — 旧 QFAI-DDP-019~025 を UIX-VAL-DDH-\* canonical コードに置換。sidecar-first 読み取り順序に変更
 - REQ-0022: 明示的 UI 分類ブロック — 01_Context.md に `ui_bearing`/`primary_surface`/`secondary_surfaces`/`classification_rationale` の構造化ブロックを必須とする。`detection/surfaceType.ts` が分類ブロック優先ルールで surface type を判定
 - REQ-0023: サイドカーファイルリネーム（v1.7.13）— 10_strategy.md → 10_implementation_strategy.md、30_comparison.md → 30_option_comparison.md、40_contracts.md → 40_screen_contracts.md。バリデータはリネーム後のファイル名のみを期待
+- REQ-0024: Surface Classification 二分割 (v1.7.14, DR-0110) — isDiscussionUiBearingPrototypingSurface()（web/mobile/desktop/cli/mixed）と requiresVisualBrowserEvidenceSurface()（web/mobile/desktop/mixed、cli 除外）を独立した判定関数として提供。cli は discussion UI-bearing だが browser evidence 義務は免除
+- REQ-0025: Strategy Decision Canonical Vocabulary (v1.7.14, DR-0114) — strategy artifact の decision/chosen_option/candidate_options フィールドに canonical enum（template, component-library, design-system, native-pattern, bespoke, none）を導入。selection_required=true/false に対応する状態機械を強制
+- REQ-0026: "selected anchor" Wording 正規化 (v1.7.14) — 全アーティファクトで "selected direction" → "selected anchor" に統一。DDH-SELECTED-DIRECTION → DDH-SELECTED-ANCHOR にエラーコード変更
+- REQ-0027: Score Scope Separation (v1.7.14) — 3-layer evaluation aggregate scores は design direction quality（option 比較・選定）を測定するものであり、prototyping implementation fidelity scores とは異なる評価対象。aggregate テンプレート（23_design_eval_aggregate.md）に Score Scope Limitation セクションを追加し、prototyping scoringTrace へのコピーを明示的に禁止
 
 ## Entry points
 

@@ -1,46 +1,92 @@
-/**
- * Browser QA runner — WS-B
- *
- * Orchestrates the canonical 4-phase Browser QA execution model.
- * Provider resolution → phase execution → truthful skip/fail handling.
- */
-
-import { isUiBearingSurfaceType } from "../detection/surfaceType.js";
-import { runSmokePhase } from "./phases/smoke.js";
-import { runInteractionPhase } from "./phases/interaction.js";
-import { runVisualPhase } from "./phases/visual.js";
+import { requiresVisualBrowserEvidence } from "../detection/surfaceType.js";
 import { runAccessibilityPhase } from "./phases/accessibility.js";
+import { runInteractionPhase } from "./phases/interaction.js";
+import { runSmokePhase } from "./phases/smoke.js";
+import { runVisualPhase } from "./phases/visual.js";
 import type {
   BrowserQaInput,
+  BrowserQaPhase,
   BrowserQaPhaseResult,
   BrowserQaProvider,
   BrowserQaRunResult,
   BrowserQaSummary,
-  BrowserQaPhase,
 } from "./types.js";
 import { BROWSER_QA_PHASES } from "./types.js";
 
-/**
- * Run the canonical 4-phase Browser QA.
- *
- * - provider resolved → delegate to provider methods
- * - no provider → use built-in static analysis phases
- * - non-ui surface → all phases skipped
- */
+function validatePhaseResult(
+  phase: BrowserQaPhase,
+  result: BrowserQaPhaseResult,
+): BrowserQaPhaseResult {
+  const checksPerformed = Array.isArray(result.checks_performed) ? result.checks_performed : [];
+  const findings = Array.isArray(result.findings) ? result.findings : [];
+  const repairSuggestions = Array.isArray(result.repair_suggestions)
+    ? result.repair_suggestions
+    : [];
+  const evidenceRefs = Array.isArray(result.evidence_refs) ? result.evidence_refs : [];
+  const normalizedResult: BrowserQaPhaseResult = {
+    phase,
+    status: result.status,
+    findings,
+    repair_suggestions: repairSuggestions,
+    evidence_refs: evidenceRefs,
+    checks_performed:
+      checksPerformed.length > 0 ? checksPerformed : [`provider executed ${phase} checks`],
+    ...(result.skippedReason ? { skippedReason: result.skippedReason } : {}),
+  };
+  // Evidence check: provider explicitly returning status "executed" or "passed"
+  // with empty findings is normal (healthy page). Only flag when status indicates
+  // execution but provider returned absolutely no artifacts at all.
+  const hasEvidence =
+    normalizedResult.findings.length > 0 ||
+    checksPerformed.length > 0 ||
+    evidenceRefs.length > 0 ||
+    result.status === "executed" ||
+    result.status === "passed";
+  if (!hasEvidence && result.status !== "skipped") {
+    return {
+      ...result,
+      phase,
+      status: "failed",
+      findings: [
+        {
+          phase,
+          severity: "error",
+          summary: "Phase evidence is empty.",
+          detail: "A passed or failed Browser QA phase must record findings or checks_performed.",
+          evidence_refs: [`phase:${phase}`],
+          repair_suggestions: [
+            "Record concrete checks_performed for the phase or emit structured findings.",
+          ],
+        },
+      ],
+      repair_suggestions: [
+        "Record concrete checks_performed for the phase or emit structured findings.",
+      ],
+      evidence_refs: [`phase:${phase}`],
+      checks_performed: normalizedResult.checks_performed,
+    };
+  }
+  return { ...normalizedResult, phase };
+}
+
 export async function runBrowserQaOrchestrated(
   input: BrowserQaInput,
   provider?: BrowserQaProvider,
 ): Promise<BrowserQaRunResult> {
   const timestamp = new Date().toISOString();
 
-  // Non-UI surface → skip all phases
-  if (!isUiBearingSurfaceType(input.surface)) {
+  if (!requiresVisualBrowserEvidence(input.surface)) {
     return {
       phases: BROWSER_QA_PHASES.map((phase) => ({
         phase,
         status: "skipped" as const,
         findings: [],
-        skippedReason: `non-ui surface '${input.surface}' — Browser QA not applicable`,
+        repair_suggestions: [],
+        evidence_refs: [`surface:${input.surface}`],
+        checks_performed: [
+          `skipped Browser QA because surface '${input.surface}' does not require visual/browser evidence`,
+        ],
+        skippedReason: `surface '${input.surface}' does not require Browser QA`,
       })),
       provider: "none",
       timestamp,
@@ -49,46 +95,56 @@ export async function runBrowserQaOrchestrated(
 
   const hasHtml = typeof input.htmlContent === "string" && input.htmlContent.trim().length > 0;
   const hasTargetUrl = typeof input.targetUrl === "string" && input.targetUrl.trim().length > 0;
-  if (input.required && !hasHtml && !hasTargetUrl) {
+  if (!hasHtml && !hasTargetUrl) {
+    // When browser QA is not required (standard/low-cost), missing input is a
+    // normal skip — not a smoke failure.
+    if (input.required === false) {
+      return {
+        phases: BROWSER_QA_PHASES.map((phase) => ({
+          phase,
+          status: "skipped" as const,
+          findings: [],
+          repair_suggestions: [],
+          evidence_refs: [],
+          checks_performed: [
+            "skipped Browser QA: input not provided and browserQa is not required for this mode",
+          ],
+          skippedReason: "Browser QA input not provided (not required)",
+        })),
+        provider: provider?.providerId ?? "qfai-builtin",
+        timestamp,
+      };
+    }
+    const smoke = await runSmokePhase(input);
     return {
       phases: [
-        {
-          phase: "smoke",
-          status: "failed",
+        smoke,
+        ...(["interaction", "visual", "accessibility"] as const).map((phase) => ({
+          phase,
+          status: "skipped" as const,
           findings: [],
-          skippedReason: "required Browser QA input is missing",
-        },
-        {
-          phase: "interaction",
-          status: "skipped",
-          findings: [],
-          skippedReason: "smoke phase failed — subsequent phases skipped",
-        },
-        {
-          phase: "visual",
-          status: "skipped",
-          findings: [],
-          skippedReason: "smoke phase failed — subsequent phases skipped",
-        },
-        {
-          phase: "accessibility",
-          status: "skipped",
-          findings: [],
-          skippedReason: "smoke phase failed — subsequent phases skipped",
-        },
+          repair_suggestions: [],
+          evidence_refs: ["input:htmlContent", "input:targetUrl"],
+          checks_performed: ["skipped because smoke failed on missing Browser QA input"],
+          skippedReason: "smoke phase failed due to missing Browser QA input",
+        })),
       ],
       provider: provider?.providerId ?? "qfai-builtin",
       timestamp,
     };
   }
 
-  // Provider registered but cannot run for this surface
   if (provider && !provider.canRun(input.surface)) {
     return {
       phases: BROWSER_QA_PHASES.map((phase) => ({
         phase,
         status: "skipped" as const,
         findings: [],
+        repair_suggestions: [],
+        evidence_refs: [`provider:${provider.providerId}`],
+        checks_performed: [
+          `provider '${provider.providerId}' cannot run on surface '${input.surface}'`,
+        ],
         skippedReason: `provider '${provider.providerId}' cannot run on surface '${input.surface}'`,
       })),
       provider: provider.providerId,
@@ -96,13 +152,9 @@ export async function runBrowserQaOrchestrated(
     };
   }
 
-  // No provider → use built-in static analysis
-  if (!provider) {
-    return runBuiltinPhases(input, timestamp);
-  }
-
-  // Provider registered → delegate
-  return runProviderPhases(input, provider, timestamp);
+  return provider
+    ? runProviderPhases(input, provider, timestamp)
+    : runBuiltinPhases(input, timestamp);
 }
 
 async function runBuiltinPhases(
@@ -110,33 +162,26 @@ async function runBuiltinPhases(
   timestamp: string,
 ): Promise<BrowserQaRunResult> {
   const phases: BrowserQaPhaseResult[] = [];
-
-  // smoke
-  const smoke = await runSmokePhase(input);
+  const smoke = validatePhaseResult("smoke", await runSmokePhase(input));
   phases.push(smoke);
-
-  // If smoke hard-fails, skip remaining
   if (smoke.status === "failed") {
     for (const phase of ["interaction", "visual", "accessibility"] as const) {
       phases.push({
         phase,
         status: "skipped",
         findings: [],
-        skippedReason: "smoke phase failed — subsequent phases skipped",
+        repair_suggestions: [],
+        evidence_refs: [`phase:${phase}`],
+        checks_performed: ["skipped because smoke phase failed"],
+        skippedReason: "smoke phase failed",
       });
     }
     return { phases, provider: "qfai-builtin", timestamp };
   }
 
-  // interaction
-  phases.push(await runInteractionPhase(input));
-
-  // visual
-  phases.push(await runVisualPhase(input));
-
-  // accessibility
-  phases.push(await runAccessibilityPhase(input));
-
+  phases.push(validatePhaseResult("interaction", await runInteractionPhase(input)));
+  phases.push(validatePhaseResult("visual", await runVisualPhase(input)));
+  phases.push(validatePhaseResult("accessibility", await runAccessibilityPhase(input)));
   return { phases, provider: "qfai-builtin", timestamp };
 }
 
@@ -146,7 +191,6 @@ async function runProviderPhases(
   timestamp: string,
 ): Promise<BrowserQaRunResult> {
   const phases: BrowserQaPhaseResult[] = [];
-
   const phaseMethods: Array<{
     phase: BrowserQaPhase;
     run: (i: BrowserQaInput) => Promise<BrowserQaPhaseResult>;
@@ -164,23 +208,35 @@ async function runProviderPhases(
         phase,
         status: "skipped",
         findings: [],
-        skippedReason: "previous phase failed — subsequent phases skipped",
+        repair_suggestions: [],
+        evidence_refs: [`phase:${phase}`],
+        checks_performed: ["skipped because a previous phase failed"],
+        skippedReason: "previous phase failed",
       });
       continue;
     }
 
     try {
-      const result = await run(input);
-      phases.push({ ...result, phase });
-      if (result.status === "failed") {
-        previousFailed = true;
-      }
+      const result = validatePhaseResult(phase, await run(input));
+      phases.push(result);
+      previousFailed = result.status === "failed";
     } catch (error) {
       phases.push({
         phase,
         status: "failed",
-        findings: [],
-        skippedReason: `phase execution error: ${error instanceof Error ? error.message : String(error)}`,
+        findings: [
+          {
+            phase,
+            severity: "error",
+            summary: "Provider phase execution failed.",
+            detail: error instanceof Error ? error.message : String(error),
+            evidence_refs: [`provider:${provider.providerId}`],
+            repair_suggestions: ["Fix the provider error and rerun Browser QA."],
+          },
+        ],
+        repair_suggestions: ["Fix the provider error and rerun Browser QA."],
+        evidence_refs: [`provider:${provider.providerId}`],
+        checks_performed: [`provider '${provider.providerId}' threw during ${phase}`],
       });
       previousFailed = true;
     }
@@ -189,20 +245,22 @@ async function runProviderPhases(
   return { phases, provider: provider.providerId, timestamp };
 }
 
-/**
- * Summarize a BrowserQaRunResult for report output.
- */
 export function summarizeBrowserQaResult(result: BrowserQaRunResult): BrowserQaSummary {
-  const phaseMap = {} as Record<BrowserQaPhase, { status: string; findingsCount: number }>;
+  const phaseMap = {} as BrowserQaSummary["phases"];
   let totalFindings = 0;
+  let totalRepairs = 0;
   const skippedReasons: string[] = [];
 
   for (const phaseResult of result.phases) {
     phaseMap[phaseResult.phase] = {
       status: phaseResult.status,
       findingsCount: phaseResult.findings.length,
+      checksCount: phaseResult.checks_performed.length,
+      passed: phaseResult.status === "passed" || phaseResult.status === "executed" ? 1 : 0,
+      failed: phaseResult.status === "failed" ? 1 : 0,
     };
     totalFindings += phaseResult.findings.length;
+    totalRepairs += phaseResult.repair_suggestions.length;
     if (phaseResult.status === "skipped" && phaseResult.skippedReason) {
       skippedReasons.push(`${phaseResult.phase}: ${phaseResult.skippedReason}`);
     }
@@ -210,8 +268,9 @@ export function summarizeBrowserQaResult(result: BrowserQaRunResult): BrowserQaS
 
   return {
     providerId: result.provider,
-    phases: phaseMap as BrowserQaSummary["phases"],
+    phases: phaseMap,
     totalFindings,
+    totalRepairs,
     skippedReasons,
   };
 }

@@ -2,13 +2,17 @@ import { readFile } from "node:fs/promises";
 
 import { parse as parseYaml } from "yaml";
 
-import { UI_BEARING_SURFACES } from "../detection/surfaceType.js";
-import type { SurfaceType } from "../detection/surfaceType.js";
+import {
+  CANONICAL_PROTOTYPING_SURFACES,
+  isCanonicalPrototypingSurface,
+  requiresVisualBrowserEvidenceSurface,
+} from "../domain/surface.js";
 import {
   hasLegacyRecommendationKeys,
   hasNamespacedRecommendationBlock,
   isPlainRecord,
 } from "./recommendationSchema.js";
+import { validateRecommendationSemantics } from "./recommendationSemantics.js";
 import type {
   DiscussionModeRecommendation,
   DiscussionRecommendationSourceSchema,
@@ -22,24 +26,10 @@ import type {
 } from "./types.js";
 
 const VALID_MODES = new Set<PrototypingMode>(["low-cost", "standard", "full-harness"]);
-const VALID_SURFACES = new Set<PrototypingSurface>([
-  "web",
-  "mobile",
-  "desktop",
-  "cli",
-  "mixed",
-  "non-ui",
-]);
-
-/** Legacy surface values that are accepted and mapped to canonical equivalents */
-const LEGACY_SURFACE_MAP: Record<string, PrototypingSurface> = {
-  "web-ui": "web",
-  "mobile-ui": "mobile",
-  "desktop-ui": "desktop",
-};
+const VALID_SURFACES = new Set<PrototypingSurface>(CANONICAL_PROTOTYPING_SURFACES);
 
 // ---------------------------------------------------------------------------
-// Discussion recommendation parsing (dual-schema: namespaced + legacy)
+// Discussion recommendation parsing (canonical namespaced only)
 // ---------------------------------------------------------------------------
 
 export type ParseDiscussionResult = {
@@ -49,7 +39,7 @@ export type ParseDiscussionResult = {
 
 /**
  * Parse a prototyping.yaml file from a discussion pack.
- * Supports both canonical namespaced (`prototyping.*`) and legacy top-level schema.
+ * Supports only the canonical namespaced (`prototyping.*`) schema.
  */
 export async function parseDiscussionModeRecommendation(
   filePath: string,
@@ -84,79 +74,84 @@ export async function parseDiscussionModeRecommendationWithWarnings(
 
 export function parseDiscussionFromObject(parsed: Record<string, unknown>): ParseDiscussionResult {
   const warnings: string[] = [];
+  const hasStaleTopLevelKeys = hasLegacyRecommendationKeys(parsed);
 
-  // D-5: existence-based precedence — if namespaced key exists, it is always primary
-  const hasNamespaced = hasNamespacedRecommendationBlock(parsed);
-  const hasTopLevel = hasLegacyRecommendationKeys(parsed);
-
-  if (hasNamespaced && hasTopLevel) {
+  if (hasStaleTopLevelKeys) {
     warnings.push(
-      "QFAI-PROT-232: conflicting namespaced and top-level prototyping recommendation blocks — namespaced takes precedence",
+      "prototyping.yaml must use the canonical namespaced schema under 'prototyping:' only. Legacy top-level recommendation keys are not supported.",
     );
-  }
-
-  if (hasNamespaced) {
-    // D-5: namespaced key exists — use it exclusively; do NOT fall back to legacy
-    // Non-object value means invalid namespaced block — return null
-    if (!isPlainRecord(parsed.prototyping)) {
-      return { recommendation: null, warnings };
-    }
-    const rec = extractRecommendation(parsed.prototyping, "canonical-namespaced");
-    if (rec) {
-      return { recommendation: rec, warnings };
-    }
-    // Invalid namespaced block — return null (do not silently fall back to legacy)
+    // Stale top-level keys coexist is hard invalid regardless of namespaced block validity
     return { recommendation: null, warnings };
   }
 
-  if (hasTopLevel) {
-    warnings.push(
-      "QFAI-PROT-231: deprecated top-level prototyping recommendation schema — migrate to prototyping.* namespaced form",
-    );
-    const rec = extractRecommendation(parsed, "legacy-top-level");
-    if (rec) {
-      return { recommendation: rec, warnings };
+  const hasNamespaced = hasNamespacedRecommendationBlock(parsed);
+
+  if (hasNamespaced) {
+    if (!isPlainRecord(parsed.prototyping)) {
+      return { recommendation: null, warnings };
     }
+    const result = extractRecommendation(parsed.prototyping, "canonical-namespaced");
+    warnings.push(...result.warnings);
+    return { recommendation: result.recommendation, warnings };
   }
 
   return { recommendation: null, warnings };
 }
 
+type ExtractRecommendationResult = {
+  recommendation: DiscussionModeRecommendation | null;
+  warnings: string[];
+};
+
 function extractRecommendation(
   obj: Record<string, unknown>,
-  sourceSchema: DiscussionRecommendationSourceSchema,
-): DiscussionModeRecommendation | null {
+  _sourceSchema: DiscussionRecommendationSourceSchema,
+): ExtractRecommendationResult {
   if (!isValidPrototypingMode(obj.recommended_mode)) {
-    return null;
+    return { recommendation: null, warnings: [] };
   }
   const rationale = asNonEmptyString(obj.rationale);
   if (!rationale) {
-    return null;
+    return { recommendation: null, warnings: [] };
   }
 
   if (!Array.isArray(obj.allowed_modes)) {
-    return null;
+    return { recommendation: null, warnings: [] };
   }
   const allowedModes = normalizeAllowedModes(
     obj.allowed_modes.filter((value): value is string => typeof value === "string"),
   );
   if (allowedModes.length === 0) {
-    return null;
+    return { recommendation: null, warnings: [] };
   }
 
   if (!isValidSurface(obj.surface)) {
-    return null;
+    return { recommendation: null, warnings: [] };
   }
   const surface = obj.surface;
   const updatedAt = asNonEmptyString(obj.updated_at);
 
-  return {
+  const semanticResult = validateRecommendationSemantics({
     recommendedMode: obj.recommended_mode,
-    rationale,
     allowedModes,
-    surface,
-    ...(updatedAt ? { updatedAt } : {}),
-    sourceSchema,
+  });
+  if (!semanticResult.valid) {
+    return {
+      recommendation: null,
+      warnings: [`${semanticResult.code}: ${semanticResult.message}`],
+    };
+  }
+
+  return {
+    recommendation: {
+      recommendedMode: obj.recommended_mode,
+      rationale,
+      allowedModes,
+      surface,
+      ...(updatedAt ? { updatedAt } : {}),
+      sourceSchema: "canonical-namespaced",
+    },
+    warnings: [],
   };
 }
 
@@ -205,10 +200,6 @@ export function summarizeResolvedMode(input: ModeResolutionInput): ResolvedModeS
     warnings.push(
       `QFAI-PROT-236: requested mode ${input.explicitMode} is not in discussion allowed_modes [${input.discussionRecommendation.allowedModes.join(", ")}]`,
     );
-  }
-
-  if (input.discussionRecommendation?.sourceSchema === "legacy-top-level") {
-    warnings.push("QFAI-PROT-231: discussion recommendation uses deprecated top-level schema");
   }
 
   return {
@@ -267,22 +258,14 @@ export function inferSurfaceFromRecommendationAndEvidence(input: {
   hasBrowserQaBundle?: boolean | undefined;
   hasUiRoutes?: boolean | undefined;
   hasRuntimeGateUi?: boolean | undefined;
-}): PrototypingSurface {
+}): PrototypingSurface | null {
   if (input.evidenceSurface && isValidPrototypingSurface(input.evidenceSurface)) {
     return input.evidenceSurface;
   }
   if (input.recommendationSurface && isValidPrototypingSurface(input.recommendationSurface)) {
     return input.recommendationSurface;
   }
-
-  const hasUiSignals =
-    input.hasUiFidelity ||
-    input.hasRenderBundle ||
-    input.hasBrowserQaBundle ||
-    input.hasUiRoutes ||
-    input.hasRuntimeGateUi;
-
-  return hasUiSignals ? "web" : "non-ui";
+  return null;
 }
 
 // ---------------------------------------------------------------------------
@@ -293,8 +276,9 @@ export function derivePrototypingObligations(input: {
   surface: PrototypingSurface;
   effectiveMode: PrototypingMode;
 }): PrototypingObligations {
-  const uiBearing = isUiBearingSurface(input.surface);
-  if (!uiBearing) {
+  // This check is only for visual/browser evidence obligations, not discussion UI-bearing.
+  const needsVisualBrowserEvidence = requiresVisualBrowserEvidence(input.surface);
+  if (!needsVisualBrowserEvidence) {
     return {
       requireRuntimeGate: false,
       requireUiFidelity: false,
@@ -342,24 +326,11 @@ export function isValidPrototypingMode(value: unknown): value is PrototypingMode
 }
 
 export function isValidPrototypingSurface(value: unknown): value is PrototypingSurface {
-  if (typeof value !== "string") return false;
-  return VALID_SURFACES.has(value as PrototypingSurface) || value in LEGACY_SURFACE_MAP;
+  return typeof value === "string" && isCanonicalPrototypingSurface(value);
 }
 
-/**
- * Normalize a surface value: map legacy values to canonical equivalents.
- */
-export function normalizePrototypingSurface(value: string): PrototypingSurface {
-  const mapped = LEGACY_SURFACE_MAP[value];
-  if (mapped) return mapped;
-  if (VALID_SURFACES.has(value as PrototypingSurface)) return value as PrototypingSurface;
-  return "non-ui";
-}
-
-export function isUiBearingSurface(surface: PrototypingSurface): boolean {
-  // Normalize legacy values (web-ui → web, etc.) before checking
-  const normalized = LEGACY_SURFACE_MAP[surface] ?? surface;
-  return UI_BEARING_SURFACES.has(normalized as SurfaceType);
+export function requiresVisualBrowserEvidence(surface: PrototypingSurface): boolean {
+  return requiresVisualBrowserEvidenceSurface(surface);
 }
 
 export function normalizeAllowedModes(modes?: string[]): PrototypingMode[] {

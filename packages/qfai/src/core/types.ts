@@ -2,7 +2,7 @@ import type { ScCoverage, TestFileScan } from "./traceability.js";
 
 export type IssueSeverity = "info" | "warning" | "error";
 
-export type IssueCategory = "canonical" | "compatibility" | "change";
+export type IssueCategory = "canonical" | "change";
 
 export type IssueLocation = {
   line: number;
@@ -12,6 +12,7 @@ export type IssueLocation = {
 export type Issue = {
   code: string;
   severity: IssueSeverity;
+  // current-only issue model: canonical contract violations or explicit change advisories
   category: IssueCategory;
   message: string;
   suppressed?: boolean;
@@ -63,7 +64,7 @@ export type ValidationWaiverEntry = {
   expires: string;
   evidence: string;
   owner?: string;
-  // backward-compatible aliases for historical report consumers
+  // optional aliases emitted in waiver serialization
   rule_id?: string;
   expires_on?: string;
 };
@@ -81,7 +82,7 @@ export type ValidationWaivers = {
 
 export type ValidationResult = {
   toolVersion: string;
-  // optional to keep backward compatibility with validate.json from older versions
+  // optional because this report section is emitted only when phase is specified
   phase?: ValidationPhase;
   issues: Issue[];
   counts: ValidationCounts;

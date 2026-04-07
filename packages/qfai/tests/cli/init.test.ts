@@ -937,7 +937,7 @@ describe("qfai init", { timeout: 60000 }, () => {
   });
 
   // QFAI:SPEC-0003:TC-0003-0012
-  it("Backward compatibility — existing init outputs unchanged", async () => {
+  it("current init outputs remain stable after additive instruction assets", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
     try {
       await runInit({ dir: root, force: false, dryRun: false, yes: true });

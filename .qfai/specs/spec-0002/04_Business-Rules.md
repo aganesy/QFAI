@@ -53,7 +53,7 @@
 - AC-Refs: AC-0002-0024
 
 - DDS バリデータは canonical UIX-VAL-DDH-\* コードを使用する
-- 旧 QFAI-DDP-019~025 コードは legacy/compatibility path でのみ使用
+- 旧 QFAI-DDP-019~025 コードは v1.7.14 で完全削除（legacy/ ディレクトリ自体が削除済み。DR-0115）
 - Sidecar-first 読み取り順序: uiux/30_option_comparison.md → uiux/31_selected_anchor_screen.md → uiux/10_strategy.md → uiux/11_design_taste_interview.md → 04_Sources → uiux/20-23 (+ optional 24) → uiux/40_screen_contracts.md → uiux/50_review_input_bundle.md を primary source とする
 
 ## BR-0002-0033: DDH Validator Sidecar Source Mapping
@@ -63,12 +63,12 @@
 - v1.7.13 の sidecar-first rewrite により、各 DDH validator の読み取り先が変更された:
   - UIX-VAL-DDH-SIDECAR-PRIMARY-TRUTH: uiux/10_strategy.md, uiux/30_option_comparison.md, uiux/31_selected_anchor_screen.md, uiux/40_screen_contracts.md の存在チェック
   - UIX-VAL-DDH-OPTION-COMPARISON: uiux/30_option_comparison.md で 2+ オプション比較チェック
-  - UIX-VAL-DDH-SELECTED-DIRECTION: uiux/31_selected_anchor_screen.md の `## Selected Direction` セクション + `Selected:` 宣言チェック
+  - UIX-VAL-DDH-SELECTED-ANCHOR: uiux/31_selected_anchor_screen.md の `## Selected Anchor` セクション + `Selected:` 宣言チェック（v1.7.14: DDH-SELECTED-DIRECTION → DDH-SELECTED-ANCHOR にリネーム）
   - UIX-VAL-DDH-COMPETITIVE-REFERENCES: 04_Sources.md の競合参考チェック
   - UIX-VAL-DDH-INTERACTION-HANDOFF: 03_Story-Workshop.md の `## Behavior Obligations` → `Interaction Contracts` サブセクション、fallback は全セクション内容
   - UIX-VAL-DDH-STATE-COVERAGE: 03_Story-Workshop.md の `## Behavior Obligations` で state-risk discovery signal + uiux/40_screen_contracts.md へのハンドオフ
   - UIX-VAL-DDH-DESIGN-ANTI-GOALS: 03_Story-Workshop.md の `## Behavior Obligations` を primary、fallback は uiux/30_option_comparison.md
-- 旧コードマッピング: QFAI-DDP-019→DDH-SIDECAR-PRIMARY-TRUTH, 020→DDH-OPTION-COMPARISON, 021→DDH-SELECTED-DIRECTION, 022→DDH-COMPETITIVE-REFERENCES, 023→DDH-INTERACTION-HANDOFF, 024→DDH-STATE-COVERAGE, 025→DDH-DESIGN-ANTI-GOALS
+- 旧コードマッピング: QFAI-DDP-019→DDH-SIDECAR-PRIMARY-TRUTH, 020→DDH-OPTION-COMPARISON, 021→DDH-SELECTED-ANCHOR（v1.7.14 リネーム）, 022→DDH-COMPETITIVE-REFERENCES, 023→DDH-INTERACTION-HANDOFF, 024→DDH-STATE-COVERAGE, 025→DDH-DESIGN-ANTI-GOALS
 
 ## BR-0002-0034: Screen Contract Nested Bullet Format
 
@@ -96,9 +96,9 @@
 - "default" は初期表示状態、"populated" は "default" に包含される概念として整理
 - 検証は word boundary マッチ（行頭アンカーではなくセクション内の任意位置）に緩和
 
-## BR-0002-0037: Review Request Selected Direction Enforcement
+## BR-0002-0037: Review Request Selected Anchor Enforcement
 
 - AC-Refs: AC-0002-0024
 
-- 14_Review-Request.md の "Design Direction Decisions" セクションは "Selected Direction" を含まなければならない（旧 "Anchor" は非推奨）
+- 14_Review-Request.md の "Design Direction Decisions" セクションは "Selected Anchor" を含まなければならない（v1.7.14: "Selected Direction" → "Selected Anchor" にリネーム）
 - テンプレート更新: 03_Story-Workshop.md から "Behavior Obligations" セクション構造に移行

@@ -3,7 +3,7 @@ import type { Issue } from "../types.js";
 
 /**
  * @deprecated Use {@link validateDiscussionPackReadiness} from `./discussionPack.js` instead.
- * Kept only for backward-compat reference; no longer called from validate.ts.
+ * No longer called from validate.ts.
  * Always returns an empty array — require-pack validation has been replaced
  * by discussion-pack validation (QFAI-DPACK-*).
  */

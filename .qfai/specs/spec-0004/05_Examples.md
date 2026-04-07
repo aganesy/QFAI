@@ -76,18 +76,18 @@
 
 - BR-Ref: BR-0004-0019
 
-| Input                                    | Expected                           |
-| ---------------------------------------- | ---------------------------------- |
-| Canonical UIX validator finding          | issue.category === "canonical"     |
-| Legacy DDP validator finding (migration) | issue.category === "compatibility" |
+| Input                           | Expected                                                                      |
+| ------------------------------- | ----------------------------------------------------------------------------- |
+| Canonical UIX validator finding | issue.category === "canonical"                                                |
+| Any validator finding           | issue.category === "canonical" or "change" (v1.7.14: "compatibility" removed) |
 
 ## EX-0004-0021: Canonical Production Path Verification
 
 - BR-Ref: BR-0004-0020
 
-| Input                                                | Expected                                                                               |
-| ---------------------------------------------------- | -------------------------------------------------------------------------------------- |
-| Inspect validate.ts registered validators at runtime | runCanonicalUixValidators present, validateDdpFields absent, legacy namespace isolated |
+| Input                                                | Expected                                                                                        |
+| ---------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| Inspect validate.ts registered validators at runtime | runCanonicalUixValidators present, validateDdpFields absent, legacy namespace removed (v1.7.14) |
 
 ## EX-0004-0022: Phase1 Ratchet Active
 
@@ -99,14 +99,14 @@
 | phase1ReleaseDate set to 40 days ago, UIX-VAL error exists | Error remains as-is (ratchet expired) |
 | phase1ReleaseDate not set                                  | All UIX-VAL severities unchanged      |
 
-## EX-0004-0023: QFAI-AUD-021 Selected Direction
+## EX-0004-0023: QFAI-AUD-021 Selected Anchor
 
 - BR-Ref: BR-0004-0024
 
-| Input                                                                  | Expected           |
-| ---------------------------------------------------------------------- | ------------------ |
-| uiux/31_selected_anchor_screen.md with `## Selected Direction` present | No QFAI-AUD-021    |
-| uiux/31_selected_anchor_screen.md without `## Selected Direction`      | QFAI-AUD-021 error |
+| Input                                                                | Expected           |
+| -------------------------------------------------------------------- | ------------------ |
+| uiux/31_selected_anchor_screen.md with selected_option field present | No QFAI-AUD-021    |
+| uiux/31_selected_anchor_screen.md without selected_option field      | QFAI-AUD-021 error |
 
 ## EX-0004-0024: Canonical Validator Enumeration
 

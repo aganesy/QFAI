@@ -4,7 +4,11 @@ import path from "node:path";
 import { writeEvidenceFile } from "./fsEvidenceWriter.js";
 import type { RenderRunnerResult } from "./types.js";
 import type { BrowserQaRunResult } from "../browserQa/types.js";
+import type { BrowserQaBundle } from "../browserQa/index.js";
 import type { PrototypingMode, PrototypingSurface } from "../prototyping/types.js";
+import type { FakeUiDetectionResult } from "../harness/fakeUiDetection.js";
+import type { FullHarnessHandoff } from "../harness/handoff.js";
+import type { FullHarnessExitReason } from "../harness/exitReason.js";
 
 export type PrototypingSummaryBundle = {
   surface: PrototypingSurface;
@@ -72,6 +76,11 @@ export async function writeEvidenceBundles(input: {
   };
   browserQa?: { result: BrowserQaRunResult; mode: PrototypingMode };
   prototyping: PrototypingSummaryBundle;
+  fullHarnessArtifacts?: {
+    fakeUiDetection: FakeUiDetectionResult;
+    handoff: FullHarnessHandoff;
+    exitReason: FullHarnessExitReason;
+  };
 }): Promise<{
   prototypingPath: string;
   renderPath: string;
@@ -84,6 +93,9 @@ export async function writeEvidenceBundles(input: {
   const prototypingPath = path.join(evidenceRoot, "prototyping.json");
   const renderPath = path.join(evidenceRoot, "render.json");
   const browserQaPath = path.join(evidenceRoot, "browser-qa.json");
+  const browserQaSummaryPath = path.join(evidenceRoot, "browserQa.summary.json");
+  const browserQaFindingsPath = path.join(evidenceRoot, "browserQa.findings.json");
+  const browserQaRepairsPath = path.join(evidenceRoot, "browserQa.repairs.json");
 
   const renderBundle =
     input.render === undefined
@@ -107,6 +119,7 @@ export async function writeEvidenceBundles(input: {
             summary: undefined,
           },
           findings: [],
+          repairs: [],
         }
       : buildBrowserQaBundle(input.browserQa.result, input.browserQa.mode);
 
@@ -118,6 +131,31 @@ export async function writeEvidenceBundles(input: {
     ),
     writeEvidenceFile(renderPath, JSON.stringify(renderBundle, null, 2)),
     writeEvidenceFile(browserQaPath, JSON.stringify(browserQaBundle, null, 2)),
+    writeEvidenceFile(
+      browserQaSummaryPath,
+      JSON.stringify(browserQaBundle.browserQa.summary ?? {}, null, 2),
+    ),
+    writeEvidenceFile(
+      browserQaFindingsPath,
+      JSON.stringify(browserQaBundle.findings ?? [], null, 2),
+    ),
+    writeEvidenceFile(browserQaRepairsPath, JSON.stringify(browserQaBundle.repairs ?? [], null, 2)),
+    ...(input.fullHarnessArtifacts
+      ? [
+          writeEvidenceFile(
+            path.join(evidenceRoot, "fullHarness.fakeUiDetection.json"),
+            JSON.stringify(input.fullHarnessArtifacts.fakeUiDetection, null, 2),
+          ),
+          writeEvidenceFile(
+            path.join(evidenceRoot, "fullHarness.handoff.json"),
+            JSON.stringify(input.fullHarnessArtifacts.handoff, null, 2),
+          ),
+          writeEvidenceFile(
+            path.join(evidenceRoot, "fullHarness.exit.json"),
+            JSON.stringify({ exit_reason: input.fullHarnessArtifacts.exitReason }, null, 2),
+          ),
+        ]
+      : []),
   ]);
 
   return { prototypingPath, renderPath, browserQaPath };
@@ -172,27 +210,41 @@ function buildRenderBundle(
   };
 }
 
-function buildBrowserQaBundle(
-  result: BrowserQaRunResult,
-  mode: PrototypingMode,
-): Record<string, unknown> {
-  const summary: Record<string, { passed: number; failed: number }> = {};
+function buildBrowserQaBundle(result: BrowserQaRunResult, mode: PrototypingMode): BrowserQaBundle {
+  const summary: NonNullable<BrowserQaBundle["browserQa"]["summary"]> = {
+    smoke: { status: "skipped", findingsCount: 0, checksCount: 0, passed: 0, failed: 0 },
+    interaction: { status: "skipped", findingsCount: 0, checksCount: 0, passed: 0, failed: 0 },
+    visual: { status: "skipped", findingsCount: 0, checksCount: 0, passed: 0, failed: 0 },
+    accessibility: { status: "skipped", findingsCount: 0, checksCount: 0, passed: 0, failed: 0 },
+  };
   let executed = false;
-  const findings: Array<Record<string, unknown>> = [];
+  const findings: NonNullable<BrowserQaBundle["findings"]> = [];
+  const repairs = new Set<string>();
   for (const phase of result.phases) {
     summary[phase.phase] = {
-      passed: phase.status === "executed" ? 1 : 0,
+      status: phase.status,
+      findingsCount: phase.findings.length,
+      checksCount: phase.checks_performed.length,
+      passed: phase.status === "executed" || phase.status === "passed" ? 1 : 0,
       failed: phase.status === "failed" ? 1 : 0,
     };
-    if (phase.status === "executed") {
+    if (phase.status === "executed" || phase.status === "passed") {
       executed = true;
     }
+    phase.repair_suggestions.forEach((repair) => repairs.add(repair));
     for (const finding of phase.findings) {
       findings.push({
         category: phase.phase,
+        phase: phase.phase,
         severity: finding.severity,
-        message: finding.message,
+        summary: finding.summary,
+        detail: finding.detail,
+        message: finding.message ?? finding.summary,
         ...(finding.route ? { route: finding.route } : {}),
+        ...(finding.screen_id ? { screen_id: finding.screen_id } : {}),
+        ...(finding.selector ? { selector: finding.selector } : {}),
+        evidence_refs: finding.evidence_refs,
+        repair_suggestions: finding.repair_suggestions,
       });
     }
   }
@@ -205,6 +257,7 @@ function buildBrowserQaBundle(
       summary,
     },
     findings,
+    repairs: Array.from(repairs),
   };
 }
 

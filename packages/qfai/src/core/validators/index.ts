@@ -8,7 +8,6 @@ export { validateDensityHints } from "./densityHints.js";
 export { validateImportLiteEvidencePresence } from "./importLite.js";
 export { validateLayerCoverage } from "./layerCoverage.js";
 export { validateLayeredTraceability } from "./layeredTraceability.js";
-export { validateLegacyStatusDir } from "./legacyStatusDir.js";
 export { validateMermaidEnforcement } from "./mermaidEnforcement.js";
 export { validateContractReferences } from "./contractReferences.js";
 export { validateAtddCodeTraceability } from "./atddCodeTraceability.js";

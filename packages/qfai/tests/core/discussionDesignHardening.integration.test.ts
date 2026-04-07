@@ -131,12 +131,12 @@ async function seedUiBearingDiscussionPack(root: string): Promise<void> {
     "## Layer Classification",
     "Layer: strategy",
     "",
-    "### Surface: web-ui",
-    "- surface: web-ui",
+    "### Surface: web",
+    "- surface: web",
     "- selection_required: yes",
-    "- decision: Card-based layout",
-    "- candidate_options: Card, List",
-    "- chosen_option: Option A",
+    "- decision: component-library",
+    "- candidate_options: component-library, design-system",
+    "- chosen_option: component-library",
     "- rationale: Better visual hierarchy",
     "- verification_expectations: Responsive card grid",
     "- notes_for_reviewer: None",
@@ -164,11 +164,19 @@ async function seedUiBearingDiscussionPack(root: string): Promise<void> {
     "- route: /dashboard",
     "- purpose: Main dashboard view",
     "- actor: user",
-    "- primary_tasks: View overview",
-    "- secondary_tasks: Export data",
-    "- required_states: default, loading, empty, error",
-    "- transitions: navigate to detail",
-    "- observable_outcomes: Data displayed",
+    "- primary_tasks:",
+    "  - View overview: open dashboard summary",
+    "- secondary_tasks:",
+    "  - Export data: download a report",
+    "- required_states:",
+    "  - default: Main dashboard data is visible",
+    "  - loading: Loading skeleton is visible",
+    "  - empty: Empty state explains next steps",
+    "  - error: Retry action is visible",
+    "- transitions:",
+    "  - default -> loading: refresh requested",
+    "- observable_outcomes:",
+    "  - Data displayed: summary cards are visible",
     "- notes_for_verify: Check states",
     "- notes_for_reviewer: None",
   ].join("\n");
@@ -237,14 +245,14 @@ async function seedNonUiDiscussionPack(root: string): Promise<void> {
 
 describe("Discussion Design Hardening — Integration", { timeout: 30000 }, () => {
   // TDD-0025: TC-0002-0025
-  it("Review-Request template has Selected Direction Consistency section", async () => {
+  it("Review-Request template has Selected Anchor Consistency section", async () => {
     const templatePath = path.resolve(
       process.cwd(),
       "assets/init/.qfai/assistant/skills/qfai-discussion/templates/14_Review-Request.md",
     );
     const content = await readFile(templatePath, "utf-8");
-    expect(content).toContain("## Selected Direction Consistency");
-    expect(content).toMatch(/selected direction/i);
+    expect(content).toContain("## Selected Anchor Consistency");
+    expect(content).toMatch(/selected anchor/i);
     expect(content).toMatch(/strategy alignment/i);
     expect(content).toMatch(/evaluation traceability/i);
   });
@@ -299,7 +307,7 @@ describe("Discussion Design Hardening — Integration", { timeout: 30000 }, () =
   });
 
   // TDD-0030: TC-0002-0030
-  it("non-UI pack backward compatibility — zero new discussion hardening issues", async () => {
+  it("non-UI pack keeps zero discussion hardening issues", async () => {
     await withProject(async (root) => {
       await seedNonUiDiscussionPack(root);
       const result = await validateProject(root);
@@ -307,7 +315,7 @@ describe("Discussion Design Hardening — Integration", { timeout: 30000 }, () =
         (i) =>
           i.code === "UIX-VAL-DDH-SIDECAR-PRIMARY-TRUTH" ||
           i.code === "UIX-VAL-DDH-OPTION-COMPARISON" ||
-          i.code === "UIX-VAL-DDH-SELECTED-DIRECTION" ||
+          i.code === "UIX-VAL-DDH-SELECTED-ANCHOR" ||
           i.code === "UIX-VAL-DDH-COMPETITIVE-REFERENCES" ||
           i.code === "UIX-VAL-DDH-INTERACTION-HANDOFF" ||
           i.code === "UIX-VAL-DDH-STATE-COVERAGE" ||
@@ -346,7 +354,7 @@ describe("Discussion Design Hardening — Integration", { timeout: 30000 }, () =
         [
           "UIX-VAL-DDH-SIDECAR-PRIMARY-TRUTH",
           "UIX-VAL-DDH-OPTION-COMPARISON",
-          "UIX-VAL-DDH-SELECTED-DIRECTION",
+          "UIX-VAL-DDH-SELECTED-ANCHOR",
           "UIX-VAL-DDH-COMPETITIVE-REFERENCES",
           "UIX-VAL-DDH-INTERACTION-HANDOFF",
           "UIX-VAL-DDH-STATE-COVERAGE",

@@ -59,7 +59,7 @@ describe("surface detection", () => {
     expect(result1).toBe("web");
   });
 
-  it("explicit web-ui metadata", async () => {
+  it("explicit web metadata", async () => {
     const root = await newTempDir();
     await writeFile(path.join(root, "01_Spec.md"), "# Spec\n\n- surface: web\n", "utf-8");
     await mkdir(path.join(root, "uiux"), { recursive: true });

@@ -75,3 +75,63 @@ Given qfai.config.yaml with no `prototyping` stanza, when config normalization r
 ## AC-0012-0019: Report Prototyping Section
 
 Given valid prototyping evidence, when qfai report runs, then the report includes a `## Prototyping` section with mode, obligations, evidence, harness, render, browserQa, calibration subsections.
+
+## AC-0012-0020: Canonical Prototyping Surface Names
+
+Given prototyping configuration with surface "web", when execution validates the surface, then it is accepted. Given surface "web-ui", then it is rejected with an error indicating the canonical name.
+
+## AC-0012-0021: Execution Rejects Invalid Classification
+
+Given a discussion-pack with contradictory classification (ui_bearing=true but primary_surface=non-ui), when execution.ts runs, then a hard error is thrown immediately without fallback or continuation.
+
+## AC-0012-0022: Execution Rejects Non-UI Packs
+
+Given a discussion-pack classified as non-UI (ui_bearing=false, primary_surface=non-ui), when execution.ts runs, then it is rejected with "Non-UI classification is not a prototyping execution target".
+
+## AC-0012-0023: Legacy Top-Level Keys Hard-Rejected
+
+Given a prototyping.yaml with legacy top-level keys (recommended_mode at root level), when mode resolution runs, then a hard error is returned (not a warning or fallback to namespaced block).
+
+## AC-0012-0024: Semantic Invariant Enforced at Parser
+
+Given a prototyping.yaml where recommended_mode is "full-harness" but allowed_modes is ["low-cost", "standard"], when extractRecommendation() runs, then it returns null with a semantic mismatch warning.
+
+## AC-0012-0025: CLI Surface Skips Browser Evidence
+
+Given a discussion-pack with surface "cli" and mode "standard", when derivePrototypingObligations() runs, then requireRenderBundle=false and requireBrowserQaBundle=false, but requireRuntimeGate=true.
+
+## AC-0012-0026: Surface Inference Returns Null
+
+Given a prototyping.yaml with no surface field and no evidence signals, when inferSurfaceFromRecommendationAndEvidence() runs, then it returns null (not "non-ui").
+
+## AC-0012-0027: Full-Harness Iteration Cycle
+
+Given full-harness mode, when the iteration protocol runs, then each iteration executes exactly 4 steps (Evaluate→Identify→Fix→Re-evaluate) and records a scoringTrace entry with weightedTotal, decision, evaluators, and axisDelta.
+
+## AC-0012-0028: Independent Evaluator Invocation
+
+Given full-harness mode, when evaluation is performed, then product-surface-reviewer and product-experience-architect are launched via `task` tool in `background` mode
+with separate contexts receiving only screenshots/HTML snapshots and evaluation axis definitions (no improvement history or previous scores).
+
+## AC-0012-0029: Score Scope Enforcement
+
+Given a prototyping skill execution in full-harness mode, when scoringTrace is recorded, then no entry contains scores copied from discussion 3-layer aggregate evaluation. Discussion scores measure design direction quality; prototyping scores measure implementation fidelity.
+
+## AC-0012-0030: Evaluation Rigor Rubric
+
+Given full-harness evaluation, when an evaluator scores an axis, then the score uses a 3-tier rubric: existence_gate (0-0.3), quality_criteria (0.3-0.7), excellence_criteria (0.7-1.0). An axis failing existence_gate cannot score above 0.3.
+
+## AC-0012-0031: Asset Quality Gates
+
+Given full-harness mode with surface=web, when final output is evaluated, then no emoji characters (U+1F000–U+1FAFF, U+2600–U+27BF) appear as decorative elements,
+no placeholder content (lorem ipsum, placeholder.com images) exists, and color contrast ratios meet WCAG 2.1 AA (≥4.5:1 normal text, ≥3:1 large text).
+
+## AC-0012-0032: Reviewer Gate Full-Harness Checks
+
+Given full-harness evidence, when the reviewer evaluates, then it verifies: iterationCount>1 (or explicit justification), scoringTrace count matches iterationCount, scores show progression, terminationReason is consistent, independent evaluators were invoked, and a limitations section is present.
+
+## AC-0012-0033: PROT-290~294 Validator Rules
+
+Given full-harness evidence with iterationCount=1 and terminationReason=converged, when prototypingEvidence validator runs, then QFAI-PROT-290 warning is emitted.
+Given scoringTrace.length≠iterationCount, then QFAI-PROT-291 warning. Given terminationReason=max-iterations but count<maxIterations, then QFAI-PROT-292 warning.
+Given iterationCount>maxIterations, then QFAI-PROT-293 warning. Given non-increasing scoringTrace, then QFAI-PROT-294 info.

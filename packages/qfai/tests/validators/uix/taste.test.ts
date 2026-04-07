@@ -24,9 +24,9 @@ async function newTempDir(): Promise<string> {
   return dir;
 }
 
-/** Create a UI-bearing pack root with 01_Spec.md declaring web-ui surface */
+/** Create a UI-bearing pack root with 01_Spec.md declaring web surface */
 async function createUiBearingPack(root: string): Promise<void> {
-  await writeFile(path.join(root, "01_Spec.md"), "# Spec\n\n- surface: web-ui\n", "utf-8");
+  await writeFile(path.join(root, "01_Spec.md"), "# Spec\n\n- surface: web\n", "utf-8");
   await mkdir(path.join(root, "uiux"), { recursive: true });
 }
 

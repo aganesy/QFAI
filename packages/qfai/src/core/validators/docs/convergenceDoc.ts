@@ -1,5 +1,5 @@
 /**
- * Doc convergence validator — spec-0037
+ * Doc convergence validator - spec-0037
  *
  * Validates that the master convergence document exists
  * with required canonical structure sections.
@@ -33,7 +33,7 @@ export async function validateConvergenceDoc(steeringDir: string): Promise<Conve
     issues.push({
       code: "QFAI-DOC-CONVERGENCE-MISSING",
       severity: "error",
-      category: "compatibility",
+      category: "canonical",
       message: "Master convergence document is missing from steering directory.",
       file: "steering/convergence.md",
       suggested_action:
@@ -58,7 +58,7 @@ export async function validateConvergenceDoc(steeringDir: string): Promise<Conve
     issues.push({
       code: "QFAI-DOC-CONVERGENCE-INCOMPLETE",
       severity: "error",
-      category: "compatibility",
+      category: "canonical",
       message: `Convergence document missing required sections: ${missingSections.join(", ")}`,
       file: "steering/convergence.md",
       suggested_action: `Add the following sections to convergence.md: ${missingSections.join(", ")}`,

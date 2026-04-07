@@ -271,7 +271,7 @@ describe("validateProject (spec pack)", { timeout: 15000 }, () => {
     });
   });
 
-  it("does not elevate OQ gate from legacy status JSON", async () => {
+  it("ignores legacy status JSON for OQ gate decisions", async () => {
     await withProject(async (root) => {
       const statusPath = path.join(root, ".qfai", "status", "release.json");
       await mkdir(path.dirname(statusPath), { recursive: true });
@@ -283,13 +283,10 @@ describe("validateProject (spec pack)", { timeout: 15000 }, () => {
 
       const result = await validateProject(root);
       const oqIssue = result.issues.find((item) => item.code === "E_OQ_OPEN_RELEASE_BLOCK");
-      const legacyIssue = result.issues.find((item) => item.code === "LEGACY_STATUS_DIR_NONEMPTY");
 
       expect(oqIssue).toBeDefined();
       expect(oqIssue?.severity).toBe("warning");
       expect(oqIssue?.refs).toContain("OQ-0001");
-      expect(legacyIssue).toBeDefined();
-      expect(legacyIssue?.severity).toBe("warning");
     });
   });
 
@@ -338,22 +335,18 @@ describe("validateProject (spec pack)", { timeout: 15000 }, () => {
     });
   });
 
-  it("warns when legacy status directory exists", async () => {
+  it("does not emit legacy status directory warnings anymore", async () => {
     await withProject(async (root) => {
       const statusDir = path.join(root, ".qfai", "status");
       await mkdir(statusDir, { recursive: true });
       await writeFile(path.join(statusDir, "README.md"), "# status\n", "utf-8");
 
       const result = await validateProject(root);
-      const issue = result.issues.find((item) => item.code === "LEGACY_STATUS_DIR");
-
-      expect(issue).toBeDefined();
-      expect(issue?.severity).toBe("warning");
-      expect(issue?.file).toBe(statusDir);
+      expect(result.issues.some((item) => item.code === "LEGACY_STATUS_DIR")).toBe(false);
     });
   });
 
-  it("warns stronger when legacy status directory is non-empty", async () => {
+  it("does not emit legacy status directory non-empty warnings anymore", async () => {
     await withProject(async (root) => {
       const statusDir = path.join(root, ".qfai", "status");
       await mkdir(statusDir, { recursive: true });
@@ -364,11 +357,7 @@ describe("validateProject (spec pack)", { timeout: 15000 }, () => {
       );
 
       const result = await validateProject(root);
-      const issue = result.issues.find((item) => item.code === "LEGACY_STATUS_DIR_NONEMPTY");
-
-      expect(issue).toBeDefined();
-      expect(issue?.severity).toBe("warning");
-      expect(issue?.refs).toContain("release.json");
+      expect(result.issues.some((item) => item.code === "LEGACY_STATUS_DIR_NONEMPTY")).toBe(false);
     });
   });
 
@@ -1224,7 +1213,8 @@ async function seedDiscussionPackFixtures(root: string): Promise<void> {
         "- observation: Tonal palette and surface elevation patterns",
         "- freshness_date: 2026-02-16",
         "- confidence: high",
-        "- source_translation: Apply tonal palette for visual hierarchy",
+        "- decision_connection: Reinforces a card hierarchy with clear emphasis on the primary action.",
+        "- evaluation_connection: Adds a scoring lens for hierarchy clarity and tonal separation.",
         "- local_implication: Use tonal elevation for card hierarchy in dashboard",
         "",
         "### Layout / Composition Trends",
@@ -1235,7 +1225,8 @@ async function seedDiscussionPackFixtures(root: string): Promise<void> {
         "- observation: Single-column hero layout for focused actions",
         "- freshness_date: 2026-02-16",
         "- confidence: high",
-        "- source_translation: Adopt hero-action layout pattern",
+        "- decision_connection: Favors a single dominant action above the fold.",
+        "- evaluation_connection: Adds comparison pressure toward focused hero-action layouts.",
         "- local_implication: Apply single hero CTA for dashboard entry point",
         "",
         "### Density / Hierarchy Trends",
@@ -1246,7 +1237,8 @@ async function seedDiscussionPackFixtures(root: string): Promise<void> {
         "- observation: Medium density with clear CTA hierarchy",
         "- freshness_date: 2026-02-16",
         "- confidence: high",
-        "- source_translation: Medium density layouts improve scan speed",
+        "- decision_connection: Pushes against overcrowded dashboards with competing CTAs.",
+        "- evaluation_connection: Adds an evaluation lens for scan speed and CTA hierarchy.",
         "- local_implication: Keep dashboard density moderate with clear primary action",
         "",
         "### Interaction / Motion Trends",
@@ -1257,7 +1249,8 @@ async function seedDiscussionPackFixtures(root: string): Promise<void> {
         "- observation: Motion supports state change, not decoration",
         "- freshness_date: 2026-02-16",
         "- confidence: high",
-        "- source_translation: Motion pattern translated for the current dashboard workflow",
+        "- decision_connection: Limits motion to state-change reinforcement only.",
+        "- evaluation_connection: Adds explicit review checks for purposeful motion usage.",
         "- local_implication: State transitions use purposeful animation only",
         "",
         "### Component Styling Trends",
@@ -1268,7 +1261,8 @@ async function seedDiscussionPackFixtures(root: string): Promise<void> {
         "- observation: Unstyled accessible primitives with customizable theming",
         "- freshness_date: 2026-02-16",
         "- confidence: high",
-        "- source_translation: Adopt primitive-based approach for consistent styling",
+        "- decision_connection: Prefers composable primitives over bespoke one-off widgets.",
+        "- evaluation_connection: Adds a criterion for consistency through reusable primitives.",
         "- local_implication: Use composable primitives for dashboard components",
         "",
         "### Stale / Overused AI Slop Patterns",
@@ -1279,7 +1273,8 @@ async function seedDiscussionPackFixtures(root: string): Promise<void> {
         "- observation: Generic gradient hero sections with stock illustrations",
         "- freshness_date: 2026-02-16",
         "- confidence: high",
-        "- source_translation: Avoid generic AI-generated hero patterns",
+        "- decision_connection: Rejects generic hero sections that dilute product specificity.",
+        "- evaluation_connection: Adds explicit anti-pattern checks for AI-slop hero treatments.",
         "- local_implication: Use product-specific content instead of generic hero sections",
         "",
         "## Competitive Reference Registry",
@@ -1349,7 +1344,7 @@ async function seedDiscussionPackFixtures(root: string): Promise<void> {
         "",
         "| Term | Definition | Synonyms | Source refs |",
         "| ---- | ---------- | -------- | ----------- |",
-        "| Discussion-pack | A timestamped discussion pack consisting of 15 required markdown files plus required prototyping.yaml under `.qfai/discussion/discussion-<ts>/`. | discussion pack | SRC-0001 |",
+        "| Discussion-pack | A timestamped discussion pack consisting of 15 required markdown files under `.qfai/discussion/discussion-<ts>/`; `prototyping.yaml` is required only when the latest pack is ui_bearing=true. | discussion pack | SRC-0001 |",
         "",
       ],
     },
@@ -1424,8 +1419,8 @@ async function seedDiscussionPackFixtures(root: string): Promise<void> {
         "",
         "Review request for discussion pack baseline validator fixtures.",
         "This file captures the review scope and expected reviewers.",
-        "Selected direction: verify `uiux/31_selected_anchor_screen.md` selected_option is populated and references a compared option.",
-        "Strategy alignment: verify `uiux/10_implementation_strategy.md` chosen_option matches the selected direction.",
+        "Selected anchor: verify `uiux/31_selected_anchor_screen.md` selected_option is populated and references a compared option.",
+        "Strategy alignment: verify `uiux/10_implementation_strategy.md` chosen_option matches the selected anchor.",
         "Verify screen contracts use all 4 required states (default/loading/empty/error).",
         "",
       ],
@@ -1464,15 +1459,17 @@ async function seedDiscussionPackFixtures(root: string): Promise<void> {
         "- surface: web",
         "- selection_required: true",
         "- decision: component-library",
-        "- candidate_options: Option A, Option B",
-        "- chosen_option: Option A",
-        "- rationale: Option A provides the clearest primary action for the dashboard workflow.",
+        "- candidate_options:",
+        "  - component-library",
+        "  - bespoke",
+        "- chosen_option: component-library",
+        "- rationale: component-library provides the clearest primary action for the dashboard workflow.",
         "- why_this_strategy: Component-library strategy leverages proven accessible primitives and reduces custom styling overhead.",
         "- expected_strengths: Consistent styling, built-in accessibility, fast iteration on new screens.",
         "- known_risks: Limited customization for highly bespoke brand expression; dependency on library release cadence.",
         "- fit_for_this_product: Dashboard-focused product benefits from pre-built data display and action components.",
         "- verification_expectations: Check responsive layout and task completion behavior.",
-        "- notes_for_reviewer: Focus on selected direction consistency.",
+        "- notes_for_reviewer: Focus on selected anchor consistency.",
       ],
     },
     {
@@ -1508,7 +1505,53 @@ async function seedDiscussionPackFixtures(root: string): Promise<void> {
         "Confirm dashboard density on smaller screens.",
         "",
         "## taste_reflection_depth",
-        "These answers should be reflected in selected direction and contracts.",
+        "These answers should be reflected in selected anchor and contracts.",
+      ],
+    },
+    {
+      name: "uiux/20_trend_scan.md",
+      lines: [
+        "# Trend Scan",
+        "",
+        "## user expectation / market norm",
+        "",
+        "### Dashboard single-action pattern",
+        "",
+        "- reference: NNG Dashboard Guidelines 2026",
+        "- observation: Users expect a single primary CTA on dashboards",
+        "- decision_connection: Aligns with single-hero strategy selection",
+        "- evaluation_connection: Supports hierarchy invariant evaluation",
+        "- local_implication: Keep one primary action visible above fold",
+        "",
+        "## product neighbor / comparable flow",
+        "",
+        "### Competitor onboarding flow",
+        "",
+        "- reference: https://competitor-alpha.example.com/onboarding",
+        "- observation: Focused onboarding with clear step indicators",
+        "- decision_connection: Reinforces component-library decision for step UI",
+        "- evaluation_connection: Validates clarity evaluation criteria",
+        "- local_implication: Use step indicator component for onboarding",
+        "",
+        "## platform convention",
+        "",
+        "### Material Design 3 tonal system",
+        "",
+        "- reference: Material Design 3 Guidelines",
+        "- observation: Tonal elevation patterns for card hierarchy",
+        "- decision_connection: Supports component-library strategy",
+        "- evaluation_connection: Feeds into visual hierarchy evaluation",
+        "- local_implication: Apply tonal palette for dashboard card hierarchy",
+        "",
+        "## accessibility / compliance relevant signal",
+        "",
+        "### WCAG 2.2 Level AA contrast",
+        "",
+        "- reference: WCAG 2.2 Guidelines",
+        "- observation: Contrast ratio requirements for interactive elements",
+        "- decision_connection: Primitives library includes accessible defaults",
+        "- evaluation_connection: Validates accessibility invariant evaluation",
+        "- local_implication: Verify contrast ratios on all interactive elements",
       ],
     },
     {
@@ -1642,6 +1685,12 @@ async function seedDiscussionPackFixtures(root: string): Promise<void> {
         "",
         "- selected_option: Option A",
         "- why_selected: best fit for the current workflow and review criteria",
+        "",
+        "## rejected_or_deferred_options",
+        "",
+        "- option: Option B",
+        "- disposition: rejected",
+        "- reason: dense table-first presentation weakens first-run task focus and increases initial cognitive load",
       ],
     },
     {
@@ -1706,7 +1755,7 @@ async function seedDiscussionPackFixtures(root: string): Promise<void> {
       "    - low-cost",
       "    - standard",
       "    - full-harness",
-      "  surface: web-ui",
+      "  surface: web",
     ].join("\n"),
     "utf-8",
   );
@@ -1780,6 +1829,7 @@ async function seedPrototypingEvidenceFixture(root: string): Promise<void> {
     path.join(evidenceRoot, "prototyping.json"),
     `${JSON.stringify(
       {
+        surface: "web",
         specs: [
           {
             specId: "spec-0001",
@@ -1800,6 +1850,11 @@ async function seedPrototypingEvidenceFixture(root: string): Promise<void> {
             },
           },
         ],
+        mode: {
+          effective: "standard",
+          source: "discussion-recommendation",
+          rationale: "UI validation is recommended.",
+        },
         runtimeGate: {
           ui: [{ route: "/orders", status: 200 }],
           api: [{ method: "GET", path: "/api/orders", status: 200 }],

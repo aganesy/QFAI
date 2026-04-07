@@ -2,7 +2,7 @@ import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 
 import { loadConfig, resolvePath } from "../config.js";
-import { readClassificationBlock } from "../detection/surfaceType.js";
+import { readValidatedClassification } from "../detection/surfaceType.js";
 import type { SurfaceType } from "../detection/surfaceType.js";
 import { writeEvidenceBundles, type PrototypingSummaryBundle } from "../evidence/bundleWriter.js";
 import { runRenderCapture } from "../evidence/renderRunner.js";
@@ -18,6 +18,7 @@ import type { CritiqueAdapter } from "../critique/adapter.js";
 import { resolveLatestRecommendationArtifact } from "./recommendationArtifact.js";
 import { derivePrototypingObligations, resolvePrototypingMode } from "./mode.js";
 import type { PrototypingMode, PrototypingSurface } from "./types.js";
+import { assertCanonicalPrototypingSurface } from "../domain/surface.js";
 import type { ProviderRegistry } from "../providers/registry.js";
 import { runBrowserQaOrchestrated } from "../browserQa/runner.js";
 import {
@@ -60,10 +61,37 @@ export async function runPrototypingExecution(
   const discussionRoot = resolvePath(request.root, config, "discussionDir");
   const latestPack = await findLatestDiscussionPackDir(discussionRoot);
   const recommendation = await resolveLatestRecommendationArtifact(request.root, config);
-  const classification = await readClassificationBlock(latestPack ?? request.root);
-  const surface = (classification?.primary_surface ??
-    recommendation.recommendation?.surface ??
-    "non-ui") as PrototypingSurface;
+
+  // Hard gate: invalid recommendation artifact must reject execution immediately.
+  // No fallback to explicit mode, default mode, or warning-only continuation.
+  if (recommendation.status === "invalid") {
+    throw new Error(
+      "Prototyping recommendation artifact is invalid. " +
+        "Canonical namespaced schema is required under 'prototyping:' key. " +
+        "Top-level recommendation keys are not supported. " +
+        "recommended_mode must be included in allowed_modes. " +
+        "Fix prototyping.yaml before running prototyping execution.",
+    );
+  }
+
+  const classification = await readValidatedClassification(latestPack ?? request.root);
+  if (classification === null) {
+    throw new Error(
+      "Classification is invalid or contradictory. " +
+        "Prototyping execution requires a valid classification in 01_Context.md. " +
+        "Fix the classification block before running prototyping.",
+    );
+  }
+  if (!classification.ui_bearing || classification.primary_surface === "non-ui") {
+    throw new Error(
+      "Non-UI classification is not a prototyping execution target. " +
+        "surface field must be one of: web, mobile, desktop, cli, mixed.",
+    );
+  }
+  const recommendationSurface = recommendation.recommendation?.surface;
+  const classifiedSurface = classification.primary_surface;
+  const resolvedSurface = recommendationSurface ?? classifiedSurface;
+  const surface: PrototypingSurface = assertCanonicalPrototypingSurface(resolvedSurface);
   const modeSummary = resolvePrototypingMode({
     explicitMode: request.requestedMode,
     discussionRecommendation: recommendation.recommendation,
@@ -72,6 +100,8 @@ export async function runPrototypingExecution(
     surface,
     effectiveMode: modeSummary.effective,
   });
+  // Prototyping execution decides only visual/browser evidence obligations here.
+  // Discussion-side UI-bearing classification is handled separately.
   const targetUrl = resolvePrototypingExecutionTargetUrl({
     ...(request.targetUrl !== undefined ? { requestTargetUrl: request.targetUrl } : {}),
     config,
@@ -108,7 +138,7 @@ export async function runPrototypingExecution(
   const browserQaInput = await buildBrowserQaInput({
     renderResult,
     ...(targetUrl !== undefined ? { targetUrl } : {}),
-    surface: surface as SurfaceType,
+    surface,
     required: obligations.requireBrowserQaBundle,
   });
   const browserQaResult = await runBrowserQaOrchestrated(browserQaInput, browserQaProvider);
@@ -150,7 +180,7 @@ export async function runPrototypingExecution(
         requirements: ["Generated from qfai prototyping run"],
       },
       adapters: {
-        surface: surface as SurfaceType,
+        surface,
         render: {
           // eslint-disable-next-line @typescript-eslint/require-await
           captureEvidence: async () => renderResult,
@@ -180,6 +210,28 @@ export async function runPrototypingExecution(
         weightedTotal: entry.score,
         decision: entry.decision,
       })),
+    };
+    const evidencePaths = await writeEvidenceBundles({
+      root: request.root,
+      render: { result: renderResult, surface, mode: modeSummary.effective, generatedAt },
+      browserQa: { result: browserQaResult, mode: modeSummary.effective },
+      prototyping: summary,
+      fullHarnessArtifacts: {
+        fakeUiDetection: fullHarness.fakeUiDetection,
+        handoff: fullHarness.handoff,
+        exitReason: fullHarness.exitReason,
+      },
+    });
+
+    return {
+      mode: modeSummary.effective,
+      surface,
+      evidencePaths: {
+        prototyping: evidencePaths.prototypingPath,
+        render: evidencePaths.renderPath,
+        browserQa: evidencePaths.browserQaPath,
+      },
+      generatedAt,
     };
   }
 
@@ -233,7 +285,7 @@ async function buildPrototypingSummaryBundle(input: {
     },
     meta: {
       generatedAt: input.generatedAt,
-      toolVersion: "1.7.13",
+      toolVersion: "1.7.14",
       commands: [`qfai prototyping run --mode ${input.mode.effective}`],
       generatedBy: "qfai prototyping run",
       providerIds: input.providerIds,

@@ -37,14 +37,14 @@ describe("E2E: prototyping SKILL.md defines Mode Selection Protocol", () => {
     const c = await load();
     expect(c).toMatch(/## Obligation Matrix/);
     expect(c).toMatch(/\|\s*surface\s*\/\s*mode/);
-    expect(c).toContain("non-ui / low-cost");
-    expect(c).toContain("ui-bearing / standard");
+    expect(c).toContain("web / low-cost");
+    expect(c).toContain("web / standard");
   });
 
   it("contains Surface Semantics for non-ui skip", async () => {
     const c = await load();
     expect(c).toMatch(/## Surface Semantics/);
-    expect(c).toContain("non-ui");
+    expect(c).toContain("ui_bearing: false");
     expect(c).toContain("uiFidelity");
   });
 

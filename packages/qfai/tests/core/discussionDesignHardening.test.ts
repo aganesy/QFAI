@@ -39,7 +39,7 @@ import {
   isUiBearing,
   validateSidecarPrimaryTruth,
   validateOptionComparison,
-  validateSelectedDirection,
+  validateSelectedAnchor,
   validateCompetitiveRefs,
   validateInteractionPriorityHandoff,
   validateStateCoverage,
@@ -334,14 +334,14 @@ describe("validateOptionComparison (UIX-VAL-DDH-OPTION-COMPARISON)", { timeout: 
 });
 
 // ---------------------------------------------------------------------------
-// UIX discussion hardening: Selected direction — TDD-0010..0011
+// UIX discussion hardening: Selected anchor — TDD-0010..0011
 // ---------------------------------------------------------------------------
 
-describe("validateSelectedDirection (UIX-VAL-DDH-SELECTED-DIRECTION)", { timeout: 10000 }, () => {
+describe("validateSelectedAnchor (UIX-VAL-DDH-SELECTED-ANCHOR)", { timeout: 10000 }, () => {
   // TDD-0010: TC-0002-0010
   it("pass — 31_selected_anchor_screen.md has selected_option and why_selected", async () => {
     await withPackDir(sidecarFiles(), async (packRoot) => {
-      const issues = await validateSelectedDirection(packRoot);
+      const issues = await validateSelectedAnchor(packRoot);
       expect(issues).toEqual([]);
     });
   });
@@ -351,9 +351,9 @@ describe("validateSelectedDirection (UIX-VAL-DDH-SELECTED-DIRECTION)", { timeout
     const files = sidecarFiles();
     delete files["uiux/31_selected_anchor_screen.md"];
     await withPackDir(files, async (packRoot) => {
-      const issues = await validateSelectedDirection(packRoot);
+      const issues = await validateSelectedAnchor(packRoot);
       expect(issues.length).toBe(1);
-      expect(issues[0]?.code).toBe("UIX-VAL-DDH-SELECTED-DIRECTION");
+      expect(issues[0]?.code).toBe("UIX-VAL-DDH-SELECTED-ANCHOR");
       expect(issues[0]?.severity).toBe("error");
     });
   });
@@ -600,12 +600,12 @@ describe("Cross-cutting validators", { timeout: 10000 }, () => {
     });
     await withPackDir(
       {
-        // No 31_selected_anchor_screen.md — triggers selected direction error
+        // No 31_selected_anchor_screen.md — triggers selected anchor error
         "03_Story-Workshop.md": story,
       },
       async (packRoot) => {
         const allIssues = [
-          ...(await validateSelectedDirection(packRoot)),
+          ...(await validateSelectedAnchor(packRoot)),
           ...(await validateDesignAntiGoals(packRoot)),
           ...(await validateStateCoverage(packRoot)),
         ];
@@ -661,7 +661,7 @@ describe("Cross-cutting validators", { timeout: 10000 }, () => {
       async (packRoot) => {
         const allIssues = [
           ...(await validateOptionComparison(packRoot)),
-          ...(await validateSelectedDirection(packRoot)),
+          ...(await validateSelectedAnchor(packRoot)),
           ...(await validateCompetitiveRefs(packRoot)),
           ...(await validateInteractionPriorityHandoff(packRoot)),
           ...(await validateStateCoverage(packRoot)),
@@ -725,28 +725,28 @@ describe("Post-merge edge cases", { timeout: 10000 }, () => {
     });
   });
 
-  // Fix #3: missing selected_option in 31_selected_anchor_screen.md → canonical selected-direction error
-  it("missing selected_option in anchor → canonical selected-direction error", async () => {
+  // Fix #3: missing selected_option in 31_selected_anchor_screen.md → canonical selected-anchor error
+  it("missing selected_option in anchor → canonical selected-anchor error", async () => {
     const anchor = "# 31 Selected Anchor Screen\n\n- why_selected: Good option";
     await withPackDir(
       sidecarFiles({ "uiux/31_selected_anchor_screen.md": anchor }),
       async (packRoot) => {
-        const issues = await validateSelectedDirection(packRoot);
+        const issues = await validateSelectedAnchor(packRoot);
         expect(issues.length).toBeGreaterThan(0);
-        expect(issues[0]?.code).toBe("UIX-VAL-DDH-SELECTED-DIRECTION");
+        expect(issues[0]?.code).toBe("UIX-VAL-DDH-SELECTED-ANCHOR");
       },
     );
   });
 
   // Missing why_selected in 31_selected_anchor_screen.md
-  it("missing why_selected in anchor → canonical selected-direction error", async () => {
+  it("missing why_selected in anchor → canonical selected-anchor error", async () => {
     const anchor = "# 31 Selected Anchor Screen\n\n- selected_option: Option A";
     await withPackDir(
       sidecarFiles({ "uiux/31_selected_anchor_screen.md": anchor }),
       async (packRoot) => {
-        const issues = await validateSelectedDirection(packRoot);
+        const issues = await validateSelectedAnchor(packRoot);
         expect(issues.length).toBeGreaterThan(0);
-        expect(issues[0]?.code).toBe("UIX-VAL-DDH-SELECTED-DIRECTION");
+        expect(issues[0]?.code).toBe("UIX-VAL-DDH-SELECTED-ANCHOR");
       },
     );
   });

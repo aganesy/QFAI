@@ -38,6 +38,7 @@
 
 ## Post-Migration Changes
 
-| Date       | Change Type | IDs Affected | Summary                                                                                                                                                |
-| ---------- | ----------- | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| 2026-04-01 | adopted     | —            | test-design-analyst: Coverage Depth Matrix 出力義務・品質深度チェックリスト参照義務を追加。qa-gatekeeper: テストケース品質深度チェックセクション追加。 |
+| Date       | Change Type | IDs Affected       | Summary                                                                                                                                                                                                                             |
+| ---------- | ----------- | ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-04-01 | adopted     | —                  | test-design-analyst: Coverage Depth Matrix 出力義務・品質深度チェックリスト参照義務を追加。qa-gatekeeper: テストケース品質深度チェックセクション追加。                                                                              |
+| 2026-04-08 | adopted     | REQ-0013, REQ-0014 | Full-Harness Review Profile 追加（review-profiles.yml）、Prototyping Evidence Phase Routing 追加（agent-routing.yml に product-experience-architect）。full-harness インシデントレポートに基づく独立評価パネル構成の routing 反映。 |

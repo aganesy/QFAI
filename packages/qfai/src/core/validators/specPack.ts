@@ -137,7 +137,7 @@ async function validateSpecPackEntry(
         entry.dir,
         "specPack.requiredFiles",
         missingFiles,
-        "compatibility",
+        "canonical",
         "spec-XXXX 配下に不足ファイルを追加し、01_Spec.md から 18_delta.md まで揃えてください。",
       ),
     );
@@ -229,7 +229,7 @@ async function validateSpecPackEntry(
             entry.examplesPath,
             "specPack.examples.acExists",
             [acId],
-            "compatibility",
+            "canonical",
             "07_Acceptance-criteria.md に AC ID を追加するか、09_Examples.feature の AC タグを既存IDへ修正してください。",
           ),
         );
@@ -287,7 +287,7 @@ async function validateSpecPackEntry(
           entry.acceptanceCriteriaPath,
           "id.format",
           invalidAcIds,
-          "compatibility",
+          "canonical",
           "07_Acceptance-criteria.md の AC ID を `AC-0001-0001` 形式へ修正してください。",
         ),
       );
@@ -305,7 +305,7 @@ async function validateSpecPackEntry(
           entry.testCasesPath,
           "id.format",
           invalidTcIds,
-          "compatibility",
+          "canonical",
           "10_Test-cases.md の TC ID を `TC-0001-0001` 形式へ修正してください。",
         ),
       );
@@ -341,7 +341,7 @@ async function validateLayeredSpecEntry(entry: SpecEntry): Promise<Issue[]> {
         entry.dir,
         "specPack.layered.requiredFiles",
         missingFiles,
-        "compatibility",
+        "canonical",
         requiredFilesHint,
       ),
     );
@@ -357,7 +357,7 @@ async function validateLayeredSpecEntry(entry: SpecEntry): Promise<Issue[]> {
         entry.sharedDir,
         "specPack.layered.sharedRequiredFiles",
         missingSharedFiles,
-        "compatibility",
+        "canonical",
         `specs/_policies 配下に次の必須ファイルを揃えてください: ${entry.requiredSharedFileNames.join(
           " / ",
         )}`,
@@ -376,7 +376,7 @@ async function validateLayeredSpecEntry(entry: SpecEntry): Promise<Issue[]> {
           entry.dir,
           "specPack.layered.deltaFile",
           ["*_delta.md"],
-          "compatibility",
+          "canonical",
           "spec-XXXX 配下に 09_delta.md（または *_delta.md）を追加してください。",
         ),
       );
@@ -504,7 +504,7 @@ function validateLayeredIdFormat(
       filePath,
       "id.format",
       invalid,
-      "compatibility",
+      "canonical",
       suggestedAction,
     ),
   ];
@@ -531,7 +531,7 @@ function validateLayeredNamespace(
       filePath,
       "specPack.layered.namespace",
       mismatched,
-      "compatibility",
+      "canonical",
       `${path.basename(filePath)} の ${prefix} ID を spec-${entry.specNumber} に合わせて修正してください。`,
     ),
   ];
@@ -593,7 +593,7 @@ function validateOpenQuestionsGate(
         entry.openQuestionsPath,
         "specPack.openQuestions",
         openIds,
-        "compatibility",
+        "canonical",
         "15_Open-questions.md の `status: open` を `resolved` または `deferred` に更新し、根拠を追記してください。",
       ),
     );
@@ -622,7 +622,7 @@ function validateOpenQuestionsGate(
         entry.openQuestionsPath,
         "specPack.openQuestionsStatus",
         refs,
-        "compatibility",
+        "canonical",
         "15_Open-questions.md の各 OQ-* に `status: open|resolved|deferred` を正しい綴りで記載してください。",
       ),
     );
@@ -708,7 +708,7 @@ function validateDeltaGate(entry: SpecEntry, text: string): Issue[] {
       entry.deltaPath,
       "specPack.deltaRequired",
       [...missingHeadings, ...missingRejectedHints],
-      "compatibility",
+      "canonical",
       "18_delta.md に `Change Summary / Rationale / Candidates Considered / Adopted / Rejected / Impact / Follow-ups` を揃え、Rejected に `DO NOT` と `Temptation` を記載してください。",
     ),
   ];
@@ -784,7 +784,7 @@ async function validateTraceabilityLedger(
         entry.traceabilityLedgerPath,
         "ledger.columns",
         missingColumns,
-        "compatibility",
+        "canonical",
         "16_Traceability-ledger.md のヘッダに必須列（trace_id,obj_id,init_id,cap_id,flow_id,us_id,ac_id,ex_ids,tc_ids）を追加してください。",
       ),
     );
@@ -835,7 +835,7 @@ async function validateTraceabilityLedger(
           entry.traceabilityLedgerPath,
           "ledger.requiredCells",
           emptyCells,
-          "compatibility",
+          "canonical",
           "16_Traceability-ledger.md の該当行で空セルを埋め、各列に有効なIDを設定してください。",
         ),
       );
@@ -858,7 +858,7 @@ async function validateTraceabilityLedger(
           entry.traceabilityLedgerPath,
           "ledger.cardinality",
           emptyMulti,
-          "compatibility",
+          "canonical",
           "16_Traceability-ledger.md の ex_ids/tc_ids に少なくとも1件のIDを設定してください。",
         ),
       );
@@ -885,7 +885,7 @@ async function validateTraceabilityLedger(
           entry.traceabilityLedgerPath,
           "ledger.objExists",
           [objId],
-          "compatibility",
+          "canonical",
           "02_Objective.md に OBJ ID を追加するか、Ledger の obj_id を既存IDへ修正してください。",
         ),
       );
@@ -899,7 +899,7 @@ async function validateTraceabilityLedger(
           entry.traceabilityLedgerPath,
           "ledger.initExists",
           [initId],
-          "compatibility",
+          "canonical",
           "03_Initiative.md に INIT ID を追加するか、Ledger の init_id を既存IDへ修正してください。",
         ),
       );
@@ -913,7 +913,7 @@ async function validateTraceabilityLedger(
           entry.traceabilityLedgerPath,
           "ledger.capExists",
           [capId],
-          "compatibility",
+          "canonical",
           "04_Capability.md に CAP ID を追加するか、Ledger の cap_id を既存IDへ修正してください。",
         ),
       );
@@ -927,7 +927,7 @@ async function validateTraceabilityLedger(
           entry.traceabilityLedgerPath,
           "ledger.flowExists",
           [flowId],
-          "compatibility",
+          "canonical",
           "05_Business-flow.feature に FLOW ID を追加するか、Ledger の flow_id を既存IDへ修正してください。",
         ),
       );
@@ -941,7 +941,7 @@ async function validateTraceabilityLedger(
           entry.traceabilityLedgerPath,
           "ledger.usExists",
           [usId],
-          "compatibility",
+          "canonical",
           "06_User-stories.md に US ID を追加するか、Ledger の us_id を既存IDへ修正してください。",
         ),
       );
@@ -955,7 +955,7 @@ async function validateTraceabilityLedger(
           entry.traceabilityLedgerPath,
           "ledger.acExists",
           [acId],
-          "compatibility",
+          "canonical",
           "07_Acceptance-criteria.md に AC ID を追加するか、Ledger の ac_id を既存IDへ修正してください。",
         ),
       );
@@ -970,7 +970,7 @@ async function validateTraceabilityLedger(
             entry.traceabilityLedgerPath,
             "ledger.exExists",
             [exId],
-            "compatibility",
+            "canonical",
             "09_Examples.feature に EX ID を追加するか、Ledger の ex_ids を既存IDへ修正してください。",
           ),
         );
@@ -986,7 +986,7 @@ async function validateTraceabilityLedger(
             entry.traceabilityLedgerPath,
             "ledger.tcExists",
             [tcId],
-            "compatibility",
+            "canonical",
             "10_Test-cases.md に TC ID を追加するか、Ledger の tc_ids を既存IDへ修正してください。",
           ),
         );
@@ -1003,7 +1003,7 @@ async function validateTraceabilityLedger(
             entry.traceabilityLedgerPath,
             "ledger.conExists",
             [conId],
-            "compatibility",
+            "canonical",
             "11_Contracts.md と `.qfai/contracts/**` の CON ID を一致させるように修正してください。",
           ),
         );
@@ -1023,7 +1023,7 @@ async function validateTraceabilityLedger(
           entry.traceabilityLedgerPath,
           "ledger.acCoverage",
           uncoveredAcIds,
-          "compatibility",
+          "canonical",
           "16_Traceability-ledger.md に AC へ紐づく EX/TC 接続行を追加してください。",
         ),
       );
@@ -1039,7 +1039,7 @@ async function validateTraceabilityLedger(
           entry.traceabilityLedgerPath,
           "ledger.tcCoverage",
           orphanTcIds,
-          "compatibility",
+          "canonical",
           "16_Traceability-ledger.md に該当 TC を参照する行を追加し、OBJ まで遡れるようにしてください。",
         ),
       );
@@ -1153,7 +1153,7 @@ function validateUpperToLowerReferenceRules(
         entry.requiredFiles[rule.fileName],
         "specPack.noUpstreamToDownstreamRef",
         samples,
-        "compatibility",
+        "canonical",
         "下位との接続は 16_Traceability-ledger.md に記述してください。",
       ),
     );
@@ -1227,7 +1227,7 @@ function validateLedgerId(
         entry.traceabilityLedgerPath,
         "ledger.idFormat",
         [value],
-        "compatibility",
+        "canonical",
         `16_Traceability-ledger.md の ${column} を ${kind}-0001-0001 形式へ修正してください。`,
       ),
     );

@@ -85,7 +85,7 @@ export function findingToIssue(
     finding.file,
     `${rulePrefix}.${finding.dimension}`,
     finding.evidence.length > 0 ? finding.evidence : undefined,
-    "compatibility",
+    "canonical",
     finding.guidance,
   );
 }
@@ -107,7 +107,7 @@ function _extractSection(content: string, heading: string): string | null {
 }
 
 // ---------------------------------------------------------------------------
-// Contracts / Selected Direction Checks
+// Contracts / Selected Anchor Checks
 // ---------------------------------------------------------------------------
 
 function parseScreenBlocks(content: string): Array<{ screenId: string; primaryTasks: string[] }> {
@@ -177,7 +177,7 @@ function checkContractsHierarchy(
         dimension: "visualHierarchy",
         severityTier: 2,
         message: `Screen '${screen.screenId}' defines multiple primary tasks (${screen.primaryTasks.length} > ${auditConfig.maxPrimaryCtas})`,
-        why: "Multiple primary tasks weaken the selected direction and blur the intended primary action",
+        why: "Multiple primary tasks weaken the selected anchor and blur the intended primary action",
         evidence: screen.primaryTasks,
         guidance: "Reduce primary_tasks to the single most important user action for this screen.",
         file,
@@ -242,7 +242,7 @@ async function checkTokenDrift(
     return findings;
   }
 
-  // Count total occurrences (not unique) — AC-0025-0005 is occurrence-based
+  // Count total occurrences (not unique) - AC-0025-0005 is occurrence-based
   let rawCount = 0;
   const sampleLiterals: string[] = [];
   for (const htmlFile of htmlFiles) {
@@ -295,7 +295,7 @@ export function deduplicateFindings(issues: Issue[], maxPerRule: number): Issue[
       result.push({
         code,
         severity: "info",
-        category: "compatibility",
+        category: "canonical",
         message: `${count - maxPerRule} additional "${code}" finding(s) suppressed (max ${maxPerRule} per rule)`,
         rule: `audit.dedup.${code}`,
       });

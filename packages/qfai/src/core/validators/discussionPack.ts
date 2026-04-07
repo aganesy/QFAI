@@ -26,8 +26,8 @@ export async function validateDiscussionPackReadiness(
         readiness.dangerousPackNames,
         "change",
         [
-          "新規 pack は `discussion-YYYYMMDDhhmmssSSS/` のみ許可されます。",
-          "既存の不正ディレクトリは `discussion-legacy-*` などへ退避し、latest 判定対象から外してください。",
+          "現在の正規命名 (`discussion-YYYYMMDDhhmmssSSS/`) のみサポートされています。不正なディレクトリを削除またはリネームしてください。",
+          "Only canonical naming is supported. Remove or rename the non-canonical discussion directory.",
         ].join("\n"),
       ),
     );
@@ -37,15 +37,15 @@ export async function validateDiscussionPackReadiness(
     issues.push(
       issue(
         "QFAI-DPACK-006",
-        `legacy discussion-pack を検出しました: ${readiness.legacyPackNames.join(", ")}`,
+        `current canonical discussion-pack naming does not allow sequential pack directories: ${readiness.legacyPackNames.join(", ")}`,
         "warning",
         discussionRoot,
         "discussionPack.legacy",
         readiness.legacyPackNames,
         "change",
         [
-          "legacy 連番 pack（例: discussion-0001）は段階的に廃止されます。",
-          "移行時は `discussion-legacy-*` へ退避するか、削除してください。",
+          "現在の正規レイアウトのみサポートされています。不正なディレクトリを削除またはリネームしてください。",
+          "Only canonical layout is supported. Remove or rename the non-canonical discussion directory.",
         ].join("\n"),
       ),
     );
@@ -73,18 +73,22 @@ export async function validateDiscussionPackReadiness(
 
   if (readiness.missingFiles.length > 0 || readiness.missingSideArtifacts.length > 0) {
     const allMissing = [...readiness.missingFiles, ...readiness.missingSideArtifacts];
-    issues.push(
-      issue(
-        "QFAI-DPACK-002",
-        `discussion-pack の必須ファイルが不足しています: ${allMissing.join(", ")}`,
-        "error",
-        readiness.latestPackDir,
-        "discussionPack.requiredFiles",
-        allMissing,
-        "change",
-        `不足ファイルを作成してください: ${allMissing.join(", ")}。prototyping.yaml は必須サイドアーティファクトです。`,
-      ),
-    );
+    if (allMissing.length > 0) {
+      issues.push(
+        issue(
+          "QFAI-DPACK-002",
+          `discussion-pack の必須ファイルが不足しています: ${allMissing.join(", ")}`,
+          "error",
+          readiness.latestPackDir,
+          "discussionPack.requiredFiles",
+          allMissing,
+          "change",
+          readiness.prototypingRequired
+            ? `不足ファイルを作成してください: ${allMissing.join(", ")}。latest UI-bearing discussion pack では prototyping.yaml が必須です。`
+            : `不足ファイルを作成してください: ${allMissing.join(", ")}。non-ui discussion pack では prototyping.yaml は不要です。`,
+        ),
+      );
+    }
   }
 
   if (readiness.incompleteFiles.length > 0) {

@@ -71,18 +71,18 @@ describe("runBrowserQaOrchestrated", () => {
     expect(result.phases[3].status).toBe("skipped");
   });
 
-  it("TC-B4: non-ui surface → all 4 phases skipped with reason", async () => {
+  it("TC-B4: cli surface → all 4 phases skipped with reason", async () => {
     const input: BrowserQaInput = { surface: "cli", htmlContent: MINIMAL_HTML };
     const result = await runBrowserQaOrchestrated(input);
 
     expect(result.phases).toHaveLength(4);
     for (const p of result.phases) {
       expect(p.status).toBe("skipped");
-      expect(p.skippedReason).toContain("non-ui");
+      expect(p.skippedReason).toContain("does not require Browser QA");
     }
   });
 
-  it("TC-B4b: non-ui surface (non-ui) → all 4 phases skipped", async () => {
+  it("TC-B4b: non-ui classification surface → all 4 phases skipped", async () => {
     const input: BrowserQaInput = { surface: "non-ui" };
     const result = await runBrowserQaOrchestrated(input);
 

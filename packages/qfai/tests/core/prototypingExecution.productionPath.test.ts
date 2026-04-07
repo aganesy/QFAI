@@ -8,7 +8,7 @@
 import { describe, it, expect } from "vitest";
 import {
   derivePrototypingObligations,
-  isUiBearingSurface,
+  requiresVisualBrowserEvidence,
 } from "../../src/core/prototyping/mode.js";
 import { buildRuntimeGate } from "../../src/core/prototyping/runtimeGateBuilder.js";
 import type { PrototypingMode, PrototypingSurface } from "../../src/core/prototyping/types.js";
@@ -56,10 +56,10 @@ describe("prototyping execution production path", () => {
     });
   });
 
-  describe("non-ui + standard", () => {
+  describe("cli + standard", () => {
     it("derives obligations with UI-specific evidence not required", () => {
       const obligations = derivePrototypingObligations({
-        surface: "non-ui",
+        surface: "cli",
         effectiveMode: "standard",
       });
       expect(obligations.requireUiFidelity).toBe(false);
@@ -69,23 +69,23 @@ describe("prototyping execution production path", () => {
       expect(obligations.requireRuntimeGate).toBe(false);
     });
 
-    it("runtime gate returns empty arrays for non-ui", () => {
-      const gate = buildRuntimeGate({ surface: "non-ui" });
+    it("runtime gate returns empty arrays for cli", () => {
+      const gate = buildRuntimeGate({ surface: "cli" });
       expect(gate).toBeDefined();
       if (!gate) throw new Error("gate should be defined");
       expect(gate.ui).toEqual([]);
       expect(gate.api).toEqual([]);
     });
 
-    it("isUiBearingSurface returns false for non-ui", () => {
-      expect(isUiBearingSurface("non-ui")).toBe(false);
+    it("requiresVisualBrowserEvidence returns false for cli prototyping surface", () => {
+      expect(requiresVisualBrowserEvidence("cli")).toBe(false);
     });
   });
 
-  describe("non-ui + full-harness", () => {
+  describe("cli + full-harness", () => {
     it("requires fullHarness but not UI evidence", () => {
       const obligations = derivePrototypingObligations({
-        surface: "non-ui",
+        surface: "cli",
         effectiveMode: "full-harness",
       });
       expect(obligations.requireFullHarness).toBe(true);
@@ -97,24 +97,24 @@ describe("prototyping execution production path", () => {
 
   describe("surface detection", () => {
     const uiBearingSurfaces: PrototypingSurface[] = ["web", "mobile", "desktop", "mixed"];
-    const nonUiSurfaces: PrototypingSurface[] = ["cli", "non-ui"];
+    const nonUiSurfaces: PrototypingSurface[] = ["cli"];
 
     for (const surface of uiBearingSurfaces) {
       it(`${surface} is UI-bearing`, () => {
-        expect(isUiBearingSurface(surface)).toBe(true);
+        expect(requiresVisualBrowserEvidence(surface)).toBe(true);
       });
     }
 
     for (const surface of nonUiSurfaces) {
-      it(`${surface} is not UI-bearing`, () => {
-        expect(isUiBearingSurface(surface)).toBe(false);
+      it(`${surface} is not a visual/browser prototyping surface`, () => {
+        expect(requiresVisualBrowserEvidence(surface)).toBe(false);
       });
     }
   });
 
   describe("obligation matrix completeness", () => {
     const modes: PrototypingMode[] = ["low-cost", "standard", "full-harness"];
-    const surfaces: PrototypingSurface[] = ["web", "non-ui"];
+    const surfaces: PrototypingSurface[] = ["web", "cli"];
 
     for (const mode of modes) {
       for (const surface of surfaces) {

@@ -78,6 +78,6 @@
 
 - AC-Refs: AC-0014-0012
 
-- verify が使用する runCanonicalUixValidators() は 12 modular validators を並列実行する（canonical.ts, foundation.ts, comparisonValidator.ts, oqClosure.ts, rollout.ts, scoringReady.ts, strategy.ts, screenContract.ts, trend.ts, threeLayer.ts, tasteInterview, prototypingRecommendation.ts）
+- verify が使用する runCanonicalUixValidators() は 11 modular validators を並列実行する（v1.7.14: rollout.ts 削除により 12→11。canonical.ts, foundation.ts, comparisonValidator.ts, oqClosure.ts, scoringReady.ts, strategy.ts, screenContract.ts, trend.ts, threeLayer.ts, tasteInterview, prototypingRecommendation.ts）
 - verify 固有の制約: --phase refinement は local-only、CI は default/full のみ
 - UIX-REV semantic reviewers は runCanonicalUixValidators() とは別に、verify skill 内で実行される

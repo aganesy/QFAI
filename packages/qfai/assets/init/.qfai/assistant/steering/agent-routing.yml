@@ -119,7 +119,7 @@ routing:
         rerun_policy: changed-scope-dependents
       - id: evidence
         mandatory_agents: []
-        conditional_agents: [devops-ci-engineer, qa-gatekeeper]
+        conditional_agents: [devops-ci-engineer, qa-gatekeeper, product-experience-architect]
         parallel_groups: []
         blocking_agents: [qa-gatekeeper]
         rerun_policy: changed-scope-dependents

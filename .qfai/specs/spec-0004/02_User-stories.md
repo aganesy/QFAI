@@ -147,13 +147,13 @@
 - Non-goals: フル Browser QA フレームワークの実装
 - Notes: REQ-0014。minimal runner のスコープを明確にし、未実行テストを pass と偽らない
 
-## US-0004-0020: Canonical/Legacy Validator Separation
+## US-0004-0020: Canonical Validator Pipeline
 
-As a QFAI user, I want the validate pipeline to use only canonical validators in production, with legacy validators available only for migration tooling, so that validation results are accurate and not polluted by deprecated rules.
+As a QFAI user, I want the validate pipeline to use only canonical validators in production, so that validation results are accurate and consistent. v1.7.14: legacy validators are completely removed from the source tree (DR-0115).
 
 ## US-0004-0021: IssueCategory Discrimination
 
-As a CI/CD engineer, I want validator issues tagged with `category: "canonical"` or `"compatibility"` or `"change"`, so that I can filter and prioritize findings by their source.
+As a CI/CD engineer, I want validator issues tagged with `category: "canonical"` or `"change"`, so that I can filter and prioritize findings by their source. v1.7.14: "compatibility" category removed (DR-0108).
 
 ## US-0004-0022: Prototyping Recommendation Validation
 

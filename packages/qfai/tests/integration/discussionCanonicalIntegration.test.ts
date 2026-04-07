@@ -104,7 +104,7 @@ afterEach(async () => {
 // ---------------------------------------------------------------------------
 
 async function createUiBearingPack(root: string): Promise<void> {
-  await writeFile(path.join(root, "01_Spec.md"), "# Spec\n\n- surface: web-ui\n", "utf-8");
+  await writeFile(path.join(root, "01_Spec.md"), "# Spec\n\n- surface: web\n", "utf-8");
   await mkdir(path.join(root, "uiux"), { recursive: true });
 }
 
@@ -148,42 +148,37 @@ function antiPreferenceTasteContent(): string {
 function trendEntry(
   ref: string,
   obs: string,
-  date: string,
-  conf: string,
-  trans: string,
+  decConn: string,
+  evalConn: string,
   imp: string,
 ): string {
   return [
-    "#### Entry 1",
+    "### Entry 1",
     "",
     `- reference: ${ref}`,
     `- observation: ${obs}`,
-    `- freshness_date: ${date}`,
-    `- confidence: ${conf}`,
-    `- source_translation: ${trans}`,
+    `- decision_connection: ${decConn}`,
+    `- evaluation_connection: ${evalConn}`,
     `- local_implication: ${imp}`,
   ].join("\n");
 }
 
 function completeTrendContent(): string {
   const categories = [
-    "Visual Tone Trends",
-    "Layout / Composition Trends",
-    "Density / Hierarchy Trends",
-    "Interaction / Motion Trends",
-    "Component Styling Trends",
-    "Stale / Overused AI Slop Patterns",
+    "user expectation / market norm",
+    "product neighbor / comparable flow",
+    "platform convention",
+    "accessibility / compliance relevant signal",
   ];
-  const lines = ["# Sources", "", "## Trend Scan", ""];
+  const lines = ["# Trend Scan", ""];
   for (const cat of categories) {
-    lines.push(`### ${cat}`, "");
+    lines.push(`## ${cat}`, "");
     lines.push(
       trendEntry(
         "Ref A",
         `Observed signal in ${cat}`,
-        "2025-12-01",
-        "high",
-        `Adopted pattern from ${cat}`,
+        `Decision connection for ${cat}`,
+        `Evaluation connection for ${cat}`,
         `Apply locally for ${cat}`,
       ),
     );
@@ -194,23 +189,20 @@ function completeTrendContent(): string {
 
 function allLowConfidenceTrendContent(): string {
   const categories = [
-    "Visual Tone Trends",
-    "Layout / Composition Trends",
-    "Density / Hierarchy Trends",
-    "Interaction / Motion Trends",
-    "Component Styling Trends",
-    "Stale / Overused AI Slop Patterns",
+    "user expectation / market norm",
+    "product neighbor / comparable flow",
+    "platform convention",
+    "accessibility / compliance relevant signal",
   ];
-  const lines = ["# Sources", "", "## Trend Scan", ""];
+  const lines = ["# Trend Scan", ""];
   for (const cat of categories) {
-    lines.push(`### ${cat}`, "");
+    lines.push(`## ${cat}`, "");
     lines.push(
       trendEntry(
         "Ref A",
         `Observed signal in ${cat}`,
-        "2025-12-01",
-        "low",
-        `Adopted pattern from ${cat}`,
+        `Decision connection for ${cat}`,
+        `Evaluation connection for ${cat}`,
         `Apply locally for ${cat}`,
       ),
     );
@@ -296,24 +288,38 @@ function fullMandatoryScoringContent(): string {
 
 const STRONG_FIELDS = [
   "surface",
+  "selection_required",
   "decision",
-  "why_this_strategy",
-  "expected_strengths",
-  "known_risks",
-  "fit_for_this_product",
+  "candidate_options",
+  "chosen_option",
+  "rationale",
+  "verification_expectations",
+  "notes_for_reviewer",
 ] as const;
 
 function strongStrategyContent(overrides: Record<string, string> = {}): string {
   const defaults: Record<string, string> = {
     surface: "web",
+    selection_required: "true",
     decision: "component-library",
-    why_this_strategy: "Component library provides consistent, accessible UI building blocks",
-    expected_strengths: "Rapid prototyping, consistent styling, accessibility compliance",
-    known_risks: "Vendor lock-in, limited customization for bespoke interactions",
-    fit_for_this_product: "Web dashboard with standard CRUD patterns fits component-library well",
+    candidate_options: "",
+    chosen_option: "component-library",
+    rationale: "Component library provides consistent, accessible UI building blocks",
+    verification_expectations: "Primary tasks remain obvious without generic dashboard drift",
+    notes_for_reviewer: "Check that the chosen direction stays aligned with the anchor screen",
   };
   const merged = { ...defaults, ...overrides };
-  return "# Strategy\n\n" + STRONG_FIELDS.map((f) => `- ${f}: ${merged[f]}`).join("\n");
+  const lines = ["# Implementation Strategy", ""];
+  for (const f of STRONG_FIELDS) {
+    if (f === "candidate_options") {
+      lines.push("- candidate_options:");
+      lines.push("  - component-library");
+      lines.push("  - bespoke");
+    } else {
+      lines.push(`- ${f}: ${merged[f]}`);
+    }
+  }
+  return lines.join("\n");
 }
 
 /**
@@ -321,18 +327,25 @@ function strongStrategyContent(overrides: Record<string, string> = {}): string {
  */
 function legacySurfaceStrategyContent(): string {
   return [
-    "# Strategy",
+    "# Implementation Strategy",
     "",
     "- surface: web-ui",
+    "- selection_required: true",
     "- decision: component-library",
-    "- why_this_strategy: Component library provides consistent UI building blocks",
-    "- expected_strengths: Rapid prototyping, consistent styling",
-    "- known_risks: Vendor lock-in, limited customization",
-    "- fit_for_this_product: Standard CRUD web app fits well",
+    "- candidate_options:",
+    "  - component-library",
+    "  - bespoke",
+    "- chosen_option: component-library",
+    "- rationale: Component library provides consistent UI building blocks",
+    "- verification_expectations: Primary tasks remain obvious",
+    "- notes_for_reviewer: Check alignment with anchor screen",
   ].join("\n");
 }
 
-function completeScreenEntry(id: string, states = "default, loading, empty, error"): string {
+function completeScreenEntry(
+  id: string,
+  states = ["default", "loading", "empty", "error"],
+): string {
   return [
     `### Screen: ${id}`,
     "",
@@ -340,11 +353,20 @@ function completeScreenEntry(id: string, states = "default, loading, empty, erro
     `- route: /app/${id}`,
     `- purpose: Main ${id} view`,
     `- actor: end-user`,
-    `- primary_tasks: View data, Edit entries`,
-    `- secondary_tasks: Export data, Filter results`,
-    `- required_states: ${states}`,
-    `- transitions: Navigate to detail, Back to list`,
-    `- observable_outcomes: Data displayed, Changes saved`,
+    `- primary_tasks:`,
+    `  - View data: open the main content`,
+    `  - Edit entries: update a record`,
+    `- secondary_tasks:`,
+    `  - Export data: download a report`,
+    `  - Filter results: narrow the current results`,
+    `- required_states:`,
+    ...states.map((state) => `  - ${state}: ${state} state is available`),
+    `- transitions:`,
+    `  - load -> success: content loaded`,
+    `  - load -> error: request failed`,
+    `- observable_outcomes:`,
+    `  - Data displayed: primary content is visible`,
+    `  - Changes saved: success feedback is visible`,
     `- notes_for_verify: Check responsive layout`,
     `- notes_for_reviewer: Focus on loading state`,
   ].join("\n");
@@ -358,7 +380,8 @@ function incompleteScreenEntry(id: string): string {
     `- route: /app/${id}`,
     `- purpose: Main ${id} view`,
     `- actor: end-user`,
-    `- primary_tasks: View data`,
+    `- primary_tasks:`,
+    `  - View data: open the main content`,
     // Missing: required_states, transitions, observable_outcomes, notes_for_verify, notes_for_reviewer
   ].join("\n");
 }
@@ -445,7 +468,7 @@ describe("Trend validator", () => {
   it("TC-0002-0006: complete trend scan with freshness metadata passes", async () => {
     const root = await newTempDir();
     await createUiBearingPack(root);
-    await writeFile(path.join(root, "04_Sources.md"), completeTrendContent(), "utf-8");
+    await writeFile(path.join(root, "uiux", "20_trend_scan.md"), completeTrendContent(), "utf-8");
 
     const issues = await validateTrendScan(root, defaultConfig);
 
@@ -469,80 +492,51 @@ describe("Trend validator", () => {
   });
 
   // TC-0002-0008
-  it("TC-0002-0008: trend scan missing source_translation emits FIELD-MISSING", async () => {
+  it("TC-0002-0008: trend scan missing decision_connection emits FIELD-MISSING", async () => {
     const root = await newTempDir();
     await createUiBearingPack(root);
     const content = [
-      "# Sources",
+      "# Trend Scan",
       "",
-      "## Trend Scan",
+      "## user expectation / market norm",
       "",
-      "### Visual Tone Trends",
-      "",
-      "#### Entry 1",
+      "### Entry 1",
       "",
       "- reference: Ref A",
       "- observation: Observed a minimalist tone signal",
-      "- freshness_date: 2025-12-01",
-      "- confidence: high",
       "- local_implication: Apply minimalist tone locally",
       "",
-      "### Layout / Composition Trends",
+      "## product neighbor / comparable flow",
       "",
-      "#### Entry 1",
+      "### Entry 1",
       "",
       "- reference: Ref B",
       "- observation: Observed grid layout signal",
-      "- freshness_date: 2025-11-15",
-      "- confidence: medium",
-      "- source_translation: Adopted grid layout",
+      "- decision_connection: Adopted grid layout",
+      "- evaluation_connection: Eval connection B",
       "- local_implication: Apply grid layout locally",
       "",
-      "### Density / Hierarchy Trends",
+      "## platform convention",
       "",
-      "#### Entry 1",
+      "### Entry 1",
       "",
       "- reference: Ref C",
       "- observation: Observed density signal",
-      "- freshness_date: 2025-10-01",
-      "- confidence: low",
-      "- source_translation: Adopted flat hierarchy",
+      "- decision_connection: Adopted flat hierarchy",
+      "- evaluation_connection: Eval connection C",
       "- local_implication: Apply flat hierarchy locally",
       "",
-      "### Interaction / Motion Trends",
+      "## accessibility / compliance relevant signal",
       "",
-      "#### Entry 1",
+      "### Entry 1",
       "",
       "- reference: Ref D",
-      "- observation: Observed motion signal",
-      "- freshness_date: 2025-09-01",
-      "- confidence: high",
-      "- source_translation: Adopted subtle transitions",
-      "- local_implication: Apply subtle transitions locally",
-      "",
-      "### Component Styling Trends",
-      "",
-      "#### Entry 1",
-      "",
-      "- reference: Ref E",
-      "- observation: Observed component styling signal",
-      "- freshness_date: 2025-08-01",
-      "- confidence: medium",
-      "- source_translation: Adopted rounded corners",
-      "- local_implication: Apply rounded corners locally",
-      "",
-      "### Stale / Overused AI Slop Patterns",
-      "",
-      "#### Entry 1",
-      "",
-      "- reference: Ref F",
-      "- observation: Observed stale pattern",
-      "- freshness_date: 2025-07-01",
-      "- confidence: low",
-      "- source_translation: Avoid overused gradient pattern",
-      "- local_implication: Explicitly avoid gradient usage",
+      "- observation: Observed a11y signal",
+      "- decision_connection: Adopted a11y pattern",
+      "- evaluation_connection: Eval connection D",
+      "- local_implication: Apply a11y locally",
     ].join("\n");
-    await writeFile(path.join(root, "04_Sources.md"), content, "utf-8");
+    await writeFile(path.join(root, "uiux", "20_trend_scan.md"), content, "utf-8");
 
     const issues = await validateTrendScan(root, defaultConfig);
 
@@ -564,7 +558,11 @@ describe("Trend validator", () => {
   it("TC-0002-0027: all low confidence references pass (confidence field exists)", async () => {
     const root = await newTempDir();
     await createUiBearingPack(root);
-    await writeFile(path.join(root, "04_Sources.md"), allLowConfidenceTrendContent(), "utf-8");
+    await writeFile(
+      path.join(root, "uiux", "20_trend_scan.md"),
+      allLowConfidenceTrendContent(),
+      "utf-8",
+    );
 
     const issues = await validateTrendScan(root, defaultConfig);
 
@@ -591,7 +589,7 @@ describe("3-layer evaluation model", () => {
       "",
       "## trend-derived",
       "",
-      "- micro_interaction: source_translation: Adopted from 2025 motion trends",
+      "- micro_interaction: local_translation: Adopted from 2025 motion trends",
       "",
       "## product-specific",
       "",
@@ -605,7 +603,7 @@ describe("3-layer evaluation model", () => {
   });
 
   // TC-0002-0011
-  it("TC-0002-0011: v1.7.6 4-axis format emits deprecation warning", async () => {
+  it("TC-0002-0011: v1.7.6 4-axis format emits error", async () => {
     const root = await newTempDir();
     await createUiBearingPack(root);
     const content = [
@@ -631,10 +629,10 @@ describe("3-layer evaluation model", () => {
 
     const issues = await validateThreeLayerModel(root, defaultConfig);
 
-    const warnings = issues.filter((i) => i.severity === "warning");
-    expect(warnings.length).toBeGreaterThan(0);
-    const deprecation = warnings.find((i) => i.message.match(/4-axis|deprecat/i));
-    expect(deprecation).toBeDefined();
+    const errors = issues.filter((i) => i.severity === "error");
+    expect(errors.length).toBeGreaterThan(0);
+    const legacyErr = errors.find((i) => i.message.match(/4-axis|not allowed/i));
+    expect(legacyErr).toBeDefined();
   });
 
   // TC-0002-0012
@@ -801,7 +799,7 @@ describe("Strategy validator", () => {
 
     const issues = await validateStrategyStrong(root, defaultConfig);
 
-    const legacy = issues.filter((i) => i.code === "UIX-VAL-STRATEGY-LEGACY-SURFACE");
+    const legacy = issues.filter((i) => i.code === "UIX-VAL-STRATEGY-INVALID-SURFACE");
     expect(legacy.length).toBeGreaterThan(0);
     expect(legacy[0]?.severity).toBe("error");
   });
@@ -822,7 +820,7 @@ describe("Strategy validator", () => {
     await createUiBearingPack(root);
     await writeFile(
       path.join(root, "uiux", "10_implementation_strategy.md"),
-      strongStrategyContent({ why_this_strategy: "TBD" }),
+      strongStrategyContent({ rationale: "TBD" }),
       "utf-8",
     );
 
@@ -911,7 +909,7 @@ describe("Screen contract validator", () => {
     const content = [
       "# Screen Contracts",
       "",
-      completeScreenEntry("dashboard", "default, loading"), // missing empty, error
+      completeScreenEntry("dashboard", ["default", "loading"]), // missing empty, error
     ].join("\n");
     await writeFile(path.join(root, "uiux", "40_screen_contracts.md"), content, "utf-8");
 

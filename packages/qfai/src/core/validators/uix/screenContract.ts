@@ -40,7 +40,7 @@ function contractIssue(
   return {
     code,
     severity,
-    category: "compatibility",
+    category: "canonical",
     message,
     file: RELPATH,
     suggested_action: suggestedAction,
@@ -70,6 +70,8 @@ type ScreenBlock = {
   transitions: string[];
   /** Nested: observable_outcomes list. */
   observableOutcomes: string[];
+  /** Legacy flat nested fields that must now be rejected. */
+  invalidInlineNestedFields: string[];
 };
 
 function newScreenBlock(name: string): ScreenBlock {
@@ -81,11 +83,12 @@ function newScreenBlock(name: string): ScreenBlock {
     requiredStates: {},
     transitions: [],
     observableOutcomes: [],
+    invalidInlineNestedFields: [],
   };
 }
 
 /**
- * Section-aware screen block parser supporting both flat and nested bullet formats.
+ * Section-aware screen block parser supporting only the canonical nested bullet format.
  *
  * Canonical format uses nested bullets:
  *   - primary_tasks:
@@ -94,9 +97,6 @@ function newScreenBlock(name: string): ScreenBlock {
  *     - default: description
  *     - loading: description
  *
- * Legacy flat CSV format is accepted for compatibility:
- *   - primary_tasks: task 1, task 2
- *   - required_states: default, loading, empty, error
  */
 function parseScreenBlocks(content: string): ScreenBlock[] {
   const blocks: ScreenBlock[] = [];
@@ -145,8 +145,7 @@ function parseScreenBlocks(content: string): ScreenBlock[] {
           }
         }
       } else if (NESTED_FIELD_NAMES.includes(key) && inlineValue !== "") {
-        // Compat: flat CSV for nested fields
-        assignFlatCompat(current, key, inlineValue);
+        current.invalidInlineNestedFields.push(key);
         i += 1;
       } else {
         // Regular flat field
@@ -193,32 +192,6 @@ function assignNestedChild(block: ScreenBlock, key: string, value: string): void
   }
 }
 
-function assignFlatCompat(block: ScreenBlock, key: string, csvValue: string): void {
-  const parts = csvValue
-    .split(",")
-    .map((s) => s.trim())
-    .filter(Boolean);
-  switch (key) {
-    case "primary_tasks":
-      block.primaryTasks.push(...parts);
-      break;
-    case "secondary_tasks":
-      block.secondaryTasks.push(...parts);
-      break;
-    case "required_states":
-      for (const part of parts) {
-        block.requiredStates[part.toLowerCase()] = "";
-      }
-      break;
-    case "transitions":
-      block.transitions.push(...parts);
-      break;
-    case "observable_outcomes":
-      block.observableOutcomes.push(...parts);
-      break;
-  }
-}
-
 export async function validateScreenContractSchema(
   root: string,
   _config: QfaiConfig,
@@ -256,6 +229,19 @@ export async function validateScreenContractSchema(
   // Validate each screen
   for (const screen of screens) {
     const screenId = screen.fields["screen_id"] ?? screen.name;
+
+    if (screen.invalidInlineNestedFields.length > 0) {
+      issues.push(
+        contractIssue(
+          "UIX-VAL-SCREEN-CONTRACT-LEGACY-FORMAT",
+          `Screen '${screenId}' uses legacy flat nested fields: ${screen.invalidInlineNestedFields.join(", ")}. Use nested canonical bullets only.`,
+          "error",
+          `Rewrite ${screen.invalidInlineNestedFields.join(", ")} as nested canonical bullets in ${RELPATH}.`,
+        ),
+      );
+      // Skip nested-field checks for legacy-format screens to avoid duplicate noise
+      continue;
+    }
 
     // Check required fields (dispatch to typed properties for nested fields)
     const missing = REQUIRED_FIELDS.filter((f) => {

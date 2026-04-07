@@ -29,7 +29,6 @@ import {
   validateDiscussionVisuals,
   validateDensityHints,
   validateHtmlMock,
-  validateLegacyStatusDir,
   validateLayerCoverage,
   validateLayeredTraceability,
   validateMermaidScreenFlow,
@@ -100,7 +99,7 @@ export async function validateProject(
     uiuxIssues.push({
       code: "QFAI-UIUX-PERF",
       severity: "warning",
-      category: "compatibility",
+      category: "canonical",
       message: `UI/UX validation exceeded budget (${UIUX_VALIDATION_BUDGET_MS}ms). All validators were executed.`,
       rule: "uiux.performanceBudget",
     });
@@ -125,7 +124,6 @@ export async function validateProject(
     ...(await validateSpecPacks(root, config)),
     ...(await validateDiscussionPackReadiness(root, config)),
     ...(await validateDiscussionVisuals(root)),
-    ...(await validateLegacyStatusDir(root)),
     ...(await validateStatusInSpecs(root, config)),
     ...(await validateDensityHints(root, config)),
     ...(await validateReviewArtifacts(root)),

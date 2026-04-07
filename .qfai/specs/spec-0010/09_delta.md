@@ -105,3 +105,21 @@
 - adopted: US-0010-0015, AC-0010-0015~0016 追加
 - adopted: US range 更新 US-0010-0001..US-0010-0015
 - rationale: v1.7.13 で prototyping.yaml が discussion-pack の必須サイドアーティファクトになった実装の仕様反映
+
+## v1.7.14 (2026-04-07) — Classification-Aware Requiredness & Namespaced-Only
+
+- adopted: REQ-0017（Classification-Aware prototyping.yaml Requiredness）, REQ-0018（Namespaced-Only Schema Mandatory）追加
+- adopted: US range 更新 US-0010-0001..US-0010-0015
+- rationale: v1.7.14 の breaking change を仕様に反映:
+  - **Classification-aware requiredness**: prototyping.yaml の必須性を classification に基づいて判定。ui_bearing=true のパックのみ prototyping.yaml を必須とし、non-UI パックは免除（DR-0110）
+  - **Namespaced-only schema mandatory**: prototyping.yaml 生成時は `prototyping:` namespaced block のみ使用。legacy top-level keys は生成禁止（DR-0112）
+  - **"selected direction" → "selected anchor"**: SKILL.md テンプレート内の用語統一
+  - **cli as UI-bearing**: cli surface が discussion UI-bearing に明示的に含まれ、sidecar 生成対象に
+
+### v1.7.14 Score Scope Annotation (2026-04-08)
+
+- adopted: REQ-0019（Score Scope Annotation）追加
+- rationale: full-harness インシデントレポートに基づく改善:
+  - discussion SKILL.md に 3-layer scores の Score Scope 注記を追加（design direction quality であり implementation fidelity ではない旨）
+  - prototyping.yaml 生成時に `recommended_mode: full-harness` の場合、`iteration_expectations` ブロックを追加
+  - prototyping skill がスコアの射程の違いを認識して独自の evaluation criteria で実装品質を評価するよう導線を設定

@@ -55,11 +55,11 @@ export async function captureRenderEvidence(
       if (captureOne) {
         captured.push(await captureOne(target));
       } else {
-        // WS-C: No captureOne adapter and no placeholder — skip truthfully
+        // WS-C: No captureOne adapter and no placeholder - skip truthfully
         captured.push({
           viewport: target.viewport,
           status: "skipped",
-          skippedReason: "No capture adapter provided — cannot produce real evidence artifacts",
+          skippedReason: "No capture adapter provided - cannot produce real evidence artifacts",
         } as RenderEvidenceEntry);
         continue;
       }
@@ -170,7 +170,7 @@ export function validateRenderEvidenceBundle(
       issues.push(
         makeIssue(
           "QFAI-PROT-251",
-          "`renderEvidence.outputPath` contains inline payload — path-only required",
+          "`renderEvidence.outputPath` contains inline payload - path-only required",
           file,
           rule,
         ),
@@ -253,13 +253,13 @@ function validateRenderEvidenceScreen(screen: unknown): Array<{ code?: string; m
       if (looksLikeInlineRenderPayload(screen.imagePath)) {
         errors.push({
           code: "QFAI-PROT-251",
-          message: `\`screens[].imagePath\` contains inline payload — path-only required (route=${String(screen.route)})`,
+          message: `\`screens[].imagePath\` contains inline payload - path-only required (route=${String(screen.route)})`,
         });
       }
       if (looksLikeInlineRenderPayload(screen.htmlPath)) {
         errors.push({
           code: "QFAI-PROT-251",
-          message: `\`screens[].htmlPath\` contains inline payload — path-only required (route=${String(screen.route)})`,
+          message: `\`screens[].htmlPath\` contains inline payload - path-only required (route=${String(screen.route)})`,
         });
       }
     }
@@ -333,7 +333,7 @@ function makeIssue(code: string, message: string, file?: string, rule?: string):
   return {
     code,
     severity: "error",
-    category: "compatibility",
+    category: "canonical",
     message,
     ...(file ? { file } : {}),
     ...(rule ? { rule } : {}),

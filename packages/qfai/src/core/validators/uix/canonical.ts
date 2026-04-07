@@ -1,11 +1,8 @@
 /**
- * Canonical UIX aggregate validator — v1.7.13
+ * Canonical UIX aggregate validator — v1.7.14
  *
  * This is the package's production-path UIX validator entrypoint.
  * All validators are owned by canonical modules under uix/.
- *
- * runLegacyUixCompatibilityValidators (legacy/uixCompatibility.ts) is retained
- * for migration compatibility only and should not define the package's primary truth.
  */
 import path from "node:path";
 
@@ -19,7 +16,6 @@ import { validateClassification } from "./classification.js";
 import { validateSidecarMissing } from "./foundation.js";
 import { validateOptionComparison } from "./comparisonValidator.js";
 import { validateOqClosure } from "./oqClosure.js";
-import { validateMigration, applyPhase1Ratchet } from "./rollout.js";
 
 // Strong validators from uix/
 import { validateTasteInterview } from "./taste.js";
@@ -36,7 +32,6 @@ import { validateScreenContractSchema } from "./screenContract.js";
 /**
  * Run the canonical UIX validator set and return combined issues.
  * Resolves the latest discussion pack when root is a repo root.
- * When `config.uiux.phase1ReleaseDate` is set, applies the phase-1 ratchet.
  */
 export async function runCanonicalUixValidators(
   root: string,
@@ -72,24 +67,14 @@ export async function runCanonicalUixValidators(
     validateStrategyStrong,
     // Strong screen contract schema
     validateScreenContractSchema,
-    // Option comparison & selected direction
+    // Option comparison & selected anchor
     validateOptionComparison,
     // OQ closure
     validateOqClosure,
-    // Migration / stale-asset detection
-    validateMigration,
   ];
 
   const results = await Promise.all(validators.map((v) => v(effectiveRoot, config)));
-  let issues = results.flat();
-
-  const relDateStr = config.uiux?.phase1ReleaseDate;
-  if (relDateStr) {
-    const releaseDate = new Date(relDateStr);
-    if (!isNaN(releaseDate.getTime())) {
-      issues = applyPhase1Ratchet(issues, releaseDate);
-    }
-  }
+  const issues = results.flat();
 
   return issues;
 }

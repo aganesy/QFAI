@@ -38,14 +38,23 @@ Optional:
 
 ## Obligation matrix
 
-| surface / mode            | specs    | runtimeGate | uiFidelity                    | render evidence | browser QA | fullHarness |
-| ------------------------- | -------- | ----------- | ----------------------------- | --------------- | ---------- | ----------- |
-| non-ui / low-cost         | required | optional    | n/a                           | n/a             | n/a        | absent      |
-| non-ui / standard         | required | optional    | n/a                           | n/a             | n/a        | absent      |
-| non-ui / full-harness     | required | optional    | n/a                           | n/a             | n/a        | required    |
-| ui-bearing / low-cost     | required | optional    | optional (`skeleton` allowed) | optional        | optional   | absent      |
-| ui-bearing / standard     | required | optional    | required                      | optional        | optional   | absent      |
-| ui-bearing / full-harness | required | required    | required                      | required        | required   | required    |
+| surface / mode         | specs    | runtimeGate | uiFidelity                    | render evidence | browser QA | fullHarness |
+| ---------------------- | -------- | ----------- | ----------------------------- | --------------- | ---------- | ----------- |
+| web / low-cost         | required | optional    | optional (`skeleton` allowed) | optional        | optional   | absent      |
+| web / standard         | required | optional    | required                      | optional        | optional   | absent      |
+| web / full-harness     | required | required    | required                      | required        | required   | required    |
+| mobile / low-cost      | required | optional    | optional (`skeleton` allowed) | optional        | optional   | absent      |
+| mobile / standard      | required | optional    | required                      | optional        | optional   | absent      |
+| mobile / full-harness  | required | required    | required                      | required        | required   | required    |
+| desktop / low-cost     | required | optional    | optional (`skeleton` allowed) | optional        | optional   | absent      |
+| desktop / standard     | required | optional    | required                      | optional        | optional   | absent      |
+| desktop / full-harness | required | required    | required                      | required        | required   | required    |
+| cli / low-cost         | required | optional    | n/a                           | n/a             | n/a        | absent      |
+| cli / standard         | required | optional    | n/a                           | n/a             | n/a        | absent      |
+| cli / full-harness     | required | optional    | n/a                           | n/a             | n/a        | required    |
+| mixed / low-cost       | required | optional    | optional (`skeleton` allowed) | optional        | optional   | absent      |
+| mixed / standard       | required | optional    | required                      | optional        | optional   | absent      |
+| mixed / full-harness   | required | required    | required                      | required        | required   | required    |
 
 Interpretation:
 
@@ -53,16 +62,16 @@ Interpretation:
 - `optional`: if present, schema must be valid
 - `n/a`: absent is normal success
 
-## non-ui canonical semantics
+## cli surface canonical semantics
 
-For `surface: non-ui`, the following are normal success when absent:
+For `cli` surface, the following are normal success when absent:
 
 - `uiFidelity`
 - render evidence bundle
 - browser QA bundle
 - `runtimeGate.ui`
 
-Contradictory UI-only payloads on `non-ui` are validation errors.
+`ui_bearing: false` specs are not prototyping execution targets. Contradictory UI-only payloads on `cli` surface are validation errors.
 
 ## uiFidelity notes
 
@@ -167,7 +176,7 @@ Rules:
 
 ```json
 {
-  "surface": "web-ui",
+  "surface": "web",
   "specs": [
     {
       "specId": "spec-0001",

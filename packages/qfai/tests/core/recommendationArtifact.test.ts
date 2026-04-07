@@ -85,7 +85,7 @@ describe("resolveLatestRecommendationArtifact", () => {
           "  allowed_modes:",
           "    - standard",
           "    - low-cost",
-          "  surface: non-ui",
+          "  surface: cli",
           "",
         ].join("\n"),
         "utf-8",
@@ -96,13 +96,13 @@ describe("resolveLatestRecommendationArtifact", () => {
       expect(result.recommendation).not.toBeNull();
       if (!result.recommendation) throw new Error("recommendation should not be null");
       expect(result.recommendation.recommendedMode).toBe("standard");
-      expect(result.recommendation.surface).toBe("non-ui");
+      expect(result.recommendation.surface).toBe("cli");
       expect(result.recommendation.allowedModes).toEqual(["low-cost", "standard"]);
       expect(result.path).toContain("prototyping.yaml");
     });
   });
 
-  it("returns valid with legacy schema and includes deprecation warning", async () => {
+  it("returns invalid for legacy-only schema (no prototyping namespace)", async () => {
     await withTempRoot(async (root) => {
       const packDir = path.join(root, ".qfai", "discussion", "discussion-20260404000000000");
       await mkdir(packDir, { recursive: true });
@@ -113,7 +113,93 @@ describe("resolveLatestRecommendationArtifact", () => {
           "rationale: legacy format",
           "allowed_modes:",
           "  - standard",
-          "surface: web-ui",
+          "surface: web",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+
+      const result = await resolveLatestRecommendationArtifact(root, defaultConfig);
+      expect(result.status).toBe("invalid");
+      expect(result.recommendation).toBeNull();
+    });
+  });
+
+  it("returns invalid when valid namespaced block coexists with stale top-level keys", async () => {
+    await withTempRoot(async (root) => {
+      const packDir = path.join(root, ".qfai", "discussion", "discussion-20260404000000000");
+      await mkdir(packDir, { recursive: true });
+      await writeFile(
+        path.join(packDir, "prototyping.yaml"),
+        [
+          "recommended_mode: low-cost",
+          "rationale: stale top-level rationale",
+          "allowed_modes:",
+          "  - low-cost",
+          "surface: web",
+          "prototyping:",
+          "  recommended_mode: standard",
+          "  rationale: valid namespaced rationale",
+          "  allowed_modes:",
+          "    - standard",
+          "  surface: web",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+
+      const result = await resolveLatestRecommendationArtifact(root, defaultConfig);
+      expect(result.status).toBe("invalid");
+      expect(result.recommendation).toBeNull();
+      expect(result.warnings).toEqual(
+        expect.arrayContaining([
+          expect.stringContaining("Legacy top-level recommendation keys are not supported"),
+        ]),
+      );
+    });
+  });
+
+  it("warnings may exist but status remains invalid for stale coexist", async () => {
+    await withTempRoot(async (root) => {
+      const packDir = path.join(root, ".qfai", "discussion", "discussion-20260404000000000");
+      await mkdir(packDir, { recursive: true });
+      await writeFile(
+        path.join(packDir, "prototyping.yaml"),
+        [
+          "recommended_mode: standard",
+          "surface: web",
+          "prototyping:",
+          "  recommended_mode: standard",
+          "  rationale: valid namespaced",
+          "  allowed_modes:",
+          "    - standard",
+          "  surface: web",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+
+      const result = await resolveLatestRecommendationArtifact(root, defaultConfig);
+      expect(result.status).toBe("invalid");
+      expect(result.recommendation).toBeNull();
+      expect(result.warnings.length).toBeGreaterThan(0);
+    });
+  });
+
+  it("returns valid only for namespaced-only artifact", async () => {
+    await withTempRoot(async (root) => {
+      const packDir = path.join(root, ".qfai", "discussion", "discussion-20260404000000000");
+      await mkdir(packDir, { recursive: true });
+      await writeFile(
+        path.join(packDir, "prototyping.yaml"),
+        [
+          "prototyping:",
+          "  recommended_mode: standard",
+          "  rationale: namespaced-only artifact",
+          "  allowed_modes:",
+          "    - standard",
+          "    - low-cost",
+          "  surface: web",
           "",
         ].join("\n"),
         "utf-8",
@@ -122,9 +208,36 @@ describe("resolveLatestRecommendationArtifact", () => {
       const result = await resolveLatestRecommendationArtifact(root, defaultConfig);
       expect(result.status).toBe("valid");
       expect(result.recommendation).not.toBeNull();
-      if (!result.recommendation) throw new Error("recommendation should not be null");
-      expect(result.recommendation.surface).toBe("web-ui");
-      expect(result.warnings.some((w) => w.includes("QFAI-PROT-231"))).toBe(true);
+      expect(result.recommendation?.recommendedMode).toBe("standard");
+      expect(result.warnings).toEqual([]);
+    });
+  });
+
+  it("returns invalid with QFAI-PROT-154 warning for semantic mismatch (recommended_mode not in allowed_modes)", async () => {
+    await withTempRoot(async (root) => {
+      const packDir = path.join(root, ".qfai", "discussion", "discussion-20260404000000000");
+      await mkdir(packDir, { recursive: true });
+      await writeFile(
+        path.join(packDir, "prototyping.yaml"),
+        [
+          "prototyping:",
+          "  recommended_mode: standard",
+          "  rationale: semantic mismatch resolver test",
+          "  allowed_modes:",
+          "    - low-cost",
+          "    - full-harness",
+          "  surface: web",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+
+      const result = await resolveLatestRecommendationArtifact(root, defaultConfig);
+      expect(result.status).toBe("invalid");
+      expect(result.recommendation).toBeNull();
+      expect(result.warnings).toEqual(
+        expect.arrayContaining([expect.stringContaining("QFAI-PROT-154")]),
+      );
     });
   });
 });

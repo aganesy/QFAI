@@ -34,8 +34,8 @@ describe("package-only SSOT prototyping assets", () => {
       "low-cost",
       "standard",
       "full-harness",
-      "non-ui",
-      "ui-bearing",
+      "cli",
+      "web",
       "render.json",
       "browser-qa.json",
     ]) {
@@ -50,9 +50,11 @@ describe("package-only SSOT prototyping assets", () => {
     expect(skill).not.toMatch(/npx\s+qfai\s+prototyping\b/i);
   });
 
-  it("README documents non-ui absent-is-normal semantics", async () => {
+  it("README documents cli absent-is-normal semantics", async () => {
     const readme = await readFile(evidenceReadmePath, "utf-8");
-    expect(readme).toContain("Contradictory UI-only payloads on `non-ui` are validation errors.");
+    expect(readme).toContain(
+      "Contradictory UI-only payloads on `cli` surface are validation errors.",
+    );
     expect(readme).toContain("absent is normal success");
   });
 });

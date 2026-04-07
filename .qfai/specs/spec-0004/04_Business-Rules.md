@@ -27,16 +27,14 @@
 - AC-Refs: AC-0004-0022
 
 - validate.ts pipeline は runCanonicalUixValidators() のみを UIX entrypoint として登録する
-- validateDdpFields は production path から削除され、legacy/ddpCompatibility.ts に移動
-- legacy validators は migration tooling（`legacy/` namespace）でのみ利用可能
+- v1.7.14: validateDdpFields および legacy/ ディレクトリは完全削除済み（DR-0115）。migration tooling パスは存在しない
 
 ## BR-0004-0019: IssueCategory Discrimination
 
 - AC-Refs: AC-0004-0023
 
-- IssueCategory type: "canonical" | "compatibility" | "change"
-- 全新規 canonical validator は category: "canonical" を emit
-- legacy/compatibility validator は category: "compatibility" を emit
+- IssueCategory type: "canonical" | "change"（v1.7.14: "compatibility" は DR-0108 で削除）
+- 全 canonical validator は category: "canonical" を emit
 
 ## BR-0004-0020: prototypingRecommendation Validator
 
@@ -44,23 +42,20 @@
 
 - prototyping.yaml の schema validation を validate pipeline に登録
 - 必須フィールド: recommended_mode, rationale, allowed_modes, surface
-- allowed_modes に recommended_mode が含まれない場合は QFAI-PROT-154
-- deprecated top-level schema は QFAI-PROT-231 (warning)
-- namespaced vs top-level conflict は QFAI-PROT-232 (warning)
+- allowed_modes に recommended_mode が含まれない場合は QFAI-PROT-154（semantic invariant error）
+- v1.7.14: legacy top-level keys の存在は hard error（DR-0112）。QFAI-PROT-231/232 warning は廃止
 
-## BR-0004-0021: Phase1 Ratchet Mechanism
+## BR-0004-0021: [REMOVED v1.7.14] Phase1 Ratchet Mechanism
 
 - AC-Refs: AC-0004-0022
-
-- `applyPhase1Ratchet()` in `uix/rollout.ts` は config.uiux.phase1ReleaseDate が設定されている場合、リリース日から 30 日以内の全 UIX-VAL-\* エラーを warning に降格する
-- 目的: 初期ロールアウト期間中の hard failure 防止
-- phase1ReleaseDate 未設定時は ratchet 不適用（全 UIX-VAL-\* はそのまま error）
+- Status: **REMOVED** — v1.7.14 で rollout.ts と共に完全削除（DR-0115）
+- 旧内容: `applyPhase1Ratchet()` in `uix/rollout.ts` は config.uiux.phase1ReleaseDate に基づく ratchet を適用していた
 
 ## BR-0004-0022: Canonical Validator Enumeration
 
 - AC-Refs: AC-0004-0022
 
-- runCanonicalUixValidators() は以下の 12 modular validators を並列実行する:
+- runCanonicalUixValidators() は以下の 11 modular validators を並列実行する（v1.7.14: rollout.ts 削除により 12→11）:
   1. validateSidecarMissing (foundation.ts)
   2. validateStrategyStrong (strategy.ts)
   3. validateScoringReady (scoringReady.ts)
@@ -70,9 +65,8 @@
   7. validateThreeLayerPresence (threeLayer.ts)
   8. validateOptionComparison (comparisonValidator.ts)
   9. validateOqClosure (oqClosure.ts)
-  10. validateMigration + applyPhase1Ratchet (rollout.ts)
-  11. validateDiscussionDesignHardening (discussionDesignHardening.ts — 7 sub-validators)
-  12. validatePrototypingRecommendation (prototypingRecommendation.ts)
+  10. validateDiscussionDesignHardening (discussionDesignHardening.ts — 7 sub-validators)
+  11. validatePrototypingRecommendation (prototypingRecommendation.ts)
 
 ## BR-0004-0023: QFAI-VIS-002 Severity Downgrade
 
@@ -82,21 +76,18 @@
 - メッセージ変更: "HTML+CSS visual mock is an optional fallback aid; sidecar artifacts (uiux/) are the primary UI definition"
 - 設計意図: sidecar-first モデルで HTML mock は optional/fallback に位置づけ変更
 
-## BR-0004-0024: QFAI-AUD-021 Selected Direction Audit
+## BR-0004-0024: QFAI-AUD-021 Selected Anchor Audit
 
 - AC-Refs: AC-0004-0016
 
-- v1.7.13 で新規監査ルール QFAI-AUD-021 を追加
-- uiux/31_selected_anchor_screen.md に `## Selected Direction` セクションが存在しない場合に error を emit
+- v1.7.13 で新規監査ルール QFAI-AUD-021 を追加（v1.7.14: "Selected Direction" → "Selected Anchor" にリネーム）
+- uiux/31_selected_anchor_screen.md に selected_option フィールドが存在しない場合に error を emit
 - dimension: consistency, tier: 1
 
-## BR-0004-0025: Canonical Barrel Isolation Rule
+## BR-0004-0025: [REMOVED v1.7.14] Canonical Barrel Isolation Rule
 
 - AC-Refs: AC-0004-0022
-
-- validators/index.ts（canonical barrel）は validators/legacy/ からの re-export を禁止する
-- legacy validators は validators/legacy/index.ts 経由でのみアクセス可能
-- 目的: production path と legacy path の境界を明確に分離し、意図しない legacy validator の混入を防止
+- Status: **REMOVED** — v1.7.14 で validators/legacy/ ディレクトリ自体が完全削除されたため、barrel isolation ルールは不要（DR-0115）
 
 ## BR-0004-0026: QFAI-CRIT-005 Read-Order Requirement
 
