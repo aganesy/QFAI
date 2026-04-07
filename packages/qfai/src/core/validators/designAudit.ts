@@ -69,7 +69,7 @@ export function mapSeverity(tier: number, profile: string, category?: string): I
 }
 
 // ---------------------------------------------------------------------------
-// Finding ↁEIssue Conversion
+// Finding → Issue Conversion
 // ---------------------------------------------------------------------------
 
 export function findingToIssue(

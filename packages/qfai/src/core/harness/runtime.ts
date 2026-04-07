@@ -100,7 +100,12 @@ export async function runFullHarness(request: FullHarnessRequest): Promise<FullH
 
   const evidence = generateEvidence(loopResult);
   const reviewSummary = generateReviewSummary(loopResult);
-  const fakeUiDetection = detectFakeUi({ renderResults, browserQaResults });
+  // Only run fake-UI detection when visual evidence was required and attempted.
+  // CLI / non-UI surfaces never collect render/browserQa evidence, so checking
+  // empty arrays would always produce a false positive.
+  const fakeUiDetection = requiresVisualEvidence
+    ? detectFakeUi({ renderResults, browserQaResults })
+    : { detected: false, reasons: [], evidence_refs: [], confidence: "low" as const };
   const exitReason = fakeUiDetection.detected
     ? "fake-ui-detected"
     : mapLoopStatusToExitReason(loopResult.terminationReason);

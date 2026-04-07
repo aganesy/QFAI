@@ -57,6 +57,8 @@ export const BROWSER_QA_ISSUE_CODES = {
   findings: "QFAI-PROT-276",
 } as const;
 
+const VALID_FINDING_SEVERITIES = new Set(["info", "warn", "warning", "error"]);
+
 export async function readBrowserQaBundle(filePath: string): Promise<BrowserQaBundle | null> {
   let raw: string;
   try {
@@ -175,6 +177,20 @@ export function validateBrowserQaBundle(
             makeIssue(
               BROWSER_QA_ISSUE_CODES.findings,
               "`findings[]` requires summary/detail/evidence_refs/repair_suggestions",
+              file,
+              rule,
+            ),
+          );
+        }
+        if (
+          isRecord(finding) &&
+          typeof finding.severity === "string" &&
+          !VALID_FINDING_SEVERITIES.has(finding.severity)
+        ) {
+          issues.push(
+            makeIssue(
+              BROWSER_QA_ISSUE_CODES.findings,
+              `\`findings[].severity\` must be one of: ${[...VALID_FINDING_SEVERITIES].join(", ")}. Got: "${finding.severity}"`,
               file,
               rule,
             ),
