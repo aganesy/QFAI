@@ -276,7 +276,7 @@ export function readValidatedClassificationBlock(content: string): UiBearingClas
     return null;
   }
 
-  if (parsed.uiBearing === false) {
+  if (!parsed.uiBearing) {
     if (parsed.primarySurface !== "non-ui") {
       return null;
     }
@@ -285,7 +285,7 @@ export function readValidatedClassificationBlock(content: string): UiBearingClas
     }
   }
 
-  if (parsed.uiBearing === true) {
+  if (parsed.uiBearing) {
     if (parsed.primarySurface === "non-ui") {
       return null;
     }

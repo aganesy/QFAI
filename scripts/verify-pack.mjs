@@ -331,6 +331,13 @@ const seededDiscussionPackFiles = {
     "- Captured at: 2026-02-16.",
     "- Purpose: provide stable evidence for seeded discussion.",
     "",
+    "## Classification",
+    "",
+    "- ui_bearing: false",
+    "- primary_surface: non-ui",
+    "- secondary_surfaces: []",
+    "- classification_rationale: Packaging validation fixture — no user-facing UI.",
+    "",
   ],
   "02_Inception-Deck.md": [
     "# 02 Inception Deck",
@@ -475,7 +482,7 @@ const prototypingYamlContent = [
   '  rationale: "Minimal smoke-test seed for verify-pack packaging validation."',
   "  allowed_modes:",
   "    - low-cost",
-  "  surface: web-ui",
+  "  surface: cli",
   "",
 ].join("\n");
 writeFileSync(path.join(seededDiscussionPackDir, "prototyping.yaml"), prototypingYamlContent);
