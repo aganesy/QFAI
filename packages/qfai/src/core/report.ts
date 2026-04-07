@@ -1831,11 +1831,14 @@ async function collectPrototypingSummary(
   if (browserQaBundle?.browserQa.summary) {
     const summary = browserQaBundle.browserQa.summary;
     for (const category of ["smoke", "interaction", "visual", "accessibility"] as const) {
-      const bucket = summary[category];
+      const bucket = summary[category] as Record<string, unknown> | undefined;
       if (!bucket || typeof bucket !== "object") continue;
+      const passed = typeof bucket.passed === "number" ? bucket.passed : 0;
+      const failed = typeof bucket.failed === "number" ? bucket.failed : 0;
+      const status = typeof bucket.status === "string" ? bucket.status : "";
       browserQaTotalPassed +=
-        bucket.passed ?? (bucket.status === "passed" || bucket.status === "executed" ? 1 : 0);
-      browserQaTotalFailed += bucket.failed ?? (bucket.status === "failed" ? 1 : 0);
+        passed || (status === "passed" || status === "executed" ? 1 : 0);
+      browserQaTotalFailed += failed || (status === "failed" ? 1 : 0);
     }
   }
   const browserQaModeMismatch =
