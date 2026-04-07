@@ -32,7 +32,7 @@ Draft interaction contracts for key screens using the strong screen contract sch
 - notes_for_verify: [notes for verification/testing]
 - notes_for_reviewer: [any additional context for the reviewer]
 
-<!-- Nested list format is canonical for primary_tasks, secondary_tasks, required_states, transitions, observable_outcomes. Inline CSV is accepted for backward compatibility. -->
+<!-- Nested list format is canonical for primary_tasks, secondary_tasks, required_states, transitions, observable_outcomes. -->
 
 > **Note:** `required_states` primary truth lives in this file. Each screen's state set is authoritative here.
 > **Note:** `secondary_tasks` documents non-primary user workflows available on the screen.

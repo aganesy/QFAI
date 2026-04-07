@@ -73,7 +73,7 @@ Screen-level contract details are finalized in `uiux/40_screen_contracts.md`. Pr
 ## Appendix: Screen Mock — Optional Fallback (HTML+CSS)
 
 <!-- Optional fallback only — do not use as the primary UI definition artifact.
-     Include only when it materially clarifies the selected direction.
+     Include only when it materially clarifies the selected anchor.
      Behavior Obligations and sidecar artifacts (uiux/) are the primary UI definitions.
      The required state SSOT is uiux/40_screen_contracts.md (`default/loading/empty/error`). -->
 

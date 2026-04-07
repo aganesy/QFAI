@@ -1,20 +1,38 @@
 # Implementation Strategy
 
-## Strategy Definition
+## Surface
 
-<!-- Use exactly one canonical strategy block. -->
+- surface: web
 
-### Strategy
+## Selection Requirement
 
-- surface: [web|mobile|desktop|cli|mixed|non-ui]
-- decision: [template|component-library|design-system|native-pattern|bespoke|none]
-- why_this_strategy: [Why this strategy is the right fit for the current product and surface]
-- expected_strengths: [Concrete strengths expected from this strategy]
-- known_risks: [Concrete risks, failure modes, or tradeoffs]
-- fit_for_this_product: [Why this strategy matches the actual product context]
+- selection_required: true
 
-## Constraints
+## Decision
 
-- Use only the canonical enum values shown above.
-- Do not add legacy keys or freeform alternative enums.
-- Keep the strategy aligned with `01_Context.md` classification and `31_selected_anchor_screen.md`.
+- decision: component-library
+
+## Candidate Options
+
+- candidate_options:
+  - component-library
+  - bespoke
+
+## Chosen Option
+
+- chosen_option: component-library
+
+## Rationale
+
+- rationale:
+  - Existing design-system alignment is more valuable than bespoke variance.
+
+## Verification Expectations
+
+- verification_expectations:
+  - Primary tasks remain obvious without generic dashboard drift.
+
+## Notes for Reviewer
+
+- notes_for_reviewer:
+  - Check that the chosen direction stays aligned with the anchor screen and screen contracts.

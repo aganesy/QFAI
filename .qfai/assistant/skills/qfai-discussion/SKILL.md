@@ -1,7 +1,7 @@
 ---
 name: qfai-discussion
 title: QFAI Discussion (Unified Discuss + Require)
-description: "Run structured discussion that merges discuss and require into a single 15-file discussion pack with required prototyping.yaml and OQ-driven exit."
+description: "Run structured discussion that merges discuss and require into a single 15-file discussion pack with classification-aware prototyping.yaml requiredness and OQ-driven exit."
 argument-hint: "<idea-or-problem> [--auto]"
 allowed-tools: [Read, Glob, Write, TodoWrite, Task, Bash]
 roles:
@@ -135,16 +135,16 @@ Every major artifact in this stage MUST include this table schema:
     - `04_Sources.md#Trend Scan` — trend scan with required category coverage and per-entry completeness
     - `uiux/20-24` — 3-layer evaluation family (invariant, trend-derived, product-specific, aggregate, dynamic overrides)
     - `uiux/30_option_comparison.md` — option comparison
-    - `uiux/31_selected_anchor_screen.md` — selected anchor screen (Selected Direction single source of truth)
+    - `uiux/31_selected_anchor_screen.md` — selected anchor screen (selected anchor single source of truth)
     - `uiux/40_screen_contracts.md` — screen contracts (strong schema)
     - `uiux/50_review_input_bundle.md` — review input bundle
-  - `04_Sources.md` `## Trend Scan` must include all required categories, and each entry must include: `reference`, `observation`, `freshness_date`, `confidence`, `source_translation`, `local_implication`
+  - `04_Sources.md` `## Trend Scan` must include all required categories, and each entry must include: `reference`, `observation`, `decision_connection`, `evaluation_connection`, `local_implication`
   - `04_Sources.md` `## Competitive Reference Registry` entries must include:
     - `adopted_points`: what was adopted and why
     - `rejected_points`: what was not adopted and why
     - `local_translation`: how adopted points were adapted
     - Placeholder-like values (TBD, N/A, TODO, empty) are treated as missing
-  - `14_Review-Request.md` must review selected direction from `uiux/31_selected_anchor_screen.md` and strategy alignment from `uiux/10_implementation_strategy.md`.
+  - `14_Review-Request.md` must review selected anchor from `uiux/31_selected_anchor_screen.md` and strategy alignment from `uiux/10_implementation_strategy.md`.
   - `99_delta.md` must include a `## Rejected Visual Directions` section with rationale and recurrence prevention.
   - `04_Sources.md` must include a `## Trend Scan` section where each required category has at least one complete entry.
   - `04_Sources.md` must include a `## Competitive Reference Registry` where each entry has: `adopted_points`, `rejected_points`, `local_translation` fields populated.
@@ -166,12 +166,18 @@ Every major artifact in this stage MUST include this table schema:
 Classify the project's surface type to determine whether UI/UX sidecar artifacts are required.
 Classification is based on **surface type only**, not interaction complexity (DR-0057).
 
+Classification surfaces: `web | mobile | desktop | cli | mixed | non-ui`
+Prototyping surfaces (subset): `web | mobile | desktop | cli | mixed`
+
+`non-ui` is a classification-only value used in `01_Context.md` when `ui_bearing: false`.
+It is not a prototyping surface and does not appear in `prototyping.yaml`.
+
 | Surface Type | UI-bearing | Sidecar Generation                       | Example                                  |
 | ------------ | ---------- | ---------------------------------------- | ---------------------------------------- |
 | web          | Yes        | Full 11-file uiux/ sidecar               | Web application with user-facing screens |
 | mobile       | Yes        | Full 11-file uiux/ sidecar               | Mobile app with touch interactions       |
 | desktop      | Yes        | Full 11-file uiux/ sidecar               | Desktop application with GUI             |
-| cli          | No         | No uiux/ directory, no sidecar generated | CLI tool, terminal application           |
+| cli          | Yes        | Full 11-file uiux/ sidecar               | CLI tool, terminal application           |
 | mixed        | Yes        | Full 11-file uiux/ sidecar               | Cross-platform with UI components        |
 | non-ui       | No         | No uiux/ directory, no sidecar generated | API service, library                     |
 
@@ -189,10 +195,10 @@ When UI-bearing is detected:
 2. Apply UX intent cross-references to core templates
 3. Add UI-bearing completion conditions
 
-When non-ui is detected:
+When non-ui is detected (`classification.ui_bearing: false`):
 
 - Skip uiux/ sidecar generation entirely — no uiux/ directory, no errors
-- Core 15-file pack plus required prototyping.yaml is generated as before
+- Core 15-file pack is generated; `prototyping.yaml` is not required
 - No additional UI/UX completion conditions apply
 
 ### UI-bearing Completion Conditions
@@ -209,18 +215,18 @@ For UI-bearing projects, the following conditions must ALL be satisfied before d
    have invariant, trend-derived, and product-specific evaluation criteria
 4. **Dynamic overrides documented**: `uiux/24_design_eval_dynamic_overrides.md` lists any override rules
 5. **Comparison completed**: `uiux/30_option_comparison.md` documents option comparison against scoring axes
-6. **Anchor screen selected**: `uiux/31_selected_anchor_screen.md` documents the selected direction and anchor screen
+6. **Anchor screen selected**: `uiux/31_selected_anchor_screen.md` documents the selected anchor and anchor screen
 7. **Contracts drafted**: `uiux/40_screen_contracts.md` contains screen interaction contracts
 
 Completion is blocked until all 7 conditions are met. Skipping any condition prevents the discussion from being marked as complete.
 
 ### Non-UI Completion
 
-For non-ui projects, completion conditions remain unchanged from prior versions. No additional UI/UX conditions apply; no sidecar artifacts are required.
+For non-UI projects (`classification.ui_bearing: false`), no UI/UX completion conditions apply and no sidecar artifacts are required. `prototyping.yaml` is not required for non-UI packs.
 
 ## Goal
 
-Produce a unified 15-file discussion pack plus required prototyping.yaml with explicit decisions, requirements, OQ states, and rationale so `/qfai-sdd` starts without unresolved blockers.
+Produce a unified 15-file discussion pack with explicit decisions, requirements, OQ states, and rationale so `/qfai-sdd` starts without unresolved blockers. The latest discussion pack must include `prototyping.yaml` when `ui_bearing: true`, and must not require it when `ui_bearing: false`.
 
 ## Non-goals
 
@@ -246,7 +252,7 @@ Produce a unified 15-file discussion pack plus required prototyping.yaml with ex
 - `.qfai/discussion/discussion-*/14_Review-Request.md`
 - `.qfai/discussion/discussion-*/99_delta.md`
 - review artifacts under `.qfai/review/review-YYYYMMDDhhmmssSSS/`
-- `.qfai/discussion/discussion-*/prototyping.yaml`
+- `.qfai/discussion/discussion-*/prototyping.yaml` when the latest discussion pack is `ui_bearing: true`
 - Evidence file: `.qfai/evidence/discussion-YYYYMMDDhhmmssSSS.md`
 - Reviewer notes (`PASS` or `REVISE`)
 
@@ -254,7 +260,7 @@ Produce a unified 15-file discussion pack plus required prototyping.yaml with ex
 
 1. Run the core interview for product concept, scope, stakeholders, and constraints (`01_Context.md`).
 2. Run Inception Deck (10 questions) for ambiguity removal and project alignment, and include at least one Mermaid diagram (`02_Inception-Deck.md`).
-3. Run Story Workshop to capture user stories, user flows, and at least one Mermaid diagram; HTML+CSS visual mock is optional fallback only when it materially clarifies the selected direction (`03_Story-Workshop.md`).
+3. Run Story Workshop to capture user stories, user flows, and at least one Mermaid diagram; HTML+CSS visual mock is optional fallback only when it materially clarifies the selected anchor (`03_Story-Workshop.md`).
 4. Register source traceability in `04_Sources.md` with stable `SRC-XXXX` identifiers.
 5. Define scope boundaries and success criteria in `05_Scope.md`.
 6. Capture functional requirements in `06_REQ.md` with `REQ-0001` format.
@@ -267,14 +273,17 @@ Produce a unified 15-file discussion pack plus required prototyping.yaml with ex
 13. Run OQ resolution hearing repeatedly until open count is zero.
 14. Move deferred items to `13_Deferred.md` with all mandatory metadata columns.
 15. Update `12_OQ-Resolution-Log.md`, `14_Review-Request.md`, and `99_delta.md`.
-16. Generate `prototyping.yaml` at the discussion pack top level for downstream prototyping recommendation.
+16. Generate `prototyping.yaml` at the discussion pack top level for downstream prototyping recommendation only when the latest discussion pack is `ui_bearing: true`.
     - MUST use the **namespaced canonical schema** with `prototyping.recommended_mode` (not top-level `recommended_mode`).
-    - Top-level `recommended_mode` is legacy compatibility only and MUST NOT be emitted in new artifacts.
     - All fields (`recommended_mode`, `rationale`, `allowed_modes`, `surface`) are required under the `prototyping:` key.
+    - Top-level recommendation keys are not supported; only the namespaced `prototyping:` block is accepted.
+    - Coexistence of top-level recommendation keys with the namespaced block is invalid and will be rejected by validation and execution.
 17. Choose `recommended_mode` with these defaults:
-    - `low-cost`: rough draft or strong cost priority
-    - `standard`: normal customer-presentable path
-    - `full-harness`: only when the premium runtime loop is justified
+
+- `low-cost`: rough draft or strong cost priority
+- `standard`: normal customer-presentable path
+- `full-harness`: only when the premium runtime loop is justified
+
 18. Request review and record Reviewer result.
 
 ## Example Mapping Perspectives (Mandatory)

@@ -26,11 +26,13 @@ Consolidate all sidecar artifacts into a review-ready bundle for design reviewer
 - Required trend categories are all present and complete.
 - Stale / overused AI slop patterns are explicitly avoided.
 - Trend research is translated into scoring, comparison, and selected anchor decisions.
+- Scoring-ready axes use canonical fields: `origin`, `layer`, `source_refs`, `goal_refs`, `evidence_required`, `review_questions`.
 
 ## Review Checklist
 
 - [ ] Strategy aligns with surface type and project constraints
 - [ ] Trend categories are complete and translated into local design decisions
 - [ ] Competitive references include adopted_points, rejected_points, and local_translation
+- [ ] Scoring-ready axes expose canonical fields including origin/source_refs/goal_refs/evidence_required/review_questions
 - [ ] Selected anchor clearly documents rationale and downstream implications
 - [ ] Screen contracts cover all required states

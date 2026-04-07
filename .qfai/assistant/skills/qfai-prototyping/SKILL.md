@@ -16,7 +16,7 @@ roles:
     product-surface-reviewer,
     qa-gatekeeper,
   ]
-routing-profile: ui-bearing
+routing-profile: ui-surface-aware
 mode: execution-focused
 ---
 
@@ -38,12 +38,9 @@ This skill is **static-first**. File-based checks and evidence are the default. 
 - If a required API endpoint still returns `404`, the run is incomplete.
 - `L1` and `L2` critique findings must be reflected in the evidence pack or justified as `REVISE`.
 - `uiFidelity` is the canonical UI evidence block for UI-bearing surfaces.
-- non-ui skip semantics must be preserved. UI-only placeholders are not required when the surface is non-ui.
+- `ui_bearing: false` specs are not prototyping execution targets. UI-only placeholders are not required for such specs.
 - Review rendered output, screenshot evidence, HTML snapshots, or preview artifacts before closing any UI-affecting run.
-- Read the canonical sidecar family first: option comparison / `30_option_comparison.md` -> selected anchor screen / `31_selected_anchor_screen.md`
-  -> strategy / `10_implementation_strategy.md` -> taste interview / `11_design_taste_interview.md` -> trend scan / `04_Sources.md`
-  -> 3-layer evaluation family (`20/21/22/23` + optional `24`) -> screen contracts / `40_screen_contracts.md`
-  -> review input bundle / `50_review_input_bundle.md`.
+- Read the canonical sidecar family first: option comparison / `30_option_comparison.md` -> selected anchor screen / `31_selected_anchor_screen.md` -> strategy / `10_implementation_strategy.md` -> taste interview / `11_design_taste_interview.md` -> trend scan / `04_Sources.md` -> 3-layer evaluation family (`20/21/22/23` + optional `24`) -> screen contracts / `40_screen_contracts.md` -> review input bundle / `50_review_input_bundle.md`.
 
 ## Goal
 
@@ -73,10 +70,12 @@ Record in `prototyping.json`:
 
 ## Surface Semantics
 
-- `surface: non-ui` means UI-specific evidence is `n/a`.
-- For non-ui projects, `uiFidelity`, render evidence, browser QA, and `runtimeGate.ui` may be absent.
-- Absent is normal for non-ui. Do not force skipped placeholders unless the project intentionally emits them.
-- For UI-bearing projects, route/contract fidelity must be captured when `uiFidelity` is required by mode.
+Canonical prototyping surfaces are: `web`, `mobile`, `desktop`, `cli`, `mixed`.
+
+- `ui_bearing: false` specs are **not** prototyping execution targets. Prototyping execution is only invoked for `ui_bearing: true` or `mixed` classifications.
+- For `cli` surface: render screenshot evidence is not required; browser QA is not required. Only output / interaction / structured evidence is expected.
+- For `web`, `mobile`, `desktop` surfaces: route/contract fidelity must be captured when `uiFidelity` is required by mode.
+- `mixed` surface inherits the union of obligations from the constituent surfaces.
 
 ## Prototyping Modes
 
@@ -84,42 +83,54 @@ Record in `prototyping.json`:
 
 - Static checks only.
 - Suitable for early skeleton work.
-- UI-bearing projects may include `uiFidelity` and render/browser artifacts, but they are optional.
+- `web`, `mobile`, `desktop`, `mixed` surfaces may include `uiFidelity` and render/browser artifacts, but they are optional.
+- `cli` surface does not require `uiFidelity`, render evidence, or browser QA.
 - `skeleton` mode is allowed for lightweight UI proof.
 
 ### Standard
 
 - Static checks plus optional light validation.
 - This is the default mode.
-- UI-bearing projects require `uiFidelity`.
+- `web`, `mobile`, `desktop`, `mixed` surfaces require `uiFidelity`.
+- `cli` surface does not require `uiFidelity`, render evidence, or browser QA.
 - Runtime gate, render bundle, and browser QA bundle are optional.
 
 ### Full-harness
 
 - Explicit opt-in only. Never auto-activate.
 - Adds runtime-heavy obligations and full-harness audit metadata.
-- UI-bearing projects require runtime gate, render bundle, browser QA bundle, and `fullHarness`.
-- Non-ui projects require `fullHarness`, but UI-specific bundles remain n/a.
+- `web`, `mobile`, `desktop`, `mixed` surfaces require runtime gate, render bundle, browser QA bundle, and `fullHarness`.
+- `cli` surface requires `fullHarness` but not `uiFidelity`, render evidence, or browser QA.
+- `ui_bearing: false` specs are not prototyping execution targets.
 
 ## Obligation Matrix
 
 ### surface / mode
 
-| surface / mode            | specs    | runtimeGate | uiFidelity                        | render evidence                      | browser QA   | fullHarness  |
-| ------------------------- | -------- | ----------- | --------------------------------- | ------------------------------------ | ------------ | ------------ |
-| non-ui / low-cost         | required | optional    | n/a                               | n/a                                  | n/a          | absent       |
-| non-ui / standard         | required | optional    | n/a                               | n/a                                  | n/a          | absent       |
-| non-ui / full-harness     | required | optional    | n/a                               | n/a                                  | n/a          | required     |
-| ui-bearing / low-cost     | required | optional    | optional (`skeleton` allowed)     | optional (`captured/skipped/failed`) | optional     | absent       |
-| ui-bearing / standard     | required | optional    | **required** (`interactive` only) | optional (`captured/skipped/failed`) | optional     | absent       |
-| ui-bearing / full-harness | required | required    | **required** (`interactive` only) | **required**                         | **required** | **required** |
+| surface / mode         | specs    | runtimeGate | uiFidelity                        | render evidence                      | browser QA   | fullHarness  |
+| ---------------------- | -------- | ----------- | --------------------------------- | ------------------------------------ | ------------ | ------------ |
+| web / low-cost         | required | optional    | optional (`skeleton` allowed)     | optional (`captured/skipped/failed`) | optional     | absent       |
+| web / standard         | required | optional    | **required** (`interactive` only) | optional (`captured/skipped/failed`) | optional     | absent       |
+| web / full-harness     | required | required    | **required** (`interactive` only) | **required**                         | **required** | **required** |
+| mobile / low-cost      | required | optional    | optional (`skeleton` allowed)     | optional (`captured/skipped/failed`) | optional     | absent       |
+| mobile / standard      | required | optional    | **required** (`interactive` only) | optional (`captured/skipped/failed`) | optional     | absent       |
+| mobile / full-harness  | required | required    | **required** (`interactive` only) | **required**                         | **required** | **required** |
+| desktop / low-cost     | required | optional    | optional (`skeleton` allowed)     | optional (`captured/skipped/failed`) | optional     | absent       |
+| desktop / standard     | required | optional    | **required** (`interactive` only) | optional (`captured/skipped/failed`) | optional     | absent       |
+| desktop / full-harness | required | required    | **required** (`interactive` only) | **required**                         | **required** | **required** |
+| cli / low-cost         | required | optional    | n/a                               | n/a                                  | n/a          | absent       |
+| cli / standard         | required | optional    | n/a                               | n/a                                  | n/a          | absent       |
+| cli / full-harness     | required | optional    | n/a                               | n/a                                  | n/a          | **required** |
+| mixed / low-cost       | required | optional    | optional (`skeleton` allowed)     | optional (`captured/skipped/failed`) | optional     | absent       |
+| mixed / standard       | required | optional    | **required** (`interactive` only) | optional (`captured/skipped/failed`) | optional     | absent       |
+| mixed / full-harness   | required | required    | **required** (`interactive` only) | **required**                         | **required** | **required** |
 
 `uiFidelity.mode` policy:
 
 - `low-cost`: `skeleton` or `interactive`
 - `standard`: `interactive` only — `skeleton` is rejected by the validator
 - `full-harness`: `interactive` only — `skeleton` is rejected; render evidence, Browser QA, runtimeGate, and fullHarness block are all required
-- `non-ui`: `uiFidelity` is not emitted
+- `cli`: `uiFidelity` is not emitted; render and browser QA are not required
 
 Interpretation:
 
@@ -135,27 +146,33 @@ Interpretation:
 - `.qfai/evidence/prototyping.json`
 - `.qfai/evidence/render.json` when render evidence is emitted or required by mode
 - `.qfai/evidence/browser-qa.json` when browser QA evidence is emitted or required by mode
+- `.qfai/evidence/browserQa.summary.json` when browser QA evidence is emitted or required by mode
+- `.qfai/evidence/browserQa.findings.json` when browser QA evidence is emitted or required by mode
+- `.qfai/evidence/browserQa.repairs.json` when browser QA evidence is emitted or required by mode
+- `.qfai/evidence/fullHarness.exit.json` when `mode.effective = full-harness`
+- `.qfai/evidence/fullHarness.handoff.json` when `mode.effective = full-harness`
+- `.qfai/evidence/fullHarness.fakeUiDetection.json` when `mode.effective = full-harness`
 - `Coverage Matrix` covering all specs
 - critique summary with `L1` / `L2` findings and disposition
 
 ### low-cost obligations
 
 - always: `specs[]`, `meta.generatedAt`, `meta.toolVersion`, `meta.commands[]`, `mode.*`
-- ui-bearing: `uiFidelity` optional, render/browser optional
-- non-ui: UI-specific evidence is n/a
+- `web`, `mobile`, `desktop`, `mixed`: `uiFidelity` optional, render/browser optional
+- `cli`: UI-specific evidence is n/a
 
 ### standard obligations
 
 - always: `specs[]`, `meta.*`, `mode.*`
-- ui-bearing: `uiFidelity` required
-- non-ui: UI-specific evidence is n/a
+- `web`, `mobile`, `desktop`, `mixed`: `uiFidelity` required
+- `cli`: UI-specific evidence is n/a
 - runtime gate and browser QA remain optional
 
 ### full-harness obligations
 
 - always: `specs[]`, `meta.*`, `mode.*`, `fullHarness`
-- ui-bearing: `runtimeGate`, `.qfai/evidence/render.json`, `.qfai/evidence/browser-qa.json`, `uiFidelity`
-- non-ui: UI-specific evidence remains n/a
+- `web`, `mobile`, `desktop`, `mixed`: `runtimeGate`, `.qfai/evidence/render.json`, Browser QA bundle trio, `uiFidelity`
+- `cli`: UI-specific evidence remains n/a
 
 ## Full-harness minimum completeness
 
@@ -169,11 +186,20 @@ When `mode.effective = full-harness`, record:
 - `fullHarness.terminationReason`
 - `fullHarness.reviewerSignoff`
 - `fullHarness.scoringTrace`
+- `fullHarness.exit`
+- `fullHarness.handoff`
+- `fullHarness.fakeUiDetection`
 
 ## Canonical Bundles
 
 - render bundle: `.qfai/evidence/render.json`
 - browser QA bundle: `.qfai/evidence/browser-qa.json`
+- browser QA summary: `.qfai/evidence/browserQa.summary.json`
+- browser QA findings: `.qfai/evidence/browserQa.findings.json`
+- browser QA repairs: `.qfai/evidence/browserQa.repairs.json`
+- full-harness exit: `.qfai/evidence/fullHarness.exit.json`
+- full-harness handoff: `.qfai/evidence/fullHarness.handoff.json`
+- full-harness fake-UI detection: `.qfai/evidence/fullHarness.fakeUiDetection.json`
 
 Render bundle uses `captured | skipped | failed`.
 Browser QA bundle uses `completed | skipped | failed`.
@@ -183,13 +209,10 @@ Browser QA bundle uses `completed | skipped | failed`.
 1. Read `.qfai/specs/spec-*` and determine the surface and requested mode.
 2. Build the minimum runnable slice across **ALL specs**.
 3. Produce `prototyping.md` and `prototyping.json` with a complete Coverage Matrix.
-4. If UI-bearing, capture `uiFidelity`; if full-harness, capture runtime gate, render bundle, and browser QA bundle.
+4. If `web`, `mobile`, `desktop`, or `mixed` surface, capture `uiFidelity`; if full-harness, capture runtime gate, render bundle, and browser QA bundle.
 5. Review rendered output, screenshot evidence, HTML snapshots, or preview artifacts against the canonical sidecar family.
 6. Record critique findings, classify each as `L1` or `L2`, and either fix or mark the result `REVISE`.
-7. Use the read order
-   `option comparison (30_option_comparison.md) -> selected anchor screen (31_selected_anchor_screen.md) -> strategy (10_implementation_strategy.md)`
-   `-> taste interview (11_design_taste_interview.md) -> trend scan (04_Sources.md) -> 3-layer evaluation family (20/21/22/23 + optional 24)`
-   `-> screen contracts (40_screen_contracts.md) -> review input bundle (50_review_input_bundle.md)` when the project is UI-bearing.
+7. Use the read order `option comparison (30_option_comparison.md) -> selected anchor screen (31_selected_anchor_screen.md) -> strategy (10_implementation_strategy.md) -> taste interview (11_design_taste_interview.md) -> trend scan (04_Sources.md) -> 3-layer evaluation family (20/21/22/23 + optional 24) -> screen contracts (40_screen_contracts.md) -> review input bundle (50_review_input_bundle.md)` when the surface is `web`, `mobile`, `desktop`, or `mixed`.
 8. Run `qfai validate --fail-on error`.
 9. Route reviewer gate and do not declare completion until the result is `PASS`.
 
@@ -237,8 +260,9 @@ Before DONE:
 - package assets and generated evidence must match the obligation matrix
 - `qfai validate --fail-on error` must pass
 - reviewer gate must return PASS
-- UI-bearing runs must reconcile `uiFidelity`, render evidence, and critique outputs
-- non-ui runs must preserve `n/a` semantics without fake placeholders
+- `web`, `mobile`, `desktop`, `mixed` surface runs must reconcile `uiFidelity`, render evidence, and critique outputs
+- `cli` surface runs preserve n/a semantics for render and browser QA without fake placeholders
+- `ui_bearing: false` specs are not prototyping execution targets
 
 ## FINAL CHECKLIST (Check Last)
 

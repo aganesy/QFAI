@@ -22,7 +22,7 @@
 - observation: [What visual tone signal was observed]
 - freshness_date: YYYY-MM-DD
 - confidence: [high|medium|low]
-- source_translation: [How the signal translates into this project]
+- decision_connection: [How the signal translates into this project]
 - local_implication: [What should change locally]
 
 ### Layout / Composition Trends
@@ -33,7 +33,7 @@
 - observation: [What layout or composition signal was observed]
 - freshness_date: YYYY-MM-DD
 - confidence: [high|medium|low]
-- source_translation: [How the signal translates into this project]
+- decision_connection: [How the signal translates into this project]
 - local_implication: [What should change locally]
 
 ### Density / Hierarchy Trends
@@ -44,7 +44,7 @@
 - observation: [What density or hierarchy signal was observed]
 - freshness_date: YYYY-MM-DD
 - confidence: [high|medium|low]
-- source_translation: [How the signal translates into this project]
+- decision_connection: [How the signal translates into this project]
 - local_implication: [What should change locally]
 
 ### Interaction / Motion Trends
@@ -55,7 +55,7 @@
 - observation: [What interaction or motion signal was observed]
 - freshness_date: YYYY-MM-DD
 - confidence: [high|medium|low]
-- source_translation: [How the signal translates into this project]
+- decision_connection: [How the signal translates into this project]
 - local_implication: [What should change locally]
 
 ### Component Styling Trends
@@ -66,7 +66,7 @@
 - observation: [What component styling signal was observed]
 - freshness_date: YYYY-MM-DD
 - confidence: [high|medium|low]
-- source_translation: [How the signal translates into this project]
+- decision_connection: [How the signal translates into this project]
 - local_implication: [What should change locally]
 
 ### Stale / Overused AI Slop Patterns
@@ -77,7 +77,7 @@
 - observation: [What stale pattern should be avoided]
 - freshness_date: YYYY-MM-DD
 - confidence: [high|medium|low]
-- source_translation: [Why this stale pattern is relevant to avoid here]
+- decision_connection: [Why this stale pattern is relevant to avoid here]
 - local_implication: [What should be explicitly avoided locally]
 
 ## Competitive Reference Registry
