@@ -40,7 +40,10 @@ This skill is **static-first**. File-based checks and evidence are the default. 
 - `uiFidelity` is the canonical UI evidence block for UI-bearing surfaces.
 - `ui_bearing: false` specs are not prototyping execution targets. UI-only placeholders are not required for such specs.
 - Review rendered output, screenshot evidence, HTML snapshots, or preview artifacts before closing any UI-affecting run.
-- Read the canonical sidecar family first: option comparison / `30_option_comparison.md` -> selected anchor screen / `31_selected_anchor_screen.md` -> strategy / `10_implementation_strategy.md` -> taste interview / `11_design_taste_interview.md` -> trend scan / `04_Sources.md` -> 3-layer evaluation family (`20/21/22/23` + optional `24`) -> screen contracts / `40_screen_contracts.md` -> review input bundle / `50_review_input_bundle.md`.
+- Read the canonical sidecar family first: option comparison / `30_option_comparison.md` -> selected anchor screen / `31_selected_anchor_screen.md` ->
+  strategy / `10_implementation_strategy.md` -> taste interview / `11_design_taste_interview.md` ->
+  trend scan / `04_Sources.md` -> 3-layer evaluation family (`20/21/22/23` + optional `24`) ->
+  screen contracts / `40_screen_contracts.md` -> review input bundle / `50_review_input_bundle.md`.
 
 ## Goal
 
@@ -111,7 +114,8 @@ Canonical prototyping surfaces are: `web`, `mobile`, `desktop`, `cli`, `mixed`.
 - `cli` surface requires `fullHarness` but not `uiFidelity`, render evidence, or browser QA.
 - `ui_bearing: false` specs are not prototyping execution targets.
 - Full-harness is an **iterative design-improvement loop**, not a single evidence-generation pass. See `## Full-Harness Iteration Protocol` below.
-- The discussion 3-layer evaluation score measures **design direction quality** and MUST NOT be copied into `fullHarness.scoringTrace`. Prototyping scores measure **implementation fidelity** against the selected anchor.
+- The discussion 3-layer evaluation score measures **design direction quality** and MUST NOT be copied into `fullHarness.scoringTrace`.
+  Prototyping scores measure **implementation fidelity** against the selected anchor.
 
 ## Obligation Matrix
 
@@ -300,7 +304,9 @@ Each iteration MUST produce a `scoringTrace` entry:
 
 ### Maximum Delta Cap
 
-Per-axis score improvement per iteration is capped at `maxDeltaPerAxisPerIteration: 0.15`. Any reported delta exceeding this cap MUST trigger re-evaluation or justification. This prevents single-iteration score inflation.
+Per-axis score improvement per iteration is capped at `maxDeltaPerAxisPerIteration: 0.15`.
+Any reported delta exceeding this cap MUST trigger re-evaluation or justification.
+This prevents single-iteration score inflation.
 
 ## Evaluation Rigor Rules (Full-Harness)
 
@@ -384,7 +390,11 @@ When a dev server is started for evidence collection:
    e. Continue until termination condition is met.
    f. Record `terminationReason`, `iterationCount`, `bestIteration`.
 7. Record critique findings, classify each as `L1` or `L2`, and either fix or mark the result `REVISE`.
-8. Use the read order `option comparison (30_option_comparison.md) -> selected anchor screen (31_selected_anchor_screen.md) -> strategy (10_implementation_strategy.md) -> taste interview (11_design_taste_interview.md) -> trend scan (04_Sources.md) -> 3-layer evaluation family (20/21/22/23 + optional 24) -> screen contracts (40_screen_contracts.md) -> review input bundle (50_review_input_bundle.md)` when the surface is `web`, `mobile`, `desktop`, or `mixed`.
+8. Use the following read order when the surface is `web`, `mobile`, `desktop`, or `mixed`:
+   option comparison (`30_option_comparison.md`) -> selected anchor screen (`31_selected_anchor_screen.md`) ->
+   strategy (`10_implementation_strategy.md`) -> taste interview (`11_design_taste_interview.md`) ->
+   trend scan (`04_Sources.md`) -> 3-layer evaluation family (`20/21/22/23` + optional `24`) ->
+   screen contracts (`40_screen_contracts.md`) -> review input bundle (`50_review_input_bundle.md`).
 9. Run `qfai validate --fail-on error`.
 10. Route reviewer gate and do not declare completion until the result is `PASS`.
 

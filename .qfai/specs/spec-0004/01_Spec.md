@@ -54,13 +54,19 @@
 - REQ-0114: IssueCategory "canonical" — 全新規 canonical validator が category: "canonical" を emit
 - REQ-0115: prototypingRecommendation バリデータ — prototyping.yaml schema validation を validate pipeline に登録
 - REQ-0116: DDP バリデータ除去 — validateDdpFields を production path から削除（legacy namespace に移動）
-- REQ-0117: 新規 UIX canonical バリデータ — 11 modular validators を production path に登録（v1.7.14: rollout.ts 削除により 12→11）: canonical.ts（aggregator）, classification.ts, foundation.ts, comparisonValidator.ts, oqClosure.ts, scoringReady.ts, strategy.ts, screenContract.ts, trend.ts, threeLayer.ts。canonical.ts が各バリデータを順次実行し Issue[] を集約
+- REQ-0117: 新規 UIX canonical バリデータ — 11 modular validators を production path に登録（v1.7.14: rollout.ts 削除により 12→11）:
+  canonical.ts（aggregator）, classification.ts, foundation.ts, comparisonValidator.ts, oqClosure.ts, scoringReady.ts, strategy.ts, screenContract.ts, trend.ts, threeLayer.ts。
+  canonical.ts が各バリデータを順次実行し Issue[] を集約
 - REQ-0118: Surface Type Detection Module — `detection/surfaceType.ts` が 01_Context.md の明示的分類ブロック（ui_bearing/primary_surface）を優先し、フォールバックとして surface_type フィールドを使用。非 UI プロジェクトでは UIX バリデータを安全にスキップ
 - REQ-0119: Legacy Validator 完全削除 (v1.7.14, DR-0115) — legacy/ ディレクトリ（ddpCompatibility.ts, uixCompatibility.ts, index.ts）、legacyStatusDir.ts、migration/formatDetection.ts、uix/rollout.ts を production ソースツリーから完全削除。migration tooling パスも廃止
 - REQ-0120: IssueCategory 簡素化 (v1.7.14, DR-0108) — IssueCategory union type から "compatibility" を削除し、"canonical" | "change" のみとする。全バリデータの category 出力を "canonical" に統一
 - REQ-0121: Strict Classification Validation (v1.7.14, DR-0111) — classification.ts バリデータが分類ブロック内の意味的矛盾（ui_bearing=false + 空でない secondary_surfaces、ui_bearing=true + primary_surface=non-ui、invalid/duplicate secondary surfaces 等）を hard error として検出
 - REQ-0122: Strategy Semantic Validation (v1.7.14, DR-0114) — strategy.ts バリデータが canonical strategy decision enum を強制。selection_required=true → ≥2 candidates + non-"none" decision、selection_required=false → decision="none" の状態機械を検証。invalid surface/decision/candidates を reject
-- REQ-0123: Full-Harness Iteration Integrity Validators QFAI-PROT-290~294 (v1.7.14) — prototypingEvidence.ts に 5 つの full-harness iteration integrity validator を追加: PROT-290（iterationCount=1 + converged warning）、PROT-291（scoringTrace count mismatch warning）、PROT-292（terminationReason cross-check warning）、PROT-293（maxIterations 超過 warning）、PROT-294（non-increasing scoringTrace info）。fullHarness validator taxonomy reserved range: 281-294
+- REQ-0123: Full-Harness Iteration Integrity Validators QFAI-PROT-290~294 (v1.7.14) —
+  prototypingEvidence.ts に 5 つの full-harness iteration integrity validator を追加:
+  PROT-290（iterationCount=1 + converged warning）、PROT-291（scoringTrace count mismatch warning）、
+  PROT-292（terminationReason cross-check warning）、PROT-293（maxIterations 超過 warning）、
+  PROT-294（non-increasing scoringTrace info）。fullHarness validator taxonomy reserved range: 281-294
 
 ## Entry points
 
