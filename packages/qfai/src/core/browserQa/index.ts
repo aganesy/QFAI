@@ -162,6 +162,27 @@ export function validateBrowserQaBundle(
               rule,
             ),
           );
+        } else {
+          if ("passed" in record && typeof record.passed !== "number") {
+            issues.push(
+              makeIssue(
+                BROWSER_QA_ISSUE_CODES.summary,
+                `\`browserQa.summary.${phase}.passed\` must be a number when present`,
+                file,
+                rule,
+              ),
+            );
+          }
+          if ("failed" in record && typeof record.failed !== "number") {
+            issues.push(
+              makeIssue(
+                BROWSER_QA_ISSUE_CODES.summary,
+                `\`browserQa.summary.${phase}.failed\` must be a number when present`,
+                file,
+                rule,
+              ),
+            );
+          }
         }
       }
     }
