@@ -129,7 +129,7 @@ function resolvePreflightBlockers(readiness: {
     }
     if (sideArtifactMissing.length > 0) {
       const message = readiness.prototypingRequired
-        ? `latest UI-bearing discussion pack is missing ${sideArtifactMissing.join(", ")}`
+        ? `UI-bearing discussion pack に必須 side artifact が不足しています: ${sideArtifactMissing.join(", ")}`
         : `必須 side artifact 不足: ${sideArtifactMissing.join(", ")}`;
       blockers.push(message);
     }
