@@ -7,3 +7,8 @@ prototyping:
     - standard
     - full-harness
   surface: web
+  mode_expectations:
+    full-harness:
+      expected_iterations: "2+"
+      process: "measure -> score -> fix code -> re-run"
+      calibration_ref: "qfai.config.yaml#prototyping.calibration"

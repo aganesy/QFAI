@@ -89,7 +89,6 @@ export type QfaiPrototypingConfig = {
     targetUrl?: string | null;
     browserProvider?: string;
     renderProvider?: string;
-    reviewer?: string;
   };
 };
 
@@ -571,19 +570,6 @@ function normalizePrototypingExecution(
       configPath,
       issues,
     ),
-    ...((): { reviewer?: string } => {
-      const reviewerStr =
-        raw.reviewer !== undefined
-          ? readString(
-              raw.reviewer,
-              base?.reviewer ?? "",
-              "prototyping.execution.reviewer",
-              configPath,
-              issues,
-            )
-          : base?.reviewer;
-      return reviewerStr ? { reviewer: reviewerStr } : {};
-    })(),
   };
 }
 

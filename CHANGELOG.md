@@ -8,6 +8,40 @@
 
 - なし
 
+## [1.7.15] - 2026-04-08
+
+### Added
+
+- Full-harness runtime truthfulization: measurement-driven iteration engine replaces fake planner/generator/evaluator loop
+- Trend scan canonicalization: `04_Sources.md#Trend Scan` is the sole canonical location; `uiux/20_trend_scan.md` removed
+- Root/init SSOT unification: `scripts/sync-init-to-root.mjs` ensures `packages/qfai/assets/init/` is the single source of truth
+- Evidence schema v2: `fullHarness` block requires calibrationRef, L1/L2 panel scores, commitSha, limitations, reviewer logs
+- New harness modules: `measurement.ts`, `panelScore.ts`, `history.ts`, `reviewerIdentity.ts`, `gitRevision.ts`
+- Validator hardening: reviewer placeholder rejection, weightedTotal = min(L1, L2) enforcement, commitSha/limitations mandatory
+- Calibration wiring: `qfai.config.yaml > prototyping.calibration` is the sole runtime parameter source for full-harness
+
+### Changed
+
+- **BREAKING**: full-harness is now measurement-driven; 1 CLI invocation = 1 iteration measurement, multiple iterations require real code changes between runs
+- **BREAKING**: `--reviewer <id>` is mandatory for full-harness mode; `config.prototyping.execution.reviewer` removed
+- **BREAKING**: `weightedTotal = min(l1.total, l2.total)` replaces generic weighted average
+- **BREAKING**: `fullHarness` evidence schema v2 with calibrationRef, iterations array, scoringTrace, reviewerLogs, limitations
+- `04_Sources.md` template restructured: Source Registry, Trend Scan (4 canonical categories), Competitive Reference Registry, Traceability
+- CLI: added `--change-summary` and `--limitation` flags for full-harness mode
+- Prototyping SKILL.md: full-harness described as measurement-driven iterative workflow
+- Discussion README: `04_Sources.md` responsibilities expanded to include trend scan and competitive registry
+- Evidence README: fullHarness schema v2 field table added, uiFidelity observation-only policy documented
+- Review profiles and agent routing synced between root and init assets
+
+### Removed
+
+- Fake planner/generator/evaluator loop (`planner.ts`, `generator.ts`, `evaluator.ts`, `loop.ts`)
+- `uiux/20_trend_scan.md` template and all references
+- `config.prototyping.execution.reviewer` config option
+- `resolvedReviewer ?? "qfai"` placeholder reviewer logic
+- uiFidelity expected→observed synthetic fallback
+- Legacy fullHarness schema v1 compatibility
+
 ## [1.7.14] - 2026-04-07
 
 ### Added

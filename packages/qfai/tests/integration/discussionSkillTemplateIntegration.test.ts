@@ -103,12 +103,12 @@ function completeTrendContent(): string {
     "platform convention",
     "accessibility / compliance relevant signal",
   ];
-  const lines = ["# Trend Scan", ""];
+  const lines = ["# Sources", "", "## Trend Scan", ""];
   for (const cat of categories) {
     lines.push(
-      `## ${cat}`,
+      `### ${cat}`,
       "",
-      "### Entry 1",
+      "#### Entry 1",
       "",
       `- reference: Ref for ${cat}`,
       `- observation: Observed signal in ${cat}`,
@@ -386,7 +386,7 @@ describe("TC-0010-0029: Missing HTML/CSS mock (optional) → no error", () => {
       completeTasteContent(),
       "utf-8",
     );
-    await writeFile(path.join(root, "uiux", "20_trend_scan.md"), completeTrendContent(), "utf-8");
+    await writeFile(path.join(root, "04_Sources.md"), completeTrendContent(), "utf-8");
 
     const tasteIssues = await validateTasteInterview(root, defaultConfig);
     const trendIssues = await validateTrendScan(root, defaultConfig);
@@ -414,7 +414,7 @@ describe("TC-0010-0030: Missing taste/trend/HTML → partial failure", () => {
     const tasteMissing = tasteIssues.filter((i) => i.code === "UIX-VAL-TASTE-MISSING");
     expect(tasteMissing.length).toBeGreaterThan(0);
 
-    // Trend validator now emits TREND-SCAN-MISSING when uiux/20_trend_scan.md is absent
+    // Trend validator now emits TREND-SCAN-MISSING when 04_Sources.md is absent
     const trendMissing = trendIssues.filter((i) => i.code === "UIX-VAL-TREND-SCAN-MISSING");
     expect(trendMissing.length).toBeGreaterThan(0);
   });

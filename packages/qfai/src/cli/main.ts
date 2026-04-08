@@ -81,6 +81,12 @@ export async function run(argv: string[], cwd: string): Promise<void> {
             ? { renderProvider: options.prototypingRenderProvider }
             : {}),
           ...(options.prototypingReviewer ? { reviewer: options.prototypingReviewer } : {}),
+          ...(options.prototypingChangeSummary
+            ? { changeSummary: options.prototypingChangeSummary }
+            : {}),
+          ...(options.prototypingLimitations
+            ? { limitations: options.prototypingLimitations }
+            : {}),
         });
       }
       return;

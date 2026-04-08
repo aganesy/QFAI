@@ -14,71 +14,45 @@
 
 ## Trend Scan
 
-### Visual Tone Trends
+### user expectation / market norm
 
 #### Entry 1
 
 - reference: [Source name or URL]
-- observation: [What visual tone signal was observed]
-- freshness_date: YYYY-MM-DD
-- confidence: [high|medium|low]
+- observation: [What user expectation or market norm signal was observed]
 - decision_connection: [How the signal translates into this project]
+- evaluation_connection: [How the signal should be evaluated in design review]
 - local_implication: [What should change locally]
 
-### Layout / Composition Trends
+### product neighbor / comparable flow
 
 #### Entry 1
 
 - reference: [Source name or URL]
-- observation: [What layout or composition signal was observed]
-- freshness_date: YYYY-MM-DD
-- confidence: [high|medium|low]
+- observation: [What comparable product or flow signal was observed]
 - decision_connection: [How the signal translates into this project]
+- evaluation_connection: [How the signal should be evaluated in design review]
 - local_implication: [What should change locally]
 
-### Density / Hierarchy Trends
+### platform convention
 
 #### Entry 1
 
 - reference: [Source name or URL]
-- observation: [What density or hierarchy signal was observed]
-- freshness_date: YYYY-MM-DD
-- confidence: [high|medium|low]
+- observation: [What platform convention signal was observed]
 - decision_connection: [How the signal translates into this project]
+- evaluation_connection: [How the signal should be evaluated in design review]
 - local_implication: [What should change locally]
 
-### Interaction / Motion Trends
+### accessibility / compliance relevant signal
 
 #### Entry 1
 
 - reference: [Source name or URL]
-- observation: [What interaction or motion signal was observed]
-- freshness_date: YYYY-MM-DD
-- confidence: [high|medium|low]
+- observation: [What accessibility or compliance signal was observed]
 - decision_connection: [How the signal translates into this project]
+- evaluation_connection: [How the signal should be evaluated in design review]
 - local_implication: [What should change locally]
-
-### Component Styling Trends
-
-#### Entry 1
-
-- reference: [Source name or URL]
-- observation: [What component styling signal was observed]
-- freshness_date: YYYY-MM-DD
-- confidence: [high|medium|low]
-- decision_connection: [How the signal translates into this project]
-- local_implication: [What should change locally]
-
-### Stale / Overused AI Slop Patterns
-
-#### Entry 1
-
-- reference: [Source name or URL]
-- observation: [What stale pattern should be avoided]
-- freshness_date: YYYY-MM-DD
-- confidence: [high|medium|low]
-- decision_connection: [Why this stale pattern is relevant to avoid here]
-- local_implication: [What should be explicitly avoided locally]
 
 ## Competitive Reference Registry
 

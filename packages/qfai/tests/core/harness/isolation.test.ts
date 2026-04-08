@@ -6,10 +6,13 @@ describe("StandardPathIsolation", () => {
     it("harness module can be imported independently", async () => {
       const harnessModule = await import("../../../src/core/harness/index.js");
 
-      expect(harnessModule.HarnessLoop).toBeDefined();
-      expect(harnessModule.Planner).toBeDefined();
-      expect(harnessModule.Generator).toBeDefined();
-      expect(harnessModule.Evaluator).toBeDefined();
+      expect(harnessModule.runMeasurement).toBeDefined();
+      expect(harnessModule.computeWeightedTotal).toBeDefined();
+      expect(harnessModule.determineDecision).toBeDefined();
+      expect(harnessModule.validatePanelScore).toBeDefined();
+      expect(harnessModule.validateReviewer).toBeDefined();
+      expect(harnessModule.resolveCommitSha).toBeDefined();
+      expect(harnessModule.runFullHarness).toBeDefined();
     });
   });
 });

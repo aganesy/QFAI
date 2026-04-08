@@ -118,26 +118,14 @@ describe("validatePrototypingEvidence", () => {
           source: "explicit-request",
           rationale: "runtime proof requested",
         },
-        fullHarness: {
-          enabled: true,
-          available: true,
+        fullHarness: buildV2FullHarness({
           runId: "fh-1",
           iterationCount: 5,
           bestIteration: 5,
           terminationReason: "converged",
-          reviewerSignoff: {
-            status: "approved",
-            reviewer: "qa",
-            timestamp: "2026-04-04T00:00:00.000Z",
-          },
-          scoringTrace: [
-            { iteration: 1, weightedTotal: 0.5, decision: "refine" },
-            { iteration: 2, weightedTotal: 0.6, decision: "refine" },
-            { iteration: 3, weightedTotal: 0.7, decision: "refine" },
-            { iteration: 4, weightedTotal: 0.75, decision: "refine" },
-            { iteration: 5, weightedTotal: 0.85, decision: "accept" },
-          ],
-        },
+          scores: [0.5, 0.6, 0.7, 0.75, 0.85],
+          lastDecision: "accept",
+        }),
         runtimeGate: {
           ui: [{ route: "/orders", status: 200 }],
           api: [{ method: "GET", path: "/api/orders", status: 200 }],
@@ -164,7 +152,7 @@ describe("validatePrototypingEvidence", () => {
     });
   });
 
-  it("warns when full-harness has iterationCount=1 and converged (QFAI-PROT-290)", async () => {
+  it("errors when full-harness has iterationCount=1 and converged (QFAI-PROT-290)", async () => {
     await withTempRoot(async (root) => {
       await seedSpecs(root, ["0001"]);
       await seedEvidence(root, {
@@ -176,20 +164,14 @@ describe("validatePrototypingEvidence", () => {
           source: "explicit-request",
           rationale: "runtime proof requested",
         },
-        fullHarness: {
-          enabled: true,
-          available: true,
+        fullHarness: buildV2FullHarness({
           runId: "fh-290",
           iterationCount: 1,
           bestIteration: 1,
           terminationReason: "converged",
-          reviewerSignoff: {
-            status: "approved",
-            reviewer: "qa",
-            timestamp: "2026-01-01T00:00:00Z",
-          },
-          scoringTrace: [{ iteration: 1, weightedTotal: 0.85, decision: "accept" }],
-        },
+          scores: [0.85],
+          lastDecision: "accept",
+        }),
         runtimeGate: { ui: [{ route: "/", status: 200 }], api: [] },
         uiFidelity: {
           mode: "interactive",
@@ -209,13 +191,24 @@ describe("validatePrototypingEvidence", () => {
       await seedBrowserQaBundle(root);
       const issues = await validatePrototypingEvidence(root, defaultConfig);
       expect(issues.some((i) => i.code === "QFAI-PROT-290")).toBe(true);
-      expect(issues.find((i) => i.code === "QFAI-PROT-290")?.severity).toBe("warning");
+      expect(issues.find((i) => i.code === "QFAI-PROT-290")?.severity).toBe("error");
     });
   });
 
-  it("warns when scoringTrace count mismatches iterationCount (QFAI-PROT-291)", async () => {
+  it("errors when scoringTrace count mismatches iterationCount (QFAI-PROT-291)", async () => {
     await withTempRoot(async (root) => {
       await seedSpecs(root, ["0001"]);
+      // Build 3-iteration harness but only provide 2 scoringTrace/iterations entries
+      const fh = buildV2FullHarness({
+        runId: "fh-291",
+        iterationCount: 3,
+        bestIteration: 3,
+        terminationReason: "plateau",
+        scores: [0.5, 0.6],
+        lastDecision: "refine",
+      });
+      // Override iterationCount to be 3 while arrays only have 2 entries
+      fh.iterationCount = 3;
       await seedEvidence(root, {
         surface: "web",
         specs: [buildSpecRow("spec-0001", { ui: 1, api: 1, db: 1 })],
@@ -225,23 +218,7 @@ describe("validatePrototypingEvidence", () => {
           source: "explicit-request",
           rationale: "test",
         },
-        fullHarness: {
-          enabled: true,
-          available: true,
-          runId: "fh-291",
-          iterationCount: 3,
-          bestIteration: 3,
-          terminationReason: "plateau",
-          reviewerSignoff: {
-            status: "approved",
-            reviewer: "qa",
-            timestamp: "2026-01-01T00:00:00Z",
-          },
-          scoringTrace: [
-            { iteration: 1, weightedTotal: 0.5, decision: "refine" },
-            { iteration: 2, weightedTotal: 0.6, decision: "refine" },
-          ],
-        },
+        fullHarness: fh,
         runtimeGate: { ui: [{ route: "/", status: 200 }], api: [] },
         uiFidelity: {
           mode: "interactive",
@@ -276,24 +253,14 @@ describe("validatePrototypingEvidence", () => {
           source: "explicit-request",
           rationale: "test",
         },
-        fullHarness: {
-          enabled: true,
-          available: true,
+        fullHarness: buildV2FullHarness({
           runId: "fh-292",
           iterationCount: 3,
           bestIteration: 3,
           terminationReason: "max-iterations",
-          reviewerSignoff: {
-            status: "approved",
-            reviewer: "qa",
-            timestamp: "2026-01-01T00:00:00Z",
-          },
-          scoringTrace: [
-            { iteration: 1, weightedTotal: 0.5, decision: "refine" },
-            { iteration: 2, weightedTotal: 0.6, decision: "refine" },
-            { iteration: 3, weightedTotal: 0.65, decision: "refine" },
-          ],
-        },
+          scores: [0.5, 0.6, 0.65],
+          lastDecision: "refine",
+        }),
         runtimeGate: { ui: [{ route: "/", status: 200 }], api: [] },
         uiFidelity: {
           mode: "interactive",
@@ -319,11 +286,6 @@ describe("validatePrototypingEvidence", () => {
   it("warns when iterationCount exceeds maxIterations (QFAI-PROT-293)", async () => {
     await withTempRoot(async (root) => {
       await seedSpecs(root, ["0001"]);
-      const scoringTrace = Array.from({ length: 20 }, (_, i) => ({
-        iteration: i + 1,
-        weightedTotal: 0.4 + i * 0.02,
-        decision: "refine",
-      }));
       await seedEvidence(root, {
         surface: "web",
         specs: [buildSpecRow("spec-0001", { ui: 1, api: 1, db: 1 })],
@@ -333,20 +295,14 @@ describe("validatePrototypingEvidence", () => {
           source: "explicit-request",
           rationale: "test",
         },
-        fullHarness: {
-          enabled: true,
-          available: true,
+        fullHarness: buildV2FullHarness({
           runId: "fh-293",
           iterationCount: 20,
           bestIteration: 20,
           terminationReason: "manual-stop",
-          reviewerSignoff: {
-            status: "approved",
-            reviewer: "qa",
-            timestamp: "2026-01-01T00:00:00Z",
-          },
-          scoringTrace,
-        },
+          scores: Array.from({ length: 20 }, (_, i) => 0.4 + i * 0.02),
+          lastDecision: "refine",
+        }),
         runtimeGate: { ui: [{ route: "/", status: 200 }], api: [] },
         uiFidelity: {
           mode: "interactive",
@@ -381,24 +337,14 @@ describe("validatePrototypingEvidence", () => {
           source: "explicit-request",
           rationale: "test",
         },
-        fullHarness: {
-          enabled: true,
-          available: true,
+        fullHarness: buildV2FullHarness({
           runId: "fh-294",
           iterationCount: 3,
           bestIteration: 1,
           terminationReason: "plateau",
-          reviewerSignoff: {
-            status: "approved",
-            reviewer: "qa",
-            timestamp: "2026-01-01T00:00:00Z",
-          },
-          scoringTrace: [
-            { iteration: 1, weightedTotal: 0.6, decision: "refine" },
-            { iteration: 2, weightedTotal: 0.6, decision: "refine" },
-            { iteration: 3, weightedTotal: 0.59, decision: "refine" },
-          ],
-        },
+          scores: [0.6, 0.6, 0.59],
+          lastDecision: "refine",
+        }),
         runtimeGate: { ui: [{ route: "/", status: 200 }], api: [] },
         uiFidelity: {
           mode: "interactive",
@@ -853,5 +799,69 @@ function buildSpecRow(
       apiEndpoints: [],
       dbObjects: [],
     },
+  };
+}
+
+/** Build a schema v2 compliant fullHarness block for tests. */
+function buildV2FullHarness(opts: {
+  runId: string;
+  iterationCount: number;
+  bestIteration: number;
+  terminationReason: string;
+  scores: number[];
+  lastDecision: string;
+}): Record<string, unknown> {
+  const iterations = opts.scores.map((score, i) => ({
+    iteration: i + 1,
+    commitSha: `abc${String(i + 1).padStart(4, "0")}`,
+    reviewerId: "qa-reviewer",
+    timestamp: `2026-04-0${i + 1}T00:00:00Z`,
+    changeSummary: [`Iteration ${i + 1} changes`],
+    limitations: ["Known limitation"],
+    l1: { panel: "L1", total: score },
+    l2: { panel: "L2", total: score },
+    weightedTotal: score,
+    deltaFromPrevious: i === 0 ? null : +(score - opts.scores[i - 1]).toFixed(4),
+    decision: i === opts.scores.length - 1 ? opts.lastDecision : "refine",
+  }));
+  const scoringTrace = opts.scores.map((score, i) => ({
+    iteration: i + 1,
+    l1Total: score,
+    l2Total: score,
+    weightedTotal: score,
+    deltaFromPrevious: i === 0 ? null : +(score - opts.scores[i - 1]).toFixed(4),
+    decision: i === opts.scores.length - 1 ? opts.lastDecision : "refine",
+    commitSha: `abc${String(i + 1).padStart(4, "0")}`,
+  }));
+  return {
+    enabled: true,
+    runId: opts.runId,
+    calibrationRef: {
+      configPath: "qfai.config.yaml",
+      packPath: ".qfai/discussion/discussion-20260404000000000",
+      packVersion: "1.0.0",
+    },
+    iterationCount: opts.scores.length,
+    bestIteration: opts.bestIteration,
+    status: "completed",
+    terminationReason: opts.terminationReason,
+    reviewerSignoff: {
+      reviewerId: "qa-reviewer",
+      status: "approved",
+      timestamp: "2026-04-04T00:00:00Z",
+      source: "cli",
+    },
+    reviewerLogs: [
+      {
+        iteration: opts.scores.length,
+        reviewerId: "qa-reviewer",
+        verdict: "approve",
+        summary: "All checks passed and quality meets threshold",
+        evidenceRefs: ["evidence/prototyping.json"],
+      },
+    ],
+    iterations,
+    scoringTrace,
+    limitations: ["Known limitation"],
   };
 }

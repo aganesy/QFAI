@@ -1,108 +1,104 @@
 /**
- * Full-harness mode types.
+ * Full-harness mode types — v1.7.15 measurement-driven model.
  *
- * Defines the planner/generator/evaluator loop interfaces
- * and evidence structures for /qfai-prototyping full-harness mode.
+ * Each iteration is a real observation of code state.
+ * No planner/generator/evaluator loop.
  */
 
-import type { CritiqueResult } from "../critique/types.js";
-import type { Decision, ThresholdConfig } from "../calibration/types.js";
+import type { Decision } from "../calibration/types.js";
 
-export type HarnessConfig = {
-  maxIterations: number;
-  thresholds: ThresholdConfig;
-  dimensionWeights?: Record<string, number> | undefined;
-  dimensionFloors?: Record<string, number> | undefined;
-  plateauDelta?: number | undefined;
-  plateauLookback?: number | undefined;
-};
-
-export const MIN_ITERATIONS = 5;
-export const MAX_ITERATIONS = 15;
-export const DEFAULT_MAX_ITERATIONS = 15;
-
-export type PlannerStrategy = {
-  approach: string;
-  constraints: string[];
-  budgetGuidance: string;
-};
-
-export type GeneratorOutput = {
-  content: string;
-  metadata?: Record<string, unknown> | undefined;
-};
-
-export type EvaluatorInput = {
-  output: GeneratorOutput;
-  strategy: PlannerStrategy;
-  iteration: number;
-  critique?: CritiqueResult | undefined;
-};
-
-export type DimensionScore = {
-  dimension: string;
-  score: number;
-  weight: number;
-  floor?: number | undefined;
-};
-
-export type EvaluatorResult = {
-  decision: Decision;
-  weightedTotal: number;
-  dimensionScores: DimensionScore[];
-  feedback?: string | undefined;
-  pivotContext?: string | undefined;
-};
-
-export type IterationRecord = {
-  iteration: number;
-  plannerStrategy?: PlannerStrategy | undefined;
-  generatorOutput: GeneratorOutput;
-  evaluatorResult: EvaluatorResult;
-  critiqueResult?: CritiqueResult | undefined;
-};
-
-export type LoopStatus = "converged" | "max-iterations" | "plateau";
-
-export type LoopResult = {
-  status: LoopStatus;
-  finalOutput: GeneratorOutput;
-  finalScore: number;
-  terminationReason: LoopStatus;
-  iterationCount: number;
-  iterations: IterationRecord[];
-  bestIteration: number;
-};
-
-export type HarnessEvidence = {
-  runId: string;
-  timestamp: string;
-  status: LoopStatus;
-  iterationCount: number;
-  finalScore: number;
-  terminationReason: LoopStatus;
-  iterations: IterationRecord[];
-  bestIteration: number;
-};
-
-export type ReviewSummary = {
-  finalScore: number;
-  recommendation: string;
-  iterationSummary: Array<{
-    iteration: number;
+export type FullHarnessPanelScore = {
+  panel: "L1" | "L2";
+  total: number;
+  axes: Array<{
+    axisId: string;
     score: number;
-    decision: Decision;
+    rationale: string;
+    evidenceRefs: string[];
   }>;
 };
 
-export type SpecInputs = {
-  specId: string;
-  requirements: string[];
-  constraints?: string[] | undefined;
-  calibrationPackPath?: string | undefined;
+export type FullHarnessIteration = {
+  iteration: number;
+  commitSha: string;
+  reviewerId: string;
+  timestamp: string;
+  changeSummary: string[];
+  limitations: string[];
+  evidenceRefs: {
+    render: string[];
+    browserQa: string[];
+    runtimeGate: string[];
+    uiFidelity: string[];
+    specCoverage: string[];
+  };
+  l1: FullHarnessPanelScore;
+  l2: FullHarnessPanelScore;
+  weightedTotal: number;
+  deltaFromPrevious: number | null;
+  decision: Decision;
 };
 
-export type ValidationError = {
-  field: string;
-  message: string;
+export type TerminationReason = "converged" | "max-iterations" | "plateau" | "manual-stop";
+
+export type FullHarnessHistory = {
+  runId: string;
+  iterations: FullHarnessIteration[];
+  bestIteration: number;
+  terminationReason?: TerminationReason;
+  scoringTrace: Array<{
+    iteration: number;
+    l1Total: number;
+    l2Total: number;
+    weightedTotal: number;
+    deltaFromPrevious: number | null;
+    decision: Decision;
+    commitSha: string;
+  }>;
 };
+
+export type MeasurementInput = {
+  root: string;
+  reviewer: string;
+  changeSummary: string[];
+  limitations: string[];
+  calibration: {
+    packPath: string;
+    thresholds: { accept: number; refine: number };
+    maxIterations: number;
+    plateauDelta: number;
+    plateauLookback: number;
+  };
+  renderRefs?: string[];
+  browserQaRefs?: string[];
+  runtimeGateRefs?: string[];
+  uiFidelityRefs?: string[];
+  specCoverageRefs?: string[];
+  l1: FullHarnessPanelScore;
+  l2: FullHarnessPanelScore;
+};
+
+export type MeasurementResult = {
+  iteration: FullHarnessIteration;
+  history: FullHarnessHistory;
+  terminationReason: TerminationReason | undefined;
+  isTerminal: boolean;
+};
+
+export type FullHarnessCalibrationRef = {
+  configPath: string;
+  packPath: string;
+  packVersion: string;
+};
+
+export const REVIEWER_PLACEHOLDERS = [
+  "qfai",
+  "default",
+  "system",
+  "auto",
+  "placeholder",
+  "tbd",
+  "n/a",
+  "none",
+  "",
+];

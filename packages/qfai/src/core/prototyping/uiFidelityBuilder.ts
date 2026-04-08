@@ -104,17 +104,12 @@ export async function buildUiFidelity(input: {
         uiContractId: contract.contractId,
         expected: contract.expected,
         ...(htmlLabels.length > 0 ? { found: { labels: htmlLabels } } : {}),
-        // Foundation fallback: when no browser QA or render capture data is
-        // available, observed metrics are seeded from contract expected values.
-        // Real measurements take precedence via Math.max / conditional logic.
+        // v1.7.15: observed reflects real measurement only.
+        // htmlLabels = elements found in rendered HTML; browserFindingsCount = actions
+        // detected by browser QA. No synthetic fallback from expected values.
         observed: {
-          elementsPlaced: Math.max(contract.expected.elements, htmlLabels.length),
-          actionsWired:
-            contract.expected.actions > 0
-              ? contract.expected.actions
-              : browserFindingsCount > 0
-                ? 1
-                : 0,
+          elementsPlaced: htmlLabels.length,
+          actionsWired: browserFindingsCount > 0 ? browserFindingsCount : 0,
         },
         mockPaths: [
           {

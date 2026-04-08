@@ -47,15 +47,14 @@ describe("uiux sidecar templates", { timeout: 15000 }, () => {
     return readFile(path.join(templateDir, filename), "utf-8");
   }
 
-  // TDD-0001: TC-0002-0001 — 13 sidecar files present
-  it("has exactly 13 sidecar files", async () => {
+  // TDD-0001: TC-0002-0001 — 12 sidecar files present
+  it("has exactly 12 sidecar files", async () => {
     const files = await fg(["*.md"], { cwd: uiuxDir, absolute: false });
     expect(files.sort()).toEqual([
       "00_index.md",
       "10_implementation_strategy.md",
       "11_design_taste_interview.md",
       "20_design_eval_invariant.md",
-      "20_trend_scan.md",
       "21_design_eval_trend_derived.md",
       "22_design_eval_product_specific.md",
       "23_design_eval_aggregate.md",
@@ -321,7 +320,7 @@ describe("uiux sidecar templates", { timeout: 15000 }, () => {
       cwd: initAssetsDir,
       absolute: false,
     });
-    expect(uiuxFiles.length).toBe(13);
+    expect(uiuxFiles.length).toBe(12);
   });
 
   // TDD-0022: TC-0002-0019 — verify-pack: existing asset tests pass

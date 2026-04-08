@@ -37,7 +37,7 @@ discussion/
 - `01_Context.md` – Background, purpose, stakeholders, assumptions, and issues.
 - `02_Inception-Deck.md` – Inception Deck (10 questions) for ambiguity removal and alignment.
 - `03_Story-Workshop.md` – Story workshop with user stories, user flows, and Mermaid diagrams.
-- `04_Sources.md` – Input sources (primary info, evidence, links) with `SRC-XXXX` IDs.
+- `04_Sources.md` – Source registry, trend scan, competitive reference registry, and traceability. This is the canonical location for trend translation, competitive analysis, and source-to-requirement traceability (`SRC-XXXX` IDs).
 - `05_Scope.md` – Scope, out-of-scope, constraints, and success criteria.
 - `06_REQ.md` – Functional requirements list (`REQ-0001` format).
 - `07_NFR.md` – Non-functional requirements list (`NFR-0001` format).

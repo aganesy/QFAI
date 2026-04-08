@@ -14,7 +14,7 @@ import type {
 import type { BrowserQaInput } from "../browserQa/types.js";
 import { findLatestDiscussionPackDir } from "../discussionPack.js";
 import { runFullHarness } from "../harness/runtime.js";
-import type { CritiqueAdapter } from "../critique/adapter.js";
+
 import { resolveLatestRecommendationArtifact } from "./recommendationArtifact.js";
 import { derivePrototypingObligations, resolvePrototypingMode } from "./mode.js";
 import type { PrototypingMode, PrototypingSurface } from "./types.js";
@@ -35,10 +35,11 @@ export type PrototypingExecutionRequest = {
   providerRegistry?: ProviderRegistry;
   renderAdapter?: RenderCaptureAdapter;
   browserQaProviderId?: string;
-  critiqueAdapter?: CritiqueAdapter;
   renderProviderId?: string;
   targetUrl?: string;
   reviewer?: string;
+  changeSummary?: string[];
+  limitations?: string[];
 };
 
 export type PrototypingExecutionResult = {
@@ -117,8 +118,6 @@ export async function runPrototypingExecution(
     ...(targetUrl !== undefined ? { targetUrl } : {}),
   });
 
-  const resolvedReviewer = request.reviewer ?? config.prototyping?.execution?.reviewer ?? undefined;
-
   const renderTargets: RenderCaptureTarget[] = obligations.requireRenderBundle
     ? [{ targetId: "primary", route: "/primary", viewport: "desktop", width: 1440, height: 900 }]
     : [];
@@ -174,10 +173,37 @@ export async function runPrototypingExecution(
     summary.missingRequiredEvidence = uiFidelity.missingRequiredEvidence;
   }
   if (modeSummary.effective === "full-harness") {
+    // Reviewer is mandatory for full-harness
+    if (!request.reviewer) {
+      throw new Error(
+        "Full-harness mode requires --reviewer <id>. " +
+          "Provide a real reviewer identifier via the CLI flag.",
+      );
+    }
+    const calibration = config.prototyping?.calibration ?? {
+      packPath: ".qfai/evidence/calibration.yaml",
+      thresholds: { accept: 0.8, refine: 0.5 },
+      maxIterations: 15,
+      plateauDelta: 0.02,
+      plateauLookback: 3,
+    };
+
     const fullHarness = await runFullHarness({
-      inputs: {
-        specId: "prototyping-run",
-        requirements: ["Generated from qfai prototyping run"],
+      root: request.root,
+      reviewer: request.reviewer,
+      changeSummary: request.changeSummary ?? ["Initial measurement"],
+      limitations: request.limitations ?? [],
+      calibration: {
+        packPath: calibration.packPath ?? ".qfai/evidence/calibration.yaml",
+        packVersion: "1.0.0",
+        configPath: "qfai.config.yaml",
+        thresholds: {
+          accept: calibration.thresholds?.accept ?? 0.8,
+          refine: calibration.thresholds?.refine ?? 0.5,
+        },
+        maxIterations: calibration.maxIterations ?? 15,
+        plateauDelta: calibration.plateauDelta ?? 0.02,
+        plateauLookback: calibration.plateauLookback ?? 3,
       },
       adapters: {
         surface,
@@ -191,25 +217,42 @@ export async function runPrototypingExecution(
         },
         observability: createObservabilityAdapter(request.root),
       },
-      ...(request.critiqueAdapter ? { critiqueAdapter: request.critiqueAdapter } : {}),
+      l1: { panel: "L1", total: 0, axes: [] },
+      l2: { panel: "L2", total: 0, axes: [] },
     });
+
+    const isCompleted = fullHarness.isTerminal;
     summary.fullHarness = {
       enabled: true,
-      available: true,
-      runId: fullHarness.evidence.runId,
-      iterationCount: fullHarness.loopResult.iterationCount,
-      bestIteration: fullHarness.loopResult.bestIteration,
-      terminationReason: fullHarness.loopResult.terminationReason,
+      runId: fullHarness.history.runId,
+      calibrationRef: fullHarness.calibrationRef,
+      iterationCount: fullHarness.history.iterations.length,
+      bestIteration: fullHarness.history.bestIteration,
+      status: isCompleted ? "completed" : "in-progress",
+      ...(fullHarness.terminationReason
+        ? { terminationReason: fullHarness.terminationReason }
+        : {}),
       reviewerSignoff: {
-        status: resolvedReviewer ? "approved" : "pending",
-        reviewer: resolvedReviewer ?? "qfai",
+        reviewerId: request.reviewer,
+        status: isCompleted ? "approved" : "rejected",
         timestamp: generatedAt,
+        source: "cli",
       },
-      scoringTrace: fullHarness.reviewSummary.iterationSummary.map((entry) => ({
-        iteration: entry.iteration,
-        weightedTotal: entry.score,
-        decision: entry.decision,
-      })),
+      reviewerLogs: [
+        {
+          iteration: fullHarness.iteration.iteration,
+          reviewerId: request.reviewer,
+          verdict: fullHarness.iteration.decision === "accept" ? "approve" : "revise",
+          summary: `Iteration ${fullHarness.iteration.iteration} measurement recorded`,
+          evidenceRefs: [
+            ...fullHarness.iteration.evidenceRefs.render,
+            ...fullHarness.iteration.evidenceRefs.browserQa,
+          ],
+        },
+      ],
+      iterations: fullHarness.history.iterations,
+      scoringTrace: fullHarness.history.scoringTrace,
+      limitations: fullHarness.iteration.limitations,
     };
     const evidencePaths = await writeEvidenceBundles({
       root: request.root,
@@ -285,7 +328,7 @@ async function buildPrototypingSummaryBundle(input: {
     },
     meta: {
       generatedAt: input.generatedAt,
-      toolVersion: "1.7.14",
+      toolVersion: "1.7.15",
       commands: [`qfai prototyping run --mode ${input.mode.effective}`],
       generatedBy: "qfai prototyping run",
       providerIds: input.providerIds,

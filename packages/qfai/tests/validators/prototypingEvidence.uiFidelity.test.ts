@@ -102,17 +102,58 @@ describe("uiFidelity validator", () => {
       uiFidelity: { mode: "skeleton", screens: [] },
       fullHarness: {
         enabled: true,
-        available: true,
         runId: "run-001",
+        calibrationRef: {
+          configPath: "qfai.config.yaml",
+          packPath: ".qfai/discussion/discussion-20260404000000000",
+          packVersion: "1.0.0",
+        },
         iterationCount: 1,
         bestIteration: 1,
+        status: "completed",
         terminationReason: "converged",
         reviewerSignoff: {
+          reviewerId: "qa-reviewer",
           status: "approved",
-          reviewer: "test",
           timestamp: new Date().toISOString(),
+          source: "cli",
         },
-        scoringTrace: [{ iteration: 1, weightedTotal: 0.9, decision: "accept" }],
+        reviewerLogs: [
+          {
+            iteration: 1,
+            reviewerId: "qa-reviewer",
+            verdict: "approve",
+            summary: "All checks passed and quality meets threshold",
+            evidenceRefs: ["evidence/prototyping.json"],
+          },
+        ],
+        iterations: [
+          {
+            iteration: 1,
+            commitSha: "abc0001",
+            reviewerId: "qa-reviewer",
+            timestamp: new Date().toISOString(),
+            changeSummary: ["Initial implementation"],
+            limitations: ["Known limitation"],
+            l1: { panel: "L1", total: 0.9 },
+            l2: { panel: "L2", total: 0.9 },
+            weightedTotal: 0.9,
+            deltaFromPrevious: null,
+            decision: "accept",
+          },
+        ],
+        scoringTrace: [
+          {
+            iteration: 1,
+            l1Total: 0.9,
+            l2Total: 0.9,
+            weightedTotal: 0.9,
+            deltaFromPrevious: null,
+            decision: "accept",
+            commitSha: "abc0001",
+          },
+        ],
+        limitations: ["Known limitation"],
       },
     });
     const issues = await runValidation(root, evidence);

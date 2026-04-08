@@ -2,8 +2,10 @@
 
 ## Purpose
 
-Define UI surface contracts as SSOT for prototyping and E2E selection.
+Define UI surface contracts for prototyping and E2E selection.
 The contract must describe both screen structure and minimum mockable behavior.
+
+> **Note:** UI contracts are **supporting input** that supplements the discussion sidecar artifacts (`discussion-*/uiux/*`), which remain the primary truth for UI/UX definitions. Screen contract YAML files are read **only when present**; after `qfai init`, this directory may contain only this README — that is the normal initial state.
 
 ## File rules
 
@@ -33,11 +35,11 @@ The contract must describe both screen structure and minimum mockable behavior.
 
 ### `data-qfai` marker convention
 
-- Recommended marker value: `CONTRACT_ID:ELEMENT_ID` (example: `data-qfai="CON-UI-0001:search_input"`).
+- Canonical marker value: `CONTRACT_ID:ELEMENT_ID` (example: `data-qfai="CON-UI-0001:search_input"`).
 - Use `elements[].id` (stable ID) for the marker suffix, not `elements[].label`.
 - Even when label text is not visible in the UI, markers ensure fidelity coverage.
 - autogen generates expected markers from `elements[].id` automatically.
-- Legacy format (`CONTRACT_ID:ELEMENT_LABEL`) is accepted for backward compatibility but new implementations should use the id-based format.
+- The id-based format (`CONTRACT_ID:ELEMENT_ID`) is the only canonical marker format.
 
 ## Mockable prototype minimum (L2)
 
@@ -130,7 +132,7 @@ screens:
 
 ### Q1. "The page is just a static string." Which rule fails?
 
-- Typical fail: `QFAI-PROT-232` (`prototypingEvidence.uiFidelityContractCoverage`).
+- Typical fail: `QFAI-PROT-238` (`prototypingEvidence.uiFidelityContractCoverage`).
 - Reason: Contract expects `elements/actions`, but runtime evidence does not satisfy expected placement/wiring.
 - Fix:
   - Add concrete UI elements for contract labels, or
@@ -142,7 +144,7 @@ screens:
   1. Contract label (`contracts/ui/*.yaml`)
   2. UI rendered text (or marker mapping)
   3. Prototyping evidence (`.qfai/evidence/prototyping.json`)
-- If only one side is updated, `QFAI-PROT-232` can remain unresolved in review.
+- If only one side is updated, `QFAI-PROT-238` can remain unresolved in review.
 
 ### Q3. "Can I treat this as a static screen?"
 

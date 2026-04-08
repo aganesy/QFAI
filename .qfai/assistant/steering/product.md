@@ -37,8 +37,9 @@
 
 ## Release posture
 
-- Compatibility policy: semver. Maintain backward compatibility of the CLI command system.
-- Breaking change policy: Breaking changes deferred until v2.0. Migration guide (docs/migrations/) required.
+- Compatibility policy: current canonical contract only.
+- Breaking changes are allowed when required to restore canonical consistency.
+- CLI/skill/docs/validator must match current package semantics.
 - Evidence: CHANGELOG.md, 09_Constraints.md (DL-02)
 
 ## Milestones
@@ -64,11 +65,10 @@
 | v1.7.7 (完了)     | Remediation & Prototyping Readiness — static-first prototyping default + full-harness mode exposure + 3-layer eval reconciliation + strategy/contract upgrade + UI-bearing detection fix + render evidence wiring + browser QA findings + doc normalization + migration support                                                                                                |
 | v1.7.8 (完了)     | Canonical Convergence — design taste interview + trend research + 3-layer evaluation convergence + scoring-ready schema + strategy/screen contract upgrade + UI-bearing detection unification + static-first prototyping rewrite + full-harness mode convergence + render evidence wiring + browser QA MVP + reviewer extension + migration normalization + docs normalization |
 | v1.7.9 (完了)     | Convergence Correction Release — canonical validator registration, discussion completion convergence, honest render evidence/browser QA wiring, reviewer routing alignment, docs maturity normalization                                                                                                                                                                        |
-| v1.7.13 (進行中)  | Canonical Sidecar Convergence — selected direction to 31_selected_anchor_screen.md, 30_option_comparison.md/40_screen_contracts.md/50_review_input_bundle.md canonical rename, sidecar-first read order, DDS/anchor vocabulary removal, validator semantics rewrite, template-validator self-consistency                                                                       |
+| v1.7.13 (完了)    | Canonical Sidecar Convergence — selected anchor SSOT moved to 31_selected_anchor_screen.md, option comparison remains in 30_option_comparison.md, sidecar-first read order, DDS/anchor vocabulary removal, validator semantics rewrite, template-validator self-consistency                                                                                                    |
+| v1.7.14 (進行中)  | Canonical Convergence Finalization — strict classification enforcement, namespaced-only prototyping.yaml, current-only shipped SSOT, regression net hardening                                                                                                                                                                                                                  |
 
 ## Open questions
 
 - Blocking: none
-- Non-blocking:
-  - OQ-0003: validate.json external API stability (deferred to v2.0)
-  - OQ-0004: Legacy spec-pack deprecation schedule (deferred to v2.0)
+- Non-blocking: none

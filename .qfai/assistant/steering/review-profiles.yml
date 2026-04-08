@@ -16,6 +16,9 @@ profiles:
   runtime-heavy:
     always_required: [completion-reviewer, qa-gatekeeper]
     conditional_required: [implementation-reviewer]
+  full-harness:
+    always_required: [completion-reviewer, product-surface-reviewer, qa-gatekeeper]
+    conditional_required: []
 
 optional_modes:
   devils-advocate:

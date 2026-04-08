@@ -8,7 +8,7 @@
 - capability-specific details: `.qfai/specs/spec-XXXX/**`
 
 The slice policy SSOT lives in `_policies/11_Slice-Policy.md`.
-The current approved model is based on structural/cli/skill/agent categories; `/qfai-sdd` must refresh that policy file before making create/update/delete slice decisions.
+The current approved model is **1 CAP = 1 spec directory**, but `/qfai-sdd` must refresh that policy file before making create/update/delete slice decisions.
 
 ## Required layout
 
@@ -67,6 +67,19 @@ Each `spec-XXXX/` must satisfy:
 - `EX -> TC`
 
 `_policies/` files must not contain lower-layer IDs (`US/AC/BR/EX/TC`) or `spec-XXXX` references.
+
+## TDD Execution Ledger (`tdd/test-list.md`)
+
+Each `spec-XXXX/tdd/test-list.md` is the execution ledger for the TDD micro-cycle.
+
+- **8 required columns**: TDD-ID, TC-Refs, Layer, Test file, Selector, Status, DR-ID, Evidence
+- **Coverage** is measured as unit/component TC references from `06_Test-Cases.md` appearing in TC-Refs
+- **Level column fallback**: when `06_Test-Cases.md` has no `Level` column, all TCs are treated as coverage targets (equivalent to all being unit/component)
+- **Status=exception** rows must have a non-empty DR-ID (Decision Record reference)
+- **Status in {green, refactor, done}** rows must have an existing Test file (resolved relative to project root)
+- **TDD-ID** must match `TDD-NNNN` format and be unique within the spec (case-insensitive)
+- Specs without `tdd/test-list.md` receive a `TDDLIST_MISSING` warning (not error)
+- Old 6-column format (missing DR-ID/Evidence) triggers `TDDLIST_REQUIRED_COLUMN_MISSING` error
 
 ## Notes
 

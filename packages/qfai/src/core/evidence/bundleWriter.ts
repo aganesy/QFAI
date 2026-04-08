@@ -9,6 +9,11 @@ import type { PrototypingMode, PrototypingSurface } from "../prototyping/types.j
 import type { FakeUiDetectionResult } from "../harness/fakeUiDetection.js";
 import type { FullHarnessHandoff } from "../harness/handoff.js";
 import type { FullHarnessExitReason } from "../harness/exitReason.js";
+import type {
+  FullHarnessIteration,
+  FullHarnessCalibrationRef,
+  TerminationReason,
+} from "../harness/types.js";
 
 export type PrototypingSummaryBundle = {
   surface: PrototypingSurface;
@@ -48,17 +53,36 @@ export type PrototypingSummaryBundle = {
   };
   fullHarness?: {
     enabled: true;
-    available: boolean;
     runId: string;
+    calibrationRef: FullHarnessCalibrationRef;
     iterationCount: number;
     bestIteration: number;
-    terminationReason: string;
+    status: "in-progress" | "completed";
+    terminationReason?: TerminationReason;
     reviewerSignoff: {
-      status: string;
-      reviewer: string;
+      reviewerId: string;
+      status: "approved" | "rejected";
       timestamp: string;
+      source: "cli";
     };
-    scoringTrace: Array<{ iteration: number; weightedTotal: number; decision: string }>;
+    reviewerLogs: Array<{
+      iteration: number;
+      reviewerId: string;
+      verdict: "approve" | "revise" | "reject";
+      summary: string;
+      evidenceRefs: string[];
+    }>;
+    iterations: FullHarnessIteration[];
+    scoringTrace: Array<{
+      iteration: number;
+      l1Total: number;
+      l2Total: number;
+      weightedTotal: number;
+      deltaFromPrevious: number | null;
+      decision: "accept" | "refine" | "pivot";
+      commitSha: string;
+    }>;
+    limitations: string[];
   };
 };
 

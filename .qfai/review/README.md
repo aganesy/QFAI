@@ -19,7 +19,7 @@ Routing SSOT:
 
 ```text
 .qfai/review/
-├── .gitignore
+├── README.md
 └── review-YYYYMMDDhhmmssSSS/
     ├── review_request.md
     ├── R01_<reviewer>.md

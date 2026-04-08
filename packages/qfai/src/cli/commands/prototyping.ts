@@ -8,6 +8,8 @@ export async function runPrototypingCommand(options: {
   browserProvider?: string;
   renderProvider?: string;
   reviewer?: string;
+  changeSummary?: string[];
+  limitations?: string[];
 }): Promise<void> {
   const result = await runPrototypingExecution({
     root: options.root,
@@ -16,6 +18,8 @@ export async function runPrototypingCommand(options: {
     ...(options.browserProvider ? { browserQaProviderId: options.browserProvider } : {}),
     ...(options.renderProvider ? { renderProviderId: options.renderProvider } : {}),
     ...(options.reviewer ? { reviewer: options.reviewer } : {}),
+    ...(options.changeSummary ? { changeSummary: options.changeSummary } : {}),
+    ...(options.limitations ? { limitations: options.limitations } : {}),
   });
 
   info(`mode: ${result.mode}`);

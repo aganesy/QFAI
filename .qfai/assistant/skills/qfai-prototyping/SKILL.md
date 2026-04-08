@@ -113,9 +113,12 @@ Canonical prototyping surfaces are: `web`, `mobile`, `desktop`, `cli`, `mixed`.
 - `web`, `mobile`, `desktop`, `mixed` surfaces require runtime gate, render bundle, browser QA bundle, and `fullHarness`.
 - `cli` surface requires `fullHarness` but not `uiFidelity`, render evidence, or browser QA.
 - `ui_bearing: false` specs are not prototyping execution targets.
-- Full-harness is an **iterative design-improvement loop**, not a single evidence-generation pass. See `## Full-Harness Iteration Protocol` below.
+- Full-harness is a **measurement-driven iterative workflow**: each `qfai prototyping run --mode full-harness` invocation records exactly one iteration of real code observation. Multiple iterations are formed by running the command multiple times with real code changes in between.
 - The discussion 3-layer evaluation score measures **design direction quality** and MUST NOT be copied into `fullHarness.scoringTrace`.
   Prototyping scores measure **implementation fidelity** against the selected anchor.
+- `--reviewer <id>` is mandatory for full-harness. Placeholder values are rejected.
+- `--change-summary` and `--limitation` capture per-iteration context.
+- Calibration parameters from `qfai.config.yaml > prototyping.calibration` are the sole runtime parameter source.
 
 ## Obligation Matrix
 
@@ -193,18 +196,22 @@ Interpretation:
 When `mode.effective = full-harness`, record:
 
 - `fullHarness.enabled = true`
-- `fullHarness.available`
 - `fullHarness.runId`
-- `fullHarness.iterationCount >= 1` (validator warns if `== 1` with `terminationReason: converged` — see QFAI-PROT-290)
-- `fullHarness.scoringTrace` entries MUST equal `iterationCount` (validator warns on mismatch — see QFAI-PROT-291)
-- `fullHarness.scoringTrace` SHOULD show measurable progression (non-monotonic traces are flagged as info — see QFAI-PROT-294)
+- `fullHarness.calibrationRef` (configPath, packPath, packVersion)
+- `fullHarness.iterationCount >= 1` (validator errors if `== 1` with `terminationReason: converged` — convergence requires 2+ iterations)
+- `fullHarness.status` (`in-progress` or `completed`)
+- `fullHarness.terminationReason` (required when `status = completed`)
+- `fullHarness.reviewerSignoff` (reviewerId, status, timestamp, source)
+- `fullHarness.reviewerLogs` (per-iteration reviewer verdicts)
+- `fullHarness.iterations` (full iteration records with commitSha, L1/L2 panel scores, limitations)
+- `fullHarness.scoringTrace` entries MUST equal `iterationCount` (validator errors on mismatch)
+- `fullHarness.scoringTrace` SHOULD show measurable progression (non-monotonic traces are flagged as info)
+- `fullHarness.limitations` (unresolved limitations)
 - `fullHarness.bestIteration >= 1`
-- `fullHarness.terminationReason`
-- `fullHarness.reviewerSignoff`
-- `fullHarness.scoringTrace`
 - `fullHarness.exit`
 - `fullHarness.handoff`
 - `fullHarness.fakeUiDetection`
+- `weightedTotal = min(L1.total, L2.total)` — validator enforces this invariant
 
 ## Canonical Bundles
 
@@ -222,16 +229,22 @@ Browser QA bundle uses `completed | skipped | failed`.
 
 ## Full-Harness Iteration Protocol
 
-Full-harness mode executes a **multi-iteration improvement loop**. A single-pass evidence dump is not full-harness.
+Full-harness mode is a **measurement-driven iterative workflow**. Each CLI invocation measures the current code state; it does NOT modify code.
 
 ### Iteration Cycle Definition
 
-Each iteration consists of exactly 4 steps:
+Each iteration consists of exactly 1 measurement:
 
-1. **Evaluate**: Score the current implementation against the evaluation axes defined in `uiux/20-23` (3-layer evaluation family). Use the calibration baselines from `qfai.config.yaml > prototyping.calibration`.
-2. **Identify**: List concrete deficiencies with L1/L2 classification. Each finding MUST reference a specific evaluation axis and criterion.
-3. **Fix**: Apply targeted improvements to the identified deficiencies. Record what was changed and why.
-4. **Re-evaluate**: Re-score using the same evaluation axes. Record the delta per axis.
+1. **Measure**: `qfai prototyping run --mode full-harness --reviewer <id> --change-summary "what changed"` observes the current code state, captures render/browserQA/runtimeGate/uiFidelity/specCoverage evidence, and computes L1/L2 panel scores.
+
+Multiple iterations are formed by **real code changes between runs**:
+
+- Run 1: measure initial state
+- Developer/AI fixes code based on findings
+- Run 2: measure improved state (delta computed automatically)
+- Repeat until converged, plateau, or max-iterations
+
+The runtime does NOT contain a self-modifying loop. It does NOT generate code, plan improvements, or fabricate iteration results.
 
 ### Calibration Configuration Reference
 
@@ -249,20 +262,20 @@ prototyping:
     plateauLookback: 3 # N for plateau detection window
 ```
 
-Runtime constants (harness types): `MIN_ITERATIONS = 5`, `MAX_ITERATIONS = 15`.
+Runtime calibration is sourced from `qfai.config.yaml > prototyping.calibration`. There are no hardcoded MIN_ITERATIONS/MAX_ITERATIONS constants — `maxIterations` is configurable.
 
 ### Termination Conditions
 
 The loop terminates when **any** of these conditions is met:
 
-| Condition              | `terminationReason` | Description                                                                 |
-| ---------------------- | ------------------- | --------------------------------------------------------------------------- |
-| Accept threshold met   | `converged`         | `weightedTotal >= thresholds.accept` AND `iterationCount >= MIN_ITERATIONS` |
-| Max iterations reached | `max-iterations`    | `iterationCount >= maxIterations`                                           |
-| Score plateau detected | `plateau`           | Score delta < `plateauDelta` for `plateauLookback` consecutive iterations   |
-| User manual stop       | `manual-stop`       | User explicitly requests termination                                        |
+| Condition              | `terminationReason` | Description                                                                          |
+| ---------------------- | ------------------- | ------------------------------------------------------------------------------------ |
+| Accept threshold met   | `converged`         | `weightedTotal >= thresholds.accept` AND `iterationCount >= 2` (plateau check based) |
+| Max iterations reached | `max-iterations`    | `iterationCount >= maxIterations`                                                    |
+| Score plateau detected | `plateau`           | Score delta < `plateauDelta` for `plateauLookback` consecutive iterations            |
+| User manual stop       | `manual-stop`       | User explicitly requests termination                                                 |
 
-**IMPORTANT**: `converged` with `iterationCount == 1` is a contradiction and will trigger a validator warning (QFAI-PROT-290).
+**IMPORTANT**: `converged` with `iterationCount < 2` is a contradiction and will trigger a validator error (QFAI-PROT-290).
 
 ### Independent Evaluator Panel (MUST)
 
@@ -278,8 +291,8 @@ To prevent self-evaluation bias, the evaluator MUST be independent from the gene
 
 - L1 and L2 MUST be launched via `task` tool in `background` mode with a separate context. They MUST NOT receive improvement history, previous scores, or generator plans.
 - L3 operates on the final evidence file and does not need a separate context.
-- The iteration's `weightedTotal` is the **minimum** of L1 and L2 scores. If either returns below `thresholds.refine`, the iteration decision is `pivot`.
-- Fabricated reviewer names (e.g., `"completion-reviewer"` without actual agent invocation) are a process integrity violation.
+- The iteration's `weightedTotal` is `min(L1.total, L2.total)`. If either returns below `thresholds.refine`, the iteration decision is `pivot`.
+- Fabricated reviewer names (e.g., `"qfai"`, `"default"`, `"placeholder"`) are rejected by the CLI and validator.
 
 ### scoringTrace Recording
 
@@ -288,13 +301,16 @@ Each iteration MUST produce a `scoringTrace` entry:
 ```json
 {
   "iteration": 3,
-  "weightedTotal": 0.72,
+  "l1Total": 0.75,
+  "l2Total": 0.68,
+  "weightedTotal": 0.68,
+  "deltaFromPrevious": 0.05,
   "decision": "refine",
-  "evaluators": ["product-surface-reviewer", "product-experience-architect"],
-  "axisDelta": { "visual_coherence": 0.05, "navigation": 0.08, "accessibility": -0.01 },
-  "maxDeltaCap": 0.15
+  "commitSha": "abc123def"
 }
 ```
+
+`weightedTotal` is always `min(l1Total, l2Total)`. The validator enforces this invariant.
 
 **Score Scope Separation:**
 

@@ -19,9 +19,9 @@
 ## Compatibility vs Change Rubric
 
 - Criteria (Compatibility): validate.json is an internal contract (not a stable API). CLI command system follows semver.
-- Criteria (Change): Breaking changes deferred until v2.0. Migration guide required.
+- Criteria (Change): canonical consistency, validator alignment, and shipped SSOT alignment take priority. Breaking changes are allowed when required to restore canonical consistency.
 - Examples: `_shared/` -> `_policies/` rename (v1.5.3), spec-pack -> layered migration (v1.4.17)
-- Evidence: CHANGELOG.md, OQ-0003 (validate.json), OQ-0004 (legacy deprecation)
+- Evidence: CHANGELOG.md
 
 ## Governance (Ownership / Review / Evidence)
 
@@ -54,14 +54,11 @@
 ## Non-goals / Not-now (Optional)
 
 - IDE plugin / GUI development
-- Plugin architecture (to be reconsidered in v2.0)
+- Plugin architecture
 - Automated test generation
 - browser QA full audit / screenshot diff / repair loop / external critique adapter (v1.7.1)
 - auto-fix / rewrite for design findings (v1.7.2)
-- evidence schema versioning detail (deferred to v1.7.6, OQ-0001 of discussion-20260329130000123)
-- browser QA output normalization shape (deferred to v1.7.6, OQ-0002 of discussion-20260329130000123)
-- external critique provider / full-harness orchestration / calibration pack / cost observability / long-running handoff (v1.7.5 out of scope → v1.7.6 IN scope)
-- Evidence: 05_Scope.md (Out of Scope), OQ-0001, OQ-0002, discussion-20260329175059391
+- Evidence: 05_Scope.md (Out of Scope)
 
 ## References (Optional)
 

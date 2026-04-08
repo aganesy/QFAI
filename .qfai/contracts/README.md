@@ -1,28 +1,30 @@
-# .qfai/contracts
+# contracts
 
 ## Purpose
 
 Contracts define the **stable surface** that specs and tests may reference.
 They are the boundary between "what we promise" and "how we implement".
 
-QFAI organizes contracts into three types:
+QFAI organizes contracts into four directories:
 
 ```text
-.qfai/contracts/
-├── api/   # OpenAPI YAML (endpoints, request/response)
-├── db/    # SQL schema contracts (tables, columns, constraints)
-└── ui/    # UI contract YAML (screens, elements, user actions)
+contracts/
+├── api/      # OpenAPI YAML (endpoints, request/response)
+├── db/       # SQL schema contracts (tables, columns, constraints)
+├── design/   # Design token YAML — optional supporting input
+└── ui/       # UI contract YAML (screens, elements, user actions)
 ```
+
+> **Note:** `ui/` and `design/` are **supporting input** that supplements the discussion sidecar artifacts (`discussion-*/uiux/*`), which remain the primary truth. After `qfai init`, these directories may contain only placeholder READMEs — this is the normal initial state.
 
 ## Directory rules
 
 - Contract files are **minimal**: only what specs actually need.
 - Each contract file must declare `QFAI-CONTRACT-ID` at the top (`CON-UI-*` / `CON-API-*` / `CON-DB-*`).
 - Prefer additive changes; breaking changes require delta notes.
-- The scaffold keeps `api/`, `db/`, and `ui/` README stubs in-repo; add concrete contract files only when a spec actually references them.
 
 ```text
-.qfai/contracts/
+contracts/
 ├── README.md
 ├── api/
 │   ├── README.md
@@ -30,6 +32,9 @@ QFAI organizes contracts into three types:
 ├── db/
 │   ├── README.md
 │   └── db-0001-<slug>.sql
+├── design/
+│   ├── README.md
+│   └── design-tokens.yaml          (created when needed)
 └── ui/
     ├── README.md
     └── ui-0001-<slug>.yaml

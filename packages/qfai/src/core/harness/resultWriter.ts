@@ -1,10 +1,11 @@
 /**
- * Harness result writer — WS-D
+ * Harness result writer — v1.7.15
  *
  * Writes full-harness execution results to a structured output.
+ * Updated for measurement-driven model (no LoopResult).
  */
 
-import type { LoopResult } from "./types.js";
+import type { FullHarnessHistory, TerminationReason } from "./types.js";
 import type { BrowserQaRunResult } from "../browserQa/types.js";
 import type { RenderRunnerResult } from "../evidence/types.js";
 
@@ -35,10 +36,11 @@ export type FullHarnessOutput = {
 };
 
 export function buildFullHarnessResult(
-  loopResult: LoopResult,
+  history: FullHarnessHistory,
   renderResults: RenderRunnerResult[],
   browserQaResults: BrowserQaRunResult[],
   thresholds: { accept: number; refine: number },
+  terminationReason?: TerminationReason,
   observabilityRefs: string[] = [],
 ): FullHarnessOutput {
   const renderCounts = { captured: 0, skipped: 0, failed: 0 };
@@ -63,16 +65,17 @@ export function buildFullHarnessResult(
     }
   }
 
-  const lastIteration = loopResult.iterations[loopResult.iterations.length - 1];
-  const lastDecision = lastIteration ? lastIteration.evaluatorResult.decision : "unknown";
+  const lastIteration = history.iterations[history.iterations.length - 1];
+  const lastDecision = lastIteration ? lastIteration.decision : "unknown";
+  const finalScore = lastIteration ? lastIteration.weightedTotal : 0;
 
   return {
     mode: "full-harness",
-    iterations: loopResult.iterationCount,
-    terminationReason: loopResult.terminationReason,
+    iterations: history.iterations.length,
+    terminationReason: terminationReason ?? "in-progress",
     evaluationSummary: {
-      finalScore: loopResult.finalScore,
-      bestIteration: loopResult.bestIteration,
+      finalScore,
+      bestIteration: history.bestIteration,
       decision: lastDecision,
     },
     evidenceSummary: {

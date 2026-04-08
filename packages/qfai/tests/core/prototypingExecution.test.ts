@@ -10,6 +10,14 @@ async function withRoot(task: (root: string) => Promise<void>): Promise<void> {
   const root = await mkdtemp(path.join(os.tmpdir(), "qfai-prototyping-run-"));
   try {
     await mkdir(path.join(root, ".qfai", "specs", "spec-0001"), { recursive: true });
+    // Full-harness requires a git repo for resolveCommitSha
+    await mkdir(path.join(root, ".git", "refs", "heads"), { recursive: true });
+    await writeFile(path.join(root, ".git", "HEAD"), "ref: refs/heads/main\n", "utf-8");
+    await writeFile(
+      path.join(root, ".git", "refs", "heads", "main"),
+      "abc1234567890abcdef1234567890abcdef123456\n",
+      "utf-8",
+    );
     await writeFile(
       path.join(root, "qfai.config.yaml"),
       "paths:\n  discussionDir: .qfai/discussion\n",
@@ -49,18 +57,25 @@ describe("runPrototypingExecution", () => {
 
   it("persists fullHarness block for full-harness mode", async () => {
     await withRoot(async (root) => {
-      const result = await runPrototypingExecution({ root, requestedMode: "full-harness" });
+      const result = await runPrototypingExecution({
+        root,
+        requestedMode: "full-harness",
+        reviewer: "test-reviewer",
+      });
       const payload = JSON.parse(await readFile(result.evidencePaths.prototyping, "utf-8")) as {
         fullHarness?: {
+          enabled?: boolean;
+          status?: string;
           terminationReason?: string;
           scoringTrace?: unknown[];
-          reviewerSignoff?: { reviewer?: string };
+          reviewerSignoff?: { reviewerId?: string };
         };
       };
 
-      expect(payload.fullHarness?.terminationReason).toBeTruthy();
+      expect(payload.fullHarness?.enabled).toBe(true);
+      expect(payload.fullHarness?.status).toBeTruthy();
       expect(payload.fullHarness?.scoringTrace?.length).toBeGreaterThan(0);
-      expect(payload.fullHarness?.reviewerSignoff?.reviewer).toBe("qfai");
+      expect(payload.fullHarness?.reviewerSignoff?.reviewerId).toBe("test-reviewer");
     });
   });
 
