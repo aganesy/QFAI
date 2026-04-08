@@ -80,7 +80,7 @@ describe("runMeasurement", () => {
     expect(result.iteration.weightedTotal).toBe(0.3);
   });
 
-  it("terminates when accept threshold met", async () => {
+  it("single-iteration accept is NOT terminal (v1.7.15)", async () => {
     const result = await runMeasurement(
       makeInput({
         l1: { panel: "L1", total: 0.9, axes: [] },
@@ -88,7 +88,8 @@ describe("runMeasurement", () => {
       }),
     );
     expect(result.iteration.decision).toBe("accept");
-    expect(result.terminationReason).toBe("converged");
-    expect(result.isTerminal).toBe(true);
+    // v1.7.15: single-iteration accept does NOT produce converged
+    expect(result.terminationReason).toBeUndefined();
+    expect(result.isTerminal).toBe(false);
   });
 });

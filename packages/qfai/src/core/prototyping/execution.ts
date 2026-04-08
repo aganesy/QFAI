@@ -14,6 +14,7 @@ import type {
 import type { BrowserQaInput } from "../browserQa/types.js";
 import { findLatestDiscussionPackDir } from "../discussionPack.js";
 import { runFullHarness } from "../harness/runtime.js";
+import { CalibrationLoader } from "../calibration/loader.js";
 
 import { resolveLatestRecommendationArtifact } from "./recommendationArtifact.js";
 import { derivePrototypingObligations, resolvePrototypingMode } from "./mode.js";
@@ -28,6 +29,11 @@ import {
 import { buildUiFidelity } from "./uiFidelityBuilder.js";
 import { buildRuntimeGate } from "./runtimeGateBuilder.js";
 import { createObservabilityAdapter } from "./observabilityAdapter.js";
+import { buildSpecCoverageSummary, buildPerSpecCoverage } from "./specCoverage.js";
+import { buildUiObservationSummary, buildBrowserQaSummaryFromResult } from "./uiObservation.js";
+import { loadHistory } from "../harness/history.js";
+import type { FullHarnessPanelInputs } from "../harness/panelInputs.js";
+import { validatePanelInputs } from "../harness/panelInputs.js";
 
 export type PrototypingExecutionRequest = {
   root: string;
@@ -142,6 +148,11 @@ export async function runPrototypingExecution(
   });
   const browserQaResult = await runBrowserQaOrchestrated(browserQaInput, browserQaProvider);
 
+  const runtimeGate = buildRuntimeGate({
+    surface,
+    ...(targetUrl !== undefined ? { targetUrl } : {}),
+  });
+
   const summary = await buildPrototypingSummaryBundle({
     root: request.root,
     generatedAt,
@@ -149,12 +160,9 @@ export async function runPrototypingExecution(
     surface,
     providerIds: resolvedProviders.providerIds,
     ...(targetUrl !== undefined ? { targetUrl } : {}),
+    ...(runtimeGate !== undefined ? { runtimeGate } : {}),
   });
 
-  const runtimeGate = buildRuntimeGate({
-    surface,
-    ...(targetUrl !== undefined ? { targetUrl } : {}),
-  });
   if (runtimeGate) {
     summary.runtimeGate = runtimeGate;
   }
@@ -180,13 +188,114 @@ export async function runPrototypingExecution(
           "Provide a real reviewer identifier via the CLI flag.",
       );
     }
-    const calibration = config.prototyping?.calibration ?? {
-      packPath: ".qfai/evidence/calibration.yaml",
-      thresholds: { accept: 0.8, refine: 0.5 },
-      maxIterations: 15,
-      plateauDelta: 0.02,
-      plateauLookback: 3,
+
+    // Reject placeholder reviewer identifiers
+    const normalizedReviewer = request.reviewer.toLowerCase().trim();
+    const placeholders = [
+      "qfai",
+      "default",
+      "system",
+      "auto",
+      "placeholder",
+      "tbd",
+      "n/a",
+      "none",
+      "unknown",
+      "",
+    ];
+    if (placeholders.includes(normalizedReviewer)) {
+      throw new Error(
+        `Reviewer identifier "${request.reviewer}" is a placeholder. ` +
+          `Provide a real reviewer identity for full-harness mode.`,
+      );
+    }
+
+    // CalibrationLoader — pack must be loadable for full-harness
+    const calibrationConfig = config.prototyping?.calibration;
+    const packPath = calibrationConfig?.packPath ?? ".qfai/evidence/calibration.yaml";
+    const fullPackPath = path.join(request.root, packPath);
+    const calibrationLoader = new CalibrationLoader(fullPackPath);
+    let calibrationPack;
+    try {
+      calibrationPack = await calibrationLoader.load();
+    } catch (err) {
+      throw new Error(
+        `Full-harness requires a valid calibration pack at ${packPath}. ` +
+          `Load failed: ${err instanceof Error ? err.message : String(err)}`,
+      );
+    }
+    const packVersion = calibrationPack.version;
+
+    const thresholds = {
+      accept: calibrationPack.thresholds?.accept ?? calibrationConfig?.thresholds?.accept ?? 0.8,
+      refine: calibrationPack.thresholds?.refine ?? calibrationConfig?.thresholds?.refine ?? 0.5,
     };
+    const maxIterations = calibrationConfig?.maxIterations ?? 15;
+    const plateauDelta = calibrationConfig?.plateauDelta ?? 0.02;
+    const plateauLookback = calibrationConfig?.plateauLookback ?? 3;
+
+    // Build spec coverage from real artifacts
+    const specsDir = path.join(request.root, ".qfai", "specs");
+    const runtimeGateForCoverage = buildRuntimeGate({
+      surface,
+      ...(targetUrl !== undefined ? { targetUrl } : {}),
+    });
+    const specCoverage = await buildSpecCoverageSummary(
+      specsDir,
+      runtimeGateForCoverage ?? undefined,
+      path.join(request.root, ".qfai", "evidence"),
+    );
+
+    // Build UI observation from real DOM/render
+    const uiObservation = await buildUiObservationSummary(renderResult);
+
+    // Build browser QA summary from real results
+    const browserQaSummary = buildBrowserQaSummaryFromResult(browserQaResult);
+
+    // Assemble panel inputs from real evidence
+    const runtimeGateEvidence = runtimeGateForCoverage
+      ? {
+          uiRoutes: runtimeGateForCoverage.ui,
+          apiEndpoints: runtimeGateForCoverage.api,
+        }
+      : { uiRoutes: [], apiEndpoints: [] };
+
+    const panelInputs: FullHarnessPanelInputs = {
+      runtimeGate: runtimeGateEvidence,
+      renderEvidence: {
+        totalScreens: renderResult.entries.length,
+        capturedScreens: renderResult.entries.filter((e) => e.status === "captured").length,
+        failedScreens: renderResult.entries.filter((e) => e.status === "failed").length,
+        viewports: [...new Set(renderResult.entries.map((e) => e.viewport))],
+        evidenceRefs: renderResult.filesWritten,
+      },
+      browserQa: browserQaSummary,
+      uiObservation,
+      specCoverage,
+      discussionAxes: {
+        invariantAxes: 0,
+        trendDerivedAxes: 0,
+        productSpecificAxes: 0,
+        aggregateScore: 0,
+        evidenceRefs: [],
+      },
+      screenContract: {
+        totalContracts: uiFidelity.uiFidelity?.screens.length ?? 0,
+        coveredContracts:
+          uiFidelity.uiFidelity?.screens.filter((s) => s.observed.elementsPlaced > 0).length ?? 0,
+        fidelityScore: 0,
+        evidenceRefs: [],
+      },
+      trendAlignment: {
+        trendSourcesChecked: 0,
+        translationConsistency: 0,
+        competitiveGapsCovered: 0,
+        evidenceRefs: [],
+      },
+    };
+
+    // Validate panel inputs — missing evidence must fail, not silently score to 0
+    validatePanelInputs(panelInputs);
 
     const fullHarness = await runFullHarness({
       root: request.root,
@@ -194,16 +303,13 @@ export async function runPrototypingExecution(
       changeSummary: request.changeSummary ?? ["Initial measurement"],
       limitations: request.limitations ?? [],
       calibration: {
-        packPath: calibration.packPath ?? ".qfai/evidence/calibration.yaml",
-        packVersion: "1.0.0",
+        packPath,
+        packVersion,
         configPath: "qfai.config.yaml",
-        thresholds: {
-          accept: calibration.thresholds?.accept ?? 0.8,
-          refine: calibration.thresholds?.refine ?? 0.5,
-        },
-        maxIterations: calibration.maxIterations ?? 15,
-        plateauDelta: calibration.plateauDelta ?? 0.02,
-        plateauLookback: calibration.plateauLookback ?? 3,
+        thresholds,
+        maxIterations,
+        plateauDelta,
+        plateauLookback,
       },
       adapters: {
         surface,
@@ -217,11 +323,54 @@ export async function runPrototypingExecution(
         },
         observability: createObservabilityAdapter(request.root),
       },
-      l1: { panel: "L1", total: 0, axes: [] },
-      l2: { panel: "L2", total: 0, axes: [] },
+      panelInputs,
     });
 
     const isCompleted = fullHarness.isTerminal;
+
+    // Load cumulative reviewerLogs from history (append-only)
+    const previousHistory = await loadHistory(request.root);
+    const previousLogs: Array<{
+      iteration: number;
+      reviewerId: string;
+      verdict: "approve" | "revise" | "reject";
+      summary: string;
+      evidenceRefs: string[];
+    }> = [];
+    if (previousHistory) {
+      // Extract previous reviewerLogs from existing prototyping.json fullHarness block
+      try {
+        const existingJson = await readFile(
+          path.join(request.root, ".qfai", "evidence", "prototyping.json"),
+          "utf-8",
+        );
+        const existingParsed = JSON.parse(existingJson) as Record<string, unknown>;
+        const existingFh = existingParsed.fullHarness as Record<string, unknown> | undefined;
+        if (existingFh && Array.isArray(existingFh.reviewerLogs)) {
+          previousLogs.push(...(existingFh.reviewerLogs as typeof previousLogs));
+        }
+      } catch {
+        // No previous logs to accumulate
+      }
+    }
+
+    const currentLog = {
+      iteration: fullHarness.iteration.iteration,
+      reviewerId: request.reviewer,
+      verdict: (fullHarness.iteration.decision === "accept" ? "approve" : "revise") as
+        | "approve"
+        | "revise"
+        | "reject",
+      summary: `Iteration ${fullHarness.iteration.iteration} measurement recorded`,
+      evidenceRefs: [
+        ...fullHarness.iteration.evidenceRefs.render,
+        ...fullHarness.iteration.evidenceRefs.browserQa,
+      ],
+    };
+
+    // Cumulative reviewerLogs (append-only)
+    const cumulativeReviewerLogs = [...previousLogs, currentLog];
+
     summary.fullHarness = {
       enabled: true,
       runId: fullHarness.history.runId,
@@ -238,18 +387,7 @@ export async function runPrototypingExecution(
         timestamp: generatedAt,
         source: "cli",
       },
-      reviewerLogs: [
-        {
-          iteration: fullHarness.iteration.iteration,
-          reviewerId: request.reviewer,
-          verdict: fullHarness.iteration.decision === "accept" ? "approve" : "revise",
-          summary: `Iteration ${fullHarness.iteration.iteration} measurement recorded`,
-          evidenceRefs: [
-            ...fullHarness.iteration.evidenceRefs.render,
-            ...fullHarness.iteration.evidenceRefs.browserQa,
-          ],
-        },
-      ],
+      reviewerLogs: cumulativeReviewerLogs,
       iterations: fullHarness.history.iterations,
       scoringTrace: fullHarness.history.scoringTrace,
       limitations: fullHarness.iteration.limitations,
@@ -304,18 +442,39 @@ async function buildPrototypingSummaryBundle(input: {
   surface: PrototypingSurface;
   providerIds: string[];
   targetUrl?: string;
+  runtimeGate?: {
+    ui: Array<{ route: string; status: number }>;
+    api: Array<{ method: string; path: string; status: number }>;
+  };
 }): Promise<PrototypingSummaryBundle> {
   const specsDir = path.join(input.root, ".qfai", "specs");
+  const perSpecCoverage = await buildPerSpecCoverage(specsDir, input.runtimeGate);
+  const perSpecMap = new Map(perSpecCoverage.map((s) => [s.specId, s]));
   const specNames = await safeReadDir(specsDir);
   const specs = specNames
     .filter((name) => name.startsWith("spec-"))
     .sort((left, right) => left.localeCompare(right))
-    .map((name) => ({
-      specId: name,
-      declared: { uiRoutes: 0, apiEndpoints: 0, dbObjects: 0 },
-      checked: { uiOk: 0, apiNon404: 0, dbPresent: 0 },
-      missing: { uiRoutes: [], apiEndpoints: [], dbObjects: [] },
-    }));
+    .map((name) => {
+      const perSpec = perSpecMap.get(name);
+      if (perSpec) {
+        return {
+          specId: name,
+          declared: { ...perSpec.declared },
+          checked: { ...perSpec.checked },
+          missing: {
+            uiRoutes: [...perSpec.missing.uiRoutes],
+            apiEndpoints: [...perSpec.missing.apiEndpoints],
+            dbObjects: [...perSpec.missing.dbObjects],
+          },
+        };
+      }
+      return {
+        specId: name,
+        declared: { uiRoutes: 0, apiEndpoints: 0, dbObjects: 0 },
+        checked: { uiOk: 0, apiNon404: 0, dbPresent: 0 },
+        missing: { uiRoutes: [], apiEndpoints: [], dbObjects: [] },
+      };
+    });
 
   return {
     surface: input.surface,

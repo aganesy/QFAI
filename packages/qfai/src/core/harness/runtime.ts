@@ -4,6 +4,12 @@
  * Measurement-driven orchestration.
  * Does NOT contain a self-modifying loop.
  * Each CLI invocation records exactly one iteration of real observation.
+ *
+ * v1.7.15 breaking changes:
+ * - Panel scores computed from real evidence (no dummy l1/l2=0)
+ * - calibration pack required (no silent fallback)
+ * - reviewer required (no placeholder)
+ * - commitSha required (no silent failure)
  */
 
 import { requiresVisualBrowserEvidence } from "../detection/surfaceType.js";
@@ -20,6 +26,8 @@ import type {
   FullHarnessPanelScore,
 } from "./types.js";
 import { runMeasurement } from "./measurement.js";
+import type { FullHarnessPanelInputs } from "./panelInputs.js";
+import { scorePanelsFromInputs } from "./panelScore.js";
 import type { RenderRunnerResult } from "../evidence/types.js";
 import type { BrowserQaRunResult } from "../browserQa/types.js";
 
@@ -38,8 +46,9 @@ export type FullHarnessRequest = {
     plateauLookback: number;
   };
   adapters?: FullHarnessAdapters;
-  l1: FullHarnessPanelScore;
-  l2: FullHarnessPanelScore;
+  panelInputs?: FullHarnessPanelInputs;
+  l1?: FullHarnessPanelScore;
+  l2?: FullHarnessPanelScore;
 };
 
 export type FullHarnessResult = {
@@ -58,7 +67,7 @@ export type FullHarnessResult = {
  *
  * This does NOT loop. Each invocation:
  * 1. Captures render/browserQa evidence
- * 2. Measures panel scores
+ * 2. Scores panels from real evidence inputs
  * 3. Appends iteration to history
  * 4. Computes termination
  */
@@ -92,11 +101,29 @@ export async function runFullHarness(request: FullHarnessRequest): Promise<FullH
     }
   }
 
+  // Compute panel scores from real evidence
+  let l1: FullHarnessPanelScore;
+  let l2: FullHarnessPanelScore;
+
+  if (request.panelInputs) {
+    const scored = scorePanelsFromInputs(request.panelInputs);
+    l1 = scored.l1;
+    l2 = scored.l2;
+  } else if (request.l1 && request.l2) {
+    // Allow pre-computed scores if explicitly provided (for testing)
+    l1 = request.l1;
+    l2 = request.l2;
+  } else {
+    throw new Error(
+      "Full-harness requires either panelInputs for evidence-based scoring or explicit l1/l2 scores.",
+    );
+  }
+
   // Observability
   if (request.adapters?.observability) {
     request.adapters.observability.recordIteration({
       iteration: 1,
-      score: Math.min(request.l1.total, request.l2.total),
+      score: Math.min(l1.total, l2.total),
       decision: "refine",
     });
     await request.adapters.observability.flush();
@@ -116,8 +143,8 @@ export async function runFullHarness(request: FullHarnessRequest): Promise<FullH
     },
     renderRefs,
     browserQaRefs,
-    l1: request.l1,
-    l2: request.l2,
+    l1,
+    l2,
   };
 
   const measurementResult = await runMeasurement(measurementInput);

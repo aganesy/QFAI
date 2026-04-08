@@ -391,6 +391,13 @@ const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-PROT-301": "fullHarness.calibrationRef is missing or has empty configPath/packPath.",
   "QFAI-PROT-302": "All fullHarness iterations have the same commitSha.",
   "QFAI-PROT-303": "fullHarness reviewerLog summary is too short.",
+  "QFAI-PROT-304": "fullHarness reviewerLogs count does not match iterationCount.",
+  "QFAI-PROT-305":
+    "fullHarness specCoverage is zero-seeded (all declared/checked counts are zero).",
+  "QFAI-PROT-306": "fullHarness uiFidelity mockPaths contains synthetic auto-pass entries.",
+  "QFAI-PROT-307": "fullHarness calibrationRef.packVersion appears hardcoded.",
+  "QFAI-PROT-308": "fullHarness status is converged but iterationCount < 2.",
+  "QFAI-PROT-309": "fullHarness iteration reviewer is a placeholder value.",
   "QFAI-CONTRACT-030":
     "Contract index references must match declared contract IDs in .qfai/contracts/**.",
 };

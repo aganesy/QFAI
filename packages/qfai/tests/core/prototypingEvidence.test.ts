@@ -851,15 +851,13 @@ function buildV2FullHarness(opts: {
       timestamp: "2026-04-04T00:00:00Z",
       source: "cli",
     },
-    reviewerLogs: [
-      {
-        iteration: opts.scores.length,
-        reviewerId: "qa-reviewer",
-        verdict: "approve",
-        summary: "All checks passed and quality meets threshold",
-        evidenceRefs: ["evidence/prototyping.json"],
-      },
-    ],
+    reviewerLogs: opts.scores.map((_, i) => ({
+      iteration: i + 1,
+      reviewerId: "qa-reviewer",
+      verdict: i === opts.scores.length - 1 ? "approve" : "revise",
+      summary: `Iteration ${i + 1} review: checks passed and evaluated`,
+      evidenceRefs: ["evidence/prototyping.json"],
+    })),
     iterations,
     scoringTrace,
     limitations: ["Known limitation"],

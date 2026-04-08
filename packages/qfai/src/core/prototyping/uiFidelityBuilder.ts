@@ -10,6 +10,7 @@ import type { RenderRunnerResult } from "../evidence/types.js";
 import type { UiFidelityStatus } from "./types.js";
 import { findLatestDiscussionPackDir } from "../discussionPack.js";
 import { readSafe } from "../validators/utils.js";
+import { buildUiObservationSummary, deriveMockPathFindingsFromBrowserQa } from "./uiObservation.js";
 
 type ScreenContractEntry = {
   screenId: string;
@@ -77,6 +78,9 @@ export async function buildUiFidelity(input: {
   const screenContracts = await readScreenContracts(latestPack);
   const contractSummaries = await collectUiContractScreens(input.root, input.config);
 
+  const uiObservation = await buildUiObservationSummary(input.renderResult);
+  const mockPathFindings = deriveMockPathFindingsFromBrowserQa(input.browserQaResult);
+
   const screens = screenContracts
     .map((screen) => {
       const contract = contractSummaries.find((candidate) => candidate.route === screen.route);
@@ -87,36 +91,33 @@ export async function buildUiFidelity(input: {
       const renderEntries = (input.renderResult?.entries ?? []).filter(
         (entry) => entry.target === screen.route || entry.target === screen.screenId,
       );
-      const capturedHtml = renderEntries.find(
-        (entry) => entry.status === "captured" && entry.html_path,
-      );
-      const htmlLabels = capturedHtml?.html_path
-        ? extractHtmlLabelsFromString(capturedHtml.html_path)
-        : [];
+
+      // v1.7.15: Use DOM-derived observation from uiObservation.ts
+      const domLabels = uiObservation.domLabelsFound;
       const browserFindingsCount =
         input.browserQaResult?.phases
           .flatMap((phase) => phase.findings)
           .filter((finding) => finding.route === undefined || finding.route === screen.route)
           .length ?? 0;
 
+      // v1.7.15: mockPaths derived from browser QA findings only (no auto-pass)
+      const screenMockPaths = mockPathFindings.filter(
+        (f) => f.id.startsWith(screen.screenId) || f.id.includes(screen.route),
+      );
+
       return {
         route: screen.route,
         uiContractId: contract.contractId,
         expected: contract.expected,
-        ...(htmlLabels.length > 0 ? { found: { labels: htmlLabels } } : {}),
+        ...(domLabels.length > 0 ? { found: { labels: domLabels } } : {}),
         // v1.7.15: observed reflects real measurement only.
-        // htmlLabels = elements found in rendered HTML; browserFindingsCount = actions
+        // domLabels = elements found in rendered HTML; browserFindingsCount = actions
         // detected by browser QA. No synthetic fallback from expected values.
         observed: {
-          elementsPlaced: htmlLabels.length,
+          elementsPlaced: domLabels.length,
           actionsWired: browserFindingsCount > 0 ? browserFindingsCount : 0,
         },
-        mockPaths: [
-          {
-            id: `${screen.screenId}-default`,
-            status: "pass",
-          },
-        ],
+        mockPaths: screenMockPaths,
         renders: renderEntries.map((entry) => ({
           viewport: entry.viewport,
           status: entry.status,
@@ -277,11 +278,4 @@ async function collectUiContractScreens(
   }
 
   return screens;
-}
-
-function extractHtmlLabelsFromString(filePath: string): string[] {
-  if (!filePath.endsWith(".html")) {
-    return [];
-  }
-  return [];
 }

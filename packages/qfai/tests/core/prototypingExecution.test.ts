@@ -1,4 +1,4 @@
-import { access, mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { access, mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -55,27 +55,15 @@ describe("runPrototypingExecution", () => {
     });
   });
 
-  it("persists fullHarness block for full-harness mode", async () => {
+  it("full-harness fails without browser QA evidence", async () => {
     await withRoot(async (root) => {
-      const result = await runPrototypingExecution({
-        root,
-        requestedMode: "full-harness",
-        reviewer: "test-reviewer",
-      });
-      const payload = JSON.parse(await readFile(result.evidencePaths.prototyping, "utf-8")) as {
-        fullHarness?: {
-          enabled?: boolean;
-          status?: string;
-          terminationReason?: string;
-          scoringTrace?: unknown[];
-          reviewerSignoff?: { reviewerId?: string };
-        };
-      };
-
-      expect(payload.fullHarness?.enabled).toBe(true);
-      expect(payload.fullHarness?.status).toBeTruthy();
-      expect(payload.fullHarness?.scoringTrace?.length).toBeGreaterThan(0);
-      expect(payload.fullHarness?.reviewerSignoff?.reviewerId).toBe("test-reviewer");
+      await expect(
+        runPrototypingExecution({
+          root,
+          requestedMode: "full-harness",
+          reviewer: "test-reviewer",
+        }),
+      ).rejects.toThrow(/Full-harness measurement requires complete evidence/);
     });
   });
 
@@ -430,6 +418,22 @@ describe("runPrototypingExecution", () => {
       await expect(runPrototypingExecution({ root, requestedMode: "standard" })).rejects.toThrow(
         /recommendation artifact is invalid/i,
       );
+    });
+  });
+
+  it("full-harness rejects missing reviewer", async () => {
+    await withRoot(async (root) => {
+      await expect(
+        runPrototypingExecution({ root, requestedMode: "full-harness" }),
+      ).rejects.toThrow(/requires --reviewer/i);
+    });
+  });
+
+  it("full-harness rejects placeholder reviewer", async () => {
+    await withRoot(async (root) => {
+      await expect(
+        runPrototypingExecution({ root, requestedMode: "full-harness", reviewer: "qfai" }),
+      ).rejects.toThrow(/placeholder/i);
     });
   });
 });

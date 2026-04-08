@@ -96,6 +96,7 @@ export const REVIEWER_PLACEHOLDERS = [
   "default",
   "system",
   "auto",
+  "unknown",
   "placeholder",
   "tbd",
   "n/a",

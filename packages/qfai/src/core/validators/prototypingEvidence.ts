@@ -20,6 +20,7 @@ import {
   isValidPrototypingSurface,
 } from "../prototyping/mode.js";
 import { CANONICAL_PROTOTYPING_SURFACES } from "../domain/surface.js";
+import { REVIEWER_PLACEHOLDERS } from "../harness/types.js";
 import {
   resolveLatestRecommendationArtifact,
   type ResolvedRecommendationArtifact,
@@ -101,6 +102,13 @@ type PrototypingEvidence = {
       timestamp: string;
       changeSummary: string[];
       limitations: string[];
+      evidenceRefs?: {
+        render: string[];
+        browserQa: string[];
+        runtimeGate: string[];
+        uiFidelity: string[];
+        specCoverage: string[];
+      };
       l1: { panel: "L1"; total: number };
       l2: { panel: "L2"; total: number };
       weightedTotal: number;
@@ -1422,7 +1430,7 @@ function validateModeMetadata(
         issue(
           "QFAI-PROT-292",
           `terminationReason is 'max-iterations' but iterationCount (${evidence.fullHarness.iterationCount}) < configured maxIterations (${config.prototyping.calibration.maxIterations}).`,
-          "warning",
+          "error",
           evidenceJsonPath,
           "prototypingEvidence.fullHarnessTerminationReasonMismatch",
           undefined,
@@ -1441,7 +1449,7 @@ function validateModeMetadata(
         issue(
           "QFAI-PROT-293",
           `fullHarness.iterationCount (${evidence.fullHarness.iterationCount}) exceeds configured maxIterations (${config.prototyping.calibration.maxIterations}).`,
-          "warning",
+          "error",
           evidenceJsonPath,
           "prototypingEvidence.fullHarnessExceedsMaxIterations",
           undefined,
@@ -1472,17 +1480,6 @@ function validateModeMetadata(
     }
 
     // QFAI-PROT-295: Reviewer placeholder rejection
-    const REVIEWER_PLACEHOLDERS = [
-      "qfai",
-      "default",
-      "system",
-      "auto",
-      "placeholder",
-      "tbd",
-      "n/a",
-      "none",
-      "",
-    ];
     if (
       REVIEWER_PLACEHOLDERS.includes(
         evidence.fullHarness.reviewerSignoff.reviewerId.toLowerCase().trim(),
@@ -1646,6 +1643,138 @@ function validateModeMetadata(
             undefined,
             "canonical",
             "reviewerLogs[].summary は十分な長さ（10文字以上）にしてください。",
+          ),
+        );
+      }
+    }
+
+    // QFAI-PROT-304: reviewerLogs count must match iterationCount
+    if (evidence.fullHarness.reviewerLogs.length !== evidence.fullHarness.iterationCount) {
+      issues.push(
+        issue(
+          "QFAI-PROT-304",
+          `fullHarness reviewerLogs count (${evidence.fullHarness.reviewerLogs.length}) does not match iterationCount (${evidence.fullHarness.iterationCount}).`,
+          "error",
+          evidenceJsonPath,
+          "prototypingEvidence.fullHarnessReviewerLogsCountMismatch",
+          undefined,
+          "canonical",
+          "reviewerLogs は各 iteration に対して1件ずつ存在する必要があります。",
+        ),
+      );
+    }
+
+    // QFAI-PROT-305: zero-seeded specCoverage detection
+    // Also check top-level specs for zero-seeding
+    const allSpecsZeroSeeded =
+      evidence.specs.length > 0 &&
+      evidence.specs.every(
+        (s) =>
+          s.declared.uiRoutes === 0 &&
+          s.declared.apiEndpoints === 0 &&
+          s.declared.dbObjects === 0 &&
+          s.checked.uiOk === 0 &&
+          s.checked.apiNon404 === 0 &&
+          s.checked.dbPresent === 0 &&
+          s.missing.uiRoutes.length === 0 &&
+          s.missing.apiEndpoints.length === 0 &&
+          s.missing.dbObjects.length === 0,
+      );
+    if (allSpecsZeroSeeded) {
+      issues.push(
+        issue(
+          "QFAI-PROT-305",
+          "All specs have zero-seeded coverage (all declared/checked/missing = 0/empty). Real spec coverage measurement is required.",
+          "error",
+          evidenceJsonPath,
+          "prototypingEvidence.fullHarnessZeroSeededSpecCoverage",
+          undefined,
+          "canonical",
+          "specs[] の declared/checked/missing はゼロ初期化ではなく、実際の spec artifact から導出してください。",
+        ),
+      );
+    }
+
+    // QFAI-PROT-306: synthetic mockPaths auto-pass detection
+    if (evidence.uiFidelity) {
+      for (const screen of evidence.uiFidelity.screens) {
+        const hasAutoPass = screen.mockPaths.some(
+          (mp) => mp.status === "pass" && (mp.id.endsWith("-default") || mp.id.includes("auto")),
+        );
+        if (hasAutoPass) {
+          issues.push(
+            issue(
+              "QFAI-PROT-306",
+              `uiFidelity screen "${screen.route}" has synthetic auto-pass mockPaths. mockPaths must be derived from browser QA findings only.`,
+              "error",
+              evidenceJsonPath,
+              "prototypingEvidence.syntheticMockPathsAutoPass",
+              undefined,
+              "canonical",
+              "mockPaths は browser QA findings から導出してください。自動生成の pass は禁止されています。",
+            ),
+          );
+        }
+      }
+    }
+
+    // QFAI-PROT-307: calibrationRef packVersion hardcoded detection
+    if (
+      evidence.fullHarness.calibrationRef.packVersion === "1.0.0" &&
+      evidence.fullHarness.iterationCount > 0
+    ) {
+      // Check if it looks like a default — if packPath is also default, it's likely hardcoded
+      const looksHardcoded =
+        evidence.fullHarness.calibrationRef.packPath.includes("calibration.yaml") &&
+        evidence.fullHarness.calibrationRef.configPath === "qfai.config.yaml";
+      if (looksHardcoded) {
+        issues.push(
+          issue(
+            "QFAI-PROT-307",
+            "fullHarness.calibrationRef.packVersion appears hardcoded ('1.0.0'). packVersion must be resolved from pack metadata.",
+            "warning",
+            evidenceJsonPath,
+            "prototypingEvidence.fullHarnessPackVersionHardcoded",
+            undefined,
+            "canonical",
+            "calibrationRef.packVersion は calibration pack のメタデータから解決してください。",
+          ),
+        );
+      }
+    }
+
+    // QFAI-PROT-308: converged requires iterationCount >= 2 (strengthened from PROT-290)
+    if (
+      evidence.fullHarness.terminationReason === "converged" &&
+      evidence.fullHarness.iterationCount < 2
+    ) {
+      issues.push(
+        issue(
+          "QFAI-PROT-308",
+          `converged requires iterationCount >= 2, but iterationCount is ${evidence.fullHarness.iterationCount}.`,
+          "error",
+          evidenceJsonPath,
+          "prototypingEvidence.fullHarnessConvergedRequiresMinIterations",
+          undefined,
+          "canonical",
+          "converged は最低2回の iteration が必要です。",
+        ),
+      );
+    }
+
+    // QFAI-PROT-309: reviewer placeholder in iterations
+    for (const iter of evidence.fullHarness.iterations) {
+      if (REVIEWER_PLACEHOLDERS.includes(iter.reviewerId.toLowerCase().trim())) {
+        issues.push(
+          issue(
+            "QFAI-PROT-309",
+            `fullHarness iteration ${iter.iteration}: reviewerId "${iter.reviewerId}" is a placeholder value.`,
+            "error",
+            evidenceJsonPath,
+            "prototypingEvidence.fullHarnessIterationReviewerPlaceholder",
+            undefined,
+            "canonical",
+            "iterations[].reviewerId にプレースホルダ値は使用できません。",
           ),
         );
       }

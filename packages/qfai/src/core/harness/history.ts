@@ -113,9 +113,7 @@ export function computeTerminationReason(
     }
   }
 
-  // Check if latest iteration meets accept threshold
-  const latest = history.iterations[count - 1];
-  if (latest?.decision === "accept") return "converged";
-
+  // v1.7.15: single-iteration accept does NOT produce converged.
+  // Convergence requires iterationCount >= 2 AND plateau condition.
   return undefined;
 }

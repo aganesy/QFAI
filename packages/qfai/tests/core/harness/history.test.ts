@@ -133,11 +133,13 @@ describe("computeTerminationReason", () => {
   });
 
   it("returns converged on accept decision", () => {
+    // v1.7.15: single-iteration accept does NOT produce converged.
+    // Convergence requires iterationCount >= 2 + plateau.
     const history = appendIteration(
       null,
       makeIteration({ weightedTotal: 0.9, decision: "accept" }),
     );
-    expect(computeTerminationReason(history, calibration)).toBe("converged");
+    expect(computeTerminationReason(history, calibration)).toBeUndefined();
   });
 
   it("returns undefined when still progressing", () => {

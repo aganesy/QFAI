@@ -109,10 +109,14 @@ When `mode.effective = "full-harness"`:
 - `weightedTotal = min(l1.total, l2.total)` — validator enforces this invariant
 - `commitSha` is mandatory on every iteration — must be a real git commit
 - `limitations` is mandatory — empty array is valid, absent is not
-- `reviewerId` must not be a placeholder (e.g., "qfai", "default", "none")
+- `reviewerId` must not be a placeholder (e.g., "qfai", "default", "none", "unknown")
 - `observed` values in uiFidelity must come from real measurement, not copied from `expected`
-- `mockPaths` must come from real browser QA findings, not auto-generated as "pass"
-- `specCoverage` must come from real spec/runtime evidence, not zero-seeded
+- `mockPaths` must come from real browser QA findings, not auto-generated as "pass" (QFAI-PROT-306)
+- `specCoverage` must come from real spec/runtime evidence, not zero-seeded (QFAI-PROT-305)
+- `reviewerLogs[]` count must equal `iterationCount` — one log per iteration (QFAI-PROT-304)
+- Single-iteration `converged` is prohibited — convergence requires `iterationCount >= 2` (QFAI-PROT-308)
+- `calibrationRef.packVersion` must be resolved from pack metadata, not hardcoded (QFAI-PROT-307)
+- Iteration-level `reviewerId` must not be a placeholder (QFAI-PROT-309)
 
 ## Render evidence bundle conventions
 

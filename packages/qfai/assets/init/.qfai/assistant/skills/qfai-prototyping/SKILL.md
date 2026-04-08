@@ -275,7 +275,7 @@ The loop terminates when **any** of these conditions is met:
 | Score plateau detected | `plateau`           | Score delta < `plateauDelta` for `plateauLookback` consecutive iterations            |
 | User manual stop       | `manual-stop`       | User explicitly requests termination                                                 |
 
-**IMPORTANT**: `converged` with `iterationCount < 2` is a contradiction and will trigger a validator error (QFAI-PROT-290).
+**IMPORTANT**: `converged` with `iterationCount < 2` is a contradiction and will trigger validator errors (QFAI-PROT-290, QFAI-PROT-308). Single-iteration accept does NOT produce `converged` — convergence requires `iterationCount >= 2` AND plateau-based determination.
 
 ### Independent Evaluator Panel (MUST)
 
@@ -451,11 +451,15 @@ Every major artifact in this stage MUST include this table schema:
 - Reviewer must verify evidence obligations for the chosen `surface / mode`.
 - Do not declare DONE until Reviewer returns `PASS`; otherwise apply `REVISE`.
 - **[full-harness only]** Reviewer MUST verify:
-  - `iterationCount > 1` (or explicit justification for single-iteration convergence).
+  - `iterationCount >= 2` for converged status (single-iteration converged is prohibited).
   - `scoringTrace` contains entries equal to `iterationCount`.
+  - `reviewerLogs` count equals `iterationCount` (one log per iteration, QFAI-PROT-304).
   - `scoringTrace` shows measurable score progression (not all identical scores).
   - `terminationReason` is consistent with the scoring trajectory.
-  - Independent evaluators were actually invoked (not fabricated names).
+  - Independent evaluators were actually invoked (not fabricated names or placeholders).
+  - `specCoverage` is measured from real spec artifacts, not zero-seeded (QFAI-PROT-305).
+  - `mockPaths` derived from browser QA findings only, no synthetic auto-pass (QFAI-PROT-306).
+  - `calibrationRef.packVersion` resolved from pack metadata, not hardcoded (QFAI-PROT-307).
   - `limitations` section is present and documents known shortcomings honestly.
 
 ### Limitations Section (Full-Harness MUST)

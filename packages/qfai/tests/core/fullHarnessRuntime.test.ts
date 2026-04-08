@@ -53,7 +53,7 @@ function makeRequest(
 }
 
 describe("runFullHarness", () => {
-  it("TC-D1: 1 iteration accept → converged", async () => {
+  it("TC-D1: 1 iteration accept → NOT converged (v1.7.15)", async () => {
     await withRoot(async (root) => {
       const result = await runFullHarness(
         makeRequest(root, {
@@ -71,10 +71,11 @@ describe("runFullHarness", () => {
         }),
       );
 
-      expect(result.isTerminal).toBe(true);
-      expect(result.terminationReason).toBe("converged");
-      expect(result.history.iterations.length).toBeGreaterThan(0);
-      expect(result.history.scoringTrace.length).toBeGreaterThan(0);
+      // v1.7.15: single-iteration accept does NOT produce converged
+      expect(result.isTerminal).toBe(false);
+      expect(result.terminationReason).toBeUndefined();
+      expect(result.history.iterations.length).toBe(1);
+      expect(result.history.scoringTrace.length).toBe(1);
     });
   });
 
