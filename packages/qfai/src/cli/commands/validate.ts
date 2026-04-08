@@ -382,6 +382,15 @@ const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "terminationReason is max-iterations but iterationCount is below configured maxIterations.",
   "QFAI-PROT-293": "fullHarness.iterationCount exceeds configured maxIterations.",
   "QFAI-PROT-294": "fullHarness.scoringTrace shows no improvement across iterations.",
+  "QFAI-PROT-295": "fullHarness reviewer is a placeholder value.",
+  "QFAI-PROT-296": "fullHarness iteration weightedTotal does not equal min(l1.total, l2.total).",
+  "QFAI-PROT-297": "fullHarness iteration commitSha is required.",
+  "QFAI-PROT-298": "fullHarness.limitations is required.",
+  "QFAI-PROT-299": "fullHarness.status is completed but terminationReason is missing.",
+  "QFAI-PROT-300": "terminationReason is plateau but iterationCount is less than plateauLookback.",
+  "QFAI-PROT-301": "fullHarness.calibrationRef is missing or has empty configPath/packPath.",
+  "QFAI-PROT-302": "All fullHarness iterations have the same commitSha.",
+  "QFAI-PROT-303": "fullHarness reviewerLog summary is too short.",
   "QFAI-CONTRACT-030":
     "Contract index references must match declared contract IDs in .qfai/contracts/**.",
 };

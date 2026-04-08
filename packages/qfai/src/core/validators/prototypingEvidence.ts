@@ -71,21 +71,52 @@ type PrototypingEvidence = {
   };
   fullHarness?: {
     enabled: true;
-    available: boolean;
     runId: string;
+    calibrationRef: {
+      configPath: string;
+      packPath: string;
+      packVersion: string;
+    };
     iterationCount: number;
     bestIteration: number;
-    terminationReason: "converged" | "max-iterations" | "plateau" | "manual-stop";
+    status: "in-progress" | "completed";
+    terminationReason?: "converged" | "max-iterations" | "plateau" | "manual-stop";
     reviewerSignoff: {
+      reviewerId: string;
       status: "approved" | "rejected";
-      reviewer: string;
       timestamp: string;
+      source: string;
     };
-    scoringTrace: Array<{
+    reviewerLogs: Array<{
       iteration: number;
+      reviewerId: string;
+      verdict: "approve" | "revise" | "reject";
+      summary: string;
+      evidenceRefs: string[];
+    }>;
+    iterations: Array<{
+      iteration: number;
+      commitSha: string;
+      reviewerId: string;
+      timestamp: string;
+      changeSummary: string[];
+      limitations: string[];
+      l1: { panel: "L1"; total: number };
+      l2: { panel: "L2"; total: number };
       weightedTotal: number;
+      deltaFromPrevious: number | null;
       decision: string;
     }>;
+    scoringTrace: Array<{
+      iteration: number;
+      l1Total: number;
+      l2Total: number;
+      weightedTotal: number;
+      deltaFromPrevious: number | null;
+      decision: string;
+      commitSha: string;
+    }>;
+    limitations?: string[];
   };
   renderEvidence?: {
     status: "captured" | "skipped" | "failed";
@@ -1294,7 +1325,10 @@ function validateModeMetadata(
       );
       return issues;
     }
-    if (!VALID_FULL_HARNESS_TERMINATION_REASONS.has(evidence.fullHarness.terminationReason)) {
+    if (
+      evidence.fullHarness.terminationReason !== undefined &&
+      !VALID_FULL_HARNESS_TERMINATION_REASONS.has(evidence.fullHarness.terminationReason)
+    ) {
       issues.push(
         issue(
           "QFAI-PROT-282",
@@ -1323,7 +1357,7 @@ function validateModeMetadata(
       );
     }
     if (
-      evidence.fullHarness.reviewerSignoff.reviewer.trim().length === 0 ||
+      evidence.fullHarness.reviewerSignoff.reviewerId.trim().length === 0 ||
       evidence.fullHarness.reviewerSignoff.timestamp.trim().length === 0
     ) {
       issues.push(
@@ -1340,7 +1374,7 @@ function validateModeMetadata(
       );
     }
 
-    // QFAI-PROT-290: iterationCount == 1 with converged is suspicious
+    // QFAI-PROT-290: iterationCount == 1 with converged must be an error
     if (
       evidence.fullHarness.iterationCount === 1 &&
       evidence.fullHarness.terminationReason === "converged"
@@ -1349,7 +1383,7 @@ function validateModeMetadata(
         issue(
           "QFAI-PROT-290",
           "fullHarness.iterationCount is 1 with terminationReason 'converged'. Full-harness is an iterative loop; single-iteration convergence is suspicious.",
-          "warning",
+          "error",
           evidenceJsonPath,
           "prototypingEvidence.fullHarnessSingleIterationConverged",
           undefined,
@@ -1359,18 +1393,21 @@ function validateModeMetadata(
       );
     }
 
-    // QFAI-PROT-291: scoringTrace length should match iterationCount
-    if (evidence.fullHarness.scoringTrace.length !== evidence.fullHarness.iterationCount) {
+    // QFAI-PROT-291: scoringTrace / iterations / iterationCount must all match
+    if (
+      evidence.fullHarness.scoringTrace.length !== evidence.fullHarness.iterationCount ||
+      evidence.fullHarness.iterations.length !== evidence.fullHarness.iterationCount
+    ) {
       issues.push(
         issue(
           "QFAI-PROT-291",
-          `fullHarness.scoringTrace has ${evidence.fullHarness.scoringTrace.length} entries but iterationCount is ${evidence.fullHarness.iterationCount}.`,
-          "warning",
+          `fullHarness count mismatch: scoringTrace=${evidence.fullHarness.scoringTrace.length}, iterations=${evidence.fullHarness.iterations.length}, iterationCount=${evidence.fullHarness.iterationCount}.`,
+          "error",
           evidenceJsonPath,
           "prototypingEvidence.fullHarnessScoringTraceCountMismatch",
           undefined,
           "canonical",
-          "scoringTrace のエントリ数と iterationCount を一致させてください。",
+          "scoringTrace / iterations のエントリ数と iterationCount を一致させてください。",
         ),
       );
     }
@@ -1429,6 +1466,186 @@ function validateModeMetadata(
             undefined,
             "canonical",
             "scoringTrace のスコアが改善していません。反復改善ループが機能しているか確認してください。",
+          ),
+        );
+      }
+    }
+
+    // QFAI-PROT-295: Reviewer placeholder rejection
+    const REVIEWER_PLACEHOLDERS = [
+      "qfai",
+      "default",
+      "system",
+      "auto",
+      "placeholder",
+      "tbd",
+      "n/a",
+      "none",
+      "",
+    ];
+    if (
+      REVIEWER_PLACEHOLDERS.includes(
+        evidence.fullHarness.reviewerSignoff.reviewerId.toLowerCase().trim(),
+      )
+    ) {
+      issues.push(
+        issue(
+          "QFAI-PROT-295",
+          "fullHarness reviewer is a placeholder value. A real reviewer identifier is required.",
+          "error",
+          evidenceJsonPath,
+          "prototypingEvidence.fullHarnessReviewerPlaceholder",
+          undefined,
+          "canonical",
+          "reviewerSignoff.reviewerId にプレースホルダ値は使用できません。実際のレビュアー識別子を設定してください。",
+        ),
+      );
+    }
+
+    // QFAI-PROT-296: weightedTotal enforcement
+    for (const iter of evidence.fullHarness.iterations) {
+      const expected = Math.min(iter.l1.total, iter.l2.total);
+      if (Math.abs(iter.weightedTotal - expected) > 0.001) {
+        issues.push(
+          issue(
+            "QFAI-PROT-296",
+            `fullHarness iteration ${iter.iteration}: weightedTotal (${iter.weightedTotal}) does not equal min(l1.total, l2.total) (${expected}).`,
+            "error",
+            evidenceJsonPath,
+            "prototypingEvidence.fullHarnessWeightedTotalMismatch",
+            undefined,
+            "canonical",
+            "iterations[].weightedTotal は min(l1.total, l2.total) と一致する必要があります。",
+          ),
+        );
+      }
+    }
+
+    // QFAI-PROT-297: commitSha missing
+    for (const iter of evidence.fullHarness.iterations) {
+      if (!iter.commitSha || iter.commitSha.trim().length === 0) {
+        issues.push(
+          issue(
+            "QFAI-PROT-297",
+            `fullHarness iteration ${iter.iteration}: commitSha is required.`,
+            "error",
+            evidenceJsonPath,
+            "prototypingEvidence.fullHarnessCommitShaMissing",
+            undefined,
+            "canonical",
+            "iterations[].commitSha は必須です。",
+          ),
+        );
+      }
+    }
+
+    // QFAI-PROT-298: limitations missing
+    if (!evidence.fullHarness.limitations) {
+      issues.push(
+        issue(
+          "QFAI-PROT-298",
+          "fullHarness.limitations is required (use empty array if none).",
+          "error",
+          evidenceJsonPath,
+          "prototypingEvidence.fullHarnessLimitationsMissing",
+          undefined,
+          "canonical",
+          "fullHarness.limitations は必須です（該当なしの場合は空配列を設定してください）。",
+        ),
+      );
+    }
+
+    // QFAI-PROT-299: status=completed but terminationReason missing
+    if (
+      evidence.fullHarness.status === "completed" &&
+      evidence.fullHarness.terminationReason === undefined
+    ) {
+      issues.push(
+        issue(
+          "QFAI-PROT-299",
+          "fullHarness.status is 'completed' but terminationReason is missing.",
+          "error",
+          evidenceJsonPath,
+          "prototypingEvidence.fullHarnessCompletedNoTerminationReason",
+          undefined,
+          "canonical",
+          "status が completed の場合は terminationReason を設定してください。",
+        ),
+      );
+    }
+
+    // QFAI-PROT-300: plateau with insufficient iterations
+    if (
+      evidence.fullHarness.terminationReason === "plateau" &&
+      config.prototyping?.calibration?.plateauLookback !== undefined &&
+      evidence.fullHarness.iterationCount < config.prototyping.calibration.plateauLookback
+    ) {
+      issues.push(
+        issue(
+          "QFAI-PROT-300",
+          `terminationReason is 'plateau' but iterationCount (${evidence.fullHarness.iterationCount}) is less than plateauLookback (${config.prototyping.calibration.plateauLookback}).`,
+          "error",
+          evidenceJsonPath,
+          "prototypingEvidence.fullHarnessPlateauInsufficientIterations",
+          undefined,
+          "canonical",
+          "terminationReason が plateau の場合、iterationCount は plateauLookback 以上である必要があります。",
+        ),
+      );
+    }
+
+    // QFAI-PROT-301: calibrationRef has empty configPath/packPath
+    if (
+      evidence.fullHarness.calibrationRef.configPath.trim().length === 0 ||
+      evidence.fullHarness.calibrationRef.packPath.trim().length === 0
+    ) {
+      issues.push(
+        issue(
+          "QFAI-PROT-301",
+          "fullHarness.calibrationRef is missing or has empty configPath/packPath.",
+          "error",
+          evidenceJsonPath,
+          "prototypingEvidence.fullHarnessCalibrationRefMissing",
+          undefined,
+          "canonical",
+          "fullHarness.calibrationRef に configPath / packPath を設定してください。",
+        ),
+      );
+    }
+
+    // QFAI-PROT-302: All iterations have identical commitSha
+    if (evidence.fullHarness.iterations.length >= 2) {
+      const shas = evidence.fullHarness.iterations.map((iter) => iter.commitSha);
+      const allSame = shas.every((sha) => sha === shas[0]);
+      if (allSame) {
+        issues.push(
+          issue(
+            "QFAI-PROT-302",
+            "All fullHarness iterations have the same commitSha. Each iteration should reflect a real code change.",
+            "warning",
+            evidenceJsonPath,
+            "prototypingEvidence.fullHarnessIdenticalCommitSha",
+            undefined,
+            "canonical",
+            "すべての iteration が同一の commitSha です。各 iteration は実際のコード変更を反映する必要があります。",
+          ),
+        );
+      }
+    }
+
+    // QFAI-PROT-303: reviewerLogs summary too short
+    for (const log of evidence.fullHarness.reviewerLogs) {
+      if (log.summary.length < 10) {
+        issues.push(
+          issue(
+            "QFAI-PROT-303",
+            `fullHarness reviewerLog for iteration ${log.iteration} has a very short summary.`,
+            "warning",
+            evidenceJsonPath,
+            "prototypingEvidence.fullHarnessReviewerLogShortSummary",
+            undefined,
+            "canonical",
+            "reviewerLogs[].summary は十分な長さ（10文字以上）にしてください。",
           ),
         );
       }
@@ -2487,76 +2704,222 @@ function normalizeFullHarnessBlock(
   if (value.enabled !== true) {
     return { ok: false, reason: "`fullHarness.enabled` must be true" };
   }
-  if (typeof value.available !== "boolean") {
-    return { ok: false, reason: "`fullHarness.available` must be boolean" };
-  }
   if (typeof value.runId !== "string" || value.runId.trim().length === 0) {
     return { ok: false, reason: "`fullHarness.runId` is required" };
   }
+
+  // calibrationRef validation
+  if (!isRecord(value.calibrationRef)) {
+    return { ok: false, reason: "`fullHarness.calibrationRef` must be an object" };
+  }
+  if (
+    typeof value.calibrationRef.configPath !== "string" ||
+    typeof value.calibrationRef.packPath !== "string" ||
+    typeof value.calibrationRef.packVersion !== "string"
+  ) {
+    return {
+      ok: false,
+      reason: "`fullHarness.calibrationRef` requires configPath, packPath, packVersion strings",
+    };
+  }
+
   if (!isPositiveInteger(value.iterationCount) || !isPositiveInteger(value.bestIteration)) {
     return {
       ok: false,
       reason: "`fullHarness.iterationCount` and `bestIteration` must be integers >= 1",
     };
   }
+
+  // status validation
+  if (value.status !== "in-progress" && value.status !== "completed") {
+    return { ok: false, reason: "`fullHarness.status` must be 'in-progress' or 'completed'" };
+  }
+
+  // terminationReason is optional; validate only when present
   if (
-    typeof value.terminationReason !== "string" ||
-    !VALID_FULL_HARNESS_TERMINATION_REASONS.has(value.terminationReason)
+    value.terminationReason !== undefined &&
+    (typeof value.terminationReason !== "string" ||
+      !VALID_FULL_HARNESS_TERMINATION_REASONS.has(value.terminationReason))
   ) {
     return { ok: false, reason: "`fullHarness.terminationReason` is invalid" };
   }
+
+  // reviewerSignoff validation
   if (!isRecord(value.reviewerSignoff)) {
     return { ok: false, reason: "`fullHarness.reviewerSignoff` must be an object" };
   }
   if (
     (value.reviewerSignoff.status !== "approved" && value.reviewerSignoff.status !== "rejected") ||
-    typeof value.reviewerSignoff.reviewer !== "string" ||
+    typeof value.reviewerSignoff.reviewerId !== "string" ||
     typeof value.reviewerSignoff.timestamp !== "string"
   ) {
     return { ok: false, reason: "`fullHarness.reviewerSignoff` is invalid" };
   }
+  const reviewerSource =
+    typeof value.reviewerSignoff.source === "string" ? value.reviewerSignoff.source.trim() : "cli";
+
+  // reviewerLogs validation
+  if (!Array.isArray(value.reviewerLogs)) {
+    return { ok: false, reason: "`fullHarness.reviewerLogs` must be an array" };
+  }
+  const reviewerLogs: NonNullable<PrototypingEvidence["fullHarness"]>["reviewerLogs"] = [];
+  for (const log of value.reviewerLogs) {
+    if (
+      !isRecord(log) ||
+      !isPositiveInteger(log.iteration) ||
+      typeof log.reviewerId !== "string" ||
+      typeof log.summary !== "string" ||
+      !Array.isArray(log.evidenceRefs)
+    ) {
+      return { ok: false, reason: "`fullHarness.reviewerLogs[]` is invalid" };
+    }
+    if (log.verdict !== "approve" && log.verdict !== "revise" && log.verdict !== "reject") {
+      return {
+        ok: false,
+        reason: "`fullHarness.reviewerLogs[].verdict` must be approve|revise|reject",
+      };
+    }
+    reviewerLogs.push({
+      iteration: log.iteration,
+      reviewerId: log.reviewerId.trim(),
+      verdict: log.verdict,
+      summary: log.summary.trim(),
+      evidenceRefs: (log.evidenceRefs as unknown[]).map((r) => String(r).trim()),
+    });
+  }
+
+  // iterations validation
+  if (!Array.isArray(value.iterations)) {
+    return { ok: false, reason: "`fullHarness.iterations` must be an array" };
+  }
+  const iterations: NonNullable<PrototypingEvidence["fullHarness"]>["iterations"] = [];
+  for (const iter of value.iterations) {
+    if (
+      !isRecord(iter) ||
+      !isPositiveInteger(iter.iteration) ||
+      typeof iter.commitSha !== "string" ||
+      typeof iter.reviewerId !== "string" ||
+      typeof iter.timestamp !== "string" ||
+      !Array.isArray(iter.changeSummary) ||
+      !Array.isArray(iter.limitations) ||
+      !isRecord(iter.l1) ||
+      !isRecord(iter.l2) ||
+      typeof iter.weightedTotal !== "number" ||
+      !Number.isFinite(iter.weightedTotal) ||
+      typeof iter.decision !== "string"
+    ) {
+      return { ok: false, reason: "`fullHarness.iterations[]` is invalid" };
+    }
+    if (
+      iter.l1.panel !== "L1" ||
+      typeof iter.l1.total !== "number" ||
+      iter.l2.panel !== "L2" ||
+      typeof iter.l2.total !== "number"
+    ) {
+      return { ok: false, reason: "`fullHarness.iterations[].l1/l2` is invalid" };
+    }
+    if (
+      iter.deltaFromPrevious !== null &&
+      (typeof iter.deltaFromPrevious !== "number" || !Number.isFinite(iter.deltaFromPrevious))
+    ) {
+      return {
+        ok: false,
+        reason: "`fullHarness.iterations[].deltaFromPrevious` must be number or null",
+      };
+    }
+    iterations.push({
+      iteration: iter.iteration,
+      commitSha: iter.commitSha.trim(),
+      reviewerId: iter.reviewerId.trim(),
+      timestamp: iter.timestamp.trim(),
+      changeSummary: (iter.changeSummary as unknown[]).map((s) => String(s).trim()),
+      limitations: (iter.limitations as unknown[]).map((s) => String(s).trim()),
+      l1: { panel: "L1" as const, total: iter.l1.total },
+      l2: { panel: "L2" as const, total: iter.l2.total },
+      weightedTotal: iter.weightedTotal,
+      deltaFromPrevious: iter.deltaFromPrevious,
+      decision: iter.decision.trim(),
+    });
+  }
+
+  // scoringTrace validation
   if (!Array.isArray(value.scoringTrace)) {
     return { ok: false, reason: "`fullHarness.scoringTrace` must be an array" };
   }
-
   const scoringTrace: NonNullable<PrototypingEvidence["fullHarness"]>["scoringTrace"] = [];
   for (const row of value.scoringTrace) {
     if (
       !isRecord(row) ||
       !isPositiveInteger(row.iteration) ||
+      typeof row.l1Total !== "number" ||
+      !Number.isFinite(row.l1Total) ||
+      typeof row.l2Total !== "number" ||
+      !Number.isFinite(row.l2Total) ||
       typeof row.weightedTotal !== "number" ||
       !Number.isFinite(row.weightedTotal) ||
       typeof row.decision !== "string" ||
-      row.decision.trim().length === 0
+      row.decision.trim().length === 0 ||
+      typeof row.commitSha !== "string"
     ) {
       return { ok: false, reason: "`fullHarness.scoringTrace[]` is invalid" };
     }
+    if (
+      row.deltaFromPrevious !== null &&
+      (typeof row.deltaFromPrevious !== "number" || !Number.isFinite(row.deltaFromPrevious))
+    ) {
+      return {
+        ok: false,
+        reason: "`fullHarness.scoringTrace[].deltaFromPrevious` must be number or null",
+      };
+    }
     scoringTrace.push({
       iteration: row.iteration,
+      l1Total: row.l1Total,
+      l2Total: row.l2Total,
       weightedTotal: row.weightedTotal,
+      deltaFromPrevious: row.deltaFromPrevious,
       decision: row.decision.trim(),
+      commitSha: row.commitSha.trim(),
     });
   }
+
+  // limitations validation (lenient: undefined when missing, PROT-298 catches it)
+  const limitations = Array.isArray(value.limitations)
+    ? (value.limitations as unknown[]).map((s) => String(s).trim())
+    : undefined;
 
   return {
     ok: true,
     value: {
       enabled: true,
-      available: value.available,
       runId: value.runId.trim(),
+      calibrationRef: {
+        configPath: value.calibrationRef.configPath.trim(),
+        packPath: value.calibrationRef.packPath.trim(),
+        packVersion: value.calibrationRef.packVersion.trim(),
+      },
       iterationCount: value.iterationCount,
       bestIteration: value.bestIteration,
-      terminationReason: value.terminationReason as
-        | "converged"
-        | "max-iterations"
-        | "plateau"
-        | "manual-stop",
+      status: value.status,
+      ...(value.terminationReason !== undefined
+        ? {
+            terminationReason: value.terminationReason as
+              | "converged"
+              | "max-iterations"
+              | "plateau"
+              | "manual-stop",
+          }
+        : {}),
       reviewerSignoff: {
+        reviewerId: value.reviewerSignoff.reviewerId.trim(),
         status: value.reviewerSignoff.status,
-        reviewer: value.reviewerSignoff.reviewer.trim(),
         timestamp: value.reviewerSignoff.timestamp.trim(),
+        source: reviewerSource,
       },
+      reviewerLogs,
+      iterations,
       scoringTrace,
+      ...(limitations !== undefined ? { limitations } : {}),
     },
   };
 }
