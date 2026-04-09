@@ -138,8 +138,14 @@ export async function buildSpecCoverageSummary(
       }
     }
 
-    // DB objects: no runtime observation available, all are missing
-    missingDbObjects.push(...spec.dbObjects);
+    // DB objects: v1.7.15 fail-closed — declared DB objects with no observation is an error
+    if (spec.dbObjects.length > 0) {
+      throw new Error(
+        `Spec coverage failure: spec "${spec.specId}" declares ${spec.dbObjects.length} DB objects ` +
+          `but DB object observation is not implemented. ` +
+          `Either implement DB observation or remove DB object declarations.`,
+      );
+    }
   }
 
   const evidenceRefs: string[] = [];

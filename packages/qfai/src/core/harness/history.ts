@@ -88,6 +88,42 @@ export function appendIteration(
   };
 }
 
+/**
+ * v1.7.15 WS-7: Validate structural consistency invariants.
+ * iterations.length === scoringTrace.length === reviewerLogsLength (if provided)
+ * Each iteration has valid evidenceRefs array.
+ */
+export function validateHistoryConsistency(
+  history: FullHarnessHistory,
+  reviewerLogsLength?: number,
+): string[] {
+  const errors: string[] = [];
+
+  if (history.iterations.length !== history.scoringTrace.length) {
+    errors.push(
+      `History consistency violation: iterations.length (${history.iterations.length}) !== ` +
+        `scoringTrace.length (${history.scoringTrace.length})`,
+    );
+  }
+
+  if (reviewerLogsLength !== undefined && history.iterations.length !== reviewerLogsLength) {
+    errors.push(
+      `History consistency violation: iterations.length (${history.iterations.length}) !== ` +
+        `reviewerLogs.length (${reviewerLogsLength})`,
+    );
+  }
+
+  for (const it of history.iterations) {
+    const refs = it.evidenceRefs;
+    const hasEmpty = Object.values(refs).some((arr) => arr.length === 0);
+    if (hasEmpty) {
+      errors.push(`Iteration ${it.iteration} has empty evidenceRefs categories`);
+    }
+  }
+
+  return errors;
+}
+
 export function computeTerminationReason(
   history: FullHarnessHistory,
   calibration: {
@@ -102,15 +138,20 @@ export function computeTerminationReason(
 
   if (count >= calibration.maxIterations) return "max-iterations";
 
-  if (count >= 2) {
-    const lookback = Math.min(calibration.plateauLookback, count);
-    const recentScores = history.iterations.slice(-lookback).map((i) => i.weightedTotal);
-    const maxDelta = Math.max(...recentScores) - Math.min(...recentScores);
-    if (maxDelta < calibration.plateauDelta) {
-      const latestEntry = history.iterations[count - 1];
-      const latestTotal = latestEntry?.weightedTotal ?? 0;
-      return latestTotal >= calibration.thresholds.accept ? "converged" : "plateau";
-    }
+  // v1.7.15: plateau/converged require count >= plateauLookback (strict).
+  // Do not use Math.min to adapt lookback to shorter history.
+  if (count < calibration.plateauLookback) {
+    return undefined;
+  }
+
+  const recentScores = history.iterations
+    .slice(-calibration.plateauLookback)
+    .map((i) => i.weightedTotal);
+  const maxDelta = Math.max(...recentScores) - Math.min(...recentScores);
+  if (maxDelta < calibration.plateauDelta) {
+    const latestEntry = history.iterations[count - 1];
+    const latestTotal = latestEntry?.weightedTotal ?? 0;
+    return latestTotal >= calibration.thresholds.accept ? "converged" : "plateau";
   }
 
   // v1.7.15: single-iteration accept does NOT produce converged.

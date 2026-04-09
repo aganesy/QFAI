@@ -106,11 +106,22 @@ type PrototypingEvidence = {
         render: string[];
         browserQa: string[];
         runtimeGate: string[];
-        uiFidelity: string[];
+        uiObservation: string[];
         specCoverage: string[];
+        discussion: string[];
+        screenContract: string[];
+        trend: string[];
       };
-      l1: { panel: "L1"; total: number };
-      l2: { panel: "L2"; total: number };
+      l1: {
+        panel: "L1";
+        total: number;
+        axes: Array<{ axisId: string; score: number; rationale: string; evidenceRefs: string[] }>;
+      };
+      l2: {
+        panel: "L2";
+        total: number;
+        axes: Array<{ axisId: string; score: number; rationale: string; evidenceRefs: string[] }>;
+      };
       weightedTotal: number;
       deltaFromPrevious: number | null;
       decision: string;
@@ -1719,6 +1730,7 @@ function validateModeMetadata(
     }
 
     // QFAI-PROT-307: calibrationRef packVersion hardcoded detection
+    // v1.7.15 WS-8: escalated from warning to error
     if (
       evidence.fullHarness.calibrationRef.packVersion === "1.0.0" &&
       evidence.fullHarness.iterationCount > 0
@@ -1732,7 +1744,7 @@ function validateModeMetadata(
           issue(
             "QFAI-PROT-307",
             "fullHarness.calibrationRef.packVersion appears hardcoded ('1.0.0'). packVersion must be resolved from pack metadata.",
-            "warning",
+            "error",
             evidenceJsonPath,
             "prototypingEvidence.fullHarnessPackVersionHardcoded",
             undefined,
@@ -1775,6 +1787,142 @@ function validateModeMetadata(
             undefined,
             "canonical",
             "iterations[].reviewerId にプレースホルダ値は使用できません。",
+          ),
+        );
+      }
+    }
+
+    // v1.7.15 WS-8: New validation rules for evidence-driven strictness
+
+    // QFAI-PROT-310: L2 evidence refs — discussion axes must have evidenceRefs
+    for (const iter of evidence.fullHarness.iterations) {
+      if (iter.evidenceRefs !== undefined && iter.evidenceRefs.discussion.length === 0) {
+        issues.push(
+          issue(
+            "QFAI-PROT-310",
+            `fullHarness iteration ${iter.iteration}: evidenceRefs.discussion is empty. Discussion evidence is required for L2 scoring.`,
+            "error",
+            evidenceJsonPath,
+            "prototypingEvidence.fullHarnessDiscussionEvidenceRefsMissing",
+            undefined,
+            "canonical",
+            "iterations[].evidenceRefs.discussion には discussion artifact への参照が必要です。",
+          ),
+        );
+      }
+    }
+
+    // QFAI-PROT-311: L2 evidence refs — screen contract must have evidenceRefs
+    for (const iter of evidence.fullHarness.iterations) {
+      if (iter.evidenceRefs !== undefined && iter.evidenceRefs.screenContract.length === 0) {
+        issues.push(
+          issue(
+            "QFAI-PROT-311",
+            `fullHarness iteration ${iter.iteration}: evidenceRefs.screenContract is empty. Screen contract evidence is required for L2 scoring.`,
+            "error",
+            evidenceJsonPath,
+            "prototypingEvidence.fullHarnessScreenContractEvidenceRefsMissing",
+            undefined,
+            "canonical",
+            "iterations[].evidenceRefs.screenContract には screen contract への参照が必要です。",
+          ),
+        );
+      }
+    }
+
+    // QFAI-PROT-312: L2 evidence refs — trend alignment must have evidenceRefs
+    for (const iter of evidence.fullHarness.iterations) {
+      if (iter.evidenceRefs !== undefined && iter.evidenceRefs.trend.length === 0) {
+        issues.push(
+          issue(
+            "QFAI-PROT-312",
+            `fullHarness iteration ${iter.iteration}: evidenceRefs.trend is empty. Trend alignment evidence is required for L2 scoring.`,
+            "error",
+            evidenceJsonPath,
+            "prototypingEvidence.fullHarnessTrendEvidenceRefsMissing",
+            undefined,
+            "canonical",
+            "iterations[].evidenceRefs.trend には trend artifact への参照が必要です。",
+          ),
+        );
+      }
+    }
+
+    // QFAI-PROT-313: DB objects declared but no DB coverage evidence
+    for (const spec of evidence.specs) {
+      if (spec.declared.dbObjects > 0 && spec.checked.dbPresent === 0) {
+        issues.push(
+          issue(
+            "QFAI-PROT-313",
+            `Spec "${spec.specId}" declares ${spec.declared.dbObjects} DB objects but has no DB coverage evidence (dbPresent=0).`,
+            "error",
+            evidenceJsonPath,
+            "prototypingEvidence.dbObjectsDeclaredNoCoverage",
+            [`specId=${spec.specId}`, `declared=${spec.declared.dbObjects}`],
+            "canonical",
+            "DB objects を宣言する spec には、DB coverage evidence が必要です。",
+          ),
+        );
+      }
+    }
+
+    // QFAI-PROT-314: iterations evidenceRefs missing required categories
+    const requiredEvidenceCategories = [
+      "render",
+      "browserQa",
+      "runtimeGate",
+      "specCoverage",
+    ] as const;
+    for (const iter of evidence.fullHarness.iterations) {
+      if (iter.evidenceRefs !== undefined) {
+        for (const category of requiredEvidenceCategories) {
+          const refs = iter.evidenceRefs[category];
+          if (refs.length === 0) {
+            issues.push(
+              issue(
+                "QFAI-PROT-314",
+                `fullHarness iteration ${iter.iteration}: evidenceRefs.${category} is missing or empty. All evidence categories are required.`,
+                "error",
+                evidenceJsonPath,
+                "prototypingEvidence.fullHarnessEvidenceRefsCategoryMissing",
+                [`iteration=${iter.iteration}`, `category=${category}`],
+                "canonical",
+                `iterations[].evidenceRefs.${category} は必須カテゴリです。`,
+              ),
+            );
+          }
+        }
+      }
+    }
+
+    // QFAI-PROT-315: pre-scored l1/l2 detection in iterations
+    for (const iter of evidence.fullHarness.iterations) {
+      // Check if l1/l2 look pre-scored (axes array empty but total > 0)
+      if (iter.l1.axes.length === 0 && iter.l1.total > 0) {
+        issues.push(
+          issue(
+            "QFAI-PROT-315",
+            `fullHarness iteration ${iter.iteration}: L1 panel appears pre-scored (total=${iter.l1.total} but no axes). Panels must be computed from real evidence.`,
+            "error",
+            evidenceJsonPath,
+            "prototypingEvidence.fullHarnessPrescored",
+            [`iteration=${iter.iteration}`, `panel=L1`],
+            "canonical",
+            "L1/L2 パネルは panelInputs から算出する必要があります。pre-scored 値は禁止です。",
+          ),
+        );
+      }
+      if (iter.l2.axes.length === 0 && iter.l2.total > 0) {
+        issues.push(
+          issue(
+            "QFAI-PROT-315",
+            `fullHarness iteration ${iter.iteration}: L2 panel appears pre-scored (total=${iter.l2.total} but no axes). Panels must be computed from real evidence.`,
+            "error",
+            evidenceJsonPath,
+            "prototypingEvidence.fullHarnessPrescored",
+            [`iteration=${iter.iteration}`, `panel=L2`],
+            "canonical",
+            "L1/L2 パネルは panelInputs から算出する必要があります。pre-scored 値は禁止です。",
           ),
         );
       }
@@ -2956,6 +3104,58 @@ function normalizeFullHarnessBlock(
         reason: "`fullHarness.iterations[].deltaFromPrevious` must be number or null",
       };
     }
+    // v1.7.15: parse evidenceRefs (optional for backward compat but validated if present)
+    let parsedEvidenceRefs:
+      | NonNullable<PrototypingEvidence["fullHarness"]>["iterations"][0]["evidenceRefs"]
+      | undefined;
+    if (isRecord(iter.evidenceRefs)) {
+      const er = iter.evidenceRefs;
+      parsedEvidenceRefs = {
+        render: Array.isArray(er.render) ? (er.render as unknown[]).map((r) => String(r)) : [],
+        browserQa: Array.isArray(er.browserQa)
+          ? (er.browserQa as unknown[]).map((r) => String(r))
+          : [],
+        runtimeGate: Array.isArray(er.runtimeGate)
+          ? (er.runtimeGate as unknown[]).map((r) => String(r))
+          : [],
+        uiObservation: Array.isArray(er.uiObservation)
+          ? (er.uiObservation as unknown[]).map((r) => String(r))
+          : [],
+        specCoverage: Array.isArray(er.specCoverage)
+          ? (er.specCoverage as unknown[]).map((r) => String(r))
+          : [],
+        discussion: Array.isArray(er.discussion)
+          ? (er.discussion as unknown[]).map((r) => String(r))
+          : [],
+        screenContract: Array.isArray(er.screenContract)
+          ? (er.screenContract as unknown[]).map((r) => String(r))
+          : [],
+        trend: Array.isArray(er.trend) ? (er.trend as unknown[]).map((r) => String(r)) : [],
+      };
+    }
+
+    // v1.7.15: parse l1/l2 axes
+    const l1Axes = Array.isArray(iter.l1.axes)
+      ? (iter.l1.axes as unknown[]).filter(isRecord).map((a) => ({
+          axisId: typeof a.axisId === "string" ? a.axisId : "",
+          score: typeof a.score === "number" ? a.score : 0,
+          rationale: typeof a.rationale === "string" ? a.rationale : "",
+          evidenceRefs: Array.isArray(a.evidenceRefs)
+            ? (a.evidenceRefs as unknown[]).map((r) => String(r))
+            : [],
+        }))
+      : [];
+    const l2Axes = Array.isArray(iter.l2.axes)
+      ? (iter.l2.axes as unknown[]).filter(isRecord).map((a) => ({
+          axisId: typeof a.axisId === "string" ? a.axisId : "",
+          score: typeof a.score === "number" ? a.score : 0,
+          rationale: typeof a.rationale === "string" ? a.rationale : "",
+          evidenceRefs: Array.isArray(a.evidenceRefs)
+            ? (a.evidenceRefs as unknown[]).map((r) => String(r))
+            : [],
+        }))
+      : [];
+
     iterations.push({
       iteration: iter.iteration,
       commitSha: iter.commitSha.trim(),
@@ -2963,8 +3163,9 @@ function normalizeFullHarnessBlock(
       timestamp: iter.timestamp.trim(),
       changeSummary: (iter.changeSummary as unknown[]).map((s) => String(s).trim()),
       limitations: (iter.limitations as unknown[]).map((s) => String(s).trim()),
-      l1: { panel: "L1" as const, total: iter.l1.total },
-      l2: { panel: "L2" as const, total: iter.l2.total },
+      ...(parsedEvidenceRefs ? { evidenceRefs: parsedEvidenceRefs } : {}),
+      l1: { panel: "L1" as const, total: iter.l1.total, axes: l1Axes },
+      l2: { panel: "L2" as const, total: iter.l2.total, axes: l2Axes },
       weightedTotal: iter.weightedTotal,
       deltaFromPrevious: iter.deltaFromPrevious,
       decision: iter.decision.trim(),

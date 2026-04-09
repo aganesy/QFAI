@@ -2,12 +2,17 @@
  * UI observation — v1.7.15
  *
  * DOM / browser QA / render evidence-driven observation.
- * No synthetic fallback; insufficient evidence → explicit status.
+ * v1.7.15: screen-level observation, no synthetic fallback.
+ * Insufficient evidence → explicit status.
  */
 
 import { readFile } from "node:fs/promises";
 import { JSDOM } from "jsdom";
-import type { UiObservationSummary, BrowserQaSummary } from "../harness/panelInputs.js";
+import type {
+  UiObservationSummary,
+  BrowserQaSummary,
+  ScreenObservation,
+} from "../harness/panelInputs.js";
 import type { RenderRunnerResult } from "../evidence/types.js";
 import type { BrowserQaRunResult } from "../browserQa/types.js";
 
@@ -68,45 +73,71 @@ export function extractDomLabelsWithJsdom(html: string): string[] {
   return [...new Set(labels)];
 }
 
+/**
+ * Build screen-level UI observation summary from render results and browser QA.
+ * v1.7.15: each screen gets its own observation, not a flattened aggregate.
+ */
 export async function buildUiObservationSummary(
   renderResult?: RenderRunnerResult,
+  browserQaResult?: BrowserQaRunResult,
 ): Promise<UiObservationSummary> {
-  const htmlCaptureRefs: string[] = [];
-  let allLabels: string[] = [];
+  const screens: ScreenObservation[] = [];
+  const evidenceRefs: string[] = [];
 
   if (renderResult) {
     for (const entry of renderResult.entries) {
       if (entry.status === "captured" && entry.html_path) {
-        htmlCaptureRefs.push(entry.html_path);
+        evidenceRefs.push(entry.html_path);
         const html = await loadCapturedHtml(entry.html_path);
-        if (html) {
-          const labels = extractDomLabelsWithJsdom(html);
-          allLabels.push(...labels);
+        const domLabels = html ? extractDomLabelsWithJsdom(html) : [];
+
+        // Derive actionsWired from browser QA findings for this screen's route
+        let actionsWired = 0;
+        const mockPathFindings: ScreenObservation["mockPathFindings"] = [];
+        if (browserQaResult) {
+          for (const phase of browserQaResult.phases) {
+            for (const finding of phase.findings) {
+              const matchesRoute =
+                finding.route === undefined ||
+                finding.route === entry.target ||
+                finding.route === entry.viewport;
+              if (matchesRoute) {
+                actionsWired++;
+                mockPathFindings.push({
+                  id: finding.screen_id ?? `${phase.phase}-${finding.route ?? "unknown"}`,
+                  status: finding.severity === "error" ? "fail" : "finding",
+                });
+              }
+            }
+          }
         }
+
+        screens.push({
+          route: entry.target || entry.viewport || "unknown",
+          htmlCaptureRef: entry.html_path,
+          domLabelsFound: domLabels,
+          elementsPlaced: domLabels.length,
+          actionsWired,
+          mockPathFindings,
+        });
       }
     }
   }
 
-  allLabels = [...new Set(allLabels)];
-
-  return {
-    domLabelsFound: allLabels,
-    elementsPlaced: allLabels.length,
-    actionsWired: 0, // Will be enriched by browser QA
-    htmlCaptureRefs,
-  };
+  return { screens, evidenceRefs };
 }
 
 export function deriveMockPathFindingsFromBrowserQa(
   browserQaResult?: BrowserQaRunResult,
-): Array<{ id: string; status: string }> {
+): Array<{ id: string; status: "pass" | "fail" | "finding" }> {
   if (!browserQaResult) return [];
 
-  const findings: Array<{ id: string; status: string }> = [];
+  const findings: Array<{ id: string; status: "pass" | "fail" | "finding" }> = [];
   for (const phase of browserQaResult.phases) {
     for (const finding of phase.findings) {
       findings.push({
         id: finding.screen_id ?? `${phase.phase}-finding`,
+        // v1.7.15: "pass" only from explicit success observation, not auto-generated
         status: finding.severity === "error" ? "fail" : "finding",
       });
     }

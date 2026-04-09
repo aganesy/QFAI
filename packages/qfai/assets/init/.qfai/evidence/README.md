@@ -118,6 +118,18 @@ When `mode.effective = "full-harness"`:
 - `calibrationRef.packVersion` must be resolved from pack metadata, not hardcoded (QFAI-PROT-307)
 - Iteration-level `reviewerId` must not be a placeholder (QFAI-PROT-309)
 
+**Prohibited patterns (current):**
+
+- Pre-scored `l1`/`l2` metadata flow-through — panels must be computed from `panelInputs` with real axes (QFAI-PROT-315)
+- Hardcoded default `packVersion` — pack version must come from calibration pack metadata (QFAI-PROT-307)
+- Synthetic `mockPaths.status="pass"` auto-generation — only real browser QA observations (QFAI-PROT-306)
+- Zero-seeded `specCoverage` — all declared/checked/missing must reflect real measurement (QFAI-PROT-305)
+- Count-insufficient `plateau`/`converged` — `iterationCount` must be >= `plateauLookback` (QFAI-PROT-300)
+- Empty L2 evidence refs for `discussion`, `screenContract`, `trend` (QFAI-PROT-310/311/312)
+- DB objects `declared > 0` without observation evidence (QFAI-PROT-313)
+- `iterations[].evidenceRefs` missing required categories (QFAI-PROT-314)
+- Flat/aggregate UI observation — must be screen-level per route
+
 ## Render evidence bundle conventions
 
 Canonical path: `.qfai/evidence/render.json`

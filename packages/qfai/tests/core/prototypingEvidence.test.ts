@@ -818,8 +818,30 @@ function buildV2FullHarness(opts: {
     timestamp: `2026-04-0${i + 1}T00:00:00Z`,
     changeSummary: [`Iteration ${i + 1} changes`],
     limitations: ["Known limitation"],
-    l1: { panel: "L1", total: score },
-    l2: { panel: "L2", total: score },
+    l1: {
+      panel: "L1",
+      total: score,
+      axes: [
+        {
+          axisId: "coverage",
+          score,
+          rationale: "test fixture",
+          evidenceRefs: ["evidence/prototyping.json"],
+        },
+      ],
+    },
+    l2: {
+      panel: "L2",
+      total: score,
+      axes: [
+        {
+          axisId: "coverage",
+          score,
+          rationale: "test fixture",
+          evidenceRefs: ["evidence/prototyping.json"],
+        },
+      ],
+    },
     weightedTotal: score,
     deltaFromPrevious: i === 0 ? null : +(score - opts.scores[i - 1]).toFixed(4),
     decision: i === opts.scores.length - 1 ? opts.lastDecision : "refine",

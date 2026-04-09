@@ -49,7 +49,7 @@ export type BuiltUiFidelity = {
         elementsPlaced: number;
         actionsWired: number;
       };
-      mockPaths: Array<{ id: string; status: string }>;
+      mockPaths: Array<{ id: string; status: "pass" | "fail" | "finding" }>;
       renders: Array<{
         viewport: string;
         status: "captured" | "skipped" | "failed";
@@ -78,7 +78,8 @@ export async function buildUiFidelity(input: {
   const screenContracts = await readScreenContracts(latestPack);
   const contractSummaries = await collectUiContractScreens(input.root, input.config);
 
-  const uiObservation = await buildUiObservationSummary(input.renderResult);
+  // v1.7.15: screen-level observation from uiObservation.ts
+  const uiObservation = await buildUiObservationSummary(input.renderResult, input.browserQaResult);
   const mockPathFindings = deriveMockPathFindingsFromBrowserQa(input.browserQaResult);
 
   const screens = screenContracts
@@ -92,30 +93,28 @@ export async function buildUiFidelity(input: {
         (entry) => entry.target === screen.route || entry.target === screen.screenId,
       );
 
-      // v1.7.15: Use DOM-derived observation from uiObservation.ts
-      const domLabels = uiObservation.domLabelsFound;
-      const browserFindingsCount =
-        input.browserQaResult?.phases
-          .flatMap((phase) => phase.findings)
-          .filter((finding) => finding.route === undefined || finding.route === screen.route)
-          .length ?? 0;
+      // v1.7.15: screen-level observation — find the specific screen's observation
+      const screenObs = uiObservation.screens.find(
+        (obs) => obs.route === screen.route || obs.route === screen.screenId,
+      );
+      const domLabels = screenObs?.domLabelsFound ?? [];
+      const actionsWired = screenObs?.actionsWired ?? 0;
 
       // v1.7.15: mockPaths derived from browser QA findings only (no auto-pass)
-      const screenMockPaths = mockPathFindings.filter(
-        (f) => f.id.startsWith(screen.screenId) || f.id.includes(screen.route),
-      );
+      const screenMockPaths =
+        screenObs?.mockPathFindings ??
+        mockPathFindings.filter(
+          (f) => f.id.startsWith(screen.screenId) || f.id.includes(screen.route),
+        );
 
       return {
         route: screen.route,
         uiContractId: contract.contractId,
         expected: contract.expected,
         ...(domLabels.length > 0 ? { found: { labels: domLabels } } : {}),
-        // v1.7.15: observed reflects real measurement only.
-        // domLabels = elements found in rendered HTML; browserFindingsCount = actions
-        // detected by browser QA. No synthetic fallback from expected values.
         observed: {
           elementsPlaced: domLabels.length,
-          actionsWired: browserFindingsCount > 0 ? browserFindingsCount : 0,
+          actionsWired,
         },
         mockPaths: screenMockPaths,
         renders: renderEntries.map((entry) => ({
@@ -149,6 +148,12 @@ export async function buildUiFidelity(input: {
     };
   }
 
+  // v1.7.15: check for insufficient evidence per screen
+  const insufficientScreens = screens.filter(
+    (s) => s.renders.length === 0 && s.observed.elementsPlaced === 0,
+  );
+  const hasInsufficientEvidence = insufficientScreens.length > 0;
+
   return {
     uiFidelity: {
       mode: "interactive",
@@ -156,9 +161,16 @@ export async function buildUiFidelity(input: {
     },
     status: {
       required: input.required,
-      status: "completed",
+      status: hasInsufficientEvidence ? "insufficient-evidence" : "completed",
+      ...(hasInsufficientEvidence
+        ? {
+            reason: `${insufficientScreens.length} screen(s) lack render/observation evidence: ${insufficientScreens.map((s) => s.route).join(", ")}`,
+          }
+        : {}),
     },
-    missingRequiredEvidence: [],
+    missingRequiredEvidence: hasInsufficientEvidence
+      ? insufficientScreens.map((s) => `uiFidelity:${s.route}`)
+      : [],
   };
 }
 

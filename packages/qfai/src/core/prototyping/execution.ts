@@ -34,6 +34,11 @@ import { buildUiObservationSummary, buildBrowserQaSummaryFromResult } from "./ui
 import { loadHistory } from "../harness/history.js";
 import type { FullHarnessPanelInputs } from "../harness/panelInputs.js";
 import { validatePanelInputs } from "../harness/panelInputs.js";
+import {
+  buildDiscussionAxisInputs,
+  buildScreenContractInputs,
+  buildTrendAlignmentInputs,
+} from "./l2Evidence.js";
 
 export type PrototypingExecutionRequest = {
   root: string;
@@ -210,7 +215,7 @@ export async function runPrototypingExecution(
       );
     }
 
-    // CalibrationLoader — pack must be loadable for full-harness
+    // CalibrationLoader — pack is SSOT for all thresholds/params (fail-closed)
     const calibrationConfig = config.prototyping?.calibration;
     const packPath = calibrationConfig?.packPath ?? ".qfai/evidence/calibration.yaml";
     const fullPackPath = path.join(request.root, packPath);
@@ -226,13 +231,11 @@ export async function runPrototypingExecution(
     }
     const packVersion = calibrationPack.version;
 
-    const thresholds = {
-      accept: calibrationPack.thresholds?.accept ?? calibrationConfig?.thresholds?.accept ?? 0.8,
-      refine: calibrationPack.thresholds?.refine ?? calibrationConfig?.thresholds?.refine ?? 0.5,
-    };
-    const maxIterations = calibrationConfig?.maxIterations ?? 15;
-    const plateauDelta = calibrationConfig?.plateauDelta ?? 0.02;
-    const plateauLookback = calibrationConfig?.plateauLookback ?? 3;
+    // v1.7.15: pack is SSOT — no config fallback for thresholds/maxIterations/plateau
+    const thresholds = calibrationPack.thresholds;
+    const maxIterations = calibrationPack.maxIterations;
+    const plateauDelta = calibrationPack.plateauDelta;
+    const plateauLookback = calibrationPack.plateauLookback;
 
     // Build spec coverage from real artifacts
     const specsDir = path.join(request.root, ".qfai", "specs");
@@ -247,7 +250,7 @@ export async function runPrototypingExecution(
     );
 
     // Build UI observation from real DOM/render
-    const uiObservation = await buildUiObservationSummary(renderResult);
+    const uiObservation = await buildUiObservationSummary(renderResult, browserQaResult);
 
     // Build browser QA summary from real results
     const browserQaSummary = buildBrowserQaSummaryFromResult(browserQaResult);
@@ -259,6 +262,18 @@ export async function runPrototypingExecution(
           apiEndpoints: runtimeGateForCoverage.api,
         }
       : { uiRoutes: [], apiEndpoints: [] };
+
+    // Build L2 inputs from real artifacts (no zero-filling)
+    const discussionAxes = await buildDiscussionAxisInputs(request.root);
+    const screenContractInputs = uiFidelity.uiFidelity
+      ? buildScreenContractInputs(request.root, uiFidelity.uiFidelity.screens)
+      : (() => {
+          throw new Error(
+            "Full-harness requires UI fidelity screens for screen contract inputs. " +
+              "No screen contracts could be resolved.",
+          );
+        })();
+    const trendAlignment = await buildTrendAlignmentInputs(request.root);
 
     const panelInputs: FullHarnessPanelInputs = {
       runtimeGate: runtimeGateEvidence,
@@ -272,26 +287,9 @@ export async function runPrototypingExecution(
       browserQa: browserQaSummary,
       uiObservation,
       specCoverage,
-      discussionAxes: {
-        invariantAxes: 0,
-        trendDerivedAxes: 0,
-        productSpecificAxes: 0,
-        aggregateScore: 0,
-        evidenceRefs: [],
-      },
-      screenContract: {
-        totalContracts: uiFidelity.uiFidelity?.screens.length ?? 0,
-        coveredContracts:
-          uiFidelity.uiFidelity?.screens.filter((s) => s.observed.elementsPlaced > 0).length ?? 0,
-        fidelityScore: 0,
-        evidenceRefs: [],
-      },
-      trendAlignment: {
-        trendSourcesChecked: 0,
-        translationConsistency: 0,
-        competitiveGapsCovered: 0,
-        evidenceRefs: [],
-      },
+      discussionAxes,
+      screenContract: screenContractInputs,
+      trendAlignment,
     };
 
     // Validate panel inputs — missing evidence must fail, not silently score to 0
@@ -361,10 +359,16 @@ export async function runPrototypingExecution(
         | "approve"
         | "revise"
         | "reject",
-      summary: `Iteration ${fullHarness.iteration.iteration} measurement recorded`,
+      summary: `Iteration ${fullHarness.iteration.iteration}: decision=${fullHarness.iteration.decision} weightedTotal=${fullHarness.iteration.weightedTotal.toFixed(3)} limitations=${fullHarness.iteration.limitations.length}`,
       evidenceRefs: [
         ...fullHarness.iteration.evidenceRefs.render,
         ...fullHarness.iteration.evidenceRefs.browserQa,
+        ...fullHarness.iteration.evidenceRefs.runtimeGate,
+        ...fullHarness.iteration.evidenceRefs.uiObservation,
+        ...fullHarness.iteration.evidenceRefs.specCoverage,
+        ...fullHarness.iteration.evidenceRefs.discussion,
+        ...fullHarness.iteration.evidenceRefs.screenContract,
+        ...fullHarness.iteration.evidenceRefs.trend,
       ],
     };
 
@@ -456,23 +460,21 @@ async function buildPrototypingSummaryBundle(input: {
     .sort((left, right) => left.localeCompare(right))
     .map((name) => {
       const perSpec = perSpecMap.get(name);
-      if (perSpec) {
-        return {
-          specId: name,
-          declared: { ...perSpec.declared },
-          checked: { ...perSpec.checked },
-          missing: {
-            uiRoutes: [...perSpec.missing.uiRoutes],
-            apiEndpoints: [...perSpec.missing.apiEndpoints],
-            dbObjects: [...perSpec.missing.dbObjects],
-          },
-        };
+      if (!perSpec) {
+        throw new Error(
+          `Spec coverage build failure: spec "${name}" exists but has no coverage data. ` +
+            `All specs must have corresponding coverage results.`,
+        );
       }
       return {
         specId: name,
-        declared: { uiRoutes: 0, apiEndpoints: 0, dbObjects: 0 },
-        checked: { uiOk: 0, apiNon404: 0, dbPresent: 0 },
-        missing: { uiRoutes: [], apiEndpoints: [], dbObjects: [] },
+        declared: { ...perSpec.declared },
+        checked: { ...perSpec.checked },
+        missing: {
+          uiRoutes: [...perSpec.missing.uiRoutes],
+          apiEndpoints: [...perSpec.missing.apiEndpoints],
+          dbObjects: [...perSpec.missing.dbObjects],
+        },
       };
     });
 

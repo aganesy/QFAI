@@ -14,7 +14,10 @@ export type AlignmentExample = {
 export type CalibrationPack = {
   version: string;
   examples: AlignmentExample[];
-  thresholds?: ThresholdConfig;
+  thresholds: ThresholdConfig;
+  maxIterations: number;
+  plateauDelta: number;
+  plateauLookback: number;
 };
 
 export type ThresholdConfig = {

@@ -119,6 +119,16 @@ Canonical prototyping surfaces are: `web`, `mobile`, `desktop`, `cli`, `mixed`.
 - `--reviewer <id>` is mandatory for full-harness. Placeholder values are rejected.
 - `--change-summary` and `--limitation` capture per-iteration context.
 - Calibration parameters from `qfai.config.yaml > prototyping.calibration` are the sole runtime parameter source.
+- **Current version**: Full-harness is strictly evidence-driven:
+  - Calibration pack is mandatory — missing pack/version/thresholds is a fatal error (no fallback defaults).
+  - `2 iteration` minimum for `converged` — single-iteration accept does NOT produce `converged`.
+  - Trend / discussion / screen contract evidence are mandatory for L2 scoring — empty evidenceRefs is an error.
+  - UI fidelity uses **screen-level** observation — aggregate/flat summary is prohibited.
+  - Pre-scored `l1`/`l2` metadata flow-through is prohibited — panels must be computed from real `panelInputs`.
+  - Per-spec zero-fill fallback is prohibited — all specs must have real coverage data.
+  - DB object declarations without observation evidence are rejected.
+  - Synthetic `mockPaths.status="pass"` auto-generation is prohibited — only real browser QA observations.
+  - Hardcoded default `packVersion` is rejected by the validator.
 
 ## Obligation Matrix
 

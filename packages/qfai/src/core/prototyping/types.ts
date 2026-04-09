@@ -66,6 +66,6 @@ export type PrototypingExecutionConfig = {
 
 export type UiFidelityStatus = {
   required: boolean;
-  status: "completed" | "failed" | "n/a";
+  status: "completed" | "failed" | "insufficient-evidence" | "n/a";
   reason?: string;
 };

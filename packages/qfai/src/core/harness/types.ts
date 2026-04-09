@@ -29,8 +29,11 @@ export type FullHarnessIteration = {
     render: string[];
     browserQa: string[];
     runtimeGate: string[];
-    uiFidelity: string[];
+    uiObservation: string[];
     specCoverage: string[];
+    discussion: string[];
+    screenContract: string[];
+    trend: string[];
   };
   l1: FullHarnessPanelScore;
   l2: FullHarnessPanelScore;
@@ -72,8 +75,11 @@ export type MeasurementInput = {
   renderRefs?: string[];
   browserQaRefs?: string[];
   runtimeGateRefs?: string[];
-  uiFidelityRefs?: string[];
+  uiObservationRefs?: string[];
   specCoverageRefs?: string[];
+  discussionRefs?: string[];
+  screenContractRefs?: string[];
+  trendRefs?: string[];
   l1: FullHarnessPanelScore;
   l2: FullHarnessPanelScore;
 };

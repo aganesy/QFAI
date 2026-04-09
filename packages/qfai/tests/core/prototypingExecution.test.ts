@@ -63,7 +63,7 @@ describe("runPrototypingExecution", () => {
           requestedMode: "full-harness",
           reviewer: "test-reviewer",
         }),
-      ).rejects.toThrow(/Full-harness measurement requires complete evidence/);
+      ).rejects.toThrow(/Full-harness requires a valid calibration pack/);
     });
   });
 

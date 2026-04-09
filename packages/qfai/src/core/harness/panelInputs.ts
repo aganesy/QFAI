@@ -3,6 +3,7 @@
  *
  * Separates evidence collection from scoring logic.
  * Every field is required; missing evidence is a MeasurementError.
+ * v1.7.15: screen-level observation, L2 evidence refs required, fail-closed.
  */
 
 export type RuntimeGateEvidence = {
@@ -28,11 +29,18 @@ export type BrowserQaSummary = {
   evidenceRefs: string[];
 };
 
-export type UiObservationSummary = {
+export type ScreenObservation = {
+  route: string;
+  htmlCaptureRef: string;
   domLabelsFound: string[];
   elementsPlaced: number;
   actionsWired: number;
-  htmlCaptureRefs: string[];
+  mockPathFindings: Array<{ id: string; status: "pass" | "fail" | "finding" }>;
+};
+
+export type UiObservationSummary = {
+  screens: ScreenObservation[];
+  evidenceRefs: string[];
 };
 
 export type SpecCoverageSummary = {
@@ -103,11 +111,29 @@ export function validatePanelInputs(inputs: FullHarnessPanelInputs): void {
   if (inputs.renderEvidence.totalScreens === 0) {
     missing.push("renderEvidence.screens (no screens captured)");
   }
+  if (inputs.renderEvidence.evidenceRefs.length === 0) {
+    missing.push("renderEvidence.evidenceRefs (empty)");
+  }
   if (!inputs.browserQa.executed) {
     missing.push("browserQa (not executed)");
   }
+  if (inputs.browserQa.evidenceRefs.length === 0) {
+    missing.push("browserQa.evidenceRefs (empty)");
+  }
   if (inputs.specCoverage.evidenceRefs.length === 0) {
     missing.push("specCoverage.evidenceRefs (empty)");
+  }
+  if (inputs.uiObservation.evidenceRefs.length === 0) {
+    missing.push("uiObservation.evidenceRefs (empty)");
+  }
+  if (inputs.discussionAxes.evidenceRefs.length === 0) {
+    missing.push("discussionAxes.evidenceRefs (empty)");
+  }
+  if (inputs.screenContract.evidenceRefs.length === 0) {
+    missing.push("screenContract.evidenceRefs (empty)");
+  }
+  if (inputs.trendAlignment.evidenceRefs.length === 0) {
+    missing.push("trendAlignment.evidenceRefs (empty)");
   }
 
   if (missing.length > 0) {

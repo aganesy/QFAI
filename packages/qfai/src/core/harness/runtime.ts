@@ -23,10 +23,10 @@ import type {
   MeasurementInput,
   TerminationReason,
   FullHarnessCalibrationRef,
-  FullHarnessPanelScore,
 } from "./types.js";
 import { runMeasurement } from "./measurement.js";
 import type { FullHarnessPanelInputs } from "./panelInputs.js";
+import { validatePanelInputs } from "./panelInputs.js";
 import { scorePanelsFromInputs } from "./panelScore.js";
 import type { RenderRunnerResult } from "../evidence/types.js";
 import type { BrowserQaRunResult } from "../browserQa/types.js";
@@ -46,9 +46,7 @@ export type FullHarnessRequest = {
     plateauLookback: number;
   };
   adapters?: FullHarnessAdapters;
-  panelInputs?: FullHarnessPanelInputs;
-  l1?: FullHarnessPanelScore;
-  l2?: FullHarnessPanelScore;
+  panelInputs: FullHarnessPanelInputs;
 };
 
 export type FullHarnessResult = {
@@ -101,23 +99,11 @@ export async function runFullHarness(request: FullHarnessRequest): Promise<FullH
     }
   }
 
-  // Compute panel scores from real evidence
-  let l1: FullHarnessPanelScore;
-  let l2: FullHarnessPanelScore;
-
-  if (request.panelInputs) {
-    const scored = scorePanelsFromInputs(request.panelInputs);
-    l1 = scored.l1;
-    l2 = scored.l2;
-  } else if (request.l1 && request.l2) {
-    // Allow pre-computed scores if explicitly provided (for testing)
-    l1 = request.l1;
-    l2 = request.l2;
-  } else {
-    throw new Error(
-      "Full-harness requires either panelInputs for evidence-based scoring or explicit l1/l2 scores.",
-    );
-  }
+  // Validate and score panels from real evidence inputs only
+  validatePanelInputs(request.panelInputs);
+  const scored = scorePanelsFromInputs(request.panelInputs);
+  const l1 = scored.l1;
+  const l2 = scored.l2;
 
   // Observability
   if (request.adapters?.observability) {
@@ -143,6 +129,12 @@ export async function runFullHarness(request: FullHarnessRequest): Promise<FullH
     },
     renderRefs,
     browserQaRefs,
+    runtimeGateRefs: request.panelInputs.runtimeGate.uiRoutes.length > 0 ? ["runtimeGate"] : [],
+    uiObservationRefs: request.panelInputs.uiObservation.evidenceRefs,
+    specCoverageRefs: request.panelInputs.specCoverage.evidenceRefs,
+    discussionRefs: request.panelInputs.discussionAxes.evidenceRefs,
+    screenContractRefs: request.panelInputs.screenContract.evidenceRefs,
+    trendRefs: request.panelInputs.trendAlignment.evidenceRefs,
     l1,
     l2,
   };

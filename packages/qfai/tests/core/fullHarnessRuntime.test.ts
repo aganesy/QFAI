@@ -9,6 +9,7 @@ import { describe, expect, it } from "vitest";
 
 import { runFullHarness, type FullHarnessRequest } from "../../src/core/harness/runtime.js";
 import type { FullHarnessAdapters } from "../../src/core/harness/adapters.js";
+import type { FullHarnessPanelInputs } from "../../src/core/harness/panelInputs.js";
 
 async function withRoot(task: (root: string) => Promise<void>): Promise<void> {
   const root = await mkdtemp(path.join(os.tmpdir(), "qfai-harness-"));
@@ -28,6 +29,70 @@ async function withRoot(task: (root: string) => Promise<void>): Promise<void> {
   }
 }
 
+function makePanelInputs(overrides: Partial<FullHarnessPanelInputs> = {}): FullHarnessPanelInputs {
+  return {
+    runtimeGate: {
+      uiRoutes: [{ route: "/", status: 200 }],
+      apiEndpoints: [{ method: "GET", path: "/api/health", status: 200 }],
+    },
+    renderEvidence: {
+      totalScreens: 2,
+      capturedScreens: 2,
+      failedScreens: 0,
+      viewports: ["1920x1080"],
+      evidenceRefs: ["render-001.png"],
+    },
+    browserQa: {
+      executed: true,
+      blockingFindings: 0,
+      experienceFindings: 0,
+      visualFindings: 0,
+      totalFindings: 0,
+      phasesExecuted: ["navigation", "interaction"],
+      evidenceRefs: ["browserQa-report.json"],
+    },
+    uiObservation: {
+      screens: [
+        {
+          route: "/",
+          htmlCaptureRef: "screen-001.html",
+          domLabelsFound: ["heading"],
+          elementsPlaced: 5,
+          actionsWired: 2,
+          mockPathFindings: [],
+        },
+      ],
+      evidenceRefs: ["uiObs-001.json"],
+    },
+    specCoverage: {
+      declared: { uiRoutes: 1, apiEndpoints: 1, dbObjects: 1 },
+      checked: { uiOk: 1, apiNon404: 1, dbPresent: 1 },
+      missing: { uiRoutes: [], apiEndpoints: [], dbObjects: [] },
+      evidenceRefs: ["specCov-001.json"],
+    },
+    discussionAxes: {
+      invariantAxes: 3,
+      trendDerivedAxes: 2,
+      productSpecificAxes: 1,
+      aggregateScore: 0.9,
+      evidenceRefs: ["discussion-001.json"],
+    },
+    screenContract: {
+      totalContracts: 2,
+      coveredContracts: 2,
+      fidelityScore: 0.95,
+      evidenceRefs: ["screenContract-001.json"],
+    },
+    trendAlignment: {
+      trendSourcesChecked: 3,
+      translationConsistency: 0.9,
+      competitiveGapsCovered: 2,
+      evidenceRefs: ["trend-001.json"],
+    },
+    ...overrides,
+  };
+}
+
 function makeRequest(
   root: string,
   overrides: Partial<FullHarnessRequest> = {},
@@ -39,15 +104,14 @@ function makeRequest(
     limitations: [],
     calibration: {
       packPath: ".qfai/evidence/calibration.yaml",
-      packVersion: "1.0.0",
+      packVersion: "1.7.15",
       configPath: "qfai.config.yaml",
       thresholds: { accept: 0.8, refine: 0.5 },
       maxIterations: 5,
       plateauDelta: 0.02,
       plateauLookback: 3,
     },
-    l1: { panel: "L1", total: 0, axes: [] },
-    l2: { panel: "L2", total: 0, axes: [] },
+    panelInputs: makePanelInputs(),
     ...overrides,
   };
 }
@@ -57,11 +121,9 @@ describe("runFullHarness", () => {
     await withRoot(async (root) => {
       const result = await runFullHarness(
         makeRequest(root, {
-          l1: { panel: "L1", total: 1.0, axes: [] },
-          l2: { panel: "L2", total: 1.0, axes: [] },
           calibration: {
             packPath: ".qfai/evidence/calibration.yaml",
-            packVersion: "1.0.0",
+            packVersion: "1.7.15",
             configPath: "qfai.config.yaml",
             thresholds: { accept: 0.1, refine: 0.05 },
             maxIterations: 5,
@@ -85,7 +147,7 @@ describe("runFullHarness", () => {
         makeRequest(root, {
           calibration: {
             packPath: ".qfai/evidence/calibration.yaml",
-            packVersion: "1.0.0",
+            packVersion: "1.7.15",
             configPath: "qfai.config.yaml",
             thresholds: { accept: 0.99, refine: 0.98 },
             maxIterations: 5,
@@ -126,7 +188,7 @@ describe("runFullHarness", () => {
           adapters,
           calibration: {
             packPath: ".qfai/evidence/calibration.yaml",
-            packVersion: "1.0.0",
+            packVersion: "1.7.15",
             configPath: "qfai.config.yaml",
             thresholds: { accept: 0.1, refine: 0.05 },
             maxIterations: 5,
@@ -167,7 +229,7 @@ describe("runFullHarness", () => {
           adapters,
           calibration: {
             packPath: ".qfai/evidence/calibration.yaml",
-            packVersion: "1.0.0",
+            packVersion: "1.7.15",
             configPath: "qfai.config.yaml",
             thresholds: { accept: 0.1, refine: 0.05 },
             maxIterations: 5,
@@ -188,7 +250,7 @@ describe("runFullHarness", () => {
         makeRequest(root, {
           calibration: {
             packPath: ".qfai/evidence/calibration.yaml",
-            packVersion: "1.0.0",
+            packVersion: "1.7.15",
             configPath: "qfai.config.yaml",
             thresholds: { accept: 0.1, refine: 0.05 },
             maxIterations: 5,
@@ -228,7 +290,7 @@ describe("runFullHarness", () => {
           adapters,
           calibration: {
             packPath: ".qfai/evidence/calibration.yaml",
-            packVersion: "1.0.0",
+            packVersion: "1.7.15",
             configPath: "qfai.config.yaml",
             thresholds: { accept: 0.1, refine: 0.05 },
             maxIterations: 5,
@@ -249,7 +311,7 @@ describe("runFullHarness", () => {
         makeRequest(root, {
           calibration: {
             packPath: ".qfai/evidence/calibration.yaml",
-            packVersion: "1.0.0",
+            packVersion: "1.7.15",
             configPath: "qfai.config.yaml",
             thresholds: { accept: 0.1, refine: 0.05 },
             maxIterations: 5,
