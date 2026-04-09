@@ -5,13 +5,11 @@ export function buildRuntimeGate(input: { surface: PrototypingSurface; targetUrl
   | {
       ui: Array<{ route: string; status: number }>;
       api: Array<{ method: string; path: string; status: number }>;
+      evidenceRefs: string[];
     }
   | undefined {
   if (!requiresVisualBrowserEvidence(input.surface)) {
-    return {
-      ui: [],
-      api: [],
-    };
+    return undefined;
   }
 
   if (!input.targetUrl) {
@@ -21,5 +19,6 @@ export function buildRuntimeGate(input: { surface: PrototypingSurface; targetUrl
   return {
     ui: [{ route: input.targetUrl, status: 200 }],
     api: [],
+    evidenceRefs: [".qfai/evidence/prototyping.json#/runtimeGate"],
   };
 }

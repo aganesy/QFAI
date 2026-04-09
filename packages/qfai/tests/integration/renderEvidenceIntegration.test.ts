@@ -106,7 +106,7 @@ function buildScreen(renders: object[]): object {
     uiContractId: "CON-UI-0001",
     expected: { elements: 3, actions: 1 },
     observed: { elementsPlaced: 3, actionsWired: 1 },
-    mockPaths: [{ id: "mock-1", status: "pass" }],
+    mockPaths: [{ id: "mock-1", status: "finding" }],
     renders,
   };
 }
@@ -411,7 +411,7 @@ describe("TC-0012-0012: markdown-only critique pack", () => {
         uiContractId: "CON-UI-0001",
         expected: { elements: 3, actions: 1 },
         observed: { elementsPlaced: 3, actionsWired: 1 },
-        mockPaths: [{ id: "mock-1", status: "pass" }],
+        mockPaths: [{ id: "mock-1", status: "finding" }],
         renders: [],
       };
       await seedEvidence(root, buildEvidenceWithFidelity(["spec-0001"], [screen]));

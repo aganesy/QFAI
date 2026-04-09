@@ -51,7 +51,6 @@ Optional:
 | desktop / full-harness | required | required    | required                      | required        | required   | required    |
 | cli / low-cost         | required | optional    | n/a                           | n/a             | n/a        | absent      |
 | cli / standard         | required | optional    | n/a                           | n/a             | n/a        | absent      |
-| cli / full-harness     | required | optional    | n/a                           | n/a             | n/a        | required    |
 | mixed / low-cost       | required | optional    | optional (`skeleton` allowed) | optional        | optional   | absent      |
 | mixed / standard       | required | optional    | required                      | optional        | optional   | absent      |
 | mixed / full-harness   | required | required    | required                      | required        | required   | required    |
@@ -64,7 +63,7 @@ Interpretation:
 
 ## cli surface canonical semantics
 
-For `cli` surface, the following are normal success when absent:
+For `cli` surface, `full-harness` is invalid. In `low-cost` / `standard`, the following are normal success when absent:
 
 - `uiFidelity`
 - render evidence bundle
@@ -111,7 +110,7 @@ When `mode.effective = "full-harness"`:
 - `limitations` is mandatory — empty array is valid, absent is not
 - `reviewerId` must not be a placeholder (e.g., "qfai", "default", "none", "unknown")
 - `observed` values in uiFidelity must come from real measurement, not copied from `expected`
-- `mockPaths` must come from real browser QA findings, not auto-generated as "pass" (QFAI-PROT-306)
+- `mockPaths` must come from real browser QA findings and remain `fail|finding` only; `status="pass"` is forbidden (QFAI-PROT-306)
 - `specCoverage` must come from real spec/runtime evidence, not zero-seeded (QFAI-PROT-305)
 - `reviewerLogs[]` count must equal `iterationCount` — one log per iteration (QFAI-PROT-304)
 - Single-iteration `converged` is prohibited — convergence requires `iterationCount >= 2` (QFAI-PROT-308)
@@ -122,7 +121,7 @@ When `mode.effective = "full-harness"`:
 
 - Pre-scored `l1`/`l2` metadata flow-through — panels must be computed from `panelInputs` with real axes (QFAI-PROT-315)
 - Hardcoded default `packVersion` — pack version must come from calibration pack metadata (QFAI-PROT-307)
-- Synthetic `mockPaths.status="pass"` auto-generation — only real browser QA observations (QFAI-PROT-306)
+- Synthetic or manual `mockPaths.status="pass"` entries — only `fail|finding` from real browser QA observations are allowed (QFAI-PROT-306)
 - Zero-seeded `specCoverage` — all declared/checked/missing must reflect real measurement (QFAI-PROT-305)
 - Count-insufficient `plateau`/`converged` — `iterationCount` must be >= `plateauLookback` (QFAI-PROT-300)
 - Empty L2 evidence refs for `discussion`, `screenContract`, `trend` (QFAI-PROT-310/311/312)

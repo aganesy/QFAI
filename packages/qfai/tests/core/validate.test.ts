@@ -1873,7 +1873,7 @@ async function seedPrototypingEvidenceFixture(root: string): Promise<void> {
                 elementsPlaced: 3,
                 actionsWired: 1,
               },
-              mockPaths: [{ id: "mp_create_to_list", status: "pass" }],
+              mockPaths: [{ id: "mp_create_to_list", status: "finding" }],
               renders: [
                 {
                   viewport: "desktop",

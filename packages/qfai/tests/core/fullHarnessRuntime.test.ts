@@ -34,6 +34,7 @@ function makePanelInputs(overrides: Partial<FullHarnessPanelInputs> = {}): FullH
     runtimeGate: {
       uiRoutes: [{ route: "/", status: 200 }],
       apiEndpoints: [{ method: "GET", path: "/api/health", status: 200 }],
+      evidenceRefs: [".qfai/evidence/prototyping.json#/runtimeGate"],
     },
     renderEvidence: {
       totalScreens: 2,
@@ -60,6 +61,8 @@ function makePanelInputs(overrides: Partial<FullHarnessPanelInputs> = {}): FullH
           elementsPlaced: 5,
           actionsWired: 2,
           mockPathFindings: [],
+          browserQaEvidenceRefs: ["browserQa-report.json#/phases/0"],
+          browserQaObserved: true,
         },
       ],
       evidenceRefs: ["uiObs-001.json"],
@@ -172,13 +175,38 @@ describe("runFullHarness", () => {
         render: {
           captureEvidence: async () => {
             renderCalled = true;
-            return { entries: [], filesWritten: [] };
+            return {
+              entries: [
+                {
+                  capture_id: "cap-1",
+                  target: "/",
+                  status: "captured",
+                  screenshot_path: "render-001.png",
+                  html_path: "render-001.html",
+                  viewport: "desktop",
+                },
+              ],
+              filesWritten: ["render-001.png", "render-001.html"],
+            };
           },
         },
         browserQa: {
           runQa: async () => {
             qaCalled = true;
-            return { phases: [], provider: "test", timestamp: new Date().toISOString() };
+            return {
+              phases: [
+                {
+                  phase: "smoke",
+                  status: "passed",
+                  findings: [],
+                  repair_suggestions: [],
+                  evidence_refs: ["browserQa-report.json#/phases/smoke"],
+                  checks_performed: ["smoke passed"],
+                },
+              ],
+              provider: "test",
+              timestamp: new Date().toISOString(),
+            };
           },
         },
       };
@@ -275,6 +303,37 @@ describe("runFullHarness", () => {
 
       const adapters: FullHarnessAdapters = {
         surface: "web",
+        render: {
+          captureEvidence: async () => ({
+            entries: [
+              {
+                capture_id: "cap-1",
+                target: "/",
+                status: "captured",
+                screenshot_path: "render-001.png",
+                html_path: "render-001.html",
+                viewport: "desktop",
+              },
+            ],
+            filesWritten: ["render-001.png", "render-001.html"],
+          }),
+        },
+        browserQa: {
+          runQa: async () => ({
+            phases: [
+              {
+                phase: "smoke",
+                status: "passed",
+                findings: [],
+                repair_suggestions: [],
+                evidence_refs: ["browserQa-report.json#/phases/smoke"],
+                checks_performed: ["smoke passed"],
+              },
+            ],
+            provider: "test",
+            timestamp: new Date().toISOString(),
+          }),
+        },
         observability: {
           recordIteration: (data) => {
             records.push(data);

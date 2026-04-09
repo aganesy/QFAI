@@ -83,6 +83,39 @@ export async function buildUiObservationSummary(
 ): Promise<UiObservationSummary> {
   const screens: ScreenObservation[] = [];
   const evidenceRefs: string[] = [];
+  const browserQaByRoute = new Map<
+    string,
+    { refs: Set<string>; observed: boolean; actions: number }
+  >();
+  const phaseLevelRefs = new Set<string>();
+
+  if (browserQaResult) {
+    for (const phase of browserQaResult.phases) {
+      for (const ref of phase.evidence_refs) {
+        phaseLevelRefs.add(ref);
+      }
+      for (const finding of phase.findings) {
+        const key = finding.route ?? finding.screen_id ?? "";
+        if (!key) {
+          continue;
+        }
+        const existing = browserQaByRoute.get(key) ?? {
+          refs: new Set<string>(),
+          observed: false,
+          actions: 0,
+        };
+        existing.observed = true;
+        existing.actions += 1;
+        for (const ref of phase.evidence_refs) {
+          existing.refs.add(ref);
+        }
+        for (const ref of finding.evidence_refs) {
+          existing.refs.add(ref);
+        }
+        browserQaByRoute.set(key, existing);
+      }
+    }
+  }
 
   if (renderResult) {
     for (const entry of renderResult.entries) {
@@ -90,54 +123,65 @@ export async function buildUiObservationSummary(
         evidenceRefs.push(entry.html_path);
         const html = await loadCapturedHtml(entry.html_path);
         const domLabels = html ? extractDomLabelsWithJsdom(html) : [];
-
-        // Derive actionsWired from browser QA findings for this screen's route
-        let actionsWired = 0;
+        const screenRoute = entry.target || entry.viewport || "unknown";
+        const screenQa = browserQaByRoute.get(screenRoute) ??
+          browserQaByRoute.get(entry.viewport) ?? {
+            refs: new Set<string>(),
+            observed: false,
+            actions: 0,
+          };
         const mockPathFindings: ScreenObservation["mockPathFindings"] = [];
         if (browserQaResult) {
           for (const phase of browserQaResult.phases) {
             for (const finding of phase.findings) {
               const matchesRoute =
-                finding.route === undefined ||
-                finding.route === entry.target ||
-                finding.route === entry.viewport;
-              if (matchesRoute) {
-                actionsWired++;
-                mockPathFindings.push({
-                  id: finding.screen_id ?? `${phase.phase}-${finding.route ?? "unknown"}`,
-                  status: finding.severity === "error" ? "fail" : "finding",
-                });
+                finding.route === screenRoute ||
+                finding.route === entry.viewport ||
+                finding.screen_id === screenRoute;
+              if (!matchesRoute) {
+                continue;
               }
+              mockPathFindings.push({
+                id: finding.screen_id ?? `${phase.phase}-${finding.route ?? "unknown"}`,
+                status: finding.severity === "error" ? "fail" : "finding",
+              });
             }
           }
         }
+        const browserQaEvidenceRefs = [
+          ...new Set([
+            ...screenQa.refs,
+            ...(screenQa.refs.size === 0 ? Array.from(phaseLevelRefs) : []),
+          ]),
+        ];
 
         screens.push({
-          route: entry.target || entry.viewport || "unknown",
+          route: screenRoute,
           htmlCaptureRef: entry.html_path,
           domLabelsFound: domLabels,
           elementsPlaced: domLabels.length,
-          actionsWired,
+          actionsWired: screenQa.actions,
           mockPathFindings,
+          browserQaEvidenceRefs,
+          browserQaObserved: browserQaEvidenceRefs.length > 0 || mockPathFindings.length > 0,
         });
       }
     }
   }
 
-  return { screens, evidenceRefs };
+  return { screens, evidenceRefs: [...new Set(evidenceRefs)] };
 }
 
 export function deriveMockPathFindingsFromBrowserQa(
   browserQaResult?: BrowserQaRunResult,
-): Array<{ id: string; status: "pass" | "fail" | "finding" }> {
+): Array<{ id: string; status: "fail" | "finding" }> {
   if (!browserQaResult) return [];
 
-  const findings: Array<{ id: string; status: "pass" | "fail" | "finding" }> = [];
+  const findings: Array<{ id: string; status: "fail" | "finding" }> = [];
   for (const phase of browserQaResult.phases) {
     for (const finding of phase.findings) {
       findings.push({
         id: finding.screen_id ?? `${phase.phase}-finding`,
-        // v1.7.15: "pass" only from explicit success observation, not auto-generated
         status: finding.severity === "error" ? "fail" : "finding",
       });
     }
@@ -171,6 +215,7 @@ export function buildBrowserQaSummaryFromResult(
     if (phase.status === "executed" || phase.status === "passed") {
       phasesExecuted.push(phase.phase);
     }
+    evidenceRefs.push(...phase.evidence_refs);
     for (const finding of phase.findings) {
       if (finding.severity === "error") {
         blockingFindings++;
@@ -184,7 +229,7 @@ export function buildBrowserQaSummaryFromResult(
   }
 
   return {
-    executed: phasesExecuted.length > 0,
+    executed: phasesExecuted.length > 0 || evidenceRefs.length > 0,
     blockingFindings,
     experienceFindings,
     visualFindings,

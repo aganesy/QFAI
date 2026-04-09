@@ -17,7 +17,12 @@ import { runFullHarness } from "../harness/runtime.js";
 import { CalibrationLoader } from "../calibration/loader.js";
 
 import { resolveLatestRecommendationArtifact } from "./recommendationArtifact.js";
-import { derivePrototypingObligations, resolvePrototypingMode } from "./mode.js";
+import {
+  derivePrototypingObligations,
+  FULL_HARNESS_INVALID_COMBINATION_MESSAGE,
+  resolvePrototypingMode,
+  requiresVisualBrowserEvidence,
+} from "./mode.js";
 import type { PrototypingMode, PrototypingSurface } from "./types.js";
 import { assertCanonicalPrototypingSurface } from "../domain/surface.js";
 import type { ProviderRegistry } from "../providers/registry.js";
@@ -112,8 +117,9 @@ export async function runPrototypingExecution(
     surface,
     effectiveMode: modeSummary.effective,
   });
-  // Prototyping execution decides only visual/browser evidence obligations here.
-  // Discussion-side UI-bearing classification is handled separately.
+  if (!obligations.validCombination) {
+    throw new Error(obligations.invalidReason ?? FULL_HARNESS_INVALID_COMBINATION_MESSAGE);
+  }
   const targetUrl = resolvePrototypingExecutionTargetUrl({
     ...(request.targetUrl !== undefined ? { requestTargetUrl: request.targetUrl } : {}),
     config,
@@ -129,13 +135,19 @@ export async function runPrototypingExecution(
     ...(targetUrl !== undefined ? { targetUrl } : {}),
   });
 
+  const visualFullHarness =
+    modeSummary.effective === "full-harness" && requiresVisualBrowserEvidence(surface);
+  const effectiveRenderAdapter = request.renderAdapter ?? resolvedProviders.renderAdapter;
   const renderTargets: RenderCaptureTarget[] = obligations.requireRenderBundle
     ? [{ targetId: "primary", route: "/primary", viewport: "desktop", width: 1440, height: 900 }]
     : [];
+  if (visualFullHarness && !effectiveRenderAdapter) {
+    throw new Error("Full-harness requires a render adapter for UI-bearing surfaces.");
+  }
   const renderResult = await runRenderCapture(
     renderTargets,
     path.join(request.root, ".qfai", "evidence", "render"),
-    request.renderAdapter ?? resolvedProviders.renderAdapter,
+    effectiveRenderAdapter,
     { required: obligations.requireRenderBundle },
   );
 
@@ -145,6 +157,9 @@ export async function runPrototypingExecution(
       ? request.providerRegistry?.getQaProvider(request.browserQaProviderId)
       : (resolvedProviders.registry.getFirstQaProvider() ??
         request.providerRegistry?.getFirstQaProvider());
+  if (visualFullHarness && !browserQaProvider) {
+    throw new Error("Full-harness requires a browser QA adapter for UI-bearing surfaces.");
+  }
   const browserQaInput = await buildBrowserQaInput({
     renderResult,
     ...(targetUrl !== undefined ? { targetUrl } : {}),
@@ -260,13 +275,14 @@ export async function runPrototypingExecution(
       ? {
           uiRoutes: runtimeGateForCoverage.ui,
           apiEndpoints: runtimeGateForCoverage.api,
+          evidenceRefs: runtimeGateForCoverage.evidenceRefs,
         }
-      : { uiRoutes: [], apiEndpoints: [] };
+      : { uiRoutes: [], apiEndpoints: [], evidenceRefs: [] };
 
     // Build L2 inputs from real artifacts (no zero-filling)
     const discussionAxes = await buildDiscussionAxisInputs(request.root);
     const screenContractInputs = uiFidelity.uiFidelity
-      ? buildScreenContractInputs(request.root, uiFidelity.uiFidelity.screens)
+      ? await buildScreenContractInputs(request.root, uiFidelity.uiFidelity.screens)
       : (() => {
           throw new Error(
             "Full-harness requires UI fidelity screens for screen contract inputs. " +

@@ -9,6 +9,7 @@
 export type RuntimeGateEvidence = {
   uiRoutes: Array<{ route: string; status: number }>;
   apiEndpoints: Array<{ method: string; path: string; status: number }>;
+  evidenceRefs: string[];
 };
 
 export type RenderEvidenceSummary = {
@@ -35,7 +36,9 @@ export type ScreenObservation = {
   domLabelsFound: string[];
   elementsPlaced: number;
   actionsWired: number;
-  mockPathFindings: Array<{ id: string; status: "pass" | "fail" | "finding" }>;
+  mockPathFindings: Array<{ id: string; status: "fail" | "finding" }>;
+  browserQaEvidenceRefs: string[];
+  browserQaObserved: boolean;
 };
 
 export type UiObservationSummary = {
@@ -119,6 +122,9 @@ export function validatePanelInputs(inputs: FullHarnessPanelInputs): void {
   }
   if (inputs.browserQa.evidenceRefs.length === 0) {
     missing.push("browserQa.evidenceRefs (empty)");
+  }
+  if (inputs.runtimeGate.evidenceRefs.length === 0) {
+    missing.push("runtimeGate.evidenceRefs (empty)");
   }
   if (inputs.specCoverage.evidenceRefs.length === 0) {
     missing.push("specCoverage.evidenceRefs (empty)");

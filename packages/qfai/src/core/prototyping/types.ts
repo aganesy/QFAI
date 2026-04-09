@@ -50,6 +50,8 @@ export type PrototypingObligations = {
   requireRenderBundle: boolean;
   requireBrowserQaBundle: boolean;
   requireFullHarness: boolean;
+  validCombination: boolean;
+  invalidReason?: string | undefined;
 };
 
 export type ResolveModeInput = {

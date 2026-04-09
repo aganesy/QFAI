@@ -143,7 +143,7 @@ Options:
   --run-validate                report: validate を実行してから report を生成
   --base-url <url>              report: 基準URL
   --path <path>                 guardrails: 対象ファイル/ディレクトリ（複数指定可）
-  --mode <low-cost|standard|full-harness>  prototyping: 実行モード
+  --mode <low-cost|standard|full-harness>  prototyping: 実行モード（full-harness は UI-bearing surface 専用）
   --target-url <url>            prototyping: Browser QA / render 対象 URL
   --browser-provider <id>       prototyping: Browser QA provider ID
   --render-provider <id>        prototyping: render provider ID

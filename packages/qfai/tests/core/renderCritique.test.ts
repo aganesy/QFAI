@@ -216,7 +216,7 @@ describe("Render Critique Loop validation (SPEC-0021)", { timeout: 15000 }, () =
               uiContractId: "CON-UI-0001",
               expected: { elements: 2, actions: 1 },
               observed: { elementsPlaced: 2, actionsWired: 1 },
-              mockPaths: [{ id: "mp_orders", status: "pass" }],
+              mockPaths: [{ id: "mp_orders", status: "finding" }],
               renders: [
                 {
                   viewport: "desktop",

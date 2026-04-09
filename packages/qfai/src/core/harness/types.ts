@@ -25,6 +25,7 @@ export type FullHarnessIteration = {
   timestamp: string;
   changeSummary: string[];
   limitations: string[];
+  // Breaking contract from v1.7.15 onward: all evidence categories are mandatory.
   evidenceRefs: {
     render: string[];
     browserQa: string[];
@@ -72,14 +73,14 @@ export type MeasurementInput = {
     plateauDelta: number;
     plateauLookback: number;
   };
-  renderRefs?: string[];
-  browserQaRefs?: string[];
-  runtimeGateRefs?: string[];
-  uiObservationRefs?: string[];
-  specCoverageRefs?: string[];
-  discussionRefs?: string[];
-  screenContractRefs?: string[];
-  trendRefs?: string[];
+  renderRefs: string[];
+  browserQaRefs: string[];
+  runtimeGateRefs: string[];
+  uiObservationRefs: string[];
+  specCoverageRefs: string[];
+  discussionRefs: string[];
+  screenContractRefs: string[];
+  trendRefs: string[];
   l1: FullHarnessPanelScore;
   l2: FullHarnessPanelScore;
 };

@@ -37,7 +37,6 @@ const VALID_SKILL_CONTENT = [
   "| desktop / standard | required | optional | required | optional | optional | absent |",
   "| cli / low-cost | required | optional | n/a | n/a | n/a | absent |",
   "| cli / standard | required | optional | n/a | n/a | n/a | absent |",
-  "| cli / full-harness | required | optional | n/a | n/a | n/a | required |",
   "| mixed / standard | required | optional | required | optional | optional | absent |",
 ].join("\n");
 

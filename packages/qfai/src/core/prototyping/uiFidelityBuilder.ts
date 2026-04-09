@@ -49,7 +49,7 @@ export type BuiltUiFidelity = {
         elementsPlaced: number;
         actionsWired: number;
       };
-      mockPaths: Array<{ id: string; status: "pass" | "fail" | "finding" }>;
+      mockPaths: Array<{ id: string; status: "fail" | "finding" }>;
       renders: Array<{
         viewport: string;
         status: "captured" | "skipped" | "failed";
@@ -149,9 +149,19 @@ export async function buildUiFidelity(input: {
   }
 
   // v1.7.15: check for insufficient evidence per screen
-  const insufficientScreens = screens.filter(
-    (s) => s.renders.length === 0 && s.observed.elementsPlaced === 0,
-  );
+  const insufficientScreens = screens.filter((screen) => {
+    const hasCapturedRender = screen.renders.some((render) => render.status === "captured");
+    const hasHtmlCapture = screen.renders.some(
+      (render) => render.status === "captured" && typeof render.htmlPath === "string",
+    );
+    const screenObservation = uiObservation.screens.find(
+      (obs) => obs.route === screen.route || obs.route === screen.uiContractId,
+    );
+    const hasBrowserQaObservation =
+      screenObservation?.browserQaObserved === true ||
+      (screenObservation?.browserQaEvidenceRefs.length ?? 0) > 0;
+    return !hasCapturedRender || !hasHtmlCapture || !screenObservation || !hasBrowserQaObservation;
+  });
   const hasInsufficientEvidence = insufficientScreens.length > 0;
 
   return {

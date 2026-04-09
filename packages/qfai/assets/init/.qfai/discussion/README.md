@@ -50,6 +50,19 @@ discussion/
 - `14_Review-Request.md` – Review request for review artifact generation.
 - `99_delta.md` – Change history (adopted, rejected, drift, recurrence prevention).
 
+## UI/UX canonical family
+
+For UI-bearing packs, the canonical design-evaluation source-of-truth is:
+
+- `04_Sources.md` for trend translation and competitive reference registry
+- `uiux/20_design_eval_invariant.md`
+- `uiux/21_design_eval_trend_derived.md`
+- `uiux/22_design_eval_product_specific.md`
+- `uiux/23_design_eval_aggregate.md`
+- `uiux/40_screen_contracts.md`
+
+`05_Scope.md` is not a trend source-of-truth for L2 scoring, and fallback scans such as `uiux/*trend*` or `uiux/*competitive*` must not replace these canonical files.
+
 ## OQ Register rules
 
 `11_OQ-Register.md` must include these mandatory columns:

@@ -69,12 +69,9 @@ describe("prototyping execution production path", () => {
       expect(obligations.requireRuntimeGate).toBe(false);
     });
 
-    it("runtime gate returns empty arrays for cli", () => {
+    it("runtime gate is undefined for cli", () => {
       const gate = buildRuntimeGate({ surface: "cli" });
-      expect(gate).toBeDefined();
-      if (!gate) throw new Error("gate should be defined");
-      expect(gate.ui).toEqual([]);
-      expect(gate.api).toEqual([]);
+      expect(gate).toBeUndefined();
     });
 
     it("requiresVisualBrowserEvidence returns false for cli prototyping surface", () => {
@@ -83,12 +80,13 @@ describe("prototyping execution production path", () => {
   });
 
   describe("cli + full-harness", () => {
-    it("requires fullHarness but not UI evidence", () => {
+    it("marks cli/full-harness as invalid", () => {
       const obligations = derivePrototypingObligations({
         surface: "cli",
         effectiveMode: "full-harness",
       });
-      expect(obligations.requireFullHarness).toBe(true);
+      expect(obligations.validCombination).toBe(false);
+      expect(obligations.invalidReason).toContain("full-harness is supported only");
       expect(obligations.requireUiFidelity).toBe(false);
       expect(obligations.requireRenderBundle).toBe(false);
       expect(obligations.requireBrowserQaBundle).toBe(false);

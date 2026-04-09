@@ -27,7 +27,7 @@ export function scoreL1(inputs: FullHarnessPanelInputs): FullHarnessPanelScore {
     axisId: "runtime-gate",
     score: rgScore,
     rationale: `${rgOk}/${totalRgChecks} runtime gate checks passed`,
-    evidenceRefs: ["runtimeGate"],
+    evidenceRefs: rg.evidenceRefs,
   });
 
   // Render coverage score

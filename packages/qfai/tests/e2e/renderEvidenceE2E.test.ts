@@ -95,7 +95,7 @@ function buildScreenWithRenders(renders: object[]): object {
     uiContractId: "CON-UI-0001",
     expected: { elements: 3, actions: 1 },
     observed: { elementsPlaced: 3, actionsWired: 1 },
-    mockPaths: [{ id: "mock-1", status: "pass" }],
+    mockPaths: [{ id: "mock-1", status: "finding" }],
     renders,
   };
 }
@@ -320,7 +320,7 @@ describe("E2E: US-0012-0005 — legacy critique artifact parsing", () => {
         uiContractId: "CON-UI-0001",
         expected: { elements: 3, actions: 1 },
         observed: { elementsPlaced: 3, actionsWired: 1 },
-        mockPaths: [{ id: "mock-1", status: "pass" }],
+        mockPaths: [{ id: "mock-1", status: "finding" }],
         renders: [],
       };
       const evidence = buildEvidenceWithUiFidelity(["spec-0001"], [screen]);

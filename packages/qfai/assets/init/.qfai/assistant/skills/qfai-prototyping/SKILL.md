@@ -110,8 +110,9 @@ Canonical prototyping surfaces are: `web`, `mobile`, `desktop`, `cli`, `mixed`.
 
 - Explicit opt-in only. Never auto-activate.
 - Adds runtime-heavy obligations and full-harness audit metadata.
+- Full-harness is allowed only for UI-bearing surfaces that require visual/browser evidence.
 - `web`, `mobile`, `desktop`, `mixed` surfaces require runtime gate, render bundle, browser QA bundle, and `fullHarness`.
-- `cli` surface requires `fullHarness` but not `uiFidelity`, render evidence, or browser QA.
+- `cli` surface must not use `full-harness`; use `low-cost` or `standard`.
 - `ui_bearing: false` specs are not prototyping execution targets.
 - Full-harness is a **measurement-driven iterative workflow**: each `qfai prototyping run --mode full-harness` invocation records exactly one iteration of real code observation. Multiple iterations are formed by running the command multiple times with real code changes in between.
 - The discussion 3-layer evaluation score measures **design direction quality** and MUST NOT be copied into `fullHarness.scoringTrace`.
@@ -127,7 +128,7 @@ Canonical prototyping surfaces are: `web`, `mobile`, `desktop`, `cli`, `mixed`.
   - Pre-scored `l1`/`l2` metadata flow-through is prohibited — panels must be computed from real `panelInputs`.
   - Per-spec zero-fill fallback is prohibited — all specs must have real coverage data.
   - DB object declarations without observation evidence are rejected.
-  - Synthetic `mockPaths.status="pass"` auto-generation is prohibited — only real browser QA observations.
+  - `mockPaths` is a negative-only issue ledger (`fail|finding`) — `status="pass"` is prohibited.
   - Hardcoded default `packVersion` is rejected by the validator.
 
 ## Obligation Matrix
@@ -147,7 +148,6 @@ Canonical prototyping surfaces are: `web`, `mobile`, `desktop`, `cli`, `mixed`.
 | desktop / full-harness | required | required    | **required** (`interactive` only) | **required**                         | **required** | **required** |
 | cli / low-cost         | required | optional    | n/a                               | n/a                                  | n/a          | absent       |
 | cli / standard         | required | optional    | n/a                               | n/a                                  | n/a          | absent       |
-| cli / full-harness     | required | optional    | n/a                               | n/a                                  | n/a          | **required** |
 | mixed / low-cost       | required | optional    | optional (`skeleton` allowed)     | optional (`captured/skipped/failed`) | optional     | absent       |
 | mixed / standard       | required | optional    | **required** (`interactive` only) | optional (`captured/skipped/failed`) | optional     | absent       |
 | mixed / full-harness   | required | required    | **required** (`interactive` only) | **required**                         | **required** | **required** |
@@ -199,7 +199,7 @@ Interpretation:
 
 - always: `specs[]`, `meta.*`, `mode.*`, `fullHarness`
 - `web`, `mobile`, `desktop`, `mixed`: `runtimeGate`, `.qfai/evidence/render.json`, Browser QA bundle trio, `uiFidelity`
-- `cli`: UI-specific evidence remains n/a
+- `cli`: `full-harness` is invalid. UI-specific evidence remains n/a in `low-cost` / `standard`.
 
 ## Full-harness minimum completeness
 

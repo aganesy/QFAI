@@ -135,6 +135,20 @@ describe("uiFidelity validator", () => {
             timestamp: new Date().toISOString(),
             changeSummary: ["Initial implementation"],
             limitations: ["Known limitation"],
+            evidenceRefs: {
+              render: [".qfai/evidence/render.json#/screens/0"],
+              browserQa: [".qfai/evidence/browser-qa.json#/browserQa"],
+              runtimeGate: [".qfai/evidence/prototyping.json#/runtimeGate"],
+              uiObservation: [".qfai/evidence/prototyping.json#/uiFidelity/screens/0"],
+              specCoverage: [".qfai/evidence/prototyping.json#/specs/0"],
+              discussion: [
+                ".qfai/discussion/discussion-20260404000000000/uiux/20_design_eval_invariant.md",
+              ],
+              screenContract: [
+                ".qfai/discussion/discussion-20260404000000000/uiux/40_screen_contracts.md#screen:/",
+              ],
+              trend: [".qfai/discussion/discussion-20260404000000000/04_Sources.md"],
+            },
             l1: { panel: "L1", total: 0.9 },
             l2: { panel: "L2", total: 0.9 },
             weightedTotal: 0.9,

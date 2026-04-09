@@ -5,7 +5,7 @@
  * Zero-filling is prohibited. Missing artifacts → throw.
  */
 
-import { readdir, readFile } from "node:fs/promises";
+import { readFile } from "node:fs/promises";
 import path from "node:path";
 import type {
   DiscussionAxisInputs,
@@ -29,73 +29,24 @@ export async function buildDiscussionAxisInputs(root: string): Promise<Discussio
     );
   }
 
-  // Read discussion files to extract axis information
-  let invariantAxes = 0;
-  let trendDerivedAxes = 0;
-  let productSpecificAxes = 0;
-  let aggregateScore = 0;
-  let axisFileFound = false;
-  const evidenceRefs: string[] = [latestPack];
+  const invariantPath = path.join(latestPack, "uiux", "20_design_eval_invariant.md");
+  const trendPath = path.join(latestPack, "uiux", "21_design_eval_trend_derived.md");
+  const productPath = path.join(latestPack, "uiux", "22_design_eval_product_specific.md");
+  const aggregatePath = path.join(latestPack, "uiux", "23_design_eval_aggregate.md");
 
-  // Try reading OQ-Resolution-Log or structured evaluation output
-  const filesToScan = [
-    "12_OQ-Resolution-Log.md",
-    "11_OQ-Register.md",
-    "06_REQ.md",
-    "07_NFR.md",
-    "05_Scope.md",
-  ];
-
-  for (const fileName of filesToScan) {
-    const filePath = path.join(latestPack, fileName);
-    try {
-      const content = await readFile(filePath, "utf-8");
-      if (content.trim().length > 0) {
-        evidenceRefs.push(filePath);
-
-        // Extract axis counts from structured content
-        const invariantMatches = content.match(/invariant|universal|core/gi);
-        const trendMatches = content.match(/trend|market|competitive/gi);
-        const productMatches = content.match(/product-specific|domain-specific|unique/gi);
-
-        if (invariantMatches) invariantAxes += invariantMatches.length;
-        if (trendMatches) trendDerivedAxes += trendMatches.length;
-        if (productMatches) productSpecificAxes += productMatches.length;
-        axisFileFound = true;
-      }
-    } catch {
-      // File doesn't exist, continue
-    }
-  }
-
-  if (!axisFileFound) {
-    throw new Error(
-      "L2 evidence failure: discussion pack exists but contains no evaluatable axes. " +
-        "Ensure discussion pack has OQ-Register, REQ, NFR, or Scope files.",
-    );
-  }
-
-  const totalAxes = invariantAxes + trendDerivedAxes + productSpecificAxes;
-  if (totalAxes === 0) {
-    throw new Error(
-      "L2 evidence failure: discussion pack contains no classifiable axes (invariant/trend/product).",
-    );
-  }
-
-  // Compute aggregate score based on coverage completeness
-  // This is derived from the ratio of axis categories present
-  const categoriesPresent =
-    (invariantAxes > 0 ? 1 : 0) +
-    (trendDerivedAxes > 0 ? 1 : 0) +
-    (productSpecificAxes > 0 ? 1 : 0);
-  aggregateScore = categoriesPresent / 3;
+  const [invariantRaw, trendRaw, productRaw, aggregateRaw] = await Promise.all([
+    readRequiredFile(invariantPath),
+    readRequiredFile(trendPath),
+    readRequiredFile(productPath),
+    readRequiredFile(aggregatePath),
+  ]);
 
   return {
-    invariantAxes,
-    trendDerivedAxes,
-    productSpecificAxes,
-    aggregateScore,
-    evidenceRefs,
+    invariantAxes: parseAxisCount(invariantRaw),
+    trendDerivedAxes: parseAxisCount(trendRaw),
+    productSpecificAxes: parseAxisCount(productRaw),
+    aggregateScore: parseAggregateScore(aggregateRaw),
+    evidenceRefs: [invariantPath, trendPath, productPath, aggregatePath],
   };
 }
 
@@ -104,7 +55,7 @@ export async function buildDiscussionAxisInputs(root: string): Promise<Discussio
  * Uses screen observations and contract coverage data.
  * Throws if no screen contract evidence exists.
  */
-export function buildScreenContractInputs(
+export async function buildScreenContractInputs(
   root: string,
   uiFidelityScreens: Array<{
     route: string;
@@ -112,7 +63,7 @@ export function buildScreenContractInputs(
     observed: { elementsPlaced: number; actionsWired: number };
     expected: { elements: number; actions: number };
   }>,
-): ScreenContractInputs {
+): Promise<ScreenContractInputs> {
   if (uiFidelityScreens.length === 0) {
     throw new Error(
       "L2 evidence failure: no screen contract evidence. " +
@@ -136,8 +87,18 @@ export function buildScreenContractInputs(
   }
   const fidelityScore = totalFidelity / totalContracts;
 
+  const latestPack = await findLatestDiscussionPackDir(path.join(root, ".qfai", "discussion"));
+  if (!latestPack) {
+    throw new Error(
+      "L2 evidence failure: no discussion pack found for screen contract evidence. " +
+        "Full-harness requires 40_screen_contracts.md.",
+    );
+  }
+  const screenContractsRef = toPosixPath(
+    path.relative(root, path.join(latestPack, "uiux", "40_screen_contracts.md")),
+  );
   const evidenceRefs: string[] = uiFidelityScreens.map(
-    (s) => `screen-contract:${s.uiContractId}:${s.route}`,
+    (screen) => `${screenContractsRef}#screen:${slugifyScreenRef(screen.route)}`,
   );
 
   return {
@@ -163,64 +124,16 @@ export async function buildTrendAlignmentInputs(root: string): Promise<TrendAlig
     );
   }
 
-  let trendSourcesChecked = 0;
-  let translationConsistency = 0;
-  let competitiveGapsCovered = 0;
-  const evidenceRefs: string[] = [];
-
-  // Scan for trend/competitive research artifacts
-  const trendFiles = ["04_Sources.md", "05_Scope.md"];
-  // Also check for uiux subdirectory trend artifacts
-  const uiuxTrendFiles: string[] = [];
-  const uiuxDir = path.join(latestPack, "uiux");
-  try {
-    const uiuxEntries = await readdir(uiuxDir);
-    uiuxTrendFiles.push(
-      ...uiuxEntries.filter(
-        (e) =>
-          e.includes("trend") ||
-          e.includes("competitive") ||
-          e.includes("reference") ||
-          e.includes("10_"),
-      ),
-    );
-  } catch {
-    // uiux dir may not exist
-  }
-
-  for (const fileName of trendFiles) {
-    const filePath = path.join(latestPack, fileName);
-    try {
-      const content = await readFile(filePath, "utf-8");
-      if (content.trim().length > 0) {
-        evidenceRefs.push(filePath);
-        // Count trend sources from structured references
-        const sourceMatches = content.match(/https?:\/\/[^\s)]+/g);
-        if (sourceMatches) trendSourcesChecked += sourceMatches.length;
-        // Check for competitive gap references
-        const gapMatches = content.match(/competitive|gap|benchmark|alternative/gi);
-        if (gapMatches) competitiveGapsCovered += gapMatches.length;
-      }
-    } catch {
-      // File doesn't exist
-    }
-  }
-
-  for (const fileName of uiuxTrendFiles) {
-    const filePath = path.join(uiuxDir, fileName);
-    try {
-      const content = await readFile(filePath, "utf-8");
-      if (content.trim().length > 0) {
-        evidenceRefs.push(filePath);
-        const sourceMatches = content.match(/https?:\/\/[^\s)]+/g);
-        if (sourceMatches) trendSourcesChecked += sourceMatches.length;
-        const gapMatches = content.match(/competitive|gap|benchmark|alternative/gi);
-        if (gapMatches) competitiveGapsCovered += gapMatches.length;
-      }
-    } catch {
-      // File doesn't exist
-    }
-  }
+  const sourcesPath = path.join(latestPack, "04_Sources.md");
+  const content = await readRequiredFile(sourcesPath);
+  const trendSourcesChecked = countHeadingItems(content, "Trend Scan");
+  const competitiveGapsCovered = countHeadingItems(content, "Competitive Reference Registry");
+  const completenessSignals = [
+    countKeyword(content, "translation"),
+    countKeyword(content, "local implication"),
+    countKeyword(content, "decision_connection"),
+    countKeyword(content, "evaluation_connection"),
+  ];
 
   if (trendSourcesChecked === 0) {
     throw new Error(
@@ -229,13 +142,90 @@ export async function buildTrendAlignmentInputs(root: string): Promise<TrendAlig
     );
   }
 
-  // Translation consistency based on coverage of trend sources in discussion
-  translationConsistency = Math.min(1, trendSourcesChecked / 5);
-
   return {
     trendSourcesChecked,
-    translationConsistency,
-    competitiveGapsCovered: Math.min(competitiveGapsCovered, trendSourcesChecked),
-    evidenceRefs,
+    translationConsistency:
+      completenessSignals.reduce((sum, value) => sum + Math.min(value, 1), 0) /
+      completenessSignals.length,
+    competitiveGapsCovered,
+    evidenceRefs: [sourcesPath],
   };
+}
+
+async function readRequiredFile(filePath: string): Promise<string> {
+  try {
+    const raw = await readFile(filePath, "utf-8");
+    if (raw.trim().length === 0) {
+      throw new Error("file is empty");
+    }
+    return raw;
+  } catch (error) {
+    throw new Error(
+      `L2 evidence failure: required canonical artifact is missing or unreadable: ${filePath}. ${error instanceof Error ? error.message : String(error)}`,
+    );
+  }
+}
+
+function parseAxisCount(content: string): number {
+  const explicit = /(?:axis[_ ]count|total[_ ]axes|axes?)\s*[:=]\s*(\d+)/i.exec(content);
+  if (explicit?.[1]) {
+    return Number(explicit[1]);
+  }
+  const bulletCount = content.match(/^\s*[-*]\s+/gm)?.length ?? 0;
+  if (bulletCount > 0) {
+    return bulletCount;
+  }
+  throw new Error(
+    "L2 evidence failure: canonical axis file does not expose a parsable axis count.",
+  );
+}
+
+function parseAggregateScore(content: string): number {
+  const match =
+    /(?:aggregate[_ ]score|score|overall)\s*[:=]\s*(0(?:\.\d+)?|1(?:\.0+)?)\b/i.exec(content) ??
+    /\b(0(?:\.\d+)?|1(?:\.0+)?)\b/.exec(content);
+  if (!match?.[1]) {
+    throw new Error(
+      "L2 evidence failure: canonical aggregate file does not expose a parsable score.",
+    );
+  }
+  return Number(match[1]);
+}
+
+function countHeadingItems(content: string, heading: string): number {
+  const section = extractSection(content, heading);
+  return section.match(/^\s*[-*]\s+/gm)?.length ?? 0;
+}
+
+function countKeyword(content: string, keyword: string): number {
+  return (
+    content.match(new RegExp(keyword.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "gi"))?.length ?? 0
+  );
+}
+
+function extractSection(content: string, heading: string): string {
+  const lines = content.split(/\r?\n/);
+  const start = lines.findIndex((line) =>
+    new RegExp(`^#{1,6}\\s+${heading.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "i").test(line),
+  );
+  if (start < 0) {
+    return "";
+  }
+  const collected: string[] = [];
+  for (let index = start + 1; index < lines.length; index += 1) {
+    const line = lines[index] ?? "";
+    if (/^#{1,6}\s+/.test(line)) {
+      break;
+    }
+    collected.push(line);
+  }
+  return collected.join("\n");
+}
+
+function slugifyScreenRef(value: string): string {
+  return value.replace(/[^a-zA-Z0-9/_-]+/g, "-");
+}
+
+function toPosixPath(value: string): string {
+  return value.split(path.sep).join("/");
 }

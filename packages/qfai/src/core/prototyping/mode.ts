@@ -27,6 +27,8 @@ import type {
 
 const VALID_MODES = new Set<PrototypingMode>(["low-cost", "standard", "full-harness"]);
 const VALID_SURFACES = new Set<PrototypingSurface>(CANONICAL_PROTOTYPING_SURFACES);
+export const FULL_HARNESS_INVALID_COMBINATION_MESSAGE =
+  "full-harness is supported only for UI-bearing surfaces that require visual/browser evidence.";
 
 // ---------------------------------------------------------------------------
 // Discussion recommendation parsing (canonical namespaced only)
@@ -276,15 +278,27 @@ export function derivePrototypingObligations(input: {
   surface: PrototypingSurface;
   effectiveMode: PrototypingMode;
 }): PrototypingObligations {
-  // This check is only for visual/browser evidence obligations, not discussion UI-bearing.
   const needsVisualBrowserEvidence = requiresVisualBrowserEvidence(input.surface);
+  if (input.effectiveMode === "full-harness" && !needsVisualBrowserEvidence) {
+    return {
+      requireRuntimeGate: false,
+      requireUiFidelity: false,
+      requireRenderBundle: false,
+      requireBrowserQaBundle: false,
+      requireFullHarness: false,
+      validCombination: false,
+      invalidReason: FULL_HARNESS_INVALID_COMBINATION_MESSAGE,
+    };
+  }
+
   if (!needsVisualBrowserEvidence) {
     return {
       requireRuntimeGate: false,
       requireUiFidelity: false,
       requireRenderBundle: false,
       requireBrowserQaBundle: false,
-      requireFullHarness: input.effectiveMode === "full-harness",
+      requireFullHarness: false,
+      validCombination: true,
     };
   }
 
@@ -295,6 +309,7 @@ export function derivePrototypingObligations(input: {
       requireRenderBundle: true,
       requireBrowserQaBundle: true,
       requireFullHarness: true,
+      validCombination: true,
     };
   }
 
@@ -305,6 +320,7 @@ export function derivePrototypingObligations(input: {
       requireRenderBundle: false,
       requireBrowserQaBundle: false,
       requireFullHarness: false,
+      validCombination: true,
     };
   }
 
@@ -314,6 +330,7 @@ export function derivePrototypingObligations(input: {
     requireRenderBundle: false,
     requireBrowserQaBundle: false,
     requireFullHarness: false,
+    validCombination: true,
   };
 }
 

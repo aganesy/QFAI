@@ -440,9 +440,9 @@ describe("obligation matrix (shared)", () => {
     expect(o.requireFullHarness).toBe(false);
   });
 
-  it("cli + full-harness requires fullHarness only", () => {
+  it("cli + full-harness is invalid", () => {
     const o = derivePrototypingObligations({ surface: "cli", effectiveMode: "full-harness" });
-    expect(o.requireFullHarness).toBe(true);
+    expect(o.validCombination).toBe(false);
     expect(o.requireUiFidelity).toBe(false);
     expect(o.requireRenderBundle).toBe(false);
     expect(o.requireBrowserQaBundle).toBe(false);
@@ -465,9 +465,9 @@ describe("obligation matrix (shared)", () => {
     expect(o.requireRuntimeGate).toBe(false);
   });
 
-  it("TC-A7: cli + full-harness → fullHarness yes, UI obligations no", () => {
+  it("TC-A7: cli + full-harness → invalid combination", () => {
     const o = derivePrototypingObligations({ surface: "cli", effectiveMode: "full-harness" });
-    expect(o.requireFullHarness).toBe(true);
+    expect(o.validCombination).toBe(false);
     expect(o.requireUiFidelity).toBe(false);
     expect(o.requireRenderBundle).toBe(false);
     expect(o.requireBrowserQaBundle).toBe(false);

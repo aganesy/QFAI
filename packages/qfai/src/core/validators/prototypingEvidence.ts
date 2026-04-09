@@ -102,7 +102,7 @@ type PrototypingEvidence = {
       timestamp: string;
       changeSummary: string[];
       limitations: string[];
-      evidenceRefs?: {
+      evidenceRefs: {
         render: string[];
         browserQa: string[];
         runtimeGate: string[];
@@ -911,6 +911,22 @@ function validatePrototypingObligationMatrix(
   const mismatches: string[] = [];
   const needsVisualBrowserEvidence = requiresVisualBrowserEvidence(surface);
 
+  if (!obligations.validCombination) {
+    issues.push(
+      issue(
+        "QFAI-PROT-172",
+        obligations.invalidReason ?? "invalid full-harness surface/mode combination.",
+        "error",
+        evidenceJsonPath,
+        "prototypingEvidence.obligationMatrix",
+        [`surface=${surface}`, `mode=${evidence.mode?.effective ?? "standard"}`],
+        "canonical",
+        "full-harness は visual/browser evidence を必要とする UI-bearing surface でのみ許可されます。",
+      ),
+    );
+    return issues;
+  }
+
   if (!needsVisualBrowserEvidence) {
     const contradictions: string[] = [];
     if ((evidence.runtimeGate?.ui.length ?? 0) > 0) contradictions.push("runtimeGate.ui");
@@ -1706,23 +1722,23 @@ function validateModeMetadata(
       );
     }
 
-    // QFAI-PROT-306: synthetic mockPaths auto-pass detection
+    // QFAI-PROT-306: synthetic mockPaths auto-pass detection / banned pass status
     if (evidence.uiFidelity) {
       for (const screen of evidence.uiFidelity.screens) {
         const hasAutoPass = screen.mockPaths.some(
-          (mp) => mp.status === "pass" && (mp.id.endsWith("-default") || mp.id.includes("auto")),
+          (mp) => mp.status === "pass" || mp.id.endsWith("-default") || mp.id.includes("auto"),
         );
         if (hasAutoPass) {
           issues.push(
             issue(
               "QFAI-PROT-306",
-              `uiFidelity screen "${screen.route}" has synthetic auto-pass mockPaths. mockPaths must be derived from browser QA findings only.`,
+              `uiFidelity screen "${screen.route}" has invalid mockPaths entries. mockPaths must be fail|finding only and derived from browser QA findings.`,
               "error",
               evidenceJsonPath,
               "prototypingEvidence.syntheticMockPathsAutoPass",
               undefined,
               "canonical",
-              "mockPaths は browser QA findings から導出してください。自動生成の pass は禁止されています。",
+              "mockPaths は browser QA findings から導出してください。status=pass は禁止されています。",
             ),
           );
         }
@@ -1796,7 +1812,7 @@ function validateModeMetadata(
 
     // QFAI-PROT-310: L2 evidence refs — discussion axes must have evidenceRefs
     for (const iter of evidence.fullHarness.iterations) {
-      if (iter.evidenceRefs !== undefined && iter.evidenceRefs.discussion.length === 0) {
+      if (iter.evidenceRefs.discussion.length === 0) {
         issues.push(
           issue(
             "QFAI-PROT-310",
@@ -1814,7 +1830,7 @@ function validateModeMetadata(
 
     // QFAI-PROT-311: L2 evidence refs — screen contract must have evidenceRefs
     for (const iter of evidence.fullHarness.iterations) {
-      if (iter.evidenceRefs !== undefined && iter.evidenceRefs.screenContract.length === 0) {
+      if (iter.evidenceRefs.screenContract.length === 0) {
         issues.push(
           issue(
             "QFAI-PROT-311",
@@ -1832,7 +1848,7 @@ function validateModeMetadata(
 
     // QFAI-PROT-312: L2 evidence refs — trend alignment must have evidenceRefs
     for (const iter of evidence.fullHarness.iterations) {
-      if (iter.evidenceRefs !== undefined && iter.evidenceRefs.trend.length === 0) {
+      if (iter.evidenceRefs.trend.length === 0) {
         issues.push(
           issue(
             "QFAI-PROT-312",
@@ -1871,26 +1887,28 @@ function validateModeMetadata(
       "render",
       "browserQa",
       "runtimeGate",
+      "uiObservation",
       "specCoverage",
+      "discussion",
+      "screenContract",
+      "trend",
     ] as const;
     for (const iter of evidence.fullHarness.iterations) {
-      if (iter.evidenceRefs !== undefined) {
-        for (const category of requiredEvidenceCategories) {
-          const refs = iter.evidenceRefs[category];
-          if (refs.length === 0) {
-            issues.push(
-              issue(
-                "QFAI-PROT-314",
-                `fullHarness iteration ${iter.iteration}: evidenceRefs.${category} is missing or empty. All evidence categories are required.`,
-                "error",
-                evidenceJsonPath,
-                "prototypingEvidence.fullHarnessEvidenceRefsCategoryMissing",
-                [`iteration=${iter.iteration}`, `category=${category}`],
-                "canonical",
-                `iterations[].evidenceRefs.${category} は必須カテゴリです。`,
-              ),
-            );
-          }
+      for (const category of requiredEvidenceCategories) {
+        const refs = iter.evidenceRefs[category];
+        if (refs.length === 0) {
+          issues.push(
+            issue(
+              "QFAI-PROT-314",
+              `fullHarness iteration ${iter.iteration}: evidenceRefs.${category} is missing or empty. All evidence categories are required.`,
+              "error",
+              evidenceJsonPath,
+              "prototypingEvidence.fullHarnessEvidenceRefsCategoryMissing",
+              [`iteration=${iter.iteration}`, `category=${category}`],
+              "canonical",
+              `iterations[].evidenceRefs.${category} は必須カテゴリです。`,
+            ),
+          );
         }
       }
     }
@@ -2232,20 +2250,17 @@ async function validateUiFidelity(
   }
 
   const hasMockPaths = uiFidelity.screens.some((screen) => screen.mockPaths.length > 0);
-  const hasPassMockPath = uiFidelity.screens.some((screen) =>
-    screen.mockPaths.some((entry) => entry.status === "pass"),
-  );
-  if (!hasMockPaths || !hasPassMockPath) {
+  if (!hasMockPaths) {
     issues.push(
       issue(
         "QFAI-PROT-237",
-        "QFAI-PROT-237: interactive uiFidelity is missing mockPaths.status=pass. Record at least one passing mock flow.",
+        "QFAI-PROT-237: interactive uiFidelity is missing observed mockPaths issue ledger entries.",
         "warning",
         evidenceJsonPath,
-        "prototypingEvidence.mockPathsPass",
+        "prototypingEvidence.mockPathsLedger",
         uiFidelity.screens.map((screen) => screen.route),
         "change",
-        "uiFidelity.screens[].mockPaths に status=pass を最低1件追加し、モック導線の観測結果を記録してください。",
+        "uiFidelity.screens[].mockPaths には browser QA 観測から導出した fail|finding の issue ledger を記録してください。",
       ),
     );
   }
@@ -2839,10 +2854,17 @@ function normalizeUiFidelityMockPaths(
         reason: "`uiFidelity.screens[].mockPaths[].status` is required as string",
       };
     }
+    const normalizedStatus = entry.status.trim().toLowerCase();
+    if (normalizedStatus !== "fail" && normalizedStatus !== "finding") {
+      return {
+        ok: false,
+        reason: "`uiFidelity.screens[].mockPaths[].status` must be fail|finding",
+      };
+    }
     const id = typeof entry.id === "string" ? entry.id.trim() : "";
     mockPaths.push({
       id,
-      status: entry.status.trim().toLowerCase(),
+      status: normalizedStatus,
     });
   }
   return { ok: true, value: mockPaths };
@@ -3104,34 +3126,32 @@ function normalizeFullHarnessBlock(
         reason: "`fullHarness.iterations[].deltaFromPrevious` must be number or null",
       };
     }
-    // v1.7.15: parse evidenceRefs (optional for backward compat but validated if present)
-    let parsedEvidenceRefs:
-      | NonNullable<PrototypingEvidence["fullHarness"]>["iterations"][0]["evidenceRefs"]
-      | undefined;
-    if (isRecord(iter.evidenceRefs)) {
-      const er = iter.evidenceRefs;
-      parsedEvidenceRefs = {
-        render: Array.isArray(er.render) ? (er.render as unknown[]).map((r) => String(r)) : [],
-        browserQa: Array.isArray(er.browserQa)
-          ? (er.browserQa as unknown[]).map((r) => String(r))
-          : [],
-        runtimeGate: Array.isArray(er.runtimeGate)
-          ? (er.runtimeGate as unknown[]).map((r) => String(r))
-          : [],
-        uiObservation: Array.isArray(er.uiObservation)
-          ? (er.uiObservation as unknown[]).map((r) => String(r))
-          : [],
-        specCoverage: Array.isArray(er.specCoverage)
-          ? (er.specCoverage as unknown[]).map((r) => String(r))
-          : [],
-        discussion: Array.isArray(er.discussion)
-          ? (er.discussion as unknown[]).map((r) => String(r))
-          : [],
-        screenContract: Array.isArray(er.screenContract)
-          ? (er.screenContract as unknown[]).map((r) => String(r))
-          : [],
-        trend: Array.isArray(er.trend) ? (er.trend as unknown[]).map((r) => String(r)) : [],
-      };
+    if (!isRecord(iter.evidenceRefs)) {
+      return { ok: false, reason: "`fullHarness.iterations[].evidenceRefs` is required" };
+    }
+    const er = iter.evidenceRefs;
+    const evidenceCategories = [
+      "render",
+      "browserQa",
+      "runtimeGate",
+      "uiObservation",
+      "specCoverage",
+      "discussion",
+      "screenContract",
+      "trend",
+    ] as const;
+    const parsedEvidenceRefs = {} as NonNullable<
+      PrototypingEvidence["fullHarness"]
+    >["iterations"][0]["evidenceRefs"];
+    for (const category of evidenceCategories) {
+      const refs = normalizeEvidenceRefArray(er[category]);
+      if (refs === null) {
+        return {
+          ok: false,
+          reason: `\`fullHarness.iterations[].evidenceRefs.${category}\` must be a string array`,
+        };
+      }
+      parsedEvidenceRefs[category] = refs;
     }
 
     // v1.7.15: parse l1/l2 axes
@@ -3163,7 +3183,7 @@ function normalizeFullHarnessBlock(
       timestamp: iter.timestamp.trim(),
       changeSummary: (iter.changeSummary as unknown[]).map((s) => String(s).trim()),
       limitations: (iter.limitations as unknown[]).map((s) => String(s).trim()),
-      ...(parsedEvidenceRefs ? { evidenceRefs: parsedEvidenceRefs } : {}),
+      evidenceRefs: parsedEvidenceRefs,
       l1: { panel: "L1" as const, total: iter.l1.total, axes: l1Axes },
       l2: { panel: "L2" as const, total: iter.l2.total, axes: l2Axes },
       weightedTotal: iter.weightedTotal,
@@ -3378,6 +3398,13 @@ function toOptionalStringArray(value: unknown): string[] | undefined {
     return undefined;
   }
   return value.map((item: string) => item.trim()).filter((item) => item.length > 0);
+}
+
+function normalizeEvidenceRefArray(value: unknown): string[] | null {
+  if (!Array.isArray(value) || !value.every((item) => typeof item === "string")) {
+    return null;
+  }
+  return value.map((item: string) => item.trim());
 }
 
 function normalizeOptionalFoundBlock(value: unknown): {

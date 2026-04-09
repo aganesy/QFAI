@@ -70,32 +70,44 @@ export type FullHarnessResult = {
  * 4. Computes termination
  */
 export async function runFullHarness(request: FullHarnessRequest): Promise<FullHarnessResult> {
-  const surface = request.adapters?.surface;
+  const adapters = request.adapters;
+  const surface = adapters?.surface;
   const requiresVisualEvidence = surface ? requiresVisualBrowserEvidence(surface) : false;
+
+  if (requiresVisualEvidence && !adapters?.render) {
+    throw new Error("Full-harness requires a render adapter for UI-bearing surfaces.");
+  }
+  if (requiresVisualEvidence && !adapters?.browserQa) {
+    throw new Error("Full-harness requires a browser QA adapter for UI-bearing surfaces.");
+  }
 
   const renderResults: RenderRunnerResult[] = [];
   const browserQaResults: BrowserQaRunResult[] = [];
   const renderRefs: string[] = [];
   const browserQaRefs: string[] = [];
 
-  // Capture render evidence (UI-bearing only)
-  if (requiresVisualEvidence && request.adapters?.render) {
-    try {
-      const renderResult = await request.adapters.render.captureEvidence(1);
-      renderResults.push(renderResult);
-      renderRefs.push(...renderResult.filesWritten);
-    } catch {
-      // Render capture failure is non-fatal
+  if (requiresVisualEvidence && adapters?.render) {
+    const renderResult = await adapters.render.captureEvidence(1);
+    renderResults.push(renderResult);
+    renderRefs.push(...renderResult.filesWritten);
+    const hasCapturedRender = renderResult.entries.some((entry) => entry.status === "captured");
+    const hasRenderFailure = renderResult.entries.some((entry) => entry.status === "failed");
+    if (!hasCapturedRender || hasRenderFailure) {
+      throw new Error("Full-harness requires successful render capture for UI-bearing surfaces.");
     }
   }
 
-  // Capture Browser QA evidence (UI-bearing only)
-  if (requiresVisualEvidence && request.adapters?.browserQa) {
-    try {
-      const qaResult = await request.adapters.browserQa.runQa(1);
-      browserQaResults.push(qaResult);
-    } catch {
-      // Browser QA failure is non-fatal
+  if (requiresVisualEvidence && adapters?.browserQa) {
+    const qaResult = await adapters.browserQa.runQa(1);
+    browserQaResults.push(qaResult);
+    const hasExecutedPhase = qaResult.phases.some(
+      (phase) => phase.status === "executed" || phase.status === "passed",
+    );
+    const hasBrowserQaFailure = qaResult.phases.some((phase) => phase.status === "failed");
+    if (!hasExecutedPhase || hasBrowserQaFailure) {
+      throw new Error(
+        "Full-harness requires successful browser QA execution for UI-bearing surfaces.",
+      );
     }
   }
 
@@ -104,16 +116,6 @@ export async function runFullHarness(request: FullHarnessRequest): Promise<FullH
   const scored = scorePanelsFromInputs(request.panelInputs);
   const l1 = scored.l1;
   const l2 = scored.l2;
-
-  // Observability
-  if (request.adapters?.observability) {
-    request.adapters.observability.recordIteration({
-      iteration: 1,
-      score: Math.min(l1.total, l2.total),
-      decision: "refine",
-    });
-    await request.adapters.observability.flush();
-  }
 
   const measurementInput: MeasurementInput = {
     root: request.root,
@@ -129,7 +131,7 @@ export async function runFullHarness(request: FullHarnessRequest): Promise<FullH
     },
     renderRefs,
     browserQaRefs,
-    runtimeGateRefs: request.panelInputs.runtimeGate.uiRoutes.length > 0 ? ["runtimeGate"] : [],
+    runtimeGateRefs: request.panelInputs.runtimeGate.evidenceRefs,
     uiObservationRefs: request.panelInputs.uiObservation.evidenceRefs,
     specCoverageRefs: request.panelInputs.specCoverage.evidenceRefs,
     discussionRefs: request.panelInputs.discussionAxes.evidenceRefs,
@@ -140,6 +142,15 @@ export async function runFullHarness(request: FullHarnessRequest): Promise<FullH
   };
 
   const measurementResult = await runMeasurement(measurementInput);
+
+  if (adapters?.observability) {
+    adapters.observability.recordIteration({
+      iteration: measurementResult.iteration.iteration,
+      score: measurementResult.iteration.weightedTotal,
+      decision: measurementResult.iteration.decision,
+    });
+    await adapters.observability.flush();
+  }
 
   const calibrationRef: FullHarnessCalibrationRef = {
     configPath: request.calibration.configPath,

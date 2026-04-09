@@ -330,7 +330,7 @@ const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "evidence mode.source is discussion-recommendation but recommendation artifact is missing or invalid.",
   "QFAI-PROT-236": "explicit requested mode is not allowed by discussion allowed_modes.",
   "QFAI-PROT-237":
-    "interactive uiFidelity requires at least one passing mock flow (mockPaths.status=pass).",
+    "interactive uiFidelity requires observed mockPaths issue ledger entries (fail|finding).",
   "QFAI-PROT-238":
     "uiFidelity does not satisfy UI contract coverage (screens empty or contract mismatch).",
   "QFAI-PROT-241":
@@ -394,7 +394,8 @@ const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-PROT-304": "fullHarness reviewerLogs count does not match iterationCount.",
   "QFAI-PROT-305":
     "fullHarness specCoverage is zero-seeded (all declared/checked counts are zero).",
-  "QFAI-PROT-306": "fullHarness uiFidelity mockPaths contains synthetic auto-pass entries.",
+  "QFAI-PROT-306":
+    "fullHarness uiFidelity mockPaths must be fail|finding only and must not contain synthetic pass entries.",
   "QFAI-PROT-307": "fullHarness calibrationRef.packVersion appears hardcoded.",
   "QFAI-PROT-308": "fullHarness status is converged but iterationCount < 2.",
   "QFAI-PROT-309": "fullHarness iteration reviewer is a placeholder value.",
