@@ -13,6 +13,7 @@ import type {
   TrendAlignmentInputs,
 } from "../harness/panelInputs.js";
 import { findLatestDiscussionPackDir } from "../discussionPack.js";
+import { readCanonicalScreenContracts } from "./screenContracts.js";
 
 /**
  * Build discussion axis inputs from real discussion artifacts.
@@ -41,12 +42,24 @@ export async function buildDiscussionAxisInputs(root: string): Promise<Discussio
     readRequiredFile(aggregatePath),
   ]);
 
+  const invariantAxes = parseStructuredAxisCount(invariantRaw);
+  const trendDerivedAxes = parseStructuredAxisCount(trendRaw);
+  const productSpecificAxes = parseStructuredAxisCount(productRaw);
+  const aggregateScore = parseStructuredAggregateScore(aggregateRaw);
+
+  const degradedScoring =
+    invariantAxes.degraded ||
+    trendDerivedAxes.degraded ||
+    productSpecificAxes.degraded ||
+    aggregateScore.degraded;
+
   return {
-    invariantAxes: parseAxisCount(invariantRaw),
-    trendDerivedAxes: parseAxisCount(trendRaw),
-    productSpecificAxes: parseAxisCount(productRaw),
-    aggregateScore: parseAggregateScore(aggregateRaw),
+    invariantAxes: invariantAxes.value,
+    trendDerivedAxes: trendDerivedAxes.value,
+    productSpecificAxes: productSpecificAxes.value,
+    aggregateScore: aggregateScore.value,
     evidenceRefs: [invariantPath, trendPath, productPath, aggregatePath],
+    degradedScoring,
   };
 }
 
@@ -97,6 +110,8 @@ export async function buildScreenContractInputs(
   const screenContractsRef = toPosixPath(
     path.relative(root, path.join(latestPack, "uiux", "40_screen_contracts.md")),
   );
+  const declaredContracts = await readCanonicalScreenContracts(latestPack);
+  const degradedScoring = declaredContracts.length === 0;
   const evidenceRefs: string[] = uiFidelityScreens.map(
     (screen) => `${screenContractsRef}#screen:${slugifyScreenRef(screen.route)}`,
   );
@@ -106,6 +121,7 @@ export async function buildScreenContractInputs(
     coveredContracts,
     fidelityScore,
     evidenceRefs,
+    degradedScoring,
   };
 }
 
@@ -125,15 +141,30 @@ export async function buildTrendAlignmentInputs(root: string): Promise<TrendAlig
   }
 
   const sourcesPath = path.join(latestPack, "04_Sources.md");
-  const content = await readRequiredFile(sourcesPath);
-  const trendSourcesChecked = countHeadingItems(content, "Trend Scan");
-  const competitiveGapsCovered = countHeadingItems(content, "Competitive Reference Registry");
-  const completenessSignals = [
-    countKeyword(content, "translation"),
-    countKeyword(content, "local implication"),
-    countKeyword(content, "decision_connection"),
-    countKeyword(content, "evaluation_connection"),
+  const screenContractsPath = path.join(latestPack, "uiux", "40_screen_contracts.md");
+  const [content, screenContractsRaw] = await Promise.all([
+    readRequiredFile(sourcesPath),
+    readRequiredFile(screenContractsPath),
+  ]);
+  const trendSources = parseStructuredListSection(content, "Trend Scan");
+  const competitiveRefs = parseStructuredListSection(content, "Competitive Reference Registry");
+  const structuredSignals = [
+    parseStructuredFieldCount(content, "translation"),
+    parseStructuredFieldCount(content, "local_implication"),
+    parseStructuredFieldCount(content, "decision_connection"),
+    parseStructuredFieldCount(content, "evaluation_connection"),
   ];
+  const screenContracts = readScreenContractsCount(screenContractsRaw);
+  const degradedScoring =
+    trendSources.degraded ||
+    competitiveRefs.degraded ||
+    structuredSignals.some((signal) => signal.degraded) ||
+    screenContracts.degraded;
+  const trendSourcesChecked = trendSources.value;
+  const competitiveGapsCovered = competitiveRefs.value;
+  const translationConsistency =
+    structuredSignals.reduce((sum, signal) => sum + Math.min(signal.value, 1), 0) /
+    structuredSignals.length;
 
   if (trendSourcesChecked === 0) {
     throw new Error(
@@ -144,11 +175,10 @@ export async function buildTrendAlignmentInputs(root: string): Promise<TrendAlig
 
   return {
     trendSourcesChecked,
-    translationConsistency:
-      completenessSignals.reduce((sum, value) => sum + Math.min(value, 1), 0) /
-      completenessSignals.length,
+    translationConsistency,
     competitiveGapsCovered,
-    evidenceRefs: [sourcesPath],
+    evidenceRefs: [sourcesPath, screenContractsPath],
+    degradedScoring,
   };
 }
 
@@ -166,21 +196,25 @@ async function readRequiredFile(filePath: string): Promise<string> {
   }
 }
 
-function parseAxisCount(content: string): number {
+function parseStructuredAxisCount(content: string): { value: number; degraded: boolean } {
   const explicit = /(?:axis[_ ]count|total[_ ]axes|axes?)\s*[:=]\s*(\d+)/i.exec(content);
   if (explicit?.[1]) {
-    return Number(explicit[1]);
+    return { value: Number(explicit[1]), degraded: false };
+  }
+  const headingBlocks = content.match(/^##+\s+/gm)?.length ?? 0;
+  if (headingBlocks > 0) {
+    return { value: headingBlocks, degraded: false };
   }
   const bulletCount = content.match(/^\s*[-*]\s+/gm)?.length ?? 0;
   if (bulletCount > 0) {
-    return bulletCount;
+    return { value: bulletCount, degraded: true };
   }
   throw new Error(
     "L2 evidence failure: canonical axis file does not expose a parsable axis count.",
   );
 }
 
-function parseAggregateScore(content: string): number {
+function parseStructuredAggregateScore(content: string): { value: number; degraded: boolean } {
   const match =
     /(?:aggregate[_ ]score|score|overall)\s*[:=]\s*(0(?:\.\d+)?|1(?:\.0+)?)\b/i.exec(content) ??
     /\b(0(?:\.\d+)?|1(?:\.0+)?)\b/.exec(content);
@@ -189,18 +223,41 @@ function parseAggregateScore(content: string): number {
       "L2 evidence failure: canonical aggregate file does not expose a parsable score.",
     );
   }
-  return Number(match[1]);
+  return { value: Number(match[1]), degraded: false };
 }
 
-function countHeadingItems(content: string, heading: string): number {
+function parseStructuredListSection(
+  content: string,
+  heading: string,
+): { value: number; degraded: boolean } {
   const section = extractSection(content, heading);
-  return section.match(/^\s*[-*]\s+/gm)?.length ?? 0;
+  const bullets = section.match(/^\s*[-*]\s+/gm)?.length ?? 0;
+  return { value: bullets, degraded: false };
 }
 
-function countKeyword(content: string, keyword: string): number {
-  return (
-    content.match(new RegExp(keyword.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "gi"))?.length ?? 0
+function parseStructuredFieldCount(
+  content: string,
+  fieldName: string,
+): { value: number; degraded: boolean } {
+  const fieldPattern = new RegExp(
+    `^\\s*-\\s+${fieldName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*:`,
+    "gim",
   );
+  const structured = content.match(fieldPattern)?.length ?? 0;
+  if (structured > 0) {
+    return { value: structured, degraded: false };
+  }
+  const fallback =
+    content.match(new RegExp(fieldName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "gi"))?.length ?? 0;
+  return { value: fallback, degraded: fallback > 0 };
+}
+
+function readScreenContractsCount(content: string): { value: number; degraded: boolean } {
+  const structured = content.match(/^###\s+Screen:\s+/gm)?.length ?? 0;
+  if (structured > 0) {
+    return { value: structured, degraded: false };
+  }
+  return { value: 0, degraded: true };
 }
 
 function extractSection(content: string, heading: string): string {

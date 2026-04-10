@@ -80,6 +80,10 @@ export function scoreL1(inputs: FullHarnessPanelInputs): FullHarnessPanelScore {
 
 export function scoreL2(inputs: FullHarnessPanelInputs): FullHarnessPanelScore {
   const axes: FullHarnessPanelScore["axes"] = [];
+  const degradedScoring =
+    inputs.discussionAxes.degradedScoring === true ||
+    inputs.screenContract.degradedScoring === true ||
+    inputs.trendAlignment.degradedScoring === true;
 
   // Discussion 3-layer axes
   const da = inputs.discussionAxes;
@@ -136,7 +140,12 @@ export function scoreL2(inputs: FullHarnessPanelInputs): FullHarnessPanelScore {
 
   const total = axes.length > 0 ? axes.reduce((sum, a) => sum + a.score, 0) / axes.length : 0;
 
-  return { panel: "L2", total: clamp01(total), axes };
+  return {
+    panel: "L2",
+    total: clamp01(total),
+    ...(degradedScoring ? { degradedScoring: true } : {}),
+    axes,
+  };
 }
 
 export function computeWeightedTotal(l1: FullHarnessPanelScore, l2: FullHarnessPanelScore): number {

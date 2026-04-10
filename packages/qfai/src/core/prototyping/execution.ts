@@ -44,6 +44,12 @@ import {
   buildScreenContractInputs,
   buildTrendAlignmentInputs,
 } from "./l2Evidence.js";
+import {
+  buildScreenRenderTargets,
+  type CanonicalScreenContract,
+  readCanonicalScreenContracts,
+  toBrowserQaScreenContracts,
+} from "./screenContracts.js";
 
 export type PrototypingExecutionRequest = {
   root: string;
@@ -138,8 +144,14 @@ export async function runPrototypingExecution(
   const visualFullHarness =
     modeSummary.effective === "full-harness" && requiresVisualBrowserEvidence(surface);
   const effectiveRenderAdapter = request.renderAdapter ?? resolvedProviders.renderAdapter;
+  const screenContracts = visualFullHarness ? await readCanonicalScreenContracts(latestPack) : [];
+  if (visualFullHarness && screenContracts.length === 0) {
+    throw new Error(
+      "Full-harness requires canonical screen contracts in uiux/40_screen_contracts.md for UI-bearing surfaces.",
+    );
+  }
   const renderTargets: RenderCaptureTarget[] = obligations.requireRenderBundle
-    ? [{ targetId: "primary", route: "/primary", viewport: "desktop", width: 1440, height: 900 }]
+    ? buildScreenRenderTargets(screenContracts)
     : [];
   if (visualFullHarness && !effectiveRenderAdapter) {
     throw new Error("Full-harness requires a render adapter for UI-bearing surfaces.");
@@ -165,12 +177,14 @@ export async function runPrototypingExecution(
     ...(targetUrl !== undefined ? { targetUrl } : {}),
     surface,
     required: obligations.requireBrowserQaBundle,
+    screenContracts,
   });
   const browserQaResult = await runBrowserQaOrchestrated(browserQaInput, browserQaProvider);
 
   const runtimeGate = buildRuntimeGate({
     surface,
     ...(targetUrl !== undefined ? { targetUrl } : {}),
+    routes: screenContracts.map((screen) => screen.route),
   });
 
   const summary = await buildPrototypingSummaryBundle({
@@ -257,6 +271,7 @@ export async function runPrototypingExecution(
     const runtimeGateForCoverage = buildRuntimeGate({
       surface,
       ...(targetUrl !== undefined ? { targetUrl } : {}),
+      routes: screenContracts.map((screen) => screen.route),
     });
     const specCoverage = await buildSpecCoverageSummary(
       specsDir,
@@ -265,7 +280,11 @@ export async function runPrototypingExecution(
     );
 
     // Build UI observation from real DOM/render
-    const uiObservation = await buildUiObservationSummary(renderResult, browserQaResult);
+    const uiObservation = await buildUiObservationSummary(
+      renderResult,
+      browserQaResult,
+      screenContracts,
+    );
 
     // Build browser QA summary from real results
     const browserQaSummary = buildBrowserQaSummaryFromResult(browserQaResult);
@@ -463,7 +482,7 @@ async function buildPrototypingSummaryBundle(input: {
   providerIds: string[];
   targetUrl?: string;
   runtimeGate?: {
-    ui: Array<{ route: string; status: number }>;
+    ui: Array<{ route: string; status: number; url?: string }>;
     api: Array<{ method: string; path: string; status: number }>;
   };
 }): Promise<PrototypingSummaryBundle> {
@@ -519,33 +538,39 @@ async function buildBrowserQaInput(input: {
   targetUrl?: string;
   surface: SurfaceType;
   required: boolean;
+  screenContracts: CanonicalScreenContract[];
 }): Promise<BrowserQaInput> {
   const capturedHtmlPath = input.renderResult.entries.find(
     (entry) => entry.status === "captured" && typeof entry.html_path === "string",
   )?.html_path;
+  const routes = input.screenContracts.map((screen) => screen.route);
+  const browserQaScreenContracts = toBrowserQaScreenContracts(input.screenContracts);
   if (capturedHtmlPath) {
     return {
       surface: input.surface,
-      routes: ["/primary"],
+      routes,
       htmlContent: await readFile(capturedHtmlPath, "utf-8"),
       required: input.required,
       executionSource: "html",
+      screenContracts: browserQaScreenContracts,
     };
   }
   if (input.targetUrl) {
     return {
       surface: input.surface,
-      routes: ["/primary"],
+      routes,
       targetUrl: input.targetUrl,
       required: input.required,
       executionSource: "url",
+      screenContracts: browserQaScreenContracts,
     };
   }
   return {
     surface: input.surface,
-    routes: ["/primary"],
+    routes,
     required: input.required,
     executionSource: "none",
+    screenContracts: browserQaScreenContracts,
   };
 }
 

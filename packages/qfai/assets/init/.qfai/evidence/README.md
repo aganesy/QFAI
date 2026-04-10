@@ -72,6 +72,8 @@ For `cli` surface, `full-harness` is invalid. In `low-cost` / `standard`, the fo
 
 `ui_bearing: false` specs are not prototyping execution targets. Contradictory UI-only payloads on `cli` surface are validation errors.
 
+For UI-bearing `full-harness`, canonical screen contracts are mandatory. Render targets, Browser QA routes, `runtimeGate.ui[].route`, `uiFidelity.screens[]`, and `uiObservation` must all use the canonical route paths from `uiux/40_screen_contracts.md`. Full URLs belong in separate target fields and must not replace route semantics.
+
 ## uiFidelity notes
 
 - `uiFidelity` is the canonical UI evidence block.
@@ -116,6 +118,7 @@ When `mode.effective = "full-harness"`:
 - Single-iteration `converged` is prohibited — convergence requires `iterationCount >= 2` (QFAI-PROT-308)
 - `calibrationRef.packVersion` must be resolved from pack metadata, not hardcoded (QFAI-PROT-307)
 - Iteration-level `reviewerId` must not be a placeholder (QFAI-PROT-309)
+- `iterations[].evidenceRefs.browserQa` is mandatory whenever Browser QA executed. Summary-only Browser QA refs are insufficient.
 
 **Prohibited patterns (current):**
 
@@ -128,6 +131,7 @@ When `mode.effective = "full-harness"`:
 - DB objects `declared > 0` without observation evidence (QFAI-PROT-313)
 - `iterations[].evidenceRefs` missing required categories (QFAI-PROT-314)
 - Flat/aggregate UI observation — must be screen-level per route
+- URL-as-route payloads in `runtimeGate.ui[].route`
 
 ## Render evidence bundle conventions
 

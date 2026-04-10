@@ -10,6 +10,7 @@ import type { Decision } from "../calibration/types.js";
 export type FullHarnessPanelScore = {
   panel: "L1" | "L2";
   total: number;
+  degradedScoring?: boolean;
   axes: Array<{
     axisId: string;
     score: number;

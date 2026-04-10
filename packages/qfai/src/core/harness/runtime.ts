@@ -12,6 +12,7 @@
  * - commitSha required (no silent failure)
  */
 
+import { FULL_HARNESS_INVALID_COMBINATION_MESSAGE } from "../prototyping/mode.js";
 import { requiresVisualBrowserEvidence } from "../detection/surfaceType.js";
 import { detectFakeUi, type FakeUiDetectionResult } from "./fakeUiDetection.js";
 import { mapLoopStatusToExitReason, type FullHarnessExitReason } from "./exitReason.js";
@@ -74,6 +75,10 @@ export async function runFullHarness(request: FullHarnessRequest): Promise<FullH
   const surface = adapters?.surface;
   const requiresVisualEvidence = surface ? requiresVisualBrowserEvidence(surface) : false;
 
+  if (surface && !requiresVisualEvidence) {
+    throw new Error(FULL_HARNESS_INVALID_COMBINATION_MESSAGE);
+  }
+
   if (requiresVisualEvidence && !adapters?.render) {
     throw new Error("Full-harness requires a render adapter for UI-bearing surfaces.");
   }
@@ -100,6 +105,18 @@ export async function runFullHarness(request: FullHarnessRequest): Promise<FullH
   if (requiresVisualEvidence && adapters?.browserQa) {
     const qaResult = await adapters.browserQa.runQa(1);
     browserQaResults.push(qaResult);
+    const aggregatedBrowserQaRefs = new Set<string>();
+    for (const phase of qaResult.phases) {
+      for (const ref of phase.evidence_refs) {
+        aggregatedBrowserQaRefs.add(ref);
+      }
+      for (const finding of phase.findings) {
+        for (const ref of finding.evidence_refs) {
+          aggregatedBrowserQaRefs.add(ref);
+        }
+      }
+    }
+    browserQaRefs.push(...aggregatedBrowserQaRefs);
     const hasExecutedPhase = qaResult.phases.some(
       (phase) => phase.status === "executed" || phase.status === "passed",
     );
@@ -109,6 +126,15 @@ export async function runFullHarness(request: FullHarnessRequest): Promise<FullH
         "Full-harness requires successful browser QA execution for UI-bearing surfaces.",
       );
     }
+    if (browserQaRefs.length === 0) {
+      throw new Error(
+        "Full-harness requires Browser QA evidence refs for executed Browser QA phases.",
+      );
+    }
+  }
+
+  if (browserQaRefs.length === 0 && request.panelInputs.browserQa.executed) {
+    browserQaRefs.push(...request.panelInputs.browserQa.evidenceRefs);
   }
 
   // Validate and score panels from real evidence inputs only

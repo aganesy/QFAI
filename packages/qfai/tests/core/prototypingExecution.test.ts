@@ -37,6 +37,35 @@ async function withRoot(task: (root: string) => Promise<void>): Promise<void> {
       ].join("\n"),
       "utf-8",
     );
+    const packDir = path.join(root, ".qfai", "discussion", "discussion-20260406000000000");
+    await mkdir(path.join(packDir, "uiux"), { recursive: true });
+    await writeFile(
+      path.join(packDir, "01_Context.md"),
+      [
+        "# Context",
+        "",
+        "- ui_bearing: true",
+        "- primary_surface: web",
+        "- secondary_surfaces:",
+        "  - cli",
+        "- classification_rationale: default web execution fixture",
+        "",
+      ].join("\n"),
+      "utf-8",
+    );
+    await writeFile(
+      path.join(packDir, "uiux", "40_screen_contracts.md"),
+      [
+        "# Screen Contracts",
+        "",
+        "### Screen: Dashboard",
+        "- screen_id: dashboard",
+        "- route: /dashboard",
+        "- primary_tasks:",
+        "  - Review summary",
+      ].join("\n"),
+      "utf-8",
+    );
     await task(root);
   } finally {
     await rm(root, { recursive: true, force: true });

@@ -7,7 +7,7 @@
  */
 
 export type RuntimeGateEvidence = {
-  uiRoutes: Array<{ route: string; status: number }>;
+  uiRoutes: Array<{ route: string; status: number; url?: string }>;
   apiEndpoints: Array<{ method: string; path: string; status: number }>;
   evidenceRefs: string[];
 };
@@ -31,6 +31,7 @@ export type BrowserQaSummary = {
 };
 
 export type ScreenObservation = {
+  screenId: string;
   route: string;
   htmlCaptureRef: string;
   domLabelsFound: string[];
@@ -71,6 +72,7 @@ export type DiscussionAxisInputs = {
   productSpecificAxes: number;
   aggregateScore: number;
   evidenceRefs: string[];
+  degradedScoring?: boolean;
 };
 
 export type ScreenContractInputs = {
@@ -78,6 +80,7 @@ export type ScreenContractInputs = {
   coveredContracts: number;
   fidelityScore: number;
   evidenceRefs: string[];
+  degradedScoring?: boolean;
 };
 
 export type TrendAlignmentInputs = {
@@ -85,6 +88,7 @@ export type TrendAlignmentInputs = {
   translationConsistency: number;
   competitiveGapsCovered: number;
   evidenceRefs: string[];
+  degradedScoring?: boolean;
 };
 
 export type FullHarnessPanelInputs = {

@@ -15,6 +15,7 @@ import type {
 } from "../harness/panelInputs.js";
 import type { RenderRunnerResult } from "../evidence/types.js";
 import type { BrowserQaRunResult } from "../browserQa/types.js";
+import type { CanonicalScreenContract } from "./screenContracts.js";
 
 export async function loadCapturedHtml(htmlPath: string): Promise<string | null> {
   try {
@@ -80,14 +81,14 @@ export function extractDomLabelsWithJsdom(html: string): string[] {
 export async function buildUiObservationSummary(
   renderResult?: RenderRunnerResult,
   browserQaResult?: BrowserQaRunResult,
+  screenContracts: CanonicalScreenContract[] = [],
 ): Promise<UiObservationSummary> {
   const screens: ScreenObservation[] = [];
   const evidenceRefs: string[] = [];
-  const browserQaByRoute = new Map<
-    string,
-    { refs: Set<string>; observed: boolean; actions: number }
-  >();
+  const browserQaByScreen = new Map<string, { refs: Set<string>; actions: number }>();
   const phaseLevelRefs = new Set<string>();
+  const contractByRoute = new Map(screenContracts.map((screen) => [screen.route, screen]));
+  const contractById = new Map(screenContracts.map((screen) => [screen.screenId, screen]));
 
   if (browserQaResult) {
     for (const phase of browserQaResult.phases) {
@@ -95,16 +96,17 @@ export async function buildUiObservationSummary(
         phaseLevelRefs.add(ref);
       }
       for (const finding of phase.findings) {
-        const key = finding.route ?? finding.screen_id ?? "";
-        if (!key) {
+        const contract =
+          (finding.route ? contractByRoute.get(finding.route) : undefined) ??
+          (finding.screen_id ? contractById.get(finding.screen_id) : undefined);
+        const key = contract?.screenId ?? finding.screen_id ?? finding.route ?? "";
+        if (!key || !(contract || finding.screen_id || finding.route)) {
           continue;
         }
-        const existing = browserQaByRoute.get(key) ?? {
+        const existing = browserQaByScreen.get(key) ?? {
           refs: new Set<string>(),
-          observed: false,
           actions: 0,
         };
-        existing.observed = true;
         existing.actions += 1;
         for (const ref of phase.evidence_refs) {
           existing.refs.add(ref);
@@ -112,7 +114,7 @@ export async function buildUiObservationSummary(
         for (const ref of finding.evidence_refs) {
           existing.refs.add(ref);
         }
-        browserQaByRoute.set(key, existing);
+        browserQaByScreen.set(key, existing);
       }
     }
   }
@@ -123,26 +125,34 @@ export async function buildUiObservationSummary(
         evidenceRefs.push(entry.html_path);
         const html = await loadCapturedHtml(entry.html_path);
         const domLabels = html ? extractDomLabelsWithJsdom(html) : [];
-        const screenRoute = entry.target || entry.viewport || "unknown";
-        const screenQa = browserQaByRoute.get(screenRoute) ??
-          browserQaByRoute.get(entry.viewport) ?? {
+        const contract = contractByRoute.get(entry.target) ?? contractById.get(entry.target);
+        const screenId = contract?.screenId ?? entry.target;
+        const screenRoute = contract?.route ?? entry.target;
+        const screenQa = browserQaByScreen.get(screenId) ??
+          browserQaByScreen.get(screenRoute) ?? {
             refs: new Set<string>(),
-            observed: false,
             actions: 0,
           };
         const mockPathFindings: ScreenObservation["mockPathFindings"] = [];
         if (browserQaResult) {
           for (const phase of browserQaResult.phases) {
             for (const finding of phase.findings) {
+              const findingContract =
+                (finding.route ? contractByRoute.get(finding.route) : undefined) ??
+                (finding.screen_id ? contractById.get(finding.screen_id) : undefined);
               const matchesRoute =
                 finding.route === screenRoute ||
-                finding.route === entry.viewport ||
-                finding.screen_id === screenRoute;
+                finding.screen_id === screenId ||
+                findingContract?.screenId === screenId ||
+                findingContract?.route === screenRoute;
               if (!matchesRoute) {
                 continue;
               }
               mockPathFindings.push({
-                id: finding.screen_id ?? `${phase.phase}-${finding.route ?? "unknown"}`,
+                id:
+                  finding.screen_id ??
+                  findingContract?.screenId ??
+                  `${phase.phase}-${finding.route ?? "unknown"}`,
                 status: finding.severity === "error" ? "fail" : "finding",
               });
             }
@@ -156,6 +166,7 @@ export async function buildUiObservationSummary(
         ];
 
         screens.push({
+          screenId,
           route: screenRoute,
           htmlCaptureRef: entry.html_path,
           domLabelsFound: domLabels,

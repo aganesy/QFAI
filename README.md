@@ -18,7 +18,7 @@ The agent reads the repository, produces the required artifacts, and iterates un
 ## Release status
 
 - Current package version: `1.7.15`
-- Release posture: v1.7.15 enforces runtime truthfulness — full-harness is measurement-driven iteration accumulation for UI-bearing surfaces only, trend scan is canonicalized to `04_Sources.md`, the design-eval SSOT is `uiux/20/21/22/23` + `40_screen_contracts.md`, and evidence schema v2 prohibits synthetic fallback.
+- Release posture: v1.7.15 enforces runtime truthfulness. `full-harness` is measurement-driven iteration accumulation for UI-bearing surfaces only, uses canonical screen/route semantics from discussion-pack `40_screen_contracts.md`, requires Browser QA evidence refs through iteration history, canonicalizes trend scan to `04_Sources.md`, treats `20/21/22/23` + `40_screen_contracts.md` in the discussion pack as the design-eval SSOT, and prohibits synthetic fallback.
 - Current repo note: some repo-wide `qfai validate --fail-on error` blockers still come from historical review/evidence/ATDD/TDD artifacts and are being cleaned incrementally.
 
 ## Quick start

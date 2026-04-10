@@ -17,6 +17,12 @@ import { validateReviewer } from "./reviewerIdentity.js";
 import { resolveCommitSha } from "./gitRevision.js";
 
 export async function runMeasurement(input: MeasurementInput): Promise<MeasurementResult> {
+  if (input.browserQaRefs.length === 0) {
+    throw new Error(
+      "Full-harness measurement requires non-empty browser QA evidence refs for executed Browser QA.",
+    );
+  }
+
   const reviewer = validateReviewer(input.reviewer);
   const commitSha = await resolveCommitSha(input.root);
 

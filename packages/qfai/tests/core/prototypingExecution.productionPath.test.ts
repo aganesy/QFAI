@@ -47,12 +47,17 @@ describe("prototyping execution production path", () => {
       expect(gate).toBeUndefined();
     });
 
-    it("runtime gate is populated when targetUrl is present for UI-bearing", () => {
-      const gate = buildRuntimeGate({ surface: "web", targetUrl: "http://localhost:3000" });
+    it("runtime gate is populated with canonical routes when routes are present", () => {
+      const gate = buildRuntimeGate({
+        surface: "web",
+        targetUrl: "http://localhost:3000",
+        routes: ["/dashboard"],
+      });
       expect(gate).toBeDefined();
       if (!gate) throw new Error("gate should be defined");
       expect(gate.ui).toHaveLength(1);
-      expect(gate.ui[0].route).toBe("http://localhost:3000");
+      expect(gate.ui[0].route).toBe("/dashboard");
+      expect(gate.ui[0].url).toBe("http://localhost:3000/dashboard");
     });
   });
 

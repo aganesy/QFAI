@@ -231,7 +231,7 @@ describe("runFullHarness", () => {
     });
   });
 
-  it("TC-D5: CLI surface → UI steps skipped", async () => {
+  it("TC-D5: CLI surface → full-harness is rejected", async () => {
     await withRoot(async (root) => {
       let renderCalled = false;
       let qaCalled = false;
@@ -252,21 +252,22 @@ describe("runFullHarness", () => {
         },
       };
 
-      await runFullHarness(
-        makeRequest(root, {
-          adapters,
-          calibration: {
-            packPath: ".qfai/evidence/calibration.yaml",
-            packVersion: "1.7.15",
-            configPath: "qfai.config.yaml",
-            thresholds: { accept: 0.1, refine: 0.05 },
-            maxIterations: 5,
-            plateauDelta: 0.02,
-            plateauLookback: 3,
-          },
-        }),
-      );
-
+      await expect(
+        runFullHarness(
+          makeRequest(root, {
+            adapters,
+            calibration: {
+              packPath: ".qfai/evidence/calibration.yaml",
+              packVersion: "1.7.15",
+              configPath: "qfai.config.yaml",
+              thresholds: { accept: 0.1, refine: 0.05 },
+              maxIterations: 5,
+              plateauDelta: 0.02,
+              plateauLookback: 3,
+            },
+          }),
+        ),
+      ).rejects.toThrow("full-harness is supported only");
       expect(renderCalled).toBe(false);
       expect(qaCalled).toBe(false);
     });

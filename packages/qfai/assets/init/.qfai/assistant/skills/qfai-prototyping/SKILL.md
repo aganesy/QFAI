@@ -113,6 +113,7 @@ Canonical prototyping surfaces are: `web`, `mobile`, `desktop`, `cli`, `mixed`.
 - Full-harness is allowed only for UI-bearing surfaces that require visual/browser evidence.
 - `web`, `mobile`, `desktop`, `mixed` surfaces require runtime gate, render bundle, browser QA bundle, and `fullHarness`.
 - `cli` surface must not use `full-harness`; use `low-cost` or `standard`.
+- Full-harness render targets, Browser QA routes, UI observation, uiFidelity, runtimeGate, and specCoverage all use the canonical screen/route set from `uiux/40_screen_contracts.md`. Placeholder routes such as `"/primary"` are invalid.
 - `ui_bearing: false` specs are not prototyping execution targets.
 - Full-harness is a **measurement-driven iterative workflow**: each `qfai prototyping run --mode full-harness` invocation records exactly one iteration of real code observation. Multiple iterations are formed by running the command multiple times with real code changes in between.
 - The discussion 3-layer evaluation score measures **design direction quality** and MUST NOT be copied into `fullHarness.scoringTrace`.
@@ -125,6 +126,7 @@ Canonical prototyping surfaces are: `web`, `mobile`, `desktop`, `cli`, `mixed`.
   - `2 iteration` minimum for `converged` — single-iteration accept does NOT produce `converged`.
   - Trend / discussion / screen contract evidence are mandatory for L2 scoring — empty evidenceRefs is an error.
   - UI fidelity uses **screen-level** observation — aggregate/flat summary is prohibited.
+  - Browser QA evidence must be preserved in summary and `fullHarness.iterations[].evidenceRefs.browserQa`; executed Browser QA with empty evidence refs is invalid.
   - Pre-scored `l1`/`l2` metadata flow-through is prohibited — panels must be computed from real `panelInputs`.
   - Per-spec zero-fill fallback is prohibited — all specs must have real coverage data.
   - DB object declarations without observation evidence are rejected.
@@ -199,6 +201,7 @@ Interpretation:
 
 - always: `specs[]`, `meta.*`, `mode.*`, `fullHarness`
 - `web`, `mobile`, `desktop`, `mixed`: `runtimeGate`, `.qfai/evidence/render.json`, Browser QA bundle trio, `uiFidelity`
+- `runtimeGate.ui[].route` stores canonical route paths. URLs are separate runtime targets and must not replace the route field.
 - `cli`: `full-harness` is invalid. UI-specific evidence remains n/a in `low-cost` / `standard`.
 
 ## Full-harness minimum completeness

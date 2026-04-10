@@ -1,9 +1,13 @@
 import type { PrototypingSurface } from "./types.js";
 import { requiresVisualBrowserEvidence } from "../detection/surfaceType.js";
 
-export function buildRuntimeGate(input: { surface: PrototypingSurface; targetUrl?: string }):
+export function buildRuntimeGate(input: {
+  surface: PrototypingSurface;
+  targetUrl?: string;
+  routes?: string[];
+}):
   | {
-      ui: Array<{ route: string; status: number }>;
+      ui: Array<{ route: string; status: number; url?: string }>;
       api: Array<{ method: string; path: string; status: number }>;
       evidenceRefs: string[];
     }
@@ -12,13 +16,23 @@ export function buildRuntimeGate(input: { surface: PrototypingSurface; targetUrl
     return undefined;
   }
 
-  if (!input.targetUrl) {
+  if (!input.routes || input.routes.length === 0) {
     return undefined;
   }
 
   return {
-    ui: [{ route: input.targetUrl, status: 200 }],
+    ui: input.routes.map((route) => ({
+      route,
+      status: 200,
+      ...(input.targetUrl
+        ? { url: new URL(route, ensureTrailingSlash(input.targetUrl)).toString() }
+        : {}),
+    })),
     api: [],
     evidenceRefs: [".qfai/evidence/prototyping.json#/runtimeGate"],
   };
+}
+
+function ensureTrailingSlash(value: string): string {
+  return value.endsWith("/") ? value : `${value}/`;
 }
