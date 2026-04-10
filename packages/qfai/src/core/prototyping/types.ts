@@ -1,6 +1,6 @@
 import type { CanonicalPrototypingSurface } from "../domain/surface.js";
 
-export type PrototypingMode = "low-cost" | "standard" | "full-harness";
+export type PrototypingMode = "full-harness";
 
 export type ModeSelectionSource =
   | "explicit-request"

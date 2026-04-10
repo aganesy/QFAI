@@ -54,7 +54,7 @@ npx qfai report
 - `npx qfai doctor`
   - Diagnoses configuration discovery, path resolution, glob scanning, and `validate.json` inputs before running validate/report; use `--fail-on` to enforce failures in CI.
     Note: prototyping evidence (`.qfai/evidence/prototyping.json`) is produced by the AI workflow / skills
-    (`/qfai-prototyping` with `mode=low-cost|standard|full-harness`), not by a CLI command.
+    (`/qfai-prototyping` with `mode=full-harness` for supported UI surfaces only), not by a general-purpose end-user CLI flow.
     `qfai validate` consumes the resulting evidence files, including `mode.effective` and `fullHarness` metadata when present.
 
 ## ATDD annotation hard gate
@@ -89,7 +89,7 @@ QFAI includes a small set of custom skills (stored under `.qfai/assistant/skills
   as 15 required markdown files under `.qfai/discussion/discussion-<ts>/`.
   UI-bearing discussion packs require `prototyping.yaml`; non-ui discussion packs do not.
 - **qfai-sdd**: Unified SDD entrypoint with discussion-pack preflight guard (missing/incomplete/blocking OQ causes stop + next action guidance).
-- **qfai-prototyping**: Build a contract-aligned UI prototype with static-first evidence by default, and escalate to full-harness only when explicitly justified for UI-bearing surfaces.
+- **qfai-prototyping**: Build a contract-aligned UI prototype under the `full-harness` only / UI-only contract, with calibration-pack SSOT and screen-level Browser QA evidence.
 - **qfai-atdd**: Implement acceptance tests driven by specs/scenarios.
 - **qfai-implement**: Unified TDD micro-cycle (Red/Green/Refactor) one test at a time using `test-list.md` as the execution ledger, including ledger status updates and exception closure.
 - **qfai-verify**: Run full-scan local quality gates (`validate --fail-on error`, `report`, repo gates) and produce reviewer-approved evidence under `.qfai/evidence/`.

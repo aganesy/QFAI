@@ -45,6 +45,9 @@ export type FullHarnessIteration = {
 };
 
 export type TerminationReason = "converged" | "max-iterations" | "plateau" | "manual-stop";
+export type FinalDecision = "accepted" | "rejected" | "abandoned";
+export type ReviewerSignoffStatus = "approved" | "rejected" | "abandoned";
+export type ReviewerLogVerdict = "approve" | "revise" | "reject" | "abandon";
 
 export type FullHarnessHistory = {
   runId: string;

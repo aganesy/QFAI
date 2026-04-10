@@ -44,9 +44,9 @@ describe("determineDecision", () => {
     expect(determineDecision(0.7, thresholds)).toBe("refine");
   });
 
-  it("returns pivot when below refine threshold", () => {
-    expect(determineDecision(0.3, thresholds)).toBe("pivot");
-    expect(determineDecision(0.0, thresholds)).toBe("pivot");
+  it("returns reject when below refine threshold", () => {
+    expect(determineDecision(0.3, thresholds)).toBe("reject");
+    expect(determineDecision(0.0, thresholds)).toBe("reject");
   });
 });
 

@@ -13,6 +13,9 @@ import type {
   FullHarnessIteration,
   FullHarnessCalibrationRef,
   TerminationReason,
+  FinalDecision,
+  ReviewerLogVerdict,
+  ReviewerSignoffStatus,
 } from "../harness/types.js";
 
 export type PrototypingSummaryBundle = {
@@ -22,6 +25,11 @@ export type PrototypingSummaryBundle = {
     declared: { uiRoutes: number; apiEndpoints: number; dbObjects: number };
     checked: { uiOk: number; apiNon404: number; dbPresent: number };
     missing: { uiRoutes: string[]; apiEndpoints: string[]; dbObjects: string[] };
+    coverageRefs?: Array<{
+      route: string;
+      declaredRef: string;
+      observedRefs: string[];
+    }>;
   }>;
   mode: {
     requested?: PrototypingMode;
@@ -47,6 +55,7 @@ export type PrototypingSummaryBundle = {
     ui: Array<{
       screenId: string;
       route: string;
+      declaredRef?: string;
       url?: string;
       rendered: boolean;
       browserVisited: boolean;
@@ -67,16 +76,17 @@ export type PrototypingSummaryBundle = {
     bestIteration: number;
     status: "in-progress" | "completed";
     terminationReason?: TerminationReason;
+    finalDecision: FinalDecision;
     reviewerSignoff: {
       reviewerId: string;
-      status: "approved" | "rejected";
+      status: ReviewerSignoffStatus;
       timestamp: string;
       source: "cli";
     };
     reviewerLogs: Array<{
       iteration: number;
       reviewerId: string;
-      verdict: "approve" | "revise" | "reject";
+      verdict: ReviewerLogVerdict;
       summary: string;
       evidenceRefs: string[];
     }>;
@@ -87,7 +97,7 @@ export type PrototypingSummaryBundle = {
       l2Total: number;
       weightedTotal: number;
       deltaFromPrevious: number | null;
-      decision: "accept" | "refine" | "pivot";
+      decision: "accept" | "refine" | "reject";
       commitSha: string;
     }>;
     limitations: string[];

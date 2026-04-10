@@ -30,7 +30,7 @@ export const DEFAULT_THRESHOLDS: ThresholdConfig = {
   refine: 0.5,
 };
 
-export type Decision = "accept" | "refine" | "pivot";
+export type Decision = "accept" | "refine" | "reject";
 
 export type DecisionResult = {
   decision: Decision;

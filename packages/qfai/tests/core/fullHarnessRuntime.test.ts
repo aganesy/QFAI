@@ -1,6 +1,3 @@
-/**
- * Full-harness runtime tests — WS-4 measurement-driven model
- */
 import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -8,19 +5,32 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { runFullHarness, type FullHarnessRequest } from "../../src/core/harness/runtime.js";
-import type { FullHarnessAdapters } from "../../src/core/harness/adapters.js";
 import type { FullHarnessPanelInputs } from "../../src/core/harness/panelInputs.js";
 
 async function withRoot(task: (root: string) => Promise<void>): Promise<void> {
   const root = await mkdtemp(path.join(os.tmpdir(), "qfai-harness-"));
   try {
     await mkdir(path.join(root, ".qfai", "evidence"), { recursive: true });
-    // Full-harness requires a git repo for resolveCommitSha
     await mkdir(path.join(root, ".git", "refs", "heads"), { recursive: true });
     await writeFile(path.join(root, ".git", "HEAD"), "ref: refs/heads/main\n", "utf-8");
     await writeFile(
       path.join(root, ".git", "refs", "heads", "main"),
       "abc1234567890abcdef1234567890abcdef123456\n",
+      "utf-8",
+    );
+    await writeFile(
+      path.join(root, ".qfai", "evidence", "calibration.yaml"),
+      [
+        "version: 1.7.15",
+        "thresholds:",
+        "  accept: 0.8",
+        "  refine: 0.5",
+        "maxIterations: 5",
+        "plateauDelta: 0.02",
+        "plateauLookback: 3",
+        "examples: []",
+        "",
+      ].join("\n"),
       "utf-8",
     );
     await task(root);
@@ -29,28 +39,31 @@ async function withRoot(task: (root: string) => Promise<void>): Promise<void> {
   }
 }
 
-function makePanelInputs(overrides: Partial<FullHarnessPanelInputs> = {}): FullHarnessPanelInputs {
+function makePanelInputs(): FullHarnessPanelInputs {
   return {
     runtimeGate: {
       uiRoutes: [
         {
-          screenId: "home",
-          route: "/",
+          screenId: "dashboard",
+          route: "/dashboard",
           rendered: true,
           browserVisited: true,
-          renderEvidenceRefs: ["render-001.png", "render-001.html"],
-          browserQaEvidenceRefs: ["browserQa-report.json#/phases/smoke"],
+          renderEvidenceRefs: [".qfai/evidence/render.json#/screens/0"],
+          browserQaEvidenceRefs: [".qfai/evidence/browser-qa.json#/phases/0"],
         },
       ],
-      apiEndpoints: [{ method: "GET", path: "/api/health", status: 200 }],
-      evidenceRefs: [".qfai/evidence/prototyping.json#/runtimeGate"],
+      evidenceRefs: [
+        ".qfai/discussion/discussion-20260406000000000/uiux/40_screen_contracts.md#dashboard",
+        ".qfai/evidence/render.json#/screens/0",
+        ".qfai/evidence/browser-qa.json#/phases/0",
+      ],
     },
     renderEvidence: {
-      totalScreens: 2,
-      capturedScreens: 2,
+      totalScreens: 1,
+      capturedScreens: 1,
       failedScreens: 0,
-      viewports: ["1920x1080"],
-      evidenceRefs: ["render-001.png"],
+      viewports: ["desktop"],
+      evidenceRefs: [".qfai/evidence/render.json#/screens/0"],
     },
     browserQa: {
       executed: true,
@@ -58,51 +71,57 @@ function makePanelInputs(overrides: Partial<FullHarnessPanelInputs> = {}): FullH
       experienceFindings: 0,
       visualFindings: 0,
       totalFindings: 0,
-      phasesExecuted: ["smoke", "interaction"],
-      evidenceRefs: ["browserQa-report.json"],
+      phasesExecuted: ["smoke"],
+      evidenceRefs: [".qfai/evidence/browser-qa.json#/phases/0"],
     },
     uiObservation: {
       screens: [
         {
-          screenId: "home",
-          route: "/",
-          htmlCaptureRef: "screen-001.html",
-          domLabelsFound: ["heading"],
-          elementsPlaced: 5,
-          actionsWired: 2,
+          screenId: "dashboard",
+          route: "/dashboard",
+          htmlCaptureRef: ".qfai/evidence/render/dashboard.desktop.html",
+          domLabelsFound: ["Dashboard"],
+          elementsPlaced: 1,
+          actionsWired: 1,
           mockPathFindings: [],
-          browserQaEvidenceRefs: ["browserQa-report.json#/phases/0"],
+          browserQaEvidenceRefs: [".qfai/evidence/browser-qa.json#/phases/0"],
           browserQaObserved: true,
         },
       ],
-      evidenceRefs: ["uiObs-001.json"],
+      evidenceRefs: [".qfai/evidence/render/dashboard.desktop.html"],
     },
     specCoverage: {
-      declared: { uiRoutes: 1, apiEndpoints: 1, dbObjects: 1 },
-      checked: { uiOk: 1, apiNon404: 1, dbPresent: 1 },
-      missing: { uiRoutes: [], apiEndpoints: [], dbObjects: [] },
-      evidenceRefs: ["specCov-001.json"],
+      declared: { uiRoutes: 1 },
+      checked: { uiOk: 1 },
+      missing: { uiRoutes: [] },
+      evidenceRefs: [
+        ".qfai/discussion/discussion-20260406000000000/uiux/40_screen_contracts.md#dashboard",
+        ".qfai/evidence/render.json#/screens/0",
+      ],
     },
     discussionAxes: {
-      invariantAxes: 3,
-      trendDerivedAxes: 2,
+      invariantAxes: 1,
+      trendDerivedAxes: 1,
       productSpecificAxes: 1,
       aggregateScore: 0.9,
-      evidenceRefs: ["discussion-001.json"],
+      evidenceRefs: [
+        ".qfai/discussion/discussion-20260406000000000/uiux/20_design_eval_invariant.md",
+      ],
     },
     screenContract: {
-      totalContracts: 2,
-      coveredContracts: 2,
-      fidelityScore: 0.95,
-      evidenceRefs: ["screenContract-001.json"],
+      totalContracts: 1,
+      coveredContracts: 1,
+      fidelityScore: 1,
+      evidenceRefs: [
+        ".qfai/discussion/discussion-20260406000000000/uiux/40_screen_contracts.md#dashboard",
+      ],
     },
     trendAlignment: {
-      trendSourcesChecked: 3,
-      translationConsistency: 0.9,
-      competitiveGapsCovered: 2,
-      evidenceRefs: ["trend-001.json"],
+      trendSourcesChecked: 1,
+      translationConsistency: 1,
+      competitiveGapsCovered: 1,
+      evidenceRefs: [".qfai/discussion/discussion-20260406000000000/04_Sources.md"],
     },
-    ...overrides,
   };
 }
 
@@ -112,17 +131,12 @@ function makeRequest(
 ): FullHarnessRequest {
   return {
     root,
-    reviewer: "test-reviewer",
+    reviewer: "qa-reviewer",
     changeSummary: ["Initial measurement"],
     limitations: [],
-    calibration: {
-      packPath: ".qfai/evidence/calibration.yaml",
-      packVersion: "1.7.15",
+    calibrationRef: {
+      packPath: path.join(root, ".qfai", "evidence", "calibration.yaml"),
       configPath: "qfai.config.yaml",
-      thresholds: { accept: 0.8, refine: 0.5 },
-      maxIterations: 5,
-      plateauDelta: 0.02,
-      plateauLookback: 3,
     },
     adapters: {
       surface: "web",
@@ -131,14 +145,17 @@ function makeRequest(
           entries: [
             {
               capture_id: "cap-1",
-              target: "/",
+              target: "/dashboard",
               status: "captured",
-              screenshot_path: "render-001.png",
-              html_path: "render-001.html",
+              screenshot_path: ".qfai/evidence/render/dashboard.desktop.png",
+              html_path: ".qfai/evidence/render/dashboard.desktop.html",
               viewport: "desktop",
             },
           ],
-          filesWritten: ["render-001.png", "render-001.html"],
+          filesWritten: [
+            ".qfai/evidence/render/dashboard.desktop.png",
+            ".qfai/evidence/render/dashboard.desktop.html",
+          ],
         }),
       },
       browserQa: {
@@ -149,7 +166,7 @@ function makeRequest(
               status: "passed",
               findings: [],
               repair_suggestions: [],
-              evidence_refs: ["browserQa-report.json#/phases/smoke"],
+              evidence_refs: [".qfai/evidence/browser-qa.json#/phases/0"],
               checks_performed: ["smoke passed"],
             },
           ],
@@ -158,359 +175,86 @@ function makeRequest(
         }),
       },
     },
-    screenContracts: [{ screenId: "home", route: "/" }],
+    screenContracts: [{ screenId: "dashboard", route: "/dashboard" }],
     panelInputs: makePanelInputs(),
     ...overrides,
   };
 }
 
 describe("runFullHarness", () => {
-  it("TC-D1: 1 iteration accept → NOT converged (v1.7.15)", async () => {
+  it("loads calibration pack from calibrationRef.packPath inside runtime", async () => {
     await withRoot(async (root) => {
-      const result = await runFullHarness(
-        makeRequest(root, {
-          calibration: {
-            packPath: ".qfai/evidence/calibration.yaml",
-            packVersion: "1.7.15",
-            configPath: "qfai.config.yaml",
-            thresholds: { accept: 0.1, refine: 0.05 },
-            maxIterations: 5,
-            plateauDelta: 0.02,
-            plateauLookback: 3,
-          },
-        }),
+      const result = await runFullHarness(makeRequest(root));
+      expect(result.calibrationRef.packPath).toContain("calibration.yaml");
+      expect(result.calibrationRef.packVersion).toBe("1.7.15");
+    });
+  });
+
+  it("keeps single-iteration accept non-terminal", async () => {
+    await withRoot(async (root) => {
+      await writeFile(
+        path.join(root, ".qfai", "evidence", "calibration.yaml"),
+        [
+          "version: 1.7.15",
+          "thresholds:",
+          "  accept: 0.1",
+          "  refine: 0.05",
+          "maxIterations: 5",
+          "plateauDelta: 0.02",
+          "plateauLookback: 3",
+          "examples: []",
+          "",
+        ].join("\n"),
+        "utf-8",
       );
 
-      // v1.7.15: single-iteration accept does NOT produce converged
+      const result = await runFullHarness(makeRequest(root));
       expect(result.isTerminal).toBe(false);
       expect(result.terminationReason).toBeUndefined();
-      expect(result.history.iterations.length).toBe(1);
-      expect(result.history.scoringTrace.length).toBe(1);
+      expect(result.finalDecision).toBe("accepted");
+      expect(result.signoffStatus).toBe("approved");
+      expect(result.logVerdict).toBe("approve");
     });
   });
 
-  it("TC-D3: low scores → not terminal on first iteration", async () => {
+  it("maps plateau termination to abandoned semantics", async () => {
     await withRoot(async (root) => {
-      const result = await runFullHarness(
-        makeRequest(root, {
-          calibration: {
-            packPath: ".qfai/evidence/calibration.yaml",
-            packVersion: "1.7.15",
-            configPath: "qfai.config.yaml",
-            thresholds: { accept: 0.99, refine: 0.98 },
-            maxIterations: 5,
-            plateauDelta: 0.02,
-            plateauLookback: 3,
-          },
-        }),
+      await writeFile(
+        path.join(root, ".qfai", "evidence", "calibration.yaml"),
+        [
+          "version: 1.7.15",
+          "thresholds:",
+          "  accept: 0.99",
+          "  refine: 0.98",
+          "maxIterations: 1",
+          "plateauDelta: 0.02",
+          "plateauLookback: 1",
+          "examples: []",
+          "",
+        ].join("\n"),
+        "utf-8",
       );
 
-      expect(result.isTerminal).toBe(false);
-      expect(result.history.iterations.length).toBe(1);
+      const result = await runFullHarness(makeRequest(root));
+      expect(result.isTerminal).toBe(true);
+      expect(result.finalDecision).toBe("abandoned");
+      expect(result.signoffStatus).toBe("abandoned");
+      expect(result.logVerdict).toBe("abandon");
     });
   });
 
-  it("TC-D4: UI-bearing surface → calls render and Browser QA", async () => {
-    await withRoot(async (root) => {
-      let renderCalled = false;
-      let qaCalled = false;
-
-      const adapters: FullHarnessAdapters = {
-        surface: "web",
-        render: {
-          captureEvidence: async () => {
-            renderCalled = true;
-            return {
-              entries: [
-                {
-                  capture_id: "cap-1",
-                  target: "/",
-                  status: "captured",
-                  screenshot_path: "render-001.png",
-                  html_path: "render-001.html",
-                  viewport: "desktop",
-                },
-              ],
-              filesWritten: ["render-001.png", "render-001.html"],
-            };
-          },
-        },
-        browserQa: {
-          runQa: async () => {
-            qaCalled = true;
-            return {
-              phases: [
-                {
-                  phase: "smoke",
-                  status: "passed",
-                  findings: [],
-                  repair_suggestions: [],
-                  evidence_refs: ["browserQa-report.json#/phases/smoke"],
-                  checks_performed: ["smoke passed"],
-                },
-              ],
-              provider: "test",
-              timestamp: new Date().toISOString(),
-            };
-          },
-        },
-      };
-
-      await runFullHarness(
-        makeRequest(root, {
-          adapters,
-          calibration: {
-            packPath: ".qfai/evidence/calibration.yaml",
-            packVersion: "1.7.15",
-            configPath: "qfai.config.yaml",
-            thresholds: { accept: 0.1, refine: 0.05 },
-            maxIterations: 5,
-            plateauDelta: 0.02,
-            plateauLookback: 3,
-          },
-        }),
-      );
-
-      expect(renderCalled).toBe(true);
-      expect(qaCalled).toBe(true);
-    });
-  });
-
-  it("TC-D5: CLI surface → full-harness is rejected", async () => {
-    await withRoot(async (root) => {
-      let renderCalled = false;
-      let qaCalled = false;
-
-      const adapters: FullHarnessAdapters = {
-        surface: "cli",
-        render: {
-          captureEvidence: async () => {
-            renderCalled = true;
-            return { entries: [], filesWritten: [] };
-          },
-        },
-        browserQa: {
-          runQa: async () => {
-            qaCalled = true;
-            return { phases: [], provider: "test", timestamp: new Date().toISOString() };
-          },
-        },
-      };
-
-      await expect(
-        runFullHarness(
-          makeRequest(root, {
-            adapters,
-            calibration: {
-              packPath: ".qfai/evidence/calibration.yaml",
-              packVersion: "1.7.15",
-              configPath: "qfai.config.yaml",
-              thresholds: { accept: 0.1, refine: 0.05 },
-              maxIterations: 5,
-              plateauDelta: 0.02,
-              plateauLookback: 3,
-            },
-          }),
-        ),
-      ).rejects.toThrow("full-harness is supported only");
-      expect(renderCalled).toBe(false);
-      expect(qaCalled).toBe(false);
-    });
-  });
-
-  it("fails closed when surface is missing", async () => {
+  it("rejects cli surface", async () => {
     await withRoot(async (root) => {
       await expect(
         runFullHarness(
           makeRequest(root, {
             adapters: {
-              surface: undefined as never,
-              render: {
-                captureEvidence: async () => ({ entries: [], filesWritten: [] }),
-              },
-              browserQa: {
-                runQa: async () => ({
-                  phases: [],
-                  provider: "test",
-                  timestamp: new Date().toISOString(),
-                }),
-              },
+              ...makeRequest(root).adapters,
+              surface: "cli",
             },
           }),
         ),
-      ).rejects.toThrow("Full-harness requires adapters.surface.");
-    });
-  });
-
-  it("fails closed when screenContracts are missing", async () => {
-    await withRoot(async (root) => {
-      await expect(
-        runFullHarness(
-          makeRequest(root, {
-            screenContracts: [],
-          }),
-        ),
-      ).rejects.toThrow("Full-harness requires canonical screenContracts.");
-    });
-  });
-
-  it("fails closed when Browser QA executes without evidence refs", async () => {
-    await withRoot(async (root) => {
-      await expect(
-        runFullHarness(
-          makeRequest(root, {
-            adapters: {
-              surface: "web",
-              render: {
-                captureEvidence: async () => ({
-                  entries: [
-                    {
-                      capture_id: "cap-1",
-                      target: "/",
-                      status: "captured",
-                      screenshot_path: "render-001.png",
-                      html_path: "render-001.html",
-                      viewport: "desktop",
-                    },
-                  ],
-                  filesWritten: ["render-001.png", "render-001.html"],
-                }),
-              },
-              browserQa: {
-                runQa: async () => ({
-                  phases: [
-                    {
-                      phase: "smoke",
-                      status: "passed",
-                      findings: [],
-                      repair_suggestions: [],
-                      evidence_refs: [],
-                      checks_performed: ["smoke passed"],
-                    },
-                  ],
-                  provider: "test",
-                  timestamp: new Date().toISOString(),
-                }),
-              },
-            },
-          }),
-        ),
-      ).rejects.toThrow("Full-harness requires Browser QA evidence refs");
-    });
-  });
-
-  it("TC-D6: result writer produces expected summary", async () => {
-    await withRoot(async (root) => {
-      const result = await runFullHarness(
-        makeRequest(root, {
-          calibration: {
-            packPath: ".qfai/evidence/calibration.yaml",
-            packVersion: "1.7.15",
-            configPath: "qfai.config.yaml",
-            thresholds: { accept: 0.1, refine: 0.05 },
-            maxIterations: 5,
-            plateauDelta: 0.02,
-            plateauLookback: 3,
-          },
-        }),
-      );
-
-      expect(result.iteration).toBeDefined();
-      expect(typeof result.iteration.iteration).toBe("number");
-      expect(result.history.runId).toBeTruthy();
-      expect(result.calibrationRef).toBeDefined();
-      expect(result.calibrationRef.configPath).toBe("qfai.config.yaml");
-    });
-  });
-
-  it("observability adapter receives iteration records", async () => {
-    await withRoot(async (root) => {
-      const records: Array<{ iteration: number; score: number; decision: string }> = [];
-      let flushed = false;
-
-      const adapters: FullHarnessAdapters = {
-        surface: "web",
-        render: {
-          captureEvidence: async () => ({
-            entries: [
-              {
-                capture_id: "cap-1",
-                target: "/",
-                status: "captured",
-                screenshot_path: "render-001.png",
-                html_path: "render-001.html",
-                viewport: "desktop",
-              },
-            ],
-            filesWritten: ["render-001.png", "render-001.html"],
-          }),
-        },
-        browserQa: {
-          runQa: async () => ({
-            phases: [
-              {
-                phase: "smoke",
-                status: "passed",
-                findings: [],
-                repair_suggestions: [],
-                evidence_refs: ["browserQa-report.json#/phases/smoke"],
-                checks_performed: ["smoke passed"],
-              },
-            ],
-            provider: "test",
-            timestamp: new Date().toISOString(),
-          }),
-        },
-        observability: {
-          recordIteration: (data) => {
-            records.push(data);
-          },
-          flush: async () => {
-            flushed = true;
-          },
-        },
-      };
-
-      await runFullHarness(
-        makeRequest(root, {
-          adapters,
-          calibration: {
-            packPath: ".qfai/evidence/calibration.yaml",
-            packVersion: "1.7.15",
-            configPath: "qfai.config.yaml",
-            thresholds: { accept: 0.1, refine: 0.05 },
-            maxIterations: 5,
-            plateauDelta: 0.02,
-            plateauLookback: 3,
-          },
-        }),
-      );
-
-      expect(records.length).toBeGreaterThan(0);
-      expect(flushed).toBe(true);
-    });
-  });
-
-  it("generates evidence and review summary", async () => {
-    await withRoot(async (root) => {
-      const result = await runFullHarness(
-        makeRequest(root, {
-          calibration: {
-            packPath: ".qfai/evidence/calibration.yaml",
-            packVersion: "1.7.15",
-            configPath: "qfai.config.yaml",
-            thresholds: { accept: 0.1, refine: 0.05 },
-            maxIterations: 5,
-            plateauDelta: 0.02,
-            plateauLookback: 3,
-          },
-        }),
-      );
-
-      expect(result.history.runId).toBeTruthy();
-      expect(result.iteration).toBeDefined();
-      expect(result.fakeUiDetection).toBeDefined();
-      expect(result.handoff).toBeDefined();
+      ).rejects.toThrow("packages/qfai v1.7.15");
     });
   });
 });

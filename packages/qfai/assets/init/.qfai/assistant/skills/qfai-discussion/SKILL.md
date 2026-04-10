@@ -286,16 +286,15 @@ The latest discussion pack must include `prototyping.yaml` when `ui_bearing: tru
     - All fields (`recommended_mode`, `rationale`, `allowed_modes`, `surface`) are required under the `prototyping:` key.
     - Top-level recommendation keys are not supported; only the namespaced `prototyping:` block is accepted.
     - Coexistence of top-level recommendation keys with the namespaced block is invalid and will be rejected by validation and execution.
-17. Choose `recommended_mode` with these defaults:
-    - `low-cost`: rough draft or strong cost priority
-    - `standard`: normal customer-presentable path
-    - `full-harness`: only when the premium runtime loop is justified
+17. Set `recommended_mode: full-harness` and `allowed_modes: [full-harness]` for every UI-bearing discussion pack in `packages/qfai`.
 
-    When `recommended_mode: full-harness`, add an `iteration_expectations` block to `prototyping.yaml`:
+    Add an `iteration_expectations` block to `prototyping.yaml`:
 
     ```yaml
     prototyping:
       recommended_mode: full-harness
+      allowed_modes:
+        - full-harness
       iteration_expectations:
         min_iterations: 5
         evaluation_axes_source: "uiux/20-23 (3-layer evaluation family)"

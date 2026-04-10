@@ -16,7 +16,6 @@ import type {
 import {
   derivePrototypingObligations,
   inferSurfaceFromRecommendationAndEvidence,
-  requiresVisualBrowserEvidence,
   isValidPrototypingSurface,
 } from "../prototyping/mode.js";
 import { CANONICAL_PROTOTYPING_SURFACES } from "../domain/surface.js";
@@ -40,6 +39,7 @@ import {
   type RenderEvidenceEntry,
 } from "../uiux/renderEvidenceTypes.js";
 import { resolveCalibrationPack } from "../calibration/packResolver.js";
+import { isSupportedPrototypingSurface } from "../prototyping/surfacePolicy.js";
 import { issue } from "./utils.js";
 
 type PrototypingSpecEvidence = {
@@ -83,16 +83,17 @@ type PrototypingEvidence = {
     bestIteration: number;
     status: "in-progress" | "completed";
     terminationReason?: "converged" | "max-iterations" | "plateau" | "manual-stop";
+    finalDecision: "accepted" | "rejected" | "abandoned";
     reviewerSignoff: {
       reviewerId: string;
-      status: "approved" | "rejected";
+      status: "approved" | "rejected" | "abandoned";
       timestamp: string;
       source: string;
     };
     reviewerLogs: Array<{
       iteration: number;
       reviewerId: string;
-      verdict: "approve" | "revise" | "reject";
+      verdict: "approve" | "revise" | "reject" | "abandon";
       summary: string;
       evidenceRefs: string[];
     }>;
@@ -310,7 +311,7 @@ export async function validatePrototypingEvidence(
 
   const recommendationArtifact = await resolveLatestRecommendationArtifact(root, config);
   const surfaceResult = resolvePrototypingSurface(parsed.value, recommendationArtifact);
-  const effectiveMode = parsed.value.mode?.effective ?? "standard";
+  const effectiveMode = parsed.value.mode?.effective ?? "full-harness";
 
   const issues: Issue[] = [];
   issues.push(...validateSurface(surfaceResult, evidenceJsonPath));
@@ -430,29 +431,9 @@ export async function validatePrototypingEvidence(
       );
     } else {
       const rec = artifactRec;
-      const evidenceEffective = parsed.value.mode.effective;
-
-      // QFAI-PROT-233: evidence effective mode doesn't match resolved precedence
-      if (evidenceEffective !== rec.recommendedMode) {
-        issues.push(
-          issue(
-            "QFAI-PROT-233",
-            `prototyping evidence effective mode (${evidenceEffective}) does not match discussion recommendation (${rec.recommendedMode}).`,
-            "error",
-            evidenceJsonPath,
-            "prototypingEvidence.modePrecedenceMismatch",
-            [`effective=${evidenceEffective}`, `recommended=${rec.recommendedMode}`],
-            "canonical",
-            "evidence の mode.effective を discussion recommendation に合わせるか、mode.source を修正してください。",
-          ),
-        );
-      }
-
       // QFAI-PROT-236: requested mode is not allowed by discussion artifact
       if (
         parsed.value.mode.requested &&
-        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-        rec.allowedModes &&
         rec.allowedModes.length > 0 &&
         !rec.allowedModes.includes(parsed.value.mode.requested)
       ) {
@@ -476,8 +457,7 @@ export async function validatePrototypingEvidence(
     const evidenceSource = parsed.value.mode.source;
 
     // QFAI-PROT-234: discussion recommendation exists but mode.source=default
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-    if (evidenceSource === "system-default" && rec.recommendedMode) {
+    if (evidenceSource === "system-default") {
       issues.push(
         issue(
           "QFAI-PROT-234",
@@ -527,20 +507,21 @@ export async function validatePrototypingEvidence(
     // QFAI-PROT-254: render evidence bundle contradicts a non-UI prototyping surface
     if (
       surfaceResult.surface &&
-      !requiresVisualBrowserEvidence(surfaceResult.surface) &&
+      !isSupportedPrototypingSurface(surfaceResult.surface) &&
       // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
       renderBundle.renderEvidence?.status === "captured"
     ) {
+      const contradictorySurface = String(surfaceResult.surface);
       issues.push(
         issue(
           "QFAI-PROT-254",
-          `render evidence bundle has captured status but surface is ${surfaceResult.surface}.`,
+          `render evidence bundle has captured status but surface is ${contradictorySurface}.`,
           "warning",
           renderBundlePath,
           "prototypingEvidence.renderBundleSurfaceContradiction",
-          [`surface=${surfaceResult.surface}`],
+          [`surface=${contradictorySurface}`],
           "canonical",
-          `${surfaceResult.surface} surface では render evidence は不要です。surface を見直すか render bundle を削除してください。`,
+          `${contradictorySurface} surface では render evidence は不要です。surface を見直すか render bundle を削除してください。`,
         ),
       );
     }
@@ -630,29 +611,6 @@ export async function validatePrototypingEvidence(
     });
     issues.push(...browserQaIssuesFromBundle);
 
-    // QFAI-PROT-261: browser QA bundle mode contradicts prototyping effective mode
-    if (
-      browserQaBundle.browserQa.mode &&
-      parsed.value.mode?.effective &&
-      browserQaBundle.browserQa.mode !== parsed.value.mode.effective
-    ) {
-      issues.push(
-        issue(
-          "QFAI-PROT-261",
-          `browser QA bundle mode (${browserQaBundle.browserQa.mode}) does not match prototyping effective mode (${parsed.value.mode.effective}).`,
-          "warning",
-          browserQaBundlePath,
-          "prototypingEvidence.browserQaModeMismatch",
-          [
-            `browserQa.mode=${browserQaBundle.browserQa.mode}`,
-            `effective=${parsed.value.mode.effective}`,
-          ],
-          "canonical",
-          "browser QA bundle の mode を prototyping.json の mode.effective に合わせてください。",
-        ),
-      );
-    }
-
     // QFAI-PROT-262: browser QA completed status without usable evidence
     if (
       browserQaBundle.browserQa.executed &&
@@ -723,7 +681,6 @@ export async function validatePrototypingEvidence(
     );
     issues.push(...uiFidelityIssues);
   }
-
   return issues;
 }
 
@@ -848,25 +805,26 @@ function validatePrototypingObligationMatrix(
 ): Issue[] {
   const issues: Issue[] = [];
   const mismatches: string[] = [];
-  const needsVisualBrowserEvidence = requiresVisualBrowserEvidence(surface);
+  const needsVisualBrowserEvidence = isSupportedPrototypingSurface(surface);
 
   if (!obligations.validCombination) {
     issues.push(
       issue(
         "QFAI-PROT-172",
-        obligations.invalidReason ?? "invalid full-harness surface/mode combination.",
+        obligations.invalidReason ?? "invalid prototyping surface/mode combination.",
         "error",
         evidenceJsonPath,
         "prototypingEvidence.obligationMatrix",
-        [`surface=${surface}`, `mode=${evidence.mode?.effective ?? "standard"}`],
+        [`surface=${surface}`, `mode=${evidence.mode?.effective ?? "full-harness"}`],
         "canonical",
-        "full-harness は visual/browser evidence を必要とする UI-bearing surface でのみ許可されます。",
+        "packages/qfai v1.7.15 では prototyping は full-harness / UI-only のみ許可されます。",
       ),
     );
     return issues;
   }
 
   if (!needsVisualBrowserEvidence) {
+    const nonUiSurface = String(surface);
     const contradictions: string[] = [];
     if ((evidence.runtimeGate?.ui.length ?? 0) > 0) contradictions.push("runtimeGate.ui");
     if (evidence.uiFidelity) contradictions.push("uiFidelity");
@@ -876,7 +834,7 @@ function validatePrototypingObligationMatrix(
       issues.push(
         issue(
           "QFAI-PROT-175",
-          `surface=${surface} に UI 専用 evidence が含まれています: ${contradictions.join(", ")}`,
+          `surface=${nonUiSurface} に UI 専用 evidence が含まれています: ${contradictions.join(", ")}`,
           "error",
           evidenceJsonPath,
           "prototypingEvidence.nonUiContradiction",
@@ -893,11 +851,11 @@ function validatePrototypingObligationMatrix(
     issues.push(
       issue(
         "QFAI-PROT-176",
-        "ui-bearing の standard/full-harness mode では uiFidelity が必須です。",
+        "packages/qfai v1.7.15 の prototyping では uiFidelity が必須です。",
         "error",
         evidenceJsonPath,
         "prototypingEvidence.uiFidelityRequiredByMode",
-        [`surface=${surface}`, `mode=${evidence.mode?.effective ?? "standard"}`],
+        [`surface=${surface}`, `mode=${evidence.mode?.effective ?? "full-harness"}`],
         "canonical",
         "uiFidelity.screens[] を追加し、UI contract 対応の evidence を記録してください。",
       ),
@@ -909,11 +867,11 @@ function validatePrototypingObligationMatrix(
     issues.push(
       issue(
         "QFAI-PROT-177",
-        "ui-bearing の full-harness mode では runtimeGate が必須です。",
+        "packages/qfai v1.7.15 の prototyping では runtimeGate が必須です。",
         "error",
         evidenceJsonPath,
         "prototypingEvidence.runtimeGateRequiredByMode",
-        [`surface=${surface}`, `mode=${evidence.mode?.effective ?? "standard"}`],
+        [`surface=${surface}`, `mode=${evidence.mode?.effective ?? "full-harness"}`],
         "canonical",
         "runtimeGate.ui を追加して full-harness の UI route 観測結果を記録してください。",
       ),
@@ -929,7 +887,7 @@ function validatePrototypingObligationMatrix(
         "error",
         evidenceJsonPath,
         "prototypingEvidence.renderBundleRequired",
-        [`surface=${surface}`, `mode=${evidence.mode?.effective ?? "standard"}`],
+        [`surface=${surface}`, `mode=${evidence.mode?.effective ?? "full-harness"}`],
         "canonical",
         "`.qfai/evidence/render.json` を追加し、captured/skipped/failed の bundle を記録してください。",
       ),
@@ -945,7 +903,7 @@ function validatePrototypingObligationMatrix(
         "error",
         evidenceJsonPath,
         "prototypingEvidence.browserQaBundleRequired",
-        [`surface=${surface}`, `mode=${evidence.mode?.effective ?? "standard"}`],
+        [`surface=${surface}`, `mode=${evidence.mode?.effective ?? "full-harness"}`],
         "canonical",
         "`.qfai/evidence/browser-qa.json` を追加し、browser QA summary/findings を記録してください。",
       ),
@@ -964,13 +922,12 @@ function validatePrototypingObligationMatrix(
         "error",
         evidenceJsonPath,
         "prototypingEvidence.obligationMatrix",
-        [`surface=${surface}`, `mode=${evidence.mode?.effective ?? "standard"}`, ...mismatches],
+        [`surface=${surface}`, `mode=${evidence.mode?.effective ?? "full-harness"}`, ...mismatches],
         "canonical",
         "surface と mode.effective に応じた required evidence を揃えてください。",
       ),
     );
   }
-
   return issues;
 }
 
@@ -1204,7 +1161,7 @@ async function validateModeMetadata(
         "prototypingEvidence.modeEffective",
         undefined,
         "canonical",
-        "mode.effective を low-cost|standard|full-harness のいずれかにしてください。",
+        "mode.effective は full-harness のみ許可されます。",
       ),
     );
   }
@@ -1276,599 +1233,661 @@ async function validateModeMetadata(
     }
   }
 
-  if (evidence.mode.effective === "full-harness") {
-    if (!evidence.fullHarness) {
+  if (!evidence.fullHarness) {
+    issues.push(
+      issue(
+        "QFAI-PROT-281",
+        "mode.effective が full-harness の場合は fullHarness block が必要です。",
+        "error",
+        evidenceJsonPath,
+        "prototypingEvidence.fullHarnessRequired",
+        undefined,
+        "canonical",
+        "fullHarness.enabled / terminationReason / scoringTrace / reviewerSignoff を追加してください。",
+      ),
+    );
+    return issues;
+  }
+  let calibrationPack: Awaited<ReturnType<typeof resolveCalibrationPack>> | undefined;
+  try {
+    calibrationPack = await resolveCalibrationPack({
+      root,
+      packPath: evidence.fullHarness.calibrationRef.packPath,
+    });
+  } catch (error) {
+    issues.push(
+      issue(
+        "QFAI-PROT-265",
+        `fullHarness calibration pack could not be resolved from packPath: ${evidence.fullHarness.calibrationRef.packPath}. ${formatError(error)}`,
+        "error",
+        evidenceJsonPath,
+        "prototypingEvidence.fullHarnessCalibrationPackMissing",
+        [evidence.fullHarness.calibrationRef.packPath],
+        "canonical",
+        "fullHarness.calibrationRef.packPath が指す calibration pack を修正してください。",
+      ),
+    );
+  }
+  if (
+    evidence.fullHarness.terminationReason !== undefined &&
+    !VALID_FULL_HARNESS_TERMINATION_REASONS.has(evidence.fullHarness.terminationReason)
+  ) {
+    issues.push(
+      issue(
+        "QFAI-PROT-282",
+        "fullHarness.terminationReason が不正です。",
+        "error",
+        evidenceJsonPath,
+        "prototypingEvidence.fullHarnessTerminationReason",
+        undefined,
+        "canonical",
+        "terminationReason は converged|max-iterations|plateau|manual-stop のいずれかにしてください。",
+      ),
+    );
+  }
+  if (evidence.fullHarness.scoringTrace.length === 0) {
+    issues.push(
+      issue(
+        "QFAI-PROT-283",
+        "fullHarness.scoringTrace は 1 件以上必要です。",
+        "error",
+        evidenceJsonPath,
+        "prototypingEvidence.fullHarnessScoringTrace",
+        undefined,
+        "canonical",
+        "fullHarness.scoringTrace に iteration ごとの score を追加してください。",
+      ),
+    );
+  }
+  if (
+    evidence.fullHarness.reviewerSignoff.reviewerId.trim().length === 0 ||
+    evidence.fullHarness.reviewerSignoff.timestamp.trim().length === 0
+  ) {
+    issues.push(
+      issue(
+        "QFAI-PROT-264",
+        "fullHarness.reviewerSignoff が不完全です。",
+        "error",
+        evidenceJsonPath,
+        "prototypingEvidence.fullHarnessReviewerSignoff",
+        undefined,
+        "canonical",
+        "reviewerSignoff に reviewer / timestamp / status を記録してください。",
+      ),
+    );
+  }
+  const expectedSignoffStatus =
+    evidence.fullHarness.finalDecision === "accepted"
+      ? "approved"
+      : evidence.fullHarness.finalDecision === "rejected"
+        ? "rejected"
+        : "abandoned";
+  if (evidence.fullHarness.reviewerSignoff.status !== expectedSignoffStatus) {
+    issues.push(
+      issue(
+        "QFAI-PROT-316",
+        `reviewerSignoff.status (${evidence.fullHarness.reviewerSignoff.status}) does not match finalDecision (${evidence.fullHarness.finalDecision}).`,
+        "error",
+        evidenceJsonPath,
+        "prototypingEvidence.fullHarnessReviewDecisionMismatch",
+        undefined,
+        "canonical",
+        "reviewerSignoff.status は finalDecision と整合させてください。",
+      ),
+    );
+  }
+  const lastReviewerLog =
+    evidence.fullHarness.reviewerLogs[evidence.fullHarness.reviewerLogs.length - 1];
+  if (lastReviewerLog) {
+    const expectedVerdict =
+      evidence.fullHarness.finalDecision === "accepted"
+        ? "approve"
+        : evidence.fullHarness.finalDecision === "rejected"
+          ? "reject"
+          : evidence.fullHarness.terminationReason
+            ? "abandon"
+            : "revise";
+    if (lastReviewerLog.verdict !== expectedVerdict) {
       issues.push(
         issue(
-          "QFAI-PROT-281",
-          "mode.effective が full-harness の場合は fullHarness block が必要です。",
+          "QFAI-PROT-317",
+          `reviewerLogs[last].verdict (${lastReviewerLog.verdict}) does not match finalDecision/termination semantics.`,
           "error",
           evidenceJsonPath,
-          "prototypingEvidence.fullHarnessRequired",
+          "prototypingEvidence.fullHarnessReviewerLogVerdictMismatch",
           undefined,
           "canonical",
-          "fullHarness.enabled / terminationReason / scoringTrace / reviewerSignoff を追加してください。",
-        ),
-      );
-      return issues;
-    }
-    let calibrationPack: Awaited<ReturnType<typeof resolveCalibrationPack>> | undefined;
-    try {
-      calibrationPack = await resolveCalibrationPack({
-        root,
-        packPath: evidence.fullHarness.calibrationRef.packPath,
-      });
-    } catch (error) {
-      issues.push(
-        issue(
-          "QFAI-PROT-265",
-          `fullHarness calibration pack could not be resolved from packPath: ${evidence.fullHarness.calibrationRef.packPath}. ${formatError(error)}`,
-          "error",
-          evidenceJsonPath,
-          "prototypingEvidence.fullHarnessCalibrationPackMissing",
-          [evidence.fullHarness.calibrationRef.packPath],
-          "canonical",
-          "fullHarness.calibrationRef.packPath が指す calibration pack を修正してください。",
+          "最終 reviewerLogs.verdict は finalDecision / terminationReason と整合させてください。",
         ),
       );
     }
-    if (
-      evidence.fullHarness.terminationReason !== undefined &&
-      !VALID_FULL_HARNESS_TERMINATION_REASONS.has(evidence.fullHarness.terminationReason)
-    ) {
-      issues.push(
-        issue(
-          "QFAI-PROT-282",
-          "fullHarness.terminationReason が不正です。",
-          "error",
-          evidenceJsonPath,
-          "prototypingEvidence.fullHarnessTerminationReason",
-          undefined,
-          "canonical",
-          "terminationReason は converged|max-iterations|plateau|manual-stop のいずれかにしてください。",
-        ),
-      );
-    }
-    if (evidence.fullHarness.scoringTrace.length === 0) {
-      issues.push(
-        issue(
-          "QFAI-PROT-283",
-          "fullHarness.scoringTrace は 1 件以上必要です。",
-          "error",
-          evidenceJsonPath,
-          "prototypingEvidence.fullHarnessScoringTrace",
-          undefined,
-          "canonical",
-          "fullHarness.scoringTrace に iteration ごとの score を追加してください。",
-        ),
-      );
-    }
-    if (
-      evidence.fullHarness.reviewerSignoff.reviewerId.trim().length === 0 ||
-      evidence.fullHarness.reviewerSignoff.timestamp.trim().length === 0
-    ) {
-      issues.push(
-        issue(
-          "QFAI-PROT-264",
-          "fullHarness.reviewerSignoff が不完全です。",
-          "error",
-          evidenceJsonPath,
-          "prototypingEvidence.fullHarnessReviewerSignoff",
-          undefined,
-          "canonical",
-          "reviewerSignoff に reviewer / timestamp / status を記録してください。",
-        ),
-      );
-    }
+  }
 
-    // QFAI-PROT-290: iterationCount == 1 with converged must be an error
-    if (
-      evidence.fullHarness.iterationCount === 1 &&
-      evidence.fullHarness.terminationReason === "converged"
-    ) {
+  // QFAI-PROT-290: iterationCount == 1 with converged must be an error
+  if (
+    evidence.fullHarness.iterationCount === 1 &&
+    evidence.fullHarness.terminationReason === "converged"
+  ) {
+    issues.push(
+      issue(
+        "QFAI-PROT-290",
+        "fullHarness.iterationCount is 1 with terminationReason 'converged'. Full-harness is an iterative loop; single-iteration convergence is suspicious.",
+        "error",
+        evidenceJsonPath,
+        "prototypingEvidence.fullHarnessSingleIterationConverged",
+        undefined,
+        "canonical",
+        "full-harness は反復改善ループです。1回で converged は通常ありえません。iterationCount を確認してください。",
+      ),
+    );
+  }
+
+  // QFAI-PROT-291: scoringTrace / iterations / iterationCount must all match
+  if (
+    evidence.fullHarness.scoringTrace.length !== evidence.fullHarness.iterationCount ||
+    evidence.fullHarness.iterations.length !== evidence.fullHarness.iterationCount
+  ) {
+    issues.push(
+      issue(
+        "QFAI-PROT-291",
+        `fullHarness count mismatch: scoringTrace=${evidence.fullHarness.scoringTrace.length}, iterations=${evidence.fullHarness.iterations.length}, iterationCount=${evidence.fullHarness.iterationCount}.`,
+        "error",
+        evidenceJsonPath,
+        "prototypingEvidence.fullHarnessScoringTraceCountMismatch",
+        undefined,
+        "canonical",
+        "scoringTrace / iterations のエントリ数と iterationCount を一致させてください。",
+      ),
+    );
+  }
+
+  // QFAI-PROT-292: terminationReason / iterationCount cross-check
+  if (
+    evidence.fullHarness.terminationReason === "max-iterations" &&
+    calibrationPack &&
+    evidence.fullHarness.iterationCount < calibrationPack.maxIterations
+  ) {
+    issues.push(
+      issue(
+        "QFAI-PROT-292",
+        `terminationReason is 'max-iterations' but iterationCount (${evidence.fullHarness.iterationCount}) < pack maxIterations (${calibrationPack.maxIterations}).`,
+        "error",
+        evidenceJsonPath,
+        "prototypingEvidence.fullHarnessTerminationReasonMismatch",
+        undefined,
+        "canonical",
+        "terminationReason と iterationCount の整合性を確認してください。",
+      ),
+    );
+  }
+
+  // QFAI-PROT-293: calibration maxIterations consistency
+  if (calibrationPack && evidence.fullHarness.iterationCount > calibrationPack.maxIterations) {
+    issues.push(
+      issue(
+        "QFAI-PROT-293",
+        `fullHarness.iterationCount (${evidence.fullHarness.iterationCount}) exceeds pack maxIterations (${calibrationPack.maxIterations}).`,
+        "error",
+        evidenceJsonPath,
+        "prototypingEvidence.fullHarnessExceedsMaxIterations",
+        undefined,
+        "canonical",
+        "iterationCount が maxIterations を超えています。設定を確認してください。",
+      ),
+    );
+  }
+
+  // QFAI-PROT-294: scoringTrace improvement progression (info)
+  if (evidence.fullHarness.scoringTrace.length >= 2) {
+    const scores = evidence.fullHarness.scoringTrace.map((s) => s.weightedTotal);
+    const isNonProgressing = scores.every((s, i) => i === 0 || s <= (scores[i - 1] ?? s));
+    if (isNonProgressing) {
       issues.push(
         issue(
-          "QFAI-PROT-290",
-          "fullHarness.iterationCount is 1 with terminationReason 'converged'. Full-harness is an iterative loop; single-iteration convergence is suspicious.",
-          "error",
+          "QFAI-PROT-294",
+          "fullHarness.scoringTrace shows no improvement across iterations. Scores are non-increasing.",
+          "info",
           evidenceJsonPath,
-          "prototypingEvidence.fullHarnessSingleIterationConverged",
+          "prototypingEvidence.fullHarnessNoProgression",
           undefined,
           "canonical",
-          "full-harness は反復改善ループです。1回で converged は通常ありえません。iterationCount を確認してください。",
+          "scoringTrace のスコアが改善していません。反復改善ループが機能しているか確認してください。",
         ),
       );
     }
+  }
 
-    // QFAI-PROT-291: scoringTrace / iterations / iterationCount must all match
-    if (
-      evidence.fullHarness.scoringTrace.length !== evidence.fullHarness.iterationCount ||
-      evidence.fullHarness.iterations.length !== evidence.fullHarness.iterationCount
-    ) {
+  // QFAI-PROT-295: Reviewer placeholder rejection
+  if (
+    REVIEWER_PLACEHOLDERS.includes(
+      evidence.fullHarness.reviewerSignoff.reviewerId.toLowerCase().trim(),
+    )
+  ) {
+    issues.push(
+      issue(
+        "QFAI-PROT-295",
+        "fullHarness reviewer is a placeholder value. A real reviewer identifier is required.",
+        "error",
+        evidenceJsonPath,
+        "prototypingEvidence.fullHarnessReviewerPlaceholder",
+        undefined,
+        "canonical",
+        "reviewerSignoff.reviewerId にプレースホルダ値は使用できません。実際のレビュアー識別子を設定してください。",
+      ),
+    );
+  }
+
+  // QFAI-PROT-296: weightedTotal enforcement
+  for (const iter of evidence.fullHarness.iterations) {
+    const expected = Math.min(iter.l1.total, iter.l2.total);
+    if (Math.abs(iter.weightedTotal - expected) > 0.001) {
       issues.push(
         issue(
-          "QFAI-PROT-291",
-          `fullHarness count mismatch: scoringTrace=${evidence.fullHarness.scoringTrace.length}, iterations=${evidence.fullHarness.iterations.length}, iterationCount=${evidence.fullHarness.iterationCount}.`,
+          "QFAI-PROT-296",
+          `fullHarness iteration ${iter.iteration}: weightedTotal (${iter.weightedTotal}) does not equal min(l1.total, l2.total) (${expected}).`,
           "error",
           evidenceJsonPath,
-          "prototypingEvidence.fullHarnessScoringTraceCountMismatch",
+          "prototypingEvidence.fullHarnessWeightedTotalMismatch",
           undefined,
           "canonical",
-          "scoringTrace / iterations のエントリ数と iterationCount を一致させてください。",
+          "iterations[].weightedTotal は min(l1.total, l2.total) と一致する必要があります。",
         ),
       );
     }
+  }
 
-    // QFAI-PROT-292: terminationReason / iterationCount cross-check
-    if (
-      evidence.fullHarness.terminationReason === "max-iterations" &&
-      calibrationPack &&
-      evidence.fullHarness.iterationCount < calibrationPack.maxIterations
-    ) {
+  // QFAI-PROT-297: commitSha missing
+  for (const iter of evidence.fullHarness.iterations) {
+    if (!iter.commitSha || iter.commitSha.trim().length === 0) {
       issues.push(
         issue(
-          "QFAI-PROT-292",
-          `terminationReason is 'max-iterations' but iterationCount (${evidence.fullHarness.iterationCount}) < pack maxIterations (${calibrationPack.maxIterations}).`,
+          "QFAI-PROT-297",
+          `fullHarness iteration ${iter.iteration}: commitSha is required.`,
           "error",
           evidenceJsonPath,
-          "prototypingEvidence.fullHarnessTerminationReasonMismatch",
+          "prototypingEvidence.fullHarnessCommitShaMissing",
           undefined,
           "canonical",
-          "terminationReason と iterationCount の整合性を確認してください。",
+          "iterations[].commitSha は必須です。",
         ),
       );
     }
+  }
 
-    // QFAI-PROT-293: calibration maxIterations consistency
-    if (calibrationPack && evidence.fullHarness.iterationCount > calibrationPack.maxIterations) {
+  // QFAI-PROT-298: limitations missing
+  if (!evidence.fullHarness.limitations) {
+    issues.push(
+      issue(
+        "QFAI-PROT-298",
+        "fullHarness.limitations is required (use empty array if none).",
+        "error",
+        evidenceJsonPath,
+        "prototypingEvidence.fullHarnessLimitationsMissing",
+        undefined,
+        "canonical",
+        "fullHarness.limitations は必須です（該当なしの場合は空配列を設定してください）。",
+      ),
+    );
+  }
+
+  // QFAI-PROT-299: status=completed but terminationReason missing
+  if (
+    evidence.fullHarness.status === "completed" &&
+    evidence.fullHarness.terminationReason === undefined
+  ) {
+    issues.push(
+      issue(
+        "QFAI-PROT-299",
+        "fullHarness.status is 'completed' but terminationReason is missing.",
+        "error",
+        evidenceJsonPath,
+        "prototypingEvidence.fullHarnessCompletedNoTerminationReason",
+        undefined,
+        "canonical",
+        "status が completed の場合は terminationReason を設定してください。",
+      ),
+    );
+  }
+
+  // QFAI-PROT-300: plateau with insufficient iterations
+  if (
+    evidence.fullHarness.terminationReason === "plateau" &&
+    calibrationPack &&
+    evidence.fullHarness.iterationCount < calibrationPack.plateauLookback
+  ) {
+    issues.push(
+      issue(
+        "QFAI-PROT-300",
+        `terminationReason is 'plateau' but iterationCount (${evidence.fullHarness.iterationCount}) is less than plateauLookback (${calibrationPack.plateauLookback}).`,
+        "error",
+        evidenceJsonPath,
+        "prototypingEvidence.fullHarnessPlateauInsufficientIterations",
+        undefined,
+        "canonical",
+        "terminationReason が plateau の場合、iterationCount は plateauLookback 以上である必要があります。",
+      ),
+    );
+  }
+
+  // QFAI-PROT-301: calibrationRef has empty configPath/packPath
+  if (
+    evidence.fullHarness.calibrationRef.configPath.trim().length === 0 ||
+    evidence.fullHarness.calibrationRef.packPath.trim().length === 0
+  ) {
+    issues.push(
+      issue(
+        "QFAI-PROT-301",
+        "fullHarness.calibrationRef is missing or has empty configPath/packPath.",
+        "error",
+        evidenceJsonPath,
+        "prototypingEvidence.fullHarnessCalibrationRefMissing",
+        undefined,
+        "canonical",
+        "fullHarness.calibrationRef に configPath / packPath を設定してください。",
+      ),
+    );
+  }
+
+  // QFAI-PROT-302: All iterations have identical commitSha
+  if (evidence.fullHarness.iterations.length >= 2) {
+    const shas = evidence.fullHarness.iterations.map((iter) => iter.commitSha);
+    const allSame = shas.every((sha) => sha === shas[0]);
+    if (allSame) {
       issues.push(
         issue(
-          "QFAI-PROT-293",
-          `fullHarness.iterationCount (${evidence.fullHarness.iterationCount}) exceeds pack maxIterations (${calibrationPack.maxIterations}).`,
-          "error",
+          "QFAI-PROT-302",
+          "All fullHarness iterations have the same commitSha. Each iteration should reflect a real code change.",
+          "warning",
           evidenceJsonPath,
-          "prototypingEvidence.fullHarnessExceedsMaxIterations",
+          "prototypingEvidence.fullHarnessIdenticalCommitSha",
           undefined,
           "canonical",
-          "iterationCount が maxIterations を超えています。設定を確認してください。",
+          "すべての iteration が同一の commitSha です。各 iteration は実際のコード変更を反映する必要があります。",
         ),
       );
     }
+  }
 
-    // QFAI-PROT-294: scoringTrace improvement progression (info)
-    if (evidence.fullHarness.scoringTrace.length >= 2) {
-      const scores = evidence.fullHarness.scoringTrace.map((s) => s.weightedTotal);
-      const isNonProgressing = scores.every((s, i) => i === 0 || s <= (scores[i - 1] ?? s));
-      if (isNonProgressing) {
+  // QFAI-PROT-303: reviewerLogs summary too short
+  for (const log of evidence.fullHarness.reviewerLogs) {
+    if (log.summary.length < 10) {
+      issues.push(
+        issue(
+          "QFAI-PROT-303",
+          `fullHarness reviewerLog for iteration ${log.iteration} has a very short summary.`,
+          "warning",
+          evidenceJsonPath,
+          "prototypingEvidence.fullHarnessReviewerLogShortSummary",
+          undefined,
+          "canonical",
+          "reviewerLogs[].summary は十分な長さ（10文字以上）にしてください。",
+        ),
+      );
+    }
+  }
+
+  // QFAI-PROT-304: reviewerLogs count must match iterationCount
+  if (evidence.fullHarness.reviewerLogs.length !== evidence.fullHarness.iterationCount) {
+    issues.push(
+      issue(
+        "QFAI-PROT-304",
+        `fullHarness reviewerLogs count (${evidence.fullHarness.reviewerLogs.length}) does not match iterationCount (${evidence.fullHarness.iterationCount}).`,
+        "error",
+        evidenceJsonPath,
+        "prototypingEvidence.fullHarnessReviewerLogsCountMismatch",
+        undefined,
+        "canonical",
+        "reviewerLogs は各 iteration に対して1件ずつ存在する必要があります。",
+      ),
+    );
+  }
+
+  // QFAI-PROT-305: zero-seeded specCoverage detection
+  // Also check top-level specs for zero-seeding
+  const allSpecsZeroSeeded =
+    evidence.specs.length > 0 &&
+    evidence.specs.every(
+      (s) => s.declared.uiRoutes === 0 && s.checked.uiOk === 0 && s.missing.uiRoutes.length === 0,
+    );
+  if (allSpecsZeroSeeded) {
+    issues.push(
+      issue(
+        "QFAI-PROT-305",
+        "All specs have zero-seeded coverage (all declared/checked/missing = 0/empty). Real spec coverage measurement is required.",
+        "error",
+        evidenceJsonPath,
+        "prototypingEvidence.fullHarnessZeroSeededSpecCoverage",
+        undefined,
+        "canonical",
+        "specs[] の declared/checked/missing はゼロ初期化ではなく、実際の spec artifact から導出してください。",
+      ),
+    );
+  }
+
+  // QFAI-PROT-306: synthetic mockPaths auto-pass detection / banned pass status
+  if (evidence.uiFidelity) {
+    for (const screen of evidence.uiFidelity.screens) {
+      const hasAutoPass = screen.mockPaths.some(
+        (mp) => mp.status === "pass" || mp.id.endsWith("-default") || mp.id.includes("auto"),
+      );
+      if (hasAutoPass) {
         issues.push(
           issue(
-            "QFAI-PROT-294",
-            "fullHarness.scoringTrace shows no improvement across iterations. Scores are non-increasing.",
-            "info",
-            evidenceJsonPath,
-            "prototypingEvidence.fullHarnessNoProgression",
-            undefined,
-            "canonical",
-            "scoringTrace のスコアが改善していません。反復改善ループが機能しているか確認してください。",
-          ),
-        );
-      }
-    }
-
-    // QFAI-PROT-295: Reviewer placeholder rejection
-    if (
-      REVIEWER_PLACEHOLDERS.includes(
-        evidence.fullHarness.reviewerSignoff.reviewerId.toLowerCase().trim(),
-      )
-    ) {
-      issues.push(
-        issue(
-          "QFAI-PROT-295",
-          "fullHarness reviewer is a placeholder value. A real reviewer identifier is required.",
-          "error",
-          evidenceJsonPath,
-          "prototypingEvidence.fullHarnessReviewerPlaceholder",
-          undefined,
-          "canonical",
-          "reviewerSignoff.reviewerId にプレースホルダ値は使用できません。実際のレビュアー識別子を設定してください。",
-        ),
-      );
-    }
-
-    // QFAI-PROT-296: weightedTotal enforcement
-    for (const iter of evidence.fullHarness.iterations) {
-      const expected = Math.min(iter.l1.total, iter.l2.total);
-      if (Math.abs(iter.weightedTotal - expected) > 0.001) {
-        issues.push(
-          issue(
-            "QFAI-PROT-296",
-            `fullHarness iteration ${iter.iteration}: weightedTotal (${iter.weightedTotal}) does not equal min(l1.total, l2.total) (${expected}).`,
+            "QFAI-PROT-306",
+            `uiFidelity screen "${screen.route}" has invalid mockPaths entries. mockPaths must be fail|finding only and derived from browser QA findings.`,
             "error",
             evidenceJsonPath,
-            "prototypingEvidence.fullHarnessWeightedTotalMismatch",
+            "prototypingEvidence.syntheticMockPathsAutoPass",
             undefined,
             "canonical",
-            "iterations[].weightedTotal は min(l1.total, l2.total) と一致する必要があります。",
-          ),
-        );
-      }
-    }
-
-    // QFAI-PROT-297: commitSha missing
-    for (const iter of evidence.fullHarness.iterations) {
-      if (!iter.commitSha || iter.commitSha.trim().length === 0) {
-        issues.push(
-          issue(
-            "QFAI-PROT-297",
-            `fullHarness iteration ${iter.iteration}: commitSha is required.`,
-            "error",
-            evidenceJsonPath,
-            "prototypingEvidence.fullHarnessCommitShaMissing",
-            undefined,
-            "canonical",
-            "iterations[].commitSha は必須です。",
-          ),
-        );
-      }
-    }
-
-    // QFAI-PROT-298: limitations missing
-    if (!evidence.fullHarness.limitations) {
-      issues.push(
-        issue(
-          "QFAI-PROT-298",
-          "fullHarness.limitations is required (use empty array if none).",
-          "error",
-          evidenceJsonPath,
-          "prototypingEvidence.fullHarnessLimitationsMissing",
-          undefined,
-          "canonical",
-          "fullHarness.limitations は必須です（該当なしの場合は空配列を設定してください）。",
-        ),
-      );
-    }
-
-    // QFAI-PROT-299: status=completed but terminationReason missing
-    if (
-      evidence.fullHarness.status === "completed" &&
-      evidence.fullHarness.terminationReason === undefined
-    ) {
-      issues.push(
-        issue(
-          "QFAI-PROT-299",
-          "fullHarness.status is 'completed' but terminationReason is missing.",
-          "error",
-          evidenceJsonPath,
-          "prototypingEvidence.fullHarnessCompletedNoTerminationReason",
-          undefined,
-          "canonical",
-          "status が completed の場合は terminationReason を設定してください。",
-        ),
-      );
-    }
-
-    // QFAI-PROT-300: plateau with insufficient iterations
-    if (
-      evidence.fullHarness.terminationReason === "plateau" &&
-      calibrationPack &&
-      evidence.fullHarness.iterationCount < calibrationPack.plateauLookback
-    ) {
-      issues.push(
-        issue(
-          "QFAI-PROT-300",
-          `terminationReason is 'plateau' but iterationCount (${evidence.fullHarness.iterationCount}) is less than plateauLookback (${calibrationPack.plateauLookback}).`,
-          "error",
-          evidenceJsonPath,
-          "prototypingEvidence.fullHarnessPlateauInsufficientIterations",
-          undefined,
-          "canonical",
-          "terminationReason が plateau の場合、iterationCount は plateauLookback 以上である必要があります。",
-        ),
-      );
-    }
-
-    // QFAI-PROT-301: calibrationRef has empty configPath/packPath
-    if (
-      evidence.fullHarness.calibrationRef.configPath.trim().length === 0 ||
-      evidence.fullHarness.calibrationRef.packPath.trim().length === 0
-    ) {
-      issues.push(
-        issue(
-          "QFAI-PROT-301",
-          "fullHarness.calibrationRef is missing or has empty configPath/packPath.",
-          "error",
-          evidenceJsonPath,
-          "prototypingEvidence.fullHarnessCalibrationRefMissing",
-          undefined,
-          "canonical",
-          "fullHarness.calibrationRef に configPath / packPath を設定してください。",
-        ),
-      );
-    }
-
-    // QFAI-PROT-302: All iterations have identical commitSha
-    if (evidence.fullHarness.iterations.length >= 2) {
-      const shas = evidence.fullHarness.iterations.map((iter) => iter.commitSha);
-      const allSame = shas.every((sha) => sha === shas[0]);
-      if (allSame) {
-        issues.push(
-          issue(
-            "QFAI-PROT-302",
-            "All fullHarness iterations have the same commitSha. Each iteration should reflect a real code change.",
-            "warning",
-            evidenceJsonPath,
-            "prototypingEvidence.fullHarnessIdenticalCommitSha",
-            undefined,
-            "canonical",
-            "すべての iteration が同一の commitSha です。各 iteration は実際のコード変更を反映する必要があります。",
-          ),
-        );
-      }
-    }
-
-    // QFAI-PROT-303: reviewerLogs summary too short
-    for (const log of evidence.fullHarness.reviewerLogs) {
-      if (log.summary.length < 10) {
-        issues.push(
-          issue(
-            "QFAI-PROT-303",
-            `fullHarness reviewerLog for iteration ${log.iteration} has a very short summary.`,
-            "warning",
-            evidenceJsonPath,
-            "prototypingEvidence.fullHarnessReviewerLogShortSummary",
-            undefined,
-            "canonical",
-            "reviewerLogs[].summary は十分な長さ（10文字以上）にしてください。",
-          ),
-        );
-      }
-    }
-
-    // QFAI-PROT-304: reviewerLogs count must match iterationCount
-    if (evidence.fullHarness.reviewerLogs.length !== evidence.fullHarness.iterationCount) {
-      issues.push(
-        issue(
-          "QFAI-PROT-304",
-          `fullHarness reviewerLogs count (${evidence.fullHarness.reviewerLogs.length}) does not match iterationCount (${evidence.fullHarness.iterationCount}).`,
-          "error",
-          evidenceJsonPath,
-          "prototypingEvidence.fullHarnessReviewerLogsCountMismatch",
-          undefined,
-          "canonical",
-          "reviewerLogs は各 iteration に対して1件ずつ存在する必要があります。",
-        ),
-      );
-    }
-
-    // QFAI-PROT-305: zero-seeded specCoverage detection
-    // Also check top-level specs for zero-seeding
-    const allSpecsZeroSeeded =
-      evidence.specs.length > 0 &&
-      evidence.specs.every(
-        (s) => s.declared.uiRoutes === 0 && s.checked.uiOk === 0 && s.missing.uiRoutes.length === 0,
-      );
-    if (allSpecsZeroSeeded) {
-      issues.push(
-        issue(
-          "QFAI-PROT-305",
-          "All specs have zero-seeded coverage (all declared/checked/missing = 0/empty). Real spec coverage measurement is required.",
-          "error",
-          evidenceJsonPath,
-          "prototypingEvidence.fullHarnessZeroSeededSpecCoverage",
-          undefined,
-          "canonical",
-          "specs[] の declared/checked/missing はゼロ初期化ではなく、実際の spec artifact から導出してください。",
-        ),
-      );
-    }
-
-    // QFAI-PROT-306: synthetic mockPaths auto-pass detection / banned pass status
-    if (evidence.uiFidelity) {
-      for (const screen of evidence.uiFidelity.screens) {
-        const hasAutoPass = screen.mockPaths.some(
-          (mp) => mp.status === "pass" || mp.id.endsWith("-default") || mp.id.includes("auto"),
-        );
-        if (hasAutoPass) {
-          issues.push(
-            issue(
-              "QFAI-PROT-306",
-              `uiFidelity screen "${screen.route}" has invalid mockPaths entries. mockPaths must be fail|finding only and derived from browser QA findings.`,
-              "error",
-              evidenceJsonPath,
-              "prototypingEvidence.syntheticMockPathsAutoPass",
-              undefined,
-              "canonical",
-              "mockPaths は browser QA findings から導出してください。status=pass は禁止されています。",
-            ),
-          );
-        }
-      }
-    }
-
-    // QFAI-PROT-307: calibrationRef packVersion hardcoded detection
-    // v1.7.15 WS-8: escalated from warning to error
-    if (
-      evidence.fullHarness.calibrationRef.packVersion === "1.0.0" &&
-      evidence.fullHarness.iterationCount > 0
-    ) {
-      // Check if it looks like a default — if packPath is also default, it's likely hardcoded
-      const looksHardcoded =
-        evidence.fullHarness.calibrationRef.packPath.includes("calibration.yaml") &&
-        evidence.fullHarness.calibrationRef.configPath === "qfai.config.yaml";
-      if (looksHardcoded) {
-        issues.push(
-          issue(
-            "QFAI-PROT-307",
-            "fullHarness.calibrationRef.packVersion appears hardcoded ('1.0.0'). packVersion must be resolved from pack metadata.",
-            "error",
-            evidenceJsonPath,
-            "prototypingEvidence.fullHarnessPackVersionHardcoded",
-            undefined,
-            "canonical",
-            "calibrationRef.packVersion は calibration pack のメタデータから解決してください。",
-          ),
-        );
-      }
-    }
-
-    // QFAI-PROT-308: converged requires iterationCount >= 2 (strengthened from PROT-290)
-    if (
-      evidence.fullHarness.terminationReason === "converged" &&
-      evidence.fullHarness.iterationCount < 2
-    ) {
-      issues.push(
-        issue(
-          "QFAI-PROT-308",
-          `converged requires iterationCount >= 2, but iterationCount is ${evidence.fullHarness.iterationCount}.`,
-          "error",
-          evidenceJsonPath,
-          "prototypingEvidence.fullHarnessConvergedRequiresMinIterations",
-          undefined,
-          "canonical",
-          "converged は最低2回の iteration が必要です。",
-        ),
-      );
-    }
-
-    // QFAI-PROT-309: reviewer placeholder in iterations
-    for (const iter of evidence.fullHarness.iterations) {
-      if (REVIEWER_PLACEHOLDERS.includes(iter.reviewerId.toLowerCase().trim())) {
-        issues.push(
-          issue(
-            "QFAI-PROT-309",
-            `fullHarness iteration ${iter.iteration}: reviewerId "${iter.reviewerId}" is a placeholder value.`,
-            "error",
-            evidenceJsonPath,
-            "prototypingEvidence.fullHarnessIterationReviewerPlaceholder",
-            undefined,
-            "canonical",
-            "iterations[].reviewerId にプレースホルダ値は使用できません。",
-          ),
-        );
-      }
-    }
-
-    // v1.7.15 WS-8: New validation rules for evidence-driven strictness
-
-    // QFAI-PROT-310: L2 evidence refs — discussion axes must have evidenceRefs
-    for (const iter of evidence.fullHarness.iterations) {
-      if (iter.evidenceRefs.discussion.length === 0) {
-        issues.push(
-          issue(
-            "QFAI-PROT-310",
-            `fullHarness iteration ${iter.iteration}: evidenceRefs.discussion is empty. Discussion evidence is required for L2 scoring.`,
-            "error",
-            evidenceJsonPath,
-            "prototypingEvidence.fullHarnessDiscussionEvidenceRefsMissing",
-            undefined,
-            "canonical",
-            "iterations[].evidenceRefs.discussion には discussion artifact への参照が必要です。",
-          ),
-        );
-      }
-    }
-
-    // QFAI-PROT-311: L2 evidence refs — screen contract must have evidenceRefs
-    for (const iter of evidence.fullHarness.iterations) {
-      if (iter.evidenceRefs.screenContract.length === 0) {
-        issues.push(
-          issue(
-            "QFAI-PROT-311",
-            `fullHarness iteration ${iter.iteration}: evidenceRefs.screenContract is empty. Screen contract evidence is required for L2 scoring.`,
-            "error",
-            evidenceJsonPath,
-            "prototypingEvidence.fullHarnessScreenContractEvidenceRefsMissing",
-            undefined,
-            "canonical",
-            "iterations[].evidenceRefs.screenContract には screen contract への参照が必要です。",
-          ),
-        );
-      }
-    }
-
-    // QFAI-PROT-312: L2 evidence refs — trend alignment must have evidenceRefs
-    for (const iter of evidence.fullHarness.iterations) {
-      if (iter.evidenceRefs.trend.length === 0) {
-        issues.push(
-          issue(
-            "QFAI-PROT-312",
-            `fullHarness iteration ${iter.iteration}: evidenceRefs.trend is empty. Trend alignment evidence is required for L2 scoring.`,
-            "error",
-            evidenceJsonPath,
-            "prototypingEvidence.fullHarnessTrendEvidenceRefsMissing",
-            undefined,
-            "canonical",
-            "iterations[].evidenceRefs.trend には trend artifact への参照が必要です。",
-          ),
-        );
-      }
-    }
-
-    // QFAI-PROT-314: iterations evidenceRefs missing required categories
-    const requiredEvidenceCategories = [
-      "render",
-      "browserQa",
-      "runtimeGate",
-      "uiObservation",
-      "specCoverage",
-      "discussion",
-      "screenContract",
-      "trend",
-    ] as const;
-    for (const iter of evidence.fullHarness.iterations) {
-      for (const category of requiredEvidenceCategories) {
-        const refs = iter.evidenceRefs[category];
-        if (refs.length === 0) {
-          issues.push(
-            issue(
-              "QFAI-PROT-314",
-              `fullHarness iteration ${iter.iteration}: evidenceRefs.${category} is missing or empty. All evidence categories are required.`,
-              "error",
-              evidenceJsonPath,
-              "prototypingEvidence.fullHarnessEvidenceRefsCategoryMissing",
-              [`iteration=${iter.iteration}`, `category=${category}`],
-              "canonical",
-              `iterations[].evidenceRefs.${category} は必須カテゴリです。`,
-            ),
-          );
-        }
-      }
-    }
-
-    // QFAI-PROT-315: pre-scored l1/l2 detection in iterations
-    for (const iter of evidence.fullHarness.iterations) {
-      // Check if l1/l2 look pre-scored (axes array empty but total > 0)
-      if (iter.l1.axes.length === 0 && iter.l1.total > 0) {
-        issues.push(
-          issue(
-            "QFAI-PROT-315",
-            `fullHarness iteration ${iter.iteration}: L1 panel appears pre-scored (total=${iter.l1.total} but no axes). Panels must be computed from real evidence.`,
-            "error",
-            evidenceJsonPath,
-            "prototypingEvidence.fullHarnessPrescored",
-            [`iteration=${iter.iteration}`, `panel=L1`],
-            "canonical",
-            "L1/L2 パネルは panelInputs から算出する必要があります。pre-scored 値は禁止です。",
-          ),
-        );
-      }
-      if (iter.l2.axes.length === 0 && iter.l2.total > 0) {
-        issues.push(
-          issue(
-            "QFAI-PROT-315",
-            `fullHarness iteration ${iter.iteration}: L2 panel appears pre-scored (total=${iter.l2.total} but no axes). Panels must be computed from real evidence.`,
-            "error",
-            evidenceJsonPath,
-            "prototypingEvidence.fullHarnessPrescored",
-            [`iteration=${iter.iteration}`, `panel=L2`],
-            "canonical",
-            "L1/L2 パネルは panelInputs から算出する必要があります。pre-scored 値は禁止です。",
+            "mockPaths は browser QA findings から導出してください。status=pass は禁止されています。",
           ),
         );
       }
     }
   }
 
+  // QFAI-PROT-307: calibrationRef packVersion hardcoded detection
+  // v1.7.15 WS-8: escalated from warning to error
+  if (
+    evidence.fullHarness.calibrationRef.packVersion === "1.0.0" &&
+    evidence.fullHarness.iterationCount > 0
+  ) {
+    // Check if it looks like a default — if packPath is also default, it's likely hardcoded
+    const looksHardcoded =
+      evidence.fullHarness.calibrationRef.packPath.includes("calibration.yaml") &&
+      evidence.fullHarness.calibrationRef.configPath === "qfai.config.yaml";
+    if (looksHardcoded) {
+      issues.push(
+        issue(
+          "QFAI-PROT-307",
+          "fullHarness.calibrationRef.packVersion appears hardcoded ('1.0.0'). packVersion must be resolved from pack metadata.",
+          "error",
+          evidenceJsonPath,
+          "prototypingEvidence.fullHarnessPackVersionHardcoded",
+          undefined,
+          "canonical",
+          "calibrationRef.packVersion は calibration pack のメタデータから解決してください。",
+        ),
+      );
+    }
+  }
+
+  // QFAI-PROT-308: converged requires iterationCount >= 2 (strengthened from PROT-290)
+  if (
+    evidence.fullHarness.terminationReason === "converged" &&
+    evidence.fullHarness.iterationCount < 2
+  ) {
+    issues.push(
+      issue(
+        "QFAI-PROT-308",
+        `converged requires iterationCount >= 2, but iterationCount is ${evidence.fullHarness.iterationCount}.`,
+        "error",
+        evidenceJsonPath,
+        "prototypingEvidence.fullHarnessConvergedRequiresMinIterations",
+        undefined,
+        "canonical",
+        "converged は最低2回の iteration が必要です。",
+      ),
+    );
+  }
+
+  // QFAI-PROT-309: reviewer placeholder in iterations
+  for (const iter of evidence.fullHarness.iterations) {
+    if (REVIEWER_PLACEHOLDERS.includes(iter.reviewerId.toLowerCase().trim())) {
+      issues.push(
+        issue(
+          "QFAI-PROT-309",
+          `fullHarness iteration ${iter.iteration}: reviewerId "${iter.reviewerId}" is a placeholder value.`,
+          "error",
+          evidenceJsonPath,
+          "prototypingEvidence.fullHarnessIterationReviewerPlaceholder",
+          undefined,
+          "canonical",
+          "iterations[].reviewerId にプレースホルダ値は使用できません。",
+        ),
+      );
+    }
+  }
+
+  // v1.7.15 WS-8: New validation rules for evidence-driven strictness
+
+  // QFAI-PROT-310: L2 evidence refs — discussion axes must have evidenceRefs
+  for (const iter of evidence.fullHarness.iterations) {
+    if (iter.evidenceRefs.discussion.length === 0) {
+      issues.push(
+        issue(
+          "QFAI-PROT-310",
+          `fullHarness iteration ${iter.iteration}: evidenceRefs.discussion is empty. Discussion evidence is required for L2 scoring.`,
+          "error",
+          evidenceJsonPath,
+          "prototypingEvidence.fullHarnessDiscussionEvidenceRefsMissing",
+          undefined,
+          "canonical",
+          "iterations[].evidenceRefs.discussion には discussion artifact への参照が必要です。",
+        ),
+      );
+    }
+  }
+
+  // QFAI-PROT-311: L2 evidence refs — screen contract must have evidenceRefs
+  for (const iter of evidence.fullHarness.iterations) {
+    if (iter.evidenceRefs.screenContract.length === 0) {
+      issues.push(
+        issue(
+          "QFAI-PROT-311",
+          `fullHarness iteration ${iter.iteration}: evidenceRefs.screenContract is empty. Screen contract evidence is required for L2 scoring.`,
+          "error",
+          evidenceJsonPath,
+          "prototypingEvidence.fullHarnessScreenContractEvidenceRefsMissing",
+          undefined,
+          "canonical",
+          "iterations[].evidenceRefs.screenContract には screen contract への参照が必要です。",
+        ),
+      );
+    }
+  }
+
+  // QFAI-PROT-312: L2 evidence refs — trend alignment must have evidenceRefs
+  for (const iter of evidence.fullHarness.iterations) {
+    if (iter.evidenceRefs.trend.length === 0) {
+      issues.push(
+        issue(
+          "QFAI-PROT-312",
+          `fullHarness iteration ${iter.iteration}: evidenceRefs.trend is empty. Trend alignment evidence is required for L2 scoring.`,
+          "error",
+          evidenceJsonPath,
+          "prototypingEvidence.fullHarnessTrendEvidenceRefsMissing",
+          undefined,
+          "canonical",
+          "iterations[].evidenceRefs.trend には trend artifact への参照が必要です。",
+        ),
+      );
+    }
+  }
+
+  // QFAI-PROT-314: iterations evidenceRefs missing required categories
+  const requiredEvidenceCategories = [
+    "render",
+    "browserQa",
+    "runtimeGate",
+    "uiObservation",
+    "specCoverage",
+    "discussion",
+    "screenContract",
+    "trend",
+  ] as const;
+  for (const iter of evidence.fullHarness.iterations) {
+    for (const category of requiredEvidenceCategories) {
+      const refs = iter.evidenceRefs[category];
+      if (refs.length === 0) {
+        issues.push(
+          issue(
+            "QFAI-PROT-314",
+            `fullHarness iteration ${iter.iteration}: evidenceRefs.${category} is missing or empty. All evidence categories are required.`,
+            "error",
+            evidenceJsonPath,
+            "prototypingEvidence.fullHarnessEvidenceRefsCategoryMissing",
+            [`iteration=${iter.iteration}`, `category=${category}`],
+            "canonical",
+            `iterations[].evidenceRefs.${category} は必須カテゴリです。`,
+          ),
+        );
+      }
+    }
+  }
+
+  // QFAI-PROT-315: pre-scored l1/l2 detection in iterations
+  for (const iter of evidence.fullHarness.iterations) {
+    // Check if l1/l2 look pre-scored (axes array empty but total > 0)
+    if (iter.l1.axes.length === 0 && iter.l1.total > 0) {
+      issues.push(
+        issue(
+          "QFAI-PROT-315",
+          `fullHarness iteration ${iter.iteration}: L1 panel appears pre-scored (total=${iter.l1.total} but no axes). Panels must be computed from real evidence.`,
+          "error",
+          evidenceJsonPath,
+          "prototypingEvidence.fullHarnessPrescored",
+          [`iteration=${iter.iteration}`, `panel=L1`],
+          "canonical",
+          "L1/L2 パネルは panelInputs から算出する必要があります。pre-scored 値は禁止です。",
+        ),
+      );
+    }
+    if (iter.l2.axes.length === 0 && iter.l2.total > 0) {
+      issues.push(
+        issue(
+          "QFAI-PROT-315",
+          `fullHarness iteration ${iter.iteration}: L2 panel appears pre-scored (total=${iter.l2.total} but no axes). Panels must be computed from real evidence.`,
+          "error",
+          evidenceJsonPath,
+          "prototypingEvidence.fullHarnessPrescored",
+          [`iteration=${iter.iteration}`, `panel=L2`],
+          "canonical",
+          "L1/L2 パネルは panelInputs から算出する必要があります。pre-scored 値は禁止です。",
+        ),
+      );
+    }
+  }
+  for (const ref of evidence.fullHarness.iterations.flatMap((iter) => [
+    ...iter.evidenceRefs.runtimeGate,
+    ...iter.evidenceRefs.specCoverage,
+  ])) {
+    if (ref === ".qfai/evidence/prototyping.json#/runtimeGate" || ref.startsWith("specs: ")) {
+      issues.push(
+        issue(
+          "QFAI-PROT-318",
+          `synthetic evidence ref is not allowed: ${ref}`,
+          "error",
+          evidenceJsonPath,
+          "prototypingEvidence.syntheticEvidenceRef",
+          [ref],
+          "canonical",
+          "runtimeGate/specCoverage の evidenceRefs には concrete artifact ref のみを保持してください。",
+        ),
+      );
+    }
+  }
   return issues;
 }
 
@@ -1882,40 +1901,37 @@ async function validateUiFidelity(
 ): Promise<Issue[]> {
   const issues: Issue[] = [];
   const uiFidelity = evidence.uiFidelity;
-  const needsVisualBrowserEvidence = requiresVisualBrowserEvidence(surface);
+  const needsVisualBrowserEvidence = isSupportedPrototypingSurface(surface);
   const effectiveMode = evidence.mode?.effective;
-  const isStandardOrFull = effectiveMode === "standard" || effectiveMode === "full-harness";
+  const isFullHarness = effectiveMode === "full-harness";
 
   if (!needsVisualBrowserEvidence) {
     return issues;
   }
 
-  // B-3: standard/full-harness + UI-bearing + uiFidelity absent → error
-  if (!uiFidelity && isStandardOrFull) {
+  if (!uiFidelity && isFullHarness) {
     issues.push(
       issue(
         "QFAI-PROT-270",
-        "QFAI-PROT-270: uiFidelity is required for UI-bearing surfaces in standard/full-harness mode but is absent.",
+        "QFAI-PROT-270: uiFidelity is required for full-harness UI prototyping but is absent.",
         "error",
         evidenceJsonPath,
         "prototypingEvidence.uiFidelityRequired",
         ["uiFidelity"],
         "change",
-        "uiFidelity ブロックを prototyping.json に追加してください。standard/full-harness では interactive mode が必須です。",
+        "uiFidelity ブロックを prototyping.json に追加してください。full-harness では interactive mode が必須です。",
       ),
     );
     return issues;
   }
 
   if (!uiFidelity) {
-    // low-cost + UI-bearing + absent → allowed
     return issues;
   }
 
   const mode = uiFidelity.mode;
 
-  // B-3: standard/full-harness + UI-bearing + skeleton → error
-  if (mode === "skeleton" && isStandardOrFull) {
+  if (mode === "skeleton") {
     issues.push(
       issue(
         "QFAI-PROT-271",
@@ -1925,14 +1941,9 @@ async function validateUiFidelity(
         "prototypingEvidence.uiFidelitySkeletonRejected",
         ["uiFidelity.mode"],
         "change",
-        `${effectiveMode} モードでは uiFidelity.mode = "interactive" が必須です。skeleton は low-cost モードでのみ許可されます。`,
+        `${effectiveMode} モードでは uiFidelity.mode = "interactive" が必須です。`,
       ),
     );
-    return issues;
-  }
-
-  // low-cost + skeleton → allowed, skip further checks
-  if (mode === "skeleton") {
     return issues;
   }
 
@@ -2824,7 +2835,7 @@ function normalizeSpecEvidence(
   };
 }
 
-const VALID_PROTOTYPING_MODES = new Set<PrototypingMode>(["low-cost", "standard", "full-harness"]);
+const VALID_PROTOTYPING_MODES = new Set<PrototypingMode>(["full-harness"]);
 const VALID_PROTOTYPING_SURFACES = new Set(CANONICAL_PROTOTYPING_SURFACES);
 const VALID_MODE_SOURCES = new Set<ModeSelectionSource>([
   "explicit-request",
@@ -2853,13 +2864,18 @@ function normalizeModeBlock(
   if (typeof value.rationale !== "string") {
     return { ok: false, reason: "`mode.rationale` must be a string" };
   }
-
   const result: NonNullable<PrototypingEvidence["mode"]> = {
     effective: value.effective,
     source: value.source,
     rationale: value.rationale.trim(),
   };
 
+  if (
+    value.requested !== undefined &&
+    (typeof value.requested !== "string" || value.requested !== "full-harness")
+  ) {
+    return { ok: false, reason: "`mode.requested` must be full-harness when present" };
+  }
   if (isValidMode(value.requested)) {
     result.requested = value.requested;
   }
@@ -2970,11 +2986,20 @@ function normalizeFullHarnessBlock(
     return { ok: false, reason: "`fullHarness.reviewerSignoff` must be an object" };
   }
   if (
-    (value.reviewerSignoff.status !== "approved" && value.reviewerSignoff.status !== "rejected") ||
+    (value.reviewerSignoff.status !== "approved" &&
+      value.reviewerSignoff.status !== "rejected" &&
+      value.reviewerSignoff.status !== "abandoned") ||
     typeof value.reviewerSignoff.reviewerId !== "string" ||
     typeof value.reviewerSignoff.timestamp !== "string"
   ) {
     return { ok: false, reason: "`fullHarness.reviewerSignoff` is invalid" };
+  }
+  if (
+    value.finalDecision !== "accepted" &&
+    value.finalDecision !== "rejected" &&
+    value.finalDecision !== "abandoned"
+  ) {
+    return { ok: false, reason: "`fullHarness.finalDecision` is invalid" };
   }
   const reviewerSource =
     typeof value.reviewerSignoff.source === "string" ? value.reviewerSignoff.source.trim() : "cli";
@@ -2994,10 +3019,15 @@ function normalizeFullHarnessBlock(
     ) {
       return { ok: false, reason: "`fullHarness.reviewerLogs[]` is invalid" };
     }
-    if (log.verdict !== "approve" && log.verdict !== "revise" && log.verdict !== "reject") {
+    if (
+      log.verdict !== "approve" &&
+      log.verdict !== "revise" &&
+      log.verdict !== "reject" &&
+      log.verdict !== "abandon"
+    ) {
       return {
         ok: false,
-        reason: "`fullHarness.reviewerLogs[].verdict` must be approve|revise|reject",
+        reason: "`fullHarness.reviewerLogs[].verdict` must be approve|revise|reject|abandon",
       };
     }
     reviewerLogs.push({
@@ -3182,6 +3212,7 @@ function normalizeFullHarnessBlock(
               | "manual-stop",
           }
         : {}),
+      finalDecision: value.finalDecision,
       reviewerSignoff: {
         reviewerId: value.reviewerSignoff.reviewerId.trim(),
         status: value.reviewerSignoff.status,

@@ -32,25 +32,16 @@ describe("prototyping wording alignment", () => {
     expect(detectAspirationalClaims(content)).toEqual([]);
   });
 
-  it("package asset skill defines all mode headings and obligation matrix", async () => {
+  it("package asset skill defines the full-harness section and obligation matrix", async () => {
     const content = await readSkillMd();
+    expect(checkModeHeadings(content).present).toEqual(["full-harness"]);
     expect(checkModeHeadings(content).missing).toHaveLength(0);
     expect(hasModeSurfaceMatrix(content)).toBe(true);
   });
 
-  it("routing wording matches canonical implementation expectations", async () => {
+  it("routing wording matches full-harness-only expectations", async () => {
     const content = await readSkillMd();
     const conditions: RoutingCondition[] = [
-      {
-        mode: "low-cost",
-        trigger: "explicit request",
-        target: "lightweight obligations",
-      },
-      {
-        mode: "standard",
-        trigger: "default or discussion recommendation",
-        target: "static checks",
-      },
       {
         mode: "full-harness",
         trigger: "explicit request",

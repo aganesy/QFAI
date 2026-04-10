@@ -80,12 +80,11 @@ describe("resolveLatestRecommendationArtifact", () => {
         path.join(packDir, "prototyping.yaml"),
         [
           "prototyping:",
-          "  recommended_mode: standard",
+          "  recommended_mode: full-harness",
           "  rationale: validated recommendation",
           "  allowed_modes:",
-          "    - standard",
-          "    - low-cost",
-          "  surface: cli",
+          "    - full-harness",
+          "  surface: web",
           "",
         ].join("\n"),
         "utf-8",
@@ -95,9 +94,9 @@ describe("resolveLatestRecommendationArtifact", () => {
       expect(result.status).toBe("valid");
       expect(result.recommendation).not.toBeNull();
       if (!result.recommendation) throw new Error("recommendation should not be null");
-      expect(result.recommendation.recommendedMode).toBe("standard");
-      expect(result.recommendation.surface).toBe("cli");
-      expect(result.recommendation.allowedModes).toEqual(["low-cost", "standard"]);
+      expect(result.recommendation.recommendedMode).toBe("full-harness");
+      expect(result.recommendation.surface).toBe("web");
+      expect(result.recommendation.allowedModes).toEqual(["full-harness"]);
       expect(result.path).toContain("prototyping.yaml");
     });
   });
@@ -109,10 +108,10 @@ describe("resolveLatestRecommendationArtifact", () => {
       await writeFile(
         path.join(packDir, "prototyping.yaml"),
         [
-          "recommended_mode: standard",
+          "recommended_mode: full-harness",
           "rationale: legacy format",
           "allowed_modes:",
-          "  - standard",
+          "  - full-harness",
           "surface: web",
           "",
         ].join("\n"),
@@ -132,16 +131,16 @@ describe("resolveLatestRecommendationArtifact", () => {
       await writeFile(
         path.join(packDir, "prototyping.yaml"),
         [
-          "recommended_mode: low-cost",
+          "recommended_mode: full-harness",
           "rationale: stale top-level rationale",
           "allowed_modes:",
-          "  - low-cost",
+          "  - full-harness",
           "surface: web",
           "prototyping:",
-          "  recommended_mode: standard",
+          "  recommended_mode: full-harness",
           "  rationale: valid namespaced rationale",
           "  allowed_modes:",
-          "    - standard",
+          "    - full-harness",
           "  surface: web",
           "",
         ].join("\n"),
@@ -166,13 +165,13 @@ describe("resolveLatestRecommendationArtifact", () => {
       await writeFile(
         path.join(packDir, "prototyping.yaml"),
         [
-          "recommended_mode: standard",
+          "recommended_mode: full-harness",
           "surface: web",
           "prototyping:",
-          "  recommended_mode: standard",
+          "  recommended_mode: full-harness",
           "  rationale: valid namespaced",
           "  allowed_modes:",
-          "    - standard",
+          "    - full-harness",
           "  surface: web",
           "",
         ].join("\n"),
@@ -194,11 +193,10 @@ describe("resolveLatestRecommendationArtifact", () => {
         path.join(packDir, "prototyping.yaml"),
         [
           "prototyping:",
-          "  recommended_mode: standard",
+          "  recommended_mode: full-harness",
           "  rationale: namespaced-only artifact",
           "  allowed_modes:",
-          "    - standard",
-          "    - low-cost",
+          "    - full-harness",
           "  surface: web",
           "",
         ].join("\n"),
@@ -208,12 +206,12 @@ describe("resolveLatestRecommendationArtifact", () => {
       const result = await resolveLatestRecommendationArtifact(root, defaultConfig);
       expect(result.status).toBe("valid");
       expect(result.recommendation).not.toBeNull();
-      expect(result.recommendation?.recommendedMode).toBe("standard");
+      expect(result.recommendation?.recommendedMode).toBe("full-harness");
       expect(result.warnings).toEqual([]);
     });
   });
 
-  it("returns invalid with QFAI-PROT-154 warning for semantic mismatch (recommended_mode not in allowed_modes)", async () => {
+  it("returns invalid when allowed_modes contains only unsupported legacy values", async () => {
     await withTempRoot(async (root) => {
       const packDir = path.join(root, ".qfai", "discussion", "discussion-20260404000000000");
       await mkdir(packDir, { recursive: true });
@@ -221,11 +219,10 @@ describe("resolveLatestRecommendationArtifact", () => {
         path.join(packDir, "prototyping.yaml"),
         [
           "prototyping:",
-          "  recommended_mode: standard",
+          "  recommended_mode: full-harness",
           "  rationale: semantic mismatch resolver test",
           "  allowed_modes:",
-          "    - low-cost",
-          "    - full-harness",
+          "    - web",
           "  surface: web",
           "",
         ].join("\n"),
@@ -235,9 +232,7 @@ describe("resolveLatestRecommendationArtifact", () => {
       const result = await resolveLatestRecommendationArtifact(root, defaultConfig);
       expect(result.status).toBe("invalid");
       expect(result.recommendation).toBeNull();
-      expect(result.warnings).toEqual(
-        expect.arrayContaining([expect.stringContaining("QFAI-PROT-154")]),
-      );
+      expect(result.warnings).toEqual([]);
     });
   });
 });

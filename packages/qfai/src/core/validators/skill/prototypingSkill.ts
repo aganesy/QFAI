@@ -5,10 +5,12 @@ const BANNED_PHRASES = [
   "ui routes reachable",
   "api non-404",
   "db objects present",
-  "full-harness by default",
+  "do not default to full-harness",
+  "mode=low-cost",
+  "mode=standard",
 ] as const;
 
-const REQUIRED_MODES = ["low-cost", "standard", "full-harness"] as const;
+const REQUIRED_MODES = ["full-harness"] as const;
 
 const ASPIRATIONAL_PATTERNS = [
   /visual regression/i,
@@ -88,7 +90,7 @@ export function checkModeHeadings(content: string): { present: string[]; missing
   return { present, missing };
 }
 
-const CANONICAL_SURFACES = ["web", "mobile", "desktop", "cli", "mixed"] as const;
+const CANONICAL_SURFACES = ["web", "mobile", "desktop", "mixed"] as const;
 
 export function hasCanonicalSurfaceDocumentation(content: string): boolean {
   const lower = content.toLowerCase();
@@ -97,7 +99,12 @@ export function hasCanonicalSurfaceDocumentation(content: string): boolean {
 
 export function hasCliSurfaceDocumentation(content: string): boolean {
   const lower = content.toLowerCase();
-  return lower.includes("cli") && (lower.includes("n/a") || lower.includes("not required"));
+  return (
+    lower.includes("cli") &&
+    (lower.includes("not execution target") ||
+      lower.includes("rejected") ||
+      lower.includes("not supported"))
+  );
 }
 
 export function hasUiBearingFalseExclusion(content: string): boolean {
@@ -113,8 +120,6 @@ export function hasModeSurfaceMatrix(content: string): boolean {
   return (
     lower.includes("obligation matrix") &&
     lower.includes("surface / mode") &&
-    lower.includes("low-cost") &&
-    lower.includes("standard") &&
     lower.includes("full-harness") &&
     CANONICAL_SURFACES.every((s) => lower.includes(s))
   );
@@ -149,22 +154,12 @@ export function checkRoutingConsistency(
       continue;
     }
     if (condition.mode === "full-harness") {
-      if (
-        !/explicitly opted in|explicit opt-in only|explicit request|mode=full-harness/i.test(
-          content,
-        )
-      ) {
-        contradictions.push("full-harness: explicit opt-in wording missing");
+      if (!/default.*full-harness|full-harness.*default/i.test(content)) {
+        contradictions.push("full-harness: default wording missing");
       }
-      if (/full-harness by default|automatically triggers .*full-harness/i.test(content)) {
-        contradictions.push("full-harness: automatic escalation wording detected");
+      if (/do not default to full-harness|explicit opt-in only/i.test(content)) {
+        contradictions.push("full-harness: stale opt-in wording detected");
       }
-    }
-    if (condition.mode === "standard" && !/static checks/i.test(content)) {
-      contradictions.push("standard: static checks wording missing");
-    }
-    if (condition.mode === "low-cost" && !/static checks only|skeleton/i.test(content)) {
-      contradictions.push("low-cost: lightweight obligation wording missing");
     }
   }
 
@@ -219,9 +214,9 @@ export function validatePrototypingSkillContent(content: string): SkillValidatio
     issues.push(
       skillIssue(
         "UIX-VAL-SKILL-CANONICAL-SURFACE",
-        "Prototyping skill must document all canonical surfaces: web, mobile, desktop, cli, mixed.",
+        "Prototyping skill must document supported UI prototyping surfaces: web, mobile, desktop, mixed.",
         "error",
-        "canonical 5 surface (web, mobile, desktop, cli, mixed) を明記してください。",
+        "supported UI surface (web, mobile, desktop, mixed) を明記してください。",
       ),
     );
   }
@@ -230,9 +225,9 @@ export function validatePrototypingSkillContent(content: string): SkillValidatio
     issues.push(
       skillIssue(
         "UIX-VAL-SKILL-CLI-SURFACE",
-        "Prototyping skill must document cli surface obligations.",
+        "Prototyping skill must document that cli surface is rejected from prototyping execution.",
         "error",
-        "cli surface の obligation (render/browser QA は n/a) を明記してください。",
+        "cli surface は prototyping execution 対象外であることを明記してください。",
       ),
     );
   }
@@ -265,7 +260,7 @@ export function validatePrototypingSkillContent(content: string): SkillValidatio
         "UIX-VAL-SKILL-MATRIX",
         "Prototyping skill is missing a mode/surface obligation matrix.",
         "error",
-        "canonical 5 surface (web, mobile, desktop, cli, mixed) と low-cost / standard / full-harness の obligation matrix を追加してください。",
+        "web / mobile / desktop / mixed の full-harness obligation matrix を追加してください。",
       ),
     );
   }

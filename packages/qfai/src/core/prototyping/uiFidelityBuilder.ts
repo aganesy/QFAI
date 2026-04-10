@@ -162,7 +162,7 @@ export async function buildUiFidelity(input: {
       (render) => render.status === "captured" && typeof render.htmlPath === "string",
     );
     const screenObservation = uiObservation.screens.find(
-      (obs) => obs.route === screen.route || obs.screenId === screen.uiContractId,
+      (obs) => obs.screenId === screen.screenId || obs.route === screen.route,
     );
     const hasBrowserQaObservation =
       screenObservation?.browserQaObserved === true ||

@@ -12,8 +12,11 @@
  * - commitSha required (no silent failure)
  */
 
+import path from "node:path";
+
 import { FULL_HARNESS_INVALID_COMBINATION_MESSAGE } from "../prototyping/mode.js";
 import { requiresVisualBrowserEvidence } from "../detection/surfaceType.js";
+import { CalibrationLoader } from "../calibration/loader.js";
 import { detectFakeUi, type FakeUiDetectionResult } from "./fakeUiDetection.js";
 import { mapLoopStatusToExitReason, type FullHarnessExitReason } from "./exitReason.js";
 import { createFullHarnessHandoff, type FullHarnessHandoff } from "./handoff.js";
@@ -22,8 +25,12 @@ import type {
   FullHarnessHistory,
   FullHarnessIteration,
   MeasurementInput,
+  MeasurementResult,
   TerminationReason,
   FullHarnessCalibrationRef,
+  FinalDecision,
+  ReviewerLogVerdict,
+  ReviewerSignoffStatus,
 } from "./types.js";
 import { runMeasurement } from "./measurement.js";
 import type { FullHarnessPanelInputs } from "./panelInputs.js";
@@ -37,14 +44,9 @@ export type FullHarnessRequest = {
   reviewer: string;
   changeSummary: string[];
   limitations: string[];
-  calibration: {
+  calibrationRef: {
     packPath: string;
-    packVersion: string;
     configPath: string;
-    thresholds: { accept: number; refine: number };
-    maxIterations: number;
-    plateauDelta: number;
-    plateauLookback: number;
   };
   adapters: FullHarnessAdapters;
   screenContracts: Array<{ screenId: string; route: string }>;
@@ -60,6 +62,9 @@ export type FullHarnessResult = {
   handoff: FullHarnessHandoff;
   terminationReason: TerminationReason | undefined;
   isTerminal: boolean;
+  finalDecision: FinalDecision;
+  signoffStatus: ReviewerSignoffStatus;
+  logVerdict: ReviewerLogVerdict;
 };
 
 /**
@@ -136,6 +141,11 @@ export async function runFullHarness(request: FullHarnessRequest): Promise<FullH
   const scored = scorePanelsFromInputs(request.panelInputs);
   const l1 = scored.l1;
   const l2 = scored.l2;
+  const resolvedPackPath = path.isAbsolute(request.calibrationRef.packPath)
+    ? request.calibrationRef.packPath
+    : path.join(request.root, request.calibrationRef.packPath);
+  const loader = new CalibrationLoader(resolvedPackPath);
+  const calibrationPack = await loader.load();
 
   const measurementInput: MeasurementInput = {
     root: request.root,
@@ -143,11 +153,11 @@ export async function runFullHarness(request: FullHarnessRequest): Promise<FullH
     changeSummary: request.changeSummary,
     limitations: request.limitations,
     calibration: {
-      packPath: request.calibration.packPath,
-      thresholds: request.calibration.thresholds,
-      maxIterations: request.calibration.maxIterations,
-      plateauDelta: request.calibration.plateauDelta,
-      plateauLookback: request.calibration.plateauLookback,
+      packPath: request.calibrationRef.packPath,
+      thresholds: calibrationPack.thresholds,
+      maxIterations: calibrationPack.maxIterations,
+      plateauDelta: calibrationPack.plateauDelta,
+      plateauLookback: calibrationPack.plateauLookback,
     },
     renderRefs,
     browserQaRefs,
@@ -173,9 +183,9 @@ export async function runFullHarness(request: FullHarnessRequest): Promise<FullH
   }
 
   const calibrationRef: FullHarnessCalibrationRef = {
-    configPath: request.calibration.configPath,
-    packPath: request.calibration.packPath,
-    packVersion: request.calibration.packVersion,
+    configPath: request.calibrationRef.configPath,
+    packPath: request.calibrationRef.packPath,
+    packVersion: calibrationPack.version,
   };
 
   const fakeUiDetection = detectFakeUi({ renderResults, browserQaResults });
@@ -196,6 +206,9 @@ export async function runFullHarness(request: FullHarnessRequest): Promise<FullH
       ? ["Verify that the selected build performs real state and route changes."]
       : [],
   });
+  const finalDecision = deriveFinalDecision(measurementResult);
+  const signoffStatus = mapFinalDecisionToSignoffStatus(finalDecision);
+  const logVerdict = deriveLogVerdict(finalDecision, measurementResult);
 
   return {
     iteration: measurementResult.iteration,
@@ -206,5 +219,53 @@ export async function runFullHarness(request: FullHarnessRequest): Promise<FullH
     handoff,
     terminationReason: measurementResult.terminationReason,
     isTerminal: measurementResult.isTerminal,
+    finalDecision,
+    signoffStatus,
+    logVerdict,
   };
+}
+
+function deriveFinalDecision(result: MeasurementResult): FinalDecision {
+  if (result.iteration.decision === "accept") {
+    return "accepted";
+  }
+  if (result.iteration.decision === "reject") {
+    return "rejected";
+  }
+  if (
+    result.terminationReason === "plateau" ||
+    result.terminationReason === "max-iterations" ||
+    result.terminationReason === "manual-stop" ||
+    result.isTerminal
+  ) {
+    return "abandoned";
+  }
+  return "abandoned";
+}
+
+function mapFinalDecisionToSignoffStatus(finalDecision: FinalDecision): ReviewerSignoffStatus {
+  switch (finalDecision) {
+    case "accepted":
+      return "approved";
+    case "rejected":
+      return "rejected";
+    case "abandoned":
+      return "abandoned";
+  }
+}
+
+function deriveLogVerdict(
+  finalDecision: FinalDecision,
+  result: { iteration: { decision: string }; isTerminal: boolean },
+): ReviewerLogVerdict {
+  if (finalDecision === "accepted") {
+    return "approve";
+  }
+  if (finalDecision === "rejected") {
+    return "reject";
+  }
+  if (result.isTerminal) {
+    return "abandon";
+  }
+  return "revise";
 }

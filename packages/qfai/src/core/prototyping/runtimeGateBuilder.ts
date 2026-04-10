@@ -5,6 +5,7 @@ export function buildRuntimeGate(input: { runtimeObservation: RuntimeObservation
       ui: Array<{
         screenId: string;
         route: string;
+        declaredRef: string;
         url?: string;
         rendered: boolean;
         browserVisited: boolean;
@@ -21,6 +22,14 @@ export function buildRuntimeGate(input: { runtimeObservation: RuntimeObservation
 
   return {
     ui: input.runtimeObservation.ui.map((entry) => ({ ...entry })),
-    evidenceRefs: [".qfai/evidence/prototyping.json#/runtimeGate"],
+    evidenceRefs: Array.from(
+      new Set(
+        input.runtimeObservation.ui.flatMap((entry) => [
+          entry.declaredRef,
+          ...entry.renderEvidenceRefs,
+          ...entry.browserQaEvidenceRefs,
+        ]),
+      ),
+    ),
   };
 }

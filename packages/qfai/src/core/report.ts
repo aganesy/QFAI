@@ -1588,7 +1588,7 @@ export function formatReportMarkdown(
       "- render evidence が不足または不完全です。viewport coverage と artifact path を確認してください。",
     );
     lines.push(
-      "- recover: `qfai prototyping run --mode standard` を実行し、`.qfai/evidence/prototyping.json` / `render.json` / `browser-qa.json` を再生成します。",
+      "- recover: `qfai prototyping run --mode full-harness --reviewer <id>` を実行し、`.qfai/evidence/prototyping.json` / `render.json` / `browser-qa.json` を再生成します。",
     );
     lines.push(
       "- why it matters: render evidence は viewport coverage と missing artifact の切り分けに使われ、strict/high profile では gate に影響します。",
@@ -1731,9 +1731,13 @@ async function collectPrototypingSummary(
 
   const record = parsed as Record<string, unknown>;
   const mode = asRecord(record.mode);
-  if (!mode || !isValidPrototypingMode(mode.effective) || typeof mode.source !== "string") {
+  if (!mode || typeof mode.source !== "string") {
     return undefined;
   }
+  const rawEffectiveMode =
+    typeof mode.effective === "string" && mode.effective.trim().length > 0
+      ? mode.effective.trim()
+      : "full-harness";
 
   const warnings: string[] = [];
 
@@ -1754,9 +1758,12 @@ async function collectPrototypingSummary(
   const modeSummary = summarizeResolvedMode({
     explicitMode: isValidPrototypingMode(mode.requested) ? mode.requested : undefined,
     discussionRecommendation: effectiveRec,
-    defaultMode: mode.effective,
+    ...(isValidPrototypingMode(rawEffectiveMode) ? { defaultMode: rawEffectiveMode } : {}),
   });
   warnings.push(...modeSummary.warnings);
+  if (!isValidPrototypingMode(rawEffectiveMode)) {
+    warnings.push(`prototyping evidence effective mode is non-canonical: ${rawEffectiveMode}`);
+  }
 
   const discussionSummary = effectiveRec
     ? effectiveRec.rationale
@@ -1797,7 +1804,7 @@ async function collectPrototypingSummary(
       "prototyping surface could not be derived from evidence or recommendation; report defaulted to mixed.",
     );
   }
-  const effectiveMode = mode.effective;
+  const effectiveMode = rawEffectiveMode;
 
   // WS-3: Use shared obligation matrix
   const obligations = derivePrototypingObligations({ surface: effectiveSurface, effectiveMode });
@@ -1830,16 +1837,6 @@ async function collectPrototypingSummary(
       `evidence mode source is "system-default" but discussion recommendation exists (${effectiveRec.recommendedMode})`,
     );
   }
-  if (
-    mode.source === "discussion-recommendation" &&
-    effectiveRec &&
-    mode.effective !== effectiveRec.recommendedMode
-  ) {
-    warnings.push(
-      `evidence effective mode (${mode.effective}) does not match discussion recommendation (${effectiveRec.recommendedMode})`,
-    );
-  }
-
   const renderSummary = summarizeRenderEvidence(renderBundle);
   const renderCounts = {
     captured: renderSummary.captured,
@@ -1875,10 +1872,6 @@ async function collectPrototypingSummary(
       browserQaTotalFailed += failed || (status === "failed" ? 1 : 0);
     }
   }
-  const browserQaModeMismatch =
-    browserQaBundle?.browserQa.mode !== undefined &&
-    browserQaBundle.browserQa.mode !== effectiveMode;
-
   // WS-8: Calibration summary
   const calibrationConfig = config.prototyping?.calibration;
   const scoringTrace =
@@ -2054,7 +2047,6 @@ async function collectPrototypingSummary(
             phaseSummary: browserQaBundle.browserQa.summary,
           }
         : {}),
-      ...(browserQaModeMismatch ? { modeMismatch: true } : {}),
     },
     ...(calibrationSummary ? { calibration: calibrationSummary } : {}),
     warnings,

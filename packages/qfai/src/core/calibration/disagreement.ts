@@ -16,7 +16,7 @@ export class DisagreementHandler {
 
   resolve(reviewerScores: ReviewerScore[]): DecisionResult {
     if (reviewerScores.length === 0) {
-      return { decision: "pivot", score: 0 };
+      return { decision: "reject", score: 0 };
     }
 
     // Classify each reviewer's score
@@ -46,11 +46,11 @@ export class DisagreementHandler {
 
     let finalDecision: Decision;
     if (majorityDecisions.length === 1) {
-      finalDecision = majorityDecisions[0] ?? "pivot";
+      finalDecision = majorityDecisions[0] ?? "reject";
     } else {
       // Tie-breaking: highest confidence wins
       let bestConfidence = -1;
-      finalDecision = "pivot";
+      finalDecision = "reject";
       for (const c of classifications) {
         if (majorityDecisions.includes(c.decision) && c.confidence > bestConfidence) {
           bestConfidence = c.confidence;

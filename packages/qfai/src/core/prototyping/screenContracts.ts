@@ -9,6 +9,7 @@ export type CanonicalScreenContract = {
   screenId: string;
   route: string;
   primaryTasks: string[];
+  sourceRef: string;
 };
 
 export async function readCanonicalScreenContracts(
@@ -24,7 +25,17 @@ export async function readCanonicalScreenContracts(
     return [];
   }
 
-  return parseCanonicalScreenContracts(raw);
+  return parseCanonicalScreenContracts(raw).map((screen) => ({
+    ...screen,
+    sourceRef:
+      path.posix.join(
+        ".qfai",
+        "discussion",
+        path.basename(packDir),
+        "uiux",
+        "40_screen_contracts.md",
+      ) + `#${screen.screenId}`,
+  }));
 }
 
 export function parseCanonicalScreenContracts(content: string): CanonicalScreenContract[] {
@@ -45,6 +56,7 @@ export function parseCanonicalScreenContracts(content: string): CanonicalScreenC
         screenId: slugifyScreenId(name),
         route: "",
         primaryTasks: [],
+        sourceRef: "",
       };
       inPrimaryTasks = false;
       continue;

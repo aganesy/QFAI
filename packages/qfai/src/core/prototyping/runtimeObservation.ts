@@ -6,6 +6,7 @@ import type { CanonicalScreenContract } from "./screenContracts.js";
 export type ObservedUiRoute = {
   screenId: string;
   route: string;
+  declaredRef: string;
   url?: string;
   rendered: boolean;
   browserVisited: boolean;
@@ -83,6 +84,7 @@ export function buildRuntimeObservation(input: {
       return {
         screenId: screen.screenId,
         route: screen.route,
+        declaredRef: screen.sourceRef,
         ...(input.targetUrl
           ? { url: new URL(screen.route, ensureTrailingSlash(input.targetUrl)).toString() }
           : {}),

@@ -171,7 +171,7 @@ export function determineDecision(
 ): Decision {
   if (weightedTotal >= thresholds.accept) return "accept";
   if (weightedTotal >= thresholds.refine) return "refine";
-  return "pivot";
+  return "reject";
 }
 
 export function validatePanelScore(panel: FullHarnessPanelScore): string[] {

@@ -3,6 +3,8 @@ import { loadConfig, resolvePath } from "../../core/config.js";
 import { readValidatedClassification } from "../../core/detection/surfaceType.js";
 import { findLatestDiscussionPackDir } from "../../core/discussionPack.js";
 import { assertCanonicalPrototypingSurface } from "../../core/domain/surface.js";
+import type { RenderCaptureAdapter } from "../../core/evidence/types.js";
+import type { ProviderRegistry } from "../../core/providers/registry.js";
 import {
   derivePrototypingObligations,
   NON_UI_PROTOTYPING_SURFACE_MESSAGE,
@@ -11,13 +13,15 @@ import { runPrototypingExecution } from "../../core/prototyping/execution.js";
 
 export async function runPrototypingCommand(options: {
   root: string;
-  mode?: "low-cost" | "standard" | "full-harness";
+  mode?: "full-harness";
   targetUrl?: string;
   browserProvider?: string;
   renderProvider?: string;
   reviewer?: string;
   changeSummary?: string[];
   limitations?: string[];
+  providerRegistry?: ProviderRegistry;
+  renderAdapter?: RenderCaptureAdapter;
 }): Promise<void> {
   const resolved = await loadConfig(options.root);
   const discussionRoot = resolvePath(options.root, resolved.config, "discussionDir");
@@ -29,7 +33,7 @@ export async function runPrototypingCommand(options: {
     }
     const obligations = derivePrototypingObligations({
       surface: assertCanonicalPrototypingSurface(classification.primary_surface),
-      effectiveMode: options.mode ?? "standard",
+      effectiveMode: options.mode ?? "full-harness",
     });
     if (!obligations.validCombination) {
       throw new Error(obligations.invalidReason ?? NON_UI_PROTOTYPING_SURFACE_MESSAGE);
@@ -54,6 +58,8 @@ export async function runPrototypingCommand(options: {
     ...(options.reviewer ? { reviewer: options.reviewer } : {}),
     ...(options.changeSummary ? { changeSummary: options.changeSummary } : {}),
     ...(options.limitations ? { limitations: options.limitations } : {}),
+    ...(options.providerRegistry ? { providerRegistry: options.providerRegistry } : {}),
+    ...(options.renderAdapter ? { renderAdapter: options.renderAdapter } : {}),
   });
 
   info(`mode: ${result.mode}`);

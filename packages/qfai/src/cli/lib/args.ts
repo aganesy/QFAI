@@ -3,7 +3,7 @@ export type ParsedArgs = {
   invalid: boolean;
   options: {
     prototypingAction?: "run";
-    prototypingMode?: "low-cost" | "standard" | "full-harness";
+    prototypingMode?: "full-harness";
     prototypingTargetUrl?: string;
     prototypingBrowserProvider?: string;
     prototypingRenderProvider?: string;
@@ -155,7 +155,7 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
           markInvalid();
           break;
         }
-        if (next === "low-cost" || next === "standard" || next === "full-harness") {
+        if (next === "full-harness") {
           options.prototypingMode = next;
         } else {
           markInvalid();

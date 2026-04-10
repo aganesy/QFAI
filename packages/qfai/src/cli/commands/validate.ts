@@ -298,7 +298,7 @@ const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-PROT-101":
     "Both prototyping evidence files exist and prototyping.json follows the required schema.",
   "QFAI-PROT-150": "prototyping.json is missing the canonical mode block.",
-  "QFAI-PROT-151": "mode.effective must be low-cost|standard|full-harness.",
+  "QFAI-PROT-151": "mode.effective must be full-harness.",
   "QFAI-PROT-152":
     "mode.source must be explicit-request|discussion-recommendation|system-default and rationale must be non-empty.",
   "QFAI-PROT-171": "surface field must be one of: web, mobile, desktop, cli, mixed.",
@@ -308,7 +308,7 @@ const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-PROT-174": "required browser QA bundle is missing.",
   "QFAI-PROT-175":
     "non-UI prototyping surface but UI-only evidence present (runtimeGate.ui, uiFidelity, render, browserQa).",
-  "QFAI-PROT-176": "ui-bearing standard/full-harness mode requires uiFidelity.",
+  "QFAI-PROT-176": "ui-bearing full-harness mode requires uiFidelity.",
   "QFAI-PROT-177": "ui-bearing full-harness mode requires runtimeGate.",
   "QFAI-PROT-111":
     "Coverage Matrix rows in prototyping evidence include every `.qfai/specs/spec-*` entry.",
@@ -360,10 +360,8 @@ const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "browser QA executed/status contradiction (e.g. executed=true but status!=completed).",
   "QFAI-PROT-275": "browser QA summary is malformed (non-object or invalid bucket counts).",
   "QFAI-PROT-276": "browser QA findings are malformed (non-array or invalid finding structure).",
-  "QFAI-PROT-270":
-    "uiFidelity is required for UI-bearing surfaces in standard/full-harness mode but is absent.",
-  "QFAI-PROT-271":
-    "uiFidelity.mode='skeleton' is not allowed in standard/full-harness mode for UI-bearing surfaces.",
+  "QFAI-PROT-270": "uiFidelity is required for full-harness UI prototyping but is absent.",
+  "QFAI-PROT-271": "uiFidelity.mode='skeleton' is not allowed in full-harness UI prototyping.",
   "QFAI-PROT-272":
     "uiFidelity screen is missing required fields (uiContractId, route, expected, observed).",
   "QFAI-PROT-281": "mode.effective is full-harness but fullHarness block is missing.",

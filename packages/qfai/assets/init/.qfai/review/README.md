@@ -73,5 +73,5 @@ Diagnosis flow:
 
 1. Read validator `code/rule/refs` and capture `contract_id` + `route`.
 2. Check required `elements[].label` and `actions[]` in the contract.
-3. Verify `uiFidelity.screens[]` coverage and `mockPaths.status=pass`.
+3. Verify `uiFidelity.screens[]` coverage and that `mockPaths` contains only negative findings (`fail|finding`).
 4. Confirm UI renders labels or has stable `data-qfai` markers before resolving the review thread.

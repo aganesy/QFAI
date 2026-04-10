@@ -1,16 +1,17 @@
 /**
  * WS-E: uiFidelity validator tests
  *
- * Verifies that the prototyping evidence validator correctly enforces
- * uiFidelity mode policy per the obligation matrix.
+ * Verifies that the prototyping evidence validator enforces the
+ * full-harness-only uiFidelity contract.
  */
 
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { mkdir, writeFile, rm } from "node:fs/promises";
-import path from "node:path";
+import { mkdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { validatePrototypingEvidence } from "../../src/core/validators/prototypingEvidence.js";
+import path from "node:path";
+
 import { defaultConfig } from "../../src/core/config.js";
+import { validatePrototypingEvidence } from "../../src/core/validators/prototypingEvidence.js";
 
 function makeEvidence(overrides: Record<string, unknown> = {}): Record<string, unknown> {
   return {
@@ -21,17 +22,28 @@ function makeEvidence(overrides: Record<string, unknown> = {}): Record<string, u
         declared: { uiRoutes: 1, apiEndpoints: 0, dbObjects: 0 },
         checked: { uiOk: 1, apiNon404: 0, dbPresent: 0 },
         missing: { uiRoutes: [], apiEndpoints: [], dbObjects: [] },
+        coverageRefs: [
+          {
+            route: "/dashboard",
+            declaredRef:
+              ".qfai/discussion/discussion-20260404000000000/uiux/40_screen_contracts.md#dashboard",
+            observedRefs: [
+              ".qfai/evidence/render.json#/screens/0",
+              ".qfai/evidence/browser-qa.json#/phases/0",
+            ],
+          },
+        ],
       },
     ],
     mode: {
-      effective: "standard",
+      effective: "full-harness",
       source: "explicit-request",
       rationale: "test",
     },
     meta: {
       generatedAt: new Date().toISOString(),
-      toolVersion: "1.7.13",
-      commands: ["qfai prototyping run --mode standard"],
+      toolVersion: "1.7.15",
+      commands: ["qfai prototyping run --mode full-harness"],
     },
     ...overrides,
   };
@@ -44,6 +56,26 @@ async function setupRoot(): Promise<string> {
   );
   await mkdir(path.join(root, ".qfai", "evidence"), { recursive: true });
   await mkdir(path.join(root, ".qfai", "specs", "spec-0001"), { recursive: true });
+  await writeFile(
+    path.join(root, "qfai.config.yaml"),
+    ["prototyping:", "  calibration:", "    packPath: .qfai/evidence/calibration.yaml", ""].join(
+      "\n",
+    ),
+  );
+  await writeFile(
+    path.join(root, ".qfai", "evidence", "calibration.yaml"),
+    [
+      "version: 1.7.15",
+      "thresholds:",
+      "  accept: 0.8",
+      "  refine: 0.5",
+      "maxIterations: 5",
+      "plateauDelta: 0.02",
+      "plateauLookback: 3",
+      "examples: []",
+      "",
+    ].join("\n"),
+  );
   await writeFile(
     path.join(root, ".qfai", "specs", "spec-0001", "01_Requirements.md"),
     "# Requirements\n\n- REQ-0001: Test requirement\n",
@@ -75,147 +107,56 @@ describe("uiFidelity validator", () => {
   });
 
   afterEach(async () => {
-    try {
-      await rm(root, { recursive: true, force: true });
-    } catch {
-      // cleanup best-effort
-    }
+    await rm(root, { recursive: true, force: true });
   });
 
-  it("standard + UI-bearing + skeleton → error QFAI-PROT-271", async () => {
-    const evidence = makeEvidence({
-      uiFidelity: { mode: "skeleton", screens: [] },
-    });
-    const issues = await runValidation(root, evidence);
-    const skeletonErrors = issues.filter((issue) => issue.code === "QFAI-PROT-271");
-    expect(skeletonErrors.length).toBeGreaterThanOrEqual(1);
-    expect(skeletonErrors[0].severity).toBe("error");
-  });
-
-  it("full-harness + UI-bearing + skeleton → error QFAI-PROT-271", async () => {
-    const evidence = makeEvidence({
-      mode: {
-        effective: "full-harness",
-        source: "explicit-request",
-        rationale: "test",
-      },
-      uiFidelity: { mode: "skeleton", screens: [] },
-      fullHarness: {
-        enabled: true,
-        runId: "run-001",
-        calibrationRef: {
-          configPath: "qfai.config.yaml",
-          packPath: ".qfai/discussion/discussion-20260404000000000",
-          packVersion: "1.0.0",
-        },
-        iterationCount: 1,
-        bestIteration: 1,
-        status: "completed",
-        terminationReason: "converged",
-        reviewerSignoff: {
-          reviewerId: "qa-reviewer",
-          status: "approved",
-          timestamp: new Date().toISOString(),
-          source: "cli",
-        },
-        reviewerLogs: [
-          {
-            iteration: 1,
-            reviewerId: "qa-reviewer",
-            verdict: "approve",
-            summary: "All checks passed and quality meets threshold",
-            evidenceRefs: ["evidence/prototyping.json"],
-          },
-        ],
-        iterations: [
-          {
-            iteration: 1,
-            commitSha: "abc0001",
-            reviewerId: "qa-reviewer",
-            timestamp: new Date().toISOString(),
-            changeSummary: ["Initial implementation"],
-            limitations: ["Known limitation"],
-            evidenceRefs: {
-              render: [".qfai/evidence/render.json#/screens/0"],
-              browserQa: [".qfai/evidence/browser-qa.json#/browserQa"],
-              runtimeGate: [".qfai/evidence/prototyping.json#/runtimeGate"],
-              uiObservation: [".qfai/evidence/prototyping.json#/uiFidelity/screens/0"],
-              specCoverage: [".qfai/evidence/prototyping.json#/specs/0"],
-              discussion: [
-                ".qfai/discussion/discussion-20260404000000000/uiux/20_design_eval_invariant.md",
-              ],
-              screenContract: [
-                ".qfai/discussion/discussion-20260404000000000/uiux/40_screen_contracts.md#screen:/",
-              ],
-              trend: [".qfai/discussion/discussion-20260404000000000/04_Sources.md"],
-            },
-            l1: { panel: "L1", total: 0.9 },
-            l2: { panel: "L2", total: 0.9 },
-            weightedTotal: 0.9,
-            deltaFromPrevious: null,
-            decision: "accept",
-          },
-        ],
-        scoringTrace: [
-          {
-            iteration: 1,
-            l1Total: 0.9,
-            l2Total: 0.9,
-            weightedTotal: 0.9,
-            deltaFromPrevious: null,
-            decision: "accept",
-            commitSha: "abc0001",
-          },
-        ],
-        limitations: ["Known limitation"],
-      },
-    });
-    const issues = await runValidation(root, evidence);
-    const skeletonErrors = issues.filter((issue) => issue.code === "QFAI-PROT-271");
-    expect(skeletonErrors.length).toBeGreaterThanOrEqual(1);
-  });
-
-  it("low-cost + UI-bearing + skeleton → no skeleton error", async () => {
-    const evidence = makeEvidence({
-      mode: {
-        effective: "low-cost",
-        source: "explicit-request",
-        rationale: "test",
-      },
-      uiFidelity: { mode: "skeleton", screens: [] },
-    });
-    const issues = await runValidation(root, evidence);
-    const skeletonErrors = issues.filter((issue) => issue.code === "QFAI-PROT-271");
-    expect(skeletonErrors).toHaveLength(0);
-  });
-
-  it("standard + UI-bearing + interactive + screens empty → error QFAI-PROT-238", async () => {
-    const evidence = makeEvidence({
-      uiFidelity: { mode: "interactive", screens: [] },
-    });
-    const issues = await runValidation(root, evidence);
-    const emptyErrors = issues.filter((issue) => issue.code === "QFAI-PROT-238");
-    expect(emptyErrors.length).toBeGreaterThanOrEqual(1);
-    expect(emptyErrors[0].severity).toBe("error");
-  });
-
-  it("standard + UI-bearing + uiFidelity absent → error QFAI-PROT-270", async () => {
-    const evidence = makeEvidence();
-    // No uiFidelity field
-    const issues = await runValidation(root, evidence);
-    const absentErrors = issues.filter((issue) => issue.code === "QFAI-PROT-270");
-    expect(absentErrors.length).toBeGreaterThanOrEqual(1);
-    expect(absentErrors[0].severity).toBe("error");
-  });
-
-  it("non-ui + standard + uiFidelity absent → no uiFidelity error", async () => {
-    const evidence = makeEvidence({
-      surface: "non-ui",
-    });
-    const issues = await runValidation(root, evidence);
-    const uiFidelityErrors = issues.filter(
-      (issue) => issue.code === "QFAI-PROT-270" || issue.code === "QFAI-PROT-271",
+  it("rejects skeleton uiFidelity in full-harness", async () => {
+    const issues = await runValidation(
+      root,
+      makeEvidence({
+        uiFidelity: { mode: "skeleton", screens: [] },
+      }),
     );
-    expect(uiFidelityErrors).toHaveLength(0);
+
+    expect(issues.some((issue) => issue.code === "QFAI-PROT-271")).toBe(true);
+  });
+
+  it("rejects non-full-harness mode metadata", async () => {
+    const issues = await runValidation(
+      root,
+      makeEvidence({
+        mode: {
+          effective: "standard",
+          source: "explicit-request",
+          rationale: "legacy",
+        },
+      }),
+    );
+
+    expect(
+      issues.some(
+        (issue) =>
+          issue.code === "QFAI-PROT-101" ||
+          issue.code === "QFAI-PROT-150" ||
+          issue.code === "QFAI-PROT-151" ||
+          issue.message.includes("full-harness"),
+      ),
+    ).toBe(true);
+  });
+
+  it("requires uiFidelity for full-harness ui-bearing evidence", async () => {
+    const issues = await runValidation(root, makeEvidence());
+    expect(issues.some((issue) => issue.code === "QFAI-PROT-270")).toBe(true);
+  });
+
+  it("accepts missing uiFidelity on non-ui surface only as part of contradiction handling", async () => {
+    const issues = await runValidation(
+      root,
+      makeEvidence({
+        surface: "cli",
+      }),
+    );
+    expect(issues.some((issue) => issue.code === "QFAI-PROT-270")).toBe(false);
+    expect(issues.some((issue) => issue.code === "QFAI-PROT-172")).toBe(true);
   });
 });

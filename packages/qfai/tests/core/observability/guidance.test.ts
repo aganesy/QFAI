@@ -8,8 +8,8 @@ import { ModeGuidance } from "../../../src/core/observability/guidance.js";
 describe("ModeGuidance", () => {
   const guidance = new ModeGuidance();
 
-  describe("standard recommendation (TC-0012-0008)", () => {
-    it("recommends standard for high test ratio and coverage", () => {
+  describe("full-harness recommendation (TC-0012-0008)", () => {
+    it("recommends full-harness even for favorable characteristics", () => {
       const result = guidance.recommend({
         fileCount: 500,
         testRatio: 0.5,
@@ -17,8 +17,8 @@ describe("ModeGuidance", () => {
         codeComplexity: 0.3,
       });
 
-      expect(result.mode).toBe("standard");
-      expect(result.reasoning).toBeTruthy();
+      expect(result.mode).toBe("full-harness");
+      expect(result.reasoning).toContain("full-harness only");
     });
   });
 
@@ -48,7 +48,7 @@ describe("ModeGuidance", () => {
       // The result is purely a recommendation object — it has no side effects
       expect(result).toHaveProperty("mode");
       expect(result).toHaveProperty("reasoning");
-      expect(["standard", "full-harness"]).toContain(result.mode);
+      expect(result.mode).toBe("full-harness");
       // No mode mutation — calling again with same input gives same result
       const result2 = guidance.recommend({
         fileCount: 100,
