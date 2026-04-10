@@ -29,6 +29,9 @@ const VALID_MODES = new Set<PrototypingMode>(["low-cost", "standard", "full-harn
 const VALID_SURFACES = new Set<PrototypingSurface>(CANONICAL_PROTOTYPING_SURFACES);
 export const FULL_HARNESS_INVALID_COMBINATION_MESSAGE =
   "full-harness is supported only for UI-bearing surfaces that require visual/browser evidence.";
+export const NON_UI_PROTOTYPING_SURFACE_REASON_CODE = "unsupported_non_ui_prototyping_surface";
+export const NON_UI_PROTOTYPING_SURFACE_MESSAGE =
+  "Prototyping is supported only for UI-bearing surfaces that require visual/browser evidence.";
 
 // ---------------------------------------------------------------------------
 // Discussion recommendation parsing (canonical namespaced only)
@@ -279,18 +282,6 @@ export function derivePrototypingObligations(input: {
   effectiveMode: PrototypingMode;
 }): PrototypingObligations {
   const needsVisualBrowserEvidence = requiresVisualBrowserEvidence(input.surface);
-  if (input.effectiveMode === "full-harness" && !needsVisualBrowserEvidence) {
-    return {
-      requireRuntimeGate: false,
-      requireUiFidelity: false,
-      requireRenderBundle: false,
-      requireBrowserQaBundle: false,
-      requireFullHarness: false,
-      validCombination: false,
-      invalidReason: FULL_HARNESS_INVALID_COMBINATION_MESSAGE,
-    };
-  }
-
   if (!needsVisualBrowserEvidence) {
     return {
       requireRuntimeGate: false,
@@ -298,7 +289,9 @@ export function derivePrototypingObligations(input: {
       requireRenderBundle: false,
       requireBrowserQaBundle: false,
       requireFullHarness: false,
-      validCombination: true,
+      validCombination: false,
+      invalidReasonCode: NON_UI_PROTOTYPING_SURFACE_REASON_CODE,
+      invalidReason: NON_UI_PROTOTYPING_SURFACE_MESSAGE,
     };
   }
 

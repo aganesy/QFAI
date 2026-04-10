@@ -42,17 +42,17 @@ describe("l2Evidence", () => {
     }
     await writeFile(
       path.join(uiuxDir, "20_design_eval_invariant.md"),
-      "## Axis A\n- intent: keep focus\n",
+      "### Axis: [INV-01]\n- intent: keep focus\n",
       "utf-8",
     );
     await writeFile(
       path.join(uiuxDir, "21_design_eval_trend_derived.md"),
-      "## Axis B\n- intent: align trend\n",
+      "### Axis: [TRD-01]\n- intent: align trend\n",
       "utf-8",
     );
     await writeFile(
       path.join(uiuxDir, "22_design_eval_product_specific.md"),
-      "## Axis C\n- intent: fit product\n",
+      "### Axis: [PRD-01]\n- intent: fit product\n",
       "utf-8",
     );
     await writeFile(

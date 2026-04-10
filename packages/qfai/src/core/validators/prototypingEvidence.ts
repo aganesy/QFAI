@@ -39,6 +39,7 @@ import {
   type RenderEvidenceBundle,
   type RenderEvidenceEntry,
 } from "../uiux/renderEvidenceTypes.js";
+import { resolveCalibrationPack } from "../calibration/packResolver.js";
 import { issue } from "./utils.js";
 
 type PrototypingSpecEvidence = {
@@ -149,13 +150,14 @@ type PrototypingEvidence = {
   };
   runtimeGate?: {
     ui: Array<{
+      screenId: string;
       route: string;
-      status: number;
-    }>;
-    api: Array<{
-      method: string;
-      path: string;
-      status: number;
+      url?: string;
+      rendered: boolean;
+      browserVisited: boolean;
+      httpStatus?: number;
+      renderEvidenceRefs: string[];
+      browserQaEvidenceRefs: string[];
     }>;
   };
   uiFidelity?: UiFidelityEvidence;
@@ -312,7 +314,7 @@ export async function validatePrototypingEvidence(
 
   const issues: Issue[] = [];
   issues.push(...validateSurface(surfaceResult, evidenceJsonPath));
-  issues.push(...validateModeMetadata(parsed.value, evidenceJsonPath, config));
+  issues.push(...(await validateModeMetadata(parsed.value, evidenceJsonPath, config, root)));
   if (surfaceResult.surface) {
     const obligations = derivePrototypingObligations({
       surface: surfaceResult.surface,
@@ -345,8 +347,7 @@ export async function validatePrototypingEvidence(
   }
 
   const uiMismatches: string[] = [];
-  const apiMismatches: string[] = [];
-  const dbMismatches: string[] = [];
+  const unsupportedCoverageDeclarations: string[] = [];
 
   for (const specId of expectedSpecIds) {
     const row = evidenceBySpecId.get(specId);
@@ -363,23 +364,15 @@ export async function validatePrototypingEvidence(
         ),
       );
     }
-    if (row.checked.apiNon404 < row.declared.apiEndpoints || row.missing.apiEndpoints.length > 0) {
-      apiMismatches.push(
-        formatMismatch(
-          row.specId,
-          `${row.checked.apiNon404}/${row.declared.apiEndpoints}`,
-          row.missing.apiEndpoints,
-        ),
-      );
-    }
-    if (row.checked.dbPresent < row.declared.dbObjects || row.missing.dbObjects.length > 0) {
-      dbMismatches.push(
-        formatMismatch(
-          row.specId,
-          `${row.checked.dbPresent}/${row.declared.dbObjects}`,
-          row.missing.dbObjects,
-        ),
-      );
+    if (
+      row.declared.apiEndpoints > 0 ||
+      row.declared.dbObjects > 0 ||
+      row.checked.apiNon404 > 0 ||
+      row.checked.dbPresent > 0 ||
+      row.missing.apiEndpoints.length > 0 ||
+      row.missing.dbObjects.length > 0
+    ) {
+      unsupportedCoverageDeclarations.push(row.specId);
     }
   }
 
@@ -398,51 +391,17 @@ export async function validatePrototypingEvidence(
     );
   }
 
-  if (apiMismatches.length > 0) {
+  if (unsupportedCoverageDeclarations.length > 0) {
     issues.push(
       issue(
-        "QFAI-PROT-113",
-        `API non-404 チェックが未達です: ${apiMismatches.join("; ")}`,
+        "QFAI-PROT-313",
+        `UI-only prototyping evidence must not declare API/DB coverage: ${unsupportedCoverageDeclarations.join(", ")}`,
         "error",
         evidenceJsonPath,
-        "prototypingEvidence.apiNon404",
-        extractSpecRefs(apiMismatches),
-        "change",
-        "Coverage Matrix の API 列を修正し、declared endpoint の非404化を完了してください。",
-      ),
-    );
-  }
-
-  const runtime404Refs = (parsed.value.runtimeGate?.api ?? [])
-    .filter((entry) => entry.status === 404)
-    .map((entry) => `${entry.method.toUpperCase()} ${entry.path}`)
-    .sort((left, right) => left.localeCompare(right));
-  if (runtime404Refs.length > 0) {
-    issues.push(
-      issue(
-        "QFAI-PROT-113",
-        `Runtime Gate で API 404 を検出しました: ${runtime404Refs.join(", ")}`,
-        "error",
-        evidenceJsonPath,
-        "prototypingEvidence.apiRuntime404",
-        runtime404Refs,
-        "change",
-        "404 endpoint を解消し、runtimeGate.api の結果を更新してください。",
-      ),
-    );
-  }
-
-  if (dbMismatches.length > 0) {
-    issues.push(
-      issue(
-        "QFAI-PROT-114",
-        `DB present チェックが未達です: ${dbMismatches.join("; ")}`,
-        "error",
-        evidenceJsonPath,
-        "prototypingEvidence.dbPresence",
-        extractSpecRefs(dbMismatches),
-        "change",
-        "Coverage Matrix の DB 列を修正し、必要オブジェクトの存在を確認してください。",
+        "prototypingEvidence.nonUiCoverageDeclaration",
+        unsupportedCoverageDeclarations,
+        "canonical",
+        "prototyping の coverage は UI route のみです。specs[].declared/checked/missing の API/DB 値を 0 または空配列に修正してください。",
       ),
     );
   }
@@ -738,31 +697,11 @@ export async function validatePrototypingEvidence(
     }
   }
 
-  // WS-8: Calibration warnings
-  if (parsed.value.fullHarness && !config.prototyping?.calibration) {
-    issues.push(
-      issue(
-        "QFAI-PROT-265",
-        "full-harness evidence present without calibration configuration in qfai.config.yaml.",
-        "warning",
-        evidenceJsonPath,
-        "prototypingEvidence.calibrationMissing",
-        undefined,
-        "canonical",
-        "qfai.config.yaml に prototyping.calibration セクションを追加してください。",
-      ),
-    );
-  }
-
-  if (
-    config.prototyping?.calibration &&
-    parsed.value.fullHarness &&
-    parsed.value.fullHarness.scoringTrace.length === 0
-  ) {
+  if (parsed.value.fullHarness && parsed.value.fullHarness.scoringTrace.length === 0) {
     issues.push(
       issue(
         "QFAI-PROT-266",
-        "calibration threshold configured but scoring trace is empty.",
+        "full-harness evidence exists but scoring trace is empty.",
         "warning",
         evidenceJsonPath,
         "prototypingEvidence.calibrationScoringTraceMissing",
@@ -976,7 +915,7 @@ function validatePrototypingObligationMatrix(
         "prototypingEvidence.runtimeGateRequiredByMode",
         [`surface=${surface}`, `mode=${evidence.mode?.effective ?? "standard"}`],
         "canonical",
-        "runtimeGate.ui / runtimeGate.api を追加して full-harness の観測結果を記録してください。",
+        "runtimeGate.ui を追加して full-harness の UI route 観測結果を記録してください。",
       ),
     );
   }
@@ -1068,61 +1007,53 @@ function parseEvidence(
       return { ok: false, reason: "`runtimeGate` must be an object" };
     }
     const runtimeUiNode = runtimeGateNode.ui;
-    const runtimeApiNode = runtimeGateNode.api;
     if (!Array.isArray(runtimeUiNode)) {
       return { ok: false, reason: "`runtimeGate.ui` must be an array" };
     }
-    if (!Array.isArray(runtimeApiNode)) {
-      return { ok: false, reason: "`runtimeGate.api` must be an array" };
-    }
-    const uiRows: Array<{ route: string; status: number }> = [];
+    const uiRows: NonNullable<PrototypingEvidence["runtimeGate"]>["ui"] = [];
     for (const row of runtimeUiNode) {
       if (!isRecord(row)) {
         return { ok: false, reason: "`runtimeGate.ui[]` must be objects" };
       }
       if (
+        typeof row.screenId !== "string" ||
+        row.screenId.trim().length === 0 ||
         typeof row.route !== "string" ||
         row.route.trim().length === 0 ||
-        !isInteger(row.status)
+        typeof row.rendered !== "boolean" ||
+        typeof row.browserVisited !== "boolean"
       ) {
         return {
           ok: false,
-          reason: "`runtimeGate.ui[]` requires route/status (status as integer)",
+          reason:
+            "`runtimeGate.ui[]` requires screenId/route/rendered/browserVisited with observed-only UI ledger fields",
+        };
+      }
+      const renderEvidenceRefs = normalizeEvidenceRefArray(row.renderEvidenceRefs);
+      const browserQaEvidenceRefs = normalizeEvidenceRefArray(row.browserQaEvidenceRefs);
+      if (renderEvidenceRefs === null || browserQaEvidenceRefs === null) {
+        return {
+          ok: false,
+          reason:
+            "`runtimeGate.ui[]` requires string arrays for renderEvidenceRefs/browserQaEvidenceRefs",
         };
       }
       uiRows.push({
+        screenId: row.screenId.trim(),
         route: row.route.trim(),
-        status: row.status,
-      });
-    }
-
-    const apiRows: Array<{ method: string; path: string; status: number }> = [];
-    for (const row of runtimeApiNode) {
-      if (!isRecord(row)) {
-        return { ok: false, reason: "`runtimeGate.api[]` must be objects" };
-      }
-      if (
-        typeof row.method !== "string" ||
-        row.method.trim().length === 0 ||
-        typeof row.path !== "string" ||
-        row.path.trim().length === 0 ||
-        !isInteger(row.status)
-      ) {
-        return {
-          ok: false,
-          reason: "`runtimeGate.api[]` requires method/path/status (status as integer)",
-        };
-      }
-      apiRows.push({
-        method: row.method.trim(),
-        path: row.path.trim(),
-        status: row.status,
+        ...(typeof row.url === "string" && row.url.trim().length > 0
+          ? { url: row.url.trim() }
+          : {}),
+        rendered: row.rendered,
+        browserVisited: row.browserVisited,
+        ...(isInteger(row.httpStatus) ? { httpStatus: row.httpStatus } : {}),
+        renderEvidenceRefs,
+        browserQaEvidenceRefs,
       });
     }
 
     runtimeGate = {
       ui: uiRows,
-      api: apiRows,
     };
   }
 
@@ -1239,11 +1170,12 @@ function parseEvidence(
   };
 }
 
-function validateModeMetadata(
+async function validateModeMetadata(
   evidence: PrototypingEvidence,
   evidenceJsonPath: string,
   config: QfaiConfig,
-): Issue[] {
+  root: string,
+): Promise<Issue[]> {
   const issues: Issue[] = [];
 
   if (!evidence.mode) {
@@ -1360,6 +1292,26 @@ function validateModeMetadata(
       );
       return issues;
     }
+    let calibrationPack: Awaited<ReturnType<typeof resolveCalibrationPack>> | undefined;
+    try {
+      calibrationPack = await resolveCalibrationPack({
+        root,
+        packPath: evidence.fullHarness.calibrationRef.packPath,
+      });
+    } catch (error) {
+      issues.push(
+        issue(
+          "QFAI-PROT-265",
+          `fullHarness calibration pack could not be resolved from packPath: ${evidence.fullHarness.calibrationRef.packPath}. ${formatError(error)}`,
+          "error",
+          evidenceJsonPath,
+          "prototypingEvidence.fullHarnessCalibrationPackMissing",
+          [evidence.fullHarness.calibrationRef.packPath],
+          "canonical",
+          "fullHarness.calibrationRef.packPath が指す calibration pack を修正してください。",
+        ),
+      );
+    }
     if (
       evidence.fullHarness.terminationReason !== undefined &&
       !VALID_FULL_HARNESS_TERMINATION_REASONS.has(evidence.fullHarness.terminationReason)
@@ -1450,13 +1402,13 @@ function validateModeMetadata(
     // QFAI-PROT-292: terminationReason / iterationCount cross-check
     if (
       evidence.fullHarness.terminationReason === "max-iterations" &&
-      config.prototyping?.calibration?.maxIterations !== undefined &&
-      evidence.fullHarness.iterationCount < config.prototyping.calibration.maxIterations
+      calibrationPack &&
+      evidence.fullHarness.iterationCount < calibrationPack.maxIterations
     ) {
       issues.push(
         issue(
           "QFAI-PROT-292",
-          `terminationReason is 'max-iterations' but iterationCount (${evidence.fullHarness.iterationCount}) < configured maxIterations (${config.prototyping.calibration.maxIterations}).`,
+          `terminationReason is 'max-iterations' but iterationCount (${evidence.fullHarness.iterationCount}) < pack maxIterations (${calibrationPack.maxIterations}).`,
           "error",
           evidenceJsonPath,
           "prototypingEvidence.fullHarnessTerminationReasonMismatch",
@@ -1468,14 +1420,11 @@ function validateModeMetadata(
     }
 
     // QFAI-PROT-293: calibration maxIterations consistency
-    if (
-      config.prototyping?.calibration?.maxIterations !== undefined &&
-      evidence.fullHarness.iterationCount > config.prototyping.calibration.maxIterations
-    ) {
+    if (calibrationPack && evidence.fullHarness.iterationCount > calibrationPack.maxIterations) {
       issues.push(
         issue(
           "QFAI-PROT-293",
-          `fullHarness.iterationCount (${evidence.fullHarness.iterationCount}) exceeds configured maxIterations (${config.prototyping.calibration.maxIterations}).`,
+          `fullHarness.iterationCount (${evidence.fullHarness.iterationCount}) exceeds pack maxIterations (${calibrationPack.maxIterations}).`,
           "error",
           evidenceJsonPath,
           "prototypingEvidence.fullHarnessExceedsMaxIterations",
@@ -1601,13 +1550,13 @@ function validateModeMetadata(
     // QFAI-PROT-300: plateau with insufficient iterations
     if (
       evidence.fullHarness.terminationReason === "plateau" &&
-      config.prototyping?.calibration?.plateauLookback !== undefined &&
-      evidence.fullHarness.iterationCount < config.prototyping.calibration.plateauLookback
+      calibrationPack &&
+      evidence.fullHarness.iterationCount < calibrationPack.plateauLookback
     ) {
       issues.push(
         issue(
           "QFAI-PROT-300",
-          `terminationReason is 'plateau' but iterationCount (${evidence.fullHarness.iterationCount}) is less than plateauLookback (${config.prototyping.calibration.plateauLookback}).`,
+          `terminationReason is 'plateau' but iterationCount (${evidence.fullHarness.iterationCount}) is less than plateauLookback (${calibrationPack.plateauLookback}).`,
           "error",
           evidenceJsonPath,
           "prototypingEvidence.fullHarnessPlateauInsufficientIterations",
@@ -1696,16 +1645,7 @@ function validateModeMetadata(
     const allSpecsZeroSeeded =
       evidence.specs.length > 0 &&
       evidence.specs.every(
-        (s) =>
-          s.declared.uiRoutes === 0 &&
-          s.declared.apiEndpoints === 0 &&
-          s.declared.dbObjects === 0 &&
-          s.checked.uiOk === 0 &&
-          s.checked.apiNon404 === 0 &&
-          s.checked.dbPresent === 0 &&
-          s.missing.uiRoutes.length === 0 &&
-          s.missing.apiEndpoints.length === 0 &&
-          s.missing.dbObjects.length === 0,
+        (s) => s.declared.uiRoutes === 0 && s.checked.uiOk === 0 && s.missing.uiRoutes.length === 0,
       );
     if (allSpecsZeroSeeded) {
       issues.push(
@@ -1859,24 +1799,6 @@ function validateModeMetadata(
             undefined,
             "canonical",
             "iterations[].evidenceRefs.trend には trend artifact への参照が必要です。",
-          ),
-        );
-      }
-    }
-
-    // QFAI-PROT-313: DB objects declared but no DB coverage evidence
-    for (const spec of evidence.specs) {
-      if (spec.declared.dbObjects > 0 && spec.checked.dbPresent === 0) {
-        issues.push(
-          issue(
-            "QFAI-PROT-313",
-            `Spec "${spec.specId}" declares ${spec.declared.dbObjects} DB objects but has no DB coverage evidence (dbPresent=0).`,
-            "error",
-            evidenceJsonPath,
-            "prototypingEvidence.dbObjectsDeclaredNoCoverage",
-            [`specId=${spec.specId}`, `declared=${spec.declared.dbObjects}`],
-            "canonical",
-            "DB objects を宣言する spec には、DB coverage evidence が必要です。",
           ),
         );
       }

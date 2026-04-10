@@ -35,10 +35,9 @@ This skill is **static-first**. File-based checks and evidence are the default. 
 - `DONE is forbidden` until prototyping evidence, reviewer gate, and `qfai validate --fail-on error` pass.
 - `qfai prototyping run` is available as an auxiliary generate-side command, not the primary surface for this skill.
 - Defaulting to full-harness is prohibited.
-- If a required API endpoint still returns `404`, the run is incomplete.
 - `L1` and `L2` critique findings must be reflected in the evidence pack or justified as `REVISE`.
 - `uiFidelity` is the canonical UI evidence block for UI-bearing surfaces.
-- `ui_bearing: false` specs are not prototyping execution targets. UI-only placeholders are not required for such specs.
+- Prototyping execution is UI-only. Non-UI surfaces (`cli`, API-only, backend-only, `ui_bearing: false`) are not execution targets.
 - Review rendered output, screenshot evidence, HTML snapshots, or preview artifacts before closing any UI-affecting run.
 - Read the canonical sidecar family first: option comparison / `30_option_comparison.md` -> selected anchor screen / `31_selected_anchor_screen.md` ->
   strategy / `10_implementation_strategy.md` -> taste interview / `11_design_taste_interview.md` ->
@@ -83,8 +82,8 @@ Record in `prototyping.json`:
 
 Canonical prototyping surfaces are: `web`, `mobile`, `desktop`, `cli`, `mixed`.
 
-- `ui_bearing: false` specs are **not** prototyping execution targets. Prototyping execution is only invoked for `ui_bearing: true` or `mixed` classifications.
-- For `cli` surface: render screenshot evidence is not required; browser QA is not required. Only output / interaction / structured evidence is expected.
+- `ui_bearing: false` specs are **not** prototyping execution targets. Prototyping execution is only invoked for UI-bearing surfaces that require visual/browser evidence.
+- `cli` / non-UI surfaces are rejected in every prototyping mode. There is no reduced contract.
 - For `web`, `mobile`, `desktop` surfaces: route/contract fidelity must be captured when `uiFidelity` is required by mode.
 - `mixed` surface inherits the union of obligations from the constituent surfaces.
 
@@ -95,7 +94,6 @@ Canonical prototyping surfaces are: `web`, `mobile`, `desktop`, `cli`, `mixed`.
 - Static checks only.
 - Suitable for early skeleton work.
 - `web`, `mobile`, `desktop`, `mixed` surfaces may include `uiFidelity` and render/browser artifacts, but they are optional.
-- `cli` surface does not require `uiFidelity`, render evidence, or browser QA.
 - `skeleton` mode is allowed for lightweight UI proof.
 
 ### Standard
@@ -103,7 +101,6 @@ Canonical prototyping surfaces are: `web`, `mobile`, `desktop`, `cli`, `mixed`.
 - Static checks plus optional light validation.
 - This is the default mode.
 - `web`, `mobile`, `desktop`, `mixed` surfaces require `uiFidelity`.
-- `cli` surface does not require `uiFidelity`, render evidence, or browser QA.
 - Runtime gate, render bundle, and browser QA bundle are optional.
 
 ### Full-harness
@@ -112,15 +109,14 @@ Canonical prototyping surfaces are: `web`, `mobile`, `desktop`, `cli`, `mixed`.
 - Adds runtime-heavy obligations and full-harness audit metadata.
 - Full-harness is allowed only for UI-bearing surfaces that require visual/browser evidence.
 - `web`, `mobile`, `desktop`, `mixed` surfaces require runtime gate, render bundle, browser QA bundle, and `fullHarness`.
-- `cli` surface must not use `full-harness`; use `low-cost` or `standard`.
+- Non-UI surfaces must not use prototyping at all.
 - Full-harness render targets, Browser QA routes, UI observation, uiFidelity, runtimeGate, and specCoverage all use the canonical screen/route set from `uiux/40_screen_contracts.md`. Placeholder routes such as `"/primary"` are invalid.
-- `ui_bearing: false` specs are not prototyping execution targets.
 - Full-harness is a **measurement-driven iterative workflow**: each `qfai prototyping run --mode full-harness` invocation records exactly one iteration of real code observation. Multiple iterations are formed by running the command multiple times with real code changes in between.
 - The discussion 3-layer evaluation score measures **design direction quality** and MUST NOT be copied into `fullHarness.scoringTrace`.
   Prototyping scores measure **implementation fidelity** against the selected anchor.
 - `--reviewer <id>` is mandatory for full-harness. Placeholder values are rejected.
 - `--change-summary` and `--limitation` capture per-iteration context.
-- Calibration parameters from `qfai.config.yaml > prototyping.calibration` are the sole runtime parameter source.
+- Calibration pack is the SSOT. Runtime and validator resolve thresholds, `maxIterations`, `plateauDelta`, and `plateauLookback` from `calibrationRef.packPath`.
 - **Current version**: Full-harness is strictly evidence-driven:
   - Calibration pack is mandatory — missing pack/version/thresholds is a fatal error (no fallback defaults).
   - `2 iteration` minimum for `converged` — single-iteration accept does NOT produce `converged`.
@@ -129,7 +125,9 @@ Canonical prototyping surfaces are: `web`, `mobile`, `desktop`, `cli`, `mixed`.
   - Browser QA evidence must be preserved in summary and `fullHarness.iterations[].evidenceRefs.browserQa`; executed Browser QA with empty evidence refs is invalid.
   - Pre-scored `l1`/`l2` metadata flow-through is prohibited — panels must be computed from real `panelInputs`.
   - Per-spec zero-fill fallback is prohibited — all specs must have real coverage data.
-  - DB object declarations without observation evidence are rejected.
+  - Browser QA is per-screen mandatory in full-harness. Generic phase refs and first-HTML shortcuts are invalid.
+  - `runtimeGate` / `specCoverage` are UI-route observation ledgers only. Synthetic status codes and API/DB prototyping coverage are invalid.
+  - `actionsWired` must come from actionable control coverage, not finding counts.
   - `mockPaths` is a negative-only issue ledger (`fail|finding`) — `status="pass"` is prohibited.
   - Hardcoded default `packVersion` is rejected by the validator.
 
@@ -148,8 +146,6 @@ Canonical prototyping surfaces are: `web`, `mobile`, `desktop`, `cli`, `mixed`.
 | desktop / low-cost     | required | optional    | optional (`skeleton` allowed)     | optional (`captured/skipped/failed`) | optional     | absent       |
 | desktop / standard     | required | optional    | **required** (`interactive` only) | optional (`captured/skipped/failed`) | optional     | absent       |
 | desktop / full-harness | required | required    | **required** (`interactive` only) | **required**                         | **required** | **required** |
-| cli / low-cost         | required | optional    | n/a                               | n/a                                  | n/a          | absent       |
-| cli / standard         | required | optional    | n/a                               | n/a                                  | n/a          | absent       |
 | mixed / low-cost       | required | optional    | optional (`skeleton` allowed)     | optional (`captured/skipped/failed`) | optional     | absent       |
 | mixed / standard       | required | optional    | **required** (`interactive` only) | optional (`captured/skipped/failed`) | optional     | absent       |
 | mixed / full-harness   | required | required    | **required** (`interactive` only) | **required**                         | **required** | **required** |
@@ -159,7 +155,7 @@ Canonical prototyping surfaces are: `web`, `mobile`, `desktop`, `cli`, `mixed`.
 - `low-cost`: `skeleton` or `interactive`
 - `standard`: `interactive` only — `skeleton` is rejected by the validator
 - `full-harness`: `interactive` only — `skeleton` is rejected; render evidence, Browser QA, runtimeGate, and fullHarness block are all required
-- `cli`: `uiFidelity` is not emitted; render and browser QA are not required
+- non-UI surfaces: rejected in all modes
 
 Interpretation:
 
@@ -188,13 +184,11 @@ Interpretation:
 
 - always: `specs[]`, `meta.generatedAt`, `meta.toolVersion`, `meta.commands[]`, `mode.*`
 - `web`, `mobile`, `desktop`, `mixed`: `uiFidelity` optional, render/browser optional
-- `cli`: UI-specific evidence is n/a
 
 ### standard obligations
 
 - always: `specs[]`, `meta.*`, `mode.*`
 - `web`, `mobile`, `desktop`, `mixed`: `uiFidelity` required
-- `cli`: UI-specific evidence is n/a
 - runtime gate and browser QA remain optional
 
 ### full-harness obligations
@@ -202,7 +196,8 @@ Interpretation:
 - always: `specs[]`, `meta.*`, `mode.*`, `fullHarness`
 - `web`, `mobile`, `desktop`, `mixed`: `runtimeGate`, `.qfai/evidence/render.json`, Browser QA bundle trio, `uiFidelity`
 - `runtimeGate.ui[].route` stores canonical route paths. URLs are separate runtime targets and must not replace the route field.
-- `cli`: `full-harness` is invalid. UI-specific evidence remains n/a in `low-cost` / `standard`.
+- each `runtimeGate.ui[]` row must come from observed render/browser evidence; synthetic status codes are forbidden
+- Browser QA evidence must be preserved per screen; generic phase refs are insufficient
 
 ## Full-harness minimum completeness
 
@@ -412,7 +407,7 @@ When a dev server is started for evidence collection:
 4. If `web`, `mobile`, `desktop`, or `mixed` surface, capture `uiFidelity`; if full-harness, capture runtime gate, render bundle, and browser QA bundle.
 5. Review rendered output, screenshot evidence, HTML snapshots, or preview artifacts against the canonical sidecar family.
 6. **[full-harness only]** Execute the Full-Harness Iteration Protocol:
-   a. Initialize calibration from `qfai.config.yaml > prototyping.calibration`.
+   a. Initialize calibration from the pack referenced by `prototyping.calibration.packPath`.
    b. Run Evaluate → Identify → Fix → Re-evaluate cycle.
    c. Launch independent evaluators (product-surface-reviewer, product-experience-architect) per iteration.
    d. Record each iteration in `scoringTrace`.
@@ -494,7 +489,6 @@ Before DONE:
 - `qfai validate --fail-on error` must pass
 - reviewer gate must return PASS
 - `web`, `mobile`, `desktop`, `mixed` surface runs must reconcile `uiFidelity`, render evidence, and critique outputs
-- `cli` surface runs preserve n/a semantics for render and browser QA without fake placeholders
 - `ui_bearing: false` specs are not prototyping execution targets
 
 ## FINAL CHECKLIST (Check Last)

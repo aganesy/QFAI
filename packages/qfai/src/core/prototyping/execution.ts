@@ -3,30 +3,23 @@ import path from "node:path";
 
 import { loadConfig, resolvePath } from "../config.js";
 import { readValidatedClassification } from "../detection/surfaceType.js";
-import type { SurfaceType } from "../detection/surfaceType.js";
 import { writeEvidenceBundles, type PrototypingSummaryBundle } from "../evidence/bundleWriter.js";
 import { runRenderCapture } from "../evidence/renderRunner.js";
-import type {
-  RenderCaptureAdapter,
-  RenderCaptureTarget,
-  RenderRunnerResult,
-} from "../evidence/types.js";
-import type { BrowserQaInput } from "../browserQa/types.js";
+import type { RenderCaptureAdapter, RenderCaptureTarget } from "../evidence/types.js";
 import { findLatestDiscussionPackDir } from "../discussionPack.js";
 import { runFullHarness } from "../harness/runtime.js";
-import { CalibrationLoader } from "../calibration/loader.js";
+import { resolveCalibrationPack } from "../calibration/packResolver.js";
 
 import { resolveLatestRecommendationArtifact } from "./recommendationArtifact.js";
 import {
   derivePrototypingObligations,
-  FULL_HARNESS_INVALID_COMBINATION_MESSAGE,
+  NON_UI_PROTOTYPING_SURFACE_MESSAGE,
   resolvePrototypingMode,
   requiresVisualBrowserEvidence,
 } from "./mode.js";
 import type { PrototypingMode, PrototypingSurface } from "./types.js";
 import { assertCanonicalPrototypingSurface } from "../domain/surface.js";
 import type { ProviderRegistry } from "../providers/registry.js";
-import { runBrowserQaOrchestrated } from "../browserQa/runner.js";
 import {
   resolvePrototypingExecutionTargetUrl,
   resolvePrototypingProviders,
@@ -44,12 +37,9 @@ import {
   buildScreenContractInputs,
   buildTrendAlignmentInputs,
 } from "./l2Evidence.js";
-import {
-  buildScreenRenderTargets,
-  type CanonicalScreenContract,
-  readCanonicalScreenContracts,
-  toBrowserQaScreenContracts,
-} from "./screenContracts.js";
+import { buildScreenRenderTargets, readCanonicalScreenContracts } from "./screenContracts.js";
+import { runBrowserQaPerScreen } from "./browserQaPerScreen.js";
+import { buildRuntimeObservation, type RuntimeObservation } from "./runtimeObservation.js";
 
 export type PrototypingExecutionRequest = {
   root: string;
@@ -124,7 +114,7 @@ export async function runPrototypingExecution(
     effectiveMode: modeSummary.effective,
   });
   if (!obligations.validCombination) {
-    throw new Error(obligations.invalidReason ?? FULL_HARNESS_INVALID_COMBINATION_MESSAGE);
+    throw new Error(obligations.invalidReason ?? NON_UI_PROTOTYPING_SURFACE_MESSAGE);
   }
   const targetUrl = resolvePrototypingExecutionTargetUrl({
     ...(request.targetUrl !== undefined ? { requestTargetUrl: request.targetUrl } : {}),
@@ -172,20 +162,21 @@ export async function runPrototypingExecution(
   if (visualFullHarness && !browserQaProvider) {
     throw new Error("Full-harness requires a browser QA adapter for UI-bearing surfaces.");
   }
-  const browserQaInput = await buildBrowserQaInput({
-    renderResult,
-    ...(targetUrl !== undefined ? { targetUrl } : {}),
+  const browserQaResult = await runBrowserQaPerScreen({
     surface,
     required: obligations.requireBrowserQaBundle,
     screenContracts,
-  });
-  const browserQaResult = await runBrowserQaOrchestrated(browserQaInput, browserQaProvider);
-
-  const runtimeGate = buildRuntimeGate({
-    surface,
+    renderResult,
     ...(targetUrl !== undefined ? { targetUrl } : {}),
-    routes: screenContracts.map((screen) => screen.route),
+    ...(browserQaProvider ? { provider: browserQaProvider } : {}),
   });
+  const runtimeObservation = buildRuntimeObservation({
+    screenContracts,
+    renderResult,
+    browserQaResult,
+    ...(targetUrl !== undefined ? { targetUrl } : {}),
+  });
+  const runtimeGate = buildRuntimeGate({ runtimeObservation });
 
   const summary = await buildPrototypingSummaryBundle({
     root: request.root,
@@ -247,212 +238,211 @@ export async function runPrototypingExecution(
     // CalibrationLoader — pack is SSOT for all thresholds/params (fail-closed)
     const calibrationConfig = config.prototyping?.calibration;
     const packPath = calibrationConfig?.packPath ?? ".qfai/evidence/calibration.yaml";
-    const fullPackPath = path.join(request.root, packPath);
-    const calibrationLoader = new CalibrationLoader(fullPackPath);
-    let calibrationPack;
     try {
-      calibrationPack = await calibrationLoader.load();
+      const calibrationPack = await resolveCalibrationPack({
+        root: request.root,
+        packPath,
+      });
+      const packVersion = calibrationPack.pack.version;
+
+      // v1.7.15: pack is SSOT — no config fallback for thresholds/maxIterations/plateau
+      const thresholds = calibrationPack.thresholds;
+      const maxIterations = calibrationPack.maxIterations;
+      const plateauDelta = calibrationPack.plateauDelta;
+      const plateauLookback = calibrationPack.plateauLookback;
+
+      // Build spec coverage from real artifacts
+      const specsDir = path.join(request.root, ".qfai", "specs");
+      const runtimeGateForCoverage = buildRuntimeGate({ runtimeObservation });
+      const specCoverage = await buildSpecCoverageSummary(
+        specsDir,
+        runtimeObservation,
+        path.join(request.root, ".qfai", "evidence"),
+      );
+
+      // Build UI observation from real DOM/render
+      const uiObservation = await buildUiObservationSummary(
+        renderResult,
+        browserQaResult,
+        screenContracts,
+      );
+
+      // Build browser QA summary from real results
+      const browserQaSummary = buildBrowserQaSummaryFromResult(browserQaResult);
+
+      // Assemble panel inputs from real evidence
+      const runtimeGateEvidence = runtimeGateForCoverage
+        ? {
+            uiRoutes: runtimeGateForCoverage.ui,
+            evidenceRefs: runtimeGateForCoverage.evidenceRefs,
+          }
+        : { uiRoutes: [], evidenceRefs: [] };
+
+      // Build L2 inputs from real artifacts (no zero-filling)
+      const discussionAxes = await buildDiscussionAxisInputs(request.root);
+      const screenContractInputs = uiFidelity.uiFidelity
+        ? await buildScreenContractInputs(request.root, uiFidelity.uiFidelity.screens)
+        : (() => {
+            throw new Error(
+              "Full-harness requires UI fidelity screens for screen contract inputs. " +
+                "No screen contracts could be resolved.",
+            );
+          })();
+      const trendAlignment = await buildTrendAlignmentInputs(request.root);
+
+      const panelInputs: FullHarnessPanelInputs = {
+        runtimeGate: runtimeGateEvidence,
+        renderEvidence: {
+          totalScreens: renderResult.entries.length,
+          capturedScreens: renderResult.entries.filter((e) => e.status === "captured").length,
+          failedScreens: renderResult.entries.filter((e) => e.status === "failed").length,
+          viewports: [...new Set(renderResult.entries.map((e) => e.viewport))],
+          evidenceRefs: renderResult.filesWritten,
+        },
+        browserQa: browserQaSummary,
+        uiObservation,
+        specCoverage,
+        discussionAxes,
+        screenContract: screenContractInputs,
+        trendAlignment,
+      };
+
+      // Validate panel inputs — missing evidence must fail, not silently score to 0
+      validatePanelInputs(panelInputs);
+
+      const fullHarness = await runFullHarness({
+        root: request.root,
+        reviewer: request.reviewer,
+        changeSummary: request.changeSummary ?? ["Initial measurement"],
+        limitations: request.limitations ?? [],
+        calibration: {
+          packPath,
+          packVersion,
+          configPath: "qfai.config.yaml",
+          thresholds,
+          maxIterations,
+          plateauDelta,
+          plateauLookback,
+        },
+        adapters: {
+          surface,
+          render: {
+            // eslint-disable-next-line @typescript-eslint/require-await
+            captureEvidence: async () => renderResult,
+          },
+          browserQa: {
+            // eslint-disable-next-line @typescript-eslint/require-await
+            runQa: async () => browserQaResult,
+          },
+          observability: createObservabilityAdapter(request.root),
+        },
+        screenContracts: screenContracts.map((screen) => ({
+          screenId: screen.screenId,
+          route: screen.route,
+        })),
+        panelInputs,
+      });
+
+      const isCompleted = fullHarness.isTerminal;
+
+      // Load cumulative reviewerLogs from history (append-only)
+      const previousHistory = await loadHistory(request.root);
+      const previousLogs: Array<{
+        iteration: number;
+        reviewerId: string;
+        verdict: "approve" | "revise" | "reject";
+        summary: string;
+        evidenceRefs: string[];
+      }> = [];
+      if (previousHistory) {
+        // Extract previous reviewerLogs from existing prototyping.json fullHarness block
+        try {
+          const existingJson = await readFile(
+            path.join(request.root, ".qfai", "evidence", "prototyping.json"),
+            "utf-8",
+          );
+          const existingParsed = JSON.parse(existingJson) as Record<string, unknown>;
+          const existingFh = existingParsed.fullHarness as Record<string, unknown> | undefined;
+          if (existingFh && Array.isArray(existingFh.reviewerLogs)) {
+            previousLogs.push(...(existingFh.reviewerLogs as typeof previousLogs));
+          }
+        } catch {
+          // No previous logs to accumulate
+        }
+      }
+
+      const currentLog = {
+        iteration: fullHarness.iteration.iteration,
+        reviewerId: request.reviewer,
+        verdict: (fullHarness.iteration.decision === "accept" ? "approve" : "revise") as
+          | "approve"
+          | "revise"
+          | "reject",
+        summary: `Iteration ${fullHarness.iteration.iteration}: decision=${fullHarness.iteration.decision} weightedTotal=${fullHarness.iteration.weightedTotal.toFixed(3)} limitations=${fullHarness.iteration.limitations.length}`,
+        evidenceRefs: [
+          ...fullHarness.iteration.evidenceRefs.render,
+          ...fullHarness.iteration.evidenceRefs.browserQa,
+          ...fullHarness.iteration.evidenceRefs.runtimeGate,
+          ...fullHarness.iteration.evidenceRefs.uiObservation,
+          ...fullHarness.iteration.evidenceRefs.specCoverage,
+          ...fullHarness.iteration.evidenceRefs.discussion,
+          ...fullHarness.iteration.evidenceRefs.screenContract,
+          ...fullHarness.iteration.evidenceRefs.trend,
+        ],
+      };
+
+      // Cumulative reviewerLogs (append-only)
+      const cumulativeReviewerLogs = [...previousLogs, currentLog];
+
+      summary.fullHarness = {
+        enabled: true,
+        runId: fullHarness.history.runId,
+        calibrationRef: fullHarness.calibrationRef,
+        iterationCount: fullHarness.history.iterations.length,
+        bestIteration: fullHarness.history.bestIteration,
+        status: isCompleted ? "completed" : "in-progress",
+        ...(fullHarness.terminationReason
+          ? { terminationReason: fullHarness.terminationReason }
+          : {}),
+        reviewerSignoff: {
+          reviewerId: request.reviewer,
+          status: isCompleted ? "approved" : "rejected",
+          timestamp: generatedAt,
+          source: "cli",
+        },
+        reviewerLogs: cumulativeReviewerLogs,
+        iterations: fullHarness.history.iterations,
+        scoringTrace: fullHarness.history.scoringTrace,
+        limitations: fullHarness.iteration.limitations,
+      };
+      const evidencePaths = await writeEvidenceBundles({
+        root: request.root,
+        render: { result: renderResult, surface, mode: modeSummary.effective, generatedAt },
+        browserQa: { result: browserQaResult, mode: modeSummary.effective },
+        prototyping: summary,
+        fullHarnessArtifacts: {
+          fakeUiDetection: fullHarness.fakeUiDetection,
+          handoff: fullHarness.handoff,
+          exitReason: fullHarness.exitReason,
+        },
+      });
+
+      return {
+        mode: modeSummary.effective,
+        surface,
+        evidencePaths: {
+          prototyping: evidencePaths.prototypingPath,
+          render: evidencePaths.renderPath,
+          browserQa: evidencePaths.browserQaPath,
+        },
+        generatedAt,
+      };
     } catch (err) {
       throw new Error(
         `Full-harness requires a valid calibration pack at ${packPath}. ` +
           `Load failed: ${err instanceof Error ? err.message : String(err)}`,
       );
     }
-    const packVersion = calibrationPack.version;
-
-    // v1.7.15: pack is SSOT — no config fallback for thresholds/maxIterations/plateau
-    const thresholds = calibrationPack.thresholds;
-    const maxIterations = calibrationPack.maxIterations;
-    const plateauDelta = calibrationPack.plateauDelta;
-    const plateauLookback = calibrationPack.plateauLookback;
-
-    // Build spec coverage from real artifacts
-    const specsDir = path.join(request.root, ".qfai", "specs");
-    const runtimeGateForCoverage = buildRuntimeGate({
-      surface,
-      ...(targetUrl !== undefined ? { targetUrl } : {}),
-      routes: screenContracts.map((screen) => screen.route),
-    });
-    const specCoverage = await buildSpecCoverageSummary(
-      specsDir,
-      runtimeGateForCoverage ?? undefined,
-      path.join(request.root, ".qfai", "evidence"),
-    );
-
-    // Build UI observation from real DOM/render
-    const uiObservation = await buildUiObservationSummary(
-      renderResult,
-      browserQaResult,
-      screenContracts,
-    );
-
-    // Build browser QA summary from real results
-    const browserQaSummary = buildBrowserQaSummaryFromResult(browserQaResult);
-
-    // Assemble panel inputs from real evidence
-    const runtimeGateEvidence = runtimeGateForCoverage
-      ? {
-          uiRoutes: runtimeGateForCoverage.ui,
-          apiEndpoints: runtimeGateForCoverage.api,
-          evidenceRefs: runtimeGateForCoverage.evidenceRefs,
-        }
-      : { uiRoutes: [], apiEndpoints: [], evidenceRefs: [] };
-
-    // Build L2 inputs from real artifacts (no zero-filling)
-    const discussionAxes = await buildDiscussionAxisInputs(request.root);
-    const screenContractInputs = uiFidelity.uiFidelity
-      ? await buildScreenContractInputs(request.root, uiFidelity.uiFidelity.screens)
-      : (() => {
-          throw new Error(
-            "Full-harness requires UI fidelity screens for screen contract inputs. " +
-              "No screen contracts could be resolved.",
-          );
-        })();
-    const trendAlignment = await buildTrendAlignmentInputs(request.root);
-
-    const panelInputs: FullHarnessPanelInputs = {
-      runtimeGate: runtimeGateEvidence,
-      renderEvidence: {
-        totalScreens: renderResult.entries.length,
-        capturedScreens: renderResult.entries.filter((e) => e.status === "captured").length,
-        failedScreens: renderResult.entries.filter((e) => e.status === "failed").length,
-        viewports: [...new Set(renderResult.entries.map((e) => e.viewport))],
-        evidenceRefs: renderResult.filesWritten,
-      },
-      browserQa: browserQaSummary,
-      uiObservation,
-      specCoverage,
-      discussionAxes,
-      screenContract: screenContractInputs,
-      trendAlignment,
-    };
-
-    // Validate panel inputs — missing evidence must fail, not silently score to 0
-    validatePanelInputs(panelInputs);
-
-    const fullHarness = await runFullHarness({
-      root: request.root,
-      reviewer: request.reviewer,
-      changeSummary: request.changeSummary ?? ["Initial measurement"],
-      limitations: request.limitations ?? [],
-      calibration: {
-        packPath,
-        packVersion,
-        configPath: "qfai.config.yaml",
-        thresholds,
-        maxIterations,
-        plateauDelta,
-        plateauLookback,
-      },
-      adapters: {
-        surface,
-        render: {
-          // eslint-disable-next-line @typescript-eslint/require-await
-          captureEvidence: async () => renderResult,
-        },
-        browserQa: {
-          // eslint-disable-next-line @typescript-eslint/require-await
-          runQa: async () => browserQaResult,
-        },
-        observability: createObservabilityAdapter(request.root),
-      },
-      panelInputs,
-    });
-
-    const isCompleted = fullHarness.isTerminal;
-
-    // Load cumulative reviewerLogs from history (append-only)
-    const previousHistory = await loadHistory(request.root);
-    const previousLogs: Array<{
-      iteration: number;
-      reviewerId: string;
-      verdict: "approve" | "revise" | "reject";
-      summary: string;
-      evidenceRefs: string[];
-    }> = [];
-    if (previousHistory) {
-      // Extract previous reviewerLogs from existing prototyping.json fullHarness block
-      try {
-        const existingJson = await readFile(
-          path.join(request.root, ".qfai", "evidence", "prototyping.json"),
-          "utf-8",
-        );
-        const existingParsed = JSON.parse(existingJson) as Record<string, unknown>;
-        const existingFh = existingParsed.fullHarness as Record<string, unknown> | undefined;
-        if (existingFh && Array.isArray(existingFh.reviewerLogs)) {
-          previousLogs.push(...(existingFh.reviewerLogs as typeof previousLogs));
-        }
-      } catch {
-        // No previous logs to accumulate
-      }
-    }
-
-    const currentLog = {
-      iteration: fullHarness.iteration.iteration,
-      reviewerId: request.reviewer,
-      verdict: (fullHarness.iteration.decision === "accept" ? "approve" : "revise") as
-        | "approve"
-        | "revise"
-        | "reject",
-      summary: `Iteration ${fullHarness.iteration.iteration}: decision=${fullHarness.iteration.decision} weightedTotal=${fullHarness.iteration.weightedTotal.toFixed(3)} limitations=${fullHarness.iteration.limitations.length}`,
-      evidenceRefs: [
-        ...fullHarness.iteration.evidenceRefs.render,
-        ...fullHarness.iteration.evidenceRefs.browserQa,
-        ...fullHarness.iteration.evidenceRefs.runtimeGate,
-        ...fullHarness.iteration.evidenceRefs.uiObservation,
-        ...fullHarness.iteration.evidenceRefs.specCoverage,
-        ...fullHarness.iteration.evidenceRefs.discussion,
-        ...fullHarness.iteration.evidenceRefs.screenContract,
-        ...fullHarness.iteration.evidenceRefs.trend,
-      ],
-    };
-
-    // Cumulative reviewerLogs (append-only)
-    const cumulativeReviewerLogs = [...previousLogs, currentLog];
-
-    summary.fullHarness = {
-      enabled: true,
-      runId: fullHarness.history.runId,
-      calibrationRef: fullHarness.calibrationRef,
-      iterationCount: fullHarness.history.iterations.length,
-      bestIteration: fullHarness.history.bestIteration,
-      status: isCompleted ? "completed" : "in-progress",
-      ...(fullHarness.terminationReason
-        ? { terminationReason: fullHarness.terminationReason }
-        : {}),
-      reviewerSignoff: {
-        reviewerId: request.reviewer,
-        status: isCompleted ? "approved" : "rejected",
-        timestamp: generatedAt,
-        source: "cli",
-      },
-      reviewerLogs: cumulativeReviewerLogs,
-      iterations: fullHarness.history.iterations,
-      scoringTrace: fullHarness.history.scoringTrace,
-      limitations: fullHarness.iteration.limitations,
-    };
-    const evidencePaths = await writeEvidenceBundles({
-      root: request.root,
-      render: { result: renderResult, surface, mode: modeSummary.effective, generatedAt },
-      browserQa: { result: browserQaResult, mode: modeSummary.effective },
-      prototyping: summary,
-      fullHarnessArtifacts: {
-        fakeUiDetection: fullHarness.fakeUiDetection,
-        handoff: fullHarness.handoff,
-        exitReason: fullHarness.exitReason,
-      },
-    });
-
-    return {
-      mode: modeSummary.effective,
-      surface,
-      evidencePaths: {
-        prototyping: evidencePaths.prototypingPath,
-        render: evidencePaths.renderPath,
-        browserQa: evidencePaths.browserQaPath,
-      },
-      generatedAt,
-    };
   }
 
   const evidencePaths = await writeEvidenceBundles({
@@ -482,12 +472,23 @@ async function buildPrototypingSummaryBundle(input: {
   providerIds: string[];
   targetUrl?: string;
   runtimeGate?: {
-    ui: Array<{ route: string; status: number; url?: string }>;
-    api: Array<{ method: string; path: string; status: number }>;
+    ui: Array<{
+      screenId: string;
+      route: string;
+      url?: string;
+      rendered: boolean;
+      browserVisited: boolean;
+      httpStatus?: number;
+      renderEvidenceRefs: string[];
+      browserQaEvidenceRefs: string[];
+    }>;
   };
 }): Promise<PrototypingSummaryBundle> {
   const specsDir = path.join(input.root, ".qfai", "specs");
-  const perSpecCoverage = await buildPerSpecCoverage(specsDir, input.runtimeGate);
+  const perSpecCoverage = await buildPerSpecCoverage(
+    specsDir,
+    runtimeGateToObservation(input.runtimeGate),
+  );
   const perSpecMap = new Map(perSpecCoverage.map((s) => [s.specId, s]));
   const specNames = await safeReadDir(specsDir);
   const specs = specNames
@@ -507,8 +508,8 @@ async function buildPrototypingSummaryBundle(input: {
         checked: { ...perSpec.checked },
         missing: {
           uiRoutes: [...perSpec.missing.uiRoutes],
-          apiEndpoints: [...perSpec.missing.apiEndpoints],
-          dbObjects: [...perSpec.missing.dbObjects],
+          apiEndpoints: [],
+          dbObjects: [],
         },
       };
     });
@@ -533,51 +534,34 @@ async function buildPrototypingSummaryBundle(input: {
   };
 }
 
-async function buildBrowserQaInput(input: {
-  renderResult: RenderRunnerResult;
-  targetUrl?: string;
-  surface: SurfaceType;
-  required: boolean;
-  screenContracts: CanonicalScreenContract[];
-}): Promise<BrowserQaInput> {
-  const capturedHtmlPath = input.renderResult.entries.find(
-    (entry) => entry.status === "captured" && typeof entry.html_path === "string",
-  )?.html_path;
-  const routes = input.screenContracts.map((screen) => screen.route);
-  const browserQaScreenContracts = toBrowserQaScreenContracts(input.screenContracts);
-  if (capturedHtmlPath) {
-    return {
-      surface: input.surface,
-      routes,
-      htmlContent: await readFile(capturedHtmlPath, "utf-8"),
-      required: input.required,
-      executionSource: "html",
-      screenContracts: browserQaScreenContracts,
-    };
-  }
-  if (input.targetUrl) {
-    return {
-      surface: input.surface,
-      routes,
-      targetUrl: input.targetUrl,
-      required: input.required,
-      executionSource: "url",
-      screenContracts: browserQaScreenContracts,
-    };
-  }
-  return {
-    surface: input.surface,
-    routes,
-    required: input.required,
-    executionSource: "none",
-    screenContracts: browserQaScreenContracts,
-  };
-}
-
 async function safeReadDir(dir: string): Promise<string[]> {
   try {
     return await readdir(dir);
   } catch {
     return [];
   }
+}
+
+function runtimeGateToObservation(
+  runtimeGate:
+    | {
+        ui: Array<{
+          screenId: string;
+          route: string;
+          url?: string;
+          rendered: boolean;
+          browserVisited: boolean;
+          httpStatus?: number;
+          renderEvidenceRefs: string[];
+          browserQaEvidenceRefs: string[];
+        }>;
+      }
+    | undefined,
+): RuntimeObservation | undefined {
+  if (!runtimeGate) {
+    return undefined;
+  }
+  return {
+    ui: runtimeGate.ui.map((entry) => ({ ...entry })),
+  };
 }

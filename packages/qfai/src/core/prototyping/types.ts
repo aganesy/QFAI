@@ -51,6 +51,7 @@ export type PrototypingObligations = {
   requireBrowserQaBundle: boolean;
   requireFullHarness: boolean;
   validCombination: boolean;
+  invalidReasonCode?: string | undefined;
   invalidReason?: string | undefined;
 };
 

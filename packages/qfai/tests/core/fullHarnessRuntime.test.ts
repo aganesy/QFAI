@@ -32,7 +32,16 @@ async function withRoot(task: (root: string) => Promise<void>): Promise<void> {
 function makePanelInputs(overrides: Partial<FullHarnessPanelInputs> = {}): FullHarnessPanelInputs {
   return {
     runtimeGate: {
-      uiRoutes: [{ route: "/", status: 200 }],
+      uiRoutes: [
+        {
+          screenId: "home",
+          route: "/",
+          rendered: true,
+          browserVisited: true,
+          renderEvidenceRefs: ["render-001.png", "render-001.html"],
+          browserQaEvidenceRefs: ["browserQa-report.json#/phases/smoke"],
+        },
+      ],
       apiEndpoints: [{ method: "GET", path: "/api/health", status: 200 }],
       evidenceRefs: [".qfai/evidence/prototyping.json#/runtimeGate"],
     },
@@ -49,12 +58,13 @@ function makePanelInputs(overrides: Partial<FullHarnessPanelInputs> = {}): FullH
       experienceFindings: 0,
       visualFindings: 0,
       totalFindings: 0,
-      phasesExecuted: ["navigation", "interaction"],
+      phasesExecuted: ["smoke", "interaction"],
       evidenceRefs: ["browserQa-report.json"],
     },
     uiObservation: {
       screens: [
         {
+          screenId: "home",
           route: "/",
           htmlCaptureRef: "screen-001.html",
           domLabelsFound: ["heading"],
@@ -114,6 +124,41 @@ function makeRequest(
       plateauDelta: 0.02,
       plateauLookback: 3,
     },
+    adapters: {
+      surface: "web",
+      render: {
+        captureEvidence: async () => ({
+          entries: [
+            {
+              capture_id: "cap-1",
+              target: "/",
+              status: "captured",
+              screenshot_path: "render-001.png",
+              html_path: "render-001.html",
+              viewport: "desktop",
+            },
+          ],
+          filesWritten: ["render-001.png", "render-001.html"],
+        }),
+      },
+      browserQa: {
+        runQa: async () => ({
+          phases: [
+            {
+              phase: "smoke",
+              status: "passed",
+              findings: [],
+              repair_suggestions: [],
+              evidence_refs: ["browserQa-report.json#/phases/smoke"],
+              checks_performed: ["smoke passed"],
+            },
+          ],
+          provider: "test",
+          timestamp: new Date().toISOString(),
+        }),
+      },
+    },
+    screenContracts: [{ screenId: "home", route: "/" }],
     panelInputs: makePanelInputs(),
     ...overrides,
   };
@@ -270,6 +315,87 @@ describe("runFullHarness", () => {
       ).rejects.toThrow("full-harness is supported only");
       expect(renderCalled).toBe(false);
       expect(qaCalled).toBe(false);
+    });
+  });
+
+  it("fails closed when surface is missing", async () => {
+    await withRoot(async (root) => {
+      await expect(
+        runFullHarness(
+          makeRequest(root, {
+            adapters: {
+              surface: undefined as never,
+              render: {
+                captureEvidence: async () => ({ entries: [], filesWritten: [] }),
+              },
+              browserQa: {
+                runQa: async () => ({
+                  phases: [],
+                  provider: "test",
+                  timestamp: new Date().toISOString(),
+                }),
+              },
+            },
+          }),
+        ),
+      ).rejects.toThrow("Full-harness requires adapters.surface.");
+    });
+  });
+
+  it("fails closed when screenContracts are missing", async () => {
+    await withRoot(async (root) => {
+      await expect(
+        runFullHarness(
+          makeRequest(root, {
+            screenContracts: [],
+          }),
+        ),
+      ).rejects.toThrow("Full-harness requires canonical screenContracts.");
+    });
+  });
+
+  it("fails closed when Browser QA executes without evidence refs", async () => {
+    await withRoot(async (root) => {
+      await expect(
+        runFullHarness(
+          makeRequest(root, {
+            adapters: {
+              surface: "web",
+              render: {
+                captureEvidence: async () => ({
+                  entries: [
+                    {
+                      capture_id: "cap-1",
+                      target: "/",
+                      status: "captured",
+                      screenshot_path: "render-001.png",
+                      html_path: "render-001.html",
+                      viewport: "desktop",
+                    },
+                  ],
+                  filesWritten: ["render-001.png", "render-001.html"],
+                }),
+              },
+              browserQa: {
+                runQa: async () => ({
+                  phases: [
+                    {
+                      phase: "smoke",
+                      status: "passed",
+                      findings: [],
+                      repair_suggestions: [],
+                      evidence_refs: [],
+                      checks_performed: ["smoke passed"],
+                    },
+                  ],
+                  provider: "test",
+                  timestamp: new Date().toISOString(),
+                }),
+              },
+            },
+          }),
+        ),
+      ).rejects.toThrow("Full-harness requires Browser QA evidence refs");
     });
   });
 

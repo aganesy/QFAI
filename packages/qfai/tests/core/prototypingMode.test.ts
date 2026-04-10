@@ -434,18 +434,14 @@ describe("obligation matrix (shared)", () => {
 
   it("cli + standard requires nothing", () => {
     const o = derivePrototypingObligations({ surface: "cli", effectiveMode: "standard" });
-    expect(o.requireUiFidelity).toBe(false);
-    expect(o.requireRenderBundle).toBe(false);
-    expect(o.requireBrowserQaBundle).toBe(false);
-    expect(o.requireFullHarness).toBe(false);
+    expect(o.validCombination).toBe(false);
+    expect(o.invalidReasonCode).toBe("unsupported_non_ui_prototyping_surface");
   });
 
   it("cli + full-harness is invalid", () => {
     const o = derivePrototypingObligations({ surface: "cli", effectiveMode: "full-harness" });
     expect(o.validCombination).toBe(false);
-    expect(o.requireUiFidelity).toBe(false);
-    expect(o.requireRenderBundle).toBe(false);
-    expect(o.requireBrowserQaBundle).toBe(false);
+    expect(o.invalidReasonCode).toBe("unsupported_non_ui_prototyping_surface");
   });
 
   it("ui-bearing + low-cost requires nothing", () => {
@@ -458,19 +454,14 @@ describe("obligation matrix (shared)", () => {
 
   it("TC-A6: cli + standard → no UI obligations", () => {
     const o = derivePrototypingObligations({ surface: "cli", effectiveMode: "standard" });
-    expect(o.requireUiFidelity).toBe(false);
-    expect(o.requireRenderBundle).toBe(false);
-    expect(o.requireBrowserQaBundle).toBe(false);
-    expect(o.requireFullHarness).toBe(false);
-    expect(o.requireRuntimeGate).toBe(false);
+    expect(o.validCombination).toBe(false);
+    expect(o.invalidReasonCode).toBe("unsupported_non_ui_prototyping_surface");
   });
 
   it("TC-A7: cli + full-harness → invalid combination", () => {
     const o = derivePrototypingObligations({ surface: "cli", effectiveMode: "full-harness" });
     expect(o.validCombination).toBe(false);
-    expect(o.requireUiFidelity).toBe(false);
-    expect(o.requireRenderBundle).toBe(false);
-    expect(o.requireBrowserQaBundle).toBe(false);
+    expect(o.invalidReasonCode).toBe("unsupported_non_ui_prototyping_surface");
   });
 });
 

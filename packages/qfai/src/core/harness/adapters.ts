@@ -35,7 +35,7 @@ export type HarnessObservabilityAdapter = {
 
 export type FullHarnessAdapters = {
   surface: SurfaceType;
-  render?: HarnessRenderAdapter;
-  browserQa?: HarnessBrowserQaAdapter;
+  render: HarnessRenderAdapter;
+  browserQa: HarnessBrowserQaAdapter;
   observability?: HarnessObservabilityAdapter;
 };

@@ -314,10 +314,6 @@ const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "Coverage Matrix rows in prototyping evidence include every `.qfai/specs/spec-*` entry.",
   "QFAI-PROT-112":
     "Per-spec UI checks satisfy declared route counts and leave no unresolved UI routes.",
-  "QFAI-PROT-113":
-    "Per-spec API checks satisfy declared endpoint counts and runtime gate contains no 404 statuses.",
-  "QFAI-PROT-114":
-    "Per-spec DB checks satisfy declared object counts and leave no unresolved DB objects.",
   "QFAI-PROT-153":
     "prototyping.yaml invalid; canonical namespaced prototyping block is required, top-level recommendation keys are not supported, and semantic mismatch (recommended_mode not in allowed_modes) is invalid.",
   "QFAI-PROT-154": "prototyping.yaml allowed_modes must include recommended_mode.",
@@ -357,9 +353,8 @@ const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-PROT-263":
     "browser QA bundle exists but executed=false for full-harness ui-bearing project.",
   "QFAI-PROT-264": "fullHarness reviewer signoff is incomplete (missing reviewer or timestamp).",
-  "QFAI-PROT-265":
-    "full-harness evidence present without calibration configuration in qfai.config.yaml.",
-  "QFAI-PROT-266": "calibration threshold configured but scoring trace is empty.",
+  "QFAI-PROT-265": "full-harness calibration pack could not be resolved from packPath.",
+  "QFAI-PROT-266": "full-harness evidence exists but scoring trace is empty.",
   "QFAI-PROT-273": "browser QA bundle schema is invalid (missing or malformed browserQa block).",
   "QFAI-PROT-274":
     "browser QA executed/status contradiction (e.g. executed=true but status!=completed).",

@@ -44,8 +44,16 @@ export type PrototypingSummaryBundle = {
   };
   missingRequiredEvidence?: string[];
   runtimeGate?: {
-    ui: Array<{ route: string; status: number }>;
-    api: Array<{ method: string; path: string; status: number }>;
+    ui: Array<{
+      screenId: string;
+      route: string;
+      url?: string;
+      rendered: boolean;
+      browserVisited: boolean;
+      httpStatus?: number;
+      renderEvidenceRefs: string[];
+      browserQaEvidenceRefs: string[];
+    }>;
   };
   uiFidelity?: {
     mode: "interactive" | "skeleton";

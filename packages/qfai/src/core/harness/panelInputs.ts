@@ -7,8 +7,16 @@
  */
 
 export type RuntimeGateEvidence = {
-  uiRoutes: Array<{ route: string; status: number; url?: string }>;
-  apiEndpoints: Array<{ method: string; path: string; status: number }>;
+  uiRoutes: Array<{
+    screenId: string;
+    route: string;
+    url?: string;
+    rendered: boolean;
+    browserVisited: boolean;
+    httpStatus?: number;
+    renderEvidenceRefs: string[];
+    browserQaEvidenceRefs: string[];
+  }>;
   evidenceRefs: string[];
 };
 
@@ -36,10 +44,14 @@ export type ScreenObservation = {
   htmlCaptureRef: string;
   domLabelsFound: string[];
   elementsPlaced: number;
+  actionsDeclared?: number;
+  actionsObserved?: number;
   actionsWired: number;
+  missingActions?: string[];
   mockPathFindings: Array<{ id: string; status: "fail" | "finding" }>;
   browserQaEvidenceRefs: string[];
   browserQaObserved: boolean;
+  evidenceMissing?: boolean;
 };
 
 export type UiObservationSummary = {
@@ -50,18 +62,12 @@ export type UiObservationSummary = {
 export type SpecCoverageSummary = {
   declared: {
     uiRoutes: number;
-    apiEndpoints: number;
-    dbObjects: number;
   };
   checked: {
     uiOk: number;
-    apiNon404: number;
-    dbPresent: number;
   };
   missing: {
     uiRoutes: string[];
-    apiEndpoints: string[];
-    dbObjects: string[];
   };
   evidenceRefs: string[];
 };

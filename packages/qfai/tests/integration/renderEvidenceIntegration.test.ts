@@ -91,10 +91,23 @@ function buildMinimalEvidence(specIds: string[]): object {
       checked: { uiOk: 1, apiNon404: 0, dbPresent: 0 },
       missing: { uiRoutes: [], apiEndpoints: [], dbObjects: [] },
     })),
-    runtimeGate: { ui: [{ route: "/", status: 200 }], api: [] },
+    runtimeGate: {
+      ui: [
+        {
+          screenId: "screen-orders",
+          route: "/orders",
+          url: "http://127.0.0.1:4173/orders",
+          rendered: true,
+          browserVisited: true,
+          httpStatus: 200,
+          renderEvidenceRefs: [],
+          browserQaEvidenceRefs: [],
+        },
+      ],
+    },
     meta: {
       generatedAt: "2026-03-31T00:00:00Z",
-      toolVersion: "1.7.14",
+      toolVersion: "1.7.15",
       commands: ["prototyping"],
     },
   };

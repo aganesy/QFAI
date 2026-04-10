@@ -49,8 +49,6 @@ Optional:
 | desktop / low-cost     | required | optional    | optional (`skeleton` allowed) | optional        | optional   | absent      |
 | desktop / standard     | required | optional    | required                      | optional        | optional   | absent      |
 | desktop / full-harness | required | required    | required                      | required        | required   | required    |
-| cli / low-cost         | required | optional    | n/a                           | n/a             | n/a        | absent      |
-| cli / standard         | required | optional    | n/a                           | n/a             | n/a        | absent      |
 | mixed / low-cost       | required | optional    | optional (`skeleton` allowed) | optional        | optional   | absent      |
 | mixed / standard       | required | optional    | required                      | optional        | optional   | absent      |
 | mixed / full-harness   | required | required    | required                      | required        | required   | required    |
@@ -61,18 +59,11 @@ Interpretation:
 - `optional`: if present, schema must be valid
 - `n/a`: absent is normal success
 
-## cli surface canonical semantics
+## Non-UI surface semantics
 
-For `cli` surface, `full-harness` is invalid. In `low-cost` / `standard`, the following are normal success when absent:
+Prototyping is UI-only. `cli`, API-only, backend-only, and `ui_bearing: false` surfaces are not prototyping execution targets. Contradictory UI-only payloads on `cli` surface are validation errors. Equivalent contradictory prototyping payloads on other non-UI surfaces are also validation errors.
 
-- `uiFidelity`
-- render evidence bundle
-- browser QA bundle
-- `runtimeGate.ui`
-
-`ui_bearing: false` specs are not prototyping execution targets. Contradictory UI-only payloads on `cli` surface are validation errors.
-
-For UI-bearing `full-harness`, canonical screen contracts are mandatory. Render targets, Browser QA routes, `runtimeGate.ui[].route`, `uiFidelity.screens[]`, and `uiObservation` must all use the canonical route paths from `uiux/40_screen_contracts.md`. Full URLs belong in separate target fields and must not replace route semantics.
+For UI-bearing `full-harness`, canonical screen contracts are mandatory. Render targets, Browser QA routes, `runtimeGate.ui[].route`, `uiFidelity.screens[]`, and `uiObservation` must all use the canonical route paths from `uiux/40_screen_contracts.md`. Full URLs belong in separate target fields and must not replace route semantics. `runtimeGate` is an observed-only UI route ledger; synthetic status codes and API/DB prototyping coverage are invalid.
 
 ## uiFidelity notes
 
@@ -112,6 +103,7 @@ When `mode.effective = "full-harness"`:
 - `limitations` is mandatory — empty array is valid, absent is not
 - `reviewerId` must not be a placeholder (e.g., "qfai", "default", "none", "unknown")
 - `observed` values in uiFidelity must come from real measurement, not copied from `expected`
+- `actionsWired` must be based on actionable control coverage (`actionsDeclared` / `actionsObserved` / `missingActions`), not finding counts
 - `mockPaths` must come from real browser QA findings and remain `fail|finding` only; `status="pass"` is forbidden (QFAI-PROT-306)
 - `specCoverage` must come from real spec/runtime evidence, not zero-seeded (QFAI-PROT-305)
 - `reviewerLogs[]` count must equal `iterationCount` — one log per iteration (QFAI-PROT-304)
@@ -119,6 +111,7 @@ When `mode.effective = "full-harness"`:
 - `calibrationRef.packVersion` must be resolved from pack metadata, not hardcoded (QFAI-PROT-307)
 - Iteration-level `reviewerId` must not be a placeholder (QFAI-PROT-309)
 - `iterations[].evidenceRefs.browserQa` is mandatory whenever Browser QA executed. Summary-only Browser QA refs are insufficient.
+- Browser QA evidence is per-screen mandatory in full-harness. Reusing generic phase refs across every screen is invalid.
 
 **Prohibited patterns (current):**
 
@@ -220,8 +213,8 @@ Rules:
   "specs": [
     {
       "specId": "spec-0001",
-      "declared": { "uiRoutes": 1, "apiEndpoints": 1, "dbObjects": 1 },
-      "checked": { "uiOk": 1, "apiNon404": 1, "dbPresent": 1 },
+      "declared": { "uiRoutes": 1, "apiEndpoints": 0, "dbObjects": 0 },
+      "checked": { "uiOk": 1, "apiNon404": 0, "dbPresent": 0 },
       "missing": { "uiRoutes": [], "apiEndpoints": [], "dbObjects": [] }
     }
   ],

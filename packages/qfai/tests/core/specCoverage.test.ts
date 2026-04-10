@@ -8,10 +8,25 @@ describe("specCoverage", () => {
       "missing-specs-dir",
       {
         ui: [
-          { route: "/dashboard", status: 200, url: "http://localhost:3000/dashboard" },
-          { route: "/settings", status: 200, url: "http://localhost:3000/settings" },
+          {
+            screenId: "dashboard",
+            route: "/dashboard",
+            url: "http://localhost:3000/dashboard",
+            rendered: true,
+            browserVisited: false,
+            renderEvidenceRefs: ["render/dashboard.html"],
+            browserQaEvidenceRefs: [],
+          },
+          {
+            screenId: "settings",
+            route: "/settings",
+            url: "http://localhost:3000/settings",
+            rendered: false,
+            browserVisited: true,
+            renderEvidenceRefs: [],
+            browserQaEvidenceRefs: ["browser-qa.json#/settings"],
+          },
         ],
-        api: [],
       },
       ".qfai/evidence",
     );

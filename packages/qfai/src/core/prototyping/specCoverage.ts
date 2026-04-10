@@ -8,6 +8,7 @@
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import type { SpecCoverageSummary } from "../harness/panelInputs.js";
+import type { RuntimeObservation } from "./runtimeObservation.js";
 
 type SpecDeclaration = {
   specId: string;
@@ -76,51 +77,29 @@ function extractDeclarations(content: string, kind: string): string[] {
   return results;
 }
 
-export function collectObservedRuntimeArtifacts(runtimeGate?: {
-  ui: Array<{ route: string; status: number }>;
-  api: Array<{ method: string; path: string; status: number }>;
-}): {
+export function collectObservedRuntimeArtifacts(runtimeObservation?: RuntimeObservation): {
   uiOk: string[];
-  apiNon404: string[];
 } {
-  if (!runtimeGate) return { uiOk: [], apiNon404: [] };
+  if (!runtimeObservation) return { uiOk: [] };
 
-  const uiOk = runtimeGate.ui
-    .filter((entry) => entry.status >= 200 && entry.status < 400)
-    .map((entry) => entry.route);
-
-  const apiNon404 = runtimeGate.api
-    .filter((entry) => entry.status !== 404)
-    .map((entry) => `${entry.method} ${entry.path}`);
-
-  return { uiOk, apiNon404 };
+  const uiOk = runtimeObservation.ui.map((entry) => entry.route);
+  return { uiOk };
 }
 
 export async function buildSpecCoverageSummary(
   specsDir: string,
-  runtimeGate?: {
-    ui: Array<{ route: string; status: number }>;
-    api: Array<{ method: string; path: string; status: number }>;
-  },
+  runtimeObservation?: RuntimeObservation,
   evidenceDir?: string,
 ): Promise<SpecCoverageSummary> {
   const declared = await loadDeclaredSpecArtifacts(specsDir);
-  const observed = collectObservedRuntimeArtifacts(runtimeGate);
+  const observed = collectObservedRuntimeArtifacts(runtimeObservation);
 
   let totalUiRoutes = 0;
-  let totalApiEndpoints = 0;
-  let totalDbObjects = 0;
   let uiOk = 0;
-  let apiNon404 = 0;
-  const dbPresent = 0;
   const missingUiRoutes: string[] = [];
-  const missingApiEndpoints: string[] = [];
-  const missingDbObjects: string[] = [];
 
   for (const spec of declared) {
     totalUiRoutes += spec.uiRoutes.length;
-    totalApiEndpoints += spec.apiEndpoints.length;
-    totalDbObjects += spec.dbObjects.length;
 
     for (const route of spec.uiRoutes) {
       if (observed.uiOk.includes(route)) {
@@ -130,20 +109,10 @@ export async function buildSpecCoverageSummary(
       }
     }
 
-    for (const endpoint of spec.apiEndpoints) {
-      if (observed.apiNon404.some((a) => a.includes(endpoint))) {
-        apiNon404++;
-      } else {
-        missingApiEndpoints.push(endpoint);
-      }
-    }
-
-    // DB objects: v1.7.15 fail-closed — declared DB objects with no observation is an error
-    if (spec.dbObjects.length > 0) {
+    if (spec.apiEndpoints.length > 0 || spec.dbObjects.length > 0) {
       throw new Error(
-        `Spec coverage failure: spec "${spec.specId}" declares ${spec.dbObjects.length} DB objects ` +
-          `but DB object observation is not implemented. ` +
-          `Either implement DB observation or remove DB object declarations.`,
+        `Spec coverage failure: spec "${spec.specId}" declares non-UI prototyping coverage. ` +
+          `packages/qfai prototyping supports UI route coverage only.`,
       );
     }
   }
@@ -159,18 +128,12 @@ export async function buildSpecCoverageSummary(
   return {
     declared: {
       uiRoutes: totalUiRoutes,
-      apiEndpoints: totalApiEndpoints,
-      dbObjects: totalDbObjects,
     },
     checked: {
       uiOk,
-      apiNon404,
-      dbPresent,
     },
     missing: {
       uiRoutes: missingUiRoutes,
-      apiEndpoints: missingApiEndpoints,
-      dbObjects: missingDbObjects,
     },
     evidenceRefs,
   };
@@ -185,19 +148,14 @@ export type PerSpecCoverage = {
 
 export async function buildPerSpecCoverage(
   specsDir: string,
-  runtimeGate?: {
-    ui: Array<{ route: string; status: number }>;
-    api: Array<{ method: string; path: string; status: number }>;
-  },
+  runtimeObservation?: RuntimeObservation,
 ): Promise<PerSpecCoverage[]> {
   const declared = await loadDeclaredSpecArtifacts(specsDir);
-  const observed = collectObservedRuntimeArtifacts(runtimeGate);
+  const observed = collectObservedRuntimeArtifacts(runtimeObservation);
 
   return declared.map((spec) => {
     let uiOk = 0;
-    let apiNon404 = 0;
     const missingUiRoutes: string[] = [];
-    const missingApiEndpoints: string[] = [];
 
     for (const route of spec.uiRoutes) {
       if (observed.uiOk.includes(route)) {
@@ -207,30 +165,22 @@ export async function buildPerSpecCoverage(
       }
     }
 
-    for (const endpoint of spec.apiEndpoints) {
-      if (observed.apiNon404.some((a) => a.includes(endpoint))) {
-        apiNon404++;
-      } else {
-        missingApiEndpoints.push(endpoint);
-      }
-    }
-
     return {
       specId: spec.specId,
       declared: {
         uiRoutes: spec.uiRoutes.length,
-        apiEndpoints: spec.apiEndpoints.length,
-        dbObjects: spec.dbObjects.length,
+        apiEndpoints: 0,
+        dbObjects: 0,
       },
       checked: {
         uiOk,
-        apiNon404,
+        apiNon404: 0,
         dbPresent: 0,
       },
       missing: {
         uiRoutes: missingUiRoutes,
-        apiEndpoints: missingApiEndpoints,
-        dbObjects: [...spec.dbObjects],
+        apiEndpoints: [],
+        dbObjects: [],
       },
     };
   });

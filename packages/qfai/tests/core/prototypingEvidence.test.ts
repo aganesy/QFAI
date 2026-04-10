@@ -25,7 +25,7 @@ describe("validatePrototypingEvidence", () => {
     });
   });
 
-  it("accepts cli standard evidence without ui-specific payloads", async () => {
+  it("rejects cli standard evidence because prototyping is UI-only", async () => {
     await withTempRoot(async (root) => {
       await seedSpecs(root, ["0001"]);
       await seedEvidence(root, {
@@ -39,7 +39,7 @@ describe("validatePrototypingEvidence", () => {
       });
 
       const issues = await validatePrototypingEvidence(root, defaultConfig);
-      expect(issues).toEqual([]);
+      expect(issues.some((item) => item.code === "QFAI-PROT-172")).toBe(true);
     });
   });
 
@@ -58,7 +58,7 @@ describe("validatePrototypingEvidence", () => {
       });
 
       const issues = await validatePrototypingEvidence(root, defaultConfig);
-      expect(issues.some((item) => item.code === "QFAI-PROT-175")).toBe(true);
+      expect(issues.some((item) => item.code === "QFAI-PROT-172")).toBe(true);
     });
   });
 
@@ -750,6 +750,23 @@ type EvidencePayload = {
 async function seedEvidence(root: string, payload: EvidencePayload): Promise<void> {
   const evidenceRoot = path.join(root, ".qfai", "evidence");
   await mkdir(evidenceRoot, { recursive: true });
+  if (payload.fullHarness) {
+    await writeFile(
+      path.join(evidenceRoot, "calibration.yaml"),
+      [
+        "version: 1.7.15",
+        "thresholds:",
+        "  accept: 0.8",
+        "  refine: 0.5",
+        "maxIterations: 15",
+        "plateauDelta: 0.02",
+        "plateauLookback: 3",
+        "examples: []",
+        "",
+      ].join("\n"),
+      "utf-8",
+    );
+  }
   await writeFile(path.join(evidenceRoot, "prototyping.md"), "# Prototyping Evidence\n", "utf-8");
   await writeFile(
     path.join(evidenceRoot, "prototyping.json"),
@@ -763,7 +780,21 @@ async function seedEvidence(root: string, payload: EvidencePayload): Promise<voi
           rationale: "default standard mode",
         },
         ...(payload.fullHarness ? { fullHarness: payload.fullHarness } : {}),
-        ...(payload.runtimeGate ? { runtimeGate: payload.runtimeGate } : {}),
+        ...(payload.runtimeGate
+          ? {
+              runtimeGate: {
+                ui: payload.runtimeGate.ui.map((entry) => ({
+                  screenId: entry.route.replace(/[^a-z0-9]+/gi, "-") || "root",
+                  route: entry.route,
+                  rendered: entry.status >= 200 && entry.status < 400,
+                  browserVisited: entry.status >= 200 && entry.status < 400,
+                  ...(entry.status > 0 ? { httpStatus: entry.status } : {}),
+                  renderEvidenceRefs: [".qfai/evidence/render.json#/screens/0"],
+                  browserQaEvidenceRefs: [".qfai/evidence/browser-qa.json#/findings"],
+                })),
+              },
+            }
+          : {}),
         ...(payload.uiFidelity ? { uiFidelity: payload.uiFidelity } : {}),
         meta: {
           generatedAt: "2026-04-04T00:00:00.000Z",
@@ -786,13 +817,13 @@ function buildSpecRow(
     specId,
     declared: {
       uiRoutes: counts.ui,
-      apiEndpoints: counts.api,
-      dbObjects: counts.db,
+      apiEndpoints: 0,
+      dbObjects: 0,
     },
     checked: {
       uiOk: counts.ui,
-      apiNon404: counts.api,
-      dbPresent: counts.db,
+      apiNon404: 0,
+      dbPresent: 0,
     },
     missing: {
       uiRoutes: [],
@@ -874,8 +905,8 @@ function buildV2FullHarness(opts: {
     runId: opts.runId,
     calibrationRef: {
       configPath: "qfai.config.yaml",
-      packPath: ".qfai/discussion/discussion-20260404000000000",
-      packVersion: "1.0.0",
+      packPath: ".qfai/evidence/calibration.yaml",
+      packVersion: "1.7.15",
     },
     iterationCount: opts.scores.length,
     bestIteration: opts.bestIteration,

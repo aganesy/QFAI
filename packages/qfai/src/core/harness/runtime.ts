@@ -46,7 +46,8 @@ export type FullHarnessRequest = {
     plateauDelta: number;
     plateauLookback: number;
   };
-  adapters?: FullHarnessAdapters;
+  adapters: FullHarnessAdapters;
+  screenContracts: Array<{ screenId: string; route: string }>;
   panelInputs: FullHarnessPanelInputs;
 };
 
@@ -71,19 +72,20 @@ export type FullHarnessResult = {
  * 4. Computes termination
  */
 export async function runFullHarness(request: FullHarnessRequest): Promise<FullHarnessResult> {
-  const adapters = request.adapters;
-  const surface = adapters?.surface;
-  const requiresVisualEvidence = surface ? requiresVisualBrowserEvidence(surface) : false;
+  const { adapters } = request;
+  const surface = adapters.surface;
+  if (typeof surface !== "string" || surface.length === 0) {
+    throw new Error("Full-harness requires adapters.surface.");
+  }
 
-  if (surface && !requiresVisualEvidence) {
+  if (request.screenContracts.length === 0) {
+    throw new Error("Full-harness requires canonical screenContracts.");
+  }
+
+  const requiresVisualEvidence = requiresVisualBrowserEvidence(surface);
+
+  if (!requiresVisualEvidence) {
     throw new Error(FULL_HARNESS_INVALID_COMBINATION_MESSAGE);
-  }
-
-  if (requiresVisualEvidence && !adapters?.render) {
-    throw new Error("Full-harness requires a render adapter for UI-bearing surfaces.");
-  }
-  if (requiresVisualEvidence && !adapters?.browserQa) {
-    throw new Error("Full-harness requires a browser QA adapter for UI-bearing surfaces.");
   }
 
   const renderResults: RenderRunnerResult[] = [];
@@ -91,50 +93,42 @@ export async function runFullHarness(request: FullHarnessRequest): Promise<FullH
   const renderRefs: string[] = [];
   const browserQaRefs: string[] = [];
 
-  if (requiresVisualEvidence && adapters?.render) {
-    const renderResult = await adapters.render.captureEvidence(1);
-    renderResults.push(renderResult);
-    renderRefs.push(...renderResult.filesWritten);
-    const hasCapturedRender = renderResult.entries.some((entry) => entry.status === "captured");
-    const hasRenderFailure = renderResult.entries.some((entry) => entry.status === "failed");
-    if (!hasCapturedRender || hasRenderFailure) {
-      throw new Error("Full-harness requires successful render capture for UI-bearing surfaces.");
-    }
+  const renderResult = await adapters.render.captureEvidence(1);
+  renderResults.push(renderResult);
+  renderRefs.push(...renderResult.filesWritten);
+  const hasCapturedRender = renderResult.entries.some((entry) => entry.status === "captured");
+  const hasRenderFailure = renderResult.entries.some((entry) => entry.status === "failed");
+  if (!hasCapturedRender || hasRenderFailure) {
+    throw new Error("Full-harness requires successful render capture for UI-bearing surfaces.");
   }
 
-  if (requiresVisualEvidence && adapters?.browserQa) {
-    const qaResult = await adapters.browserQa.runQa(1);
-    browserQaResults.push(qaResult);
-    const aggregatedBrowserQaRefs = new Set<string>();
-    for (const phase of qaResult.phases) {
-      for (const ref of phase.evidence_refs) {
+  const qaResult = await adapters.browserQa.runQa(1);
+  browserQaResults.push(qaResult);
+  const aggregatedBrowserQaRefs = new Set<string>();
+  for (const phase of qaResult.phases) {
+    for (const ref of phase.evidence_refs) {
+      aggregatedBrowserQaRefs.add(ref);
+    }
+    for (const finding of phase.findings) {
+      for (const ref of finding.evidence_refs) {
         aggregatedBrowserQaRefs.add(ref);
       }
-      for (const finding of phase.findings) {
-        for (const ref of finding.evidence_refs) {
-          aggregatedBrowserQaRefs.add(ref);
-        }
-      }
-    }
-    browserQaRefs.push(...aggregatedBrowserQaRefs);
-    const hasExecutedPhase = qaResult.phases.some(
-      (phase) => phase.status === "executed" || phase.status === "passed",
-    );
-    const hasBrowserQaFailure = qaResult.phases.some((phase) => phase.status === "failed");
-    if (!hasExecutedPhase || hasBrowserQaFailure) {
-      throw new Error(
-        "Full-harness requires successful browser QA execution for UI-bearing surfaces.",
-      );
-    }
-    if (browserQaRefs.length === 0) {
-      throw new Error(
-        "Full-harness requires Browser QA evidence refs for executed Browser QA phases.",
-      );
     }
   }
-
-  if (browserQaRefs.length === 0 && request.panelInputs.browserQa.executed) {
-    browserQaRefs.push(...request.panelInputs.browserQa.evidenceRefs);
+  browserQaRefs.push(...aggregatedBrowserQaRefs);
+  const hasExecutedPhase = qaResult.phases.some(
+    (phase) => phase.status === "executed" || phase.status === "passed",
+  );
+  const hasBrowserQaFailure = qaResult.phases.some((phase) => phase.status === "failed");
+  if (!hasExecutedPhase || hasBrowserQaFailure) {
+    throw new Error(
+      "Full-harness requires successful browser QA execution for UI-bearing surfaces.",
+    );
+  }
+  if (browserQaRefs.length === 0) {
+    throw new Error(
+      "Full-harness requires Browser QA evidence refs for executed Browser QA phases.",
+    );
   }
 
   // Validate and score panels from real evidence inputs only
@@ -169,7 +163,7 @@ export async function runFullHarness(request: FullHarnessRequest): Promise<FullH
 
   const measurementResult = await runMeasurement(measurementInput);
 
-  if (adapters?.observability) {
+  if (adapters.observability) {
     adapters.observability.recordIteration({
       iteration: measurementResult.iteration.iteration,
       score: measurementResult.iteration.weightedTotal,
@@ -184,9 +178,7 @@ export async function runFullHarness(request: FullHarnessRequest): Promise<FullH
     packVersion: request.calibration.packVersion,
   };
 
-  const fakeUiDetection = requiresVisualEvidence
-    ? detectFakeUi({ renderResults, browserQaResults })
-    : { detected: false, reasons: [], evidence_refs: [], confidence: "low" as const };
+  const fakeUiDetection = detectFakeUi({ renderResults, browserQaResults });
 
   const terminationStatus = measurementResult.terminationReason;
   const exitReason: FullHarnessExitReason = fakeUiDetection.detected

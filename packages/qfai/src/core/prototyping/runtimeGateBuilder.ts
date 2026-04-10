@@ -1,38 +1,26 @@
-import type { PrototypingSurface } from "./types.js";
-import { requiresVisualBrowserEvidence } from "../detection/surfaceType.js";
+import type { RuntimeObservation } from "./runtimeObservation.js";
 
-export function buildRuntimeGate(input: {
-  surface: PrototypingSurface;
-  targetUrl?: string;
-  routes?: string[];
-}):
+export function buildRuntimeGate(input: { runtimeObservation: RuntimeObservation }):
   | {
-      ui: Array<{ route: string; status: number; url?: string }>;
-      api: Array<{ method: string; path: string; status: number }>;
+      ui: Array<{
+        screenId: string;
+        route: string;
+        url?: string;
+        rendered: boolean;
+        browserVisited: boolean;
+        httpStatus?: number;
+        renderEvidenceRefs: string[];
+        browserQaEvidenceRefs: string[];
+      }>;
       evidenceRefs: string[];
     }
   | undefined {
-  if (!requiresVisualBrowserEvidence(input.surface)) {
-    return undefined;
-  }
-
-  if (!input.routes || input.routes.length === 0) {
+  if (input.runtimeObservation.ui.length === 0) {
     return undefined;
   }
 
   return {
-    ui: input.routes.map((route) => ({
-      route,
-      status: 200,
-      ...(input.targetUrl
-        ? { url: new URL(route, ensureTrailingSlash(input.targetUrl)).toString() }
-        : {}),
-    })),
-    api: [],
+    ui: input.runtimeObservation.ui.map((entry) => ({ ...entry })),
     evidenceRefs: [".qfai/evidence/prototyping.json#/runtimeGate"],
   };
-}
-
-function ensureTrailingSlash(value: string): string {
-  return value.endsWith("/") ? value : `${value}/`;
 }

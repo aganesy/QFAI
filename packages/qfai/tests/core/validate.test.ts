@@ -70,25 +70,30 @@ describe("validateProject (spec pack)", { timeout: 15000 }, () => {
     });
   });
 
-  it("fails when prototyping runtime gate records API 404", async () => {
+  it("fails when prototyping evidence declares API coverage on UI-only contract", async () => {
     await withProject(async (root) => {
       const evidencePath = path.join(root, ".qfai", "evidence", "prototyping.json");
       const evidence = JSON.parse(await readFile(evidencePath, "utf-8")) as Record<string, unknown>;
-      evidence.runtimeGate = {
-        ui: [{ route: "/orders", status: 200 }],
-        api: [{ method: "GET", path: "/api/orders", status: 404 }],
-      };
+      evidence.specs = [
+        {
+          specId: "spec-0001",
+          declared: { uiRoutes: 1, apiEndpoints: 1, dbObjects: 0 },
+          checked: { uiOk: 1, apiNon404: 1, dbPresent: 0 },
+          missing: { uiRoutes: [], apiEndpoints: ["/api/orders"], dbObjects: [] },
+        },
+      ];
       await writeFile(evidencePath, `${JSON.stringify(evidence, null, 2)}\n`);
 
       const result = await validateProject(root);
       const issue = result.issues.find(
         (item) =>
-          item.code === "QFAI-PROT-113" && item.rule === "prototypingEvidence.apiRuntime404",
+          item.code === "QFAI-PROT-313" &&
+          item.rule === "prototypingEvidence.nonUiCoverageDeclaration",
       );
 
       expect(issue).toBeDefined();
       expect(issue?.severity).toBe("error");
-      expect(issue?.refs).toContain("GET /api/orders");
+      expect(issue?.refs).toContain("spec-0001");
     });
   });
 
@@ -1837,13 +1842,13 @@ async function seedPrototypingEvidenceFixture(root: string): Promise<void> {
             specId: "spec-0001",
             declared: {
               uiRoutes: 1,
-              apiEndpoints: 1,
-              dbObjects: 1,
+              apiEndpoints: 0,
+              dbObjects: 0,
             },
             checked: {
               uiOk: 1,
-              apiNon404: 1,
-              dbPresent: 1,
+              apiNon404: 0,
+              dbPresent: 0,
             },
             missing: {
               uiRoutes: [],
@@ -1858,8 +1863,17 @@ async function seedPrototypingEvidenceFixture(root: string): Promise<void> {
           rationale: "UI validation is recommended.",
         },
         runtimeGate: {
-          ui: [{ route: "/orders", status: 200 }],
-          api: [{ method: "GET", path: "/api/orders", status: 200 }],
+          ui: [
+            {
+              screenId: "orders",
+              route: "/orders",
+              rendered: true,
+              browserVisited: true,
+              httpStatus: 200,
+              renderEvidenceRefs: [".qfai/evidence/render.json#/screens/0"],
+              browserQaEvidenceRefs: [".qfai/evidence/browser-qa.json#/findings"],
+            },
+          ],
         },
         uiFidelity: {
           version: "0.1",

@@ -18,10 +18,13 @@ export function scoreL1(inputs: FullHarnessPanelInputs): FullHarnessPanelScore {
 
   // Runtime gate score
   const rg = inputs.runtimeGate;
-  const totalRgChecks = rg.uiRoutes.length + rg.apiEndpoints.length;
-  const rgOk =
-    rg.uiRoutes.filter((r) => r.status >= 200 && r.status < 400).length +
-    rg.apiEndpoints.filter((e) => e.status !== 404).length;
+  const totalRgChecks = rg.uiRoutes.length;
+  const rgOk = rg.uiRoutes.filter(
+    (r) =>
+      r.browserVisited ||
+      r.rendered ||
+      (r.httpStatus !== undefined && r.httpStatus >= 200 && r.httpStatus < 400),
+  ).length;
   const rgScore = totalRgChecks > 0 ? rgOk / totalRgChecks : 0;
   axes.push({
     axisId: "runtime-gate",
@@ -63,8 +66,8 @@ export function scoreL1(inputs: FullHarnessPanelInputs): FullHarnessPanelScore {
 
   // Spec coverage
   const spc = inputs.specCoverage;
-  const totalDeclared = spc.declared.uiRoutes + spc.declared.apiEndpoints + spc.declared.dbObjects;
-  const totalChecked = spc.checked.uiOk + spc.checked.apiNon404 + spc.checked.dbPresent;
+  const totalDeclared = spc.declared.uiRoutes;
+  const totalChecked = spc.checked.uiOk;
   const spcScore = totalDeclared > 0 ? totalChecked / totalDeclared : 0;
   axes.push({
     axisId: "spec-coverage",

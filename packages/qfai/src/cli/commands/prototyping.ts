@@ -5,7 +5,7 @@ import { findLatestDiscussionPackDir } from "../../core/discussionPack.js";
 import { assertCanonicalPrototypingSurface } from "../../core/domain/surface.js";
 import {
   derivePrototypingObligations,
-  FULL_HARNESS_INVALID_COMBINATION_MESSAGE,
+  NON_UI_PROTOTYPING_SURFACE_MESSAGE,
 } from "../../core/prototyping/mode.js";
 import { runPrototypingExecution } from "../../core/prototyping/execution.js";
 
@@ -19,19 +19,29 @@ export async function runPrototypingCommand(options: {
   changeSummary?: string[];
   limitations?: string[];
 }): Promise<void> {
-  if (options.mode === "full-harness") {
-    const resolved = await loadConfig(options.root);
-    const discussionRoot = resolvePath(options.root, resolved.config, "discussionDir");
-    const latestPack = await findLatestDiscussionPackDir(discussionRoot);
-    const classification = await readValidatedClassification(latestPack ?? options.root);
-    if (classification) {
-      const obligations = derivePrototypingObligations({
-        surface: assertCanonicalPrototypingSurface(classification.primary_surface),
-        effectiveMode: "full-harness",
-      });
-      if (!obligations.validCombination) {
-        throw new Error(obligations.invalidReason ?? FULL_HARNESS_INVALID_COMBINATION_MESSAGE);
-      }
+  const resolved = await loadConfig(options.root);
+  const discussionRoot = resolvePath(options.root, resolved.config, "discussionDir");
+  const latestPack = await findLatestDiscussionPackDir(discussionRoot);
+  const classification = await readValidatedClassification(latestPack ?? options.root);
+  if (classification) {
+    if (!classification.ui_bearing || classification.primary_surface === "non-ui") {
+      throw new Error(NON_UI_PROTOTYPING_SURFACE_MESSAGE);
+    }
+    const obligations = derivePrototypingObligations({
+      surface: assertCanonicalPrototypingSurface(classification.primary_surface),
+      effectiveMode: options.mode ?? "standard",
+    });
+    if (!obligations.validCombination) {
+      throw new Error(obligations.invalidReason ?? NON_UI_PROTOTYPING_SURFACE_MESSAGE);
+    }
+  } else if (options.mode) {
+    // Execution does the strict contract check, but keep CLI rejection aligned when the mode is explicit.
+    const fallbackObligations = derivePrototypingObligations({
+      surface: "web",
+      effectiveMode: options.mode,
+    });
+    if (!fallbackObligations.validCombination) {
+      throw new Error(fallbackObligations.invalidReason ?? NON_UI_PROTOTYPING_SURFACE_MESSAGE);
     }
   }
 

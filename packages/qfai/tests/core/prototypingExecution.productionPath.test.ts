@@ -11,6 +11,7 @@ import {
   requiresVisualBrowserEvidence,
 } from "../../src/core/prototyping/mode.js";
 import { buildRuntimeGate } from "../../src/core/prototyping/runtimeGateBuilder.js";
+import { buildRuntimeObservation } from "../../src/core/prototyping/runtimeObservation.js";
 import type { PrototypingMode, PrototypingSurface } from "../../src/core/prototyping/types.js";
 
 describe("prototyping execution production path", () => {
@@ -43,39 +44,52 @@ describe("prototyping execution production path", () => {
 
   describe("UI-bearing + full-harness + targetUrl absent", () => {
     it("runtime gate is undefined when targetUrl is absent for UI-bearing", () => {
-      const gate = buildRuntimeGate({ surface: "web" });
+      const gate = buildRuntimeGate({ runtimeObservation: { ui: [] } });
       expect(gate).toBeUndefined();
     });
 
-    it("runtime gate is populated with canonical routes when routes are present", () => {
-      const gate = buildRuntimeGate({
-        surface: "web",
+    it("runtime gate is populated only from observed canonical routes", () => {
+      const observation = buildRuntimeObservation({
+        screenContracts: [
+          { name: "Dashboard", screenId: "dashboard", route: "/dashboard", primaryTasks: [] },
+        ],
+        renderResult: {
+          entries: [
+            {
+              capture_id: "dashboard",
+              target: "/dashboard",
+              status: "captured",
+              screenshot_path: "dashboard.png",
+              html_path: "dashboard.html",
+              viewport: "desktop",
+            },
+          ],
+          filesWritten: ["dashboard.png", "dashboard.html"],
+        },
         targetUrl: "http://localhost:3000",
-        routes: ["/dashboard"],
       });
+      const gate = buildRuntimeGate({ runtimeObservation: observation });
       expect(gate).toBeDefined();
       if (!gate) throw new Error("gate should be defined");
       expect(gate.ui).toHaveLength(1);
       expect(gate.ui[0].route).toBe("/dashboard");
       expect(gate.ui[0].url).toBe("http://localhost:3000/dashboard");
+      expect(gate.ui[0].rendered).toBe(true);
     });
   });
 
   describe("cli + standard", () => {
-    it("derives obligations with UI-specific evidence not required", () => {
+    it("rejects non-UI prototyping surfaces across all modes", () => {
       const obligations = derivePrototypingObligations({
         surface: "cli",
         effectiveMode: "standard",
       });
-      expect(obligations.requireUiFidelity).toBe(false);
-      expect(obligations.requireRenderBundle).toBe(false);
-      expect(obligations.requireBrowserQaBundle).toBe(false);
-      expect(obligations.requireFullHarness).toBe(false);
-      expect(obligations.requireRuntimeGate).toBe(false);
+      expect(obligations.validCombination).toBe(false);
+      expect(obligations.invalidReasonCode).toBe("unsupported_non_ui_prototyping_surface");
     });
 
     it("runtime gate is undefined for cli", () => {
-      const gate = buildRuntimeGate({ surface: "cli" });
+      const gate = buildRuntimeGate({ runtimeObservation: { ui: [] } });
       expect(gate).toBeUndefined();
     });
 
@@ -91,10 +105,7 @@ describe("prototyping execution production path", () => {
         effectiveMode: "full-harness",
       });
       expect(obligations.validCombination).toBe(false);
-      expect(obligations.invalidReason).toContain("full-harness is supported only");
-      expect(obligations.requireUiFidelity).toBe(false);
-      expect(obligations.requireRenderBundle).toBe(false);
-      expect(obligations.requireBrowserQaBundle).toBe(false);
+      expect(obligations.invalidReasonCode).toBe("unsupported_non_ui_prototyping_surface");
     });
   });
 

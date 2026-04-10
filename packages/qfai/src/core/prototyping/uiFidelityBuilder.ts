@@ -14,6 +14,7 @@ import { buildUiObservationSummary, deriveMockPathFindingsFromBrowserQa } from "
 type ContractScreenSummary = {
   contractId: string;
   route: string;
+  screenId: string;
   expected: {
     elements: number;
     actions: number;
@@ -71,12 +72,19 @@ export async function buildUiFidelity(input: {
   const latestPack = await findLatestDiscussionPackDir(discussionRoot);
   const screenContracts = await readCanonicalScreenContracts(latestPack);
   const contractSummaries = await collectUiContractScreens(input.root, input.config);
+  const enrichedScreenContracts = screenContracts.map((screen) => {
+    const contract = contractSummaries.find((candidate) => candidate.route === screen.route);
+    return {
+      ...screen,
+      actionIds: contract?.expected.ids ?? [],
+    };
+  });
 
   // v1.7.15: screen-level observation from uiObservation.ts
   const uiObservation = await buildUiObservationSummary(
     input.renderResult,
     input.browserQaResult,
-    screenContracts,
+    enrichedScreenContracts,
   );
   const mockPathFindings = deriveMockPathFindingsFromBrowserQa(input.browserQaResult);
 
@@ -232,6 +240,10 @@ async function collectUiContractScreens(
       screens.push({
         contractId,
         route,
+        screenId:
+          typeof (screen as { id?: unknown }).id === "string"
+            ? (screen as { id: string }).id.trim()
+            : route,
         expected: {
           elements: elements.filter(
             (item) => typeof item.id === "string" && item.id.trim().length > 0,

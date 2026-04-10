@@ -14,8 +14,9 @@ import type {
   ScreenObservation,
 } from "../harness/panelInputs.js";
 import type { RenderRunnerResult } from "../evidence/types.js";
-import type { BrowserQaRunResult } from "../browserQa/types.js";
+import type { BrowserQaFinding, BrowserQaRunResult } from "../browserQa/types.js";
 import type { CanonicalScreenContract } from "./screenContracts.js";
+import { buildActionCoverage, type ObservedActionControl } from "./actionCoverage.js";
 
 export async function loadCapturedHtml(htmlPath: string): Promise<string | null> {
   try {
@@ -26,9 +27,17 @@ export async function loadCapturedHtml(htmlPath: string): Promise<string | null>
 }
 
 export function extractDomLabelsWithJsdom(html: string): string[] {
+  return extractDomObservationWithJsdom(html).labels;
+}
+
+export function extractDomObservationWithJsdom(html: string): {
+  labels: string[];
+  controls: ObservedActionControl[];
+} {
   const dom = new JSDOM(html);
   const doc = dom.window.document;
   const labels: string[] = [];
+  const controls: ObservedActionControl[] = [];
 
   // Extract text from labels, buttons, headings, links, aria-labels
   const selectors = [
@@ -71,7 +80,38 @@ export function extractDomLabelsWithJsdom(html: string): string[] {
     }
   }
 
-  return [...new Set(labels)];
+  const actionableSelectors = [
+    "button",
+    "a[href]",
+    "input[type='button']",
+    "input[type='submit']",
+    "input[type='reset']",
+    "input:not([type])",
+    "[role='button']",
+    "[data-testid]",
+    "[onclick]",
+  ];
+  for (const el of doc.querySelectorAll(actionableSelectors.join(","))) {
+    const text = el.textContent.trim();
+    const ariaLabel = el.getAttribute("aria-label")?.trim();
+    const id = el.getAttribute("id")?.trim();
+    const testId = el.getAttribute("data-testid")?.trim();
+    const name = el.getAttribute("name")?.trim();
+    const selector = buildSelector(el);
+    const interactionTargetResolved = selector.length > 0;
+    controls.push({
+      ...(text ? { label: text } : {}),
+      ...(ariaLabel && !text ? { label: ariaLabel } : {}),
+      ...(id ? { id } : testId ? { id: testId } : name ? { id: name } : {}),
+      selector,
+      interactionTargetResolved,
+    });
+  }
+
+  return {
+    labels: [...new Set(labels)],
+    controls,
+  };
 }
 
 /**
@@ -81,20 +121,16 @@ export function extractDomLabelsWithJsdom(html: string): string[] {
 export async function buildUiObservationSummary(
   renderResult?: RenderRunnerResult,
   browserQaResult?: BrowserQaRunResult,
-  screenContracts: CanonicalScreenContract[] = [],
+  screenContracts: Array<CanonicalScreenContract & { actionIds?: string[] }> = [],
 ): Promise<UiObservationSummary> {
   const screens: ScreenObservation[] = [];
   const evidenceRefs: string[] = [];
-  const browserQaByScreen = new Map<string, { refs: Set<string>; actions: number }>();
-  const phaseLevelRefs = new Set<string>();
+  const browserQaByScreen = new Map<string, { refs: Set<string>; findings: BrowserQaFinding[] }>();
   const contractByRoute = new Map(screenContracts.map((screen) => [screen.route, screen]));
   const contractById = new Map(screenContracts.map((screen) => [screen.screenId, screen]));
 
   if (browserQaResult) {
     for (const phase of browserQaResult.phases) {
-      for (const ref of phase.evidence_refs) {
-        phaseLevelRefs.add(ref);
-      }
       for (const finding of phase.findings) {
         const contract =
           (finding.route ? contractByRoute.get(finding.route) : undefined) ??
@@ -105,15 +141,15 @@ export async function buildUiObservationSummary(
         }
         const existing = browserQaByScreen.get(key) ?? {
           refs: new Set<string>(),
-          actions: 0,
+          findings: [],
         };
-        existing.actions += 1;
         for (const ref of phase.evidence_refs) {
           existing.refs.add(ref);
         }
         for (const ref of finding.evidence_refs) {
           existing.refs.add(ref);
         }
+        existing.findings.push(finding);
         browserQaByScreen.set(key, existing);
       }
     }
@@ -124,14 +160,17 @@ export async function buildUiObservationSummary(
       if (entry.status === "captured" && entry.html_path) {
         evidenceRefs.push(entry.html_path);
         const html = await loadCapturedHtml(entry.html_path);
-        const domLabels = html ? extractDomLabelsWithJsdom(html) : [];
+        const domObservation = html
+          ? extractDomObservationWithJsdom(html)
+          : { labels: [], controls: [] as ObservedActionControl[] };
+        const domLabels = domObservation.labels;
         const contract = contractByRoute.get(entry.target) ?? contractById.get(entry.target);
         const screenId = contract?.screenId ?? entry.target;
         const screenRoute = contract?.route ?? entry.target;
         const screenQa = browserQaByScreen.get(screenId) ??
           browserQaByScreen.get(screenRoute) ?? {
             refs: new Set<string>(),
-            actions: 0,
+            findings: [],
           };
         const mockPathFindings: ScreenObservation["mockPathFindings"] = [];
         if (browserQaResult) {
@@ -158,12 +197,13 @@ export async function buildUiObservationSummary(
             }
           }
         }
-        const browserQaEvidenceRefs = [
-          ...new Set([
-            ...screenQa.refs,
-            ...(screenQa.refs.size === 0 ? Array.from(phaseLevelRefs) : []),
-          ]),
-        ];
+        const browserQaEvidenceRefs = [...new Set([...screenQa.refs])];
+        const actionCoverage = buildActionCoverage({
+          actionIds: contract?.actionIds ?? [],
+          controls: domObservation.controls,
+          browserQaFindings: screenQa.findings,
+        });
+        const evidenceMissing = browserQaEvidenceRefs.length === 0;
 
         screens.push({
           screenId,
@@ -171,16 +211,44 @@ export async function buildUiObservationSummary(
           htmlCaptureRef: entry.html_path,
           domLabelsFound: domLabels,
           elementsPlaced: domLabels.length,
-          actionsWired: screenQa.actions,
+          actionsDeclared: actionCoverage.actionsDeclared,
+          actionsObserved: actionCoverage.actionsObserved,
+          actionsWired: actionCoverage.actionsWired,
+          missingActions: actionCoverage.missingActions,
           mockPathFindings,
           browserQaEvidenceRefs,
-          browserQaObserved: browserQaEvidenceRefs.length > 0 || mockPathFindings.length > 0,
+          browserQaObserved: browserQaEvidenceRefs.length > 0,
+          evidenceMissing,
         });
       }
     }
   }
 
   return { screens, evidenceRefs: [...new Set(evidenceRefs)] };
+}
+
+function buildSelector(element: Element): string {
+  const id = element.getAttribute("id")?.trim();
+  if (id) {
+    return `${element.tagName.toLowerCase()}#${id}`;
+  }
+  const testId = element.getAttribute("data-testid")?.trim();
+  if (testId) {
+    return `${element.tagName.toLowerCase()}[data-testid="${testId}"]`;
+  }
+  const name = element.getAttribute("name")?.trim();
+  if (name) {
+    return `${element.tagName.toLowerCase()}[name="${name}"]`;
+  }
+  const ariaLabel = element.getAttribute("aria-label")?.trim();
+  if (ariaLabel) {
+    return `${element.tagName.toLowerCase()}[aria-label="${ariaLabel}"]`;
+  }
+  const text = element.textContent.trim();
+  if (text) {
+    return `${element.tagName.toLowerCase()}[text="${text.slice(0, 80)}"]`;
+  }
+  return element.tagName.toLowerCase();
 }
 
 export function deriveMockPathFindingsFromBrowserQa(
