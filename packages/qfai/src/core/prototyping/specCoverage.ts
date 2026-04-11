@@ -115,13 +115,14 @@ export function collectObservedRuntimeArtifacts(runtimeObservation?: RuntimeObse
   return { uiOk, observedRefsByRoute };
 }
 
-export async function buildSpecCoverageSummary(
-  specsDir: string,
-  runtimeObservation?: RuntimeObservation,
-  evidenceDir?: string,
-): Promise<SpecCoverageSummary> {
-  const declared = await loadDeclaredSpecArtifacts(specsDir);
-  const observed = collectObservedRuntimeArtifacts(runtimeObservation);
+export async function buildSpecCoverageSummary(input: {
+  specsDir: string;
+  runtimeObservation?: RuntimeObservation;
+  declaredSpecRefs?: string[];
+  observedEvidenceRefs?: string[];
+}): Promise<SpecCoverageSummary> {
+  const declared = await loadDeclaredSpecArtifacts(input.specsDir);
+  const observed = collectObservedRuntimeArtifacts(input.runtimeObservation);
 
   let totalUiRoutes = 0;
   let uiOk = 0;
@@ -146,10 +147,10 @@ export async function buildSpecCoverageSummary(
     }
   }
 
-  const evidenceRefs: string[] = [];
-  if (evidenceDir) {
-    evidenceRefs.push(evidenceDir);
-  }
+  const evidenceRefs: string[] = [
+    ...(input.declaredSpecRefs ?? []),
+    ...(input.observedEvidenceRefs ?? []),
+  ];
   for (const spec of declared) {
     for (const route of spec.uiRoutes) {
       evidenceRefs.push(route.declaredRef);

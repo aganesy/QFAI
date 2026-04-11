@@ -5,6 +5,7 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { runFullHarness, type FullHarnessRequest } from "../../src/core/harness/runtime.js";
+import type { CalibrationPack } from "../../src/core/calibration/types.js";
 import type { FullHarnessPanelInputs } from "../../src/core/harness/panelInputs.js";
 
 async function withRoot(task: (root: string) => Promise<void>): Promise<void> {
@@ -129,14 +130,24 @@ function makeRequest(
   root: string,
   overrides: Partial<FullHarnessRequest> = {},
 ): FullHarnessRequest {
+  const calibrationPack: CalibrationPack = {
+    version: "1.7.15",
+    thresholds: { accept: 0.8, refine: 0.5 },
+    maxIterations: 5,
+    plateauDelta: 0.02,
+    plateauLookback: 3,
+    examples: [],
+  };
   return {
     root,
     reviewer: "qa-reviewer",
     changeSummary: ["Initial measurement"],
     limitations: [],
+    calibrationPack,
     calibrationRef: {
       packPath: path.join(root, ".qfai", "evidence", "calibration.yaml"),
       configPath: "qfai.config.yaml",
+      packVersion: calibrationPack.version,
     },
     adapters: {
       surface: "web",
@@ -182,7 +193,7 @@ function makeRequest(
 }
 
 describe("runFullHarness", () => {
-  it("loads calibration pack from calibrationRef.packPath inside runtime", async () => {
+  it("uses the resolved calibration pack provided by the caller", async () => {
     await withRoot(async (root) => {
       const result = await runFullHarness(makeRequest(root));
       expect(result.calibrationRef.packPath).toContain("calibration.yaml");
@@ -208,7 +219,23 @@ describe("runFullHarness", () => {
         "utf-8",
       );
 
-      const result = await runFullHarness(makeRequest(root));
+      const result = await runFullHarness(
+        makeRequest(root, {
+          calibrationPack: {
+            version: "1.7.15",
+            thresholds: { accept: 0.1, refine: 0.05 },
+            maxIterations: 5,
+            plateauDelta: 0.02,
+            plateauLookback: 3,
+            examples: [],
+          },
+          calibrationRef: {
+            packPath: path.join(root, ".qfai", "evidence", "calibration.yaml"),
+            configPath: "qfai.config.yaml",
+            packVersion: "1.7.15",
+          },
+        }),
+      );
       expect(result.isTerminal).toBe(false);
       expect(result.terminationReason).toBeUndefined();
       expect(result.finalDecision).toBe("accepted");
@@ -235,7 +262,23 @@ describe("runFullHarness", () => {
         "utf-8",
       );
 
-      const result = await runFullHarness(makeRequest(root));
+      const result = await runFullHarness(
+        makeRequest(root, {
+          calibrationPack: {
+            version: "1.7.15",
+            thresholds: { accept: 0.99, refine: 0.98 },
+            maxIterations: 1,
+            plateauDelta: 0.02,
+            plateauLookback: 1,
+            examples: [],
+          },
+          calibrationRef: {
+            packPath: path.join(root, ".qfai", "evidence", "calibration.yaml"),
+            configPath: "qfai.config.yaml",
+            packVersion: "1.7.15",
+          },
+        }),
+      );
       expect(result.isTerminal).toBe(true);
       expect(result.finalDecision).toBe("abandoned");
       expect(result.signoffStatus).toBe("abandoned");

@@ -398,9 +398,7 @@ describe("validatePrototypingEvidence", () => {
       const fullHarness = invalid.fullHarness as {
         iterations: Array<{ evidenceRefs: { runtimeGate: string[]; specCoverage: string[] } }>;
       };
-      fullHarness.iterations[0].evidenceRefs.runtimeGate = [
-        ".qfai/evidence/prototyping.json#/runtimeGate",
-      ];
+      fullHarness.iterations[0].evidenceRefs.runtimeGate = [".qfai/evidence/render"];
       fullHarness.iterations[0].evidenceRefs.specCoverage = ["specs: spec-0001"];
       await seedEvidence(root, invalid);
 
@@ -445,6 +443,34 @@ describe("validatePrototypingEvidence", () => {
       const issues = await validatePrototypingEvidence(root, defaultConfig);
       expect(issues.some((item) => item.code === "QFAI-PROT-316")).toBe(true);
       expect(issues.some((item) => item.code === "QFAI-PROT-317")).toBe(true);
+    });
+  });
+
+  it("rejects mismatched calibration metadata", async () => {
+    await withTempRoot(async (root) => {
+      await seedSpecs(root);
+      await seedDiscussion(root);
+      await seedContracts(root);
+      await seedCalibration(root);
+      await seedRenderBundle(root);
+      await seedBrowserQaBundle(root);
+      await seedEvidence(
+        root,
+        buildValidEvidence({
+          fullHarness: {
+            ...(buildValidEvidence().fullHarness as Record<string, unknown>),
+            calibrationRef: {
+              configPath: "custom.config.yaml",
+              packPath: ".qfai/evidence/calibration.yaml",
+              packVersion: "9.9.9",
+            },
+          },
+        }),
+      );
+
+      const issues = await validatePrototypingEvidence(root, defaultConfig);
+      expect(issues.some((item) => item.code === "QFAI-PROT-320")).toBe(true);
+      expect(issues.some((item) => item.code === "QFAI-PROT-321")).toBe(true);
     });
   });
 });

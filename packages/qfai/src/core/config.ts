@@ -74,13 +74,6 @@ export type QfaiUiuxConfig = {
 
 export type QfaiPrototypingCalibrationConfig = {
   packPath?: string;
-  thresholds?: {
-    accept?: number;
-    refine?: number;
-  };
-  maxIterations?: number;
-  plateauDelta?: number;
-  plateauLookback?: number;
 };
 
 export type QfaiPrototypingConfig = {
@@ -153,13 +146,6 @@ export const defaultConfig: QfaiConfig = {
   prototyping: {
     calibration: {
       packPath: ".qfai/evidence/calibration.yaml",
-      thresholds: {
-        accept: 0.8,
-        refine: 0.5,
-      },
-      maxIterations: 15,
-      plateauDelta: 0.02,
-      plateauLookback: 3,
     },
     execution: {
       targetUrl: null,
@@ -487,43 +473,21 @@ function normalizePrototypingCalibration(
 ): QfaiPrototypingCalibrationConfig | undefined {
   const base = defaultConfig.prototyping?.calibration;
   if (raw === undefined || raw === null) {
-    return base ? { ...base, thresholds: { ...base.thresholds } } : undefined;
+    return base ? { ...base } : undefined;
   }
   if (!isRecord(raw)) {
     issues.push(
       configIssue(configPath, "prototyping.calibration はオブジェクトである必要があります。"),
     );
-    return base ? { ...base, thresholds: { ...base.thresholds } } : undefined;
+    return base ? { ...base } : undefined;
   }
 
-  const thresholds = normalizePrototypingThresholds(raw.thresholds, configPath, issues);
+  validateObsoleteCalibrationFields(raw, configPath, issues);
   return {
     packPath: readString(
       raw.packPath,
       base?.packPath ?? ".qfai/evidence/calibration.yaml",
       "prototyping.calibration.packPath",
-      configPath,
-      issues,
-    ),
-    thresholds,
-    maxIterations: readPositiveInt(
-      raw.maxIterations,
-      base?.maxIterations ?? 15,
-      "prototyping.calibration.maxIterations",
-      configPath,
-      issues,
-    ),
-    plateauDelta: readNonNegativeNumber(
-      raw.plateauDelta,
-      base?.plateauDelta ?? 0.02,
-      "prototyping.calibration.plateauDelta",
-      configPath,
-      issues,
-    ),
-    plateauLookback: readPositiveInt(
-      raw.plateauLookback,
-      base?.plateauLookback ?? 3,
-      "prototyping.calibration.plateauLookback",
       configPath,
       issues,
     ),
@@ -573,44 +537,27 @@ function normalizePrototypingExecution(
   };
 }
 
-function normalizePrototypingThresholds(
-  raw: unknown,
+function validateObsoleteCalibrationFields(
+  raw: Record<string, unknown>,
   configPath: string,
   issues: Issue[],
-): NonNullable<QfaiPrototypingCalibrationConfig["thresholds"]> {
-  const base = defaultConfig.prototyping?.calibration?.thresholds ?? {
-    accept: 0.8,
-    refine: 0.5,
-  };
-  if (raw === undefined || raw === null) {
-    return { ...base };
+): void {
+  const obsoleteFields = [
+    "thresholds",
+    "maxIterations",
+    "plateauDelta",
+    "plateauLookback",
+  ] as const;
+  for (const field of obsoleteFields) {
+    if (raw[field] !== undefined) {
+      issues.push(
+        configIssue(
+          configPath,
+          `prototyping.calibration.${field} は廃止されました。calibration pack のみを使用し、prototyping.calibration.packPath だけを設定してください。`,
+        ),
+      );
+    }
   }
-  if (!isRecord(raw)) {
-    issues.push(
-      configIssue(
-        configPath,
-        "prototyping.calibration.thresholds はオブジェクトである必要があります。",
-      ),
-    );
-    return { ...base };
-  }
-
-  return {
-    accept: readRatio(
-      raw.accept,
-      base.accept ?? 0.8,
-      "prototyping.calibration.thresholds.accept",
-      configPath,
-      issues,
-    ),
-    refine: readRatio(
-      raw.refine,
-      base.refine ?? 0.5,
-      "prototyping.calibration.thresholds.refine",
-      configPath,
-      issues,
-    ),
-  };
 }
 
 function readString(
@@ -665,22 +612,6 @@ function readOptionalRatio(
   return fallback;
 }
 
-function readRatio(
-  value: unknown,
-  fallback: number,
-  label: string,
-  configPath: string,
-  issues: Issue[],
-): number {
-  if (typeof value === "number" && Number.isFinite(value) && value >= 0 && value <= 1) {
-    return value;
-  }
-  if (value !== undefined) {
-    issues.push(configIssue(configPath, `${label} は 0〜1 の数値である必要があります。`));
-  }
-  return fallback;
-}
-
 function readOptionalNonNegativeInt(
   value: unknown,
   fallback: number | null,
@@ -718,43 +649,6 @@ function readStringArray(
   }
   if (value !== undefined) {
     issues.push(configIssue(configPath, `${label} は文字列配列である必要があります。`));
-  }
-  return fallback;
-}
-
-function readPositiveInt(
-  value: unknown,
-  fallback: number,
-  label: string,
-  configPath: string,
-  issues: Issue[],
-): number {
-  if (
-    typeof value === "number" &&
-    Number.isFinite(value) &&
-    Number.isInteger(value) &&
-    value >= 1
-  ) {
-    return value;
-  }
-  if (value !== undefined) {
-    issues.push(configIssue(configPath, `${label} は 1 以上の整数である必要があります。`));
-  }
-  return fallback;
-}
-
-function readNonNegativeNumber(
-  value: unknown,
-  fallback: number,
-  label: string,
-  configPath: string,
-  issues: Issue[],
-): number {
-  if (typeof value === "number" && Number.isFinite(value) && value >= 0) {
-    return value;
-  }
-  if (value !== undefined) {
-    issues.push(configIssue(configPath, `${label} は 0 以上の数値である必要があります。`));
   }
   return fallback;
 }

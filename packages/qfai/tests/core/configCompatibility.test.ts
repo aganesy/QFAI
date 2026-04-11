@@ -119,18 +119,16 @@ describe("config legacy promptsDir alias (promptsDir -> skillsDir)", () => {
     try {
       await writeFile(
         path.join(root, "qfai.config.yaml"),
-        ["prototyping:", "  calibration:", "    maxIterations: 9", ""].join("\n"),
+        ["prototyping:", "  calibration:", "    packPath: .qfai/evidence/custom.yaml", ""].join(
+          "\n",
+        ),
         "utf-8",
       );
 
       const { config, issues } = await loadConfig(root);
       expect(issues).toEqual([]);
       expect(config.prototyping?.calibration).toEqual({
-        packPath: ".qfai/evidence/calibration.yaml",
-        thresholds: { accept: 0.8, refine: 0.5 },
-        maxIterations: 9,
-        plateauDelta: 0.02,
-        plateauLookback: 3,
+        packPath: ".qfai/evidence/custom.yaml",
       });
     } finally {
       await rm(root, { recursive: true, force: true });

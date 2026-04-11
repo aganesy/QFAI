@@ -4,9 +4,9 @@ import { buildSpecCoverageSummary } from "../../src/core/prototyping/specCoverag
 
 describe("specCoverage", () => {
   it("compares declared and observed canonical routes without URL fallback", async () => {
-    const summary = await buildSpecCoverageSummary(
-      "missing-specs-dir",
-      {
+    const summary = await buildSpecCoverageSummary({
+      specsDir: "missing-specs-dir",
+      runtimeObservation: {
         ui: [
           {
             screenId: "dashboard",
@@ -28,10 +28,10 @@ describe("specCoverage", () => {
           },
         ],
       },
-      ".qfai/evidence",
-    );
+      observedEvidenceRefs: [".qfai/evidence/render/dashboard.desktop.png"],
+    });
 
     expect(summary.checked.uiOk).toBe(0);
-    expect(summary.evidenceRefs).toContain(".qfai/evidence");
+    expect(summary.evidenceRefs).toContain(".qfai/evidence/render/dashboard.desktop.png");
   });
 });

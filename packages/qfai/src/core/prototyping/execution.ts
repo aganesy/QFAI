@@ -7,8 +7,14 @@ import { writeEvidenceBundles, type PrototypingSummaryBundle } from "../evidence
 import { runRenderCapture } from "../evidence/renderRunner.js";
 import type { RenderCaptureAdapter, RenderCaptureTarget } from "../evidence/types.js";
 import { findLatestDiscussionPackDir } from "../discussionPack.js";
+import {
+  resolveCalibrationPack,
+  type ResolvedCalibrationPack,
+} from "../calibration/packResolver.js";
 import { runFullHarness } from "../harness/runtime.js";
-import { resolveCalibrationPack } from "../calibration/packResolver.js";
+import type { FullHarnessPanelInputs } from "../harness/panelInputs.js";
+import { validatePanelInputs } from "../harness/panelInputs.js";
+import { loadHistory } from "../harness/history.js";
 
 import { resolveLatestRecommendationArtifact } from "./recommendationArtifact.js";
 import {
@@ -23,14 +29,11 @@ import {
   resolvePrototypingExecutionTargetUrl,
   resolvePrototypingProviders,
 } from "./providerResolution.js";
-import { buildUiFidelity } from "./uiFidelityBuilder.js";
+import { buildUiFidelity, type BuiltUiFidelity } from "./uiFidelityBuilder.js";
 import { buildRuntimeGate } from "./runtimeGateBuilder.js";
 import { createObservabilityAdapter } from "./observabilityAdapter.js";
 import { buildSpecCoverageSummary, buildPerSpecCoverage } from "./specCoverage.js";
 import { buildUiObservationSummary, buildBrowserQaSummaryFromResult } from "./uiObservation.js";
-import { loadHistory } from "../harness/history.js";
-import type { FullHarnessPanelInputs } from "../harness/panelInputs.js";
-import { validatePanelInputs } from "../harness/panelInputs.js";
 import {
   buildDiscussionAxisInputs,
   buildScreenContractInputs,
@@ -41,8 +44,17 @@ import { runBrowserQaPerScreen } from "./browserQaPerScreen.js";
 import { buildRuntimeObservation, type RuntimeObservation } from "./runtimeObservation.js";
 import {
   assertSupportedPrototypingSurface,
+  getSupportedPrototypingSurfacesLabel,
   isSupportedPrototypingSurface,
 } from "./surfacePolicy.js";
+import {
+  CalibrationResolutionError,
+  EvidenceWriteError,
+  FullHarnessRuntimeError,
+  L2EvidenceBuildError,
+  SpecCoverageBuildError,
+  UiFidelityEvidenceError,
+} from "./errors.js";
 
 export type PrototypingExecutionRequest = {
   root: string;
@@ -74,12 +86,11 @@ export async function runPrototypingExecution(
   const generatedAt = new Date().toISOString();
   const resolved = await loadConfig(request.root);
   const config = resolved.config;
+  const configPathForSummary = toRelativeSummaryPath(request.root, resolved.configPath);
   const discussionRoot = resolvePath(request.root, config, "discussionDir");
   const latestPack = await findLatestDiscussionPackDir(discussionRoot);
   const recommendation = await resolveLatestRecommendationArtifact(request.root, config);
 
-  // Hard gate: invalid recommendation artifact must reject execution immediately.
-  // No fallback to explicit mode, default mode, or warning-only continuation.
   if (recommendation.status === "invalid") {
     throw new Error(
       "Prototyping recommendation artifact is invalid. " +
@@ -101,9 +112,10 @@ export async function runPrototypingExecution(
   if (!classification.ui_bearing || classification.primary_surface === "non-ui") {
     throw new Error(
       "Non-UI classification is not a prototyping execution target. " +
-        "surface field must be one of: web, mobile, desktop, cli, mixed.",
+        `surface field must be one of: ${getSupportedPrototypingSurfacesLabel()}.`,
     );
   }
+
   const recommendationSurface = recommendation.recommendation?.surface;
   const classifiedSurface = classification.primary_surface;
   const resolvedSurface = recommendationSurface ?? classifiedSurface;
@@ -120,6 +132,7 @@ export async function runPrototypingExecution(
   if (!obligations.validCombination) {
     throw new Error(obligations.invalidReason ?? NON_UI_PROTOTYPING_SURFACE_MESSAGE);
   }
+
   const targetUrl = resolvePrototypingExecutionTargetUrl({
     ...(request.targetUrl !== undefined ? { requestTargetUrl: request.targetUrl } : {}),
     config,
@@ -135,6 +148,21 @@ export async function runPrototypingExecution(
     ...(targetUrl !== undefined ? { targetUrl } : {}),
   });
 
+  if (!request.reviewer) {
+    throw new Error(
+      "Full-harness mode requires --reviewer <id>. " +
+        "Provide a real reviewer identifier via the CLI flag.",
+    );
+  }
+  assertReviewerIsNotPlaceholder(request.reviewer);
+
+  const calibrationConfig = config.prototyping?.calibration;
+  const packPath = calibrationConfig?.packPath ?? ".qfai/evidence/calibration.yaml";
+  const resolvedCalibration = await resolveCalibrationOrThrow({
+    root: request.root,
+    packPath,
+  });
+
   const visualFullHarness = isSupportedPrototypingSurface(supportedSurface);
   const effectiveRenderAdapter = request.renderAdapter ?? resolvedProviders.renderAdapter;
   const screenContracts = visualFullHarness ? await readCanonicalScreenContracts(latestPack) : [];
@@ -143,6 +171,7 @@ export async function runPrototypingExecution(
       "Full-harness requires canonical screen contracts in uiux/40_screen_contracts.md for UI-bearing surfaces.",
     );
   }
+
   const renderTargets: RenderCaptureTarget[] = buildScreenRenderTargets(screenContracts);
   if (!effectiveRenderAdapter) {
     throw new Error("Full-harness requires a render adapter for UI-bearing surfaces.");
@@ -170,6 +199,7 @@ export async function runPrototypingExecution(
     ...(targetUrl !== undefined ? { targetUrl } : {}),
     provider: browserQaProvider,
   });
+
   const runtimeObservation = buildRuntimeObservation({
     screenContracts,
     renderResult,
@@ -187,247 +217,357 @@ export async function runPrototypingExecution(
     ...(targetUrl !== undefined ? { targetUrl } : {}),
     ...(runtimeGate !== undefined ? { runtimeGate } : {}),
   });
-
   if (runtimeGate) {
     summary.runtimeGate = runtimeGate;
   }
-  const uiFidelity = await buildUiFidelity({
+
+  const uiFidelity = await buildUiFidelityOrThrow({
     root: request.root,
     config,
     required: obligations.requireUiFidelity,
     renderResult,
     browserQaResult,
+    screenContracts: screenContracts.map((screen) => ({
+      screenId: screen.screenId,
+      route: screen.route,
+    })),
   });
-  if (uiFidelity.uiFidelity) {
-    summary.uiFidelity = uiFidelity.uiFidelity;
-  }
+  summary.uiFidelity = uiFidelity.uiFidelity;
   summary.uiFidelityStatus = uiFidelity.status;
-  if (uiFidelity.missingRequiredEvidence.length > 0) {
-    summary.missingRequiredEvidence = uiFidelity.missingRequiredEvidence;
-  }
-  // Reviewer is mandatory for full-harness
-  if (!request.reviewer) {
-    throw new Error(
-      "Full-harness mode requires --reviewer <id>. " +
-        "Provide a real reviewer identifier via the CLI flag.",
-    );
-  }
 
-  const normalizedReviewer = request.reviewer.toLowerCase().trim();
-  const placeholders = [
-    "qfai",
-    "default",
-    "system",
-    "auto",
-    "placeholder",
-    "tbd",
-    "n/a",
-    "none",
-    "unknown",
-    "",
-  ];
-  if (placeholders.includes(normalizedReviewer)) {
-    throw new Error(
-      `Reviewer identifier "${request.reviewer}" is a placeholder. ` +
-        `Provide a real reviewer identity for full-harness mode.`,
-    );
-  }
+  const specsDir = path.join(request.root, ".qfai", "specs");
+  const specCoverage = await buildSpecCoverageOrThrow({
+    specsDir,
+    runtimeObservation,
+    renderFilesWritten: renderResult.filesWritten,
+    browserQaResult,
+  });
 
-  const calibrationConfig = config.prototyping?.calibration;
-  const packPath = calibrationConfig?.packPath ?? ".qfai/evidence/calibration.yaml";
+  const uiObservation = await buildUiObservationSummary(
+    renderResult,
+    browserQaResult,
+    screenContracts,
+  );
+  const browserQaSummary = buildBrowserQaSummaryFromResult(browserQaResult);
+  const runtimeGateEvidence = runtimeGate
+    ? {
+        uiRoutes: runtimeGate.ui,
+        evidenceRefs: runtimeGate.evidenceRefs,
+      }
+    : { uiRoutes: [], evidenceRefs: [] };
+
+  const panelInputs = await buildPanelInputsOrThrow({
+    root: request.root,
+    uiFidelityScreens: uiFidelity.uiFidelity.screens,
+    renderResult,
+    browserQaSummary,
+    uiObservation,
+    specCoverage,
+    runtimeGateEvidence,
+  });
+
+  const fullHarness = await runFullHarnessOrThrow({
+    request,
+    reviewer: request.reviewer,
+    supportedSurface,
+    resolvedCalibration,
+    configPathForSummary,
+    renderResult,
+    browserQaResult,
+    screenContracts: screenContracts.map((screen) => ({
+      screenId: screen.screenId,
+      route: screen.route,
+    })),
+    panelInputs,
+  });
+
+  const cumulativeReviewerLogs = await buildCumulativeReviewerLogs({
+    root: request.root,
+    reviewer: request.reviewer,
+    fullHarness,
+  });
+
+  summary.fullHarness = {
+    enabled: true,
+    runId: fullHarness.history.runId,
+    calibrationRef: fullHarness.calibrationRef,
+    iterationCount: fullHarness.history.iterations.length,
+    bestIteration: fullHarness.history.bestIteration,
+    status: fullHarness.isTerminal ? "completed" : "in-progress",
+    ...(fullHarness.terminationReason ? { terminationReason: fullHarness.terminationReason } : {}),
+    finalDecision: fullHarness.finalDecision,
+    reviewerSignoff: {
+      reviewerId: request.reviewer,
+      status: fullHarness.signoffStatus,
+      timestamp: generatedAt,
+      source: "cli",
+    },
+    reviewerLogs: cumulativeReviewerLogs,
+    iterations: fullHarness.history.iterations,
+    scoringTrace: fullHarness.history.scoringTrace,
+    limitations: fullHarness.iteration.limitations,
+  };
+
+  const evidencePaths = await writeEvidenceBundlesOrThrow({
+    root: request.root,
+    render: {
+      result: renderResult,
+      surface: supportedSurface,
+      mode: modeSummary.effective,
+      generatedAt,
+    },
+    browserQa: { result: browserQaResult, mode: modeSummary.effective },
+    prototyping: summary,
+    fullHarnessArtifacts: {
+      fakeUiDetection: fullHarness.fakeUiDetection,
+      handoff: fullHarness.handoff,
+      exitReason: fullHarness.exitReason,
+    },
+  });
+
+  return {
+    mode: modeSummary.effective,
+    surface: supportedSurface,
+    evidencePaths: {
+      prototyping: evidencePaths.prototypingPath,
+      render: evidencePaths.renderPath,
+      browserQa: evidencePaths.browserQaPath,
+    },
+    generatedAt,
+  };
+}
+
+async function resolveCalibrationOrThrow(input: {
+  root: string;
+  packPath: string;
+}): Promise<ResolvedCalibrationPack> {
   try {
-    await resolveCalibrationPack({
-      root: request.root,
-      packPath,
+    return await resolveCalibrationPack(input);
+  } catch (error) {
+    throw new CalibrationResolutionError(
+      `Calibration pack resolution failed for "${input.packPath}". ${formatError(error)}`,
+      { cause: error },
+    );
+  }
+}
+
+async function buildUiFidelityOrThrow(input: {
+  root: string;
+  config: Awaited<ReturnType<typeof loadConfig>>["config"];
+  required: boolean;
+  renderResult: Awaited<ReturnType<typeof runRenderCapture>>;
+  browserQaResult: Awaited<ReturnType<typeof runBrowserQaPerScreen>>;
+  screenContracts: Array<{ screenId: string; route: string }>;
+}) {
+  let uiFidelity;
+  try {
+    uiFidelity = await buildUiFidelity({
+      root: input.root,
+      config: input.config,
+      required: input.required,
+      renderResult: input.renderResult,
+      browserQaResult: input.browserQaResult,
     });
-
-    // Build spec coverage from real artifacts
-    const specsDir = path.join(request.root, ".qfai", "specs");
-    const runtimeGateForCoverage = buildRuntimeGate({ runtimeObservation });
-    const specCoverage = await buildSpecCoverageSummary(
-      specsDir,
-      runtimeObservation,
-      latestPack ?? undefined,
+  } catch (error) {
+    throw new UiFidelityEvidenceError(
+      `UI fidelity evidence construction failed. ${formatError(error)}`,
+      { cause: error },
     );
+  }
 
-    // Build UI observation from real DOM/render
-    const uiObservation = await buildUiObservationSummary(
-      renderResult,
-      browserQaResult,
-      screenContracts,
+  const built = uiFidelity.uiFidelity;
+  if (!built) {
+    throw new UiFidelityEvidenceError("UI fidelity evidence is missing.");
+  }
+
+  const missingScreens = input.screenContracts.filter(
+    (screen) => !built.screens.some((entry) => entry.screenId === screen.screenId),
+  );
+  const missingRequiredEvidence = uiFidelity.missingRequiredEvidence;
+  const hasIncompleteStatus = uiFidelity.status.status !== "completed";
+  if (hasIncompleteStatus || missingRequiredEvidence.length > 0 || missingScreens.length > 0) {
+    throw new UiFidelityEvidenceError(
+      buildUiFidelityEvidenceMessage({
+        status: uiFidelity.status.status,
+        missingRequiredEvidence,
+        missingScreens,
+        ...(uiFidelity.status.reason ? { reason: uiFidelity.status.reason } : {}),
+      }),
     );
+  }
 
-    // Build browser QA summary from real results
-    const browserQaSummary = buildBrowserQaSummaryFromResult(browserQaResult);
+  return {
+    uiFidelity: built,
+    status: uiFidelity.status,
+  };
+}
 
-    // Assemble panel inputs from real evidence
-    const runtimeGateEvidence = runtimeGateForCoverage
-      ? {
-          uiRoutes: runtimeGateForCoverage.ui,
-          evidenceRefs: runtimeGateForCoverage.evidenceRefs,
-        }
-      : { uiRoutes: [], evidenceRefs: [] };
+async function buildSpecCoverageOrThrow(input: {
+  specsDir: string;
+  runtimeObservation: RuntimeObservation;
+  renderFilesWritten: string[];
+  browserQaResult: Awaited<ReturnType<typeof runBrowserQaPerScreen>>;
+}) {
+  try {
+    return await buildSpecCoverageSummary({
+      specsDir: input.specsDir,
+      runtimeObservation: input.runtimeObservation,
+      observedEvidenceRefs: [
+        ...input.renderFilesWritten,
+        ...collectBrowserQaEvidenceRefs(input.browserQaResult),
+      ],
+    });
+  } catch (error) {
+    throw new SpecCoverageBuildError(`Spec coverage construction failed. ${formatError(error)}`, {
+      cause: error,
+    });
+  }
+}
 
-    // Build L2 inputs from real artifacts (no zero-filling)
-    const discussionAxes = await buildDiscussionAxisInputs(request.root);
-    const screenContractInputs = uiFidelity.uiFidelity
-      ? await buildScreenContractInputs(request.root, uiFidelity.uiFidelity.screens)
-      : (() => {
-          throw new Error(
-            "Full-harness requires UI fidelity screens for screen contract inputs. " +
-              "No screen contracts could be resolved.",
-          );
-        })();
-    const trendAlignment = await buildTrendAlignmentInputs(request.root);
+async function buildPanelInputsOrThrow(input: {
+  root: string;
+  uiFidelityScreens: NonNullable<BuiltUiFidelity["uiFidelity"]>["screens"];
+  renderResult: Awaited<ReturnType<typeof runRenderCapture>>;
+  browserQaSummary: ReturnType<typeof buildBrowserQaSummaryFromResult>;
+  uiObservation: Awaited<ReturnType<typeof buildUiObservationSummary>>;
+  specCoverage: Awaited<ReturnType<typeof buildSpecCoverageSummary>>;
+  runtimeGateEvidence: FullHarnessPanelInputs["runtimeGate"];
+}): Promise<FullHarnessPanelInputs> {
+  try {
+    const discussionAxes = await buildDiscussionAxisInputs(input.root);
+    const screenContractInputs = await buildScreenContractInputs(
+      input.root,
+      input.uiFidelityScreens,
+    );
+    const trendAlignment = await buildTrendAlignmentInputs(input.root);
 
     const panelInputs: FullHarnessPanelInputs = {
-      runtimeGate: runtimeGateEvidence,
+      runtimeGate: input.runtimeGateEvidence,
       renderEvidence: {
-        totalScreens: renderResult.entries.length,
-        capturedScreens: renderResult.entries.filter((e) => e.status === "captured").length,
-        failedScreens: renderResult.entries.filter((e) => e.status === "failed").length,
-        viewports: [...new Set(renderResult.entries.map((e) => e.viewport))],
-        evidenceRefs: renderResult.filesWritten,
+        totalScreens: input.renderResult.entries.length,
+        capturedScreens: input.renderResult.entries.filter((entry) => entry.status === "captured")
+          .length,
+        failedScreens: input.renderResult.entries.filter((entry) => entry.status === "failed")
+          .length,
+        viewports: [...new Set(input.renderResult.entries.map((entry) => entry.viewport))],
+        evidenceRefs: input.renderResult.filesWritten,
       },
-      browserQa: browserQaSummary,
-      uiObservation,
-      specCoverage,
+      browserQa: input.browserQaSummary,
+      uiObservation: input.uiObservation,
+      specCoverage: input.specCoverage,
       discussionAxes,
       screenContract: screenContractInputs,
       trendAlignment,
     };
-
-    // Validate panel inputs — missing evidence must fail, not silently score to 0
     validatePanelInputs(panelInputs);
+    return panelInputs;
+  } catch (error) {
+    throw new L2EvidenceBuildError(`L2 evidence construction failed. ${formatError(error)}`, {
+      cause: error,
+    });
+  }
+}
 
-    const fullHarness = await runFullHarness({
-      root: request.root,
-      reviewer: request.reviewer,
-      changeSummary: request.changeSummary ?? ["Initial measurement"],
-      limitations: request.limitations ?? [],
+async function runFullHarnessOrThrow(input: {
+  request: PrototypingExecutionRequest;
+  reviewer: string;
+  supportedSurface: PrototypingSurface;
+  resolvedCalibration: ResolvedCalibrationPack;
+  configPathForSummary: string;
+  renderResult: Awaited<ReturnType<typeof runRenderCapture>>;
+  browserQaResult: Awaited<ReturnType<typeof runBrowserQaPerScreen>>;
+  screenContracts: Array<{ screenId: string; route: string }>;
+  panelInputs: FullHarnessPanelInputs;
+}) {
+  try {
+    return await runFullHarness({
+      root: input.request.root,
+      reviewer: input.reviewer,
+      changeSummary: input.request.changeSummary ?? ["Initial measurement"],
+      limitations: input.request.limitations ?? [],
+      calibrationPack: input.resolvedCalibration.pack,
       calibrationRef: {
-        packPath,
-        configPath: "qfai.config.yaml",
+        packPath: input.resolvedCalibration.packPath,
+        packVersion: input.resolvedCalibration.pack.version,
+        configPath: input.configPathForSummary,
       },
       adapters: {
-        surface: supportedSurface,
+        surface: input.supportedSurface,
         render: {
           // eslint-disable-next-line @typescript-eslint/require-await
-          captureEvidence: async () => renderResult,
+          captureEvidence: async () => input.renderResult,
         },
         browserQa: {
           // eslint-disable-next-line @typescript-eslint/require-await
-          runQa: async () => browserQaResult,
+          runQa: async () => input.browserQaResult,
         },
-        observability: createObservabilityAdapter(request.root),
+        observability: createObservabilityAdapter(input.request.root),
       },
-      screenContracts: screenContracts.map((screen) => ({
-        screenId: screen.screenId,
-        route: screen.route,
-      })),
-      panelInputs,
+      screenContracts: input.screenContracts,
+      panelInputs: input.panelInputs,
     });
+  } catch (error) {
+    throw new FullHarnessRuntimeError(`Full-harness runtime failed. ${formatError(error)}`, {
+      cause: error,
+    });
+  }
+}
 
-    // Load cumulative reviewerLogs from history (append-only)
-    const previousHistory = await loadHistory(request.root);
-    const previousLogs: Array<{
-      iteration: number;
-      reviewerId: string;
-      verdict: "approve" | "revise" | "reject";
-      summary: string;
-      evidenceRefs: string[];
-    }> = [];
-    if (previousHistory) {
-      // Extract previous reviewerLogs from existing prototyping.json fullHarness block
-      try {
-        const existingJson = await readFile(
-          path.join(request.root, ".qfai", "evidence", "prototyping.json"),
-          "utf-8",
-        );
-        const existingParsed = JSON.parse(existingJson) as Record<string, unknown>;
-        const existingFh = existingParsed.fullHarness as Record<string, unknown> | undefined;
-        if (existingFh && Array.isArray(existingFh.reviewerLogs)) {
-          previousLogs.push(...(existingFh.reviewerLogs as typeof previousLogs));
-        }
-      } catch {
-        // No previous logs to accumulate
+async function buildCumulativeReviewerLogs(input: {
+  root: string;
+  reviewer: string;
+  fullHarness: Awaited<ReturnType<typeof runFullHarness>>;
+}) {
+  const previousLogs: Array<{
+    iteration: number;
+    reviewerId: string;
+    verdict: "approve" | "revise" | "reject";
+    summary: string;
+    evidenceRefs: string[];
+  }> = [];
+  const previousHistory = await loadHistory(input.root);
+  if (previousHistory) {
+    try {
+      const existingJson = await readFile(
+        path.join(input.root, ".qfai", "evidence", "prototyping.json"),
+        "utf-8",
+      );
+      const existingParsed = JSON.parse(existingJson) as Record<string, unknown>;
+      const existingFh = existingParsed.fullHarness as Record<string, unknown> | undefined;
+      if (existingFh && Array.isArray(existingFh.reviewerLogs)) {
+        previousLogs.push(...(existingFh.reviewerLogs as typeof previousLogs));
       }
+    } catch {
+      // Ignore malformed previous evidence; the current run will write the authoritative bundle.
     }
+  }
 
-    const currentLog = {
-      iteration: fullHarness.iteration.iteration,
-      reviewerId: request.reviewer,
-      verdict: fullHarness.logVerdict,
-      summary: `Iteration ${fullHarness.iteration.iteration}: decision=${fullHarness.iteration.decision} finalDecision=${fullHarness.finalDecision} weightedTotal=${fullHarness.iteration.weightedTotal.toFixed(3)} limitations=${fullHarness.iteration.limitations.length}`,
-      evidenceRefs: [
-        ...fullHarness.iteration.evidenceRefs.render,
-        ...fullHarness.iteration.evidenceRefs.browserQa,
-        ...fullHarness.iteration.evidenceRefs.runtimeGate,
-        ...fullHarness.iteration.evidenceRefs.uiObservation,
-        ...fullHarness.iteration.evidenceRefs.specCoverage,
-        ...fullHarness.iteration.evidenceRefs.discussion,
-        ...fullHarness.iteration.evidenceRefs.screenContract,
-        ...fullHarness.iteration.evidenceRefs.trend,
-      ],
-    };
+  const currentLog = {
+    iteration: input.fullHarness.iteration.iteration,
+    reviewerId: input.reviewer,
+    verdict: input.fullHarness.logVerdict,
+    summary: `Iteration ${input.fullHarness.iteration.iteration}: decision=${input.fullHarness.iteration.decision} finalDecision=${input.fullHarness.finalDecision} weightedTotal=${input.fullHarness.iteration.weightedTotal.toFixed(3)} limitations=${input.fullHarness.iteration.limitations.length}`,
+    evidenceRefs: [
+      ...input.fullHarness.iteration.evidenceRefs.render,
+      ...input.fullHarness.iteration.evidenceRefs.browserQa,
+      ...input.fullHarness.iteration.evidenceRefs.runtimeGate,
+      ...input.fullHarness.iteration.evidenceRefs.uiObservation,
+      ...input.fullHarness.iteration.evidenceRefs.specCoverage,
+      ...input.fullHarness.iteration.evidenceRefs.discussion,
+      ...input.fullHarness.iteration.evidenceRefs.screenContract,
+      ...input.fullHarness.iteration.evidenceRefs.trend,
+    ],
+  };
+  return [...previousLogs, currentLog];
+}
 
-    // Cumulative reviewerLogs (append-only)
-    const cumulativeReviewerLogs = [...previousLogs, currentLog];
-
-    summary.fullHarness = {
-      enabled: true,
-      runId: fullHarness.history.runId,
-      calibrationRef: fullHarness.calibrationRef,
-      iterationCount: fullHarness.history.iterations.length,
-      bestIteration: fullHarness.history.bestIteration,
-      status: fullHarness.isTerminal ? "completed" : "in-progress",
-      ...(fullHarness.terminationReason
-        ? { terminationReason: fullHarness.terminationReason }
-        : {}),
-      finalDecision: fullHarness.finalDecision,
-      reviewerSignoff: {
-        reviewerId: request.reviewer,
-        status: fullHarness.signoffStatus,
-        timestamp: generatedAt,
-        source: "cli",
-      },
-      reviewerLogs: cumulativeReviewerLogs,
-      iterations: fullHarness.history.iterations,
-      scoringTrace: fullHarness.history.scoringTrace,
-      limitations: fullHarness.iteration.limitations,
-    };
-    const evidencePaths = await writeEvidenceBundles({
-      root: request.root,
-      render: {
-        result: renderResult,
-        surface: supportedSurface,
-        mode: modeSummary.effective,
-        generatedAt,
-      },
-      browserQa: { result: browserQaResult, mode: modeSummary.effective },
-      prototyping: summary,
-      fullHarnessArtifacts: {
-        fakeUiDetection: fullHarness.fakeUiDetection,
-        handoff: fullHarness.handoff,
-        exitReason: fullHarness.exitReason,
-      },
+async function writeEvidenceBundlesOrThrow(input: Parameters<typeof writeEvidenceBundles>[0]) {
+  try {
+    return await writeEvidenceBundles(input);
+  } catch (error) {
+    throw new EvidenceWriteError(`Evidence bundle write failed. ${formatError(error)}`, {
+      cause: error,
     });
-
-    return {
-      mode: modeSummary.effective,
-      surface: supportedSurface,
-      evidencePaths: {
-        prototyping: evidencePaths.prototypingPath,
-        render: evidencePaths.renderPath,
-        browserQa: evidencePaths.browserQaPath,
-      },
-      generatedAt,
-    };
-  } catch (err) {
-    throw new Error(
-      `Full-harness requires a valid calibration pack at ${packPath}. ` +
-        `Load failed: ${err instanceof Error ? err.message : String(err)}`,
-    );
   }
 }
 
@@ -457,7 +597,7 @@ async function buildPrototypingSummaryBundle(input: {
     specsDir,
     runtimeGateToObservation(input.runtimeGate),
   );
-  const perSpecMap = new Map(perSpecCoverage.map((s) => [s.specId, s]));
+  const perSpecMap = new Map(perSpecCoverage.map((spec) => [spec.specId, spec]));
   const specNames = await safeReadDir(specsDir);
   const specs = specNames
     .filter((name) => name.startsWith("spec-"))
@@ -467,7 +607,7 @@ async function buildPrototypingSummaryBundle(input: {
       if (!perSpec) {
         throw new Error(
           `Spec coverage build failure: spec "${name}" exists but has no coverage data. ` +
-            `All specs must have corresponding coverage results.`,
+            "All specs must have corresponding coverage results.",
         );
       }
       return {
@@ -538,4 +678,76 @@ function runtimeGateToObservation(
   return {
     ui: runtimeGate.ui.map((entry) => ({ ...entry })),
   };
+}
+
+function collectBrowserQaEvidenceRefs(
+  browserQaResult: Awaited<ReturnType<typeof runBrowserQaPerScreen>>,
+): string[] {
+  const refs = new Set<string>();
+  for (const phase of browserQaResult.phases) {
+    for (const ref of phase.evidence_refs) {
+      refs.add(ref);
+    }
+    for (const finding of phase.findings) {
+      for (const ref of finding.evidence_refs) {
+        refs.add(ref);
+      }
+    }
+  }
+  return [...refs];
+}
+
+function buildUiFidelityEvidenceMessage(input: {
+  status: string;
+  reason?: string;
+  missingRequiredEvidence: string[];
+  missingScreens: Array<{ screenId: string; route: string }>;
+}): string {
+  const parts = [`UI fidelity evidence is insufficient (status=${input.status}).`];
+  if (input.reason) {
+    parts.push(input.reason);
+  }
+  if (input.missingRequiredEvidence.length > 0) {
+    parts.push(`missingRequiredEvidence=${input.missingRequiredEvidence.join(", ")}`);
+  }
+  if (input.missingScreens.length > 0) {
+    parts.push(
+      `missingScreens=${input.missingScreens.map((screen) => `${screen.screenId}:${screen.route}`).join(", ")}`,
+    );
+  }
+  return parts.join(" ");
+}
+
+function assertReviewerIsNotPlaceholder(reviewer: string): void {
+  const normalizedReviewer = reviewer.toLowerCase().trim();
+  const placeholders = [
+    "qfai",
+    "default",
+    "system",
+    "auto",
+    "placeholder",
+    "tbd",
+    "n/a",
+    "none",
+    "unknown",
+    "",
+  ];
+  if (placeholders.includes(normalizedReviewer)) {
+    throw new Error(
+      `Reviewer identifier "${reviewer}" is a placeholder. ` +
+        "Provide a real reviewer identity for full-harness mode.",
+    );
+  }
+}
+
+function toRelativeSummaryPath(root: string, candidate: string): string {
+  const relative = path.isAbsolute(candidate) ? path.relative(root, candidate) : candidate;
+  return relative.replaceAll("\\", "/");
+}
+
+function formatError(error: unknown): string {
+  if (error instanceof Error) {
+    return error.message;
+  }
+  return String(error);
 }

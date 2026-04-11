@@ -182,6 +182,7 @@ export async function buildUiFidelity(input: {
       mode: "interactive",
       screens,
     },
+    // Execution is fail-closed: callers must treat any non-completed status as execution failure.
     status: {
       required: input.required,
       status: hasInsufficientEvidence ? "insufficient-evidence" : "completed",

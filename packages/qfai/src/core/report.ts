@@ -1880,28 +1880,7 @@ async function collectPrototypingSummary(
     calibrationConfig || scoringTrace
       ? {
           configPresent: Boolean(calibrationConfig),
-          ...(calibrationConfig?.thresholds
-            ? {
-                thresholdSummary: {
-                  accept: calibrationConfig.thresholds.accept ?? 0.8,
-                  refine: calibrationConfig.thresholds.refine ?? 0.5,
-                },
-              }
-            : {}),
           scoringTraceAvailable: Boolean(scoringTrace && scoringTrace.length > 0),
-          ...(scoringTrace && scoringTrace.length > 0 && calibrationConfig?.thresholds
-            ? {
-                belowThresholdWarning: scoringTrace.some(
-                  (row: unknown) =>
-                    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-                    asRecord(row) !== null &&
-                    typeof asRecord(row)?.weightedTotal === "number" &&
-                    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-                    (asRecord(row)!.weightedTotal as number) <
-                      (calibrationConfig.thresholds?.accept ?? 0.8),
-                ),
-              }
-            : {}),
         }
       : undefined;
 

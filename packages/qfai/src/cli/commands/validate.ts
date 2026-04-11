@@ -319,8 +319,6 @@ const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-PROT-154": "prototyping.yaml allowed_modes must include recommended_mode.",
   "QFAI-PROT-155": "prototyping.yaml requires allowed_modes field.",
   "QFAI-PROT-156": "prototyping.yaml requires surface field.",
-  "QFAI-PROT-233":
-    "evidence effective mode differs from resolved discussion recommendation precedence.",
   "QFAI-PROT-234": "discussion recommendation exists but evidence mode.source is system-default.",
   "QFAI-PROT-235":
     "evidence mode.source is discussion-recommendation but recommendation artifact is missing or invalid.",
@@ -347,7 +345,6 @@ const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-PROT-254": "render bundle contradicts non-UI prototyping surface / mode expectation.",
   "QFAI-PROT-255": "captured render evidence screen references a file that does not exist on disk.",
   "QFAI-PROT-256": "skipped/failed render evidence screen is missing required reason/error field.",
-  "QFAI-PROT-261": "browser QA bundle mode does not match prototyping effective mode.",
   "QFAI-PROT-262":
     "browser QA completed status without usable evidence (no summary and no findings).",
   "QFAI-PROT-263":
@@ -389,9 +386,17 @@ const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "fullHarness specCoverage is zero-seeded (all declared/checked counts are zero).",
   "QFAI-PROT-306":
     "fullHarness uiFidelity mockPaths must be fail|finding only and must not contain synthetic pass entries.",
-  "QFAI-PROT-307": "fullHarness calibrationRef.packVersion appears hardcoded.",
   "QFAI-PROT-308": "fullHarness status is converged but iterationCount < 2.",
   "QFAI-PROT-309": "fullHarness iteration reviewer is a placeholder value.",
+  "QFAI-PROT-316": "reviewerSignoff.status does not match fullHarness.finalDecision.",
+  "QFAI-PROT-317": "final reviewerLogs verdict does not match fullHarness termination semantics.",
+  "QFAI-PROT-318":
+    "runtimeGate/specCoverage evidenceRefs contain a non-concrete artifact reference.",
+  "QFAI-PROT-319": "fullHarness.calibrationRef.packPath does not match the resolved pack path.",
+  "QFAI-PROT-320":
+    "fullHarness.calibrationRef.packVersion does not match the resolved calibration pack version.",
+  "QFAI-PROT-321":
+    "fullHarness.calibrationRef.configPath does not match the active qfai.config.yaml path.",
   "QFAI-CONTRACT-030":
     "Contract index references must match declared contract IDs in .qfai/contracts/**.",
 };

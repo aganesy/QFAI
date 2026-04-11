@@ -12,11 +12,9 @@
  * - commitSha required (no silent failure)
  */
 
-import path from "node:path";
-
 import { FULL_HARNESS_INVALID_COMBINATION_MESSAGE } from "../prototyping/mode.js";
 import { requiresVisualBrowserEvidence } from "../detection/surfaceType.js";
-import { CalibrationLoader } from "../calibration/loader.js";
+import type { CalibrationPack } from "../calibration/types.js";
 import { detectFakeUi, type FakeUiDetectionResult } from "./fakeUiDetection.js";
 import { mapLoopStatusToExitReason, type FullHarnessExitReason } from "./exitReason.js";
 import { createFullHarnessHandoff, type FullHarnessHandoff } from "./handoff.js";
@@ -44,9 +42,11 @@ export type FullHarnessRequest = {
   reviewer: string;
   changeSummary: string[];
   limitations: string[];
+  calibrationPack: CalibrationPack;
   calibrationRef: {
     packPath: string;
-    configPath: string;
+    packVersion: string;
+    configPath?: string;
   };
   adapters: FullHarnessAdapters;
   screenContracts: Array<{ screenId: string; route: string }>;
@@ -141,11 +141,7 @@ export async function runFullHarness(request: FullHarnessRequest): Promise<FullH
   const scored = scorePanelsFromInputs(request.panelInputs);
   const l1 = scored.l1;
   const l2 = scored.l2;
-  const resolvedPackPath = path.isAbsolute(request.calibrationRef.packPath)
-    ? request.calibrationRef.packPath
-    : path.join(request.root, request.calibrationRef.packPath);
-  const loader = new CalibrationLoader(resolvedPackPath);
-  const calibrationPack = await loader.load();
+  const calibrationPack = request.calibrationPack;
 
   const measurementInput: MeasurementInput = {
     root: request.root,
@@ -183,9 +179,9 @@ export async function runFullHarness(request: FullHarnessRequest): Promise<FullH
   }
 
   const calibrationRef: FullHarnessCalibrationRef = {
-    configPath: request.calibrationRef.configPath,
+    configPath: request.calibrationRef.configPath ?? "",
     packPath: request.calibrationRef.packPath,
-    packVersion: calibrationPack.version,
+    packVersion: request.calibrationRef.packVersion,
   };
 
   const fakeUiDetection = detectFakeUi({ renderResults, browserQaResults });

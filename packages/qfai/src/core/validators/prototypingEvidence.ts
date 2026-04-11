@@ -2,7 +2,7 @@ import { access, readFile } from "node:fs/promises";
 import path from "node:path";
 
 import type { QfaiConfig } from "../config.js";
-import { resolvePath } from "../config.js";
+import { getConfigPath, resolvePath } from "../config.js";
 import { parseStructuredContract } from "../contracts.js";
 import { buildContractIndex } from "../contractIndex.js";
 import { stripContractDeclarationLines } from "../contractsDecl.js";
@@ -1268,6 +1268,66 @@ async function validateModeMetadata(
       ),
     );
   }
+  if (calibrationPack) {
+    const summaryPackPath = normalizeArtifactRefPath(
+      root,
+      evidence.fullHarness.calibrationRef.packPath,
+    );
+    const resolvedPackPath = normalizeArtifactRefPath(root, calibrationPack.packPath);
+    if (summaryPackPath !== resolvedPackPath) {
+      issues.push(
+        issue(
+          "QFAI-PROT-319",
+          `fullHarness.calibrationRef.packPath (${evidence.fullHarness.calibrationRef.packPath}) does not match resolved calibration pack path (${calibrationPack.packPath}).`,
+          "error",
+          evidenceJsonPath,
+          "prototypingEvidence.fullHarnessCalibrationPackPathMismatch",
+          [evidence.fullHarness.calibrationRef.packPath, calibrationPack.packPath],
+          "canonical",
+          "fullHarness.calibrationRef.packPath は実際に解決された calibration pack と一致させてください。",
+        ),
+      );
+    }
+    if (evidence.fullHarness.calibrationRef.packVersion !== calibrationPack.pack.version) {
+      issues.push(
+        issue(
+          "QFAI-PROT-320",
+          `fullHarness.calibrationRef.packVersion (${evidence.fullHarness.calibrationRef.packVersion}) does not match resolved pack version (${calibrationPack.pack.version}).`,
+          "error",
+          evidenceJsonPath,
+          "prototypingEvidence.fullHarnessCalibrationPackVersionMismatch",
+          [evidence.fullHarness.calibrationRef.packVersion, calibrationPack.pack.version],
+          "canonical",
+          "fullHarness.calibrationRef.packVersion は calibration pack metadata の version と一致させてください。",
+        ),
+      );
+    }
+    const expectedConfigPath = normalizeArtifactRefPath(
+      root,
+      path.relative(root, getConfigPath(root)),
+    );
+    const summaryConfigPath = normalizeArtifactRefPath(
+      root,
+      evidence.fullHarness.calibrationRef.configPath,
+    );
+    if (summaryConfigPath !== expectedConfigPath) {
+      issues.push(
+        issue(
+          "QFAI-PROT-321",
+          `fullHarness.calibrationRef.configPath (${evidence.fullHarness.calibrationRef.configPath}) does not match expected config path (${path.relative(root, getConfigPath(root))}).`,
+          "error",
+          evidenceJsonPath,
+          "prototypingEvidence.fullHarnessCalibrationConfigPathMismatch",
+          [
+            evidence.fullHarness.calibrationRef.configPath,
+            path.relative(root, getConfigPath(root)),
+          ],
+          "canonical",
+          "fullHarness.calibrationRef.configPath は実行時設定ファイルと一致させてください。",
+        ),
+      );
+    }
+  }
   if (
     evidence.fullHarness.terminationReason !== undefined &&
     !VALID_FULL_HARNESS_TERMINATION_REASONS.has(evidence.fullHarness.terminationReason)
@@ -1687,32 +1747,6 @@ async function validateModeMetadata(
     }
   }
 
-  // QFAI-PROT-307: calibrationRef packVersion hardcoded detection
-  // v1.7.15 WS-8: escalated from warning to error
-  if (
-    evidence.fullHarness.calibrationRef.packVersion === "1.0.0" &&
-    evidence.fullHarness.iterationCount > 0
-  ) {
-    // Check if it looks like a default — if packPath is also default, it's likely hardcoded
-    const looksHardcoded =
-      evidence.fullHarness.calibrationRef.packPath.includes("calibration.yaml") &&
-      evidence.fullHarness.calibrationRef.configPath === "qfai.config.yaml";
-    if (looksHardcoded) {
-      issues.push(
-        issue(
-          "QFAI-PROT-307",
-          "fullHarness.calibrationRef.packVersion appears hardcoded ('1.0.0'). packVersion must be resolved from pack metadata.",
-          "error",
-          evidenceJsonPath,
-          "prototypingEvidence.fullHarnessPackVersionHardcoded",
-          undefined,
-          "canonical",
-          "calibrationRef.packVersion は calibration pack のメタデータから解決してください。",
-        ),
-      );
-    }
-  }
-
   // QFAI-PROT-308: converged requires iterationCount >= 2 (strengthened from PROT-290)
   if (
     evidence.fullHarness.terminationReason === "converged" &&
@@ -1873,11 +1907,11 @@ async function validateModeMetadata(
     ...iter.evidenceRefs.runtimeGate,
     ...iter.evidenceRefs.specCoverage,
   ])) {
-    if (ref === ".qfai/evidence/prototyping.json#/runtimeGate" || ref.startsWith("specs: ")) {
+    if (!isConcreteArtifactRef(ref)) {
       issues.push(
         issue(
           "QFAI-PROT-318",
-          `synthetic evidence ref is not allowed: ${ref}`,
+          `non-concrete evidence ref is not allowed: ${ref}`,
           "error",
           evidenceJsonPath,
           "prototypingEvidence.syntheticEvidenceRef",
@@ -3353,6 +3387,34 @@ function toOptionalStringArray(value: unknown): string[] | undefined {
   return value.map((item: string) => item.trim()).filter((item) => item.length > 0);
 }
 
+function isConcreteArtifactRef(ref: string): boolean {
+  const trimmed = ref.trim();
+  if (trimmed.length === 0) {
+    return false;
+  }
+  if (trimmed.startsWith("specs:")) {
+    return false;
+  }
+  if (trimmed.startsWith(".qfai/evidence/prototyping.json#/")) {
+    return false;
+  }
+  if (path.isAbsolute(trimmed)) {
+    return false;
+  }
+  if (trimmed.endsWith("/") || trimmed.endsWith("\\")) {
+    return false;
+  }
+  const [artifactPath, anchor] = trimmed.split("#", 2);
+  const extension = path.extname(artifactPath ?? "");
+  if (extension.length === 0) {
+    return false;
+  }
+  if (extension === ".md" && (!anchor || anchor.trim().length === 0)) {
+    return false;
+  }
+  return true;
+}
+
 function normalizeEvidenceRefArray(value: unknown): string[] | null {
   if (!Array.isArray(value) || !value.every((item) => typeof item === "string")) {
     return null;
@@ -3400,6 +3462,11 @@ function normalizeOptionalMissingBlock(value: unknown): {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function normalizeArtifactRefPath(root: string, targetPath: string): string {
+  const resolved = path.isAbsolute(targetPath) ? targetPath : path.resolve(root, targetPath);
+  return path.normalize(resolved);
 }
 
 function isValidMode(value: unknown): value is PrototypingMode {

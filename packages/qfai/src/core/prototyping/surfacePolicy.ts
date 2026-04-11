@@ -11,8 +11,12 @@ export function isSupportedPrototypingSurface(surface: string): surface is Proto
 export function assertSupportedPrototypingSurface(surface: string): PrototypingSurface {
   if (!isSupportedPrototypingSurface(surface)) {
     throw new Error(
-      `packages/qfai v1.7.15 supports prototyping only for UI-bearing surfaces: ${PROTOTYPING_SUPPORTED_SURFACES.join(", ")}.`,
+      `packages/qfai v1.7.15 supports prototyping only for UI-bearing surfaces: ${getSupportedPrototypingSurfacesLabel()}.`,
     );
   }
   return surface;
+}
+
+export function getSupportedPrototypingSurfacesLabel(): string {
+  return PROTOTYPING_SUPPORTED_SURFACES.join(", ");
 }

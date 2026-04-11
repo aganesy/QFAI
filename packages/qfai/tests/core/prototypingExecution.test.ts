@@ -289,6 +289,43 @@ describe("runPrototypingExecution", () => {
     });
   });
 
+  it("fails closed when a required screen has insufficient UI fidelity evidence", async () => {
+    await withRoot(async (root) => {
+      const packDir = path.join(root, ".qfai", "discussion", "discussion-20260406000000000");
+      await writeFile(
+        path.join(packDir, "uiux", "40_screen_contracts.md"),
+        [
+          "# Screen Contracts",
+          "",
+          "### Screen: Dashboard",
+          "- screen_id: dashboard",
+          "- route: /dashboard",
+          "",
+          "### Screen: Settings",
+          "- screen_id: settings",
+          "- route: /settings",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+
+      await expect(
+        runPrototypingExecution({
+          root,
+          requestedMode: "full-harness",
+          reviewer: "qa-reviewer",
+          renderAdapter: createFakeRenderAdapter(),
+          providerRegistry: createFakeProviderRegistry(),
+          browserQaProviderId: "test-browser-qa",
+        }),
+      ).rejects.toThrow(/UiFidelityEvidenceError|UI fidelity evidence is insufficient/i);
+
+      await expect(
+        access(path.join(root, ".qfai", "evidence", "prototyping.json")),
+      ).rejects.toThrow();
+    });
+  });
+
   it("rejects stale coexist recommendation artifact", async () => {
     await withRoot(async (root) => {
       const packDir = path.join(root, ".qfai", "discussion", "discussion-20260406000000000");
