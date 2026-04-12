@@ -13,6 +13,7 @@ import type {
   TrendAlignmentInputs,
 } from "../harness/panelInputs.js";
 import { findLatestDiscussionPackDir } from "../discussionPack.js";
+import { toRepoRelativeArtifactRef } from "./pathUtils.js";
 import { readCanonicalScreenContracts } from "./screenContracts.js";
 import {
   readRequiredAggregateScore,
@@ -54,7 +55,28 @@ export async function buildDiscussionAxisInputs(root: string): Promise<Discussio
     trendDerivedAxes: readRequiredAxisCount(trendRaw),
     productSpecificAxes: readRequiredAxisCount(productRaw),
     aggregateScore: readRequiredAggregateScore(aggregateRaw),
-    evidenceRefs: [invariantPath, trendPath, productPath, aggregatePath],
+    evidenceRefs: [
+      toRepoRelativeArtifactRef({
+        repoRoot: root,
+        absolutePath: invariantPath,
+        anchor: "discussion-axes-invariant",
+      }),
+      toRepoRelativeArtifactRef({
+        repoRoot: root,
+        absolutePath: trendPath,
+        anchor: "discussion-axes-trend-derived",
+      }),
+      toRepoRelativeArtifactRef({
+        repoRoot: root,
+        absolutePath: productPath,
+        anchor: "discussion-axes-product-specific",
+      }),
+      toRepoRelativeArtifactRef({
+        repoRoot: root,
+        absolutePath: aggregatePath,
+        anchor: "discussion-axes-aggregate",
+      }),
+    ],
     degradedScoring: false,
   };
 }
@@ -166,7 +188,18 @@ export async function buildTrendAlignmentInputs(root: string): Promise<TrendAlig
     trendSourcesChecked,
     translationConsistency,
     competitiveGapsCovered,
-    evidenceRefs: [sourcesPath, screenContractsPath],
+    evidenceRefs: [
+      toRepoRelativeArtifactRef({
+        repoRoot: root,
+        absolutePath: sourcesPath,
+        anchor: "trend-scan",
+      }),
+      toRepoRelativeArtifactRef({
+        repoRoot: root,
+        absolutePath: screenContractsPath,
+        anchor: "screen-contracts",
+      }),
+    ],
     degradedScoring: false,
   };
 }

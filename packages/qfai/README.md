@@ -57,7 +57,12 @@ npx qfai report
     (`/qfai-prototyping` with `mode=full-harness` for supported UI surfaces only), not by a general-purpose end-user CLI flow.
     `qfai validate` consumes the resulting evidence files, including `mode.effective` and `fullHarness` metadata when present.
     Traceability refs inside prototyping evidence must use repo-root-relative concrete artifact refs (for example `.qfai/specs/spec-0001/01_Spec.md#L3` or `.qfai/evidence/render.json#/screens/0`).
-    Absolute paths are invalid, and top-level `runtimeGate.evidenceRefs` is validated with the same strict ref grammar as iteration/specCoverage refs.
+    Absolute paths are invalid. The same strict ref grammar is enforced for top-level and leaf evidence-bearing fields, including
+    `runtimeGate.evidenceRefs`, `runtimeGate.ui[].declaredRef`, `runtimeGate.ui[].renderEvidenceRefs[]`,
+    `runtimeGate.ui[].browserQaEvidenceRefs[]`, `specs[].coverageRefs[].declaredRef`, `specs[].coverageRefs[].observedRefs[]`,
+    `fullHarness.iterations[].evidenceRefs.runtimeGate`, `fullHarness.iterations[].evidenceRefs.specCoverage`,
+    `fullHarness.iterations[].l1.axes[].evidenceRefs[]`, `fullHarness.iterations[].l2.axes[].evidenceRefs[]`, and
+    `fullHarness.reviewerLogs[].evidenceRefs[]`.
 
 ## ATDD annotation hard gate
 

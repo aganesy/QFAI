@@ -159,7 +159,7 @@ type PrototypingEvidence = {
     ui: Array<{
       screenId: string;
       route: string;
-      declaredRef?: string;
+      declaredRef: string;
       url?: string;
       rendered: boolean;
       browserVisited: boolean;
@@ -984,13 +984,15 @@ function parseEvidence(
         row.screenId.trim().length === 0 ||
         typeof row.route !== "string" ||
         row.route.trim().length === 0 ||
+        typeof row.declaredRef !== "string" ||
+        row.declaredRef.trim().length === 0 ||
         typeof row.rendered !== "boolean" ||
         typeof row.browserVisited !== "boolean"
       ) {
         return {
           ok: false,
           reason:
-            "`runtimeGate.ui[]` requires screenId/route/rendered/browserVisited with observed-only UI ledger fields",
+            "`runtimeGate.ui[]` requires screenId/route/declaredRef/rendered/browserVisited with observed-only UI ledger fields",
         };
       }
       const renderEvidenceRefs = normalizeEvidenceRefArray(row.renderEvidenceRefs);
@@ -1005,9 +1007,7 @@ function parseEvidence(
       uiRows.push({
         screenId: row.screenId.trim(),
         route: row.route.trim(),
-        ...(typeof row.declaredRef === "string" && row.declaredRef.trim().length > 0
-          ? { declaredRef: row.declaredRef.trim() }
-          : {}),
+        declaredRef: row.declaredRef.trim(),
         ...(typeof row.url === "string" && row.url.trim().length > 0
           ? { url: row.url.trim() }
           : {}),
@@ -1929,21 +1929,39 @@ async function validateModeMetadata(
         ),
       );
     }
-    for (const ref of evidence.runtimeGate.evidenceRefs) {
-      if (!isConcreteArtifactRef(ref)) {
-        issues.push(
-          issue(
-            "QFAI-PROT-318",
-            `non-concrete evidence ref is not allowed: ${ref}`,
-            "error",
-            evidenceJsonPath,
-            "prototypingEvidence.syntheticEvidenceRef",
-            [ref],
-            "canonical",
-            "runtimeGate/specCoverage の evidenceRefs には concrete artifact ref のみを保持してください。",
-          ),
-        );
-      }
+    pushConcreteArtifactRefIssues(issues, {
+      evidenceJsonPath,
+      refs: evidence.runtimeGate.evidenceRefs,
+      required: true,
+      fieldPath: "runtimeGate.evidenceRefs",
+      guidance:
+        "runtimeGate/specCoverage の evidenceRefs には concrete artifact ref のみを保持してください。",
+    });
+    for (const row of evidence.runtimeGate.ui) {
+      pushConcreteArtifactRefIssues(issues, {
+        evidenceJsonPath,
+        refs: [row.declaredRef],
+        required: true,
+        fieldPath: `runtimeGate.ui[${row.screenId}].declaredRef`,
+        guidance:
+          "runtimeGate.ui[].declaredRef には concrete artifact ref のみを保持してください。",
+      });
+      pushConcreteArtifactRefIssues(issues, {
+        evidenceJsonPath,
+        refs: row.renderEvidenceRefs,
+        required: true,
+        fieldPath: `runtimeGate.ui[${row.screenId}].renderEvidenceRefs`,
+        guidance:
+          "runtimeGate.ui[].renderEvidenceRefs[] には concrete artifact ref のみを保持してください。",
+      });
+      pushConcreteArtifactRefIssues(issues, {
+        evidenceJsonPath,
+        refs: row.browserQaEvidenceRefs,
+        required: true,
+        fieldPath: `runtimeGate.ui[${row.screenId}].browserQaEvidenceRefs`,
+        guidance:
+          "runtimeGate.ui[].browserQaEvidenceRefs[] には concrete artifact ref のみを保持してください。",
+      });
     }
     const hasObservedRuntimeRoute = evidence.runtimeGate.ui.some(
       (entry) => entry.rendered || entry.browserVisited,
@@ -1982,38 +2000,56 @@ async function validateModeMetadata(
       );
     }
   }
+  for (const iter of evidence.fullHarness.iterations) {
+    for (const axis of iter.l1.axes) {
+      pushConcreteArtifactRefIssues(issues, {
+        evidenceJsonPath,
+        refs: axis.evidenceRefs,
+        required: true,
+        fieldPath: `fullHarness.iterations[${iter.iteration}].l1.axes[${axis.axisId}].evidenceRefs`,
+        guidance:
+          "fullHarness.iterations[].l1.axes[].evidenceRefs[] には concrete artifact ref のみを保持してください。",
+      });
+    }
+    for (const axis of iter.l2.axes) {
+      pushConcreteArtifactRefIssues(issues, {
+        evidenceJsonPath,
+        refs: axis.evidenceRefs,
+        required: true,
+        fieldPath: `fullHarness.iterations[${iter.iteration}].l2.axes[${axis.axisId}].evidenceRefs`,
+        guidance:
+          "fullHarness.iterations[].l2.axes[].evidenceRefs[] には concrete artifact ref のみを保持してください。",
+      });
+    }
+  }
+  for (const log of evidence.fullHarness.reviewerLogs) {
+    pushConcreteArtifactRefIssues(issues, {
+      evidenceJsonPath,
+      refs: log.evidenceRefs,
+      required: true,
+      fieldPath: `fullHarness.reviewerLogs[${log.iteration}:${log.reviewerId}].evidenceRefs`,
+      guidance:
+        "fullHarness.reviewerLogs[].evidenceRefs[] には concrete artifact ref のみを保持してください。",
+    });
+  }
   for (const spec of evidence.specs) {
     for (const coverage of spec.coverageRefs ?? []) {
-      if (!isConcreteArtifactRef(coverage.declaredRef)) {
-        issues.push(
-          issue(
-            "QFAI-PROT-318",
-            `non-concrete declaredRef is not allowed: ${coverage.declaredRef}`,
-            "error",
-            evidenceJsonPath,
-            "prototypingEvidence.syntheticEvidenceRef",
-            [coverage.declaredRef],
-            "canonical",
-            "specs[].coverageRefs[].declaredRef には concrete artifact ref のみを保持してください。",
-          ),
-        );
-      }
-      for (const observedRef of coverage.observedRefs) {
-        if (!isConcreteArtifactRef(observedRef)) {
-          issues.push(
-            issue(
-              "QFAI-PROT-318",
-              `non-concrete observedRef is not allowed: ${observedRef}`,
-              "error",
-              evidenceJsonPath,
-              "prototypingEvidence.syntheticEvidenceRef",
-              [observedRef],
-              "canonical",
-              "specs[].coverageRefs[].observedRefs には concrete artifact ref のみを保持してください。",
-            ),
-          );
-        }
-      }
+      pushConcreteArtifactRefIssues(issues, {
+        evidenceJsonPath,
+        refs: [coverage.declaredRef],
+        required: true,
+        fieldPath: `specs[${spec.specId}].coverageRefs[${coverage.route}].declaredRef`,
+        guidance:
+          "specs[].coverageRefs[].declaredRef には concrete artifact ref のみを保持してください。",
+      });
+      pushConcreteArtifactRefIssues(issues, {
+        evidenceJsonPath,
+        refs: coverage.observedRefs,
+        required: true,
+        fieldPath: `specs[${spec.specId}].coverageRefs[${coverage.route}].observedRefs`,
+        guidance:
+          "specs[].coverageRefs[].observedRefs には concrete artifact ref のみを保持してください。",
+      });
     }
   }
   return issues;
@@ -3194,7 +3230,7 @@ function normalizeFullHarnessBlock(
       reviewerId: log.reviewerId.trim(),
       verdict: log.verdict,
       summary: log.summary.trim(),
-      evidenceRefs: (log.evidenceRefs as unknown[]).map((r) => String(r).trim()),
+      evidenceRefs: normalizeEvidenceRefArray(log.evidenceRefs) ?? [],
     });
   }
 
@@ -3266,26 +3302,14 @@ function normalizeFullHarnessBlock(
     }
 
     // v1.7.15: parse l1/l2 axes
-    const l1Axes = Array.isArray(iter.l1.axes)
-      ? (iter.l1.axes as unknown[]).filter(isRecord).map((a) => ({
-          axisId: typeof a.axisId === "string" ? a.axisId : "",
-          score: typeof a.score === "number" ? a.score : 0,
-          rationale: typeof a.rationale === "string" ? a.rationale : "",
-          evidenceRefs: Array.isArray(a.evidenceRefs)
-            ? (a.evidenceRefs as unknown[]).map((r) => String(r))
-            : [],
-        }))
-      : [];
-    const l2Axes = Array.isArray(iter.l2.axes)
-      ? (iter.l2.axes as unknown[]).filter(isRecord).map((a) => ({
-          axisId: typeof a.axisId === "string" ? a.axisId : "",
-          score: typeof a.score === "number" ? a.score : 0,
-          rationale: typeof a.rationale === "string" ? a.rationale : "",
-          evidenceRefs: Array.isArray(a.evidenceRefs)
-            ? (a.evidenceRefs as unknown[]).map((r) => String(r))
-            : [],
-        }))
-      : [];
+    const l1Axes = normalizeHarnessAxes(iter.l1.axes);
+    if (!l1Axes.ok) {
+      return { ok: false, reason: l1Axes.reason };
+    }
+    const l2Axes = normalizeHarnessAxes(iter.l2.axes);
+    if (!l2Axes.ok) {
+      return { ok: false, reason: l2Axes.reason };
+    }
 
     iterations.push({
       iteration: iter.iteration,
@@ -3295,8 +3319,8 @@ function normalizeFullHarnessBlock(
       changeSummary: (iter.changeSummary as unknown[]).map((s) => String(s).trim()),
       limitations: (iter.limitations as unknown[]).map((s) => String(s).trim()),
       evidenceRefs: parsedEvidenceRefs,
-      l1: { panel: "L1" as const, total: iter.l1.total, axes: l1Axes },
-      l2: { panel: "L2" as const, total: iter.l2.total, axes: l2Axes },
+      l1: { panel: "L1" as const, total: iter.l1.total, axes: l1Axes.value },
+      l2: { panel: "L2" as const, total: iter.l2.total, axes: l2Axes.value },
       weightedTotal: iter.weightedTotal,
       deltaFromPrevious: iter.deltaFromPrevious,
       decision: iter.decision.trim(),
@@ -3517,6 +3541,90 @@ function normalizeEvidenceRefArray(value: unknown): string[] | null {
     return null;
   }
   return value.map((item: string) => item.trim());
+}
+
+function pushConcreteArtifactRefIssues(
+  issues: Issue[],
+  input: {
+    evidenceJsonPath: string;
+    refs: string[];
+    required: boolean;
+    fieldPath: string;
+    guidance: string;
+  },
+): void {
+  if (input.required && input.refs.length === 0) {
+    issues.push(
+      issue(
+        "QFAI-PROT-318",
+        `${input.fieldPath} must not be empty.`,
+        "error",
+        input.evidenceJsonPath,
+        "prototypingEvidence.syntheticEvidenceRef",
+        [input.fieldPath],
+        "canonical",
+        input.guidance,
+      ),
+    );
+    return;
+  }
+
+  for (const ref of input.refs) {
+    if (isConcreteArtifactRef(ref)) {
+      continue;
+    }
+    issues.push(
+      issue(
+        "QFAI-PROT-318",
+        `non-concrete evidence ref is not allowed in ${input.fieldPath}: ${ref}`,
+        "error",
+        input.evidenceJsonPath,
+        "prototypingEvidence.syntheticEvidenceRef",
+        [ref],
+        "canonical",
+        input.guidance,
+      ),
+    );
+  }
+}
+
+function normalizeHarnessAxes(value: unknown):
+  | {
+      ok: true;
+      value: Array<{ axisId: string; score: number; rationale: string; evidenceRefs: string[] }>;
+    }
+  | { ok: false; reason: string } {
+  if (!Array.isArray(value)) {
+    return { ok: false, reason: "`fullHarness.iterations[].l1/l2.axes` must be an array" };
+  }
+
+  const axes: Array<{ axisId: string; score: number; rationale: string; evidenceRefs: string[] }> =
+    [];
+  for (const axis of value) {
+    if (
+      !isRecord(axis) ||
+      typeof axis.axisId !== "string" ||
+      typeof axis.score !== "number" ||
+      typeof axis.rationale !== "string"
+    ) {
+      return { ok: false, reason: "`fullHarness.iterations[].l1/l2.axes[]` is invalid" };
+    }
+    const evidenceRefs = normalizeEvidenceRefArray(axis.evidenceRefs);
+    if (evidenceRefs === null) {
+      return {
+        ok: false,
+        reason: "`fullHarness.iterations[].l1/l2.axes[].evidenceRefs` must be a string array",
+      };
+    }
+    axes.push({
+      axisId: axis.axisId.trim(),
+      score: axis.score,
+      rationale: axis.rationale.trim(),
+      evidenceRefs,
+    });
+  }
+
+  return { ok: true, value: axes };
 }
 
 function normalizeOptionalFoundBlock(value: unknown): {

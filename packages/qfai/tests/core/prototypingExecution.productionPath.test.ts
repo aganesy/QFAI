@@ -11,6 +11,7 @@ import type {
   BrowserQaPhaseResult,
 } from "../../src/core/browserQa/types.js";
 import type { RenderCaptureAdapter, RenderCaptureTarget } from "../../src/core/evidence/types.js";
+import { isConcreteArtifactRef } from "../../src/core/prototyping/pathUtils.js";
 import { runPrototypingExecution } from "../../src/core/prototyping/execution.js";
 import { ProviderRegistry } from "../../src/core/providers/registry.js";
 import { validatePrototypingEvidence } from "../../src/core/validators/prototypingEvidence.js";
@@ -240,12 +241,59 @@ describe("prototyping execution production path", () => {
       });
 
       await expect(access(result.evidencePaths.prototyping)).resolves.toBeUndefined();
+      const prototyping = JSON.parse(
+        await readFile(result.evidencePaths.prototyping, "utf-8"),
+      ) as Record<string, unknown>;
+      const runtimeGate = prototyping.runtimeGate as {
+        ui: Array<{
+          declaredRef: string;
+          renderEvidenceRefs: string[];
+          browserQaEvidenceRefs: string[];
+        }>;
+      };
+      const fullHarness = prototyping.fullHarness as {
+        reviewerLogs: Array<{ evidenceRefs: string[] }>;
+        iterations: Array<{
+          l1: { axes: Array<{ evidenceRefs: string[] }> };
+          l2: { axes: Array<{ evidenceRefs: string[] }> };
+        }>;
+      };
+      expect(runtimeGate.ui.every((entry) => isConcreteArtifactRef(entry.declaredRef))).toBe(true);
+      expect(
+        runtimeGate.ui.every((entry) =>
+          entry.renderEvidenceRefs.every((ref) => isConcreteArtifactRef(ref)),
+        ),
+      ).toBe(true);
+      expect(
+        runtimeGate.ui.every((entry) =>
+          entry.browserQaEvidenceRefs.every((ref) => isConcreteArtifactRef(ref)),
+        ),
+      ).toBe(true);
+      expect(
+        fullHarness.reviewerLogs.every((log) =>
+          log.evidenceRefs.every((ref) => isConcreteArtifactRef(ref)),
+        ),
+      ).toBe(true);
+      expect(
+        fullHarness.iterations.every((iteration) =>
+          iteration.l1.axes.every((axis) =>
+            axis.evidenceRefs.every((ref) => isConcreteArtifactRef(ref)),
+          ),
+        ),
+      ).toBe(true);
+      expect(
+        fullHarness.iterations.every((iteration) =>
+          iteration.l2.axes.every((axis) =>
+            axis.evidenceRefs.every((ref) => isConcreteArtifactRef(ref)),
+          ),
+        ),
+      ).toBe(true);
       const issues = await validatePrototypingEvidence(root, defaultConfig);
       expect(issues).toEqual([]);
     });
   });
 
-  it("rejects an injected absolute path in runtimeGate.evidenceRefs", async () => {
+  it("rejects an injected malformed leaf ref after execution", async () => {
     await withRoot(async (root) => {
       await runPrototypingExecution({
         root,
@@ -258,8 +306,8 @@ describe("prototyping execution production path", () => {
 
       const prototypingPath = path.join(root, ".qfai", "evidence", "prototyping.json");
       const raw = JSON.parse(await readFile(prototypingPath, "utf-8")) as Record<string, unknown>;
-      const runtimeGate = raw.runtimeGate as Record<string, unknown>;
-      runtimeGate.evidenceRefs = [path.join(root, ".qfai", "evidence", "render", "dashboard.png")];
+      const runtimeGate = raw.runtimeGate as { ui: Array<Record<string, unknown>> };
+      (runtimeGate.ui[0]?.renderEvidenceRefs as string[])[0] = "render/dashboard.png";
       await writeFile(prototypingPath, JSON.stringify(raw, null, 2), "utf-8");
 
       const issues = await validatePrototypingEvidence(root, defaultConfig);

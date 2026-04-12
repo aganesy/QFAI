@@ -36,6 +36,7 @@ import { validatePanelInputs } from "./panelInputs.js";
 import { scorePanelsFromInputs } from "./panelScore.js";
 import type { RenderRunnerResult } from "../evidence/types.js";
 import type { BrowserQaRunResult } from "../browserQa/types.js";
+import { toConcreteArtifactRef } from "../prototyping/pathUtils.js";
 
 export type FullHarnessRequest = {
   root: string;
@@ -100,7 +101,9 @@ export async function runFullHarness(request: FullHarnessRequest): Promise<FullH
 
   const renderResult = await adapters.render.captureEvidence(1);
   renderResults.push(renderResult);
-  renderRefs.push(...renderResult.filesWritten);
+  renderRefs.push(
+    ...renderResult.filesWritten.map((ref) => toConcreteArtifactRef(request.root, ref)),
+  );
   const hasCapturedRender = renderResult.entries.some((entry) => entry.status === "captured");
   const hasRenderFailure = renderResult.entries.some((entry) => entry.status === "failed");
   if (!hasCapturedRender || hasRenderFailure) {
@@ -112,11 +115,11 @@ export async function runFullHarness(request: FullHarnessRequest): Promise<FullH
   const aggregatedBrowserQaRefs = new Set<string>();
   for (const phase of qaResult.phases) {
     for (const ref of phase.evidence_refs) {
-      aggregatedBrowserQaRefs.add(ref);
+      aggregatedBrowserQaRefs.add(toConcreteArtifactRef(request.root, ref));
     }
     for (const finding of phase.findings) {
       for (const ref of finding.evidence_refs) {
-        aggregatedBrowserQaRefs.add(ref);
+        aggregatedBrowserQaRefs.add(toConcreteArtifactRef(request.root, ref));
       }
     }
   }

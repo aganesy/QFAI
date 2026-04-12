@@ -1865,12 +1865,19 @@ async function seedPrototypingEvidenceFixture(root: string): Promise<void> {
             {
               screenId: "orders",
               route: "/orders/new",
+              declaredRef:
+                ".qfai/discussion/discussion-20260216000000000/uiux/40_screen_contracts.md#orders",
               rendered: true,
               browserVisited: true,
               httpStatus: 200,
               renderEvidenceRefs: [".qfai/evidence/render.json#/screens/0"],
               browserQaEvidenceRefs: [".qfai/evidence/browser-qa.json#/findings"],
             },
+          ],
+          evidenceRefs: [
+            ".qfai/discussion/discussion-20260216000000000/uiux/40_screen_contracts.md#orders",
+            ".qfai/evidence/render.json#/screens/0",
+            ".qfai/evidence/browser-qa.json#/findings",
           ],
         },
         uiFidelity: {
@@ -1963,12 +1970,28 @@ async function seedPrototypingEvidenceFixture(root: string): Promise<void> {
               l1: {
                 panel: "L1",
                 total: 0.9,
-                axes: [{ axisId: "runtime", score: 0.9, rationale: "ok", evidenceRefs: ["a"] }],
+                axes: [
+                  {
+                    axisId: "runtime",
+                    score: 0.9,
+                    rationale: "ok",
+                    evidenceRefs: [".qfai/evidence/render.json#/screens/0"],
+                  },
+                ],
               },
               l2: {
                 panel: "L2",
                 total: 0.9,
-                axes: [{ axisId: "design", score: 0.9, rationale: "ok", evidenceRefs: ["b"] }],
+                axes: [
+                  {
+                    axisId: "design",
+                    score: 0.9,
+                    rationale: "ok",
+                    evidenceRefs: [
+                      ".qfai/discussion/discussion-20260216000000000/uiux/20_design_eval_invariant.md#axis-1",
+                    ],
+                  },
+                ],
               },
               weightedTotal: 0.9,
               deltaFromPrevious: null,
@@ -2029,8 +2052,8 @@ async function seedPrototypingEvidenceFixture(root: string): Promise<void> {
             status: "captured",
             width: 1280,
             height: 960,
-            imagePath: "render/orders.desktop.png",
-            htmlPath: "render/orders.desktop.html",
+            imagePath: ".qfai/evidence/render/orders.desktop.png",
+            htmlPath: ".qfai/evidence/render/orders.desktop.html",
           },
           {
             route: "/orders/new",
@@ -2038,8 +2061,8 @@ async function seedPrototypingEvidenceFixture(root: string): Promise<void> {
             status: "captured",
             width: 390,
             height: 844,
-            imagePath: "render/orders.mobile.png",
-            htmlPath: "render/orders.mobile.html",
+            imagePath: ".qfai/evidence/render/orders.mobile.png",
+            htmlPath: ".qfai/evidence/render/orders.mobile.html",
           },
         ],
       },

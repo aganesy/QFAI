@@ -13,6 +13,7 @@ import {
 } from "../calibration/packResolver.js";
 import { runFullHarness } from "../harness/runtime.js";
 import type { FullHarnessPanelInputs } from "../harness/panelInputs.js";
+import type { FullHarnessIteration } from "../harness/types.js";
 import { validatePanelInputs } from "../harness/panelInputs.js";
 import { loadHistory } from "../harness/history.js";
 
@@ -319,9 +320,15 @@ export async function runPrototypingExecution(
   };
 
   if (runtimeGate) {
+    assertRuntimeGateLeafRefs(runtimeGate);
     assertConcreteArtifactRefs(runtimeGate.evidenceRefs, "runtimeGate.evidenceRefs");
   }
   assertConcreteArtifactRefs(specCoverage.evidenceRefs, "specCoverage.evidenceRefs");
+  assertFullHarnessLeafRefs(fullHarness.history.iterations, "fullHarness.iterations");
+  assertConcreteArtifactRefs(
+    cumulativeReviewerLogs.flatMap((log) => log.evidenceRefs),
+    "fullHarness.reviewerLogs.evidenceRefs",
+  );
 
   const evidencePaths = await writeEvidenceBundlesOrThrow({
     root: request.root,
@@ -457,6 +464,7 @@ async function buildPanelInputsOrThrow(input: {
       input.uiFidelityScreens,
     );
     const trendAlignment = await buildTrendAlignmentInputs(input.root);
+    const uiObservation = normalizeUiObservationSummary(input.root, input.uiObservation);
 
     const panelInputs: FullHarnessPanelInputs = {
       runtimeGate: input.runtimeGateEvidence,
@@ -467,14 +475,26 @@ async function buildPanelInputsOrThrow(input: {
         failedScreens: input.renderResult.entries.filter((entry) => entry.status === "failed")
           .length,
         viewports: [...new Set(input.renderResult.entries.map((entry) => entry.viewport))],
-        evidenceRefs: input.renderResult.filesWritten,
+        evidenceRefs: normalizeEvidenceRefList(input.root, input.renderResult.filesWritten),
       },
-      browserQa: input.browserQaSummary,
-      uiObservation: input.uiObservation,
+      browserQa: {
+        ...input.browserQaSummary,
+        evidenceRefs: normalizeEvidenceRefList(input.root, input.browserQaSummary.evidenceRefs),
+      },
+      uiObservation,
       specCoverage: input.specCoverage,
-      discussionAxes,
-      screenContract: screenContractInputs,
-      trendAlignment,
+      discussionAxes: {
+        ...discussionAxes,
+        evidenceRefs: normalizeEvidenceRefList(input.root, discussionAxes.evidenceRefs),
+      },
+      screenContract: {
+        ...screenContractInputs,
+        evidenceRefs: normalizeEvidenceRefList(input.root, screenContractInputs.evidenceRefs),
+      },
+      trendAlignment: {
+        ...trendAlignment,
+        evidenceRefs: normalizeEvidenceRefList(input.root, trendAlignment.evidenceRefs),
+      },
     };
     validatePanelInputs(panelInputs);
     return panelInputs;
@@ -721,12 +741,87 @@ function dedupeRefs(refs: string[]): string[] {
   return Array.from(new Set(refs));
 }
 
+function normalizeUiObservationSummary(
+  root: string,
+  summary: Awaited<ReturnType<typeof buildUiObservationSummary>>,
+): Awaited<ReturnType<typeof buildUiObservationSummary>> {
+  return {
+    ...summary,
+    screens: summary.screens.map((screen) => ({
+      ...screen,
+      htmlCaptureRef: toConcreteArtifactRef(root, screen.htmlCaptureRef),
+      browserQaEvidenceRefs: normalizeEvidenceRefList(root, screen.browserQaEvidenceRefs),
+    })),
+    evidenceRefs: normalizeEvidenceRefList(root, summary.evidenceRefs),
+  };
+}
+
+function normalizeEvidenceRefList(root: string, refs: string[]): string[] {
+  return dedupeRefs(refs.map((ref) => toConcreteArtifactRef(root, ref)));
+}
+
 function assertConcreteArtifactRefs(refs: string[], label: string): void {
   for (const ref of refs) {
     try {
       assertConcreteArtifactRef(ref);
     } catch (error) {
       throw new Error(`${label} contains a non-concrete artifact ref. ${formatError(error)}`);
+    }
+  }
+}
+
+function assertRuntimeGateLeafRefs(
+  runtimeGate: NonNullable<PrototypingSummaryBundle["runtimeGate"]>,
+): void {
+  for (const entry of runtimeGate.ui) {
+    assertConcreteArtifactRefs(
+      [entry.declaredRef],
+      `runtimeGate.ui[${entry.screenId}].declaredRef`,
+    );
+    if (entry.renderEvidenceRefs.length === 0) {
+      throw new Error(
+        `runtimeGate.ui[${entry.screenId}].renderEvidenceRefs must not be empty in full-harness mode.`,
+      );
+    }
+    if (entry.browserQaEvidenceRefs.length === 0) {
+      throw new Error(
+        `runtimeGate.ui[${entry.screenId}].browserQaEvidenceRefs must not be empty in full-harness mode.`,
+      );
+    }
+    assertConcreteArtifactRefs(
+      entry.renderEvidenceRefs,
+      `runtimeGate.ui[${entry.screenId}].renderEvidenceRefs`,
+    );
+    assertConcreteArtifactRefs(
+      entry.browserQaEvidenceRefs,
+      `runtimeGate.ui[${entry.screenId}].browserQaEvidenceRefs`,
+    );
+  }
+}
+
+function assertFullHarnessLeafRefs(iterations: FullHarnessIteration[], label: string): void {
+  for (const iteration of iterations) {
+    for (const axis of iteration.l1.axes) {
+      if (axis.evidenceRefs.length === 0) {
+        throw new Error(
+          `${label}[${iteration.iteration}].l1.axes[${axis.axisId}].evidenceRefs must not be empty.`,
+        );
+      }
+      assertConcreteArtifactRefs(
+        axis.evidenceRefs,
+        `${label}[${iteration.iteration}].l1.axes[${axis.axisId}].evidenceRefs`,
+      );
+    }
+    for (const axis of iteration.l2.axes) {
+      if (axis.evidenceRefs.length === 0) {
+        throw new Error(
+          `${label}[${iteration.iteration}].l2.axes[${axis.axisId}].evidenceRefs must not be empty.`,
+        );
+      }
+      assertConcreteArtifactRefs(
+        axis.evidenceRefs,
+        `${label}[${iteration.iteration}].l2.axes[${axis.axisId}].evidenceRefs`,
+      );
     }
   }
 }

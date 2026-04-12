@@ -55,7 +55,7 @@ export type PrototypingSummaryBundle = {
     ui: Array<{
       screenId: string;
       route: string;
-      declaredRef?: string;
+      declaredRef: string;
       url?: string;
       rendered: boolean;
       browserVisited: boolean;

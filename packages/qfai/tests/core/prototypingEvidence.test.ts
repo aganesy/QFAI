@@ -308,12 +308,28 @@ function buildValidEvidence(overrides: Record<string, unknown> = {}): Record<str
           l1: {
             panel: "L1",
             total: 0.9,
-            axes: [{ axisId: "runtime", score: 0.9, rationale: "ok", evidenceRefs: ["a"] }],
+            axes: [
+              {
+                axisId: "runtime",
+                score: 0.9,
+                rationale: "ok",
+                evidenceRefs: [".qfai/evidence/render.json#/screens/0"],
+              },
+            ],
           },
           l2: {
             panel: "L2",
             total: 0.9,
-            axes: [{ axisId: "design", score: 0.9, rationale: "ok", evidenceRefs: ["b"] }],
+            axes: [
+              {
+                axisId: "design",
+                score: 0.9,
+                rationale: "ok",
+                evidenceRefs: [
+                  ".qfai/discussion/discussion-20260404000000000/uiux/20_design_eval_invariant.md#axis-1",
+                ],
+              },
+            ],
           },
           weightedTotal: 0.9,
           deltaFromPrevious: null,
@@ -445,6 +461,98 @@ describe("validatePrototypingEvidence", () => {
     });
   });
 
+  it("rejects missing runtimeGate.ui[].declaredRef at parse time", async () => {
+    await withTempRoot(async (root) => {
+      await seedSpecs(root);
+      await seedDiscussion(root);
+      await seedContracts(root);
+      await seedCalibration(root);
+      await seedRenderBundle(root);
+      await seedBrowserQaBundle(root);
+      const invalid = buildValidEvidence();
+      delete (
+        (invalid.runtimeGate as { ui: Array<Record<string, unknown>> }).ui[0] as Record<
+          string,
+          unknown
+        >
+      ).declaredRef;
+      await seedEvidence(root, invalid);
+
+      const issues = await validatePrototypingEvidence(root, defaultConfig);
+      expect(issues.some((item) => item.code === "QFAI-PROT-101")).toBe(true);
+    });
+  });
+
+  it("rejects malformed runtimeGate.ui leaf refs", async () => {
+    await withTempRoot(async (root) => {
+      await seedSpecs(root);
+      await seedDiscussion(root);
+      await seedContracts(root);
+      await seedCalibration(root);
+      await seedRenderBundle(root);
+      await seedBrowserQaBundle(root);
+      const invalid = buildValidEvidence();
+      const row = (invalid.runtimeGate as { ui: Array<Record<string, unknown>> }).ui[0] as Record<
+        string,
+        unknown
+      >;
+      row.declaredRef = path.join(root, ".qfai", "specs", "spec-0001", "01_Spec.md");
+      row.renderEvidenceRefs = [".qfai/evidence/render"];
+      row.browserQaEvidenceRefs = ["browser-qa.json"];
+      await seedEvidence(root, invalid);
+
+      const issues = await validatePrototypingEvidence(root, defaultConfig);
+      expect(issues.filter((item) => item.code === "QFAI-PROT-318").length).toBeGreaterThanOrEqual(
+        3,
+      );
+    });
+  });
+
+  it("rejects windows-style runtimeGate.ui browserQa refs", async () => {
+    await withTempRoot(async (root) => {
+      await seedSpecs(root);
+      await seedDiscussion(root);
+      await seedContracts(root);
+      await seedCalibration(root);
+      await seedRenderBundle(root);
+      await seedBrowserQaBundle(root);
+      const invalid = buildValidEvidence();
+      const row = (invalid.runtimeGate as { ui: Array<Record<string, unknown>> }).ui[0] as Record<
+        string,
+        unknown
+      >;
+      (row.browserQaEvidenceRefs as string[])[0] = ".qfai\\evidence\\browser-qa.json#/phases/0";
+      await seedEvidence(root, invalid);
+
+      const issues = await validatePrototypingEvidence(root, defaultConfig);
+      expect(issues.some((item) => item.code === "QFAI-PROT-318")).toBe(true);
+    });
+  });
+
+  it("rejects empty runtimeGate.ui leaf evidence arrays", async () => {
+    await withTempRoot(async (root) => {
+      await seedSpecs(root);
+      await seedDiscussion(root);
+      await seedContracts(root);
+      await seedCalibration(root);
+      await seedRenderBundle(root);
+      await seedBrowserQaBundle(root);
+      const invalid = buildValidEvidence();
+      const row = (invalid.runtimeGate as { ui: Array<Record<string, unknown>> }).ui[0] as Record<
+        string,
+        unknown
+      >;
+      row.renderEvidenceRefs = [];
+      row.browserQaEvidenceRefs = [];
+      await seedEvidence(root, invalid);
+
+      const issues = await validatePrototypingEvidence(root, defaultConfig);
+      expect(issues.filter((item) => item.code === "QFAI-PROT-318").length).toBeGreaterThanOrEqual(
+        2,
+      );
+    });
+  });
+
   it("rejects missing top-level runtimeGate.evidenceRefs at parse time", async () => {
     await withTempRoot(async (root) => {
       await seedSpecs(root);
@@ -493,6 +601,94 @@ describe("validatePrototypingEvidence", () => {
           Record<string, unknown>
         >
       )[0].declaredRef = path.join(root, ".qfai", "specs", "spec-0001", "01_Spec.md");
+      await seedEvidence(root, invalid);
+
+      const issues = await validatePrototypingEvidence(root, defaultConfig);
+      expect(issues.some((item) => item.code === "QFAI-PROT-318")).toBe(true);
+    });
+  });
+
+  it("rejects non-concrete fullHarness axis evidence refs", async () => {
+    await withTempRoot(async (root) => {
+      await seedSpecs(root);
+      await seedDiscussion(root);
+      await seedContracts(root);
+      await seedCalibration(root);
+      await seedRenderBundle(root);
+      await seedBrowserQaBundle(root);
+      const invalid = buildValidEvidence();
+      const iteration = (invalid.fullHarness as { iterations: Array<Record<string, unknown>> })
+        .iterations[0] as Record<string, unknown>;
+      const l1Axis = (
+        (iteration.l1 as Record<string, unknown>).axes as Array<Record<string, unknown>>
+      )[0] as Record<string, unknown>;
+      const l2Axis = (
+        (iteration.l2 as Record<string, unknown>).axes as Array<Record<string, unknown>>
+      )[0] as Record<string, unknown>;
+      (l1Axis.evidenceRefs as string[])[0] = "a";
+      (l2Axis.evidenceRefs as string[])[0] = ".qfai/evidence/prototyping.json#/fullHarness";
+      await seedEvidence(root, invalid);
+
+      const issues = await validatePrototypingEvidence(root, defaultConfig);
+      expect(issues.filter((item) => item.code === "QFAI-PROT-318").length).toBeGreaterThanOrEqual(
+        2,
+      );
+    });
+  });
+
+  it("rejects empty fullHarness axis evidence refs", async () => {
+    await withTempRoot(async (root) => {
+      await seedSpecs(root);
+      await seedDiscussion(root);
+      await seedContracts(root);
+      await seedCalibration(root);
+      await seedRenderBundle(root);
+      await seedBrowserQaBundle(root);
+      const invalid = buildValidEvidence();
+      const iteration = (invalid.fullHarness as { iterations: Array<Record<string, unknown>> })
+        .iterations[0] as Record<string, unknown>;
+      const l1Axis = (
+        (iteration.l1 as Record<string, unknown>).axes as Array<Record<string, unknown>>
+      )[0] as Record<string, unknown>;
+      l1Axis.evidenceRefs = [];
+      await seedEvidence(root, invalid);
+
+      const issues = await validatePrototypingEvidence(root, defaultConfig);
+      expect(issues.some((item) => item.code === "QFAI-PROT-318")).toBe(true);
+    });
+  });
+
+  it("rejects non-concrete reviewer log evidence refs", async () => {
+    await withTempRoot(async (root) => {
+      await seedSpecs(root);
+      await seedDiscussion(root);
+      await seedContracts(root);
+      await seedCalibration(root);
+      await seedRenderBundle(root);
+      await seedBrowserQaBundle(root);
+      const invalid = buildValidEvidence();
+      const log = (invalid.fullHarness as { reviewerLogs: Array<Record<string, unknown>> })
+        .reviewerLogs[0] as Record<string, unknown>;
+      (log.evidenceRefs as string[])[0] = "reviewer:1";
+      await seedEvidence(root, invalid);
+
+      const issues = await validatePrototypingEvidence(root, defaultConfig);
+      expect(issues.some((item) => item.code === "QFAI-PROT-318")).toBe(true);
+    });
+  });
+
+  it("rejects empty reviewer log evidence refs", async () => {
+    await withTempRoot(async (root) => {
+      await seedSpecs(root);
+      await seedDiscussion(root);
+      await seedContracts(root);
+      await seedCalibration(root);
+      await seedRenderBundle(root);
+      await seedBrowserQaBundle(root);
+      const invalid = buildValidEvidence();
+      const log = (invalid.fullHarness as { reviewerLogs: Array<Record<string, unknown>> })
+        .reviewerLogs[0] as Record<string, unknown>;
+      log.evidenceRefs = [];
       await seedEvidence(root, invalid);
 
       const issues = await validatePrototypingEvidence(root, defaultConfig);
