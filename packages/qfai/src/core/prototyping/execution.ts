@@ -31,6 +31,11 @@ import {
 } from "./providerResolution.js";
 import { buildUiFidelity, type BuiltUiFidelity } from "./uiFidelityBuilder.js";
 import { buildRuntimeGate } from "./runtimeGateBuilder.js";
+import {
+  assertConcreteArtifactRef,
+  normalizeConcreteArtifactRef,
+  toConcreteArtifactRef,
+} from "./pathUtils.js";
 import { createObservabilityAdapter } from "./observabilityAdapter.js";
 import { buildSpecCoverageSummary, buildPerSpecCoverage } from "./specCoverage.js";
 import { buildUiObservationSummary, buildBrowserQaSummaryFromResult } from "./uiObservation.js";
@@ -206,7 +211,11 @@ export async function runPrototypingExecution(
     browserQaResult,
     ...(targetUrl !== undefined ? { targetUrl } : {}),
   });
-  const runtimeGate = buildRuntimeGate({ runtimeObservation });
+  const normalizedRuntimeObservation = normalizeRuntimeObservationRefs(
+    request.root,
+    runtimeObservation,
+  );
+  const runtimeGate = buildRuntimeGate({ runtimeObservation: normalizedRuntimeObservation });
 
   const summary = await buildPrototypingSummaryBundle({
     root: request.root,
@@ -237,8 +246,9 @@ export async function runPrototypingExecution(
 
   const specsDir = path.join(request.root, ".qfai", "specs");
   const specCoverage = await buildSpecCoverageOrThrow({
+    root: request.root,
     specsDir,
-    runtimeObservation,
+    runtimeObservation: normalizedRuntimeObservation,
     renderFilesWritten: renderResult.filesWritten,
     browserQaResult,
   });
@@ -307,6 +317,11 @@ export async function runPrototypingExecution(
     scoringTrace: fullHarness.history.scoringTrace,
     limitations: fullHarness.iteration.limitations,
   };
+
+  if (runtimeGate) {
+    assertConcreteArtifactRefs(runtimeGate.evidenceRefs, "runtimeGate.evidenceRefs");
+  }
+  assertConcreteArtifactRefs(specCoverage.evidenceRefs, "specCoverage.evidenceRefs");
 
   const evidencePaths = await writeEvidenceBundlesOrThrow({
     root: request.root,
@@ -403,6 +418,7 @@ async function buildUiFidelityOrThrow(input: {
 }
 
 async function buildSpecCoverageOrThrow(input: {
+  root: string;
   specsDir: string;
   runtimeObservation: RuntimeObservation;
   renderFilesWritten: string[];
@@ -410,6 +426,7 @@ async function buildSpecCoverageOrThrow(input: {
 }) {
   try {
     return await buildSpecCoverageSummary({
+      root: input.root,
       specsDir: input.specsDir,
       runtimeObservation: input.runtimeObservation,
       observedEvidenceRefs: [
@@ -590,6 +607,7 @@ async function buildPrototypingSummaryBundle(input: {
       renderEvidenceRefs: string[];
       browserQaEvidenceRefs: string[];
     }>;
+    evidenceRefs: string[];
   };
 }): Promise<PrototypingSummaryBundle> {
   const specsDir = path.join(input.root, ".qfai", "specs");
@@ -644,6 +662,7 @@ async function buildPrototypingSummaryBundle(input: {
       providerIds: input.providerIds,
       ...(input.targetUrl ? { targetUrl: input.targetUrl } : {}),
     },
+    ...(input.runtimeGate ? { runtimeGate: input.runtimeGate } : {}),
   };
 }
 
@@ -678,6 +697,38 @@ function runtimeGateToObservation(
   return {
     ui: runtimeGate.ui.map((entry) => ({ ...entry })),
   };
+}
+
+function normalizeRuntimeObservationRefs(
+  root: string,
+  runtimeObservation: RuntimeObservation,
+): RuntimeObservation {
+  return {
+    ui: runtimeObservation.ui.map((entry) => ({
+      ...entry,
+      declaredRef: normalizeConcreteArtifactRef(entry.declaredRef),
+      renderEvidenceRefs: dedupeRefs(
+        entry.renderEvidenceRefs.map((ref) => toConcreteArtifactRef(root, ref)),
+      ),
+      browserQaEvidenceRefs: dedupeRefs(
+        entry.browserQaEvidenceRefs.map((ref) => normalizeConcreteArtifactRef(ref)),
+      ),
+    })),
+  };
+}
+
+function dedupeRefs(refs: string[]): string[] {
+  return Array.from(new Set(refs));
+}
+
+function assertConcreteArtifactRefs(refs: string[], label: string): void {
+  for (const ref of refs) {
+    try {
+      assertConcreteArtifactRef(ref);
+    } catch (error) {
+      throw new Error(`${label} contains a non-concrete artifact ref. ${formatError(error)}`);
+    }
+  }
 }
 
 function collectBrowserQaEvidenceRefs(

@@ -63,6 +63,7 @@ export type PrototypingSummaryBundle = {
       renderEvidenceRefs: string[];
       browserQaEvidenceRefs: string[];
     }>;
+    evidenceRefs: string[];
   };
   uiFidelity?: {
     mode: "interactive" | "skeleton";

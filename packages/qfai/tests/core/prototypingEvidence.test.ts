@@ -101,8 +101,8 @@ async function seedRenderBundle(root: string): Promise<void> {
             status: "captured",
             width: 1440,
             height: 900,
-            imagePath: "render/orders.desktop.png",
-            htmlPath: "render/orders.desktop.html",
+            imagePath: ".qfai/evidence/render/orders.desktop.png",
+            htmlPath: ".qfai/evidence/render/orders.desktop.html",
           },
           {
             route: "/orders",
@@ -110,8 +110,8 @@ async function seedRenderBundle(root: string): Promise<void> {
             status: "captured",
             width: 390,
             height: 844,
-            imagePath: "render/orders.mobile.png",
-            htmlPath: "render/orders.mobile.html",
+            imagePath: ".qfai/evidence/render/orders.mobile.png",
+            htmlPath: ".qfai/evidence/render/orders.mobile.html",
           },
         ],
       },
@@ -400,6 +400,99 @@ describe("validatePrototypingEvidence", () => {
       };
       fullHarness.iterations[0].evidenceRefs.runtimeGate = [".qfai/evidence/render"];
       fullHarness.iterations[0].evidenceRefs.specCoverage = ["specs: spec-0001"];
+      await seedEvidence(root, invalid);
+
+      const issues = await validatePrototypingEvidence(root, defaultConfig);
+      expect(issues.some((item) => item.code === "QFAI-PROT-318")).toBe(true);
+    });
+  });
+
+  it("rejects malformed top-level runtimeGate.evidenceRefs", async () => {
+    await withTempRoot(async (root) => {
+      await seedSpecs(root);
+      await seedDiscussion(root);
+      await seedContracts(root);
+      await seedCalibration(root);
+      await seedRenderBundle(root);
+      await seedBrowserQaBundle(root);
+      const invalid = buildValidEvidence();
+      (invalid.runtimeGate as { evidenceRefs: string[] }).evidenceRefs = [
+        path.join(root, ".qfai", "evidence", "render", "orders.desktop.png"),
+      ];
+      await seedEvidence(root, invalid);
+
+      const issues = await validatePrototypingEvidence(root, defaultConfig);
+      expect(issues.some((item) => item.code === "QFAI-PROT-318")).toBe(true);
+    });
+  });
+
+  it("rejects self refs in top-level runtimeGate.evidenceRefs", async () => {
+    await withTempRoot(async (root) => {
+      await seedSpecs(root);
+      await seedDiscussion(root);
+      await seedContracts(root);
+      await seedCalibration(root);
+      await seedRenderBundle(root);
+      await seedBrowserQaBundle(root);
+      const invalid = buildValidEvidence();
+      (invalid.runtimeGate as { evidenceRefs: string[] }).evidenceRefs = [
+        ".qfai/evidence/prototyping.json#/runtimeGate",
+      ];
+      await seedEvidence(root, invalid);
+
+      const issues = await validatePrototypingEvidence(root, defaultConfig);
+      expect(issues.some((item) => item.code === "QFAI-PROT-318")).toBe(true);
+    });
+  });
+
+  it("rejects missing top-level runtimeGate.evidenceRefs at parse time", async () => {
+    await withTempRoot(async (root) => {
+      await seedSpecs(root);
+      await seedDiscussion(root);
+      await seedContracts(root);
+      await seedCalibration(root);
+      await seedRenderBundle(root);
+      await seedBrowserQaBundle(root);
+      const invalid = buildValidEvidence();
+      delete (invalid.runtimeGate as Record<string, unknown>).evidenceRefs;
+      await seedEvidence(root, invalid);
+
+      const issues = await validatePrototypingEvidence(root, defaultConfig);
+      expect(issues.some((item) => item.code === "QFAI-PROT-101")).toBe(true);
+    });
+  });
+
+  it("rejects empty top-level runtimeGate.evidenceRefs", async () => {
+    await withTempRoot(async (root) => {
+      await seedSpecs(root);
+      await seedDiscussion(root);
+      await seedContracts(root);
+      await seedCalibration(root);
+      await seedRenderBundle(root);
+      await seedBrowserQaBundle(root);
+      const invalid = buildValidEvidence();
+      (invalid.runtimeGate as { evidenceRefs: string[] }).evidenceRefs = [];
+      await seedEvidence(root, invalid);
+
+      const issues = await validatePrototypingEvidence(root, defaultConfig);
+      expect(issues.some((item) => item.code === "QFAI-PROT-177")).toBe(true);
+    });
+  });
+
+  it("rejects non-concrete per-spec coverage declaredRef", async () => {
+    await withTempRoot(async (root) => {
+      await seedSpecs(root);
+      await seedDiscussion(root);
+      await seedContracts(root);
+      await seedCalibration(root);
+      await seedRenderBundle(root);
+      await seedBrowserQaBundle(root);
+      const invalid = buildValidEvidence();
+      (
+        (invalid.specs as Array<Record<string, unknown>>)[0]?.coverageRefs as Array<
+          Record<string, unknown>
+        >
+      )[0].declaredRef = path.join(root, ".qfai", "specs", "spec-0001", "01_Spec.md");
       await seedEvidence(root, invalid);
 
       const issues = await validatePrototypingEvidence(root, defaultConfig);

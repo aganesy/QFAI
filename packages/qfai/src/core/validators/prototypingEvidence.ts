@@ -40,6 +40,7 @@ import {
 } from "../uiux/renderEvidenceTypes.js";
 import { resolveCalibrationPack } from "../calibration/packResolver.js";
 import { isSupportedPrototypingSurface } from "../prototyping/surfacePolicy.js";
+import { isConcreteArtifactRef } from "../prototyping/pathUtils.js";
 import { issue } from "./utils.js";
 
 type PrototypingSpecEvidence = {
@@ -59,6 +60,11 @@ type PrototypingSpecEvidence = {
     apiEndpoints: string[];
     dbObjects: string[];
   };
+  coverageRefs?: Array<{
+    route: string;
+    declaredRef: string;
+    observedRefs: string[];
+  }>;
 };
 
 type PrototypingEvidence = {
@@ -153,6 +159,7 @@ type PrototypingEvidence = {
     ui: Array<{
       screenId: string;
       route: string;
+      declaredRef?: string;
       url?: string;
       rendered: boolean;
       browserVisited: boolean;
@@ -160,6 +167,7 @@ type PrototypingEvidence = {
       renderEvidenceRefs: string[];
       browserQaEvidenceRefs: string[];
     }>;
+    evidenceRefs: string[];
   };
   uiFidelity?: UiFidelityEvidence;
   meta: {
@@ -528,13 +536,10 @@ export async function validatePrototypingEvidence(
 
     // WS-C: File existence check for captured render evidence entries
     if (Array.isArray(renderBundle.screens)) {
-      const bundleDir = renderBundlePath ? path.dirname(renderBundlePath) : root;
       for (const screen of renderBundle.screens) {
         if (isRecord(screen) && screen.status === "captured") {
           if (typeof screen.imagePath === "string" && screen.imagePath.trim().length > 0) {
-            const imgFullPath = path.isAbsolute(screen.imagePath)
-              ? screen.imagePath
-              : path.join(bundleDir, screen.imagePath);
+            const imgFullPath = normalizeArtifactRefPath(root, screen.imagePath);
             try {
               await access(imgFullPath);
             } catch {
@@ -553,9 +558,7 @@ export async function validatePrototypingEvidence(
             }
           }
           if (typeof screen.htmlPath === "string" && screen.htmlPath.trim().length > 0) {
-            const htmlFullPath = path.isAbsolute(screen.htmlPath)
-              ? screen.htmlPath
-              : path.join(bundleDir, screen.htmlPath);
+            const htmlFullPath = normalizeArtifactRefPath(root, screen.htmlPath);
             try {
               await access(htmlFullPath);
             } catch {
@@ -967,6 +970,10 @@ function parseEvidence(
     if (!Array.isArray(runtimeUiNode)) {
       return { ok: false, reason: "`runtimeGate.ui` must be an array" };
     }
+    const runtimeGateEvidenceRefs = normalizeEvidenceRefArray(runtimeGateNode.evidenceRefs);
+    if (runtimeGateEvidenceRefs === null) {
+      return { ok: false, reason: "`runtimeGate.evidenceRefs` must be a string array" };
+    }
     const uiRows: NonNullable<PrototypingEvidence["runtimeGate"]>["ui"] = [];
     for (const row of runtimeUiNode) {
       if (!isRecord(row)) {
@@ -998,6 +1005,9 @@ function parseEvidence(
       uiRows.push({
         screenId: row.screenId.trim(),
         route: row.route.trim(),
+        ...(typeof row.declaredRef === "string" && row.declaredRef.trim().length > 0
+          ? { declaredRef: row.declaredRef.trim() }
+          : {}),
         ...(typeof row.url === "string" && row.url.trim().length > 0
           ? { url: row.url.trim() }
           : {}),
@@ -1011,6 +1021,7 @@ function parseEvidence(
 
     runtimeGate = {
       ui: uiRows,
+      evidenceRefs: runtimeGateEvidenceRefs,
     };
   }
 
@@ -1903,6 +1914,55 @@ async function validateModeMetadata(
       );
     }
   }
+  if (evidence.runtimeGate) {
+    if (evidence.runtimeGate.evidenceRefs.length === 0) {
+      issues.push(
+        issue(
+          "QFAI-PROT-177",
+          "runtimeGate.evidenceRefs is required and must not be empty for full-harness UI prototyping.",
+          "error",
+          evidenceJsonPath,
+          "prototypingEvidence.runtimeGateRequiredByMode",
+          ["runtimeGate.evidenceRefs"],
+          "canonical",
+          "runtimeGate.evidenceRefs に concrete artifact ref を追加してください。",
+        ),
+      );
+    }
+    for (const ref of evidence.runtimeGate.evidenceRefs) {
+      if (!isConcreteArtifactRef(ref)) {
+        issues.push(
+          issue(
+            "QFAI-PROT-318",
+            `non-concrete evidence ref is not allowed: ${ref}`,
+            "error",
+            evidenceJsonPath,
+            "prototypingEvidence.syntheticEvidenceRef",
+            [ref],
+            "canonical",
+            "runtimeGate/specCoverage の evidenceRefs には concrete artifact ref のみを保持してください。",
+          ),
+        );
+      }
+    }
+    const hasObservedRuntimeRoute = evidence.runtimeGate.ui.some(
+      (entry) => entry.rendered || entry.browserVisited,
+    );
+    if (hasObservedRuntimeRoute && evidence.runtimeGate.evidenceRefs.length === 0) {
+      issues.push(
+        issue(
+          "QFAI-PROT-177",
+          "runtimeGate.ui records observed routes but runtimeGate.evidenceRefs is empty.",
+          "error",
+          evidenceJsonPath,
+          "prototypingEvidence.runtimeGateRequiredByMode",
+          ["runtimeGate.evidenceRefs"],
+          "canonical",
+          "observed route がある場合、runtimeGate.evidenceRefs に対応する concrete artifact ref を記録してください。",
+        ),
+      );
+    }
+  }
   for (const ref of evidence.fullHarness.iterations.flatMap((iter) => [
     ...iter.evidenceRefs.runtimeGate,
     ...iter.evidenceRefs.specCoverage,
@@ -1920,6 +1980,40 @@ async function validateModeMetadata(
           "runtimeGate/specCoverage の evidenceRefs には concrete artifact ref のみを保持してください。",
         ),
       );
+    }
+  }
+  for (const spec of evidence.specs) {
+    for (const coverage of spec.coverageRefs ?? []) {
+      if (!isConcreteArtifactRef(coverage.declaredRef)) {
+        issues.push(
+          issue(
+            "QFAI-PROT-318",
+            `non-concrete declaredRef is not allowed: ${coverage.declaredRef}`,
+            "error",
+            evidenceJsonPath,
+            "prototypingEvidence.syntheticEvidenceRef",
+            [coverage.declaredRef],
+            "canonical",
+            "specs[].coverageRefs[].declaredRef には concrete artifact ref のみを保持してください。",
+          ),
+        );
+      }
+      for (const observedRef of coverage.observedRefs) {
+        if (!isConcreteArtifactRef(observedRef)) {
+          issues.push(
+            issue(
+              "QFAI-PROT-318",
+              `non-concrete observedRef is not allowed: ${observedRef}`,
+              "error",
+              evidenceJsonPath,
+              "prototypingEvidence.syntheticEvidenceRef",
+              [observedRef],
+              "canonical",
+              "specs[].coverageRefs[].observedRefs には concrete artifact ref のみを保持してください。",
+            ),
+          );
+        }
+      }
     }
   }
   return issues;
@@ -2858,6 +2952,36 @@ function normalizeSpecEvidence(
   if (!missing.ok) {
     return missing;
   }
+  let coverageRefs: PrototypingSpecEvidence["coverageRefs"];
+  if (value.coverageRefs !== undefined) {
+    if (!Array.isArray(value.coverageRefs)) {
+      return { ok: false, reason: "`specs[].coverageRefs` must be an array when present" };
+    }
+    coverageRefs = [];
+    for (const row of value.coverageRefs) {
+      if (
+        !isRecord(row) ||
+        typeof row.route !== "string" ||
+        row.route.trim().length === 0 ||
+        typeof row.declaredRef !== "string" ||
+        row.declaredRef.trim().length === 0
+      ) {
+        return { ok: false, reason: "`specs[].coverageRefs[]` is invalid" };
+      }
+      const observedRefs = normalizeEvidenceRefArray(row.observedRefs);
+      if (observedRefs === null) {
+        return {
+          ok: false,
+          reason: "`specs[].coverageRefs[].observedRefs` must be a string array",
+        };
+      }
+      coverageRefs.push({
+        route: row.route.trim(),
+        declaredRef: row.declaredRef.trim(),
+        observedRefs,
+      });
+    }
+  }
   return {
     ok: true,
     value: {
@@ -2865,6 +2989,7 @@ function normalizeSpecEvidence(
       declared: declared.value,
       checked: checked.value,
       missing: missing.value,
+      ...(coverageRefs ? { coverageRefs } : {}),
     },
   };
 }
@@ -3385,34 +3510,6 @@ function toOptionalStringArray(value: unknown): string[] | undefined {
     return undefined;
   }
   return value.map((item: string) => item.trim()).filter((item) => item.length > 0);
-}
-
-function isConcreteArtifactRef(ref: string): boolean {
-  const trimmed = ref.trim();
-  if (trimmed.length === 0) {
-    return false;
-  }
-  if (trimmed.startsWith("specs:")) {
-    return false;
-  }
-  if (trimmed.startsWith(".qfai/evidence/prototyping.json#/")) {
-    return false;
-  }
-  if (path.isAbsolute(trimmed)) {
-    return false;
-  }
-  if (trimmed.endsWith("/") || trimmed.endsWith("\\")) {
-    return false;
-  }
-  const [artifactPath, anchor] = trimmed.split("#", 2);
-  const extension = path.extname(artifactPath ?? "");
-  if (extension.length === 0) {
-    return false;
-  }
-  if (extension === ".md" && (!anchor || anchor.trim().length === 0)) {
-    return false;
-  }
-  return true;
 }
 
 function normalizeEvidenceRefArray(value: unknown): string[] | null {

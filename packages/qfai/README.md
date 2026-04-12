@@ -56,6 +56,8 @@ npx qfai report
     Note: prototyping evidence (`.qfai/evidence/prototyping.json`) is produced by the AI workflow / skills
     (`/qfai-prototyping` with `mode=full-harness` for supported UI surfaces only), not by a general-purpose end-user CLI flow.
     `qfai validate` consumes the resulting evidence files, including `mode.effective` and `fullHarness` metadata when present.
+    Traceability refs inside prototyping evidence must use repo-root-relative concrete artifact refs (for example `.qfai/specs/spec-0001/01_Spec.md#L3` or `.qfai/evidence/render.json#/screens/0`).
+    Absolute paths are invalid, and top-level `runtimeGate.evidenceRefs` is validated with the same strict ref grammar as iteration/specCoverage refs.
 
 ## ATDD annotation hard gate
 

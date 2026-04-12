@@ -9,6 +9,11 @@ import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import type { SpecCoverageSummary } from "../harness/panelInputs.js";
 import type { RuntimeObservation } from "./runtimeObservation.js";
+import {
+  assertConcreteArtifactRef,
+  toConcreteArtifactRef,
+  toRepoRelativeArtifactRef,
+} from "./pathUtils.js";
 
 type SpecDeclaration = {
   specId: string;
@@ -19,6 +24,7 @@ type SpecDeclaration = {
 
 export async function loadDeclaredSpecArtifacts(specsDir: string): Promise<SpecDeclaration[]> {
   const declarations: SpecDeclaration[] = [];
+  const repoRoot = inferRepoRootFromSpecsDir(specsDir);
   let entries: string[];
   try {
     entries = await readdir(specsDir);
@@ -28,7 +34,7 @@ export async function loadDeclaredSpecArtifacts(specsDir: string): Promise<SpecD
 
   for (const entry of entries.filter((e) => e.startsWith("spec-")).sort()) {
     const specDir = path.join(specsDir, entry);
-    const declaration = await parseSpecDeclaration(specDir, entry);
+    const declaration = await parseSpecDeclaration(specDir, entry, repoRoot);
     if (declaration) {
       declarations.push(declaration);
     }
@@ -39,6 +45,7 @@ export async function loadDeclaredSpecArtifacts(specsDir: string): Promise<SpecD
 async function parseSpecDeclaration(
   specDir: string,
   specId: string,
+  repoRoot: string,
 ): Promise<SpecDeclaration | null> {
   const uiRoutes: Array<{ route: string; declaredRef: string }> = [];
   const apiEndpoints: string[] = [];
@@ -55,7 +62,7 @@ async function parseSpecDeclaration(
     const filePath = path.join(specDir, file);
     try {
       const content = await readFile(filePath, "utf-8");
-      uiRoutes.push(...extractUiRouteDeclarations(content, filePath));
+      uiRoutes.push(...extractUiRouteDeclarations(content, filePath, repoRoot));
       apiEndpoints.push(...extractDeclarations(content, "api_endpoint"));
       dbObjects.push(...extractDeclarations(content, "db_object"));
     } catch {
@@ -80,6 +87,7 @@ function extractDeclarations(content: string, kind: string): string[] {
 function extractUiRouteDeclarations(
   content: string,
   filePath: string,
+  repoRoot: string,
 ): Array<{ route: string; declaredRef: string }> {
   const results: Array<{ route: string; declaredRef: string }> = [];
   const regex = /^\s*-\s+ui_route:\s*(.+)$/gm;
@@ -92,7 +100,11 @@ function extractUiRouteDeclarations(
     const lineNumber = content.slice(0, match.index).split("\n").length;
     results.push({
       route,
-      declaredRef: `${filePath}#L${lineNumber}`,
+      declaredRef: toRepoRelativeArtifactRef({
+        repoRoot,
+        absolutePath: filePath,
+        line: lineNumber,
+      }),
     });
   }
   return results;
@@ -116,11 +128,15 @@ export function collectObservedRuntimeArtifacts(runtimeObservation?: RuntimeObse
 }
 
 export async function buildSpecCoverageSummary(input: {
+  root?: string;
   specsDir: string;
   runtimeObservation?: RuntimeObservation;
   declaredSpecRefs?: string[];
   observedEvidenceRefs?: string[];
 }): Promise<SpecCoverageSummary> {
+  const repoRoot = input.root
+    ? path.resolve(input.root)
+    : inferRepoRootFromSpecsDir(input.specsDir);
   const declared = await loadDeclaredSpecArtifacts(input.specsDir);
   const observed = collectObservedRuntimeArtifacts(input.runtimeObservation);
 
@@ -148,14 +164,15 @@ export async function buildSpecCoverageSummary(input: {
   }
 
   const evidenceRefs: string[] = [
-    ...(input.declaredSpecRefs ?? []),
-    ...(input.observedEvidenceRefs ?? []),
+    ...(input.declaredSpecRefs ?? []).map((ref) => toConcreteArtifactRef(repoRoot, ref)),
+    ...(input.observedEvidenceRefs ?? []).map((ref) => toConcreteArtifactRef(repoRoot, ref)),
   ];
   for (const spec of declared) {
     for (const route of spec.uiRoutes) {
+      assertConcreteArtifactRef(route.declaredRef);
       evidenceRefs.push(route.declaredRef);
       for (const observedRef of observed.observedRefsByRoute.get(route.route) ?? []) {
-        evidenceRefs.push(observedRef);
+        evidenceRefs.push(toConcreteArtifactRef(repoRoot, observedRef));
       }
     }
   }
@@ -190,6 +207,7 @@ export async function buildPerSpecCoverage(
   specsDir: string,
   runtimeObservation?: RuntimeObservation,
 ): Promise<PerSpecCoverage[]> {
+  const repoRoot = inferRepoRootFromSpecsDir(specsDir);
   const declared = await loadDeclaredSpecArtifacts(specsDir);
   const observed = collectObservedRuntimeArtifacts(runtimeObservation);
 
@@ -200,7 +218,9 @@ export async function buildPerSpecCoverage(
     const coverageRefs = spec.uiRoutes.map((route) => ({
       route: route.route,
       declaredRef: route.declaredRef,
-      observedRefs: observed.observedRefsByRoute.get(route.route) ?? [],
+      observedRefs: (observed.observedRefsByRoute.get(route.route) ?? []).map((ref) =>
+        toConcreteArtifactRef(repoRoot, ref),
+      ),
     }));
 
     for (const route of spec.uiRoutes) {
@@ -231,4 +251,8 @@ export async function buildPerSpecCoverage(
       coverageRefs,
     };
   });
+}
+
+function inferRepoRootFromSpecsDir(specsDir: string): string {
+  return path.resolve(specsDir, "..", "..");
 }
