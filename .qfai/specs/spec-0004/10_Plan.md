@@ -67,3 +67,22 @@ All functionality is already implemented. This spec documents existing behavior.
 - IssueCategory: `packages/qfai/src/core/types.ts` — added "canonical"
 - prototypingRecommendation: `packages/qfai/src/core/validators/prototypingRecommendation.ts`
 - Status: implemented (v1.7.13-18..22)
+
+## v1.7.15 Validator Rules Plan
+
+### File Touchpoints
+
+| File | Changes |
+|---|---|
+| `packages/qfai/src/validators/uix/prototypingEvidence.ts` | 12 new rule functions (PROT-295..306, PROT-308..309); severity upgrade for PROT-290..292 from warning to error |
+| `packages/qfai/src/cli/commands/validate.ts` | Add PROT-295..309 descriptions to issue code description map |
+| `packages/qfai/tests/unit/validators/prototypingEvidence.test.ts` | 24+ new test cases (positive + negative for each rule) |
+
+### Implementation Notes
+
+- No new validator file creation; all rules added to existing `prototypingEvidence.ts` aggregator
+- PROT-290..292 severity change is in-place edit (warning→error)
+- PROT-295..306 are new rule functions appended to the fullHarness validation section
+- PROT-308..309 are supplementary checks (converged min-iteration, iteration-level reviewer)
+- All new rules follow existing `issue()` helper pattern with category="canonical"
+- Test strategy: each rule gets at least 1 positive (pass) + 1 negative (reject) test case

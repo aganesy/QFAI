@@ -140,3 +140,122 @@
 | -------------------------------------------------------------------------- | --------------------- |
 | Critique evidence referencing sidecar + strategy + contracts + eval tokens | QFAI-CRIT-005 passes  |
 | Critique evidence missing eval family tokens                               | QFAI-CRIT-005 warning |
+
+## EX-0004-0028: terminationReason=max-iterations with low iterationCount (v1.7.15)
+
+- BR-Ref: BR-0004-0027
+
+| Input | Expected |
+|---|---|
+| evidence with terminationReason=max-iterations, iterationCount=2, maxIterations=5 | QFAI-PROT-292 error emitted |
+| evidence with terminationReason=max-iterations, iterationCount=5, maxIterations=5 | No PROT-292 error |
+
+## EX-0004-0029: Single-iteration converged reject (v1.7.15)
+
+- BR-Ref: BR-0004-0028
+
+| Input | Expected |
+|---|---|
+| evidence with terminationReason=converged, iterationCount=1 | QFAI-PROT-290 + QFAI-PROT-308 errors |
+| evidence with terminationReason=converged, iterationCount=3 | No PROT-290/308 errors |
+
+## EX-0004-0030: weightedTotal mismatch (v1.7.15)
+
+- BR-Ref: BR-0004-0029
+
+| Input | Expected |
+|---|---|
+| iteration with l1.total=0.7, l2.total=0.8, weightedTotal=0.8 | QFAI-PROT-296 error (expected 0.7) |
+| iteration with l1.total=0.7, l2.total=0.8, weightedTotal=0.7 | No PROT-296 error |
+
+## EX-0004-0031: Reviewer placeholder reject (v1.7.15)
+
+- BR-Ref: BR-0004-0030
+
+| Input | Expected |
+|---|---|
+| reviewerSignoff.reviewerId="qfai" | QFAI-PROT-295 error |
+| iteration.reviewerId="default" | QFAI-PROT-309 error |
+| reviewerSignoff.reviewerId="alice@example.com" | No PROT-295/309 errors |
+
+## EX-0004-0032: Zero-seeded specCoverage (v1.7.15)
+
+- BR-Ref: BR-0004-0031
+
+| Input | Expected |
+|---|---|
+| all specs: declared.uiRoutes=0, checked.uiOk=0, missing.uiRoutes=[] | QFAI-PROT-305 error |
+| specs with declared.uiRoutes=3, checked.uiOk=2 | No PROT-305 error |
+
+## EX-0004-0033: Synthetic mockPaths pass (v1.7.15)
+
+- BR-Ref: BR-0004-0032
+
+| Input | Expected |
+|---|---|
+| uiFidelity screen with mockPaths[].status="pass" | QFAI-PROT-306 error |
+| uiFidelity screen with mockPaths[].status="fail" only | No PROT-306 error |
+
+## EX-0004-0034: CalibrationRef empty (v1.7.15)
+
+- BR-Ref: BR-0004-0033
+
+| Input | Expected |
+|---|---|
+| calibrationRef.configPath="" | QFAI-PROT-301 error |
+| calibrationRef.configPath="qfai.config.yaml", packPath="packs/default" | No PROT-301 error |
+
+## EX-0004-0035: reviewerLogs count mismatch (v1.7.15)
+
+- BR-Ref: BR-0004-0034
+
+| Input | Expected |
+|---|---|
+| iterationCount=3, reviewerLogs.length=2 | QFAI-PROT-304 error |
+| iterationCount=3, reviewerLogs.length=3 | No PROT-304 error |
+
+## EX-0004-0036: iterations/scoringTrace count mismatch (v1.7.15)
+
+- BR-Ref: BR-0004-0035
+
+| Input | Expected |
+|---|---|
+| iterationCount=3, iterations.length=2, scoringTrace.length=3 | QFAI-PROT-291 error |
+| iterationCount=3, iterations.length=3, scoringTrace.length=3 | No PROT-291 error |
+
+## EX-0004-0037: commitSha missing (v1.7.15)
+
+- BR-Ref: BR-0004-0036
+
+| Input | Expected |
+|---|---|
+| iteration.commitSha="" | QFAI-PROT-297 error |
+| iteration.commitSha="abc123def" | No PROT-297 error |
+
+## EX-0004-0038: limitations missing (v1.7.15)
+
+- BR-Ref: BR-0004-0037
+
+| Input | Expected |
+|---|---|
+| fullHarness.limitations=undefined | QFAI-PROT-298 error |
+| fullHarness.limitations=[] | No PROT-298 error |
+
+## EX-0004-0039: Additional integrity checks (v1.7.15)
+
+- BR-Ref: BR-0004-0038
+
+| Input | Expected |
+|---|---|
+| status=completed, terminationReason=undefined | QFAI-PROT-299 error |
+| terminationReason=plateau, iterationCount=1, plateauLookback=3 | QFAI-PROT-300 error |
+| 3 iterations all with commitSha="abc123" | QFAI-PROT-302 warning |
+| reviewerLog.summary="ok" (3 chars) | QFAI-PROT-303 warning |
+
+## EX-0004-0040: Valid evidence passes all v1.7.15 rules
+
+- BR-Ref: BR-0004-0027..BR-0004-0038
+
+| Input | Expected |
+|---|---|
+| Well-formed evidence: real reviewer, iterationCount=3 for converged, correct min(l1,l2), non-zero specCoverage, no synthetic mockPaths, matching counts, valid calibrationRef, present commitSha/limitations | Zero PROT-290..309 errors |

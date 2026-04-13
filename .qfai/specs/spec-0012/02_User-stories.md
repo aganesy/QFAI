@@ -103,3 +103,19 @@ As a developer, I want discussion 3-layer scores (design direction quality) to b
 As a QFAI developer, I want prototypingEvidence.ts to include QFAI-PROT-290~294 validator rules checking iteration integrity
 (single-iteration convergence, scoringTrace count, terminationReason cross-check, maxIterations cap, score progression),
 so that full-harness evidence quality is automatically verified.
+
+## US-0012-0026: Full-Harness Real Convergence (v1.7.15)
+
+As a developer, I want a full-harness run with real reviewer and calibration data to converge only after at least 2 iterations with real panel scoring (weightedTotal = min(L1, L2)), so that single-iteration convergence and zero-seeded scores are structurally impossible.
+
+## US-0012-0027: Missing Evidence Fail-Fast (v1.7.15)
+
+As a developer, I want missing evidence (reviewer identity, commitSha, calibration pack, render evidence, browser QA evidence, ui observation input, spec coverage input) to cause an immediate runtime error without silent fallback, so that the pipeline never produces partially-grounded results.
+
+## US-0012-0028: Evidence Grounding Integrity (v1.7.15)
+
+As a QA engineer, I want specCoverage to be derived from real spec/runtime diffs and uiFidelity to reject synthetic or zero-seeded values (including auto-generated mockPaths.status="pass"), so that evidence artifacts reflect actual implementation state.
+
+## US-0012-0029: Docs-Runtime Reality Sync (v1.7.15)
+
+As a QFAI maintainer, I want docs/SKILL/README claims about full-harness input requirements, reviewer mandatory status, convergence rules, specCoverage measurement, uiFidelity observation-only constraints, and calibration necessity to match the actual runtime failure conditions, so that documentation never overstates or understates what the system enforces.

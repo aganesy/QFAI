@@ -107,3 +107,17 @@
 | Input                             | Expected                                              |
 | --------------------------------- | ----------------------------------------------------- |
 | Run verify on well-formed project | 12 canonical validators execute, no legacy validators |
+
+## EX-0014-0016: Docs/Runtime Drift Detected (v1.7.15)
+
+- BR-Ref: BR-0014-0015, BR-0014-0016
+- Given SKILL.md claims "specCoverage must be non-zero-seeded" but the corresponding validator rule PROT-305 has been disabled or removed from prototypingEvidence.ts
+- When verify runs the docs/runtime drift gate
+- Then drift is detected: "SKILL.md claim 'specCoverage must be non-zero-seeded' has no matching runtime error condition" and verify fails
+
+## EX-0014-0017: Docs/Runtime Drift Clean (v1.7.15)
+
+- BR-Ref: BR-0014-0015
+- Given all SKILL.md claims (reviewer required, convergence >=2 iterations, specCoverage non-zero-seeded, etc.) each have a matching runtime validator rule (PROT-295, PROT-308, PROT-305, etc.)
+- When verify runs the docs/runtime drift gate
+- Then zero drift findings, gate passes

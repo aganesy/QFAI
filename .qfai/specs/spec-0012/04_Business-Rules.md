@@ -298,3 +298,137 @@
 - 各評価軸のイテレーションあたりスコア改善上限: maxDeltaPerAxisPerIteration = 0.15
 - この上限を超える delta は再評価または正当化を必須とする
 - single-iteration score inflation を防止する仕組み
+
+## BR-0012-0041: L1 Panel Scoring from Real Evidence (v1.7.15)
+
+- AC-Refs: AC-0012-0026-01
+- REQ-Refs: REQ-0041
+
+- scoreL1(inputs) は runtime gate / render coverage / browser QA blocking findings / screen contract coverage / spec coverage を必須入力とする
+- l1: { total: 0, axes: [] } の固定値生成を禁止する
+- 入力のいずれかが欠落している場合は MeasurementError を投げる
+
+## BR-0012-0042: L2 Panel Scoring from Real Evidence (v1.7.15)
+
+- AC-Refs: AC-0012-0026-01
+- REQ-Refs: REQ-0042
+
+- scoreL2(inputs) は discussion 3-layer axes / screen contract fidelity / trend translation consistency / visual findings / browser QA experience findings を必須入力とする
+- 全入力が実 evidence から供給されること
+
+## BR-0012-0043: weightedTotal Always Minimum (v1.7.15)
+
+- AC-Refs: AC-0012-0026-03
+- REQ-Refs: REQ-0043
+
+- computeWeightedTotal(l1, l2) は常に Math.min(l1.total, l2.total) を返す
+- 平均、加重平均、または pre-scored 値の流用を禁止する
+
+## BR-0012-0044: Converged Requires Two Iterations (v1.7.15)
+
+- AC-Refs: AC-0012-0026-02
+- REQ-Refs: REQ-0044
+
+- converged は iterationCount >= 2 を必須とする
+- 1 iteration 目で weightedTotal >= acceptThreshold であっても status は in-progress のまま
+- converged には追加条件として plateauLookback >= 2 区間の score delta が plateauDelta 以下であることを要求
+
+## BR-0012-0045: Plateau Requires Two Iterations (v1.7.15)
+
+- AC-Refs: AC-0012-0026-02
+- REQ-Refs: REQ-0045
+
+- plateau は iterationCount >= 2 かつ plateau 条件成立だが accept threshold 未達の場合のみ設定
+- single-iteration plateau は矛盾として reject
+
+## BR-0012-0046: max-iterations Exact Match (v1.7.15)
+
+- AC-Refs: AC-0012-0026-02
+- REQ-Refs: REQ-0046
+
+- terminationReason = max-iterations は iterationCount === calibration.maxIterations の場合のみ設定
+- iterationCount < maxIterations で max-iterations を設定することは禁止
+
+## BR-0012-0047: reviewerLogs Append-Only (v1.7.15)
+
+- AC-Refs: AC-0012-0026-02
+- REQ-Refs: REQ-0047
+
+- reviewerLogs[] は iteration ごとに 1 エントリを append する
+- 既存エントリの上書き・削除・単一要素置換を禁止
+- reviewerLogs.length === iterationCount を常に満たす
+
+## BR-0012-0048: Reviewer Placeholder Reject List (v1.7.15)
+
+- AC-Refs: AC-0012-0027-01
+- REQ-Refs: REQ-0048
+
+- 以下の placeholder 値を reject する（frozen list）: "qfai", "default", "auto", "system", "unknown", "" (空文字)
+- CLI 引数未指定時は CLI レベルで失敗させる
+- runtime 内の resolvedReviewer ?? "qfai" 的フォールバックを禁止する
+
+## BR-0012-0049: commitSha Mandatory in Full-Harness (v1.7.15)
+
+- AC-Refs: AC-0012-0027-02
+- REQ-Refs: REQ-0049
+
+- full-harness 実行時に commit SHA 取得が必須
+- 取得不能時は runtime error で失敗させる（空文字やプレースホルダーへのフォールバック禁止）
+
+## BR-0012-0050: specCoverage from Real Diffs Only (v1.7.15)
+
+- AC-Refs: AC-0012-0028-01
+- REQ-Refs: REQ-0050
+
+- specCoverage は loadDeclaredSpecArtifacts() と collectObservedRuntimeArtifacts() の実差分から生成
+- uiRoutes, apiEndpoints, dbObjects の 3 系統を最低限扱う
+- 全軸 {declared:0, observed:0, ratio:0} の zero-seeded 出力を禁止
+
+## BR-0012-0051: uiFidelity Observation-Only (v1.7.15)
+
+- AC-Refs: AC-0012-0028-02
+- REQ-Refs: REQ-0051
+
+- uiFidelity は DOM parse (jsdom) / browser QA / render evidence からのみ構成する
+- mockPaths.status = "pass" の自動生成を禁止
+- evidence 不足時は status = "insufficient-evidence" を返す
+
+## BR-0012-0052: extractHtmlLabelsFromString Removal (v1.7.15)
+
+- AC-Refs: AC-0012-0028-03
+- REQ-Refs: REQ-0052
+
+- extractHtmlLabelsFromString() の空実装を削除する
+- label extraction は uiObservation.ts の extractDomLabelsWithJsdom() が担う
+
+## BR-0012-0053: CalibrationLoader Wired in execution.ts (v1.7.15)
+
+- AC-Refs: AC-0012-0027-03
+- REQ-Refs: REQ-0053
+
+- CalibrationLoader は execution.ts で loadConfig() 後に呼び出す（config.ts ではない）
+- pack 不在・読取不可・schema 不整合時は runtime error で失敗させる
+
+## BR-0012-0054: packVersion from Pack Metadata Only (v1.7.15)
+
+- AC-Refs: AC-0012-0029-02
+- REQ-Refs: REQ-0054
+
+- packVersion は CalibrationLoader 経由で pack metadata から動的に取得する
+- packVersion: "1.0.0" のハードコードを禁止する
+
+## BR-0012-0055: Docs Reality Sync (v1.7.15)
+
+- AC-Refs: AC-0012-0029-01
+- REQ-Refs: REQ-0055
+
+- SKILL.md / evidence README / discussion README の各制約主張は validator rule または runtime error condition に 1:1 対応する
+- runtime 未実装の機能を docs で主張してはならない
+
+## BR-0012-0056: Fail-Fast No Silent Fallback (v1.7.15)
+
+- AC-Refs: AC-0012-0027-01, AC-0012-0027-02, AC-0012-0027-03, AC-0012-0027-04
+- REQ-Refs: REQ-0056
+
+- full-harness で必須 evidence (calibration / reviewer / commitSha / render / browserQa / uiObservation / specCoverage) のいずれかが欠落した場合は runtime error で即座に失敗させる
+- デフォルト値での補完・silent fallback・graceful degradation を禁止する

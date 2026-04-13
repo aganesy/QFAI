@@ -51,3 +51,11 @@
 - [REMOVED v1.7.14] Legacy isolation: `validators/legacy/` ディレクトリは v1.7.14 で完全削除（DR-0115）
 - [REMOVED v1.7.14] Rollout ratchet: `uix/rollout.ts` は v1.7.14 で完全削除（DR-0115）
 - Status: implemented (v1.7.13 canonical/legacy separation → v1.7.14 legacy infrastructure 完全削除)
+
+## v1.7.15 Integration Hook — Docs/Runtime Drift Gate
+
+- verify calls existing `packages/qfai/tests/integration/` harness; no new binary path
+- Integration test parses SKILL.md constraint claims and enumerates runtime validator rule registry
+- Test asserts 1:1 correspondence between docs claims and runtime error conditions
+- Runs as part of standard `vitest` integration suite
+- No changes to verify CLI surface; drift gate is transparent to the user (verify just reports pass/fail)

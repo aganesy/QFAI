@@ -185,3 +185,61 @@ REQ-0040 → US-0012-0025 → AC-0012-0033 → BR-0012-0030
 | `cli/commands/validate.ts`                                                                      | PROT-290~294 description 追加                                                    |
 | `tests/core/prototypingEvidence.test.ts`                                                        | 5 test cases 追加（+270行）                                                      |
 | `tests/core/issueCodeUniqueness.test.ts`                                                        | TAXONOMY_RANGE_MAX 283→294, fullHarness range 281→294                            |
+
+## v1.7.15 Adopted
+
+- AD-0012-0007: Panel scoring L1/L2 from real evidence — l1/l2 fixed-zero generation prohibited (REQ-0041, REQ-0042)
+- AD-0012-0008: weightedTotal = min(l1.total, l2.total) always enforced (REQ-0043)
+- AD-0012-0009: converged requires iterationCount >= 2 + plateauLookback >= 2 in CalibrationLoader schema (REQ-0044)
+- AD-0012-0010: plateau/max-iterations termination rules hardened (REQ-0045, REQ-0046)
+- AD-0012-0011: reviewerLogs[] append-only cumulative (REQ-0047)
+- AD-0012-0012: reviewer CLI mandatory, placeholder reject list frozen (REQ-0048)
+- AD-0012-0013: commitSha mandatory in full-harness (REQ-0049)
+- AD-0012-0014: specCoverage from real diffs only, zero-seeded prohibited (REQ-0050)
+- AD-0012-0015: uiFidelity observation-only, synthetic mockPaths pass prohibited (REQ-0051)
+- AD-0012-0016: extractHtmlLabelsFromString empty impl removed, moved to uiObservation.ts (REQ-0052)
+- AD-0012-0017: CalibrationLoader wired in execution.ts (not config.ts) (REQ-0053)
+- AD-0012-0018: packVersion from pack metadata only, hardcode prohibited (REQ-0054)
+- AD-0012-0019: docs/SKILL/README reality sync — claims match runtime failure conditions (REQ-0055)
+- AD-0012-0020: fail-fast on missing evidence — no silent fallback (REQ-0056)
+
+### Traceability Chain (v1.7.15 additions)
+
+```text
+REQ-0041..0044 → US-0012-0026 → AC-0012-0026-01..03 → BR-0012-0041..0047 → EX-0012-0041..0045 → TC-0012-0030..0035
+REQ-0048..0049,0053,0056 → US-0012-0027 → AC-0012-0027-01..04 → BR-0012-0048..0049,0053,0056 → EX-0012-0046..0047,0050,0053 → TC-0012-0036..0039
+REQ-0050..0052 → US-0012-0028 → AC-0012-0028-01..03 → BR-0012-0050..0052 → EX-0012-0048..0049,0054 → TC-0012-0040..0042
+REQ-0054..0055 → US-0012-0029 → AC-0012-0029-01..02 → BR-0012-0054..0055 → EX-0012-0051..0052 → TC-0012-0043..0045
+```
+
+## v1.7.15 Rejected
+
+- RJ-0012-0003: Silent fallback on missing evidence
+  - DO NOT reintroduce silent fallback on missing evidence
+  - Temptation: fill default values to keep pipeline green when evidence is partially available
+  - Reason: silent fallback produces partially-grounded evidence that appears valid but is not truthful
+
+- RJ-0012-0004: Copy discussion 3-layer scores to scoringTrace
+  - DO NOT copy discussion 3-layer scores to scoringTrace
+  - Temptation: reduce re-compute cost by reusing discussion evaluation results
+  - Reason: discussion scores measure design direction quality (what); prototyping scores measure implementation fidelity (how well) — different evaluation targets
+
+- RJ-0012-0005: Single-iteration converged
+  - DO NOT accept single-iteration converged
+  - Temptation: short-circuit to save runtime when first iteration exceeds threshold
+  - Reason: single iteration provides no plateau data, no score progression, and no convergence evidence
+
+- RJ-0012-0006: Auto-generate mockPaths.status="pass"
+  - DO NOT auto-generate mockPaths.status="pass"
+  - Temptation: reduce evidence authoring burden by generating pass entries for all declared mock paths
+  - Reason: synthetic pass entries bypass actual browser QA verification and produce false-positive fidelity reports
+
+- RJ-0012-0007: Hardcode packVersion
+  - DO NOT hardcode packVersion
+  - Temptation: bypass calibration plumbing by setting packVersion: "1.0.0" directly
+  - Reason: hardcoded packVersion creates drift between calibration pack metadata and runtime summary
+
+- RJ-0012-0008: Fallback resolvedReviewer ?? "qfai"
+  - DO NOT use fallback resolvedReviewer ?? "qfai"
+  - Temptation: keep CLI frictionless by auto-filling reviewer when not specified
+  - Reason: auto-filled reviewer identity defeats the purpose of human accountability in review signoff

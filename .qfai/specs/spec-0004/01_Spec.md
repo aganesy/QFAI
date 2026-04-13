@@ -12,7 +12,7 @@
 
 ## Scope
 
-- In: validate コマンドの全機能（50+ バリデータ実行、--fail-on, --format, --phase, --platform, validate.json 出力、ランログ、ウェイバー適用、phase guard、canonical/legacy validator 分離、IssueCategory "canonical"、prototypingRecommendation バリデータ、Surface Type Detection による non-UI 安全スキップ）
+- In: validate コマンドの全機能（50+ バリデータ実行、--fail-on, --format, --phase, --platform, validate.json 出力、ランログ、ウェイバー適用、phase guard、canonical/legacy validator 分離、IssueCategory "canonical"、prototypingRecommendation バリデータ、Surface Type Detection による non-UI 安全スキップ、full-harness iteration integrity validators (PROT-290..306, PROT-308..309)）
 - Out: report/init/doctor/guardrails
 
 ## Applicable NFR
@@ -67,10 +67,22 @@
   PROT-290（iterationCount=1 + converged warning）、PROT-291（scoringTrace count mismatch warning）、
   PROT-292（terminationReason cross-check warning）、PROT-293（maxIterations 超過 warning）、
   PROT-294（non-increasing scoringTrace info）。fullHarness validator taxonomy reserved range: 281-294
+- REQ-0124: Validator rule: terminationReason=max-iterations integrity (QFAI-PROT-292 severity upgrade to error) — terminationReason=max-iterations なのに iterationCount < maxIterations の場合を error とする（v1.7.15 で warning→error 昇格）。REQ-0015 対応
+- REQ-0125: Validator rule: single-iteration converged reject (QFAI-PROT-290 error upgrade + QFAI-PROT-308 new) — terminationReason=converged なのに iterationCount < 2 の場合を error とする。PROT-290 は warning→error 昇格、PROT-308 は新規 error。REQ-0016 対応
+- REQ-0126: Validator rule: weightedTotal mismatch reject (QFAI-PROT-296) — weightedTotal !== min(l1.total, l2.total) の場合を error とする。REQ-0017 対応
+- REQ-0127: Validator rule: reviewer placeholder/missing reject (QFAI-PROT-295, QFAI-PROT-309) — reviewer placeholder または missing の場合を error とする。PROT-295 はトップレベル、PROT-309 は iteration レベル。REQ-0018 対応
+- REQ-0128: Validator rule: zero-seeded specCoverage reject (QFAI-PROT-305) — zero-seeded specCoverage（全 declared/checked=0）を error とする。REQ-0019 対応
+- REQ-0129: Validator rule: synthetic mockPaths pass reject (QFAI-PROT-306) — mockPaths に status=pass/auto/default の synthetic エントリがある場合を error とする。REQ-0020 対応
+- REQ-0130: Validator rule: calibrationRef missing/mismatch reject (QFAI-PROT-301) — calibrationRef の configPath/packPath が空の場合を error とする。REQ-0021 対応
+- REQ-0131: Validator rule: reviewerLogs count mismatch (QFAI-PROT-304) — reviewerLogs.length !== iterationCount の場合を error とする。REQ-0022a 対応
+- REQ-0132: Validator rule: iterations/scoringTrace count mismatch (QFAI-PROT-291 severity upgrade) — iterations.length !== iterationCount または scoringTrace.length !== iterationCount の場合を error とする（v1.7.15 で warning→error 昇格）。REQ-0022b/c 対応
+- REQ-0133: Validator rule: commitSha missing reject (QFAI-PROT-297) — iteration の commitSha 欠落を error とする。REQ-0023 対応
+- REQ-0134: Validator rule: limitations missing reject (QFAI-PROT-298) — fullHarness.limitations 欠落を error とする。REQ-0024 対応
+- REQ-0135: Validator rules: additional full-harness integrity checks (QFAI-PROT-299, PROT-300, PROT-302, PROT-303) — status=completed + terminationReason 欠落 (PROT-299 error)、plateau + insufficient iterations (PROT-300 error)、全 iteration 同一 commitSha (PROT-302 warning)、reviewerLog summary too short (PROT-303 warning)
 
 ## Entry points
 
-- US range in this spec: US-0004-0001..US-0004-0023
+- US range in this spec: US-0004-0001..US-0004-0025
 - Primary actors: QA エンジニア / AI エージェント
 - Notes: `qfai validate` でスペック・コントラクト・トレーサビリティを包括検証する
 

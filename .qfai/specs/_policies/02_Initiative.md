@@ -52,6 +52,21 @@
 | v1.7.9 (完了)                            | Convergence Correction Release — validation truth path, discussion completion convergence, prototyping mode/public contract alignment, honest render evidence/browser QA reporting, reviewer/docs normalization                                                                                                                                                                                                                                 |
 | v1.7.11 (SDD 進行中)                     | Completion / Correction / Integration Release — 全 surface (discussion / templates / validators / runtime / docs / tests) を canonical 3-layer evaluation model に収束。10 workstreams: discussion canonical (A), template replacement (B), sources schema (C), strategy strong schema (D), contracts strong schema (E), validator truth-path (F), render evidence (G), browser QA (H), prototyping contracts (I), docs/tests normalization (J) |
 | v1.7.13 (SDD 進行中)                     | Canonical Sidecar Convergence — canonical/legacy validator separation, prototyping module (mode.ts, recommendationArtifact.ts), prototyping.yaml required side artifact, existence-based precedence, report prototyping observability, config prototyping.calibration, DDS→sidecar-first validator rewrite                                                                                                                                      |
+| v1.7.15 (SDD 進行中)                     | packages/qfai single-PR completion — runtime truthfulness hardening: panel scoring from real evidence, converged>=2 iterations, reviewer/commitSha mandatory, specCoverage from real diffs, uiFidelity observation-only, CalibrationLoader wired, fail-fast on missing evidence, docs/SKILL/README reality sync                                                                                                                               |
+
+## v1.7.15 Initiative — packages/qfai single-PR completion
+
+Source: SRC-0001 — QFAI v1.7.15 継続開発設計書
+
+| WS | Workstream | Summary |
+|---|---|---|
+| WS-1 | Full-harness scoring 実体化 | scoreL1/scoreL2 を実 evidence から算出。weightedTotal = min(L1, L2)。固定値生成禁止 |
+| WS-2 | History / convergence / reviewer log 真正化 | converged requires iterationCount>=2, reviewerLogs append-only, reviewer CLI mandatory |
+| WS-3 | Spec coverage 実測化 | specCoverage を宣言/実測差分から導出。zero-seeded 禁止 |
+| WS-4 | uiFidelity observation-only 化 | DOM parse + browserQa + render evidence のみ。synthetic mockPaths pass 禁止。extractHtmlLabelsFromString 空実装廃止 |
+| WS-5 | Calibration wiring 本接続 | CalibrationLoader を execution.ts に接続。packVersion を pack metadata から解決 |
+| WS-6 | Validator hardening 完遂 | prototypingEvidence.ts に reviewer/commitSha/specCoverage/mockPaths/calibrationRef/array length validator rules 追加 |
+| WS-7 | Docs / SKILL / README reality sync | docs 主張と runtime failure conditions の 1:1 対応を保証 |
 
 ## リスク
 

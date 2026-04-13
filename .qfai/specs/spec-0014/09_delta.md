@@ -97,3 +97,25 @@ US-0014-0009 → AC-0014-0011 → BR-0014-0009 → EX-0014-0012, EX-0014-0013 �
 - rationale: 実装分析で特定された未文書化の v1.7.13 変更:
   - REQ-0013 が列挙していなかった classification.ts（明示的 UI 分類検証）を含む完全なバリデータリストに更新
   - 各バリデータの責務を明記（oqClosure=OQ 参照解決、rollout=migration 検出、等）
+
+## v1.7.15 (2026-04-14) — Docs/Runtime Drift Gate
+
+### v1.7.15 Adopted
+
+- adopted: REQ-0015（Docs/Runtime drift gate）追加
+- adopted: US-0014-0012, AC-0014-0014..0015, BR-0014-0015..0016, EX-0014-0016..0017, TC-0014-0018..0019 追加
+- adopted: DR-0014-0001（integration test location and scope）追加
+- rationale: discussion NFR-0005 および REQ-0025 に基づく docs/runtime drift 検出機能。SKILL.md / evidence README / discussion README の主張と runtime error conditions の 1:1 対応を integration test で検証
+
+### v1.7.15 Traceability Chain
+
+```text
+US-0014-0012 → AC-0014-0014, AC-0014-0015 → BR-0014-0015, BR-0014-0016 → EX-0014-0016, EX-0014-0017 → TC-0014-0018, TC-0014-0019
+```
+
+### v1.7.15 Rejected
+
+- RJ-v1715-001: Auto-sync docs from runtime
+  - DO NOT auto-sync docs from runtime state (or vice versa)
+  - Temptation: reduce doc drift by codegen — automatically update SKILL.md when validator rules change
+  - Reason: doc intent is not equivalent to runtime state. A doc may intentionally describe future behavior, or a runtime rule may be temporarily disabled for debugging. The drift gate must detect both directions of drift, not silently align them. Auto-sync would mask intentional divergences and remove the human review step that catches aspirational vs actual discrepancies

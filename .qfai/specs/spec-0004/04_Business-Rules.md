@@ -99,3 +99,88 @@
   3. Contracts tokens
   4. Taste/Trend/3-layer evaluation family tokens
 - 旧: DDP → Design Token → UI Contract → HTML Mock → Flow
+
+## BR-0004-0027: PROT-292 terminationReason=max-iterations integrity (v1.7.15)
+
+- AC-Refs: AC-0004-0025
+- Detection: terminationReason=max-iterations AND iterationCount < calibration.maxIterations
+- Severity: error (upgraded from warning in v1.7.14)
+- Rule ID: QFAI-PROT-292
+
+## BR-0004-0028: PROT-290/308 single-iteration converged reject (v1.7.15)
+
+- AC-Refs: AC-0004-0026
+- Detection: terminationReason=converged AND iterationCount < 2
+- Severity: error (PROT-290 upgraded from warning; PROT-308 new error)
+- Rule IDs: QFAI-PROT-290, QFAI-PROT-308
+
+## BR-0004-0029: PROT-296 weightedTotal mismatch reject (v1.7.15)
+
+- AC-Refs: AC-0004-0025
+- Detection: iteration.weightedTotal !== min(iteration.l1.total, iteration.l2.total) (tolerance 0.001)
+- Severity: error
+- Rule ID: QFAI-PROT-296
+
+## BR-0004-0030: PROT-295/309 reviewer placeholder reject (v1.7.15)
+
+- AC-Refs: AC-0004-0027
+- Detection: reviewerSignoff.reviewerId or iteration.reviewerId is placeholder (qfai, default, auto, system, unknown, empty)
+- Severity: error
+- Rule IDs: QFAI-PROT-295 (top-level), QFAI-PROT-309 (iteration-level)
+
+## BR-0004-0031: PROT-305 zero-seeded specCoverage reject (v1.7.15)
+
+- AC-Refs: AC-0004-0028
+- Detection: all specs have declared/checked counts = 0 and missing arrays empty
+- Severity: error
+- Rule ID: QFAI-PROT-305
+
+## BR-0004-0032: PROT-306 synthetic mockPaths pass reject (v1.7.15)
+
+- AC-Refs: AC-0004-0029
+- Detection: uiFidelity.screens[].mockPaths contains status="pass", id ending "-default", or id containing "auto"
+- Severity: error
+- Rule ID: QFAI-PROT-306
+
+## BR-0004-0033: PROT-301 calibrationRef missing/empty reject (v1.7.15)
+
+- AC-Refs: AC-0004-0031
+- Detection: calibrationRef.configPath or calibrationRef.packPath is empty
+- Severity: error
+- Rule ID: QFAI-PROT-301
+
+## BR-0004-0034: PROT-304 reviewerLogs count mismatch (v1.7.15)
+
+- AC-Refs: AC-0004-0030
+- Detection: reviewerLogs.length !== iterationCount
+- Severity: error
+- Rule ID: QFAI-PROT-304
+
+## BR-0004-0035: PROT-291 iterations/scoringTrace count mismatch (v1.7.15)
+
+- AC-Refs: AC-0004-0030
+- Detection: iterations.length !== iterationCount OR scoringTrace.length !== iterationCount
+- Severity: error (upgraded from warning in v1.7.14)
+- Rule ID: QFAI-PROT-291
+
+## BR-0004-0036: PROT-297 commitSha missing reject (v1.7.15)
+
+- AC-Refs: AC-0004-0031
+- Detection: iteration.commitSha is empty or missing
+- Severity: error
+- Rule ID: QFAI-PROT-297
+
+## BR-0004-0037: PROT-298 limitations missing reject (v1.7.15)
+
+- AC-Refs: AC-0004-0031
+- Detection: fullHarness.limitations is undefined/missing
+- Severity: error
+- Rule ID: QFAI-PROT-298
+
+## BR-0004-0038: Additional full-harness integrity rules (v1.7.15)
+
+- AC-Refs: AC-0004-0025
+- PROT-299: status=completed but terminationReason missing → error
+- PROT-300: terminationReason=plateau but iterationCount < plateauLookback → error
+- PROT-302: all iterations have identical commitSha → warning
+- PROT-303: reviewerLog summary < 10 chars → warning

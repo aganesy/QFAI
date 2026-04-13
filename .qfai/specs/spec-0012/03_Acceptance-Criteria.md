@@ -135,3 +135,51 @@ Given full-harness evidence, when the reviewer evaluates, then it verifies: iter
 Given full-harness evidence with iterationCount=1 and terminationReason=converged, when prototypingEvidence validator runs, then QFAI-PROT-290 warning is emitted.
 Given scoringTrace.length≠iterationCount, then QFAI-PROT-291 warning. Given terminationReason=max-iterations but count<maxIterations, then QFAI-PROT-292 warning.
 Given iterationCount>maxIterations, then QFAI-PROT-293 warning. Given non-increasing scoringTrace, then QFAI-PROT-294 info.
+
+## AC-0012-0026-01: Real Panel Scoring from Evidence (v1.7.15)
+
+Given a full-harness run with valid evidence inputs, when scoreL1() and scoreL2() execute, then both produce non-zero totals derived from actual evidence (not fixed l1/l2={total:0, axes:[]}).
+
+## AC-0012-0026-02: Converged Requires iterationCount >= 2 (v1.7.15)
+
+Given a full-harness run where weightedTotal >= acceptThreshold at iteration 1, when termination logic runs, then status remains in-progress (not converged). Converged is only set when iterationCount >= 2 and plateau/threshold conditions are met.
+
+## AC-0012-0026-03: weightedTotal = min(L1, L2) (v1.7.15)
+
+Given L1.total=0.85 and L2.total=0.70, when computeWeightedTotal() runs, then weightedTotal === 0.70 (always the minimum).
+
+## AC-0012-0027-01: Missing Reviewer Fails Fast (v1.7.15)
+
+Given a full-harness run with no reviewer specified or reviewer set to a placeholder value (qfai/default/auto/system/unknown/""), when execution starts, then a runtime error is thrown before any measurement occurs.
+
+## AC-0012-0027-02: Missing commitSha Fails Fast (v1.7.15)
+
+Given a full-harness run where git commit SHA cannot be obtained, when execution starts, then a runtime error is thrown (no silent fallback to empty string or placeholder).
+
+## AC-0012-0027-03: Missing Calibration Pack Fails Fast (v1.7.15)
+
+Given a full-harness run where the calibration pack is absent, unreadable, or schema-invalid, when CalibrationLoader runs in execution.ts, then a runtime error is thrown.
+
+## AC-0012-0027-04: Missing Render/BrowserQA/UiObservation/SpecCoverage Evidence Fails Fast (v1.7.15)
+
+Given a full-harness run where any of render evidence, browser QA evidence, UI observation input, or spec coverage input is missing, when the measurement phase starts, then a runtime error is thrown for each missing piece.
+
+## AC-0012-0028-01: specCoverage from Real Diffs (v1.7.15)
+
+Given declared spec artifacts and observed runtime artifacts, when buildSpecCoverageSummary() runs, then specCoverage reflects actual coverage ratios for uiRoutes, apiEndpoints, and dbObjects. Zero-seeded output ({declared:0, observed:0, ratio:0} for all axes) is rejected.
+
+## AC-0012-0028-02: uiFidelity Rejects Synthetic mockPaths (v1.7.15)
+
+Given a full-harness run, when uiFidelity is built, then no mockPaths entry has status="pass" unless backed by actual browser QA findings. Auto-generated pass entries are rejected.
+
+## AC-0012-0028-03: extractHtmlLabelsFromString Replaced (v1.7.15)
+
+Given HTML capture input, when label extraction runs, then extractDomLabelsWithJsdom() in uiObservation.ts is used (the old empty-implementation extractHtmlLabelsFromString is removed).
+
+## AC-0012-0029-01: Docs Claims Match Runtime Failures (v1.7.15)
+
+Given SKILL.md / evidence README / discussion README, when their constraint claims are enumerated, then each claim maps 1:1 to a validator rule or runtime error condition in the codebase.
+
+## AC-0012-0029-02: packVersion from Pack Metadata (v1.7.15)
+
+Given a calibration pack with metadata, when packVersion is resolved, then it matches the pack metadata value (not hardcoded "1.0.0").

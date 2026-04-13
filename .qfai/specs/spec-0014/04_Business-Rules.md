@@ -81,3 +81,22 @@
 - verify が使用する runCanonicalUixValidators() は 11 modular validators を並列実行する（v1.7.14: rollout.ts 削除により 12→11。canonical.ts, foundation.ts, comparisonValidator.ts, oqClosure.ts, scoringReady.ts, strategy.ts, screenContract.ts, trend.ts, threeLayer.ts, tasteInterview, prototypingRecommendation.ts）
 - verify 固有の制約: --phase refinement は local-only、CI は default/full のみ
 - UIX-REV semantic reviewers は runCanonicalUixValidators() とは別に、verify skill 内で実行される
+
+## BR-0014-0015: Docs/Runtime Drift Detection (v1.7.15)
+
+- AC-Refs: AC-0014-0014, AC-0014-0015
+
+- Integration test MUST enumerate all constraint claims in SKILL.md, evidence README, and discussion README
+- Each documented claim MUST have a corresponding runtime error condition (validator rule or runtime exception)
+- Each runtime error condition MUST have a corresponding documented claim
+- Drift in either direction (docs claims unmatched runtime, runtime enforces undocumented constraint) MUST cause verify failure
+- Drift gate runs as part of the integration test suite, not as a separate binary
+
+## BR-0014-0016: Docs/Runtime Drift Is Bidirectional (v1.7.15)
+
+- AC-Refs: AC-0014-0014
+
+- The drift gate MUST detect both directions of drift:
+  1. Docs claim → no matching runtime enforcement (doc is stale or aspirational)
+  2. Runtime enforcement → no matching docs claim (doc is incomplete)
+- The gate MUST NOT auto-sync docs from runtime or vice versa; it only detects and reports

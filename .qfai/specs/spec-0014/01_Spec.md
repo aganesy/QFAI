@@ -28,6 +28,7 @@
   - Waiver handling: waivers for warning/info only, error waivers rejected
   - Canonical UIX validators (runCanonicalUixValidators — 11 modular validators, v1.7.14: rollout.ts 削除により 12→11)
   - [REMOVED v1.7.14] Legacy compatibility path — validators/legacy/ namespace は完全削除済み（DR-0115）
+  - v1.7.15: docs/runtime drift integration test gate (SKILL.md / evidence README / discussion README claims vs runtime error conditions must correspond 1:1)
 - Out:
   - Incremental/diff-only verification (DR-0007: verify is always full-scan)
   - Spec artifact authoring (belongs to `/qfai-sdd`)
@@ -73,10 +74,11 @@
   scoringReady.ts（scoring schema 完全性）, strategy.ts（strategy artifact 完全性）, screenContract.ts（screen contract schema）,
   trend.ts（trend research 検証）, threeLayer.ts（3-layer evaluation 完全性）を canonical.ts が順次実行
 - REQ-0014: [REMOVED v1.7.14] Legacy Compatibility Path — v1.7.14 で legacy/ ディレクトリおよび IssueCategory "compatibility" は完全削除済み（DR-0108, DR-0115）
+- REQ-0015: v1.7.15 Docs/Runtime drift gate — integration test が docs claims（SKILL.md, evidence README, discussion README）と runtime error conditions の 1:1 対応を検証する。docs が runtime で enforced されない制約を主張している場合、または runtime が docs に記載されていない制約を enforce している場合に fail する（discussion NFR-0005, REQ-0025）
 
 ## Entry points
 
-- US range in this spec: US-0014-0001..US-0014-0011
+- US range in this spec: US-0014-0001..US-0014-0012
 - Primary actors: QFAI user (developer), CI/CD pipeline, DevOps/CI Engineer
 - Notes: Verify is the final quality gate before PR creation. It produces evidence for PR descriptions.
 

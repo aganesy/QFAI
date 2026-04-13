@@ -1185,3 +1185,48 @@ discussion-20260329195516830（v1.7.6 Audit Remediation）、
 - Rationale: discussion scores は「どのデザイン方向が最も評価基準を満たすか」（what）を測定し、prototyping scores は「選択したアンカーに対する実装品質がどの程度か」（how well）を測定する。評価対象が根本的に異なるため、スコアの再利用は意味的に不正
 - Rejected-A: discussion scores を prototyping の初期値として使用（評価対象の違いにより、初期値としても不適切）
   - DO NOT: discussion aggregate scores を prototyping scoringTrace の初期値・参照値として使用しない。Temptation: discussion で高スコアなら prototyping も高スコアから始めたい
+
+### DR-0200: converged requires iterationCount>=2 (v1.7.15)
+
+- Decision: converged 判定は iterationCount >= 2 を必須条件とし、CalibrationLoader schema で plateauLookback >= 2 を強制する
+- Status: Adopted
+
+### DR-0201: Reviewer placeholder reject list frozen (v1.7.15)
+
+- Decision: reviewer placeholder reject list を "qfai", "default", "auto", "system", "unknown", "" の 6 値に凍結。resolvedReviewer ?? "qfai" フォールバック禁止
+- Status: Adopted
+
+### DR-0202: commitSha mandatory in full-harness (v1.7.15)
+
+- Decision: full-harness 実行時に commitSha を必須とし、取得不能時は runtime error
+- Status: Adopted
+
+### DR-0203: packVersion from pack metadata only (v1.7.15)
+
+- Decision: packVersion は CalibrationLoader 経由で pack metadata から動的取得。ハードコード禁止
+- Status: Adopted
+
+### DR-0204: weightedTotal = min(l1.total, l2.total) always (v1.7.15)
+
+- Decision: computeWeightedTotal は常に Math.min(l1.total, l2.total) を返す
+- Status: Adopted
+
+### DR-0205: specCoverage from real diffs only (v1.7.15)
+
+- Decision: specCoverage は実 spec/runtime evidence から導出。zero-seeded 出力を禁止
+- Status: Adopted
+
+### DR-0206: uiFidelity observation-only (v1.7.15)
+
+- Decision: uiFidelity は DOM parse / browser QA / render evidence からのみ構成。synthetic mockPaths pass を禁止
+- Status: Adopted
+
+### DR-0207: CalibrationLoader wired in execution.ts (v1.7.15)
+
+- Decision: CalibrationLoader は execution.ts で loadConfig() 後に呼び出す（config.ts ではない）
+- Status: Adopted
+
+### DR-0208: Fail-fast no silent fallback (v1.7.15)
+
+- Decision: 必須 evidence 欠落時は runtime error で即座に失敗。デフォルト値補完を禁止
+- Status: Adopted

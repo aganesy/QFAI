@@ -81,6 +81,13 @@
 - TC-72: prototypingRecommendation validator は SDD preflight のブロッカーとして機能する
 - TC-73: prototyping.calibration config block はデフォルト値を持ち、未設定でも正常動作する
 
+### v1.7.15 追加制約
+
+- TC-74: 単一 PR で packages/qfai/** のみ変更する。repo root `.qfai/` への変更を禁止
+- TC-75: 破壊的変更を許容する。後方互換性の維持義務なし
+- TC-76: ユーザー移行ケアは不要（internal-only refactor）
+- TC-77: schema / runtime / validator / docs / tests を同一 PR で同時更新する
+
 ## Operational Constraints
 
 | ID    | Constraint                                                                                                 | Rationale                                                        | Impact                                   |

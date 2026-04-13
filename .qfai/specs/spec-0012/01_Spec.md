@@ -13,6 +13,7 @@
 ## Scope
 
 - In:
+  - NOTE: v1.7.15 adds runtime truthfulness hardening — panel scoring from real evidence, converged requires iterationCount>=2, reviewer/commitSha mandatory, specCoverage from real diffs, uiFidelity observation-only, CalibrationLoader wired into execution.ts, fail-fast on missing evidence
   - `/qfai-prototyping` skill workflow (SKILL only, no CLI command) — skill-centered truth: the skill is the sole interface for prototyping
   - All-spec stage: scope is ALL specs from `.qfai/specs/spec-*`
   - Spec Auto-Discovery Protocol (4-source unified diff detection: branch diff, local changes, evidence mtime, delta.md parse)
@@ -118,10 +119,26 @@
 - REQ-0039: Reviewer Gate Strengthening (v1.7.14) — full-harness 専用の 6 項目検証（iterationCount>1, scoringTrace count 一致, score progression, terminationReason 整合, 独立評価者実行確認, limitations セクション存在）。Limitations section の full-harness MUST 義務化
 - REQ-0040: Full-Harness Validator Rules QFAI-PROT-290~294 (v1.7.14) — 5 つの新規 validator rule を prototypingEvidence.ts に追加。PROT-290（iterationCount=1+converged warning）、PROT-291（scoringTrace count mismatch warning）、
   PROT-292（terminationReason cross-check warning）、PROT-293（maxIterations 超過 warning）、PROT-294（non-increasing scoringTrace info）
+- REQ-0041: Panel scoring L1 実 evidence 算出 (v1.7.15; discussion REQ-0001) — scoreL1(inputs) は runtime gate / render coverage / browser QA blocking findings / screen contract coverage / spec coverage を必須入力とし、実 evidence から L1 total を算出する。l1: { total: 0, axes: [] } の固定値生成を禁止
+- REQ-0042: Panel scoring L2 実 evidence 算出 (v1.7.15; discussion REQ-0002) — scoreL2(inputs) は discussion 3-layer axes / screen contract fidelity / trend translation consistency / visual findings / browser QA experience findings を必須入力とし、実 evidence から L2 total を算出する
+- REQ-0043: weightedTotal = min(l1.total, l2.total) (v1.7.15; discussion REQ-0003) — computeWeightedTotal(l1, l2) は常に Math.min(l1.total, l2.total) を返す。pre-scored 値の流用を禁止
+- REQ-0044: converged 判定: iterationCount >= 2 必須 (v1.7.15; discussion REQ-0004) — converged は iterationCount >= 2 かつ weightedTotal >= acceptThreshold かつ plateau 条件を満たす場合のみ成立。1 iteration 目 accept でも converged にしない
+- REQ-0045: plateau 判定 (v1.7.15; discussion REQ-0005) — plateau は iterationCount >= 2 かつ plateau 条件成立だが accept threshold 未達の場合に設定
+- REQ-0046: max-iterations 判定 (v1.7.15; discussion REQ-0006) — terminationReason = max-iterations は iterationCount === calibration.maxIterations の場合のみ設定
+- REQ-0047: reviewerLogs[] append-only 累積 (v1.7.15; discussion REQ-0007) — reviewerLogs[] は iteration ごとに append-only で累積。既存ログの上書き・単一要素置換を禁止
+- REQ-0048: reviewer CLI 引数必須・placeholder 拒否 (v1.7.15; discussion REQ-0008) — reviewerId は CLI 引数で必須。placeholder 値 (qfai, default, auto, system, unknown, 空文字) を reject。resolvedReviewer ?? "qfai" フォールバックを禁止
+- REQ-0049: commitSha full-harness 必須 (v1.7.15; discussion REQ-0009) — full-harness 実行時に commit SHA 取得失敗を許可しない。取得不能時は runtime error で失敗
+- REQ-0050: specCoverage 実測導出 (v1.7.15; discussion REQ-0010) — specCoverage は loadDeclaredSpecArtifacts() と collectObservedRuntimeArtifacts() の実差分から buildSpecCoverageSummary() で生成。zero-seeded 固定出力を禁止
+- REQ-0051: uiFidelity observation-only 化 (v1.7.15; discussion REQ-0011) — uiFidelity は DOM parse (jsdom) / browser QA / render evidence からのみ構成。mockPaths.status = "pass" の自動生成を禁止。evidence 不足時は status = "insufficient-evidence"
+- REQ-0052: extractHtmlLabelsFromString 空実装廃止 (v1.7.15; discussion REQ-0012) — extractHtmlLabelsFromString() の空実装を削除し、uiObservation.ts の extractDomLabelsWithJsdom() へ責務移管
+- REQ-0053: CalibrationLoader execution path 本接続 (v1.7.15; discussion REQ-0013) — CalibrationLoader を execution.ts で loadConfig() 後に呼び出し、full-harness の実行パスに接続。pack 不在・読取不可・schema 不整合時は失敗
+- REQ-0054: packVersion pack metadata 解決 (v1.7.15; discussion REQ-0014) — packVersion は CalibrationLoader 経由で pack metadata から動的に取得。packVersion: "1.0.0" のハードコードを禁止
+- REQ-0055: Docs / SKILL / README reality sync (v1.7.15; discussion REQ-0025) — docs の主張が runtime 実体を超えないこと。full-harness 入力要件、reviewer 必須、convergence rule、specCoverage 実測要件、uiFidelity observation-only rule、calibration 必須性を runtime と一致させる
+- REQ-0056: missing evidence fail-fast (v1.7.15; discussion REQ-0026) — full-harness で calibration pack / reviewer / commit SHA / render evidence / browser QA evidence / ui observation input / spec coverage input が欠けた場合、補完せず runtime error で失敗
 
 ## Entry points
 
-- US range in this spec: US-0012-0001..US-0012-0025
+- US range in this spec: US-0012-0001..US-0012-0029
 - Primary actors: Developer, AI Agent (FullStackEngineer, RuntimeGatekeeper), CI/CD pipeline
 - Notes: No CLI command exists. This is a skill-only spec for `/qfai-prototyping`.
 

@@ -29,3 +29,21 @@
 - Decision: classification.ts に意味的矛盾検出、strategy.ts に canonical enum 強制と状態機械検証を追加
 - Context: v1.7.13 の classification.ts は構造チェックのみ（フィールド存在確認）。strategy.ts は 8 フィールドの型チェックのみで decision 値は任意文字列
 - Rationale: 構造的に正しいが意味的に矛盾するデータ（ui_bearing=true + primary_surface=non-ui 等）を検出し、downstream の execution/report エラーを validator レイヤーで事前に防止
+
+### DR-0004-0006: PROT-295..306, 308..309 Taxonomy Allocation (v1.7.15)
+
+- Decision: fullHarness validator taxonomy range を 281-294 から 281-321 に拡張。PROT-295..306 に 12 の新規 error-level validator rules を割り当て、PROT-308..309 に追加の converged/reviewer checks を割り当て
+- Context: v1.7.14 で PROT-290..294 を warning/info として導入したが、v1.7.15 でこれらを error に昇格し追加 rules を配置
+- Rationale: 連番を維持し taxonomy 衝突を回避。PROT-307 はスキップ（将来予約）
+
+### DR-0004-0007: All PROT-290..309 Rules Are Error Severity — Breaking Change (v1.7.15)
+
+- Decision: PROT-290..306, PROT-308..309 の severity をすべて error とする（PROT-302, PROT-303 は warning に据え置き）。v1.7.14 の PROT-290..292 は warning→error に昇格
+- Context: v1.7.14 では soft introduction のため warning で導入。v1.7.15 は破壊的変更リリースであり、evidence truthfulness を enforcement レベルで強制
+- Rationale: warning では CI を通過するため enforcement として機能しない。v1.7.15 は後方互換を考慮しない設計判断（discussion 05_Scope.md §Constraints）に基づき、全 critical rules を error に統一
+
+### DR-0004-0008: No Waiver Allowed for PROT-295..309 Error Rules (v1.7.15)
+
+- Decision: PROT-295..309 の error-level rules に対する waiver を認めない
+- Context: waivers.yml で warning/info を suppress/downgrade する仕組みが存在するが、error-level findings は waiver 対象外（spec-0014 BR-0014-0003 と一貫）
+- Rationale: これらの rules は evidence truthfulness の根幹であり、waiver による回避は evidence 品質の保証を無効にする

@@ -182,3 +182,142 @@
 | prototyping.yaml surface="web"              | surface="web" (explicit)                         |
 | No surface field, evidence has uiRoutes > 0 | surface="web" (inferred)                         |
 | No surface field, no evidence signals       | surface=null (v1.7.14: no default, returns null) |
+
+## EX-0012-0041: L1/L2 Panel Scoring with Real Evidence (v1.7.15)
+
+- BR-Ref: BR-0012-0041, BR-0012-0042
+
+| Input                                                                  | Expected                                                  |
+| ---------------------------------------------------------------------- | --------------------------------------------------------- |
+| Valid render coverage + browser QA + screen contracts + spec coverage   | L1.total > 0, L2.total > 0, both derived from evidence   |
+| Missing render coverage input                                          | MeasurementError thrown (no silent fallback to l1.total=0)|
+
+## EX-0012-0042: weightedTotal = min(L1, L2) (v1.7.15)
+
+- BR-Ref: BR-0012-0043
+
+| L1.total | L2.total | Expected weightedTotal |
+| -------- | -------- | ---------------------- |
+| 0.85     | 0.70     | 0.70                   |
+| 0.60     | 0.90     | 0.60                   |
+| 0.80     | 0.80     | 0.80                   |
+
+## EX-0012-0043: Converged Requires iterationCount >= 2 (v1.7.15)
+
+- BR-Ref: BR-0012-0044
+
+| iterationCount | weightedTotal | acceptThreshold | Expected status |
+| -------------- | ------------- | --------------- | --------------- |
+| 1              | 0.95          | 0.80            | in-progress     |
+| 2              | 0.85          | 0.80            | converged       |
+| 1              | 0.50          | 0.80            | in-progress     |
+
+## EX-0012-0044: Plateau and max-iterations (v1.7.15)
+
+- BR-Ref: BR-0012-0045, BR-0012-0046
+
+| iterationCount | Condition                                             | Expected terminationReason |
+| -------------- | ----------------------------------------------------- | -------------------------- |
+| 5              | score delta < plateauDelta for plateauLookback iters  | plateau                    |
+| 15             | iterationCount === maxIterations                      | max-iterations             |
+| 10             | iterationCount < maxIterations, not converged         | null (continue)            |
+
+## EX-0012-0045: reviewerLogs Append-Only (v1.7.15)
+
+- BR-Ref: BR-0012-0047
+
+- Given iteration 1 produces reviewerLog entry A
+- When iteration 2 runs
+- Then reviewerLogs === [A, B] (B appended, A unchanged)
+- And reviewerLogs.length === 2 === iterationCount
+
+## EX-0012-0046: Reviewer Placeholder Rejection (v1.7.15)
+
+- BR-Ref: BR-0012-0048
+
+| reviewerId input | Expected result                          |
+| ---------------- | ---------------------------------------- |
+| "qfai"           | CLI/runtime error: placeholder reviewer  |
+| "default"        | CLI/runtime error: placeholder reviewer  |
+| "auto"           | CLI/runtime error: placeholder reviewer  |
+| "system"         | CLI/runtime error: placeholder reviewer  |
+| "unknown"        | CLI/runtime error: placeholder reviewer  |
+| ""               | CLI/runtime error: reviewer required     |
+| "alice"          | Accepted                                 |
+
+## EX-0012-0047: commitSha Mandatory (v1.7.15)
+
+- BR-Ref: BR-0012-0049
+
+- Given full-harness mode and git is not available or HEAD is detached with no SHA
+- When execution starts
+- Then runtime error is thrown with message about missing commitSha
+
+## EX-0012-0048: specCoverage Zero-Seeded Rejection (v1.7.15)
+
+- BR-Ref: BR-0012-0050
+
+| specCoverage output                                               | Expected   |
+| ----------------------------------------------------------------- | ---------- |
+| {uiRoutes: {declared:5, observed:3, ratio:0.6}, ...}             | Accepted   |
+| {uiRoutes: {declared:0, observed:0, ratio:0}, apiEndpoints: ...0}| Rejected   |
+
+## EX-0012-0049: uiFidelity Synthetic mockPaths Rejection (v1.7.15)
+
+- BR-Ref: BR-0012-0051
+
+| mockPaths entry                                        | Expected                        |
+| ------------------------------------------------------ | ------------------------------- |
+| {path: "/login", status: "pass"} with browserQa backup | Accepted                        |
+| {path: "/login", status: "pass"} auto-generated        | Rejected (synthetic)            |
+| No browserQa findings                                  | mockPaths is empty              |
+
+## EX-0012-0050: CalibrationLoader Fail-Fast (v1.7.15)
+
+- BR-Ref: BR-0012-0053
+
+| Calibration pack state      | Expected                                     |
+| --------------------------- | -------------------------------------------- |
+| Valid pack at expected path  | CalibrationPack loaded, execution proceeds   |
+| Pack file missing            | Runtime error: calibration pack not found     |
+| Pack file unreadable         | Runtime error: calibration pack read failure  |
+| Pack schema invalid          | Runtime error: calibration schema mismatch    |
+
+## EX-0012-0051: packVersion from Metadata (v1.7.15)
+
+- BR-Ref: BR-0012-0054
+
+| Pack metadata version | Expected packVersion |
+| --------------------- | -------------------- |
+| "2.1.0"               | "2.1.0"              |
+| Metadata missing      | Runtime error        |
+
+## EX-0012-0052: Docs-Runtime Claim Mapping (v1.7.15)
+
+- BR-Ref: BR-0012-0055
+
+- Given SKILL.md claims "reviewer is mandatory in full-harness"
+- When runtime is inspected
+- Then execution.ts throws error on missing/placeholder reviewer (1:1 correspondence)
+
+## EX-0012-0053: Missing Evidence Fail-Fast (v1.7.15)
+
+- BR-Ref: BR-0012-0056
+
+| Missing evidence     | Expected                                            |
+| -------------------- | --------------------------------------------------- |
+| Calibration pack     | Runtime error before measurement phase              |
+| Reviewer identity    | Runtime error before measurement phase              |
+| Commit SHA           | Runtime error before measurement phase              |
+| Render evidence      | Runtime error before measurement phase              |
+| Browser QA evidence  | Runtime error before measurement phase              |
+| UI observation input | Runtime error before measurement phase              |
+| Spec coverage input  | Runtime error before measurement phase              |
+
+## EX-0012-0054: extractHtmlLabelsFromString Replaced (v1.7.15)
+
+- BR-Ref: BR-0012-0052
+
+- Given HTML capture input with DOM labels
+- When label extraction is invoked
+- Then extractDomLabelsWithJsdom() in uiObservation.ts produces labels (old empty function removed from codebase)

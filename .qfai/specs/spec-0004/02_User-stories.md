@@ -24,6 +24,9 @@
 - US-0004-0020: Canonical/Legacy Validator Separation
 - US-0004-0021: IssueCategory Discrimination
 - US-0004-0022: Prototyping Recommendation Validation（REQ-0014）
+- US-0004-0023: Full-Harness Iteration Integrity Error Enforcement (v1.7.15, REQ-0124..REQ-0134)
+- US-0004-0024: Reviewer and Convergence Evidence Truthfulness (v1.7.15, REQ-0125..REQ-0127)
+- US-0004-0025: Evidence Grounding Validators (v1.7.15, REQ-0128..REQ-0134)
 
 ## US-0004-0001: バリデーション実行
 
@@ -158,3 +161,24 @@ As a CI/CD engineer, I want validator issues tagged with `category: "canonical"`
 ## US-0004-0022: Prototyping Recommendation Validation
 
 As a QFAI user, I want `qfai validate` to check prototyping.yaml schema (required fields, mode validity, allowed_modes consistency), so that invalid prototyping recommendations are caught early.
+
+## US-0004-0023: Full-Harness Iteration Integrity Error Enforcement (v1.7.15)
+
+- Parent: CAP-0004
+- Goal: CI rejects full-harness evidence containing synthetic/zero-seeded/single-iteration-converged patterns by enforcing PROT-295..306, PROT-308..309 as error severity
+- Non-goals: Downgrading these rules to warnings
+- Notes: REQ-0124..REQ-0134。v1.7.15 で PROT-290..292 を warning→error に昇格し、PROT-295..306, PROT-308..309 を新規 error として追加
+
+## US-0004-0024: Reviewer and Convergence Evidence Truthfulness (v1.7.15)
+
+- Parent: CAP-0004
+- Goal: Validator rejects evidence where reviewer is placeholder, convergence claims single-iteration, or weightedTotal is pre-scored, ensuring full-harness evidence reflects real iterative review
+- Non-goals: Validating reviewer identity against external systems
+- Notes: REQ-0125..REQ-0127。PROT-290, PROT-295, PROT-296, PROT-308, PROT-309 が対応
+
+## US-0004-0025: Evidence Grounding Validators (v1.7.15)
+
+- Parent: CAP-0004
+- Goal: Validator rejects evidence where specCoverage is zero-seeded, mockPaths contain synthetic passes, calibrationRef is empty, or structural counts (reviewerLogs/iterations/scoringTrace) do not match iterationCount
+- Non-goals: Validating evidence content quality beyond structural integrity
+- Notes: REQ-0128..REQ-0134。PROT-291, PROT-297, PROT-298, PROT-301, PROT-304, PROT-305, PROT-306 が対応

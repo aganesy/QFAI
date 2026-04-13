@@ -51,3 +51,11 @@ Given verify runs qfai validate, when UIX validation executes, then runCanonical
 ## AC-0014-0013: Legacy Validators Not in Production
 
 Given verify runs qfai validate, when the validator pipeline executes, then no validators from validators/legacy/ namespace are invoked.
+
+## AC-0014-0014: Docs/Runtime Drift Detected (v1.7.15)
+
+Given SKILL.md claims a constraint (e.g., "reviewer is required") but the runtime error condition for that constraint does not exist or is disabled, when verify runs the docs/runtime drift gate, then verify fails with a drift detection error listing the undocumented or unmatched claims.
+
+## AC-0014-0015: Docs/Runtime Drift Clean (v1.7.15)
+
+Given all documented claims in SKILL.md, evidence README, and discussion README have matching runtime error conditions (1:1 correspondence), when verify runs the docs/runtime drift gate, then the drift gate passes with zero drift findings.

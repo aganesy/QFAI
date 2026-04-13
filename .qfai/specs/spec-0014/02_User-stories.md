@@ -49,3 +49,9 @@ As a QA engineer, I want verify to use only canonical UIX validators (12 modular
 ## US-0014-0011: Legacy Validator Isolation
 
 As a QFAI maintainer, I want legacy DDP validators isolated in the `validators/legacy/` namespace and excluded from the production verify path, so that they remain available for migration tooling without affecting new projects.
+
+## US-0014-0012: Docs/Runtime Drift Gate (v1.7.15)
+
+As a QA engineer, I want verify to fail when SKILL.md or evidence README claims a constraint that runtime no longer enforces (or runtime enforces a constraint not documented in docs), so that documentation drift is caught before merge.
+
+- Refs: REQ-0015, NFR-0005, discussion REQ-0025

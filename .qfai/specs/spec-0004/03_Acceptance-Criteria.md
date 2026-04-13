@@ -195,6 +195,70 @@ Scenario: prototypingRecommendation validation
   Then QFAI-PROT-153/154/155/156 issues are emitted
 ```
 
+```gherkin
+# AC-0004-0025
+Scenario: Full-harness iteration integrity error enforcement (v1.7.15)
+  Given full-harness evidence with terminationReason=max-iterations and iterationCount < maxIterations
+  When `qfai validate` runs the prototypingEvidence validator
+  Then QFAI-PROT-292 error is emitted (not warning)
+```
+
+```gherkin
+# AC-0004-0026
+Scenario: Single-iteration converged evidence rejected (v1.7.15)
+  Given full-harness evidence with terminationReason=converged and iterationCount=1
+  When `qfai validate` runs the prototypingEvidence validator
+  Then QFAI-PROT-290 and QFAI-PROT-308 errors are emitted
+```
+
+```gherkin
+# AC-0004-0027
+Scenario: Reviewer placeholder rejected (v1.7.15)
+  Given full-harness evidence with reviewer="qfai" or reviewer="" at top-level or iteration-level
+  When `qfai validate` runs the prototypingEvidence validator
+  Then QFAI-PROT-295 and/or QFAI-PROT-309 errors are emitted
+```
+
+```gherkin
+# AC-0004-0028
+Scenario: Zero-seeded specCoverage rejected (v1.7.15)
+  Given full-harness evidence where all specs have declared/checked/missing = 0/empty
+  When `qfai validate` runs the prototypingEvidence validator
+  Then QFAI-PROT-305 error is emitted
+```
+
+```gherkin
+# AC-0004-0029
+Scenario: Synthetic mockPaths pass rejected (v1.7.15)
+  Given full-harness evidence with uiFidelity mockPaths containing status="pass" entries
+  When `qfai validate` runs the prototypingEvidence validator
+  Then QFAI-PROT-306 error is emitted
+```
+
+```gherkin
+# AC-0004-0030
+Scenario: Evidence structural count integrity (v1.7.15)
+  Given full-harness evidence where reviewerLogs.length or iterations.length or scoringTrace.length !== iterationCount
+  When `qfai validate` runs the prototypingEvidence validator
+  Then QFAI-PROT-304 and/or QFAI-PROT-291 errors are emitted
+```
+
+```gherkin
+# AC-0004-0031
+Scenario: CalibrationRef and commitSha and limitations required (v1.7.15)
+  Given full-harness evidence with empty calibrationRef.configPath, missing iteration commitSha, or missing limitations
+  When `qfai validate` runs the prototypingEvidence validator
+  Then QFAI-PROT-301, QFAI-PROT-297, and/or QFAI-PROT-298 errors are emitted
+```
+
+```gherkin
+# AC-0004-0032
+Scenario: Valid full-harness evidence passes all v1.7.15 validators
+  Given full-harness evidence with real reviewer, iterationCount>=2 for converged, correct weightedTotal, non-zero specCoverage, no synthetic mockPaths, matching structural counts, valid calibrationRef, and present commitSha/limitations
+  When `qfai validate` runs the prototypingEvidence validator
+  Then no PROT-290..309 errors are emitted
+```
+
 ## AC Catalog (optional)
 
 | AC_ID        | Title                                | Notes         | Priority |
@@ -223,3 +287,11 @@ Scenario: prototypingRecommendation validation
 | AC-0004-0022 | Canonical-only production path       | REQ-0113,0116 | P1       |
 | AC-0004-0023 | IssueCategory on canonical issues    | REQ-0114      | P1       |
 | AC-0004-0024 | prototypingRecommendation validation | REQ-0115      | P1       |
+| AC-0004-0025 | Full-harness iteration integrity error enforcement | REQ-0124,0132 | P1 |
+| AC-0004-0026 | Single-iteration converged reject | REQ-0125 | P1 |
+| AC-0004-0027 | Reviewer placeholder reject | REQ-0127 | P1 |
+| AC-0004-0028 | Zero-seeded specCoverage reject | REQ-0128 | P1 |
+| AC-0004-0029 | Synthetic mockPaths pass reject | REQ-0129 | P1 |
+| AC-0004-0030 | Evidence structural count integrity | REQ-0131,0132 | P1 |
+| AC-0004-0031 | CalibrationRef/commitSha/limitations required | REQ-0130,0133,0134 | P1 |
+| AC-0004-0032 | Valid evidence passes all v1.7.15 validators | REQ-0124..0135 | P1 |

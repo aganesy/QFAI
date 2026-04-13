@@ -66,3 +66,67 @@
 - Rationale: 一方の evaluator が高く、他方が低い場合に平均化するとデザイン品質の重大な問題が隠蔽される。最小値により、両評価者が合意しない限り accept に至らない
 - Status: Adopted
 - Impact: SKILL.md scoringTrace Recording セクション、BR-0012-0025 に反映
+
+## DR-0012-0010: converged requires iterationCount>=2 + plateauLookback>=2 (v1.7.15)
+
+- Decision: converged 判定は iterationCount >= 2 を必須条件とし、CalibrationLoader schema で plateauLookback >= 2 を強制する
+- Context: R03 non-blocking note from discussion review; single-iteration converged は evidence truthfulness を損なう
+- Rationale: 最低 2 iteration がなければ plateau 判定も score progression 比較も不可能。CalibrationLoader が schema レベルで plateauLookback < 2 を reject することで runtime での矛盾を防止
+- Status: Adopted
+- Impact: termination.ts, calibration.ts schema, CalibrationLoader validation
+
+## DR-0012-0011: Reviewer placeholder reject list frozen (v1.7.15)
+
+- Decision: reviewer placeholder reject list を "qfai", "default", "auto", "system", "unknown", "" の 6 値に凍結する
+- Rationale: これらの値は全て runtime が自動挿入する可能性のあるフォールバック値。リストを凍結することで reject 条件が予測可能になる
+- Status: Adopted
+- Impact: reviewerIdentity.ts, execution.ts CLI gate, prototypingEvidence.ts validator
+
+## DR-0012-0012: commitSha mandatory in full-harness (v1.7.15)
+
+- Decision: full-harness 実行時に commitSha を必須とし、取得不能時は runtime error
+- Rationale: commitSha なしでは evidence の再現性が保証できない。CI/CD 環境では常に取得可能であり、取得不能は環境異常を示す
+- Status: Adopted
+- Impact: gitRevision.ts, execution.ts
+
+## DR-0012-0013: packVersion from pack metadata only (v1.7.15)
+
+- Decision: packVersion は CalibrationLoader 経由で pack metadata から動的取得。ハードコード禁止
+- Rationale: packVersion のハードコードは calibration pack と runtime summary の不一致を招く。metadata からの動的取得で single-source-of-truth を維持
+- Status: Adopted
+- Impact: calibration.ts, execution.ts, bundleWriter.ts
+
+## DR-0012-0014: weightedTotal = min(l1.total, l2.total) always (v1.7.15)
+
+- Decision: computeWeightedTotal は常に Math.min(l1.total, l2.total) を返す。他の算出方式を禁止
+- Rationale: DR-0012-0009 の再確認。v1.7.15 では runtime implementation で min が確実に使われることを保証する
+- Status: Adopted
+- Impact: panelScore.ts
+
+## DR-0012-0015: specCoverage from real diffs only (v1.7.15)
+
+- Decision: specCoverage は loadDeclaredSpecArtifacts() と collectObservedRuntimeArtifacts() の実差分から生成。zero-seeded 出力を禁止
+- Rationale: zero-seeded specCoverage は coverage metrics を無意味にする。実測値のみが品質判断に有用
+- Status: Adopted
+- Impact: specCoverageBuilder.ts (新規), execution.ts
+
+## DR-0012-0016: uiFidelity observation-only (DOM jsdom + browserQa + render evidence) (v1.7.15)
+
+- Decision: uiFidelity は DOM parse (jsdom) / browser QA / render evidence からのみ構成。synthetic mockPaths pass を禁止
+- Rationale: observation-only policy により uiFidelity が実装実態を正確に反映。synthetic 値は品質の偽装
+- Status: Adopted
+- Impact: uiFidelityBuilder.ts, uiObservation.ts
+
+## DR-0012-0017: CalibrationLoader wired in execution.ts (not config.ts) (v1.7.15)
+
+- Decision: CalibrationLoader は execution.ts で loadConfig() 後に呼び出す。config.ts への統合は行わない
+- Rationale: calibration loading は execution-time concern であり、config normalization とは独立。execution.ts に配置することで full-harness path のみで calibration が必要という意図が明確になる
+- Status: Adopted
+- Impact: execution.ts, CalibrationLoader
+
+## DR-0012-0018: Fail-fast no silent fallback (v1.7.15)
+
+- Decision: 必須 evidence 欠落時は runtime error で即座に失敗。デフォルト値補完・silent fallback・graceful degradation を禁止
+- Rationale: silent fallback は evidence truthfulness を破壊する。fail-fast により問題が早期に検出され、不正な evidence の生成を防止
+- Status: Adopted
+- Impact: execution.ts, prototypingEvidence.ts, all evidence builder modules
