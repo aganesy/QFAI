@@ -40,6 +40,7 @@ import {
 } from "../uiux/renderEvidenceTypes.js";
 import { resolveCalibrationPack } from "../calibration/packResolver.js";
 import { isSupportedPrototypingSurface } from "../prototyping/surfacePolicy.js";
+import { isCanonicalScreenContractRef, isSpecDeclarationRef } from "../prototyping/refSemantics.js";
 import { isConcreteArtifactRef } from "../prototyping/pathUtils.js";
 import { issue } from "./utils.js";
 
@@ -89,11 +90,11 @@ type PrototypingEvidence = {
     bestIteration: number;
     status: "in-progress" | "completed";
     terminationReason?: "converged" | "max-iterations" | "plateau" | "manual-stop";
-    finalDecision: "accepted" | "rejected" | "abandoned";
+    finalDecision: "pending" | "accepted" | "rejected" | "abandoned";
     reviewerSignoff: {
       reviewerId: string;
-      status: "approved" | "rejected" | "abandoned";
-      timestamp: string;
+      status: "pending" | "approved" | "rejected" | "abandoned";
+      timestamp?: string;
       source: string;
     };
     reviewerLogs: Array<{
@@ -1372,7 +1373,8 @@ async function validateModeMetadata(
   }
   if (
     evidence.fullHarness.reviewerSignoff.reviewerId.trim().length === 0 ||
-    evidence.fullHarness.reviewerSignoff.timestamp.trim().length === 0
+    (evidence.fullHarness.reviewerSignoff.timestamp !== undefined &&
+      evidence.fullHarness.reviewerSignoff.timestamp.trim().length === 0)
   ) {
     issues.push(
       issue(
@@ -1387,12 +1389,15 @@ async function validateModeMetadata(
       ),
     );
   }
+  const isCompletedFullHarness = evidence.fullHarness.status === "completed";
   const expectedSignoffStatus =
-    evidence.fullHarness.finalDecision === "accepted"
-      ? "approved"
-      : evidence.fullHarness.finalDecision === "rejected"
-        ? "rejected"
-        : "abandoned";
+    evidence.fullHarness.finalDecision === "pending"
+      ? "pending"
+      : evidence.fullHarness.finalDecision === "accepted"
+        ? "approved"
+        : evidence.fullHarness.finalDecision === "rejected"
+          ? "rejected"
+          : "abandoned";
   if (evidence.fullHarness.reviewerSignoff.status !== expectedSignoffStatus) {
     issues.push(
       issue(
@@ -1407,17 +1412,95 @@ async function validateModeMetadata(
       ),
     );
   }
+  if (!isCompletedFullHarness) {
+    if (evidence.fullHarness.finalDecision !== "pending") {
+      issues.push(
+        issue(
+          "QFAI-PROT-322",
+          `fullHarness.status is 'in-progress' but finalDecision is ${evidence.fullHarness.finalDecision}.`,
+          "error",
+          evidenceJsonPath,
+          "prototypingEvidence.fullHarnessInProgressFinalDecision",
+          undefined,
+          "canonical",
+          "status=in-progress の場合、finalDecision は pending に固定してください。",
+        ),
+      );
+    }
+    if (evidence.fullHarness.reviewerSignoff.status !== "pending") {
+      issues.push(
+        issue(
+          "QFAI-PROT-323",
+          `fullHarness.status is 'in-progress' but reviewerSignoff.status is ${evidence.fullHarness.reviewerSignoff.status}.`,
+          "error",
+          evidenceJsonPath,
+          "prototypingEvidence.fullHarnessInProgressReviewerSignoff",
+          undefined,
+          "canonical",
+          "status=in-progress の場合、reviewerSignoff.status は pending に固定してください。",
+        ),
+      );
+    }
+    if (evidence.fullHarness.terminationReason !== undefined) {
+      issues.push(
+        issue(
+          "QFAI-PROT-324",
+          "fullHarness.status is 'in-progress' but terminationReason is present.",
+          "error",
+          evidenceJsonPath,
+          "prototypingEvidence.fullHarnessInProgressTerminationReason",
+          undefined,
+          "canonical",
+          "status=in-progress の場合、terminationReason は設定できません。",
+        ),
+      );
+    }
+  }
+  if (isCompletedFullHarness && evidence.fullHarness.reviewerSignoff.status === "pending") {
+    issues.push(
+      issue(
+        "QFAI-PROT-325",
+        "fullHarness.status is 'completed' but reviewerSignoff.status is pending.",
+        "error",
+        evidenceJsonPath,
+        "prototypingEvidence.fullHarnessCompletedPendingReviewerSignoff",
+        undefined,
+        "canonical",
+        "status=completed の場合、reviewerSignoff.status は approved|rejected|abandoned のいずれかにしてください。",
+      ),
+    );
+  }
+  if (
+    isCompletedFullHarness &&
+    (evidence.fullHarness.reviewerSignoff.timestamp === undefined ||
+      evidence.fullHarness.reviewerSignoff.timestamp.trim().length === 0)
+  ) {
+    issues.push(
+      issue(
+        "QFAI-PROT-329",
+        "fullHarness.status is 'completed' but reviewerSignoff.timestamp is missing.",
+        "error",
+        evidenceJsonPath,
+        "prototypingEvidence.fullHarnessCompletedMissingReviewerTimestamp",
+        undefined,
+        "canonical",
+        "status=completed の場合、reviewerSignoff.timestamp は必須です。",
+      ),
+    );
+  }
   const lastReviewerLog =
     evidence.fullHarness.reviewerLogs[evidence.fullHarness.reviewerLogs.length - 1];
   if (lastReviewerLog) {
     const expectedVerdict =
-      evidence.fullHarness.finalDecision === "accepted"
-        ? "approve"
-        : evidence.fullHarness.finalDecision === "rejected"
-          ? "reject"
-          : evidence.fullHarness.terminationReason
-            ? "abandon"
-            : "revise";
+      evidence.fullHarness.finalDecision === "pending"
+        ? "revise"
+        : evidence.fullHarness.finalDecision === "accepted"
+          ? "approve"
+          : evidence.fullHarness.finalDecision === "rejected"
+            ? "reject"
+            : evidence.fullHarness.terminationReason
+              ? "abandon"
+              : "revise";
     if (lastReviewerLog.verdict !== expectedVerdict) {
       issues.push(
         issue(
@@ -1946,6 +2029,20 @@ async function validateModeMetadata(
         guidance:
           "runtimeGate.ui[].declaredRef には concrete artifact ref のみを保持してください。",
       });
+      if (!isCanonicalScreenContractRef(row.declaredRef)) {
+        issues.push(
+          issue(
+            "QFAI-PROT-326",
+            `runtimeGate.ui[${row.screenId}].declaredRef must use the canonical 40_screen_contracts.md#<screenId> sourceRef.`,
+            "error",
+            evidenceJsonPath,
+            "prototypingEvidence.runtimeGateCanonicalScreenContractRef",
+            [row.declaredRef],
+            "canonical",
+            "runtimeGate.ui[].declaredRef には readCanonicalScreenContracts() が返す canonical sourceRef を保持してください。",
+          ),
+        );
+      }
       pushConcreteArtifactRefIssues(issues, {
         evidenceJsonPath,
         refs: row.renderEvidenceRefs,
@@ -1981,23 +2078,41 @@ async function validateModeMetadata(
       );
     }
   }
-  for (const ref of evidence.fullHarness.iterations.flatMap((iter) => [
-    ...iter.evidenceRefs.runtimeGate,
-    ...iter.evidenceRefs.specCoverage,
-  ])) {
-    if (!isConcreteArtifactRef(ref)) {
-      issues.push(
-        issue(
-          "QFAI-PROT-318",
-          `non-concrete evidence ref is not allowed: ${ref}`,
-          "error",
-          evidenceJsonPath,
-          "prototypingEvidence.syntheticEvidenceRef",
-          [ref],
-          "canonical",
-          "runtimeGate/specCoverage の evidenceRefs には concrete artifact ref のみを保持してください。",
-        ),
-      );
+  const strictIterationEvidenceCategories = [
+    "runtimeGate",
+    "specCoverage",
+    "render",
+    "browserQa",
+    "uiObservation",
+    "discussion",
+    "screenContract",
+    "trend",
+  ] as const;
+  for (const iter of evidence.fullHarness.iterations) {
+    for (const category of strictIterationEvidenceCategories) {
+      pushConcreteArtifactRefIssues(issues, {
+        evidenceJsonPath,
+        refs: iter.evidenceRefs[category],
+        required: true,
+        fieldPath: `fullHarness.iterations[${iter.iteration}].evidenceRefs.${category}`,
+        guidance: `fullHarness.iterations[].evidenceRefs.${category}[] には concrete artifact ref のみを保持してください。`,
+      });
+    }
+    for (const ref of iter.evidenceRefs.screenContract) {
+      if (!isCanonicalScreenContractRef(ref)) {
+        issues.push(
+          issue(
+            "QFAI-PROT-327",
+            `fullHarness.iterations[${iter.iteration}].evidenceRefs.screenContract contains a non-canonical screen contract ref: ${ref}`,
+            "error",
+            evidenceJsonPath,
+            "prototypingEvidence.fullHarnessCanonicalScreenContractRef",
+            [ref],
+            "canonical",
+            "iterations[].evidenceRefs.screenContract には 40_screen_contracts.md#<screenId> の canonical sourceRef のみを保持してください。",
+          ),
+        );
+      }
     }
   }
   for (const iter of evidence.fullHarness.iterations) {
@@ -2042,6 +2157,20 @@ async function validateModeMetadata(
         guidance:
           "specs[].coverageRefs[].declaredRef には concrete artifact ref のみを保持してください。",
       });
+      if (!isSpecDeclarationRef(coverage.declaredRef)) {
+        issues.push(
+          issue(
+            "QFAI-PROT-328",
+            `specs[${spec.specId}].coverageRefs[${coverage.route}].declaredRef must point to a spec declaration under .qfai/specs/: ${coverage.declaredRef}`,
+            "error",
+            evidenceJsonPath,
+            "prototypingEvidence.specCoverageDeclaredRefSemantic",
+            [coverage.declaredRef],
+            "canonical",
+            "specs[].coverageRefs[].declaredRef には .qfai/specs/.../01_Spec.md#L<line> などの spec declaration ref のみを保持してください。",
+          ),
+        );
+      }
       pushConcreteArtifactRefIssues(issues, {
         evidenceJsonPath,
         refs: coverage.observedRefs,
@@ -3181,15 +3310,18 @@ function normalizeFullHarnessBlock(
     return { ok: false, reason: "`fullHarness.reviewerSignoff` must be an object" };
   }
   if (
-    (value.reviewerSignoff.status !== "approved" &&
+    (value.reviewerSignoff.status !== "pending" &&
+      value.reviewerSignoff.status !== "approved" &&
       value.reviewerSignoff.status !== "rejected" &&
       value.reviewerSignoff.status !== "abandoned") ||
     typeof value.reviewerSignoff.reviewerId !== "string" ||
-    typeof value.reviewerSignoff.timestamp !== "string"
+    (value.reviewerSignoff.timestamp !== undefined &&
+      typeof value.reviewerSignoff.timestamp !== "string")
   ) {
     return { ok: false, reason: "`fullHarness.reviewerSignoff` is invalid" };
   }
   if (
+    value.finalDecision !== "pending" &&
     value.finalDecision !== "accepted" &&
     value.finalDecision !== "rejected" &&
     value.finalDecision !== "abandoned"
@@ -3399,7 +3531,9 @@ function normalizeFullHarnessBlock(
       reviewerSignoff: {
         reviewerId: value.reviewerSignoff.reviewerId.trim(),
         status: value.reviewerSignoff.status,
-        timestamp: value.reviewerSignoff.timestamp.trim(),
+        ...(typeof value.reviewerSignoff.timestamp === "string"
+          ? { timestamp: value.reviewerSignoff.timestamp.trim() }
+          : {}),
         source: reviewerSource,
       },
       reviewerLogs,

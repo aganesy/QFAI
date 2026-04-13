@@ -1925,19 +1925,18 @@ async function seedPrototypingEvidenceFixture(root: string): Promise<void> {
           iterationCount: 1,
           bestIteration: 1,
           status: "in-progress",
-          finalDecision: "accepted",
+          finalDecision: "pending",
           reviewerSignoff: {
             reviewerId: "qa-reviewer",
-            status: "approved",
-            timestamp: "2026-02-23T00:00:00Z",
+            status: "pending",
             source: "cli",
           },
           reviewerLogs: [
             {
               iteration: 1,
               reviewerId: "qa-reviewer",
-              verdict: "approve",
-              summary: "Iteration 1 approved after observed evidence review.",
+              verdict: "revise",
+              summary: "Iteration 1 requires another pass before terminal signoff.",
               evidenceRefs: [".qfai/evidence/render.json#/screens/0"],
             },
           ],
@@ -1960,12 +1959,12 @@ async function seedPrototypingEvidenceFixture(root: string): Promise<void> {
                   ".qfai/discussion/discussion-20260216000000000/uiux/40_screen_contracts.md#orders",
                 ],
                 discussion: [
-                  ".qfai/discussion/discussion-20260216000000000/uiux/20_design_eval_invariant.md",
+                  ".qfai/discussion/discussion-20260216000000000/uiux/20_design_eval_invariant.md#discussion-axes-invariant",
                 ],
                 screenContract: [
                   ".qfai/discussion/discussion-20260216000000000/uiux/40_screen_contracts.md#orders",
                 ],
-                trend: [".qfai/discussion/discussion-20260216000000000/04_Sources.md"],
+                trend: [".qfai/discussion/discussion-20260216000000000/04_Sources.md#trend-scan"],
               },
               l1: {
                 panel: "L1",

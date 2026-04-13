@@ -397,6 +397,16 @@ const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "fullHarness.calibrationRef.packVersion does not match the resolved calibration pack version.",
   "QFAI-PROT-321":
     "fullHarness.calibrationRef.configPath does not match the active qfai.config.yaml path.",
+  "QFAI-PROT-322": "fullHarness.status is in-progress but finalDecision is not pending.",
+  "QFAI-PROT-323": "fullHarness.status is in-progress but reviewerSignoff.status is not pending.",
+  "QFAI-PROT-324": "fullHarness.status is in-progress but terminationReason is still present.",
+  "QFAI-PROT-325": "fullHarness.status is completed but reviewerSignoff.status is still pending.",
+  "QFAI-PROT-326": "runtimeGate.ui[].declaredRef must use the canonical screen contract sourceRef.",
+  "QFAI-PROT-327":
+    "fullHarness.iterations[].evidenceRefs.screenContract must use canonical screen contract refs.",
+  "QFAI-PROT-328":
+    "specs[].coverageRefs[].declaredRef must point to a spec declaration under .qfai/specs/.",
+  "QFAI-PROT-329": "fullHarness.status is completed but reviewerSignoff.timestamp is missing.",
   "QFAI-CONTRACT-030":
     "Contract index references must match declared contract IDs in .qfai/contracts/**.",
 };

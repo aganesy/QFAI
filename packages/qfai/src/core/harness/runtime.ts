@@ -225,25 +225,27 @@ export async function runFullHarness(request: FullHarnessRequest): Promise<FullH
 }
 
 function deriveFinalDecision(result: MeasurementResult): FinalDecision {
-  if (result.iteration.decision === "accept") {
+  // Terminal mapping is fixed:
+  // terminationReason undefined -> pending/pending
+  // terminationReason=converged -> accepted/approved
+  // terminationReason in {max-iterations,plateau,manual-stop} with iteration.decision=reject -> rejected/rejected
+  // otherwise non-converged terminationReason -> abandoned/abandoned
+  if (result.terminationReason === undefined) {
+    return "pending";
+  }
+  if (result.terminationReason === "converged") {
     return "accepted";
   }
   if (result.iteration.decision === "reject") {
     return "rejected";
-  }
-  if (
-    result.terminationReason === "plateau" ||
-    result.terminationReason === "max-iterations" ||
-    result.terminationReason === "manual-stop" ||
-    result.isTerminal
-  ) {
-    return "abandoned";
   }
   return "abandoned";
 }
 
 function mapFinalDecisionToSignoffStatus(finalDecision: FinalDecision): ReviewerSignoffStatus {
   switch (finalDecision) {
+    case "pending":
+      return "pending";
     case "accepted":
       return "approved";
     case "rejected":
@@ -257,6 +259,9 @@ function deriveLogVerdict(
   finalDecision: FinalDecision,
   result: { iteration: { decision: string }; isTerminal: boolean },
 ): ReviewerLogVerdict {
+  if (finalDecision === "pending") {
+    return "revise";
+  }
   if (finalDecision === "accepted") {
     return "approve";
   }

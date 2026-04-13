@@ -81,7 +81,7 @@ export type PrototypingSummaryBundle = {
     reviewerSignoff: {
       reviewerId: string;
       status: ReviewerSignoffStatus;
-      timestamp: string;
+      timestamp?: string;
       source: "cli";
     };
     reviewerLogs: Array<{

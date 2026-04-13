@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import {
   buildDiscussionAxisInputs,
+  buildScreenContractInputs,
   buildTrendAlignmentInputs,
 } from "../../src/core/prototyping/l2Evidence.js";
 
@@ -99,6 +100,41 @@ describe("l2Evidence", () => {
     expect(discussion.degradedScoring).toBe(false);
     expect(trend.trendSourcesChecked).toBe(1);
     expect(trend.degradedScoring).toBe(false);
-    expect(trend.evidenceRefs.some((ref) => ref.endsWith("40_screen_contracts.md"))).toBe(true);
+    expect(trend.evidenceRefs.some((ref) => ref.includes("40_screen_contracts.md#"))).toBe(true);
+  });
+
+  it("uses canonical screen contract sourceRef instead of route-slug anchors", async () => {
+    await writeFile(
+      path.join(
+        root,
+        ".qfai",
+        "discussion",
+        "discussion-20260410000000000",
+        "uiux",
+        "40_screen_contracts.md",
+      ),
+      [
+        "# Screen Contracts",
+        "",
+        "### Screen: Dashboard",
+        "- screen_id: home-dashboard",
+        "- route: /dashboard",
+      ].join("\n"),
+      "utf-8",
+    );
+
+    const screenContracts = await buildScreenContractInputs(root, [
+      {
+        screenId: "home-dashboard",
+        route: "/dashboard",
+        uiContractId: "CON-UI-0001",
+        observed: { elementsPlaced: 1, actionsWired: 1 },
+        expected: { elements: 1, actions: 1 },
+      },
+    ]);
+
+    expect(screenContracts.evidenceRefs).toEqual([
+      ".qfai/discussion/discussion-20260410000000000/uiux/40_screen_contracts.md#home-dashboard",
+    ]);
   });
 });

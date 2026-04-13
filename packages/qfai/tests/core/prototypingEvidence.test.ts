@@ -189,8 +189,7 @@ function buildValidEvidence(overrides: Record<string, unknown> = {}): Record<str
         coverageRefs: [
           {
             route: "/orders",
-            declaredRef:
-              ".qfai/discussion/discussion-20260404000000000/uiux/40_screen_contracts.md#orders",
+            declaredRef: ".qfai/specs/spec-0001/01_Spec.md#L2",
             observedRefs: [".qfai/evidence/render.json#/screens/0"],
           },
         ],
@@ -263,19 +262,18 @@ function buildValidEvidence(overrides: Record<string, unknown> = {}): Record<str
       iterationCount: 1,
       bestIteration: 1,
       status: "in-progress",
-      finalDecision: "accepted",
+      finalDecision: "pending",
       reviewerSignoff: {
         reviewerId: "qa-reviewer",
-        status: "approved",
-        timestamp: "2026-04-04T00:00:00Z",
+        status: "pending",
         source: "cli",
       },
       reviewerLogs: [
         {
           iteration: 1,
           reviewerId: "qa-reviewer",
-          verdict: "approve",
-          summary: "Iteration 1 approved after observed evidence review.",
+          verdict: "revise",
+          summary: "Iteration 1 requires another pass before terminal signoff.",
           evidenceRefs: [".qfai/evidence/render.json#/screens/0"],
         },
       ],
@@ -298,12 +296,12 @@ function buildValidEvidence(overrides: Record<string, unknown> = {}): Record<str
               ".qfai/discussion/discussion-20260404000000000/uiux/40_screen_contracts.md#orders",
             ],
             discussion: [
-              ".qfai/discussion/discussion-20260404000000000/uiux/20_design_eval_invariant.md",
+              ".qfai/discussion/discussion-20260404000000000/uiux/20_design_eval_invariant.md#discussion-axes-invariant",
             ],
             screenContract: [
               ".qfai/discussion/discussion-20260404000000000/uiux/40_screen_contracts.md#orders",
             ],
-            trend: [".qfai/discussion/discussion-20260404000000000/04_Sources.md"],
+            trend: [".qfai/discussion/discussion-20260404000000000/04_Sources.md#trend-scan"],
           },
           l1: {
             panel: "L1",
@@ -760,6 +758,215 @@ describe("validatePrototypingEvidence", () => {
       const issues = await validatePrototypingEvidence(root, defaultConfig);
       expect(issues.some((item) => item.code === "QFAI-PROT-320")).toBe(true);
       expect(issues.some((item) => item.code === "QFAI-PROT-321")).toBe(true);
+    });
+  });
+
+  it("rejects non-terminal accepted or approved semantics", async () => {
+    await withTempRoot(async (root) => {
+      await seedSpecs(root);
+      await seedDiscussion(root);
+      await seedContracts(root);
+      await seedCalibration(root);
+      await seedRenderBundle(root);
+      await seedBrowserQaBundle(root);
+      await seedEvidence(
+        root,
+        buildValidEvidence({
+          fullHarness: {
+            ...(buildValidEvidence().fullHarness as Record<string, unknown>),
+            finalDecision: "accepted",
+            reviewerSignoff: {
+              reviewerId: "qa-reviewer",
+              status: "approved",
+              source: "cli",
+            },
+          },
+        }),
+      );
+
+      const issues = await validatePrototypingEvidence(root, defaultConfig);
+      expect(issues.some((item) => item.code === "QFAI-PROT-322")).toBe(true);
+      expect(issues.some((item) => item.code === "QFAI-PROT-323")).toBe(true);
+    });
+  });
+
+  it("rejects terminationReason on in-progress fullHarness", async () => {
+    await withTempRoot(async (root) => {
+      await seedSpecs(root);
+      await seedDiscussion(root);
+      await seedContracts(root);
+      await seedCalibration(root);
+      await seedRenderBundle(root);
+      await seedBrowserQaBundle(root);
+      await seedEvidence(
+        root,
+        buildValidEvidence({
+          fullHarness: {
+            ...(buildValidEvidence().fullHarness as Record<string, unknown>),
+            terminationReason: "plateau",
+          },
+        }),
+      );
+
+      const issues = await validatePrototypingEvidence(root, defaultConfig);
+      expect(issues.some((item) => item.code === "QFAI-PROT-324")).toBe(true);
+    });
+  });
+
+  it("rejects route-slug screen contract refs in runtimeGate and iteration evidence", async () => {
+    await withTempRoot(async (root) => {
+      await seedSpecs(root);
+      await seedDiscussion(root);
+      await seedContracts(root);
+      await seedCalibration(root);
+      await seedRenderBundle(root);
+      await seedBrowserQaBundle(root);
+      const invalid = buildValidEvidence();
+      (
+        (invalid.runtimeGate as { ui: Array<Record<string, unknown>> }).ui[0] as Record<
+          string,
+          unknown
+        >
+      ).declaredRef =
+        ".qfai/discussion/discussion-20260404000000000/uiux/40_screen_contracts.md#screen:orders";
+      (
+        (
+          (invalid.fullHarness as { iterations: Array<Record<string, unknown>> })
+            .iterations[0] as Record<string, unknown>
+        ).evidenceRefs as Record<string, string[]>
+      ).screenContract = [
+        ".qfai/discussion/discussion-20260404000000000/uiux/40_screen_contracts.md#screen:orders",
+      ];
+      await seedEvidence(root, invalid);
+
+      const issues = await validatePrototypingEvidence(root, defaultConfig);
+      expect(issues.some((item) => item.code === "QFAI-PROT-326")).toBe(true);
+      expect(issues.some((item) => item.code === "QFAI-PROT-327")).toBe(true);
+    });
+  });
+
+  it("rejects non-spec declaredRef even when it is concrete", async () => {
+    await withTempRoot(async (root) => {
+      await seedSpecs(root);
+      await seedDiscussion(root);
+      await seedContracts(root);
+      await seedCalibration(root);
+      await seedRenderBundle(root);
+      await seedBrowserQaBundle(root);
+      const invalid = buildValidEvidence();
+      (
+        (invalid.specs as Array<Record<string, unknown>>)[0]?.coverageRefs as Array<
+          Record<string, unknown>
+        >
+      )[0].declaredRef =
+        ".qfai/discussion/discussion-20260404000000000/uiux/40_screen_contracts.md#orders";
+      await seedEvidence(root, invalid);
+
+      const issues = await validatePrototypingEvidence(root, defaultConfig);
+      expect(issues.some((item) => item.code === "QFAI-PROT-328")).toBe(true);
+    });
+  });
+
+  it.each([
+    ["render", "render", "specs:render"],
+    ["browserQa", "browserQa", "/abs/browser-qa.json#/phases/0"],
+    ["uiObservation", "uiObservation", ".qfai/evidence/prototyping.json#/uiObservation"],
+    ["discussion", "discussion", "discussion-axes"],
+    ["trend", "trend", ".qfai\\evidence\\trend.md#trend"],
+  ] as const)(
+    "rejects non-concrete iteration evidenceRefs.%s",
+    async (_label, category, badRef) => {
+      await withTempRoot(async (root) => {
+        await seedSpecs(root);
+        await seedDiscussion(root);
+        await seedContracts(root);
+        await seedCalibration(root);
+        await seedRenderBundle(root);
+        await seedBrowserQaBundle(root);
+        const invalid = buildValidEvidence();
+        const iteration = (invalid.fullHarness as { iterations: Array<Record<string, unknown>> })
+          .iterations[0] as Record<string, unknown>;
+        (iteration.evidenceRefs as Record<string, string[]>)[category] = [badRef];
+        await seedEvidence(root, invalid);
+
+        const issues = await validatePrototypingEvidence(root, defaultConfig);
+        expect(issues.some((item) => item.code === "QFAI-PROT-318")).toBe(true);
+      });
+    },
+  );
+
+  it.each([
+    "render",
+    "browserQa",
+    "uiObservation",
+    "discussion",
+    "screenContract",
+    "trend",
+  ] as const)("rejects empty iteration evidenceRefs.%s", async (category) => {
+    await withTempRoot(async (root) => {
+      await seedSpecs(root);
+      await seedDiscussion(root);
+      await seedContracts(root);
+      await seedCalibration(root);
+      await seedRenderBundle(root);
+      await seedBrowserQaBundle(root);
+      const invalid = buildValidEvidence();
+      const iteration = (invalid.fullHarness as { iterations: Array<Record<string, unknown>> })
+        .iterations[0] as Record<string, unknown>;
+      (iteration.evidenceRefs as Record<string, string[]>)[category] = [];
+      await seedEvidence(root, invalid);
+
+      const issues = await validatePrototypingEvidence(root, defaultConfig);
+      expect(
+        issues.some((item) => item.code === "QFAI-PROT-314" || item.code === "QFAI-PROT-318"),
+      ).toBe(true);
+    });
+  });
+
+  it("rejects status=completed when reviewerSignoff is still pending", async () => {
+    await withTempRoot(async (root) => {
+      await seedSpecs(root);
+      await seedDiscussion(root);
+      await seedContracts(root);
+      await seedCalibration(root);
+      await seedRenderBundle(root);
+      await seedBrowserQaBundle(root);
+      const invalid = buildValidEvidence();
+      const fh = invalid.fullHarness as Record<string, unknown>;
+      fh.status = "completed";
+      fh.terminationReason = "converged";
+      fh.finalDecision = "accepted";
+      (fh.reviewerSignoff as Record<string, unknown>).status = "pending";
+      delete (fh.reviewerSignoff as Record<string, unknown>).timestamp;
+      await seedEvidence(root, invalid);
+
+      const issues = await validatePrototypingEvidence(root, defaultConfig);
+      expect(issues.some((item) => item.code === "QFAI-PROT-325")).toBe(true);
+      expect(issues.some((item) => item.code === "QFAI-PROT-329")).toBe(true);
+    });
+  });
+
+  it("rejects status=completed when finalDecision and reviewerSignoff disagree", async () => {
+    await withTempRoot(async (root) => {
+      await seedSpecs(root);
+      await seedDiscussion(root);
+      await seedContracts(root);
+      await seedCalibration(root);
+      await seedRenderBundle(root);
+      await seedBrowserQaBundle(root);
+      const invalid = buildValidEvidence();
+      const fh = invalid.fullHarness as Record<string, unknown>;
+      fh.status = "completed";
+      fh.terminationReason = "converged";
+      fh.finalDecision = "accepted";
+      const signoff = fh.reviewerSignoff as Record<string, unknown>;
+      signoff.status = "rejected";
+      signoff.timestamp = "2026-04-04T00:00:00Z";
+      await seedEvidence(root, invalid);
+
+      const issues = await validatePrototypingEvidence(root, defaultConfig);
+      // expectedSignoffStatus mismatch — finalDecision=accepted requires approved
+      expect(issues.some((item) => item.message.includes("reviewerSignoff.status"))).toBe(true);
     });
   });
 });

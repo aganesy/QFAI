@@ -238,9 +238,9 @@ describe("runFullHarness", () => {
       );
       expect(result.isTerminal).toBe(false);
       expect(result.terminationReason).toBeUndefined();
-      expect(result.finalDecision).toBe("accepted");
-      expect(result.signoffStatus).toBe("approved");
-      expect(result.logVerdict).toBe("approve");
+      expect(result.finalDecision).toBe("pending");
+      expect(result.signoffStatus).toBe("pending");
+      expect(result.logVerdict).toBe("revise");
     });
   });
 

@@ -246,19 +246,29 @@ describe("prototyping execution production path", () => {
       ) as Record<string, unknown>;
       const runtimeGate = prototyping.runtimeGate as {
         ui: Array<{
+          screenId: string;
           declaredRef: string;
           renderEvidenceRefs: string[];
           browserQaEvidenceRefs: string[];
         }>;
       };
       const fullHarness = prototyping.fullHarness as {
+        finalDecision: string;
+        reviewerSignoff: { status: string; timestamp?: string };
         reviewerLogs: Array<{ evidenceRefs: string[] }>;
         iterations: Array<{
+          evidenceRefs: { screenContract: string[] };
           l1: { axes: Array<{ evidenceRefs: string[] }> };
           l2: { axes: Array<{ evidenceRefs: string[] }> };
         }>;
       };
+      const specs = prototyping.specs as Array<{
+        coverageRefs: Array<{ declaredRef: string }>;
+      }>;
       expect(runtimeGate.ui.every((entry) => isConcreteArtifactRef(entry.declaredRef))).toBe(true);
+      expect(runtimeGate.ui[0]?.declaredRef).toBe(
+        ".qfai/discussion/discussion-20260406000000000/uiux/40_screen_contracts.md#dashboard",
+      );
       expect(
         runtimeGate.ui.every((entry) =>
           entry.renderEvidenceRefs.every((ref) => isConcreteArtifactRef(ref)),
@@ -288,6 +298,15 @@ describe("prototyping execution production path", () => {
           ),
         ),
       ).toBe(true);
+      expect(
+        fullHarness.iterations[0]?.evidenceRefs.screenContract.every((ref) =>
+          ref.endsWith("40_screen_contracts.md#dashboard"),
+        ),
+      ).toBe(true);
+      expect(specs[0]?.coverageRefs[0]?.declaredRef).toBe(".qfai/specs/spec-0001/01_Spec.md#L2");
+      expect(fullHarness.finalDecision).toBe("pending");
+      expect(fullHarness.reviewerSignoff.status).toBe("pending");
+      expect(fullHarness.reviewerSignoff.timestamp).toBeUndefined();
       const issues = await validatePrototypingEvidence(root, defaultConfig);
       expect(issues).toEqual([]);
     });

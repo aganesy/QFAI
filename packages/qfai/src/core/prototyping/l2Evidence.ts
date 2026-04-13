@@ -91,6 +91,7 @@ export async function buildScreenContractInputs(
   uiFidelityScreens: Array<{
     route: string;
     uiContractId: string;
+    screenId?: string;
     observed: { elementsPlaced: number; actionsWired: number };
     expected: { elements: number; actions: number };
   }>,
@@ -125,14 +126,21 @@ export async function buildScreenContractInputs(
         "Full-harness requires 40_screen_contracts.md.",
     );
   }
-  const screenContractsRef = toPosixPath(
-    path.relative(root, path.join(latestPack, "uiux", "40_screen_contracts.md")),
-  );
   const declaredContracts = await readCanonicalScreenContracts(latestPack);
   const degradedScoring = declaredContracts.length === 0;
-  const evidenceRefs: string[] = uiFidelityScreens.map(
-    (screen) => `${screenContractsRef}#screen:${slugifyScreenRef(screen.route)}`,
-  );
+  const declaredByScreenId = new Map(declaredContracts.map((screen) => [screen.screenId, screen]));
+  const declaredByRoute = new Map(declaredContracts.map((screen) => [screen.route, screen]));
+  const evidenceRefs: string[] = uiFidelityScreens.map((screen) => {
+    const declared =
+      (screen.screenId ? declaredByScreenId.get(screen.screenId) : undefined) ??
+      declaredByRoute.get(screen.route);
+    if (!declared) {
+      throw new Error(
+        `L2 evidence failure: no canonical screen contract sourceRef for route "${screen.route}".`,
+      );
+    }
+    return declared.sourceRef;
+  });
 
   return {
     totalContracts,
@@ -216,12 +224,4 @@ async function readRequiredFile(filePath: string): Promise<string> {
       `L2 evidence failure: required canonical artifact is missing or unreadable: ${filePath}. ${error instanceof Error ? error.message : String(error)}`,
     );
   }
-}
-
-function slugifyScreenRef(value: string): string {
-  return value.replace(/[^a-zA-Z0-9/_-]+/g, "-");
-}
-
-function toPosixPath(value: string): string {
-  return value.split(path.sep).join("/");
 }

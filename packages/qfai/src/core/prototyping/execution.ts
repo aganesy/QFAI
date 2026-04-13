@@ -32,11 +32,12 @@ import {
 } from "./providerResolution.js";
 import { buildUiFidelity, type BuiltUiFidelity } from "./uiFidelityBuilder.js";
 import { buildRuntimeGate } from "./runtimeGateBuilder.js";
+import { normalizeConcreteArtifactRef, toConcreteArtifactRef } from "./pathUtils.js";
 import {
-  assertConcreteArtifactRef,
-  normalizeConcreteArtifactRef,
-  toConcreteArtifactRef,
-} from "./pathUtils.js";
+  assertConcreteArtifactRefs,
+  isCanonicalScreenContractRef,
+  isSpecDeclarationRef,
+} from "./refSemantics.js";
 import { createObservabilityAdapter } from "./observabilityAdapter.js";
 import { buildSpecCoverageSummary, buildPerSpecCoverage } from "./specCoverage.js";
 import { buildUiObservationSummary, buildBrowserQaSummaryFromResult } from "./uiObservation.js";
@@ -305,12 +306,14 @@ export async function runPrototypingExecution(
     iterationCount: fullHarness.history.iterations.length,
     bestIteration: fullHarness.history.bestIteration,
     status: fullHarness.isTerminal ? "completed" : "in-progress",
-    ...(fullHarness.terminationReason ? { terminationReason: fullHarness.terminationReason } : {}),
-    finalDecision: fullHarness.finalDecision,
+    ...(fullHarness.isTerminal && fullHarness.terminationReason
+      ? { terminationReason: fullHarness.terminationReason }
+      : {}),
+    finalDecision: fullHarness.isTerminal ? fullHarness.finalDecision : "pending",
     reviewerSignoff: {
       reviewerId: request.reviewer,
-      status: fullHarness.signoffStatus,
-      timestamp: generatedAt,
+      status: fullHarness.isTerminal ? fullHarness.signoffStatus : "pending",
+      ...(fullHarness.isTerminal ? { timestamp: generatedAt } : {}),
       source: "cli",
     },
     reviewerLogs: cumulativeReviewerLogs,
@@ -321,14 +324,16 @@ export async function runPrototypingExecution(
 
   if (runtimeGate) {
     assertRuntimeGateLeafRefs(runtimeGate);
-    assertConcreteArtifactRefs(runtimeGate.evidenceRefs, "runtimeGate.evidenceRefs");
+    assertConcreteArtifactRefs("runtimeGate.evidenceRefs", runtimeGate.evidenceRefs);
   }
-  assertConcreteArtifactRefs(specCoverage.evidenceRefs, "specCoverage.evidenceRefs");
+  assertConcreteArtifactRefs("specCoverage.evidenceRefs", specCoverage.evidenceRefs);
   assertFullHarnessLeafRefs(fullHarness.history.iterations, "fullHarness.iterations");
-  assertConcreteArtifactRefs(
-    cumulativeReviewerLogs.flatMap((log) => log.evidenceRefs),
-    "fullHarness.reviewerLogs.evidenceRefs",
-  );
+  for (const log of cumulativeReviewerLogs) {
+    assertConcreteArtifactRefs(
+      `fullHarness.reviewerLogs[${log.iteration}:${log.reviewerId}].evidenceRefs`,
+      log.evidenceRefs,
+    );
+  }
 
   const evidencePaths = await writeEvidenceBundlesOrThrow({
     root: request.root,
@@ -659,7 +664,10 @@ async function buildPrototypingSummaryBundle(input: {
         },
         coverageRefs: perSpec.coverageRefs.map((coverage) => ({
           route: coverage.route,
-          declaredRef: coverage.declaredRef,
+          declaredRef: assertSpecDeclarationRef(
+            coverage.declaredRef,
+            `specs[${name}].coverageRefs[${coverage.route}].declaredRef`,
+          ),
           observedRefs: [...coverage.observedRefs],
         })),
       };
@@ -760,67 +768,68 @@ function normalizeEvidenceRefList(root: string, refs: string[]): string[] {
   return dedupeRefs(refs.map((ref) => toConcreteArtifactRef(root, ref)));
 }
 
-function assertConcreteArtifactRefs(refs: string[], label: string): void {
-  for (const ref of refs) {
-    try {
-      assertConcreteArtifactRef(ref);
-    } catch (error) {
-      throw new Error(`${label} contains a non-concrete artifact ref. ${formatError(error)}`);
-    }
-  }
-}
-
 function assertRuntimeGateLeafRefs(
   runtimeGate: NonNullable<PrototypingSummaryBundle["runtimeGate"]>,
 ): void {
   for (const entry of runtimeGate.ui) {
-    assertConcreteArtifactRefs(
-      [entry.declaredRef],
-      `runtimeGate.ui[${entry.screenId}].declaredRef`,
-    );
-    if (entry.renderEvidenceRefs.length === 0) {
+    if (!isCanonicalScreenContractRef(entry.declaredRef)) {
       throw new Error(
-        `runtimeGate.ui[${entry.screenId}].renderEvidenceRefs must not be empty in full-harness mode.`,
-      );
-    }
-    if (entry.browserQaEvidenceRefs.length === 0) {
-      throw new Error(
-        `runtimeGate.ui[${entry.screenId}].browserQaEvidenceRefs must not be empty in full-harness mode.`,
+        `runtimeGate.ui[${entry.screenId}].declaredRef must use the canonical screen contract sourceRef.`,
       );
     }
     assertConcreteArtifactRefs(
-      entry.renderEvidenceRefs,
       `runtimeGate.ui[${entry.screenId}].renderEvidenceRefs`,
+      entry.renderEvidenceRefs,
     );
     assertConcreteArtifactRefs(
-      entry.browserQaEvidenceRefs,
       `runtimeGate.ui[${entry.screenId}].browserQaEvidenceRefs`,
+      entry.browserQaEvidenceRefs,
     );
   }
 }
 
+function assertSpecDeclarationRef(ref: string, fieldPath: string): string {
+  if (!isSpecDeclarationRef(ref)) {
+    throw new Error(`${fieldPath} must point to a spec declaration ref under .qfai/specs/.`);
+  }
+  return ref;
+}
+
 function assertFullHarnessLeafRefs(iterations: FullHarnessIteration[], label: string): void {
   for (const iteration of iterations) {
-    for (const axis of iteration.l1.axes) {
-      if (axis.evidenceRefs.length === 0) {
+    const categories = [
+      "runtimeGate",
+      "specCoverage",
+      "render",
+      "browserQa",
+      "uiObservation",
+      "discussion",
+      "screenContract",
+      "trend",
+    ] as const;
+    for (const category of categories) {
+      assertConcreteArtifactRefs(
+        `${label}[${iteration.iteration}].evidenceRefs.${category}`,
+        iteration.evidenceRefs[category],
+      );
+    }
+    for (const ref of iteration.evidenceRefs.screenContract) {
+      if (!isCanonicalScreenContractRef(ref)) {
         throw new Error(
-          `${label}[${iteration.iteration}].l1.axes[${axis.axisId}].evidenceRefs must not be empty.`,
+          `${label}[${iteration.iteration}].evidenceRefs.screenContract must use canonical screen contract refs.`,
         );
       }
+    }
+    for (const axis of iteration.l1.axes) {
       assertConcreteArtifactRefs(
-        axis.evidenceRefs,
         `${label}[${iteration.iteration}].l1.axes[${axis.axisId}].evidenceRefs`,
+        axis.evidenceRefs,
       );
     }
     for (const axis of iteration.l2.axes) {
-      if (axis.evidenceRefs.length === 0) {
-        throw new Error(
-          `${label}[${iteration.iteration}].l2.axes[${axis.axisId}].evidenceRefs must not be empty.`,
-        );
-      }
       assertConcreteArtifactRefs(
-        axis.evidenceRefs,
         `${label}[${iteration.iteration}].l2.axes[${axis.axisId}].evidenceRefs`,
+        axis.evidenceRefs,
       );
     }
   }
