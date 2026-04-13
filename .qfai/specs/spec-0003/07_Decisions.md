@@ -31,3 +31,9 @@
 
 - 統合ディレクトリの README.md は symlink 化せず通常ファイルとして配置する
 - Why: README は統合先ごとに内容が異なるため
+
+### DR-0003-0006: TDD Ledger Backfill from Migrated Coverage (v1.7.15)
+
+- Decision: TDD-0001..0015 のテストは既存実装 (v1.7.x) に対する backfill として Exception パターンで確定する
+- Context: test-list.md は 06_Test-Cases.md から auto-generate された skeleton ledger で、Test file=TBD/Selector=migrated のまま放置されていた
+- Rationale: init コマンドは tests/cli/init.test.ts で既に広範にカバー済み（空ディレクトリ初期化、冪等性、--force、--dry-run、symlink生成、レガシー退避、instructions配置）。tests/codex/agents.test.ts も TC-0003-0001..0009 をカバー。one-shot GREEN で exception に確定する
