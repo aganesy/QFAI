@@ -12,6 +12,7 @@
 import type { FullHarnessPanelScore } from "./types.js";
 import type { Decision } from "../calibration/types.js";
 import type { FullHarnessPanelInputs } from "./panelInputs.js";
+import { assertConcreteArtifactRef } from "../prototyping/pathUtils.js";
 
 export function scoreL1(inputs: FullHarnessPanelInputs): FullHarnessPanelScore {
   const axes: FullHarnessPanelScore["axes"] = [];
@@ -174,6 +175,15 @@ export function determineDecision(
   return "reject";
 }
 
+/**
+ * rev11 strictness:
+ * - axes length >= 1 (empty axes are rejected).
+ * - per-axis: score range, rationale non-empty, evidenceRefs non-empty and
+ *   every ref must be a concrete artifact ref under `.qfai/`.
+ *
+ * Validation order (per axis): score -> rationale -> evidenceRefs.
+ * Errors accumulate; a non-empty result means the panel MUST NOT be used.
+ */
 export function validatePanelScore(panel: FullHarnessPanelScore): string[] {
   const errors: string[] = [];
   if (typeof panel.total !== "number" || panel.total < 0 || panel.total > 1) {
@@ -183,11 +193,28 @@ export function validatePanelScore(panel: FullHarnessPanelScore): string[] {
     errors.push(`Panel ${panel.panel} must have at least one axis`);
   }
   for (const axis of panel.axes) {
+    const axisLabel = `Panel ${panel.panel} axis ${axis.axisId}`;
     if (typeof axis.score !== "number" || axis.score < 0 || axis.score > 1) {
-      errors.push(`Axis ${axis.axisId} score must be between 0 and 1`);
+      errors.push(`${axisLabel} score must be between 0 and 1`);
     }
     if (!axis.rationale || axis.rationale.trim().length === 0) {
-      errors.push(`Axis ${axis.axisId} must have a non-empty rationale`);
+      errors.push(`${axisLabel} must have a non-empty rationale`);
+    }
+    if (!Array.isArray(axis.evidenceRefs) || axis.evidenceRefs.length === 0) {
+      errors.push(`${axisLabel} must have at least one evidenceRef`);
+    } else {
+      for (const ref of axis.evidenceRefs) {
+        if (typeof ref !== "string" || ref.trim().length === 0) {
+          errors.push(`${axisLabel} evidenceRef must be a non-empty string`);
+          continue;
+        }
+        try {
+          assertConcreteArtifactRef(ref);
+        } catch (error) {
+          const reason = error instanceof Error ? error.message : String(error);
+          errors.push(`${axisLabel} evidenceRef is not a concrete artifact ref: ${reason}`);
+        }
+      }
     }
   }
   return errors;

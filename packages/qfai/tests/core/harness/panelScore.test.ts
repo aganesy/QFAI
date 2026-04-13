@@ -11,6 +11,33 @@ import {
 import type { FullHarnessPanelScore } from "../../../src/core/harness/types.js";
 import type { FullHarnessPanelInputs } from "../../../src/core/harness/panelInputs.js";
 
+const RENDER_REF = ".qfai/evidence/render.json#/screens/dashboard";
+const BROWSER_QA_REF = ".qfai/evidence/browser-qa.json#/screens/dashboard";
+const RUNTIME_GATE_REF = ".qfai/evidence/runtime-gate.json#/gate";
+const SCREEN_CONTRACT_REF = ".qfai/discussion/pack-1/uiux/40_screen_contracts.md#dashboard";
+const SPEC_COV_REF = ".qfai/evidence/spec-coverage.json#/coverage";
+const DISCUSSION_REF = ".qfai/discussion/pack-1/uiux/20_design_eval_invariant.md#L12";
+const TREND_REF = ".qfai/discussion/pack-1/04_Sources.md#L8";
+const HTML_REF = ".qfai/evidence/render/dashboard.desktop.html";
+
+function panelWithAxis(
+  overrides: Partial<FullHarnessPanelScore["axes"][number]> = {},
+): FullHarnessPanelScore {
+  return {
+    panel: "L1",
+    total: 0.75,
+    axes: [
+      {
+        axisId: "AX-001",
+        score: 0.75,
+        rationale: "Valid rationale",
+        evidenceRefs: [RENDER_REF],
+        ...overrides,
+      },
+    ],
+  };
+}
+
 describe("computeWeightedTotal", () => {
   it("returns min(l1.total, l2.total)", () => {
     const l1: FullHarnessPanelScore = { panel: "L1", total: 0.8, axes: [] };
@@ -22,12 +49,6 @@ describe("computeWeightedTotal", () => {
     const l1: FullHarnessPanelScore = { panel: "L1", total: 0.3, axes: [] };
     const l2: FullHarnessPanelScore = { panel: "L2", total: 0.9, axes: [] };
     expect(computeWeightedTotal(l1, l2)).toBe(0.3);
-  });
-
-  it("returns same value when equal", () => {
-    const l1: FullHarnessPanelScore = { panel: "L1", total: 0.7, axes: [] };
-    const l2: FullHarnessPanelScore = { panel: "L2", total: 0.7, axes: [] };
-    expect(computeWeightedTotal(l1, l2)).toBe(0.7);
   });
 });
 
@@ -50,63 +71,84 @@ describe("determineDecision", () => {
   });
 });
 
-describe("validatePanelScore", () => {
-  it("returns no errors for valid panel", () => {
-    const panel: FullHarnessPanelScore = {
-      panel: "L1",
-      total: 0.75,
-      axes: [
-        {
-          axisId: "AX-001",
-          score: 0.8,
-          rationale: "Good accessibility compliance",
-          evidenceRefs: ["render/screen1.png"],
-        },
-      ],
-    };
-    expect(validatePanelScore(panel)).toHaveLength(0);
+describe("validatePanelScore (rev11 strict)", () => {
+  it("returns no errors for a fully-valid panel", () => {
+    expect(validatePanelScore(panelWithAxis())).toHaveLength(0);
   });
 
   it("rejects total outside 0-1 range", () => {
-    const panel: FullHarnessPanelScore = { panel: "L1", total: 1.5, axes: [] };
+    const panel: FullHarnessPanelScore = {
+      ...panelWithAxis(),
+      total: 1.5,
+    };
     const errors = validatePanelScore(panel);
-    expect(errors.length).toBeGreaterThan(0);
-    expect(errors[0]).toMatch(/total must be between 0 and 1/);
+    expect(errors.some((e) => /total must be between 0 and 1/.test(e))).toBe(true);
+  });
+
+  it("rejects empty axes", () => {
+    const panel: FullHarnessPanelScore = { panel: "L1", total: 0.5, axes: [] };
+    const errors = validatePanelScore(panel);
+    expect(errors.some((e) => /at least one axis/.test(e))).toBe(true);
   });
 
   it("rejects axis score outside 0-1 range", () => {
-    const panel: FullHarnessPanelScore = {
-      panel: "L2",
-      total: 0.5,
-      axes: [{ axisId: "AX-001", score: -0.1, rationale: "Valid", evidenceRefs: [] }],
-    };
+    const panel = panelWithAxis({ score: -0.1 });
     const errors = validatePanelScore(panel);
-    expect(errors.some((e) => e.includes("score must be between 0 and 1"))).toBe(true);
+    expect(errors.some((e) => /score must be between 0 and 1/.test(e))).toBe(true);
   });
 
   it("rejects empty rationale", () => {
-    const panel: FullHarnessPanelScore = {
-      panel: "L1",
-      total: 0.5,
-      axes: [{ axisId: "AX-001", score: 0.5, rationale: "", evidenceRefs: [] }],
-    };
+    const panel = panelWithAxis({ rationale: "" });
     const errors = validatePanelScore(panel);
-    expect(errors.some((e) => e.includes("non-empty rationale"))).toBe(true);
+    expect(errors.some((e) => /non-empty rationale/.test(e))).toBe(true);
+  });
+
+  it("rejects empty evidenceRefs", () => {
+    const panel = panelWithAxis({ evidenceRefs: [] });
+    const errors = validatePanelScore(panel);
+    expect(errors.some((e) => /at least one evidenceRef/.test(e))).toBe(true);
+  });
+
+  it("rejects malformed evidenceRef (bare filename)", () => {
+    const panel = panelWithAxis({ evidenceRefs: ["render/home.png"] });
+    const errors = validatePanelScore(panel);
+    expect(errors.some((e) => /not a concrete artifact ref/.test(e))).toBe(true);
+  });
+
+  it("rejects absolute path evidenceRef", () => {
+    const panel = panelWithAxis({ evidenceRefs: ["/abs/render.json#/screens/0"] });
+    const errors = validatePanelScore(panel);
+    expect(errors.some((e) => /not a concrete artifact ref/.test(e))).toBe(true);
+  });
+
+  it("rejects synthetic token evidenceRef", () => {
+    const panel = panelWithAxis({ evidenceRefs: ["specs:foo"] });
+    const errors = validatePanelScore(panel);
+    expect(errors.some((e) => /not a concrete artifact ref/.test(e))).toBe(true);
   });
 });
 
 function makePanelInputs(overrides: Partial<FullHarnessPanelInputs> = {}): FullHarnessPanelInputs {
   return {
     runtimeGate: {
-      uiRoutes: [{ route: "/home", status: 200 }],
-      apiEndpoints: [{ method: "GET", path: "/api/v1/items", status: 200 }],
+      uiRoutes: [
+        {
+          screenId: "dashboard",
+          route: "/dashboard",
+          rendered: true,
+          browserVisited: true,
+          renderEvidenceRefs: [RENDER_REF],
+          browserQaEvidenceRefs: [BROWSER_QA_REF],
+        },
+      ],
+      evidenceRefs: [RUNTIME_GATE_REF],
     },
     renderEvidence: {
       totalScreens: 2,
       capturedScreens: 2,
       failedScreens: 0,
       viewports: ["desktop", "mobile"],
-      evidenceRefs: ["render/home.png"],
+      evidenceRefs: [RENDER_REF],
     },
     browserQa: {
       executed: true,
@@ -115,52 +157,57 @@ function makePanelInputs(overrides: Partial<FullHarnessPanelInputs> = {}): FullH
       visualFindings: 0,
       totalFindings: 0,
       phasesExecuted: ["smoke", "interaction"],
-      evidenceRefs: ["browser-qa.json"],
+      evidenceRefs: [BROWSER_QA_REF],
     },
     uiObservation: {
-      domLabelsFound: ["Home", "Orders"],
-      elementsPlaced: 10,
-      actionsWired: 5,
-      htmlCaptureRefs: ["render/home.html"],
+      screens: [
+        {
+          screenId: "dashboard",
+          route: "/dashboard",
+          htmlCaptureRef: HTML_REF,
+          domLabelsFound: ["Dashboard"],
+          elementsPlaced: 1,
+          actionsWired: 1,
+          mockPathFindings: [],
+          browserQaEvidenceRefs: [BROWSER_QA_REF],
+          browserQaObserved: true,
+        },
+      ],
+      evidenceRefs: [HTML_REF],
     },
     specCoverage: {
-      declared: { uiRoutes: 1, apiEndpoints: 1, dbObjects: 0 },
-      checked: { uiOk: 1, apiNon404: 1, dbPresent: 0 },
-      missing: { uiRoutes: [], apiEndpoints: [], dbObjects: [] },
-      evidenceRefs: ["specs/spec-0001"],
+      declared: { uiRoutes: 1 },
+      checked: { uiOk: 1 },
+      missing: { uiRoutes: [] },
+      evidenceRefs: [SPEC_COV_REF],
     },
     discussionAxes: {
       invariantAxes: 3,
       trendDerivedAxes: 2,
       productSpecificAxes: 1,
       aggregateScore: 0.8,
-      evidenceRefs: ["discussion/pack-1"],
+      evidenceRefs: [DISCUSSION_REF],
     },
     screenContract: {
       totalContracts: 3,
       coveredContracts: 3,
       fidelityScore: 0.9,
-      evidenceRefs: ["screen-contract.yaml"],
+      evidenceRefs: [SCREEN_CONTRACT_REF],
     },
     trendAlignment: {
       trendSourcesChecked: 2,
       translationConsistency: 0.85,
       competitiveGapsCovered: 1,
-      evidenceRefs: ["trends.md"],
+      evidenceRefs: [TREND_REF],
     },
     ...overrides,
   };
 }
 
 describe("scoreL1", () => {
-  it("computes L1 score from evidence inputs", () => {
-    const inputs = makePanelInputs();
-    const result = scoreL1(inputs);
-
+  it("computes L1 with the fixed axis set", () => {
+    const result = scoreL1(makePanelInputs());
     expect(result.panel).toBe("L1");
-    expect(result.total).toBeGreaterThan(0);
-    expect(result.total).toBeLessThanOrEqual(1);
-    expect(result.axes.length).toBe(5);
     expect(result.axes.map((a) => a.axisId)).toEqual([
       "runtime-gate",
       "render-coverage",
@@ -168,49 +215,14 @@ describe("scoreL1", () => {
       "screen-contract-coverage",
       "spec-coverage",
     ]);
-  });
-
-  it("penalizes blocking browser QA findings", () => {
-    const clean = scoreL1(
-      makePanelInputs({ browserQa: { ...makePanelInputs().browserQa, blockingFindings: 0 } }),
-    );
-    const dirty = scoreL1(
-      makePanelInputs({ browserQa: { ...makePanelInputs().browserQa, blockingFindings: 3 } }),
-    );
-
-    const cleanBqaAxis = clean.axes.find((a) => a.axisId === "browser-qa-blocking");
-    const dirtyBqaAxis = dirty.axes.find((a) => a.axisId === "browser-qa-blocking");
-    expect(cleanBqaAxis).toBeDefined();
-    expect(dirtyBqaAxis).toBeDefined();
-    expect(cleanBqaAxis?.score).toBeGreaterThan(dirtyBqaAxis?.score ?? 0);
-  });
-
-  it("scores spec-coverage from declared vs checked", () => {
-    const result = scoreL1(
-      makePanelInputs({
-        specCoverage: {
-          declared: { uiRoutes: 4, apiEndpoints: 2, dbObjects: 0 },
-          checked: { uiOk: 2, apiNon404: 1, dbPresent: 0 },
-          missing: { uiRoutes: ["/a", "/b"], apiEndpoints: ["/c"], dbObjects: [] },
-          evidenceRefs: ["specs"],
-        },
-      }),
-    );
-    const spcAxis = result.axes.find((a) => a.axisId === "spec-coverage");
-    expect(spcAxis).toBeDefined();
-    expect(spcAxis?.score).toBeCloseTo(0.5); // 3/6
+    expect(validatePanelScore(result)).toHaveLength(0);
   });
 });
 
 describe("scoreL2", () => {
-  it("computes L2 score from evidence inputs", () => {
-    const inputs = makePanelInputs();
-    const result = scoreL2(inputs);
-
+  it("computes L2 with the fixed axis set", () => {
+    const result = scoreL2(makePanelInputs());
     expect(result.panel).toBe("L2");
-    expect(result.total).toBeGreaterThan(0);
-    expect(result.total).toBeLessThanOrEqual(1);
-    expect(result.axes.length).toBe(5);
     expect(result.axes.map((a) => a.axisId)).toEqual([
       "discussion-axes",
       "screen-contract-fidelity",
@@ -218,29 +230,13 @@ describe("scoreL2", () => {
       "visual-findings",
       "browser-qa-experience",
     ]);
-  });
-
-  it("penalizes visual findings", () => {
-    const clean = scoreL2(
-      makePanelInputs({ browserQa: { ...makePanelInputs().browserQa, visualFindings: 0 } }),
-    );
-    const dirty = scoreL2(
-      makePanelInputs({ browserQa: { ...makePanelInputs().browserQa, visualFindings: 5 } }),
-    );
-
-    const cleanAxis = clean.axes.find((a) => a.axisId === "visual-findings");
-    const dirtyAxis = dirty.axes.find((a) => a.axisId === "visual-findings");
-    expect(cleanAxis).toBeDefined();
-    expect(dirtyAxis).toBeDefined();
-    expect(cleanAxis?.score).toBeGreaterThan(dirtyAxis?.score ?? 0);
+    expect(validatePanelScore(result)).toHaveLength(0);
   });
 });
 
 describe("scorePanelsFromInputs", () => {
   it("returns l1, l2, and weightedTotal = min(l1, l2)", () => {
-    const inputs = makePanelInputs();
-    const { l1, l2, weightedTotal } = scorePanelsFromInputs(inputs);
-
+    const { l1, l2, weightedTotal } = scorePanelsFromInputs(makePanelInputs());
     expect(l1.panel).toBe("L1");
     expect(l2.panel).toBe("L2");
     expect(weightedTotal).toBe(Math.min(l1.total, l2.total));

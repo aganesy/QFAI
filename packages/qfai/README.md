@@ -68,8 +68,10 @@ npx qfai report
     `fullHarness.reviewerLogs[].evidenceRefs[]`.
     Semantic rules are also strict: `runtimeGate.ui[].declaredRef` and `fullHarness.iterations[].evidenceRefs.screenContract[]`
     must use the canonical screen contract sourceRef `.qfai/discussion/<pack>/uiux/40_screen_contracts.md#<screenId>`,
-    and `specs[].coverageRefs[].declaredRef` must point to a spec declaration under `.qfai/specs/` such as
-    `.qfai/specs/spec-0001/01_Spec.md#L3`.
+    and `specs[].coverageRefs[].declaredRef` must use the canonical spec declaration form
+    `.qfai/specs/<specId>/01_Spec.md#L<line>` (for example `.qfai/specs/spec-0001/01_Spec.md#L3`);
+    `notes.md`, `appendix.md`, anchor-fragment forms such as `#route-home`, discussion refs, and screen contract refs
+    are NOT valid `declaredRef` values.
     `fullHarness` follows a terminal-first state machine: `status="in-progress"` requires `finalDecision="pending"`,
     `reviewerSignoff.status="pending"`, and no `terminationReason`; `status="completed"` requires `terminationReason`,
     a non-pending `finalDecision`, and a terminal `reviewerSignoff`.

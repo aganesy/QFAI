@@ -108,4 +108,35 @@ describe("specCoverage", () => {
       }),
     ).toThrow(/extension|directory/i);
   });
+
+  it("ignores ui_route declarations in notes.md / appendix.md (01_Spec.md-only)", async () => {
+    const root = await createRoot();
+    // 01_Spec.md with a valid declaration.
+    await writeFile(
+      path.join(root, ".qfai", "specs", "spec-0001", "01_Spec.md"),
+      ["# Spec", "", "- ui_route: /home", ""].join("\n"),
+      "utf-8",
+    );
+    // notes.md / appendix.md declarations MUST be ignored by the canonical
+    // declaration reader.
+    await writeFile(
+      path.join(root, ".qfai", "specs", "spec-0001", "notes.md"),
+      ["# Notes", "", "- ui_route: /notes-only", ""].join("\n"),
+      "utf-8",
+    );
+    await writeFile(
+      path.join(root, ".qfai", "specs", "spec-0001", "appendix.md"),
+      ["# Appendix", "", "- ui_route: /appendix-only", ""].join("\n"),
+      "utf-8",
+    );
+
+    const coverage = await buildPerSpecCoverage(path.join(root, ".qfai", "specs"));
+    const declaredRoutes = coverage[0]?.coverageRefs.map((r) => r.route) ?? [];
+    expect(declaredRoutes).toContain("/home");
+    expect(declaredRoutes).not.toContain("/notes-only");
+    expect(declaredRoutes).not.toContain("/appendix-only");
+    expect(coverage[0]?.coverageRefs[0]?.declaredRef).toBe(
+      ".qfai/specs/spec-0001/01_Spec.md#L2",
+    );
+  });
 });

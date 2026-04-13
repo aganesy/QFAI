@@ -14,6 +14,7 @@ import {
   toConcreteArtifactRef,
   toRepoRelativeArtifactRef,
 } from "./pathUtils.js";
+import { isSpecDeclarationRef } from "./refSemantics.js";
 
 type SpecDeclaration = {
   specId: string;
@@ -51,24 +52,20 @@ async function parseSpecDeclaration(
   const apiEndpoints: string[] = [];
   const dbObjects: string[] = [];
 
-  let files: string[];
+  // rev11: canonical declaration source is `01_Spec.md` only.
+  // Broad directory scanning is intentionally removed so that `declaredRef`
+  // points at the spec's single declaration file.
+  const declarationPath = path.join(specDir, "01_Spec.md");
+  let content: string;
   try {
-    files = await readdir(specDir);
+    content = await readFile(declarationPath, "utf-8");
   } catch {
     return { specId, uiRoutes, apiEndpoints, dbObjects };
   }
 
-  for (const file of files) {
-    const filePath = path.join(specDir, file);
-    try {
-      const content = await readFile(filePath, "utf-8");
-      uiRoutes.push(...extractUiRouteDeclarations(content, filePath, repoRoot));
-      apiEndpoints.push(...extractDeclarations(content, "api_endpoint"));
-      dbObjects.push(...extractDeclarations(content, "db_object"));
-    } catch {
-      // skip unreadable files
-    }
-  }
+  uiRoutes.push(...extractUiRouteDeclarations(content, declarationPath, repoRoot));
+  apiEndpoints.push(...extractDeclarations(content, "api_endpoint"));
+  dbObjects.push(...extractDeclarations(content, "db_object"));
 
   return { specId, uiRoutes, apiEndpoints, dbObjects };
 }
@@ -170,6 +167,12 @@ export async function buildSpecCoverageSummary(input: {
   for (const spec of declared) {
     for (const route of spec.uiRoutes) {
       assertConcreteArtifactRef(route.declaredRef);
+      if (!isSpecDeclarationRef(route.declaredRef)) {
+        throw new Error(
+          `Spec coverage failure: declaredRef must point to ` +
+            `.qfai/specs/<specId>/01_Spec.md#L<line>. Got: ${route.declaredRef}`,
+        );
+      }
       evidenceRefs.push(route.declaredRef);
       for (const observedRef of observed.observedRefsByRoute.get(route.route) ?? []) {
         evidenceRefs.push(toConcreteArtifactRef(repoRoot, observedRef));

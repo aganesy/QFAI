@@ -106,7 +106,7 @@ function makePanelInputs(): FullHarnessPanelInputs {
       productSpecificAxes: 1,
       aggregateScore: 0.9,
       evidenceRefs: [
-        ".qfai/discussion/discussion-20260406000000000/uiux/20_design_eval_invariant.md",
+        ".qfai/discussion/discussion-20260406000000000/uiux/20_design_eval_invariant.md#L12",
       ],
     },
     screenContract: {
@@ -121,7 +121,7 @@ function makePanelInputs(): FullHarnessPanelInputs {
       trendSourcesChecked: 1,
       translationConsistency: 1,
       competitiveGapsCovered: 1,
-      evidenceRefs: [".qfai/discussion/discussion-20260406000000000/04_Sources.md"],
+      evidenceRefs: [".qfai/discussion/discussion-20260406000000000/04_Sources.md#L8"],
     },
   };
 }

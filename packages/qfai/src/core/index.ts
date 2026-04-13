@@ -36,12 +36,11 @@ export { writeEvidenceBundles } from "./evidence/bundleWriter.js";
 // WS-D: Full-harness runtime (v1.7.15 measurement-driven)
 export { runFullHarness } from "./harness/runtime.js";
 export type { FullHarnessRequest, FullHarnessResult } from "./harness/runtime.js";
-export { runMeasurement } from "./harness/measurement.js";
-export {
-  computeWeightedTotal,
-  determineDecision,
-  validatePanelScore,
-} from "./harness/panelScore.js";
+// rev11 breaking change: `runMeasurement` and `validatePanelScore` are
+// intentionally NOT re-exported here. They remain as internal helpers under
+// `./harness/` so that the package public surface only exposes strict
+// production-path APIs (`runFullHarness`, validators, canonical builders).
+export { computeWeightedTotal, determineDecision } from "./harness/panelScore.js";
 export { loadHistory, appendIteration, computeTerminationReason } from "./harness/history.js";
 export { validateReviewer } from "./harness/reviewerIdentity.js";
 export { resolveCommitSha } from "./harness/gitRevision.js";

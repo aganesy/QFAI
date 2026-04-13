@@ -37,6 +37,14 @@ export function isCanonicalScreenContractRef(ref: string): boolean {
   return !fragment.startsWith("screen:");
 }
 
+/**
+ * A `declaredRef` is the citation of a spec's declaration of a UI route.
+ *
+ * rev11 semantic closure:
+ * - The only canonical declaration source is the spec's `01_Spec.md`.
+ * - The only canonical fragment form is `#L<positive integer>`.
+ * - `notes.md`, `appendix.md`, `discussion.md`, `.json`, `#anchor` etc. are NOT declarations.
+ */
 export function isSpecDeclarationRef(ref: string): boolean {
   try {
     assertConcreteArtifactRef(ref);
@@ -44,16 +52,7 @@ export function isSpecDeclarationRef(ref: string): boolean {
     return false;
   }
 
-  const match = /^\.qfai\/specs\/[^#]+\.md#(.+)$/.exec(ref);
-  if (!match) {
-    return false;
-  }
-
-  const fragment = match[1];
-  if (!fragment) {
-    return false;
-  }
-  return /^L[1-9]\d*$/.test(fragment) || /^[A-Za-z0-9][A-Za-z0-9._:-]*$/.test(fragment);
+  return /^\.qfai\/specs\/[^/#]+\/01_Spec\.md#L[1-9]\d*$/.test(ref);
 }
 
 function formatError(error: unknown): string {
