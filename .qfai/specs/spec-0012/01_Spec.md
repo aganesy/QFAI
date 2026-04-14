@@ -14,6 +14,7 @@
 
 - In:
   - NOTE: v1.7.15 adds runtime truthfulness hardening — panel scoring from real evidence, converged requires iterationCount>=2, reviewer/commitSha mandatory, specCoverage from real diffs, uiFidelity observation-only, CalibrationLoader wired into execution.ts, fail-fast on missing evidence
+  - NOTE: v1.7.15 rev4 adds 5 audit resolution items — cli/full-harness 4-layer reject, screen contract-based Browser QA targets ("/primary" removal), Browser QA evidence chain completeness (hard-fail on empty), canonical route semantics for runtimeGate/specCoverage, L2 structured parse priority, stale semantics cleanup
   - `/qfai-prototyping` skill workflow (SKILL only, no CLI command) — skill-centered truth: the skill is the sole interface for prototyping
   - All-spec stage: scope is ALL specs from `.qfai/specs/spec-*`
   - Spec Auto-Discovery Protocol (4-source unified diff detection: branch diff, local changes, evidence mtime, delta.md parse)
@@ -62,6 +63,16 @@
 - NFR-0003: API runtime gate -- zero 404 results in API endpoint checks
 - NFR-0004: No placeholder pages -- placeholder-only pages are marked REVISE, not accepted
 - NFR-0005: L2 fidelity default -- declared primary interactions wired with mockable behavior
+- NFR-0006 (rev4): surface/mode バリデーション 10ms 以内
+- NFR-0007 (rev4): `40_screen_contracts.md` パース 100 画面で 500ms 以内
+- NFR-0008 (rev4): canonical path 比較 1000 ルートで 200ms 以内
+- NFR-0009 (rev4): surface/mode 拒否ガード 3 層一貫動作
+- NFR-0010 (rev4): Browser QA 空エビデンス時のフェイル率 100%
+- NFR-0011 (rev4): canonical path 正規化 trailing slash 一貫性
+- NFR-0012 (rev4): canonical route 導出ロジック WS-2/WS-4 共有（重複実装なし）
+- NFR-0013 (rev4): 型安全性維持（新規 any / @ts-ignore 追加 0 件）
+- NFR-0014 (rev4): 拒否エラーメッセージに原因+対処方法含む
+- NFR-0015 (rev4): 公開 API 破壊的変更なし
 
 ## Applicable Policy
 
@@ -165,10 +176,16 @@
 - REQ-0084: bundleWriter schema v2 追随 (v1.7.15 rev2; discussion REQ-0054) — 8 カテゴリ evidenceRefs + FullHarnessIteration 新型。v1 非並存
 - REQ-0085: docs/SKILL/README reality sync rev2 (v1.7.15 rev2; discussion REQ-0056) — 独立 evaluator 自動複数起動/Evaluate→Fix loop 内包/evidence 自動補完の主張を削除
 - REQ-0086: tests fixture rev2 改定 (v1.7.15 rev2; discussion REQ-0057) — 正常系から旧前提を削除し異常系に新 fixture 追加
+- REQ-0087: cli/full-harness 4-layer reject (v1.7.15 rev4; WS-1) — derivePrototypingObligations / runFullHarness / CLI / validator の 4 層で cli + full-harness を拒否。UI-bearing surface は web/mobile/desktop/mixed
+- REQ-0088: screen contract-based Browser QA targets (v1.7.15 rev4; WS-2) — "/primary" 除去。screenContracts.ts パーサー新設。各スクリーン個別のフィデリティ測定ターゲットとエビデンス生成
+- REQ-0089: Browser QA evidence chain completeness (v1.7.15 rev4; WS-3) — iterations[].evidenceRefs.browserQa にフェーズ参照・ファインディング参照を格納。空の場合ハードフェイル
+- REQ-0090: canonical route semantics (v1.7.15 rev4; WS-4) — specCoverage / runtimeGateBuilder で canonical path 比較。URL をルートとして扱わない。missing_observation レポート
+- REQ-0091: L2 structured parse priority (v1.7.15 rev4; WS-5) — 正規アーティファクト（20-23 系、04_Sources.md、40_screen_contracts.md）必須。構造化パース優先。ヒューリスティック縮小
+- REQ-0092: stale semantics cleanup (v1.7.15 rev4; WS-6) — prototypingEvidence.ts 陳腐化 remediation 除去。skip→reject 変換。URL-as-route→canonical route。"/primary" 除去。README/SKILL/evidence README 更新
 
 ## Entry points
 
-- US range in this spec: US-0012-0001..US-0012-0037
+- US range in this spec: US-0012-0001..US-0012-0043
 - Primary actors: Developer, AI Agent (FullStackEngineer, RuntimeGatekeeper), CI/CD pipeline
 - Notes: No CLI command exists. This is a skill-only spec for `/qfai-prototyping`.
 

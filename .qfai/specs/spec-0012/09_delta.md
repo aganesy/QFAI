@@ -287,3 +287,56 @@ REQ-0054..0055 → US-0012-0029 → AC-0012-0029-01..02 → BR-0012-0054..0055 �
   - DO NOT continue with zeros when DB is declared but unobserved
   - Temptation: avoid pipeline breakage for projects that haven't set up DB observation
   - Reason: declared DB objects passing validation without observation is evidence fraud
+
+## v1.7.15 rev4 — Adopted
+
+- AD-0012-0028: cli/full-harness 4-layer reject (DR-0012-0028 / DR-0217)
+  - derivePrototypingObligations / runFullHarness / CLI / バリデータの 4 層で拒否
+  - UI-bearing surface: web/mobile/desktop/mixed のみ。cli は非ビジュアル
+- AD-0012-0029: screen contract-based Browser QA targets (DR-0012-0029 / DR-0218)
+  - `"/primary"` ハードコード廃止。`40_screen_contracts.md` からスクリーン一覧を導出
+  - `screenContracts.ts` パーサー新設
+- AD-0012-0030: Browser QA evidence chain hard-fail (DR-0012-0030 / DR-0219)
+  - `iterations[].evidenceRefs.browserQa` 空時ハードフェイル。サイレントパス禁止
+- AD-0012-0031: canonical route semantics (DR-0012-0031 / DR-0220)
+  - runtimeGateBuilder / specCoverage で canonical path 比較。URL をルートとして扱わない
+- AD-0012-0032: L2 structured parse priority (DR-0012-0032 / DR-0221)
+  - 構造化パース（20-23 系、04_Sources.md、40_screen_contracts.md）優先
+  - ヒューリスティックフォールバックは構造化ソース不在時のみ
+- AD-0012-0033: parameterized route pattern-based matching (DR-0012-0027 / DR-0222, OQ-0004 resolution)
+  - パラメタライズドルートはパターンベースマッチングで照合
+- AD-0012-0034: REQ-0087〜0092 追加（rev4 discussion REQ-0001〜0033 の spec 反映）
+- AD-0012-0035: US-0012-0038〜0043, AC/BR/EX/TC 追加（rev4 全 6 workstream の slice 拡張）
+
+### Traceability Chain (v1.7.15 rev4 additions)
+
+```text
+REQ-0087 (WS-1) → US-0012-0038 → AC-0012-0038-01..05 → BR-0012-0068..0069 → EX-0012-0082..0083 → TC-0012-0092..0097
+REQ-0088 (WS-2) → US-0012-0039 → AC-0012-0039-01..06 → BR-0012-0070..0071 → EX-0012-0084..0085 → TC-0012-0098..0102
+REQ-0089 (WS-3) → US-0012-0040 → AC-0012-0040-01..04 → BR-0012-0072..0073 → EX-0012-0086..0087 → TC-0012-0103..0105
+REQ-0090 (WS-4) → US-0012-0041 → AC-0012-0041-01..04 → BR-0012-0074..0075,0079 → EX-0012-0088..0090,0095 → TC-0012-0106..0110,0120
+REQ-0091 (WS-5) → US-0012-0042 → AC-0012-0042-01..03 → BR-0012-0076 → EX-0012-0091..0092 → TC-0012-0111..0113
+REQ-0092 (WS-6) → US-0012-0043 → AC-0012-0043-01..06 → BR-0012-0077..0078 → EX-0012-0093..0094 → TC-0012-0114..0119
+```
+
+## v1.7.15 rev4 — Rejected
+
+- RJ-0012-0015: Keep "/primary" as default Browser QA target
+  - DO NOT keep "/primary" as Browser QA target
+  - Temptation: simplicity of a single fixed target, backward compatibility
+  - Reason: fixed target causes measurement gaps for multi-screen applications; screen contract derivation is the correct approach
+
+- RJ-0012-0016: Silent pass on empty browserQa evidenceRefs
+  - DO NOT silently pass when browserQa evidenceRefs are empty
+  - Temptation: avoid pipeline breakage when Browser QA results are not yet available
+  - Reason: empty evidence chain breaks audit traceability; fail-closed is the correct policy
+
+- RJ-0012-0017: URL as route in specCoverage
+  - DO NOT use full URL as route identifier in specCoverage
+  - Temptation: URLs contain all information needed for routing
+  - Reason: query parameters and fragments cause false route mismatches; canonical path is the correct abstraction
+
+- RJ-0012-0018: Heuristic-first L2 evidence collection
+  - DO NOT prioritize heuristic parsing over structured parsing for L2 evidence
+  - Temptation: heuristic parsing is simpler and handles varied formats
+  - Reason: heuristic dependence reduces evidence accuracy and reproducibility; structured parse provides deterministic results

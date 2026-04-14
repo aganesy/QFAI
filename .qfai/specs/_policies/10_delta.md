@@ -343,3 +343,22 @@
 | Flatten UiObservation + screen breakdown  | Dual structure with conflicting aggregation semantics          | DO NOT maintain flatten + screen-level dual structures. Temptation: backward compat                |
 | bundleWriter schema v1/v2 coexistence     | Schema divergence and consumer confusion                       | DO NOT allow v1/v2 parallel schemas. Temptation: gradual migration                                 |
 | DB coverage missing = continue with zeros | Declared DB objects pass validation without observation        | DO NOT continue with zeros when DB is declared but unobserved. Temptation: avoid pipeline breakage |
+
+## v1.7.15 rev4 — Single-PR Completion (Adopted)
+
+### Phase: SDD Outline (Phase 1)
+
+| Layer            | Change                                                         | Reason                                                           |
+| ---------------- | -------------------------------------------------------------- | ---------------------------------------------------------------- |
+| 02_Initiative    | v1.7.15 rev4 initiative section added (6 WS, 33 REQs)        | 監査残留齟齬 5 件の仕様反映                                      |
+| 04_Business-Flow | 5 Mermaid flow diagrams added (WS-1~WS-5, implementation deps)| rev4 ワークフロー可視化                                          |
+| 06_Glossary      | rev4 terms added (canonical route, screen contract, etc.)      | 新概念の用語定義                                                 |
+| 07_Constraints   | CON-017~021 added (rev4 technical + operational constraints)   | rev4 固有の制約の明文化                                          |
+| 08_Decisions     | DR-0217~0222 added (4-layer reject, screen contract targets, etc.)| rev4 設計判断の記録                                           |
+
+### Discussion Pack Reference
+
+- `discussion-20260414195449523` (v1.7.15 rev4, 3 reviewer PASS)
+- Classification: non-ui
+- OQ-0004 resolved at SDD level → DR-0222 (pattern-based matching)
+- OQ-0006 deferred to v1.8 (L2 full redesign)

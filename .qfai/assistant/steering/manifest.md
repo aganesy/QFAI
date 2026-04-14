@@ -50,7 +50,9 @@
     `.qfai/discussion/discussion-20260330153902875/`
     (v1.7.9 Convergence Correction Release — truthful implementation alignment across validate/discussion/prototyping/docs),
     `.qfai/discussion/discussion-20260414072809763/`
-    (v1.7.15 Runtime Truthfulness Hardening — fail-closed runtime, pre-scored path elimination, screen-level UiObservation, l2Evidence, validator error upgrades)
+    (v1.7.15 Runtime Truthfulness Hardening — fail-closed runtime, pre-scored path elimination, screen-level UiObservation, l2Evidence, validator error upgrades),
+    `.qfai/discussion/discussion-20260414195449523/`
+    (v1.7.15 rev4 Single-PR Completion — 5 remaining audit issues: cli/full-harness reject, screen contract targets, evidence chain completeness, canonical route semantics, L2 structured parse, stale cleanup)
   - Assumptions: None (all verified from repository analysis)
 
 ## Non-goals / Not-now (Optional)

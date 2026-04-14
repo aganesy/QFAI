@@ -255,6 +255,15 @@
 | fail-closed               | 入力不備時にデフォルト値で続行せず即座に失敗する設計方針。CalibrationLoader / validatePanelInputs / specCoverage 等に適用 (v1.7.15 rev2)                                                                                         |
 | validatePanelInputs       | panelInputs の必須項目欠落を検出する検証関数。10 種類の silent pass を error に昇格 (v1.7.15 rev2)                                                                                                                               |
 
+| canonical route             | URL パスとは分離された、spec 定義上の論理ルート識別子。`runtimeGate` / `specCoverage` はこの canonical route を基準に計測する (v1.7.15 rev4) |
+| screen-level measurement    | 各 screen contract に対して個別に render / Browser QA / observation を実施する測定方式 (v1.7.15 rev4) |
+| render target               | render パネルの測定対象画面。rev4 では `"/primary"` 固定値を廃止し、canonical screen contract から動的に決定 (v1.7.15 rev4) |
+| structured parse            | L2 evidence の構築において、artifact を構造化パーサーで解析する方式。heuristic fallback より優先 (v1.7.15 rev4) |
+| heuristic fallback          | structured parse が利用できない場合に、テキストパターンマッチ等の経験則で L2 入力を推定する方式。rev4 では適用範囲を縮小 (v1.7.15 rev4) |
+| canonical screen contract   | screen contract の正規化された表現。画面 ID / ルート / 期待 DOM 構造 / 期待アクションを定義 (v1.7.15 rev4) |
+| missing_observation         | 画面契約に存在するがオブザベーションにないルートに対する specCoverage のレポートステータス (v1.7.15 rev4) |
+| reality sync                | docs / SKILL / README が runtime / validator / tests の実体と一致した状態 (v1.7.15 rev4) |
+
 ## 使用ルール
 
 - 全成果物で上記の用語定義に従い、一貫した用語を使用すること

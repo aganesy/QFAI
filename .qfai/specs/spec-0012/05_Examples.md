@@ -556,3 +556,109 @@
 - Given iteration N scores ux_quality=0.50, iteration N+1 scores ux_quality=0.70 (delta=0.20)
 - When maxDeltaPerAxisPerIteration=0.15 cap is checked
 - Then delta 0.20 exceeds cap 0.15; re-evaluation or justification is required before accepting the score
+
+## EX-0012-0082: cli + full-harness Rejection (v1.7.15 rev4)
+
+- BR-Ref: BR-0012-0069
+- Given `surface: cli`, `mode: full-harness`
+- When `derivePrototypingObligations()` is called
+- Then exception is thrown with message indicating cli cannot use full-harness
+
+## EX-0012-0083: web + full-harness Acceptance (v1.7.15 rev4)
+
+- BR-Ref: BR-0012-0068
+- Given `surface: web`, `mode: full-harness`
+- When `derivePrototypingObligations()` is called
+- Then obligations are derived successfully
+
+## EX-0012-0084: 3-Screen Contract Target Generation (v1.7.15 rev4)
+
+- BR-Ref: BR-0012-0070, BR-0012-0071
+- Given `40_screen_contracts.md` with 3 screen definitions
+- When Browser QA targets are generated
+- Then 3 targets are created, each with its own evidence record
+
+## EX-0012-0085: Missing Screen Contract File (v1.7.15 rev4)
+
+- BR-Ref: BR-0012-0070
+- Given `40_screen_contracts.md` does not exist
+- When Browser QA target generation is attempted
+- Then clear error message is returned indicating missing screen contract
+
+## EX-0012-0086: Empty browserQa evidenceRefs Hard Fail (v1.7.15 rev4)
+
+- BR-Ref: BR-0012-0072
+- Given Browser QA execution completes with empty `evidenceRefs.browserQa`
+- When iteration evidence is validated
+- Then hard fail is triggered with explicit error message
+
+## EX-0012-0087: browserQa Evidence Chain Populated (v1.7.15 rev4)
+
+- BR-Ref: BR-0012-0072, BR-0012-0073
+- Given Browser QA execution produces 2 phases and 3 findings
+- When evidence chain is assembled
+- Then `iterations[].evidenceRefs.browserQa` contains all phase refs and finding refs, and summary includes both
+
+## EX-0012-0088: Canonical Route Comparison Match (v1.7.15 rev4)
+
+- BR-Ref: BR-0012-0074
+- Given screen contract route `/dashboard` and observation path `/dashboard/`
+- When specCoverage compares routes
+- Then routes match (trailing slash normalized)
+
+## EX-0012-0089: URL Rejected as Route (v1.7.15 rev4)
+
+- BR-Ref: BR-0012-0074
+- Given input `https://app.example.com/dashboard?tab=1`
+- When runtimeGateBuilder processes route
+- Then URL is rejected as route (not canonical path)
+
+## EX-0012-0090: Missing Observation Report (v1.7.15 rev4)
+
+- BR-Ref: BR-0012-0075
+- Given screen contract has routes `/dashboard`, `/settings`, `/profile`
+- And observations exist only for `/dashboard`, `/settings`
+- When specCoverage runs
+- Then `/profile` is reported as `missing_observation`
+
+## EX-0012-0091: L2 Structured Parse Priority (v1.7.15 rev4)
+
+- BR-Ref: BR-0012-0076
+- Given 20-23 structured files all present
+- When l2Evidence collects evidence
+- Then structured parse is used; heuristic fallback is not invoked
+
+## EX-0012-0092: L2 Heuristic Fallback on Missing Structured Source (v1.7.15 rev4)
+
+- BR-Ref: BR-0012-0076
+- Given `04_Sources.md` structured fields are empty
+- When l2Evidence collects evidence
+- Then heuristic fallback is used for that source only, with warning log
+
+## EX-0012-0093: skip→reject Conversion in Tests (v1.7.15 rev4)
+
+- BR-Ref: BR-0012-0077
+- Given test fixture with `skip: true` flag
+- When cleanup is applied
+- Then flag becomes `reject: true` and test expectation matches reject behavior
+
+## EX-0012-0094: "/primary" Removed from Test Expectations (v1.7.15 rev4)
+
+- BR-Ref: BR-0012-0077
+- Given test expecting Browser QA target `"/primary"`
+- When cleanup is applied
+- Then test expectation uses screen contract-derived route
+
+## EX-0012-0095: Parameterized Route Pattern Match (v1.7.15 rev4)
+
+- BR-Ref: BR-0012-0079
+- Given screen contract route `/orders/:id` and observation path `/orders/123`
+- When pattern-based matching runs
+- Then routes match
+
+## EX-0012-0096: Docs Reality Sync Verification (v1.7.15 rev4)
+
+- BR-Ref: BR-0012-0078
+- Given README.md references stale behavior (e.g., `"/primary"` target)
+- When reality sync cleanup is applied
+- Then README reflects current screen contract-based target derivation

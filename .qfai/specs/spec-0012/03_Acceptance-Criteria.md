@@ -279,3 +279,171 @@ Given normal-path test fixtures, when inspected, then l1/l2 direct pass, packVer
 ## AC-0012-0037-02: Error Fixtures Rev2 Added (v1.7.15 rev2)
 
 Given error-path test fixtures, when inspected, then missing pack, missing reviewer, missing discussion/trend/screenContract evidence, insufficient UI observation, per-spec coverage build failure are present.
+
+## AC-0012-0038-01: derivePrototypingObligations Rejects cli + full-harness (v1.7.15 rev4)
+
+- US-Ref: US-0012-0038
+- REQ-Ref: REQ-0001
+- `derivePrototypingObligations()` は surface が UI-bearing でない場合に `full-harness` mode を例外で拒否する
+
+## AC-0012-0038-02: runFullHarness Pre-Execution Surface Check (v1.7.15 rev4)
+
+- US-Ref: US-0012-0038
+- REQ-Ref: REQ-0002
+- `runFullHarness()` は実行開始前に surface が UI-bearing であることを検証し、非ビジュアルの場合ハードリジェクトする
+
+## AC-0012-0038-03: CLI Rejects cli + full-harness (v1.7.15 rev4)
+
+- US-Ref: US-0012-0038
+- REQ-Ref: REQ-0003
+- CLI (`cli/prototyping.ts`) は `surface: cli` + `mode: full-harness` の組み合わせを受け付けた場合、即座にエラー終了する
+
+## AC-0012-0038-04: Validator Rejects cli + full-harness in prototyping.yaml (v1.7.15 rev4)
+
+- US-Ref: US-0012-0038
+- REQ-Ref: REQ-0004
+- バリデータは `prototyping.yaml` において `surface: cli` + `allowed_modes: [full-harness]` の組み合わせを無効として拒否する
+
+## AC-0012-0038-05: UI-bearing Surface Classification (v1.7.15 rev4)
+
+- US-Ref: US-0012-0038
+- REQ-Ref: REQ-0005
+- UI-bearing surface は `web`, `mobile`, `desktop`, `mixed` を許可し、`cli` を非ビジュアルとして分類する
+
+## AC-0012-0039-01: "/primary" Hardcode Removal (v1.7.15 rev4)
+
+- US-Ref: US-0012-0039
+- REQ-Ref: REQ-0007
+- `"/primary"` ハードコード参照をソースコードから完全に除去する
+
+## AC-0012-0039-02: Browser QA Targets from Screen Contracts (v1.7.15 rev4)
+
+- US-Ref: US-0012-0039
+- REQ-Ref: REQ-0006
+- Browser QA ターゲット一覧は `40_screen_contracts.md` のスクリーン定義から導出する
+
+## AC-0012-0039-03: screenContracts.ts Parser (v1.7.15 rev4)
+
+- US-Ref: US-0012-0039
+- REQ-Ref: REQ-0008
+- `screenContracts.ts` は `40_screen_contracts.md` をパースしスクリーン一覧を返却する関数を提供する
+
+## AC-0012-0039-04: uiFidelityBuilder Per-Screen Targets (v1.7.15 rev4)
+
+- US-Ref: US-0012-0039
+- REQ-Ref: REQ-0009
+- `uiFidelityBuilder.ts` は画面契約から導出された各スクリーンに対して個別のフィデリティ測定ターゲットを生成する
+
+## AC-0012-0039-05: Screen Count Match (v1.7.15 rev4)
+
+- US-Ref: US-0012-0039
+- REQ-Ref: REQ-0010
+- Browser QA 実行時、画面契約のスクリーン数と生成されたターゲット数が一致する
+
+## AC-0012-0039-06: Per-Screen Evidence Records (v1.7.15 rev4)
+
+- US-Ref: US-0012-0039
+- REQ-Ref: REQ-0011
+- 各スクリーンに対して個別のエビデンスレコードが生成される
+
+## AC-0012-0040-01: Phase Refs in Summary (v1.7.15 rev4)
+
+- US-Ref: US-0012-0040
+- REQ-Ref: REQ-0012
+- Browser QA 実行後、フェーズ参照 (`evidence_refs`) をサマリーレベルに含める
+
+## AC-0012-0040-02: Findings Refs in Summary (v1.7.15 rev4)
+
+- US-Ref: US-0012-0040
+- REQ-Ref: REQ-0013
+- Browser QA 実行後、ファインディング参照をサマリーレベルに含める
+
+## AC-0012-0040-03: browserQa evidenceRefs Populated (v1.7.15 rev4)
+
+- US-Ref: US-0012-0040
+- REQ-Ref: REQ-0014
+- `iterations[].evidenceRefs.browserQa` にフェーズ参照・ファインディング参照を格納する
+
+## AC-0012-0040-04: Empty browserQa Hard Fail (v1.7.15 rev4)
+
+- US-Ref: US-0012-0040
+- REQ-Ref: REQ-0015
+- `iterations[].evidenceRefs.browserQa` が空の場合、ハードフェイルとしてイテレーションを失敗させる
+
+## AC-0012-0041-01: specCoverage Uses Canonical Path (v1.7.15 rev4)
+
+- US-Ref: US-0012-0041
+- REQ-Ref: REQ-0017
+- `specCoverage.ts` はルート比較において canonical path（正規パス）を使用する
+
+## AC-0012-0041-02: URL Not Treated as Route (v1.7.15 rev4)
+
+- US-Ref: US-0012-0041
+- REQ-Ref: REQ-0018
+- URL（プロトコル、ホスト、クエリパラメータ、フラグメントを含む文字列）をルートとして扱わない
+
+## AC-0012-0041-03: runtimeGateBuilder Canonical Normalization (v1.7.15 rev4)
+
+- US-Ref: US-0012-0041
+- REQ-Ref: REQ-0019
+- `runtimeGateBuilder.ts` はルートを canonical path に正規化する処理を実装する
+
+## AC-0012-0041-04: Missing Observation Report (v1.7.15 rev4)
+
+- US-Ref: US-0012-0041
+- REQ-Ref: REQ-0020
+- 画面契約に存在するが対応するオブザベーションがないルートは `missing_observation` としてレポートする
+
+## AC-0012-0042-01: Canonical Artifacts Required (v1.7.15 rev4)
+
+- US-Ref: US-0012-0042
+- REQ-Ref: REQ-0022
+- L2 エビデンス収集は正規アーティファクト（20-23 系、`04_Sources.md`、`40_screen_contracts.md`）を必須とする
+
+## AC-0012-0042-02: Structured Parse Priority (v1.7.15 rev4)
+
+- US-Ref: US-0012-0042
+- REQ-Ref: REQ-0023, REQ-0024, REQ-0025
+- `l2Evidence.ts` は 20-23 系ファイルの構造化セクション、`04_Sources.md`、`40_screen_contracts.md` を優先的にパースする
+
+## AC-0012-0042-03: No Heuristic When Structured Available (v1.7.15 rev4)
+
+- US-Ref: US-0012-0042
+- REQ-Ref: REQ-0026
+- 構造化パースが利用可能な場合、ヒューリスティックフォールバックを実行しない
+
+## AC-0012-0043-01: Stale Remediation Removed (v1.7.15 rev4)
+
+- US-Ref: US-0012-0043
+- REQ-Ref: REQ-0028
+- `prototypingEvidence.ts` から陳腐化した remediation セマンティクスを除去する
+
+## AC-0012-0043-02: skip→reject Conversion (v1.7.15 rev4)
+
+- US-Ref: US-0012-0043
+- REQ-Ref: REQ-0029
+- テストファイルの `skip` フラグを `reject` に変換する
+
+## AC-0012-0043-03: URL-as-route to Canonical Route (v1.7.15 rev4)
+
+- US-Ref: US-0012-0043
+- REQ-Ref: REQ-0030
+- テストファイルの URL-as-route 期待値を canonical route 期待値に変換する
+
+## AC-0012-0043-04: "/primary" Removed from Tests (v1.7.15 rev4)
+
+- US-Ref: US-0012-0043
+- REQ-Ref: REQ-0031
+- テストファイルから `"/primary"` への参照を完全に除去する
+
+## AC-0012-0043-05: README Updated (v1.7.15 rev4)
+
+- US-Ref: US-0012-0043
+- REQ-Ref: REQ-0032
+- `README.md` の陳腐化した記述を更新する
+
+## AC-0012-0043-06: SKILL.md and evidence/README Updated (v1.7.15 rev4)
+
+- US-Ref: US-0012-0043
+- REQ-Ref: REQ-0033
+- `SKILL.md` および `evidence/README.md` の陳腐化した記述を更新する

@@ -186,3 +186,52 @@
 - Rationale: 実装は v1.7.15 rev2 SDD → ATDD → implement の流れで runtime.ts/types.ts/l2Evidence.ts 等が先行実装済み。テストは ATDD integration test として作成・PASS 済み。TDD ledger 上は exception として記録し、既存テスト結果を evidence に紐付ける
 - Status: Adopted
 - Impact: spec-0012/tdd/test-list.md (25 entries)
+
+## DR-0012-0027: Parameterized Route Pattern-Based Matching (v1.7.15 rev4, OQ-0004 resolution)
+
+- Decision: パラメタライズドルート（e.g., `/orders/:id`）のマッチングにパターンベースマッチング（Option B）を採用
+- Status: Adopted
+- Rationale: exact match のみでは動的ルートの Browser QA エビデンスチェーンが断裂する。canonical normalization はオーバーエンジニアリング
+- Alternatives: (A) Exact match only — 動的ルート未対応 / (B) Pattern-based matching (adopted) / (C) Canonical normalization — 過度な複雑化
+- Source: OQ-0004, discussion-20260414195449523
+- Policy DR: DR-0222
+
+## DR-0012-0028: 4-Layer full-harness Reject (v1.7.15 rev4)
+
+- Decision: cli + full-harness を CLI / derivePrototypingObligations / runFullHarness / バリデータの 4 層で拒否
+- Status: Adopted
+- Rationale: rev2 の 3 層防御を 4 層に拡張し、バリデータ層でも早期拒否を実現
+- Source: discussion-20260414195449523, WS-1
+- Policy DR: DR-0217
+
+## DR-0012-0029: Screen Contract-Based Browser QA Targets (v1.7.15 rev4)
+
+- Decision: Browser QA ターゲットを `"/primary"` 固定値から `40_screen_contracts.md` に基づく動的導出に変更
+- Status: Adopted
+- Rationale: 固定値では複数画面の測定漏れが発生
+- Source: discussion-20260414195449523, WS-2
+- Policy DR: DR-0218
+
+## DR-0012-0030: Browser QA Evidence Chain Hard-Fail (v1.7.15 rev4)
+
+- Decision: `evidenceRefs.browserQa` 空時はハードフェイル（サイレントパス禁止）
+- Status: Adopted
+- Rationale: fail-closed ポリシー一環。エビデンスチェーン中断は監査追跡不能
+- Source: discussion-20260414195449523, WS-3
+- Policy DR: DR-0219
+
+## DR-0012-0031: Canonical Route Semantics (v1.7.15 rev4)
+
+- Decision: runtimeGate / specCoverage で canonical path 比較を採用（URL 直接使用禁止）
+- Status: Adopted
+- Rationale: クエリパラメータ等を含む URL の誤判定バグ排除
+- Source: discussion-20260414195449523, WS-4
+- Policy DR: DR-0220
+
+## DR-0012-0032: L2 Structured Parse Priority (v1.7.15 rev4)
+
+- Decision: L2 エビデンスで構造化パース優先、ヒューリスティック縮小
+- Status: Adopted
+- Rationale: ヒューリスティック依存はエビデンス精度低下
+- Source: discussion-20260414195449523, WS-5
+- Policy DR: DR-0221

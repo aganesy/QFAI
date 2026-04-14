@@ -534,3 +534,73 @@
 
 - 正常系 fixture から削除: l1/l2 直渡し / packVersion:"1.0.0" / single-iteration converged / actionsWired=0 / flattened DOM labels
 - 異常系 fixture に追加: missing pack / missing reviewer / missing discussion|trend|screenContract evidence / insufficient ui observation / per-spec coverage build failure
+
+## BR-0012-0068: UI-bearing Surface Classification (v1.7.15 rev4)
+
+- AC-Refs: AC-0012-0038-05
+- UI-bearing surface は `web`, `mobile`, `desktop`, `mixed` に限定される
+- `cli` は非ビジュアルとして分類され、full-harness mode との組み合わせは無効
+
+## BR-0012-0069: 4-Layer full-harness Reject Guard (v1.7.15 rev4)
+
+- AC-Refs: AC-0012-0038-01, AC-0012-0038-02, AC-0012-0038-03, AC-0012-0038-04
+- CLI / derivePrototypingObligations / runFullHarness / バリデータの 4 層すべてで cli + full-harness を拒否
+- 1 層でもバイパスされた場合、次の層で拒否が発動する（多層防御）
+
+## BR-0012-0070: Screen Contract Target Derivation (v1.7.15 rev4)
+
+- AC-Refs: AC-0012-0039-02, AC-0012-0039-03
+- Browser QA ターゲットは `40_screen_contracts.md` のスクリーン定義から動的に導出する
+- `"/primary"` ハードコードの使用を禁止する
+
+## BR-0012-0071: Screen Count Consistency (v1.7.15 rev4)
+
+- AC-Refs: AC-0012-0039-05, AC-0012-0039-06
+- 画面契約のスクリーン数とターゲット数は必ず一致する
+- 各スクリーンに対して個別のエビデンスレコードを生成する
+
+## BR-0012-0072: Browser QA Evidence Chain Non-Empty (v1.7.15 rev4)
+
+- AC-Refs: AC-0012-0040-03, AC-0012-0040-04
+- `iterations[].evidenceRefs.browserQa` は非空であることが必須
+- 空の場合はハードフェイルとし、サイレントパスを禁止する
+
+## BR-0012-0073: Evidence Refs Summary Inclusion (v1.7.15 rev4)
+
+- AC-Refs: AC-0012-0040-01, AC-0012-0040-02
+- フェーズ参照とファインディング参照はサマリーレベルに必ず含める
+
+## BR-0012-0074: Canonical Path Comparison (v1.7.15 rev4)
+
+- AC-Refs: AC-0012-0041-01, AC-0012-0041-02, AC-0012-0041-03
+- ルート比較は canonical path で行い、URL をルートとして扱わない
+- 末尾スラッシュの有無に関わらず一貫した結果を返す
+
+## BR-0012-0075: Missing Observation Reporting (v1.7.15 rev4)
+
+- AC-Refs: AC-0012-0041-04
+- 画面契約に存在するがオブザベーションにないルートは `missing_observation` としてレポートする
+- レポートには対象ルート名を具体的に列挙する
+
+## BR-0012-0076: Structured Parse Priority (v1.7.15 rev4)
+
+- AC-Refs: AC-0012-0042-01, AC-0012-0042-02, AC-0012-0042-03
+- L2 エビデンス収集では構造化パースを優先する
+- ヒューリスティックフォールバックは構造化ソースが不在の場合のみ許可
+
+## BR-0012-0077: Stale Semantics Cleanup Rules (v1.7.15 rev4)
+
+- AC-Refs: AC-0012-0043-01, AC-0012-0043-02, AC-0012-0043-03, AC-0012-0043-04
+- 陳腐化 remediation は除去する
+- `skip` → `reject` 変換、URL-as-route → canonical route 変換、`"/primary"` 除去を実施
+
+## BR-0012-0078: Docs Reality Sync (v1.7.15 rev4)
+
+- AC-Refs: AC-0012-0043-05, AC-0012-0043-06
+- README / SKILL.md / evidence README は runtime / validator / tests の実体と一致させる
+
+## BR-0012-0079: Parameterized Route Pattern Matching (v1.7.15 rev4)
+
+- AC-Refs: AC-0012-0041-01
+- パラメタライズドルート（e.g., `/orders/:id`）はパターンベースマッチングで Browser QA エビデンスチェーンと照合する
+- OQ-0004 resolution: DR-0012-0027 / DR-0222

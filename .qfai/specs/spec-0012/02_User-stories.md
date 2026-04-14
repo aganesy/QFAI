@@ -151,3 +151,63 @@ As a developer, I want reviewerLogs to store all 8 evidence categories per itera
 ## US-0012-0037: Tests Fixture Rev2 Alignment (v1.7.15 rev2)
 
 As a developer, I want test fixtures to remove l1/l2 direct pass, packVersion:"1.0.0", single-iteration converged, actionsWired=0, and flattened DOM labels from normal paths, and add missing evidence/insufficient observation/per-spec failure to error paths, so that the test suite validates the rev2 runtime contract.
+
+## US-0012-0038: full-harness mode/surface 契約厳格化 (v1.7.15 rev4)
+
+**As a** QFAI パッケージ利用者（CI パイプライン運用者）
+**I want** `cli` surface と `full-harness` mode の組み合わせがランタイム・CLI・バリデータすべてで即座に拒否される
+**So that** UI を持たない surface で full-harness が誤実行され、無意味なブラウザ QA サイクルが走るリスクを排除できる
+
+- REQ-Refs: REQ-0001〜REQ-0005
+- WS: WS-1
+- Discussion: discussion-20260414195449523
+
+## US-0012-0039: render/Browser QA ターゲット画面契約準拠 (v1.7.15 rev4)
+
+**As a** QFAI パッケージ利用者
+**I want** Browser QA のターゲットが `"/primary"` 固定値ではなく `40_screen_contracts.md` から導出される
+**So that** 画面契約に定義された全画面に対して正確にフィデリティ測定が行われ、測定漏れを防止できる
+
+- REQ-Refs: REQ-0006〜REQ-0011
+- WS: WS-2
+- Discussion: discussion-20260414195449523
+
+## US-0012-0040: Browser QA エビデンスチェーン完全性 (v1.7.15 rev4)
+
+**As a** QFAI パッケージ利用者
+**I want** Browser QA のフェーズ参照・ファインディング参照がイテレーション記録に確実に格納される
+**So that** エビデンスチェーンが中断せず、監査時に全フェーズ・ファインディングの追跡が可能になる
+
+- REQ-Refs: REQ-0012〜REQ-0016
+- WS: WS-3
+- Discussion: discussion-20260414195449523
+
+## US-0012-0041: runtimeGate/specCoverage 正規ルート意味論 (v1.7.15 rev4)
+
+**As a** QFAI パッケージ利用者
+**I want** `runtimeGate` と `specCoverage` が URL ではなく正規ルート（canonical route）で比較を行う
+**So that** クエリパラメータやフラグメントを含む URL が誤って別ルートと判定されるバグを排除できる
+
+- REQ-Refs: REQ-0017〜REQ-0021
+- WS: WS-4
+- Discussion: discussion-20260414195449523
+
+## US-0012-0042: L2 エビデンス構造化パース優先 (v1.7.15 rev4)
+
+**As a** QFAI パッケージ利用者
+**I want** L2 エビデンス収集が構造化セクションのパースを優先する
+**So that** ヒューリスティックフォールバックへの依存が最小化され、エビデンスの正確性と再現性が向上する
+
+- REQ-Refs: REQ-0022〜REQ-0027
+- WS: WS-5
+- Discussion: discussion-20260414195449523
+
+## US-0012-0043: validator/docs/tests 陳腐化セマンティクス整理 (v1.7.15 rev4)
+
+**As a** QFAI パッケージ開発者
+**I want** 陳腐化した remediation セマンティクス・URL-as-route テスト期待値・skip フラグが整理される
+**So that** テストスイートが現行仕様を正確に反映し、将来の開発者が誤った期待値に惑わされない
+
+- REQ-Refs: REQ-0028〜REQ-0033
+- WS: WS-6
+- Discussion: discussion-20260414195449523

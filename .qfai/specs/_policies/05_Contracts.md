@@ -140,6 +140,13 @@ QFAI は GUI を持たない CLI ツールである。`/qfai-prototyping` スキ
 - 主な変更対象: `runFullHarness()` request 契約、l2Evidence.ts 新設、CalibrationLoader strict 化、screen-level UiObservation、bundleWriter schema v2、validator 14 項目 error 昇格 — 全て内部モジュール。
 - したがって Contract Index の `0 items` は v1.7.15 でも意図的な none-rationale であり、discussion-20260414072809763 のスコープ境界に整合する。
 
+## v1.7.15 rev4 Contract Posture
+
+- Contracts-first review completed for v1.7.15 rev4 single-PR completion (`discussion-20260414195449523`).
+- v1.7.15 rev4 は 5 件の監査残留齟齬を是正する内部 runtime/validator/evidence/docs 変更であり、外部向け stable contract は新設しない。
+- 主な変更対象: mode.ts cli/full-harness reject、screenContracts.ts パーサー、uiObservation.ts screen-level 再構築、runtimeGateBuilder.ts canonical route、l2Evidence.ts structured parse、prototypingEvidence.ts validator — 全て内部モジュール。
+- したがって Contract Index の `0 items` は v1.7.15 rev4 でも意図的な none-rationale であり、discussion-20260414195449523 のスコープ境界に整合する。
+
 ## ER Diagram
 
 QFAI はデータベースを使用しないため、ER Diagram は省略する。

@@ -973,3 +973,206 @@
 | ---- | ----------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
 | 1    | Record iteration with axis score delta of 0.25 (exceeds maxDeltaPerAxisPerIteration=0.15) | Delta recorded                                                               |
 | 2    | Validate delta cap                                                                        | Re-evaluation required: delta 0.25 exceeds 0.15 cap; justification mandatory |
+
+## TC-0012-0092: derivePrototypingObligations Rejects cli + full-harness (v1.7.15 rev4)
+
+- EX-Ref: EX-0012-0082
+- AC-Refs: AC-0012-0038-01
+- Type: error
+- Verify `derivePrototypingObligations()` throws exception when called with `surface: cli` + `mode: full-harness`
+
+## TC-0012-0093: runFullHarness Rejects Non-Visual Surface (v1.7.15 rev4)
+
+- EX-Ref: EX-0012-0082
+- AC-Refs: AC-0012-0038-02
+- Type: error
+- Verify `runFullHarness()` rejects execution when surface is not UI-bearing
+
+## TC-0012-0094: CLI Rejects cli + full-harness (v1.7.15 rev4)
+
+- EX-Ref: EX-0012-0082
+- AC-Refs: AC-0012-0038-03
+- Type: error
+- Verify CLI exits with error when `surface: cli` + `mode: full-harness` is specified
+
+## TC-0012-0095: Validator Rejects cli + full-harness in prototyping.yaml (v1.7.15 rev4)
+
+- EX-Ref: EX-0012-0082
+- AC-Refs: AC-0012-0038-04
+- Type: error
+- Verify validator rejects `prototyping.yaml` with `surface: cli` + `allowed_modes: [full-harness]`
+
+## TC-0012-0096: web + full-harness Accepted (v1.7.15 rev4)
+
+- EX-Ref: EX-0012-0083
+- AC-Refs: AC-0012-0038-05
+- Type: normal
+- Verify `surface: web` + `mode: full-harness` is accepted by all 4 layers
+
+## TC-0012-0097: mixed + full-harness Accepted (v1.7.15 rev4)
+
+- EX-Ref: EX-0012-0083
+- AC-Refs: AC-0012-0038-05
+- Type: boundary
+- Verify `surface: mixed` + `mode: full-harness` is accepted (mixed includes UI)
+
+## TC-0012-0098: Screen Contract Target Generation (v1.7.15 rev4)
+
+- EX-Ref: EX-0012-0084
+- AC-Refs: AC-0012-0039-02, AC-0012-0039-05
+- Type: normal
+- Verify Browser QA generates targets from screen contracts with matching count
+
+## TC-0012-0099: "/primary" Hardcode Absent (v1.7.15 rev4)
+
+- EX-Ref: EX-0012-0084
+- AC-Refs: AC-0012-0039-01
+- Type: normal
+- Scan source code and verify zero occurrences of `"/primary"` as Browser QA target
+
+## TC-0012-0100: screenContracts.ts Parser Returns Screen List (v1.7.15 rev4)
+
+- EX-Ref: EX-0012-0084
+- AC-Refs: AC-0012-0039-03
+- Type: normal
+- Verify `screenContracts.ts` parses `40_screen_contracts.md` and returns correct screen list
+
+## TC-0012-0101: Per-Screen Evidence Records (v1.7.15 rev4)
+
+- EX-Ref: EX-0012-0084
+- AC-Refs: AC-0012-0039-06
+- Type: normal
+- Verify each screen has an individual evidence record
+
+## TC-0012-0102: Missing Screen Contract Error (v1.7.15 rev4)
+
+- EX-Ref: EX-0012-0085
+- AC-Refs: AC-0012-0039-02
+- Type: error
+- Verify clear error when `40_screen_contracts.md` does not exist
+
+## TC-0012-0103: browserQa evidenceRefs Populated (v1.7.15 rev4)
+
+- EX-Ref: EX-0012-0087
+- AC-Refs: AC-0012-0040-03
+- Type: normal
+- Verify `iterations[].evidenceRefs.browserQa` is populated with phase refs and finding refs
+
+## TC-0012-0104: Empty browserQa Hard Fail (v1.7.15 rev4)
+
+- EX-Ref: EX-0012-0086
+- AC-Refs: AC-0012-0040-04
+- Type: error
+- Verify hard fail when `iterations[].evidenceRefs.browserQa` is empty
+
+## TC-0012-0105: Phase and Finding Refs in Summary (v1.7.15 rev4)
+
+- EX-Ref: EX-0012-0087
+- AC-Refs: AC-0012-0040-01, AC-0012-0040-02
+- Type: normal
+- Verify summary includes both phase references and finding references
+
+## TC-0012-0106: specCoverage Canonical Path Comparison (v1.7.15 rev4)
+
+- EX-Ref: EX-0012-0088
+- AC-Refs: AC-0012-0041-01
+- Type: normal
+- Verify specCoverage uses canonical path for route comparison
+
+## TC-0012-0107: Trailing Slash Normalization (v1.7.15 rev4)
+
+- EX-Ref: EX-0012-0088
+- AC-Refs: AC-0012-0041-01
+- Type: boundary
+- Verify `/dashboard` and `/dashboard/` are treated as the same canonical path
+
+## TC-0012-0108: URL Rejected as Route (v1.7.15 rev4)
+
+- EX-Ref: EX-0012-0089
+- AC-Refs: AC-0012-0041-02
+- Type: error
+- Verify URL with protocol/host/query is rejected as route
+
+## TC-0012-0109: Missing Observation Report (v1.7.15 rev4)
+
+- EX-Ref: EX-0012-0090
+- AC-Refs: AC-0012-0041-04
+- Type: normal
+- Verify unobserved routes are reported as `missing_observation` with specific route names
+
+## TC-0012-0110: Canonical Route Shared Logic (v1.7.15 rev4)
+
+- EX-Ref: EX-0012-0088
+- AC-Refs: AC-0012-0041-03
+- Type: normal
+- Verify WS-2 and WS-4 share the same canonical route derivation logic
+
+## TC-0012-0111: L2 Structured Parse Used (v1.7.15 rev4)
+
+- EX-Ref: EX-0012-0091
+- AC-Refs: AC-0012-0042-02
+- Type: normal
+- Verify structured parse is used when all canonical artifacts are present
+
+## TC-0012-0112: L2 Heuristic Fallback Only When Needed (v1.7.15 rev4)
+
+- EX-Ref: EX-0012-0092
+- AC-Refs: AC-0012-0042-03
+- Type: boundary
+- Verify heuristic fallback only activates when structured source is absent, with warning log
+
+## TC-0012-0113: Canonical Artifacts Required (v1.7.15 rev4)
+
+- EX-Ref: EX-0012-0091
+- AC-Refs: AC-0012-0042-01
+- Type: error
+- Verify error when required canonical artifacts (20-23, 04_Sources, 40_screen_contracts) are missing
+
+## TC-0012-0114: Stale Remediation Removed (v1.7.15 rev4)
+
+- EX-Ref: EX-0012-0093
+- AC-Refs: AC-0012-0043-01
+- Type: normal
+- Verify `prototypingEvidence.ts` contains no stale remediation semantics
+
+## TC-0012-0115: skip→reject Conversion (v1.7.15 rev4)
+
+- EX-Ref: EX-0012-0093
+- AC-Refs: AC-0012-0043-02
+- Type: normal
+- Verify all test `skip` flags are converted to `reject`
+
+## TC-0012-0116: URL-as-route to Canonical Route (v1.7.15 rev4)
+
+- EX-Ref: EX-0012-0094
+- AC-Refs: AC-0012-0043-03
+- Type: normal
+- Verify test expectations use canonical routes instead of URLs
+
+## TC-0012-0117: "/primary" Absent from Tests (v1.7.15 rev4)
+
+- EX-Ref: EX-0012-0094
+- AC-Refs: AC-0012-0043-04
+- Type: normal
+- Verify zero `"/primary"` references in test files
+
+## TC-0012-0118: README Reality Sync (v1.7.15 rev4)
+
+- EX-Ref: EX-0012-0093, EX-0012-0096
+- AC-Refs: AC-0012-0043-05
+- Type: normal
+- Verify README reflects current runtime behavior
+
+## TC-0012-0119: SKILL.md and evidence README Reality Sync (v1.7.15 rev4)
+
+- EX-Ref: EX-0012-0093
+- AC-Refs: AC-0012-0043-06
+- Type: normal
+- Verify SKILL.md and evidence/README.md reflect current implementation
+
+## TC-0012-0120: Parameterized Route Pattern Match (v1.7.15 rev4)
+
+- EX-Ref: EX-0012-0095
+- AC-Refs: AC-0012-0041-01
+- Type: boundary
+- Verify `/orders/:id` pattern matches observation `/orders/123`

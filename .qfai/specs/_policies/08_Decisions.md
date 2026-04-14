@@ -1286,3 +1286,51 @@ discussion-20260329195516830（v1.7.6 Audit Remediation）、
 
 - Decision: declared DB objects ありで観測なしの場合は full-harness failure。「常に missing 扱いで続行」を禁止
 - Status: Adopted
+
+### DR-0217: cli/full-harness reject at 4 layers (v1.7.15 rev4)
+
+- Decision: `cli` + `full-harness` の組み合わせを CLI / derivePrototypingObligations / runFullHarness / バリデータの 4 層で拒否する
+- Status: Adopted
+- Rationale: non-UI surface で full-harness を実行しても無意味な Browser QA サイクルが走るだけ。3 層（rev2 DR-0210）から 4 層に拡張
+- Alternatives: (A) CLI 層のみで拒否 — 不十分、バイパス可能 / (B) 4 層防御 (adopted)
+- Source: discussion-20260414195449523, WS-1
+
+### DR-0218: screen contract-based Browser QA targets (v1.7.15 rev4)
+
+- Decision: Browser QA ターゲットを `"/primary"` 固定値から `40_screen_contracts.md` のスクリーン定義に基づく動的導出に変更
+- Status: Adopted
+- Rationale: 固定値では複数画面の測定漏れが発生し、監査で齟齬として検出された
+- Alternatives: (A) "/primary" 維持 — 測定漏れ / (B) screen contract 導出 (adopted)
+- Source: discussion-20260414195449523, WS-2
+
+### DR-0219: Browser QA evidence chain hard-fail on empty (v1.7.15 rev4)
+
+- Decision: `iterations[].evidenceRefs.browserQa` が空の場合はハードフェイルとし、サイレントパスを禁止
+- Status: Adopted
+- Rationale: エビデンスチェーン中断は監査追跡不能を意味する。fail-closed ポリシーの一環
+- Alternatives: (A) 空でも続行 — 監査チェーン断裂 / (B) ハードフェイル (adopted)
+- Source: discussion-20260414195449523, WS-3
+
+### DR-0220: canonical route semantics for runtimeGate/specCoverage (v1.7.15 rev4)
+
+- Decision: `runtimeGateBuilder.ts` / `specCoverage.ts` で URL ではなく canonical path（正規パス）で比較する
+- Status: Adopted
+- Rationale: クエリパラメータやフラグメントを含む URL が誤って別ルートと判定されるバグを排除
+- Alternatives: (A) URL そのまま使用 — 誤判定 / (B) canonical path 比較 (adopted)
+- Source: discussion-20260414195449523, WS-4
+
+### DR-0221: L2 structured parse priority over heuristic (v1.7.15 rev4)
+
+- Decision: L2 エビデンス収集で構造化パース（20-23 系、04_Sources.md、40_screen_contracts.md）を優先し、ヒューリスティックフォールバックは構造化ソース不在時のみ許可
+- Status: Adopted
+- Rationale: ヒューリスティック依存はエビデンス精度と再現性を低下させる
+- Alternatives: (A) ヒューリスティック優先 — 精度低下 / (B) 構造化パース優先 (adopted)
+- Source: discussion-20260414195449523, WS-5
+
+### DR-0222: parameterized route pattern-based matching (v1.7.15 rev4, OQ-0004 resolution)
+
+- Decision: Browser QA のパラメタライズドルート（e.g., `/orders/:id`）のマッチングにパターンベースマッチング（Option B）を採用
+- Status: Adopted
+- Rationale: exact match のみでは動的ルートの Browser QA エビデンスチェーンが断裂する。canonical normalization はオーバーエンジニアリング
+- Alternatives: (A) Exact match only — 動的ルート未対応 / (B) Pattern-based matching (adopted) / (C) Canonical normalization — 過度な複雑化
+- Source: discussion-20260414195449523, OQ-0004
