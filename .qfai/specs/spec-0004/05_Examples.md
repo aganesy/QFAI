@@ -145,141 +145,141 @@
 
 - BR-Ref: BR-0004-0027
 
-| Input | Expected |
-|---|---|
+| Input                                                                             | Expected                    |
+| --------------------------------------------------------------------------------- | --------------------------- |
 | evidence with terminationReason=max-iterations, iterationCount=2, maxIterations=5 | QFAI-PROT-292 error emitted |
-| evidence with terminationReason=max-iterations, iterationCount=5, maxIterations=5 | No PROT-292 error |
+| evidence with terminationReason=max-iterations, iterationCount=5, maxIterations=5 | No PROT-292 error           |
 
 ## EX-0004-0029: Single-iteration converged reject (v1.7.15)
 
 - BR-Ref: BR-0004-0028
 
-| Input | Expected |
-|---|---|
+| Input                                                       | Expected                             |
+| ----------------------------------------------------------- | ------------------------------------ |
 | evidence with terminationReason=converged, iterationCount=1 | QFAI-PROT-290 + QFAI-PROT-308 errors |
-| evidence with terminationReason=converged, iterationCount=3 | No PROT-290/308 errors |
+| evidence with terminationReason=converged, iterationCount=3 | No PROT-290/308 errors               |
 
 ## EX-0004-0030: weightedTotal mismatch (v1.7.15)
 
 - BR-Ref: BR-0004-0029
 
-| Input | Expected |
-|---|---|
+| Input                                                        | Expected                           |
+| ------------------------------------------------------------ | ---------------------------------- |
 | iteration with l1.total=0.7, l2.total=0.8, weightedTotal=0.8 | QFAI-PROT-296 error (expected 0.7) |
-| iteration with l1.total=0.7, l2.total=0.8, weightedTotal=0.7 | No PROT-296 error |
+| iteration with l1.total=0.7, l2.total=0.8, weightedTotal=0.7 | No PROT-296 error                  |
 
 ## EX-0004-0031: Reviewer placeholder reject (v1.7.15)
 
 - BR-Ref: BR-0004-0030
 
-| Input | Expected |
-|---|---|
-| reviewerSignoff.reviewerId="qfai" | QFAI-PROT-295 error |
-| iteration.reviewerId="default" | QFAI-PROT-309 error |
+| Input                                          | Expected               |
+| ---------------------------------------------- | ---------------------- |
+| reviewerSignoff.reviewerId="qfai"              | QFAI-PROT-295 error    |
+| iteration.reviewerId="default"                 | QFAI-PROT-309 error    |
 | reviewerSignoff.reviewerId="alice@example.com" | No PROT-295/309 errors |
 
 ## EX-0004-0032: Zero-seeded specCoverage (v1.7.15)
 
 - BR-Ref: BR-0004-0031
 
-| Input | Expected |
-|---|---|
+| Input                                                               | Expected            |
+| ------------------------------------------------------------------- | ------------------- |
 | all specs: declared.uiRoutes=0, checked.uiOk=0, missing.uiRoutes=[] | QFAI-PROT-305 error |
-| specs with declared.uiRoutes=3, checked.uiOk=2 | No PROT-305 error |
+| specs with declared.uiRoutes=3, checked.uiOk=2                      | No PROT-305 error   |
 
 ## EX-0004-0033: Synthetic mockPaths pass (v1.7.15)
 
 - BR-Ref: BR-0004-0032
 
-| Input | Expected |
-|---|---|
-| uiFidelity screen with mockPaths[].status="pass" | QFAI-PROT-306 error |
-| uiFidelity screen with mockPaths[].status="fail" only | No PROT-306 error |
+| Input                                                 | Expected            |
+| ----------------------------------------------------- | ------------------- |
+| uiFidelity screen with mockPaths[].status="pass"      | QFAI-PROT-306 error |
+| uiFidelity screen with mockPaths[].status="fail" only | No PROT-306 error   |
 
 ## EX-0004-0034: CalibrationRef empty (v1.7.15)
 
 - BR-Ref: BR-0004-0033
 
-| Input | Expected |
-|---|---|
-| calibrationRef.configPath="" | QFAI-PROT-301 error |
-| calibrationRef.configPath="qfai.config.yaml", packPath="packs/default" | No PROT-301 error |
+| Input                                                                  | Expected            |
+| ---------------------------------------------------------------------- | ------------------- |
+| calibrationRef.configPath=""                                           | QFAI-PROT-301 error |
+| calibrationRef.configPath="qfai.config.yaml", packPath="packs/default" | No PROT-301 error   |
 
 ## EX-0004-0035: reviewerLogs count mismatch (v1.7.15)
 
 - BR-Ref: BR-0004-0034
 
-| Input | Expected |
-|---|---|
+| Input                                   | Expected            |
+| --------------------------------------- | ------------------- |
 | iterationCount=3, reviewerLogs.length=2 | QFAI-PROT-304 error |
-| iterationCount=3, reviewerLogs.length=3 | No PROT-304 error |
+| iterationCount=3, reviewerLogs.length=3 | No PROT-304 error   |
 
 ## EX-0004-0036: iterations/scoringTrace count mismatch (v1.7.15)
 
 - BR-Ref: BR-0004-0035
 
-| Input | Expected |
-|---|---|
+| Input                                                        | Expected            |
+| ------------------------------------------------------------ | ------------------- |
 | iterationCount=3, iterations.length=2, scoringTrace.length=3 | QFAI-PROT-291 error |
-| iterationCount=3, iterations.length=3, scoringTrace.length=3 | No PROT-291 error |
+| iterationCount=3, iterations.length=3, scoringTrace.length=3 | No PROT-291 error   |
 
 ## EX-0004-0037: commitSha missing (v1.7.15)
 
 - BR-Ref: BR-0004-0036
 
-| Input | Expected |
-|---|---|
-| iteration.commitSha="" | QFAI-PROT-297 error |
-| iteration.commitSha="abc123def" | No PROT-297 error |
+| Input                           | Expected            |
+| ------------------------------- | ------------------- |
+| iteration.commitSha=""          | QFAI-PROT-297 error |
+| iteration.commitSha="abc123def" | No PROT-297 error   |
 
 ## EX-0004-0038: limitations missing (v1.7.15)
 
 - BR-Ref: BR-0004-0037
 
-| Input | Expected |
-|---|---|
+| Input                             | Expected            |
+| --------------------------------- | ------------------- |
 | fullHarness.limitations=undefined | QFAI-PROT-298 error |
-| fullHarness.limitations=[] | No PROT-298 error |
+| fullHarness.limitations=[]        | No PROT-298 error   |
 
 ## EX-0004-0039: Additional integrity checks (v1.7.15)
 
 - BR-Ref: BR-0004-0038
 
-| Input | Expected |
-|---|---|
-| status=completed, terminationReason=undefined | QFAI-PROT-299 error |
-| terminationReason=plateau, iterationCount=1, plateauLookback=3 | QFAI-PROT-300 error |
-| 3 iterations all with commitSha="abc123" | QFAI-PROT-302 warning |
-| reviewerLog.summary="ok" (3 chars) | QFAI-PROT-303 warning |
+| Input                                                          | Expected              |
+| -------------------------------------------------------------- | --------------------- |
+| status=completed, terminationReason=undefined                  | QFAI-PROT-299 error   |
+| terminationReason=plateau, iterationCount=1, plateauLookback=3 | QFAI-PROT-300 error   |
+| 3 iterations all with commitSha="abc123"                       | QFAI-PROT-302 warning |
+| reviewerLog.summary="ok" (3 chars)                             | QFAI-PROT-303 warning |
 
 ## EX-0004-0040: Valid evidence passes all v1.7.15 rules
 
 - BR-Ref: BR-0004-0027..BR-0004-0038
 
-| Input | Expected |
-|---|---|
+| Input                                                                                                                                                                                                        | Expected                  |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------- |
 | Well-formed evidence: real reviewer, iterationCount=3 for converged, correct min(l1,l2), non-zero specCoverage, no synthetic mockPaths, matching counts, valid calibrationRef, present commitSha/limitations | Zero PROT-290..309 errors |
 
 ## EX-0004-0041: Rev2 evidence category validator cases (v1.7.15 rev2)
 
 - BR-Ref: BR-0004-0039
 
-| Input | Expected |
-|---|---|
-| discussion.evidenceRefs = [] | Error emitted |
-| screenContract.evidenceRefs = [] | Error emitted |
-| trend.evidenceRefs = [] | Error emitted |
-| declared DB = 3, observed = 0 | Error emitted |
+| Input                                                 | Expected      |
+| ----------------------------------------------------- | ------------- |
+| discussion.evidenceRefs = []                          | Error emitted |
+| screenContract.evidenceRefs = []                      | Error emitted |
+| trend.evidenceRefs = []                               | Error emitted |
+| declared DB = 3, observed = 0                         | Error emitted |
 | uiFidelity.status = "completed", no screen-level data | Error emitted |
-| iteration[0].evidenceRefs missing "discussion" key | Error emitted |
-| evidence contains request.l1 field (old schema) | Error emitted |
+| iteration[0].evidenceRefs missing "discussion" key    | Error emitted |
+| evidence contains request.l1 field (old schema)       | Error emitted |
 
 ## EX-0004-0042: Rev2 validator happy path (v1.7.15 rev2)
 
 - BR-Ref: BR-0004-0039, BR-0004-0040
 
-| Input | Expected |
-|---|---|
+| Input                                                                                                            | Expected                    |
+| ---------------------------------------------------------------------------------------------------------------- | --------------------------- |
 | All 8 category evidenceRefs non-empty, screen-level uiFidelity, no old schema artifacts, rev2-compliant fixtures | Zero errors from rev2 rules |
 
 ## EX-0004-0043: Rev2 fixture validation (v1.7.15 rev2)

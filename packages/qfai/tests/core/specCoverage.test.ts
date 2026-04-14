@@ -135,8 +135,6 @@ describe("specCoverage", () => {
     expect(declaredRoutes).toContain("/home");
     expect(declaredRoutes).not.toContain("/notes-only");
     expect(declaredRoutes).not.toContain("/appendix-only");
-    expect(coverage[0]?.coverageRefs[0]?.declaredRef).toBe(
-      ".qfai/specs/spec-0001/01_Spec.md#L2",
-    );
+    expect(coverage[0]?.coverageRefs[0]?.declaredRef).toBe(".qfai/specs/spec-0001/01_Spec.md#L2");
   });
 });

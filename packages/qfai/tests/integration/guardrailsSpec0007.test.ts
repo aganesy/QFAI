@@ -31,14 +31,7 @@ const GUARDRAILS_CLI = path.resolve(
   "guardrails.ts",
 );
 
-const GUARDRAILS_CORE = path.resolve(
-  __dirname,
-  "..",
-  "..",
-  "src",
-  "core",
-  "decisionGuardrails.ts",
-);
+const GUARDRAILS_CORE = path.resolve(__dirname, "..", "..", "src", "core", "decisionGuardrails.ts");
 
 // TC-0007-0001: Guardrail detection source coverage
 describe("TC-0007-0001: Guardrail detection source coverage", () => {

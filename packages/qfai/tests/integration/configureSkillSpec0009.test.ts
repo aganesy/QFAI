@@ -33,14 +33,7 @@ const SKILL_PATH = path.resolve(
   "SKILL.md",
 );
 
-const CONFIG_PATH = path.resolve(
-  __dirname,
-  "..",
-  "..",
-  "src",
-  "core",
-  "config.ts",
-);
+const CONFIG_PATH = path.resolve(__dirname, "..", "..", "src", "core", "config.ts");
 
 // TC-0009-0001: Repository Analysis Identifies Frameworks
 describe("TC-0009-0001: Repository Analysis Identifies Frameworks", () => {

@@ -21,24 +21,9 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 
-const REPORT_MODULE = path.resolve(
-  __dirname,
-  "..",
-  "..",
-  "src",
-  "core",
-  "report.ts",
-);
+const REPORT_MODULE = path.resolve(__dirname, "..", "..", "src", "core", "report.ts");
 
-const REPORT_CLI = path.resolve(
-  __dirname,
-  "..",
-  "..",
-  "src",
-  "cli",
-  "commands",
-  "report.ts",
-);
+const REPORT_CLI = path.resolve(__dirname, "..", "..", "src", "cli", "commands", "report.ts");
 
 const OBSERVABILITY_PATH = path.resolve(
   __dirname,

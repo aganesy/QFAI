@@ -25,9 +25,7 @@ import { isCanonicalScreenContractRef } from "../prototyping/refSemantics.js";
 
 function assertCategoryRefs(category: string, refs: readonly string[]): void {
   if (!Array.isArray(refs) || refs.length === 0) {
-    throw new Error(
-      `Full-harness measurement requires non-empty ${category} evidence refs.`,
-    );
+    throw new Error(`Full-harness measurement requires non-empty ${category} evidence refs.`);
   }
   for (const ref of refs) {
     if (typeof ref !== "string" || ref.trim().length === 0) {
@@ -70,15 +68,11 @@ export async function runMeasurement(input: MeasurementInput): Promise<Measureme
 
   const l1Errors = validatePanelScore(input.l1);
   if (l1Errors.length > 0) {
-    throw new Error(
-      `Full-harness measurement rejected L1 panel score: ${l1Errors.join("; ")}`,
-    );
+    throw new Error(`Full-harness measurement rejected L1 panel score: ${l1Errors.join("; ")}`);
   }
   const l2Errors = validatePanelScore(input.l2);
   if (l2Errors.length > 0) {
-    throw new Error(
-      `Full-harness measurement rejected L2 panel score: ${l2Errors.join("; ")}`,
-    );
+    throw new Error(`Full-harness measurement rejected L2 panel score: ${l2Errors.join("; ")}`);
   }
 
   const reviewer = validateReviewer(input.reviewer);

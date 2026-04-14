@@ -187,10 +187,10 @@
 
 - BR-Ref: BR-0012-0041, BR-0012-0042
 
-| Input                                                                  | Expected                                                  |
-| ---------------------------------------------------------------------- | --------------------------------------------------------- |
-| Valid render coverage + browser QA + screen contracts + spec coverage   | L1.total > 0, L2.total > 0, both derived from evidence   |
-| Missing render coverage input                                          | MeasurementError thrown (no silent fallback to l1.total=0)|
+| Input                                                                 | Expected                                                   |
+| --------------------------------------------------------------------- | ---------------------------------------------------------- |
+| Valid render coverage + browser QA + screen contracts + spec coverage | L1.total > 0, L2.total > 0, both derived from evidence     |
+| Missing render coverage input                                         | MeasurementError thrown (no silent fallback to l1.total=0) |
 
 ## EX-0012-0042: weightedTotal = min(L1, L2) (v1.7.15)
 
@@ -216,11 +216,11 @@
 
 - BR-Ref: BR-0012-0045, BR-0012-0046
 
-| iterationCount | Condition                                             | Expected terminationReason |
-| -------------- | ----------------------------------------------------- | -------------------------- |
-| 5              | score delta < plateauDelta for plateauLookback iters  | plateau                    |
-| 15             | iterationCount === maxIterations                      | max-iterations             |
-| 10             | iterationCount < maxIterations, not converged         | null (continue)            |
+| iterationCount | Condition                                            | Expected terminationReason |
+| -------------- | ---------------------------------------------------- | -------------------------- |
+| 5              | score delta < plateauDelta for plateauLookback iters | plateau                    |
+| 15             | iterationCount === maxIterations                     | max-iterations             |
+| 10             | iterationCount < maxIterations, not converged        | null (continue)            |
 
 ## EX-0012-0045: reviewerLogs Append-Only (v1.7.15)
 
@@ -235,15 +235,15 @@
 
 - BR-Ref: BR-0012-0048
 
-| reviewerId input | Expected result                          |
-| ---------------- | ---------------------------------------- |
-| "qfai"           | CLI/runtime error: placeholder reviewer  |
-| "default"        | CLI/runtime error: placeholder reviewer  |
-| "auto"           | CLI/runtime error: placeholder reviewer  |
-| "system"         | CLI/runtime error: placeholder reviewer  |
-| "unknown"        | CLI/runtime error: placeholder reviewer  |
-| ""               | CLI/runtime error: reviewer required     |
-| "alice"          | Accepted                                 |
+| reviewerId input | Expected result                         |
+| ---------------- | --------------------------------------- |
+| "qfai"           | CLI/runtime error: placeholder reviewer |
+| "default"        | CLI/runtime error: placeholder reviewer |
+| "auto"           | CLI/runtime error: placeholder reviewer |
+| "system"         | CLI/runtime error: placeholder reviewer |
+| "unknown"        | CLI/runtime error: placeholder reviewer |
+| ""               | CLI/runtime error: reviewer required    |
+| "alice"          | Accepted                                |
 
 ## EX-0012-0047: commitSha Mandatory (v1.7.15)
 
@@ -257,20 +257,20 @@
 
 - BR-Ref: BR-0012-0050
 
-| specCoverage output                                               | Expected   |
-| ----------------------------------------------------------------- | ---------- |
-| {uiRoutes: {declared:5, observed:3, ratio:0.6}, ...}             | Accepted   |
-| {uiRoutes: {declared:0, observed:0, ratio:0}, apiEndpoints: ...0}| Rejected   |
+| specCoverage output                                               | Expected |
+| ----------------------------------------------------------------- | -------- |
+| {uiRoutes: {declared:5, observed:3, ratio:0.6}, ...}              | Accepted |
+| {uiRoutes: {declared:0, observed:0, ratio:0}, apiEndpoints: ...0} | Rejected |
 
 ## EX-0012-0049: uiFidelity Synthetic mockPaths Rejection (v1.7.15)
 
 - BR-Ref: BR-0012-0051
 
-| mockPaths entry                                        | Expected                        |
-| ------------------------------------------------------ | ------------------------------- |
-| {path: "/login", status: "pass"} with browserQa backup | Accepted                        |
-| {path: "/login", status: "pass"} auto-generated        | Rejected (synthetic)            |
-| No browserQa findings                                  | mockPaths is empty              |
+| mockPaths entry                                        | Expected             |
+| ------------------------------------------------------ | -------------------- |
+| {path: "/login", status: "pass"} with browserQa backup | Accepted             |
+| {path: "/login", status: "pass"} auto-generated        | Rejected (synthetic) |
+| No browserQa findings                                  | mockPaths is empty   |
 
 ## EX-0012-0050: CalibrationLoader Fail-Fast (v1.7.15)
 
@@ -278,10 +278,10 @@
 
 | Calibration pack state      | Expected                                     |
 | --------------------------- | -------------------------------------------- |
-| Valid pack at expected path  | CalibrationPack loaded, execution proceeds   |
-| Pack file missing            | Runtime error: calibration pack not found     |
-| Pack file unreadable         | Runtime error: calibration pack read failure  |
-| Pack schema invalid          | Runtime error: calibration schema mismatch    |
+| Valid pack at expected path | CalibrationPack loaded, execution proceeds   |
+| Pack file missing           | Runtime error: calibration pack not found    |
+| Pack file unreadable        | Runtime error: calibration pack read failure |
+| Pack schema invalid         | Runtime error: calibration schema mismatch   |
 
 ## EX-0012-0051: packVersion from Metadata (v1.7.15)
 
@@ -304,15 +304,15 @@
 
 - BR-Ref: BR-0012-0056
 
-| Missing evidence     | Expected                                            |
-| -------------------- | --------------------------------------------------- |
-| Calibration pack     | Runtime error before measurement phase              |
-| Reviewer identity    | Runtime error before measurement phase              |
-| Commit SHA           | Runtime error before measurement phase              |
-| Render evidence      | Runtime error before measurement phase              |
-| Browser QA evidence  | Runtime error before measurement phase              |
-| UI observation input | Runtime error before measurement phase              |
-| Spec coverage input  | Runtime error before measurement phase              |
+| Missing evidence     | Expected                               |
+| -------------------- | -------------------------------------- |
+| Calibration pack     | Runtime error before measurement phase |
+| Reviewer identity    | Runtime error before measurement phase |
+| Commit SHA           | Runtime error before measurement phase |
+| Render evidence      | Runtime error before measurement phase |
+| Browser QA evidence  | Runtime error before measurement phase |
+| UI observation input | Runtime error before measurement phase |
+| Spec coverage input  | Runtime error before measurement phase |
 
 ## EX-0012-0054: extractHtmlLabelsFromString Replaced (v1.7.15)
 
@@ -350,18 +350,18 @@
 
 - BR-Ref: BR-0012-0059
 
-| Input condition | Expected |
-|---|---|
-| renderEvidence.totalScreens === 0 | throw |
-| renderEvidence.evidenceRefs.length === 0 | throw |
-| browserQa.executed === false | throw |
-| browserQa.evidenceRefs.length === 0 | throw |
-| specCoverage.evidenceRefs.length === 0 | throw |
-| uiObservation.htmlCaptureRefs.length === 0 | throw |
-| discussionAxes.evidenceRefs.length === 0 | throw |
-| screenContract.evidenceRefs.length === 0 | throw |
-| trendAlignment.evidenceRefs.length === 0 | throw |
-| screenContract.totalContracts > 0 && fidelityScore === 0 | throw |
+| Input condition                                          | Expected |
+| -------------------------------------------------------- | -------- |
+| renderEvidence.totalScreens === 0                        | throw    |
+| renderEvidence.evidenceRefs.length === 0                 | throw    |
+| browserQa.executed === false                             | throw    |
+| browserQa.evidenceRefs.length === 0                      | throw    |
+| specCoverage.evidenceRefs.length === 0                   | throw    |
+| uiObservation.htmlCaptureRefs.length === 0               | throw    |
+| discussionAxes.evidenceRefs.length === 0                 | throw    |
+| screenContract.evidenceRefs.length === 0                 | throw    |
+| trendAlignment.evidenceRefs.length === 0                 | throw    |
+| screenContract.totalContracts > 0 && fidelityScore === 0 | throw    |
 
 ## EX-0012-0069: panelScore Double Defense (v1.7.15 rev2)
 
@@ -395,15 +395,15 @@
 
 - BR-Ref: BR-0012-0062
 
-| Missing Item | Expected Behavior |
-|---|---|
-| Pack file not found | throw "calibration pack not found" |
-| YAML parse error | throw "invalid YAML" |
-| version field missing | throw "version required" |
-| thresholds.accept missing | throw "accept threshold required" |
-| maxIterations missing | throw "maxIterations required" |
-| plateauDelta missing | throw "plateauDelta required" |
-| plateauLookback missing | throw "plateauLookback required" |
+| Missing Item              | Expected Behavior                  |
+| ------------------------- | ---------------------------------- |
+| Pack file not found       | throw "calibration pack not found" |
+| YAML parse error          | throw "invalid YAML"               |
+| version field missing     | throw "version required"           |
+| thresholds.accept missing | throw "accept threshold required"  |
+| maxIterations missing     | throw "maxIterations required"     |
+| plateauDelta missing      | throw "plateauDelta required"      |
+| plateauLookback missing   | throw "plateauLookback required"   |
 
 ## EX-0012-0060: Termination Guard (v1.7.15 rev2)
 

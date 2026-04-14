@@ -72,11 +72,11 @@ All functionality is already implemented. This spec documents existing behavior.
 
 ### File Touchpoints
 
-| File | Changes |
-|---|---|
-| `packages/qfai/src/validators/uix/prototypingEvidence.ts` | 12 new rule functions (PROT-295..306, PROT-308..309); severity upgrade for PROT-290..292 from warning to error |
-| `packages/qfai/src/cli/commands/validate.ts` | Add PROT-295..309 descriptions to issue code description map |
-| `packages/qfai/tests/unit/validators/prototypingEvidence.test.ts` | 24+ new test cases (positive + negative for each rule) |
+| File                                                              | Changes                                                                                                        |
+| ----------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| `packages/qfai/src/validators/uix/prototypingEvidence.ts`         | 12 new rule functions (PROT-295..306, PROT-308..309); severity upgrade for PROT-290..292 from warning to error |
+| `packages/qfai/src/cli/commands/validate.ts`                      | Add PROT-295..309 descriptions to issue code description map                                                   |
+| `packages/qfai/tests/unit/validators/prototypingEvidence.test.ts` | 24+ new test cases (positive + negative for each rule)                                                         |
 
 ### Implementation Notes
 
@@ -91,15 +91,15 @@ All functionality is already implemented. This spec documents existing behavior.
 
 #### New Rules (semantic changes → new rule IDs)
 
-| Rule | Check | Severity |
-|---|---|---|
-| (new ID) | discussion.evidenceRefs.length === 0 | error |
-| (new ID) | screenContract.evidenceRefs.length === 0 | error |
-| (new ID) | trend.evidenceRefs.length === 0 | error |
-| (new ID) | declared DB > 0 && observed DB === 0 | error |
-| (new ID) | uiFidelity.status=completed && no screen-level data | error |
-| (new ID) | iteration[i].evidenceRefs missing required category | error |
-| (new ID) | evidence contains request.l1/l2 old schema field | error |
+| Rule     | Check                                               | Severity |
+| -------- | --------------------------------------------------- | -------- |
+| (new ID) | discussion.evidenceRefs.length === 0                | error    |
+| (new ID) | screenContract.evidenceRefs.length === 0            | error    |
+| (new ID) | trend.evidenceRefs.length === 0                     | error    |
+| (new ID) | declared DB > 0 && observed DB === 0                | error    |
+| (new ID) | uiFidelity.status=completed && no screen-level data | error    |
+| (new ID) | iteration[i].evidenceRefs missing required category | error    |
+| (new ID) | evidence contains request.l1/l2 old schema field    | error    |
 
 #### Test Fixture Policy
 

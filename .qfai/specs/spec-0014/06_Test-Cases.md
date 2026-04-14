@@ -154,10 +154,10 @@
 - AC-Refs: AC-0014-0014
 - Type: error
 
-| Step | Action | Expected |
-|---|---|---|
-| 1 | Modify SKILL.md to claim a constraint with no matching runtime rule | SKILL.md updated |
-| 2 | Run verify docs/runtime drift gate | Drift detected, verify fails with specific claim/rule mismatch report |
+| Step | Action                                                              | Expected                                                              |
+| ---- | ------------------------------------------------------------------- | --------------------------------------------------------------------- |
+| 1    | Modify SKILL.md to claim a constraint with no matching runtime rule | SKILL.md updated                                                      |
+| 2    | Run verify docs/runtime drift gate                                  | Drift detected, verify fails with specific claim/rule mismatch report |
 
 ## TC-0014-0019: Docs/Runtime Drift Clean (v1.7.15)
 
@@ -165,7 +165,7 @@
 - AC-Refs: AC-0014-0015
 - Type: normal
 
-| Step | Action | Expected |
-|---|---|---|
-| 1 | Ensure all SKILL.md claims have matching runtime validator rules | Claims aligned |
-| 2 | Run verify docs/runtime drift gate | Zero drift findings, gate passes |
+| Step | Action                                                           | Expected                         |
+| ---- | ---------------------------------------------------------------- | -------------------------------- |
+| 1    | Ensure all SKILL.md claims have matching runtime validator rules | Claims aligned                   |
+| 2    | Run verify docs/runtime drift gate                               | Zero drift findings, gate passes |

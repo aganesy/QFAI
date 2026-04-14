@@ -34,6 +34,27 @@
 // QFAI:SPEC-0012:TC-0012-0068
 // QFAI:SPEC-0012:TC-0012-0069
 // QFAI:SPEC-0012:TC-0012-0070
+// QFAI:SPEC-0012:TC-0012-0071
+// QFAI:SPEC-0012:TC-0012-0072
+// QFAI:SPEC-0012:TC-0012-0073
+// QFAI:SPEC-0012:TC-0012-0074
+// QFAI:SPEC-0012:TC-0012-0075
+// QFAI:SPEC-0012:TC-0012-0076
+// QFAI:SPEC-0012:TC-0012-0077
+// QFAI:SPEC-0012:TC-0012-0078
+// QFAI:SPEC-0012:TC-0012-0079
+// QFAI:SPEC-0012:TC-0012-0080
+// QFAI:SPEC-0012:TC-0012-0081
+// QFAI:SPEC-0012:TC-0012-0082
+// QFAI:SPEC-0012:TC-0012-0083
+// QFAI:SPEC-0012:TC-0012-0084
+// QFAI:SPEC-0012:TC-0012-0085
+// QFAI:SPEC-0012:TC-0012-0086
+// QFAI:SPEC-0012:TC-0012-0087
+// QFAI:SPEC-0012:TC-0012-0088
+// QFAI:SPEC-0012:TC-0012-0089
+// QFAI:SPEC-0012:TC-0012-0090
+// QFAI:SPEC-0012:TC-0012-0091
 
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -45,13 +66,17 @@ import {
   resolvePrototypingMode,
   inferSurfaceFromRecommendationAndEvidence,
   derivePrototypingObligations,
+  parseDiscussionFromObject,
+  requiresVisualBrowserEvidence,
+  NON_UI_PROTOTYPING_SURFACE_REASON_CODE,
 } from "../../src/core/prototyping/mode.js";
-import type {
-  PrototypingSurface,
-  PrototypingMode,
-} from "../../src/core/prototyping/types.js";
+import {
+  isCanonicalPrototypingSurface,
+  assertCanonicalPrototypingSurface,
+} from "../../src/core/domain/surface.js";
+import type { PrototypingSurface } from "../../src/core/prototyping/types.js";
 import { CalibrationLoader } from "../../src/core/calibration/loader.js";
-import { ScoringEngine } from "../../src/core/calibration/scoring.js";
+import { ScoringEngine as _ScoringEngine } from "../../src/core/calibration/scoring.js";
 import { PlateauDetector } from "../../src/core/calibration/plateau.js";
 import {
   scoreL1,
@@ -60,23 +85,14 @@ import {
   scorePanelsFromInputs,
   validatePanelScore,
 } from "../../src/core/harness/panelScore.js";
-import {
-  validatePanelInputs,
-  MeasurementError,
-} from "../../src/core/harness/panelInputs.js";
-import type {
-  FullHarnessPanelInputs,
-  ScreenObservation,
-} from "../../src/core/harness/panelInputs.js";
+import { validatePanelInputs, MeasurementError } from "../../src/core/harness/panelInputs.js";
+import type { FullHarnessPanelInputs } from "../../src/core/harness/panelInputs.js";
 import {
   appendIteration,
   computeTerminationReason,
   validateHistoryConsistency,
 } from "../../src/core/harness/history.js";
-import type {
-  FullHarnessIteration,
-  FullHarnessHistory,
-} from "../../src/core/harness/types.js";
+import type { FullHarnessIteration, FullHarnessHistory } from "../../src/core/harness/types.js";
 import { REVIEWER_PLACEHOLDERS } from "../../src/core/harness/types.js";
 import { extractDomLabelsWithJsdom } from "../../src/core/prototyping/uiObservation.js";
 
@@ -292,7 +308,7 @@ describe("TC-0012-0031: L1/L2 scoring missing evidence error", () => {
     const l1 = scoreL1(inputs);
     const renderAxis = l1.axes.find((a) => a.axisId === "render-coverage");
     expect(renderAxis).toBeDefined();
-    expect(renderAxis!.score).toBe(0);
+    expect(renderAxis?.score).toBe(0);
   });
 });
 
@@ -399,7 +415,7 @@ describe("TC-0012-0035: reviewerLogs append-only", () => {
     // New history has both
     expect(historyAfterSecond.iterations.length).toBe(2);
     // First iteration preserved
-    expect(historyAfterSecond.iterations[0]!.weightedTotal).toBe(0.6);
+    expect(historyAfterSecond.iterations[0]?.weightedTotal).toBe(0.6);
   });
 });
 
@@ -410,7 +426,18 @@ describe("TC-0012-0035: reviewerLogs append-only", () => {
 // QFAI:SPEC-0012:TC-0012-0036
 describe("TC-0012-0036: Reviewer placeholder rejection", () => {
   it("REVIEWER_PLACEHOLDERS includes all known placeholders", () => {
-    const expected = ["qfai", "default", "system", "auto", "placeholder", "tbd", "n/a", "none", "unknown", ""];
+    const expected = [
+      "qfai",
+      "default",
+      "system",
+      "auto",
+      "placeholder",
+      "tbd",
+      "n/a",
+      "none",
+      "unknown",
+      "",
+    ];
     for (const placeholder of expected) {
       expect(REVIEWER_PLACEHOLDERS).toContain(placeholder);
     }
@@ -480,13 +507,7 @@ describe("TC-0012-0039: Missing evidence fail-fast", () => {
 // QFAI:SPEC-0012:TC-0012-0040
 describe("TC-0012-0040: specCoverage zero-seeded rejection", () => {
   it("specCoverage source rejects zero-seeded non-UI coverage via error", async () => {
-    const srcPath = path.resolve(
-      process.cwd(),
-      "src",
-      "core",
-      "prototyping",
-      "specCoverage.ts",
-    );
+    const srcPath = path.resolve(process.cwd(), "src", "core", "prototyping", "specCoverage.ts");
     const content = await readFile(srcPath, "utf-8");
     // The module must throw on apiEndpoints/dbObjects
     expect(content).toContain("non-UI prototyping coverage");
@@ -517,13 +538,7 @@ describe("TC-0012-0041: uiFidelity synthetic mockPaths rejection", () => {
 // QFAI:SPEC-0012:TC-0012-0046
 describe("TC-0012-0046: request.l1/l2 type removed", () => {
   it("FullHarnessIteration type has l1 and l2 as panel scores, not request fields", async () => {
-    const typesPath = path.resolve(
-      process.cwd(),
-      "src",
-      "core",
-      "harness",
-      "types.ts",
-    );
+    const typesPath = path.resolve(process.cwd(), "src", "core", "harness", "types.ts");
     const content = await readFile(typesPath, "utf-8");
     // FullHarnessIteration has l1/l2 as FullHarnessPanelScore (result), not request
     expect(content).toMatch(/l1:\s*FullHarnessPanelScore/);
@@ -571,13 +586,7 @@ describe("TC-0012-0048: Scoring pipeline sequence", () => {
 // QFAI:SPEC-0012:TC-0012-0049
 describe("TC-0012-0049: l2Evidence builders happy path", () => {
   it("l2Evidence module exports buildDiscussionAxisInputs, buildScreenContractInputs, buildTrendAlignmentInputs", async () => {
-    const srcPath = path.resolve(
-      process.cwd(),
-      "src",
-      "core",
-      "prototyping",
-      "l2Evidence.ts",
-    );
+    const srcPath = path.resolve(process.cwd(), "src", "core", "prototyping", "l2Evidence.ts");
     const content = await readFile(srcPath, "utf-8");
     expect(content).toContain("export async function buildDiscussionAxisInputs");
     expect(content).toContain("export async function buildScreenContractInputs");
@@ -591,13 +600,7 @@ describe("TC-0012-0049: l2Evidence builders happy path", () => {
 // QFAI:SPEC-0012:TC-0012-0050
 describe("TC-0012-0050: l2Evidence missing artifact throws", () => {
   it("l2Evidence source throws on missing required files", async () => {
-    const srcPath = path.resolve(
-      process.cwd(),
-      "src",
-      "core",
-      "prototyping",
-      "l2Evidence.ts",
-    );
+    const srcPath = path.resolve(process.cwd(), "src", "core", "prototyping", "l2Evidence.ts");
     const content = await readFile(srcPath, "utf-8");
     // Verify fail-closed behavior for missing artifacts
     expect(content).toContain("L2 evidence failure:");
@@ -611,13 +614,7 @@ describe("TC-0012-0050: l2Evidence missing artifact throws", () => {
 // QFAI:SPEC-0012:TC-0012-0051
 describe("TC-0012-0051: execution.ts L2 dummy removal", () => {
   it("execution source contains no zero-literal score assignments", async () => {
-    const srcPath = path.resolve(
-      process.cwd(),
-      "src",
-      "core",
-      "prototyping",
-      "execution.ts",
-    );
+    const srcPath = path.resolve(process.cwd(), "src", "core", "prototyping", "execution.ts");
     const content = await readFile(srcPath, "utf-8");
     // No dummy 0 scores being assigned as evidence
     expect(content).not.toMatch(/score\s*[:=]\s*0[,;]/);
@@ -638,13 +635,7 @@ describe("TC-0012-0052: Missing pack throws", () => {
   });
 
   it("loader source has no DEFAULT_PACK constant export", async () => {
-    const srcPath = path.resolve(
-      process.cwd(),
-      "src",
-      "core",
-      "calibration",
-      "loader.ts",
-    );
+    const srcPath = path.resolve(process.cwd(), "src", "core", "calibration", "loader.ts");
     const content = await readFile(srcPath, "utf-8");
     // No exported DEFAULT_PACK constant (comments documenting removal are allowed)
     expect(content).not.toMatch(/export\s+(const|let|var|function)\s+DEFAULT_PACK/);
@@ -718,13 +709,7 @@ describe("TC-0012-0053: Schema violations throw", () => {
 // QFAI:SPEC-0012:TC-0012-0054
 describe("TC-0012-0054: Config fallback weakened", () => {
   it("execution source only reads packPath from config", async () => {
-    const srcPath = path.resolve(
-      process.cwd(),
-      "src",
-      "core",
-      "prototyping",
-      "execution.ts",
-    );
+    const srcPath = path.resolve(process.cwd(), "src", "core", "prototyping", "execution.ts");
     const content = await readFile(srcPath, "utf-8");
     // packPath is derived from config.prototyping?.calibration?.packPath
     expect(content).toContain("calibrationConfig?.packPath");
@@ -762,13 +747,7 @@ describe("TC-0012-0055: Premature termination guard", () => {
 // QFAI:SPEC-0012:TC-0012-0056
 describe("TC-0012-0056: Validator premature termination reject", () => {
   it("history source code enforces strict plateauLookback (no Math.min adaptation)", async () => {
-    const srcPath = path.resolve(
-      process.cwd(),
-      "src",
-      "core",
-      "harness",
-      "history.ts",
-    );
+    const srcPath = path.resolve(process.cwd(), "src", "core", "harness", "history.ts");
     const content = await readFile(srcPath, "utf-8");
     // The code explicitly checks count < plateauLookback without Math.min
     expect(content).toContain("count < calibration.plateauLookback");
@@ -783,13 +762,7 @@ describe("TC-0012-0056: Validator premature termination reject", () => {
 // QFAI:SPEC-0012:TC-0012-0057
 describe("TC-0012-0057: Missing spec error", () => {
   it("execution source throws when spec exists but has no coverage data", async () => {
-    const srcPath = path.resolve(
-      process.cwd(),
-      "src",
-      "core",
-      "prototyping",
-      "execution.ts",
-    );
+    const srcPath = path.resolve(process.cwd(), "src", "core", "prototyping", "execution.ts");
     const content = await readFile(srcPath, "utf-8");
     expect(content).toContain("exists but has no coverage data");
   });
@@ -802,9 +775,8 @@ describe("TC-0012-0058: Silent empty rejected", () => {
       const specsDir = path.join(dir, ".qfai", "specs");
       await mkdir(specsDir, { recursive: true });
 
-      const { buildSpecCoverageSummary } = await import(
-        "../../src/core/prototyping/specCoverage.js"
-      );
+      const { buildSpecCoverageSummary } =
+        await import("../../src/core/prototyping/specCoverage.js");
       const result = await buildSpecCoverageSummary({ specsDir });
       expect(result.declared.uiRoutes).toBe(0);
       expect(result.checked.uiOk).toBe(0);
@@ -816,13 +788,7 @@ describe("TC-0012-0058: Silent empty rejected", () => {
 // QFAI:SPEC-0012:TC-0012-0059
 describe("TC-0012-0059: DB coverage binary policy", () => {
   it("specCoverage source rejects declared DB objects", async () => {
-    const srcPath = path.resolve(
-      process.cwd(),
-      "src",
-      "core",
-      "prototyping",
-      "specCoverage.ts",
-    );
+    const srcPath = path.resolve(process.cwd(), "src", "core", "prototyping", "specCoverage.ts");
     const content = await readFile(srcPath, "utf-8");
     // DB objects and API endpoints declared cause an error
     expect(content).toContain("non-UI prototyping coverage");
@@ -858,13 +824,7 @@ describe("TC-0012-0060: ScreenObservation array output", () => {
   });
 
   it("ScreenObservation type requires all expected fields", async () => {
-    const typesPath = path.resolve(
-      process.cwd(),
-      "src",
-      "core",
-      "harness",
-      "panelInputs.ts",
-    );
+    const typesPath = path.resolve(process.cwd(), "src", "core", "harness", "panelInputs.ts");
     const content = await readFile(typesPath, "utf-8");
     expect(content).toContain("screenId: string");
     expect(content).toContain("route: string");
@@ -881,13 +841,7 @@ describe("TC-0012-0060: ScreenObservation array output", () => {
 // QFAI:SPEC-0012:TC-0012-0061
 describe("TC-0012-0061: actionsWired unknown", () => {
   it("uiObservation source does not use actionsWired: 0 as default when no QA data", async () => {
-    const srcPath = path.resolve(
-      process.cwd(),
-      "src",
-      "core",
-      "prototyping",
-      "uiObservation.ts",
-    );
+    const srcPath = path.resolve(process.cwd(), "src", "core", "prototyping", "uiObservation.ts");
     const content = await readFile(srcPath, "utf-8");
     // actionsWired is computed from actionCoverage, not hardcoded to 0
     expect(content).toContain("actionCoverage.actionsWired");
@@ -962,13 +916,7 @@ describe("TC-0012-0063: History array length mismatch", () => {
 // QFAI:SPEC-0012:TC-0012-0064
 describe("TC-0012-0064: bundleWriter schema v2 output", () => {
   it("bundleWriter has 8-category evidenceRefs in FullHarnessIteration", async () => {
-    const typesPath = path.resolve(
-      process.cwd(),
-      "src",
-      "core",
-      "harness",
-      "types.ts",
-    );
+    const typesPath = path.resolve(process.cwd(), "src", "core", "harness", "types.ts");
     const content = await readFile(typesPath, "utf-8");
     const categories = [
       "render:",
@@ -986,13 +934,7 @@ describe("TC-0012-0064: bundleWriter schema v2 output", () => {
   });
 
   it("bundleWriter source uses PrototypingSummaryBundle without v1 schema", async () => {
-    const srcPath = path.resolve(
-      process.cwd(),
-      "src",
-      "core",
-      "evidence",
-      "bundleWriter.ts",
-    );
+    const srcPath = path.resolve(process.cwd(), "src", "core", "evidence", "bundleWriter.ts");
     const content = await readFile(srcPath, "utf-8");
     expect(content).toContain("PrototypingSummaryBundle");
     // No v1 schema references
@@ -1017,13 +959,7 @@ describe("TC-0012-0065: Normal fixture rev2 clean", () => {
   });
 
   it("CalibrationLoader source has no version 1.0.0 fallback logic", async () => {
-    const srcPath = path.resolve(
-      process.cwd(),
-      "src",
-      "core",
-      "calibration",
-      "loader.ts",
-    );
+    const srcPath = path.resolve(process.cwd(), "src", "core", "calibration", "loader.ts");
     const content = await readFile(srcPath, "utf-8");
     // No runtime fallback to "1.0.0" (comments documenting removal are allowed)
     expect(content).not.toMatch(/version\s*=\s*["']1\.0\.0["']/);
@@ -1035,13 +971,7 @@ describe("TC-0012-0065: Normal fixture rev2 clean", () => {
 // QFAI:SPEC-0012:TC-0012-0066
 describe("TC-0012-0066: Error fixture rev2 coverage", () => {
   it("execution source has explicit checks for missing pack, reviewer, and evidence", async () => {
-    const srcPath = path.resolve(
-      process.cwd(),
-      "src",
-      "core",
-      "prototyping",
-      "execution.ts",
-    );
+    const srcPath = path.resolve(process.cwd(), "src", "core", "prototyping", "execution.ts");
     const content = await readFile(srcPath, "utf-8");
     // Missing calibration pack
     expect(content).toContain("CalibrationResolutionError");
@@ -1072,8 +1002,14 @@ describe("TC-0012-0067: FullHarnessIteration required fields", () => {
 
     // All 8 evidence categories must be present
     const categories = [
-      "render", "browserQa", "runtimeGate", "uiObservation",
-      "specCoverage", "discussion", "screenContract", "trend",
+      "render",
+      "browserQa",
+      "runtimeGate",
+      "uiObservation",
+      "specCoverage",
+      "discussion",
+      "screenContract",
+      "trend",
     ] as const;
     for (const cat of categories) {
       expect(Array.isArray(iteration.evidenceRefs[cat])).toBe(true);
@@ -1085,13 +1021,7 @@ describe("TC-0012-0067: FullHarnessIteration required fields", () => {
 // QFAI:SPEC-0012:TC-0012-0068
 describe("TC-0012-0068: FullHarnessIteration missing field", () => {
   it("type definition requires all iteration fields (TypeScript contract)", async () => {
-    const typesPath = path.resolve(
-      process.cwd(),
-      "src",
-      "core",
-      "harness",
-      "types.ts",
-    );
+    const typesPath = path.resolve(process.cwd(), "src", "core", "harness", "types.ts");
     const content = await readFile(typesPath, "utf-8");
     // Verify mandatory fields (no optional markers)
     const requiredFields = [
@@ -1182,7 +1112,7 @@ describe("TC-0012-0069: validatePanelInputs 10-check gate", () => {
       expect(me.missingEvidence.length).toBeGreaterThanOrEqual(8);
       // Verify key categories are mentioned
       for (const cat of checkCategories) {
-        const found = me.missingEvidence.some((m) => m.includes(cat.split(".")[0]!));
+        const found = me.missingEvidence.some((m) => m.includes(cat.split(".")[0] ?? ""));
         expect(found).toBe(true);
       }
     }
@@ -1251,5 +1181,422 @@ describe("TC-0012-0070: panelScore double defense", () => {
     };
     const errors = validatePanelScore(noRefs);
     expect(errors.some((e) => e.includes("at least one evidenceRef"))).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Group: Surface & Classification (TC-0012-0071 .. TC-0012-0082)
+// ---------------------------------------------------------------------------
+
+// QFAI:SPEC-0012:TC-0012-0071
+describe("TC-0012-0071: Canonical surface name accepted", () => {
+  it("isCanonicalPrototypingSurface returns true for 'web'", () => {
+    expect(isCanonicalPrototypingSurface("web")).toBe(true);
+  });
+
+  it("assertCanonicalPrototypingSurface does not throw for 'web'", () => {
+    expect(() => assertCanonicalPrototypingSurface("web")).not.toThrow();
+    expect(assertCanonicalPrototypingSurface("web")).toBe("web");
+  });
+});
+
+// QFAI:SPEC-0012:TC-0012-0072
+describe("TC-0012-0072: Non-canonical surface name rejected", () => {
+  it("isCanonicalPrototypingSurface returns false for 'web-ui'", () => {
+    expect(isCanonicalPrototypingSurface("web-ui")).toBe(false);
+  });
+
+  it("assertCanonicalPrototypingSurface throws for 'web-ui'", () => {
+    expect(() => assertCanonicalPrototypingSurface("web-ui")).toThrow(
+      /surface field must be one of/,
+    );
+  });
+});
+
+// QFAI:SPEC-0012:TC-0012-0073
+describe("TC-0012-0073: Contradictory classification hard error", () => {
+  it("parseDiscussionFromObject with both legacy keys and namespaced block returns null with warning", () => {
+    const input: Record<string, unknown> = {
+      recommended_mode: "full-harness",
+      rationale: "legacy top-level",
+      allowed_modes: ["full-harness"],
+      surface: "web",
+      prototyping: {
+        recommended_mode: "full-harness",
+        rationale: "namespaced",
+        allowed_modes: ["full-harness"],
+        surface: "web",
+      },
+    };
+    const result = parseDiscussionFromObject(input);
+    expect(result.recommendation).toBeNull();
+    expect(result.warnings.length).toBeGreaterThan(0);
+    expect(result.warnings[0]).toContain("Legacy top-level recommendation keys");
+  });
+});
+
+// QFAI:SPEC-0012:TC-0012-0074
+describe("TC-0012-0074: Valid classification passes", () => {
+  it("parseDiscussionFromObject with valid namespaced schema returns recommendation", () => {
+    const input: Record<string, unknown> = {
+      prototyping: {
+        recommended_mode: "full-harness",
+        rationale: "UI prototype requires full-harness evaluation",
+        allowed_modes: ["full-harness"],
+        surface: "web",
+        updated_at: "2026-04-14",
+      },
+    };
+    const result = parseDiscussionFromObject(input);
+    expect(result.recommendation).not.toBeNull();
+    const rec = result.recommendation ?? { recommendedMode: "", surface: "", sourceSchema: "" };
+    expect(rec.recommendedMode).toBe("full-harness");
+    expect(rec.surface).toBe("web");
+    expect(rec.sourceSchema).toBe("canonical-namespaced");
+    expect(result.warnings).toHaveLength(0);
+  });
+});
+
+// QFAI:SPEC-0012:TC-0012-0075
+describe("TC-0012-0075: Non-UI surface rejected in obligation", () => {
+  it("derivePrototypingObligations returns invalid for cli + full-harness", () => {
+    const obligations = derivePrototypingObligations({
+      surface: "cli" as PrototypingSurface,
+      effectiveMode: "full-harness",
+    });
+    expect(obligations.validCombination).toBe(false);
+    expect(obligations.invalidReasonCode).toBe(NON_UI_PROTOTYPING_SURFACE_REASON_CODE);
+  });
+});
+
+// QFAI:SPEC-0012:TC-0012-0076
+describe("TC-0012-0076: UI-bearing surface accepted in obligation", () => {
+  it("derivePrototypingObligations returns valid for web + full-harness", () => {
+    const obligations = derivePrototypingObligations({
+      surface: "web" as PrototypingSurface,
+      effectiveMode: "full-harness",
+    });
+    expect(obligations.validCombination).toBe(true);
+    expect(obligations.requireRuntimeGate).toBe(true);
+    expect(obligations.requireFullHarness).toBe(true);
+  });
+});
+
+// QFAI:SPEC-0012:TC-0012-0077
+describe("TC-0012-0077: Legacy top-level key hard error", () => {
+  it("parseDiscussionFromObject with only legacy keys returns null with warning", () => {
+    const input: Record<string, unknown> = {
+      recommended_mode: "full-harness",
+      rationale: "legacy only",
+      allowed_modes: ["full-harness"],
+      surface: "web",
+    };
+    const result = parseDiscussionFromObject(input);
+    expect(result.recommendation).toBeNull();
+    expect(result.warnings.length).toBeGreaterThan(0);
+    expect(result.warnings[0]).toContain("Legacy top-level recommendation keys");
+  });
+});
+
+// QFAI:SPEC-0012:TC-0012-0078
+describe("TC-0012-0078: Namespaced key accepted", () => {
+  it("parseDiscussionFromObject with proper prototyping: block returns valid recommendation", () => {
+    const input: Record<string, unknown> = {
+      prototyping: {
+        recommended_mode: "full-harness",
+        rationale: "Proper namespaced schema",
+        allowed_modes: ["full-harness"],
+        surface: "mobile",
+      },
+    };
+    const result = parseDiscussionFromObject(input);
+    expect(result.recommendation).not.toBeNull();
+    const rec = result.recommendation ?? { recommendedMode: "", surface: "" };
+    expect(rec.recommendedMode).toBe("full-harness");
+    expect(rec.surface).toBe("mobile");
+    expect(result.warnings).toHaveLength(0);
+  });
+});
+
+// QFAI:SPEC-0012:TC-0012-0079
+describe("TC-0012-0079: Semantic mismatch returns null", () => {
+  it("parseDiscussionFromObject with invalid allowed_modes returns null", () => {
+    const input: Record<string, unknown> = {
+      prototyping: {
+        recommended_mode: "full-harness",
+        rationale: "Valid rationale text",
+        allowed_modes: ["low-cost", "standard"],
+        surface: "web",
+      },
+    };
+    const result = parseDiscussionFromObject(input);
+    expect(result.recommendation).toBeNull();
+  });
+});
+
+// QFAI:SPEC-0012:TC-0012-0080
+describe("TC-0012-0080: Consistent mode accepted", () => {
+  it("parseDiscussionFromObject with consistent recommended and allowed modes succeeds", () => {
+    const input: Record<string, unknown> = {
+      prototyping: {
+        recommended_mode: "full-harness",
+        rationale: "Consistent mode configuration",
+        allowed_modes: ["full-harness"],
+        surface: "desktop",
+      },
+    };
+    const result = parseDiscussionFromObject(input);
+    expect(result.recommendation).not.toBeNull();
+    const rec = result.recommendation ?? { allowedModes: [] as string[] };
+    expect(rec.allowedModes).toContain("full-harness");
+    expect(result.warnings).toHaveLength(0);
+  });
+});
+
+// QFAI:SPEC-0012:TC-0012-0081
+describe("TC-0012-0081: CLI surface obligations exclude browser evidence", () => {
+  it("requiresVisualBrowserEvidence returns false for cli", () => {
+    expect(requiresVisualBrowserEvidence("cli" as PrototypingSurface)).toBe(false);
+  });
+});
+
+// QFAI:SPEC-0012:TC-0012-0082
+describe("TC-0012-0082: CLI surface is invalid combination in full-harness", () => {
+  it("derivePrototypingObligations marks cli + full-harness as invalid", () => {
+    const obligations = derivePrototypingObligations({
+      surface: "cli" as PrototypingSurface,
+      effectiveMode: "full-harness",
+    });
+    expect(obligations.validCombination).toBe(false);
+    expect(obligations.requireRuntimeGate).toBe(false);
+    expect(obligations.requireBrowserQaBundle).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Group: Termination & Scoring (TC-0012-0083 .. TC-0012-0091)
+// ---------------------------------------------------------------------------
+
+// QFAI:SPEC-0012:TC-0012-0083
+describe("TC-0012-0083: Full-harness converged termination", () => {
+  it("computeTerminationReason returns 'converged' when scores exceed accept threshold", () => {
+    const iterations: FullHarnessIteration[] = Array.from({ length: 6 }, (_, i) =>
+      buildMinimalIteration({
+        iteration: i + 1,
+        weightedTotal: 0.82 + i * 0.005,
+        deltaFromPrevious: i === 0 ? null : 0.005,
+        decision: "refine",
+      }),
+    );
+    const history: FullHarnessHistory = {
+      runId: "test-converged",
+      iterations,
+      bestIteration: 6,
+      scoringTrace: iterations.map((it) => ({
+        iteration: it.iteration,
+        l1Total: it.l1.total,
+        l2Total: it.l2.total,
+        weightedTotal: it.weightedTotal,
+        deltaFromPrevious: it.deltaFromPrevious,
+        decision: it.decision,
+        commitSha: it.commitSha,
+      })),
+    };
+    const reason = computeTerminationReason(history, {
+      maxIterations: 15,
+      plateauDelta: 0.02,
+      plateauLookback: 3,
+      thresholds: { accept: 0.8 },
+    });
+    expect(reason).toBe("converged");
+  });
+});
+
+// QFAI:SPEC-0012:TC-0012-0084
+describe("TC-0012-0084: Full-harness plateau termination", () => {
+  it("computeTerminationReason returns 'plateau' when scores plateau below accept", () => {
+    const scores = [0.6, 0.61, 0.605, 0.608, 0.607];
+    const iterations: FullHarnessIteration[] = scores.map((s, i) =>
+      buildMinimalIteration({
+        iteration: i + 1,
+        weightedTotal: s,
+        deltaFromPrevious: i === 0 ? null : Math.abs(s - scores[i - 1]),
+        decision: "refine",
+      }),
+    );
+    const history: FullHarnessHistory = {
+      runId: "test-plateau",
+      iterations,
+      bestIteration: 2,
+      scoringTrace: iterations.map((it) => ({
+        iteration: it.iteration,
+        l1Total: it.l1.total,
+        l2Total: it.l2.total,
+        weightedTotal: it.weightedTotal,
+        deltaFromPrevious: it.deltaFromPrevious,
+        decision: it.decision,
+        commitSha: it.commitSha,
+      })),
+    };
+    const reason = computeTerminationReason(history, {
+      maxIterations: 15,
+      plateauDelta: 0.02,
+      plateauLookback: 3,
+      thresholds: { accept: 0.9 },
+    });
+    expect(reason).toBe("plateau");
+  });
+});
+
+// QFAI:SPEC-0012:TC-0012-0085
+describe("TC-0012-0085: Independent evaluator panel score", () => {
+  it("scorePanelsFromInputs produces non-zero L1, L2 and correct weightedTotal", () => {
+    const inputs = buildMinimalPanelInputs();
+    const result = scorePanelsFromInputs(inputs);
+    expect(result.l1.total).toBeGreaterThan(0);
+    expect(result.l2.total).toBeGreaterThan(0);
+    expect(result.weightedTotal).toBe(Math.min(result.l1.total, result.l2.total));
+  });
+});
+
+// QFAI:SPEC-0012:TC-0012-0086
+describe("TC-0012-0086: Score scope separation", () => {
+  it("scorePanelsFromInputs output is structurally scoped to prototyping only", () => {
+    const inputs = buildMinimalPanelInputs();
+    const result = scorePanelsFromInputs(inputs);
+    expect(result.l1.panel).toBe("L1");
+    expect(result.l2.panel).toBe("L2");
+    // Verify no discussion-scope fields leak into scoring result
+    const resultKeys = Object.keys(result);
+    expect(resultKeys).toContain("l1");
+    expect(resultKeys).toContain("l2");
+    expect(resultKeys).toContain("weightedTotal");
+    expect(resultKeys).not.toContain("discussionScore");
+    expect(resultKeys).not.toContain("discussionTotal");
+  });
+});
+
+// QFAI:SPEC-0012:TC-0012-0087
+describe("TC-0012-0087: Existence gate score ceiling", () => {
+  it("scoreL1 with zero evidence produces total <= 0.3", () => {
+    const zeroInputs = buildMinimalPanelInputs({
+      runtimeGate: {
+        uiRoutes: [],
+        evidenceRefs: [".qfai/evidence/runtimeGate.json"],
+      },
+      renderEvidence: {
+        totalScreens: 0,
+        capturedScreens: 0,
+        failedScreens: 0,
+        viewports: [],
+        evidenceRefs: [".qfai/evidence/render/empty.png"],
+      },
+      browserQa: {
+        executed: false,
+        blockingFindings: 0,
+        experienceFindings: 0,
+        visualFindings: 0,
+        totalFindings: 0,
+        phasesExecuted: [],
+        evidenceRefs: [".qfai/evidence/browserQa/empty.json"],
+      },
+      specCoverage: {
+        declared: { uiRoutes: 0 },
+        checked: { uiOk: 0 },
+        missing: { uiRoutes: [] },
+        evidenceRefs: [".qfai/specs/empty.md"],
+      },
+      screenContract: {
+        totalContracts: 0,
+        coveredContracts: 0,
+        fidelityScore: 0,
+        evidenceRefs: [".qfai/evidence/empty-contract.json"],
+      },
+    });
+    const l1 = scoreL1(zeroInputs);
+    expect(l1.total).toBeLessThanOrEqual(0.3);
+  });
+});
+
+// QFAI:SPEC-0012:TC-0012-0088
+describe("TC-0012-0088: Asset emoji prohibition", () => {
+  // No production emoji-prohibition function exists yet in packages/qfai/src/.
+  // Marking as todo to avoid false-green coverage. Implement when production code is added.
+  it.todo("emoji codepoints in asset names trigger REVISE decision");
+});
+
+// QFAI:SPEC-0012:TC-0012-0089
+describe("TC-0012-0089: Reviewer gate verification checks", () => {
+  it("validateHistoryConsistency returns no errors for valid 3-iteration history", () => {
+    const iterations: FullHarnessIteration[] = [1, 2, 3].map((n) =>
+      buildMinimalIteration({
+        iteration: n,
+        weightedTotal: 0.7 + n * 0.05,
+        deltaFromPrevious: n === 1 ? null : 0.05,
+        decision: "refine",
+      }),
+    );
+    const history: FullHarnessHistory = {
+      runId: "test-consistency",
+      iterations,
+      bestIteration: 3,
+      scoringTrace: iterations.map((it) => ({
+        iteration: it.iteration,
+        l1Total: it.l1.total,
+        l2Total: it.l2.total,
+        weightedTotal: it.weightedTotal,
+        deltaFromPrevious: it.deltaFromPrevious,
+        decision: it.decision,
+        commitSha: it.commitSha,
+      })),
+    };
+    const errors = validateHistoryConsistency(history);
+    expect(errors).toHaveLength(0);
+  });
+});
+
+// QFAI:SPEC-0012:TC-0012-0090
+describe("TC-0012-0090: PROT-290 single-iteration convergence guard", () => {
+  it("computeTerminationReason does not return 'converged' for single iteration", () => {
+    const iterations: FullHarnessIteration[] = [
+      buildMinimalIteration({
+        iteration: 1,
+        weightedTotal: 0.95,
+        deltaFromPrevious: null,
+        decision: "accept",
+      }),
+    ];
+    const history: FullHarnessHistory = {
+      runId: "test-single",
+      iterations,
+      bestIteration: 1,
+      scoringTrace: iterations.map((it) => ({
+        iteration: it.iteration,
+        l1Total: it.l1.total,
+        l2Total: it.l2.total,
+        weightedTotal: it.weightedTotal,
+        deltaFromPrevious: it.deltaFromPrevious,
+        decision: it.decision,
+        commitSha: it.commitSha,
+      })),
+    };
+    const reason = computeTerminationReason(history, {
+      maxIterations: 15,
+      plateauDelta: 0.02,
+      plateauLookback: 3,
+      thresholds: { accept: 0.8 },
+    });
+    expect(reason).toBeUndefined();
+  });
+});
+
+// QFAI:SPEC-0012:TC-0012-0091
+describe("TC-0012-0091: Maximum delta cap – large delta is not plateau", () => {
+  it("PlateauDetector does not detect plateau when score delta is large", () => {
+    const detector = new PlateauDetector({ deltaThreshold: 0.02, lookbackWindow: 3 });
+    const scores = [0.5, 0.52, 0.51, 0.76];
+    const result = detector.detect(scores);
+    expect(result.detected).toBe(false);
+    expect(result.delta).toBeGreaterThanOrEqual(0.02);
   });
 });

@@ -344,7 +344,15 @@ describe("E2E: IssueCategory discrimination (US-0004-0021)", () => {
 describe("E2E: prototyping recommendation validation (US-0004-0022)", () => {
   it("validators/prototypingEvidence.ts checks prototyping.yaml schema", async () => {
     const src = await readFile(
-      path.join(repoRoot, "packages", "qfai", "src", "core", "validators", "prototypingEvidence.ts"),
+      path.join(
+        repoRoot,
+        "packages",
+        "qfai",
+        "src",
+        "core",
+        "validators",
+        "prototypingEvidence.ts",
+      ),
       "utf-8",
     );
     expect(src).toContain("prototyping.yaml");
@@ -376,7 +384,15 @@ describe("E2E: prototyping recommendation validation (US-0004-0022)", () => {
 describe("E2E: full-harness iteration integrity errors (US-0004-0023)", () => {
   it("prototypingEvidence.ts includes PROT-295..306 error rules", async () => {
     const src = await readFile(
-      path.join(repoRoot, "packages", "qfai", "src", "core", "validators", "prototypingEvidence.ts"),
+      path.join(
+        repoRoot,
+        "packages",
+        "qfai",
+        "src",
+        "core",
+        "validators",
+        "prototypingEvidence.ts",
+      ),
       "utf-8",
     );
     // PROT-295 through PROT-306
@@ -396,7 +412,15 @@ describe("E2E: full-harness iteration integrity errors (US-0004-0023)", () => {
 
   it("prototypingEvidence.ts includes PROT-308..309 error rules", async () => {
     const src = await readFile(
-      path.join(repoRoot, "packages", "qfai", "src", "core", "validators", "prototypingEvidence.ts"),
+      path.join(
+        repoRoot,
+        "packages",
+        "qfai",
+        "src",
+        "core",
+        "validators",
+        "prototypingEvidence.ts",
+      ),
       "utf-8",
     );
     expect(src).toContain("QFAI-PROT-308");
@@ -408,7 +432,15 @@ describe("E2E: full-harness iteration integrity errors (US-0004-0023)", () => {
 describe("E2E: reviewer/convergence truthfulness (US-0004-0024)", () => {
   it("prototypingEvidence.ts checks reviewer placeholder values", async () => {
     const src = await readFile(
-      path.join(repoRoot, "packages", "qfai", "src", "core", "validators", "prototypingEvidence.ts"),
+      path.join(
+        repoRoot,
+        "packages",
+        "qfai",
+        "src",
+        "core",
+        "validators",
+        "prototypingEvidence.ts",
+      ),
       "utf-8",
     );
     expect(src).toContain("REVIEWER_PLACEHOLDERS");
@@ -420,7 +452,15 @@ describe("E2E: reviewer/convergence truthfulness (US-0004-0024)", () => {
 
   it("prototypingEvidence.ts detects single-iteration converged as suspicious", async () => {
     const src = await readFile(
-      path.join(repoRoot, "packages", "qfai", "src", "core", "validators", "prototypingEvidence.ts"),
+      path.join(
+        repoRoot,
+        "packages",
+        "qfai",
+        "src",
+        "core",
+        "validators",
+        "prototypingEvidence.ts",
+      ),
       "utf-8",
     );
     // PROT-290/308: single-iteration convergence
@@ -431,7 +471,15 @@ describe("E2E: reviewer/convergence truthfulness (US-0004-0024)", () => {
 
   it("prototypingEvidence.ts validates weightedTotal consistency", async () => {
     const src = await readFile(
-      path.join(repoRoot, "packages", "qfai", "src", "core", "validators", "prototypingEvidence.ts"),
+      path.join(
+        repoRoot,
+        "packages",
+        "qfai",
+        "src",
+        "core",
+        "validators",
+        "prototypingEvidence.ts",
+      ),
       "utf-8",
     );
     // PROT-296: weightedTotal enforcement
@@ -444,7 +492,15 @@ describe("E2E: reviewer/convergence truthfulness (US-0004-0024)", () => {
 describe("E2E: evidence grounding validators (US-0004-0025)", () => {
   it("prototypingEvidence.ts validates specCoverage grounding", async () => {
     const src = await readFile(
-      path.join(repoRoot, "packages", "qfai", "src", "core", "validators", "prototypingEvidence.ts"),
+      path.join(
+        repoRoot,
+        "packages",
+        "qfai",
+        "src",
+        "core",
+        "validators",
+        "prototypingEvidence.ts",
+      ),
       "utf-8",
     );
     // PROT-305: zero-seeded specCoverage detection
@@ -454,7 +510,15 @@ describe("E2E: evidence grounding validators (US-0004-0025)", () => {
 
   it("prototypingEvidence.ts validates mockPaths grounding", async () => {
     const src = await readFile(
-      path.join(repoRoot, "packages", "qfai", "src", "core", "validators", "prototypingEvidence.ts"),
+      path.join(
+        repoRoot,
+        "packages",
+        "qfai",
+        "src",
+        "core",
+        "validators",
+        "prototypingEvidence.ts",
+      ),
       "utf-8",
     );
     // PROT-306: synthetic mockPaths auto-pass detection
@@ -464,7 +528,15 @@ describe("E2E: evidence grounding validators (US-0004-0025)", () => {
 
   it("prototypingEvidence.ts validates calibrationRef integrity", async () => {
     const src = await readFile(
-      path.join(repoRoot, "packages", "qfai", "src", "core", "validators", "prototypingEvidence.ts"),
+      path.join(
+        repoRoot,
+        "packages",
+        "qfai",
+        "src",
+        "core",
+        "validators",
+        "prototypingEvidence.ts",
+      ),
       "utf-8",
     );
     // PROT-301: calibrationRef empty configPath/packPath
@@ -474,7 +546,15 @@ describe("E2E: evidence grounding validators (US-0004-0025)", () => {
 
   it("prototypingEvidence.ts validates commitSha presence", async () => {
     const src = await readFile(
-      path.join(repoRoot, "packages", "qfai", "src", "core", "validators", "prototypingEvidence.ts"),
+      path.join(
+        repoRoot,
+        "packages",
+        "qfai",
+        "src",
+        "core",
+        "validators",
+        "prototypingEvidence.ts",
+      ),
       "utf-8",
     );
     // PROT-297: commitSha missing
@@ -484,7 +564,15 @@ describe("E2E: evidence grounding validators (US-0004-0025)", () => {
 
   it("prototypingEvidence.ts validates limitations presence", async () => {
     const src = await readFile(
-      path.join(repoRoot, "packages", "qfai", "src", "core", "validators", "prototypingEvidence.ts"),
+      path.join(
+        repoRoot,
+        "packages",
+        "qfai",
+        "src",
+        "core",
+        "validators",
+        "prototypingEvidence.ts",
+      ),
       "utf-8",
     );
     // PROT-298: limitations missing
@@ -497,7 +585,15 @@ describe("E2E: evidence grounding validators (US-0004-0025)", () => {
 describe("E2E: rev2 evidence category validators (US-0004-0026)", () => {
   it("prototypingEvidence.ts checks discussion evidenceRefs empty (PROT-310)", async () => {
     const src = await readFile(
-      path.join(repoRoot, "packages", "qfai", "src", "core", "validators", "prototypingEvidence.ts"),
+      path.join(
+        repoRoot,
+        "packages",
+        "qfai",
+        "src",
+        "core",
+        "validators",
+        "prototypingEvidence.ts",
+      ),
       "utf-8",
     );
     expect(src).toContain("QFAI-PROT-310");
@@ -506,7 +602,15 @@ describe("E2E: rev2 evidence category validators (US-0004-0026)", () => {
 
   it("prototypingEvidence.ts checks screenContract evidenceRefs empty (PROT-311)", async () => {
     const src = await readFile(
-      path.join(repoRoot, "packages", "qfai", "src", "core", "validators", "prototypingEvidence.ts"),
+      path.join(
+        repoRoot,
+        "packages",
+        "qfai",
+        "src",
+        "core",
+        "validators",
+        "prototypingEvidence.ts",
+      ),
       "utf-8",
     );
     expect(src).toContain("QFAI-PROT-311");
@@ -515,7 +619,15 @@ describe("E2E: rev2 evidence category validators (US-0004-0026)", () => {
 
   it("prototypingEvidence.ts checks trend evidenceRefs empty (PROT-312)", async () => {
     const src = await readFile(
-      path.join(repoRoot, "packages", "qfai", "src", "core", "validators", "prototypingEvidence.ts"),
+      path.join(
+        repoRoot,
+        "packages",
+        "qfai",
+        "src",
+        "core",
+        "validators",
+        "prototypingEvidence.ts",
+      ),
       "utf-8",
     );
     expect(src).toContain("QFAI-PROT-312");
@@ -524,7 +636,15 @@ describe("E2E: rev2 evidence category validators (US-0004-0026)", () => {
 
   it("prototypingEvidence.ts checks iteration evidenceRefs required categories (PROT-314)", async () => {
     const src = await readFile(
-      path.join(repoRoot, "packages", "qfai", "src", "core", "validators", "prototypingEvidence.ts"),
+      path.join(
+        repoRoot,
+        "packages",
+        "qfai",
+        "src",
+        "core",
+        "validators",
+        "prototypingEvidence.ts",
+      ),
       "utf-8",
     );
     expect(src).toContain("QFAI-PROT-314");
@@ -533,7 +653,15 @@ describe("E2E: rev2 evidence category validators (US-0004-0026)", () => {
 
   it("prototypingEvidence.ts validates uiFidelity at screen-level", async () => {
     const src = await readFile(
-      path.join(repoRoot, "packages", "qfai", "src", "core", "validators", "prototypingEvidence.ts"),
+      path.join(
+        repoRoot,
+        "packages",
+        "qfai",
+        "src",
+        "core",
+        "validators",
+        "prototypingEvidence.ts",
+      ),
       "utf-8",
     );
     expect(src).toContain("uiFidelity");
@@ -543,7 +671,15 @@ describe("E2E: rev2 evidence category validators (US-0004-0026)", () => {
 
   it("prototypingEvidence.ts detects pre-scored l1/l2 (old schema detection, PROT-315)", async () => {
     const src = await readFile(
-      path.join(repoRoot, "packages", "qfai", "src", "core", "validators", "prototypingEvidence.ts"),
+      path.join(
+        repoRoot,
+        "packages",
+        "qfai",
+        "src",
+        "core",
+        "validators",
+        "prototypingEvidence.ts",
+      ),
       "utf-8",
     );
     expect(src).toContain("QFAI-PROT-315");
@@ -556,7 +692,15 @@ describe("E2E: rev2 evidence category validators (US-0004-0026)", () => {
 describe("E2E: test fixtures rev2 (US-0004-0027)", () => {
   it("prototypingEvidence.ts uses rev2 evidence contract with L2 axes and evidenceRefs categories", async () => {
     const src = await readFile(
-      path.join(repoRoot, "packages", "qfai", "src", "core", "validators", "prototypingEvidence.ts"),
+      path.join(
+        repoRoot,
+        "packages",
+        "qfai",
+        "src",
+        "core",
+        "validators",
+        "prototypingEvidence.ts",
+      ),
       "utf-8",
     );
     // Rev2 contract requires categorized evidenceRefs in iterations
@@ -571,7 +715,15 @@ describe("E2E: test fixtures rev2 (US-0004-0027)", () => {
 
   it("prototypingEvidence type defines rev2 iteration evidenceRefs structure", async () => {
     const src = await readFile(
-      path.join(repoRoot, "packages", "qfai", "src", "core", "validators", "prototypingEvidence.ts"),
+      path.join(
+        repoRoot,
+        "packages",
+        "qfai",
+        "src",
+        "core",
+        "validators",
+        "prototypingEvidence.ts",
+      ),
       "utf-8",
     );
     // Rev2 evidenceRefs is an object with typed categories, not a flat string array

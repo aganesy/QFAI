@@ -136,7 +136,9 @@ describe("E2E: US-0012-0011 — mode.ts exports required functions", () => {
 
   it("exports parseDiscussionModeRecommendationWithWarnings", async () => {
     const src = await readFile(srcPath("prototyping", "mode.ts"), "utf-8");
-    expect(src).toMatch(/export\s+async\s+function\s+parseDiscussionModeRecommendationWithWarnings/);
+    expect(src).toMatch(
+      /export\s+async\s+function\s+parseDiscussionModeRecommendationWithWarnings/,
+    );
   });
 
   it("exports inferSurfaceFromRecommendationAndEvidence", async () => {

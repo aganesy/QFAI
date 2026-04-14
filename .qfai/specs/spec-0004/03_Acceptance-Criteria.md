@@ -261,43 +261,43 @@ Scenario: Valid full-harness evidence passes all v1.7.15 validators
 
 ## AC Catalog (optional)
 
-| AC_ID        | Title                                | Notes         | Priority |
-| ------------ | ------------------------------------ | ------------- | -------- |
-| AC-0004-0001 | 全バリデータ実行                     | REQ-0010      | P1       |
-| AC-0004-0002 | --phase スコープ制御                 | REQ-0011      | P1       |
-| AC-0004-0003 | --fail-on error                      | REQ-0012      | P1       |
-| AC-0004-0004 | --fail-on warning                    | REQ-0012      | P1       |
-| AC-0004-0005 | --format github                      | REQ-0013      | P1       |
-| AC-0004-0006 | validate.json 出力                   | REQ-0014      | P1       |
-| AC-0004-0007 | ランログ生成                         | REQ-0015      | P2       |
-| AC-0004-0008 | ウェイバー suppress                  | REQ-0110      | P1       |
-| AC-0004-0009 | 必須ファイル欠落                     | REQ-0100      | P1       |
-| AC-0004-0010 | ID フォーマット不正                  | REQ-0101      | P1       |
-| AC-0004-0011 | トレーサビリティ欠落                 | REQ-0102      | P1       |
-| AC-0004-0012 | ATDD アノテーション                  | REQ-0103      | P1       |
-| AC-0004-0013 | blocking OQ 検出                     | REQ-0104      | P1       |
-| AC-0004-0014 | 冪等性確認                           | NFR-0012      | P1       |
-| AC-0004-0015 | phase guard                          | phase policy  | P1       |
-| AC-0004-0016 | Canonical UIX aggregator             | REQ-0011      | P1       |
-| AC-0004-0017 | 3-layer テンプレートファイル名期待   | REQ-0012      | P1       |
-| AC-0004-0018 | 旧 4-axis ファイルエラー             | REQ-0012      | P1       |
-| AC-0004-0019 | Non-UI パック UIX スキップ           | REQ-0012      | P2       |
-| AC-0004-0020 | render-evidence truthful state       | REQ-0013      | P1       |
-| AC-0004-0021 | Browser QA truthful runner           | REQ-0014      | P1       |
-| AC-0004-0022 | Canonical-only production path       | REQ-0113,0116 | P1       |
-| AC-0004-0023 | IssueCategory on canonical issues    | REQ-0114      | P1       |
-| AC-0004-0024 | prototypingRecommendation validation | REQ-0115      | P1       |
-| AC-0004-0025 | Full-harness iteration integrity error enforcement | REQ-0124,0132 | P1 |
-| AC-0004-0026 | Single-iteration converged reject | REQ-0125 | P1 |
-| AC-0004-0027 | Reviewer placeholder reject | REQ-0127 | P1 |
-| AC-0004-0028 | Zero-seeded specCoverage reject | REQ-0128 | P1 |
-| AC-0004-0029 | Synthetic mockPaths pass reject | REQ-0129 | P1 |
-| AC-0004-0030 | Evidence structural count integrity | REQ-0131,0132 | P1 |
-| AC-0004-0031 | CalibrationRef/commitSha/limitations required | REQ-0130,0133,0134 | P1 |
-| AC-0004-0032 | Valid evidence passes all v1.7.15 validators | REQ-0124..0135 | P1 |
-| AC-0004-0033 | discussion/screenContract/trend evidenceRefs empty error | REQ-0136 | P1 |
-| AC-0004-0034 | Declared DB no observation error | REQ-0136 | P1 |
-| AC-0004-0035 | uiFidelity completed without screen-level error | REQ-0136 | P1 |
-| AC-0004-0036 | Iteration evidenceRefs missing category error | REQ-0136 | P1 |
-| AC-0004-0037 | Old schema l1/l2 evidence detected error | REQ-0136 | P1 |
-| AC-0004-0038 | Validator test fixtures rev2 aligned | REQ-0137 | P1 |
+| AC_ID        | Title                                                    | Notes              | Priority |
+| ------------ | -------------------------------------------------------- | ------------------ | -------- |
+| AC-0004-0001 | 全バリデータ実行                                         | REQ-0010           | P1       |
+| AC-0004-0002 | --phase スコープ制御                                     | REQ-0011           | P1       |
+| AC-0004-0003 | --fail-on error                                          | REQ-0012           | P1       |
+| AC-0004-0004 | --fail-on warning                                        | REQ-0012           | P1       |
+| AC-0004-0005 | --format github                                          | REQ-0013           | P1       |
+| AC-0004-0006 | validate.json 出力                                       | REQ-0014           | P1       |
+| AC-0004-0007 | ランログ生成                                             | REQ-0015           | P2       |
+| AC-0004-0008 | ウェイバー suppress                                      | REQ-0110           | P1       |
+| AC-0004-0009 | 必須ファイル欠落                                         | REQ-0100           | P1       |
+| AC-0004-0010 | ID フォーマット不正                                      | REQ-0101           | P1       |
+| AC-0004-0011 | トレーサビリティ欠落                                     | REQ-0102           | P1       |
+| AC-0004-0012 | ATDD アノテーション                                      | REQ-0103           | P1       |
+| AC-0004-0013 | blocking OQ 検出                                         | REQ-0104           | P1       |
+| AC-0004-0014 | 冪等性確認                                               | NFR-0012           | P1       |
+| AC-0004-0015 | phase guard                                              | phase policy       | P1       |
+| AC-0004-0016 | Canonical UIX aggregator                                 | REQ-0011           | P1       |
+| AC-0004-0017 | 3-layer テンプレートファイル名期待                       | REQ-0012           | P1       |
+| AC-0004-0018 | 旧 4-axis ファイルエラー                                 | REQ-0012           | P1       |
+| AC-0004-0019 | Non-UI パック UIX スキップ                               | REQ-0012           | P2       |
+| AC-0004-0020 | render-evidence truthful state                           | REQ-0013           | P1       |
+| AC-0004-0021 | Browser QA truthful runner                               | REQ-0014           | P1       |
+| AC-0004-0022 | Canonical-only production path                           | REQ-0113,0116      | P1       |
+| AC-0004-0023 | IssueCategory on canonical issues                        | REQ-0114           | P1       |
+| AC-0004-0024 | prototypingRecommendation validation                     | REQ-0115           | P1       |
+| AC-0004-0025 | Full-harness iteration integrity error enforcement       | REQ-0124,0132      | P1       |
+| AC-0004-0026 | Single-iteration converged reject                        | REQ-0125           | P1       |
+| AC-0004-0027 | Reviewer placeholder reject                              | REQ-0127           | P1       |
+| AC-0004-0028 | Zero-seeded specCoverage reject                          | REQ-0128           | P1       |
+| AC-0004-0029 | Synthetic mockPaths pass reject                          | REQ-0129           | P1       |
+| AC-0004-0030 | Evidence structural count integrity                      | REQ-0131,0132      | P1       |
+| AC-0004-0031 | CalibrationRef/commitSha/limitations required            | REQ-0130,0133,0134 | P1       |
+| AC-0004-0032 | Valid evidence passes all v1.7.15 validators             | REQ-0124..0135     | P1       |
+| AC-0004-0033 | discussion/screenContract/trend evidenceRefs empty error | REQ-0136           | P1       |
+| AC-0004-0034 | Declared DB no observation error                         | REQ-0136           | P1       |
+| AC-0004-0035 | uiFidelity completed without screen-level error          | REQ-0136           | P1       |
+| AC-0004-0036 | Iteration evidenceRefs missing category error            | REQ-0136           | P1       |
+| AC-0004-0037 | Old schema l1/l2 evidence detected error                 | REQ-0136           | P1       |
+| AC-0004-0038 | Validator test fixtures rev2 aligned                     | REQ-0137           | P1       |

@@ -54,9 +54,7 @@ describe("isSpecDeclarationRef (rev11 canonical grammar)", () => {
 describe("isCanonicalScreenContractRef", () => {
   it("accepts canonical slug-form anchor", () => {
     expect(
-      isCanonicalScreenContractRef(
-        ".qfai/discussion/pack-1/uiux/40_screen_contracts.md#dashboard",
-      ),
+      isCanonicalScreenContractRef(".qfai/discussion/pack-1/uiux/40_screen_contracts.md#dashboard"),
     ).toBe(true);
   });
 

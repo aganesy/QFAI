@@ -423,8 +423,14 @@ describe("prototypingEvidence fullHarness rules (PROT-290..309)", () => {
         withFullHarness({
           iterationCount: 2,
           terminationReason: "max-iterations",
-          iterations: [makeIteration({ iteration: 1 }), makeIteration({ iteration: 2, commitSha: "abc0002", deltaFromPrevious: 0.01 })],
-          scoringTrace: [makeScoringTrace({ iteration: 1 }), makeScoringTrace({ iteration: 2, commitSha: "abc0002", deltaFromPrevious: 0.01 })],
+          iterations: [
+            makeIteration({ iteration: 1 }),
+            makeIteration({ iteration: 2, commitSha: "abc0002", deltaFromPrevious: 0.01 }),
+          ],
+          scoringTrace: [
+            makeScoringTrace({ iteration: 1 }),
+            makeScoringTrace({ iteration: 2, commitSha: "abc0002", deltaFromPrevious: 0.01 }),
+          ],
           reviewerLogs: [makeReviewerLog({ iteration: 1 }), makeReviewerLog({ iteration: 2 })],
         }),
       );
@@ -451,9 +457,7 @@ describe("prototypingEvidence fullHarness rules (PROT-290..309)", () => {
           deltaFromPrevious: i === 0 ? null : 0.01,
         }),
       );
-      const logs = Array.from({ length: 5 }, (_, i) =>
-        makeReviewerLog({ iteration: i + 1 }),
-      );
+      const logs = Array.from({ length: 5 }, (_, i) => makeReviewerLog({ iteration: i + 1 }));
       await seedEvidence(
         root,
         withFullHarness({
@@ -502,10 +506,7 @@ describe("prototypingEvidence fullHarness rules (PROT-290..309)", () => {
             makeScoringTrace({ iteration: 1 }),
             makeScoringTrace({ iteration: 2, commitSha: "abc0002", deltaFromPrevious: 0.01 }),
           ],
-          reviewerLogs: [
-            makeReviewerLog({ iteration: 1 }),
-            makeReviewerLog({ iteration: 2 }),
-          ],
+          reviewerLogs: [makeReviewerLog({ iteration: 1 }), makeReviewerLog({ iteration: 2 })],
         }),
       );
       const issues = await validatePrototypingEvidence(root, defaultConfig);
@@ -778,7 +779,7 @@ describe("prototypingEvidence rev2 rules (PROT-310..315)", () => {
       await seedAll(root);
       const iter = makeIteration({
         evidenceRefs: {
-          ...makeIteration().evidenceRefs as Record<string, string[]>,
+          ...(makeIteration().evidenceRefs as Record<string, string[]>),
           discussion: [],
         },
       });
@@ -794,7 +795,7 @@ describe("prototypingEvidence rev2 rules (PROT-310..315)", () => {
       await seedAll(root);
       const iter = makeIteration({
         evidenceRefs: {
-          ...makeIteration().evidenceRefs as Record<string, string[]>,
+          ...(makeIteration().evidenceRefs as Record<string, string[]>),
           screenContract: [],
         },
       });
@@ -810,7 +811,7 @@ describe("prototypingEvidence rev2 rules (PROT-310..315)", () => {
       await seedAll(root);
       const iter = makeIteration({
         evidenceRefs: {
-          ...makeIteration().evidenceRefs as Record<string, string[]>,
+          ...(makeIteration().evidenceRefs as Record<string, string[]>),
           trend: [],
         },
       });
@@ -832,7 +833,11 @@ describe("prototypingEvidence rev2 rules (PROT-310..315)", () => {
               specId: "spec-0001",
               declared: { uiRoutes: 1, apiEndpoints: 0, dbObjects: 3 },
               checked: { uiOk: 1, apiNon404: 0, dbPresent: 0 },
-              missing: { uiRoutes: [], apiEndpoints: [], dbObjects: ["table1", "table2", "table3"] },
+              missing: {
+                uiRoutes: [],
+                apiEndpoints: [],
+                dbObjects: ["table1", "table2", "table3"],
+              },
               coverageRefs: [],
             },
           ],
@@ -900,7 +905,14 @@ describe("prototypingEvidence rev2 rules (PROT-310..315)", () => {
       await seedAll(root);
       await seedEvidence(root, buildValidEvidence());
       const issues = await validatePrototypingEvidence(root, defaultConfig);
-      const rev2Codes = ["QFAI-PROT-310", "QFAI-PROT-311", "QFAI-PROT-312", "QFAI-PROT-313", "QFAI-PROT-314", "QFAI-PROT-315"];
+      const rev2Codes = [
+        "QFAI-PROT-310",
+        "QFAI-PROT-311",
+        "QFAI-PROT-312",
+        "QFAI-PROT-313",
+        "QFAI-PROT-314",
+        "QFAI-PROT-315",
+      ];
       const rev2Issues = issues.filter((i) => rev2Codes.includes(i.code));
       expect(rev2Issues).toHaveLength(0);
     });

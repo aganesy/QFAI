@@ -26,15 +26,7 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 
-const INIT_CLI = path.resolve(
-  __dirname,
-  "..",
-  "..",
-  "src",
-  "cli",
-  "commands",
-  "init.ts",
-);
+const INIT_CLI = path.resolve(__dirname, "..", "..", "src", "cli", "commands", "init.ts");
 
 // TC-0003-0001: Empty directory initialization
 describe("TC-0003-0001: Empty directory initialization", () => {

@@ -5,10 +5,7 @@ import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { runMeasurement } from "../../../src/core/harness/measurement.js";
-import type {
-  FullHarnessPanelScore,
-  MeasurementInput,
-} from "../../../src/core/harness/types.js";
+import type { FullHarnessPanelScore, MeasurementInput } from "../../../src/core/harness/types.js";
 
 const RENDER_REF = ".qfai/evidence/render.json#/screens/dashboard";
 const BROWSER_QA_REF = ".qfai/evidence/browser-qa.json#/screens/dashboard";

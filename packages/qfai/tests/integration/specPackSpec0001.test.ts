@@ -36,22 +36,48 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 
-const SPEC_LAYOUT = path.resolve(
-  __dirname, "..", "..", "src", "core", "specLayout.ts",
-);
+const SPEC_LAYOUT = path.resolve(__dirname, "..", "..", "src", "core", "specLayout.ts");
 const SPEC_PACK_VALIDATOR = path.resolve(
-  __dirname, "..", "..", "src", "core", "validators", "specPack.ts",
+  __dirname,
+  "..",
+  "..",
+  "src",
+  "core",
+  "validators",
+  "specPack.ts",
 );
 const DRIFT_PROTOCOL = path.resolve(
-  __dirname, "..", "..", "assets", "init", ".qfai", "assistant",
-  "instructions", "drift-protocol.md",
+  __dirname,
+  "..",
+  "..",
+  "assets",
+  "init",
+  ".qfai",
+  "assistant",
+  "instructions",
+  "drift-protocol.md",
 );
 const CONSTITUTION = path.resolve(
-  __dirname, "..", "..", "assets", "init", ".qfai", "assistant",
-  "instructions", "constitution.md",
+  __dirname,
+  "..",
+  "..",
+  "assets",
+  "init",
+  ".qfai",
+  "assistant",
+  "instructions",
+  "constitution.md",
 );
 const SPEC_0001 = path.resolve(
-  __dirname, "..", "..", "..", "..", ".qfai", "specs", "spec-0001", "01_Spec.md",
+  __dirname,
+  "..",
+  "..",
+  "..",
+  "..",
+  ".qfai",
+  "specs",
+  "spec-0001",
+  "01_Spec.md",
 );
 
 // TC-0001-0001: v1421 spec files count

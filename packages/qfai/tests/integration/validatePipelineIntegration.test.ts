@@ -273,7 +273,7 @@ describe("TC-0004-0025: IssueCategory on canonical issues", () => {
 
   it("Issue type requires category: IssueCategory", async () => {
     const src = await readSource("packages/qfai/src/core/types.ts");
-    expect(src).toContain('category: IssueCategory');
+    expect(src).toContain("category: IssueCategory");
     expect(src).toMatch(/IssueCategory\s*=\s*["']canonical["']/);
   });
 });
@@ -743,9 +743,7 @@ describe("TC-0004-0061: Rev2 compliant evidence happy path (v1.7.15 rev2)", () =
 // QFAI:SPEC-0004:TC-0004-0062
 describe("TC-0004-0062: Validator test fixtures rev2 clean (v1.7.15 rev2)", () => {
   it("unit test normal fixtures do not contain l1/l2 direct pass patterns", async () => {
-    const src = await readSource(
-      "packages/qfai/tests/unit/validators/prototypingEvidence.test.ts",
-    );
+    const src = await readSource("packages/qfai/tests/unit/validators/prototypingEvidence.test.ts");
     // makeIteration (used inside buildValidEvidence) must have populated axes
     const iterFn = src.match(/function makeIteration[\s\S]*?\n\}/);
     expect(iterFn).not.toBeNull();
@@ -756,17 +754,13 @@ describe("TC-0004-0062: Validator test fixtures rev2 clean (v1.7.15 rev2)", () =
   });
 
   it("unit test normal fixtures do not use packVersion '1.0.0'", async () => {
-    const src = await readSource(
-      "packages/qfai/tests/unit/validators/prototypingEvidence.test.ts",
-    );
+    const src = await readSource("packages/qfai/tests/unit/validators/prototypingEvidence.test.ts");
     // Must not contain packVersion: "1.0.0" which indicates old schema
     expect(src).not.toMatch(/packVersion.*["']1\.0\.0["']/);
   });
 
   it("unit test error fixtures include missing evidence category scenarios", async () => {
-    const src = await readSource(
-      "packages/qfai/tests/unit/validators/prototypingEvidence.test.ts",
-    );
+    const src = await readSource("packages/qfai/tests/unit/validators/prototypingEvidence.test.ts");
     // The test file must exercise PROT-309 (reviewer placeholder in iterations)
     expect(src).toContain("PROT-309");
     // And PROT-305 (zero-seeded specCoverage)
