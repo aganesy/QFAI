@@ -739,3 +739,237 @@
 | 1    | aggregateScore = 1.5                              | Error: out of 0-1 range               |
 | 2    | trendSourcesChecked = 0                           | Error: trend sources required          |
 | 3    | screenContract.totalContracts > 0, fidelityScore = 0 | Error: fidelity score required     |
+
+## TC-0012-0071: Canonical Surface Name Accepted (v1.7.14)
+
+- EX-Ref: EX-0012-0070
+- AC-Refs: AC-0012-0020
+- Type: normal
+
+| Step | Action                                           | Expected                               |
+| ---- | ------------------------------------------------ | -------------------------------------- |
+| 1    | Set prototyping configuration with surface "web"  | Surface value parsed without error     |
+| 2    | Run execution validation against the surface      | Validation passes; surface accepted    |
+
+## TC-0012-0072: Non-Canonical Surface Name Rejected (v1.7.14)
+
+- EX-Ref: EX-0012-0070
+- AC-Refs: AC-0012-0020
+- Type: error
+
+| Step | Action                                           | Expected                               |
+| ---- | ------------------------------------------------ | -------------------------------------- |
+| 1    | Set prototyping configuration with surface "web-ui" | Surface value parsed                 |
+| 2    | Run execution validation against the surface      | Error rejected with message indicating canonical name "web" |
+
+## TC-0012-0073: Contradictory Classification Hard Error (v1.7.14)
+
+- EX-Ref: EX-0012-0071
+- AC-Refs: AC-0012-0021
+- Type: error
+
+| Step | Action                                           | Expected                               |
+| ---- | ------------------------------------------------ | -------------------------------------- |
+| 1    | Create discussion-pack with ui_bearing=true, primary_surface=non-ui | Pack loaded |
+| 2    | Run execution.ts against the pack                 | Hard error thrown immediately; no fallback or continuation |
+
+## TC-0012-0074: Valid Classification Passes Execution (v1.7.14)
+
+- EX-Ref: EX-0012-0071
+- AC-Refs: AC-0012-0021
+- Type: normal
+
+| Step | Action                                           | Expected                               |
+| ---- | ------------------------------------------------ | -------------------------------------- |
+| 1    | Create discussion-pack with ui_bearing=true, primary_surface=web | Pack loaded |
+| 2    | Run execution.ts against the pack                 | Classification accepted; execution proceeds |
+
+## TC-0012-0075: Non-UI Pack Rejected by Execution (v1.7.14)
+
+- EX-Ref: EX-0012-0071
+- AC-Refs: AC-0012-0022
+- Type: error
+
+| Step | Action                                           | Expected                               |
+| ---- | ------------------------------------------------ | -------------------------------------- |
+| 1    | Create discussion-pack with ui_bearing=false, primary_surface=non-ui | Pack loaded |
+| 2    | Run execution.ts against the pack                 | Rejected with "Non-UI classification is not a prototyping execution target" |
+
+## TC-0012-0076: UI-Bearing Pack Accepted by Execution (v1.7.14)
+
+- EX-Ref: EX-0012-0071
+- AC-Refs: AC-0012-0022
+- Type: normal
+
+| Step | Action                                           | Expected                               |
+| ---- | ------------------------------------------------ | -------------------------------------- |
+| 1    | Create discussion-pack with ui_bearing=true, primary_surface=web | Pack loaded |
+| 2    | Run execution.ts against the pack                 | Pack accepted; prototyping execution proceeds normally |
+
+## TC-0012-0077: Legacy Top-Level Key Hard Error (v1.7.14)
+
+- EX-Ref: EX-0012-0072
+- AC-Refs: AC-0012-0023
+- Type: error
+
+| Step | Action                                           | Expected                               |
+| ---- | ------------------------------------------------ | -------------------------------------- |
+| 1    | Create prototyping.yaml with recommended_mode at root level | YAML parsed |
+| 2    | Run mode resolution                               | Hard error returned (not warning, not fallback to namespaced block) |
+
+## TC-0012-0078: Namespaced Key Accepted by Mode Resolution (v1.7.14)
+
+- EX-Ref: EX-0012-0072
+- AC-Refs: AC-0012-0023
+- Type: normal
+
+| Step | Action                                           | Expected                               |
+| ---- | ------------------------------------------------ | -------------------------------------- |
+| 1    | Create prototyping.yaml with recommended_mode inside namespaced block | YAML parsed |
+| 2    | Run mode resolution                               | Mode resolved successfully from namespaced block |
+
+## TC-0012-0079: Semantic Mismatch Returns Null With Warning (v1.7.14)
+
+- EX-Ref: EX-0012-0072
+- AC-Refs: AC-0012-0024
+- Type: error
+
+| Step | Action                                           | Expected                               |
+| ---- | ------------------------------------------------ | -------------------------------------- |
+| 1    | Create prototyping.yaml with recommended_mode="full-harness", allowed_modes=["low-cost","standard"] | YAML parsed |
+| 2    | Call extractRecommendation()                      | Returns null; semantic mismatch warning emitted |
+
+## TC-0012-0080: Consistent Mode Recommendation Accepted (v1.7.14)
+
+- EX-Ref: EX-0012-0072
+- AC-Refs: AC-0012-0024
+- Type: normal
+
+| Step | Action                                           | Expected                               |
+| ---- | ------------------------------------------------ | -------------------------------------- |
+| 1    | Create prototyping.yaml with recommended_mode="standard", allowed_modes=["low-cost","standard"] | YAML parsed |
+| 2    | Call extractRecommendation()                      | Returns "standard"; no warning emitted |
+
+## TC-0012-0081: CLI Surface Obligations Exclude Browser (v1.7.14)
+
+- EX-Ref: EX-0012-0073
+- AC-Refs: AC-0012-0025
+- Type: normal
+
+| Step | Action                                           | Expected                               |
+| ---- | ------------------------------------------------ | -------------------------------------- |
+| 1    | Create discussion-pack with surface="cli", mode="standard" | Pack loaded |
+| 2    | Call derivePrototypingObligations()               | requireRenderBundle=false, requireBrowserQaBundle=false |
+
+## TC-0012-0082: CLI Surface Requires Runtime Gate (v1.7.14)
+
+- EX-Ref: EX-0012-0073
+- AC-Refs: AC-0012-0025
+- Type: boundary
+
+| Step | Action                                           | Expected                               |
+| ---- | ------------------------------------------------ | -------------------------------------- |
+| 1    | Create discussion-pack with surface="cli", mode="standard" | Pack loaded |
+| 2    | Call derivePrototypingObligations()               | requireRuntimeGate=true despite browser bundles being false |
+
+## TC-0012-0083: Full-Harness Iteration Converged Termination (v1.7.14)
+
+- EX-Ref: EX-0012-0074
+- AC-Refs: AC-0012-0027
+- Type: normal
+
+| Step | Action                                           | Expected                               |
+| ---- | ------------------------------------------------ | -------------------------------------- |
+| 1    | Configure calibration: accept=0.75, maxIterations=15, plateauDelta=0.02, plateauLookback=3 | Config loaded |
+| 2    | Run full-harness iteration loop; scores improve to 0.80 by iteration 6 | Loop executes Evaluate→Identify→Fix→Re-evaluate per iteration |
+| 3    | Check termination                                | terminationReason="converged", iterationCount=6 (≥MIN_ITERATIONS=5) |
+
+## TC-0012-0084: Full-Harness Plateau Termination (v1.7.14)
+
+- EX-Ref: EX-0012-0074
+- AC-Refs: AC-0012-0027
+- Type: boundary
+
+| Step | Action                                           | Expected                               |
+| ---- | ------------------------------------------------ | -------------------------------------- |
+| 1    | Configure calibration: accept=0.90, plateauDelta=0.02, plateauLookback=3 | Config loaded |
+| 2    | Run iteration loop; scores plateau at 0.72 for 3 consecutive iterations | Plateau detected |
+| 3    | Check termination                                | terminationReason="plateau", score delta < 0.02 for lookback window |
+
+## TC-0012-0085: Independent Evaluator Panel Minimum Score (v1.7.14)
+
+- EX-Ref: EX-0012-0075
+- AC-Refs: AC-0012-0028
+- Type: normal
+
+| Step | Action                                           | Expected                               |
+| ---- | ------------------------------------------------ | -------------------------------------- |
+| 1    | Launch L1 (product-surface-reviewer) and L2 (product-experience-architect) in background mode | Evaluators started without improvement history |
+| 2    | L1 returns score 0.65, L2 returns score 0.72    | Both scores recorded |
+| 3    | Calculate weightedTotal                          | weightedTotal = min(0.65, 0.72) = 0.65; decision=pivot (below refine threshold) |
+
+## TC-0012-0086: Score Scope Separation Violation Blocked (v1.7.14)
+
+- EX-Ref: EX-0012-0076
+- AC-Refs: AC-0012-0029
+- Type: error
+
+| Step | Action                                           | Expected                               |
+| ---- | ------------------------------------------------ | -------------------------------------- |
+| 1    | Attempt to copy discussion 3-layer scores into prototyping scoringTrace | Operation attempted |
+| 2    | Validate scoringTrace source                     | Rejected: discussion scores measure design direction quality, not implementation fidelity |
+
+## TC-0012-0087: Existence Gate Caps Score at 0.3 (v1.7.14)
+
+- EX-Ref: EX-0012-0077
+- AC-Refs: AC-0012-0030
+- Type: boundary
+
+| Step | Action                                           | Expected                               |
+| ---- | ------------------------------------------------ | -------------------------------------- |
+| 1    | Evaluate axis where element does not exist (existence_gate fails) | existence_gate=false |
+| 2    | Attempt to assign quality_criteria score of 0.5  | Score capped at 0.3 maximum; score cannot exceed existence_gate ceiling |
+
+## TC-0012-0088: Asset Acquisition Emoji Forbidden (v1.7.14)
+
+- EX-Ref: EX-0012-0078
+- AC-Refs: AC-0012-0031
+- Type: error
+
+| Step | Action                                           | Expected                               |
+| ---- | ------------------------------------------------ | -------------------------------------- |
+| 1    | Generate full-harness output with emoji U+1F600 as decorative UI element | Output generated |
+| 2    | Run asset validation                             | Error: emoji characters (U+1F000–U+1FAFF) forbidden as UI decoration in full-harness output |
+
+## TC-0012-0089: Reviewer Gate Six Verification Checks (v1.7.14)
+
+- EX-Ref: EX-0012-0079
+- AC-Refs: AC-0012-0032
+- Type: normal
+
+| Step | Action                                           | Expected                               |
+| ---- | ------------------------------------------------ | -------------------------------------- |
+| 1    | Submit full-harness evidence with iterationCount=3, matching scoringTrace, improving scores | Evidence submitted |
+| 2    | Run reviewer gate verification                   | All 6 checks pass: count>1, trace matches, improvement shown, termination consistent, evaluators launched, limitations documented |
+
+## TC-0012-0090: Validator PROT-290 Single-Iteration Convergence Warning (v1.7.14)
+
+- EX-Ref: EX-0012-0080
+- AC-Refs: AC-0012-0033
+- Type: boundary
+
+| Step | Action                                           | Expected                               |
+| ---- | ------------------------------------------------ | -------------------------------------- |
+| 1    | Create evidence with iterationCount=1, terminationReason="converged" | Evidence loaded |
+| 2    | Run prototypingEvidence validator                | QFAI-PROT-290 warning: single-iteration convergence is normally unexpected |
+
+## TC-0012-0091: Maximum Delta Cap Exceeded Re-evaluation (v1.7.14)
+
+- EX-Ref: EX-0012-0081
+- AC-Refs: AC-0012-0027
+- Type: boundary
+
+| Step | Action                                           | Expected                               |
+| ---- | ------------------------------------------------ | -------------------------------------- |
+| 1    | Record iteration with axis score delta of 0.25 (exceeds maxDeltaPerAxisPerIteration=0.15) | Delta recorded |
+| 2    | Validate delta cap                               | Re-evaluation required: delta 0.25 exceeds 0.15 cap; justification mandatory |

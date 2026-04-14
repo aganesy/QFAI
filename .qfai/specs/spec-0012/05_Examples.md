@@ -417,9 +417,9 @@
 
 - BR-Ref: BR-0012-0064
 
-- Given specNames=["spec-0001","spec-0002"] and perSpecMap has only "spec-0001"
+- Given specNames=["alpha","beta"] and perSpecMap has only "alpha"
 - When buildPrototypingSummaryBundle runs
-- Then error thrown for missing "spec-0002" (not zero-initialized)
+- Then error thrown for missing "beta" (not zero-initialized)
 
 ## EX-0012-0062: ScreenObservation Happy Path (v1.7.15 rev2)
 
@@ -460,3 +460,99 @@
 - Given normal-path test fixtures directory
 - When grepped for `"l1":` or `"l2":` direct pass or `packVersion:"1.0.0"` or single-iteration converged
 - Then zero matches found
+
+## EX-0012-0070: Canonical Prototyping Surface Validation (v1.7.14)
+
+- BR-Ref: BR-0012-0020
+
+- Given a classification block with primary_surface="web-ui" (legacy -ui suffix)
+- When assertCanonicalPrototypingSurface() is called
+- Then validation fails; only the 5 canonical values (web/mobile/desktop/cli/mixed) are accepted
+
+## EX-0012-0071: Execution Hard Gate on Invalid Recommendation (v1.7.14)
+
+- BR-Ref: BR-0012-0021
+
+- Given recommendation.status==="invalid" and classification===null from resolver output
+- When execution.ts processes via readValidatedClassification() (strict API)
+- Then a hard error is thrown; readClassificationBlock() (non-strict) is never used
+
+## EX-0012-0072: Semantic Invariant — Mode Mismatch Cascade (v1.7.14)
+
+- BR-Ref: BR-0012-0022
+
+- Given recommended_mode="full-harness" but allowed_modes=["standard"] in prototyping.yaml
+- When validateRecommendationSemantics() checks the mismatch
+- Then parser returns null+warning, resolver returns invalid, execution throws hard error
+
+## EX-0012-0073: Classification Separation — Surface-Based Obligations (v1.7.14)
+
+- BR-Ref: BR-0012-0023
+
+- Given classification with primary_surface="web" (needsVisualBrowserEvidence=true) and a second spec with primary_surface="cli"
+- When derivePrototypingObligations() runs for each
+- Then web spec gets requireRenderBundle=true, requireBrowserQaBundle=true; cli spec gets requireRuntimeGate=true, visual/browser evidence=false
+
+## EX-0012-0074: Full-Harness Iteration Protocol Termination (v1.7.14)
+
+- BR-Ref: BR-0012-0024
+
+- Given full-harness mode with accept=0.7, max=10 iterations; at iteration 5 weightedTotal reaches 0.75
+- When the 4-step cycle (Evaluate→Identify→Fix→Re-evaluate) completes iteration 5
+- Then loop terminates with terminationReason="converged"; if iterationCount were 1 instead, QFAI-PROT-290 warning would fire
+
+## EX-0012-0075: Independent Evaluator Panel Scoring (v1.7.14)
+
+- BR-Ref: BR-0012-0025
+
+- Given L1 (product-surface-reviewer) scores 0.72, L2 (product-experience-architect) scores 0.68, L3 (qa-gatekeeper) passes integrity
+- When weightedTotal is computed
+- Then weightedTotal = min(L1, L2) = min(0.72, 0.68) = 0.68; L1/L2 launched in background mode without improvement history
+
+## EX-0012-0076: Score Scope Separation Enforcement (v1.7.14)
+
+- BR-Ref: BR-0012-0026
+
+- Given discussion 3-layer scores {product:0.8, engineering:0.7, quality:0.75} already recorded
+- When an implementation copies these discussion scores directly into prototyping scoringTrace
+- Then validation rejects: discussion scores measure design direction quality; scoringTrace measures implementation fidelity; copying is forbidden
+
+## EX-0012-0077: Evaluation Rigor — Existence Gate Cap (v1.7.14)
+
+- BR-Ref: BR-0012-0027
+
+- Given L1 evaluator finds a required navigation element completely missing (existence_gate range 0.0–0.3, score=0.2)
+- When the 3-tier rubric (existence_gate / quality_criteria / excellence_criteria) is applied
+- Then total score capped at 0.3; finding classified as L1(structural, auto-fix)
+
+## EX-0012-0078: Asset Acquisition — Emoji and Placeholder Forbidden (v1.7.14)
+
+- BR-Ref: BR-0012-0028
+
+- Given a full-harness prototyping output that uses emoji icons (🏠) in the hero section and "Lorem ipsum" placeholder text
+- When asset acquisition rules are evaluated
+- Then output rejected: emoji in UI forbidden, placeholder in final output forbidden; free sources (Unsplash, Pexels) MUST be used; WCAG 2.1 AA required
+
+## EX-0012-0079: Reviewer Gate — Six Verification Checks (v1.7.14)
+
+- BR-Ref: BR-0012-0029
+
+- Given a full-harness result with iterationCount=1, scoringTrace=[0.65], terminationReason="converged"
+- When the 6 reviewer verification checks run
+- Then check fails on: iterationCount>1 (false), score improvement not shown (single entry), and terminationReason mismatch with trajectory
+
+## EX-0012-0080: Validator Rules PROT-290~294 (v1.7.14)
+
+- BR-Ref: BR-0012-0030
+
+- Given iterationCount=3 but scoringTrace has 2 entries, and max_iterations=5
+- When full-harness validator rules QFAI-PROT-290~294 are evaluated
+- Then QFAI-PROT-291(warning) fires: trace length (2) ≠ iterationCount (3)
+
+## EX-0012-0081: Maximum Delta Cap Exceeded (v1.7.14)
+
+- BR-Ref: BR-0012-0031
+
+- Given iteration N scores ux_quality=0.50, iteration N+1 scores ux_quality=0.70 (delta=0.20)
+- When maxDeltaPerAxisPerIteration=0.15 cap is checked
+- Then delta 0.20 exceeds cap 0.15; re-evaluation or justification is required before accepting the score
