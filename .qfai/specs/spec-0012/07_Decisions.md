@@ -130,3 +130,52 @@
 - Rationale: silent fallback は evidence truthfulness を破壊する。fail-fast により問題が早期に検出され、不正な evidence の生成を防止
 - Status: Adopted
 - Impact: execution.ts, prototypingEvidence.ts, all evidence builder modules
+
+## DR-0012-0019: Pre-scored l1/l2 path elimination (v1.7.15 rev2, DR-0209)
+
+- Decision: runFullHarness() request 型から l1/l2 を削除。scoring は runtime 内一元実行
+- Rationale: pre-scored 値の存在が evidence-grounded でないスコアの採用経路を作る
+- Status: Adopted
+- Impact: types.ts, execution.ts, all callers
+
+## DR-0012-0020: l2Evidence.ts new file (v1.7.15 rev2, DR-0210)
+
+- Decision: l2Evidence.ts を core/prototyping/ に新設し、3 builder 関数で実 artifact から L2 入力を導出
+- Rationale: execution.ts 内の L2 dummy object を構造的に排除
+- Status: Adopted
+- Impact: l2Evidence.ts (new), execution.ts
+
+## DR-0012-0021: CalibrationLoader fail-open removal (v1.7.15 rev2, DR-0211)
+
+- Decision: DEFAULT_PACK / version="1.0.0" 補完 / thresholds default 注入の全パスを削除
+- Rationale: fail-closed 設計で calibration の存在と正当性を保証
+- Status: Adopted
+- Impact: calibrationLoader.ts, execution.ts
+
+## DR-0012-0022: TerminationContext CalibrationPack only (v1.7.15 rev2, DR-0212)
+
+- Decision: history.ts の termination 関数は CalibrationPack のみ受け入れ
+- Rationale: pack 以外の plateauLookback 解決経路を廃止
+- Status: Adopted
+- Impact: history.ts
+
+## DR-0012-0023: Screen-level UiObservation (v1.7.15 rev2, DR-0213)
+
+- Decision: ScreenObservation 型で screen-level 保持。flatten 集約廃止
+- Rationale: screen 単位の insufficient-evidence 検出を可能にする
+- Status: Adopted
+- Impact: uiObservation.ts, uiFidelityBuilder.ts, types.ts
+
+## DR-0012-0024: bundleWriter schema v2 only (v1.7.15 rev2, DR-0214)
+
+- Decision: schema v2 のみ出力。v1/v2 並存禁止
+- Rationale: schema 分岐はメンテナンスコストと consumer 混乱を招く
+- Status: Adopted
+- Impact: bundleWriter.ts
+
+## DR-0012-0025: DB coverage binary policy (v1.7.15 rev2, DR-0216)
+
+- Decision: declared DB objects ありで観測なし → full-harness failure
+- Rationale: missing 続行は evidence truthfulness を損なう
+- Status: Adopted
+- Impact: specCoverage.ts, execution.ts

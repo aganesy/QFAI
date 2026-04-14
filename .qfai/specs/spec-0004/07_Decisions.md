@@ -47,3 +47,9 @@
 - Decision: PROT-295..309 の error-level rules に対する waiver を認めない
 - Context: waivers.yml で warning/info を suppress/downgrade する仕組みが存在するが、error-level findings は waiver 対象外（spec-0014 BR-0014-0003 と一貫）
 - Rationale: これらの rules は evidence truthfulness の根幹であり、waiver による回避は evidence 品質の保証を無効にする
+
+### DR-0004-0009: Rev2 Validator Rules Use New Rule IDs for Semantic Changes (v1.7.15 rev2)
+
+- Decision: rev2 で追加される validator rules のうち、既存 rule の severity upgrade は rule ID を維持し、semantic 変更（新しい検出対象）は新 rule ID に分離する
+- Rationale: rule ID の安定性を保ちつつ、新検出対象を明確に区別。既存の waiver や CI 設定が意図せず新ルールを抑制するリスクを回避
+- Status: Adopted

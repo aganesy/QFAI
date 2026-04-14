@@ -295,3 +295,9 @@ Scenario: Valid full-harness evidence passes all v1.7.15 validators
 | AC-0004-0030 | Evidence structural count integrity | REQ-0131,0132 | P1 |
 | AC-0004-0031 | CalibrationRef/commitSha/limitations required | REQ-0130,0133,0134 | P1 |
 | AC-0004-0032 | Valid evidence passes all v1.7.15 validators | REQ-0124..0135 | P1 |
+| AC-0004-0033 | discussion/screenContract/trend evidenceRefs empty error | REQ-0136 | P1 |
+| AC-0004-0034 | Declared DB no observation error | REQ-0136 | P1 |
+| AC-0004-0035 | uiFidelity completed without screen-level error | REQ-0136 | P1 |
+| AC-0004-0036 | Iteration evidenceRefs missing category error | REQ-0136 | P1 |
+| AC-0004-0037 | Old schema l1/l2 evidence detected error | REQ-0136 | P1 |
+| AC-0004-0038 | Validator test fixtures rev2 aligned | REQ-0137 | P1 |

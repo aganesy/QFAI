@@ -94,16 +94,22 @@ Single-PR: `packages/qfai/**` only. No `.qfai/` root edits.
 | Discussion README | Score scope separation note (discussion scores != prototyping scores) |
 | Drift diff | Enumerate docs claims vs runtime error conditions for 1:1 correspondence verification |
 
-### Implementation Order
+### Implementation Order (rev2 refined, TC-84 compliant)
 
-1. CalibrationLoader schema hardening (plateauLookback >= 2, pack metadata packVersion)
-2. panelScore.ts (scoreL1/scoreL2 real evidence, weightedTotal = min)
-3. termination.ts (converged/plateau/max-iterations rules)
-4. history.ts (reviewerLogs append-only)
-5. execution.ts (CalibrationLoader wiring, fail-fast gates, reviewer placeholder gate)
-6. specCoverageBuilder.ts (new module)
-7. uiObservation.ts (extractDomLabelsWithJsdom), uiFidelityBuilder.ts (observation-only)
-8. commitSha/gitRevision (mandatory in full-harness)
-9. prototypingEvidence.ts (validator hardening)
-10. docs/SKILL/README sync
-11. tests (unit + integration)
+Dependency graph order: calibration/history/runtime/types → l2Evidence/measurement/panelInputs/panelScore → execution 結線 → specCoverage/uiObservation/uiFidelityBuilder
+
+1. types.ts — FullHarnessRequest から l1/l2 削除、FullHarnessIteration evidence-driven 再定義、MeasurementResult strict、ScreenObservation 型、evidenceRefs 8 カテゴリ型
+2. calibrationLoader.ts — fail-open 全廃（DEFAULT_PACK / version="1.0.0" / thresholds default 削除）
+3. history.ts — TerminationContext を CalibrationPack で受ける、count<plateauLookback guard、array length strict
+4. l2Evidence.ts（新設）— buildDiscussionAxisInputs / buildScreenContractInputs / buildTrendAlignmentInputs
+5. measurement.ts — MeasurementResult に 8 カテゴリ evidenceRefs 同時返却
+6. panelInputs.ts — validatePanelInputs 10-check gate 強化
+7. panelScore.ts — aggregateScore 0〜1 / trendSourcesChecked===0 reject / fidelityScore===0 with contracts reject
+8. execution.ts — pre-scored bypass 削除、scoring pipeline 一元化、L2 dummy 全廃→l2Evidence builder 呼び出し、CalibrationLoader wiring、config fallback 弱体化、fail-fast gates
+9. specCoverage.ts — 全 spec 必須化、silent 空返却禁止、DB coverage 二択
+10. uiObservation.ts — ScreenObservation array 出力、actionsWired browser QA 由来、mockPath semantics 同期
+11. uiFidelityBuilder.ts — screen-level 化、insufficient-evidence 厳格化、auto-pass 廃止
+12. bundleWriter.ts — schema v2（8 カテゴリ + 新 iteration 型）
+13. prototypingEvidence.ts — validator 14 項目 error 昇格 + rev2 追加ルール
+14. docs/SKILL/README — reality sync（独立 evaluator 自動起動主張削除等）
+15. tests — normal fixture rev2 clean + error fixture rev2 追加

@@ -246,6 +246,14 @@
 | UIX-REV      | UI/UX Review — semantic reviewer ルール ID プレフィックス (v1.7.4)           |
 | FH           | Full-Harness — premium prototyping mode の反復ループ構造                     |
 | SDP          | Spec Diff Protocol                                                           | Spec Auto-Discovery Protocol の略称 |
+| l2Evidence                   | L2 Evidence Module — `l2Evidence.ts` が提供する 3 つの builder 関数（buildDiscussionAxisInputs / buildScreenContractInputs / buildTrendAlignmentInputs）で実 discussion artifact から L2 入力を導出するモジュール (v1.7.15 rev2) |
+| ScreenObservation            | Screen-level UI 観測型。route / htmlCaptureRef / domLabelsFound / elementsPlaced / actionsWired / mockPathFindings を screen 単位で保持する (v1.7.15 rev2) |
+| TerminationContext           | Full-harness 終了判定コンテキスト。`{ calibration: CalibrationPack; history: FullHarnessHistory }` を受け、CalibrationPack 以外からの plateauLookback 解決を禁止 (v1.7.15 rev2) |
+| MeasurementResult            | Full-harness 計測結果型。panelInputs と 8 カテゴリ evidenceRefs を同時に返す strict 型 (v1.7.15 rev2) |
+| evidenceRefs 8 categories    | iteration ごとに必須の 8 つの evidence カテゴリ: runtimeGate / render / browserQa / uiObservation / specCoverage / discussion / screenContract / trend (v1.7.15 rev2) |
+| schema v2 (bundleWriter)     | bundleWriter の新 iteration schema。8 カテゴリ evidenceRefs + FullHarnessIteration 新型の required fields を定義。v1 との並存を禁止 (v1.7.15 rev2) |
+| fail-closed                  | 入力不備時にデフォルト値で続行せず即座に失敗する設計方針。CalibrationLoader / validatePanelInputs / specCoverage 等に適用 (v1.7.15 rev2) |
+| validatePanelInputs          | panelInputs の必須項目欠落を検出する検証関数。10 種類の silent pass を error に昇格 (v1.7.15 rev2) |
 
 ## 使用ルール
 

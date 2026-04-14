@@ -2,7 +2,7 @@
 
 ## Decisions
 
-108 items — discussion-20260312143000000（symlink アーキテクチャ移行）、
+116 items — discussion-20260312143000000（symlink アーキテクチャ移行）、
 discussion-20260313143000000（SDP）、discussion-20260314053646704（AskUserQuestion MUST 化）、
 discussion-20260317102145554（実装フェーズ統一）、discussion-20260322091309602（Copilot レビューインストラクション配布）、
 discussion-20260323111959112（Codex サブエージェント）、discussion-20260324054332396（デザインディレクション＆UI品質強化）、
@@ -1229,4 +1229,60 @@ discussion-20260329195516830（v1.7.6 Audit Remediation）、
 ### DR-0208: Fail-fast no silent fallback (v1.7.15)
 
 - Decision: 必須 evidence 欠落時は runtime error で即座に失敗。デフォルト値補完を禁止
+- Status: Adopted
+
+### DR-0209: Pre-scored l1/l2 path elimination (v1.7.15 rev2)
+
+- Decision: runFullHarness() の request 型から l1/l2 を削除。scoring は runtime 内部で一元実行。panelInputs 欠如時は即 throw
+- Context: request.l1/l2 が外部で pre-scored された値を受け入れ、runtime が scoring をスキップする経路が存在した。これにより evidence-grounded でないスコアが converged 判定に使用される
+- Rationale: scoring の唯一の経路を runtime 内に閉じることで、evidence からの逸脱を構造的に防止
+- Rejected: request.l1/l2 を optional で残す（silent bypass の温床になる）
+  - DO NOT: request 型に pre-scored path を残さない。Temptation: 後方互換のため optional にしたい
+- Status: Adopted
+
+### DR-0210: l2Evidence.ts new file for real artifact derivation (v1.7.15 rev2)
+
+- Decision: l2Evidence.ts を packages/qfai/src/core/prototyping/ に新設。buildDiscussionAxisInputs / buildScreenContractInputs / buildTrendAlignmentInputs で実 artifact から L2 入力を導出
+- Context: execution.ts 内で L2 dummy object（aggregateScore:0, evidenceRefs:[]）が inline 生成されていた
+- Rationale: 実 artifact 読み取りを専用モジュールに集約し、dummy object の再発を防止。evidence 不足時は throw
+- Rejected: execution.ts 内に inline で build 関数を追加（モジュール責務の曖昧化）
+  - DO NOT: L2 evidence 導出を execution.ts に埋め込まない。Temptation: 1 ファイルで完結させたい
+- Status: Adopted
+
+### DR-0211: CalibrationLoader fail-open removal (v1.7.15 rev2)
+
+- Decision: CalibrationLoader の全 fail-open パスを削除。DEFAULT_PACK fallback / version="1.0.0" 補完 / thresholds 欠落時の default 値注入を廃止
+- Context: pack 不在でも DEFAULT_PACK で続行できたため、calibration なしの full-harness 実行が可能だった
+- Rationale: fail-closed 設計により calibration pack の存在と正当性を構造的に保証
+- Rejected: DEFAULT_PACK を pack 不在時のみの safe default として維持（fail-open の最後の砦になる）
+  - DO NOT: CalibrationLoader に fallback を残さない。Temptation: 初回セットアップの摩擦を減らしたい
+- Status: Adopted
+
+### DR-0212: TerminationContext receives CalibrationPack only (v1.7.15 rev2)
+
+- Decision: history.ts の computeTerminationReason() / computeStatus() は { calibration: CalibrationPack; history: FullHarnessHistory } を受ける。pack 以外からの plateauLookback 解決を廃止
+- Status: Adopted
+
+### DR-0213: Screen-level UiObservation with ScreenObservation type (v1.7.15 rev2)
+
+- Decision: UiObservationSummary を ScreenObservation[] ベースに再構築。flatten 集約を廃止し screen-level で観測結果を保持
+- Context: 全 screen の DOM labels / actions / mockPaths を flatten して集約していたため、screen 単位の品質判定が不可能だった
+- Rationale: screen-level 保持により個別 screen の insufficient-evidence 検出が可能に。uiFidelityBuilder も screen 単位で observed を構築
+- Rejected: flatten 集約を維持し summary 内に screen breakdown を追加（二重構造）
+  - DO NOT: flatten 集約と screen-level を並存させない。Temptation: 後方互換のため両方持ちたい
+- Status: Adopted
+
+### DR-0214: bundleWriter schema v2 only (v1.7.15 rev2)
+
+- Decision: bundleWriter は schema v2（8 カテゴリ evidenceRefs + FullHarnessIteration 新型）のみ出力。v1/v2 並存を禁止
+- Status: Adopted
+
+### DR-0215: Validator 14-rule error upgrade (v1.7.15 rev2)
+
+- Decision: prototypingEvidence.ts の 14 項目を warning から error に昇格。新 semantic 変更分は新 rule ID に分離
+- Status: Adopted
+
+### DR-0216: DB coverage binary policy (v1.7.15 rev2)
+
+- Decision: declared DB objects ありで観測なしの場合は full-harness failure。「常に missing 扱いで続行」を禁止
 - Status: Adopted

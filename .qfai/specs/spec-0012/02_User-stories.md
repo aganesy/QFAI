@@ -119,3 +119,35 @@ As a QA engineer, I want specCoverage to be derived from real spec/runtime diffs
 ## US-0012-0029: Docs-Runtime Reality Sync (v1.7.15)
 
 As a QFAI maintainer, I want docs/SKILL/README claims about full-harness input requirements, reviewer mandatory status, convergence rules, specCoverage measurement, uiFidelity observation-only constraints, and calibration necessity to match the actual runtime failure conditions, so that documentation never overstates or understates what the system enforces.
+
+## US-0012-0030: Pre-Scored Path Elimination (v1.7.15 rev2)
+
+As a developer, I want the runFullHarness() request type to no longer accept pre-scored l1/l2 values, so that all scoring is performed exclusively within the runtime from real evidence and no external bypass is possible.
+
+## US-0012-0031: l2Evidence Real Artifact Derivation (v1.7.15 rev2)
+
+As a developer, I want l2Evidence.ts to build discussion axis inputs, screen contract inputs, and trend alignment inputs from actual discussion artifacts, so that L2 scoring is grounded in real data rather than dummy zero-seeded objects.
+
+## US-0012-0032: CalibrationLoader Fail-Closed (v1.7.15 rev2)
+
+As a developer, I want CalibrationLoader to throw on every misconfiguration (missing pack, invalid YAML, missing version/thresholds/maxIterations/plateauDelta/plateauLookback), so that no full-harness run proceeds with uncalibrated or partially-calibrated settings.
+
+## US-0012-0033: Termination Semantics Truthfulness (v1.7.15 rev2)
+
+As a developer, I want termination conditions to require count >= plateauLookback before any plateau/converged judgment, and the validator to reject violations, so that premature termination is structurally impossible.
+
+## US-0012-0034: specCoverage Strict Derivation (v1.7.15 rev2)
+
+As a developer, I want specCoverage to require all declared specs in perSpecMap and reject silent empty returns, with DB coverage following a binary policy (observe or fail), so that coverage evidence is never silently incomplete.
+
+## US-0012-0035: Screen-Level UiObservation (v1.7.15 rev2)
+
+As a developer, I want UiObservation to use ScreenObservation type with per-screen DOM labels, actionsWired from browser QA, and mockPath findings, so that flatten aggregation is eliminated and screen-level insufficient-evidence detection is possible.
+
+## US-0012-0036: ReviewerLog and BundleWriter Integrity (v1.7.15 rev2)
+
+As a developer, I want reviewerLogs to store all 8 evidence categories per iteration, history arrays to maintain strict length equality, and bundleWriter to output schema v2 only, so that iteration integrity is fully traceable and verifiable.
+
+## US-0012-0037: Tests Fixture Rev2 Alignment (v1.7.15 rev2)
+
+As a developer, I want test fixtures to remove l1/l2 direct pass, packVersion:"1.0.0", single-iteration converged, actionsWired=0, and flattened DOM labels from normal paths, and add missing evidence/insufficient observation/per-spec failure to error paths, so that the test suite validates the rev2 runtime contract.

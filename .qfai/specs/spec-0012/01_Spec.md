@@ -135,10 +135,40 @@
 - REQ-0054: packVersion pack metadata 解決 (v1.7.15; discussion REQ-0014) — packVersion は CalibrationLoader 経由で pack metadata から動的に取得。packVersion: "1.0.0" のハードコードを禁止
 - REQ-0055: Docs / SKILL / README reality sync (v1.7.15; discussion REQ-0025) — docs の主張が runtime 実体を超えないこと。full-harness 入力要件、reviewer 必須、convergence rule、specCoverage 実測要件、uiFidelity observation-only rule、calibration 必須性を runtime と一致させる
 - REQ-0056: missing evidence fail-fast (v1.7.15; discussion REQ-0026) — full-harness で calibration pack / reviewer / commit SHA / render evidence / browser QA evidence / ui observation input / spec coverage input が欠けた場合、補完せず runtime error で失敗
+- REQ-0057: runFullHarness 契約から pre-scored l1/l2 削除 (v1.7.15 rev2; discussion REQ-0027) — request 型から l1/l2 を削除。panelInputs 欠如時は即 throw
+- REQ-0058: scoring runtime 内一元実行 (v1.7.15 rev2; discussion REQ-0028) — validatePanelInputs → scorePanelsFromInputs → determineDecision を必ず直列実行。外部 pre-scored 値の採用経路を削除
+- REQ-0059: FullHarnessIteration evidence-driven 再定義 (v1.7.15 rev2; discussion REQ-0029) — l1/l2/weightedTotal/commitSha/reviewerId/limitations/evidenceRefs を必須化
+- REQ-0060: MeasurementResult strict 再定義 (v1.7.15 rev2; discussion REQ-0030) — panelInputs と 8 カテゴリ evidenceRefs を同時に返す。空カテゴリ許容 NG
+- REQ-0061: evidenceRefs 8 カテゴリ必須化 (v1.7.15 rev2; discussion REQ-0031) — runtimeGate/render/browserQa/uiObservation/specCoverage/discussion/screenContract/trend の 8 カテゴリを必ず非空で保持
+- REQ-0062: validatePanelInputs 欠落チェック強化 (v1.7.15 rev2; discussion REQ-0032) — 10 種類の silent pass を error に昇格
+- REQ-0063: l2Evidence.ts 新設 (v1.7.15 rev2; discussion REQ-0033) — buildDiscussionAxisInputs(root) で実 discussion artifact から軸数を抽出。artifact 内評価値の再利用禁止
+- REQ-0064: buildScreenContractInputs (v1.7.15 rev2; discussion REQ-0034) — totalContracts/coveredContracts/fidelityScore を算出。fidelityScore の 0 初期化禁止
+- REQ-0065: buildTrendAlignmentInputs (v1.7.15 rev2; discussion REQ-0035) — trendSourcesChecked===0 で必ず失敗
+- REQ-0066: execution.ts L2 dummy object 全廃 (v1.7.15 rev2; discussion REQ-0036) — 0 埋め literal を削除し l2Evidence builder 呼び出しに差し替え
+- REQ-0067: panelScore 二重防御 (v1.7.15 rev2; discussion REQ-0037) — aggregateScore 0〜1 必須、trendSourcesChecked===0 reject、fidelityScore===0 with contracts reject
+- REQ-0068: CalibrationLoader fail-open 全廃 (v1.7.15 rev2; discussion REQ-0038) — pack 不在/YAML 不正/version 欠落/thresholds 欠落/maxIterations 欠落で throw。DEFAULT_PACK fallback 削除
+- REQ-0069: calibrationConfig fallback 弱体化 (v1.7.15 rev2; discussion REQ-0039) — config 側は packPath 解決用のみ。thresholds/maxIterations/plateauDelta/plateauLookback を config から補う処理を削除
+- REQ-0070: TerminationContext を CalibrationPack で受ける (v1.7.15 rev2; discussion REQ-0040) — history.ts が CalibrationPack のみ受け入れる
+- REQ-0071: count<plateauLookback で terminal にしない (v1.7.15 rev2; discussion REQ-0041) — status="in-progress", terminationReason: undefined を返す
+- REQ-0072: validator termination 条件同期 (v1.7.15 rev2; discussion REQ-0042) — plateau/converged + iterationCount<plateauLookback を error
+- REQ-0073: specCoverage 全 spec 必須化 (v1.7.15 rev2; discussion REQ-0043) — specNames にある spec が perSpecMap に無い場合は error
+- REQ-0074: specCoverage.ts silent 空返却禁止 (v1.7.15 rev2; discussion REQ-0044) — 宣言抽出結果完全空/evidenceRefs 作れない/DB 未実装通過を error 化
+- REQ-0075: DB coverage 二択ポリシー (v1.7.15 rev2; discussion REQ-0045) — 実 DB 観測 or full-harness failure。missing 続行禁止
+- REQ-0076: UiObservationSummary screen-level 再構築 (v1.7.15 rev2; discussion REQ-0046) — ScreenObservation 型導入。flatten 廃止
+- REQ-0077: actionsWired browser QA 由来 (v1.7.15 rev2; discussion REQ-0047) — 0 固定廃止。観測不能は unknown
+- REQ-0078: mockPath findings semantics 同期 (v1.7.15 rev2; discussion REQ-0048) — pass は明示的成功導線観測のみ
+- REQ-0079: uiFidelityBuilder screen-level 化 (v1.7.15 rev2; discussion REQ-0049) — screen 共通 DOM labels 流用廃止
+- REQ-0080: uiFidelity insufficient-evidence 厳格化 (v1.7.15 rev2; discussion REQ-0050) — html capture 無し/render evidence 無し/browser QA 無し/action 観測不可で insufficient-evidence or error
+- REQ-0081: uiFidelity auto-pass 完全廃止 (v1.7.15 rev2; discussion REQ-0051) — mockPaths status=pass 自動生成禁止
+- REQ-0082: reviewerLog 8 カテゴリ evidenceRefs 保存 (v1.7.15 rev2; discussion REQ-0052) — render/browserQa のみでは不可
+- REQ-0083: history 整合性 strict (v1.7.15 rev2; discussion REQ-0053) — iterations.length===iterationCount===scoringTrace.length===reviewerLogs.length。ズレで throw
+- REQ-0084: bundleWriter schema v2 追随 (v1.7.15 rev2; discussion REQ-0054) — 8 カテゴリ evidenceRefs + FullHarnessIteration 新型。v1 非並存
+- REQ-0085: docs/SKILL/README reality sync rev2 (v1.7.15 rev2; discussion REQ-0056) — 独立 evaluator 自動複数起動/Evaluate→Fix loop 内包/evidence 自動補完の主張を削除
+- REQ-0086: tests fixture rev2 改定 (v1.7.15 rev2; discussion REQ-0057) — 正常系から旧前提を削除し異常系に新 fixture 追加
 
 ## Entry points
 
-- US range in this spec: US-0012-0001..US-0012-0029
+- US range in this spec: US-0012-0001..US-0012-0037
 - Primary actors: Developer, AI Agent (FullStackEngineer, RuntimeGatekeeper), CI/CD pipeline
 - Notes: No CLI command exists. This is a skill-only spec for `/qfai-prototyping`.
 

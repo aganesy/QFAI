@@ -183,3 +183,99 @@ Given SKILL.md / evidence README / discussion README, when their constraint clai
 ## AC-0012-0029-02: packVersion from Pack Metadata (v1.7.15)
 
 Given a calibration pack with metadata, when packVersion is resolved, then it matches the pack metadata value (not hardcoded "1.0.0").
+
+## AC-0012-0030-01: request.l1/l2 Removed from Type (v1.7.15 rev2)
+
+Given runFullHarness() request type, when inspected, then l1 and l2 fields do not exist in the type definition.
+
+## AC-0012-0030-02: panelInputs Required (v1.7.15 rev2)
+
+Given a runFullHarness() call without panelInputs, when executed, then a runtime error is thrown immediately.
+
+## AC-0012-0030-03: Scoring Pipeline Internal Only (v1.7.15 rev2)
+
+Given runFullHarness() execution, when scoring runs, then validatePanelInputs → scorePanelsFromInputs → determineDecision executes in strict sequence within the runtime.
+
+## AC-0012-0031-01: l2Evidence.ts Exists with 3 Builders (v1.7.15 rev2)
+
+Given packages/qfai/src/core/prototyping/, when l2Evidence.ts is inspected, then buildDiscussionAxisInputs, buildScreenContractInputs, buildTrendAlignmentInputs are exported.
+
+## AC-0012-0031-02: Discussion Axis Inputs from Real Artifact (v1.7.15 rev2)
+
+Given a discussion pack with 3-layer evaluation files, when buildDiscussionAxisInputs runs, then axis counts are extracted from actual files and artifact evaluation values are not reused.
+
+## AC-0012-0031-03: execution.ts L2 Dummy Objects Removed (v1.7.15 rev2)
+
+Given execution.ts source, when grepped for `aggregateScore:0, evidenceRefs:[]` or `fidelityScore:0, evidenceRefs:[]` or `translationConsistency:0, evidenceRefs:[]`, then zero matches are found.
+
+## AC-0012-0032-01: CalibrationLoader Throws on Missing Pack (v1.7.15 rev2)
+
+Given no calibration pack file, when CalibrationLoader runs, then it throws an error (not returns DEFAULT_PACK).
+
+## AC-0012-0032-02: CalibrationLoader Throws on Schema Violation (v1.7.15 rev2)
+
+Given a calibration pack YAML missing version/thresholds.accept/thresholds.refine/maxIterations/plateauDelta/plateauLookback, when CalibrationLoader runs, then it throws for each missing field.
+
+## AC-0012-0032-03: Config Fallback Limited to packPath (v1.7.15 rev2)
+
+Given execution.ts calibration resolution, when config provides thresholds/maxIterations/plateauDelta/plateauLookback, then those values are ignored (only packPath from config is used).
+
+## AC-0012-0033-01: count < plateauLookback Returns In-Progress (v1.7.15 rev2)
+
+Given history.ts with iterationCount < calibration.plateauLookback, when computeTerminationReason runs, then status="in-progress" and terminationReason=undefined.
+
+## AC-0012-0033-02: Validator Rejects Premature Termination (v1.7.15 rev2)
+
+Given terminationReason="plateau" with iterationCount < plateauLookback, when the validator runs, then an error is emitted.
+
+## AC-0012-0034-01: specCoverage Missing Spec is Error (v1.7.15 rev2)
+
+Given specNames containing "spec-0001" but perSpecMap lacking it, when buildPrototypingSummaryBundle runs, then an error is thrown (not zero-initialized).
+
+## AC-0012-0034-02: specCoverage Silent Empty Prohibited (v1.7.15 rev2)
+
+Given loadDeclaredSpecArtifacts returning empty declaration extraction despite readable spec dirs, when processing, then an error is thrown.
+
+## AC-0012-0034-03: DB Coverage Binary Policy (v1.7.15 rev2)
+
+Given declared DB objects > 0 and no observation, when coverage is evaluated, then full-harness failure occurs (not silent missing continuation).
+
+## AC-0012-0035-01: ScreenObservation Array Returned (v1.7.15 rev2)
+
+Given UiObservationSummary output, when inspected, then it contains screens: ScreenObservation[] (not flattened aggregates).
+
+## AC-0012-0035-02: actionsWired from Browser QA (v1.7.15 rev2)
+
+Given a screen with browser QA interaction data, when actionsWired is computed, then it reflects browser QA observation (not 0 fixed).
+
+## AC-0012-0035-03: actionsWired Unknown for Unobservable (v1.7.15 rev2)
+
+Given a screen without browser QA interaction data, when actionsWired is set, then it uses "unknown" (not 0).
+
+## AC-0012-0035-04: uiFidelityBuilder Screen-Level Only (v1.7.15 rev2)
+
+Given uiFidelityBuilder processing, when building observed values, then each screen uses only its own html capture DOM labels/actions (no cross-screen sharing).
+
+## AC-0012-0035-05: uiFidelity Auto-Pass Abolished (v1.7.15 rev2)
+
+Given uiFidelity processing, when mockPaths are built, then no status="pass" is auto-generated. Expected-to-observed copying is prohibited.
+
+## AC-0012-0036-01: reviewerLog Contains 8 Categories (v1.7.15 rev2)
+
+Given reviewerLog.evidenceRefs, when inspected, then all 8 evidence categories are present (not just render/browserQa).
+
+## AC-0012-0036-02: History Array Length Strict (v1.7.15 rev2)
+
+Given history reconstruction, when iterations.length !== iterationCount or scoringTrace.length !== iterationCount or reviewerLogs.length !== iterationCount, then a runtime error is thrown.
+
+## AC-0012-0036-03: bundleWriter Schema v2 Only (v1.7.15 rev2)
+
+Given bundleWriter output, when schema version is checked, then it outputs schema v2 format only (8-category evidenceRefs + FullHarnessIteration new fields). No v1 output path exists.
+
+## AC-0012-0037-01: Normal Fixtures Rev2 Clean (v1.7.15 rev2)
+
+Given normal-path test fixtures, when inspected, then l1/l2 direct pass, packVersion:"1.0.0", single-iteration converged, actionsWired=0, flattened DOM labels are absent.
+
+## AC-0012-0037-02: Error Fixtures Rev2 Added (v1.7.15 rev2)
+
+Given error-path test fixtures, when inspected, then missing pack, missing reviewer, missing discussion/trend/screenContract evidence, insufficient UI observation, per-spec coverage build failure are present.

@@ -198,3 +198,17 @@ US-0004-0025 → AC-0004-0028..AC-0004-0031 → BR-0004-0031..BR-0004-0037 → E
   - DO NOT allow waivers to suppress these error-level findings
   - Temptation: unblock stalled PRs that fail on new validator rules
   - Reason: these rules enforce evidence truthfulness at the structural level. Waiving them defeats the purpose of the v1.7.15 hardening effort. Fix the evidence, not the gate
+
+## v1.7.15 rev2 — Adopted
+
+- AD-v1715r2-001: REQ-0136 追加（14 項目 error 昇格 rev2: evidence category empty / DB no observation / uiFidelity screen-level / iteration evidenceRefs / old schema detection）
+- AD-v1715r2-002: REQ-0137 追加（validator tests fixture rev2 改定）
+- AD-v1715r2-003: DR-0004-0009 追加（新 rule ID for semantic changes）
+- AD-v1715r2-004: US-0004-0026..0027, AC-0004-0033..0038, BR-0004-0039..0040, EX-0004-0041..0043, TC-0004-0054..0062 追加
+
+## v1.7.15 rev2 — Rejected
+
+- RJ-v1715r2-001: Reuse existing rule IDs for semantic changes
+  - DO NOT reuse existing rule IDs when detection target changes semantically
+  - Temptation: keep rule count low by overloading existing IDs
+  - Reason: overloaded IDs break waiver targeting and CI filtering

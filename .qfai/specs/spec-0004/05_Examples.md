@@ -259,3 +259,36 @@
 | Input | Expected |
 |---|---|
 | Well-formed evidence: real reviewer, iterationCount=3 for converged, correct min(l1,l2), non-zero specCoverage, no synthetic mockPaths, matching counts, valid calibrationRef, present commitSha/limitations | Zero PROT-290..309 errors |
+
+## EX-0004-0041: Rev2 evidence category validator cases (v1.7.15 rev2)
+
+- BR-Ref: BR-0004-0039
+
+| Input | Expected |
+|---|---|
+| discussion.evidenceRefs = [] | Error emitted |
+| screenContract.evidenceRefs = [] | Error emitted |
+| trend.evidenceRefs = [] | Error emitted |
+| declared DB = 3, observed = 0 | Error emitted |
+| uiFidelity.status = "completed", no screen-level data | Error emitted |
+| iteration[0].evidenceRefs missing "discussion" key | Error emitted |
+| evidence contains request.l1 field (old schema) | Error emitted |
+
+## EX-0004-0042: Rev2 validator happy path (v1.7.15 rev2)
+
+- BR-Ref: BR-0004-0039, BR-0004-0040
+
+| Input | Expected |
+|---|---|
+| All 8 category evidenceRefs non-empty, screen-level uiFidelity, no old schema artifacts, rev2-compliant fixtures | Zero errors from rev2 rules |
+
+## EX-0004-0043: Rev2 fixture validation (v1.7.15 rev2)
+
+- BR-Ref: BR-0004-0040
+
+- Given normal-path test fixtures in validator tests
+- When grepped for l1/l2 direct pass or packVersion:"1.0.0"
+- Then zero matches found
+- Given error-path test fixtures
+- When checked for missing discussion/trend/screenContract evidence cases
+- Then all cases present

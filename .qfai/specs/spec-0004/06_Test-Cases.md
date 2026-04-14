@@ -509,3 +509,103 @@ Verify:
 |---|---|---|
 | 1 | Create well-formed evidence with real reviewer, iterationCount>=2 for converged, correct min(l1,l2), non-zero specCoverage, no synthetic mockPaths, matching counts, valid calibrationRef, present commitSha/limitations | Evidence ready |
 | 2 | Run prototypingEvidence validator | Zero PROT-290..309 errors |
+
+## TC-0004-0054: discussion evidenceRefs empty error (v1.7.15 rev2)
+
+- EX-Ref: EX-0004-0041
+- AC-Refs: AC-0004-0033
+- Type: error
+
+| Step | Action | Expected |
+|---|---|---|
+| 1 | Create evidence with discussion.evidenceRefs = [] | Evidence ready |
+| 2 | Run prototypingEvidence validator | Error emitted for empty discussion refs |
+
+## TC-0004-0055: screenContract evidenceRefs empty error (v1.7.15 rev2)
+
+- EX-Ref: EX-0004-0041
+- AC-Refs: AC-0004-0033
+- Type: error
+
+| Step | Action | Expected |
+|---|---|---|
+| 1 | Create evidence with screenContract.evidenceRefs = [] | Evidence ready |
+| 2 | Run prototypingEvidence validator | Error emitted for empty screenContract refs |
+
+## TC-0004-0056: trend evidenceRefs empty error (v1.7.15 rev2)
+
+- EX-Ref: EX-0004-0041
+- AC-Refs: AC-0004-0033
+- Type: error
+
+| Step | Action | Expected |
+|---|---|---|
+| 1 | Create evidence with trend.evidenceRefs = [] | Evidence ready |
+| 2 | Run prototypingEvidence validator | Error emitted for empty trend refs |
+
+## TC-0004-0057: Declared DB no observation error (v1.7.15 rev2)
+
+- EX-Ref: EX-0004-0041
+- AC-Refs: AC-0004-0034
+- Type: error
+
+| Step | Action | Expected |
+|---|---|---|
+| 1 | Create evidence with dbObjects declared=3, observed=0 | Evidence ready |
+| 2 | Run prototypingEvidence validator | Error emitted for unobserved DB |
+
+## TC-0004-0058: uiFidelity completed without screen-level (v1.7.15 rev2)
+
+- EX-Ref: EX-0004-0041
+- AC-Refs: AC-0004-0035
+- Type: error
+
+| Step | Action | Expected |
+|---|---|---|
+| 1 | Create evidence with uiFidelity.status="completed" but no screens array | Evidence ready |
+| 2 | Run prototypingEvidence validator | Error emitted for missing screen-level |
+
+## TC-0004-0059: Iteration evidenceRefs missing category (v1.7.15 rev2)
+
+- EX-Ref: EX-0004-0041
+- AC-Refs: AC-0004-0036
+- Type: error
+
+| Step | Action | Expected |
+|---|---|---|
+| 1 | Create iteration with evidenceRefs missing "discussion" category | Evidence ready |
+| 2 | Run prototypingEvidence validator | Error emitted for missing category |
+
+## TC-0004-0060: Old schema l1/l2 detection (v1.7.15 rev2)
+
+- EX-Ref: EX-0004-0041
+- AC-Refs: AC-0004-0037
+- Type: error
+
+| Step | Action | Expected |
+|---|---|---|
+| 1 | Create evidence containing request.l1 field | Evidence ready |
+| 2 | Run prototypingEvidence validator | Error emitted for old schema artifact |
+
+## TC-0004-0061: Rev2 compliant evidence happy path (v1.7.15 rev2)
+
+- EX-Ref: EX-0004-0042
+- AC-Refs: AC-0004-0033, AC-0004-0034, AC-0004-0035, AC-0004-0036, AC-0004-0037
+- Type: normal
+
+| Step | Action | Expected |
+|---|---|---|
+| 1 | Create rev2-compliant evidence: all 8 categories non-empty, screen-level uiFidelity, no old schema | Evidence ready |
+| 2 | Run prototypingEvidence validator | Zero errors from rev2 rules |
+
+## TC-0004-0062: Validator test fixtures rev2 clean (v1.7.15 rev2)
+
+- EX-Ref: EX-0004-0043
+- AC-Refs: AC-0004-0038
+- Type: boundary
+
+| Step | Action | Expected |
+|---|---|---|
+| 1 | Grep normal fixtures for l1/l2 direct pass | Zero matches |
+| 2 | Grep normal fixtures for packVersion:"1.0.0" | Zero matches |
+| 3 | Check error fixtures include missing evidence categories | Present |

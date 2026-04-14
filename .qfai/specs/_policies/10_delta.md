@@ -311,3 +311,35 @@
 | Auto-generate mockPaths.status="pass"                | False-positive fidelity reports bypass browser QA verification     | DO NOT auto-generate synthetic pass. Temptation: reduce evidence authoring burden                          |
 | Hardcode packVersion                                 | Drift between calibration pack metadata and runtime summary       | DO NOT hardcode packVersion. Temptation: bypass calibration plumbing                                      |
 | Fallback resolvedReviewer ?? "qfai"                  | Defeats human accountability in review signoff                    | DO NOT use reviewer fallback. Temptation: keep CLI frictionless                                           |
+
+### v1.7.15 rev2 — packages/qfai single-PR completion (design rev2 refinement)
+
+| Date       | Change Type | Section          | Summary                                                                                                                                                                           | Rationale                                                                   |
+| ---------- | ----------- | ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| 2026-04-14 | adopted     | 02_Initiative.md | WS テーブルを rev2 の 9 workstream に更新（WS-1〜WS-9、Discussion REQ 対応列追加）                                                                                                | rev2 設計書の詳細な workstream 分解を反映                                    |
+| 2026-04-14 | adopted     | 07_Constraints.md| TC-78〜TC-84 追加（CalibrationLoader fail-closed, evidenceRefs 8 categories, l2Evidence.ts, schema v2, ScreenObservation, actionsWired, 実装順序）                                  | rev2 で明示された実装制約の spec 反映                                        |
+| 2026-04-14 | adopted     | 08_Decisions.md  | DR-0209〜DR-0216 追加（pre-scored elimination, l2Evidence, CalibrationLoader fail-open, TerminationContext, screen-level UiObservation, schema v2, validator 14-rule, DB coverage） | rev2 設計判断の spec レベル記録                                              |
+| 2026-04-14 | adopted     | spec-0012        | REQ-0057〜0084 追加（rev2 discussion REQ-0027〜0054, 0056〜0057 の spec 反映）                                                                                                    | rev2 runtime truthfulness hardening 全項目の仕様反映                         |
+| 2026-04-14 | adopted     | spec-0004        | REQ-0136〜0137 追加（rev2 discussion REQ-0055 の validator 14 項目 error 昇格 + tests fixture 改定）                                                                               | rev2 validator hardening の仕様反映                                          |
+
+#### v1.7.15 rev2 Adopted (policy level)
+
+- Pre-scored l1/l2 path elimination from runFullHarness request (DR-0209)
+- l2Evidence.ts new file for real artifact derivation (DR-0210)
+- CalibrationLoader fail-open removal — all fallbacks deleted (DR-0211)
+- TerminationContext receives CalibrationPack only (DR-0212)
+- Screen-level UiObservation with ScreenObservation type (DR-0213)
+- bundleWriter schema v2 only — no v1 coexistence (DR-0214)
+- Validator 14-rule error upgrade (DR-0215)
+- DB coverage binary policy — observe or fail (DR-0216)
+
+#### v1.7.15 rev2 Rejected (policy level)
+
+| Rejected option                                     | Risk of adoption                                                  | DO NOT / Temptation                                                                                       |
+| --------------------------------------------------- | ----------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| Keep request.l1/l2 as optional                       | Silent bypass of runtime scoring allows ungrounded scores         | DO NOT keep pre-scored path in request type. Temptation: backward compatibility                            |
+| L2 dummy objects inline in execution.ts              | Dummy 0-values mask missing evidence and pass validation          | DO NOT inline L2 dummy objects. Temptation: avoid new file creation                                       |
+| DEFAULT_PACK as safe calibration fallback            | Uncalibrated full-harness runs produce meaningless convergence    | DO NOT keep DEFAULT_PACK fallback. Temptation: reduce first-run friction                                  |
+| Flatten UiObservation + screen breakdown              | Dual structure with conflicting aggregation semantics             | DO NOT maintain flatten + screen-level dual structures. Temptation: backward compat                        |
+| bundleWriter schema v1/v2 coexistence                | Schema divergence and consumer confusion                          | DO NOT allow v1/v2 parallel schemas. Temptation: gradual migration                                        |
+| DB coverage missing = continue with zeros            | Declared DB objects pass validation without observation           | DO NOT continue with zeros when DB is declared but unobserved. Temptation: avoid pipeline breakage         |

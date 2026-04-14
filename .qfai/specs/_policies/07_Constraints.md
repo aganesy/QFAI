@@ -88,6 +88,16 @@
 - TC-76: ユーザー移行ケアは不要（internal-only refactor）
 - TC-77: schema / runtime / validator / docs / tests を同一 PR で同時更新する
 
+### v1.7.15 rev2 追加制約
+
+- TC-78: CalibrationLoader は fail-closed。pack 不在 / YAML parse 不正 / version 欠落 / thresholds 欠落 / maxIterations/plateauDelta/plateauLookback 欠落の全ケースで throw。DEFAULT_PACK fallback と version="1.0.0" 補完を削除
+- TC-79: iteration.evidenceRefs は 8 カテゴリ（runtimeGate / render / browserQa / uiObservation / specCoverage / discussion / screenContract / trend）を必ず非空で保持
+- TC-80: l2Evidence.ts は packages/qfai/src/core/prototyping/ に配置。実 discussion artifact から軸数を抽出し artifact 内評価値の再利用を禁止
+- TC-81: bundleWriter schema v2 を一本化。v1/v2 並存を禁止
+- TC-82: ScreenObservation 型（route, htmlCaptureRef, domLabelsFound, elementsPlaced, actionsWired, mockPathFindings）で screen-level を表現。flatten 集約を廃止
+- TC-83: actionsWired は browser QA 由来の観測値。0 固定を廃止し、観測不能は "unknown" で表現
+- TC-84: 実装順序は依存グラフに従う: calibration/history/runtime/types → l2Evidence/measurement/panelInputs/panelScore → execution 結線 → specCoverage/uiObservation/uiFidelityBuilder
+
 ## Operational Constraints
 
 | ID    | Constraint                                                                                                 | Rationale                                                        | Impact                                   |

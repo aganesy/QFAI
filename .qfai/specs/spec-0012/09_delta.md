@@ -243,3 +243,47 @@ REQ-0054..0055 → US-0012-0029 → AC-0012-0029-01..02 → BR-0012-0054..0055 �
   - DO NOT use fallback resolvedReviewer ?? "qfai"
   - Temptation: keep CLI frictionless by auto-filling reviewer when not specified
   - Reason: auto-filled reviewer identity defeats the purpose of human accountability in review signoff
+
+## v1.7.15 rev2 — Adopted
+
+- AD-0012-0019: Pre-scored l1/l2 path elimination (DR-0012-0019)
+- AD-0012-0020: l2Evidence.ts new file for real artifact derivation (DR-0012-0020)
+- AD-0012-0021: CalibrationLoader fail-open removal (DR-0012-0021)
+- AD-0012-0022: TerminationContext CalibrationPack only (DR-0012-0022)
+- AD-0012-0023: Screen-level UiObservation (DR-0012-0023)
+- AD-0012-0024: bundleWriter schema v2 only (DR-0012-0024)
+- AD-0012-0025: DB coverage binary policy (DR-0012-0025)
+- AD-0012-0026: REQ-0057〜0086 追加（rev2 discussion REQ-0027〜0054, 0056〜0057 の spec 反映）
+- AD-0012-0027: US-0012-0030〜0037, AC/BR/EX/TC 追加（rev2 全 workstream の slice 拡張）
+
+## v1.7.15 rev2 — Rejected
+
+- RJ-0012-0009: Keep request.l1/l2 as optional
+  - DO NOT keep pre-scored l1/l2 in request type
+  - Temptation: backward compatibility allows optional fields
+  - Reason: optional pre-scored paths silently bypass runtime scoring, defeating evidence grounding
+
+- RJ-0012-0010: L2 dummy objects inline in execution.ts
+  - DO NOT inline L2 dummy objects in execution.ts
+  - Temptation: avoid new file creation, keep everything in one place
+  - Reason: dummy zero-values mask missing evidence and pass validation as if grounded
+
+- RJ-0012-0011: DEFAULT_PACK as safe calibration fallback
+  - DO NOT keep DEFAULT_PACK fallback in CalibrationLoader
+  - Temptation: reduce first-run friction when calibration pack is not yet configured
+  - Reason: uncalibrated full-harness runs produce meaningless convergence results
+
+- RJ-0012-0012: Flatten UiObservation + screen breakdown dual structure
+  - DO NOT maintain flatten + screen-level dual structures
+  - Temptation: backward compatibility with consumers that read flattened aggregates
+  - Reason: dual structure creates conflicting aggregation semantics and maintenance burden
+
+- RJ-0012-0013: bundleWriter schema v1/v2 coexistence
+  - DO NOT allow v1/v2 parallel schemas in bundleWriter
+  - Temptation: gradual migration for consumers
+  - Reason: schema divergence creates consumer confusion and maintenance cost
+
+- RJ-0012-0014: DB coverage missing = continue with zeros
+  - DO NOT continue with zeros when DB is declared but unobserved
+  - Temptation: avoid pipeline breakage for projects that haven't set up DB observation
+  - Reason: declared DB objects passing validation without observation is evidence fraud

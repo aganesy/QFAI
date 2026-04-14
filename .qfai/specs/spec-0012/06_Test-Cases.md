@@ -452,3 +452,290 @@
 | Step | Action                                           | Expected                               |
 | ---- | ------------------------------------------------ | -------------------------------------- |
 | 1    | Search source for packVersion: "1.0.0" hardcode  | Not found (hardcode removed)           |
+
+## TC-0012-0046: request.l1/l2 Type Removed (v1.7.15 rev2)
+
+- EX-Ref: EX-0012-0055
+- AC-Refs: AC-0012-0030-01
+- Type: normal
+
+| Step | Action                                           | Expected                               |
+| ---- | ------------------------------------------------ | -------------------------------------- |
+| 1    | Inspect FullHarnessRequest type definition        | l1 and l2 fields absent                |
+| 2    | Attempt type assertion with l1/l2                 | TypeScript compile error               |
+
+## TC-0012-0047: panelInputs Missing Throws (v1.7.15 rev2)
+
+- EX-Ref: EX-0012-0056
+- AC-Refs: AC-0012-0030-02
+- Type: error
+
+| Step | Action                                           | Expected                               |
+| ---- | ------------------------------------------------ | -------------------------------------- |
+| 1    | Call runFullHarness without panelInputs           | Error thrown: "panelInputs required"   |
+
+## TC-0012-0048: Scoring Pipeline Sequence (v1.7.15 rev2)
+
+- EX-Ref: EX-0012-0057
+- AC-Refs: AC-0012-0030-03
+- Type: normal
+
+| Step | Action                                           | Expected                               |
+| ---- | ------------------------------------------------ | -------------------------------------- |
+| 1    | Run full-harness with valid panelInputs           | validatePanelInputs called first       |
+| 2    | Verify scoring sequence                           | scorePanelsFromInputs → determineDecision |
+| 3    | Check no external pre-scored bypass               | Only internal scoring path exists      |
+
+## TC-0012-0049: l2Evidence Builders Happy Path (v1.7.15 rev2)
+
+- EX-Ref: EX-0012-0057
+- AC-Refs: AC-0012-0031-01, AC-0012-0031-02
+- Type: normal
+
+| Step | Action                                           | Expected                               |
+| ---- | ------------------------------------------------ | -------------------------------------- |
+| 1    | Provide discussion pack with 3-layer eval files   | Files readable                         |
+| 2    | Call buildDiscussionAxisInputs(root)              | Returns axis counts from real artifacts|
+| 3    | Call buildScreenContractInputs(uiFidelity, contracts) | Returns totalContracts, coveredContracts, fidelityScore |
+| 4    | Call buildTrendAlignmentInputs(research)          | Returns trendSourcesChecked > 0        |
+
+## TC-0012-0050: l2Evidence Missing Artifact Throws (v1.7.15 rev2)
+
+- EX-Ref: EX-0012-0058
+- AC-Refs: AC-0012-0031-02
+- Type: error
+
+| Step | Action                                           | Expected                               |
+| ---- | ------------------------------------------------ | -------------------------------------- |
+| 1    | Call buildDiscussionAxisInputs with missing eval files | Error thrown: artifact insufficiency |
+| 2    | Call buildTrendAlignmentInputs with 0 sources     | Error thrown: trendSourcesChecked===0  |
+| 3    | Call buildScreenContractInputs with contracts>0 but covered=0 | Error: evidence failure |
+
+## TC-0012-0051: execution.ts L2 Dummy Removal (v1.7.15 rev2)
+
+- EX-Ref: EX-0012-0057
+- AC-Refs: AC-0012-0031-03
+- Type: boundary
+
+| Step | Action                                           | Expected                               |
+| ---- | ------------------------------------------------ | -------------------------------------- |
+| 1    | Grep execution.ts for aggregateScore:0           | Zero matches                           |
+| 2    | Grep execution.ts for fidelityScore:0, evidenceRefs:[] | Zero matches                    |
+| 3    | Grep execution.ts for translationConsistency:0   | Zero matches                           |
+
+## TC-0012-0052: CalibrationLoader Missing Pack (v1.7.15 rev2)
+
+- EX-Ref: EX-0012-0059
+- AC-Refs: AC-0012-0032-01
+- Type: error
+
+| Step | Action                                           | Expected                               |
+| ---- | ------------------------------------------------ | -------------------------------------- |
+| 1    | Configure packPath to non-existent file           | CalibrationLoader throws               |
+| 2    | Verify no DEFAULT_PACK fallback                   | Error, not default values              |
+
+## TC-0012-0053: CalibrationLoader Schema Violations (v1.7.15 rev2)
+
+- EX-Ref: EX-0012-0059
+- AC-Refs: AC-0012-0032-02
+- Type: error
+
+| Step | Action                                           | Expected                               |
+| ---- | ------------------------------------------------ | -------------------------------------- |
+| 1    | Pack YAML missing version field                   | Throw: "version required"              |
+| 2    | Pack YAML missing thresholds.accept               | Throw: "accept threshold required"     |
+| 3    | Pack YAML missing maxIterations                   | Throw: "maxIterations required"        |
+| 4    | Pack YAML missing plateauDelta                    | Throw: "plateauDelta required"         |
+| 5    | Pack YAML missing plateauLookback                 | Throw: "plateauLookback required"      |
+
+## TC-0012-0054: Config Fallback Weakened (v1.7.15 rev2)
+
+- EX-Ref: EX-0012-0059
+- AC-Refs: AC-0012-0032-03
+- Type: boundary
+
+| Step | Action                                           | Expected                               |
+| ---- | ------------------------------------------------ | -------------------------------------- |
+| 1    | Config provides thresholds/maxIterations           | Ignored (only packPath used from config)|
+| 2    | Pack has different thresholds than config          | Pack values used, config values ignored |
+
+## TC-0012-0055: Premature Termination Guard (v1.7.15 rev2)
+
+- EX-Ref: EX-0012-0060
+- AC-Refs: AC-0012-0033-01
+- Type: normal
+
+| Step | Action                                           | Expected                               |
+| ---- | ------------------------------------------------ | -------------------------------------- |
+| 1    | iterationCount=1, plateauLookback=3               | status="in-progress", terminationReason=undefined |
+| 2    | iterationCount=2, plateauLookback=3               | status="in-progress", terminationReason=undefined |
+| 3    | iterationCount=3, plateau conditions met, below accept | terminationReason="plateau" |
+
+## TC-0012-0056: Validator Premature Termination Reject (v1.7.15 rev2)
+
+- EX-Ref: EX-0012-0060
+- AC-Refs: AC-0012-0033-02
+- Type: error
+
+| Step | Action                                           | Expected                               |
+| ---- | ------------------------------------------------ | -------------------------------------- |
+| 1    | Evidence: terminationReason=plateau, iterationCount=1, plateauLookback=3 | Validator error emitted |
+| 2    | Evidence: terminationReason=converged, iterationCount=1 | Validator error emitted |
+
+## TC-0012-0057: specCoverage Missing Spec Error (v1.7.15 rev2)
+
+- EX-Ref: EX-0012-0061
+- AC-Refs: AC-0012-0034-01
+- Type: error
+
+| Step | Action                                           | Expected                               |
+| ---- | ------------------------------------------------ | -------------------------------------- |
+| 1    | specNames=["spec-0001","spec-0002"], perSpecMap only has spec-0001 | Error: "spec-0002 missing in coverage" |
+
+## TC-0012-0058: specCoverage Silent Empty Rejected (v1.7.15 rev2)
+
+- EX-Ref: EX-0012-0061
+- AC-Refs: AC-0012-0034-02
+- Type: error
+
+| Step | Action                                           | Expected                               |
+| ---- | ------------------------------------------------ | -------------------------------------- |
+| 1    | loadDeclaredSpecArtifacts returns {} despite readable dirs | Error thrown (not silent empty) |
+
+## TC-0012-0059: DB Coverage Binary Policy (v1.7.15 rev2)
+
+- EX-Ref: EX-0012-0061
+- AC-Refs: AC-0012-0034-03
+- Type: error
+
+| Step | Action                                           | Expected                               |
+| ---- | ------------------------------------------------ | -------------------------------------- |
+| 1    | declared DB objects = 3, observed = 0             | full-harness failure                   |
+
+## TC-0012-0060: ScreenObservation Array Output (v1.7.15 rev2)
+
+- EX-Ref: EX-0012-0062
+- AC-Refs: AC-0012-0035-01
+- Type: normal
+
+| Step | Action                                           | Expected                               |
+| ---- | ------------------------------------------------ | -------------------------------------- |
+| 1    | Browser QA has results for "/" and "/about"        | screens array has 2 entries            |
+| 2    | Each entry has route, htmlCaptureRef, domLabelsFound, elementsPlaced, actionsWired, mockPathFindings | All fields populated |
+
+## TC-0012-0061: actionsWired Unknown (v1.7.15 rev2)
+
+- EX-Ref: EX-0012-0063
+- AC-Refs: AC-0012-0035-03
+- Type: boundary
+
+| Step | Action                                           | Expected                               |
+| ---- | ------------------------------------------------ | -------------------------------------- |
+| 1    | Screen without browser QA interaction             | actionsWired = "unknown" (not 0)       |
+
+## TC-0012-0062: uiFidelity Auto-Pass Absent (v1.7.15 rev2)
+
+- EX-Ref: EX-0012-0064
+- AC-Refs: AC-0012-0035-05
+- Type: error
+
+| Step | Action                                           | Expected                               |
+| ---- | ------------------------------------------------ | -------------------------------------- |
+| 1    | Build uiFidelity with expected mockPaths          | No status="pass" auto-generated        |
+| 2    | Grep for synthetic pass generation code           | Not found in codebase                  |
+
+## TC-0012-0063: History Array Length Mismatch (v1.7.15 rev2)
+
+- EX-Ref: EX-0012-0065
+- AC-Refs: AC-0012-0036-02
+- Type: error
+
+| Step | Action                                           | Expected                               |
+| ---- | ------------------------------------------------ | -------------------------------------- |
+| 1    | iterations=[it1,it2], scoringTrace=[st1]          | Error: length mismatch                 |
+| 2    | iterations=[it1], reviewerLogs=[rl1,rl2]          | Error: length mismatch                 |
+
+## TC-0012-0064: bundleWriter Schema v2 Output (v1.7.15 rev2)
+
+- EX-Ref: EX-0012-0065
+- AC-Refs: AC-0012-0036-03
+- Type: normal
+
+| Step | Action                                           | Expected                               |
+| ---- | ------------------------------------------------ | -------------------------------------- |
+| 1    | Run bundleWriter with full-harness results        | Output uses schema v2 format           |
+| 2    | Check iteration entries have 8-category evidenceRefs | All 8 categories present           |
+| 3    | Check no v1 schema output path exists             | Only v2 path in code                   |
+
+## TC-0012-0065: Normal Fixture Rev2 Clean (v1.7.15 rev2)
+
+- EX-Ref: EX-0012-0066
+- AC-Refs: AC-0012-0037-01
+- Type: boundary
+
+| Step | Action                                           | Expected                               |
+| ---- | ------------------------------------------------ | -------------------------------------- |
+| 1    | Grep normal fixtures for l1/l2 direct pass        | Zero matches                           |
+| 2    | Grep for packVersion:"1.0.0"                      | Zero matches                           |
+| 3    | Grep for single-iteration converged               | Zero matches                           |
+| 4    | Grep for actionsWired=0 as normal path            | Zero matches                           |
+
+## TC-0012-0066: Error Fixture Rev2 Coverage (v1.7.15 rev2)
+
+- EX-Ref: EX-0012-0066
+- AC-Refs: AC-0012-0037-02
+- Type: normal
+
+| Step | Action                                           | Expected                               |
+| ---- | ------------------------------------------------ | -------------------------------------- |
+| 1    | Check error fixtures include missing pack          | Present                                |
+| 2    | Check error fixtures include missing reviewer      | Present                                |
+| 3    | Check error fixtures include missing discussion evidence | Present                          |
+| 4    | Check error fixtures include insufficient UI observation | Present                          |
+| 5    | Check error fixtures include per-spec coverage failure | Present                            |
+
+## TC-0012-0067: FullHarnessIteration Required Fields (v1.7.15 rev2)
+
+- EX-Ref: EX-0012-0067
+- AC-Refs: AC-0012-0030-03
+- Type: normal
+
+| Step | Action                                           | Expected                               |
+| ---- | ------------------------------------------------ | -------------------------------------- |
+| 1    | Create FullHarnessIteration with all required fields | Object valid                        |
+| 2    | Verify l1, l2, weightedTotal, commitSha, reviewerId, limitations, evidenceRefs present | All non-null |
+
+## TC-0012-0068: FullHarnessIteration Missing Field (v1.7.15 rev2)
+
+- EX-Ref: EX-0012-0067
+- AC-Refs: AC-0012-0030-03
+- Type: error
+
+| Step | Action                                           | Expected                               |
+| ---- | ------------------------------------------------ | -------------------------------------- |
+| 1    | Create FullHarnessIteration missing commitSha     | TypeScript compile error or runtime reject |
+
+## TC-0012-0069: validatePanelInputs 10-Check Gate (v1.7.15 rev2)
+
+- EX-Ref: EX-0012-0068
+- AC-Refs: AC-0012-0030-02
+- Type: error
+
+| Step | Action                                           | Expected                               |
+| ---- | ------------------------------------------------ | -------------------------------------- |
+| 1    | Call with renderEvidence.totalScreens === 0       | throw                                  |
+| 2    | Call with browserQa.executed === false             | throw                                  |
+| 3    | Call with discussionAxes.evidenceRefs.length === 0 | throw                                 |
+| 4    | Call with screenContract.totalContracts > 0 && fidelityScore === 0 | throw               |
+
+## TC-0012-0070: panelScore Double Defense (v1.7.15 rev2)
+
+- EX-Ref: EX-0012-0069
+- AC-Refs: AC-0012-0030-03
+- Type: error
+
+| Step | Action                                           | Expected                               |
+| ---- | ------------------------------------------------ | -------------------------------------- |
+| 1    | aggregateScore = 1.5                              | Error: out of 0-1 range               |
+| 2    | trendSourcesChecked = 0                           | Error: trend sources required          |
+| 3    | screenContract.totalContracts > 0, fidelityScore = 0 | Error: fidelity score required     |

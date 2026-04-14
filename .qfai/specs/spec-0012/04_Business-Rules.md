@@ -432,3 +432,105 @@
 
 - full-harness で必須 evidence (calibration / reviewer / commitSha / render / browserQa / uiObservation / specCoverage) のいずれかが欠落した場合は runtime error で即座に失敗させる
 - デフォルト値での補完・silent fallback・graceful degradation を禁止する
+
+## BR-0012-0057: Pre-Scored Path Prohibition (v1.7.15 rev2)
+
+- AC-Refs: AC-0012-0030-01, AC-0012-0030-02, AC-0012-0030-03
+- REQ-Refs: REQ-0057, REQ-0058
+
+- runFullHarness() request 型に l1/l2 フィールドを含めない
+- panelInputs が request に存在しない場合は即 throw
+- scoring は validatePanelInputs → scorePanelsFromInputs → determineDecision の直列実行のみ
+
+## BR-0012-0058: FullHarnessIteration Evidence-Driven Type (v1.7.15 rev2)
+
+- AC-Refs: AC-0012-0030-03
+- REQ-Refs: REQ-0059, REQ-0060, REQ-0061
+
+- FullHarnessIteration の全必須フィールド: l1, l2, weightedTotal, commitSha, reviewerId, limitations, evidenceRefs
+- MeasurementResult は panelInputs と 8 カテゴリ evidenceRefs を同時に返す
+- evidenceRefs の 8 カテゴリ（runtimeGate/render/browserQa/uiObservation/specCoverage/discussion/screenContract/trend）は全て非空必須
+
+## BR-0012-0059: validatePanelInputs 10-Check Gate (v1.7.15 rev2)
+
+- AC-Refs: AC-0012-0030-02
+- REQ-Refs: REQ-0062
+
+- 以下の 10 条件で throw: renderEvidence.totalScreens===0 / renderEvidence.evidenceRefs.length===0 / browserQa.executed===false / browserQa.evidenceRefs.length===0 / specCoverage.evidenceRefs.length===0 / uiObservation.htmlCaptureRefs.length===0 / discussionAxes.evidenceRefs.length===0 / screenContract.evidenceRefs.length===0 / trendAlignment.evidenceRefs.length===0 / screenContract.totalContracts>0 && fidelityScore===0
+
+## BR-0012-0060: l2Evidence Builder Contract (v1.7.15 rev2)
+
+- AC-Refs: AC-0012-0031-01, AC-0012-0031-02, AC-0012-0031-03
+- REQ-Refs: REQ-0063, REQ-0064, REQ-0065, REQ-0066
+
+- buildDiscussionAxisInputs(root): 実 discussion artifact から invariant/trend-derived/product-specific 軸数を抽出。artifact 内評価値の再利用禁止。不足時 throw
+- buildScreenContractInputs: fidelityScore の 0 初期化禁止。contract ありで coveredContracts=0 は evidence failure
+- buildTrendAlignmentInputs: trendSourcesChecked===0 で必ず失敗
+- execution.ts の L2 dummy object（aggregateScore:0/fidelityScore:0/translationConsistency:0 + evidenceRefs:[]）を全廃し builder 呼び出しに差し替え
+
+## BR-0012-0061: panelScore Double Defense (v1.7.15 rev2)
+
+- AC-Refs: AC-0012-0030-03
+- REQ-Refs: REQ-0067
+
+- discussionAxes.aggregateScore は 0〜1 の範囲必須
+- trendSourcesChecked===0 は validator でも reject
+- screenContract.totalContracts>0 && fidelityScore===0 は runtime fail（rationale 埋めで通さない）
+
+## BR-0012-0062: CalibrationLoader Fail-Closed (v1.7.15 rev2)
+
+- AC-Refs: AC-0012-0032-01, AC-0012-0032-02, AC-0012-0032-03
+- REQ-Refs: REQ-0068, REQ-0069, REQ-0070
+
+- pack 不在 → throw / YAML parse 不正 → throw / version 欠落 → throw / thresholds.accept|refine 欠落 → throw / maxIterations|plateauDelta|plateauLookback 欠落 → throw
+- DEFAULT_PACK fallback 削除 / version="1.0.0" 補完削除
+- config 側は packPath 解決用のみ。thresholds/maxIterations/plateauDelta/plateauLookback の config 補完を削除
+- TerminationContext は { calibration: CalibrationPack; history: FullHarnessHistory } のみ受け入れ
+
+## BR-0012-0063: Termination Guard (v1.7.15 rev2)
+
+- AC-Refs: AC-0012-0033-01, AC-0012-0033-02
+- REQ-Refs: REQ-0071, REQ-0072
+
+- count < plateauLookback の場合: status="in-progress", terminationReason=undefined
+- plateau/converged 判定は count >= plateauLookback の後でのみ
+- validator: terminationReason=plateau|converged && iterationCount<plateauLookback は error
+
+## BR-0012-0064: specCoverage Strict (v1.7.15 rev2)
+
+- AC-Refs: AC-0012-0034-01, AC-0012-0034-02, AC-0012-0034-03
+- REQ-Refs: REQ-0073, REQ-0074, REQ-0075
+
+- specNames に存在する spec が perSpecMap に無い場合は error（0 初期化禁止）
+- loadDeclaredSpecArtifacts の宣言抽出結果完全空 / evidenceRefs 作成不可 / DB 未実装通過を error 化
+- declared DB objects > 0 で観測無し → full-harness failure
+
+## BR-0012-0065: Screen-Level UiObservation (v1.7.15 rev2)
+
+- AC-Refs: AC-0012-0035-01, AC-0012-0035-02, AC-0012-0035-03, AC-0012-0035-04, AC-0012-0035-05
+- REQ-Refs: REQ-0076, REQ-0077, REQ-0078, REQ-0079, REQ-0080, REQ-0081
+
+- UiObservationSummary は screens: ScreenObservation[] を返す（flatten 廃止）
+- actionsWired: browser QA interaction phase 由来。0 固定廃止。観測不能は "unknown"
+- mockPath.pass は明示的成功導線観測がある時のみ
+- uiFidelityBuilder: screen 単位で html capture → DOM labels / actions / mockPaths を構築（cross-screen 共有禁止）
+- uiFidelity insufficient-evidence: html capture 無/render evidence 無/browser QA 無/action 観測不可のいずれかで status="insufficient-evidence" or error
+- mockPaths status="pass" 自動生成禁止 / expected→observed コピー禁止
+
+## BR-0012-0066: ReviewerLog and History Integrity (v1.7.15 rev2)
+
+- AC-Refs: AC-0012-0036-01, AC-0012-0036-02, AC-0012-0036-03
+- REQ-Refs: REQ-0082, REQ-0083, REQ-0084
+
+- reviewerLog.evidenceRefs は 8 カテゴリ全体を含む（render/browserQa のみ不可）
+- reviewerLog.summary に decision / weightedTotal / limitations summary を含む
+- iterations.length === iterationCount === scoringTrace.length === reviewerLogs.length（ズレで throw）
+- bundleWriter は schema v2（8 カテゴリ evidenceRefs + FullHarnessIteration 新型）のみ出力
+
+## BR-0012-0067: Tests Fixture Rev2 (v1.7.15 rev2)
+
+- AC-Refs: AC-0012-0037-01, AC-0012-0037-02
+- REQ-Refs: REQ-0085, REQ-0086
+
+- 正常系 fixture から削除: l1/l2 直渡し / packVersion:"1.0.0" / single-iteration converged / actionsWired=0 / flattened DOM labels
+- 異常系 fixture に追加: missing pack / missing reviewer / missing discussion|trend|screenContract evidence / insufficient ui observation / per-spec coverage build failure

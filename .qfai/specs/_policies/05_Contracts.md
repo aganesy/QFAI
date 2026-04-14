@@ -133,6 +133,13 @@ QFAI は GUI を持たない CLI ツールである。`/qfai-prototyping` スキ
   - Bundle F: test truth 置換 + parity guards — 内部テスト変更
 - したがって Contract Index の `0 items` は v1.7.12 でも意図的な none-rationale であり、discussion-20260401215536131 のスコープ境界および DR-0106..0109 に整合する。
 
+## v1.7.15 Contract Posture
+
+- Contracts-first review completed for v1.7.15 runtime truthfulness hardening (`discussion-20260414072809763`).
+- v1.7.15 は `packages/qfai` 内部の runtime/validator/bundleWriter/docs/tests を改定する単一 PR release であり、外部向け stable contract は新設しない。
+- 主な変更対象: `runFullHarness()` request 契約、l2Evidence.ts 新設、CalibrationLoader strict 化、screen-level UiObservation、bundleWriter schema v2、validator 14 項目 error 昇格 — 全て内部モジュール。
+- したがって Contract Index の `0 items` は v1.7.15 でも意図的な none-rationale であり、discussion-20260414072809763 のスコープ境界に整合する。
+
 ## ER Diagram
 
 QFAI はデータベースを使用しないため、ER Diagram は省略する。

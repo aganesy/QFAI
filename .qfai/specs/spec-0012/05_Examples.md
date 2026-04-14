@@ -321,3 +321,142 @@
 - Given HTML capture input with DOM labels
 - When label extraction is invoked
 - Then extractDomLabelsWithJsdom() in uiObservation.ts produces labels (old empty function removed from codebase)
+
+## EX-0012-0055: Pre-Scored l1/l2 Rejected (v1.7.15 rev2)
+
+- BR-Ref: BR-0012-0057
+
+- Given a caller attempts `runFullHarness({ l1: {...}, l2: {...}, ... })`
+- When TypeScript compilation runs
+- Then compilation fails because l1/l2 do not exist in the request type
+
+## EX-0012-0056: panelInputs Missing Throws (v1.7.15 rev2)
+
+- BR-Ref: BR-0012-0057
+
+- Given runFullHarness called with request lacking panelInputs
+- When execution starts
+- Then runtime throws "panelInputs required" before any measurement
+
+## EX-0012-0067: FullHarnessIteration Required Fields (v1.7.15 rev2)
+
+- BR-Ref: BR-0012-0058
+
+- Given a FullHarnessIteration object
+- When inspected
+- Then l1, l2, weightedTotal, commitSha, reviewerId, limitations, evidenceRefs are all present and non-null
+
+## EX-0012-0068: validatePanelInputs 10-Check (v1.7.15 rev2)
+
+- BR-Ref: BR-0012-0059
+
+| Input condition | Expected |
+|---|---|
+| renderEvidence.totalScreens === 0 | throw |
+| renderEvidence.evidenceRefs.length === 0 | throw |
+| browserQa.executed === false | throw |
+| browserQa.evidenceRefs.length === 0 | throw |
+| specCoverage.evidenceRefs.length === 0 | throw |
+| uiObservation.htmlCaptureRefs.length === 0 | throw |
+| discussionAxes.evidenceRefs.length === 0 | throw |
+| screenContract.evidenceRefs.length === 0 | throw |
+| trendAlignment.evidenceRefs.length === 0 | throw |
+| screenContract.totalContracts > 0 && fidelityScore === 0 | throw |
+
+## EX-0012-0069: panelScore Double Defense (v1.7.15 rev2)
+
+- BR-Ref: BR-0012-0061
+
+- Given aggregateScore = 1.5 (out of 0-1 range)
+- When panelScore validation runs
+- Then error: "aggregateScore must be 0-1"
+
+- Given trendSourcesChecked = 0
+- When panelScore validation runs
+- Then error: "trend sources required"
+
+## EX-0012-0057: l2Evidence Builder Happy Path (v1.7.15 rev2)
+
+- BR-Ref: BR-0012-0060
+
+- Given a discussion pack with 3-layer eval files (20-23) and screen contracts
+- When buildDiscussionAxisInputs / buildScreenContractInputs / buildTrendAlignmentInputs run
+- Then each returns populated input objects with real axis counts, contract coverage, and trend counts
+
+## EX-0012-0058: l2Evidence Builder Missing Artifact (v1.7.15 rev2)
+
+- BR-Ref: BR-0012-0060
+
+- Given a discussion pack missing 3-layer eval files
+- When buildDiscussionAxisInputs runs
+- Then it throws an error indicating artifact insufficiency
+
+## EX-0012-0059: CalibrationLoader All Failure Modes (v1.7.15 rev2)
+
+- BR-Ref: BR-0012-0062
+
+| Missing Item | Expected Behavior |
+|---|---|
+| Pack file not found | throw "calibration pack not found" |
+| YAML parse error | throw "invalid YAML" |
+| version field missing | throw "version required" |
+| thresholds.accept missing | throw "accept threshold required" |
+| maxIterations missing | throw "maxIterations required" |
+| plateauDelta missing | throw "plateauDelta required" |
+| plateauLookback missing | throw "plateauLookback required" |
+
+## EX-0012-0060: Termination Guard (v1.7.15 rev2)
+
+- BR-Ref: BR-0012-0063
+
+- Given iterationCount=1 and plateauLookback=3
+- When computeTerminationReason runs
+- Then status="in-progress" and terminationReason=undefined (neither plateau nor converged)
+
+## EX-0012-0061: specCoverage Missing Spec (v1.7.15 rev2)
+
+- BR-Ref: BR-0012-0064
+
+- Given specNames=["spec-0001","spec-0002"] and perSpecMap has only "spec-0001"
+- When buildPrototypingSummaryBundle runs
+- Then error thrown for missing "spec-0002" (not zero-initialized)
+
+## EX-0012-0062: ScreenObservation Happy Path (v1.7.15 rev2)
+
+- BR-Ref: BR-0012-0065
+
+- Given browser QA with interaction results for routes ["/", "/about"]
+- When UiObservation builds
+- Then screens array has 2 ScreenObservation entries, each with route, htmlCaptureRef, domLabelsFound, elementsPlaced, actionsWired (from QA), mockPathFindings
+
+## EX-0012-0063: actionsWired Unknown (v1.7.15 rev2)
+
+- BR-Ref: BR-0012-0065
+
+- Given a screen where browser QA interaction phase did not execute
+- When actionsWired is computed
+- Then actionsWired = "unknown" (not 0)
+
+## EX-0012-0064: uiFidelity Auto-Pass Absent (v1.7.15 rev2)
+
+- BR-Ref: BR-0012-0065
+
+- Given uiFidelity processing with expected mockPaths
+- When building observed values
+- Then no status="pass" entries are generated from expected paths
+
+## EX-0012-0065: History Array Length Mismatch (v1.7.15 rev2)
+
+- BR-Ref: BR-0012-0066
+
+- Given iterations=[it1,it2] but scoringTrace=[st1]
+- When history reconstruction runs
+- Then runtime error thrown: "iterations.length !== scoringTrace.length"
+
+## EX-0012-0066: Normal Fixture Rev2 Validation (v1.7.15 rev2)
+
+- BR-Ref: BR-0012-0067
+
+- Given normal-path test fixtures directory
+- When grepped for `"l1":` or `"l2":` direct pass or `packVersion:"1.0.0"` or single-iteration converged
+- Then zero matches found

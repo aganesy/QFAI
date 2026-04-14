@@ -86,3 +86,23 @@ All functionality is already implemented. This spec documents existing behavior.
 - PROT-308..309 are supplementary checks (converged min-iteration, iteration-level reviewer)
 - All new rules follow existing `issue()` helper pattern with category="canonical"
 - Test strategy: each rule gets at least 1 positive (pass) + 1 negative (reject) test case
+
+### v1.7.15 rev2 Validator Rules Plan
+
+#### New Rules (semantic changes → new rule IDs)
+
+| Rule | Check | Severity |
+|---|---|---|
+| (new ID) | discussion.evidenceRefs.length === 0 | error |
+| (new ID) | screenContract.evidenceRefs.length === 0 | error |
+| (new ID) | trend.evidenceRefs.length === 0 | error |
+| (new ID) | declared DB > 0 && observed DB === 0 | error |
+| (new ID) | uiFidelity.status=completed && no screen-level data | error |
+| (new ID) | iteration[i].evidenceRefs missing required category | error |
+| (new ID) | evidence contains request.l1/l2 old schema field | error |
+
+#### Test Fixture Policy
+
+- Normal-path fixtures: remove l1/l2 direct pass, packVersion:"1.0.0", single-iteration converged, actionsWired=0
+- Error-path fixtures: add missing discussion/trend/screenContract evidence, unobserved DB, insufficient UI observation
+- Each new rule: at least 1 positive + 1 negative test case

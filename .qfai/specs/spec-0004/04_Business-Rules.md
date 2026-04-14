@@ -184,3 +184,23 @@
 - PROT-300: terminationReason=plateau but iterationCount < plateauLookback → error
 - PROT-302: all iterations have identical commitSha → warning
 - PROT-303: reviewerLog summary < 10 chars → warning
+
+## BR-0004-0039: Rev2 Evidence Category Validators (v1.7.15 rev2)
+
+- AC-Refs: AC-0004-0033, AC-0004-0034, AC-0004-0035, AC-0004-0036, AC-0004-0037
+- REQ-Refs: REQ-0136
+- discussion.evidenceRefs.length === 0 → error（新 rule ID）
+- screenContract.evidenceRefs.length === 0 → error（新 rule ID）
+- trend.evidenceRefs.length === 0 → error（新 rule ID）
+- declared DB objects > 0 && observed DB objects === 0 → error（新 rule ID）
+- uiFidelity.status === "completed" && screen-level data 不足 → error（新 rule ID）
+- iterations[i].evidenceRefs に 8 必須カテゴリのいずれかが欠落 → error（新 rule ID）
+- evidence に request.l1/l2 旧 schema 由来の痕跡を検出 → error（新 rule ID）
+- 既存ルールの severity 変更は rule ID を維持し severity のみ upgrade
+
+## BR-0004-0040: Validator Tests Rev2 Fixture Policy (v1.7.15 rev2)
+
+- AC-Refs: AC-0004-0038
+- REQ-Refs: REQ-0137
+- 正常系 fixture: l1/l2 直渡し / packVersion:"1.0.0" / single-iteration converged / actionsWired=0 / flattened DOM labels を含まない
+- 異常系 fixture: missing pack / missing reviewer / missing discussion|trend|screenContract evidence / insufficient ui observation / per-spec coverage build failure を含む

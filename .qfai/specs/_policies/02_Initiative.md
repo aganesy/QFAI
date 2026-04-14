@@ -58,15 +58,17 @@
 
 Source: SRC-0001 — QFAI v1.7.15 継続開発設計書
 
-| WS | Workstream | Summary |
-|---|---|---|
-| WS-1 | Full-harness scoring 実体化 | scoreL1/scoreL2 を実 evidence から算出。weightedTotal = min(L1, L2)。固定値生成禁止 |
-| WS-2 | History / convergence / reviewer log 真正化 | converged requires iterationCount>=2, reviewerLogs append-only, reviewer CLI mandatory |
-| WS-3 | Spec coverage 実測化 | specCoverage を宣言/実測差分から導出。zero-seeded 禁止 |
-| WS-4 | uiFidelity observation-only 化 | DOM parse + browserQa + render evidence のみ。synthetic mockPaths pass 禁止。extractHtmlLabelsFromString 空実装廃止 |
-| WS-5 | Calibration wiring 本接続 | CalibrationLoader を execution.ts に接続。packVersion を pack metadata から解決 |
-| WS-6 | Validator hardening 完遂 | prototypingEvidence.ts に reviewer/commitSha/specCoverage/mockPaths/calibrationRef/array length validator rules 追加 |
-| WS-7 | Docs / SKILL / README reality sync | docs 主張と runtime failure conditions の 1:1 対応を保証 |
+| WS | Workstream | Summary | Discussion REQs |
+|---|---|---|---|
+| WS-1 | runFullHarness 契約改定 | request 型から pre-scored l1/l2 を削除。scoring は runtime 内で一元実行。FullHarnessIteration / MeasurementResult を evidence-driven に再定義。evidenceRefs 8 カテゴリ必須化。validatePanelInputs 強化 | REQ-0027〜0032 |
+| WS-2 | l2Evidence 実体化 | l2Evidence.ts 新設。buildDiscussionAxisInputs / buildScreenContractInputs / buildTrendAlignmentInputs で実 artifact から導出。execution.ts の L2 dummy object 全廃。panelScore 二重防御 | REQ-0033〜0037 |
+| WS-3 | CalibrationLoader fail-closed 化 | CalibrationLoader fail-open 全廃（pack不在/YAML不正/version欠落/thresholds欠落で throw）。DEFAULT_PACK fallback 削除。config 側 fallback 弱体化。TerminationContext を CalibrationPack で受ける | REQ-0038〜0040 |
+| WS-4 | Termination semantics 真正化 | count<plateauLookback で terminal にしない。validator termination 条件を runtime と同期 | REQ-0041〜0042 |
+| WS-5 | specCoverage 実測化 | 全 spec 必須化。silent 空返却禁止。DB coverage 二択ポリシー（実観測 or failure） | REQ-0043〜0045 |
+| WS-6 | UiObservation screen-level 再構築 | ScreenObservation 型導入。actionsWired を browser QA 由来に変更。mockPath findings semantics 同期。uiFidelityBuilder screen-level 化。insufficient-evidence 厳格化。auto-pass 完全廃止 | REQ-0046〜0051 |
+| WS-7 | reviewerLog / history / bundleWriter 整合 | reviewerLog に 8 カテゴリ evidenceRefs 保存。history 整合性 strict（4 配列長一致）。bundleWriter schema v2 追随 | REQ-0052〜0054 |
+| WS-8 | Validator 14 項目 error 昇格 | prototypingEvidence.ts の 14 項目を error に昇格。packVersion hardcoded / calibrationRef 欠落 / count<plateauLookback / weightedTotal mismatch / evidenceRefs 欠落 / specCoverage fallback / DB 無観測 / uiFidelity 不足 / mockPaths.pass 無 QA / reviewerLogs length / iteration evidenceRefs / 旧 schema 検出 | REQ-0055 |
+| WS-9 | Docs / SKILL / README / tests reality sync | docs 主張と runtime failure conditions の 1:1 対応保証。旧 fixture を異常系に移動/削除 | REQ-0056〜0057 |
 
 ## リスク
 

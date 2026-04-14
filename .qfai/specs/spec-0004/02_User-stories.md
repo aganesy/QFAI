@@ -182,3 +182,17 @@ As a QFAI user, I want `qfai validate` to check prototyping.yaml schema (require
 - Goal: Validator rejects evidence where specCoverage is zero-seeded, mockPaths contain synthetic passes, calibrationRef is empty, or structural counts (reviewerLogs/iterations/scoringTrace) do not match iterationCount
 - Non-goals: Validating evidence content quality beyond structural integrity
 - Notes: REQ-0128..REQ-0134。PROT-291, PROT-297, PROT-298, PROT-301, PROT-304, PROT-305, PROT-306 が対応
+
+## US-0004-0026: Rev2 Evidence Category and Schema Validators (v1.7.15 rev2)
+
+- Parent: CAP-0004
+- Goal: Validator rejects evidence where discussion/screenContract/trend evidenceRefs are empty, declared DB objects lack observation, uiFidelity claims completed without screen-level data, iteration evidenceRefs miss required categories, or request.l1/l2 from old schema is detected
+- Non-goals: Implementing the runtime checks themselves (covered by spec-0012)
+- Notes: REQ-0136。既存 rule ID の severity upgrade と新 rule ID の追加
+
+## US-0004-0027: Validator Tests Fixture Rev2 Alignment (v1.7.15 rev2)
+
+- Parent: CAP-0004
+- Goal: Test fixtures for prototypingEvidence validators are updated to reflect rev2 runtime contract, removing obsolete normal-path patterns and adding rev2 error-path fixtures
+- Non-goals: Comprehensive runtime testing (covered by spec-0012 tests)
+- Notes: REQ-0137

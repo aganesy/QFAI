@@ -79,10 +79,12 @@
 - REQ-0133: Validator rule: commitSha missing reject (QFAI-PROT-297) — iteration の commitSha 欠落を error とする。REQ-0023 対応
 - REQ-0134: Validator rule: limitations missing reject (QFAI-PROT-298) — fullHarness.limitations 欠落を error とする。REQ-0024 対応
 - REQ-0135: Validator rules: additional full-harness integrity checks (QFAI-PROT-299, PROT-300, PROT-302, PROT-303) — status=completed + terminationReason 欠落 (PROT-299 error)、plateau + insufficient iterations (PROT-300 error)、全 iteration 同一 commitSha (PROT-302 warning)、reviewerLog summary too short (PROT-303 warning)
+- REQ-0136: Validator 14 項目 error 昇格 rev2 (v1.7.15 rev2; discussion REQ-0055) — 以下の追加/昇格: discussion/screenContract/trend の evidenceRefs===0 を error 化 / declared DB 無観測を error 化 / uiFidelity completed で screen-level 不足を error 化 / iterations[].evidenceRefs 必須カテゴリ欠落を error 化 / request.l1/l2 旧 schema 由来 evidence 検出を error 化。既存ルールのうち semantic 変更分は新 rule ID に分離
+- REQ-0137: Validator tests fixture rev2 改定 (v1.7.15 rev2; discussion REQ-0057) — 正常系 fixture から旧前提を削除し異常系 fixture に新ケースを追加
 
 ## Entry points
 
-- US range in this spec: US-0004-0001..US-0004-0025
+- US range in this spec: US-0004-0001..US-0004-0027
 - Primary actors: QA エンジニア / AI エージェント
 - Notes: `qfai validate` でスペック・コントラクト・トレーサビリティを包括検証する
 
