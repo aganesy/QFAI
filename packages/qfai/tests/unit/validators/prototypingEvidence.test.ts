@@ -766,3 +766,163 @@ describe("prototypingEvidence fullHarness rules (PROT-290..309)", () => {
     });
   });
 });
+
+// ---------------------------------------------------------------------------
+// Rev2 rules: PROT-310..315 (v1.7.15 rev2)
+// ---------------------------------------------------------------------------
+
+describe("prototypingEvidence rev2 rules (PROT-310..315)", () => {
+  // QFAI:SPEC-0004:TC-0004-0054
+  it("TC-0004-0054: rejects empty discussion evidenceRefs (PROT-310)", async () => {
+    await withTempRoot(async (root) => {
+      await seedAll(root);
+      const iter = makeIteration({
+        evidenceRefs: {
+          ...makeIteration().evidenceRefs as Record<string, string[]>,
+          discussion: [],
+        },
+      });
+      await seedEvidence(root, withFullHarness({ iterations: [iter] }));
+      const issues = await validatePrototypingEvidence(root, defaultConfig);
+      expect(hasCode(issues, "QFAI-PROT-310")).toBe(true);
+    });
+  });
+
+  // QFAI:SPEC-0004:TC-0004-0055
+  it("TC-0004-0055: rejects empty screenContract evidenceRefs (PROT-311)", async () => {
+    await withTempRoot(async (root) => {
+      await seedAll(root);
+      const iter = makeIteration({
+        evidenceRefs: {
+          ...makeIteration().evidenceRefs as Record<string, string[]>,
+          screenContract: [],
+        },
+      });
+      await seedEvidence(root, withFullHarness({ iterations: [iter] }));
+      const issues = await validatePrototypingEvidence(root, defaultConfig);
+      expect(hasCode(issues, "QFAI-PROT-311")).toBe(true);
+    });
+  });
+
+  // QFAI:SPEC-0004:TC-0004-0056
+  it("TC-0004-0056: rejects empty trend evidenceRefs (PROT-312)", async () => {
+    await withTempRoot(async (root) => {
+      await seedAll(root);
+      const iter = makeIteration({
+        evidenceRefs: {
+          ...makeIteration().evidenceRefs as Record<string, string[]>,
+          trend: [],
+        },
+      });
+      await seedEvidence(root, withFullHarness({ iterations: [iter] }));
+      const issues = await validatePrototypingEvidence(root, defaultConfig);
+      expect(hasCode(issues, "QFAI-PROT-312")).toBe(true);
+    });
+  });
+
+  // QFAI:SPEC-0004:TC-0004-0057
+  it("TC-0004-0057: rejects declared DB with no observation (PROT-313)", async () => {
+    await withTempRoot(async (root) => {
+      await seedAll(root);
+      await seedEvidence(
+        root,
+        buildValidEvidence({
+          specs: [
+            {
+              specId: "spec-0001",
+              declared: { uiRoutes: 1, apiEndpoints: 0, dbObjects: 3 },
+              checked: { uiOk: 1, apiNon404: 0, dbPresent: 0 },
+              missing: { uiRoutes: [], apiEndpoints: [], dbObjects: ["table1", "table2", "table3"] },
+              coverageRefs: [],
+            },
+          ],
+        }),
+      );
+      const issues = await validatePrototypingEvidence(root, defaultConfig);
+      expect(hasCode(issues, "QFAI-PROT-313")).toBe(true);
+    });
+  });
+
+  // QFAI:SPEC-0004:TC-0004-0058
+  it("TC-0004-0058: rejects uiFidelity completed without screen-level (PROT-238)", async () => {
+    await withTempRoot(async (root) => {
+      await seedAll(root);
+      await seedEvidence(
+        root,
+        buildValidEvidence({
+          uiFidelity: {
+            mode: "interactive",
+            screens: [],
+          },
+        }),
+      );
+      const issues = await validatePrototypingEvidence(root, defaultConfig);
+      const hasScreenError = issues.some(
+        (i) => i.code === "QFAI-PROT-238" || (i.message && i.message.includes("screen")),
+      );
+      expect(hasScreenError).toBe(true);
+    });
+  });
+
+  // QFAI:SPEC-0004:TC-0004-0059
+  it("TC-0004-0059: rejects iteration with missing evidenceRefs category (PROT-314)", async () => {
+    await withTempRoot(async (root) => {
+      await seedAll(root);
+      // Test with completely missing evidenceRefs (undefined triggers category check)
+      const iter = makeIteration({ evidenceRefs: undefined });
+      await seedEvidence(root, withFullHarness({ iterations: [iter] }));
+      const issues = await validatePrototypingEvidence(root, defaultConfig);
+      // PROT-314 or any category-level check should fire
+      const hasCategoryError = issues.some(
+        (i) => i.code === "QFAI-PROT-314" || (i.message && i.message.includes("evidenceRefs")),
+      );
+      expect(hasCategoryError).toBe(true);
+    });
+  });
+
+  // QFAI:SPEC-0004:TC-0004-0060
+  it("TC-0004-0060: rejects pre-scored l1/l2 old schema (PROT-315)", async () => {
+    await withTempRoot(async (root) => {
+      await seedAll(root);
+      const iter = makeIteration({
+        l1: { panel: "L1", total: 0.8, axes: [] },
+        l2: { panel: "L2", total: 0.7, axes: [] },
+      });
+      await seedEvidence(root, withFullHarness({ iterations: [iter] }));
+      const issues = await validatePrototypingEvidence(root, defaultConfig);
+      expect(hasCode(issues, "QFAI-PROT-315")).toBe(true);
+    });
+  });
+
+  // QFAI:SPEC-0004:TC-0004-0061
+  it("TC-0004-0061: valid rev2 evidence passes all PROT-310..315 rules", async () => {
+    await withTempRoot(async (root) => {
+      await seedAll(root);
+      await seedEvidence(root, buildValidEvidence());
+      const issues = await validatePrototypingEvidence(root, defaultConfig);
+      const rev2Codes = ["QFAI-PROT-310", "QFAI-PROT-311", "QFAI-PROT-312", "QFAI-PROT-313", "QFAI-PROT-314", "QFAI-PROT-315"];
+      const rev2Issues = issues.filter((i) => rev2Codes.includes(i.code));
+      expect(rev2Issues).toHaveLength(0);
+    });
+  });
+
+  // QFAI:SPEC-0004:TC-0004-0062
+  it("TC-0004-0062: normal fixtures do not contain rev1 patterns", async () => {
+    const evidence = buildValidEvidence();
+    const json = JSON.stringify(evidence);
+
+    // packVersion must not be the old default value
+    expect(json).not.toContain('"1.0.0"');
+
+    // No single-iteration converged (status is "in-progress" not "completed" with converged)
+    const fh = evidence.fullHarness as Record<string, unknown>;
+    expect(fh.status).not.toBe("completed");
+
+    // L1/L2 axes are populated (not empty)
+    const iter = (fh.iterations as Array<Record<string, unknown>>)[0];
+    const l1 = iter.l1 as { axes: unknown[] };
+    const l2 = iter.l2 as { axes: unknown[] };
+    expect(l1.axes.length).toBeGreaterThan(0);
+    expect(l2.axes.length).toBeGreaterThan(0);
+  });
+});

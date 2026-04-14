@@ -161,9 +161,38 @@ export function scorePanelsFromInputs(inputs: FullHarnessPanelInputs): {
   l2: FullHarnessPanelScore;
   weightedTotal: number;
 } {
+  // REQ-0067: panelScore double defense — reject bad inputs even if upstream missed them
+  validateScoringPreconditions(inputs);
+
   const l1 = scoreL1(inputs);
   const l2 = scoreL2(inputs);
   return { l1, l2, weightedTotal: computeWeightedTotal(l1, l2) };
+}
+
+/**
+ * REQ-0067: Double defense precondition checks.
+ * These duplicate upstream guards in l2Evidence/panelInputs to ensure
+ * panelScore never silently produces scores from invalid inputs.
+ */
+function validateScoringPreconditions(inputs: FullHarnessPanelInputs): void {
+  // aggregateScore must be 0-1
+  if (inputs.discussionAxes.aggregateScore < 0 || inputs.discussionAxes.aggregateScore > 1) {
+    throw new Error(
+      `panelScore: aggregateScore must be 0-1, got ${inputs.discussionAxes.aggregateScore}`,
+    );
+  }
+
+  // trendSourcesChecked === 0 is a scoring precondition failure
+  if (inputs.trendAlignment.trendSourcesChecked === 0) {
+    throw new Error("panelScore: trend sources required (trendSourcesChecked === 0)");
+  }
+
+  // fidelityScore === 0 with contracts > 0 is a scoring precondition failure
+  if (inputs.screenContract.totalContracts > 0 && inputs.screenContract.fidelityScore === 0) {
+    throw new Error(
+      "panelScore: fidelity score required when contracts exist (fidelityScore === 0 with totalContracts > 0)",
+    );
+  }
 }
 
 export function determineDecision(

@@ -152,6 +152,21 @@ export function validatePanelInputs(inputs: FullHarnessPanelInputs): void {
     missing.push("trendAlignment.evidenceRefs (empty)");
   }
 
+  // REQ-0062 check 6: uiObservation htmlCapture must exist on at least one screen
+  if (
+    inputs.uiObservation.screens.length > 0 &&
+    inputs.uiObservation.screens.every((s) => !s.htmlCaptureRef || s.htmlCaptureRef.length === 0)
+  ) {
+    missing.push("uiObservation.htmlCaptureRefs (no screen has HTML capture)");
+  }
+
+  // REQ-0062 check 10: fidelityScore must not be 0 when contracts exist
+  if (inputs.screenContract.totalContracts > 0 && inputs.screenContract.fidelityScore === 0) {
+    missing.push(
+      "screenContract.fidelityScore (zero with totalContracts > 0 indicates no evidence)",
+    );
+  }
+
   if (missing.length > 0) {
     throw new MeasurementError(
       `Full-harness measurement requires complete evidence. Missing: ${missing.join(", ")}`,

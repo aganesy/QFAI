@@ -179,3 +179,10 @@
 - Rationale: missing 続行は evidence truthfulness を損なう
 - Status: Adopted
 - Impact: specCoverage.ts, execution.ts
+
+## DR-0012-0026: TDD impl-first backfill for v1.7.15 rev2
+
+- Decision: v1.7.15 rev2 の runtime 実装が先行完了しているため、TC-0012-0046..0070 の TDD エントリは exception (impl-first backfill) として登録
+- Rationale: 実装は v1.7.15 rev2 SDD → ATDD → implement の流れで runtime.ts/types.ts/l2Evidence.ts 等が先行実装済み。テストは ATDD integration test として作成・PASS 済み。TDD ledger 上は exception として記録し、既存テスト結果を evidence に紐付ける
+- Status: Adopted
+- Impact: spec-0012/tdd/test-list.md (25 entries)

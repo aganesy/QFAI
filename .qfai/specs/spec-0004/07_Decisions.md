@@ -53,3 +53,9 @@
 - Decision: rev2 で追加される validator rules のうち、既存 rule の severity upgrade は rule ID を維持し、semantic 変更（新しい検出対象）は新 rule ID に分離する
 - Rationale: rule ID の安定性を保ちつつ、新検出対象を明確に区別。既存の waiver や CI 設定が意図せず新ルールを抑制するリスクを回避
 - Status: Adopted
+
+### DR-0004-0010: TDD impl-first backfill for v1.7.15 rev2
+
+- Decision: v1.7.15 rev2 の validator 実装が先行完了しているため、TC-0004-0054..0062 の TDD エントリは exception (impl-first backfill) として登録
+- Rationale: PROT-310..315 validator rules は prototypingEvidence.ts に実装済み。unit tests を追加し PASS 確認済み
+- Status: Adopted
