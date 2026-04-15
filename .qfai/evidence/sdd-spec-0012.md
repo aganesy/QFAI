@@ -443,3 +443,129 @@ COV-207 警告はすべて pre-existing（EX-0012-0001, 0041, 0044, 0084, 0087�
 - QFAI-ATDD gates: test assets not in SDD scope (per SKILL.md) ✅
 - DR-IDs: DR-0012-0033〜0035, AD-0012-0036〜0044, RJ-0012-0019〜0023
 - Subagents: real (requirements-analyst, solution-architect, test-design-analyst)
+
+---
+
+# SDD Evidence — spec-0012 (qfai-prototyping) v1.7.15 rev7
+
+## Objective
+
+Update spec-0012 (qfai-prototyping) with v1.7.15 rev7 discussion pack content closing 6 contract gaps from v1.7.15-07 audit across 7 workstreams (WS-1..WS-7). Added 7 US, 20 AC, 7 BR, 20 EX, 25 TC, 5 DR (from OQ resolutions).
+
+## Inputs Reviewed
+
+| Priority | Path | Purpose |
+| -------- | ---- | ------- |
+| P1 | `.qfai/assistant/instructions/*` | Agent instructions |
+| P2 | `.qfai/assistant/steering/*` | Steering files |
+| P3 | `.qfai/specs/spec-0012/**` | Existing spec-0012 artifacts (pre-rev7) |
+| P4 | `.qfai/discussion/discussion-20260415203030886/**` | Rev7 discussion pack (18 REQs, 7 USs, 6 NFRs, 5 OQs) |
+| P4 | `.qfai/contracts/**` | Contract posture (0 items, CLI tool) |
+
+### FORMAT SSOT files read
+- `.qfai/discussion/README.md`
+- `.qfai/specs/README.md`
+- `.qfai/evidence/README.md`
+- `.qfai/assistant/steering/agent-routing.yml`
+- `.qfai/assistant/steering/review-profiles.yml`
+- `.qfai/assistant/skills/qfai-sdd/references/rcp_footer.md`
+
+## Preflight Summary Path
+
+`.qfai/report/preflight_summary.md` (updated for rev7: discussion-20260415203030886, REQ=18, OQ open=0)
+
+## Open Questions Summary
+
+| Status | Count |
+|--------|-------|
+| Open | 0 |
+| Answered (DR-IDs) | 5 (OQ-0001→DR-0041, OQ-0002→DR-0042, OQ-0003→DR-0043, OQ-0004→DR-0044, OQ-0005→DR-0045) |
+| Deferred | 0 |
+
+## Decisions Made
+
+| DR-ID | Summary | Rationale |
+|-------|---------|-----------|
+| DR-0041 | packHash excluded from FullHarnessRequest (Option B) | Deferred — avoid breaking change; packPath+packVersion sufficient for current integrity gate |
+| DR-0042 | Error classes co-located in `prototyping/errors.ts` (Option A) | Discoverability; single import path; avoids class scatter across modules |
+| DR-0043 | configPath is optional in calibrationRef (Option A) | Backward-compatible; absence = use default config |
+| DR-0044 | Obsolete field detection at normalize-time (Option A) | Fail-fast at startup; cleaner than runtime detection |
+| DR-0045 | surfacePolicy message generated from constant (Option B) | Auto-maintenance; no manual sync required |
+
+## Work Performed
+
+| File | Change |
+|------|--------|
+| `spec-0012/01_Spec.md` | rev7 NOTE, NFR-0030..0036, REQ-0041..0058, US range updated |
+| `spec-0012/02_User-stories.md` | US-0056..0062 (7 stories) |
+| `spec-0012/03_Acceptance-Criteria.md` | AC-0056..0075 (20 criteria) |
+| `spec-0012/04_Business-Rules.md` | BR-0092..0098 (7 rules) |
+| `spec-0012/05_Examples.md` | EX-0109..0128 (20 examples) |
+| `spec-0012/06_Test-Cases.md` | TC-0173..0197 (25 test cases) |
+| `spec-0012/07_Decisions.md` | DR-0041..0045 (5 decisions from OQ resolutions) |
+| `spec-0012/08_Open-questions.md` | OQ-0001..0005 resolution records |
+| `spec-0012/09_delta.md` | v1.7.15 rev7 Contract Gap Closure section |
+| `spec-0012/10_Plan.md` | v1.7.15 rev7 Implementation Strategy |
+| `_policies/05_Contracts.md` | v1.7.15 rev7 Contract Posture (none: CLI tool) |
+| `_policies/10_delta.md` | rev7 entries |
+| `assistant/steering/manifest.md` | discussion-20260415203030886 reference added |
+
+## Commands Executed
+
+```
+pnpm --filter qfai exec qfai validate --fail-on error --format github | tee .qfai/report/validate.log
+```
+Result: error=52 warning=75 info=3
+
+```
+git stash && python check_errors.py && git stash pop
+```
+Confirmed: 52 errors identical in HEAD (pre-rev7) and working tree. **New errors = 0.**
+
+## Work Orders Summary
+
+| Step | Role (sub-agent) | Task title | Input (refs) | Output (refs) | Status |
+|------|-----------------|------------|-------------|---------------|--------|
+| 1 | general-purpose (`sdd-spec0012-rev7`) | Draft all 13 spec-0012 artifacts for v1.7.15 rev7 | discussion-20260415203030886, spec-0012 current files | 13 modified files (US/AC/BR/EX/TC/DR/OQ/delta/plan + policies) | PASS |
+| 2 | orchestrator | Run validate gate | Working tree | `.qfai/report/validate.log` | PASS (0 new errors) |
+| 3 | completion-reviewer (R01) | Review DoD, roles, artifacts | All 13 files | R01_completion-reviewer.md | PASS |
+| 4 | architecture-reviewer (R02) | Review architecture changes | BR/AC/DR for WS-1..7 | R02_architecture-reviewer.md | PASS |
+| 5 | qa-gatekeeper (R03) | Review coverage and validate gate | validate.log, TC/EX | R03_qa-gatekeeper.md | PASS |
+
+## Validate Evidence Paths
+
+- `.qfai/report/validate.log`
+- `.qfai/report/specs-coverage/spec-0012.md`
+- `.qfai/review/review-20260416070000000/summary.json`
+
+## QFAI-COV Gate Results
+
+| Gate | Count | Result |
+|------|-------|--------|
+| QFAI-COV-201 | 0 | PASS |
+| QFAI-COV-202 | 0 | PASS |
+| QFAI-COV-203 | 0 | PASS |
+| QFAI-COV-204 | 0 | PASS |
+| QFAI-COV-205 | 0 | PASS |
+| QFAI-COV-206 | 0 | PASS |
+| QFAI-ATDD-111/112 | n/a | Out of SDD scope — test assets not authored in this phase |
+
+## Gaps / Open Risks
+
+- 52 pre-existing validate errors (spec-0001..0015 ID format issues + QFAI-SKILLS-001) — not introduced by rev7; tracked as technical debt
+- TDDLIST_TEST_FILE_MISSING (spec-0012 harness 3 files): pre-existing implementation wait
+- Backward compatibility abandoned for scalar calibration fields and uiContractId (explicit in delta.md)
+
+## Final Status
+
+**PASS** — v1.7.15 rev7 SDD spec-0012 更新完了
+
+- Phase order: Contracts-first → Outline → Slice → Plan → Delta ✅
+- No rejected option reintroduced ✅
+- QFAI-COV-201..206 for spec-0012: all zero ✅
+- QFAI-COV-207 density warnings: pre-existing; triaged ✅
+- QFAI-ATDD gates: test assets not in SDD scope ✅
+- New validate errors: **0** ✅
+- DR-IDs: DR-0041..0045 ✅
+- OQ closed: OQ-0001..0005 → all resolved ✅
+- Subagents: real (general-purpose `sdd-spec0012-rev7`, reviewer roles R01/R02/R03)

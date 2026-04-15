@@ -400,3 +400,22 @@
 - OQ-0003 resolved at SDD level → DR-0012-0038 (CalibrationLoader failure → throw Error immediately)
 - OQ-0004 resolved at SDD level → DR-0012-0039 (reviewerLogs.verdict stores mapped vocabulary)
 - OQ-0005 resolved at SDD level → DR-0012-0040 (uiContractId in observation → hard-error)
+## v1.7.15 rev7 — Single-PR Completion (Adopted)
+
+### Phase: SDD Outline (Phase 1)
+
+| Date | Status | Artifact | Change | Source |
+| ---- | ------ | -------- | ------ | ------ |
+| 2026-04-15 | adopted | spec-0012 | v1.7.15 rev7: US-0012-0056..0062, AC/BR/EX/TC追加 (WS-1〜WS-7 契約ギャップ閉鎖) | discussion-20260415203030886 rev7 completion |
+| 2026-04-15 | adopted | 05_Contracts.md | v1.7.15 rev7 Contract Posture 追加 | 内部モジュール変更のみ、外部 stable contract なし |
+| 2026-04-15 | adopted | spec-0012/07_Decisions.md | DR-0012-0041..0045 (rev7 OQ-0001..0005 解決結果) 追加 | all 5 OQs resolved |
+
+### Discussion Pack Reference
+
+- `discussion-20260415203030886` (v1.7.15 rev7)
+- Classification: non-ui
+- OQ-0001 resolved at SDD level → DR-0012-0041 (packHash deferred; packPath+packVersion+configPath sufficient)
+- OQ-0002 resolved at SDD level → DR-0012-0042 (prototyping/errors.ts; SRP)
+- OQ-0003 resolved at SDD level → DR-0012-0043 (configPath optional in calibrationRef)
+- OQ-0004 resolved at SDD level → DR-0012-0044 (obsolete field detection at normalize-time)
+- OQ-0005 resolved at SDD level → DR-0012-0045 (surfacePolicy message from constant)

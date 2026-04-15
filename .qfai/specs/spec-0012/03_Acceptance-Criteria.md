@@ -785,3 +785,82 @@ Given error-path test fixtures, when inspected, then missing pack, missing revie
 - US-Ref: US-0012-0055
 - REQ-Ref: REQ-0100
 - Validator hard-errors when observation record contains `uiContractId` field (backward compat abandoned)
+## AC-0012-0056: CalibrationPack Resolved Before runFullHarness
+
+Given execution.ts runs, when runPrototypingExecution is called, then CalibrationLoader is invoked before runFullHarness() and a resolved CalibrationPack object is passed.
+
+## AC-0012-0057: FullHarnessRequest Includes calibrationPack Object
+
+Given a valid pack path, when FullHarnessRequest is constructed, then it includes `calibrationPack: CalibrationPack` and `calibrationRef: { packPath, packVersion, configPath? }` with no scalar threshold parameters.
+
+## AC-0012-0058: runtime.ts Has Zero CalibrationLoader Imports
+
+Given runtime.ts, when its import statements are inspected, then zero imports of CalibrationLoader or any calibration resolution utility are found.
+
+## AC-0012-0059: uiFidelity Status Failure Stops Execution
+
+Given uiFidelity.status !== "completed", when execution.ts evaluates the guard, then UiFidelityEvidenceError is thrown before runFullHarness() is called.
+
+## AC-0012-0060: missingRequiredEvidence Failure Stops Execution
+
+Given uiFidelity.missingRequiredEvidence.length > 0, when execution.ts evaluates the guard, then UiFidelityEvidenceError is thrown naming the missing evidence type(s).
+
+## AC-0012-0061: Missing Required Screen Stops Execution
+
+Given a required screen absent from uiFidelity.screenSummaries, when execution.ts evaluates the guard, then UiFidelityEvidenceError is thrown naming the missing screen(s).
+
+## AC-0012-0062: uiFidelity Guard Precedes runFullHarness
+
+Given the uiFidelity guard in execution.ts, when evaluated, then it fires after buildUiFidelity() and before buildSpecCoverageSummary(), buildL2Evidence(), and runFullHarness().
+
+## AC-0012-0063: specCoverage.evidenceRefs Accepts Concrete Refs Only
+
+Given specCoverage.evidenceRefs entries, when validated, then only spec anchor refs, render summary refs, screenshot refs, and browser QA artifact refs are accepted.
+
+## AC-0012-0064: Validator Rejects Non-Concrete evidenceRefs
+
+Given a directory path, self-ref, synthetic token, or extension-less path in evidenceRefs, when prototypingEvidence.ts validates, then it emits a validator error for each forbidden pattern.
+
+## AC-0012-0065: isConcreteArtifactRef Helper Exported
+
+Given prototypingEvidence.ts, when its exports are inspected, then `isConcreteArtifactRef(ref: string): boolean` is exported and available.
+
+## AC-0012-0066: Validator Resolves calibrationRef.packPath
+
+Given a prototyping evidence bundle with calibrationRef, when prototypingEvidence.ts validates, then it resolves calibrationRef.packPath and reads the actual calibration pack.
+
+## AC-0012-0067: packPath and packVersion Mismatch Is Error
+
+Given calibrationRef.packVersion in summary does not match the actual pack's version, when prototypingEvidence.ts validates, then it emits a validator error (not a warning).
+
+## AC-0012-0068: Hardcoded "1.0.0" Heuristic Removed
+
+Given packVersion = "1.0.0" in the summary but actual version differs, when prototypingEvidence.ts validates, then a validator error is emitted (heuristic removed; no special-case for "1.0.0").
+
+## AC-0012-0069: Six Distinct Error Classes Exported from prototyping/errors.ts
+
+Given packages/qfai/src/core/prototyping/errors.ts, when its exports are inspected, then exactly these 6 classes are exported: CalibrationResolutionError, UiFidelityEvidenceError, SpecCoverageBuildError, L2EvidenceBuildError, FullHarnessRuntimeError, EvidenceWriteError.
+
+## AC-0012-0070: No Catch Block Maps Non-Calibration Failures to CalibrationResolutionError
+
+Given execution.ts catch blocks, when a non-calibration phase throws, then no catch block wraps the error in CalibrationResolutionError or a message containing "Failed to load calibration pack".
+
+## AC-0012-0071: Scalar Calibration Fields Absent from PrototypingCalibrationConfig
+
+Given PrototypingCalibrationConfig in config.ts, when its type definition is inspected, then thresholds.accept, thresholds.refine, maxIterations, plateauDelta, and plateauLookback are absent.
+
+## AC-0012-0072: Obsolete Scalar Fields in Config Input Cause Error
+
+Given a config input containing any of thresholds.accept, thresholds.refine, maxIterations, plateauDelta, or plateauLookback, when config normalization runs, then an error is thrown naming the obsolete field(s).
+
+## AC-0012-0073: Shipped Config Template Uses packPath-Only
+
+Given packages/qfai/assets/init/root/qfai.config.yaml, when inspected, then it contains only prototyping.calibration.packPath under the calibration section with zero scalar calibration fields.
+
+## AC-0012-0074: surfacePolicy Rejection Message Generated from Constant
+
+Given assertSupportedPrototypingSurface() in surfacePolicy.ts, when called with an unsupported surface, then the rejection message is generated from PROTOTYPING_SUPPORTED_SURFACES constant (not hardcoded).
+
+## AC-0012-0075: Stale CLI Surface Removed from Rejection Message
+
+Given the rejection message for an unsupported surface, when inspected, then it lists "web, mobile, desktop, mixed" and does not hardcode "cli" or any other stale surface name.

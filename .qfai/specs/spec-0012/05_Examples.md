@@ -749,3 +749,123 @@
   Given obs.screenId = "screen-login" and screen.screenId = "screen-001", screen.uiContractId = "screen-login"
 - When uiFidelityBuilder matches
 - Then no match found (old uiContractId path removed); only exact screenId equality produces a match
+
+## EX-0012-0109: CalibrationLoader Called Before runFullHarness — Happy Path
+
+- BR-Ref: BR-0012-0092
+- Input: execution.ts with CalibrationLoader wired; valid packPath resolves to CalibrationPack
+- Expected: runFullHarness receives { calibrationPack, calibrationRef }; no I/O in runtime.ts
+
+## EX-0012-0110: CalibrationLoader Missing Pack — Negative Path
+
+- BR-Ref: BR-0012-0092
+- Input: packPath does not exist at runtime
+- Expected: CalibrationResolutionError thrown; runFullHarness never called
+
+## EX-0012-0111: runtime.ts Still Imports CalibrationLoader — Boundary
+
+- BR-Ref: BR-0012-0092
+- Input: runtime.ts source contains `import { CalibrationLoader } from ...`
+- Expected: TypeScript compile error or lint failure
+
+## EX-0012-0112: uiFidelity Incomplete Status — Negative Path
+
+- BR-Ref: BR-0012-0093
+- Input: uiFidelity.status = "insufficient-evidence"
+- Expected: UiFidelityEvidenceError thrown; runFullHarness not called
+
+## EX-0012-0113: uiFidelity Missing Evidence — Negative Path
+
+- BR-Ref: BR-0012-0093
+- Input: uiFidelity.missingRequiredEvidence = ["browser-qa"]
+- Expected: UiFidelityEvidenceError thrown naming "browser-qa"
+
+## EX-0012-0114: Required Screen Absent — Negative Path
+
+- BR-Ref: BR-0012-0093
+- Input: required screen "screen-checkout" absent from screenSummaries
+- Expected: UiFidelityEvidenceError naming "screen-checkout"
+
+## EX-0012-0115: Guard Fires After buildUiFidelity — State Transition
+
+- BR-Ref: BR-0012-0093
+- Input: guard position in execution.ts control flow
+- Expected: guard fires after buildUiFidelity(), before buildSpecCoverageSummary() and runFullHarness()
+
+## EX-0012-0116: Concrete Spec Anchor Ref — Happy Path
+
+- BR-Ref: BR-0012-0094
+- Input: evidenceRef = "40_screen_contracts.md#screen-login"
+- Expected: isConcreteArtifactRef returns true; no validator error
+
+## EX-0012-0117: Directory Path in evidenceRefs — Negative Path
+
+- BR-Ref: BR-0012-0094
+- Input: evidenceRef = "./evidence/prototyping/"
+- Expected: isConcreteArtifactRef returns false; validator emits error
+
+## EX-0012-0118: Self-Ref in evidenceRefs — Negative Path
+
+- BR-Ref: BR-0012-0094
+- Input: evidenceRef = ".qfai/evidence/prototyping.json#/specCoverage"
+- Expected: isConcreteArtifactRef returns false; validator emits error
+
+## EX-0012-0119: Synthetic Token in evidenceRefs — Negative Path
+
+- BR-Ref: BR-0012-0094
+- Input: evidenceRef = "specs: all screens covered"
+- Expected: isConcreteArtifactRef returns false; validator emits error
+
+## EX-0012-0120: Matching calibrationRef Metadata — Happy Path
+
+- BR-Ref: BR-0012-0095
+- Input: summary calibrationRef matches actual pack (packPath, packVersion, configPath all match)
+- Expected: validator passes; no calibration mismatch error
+
+## EX-0012-0121: packVersion Mismatch — Negative Path
+
+- BR-Ref: BR-0012-0095
+- Input: summary packVersion = "1.0.1", actual pack version = "1.0.2"
+- Expected: validator emits error (not warning)
+
+## EX-0012-0122: Hardcoded "1.0.0" Heuristic Removed — Boundary
+
+- BR-Ref: BR-0012-0095
+- Input: packVersion = "1.0.0" in summary but actual version = "1.0.2"
+- Expected: validator emits error (heuristic removed; no special-case pass)
+
+## EX-0012-0123: All 6 Error Classes Present — Happy Path
+
+- BR-Ref: BR-0012-0096
+- Input: prototyping/errors.ts file contents
+- Expected: all 6 classes exported: CalibrationResolutionError, UiFidelityEvidenceError, SpecCoverageBuildError, L2EvidenceBuildError, FullHarnessRuntimeError, EvidenceWriteError
+
+## EX-0012-0124: Bundle Write Failure Not Mapped to CalibrationResolutionError — Negative Path
+
+- BR-Ref: BR-0012-0096
+- Input: writeEvidenceBundle() throws
+- Expected: EvidenceWriteError thrown (not CalibrationResolutionError)
+
+## EX-0012-0125: packPath-Only Config — Happy Path
+
+- BR-Ref: BR-0012-0097
+- Input: config with only prototyping.calibration.packPath
+- Expected: normalize succeeds; no error
+
+## EX-0012-0126: Obsolete Scalar Field in Config — Negative Path
+
+- BR-Ref: BR-0012-0097
+- Input: config with thresholds.accept: 0.9
+- Expected: normalize throws error naming "thresholds.accept" as obsolete
+
+## EX-0012-0127: Rejection Message From Constant — Happy Path
+
+- BR-Ref: BR-0012-0098
+- Input: assertSupportedPrototypingSurface("cli") called
+- Expected: error message contains current PROTOTYPING_SUPPORTED_SURFACES members (web, mobile, desktop, mixed); does not hardcode "cli"
+
+## EX-0012-0128: Rejection Message Auto-Updates — Edge/Boundary
+
+- BR-Ref: BR-0012-0098
+- Input: PROTOTYPING_SUPPORTED_SURFACES extended with new value
+- Expected: rejection message auto-includes the new value without code change

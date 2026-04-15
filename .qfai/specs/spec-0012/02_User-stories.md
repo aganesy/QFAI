@@ -331,3 +331,72 @@ As a developer, I want test fixtures to remove l1/l2 direct pass, packVersion:"1
 - REQ-Refs: REQ-0099, REQ-0100, REQ-0101, REQ-0102
 - WS: WS-5, WS-6, WS-7
 - Discussion: discussion-20260415161758193
+## US-0012-0056: CalibrationPack Upstream Resolution (v1.7.15 rev7)
+
+**As a** package maintainer,
+**I want** `runFullHarness()` to receive a resolved `CalibrationPack` object from `execution.ts`,
+**So that** `runtime.ts` has no pack resolution responsibility and the API contract is strict.
+
+- REQ-Refs: REQ-0041, REQ-0042, REQ-0043
+- WS: WS-1
+- Discussion: discussion-20260415203030886
+
+## US-0012-0057: uiFidelity Fail-Closed Guard (v1.7.15 rev7)
+
+**As a** package maintainer,
+**I want** execution to fail immediately when uiFidelity is incomplete (status≠completed, missingRequired>0, or missing screen),
+**So that** incomplete runs never call `runFullHarness()` or produce misleading summaries.
+
+- REQ-Refs: REQ-0044, REQ-0045, REQ-0046, REQ-0047
+- WS: WS-2
+- Discussion: discussion-20260415203030886
+
+## US-0012-0058: Concrete-Only evidenceRefs (v1.7.15 rev7)
+
+**As a** package maintainer,
+**I want** `specCoverage.evidenceRefs` to contain only concrete artifact refs (spec anchors, renders, screenshots, browser QA artifacts),
+**So that** the traceability ledger is auditable and each ref resolves to a real artifact.
+
+- REQ-Refs: REQ-0048, REQ-0049
+- WS: WS-3
+- Discussion: discussion-20260415203030886
+
+## US-0012-0059: Validator Calibration Metadata Check (v1.7.15 rev7)
+
+**As a** package maintainer,
+**I want** the validator to compare `calibrationRef.packPath`, `packVersion`, and `configPath` against the actual pack,
+**So that** calibration metadata forgery (mismatched summary) is detected as a validator error.
+
+- REQ-Refs: REQ-0050, REQ-0051, REQ-0052
+- WS: WS-4
+- Discussion: discussion-20260415203030886
+
+## US-0012-0060: Error Taxonomy (v1.7.15 rev7)
+
+**As a** package maintainer,
+**I want** execution failures to have 6 distinct error classes in `prototyping/errors.ts` with narrow catch blocks,
+**So that** CI diagnostics are actionable and calibration failures are not confused with fidelity or write failures.
+
+- REQ-Refs: REQ-0053, REQ-0054
+- WS: WS-5
+- Discussion: discussion-20260415203030886
+
+## US-0012-0061: Config packPath-Only (v1.7.15 rev7)
+
+**As a** package maintainer,
+**I want** scalar calibration fields removed from the config schema, shipped template, and README,
+**So that** the calibration pack is the only calibration entry point and obsolete config inputs cause an error.
+
+- REQ-Refs: REQ-0055, REQ-0056, REQ-0057
+- WS: WS-6
+- Discussion: discussion-20260415203030886
+
+## US-0012-0062: surfacePolicy Rejection Message from Constant (v1.7.15 rev7)
+
+**As a** package maintainer,
+**I want** `surfacePolicy.ts` rejection message to be generated from `PROTOTYPING_SUPPORTED_SURFACES` constant,
+**So that** the message is never stale when the allowed surface list changes.
+
+- REQ-Refs: REQ-0058
+- WS: WS-7
+- Discussion: discussion-20260415203030886

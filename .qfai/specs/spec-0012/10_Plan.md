@@ -295,3 +295,64 @@ WS-1 and WS-2 are foundational; WS-3, WS-4, WS-5, WS-6 are independent of each o
 | D: Calibration pack SSOT | CalibrationLoader internal; throw on missing; packPath in summary | TC-0012-0154..0159 |
 | E: Concrete evidenceRefs | no self-refs; no synthetic strings; at least one concrete ref | TC-0012-0160..0163 |
 | F: reviewerSignoff + screenId + stale | status/terminationReason consistency; screenId match; uiContractId error; stale docs/tests | TC-0012-0164..0172 |
+## v1.7.15 rev7 Implementation Strategy
+
+### Scope Boundary
+
+Single-PR: `packages/qfai/**` only. 7 workstreams (WS-1..WS-7) closing 6 contract gaps from v1.7.15-07 audit + 1 minor surfacePolicy fix.
+
+### New Files (1 new module)
+
+| File | WS | Purpose |
+|------|-----|---------|
+| `packages/qfai/src/core/prototyping/errors.ts` | WS-5 | 6 distinct error classes: CalibrationResolutionError, UiFidelityEvidenceError, SpecCoverageBuildError, L2EvidenceBuildError, FullHarnessRuntimeError, EvidenceWriteError |
+
+### Modules Touched (rev7 Change Obligation)
+
+| Module | Change Obligation | WS |
+|--------|-------------------|-----|
+| `prototyping/execution.ts` | Call CalibrationLoader pre-harness; add uiFidelity guard (status/missingRequired/screen); narrow catch blocks using rev7 error classes | WS-1, WS-2, WS-5 |
+| `harness/runtime.ts` | Remove CalibrationLoader import; read calibration from request.calibrationPack.pack.measurement; accept calibrationPack object | WS-1 |
+| `calibration/loader.ts` | Ensure consistency with runtime.ts import removal | WS-1 |
+| `prototyping/specCoverage.ts` | Remove directory ref injection; enforce isConcreteArtifactRef | WS-3 |
+| `prototyping/uiFidelityBuilder.ts` | Document completed-only contract; status vocabulary | WS-2 |
+| `validators/prototypingEvidence.ts` | Add isConcreteArtifactRef export; add calibration metadata comparison; remove "1.0.0" heuristic | WS-3, WS-4 |
+| `core/config.ts` | Remove scalar calibration fields; add obsolete field error at normalize-time | WS-6 |
+| `prototyping/surfacePolicy.ts` | Generate rejection message from PROTOTYPING_SUPPORTED_SURFACES constant | WS-7 |
+| `assets/init/root/qfai.config.yaml` | Remove scalar fields; packPath-only | WS-6 |
+| `README.md` | Align config example with packPath-only | WS-6 |
+
+### Implementation Order (rev7 dependency chain)
+
+Per design doc §8: WS-6 first (establishes packPath-only contract); WS-5 before WS-2/3/4 (error classes must exist before catch blocks).
+
+1. **Step 1** (WS-6): `config.ts` — remove scalar calibration fields; add normalize-time error
+2. **Step 2** (WS-5): `prototyping/errors.ts` (NEW) — 6 error classes
+3. **Step 3** (WS-1): `harness/runtime.ts` — remove CalibrationLoader import; accept calibrationPack object; update FullHarnessRequest type
+4. **Step 4** (WS-1): `prototyping/execution.ts` — CalibrationLoader pre-harness resolution; update runFullHarness call
+5. **Step 5** (WS-2): `prototyping/execution.ts` — add uiFidelity guard; `prototyping/uiFidelityBuilder.ts` — document completed-only
+6. **Step 6** (WS-3): `prototyping/specCoverage.ts` — concrete refs enforcement; `validators/prototypingEvidence.ts` — isConcreteArtifactRef export + validation
+7. **Step 7** (WS-4): `validators/prototypingEvidence.ts` — calibration metadata comparison; remove "1.0.0" heuristic
+8. **Step 8** (WS-7): `prototyping/surfacePolicy.ts` — generate message from constant
+9. **Finalize**: `qfai.config.yaml` template; `README.md`; tests; docs sync
+
+### Test Strategy (rev7)
+
+| Layer | Location | Coverage Target |
+|-------|----------|-----------------|
+| Unit | `tests/core/` | CalibrationLoader integration, uiFidelityBuilder guard, isConcreteArtifactRef, config.ts obsolete field error, surfacePolicy message generation |
+| Integration | `tests/integration/` | execution.ts full-harness path with CalibrationPack upstream flow; uiFidelity fail-closed; concrete refs enforcement |
+| Validator | `tests/validators/` | prototypingEvidence.ts: isConcreteArtifactRef validation, calibration metadata check, "1.0.0" heuristic removed |
+| ATDD annotation map | `spec-0012/tdd/test-list.md` | TC-0012-0173..TC-0012-0197 mapped to TDD-IDs |
+
+### Acceptance Test Matrix Mapping (rev7)
+
+| Category | Coverage Target | TC Range |
+|----------|-----------------|----------|
+| A: CalibrationPack upstream | execution.ts resolves pre-harness; runtime.ts 0 CalibrationLoader imports | TC-0012-0173..0175 |
+| B: uiFidelity fail-closed | status/missingRequired/screen guard; ordering | TC-0012-0176..0180 |
+| C: Concrete evidenceRefs | isConcreteArtifactRef; directory/self-ref/synthetic rejection | TC-0012-0181..0184 |
+| D: Calibration metadata check | packPath/packVersion/configPath comparison; "1.0.0" heuristic removed | TC-0012-0185..0187 |
+| E: Error taxonomy | 6 classes; narrow catch blocks; EvidenceWriteError/FullHarnessRuntimeError distinction | TC-0012-0188..0190 |
+| F: Config packPath-only | scalar fields absent; obsolete field error; template clean | TC-0012-0191..0194 |
+| G: surfacePolicy message | from constant; auto-update; stale cli removed | TC-0012-0195..0197 |

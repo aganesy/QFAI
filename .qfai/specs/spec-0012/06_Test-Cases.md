@@ -1540,3 +1540,178 @@
 - AC-Refs: AC-0012-0055-03
 - Type: boundary
 - No test fixture contains `surface: "cli"` with `mode: "standard"`; no fixture asserts `approved` for plateau termination
+
+## TC-0012-0173: CalibrationPack Resolved — Normal Path
+
+- EX-Ref: EX-0012-0109
+- AC-Refs: AC-0012-0056, AC-0012-0057
+- Type: normal
+- Test: execution.ts calls CalibrationLoader with packPath; resulting CalibrationPack object passed to runFullHarness(); runtime.ts receives CalibrationPack without performing any I/O
+
+## TC-0012-0174: CalibrationLoader Missing Pack — Error Path
+
+- EX-Ref: EX-0012-0110
+- AC-Refs: AC-0012-0056
+- Type: error
+- Test: execution.ts with missing packPath; verify CalibrationResolutionError thrown; verify runFullHarness not called
+
+## TC-0012-0175: runtime.ts Zero CalibrationLoader Imports — Boundary
+
+- EX-Ref: EX-0012-0111
+- AC-Refs: AC-0012-0058
+- Type: boundary
+- Test: static analysis / grep of runtime.ts source confirms 0 import statements for CalibrationLoader; TypeScript compilation must succeed after import removal
+
+## TC-0012-0176: uiFidelity Status Guard — Normal Path
+
+- EX-Ref: EX-0012-0112
+- AC-Refs: AC-0012-0059, AC-0012-0062
+- Type: normal
+- Test: uiFidelity.status = "completed" + 0 missingRequired + all screens present → guard passes; execution continues to buildSpecCoverageSummary
+
+## TC-0012-0177: uiFidelity Incomplete Status — Error Path
+
+- EX-Ref: EX-0012-0112
+- AC-Refs: AC-0012-0059, AC-0012-0062
+- Type: error
+- Test: uiFidelity.status = "insufficient-evidence" → UiFidelityEvidenceError thrown before buildSpecCoverageSummary; verify runFullHarness not called
+
+## TC-0012-0178: missingRequiredEvidence Non-Empty — Error Path
+
+- EX-Ref: EX-0012-0113
+- AC-Refs: AC-0012-0060
+- Type: error
+- Test: uiFidelity.missingRequiredEvidence = ["browser-qa"] → UiFidelityEvidenceError message names "browser-qa"; runFullHarness not called
+
+## TC-0012-0179: Missing Required Screen — Error Path
+
+- EX-Ref: EX-0012-0114
+- AC-Refs: AC-0012-0061
+- Type: error
+- Test: required screen absent from screenSummaries → UiFidelityEvidenceError names missing screen; runFullHarness not called
+
+## TC-0012-0180: Guard Ordering Correct — Boundary
+
+- EX-Ref: EX-0012-0115
+- AC-Refs: AC-0012-0062
+- Type: boundary
+- Test: execution.ts code review confirms guard placement: after buildUiFidelity() return, before buildSpecCoverageSummary() invocation; no specCoverage/L2 state produced on guard failure
+
+## TC-0012-0181: Concrete Spec Anchor Ref — Normal Path
+
+- EX-Ref: EX-0012-0116
+- AC-Refs: AC-0012-0063, AC-0012-0065
+- Type: normal
+- Test: isConcreteArtifactRef("40_screen_contracts.md#screen-login") returns true; isConcreteArtifactRef("screenshots/iter-0.png") returns true; no validator error
+
+## TC-0012-0182: Directory Path Rejected — Error Path
+
+- EX-Ref: EX-0012-0117
+- AC-Refs: AC-0012-0064, AC-0012-0065
+- Type: error
+- Test: isConcreteArtifactRef("./evidence/prototyping/") returns false; validator emits error for directory path in specCoverage.evidenceRefs
+
+## TC-0012-0183: Self-Ref Rejected — Error Path
+
+- EX-Ref: EX-0012-0118
+- AC-Refs: AC-0012-0064, AC-0012-0065
+- Type: error
+- Test: isConcreteArtifactRef(".qfai/evidence/prototyping.json#/specCoverage") returns false; validator emits error
+
+## TC-0012-0184: Synthetic Token Rejected — Error Path
+
+- EX-Ref: EX-0012-0119
+- AC-Refs: AC-0012-0064, AC-0012-0065
+- Type: error
+- Test: isConcreteArtifactRef("specs: all screens covered") returns false; validator emits error
+
+## TC-0012-0185: Calibration Metadata Match — Normal Path
+
+- EX-Ref: EX-0012-0120
+- AC-Refs: AC-0012-0066, AC-0012-0067
+- Type: normal
+- Test: summary calibrationRef with matching packPath/packVersion/configPath → validator passes; 0 calibration mismatch issues
+
+## TC-0012-0186: packVersion Mismatch Is Error — Error Path
+
+- EX-Ref: EX-0012-0121
+- AC-Refs: AC-0012-0067
+- Type: error
+- Test: summary packVersion = "1.0.1", actual = "1.0.2" → issues.push(error(...)) called; result has ≥1 error with kind=error (not warning)
+
+## TC-0012-0187: "1.0.0" Heuristic Absent — Boundary
+
+- EX-Ref: EX-0012-0122
+- AC-Refs: AC-0012-0068
+- Type: boundary
+- Test: packVersion = "1.0.0" in summary, actual differs → validator emits error; no special-case pass for "1.0.0"; grep confirms no hardcoded "1.0.0" heuristic in prototypingEvidence.ts
+
+## TC-0012-0188: All 6 Error Classes Exported — Normal Path
+
+- EX-Ref: EX-0012-0123
+- AC-Refs: AC-0012-0069
+- Type: normal
+- Test: import all 6 classes from prototyping/errors.ts; verify each extends Error; verify 0 missing classes; verify no extra classes beyond the 6
+
+## TC-0012-0189: EvidenceWriteError on Write Failure — Error Path
+
+- EX-Ref: EX-0012-0124
+- AC-Refs: AC-0012-0070
+- Type: error
+- Test: writeEvidenceBundle() throws → execution.ts catch block wraps in EvidenceWriteError (not CalibrationResolutionError); message does not contain "Failed to load calibration pack"
+
+## TC-0012-0190: FullHarnessRuntimeError on Runtime Failure — Error Path
+
+- EX-Ref: EX-0012-0124
+- AC-Refs: AC-0012-0070
+- Type: error
+- Test: runFullHarness() internal throw → execution.ts catch block wraps in FullHarnessRuntimeError; instanceof check identifies FullHarnessRuntimeError
+
+## TC-0012-0191: packPath-Only Config Accepted — Normal Path
+
+- EX-Ref: EX-0012-0125
+- AC-Refs: AC-0012-0071, AC-0012-0073
+- Type: normal
+- Test: config with only prototyping.calibration.packPath → normalize returns without error; scalar fields absent from PrototypingCalibrationConfig type
+
+## TC-0012-0192: Obsolete thresholds.accept Rejected — Error Path
+
+- EX-Ref: EX-0012-0126
+- AC-Refs: AC-0012-0072
+- Type: error
+- Test: config with thresholds.accept: 0.9 → normalize throws error; error message names "thresholds.accept" as obsolete
+
+## TC-0012-0193: Obsolete maxIterations Rejected — Error Path
+
+- EX-Ref: EX-0012-0126
+- AC-Refs: AC-0012-0072
+- Type: error
+- Test: config with maxIterations: 5 → normalize throws error; error message names "maxIterations" as obsolete
+
+## TC-0012-0194: Shipped Template Has Zero Scalar Fields — Boundary
+
+- EX-Ref: EX-0012-0125
+- AC-Refs: AC-0012-0073
+- Type: boundary
+- Test: grep qfai.config.yaml for thresholds/maxIterations/plateauDelta/plateauLookback → 0 matches; only packPath present under calibration
+
+## TC-0012-0195: Rejection Message From Constant — Normal Path
+
+- EX-Ref: EX-0012-0127
+- AC-Refs: AC-0012-0074, AC-0012-0075
+- Type: normal
+- Test: assertSupportedPrototypingSurface("cli") → error message contains "web" and "mobile" and "desktop" and "mixed"; message does not contain hardcoded "cli"
+
+## TC-0012-0196: Extension of PROTOTYPING_SUPPORTED_SURFACES Auto-Updates Message — Edge
+
+- EX-Ref: EX-0012-0128
+- AC-Refs: AC-0012-0074
+- Type: edge
+- Test: temporarily add new surface to PROTOTYPING_SUPPORTED_SURFACES in test; verify rejection message includes the new surface without modifying message code
+
+## TC-0012-0197: isSupportedPrototypingSurface Returns False for Stale cli — Boundary
+
+- EX-Ref: EX-0012-0127
+- AC-Refs: AC-0012-0075
+- Type: boundary
+- Test: isSupportedPrototypingSurface("cli") returns false; isSupportedPrototypingSurface("web") returns true

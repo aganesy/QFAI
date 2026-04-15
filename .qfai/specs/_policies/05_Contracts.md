@@ -177,6 +177,21 @@ QFAI は GUI を持たない CLI ツールである。`/qfai-prototyping` スキ
 - 全て QFAI 内部モジュール。外部向け stable DB/API/UI contract は新設しない。
 - したがって Contract Index の `0 items` は v1.7.15 rev6 でも意図的な none-rationale であり、discussion-20260415161758193 のスコープ境界に整合する。
 
+## v1.7.15 rev7 Contract Posture
+
+- Contracts-first review completed for v1.7.15 rev7 single-PR completion design (`discussion-20260415203030886`).
+- v1.7.15 rev7 は `packages/qfai` 内部の prototyping subsystem の 6 contract gap + WS-7 minor fix を対象とした単一 PR リリースであり、外部向け stable contract は新設しない。
+- 主な変更対象:
+  - WS-1: `execution.ts` — CalibrationPack upstream resolution; `runtime.ts` — CalibrationLoader import removal; `FullHarnessRequest` type change
+  - WS-2: `execution.ts` — uiFidelity fail-closed guard (status/missingRequired/screen checks)
+  - WS-3: `specCoverage.ts` / `prototypingEvidence.ts` — concrete evidenceRefs enforcement; `isConcreteArtifactRef()` helper
+  - WS-4: `prototypingEvidence.ts` — calibrationRef metadata comparison against actual pack; hardcoded "1.0.0" heuristic removal
+  - WS-5: `prototyping/errors.ts` (新設) — 6 distinct error classes; narrow catch blocks replacing wide catch-all
+  - WS-6: `config.ts` — scalar calibration fields removed; obsolete field error; `qfai.config.yaml` template; `README.md`
+  - WS-7: `surfacePolicy.ts` — rejection message generated from PROTOTYPING_SUPPORTED_SURFACES constant
+- 全て QFAI 内部モジュール。外部向け stable DB/API/UI contract は新設しない。
+- したがって Contract Index の `0 items` は v1.7.15 rev7 でも意図的な none-rationale であり、discussion-20260415203030886 のスコープ境界に整合する。
+
 ## ER Diagram
 
 QFAI はデータベースを使用しないため、ER Diagram は省略する。

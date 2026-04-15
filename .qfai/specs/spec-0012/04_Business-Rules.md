@@ -749,3 +749,44 @@
 - Any observation record containing a `uiContractId` field MUST be hard-errored by the validator (OQ-0005 resolution: backward compat abandoned)
 - Stale semantics removal: shipped docs, SKILL.md, evidence/README.md, review/README.md, contracts/ui/README.md, packages/qfai/README.md must not contain `standard`, `low-cost`, `cli prototyping`, or `mockPaths.status=pass`
 - Test fixtures must not assert `approved` for plateau/maxIterations termination, or allow `cli + standard` prototyping
+## BR-0012-0092: CalibrationLoader Called in execution.ts Pre-Harness Phase
+
+- AC-Refs: AC-0012-0056, AC-0012-0057, AC-0012-0058
+- Rule: `runPrototypingExecution()` MUST call `CalibrationLoader` (or equivalent) in its pre-harness phase to obtain a resolved `CalibrationPack` object before invoking `runFullHarness()`. `runtime.ts` MUST NOT import `CalibrationLoader`.
+- Source: REQ-0041, REQ-0042, REQ-0043
+
+## BR-0012-0093: uiFidelity Guard Position — After buildUiFidelity, Before runFullHarness
+
+- AC-Refs: AC-0012-0059, AC-0012-0060, AC-0012-0061, AC-0012-0062
+- Rule: The uiFidelity guard MUST be evaluated after `buildUiFidelity()` returns and before `buildSpecCoverageSummary()`, `buildL2Evidence()`, and `runFullHarness()` are called. Any incomplete condition (status≠completed, missingRequired>0, missing screen) MUST throw `UiFidelityEvidenceError` immediately.
+- Source: REQ-0044, REQ-0045, REQ-0046, REQ-0047
+
+## BR-0012-0094: isConcreteArtifactRef Defines Forbidden Patterns
+
+- AC-Refs: AC-0012-0063, AC-0012-0064, AC-0012-0065
+- Rule: `isConcreteArtifactRef(ref)` MUST return `false` for: directory paths, pack root paths, `.qfai/evidence/prototyping.json#/...` self-refs, `specs:` prefix synthetic tokens, and extension-less paths without anchors. `specCoverage.evidenceRefs` and `runtimeGate.evidenceRefs` MUST pass all entries through this check.
+- Source: REQ-0048, REQ-0049
+
+## BR-0012-0095: Validator Uses Real Pack Comparison — No Heuristics
+
+- AC-Refs: AC-0012-0066, AC-0012-0067, AC-0012-0068
+- Rule: `prototypingEvidence.ts` MUST resolve `evidence.fullHarness.calibrationRef.packPath`, read the actual pack, and compare `packPath` (normalized), `packVersion` (strict equality), and `configPath` (strict equality if present in summary). Any mismatch MUST be `issues.push(error(...))`. Hardcoded version heuristics (e.g., `packVersion === "1.0.0"` special-case) are forbidden.
+- Source: REQ-0050, REQ-0051, REQ-0052
+
+## BR-0012-0096: Six Error Classes — Co-Located in prototyping/errors.ts
+
+- AC-Refs: AC-0012-0069, AC-0012-0070
+- Rule: `packages/qfai/src/core/prototyping/errors.ts` MUST export exactly: `CalibrationResolutionError`, `UiFidelityEvidenceError`, `SpecCoverageBuildError`, `L2EvidenceBuildError`, `FullHarnessRuntimeError`, `EvidenceWriteError`. Each MUST extend `Error`. Each catch block in `execution.ts` MUST use only the appropriate error class for its phase.
+- Source: REQ-0053, REQ-0054
+
+## BR-0012-0097: Scalar Calibration Fields Removed — Obsolete Input Causes Error
+
+- AC-Refs: AC-0012-0071, AC-0012-0072, AC-0012-0073
+- Rule: `PrototypingCalibrationConfig` in `config.ts` MUST NOT contain `thresholds.accept`, `thresholds.refine`, `maxIterations`, `plateauDelta`, or `plateauLookback`. If any of these fields are present in a user's config input, the normalize step MUST throw an error naming the obsolete field(s). `qfai.config.yaml` template and `README.md` examples MUST use packPath-only.
+- Source: REQ-0055, REQ-0056, REQ-0057
+
+## BR-0012-0098: surfacePolicy Rejection Message — Derived, Never Hardcoded
+
+- AC-Refs: AC-0012-0074, AC-0012-0075
+- Rule: `assertSupportedPrototypingSurface()` in `surfacePolicy.ts` MUST generate its rejection message by joining `PROTOTYPING_SUPPORTED_SURFACES` (e.g., `.join(", ")`). The message MUST NOT hardcode any surface name. When `PROTOTYPING_SUPPORTED_SURFACES` changes, the message auto-updates.
+- Source: REQ-0058

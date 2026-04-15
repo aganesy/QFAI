@@ -37,3 +37,33 @@
 - Status: Deferred to v1.8
 - Rationale: rev5 では structured parse 優先 + fallback 格下げで最小整合。L2 完全刷新は v1.8 planning phase で対応
 - Source: discussion-20260415014056471
+
+## OQ-0001-rev7: packHash in calibrationRef (resolved at discussion)
+
+- Status: Resolved at discussion
+- Resolution: DR-0012-0041 — defer packHash; packPath+packVersion+configPath sufficient
+- Source: discussion-20260415203030886
+
+## OQ-0002-rev7: Error Class Location (resolved at discussion)
+
+- Status: Resolved at discussion
+- Resolution: DR-0012-0042 — prototyping/errors.ts (SRP; independently testable)
+- Source: discussion-20260415203030886
+
+## OQ-0003-rev7: configPath Mandatory vs Optional (resolved at discussion)
+
+- Status: Resolved at discussion
+- Resolution: DR-0012-0043 — optional (configPath?: string); validator skips when absent
+- Source: discussion-20260415203030886
+
+## OQ-0004-rev7: Obsolete Field Detection Timing (resolved at discussion)
+
+- Status: Resolved at discussion
+- Resolution: DR-0012-0044 — normalize-time; consistent with existing config.ts patterns
+- Source: discussion-20260415203030886
+
+## OQ-0005-rev7: surfacePolicy Rejection Message Generation (resolved at discussion)
+
+- Status: Resolved at discussion
+- Resolution: DR-0012-0045 — generate from PROTOTYPING_SUPPORTED_SURFACES constant; DRY
+- Source: discussion-20260415203030886

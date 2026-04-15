@@ -310,3 +310,47 @@
 - Rejected-A: Silently ignore `uiContractId` field if present in observation records
   - DO NOT silently ignore `uiContractId` in observation records.
   - Temptation: silent ignore is safe and non-breaking for existing consumers.
+### DR-0012-0041: packHash Exclusion from calibrationRef (OQ-0001, rev7)
+
+- Decision: Exclude `packHash` from `calibrationRef` in v1.7.15 rev7. `packPath + packVersion + configPath` is sufficient for audit closure.
+- Context: Design doc §3-4 uses conditional phrasing "packHash（導入する場合）". The v1.7.15-07 audit does not mandate hash-level integrity. Adding packHash requires hash computation infrastructure not present.
+- Rationale: Option B (defer packHash) adopted. Conditional design doc language confirms deferral is correct.
+- Rejected-A: Include packHash — stronger integrity, but no audit requirement and infrastructure cost.
+  - DO NOT add packHash to calibrationRef in v1.7.15. Temptation: stronger integrity guarantee.
+- Source: OQ-0001, discussion-20260415203030886
+
+### DR-0012-0042: Error Class Location — prototyping/errors.ts (OQ-0002, rev7)
+
+- Decision: New file `packages/qfai/src/core/prototyping/errors.ts` for the 6 error classes (not core/errors.ts).
+- Context: SRP: prototyping-domain errors should be co-located with prototyping modules and independently testable.
+- Rationale: Option A (prototyping/errors.ts) adopted. Core errors.ts must not own domain-specific error classes.
+- Rejected-B: Extend core/errors.ts — fewer files but violates SRP; couples prototyping errors to the general module.
+  - DO NOT add prototyping-domain error classes to core/errors.ts. Temptation: fewer files.
+- Source: OQ-0002, discussion-20260415203030886
+
+### DR-0012-0043: configPath in calibrationRef — Optional (OQ-0003, rev7)
+
+- Decision: `configPath?: string` (optional) in `FullHarnessRequest.calibrationRef` and validator comparison.
+- Context: Design doc §3-4 states "configPath（summary に出すなら）" — conditional. Making it mandatory breaks no-overlay configurations.
+- Rationale: Option A (optional) adopted. Validator compares only when configPath is present in summary.
+- Rejected-B: Mandatory configPath — breaks configs that don't use a config overlay.
+  - DO NOT make configPath mandatory in calibrationRef. Temptation: stricter API.
+- Source: OQ-0003, discussion-20260415203030886
+
+### DR-0012-0044: Obsolete Field Detection — normalize-time (OQ-0004, rev7)
+
+- Decision: Detect obsolete scalar calibration fields at normalize-time in config.ts (not parse-time).
+- Context: Consistent with existing config normalization flow in config.ts; no JSON schema changes required.
+- Rationale: Option A (normalize-time) adopted. Aligns with codebase's existing config.ts patterns.
+- Rejected-B: parse-time detection — earlier error but requires JSON schema changes; inconsistent with existing approach.
+  - DO NOT implement parse-time scalar field detection for this change. Temptation: earlier error is better.
+- Source: OQ-0004, discussion-20260415203030886
+
+### DR-0012-0045: surfacePolicy Rejection Message — Generated from Constant (OQ-0005, rev7)
+
+- Decision: Generate rejection message by joining `PROTOTYPING_SUPPORTED_SURFACES` (e.g., `.join(", ")`).
+- Context: Hardcoded string was the root cause of stale "cli" entry. Generating from constant applies DRY.
+- Rationale: Option B (generate from constant) adopted. Message auto-updates when constant changes; prevents stale recurrence.
+- Rejected-A: Hardcode "web/mobile/desktop/mixed" — simple fix but same staleness risk recurs when constant changes.
+  - DO NOT hardcode the surface list in the rejection message string. Temptation: simpler to hardcode.
+- Source: OQ-0005, discussion-20260415203030886

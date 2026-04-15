@@ -52,7 +52,11 @@
     `.qfai/discussion/discussion-20260414072809763/`
     (v1.7.15 Runtime Truthfulness Hardening — fail-closed runtime, pre-scored path elimination, screen-level UiObservation, l2Evidence, validator error upgrades),
     `.qfai/discussion/discussion-20260414195449523/`
-    (v1.7.15 rev4 Single-PR Completion — 5 remaining audit issues: cli/full-harness reject, screen contract targets, evidence chain completeness, canonical route semantics, L2 structured parse, stale cleanup)
+    (v1.7.15 rev4 Single-PR Completion — 5 remaining audit issues: cli/full-harness reject, screen contract targets, evidence chain completeness, canonical route semantics, L2 structured parse, stale cleanup),
+    `.qfai/discussion/discussion-20260415161758193/`
+    (v1.7.15 rev6 — full-harness-only mode enforcement, surfacePolicy.ts, CalibrationLoader internal resolution, concrete evidenceRefs, reviewerSignoff semantics, uiFidelityBuilder screenId matching, stale cleanup),
+    `.qfai/discussion/discussion-20260415203030886/`
+    (v1.7.15 rev7 — 6 contract gaps: pack resolution upstream move, uiFidelity fail-closed, concrete evidenceRefs, validator calibration metadata check, error taxonomy, config packPath-only; WS-7: surfacePolicy rejection message from constant)
   - Assumptions: None (all verified from repository analysis)
 
 ## Non-goals / Not-now (Optional)

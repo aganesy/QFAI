@@ -17,6 +17,7 @@
   - NOTE: v1.7.15 rev4 adds 5 audit resolution items — cli/full-harness 4-layer reject, screen contract-based Browser QA targets ("/primary" removal), Browser QA evidence chain completeness (hard-fail on empty), canonical route semantics for runtimeGate/specCoverage, L2 structured parse priority, stale semantics cleanup
   - NOTE: v1.7.15 rev5 adds 6 audit resolution items (WS-1..WS-6 from discussion-20260415014056471) — all-mode non-UI surface rejection, observed-only ledger (runtimeObservation.ts), per-screen Browser QA mandatory (browserQaPerScreen.ts), action coverage semantics (actionCoverage.ts), runFullHarness() fail-closed (required adapters+screenContracts), calibration pack as SSOT (packResolver.ts, structuredArtifactReaders.ts)
   - NOTE: v1.7.15 rev6 adds 7 workstreams — (WS-1) full-harness-only mode enforcement at CLI/execution/validator, (WS-2) surfacePolicy.ts standalone module with PROTOTYPING_SUPPORTED_SURFACES=[web,mobile,desktop,mixed], (WS-3) runFullHarness() CalibrationLoader internal resolution (scalar params removed), (WS-4) concrete-only evidenceRefs in runtimeGate/specCoverage (self-ref/synthetic banned), (WS-5) reviewerSignoff.status approved/rejected/abandoned mapping + reviewerLogs verdict vocabulary, (WS-6) uiFidelityBuilder screenId-based matching (uiContractId hard-error), (WS-7) stale mode/surface semantics removed from shipped docs/assets/tests
+  - NOTE: v1.7.15 rev7 adds 7 workstreams (WS-1 through WS-7) — (WS-1) CalibrationPack upstream resolution: execution.ts resolves before runFullHarness(), runtime.ts has 0 CalibrationLoader imports; (WS-2) uiFidelity fail-closed guard: execution fails before runFullHarness() on status≠completed/missingRequired>0/screen missing; (WS-3) concrete-only evidenceRefs: isConcreteArtifactRef() helper, directory/self-ref/synthetic/extension-less forbidden; (WS-4) validator calibration metadata comparison: packPath/packVersion/configPath compared against actual pack, mismatch=error; (WS-5) error taxonomy: 6 distinct classes in prototyping/errors.ts, narrow catch blocks; (WS-6) config packPath-only: scalar calibration fields removed from schema/template/README, obsolete field causes error; (WS-7) surfacePolicy.ts rejection message from PROTOTYPING_SUPPORTED_SURFACES constant
   - `/qfai-prototyping` skill workflow (SKILL only, no CLI command) — skill-centered truth: the skill is the sole interface for prototyping
   - All-spec stage: scope is ALL specs from `.qfai/specs/spec-*`
   - Spec Auto-Discovery Protocol (4-source unified diff detection: branch diff, local changes, evidence mtime, delta.md parse)
@@ -94,6 +95,13 @@
 - NFR-0027 (rev6): TypeScript strict compliance — 0 @ts-ignore, bare as casts, any types in new/modified files; pnpm check-types exits 0
 - NFR-0028 (rev6): test suite pass rate — all 5 vitest suites pass (pnpm test exits 0) after rev6 changes
 - NFR-0029 (rev6): reviewerSignoff auditability — terminationReason/status inconsistency count = 0
+- NFR-0030 (rev7): execution failure distinguishability — 6 distinct error classes; 0 catch blocks misclassify phase errors
+- NFR-0031 (rev7): pack resolution failure latency — CalibrationLoader failure propagates within 100ms
+- NFR-0032 (rev7): validator calibration check overhead < 50ms
+- NFR-0033 (rev7): TypeScript strict compliance — 0 @ts-ignore, bare as casts; pnpm check-types exits 0
+- NFR-0034 (rev7): all vitest suites pass — pnpm test exits 0 after rev7 changes
+- NFR-0035 (rev7): shipped config template has 0 scalar calibration fields
+- NFR-0036 (rev7): surfacePolicy rejection message auto-updates when PROTOTYPING_SUPPORTED_SURFACES changes
 
 ## Applicable Policy
 
@@ -213,10 +221,28 @@
 - REQ-0100 (v1.7.15 rev6; WS-6): uiFidelityBuilder screenId matching — matching uses `obs.screenId === screen.screenId`; old `screen.uiContractId` matching removed; uiContractId in observation = hard-error
 - REQ-0101 (v1.7.15 rev6; WS-7): Remove stale mode/surface semantics from shipped docs and assets — SKILL.md, evidence/README.md, review/README.md, contracts/ui/README.md, packages/qfai/README.md must not contain `standard`, `low-cost`, `cli prototyping`, or `mockPaths.status=pass`
 - REQ-0102 (v1.7.15 rev6; WS-7): Remove stale test fixtures — no fixture allows `cli + standard` prototyping, assumes optional evidence for `standard`, allows `mockPaths.status=pass`, or asserts `approved` for plateau/maxIterations termination
+- REQ-0041 (rev7): execution.ts resolves CalibrationPack before runFullHarness
+- REQ-0042 (rev7): FullHarnessRequest includes calibrationPack object
+- REQ-0043 (rev7): runtime.ts does not import CalibrationLoader
+- REQ-0044 (rev7): uiFidelity.status !== "completed" causes execution failure
+- REQ-0045 (rev7): missingRequiredEvidence.length > 0 causes execution failure
+- REQ-0046 (rev7): missing required screens causes execution failure
+- REQ-0047 (rev7): runFullHarness not called when uiFidelity incomplete
+- REQ-0048 (rev7): specCoverage.evidenceRefs accepts only concrete artifact refs
+- REQ-0049 (rev7): prototypingEvidence.ts rejects directory/self/synthetic/extension-less refs
+- REQ-0050 (rev7): validator resolves calibrationRef.packPath and compares metadata
+- REQ-0051 (rev7): calibration metadata mismatch is validator error (not warning)
+- REQ-0052 (rev7): hardcoded "1.0.0" heuristic removed from validator
+- REQ-0053 (rev7): 6 distinct error classes in prototyping/errors.ts
+- REQ-0054 (rev7): catch-all CalibrationResolutionError for non-calibration failures removed
+- REQ-0055 (rev7): scalar calibration config fields removed from schema
+- REQ-0056 (rev7): obsolete scalar calibration fields in config cause error
+- REQ-0057 (rev7): shipped config template uses packPath-only
+- REQ-0058 (rev7): surfacePolicy.ts rejection message matches PROTOTYPING_SUPPORTED_SURFACES
 
 ## Entry points
 
-- US range in this spec: US-0012-0001..US-0012-0055
+- US range in this spec: US-0012-0001..US-0012-0062
 - Primary actors: Developer, AI Agent (FullStackEngineer, RuntimeGatekeeper), CI/CD pipeline
 - Notes: No CLI command exists. This is a skill-only spec for `/qfai-prototyping`.
 

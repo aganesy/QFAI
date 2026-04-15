@@ -460,3 +460,57 @@ REQ-0099,0100,0101,0102 (WS-5/6/7) → US-0012-0055 → AC-0012-0055-01..06 → 
   - DO NOT silently ignore uiContractId in observation records
   - Temptation: silent ignore is backward-compatible and avoids breaking changes
   - Reason: backward compat is explicitly abandoned in rev6; silent ignore masks stale fixtures that need cleanup
+## v1.7.15 rev7 Contract Gap Closure (DR-0012-0041..0045)
+
+### Summary
+
+6 contract gaps from v1.7.15-07 audit closed in single PR + WS-7 minor surfacePolicy fix. Backward compatibility explicitly abandoned. No migration tooling required.
+
+### Discussion Pack Reference
+
+- `discussion-20260415203030886` (v1.7.15 rev7)
+
+### Requirements Added
+
+- REQ-0041..0058: 18 new requirements covering WS-1 through WS-7
+
+### Artifacts Added
+
+| Layer | IDs Added | Description |
+| ----- | --------- | ----------- |
+| US | US-0012-0056..0062 | 7 new user stories for WS-1..WS-7 |
+| AC | AC-0012-0056..0075 | 20 new acceptance criteria |
+| BR | BR-0012-0092..0098 | 7 new business rules |
+| EX | EX-0012-0109..0128 | 20 new examples |
+| TC | TC-0012-0173..0197 | 25 new test cases |
+| DR | DR-0012-0041..0045 | 5 decision records from rev7 OQ resolutions |
+
+### Decisions Made
+
+- AD-rev7-001: packHash deferred — packPath+packVersion+configPath sufficient for v1.7.15-07 audit closure (DR-0012-0041)
+- AD-rev7-002: Error classes in prototyping/errors.ts — SRP, independently testable, co-located (DR-0012-0042)
+- AD-rev7-003: configPath optional in calibrationRef — design doc conditional phrasing confirmed (DR-0012-0043)
+- AD-rev7-004: Obsolete field detection normalize-time — consistent with existing config.ts patterns (DR-0012-0044)
+- AD-rev7-005: surfacePolicy message from constant — DRY; prevents stale recurrence (DR-0012-0045)
+
+### Rejected Options (rev7)
+
+- RJ-rev7-001: Add packHash to calibrationRef
+  - DO NOT add packHash in v1.7.15. Temptation: stronger integrity guarantee.
+  - Reason: no audit requirement; infrastructure cost; design doc conditional phrasing.
+
+- RJ-rev7-002: Error classes in core/errors.ts
+  - DO NOT add prototyping-domain error classes to core/errors.ts. Temptation: fewer files.
+  - Reason: violates SRP; couples prototyping domain to general module.
+
+- RJ-rev7-003: Mandatory configPath in calibrationRef
+  - DO NOT make configPath mandatory. Temptation: stricter API.
+  - Reason: breaks configurations without config overlay; design doc conditional.
+
+- RJ-rev7-004: parse-time scalar field detection
+  - DO NOT implement parse-time detection for obsolete scalar fields. Temptation: earlier error.
+  - Reason: inconsistent with existing config.ts normalization approach.
+
+- RJ-rev7-005: Hardcode surface list in rejection message
+  - DO NOT hardcode "web/mobile/desktop/mixed" in surfacePolicy.ts message string. Temptation: simpler.
+  - Reason: same staleness problem recurs when PROTOTYPING_SUPPORTED_SURFACES changes.
