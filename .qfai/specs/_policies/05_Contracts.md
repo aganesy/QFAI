@@ -147,6 +147,21 @@ QFAI は GUI を持たない CLI ツールである。`/qfai-prototyping` スキ
 - 主な変更対象: mode.ts cli/full-harness reject、screenContracts.ts パーサー、uiObservation.ts screen-level 再構築、runtimeGateBuilder.ts canonical route、l2Evidence.ts structured parse、prototypingEvidence.ts validator — 全て内部モジュール。
 - したがって Contract Index の `0 items` は v1.7.15 rev4 でも意図的な none-rationale であり、discussion-20260414195449523 のスコープ境界に整合する。
 
+## v1.7.15 rev5 Contract Posture
+
+- Contracts-first review completed for v1.7.15 rev5 single-PR completion design (`discussion-20260415014056471`).
+- v1.7.15 rev5 は `packages/qfai` 内部の prototyping runtime / measurement / validators / CLI / docs を対象とした単一 PR リリースであり、外部向け stable contract は新設しない。
+- 主な変更対象:
+  - WS-1: `mode.ts` / `execution.ts` / `cli/commands/prototyping.ts` / `prototypingEvidence.ts` — all-mode non-UI surface rejection
+  - WS-2: `runtimeObservation.ts`（新設）/ `runtimeGateBuilder.ts` / `specCoverage.ts` — observed-only ledger
+  - WS-3: `browserQaPerScreen.ts`（新設）/ `uiObservation.ts` / `runtime.ts` — per-screen Browser QA mandatory
+  - WS-4: `actionCoverage.ts`（新設）/ `uiObservation.ts` / `uiFidelityBuilder.ts` / `prototypingEvidence.ts` — action coverage semantics
+  - WS-5: `harness/runtime.ts` — runFullHarness() standalone fail-closed (required adapters/screenContracts)
+  - WS-6: `packResolver.ts`（新設）/ `structuredArtifactReaders.ts`（新設）/ `l2Evidence.ts` / `prototypingEvidence.ts` — calibration pack as SSOT
+  - docs/README/SKILL: reality sync for new contracts
+- 全て QFAI 内部モジュール。外部向け stable DB/API/UI contract は新設しない。
+- したがって Contract Index の `0 items` は v1.7.15 rev5 でも意図的な none-rationale であり、discussion-20260415014056471 のスコープ境界に整合する。
+
 ## ER Diagram
 
 QFAI はデータベースを使用しないため、ER Diagram は省略する。

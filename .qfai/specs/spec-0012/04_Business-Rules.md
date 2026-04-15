@@ -604,3 +604,67 @@
 - AC-Refs: AC-0012-0041-01
 - パラメタライズドルート（e.g., `/orders/:id`）はパターンベースマッチングで Browser QA エビデンスチェーンと照合する
 - OQ-0004 resolution: DR-0012-0027 / DR-0222
+
+## BR-0012-0080: All-Mode Non-UI Surface Rejection (v1.7.15 rev5 WS-1)
+
+- AC-Refs: AC-0012-0044-01, AC-0012-0044-02, AC-0012-0044-03
+- derivePrototypingObligations() returns invalidCombination=true for non-UI surface regardless of mode (low-cost/standard/full-harness)
+- reason code is unsupported_non_ui_prototyping_surface across all rejection layers
+- UI-bearing allowlist: web, mobile-web, desktop-web, native-mobile (requiresVisualBrowserEvidence===true)
+- execution.ts rejects non-UI surface immediately after classification; runtime.ts runFullHarness() throws on non-UI surface; CLI rejects at entry point; prototypingEvidence.ts validator hard-errors non-UI evidence
+
+## BR-0012-0081: Observed-Only RuntimeGate Ledger (v1.7.15 rev5 WS-2)
+
+- AC-Refs: AC-0012-0045-01, AC-0012-0045-02, AC-0012-0045-03, AC-0012-0045-04
+- runtimeObservation.ts defines ObservedUiRoute (screenId, route, url, rendered, browserVisited, httpStatus?, renderEvidenceRefs[], browserQaEvidenceRefs[]) and RuntimeObservation (ui: ObservedUiRoute[])
+- RuntimeObservation builder includes ONLY routes with successful observations; unobserved routes are excluded
+- runtimeGate.api and runtimeGate.db fields are removed from type definitions
+- synthetic status:200 generation is completely removed from runtimeGateBuilder.ts
+- specCoverage calculation: set-compare declaredUiRoutes vs observed.ui[].route
+
+## BR-0012-0082: Per-Screen Browser QA Mandatory (v1.7.15 rev5 WS-3)
+
+- AC-Refs: AC-0012-0046-01, AC-0012-0046-02, AC-0012-0046-03, AC-0012-0046-04
+- browserQaPerScreen.ts generates one Browser QA input per canonical screen contract
+- capturedHtmlPath single-file representing all screens is prohibited
+- generic phaseLevelRefs fallback from uiObservation.ts is removed
+- Screen without its own refs: UIScreenObservation (in uiObservation.ts) sets observed=false / evidenceMissing=true
+- NOTE: observed=false belongs to UIScreenObservation in uiObservation.ts; ObservedUiRoute in runtimeObservation.ts is observed-only (never contains unobserved entries)
+- runtime.ts iterations[].evidenceRefs.browserQa stores runtime-collected refs only; request.panelInputs.browserQa.evidenceRefs fallback is removed
+- browserQa executed with 0 refs → hard fail
+
+## BR-0012-0083: actionsWired = Action Coverage Semantics (v1.7.15 rev5 WS-4)
+
+- AC-Refs: AC-0012-0047-01, AC-0012-0047-02, AC-0012-0047-03, AC-0012-0047-04
+- actionCoverage.ts computes: actionsDeclared, actionsObserved, actionsWired, missingActions[]
+- actionsWired += 1 ONLY when: declared action exists AND DOM control observed AND resolved as interaction target AND no blocking error
+- finding count MUST NOT contribute to actionsWired
+- uiObservation.ts removes finding-count-to-action-count conversion
+- uiFidelityBuilder.ts actionsWired derives from ActionCoverageResult only
+- Validator: actionsWired > actionsDeclared → error; actionsDeclared>0 + DOM observed + actionsWired=0 → error
+- Exception: actionsDeclared=0 screen → actionsWired=0 is normal (OQ-0003 resolved)
+
+## BR-0012-0084: runFullHarness() Required Fields Contract (v1.7.15 rev5 WS-5)
+
+- AC-Refs: AC-0012-0048-01, AC-0012-0048-02, AC-0012-0048-03, AC-0012-0048-04, AC-0012-0048-05, AC-0012-0048-06
+- FullHarnessRequest.adapters.surface is required (not optional)
+- FullHarnessRequest.adapters.render is required
+- FullHarnessRequest.adapters.browserQa is required
+- screenContracts is promoted to required field in FullHarnessRequest
+- panelInputs.browserQa.evidenceRefs fallback is removed
+- Adapter failures are propagated, not caught-and-continued
+- browserQa.executed === true with 0 evidenceRefs → throw
+- execution.ts passes surface/adapters/screenContracts/calibration pack ref explicitly to runFullHarness()
+
+## BR-0012-0085: Calibration Pack as SSOT (v1.7.15 rev5 WS-6)
+
+- AC-Refs: AC-0012-0049-01, AC-0012-0049-02, AC-0012-0049-03, AC-0012-0049-04, AC-0012-0049-05
+- packResolver.ts provides shared calibration pack resolution for both runtime and validator
+- Input: calibrationRef.packPath; Output: pack body + canonical thresholds
+- prototypingEvidence.ts reads maxIterations/plateauDelta/plateauLookback from pack (not from config)
+- Config calibration override (thresholds/maxIterations/plateauDelta/plateauLookback) is ignored; only packPath from config is used
+- API/DB coverage declaration in prototyping artifact → hard error in validator
+- structuredArtifactReaders.ts provides structured section parsers for 20-23 files, 04_Sources.md, 40_screen_contracts.md
+- l2Evidence.ts keyword/bullet fallback downgraded to last-resort (only on complete parse failure)
+- l2Evidence.ts: failure to parse 04_Sources.md structured section → fail
+- docs/README/SKILL updated to remove non-UI prototyping language, API/DB coverage from prototyping contract, and reflect new contracts (OQ-0002 resolved: validator reject only, no schema change)

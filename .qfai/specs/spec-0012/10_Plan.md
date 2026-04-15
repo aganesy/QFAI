@@ -167,3 +167,70 @@ WS-1 は独立（並行可能）。WS-2〜WS-6 は直列依存。
 | SKILL.md        | cli + full-harness 拒否ルール明記、screen contract ベースターゲット、canonical route semantics       |
 | Evidence README | evidence chain completeness 要件、structured parse 優先ルール                                       |
 | README.md       | 陳腐化記述除去、rev4 変更反映                                                                       |
+
+## v1.7.15 rev5 Implementation Strategy
+
+### Scope Boundary
+
+Single-PR: `packages/qfai/**` only. 6 audit resolution items from discussion-20260415014056471.
+
+### New Files (5 new modules)
+
+| File | WS | Purpose |
+|------|-----|---------|
+| `runtimeObservation.ts` | WS-2 | ObservedUiRoute + RuntimeObservation types (observed-only ledger) |
+| `browserQaPerScreen.ts` | WS-3 | Per-screen Browser QA input generator |
+| `actionCoverage.ts` | WS-4 | actionsDeclared/actionsObserved/actionsWired/missingActions calculator |
+| `packResolver.ts` | WS-6 | Calibration pack resolution SSOT (shared by runtime + validator) |
+| `structuredArtifactReaders.ts` | WS-6 | Structured section parsers for discussion/screen artifacts |
+
+### Modules Touched (rev5 Change Obligation)
+
+| Module | Change Obligation | WS |
+|--------|-------------------|-----|
+| `mode.ts` / `derivePrototypingObligations()` | Return invalidCombination=true for non-UI surface regardless of mode | WS-1 |
+| `execution.ts` | Reject non-UI surface after classification (all modes); pass surface/adapters/screenContracts explicitly to runFullHarness() | WS-1, WS-5 |
+| `harness/runtime.ts` | runFullHarness() surface check at entry; make adapters.surface/render/browserQa and screenContracts required | WS-1, WS-5 |
+| `cli/commands/prototyping.ts` | Reject non-UI surface at CLI entry point | WS-1 |
+| `runtimeGateBuilder.ts` | Remove synthetic status:200 generation | WS-2 |
+| `specCoverage.ts` | Use RuntimeObservation as input; set-compare declaredUiRoutes vs observed.ui[].route; remove API/DB coverage | WS-2 |
+| `uiObservation.ts` | Remove phaseLevelRefs generic fallback; add observed=false/evidenceMissing=true to UIScreenObservation | WS-3 |
+| `runtime.ts` | evidenceRefs.browserQa from runtime only; remove panelInputs.browserQa.evidenceRefs fallback | WS-3 |
+| `uiFidelityBuilder.ts` | actionsWired from ActionCoverageResult only; remove finding-count mixing | WS-4 |
+| `prototypingEvidence.ts` | Add: non-UI surface error, API/DB coverage error, actionsWired>actionsDeclared error, actionsWired=0+declared>0 error, packResolver-based threshold checks, per-screen browserQa evidence check; remove config calibration validation | WS-1, WS-4, WS-6 |
+| `l2Evidence.ts` | Downgrade keyword/bullet fallback to last-resort; use structuredArtifactReaders.ts; fail on unreadable 04_Sources.md | WS-6 |
+| docs/README/SKILL | Remove non-UI prototyping language; remove API/DB coverage from contract; add per-screen BrowserQA mandatory; update actionsWired definition; note calibration SSOT is pack | WS-6 |
+| tests | Update for new rejection rules, new evidence structure, new coverage semantics | All WS |
+
+### Implementation Order (rev5 dependency chain)
+
+WS-1 is independent (parallel possible). WS-2 is foundation for WS-3/WS-4. WS-6 (packResolver) is independent.
+
+1. **Step 1** (WS-2 base): `runtimeObservation.ts` — ObservedUiRoute + RuntimeObservation types
+2. **Step 2** (WS-2): `runtimeGateBuilder.ts` — remove synthetic status:200; `specCoverage.ts` — use RuntimeObservation
+3. **Step 3** (WS-3): `browserQaPerScreen.ts` new module; `uiObservation.ts` — remove fallback; `runtime.ts` — per-screen evidence
+4. **Step 4** (WS-4): `actionCoverage.ts` new module; `uiObservation.ts` — ActionCoverageResult; `uiFidelityBuilder.ts`
+5. **Step 5** (WS-5): `harness/runtime.ts` — required fields; `execution.ts` — explicit pass
+6. **Step 6** (WS-6): `packResolver.ts` new module; `structuredArtifactReaders.ts` new module; `l2Evidence.ts` — structured-first; `prototypingEvidence.ts` — pack-based thresholds
+7. **WS-1** (parallel): `mode.ts` + `execution.ts` + `cli/commands/prototyping.ts` + `runtime.ts` + `prototypingEvidence.ts` — all-mode reject
+8. **Finalize**: docs/README/SKILL sync; test updates
+
+### Test Strategy (rev5)
+
+| Layer | Location | Coverage Target |
+|-------|----------|-----------------|
+| Unit | `tests/unit/` | runtimeObservation builder, actionCoverage calculator, packResolver, browserQaPerScreen |
+| Integration | `tests/integration/` | end-to-end non-UI rejection all modes; per-screen evidence chain; actionsWired semantics |
+| Validator | `tests/validators/` | API/DB coverage error, non-UI surface error, actionsWired validator rules |
+| ATDD annotation map | `spec-0012/tdd/test-list.md` | TC-0012-0121..TC-0012-0140 mapped to TDD-IDs |
+
+### Acceptance Test Matrix Mapping
+
+| Category | Coverage Target | TC Range |
+|----------|-----------------|----------|
+| A: Contract rejection | cli/api/backend surface ALL modes reject | TC-0012-0121..0123 |
+| B: full-harness strictness | surface/screenContracts/browserQa adapter missing/refs=0 → fail | TC-0012-0124..0127 |
+| C: Runtime observation | synthetic observation absent; canonical routes only | TC-0012-0128..0130 |
+| D: Multi-screen BrowserQA | per-screen refs; no phase-level generic fallback | TC-0012-0131..0133 |
+| E: Action coverage | finding count ≠ actionsWired; wiring condition only | TC-0012-0134..0137 |
+| F: Calibration/validator/L2 | runtime+validator use same pack; config override ignored; structured-only L2 | TC-0012-0138..0140 |

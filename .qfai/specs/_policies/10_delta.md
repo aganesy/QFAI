@@ -362,3 +362,21 @@
 - Classification: non-ui
 - OQ-0004 resolved at SDD level → DR-0222 (pattern-based matching)
 - OQ-0006 deferred to v1.8 (L2 full redesign)
+
+## v1.7.15 rev5 — Single-PR Completion (Adopted)
+
+### Phase: SDD Outline (Phase 1)
+
+| Layer            | Change                                                                                         | Reason                                           |
+| ---------------- | ---------------------------------------------------------------------------------------------- | ------------------------------------------------ |
+| 05_Contracts.md  | v1.7.15 rev5 Contract Posture 追加（0 items 維持、none-rationale 記載）                         | 内部モジュール変更のみ、外部 contract 新設なし   |
+| spec-0012        | v1.7.15 rev5: 6 WS（all-mode non-UI reject / observed-only ledger / per-screen BrowserQA / action coverage / fail-closed harness / calibration SSOT）を spec-0012 に反映 | discussion-20260415014056471 rev5 仕様化         |
+
+### Discussion Pack Reference
+
+- `discussion-20260415014056471` (v1.7.15 rev5, 3 reviewer PASS)
+- Classification: non-ui
+- OQ-0002 resolved at SDD level → DR-0012-0033 (validator reject only, no schema change)
+- OQ-0004 resolved at SDD level → DR-0012-0034 (pattern-based matching for parameterized routes)
+- OQ-0006 resolved at SDD level → DR-0012-0035 (PrototypingError derived type for packResolver)
+- OQ-0005 deferred to v1.8 (L2 full redesign scope)

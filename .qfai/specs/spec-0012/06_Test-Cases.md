@@ -1176,3 +1176,143 @@
 - AC-Refs: AC-0012-0041-01
 - Type: boundary
 - Verify `/orders/:id` pattern matches observation `/orders/123`
+
+## TC-0012-0121: Non-UI Surface Rejects standard mode (v1.7.15 rev5)
+
+- EX-Ref: EX-0012-0097
+- AC-Refs: AC-0012-0044-01
+- Type: normal
+- surface=cli, mode=standard → execution.ts rejects immediately; no prototyping proceeds
+
+## TC-0012-0122: Non-UI Surface Rejection Reason Code Consistent (v1.7.15 rev5)
+
+- EX-Ref: EX-0012-0097
+- AC-Refs: AC-0012-0044-02
+- Type: normal
+- surface=cli, mode=low-cost → reason code is `unsupported_non_ui_prototyping_surface` in all rejection layers
+
+## TC-0012-0123: UI-bearing Surface Accepted (All Modes) (v1.7.15 rev5)
+
+- EX-Ref: EX-0012-0097
+- AC-Refs: AC-0012-0044-03
+- Type: boundary
+- surface=web, mode=standard → accepted; surface=mobile-web, mode=full-harness → accepted
+
+## TC-0012-0124: runFullHarness Missing Surface Throws (v1.7.15 rev5)
+
+- EX-Ref: EX-0012-0101
+- AC-Refs: AC-0012-0048-01
+- Type: error
+- runFullHarness() with no surface → immediate throw before any measurement
+
+## TC-0012-0125: runFullHarness Missing Adapter Throws (v1.7.15 rev5)
+
+- EX-Ref: EX-0012-0101
+- AC-Refs: AC-0012-0048-02, AC-0012-0048-03
+- Type: error
+- Missing render adapter or browserQa adapter → throw; partial adapter set not accepted
+
+## TC-0012-0126: runFullHarness Empty ScreenContracts Throws (v1.7.15 rev5)
+
+- EX-Ref: EX-0012-0101
+- AC-Refs: AC-0012-0048-04
+- Type: boundary
+- screenContracts=[] or screenContracts=undefined → throw
+
+## TC-0012-0127: Adapter Error Propagated (v1.7.15 rev5)
+
+- EX-Ref: EX-0012-0101
+- AC-Refs: AC-0012-0048-06
+- Type: error
+- render adapter throws → error propagated; no catch-and-continue; no partial result returned
+
+## TC-0012-0128: Unobserved Route Excluded from Ledger (v1.7.15 rev5)
+
+- EX-Ref: EX-0012-0098
+- AC-Refs: AC-0012-0045-01
+- Type: normal
+- 3 declared routes, 1 never rendered → RuntimeObservation.ui contains only 2 entries
+
+## TC-0012-0129: runtimeGate api db Fields Absent (v1.7.15 rev5)
+
+- EX-Ref: EX-0012-0098
+- AC-Refs: AC-0012-0045-02
+- Type: normal
+- RuntimeObservation type has no api/db fields; accessing them is a TypeScript compile error
+
+## TC-0012-0130: specCoverage Set Comparison (v1.7.15 rev5)
+
+- EX-Ref: EX-0012-0098
+- AC-Refs: AC-0012-0045-04
+- Type: normal
+- declared=["/", "/orders", "/profile"], observed.ui=[ObservedUiRoute{route:"/"}, ObservedUiRoute{route:"/orders"}] → coverage=2/3
+
+## TC-0012-0131: Per-Screen Browser QA Executions (v1.7.15 rev5)
+
+- EX-Ref: EX-0012-0099
+- AC-Refs: AC-0012-0046-01
+- Type: normal
+- 3 screen contracts → 3 separate browserQaPerScreen.ts executions with distinct evidenceRefs
+
+## TC-0012-0132: Generic Phase Ref Reuse Validator Hard Fail (v1.7.15 rev5)
+
+- EX-Ref: EX-0012-0099
+- AC-Refs: AC-0012-0046-03
+- Type: error
+- screen uses generic phaseLevelRef → prototypingEvidence.ts emits hard error (not warning)
+
+## TC-0012-0133: Screen Without Refs Marked Unobserved (v1.7.15 rev5)
+
+- EX-Ref: EX-0012-0099
+- AC-Refs: AC-0012-0046-04
+- Type: boundary
+- screen has empty browserQaEvidenceRefs → UIScreenObservation.observed=false, evidenceMissing=true; NOT in RuntimeObservation.ui
+
+## TC-0012-0134: actionsWired Counts Only Wired Controls (v1.7.15 rev5)
+
+- EX-Ref: EX-0012-0100
+- AC-Refs: AC-0012-0047-01
+- Type: normal
+- 3 declared, 2 DOM-observed+wired → actionsWired=2 (not 3)
+
+## TC-0012-0135: Findings Do Not Increase actionsWired (v1.7.15 rev5)
+
+- EX-Ref: EX-0012-0100
+- AC-Refs: AC-0012-0047-02
+- Type: normal
+- same screen with 5 findings added → actionsWired=2 unchanged
+
+## TC-0012-0136: actionsWired > actionsDeclared Validator Error (v1.7.15 rev5)
+
+- EX-Ref: EX-0012-0100
+- AC-Refs: AC-0012-0047-03
+- Type: error
+- actionsWired=5, actionsDeclared=3 → validator error QFAI-PROT-XXX
+
+## TC-0012-0137: actionsDeclared=0 Screen is Normal (v1.7.15 rev5)
+
+- EX-Ref: EX-0012-0100
+- AC-Refs: AC-0012-0047-04
+- Type: boundary
+- actionsDeclared=0, actionsWired=0 → no error (information-only screen); contrast: actionsDeclared=2, DOM observed, actionsWired=0 → error
+
+## TC-0012-0138: packResolver Provides Consistent Thresholds (v1.7.15 rev5)
+
+- EX-Ref: EX-0012-0102
+- AC-Refs: AC-0012-0049-01, AC-0012-0049-02
+- Type: normal
+- packResolver.ts called by both runtime and validator; both receive same maxIterations/plateauDelta/plateauLookback from pack
+
+## TC-0012-0139: API Coverage in Artifact is Hard Error (v1.7.15 rev5)
+
+- EX-Ref: EX-0012-0102
+- AC-Refs: AC-0012-0049-03
+- Type: error
+- prototyping evidence artifact contains apiEndpoints declaration → validator hard error
+
+## TC-0012-0140: l2Evidence Uses Structured Parser First (v1.7.15 rev5)
+
+- EX-Ref: EX-0012-0102
+- AC-Refs: AC-0012-0049-04
+- Type: normal
+- valid 04_Sources.md with structured sections → structuredArtifactReaders.ts parses; keyword fallback NOT used; structured parse failure → hard fail (not fallback)

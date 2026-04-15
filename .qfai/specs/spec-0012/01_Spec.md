@@ -15,6 +15,7 @@
 - In:
   - NOTE: v1.7.15 adds runtime truthfulness hardening — panel scoring from real evidence, converged requires iterationCount>=2, reviewer/commitSha mandatory, specCoverage from real diffs, uiFidelity observation-only, CalibrationLoader wired into execution.ts, fail-fast on missing evidence
   - NOTE: v1.7.15 rev4 adds 5 audit resolution items — cli/full-harness 4-layer reject, screen contract-based Browser QA targets ("/primary" removal), Browser QA evidence chain completeness (hard-fail on empty), canonical route semantics for runtimeGate/specCoverage, L2 structured parse priority, stale semantics cleanup
+  - NOTE: v1.7.15 rev5 adds 6 audit resolution items (WS-1..WS-6 from discussion-20260415014056471) — all-mode non-UI surface rejection, observed-only ledger (runtimeObservation.ts), per-screen Browser QA mandatory (browserQaPerScreen.ts), action coverage semantics (actionCoverage.ts), runFullHarness() fail-closed (required adapters+screenContracts), calibration pack as SSOT (packResolver.ts, structuredArtifactReaders.ts)
   - `/qfai-prototyping` skill workflow (SKILL only, no CLI command) — skill-centered truth: the skill is the sole interface for prototyping
   - All-spec stage: scope is ALL specs from `.qfai/specs/spec-*`
   - Spec Auto-Discovery Protocol (4-source unified diff detection: branch diff, local changes, evidence mtime, delta.md parse)
@@ -50,6 +51,11 @@
   - Prototyping types (`prototyping/types.ts`): canonical type set (PrototypingMode, PrototypingSurface, PrototypingObligations, etc.)
   - prototyping.calibration config block (`qfai.config.yaml` の prototyping stanza)
   - Report prototyping observability integration (mode, obligations, evidence, harness, render, browserQa, calibration)
+  - `runtimeObservation.ts` — ObservedUiRoute / RuntimeObservation types (observed-only ledger)
+  - `browserQaPerScreen.ts` — per-screen Browser QA input generator
+  - `actionCoverage.ts` — actionsDeclared/actionsObserved/actionsWired/missingActions calculator
+  - `packResolver.ts` — calibration pack resolution SSOT (shared by runtime + validator)
+  - `structuredArtifactReaders.ts` — structured section parser for discussion/screen artifacts
 - Out:
   - CLI command `qfai prototyping` (REMOVED — no active document may reference it as a valid interface)
   - Acceptance test automation (belongs to `/qfai-atdd`)
@@ -73,6 +79,14 @@
 - NFR-0013 (rev4): 型安全性維持（新規 any / @ts-ignore 追加 0 件）
 - NFR-0014 (rev4): 拒否エラーメッセージに原因+対処方法含む
 - NFR-0015 (rev4): 公開 API 破壊的変更なし
+- NFR-0016 (rev5): runFullHarness fail-closed — 必須入力不足時は常にthrowし、silent successは0件
+- NFR-0017 (rev5): single-PR CI green — pnpm format:check && pnpm lint && pnpm check-types && vitest run 全pass
+- NFR-0018 (rev5): error messages actionable — 欠落フィールド・無効surface・証拠不足screenを特定できる内容
+- NFR-0019 (rev5): acceptance test matrix A~F 全件PASS
+- NFR-0020 (rev5): no silent failures — 6 WS いずれもsilentなfailure/silent-continueは0件
+- NFR-0021 (rev5): SSOT consistency — runtime+validatorが同一calibration packから同一threshold
+- NFR-0022 (rev5): per-screen evidence completeness — N screen contract → N個の固有browserQaEvidenceRefs
+- NFR-0023 (rev5, Should): no deprecated contract remnants — runtimeGate.api/db / synthetic-200 / actionsWired=findingCount / config-calibrationが全ソースから消えること
 
 ## Applicable Policy
 

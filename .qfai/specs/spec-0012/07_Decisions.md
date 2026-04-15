@@ -235,3 +235,24 @@
 - Rationale: ヒューリスティック依存はエビデンス精度低下
 - Source: discussion-20260414195449523, WS-5
 - Policy DR: DR-0221
+
+## DR-0012-0033: prototyping.yaml Surface Field — Validator Reject Only (v1.7.15 rev5, OQ-0002 resolution)
+
+- Decision: cli/api/backend surface を prototyping.yaml surface フィールドで宣言した場合、schema level での変更は行わず、validator reject のみで対応する
+- Rationale: schema level で cli/api/backend を reject すると後方互換を壊す可能性がある。runtime での validator reject だけで十分な機能的制御が可能
+- Status: Adopted (OQ-0002 resolved)
+- Impact: prototypingEvidence.ts validator に surface field rejection ルール追加
+
+## DR-0012-0034: parameterized Route Mapping — Pattern-Based Matching (v1.7.15 rev5, OQ-0004 resolution)
+
+- Decision: Browser QA でパラメタライズドルート（/orders/:id 等）のマッチングにパターンベースマッチング（Option B）を採用
+- Rationale: exact match のみでは SPA のダイナミックルートを正確にカバーできない。:param パターンをワイルドカードとして処理することで実際のSPA構造に対応
+- Status: Adopted (OQ-0004 resolved)
+- Impact: runtimeObservation.ts / specCoverage.ts のルートマッチングロジック
+
+## DR-0012-0035: packResolver Error Type — PrototypingError Derived Type (v1.7.15 rev5, OQ-0006 resolution)
+
+- Decision: packResolver.ts のエラー型を PrototypingError 派生型として定義（pack-not-found / pack-malformed を区別）
+- Rationale: 既存エラー階層と整合し、error handling パターンが統一される
+- Status: Adopted (OQ-0006 resolved)
+- Impact: packResolver.ts エラー型設計

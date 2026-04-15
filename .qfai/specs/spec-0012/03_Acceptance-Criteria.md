@@ -447,3 +447,160 @@ Given error-path test fixtures, when inspected, then missing pack, missing revie
 - US-Ref: US-0012-0043
 - REQ-Ref: REQ-0033
 - `SKILL.md` および `evidence/README.md` の陳腐化した記述を更新する
+
+
+## AC-0012-0044-01: Non-UI Surface Rejects All Prototyping Modes (v1.7.15 rev5)
+
+- US-Ref: US-0012-0044
+- REQ-Ref: REQ-0001
+- surface=cli/api/backend における low-cost・standard・full-harness の全 mode を mode.ts・execution.ts・runtime.ts・CLI・validator の全層で reject する
+
+## AC-0012-0044-02: Non-UI Surface Rejection Reason Code Fixed (v1.7.15 rev5)
+
+- US-Ref: US-0012-0044
+- REQ-Ref: REQ-0002
+- non-UI surface の reject 理由コードは `unsupported_non_ui_prototyping_surface` に固定される
+
+## AC-0012-0044-03: Non-UI Surface Error Message Consistent Across Layers (v1.7.15 rev5)
+
+- US-Ref: US-0012-0044
+- REQ-Ref: REQ-0003
+- エラーメッセージが mode.ts・execution.ts・runtime.ts・CLI・validator の全レイヤーで一致している
+
+## AC-0012-0045-01: Unobserved Routes Not Added to Ledger (v1.7.15 rev5)
+
+- US-Ref: US-0012-0045
+- REQ-Ref: REQ-0008
+- render/browserQA 観測なしで宣言された route は ledger に追加されない
+
+## AC-0012-0045-02: runtimeGate Has No api/db Fields (v1.7.15 rev5)
+
+- US-Ref: US-0012-0045
+- REQ-Ref: REQ-0009
+- runtimeGate.api および runtimeGate.db フィールドが型定義に存在しない
+
+## AC-0012-0045-03: Synthetic Status 200 Generation Removed (v1.7.15 rev5)
+
+- US-Ref: US-0012-0045
+- REQ-Ref: REQ-0010
+- synthetic status:200 の自動生成が完全に削除されている
+
+## AC-0012-0045-04: specCoverage As Set Comparison (v1.7.15 rev5)
+
+- US-Ref: US-0012-0045
+- REQ-Ref: REQ-0011
+- specCoverage は declaredUiRoutes と observed.ui[].route の集合比較として算出される
+
+## AC-0012-0046-01: N Screens Require N Browser QA Executions (v1.7.15 rev5)
+
+- US-Ref: US-0012-0046
+- REQ-Ref: REQ-0016
+- contract に N screen が存在する場合、N 個の Browser QA 実行が必須となる
+
+## AC-0012-0046-02: Each Screen Has Non-Empty browserQaEvidenceRefs (v1.7.15 rev5)
+
+- US-Ref: US-0012-0046
+- REQ-Ref: REQ-0017
+- 各 screen が ObservedUiRoute 内に空でない browserQaEvidenceRefs を持つ
+
+## AC-0012-0046-03: Generic Phase-Level Ref Reuse Causes Hard Fail (v1.7.15 rev5)
+
+- US-Ref: US-0012-0046
+- REQ-Ref: REQ-0018
+- generic phase-level の ref 再利用は validator で hard fail となる
+
+## AC-0012-0046-04: Screen Without Unique Refs Marked evidenceMissing (v1.7.15 rev5)
+
+- US-Ref: US-0012-0046
+- REQ-Ref: REQ-0019
+- 固有 refs を持たない screen は UIScreenObservation において observed=false / evidenceMissing=true となる
+
+## AC-0012-0047-01: actionsWired Counting Rules (v1.7.15 rev5)
+
+- US-Ref: US-0012-0047
+- REQ-Ref: REQ-0026
+- actionsWired は「declared action が存在し、DOM 上で control が観測され、interaction target として解決され、blocking error が無い」場合のみ加算される
+
+## AC-0012-0047-02: Findings Do Not Increase actionsWired (v1.7.15 rev5)
+
+- US-Ref: US-0012-0047
+- REQ-Ref: REQ-0027
+- findings を追加しても actionsWired は増加しない
+
+## AC-0012-0047-03: actionsWired Exceeding actionsDeclared Is Validator Error (v1.7.15 rev5)
+
+- US-Ref: US-0012-0047
+- REQ-Ref: REQ-0028
+- actionsWired > actionsDeclared の場合、validator error が発生する
+
+## AC-0012-0047-04: Zero actionsWired With DOM Observations Is Validator Error (v1.7.15 rev5)
+
+- US-Ref: US-0012-0047
+- REQ-Ref: REQ-0029
+- actionsDeclared>0 かつ DOM 観測ありかつ actionsWired=0 の場合、validator error が発生する（actionsDeclared=0 の screen は actionsWired=0 が正常）
+
+## AC-0012-0048-01: Missing Surface Causes Immediate Throw (v1.7.15 rev5)
+
+- US-Ref: US-0012-0048
+- REQ-Ref: REQ-0033
+- request に surface が無い場合、runFullHarness() は即座に throw する
+
+## AC-0012-0048-02: Missing Render Adapter Causes Throw (v1.7.15 rev5)
+
+- US-Ref: US-0012-0048
+- REQ-Ref: REQ-0034
+- render adapter が無い場合、runFullHarness() は throw する
+
+## AC-0012-0048-03: Missing Browser QA Adapter Causes Throw (v1.7.15 rev5)
+
+- US-Ref: US-0012-0048
+- REQ-Ref: REQ-0035
+- browserQa adapter が無い場合、runFullHarness() は throw する
+
+## AC-0012-0048-04: Empty screenContracts Causes Throw (v1.7.15 rev5)
+
+- US-Ref: US-0012-0048
+- REQ-Ref: REQ-0036
+- screenContracts が空/未定義の場合、runFullHarness() は throw する
+
+## AC-0012-0048-05: browserQa Executed With Zero EvidenceRefs Causes Throw (v1.7.15 rev5)
+
+- US-Ref: US-0012-0048
+- REQ-Ref: REQ-0037
+- browserQa.executed=true かつ evidenceRefs=0 の場合、runFullHarness() は throw する
+
+## AC-0012-0048-06: Adapter Error Propagated Not Swallowed (v1.7.15 rev5)
+
+- US-Ref: US-0012-0048
+- REQ-Ref: REQ-0038
+- adapter error は飲み込まれず propagated される
+
+## AC-0012-0049-01: packResolver Provides Shared Resolution Function (v1.7.15 rev5)
+
+- US-Ref: US-0012-0049
+- REQ-Ref: REQ-0041
+- packResolver.ts が共有解決関数を提供している
+
+## AC-0012-0049-02: prototypingEvidence Reads Thresholds from Pack (v1.7.15 rev5)
+
+- US-Ref: US-0012-0049
+- REQ-Ref: REQ-0042
+- prototypingEvidence.ts が maxIterations/plateauDelta/plateauLookback を pack から読む
+
+## AC-0012-0049-03: API/DB Coverage in Prototyping Artifact Is Hard Error (v1.7.15 rev5)
+
+- US-Ref: US-0012-0049
+- REQ-Ref: REQ-0043
+- prototyping artifact に API/DB coverage が含まれている場合、hard error が発生する
+
+## AC-0012-0049-04: l2Evidence Uses Structured Parser With Fallback Only On Failure (v1.7.15 rev5)
+
+- US-Ref: US-0012-0049
+- REQ-Ref: REQ-0044
+- l2Evidence.ts が canonical artifacts の structured parser を使用し、parse が失敗した場合のみ fallback する
+
+## AC-0012-0049-05: Docs Reflect New Contract (v1.7.15 rev5)
+
+- US-Ref: US-0012-0049
+- REQ-Ref: REQ-0045
+- docs/README/SKILL が新しい contract を反映している

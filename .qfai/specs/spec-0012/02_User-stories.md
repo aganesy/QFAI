@@ -1,4 +1,4 @@
-# 02 User Stories
+﻿# 02 User Stories
 
 ## US-0012-0001: All-Spec Prototyping
 
@@ -211,3 +211,63 @@ As a developer, I want test fixtures to remove l1/l2 direct pass, packVersion:"1
 - REQ-Refs: REQ-0028〜REQ-0033
 - WS: WS-6
 - Discussion: discussion-20260414195449523
+
+## US-0012-0044: non-UI surface prototyping 全モード拒否 (v1.7.15 rev5)
+
+**As a** QFAI メンテナー
+**I want** cli/api/backend surface が ALL prototyping modes を reject すること
+**So that** prototyping contract が明確でテスト可能になる
+
+- REQ-Refs: REQ-0001〜REQ-0007
+- WS: WS-1
+- Discussion: discussion-20260415014056471
+
+## US-0012-0045: 観測済み route のみの runtimeGate/specCoverage (v1.7.15 rev5)
+
+**As a** QFAI メンテナー
+**I want** runtimeGate が観測済み route のみを記録すること
+**So that** coverage metrics が実際の実行 evidence に基づくものになる
+
+- REQ-Refs: REQ-0008〜REQ-0015
+- WS: WS-2
+- Discussion: discussion-20260415014056471
+
+## US-0012-0046: Browser QA per-screen 必須化 (v1.7.15 rev5)
+
+**As a** QFAI メンテナー
+**I want** 各 screen contract が固有の Browser QA execution と evidence refs を持つこと
+**So that** evidence chain が screen 単位で完全になる
+
+- REQ-Refs: REQ-0016〜REQ-0025
+- WS: WS-3
+- Discussion: discussion-20260415014056471
+
+## US-0012-0047: actionsWired = action coverage セマンティクス (v1.7.15 rev5)
+
+**As a** QFAI メンテナー
+**I want** actionsWired が宣言+観測+wired 済みの control のみをカウントすること
+**So that** screen fidelity metrics が意味のあるものになる
+
+- REQ-Refs: REQ-0026〜REQ-0032
+- WS: WS-4
+- Discussion: discussion-20260415014056471
+
+## US-0012-0048: runFullHarness() standalone fail-closed (v1.7.15 rev5)
+
+**As a** QFAI メンテナー
+**I want** runFullHarness() が必須 input が不足している場合に即座に fail すること
+**So that** 部分的/無効な harness の実行が silent に成功しなくなる
+
+- REQ-Refs: REQ-0033〜REQ-0040
+- WS: WS-5
+- Discussion: discussion-20260415014056471
+
+## US-0012-0049: calibration/validator/L2/docs SSOT 統合 (v1.7.15 rev5)
+
+**As a** QFAI メンテナー
+**I want** runtime と validator が同じ pack から calibration thresholds を読むこと
+**So that** calibration が一貫しており、config が pack をオーバーライドできない
+
+- REQ-Refs: REQ-0041〜REQ-0053
+- WS: WS-6
+- Discussion: discussion-20260415014056471

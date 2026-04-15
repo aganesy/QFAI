@@ -662,3 +662,45 @@
 - Given README.md references stale behavior (e.g., `"/primary"` target)
 - When reality sync cleanup is applied
 - Then README reflects current screen contract-based target derivation
+
+## EX-0012-0097: non-UI surface all-mode rejection (v1.7.15 rev5)
+
+- BR-Ref: BR-0012-0080
+- Given surface=cli and mode=standard
+- When execution attempts to start
+- Then mode.ts/execution.ts/runtime.ts/CLI/prototypingEvidence.ts all reject with reason code `unsupported_non_ui_prototyping_surface`
+
+## EX-0012-0098: observed-only RuntimeObservation ledger (v1.7.15 rev5)
+
+- BR-Ref: BR-0012-0081
+- Given 3 declared routes, 2 rendered/observed, 1 never rendered
+- When RuntimeObservation is built
+- Then ledger contains only the 2 observed routes; unrendered route is absent; runtimeGate.api/db fields do not exist; specCoverage = 2/3 (66%)
+
+## EX-0012-0099: per-screen Browser QA mandatory (v1.7.15 rev5)
+
+- BR-Ref: BR-0012-0082
+- Given 3 screen contracts, each with distinct browserQaEvidenceRefs
+- When full-harness runs
+- Then 3 separate Browser QA executions occur, each with its own refs; generic phaseLevelRefs fallback is absent; UIScreenObservation with no refs → observed=false/evidenceMissing=true
+
+## EX-0012-0100: actionsWired = action coverage semantics (v1.7.15 rev5)
+
+- BR-Ref: BR-0012-0083
+- Given a screen with 3 declared controls, 2 DOM-observed and wired, 5 findings
+- When actionsWired is computed
+- Then actionsWired=2 (not 5); findings do NOT contribute to actionsWired; actionCoverage.ts provides the result
+
+## EX-0012-0101: runFullHarness() required fields fail-closed (v1.7.15 rev5)
+
+- BR-Ref: BR-0012-0084
+- Given runFullHarness() called without screenContracts
+- When execution starts
+- Then immediate throw: "screenContracts is required"; no partial execution occurs
+
+## EX-0012-0102: calibration pack SSOT (v1.7.15 rev5)
+
+- BR-Ref: BR-0012-0085
+- Given valid calibration pack with maxIterations=10, plateauDelta=0.01 AND config with different maxIterations=20
+- When runtime and validator resolve thresholds via packResolver.ts
+- Then both use maxIterations=10 (pack wins); config override is ignored; l2Evidence.ts uses structuredArtifactReaders.ts for 04_Sources.md

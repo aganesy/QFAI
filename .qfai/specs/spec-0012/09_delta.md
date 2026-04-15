@@ -340,3 +340,63 @@ REQ-0092 (WS-6) → US-0012-0043 → AC-0012-0043-01..06 → BR-0012-0077..0078 
   - DO NOT prioritize heuristic parsing over structured parsing for L2 evidence
   - Temptation: heuristic parsing is simpler and handles varied formats
   - Reason: heuristic dependence reduces evidence accuracy and reproducibility; structured parse provides deterministic results
+
+## v1.7.15 rev5 — Adopted (discussion-20260415014056471)
+
+- AD-0012-0036: All-mode non-UI surface rejection — derivePrototypingObligations() + execution.ts + runtime.ts + CLI + prototypingEvidence.ts 全層で standard/low-cost/full-harness 共通 reject (REQ-0001..0007, WS-1)
+- AD-0012-0037: runtimeObservation.ts new module — ObservedUiRoute + RuntimeObservation observed-only ledger; runtimeGate.api/db 型削除; synthetic status:200 削除; specCoverage 集合比較に変更 (REQ-0008..0015, WS-2)
+- AD-0012-0038: browserQaPerScreen.ts new module — per-screen Browser QA mandatory; phaseLevelRefs fallback 削除; observed=false/evidenceMissing=true をUIScreenObservation に追加; runtime refs empty → hard fail (REQ-0016..0025, WS-3)
+- AD-0012-0039: actionCoverage.ts new module — actionsWired = action coverage only (finding count 流用禁止); uiFidelityBuilder.ts ActionCoverageResult 由来に限定; validator error 追加 (REQ-0026..0032, WS-4)
+- AD-0012-0040: runFullHarness() required fields — adapters.surface/render/browserQa + screenContracts が required に昇格; panelInputs.browserQa.evidenceRefs fallback 削除; adapter failure propagated (REQ-0033..0040, WS-5)
+- AD-0012-0041: packResolver.ts + structuredArtifactReaders.ts new modules — calibration pack SSOT; prototypingEvidence.ts でconfig override禁止; l2Evidence.ts structured-first; API/DB coverage in artifact → hard error; docs/README/SKILL reality sync (REQ-0041..0053, WS-6)
+- AD-0012-0042: OQ-0002 resolved at SDD — DR-0012-0033 (validator reject only, no schema change)
+- AD-0012-0043: OQ-0004 resolved at SDD — DR-0012-0034 (pattern-based matching for parameterized routes)
+- AD-0012-0044: OQ-0006 resolved at SDD — DR-0012-0035 (PrototypingError derived type for packResolver)
+
+### Traceability Chain (v1.7.15 rev5 additions)
+
+```text
+REQ-0001..0007 (WS-1) → US-0012-0044 → AC-0012-0044-01..03 → BR-0012-0080 → EX-0012-0097 → TC-0012-0121..0123
+REQ-0008..0015 (WS-2) → US-0012-0045 → AC-0012-0045-01..04 → BR-0012-0081 → EX-0012-0098 → TC-0012-0128..0130
+REQ-0016..0025 (WS-3) → US-0012-0046 → AC-0012-0046-01..04 → BR-0012-0082 → EX-0012-0099 → TC-0012-0131..0133
+REQ-0026..0032 (WS-4) → US-0012-0047 → AC-0012-0047-01..04 → BR-0012-0083 → EX-0012-0100 → TC-0012-0134..0137
+REQ-0033..0040 (WS-5) → US-0012-0048 → AC-0012-0048-01..06 → BR-0012-0084 → EX-0012-0101 → TC-0012-0124..0127
+REQ-0041..0053 (WS-6) → US-0012-0049 → AC-0012-0049-01..05 → BR-0012-0085 → EX-0012-0102 → TC-0012-0138..0140
+```
+
+### New Source Files (v1.7.15 rev5)
+
+| File | WS | Purpose |
+|------|----|---------|
+| `core/prototyping/runtimeObservation.ts` | WS-2 | ObservedUiRoute + RuntimeObservation types |
+| `core/prototyping/browserQaPerScreen.ts` | WS-3 | Per-screen Browser QA input generator |
+| `core/prototyping/actionCoverage.ts` | WS-4 | Action coverage computation |
+| `core/prototyping/packResolver.ts` | WS-6 | Calibration pack resolution SSOT |
+| `core/prototyping/structuredArtifactReaders.ts` | WS-6 | Structured section parsers |
+
+## v1.7.15 rev5 — Rejected
+
+- RJ-0012-0019: Extend non-UI rejection to full-harness only (rev5 supersedes rev4)
+  - DO NOT limit non-UI surface rejection to full-harness mode only
+  - Temptation: rev4 already rejects cli+full-harness; standard/low-cost seem less risky for non-UI
+  - Reason: prototyping contract is UI-only by definition; all modes must be consistent
+
+- RJ-0012-0020: Keep runtimeGate.api/runtimeGate.db fields
+  - DO NOT retain runtimeGate.api/db fields in type definitions
+  - Temptation: backward compatibility with consumers that read these fields
+  - Reason: API/DB coverage is not measured by the prototyping runtime; retaining the fields creates false expectations
+
+- RJ-0012-0021: Aggregate capturedHtmlPath across all screens
+  - DO NOT use a single capturedHtmlPath to represent all screens
+  - Temptation: one HTML capture is simpler and cheaper
+  - Reason: single-file evidence cannot verify per-screen completeness; per-screen refs are mandatory for audit
+
+- RJ-0012-0022: Retain finding count as actionsWired source
+  - DO NOT use finding count as a proxy for actionsWired
+  - Temptation: finding count is already available and easy to aggregate
+  - Reason: finding count and action wiring are orthogonal concepts; mixing them produces meaningless fidelity metrics
+
+- RJ-0012-0023: Config-based calibration threshold override
+  - DO NOT allow config to override calibration thresholds from the pack
+  - Temptation: per-project tuning via config is convenient
+  - Reason: runtime and validator must read from the same pack to ensure consistent evaluation
