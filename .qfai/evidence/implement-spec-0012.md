@@ -1,0 +1,321 @@
+# TDD Evidence: spec-0012 (v1.7.15 rev2)
+
+## Objective
+
+Register TDD ledger entries for v1.7.15 rev2 TC-0012-0046..0070 (25 TCs) covering runtime truthfulness hardening for qfai-prototyping.
+
+## Items processed
+
+| TDD-ID | TC-Refs | Status | DR-ID |
+|---|---|---|---|
+| TDD-0017 | TC-0012-0046 | exception | DR-0012-0026 |
+| TDD-0018 | TC-0012-0047 | exception | DR-0012-0026 |
+| TDD-0019 | TC-0012-0048 | exception | DR-0012-0026 |
+| TDD-0020 | TC-0012-0049 | exception | DR-0012-0026 |
+| TDD-0021 | TC-0012-0050 | exception | DR-0012-0026 |
+| TDD-0022 | TC-0012-0051 | exception | DR-0012-0026 |
+| TDD-0023 | TC-0012-0052 | exception | DR-0012-0026 |
+| TDD-0024 | TC-0012-0053 | exception | DR-0012-0026 |
+| TDD-0025 | TC-0012-0054 | exception | DR-0012-0026 |
+| TDD-0026 | TC-0012-0055 | exception | DR-0012-0026 |
+| TDD-0027 | TC-0012-0056 | exception | DR-0012-0026 |
+| TDD-0028 | TC-0012-0057 | exception | DR-0012-0026 |
+| TDD-0029 | TC-0012-0058 | exception | DR-0012-0026 |
+| TDD-0030 | TC-0012-0059 | exception | DR-0012-0026 |
+| TDD-0031 | TC-0012-0060 | exception | DR-0012-0026 |
+| TDD-0032 | TC-0012-0061 | exception | DR-0012-0026 |
+| TDD-0033 | TC-0012-0062 | exception | DR-0012-0026 |
+| TDD-0034 | TC-0012-0063 | exception | DR-0012-0026 |
+| TDD-0035 | TC-0012-0064 | exception | DR-0012-0026 |
+| TDD-0036 | TC-0012-0065 | exception | DR-0012-0026 |
+| TDD-0037 | TC-0012-0066 | exception | DR-0012-0026 |
+| TDD-0038 | TC-0012-0067 | exception | DR-0012-0026 |
+| TDD-0039 | TC-0012-0068 | exception | DR-0012-0026 |
+| TDD-0040 | TC-0012-0069 | exception | DR-0012-0026 |
+| TDD-0041 | TC-0012-0070 | exception | DR-0012-0026 |
+
+## Exception rationale (DR-0012-0026)
+
+v1.7.15 rev2 runtime implementation was completed prior to TDD ledger registration. Production code exists in:
+- `harness/runtime.ts` — FullHarnessRequest without l1/l2, panelInputs required
+- `harness/types.ts` — FullHarnessIteration with 8-category evidenceRefs, commitSha, reviewerId, limitations
+- `harness/panelInputs.ts` — validatePanelInputs 10-check gate
+- `harness/panelScore.ts` — panelScore double defense
+- `harness/history.ts` — strict array length, CalibrationPack-only termination
+- `prototyping/l2Evidence.ts` — 3 builders (discussion/screenContract/trend)
+- `prototyping/execution.ts` — scoring pipeline, fail-fast gates
+- `prototyping/specCoverage.ts` — all-spec required, silent empty rejected
+- `prototyping/uiObservation.ts` — ScreenObservation type, extractDomLabelsWithJsdom
+- `prototyping/uiFidelityBuilder.ts` — screen-level, auto-pass abolished
+- `evidence/bundleWriter.ts` — schema v2 only
+- `calibration/loader.ts` — fail-closed (no DEFAULT_PACK)
+
+## Test results summary
+
+```
+npx vitest run tests/integration/prototypingRuntimeIntegration.test.ts
+# 50 tests passed, 0 failed (100ms)
+```
+
+## Commands executed
+
+```bash
+cd packages/qfai && npx vitest run tests/integration/prototypingRuntimeIntegration.test.ts
+# Result: 50 passed, 0 failed
+```
+
+## Work Orders Summary
+
+| Step | Role (sub-agent) | Task title | Input (refs) | Output (refs) | Status |
+|---|---|---|---|---|---|
+| 1 | delivery-planner (simulated) | Select rev2 TCs | 10_Plan.md, 06_Test-Cases.md | TDD-0017..0041 selection | PASS |
+| 2 | backend-engineer (simulated) | Verify impl exists | Source files | All modules implemented | PASS |
+| 3 | qa-gatekeeper (simulated) | Confirm tests pass | vitest run | 50/50 PASS | PASS |
+| 4 | completion-reviewer (simulated) | Spec alignment | test-list.md, DR-0012-0026 | exception pattern valid | PASS |
+| 5 | implementation-reviewer (simulated) | Code quality | Source modules | Implementation consistent | PASS |
+
+Subagents: simulated (reason: user explicitly approved Simulation mode)
+User approval: "Simulation mode で進める (Recommended)" via AskUserQuestion
+
+## Final status
+
+**PASS** — all 25 items registered as exception (DR-0012-0026), implementation verified, tests passing.
+
+---
+
+## v1.7.15 rev4 — TDD Ledger Registration (2026-04-15)
+
+### Objective
+
+Register TDD ledger entries for v1.7.15 rev4 TC-0012-0092..0120 (29 TCs) covering 6 work streams:
+WS-1 cli+full-harness 4-layer reject, WS-2 screen contract targets, WS-3 browser QA evidence chain,
+WS-4 canonical route semantics, WS-5 L2 structured parse, WS-6 stale cleanup.
+
+### Items processed
+
+| TDD-ID | TC-Refs | Status | DR-ID |
+|---|---|---|---|
+| TDD-0092 | TC-0012-0092 | exception | DR-0012-0026 |
+| TDD-0093 | TC-0012-0093 | exception | DR-0012-0026 |
+| TDD-0094 | TC-0012-0094 | exception | DR-0012-0026 |
+| TDD-0095 | TC-0012-0095 | exception | DR-0012-0026 |
+| TDD-0096 | TC-0012-0096 | exception | DR-0012-0026 |
+| TDD-0097 | TC-0012-0097 | exception | DR-0012-0026 |
+| TDD-0098 | TC-0012-0098 | exception | DR-0012-0026 |
+| TDD-0099 | TC-0012-0099 | exception | DR-0012-0026 |
+| TDD-0100 | TC-0012-0100 | exception | DR-0012-0026 |
+| TDD-0101 | TC-0012-0101 | exception | DR-0012-0026 |
+| TDD-0102 | TC-0012-0102 | exception | DR-0012-0026 |
+| TDD-0103 | TC-0012-0103 | exception | DR-0012-0026 |
+| TDD-0104 | TC-0012-0104 | exception | DR-0012-0026 |
+| TDD-0105 | TC-0012-0105 | exception | DR-0012-0026 |
+| TDD-0106 | TC-0012-0106 | exception | DR-0012-0026 |
+| TDD-0107 | TC-0012-0107 | exception | DR-0012-0026 |
+| TDD-0108 | TC-0012-0108 | exception | DR-0012-0026 |
+| TDD-0109 | TC-0012-0109 | exception | DR-0012-0026 |
+| TDD-0110 | TC-0012-0110 | exception | DR-0012-0026 |
+| TDD-0111 | TC-0012-0111 | exception | DR-0012-0026 |
+| TDD-0112 | TC-0012-0112 | exception | DR-0012-0026 |
+| TDD-0113 | TC-0012-0113 | exception | DR-0012-0026 |
+| TDD-0114 | TC-0012-0114 | exception | DR-0012-0026 |
+| TDD-0115 | TC-0012-0115 | exception | DR-0012-0026 |
+| TDD-0116 | TC-0012-0116 | exception | DR-0012-0026 |
+| TDD-0117 | TC-0012-0117 | exception | DR-0012-0026 |
+| TDD-0118 | TC-0012-0118 | exception | DR-0012-0026 |
+| TDD-0119 | TC-0012-0119 | exception | DR-0012-0026 |
+| TDD-0120 | TC-0012-0120 | exception | DR-0012-0026 |
+
+### Exception rationale (DR-0012-0026, rev4 continuation)
+
+v1.7.15 rev4 production code was implemented prior to TDD ledger registration (impl-first).
+All 8 modules already contain rev4 changes:
+- `mode.ts` — cli+full-harness reject guard in derivePrototypingObligations()
+- `screenContracts.ts` — parseCanonicalScreenContracts(), buildScreenRenderTargets()
+- `runtime.ts` — browserQa evidenceRefs tracking, empty hard-fail
+- `runtimeGateBuilder.ts` — canonical route normalization
+- `specCoverage.ts` — canonical path comparison, loadDeclaredSpecArtifacts()
+- `l2Evidence.ts` — structured parse priority (20-23, 04_Sources, 40_screen_contracts)
+- `prototypingEvidence.ts` — cli+full-harness reject rule, evidence chain validation
+- `execution.ts` — non-visual surface reject, assertSupportedPrototypingSurface()
+
+ATDD tests created in prior phase cover all 29 TCs.
+
+### Test results summary
+
+```
+pnpm vitest run --project integration -- prototypingRev4Integration
+# 29 tests passed, 0 failed (63ms)
+
+pnpm vitest run --project e2e -- prototypingRev4E2E
+# 21 tests passed, 0 failed (94ms)
+```
+
+### Quality gates
+
+- Format: PASS (prettier --write applied)
+- Lint: 7 pre-existing errors (non-null assertions in unrelated files)
+- Types: PASS (tsc -b clean)
+- Validate: 29 pre-existing errors, 0 new errors
+
+### Work Orders Summary
+
+| Step | Role (sub-agent) | Task title | Input (refs) | Output (refs) | Status |
+|---|---|---|---|---|---|
+| 1 | delivery-planner | Audit rev4 source state | 10_Plan.md, source modules | All 8 modules IMPLEMENTED | PASS |
+| 2 | backend-engineer | Register TDD-0092~0120 | 06_Test-Cases.md, test-list.md | 29 rows appended | PASS |
+| 3 | qa-gatekeeper | Verify tests pass + evidence | vitest run, test-list.md | 29/29 PASS, evidence sufficient | PASS |
+| 4 | implementation-reviewer | Code quality review | test-list.md diff | Schema/contiguity/TC match all ✅ | PASS |
+| 5 | completion-reviewer | Spec alignment + drift | test-list.md, 09_delta.md | No drift, no rejected reintro | PASS |
+
+Subagents: real (Task tool delegation)
+
+### Gaps / Open risks
+
+- QA advisory: ~6 of 29 tests are export-existence/source-inspection checks (not behavioral). Acceptable for impl-first backfill but deeper behavioral tests would strengthen coverage.
+- Pre-existing TDDLIST_TEST_FILE_MISSING errors for spec-0010/0012/0014 remain unresolved (not this scope).
+
+### Final status
+
+**PASS** — all 29 items registered as exception (DR-0012-0026), implementation verified, tests passing.
+Confirmed by: completion-reviewer (PASS), qa-gatekeeper (PASS), implementation-reviewer (PASS).
+
+---
+
+## v1.7.15 rev5 — TDD Micro-cycle (2026-04-15)
+
+### Objective
+
+Execute full TDD micro-cycle (Red → Green → Refactor → Done) for 2 items with intentional RED status from ATDD phase:
+- TDD-0122 / TC-0012-0122: `derivePrototypingObligations` surface check priority
+- TDD-0136 / TC-0012-0136: `actionsWired > actionsDeclared` validator rule
+
+Register exception entries for the remaining 18 rev5 TCs (already passing via ATDD-first).
+
+### Items processed
+
+| TDD-ID   | TC-Refs      | Status    | DR-ID        |
+|----------|--------------|-----------|--------------|
+| TDD-0121 | TC-0012-0121 | exception | DR-0012-0026 |
+| TDD-0122 | TC-0012-0122 | done      |              |
+| TDD-0123 | TC-0012-0123 | exception | DR-0012-0026 |
+| TDD-0124 | TC-0012-0124 | exception | DR-0012-0026 |
+| TDD-0125 | TC-0012-0125 | exception | DR-0012-0026 |
+| TDD-0126 | TC-0012-0126 | exception | DR-0012-0026 |
+| TDD-0127 | TC-0012-0127 | exception | DR-0012-0026 |
+| TDD-0128 | TC-0012-0128 | exception | DR-0012-0026 |
+| TDD-0129 | TC-0012-0129 | exception | DR-0012-0026 |
+| TDD-0130 | TC-0012-0130 | exception | DR-0012-0026 |
+| TDD-0131 | TC-0012-0131 | exception | DR-0012-0026 |
+| TDD-0132 | TC-0012-0132 | exception | DR-0012-0026 |
+| TDD-0133 | TC-0012-0133 | exception | DR-0012-0026 |
+| TDD-0134 | TC-0012-0134 | exception | DR-0012-0026 |
+| TDD-0135 | TC-0012-0135 | exception | DR-0012-0026 |
+| TDD-0136 | TC-0012-0136 | done      |              |
+| TDD-0137 | TC-0012-0137 | exception | DR-0012-0026 |
+| TDD-0138 | TC-0012-0138 | exception | DR-0012-0026 |
+| TDD-0139 | TC-0012-0139 | exception | DR-0012-0026 |
+| TDD-0140 | TC-0012-0140 | exception | DR-0012-0026 |
+
+### Per-item TDD Evidence
+
+#### TDD-0122 / TC-0012-0122
+
+- RED command: `pnpm vitest run --project integration tests/integration/prototypingRev5Integration.test.ts`
+- RED result: `FAIL … cli + low-cost mode → invalidReasonCode is NON_UI_PROTOTYPING_SURFACE_REASON_CODE` (got UNSUPPORTED_PROTOTYPING_MODE_REASON_CODE)
+- Production change: `packages/qfai/src/core/prototyping/mode.ts` — swapped guard order in `derivePrototypingObligations` (surface check before mode check)
+- GREEN command: `pnpm vitest run --project integration tests/integration/prototypingRev5Integration.test.ts`
+- GREEN result: 26/26 passed
+- Refactor verify command: `pnpm check-types && pnpm vitest run --project integration`
+- Refactor verify result: types PASS; 604 passed (8 pre-existing failures in renderEvidenceIntegration.test.ts, unrelated)
+- Spec review: PASS (completion-reviewer 2026-04-15)
+- Code quality review: PASS (implementation-reviewer 2026-04-15)
+
+#### TDD-0136 / TC-0012-0136
+
+- RED command: `pnpm vitest run --project integration tests/integration/prototypingRev5Integration.test.ts`
+- RED result: `FAIL … prototypingEvidence.ts has validation rule preventing actionsWired > actionsDeclared` (pattern not found)
+- Production change: `packages/qfai/src/core/validators/prototypingEvidence.ts` — added QFAI-PROT-330 check `actionsWired > actionsDeclared`; `packages/qfai/src/cli/commands/validate.ts` — added QFAI-PROT-330 description
+- GREEN command: `pnpm vitest run --project integration tests/integration/prototypingRev5Integration.test.ts`
+- GREEN result: 26/26 passed
+- Refactor verify command: `pnpm check-types && pnpm vitest run --project integration`
+- Refactor verify result: types PASS; 604 passed (8 pre-existing failures unchanged)
+- Spec review: PASS (completion-reviewer 2026-04-15)
+- Code quality review: PASS (implementation-reviewer 2026-04-15)
+
+### Exception rationale (DR-0012-0026, rev5 continuation)
+
+18 items (TDD-0121, 0123~0135, 0137~0140) are ATDD-first: acceptance tests were written first in the ATDD phase and were already GREEN. Registered as exception per DR-0012-0026 backfill policy.
+
+### Quality gates
+
+- Format: changed files clean (37 pre-existing issues unrelated)
+- Lint: changed files clean (7 pre-existing errors unrelated)
+- Types: PASS (tsc -b)
+- Integration tests: 604 passed; 2 intentional RED (TDD-0122/0136) resolved to GREEN
+
+### Work Orders Summary
+
+| Step | Role (sub-agent)       | Task title                          | Input (refs)                   | Output (refs)               | Status |
+|------|------------------------|-------------------------------------|--------------------------------|-----------------------------|--------|
+| 1    | delivery-planner       | Select RED items from test-list.md  | test-list.md, 06_Test-Cases.md | TDD-0122, TDD-0136 selected | PASS   |
+| 2    | backend-engineer       | Implement Fix 1 + Fix 2             | mode.ts, prototypingEvidence.ts | 2 source files changed     | PASS   |
+| 3    | qa-gatekeeper          | Confirm RED→GREEN transition        | vitest run                     | 26/26 PASS (both TCs)       | PASS   |
+| 4    | implementation-reviewer| Code quality review                 | Changed files                  | No issues found             | PASS   |
+| 5    | completion-reviewer    | Spec alignment + drift check        | AC-0012-0044-02, AC-0012-0047-03 | PASS                      | PASS   |
+
+Subagents: real (Task tool delegation)
+
+### Gaps / Open risks
+
+- QFAI-PROT-330 is above TAXONOMY_RANGE_MAX (315) in issueCodeUniqueness.test.ts — exempt from range checks (same pattern as 316-329). Can be included in a future taxonomy range extension.
+
+### Final status (rev5 cycle)
+
+**PASS** — TDD-0122 and TDD-0136 completed (Red→Green→Refactor→Done). All 20 rev5 items registered.
+Confirmed by: completion-reviewer (PASS), implementation-reviewer (PASS).
+
+---
+
+## v1.7.15 rev6 TDD cycle (2026-04-15)
+
+### Objective
+
+Fix pre-existing render-evidence test failures, implement TC-0088 emoji prohibition, and backfill TDD-0141~0172 for rev6 ATDD-first tests.
+
+### Items processed
+
+| TDD-ID | TC-Refs | Status | DR-ID | Notes |
+|---|---|---|---|---|
+| TDD-0088 | TC-0012-0088 | done | — | RED→GREEN: emoji prohibition validator PROT-284 implemented |
+| TDD-0141~0172 | TC-0012-0141~0172 | exception | DR-0012-0026 | ATDD-first backfill, rev6, vitest PASS 2026-04-15 |
+
+### RED phase evidence — TDD-0088
+
+- **RED command**: `pnpm --filter qfai exec vitest run --project integration prototypingRuntimeIntegration`
+- **RED result**: `it.todo` placeholder — no implementation existed (implicitly RED)
+- **GREEN command**: `pnpm --filter qfai exec vitest run --project integration prototypingRuntimeIntegration`
+- **GREEN result**: 73 passed (including TC-0088 emoji test)
+
+### Test infrastructure fixes
+
+Root cause: `buildMinimalEvidence` / `buildMinimalPrototypingEvidence` helpers in integration and E2E test files were missing `runtimeGate.evidenceRefs: []` and `runtimeGate.ui[].declaredRef`, causing `parseEvidence` to fail and PROT-244/245 render validators to be skipped.
+
+Files fixed:
+- `packages/qfai/tests/integration/renderEvidenceIntegration.test.ts` — 20 → 28 passed
+- `packages/qfai/tests/e2e/renderEvidenceE2E.test.ts` — 13 → 18 passed
+
+### Production code added
+
+- `packages/qfai/src/core/validators/prototypingEvidence.ts`: `containsEmojiInRange()` + PROT-284 check in `validateModeMetadata()`
+- `packages/qfai/src/cli/commands/validate.ts`: PROT-284 description added
+
+### Quality gates
+
+- Types: PASS (`pnpm check-types`)
+- Integration tests: 693 passed
+- Full suite: **169 files / 2068 tests all PASS**
+
+### Final status (rev6 cycle)
+
+**PASS** — TC-0088 done, TDD-0141~0172 exception (DR-0012-0026 backfill), all test failures resolved.
+Suite: 169 passed / 2068 passed (0 failures).
