@@ -1,0 +1,35 @@
+{
+  "version": "2.0",
+  "created_at": "2026-04-15T16:17:58Z",
+  "target": {
+    "kind": "discussion",
+    "path": ".qfai/discussion/discussion-20260415161758193"
+  },
+  "routing_profile": "requirements-heavy",
+  "reviewers": [
+    {
+      "reviewer": "completion-reviewer",
+      "status": "PASS",
+      "feedback_count": 0
+    },
+    {
+      "reviewer": "requirements-reviewer",
+      "status": "PASS",
+      "feedback_count": 2
+    }
+  ],
+  "conditional_reviewers": [
+    {
+      "reviewer": "architecture-reviewer",
+      "condition": "architecture-affecting decisions exist",
+      "status": "PASS",
+      "feedback_count": 1
+    }
+  ],
+  "non_blocking_notes": [
+    "requirements-reviewer: SRC-0002/SRC-0003 paths are placeholders (original docs not in repo); non-blocking",
+    "requirements-reviewer: All REQ status = draft; recommend updating to approved post-review",
+    "architecture-reviewer: 10_Policy.md lacks explicit uiContractId hard-error policy statement; indirectly covered by Testing Policy; non-blocking"
+  ],
+  "overall_status": "PASS"
+}
