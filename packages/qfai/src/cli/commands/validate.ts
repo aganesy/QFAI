@@ -407,6 +407,8 @@ const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-PROT-328":
     "specs[].coverageRefs[].declaredRef must point to a spec declaration under .qfai/specs/.",
   "QFAI-PROT-329": "fullHarness.status is completed but reviewerSignoff.timestamp is missing.",
+  "QFAI-PROT-330":
+    "uiFidelity screen actionsWired exceeds actionsDeclared (expected.actions). actionsWired must not exceed the number of declared actions.",
   "QFAI-CONTRACT-030":
     "Contract index references must match declared contract IDs in .qfai/contracts/**.",
 };

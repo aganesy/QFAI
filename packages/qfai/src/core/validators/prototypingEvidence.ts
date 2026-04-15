@@ -2289,6 +2289,24 @@ async function validateUiFidelity(
         ),
       );
     }
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+    if (screen.expected && screen.observed) {
+      const actionsDeclared = screen.expected.actions;
+      if (screen.observed.actionsWired > actionsDeclared) {
+        issues.push(
+          issue(
+            "QFAI-PROT-330",
+            `QFAI-PROT-330: actionsWired (${screen.observed.actionsWired}) exceeds actionsDeclared (${actionsDeclared}) for route "${screen.route}". actionsWired must not exceed expected.actions.`,
+            "error",
+            evidenceJsonPath,
+            "prototypingEvidence.uiFidelityActionsWiredOverflow",
+            [`uiFidelity.screens[].observed.actionsWired`],
+            "change",
+            `actionsWired は actionsDeclared (expected.actions) を超えてはいけません。observed.actionsWired を再計測してください。`,
+          ),
+        );
+      }
+    }
   }
 
   const contractIndex = await buildContractIndex(root, config);

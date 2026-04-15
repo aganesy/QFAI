@@ -284,19 +284,6 @@ export function derivePrototypingObligations(input: {
   surface: PrototypingSurface;
   effectiveMode: string;
 }): PrototypingObligations {
-  if (input.effectiveMode !== "full-harness") {
-    return {
-      requireRuntimeGate: false,
-      requireUiFidelity: false,
-      requireRenderBundle: false,
-      requireBrowserQaBundle: false,
-      requireFullHarness: false,
-      validCombination: false,
-      invalidReasonCode: UNSUPPORTED_PROTOTYPING_MODE_REASON_CODE,
-      invalidReason: UNSUPPORTED_PROTOTYPING_MODE_MESSAGE,
-    };
-  }
-
   if (!isSupportedPrototypingSurface(input.surface)) {
     return {
       requireRuntimeGate: false,
@@ -307,6 +294,19 @@ export function derivePrototypingObligations(input: {
       validCombination: false,
       invalidReasonCode: NON_UI_PROTOTYPING_SURFACE_REASON_CODE,
       invalidReason: NON_UI_PROTOTYPING_SURFACE_MESSAGE,
+    };
+  }
+
+  if (input.effectiveMode !== "full-harness") {
+    return {
+      requireRuntimeGate: false,
+      requireUiFidelity: false,
+      requireRenderBundle: false,
+      requireBrowserQaBundle: false,
+      requireFullHarness: false,
+      validCombination: false,
+      invalidReasonCode: UNSUPPORTED_PROTOTYPING_MODE_REASON_CODE,
+      invalidReason: UNSUPPORTED_PROTOTYPING_MODE_MESSAGE,
     };
   }
 
