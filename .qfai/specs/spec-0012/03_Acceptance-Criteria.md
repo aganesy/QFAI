@@ -604,3 +604,184 @@ Given error-path test fixtures, when inspected, then missing pack, missing revie
 - US-Ref: US-0012-0049
 - REQ-Ref: REQ-0045
 - docs/README/SKILL が新しい contract を反映している
+
+
+## AC-0012-0050-01: CLI Rejects --mode standard (v1.7.15 rev6)
+
+- US-Ref: US-0012-0050
+- REQ-Ref: REQ-0093
+- `qfai prototyping --mode standard` exits non-zero with error message containing "full-harness mode only"
+
+## AC-0012-0050-02: CLI Rejects --mode low-cost (v1.7.15 rev6)
+
+- US-Ref: US-0012-0050
+- REQ-Ref: REQ-0093
+- `qfai prototyping --mode low-cost` exits non-zero with error message containing "full-harness mode only"
+
+## AC-0012-0050-03: CLI Accepts --mode full-harness (v1.7.15 rev6)
+
+- US-Ref: US-0012-0050
+- REQ-Ref: REQ-0093
+- `qfai prototyping --mode full-harness` with valid surface and calibration proceeds to execution
+
+## AC-0012-0050-04: execution.ts Rejects non-full-harness Mode Independently (v1.7.15 rev6)
+
+- US-Ref: US-0012-0050
+- REQ-Ref: REQ-0093
+- `execution.ts` rejects `mode !== "full-harness"` independently of CLI (defense in depth)
+
+## AC-0012-0050-05: prototypingEvidence Validator Rejects non-full-harness Mode (v1.7.15 rev6)
+
+- US-Ref: US-0012-0050
+- REQ-Ref: REQ-0093
+- `prototypingEvidence.ts` validator rejects `mode !== "full-harness"` in recorded output
+
+## AC-0012-0051-01: CLI Rejects --surface cli (v1.7.15 rev6)
+
+- US-Ref: US-0012-0051
+- REQ-Ref: REQ-0094
+- `qfai prototyping --surface cli` exits non-zero with error naming the rejected surface
+
+## AC-0012-0051-02: CLI Rejects --surface api (v1.7.15 rev6)
+
+- US-Ref: US-0012-0051
+- REQ-Ref: REQ-0094
+- `qfai prototyping --surface api` exits non-zero with error naming the rejected surface
+
+## AC-0012-0051-03: CLI Rejects --surface backend (v1.7.15 rev6)
+
+- US-Ref: US-0012-0051
+- REQ-Ref: REQ-0094
+- `qfai prototyping --surface backend` exits non-zero with error naming the rejected surface
+
+## AC-0012-0051-04: execution.ts Calls assertSupportedPrototypingSurface() (v1.7.15 rev6)
+
+- US-Ref: US-0012-0051
+- REQ-Ref: REQ-0094
+- `execution.ts` calls `assertSupportedPrototypingSurface()` from `surfacePolicy.ts`
+
+## AC-0012-0051-05: prototypingEvidence Validator Rejects Non-Supported Surface (v1.7.15 rev6)
+
+- US-Ref: US-0012-0051
+- REQ-Ref: REQ-0094
+- `prototypingEvidence.ts` validator rejects any surface not in `PROTOTYPING_SUPPORTED_SURFACES`
+
+## AC-0012-0052-01: surfacePolicy.ts Exports Required Functions (v1.7.15 rev6)
+
+- US-Ref: US-0012-0052
+- REQ-Ref: REQ-0095
+- `surfacePolicy.ts` exports `PROTOTYPING_SUPPORTED_SURFACES`, `isSupportedPrototypingSurface(surface)`, and `assertSupportedPrototypingSurface(surface)`
+
+## AC-0012-0052-02: PROTOTYPING_SUPPORTED_SURFACES Is [web, mobile, desktop, mixed] (v1.7.15 rev6)
+
+- US-Ref: US-0012-0052
+- REQ-Ref: REQ-0095
+- `PROTOTYPING_SUPPORTED_SURFACES` = `["web", "mobile", "desktop", "mixed"]` (no cli, api, backend)
+
+## AC-0012-0053-01: runFullHarness Signature Has No Scalar Threshold Params (v1.7.15 rev6)
+
+- US-Ref: US-0012-0053
+- REQ-Ref: REQ-0096
+- `runFullHarness()` signature does not include scalar threshold parameters (passingThreshold etc.)
+
+## AC-0012-0053-02: runFullHarness Accepts calibrationRef.packPath (v1.7.15 rev6)
+
+- US-Ref: US-0012-0053
+- REQ-Ref: REQ-0096
+- `runFullHarness()` accepts `calibrationRef: { packPath: string }` (or pre-resolved `calibrationPack` object)
+
+## AC-0012-0053-03: CalibrationLoader Invoked Internally When packPath Provided (v1.7.15 rev6)
+
+- US-Ref: US-0012-0053
+- REQ-Ref: REQ-0096
+- When `packPath` is provided, `CalibrationLoader` is invoked internally to resolve the pack
+
+## AC-0012-0053-04: Missing packPath Throws Immediately (v1.7.15 rev6)
+
+- US-Ref: US-0012-0053
+- REQ-Ref: REQ-0096
+- If `packPath` is missing or the file is not found, an `Error` is thrown immediately before any iteration
+
+## AC-0012-0053-05: Resolved Pack Path Recorded in Runtime Summary (v1.7.15 rev6)
+
+- US-Ref: US-0012-0053
+- REQ-Ref: REQ-0096
+- The resolved pack's path is recorded in the runtime summary's `calibrationRef.packPath`
+
+## AC-0012-0053-06: Validator Checks calibrationRef.packPath (v1.7.15 rev6)
+
+- US-Ref: US-0012-0053
+- REQ-Ref: REQ-0096
+- Validator checks that `calibrationRef.packPath` matches the pack used at runtime
+
+## AC-0012-0054-01: runtimeGate.evidenceRefs Contains Render Summary Refs (v1.7.15 rev6)
+
+- US-Ref: US-0012-0054
+- REQ-Ref: REQ-0097
+- `runtimeGate.evidenceRefs` contains render summary refs (e.g., `prototyping.json#/iterations/0/renderSummary`)
+
+## AC-0012-0054-02: runtimeGate.evidenceRefs Contains Screenshot Refs (v1.7.15 rev6)
+
+- US-Ref: US-0012-0054
+- REQ-Ref: REQ-0097
+- `runtimeGate.evidenceRefs` contains screenshot refs (e.g., `screenshots/iter-0-screen-login.png`)
+
+## AC-0012-0054-03: runtimeGate.evidenceRefs Contains Browser QA Refs (v1.7.15 rev6)
+
+- US-Ref: US-0012-0054
+- REQ-Ref: REQ-0097
+- `runtimeGate.evidenceRefs` contains Browser QA phase/finding refs
+
+## AC-0012-0054-04: runtimeGate.evidenceRefs Has No Self-References (v1.7.15 rev6)
+
+- US-Ref: US-0012-0054
+- REQ-Ref: REQ-0097
+- `runtimeGate.evidenceRefs` does NOT contain self-references (e.g., `prototyping.json#/runtimeGate`)
+
+## AC-0012-0054-05: Validator Rejects Self-Reference evidenceRefs (v1.7.15 rev6)
+
+- US-Ref: US-0012-0054
+- REQ-Ref: REQ-0097, REQ-0098
+- `prototypingEvidence.ts` validator rejects any evidenceRef that is a self-reference
+
+## AC-0012-0054-06: Validator Rejects Synthetic Free-Text evidenceRefs (v1.7.15 rev6)
+
+- US-Ref: US-0012-0054
+- REQ-Ref: REQ-0097, REQ-0098
+- `prototypingEvidence.ts` validator rejects any evidenceRef that is a synthetic free-text string
+
+## AC-0012-0055-01: reviewerSignoff.status approved Only When Accepted (v1.7.15 rev6)
+
+- US-Ref: US-0012-0055
+- REQ-Ref: REQ-0099
+- `reviewerSignoff.status = "approved"` only when quality gate was met (`terminationReason = "accepted"`)
+
+## AC-0012-0055-02: reviewerSignoff.status rejected When Explicitly Rejected (v1.7.15 rev6)
+
+- US-Ref: US-0012-0055
+- REQ-Ref: REQ-0099
+- `reviewerSignoff.status = "rejected"` only when explicitly rejected (`terminationReason = "rejected"`)
+
+## AC-0012-0055-03: reviewerSignoff.status abandoned for Non-Accept Terminations (v1.7.15 rev6)
+
+- US-Ref: US-0012-0055
+- REQ-Ref: REQ-0099
+- `reviewerSignoff.status = "abandoned"` for `terminationReason = "plateau"`, `"maxIterations"`, or `"runtimeFailure"`
+
+## AC-0012-0055-04: isCompleted Alone Does Not Produce approved Status (v1.7.15 rev6)
+
+- US-Ref: US-0012-0055
+- REQ-Ref: REQ-0099
+- `isCompleted: true` alone does NOT produce `status = "approved"`
+
+## AC-0012-0055-05: uiFidelityBuilder Uses screenId for Matching (v1.7.15 rev6)
+
+- US-Ref: US-0012-0055
+- REQ-Ref: REQ-0100
+- `uiFidelityBuilder.ts` uses `obs.screenId === screen.screenId` for matching (not `screen.uiContractId`)
+
+## AC-0012-0055-06: uiContractId in Observation Is Hard-Error (v1.7.15 rev6)
+
+- US-Ref: US-0012-0055
+- REQ-Ref: REQ-0100
+- Validator hard-errors when observation record contains `uiContractId` field (backward compat abandoned)

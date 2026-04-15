@@ -380,3 +380,23 @@
 - OQ-0004 resolved at SDD level → DR-0012-0034 (pattern-based matching for parameterized routes)
 - OQ-0006 resolved at SDD level → DR-0012-0035 (PrototypingError derived type for packResolver)
 - OQ-0005 deferred to v1.8 (L2 full redesign scope)
+
+
+## v1.7.15 rev6 — Single-PR Completion (Adopted)
+
+### Phase: SDD Outline (Phase 1)
+
+| Layer            | Change                                                                                         | Reason                                           |
+| ---------------- | ---------------------------------------------------------------------------------------------- | ------------------------------------------------ |
+| 05_Contracts.md  | v1.7.15 rev6 Contract Posture 追加（0 items 維持、none-rationale 記載）                         | 内部モジュール変更のみ、外部 contract 新設なし   |
+| spec-0012        | v1.7.15 rev6: 7 WS（full-harness only / surfacePolicy / CalibrationLoader SSOT / concrete evidenceRefs / reviewerSignoff semantics / screenId fix / stale cleanup）を spec-0012 に反映 | discussion-20260415161758193 rev6 仕様化         |
+
+### Discussion Pack Reference
+
+- `discussion-20260415161758193` (v1.7.15 rev6, 3 reviewer PASS)
+- Classification: non-ui
+- OQ-0001 resolved at SDD level → DR-0012-0036 (PROTOTYPING_SUPPORTED_SURFACES = [web, mobile, desktop, mixed])
+- OQ-0002 resolved at SDD level → DR-0012-0037 (surfacePolicy.ts standalone module)
+- OQ-0003 resolved at SDD level → DR-0012-0038 (CalibrationLoader failure → throw Error immediately)
+- OQ-0004 resolved at SDD level → DR-0012-0039 (reviewerLogs.verdict stores mapped vocabulary)
+- OQ-0005 resolved at SDD level → DR-0012-0040 (uiContractId in observation → hard-error)

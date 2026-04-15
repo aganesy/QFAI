@@ -704,3 +704,48 @@
 - Given valid calibration pack with maxIterations=10, plateauDelta=0.01 AND config with different maxIterations=20
 - When runtime and validator resolve thresholds via packResolver.ts
 - Then both use maxIterations=10 (pack wins); config override is ignored; l2Evidence.ts uses structuredArtifactReaders.ts for 04_Sources.md
+
+## EX-0012-0103: Full-Harness Only Mode Enforcement (v1.7.15 rev6)
+
+- BR-Ref: BR-0012-0086
+- Given CLI invoked with `--mode standard` with a valid surface and calibration pack
+- When prototyping execution is attempted
+- Then CLI exits non-zero with error containing "full-harness mode only"; execution.ts never reached; CalibrationLoader never invoked
+
+## EX-0012-0104: Non-UI Surface Rejection at All Layers (v1.7.15 rev6)
+
+- BR-Ref: BR-0012-0087
+- Given CLI invoked with `--surface cli` with a valid mode (full-harness) and calibration pack
+- When prototyping execution is attempted
+- Then CLI exits non-zero naming "cli" as rejected surface; execution.ts assertSupportedPrototypingSurface("cli") throws independently; prototypingEvidence validator rejects recorded output; all three layers fail before any I/O
+
+## EX-0012-0105: surfacePolicy.ts Standalone Module (v1.7.15 rev6)
+
+- BR-Ref: BR-0012-0088
+- Given `isSupportedPrototypingSurface("cli")` called from a context that does not import mode.ts
+- When evaluated
+- Then returns false; `isSupportedPrototypingSurface("web")` returns true; `assertSupportedPrototypingSurface("api")` throws immediately; `PROTOTYPING_SUPPORTED_SURFACES` contains exactly ["web", "mobile", "desktop", "mixed"]
+
+## EX-0012-0106: CalibrationLoader Internal Resolution (v1.7.15 rev6)
+
+- BR-Ref: BR-0012-0089
+- Given runFullHarness() called with `calibrationRef: { packPath: "./calib/missing.yaml" }` (file not found)
+- When execution starts
+- Then immediate Error thrown with packPath in message; no iterations begin; iteration[0] does not exist in output
+
+## EX-0012-0107: Concrete evidenceRefs Validation (v1.7.15 rev6)
+
+- BR-Ref: BR-0012-0090
+- Given runtimeGate.evidenceRefs = ["prototyping.json#/runtimeGate"] (self-reference)
+- When validator runs on the recorded output
+- Then validator rejects with self-reference error; if evidenceRefs = ["specs: UI matches design"] (synthetic) then validator rejects with synthetic-ref error; if evidenceRefs = ["prototyping.json#/iterations/0/renderSummary", "screenshots/iter-0.png"] then validator passes
+
+## EX-0012-0108: reviewerSignoff Semantics and screenId Matching (v1.7.15 rev6)
+
+- BR-Ref: BR-0012-0091
+- Given execution terminates with `terminationReason = "plateau"` and `reviewerSignoff.status = "approved"`
+- When validator runs
+- Then validator rejects: inconsistent status/terminationReason; plateau → abandoned (not approved);
+  Given obs.screenId = "screen-login" and screen.screenId = "screen-001", screen.uiContractId = "screen-login"
+- When uiFidelityBuilder matches
+- Then no match found (old uiContractId path removed); only exact screenId equality produces a match

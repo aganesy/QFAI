@@ -1316,3 +1316,227 @@
 - AC-Refs: AC-0012-0049-04
 - Type: normal
 - valid 04_Sources.md with structured sections → structuredArtifactReaders.ts parses; keyword fallback NOT used; structured parse failure → hard fail (not fallback)
+
+## TC-0012-0141: CLI Rejects --mode standard (v1.7.15 rev6)
+
+- EX-Ref: EX-0012-0103
+- AC-Refs: AC-0012-0050-01
+- Type: error
+- `qfai prototyping --mode standard --surface web ...` → exits non-zero; stderr contains "full-harness mode only"
+
+## TC-0012-0142: CLI Rejects --mode low-cost (v1.7.15 rev6)
+
+- EX-Ref: EX-0012-0103
+- AC-Refs: AC-0012-0050-02
+- Type: error
+- `qfai prototyping --mode low-cost --surface web ...` → exits non-zero; stderr contains "full-harness mode only"
+
+## TC-0012-0143: CLI Accepts --mode full-harness (v1.7.15 rev6)
+
+- EX-Ref: EX-0012-0103
+- AC-Refs: AC-0012-0050-03
+- Type: normal
+- `qfai prototyping --mode full-harness --surface web ...` with valid calibration → execution proceeds; no early error exit
+
+## TC-0012-0144: execution.ts Rejects standard Mode Independently (v1.7.15 rev6)
+
+- EX-Ref: EX-0012-0103
+- AC-Refs: AC-0012-0050-04
+- Type: error
+- execution.ts called directly with `mode: "standard"` → Error thrown before CalibrationLoader is invoked
+
+## TC-0012-0145: Mode Check Fires Before CalibrationLoader (v1.7.15 rev6)
+
+- EX-Ref: EX-0012-0103
+- AC-Refs: AC-0012-0050-04
+- Type: boundary
+- execution.ts with `mode: "standard"` and valid packPath → Error thrown; CalibrationLoader never invoked; packPath file need not exist
+
+## TC-0012-0146: CLI Rejects --surface cli (v1.7.15 rev6)
+
+- EX-Ref: EX-0012-0104
+- AC-Refs: AC-0012-0051-01
+- Type: error
+- `qfai prototyping --mode full-harness --surface cli ...` → exits non-zero; error names "cli" as rejected surface
+
+## TC-0012-0147: CLI Rejects --surface api (v1.7.15 rev6)
+
+- EX-Ref: EX-0012-0104
+- AC-Refs: AC-0012-0051-02
+- Type: error
+- `qfai prototyping --mode full-harness --surface api ...` → exits non-zero; error names "api"
+
+## TC-0012-0148: CLI Rejects --surface backend (v1.7.15 rev6)
+
+- EX-Ref: EX-0012-0104
+- AC-Refs: AC-0012-0051-03
+- Type: error
+- `qfai prototyping --mode full-harness --surface backend ...` → exits non-zero; error names "backend"
+
+## TC-0012-0149: execution.ts Calls assertSupportedPrototypingSurface (v1.7.15 rev6)
+
+- EX-Ref: EX-0012-0104
+- AC-Refs: AC-0012-0051-04
+- Type: normal
+- execution.ts with surface="web" → assertSupportedPrototypingSurface("web") does not throw; execution continues
+
+## TC-0012-0150: prototypingEvidence Validator Rejects cli Surface (v1.7.15 rev6)
+
+- EX-Ref: EX-0012-0104
+- AC-Refs: AC-0012-0051-05
+- Type: error
+- Recorded output contains `surface: "cli"` → validator emits error; QFAI-PROT error for unsupported surface
+
+## TC-0012-0151: surfacePolicy isSupportedPrototypingSurface Returns False for cli (v1.7.15 rev6)
+
+- EX-Ref: EX-0012-0105
+- AC-Refs: AC-0012-0052-01
+- Type: normal
+- `isSupportedPrototypingSurface("cli")` → false; `isSupportedPrototypingSurface("web")` → true
+
+## TC-0012-0152: PROTOTYPING_SUPPORTED_SURFACES Contains Exactly 4 Members (v1.7.15 rev6)
+
+- EX-Ref: EX-0012-0105
+- AC-Refs: AC-0012-0052-02
+- Type: boundary
+- `PROTOTYPING_SUPPORTED_SURFACES.sort()` equals `["desktop", "mixed", "mobile", "web"]`; length=4
+
+## TC-0012-0153: assertSupportedPrototypingSurface Throws for Unknown Surface (v1.7.15 rev6)
+
+- EX-Ref: EX-0012-0105
+- AC-Refs: AC-0012-0052-01
+- Type: boundary
+- `assertSupportedPrototypingSurface("unknown-xyz")` → throws; `isSupportedPrototypingSurface("unknown-xyz")` → false
+
+## TC-0012-0154: runFullHarness Missing packPath Throws Before Iteration (v1.7.15 rev6)
+
+- EX-Ref: EX-0012-0106
+- AC-Refs: AC-0012-0053-04
+- Type: error
+- `runFullHarness({ calibrationRef: { packPath: "./calib/missing.yaml" } })` → Error thrown; no iteration[0] in output
+
+## TC-0012-0155: runFullHarness No calibrationRef Throws (v1.7.15 rev6)
+
+- EX-Ref: EX-0012-0106
+- AC-Refs: AC-0012-0053-04
+- Type: error
+- `runFullHarness({})` with no calibrationRef → Error thrown before any iteration; message states calibration required
+
+## TC-0012-0156: runFullHarness Malformed YAML Throws at Parse (v1.7.15 rev6)
+
+- EX-Ref: EX-0012-0106
+- AC-Refs: AC-0012-0053-04
+- Type: error
+- packPath points to malformed YAML file → Error thrown at parse time; no iteration begins
+
+## TC-0012-0157: runFullHarness Records Resolved packPath in Summary (v1.7.15 rev6)
+
+- EX-Ref: EX-0012-0106
+- AC-Refs: AC-0012-0053-05
+- Type: normal
+- `runFullHarness({ calibrationRef: { packPath: "./calib/standard.yaml" } })` with valid YAML → output summary.calibrationRef.packPath = "./calib/standard.yaml"
+
+## TC-0012-0158: TypeScript Compile Error When Scalar Params Passed (v1.7.15 rev6)
+
+- EX-Ref: EX-0012-0106
+- AC-Refs: AC-0012-0053-01
+- Type: boundary
+- Attempt to call `runFullHarness({ passingThreshold: 0.95 })` → TypeScript compile error (param removed from signature)
+
+## TC-0012-0159: Validator Rejects calibrationRef.packPath Mismatch (v1.7.15 rev6)
+
+- EX-Ref: EX-0012-0106
+- AC-Refs: AC-0012-0053-06
+- Type: error
+- Recorded output has calibrationRef.packPath="./calib/A.yaml" but pack at runtime was "B.yaml" → validator error
+
+## TC-0012-0160: Validator Passes Concrete evidenceRefs (v1.7.15 rev6)
+
+- EX-Ref: EX-0012-0107
+- AC-Refs: AC-0012-0054-01, AC-0012-0054-02, AC-0012-0054-03
+- Type: normal
+- evidenceRefs = ["prototyping.json#/iterations/0/renderSummary", "screenshots/iter-0.png", "browserQa/iter-0-smoke.json#/findings/0"] → validator passes
+
+## TC-0012-0161: Validator Rejects Self-Reference evidenceRef (v1.7.15 rev6)
+
+- EX-Ref: EX-0012-0107
+- AC-Refs: AC-0012-0054-04, AC-0012-0054-05
+- Type: error
+- evidenceRefs = ["prototyping.json#/runtimeGate"] → validator error: self-reference forbidden
+
+## TC-0012-0162: Validator Rejects Synthetic Free-Text evidenceRef (v1.7.15 rev6)
+
+- EX-Ref: EX-0012-0107
+- AC-Refs: AC-0012-0054-06
+- Type: error
+- evidenceRefs = ["specs: UI matches design as per visual inspection"] → validator error: synthetic ref forbidden
+
+## TC-0012-0163: Validator Rejects Empty evidenceRefs Array (v1.7.15 rev6)
+
+- EX-Ref: EX-0012-0107
+- AC-Refs: AC-0012-0054-05
+- Type: boundary
+- runtimeGate.evidenceRefs = [] → validator error: at least one concrete ref required
+
+## TC-0012-0164: reviewerSignoff accepted Termination Produces approved (v1.7.15 rev6)
+
+- EX-Ref: EX-0012-0108
+- AC-Refs: AC-0012-0055-01
+- Type: normal
+- `terminationReason = "accepted"` → `reviewerSignoff.status = "approved"`; validator passes
+
+## TC-0012-0165: reviewerSignoff plateau Termination Produces abandoned (v1.7.15 rev6)
+
+- EX-Ref: EX-0012-0108
+- AC-Refs: AC-0012-0055-03
+- Type: error
+- `terminationReason = "plateau"` + `status = "approved"` → validator rejects: inconsistent; correct: status = "abandoned"
+
+## TC-0012-0166: reviewerSignoff isCompleted True Alone Does Not Produce approved (v1.7.15 rev6)
+
+- EX-Ref: EX-0012-0108
+- AC-Refs: AC-0012-0055-04
+- Type: boundary
+- `isCompleted: true` + `terminationReason: "plateau"` → status must be "abandoned" not "approved"; validator rejects if "approved"
+
+## TC-0012-0167: uiFidelityBuilder Matches by screenId (v1.7.15 rev6)
+
+- EX-Ref: EX-0012-0108
+- AC-Refs: AC-0012-0055-05
+- Type: normal
+- obs.screenId = "screen-login", screen.screenId = "screen-login" → match found; fidelity computed
+
+## TC-0012-0168: uiFidelityBuilder Does Not Match by uiContractId (v1.7.15 rev6)
+
+- EX-Ref: EX-0012-0108
+- AC-Refs: AC-0012-0055-05
+- Type: error
+- obs.screenId = "screen-login", screen.uiContractId = "screen-login", screen.screenId = "screen-001" → no match found (old path removed); observation unmatched
+
+## TC-0012-0169: Validator Hard-Errors on uiContractId in Observation (v1.7.15 rev6)
+
+- EX-Ref: EX-0012-0108
+- AC-Refs: AC-0012-0055-06
+- Type: error
+- Observation record contains `uiContractId` field → validator hard-error; backward compat abandoned (OQ-0005)
+
+## TC-0012-0170: reviewerLogs verdict Uses Mapped Vocabulary (v1.7.15 rev6)
+
+- EX-Ref: EX-0012-0108
+- AC-Refs: AC-0012-0055-01, AC-0012-0055-02
+- Type: normal
+- reviewerLogs[0].verdict = "approve" → validator passes; verdict = "accept" (pre-mapping) → TypeScript type error
+
+## TC-0012-0171: Shipped Docs Do Not Contain standard or low-cost (v1.7.15 rev6)
+
+- EX-Ref: EX-0012-0108
+- AC-Refs: AC-0012-0055-03
+- Type: normal
+- SKILL.md, evidence/README.md, review/README.md do not contain "standard mode", "low-cost", or "mockPaths.status=pass"
+
+## TC-0012-0172: Test Fixtures Do Not Allow cli+standard Prototyping (v1.7.15 rev6)
+
+- EX-Ref: EX-0012-0108
+- AC-Refs: AC-0012-0055-03
+- Type: boundary
+- No test fixture contains `surface: "cli"` with `mode: "standard"`; no fixture asserts `approved` for plateau termination

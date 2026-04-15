@@ -668,3 +668,84 @@
 - l2Evidence.ts keyword/bullet fallback downgraded to last-resort (only on complete parse failure)
 - l2Evidence.ts: failure to parse 04_Sources.md structured section → fail
 - docs/README/SKILL updated to remove non-UI prototyping language, API/DB coverage from prototyping contract, and reflect new contracts (OQ-0002 resolved: validator reject only, no schema change)
+
+
+## BR-0012-0086: Full-Harness Only Enforcement (v1.7.15 rev6 WS-1)
+
+- AC-Refs: AC-0012-0050-01, AC-0012-0050-02, AC-0012-0050-03, AC-0012-0050-04, AC-0012-0050-05
+- Only `full-harness` mode is supported in packages/qfai v1.7.15; `standard` and `low-cost` are rejected at all layers
+- CLI layer (`cli/commands/prototyping.ts`): reject `--mode standard` and `--mode low-cost` before any processing; error message MUST contain "full-harness mode only"
+- execution.ts layer: reject `mode !== "full-harness"` as defense-in-depth after CLI; do not rely on CLI rejection
+- prototypingEvidence.ts validator layer: reject recorded output containing `mode !== "full-harness"`
+- Mode check MUST fire before calibration loading and before any iteration begins
+- Case-sensitive: "FULL-HARNESS" and "" (empty) are also rejected
+
+## BR-0012-0087: Surface Rejection at All Layers (v1.7.15 rev6 WS-1)
+
+- AC-Refs: AC-0012-0051-01, AC-0012-0051-02, AC-0012-0051-03, AC-0012-0051-04, AC-0012-0051-05
+- Non-UI surfaces (`cli`, `api`, `backend`, and any surface not in PROTOTYPING_SUPPORTED_SURFACES) are rejected at all layers
+- CLI layer: reject `--surface cli`, `--surface api`, `--surface backend` before any processing; error MUST name the rejected surface
+- execution.ts layer: calls `assertSupportedPrototypingSurface()` from `surfacePolicy.ts` as defense-in-depth
+- prototypingEvidence.ts validator layer: rejects any surface not in `PROTOTYPING_SUPPORTED_SURFACES`
+- Surface rejection fires before file I/O and before calibration load attempt
+- Unknown surfaces (not in PROTOTYPING_SUPPORTED_SURFACES) are also rejected
+
+## BR-0012-0088: surfacePolicy.ts as SSOT Standalone Module (v1.7.15 rev6 WS-2)
+
+- AC-Refs: AC-0012-0052-01, AC-0012-0052-02
+- `packages/qfai/src/core/prototyping/surfacePolicy.ts` is the single source of truth for surface allowlist
+- Must export: `PROTOTYPING_SUPPORTED_SURFACES: readonly string[]`, `isSupportedPrototypingSurface(surface: string): boolean`, `assertSupportedPrototypingSurface(surface: string): void`
+- `PROTOTYPING_SUPPORTED_SURFACES` value MUST be `["web", "mobile", "desktop", "mixed"]` exactly
+- `mixed` is included as a legitimate cross-platform UI surface (OQ-0001 resolution)
+- `cli`, `api`, `backend` are explicitly excluded
+- No other module may define surface allowlist as SSOT; mode.ts must not duplicate these constants
+- `assertSupportedPrototypingSurface()` throws immediately when surface is not in PROTOTYPING_SUPPORTED_SURFACES
+- `isSupportedPrototypingSurface()` is a pure function (deterministic, no side effects)
+
+## BR-0012-0089: runFullHarness CalibrationLoader Internal Resolution (v1.7.15 rev6 WS-3)
+
+- AC-Refs: AC-0012-0053-01, AC-0012-0053-02, AC-0012-0053-03, AC-0012-0053-04, AC-0012-0053-05, AC-0012-0053-06
+- `runFullHarness()` signature MUST NOT include scalar threshold parameters (e.g., passingThreshold, maxIterations as direct args)
+- `runFullHarness()` accepts `calibrationRef: { packPath: string }` OR a pre-resolved `calibrationPack` object
+- When `packPath` is provided, `CalibrationLoader` is invoked INTERNALLY to resolve the pack
+- If `packPath` is missing or the file is not found, an `Error` is thrown IMMEDIATELY before any iteration begins; error message includes packPath
+- If `packPath` points to malformed YAML, an `Error` is thrown at parse time before any iteration
+- The resolved pack's path is recorded in the runtime summary's `calibrationRef.packPath`
+- Validator checks that `calibrationRef.packPath` in the recorded output matches the pack used at runtime
+- TypeScript: removing scalar params from the signature causes a compile error if caller tries to pass them (type safety enforced)
+- Pack resolution error fires before `iteration[0]` begins; no partial iteration state in output on failure
+
+## BR-0012-0090: Concrete evidenceRefs Enforcement (v1.7.15 rev6 WS-4)
+
+- AC-Refs: AC-0012-0054-01, AC-0012-0054-02, AC-0012-0054-03, AC-0012-0054-04, AC-0012-0054-05, AC-0012-0054-06
+- `runtimeGate.evidenceRefs` MUST contain only concrete, resolvable artifact refs:
+  - Render summary refs: e.g., `prototyping.json#/iterations/N/renderSummary`
+  - Screenshot refs: e.g., `screenshots/iter-N-screen-login.png`
+  - Browser QA phase/finding refs: e.g., `browserQa/iter-N-smoke.json#/findings/0`
+- Self-references pointing to `prototyping.json#/runtimeGate` or similar are FORBIDDEN
+- Synthetic free-text strings (e.g., `"specs: UI matches design"`) are FORBIDDEN
+- Empty `evidenceRefs` array is forbidden; at least one concrete ref is required
+- `specCoverage.evidenceRefs` MUST contain only `40_screen_contracts.md#<screen-id>` spec refs and concrete observation artifact refs
+- `prototypingEvidence.ts` validator MUST reject self-references and synthetic strings with distinct error codes
+- Validation must check all entries; any single invalid entry causes rejection
+- Validator check is idempotent: same evidenceRefs validated twice returns same result
+
+## BR-0012-0091: reviewerSignoff Semantics and screenId Matching (v1.7.15 rev6 WS-5/WS-6/WS-7)
+
+- AC-Refs: AC-0012-0055-01, AC-0012-0055-02, AC-0012-0055-03, AC-0012-0055-04, AC-0012-0055-05, AC-0012-0055-06
+- `reviewerSignoff.status` MUST be one of: `approved`, `rejected`, `abandoned`
+- Mapping from `terminationReason`:
+  - `terminationReason = "accepted"` → `status = "approved"`
+  - `terminationReason = "rejected"` → `status = "rejected"`
+  - `terminationReason = "plateau"`, `"maxIterations"`, or `"runtimeFailure"` → `status = "abandoned"`
+- `isCompleted: true` alone MUST NOT produce `status = "approved"`; terminationReason is authoritative
+- `reviewerLogs[].verdict` MUST use mapped vocabulary: `approve`, `revise`, `reject`, `abandon`
+- Pre-mapping values (e.g., `accept`, `plateau-stop`) MUST NOT appear in recorded output (OQ-0004 resolution)
+- Validator enforces that `status` and `terminationReason` are mutually consistent; inconsistency is an error
+- Mapping is applied once at harness execution end; result is immutable after
+- `uiFidelityBuilder.ts` MUST use `obs.screenId === screen.screenId` for observation-to-screen matching
+- Old matching code `obs.screenId === screen.uiContractId` MUST be fully removed
+- Observations with a `screenId` matching no screen contract produce no match (no uiContractId fallback)
+- Any observation record containing a `uiContractId` field MUST be hard-errored by the validator (OQ-0005 resolution: backward compat abandoned)
+- Stale semantics removal: shipped docs, SKILL.md, evidence/README.md, review/README.md, contracts/ui/README.md, packages/qfai/README.md must not contain `standard`, `low-cost`, `cli prototyping`, or `mockPaths.status=pass`
+- Test fixtures must not assert `approved` for plateau/maxIterations termination, or allow `cli + standard` prototyping

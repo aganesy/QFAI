@@ -271,3 +271,63 @@ As a developer, I want test fixtures to remove l1/l2 direct pass, packVersion:"1
 - REQ-Refs: REQ-0041〜REQ-0053
 - WS: WS-6
 - Discussion: discussion-20260415014056471
+
+## US-0012-0050: Reject Non-Full-Harness Mode at All Layers (v1.7.15 rev6)
+
+**As a** package implementor,
+**I want** CLI, execution.ts, and prototypingEvidence.ts to reject `standard` and `low-cost` mode with a clear error,
+**So that** no user can accidentally run an unsupported mode and receive an unvalidatable result.
+
+- REQ-Refs: REQ-0093
+- WS: WS-1
+- Discussion: discussion-20260415161758193
+
+## US-0012-0051: Reject Non-UI Surfaces at All Layers (v1.7.15 rev6)
+
+**As a** package implementor,
+**I want** `cli`, `api`, and `backend` surfaces to be rejected at CLI, execution, and validator layers,
+**So that** stale CLI prototyping references in old configs cannot silently produce a prototyping run.
+
+- REQ-Refs: REQ-0094
+- WS: WS-1, WS-2
+- Discussion: discussion-20260415161758193
+
+## US-0012-0052: surfacePolicy.ts Standalone Module (v1.7.15 rev6)
+
+**As a** QFAI developer,
+**I want** `packages/qfai/src/core/prototyping/surfacePolicy.ts` to be the SSOT for surface allowlist,
+**So that** surface policy is independently testable and importable without mode.ts transitive dependencies.
+
+- REQ-Refs: REQ-0095
+- WS: WS-2
+- Discussion: discussion-20260415161758193
+
+## US-0012-0053: runFullHarness Uses CalibrationLoader Internally (v1.7.15 rev6)
+
+**As a** harness operator,
+**I want** `runFullHarness()` to resolve its calibration pack internally from `calibrationRef.packPath`,
+**So that** I cannot override thresholds externally and the validator can verify the same pack was used.
+
+- REQ-Refs: REQ-0096
+- WS: WS-3
+- Discussion: discussion-20260415161758193
+
+## US-0012-0054: runtimeGate and specCoverage Use Concrete evidenceRefs (v1.7.15 rev6)
+
+**As an** auditor,
+**I want** `runtimeGate.evidenceRefs` and `specCoverage.evidenceRefs` to point to concrete, resolvable artifacts,
+**So that** I can independently verify each ref without relying on self-referential or synthetic pointers.
+
+- REQ-Refs: REQ-0097, REQ-0098
+- WS: WS-4
+- Discussion: discussion-20260415161758193
+
+## US-0012-0055: reviewerSignoff Semantics, screenId Matching, and Stale Cleanup (v1.7.15 rev6)
+
+**As an** auditor and test engineer,
+**I want** `reviewerSignoff.status` to reflect actual outcome, `uiFidelityBuilder` to match by `screenId`, and stale docs/tests to be removed,
+**So that** audit trail is unambiguous and test fixtures are not misleading.
+
+- REQ-Refs: REQ-0099, REQ-0100, REQ-0101, REQ-0102
+- WS: WS-5, WS-6, WS-7
+- Discussion: discussion-20260415161758193

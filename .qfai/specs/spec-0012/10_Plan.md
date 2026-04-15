@@ -234,3 +234,64 @@ WS-1 is independent (parallel possible). WS-2 is foundation for WS-3/WS-4. WS-6 
 | D: Multi-screen BrowserQA | per-screen refs; no phase-level generic fallback | TC-0012-0131..0133 |
 | E: Action coverage | finding count ≠ actionsWired; wiring condition only | TC-0012-0134..0137 |
 | F: Calibration/validator/L2 | runtime+validator use same pack; config override ignored; structured-only L2 | TC-0012-0138..0140 |
+
+
+## v1.7.15 rev6 Implementation Strategy
+
+### Scope Boundary
+
+Single-PR: `packages/qfai/**` only. 7 workstreams from discussion-20260415161758193.
+
+### New Files (1 new module)
+
+| File | WS | Purpose |
+|------|-----|---------|
+| `surfacePolicy.ts` | WS-2 | Surface allowlist SSOT (PROTOTYPING_SUPPORTED_SURFACES, isSupportedPrototypingSurface, assertSupportedPrototypingSurface) |
+
+### Modules Touched (rev6 Change Obligation)
+
+| Module | Change Obligation | WS |
+|--------|-------------------|-----|
+| `cli/commands/prototyping.ts` | Reject --mode standard/low-cost with "full-harness mode only" error; reject --surface cli/api/backend before any I/O | WS-1 |
+| `prototyping/execution.ts` | Reject mode !== "full-harness" independently; call assertSupportedPrototypingSurface() from surfacePolicy.ts | WS-1, WS-2 |
+| `prototyping/surfacePolicy.ts` (NEW) | Export PROTOTYPING_SUPPORTED_SURFACES=[web,mobile,desktop,mixed], isSupportedPrototypingSurface, assertSupportedPrototypingSurface | WS-2 |
+| `harness/runtime.ts` | Remove scalar threshold params from runFullHarness(); accept calibrationRef.packPath; invoke CalibrationLoader internally; throw on missing/unresolvable | WS-3 |
+| `runtimeGateBuilder.ts` | Ensure evidenceRefs contains only concrete refs; remove any self-reference generation | WS-4 |
+| `specCoverage.ts` | Ensure evidenceRefs contains only concrete refs; remove synthetic string generation | WS-4 |
+| `prototypingEvidence.ts` | Validate mode=full-harness; validate surface in PROTOTYPING_SUPPORTED_SURFACES; reject self-refs/synthetic evidenceRefs; enforce reviewerSignoff/terminationReason consistency; hard-error uiContractId in observation | WS-1, WS-2, WS-4, WS-5, WS-6 |
+| `prototyping/uiFidelityBuilder.ts` | Replace obs.screenId === screen.uiContractId with obs.screenId === screen.screenId | WS-6 |
+| `packages/qfai/assets/**` | Remove standard/low-cost/cli prototyping/mockPaths.status=pass from SKILL.md, evidence/README.md, review/README.md, contracts/ui/README.md | WS-7 |
+| `packages/qfai/README.md` | Remove stale mode/surface references | WS-7 |
+| `tests/**` | Update fixtures: remove cli+standard, remove approved-for-plateau, add uiContractId hard-error tests, add mode reject tests, add surface reject tests | WS-7 |
+
+### Implementation Order (rev6 dependency chain)
+
+WS-1 and WS-2 are foundational; WS-3, WS-4, WS-5, WS-6 are independent of each other. WS-7 follows all code changes.
+
+1. **Step 1** (WS-2): `surfacePolicy.ts` new module — define constants and functions
+2. **Step 2** (WS-1): `cli/commands/prototyping.ts` + `execution.ts` + `harness/runtime.ts` + `prototypingEvidence.ts` — full-harness-only enforcement; surface rejection using surfacePolicy.ts
+3. **Step 3** (WS-3): `harness/runtime.ts` — remove scalar params; add calibrationRef.packPath; CalibrationLoader internal resolution
+4. **Step 4** (WS-4): `runtimeGateBuilder.ts` + `specCoverage.ts` + `prototypingEvidence.ts` — concrete evidenceRefs; self-ref and synthetic string rejection
+5. **Step 5** (WS-5): `harness/runtime.ts` + `prototypingEvidence.ts` — reviewerSignoff status mapping; reviewerLogs verdict vocabulary
+6. **Step 6** (WS-6): `prototyping/uiFidelityBuilder.ts` + `prototypingEvidence.ts` — screenId-based matching; uiContractId hard-error
+7. **Step 7** (WS-7): docs/assets/tests — stale semantics removal
+
+### Test Strategy (rev6)
+
+| Layer | Location | Coverage Target |
+|-------|----------|-----------------|
+| Unit | `tests/unit/` | surfacePolicy: isSupportedPrototypingSurface, assertSupportedPrototypingSurface; CalibrationLoader throw-on-missing; uiFidelityBuilder screenId match |
+| Integration | `tests/integration/` | end-to-end full-harness-only enforcement (mode/surface reject all layers); concrete evidenceRefs chain; reviewerSignoff consistency |
+| Validator | `tests/validators/` | mode reject rule, surface reject rule, self-ref evidenceRef rule, synthetic evidenceRef rule, reviewerSignoff consistency rule, uiContractId hard-error rule |
+| ATDD annotation map | `spec-0012/tdd/test-list.md` | TC-0012-0141..TC-0012-0172 mapped to TDD-IDs |
+
+### Acceptance Test Matrix Mapping
+
+| Category | Coverage Target | TC Range |
+|----------|-----------------|----------|
+| A: Mode rejection | standard/low-cost reject all layers | TC-0012-0141..0145 |
+| B: Surface rejection | cli/api/backend reject all layers | TC-0012-0146..0150 |
+| C: surfacePolicy.ts module | PROTOTYPING_SUPPORTED_SURFACES, isSupportedPrototypingSurface, assertSupportedPrototypingSurface | TC-0012-0151..0153 |
+| D: Calibration pack SSOT | CalibrationLoader internal; throw on missing; packPath in summary | TC-0012-0154..0159 |
+| E: Concrete evidenceRefs | no self-refs; no synthetic strings; at least one concrete ref | TC-0012-0160..0163 |
+| F: reviewerSignoff + screenId + stale | status/terminationReason consistency; screenId match; uiContractId error; stale docs/tests | TC-0012-0164..0172 |

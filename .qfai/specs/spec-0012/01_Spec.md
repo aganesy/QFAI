@@ -16,6 +16,7 @@
   - NOTE: v1.7.15 adds runtime truthfulness hardening — panel scoring from real evidence, converged requires iterationCount>=2, reviewer/commitSha mandatory, specCoverage from real diffs, uiFidelity observation-only, CalibrationLoader wired into execution.ts, fail-fast on missing evidence
   - NOTE: v1.7.15 rev4 adds 5 audit resolution items — cli/full-harness 4-layer reject, screen contract-based Browser QA targets ("/primary" removal), Browser QA evidence chain completeness (hard-fail on empty), canonical route semantics for runtimeGate/specCoverage, L2 structured parse priority, stale semantics cleanup
   - NOTE: v1.7.15 rev5 adds 6 audit resolution items (WS-1..WS-6 from discussion-20260415014056471) — all-mode non-UI surface rejection, observed-only ledger (runtimeObservation.ts), per-screen Browser QA mandatory (browserQaPerScreen.ts), action coverage semantics (actionCoverage.ts), runFullHarness() fail-closed (required adapters+screenContracts), calibration pack as SSOT (packResolver.ts, structuredArtifactReaders.ts)
+  - NOTE: v1.7.15 rev6 adds 7 workstreams — (WS-1) full-harness-only mode enforcement at CLI/execution/validator, (WS-2) surfacePolicy.ts standalone module with PROTOTYPING_SUPPORTED_SURFACES=[web,mobile,desktop,mixed], (WS-3) runFullHarness() CalibrationLoader internal resolution (scalar params removed), (WS-4) concrete-only evidenceRefs in runtimeGate/specCoverage (self-ref/synthetic banned), (WS-5) reviewerSignoff.status approved/rejected/abandoned mapping + reviewerLogs verdict vocabulary, (WS-6) uiFidelityBuilder screenId-based matching (uiContractId hard-error), (WS-7) stale mode/surface semantics removed from shipped docs/assets/tests
   - `/qfai-prototyping` skill workflow (SKILL only, no CLI command) — skill-centered truth: the skill is the sole interface for prototyping
   - All-spec stage: scope is ALL specs from `.qfai/specs/spec-*`
   - Spec Auto-Discovery Protocol (4-source unified diff detection: branch diff, local changes, evidence mtime, delta.md parse)
@@ -87,6 +88,12 @@
 - NFR-0021 (rev5): SSOT consistency — runtime+validatorが同一calibration packから同一threshold
 - NFR-0022 (rev5): per-screen evidence completeness — N screen contract → N個の固有browserQaEvidenceRefs
 - NFR-0023 (rev5, Should): no deprecated contract remnants — runtimeGate.api/db / synthetic-200 / actionsWired=findingCount / config-calibrationが全ソースから消えること
+- NFR-0024 (rev6): deterministic rejection — mode/surface rejections fail-closed; 0 silent pass-through for invalid input
+- NFR-0025 (rev6): calibration pack fail-fast — runFullHarness() throws before iteration on missing/unresolvable packPath
+- NFR-0026 (rev6): evidenceRefs resolvability — 0 self-refs or synthetic strings in runtimeGate.evidenceRefs / specCoverage.evidenceRefs
+- NFR-0027 (rev6): TypeScript strict compliance — 0 @ts-ignore, bare as casts, any types in new/modified files; pnpm check-types exits 0
+- NFR-0028 (rev6): test suite pass rate — all 5 vitest suites pass (pnpm test exits 0) after rev6 changes
+- NFR-0029 (rev6): reviewerSignoff auditability — terminationReason/status inconsistency count = 0
 
 ## Applicable Policy
 
@@ -196,10 +203,20 @@
 - REQ-0090: canonical route semantics (v1.7.15 rev4; WS-4) — specCoverage / runtimeGateBuilder で canonical path 比較。URL をルートとして扱わない。missing_observation レポート
 - REQ-0091: L2 structured parse priority (v1.7.15 rev4; WS-5) — 正規アーティファクト（20-23 系、04_Sources.md、40_screen_contracts.md）必須。構造化パース優先。ヒューリスティック縮小
 - REQ-0092: stale semantics cleanup (v1.7.15 rev4; WS-6) — prototypingEvidence.ts 陳腐化 remediation 除去。skip→reject 変換。URL-as-route→canonical route。"/primary" 除去。README/SKILL/evidence README 更新
+- REQ-0093 (v1.7.15 rev6; WS-1): Reject non-full-harness prototyping modes — CLI, execution.ts, and prototypingEvidence.ts must reject `standard` and `low-cost` mode with error stating only `full-harness` is supported
+- REQ-0094 (v1.7.15 rev6; WS-1): Reject non-UI prototyping surfaces — CLI, execution.ts, and prototypingEvidence.ts must reject `cli`, `api`, `backend`, and any surface not in PROTOTYPING_SUPPORTED_SURFACES; error must name the rejected surface
+- REQ-0095 (v1.7.15 rev6; WS-2): surfacePolicy.ts standalone module — `packages/qfai/src/core/prototyping/surfacePolicy.ts` exports `PROTOTYPING_SUPPORTED_SURFACES`, `isSupportedPrototypingSurface(surface)`, `assertSupportedPrototypingSurface(surface)` as SSOT
+- REQ-0096 (v1.7.15 rev6; WS-3): runFullHarness calibration pack SSOT — `runFullHarness()` accepts `calibrationRef.packPath`; resolves pack internally via `CalibrationLoader`; missing/unresolvable packPath throws immediately
+- REQ-0097 (v1.7.15 rev6; WS-4): runtimeGate concrete evidenceRefs — `runtimeGate.evidenceRefs` contains only concrete artifact refs; self-references and synthetic strings forbidden
+- REQ-0098 (v1.7.15 rev6; WS-4): specCoverage concrete evidenceRefs — `specCoverage.evidenceRefs` contains only concrete spec refs and observation artifact refs; synthetic string refs forbidden
+- REQ-0099 (v1.7.15 rev6; WS-5): reviewerSignoff and reviewerLogs semantics — `reviewerSignoff.status` in {approved,rejected,abandoned}; `reviewerLogs[].verdict` in {approve,revise,reject,abandon}; isCompleted alone must not produce `approved`
+- REQ-0100 (v1.7.15 rev6; WS-6): uiFidelityBuilder screenId matching — matching uses `obs.screenId === screen.screenId`; old `screen.uiContractId` matching removed; uiContractId in observation = hard-error
+- REQ-0101 (v1.7.15 rev6; WS-7): Remove stale mode/surface semantics from shipped docs and assets — SKILL.md, evidence/README.md, review/README.md, contracts/ui/README.md, packages/qfai/README.md must not contain `standard`, `low-cost`, `cli prototyping`, or `mockPaths.status=pass`
+- REQ-0102 (v1.7.15 rev6; WS-7): Remove stale test fixtures — no fixture allows `cli + standard` prototyping, assumes optional evidence for `standard`, allows `mockPaths.status=pass`, or asserts `approved` for plateau/maxIterations termination
 
 ## Entry points
 
-- US range in this spec: US-0012-0001..US-0012-0043
+- US range in this spec: US-0012-0001..US-0012-0055
 - Primary actors: Developer, AI Agent (FullStackEngineer, RuntimeGatekeeper), CI/CD pipeline
 - Notes: No CLI command exists. This is a skill-only spec for `/qfai-prototyping`.
 

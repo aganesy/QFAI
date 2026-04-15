@@ -162,6 +162,21 @@ QFAI は GUI を持たない CLI ツールである。`/qfai-prototyping` スキ
 - 全て QFAI 内部モジュール。外部向け stable DB/API/UI contract は新設しない。
 - したがって Contract Index の `0 items` は v1.7.15 rev5 でも意図的な none-rationale であり、discussion-20260415014056471 のスコープ境界に整合する。
 
+## v1.7.15 rev6 Contract Posture
+
+- Contracts-first review completed for v1.7.15 rev6 single-PR completion design (`discussion-20260415161758193`).
+- v1.7.15 rev6 は `packages/qfai` 内部の prototyping mode/surface enforcement / surfacePolicy.ts 新設 / CalibrationLoader internal resolution / evidenceRefs semantics / reviewerSignoff semantics / uiFidelityBuilder 修正 / stale docs・tests 整理を対象とした単一 PR リリースであり、外部向け stable contract は新設しない。
+- 主な変更対象:
+  - WS-1: `cli/commands/prototyping.ts` / `execution.ts` / `prototypingEvidence.ts` — full-harness only enforcement
+  - WS-2: `surfacePolicy.ts`（新設）/ `execution.ts` / `prototypingEvidence.ts` — surface allowlist SSOT
+  - WS-3: `harness/runtime.ts` — runFullHarness() scalar params removed; CalibrationLoader internal resolution
+  - WS-4: `runtimeGateBuilder.ts` / `specCoverage.ts` / `prototypingEvidence.ts` — concrete evidenceRefs enforcement
+  - WS-5: `harness/runtime.ts` / `prototypingEvidence.ts` — reviewerSignoff status semantics
+  - WS-6: `prototyping/uiFidelityBuilder.ts` / `prototypingEvidence.ts` — screenId matching; uiContractId hard-error
+  - WS-7: `packages/qfai/assets/**` / `packages/qfai/README.md` / `tests/**` — stale semantics removal
+- 全て QFAI 内部モジュール。外部向け stable DB/API/UI contract は新設しない。
+- したがって Contract Index の `0 items` は v1.7.15 rev6 でも意図的な none-rationale であり、discussion-20260415161758193 のスコープ境界に整合する。
+
 ## ER Diagram
 
 QFAI はデータベースを使用しないため、ER Diagram は省略する。

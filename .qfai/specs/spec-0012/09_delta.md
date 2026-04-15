@@ -400,3 +400,63 @@ REQ-0041..0053 (WS-6) → US-0012-0049 → AC-0012-0049-01..05 → BR-0012-0085 
   - DO NOT allow config to override calibration thresholds from the pack
   - Temptation: per-project tuning via config is convenient
   - Reason: runtime and validator must read from the same pack to ensure consistent evaluation
+
+
+## v1.7.15 rev6 — Adopted (discussion-20260415161758193)
+
+- AD-0012-0045: Full-harness only enforcement — CLI/execution.ts/prototypingEvidence.ts all-layer rejection of standard/low-cost mode; error message "full-harness mode only" (REQ-0093, WS-1)
+- AD-0012-0046: surfacePolicy.ts standalone module + surface rejection — PROTOTYPING_SUPPORTED_SURFACES=[web,mobile,desktop,mixed]; assertSupportedPrototypingSurface() SSOT; all-layer cli/api/backend rejection (REQ-0094, REQ-0095, WS-1/WS-2)
+- AD-0012-0047: OQ-0001 resolved at SDD — DR-0012-0036 (PROTOTYPING_SUPPORTED_SURFACES includes mixed)
+- AD-0012-0048: OQ-0002 resolved at SDD — DR-0012-0037 (surfacePolicy.ts standalone, not inlined in mode.ts)
+- AD-0012-0049: CalibrationLoader internal resolution — runFullHarness() scalar params removed; calibrationRef.packPath -> CalibrationLoader; throw on missing/unresolvable (REQ-0096, WS-3)
+- AD-0012-0050: OQ-0003 resolved at SDD — DR-0012-0038 (throw Error immediately, not typed error or result object)
+- AD-0012-0051: Concrete evidenceRefs enforcement — runtimeGate.evidenceRefs and specCoverage.evidenceRefs: self-ref and synthetic string forbidden; validator rejects both (REQ-0097, REQ-0098, WS-4)
+- AD-0012-0052: reviewerSignoff.status semantics — approved/rejected/abandoned mapping from terminationReason; isCompleted alone does not produce approved; reviewerLogs.verdict mapped vocabulary (REQ-0099, WS-5)
+- AD-0012-0053: OQ-0004 resolved at SDD — DR-0012-0039 (reviewerLogs verdict stores mapped vocabulary)
+- AD-0012-0054: uiFidelityBuilder screenId matching — obs.screenId === screen.screenId; old uiContractId matching removed; uiContractId in observation = hard-error (REQ-0100, WS-6)
+- AD-0012-0055: OQ-0005 resolved at SDD — DR-0012-0040 (uiContractId in observation -> hard-error; backward compat abandoned)
+- AD-0012-0056: Stale semantics cleanup — shipped docs/assets/tests: standard/low-cost/cli prototyping/mockPaths.status=pass removed; test fixtures updated for new semantics (REQ-0101, REQ-0102, WS-7)
+
+### Traceability Chain (v1.7.15 rev6 additions)
+
+```text
+REQ-0093 (WS-1) → US-0012-0050 → AC-0012-0050-01..05 → BR-0012-0086 → EX-0012-0103 → TC-0012-0141..0145
+REQ-0094 (WS-1) → US-0012-0051 → AC-0012-0051-01..05 → BR-0012-0087 → EX-0012-0104 → TC-0012-0146..0150
+REQ-0095 (WS-2) → US-0012-0052 → AC-0012-0052-01..02 → BR-0012-0088 → EX-0012-0105 → TC-0012-0151..0153
+REQ-0096 (WS-3) → US-0012-0053 → AC-0012-0053-01..06 → BR-0012-0089 → EX-0012-0106 → TC-0012-0154..0159
+REQ-0097,0098 (WS-4) → US-0012-0054 → AC-0012-0054-01..06 → BR-0012-0090 → EX-0012-0107 → TC-0012-0160..0163
+REQ-0099,0100,0101,0102 (WS-5/6/7) → US-0012-0055 → AC-0012-0055-01..06 → BR-0012-0091 → EX-0012-0108 → TC-0012-0164..0172
+```
+
+### New Source Files (v1.7.15 rev6)
+
+| File | WS | Purpose |
+|------|----|---------|
+| `core/prototyping/surfacePolicy.ts` | WS-2 | Surface allowlist SSOT (PROTOTYPING_SUPPORTED_SURFACES, isSupportedPrototypingSurface, assertSupportedPrototypingSurface) |
+
+## v1.7.15 rev6 — Rejected
+
+- RJ-0012-0024: Keep standard/low-cost modes in packages/qfai v1.7.15
+  - DO NOT retain standard or low-cost mode support in v1.7.15
+  - Temptation: some users may want lighter-weight prototyping without full runtime
+  - Reason: packages/qfai v1.7.15 commits to full-harness-only; keeping other modes creates inconsistent evidence quality and validator confusion
+
+- RJ-0012-0025: Inline surface policy constants in mode.ts (instead of standalone surfacePolicy.ts)
+  - DO NOT add PROTOTYPING_SUPPORTED_SURFACES to mode.ts
+  - Temptation: fewer files; mode.ts already knows about surfaces
+  - Reason: mode.ts owns obligations logic; surface allowlist is a separate concern (SRP violation); standalone file enables isolated testing and clean imports
+
+- RJ-0012-0026: Return typed CalibrationPackError from CalibrationLoader (instead of throw Error)
+  - DO NOT create a CalibrationPackError subclass unless callers need instanceof checks
+  - Temptation: typed errors provide more structured error handling
+  - Reason: no caller currently needs to distinguish CalibrationPackError; throw Error with packPath in message is sufficient for all consumers
+
+- RJ-0012-0027: Store pre-mapping vocabulary in reviewerLogs[].verdict (instead of mapped vocabulary)
+  - DO NOT store pre-mapping values (accept, plateau-stop) in reviewerLogs[].verdict
+  - Temptation: preserving original signals maintains full trace of harness behavior
+  - Reason: validators check against mapped vocabulary; pre-mapping values would require translation in every consumer
+
+- RJ-0012-0028: Silently ignore uiContractId field in observation records
+  - DO NOT silently ignore uiContractId in observation records
+  - Temptation: silent ignore is backward-compatible and avoids breaking changes
+  - Reason: backward compat is explicitly abandoned in rev6; silent ignore masks stale fixtures that need cleanup

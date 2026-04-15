@@ -256,3 +256,57 @@
 - Rationale: 既存エラー階層と整合し、error handling パターンが統一される
 - Status: Adopted (OQ-0006 resolved)
 - Impact: packResolver.ts エラー型設計
+
+
+## DR-0012-0036: PROTOTYPING_SUPPORTED_SURFACES = [web, mobile, desktop, mixed] (v1.7.15 rev6, OQ-0001 resolution)
+
+- Decision: `PROTOTYPING_SUPPORTED_SURFACES` = `["web", "mobile", "desktop", "mixed"]`; `mixed` is included as a legitimate cross-platform UI surface
+- Rationale: `mixed` is a valid cross-platform UI surface in the QFAI surface taxonomy; excluding it without a documented technical reason would create an unintended gap in multi-surface prototyping scenarios. Option B (exclude `mixed`) was rejected because it had no supporting rationale.
+- Status: Adopted (OQ-0001 resolved)
+- Source: discussion-20260415161758193, OQ-0001
+- Rejected-A: Exclude `mixed` from PROTOTYPING_SUPPORTED_SURFACES
+  - DO NOT exclude `mixed` from the surface allowlist without a documented technical reason.
+  - Temptation: `mixed` seems ambiguous; cleaner to enumerate only single-surface values.
+
+## DR-0012-0037: surfacePolicy.ts as Standalone Standalone File (v1.7.15 rev6, OQ-0002 resolution)
+
+- Decision: `surfacePolicy.ts` is created as a standalone file at `src/core/prototyping/surfacePolicy.ts` (not inlined into `mode.ts`)
+- Rationale: `mode.ts` already owns obligations derivation logic; adding surface policy constants there would violate SRP. Independent file enables isolated unit tests and allows CLI/validator layers to import without a transitive dependency on obligations logic.
+- Status: Adopted (OQ-0002 resolved)
+- Source: discussion-20260415161758193, OQ-0002
+- Rejected-A: Inline surface allowlist constants in `mode.ts`
+  - DO NOT add `PROTOTYPING_SUPPORTED_SURFACES` to `mode.ts`.
+  - Temptation: fewer files; simpler imports.
+
+## DR-0012-0038: CalibrationLoader Resolution Failure → throw Error Immediately (v1.7.15 rev6, OQ-0003 resolution)
+
+- Decision: `CalibrationLoader` resolution failure throws `Error` immediately with `packPath` in the message; no typed error subclass; no result-object return
+- Rationale: `CalibrationLoader` is a precondition step; the harness cannot run without a resolved pack. Precondition failures in packages/qfai use throw semantics. Typed errors (Option C) are unnecessary unless callers need to distinguish CalibrationPackError; no such caller exists. Result objects (Option B) require translation in every consumer.
+- Status: Adopted (OQ-0003 resolved)
+- Source: discussion-20260415161758193, OQ-0003
+- Rejected-A: Return typed `CalibrationPackError` subclass
+  - DO NOT create a typed error subclass for CalibrationLoader failures unless callers need instanceof checks.
+  - Temptation: typed errors provide better instanceof-based handling.
+- Rejected-B: Return `{ error: string }` result object from CalibrationLoader
+  - DO NOT return error objects from CalibrationLoader; throw is the correct pattern for precondition failures.
+  - Temptation: result objects allow callers to inspect and re-wrap errors without try/catch.
+
+## DR-0012-0039: reviewerLogs[].verdict Stores Mapped Vocabulary (v1.7.15 rev6, OQ-0004 resolution)
+
+- Decision: `reviewerLogs[].verdict` stores the post-mapping vocabulary (`approve`, `revise`, `reject`, `abandon`); pre-mapping values are not stored
+- Rationale: The validator checks `reviewerLogs[].verdict` against the mapped vocabulary. Storing original pre-mapping values would require a translation step in every consumer, increasing validator branching. The audit requirement is to see the final semantic verdict, not the raw harness signal.
+- Status: Adopted (OQ-0004 resolved)
+- Source: discussion-20260415161758193, OQ-0004
+- Rejected-A: Store original pre-mapping vocabulary in reviewerLogs[].verdict
+  - DO NOT store pre-mapping values (e.g., `accept`, `plateau-stop`) in reviewerLogs[].verdict.
+  - Temptation: preserving original values maintains trace fidelity of harness signals.
+
+## DR-0012-0040: uiContractId in Observation Schema → hard-error (v1.7.15 rev6, OQ-0005 resolution)
+
+- Decision: Any observation record that contains a `uiContractId` field causes a hard-error in the validator; backward compatibility is abandoned
+- Rationale: Backward compat is explicitly abandoned per design doc. Silently ignoring `uiContractId` would mask stale test fixtures that still use the old field, making them harder to identify. Hard-error forces immediate cleanup and surfaces the problem.
+- Status: Adopted (OQ-0005 resolved)
+- Source: discussion-20260415161758193, OQ-0005
+- Rejected-A: Silently ignore `uiContractId` field if present in observation records
+  - DO NOT silently ignore `uiContractId` in observation records.
+  - Temptation: silent ignore is safe and non-breaking for existing consumers.
