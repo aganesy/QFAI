@@ -2181,6 +2181,54 @@ async function validateModeMetadata(
       });
     }
   }
+
+  // QFAI-PROT-284: emoji prohibition in fullHarness text fields
+  {
+    const emojiFields: Array<{ value: string; path: string }> = [];
+    if (evidence.fullHarness.limitations) {
+      for (const entry of evidence.fullHarness.limitations) {
+        emojiFields.push({ value: entry, path: "fullHarness.limitations" });
+      }
+    }
+    for (const iter of evidence.fullHarness.iterations) {
+      for (const line of iter.limitations) {
+        emojiFields.push({
+          value: line,
+          path: `fullHarness.iterations[${iter.iteration}].limitations`,
+        });
+      }
+      for (const line of iter.changeSummary) {
+        emojiFields.push({
+          value: line,
+          path: `fullHarness.iterations[${iter.iteration}].changeSummary`,
+        });
+      }
+    }
+    for (const log of evidence.fullHarness.reviewerLogs) {
+      emojiFields.push({
+        value: log.summary,
+        path: `fullHarness.reviewerLogs[${log.iteration}].summary`,
+      });
+    }
+    for (const { value, path: fieldPath } of emojiFields) {
+      if (containsEmojiInRange(value)) {
+        issues.push(
+          issue(
+            "QFAI-PROT-284",
+            `emoji characters (U+1F000–U+1FAFF) are forbidden in full-harness output. Found in: ${fieldPath}`,
+            "error",
+            evidenceJsonPath,
+            "prototypingEvidence.fullHarnessEmojiProhibition",
+            [fieldPath],
+            "canonical",
+            "full-harness 出力内の絵文字（U+1F000–U+1FAFF）は禁止されています。対象フィールドから絵文字を削除してください。",
+          ),
+        );
+        break;
+      }
+    }
+  }
+
   return issues;
 }
 
@@ -3873,4 +3921,15 @@ function formatError(error: unknown): string {
     return error.message;
   }
   return String(error);
+}
+
+/** Returns true if `text` contains any codepoint in U+1F000–U+1FAFF (emoji decoration range). */
+export function containsEmojiInRange(text: string): boolean {
+  for (const char of text) {
+    const cp = char.codePointAt(0);
+    if (cp !== undefined && cp >= 0x1f000 && cp <= 0x1faff) {
+      return true;
+    }
+  }
+  return false;
 }

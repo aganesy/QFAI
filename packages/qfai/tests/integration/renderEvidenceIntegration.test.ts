@@ -96,6 +96,7 @@ function buildMinimalEvidence(specIds: string[]): object {
         {
           screenId: "screen-orders",
           route: "/orders",
+          declaredRef: ".qfai/specs/spec-0001/01_Spec.md",
           url: "http://127.0.0.1:4173/orders",
           rendered: true,
           browserVisited: true,
@@ -104,6 +105,7 @@ function buildMinimalEvidence(specIds: string[]): object {
           browserQaEvidenceRefs: [],
         },
       ],
+      evidenceRefs: [],
     },
     meta: {
       generatedAt: "2026-03-31T00:00:00Z",

@@ -95,6 +95,7 @@ import {
 import type { FullHarnessIteration, FullHarnessHistory } from "../../src/core/harness/types.js";
 import { REVIEWER_PLACEHOLDERS } from "../../src/core/harness/types.js";
 import { extractDomLabelsWithJsdom } from "../../src/core/prototyping/uiObservation.js";
+import { containsEmojiInRange } from "../../src/core/validators/prototypingEvidence.js";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -1520,9 +1521,18 @@ describe("TC-0012-0087: Existence gate score ceiling", () => {
 
 // QFAI:SPEC-0012:TC-0012-0088
 describe("TC-0012-0088: Asset emoji prohibition", () => {
-  // No production emoji-prohibition function exists yet in packages/qfai/src/.
-  // Marking as todo to avoid false-green coverage. Implement when production code is added.
-  it.todo("emoji codepoints in asset names trigger REVISE decision");
+  it("emoji codepoints in asset names trigger REVISE decision", () => {
+    // U+1F600 (😀) is in the forbidden range U+1F000–U+1FAFF
+    expect(containsEmojiInRange("decoration 😀 element")).toBe(true);
+    // Lower boundary U+1F000
+    expect(containsEmojiInRange("\u{1F000}")).toBe(true);
+    // Upper boundary U+1FAFF
+    expect(containsEmojiInRange("\u{1FAFF}")).toBe(true);
+    // U+1FB00 is outside the forbidden range
+    expect(containsEmojiInRange("\u{1FB00}")).toBe(false);
+    expect(containsEmojiInRange("clean text without emoji")).toBe(false);
+    expect(containsEmojiInRange("")).toBe(false);
+  });
 });
 
 // QFAI:SPEC-0012:TC-0012-0089
