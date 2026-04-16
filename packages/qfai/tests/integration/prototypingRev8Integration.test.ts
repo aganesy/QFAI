@@ -18,6 +18,7 @@
 // QFAI:SPEC-0012:TC-0012-0215
 // QFAI:SPEC-0012:TC-0012-0216
 // QFAI:SPEC-0012:TC-0012-0217
+// QFAI:SPEC-0012:TC-0012-0218
 
 import { readFile } from "node:fs/promises";
 import path from "node:path";
@@ -117,14 +118,15 @@ describe("TC-0012-0208..0213: Unified ref grammar across 5 ref sites (v1.7.15 re
 });
 
 // ---------------------------------------------------------------------------
-// TC-0012-0214..0217: closure regression test (WS-4)
+// TC-0012-0214..0218: closure regression test + import isolation (WS-4/WS-1)
 // ---------------------------------------------------------------------------
 
 // QFAI:SPEC-0012:TC-0012-0214
 // QFAI:SPEC-0012:TC-0012-0215
 // QFAI:SPEC-0012:TC-0012-0216
 // QFAI:SPEC-0012:TC-0012-0217
-describe("TC-0012-0214..0217: Closure regression test (v1.7.15 rev8 WS-4)", () => {
+// QFAI:SPEC-0012:TC-0012-0218
+describe("TC-0012-0214..0218: Closure regression test + import isolation (v1.7.15 rev8 WS-4/WS-1)", () => {
   it.todo(
     "TC-0012-0214: positive closure — real execution produces concrete evidenceRefs (implementation phase)",
   );
@@ -148,5 +150,14 @@ describe("TC-0012-0214..0217: Closure regression test (v1.7.15 rev8 WS-4)", () =
     // At least one of these test files should exist
     const either = specCovTest ?? protEvidTest;
     expect(either).not.toBeNull();
+  });
+
+  it("TC-0012-0218: pathUtils.ts has zero imports from execution.ts transitive graph (leaf isolation)", async () => {
+    const src = await readFile(srcPath("prototyping", "pathUtils.ts"), "utf-8");
+    const forbidden = ["execution", "specCoverage", "l2evidence", "harness/runtime"];
+    for (const pattern of forbidden) {
+      const importPattern = new RegExp(`^\\s*import[^'"]*['"][^'"]*${pattern}[^'"]*['"]`, "m");
+      expect(src, `pathUtils.ts must not import from '${pattern}'`).not.toMatch(importPattern);
+    }
   });
 });

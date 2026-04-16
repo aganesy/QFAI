@@ -989,3 +989,9 @@
 - BR-Ref: BR-0012-0106
 - Input: evidence fixture with `runtimeGate.evidenceRefs = []`
 - Expected: `validatePrototypingEvidence()` returns error; empty array is not valid
+
+## EX-0012-0149: pathUtils.ts Import Isolation — Zero Imports from execution.ts Transitive Graph (v1.7.15 rev8 WS-1)
+
+- BR-Ref: BR-0012-0099
+- Input: `packages/qfai/src/core/prototyping/pathUtils.ts` source text
+- Expected: static analysis (grep or AST) finds 0 import specifiers matching `execution`, `specCoverage`, `l2evidence`, or `harness/runtime`; the leaf module constraint is structurally enforced

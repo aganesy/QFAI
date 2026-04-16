@@ -1855,3 +1855,10 @@
 - AC-Refs: AC-0012-0102, AC-0012-0103
 - Type: boundary
 - Test: `specCoverage.test.ts` contains: (a) absolute path input → repo-relative output assertion; (b) outside-root path → throw assertion; (c) directory path → throw assertion; (d) `coverageRefs[].declaredRef` format assertion; `prototypingEvidence.test.ts` contains: (e) runtimeGate.evidenceRefs absent/empty-array/absolute-path/self-ref/synthetic-token → error assertions
+
+## TC-0012-0218: Static Analysis — pathUtils.ts Contains Zero Imports from execution.ts Transitive Graph (v1.7.15 rev8 WS-1)
+
+- EX-Ref: EX-0012-0149
+- AC-Refs: AC-0012-0076
+- Type: edge
+- Test: in `prototypingRev8E2E.test.ts` or `pathUtils.test.ts`, read `packages/qfai/src/core/prototyping/pathUtils.ts` source text; assert that no import specifier matches any of `execution`, `specCoverage`, `l2evidence`, `harness/runtime`; this enforces the leaf-module constraint from BR-0012-0099 and DR-0012-0046 at the test layer
