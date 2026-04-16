@@ -331,6 +331,7 @@ As a developer, I want test fixtures to remove l1/l2 direct pass, packVersion:"1
 - REQ-Refs: REQ-0099, REQ-0100, REQ-0101, REQ-0102
 - WS: WS-5, WS-6, WS-7
 - Discussion: discussion-20260415161758193
+
 ## US-0012-0056: CalibrationPack Upstream Resolution (v1.7.15 rev7)
 
 **As a** package maintainer,

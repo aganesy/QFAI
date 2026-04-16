@@ -38,6 +38,7 @@
 ## Required Reviewers
 
 Routing profile: `requirements-heavy`
+
 - `completion-reviewer` (always required)
 - `requirements-reviewer` (always required)
 - `architecture-reviewer` (conditional: architecture-affecting decisions exist — OQ-0002, OQ-0003, OQ-0004, OQ-0005)

@@ -87,14 +87,14 @@ Source: SRC-0001 — QFAI v1.7.15 継続開発設計書
 
 v1.7.15-04 監査レポートで検出された 5 件の残留齟齬を 1 PR で是正する。
 
-| WS   | Title                                      | Description                                                                                                                                                                                                                             | REQs            |
-| ---- | ------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------- |
-| WS-1 | full-harness mode/surface 契約厳格化       | `derivePrototypingObligations()` / `runFullHarness()` / CLI / バリデータの 4 層で cli + full-harness を拒否。UI-bearing surface 判定を web/mobile/desktop/mixed に限定                                                                    | REQ-0001〜0005  |
-| WS-2 | render/Browser QA ターゲット画面契約準拠   | `"/primary"` ハードコード除去。`40_screen_contracts.md` パーサー (`screenContracts.ts`) 新設。各スクリーンに対して個別のフィデリティ測定ターゲットと個別エビデンスを生成                                                                    | REQ-0006〜0011  |
-| WS-3 | Browser QA エビデンスチェーン完全性        | `iterations[].evidenceRefs.browserQa` にフェーズ参照・ファインディング参照を格納。空の場合ハードフェイル。`uiObservation.ts` で収集、`runtime.ts` でイテレーション記録に格納                                                                | REQ-0012〜0016  |
-| WS-4 | runtimeGate/specCoverage 正規ルート意味論  | `specCoverage.ts` / `runtimeGateBuilder.ts` で canonical path 比較。URL をルートとして扱わない。画面契約のルートに対応するオブザベーションがない場合は `missing_observation` としてレポート                                                  | REQ-0017〜0021  |
-| WS-5 | L2 エビデンス構造化パース優先              | 正規アーティファクト（20-23 系、`04_Sources.md`、`40_screen_contracts.md`）を必須とし構造化パースを優先。ヒューリスティックフォールバックは構造化ソース不在時のみ                                                                           | REQ-0022〜0027  |
-| WS-6 | validator/docs/tests 陳腐化整理            | `prototypingEvidence.ts` 陳腐化 remediation 除去。テストの `skip` → `reject` 変換。URL-as-route 期待値を canonical route に変換。`"/primary"` 参照除去。README/SKILL.md/evidence README 更新                                               | REQ-0028〜0033  |
+| WS   | Title                                     | Description                                                                                                                                                                                  | REQs           |
+| ---- | ----------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------- |
+| WS-1 | full-harness mode/surface 契約厳格化      | `derivePrototypingObligations()` / `runFullHarness()` / CLI / バリデータの 4 層で cli + full-harness を拒否。UI-bearing surface 判定を web/mobile/desktop/mixed に限定                       | REQ-0001〜0005 |
+| WS-2 | render/Browser QA ターゲット画面契約準拠  | `"/primary"` ハードコード除去。`40_screen_contracts.md` パーサー (`screenContracts.ts`) 新設。各スクリーンに対して個別のフィデリティ測定ターゲットと個別エビデンスを生成                     | REQ-0006〜0011 |
+| WS-3 | Browser QA エビデンスチェーン完全性       | `iterations[].evidenceRefs.browserQa` にフェーズ参照・ファインディング参照を格納。空の場合ハードフェイル。`uiObservation.ts` で収集、`runtime.ts` でイテレーション記録に格納                 | REQ-0012〜0016 |
+| WS-4 | runtimeGate/specCoverage 正規ルート意味論 | `specCoverage.ts` / `runtimeGateBuilder.ts` で canonical path 比較。URL をルートとして扱わない。画面契約のルートに対応するオブザベーションがない場合は `missing_observation` としてレポート  | REQ-0017〜0021 |
+| WS-5 | L2 エビデンス構造化パース優先             | 正規アーティファクト（20-23 系、`04_Sources.md`、`40_screen_contracts.md`）を必須とし構造化パースを優先。ヒューリスティックフォールバックは構造化ソース不在時のみ                            | REQ-0022〜0027 |
+| WS-6 | validator/docs/tests 陳腐化整理           | `prototypingEvidence.ts` 陳腐化 remediation 除去。テストの `skip` → `reject` 変換。URL-as-route 期待値を canonical route に変換。`"/primary"` 参照除去。README/SKILL.md/evidence README 更新 | REQ-0028〜0033 |
 
 #### 実装順序
 

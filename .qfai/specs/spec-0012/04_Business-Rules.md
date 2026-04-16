@@ -669,7 +669,6 @@
 - l2Evidence.ts: failure to parse 04_Sources.md structured section → fail
 - docs/README/SKILL updated to remove non-UI prototyping language, API/DB coverage from prototyping contract, and reflect new contracts (OQ-0002 resolved: validator reject only, no schema change)
 
-
 ## BR-0012-0086: Full-Harness Only Enforcement (v1.7.15 rev6 WS-1)
 
 - AC-Refs: AC-0012-0050-01, AC-0012-0050-02, AC-0012-0050-03, AC-0012-0050-04, AC-0012-0050-05
@@ -749,6 +748,7 @@
 - Any observation record containing a `uiContractId` field MUST be hard-errored by the validator (OQ-0005 resolution: backward compat abandoned)
 - Stale semantics removal: shipped docs, SKILL.md, evidence/README.md, review/README.md, contracts/ui/README.md, packages/qfai/README.md must not contain `standard`, `low-cost`, `cli prototyping`, or `mockPaths.status=pass`
 - Test fixtures must not assert `approved` for plateau/maxIterations termination, or allow `cli + standard` prototyping
+
 ## BR-0012-0092: CalibrationLoader Called in execution.ts Pre-Harness Phase
 
 - AC-Refs: AC-0012-0056, AC-0012-0057, AC-0012-0058

@@ -366,13 +366,13 @@ REQ-0041..0053 (WS-6) → US-0012-0049 → AC-0012-0049-01..05 → BR-0012-0085 
 
 ### New Source Files (v1.7.15 rev5)
 
-| File | WS | Purpose |
-|------|----|---------|
-| `core/prototyping/runtimeObservation.ts` | WS-2 | ObservedUiRoute + RuntimeObservation types |
-| `core/prototyping/browserQaPerScreen.ts` | WS-3 | Per-screen Browser QA input generator |
-| `core/prototyping/actionCoverage.ts` | WS-4 | Action coverage computation |
-| `core/prototyping/packResolver.ts` | WS-6 | Calibration pack resolution SSOT |
-| `core/prototyping/structuredArtifactReaders.ts` | WS-6 | Structured section parsers |
+| File                                            | WS   | Purpose                                    |
+| ----------------------------------------------- | ---- | ------------------------------------------ |
+| `core/prototyping/runtimeObservation.ts`        | WS-2 | ObservedUiRoute + RuntimeObservation types |
+| `core/prototyping/browserQaPerScreen.ts`        | WS-3 | Per-screen Browser QA input generator      |
+| `core/prototyping/actionCoverage.ts`            | WS-4 | Action coverage computation                |
+| `core/prototyping/packResolver.ts`              | WS-6 | Calibration pack resolution SSOT           |
+| `core/prototyping/structuredArtifactReaders.ts` | WS-6 | Structured section parsers                 |
 
 ## v1.7.15 rev5 — Rejected
 
@@ -400,7 +400,6 @@ REQ-0041..0053 (WS-6) → US-0012-0049 → AC-0012-0049-01..05 → BR-0012-0085 
   - DO NOT allow config to override calibration thresholds from the pack
   - Temptation: per-project tuning via config is convenient
   - Reason: runtime and validator must read from the same pack to ensure consistent evaluation
-
 
 ## v1.7.15 rev6 — Adopted (discussion-20260415161758193)
 
@@ -430,8 +429,8 @@ REQ-0099,0100,0101,0102 (WS-5/6/7) → US-0012-0055 → AC-0012-0055-01..06 → 
 
 ### New Source Files (v1.7.15 rev6)
 
-| File | WS | Purpose |
-|------|----|---------|
+| File                                | WS   | Purpose                                                                                                                   |
+| ----------------------------------- | ---- | ------------------------------------------------------------------------------------------------------------------------- |
 | `core/prototyping/surfacePolicy.ts` | WS-2 | Surface allowlist SSOT (PROTOTYPING_SUPPORTED_SURFACES, isSupportedPrototypingSurface, assertSupportedPrototypingSurface) |
 
 ## v1.7.15 rev6 — Rejected
@@ -460,6 +459,7 @@ REQ-0099,0100,0101,0102 (WS-5/6/7) → US-0012-0055 → AC-0012-0055-01..06 → 
   - DO NOT silently ignore uiContractId in observation records
   - Temptation: silent ignore is backward-compatible and avoids breaking changes
   - Reason: backward compat is explicitly abandoned in rev6; silent ignore masks stale fixtures that need cleanup
+
 ## v1.7.15 rev7 Contract Gap Closure (DR-0012-0041..0045)
 
 ### Summary
@@ -476,14 +476,14 @@ REQ-0099,0100,0101,0102 (WS-5/6/7) → US-0012-0055 → AC-0012-0055-01..06 → 
 
 ### Artifacts Added
 
-| Layer | IDs Added | Description |
-| ----- | --------- | ----------- |
-| US | US-0012-0056..0062 | 7 new user stories for WS-1..WS-7 |
-| AC | AC-0012-0056..0075 | 20 new acceptance criteria |
-| BR | BR-0012-0092..0098 | 7 new business rules |
-| EX | EX-0012-0109..0128 | 20 new examples |
-| TC | TC-0012-0173..0197 | 25 new test cases |
-| DR | DR-0012-0041..0045 | 5 decision records from rev7 OQ resolutions |
+| Layer | IDs Added          | Description                                 |
+| ----- | ------------------ | ------------------------------------------- |
+| US    | US-0012-0056..0062 | 7 new user stories for WS-1..WS-7           |
+| AC    | AC-0012-0056..0075 | 20 new acceptance criteria                  |
+| BR    | BR-0012-0092..0098 | 7 new business rules                        |
+| EX    | EX-0012-0109..0128 | 20 new examples                             |
+| TC    | TC-0012-0173..0197 | 25 new test cases                           |
+| DR    | DR-0012-0041..0045 | 5 decision records from rev7 OQ resolutions |
 
 ### Decisions Made
 
@@ -533,15 +533,15 @@ REQ-0099,0100,0101,0102 (WS-5/6/7) → US-0012-0055 → AC-0012-0055-01..06 → 
 
 ### Artifacts Added
 
-| Layer | IDs Added | Description |
-| ----- | --------- | ----------- |
-| US | US-0012-0063..0066 | 4 new user stories for WS-1..WS-4 |
-| AC | AC-0012-0076..0103 | 28 new acceptance criteria |
-| BR | BR-0012-0099..0106 | 8 new business rules |
-| EX | EX-0012-0129..0148 | 20 new examples |
-| TC | TC-0012-0198..0217 | 20 new test cases |
-| DR | DR-0012-0046..0048 | 3 decision records from rev8 OQ resolutions |
-| NFR | NFR-0037..0040 | 4 NFRs from rev8 discussion |
+| Layer | IDs Added          | Description                                 |
+| ----- | ------------------ | ------------------------------------------- |
+| US    | US-0012-0063..0066 | 4 new user stories for WS-1..WS-4           |
+| AC    | AC-0012-0076..0103 | 28 new acceptance criteria                  |
+| BR    | BR-0012-0099..0106 | 8 new business rules                        |
+| EX    | EX-0012-0129..0148 | 20 new examples                             |
+| TC    | TC-0012-0198..0217 | 20 new test cases                           |
+| DR    | DR-0012-0046..0048 | 3 decision records from rev8 OQ resolutions |
+| NFR   | NFR-0037..0040     | 4 NFRs from rev8 discussion                 |
 
 ### Decisions Made
 
@@ -562,8 +562,8 @@ REQ-0099,0100,0101,0102 (WS-5/6/7) → US-0012-0055 → AC-0012-0055-01..06 → 
 
 ### Traceability Chain
 
-| WS | REQ | US | AC | BR | EX | TC |
-|----|-----|----|----|----|----|-----|
+| WS   | REQ            | US      | AC            | BR            | EX            | TC            |
+| ---- | -------------- | ------- | ------------- | ------------- | ------------- | ------------- |
 | WS-1 | REQ-0059..0062 | US-0063 | AC-0076..0083 | BR-0099..0100 | EX-0129..0133 | TC-0198..0202 |
 | WS-2 | REQ-0063..0068 | US-0064 | AC-0084..0093 | BR-0101..0102 | EX-0134..0138 | TC-0203..0208 |
 | WS-3 | REQ-0069..0070 | US-0065 | AC-0094..0098 | BR-0103..0104 | EX-0139..0143 | TC-0209..0213 |
@@ -585,25 +585,26 @@ Leaf-field traceability closure for packages/qfai. Rev8 closed top-level summary
 
 ### Decision Records
 
-| DR-ID | Decision | Source |
-|-------|----------|--------|
-| DR-0012-0049 | ui[] row validation inline in prototypingEvidence.ts (Option A) | OQ-0001 rev9 |
-| DR-0012-0050 | browserQaEvidenceRefs[] always required non-empty (Option A) | OQ-0002 rev9 |
-| DR-0012-0051 | Per-axis validation granularity (Option A) | OQ-0003 rev9 |
+| DR-ID        | Decision                                                           | Source       |
+| ------------ | ------------------------------------------------------------------ | ------------ |
+| DR-0012-0049 | ui[] row validation inline in prototypingEvidence.ts (Option A)    | OQ-0001 rev9 |
+| DR-0012-0050 | browserQaEvidenceRefs[] always required non-empty (Option A)       | OQ-0002 rev9 |
+| DR-0012-0051 | Per-axis validation granularity (Option A)                         | OQ-0003 rev9 |
 | DR-0012-0052 | Full README enumeration of all concrete-ref leaf fields (Option A) | OQ-0004 rev9 |
 
 ### Artifacts Added
 
-| Layer | IDs Added | Description |
-|-------|-----------|-------------|
-| US | US-0012-0067..0071 | 5 user stories (WS-1: 3 leaf field groups, WS-2: schema, WS-3+WS-4: tests+docs) |
-| AC | AC-0012-0104..0132 | 29 acceptance criteria |
-| BR | BR-0012-0107..0116 | 10 business rules |
-| EX | EX-0012-0150..0172 | 23 examples |
-| TC | TC-0012-0219..0242 | 24 test cases (7 ui[] errors + 5 axis errors + 3 reviewer errors + normal/boundary) |
-| DR | DR-0012-0049..0052 | 4 decision records |
-| NFR | NFR-0041..0045 | 5 non-functional requirements |
-| REQ | REQ-0103..0122 | 20 requirements |
+| Layer | IDs Added          | Description                                                                         |
+| ----- | ------------------ | ----------------------------------------------------------------------------------- |
+| US    | US-0012-0067..0071 | 5 user stories (WS-1: 3 leaf field groups, WS-2: schema, WS-3+WS-4: tests+docs)     |
+| AC    | AC-0012-0104..0132 | 29 acceptance criteria                                                              |
+| BR    | BR-0012-0107..0116 | 10 business rules                                                                   |
+| EX    | EX-0012-0150..0172 | 23 examples                                                                         |
+| TC    | TC-0012-0219..0242 | 24 test cases (7 ui[] errors + 5 axis errors + 3 reviewer errors + normal/boundary) |
+| DR    | DR-0012-0049..0052 | 4 decision records                                                                  |
+| NFR   | NFR-0041..0045     | 5 non-functional requirements                                                       |
+| REQ   | REQ-0103..0122     | 20 requirements                                                                     |
+
 ## v1.7.15 rev9 — Leaf-Field Traceability Closure
 
 ### Scope Summary
@@ -640,9 +641,9 @@ Leaf-field traceability closure for packages/qfai. Rev8 closed top-level summary
 
 ### Traceability Chain
 
-| WS | REQ | US | AC | BR | EX | TC |
-|----|-----|----|----|----|----|-----|
-| WS-1a (ui[] row) | REQ-0103..0109 | US-0067 | AC-0104..0113 | BR-0107..0109 | EX-0150..0159 | TC-0219..0226 |
+| WS                    | REQ            | US            | AC            | BR            | EX            | TC            |
+| --------------------- | -------------- | ------------- | ------------- | ------------- | ------------- | ------------- |
+| WS-1a (ui[] row)      | REQ-0103..0109 | US-0067       | AC-0104..0113 | BR-0107..0109 | EX-0150..0159 | TC-0219..0226 |
 | WS-1b (axis/reviewer) | REQ-0110..0115 | US-0068..0069 | AC-0114..0123 | BR-0110..0111 | EX-0160..0168 | TC-0227..0233 |
-| WS-2 (bundleWriter) | REQ-0116..0118 | US-0070 | AC-0124..0127 | BR-0112..0113 | EX-0169..0170 | TC-0234..0237 |
-| WS-3+4 (tests+README) | REQ-0119..0122 | US-0071 | AC-0128..0132 | BR-0114..0116 | EX-0171..0172 | TC-0238..0242 |
+| WS-2 (bundleWriter)   | REQ-0116..0118 | US-0070       | AC-0124..0127 | BR-0112..0113 | EX-0169..0170 | TC-0234..0237 |
+| WS-3+4 (tests+README) | REQ-0119..0122 | US-0071       | AC-0128..0132 | BR-0114..0116 | EX-0171..0172 | TC-0238..0242 |

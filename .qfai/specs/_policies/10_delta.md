@@ -348,13 +348,13 @@
 
 ### Phase: SDD Outline (Phase 1)
 
-| Layer            | Change                                                         | Reason                                                           |
-| ---------------- | -------------------------------------------------------------- | ---------------------------------------------------------------- |
-| 02_Initiative    | v1.7.15 rev4 initiative section added (6 WS, 33 REQs)        | 監査残留齟齬 5 件の仕様反映                                      |
-| 04_Business-Flow | 5 Mermaid flow diagrams added (WS-1~WS-5, implementation deps)| rev4 ワークフロー可視化                                          |
-| 06_Glossary      | rev4 terms added (canonical route, screen contract, etc.)      | 新概念の用語定義                                                 |
-| 07_Constraints   | CON-017~021 added (rev4 technical + operational constraints)   | rev4 固有の制約の明文化                                          |
-| 08_Decisions     | DR-0217~0222 added (4-layer reject, screen contract targets, etc.)| rev4 設計判断の記録                                           |
+| Layer            | Change                                                             | Reason                      |
+| ---------------- | ------------------------------------------------------------------ | --------------------------- |
+| 02_Initiative    | v1.7.15 rev4 initiative section added (6 WS, 33 REQs)              | 監査残留齟齬 5 件の仕様反映 |
+| 04_Business-Flow | 5 Mermaid flow diagrams added (WS-1~WS-5, implementation deps)     | rev4 ワークフロー可視化     |
+| 06_Glossary      | rev4 terms added (canonical route, screen contract, etc.)          | 新概念の用語定義            |
+| 07_Constraints   | CON-017~021 added (rev4 technical + operational constraints)       | rev4 固有の制約の明文化     |
+| 08_Decisions     | DR-0217~0222 added (4-layer reject, screen contract targets, etc.) | rev4 設計判断の記録         |
 
 ### Discussion Pack Reference
 
@@ -367,10 +367,10 @@
 
 ### Phase: SDD Outline (Phase 1)
 
-| Layer            | Change                                                                                         | Reason                                           |
-| ---------------- | ---------------------------------------------------------------------------------------------- | ------------------------------------------------ |
-| 05_Contracts.md  | v1.7.15 rev5 Contract Posture 追加（0 items 維持、none-rationale 記載）                         | 内部モジュール変更のみ、外部 contract 新設なし   |
-| spec-0012        | v1.7.15 rev5: 6 WS（all-mode non-UI reject / observed-only ledger / per-screen BrowserQA / action coverage / fail-closed harness / calibration SSOT）を spec-0012 に反映 | discussion-20260415014056471 rev5 仕様化         |
+| Layer           | Change                                                                                                                                                                   | Reason                                         |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------- |
+| 05_Contracts.md | v1.7.15 rev5 Contract Posture 追加（0 items 維持、none-rationale 記載）                                                                                                  | 内部モジュール変更のみ、外部 contract 新設なし |
+| spec-0012       | v1.7.15 rev5: 6 WS（all-mode non-UI reject / observed-only ledger / per-screen BrowserQA / action coverage / fail-closed harness / calibration SSOT）を spec-0012 に反映 | discussion-20260415014056471 rev5 仕様化       |
 
 ### Discussion Pack Reference
 
@@ -381,15 +381,14 @@
 - OQ-0006 resolved at SDD level → DR-0012-0035 (PrototypingError derived type for packResolver)
 - OQ-0005 deferred to v1.8 (L2 full redesign scope)
 
-
 ## v1.7.15 rev6 — Single-PR Completion (Adopted)
 
 ### Phase: SDD Outline (Phase 1)
 
-| Layer            | Change                                                                                         | Reason                                           |
-| ---------------- | ---------------------------------------------------------------------------------------------- | ------------------------------------------------ |
-| 05_Contracts.md  | v1.7.15 rev6 Contract Posture 追加（0 items 維持、none-rationale 記載）                         | 内部モジュール変更のみ、外部 contract 新設なし   |
-| spec-0012        | v1.7.15 rev6: 7 WS（full-harness only / surfacePolicy / CalibrationLoader SSOT / concrete evidenceRefs / reviewerSignoff semantics / screenId fix / stale cleanup）を spec-0012 に反映 | discussion-20260415161758193 rev6 仕様化         |
+| Layer           | Change                                                                                                                                                                                 | Reason                                         |
+| --------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------- |
+| 05_Contracts.md | v1.7.15 rev6 Contract Posture 追加（0 items 維持、none-rationale 記載）                                                                                                                | 内部モジュール変更のみ、外部 contract 新設なし |
+| spec-0012       | v1.7.15 rev6: 7 WS（full-harness only / surfacePolicy / CalibrationLoader SSOT / concrete evidenceRefs / reviewerSignoff semantics / screenId fix / stale cleanup）を spec-0012 に反映 | discussion-20260415161758193 rev6 仕様化       |
 
 ### Discussion Pack Reference
 
@@ -400,15 +399,16 @@
 - OQ-0003 resolved at SDD level → DR-0012-0038 (CalibrationLoader failure → throw Error immediately)
 - OQ-0004 resolved at SDD level → DR-0012-0039 (reviewerLogs.verdict stores mapped vocabulary)
 - OQ-0005 resolved at SDD level → DR-0012-0040 (uiContractId in observation → hard-error)
+
 ## v1.7.15 rev7 — Single-PR Completion (Adopted)
 
 ### Phase: SDD Outline (Phase 1)
 
-| Date | Status | Artifact | Change | Source |
-| ---- | ------ | -------- | ------ | ------ |
-| 2026-04-15 | adopted | spec-0012 | v1.7.15 rev7: US-0012-0056..0062, AC/BR/EX/TC追加 (WS-1〜WS-7 契約ギャップ閉鎖) | discussion-20260415203030886 rev7 completion |
-| 2026-04-15 | adopted | 05_Contracts.md | v1.7.15 rev7 Contract Posture 追加 | 内部モジュール変更のみ、外部 stable contract なし |
-| 2026-04-15 | adopted | spec-0012/07_Decisions.md | DR-0012-0041..0045 (rev7 OQ-0001..0005 解決結果) 追加 | all 5 OQs resolved |
+| Date       | Status  | Artifact                  | Change                                                                          | Source                                            |
+| ---------- | ------- | ------------------------- | ------------------------------------------------------------------------------- | ------------------------------------------------- |
+| 2026-04-15 | adopted | spec-0012                 | v1.7.15 rev7: US-0012-0056..0062, AC/BR/EX/TC追加 (WS-1〜WS-7 契約ギャップ閉鎖) | discussion-20260415203030886 rev7 completion      |
+| 2026-04-15 | adopted | 05_Contracts.md           | v1.7.15 rev7 Contract Posture 追加                                              | 内部モジュール変更のみ、外部 stable contract なし |
+| 2026-04-15 | adopted | spec-0012/07_Decisions.md | DR-0012-0041..0045 (rev7 OQ-0001..0005 解決結果) 追加                           | all 5 OQs resolved                                |
 
 ### Discussion Pack Reference
 

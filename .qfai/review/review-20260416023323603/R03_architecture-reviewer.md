@@ -1,17 +1,17 @@
 # R03 Architecture Review
 
-| Field          | Value                        |
-|----------------|------------------------------|
-| reviewer_id    | R03                          |
-| reviewer_role  | architecture-reviewer        |
-| review_pack    | review-20260416023323603     |
-| target         | discussion-20260416023323603 |
-| verdict        | PASS                         |
+| Field         | Value                        |
+| ------------- | ---------------------------- |
+| reviewer_id   | R03                          |
+| reviewer_role | architecture-reviewer        |
+| review_pack   | review-20260416023323603     |
+| target        | discussion-20260416023323603 |
+| verdict       | PASS                         |
 
 ## Checked List
 
 - [x] **New `pathUtils.ts` module: is it a clean leaf module? Are circular import risks addressed in constraints?**
-  Evidence:
+      Evidence:
   - 02_Inception-Deck.md §4 Neighbors: "`pathUtils.ts` (new) — new leaf module; no imports from execution.ts"
   - 09_Constraints.md TC-2: "`pathUtils.ts` must not import from `execution.ts` or from any module that transitively imports `execution.ts`. `pathUtils.ts` is a leaf module."
   - 08_Glossary.md (`pathUtils.ts` entry): "Acts as a leaf module (no imports from `execution.ts` or other prototyping modules that import `execution.ts`)"
@@ -27,35 +27,35 @@
   - REQ-0006: "`parseEvidence()` reads `runtimeGate.evidenceRefs`; a non-array value is a parse error."
   - The `string[]` type for `evidenceRefs` is the same type used for `iterations[].evidenceRefs.runtimeGate` and `iterations[].evidenceRefs.specCoverage` (referenced in REQ-0012 and US-002 example seeds). This is architecturally consistent: the validator contract is being extended by adding the same kind of field (`evidenceRefs: string[]`) to the top-level `runtimeGate` object that already exists at the iteration level.
   - REQ-0007 further specifies the same `isConcreteArtifactRef()` check function is applied, ensuring behavioral consistency between the top-level and iteration-level fields.
-  ✅ Type extension is structurally and behaviorally consistent with the existing validator architecture.
+    ✅ Type extension is structurally and behaviorally consistent with the existing validator architecture.
 
 - [x] **Dependency graph: TC-2 (pathUtils.ts must not import from execution.ts) is captured as a constraint**
-  09_Constraints.md TC-2 states explicitly: "`pathUtils.ts` must not import from `execution.ts` or from any module that transitively imports `execution.ts`." Rationale covers the TypeScript undefined-value circular import failure mode. Impact section specifies the mitigation strategy (types defined in a neutral location). ✅
+      09_Constraints.md TC-2 states explicitly: "`pathUtils.ts` must not import from `execution.ts` or from any module that transitively imports `execution.ts`." Rationale covers the TypeScript undefined-value circular import failure mode. Impact section specifies the mitigation strategy (types defined in a neutral location). ✅
 
 - [x] **WS-3 unification: REQ-0011/REQ-0012 adequately cover the shared helper requirement**
-  - REQ-0011: Mandates exclusivity — helpers must be the *single* implementation; no parallel implementations allowed. This is enforced by NFR-0003 (grep-verifiable: "0 parallel implementations").
+  - REQ-0011: Mandates exclusivity — helpers must be the _single_ implementation; no parallel implementations allowed. This is enforced by NFR-0003 (grep-verifiable: "0 parallel implementations").
   - REQ-0012: Names all 5 traceability ref sites explicitly (`runtimeGate.evidenceRefs`, `iterations[].evidenceRefs.runtimeGate`, `iterations[].evidenceRefs.specCoverage`, `specCoverage.evidenceRefs`, `specs[].coverageRefs[].declaredRef`) and mandates shared helpers for all.
-  Together these two requirements close the WS-3 unification requirement completely and without ambiguity. ✅
+    Together these two requirements close the WS-3 unification requirement completely and without ambiguity. ✅
 
 - [x] **Rejected architecture options are in 99_delta.md (REJ-001 for inline vs. new file)**
-  99_delta.md `## Rejected Directions`:
+      99_delta.md `## Rejected Directions`:
   - REJ-001: "OQ-0001 Option B: inline helpers in `specCoverage.ts`" — rejected because inline helpers cannot be shared without coupling; recurrence prevention stated. ✅
   - REJ-002: "OQ-0003 Option B: allow empty `runtimeGate.evidenceRefs` array" — also present. ✅
 
 - [x] **No specification gap: all 5 traceability ref sites covered (REQ-0012)**
-  REQ-0012 enumerates all 5 ref sites:
+      REQ-0012 enumerates all 5 ref sites:
   1. `runtimeGate.evidenceRefs` ✅
   2. `iterations[].evidenceRefs.runtimeGate` ✅
   3. `iterations[].evidenceRefs.specCoverage` ✅
   4. `specCoverage.evidenceRefs` ✅
   5. `specs[].coverageRefs[].declaredRef` ✅
-  Cross-referenced against 03_Story-Workshop.md US-003 AC-003-2 (which also names all 5 sites) and the WS-3 diagram in the flowchart. No gap. ✅
+     Cross-referenced against 03_Story-Workshop.md US-003 AC-003-2 (which also names all 5 sites) and the WS-3 diagram in the flowchart. No gap. ✅
 
 - [x] **Production path test design: REQ-0015 correctly scopes the closure test**
-  REQ-0015: New file `prototypingExecution.productionPath.test.ts` must contain:
-  (a) At least one positive closure test: `runPrototypingExecution()` output passes `validatePrototypingEvidence()` with zero errors.
-  (b) At least one negative injection test: absolute path in `specCoverage` or `runtimeGate` causes validation failure.
-  This scope is sufficient to prevent the specific regression class identified in WS-4 (builder/validator contract mismatch). The positive case proves end-to-end coherence; the negative injection case proves the validator catches malformed builder output. NFR-0004 reinforces this with a measurable floor (1+1). ✅
+      REQ-0015: New file `prototypingExecution.productionPath.test.ts` must contain:
+      (a) At least one positive closure test: `runPrototypingExecution()` output passes `validatePrototypingEvidence()` with zero errors.
+      (b) At least one negative injection test: absolute path in `specCoverage` or `runtimeGate` causes validation failure.
+      This scope is sufficient to prevent the specific regression class identified in WS-4 (builder/validator contract mismatch). The positive case proves end-to-end coherence; the negative injection case proves the validator catches malformed builder output. NFR-0004 reinforces this with a measurable floor (1+1). ✅
 
 ## Feedback
 

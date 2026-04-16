@@ -2030,181 +2030,212 @@
 - AC-Refs: AC-0012-0110
 - Type: boundary
 - Verify: grep for independent concrete-ref grammar definitions in packages/qfai/src/ (excluding pathUtils.ts) returns 0 results
+
 ### TC-0012-0219: ui[] declaredRef Required — Absent Field Causes Validator Error (v1.7.15 rev9 WS-1)
+
 - EX-Ref: EX-0012-0150
 - AC-Refs: AC-0012-0104
 - Type: error
 - Test: `prototypingEvidence.test.ts`: construct bundle with `runtimeGate.ui[0]` missing `declaredRef`; call `validatePrototypingEvidence()`; assert error contains identifier for missing `declaredRef` on ui row
 
 ### TC-0012-0220: ui[] declaredRef Absolute Path — Validator Error (v1.7.15 rev9 WS-1)
+
 - EX-Ref: EX-0012-0151
 - AC-Refs: AC-0012-0105
 - Type: error
 - Test: `prototypingEvidence.test.ts`: set `ui[0].declaredRef = "/abs/path/spec.md"`; assert `validatePrototypingEvidence()` returns error for absolute path in `declaredRef`
 
 ### TC-0012-0221: ui[] declaredRef Synthetic Token — Validator Error (v1.7.15 rev9 WS-1)
+
 - EX-Ref: EX-0012-0152
 - AC-Refs: AC-0012-0105
 - Type: error
 - Test: `prototypingEvidence.test.ts`: set `ui[0].declaredRef = "spec"` (bare filename); assert validator error; also test Windows `\\` separator variant
 
 ### TC-0012-0222: ui[] declaredRef Concrete Ref — Passes Validation (v1.7.15 rev9 WS-1)
+
 - EX-Ref: EX-0012-0153
 - AC-Refs: AC-0012-0104, AC-0012-0105
 - Type: normal
 - Test: `prototypingEvidence.test.ts`: set `ui[0].declaredRef = ".qfai/contracts/ui/ui-0001-home.yaml#/screens/0"` (all other fields valid); assert no error for `declaredRef`
 
 ### TC-0012-0223: ui[] renderEvidenceRefs[] Empty Array — Validator Error (v1.7.15 rev9 WS-1)
+
 - EX-Ref: EX-0012-0154
 - AC-Refs: AC-0012-0106
 - Type: error
 - Test: `prototypingEvidence.test.ts`: set `ui[0].renderEvidenceRefs = []`; assert `validatePrototypingEvidence()` errors on empty renderEvidenceRefs
 
 ### TC-0012-0224: ui[] renderEvidenceRefs[] Synthetic Token — Validator Error (v1.7.15 rev9 WS-1)
+
 - EX-Ref: EX-0012-0155
 - AC-Refs: AC-0012-0107
 - Type: error
 - Test: `prototypingEvidence.test.ts`: set `ui[0].renderEvidenceRefs = ["a"]`; assert validator error for synthetic token `"a"`
 
 ### TC-0012-0225: ui[] browserQaEvidenceRefs[] Empty Array — Validator Error (v1.7.15 rev9 WS-1)
+
 - EX-Ref: EX-0012-0156
 - AC-Refs: AC-0012-0108
 - Type: error
 - Test: `prototypingEvidence.test.ts`: set `ui[0].browserQaEvidenceRefs = []`; assert validator error for empty browserQaEvidenceRefs
 
 ### TC-0012-0226: ui[] browserQaEvidenceRefs[] Windows Separator — Validator Error (v1.7.15 rev9 WS-1)
+
 - EX-Ref: EX-0012-0157
 - AC-Refs: AC-0012-0109
 - Type: boundary
 - Test: `prototypingEvidence.test.ts`: set `ui[0].browserQaEvidenceRefs = [".qfai\\evidence\\home.json"]`; assert validator error for Windows `\\` separator
 
 ### TC-0012-0227: Axis L1 — evidenceRefs[] Synthetic Token "a" — Validator Error (v1.7.15 rev9 WS-1)
+
 - EX-Ref: EX-0012-0160
 - AC-Refs: AC-0012-0114
 - Type: error
 - Test: `prototypingEvidence.test.ts`: set `iterations[0].l1.axes[0].evidenceRefs = ["a"]`; assert `validatePrototypingEvidence()` errors on synthetic token
 
 ### TC-0012-0228: Axis L2 — evidenceRefs[] Synthetic Token "b" — Validator Error (v1.7.15 rev9 WS-1)
+
 - EX-Ref: EX-0012-0161
 - AC-Refs: AC-0012-0115
 - Type: error
 - Test: `prototypingEvidence.test.ts`: set `l2.axes[0].evidenceRefs = ["b"]`; assert validator error for synthetic token `"b"`
 
 ### TC-0012-0229: Axis — Per-Axis: One Valid One Synthetic — Error for Invalid Axis (v1.7.15 rev9 WS-1)
+
 - EX-Ref: EX-0012-0162
 - AC-Refs: AC-0012-0119
 - Type: boundary
 - Test: `prototypingEvidence.test.ts`: `l1.axes[0].evidenceRefs = [".qfai/evidence/iter-0/axis-0.md#finding-1"]`; `l1.axes[1].evidenceRefs = ["a"]`; assert error for axes[1] only (per-axis granularity confirmed)
 
 ### TC-0012-0230: Axis L1 — evidenceRefs[] Empty Array — Validator Error (v1.7.15 rev9 WS-1)
+
 - EX-Ref: EX-0012-0163
 - AC-Refs: AC-0012-0116
 - Type: error
 - Test: `prototypingEvidence.test.ts`: set `l1.axes[0].evidenceRefs = []`; assert validator error for empty array on axis
 
 ### TC-0012-0231: Axis — evidenceRefs[] Absolute Path — Validator Error (v1.7.15 rev9 WS-1)
+
 - EX-Ref: EX-0012-0164
 - AC-Refs: AC-0012-0115, AC-0012-0117
 - Type: error
 - Test: `prototypingEvidence.test.ts`: set `l2.axes[0].evidenceRefs = ["/abs/path/eval.md"]`; assert validator error for absolute path
 
 ### TC-0012-0232: Axis — evidenceRefs[] Self-Ref to prototyping.json — Validator Error (v1.7.15 rev9 WS-1)
+
 - EX-Ref: EX-0012-0165
 - AC-Refs: AC-0012-0118
 - Type: error
 - Test: `prototypingEvidence.test.ts`: set `l2.axes[0].evidenceRefs = [".qfai/evidence/prototyping.json#/iterations/0"]`; assert validator error for self-ref
 
 ### TC-0012-0233: reviewerLogs — evidenceRefs[] Synthetic Token "reviewer:1" — Validator Error (v1.7.15 rev9 WS-1)
+
 - EX-Ref: EX-0012-0166
 - AC-Refs: AC-0012-0120
 - Type: error
 - Test: `prototypingEvidence.test.ts`: set `reviewerLogs[0].evidenceRefs = ["reviewer:1"]`; assert validator error for synthetic token
 
 ### TC-0012-0234: reviewerLogs — evidenceRefs[] Absolute Path — Validator Error (v1.7.15 rev9 WS-1)
+
 - EX-Ref: EX-0012-0167
 - AC-Refs: AC-0012-0121
 - Type: error
 - Test: `prototypingEvidence.test.ts`: set `reviewerLogs[0].evidenceRefs = ["/abs/path/reviewer.md"]`; assert validator error for absolute path
 
 ### TC-0012-0235: reviewerLogs — evidenceRefs[] Empty Array — Validator Error (v1.7.15 rev9 WS-1)
+
 - EX-Ref: EX-0012-0168
 - AC-Refs: AC-0012-0122
 - Type: error
 - Test: `prototypingEvidence.test.ts`: set `reviewerLogs[0].evidenceRefs = []`; assert validator error for empty array
 
 ### TC-0012-0236: isConcreteArtifactRef() Reused — No Parallel Grammar in prototypingEvidence.ts (v1.7.15 rev9 WS-1)
+
 - EX-Ref: EX-0012-0159
 - AC-Refs: AC-0012-0113
 - Type: edge
 - Test: in `prototypingEvidence.test.ts` static analysis block or `pathUtils.test.ts`: read `prototypingEvidence.ts` source text; assert no regex or custom pattern definitions for concrete-ref validation; all validation routes through `isConcreteArtifactRef()` from `pathUtils.ts`
 
 ### TC-0012-0237: bundleWriter.ts declaredRef Required — TypeScript Type Error on Omit (v1.7.15 rev9 WS-2)
+
 - EX-Ref: EX-0012-0169
 - AC-Refs: AC-0012-0124
 - Type: boundary
 - Test: add a compile-error test or verify with `pnpm check-types`: construct `ui[]` row without `declaredRef`; assert `pnpm check-types` exits non-zero (type error for missing required field)
 
 ### TC-0012-0238: bundleWriter.ts Leaf Arrays Required Non-Nullable — Null Emission Causes Type Error (v1.7.15 rev9 WS-2)
+
 - EX-Ref: EX-0012-0170
 - AC-Refs: AC-0012-0125, AC-0012-0126
 - Type: boundary
 - Test: verify with `pnpm check-types`: attempt to assign `null` or `undefined` to any of the leaf array fields (`renderEvidenceRefs`, `browserQaEvidenceRefs`, `axes[].evidenceRefs`, `reviewerLogs[].evidenceRefs`); assert type error
 
 ### TC-0012-0239: Closure Test — Leaf Fields in Execution Output Are Concrete (v1.7.15 rev9 WS-3)
+
 - EX-Ref: EX-0012-0171
 - AC-Refs: AC-0012-0131
 - Type: normal
 - Test: `prototypingExecution.productionPath.test.ts`: run `runPrototypingExecution()` with valid project; assert all leaf fields (`ui[].declaredRef`, `ui[].renderEvidenceRefs[]`, `ui[].browserQaEvidenceRefs[]`, `axes[].evidenceRefs[]`, `reviewerLogs[].evidenceRefs[]`) contain concrete artifact refs matching `isConcreteArtifactRef()` pattern
 
 ### TC-0012-0240: All 15 Leaf-Field Negative Cases Present in prototypingEvidence.test.ts (v1.7.15 rev9 WS-3)
+
 - EX-Ref: EX-0012-0171
 - AC-Refs: AC-0012-0128, AC-0012-0129
 - Type: normal
 - Test: verify test file contains 7 ui[] negative cases (AC-0012-0128) + 5 axis-level negative cases (AC-0012-0129) + 3 reviewer negative cases (AC-0012-0129); count assertions using grep; all pass with `pnpm vitest run --project validators --project core`
 
 ### TC-0012-0241: tests/core/ Fixtures Have No Synthetic Token evidenceRefs (v1.7.15 rev9 WS-3)
+
 - EX-Ref: EX-0012-0171
 - AC-Refs: AC-0012-0130
 - Type: boundary
 - Test: `grep -r '"a"' tests/core/` and `grep -r '"b"' tests/core/` and `grep -r '"reviewer:1"' tests/core/` → 0 matches in evidenceRefs contexts; all replaced with concrete artifact refs
 
 ### TC-0012-0242: README Enumerates All Concrete-Ref Leaf Fields (v1.7.15 rev9 WS-4)
+
 - EX-Ref: EX-0012-0172
 - AC-Refs: AC-0012-0132
 - Type: normal
 - Test: `packages/qfai/README.md` must contain explicit references to: `ui[].declaredRef`, `ui[].renderEvidenceRefs[]`, `ui[].browserQaEvidenceRefs[]`, `axes[].evidenceRefs[]`, `reviewerLogs[].evidenceRefs[]`; grep for these field names; all present; no content implies "top-level only" strictness
 
 ### TC-0012-0243: No Parallel Grammar — isConcreteArtifactRef() Reuse Static Check (v1.7.15 rev9 WS-1)
+
 - EX-Ref: EX-0012-0159
 - AC-Refs: AC-0012-0110
 - Type: edge
 - Test: in `pathUtils.test.ts` or static check in `prototypingEvidence.test.ts`: inspect `prototypingEvidence.ts` source for any regex or custom pattern outside `isConcreteArtifactRef()` calls for concrete-ref validation; assert 0 parallel implementations found
 
 ### TC-0012-0244: ui[] All Leaf Fields Valid — Full Row Passes (v1.7.15 rev9 WS-1)
+
 - EX-Ref: EX-0012-0158
 - AC-Refs: AC-0012-0104, AC-0012-0105, AC-0012-0106, AC-0012-0107, AC-0012-0108, AC-0012-0109
 - Type: normal
 - Test: `prototypingEvidence.test.ts`: construct bundle with `ui[0]` having all leaf fields populated with concrete refs; assert `validatePrototypingEvidence()` produces no error for ui leaf fields
 
 ### TC-0012-0245: Axis L1 — evidenceRefs[] Non-Empty Per-Axis Required (v1.7.15 rev9 WS-1)
+
 - EX-Ref: EX-0012-0163
 - AC-Refs: AC-0012-0111
 - Type: error
 - Test: `prototypingEvidence.test.ts`: set `l1.axes[0].evidenceRefs = []`; assert error on missing/empty per-axis (distinct from TC-0012-0230 which covers same scenario — this TC specifically validates AC-0012-0111 coverage)
 
 ### TC-0012-0246: Axis L1 — evidenceRefs[i] Concrete Ref Requirement (v1.7.15 rev9 WS-1)
+
 - EX-Ref: EX-0012-0160
 - AC-Refs: AC-0012-0112
 - Type: error
 - Test: `prototypingEvidence.test.ts`: set `l1.axes[0].evidenceRefs = [".qfai/evidence/iter-0/axis-0.md#finding-1"]` (valid); then set `l1.axes[1].evidenceRefs = ["a"]` (synthetic); assert only axes[1] causes error; confirms `isConcreteArtifactRef()` applied per-entry
 
 ### TC-0012-0247: bundleWriter.ts All Leaf Arrays Required Non-Nullable TypeScript Check (v1.7.15 rev9 WS-2)
+
 - EX-Ref: EX-0012-0170
 - AC-Refs: AC-0012-0123
 - Type: boundary
 - Test: verify with `pnpm check-types`: attempt assignment of `null`, `undefined`, or omit for `renderEvidenceRefs[]`, `browserQaEvidenceRefs[]`, `axes[].evidenceRefs[]`, `reviewerLogs[].evidenceRefs[]`; assert all produce TypeScript type errors (non-nullable schema enforced)
 
 ### TC-0012-0248: All 7 ui[] Leaf-Field Negative Cases Present (v1.7.15 rev9 WS-3)
+
 - EX-Ref: EX-0012-0171
 - AC-Refs: AC-0012-0127
 - Type: normal

@@ -2,33 +2,33 @@
 
 ## Review Pack Metadata
 
-| Key              | Value                                             |
-|------------------|---------------------------------------------------|
-| Scope            | discussion-20260416023323603                      |
-| Layer            | discussion                                        |
-| Review Pack ID   | review-20260416023323603                          |
-| Routing Profile  | requirements-heavy                                |
-| Created          | 2026-04-16T02:33:23Z                              |
+| Key             | Value                        |
+| --------------- | ---------------------------- |
+| Scope           | discussion-20260416023323603 |
+| Layer           | discussion                   |
+| Review Pack ID  | review-20260416023323603     |
+| Routing Profile | requirements-heavy           |
+| Created         | 2026-04-16T02:33:23Z         |
 
 ## Target Files (15)
 
-| # | File |
-|---|------|
-| 01 | `.qfai/discussion/discussion-20260416023323603/01_Context.md` |
-| 02 | `.qfai/discussion/discussion-20260416023323603/02_Inception-Deck.md` |
-| 03 | `.qfai/discussion/discussion-20260416023323603/03_Story-Workshop.md` |
-| 04 | `.qfai/discussion/discussion-20260416023323603/04_Sources.md` |
-| 05 | `.qfai/discussion/discussion-20260416023323603/05_Scope.md` |
-| 06 | `.qfai/discussion/discussion-20260416023323603/06_REQ.md` |
-| 07 | `.qfai/discussion/discussion-20260416023323603/07_NFR.md` |
-| 08 | `.qfai/discussion/discussion-20260416023323603/08_Glossary.md` |
-| 09 | `.qfai/discussion/discussion-20260416023323603/09_Constraints.md` |
-| 10 | `.qfai/discussion/discussion-20260416023323603/10_Policy.md` |
-| 11 | `.qfai/discussion/discussion-20260416023323603/11_OQ-Register.md` |
-| 12 | `.qfai/discussion/discussion-20260416023323603/12_OQ-Resolution-Log.md` |
-| 13 | `.qfai/discussion/discussion-20260416023323603/13_Deferred.md` |
-| 14 | `.qfai/discussion/discussion-20260416023323603/14_Review-Request.md` |
-| 99 | `.qfai/discussion/discussion-20260416023323603/99_delta.md` |
+| #   | File                                                                    |
+| --- | ----------------------------------------------------------------------- |
+| 01  | `.qfai/discussion/discussion-20260416023323603/01_Context.md`           |
+| 02  | `.qfai/discussion/discussion-20260416023323603/02_Inception-Deck.md`    |
+| 03  | `.qfai/discussion/discussion-20260416023323603/03_Story-Workshop.md`    |
+| 04  | `.qfai/discussion/discussion-20260416023323603/04_Sources.md`           |
+| 05  | `.qfai/discussion/discussion-20260416023323603/05_Scope.md`             |
+| 06  | `.qfai/discussion/discussion-20260416023323603/06_REQ.md`               |
+| 07  | `.qfai/discussion/discussion-20260416023323603/07_NFR.md`               |
+| 08  | `.qfai/discussion/discussion-20260416023323603/08_Glossary.md`          |
+| 09  | `.qfai/discussion/discussion-20260416023323603/09_Constraints.md`       |
+| 10  | `.qfai/discussion/discussion-20260416023323603/10_Policy.md`            |
+| 11  | `.qfai/discussion/discussion-20260416023323603/11_OQ-Register.md`       |
+| 12  | `.qfai/discussion/discussion-20260416023323603/12_OQ-Resolution-Log.md` |
+| 13  | `.qfai/discussion/discussion-20260416023323603/13_Deferred.md`          |
+| 14  | `.qfai/discussion/discussion-20260416023323603/14_Review-Request.md`    |
+| 99  | `.qfai/discussion/discussion-20260416023323603/99_delta.md`             |
 
 ## Review Focus (from 14_Review-Request.md)
 
@@ -43,12 +43,12 @@
 
 ## Reviewer Assignments
 
-| Role                     | Required? | Routing Basis |
-|--------------------------|-----------|---------------|
-| completion-reviewer      | YES       | Always required by `requirements-heavy` profile (`review-profiles.yml`) |
-| requirements-reviewer    | YES       | Always required by `requirements-heavy` profile (`review-profiles.yml`) |
+| Role                     | Required? | Routing Basis                                                                        |
+| ------------------------ | --------- | ------------------------------------------------------------------------------------ |
+| completion-reviewer      | YES       | Always required by `requirements-heavy` profile (`review-profiles.yml`)              |
+| requirements-reviewer    | YES       | Always required by `requirements-heavy` profile (`review-profiles.yml`)              |
 | architecture-reviewer    | YES       | Conditional — triggered: new `pathUtils.ts` leaf module + validator schema extension |
-| product-surface-reviewer | NO        | Conditional — not triggered: `ui_bearing: false`, non-UI pack |
+| product-surface-reviewer | NO        | Conditional — not triggered: `ui_bearing: false`, non-UI pack                        |
 
 ## Routing SSOT References
 

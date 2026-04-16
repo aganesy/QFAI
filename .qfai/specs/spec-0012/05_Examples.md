@@ -1133,7 +1133,9 @@
 - BR-Ref: BR-0012-0116
 - Input: packages/qfai/README.md after WS-4 with all leaf fields enumerated
 - Expected: README explicitly lists all concrete-ref contract fields; no language implying only top-level fields are validated
+
 ## EX-0012-0150: ui[] Row — declaredRef Absent is Validator Error (v1.7.15 rev9 WS-1)
+
 - BR-Ref: BR-0012-0107
 - US-Ref: US-0012-0067
 - Given: `runtimeGate.ui[0].declaredRef` field is missing entirely from the bundle
@@ -1141,6 +1143,7 @@
 - Then: validation error produced; error identifies missing `declaredRef` on `ui[]` row
 
 ## EX-0012-0151: ui[] Row — declaredRef Absolute Path is Validator Error (v1.7.15 rev9 WS-1)
+
 - BR-Ref: BR-0012-0108
 - US-Ref: US-0012-0067
 - Given: `runtimeGate.ui[0].declaredRef = "/abs/path/spec.md"` (absolute path)
@@ -1148,6 +1151,7 @@
 - Then: validation error produced; absolute path rejected by `isConcreteArtifactRef()`
 
 ## EX-0012-0152: ui[] Row — declaredRef Synthetic Token is Validator Error (v1.7.15 rev9 WS-1)
+
 - BR-Ref: BR-0012-0108
 - US-Ref: US-0012-0067
 - Given: `runtimeGate.ui[0].declaredRef = "spec"` (synthetic token / bare filename)
@@ -1155,6 +1159,7 @@
 - Then: validation error produced; synthetic token rejected
 
 ## EX-0012-0153: ui[] Row — declaredRef Concrete Ref Passes (v1.7.15 rev9 WS-1)
+
 - BR-Ref: BR-0012-0107, BR-0012-0108
 - US-Ref: US-0012-0067
 - Given: `runtimeGate.ui[0].declaredRef = ".qfai/contracts/ui/ui-0001-home.yaml#/screens/0"`
@@ -1162,6 +1167,7 @@
 - Then: no validation error for this field
 
 ## EX-0012-0154: ui[] Row — renderEvidenceRefs[] Empty Array is Validator Error (v1.7.15 rev9 WS-1)
+
 - BR-Ref: BR-0012-0109
 - US-Ref: US-0012-0067
 - Given: `runtimeGate.ui[0].renderEvidenceRefs = []` (empty array)
@@ -1169,6 +1175,7 @@
 - Then: validation error produced; non-empty required
 
 ## EX-0012-0155: ui[] Row — renderEvidenceRefs[] Synthetic Token is Validator Error (v1.7.15 rev9 WS-1)
+
 - BR-Ref: BR-0012-0108
 - US-Ref: US-0012-0067
 - Given: `runtimeGate.ui[0].renderEvidenceRefs = ["a"]` (synthetic token)
@@ -1176,6 +1183,7 @@
 - Then: validation error produced; synthetic token `"a"` rejected by `isConcreteArtifactRef()`
 
 ## EX-0012-0156: ui[] Row — browserQaEvidenceRefs[] Empty Array is Validator Error (v1.7.15 rev9 WS-1)
+
 - BR-Ref: BR-0012-0109
 - US-Ref: US-0012-0067
 - Given: `runtimeGate.ui[0].browserQaEvidenceRefs = []` (empty array)
@@ -1183,6 +1191,7 @@
 - Then: validation error produced; non-empty required
 
 ## EX-0012-0157: ui[] Row — browserQaEvidenceRefs[] Windows Separator is Validator Error (v1.7.15 rev9 WS-1)
+
 - BR-Ref: BR-0012-0108
 - US-Ref: US-0012-0067
 - Given: `runtimeGate.ui[0].browserQaEvidenceRefs = [".qfai\\evidence\\home.json"]` (Windows `\\`)
@@ -1190,6 +1199,7 @@
 - Then: validation error produced; Windows separator rejected
 
 ## EX-0012-0158: ui[] Row — All Leaf Fields Valid Passes (v1.7.15 rev9 WS-1)
+
 - BR-Ref: BR-0012-0107, BR-0012-0108, BR-0012-0109
 - US-Ref: US-0012-0067
 - Given: `ui[0].declaredRef = ".qfai/contracts/ui/ui-0001-home.yaml#/screens/0"`, `renderEvidenceRefs = [".qfai/evidence/render/home.png"]`, `browserQaEvidenceRefs = [".qfai/evidence/browser-qa/home.json#/checks/0"]`
@@ -1197,6 +1207,7 @@
 - Then: no validation error for this ui[] row
 
 ## EX-0012-0159: ui[] Row — isConcreteArtifactRef() Reused (No Parallel Grammar) (v1.7.15 rev9 WS-1)
+
 - BR-Ref: BR-0012-0108
 - US-Ref: US-0012-0067
 - Given: `prototypingEvidence.ts` source is inspected after WS-1
@@ -1204,6 +1215,7 @@
 - Then: no parallel regex or pattern definitions exist; all leaf validation routes through `pathUtils.ts`
 
 ## EX-0012-0160: Axis L1 — evidenceRefs[] Synthetic Token "a" is Validator Error (v1.7.15 rev9 WS-1)
+
 - BR-Ref: BR-0012-0110
 - US-Ref: US-0012-0068
 - Given: `iterations[0].l1.axes[0].evidenceRefs = ["a"]` (synthetic token)
@@ -1211,6 +1223,7 @@
 - Then: validation error produced; `"a"` rejected by `isConcreteArtifactRef()`
 
 ## EX-0012-0161: Axis L2 — evidenceRefs[] Synthetic Token "b" is Validator Error (v1.7.15 rev9 WS-1)
+
 - BR-Ref: BR-0012-0110
 - US-Ref: US-0012-0068
 - Given: `iterations[0].l2.axes[0].evidenceRefs = ["b"]` (synthetic token)
@@ -1218,6 +1231,7 @@
 - Then: validation error produced; `"b"` rejected
 
 ## EX-0012-0162: Axis — evidenceRefs[] Per-Axis: One Good Axis, One Bad Axis (v1.7.15 rev9 WS-1)
+
 - BR-Ref: BR-0012-0110
 - US-Ref: US-0012-0068
 - Given: `l1.axes[0].evidenceRefs = [".qfai/evidence/iter-0/axis-0.md#finding-1"]`; `l1.axes[1].evidenceRefs = ["a"]`
@@ -1225,6 +1239,7 @@
 - Then: validation error for axis 1 regardless of axis 0 being valid (per-axis granularity)
 
 ## EX-0012-0163: Axis L1 — evidenceRefs[] Empty Array is Validator Error (v1.7.15 rev9 WS-1)
+
 - BR-Ref: BR-0012-0110
 - US-Ref: US-0012-0068
 - Given: `iterations[0].l1.axes[0].evidenceRefs = []` (empty)
@@ -1232,6 +1247,7 @@
 - Then: validation error produced; non-empty required per axis
 
 ## EX-0012-0164: Axis — evidenceRefs[] Absolute Path is Validator Error (v1.7.15 rev9 WS-1)
+
 - BR-Ref: BR-0012-0110
 - US-Ref: US-0012-0068
 - Given: `l2.axes[0].evidenceRefs = ["/abs/path/eval.md"]` (absolute path)
@@ -1239,6 +1255,7 @@
 - Then: validation error produced
 
 ## EX-0012-0165: Axis — evidenceRefs[] Self-Ref to prototyping.json is Validator Error (v1.7.15 rev9 WS-1)
+
 - BR-Ref: BR-0012-0110
 - US-Ref: US-0012-0068
 - Given: `l2.axes[0].evidenceRefs = [".qfai/evidence/prototyping.json#/iterations/0"]` (self-ref)
@@ -1246,6 +1263,7 @@
 - Then: validation error produced; self-ref rejected
 
 ## EX-0012-0166: reviewerLogs — evidenceRefs[] Synthetic Token "reviewer:1" is Validator Error (v1.7.15 rev9 WS-1)
+
 - BR-Ref: BR-0012-0111
 - US-Ref: US-0012-0069
 - Given: `reviewerLogs[0].evidenceRefs = ["reviewer:1"]` (synthetic token)
@@ -1253,6 +1271,7 @@
 - Then: validation error produced; `"reviewer:1"` rejected
 
 ## EX-0012-0167: reviewerLogs — evidenceRefs[] Absolute Path is Validator Error (v1.7.15 rev9 WS-1)
+
 - BR-Ref: BR-0012-0111
 - US-Ref: US-0012-0069
 - Given: `reviewerLogs[0].evidenceRefs = ["/abs/path/reviewer.md"]` (absolute path)
@@ -1260,6 +1279,7 @@
 - Then: validation error produced
 
 ## EX-0012-0168: reviewerLogs — evidenceRefs[] Empty Array is Validator Error (v1.7.15 rev9 WS-1)
+
 - BR-Ref: BR-0012-0111
 - US-Ref: US-0012-0069
 - Given: `reviewerLogs[0].evidenceRefs = []` (empty)
@@ -1267,6 +1287,7 @@
 - Then: validation error produced; non-empty required
 
 ## EX-0012-0169: bundleWriter.ts declaredRef Required — Type Error for Omitted Field (v1.7.15 rev9 WS-2)
+
 - BR-Ref: BR-0012-0112
 - US-Ref: US-0012-0070
 - Given: TypeScript code builds a `ui[]` row without `declaredRef` field after WS-2
@@ -1274,6 +1295,7 @@
 - Then: TypeScript type error; `declaredRef` is required not optional
 
 ## EX-0012-0170: bundleWriter.ts Leaf Arrays Required Non-Nullable — Null Emission Prevented (v1.7.15 rev9 WS-2)
+
 - BR-Ref: BR-0012-0112, BR-0012-0113
 - US-Ref: US-0012-0070
 - Given: `runtimeObservation.ts` or `runtimeGateBuilder.ts` attempted to emit `null` for `renderEvidenceRefs`
@@ -1281,6 +1303,7 @@
 - Then: TypeScript type error; null emission is prevented by required non-nullable schema
 
 ## EX-0012-0171: 15 Negative Cases Present in prototypingEvidence.test.ts (v1.7.15 rev9 WS-3)
+
 - BR-Ref: BR-0012-0115
 - US-Ref: US-0012-0071
 - Given: `tests/core/prototypingEvidence.test.ts` is inspected after WS-3
@@ -1288,6 +1311,7 @@
 - Then: 7 ui[] negative cases + 5 axis negative cases + 3 reviewer negative cases all present and failing on invalid input
 
 ## EX-0012-0172: README Enumerates All Concrete-Ref Leaf Fields (v1.7.15 rev9 WS-4)
+
 - BR-Ref: BR-0012-0116
 - US-Ref: US-0012-0071
 - Given: `packages/qfai/README.md` is inspected after WS-4

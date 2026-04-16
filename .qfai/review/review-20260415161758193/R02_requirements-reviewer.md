@@ -27,7 +27,7 @@
 
 2. **07_NFR.md — NFR-0001 conceptually overlaps with REQ-0001/REQ-0002 (observation, not a crossing)**
    - NFR-0001 ("Deterministic rejection") asserts the same behavior domain as REQ-0001 and REQ-0002 (mode/surface rejection), but frames it as a quality attribute (fail-closed, deterministic).
-   - This is not a boundary violation — NFR-0001 is measurable and describes *how well* the system rejects, not *what* it must reject. No action required; noted for awareness.
+   - This is not a boundary violation — NFR-0001 is measurable and describes _how well_ the system rejects, not _what_ it must reject. No action required; noted for awareness.
 
 3. **06_REQ.md — REQ status column is uniformly `draft` (observation)**
    - All 10 REQs have `Status = draft`. For a resolved discussion pack, `approved` or `confirmed` statuses would better signal that these requirements are stable and ready for specification.

@@ -448,7 +448,6 @@ Given error-path test fixtures, when inspected, then missing pack, missing revie
 - REQ-Ref: REQ-0033
 - `SKILL.md` および `evidence/README.md` の陳腐化した記述を更新する
 
-
 ## AC-0012-0044-01: Non-UI Surface Rejects All Prototyping Modes (v1.7.15 rev5)
 
 - US-Ref: US-0012-0044
@@ -604,7 +603,6 @@ Given error-path test fixtures, when inspected, then missing pack, missing revie
 - US-Ref: US-0012-0049
 - REQ-Ref: REQ-0045
 - docs/README/SKILL が新しい contract を反映している
-
 
 ## AC-0012-0050-01: CLI Rejects --mode standard (v1.7.15 rev6)
 
@@ -785,6 +783,7 @@ Given error-path test fixtures, when inspected, then missing pack, missing revie
 - US-Ref: US-0012-0055
 - REQ-Ref: REQ-0100
 - Validator hard-errors when observation record contains `uiContractId` field (backward compat abandoned)
+
 ## AC-0012-0056: CalibrationPack Resolved Before runFullHarness
 
 Given execution.ts runs, when runPrototypingExecution is called, then CalibrationLoader is invoked before runFullHarness() and a resolved CalibrationPack object is passed.

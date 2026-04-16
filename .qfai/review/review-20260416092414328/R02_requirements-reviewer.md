@@ -23,12 +23,12 @@ All REQs are testable, specific, and traceable. Requirement Dependency Map prese
 
 All 4 OQs properly handled:
 
-| OQ-ID   | Both options stated | Recommendation explicit | Evidence cited |
-|---------|---------------------|-------------------------|----------------|
-| OQ-0001 | ✅ (A: inline; B: separate file) | ✅ Option A | ✅ SRC-0001 §6-1-2 |
-| OQ-0002 | ✅ (A: always error; B: allow empty) | ✅ Option A | ✅ SRC-0001 §3-2, §3-3; rev8 OQ-0003 |
-| OQ-0003 | ✅ (A: per-axis; B: aggregate) | ✅ Option A | ✅ SRC-0001 §6-1-3 |
-| OQ-0004 | ✅ (A: full enum; B: minimal note) | ✅ Option A | ✅ SRC-0001 §5-6 |
+| OQ-ID   | Both options stated                  | Recommendation explicit | Evidence cited                       |
+| ------- | ------------------------------------ | ----------------------- | ------------------------------------ |
+| OQ-0001 | ✅ (A: inline; B: separate file)     | ✅ Option A             | ✅ SRC-0001 §6-1-2                   |
+| OQ-0002 | ✅ (A: always error; B: allow empty) | ✅ Option A             | ✅ SRC-0001 §3-2, §3-3; rev8 OQ-0003 |
+| OQ-0003 | ✅ (A: per-axis; B: aggregate)       | ✅ Option A             | ✅ SRC-0001 §6-1-3                   |
+| OQ-0004 | ✅ (A: full enum; B: minimal note)   | ✅ Option A             | ✅ SRC-0001 §5-6                     |
 
 No neutral options missing. No "obviously correct" options presented without alternative. ✅
 
@@ -39,6 +39,7 @@ OQ-D001 (packHash carry-forward): Full 11-column metadata present. Severity: low
 ### NFR Assessment
 
 NFR-0001 through NFR-0005 all have:
+
 - Measurable target (specific counts, grep commands, or test pass criteria)
 - Measurement method (explicit commands or checks)
 - Source traceability (SRC-0001 §X)

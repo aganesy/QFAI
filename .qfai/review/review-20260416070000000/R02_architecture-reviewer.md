@@ -9,6 +9,7 @@
 ## Scope
 
 Architecture-sensitive changes in v1.7.15 rev7:
+
 - WS-1: CalibrationPack upstream resolution (execution.ts ← CalibrationLoader; runtime.ts zero imports)
 - WS-2: uiFidelity fail-closed guard (UiFidelityEvidenceError)
 - WS-3: specCoverage.evidenceRefs concrete-only restriction; `isConcreteArtifactRef()` helper

@@ -10,23 +10,23 @@
 
 ### Mandatory File Presence (15/15)
 
-| File                   | Present |
-|------------------------|---------|
-| 01_Context.md          | ✅      |
-| 02_Inception-Deck.md   | ✅      |
-| 03_Story-Workshop.md   | ✅      |
-| 04_Sources.md          | ✅      |
-| 05_Scope.md            | ✅      |
-| 06_REQ.md              | ✅      |
-| 07_NFR.md              | ✅      |
-| 08_Glossary.md         | ✅      |
-| 09_Constraints.md      | ✅      |
-| 10_Policy.md           | ✅      |
-| 11_OQ-Register.md      | ✅      |
-| 12_OQ-Resolution-Log.md | ✅     |
-| 13_Deferred.md         | ✅      |
-| 14_Review-Request.md   | ✅      |
-| 99_delta.md            | ✅      |
+| File                    | Present |
+| ----------------------- | ------- |
+| 01_Context.md           | ✅      |
+| 02_Inception-Deck.md    | ✅      |
+| 03_Story-Workshop.md    | ✅      |
+| 04_Sources.md           | ✅      |
+| 05_Scope.md             | ✅      |
+| 06_REQ.md               | ✅      |
+| 07_NFR.md               | ✅      |
+| 08_Glossary.md          | ✅      |
+| 09_Constraints.md       | ✅      |
+| 10_Policy.md            | ✅      |
+| 11_OQ-Register.md       | ✅      |
+| 12_OQ-Resolution-Log.md | ✅      |
+| 13_Deferred.md          | ✅      |
+| 14_Review-Request.md    | ✅      |
+| 99_delta.md             | ✅      |
 
 All 15 mandatory files present. ✅
 
@@ -37,6 +37,7 @@ All 15 mandatory files present. ✅
 ### Deferred Metadata Completeness
 
 `13_Deferred.md` contains 1 deferred item (OQ-D001 / packHash carry-forward). All 11 mandatory columns populated:
+
 - OQ-ID ✅, Title ✅, Gate ✅, Deferred-Reason ✅, Deferred-Until ✅, Owner ✅, Due ✅, Severity ✅, Impact ✅, Mitigation ✅, Evidence ✅
 
 ### Mermaid Diagram Checks

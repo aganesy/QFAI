@@ -257,7 +257,6 @@
 - Status: Adopted (OQ-0006 resolved)
 - Impact: packResolver.ts エラー型設計
 
-
 ## DR-0012-0036: PROTOTYPING_SUPPORTED_SURFACES = [web, mobile, desktop, mixed] (v1.7.15 rev6, OQ-0001 resolution)
 
 - Decision: `PROTOTYPING_SUPPORTED_SURFACES` = `["web", "mobile", "desktop", "mixed"]`; `mixed` is included as a legitimate cross-platform UI surface
@@ -310,6 +309,7 @@
 - Rejected-A: Silently ignore `uiContractId` field if present in observation records
   - DO NOT silently ignore `uiContractId` in observation records.
   - Temptation: silent ignore is safe and non-breaking for existing consumers.
+
 ### DR-0012-0041: packHash Exclusion from calibrationRef (OQ-0001, rev7)
 
 - Decision: Exclude `packHash` from `calibrationRef` in v1.7.15 rev7. `packPath + packVersion + configPath` is sufficient for audit closure.
@@ -417,7 +417,9 @@
 - Rejected: Minimal extension note (Option B) — leaves docs/validator partial-strictness mismatch unresolved.
   - DO NOT use a minimal note for README update. Temptation: minimize churn by adding only a brief note.
 - Source: discussion-20260416092414328 OQ-0004
+
 ### DR-0012-0049: ui[] Row Validation Inline in prototypingEvidence.ts (OQ-0001, rev9)
+
 - Decision: `runtimeGate.ui[]` 行レベル3フィールドの validation は `prototypingEvidence.ts` の既存 `validateRuntimeGate()` 内にインラインで実装（Option A）
 - Context: design doc §6-1-2 が変更ファイルとして `prototypingEvidence.ts` を明示。小規模な凝集した validation ユニットを別ファイルに抽出してもアーキテクチャ上の利点がない。
 - Rationale: Option A (inline) adopted. インラインは凝集性を保ち design doc §6-1-2 に忠実。将来的に ui[] 行 validation が大幅に成長した場合は抽出を再検討できる。
@@ -426,6 +428,7 @@
 - Source: OQ-0001, discussion-20260416092414328
 
 ### DR-0012-0050: browserQaEvidenceRefs[] Always Required Non-Empty (OQ-0002, rev9)
+
 - Decision: `runtimeGate.ui[].browserQaEvidenceRefs[]` は「browser QA 未実施」ケースでも常に required non-empty。空配列はハードフェイル（Option A）。
 - Context: design doc §3-2 fail-closed ポリシー、§3-3「string なら通す」leniency 廃止。rev8 OQ-0003 で `runtimeGate.evidenceRefs` 空配列を拒否した precedent と一貫。
 - Rationale: Option A (always required non-empty) adopted. Partial run で `browserQaEvidenceRefs[]` を埋められない場合はビルダーが失敗すべきであり、validator が空を許容すべきでない。
@@ -434,6 +437,7 @@
 - Source: OQ-0002, discussion-20260416092414328
 
 ### DR-0012-0051: Per-Axis evidenceRefs[] Validation Granularity (OQ-0003, rev9)
+
 - Decision: `fullHarness.iterations[].l1/l2.axes[].evidenceRefs[]` の validation を per-axis 粒度で実施（Option A）。任意の axis の空配列が validator error。
 - Context: design doc §6-1-3 "array 必須、空配列禁止、各値は concrete artifact ref" — per-element 記述。集約レニエンシー（全 axis 空のときのみ error）を採用すると一部 axis がエビデンスなしでもパスする。
 - Rationale: Option A (per-axis) adopted. Per-axis validation は package-wide fail-closed 原則と一致し、design doc §6-1-3 の literal text に従う。
@@ -442,6 +446,7 @@
 - Source: OQ-0003, discussion-20260416092414328
 
 ### DR-0012-0052: Full README Enumeration of All Concrete-Ref Leaf Fields (OQ-0004, rev9)
+
 - Decision: `packages/qfai/README.md` に concrete-ref contract の全 leaf フィールドを明記する完全列挙アプローチを採用（Option A）
 - Context: DoD §5-6「docs/validator mismatch が消える」かつ「一部 field だけ strict という状態が説明と実装のどちらにも残らない」が hard gate。design doc §9 が「README の表現を弱めて整合したことにする」を明示禁止。
 - Rationale: Option A (full enumeration) adopted. Option B（最小限の注記のみ）では partial mismatch が残る可能性が高く DoD §5-6 を満たさない。

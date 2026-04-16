@@ -1339,6 +1339,7 @@ discussion-20260416023323603（v1.7.15 rev8 leaf-field ref grammar closure）、
 - Source: discussion-20260414195449523, OQ-0004
 
 ### DR-0223: ui[] row validation inline in prototypingEvidence.ts (v1.7.15 rev9, OQ-0001 resolution)
+
 - Decision: `runtimeGate.ui[]` 行レベル3フィールド（declaredRef/renderEvidenceRefs[]/browserQaEvidenceRefs[]）の validation を `prototypingEvidence.ts` 内インラインで実装（Option A）
 - Status: Adopted
 - Rationale: design doc §6-1-2 が変更ファイルとして `prototypingEvidence.ts` を明示。小規模な凝集した validation ユニットを別モジュールに抽出してもアーキテクチャ上の利点がない。インラインは凝集性を保つ
@@ -1346,6 +1347,7 @@ discussion-20260416023323603（v1.7.15 rev8 leaf-field ref grammar closure）、
 - Source: discussion-20260416092414328, OQ-0001
 
 ### DR-0224: browserQaEvidenceRefs[] always required non-empty (v1.7.15 rev9, OQ-0002 resolution)
+
 - Decision: `runtimeGate.ui[].browserQaEvidenceRefs[]` は「browser QA 未実施」の場合でも常に required non-empty とし、空配列はハードフェイル（Option A）
 - Status: Adopted
 - Rationale: design doc §3-2 の fail-closed ポリシー。rev8 OQ-0003 で `runtimeGate.evidenceRefs` 空配列を拒否した precedent と一貫させる。空を許可するとビルダーが空を出力して validator がパスする抜け穴になる
@@ -1353,6 +1355,7 @@ discussion-20260416023323603（v1.7.15 rev8 leaf-field ref grammar closure）、
 - Source: discussion-20260416092414328, OQ-0002
 
 ### DR-0225: per-axis evidenceRefs validation granularity (v1.7.15 rev9, OQ-0003 resolution)
+
 - Decision: `fullHarness.iterations[].l1/l2.axes[].evidenceRefs[]` の validation を per-axis 粒度で実施（Option A）。任意の axis が空配列であれば validator error
 - Status: Adopted
 - Rationale: design doc §6-1-3 の per-element 記述に準拠。集約レニエンシー（全 axis が空のときのみエラー）を許すと一部の axis がエビデンスなしでもパスする
@@ -1360,6 +1363,7 @@ discussion-20260416023323603（v1.7.15 rev8 leaf-field ref grammar closure）、
 - Source: discussion-20260416092414328, OQ-0003
 
 ### DR-0226: full README enumeration of all concrete-ref leaf fields (v1.7.15 rev9, OQ-0004 resolution)
+
 - Decision: README に concrete-ref contract の全 leaf フィールド（ui[].declaredRef、ui[].renderEvidenceRefs[]、ui[].browserQaEvidenceRefs[]、axes[].evidenceRefs[]、reviewerLogs[].evidenceRefs[]）を明記（Option A）
 - Status: Adopted
 - Rationale: DoD §5-6「docs/validator partial-strictness mismatch をゼロにする」が hard gate。design doc §9 が「README の表現を弱めて整合したことにする」を明示禁止している

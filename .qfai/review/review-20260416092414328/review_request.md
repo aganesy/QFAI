@@ -1,21 +1,21 @@
 # Review Request: discussion-20260416092414328 (rev9)
 
-| Key              | Value                                                                        |
-|------------------|------------------------------------------------------------------------------|
-| Review Pack ID   | review-20260416092414328                                                     |
-| Discussion ID    | discussion-20260416092414328                                                 |
-| Timestamp        | 2026-04-16T09:24:14.328Z                                                     |
-| Routing Profile  | requirements-heavy                                                           |
-| Profile Source   | `.qfai/assistant/steering/agent-routing.yml` (skill: qfai-discussion)       |
+| Key             | Value                                                                 |
+| --------------- | --------------------------------------------------------------------- |
+| Review Pack ID  | review-20260416092414328                                              |
+| Discussion ID   | discussion-20260416092414328                                          |
+| Timestamp       | 2026-04-16T09:24:14.328Z                                              |
+| Routing Profile | requirements-heavy                                                    |
+| Profile Source  | `.qfai/assistant/steering/agent-routing.yml` (skill: qfai-discussion) |
 
 ## Required Reviewers
 
-| Role                      | Required | Trigger                                                                         |
-|---------------------------|----------|---------------------------------------------------------------------------------|
-| completion-reviewer       | YES      | Always required (requirements-heavy profile)                                    |
-| requirements-reviewer     | YES      | Always required (requirements-heavy profile)                                    |
-| architecture-reviewer     | YES      | Conditional: validator contract surface extension + bundleWriter breaking change |
-| product-surface-reviewer  | NO       | Non-UI pack (ui_bearing: false)                                                 |
+| Role                     | Required | Trigger                                                                          |
+| ------------------------ | -------- | -------------------------------------------------------------------------------- |
+| completion-reviewer      | YES      | Always required (requirements-heavy profile)                                     |
+| requirements-reviewer    | YES      | Always required (requirements-heavy profile)                                     |
+| architecture-reviewer    | YES      | Conditional: validator contract surface extension + bundleWriter breaking change |
+| product-surface-reviewer | NO       | Non-UI pack (ui_bearing: false)                                                  |
 
 ## Review Scope
 

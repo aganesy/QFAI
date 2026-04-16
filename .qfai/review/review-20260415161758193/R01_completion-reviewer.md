@@ -41,29 +41,29 @@
 - validate.log: `.qfai/report/validate.log`
 - error count: 29 (27 pre-existing + 2 ATDD expected)
 - QFAI-COV-201/202/203/204/205/206: **0** — no entries found in validate.log
-- QFAI-ATDD-111: present — US-0012-0050..0055 not yet covered in tests/e2e/** (expected; test assets out of SDD scope, will be implemented in /qfai-implement)
-- QFAI-ATDD-112: present — TC-0012-0141..0172 not yet covered in tests/integration/** (expected; test assets out of SDD scope)
+- QFAI-ATDD-111: present — US-0012-0050..0055 not yet covered in tests/e2e/\*\* (expected; test assets out of SDD scope, will be implemented in /qfai-implement)
+- QFAI-ATDD-112: present — TC-0012-0141..0172 not yet covered in tests/integration/\*\* (expected; test assets out of SDD scope)
 
 ## DoD Checklist
 
 - [x] Required roles delegated — qfai-sdd skill executed; no orchestrator self-authoring
 - [x] Phase order: Contracts→Outline→Slice→Plan→Delta — `_policies/10_delta.md` records "SDD Outline (Phase 1)" with 05_Contracts.md and spec-0012 in sequence; 09_delta.md and 10_Plan.md confirm slice and plan phases
 - [x] US→AC→BR→EX→TC traceability chain intact — full chain for REQ-0093..0102 documented in 09_delta.md traceability section: REQ→US-0050..0055→AC-0050-01..0055-06→BR-0086..0091→EX-0103..0108→TC-0141..0172
-- [x] OQ-0001..0005 resolved in DR-0036..0040 — confirmed in 07_Decisions.md: DR-0036 (OQ-0001), DR-0037 (OQ-0002), DR-0038 (OQ-0003), DR-0039 (OQ-0004), DR-0040 (OQ-0005); _policies/10_delta.md confirms all 5 resolutions
+- [x] OQ-0001..0005 resolved in DR-0036..0040 — confirmed in 07_Decisions.md: DR-0036 (OQ-0001), DR-0037 (OQ-0002), DR-0038 (OQ-0003), DR-0039 (OQ-0004), DR-0040 (OQ-0005); \_policies/10_delta.md confirms all 5 resolutions
 - [x] Rejected guardrails present — 09_delta.md contains RJ-0012-0024..0028 each with DO NOT statement and Temptation field
-- [x] Drift Protocol: no upstream edits — changes are spec-layer only (spec-0012/* and _policies/*); no packages/qfai source edits made in this SDD phase
+- [x] Drift Protocol: no upstream edits — changes are spec-layer only (spec-0012/_ and \_policies/_); no packages/qfai source edits made in this SDD phase
 
 ## WS Coverage Check
 
-| WS   | US        | AC count | BR        | EX        | TC range      |
-|------|-----------|----------|-----------|-----------|---------------|
-| WS-1 | US-0050, US-0051 | 5+5=10 | BR-0086, BR-0087 | EX-0103, EX-0104 | TC-0141..0150 |
-| WS-2 | US-0051, US-0052 | 5+2=7  | BR-0087, BR-0088 | EX-0104, EX-0105 | TC-0146..0153 |
-| WS-3 | US-0053   | 6        | BR-0089   | EX-0106   | TC-0154..0159 |
-| WS-4 | US-0054   | 6        | BR-0090   | EX-0107   | TC-0160..0163 |
-| WS-5 | US-0055   | 4 (of 6) | BR-0091   | EX-0108   | TC-0164..0172 |
-| WS-6 | US-0055   | 2 (of 6) | BR-0091   | EX-0108   | TC-0164..0172 |
-| WS-7 | US-0055   | included | BR-0091   | EX-0108   | TC-0171..0172 |
+| WS   | US               | AC count | BR               | EX               | TC range      |
+| ---- | ---------------- | -------- | ---------------- | ---------------- | ------------- |
+| WS-1 | US-0050, US-0051 | 5+5=10   | BR-0086, BR-0087 | EX-0103, EX-0104 | TC-0141..0150 |
+| WS-2 | US-0051, US-0052 | 5+2=7    | BR-0087, BR-0088 | EX-0104, EX-0105 | TC-0146..0153 |
+| WS-3 | US-0053          | 6        | BR-0089          | EX-0106          | TC-0154..0159 |
+| WS-4 | US-0054          | 6        | BR-0090          | EX-0107          | TC-0160..0163 |
+| WS-5 | US-0055          | 4 (of 6) | BR-0091          | EX-0108          | TC-0164..0172 |
+| WS-6 | US-0055          | 2 (of 6) | BR-0091          | EX-0108          | TC-0164..0172 |
+| WS-7 | US-0055          | included | BR-0091          | EX-0108          | TC-0171..0172 |
 
 All 7 workstreams have at least one US, corresponding AC, BR, EX, and TC entries.
 

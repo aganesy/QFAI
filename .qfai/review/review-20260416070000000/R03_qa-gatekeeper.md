@@ -9,6 +9,7 @@
 ## Scope
 
 QA gate review focuses on:
+
 - Validate gate result and pre-existing vs new error analysis
 - Coverage obligations (QFAI-COV-201..206)
 - ATDD annotation guidance
@@ -19,16 +20,16 @@ QA gate review focuses on:
 
 ## Validate Gate
 
-| Item | Result |
-|------|--------|
-| `qfai validate --fail-on error` | FAIL (52 errors) |
-| New errors introduced by rev7 changes | **0** |
-| Pre-existing errors (confirmed by HEAD diff) | **52** |
-| `QFAI-COV-201` (AC without TC) for spec-0012 | **0** |
-| `QFAI-COV-202` (BR without EX) for spec-0012 | **0** |
-| `QFAI-COV-203` (EX without TC) for spec-0012 | **0** |
-| `QFAI-COV-204/205/206` for spec-0012 | **0** |
-| `QFAI-ATDD-101/102/103/111/112/113/121/122` | Out of SDD scope (test assets not authored) |
+| Item                                         | Result                                      |
+| -------------------------------------------- | ------------------------------------------- |
+| `qfai validate --fail-on error`              | FAIL (52 errors)                            |
+| New errors introduced by rev7 changes        | **0**                                       |
+| Pre-existing errors (confirmed by HEAD diff) | **52**                                      |
+| `QFAI-COV-201` (AC without TC) for spec-0012 | **0**                                       |
+| `QFAI-COV-202` (BR without EX) for spec-0012 | **0**                                       |
+| `QFAI-COV-203` (EX without TC) for spec-0012 | **0**                                       |
+| `QFAI-COV-204/205/206` for spec-0012         | **0**                                       |
+| `QFAI-ATDD-101/102/103/111/112/113/121/122`  | Out of SDD scope (test assets not authored) |
 
 **Gate Assessment**: The 52 pre-existing errors are not blocking for the rev7 SDD phase. They exist in specs outside our scope (spec-0001..0011, 0013..0015) and in pre-existing spec-0012 content (AC ID format, BR AC-Refs format with sub-IDs from earlier revisions, TDDLIST references). Rev7 authoring introduced zero new errors.
 
@@ -39,6 +40,7 @@ QA gate review focuses on:
 ### TC Coverage of New ACs (AC-0056..0075 → TC-0173..0197)
 
 Each of the 20 new ACs has at least one TC:
+
 - AC-0056..0058 → TC-0173..0177 (CalibrationLoader path; includes normal + error)
 - AC-0059..0062 → TC-0178..0183 (uiFidelity guard; includes all 3 failure modes)
 - AC-0063..0065 → TC-0184..0188 (evidenceRefs concrete check; normal + forbidden patterns)
@@ -62,6 +64,7 @@ Normal-path-only coverage: **NOT present** — error/boundary paths are present 
 ## ATDD Annotation Guidance
 
 Per `10_Plan.md` (v1.7.15 rev7 Implementation Strategy), downstream test implementation should use:
+
 - `tests/integration/**` → `// QFAI:SPEC-0012:TC-XXXX`
 - `tests/e2e/**` → `// QFAI:SPEC-0012:US-XXXX`
 
@@ -72,6 +75,7 @@ No API contracts exist for this spec (CLI tool). `CON-API-XXXX` annotations: n/a
 ## Density Review
 
 `QFAI-DENSITY-002` and `QFAI-DENSITY-004` warnings for spec-0012:
+
 - These warnings indicate the coverage matrix and Scenario sections use aggregate IDs (`EX-0012`, `TC-0012`) rather than per-ID rows.
 - This is a pre-existing density pattern across all specs in the repository and not a blocker for the SDD phase.
 - The actual EX and TC content (EX-0109..0128, TC-0173..0197) is present and traceable.

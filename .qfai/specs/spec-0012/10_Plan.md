@@ -122,22 +122,22 @@ Single-PR: `packages/qfai/**` only. 5 remaining audit issues across 6 work strea
 
 ### Modules Touched (rev4 Change Obligation)
 
-| Module                     | Change Obligation                                                                                                                  | WS   |
-| -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- | ---- |
-| `mode.ts`                  | `derivePrototypingObligations()` に cli + full-harness 拒否ガード追加。UI-bearing surface 判定: web/mobile/desktop/mixed のみ許可   | WS-1 |
-| `execution.ts`             | `runFullHarness()` に非ビジュアル surface ハードリジェクト追加                                                                      | WS-1 |
-| `cli/prototyping.ts`       | cli + full-harness 組み合わせ時の即座エラー終了                                                                                     | WS-1 |
-| `screenContracts.ts` (新設)| `40_screen_contracts.md` パーサー。スクリーン一覧を返却する関数を提供                                                                | WS-2 |
-| `uiFidelityBuilder.ts`     | `"/primary"` 固定値を廃止し screen contract からターゲットを動的導出。各スクリーン個別のフィデリティ測定ターゲット生成                 | WS-2 |
-| `uiObservation.ts`         | フェーズ参照・ファインディング参照の収集。screen-level measurement のエビデンス参照を `runtime.ts` へ提供                             | WS-3 |
-| `runtime.ts`               | `iterations[].evidenceRefs.browserQa` への格納。空時ハードフェイル                                                                   | WS-3 |
-| `prototypingEvidence.ts`   | サマリーレベルにフェーズ/ファインディング参照を含める。陳腐化 remediation セマンティクス除去                                          | WS-3, WS-6 |
-| `runtimeGateBuilder.ts`    | canonical path 正規化処理実装。URL → canonical path 変換                                                                            | WS-4 |
-| `specCoverage.ts`          | canonical path 比較。URL をルートとして扱わない。missing_observation レポート                                                        | WS-4 |
-| `l2Evidence.ts`            | 20-23 系ファイル・`04_Sources.md`・`40_screen_contracts.md` の構造化パース優先。ヒューリスティック縮小                                | WS-5 |
-| `prototypingEvidence.ts`   | バリデータ: cli + full-harness 組み合わせ拒否ルール追加                                                                              | WS-1 |
-| docs/SKILL/README          | 陳腐化記述更新。runtime 実体との reality sync                                                                                        | WS-6 |
-| tests                      | `skip` → `reject` 変換。URL-as-route → canonical route 変換。`"/primary"` 除去                                                      | WS-6 |
+| Module                      | Change Obligation                                                                                                                 | WS         |
+| --------------------------- | --------------------------------------------------------------------------------------------------------------------------------- | ---------- |
+| `mode.ts`                   | `derivePrototypingObligations()` に cli + full-harness 拒否ガード追加。UI-bearing surface 判定: web/mobile/desktop/mixed のみ許可 | WS-1       |
+| `execution.ts`              | `runFullHarness()` に非ビジュアル surface ハードリジェクト追加                                                                    | WS-1       |
+| `cli/prototyping.ts`        | cli + full-harness 組み合わせ時の即座エラー終了                                                                                   | WS-1       |
+| `screenContracts.ts` (新設) | `40_screen_contracts.md` パーサー。スクリーン一覧を返却する関数を提供                                                             | WS-2       |
+| `uiFidelityBuilder.ts`      | `"/primary"` 固定値を廃止し screen contract からターゲットを動的導出。各スクリーン個別のフィデリティ測定ターゲット生成            | WS-2       |
+| `uiObservation.ts`          | フェーズ参照・ファインディング参照の収集。screen-level measurement のエビデンス参照を `runtime.ts` へ提供                         | WS-3       |
+| `runtime.ts`                | `iterations[].evidenceRefs.browserQa` への格納。空時ハードフェイル                                                                | WS-3       |
+| `prototypingEvidence.ts`    | サマリーレベルにフェーズ/ファインディング参照を含める。陳腐化 remediation セマンティクス除去                                      | WS-3, WS-6 |
+| `runtimeGateBuilder.ts`     | canonical path 正規化処理実装。URL → canonical path 変換                                                                          | WS-4       |
+| `specCoverage.ts`           | canonical path 比較。URL をルートとして扱わない。missing_observation レポート                                                     | WS-4       |
+| `l2Evidence.ts`             | 20-23 系ファイル・`04_Sources.md`・`40_screen_contracts.md` の構造化パース優先。ヒューリスティック縮小                            | WS-5       |
+| `prototypingEvidence.ts`    | バリデータ: cli + full-harness 組み合わせ拒否ルール追加                                                                           | WS-1       |
+| docs/SKILL/README           | 陳腐化記述更新。runtime 実体との reality sync                                                                                     | WS-6       |
+| tests                       | `skip` → `reject` 変換。URL-as-route → canonical route 変換。`"/primary"` 除去                                                    | WS-6       |
 
 ### Implementation Order (rev4, 6-step dependency chain)
 
@@ -153,20 +153,20 @@ WS-1 は独立（並行可能）。WS-2〜WS-6 は直列依存。
 
 ### Test Strategy (rev4)
 
-| Layer       | Location                     | Coverage Target                                                                                           |
-| ----------- | ---------------------------- | --------------------------------------------------------------------------------------------------------- |
-| Unit        | `tests/unit/`                | screenContracts parser, canonical route normalization, mode reject guard, evidence chain validation        |
-| Integration | `tests/integration/`         | screen contract → Browser QA → evidence chain full path, specCoverage canonical path comparison           |
-| Validator   | `tests/validators/`          | QFAI-PROT cli+full-harness reject rule, evidence chain non-empty rule                                     |
-| ATDD map    | `spec-0012/tdd/test-list.md` | TC-0012-0092..TC-0012-0120 mapped to TDD-IDs                                                              |
+| Layer       | Location                     | Coverage Target                                                                                     |
+| ----------- | ---------------------------- | --------------------------------------------------------------------------------------------------- |
+| Unit        | `tests/unit/`                | screenContracts parser, canonical route normalization, mode reject guard, evidence chain validation |
+| Integration | `tests/integration/`         | screen contract → Browser QA → evidence chain full path, specCoverage canonical path comparison     |
+| Validator   | `tests/validators/`          | QFAI-PROT cli+full-harness reject rule, evidence chain non-empty rule                               |
+| ATDD map    | `spec-0012/tdd/test-list.md` | TC-0012-0092..TC-0012-0120 mapped to TDD-IDs                                                        |
 
 ### Docs Sync (rev4)
 
-| Artifact        | Sync Target                                                                                        |
-| --------------- | -------------------------------------------------------------------------------------------------- |
-| SKILL.md        | cli + full-harness 拒否ルール明記、screen contract ベースターゲット、canonical route semantics       |
-| Evidence README | evidence chain completeness 要件、structured parse 優先ルール                                       |
-| README.md       | 陳腐化記述除去、rev4 変更反映                                                                       |
+| Artifact        | Sync Target                                                                                    |
+| --------------- | ---------------------------------------------------------------------------------------------- |
+| SKILL.md        | cli + full-harness 拒否ルール明記、screen contract ベースターゲット、canonical route semantics |
+| Evidence README | evidence chain completeness 要件、structured parse 優先ルール                                  |
+| README.md       | 陳腐化記述除去、rev4 変更反映                                                                  |
 
 ## v1.7.15 rev5 Implementation Strategy
 
@@ -176,31 +176,31 @@ Single-PR: `packages/qfai/**` only. 6 audit resolution items from discussion-202
 
 ### New Files (5 new modules)
 
-| File | WS | Purpose |
-|------|-----|---------|
-| `runtimeObservation.ts` | WS-2 | ObservedUiRoute + RuntimeObservation types (observed-only ledger) |
-| `browserQaPerScreen.ts` | WS-3 | Per-screen Browser QA input generator |
-| `actionCoverage.ts` | WS-4 | actionsDeclared/actionsObserved/actionsWired/missingActions calculator |
-| `packResolver.ts` | WS-6 | Calibration pack resolution SSOT (shared by runtime + validator) |
-| `structuredArtifactReaders.ts` | WS-6 | Structured section parsers for discussion/screen artifacts |
+| File                           | WS   | Purpose                                                                |
+| ------------------------------ | ---- | ---------------------------------------------------------------------- |
+| `runtimeObservation.ts`        | WS-2 | ObservedUiRoute + RuntimeObservation types (observed-only ledger)      |
+| `browserQaPerScreen.ts`        | WS-3 | Per-screen Browser QA input generator                                  |
+| `actionCoverage.ts`            | WS-4 | actionsDeclared/actionsObserved/actionsWired/missingActions calculator |
+| `packResolver.ts`              | WS-6 | Calibration pack resolution SSOT (shared by runtime + validator)       |
+| `structuredArtifactReaders.ts` | WS-6 | Structured section parsers for discussion/screen artifacts             |
 
 ### Modules Touched (rev5 Change Obligation)
 
-| Module | Change Obligation | WS |
-|--------|-------------------|-----|
-| `mode.ts` / `derivePrototypingObligations()` | Return invalidCombination=true for non-UI surface regardless of mode | WS-1 |
-| `execution.ts` | Reject non-UI surface after classification (all modes); pass surface/adapters/screenContracts explicitly to runFullHarness() | WS-1, WS-5 |
-| `harness/runtime.ts` | runFullHarness() surface check at entry; make adapters.surface/render/browserQa and screenContracts required | WS-1, WS-5 |
-| `cli/commands/prototyping.ts` | Reject non-UI surface at CLI entry point | WS-1 |
-| `runtimeGateBuilder.ts` | Remove synthetic status:200 generation | WS-2 |
-| `specCoverage.ts` | Use RuntimeObservation as input; set-compare declaredUiRoutes vs observed.ui[].route; remove API/DB coverage | WS-2 |
-| `uiObservation.ts` | Remove phaseLevelRefs generic fallback; add observed=false/evidenceMissing=true to UIScreenObservation | WS-3 |
-| `runtime.ts` | evidenceRefs.browserQa from runtime only; remove panelInputs.browserQa.evidenceRefs fallback | WS-3 |
-| `uiFidelityBuilder.ts` | actionsWired from ActionCoverageResult only; remove finding-count mixing | WS-4 |
-| `prototypingEvidence.ts` | Add: non-UI surface error, API/DB coverage error, actionsWired>actionsDeclared error, actionsWired=0+declared>0 error, packResolver-based threshold checks, per-screen browserQa evidence check; remove config calibration validation | WS-1, WS-4, WS-6 |
-| `l2Evidence.ts` | Downgrade keyword/bullet fallback to last-resort; use structuredArtifactReaders.ts; fail on unreadable 04_Sources.md | WS-6 |
-| docs/README/SKILL | Remove non-UI prototyping language; remove API/DB coverage from contract; add per-screen BrowserQA mandatory; update actionsWired definition; note calibration SSOT is pack | WS-6 |
-| tests | Update for new rejection rules, new evidence structure, new coverage semantics | All WS |
+| Module                                       | Change Obligation                                                                                                                                                                                                                     | WS               |
+| -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------- |
+| `mode.ts` / `derivePrototypingObligations()` | Return invalidCombination=true for non-UI surface regardless of mode                                                                                                                                                                  | WS-1             |
+| `execution.ts`                               | Reject non-UI surface after classification (all modes); pass surface/adapters/screenContracts explicitly to runFullHarness()                                                                                                          | WS-1, WS-5       |
+| `harness/runtime.ts`                         | runFullHarness() surface check at entry; make adapters.surface/render/browserQa and screenContracts required                                                                                                                          | WS-1, WS-5       |
+| `cli/commands/prototyping.ts`                | Reject non-UI surface at CLI entry point                                                                                                                                                                                              | WS-1             |
+| `runtimeGateBuilder.ts`                      | Remove synthetic status:200 generation                                                                                                                                                                                                | WS-2             |
+| `specCoverage.ts`                            | Use RuntimeObservation as input; set-compare declaredUiRoutes vs observed.ui[].route; remove API/DB coverage                                                                                                                          | WS-2             |
+| `uiObservation.ts`                           | Remove phaseLevelRefs generic fallback; add observed=false/evidenceMissing=true to UIScreenObservation                                                                                                                                | WS-3             |
+| `runtime.ts`                                 | evidenceRefs.browserQa from runtime only; remove panelInputs.browserQa.evidenceRefs fallback                                                                                                                                          | WS-3             |
+| `uiFidelityBuilder.ts`                       | actionsWired from ActionCoverageResult only; remove finding-count mixing                                                                                                                                                              | WS-4             |
+| `prototypingEvidence.ts`                     | Add: non-UI surface error, API/DB coverage error, actionsWired>actionsDeclared error, actionsWired=0+declared>0 error, packResolver-based threshold checks, per-screen browserQa evidence check; remove config calibration validation | WS-1, WS-4, WS-6 |
+| `l2Evidence.ts`                              | Downgrade keyword/bullet fallback to last-resort; use structuredArtifactReaders.ts; fail on unreadable 04_Sources.md                                                                                                                  | WS-6             |
+| docs/README/SKILL                            | Remove non-UI prototyping language; remove API/DB coverage from contract; add per-screen BrowserQA mandatory; update actionsWired definition; note calibration SSOT is pack                                                           | WS-6             |
+| tests                                        | Update for new rejection rules, new evidence structure, new coverage semantics                                                                                                                                                        | All WS           |
 
 ### Implementation Order (rev5 dependency chain)
 
@@ -217,24 +217,23 @@ WS-1 is independent (parallel possible). WS-2 is foundation for WS-3/WS-4. WS-6 
 
 ### Test Strategy (rev5)
 
-| Layer | Location | Coverage Target |
-|-------|----------|-----------------|
-| Unit | `tests/unit/` | runtimeObservation builder, actionCoverage calculator, packResolver, browserQaPerScreen |
-| Integration | `tests/integration/` | end-to-end non-UI rejection all modes; per-screen evidence chain; actionsWired semantics |
-| Validator | `tests/validators/` | API/DB coverage error, non-UI surface error, actionsWired validator rules |
-| ATDD annotation map | `spec-0012/tdd/test-list.md` | TC-0012-0121..TC-0012-0140 mapped to TDD-IDs |
+| Layer               | Location                     | Coverage Target                                                                          |
+| ------------------- | ---------------------------- | ---------------------------------------------------------------------------------------- |
+| Unit                | `tests/unit/`                | runtimeObservation builder, actionCoverage calculator, packResolver, browserQaPerScreen  |
+| Integration         | `tests/integration/`         | end-to-end non-UI rejection all modes; per-screen evidence chain; actionsWired semantics |
+| Validator           | `tests/validators/`          | API/DB coverage error, non-UI surface error, actionsWired validator rules                |
+| ATDD annotation map | `spec-0012/tdd/test-list.md` | TC-0012-0121..TC-0012-0140 mapped to TDD-IDs                                             |
 
 ### Acceptance Test Matrix Mapping
 
-| Category | Coverage Target | TC Range |
-|----------|-----------------|----------|
-| A: Contract rejection | cli/api/backend surface ALL modes reject | TC-0012-0121..0123 |
-| B: full-harness strictness | surface/screenContracts/browserQa adapter missing/refs=0 → fail | TC-0012-0124..0127 |
-| C: Runtime observation | synthetic observation absent; canonical routes only | TC-0012-0128..0130 |
-| D: Multi-screen BrowserQA | per-screen refs; no phase-level generic fallback | TC-0012-0131..0133 |
-| E: Action coverage | finding count ≠ actionsWired; wiring condition only | TC-0012-0134..0137 |
+| Category                    | Coverage Target                                                              | TC Range           |
+| --------------------------- | ---------------------------------------------------------------------------- | ------------------ |
+| A: Contract rejection       | cli/api/backend surface ALL modes reject                                     | TC-0012-0121..0123 |
+| B: full-harness strictness  | surface/screenContracts/browserQa adapter missing/refs=0 → fail              | TC-0012-0124..0127 |
+| C: Runtime observation      | synthetic observation absent; canonical routes only                          | TC-0012-0128..0130 |
+| D: Multi-screen BrowserQA   | per-screen refs; no phase-level generic fallback                             | TC-0012-0131..0133 |
+| E: Action coverage          | finding count ≠ actionsWired; wiring condition only                          | TC-0012-0134..0137 |
 | F: Calibration/validator/L2 | runtime+validator use same pack; config override ignored; structured-only L2 | TC-0012-0138..0140 |
-
 
 ## v1.7.15 rev6 Implementation Strategy
 
@@ -244,25 +243,25 @@ Single-PR: `packages/qfai/**` only. 7 workstreams from discussion-20260415161758
 
 ### New Files (1 new module)
 
-| File | WS | Purpose |
-|------|-----|---------|
+| File               | WS   | Purpose                                                                                                                   |
+| ------------------ | ---- | ------------------------------------------------------------------------------------------------------------------------- |
 | `surfacePolicy.ts` | WS-2 | Surface allowlist SSOT (PROTOTYPING_SUPPORTED_SURFACES, isSupportedPrototypingSurface, assertSupportedPrototypingSurface) |
 
 ### Modules Touched (rev6 Change Obligation)
 
-| Module | Change Obligation | WS |
-|--------|-------------------|-----|
-| `cli/commands/prototyping.ts` | Reject --mode standard/low-cost with "full-harness mode only" error; reject --surface cli/api/backend before any I/O | WS-1 |
-| `prototyping/execution.ts` | Reject mode !== "full-harness" independently; call assertSupportedPrototypingSurface() from surfacePolicy.ts | WS-1, WS-2 |
-| `prototyping/surfacePolicy.ts` (NEW) | Export PROTOTYPING_SUPPORTED_SURFACES=[web,mobile,desktop,mixed], isSupportedPrototypingSurface, assertSupportedPrototypingSurface | WS-2 |
-| `harness/runtime.ts` | Remove scalar threshold params from runFullHarness(); accept calibrationRef.packPath; invoke CalibrationLoader internally; throw on missing/unresolvable | WS-3 |
-| `runtimeGateBuilder.ts` | Ensure evidenceRefs contains only concrete refs; remove any self-reference generation | WS-4 |
-| `specCoverage.ts` | Ensure evidenceRefs contains only concrete refs; remove synthetic string generation | WS-4 |
-| `prototypingEvidence.ts` | Validate mode=full-harness; validate surface in PROTOTYPING_SUPPORTED_SURFACES; reject self-refs/synthetic evidenceRefs; enforce reviewerSignoff/terminationReason consistency; hard-error uiContractId in observation | WS-1, WS-2, WS-4, WS-5, WS-6 |
-| `prototyping/uiFidelityBuilder.ts` | Replace obs.screenId === screen.uiContractId with obs.screenId === screen.screenId | WS-6 |
-| `packages/qfai/assets/**` | Remove standard/low-cost/cli prototyping/mockPaths.status=pass from SKILL.md, evidence/README.md, review/README.md, contracts/ui/README.md | WS-7 |
-| `packages/qfai/README.md` | Remove stale mode/surface references | WS-7 |
-| `tests/**` | Update fixtures: remove cli+standard, remove approved-for-plateau, add uiContractId hard-error tests, add mode reject tests, add surface reject tests | WS-7 |
+| Module                               | Change Obligation                                                                                                                                                                                                      | WS                           |
+| ------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------- |
+| `cli/commands/prototyping.ts`        | Reject --mode standard/low-cost with "full-harness mode only" error; reject --surface cli/api/backend before any I/O                                                                                                   | WS-1                         |
+| `prototyping/execution.ts`           | Reject mode !== "full-harness" independently; call assertSupportedPrototypingSurface() from surfacePolicy.ts                                                                                                           | WS-1, WS-2                   |
+| `prototyping/surfacePolicy.ts` (NEW) | Export PROTOTYPING_SUPPORTED_SURFACES=[web,mobile,desktop,mixed], isSupportedPrototypingSurface, assertSupportedPrototypingSurface                                                                                     | WS-2                         |
+| `harness/runtime.ts`                 | Remove scalar threshold params from runFullHarness(); accept calibrationRef.packPath; invoke CalibrationLoader internally; throw on missing/unresolvable                                                               | WS-3                         |
+| `runtimeGateBuilder.ts`              | Ensure evidenceRefs contains only concrete refs; remove any self-reference generation                                                                                                                                  | WS-4                         |
+| `specCoverage.ts`                    | Ensure evidenceRefs contains only concrete refs; remove synthetic string generation                                                                                                                                    | WS-4                         |
+| `prototypingEvidence.ts`             | Validate mode=full-harness; validate surface in PROTOTYPING_SUPPORTED_SURFACES; reject self-refs/synthetic evidenceRefs; enforce reviewerSignoff/terminationReason consistency; hard-error uiContractId in observation | WS-1, WS-2, WS-4, WS-5, WS-6 |
+| `prototyping/uiFidelityBuilder.ts`   | Replace obs.screenId === screen.uiContractId with obs.screenId === screen.screenId                                                                                                                                     | WS-6                         |
+| `packages/qfai/assets/**`            | Remove standard/low-cost/cli prototyping/mockPaths.status=pass from SKILL.md, evidence/README.md, review/README.md, contracts/ui/README.md                                                                             | WS-7                         |
+| `packages/qfai/README.md`            | Remove stale mode/surface references                                                                                                                                                                                   | WS-7                         |
+| `tests/**`                           | Update fixtures: remove cli+standard, remove approved-for-plateau, add uiContractId hard-error tests, add mode reject tests, add surface reject tests                                                                  | WS-7                         |
 
 ### Implementation Order (rev6 dependency chain)
 
@@ -278,23 +277,24 @@ WS-1 and WS-2 are foundational; WS-3, WS-4, WS-5, WS-6 are independent of each o
 
 ### Test Strategy (rev6)
 
-| Layer | Location | Coverage Target |
-|-------|----------|-----------------|
-| Unit | `tests/unit/` | surfacePolicy: isSupportedPrototypingSurface, assertSupportedPrototypingSurface; CalibrationLoader throw-on-missing; uiFidelityBuilder screenId match |
-| Integration | `tests/integration/` | end-to-end full-harness-only enforcement (mode/surface reject all layers); concrete evidenceRefs chain; reviewerSignoff consistency |
-| Validator | `tests/validators/` | mode reject rule, surface reject rule, self-ref evidenceRef rule, synthetic evidenceRef rule, reviewerSignoff consistency rule, uiContractId hard-error rule |
-| ATDD annotation map | `spec-0012/tdd/test-list.md` | TC-0012-0141..TC-0012-0172 mapped to TDD-IDs |
+| Layer               | Location                     | Coverage Target                                                                                                                                              |
+| ------------------- | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Unit                | `tests/unit/`                | surfacePolicy: isSupportedPrototypingSurface, assertSupportedPrototypingSurface; CalibrationLoader throw-on-missing; uiFidelityBuilder screenId match        |
+| Integration         | `tests/integration/`         | end-to-end full-harness-only enforcement (mode/surface reject all layers); concrete evidenceRefs chain; reviewerSignoff consistency                          |
+| Validator           | `tests/validators/`          | mode reject rule, surface reject rule, self-ref evidenceRef rule, synthetic evidenceRef rule, reviewerSignoff consistency rule, uiContractId hard-error rule |
+| ATDD annotation map | `spec-0012/tdd/test-list.md` | TC-0012-0141..TC-0012-0172 mapped to TDD-IDs                                                                                                                 |
 
 ### Acceptance Test Matrix Mapping
 
-| Category | Coverage Target | TC Range |
-|----------|-----------------|----------|
-| A: Mode rejection | standard/low-cost reject all layers | TC-0012-0141..0145 |
-| B: Surface rejection | cli/api/backend reject all layers | TC-0012-0146..0150 |
-| C: surfacePolicy.ts module | PROTOTYPING_SUPPORTED_SURFACES, isSupportedPrototypingSurface, assertSupportedPrototypingSurface | TC-0012-0151..0153 |
-| D: Calibration pack SSOT | CalibrationLoader internal; throw on missing; packPath in summary | TC-0012-0154..0159 |
-| E: Concrete evidenceRefs | no self-refs; no synthetic strings; at least one concrete ref | TC-0012-0160..0163 |
-| F: reviewerSignoff + screenId + stale | status/terminationReason consistency; screenId match; uiContractId error; stale docs/tests | TC-0012-0164..0172 |
+| Category                              | Coverage Target                                                                                  | TC Range           |
+| ------------------------------------- | ------------------------------------------------------------------------------------------------ | ------------------ |
+| A: Mode rejection                     | standard/low-cost reject all layers                                                              | TC-0012-0141..0145 |
+| B: Surface rejection                  | cli/api/backend reject all layers                                                                | TC-0012-0146..0150 |
+| C: surfacePolicy.ts module            | PROTOTYPING_SUPPORTED_SURFACES, isSupportedPrototypingSurface, assertSupportedPrototypingSurface | TC-0012-0151..0153 |
+| D: Calibration pack SSOT              | CalibrationLoader internal; throw on missing; packPath in summary                                | TC-0012-0154..0159 |
+| E: Concrete evidenceRefs              | no self-refs; no synthetic strings; at least one concrete ref                                    | TC-0012-0160..0163 |
+| F: reviewerSignoff + screenId + stale | status/terminationReason consistency; screenId match; uiContractId error; stale docs/tests       | TC-0012-0164..0172 |
+
 ## v1.7.15 rev7 Implementation Strategy
 
 ### Scope Boundary
@@ -303,24 +303,24 @@ Single-PR: `packages/qfai/**` only. 7 workstreams (WS-1..WS-7) closing 6 contrac
 
 ### New Files (1 new module)
 
-| File | WS | Purpose |
-|------|-----|---------|
+| File                                           | WS   | Purpose                                                                                                                                                                  |
+| ---------------------------------------------- | ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `packages/qfai/src/core/prototyping/errors.ts` | WS-5 | 6 distinct error classes: CalibrationResolutionError, UiFidelityEvidenceError, SpecCoverageBuildError, L2EvidenceBuildError, FullHarnessRuntimeError, EvidenceWriteError |
 
 ### Modules Touched (rev7 Change Obligation)
 
-| Module | Change Obligation | WS |
-|--------|-------------------|-----|
-| `prototyping/execution.ts` | Call CalibrationLoader pre-harness; add uiFidelity guard (status/missingRequired/screen); narrow catch blocks using rev7 error classes | WS-1, WS-2, WS-5 |
-| `harness/runtime.ts` | Remove CalibrationLoader import; read calibration from request.calibrationPack.pack.measurement; accept calibrationPack object | WS-1 |
-| `calibration/loader.ts` | Ensure consistency with runtime.ts import removal | WS-1 |
-| `prototyping/specCoverage.ts` | Remove directory ref injection; enforce isConcreteArtifactRef | WS-3 |
-| `prototyping/uiFidelityBuilder.ts` | Document completed-only contract; status vocabulary | WS-2 |
-| `validators/prototypingEvidence.ts` | Add isConcreteArtifactRef export; add calibration metadata comparison; remove "1.0.0" heuristic | WS-3, WS-4 |
-| `core/config.ts` | Remove scalar calibration fields; add obsolete field error at normalize-time | WS-6 |
-| `prototyping/surfacePolicy.ts` | Generate rejection message from PROTOTYPING_SUPPORTED_SURFACES constant | WS-7 |
-| `assets/init/root/qfai.config.yaml` | Remove scalar fields; packPath-only | WS-6 |
-| `README.md` | Align config example with packPath-only | WS-6 |
+| Module                              | Change Obligation                                                                                                                      | WS               |
+| ----------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- | ---------------- |
+| `prototyping/execution.ts`          | Call CalibrationLoader pre-harness; add uiFidelity guard (status/missingRequired/screen); narrow catch blocks using rev7 error classes | WS-1, WS-2, WS-5 |
+| `harness/runtime.ts`                | Remove CalibrationLoader import; read calibration from request.calibrationPack.pack.measurement; accept calibrationPack object         | WS-1             |
+| `calibration/loader.ts`             | Ensure consistency with runtime.ts import removal                                                                                      | WS-1             |
+| `prototyping/specCoverage.ts`       | Remove directory ref injection; enforce isConcreteArtifactRef                                                                          | WS-3             |
+| `prototyping/uiFidelityBuilder.ts`  | Document completed-only contract; status vocabulary                                                                                    | WS-2             |
+| `validators/prototypingEvidence.ts` | Add isConcreteArtifactRef export; add calibration metadata comparison; remove "1.0.0" heuristic                                        | WS-3, WS-4       |
+| `core/config.ts`                    | Remove scalar calibration fields; add obsolete field error at normalize-time                                                           | WS-6             |
+| `prototyping/surfacePolicy.ts`      | Generate rejection message from PROTOTYPING_SUPPORTED_SURFACES constant                                                                | WS-7             |
+| `assets/init/root/qfai.config.yaml` | Remove scalar fields; packPath-only                                                                                                    | WS-6             |
+| `README.md`                         | Align config example with packPath-only                                                                                                | WS-6             |
 
 ### Implementation Order (rev7 dependency chain)
 
@@ -338,24 +338,24 @@ Per design doc §8: WS-6 first (establishes packPath-only contract); WS-5 before
 
 ### Test Strategy (rev7)
 
-| Layer | Location | Coverage Target |
-|-------|----------|-----------------|
-| Unit | `tests/core/` | CalibrationLoader integration, uiFidelityBuilder guard, isConcreteArtifactRef, config.ts obsolete field error, surfacePolicy message generation |
-| Integration | `tests/integration/` | execution.ts full-harness path with CalibrationPack upstream flow; uiFidelity fail-closed; concrete refs enforcement |
-| Validator | `tests/validators/` | prototypingEvidence.ts: isConcreteArtifactRef validation, calibration metadata check, "1.0.0" heuristic removed |
-| ATDD annotation map | `spec-0012/tdd/test-list.md` | TC-0012-0173..TC-0012-0197 mapped to TDD-IDs |
+| Layer               | Location                     | Coverage Target                                                                                                                                 |
+| ------------------- | ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| Unit                | `tests/core/`                | CalibrationLoader integration, uiFidelityBuilder guard, isConcreteArtifactRef, config.ts obsolete field error, surfacePolicy message generation |
+| Integration         | `tests/integration/`         | execution.ts full-harness path with CalibrationPack upstream flow; uiFidelity fail-closed; concrete refs enforcement                            |
+| Validator           | `tests/validators/`          | prototypingEvidence.ts: isConcreteArtifactRef validation, calibration metadata check, "1.0.0" heuristic removed                                 |
+| ATDD annotation map | `spec-0012/tdd/test-list.md` | TC-0012-0173..TC-0012-0197 mapped to TDD-IDs                                                                                                    |
 
 ### Acceptance Test Matrix Mapping (rev7)
 
-| Category | Coverage Target | TC Range |
-|----------|-----------------|----------|
-| A: CalibrationPack upstream | execution.ts resolves pre-harness; runtime.ts 0 CalibrationLoader imports | TC-0012-0173..0175 |
-| B: uiFidelity fail-closed | status/missingRequired/screen guard; ordering | TC-0012-0176..0180 |
-| C: Concrete evidenceRefs | isConcreteArtifactRef; directory/self-ref/synthetic rejection | TC-0012-0181..0184 |
-| D: Calibration metadata check | packPath/packVersion/configPath comparison; "1.0.0" heuristic removed | TC-0012-0185..0187 |
-| E: Error taxonomy | 6 classes; narrow catch blocks; EvidenceWriteError/FullHarnessRuntimeError distinction | TC-0012-0188..0190 |
-| F: Config packPath-only | scalar fields absent; obsolete field error; template clean | TC-0012-0191..0194 |
-| G: surfacePolicy message | from constant; auto-update; stale cli removed | TC-0012-0195..0197 |
+| Category                      | Coverage Target                                                                        | TC Range           |
+| ----------------------------- | -------------------------------------------------------------------------------------- | ------------------ |
+| A: CalibrationPack upstream   | execution.ts resolves pre-harness; runtime.ts 0 CalibrationLoader imports              | TC-0012-0173..0175 |
+| B: uiFidelity fail-closed     | status/missingRequired/screen guard; ordering                                          | TC-0012-0176..0180 |
+| C: Concrete evidenceRefs      | isConcreteArtifactRef; directory/self-ref/synthetic rejection                          | TC-0012-0181..0184 |
+| D: Calibration metadata check | packPath/packVersion/configPath comparison; "1.0.0" heuristic removed                  | TC-0012-0185..0187 |
+| E: Error taxonomy             | 6 classes; narrow catch blocks; EvidenceWriteError/FullHarnessRuntimeError distinction | TC-0012-0188..0190 |
+| F: Config packPath-only       | scalar fields absent; obsolete field error; template clean                             | TC-0012-0191..0194 |
+| G: surfacePolicy message      | from constant; auto-update; stale cli removed                                          | TC-0012-0195..0197 |
 
 ---
 
@@ -367,21 +367,21 @@ Single-PR: `packages/qfai/**` only. 4 workstreams (WS-1..WS-4): new leaf module 
 
 ### New Files (1 new module + 1 new test file)
 
-| File | WS | Purpose |
-|------|----|---------|
-| `packages/qfai/src/core/prototyping/pathUtils.ts` | WS-1 | 3 shared ref helpers: `toRepoRelativeArtifactRef`, `assertConcreteArtifactRef`, `isConcreteArtifactRef`; leaf module (no import from execution.ts chain) |
-| `packages/qfai/tests/core/prototyping/prototypingExecution.productionPath.test.ts` | WS-4 | Closure regression test: ≥1 positive closure + ≥1 negative injection |
+| File                                                                               | WS   | Purpose                                                                                                                                                  |
+| ---------------------------------------------------------------------------------- | ---- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `packages/qfai/src/core/prototyping/pathUtils.ts`                                  | WS-1 | 3 shared ref helpers: `toRepoRelativeArtifactRef`, `assertConcreteArtifactRef`, `isConcreteArtifactRef`; leaf module (no import from execution.ts chain) |
+| `packages/qfai/tests/core/prototyping/prototypingExecution.productionPath.test.ts` | WS-4 | Closure regression test: ≥1 positive closure + ≥1 negative injection                                                                                     |
 
 ### Modules Touched (rev8 Change Obligation)
 
-| Module | Change Obligation | WS |
-|--------|-------------------|-----|
-| `prototyping/specCoverage.ts` | Use `toRepoRelativeArtifactRef()` in `parseSpecDeclaration()`, `extractUiRouteDeclarations()`, `buildSpecCoverageSummary()`, `buildPerSpecCoverage()` | WS-1, WS-3 |
-| `validators/prototypingEvidence.ts` | Add `evidenceRefs: string[]` to `runtimeGate` type; update `parseEvidence()` to read field; add absence/empty/malformed error checks in `validatePrototypingEvidence()` | WS-2 |
-| `prototyping/execution.ts` | Add `assertConcreteArtifactRef()` calls on builder outputs before bundle write | WS-3 |
-| `prototyping/measurement.ts` | Conditional: update to shared helpers if confirmed to use absolute paths in ref output (DR-0012-0047) | WS-3 |
-| `tests/core/specCoverage.test.ts` | Add negative cases: outside-root throw, directory throw, `coverageRefs[].declaredRef` format | WS-4 |
-| `tests/validators/prototypingEvidence.test.ts` | Add `runtimeGate.evidenceRefs` cases: absent, empty, absolute, self-ref, synthetic token | WS-4 |
+| Module                                         | Change Obligation                                                                                                                                                       | WS         |
+| ---------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
+| `prototyping/specCoverage.ts`                  | Use `toRepoRelativeArtifactRef()` in `parseSpecDeclaration()`, `extractUiRouteDeclarations()`, `buildSpecCoverageSummary()`, `buildPerSpecCoverage()`                   | WS-1, WS-3 |
+| `validators/prototypingEvidence.ts`            | Add `evidenceRefs: string[]` to `runtimeGate` type; update `parseEvidence()` to read field; add absence/empty/malformed error checks in `validatePrototypingEvidence()` | WS-2       |
+| `prototyping/execution.ts`                     | Add `assertConcreteArtifactRef()` calls on builder outputs before bundle write                                                                                          | WS-3       |
+| `prototyping/measurement.ts`                   | Conditional: update to shared helpers if confirmed to use absolute paths in ref output (DR-0012-0047)                                                                   | WS-3       |
+| `tests/core/specCoverage.test.ts`              | Add negative cases: outside-root throw, directory throw, `coverageRefs[].declaredRef` format                                                                            | WS-4       |
+| `tests/validators/prototypingEvidence.test.ts` | Add `runtimeGate.evidenceRefs` cases: absent, empty, absolute, self-ref, synthetic token                                                                                | WS-4       |
 
 ### Implementation Order (rev8 dependency chain)
 
@@ -398,22 +398,22 @@ Per design doc: WS-1 first (pathUtils.ts leaf must exist before WS-2/WS-3 consum
 
 ### Test Strategy (rev8)
 
-| Layer | Location | Coverage Target |
-|-------|----------|-----------------|
-| Unit | `tests/core/prototyping/pathUtils.test.ts` (new or in existing) | All 3 helpers; 5 throw conditions; POSIX normalization; pure function properties |
-| Validators | `tests/validators/prototypingEvidence.test.ts` | runtimeGate.evidenceRefs: absent, empty, absolute, self-ref, synthetic token, directory, empty string |
-| Unit | `tests/core/specCoverage.test.ts` | Negative ref cases: outside-root throw, directory throw, declaredRef format |
-| Integration | `tests/core/prototyping/prototypingExecution.productionPath.test.ts` (new) | Positive closure + negative injection |
-| ATDD annotation map | `spec-0012/tdd/test-list.md` | TC-0012-0198..TC-0012-0217 mapped to TDD-IDs |
+| Layer               | Location                                                                   | Coverage Target                                                                                       |
+| ------------------- | -------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| Unit                | `tests/core/prototyping/pathUtils.test.ts` (new or in existing)            | All 3 helpers; 5 throw conditions; POSIX normalization; pure function properties                      |
+| Validators          | `tests/validators/prototypingEvidence.test.ts`                             | runtimeGate.evidenceRefs: absent, empty, absolute, self-ref, synthetic token, directory, empty string |
+| Unit                | `tests/core/specCoverage.test.ts`                                          | Negative ref cases: outside-root throw, directory throw, declaredRef format                           |
+| Integration         | `tests/core/prototyping/prototypingExecution.productionPath.test.ts` (new) | Positive closure + negative injection                                                                 |
+| ATDD annotation map | `spec-0012/tdd/test-list.md`                                               | TC-0012-0198..TC-0012-0217 mapped to TDD-IDs                                                          |
 
 ### Acceptance Test Matrix Mapping (rev8)
 
-| Category | Coverage Target | TC Range |
-|----------|-----------------|----------|
-| H: pathUtils.ts helpers | POSIX output; throws for outside-root/directory/both-line-anchor | TC-0012-0198..0202 |
+| Category                              | Coverage Target                                                        | TC Range           |
+| ------------------------------------- | ---------------------------------------------------------------------- | ------------------ |
+| H: pathUtils.ts helpers               | POSIX output; throws for outside-root/directory/both-line-anchor       | TC-0012-0198..0202 |
 | I: runtimeGate.evidenceRefs validator | absent/empty/absolute/self-ref/synthetic/directory/empty-string errors | TC-0012-0203..0208 |
-| J: unified grammar | all 5 ref sites consistent; 0 parallel grammar defs | TC-0012-0209..0213 |
-| K: closure regression test | positive closure 0 errors; negative injection absolute-path error | TC-0012-0214..0217 |
+| J: unified grammar                    | all 5 ref sites consistent; 0 parallel grammar defs                    | TC-0012-0209..0213 |
+| K: closure regression test            | positive closure 0 errors; negative injection absolute-path error      | TC-0012-0214..0217 |
 
 ## v1.7.15 rev9 Implementation Strategy
 
@@ -423,24 +423,24 @@ Single-PR: `packages/qfai/**` only. No `.qfai/` root edits. Backward compatibili
 
 ### Unchanged Files (Reused from rev8)
 
-| File | Notes |
-|------|-------|
-| `packages/qfai/src/core/prototyping/pathUtils.ts` | Rev8 helpers reused as-is; `isConcreteArtifactRef()` is the shared grammar SSOT |
-| `packages/qfai/src/core/prototyping/specCoverage.ts` | Rev8 changes complete; not modified in rev9 |
-| `packages/qfai/src/core/prototyping/execution.ts` | Not modified unless builder changes require it |
+| File                                                 | Notes                                                                           |
+| ---------------------------------------------------- | ------------------------------------------------------------------------------- |
+| `packages/qfai/src/core/prototyping/pathUtils.ts`    | Rev8 helpers reused as-is; `isConcreteArtifactRef()` is the shared grammar SSOT |
+| `packages/qfai/src/core/prototyping/specCoverage.ts` | Rev8 changes complete; not modified in rev9                                     |
+| `packages/qfai/src/core/prototyping/execution.ts`    | Not modified unless builder changes require it                                  |
 
 ### Modules Touched (rev9 Change Obligation)
 
-| Module | Change Obligation | WS |
-|--------|-------------------|-----|
-| `prototypingEvidence.ts` | Extend `validateRuntimeGate()` for ui[] row validation (declaredRef required+concrete, renderEvidenceRefs[] non-empty+concrete, browserQaEvidenceRefs[] non-empty+concrete). Extend `validateFullHarness()` for axes[].evidenceRefs[] per-axis and reviewerLogs[].evidenceRefs[] non-empty+concrete. All via `isConcreteArtifactRef()` from pathUtils.ts. | WS-1 |
-| `bundleWriter.ts` | Mark `runtimeGate.ui[].declaredRef` as required (not optional). Mark all leaf arrays as required non-nullable. | WS-2 |
-| `runtimeObservation.ts` | Conditionally: if null/omit emission patterns exist for leaf arrays, update to prevent | WS-2 |
-| `runtimeGateBuilder.ts` | Conditionally: if ui[].declaredRef can be emitted as undefined, update to prevent | WS-2 |
-| `tests/core/prototypingEvidence.test.ts` | Add all 15 leaf-field negative cases: 7 for ui[] + 5 for axes[] + 3 for reviewerLogs[] | WS-3 |
-| `tests/core/prototypingExecution.productionPath.test.ts` | Add leaf-field closure assertions (all leaf field groups asserted concrete) + ≥1 negative injection | WS-3 |
-| `tests/core/validate.test.ts` + all `tests/core/` fixtures | Replace all synthetic token evidenceRefs ("a", "b", "reviewer:1") with concrete artifact refs | WS-3 |
-| `packages/qfai/README.md` | Enumerate all fields under concrete-ref contract including rev9 leaf fields | WS-4 |
+| Module                                                     | Change Obligation                                                                                                                                                                                                                                                                                                                                         | WS   |
+| ---------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---- |
+| `prototypingEvidence.ts`                                   | Extend `validateRuntimeGate()` for ui[] row validation (declaredRef required+concrete, renderEvidenceRefs[] non-empty+concrete, browserQaEvidenceRefs[] non-empty+concrete). Extend `validateFullHarness()` for axes[].evidenceRefs[] per-axis and reviewerLogs[].evidenceRefs[] non-empty+concrete. All via `isConcreteArtifactRef()` from pathUtils.ts. | WS-1 |
+| `bundleWriter.ts`                                          | Mark `runtimeGate.ui[].declaredRef` as required (not optional). Mark all leaf arrays as required non-nullable.                                                                                                                                                                                                                                            | WS-2 |
+| `runtimeObservation.ts`                                    | Conditionally: if null/omit emission patterns exist for leaf arrays, update to prevent                                                                                                                                                                                                                                                                    | WS-2 |
+| `runtimeGateBuilder.ts`                                    | Conditionally: if ui[].declaredRef can be emitted as undefined, update to prevent                                                                                                                                                                                                                                                                         | WS-2 |
+| `tests/core/prototypingEvidence.test.ts`                   | Add all 15 leaf-field negative cases: 7 for ui[] + 5 for axes[] + 3 for reviewerLogs[]                                                                                                                                                                                                                                                                    | WS-3 |
+| `tests/core/prototypingExecution.productionPath.test.ts`   | Add leaf-field closure assertions (all leaf field groups asserted concrete) + ≥1 negative injection                                                                                                                                                                                                                                                       | WS-3 |
+| `tests/core/validate.test.ts` + all `tests/core/` fixtures | Replace all synthetic token evidenceRefs ("a", "b", "reviewer:1") with concrete artifact refs                                                                                                                                                                                                                                                             | WS-3 |
+| `packages/qfai/README.md`                                  | Enumerate all fields under concrete-ref contract including rev9 leaf fields                                                                                                                                                                                                                                                                               | WS-4 |
 
 ### Implementation Order (rev9)
 
@@ -452,12 +452,12 @@ Single-PR: `packages/qfai/**` only. No `.qfai/` root edits. Backward compatibili
 
 ### Test Strategy (rev9)
 
-| Layer | Location | Coverage Target |
-|-------|----------|-----------------|
-| Validators | `tests/validators/` or `tests/core/prototypingEvidence.test.ts` | All 15 new negative cases (7 ui[] + 5 axis + 3 reviewer) |
-| Core | `tests/core/prototypingExecution.productionPath.test.ts` | Leaf-field closure assertions + negative injection |
-| Core fixtures | `tests/core/` fixture files | Zero synthetic token evidenceRefs after WS-3 |
-| ATDD map | `spec-0012/tdd/test-list.md` | TC-0012-0219..TC-0012-0242 mapped to TDD-IDs |
+| Layer         | Location                                                        | Coverage Target                                          |
+| ------------- | --------------------------------------------------------------- | -------------------------------------------------------- |
+| Validators    | `tests/validators/` or `tests/core/prototypingEvidence.test.ts` | All 15 new negative cases (7 ui[] + 5 axis + 3 reviewer) |
+| Core          | `tests/core/prototypingExecution.productionPath.test.ts`        | Leaf-field closure assertions + negative injection       |
+| Core fixtures | `tests/core/` fixture files                                     | Zero synthetic token evidenceRefs after WS-3             |
+| ATDD map      | `spec-0012/tdd/test-list.md`                                    | TC-0012-0219..TC-0012-0242 mapped to TDD-IDs             |
 
 ### Key Constraints (rev9)
 
@@ -465,6 +465,7 @@ Single-PR: `packages/qfai/**` only. No `.qfai/` root edits. Backward compatibili
 - TC-2 (pathUtils.ts reuse): All new leaf-field validation must use `isConcreteArtifactRef()` from pathUtils.ts. No parallel grammar.
 - TC-4 (TypeScript strict): All new code must satisfy TypeScript strict mode. No `@ts-ignore`, no bare `any`.
 - OC-3 (Single PR): WS-1 through WS-4 must all be in the same PR.
+
 ## v1.7.15 rev9 — Leaf-Field Traceability Closure
 
 ### Implementation Strategy (rev9)
@@ -500,19 +501,19 @@ WS-4 (README) last.
 
 ### Test Strategy (rev9)
 
-| Layer | Location | Coverage Target |
-|-------|----------|-----------------|
-| Validators | `tests/validators/prototypingEvidence.test.ts` | ui[] 7 negatives + axis 5 negatives + reviewer 3 negatives |
-| Integration | `tests/core/prototypingEvidence.test.ts` | All 15 new negative cases from WS-3 §6-3-1..3 |
-| Integration | `tests/core/prototypingExecution.productionPath.test.ts` | Leaf-ref closure: positive + negative injection |
-| ATDD annotation map | `spec-0012/tdd/test-list.md` | TC-0012-0219..TC-0012-0242 mapped to TDD-IDs |
+| Layer               | Location                                                 | Coverage Target                                            |
+| ------------------- | -------------------------------------------------------- | ---------------------------------------------------------- |
+| Validators          | `tests/validators/prototypingEvidence.test.ts`           | ui[] 7 negatives + axis 5 negatives + reviewer 3 negatives |
+| Integration         | `tests/core/prototypingEvidence.test.ts`                 | All 15 new negative cases from WS-3 §6-3-1..3              |
+| Integration         | `tests/core/prototypingExecution.productionPath.test.ts` | Leaf-ref closure: positive + negative injection            |
+| ATDD annotation map | `spec-0012/tdd/test-list.md`                             | TC-0012-0219..TC-0012-0242 mapped to TDD-IDs               |
 
 ### Acceptance Test Matrix Mapping (rev9)
 
-| Category | Coverage Target | TC Range |
-|----------|-----------------|----------|
-| L: ui[] row leaf fields | declaredRef required/concrete; renderEvidenceRefs non-empty/concrete; browserQaEvidenceRefs non-empty/concrete | TC-0012-0219..0226 |
-| M: axis-level evidenceRefs | l1/l2 per-axis non-empty + concrete; self-ref, synthetic, absolute, empty | TC-0012-0227..0233 |
-| N: reviewerLogs evidenceRefs | non-empty + concrete; synthetic token, absolute, empty | TC-0012-0234..0237 |
-| O: bundleWriter + runtime | schema required; null/omit prevented; type-check gate | TC-0012-0238..0239 |
-| P: test coverage + README | 15 negatives present; no synthetic tokens; leaf fields enumerated | TC-0012-0240..0242 |
+| Category                     | Coverage Target                                                                                                | TC Range           |
+| ---------------------------- | -------------------------------------------------------------------------------------------------------------- | ------------------ |
+| L: ui[] row leaf fields      | declaredRef required/concrete; renderEvidenceRefs non-empty/concrete; browserQaEvidenceRefs non-empty/concrete | TC-0012-0219..0226 |
+| M: axis-level evidenceRefs   | l1/l2 per-axis non-empty + concrete; self-ref, synthetic, absolute, empty                                      | TC-0012-0227..0233 |
+| N: reviewerLogs evidenceRefs | non-empty + concrete; synthetic token, absolute, empty                                                         | TC-0012-0234..0237 |
+| O: bundleWriter + runtime    | schema required; null/omit prevented; type-check gate                                                          | TC-0012-0238..0239 |
+| P: test coverage + README    | 15 negatives present; no synthetic tokens; leaf fields enumerated                                              | TC-0012-0240..0242 |
