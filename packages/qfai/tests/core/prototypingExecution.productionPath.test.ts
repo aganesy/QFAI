@@ -11,7 +11,10 @@ import type {
   BrowserQaPhaseResult,
 } from "../../src/core/browserQa/types.js";
 import type { RenderCaptureAdapter, RenderCaptureTarget } from "../../src/core/evidence/types.js";
-import { isConcreteArtifactRef } from "../../src/core/prototyping/pathUtils.js";
+import {
+  assertConcreteArtifactRef,
+  isConcreteArtifactRef,
+} from "../../src/core/prototyping/pathUtils.js";
 import { runPrototypingExecution } from "../../src/core/prototyping/execution.js";
 import { ProviderRegistry } from "../../src/core/providers/registry.js";
 import { validatePrototypingEvidence } from "../../src/core/validators/prototypingEvidence.js";
@@ -229,6 +232,13 @@ async function withRoot(task: (root: string) => Promise<void>): Promise<void> {
 }
 
 describe("prototyping execution production path", () => {
+  // QFAI:SPEC-0012:TC-0012-0213
+  it("TC-0012-0213: assertConcreteArtifactRef throws for absolute path, passes for concrete ref (sync)", () => {
+    expect(() => assertConcreteArtifactRef("/abs/path/file.md")).toThrow();
+    expect(() => assertConcreteArtifactRef(".qfai/evidence/render.json#/screens/0")).not.toThrow();
+  });
+
+  // QFAI:SPEC-0012:TC-0012-0214
   it("passes the execution -> validate closure with validator success", async () => {
     await withRoot(async (root) => {
       const result = await runPrototypingExecution({
@@ -312,6 +322,7 @@ describe("prototyping execution production path", () => {
     });
   });
 
+  // QFAI:SPEC-0012:TC-0012-0215
   it("rejects an injected malformed leaf ref after execution", async () => {
     await withRoot(async (root) => {
       await runPrototypingExecution({
@@ -331,6 +342,30 @@ describe("prototyping execution production path", () => {
 
       const issues = await validatePrototypingEvidence(root, defaultConfig);
       expect(issues.some((item) => item.code === "QFAI-PROT-318")).toBe(true);
+    });
+  });
+
+  // QFAI:SPEC-0012:TC-0012-0216
+  it("TC-0012-0216: absent runtimeGate.evidenceRefs after execution causes QFAI-PROT-101", async () => {
+    await withRoot(async (root) => {
+      await runPrototypingExecution({
+        root,
+        requestedMode: "full-harness",
+        reviewer: "qa-reviewer",
+        renderAdapter: createFakeRenderAdapter(),
+        providerRegistry: createFakeProviderRegistry(),
+        browserQaProviderId: "test-browser-qa",
+      });
+
+      const prototypingPath = path.join(root, ".qfai", "evidence", "prototyping.json");
+      const raw = JSON.parse(await readFile(prototypingPath, "utf-8")) as Record<string, unknown>;
+      const rg = raw.runtimeGate as Record<string, unknown>;
+      const { evidenceRefs: _omit, ...rgWithout } = rg;
+      raw.runtimeGate = rgWithout;
+      await writeFile(prototypingPath, JSON.stringify(raw, null, 2), "utf-8");
+
+      const issues = await validatePrototypingEvidence(root, defaultConfig);
+      expect(issues.some((i) => i.code === "QFAI-PROT-101")).toBe(true);
     });
   });
 });

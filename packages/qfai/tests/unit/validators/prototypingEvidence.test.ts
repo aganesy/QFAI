@@ -938,3 +938,127 @@ describe("prototypingEvidence rev2 rules (PROT-310..315)", () => {
     expect(l2.axes.length).toBeGreaterThan(0);
   });
 });
+
+// ---------------------------------------------------------------------------
+// TC-0012-0203..0212: runtimeGate.evidenceRefs validator rev8 (v1.7.15 rev8 WS-2/WS-3)
+//
+// Backfill TDD: impl landed in v1.7.15 rev8; unit tests bound to TC-IDs here.
+// Exception patterns sanctioned by DR-0012-0048 (WS-2) and DR-0012-0046 (WS-3).
+// ---------------------------------------------------------------------------
+
+// QFAI:SPEC-0012:TC-0012-0203
+// QFAI:SPEC-0012:TC-0012-0204
+// QFAI:SPEC-0012:TC-0012-0205
+// QFAI:SPEC-0012:TC-0012-0206
+// QFAI:SPEC-0012:TC-0012-0207
+// QFAI:SPEC-0012:TC-0012-0208
+// QFAI:SPEC-0012:TC-0012-0209
+// QFAI:SPEC-0012:TC-0012-0212
+describe("TC-0012-0203..0212: runtimeGate.evidenceRefs validator rev8 (v1.7.15 rev8 WS-2/WS-3)", () => {
+  it("TC-0012-0203: runtimeGate.evidenceRefs with valid refs — no PROT-177/318 errors", async () => {
+    await withTempRoot(async (root) => {
+      await seedAll(root);
+      await seedEvidence(root, buildValidEvidence());
+      const issues = await validatePrototypingEvidence(root, defaultConfig);
+      expect(issues.filter((i) => i.code === "QFAI-PROT-177")).toHaveLength(0);
+      expect(issues.filter((i) => i.code === "QFAI-PROT-318")).toHaveLength(0);
+    });
+  });
+
+  it("TC-0012-0204: runtimeGate.evidenceRefs absent — QFAI-PROT-101", async () => {
+    await withTempRoot(async (root) => {
+      await seedAll(root);
+      const base = buildValidEvidence();
+      const rg = base.runtimeGate as Record<string, unknown>;
+      const { evidenceRefs: _omit, ...rgWithout } = rg;
+      await seedEvidence(root, { ...base, runtimeGate: rgWithout });
+      const issues = await validatePrototypingEvidence(root, defaultConfig);
+      expect(issues.some((i) => i.code === "QFAI-PROT-101")).toBe(true);
+    });
+  });
+
+  it("TC-0012-0205: runtimeGate.evidenceRefs empty array — QFAI-PROT-177", async () => {
+    await withTempRoot(async (root) => {
+      await seedAll(root);
+      const base = buildValidEvidence();
+      const rg = base.runtimeGate as Record<string, unknown>;
+      await seedEvidence(root, {
+        ...base,
+        runtimeGate: { ...rg, evidenceRefs: [] },
+      });
+      const issues = await validatePrototypingEvidence(root, defaultConfig);
+      expect(issues.some((i) => i.code === "QFAI-PROT-177")).toBe(true);
+    });
+  });
+
+  it("TC-0012-0206: absolute path in runtimeGate.evidenceRefs — QFAI-PROT-318", async () => {
+    await withTempRoot(async (root) => {
+      await seedAll(root);
+      const base = buildValidEvidence();
+      const rg = base.runtimeGate as Record<string, unknown>;
+      await seedEvidence(root, {
+        ...base,
+        runtimeGate: { ...rg, evidenceRefs: ["/abs/path/screen.png"] },
+      });
+      const issues = await validatePrototypingEvidence(root, defaultConfig);
+      expect(issues.some((i) => i.code === "QFAI-PROT-318")).toBe(true);
+    });
+  });
+
+  it("TC-0012-0207: self-ref in runtimeGate.evidenceRefs — QFAI-PROT-318", async () => {
+    await withTempRoot(async (root) => {
+      await seedAll(root);
+      const base = buildValidEvidence();
+      const rg = base.runtimeGate as Record<string, unknown>;
+      await seedEvidence(root, {
+        ...base,
+        runtimeGate: { ...rg, evidenceRefs: [".qfai/evidence/prototyping.json"] },
+      });
+      const issues = await validatePrototypingEvidence(root, defaultConfig);
+      expect(issues.some((i) => i.code === "QFAI-PROT-318")).toBe(true);
+    });
+  });
+
+  it("TC-0012-0208: synthetic token in runtimeGate.evidenceRefs — QFAI-PROT-318 (edge)", async () => {
+    await withTempRoot(async (root) => {
+      await seedAll(root);
+      const base = buildValidEvidence();
+      const rg = base.runtimeGate as Record<string, unknown>;
+      await seedEvidence(root, {
+        ...base,
+        runtimeGate: { ...rg, evidenceRefs: ["specs:spec-0001/01_Spec.md"] },
+      });
+      const issues = await validatePrototypingEvidence(root, defaultConfig);
+      expect(issues.some((i) => i.code === "QFAI-PROT-318")).toBe(true);
+    });
+  });
+
+  it("TC-0012-0209: all 5 ref sites with concrete refs pass — zero PROT-318 errors", async () => {
+    await withTempRoot(async (root) => {
+      await seedAll(root);
+      await seedEvidence(root, buildValidEvidence());
+      const issues = await validatePrototypingEvidence(root, defaultConfig);
+      expect(issues.filter((i) => i.code === "QFAI-PROT-318")).toHaveLength(0);
+    });
+  });
+
+  it("TC-0012-0212: absolute path in iterations[].evidenceRefs.runtimeGate — PROT-318 or PROT-314", async () => {
+    await withTempRoot(async (root) => {
+      await seedAll(root);
+      const base = buildValidEvidence();
+      const fh = base.fullHarness as Record<string, unknown>;
+      const iters = fh.iterations as Array<Record<string, unknown>>;
+      const iter0 = { ...iters[0] };
+      const er = { ...(iter0.evidenceRefs as Record<string, unknown>) };
+      iter0.evidenceRefs = { ...er, runtimeGate: ["/abs/path.json"] };
+      await seedEvidence(root, {
+        ...base,
+        fullHarness: { ...fh, iterations: [iter0] },
+      });
+      const issues = await validatePrototypingEvidence(root, defaultConfig);
+      expect(issues.some((i) => i.code === "QFAI-PROT-318" || i.code === "QFAI-PROT-314")).toBe(
+        true,
+      );
+    });
+  });
+});

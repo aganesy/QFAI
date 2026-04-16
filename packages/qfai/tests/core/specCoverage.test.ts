@@ -25,6 +25,7 @@ describe("specCoverage", () => {
     return root;
   }
 
+  // QFAI:SPEC-0012:TC-0012-0202
   it("normalizes declared and observed refs to repo-relative artifact refs", async () => {
     const root = await createRoot();
     const specPath = path.join(root, ".qfai", "specs", "spec-0001", "01_Spec.md");
@@ -86,6 +87,7 @@ describe("specCoverage", () => {
     ]);
   });
 
+  // QFAI:SPEC-0012:TC-0012-0217
   it("rejects repo-external paths during normalization", async () => {
     const root = await createRoot();
 
@@ -98,6 +100,7 @@ describe("specCoverage", () => {
     ).toThrow(/repo root/i);
   });
 
+  // QFAI:SPEC-0012:TC-0012-0217
   it("rejects directory paths during normalization", async () => {
     const root = await createRoot();
 
