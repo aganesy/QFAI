@@ -757,3 +757,68 @@ npx qfai validate                    → error=51, warning=85 (baseline unchange
 ### Final status (rev8)
 
 **PASS** — all rev8 stubs implemented; 773 integration + 419 e2e tests pass; 0 new validate errors
+
+---
+
+## rev9: leaf-field traceability closure (v1.7.15 rev9 WS-1)
+
+### Inputs reviewed (rev9)
+
+- `.qfai/specs/spec-0012/02_User-stories.md` (US-0012-0067..0071)
+- `.qfai/specs/spec-0012/06_Test-Cases.md` (TC-0012-0219..0248)
+- `packages/qfai/src/core/validators/prototypingEvidence.ts` (rev9 validator: pushConcreteArtifactRefIssues)
+- `packages/qfai/src/core/prototyping/pathUtils.ts` (isConcreteArtifactRef SSOT)
+- `packages/qfai/src/core/evidence/bundleWriter.ts` (type schema: declaredRef, renderEvidenceRefs, browserQaEvidenceRefs)
+- `packages/qfai/src/core/refSemantics.ts` (isCanonicalScreenContractRef)
+- `packages/qfai/tests/integration/prototypingRev8Integration.test.ts` (buildValidEvidence pattern)
+
+### Work performed (rev9)
+
+- Created `packages/qfai/tests/e2e/prototypingRev9E2E.test.ts` (US-0067..0071, source inspection)
+- Created `packages/qfai/tests/integration/prototypingRev9Integration.test.ts` (TC-0219..0248, runtime validation, 30 test cases)
+- Updated `tests/e2e/qfai-traceability.md` (+5 entries: US-0012-0067..0071)
+- Updated `tests/integration/qfai-traceability.md` (+30 entries: TC-0012-0219..0248)
+- Fixed: removed `withField` helper (unused → lint error), fixed non-null assertions (ESLint rule)
+
+### Commands executed (rev9)
+
+```
+pnpm format:check        → PASS (after pnpm format)
+eslint new test files    → PASS (0 errors)
+pnpm check-types         → PASS
+pnpm vitest run --project e2e         → PASS (441 tests)
+pnpm vitest run --project integration → PASS (799 tests)
+qfai validate --fail-on error         → ATDD-111/112 resolved (64 → 62 errors, pre-existing)
+```
+
+### Coverage Depth Matrix (rev9)
+
+| TC Group | Coverage | Normal Path | Error/Edge | Status |
+|----------|----------|-------------|------------|--------|
+| L: ui[] leaf (TC-0219..0226, 0244) | ✅ | ✅ | absent/abs/bare/empty/synthetic/winSep | ✅ |
+| M: axes evidenceRefs (TC-0228..0232, 0245..0246) | ✅ | ✅ | synthetic/empty/abs/self-ref/isolation | ✅ |
+| N: reviewerLogs evidenceRefs (TC-0233..0235) | ✅ | ✅ | synthetic/abs/empty | ✅ |
+| O: static type/source checks (TC-0236..0238, 0243, 0247) | ✅ | ✅ | type narrowing, source verification | ✅ |
+| P: closure/README (TC-0239..0242, 0248) | ✅ | ✅ | annotation presence, README fields, no-synthetic | ✅ |
+
+### Work Orders Summary (rev9)
+
+| Step | Role | Task | Output | Status |
+|------|------|------|--------|--------|
+| 1 | test-design-analyst | Coverage Depth Matrix for TC-0219..0248 | see matrix above | PASS |
+| 2 | acceptance-test-engineer | E2E tests (US-0067..0071) | prototypingRev9E2E.test.ts | PASS |
+| 3 | acceptance-test-engineer | Integration tests (TC-0219..0248) | prototypingRev9Integration.test.ts | PASS |
+| 4 | devops-ci-engineer | Run suites + capture evidence | 441 E2E + 799 integration PASS | PASS |
+| 5 | completion-reviewer | Gate: coverage + lint + types + validate | all gates PASS | PASS |
+
+### Coverage obligations (rev9)
+
+| Layer | Obligations | Covered | Status |
+|-------|-------------|---------|--------|
+| E2E | US-0012-0067..0071 (5) | All 5 | ✅ |
+| Integration | TC-0012-0219..0248 (30) | All 30 | ✅ |
+
+### Final status (rev9)
+
+**PASS** — rev9 ATDD complete; 799 integration + 441 e2e tests pass; ATDD-111/112 resolved; 0 new validate errors
+
