@@ -18,6 +18,7 @@
   - NOTE: v1.7.15 rev5 adds 6 audit resolution items (WS-1..WS-6 from discussion-20260415014056471) — all-mode non-UI surface rejection, observed-only ledger (runtimeObservation.ts), per-screen Browser QA mandatory (browserQaPerScreen.ts), action coverage semantics (actionCoverage.ts), runFullHarness() fail-closed (required adapters+screenContracts), calibration pack as SSOT (packResolver.ts, structuredArtifactReaders.ts)
   - NOTE: v1.7.15 rev6 adds 7 workstreams — (WS-1) full-harness-only mode enforcement at CLI/execution/validator, (WS-2) surfacePolicy.ts standalone module with PROTOTYPING_SUPPORTED_SURFACES=[web,mobile,desktop,mixed], (WS-3) runFullHarness() CalibrationLoader internal resolution (scalar params removed), (WS-4) concrete-only evidenceRefs in runtimeGate/specCoverage (self-ref/synthetic banned), (WS-5) reviewerSignoff.status approved/rejected/abandoned mapping + reviewerLogs verdict vocabulary, (WS-6) uiFidelityBuilder screenId-based matching (uiContractId hard-error), (WS-7) stale mode/surface semantics removed from shipped docs/assets/tests
   - NOTE: v1.7.15 rev7 adds 7 workstreams (WS-1 through WS-7) — (WS-1) CalibrationPack upstream resolution: execution.ts resolves before runFullHarness(), runtime.ts has 0 CalibrationLoader imports; (WS-2) uiFidelity fail-closed guard: execution fails before runFullHarness() on status≠completed/missingRequired>0/screen missing; (WS-3) concrete-only evidenceRefs: isConcreteArtifactRef() helper, directory/self-ref/synthetic/extension-less forbidden; (WS-4) validator calibration metadata comparison: packPath/packVersion/configPath compared against actual pack, mismatch=error; (WS-5) error taxonomy: 6 distinct classes in prototyping/errors.ts, narrow catch blocks; (WS-6) config packPath-only: scalar calibration fields removed from schema/template/README, obsolete field causes error; (WS-7) surfacePolicy.ts rejection message from PROTOTYPING_SUPPORTED_SURFACES constant
+  - NOTE: v1.7.15 rev8 adds 4 workstreams (WS-1 through WS-4) — (WS-1) new leaf module `pathUtils.ts`: `toRepoRelativeArtifactRef()`, `assertConcreteArtifactRef()`, `isConcreteArtifactRef()` as shared helpers (throws for outside-root, directory path, both line+anchor); (WS-2) `runtimeGate.evidenceRefs` validator contract: `PrototypingEvidence["runtimeGate"]` type gets `evidenceRefs: string[]` required field, absence/empty-array/malformed = validator error; (WS-3) unified ref grammar: all 5 traceability ref sites (runtimeGate.evidenceRefs, iterations[].evidenceRefs.runtimeGate, iterations[].evidenceRefs.specCoverage, specCoverage.evidenceRefs, specs[].coverageRefs[].declaredRef) use same helpers from pathUtils.ts, no parallel grammar implementations; (WS-4) new closure regression test `prototypingExecution.productionPath.test.ts` with ≥1 positive closure test + ≥1 negative injection test
   - `/qfai-prototyping` skill workflow (SKILL only, no CLI command) — skill-centered truth: the skill is the sole interface for prototyping
   - All-spec stage: scope is ALL specs from `.qfai/specs/spec-*`
   - Spec Auto-Discovery Protocol (4-source unified diff detection: branch diff, local changes, evidence mtime, delta.md parse)
@@ -102,6 +103,10 @@
 - NFR-0034 (rev7): all vitest suites pass — pnpm test exits 0 after rev7 changes
 - NFR-0035 (rev7): shipped config template has 0 scalar calibration fields
 - NFR-0036 (rev7): surfacePolicy rejection message auto-updates when PROTOTYPING_SUPPORTED_SURFACES changes
+- NFR-0037 (rev8): 100% line coverage for pathUtils.ts helpers — zero uncovered branches in `toRepoRelativeArtifactRef`, `assertConcreteArtifactRef`, `isConcreteArtifactRef`; verified by `pnpm vitest run --project core --coverage`
+- NFR-0038 (rev8): validator rejects ALL malformed ref forms with zero false-negatives — 0 false-negatives in `isConcreteArtifactRef` check; all 5 malformed forms (absolute path, self-ref, synthetic token, directory, empty string) rejected
+- NFR-0039 (rev8): no duplicate ref grammar implementation — 0 parallel implementations of concrete-ref grammar check outside `pathUtils.ts` in `packages/qfai/src`
+- NFR-0040 (rev8): execution→validate closure test in production path test file — 1 positive closure test + ≥1 negative injection test in `prototypingExecution.productionPath.test.ts`; `pnpm vitest run --project core` passes
 
 ## Applicable Policy
 
@@ -239,10 +244,25 @@
 - REQ-0056 (rev7): obsolete scalar calibration fields in config cause error
 - REQ-0057 (rev7): shipped config template uses packPath-only
 - REQ-0058 (rev7): surfacePolicy.ts rejection message matches PROTOTYPING_SUPPORTED_SURFACES
+- REQ-0059 (rev8; WS-1): toRepoRelativeArtifactRef() helper in pathUtils.ts — `toRepoRelativeArtifactRef({ repoRoot, absolutePath, line?, anchor? }): string`; throws for outside-root path, directory path (no file extension), both line+anchor specified; returns POSIX repo-relative path
+- REQ-0060 (rev8; WS-1): parseSpecDeclaration() and extractUiRouteDeclarations() use normalizer — all declaredRef values produced by these functions pass through toRepoRelativeArtifactRef(); raw absolute paths not returned
+- REQ-0061 (rev8; WS-1): buildSpecCoverageSummary() outputs only concrete artifact refs — no directory paths accepted as ref source; all evidenceRefs in output are concrete artifact refs
+- REQ-0062 (rev8; WS-1): buildPerSpecCoverage() outputs concrete artifact refs in coverageRefs[].declaredRef — same grammar (same helper) as summary evidenceRefs; absolute paths must not appear
+- REQ-0063 (rev8; WS-2): PrototypingEvidence["runtimeGate"] type includes evidenceRefs: string[] — formal required field in type definition used by both parser and validator
+- REQ-0064 (rev8; WS-2): parseEvidence() reads and type-checks runtimeGate.evidenceRefs — non-array value is parse error; absence detectable for subsequent validation
+- REQ-0065 (rev8; WS-2): validator applies isConcreteArtifactRef() to runtimeGate.evidenceRefs entries — same or stricter checks as iterations[].evidenceRefs.runtimeGate
+- REQ-0066 (rev8; WS-2): runtimeGate.evidenceRefs absence is a validator error — field must not be silently skipped
+- REQ-0067 (rev8; WS-2): runtimeGate.evidenceRefs empty array is a validator error — empty array is not a valid evidenceRefs value for full-harness UI-only output
+- REQ-0068 (rev8; WS-2): each malformed form in runtimeGate.evidenceRefs is a validator error — absolute path, self-ref (prototyping.json#/...), synthetic token, empty string, directory path (no extension) each produce individual validator error
+- REQ-0069 (rev8; WS-3): single shared helpers for ref grammar across all layers — toRepoRelativeArtifactRef, assertConcreteArtifactRef, isConcreteArtifactRef are the single SSOT; no separate parallel implementations
+- REQ-0070 (rev8; WS-3): all 5 traceability ref sites use the same grammar — runtimeGate.evidenceRefs, iterations[].evidenceRefs.runtimeGate, iterations[].evidenceRefs.specCoverage, specCoverage.evidenceRefs, specs[].coverageRefs[].declaredRef
+- REQ-0071 (rev8; WS-4): specCoverage.test.ts includes negative cases for ref normalization — absolute path → repo-relative output test; outside-root path → throw test; directory path → throw test; coverageRefs[].declaredRef format verified as concrete artifact ref
+- REQ-0072 (rev8; WS-4): prototypingEvidence.test.ts includes runtimeGate.evidenceRefs cases — absolute path → error; self-ref → error; synthetic token → error; field absent → error; empty array → error
+- REQ-0073 (rev8; WS-4): prototypingExecution.productionPath.test.ts contains closure test — ≥1 positive closure (runPrototypingExecution() output passes validatePrototypingEvidence() with 0 errors); ≥1 negative injection (absolute path in specCoverage or runtimeGate causes validate error)
 
 ## Entry points
 
-- US range in this spec: US-0012-0001..US-0012-0062
+- US range in this spec: US-0012-0001..US-0012-0066
 - Primary actors: Developer, AI Agent (FullStackEngineer, RuntimeGatekeeper), CI/CD pipeline
 - Notes: No CLI command exists. This is a skill-only spec for `/qfai-prototyping`.
 

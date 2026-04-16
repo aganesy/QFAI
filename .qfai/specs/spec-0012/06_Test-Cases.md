@@ -1715,3 +1715,143 @@
 - AC-Refs: AC-0012-0075
 - Type: boundary
 - Test: isSupportedPrototypingSurface("cli") returns false; isSupportedPrototypingSurface("web") returns true
+
+## TC-0012-0198: toRepoRelativeArtifactRef() Returns POSIX Repo-Relative Path — Normal Path (v1.7.15 rev8 WS-1)
+
+- EX-Ref: EX-0012-0129, EX-0012-0130
+- AC-Refs: AC-0012-0076, AC-0012-0083
+- Type: normal
+- Test: `toRepoRelativeArtifactRef({ repoRoot: "/repo", absolutePath: "/repo/.qfai/specs/s/01.md", line: 5 })` returns `".qfai/specs/s/01.md#L5"` using POSIX separator; same on Windows host with normalized input
+
+## TC-0012-0199: toRepoRelativeArtifactRef() Throws for Outside-Root Path — Error (v1.7.15 rev8 WS-1)
+
+- EX-Ref: EX-0012-0131
+- AC-Refs: AC-0012-0080
+- Type: error
+- Test: `toRepoRelativeArtifactRef({ repoRoot: "/repo", absolutePath: "/other-repo/file.md" })` throws; error message indicates path is outside repository root
+
+## TC-0012-0200: toRepoRelativeArtifactRef() Throws for Directory Path — Error (v1.7.15 rev8 WS-1)
+
+- EX-Ref: EX-0012-0132
+- AC-Refs: AC-0012-0081
+- Type: error
+- Test: `toRepoRelativeArtifactRef({ repoRoot: "/repo", absolutePath: "/repo/.qfai/evidence/prototyping-iter0/" })` throws; directory path (trailing slash or no extension) is rejected
+
+## TC-0012-0201: toRepoRelativeArtifactRef() Throws When Both line and anchor Specified — Boundary (v1.7.15 rev8 WS-1)
+
+- EX-Ref: EX-0012-0133
+- AC-Refs: AC-0012-0082
+- Type: boundary
+- Test: `toRepoRelativeArtifactRef({ repoRoot: "/repo", absolutePath: "/repo/file.md", line: 5, anchor: "section-a" })` throws; line and anchor are mutually exclusive
+
+## TC-0012-0202: buildSpecCoverageSummary() evidenceRefs Are Concrete and Not Absolute — Normal Path (v1.7.15 rev8 WS-1)
+
+- EX-Ref: EX-0012-0129, EX-0012-0142
+- AC-Refs: AC-0012-0077, AC-0012-0078, AC-0012-0079
+- Type: normal
+- Test: call `buildSpecCoverageSummary()` and `buildPerSpecCoverage()` with valid inputs; assert all `evidenceRefs` and `coverageRefs[].declaredRef` values are POSIX repo-relative paths (not absolute paths, not directory paths)
+
+## TC-0012-0203: runtimeGate.evidenceRefs Valid Array — Validator Passes — Normal Path (v1.7.15 rev8 WS-2)
+
+- EX-Ref: EX-0012-0134
+- AC-Refs: AC-0012-0084, AC-0012-0085, AC-0012-0086
+- Type: normal
+- Test: `validatePrototypingEvidence()` with `runtimeGate.evidenceRefs = [".qfai/evidence/iter-0/qa.json#/finding-1"]` returns 0 errors for the evidenceRefs field; field is read and validated
+
+## TC-0012-0204: runtimeGate.evidenceRefs Absent — Validator Error — Error (v1.7.15 rev8 WS-2)
+
+- EX-Ref: EX-0012-0135
+- AC-Refs: AC-0012-0087
+- Type: error
+- Test: `validatePrototypingEvidence()` with evidence where `runtimeGate.evidenceRefs` field is absent; at least 1 error returned; error code references the missing field
+
+## TC-0012-0205: runtimeGate.evidenceRefs Empty Array — Validator Error — Boundary (v1.7.15 rev8 WS-2)
+
+- EX-Ref: EX-0012-0136
+- AC-Refs: AC-0012-0088
+- Type: boundary
+- Test: `validatePrototypingEvidence()` with `runtimeGate.evidenceRefs = []`; at least 1 error returned; empty array is treated as missing required refs
+
+## TC-0012-0206: Absolute Path in runtimeGate.evidenceRefs — Validator Error — Error (v1.7.15 rev8 WS-2)
+
+- EX-Ref: EX-0012-0137
+- AC-Refs: AC-0012-0089
+- Type: error
+- Test: `validatePrototypingEvidence()` with `runtimeGate.evidenceRefs = ["/abs/path/file.json"]`; error returned for absolute path entry; error message identifies the invalid ref
+
+## TC-0012-0207: Self-Ref in runtimeGate.evidenceRefs — Validator Error — Error (v1.7.15 rev8 WS-2)
+
+- EX-Ref: EX-0012-0138
+- AC-Refs: AC-0012-0090
+- Type: error
+- Test: `validatePrototypingEvidence()` with `runtimeGate.evidenceRefs = [".qfai/evidence/prototyping.json#/runtimeGate"]`; error returned for self-referential entry
+
+## TC-0012-0208: Synthetic Token in runtimeGate.evidenceRefs — Validator Error — Edge (v1.7.15 rev8 WS-2)
+
+- EX-Ref: EX-0012-0138
+- AC-Refs: AC-0012-0091, AC-0012-0092, AC-0012-0093
+- Type: edge
+- Test: `validatePrototypingEvidence()` with `runtimeGate.evidenceRefs = ["routes: all observed", "", ".qfai/evidence/"]`; each entry produces individual error; 3 errors total
+
+## TC-0012-0209: All 5 Ref Sites Pass Validation with Consistent Refs — Normal Path (v1.7.15 rev8 WS-3)
+
+- EX-Ref: EX-0012-0139
+- AC-Refs: AC-0012-0094, AC-0012-0095
+- Type: normal
+- Test: construct evidence with all 5 ref sites populated using concrete POSIX refs via shared helpers; `validatePrototypingEvidence()` returns 0 errors; each site validates using `isConcreteArtifactRef()`
+
+## TC-0012-0210: isConcreteArtifactRef() Returns Same Result for Same Input — Boundary (v1.7.15 rev8 WS-3)
+
+- EX-Ref: EX-0012-0139
+- AC-Refs: AC-0012-0094
+- Type: boundary
+- Test: `isConcreteArtifactRef(".qfai/evidence/iter-0/qa.json")` called twice with same input returns same boolean value both times (pure function property)
+
+## TC-0012-0211: No Parallel Grammar Definition Outside pathUtils.ts — Edge (v1.7.15 rev8 WS-3)
+
+- EX-Ref: EX-0012-0140
+- AC-Refs: AC-0012-0096
+- Type: edge
+- Test: static analysis/grep confirms 0 independent regex or pattern definitions for concrete-ref grammar outside `packages/qfai/src/core/prototyping/pathUtils.ts`
+
+## TC-0012-0212: iterations[].evidenceRefs.runtimeGate Absolute Path Rejected by Same Grammar — Error (v1.7.15 rev8 WS-3)
+
+- EX-Ref: EX-0012-0141
+- AC-Refs: AC-0012-0095
+- Type: error
+- Test: evidence with `iterations[0].evidenceRefs.runtimeGate = ["/abs/path.json"]`; `validatePrototypingEvidence()` returns error using same `isConcreteArtifactRef()` check as top-level runtimeGate
+
+## TC-0012-0213: execution.ts assertConcreteArtifactRef() Blocks Absolute Builder Output Before Bundle Write — Error (v1.7.15 rev8 WS-3)
+
+- EX-Ref: EX-0012-0143
+- AC-Refs: AC-0012-0097, AC-0012-0098
+- Type: error
+- Test: unit test for `execution.ts` builder pipeline; inject absolute path in specCoverage output; assert `assertConcreteArtifactRef()` throws before `fsEvidenceWriter` is called
+
+## TC-0012-0214: Closure Test — runPrototypingExecution() Output Passes validatePrototypingEvidence() with 0 Errors — Normal Path (v1.7.15 rev8 WS-4)
+
+- EX-Ref: EX-0012-0144
+- AC-Refs: AC-0012-0099, AC-0012-0100
+- Type: normal
+- Test: in `prototypingExecution.productionPath.test.ts`, call `runPrototypingExecution()` with valid inputs; pass output to `validatePrototypingEvidence()`; assert 0 errors returned (positive closure test)
+
+## TC-0012-0215: Negative Injection — Absolute Path in specCoverage Causes Validator Error — Error (v1.7.15 rev8 WS-4)
+
+- EX-Ref: EX-0012-0145
+- AC-Refs: AC-0012-0101
+- Type: error
+- Test: in `prototypingExecution.productionPath.test.ts`, create fixture with `specCoverage.evidenceRefs[0] = "/abs/path/file.md"`; pass to `validatePrototypingEvidence()`; assert at least 1 error for absolute path
+
+## TC-0012-0216: Negative Injection — Absent runtimeGate.evidenceRefs Causes Validator Error — Error (v1.7.15 rev8 WS-4)
+
+- EX-Ref: EX-0012-0147
+- AC-Refs: AC-0012-0101
+- Type: error
+- Test: in `prototypingExecution.productionPath.test.ts` or `prototypingEvidence.test.ts`, pass evidence fixture with `runtimeGate.evidenceRefs` absent; assert at least 1 error for missing required field
+
+## TC-0012-0217: specCoverage.test.ts Negative Cases Exist and Pass — Boundary (v1.7.15 rev8 WS-4)
+
+- EX-Ref: EX-0012-0146, EX-0012-0148
+- AC-Refs: AC-0012-0102, AC-0012-0103
+- Type: boundary
+- Test: `specCoverage.test.ts` contains: (a) absolute path input → repo-relative output assertion; (b) outside-root path → throw assertion; (c) directory path → throw assertion; (d) `coverageRefs[].declaredRef` format assertion; `prototypingEvidence.test.ts` contains: (e) runtimeGate.evidenceRefs absent/empty-array/absolute-path/self-ref/synthetic-token → error assertions

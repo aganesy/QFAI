@@ -869,3 +869,123 @@
 - BR-Ref: BR-0012-0098
 - Input: PROTOTYPING_SUPPORTED_SURFACES extended with new value
 - Expected: rejection message auto-includes the new value without code change
+
+## EX-0012-0129: toRepoRelativeArtifactRef() Happy Path — POSIX Relative Output (v1.7.15 rev8 WS-1)
+
+- BR-Ref: BR-0012-0100
+- Input: `repoRoot = "/repo"`, `absolutePath = "/repo/.qfai/evidence/prototyping-iter0/run-report.md"`, `line = 12`
+- Expected: `.qfai/evidence/prototyping-iter0/run-report.md#L12` (POSIX separator, repo-relative, with line anchor)
+
+## EX-0012-0130: toRepoRelativeArtifactRef() with anchor Parameter (v1.7.15 rev8 WS-1)
+
+- BR-Ref: BR-0012-0100
+- Input: `repoRoot = "/repo"`, `absolutePath = "/repo/.qfai/evidence/iter-0/screenshot.png"`, `anchor = "finding-1"`
+- Expected: `.qfai/evidence/iter-0/screenshot.png#finding-1` (anchor appended)
+
+## EX-0012-0131: toRepoRelativeArtifactRef() Outside repoRoot — Throws (v1.7.15 rev8 WS-1)
+
+- BR-Ref: BR-0012-0099
+- Input: `repoRoot = "/repo"`, `absolutePath = "/other-repo/file.md"` (outside repoRoot)
+- Expected: `toRepoRelativeArtifactRef()` throws (path is outside the repository root)
+
+## EX-0012-0132: toRepoRelativeArtifactRef() Directory Path — Throws (v1.7.15 rev8 WS-1)
+
+- BR-Ref: BR-0012-0099
+- Input: `repoRoot = "/repo"`, `absolutePath = "/repo/.qfai/evidence/prototyping-iter0/"` (directory path, no file extension)
+- Expected: `toRepoRelativeArtifactRef()` throws (directory paths are not valid artifact refs)
+
+## EX-0012-0133: toRepoRelativeArtifactRef() Both line and anchor Specified — Throws (v1.7.15 rev8 WS-1)
+
+- BR-Ref: BR-0012-0099
+- Input: `repoRoot = "/repo"`, `absolutePath = "/repo/file.md"`, `line = 5`, `anchor = "section-a"` (both specified)
+- Expected: `toRepoRelativeArtifactRef()` throws (line and anchor are mutually exclusive)
+
+## EX-0012-0134: runtimeGate.evidenceRefs Valid Array — Validator Passes (v1.7.15 rev8 WS-2)
+
+- BR-Ref: BR-0012-0101
+- Input: `runtimeGate.evidenceRefs = [".qfai/evidence/iter-0/browser-qa.json#/finding-1"]`
+- Expected: `validatePrototypingEvidence()` passes; no errors for the runtimeGate.evidenceRefs field
+
+## EX-0012-0135: runtimeGate.evidenceRefs Absent — Validator Error (v1.7.15 rev8 WS-2)
+
+- BR-Ref: BR-0012-0101
+- Input: evidence summary where `runtimeGate.evidenceRefs` field is absent
+- Expected: `validatePrototypingEvidence()` returns at least one error citing `runtimeGate.evidenceRefs` absence
+
+## EX-0012-0136: runtimeGate.evidenceRefs Empty Array — Validator Error (v1.7.15 rev8 WS-2)
+
+- BR-Ref: BR-0012-0101
+- Input: `runtimeGate.evidenceRefs = []`
+- Expected: `validatePrototypingEvidence()` returns at least one error; empty array is not valid
+
+## EX-0012-0137: runtimeGate.evidenceRefs Absolute Path Entry — Validator Error (v1.7.15 rev8 WS-2)
+
+- BR-Ref: BR-0012-0102
+- Input: `runtimeGate.evidenceRefs = ["/abs/path/file.json"]`
+- Expected: `validatePrototypingEvidence()` returns validator error for absolute path
+
+## EX-0012-0138: runtimeGate.evidenceRefs Self-Ref Entry — Validator Error (v1.7.15 rev8 WS-2)
+
+- BR-Ref: BR-0012-0102
+- Input: `runtimeGate.evidenceRefs = [".qfai/evidence/prototyping.json#/runtimeGate"]`
+- Expected: `validatePrototypingEvidence()` returns validator error for self-referential entry
+
+## EX-0012-0139: All 5 Ref Sites Populated with Shared Helpers — Consistent Validation (v1.7.15 rev8 WS-3)
+
+- BR-Ref: BR-0012-0103
+- Input: evidence with all 5 ref sites populated using shared helpers from `pathUtils.ts`
+- Expected: all 5 ref sites pass validator; no grammar mismatch between builder output and validator expectations
+
+## EX-0012-0140: No Parallel Grammar Definition Outside pathUtils.ts — Grep Returns 0 Matches (v1.7.15 rev8 WS-3)
+
+- BR-Ref: BR-0012-0103
+- Input: grep for independent regex/pattern definitions for concrete-ref grammar outside `pathUtils.ts` in `packages/qfai/src`
+- Expected: 0 matches; all ref grammar is sourced from `pathUtils.ts`
+
+## EX-0012-0141: iterations[].evidenceRefs.runtimeGate Absolute Path Rejected — Same Grammar (v1.7.15 rev8 WS-3)
+
+- BR-Ref: BR-0012-0103
+- Input: evidence with `iterations[0].evidenceRefs.runtimeGate = ["/abs/path/file.json"]`
+- Expected: validator error; same `isConcreteArtifactRef()` check applies as for top-level `runtimeGate.evidenceRefs`
+
+## EX-0012-0142: specs[].coverageRefs[].declaredRef Absolute Path Throws at Generation (v1.7.15 rev8 WS-3)
+
+- BR-Ref: BR-0012-0104
+- Input: `buildPerSpecCoverage()` called with absolute path as input
+- Expected: `toRepoRelativeArtifactRef()` throws before the absolute path reaches `declaredRef`
+
+## EX-0012-0143: execution.ts assertConcreteArtifactRef() Blocks Absolute Builder Output (v1.7.15 rev8 WS-3)
+
+- BR-Ref: BR-0012-0104
+- Input: a builder producing absolute path in specCoverage evidenceRefs before bundle write
+- Expected: `assertConcreteArtifactRef()` throws before bundle is written to disk
+
+## EX-0012-0144: Closure Test Positive Path — runPrototypingExecution() Output Passes validatePrototypingEvidence() (v1.7.15 rev8 WS-4)
+
+- BR-Ref: BR-0012-0105
+- Input: `runPrototypingExecution()` called with valid inputs in `prototypingExecution.productionPath.test.ts`
+- Expected: `validatePrototypingEvidence(output)` returns 0 errors; closure test passes
+
+## EX-0012-0145: Closure Test Negative Injection — Absolute Path in specCoverage Causes Validator Error (v1.7.15 rev8 WS-4)
+
+- BR-Ref: BR-0012-0105
+- Input: fixture with `specCoverage.evidenceRefs[0] = "/abs/path/file.md"` passed to `validatePrototypingEvidence()`
+- Expected: validation returns at least 1 error for the absolute path
+
+## EX-0012-0146: specCoverage.test.ts Negative — Outside-Root Path Throws (v1.7.15 rev8 WS-4)
+
+- BR-Ref: BR-0012-0106
+- Input: `toRepoRelativeArtifactRef()` called from specCoverage with path outside repo root
+- Expected: function throws; outside-root path is rejected at generation time
+
+## EX-0012-0147: prototypingEvidence.test.ts Negative — Absent runtimeGate.evidenceRefs Causes Error (v1.7.15 rev8 WS-4)
+
+- BR-Ref: BR-0012-0106
+- Input: evidence fixture with `runtimeGate.evidenceRefs` field absent
+- Expected: `validatePrototypingEvidence()` returns error for absent required field
+
+## EX-0012-0148: prototypingEvidence.test.ts Negative — Empty Array runtimeGate.evidenceRefs Causes Error (v1.7.15 rev8 WS-4)
+
+- BR-Ref: BR-0012-0106
+- Input: evidence fixture with `runtimeGate.evidenceRefs = []`
+- Expected: `validatePrototypingEvidence()` returns error; empty array is not valid

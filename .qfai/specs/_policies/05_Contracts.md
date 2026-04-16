@@ -192,6 +192,19 @@ QFAI は GUI を持たない CLI ツールである。`/qfai-prototyping` スキ
 - 全て QFAI 内部モジュール。外部向け stable DB/API/UI contract は新設しない。
 - したがって Contract Index の `0 items` は v1.7.15 rev7 でも意図的な none-rationale であり、discussion-20260415203030886 のスコープ境界に整合する。
 
+## v1.7.15 rev8 Contract Posture
+
+- Contracts-first review completed for v1.7.15 rev8 single-PR completion design (`discussion-20260416023323603`).
+- v1.7.15 rev8 は `packages/qfai` 内部の prototyping subsystem の ref grammar 統一 + runtimeGate validator 拡張を対象とした単一 PR リリースであり、外部向け stable contract は新設しない。
+- 主な変更対象:
+  - WS-1: `prototyping/pathUtils.ts` (新設) — `toRepoRelativeArtifactRef`, `assertConcreteArtifactRef`, `isConcreteArtifactRef` リーフモジュール
+  - WS-2: `validators/prototypingEvidence.ts` — `runtimeGate.evidenceRefs: string[]` 型追加; parser 読み取り; 欠如/空配列/不正形式 → validator error
+  - WS-3: `prototyping/specCoverage.ts`, `prototyping/execution.ts`, `prototyping/measurement.ts` (条件付き) — 全 5 ref サイトを pathUtils.ts の共有ヘルパーで統一
+  - WS-4: 新テストファイル `prototypingExecution.productionPath.test.ts` — positive closure + negative injection
+- 全て QFAI 内部モジュール。外部向け stable DB/API/UI contract は新設しない。
+- TC-3 (breaking change): `runtimeGate.evidenceRefs` なしの既存 evidence bundle は rev8 以降 validation に失敗する。migration shim なし。
+- したがって Contract Index の `0 items` は v1.7.15 rev8 でも意図的な none-rationale であり、discussion-20260416023323603 のスコープ境界に整合する。
+
 ## ER Diagram
 
 QFAI はデータベースを使用しないため、ER Diagram は省略する。

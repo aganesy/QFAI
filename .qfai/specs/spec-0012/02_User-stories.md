@@ -400,3 +400,43 @@ As a developer, I want test fixtures to remove l1/l2 direct pass, packVersion:"1
 - REQ-Refs: REQ-0058
 - WS: WS-7
 - Discussion: discussion-20260415203030886
+
+## US-0012-0063: specCoverage Outputs Only Repo-Relative Concrete Artifact Refs (WS-1) (v1.7.15 rev8)
+
+**As a** package maintainer,
+**I want** `specCoverage.ts` to output only repo-root relative concrete artifact refs (not absolute paths),
+**So that** the traceability ledger is self-consistent with the validator contract and cross-platform reproducible.
+
+- REQ-Refs: REQ-0059, REQ-0060, REQ-0061, REQ-0062
+- WS: WS-1
+- Discussion: discussion-20260416023323603
+
+## US-0012-0064: Validator Validates Top-Level runtimeGate.evidenceRefs (WS-2) (v1.7.15 rev8)
+
+**As a** package maintainer,
+**I want** `prototypingEvidence.ts` to parse and validate top-level `runtimeGate.evidenceRefs`,
+**So that** malformed refs in the summary-level runtimeGate field are detected and rejected with the same strictness as iteration-level refs.
+
+- REQ-Refs: REQ-0063, REQ-0064, REQ-0065, REQ-0066, REQ-0067, REQ-0068
+- WS: WS-2
+- Discussion: discussion-20260416023323603
+
+## US-0012-0065: All 5 Traceability Ref Sites Use the Same Ref Grammar and Helpers (WS-3) (v1.7.15 rev8)
+
+**As a** package maintainer,
+**I want** all five traceability ref sites to use the same ref grammar implemented by shared helpers from `pathUtils.ts`,
+**So that** future grammar changes propagate consistently and there is no silent divergence between builder output and validator expectations.
+
+- REQ-Refs: REQ-0069, REQ-0070
+- WS: WS-3
+- Discussion: discussion-20260416023323603
+
+## US-0012-0066: Execution to Validate Closure Regression Test Exists (WS-4) (v1.7.15 rev8)
+
+**As a** package maintainer,
+**I want** a production-path regression test that runs `runPrototypingExecution()` and passes the output to `validatePrototypingEvidence()`,
+**So that** the class of regression where builders produce output that fails their own validator is permanently covered by the test suite.
+
+- REQ-Refs: REQ-0071, REQ-0072, REQ-0073
+- WS: WS-4
+- Discussion: discussion-20260416023323603

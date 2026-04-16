@@ -864,3 +864,199 @@ Given assertSupportedPrototypingSurface() in surfacePolicy.ts, when called with 
 ## AC-0012-0075: Stale CLI Surface Removed from Rejection Message
 
 Given the rejection message for an unsupported surface, when inspected, then it lists "web, mobile, desktop, mixed" and does not hardcode "cli" or any other stale surface name.
+
+## AC-0012-0076: toRepoRelativeArtifactRef() Exists in pathUtils.ts with Correct Signature (v1.7.15 rev8 WS-1)
+
+Given `packages/qfai/src/core/prototyping/pathUtils.ts`, when imported, then `toRepoRelativeArtifactRef({ repoRoot, absolutePath, line?, anchor? })` exists and returns a string that is a POSIX repo-relative path.
+
+- US-Ref: US-0012-0063
+- REQ-Ref: REQ-0059
+
+## AC-0012-0077: parseSpecDeclaration() and extractUiRouteDeclarations() Do Not Return Raw Absolute Paths (v1.7.15 rev8 WS-1)
+
+Given `parseSpecDeclaration()` and `extractUiRouteDeclarations()` in `specCoverage.ts`, when called, then all `declaredRef` values in their output pass through `toRepoRelativeArtifactRef()` and are never raw absolute path strings.
+
+- US-Ref: US-0012-0063
+- REQ-Ref: REQ-0060
+
+## AC-0012-0078: buildSpecCoverageSummary() Rejects Directory Paths and Outputs Only Concrete Refs (v1.7.15 rev8 WS-1)
+
+Given `buildSpecCoverageSummary()`, when called, then it does not accept a directory path as a ref source and all `evidenceRefs` in its output are concrete artifact refs (not directory paths, pack root paths, or bare filenames without extension).
+
+- US-Ref: US-0012-0063
+- REQ-Ref: REQ-0061
+
+## AC-0012-0079: buildPerSpecCoverage() Outputs Concrete Artifact Refs in coverageRefs[].declaredRef (v1.7.15 rev8 WS-1)
+
+Given `buildPerSpecCoverage()`, when called, then `coverageRefs[].declaredRef` values are concrete artifact refs using the same grammar as summary `evidenceRefs`; no absolute paths appear in `declaredRef`.
+
+- US-Ref: US-0012-0063
+- REQ-Ref: REQ-0062
+
+## AC-0012-0080: toRepoRelativeArtifactRef() Throws for Outside-Root Path (v1.7.15 rev8 WS-1)
+
+Given `toRepoRelativeArtifactRef({ repoRoot, absolutePath })`, when `absolutePath` is outside `repoRoot` (e.g., `/other-repo/file.md` when repoRoot is `/repo`), then the function throws.
+
+- US-Ref: US-0012-0063
+- REQ-Ref: REQ-0059
+
+## AC-0012-0081: toRepoRelativeArtifactRef() Throws for Directory Path (v1.7.15 rev8 WS-1)
+
+Given `toRepoRelativeArtifactRef({ repoRoot, absolutePath })`, when `absolutePath` has no file extension (i.e., it is a directory path), then the function throws.
+
+- US-Ref: US-0012-0063
+- REQ-Ref: REQ-0059
+
+## AC-0012-0082: toRepoRelativeArtifactRef() Throws When Both line and anchor Are Specified (v1.7.15 rev8 WS-1)
+
+Given `toRepoRelativeArtifactRef({ repoRoot, absolutePath, line, anchor })`, when both `line` and `anchor` are specified simultaneously, then the function throws (they are mutually exclusive).
+
+- US-Ref: US-0012-0063
+- REQ-Ref: REQ-0059
+
+## AC-0012-0083: toRepoRelativeArtifactRef() Output Uses POSIX Separator Regardless of Host OS (v1.7.15 rev8 WS-1)
+
+Given `toRepoRelativeArtifactRef()` called on a Windows host with backslash-separated paths, when called, then the output uses POSIX `/` separator (no `\\` in any returned ref).
+
+- US-Ref: US-0012-0063
+- REQ-Ref: REQ-0059
+
+## AC-0012-0084: PrototypingEvidence["runtimeGate"] Type Includes evidenceRefs: string[] (v1.7.15 rev8 WS-2)
+
+Given the TypeScript type for `PrototypingEvidence["runtimeGate"]`, when inspected, then `evidenceRefs: string[]` is a formal required field in the type definition used by both parser and validator.
+
+- US-Ref: US-0012-0064
+- REQ-Ref: REQ-0063
+
+## AC-0012-0085: parseEvidence() Reads runtimeGate.evidenceRefs; Non-Array Is Parse Error (v1.7.15 rev8 WS-2)
+
+Given `parseEvidence()` in `prototypingEvidence.ts`, when called with evidence input containing `runtimeGate.evidenceRefs`, then the field is read; a non-array value for this field is a parse error; absence of the field is detectable for subsequent validation.
+
+- US-Ref: US-0012-0064
+- REQ-Ref: REQ-0064
+
+## AC-0012-0086: validatePrototypingEvidence() Applies isConcreteArtifactRef() to runtimeGate.evidenceRefs Entries (v1.7.15 rev8 WS-2)
+
+Given `validatePrototypingEvidence()`, when called with evidence containing `runtimeGate.evidenceRefs`, then `isConcreteArtifactRef()` checks are applied to each entry with the same or stricter strictness as `iterations[].evidenceRefs.runtimeGate`.
+
+- US-Ref: US-0012-0064
+- REQ-Ref: REQ-0065
+
+## AC-0012-0087: Absence of runtimeGate.evidenceRefs Is a Validator Error (v1.7.15 rev8 WS-2)
+
+Given `validatePrototypingEvidence()` called with evidence where `runtimeGate.evidenceRefs` is absent, when validated, then at least one error is added to the issues list; the field is not silently skipped.
+
+- US-Ref: US-0012-0064
+- REQ-Ref: REQ-0066
+
+## AC-0012-0088: Empty Array runtimeGate.evidenceRefs: [] Is a Validator Error (v1.7.15 rev8 WS-2)
+
+Given `validatePrototypingEvidence()` called with evidence where `runtimeGate.evidenceRefs` is an empty array, when validated, then at least one error is returned; an empty array is not a valid evidenceRefs value.
+
+- US-Ref: US-0012-0064
+- REQ-Ref: REQ-0067
+
+## AC-0012-0089: Absolute Path in runtimeGate.evidenceRefs Is a Validator Error (v1.7.15 rev8 WS-2)
+
+Given `validatePrototypingEvidence()` with `runtimeGate.evidenceRefs = ["/abs/path/file.json"]`, when validated, then a validator error is returned for the absolute path entry.
+
+- US-Ref: US-0012-0064
+- REQ-Ref: REQ-0068
+
+## AC-0012-0090: Self-Ref in runtimeGate.evidenceRefs Is a Validator Error (v1.7.15 rev8 WS-2)
+
+Given `validatePrototypingEvidence()` with `runtimeGate.evidenceRefs = [".qfai/evidence/prototyping.json#/runtimeGate"]` (self-ref), when validated, then a validator error is returned for the self-referential entry.
+
+- US-Ref: US-0012-0064
+- REQ-Ref: REQ-0068
+
+## AC-0012-0091: Synthetic Token in runtimeGate.evidenceRefs Is a Validator Error (v1.7.15 rev8 WS-2)
+
+Given `validatePrototypingEvidence()` with `runtimeGate.evidenceRefs = ["routes: all observed"]` (synthetic token), when validated, then a validator error is returned for the synthetic token entry.
+
+- US-Ref: US-0012-0064
+- REQ-Ref: REQ-0068
+
+## AC-0012-0092: Directory Path (No Extension) in runtimeGate.evidenceRefs Is a Validator Error (v1.7.15 rev8 WS-2)
+
+Given `validatePrototypingEvidence()` with `runtimeGate.evidenceRefs = [".qfai/evidence/iter-0/"]` (directory path, no extension), when validated, then a validator error is returned for the directory path entry.
+
+- US-Ref: US-0012-0064
+- REQ-Ref: REQ-0068
+
+## AC-0012-0093: Empty String in runtimeGate.evidenceRefs Is a Validator Error (v1.7.15 rev8 WS-2)
+
+Given `validatePrototypingEvidence()` with `runtimeGate.evidenceRefs = [""]` (empty string entry), when validated, then a validator error is returned for the empty string entry.
+
+- US-Ref: US-0012-0064
+- REQ-Ref: REQ-0068
+
+## AC-0012-0094: toRepoRelativeArtifactRef, assertConcreteArtifactRef, isConcreteArtifactRef Are the Single Shared Helpers (v1.7.15 rev8 WS-3)
+
+Given the `packages/qfai/src` source tree, when inspected, then `toRepoRelativeArtifactRef`, `assertConcreteArtifactRef`, and `isConcreteArtifactRef` are the only implementations of ref grammar; validators and builders have no separate parallel implementations.
+
+- US-Ref: US-0012-0065
+- REQ-Ref: REQ-0069
+
+## AC-0012-0095: All 5 Traceability Ref Sites Use the Same Grammar (v1.7.15 rev8 WS-3)
+
+Given the 5 ref sites (`runtimeGate.evidenceRefs`, `iterations[].evidenceRefs.runtimeGate`, `iterations[].evidenceRefs.specCoverage`, `specCoverage.evidenceRefs`, `specs[].coverageRefs[].declaredRef`), when each is validated, then all use the same ref grammar enforced by shared helpers from `pathUtils.ts`.
+
+- US-Ref: US-0012-0065
+- REQ-Ref: REQ-0070
+
+## AC-0012-0096: No Parallel Regex or Pattern Definition for Concrete Ref Outside pathUtils.ts (v1.7.15 rev8 WS-3)
+
+Given a grep for independent regex or pattern definitions for concrete-ref grammar outside `pathUtils.ts` in `packages/qfai/src`, when run, then 0 matches are found.
+
+- US-Ref: US-0012-0065
+- REQ-Ref: REQ-0069
+
+## AC-0012-0097: measurement.ts Checked; Updated to Shared Helpers if Using Absolute Paths (v1.7.15 rev8 WS-3)
+
+Given `measurement.ts`, when inspected during rev8 implementation, then if it uses absolute paths in ref output it is updated to use shared helpers from `pathUtils.ts`; otherwise it is left unchanged (DR-0012-0047 conditional scope).
+
+- US-Ref: US-0012-0065
+- REQ-Ref: REQ-0069
+
+## AC-0012-0098: execution.ts Calls assertConcreteArtifactRef() on Builder Outputs Before Bundle Write (v1.7.15 rev8 WS-3)
+
+Given `execution.ts`, when it produces bundle output, then `assertConcreteArtifactRef()` is called on builder outputs (e.g., specCoverage evidenceRefs) before the bundle is written to disk.
+
+- US-Ref: US-0012-0065
+- REQ-Ref: REQ-0069
+
+## AC-0012-0099: prototypingExecution.productionPath.test.ts File Exists (v1.7.15 rev8 WS-4)
+
+Given the repository after rev8 implementation, when `packages/qfai/tests/core/` is listed, then `prototypingExecution.productionPath.test.ts` exists as a file.
+
+- US-Ref: US-0012-0066
+- REQ-Ref: REQ-0073
+
+## AC-0012-0100: At Least One Positive Closure Test — runPrototypingExecution() Output Passes validatePrototypingEvidence() (v1.7.15 rev8 WS-4)
+
+Given `prototypingExecution.productionPath.test.ts`, when the positive closure test is executed, then `runPrototypingExecution()` succeeds and its output passes `validatePrototypingEvidence()` with zero errors.
+
+- US-Ref: US-0012-0066
+- REQ-Ref: REQ-0073
+
+## AC-0012-0101: At Least One Negative Injection Test — Absolute Path Causes Validator Error (v1.7.15 rev8 WS-4)
+
+Given `prototypingExecution.productionPath.test.ts`, when the negative injection test is executed with a fixture containing an absolute path in `specCoverage.evidenceRefs` or `runtimeGate.evidenceRefs`, then `validatePrototypingEvidence()` returns at least one error.
+
+- US-Ref: US-0012-0066
+- REQ-Ref: REQ-0073
+
+## AC-0012-0102: specCoverage.test.ts Includes Negative Cases for Ref Normalization (v1.7.15 rev8 WS-4)
+
+Given `specCoverage.test.ts`, when run, then it includes: (a) absolute path input → repo-relative output; (b) outside-root path → throw; (c) directory path → throw; (d) `coverageRefs[].declaredRef` format verified as concrete artifact ref.
+
+- US-Ref: US-0012-0066
+- REQ-Ref: REQ-0071
+
+## AC-0012-0103: prototypingEvidence.test.ts Includes runtimeGate.evidenceRefs Negative Cases (v1.7.15 rev8 WS-4)
+
+Given `prototypingEvidence.test.ts`, when run, then it includes test cases for: `runtimeGate.evidenceRefs` with absolute path → error; self-ref → error; synthetic token → error; field absent → error; empty array → error.
+
+- US-Ref: US-0012-0066
+- REQ-Ref: REQ-0072

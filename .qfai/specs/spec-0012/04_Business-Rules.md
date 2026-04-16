@@ -790,3 +790,51 @@
 - AC-Refs: AC-0012-0074, AC-0012-0075
 - Rule: `assertSupportedPrototypingSurface()` in `surfacePolicy.ts` MUST generate its rejection message by joining `PROTOTYPING_SUPPORTED_SURFACES` (e.g., `.join(", ")`). The message MUST NOT hardcode any surface name. When `PROTOTYPING_SUPPORTED_SURFACES` changes, the message auto-updates.
 - Source: REQ-0058
+
+## BR-0012-0099: pathUtils.ts Is a Leaf Module — No Import from execution.ts or Its Transitive Importers (v1.7.15 rev8 WS-1)
+
+- AC-Refs: AC-0012-0076, AC-0012-0080, AC-0012-0081, AC-0012-0082
+- Rule: `packages/qfai/src/core/prototyping/pathUtils.ts` MUST NOT import from `execution.ts` or any module that transitively imports `execution.ts`. Circular import prevention is mandatory. Any type shared between pathUtils.ts and execution-layer modules MUST be defined in a neutral location (e.g., a shared types file).
+- Source: REQ-0059, TC-2 (discussion constraints)
+
+## BR-0012-0100: toRepoRelativeArtifactRef() Normalizes to POSIX Separator — Windows Backslash Forbidden (v1.7.15 rev8 WS-1)
+
+- AC-Refs: AC-0012-0083
+- Rule: `toRepoRelativeArtifactRef()` MUST normalize all path separators to POSIX `/` in its output regardless of the host OS. Windows `\\` separators in `absolutePath` input MUST be converted. The returned string MUST NOT contain `\\`.
+- Source: REQ-0059, TC-1 (discussion constraints)
+
+## BR-0012-0101: runtimeGate.evidenceRefs Absence or Empty Array Is Always a Validator Error (Fail-Closed) (v1.7.15 rev8 WS-2)
+
+- AC-Refs: AC-0012-0087, AC-0012-0088
+- Rule: `validatePrototypingEvidence()` MUST produce a validator error when `runtimeGate.evidenceRefs` is absent OR when it is an empty array `[]`. There is no valid use case for an absent or empty `runtimeGate.evidenceRefs` in full-harness UI-only output. This is a fail-closed rule (DR-0012-0048).
+- Source: REQ-0066, REQ-0067
+
+## BR-0012-0102: All Malformed Ref Forms in runtimeGate.evidenceRefs Are Individual Validator Errors (v1.7.15 rev8 WS-2)
+
+- AC-Refs: AC-0012-0089, AC-0012-0090, AC-0012-0091, AC-0012-0092, AC-0012-0093
+- Rule: Each of the following forms in `runtimeGate.evidenceRefs` MUST individually produce a validator error: (a) absolute path (starts with `/` or drive letter), (b) self-ref (`.qfai/evidence/prototyping.json#/...`), (c) synthetic token (non-path string like `"routes: all observed"`), (d) directory path (no file extension), (e) empty string `""`. Checks MUST be performed per-entry using `isConcreteArtifactRef()` from `pathUtils.ts`.
+- Source: REQ-0068
+
+## BR-0012-0103: Single Grammar SSOT — No Parallel Implementations of Concrete-Ref Grammar Outside pathUtils.ts (v1.7.15 rev8 WS-3)
+
+- AC-Refs: AC-0012-0094, AC-0012-0096
+- Rule: The concrete-ref grammar MUST have a single SSOT in `pathUtils.ts`. No module in `packages/qfai/src` may define an independent regex or pattern for "is concrete ref" outside of `pathUtils.ts`. All consumers MUST import and use the shared helpers. Violation is detectable by grep.
+- Source: REQ-0069, NFR-0003
+
+## BR-0012-0104: execution.ts Guards All Builder Outputs with assertConcreteArtifactRef() Before Bundle Write (v1.7.15 rev8 WS-3)
+
+- AC-Refs: AC-0012-0098
+- Rule: `execution.ts` MUST call `assertConcreteArtifactRef()` on builder outputs (at minimum specCoverage evidenceRefs and runtimeGate evidenceRefs) before writing the bundle to disk. An absolute path or invalid ref in any builder output MUST cause an assertion throw before bundle write, not a silent write of invalid data.
+- Source: REQ-0069
+
+## BR-0012-0105: Closure Test Required — Builder Output Must Pass Its Own Validator with Zero Errors (v1.7.15 rev8 WS-4)
+
+- AC-Refs: AC-0012-0099, AC-0012-0100
+- Rule: `prototypingExecution.productionPath.test.ts` MUST exist and MUST contain at least one test that calls `runPrototypingExecution()` end-to-end with valid inputs and passes its output to `validatePrototypingEvidence()`, asserting zero errors. This test prevents the class of regression where builders produce output that fails their own validator.
+- Source: REQ-0073, NFR-0004
+
+## BR-0012-0106: specCoverage.test.ts and prototypingEvidence.test.ts Must Include Negative Ref Cases (v1.7.15 rev8 WS-4)
+
+- AC-Refs: AC-0012-0101, AC-0012-0102, AC-0012-0103
+- Rule: `specCoverage.test.ts` MUST include negative cases: absolute path input → repo-relative output, outside-root path → throw, directory path → throw, `coverageRefs[].declaredRef` format verified. `prototypingEvidence.test.ts` MUST include negative cases for `runtimeGate.evidenceRefs`: absolute path → error, self-ref → error, synthetic token → error, absent → error, empty array → error.
+- Source: REQ-0071, REQ-0072

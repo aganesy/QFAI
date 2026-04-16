@@ -1,6 +1,6 @@
 # 08 Open Questions
 
-3 resolved, 2 deferred.
+3 resolved, 2 deferred. (rev8 adds 4 resolved; cumulative: 13 resolved, 2 deferred)
 
 ## OQ-0004: Parameterized Route Matching Strategy (resolved)
 
@@ -67,3 +67,27 @@
 - Status: Resolved at discussion
 - Resolution: DR-0012-0045 — generate from PROTOTYPING_SUPPORTED_SURFACES constant; DRY
 - Source: discussion-20260415203030886
+
+## OQ-0001-rev8: pathUtils.ts as New File vs Inline Helpers (resolved at discussion)
+
+- Status: Resolved at discussion
+- Resolution: DR-0012-0046 — standalone leaf module pathUtils.ts (Option A); no import from execution.ts or its importers (circular import prevention)
+- Source: discussion-20260416023323603
+
+## OQ-0002-rev8: measurement.ts Scope (resolved at discussion)
+
+- Status: Resolved at discussion
+- Resolution: DR-0012-0047 — include measurement.ts conditionally; update to shared helpers only if confirmed to use absolute paths (conservative scope)
+- Source: discussion-20260416023323603
+
+## OQ-0003-rev8: runtimeGate.evidenceRefs Empty Array Policy (resolved at discussion)
+
+- Status: Resolved at discussion
+- Resolution: DR-0012-0048 — fail-closed: empty array runtimeGate.evidenceRefs is always a validator error; no valid case for empty array in full-harness UI-only output
+- Source: discussion-20260416023323603
+
+## OQ-0004-rev8: README.md Update Scope (resolved at discussion)
+
+- Status: Resolved at discussion
+- Resolution: Update README.md only if existing description is absent or obsolete. No new DR required; conditional update confirmed in discussion-20260416023323603 OQ-0004 resolution.
+- Source: discussion-20260416023323603

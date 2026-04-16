@@ -514,3 +514,57 @@ REQ-0099,0100,0101,0102 (WS-5/6/7) → US-0012-0055 → AC-0012-0055-01..06 → 
 - RJ-rev7-005: Hardcode surface list in rejection message
   - DO NOT hardcode "web/mobile/desktop/mixed" in surfacePolicy.ts message string. Temptation: simpler.
   - Reason: same staleness problem recurs when PROTOTYPING_SUPPORTED_SURFACES changes.
+
+---
+
+## v1.7.15 rev8 — Adopted (discussion-20260416023323603)
+
+### Summary
+
+4 workstreams (WS-1..WS-4) introducing a shared ref grammar leaf module (`pathUtils.ts`), extending the validator contract to cover top-level `runtimeGate.evidenceRefs`, unifying all 5 traceability ref sites under shared helpers, and adding a production-path closure regression test. Breaking change: existing evidence without `runtimeGate.evidenceRefs` will fail validation after rev8.
+
+### Discussion Pack Reference
+
+- `discussion-20260416023323603` (v1.7.15 rev8)
+
+### Requirements Added
+
+- REQ-0059..0073: 15 new requirements covering WS-1 through WS-4
+
+### Artifacts Added
+
+| Layer | IDs Added | Description |
+| ----- | --------- | ----------- |
+| US | US-0012-0063..0066 | 4 new user stories for WS-1..WS-4 |
+| AC | AC-0012-0076..0103 | 28 new acceptance criteria |
+| BR | BR-0012-0099..0106 | 8 new business rules |
+| EX | EX-0012-0129..0148 | 20 new examples |
+| TC | TC-0012-0198..0217 | 20 new test cases |
+| DR | DR-0012-0046..0048 | 3 decision records from rev8 OQ resolutions |
+| NFR | NFR-0037..0040 | 4 NFRs from rev8 discussion |
+
+### Decisions Made
+
+- AD-rev8-001: pathUtils.ts as standalone leaf module — no import from execution.ts or its importers; circular import prevention (DR-0012-0046)
+- AD-rev8-002: measurement.ts scope conditional — update to shared helpers only if confirmed to use absolute paths; conservative scope (DR-0012-0047)
+- AD-rev8-003: runtimeGate.evidenceRefs empty array always error — fail-closed; no valid case for empty array in full-harness output (DR-0012-0048)
+- AD-rev8-004: README.md update conditional — update only if obsolete/absent description; no new DR
+
+### Rejected Options (rev8)
+
+- RJ-rev8-001: Inline helpers in each consumer (specCoverage.ts, prototypingEvidence.ts, etc.)
+  - DO NOT implement ref grammar helpers inline in individual modules. Temptation: fewer files, no shared dependency.
+  - Reason: divergence across 5 ref sites would recur; single SSOT in pathUtils.ts is the only maintainable approach.
+
+- RJ-rev8-002: Unconditionally include measurement.ts in rev8 scope
+  - DO NOT unconditionally touch measurement.ts without confirming absolute path usage. Temptation: completeness.
+  - Reason: unnecessary scope creep if measurement.ts doesn't use absolute paths; DR-0012-0047 mandates conditional scope.
+
+### Traceability Chain
+
+| WS | REQ | US | AC | BR | EX | TC |
+|----|-----|----|----|----|----|-----|
+| WS-1 | REQ-0059..0062 | US-0063 | AC-0076..0083 | BR-0099..0100 | EX-0129..0133 | TC-0198..0202 |
+| WS-2 | REQ-0063..0068 | US-0064 | AC-0084..0093 | BR-0101..0102 | EX-0134..0138 | TC-0203..0208 |
+| WS-3 | REQ-0069..0070 | US-0065 | AC-0094..0098 | BR-0103..0104 | EX-0139..0143 | TC-0209..0213 |
+| WS-4 | REQ-0071..0073 | US-0066 | AC-0099..0103 | BR-0105..0106 | EX-0144..0148 | TC-0214..0217 |

@@ -356,3 +356,61 @@ Per design doc §8: WS-6 first (establishes packPath-only contract); WS-5 before
 | E: Error taxonomy | 6 classes; narrow catch blocks; EvidenceWriteError/FullHarnessRuntimeError distinction | TC-0012-0188..0190 |
 | F: Config packPath-only | scalar fields absent; obsolete field error; template clean | TC-0012-0191..0194 |
 | G: surfacePolicy message | from constant; auto-update; stale cli removed | TC-0012-0195..0197 |
+
+---
+
+## v1.7.15 rev8 Implementation Strategy
+
+### Scope Boundary
+
+Single-PR: `packages/qfai/**` only. 4 workstreams (WS-1..WS-4): new leaf module `pathUtils.ts`, `runtimeGate.evidenceRefs` validator extension, unified ref grammar across all 5 ref sites, closure regression test. Breaking change: existing evidence without `runtimeGate.evidenceRefs` fails validation.
+
+### New Files (1 new module + 1 new test file)
+
+| File | WS | Purpose |
+|------|----|---------|
+| `packages/qfai/src/core/prototyping/pathUtils.ts` | WS-1 | 3 shared ref helpers: `toRepoRelativeArtifactRef`, `assertConcreteArtifactRef`, `isConcreteArtifactRef`; leaf module (no import from execution.ts chain) |
+| `packages/qfai/tests/core/prototyping/prototypingExecution.productionPath.test.ts` | WS-4 | Closure regression test: ≥1 positive closure + ≥1 negative injection |
+
+### Modules Touched (rev8 Change Obligation)
+
+| Module | Change Obligation | WS |
+|--------|-------------------|-----|
+| `prototyping/specCoverage.ts` | Use `toRepoRelativeArtifactRef()` in `parseSpecDeclaration()`, `extractUiRouteDeclarations()`, `buildSpecCoverageSummary()`, `buildPerSpecCoverage()` | WS-1, WS-3 |
+| `validators/prototypingEvidence.ts` | Add `evidenceRefs: string[]` to `runtimeGate` type; update `parseEvidence()` to read field; add absence/empty/malformed error checks in `validatePrototypingEvidence()` | WS-2 |
+| `prototyping/execution.ts` | Add `assertConcreteArtifactRef()` calls on builder outputs before bundle write | WS-3 |
+| `prototyping/measurement.ts` | Conditional: update to shared helpers if confirmed to use absolute paths in ref output (DR-0012-0047) | WS-3 |
+| `tests/core/specCoverage.test.ts` | Add negative cases: outside-root throw, directory throw, `coverageRefs[].declaredRef` format | WS-4 |
+| `tests/validators/prototypingEvidence.test.ts` | Add `runtimeGate.evidenceRefs` cases: absent, empty, absolute, self-ref, synthetic token | WS-4 |
+
+### Implementation Order (rev8 dependency chain)
+
+Per design doc: WS-1 first (pathUtils.ts leaf must exist before WS-2/WS-3 consumers); WS-4 last (tests require WS-1..WS-3 to be implemented).
+
+1. **Step 1** (WS-1): `prototyping/pathUtils.ts` (NEW) — 3 helpers with throw guards; POSIX normalization; TypeScript strict mode
+2. **Step 2** (WS-1): `prototyping/specCoverage.ts` — route all ref generation through `toRepoRelativeArtifactRef()`
+3. **Step 3** (WS-2): `validators/prototypingEvidence.ts` — add `runtimeGate.evidenceRefs` type field, parser read, validator error checks
+4. **Step 4** (WS-3): `prototyping/execution.ts` — add `assertConcreteArtifactRef()` guards on builder outputs
+5. **Step 5** (WS-3): `prototyping/measurement.ts` — conditional; grep for absolute path usage; update if needed
+6. **Step 6** (WS-4): `tests/core/specCoverage.test.ts` — add negative cases
+7. **Step 7** (WS-4): `tests/validators/prototypingEvidence.test.ts` — add `runtimeGate.evidenceRefs` negative cases
+8. **Step 8** (WS-4): `tests/core/prototyping/prototypingExecution.productionPath.test.ts` (NEW) — positive closure + negative injection
+
+### Test Strategy (rev8)
+
+| Layer | Location | Coverage Target |
+|-------|----------|-----------------|
+| Unit | `tests/core/prototyping/pathUtils.test.ts` (new or in existing) | All 3 helpers; 5 throw conditions; POSIX normalization; pure function properties |
+| Validators | `tests/validators/prototypingEvidence.test.ts` | runtimeGate.evidenceRefs: absent, empty, absolute, self-ref, synthetic token, directory, empty string |
+| Unit | `tests/core/specCoverage.test.ts` | Negative ref cases: outside-root throw, directory throw, declaredRef format |
+| Integration | `tests/core/prototyping/prototypingExecution.productionPath.test.ts` (new) | Positive closure + negative injection |
+| ATDD annotation map | `spec-0012/tdd/test-list.md` | TC-0012-0198..TC-0012-0217 mapped to TDD-IDs |
+
+### Acceptance Test Matrix Mapping (rev8)
+
+| Category | Coverage Target | TC Range |
+|----------|-----------------|----------|
+| H: pathUtils.ts helpers | POSIX output; throws for outside-root/directory/both-line-anchor | TC-0012-0198..0202 |
+| I: runtimeGate.evidenceRefs validator | absent/empty/absolute/self-ref/synthetic/directory/empty-string errors | TC-0012-0203..0208 |
+| J: unified grammar | all 5 ref sites consistent; 0 parallel grammar defs | TC-0012-0209..0213 |
+| K: closure regression test | positive closure 0 errors; negative injection absolute-path error | TC-0012-0214..0217 |

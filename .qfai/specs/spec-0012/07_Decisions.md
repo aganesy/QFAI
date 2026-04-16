@@ -354,3 +354,30 @@
 - Rejected-A: Hardcode "web/mobile/desktop/mixed" — simple fix but same staleness risk recurs when constant changes.
   - DO NOT hardcode the surface list in the rejection message string. Temptation: simpler to hardcode.
 - Source: OQ-0005, discussion-20260415203030886
+
+### DR-0012-0046: pathUtils.ts as New Standalone Leaf Module (OQ-0001, rev8)
+
+- Decision: New file `packages/qfai/src/core/prototyping/pathUtils.ts` for the 3 shared ref helpers (`toRepoRelativeArtifactRef`, `assertConcreteArtifactRef`, `isConcreteArtifactRef`). Must be a leaf module — no import from `execution.ts` or its transitive importers.
+- Context: Inline implementation in `specCoverage.ts` would scatter the grammar; a shared module prevents future divergence across 5 ref sites.
+- Rationale: Option A (standalone leaf module) adopted. Leaf constraint prevents circular imports that cause TypeScript to silently produce `undefined` for circularly imported values.
+- Rejected-B: Inline helpers in each consumer site — no shared grammar; divergence would recur.
+  - DO NOT implement ref grammar helpers inline in individual consumer modules. Temptation: fewer files.
+- Source: OQ-0001, discussion-20260416023323603
+
+### DR-0012-0047: measurement.ts Scope — Conditional Update (OQ-0002, rev8)
+
+- Decision: Include `measurement.ts` in rev8 scope only if it uses absolute paths in ref output. Review during implementation; update to shared helpers only if needed.
+- Context: Design doc §3-3 does not explicitly name `measurement.ts` as a ref-producing site. Conservative scope avoids unnecessary changes.
+- Rationale: Option B (conservative scope) adopted. Only touch `measurement.ts` if ref grammar violation confirmed; avoids scope creep.
+- Rejected-A: Unconditionally update `measurement.ts` — safe but unnecessarily expands PR diff.
+  - DO NOT unconditionally include `measurement.ts` without confirming it uses absolute paths. Temptation: completeness.
+- Source: OQ-0002, discussion-20260416023323603
+
+### DR-0012-0048: runtimeGate.evidenceRefs Empty Array — Always Validator Error (OQ-0003, rev8)
+
+- Decision: An empty array `runtimeGate.evidenceRefs: []` is always a validator error (fail-closed). There is no case where an empty array is valid.
+- Context: Full-harness UI-only output always has at least one concrete evidence artifact. Allowing an empty array would mask builders that write the field but fail to populate it.
+- Rationale: Option A (fail-closed) adopted. DR-0012-0048 confirmed: empty array = validator error, consistent with OQ-0003 resolution in discussion pack.
+- Rejected-B: Allow empty array as "no refs yet" — masks silent builder failure; OQ-0003 resolution explicitly rejects this.
+  - DO NOT treat empty runtimeGate.evidenceRefs as valid. Temptation: lenient for partial runs.
+- Source: OQ-0003, discussion-20260416023323603
