@@ -414,3 +414,105 @@ Per design doc: WS-1 first (pathUtils.ts leaf must exist before WS-2/WS-3 consum
 | I: runtimeGate.evidenceRefs validator | absent/empty/absolute/self-ref/synthetic/directory/empty-string errors | TC-0012-0203..0208 |
 | J: unified grammar | all 5 ref sites consistent; 0 parallel grammar defs | TC-0012-0209..0213 |
 | K: closure regression test | positive closure 0 errors; negative injection absolute-path error | TC-0012-0214..0217 |
+
+## v1.7.15 rev9 Implementation Strategy
+
+### Scope Boundary
+
+Single-PR: `packages/qfai/**` only. No `.qfai/` root edits. Backward compatibility explicitly abandoned.
+
+### Unchanged Files (Reused from rev8)
+
+| File | Notes |
+|------|-------|
+| `packages/qfai/src/core/prototyping/pathUtils.ts` | Rev8 helpers reused as-is; `isConcreteArtifactRef()` is the shared grammar SSOT |
+| `packages/qfai/src/core/prototyping/specCoverage.ts` | Rev8 changes complete; not modified in rev9 |
+| `packages/qfai/src/core/prototyping/execution.ts` | Not modified unless builder changes require it |
+
+### Modules Touched (rev9 Change Obligation)
+
+| Module | Change Obligation | WS |
+|--------|-------------------|-----|
+| `prototypingEvidence.ts` | Extend `validateRuntimeGate()` for ui[] row validation (declaredRef required+concrete, renderEvidenceRefs[] non-empty+concrete, browserQaEvidenceRefs[] non-empty+concrete). Extend `validateFullHarness()` for axes[].evidenceRefs[] per-axis and reviewerLogs[].evidenceRefs[] non-empty+concrete. All via `isConcreteArtifactRef()` from pathUtils.ts. | WS-1 |
+| `bundleWriter.ts` | Mark `runtimeGate.ui[].declaredRef` as required (not optional). Mark all leaf arrays as required non-nullable. | WS-2 |
+| `runtimeObservation.ts` | Conditionally: if null/omit emission patterns exist for leaf arrays, update to prevent | WS-2 |
+| `runtimeGateBuilder.ts` | Conditionally: if ui[].declaredRef can be emitted as undefined, update to prevent | WS-2 |
+| `tests/core/prototypingEvidence.test.ts` | Add all 15 leaf-field negative cases: 7 for ui[] + 5 for axes[] + 3 for reviewerLogs[] | WS-3 |
+| `tests/core/prototypingExecution.productionPath.test.ts` | Add leaf-field closure assertions (all leaf field groups asserted concrete) + ≥1 negative injection | WS-3 |
+| `tests/core/validate.test.ts` + all `tests/core/` fixtures | Replace all synthetic token evidenceRefs ("a", "b", "reviewer:1") with concrete artifact refs | WS-3 |
+| `packages/qfai/README.md` | Enumerate all fields under concrete-ref contract including rev9 leaf fields | WS-4 |
+
+### Implementation Order (rev9)
+
+1. **WS-1a** (baseline): Extend `validateRuntimeGate()` for ui[] row validation — `declaredRef` required + concrete, `renderEvidenceRefs[]` non-empty + concrete, `browserQaEvidenceRefs[]` non-empty + concrete. Run `pnpm format:check && pnpm lint && pnpm check-types` green.
+2. **WS-1b**: Extend `validateFullHarness()` for axes[].evidenceRefs[] per-axis validation and reviewerLogs[].evidenceRefs[] validation. Run format/lint/types green.
+3. **WS-2**: Update `bundleWriter.ts` strict schema (declaredRef required, leaf arrays required non-nullable). Conditionally update `runtimeObservation.ts` and `runtimeGateBuilder.ts`. Run `pnpm check-types` green.
+4. **WS-3**: Replace synthetic token fixtures. Add all 15 negative cases to prototypingEvidence.test.ts. Add leaf-field closure assertions to productionPath.test.ts. Run `pnpm vitest run --project validators --project core` green.
+5. **WS-4**: Update README. Final: run full CI (`pnpm format:check && pnpm lint && pnpm check-types && pnpm test`) green.
+
+### Test Strategy (rev9)
+
+| Layer | Location | Coverage Target |
+|-------|----------|-----------------|
+| Validators | `tests/validators/` or `tests/core/prototypingEvidence.test.ts` | All 15 new negative cases (7 ui[] + 5 axis + 3 reviewer) |
+| Core | `tests/core/prototypingExecution.productionPath.test.ts` | Leaf-field closure assertions + negative injection |
+| Core fixtures | `tests/core/` fixture files | Zero synthetic token evidenceRefs after WS-3 |
+| ATDD map | `spec-0012/tdd/test-list.md` | TC-0012-0219..TC-0012-0242 mapped to TDD-IDs |
+
+### Key Constraints (rev9)
+
+- Backward compatibility: explicitly abandoned. `runtimeGate.ui[].declaredRef` is now required; evidence bundles without it fail validation. No migration shim.
+- TC-2 (pathUtils.ts reuse): All new leaf-field validation must use `isConcreteArtifactRef()` from pathUtils.ts. No parallel grammar.
+- TC-4 (TypeScript strict): All new code must satisfy TypeScript strict mode. No `@ts-ignore`, no bare `any`.
+- OC-3 (Single PR): WS-1 through WS-4 must all be in the same PR.
+## v1.7.15 rev9 — Leaf-Field Traceability Closure
+
+### Implementation Strategy (rev9)
+
+Rev9 closes the three leaf-field blind spots that remain after rev8. All changes are in `packages/qfai`. Backward compatibility is explicitly abandoned (design doc §0, §3-2).
+
+**Dependency order (mandatory)**:
+WS-1 (validator extension) first — reuses rev8 `pathUtils.ts` helpers without modification;
+WS-2 (bundleWriter schema) after WS-1 is stable;
+WS-3 (tests) after WS-1+WS-2;
+WS-4 (README) last.
+
+1. **Step 1** (WS-1): `validators/prototypingEvidence.ts` — extend `validateRuntimeGate()` to validate all three `ui[]` row leaf fields:
+   - `declaredRef`: required; apply `isConcreteArtifactRef()` from `pathUtils.ts`
+   - `renderEvidenceRefs[]`: non-empty; apply `isConcreteArtifactRef()` to each entry
+   - `browserQaEvidenceRefs[]`: non-empty; apply `isConcreteArtifactRef()` to each entry
+2. **Step 2** (WS-1): `validators/prototypingEvidence.ts` — extend `validateFullHarness()`:
+   - `iterations[].l1.axes[].evidenceRefs[]`: per-axis non-empty + each entry concrete
+   - `iterations[].l2.axes[].evidenceRefs[]`: same
+   - `reviewerLogs[].evidenceRefs[]`: non-empty + each entry concrete
+3. **Step 3** (WS-2): `evidence/bundleWriter.ts` — update schema:
+   - `runtimeGate.ui[].declaredRef`: optional → required
+   - `renderEvidenceRefs[]`, `browserQaEvidenceRefs[]`, `axes[].evidenceRefs[]`, `reviewerLogs[].evidenceRefs[]`: required non-nullable
+4. **Step 4** (WS-2): `prototyping/runtimeObservation.ts` + `runtimeGateBuilder.ts` — conditional:
+   - grep for null/undefined/omit emission on leaf fields; fix if found
+5. **Step 5** (WS-3): `tests/core/prototypingEvidence.test.ts` — add 15 negative cases:
+   - 7 ui[] leaf-field negatives (declaredRef absent, absolute, synthetic token, renderEvidenceRefs empty, absolute, browserQaEvidenceRefs empty, absolute)
+   - 5 axis-level negatives (l1 synthetic, l2 synthetic, empty array, absolute path, self-ref)
+   - 3 reviewer-level negatives (synthetic token, absolute, empty)
+6. **Step 6** (WS-3): `tests/core/` fixture cleanup — replace all synthetic `evidenceRefs` tokens with concrete refs
+7. **Step 7** (WS-3): `tests/core/prototypingExecution.productionPath.test.ts` — add leaf-ref closure assertions + negative injection
+8. **Step 8** (WS-4): `packages/qfai/README.md` — enumerate all concrete-ref leaf fields: `ui[].declaredRef`, `ui[].renderEvidenceRefs[]`, `ui[].browserQaEvidenceRefs[]`, `axes[].evidenceRefs[]`, `reviewerLogs[].evidenceRefs[]`
+
+### Test Strategy (rev9)
+
+| Layer | Location | Coverage Target |
+|-------|----------|-----------------|
+| Validators | `tests/validators/prototypingEvidence.test.ts` | ui[] 7 negatives + axis 5 negatives + reviewer 3 negatives |
+| Integration | `tests/core/prototypingEvidence.test.ts` | All 15 new negative cases from WS-3 §6-3-1..3 |
+| Integration | `tests/core/prototypingExecution.productionPath.test.ts` | Leaf-ref closure: positive + negative injection |
+| ATDD annotation map | `spec-0012/tdd/test-list.md` | TC-0012-0219..TC-0012-0242 mapped to TDD-IDs |
+
+### Acceptance Test Matrix Mapping (rev9)
+
+| Category | Coverage Target | TC Range |
+|----------|-----------------|----------|
+| L: ui[] row leaf fields | declaredRef required/concrete; renderEvidenceRefs non-empty/concrete; browserQaEvidenceRefs non-empty/concrete | TC-0012-0219..0226 |
+| M: axis-level evidenceRefs | l1/l2 per-axis non-empty + concrete; self-ref, synthetic, absolute, empty | TC-0012-0227..0233 |
+| N: reviewerLogs evidenceRefs | non-empty + concrete; synthetic token, absolute, empty | TC-0012-0234..0237 |
+| O: bundleWriter + runtime | schema required; null/omit prevented; type-check gate | TC-0012-0238..0239 |
+| P: test coverage + README | 15 negatives present; no synthetic tokens; leaf fields enumerated | TC-0012-0240..0242 |

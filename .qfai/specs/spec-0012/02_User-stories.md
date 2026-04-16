@@ -440,3 +440,23 @@ As a developer, I want test fixtures to remove l1/l2 direct pass, packVersion:"1
 - REQ-Refs: REQ-0071, REQ-0072, REQ-0073
 - WS: WS-4
 - Discussion: discussion-20260416023323603
+
+## US-0012-0067: runtimeGate.ui[] Row-Level Leaf Fields Are Strictly Validated (WS-1) (v1.7.15 rev9)
+
+As a package maintainer, I want `prototypingEvidence.ts` to validate all three leaf fields of each `runtimeGate.ui[]` row as concrete artifact refs, so that screen-level traceability coverage cannot be silently faked with synthetic tokens, missing declarations, or absolute paths.
+
+## US-0012-0068: Axis-Level evidenceRefs[] Are Strictly Validated (WS-1) (v1.7.15 rev9)
+
+As a package maintainer, I want `prototypingEvidence.ts` to validate `fullHarness.iterations[].l1.axes[].evidenceRefs[]` and `l2.axes[].evidenceRefs[]` as non-empty concrete artifact ref arrays, so that axis rationale traceability cannot be faked with synthetic tokens or absent evidence.
+
+## US-0012-0069: reviewerLogs[] evidenceRefs[] Are Strictly Validated (WS-1) (v1.7.15 rev9)
+
+As a package maintainer, I want `prototypingEvidence.ts` to validate `fullHarness.reviewerLogs[].evidenceRefs[]` as non-empty concrete artifact ref arrays, so that reviewer rationale traceability cannot be faked with synthetic tokens or absent evidence.
+
+## US-0012-0070: Bundle Schema and Runtime Output Reflect Strict Leaf Contract (WS-2) (v1.7.15 rev9)
+
+As a package maintainer, I want `bundleWriter.ts` and any runtime builders to treat leaf array fields as required and non-nullable, so that there is no gap between what the validator rejects and what the runtime is allowed to emit.
+
+## US-0012-0071: Leaf-Field Regression Tests Cover All Negative Cases and README Is Complete (WS-3+WS-4) (v1.7.15 rev9)
+
+As a package maintainer, I want `tests/core/` to include negative test cases for every leaf-field malformed ref form and replace all synthetic token fixtures, and I want `README.md` to enumerate all fields under the concrete-ref contract, so that future regressions at leaf level are caught immediately and the documentation is accurate.

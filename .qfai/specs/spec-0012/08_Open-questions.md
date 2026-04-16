@@ -91,3 +91,46 @@
 - Status: Resolved at discussion
 - Resolution: Update README.md only if existing description is absent or obsolete. No new DR required; conditional update confirmed in discussion-20260416023323603 OQ-0004 resolution.
 - Source: discussion-20260416023323603
+
+## OQ-0001-rev9: ui[] Row Validation Location (resolved at discussion)
+
+- Status: Resolved at discussion
+- Resolution: DR-0012-0049 — inline in prototypingEvidence.ts (Option A); design doc §6-1-2 confirms prototypingEvidence.ts as the changed file
+- Source: discussion-20260416092414328
+
+## OQ-0002-rev9: browserQaEvidenceRefs[] Empty Array Policy (resolved at discussion)
+
+- Status: Resolved at discussion
+- Resolution: DR-0012-0050 — always error (Option A); fail-closed §3-2 + rev8 OQ-0003 precedent
+- Source: discussion-20260416092414328
+
+## OQ-0003-rev9: Axis-Level Validation Granularity (resolved at discussion)
+
+- Status: Resolved at discussion
+- Resolution: DR-0012-0051 — per-axis validation (Option A); design doc §6-1-3 per-element requirement
+- Source: discussion-20260416092414328
+
+## OQ-0004-rev9: README Update Scope (resolved at discussion)
+
+- Status: Resolved at discussion
+- Resolution: DR-0012-0052 — full enumeration (Option A); DoD §5-6 requires full docs/validator mismatch elimination; design doc §9 prohibits minimal-note workaround
+- Source: discussion-20260416092414328
+## OQ-0001-rev9: ui[] Row Validation Location (resolved at discussion)
+- Status: Resolved at discussion
+- Resolution: DR-0012-0049 — inline implementation in `prototypingEvidence.ts`; no separate utility file. Option A adopted per design doc §6-1-2.
+- Source: discussion-20260416092414328
+
+## OQ-0002-rev9: browserQaEvidenceRefs[] Non-Empty Policy (resolved at discussion)
+- Status: Resolved at discussion
+- Resolution: DR-0012-0050 — always required non-empty (fail-closed). Option A adopted per design doc §3-2, §3-3, and rev8 OQ-0003 precedent.
+- Source: discussion-20260416092414328
+
+## OQ-0003-rev9: Axis-Level Validation Granularity (resolved at discussion)
+- Status: Resolved at discussion
+- Resolution: DR-0012-0051 — per-axis validation; any axis with empty evidenceRefs is an error. Option A adopted per design doc §6-1-3.
+- Source: discussion-20260416092414328
+
+## OQ-0004-rev9: README Update Scope (resolved at discussion)
+- Status: Resolved at discussion
+- Resolution: DR-0012-0052 — full enumeration of all concrete-ref leaf fields. Option A adopted per DoD §5-6 and design doc §9 prohibition.
+- Source: discussion-20260416092414328

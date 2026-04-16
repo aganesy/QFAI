@@ -568,3 +568,81 @@ REQ-0099,0100,0101,0102 (WS-5/6/7) → US-0012-0055 → AC-0012-0055-01..06 → 
 | WS-2 | REQ-0063..0068 | US-0064 | AC-0084..0093 | BR-0101..0102 | EX-0134..0138 | TC-0203..0208 |
 | WS-3 | REQ-0069..0070 | US-0065 | AC-0094..0098 | BR-0103..0104 | EX-0139..0143 | TC-0209..0213 |
 | WS-4 | REQ-0071..0073 | US-0066 | AC-0099..0103 | BR-0105..0106 | EX-0144..0148 | TC-0214..0217 |
+
+## v1.7.15 rev9 Leaf-Field Traceability Closure (DR-0012-0049..0052)
+
+### Summary
+
+Leaf-field traceability closure for packages/qfai. Rev8 closed top-level summary fields (specCoverage.evidenceRefs, runtimeGate.evidenceRefs top-level). Rev9 closes the three remaining leaf-field blind spots: runtimeGate.ui[] row-level fields (declaredRef, renderEvidenceRefs[], browserQaEvidenceRefs[]), axis-level evidenceRefs[], and reviewerLogs[].evidenceRefs[].
+
+### Discussion Pack Reference
+
+- discussion-20260416092414328 (rev9 — final leaf-field closure)
+
+### Requirements Added
+
+- REQ-0103..REQ-0122 (20 requirements across WS-1 through WS-4)
+
+### Decision Records
+
+| DR-ID | Decision | Source |
+|-------|----------|--------|
+| DR-0012-0049 | ui[] row validation inline in prototypingEvidence.ts (Option A) | OQ-0001 rev9 |
+| DR-0012-0050 | browserQaEvidenceRefs[] always required non-empty (Option A) | OQ-0002 rev9 |
+| DR-0012-0051 | Per-axis validation granularity (Option A) | OQ-0003 rev9 |
+| DR-0012-0052 | Full README enumeration of all concrete-ref leaf fields (Option A) | OQ-0004 rev9 |
+
+### Artifacts Added
+
+| Layer | IDs Added | Description |
+|-------|-----------|-------------|
+| US | US-0012-0067..0071 | 5 user stories (WS-1: 3 leaf field groups, WS-2: schema, WS-3+WS-4: tests+docs) |
+| AC | AC-0012-0104..0132 | 29 acceptance criteria |
+| BR | BR-0012-0107..0116 | 10 business rules |
+| EX | EX-0012-0150..0172 | 23 examples |
+| TC | TC-0012-0219..0242 | 24 test cases (7 ui[] errors + 5 axis errors + 3 reviewer errors + normal/boundary) |
+| DR | DR-0012-0049..0052 | 4 decision records |
+| NFR | NFR-0041..0045 | 5 non-functional requirements |
+| REQ | REQ-0103..0122 | 20 requirements |
+## v1.7.15 rev9 — Leaf-Field Traceability Closure
+
+### Scope Summary
+
+- **Rev**: v1.7.15 rev9
+- **Discussion**: discussion-20260416092414328
+- **Upstream**: discussion-20260416023323603 (rev8)
+- **Objective**: Complete leaf-field traceability closure — close all three remaining leaf-field blind spots after rev8 closed top-level summary fields.
+
+### Decisions Made
+
+- AD-rev9-001: ui[] row validation inline in prototypingEvidence.ts — no separate utility file; design doc §6-1-2 (DR-0012-0049)
+- AD-rev9-002: browserQaEvidenceRefs[] always required non-empty — fail-closed; rev8 OQ-0003 precedent (DR-0012-0050)
+- AD-rev9-003: per-axis evidenceRefs[] validation — per-element not aggregate; design doc §6-1-3 (DR-0012-0051)
+- AD-rev9-004: full README enumeration — all concrete-ref leaf fields listed; DoD §5-6 hard gate (DR-0012-0052)
+
+### Rejected Options (rev9)
+
+- RJ-rev9-001: Extract validateRuntimeGateUiRow() to separate utility
+  - DO NOT extract small cohesive row-level validation to separate module. Temptation: cleaner isolation.
+  - Reason: unnecessary module boundary; design doc §6-1-2 specifies prototypingEvidence.ts as the changed file.
+
+- RJ-rev9-002: Allow empty browserQaEvidenceRefs[] for partial runs
+  - DO NOT allow empty browserQaEvidenceRefs[]. Temptation: lenient for dev-only or partial runs.
+  - Reason: design doc §3-2 fail-closed; §3-3 no leniency; rev8 OQ-0003 precedent.
+
+- RJ-rev9-003: Aggregate leniency for axis evidenceRefs[]
+  - DO NOT use aggregate leniency (error only if all axes empty). Temptation: fewer errors on partial runs.
+  - Reason: per-axis is the only logically consistent fail-closed granularity; design doc §6-1-3 literal.
+
+- RJ-rev9-004: Minimal README note instead of full enumeration
+  - DO NOT use brief note approach for README. Temptation: minimize README churn.
+  - Reason: DoD §5-6 hard gate; design doc §9 explicitly prohibits weakening README description.
+
+### Traceability Chain
+
+| WS | REQ | US | AC | BR | EX | TC |
+|----|-----|----|----|----|----|-----|
+| WS-1a (ui[] row) | REQ-0103..0109 | US-0067 | AC-0104..0113 | BR-0107..0109 | EX-0150..0159 | TC-0219..0226 |
+| WS-1b (axis/reviewer) | REQ-0110..0115 | US-0068..0069 | AC-0114..0123 | BR-0110..0111 | EX-0160..0168 | TC-0227..0233 |
+| WS-2 (bundleWriter) | REQ-0116..0118 | US-0070 | AC-0124..0127 | BR-0112..0113 | EX-0169..0170 | TC-0234..0237 |
+| WS-3+4 (tests+README) | REQ-0119..0122 | US-0071 | AC-0128..0132 | BR-0114..0116 | EX-0171..0172 | TC-0238..0242 |

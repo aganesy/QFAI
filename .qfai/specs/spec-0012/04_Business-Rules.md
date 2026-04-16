@@ -838,3 +838,53 @@
 - AC-Refs: AC-0012-0101, AC-0012-0102, AC-0012-0103
 - Rule: `specCoverage.test.ts` MUST include negative cases: absolute path input → repo-relative output, outside-root path → throw, directory path → throw, `coverageRefs[].declaredRef` format verified. `prototypingEvidence.test.ts` MUST include negative cases for `runtimeGate.evidenceRefs`: absolute path → error, self-ref → error, synthetic token → error, absent → error, empty array → error.
 - Source: REQ-0071, REQ-0072
+
+## BR-0012-0107: runtimeGate.ui[].declaredRef Required Field Rule (v1.7.15 rev9 WS-1)
+
+- AC-Refs: AC-0012-0104
+- Rule: validatePrototypingEvidence() must check each runtimeGate.ui[] row for the presence of `declaredRef`. Absence of the field (undefined or null) produces a QFAI-PROT validator error. The field check must occur before the concrete-ref grammar check (fail fast on missing).
+
+## BR-0012-0108: runtimeGate.ui[] Leaf Fields Concrete-Ref Grammar Rule (v1.7.15 rev9 WS-1)
+
+- AC-Refs: AC-0012-0105, AC-0012-0107, AC-0012-0109
+- Rule: For each `runtimeGate.ui[]` row, after presence checks pass, `isConcreteArtifactRef()` from `pathUtils.ts` is applied to `declaredRef` and every entry in `renderEvidenceRefs[]` and `browserQaEvidenceRefs[]`. Any value that fails `isConcreteArtifactRef()` produces an individual QFAI-PROT validator error. The helper is the single grammar SSOT; no parallel implementation may be introduced.
+
+## BR-0012-0109: runtimeGate.ui[] Leaf Arrays Non-Empty Rule (v1.7.15 rev9 WS-1)
+
+- AC-Refs: AC-0012-0106, AC-0012-0108
+- Rule: `renderEvidenceRefs[]` and `browserQaEvidenceRefs[]` on each `runtimeGate.ui[]` row must be non-empty arrays. An empty array `[]` or absent field produces a QFAI-PROT validator error. This applies regardless of whether a browser QA run was performed — if the run cannot be completed, the builder must fail rather than emit an empty array.
+
+## BR-0012-0110: axes[].evidenceRefs[] Per-Axis Validation Rule (v1.7.15 rev9 WS-1)
+
+- AC-Refs: AC-0012-0111, AC-0012-0112, AC-0012-0113, AC-0012-0114, AC-0012-0115, AC-0012-0116
+- Rule: For each axis in `l1.axes[]` and `l2.axes[]` across all iterations, `evidenceRefs[]` must be non-empty and every entry must pass `isConcreteArtifactRef()`. Validation is per-axis: a single axis with a malformed or empty evidenceRefs[] produces a QFAI-PROT error regardless of other axes. Self-refs (pointing to prototyping.json) are explicitly forbidden.
+
+## BR-0012-0111: reviewerLogs[].evidenceRefs[] Non-Empty and Concrete Rule (v1.7.15 rev9 WS-1)
+
+- AC-Refs: AC-0012-0117, AC-0012-0118, AC-0012-0119, AC-0012-0120, AC-0012-0121
+- Rule: For each entry in `reviewerLogs[]`, `evidenceRefs[]` must be non-empty and every entry must pass `isConcreteArtifactRef()`. Synthetic tokens (e.g., "reviewer:1"), absolute paths, self-refs, empty strings — all produce individual QFAI-PROT validator errors.
+
+## BR-0012-0112: bundleWriter.ts Strict Schema Rule (v1.7.15 rev9 WS-2)
+
+- AC-Refs: AC-0012-0122, AC-0012-0123, AC-0012-0126
+- Rule: The TypeScript type in `bundleWriter.ts` (or the shared type it uses) must mark `runtimeGate.ui[].declaredRef` as required (not optional `?`). All leaf array fields (`renderEvidenceRefs[]`, `browserQaEvidenceRefs[]`, `l1/l2.axes[].evidenceRefs[]`, `reviewerLogs[].evidenceRefs[]`) must be typed as required non-nullable arrays (not `T | undefined | null`). Any code omitting these fields must be a TypeScript compile error.
+
+## BR-0012-0113: Runtime Builder Null-Emission Prevention Rule (v1.7.15 rev9 WS-2)
+
+- AC-Refs: AC-0012-0124, AC-0012-0125
+- Rule: Runtime builders (`runtimeObservation.ts`, `runtimeGateBuilder.ts`) must not emit null, undefined, or omitted values for any required leaf field. If a builder cannot populate a required leaf array, it must throw a runtime error before the bundle is written. Silent null/empty pass-through is prohibited.
+
+## BR-0012-0114: Synthetic Token Fixture Replacement Rule (v1.7.15 rev9 WS-3)
+
+- AC-Refs: AC-0012-0130
+- Rule: All test fixtures in `packages/qfai/tests/core/` that use synthetic tokens ("a", "b", "reviewer:1", or similar non-path strings) as `evidenceRefs` values must be replaced with repo-root relative concrete artifact refs (e.g., `.qfai/evidence/iter-0/fidelity-eval.md#finding-1`). The replacement values do not need to point to existing files on disk; they must only satisfy `isConcreteArtifactRef()` grammar.
+
+## BR-0012-0115: Leaf-Field Negative Test Coverage Rule (v1.7.15 rev9 WS-3)
+
+- AC-Refs: AC-0012-0127, AC-0012-0128, AC-0012-0129, AC-0012-0131
+- Rule: `prototypingEvidence.test.ts` must include the full set of negative cases: (a) 7 cases for `runtimeGate.ui[]` (declaredRef absent, absolute path, self-ref, synthetic token, bare filename, directory path, Windows `\\` separator); (b) 5 cases for axis-level `evidenceRefs[]` (l1 synthetic token, l2 synthetic token, absolute path, self-ref, empty array); (c) 3 cases for reviewer-level `evidenceRefs[]` (synthetic token "reviewer:1", absolute path, empty array). `prototypingExecution.productionPath.test.ts` must include at least 1 positive closure assertion and 1 negative injection for a leaf field.
+
+## BR-0012-0116: README Leaf-Field Enumeration Rule (v1.7.15 rev9 WS-4)
+
+- AC-Refs: AC-0012-0132
+- Rule: `packages/qfai/README.md` must explicitly list all fields under the concrete artifact ref contract after WS-4. The list must include all rev9 leaf fields: `runtimeGate.ui[].declaredRef`, `runtimeGate.ui[].renderEvidenceRefs[]`, `runtimeGate.ui[].browserQaEvidenceRefs[]`, `fullHarness.iterations[].l1/l2.axes[].evidenceRefs[]`, `fullHarness.reviewerLogs[].evidenceRefs[]`. The description must not use language that implies only top-level fields are under the strict ref contract.

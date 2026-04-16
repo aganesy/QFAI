@@ -381,3 +381,70 @@
 - Rejected-B: Allow empty array as "no refs yet" — masks silent builder failure; OQ-0003 resolution explicitly rejects this.
   - DO NOT treat empty runtimeGate.evidenceRefs as valid. Temptation: lenient for partial runs.
 - Source: OQ-0003, discussion-20260416023323603
+
+### DR-0012-0049: ui[] Row Validation Inline in prototypingEvidence.ts (OQ-0001, rev9)
+
+- Decision: Validate runtimeGate.ui[] row fields inline inside validateRuntimeGate() in prototypingEvidence.ts (Option A adopted)
+- Context: Two options existed — inline in prototypingEvidence.ts vs extract to a separate validateRuntimeGateUiRow() utility. The design doc §6-1-2 explicitly names prototypingEvidence.ts as the changed file.
+- Rationale: Inline implementation keeps validation cohesive with existing runtimeGate validation. Design doc §6-1-2 specifies prototypingEvidence.ts as the changed file. If ui[] row validation grows significantly in future cycles, extraction can be revisited.
+- Rejected: Extract to separate utility file (Option B) — creates an unnecessary module boundary for a small, cohesive validation addition.
+  - DO NOT extract ui[] row validation to a new utility file. Temptation: small function = extract to new file.
+- Source: discussion-20260416092414328 OQ-0001
+
+### DR-0012-0050: browserQaEvidenceRefs[] Always Required Non-Empty (OQ-0002, rev9)
+
+- Decision: browserQaEvidenceRefs[] is always required non-empty; empty array is always a validator error (Option A adopted)
+- Context: Two options — always error vs allow empty when no browser QA run recorded. Design doc §3-2 is explicit on fail-closed policy; §3-3 abolishes string leniency. Rev8 OQ-0003 established the precedent.
+- Rationale: Fail-closed policy (§3-2) applies uniformly to all leaf arrays. Empty evidenceRefs is always an error — same principle as runtimeGate.evidenceRefs (rev8). Partial runs that cannot populate browserQaEvidenceRefs[] must fail the builder, not cause the validator to allow leniency.
+- Rejected: Allow empty if no browser QA run (Option B) — contradicts §3-2, §3-3, and rev8 precedent.
+  - DO NOT allow empty browserQaEvidenceRefs[] as a valid state. Temptation: partial run means partial evidence is acceptable.
+- Source: discussion-20260416092414328 OQ-0002
+
+### DR-0012-0051: Per-Axis Validation Granularity (OQ-0003, rev9)
+
+- Decision: Validate each axis independently; empty evidenceRefs[] on any single axis is a validator error (Option A adopted)
+- Context: Two granularities — per-axis (error if any axis is empty) vs aggregate (error only if all axes are empty). Design doc §6-1-3 is explicit: "array 必須、空配列禁止、各値は concrete artifact ref" (per-element, not aggregate).
+- Rationale: Per-axis validation is the correct fail-closed granularity consistent with the overall strict traceability goal. Aggregate leniency would allow a subset of axes to have empty evidence while appearing valid.
+- Rejected: Aggregate leniency (Option B) — contradicts §6-1-3 per-element requirements.
+  - DO NOT use aggregate validation for axes[].evidenceRefs[]. Temptation: only error if all axes fail reduces false positives.
+- Source: discussion-20260416092414328 OQ-0003
+
+### DR-0012-0052: Full README Enumeration of All Concrete-Ref Leaf Fields (OQ-0004, rev9)
+
+- Decision: Extend README to explicitly enumerate all fields now under the concrete-ref contract, including rev9 leaf fields (Option A adopted)
+- Context: Two options — full enumeration vs minimal extension note. Design doc §5-6 DoD: "docs / validator mismatch が消える" and "一部 field だけ strict という状態が説明と実装のどちらにも残らない".
+- Rationale: DoD §5-6 requires the docs/validator mismatch to be fully eliminated. A minimal note would likely leave a partial mismatch. Full enumeration is the only approach that satisfies the DoD. Design doc §9 explicitly prohibits "README の表現を弱めて整合したことにする".
+- Rejected: Minimal extension note (Option B) — leaves docs/validator partial-strictness mismatch unresolved.
+  - DO NOT use a minimal note for README update. Temptation: minimize churn by adding only a brief note.
+- Source: discussion-20260416092414328 OQ-0004
+### DR-0012-0049: ui[] Row Validation Inline in prototypingEvidence.ts (OQ-0001, rev9)
+- Decision: `runtimeGate.ui[]` 行レベル3フィールドの validation は `prototypingEvidence.ts` の既存 `validateRuntimeGate()` 内にインラインで実装（Option A）
+- Context: design doc §6-1-2 が変更ファイルとして `prototypingEvidence.ts` を明示。小規模な凝集した validation ユニットを別ファイルに抽出してもアーキテクチャ上の利点がない。
+- Rationale: Option A (inline) adopted. インラインは凝集性を保ち design doc §6-1-2 に忠実。将来的に ui[] 行 validation が大幅に成長した場合は抽出を再検討できる。
+- Rejected-B: Extract `validateRuntimeGateUiRow()` to separate utility — 小規模 validation ユニットの不要な module 分割。
+  - DO NOT extract small cohesive row-level validation to a separate module unless the function grows significantly. Temptation: cleaner isolation.
+- Source: OQ-0001, discussion-20260416092414328
+
+### DR-0012-0050: browserQaEvidenceRefs[] Always Required Non-Empty (OQ-0002, rev9)
+- Decision: `runtimeGate.ui[].browserQaEvidenceRefs[]` は「browser QA 未実施」ケースでも常に required non-empty。空配列はハードフェイル（Option A）。
+- Context: design doc §3-2 fail-closed ポリシー、§3-3「string なら通す」leniency 廃止。rev8 OQ-0003 で `runtimeGate.evidenceRefs` 空配列を拒否した precedent と一貫。
+- Rationale: Option A (always required non-empty) adopted. Partial run で `browserQaEvidenceRefs[]` を埋められない場合はビルダーが失敗すべきであり、validator が空を許容すべきでない。
+- Rejected-B: Allow empty when no browser QA run — design doc §3-2, §3-3 違反および rev8 OQ-0003 precedent と矛盾。
+  - DO NOT allow empty browserQaEvidenceRefs[]. Temptation: lenient for partial/dev-only runs.
+- Source: OQ-0002, discussion-20260416092414328
+
+### DR-0012-0051: Per-Axis evidenceRefs[] Validation Granularity (OQ-0003, rev9)
+- Decision: `fullHarness.iterations[].l1/l2.axes[].evidenceRefs[]` の validation を per-axis 粒度で実施（Option A）。任意の axis の空配列が validator error。
+- Context: design doc §6-1-3 "array 必須、空配列禁止、各値は concrete artifact ref" — per-element 記述。集約レニエンシー（全 axis 空のときのみ error）を採用すると一部 axis がエビデンスなしでもパスする。
+- Rationale: Option A (per-axis) adopted. Per-axis validation は package-wide fail-closed 原則と一致し、design doc §6-1-3 の literal text に従う。
+- Rejected-B: Aggregate leniency (error only if all axes empty) — partial-axis 無証拠を許容し per-axis traceability contract を破壊。
+  - DO NOT use aggregate leniency for axis evidenceRefs validation. Temptation: fewer errors on partial runs.
+- Source: OQ-0003, discussion-20260416092414328
+
+### DR-0012-0052: Full README Enumeration of All Concrete-Ref Leaf Fields (OQ-0004, rev9)
+- Decision: `packages/qfai/README.md` に concrete-ref contract の全 leaf フィールドを明記する完全列挙アプローチを採用（Option A）
+- Context: DoD §5-6「docs/validator mismatch が消える」かつ「一部 field だけ strict という状態が説明と実装のどちらにも残らない」が hard gate。design doc §9 が「README の表現を弱めて整合したことにする」を明示禁止。
+- Rationale: Option A (full enumeration) adopted. Option B（最小限の注記のみ）では partial mismatch が残る可能性が高く DoD §5-6 を満たさない。
+- Rejected-B: Add brief note only — DoD §5-6 違反。docs/validator partial-strictness mismatch が残存。
+  - DO NOT use minimal note approach for README update. Temptation: minimize README churn.
+- Source: OQ-0004, discussion-20260416092414328

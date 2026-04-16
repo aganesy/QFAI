@@ -1060,3 +1060,148 @@ Given `prototypingEvidence.test.ts`, when run, then it includes test cases for: 
 
 - US-Ref: US-0012-0066
 - REQ-Ref: REQ-0072
+
+## AC-0012-0104: runtimeGate.ui[].declaredRef Required (v1.7.15 rev9 WS-1)
+
+- US-Ref: US-0012-0067
+- Given any `runtimeGate.ui[]` row without `declaredRef`, when validatePrototypingEvidence() is called, then a validator error is produced.
+
+## AC-0012-0105: runtimeGate.ui[].declaredRef Must Be Concrete Artifact Ref (v1.7.15 rev9 WS-1)
+
+- US-Ref: US-0012-0067
+- Given `runtimeGate.ui[].declaredRef` with an absolute path, self-ref, synthetic token, bare filename, directory path, or Windows separator, when validatePrototypingEvidence() is called, then a validator error is produced.
+
+## AC-0012-0106: runtimeGate.ui[].renderEvidenceRefs[] Must Be Non-Empty (v1.7.15 rev9 WS-1)
+
+- US-Ref: US-0012-0067
+- Given `runtimeGate.ui[].renderEvidenceRefs[]` absent or empty, when validatePrototypingEvidence() is called, then a validator error is produced.
+
+## AC-0012-0107: Each runtimeGate.ui[].renderEvidenceRefs[i] Must Be Concrete Artifact Ref (v1.7.15 rev9 WS-1)
+
+- US-Ref: US-0012-0067
+- Given any malformed entry in `renderEvidenceRefs[]`, when validatePrototypingEvidence() is called, then a validator error is produced.
+
+## AC-0012-0108: runtimeGate.ui[].browserQaEvidenceRefs[] Must Be Non-Empty (v1.7.15 rev9 WS-1)
+
+- US-Ref: US-0012-0067
+- Given `runtimeGate.ui[].browserQaEvidenceRefs[]` absent or empty, when validatePrototypingEvidence() is called, then a validator error is produced.
+
+## AC-0012-0109: Each runtimeGate.ui[].browserQaEvidenceRefs[i] Must Be Concrete Artifact Ref (v1.7.15 rev9 WS-1)
+
+- US-Ref: US-0012-0067
+- Given any malformed entry in `browserQaEvidenceRefs[]`, when validatePrototypingEvidence() is called, then a validator error is produced.
+
+## AC-0012-0110: Leaf Validation Reuses isConcreteArtifactRef() from pathUtils.ts (v1.7.15 rev9 WS-1)
+
+- US-Ref: US-0012-0067, US-0012-0068, US-0012-0069
+- Given the source code of prototypingEvidence.ts after WS-1, when scanned for concrete-ref validation logic, then no parallel grammar implementation exists outside pathUtils.ts.
+
+## AC-0012-0111: l1.axes[].evidenceRefs[] Must Be Non-Empty Per-Axis (v1.7.15 rev9 WS-1)
+
+- US-Ref: US-0012-0068
+- Given any `l1.axes[]` axis with empty or absent `evidenceRefs[]`, when validatePrototypingEvidence() is called, then a validator error is produced for that axis.
+
+## AC-0012-0112: Each l1.axes[].evidenceRefs[i] Must Be Concrete Artifact Ref (v1.7.15 rev9 WS-1)
+
+- US-Ref: US-0012-0068
+- Given any malformed entry (synthetic token, absolute path, self-ref, empty string) in `l1.axes[].evidenceRefs[]`, when validatePrototypingEvidence() is called, then a validator error is produced.
+
+## AC-0012-0113: l2.axes[].evidenceRefs[] Must Be Non-Empty Per-Axis (v1.7.15 rev9 WS-1)
+
+- US-Ref: US-0012-0068
+- Given any `l2.axes[]` axis with empty or absent `evidenceRefs[]`, when validatePrototypingEvidence() is called, then a validator error is produced for that axis.
+
+## AC-0012-0114: Each l2.axes[].evidenceRefs[i] Must Be Concrete Artifact Ref (v1.7.15 rev9 WS-1)
+
+- US-Ref: US-0012-0068
+- Given any malformed entry in `l2.axes[].evidenceRefs[]`, when validatePrototypingEvidence() is called, then a validator error is produced.
+
+## AC-0012-0115: Self-Ref Forbidden in Any Axis evidenceRefs[] (v1.7.15 rev9 WS-1)
+
+- US-Ref: US-0012-0068
+- Given a self-reference (pointing to prototyping.json) in any axis `evidenceRefs[]` entry, when validatePrototypingEvidence() is called, then a validator error is produced.
+
+## AC-0012-0116: Per-Axis Validation — Not Aggregate (v1.7.15 rev9 WS-1)
+
+- US-Ref: US-0012-0068
+- Given one axis with valid refs and a later axis with a synthetic token, when validatePrototypingEvidence() is called, then a validator error is produced for the later axis regardless of the valid axis.
+
+## AC-0012-0117: reviewerLogs[].evidenceRefs[] Must Be Non-Empty Per-Entry (v1.7.15 rev9 WS-1)
+
+- US-Ref: US-0012-0069
+- Given any `reviewerLogs[]` entry with empty or absent `evidenceRefs[]`, when validatePrototypingEvidence() is called, then a validator error is produced.
+
+## AC-0012-0118: Each reviewerLogs[].evidenceRefs[i] Must Be Concrete Artifact Ref (v1.7.15 rev9 WS-1)
+
+- US-Ref: US-0012-0069
+- Given any malformed entry in `reviewerLogs[].evidenceRefs[]`, when validatePrototypingEvidence() is called, then a validator error is produced.
+
+## AC-0012-0119: Synthetic Token "reviewer:1" in reviewerLogs[].evidenceRefs[] Is a Validator Error (v1.7.15 rev9 WS-1)
+
+- US-Ref: US-0012-0069
+- Given `reviewerLogs[0].evidenceRefs = ["reviewer:1"]`, when validatePrototypingEvidence() is called, then a validator error is produced.
+
+## AC-0012-0120: Absolute Path in reviewerLogs[].evidenceRefs[] Is a Validator Error (v1.7.15 rev9 WS-1)
+
+- US-Ref: US-0012-0069
+- Given `reviewerLogs[0].evidenceRefs = ["/abs/path/reviewer.md"]`, when validatePrototypingEvidence() is called, then a validator error is produced.
+
+## AC-0012-0121: Self-Ref in reviewerLogs[].evidenceRefs[] Is a Validator Error (v1.7.15 rev9 WS-1)
+
+- US-Ref: US-0012-0069
+- Given a self-reference in `reviewerLogs[0].evidenceRefs`, when validatePrototypingEvidence() is called, then a validator error is produced.
+
+## AC-0012-0122: bundleWriter.ts Schema Marks runtimeGate.ui[].declaredRef as Required (v1.7.15 rev9 WS-2)
+
+- US-Ref: US-0012-0070
+- Given the bundleWriter.ts TypeScript type definition, when inspected, then `declaredRef` is not optional (no `?` suffix).
+
+## AC-0012-0123: bundleWriter.ts Schema Marks All Leaf Array Fields as Required Non-Nullable (v1.7.15 rev9 WS-2)
+
+- US-Ref: US-0012-0070
+- Given the bundleWriter.ts TypeScript type definitions, when inspected, then `renderEvidenceRefs[]`, `browserQaEvidenceRefs[]`, `l1/l2.axes[].evidenceRefs[]`, `reviewerLogs[].evidenceRefs[]` are required non-nullable arrays.
+
+## AC-0012-0124: Runtime Builders Cannot Emit Null or Omitted Leaf Fields (v1.7.15 rev9 WS-2)
+
+- US-Ref: US-0012-0070
+- Given runtimeObservation.ts and runtimeGateBuilder.ts after WS-2, when invoked, then null, undefined, or omitted leaf fields are not emitted; a runtime error is thrown instead.
+
+## AC-0012-0125: Runtime Error on Unpopulatable Leaf Array — Not Silent Pass-Through (v1.7.15 rev9 WS-2)
+
+- US-Ref: US-0012-0070
+- Given a runtime builder that cannot populate a required leaf array, when it runs, then a runtime error is thrown before the bundle is written.
+
+## AC-0012-0126: No Optional Mismatch Between Bundle Schema and Validator Contract (v1.7.15 rev9 WS-2)
+
+- US-Ref: US-0012-0070
+- Given the bundle schema and validator together, when analyzed for field-level agreement, then every field the validator requires as non-empty is typed as required in the bundle schema.
+
+## AC-0012-0127: prototypingEvidence.test.ts Includes All 7 ui[] Negative Cases (v1.7.15 rev9 WS-3)
+
+- US-Ref: US-0012-0071
+- Given the prototypingEvidence.test.ts file after WS-3, when run, then all 7 negative cases for runtimeGate.ui[] (declaredRef absent, absolute, self-ref, synthetic token, bare filename, directory path, Windows separator) exist and pass.
+
+## AC-0012-0128: prototypingEvidence.test.ts Includes All 5 Axis-Level Negative Cases (v1.7.15 rev9 WS-3)
+
+- US-Ref: US-0012-0071
+- Given the prototypingEvidence.test.ts file after WS-3, when run, then all 5 axis-level evidenceRefs[] negative cases (l1 synthetic, l2 synthetic, absolute, self-ref, empty) exist and pass.
+
+## AC-0012-0129: prototypingEvidence.test.ts Includes All 3 Reviewer-Level Negative Cases (v1.7.15 rev9 WS-3)
+
+- US-Ref: US-0012-0071
+- Given the prototypingEvidence.test.ts file after WS-3, when run, then all 3 reviewer-level evidenceRefs[] negative cases (synthetic token, absolute path, empty array) exist and pass.
+
+## AC-0012-0130: tests/core/ Fixtures Replace All Synthetic Token evidenceRefs (v1.7.15 rev9 WS-3)
+
+- US-Ref: US-0012-0071
+- Given all test fixture files in packages/qfai/tests/core/ after WS-3, when scanned for synthetic tokens ("a", "b", "reviewer:1") in evidenceRefs contexts, then 0 occurrences are found.
+
+## AC-0012-0131: prototypingExecution.productionPath.test.ts Closure Test Asserts Leaf Refs Are Concrete (v1.7.15 rev9 WS-3)
+
+- US-Ref: US-0012-0071
+- Given prototypingExecution.productionPath.test.ts after WS-3, when run, then the closure test asserts that leaf refs in the execution output (ui[].declaredRef, ui[].renderEvidenceRefs[], ui[].browserQaEvidenceRefs[], reviewerLogs[].evidenceRefs[], axes[].evidenceRefs[]) are concrete, and at least one negative injection test for a leaf field is present.
+
+## AC-0012-0132: README.md Enumerates All Concrete-Ref Leaf Fields (v1.7.15 rev9 WS-4)
+
+- US-Ref: US-0012-0071
+- Given packages/qfai/README.md after WS-4, when read, then all fields under the concrete artifact ref contract are listed including rev9 leaf fields, and the description does not imply that only top-level fields are validated.

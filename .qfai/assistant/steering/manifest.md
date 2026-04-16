@@ -56,7 +56,11 @@
     `.qfai/discussion/discussion-20260415161758193/`
     (v1.7.15 rev6 — full-harness-only mode enforcement, surfacePolicy.ts, CalibrationLoader internal resolution, concrete evidenceRefs, reviewerSignoff semantics, uiFidelityBuilder screenId matching, stale cleanup),
     `.qfai/discussion/discussion-20260415203030886/`
-    (v1.7.15 rev7 — 6 contract gaps: pack resolution upstream move, uiFidelity fail-closed, concrete evidenceRefs, validator calibration metadata check, error taxonomy, config packPath-only; WS-7: surfacePolicy rejection message from constant)
+    (v1.7.15 rev7 — 6 contract gaps: pack resolution upstream move, uiFidelity fail-closed, concrete evidenceRefs, validator calibration metadata check, error taxonomy, config packPath-only; WS-7: surfacePolicy rejection message from constant),
+    `.qfai/discussion/discussion-20260416023323603/`
+    (v1.7.15 rev8 — leaf-field ref grammar closure: pathUtils.ts helpers, specCoverage/runtimeGate evidenceRefs top-level validation, execution→validate closure test),
+    `.qfai/discussion/discussion-20260416092414328/`
+    (v1.7.15 rev9 — leaf-field traceability closure: ui[].declaredRef/renderEvidenceRefs[]/browserQaEvidenceRefs[] per-row validation, axes[].evidenceRefs[] per-axis validation, reviewerLogs[].evidenceRefs[] validation, bundleWriter strict schema, test fixture concrete refs, README full enumeration)
   - Assumptions: None (all verified from repository analysis)
 
 ## Non-goals / Not-now (Optional)

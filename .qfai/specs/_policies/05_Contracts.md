@@ -205,6 +205,19 @@ QFAI は GUI を持たない CLI ツールである。`/qfai-prototyping` スキ
 - TC-3 (breaking change): `runtimeGate.evidenceRefs` なしの既存 evidence bundle は rev8 以降 validation に失敗する。migration shim なし。
 - したがって Contract Index の `0 items` は v1.7.15 rev8 でも意図的な none-rationale であり、discussion-20260416023323603 のスコープ境界に整合する。
 
+## v1.7.15 rev9 Contract Posture
+
+- Contracts-first review completed for v1.7.15 rev9 leaf-field traceability closure (`discussion-20260416092414328`).
+- v1.7.15 rev9 は `packages/qfai` 内部の validator leaf-field validation 拡張 + bundleWriter schema strict化 + test fixture 置換 + README 同期を対象とした単一 PR リリースであり、外部向け stable contract は新設しない。
+- 主な変更対象:
+  - WS-1: `validators/prototypingEvidence.ts` — `runtimeGate.ui[]` 行レベル3フィールド（declaredRef 必須+concrete, renderEvidenceRefs[] 非空+concrete, browserQaEvidenceRefs[] 非空+concrete）、`axes[].evidenceRefs[]` per-axis 非空+concrete、`reviewerLogs[].evidenceRefs[]` 非空+concrete の validator 拡張。`isConcreteArtifactRef()` (pathUtils.ts) を全ケースで再利用
+  - WS-2: `evidence/bundleWriter.ts` — `runtimeGate.ui[].declaredRef` required 化（optional→required）; 全 leaf array を required non-nullable 型に変更。条件付きで `runtimeObservation.ts` / `runtimeGateBuilder.ts` の null 出力経路を閉じる
+  - WS-3: `tests/core/prototypingEvidence.test.ts` — 15 件の leaf-field 負例（7 ui[] + 5 axis + 3 reviewer）追加; `prototypingExecution.productionPath.test.ts` — leaf 具体参照 closure assertion + negative injection; 全 `tests/core/` fixture の synthetic token `evidenceRefs` を concrete refs に置換
+  - WS-4: `packages/qfai/README.md` — concrete-ref contract の全 leaf フィールドを明記（top-level のみ strict という誤解を排除）
+- 全て QFAI 内部モジュール。外部向け stable DB/API/UI contract は新設しない。
+- TC-3 (breaking change): `runtimeGate.ui[].declaredRef` なし / leaf 配列 empty / synthetic token を含む既存 evidence bundle は rev9 以降 validation に失敗する。backward compatibility は明示的に放棄。migration shim なし。
+- したがって Contract Index の `0 items` は v1.7.15 rev9 でも意図的な none-rationale であり、discussion-20260416092414328 のスコープ境界に整合する。
+
 ## ER Diagram
 
 QFAI はデータベースを使用しないため、ER Diagram は省略する。
