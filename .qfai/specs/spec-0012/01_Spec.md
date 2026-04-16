@@ -59,6 +59,7 @@
   - `actionCoverage.ts` — actionsDeclared/actionsObserved/actionsWired/missingActions calculator
   - `packResolver.ts` — calibration pack resolution SSOT (shared by runtime + validator)
   - `structuredArtifactReaders.ts` — structured section parser for discussion/screen artifacts
+  - Ref grammar helper module (`packages/qfai/src/core/prototyping/pathUtils.ts`): `toRepoRelativeArtifactRef`, `assertConcreteArtifactRef`, `isConcreteArtifactRef`
 - Out:
   - CLI command `qfai prototyping` (REMOVED — no active document may reference it as a valid interface)
   - Acceptance test automation (belongs to `/qfai-atdd`)
