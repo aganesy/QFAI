@@ -517,3 +517,49 @@ WS-4 (README) last.
 | N: reviewerLogs evidenceRefs | non-empty + concrete; synthetic token, absolute, empty                                                         | TC-0012-0234..0237 |
 | O: bundleWriter + runtime    | schema required; null/omit prevented; type-check gate                                                          | TC-0012-0238..0239 |
 | P: test coverage + README    | 15 negatives present; no synthetic tokens; leaf fields enumerated                                              | TC-0012-0240..0242 |
+
+
+## v1.7.15 rev10 Implementation Strategy
+
+### Objective
+
+Close 4 semantic gaps (WS-1~WS-4) and sync all layers (WS-5) in a single PR.
+
+### Steps
+
+1. **WS-1 (terminal state machine)**: Update `prototypingEvidence.ts` to enforce:
+   - in-progress: terminationReason absent, finalDecision=pending, reviewerSignoff.status=pending
+   - completed: terminationReason ∈ {abandoned, max-iterations, plateau}; finalDecision=abandoned; reviewerSignoff.status=abandoned
+   - Update `runtime.ts` and `history.ts` with correct state transitions
+   
+2. **WS-2 (canonical sourceRef)**: In `screenContracts.ts`:
+   - Remove slug-based anchor generation code
+   - Make `buildScreenContractInputs()` use `readCanonicalScreenContracts()` sourceRef directly
+
+3. **WS-3 (8-category refs)**: 
+   - Add `assertConcreteArtifactRefs()` array helper to `pathUtils.ts`
+   - Update `prototypingEvidence.ts` to call this helper for all 8 categories including runtimeGate and specCoverage
+   - Update `l2Evidence.ts` consumers
+
+4. **WS-4 (declaredRef semantic)**: In `specCoverage.ts`:
+   - Add regex `/^\.qfai\/specs\/.+#(L\d+|\S+)$/` validation inline
+   - Fail-closed: error on .qfai/discussion/, bare paths, non-.qfai/specs/ paths
+   
+5. **WS-5 (sync)**:
+   - Update tests: fullHarnessRuntime.test.ts (WS-1, min 3 negative), prototypingEvidence.test.ts (WS-3, min 8 negative per category), productionPath.test.ts (WS-4, min 2 negative)
+   - Update README.md to reflect WS-1~WS-4 constraints
+   - Run: pnpm format:check && pnpm lint && pnpm check-types
+   - Run: pnpm test (all GREEN required)
+
+### Test Strategy
+
+- WS-1: 3+ negative fixtures (in-progress+reason, completed+absent, completed+pending mapping)
+- WS-2: 1+ negative fixture (slug-based anchor)
+- WS-3: 8+ negative fixtures (one per category empty array) + placeholder string tests
+- WS-4: 2+ negative fixtures (bare path, discussion ref)
+- All: production path positive closure test remains GREEN
+
+### Risk / Mitigation
+
+- Breaking change: no backward compatibility. Existing evidence bundles with in-progress+terminationReason will fail. Intent is fail-closed.
+- Mitigation: negative fixtures prove validators reject previously-valid-but-incorrect bundles

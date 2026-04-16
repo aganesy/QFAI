@@ -218,6 +218,19 @@ QFAI は GUI を持たない CLI ツールである。`/qfai-prototyping` スキ
 - TC-3 (breaking change): `runtimeGate.ui[].declaredRef` なし / leaf 配列 empty / synthetic token を含む既存 evidence bundle は rev9 以降 validation に失敗する。backward compatibility は明示的に放棄。migration shim なし。
 - したがって Contract Index の `0 items` は v1.7.15 rev9 でも意図的な none-rationale であり、discussion-20260416092414328 のスコープ境界に整合する。
 
+## v1.7.15 rev10 Contract Posture
+
+- Contracts-first review completed for v1.7.15 rev10 semantic closure hardening (`discussion-20260416195444737`).
+- v1.7.15 rev10 は `packages/qfai` 内部の prototyping subsystem の semantic closure hardening を対象とした単一 PR リリースであり、外部向け stable contract は新設しない。
+- 主な変更対象:
+  - WS-1: `validators/prototypingEvidence.ts`, `prototyping/execution.ts`, `prototyping/runtime.ts`, `prototyping/history.ts` — fullHarness terminal state machine: in-progress（terminationReason 欠如必須, finalDecision=pending, reviewerSignoff.status=pending）vs completed（terminationReason ∈ {abandoned,max-iterations,plateau} 必須, finalDecision=abandoned, reviewerSignoff.status=abandoned）。全制約 fail-closed 強制
+  - WS-2: `evidence/screenContracts.ts` — `buildScreenContractInputs()` が `readCanonicalScreenContracts()` の sourceRef を直接利用。slug ベースのアンカー生成コード削除
+  - WS-3: `evidence/l2Evidence.ts`, `validators/prototypingEvidence.ts` — 全 8 evidenceRefs カテゴリ（render/browserQa/uiObservation/discussion/screenContract/trend/runtimeGate/specCoverage）に `assertConcreteArtifactRefs()` を適用。`assertConcreteArtifactRefs()` (plural) は `pathUtils.ts` に array-level wrapper として追加（OQ-0002 SDD 解決: DR-0012-0054）
+  - WS-4: `validators/specCoverage.ts`, `prototyping/execution.ts` — `specs[].coverageRefs[].declaredRef` が `/^\.qfai\/specs\/.+#(L\d+|\S+)$/` にマッチすること。bare path, discussion ref, screen contract ref は全て無効（OQ-0004 解決: DR-0012-0056）
+- 全て QFAI 内部モジュール。外部向け stable DB/API/UI contract は新設しない。
+- TC-3 (breaking change): in-progress+terminationReason が存在 / completed+terminationReason 欠如 / bare declaredRef / empty evidenceRefs category を含む既存 evidence bundle は rev10 以降 validation に失敗する。backward compatibility は明示的に放棄。migration shim なし。
+- したがって Contract Index の `0 items` は v1.7.15 rev10 でも意図的な none-rationale であり、discussion-20260416195444737 のスコープ境界に整合する。
+
 ## ER Diagram
 
 QFAI はデータベースを使用しないため、ER Diagram は省略する。

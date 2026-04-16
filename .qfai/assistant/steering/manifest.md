@@ -60,7 +60,9 @@
     `.qfai/discussion/discussion-20260416023323603/`
     (v1.7.15 rev8 — leaf-field ref grammar closure: pathUtils.ts helpers, specCoverage/runtimeGate evidenceRefs top-level validation, execution→validate closure test),
     `.qfai/discussion/discussion-20260416092414328/`
-    (v1.7.15 rev9 — leaf-field traceability closure: ui[].declaredRef/renderEvidenceRefs[]/browserQaEvidenceRefs[] per-row validation, axes[].evidenceRefs[] per-axis validation, reviewerLogs[].evidenceRefs[] validation, bundleWriter strict schema, test fixture concrete refs, README full enumeration)
+    (v1.7.15 rev9 — leaf-field traceability closure: ui[].declaredRef/renderEvidenceRefs[]/browserQaEvidenceRefs[] per-row validation, axes[].evidenceRefs[] per-axis validation, reviewerLogs[].evidenceRefs[] validation, bundleWriter strict schema, test fixture concrete refs, README full enumeration),
+    `.qfai/discussion/discussion-20260416195444737/`
+    (v1.7.15 rev10 — semantic closure hardening: WS-1 terminal state machine (in-progress/completed strict field bundles), WS-2 canonical screen contract sourceRef (slug anchor generation removed), WS-3 all 8 evidenceRefs categories via assertConcreteArtifactRefs() in pathUtils.ts, WS-4 declaredRef regex validation (.qfai/specs/+anchor mandatory))
   - Assumptions: None (all verified from repository analysis)
 
 ## Non-goals / Not-now (Optional)

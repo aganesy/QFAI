@@ -1,4 +1,4 @@
-# 03 Acceptance Criteria
+﻿# 03 Acceptance Criteria
 
 ## AC-0012-0001: All Specs in Coverage Matrix
 
@@ -1204,3 +1204,222 @@ Given `prototypingEvidence.test.ts`, when run, then it includes test cases for: 
 
 - US-Ref: US-0012-0071
 - Given packages/qfai/README.md after WS-4, when read, then all fields under the concrete artifact ref contract are listed including rev9 leaf fields, and the description does not imply that only top-level fields are validated.
+
+
+## AC-0012-0133: in-progress bundle — terminationReason absent (US-0012-0072, REQ-0124)
+
+```gherkin
+Given a fullHarness evidence bundle with status=in-progress
+When terminationReason field is present
+Then the validator returns an error
+```
+
+## AC-0012-0134: in-progress bundle — finalDecision must be pending (US-0012-0072, REQ-0124)
+
+```gherkin
+Given a fullHarness evidence bundle with status=in-progress
+When finalDecision is not "pending"
+Then the validator returns an error
+```
+
+## AC-0012-0135: in-progress bundle — reviewerSignoff.status must be pending (US-0012-0072, REQ-0124)
+
+```gherkin
+Given a fullHarness evidence bundle with status=in-progress
+When reviewerSignoff.status is not "pending"
+Then the validator returns an error
+```
+
+## AC-0012-0136: completed bundle — terminationReason required (US-0012-0072, REQ-0125)
+
+```gherkin
+Given a fullHarness evidence bundle with status=completed
+When terminationReason is absent
+Then the validator returns an error
+```
+
+## AC-0012-0137: completed bundle — terminationReason valid values (US-0012-0072, REQ-0125)
+
+```gherkin
+Given a fullHarness evidence bundle with status=completed
+When terminationReason is not in {abandoned, max-iterations, plateau}
+Then the validator returns an error
+And when terminationReason is in {abandoned, max-iterations, plateau}
+Then the validator accepts the bundle
+```
+
+## AC-0012-0138: completed bundle — finalDecision=abandoned (US-0012-0072, REQ-0126)
+
+```gherkin
+Given a fullHarness evidence bundle with status=completed
+When finalDecision is "pending"
+Then the validator returns an error
+
+Given a fullHarness evidence bundle with status=completed and terminationReason in {abandoned, max-iterations, plateau}
+When finalDecision is not "abandoned"
+Then the validator returns an error
+```
+
+## AC-0012-0139: completed bundle — reviewerSignoff.status=abandoned (US-0012-0072, REQ-0126)
+
+```gherkin
+Given a fullHarness evidence bundle with status=completed
+When reviewerSignoff.status is "pending"
+Then the validator returns an error
+
+Given a fullHarness evidence bundle with status=completed and terminationReason in {abandoned, max-iterations, plateau}
+When reviewerSignoff.status is not "abandoned"
+Then the validator returns an error
+```
+
+## AC-0012-0140: buildScreenContractInputs outputs canonical sourceRef (US-0012-0073, REQ-0127)
+
+```gherkin
+Given a screen contract read via readCanonicalScreenContracts()
+When buildScreenContractInputs() is called
+Then the output ref equals the screen's sourceRef exactly
+And the output ref does not contain a slug-derived anchor
+```
+
+## AC-0012-0141: slug-based anchor generation removed (US-0012-0073, REQ-0127)
+
+```gherkin
+Given the screenContracts.ts source code
+When reviewing the implementation
+Then slug-based anchor generation code does not exist
+```
+
+## AC-0012-0142: render evidenceRefs non-empty and concrete (US-0012-0074, REQ-0128)
+
+```gherkin
+Given a fullHarness evidence bundle
+When iterations[].evidenceRefs.render is an empty array
+Then the validator returns an error
+And when any entry in render is not a concrete artifact ref
+Then the validator returns an error
+```
+
+## AC-0012-0143: browserQa evidenceRefs non-empty and concrete (US-0012-0074, REQ-0128)
+
+```gherkin
+Given a fullHarness evidence bundle
+When iterations[].evidenceRefs.browserQa is an empty array
+Then the validator returns an error
+And when any entry in browserQa is not a concrete artifact ref
+Then the validator returns an error
+```
+
+## AC-0012-0144: uiObservation evidenceRefs non-empty and concrete (US-0012-0074, REQ-0128)
+
+```gherkin
+Given a fullHarness evidence bundle
+When iterations[].evidenceRefs.uiObservation is an empty array
+Then the validator returns an error
+And when any entry in uiObservation is not a concrete artifact ref
+Then the validator returns an error
+```
+
+## AC-0012-0145: discussion evidenceRefs non-empty and concrete (US-0012-0074, REQ-0128)
+
+```gherkin
+Given a fullHarness evidence bundle
+When iterations[].evidenceRefs.discussion is an empty array
+Then the validator returns an error
+And when any entry in discussion is not a concrete artifact ref
+Then the validator returns an error
+```
+
+## AC-0012-0146: screenContract evidenceRefs non-empty and concrete (US-0012-0074, REQ-0128)
+
+```gherkin
+Given a fullHarness evidence bundle
+When iterations[].evidenceRefs.screenContract is an empty array
+Then the validator returns an error
+And when any entry in screenContract is not a concrete artifact ref
+Then the validator returns an error
+```
+
+## AC-0012-0147: trend evidenceRefs non-empty and concrete (US-0012-0074, REQ-0128)
+
+```gherkin
+Given a fullHarness evidence bundle
+When iterations[].evidenceRefs.trend is an empty array
+Then the validator returns an error
+And when any entry in trend is not a concrete artifact ref
+Then the validator returns an error
+```
+
+## AC-0012-0148: runtimeGate evidenceRefs non-empty and concrete (US-0012-0074, REQ-0128)
+
+```gherkin
+Given a fullHarness evidence bundle
+When iterations[].evidenceRefs.runtimeGate is an empty array
+Then the validator returns an error
+And when any entry in runtimeGate is not a concrete artifact ref
+Then the validator returns an error
+```
+
+## AC-0012-0149: specCoverage evidenceRefs non-empty and concrete (US-0012-0074, REQ-0128)
+
+```gherkin
+Given a fullHarness evidence bundle
+When iterations[].evidenceRefs.specCoverage is an empty array
+Then the validator returns an error
+And when any entry in specCoverage is not a concrete artifact ref
+Then the validator returns an error
+```
+
+## AC-0012-0150: assertConcreteArtifactRefs in pathUtils.ts (US-0012-0074, REQ-0128)
+
+```gherkin
+Given pathUtils.ts contains assertConcreteArtifactRef (singular)
+When assertConcreteArtifactRefs (plural) is needed
+Then it is implemented in pathUtils.ts as an array-level wrapper
+And it is NOT in a new refSemantics.ts file (OQ-0002 resolution: DR-0012-0054)
+```
+
+## AC-0012-0151: declaredRef must start with .qfai/specs/ (US-0012-0075, REQ-0129)
+
+```gherkin
+Given a coverageRef with a declaredRef
+When the declaredRef does not start with ".qfai/specs/"
+Then the validator returns an error
+```
+
+## AC-0012-0152: declaredRef must contain anchor (US-0012-0075, REQ-0129)
+
+```gherkin
+Given a coverageRef with a declaredRef starting with ".qfai/specs/"
+When the declaredRef has no anchor (#L<n> or #<anchor>)
+Then the validator returns an error
+And when the declaredRef contains a valid anchor
+Then the validator accepts the ref
+```
+
+## AC-0012-0153: declaredRef .qfai/discussion/ path rejected (US-0012-0075, REQ-0129)
+
+```gherkin
+Given a coverageRef with a declaredRef
+When the declaredRef starts with ".qfai/discussion/"
+Then the validator returns an error
+```
+
+## AC-0012-0154: README reflects WS-1~WS-4 changes (US-0012-0076, REQ-0130)
+
+```gherkin
+Given the README.md is updated
+When it describes the fullHarness evidence schema
+Then it includes terminal state machine constraints from WS-1
+And canonical sourceRef usage from WS-2
+And all 8 evidenceRefs categories validation from WS-3
+And declaredRef semantic constraints from WS-4
+```
+
+## AC-0012-0155: All quality gates pass (US-0012-0076, REQ-0130, REQ-0131)
+
+```gherkin
+Given all WS-1~WS-4 changes are implemented
+When running pnpm format:check && pnpm lint && pnpm check-types
+Then all commands pass with zero errors
+And all tests pass (GREEN)
+```

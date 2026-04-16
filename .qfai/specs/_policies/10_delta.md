@@ -406,7 +406,7 @@
 
 | Date       | Status  | Artifact                  | Change                                                                          | Source                                            |
 | ---------- | ------- | ------------------------- | ------------------------------------------------------------------------------- | ------------------------------------------------- |
-| 2026-04-15 | adopted | spec-0012                 | v1.7.15 rev7: US-0012-0056..0062, AC/BR/EX/TC追加 (WS-1〜WS-7 契約ギャップ閉鎖) | discussion-20260415203030886 rev7 completion      |
+| 2026-04-15 | adopted | spec-0012                 | v1.7.15 rev7: spec-0012 rev7 workstream artifacts added (7 US, AC/BR/EX/TC chains, WS-1〜WS-7 契約ギャップ閉鎖) | discussion-20260415203030886 rev7 completion      |
 | 2026-04-15 | adopted | 05_Contracts.md           | v1.7.15 rev7 Contract Posture 追加                                              | 内部モジュール変更のみ、外部 stable contract なし |
 | 2026-04-15 | adopted | spec-0012/07_Decisions.md | DR-0012-0041..0045 (rev7 OQ-0001..0005 解決結果) 追加                           | all 5 OQs resolved                                |
 
@@ -419,3 +419,60 @@
 - OQ-0003 resolved at SDD level → DR-0012-0043 (configPath optional in calibrationRef)
 - OQ-0004 resolved at SDD level → DR-0012-0044 (obsolete field detection at normalize-time)
 - OQ-0005 resolved at SDD level → DR-0012-0045 (surfacePolicy message from constant)
+
+## v1.7.15 rev8 — Ref Grammar Closure (Adopted)
+
+### Phase: SDD Outline (Phase 1)
+
+| Date       | Status  | Artifact                  | Change                                                                                           | Source                                                    |
+| ---------- | ------- | ------------------------- | ------------------------------------------------------------------------------------------------ | --------------------------------------------------------- |
+| 2026-04-16 | adopted | spec-0012                 | v1.7.15 rev8: spec-0012 rev8 workstream artifacts added (5 US, AC/BR/EX/TC chains, WS-1〜WS-4 ref grammar統一・runtimeGate拡張) | discussion-20260416023323603 rev8 completion              |
+| 2026-04-16 | adopted | 05_Contracts.md           | v1.7.15 rev8 Contract Posture 追加                                                               | 内部モジュール変更のみ、外部 stable contract なし          |
+| 2026-04-16 | adopted | spec-0012/07_Decisions.md | DR-0012-0046..0052 (rev8 OQ-0001..0004 解決結果 + SDD phase 決定) 追加                           | all OQs resolved                                         |
+
+### Discussion Pack Reference
+
+- `discussion-20260416023323603` (v1.7.15 rev8)
+- Classification: non-ui
+- OQ-0001 resolved at discussion → DR-0012-0046 (toRepoRelativeArtifactRef signature)
+- OQ-0002 resolved at discussion → DR-0012-0047 (pathUtils.ts リーフモジュール新設)
+- OQ-0003 resolved at SDD level → DR-0012-0048 (runtimeGate.evidenceRefs: string[] 追加)
+- OQ-0004 resolved at SDD level → DR-0012-0049 (specCoverage.ts/execution.ts pathUtils統一)
+
+## v1.7.15 rev9 — Leaf-Field Traceability Closure (Adopted)
+
+### Phase: SDD Outline (Phase 1)
+
+| Date       | Status  | Artifact                  | Change                                                                                                                  | Source                                                    |
+| ---------- | ------- | ------------------------- | ----------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------- |
+| 2026-04-16 | adopted | spec-0012                 | v1.7.15 rev9: spec-0012 rev9 workstream artifacts added (5 US, AC/BR/EX/TC chains, WS-1〜WS-4 leaf-field validation, bundleWriter strict schema) | discussion-20260416092414328 rev9 completion              |
+| 2026-04-16 | adopted | 05_Contracts.md           | v1.7.15 rev9 Contract Posture 追加                                                                                      | 内部モジュール変更のみ、外部 stable contract なし          |
+| 2026-04-16 | adopted | spec-0012/07_Decisions.md | DR-0012-0049..0052 (rev9 OQ-0001..0004 解決結果) 追加                                                                   | all OQs resolved                                         |
+
+### Discussion Pack Reference
+
+- `discussion-20260416092414328` (v1.7.15 rev9)
+- Classification: non-ui
+- OQ-0001 resolved at discussion → DR-0012-0049 (runtimeGate.ui[] 行レベル3フィールド強制)
+- OQ-0002 resolved at discussion → DR-0012-0050 (axes[].evidenceRefs[] per-axis 強制)
+- OQ-0003 resolved at discussion → DR-0012-0051 (reviewerLogs[].evidenceRefs[] 強制)
+- OQ-0004 resolved at SDD level → DR-0012-0052 (bundleWriter leaf array required 型変更)
+
+## v1.7.15 rev10 — Semantic Closure Hardening (Adopted)
+
+### Phase: SDD Outline (Phase 1)
+
+| Date       | Status  | Artifact                  | Change                                                                                                                                              | Source                                                    |
+| ---------- | ------- | ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------- |
+| 2026-04-16 | adopted | spec-0012                 | v1.7.15 rev10: spec-0012 rev10 workstream artifacts added (5 US, AC/BR/EX/TC chains, WS-1 terminal state machine, WS-2 canonical sourceRef, WS-3 8-category refs, WS-4 declaredRef) | discussion-20260416195444737 rev10 completion             |
+| 2026-04-16 | adopted | 05_Contracts.md           | v1.7.15 rev10 Contract Posture 追加                                                                                                                 | 内部モジュール変更のみ、外部 stable contract なし          |
+| 2026-04-16 | adopted | spec-0012/07_Decisions.md | DR-0012-0053..0056 (rev10 OQ-0001..0004 解決結果) 追加                                                                                              | all OQs resolved (OQ-0002 resolved at SDD phase)         |
+
+### Discussion Pack Reference
+
+- `discussion-20260416195444737` (v1.7.15 rev10)
+- Classification: non-ui
+- OQ-0001 resolved at discussion → DR-0012-0053 (all terminationReason values → finalDecision=abandoned)
+- OQ-0002 resolved at SDD level → DR-0012-0054 (assertConcreteArtifactRefs() in pathUtils.ts; no refSemantics.ts)
+- OQ-0003 resolved at discussion → DR-0012-0055 (all 8 evidenceRefs categories use assertConcreteArtifactRefs)
+- OQ-0004 resolved at discussion → DR-0012-0056 (anchor always required in declaredRef)

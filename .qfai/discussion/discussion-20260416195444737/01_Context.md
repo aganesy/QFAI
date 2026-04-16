@@ -14,6 +14,11 @@
 | primary_surface | non-ui |
 | ステータス | draft |
 
+- ui_bearing: false
+- primary_surface: non-ui
+- secondary_surfaces:
+- classification_rationale: packages/qfai 内部実装変更のみ。UIサーフェスなし。
+
 ---
 
 ## ゴール

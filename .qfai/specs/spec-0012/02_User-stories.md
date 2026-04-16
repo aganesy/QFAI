@@ -461,3 +461,49 @@ As a package maintainer, I want `bundleWriter.ts` and any runtime builders to tr
 ## US-0012-0071: Leaf-Field Regression Tests Cover All Negative Cases and README Is Complete (WS-3+WS-4) (v1.7.15 rev9)
 
 As a package maintainer, I want `tests/core/` to include negative test cases for every leaf-field malformed ref form and replace all synthetic token fixtures, and I want `README.md` to enumerate all fields under the concrete-ref contract, so that future regressions at leaf level are caught immediately and the documentation is accurate.
+
+
+## US-0012-0072: Terminal State Machine Enforcement (v1.7.15 rev10, WS-1)
+
+- As a QFAI validator consumer,
+- I want the fullHarness outcome fields to be validated against a terminal state machine,
+- So that in-progress and completed bundles are structurally unambiguous and validators enforce all field constraints fail-closed.
+
+Parent: CAP-0012
+REQ: REQ-0123, REQ-0124, REQ-0125, REQ-0126
+
+## US-0012-0073: Canonical Screen Contract SourceRef (v1.7.15 rev10, WS-2)
+
+- As a QFAI validator consumer,
+- I want buildScreenContractInputs() to use readCanonicalScreenContracts() sourceRef directly,
+- So that evidence refs point to actual screen contract file locations rather than slug-derived anchors.
+
+Parent: CAP-0012
+REQ: REQ-0127
+
+## US-0012-0074: All EvidenceRefs Categories Validated (v1.7.15 rev10, WS-3)
+
+- As a QFAI validator consumer,
+- I want all 8 evidenceRefs categories to be validated for non-emptiness and concreteness,
+- So that evidence bundles cannot pass validation with empty arrays or placeholder strings in any category.
+
+Parent: CAP-0012
+REQ: REQ-0128
+
+## US-0012-0075: DeclaredRef Semantic Validation (v1.7.15 rev10, WS-4)
+
+- As a QFAI validator consumer,
+- I want specs[].coverageRefs[].declaredRef to be validated as a .qfai/specs/ path with anchor,
+- So that discussion refs, screen contract refs, and bare file paths cannot be used as spec coverage refs.
+
+Parent: CAP-0012
+REQ: REQ-0129
+
+## US-0012-0076: Runtime/Validator/Tests/README Sync (v1.7.15 rev10, WS-5)
+
+- As a QFAI project maintainer,
+- I want all WS-1~WS-4 changes to be consistently reflected in runtime, validators, tests, and README,
+- So that the codebase has no stale documentation or divergent behavior.
+
+Parent: CAP-0012
+REQ: REQ-0130, REQ-0131

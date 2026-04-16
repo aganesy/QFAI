@@ -888,3 +888,62 @@
 
 - AC-Refs: AC-0012-0132
 - Rule: `packages/qfai/README.md` must explicitly list all fields under the concrete artifact ref contract after WS-4. The list must include all rev9 leaf fields: `runtimeGate.ui[].declaredRef`, `runtimeGate.ui[].renderEvidenceRefs[]`, `runtimeGate.ui[].browserQaEvidenceRefs[]`, `fullHarness.iterations[].l1/l2.axes[].evidenceRefs[]`, `fullHarness.reviewerLogs[].evidenceRefs[]`. The description must not use language that implies only top-level fields are under the strict ref contract.
+
+
+## BR-0012-0117: in-progress terminationReason absent (v1.7.15 rev10, WS-1)
+
+- AC-Refs: AC-0012-0133
+
+- Rule: terminationReason MUST be absent when status=in-progress
+- Rationale: in-progress bundles represent ongoing harness runs; a termination reason has no semantic meaning until the run completes
+- Enforcement: prototypingEvidence.ts validator error (fail-closed)
+
+## BR-0012-0118: in-progress field constraints (v1.7.15 rev10, WS-1)
+
+- AC-Refs: AC-0012-0134, AC-0012-0135
+
+- Rule: When status=in-progress: finalDecision MUST be "pending", reviewerSignoff.status MUST be "pending"
+- Rationale: terminal fields have no meaning while harness is still running
+- Enforcement: prototypingEvidence.ts validator error (fail-closed)
+
+## BR-0012-0119: completed terminationReason required (v1.7.15 rev10, WS-1)
+
+- AC-Refs: AC-0012-0136, AC-0012-0137
+
+- Rule: When status=completed: terminationReason MUST be present and MUST be one of {abandoned, max-iterations, plateau}
+- Rationale: all three completion paths map to the same finalDecision (abandoned); terminationReason preserves audit trail
+- Enforcement: prototypingEvidence.ts validator error (fail-closed)
+
+## BR-0012-0120: terminationReason→finalDecision/reviewerSignoff mapping (v1.7.15 rev10, WS-1)
+
+- AC-Refs: AC-0012-0138, AC-0012-0139
+
+- Rule: All three terminationReason values (abandoned, max-iterations, plateau) map to finalDecision=abandoned and reviewerSignoff.status=abandoned
+- Rationale: OQ-0001 resolved (DR-0012-0053): automatic termination is always abandonment; accepted status requires separate human signoff
+- Single source: mapping defined once in prototypingEvidence.ts
+
+## BR-0012-0121: buildScreenContractInputs uses sourceRef (v1.7.15 rev10, WS-2)
+
+- AC-Refs: AC-0012-0140, AC-0012-0141
+
+- Rule: buildScreenContractInputs() output refs MUST equal readCanonicalScreenContracts() sourceRef exactly
+- Rule: Slug-based anchor generation code MUST NOT exist in screenContracts.ts
+- Rationale: canonical sourceRef provides the correct, stable reference; slug derivation was error-prone
+
+## BR-0012-0122: All 8 evidenceRefs categories via assertConcreteArtifactRefs (v1.7.15 rev10, WS-3)
+
+- AC-Refs: AC-0012-0142, AC-0012-0143, AC-0012-0144, AC-0012-0145, AC-0012-0146, AC-0012-0147, AC-0012-0148, AC-0012-0149
+
+- Rule: iterations[].evidenceRefs.{render,browserQa,uiObservation,discussion,screenContract,trend,runtimeGate,specCoverage} MUST be non-empty
+- Rule: Every entry in each category MUST pass assertConcreteArtifactRefs() from pathUtils.ts
+- Rule: assertConcreteArtifactRefs() (plural) is added to pathUtils.ts as an array-level wrapper (OQ-0002 resolution: DR-0012-0054)
+- Enforcement: prototypingEvidence.ts validator error (fail-closed)
+
+## BR-0012-0123: declaredRef path+anchor constraint (v1.7.15 rev10, WS-4)
+
+- AC-Refs: AC-0012-0151, AC-0012-0152, AC-0012-0153
+
+- Rule: declaredRef MUST match /^\.qfai\/specs\/.+#(L\d+|\S+)$/
+- Rule: .qfai/discussion/ paths, screen contract refs, bare file paths are all invalid
+- Rationale: OQ-0004 resolved (DR-0012-0056): traceability requires specific declaration location
+- Single source: regex defined once in specCoverage.ts (inline, no refSemantics.ts)

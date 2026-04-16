@@ -1317,3 +1317,66 @@
 - Given: `packages/qfai/README.md` is inspected after WS-4
 - When: README content is reviewed
 - Then: `ui[].declaredRef`, `ui[].renderEvidenceRefs[]`, `ui[].browserQaEvidenceRefs[]`, `axes[].evidenceRefs[]`, `reviewerLogs[].evidenceRefs[]` are all explicitly listed as concrete-ref fields; no partial-strictness gap
+
+
+## EX-0012-0173: in-progress terminationReason violation (BR-0012-0117)
+
+- Happy path: status=in-progress, terminationReason absent → validator PASS
+- Negative path: status=in-progress, terminationReason="abandoned" → validator ERROR
+- Edge/boundary: terminationReason="" (empty string) → validator ERROR (empty string is treated as PRESENT but invalid; a key must be absent, not empty, to satisfy "must be absent" constraint of BR-0012-0117)
+
+BR-Ref: BR-0012-0117
+
+## EX-0012-0174: in-progress field constraint violations (BR-0012-0118)
+
+- Happy path: status=in-progress, finalDecision=pending, reviewerSignoff.status=pending → PASS
+- Negative path A: status=in-progress, finalDecision=abandoned → ERROR
+- Negative path B: status=in-progress, reviewerSignoff.status=abandoned → ERROR
+
+BR-Ref: BR-0012-0118
+
+## EX-0012-0175: completed terminationReason required (BR-0012-0119)
+
+- Happy path A: status=completed, terminationReason=abandoned → PASS
+- Happy path B: status=completed, terminationReason=max-iterations → PASS
+- Happy path C: status=completed, terminationReason=plateau → PASS
+- Negative path: status=completed, terminationReason absent → ERROR
+- Negative path: status=completed, terminationReason="unknown-value" → ERROR
+
+BR-Ref: BR-0012-0119
+
+## EX-0012-0176: terminationReason mapping consistency (BR-0012-0120)
+
+- Happy path: completed+abandoned, finalDecision=abandoned, reviewerSignoff.status=abandoned → PASS
+- Negative path A: completed+abandoned, finalDecision=pending → ERROR
+- Negative path B: completed+max-iterations, reviewerSignoff.status=pending → ERROR
+
+BR-Ref: BR-0012-0120
+
+## EX-0012-0177: canonical sourceRef usage (BR-0012-0121)
+
+- Happy path: buildScreenContractInputs() output ref = readCanonicalScreenContracts() sourceRef → PASS
+- Negative path: output ref contains slug-derived anchor (e.g., "#home") vs sourceRef ("#home-screen") → FAIL
+- Idempotency: calling twice with same input produces same output ref
+
+BR-Ref: BR-0012-0121
+
+## EX-0012-0178: evidenceRefs 8-category completeness (BR-0012-0122)
+
+- Happy path: all 8 categories non-empty with concrete artifact refs → PASS
+- Negative path A: render=[] (empty array) → ERROR
+- Negative path B: runtimeGate=["TODO"] (placeholder) → ERROR
+- Negative path C: specCoverage=[""] (empty string) → ERROR
+- Edge: all 8 categories have exactly 1 valid concrete ref → PASS
+
+BR-Ref: BR-0012-0122
+
+## EX-0012-0179: declaredRef semantic validation (BR-0012-0123)
+
+- Happy path A: ".qfai/specs/spec-XXXX/01_Spec.md#L42" → PASS
+- Happy path B: ".qfai/specs/spec-XXXX/01_Spec.md#US-0012-0001" → PASS
+- Negative path A: ".qfai/specs/spec-XXXX/01_Spec.md" (bare path, no anchor) → ERROR
+- Negative path B: ".qfai/discussion/discussion-xxx/06_REQ.md#REQ-0001" → ERROR
+- Negative path C: "packages/qfai/src/core/prototyping/runtime.ts#L42" → ERROR
+
+BR-Ref: BR-0012-0123

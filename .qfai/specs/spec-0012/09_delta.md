@@ -647,3 +647,83 @@ Leaf-field traceability closure for packages/qfai. Rev8 closed top-level summary
 | WS-1b (axis/reviewer) | REQ-0110..0115 | US-0068..0069 | AC-0114..0123 | BR-0110..0111 | EX-0160..0168 | TC-0227..0233 |
 | WS-2 (bundleWriter)   | REQ-0116..0118 | US-0070       | AC-0124..0127 | BR-0112..0113 | EX-0169..0170 | TC-0234..0237 |
 | WS-3+4 (tests+README) | REQ-0119..0122 | US-0071       | AC-0128..0132 | BR-0114..0116 | EX-0171..0172 | TC-0238..0242 |
+
+
+## v1.7.15 rev10 — Semantic Closure Hardening
+
+### Summary
+
+4 workstreams (WS-1..WS-4) + WS-5 sync. Closes semantic gaps identified in rev10 audit: terminal state machine enforcement, canonical screen contract refs, 8-category evidenceRefs strictness, declaredRef semantic validation. Breaking change: backward compatibility explicitly abandoned. No migration tooling.
+
+### Discussion Pack Reference
+
+- `discussion-20260416195444737` (v1.7.15 rev10, 3 reviewer PASS)
+- Classification: non-ui
+
+### OQ Resolutions
+
+- OQ-0001 resolved at discussion → DR-0012-0053 (all terminationReason values → abandoned mapping)
+- OQ-0002 resolved at SDD → DR-0012-0054 (assertConcreteArtifactRefs in pathUtils.ts, no refSemantics.ts)
+- OQ-0003 resolved at discussion → DR-0012-0055 (all 8 categories use assertConcreteArtifactRefs)
+- OQ-0004 resolved at discussion → DR-0012-0056 (anchor always required in declaredRef)
+
+### Requirements Added
+
+- REQ-0123..REQ-0131 (9 requirements: terminal state machine, field constraints, terminationReason required, mapping consistency, canonical sourceRef, 8-category refs, declaredRef semantic, sync, negative fixtures)
+
+### Artifacts Added
+
+| Layer | IDs Added              | Description                                                           |
+| ----- | ---------------------- | --------------------------------------------------------------------- |
+| US    | US-0012-0072..0076     | 5 user stories (WS-1..WS-4 + sync)                                   |
+| AC    | AC-0012-0133..0155     | 23 acceptance criteria                                                |
+| BR    | BR-0012-0117..0123     | 7 business rules                                                      |
+| EX    | EX-0012-0173..0179     | 7 examples                                                            |
+| TC    | TC-0012-0243..0271     | 29 test cases (normal + error/boundary coverage per WS)               |
+| DR    | DR-0012-0053..0056     | 4 decision records (OQ-0001..0004 resolutions)                        |
+| REQ   | REQ-0123..REQ-0131     | 9 requirements                                                        |
+
+### Traceability Chain
+
+| WS   | REQ            | US      | AC            | BR            | EX            | TC            |
+| ---- | -------------- | ------- | ------------- | ------------- | ------------- | ------------- |
+| WS-1 | REQ-0123..0126 | US-0072 | AC-0133..0139 | BR-0117..0120 | EX-0173..0176 | TC-0243..0253 |
+| WS-2 | REQ-0127       | US-0073 | AC-0140..0141 | BR-0121       | EX-0177       | TC-0254..0255 |
+| WS-3 | REQ-0128       | US-0074 | AC-0142..0150 | BR-0122       | EX-0178       | TC-0256..0266 |
+| WS-4 | REQ-0129       | US-0075 | AC-0151..0153 | BR-0123       | EX-0179       | TC-0267..0270 |
+| WS-5 | REQ-0130..0131 | US-0076 | AC-0154..0155 | (sync)        | (sync)        | TC-0271       |
+
+### Affected Source Files
+
+| File | WS | Change |
+|---|---|---|
+| `packages/qfai/src/core/prototyping/pathUtils.ts` | WS-3 | +assertConcreteArtifactRefs() array helper |
+| `packages/qfai/src/core/evidence/l2Evidence.ts` | WS-3 | use assertConcreteArtifactRefs() from pathUtils.ts |
+| `packages/qfai/src/core/evidence/screenContracts.ts` | WS-2 | use readCanonicalScreenContracts() sourceRef; remove slug anchor generation |
+| `packages/qfai/src/core/validators/specCoverage.ts` | WS-4 | declaredRef regex validation |
+| `packages/qfai/src/core/validators/prototypingEvidence.ts` | WS-1, WS-3 | terminal state machine + 8-category refs |
+| `packages/qfai/src/core/prototyping/execution.ts` | WS-1, WS-4 | state machine enforcement + declaredRef validation |
+| `packages/qfai/src/core/prototyping/runtime.ts` | WS-1 | terminal state machine transitions |
+| `packages/qfai/src/core/prototyping/history.ts` | WS-1 | history tracking for state machine |
+| `packages/qfai/tests/core/fullHarnessRuntime.test.ts` | WS-1 | negative fixtures (min 3) |
+| `packages/qfai/tests/core/prototypingEvidence.test.ts` | WS-3 | 8-category negative fixtures (min 8) |
+| `packages/qfai/tests/core/prototypingExecution.productionPath.test.ts` | WS-4 | declaredRef negative fixtures (min 2) |
+| `packages/qfai/README.md` | WS-5 | WS-1~WS-4 API changes |
+
+### Rejected Options (rev10)
+
+- RJ-rev10-001: Allow terminationReason in in-progress bundles
+  - DO NOT allow terminationReason when status=in-progress. Temptation: backward compat.
+  - Reason: terminationReason has no semantic meaning for running harnesses; presence indicates stale data.
+
+- RJ-rev10-002: Create refSemantics.ts for assertConcreteArtifactRefs
+  - DO NOT create refSemantics.ts in rev10. Temptation: clean module separation.
+  - Reason: pathUtils.ts already owns ref grammar helpers (rev8); extraction threshold not reached (< 3 consumers).
+
+- RJ-rev10-003: map plateau terminationReason to accepted
+  - DO NOT map plateau to accepted/approved. Temptation: plateau sounds positive.
+  - Reason: accepted requires explicit human reviewer signoff; auto-termination is never accepted by default.
+
+- RJ-rev10-004: Allow bare file paths in declaredRef
+  - DO NOT allow bare file paths. Temptation: simpler spec authoring.
+  - Reason: anchor is required to identify the specific declaration location; file-level refs break traceability.

@@ -453,3 +453,35 @@
 - Rejected-B: Add brief note only — DoD §5-6 違反。docs/validator partial-strictness mismatch が残存。
   - DO NOT use minimal note approach for README update. Temptation: minimize README churn.
 - Source: OQ-0004, discussion-20260416092414328
+
+
+## DR-0012-0053: terminationReason→finalDecision/reviewerSignoff mapping (v1.7.15 rev10, OQ-0001 resolution)
+
+- Decision: All three terminationReason values (abandoned, max-iterations, plateau) map to finalDecision=abandoned and reviewerSignoff.status=abandoned
+- Rationale: Auto-termination is always abandonment by definition. "Accepted" status requires separate human reviewer signoff that is orthogonal to the harness termination reason. Keeping a single mapping reduces validator complexity and prevents semantic confusion between termination cause and final disposition.
+- Status: Adopted
+- Alternatives: (A) All map to abandoned (adopted) / (B) plateau maps to accepted / (C) per-value individual mapping
+- Impact: prototypingEvidence.ts validator, execution.ts state machine
+
+## DR-0012-0054: assertConcreteArtifactRefs in pathUtils.ts (v1.7.15 rev10, OQ-0002 resolution at SDD)
+
+- Decision: assertConcreteArtifactRefs() (plural, array-level wrapper) is added to the existing pathUtils.ts module. No new refSemantics.ts file is created.
+- Rationale: pathUtils.ts was created in rev8 as the ref grammar helpers SSOT. Adding the array-level wrapper there maintains the module's cohesion and avoids proliferating small modules. The reuse-count threshold (3+ files) has not been reached for refSemantics.ts extraction.
+- Status: Adopted
+- Source: OQ-0002 from discussion-20260416195444737 (deferred to SDD) → resolved here
+- Impact: pathUtils.ts (+1 exported function), prototypingEvidence.ts consumer
+
+## DR-0012-0055: All 8 evidenceRefs categories use assertConcreteArtifactRefs (v1.7.15 rev10, OQ-0003 resolution)
+
+- Decision: All 8 categories in iterations[].evidenceRefs (including runtimeGate and specCoverage) use assertConcreteArtifactRefs() from pathUtils.ts
+- Rationale: WS-3 spec says "all categories" explicitly. OQ-0003 resolved at discussion: no justification for excluding runtimeGate/specCoverage. Consistency (NFR-0004) requires all categories to follow the same rule.
+- Status: Adopted
+- Impact: prototypingEvidence.ts validator
+
+## DR-0012-0056: declaredRef anchor always required (v1.7.15 rev10, OQ-0004 resolution)
+
+- Decision: specs[].coverageRefs[].declaredRef must match /^\.qfai\/specs\/.+#(L\d+|\S+)$/. Anchor is always required. Bare file paths are invalid.
+- Rationale: The purpose of declaredRef is to point to a specific declaration location. A bare file path fails to identify which declaration within the file is being referenced, breaking the traceability chain. OQ-0004 resolved at discussion.
+- Status: Adopted
+- Impact: specCoverage.ts (regex defined inline; no separate refSemantics.ts)
+- Rejected: bare path allowed (RJ: insufficient traceability precision)

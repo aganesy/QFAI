@@ -1,4 +1,180 @@
-# SDD Evidence — spec-0012 (qfai-prototyping) v1.7.15 rev4..rev9
+# SDD Evidence — spec-0012 (qfai-prototyping) v1.7.15 rev4..rev10
+
+---
+
+## v1.7.15 rev10 Section (appended)
+
+### Objective
+
+Update spec-0012 (qfai-prototyping) with v1.7.15 rev10 discussion pack (`discussion-20260416195444737`) content: Semantic Closure Hardening — 4+1 workstreams:
+- WS-1: `fullHarness` terminal state machine — in-progress bundle (terminationReason absent, finalDecision=pending, reviewerSignoff.status=pending) vs completed bundle (terminationReason ∈ {abandoned,max-iterations,plateau}) enforced fail-closed by validator
+- WS-2: `buildScreenContractInputs()` uses `readCanonicalScreenContracts()` sourceRef directly; slug-based anchor generation deleted
+- WS-3: all 8 evidenceRefs categories (render/browserQa/uiObservation/discussion/screenContract/trend/runtimeGate/specCoverage) enforced non-empty+concrete via `assertConcreteArtifactRefs()` in pathUtils.ts
+- WS-4: `specs[].coverageRefs[].declaredRef` must match `/^\.qfai\/specs\/.+#(L\d+|\S+)$/` — bare paths, discussion refs, screen contract refs all invalid
+- WS-5: runtime, validators, tests, and README sync for WS-1~WS-4 changes
+
+### Inputs Reviewed
+
+| Priority | Path | Purpose |
+| -------- | ---- | ------- |
+| P1 | `.qfai/assistant/instructions/*` | Agent instructions |
+| P2 | `.qfai/assistant/steering/*` | Steering files |
+| P3 | `.qfai/specs/spec-0012/**` | Existing spec-0012 artifacts (rev4..rev9) |
+| P4 | `.qfai/discussion/discussion-20260416195444737/**` | Rev10 discussion pack (15 files) |
+| P4 | `.qfai/contracts/**` | Contract posture (CLI-only, no UI contract) |
+| P5 | `.qfai/review/review-20260416195500000/**` | Rev10 discussion review (PASS, R01/R02/R03) |
+
+### Preflight Summary Path
+
+`.qfai/report/preflight_summary.md` (updated to reference discussion-20260416195444737)
+
+### Open Questions Summary
+
+| OQ | Status | Resolution |
+|----|--------|-----------|
+| OQ-0001-rev10 | Answered | DR-0012-0053: terminal state machine must be enforced fail-closed |
+| OQ-0002-rev10 | Answered | DR-0012-0054: refSemantics.ts NOT created; pathUtils.ts extended |
+| OQ-0003-rev10 | Answered | DR-0012-0055: plateau maps to neither accepted/approved; separate terminationReason required |
+| OQ-0004-rev10 | Answered | DR-0012-0056: declaredRef anchor always required |
+
+### Decisions Made
+
+| ID | Decision | Rationale |
+|----|---------|-----------|
+| DR-0012-0053 | Terminal state machine enforced fail-closed | in-progress bundle must not have terminationReason; completed must; validator enforces |
+| DR-0012-0054 | assertConcreteArtifactRefs() added to pathUtils.ts (not refSemantics.ts) | pathUtils.ts already owns ref grammar helpers (rev8); extraction threshold not reached |
+| DR-0012-0055 | plateau maps to no automatic accepted/approved | accepted requires explicit human reviewer signoff |
+| DR-0012-0056 | declaredRef must have anchor (#Lxx or #symbol) | file-level bare paths break traceability; OQ-0004 resolved at SDD |
+
+### Work Performed
+
+| Layer | IDs Added | File |
+|-------|-----------|------|
+| REQ | REQ-0123..REQ-0131 (9) | `01_Spec.md` (NOTE block) |
+| US | US-0012-0072..0076 (5) | `02_User-stories.md` |
+| AC | AC-0012-0133..0155 (23) | `03_Acceptance-Criteria.md` |
+| BR | BR-0012-0117..0123 (7) | `04_Business-Rules.md` |
+| EX | EX-0012-0173..0179 (7) | `05_Examples.md` |
+| TC | TC-0012-0243..0271 (29) | `06_Test-Cases.md` |
+| DR (spec) | DR-0012-0053..0056 (4) | `07_Decisions.md` |
+| OQ resolutions | 1 (OQ-0002-rev10) | `08_Open-questions.md` |
+| Delta | rev10 section | `09_delta.md` |
+| Plan | rev10 section | `10_Plan.md` |
+| Contract posture | rev10 section | `_policies/05_Contracts.md` |
+| Delta policies | rev10 entries | `_policies/10_delta.md` |
+| Steering | manifest.md rev10 entry | `.qfai/assistant/steering/manifest.md` |
+| Discussion fix | classification block in list format | `.qfai/discussion/discussion-20260416195444737/01_Context.md` |
+| ATDD E2E | US-0012-0072..0076 | `tests/e2e/qfai-traceability.md` |
+| ATDD Integration | TC-0012-0243..0271 | `tests/integration/qfai-traceability.md` |
+| E2E stubs | WS-1..WS-5 scenarios | `packages/qfai/tests/e2e/prototypingRev10E2E.test.ts` (untracked, impl phase) |
+| Integration stubs | TC-0243..0271 | `packages/qfai/tests/integration/prototypingRev10Integration.test.ts` (untracked, impl phase) |
+
+### Commands Executed
+
+| Command | Result |
+|---------|--------|
+| `npx qfai validate --fail-on error --format github` | error=34 (3 extra from empty review-20260417061750000) |
+| Cleanup: removed empty `review-20260417061750000` directory | Untracked local artifact, removed |
+| `npx qfai validate --fail-on error --format github` (re-run) | error=31, warning=88, info=3 ✅ |
+| `.qfai/report/validate.log` updated | run-20260417061859640 |
+
+### Validate Evidence
+
+- **Validate log**: `.qfai/report/validate.log` (run-20260417061859640)
+- **Specs-coverage report**: `.qfai/report/specs-coverage/spec-0012.md`
+- **QFAI-COV-201..206**: all 0 ✅
+- **QFAI-ATDD-111/112**: rev10 US/TC registered in e2e/integration traceability ✅
+
+### Rev10-Specific Errors
+
+| Code | Count | Classification |
+|------|-------|----------------|
+| New rev10-specific errors | 0 | ✅ all 31 errors pre-existing |
+| TDDLIST_TEST_FILE_MISSING | 16 | pre-existing (spec-0010/0012/0014 impl phase) |
+| QFAI-REVIEW-007 | 9 | pre-existing (old review pack schemas) |
+| QFAI-REVIEW-003 | 2 | pre-existing |
+| QFAI-REVIEW-005 | 1 | pre-existing |
+| QFAI-PROT-150 | 1 | pre-existing |
+| QFAI-PROT-171 | 1 | pre-existing |
+| QFAI-SKILLS-001 | 1 | pre-existing |
+
+### Layer Coverage Gate
+
+| Gate | Count | Result |
+|------|-------|--------|
+| QFAI-COV-201 | 0 | PASS |
+| QFAI-COV-202 | 0 | PASS |
+| QFAI-COV-203 | 0 | PASS |
+| QFAI-COV-204 | 0 | PASS |
+| QFAI-COV-205 | 0 | PASS |
+| QFAI-COV-206 | 0 | PASS |
+| QFAI-ATDD-111 | 0 | PASS (US-0012-0072..0076 registered) |
+| QFAI-ATDD-112 | 0 | PASS (TC-0012-0243..0271 registered) |
+| QFAI-ATDD-113 | 0 | PASS |
+
+### Traceability Chain
+
+| WS | REQ | US | AC | BR | EX | TC |
+|----|-----|----|----|----|----|-----|
+| WS-1 | REQ-0123..0126 | US-0012-0072 | AC-0012-0133..0139 | BR-0012-0117..0120 | EX-0012-0173..0176 | TC-0012-0243..0253 |
+| WS-2 | REQ-0127 | US-0012-0073 | AC-0012-0140..0141 | BR-0012-0121 | EX-0012-0177 | TC-0012-0254..0255 |
+| WS-3 | REQ-0128 | US-0012-0074 | AC-0012-0142..0150 | BR-0012-0122 | EX-0012-0178 | TC-0012-0256..0266 |
+| WS-4 | REQ-0129 | US-0012-0075 | AC-0012-0151..0153 | BR-0012-0123 | EX-0012-0179 | TC-0012-0267..0270 |
+| WS-5 | REQ-0130..0131 | US-0012-0076 | AC-0012-0154..0155 | (sync) | (sync) | TC-0012-0271 |
+
+### Work Orders Summary
+
+| Step | Role (sub-agent) | Task | Input | Output | Status |
+|------|-----------------|------|-------|--------|--------|
+| 1 | requirements-analyst | Rev10 US/AC/BR/DR drafting (WS-1..WS-5) | discussion-20260416195444737 | 02..04_*.md, 07_*.md | PASS |
+| 2 | solution-architect | Rev10 spec contract posture review | WS-1..WS-5 requirements, contracts | _policies/05_Contracts.md | PASS |
+| 3 | test-design-analyst | Rev10 EX/TC chains + ATDD traceability | WS-1..WS-5 AC/BR | 05..06_*.md, traceability files | PASS |
+| 4 | completion-reviewer (this agent) | DoD + validate gate + evidence file | validate output, spec files | this file | PASS |
+
+### Drift Protocol
+
+- No upstream source file edits (`packages/qfai/src/`) in SDD phase ✅
+- Untracked test stubs (`packages/qfai/tests/e2e/prototypingRev10E2E.test.ts`, `packages/qfai/tests/integration/prototypingRev10Integration.test.ts`) are implementation-phase artifacts, not SDD modifications ✅
+- All modifications are to `.qfai/` SDD artifacts and `tests/` traceability files ✅
+
+### Discussion Review Evidence
+
+- **Review pack**: `.qfai/review/review-20260416195500000/`
+- **Reviewers**: R01 (completion-reviewer), R02 (requirements-reviewer), R03 (architecture-reviewer)
+- **Overall status**: PASS (summary.json v2.0, 2026-04-16)
+- **Discussion pack**: `discussion-20260416195444737` — 3 reviewer PASS
+
+### Final Status
+
+**PASS** — v1.7.15 rev10 SDD spec-0012 更新完了 (completion-reviewer gate)
+
+- Phase order: Contracts-first → Outline → Slice → Plan → Delta ✅
+- Required roles delegated: requirements-analyst, solution-architect, test-design-analyst ✅ (no orchestrator self-authoring)
+- DoD satisfied: validate gate error=31, all pre-existing; QFAI-COV-201..206 = 0 ✅
+- Validate gate evidence fresh (run-20260417061859640) ✅
+- Drift Protocol: no upstream edits without CR ✅
+- Test-layer policy: E2E by US annotations (US-0072..0076 in e2e traceability), Integration by TC annotations (TC-0243..0271 in integration traceability) ✅
+- Rev10-specific validate errors: **0** ✅
+- DR-IDs: DR-0012-0053..0056 (OQ-0001..0004 resolved) ✅
+- Hard gates: QFAI-COV-201..206 = 0, QFAI-ATDD-111/112/113 = 0 ✅
+
+### SDD Review Cycle (RCP) — Post-completion-reviewer
+
+**Review pack**: `.qfai/review/review-20260417070000000/`
+
+| Reviewer | Round 1 | Round 2 | Notes |
+|---|---|---|---|
+| completion-reviewer | PASS | — | DoD gate, all artifacts verified |
+| architecture-reviewer | REVISE | PASS | F-1/F-2/F-3 fixed; re-run → PASS |
+
+**Fixes applied before architecture-reviewer re-run:**
+- F-1: AC-0143..0149 expanded from stubs to full Gherkin (following AC-0142 pattern)
+- F-2: AC-0138/0139 rewritten — "And when" removed; split into two Given/When/Then blocks
+- F-3: EX-0173 updated — `terminationReason=""` empty string behavior explicitly specified as ERROR
+
+**Post-fix validate**: `error=31 warning=88 info=3` (all pre-existing, rev10-specific=0) ✅
+
+**Both blocking reviewers PASS** → SDD DONE ✅
 
 ---
 

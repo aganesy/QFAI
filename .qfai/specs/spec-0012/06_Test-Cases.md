@@ -2240,3 +2240,207 @@
 - AC-Refs: AC-0012-0127
 - Type: normal
 - Test: count test cases in `prototypingEvidence.test.ts` for ui[] leaf negatives: (1) declaredRef absent, (2) absolute path, (3) synthetic token, (4) renderEvidenceRefs empty, (5) renderEvidenceRefs synthetic, (6) browserQaEvidenceRefs empty, (7) browserQaEvidenceRefs Windows separator; assert all 7 present; `pnpm vitest run --project validators` exits 0
+
+
+## TC-0012-0243: in-progress+terminationReason present → error
+
+- Type: error
+- EX-Ref: EX-0012-0173
+- AC-Refs: AC-0012-0133
+- Verify: validator returns error when status=in-progress and terminationReason is set
+
+## TC-0012-0244: in-progress happy path (no terminationReason, pending fields)
+
+- Type: normal
+- EX-Ref: EX-0012-0173
+- AC-Refs: AC-0012-0133
+- Verify: validator passes when status=in-progress, terminationReason absent, finalDecision=pending, reviewerSignoff.status=pending
+
+## TC-0012-0245: in-progress+finalDecision≠pending → error
+
+- Type: error
+- EX-Ref: EX-0012-0174
+- AC-Refs: AC-0012-0134
+- Verify: validator returns error when status=in-progress and finalDecision=abandoned
+
+## TC-0012-0246: in-progress+reviewerSignoff.status≠pending → error
+
+- Type: error
+- EX-Ref: EX-0012-0174
+- AC-Refs: AC-0012-0135
+- Verify: validator returns error when status=in-progress and reviewerSignoff.status=abandoned
+
+## TC-0012-0247: completed+terminationReason absent → error
+
+- Type: error
+- EX-Ref: EX-0012-0175
+- AC-Refs: AC-0012-0136
+- Verify: validator returns error when status=completed and terminationReason is absent
+
+## TC-0012-0248: completed+terminationReason=abandoned → pass
+
+- Type: normal
+- EX-Ref: EX-0012-0175
+- AC-Refs: AC-0012-0137
+- Verify: validator passes with terminationReason=abandoned, finalDecision=abandoned, reviewerSignoff.status=abandoned
+
+## TC-0012-0249: completed+terminationReason=max-iterations → pass
+
+- Type: normal
+- EX-Ref: EX-0012-0175
+- AC-Refs: AC-0012-0137
+- Verify: validator passes with terminationReason=max-iterations
+
+## TC-0012-0250: completed+terminationReason=plateau → pass
+
+- Type: normal
+- EX-Ref: EX-0012-0175
+- AC-Refs: AC-0012-0137
+- Verify: validator passes with terminationReason=plateau
+
+## TC-0012-0251: completed+terminationReason=unknown-value → error
+
+- Type: error
+- EX-Ref: EX-0012-0175
+- AC-Refs: AC-0012-0137
+- Verify: validator returns error for unknown terminationReason values
+
+## TC-0012-0252: completed+finalDecision=pending → error
+
+- Type: error
+- EX-Ref: EX-0012-0176
+- AC-Refs: AC-0012-0138
+- Verify: validator returns error when finalDecision=pending on completed bundle
+
+## TC-0012-0253: completed+reviewerSignoff.status=pending → error
+
+- Type: error
+- EX-Ref: EX-0012-0176
+- AC-Refs: AC-0012-0139
+- Verify: validator returns error when reviewerSignoff.status=pending on completed bundle
+
+## TC-0012-0254: buildScreenContractInputs ref equals sourceRef
+
+- Type: normal
+- EX-Ref: EX-0012-0177
+- AC-Refs: AC-0012-0140
+- Verify: output ref matches readCanonicalScreenContracts() sourceRef exactly
+
+## TC-0012-0255: buildScreenContractInputs slug-based anchor not generated
+
+- Type: boundary
+- EX-Ref: EX-0012-0177
+- AC-Refs: AC-0012-0141
+- Verify: no slug-based anchor generation code exists in screenContracts.ts
+
+## TC-0012-0256: render evidenceRefs empty → error
+
+- Type: error
+- EX-Ref: EX-0012-0178
+- AC-Refs: AC-0012-0142
+- Verify: validator returns error when render=[]
+
+## TC-0012-0257: browserQa evidenceRefs empty → error
+
+- Type: error
+- EX-Ref: EX-0012-0178
+- AC-Refs: AC-0012-0143
+- Verify: validator returns error when browserQa=[]
+
+## TC-0012-0258: uiObservation evidenceRefs empty → error
+
+- Type: error
+- EX-Ref: EX-0012-0178
+- AC-Refs: AC-0012-0144
+- Verify: validator returns error when uiObservation=[]
+
+## TC-0012-0259: discussion evidenceRefs empty → error
+
+- Type: error
+- EX-Ref: EX-0012-0178
+- AC-Refs: AC-0012-0145
+- Verify: validator returns error when discussion=[]
+
+## TC-0012-0260: screenContract evidenceRefs empty → error
+
+- Type: error
+- EX-Ref: EX-0012-0178
+- AC-Refs: AC-0012-0146
+- Verify: validator returns error when screenContract=[]
+
+## TC-0012-0261: trend evidenceRefs empty → error
+
+- Type: error
+- EX-Ref: EX-0012-0178
+- AC-Refs: AC-0012-0147
+- Verify: validator returns error when trend=[]
+
+## TC-0012-0262: runtimeGate evidenceRefs empty → error
+
+- Type: error
+- EX-Ref: EX-0012-0178
+- AC-Refs: AC-0012-0148
+- Verify: validator returns error when runtimeGate=[] (uses assertConcreteArtifactRefs())
+
+## TC-0012-0263: specCoverage evidenceRefs empty → error
+
+- Type: error
+- EX-Ref: EX-0012-0178
+- AC-Refs: AC-0012-0149
+- Verify: validator returns error when specCoverage=[] (uses assertConcreteArtifactRefs())
+
+## TC-0012-0264: all 8 categories with 1 concrete ref each → pass
+
+- Type: normal
+- EX-Ref: EX-0012-0178
+- AC-Refs: AC-0012-0142, AC-0012-0143, AC-0012-0144, AC-0012-0145, AC-0012-0146, AC-0012-0147, AC-0012-0148, AC-0012-0149
+- Verify: validator passes when all 8 categories have at least 1 valid concrete ref
+
+## TC-0012-0265: placeholder in evidenceRefs category → error
+
+- Type: error
+- EX-Ref: EX-0012-0178
+- AC-Refs: AC-0012-0142
+- Verify: validator returns error when any category contains "TODO" or empty string
+
+## TC-0012-0266: assertConcreteArtifactRefs in pathUtils.ts (not refSemantics.ts)
+
+- Type: boundary
+- EX-Ref: EX-0012-0178
+- AC-Refs: AC-0012-0150
+- Verify: assertConcreteArtifactRefs exists in pathUtils.ts; no refSemantics.ts file created
+
+## TC-0012-0267: declaredRef .qfai/specs/+anchor → pass
+
+- Type: normal
+- EX-Ref: EX-0012-0179
+- AC-Refs: AC-0012-0151, AC-0012-0152
+- Verify: ".qfai/specs/spec-0012/01_Spec.md#L42" passes validator
+
+## TC-0012-0268: declaredRef bare path (no anchor) → error
+
+- Type: error
+- EX-Ref: EX-0012-0179
+- AC-Refs: AC-0012-0152
+- Verify: ".qfai/specs/spec-0012/01_Spec.md" (no anchor) returns error
+
+## TC-0012-0269: declaredRef .qfai/discussion/ path → error
+
+- Type: error
+- EX-Ref: EX-0012-0179
+- AC-Refs: AC-0012-0153
+- Verify: ".qfai/discussion/discussion-xxx/06_REQ.md#REQ-0001" returns error
+
+## TC-0012-0270: declaredRef non-.qfai/specs/ path → error
+
+- Type: edge
+- EX-Ref: EX-0012-0179
+- AC-Refs: AC-0012-0151
+- Verify: "packages/qfai/src/..." path returns error regardless of anchor presence
+
+## TC-0012-0271: all quality gates pass (WS-5)
+
+- Type: normal
+- EX-Ref: EX-0012-0177
+- AC-Refs: AC-0012-0154, AC-0012-0155
+- Verify: pnpm format:check && pnpm lint && pnpm check-types all pass; all tests GREEN
