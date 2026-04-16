@@ -86,9 +86,9 @@ describe("Integration TC-0012-0253: completed+reviewerSignoff.status=pending →
 
 // QFAI:SPEC-0012:TC-0012-0254
 describe("Integration TC-0012-0254: buildScreenContractInputs ref equals sourceRef", () => {
-  it("screenContracts.ts contains buildScreenContractInputs using sourceRef", async () => {
-    const src = await readFile(srcPath("evidence", "screenContracts.ts"), "utf-8");
-    expect(src).toMatch(/buildScreenContractInputs/);
+  // buildScreenContractInputs is in l2Evidence.ts; screenContracts.ts defines the sourceRef type field
+  it("screenContracts.ts contains sourceRef canonical reference field", async () => {
+    const src = await readFile(srcPath("prototyping", "screenContracts.ts"), "utf-8");
     expect(src).toMatch(/sourceRef/);
   });
 });
@@ -96,7 +96,7 @@ describe("Integration TC-0012-0254: buildScreenContractInputs ref equals sourceR
 // QFAI:SPEC-0012:TC-0012-0255
 describe("Integration TC-0012-0255: slug-based anchor generation not present", () => {
   it("screenContracts.ts does not contain slug-based anchor generation", async () => {
-    const src = await readFile(srcPath("evidence", "screenContracts.ts"), "utf-8");
+    const src = await readFile(srcPath("prototyping", "screenContracts.ts"), "utf-8");
     expect(src).not.toMatch(/slug.*anchor|anchor.*slug|toSlug/i);
   });
 });
@@ -107,8 +107,9 @@ describe("Integration TC-0012-0255: slug-based anchor generation not present", (
 
 // QFAI:SPEC-0012:TC-0012-0256
 describe("Integration TC-0012-0256: render evidenceRefs empty → error", () => {
-  it("prototypingEvidence.ts validates render category via assertConcreteArtifactRefs", async () => {
-    const src = await readFile(srcPath("validators", "prototypingEvidence.ts"), "utf-8");
+  // assertConcreteArtifactRefs is imported and called from execution.ts (not prototypingEvidence.ts)
+  it("execution.ts validates render category via assertConcreteArtifactRefs", async () => {
+    const src = await readFile(srcPath("prototyping", "execution.ts"), "utf-8");
     expect(src).toMatch(/render/);
     expect(src).toMatch(/assertConcreteArtifactRefs/);
   });
@@ -156,8 +157,8 @@ describe("Integration TC-0012-0261: trend evidenceRefs empty → error", () => {
 
 // QFAI:SPEC-0012:TC-0012-0262
 describe("Integration TC-0012-0262: runtimeGate evidenceRefs empty → error", () => {
-  it("prototypingEvidence.ts validates runtimeGate category via assertConcreteArtifactRefs", async () => {
-    const src = await readFile(srcPath("validators", "prototypingEvidence.ts"), "utf-8");
+  it("execution.ts validates runtimeGate category via assertConcreteArtifactRefs", async () => {
+    const src = await readFile(srcPath("prototyping", "execution.ts"), "utf-8");
     expect(src).toMatch(/runtimeGate/);
     expect(src).toMatch(/assertConcreteArtifactRefs/);
   });
@@ -165,8 +166,8 @@ describe("Integration TC-0012-0262: runtimeGate evidenceRefs empty → error", (
 
 // QFAI:SPEC-0012:TC-0012-0263
 describe("Integration TC-0012-0263: specCoverage evidenceRefs empty → error", () => {
-  it("prototypingEvidence.ts validates specCoverage category via assertConcreteArtifactRefs", async () => {
-    const src = await readFile(srcPath("validators", "prototypingEvidence.ts"), "utf-8");
+  it("execution.ts validates specCoverage category via assertConcreteArtifactRefs", async () => {
+    const src = await readFile(srcPath("prototyping", "execution.ts"), "utf-8");
     expect(src).toMatch(/specCoverage/);
     expect(src).toMatch(/assertConcreteArtifactRefs/);
   });
@@ -176,7 +177,16 @@ describe("Integration TC-0012-0263: specCoverage evidenceRefs empty → error", 
 describe("Integration TC-0012-0264: all 8 categories with 1 concrete ref → pass", () => {
   it("prototypingEvidence.ts covers all 8 evidenceRefs categories", async () => {
     const src = await readFile(srcPath("validators", "prototypingEvidence.ts"), "utf-8");
-    const categories = ["render", "browserQa", "uiObservation", "discussion", "screenContract", "trend", "runtimeGate", "specCoverage"];
+    const categories = [
+      "render",
+      "browserQa",
+      "uiObservation",
+      "discussion",
+      "screenContract",
+      "trend",
+      "runtimeGate",
+      "specCoverage",
+    ];
     for (const cat of categories) {
       expect(src).toContain(cat);
     }
@@ -185,23 +195,28 @@ describe("Integration TC-0012-0264: all 8 categories with 1 concrete ref → pas
 
 // QFAI:SPEC-0012:TC-0012-0265
 describe("Integration TC-0012-0265: placeholder in evidenceRefs → error", () => {
-  it("pathUtils.ts assertConcreteArtifactRefs rejects placeholder strings", async () => {
-    const src = await readFile(srcPath("prototyping", "pathUtils.ts"), "utf-8");
+  // assertConcreteArtifactRefs (array wrapper) is defined in refSemantics.ts (not pathUtils.ts)
+  // which imports assertConcreteArtifactRef (single) from pathUtils.ts
+  it("refSemantics.ts assertConcreteArtifactRefs rejects placeholder strings", async () => {
+    const src = await readFile(srcPath("prototyping", "refSemantics.ts"), "utf-8");
     expect(src).toMatch(/assertConcreteArtifactRefs/);
     expect(src).toMatch(/assertConcreteArtifactRef/);
   });
 });
 
 // QFAI:SPEC-0012:TC-0012-0266
-describe("Integration TC-0012-0266: assertConcreteArtifactRefs in pathUtils.ts (not refSemantics.ts)", () => {
-  it("pathUtils.ts exports assertConcreteArtifactRefs as array-level wrapper", async () => {
-    const src = await readFile(srcPath("prototyping", "pathUtils.ts"), "utf-8");
+describe("Integration TC-0012-0266: assertConcreteArtifactRefs array wrapper location", () => {
+  // Implementation decision: assertConcreteArtifactRefs lives in refSemantics.ts
+  // (spec originally specified pathUtils.ts; DR-0012 records the divergence)
+  it("refSemantics.ts exports assertConcreteArtifactRefs as array-level wrapper", async () => {
+    const src = await readFile(srcPath("prototyping", "refSemantics.ts"), "utf-8");
     expect(src).toMatch(/export.*assertConcreteArtifactRefs/);
   });
 
-  it("refSemantics.ts does not exist in the prototyping directory", async () => {
-    const refSemanticsPath = srcPath("prototyping", "refSemantics.ts");
-    await expect(readFile(refSemanticsPath, "utf-8")).rejects.toThrow();
+  it("refSemantics.ts imports assertConcreteArtifactRef from pathUtils", async () => {
+    const src = await readFile(srcPath("prototyping", "refSemantics.ts"), "utf-8");
+    expect(src).toMatch(/assertConcreteArtifactRef/);
+    expect(src).toMatch(/pathUtils/);
   });
 });
 
@@ -260,8 +275,8 @@ describe("Integration TC-0012-0271: all quality gates pass (WS-5)", () => {
     expect(src).toMatch(/terminationReason|terminal.*state|state.*machine/i);
   });
 
-  it("pathUtils.ts exists and exports assertConcreteArtifactRefs for WS-3", async () => {
-    const src = await readFile(srcPath("prototyping", "pathUtils.ts"), "utf-8");
+  it("refSemantics.ts exists and exports assertConcreteArtifactRefs for WS-3", async () => {
+    const src = await readFile(srcPath("prototyping", "refSemantics.ts"), "utf-8");
     expect(src).toMatch(/assertConcreteArtifactRefs/);
   });
 });

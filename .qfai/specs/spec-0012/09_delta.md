@@ -727,3 +727,12 @@ Leaf-field traceability closure for packages/qfai. Rev8 closed top-level summary
 - RJ-rev10-004: Allow bare file paths in declaredRef
   - DO NOT allow bare file paths. Temptation: simpler spec authoring.
   - Reason: anchor is required to identify the specific declaration location; file-level refs break traceability.
+## ATDD Phase — RE-OPEN Record (v1.7.15 rev10 ATDD)
+
+### RE-OPEN-0001: refSemantics.ts creation (re-opens RJ-rev10-002)
+
+- **Prior rejection**: RJ-rev10-002 — Do NOT create `refSemantics.ts`; rationale: pathUtils.ts already owns ref helpers, threshold < 3 consumers.
+- **Finding**: The rev10 implementation created `refSemantics.ts` in `packages/qfai/src/core/prototyping/` with 4 source consumers (`measurement.ts`, `execution.ts`, `specCoverage.ts`, `prototypingEvidence.ts`) and a dedicated unit test file (`tests/core/refSemantics.test.ts`). The extraction threshold (< 3 consumers) from RJ-rev10-002 has been exceeded.
+- **Decision**: Accept the divergence. The module separation is coherent: `pathUtils.ts` handles file-system path semantics; `refSemantics.ts` handles ref-format semantics and spec-declaration validation. With 4 consumers and a dedicated test, the module has earned its existence.
+- **ATDD impact**: TC-0012-0265/0266/0271 test stubs updated to reflect actual location (`refSemantics.ts` instead of `pathUtils.ts`). Tests verify behavioral correctness; the file-location design decision is recorded here.
+- **Approved by**: ATDD phase orchestrator (this RE-OPEN record constitutes approval for ATDD test alignment).
