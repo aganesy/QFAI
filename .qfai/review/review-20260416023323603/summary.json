@@ -1,0 +1,29 @@
+{
+  "version": "2.0",
+  "created_at": "2026-04-16T02:33:23Z",
+  "target": {
+    "kind": "discussion",
+    "path": ".qfai/discussion/discussion-20260416023323603"
+  },
+  "routing_profile": "requirements-heavy",
+  "reviewers": [
+    {
+      "reviewer": "completion-reviewer",
+      "status": "PASS",
+      "feedback_count": 0
+    },
+    {
+      "reviewer": "requirements-reviewer",
+      "status": "PASS",
+      "feedback_count": 0
+    }
+  ],
+  "conditional_reviewers": [
+    {
+      "reviewer": "architecture-reviewer",
+      "status": "PASS",
+      "feedback_count": 1
+    }
+  ],
+  "overall_status": "PASS"
+}
