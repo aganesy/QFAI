@@ -695,3 +695,65 @@ Evidence checked by reviewer:
 ### Final status (rev7)
 
 **PASS** — confirmed by independent completion-reviewer (real sub-agent)
+
+---
+
+## rev8 Update (v1.7.15 — WS-1/WS-2/WS-3/WS-4)
+
+### Objective
+
+Replace all `it.todo()` stubs added in SDD phase with real, runnable test assertions for:
+- WS-1: `pathUtils.ts` leaf module (TC-0012-0198..0201)
+- WS-2: `runtimeGate.evidenceRefs` validator (TC-0012-0204..0207)
+- WS-3: Unified ref grammar across all 5 sites (TC-0012-0209..0213)
+- WS-4: Closure regression test (TC-0012-0214..0218)
+- US-0012-0066: Closure regression test file existence (E2E)
+
+### Work performed
+
+**`packages/qfai/tests/integration/prototypingRev8Integration.test.ts`:**
+- Added full imports (fs/promises, os, validatePrototypingEvidence, defaultConfig, pathUtils helpers)
+- Added helper functions: `withTempRoot`, `seedAll`, `seedEvidence`, `buildValidEvidence`
+- Replaced all `it.todo()` stubs for TC-0199..0216 with real assertions:
+  - TC-0199: `toRepoRelativeArtifactRef` throws for outside-root path
+  - TC-0200: throws for directory path / no extension
+  - TC-0201: throws when both line and anchor specified
+  - TC-0204: absent evidenceRefs → QFAI-PROT-101
+  - TC-0205: empty array → QFAI-PROT-177
+  - TC-0206: absolute path → QFAI-PROT-318
+  - TC-0207: valid refs → no QFAI-PROT-177 or QFAI-PROT-318
+  - TC-0209: all 5 sites concrete → no QFAI-PROT-318
+  - TC-0210: source inspection + `isConcreteArtifactRef` pure function
+  - TC-0211: runtimeGateBuilder.ts imports from pathUtils
+  - TC-0212: absolute path in iterations evidenceRefs → QFAI-PROT-318
+  - TC-0213: `assertConcreteArtifactRef` throws/passes correctly
+  - TC-0214: source inspection of productionPath test positive closure
+  - TC-0215: specCoverage absolute ref → QFAI-PROT-318
+  - TC-0216: absent runtimeGate.evidenceRefs → QFAI-PROT-101
+  - TC-0217: fixed incorrect path (was `tests/validators/`, now `tests/unit/validators/` + `tests/core/`)
+
+**`packages/qfai/tests/e2e/prototypingRev8E2E.test.ts`:**
+- Replaced US-0066 `it.todo()` with real assertion checking productionPath test file content
+- Fixed US-0064 test to check validator file (where `evidenceRefs` actually lives) rather than `types.ts` alone
+
+### Commands executed + key outputs
+
+```
+pnpm vitest run --project integration → Test Files 37 passed, Tests 773 passed
+pnpm vitest run --project e2e        → Test Files 19 passed, Tests 419 passed
+pnpm format:check                    → modified files now clean (64 pre-existing warnings unchanged)
+pnpm lint                            → 7 errors (all pre-existing in other files)
+pnpm check-types                     → PASS (0 errors)
+npx qfai validate                    → error=51, warning=85 (baseline unchanged; 0 new errors added)
+```
+
+### Coverage obligations (rev8)
+
+| Layer       | Obligations | Covered | Status |
+|-------------|------------|---------|--------|
+| E2E         | US-0012-0063..0066 (4) | US-0063, 0064, 0065, 0066 | ✅ |
+| Integration | TC-0012-0198..0218 (21) | All 21 | ✅ |
+
+### Final status (rev8)
+
+**PASS** — all rev8 stubs implemented; 773 integration + 419 e2e tests pass; 0 new validate errors
