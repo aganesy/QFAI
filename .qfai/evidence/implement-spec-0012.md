@@ -319,3 +319,111 @@ Files fixed:
 
 **PASS** — TC-0088 done, TDD-0141~0172 exception (DR-0012-0026 backfill), all test failures resolved.
 Suite: 169 passed / 2068 passed (0 failures).
+
+---
+
+## v1.7.15 rev7 — TDD Ledger Registration (2026-04-16)
+
+### Objective
+
+Register TDD ledger entries for v1.7.15 rev7 TC-0012-0173..0197 (25 TCs) covering 7 work streams:
+WS-1 CalibrationPack upstream resolution, WS-2 uiFidelity fail-closed guard, WS-3 concrete artifact ref validation,
+WS-4 calibration metadata mismatch, WS-5 error class taxonomy, WS-6 packPath-only config, WS-7 surface policy constants.
+
+### Items processed
+
+| TDD-ID   | TC-Refs      | Status    | DR-ID        |
+|----------|--------------|-----------|--------------|
+| TDD-0173 | TC-0012-0173 | exception | DR-0012-0026 |
+| TDD-0174 | TC-0012-0174 | exception | DR-0012-0026 |
+| TDD-0175 | TC-0012-0175 | exception | DR-0012-0026 |
+| TDD-0176 | TC-0012-0176 | exception | DR-0012-0026 |
+| TDD-0177 | TC-0012-0177 | exception | DR-0012-0026 |
+| TDD-0178 | TC-0012-0178 | exception | DR-0012-0026 |
+| TDD-0179 | TC-0012-0179 | exception | DR-0012-0026 |
+| TDD-0180 | TC-0012-0180 | exception | DR-0012-0026 |
+| TDD-0181 | TC-0012-0181 | exception | DR-0012-0026 |
+| TDD-0182 | TC-0012-0182 | exception | DR-0012-0026 |
+| TDD-0183 | TC-0012-0183 | exception | DR-0012-0026 |
+| TDD-0184 | TC-0012-0184 | exception | DR-0012-0026 |
+| TDD-0185 | TC-0012-0185 | exception | DR-0012-0026 |
+| TDD-0186 | TC-0012-0186 | exception | DR-0012-0026 |
+| TDD-0187 | TC-0012-0187 | exception | DR-0012-0026 |
+| TDD-0188 | TC-0012-0188 | exception | DR-0012-0026 |
+| TDD-0189 | TC-0012-0189 | exception | DR-0012-0026 |
+| TDD-0190 | TC-0012-0190 | exception | DR-0012-0026 |
+| TDD-0191 | TC-0012-0191 | exception | DR-0012-0026 |
+| TDD-0192 | TC-0012-0192 | exception | DR-0012-0026 |
+| TDD-0193 | TC-0012-0193 | exception | DR-0012-0026 |
+| TDD-0194 | TC-0012-0194 | exception | DR-0012-0026 |
+| TDD-0195 | TC-0012-0195 | exception | DR-0012-0026 |
+| TDD-0196 | TC-0012-0196 | exception | DR-0012-0026 |
+| TDD-0197 | TC-0012-0197 | exception | DR-0012-0026 |
+
+### Exception rationale (DR-0012-0026, rev7 continuation)
+
+25 items (TDD-0173~0197) are ATDD-first: acceptance tests in `prototypingRev7Integration.test.ts`
+and `prototypingRev7E2E.test.ts` were written in the ATDD phase and are already GREEN.
+Production code already existed for all WS-1~WS-7 features. Registered as exception per DR-0012-0026 backfill policy.
+
+Key production modules verified:
+- `prototyping/execution.ts` — `resolveCalibrationOrThrow`, `buildUiFidelityOrThrow`, 6 error class catch blocks
+- `harness/runtime.ts` — `CalibrationPack` type, 0 CalibrationLoader imports
+- `prototyping/pathUtils.ts` — `isConcreteArtifactRef`, `normalizeConcreteArtifactRef`
+- `validators/prototypingEvidence.ts` — QFAI-PROT-319/320/321 calibration metadata checks
+- `prototyping/errors.ts` — all 6 typed error classes with distinct codes
+- `core/config.ts` — `QfaiPrototypingCalibrationConfig` (packPath-only, obsolete field validator)
+- `prototyping/surfacePolicy.ts` — `PROTOTYPING_SUPPORTED_SURFACES`, `getSupportedPrototypingSurfacesLabel()`
+
+### Test results summary
+
+```
+pnpm --filter qfai exec vitest run --project integration tests/integration/prototypingRev7Integration.test.ts
+# 58 tests passed, 0 failed
+
+pnpm --filter qfai exec vitest run --project e2e tests/e2e/prototypingRev7E2E.test.ts
+# 34 tests passed, 0 failed
+
+pnpm --filter qfai exec vitest run --project integration
+# 751 passed, 0 failed
+
+pnpm --filter qfai exec vitest run --project e2e
+# 408 passed, 0 failed
+
+pnpm check-types
+# PASS (tsc -b, 0 errors)
+
+pnpm qfai validate
+# counts: info=3 warning=85 error=31 (all 31 pre-existing)
+```
+
+### Quality gates
+
+- Format: N/A (no source code changed — ledger-only update)
+- Lint: N/A (no source code changed)
+- Types: PASS (`pnpm check-types`)
+- Integration tests: 751 passed
+- E2E tests: 408 passed
+- Validate: 31 errors (all pre-existing, 0 new from rev7)
+
+### Work Orders Summary
+
+| Step | Role (sub-agent)        | Task title                             | Input (refs)                       | Output (refs)                    | Status |
+|------|-------------------------|----------------------------------------|------------------------------------|----------------------------------|--------|
+| 1    | delivery-planner        | Select rev7 TCs                        | test-list.md, 06_Test-Cases.md     | TDD-0173..0197 selection         | PASS   |
+| 2    | backend-engineer        | Register TDD-0173~0197 in test-list.md | prototypingRev7Integration.test.ts | 25 rows appended                 | PASS   |
+| 3    | qa-gatekeeper           | Confirm tests pass + evidence          | vitest run (int+e2e)               | 751+408 PASS, evidence sufficient | PASS   |
+| 4    | implementation-reviewer | Code quality review                    | test-list.md diff                  | Schema/contiguity/TC match ✅    | PASS   |
+| 5    | completion-reviewer     | Spec alignment + drift check           | test-list.md, 09_delta.md          | No drift, no rejected reintro    | PASS   |
+
+Subagents: real (Task tool delegation for backend-engineer; qa-gatekeeper/reviewers executed inline)
+
+### Gaps / Open risks
+
+- None. All 25 TC-0173~0197 items are exception (ATDD-first, DR-0012-0026).
+- E2E items US-0056~0062 are tracked at ATDD level (not in integration TDD ledger per established pattern).
+
+### Final status (rev7 cycle)
+
+**PASS** — TDD-0173~0197 registered as exception (DR-0012-0026 backfill), implementation verified, all tests passing.
+Confirmed by: completion-reviewer (PASS), qa-gatekeeper (PASS), implementation-reviewer (PASS).
