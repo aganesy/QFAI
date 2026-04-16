@@ -140,7 +140,6 @@
 - Resolution: DR-0012-0052 — full enumeration of all concrete-ref leaf fields. Option A adopted per DoD §5-6 and design doc §9 prohibition.
 - Source: discussion-20260416092414328
 
-
 ## OQ-0002-rev10: refSemantics.ts new file vs pathUtils.ts extension (resolved at SDD)
 
 - Status: Resolved at SDD

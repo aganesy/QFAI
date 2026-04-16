@@ -9,13 +9,13 @@
 
 ## Review Scope
 
-| Workstream | Description |
-|---|---|
-| WS-1 | fullHarness terminal state machine (in-progress must not carry terminationReason) |
-| WS-2 | Canonical screen contract sourceRef (slug-derived anchors removed) |
-| WS-3 | 8-category evidenceRefs validation (non-empty + concrete-ref) |
-| WS-4 | declaredRef semantic constraint (.qfai/specs/ prefix + anchor required) |
-| WS-5 | Sync (traceability, delta, plan, steering) |
+| Workstream | Description                                                                       |
+| ---------- | --------------------------------------------------------------------------------- |
+| WS-1       | fullHarness terminal state machine (in-progress must not carry terminationReason) |
+| WS-2       | Canonical screen contract sourceRef (slug-derived anchors removed)                |
+| WS-3       | 8-category evidenceRefs validation (non-empty + concrete-ref)                     |
+| WS-4       | declaredRef semantic constraint (.qfai/specs/ prefix + anchor required)           |
+| WS-5       | Sync (traceability, delta, plan, steering)                                        |
 
 ## Artifacts in Scope
 
@@ -33,7 +33,7 @@
 
 ## Reviewers
 
-| # | Reviewer | Condition |
-|---|---|---|
-| R01 | completion-reviewer | Always |
+| #   | Reviewer              | Condition                                                                                                |
+| --- | --------------------- | -------------------------------------------------------------------------------------------------------- |
+| R01 | completion-reviewer   | Always                                                                                                   |
 | R02 | architecture-reviewer | Architecture-affecting: WS-1 terminal state machine, WS-2 sourceRef, WS-3 evidenceRefs, WS-4 declaredRef |

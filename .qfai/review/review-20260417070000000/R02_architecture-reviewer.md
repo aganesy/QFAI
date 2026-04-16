@@ -25,6 +25,7 @@ Then the validator returns an error`), with the category name substituted.
 
 **F-2 (AC-0138/0139 And when): RESOLVED**  
 Both ACs now use two independent Given/When/Then blocks:
+
 - AC-0138 block 1: completed + finalDecision="pending" → error
 - AC-0138 block 2: completed + terminationReason in valid set + finalDecision≠"abandoned" → error
 - AC-0139 block 1: completed + reviewerSignoff.status="pending" → error

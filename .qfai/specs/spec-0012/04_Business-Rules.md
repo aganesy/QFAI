@@ -889,7 +889,6 @@
 - AC-Refs: AC-0012-0132
 - Rule: `packages/qfai/README.md` must explicitly list all fields under the concrete artifact ref contract after WS-4. The list must include all rev9 leaf fields: `runtimeGate.ui[].declaredRef`, `runtimeGate.ui[].renderEvidenceRefs[]`, `runtimeGate.ui[].browserQaEvidenceRefs[]`, `fullHarness.iterations[].l1/l2.axes[].evidenceRefs[]`, `fullHarness.reviewerLogs[].evidenceRefs[]`. The description must not use language that implies only top-level fields are under the strict ref contract.
 
-
 ## BR-0012-0117: in-progress terminationReason absent (v1.7.15 rev10, WS-1)
 
 - AC-Refs: AC-0012-0133

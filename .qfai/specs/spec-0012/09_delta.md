@@ -648,7 +648,6 @@ Leaf-field traceability closure for packages/qfai. Rev8 closed top-level summary
 | WS-2 (bundleWriter)   | REQ-0116..0118 | US-0070       | AC-0124..0127 | BR-0112..0113 | EX-0169..0170 | TC-0234..0237 |
 | WS-3+4 (tests+README) | REQ-0119..0122 | US-0071       | AC-0128..0132 | BR-0114..0116 | EX-0171..0172 | TC-0238..0242 |
 
-
 ## v1.7.15 rev10 — Semantic Closure Hardening
 
 ### Summary
@@ -673,15 +672,15 @@ Leaf-field traceability closure for packages/qfai. Rev8 closed top-level summary
 
 ### Artifacts Added
 
-| Layer | IDs Added              | Description                                                           |
-| ----- | ---------------------- | --------------------------------------------------------------------- |
-| US    | US-0012-0072..0076     | 5 user stories (WS-1..WS-4 + sync)                                   |
-| AC    | AC-0012-0133..0155     | 23 acceptance criteria                                                |
-| BR    | BR-0012-0117..0123     | 7 business rules                                                      |
-| EX    | EX-0012-0173..0179     | 7 examples                                                            |
-| TC    | TC-0012-0243..0271     | 29 test cases (normal + error/boundary coverage per WS)               |
-| DR    | DR-0012-0053..0056     | 4 decision records (OQ-0001..0004 resolutions)                        |
-| REQ   | REQ-0123..REQ-0131     | 9 requirements                                                        |
+| Layer | IDs Added          | Description                                             |
+| ----- | ------------------ | ------------------------------------------------------- |
+| US    | US-0012-0072..0076 | 5 user stories (WS-1..WS-4 + sync)                      |
+| AC    | AC-0012-0133..0155 | 23 acceptance criteria                                  |
+| BR    | BR-0012-0117..0123 | 7 business rules                                        |
+| EX    | EX-0012-0173..0179 | 7 examples                                              |
+| TC    | TC-0012-0243..0271 | 29 test cases (normal + error/boundary coverage per WS) |
+| DR    | DR-0012-0053..0056 | 4 decision records (OQ-0001..0004 resolutions)          |
+| REQ   | REQ-0123..REQ-0131 | 9 requirements                                          |
 
 ### Traceability Chain
 
@@ -695,20 +694,20 @@ Leaf-field traceability closure for packages/qfai. Rev8 closed top-level summary
 
 ### Affected Source Files
 
-| File | WS | Change |
-|---|---|---|
-| `packages/qfai/src/core/prototyping/pathUtils.ts` | WS-3 | +assertConcreteArtifactRefs() array helper |
-| `packages/qfai/src/core/evidence/l2Evidence.ts` | WS-3 | use assertConcreteArtifactRefs() from pathUtils.ts |
-| `packages/qfai/src/core/evidence/screenContracts.ts` | WS-2 | use readCanonicalScreenContracts() sourceRef; remove slug anchor generation |
-| `packages/qfai/src/core/validators/specCoverage.ts` | WS-4 | declaredRef regex validation |
-| `packages/qfai/src/core/validators/prototypingEvidence.ts` | WS-1, WS-3 | terminal state machine + 8-category refs |
-| `packages/qfai/src/core/prototyping/execution.ts` | WS-1, WS-4 | state machine enforcement + declaredRef validation |
-| `packages/qfai/src/core/prototyping/runtime.ts` | WS-1 | terminal state machine transitions |
-| `packages/qfai/src/core/prototyping/history.ts` | WS-1 | history tracking for state machine |
-| `packages/qfai/tests/core/fullHarnessRuntime.test.ts` | WS-1 | negative fixtures (min 3) |
-| `packages/qfai/tests/core/prototypingEvidence.test.ts` | WS-3 | 8-category negative fixtures (min 8) |
-| `packages/qfai/tests/core/prototypingExecution.productionPath.test.ts` | WS-4 | declaredRef negative fixtures (min 2) |
-| `packages/qfai/README.md` | WS-5 | WS-1~WS-4 API changes |
+| File                                                                   | WS         | Change                                                                      |
+| ---------------------------------------------------------------------- | ---------- | --------------------------------------------------------------------------- |
+| `packages/qfai/src/core/prototyping/pathUtils.ts`                      | WS-3       | +assertConcreteArtifactRefs() array helper                                  |
+| `packages/qfai/src/core/evidence/l2Evidence.ts`                        | WS-3       | use assertConcreteArtifactRefs() from pathUtils.ts                          |
+| `packages/qfai/src/core/evidence/screenContracts.ts`                   | WS-2       | use readCanonicalScreenContracts() sourceRef; remove slug anchor generation |
+| `packages/qfai/src/core/validators/specCoverage.ts`                    | WS-4       | declaredRef regex validation                                                |
+| `packages/qfai/src/core/validators/prototypingEvidence.ts`             | WS-1, WS-3 | terminal state machine + 8-category refs                                    |
+| `packages/qfai/src/core/prototyping/execution.ts`                      | WS-1, WS-4 | state machine enforcement + declaredRef validation                          |
+| `packages/qfai/src/core/prototyping/runtime.ts`                        | WS-1       | terminal state machine transitions                                          |
+| `packages/qfai/src/core/prototyping/history.ts`                        | WS-1       | history tracking for state machine                                          |
+| `packages/qfai/tests/core/fullHarnessRuntime.test.ts`                  | WS-1       | negative fixtures (min 3)                                                   |
+| `packages/qfai/tests/core/prototypingEvidence.test.ts`                 | WS-3       | 8-category negative fixtures (min 8)                                        |
+| `packages/qfai/tests/core/prototypingExecution.productionPath.test.ts` | WS-4       | declaredRef negative fixtures (min 2)                                       |
+| `packages/qfai/README.md`                                              | WS-5       | WS-1~WS-4 API changes                                                       |
 
 ### Rejected Options (rev10)
 
@@ -727,6 +726,7 @@ Leaf-field traceability closure for packages/qfai. Rev8 closed top-level summary
 - RJ-rev10-004: Allow bare file paths in declaredRef
   - DO NOT allow bare file paths. Temptation: simpler spec authoring.
   - Reason: anchor is required to identify the specific declaration location; file-level refs break traceability.
+
 ## ATDD Phase — RE-OPEN Record (v1.7.15 rev10 ATDD)
 
 ### RE-OPEN-0001: refSemantics.ts creation (re-opens RJ-rev10-002)
@@ -736,3 +736,13 @@ Leaf-field traceability closure for packages/qfai. Rev8 closed top-level summary
 - **Decision**: Accept the divergence. The module separation is coherent: `pathUtils.ts` handles file-system path semantics; `refSemantics.ts` handles ref-format semantics and spec-declaration validation. With 4 consumers and a dedicated test, the module has earned its existence.
 - **ATDD impact**: TC-0012-0265/0266/0271 test stubs updated to reflect actual location (`refSemantics.ts` instead of `pathUtils.ts`). Tests verify behavioral correctness; the file-location design decision is recorded here.
 - **Approved by**: ATDD phase orchestrator (this RE-OPEN record constitutes approval for ATDD test alignment).
+
+## Implement Phase — TDD Ledger Backfill (v1.7.15 rev10)
+
+### DR-0012-0057: ATDD-first backfill for v1.7.15 rev10 WS-1..WS-5
+
+- **Decision**: Accept ATDD-first TDD ledger backfill for TC-0012-0249..TC-0012-0271 and the missed TC-0012-0218 entry.
+- **Rationale**: These tests were created during the ATDD phase (`prototypingRev10Integration.test.ts` for TC-0249..TC-0271; `prototypingRev8Integration.test.ts` for TC-0218) before the `/qfai-implement` TDD ledger cycle. All tests pass (vitest integration PASS, 2026-04-16). The ATDD-first pattern follows the precedent of DR-0012-0026, DR-0012-0049..0052.
+- **TC-0218 note**: TC-0012-0218 was accidentally skipped when TDD-0217 was recorded (TDD numbering jumped from 0217 to 0219). The test exists in `prototypingRev8Integration.test.ts` and passes.
+- **TC-0249..TC-0271 note**: These are source-inspection tests (not full behavioral coverage for all TCs; D-3 gaps for TC-0249..0253 noted as advisory F-4 from ATDD). Behavioral coverage deferred per ATDD advisory F-4.
+- **RE-OPEN-0001 cross-reference**: TDD-0266 (TC-0012-0266) uses RE-OPEN-0001 acceptance of `refSemantics.ts` (the source-inspection test verifies `refSemantics.ts` imports from `pathUtils.ts` rather than asserting it doesn't exist).

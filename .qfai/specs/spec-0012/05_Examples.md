@@ -1318,7 +1318,6 @@
 - When: README content is reviewed
 - Then: `ui[].declaredRef`, `ui[].renderEvidenceRefs[]`, `ui[].browserQaEvidenceRefs[]`, `axes[].evidenceRefs[]`, `reviewerLogs[].evidenceRefs[]` are all explicitly listed as concrete-ref fields; no partial-strictness gap
 
-
 ## EX-0012-0173: in-progress terminationReason violation (BR-0012-0117)
 
 - Happy path: status=in-progress, terminationReason absent → validator PASS

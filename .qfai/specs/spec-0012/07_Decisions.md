@@ -454,7 +454,6 @@
   - DO NOT use minimal note approach for README update. Temptation: minimize README churn.
 - Source: OQ-0004, discussion-20260416092414328
 
-
 ## DR-0012-0053: terminationReason→finalDecision/reviewerSignoff mapping (v1.7.15 rev10, OQ-0001 resolution)
 
 - Decision: All three terminationReason values (abandoned, max-iterations, plateau) map to finalDecision=abandoned and reviewerSignoff.status=abandoned

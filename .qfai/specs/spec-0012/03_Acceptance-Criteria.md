@@ -1205,7 +1205,6 @@ Given `prototypingEvidence.test.ts`, when run, then it includes test cases for: 
 - US-Ref: US-0012-0071
 - Given packages/qfai/README.md after WS-4, when read, then all fields under the concrete artifact ref contract are listed including rev9 leaf fields, and the description does not imply that only top-level fields are validated.
 
-
 ## AC-0012-0133: in-progress bundle — terminationReason absent (US-0012-0072, REQ-0124)
 
 ```gherkin

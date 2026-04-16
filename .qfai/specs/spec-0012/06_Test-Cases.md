@@ -2241,7 +2241,6 @@
 - Type: normal
 - Test: count test cases in `prototypingEvidence.test.ts` for ui[] leaf negatives: (1) declaredRef absent, (2) absolute path, (3) synthetic token, (4) renderEvidenceRefs empty, (5) renderEvidenceRefs synthetic, (6) browserQaEvidenceRefs empty, (7) browserQaEvidenceRefs Windows separator; assert all 7 present; `pnpm vitest run --project validators` exits 0
 
-
 ## TC-0012-0243: in-progress+terminationReason present → error
 
 - Type: error

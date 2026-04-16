@@ -404,11 +404,11 @@
 
 ### Phase: SDD Outline (Phase 1)
 
-| Date       | Status  | Artifact                  | Change                                                                          | Source                                            |
-| ---------- | ------- | ------------------------- | ------------------------------------------------------------------------------- | ------------------------------------------------- |
+| Date       | Status  | Artifact                  | Change                                                                                                          | Source                                            |
+| ---------- | ------- | ------------------------- | --------------------------------------------------------------------------------------------------------------- | ------------------------------------------------- |
 | 2026-04-15 | adopted | spec-0012                 | v1.7.15 rev7: spec-0012 rev7 workstream artifacts added (7 US, AC/BR/EX/TC chains, WS-1〜WS-7 契約ギャップ閉鎖) | discussion-20260415203030886 rev7 completion      |
-| 2026-04-15 | adopted | 05_Contracts.md           | v1.7.15 rev7 Contract Posture 追加                                              | 内部モジュール変更のみ、外部 stable contract なし |
-| 2026-04-15 | adopted | spec-0012/07_Decisions.md | DR-0012-0041..0045 (rev7 OQ-0001..0005 解決結果) 追加                           | all 5 OQs resolved                                |
+| 2026-04-15 | adopted | 05_Contracts.md           | v1.7.15 rev7 Contract Posture 追加                                                                              | 内部モジュール変更のみ、外部 stable contract なし |
+| 2026-04-15 | adopted | spec-0012/07_Decisions.md | DR-0012-0041..0045 (rev7 OQ-0001..0005 解決結果) 追加                                                           | all 5 OQs resolved                                |
 
 ### Discussion Pack Reference
 
@@ -424,11 +424,11 @@
 
 ### Phase: SDD Outline (Phase 1)
 
-| Date       | Status  | Artifact                  | Change                                                                                           | Source                                                    |
-| ---------- | ------- | ------------------------- | ------------------------------------------------------------------------------------------------ | --------------------------------------------------------- |
-| 2026-04-16 | adopted | spec-0012                 | v1.7.15 rev8: spec-0012 rev8 workstream artifacts added (5 US, AC/BR/EX/TC chains, WS-1〜WS-4 ref grammar統一・runtimeGate拡張) | discussion-20260416023323603 rev8 completion              |
-| 2026-04-16 | adopted | 05_Contracts.md           | v1.7.15 rev8 Contract Posture 追加                                                               | 内部モジュール変更のみ、外部 stable contract なし          |
-| 2026-04-16 | adopted | spec-0012/07_Decisions.md | DR-0012-0046..0052 (rev8 OQ-0001..0004 解決結果 + SDD phase 決定) 追加                           | all OQs resolved                                         |
+| Date       | Status  | Artifact                  | Change                                                                                                                          | Source                                            |
+| ---------- | ------- | ------------------------- | ------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------- |
+| 2026-04-16 | adopted | spec-0012                 | v1.7.15 rev8: spec-0012 rev8 workstream artifacts added (5 US, AC/BR/EX/TC chains, WS-1〜WS-4 ref grammar統一・runtimeGate拡張) | discussion-20260416023323603 rev8 completion      |
+| 2026-04-16 | adopted | 05_Contracts.md           | v1.7.15 rev8 Contract Posture 追加                                                                                              | 内部モジュール変更のみ、外部 stable contract なし |
+| 2026-04-16 | adopted | spec-0012/07_Decisions.md | DR-0012-0046..0052 (rev8 OQ-0001..0004 解決結果 + SDD phase 決定) 追加                                                          | all OQs resolved                                  |
 
 ### Discussion Pack Reference
 
@@ -443,11 +443,11 @@
 
 ### Phase: SDD Outline (Phase 1)
 
-| Date       | Status  | Artifact                  | Change                                                                                                                  | Source                                                    |
-| ---------- | ------- | ------------------------- | ----------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------- |
-| 2026-04-16 | adopted | spec-0012                 | v1.7.15 rev9: spec-0012 rev9 workstream artifacts added (5 US, AC/BR/EX/TC chains, WS-1〜WS-4 leaf-field validation, bundleWriter strict schema) | discussion-20260416092414328 rev9 completion              |
-| 2026-04-16 | adopted | 05_Contracts.md           | v1.7.15 rev9 Contract Posture 追加                                                                                      | 内部モジュール変更のみ、外部 stable contract なし          |
-| 2026-04-16 | adopted | spec-0012/07_Decisions.md | DR-0012-0049..0052 (rev9 OQ-0001..0004 解決結果) 追加                                                                   | all OQs resolved                                         |
+| Date       | Status  | Artifact                  | Change                                                                                                                                           | Source                                            |
+| ---------- | ------- | ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------- |
+| 2026-04-16 | adopted | spec-0012                 | v1.7.15 rev9: spec-0012 rev9 workstream artifacts added (5 US, AC/BR/EX/TC chains, WS-1〜WS-4 leaf-field validation, bundleWriter strict schema) | discussion-20260416092414328 rev9 completion      |
+| 2026-04-16 | adopted | 05_Contracts.md           | v1.7.15 rev9 Contract Posture 追加                                                                                                               | 内部モジュール変更のみ、外部 stable contract なし |
+| 2026-04-16 | adopted | spec-0012/07_Decisions.md | DR-0012-0049..0052 (rev9 OQ-0001..0004 解決結果) 追加                                                                                            | all OQs resolved                                  |
 
 ### Discussion Pack Reference
 
@@ -462,11 +462,11 @@
 
 ### Phase: SDD Outline (Phase 1)
 
-| Date       | Status  | Artifact                  | Change                                                                                                                                              | Source                                                    |
-| ---------- | ------- | ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------- |
-| 2026-04-16 | adopted | spec-0012                 | v1.7.15 rev10: spec-0012 rev10 workstream artifacts added (5 US, AC/BR/EX/TC chains, WS-1 terminal state machine, WS-2 canonical sourceRef, WS-3 8-category refs, WS-4 declaredRef) | discussion-20260416195444737 rev10 completion             |
-| 2026-04-16 | adopted | 05_Contracts.md           | v1.7.15 rev10 Contract Posture 追加                                                                                                                 | 内部モジュール変更のみ、外部 stable contract なし          |
-| 2026-04-16 | adopted | spec-0012/07_Decisions.md | DR-0012-0053..0056 (rev10 OQ-0001..0004 解決結果) 追加                                                                                              | all OQs resolved (OQ-0002 resolved at SDD phase)         |
+| Date       | Status  | Artifact                  | Change                                                                                                                                                                              | Source                                            |
+| ---------- | ------- | ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------- |
+| 2026-04-16 | adopted | spec-0012                 | v1.7.15 rev10: spec-0012 rev10 workstream artifacts added (5 US, AC/BR/EX/TC chains, WS-1 terminal state machine, WS-2 canonical sourceRef, WS-3 8-category refs, WS-4 declaredRef) | discussion-20260416195444737 rev10 completion     |
+| 2026-04-16 | adopted | 05_Contracts.md           | v1.7.15 rev10 Contract Posture 追加                                                                                                                                                 | 内部モジュール変更のみ、外部 stable contract なし |
+| 2026-04-16 | adopted | spec-0012/07_Decisions.md | DR-0012-0053..0056 (rev10 OQ-0001..0004 解決結果) 追加                                                                                                                              | all OQs resolved (OQ-0002 resolved at SDD phase)  |
 
 ### Discussion Pack Reference
 

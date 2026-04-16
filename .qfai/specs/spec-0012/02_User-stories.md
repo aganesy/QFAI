@@ -462,7 +462,6 @@ As a package maintainer, I want `bundleWriter.ts` and any runtime builders to tr
 
 As a package maintainer, I want `tests/core/` to include negative test cases for every leaf-field malformed ref form and replace all synthetic token fixtures, and I want `README.md` to enumerate all fields under the concrete-ref contract, so that future regressions at leaf level are caught immediately and the documentation is accurate.
 
-
 ## US-0012-0072: Terminal State Machine Enforcement (v1.7.15 rev10, WS-1)
 
 - As a QFAI validator consumer,

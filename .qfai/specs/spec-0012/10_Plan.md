@@ -518,7 +518,6 @@ WS-4 (README) last.
 | O: bundleWriter + runtime    | schema required; null/omit prevented; type-check gate                                                          | TC-0012-0238..0239 |
 | P: test coverage + README    | 15 negatives present; no synthetic tokens; leaf fields enumerated                                              | TC-0012-0240..0242 |
 
-
 ## v1.7.15 rev10 Implementation Strategy
 
 ### Objective
@@ -531,12 +530,11 @@ Close 4 semantic gaps (WS-1~WS-4) and sync all layers (WS-5) in a single PR.
    - in-progress: terminationReason absent, finalDecision=pending, reviewerSignoff.status=pending
    - completed: terminationReason ∈ {abandoned, max-iterations, plateau}; finalDecision=abandoned; reviewerSignoff.status=abandoned
    - Update `runtime.ts` and `history.ts` with correct state transitions
-   
 2. **WS-2 (canonical sourceRef)**: In `screenContracts.ts`:
    - Remove slug-based anchor generation code
    - Make `buildScreenContractInputs()` use `readCanonicalScreenContracts()` sourceRef directly
 
-3. **WS-3 (8-category refs)**: 
+3. **WS-3 (8-category refs)**:
    - Add `assertConcreteArtifactRefs()` array helper to `pathUtils.ts`
    - Update `prototypingEvidence.ts` to call this helper for all 8 categories including runtimeGate and specCoverage
    - Update `l2Evidence.ts` consumers
@@ -544,7 +542,6 @@ Close 4 semantic gaps (WS-1~WS-4) and sync all layers (WS-5) in a single PR.
 4. **WS-4 (declaredRef semantic)**: In `specCoverage.ts`:
    - Add regex `/^\.qfai\/specs\/.+#(L\d+|\S+)$/` validation inline
    - Fail-closed: error on .qfai/discussion/, bare paths, non-.qfai/specs/ paths
-   
 5. **WS-5 (sync)**:
    - Update tests: fullHarnessRuntime.test.ts (WS-1, min 3 negative), prototypingEvidence.test.ts (WS-3, min 8 negative per category), productionPath.test.ts (WS-4, min 2 negative)
    - Update README.md to reflect WS-1~WS-4 constraints
