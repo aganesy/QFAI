@@ -1,0 +1,31 @@
+{
+  "review_pack_id": "review-20260416092414328",
+  "target": {
+    "kind": "discussion",
+    "id": "discussion-20260416092414328"
+  },
+  "profile": "requirements-heavy",
+  "reviewers": [
+    {
+      "role": "completion-reviewer",
+      "file": "R01_completion-reviewer.md",
+      "result": "PASS"
+    },
+    {
+      "role": "requirements-reviewer",
+      "file": "R02_requirements-reviewer.md",
+      "result": "PASS"
+    },
+    {
+      "role": "architecture-reviewer",
+      "file": "R03_architecture-reviewer.md",
+      "result": "PASS"
+    }
+  ],
+  "overall_result": "PASS",
+  "open_count": 0,
+  "deferred_count": 1,
+  "req_count": 20,
+  "nfr_count": 5,
+  "timestamp": "2026-04-16T09:24:14.328Z"
+}
