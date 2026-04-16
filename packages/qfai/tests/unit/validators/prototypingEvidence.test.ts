@@ -4,7 +4,7 @@
  * Backfill TDD: impl landed in v1.7.15 before unit tests were bound to TC-IDs.
  * Exception pattern sanctioned by DR-0004-0006.
  */
-import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -1059,6 +1059,383 @@ describe("TC-0012-0203..0212: runtimeGate.evidenceRefs validator rev8 (v1.7.15 r
       expect(issues.some((i) => i.code === "QFAI-PROT-318" || i.code === "QFAI-PROT-314")).toBe(
         true,
       );
+    });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// TC-0012-0219..0248: leaf field concrete-ref validators (v1.7.15 rev9)
+// Backfill TDD: exception pattern sanctioned by DR-0012-0049..0052
+// ---------------------------------------------------------------------------
+
+describe("TC-0012-0219..0248: leaf field concrete-ref validators (v1.7.15 rev9)", () => {
+  // QFAI:SPEC-0012:TC-0012-0242
+  it("TC-0012-0242: no parallel grammar implementation outside pathUtils.ts", async () => {
+    const src = await readFile(
+      new URL("../../../src/core/validators/prototypingEvidence.ts", import.meta.url),
+      "utf-8",
+    );
+    // Grammar is delegated to pathUtils.ts — no inline regex or isAbsolute calls for leaf fields
+    expect(src).toContain("isConcreteArtifactRef");
+    expect(src).toContain('from "../prototyping/pathUtils.js"');
+  });
+
+  // QFAI:SPEC-0012:TC-0012-0243
+  it("TC-0012-0243: isConcreteArtifactRef reuse static check — no duplicate grammar", async () => {
+    const src = await readFile(
+      new URL("../../../src/core/validators/prototypingEvidence.ts", import.meta.url),
+      "utf-8",
+    );
+    const callCount = (src.match(/isConcreteArtifactRef/g) ?? []).length;
+    expect(callCount).toBeGreaterThan(0);
+    // No inline .startsWith(".qfai/") checks for concrete-ref validation (that belongs in pathUtils)
+    const validatorCallCount = (src.match(/pushConcreteArtifactRefIssues/g) ?? []).length;
+    expect(validatorCallCount).toBeGreaterThan(0);
+  });
+
+  // QFAI:SPEC-0012:TC-0012-0219
+  it("TC-0012-0219: runtimeGate.ui[].declaredRef absent — PROT-101 (schema parse failure)", async () => {
+    await withTempRoot(async (root) => {
+      await seedAll(root);
+      const base = buildValidEvidence();
+      const rg = base.runtimeGate as Record<string, unknown>;
+      const uiRow = (rg.ui as Array<Record<string, unknown>>)[0];
+      const { declaredRef: _omit, ...rowWithoutDeclaredRef } = uiRow as {
+        declaredRef: unknown;
+        [key: string]: unknown;
+      };
+      await seedEvidence(root, {
+        ...base,
+        runtimeGate: { ...rg, ui: [rowWithoutDeclaredRef] },
+      });
+      const issues = await validatePrototypingEvidence(root, defaultConfig);
+      // Missing declaredRef fails schema parsing → PROT-101
+      expect(hasCode(issues, "QFAI-PROT-101")).toBe(true);
+    });
+  });
+
+  // QFAI:SPEC-0012:TC-0012-0220
+  it("TC-0012-0220: runtimeGate.ui[].declaredRef absolute path — PROT-318", async () => {
+    await withTempRoot(async (root) => {
+      await seedAll(root);
+      const base = buildValidEvidence();
+      const rg = base.runtimeGate as Record<string, unknown>;
+      const uiRow = (rg.ui as Array<Record<string, unknown>>)[0];
+      await seedEvidence(root, {
+        ...base,
+        runtimeGate: { ...rg, ui: [{ ...uiRow, declaredRef: "/abs/path/spec.md" }] },
+      });
+      const issues = await validatePrototypingEvidence(root, defaultConfig);
+      expect(hasCode(issues, "QFAI-PROT-318")).toBe(true);
+    });
+  });
+
+  // QFAI:SPEC-0012:TC-0012-0221
+  it("TC-0012-0221: runtimeGate.ui[].declaredRef self-ref — PROT-318", async () => {
+    await withTempRoot(async (root) => {
+      await seedAll(root);
+      const base = buildValidEvidence();
+      const rg = base.runtimeGate as Record<string, unknown>;
+      const uiRow = (rg.ui as Array<Record<string, unknown>>)[0];
+      await seedEvidence(root, {
+        ...base,
+        runtimeGate: {
+          ...rg,
+          ui: [{ ...uiRow, declaredRef: ".qfai/evidence/prototyping.json" }],
+        },
+      });
+      const issues = await validatePrototypingEvidence(root, defaultConfig);
+      expect(hasCode(issues, "QFAI-PROT-318")).toBe(true);
+    });
+  });
+
+  // QFAI:SPEC-0012:TC-0012-0222
+  it("TC-0012-0222: runtimeGate.ui[].renderEvidenceRefs[] empty array — PROT-318", async () => {
+    await withTempRoot(async (root) => {
+      await seedAll(root);
+      const base = buildValidEvidence();
+      const rg = base.runtimeGate as Record<string, unknown>;
+      const uiRow = (rg.ui as Array<Record<string, unknown>>)[0];
+      await seedEvidence(root, {
+        ...base,
+        runtimeGate: { ...rg, ui: [{ ...uiRow, renderEvidenceRefs: [] }] },
+      });
+      const issues = await validatePrototypingEvidence(root, defaultConfig);
+      expect(hasCode(issues, "QFAI-PROT-318")).toBe(true);
+    });
+  });
+
+  // QFAI:SPEC-0012:TC-0012-0223
+  it("TC-0012-0223: runtimeGate.ui[].renderEvidenceRefs[] synthetic token — PROT-318", async () => {
+    await withTempRoot(async (root) => {
+      await seedAll(root);
+      const base = buildValidEvidence();
+      const rg = base.runtimeGate as Record<string, unknown>;
+      const uiRow = (rg.ui as Array<Record<string, unknown>>)[0];
+      await seedEvidence(root, {
+        ...base,
+        runtimeGate: { ...rg, ui: [{ ...uiRow, renderEvidenceRefs: ["a"] }] },
+      });
+      const issues = await validatePrototypingEvidence(root, defaultConfig);
+      expect(hasCode(issues, "QFAI-PROT-318")).toBe(true);
+    });
+  });
+
+  // QFAI:SPEC-0012:TC-0012-0224
+  it("TC-0012-0224: runtimeGate.ui[].browserQaEvidenceRefs[] absent or empty — PROT-318", async () => {
+    await withTempRoot(async (root) => {
+      await seedAll(root);
+      const base = buildValidEvidence();
+      const rg = base.runtimeGate as Record<string, unknown>;
+      const uiRow = (rg.ui as Array<Record<string, unknown>>)[0];
+      await seedEvidence(root, {
+        ...base,
+        runtimeGate: { ...rg, ui: [{ ...uiRow, browserQaEvidenceRefs: [] }] },
+      });
+      const issues = await validatePrototypingEvidence(root, defaultConfig);
+      expect(hasCode(issues, "QFAI-PROT-318")).toBe(true);
+    });
+  });
+
+  // QFAI:SPEC-0012:TC-0012-0225
+  it("TC-0012-0225: runtimeGate.ui[].browserQaEvidenceRefs[] bare filename — PROT-318", async () => {
+    await withTempRoot(async (root) => {
+      await seedAll(root);
+      const base = buildValidEvidence();
+      const rg = base.runtimeGate as Record<string, unknown>;
+      const uiRow = (rg.ui as Array<Record<string, unknown>>)[0];
+      await seedEvidence(root, {
+        ...base,
+        runtimeGate: { ...rg, ui: [{ ...uiRow, browserQaEvidenceRefs: ["home.json"] }] },
+      });
+      const issues = await validatePrototypingEvidence(root, defaultConfig);
+      expect(hasCode(issues, "QFAI-PROT-318")).toBe(true);
+    });
+  });
+
+  // QFAI:SPEC-0012:TC-0012-0226
+  it("TC-0012-0226: runtimeGate.ui[].browserQaEvidenceRefs[] windows separator — PROT-318 (boundary)", async () => {
+    await withTempRoot(async (root) => {
+      await seedAll(root);
+      const base = buildValidEvidence();
+      const rg = base.runtimeGate as Record<string, unknown>;
+      const uiRow = (rg.ui as Array<Record<string, unknown>>)[0];
+      await seedEvidence(root, {
+        ...base,
+        runtimeGate: {
+          ...rg,
+          ui: [{ ...uiRow, browserQaEvidenceRefs: [".qfai\\evidence\\home.json"] }],
+        },
+      });
+      const issues = await validatePrototypingEvidence(root, defaultConfig);
+      expect(hasCode(issues, "QFAI-PROT-318")).toBe(true);
+    });
+  });
+
+  // QFAI:SPEC-0012:TC-0012-0227
+  it("TC-0012-0227: runtimeGate.ui[] all three leaf fields valid — zero PROT-318 for ui row", async () => {
+    await withTempRoot(async (root) => {
+      await seedAll(root);
+      await seedEvidence(root, buildValidEvidence());
+      const issues = await validatePrototypingEvidence(root, defaultConfig);
+      expect(issues.filter((i) => i.code === "QFAI-PROT-318")).toHaveLength(0);
+    });
+  });
+
+  // QFAI:SPEC-0012:TC-0012-0244
+  it("TC-0012-0244: ui[] all leaf fields valid — full row passes (AC-0012-0104..0109)", async () => {
+    await withTempRoot(async (root) => {
+      await seedAll(root);
+      await seedEvidence(root, buildValidEvidence());
+      const issues = await validatePrototypingEvidence(root, defaultConfig);
+      expect(issues.filter((i) => i.code === "QFAI-PROT-318")).toHaveLength(0);
+    });
+  });
+
+  // QFAI:SPEC-0012:TC-0012-0228
+  it("TC-0012-0228: l1.axes[].evidenceRefs[] synthetic token — PROT-318", async () => {
+    await withTempRoot(async (root) => {
+      await seedAll(root);
+      const base = buildValidEvidence();
+      const fh = base.fullHarness as Record<string, unknown>;
+      const iters = fh.iterations as Array<Record<string, unknown>>;
+      const iter0 = { ...iters[0] };
+      const l1 = { ...(iter0.l1 as Record<string, unknown>) };
+      const axes = [...(l1.axes as Array<Record<string, unknown>>)];
+      axes[0] = { ...axes[0], evidenceRefs: ["a"] };
+      iter0.l1 = { ...l1, axes };
+      await seedEvidence(root, buildValidEvidence({ fullHarness: { ...fh, iterations: [iter0] } }));
+      const issues = await validatePrototypingEvidence(root, defaultConfig);
+      expect(hasCode(issues, "QFAI-PROT-318")).toBe(true);
+    });
+  });
+
+  // QFAI:SPEC-0012:TC-0012-0229
+  it("TC-0012-0229: l2.axes[].evidenceRefs[] synthetic token — PROT-318", async () => {
+    await withTempRoot(async (root) => {
+      await seedAll(root);
+      const base = buildValidEvidence();
+      const fh = base.fullHarness as Record<string, unknown>;
+      const iters = fh.iterations as Array<Record<string, unknown>>;
+      const iter0 = { ...iters[0] };
+      const l2 = { ...(iter0.l2 as Record<string, unknown>) };
+      const axes = [...(l2.axes as Array<Record<string, unknown>>)];
+      axes[0] = { ...axes[0], evidenceRefs: ["b"] };
+      iter0.l2 = { ...l2, axes };
+      await seedEvidence(root, buildValidEvidence({ fullHarness: { ...fh, iterations: [iter0] } }));
+      const issues = await validatePrototypingEvidence(root, defaultConfig);
+      expect(hasCode(issues, "QFAI-PROT-318")).toBe(true);
+    });
+  });
+
+  // QFAI:SPEC-0012:TC-0012-0230
+  it("TC-0012-0230: l1.axes[].evidenceRefs[] empty array — PROT-318 (boundary)", async () => {
+    await withTempRoot(async (root) => {
+      await seedAll(root);
+      const base = buildValidEvidence();
+      const fh = base.fullHarness as Record<string, unknown>;
+      const iters = fh.iterations as Array<Record<string, unknown>>;
+      const iter0 = { ...iters[0] };
+      const l1 = { ...(iter0.l1 as Record<string, unknown>) };
+      const axes = [...(l1.axes as Array<Record<string, unknown>>)];
+      axes[0] = { ...axes[0], evidenceRefs: [] };
+      iter0.l1 = { ...l1, axes };
+      await seedEvidence(root, buildValidEvidence({ fullHarness: { ...fh, iterations: [iter0] } }));
+      const issues = await validatePrototypingEvidence(root, defaultConfig);
+      expect(hasCode(issues, "QFAI-PROT-318")).toBe(true);
+    });
+  });
+
+  // QFAI:SPEC-0012:TC-0012-0231
+  it("TC-0012-0231: axes[] self-ref to prototyping.json — PROT-318", async () => {
+    await withTempRoot(async (root) => {
+      await seedAll(root);
+      const base = buildValidEvidence();
+      const fh = base.fullHarness as Record<string, unknown>;
+      const iters = fh.iterations as Array<Record<string, unknown>>;
+      const iter0 = { ...iters[0] };
+      const l2 = { ...(iter0.l2 as Record<string, unknown>) };
+      const axes = [...(l2.axes as Array<Record<string, unknown>>)];
+      axes[0] = { ...axes[0], evidenceRefs: [".qfai/evidence/prototyping.json#/iterations/0"] };
+      iter0.l2 = { ...l2, axes };
+      await seedEvidence(root, buildValidEvidence({ fullHarness: { ...fh, iterations: [iter0] } }));
+      const issues = await validatePrototypingEvidence(root, defaultConfig);
+      expect(hasCode(issues, "QFAI-PROT-318")).toBe(true);
+    });
+  });
+
+  // QFAI:SPEC-0012:TC-0012-0232
+  it("TC-0012-0232: per-axis validation isolation — one bad axis in many", async () => {
+    await withTempRoot(async (root) => {
+      await seedAll(root);
+      const base = buildValidEvidence();
+      const fh = base.fullHarness as Record<string, unknown>;
+      const iters = fh.iterations as Array<Record<string, unknown>>;
+      const iter0 = { ...iters[0] };
+      const l1 = { ...(iter0.l1 as Record<string, unknown>) };
+      const goodAxis = {
+        axisId: "runtime",
+        score: 0.9,
+        rationale: "ok",
+        evidenceRefs: [".qfai/evidence/render.json#/screens/0"],
+      };
+      const badAxis = {
+        axisId: "design",
+        score: 0.8,
+        rationale: "ok",
+        evidenceRefs: ["a"],
+      };
+      iter0.l1 = { ...l1, axes: [goodAxis, badAxis] };
+      await seedEvidence(root, buildValidEvidence({ fullHarness: { ...fh, iterations: [iter0] } }));
+      const issues = await validatePrototypingEvidence(root, defaultConfig);
+      expect(hasCode(issues, "QFAI-PROT-318")).toBe(true);
+    });
+  });
+
+  // QFAI:SPEC-0012:TC-0012-0245
+  it("TC-0012-0245: axis L1 — evidenceRefs[] non-empty per-axis required (AC-0012-0111)", async () => {
+    await withTempRoot(async (root) => {
+      await seedAll(root);
+      const base = buildValidEvidence();
+      const fh = base.fullHarness as Record<string, unknown>;
+      const iters = fh.iterations as Array<Record<string, unknown>>;
+      const iter0 = { ...iters[0] };
+      const l1 = { ...(iter0.l1 as Record<string, unknown>) };
+      const axes = [...(l1.axes as Array<Record<string, unknown>>)];
+      axes[0] = { ...axes[0], evidenceRefs: [] };
+      iter0.l1 = { ...l1, axes };
+      await seedEvidence(root, buildValidEvidence({ fullHarness: { ...fh, iterations: [iter0] } }));
+      const issues = await validatePrototypingEvidence(root, defaultConfig);
+      expect(hasCode(issues, "QFAI-PROT-318")).toBe(true);
+    });
+  });
+
+  // QFAI:SPEC-0012:TC-0012-0246
+  it("TC-0012-0246: axis L1 — evidenceRefs[i] concrete ref requirement — per-entry (AC-0012-0112)", async () => {
+    await withTempRoot(async (root) => {
+      await seedAll(root);
+      const base = buildValidEvidence();
+      const fh = base.fullHarness as Record<string, unknown>;
+      const iters = fh.iterations as Array<Record<string, unknown>>;
+      const iter0 = { ...iters[0] };
+      const l1 = { ...(iter0.l1 as Record<string, unknown>) };
+      const goodAxis = {
+        axisId: "runtime",
+        score: 0.9,
+        rationale: "ok",
+        evidenceRefs: [".qfai/evidence/iter-0/axis-0.md#finding-1"],
+      };
+      const badAxis = {
+        axisId: "design",
+        score: 0.8,
+        rationale: "ok",
+        evidenceRefs: ["a"],
+      };
+      iter0.l1 = { ...l1, axes: [goodAxis, badAxis] };
+      await seedEvidence(root, buildValidEvidence({ fullHarness: { ...fh, iterations: [iter0] } }));
+      const issues = await validatePrototypingEvidence(root, defaultConfig);
+      expect(hasCode(issues, "QFAI-PROT-318")).toBe(true);
+    });
+  });
+
+  // QFAI:SPEC-0012:TC-0012-0233
+  it("TC-0012-0233: reviewerLogs[].evidenceRefs[] synthetic token — PROT-318", async () => {
+    await withTempRoot(async (root) => {
+      await seedAll(root);
+      await seedEvidence(
+        root,
+        withFullHarness({ reviewerLogs: [makeReviewerLog({ evidenceRefs: ["reviewer:1"] })] }),
+      );
+      const issues = await validatePrototypingEvidence(root, defaultConfig);
+      expect(hasCode(issues, "QFAI-PROT-318")).toBe(true);
+    });
+  });
+
+  // QFAI:SPEC-0012:TC-0012-0234
+  it("TC-0012-0234: reviewerLogs[].evidenceRefs[] absolute path — PROT-318", async () => {
+    await withTempRoot(async (root) => {
+      await seedAll(root);
+      await seedEvidence(
+        root,
+        withFullHarness({
+          reviewerLogs: [makeReviewerLog({ evidenceRefs: ["/abs/path/reviewer.md"] })],
+        }),
+      );
+      const issues = await validatePrototypingEvidence(root, defaultConfig);
+      expect(hasCode(issues, "QFAI-PROT-318")).toBe(true);
+    });
+  });
+
+  // QFAI:SPEC-0012:TC-0012-0235
+  it("TC-0012-0235: reviewerLogs[].evidenceRefs[] empty array — PROT-318", async () => {
+    await withTempRoot(async (root) => {
+      await seedAll(root);
+      await seedEvidence(
+        root,
+        withFullHarness({ reviewerLogs: [makeReviewerLog({ evidenceRefs: [] })] }),
+      );
+      const issues = await validatePrototypingEvidence(root, defaultConfig);
+      expect(hasCode(issues, "QFAI-PROT-318")).toBe(true);
     });
   });
 });

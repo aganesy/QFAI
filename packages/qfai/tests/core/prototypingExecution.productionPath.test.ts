@@ -239,6 +239,7 @@ describe("prototyping execution production path", () => {
   });
 
   // QFAI:SPEC-0012:TC-0012-0214
+  // QFAI:SPEC-0012:TC-0012-0240
   it("passes the execution -> validate closure with validator success", async () => {
     await withRoot(async (root) => {
       const result = await runPrototypingExecution({
