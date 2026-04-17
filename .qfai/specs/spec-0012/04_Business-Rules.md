@@ -946,3 +946,94 @@
 - Rule: .qfai/discussion/ paths, screen contract refs, bare file paths are all invalid
 - Rationale: OQ-0004 resolved (DR-0012-0056): traceability requires specific declaration location
 - Single source: regex defined once in specCoverage.ts (inline, no refSemantics.ts)
+
+
+## BR-0012-0124: index.ts Must Not Export runMeasurement or validatePanelScore (v1.7.15 rev11, WS-1)
+
+- AC-Refs: AC-0012-0156
+- `src/core/index.ts` は `runMeasurement` および `validatePanelScore` を named export または barrel re-export しない。
+- `export *` による間接露出も含め、すべての export 経路を閉じる。
+- これらは `runFullHarness()` の内部実装であり、外部 API として設計されていない。
+
+## BR-0012-0125: runMeasurement Validates All 8 Category Refs (v1.7.15 rev11, WS-1)
+
+- AC-Refs: AC-0012-0157
+- `runMeasurement()` は次の全カテゴリ ref 配列が非空かつ concrete artifact ref であることを検証する:
+  renderRefs, browserQaRefs, runtimeGateRefs, uiObservationRefs, specCoverageRefs, discussionRefs, trendRefs, screenContractRefs
+- 空配列、絶対パス、synthetic token (`.qfai/placeholder` 等) は reject する。
+- 検証は assertConcreteArtifactRefs() を利用する。
+
+## BR-0012-0126: screenContractRefs Must Use Canonical Form (v1.7.15 rev11, WS-1)
+
+- AC-Refs: AC-0012-0158
+- `runMeasurement()` の `screenContractRefs[]` は `.qfai/discussion/<pack>/uiux/40_screen_contracts.md#<screenId>` 形式のみ受け付ける。
+- `#screen:<slug>` 形式（例: `#screen:dashboard`）は reject する。
+- この検証は assertConcreteArtifactRefs() の範囲内で実施する（具体的には相対パス形式チェック）。
+
+## BR-0012-0127: runMeasurement Pre-Validates Axes Before validatePanelScore (v1.7.15 rev11, WS-1)
+
+- AC-Refs: AC-0012-0159, AC-0012-0160
+- `runMeasurement()` は `l1.axes` と `l2.axes` のいずれかが空配列の場合、`validatePanelScore()` 呼び出し前に reject する。
+- `runMeasurement()` は計算開始前に必ず `validatePanelScore(l1)` と `validatePanelScore(l2)` を呼び出す。
+- validator が失敗した場合は計算を中断してエラーを返す。
+
+## BR-0012-0128: validatePanelScore Rejects Empty Axes (v1.7.15 rev11, WS-1)
+
+- AC-Refs: AC-0012-0161
+- `validatePanelScore()` は `axes.length === 0` を reject する。
+- axes が 1 件以上あることが必須。
+
+## BR-0012-0129: validatePanelScore Requires Non-Empty Concrete evidenceRefs Per Axis (v1.7.15 rev11, WS-1)
+
+- AC-Refs: AC-0012-0162
+- `validatePanelScore()` は各 axis につき `evidenceRefs.length >= 1` を必須とし、各 ref が concrete artifact ref であることを検証する。
+- 空文字列・絶対パス・synthetic token は reject する。
+
+## BR-0012-0130: specCoverage Scans Only 01_Spec.md Per Spec Directory (v1.7.15 rev11, WS-2)
+
+- AC-Refs: AC-0012-0163
+- `buildSpecCoverageSummary()` / `buildPerSpecCoverage()` は spec ディレクトリ配下の全 `.md` ファイルの走査を廃止し、各 spec の `01_Spec.md` のみを declaration source として読む。
+- `01_Spec.md` が存在しない spec は宣言 source 不在として扱う（エラーではなく空として処理）。
+- `notes.md`・`appendix.md`・その他の `.md` ファイルは対象外。
+
+## BR-0012-0131: isSpecDeclarationRef Accepts Only Line-Ref Grammar (v1.7.15 rev11, WS-2)
+
+- AC-Refs: AC-0012-0164, AC-0012-0165
+- `isSpecDeclarationRef()` は `.qfai/specs/<specId>/01_Spec.md#L<正の整数>` のみを `true` とする。
+- 以下はすべて `false` を返す:
+  - `#anchor` 形式（#L0 を含む）
+  - `notes.md` / `appendix.md` / その他 `.md` ファイルへの参照
+  - discussion ref (`.qfai/discussion/...`)
+  - screen contract ref (`.qfai/discussion/.../uiux/...`)
+  - 絶対パス
+  - ネストされたパス（`spec-0001/sub/01_Spec.md` 等）
+- `prototypingEvidence.ts` が独自 declaredRef ロジックを持つ場合は本関数に一本化する。
+
+## BR-0012-0132: measurement.test.ts Must Use Current DTO (v1.7.15 rev11, WS-3)
+
+- AC-Refs: AC-0012-0166
+- `tests/core/harness/measurement.test.ts` のフィクスチャを現行 `MeasurementInput` DTO に全面更新する。
+- 削除済みフィールドを持つフィクスチャを削除する。
+- `#screen:dashboard` reject などの負例ケースを追加する。
+- `as unknown as` キャスト・`skip`/`todo` フラグの新規追加を禁止する。
+
+## BR-0012-0133: panelScore.test.ts Must Use Current Panel Score Shape (v1.7.15 rev11, WS-3)
+
+- AC-Refs: AC-0012-0167
+- `tests/core/harness/panelScore.test.ts` を現行 `PanelScore` 型（axes + evidenceRefs 構造）に全面更新する。
+- `evidenceRefs` 厳格検証・empty axes・rationale 空・score 範囲外の各負例テストを含める。
+- 旧 DTO フィールド前提のテストを削除する。
+
+## BR-0012-0134: specCoverage.test.ts Must Cover 01_Spec.md Semantic Boundaries (v1.7.15 rev11, WS-3)
+
+- AC-Refs: AC-0012-0168
+- `tests/core/prototyping/specCoverage.test.ts` が存在しない場合は新規作成、存在する場合は拡張する。
+- `01_Spec.md#L<n>` を正例とし、`notes.md#L10` / `appendix.md#L3` / `01_Spec.md#route-home` / discussion ref / screen contract ref の各否定例を含める。
+- OQ-0004 解決: 実装着手時にファイル存在を確認し、存在すれば拡張、なければ新規作成する。
+
+## BR-0012-0135: refSemantics.test.ts Must Cover isSpecDeclarationRef Grammar (v1.7.15 rev11, WS-3)
+
+- AC-Refs: AC-0012-0169
+- `tests/core/prototyping/refSemantics.test.ts` が存在しない場合は新規作成、存在する場合は拡張する。
+- `isSpecDeclarationRef()` の許可文法（`01_Spec.md#L14`）と拒否文法（`#L0`, `#anchor`, `notes.md`, discussion ref, absolute path）を網羅的にテストする。
+- OQ-0004 解決: 実装着手時にファイル存在を確認し、存在すれば拡張、なければ新規作成する。

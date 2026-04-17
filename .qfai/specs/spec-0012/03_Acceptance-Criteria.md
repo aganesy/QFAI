@@ -1422,3 +1422,59 @@ When running pnpm format:check && pnpm lint && pnpm check-types
 Then all commands pass with zero errors
 And all tests pass (GREEN)
 ```
+
+## AC-0012-0156: runMeasurement/validatePanelScore Not Exported (v1.7.15 rev11, REQ-0001)
+
+Given the `src/core/index.ts` file, when scanned for exports, then neither `runMeasurement` nor `validatePanelScore` appear as named exports or via barrel re-exports.
+
+## AC-0012-0157: runMeasurement All 8 Categories Non-Empty and Concrete (v1.7.15 rev11, REQ-0002)
+
+Given a `MeasurementInput` with any of the 8 category arrays (renderRefs, browserQaRefs, runtimeGateRefs, uiObservationRefs, specCoverageRefs, discussionRefs, trendRefs, screenContractRefs) empty or containing a synthetic token, when `runMeasurement()` is called, then an error is returned/thrown.
+
+## AC-0012-0158: runMeasurement screenContractRefs Canonical Form Only (v1.7.15 rev11, REQ-0003)
+
+Given a `screenContractRefs` value of `[".qfai/discussion/<pack>/uiux/40_screen_contracts.md#<screenId>"]`, when `runMeasurement()` processes it, then it is accepted. Given `["#screen:dashboard"]`, then it is rejected.
+
+## AC-0012-0159: runMeasurement l1.axes/l2.axes Non-Empty Pre-Validation (v1.7.15 rev11, REQ-0004)
+
+Given a `MeasurementInput` with `l1.axes` or `l2.axes` as an empty array, when `runMeasurement()` is called, then it rejects before calling `validatePanelScore()`.
+
+## AC-0012-0160: runMeasurement Calls validatePanelScore Mandatorily (v1.7.15 rev11, REQ-0005)
+
+Given valid `l1` and `l2` panel inputs, when `runMeasurement()` is called, then `validatePanelScore(l1)` and `validatePanelScore(l2)` are both invoked before computation begins; if either fails, computation is aborted.
+
+## AC-0012-0161: validatePanelScore Rejects Empty Axes (v1.7.15 rev11, REQ-0006)
+
+Given a `PanelScore` with `axes.length === 0`, when `validatePanelScore()` is called, then it returns/throws an error.
+
+## AC-0012-0162: validatePanelScore Rejects Empty or Non-Concrete evidenceRefs (v1.7.15 rev11, REQ-0007)
+
+Given a `PanelScore` where any axis has `evidenceRefs.length === 0` or contains an empty string, absolute path, or synthetic token, when `validatePanelScore()` is called, then it returns/throws an error.
+
+## AC-0012-0163: specCoverage Reads Only 01_Spec.md Per Spec (v1.7.15 rev11, REQ-0008)
+
+Given a spec directory containing `01_Spec.md`, `notes.md`, and `appendix.md`, when `buildSpecCoverageSummary()` or `buildPerSpecCoverage()` runs, then only `01_Spec.md` is used as the declaration source; `notes.md` and `appendix.md` are ignored.
+
+## AC-0012-0164: isSpecDeclarationRef Positive Grammar (v1.7.15 rev11, REQ-0009)
+
+Given a ref of form `.qfai/specs/<specId>/01_Spec.md#L<positive integer>` (e.g., `.qfai/specs/spec-0001/01_Spec.md#L42`), when `isSpecDeclarationRef()` is called, then it returns `true`.
+
+## AC-0012-0165: isSpecDeclarationRef Negative Grammar (v1.7.15 rev11, REQ-0009)
+
+Given any of: `#anchor` format, `notes.md`, `appendix.md`, `#L0`, absolute path, discussion ref, screen contract ref, when `isSpecDeclarationRef()` is called, then it returns `false`.
+
+## AC-0012-0166: measurement.test.ts Current DTO and Negative Cases (v1.7.15 rev11, REQ-0010)
+
+Given the updated `measurement.test.ts`, when the test suite runs, then all fixtures use the current `MeasurementInput` DTO (no deleted fields), `#screen:dashboard` ref is covered as a reject case, and all tests pass GREEN.
+
+## AC-0012-0167: panelScore.test.ts Current Shape and Strict Validation Cases (v1.7.15 rev11, REQ-0011)
+
+Given the updated `panelScore.test.ts`, when the test suite runs, then all fixtures use the current `PanelScore` shape with `axes + evidenceRefs`, empty axes and empty evidenceRefs are covered as error cases, and all tests pass GREEN.
+
+## AC-0012-0168: specCoverage.test.ts Exists and Passes (v1.7.15 rev11, REQ-0012)
+
+Given `tests/core/prototyping/specCoverage.test.ts` (created or extended), when the test suite runs, then `01_Spec.md#L<n>` is covered as a positive case, `notes.md#L10`/`appendix.md#L3`/`01_Spec.md#route-home`/discussion ref/screen contract ref are covered as negative cases, and all tests pass GREEN.
+
+## AC-0012-0169: refSemantics.test.ts Exists and Passes (v1.7.15 rev11, REQ-0013)
+
+Given `tests/core/prototyping/refSemantics.test.ts` (created or extended), when the test suite runs, then `01_Spec.md#L14` is a pass case, and `#L0`/`#anchor`/`notes.md`/discussion ref/absolute path are all reject cases, and all tests pass GREEN.

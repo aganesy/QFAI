@@ -146,3 +146,17 @@
 - Resolution: DR-0012-0054 — extend pathUtils.ts with assertConcreteArtifactRefs() (array helper). No new refSemantics.ts. Trigger for extraction: reuse across 3+ files.
 - Source: discussion-20260416195444737 OQ-0002 (deferred from discussion to SDD)
 - Resolved by: SDD phase for discussion-20260416195444737
+
+## OQ-0001-rev11: PerSpecCoverage Dead Fields (resolved at SDD)
+
+- Status: Resolved at SDD
+- Resolution: DR-0012-0057 — Delete `apiEndpoints` and `dbObjects` dead fields from `PerSpecCoverage` type; retain only `uiRoutes`. No backward-compatible stub; fail-closed.
+- Source: discussion-20260417072340789 OQ-0001 (deferred from discussion to SDD)
+- Resolved by: SDD phase for discussion-20260417072340789
+
+## OQ-0004-rev11: specCoverage/refSemantics Test File New vs Extend (resolved at SDD)
+
+- Status: Resolved at SDD
+- Resolution: DR-0012-0058 — Policy: "new if absent, extend if present". Create new test file when none exists; extend existing test file when it already covers the module.
+- Source: discussion-20260417072340789 OQ-0004 (deferred from discussion to SDD)
+- Resolved by: SDD phase for discussion-20260417072340789

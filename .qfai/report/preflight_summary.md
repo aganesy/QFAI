@@ -1,72 +1,58 @@
-# Preflight Summary (v1.7.15 rev10 — 2026-04-16)
+# Preflight Summary — SDD Run
 
-## Status
+## Status: PASS
 
-- status: ready
-- source: discussion-pack
-- selected discussion-pack: .qfai/discussion/discussion-20260416195444737 (rev10 — latest)
+## Input Selection
 
-## Blockers
+| Priority | Source | Selected | Notes |
+|----------|--------|----------|-------|
+| P1 | `.qfai/assistant/instructions/*` | ✅ | Read |
+| P2 | `.qfai/assistant/steering/*` | ✅ | Read |
+| P3 | `.qfai/specs/spec-0012/**` | ✅ | Existing spec to UPDATE |
+| P4 | `.qfai/discussion/discussion-20260417072340789/**` | ✅ | Latest discussion pack |
 
-- none
+## Discussion Pack Readiness
 
-## Readiness Checks
+| Check | Status | Notes |
+|-------|--------|-------|
+| All 15 required files present | ✅ PASS | 01_Context.md through 99_delta.md |
+| No blocking OQ (open=0) | ✅ PASS | 3 resolved, 2 deferred |
+| ui_bearing: false | ✅ PASS | No sidecar required |
+| Source design doc | ✅ PASS | qfai_v1_7_15_packages_qfai_single_pr_completion_design_rev11.md |
 
-| Check | Result |
-|-------|--------|
-| 15 required files present | PASS (01_Context.md .. 99_delta.md all exist) |
-| Disposition: open count | 0 (OQ-0001 resolved, OQ-0002 deferred to SDD with full metadata, OQ-0003 resolved, OQ-0004 resolved) |
-| Deferred items with full metadata | 1 deferred (OQ-0002: assertConcreteArtifactRefs placement; full metadata present; resolved at SDD → DR-0012-0054) |
-| Mermaid diagrams in 02_Inception-Deck.md | PASS |
-| Mermaid diagrams in 03_Story-Workshop.md | PASS |
-| Reviewer overall_status | PASS (R01/R02/R03 all PASS) |
-| ui_bearing | non-ui (no prototyping.yaml required) |
+## Deferred OQ Handling
+
+| OQ-ID | Title | Deferred-Until | Status |
+|-------|-------|----------------|--------|
+| OQ-0001 | PerSpecCoverage dead fields | SDD | Resolved in this run: delete dead fields (apiEndpoints/dbObjects with 0 values) from PerSpecCoverage type |
+| OQ-0004 | specCoverage.test.ts / refSemantics.test.ts new vs extend | TDD | Recorded as BR-0012-0134/0135: "new if absent, extend if present" |
 
 ## Slice Decision
 
-- Operation: UPDATE
-- Target: spec-0012 (CAP-0012, qfai-prototyping, category: skill)
-- Reason: v1.7.15 rev10 scope (4 workstreams: WS-1 terminal state machine, WS-2 canonical sourceRef, WS-3 8-category evidenceRefs, WS-4 semantic declaredRef) is entirely within spec-0012 (confirmed by _policies/11_Slice-Policy.md v1.7.15 Slicing Confirmation section)
-- No CREATE/DELETE operations required
-- No AskUserQuestion required (UPDATE-only)
+| Spec | Action | Category | Rationale |
+|------|--------|----------|-----------|
+| spec-0012 | UPDATE | skill | v1.7.15-rev11 scope extension; slice policy confirmed no new spec needed |
 
-## Requirement Intake
+## Contracts Posture
 
-- Imported REQ count: 9 (REQ-0001..0009 from discussion-20260416195444737/06_REQ.md → spec-0012 REQ-0123..REQ-0131)
-- Imported NFR count: 0 new (existing NFR-0041..NFR-0045 from rev9 apply)
-- New US to add: 5 (US-0012-0072..0076)
-- New AC to add: 23 (AC-0012-0133..0155)
-- New BR to add: 7 (BR-0012-0117..0123)
-- New EX to add: 7 (EX-0012-0173..0179)
-- New TC to add: 29 (TC-0012-0243..0271)
-- New DR to add: 4 (DR-0012-0053..0056)
+- DB Contracts: 0 items (QFAI is CLI, no DB)
+- API Contracts: 0 items (QFAI is CLI, no HTTP API)
+- UI Contracts: 0 items (QFAI is CLI, no GUI)
+- Posture: none-rationale confirmed; no new contracts needed for v1.7.15-rev11
 
-## Current Spec-0012 ID Maxima (post-rev9)
+## Stage 0 Steering
 
-| Type | Max |
-|------|-----|
-| US | 0071 |
-| AC | 0132 |
-| BR | 0116 |
-| EX | 0172 |
-| TC | 0242 |
-| DR | 0052 |
-| REQ (spec) | REQ-0122 |
+| File | Status | Action |
+|------|--------|--------|
+| manifest.md | ✅ Updated | Added discussion-20260417072340789 evidence entry |
+| product.md | ✅ No change | Current |
+| tech.md | ✅ No change | Current |
+| structure.md | ✅ No change | Current |
 
-## v1.7.15 rev10 Upstream Context
+## Open Gaps
 
-- Upstream: discussion-20260416092414328 (rev9 — leaf-field traceability closure)
-- Rev10 closes: terminal state machine gaps, canonical sourceRef, 8-category evidenceRefs strictness, declaredRef semantics
-- pathUtils.ts (from rev8): extended with assertConcreteArtifactRefs() array helper (OQ-0002 SDD resolution → DR-0012-0054)
-- Backward compatibility: explicitly abandoned (design doc §0)
+None. All required inputs are available.
 
-## OQ Resolution at SDD Phase
+## Next Step
 
-- OQ-0001 (terminationReason mapping) → resolved at discussion → DR-0012-0053
-- OQ-0002 (assertConcreteArtifactRefs placement) → deferred to SDD → resolved: extend pathUtils.ts → DR-0012-0054
-- OQ-0003 (all 8 categories) → resolved at discussion → DR-0012-0055
-- OQ-0004 (anchor required) → resolved at discussion → DR-0012-0056
-
-## Next Commands
-
-- /qfai-sdd (this run — Phase 0..4 in progress for v1.7.15 rev10)
+Proceed to Phase 0 (Contracts-first) → Phase 1 (Outline) → Phase 2 (Slice spec-0012).

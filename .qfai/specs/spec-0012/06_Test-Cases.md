@@ -2443,3 +2443,163 @@
 - EX-Ref: EX-0012-0177
 - AC-Refs: AC-0012-0154, AC-0012-0155
 - Verify: pnpm format:check && pnpm lint && pnpm check-types all pass; all tests GREEN
+
+
+## TC-0012-0272: index.ts Export Removal Verified
+
+- Type: normal
+- EX-Ref: EX-0012-0180
+- AC-Refs: AC-0012-0156
+
+| Step | Action | Expected |
+|------|--------|----------|
+| 1 | Build packages/qfai with v1.7.15-rev11 changes | Build succeeds |
+| 2 | Import `runMeasurement` from `@qfai/core` | Import fails (not exported) |
+| 3 | Import `validatePanelScore` from `@qfai/core` | Import fails (not exported) |
+| 4 | Import `runFullHarness` from `@qfai/core` | Import succeeds |
+
+## TC-0012-0273: runMeasurement Accepts All 8 Categories Non-Empty Concrete
+
+- Type: normal
+- EX-Ref: EX-0012-0181
+- AC-Refs: AC-0012-0157, AC-0012-0160
+
+| Step | Action | Expected |
+|------|--------|----------|
+| 1 | Provide MeasurementInput with valid refs in all 8 categories | Input ready |
+| 2 | Call runMeasurement() | Validation passes, computation proceeds |
+| 3 | Check result | No error |
+
+## TC-0012-0274: runMeasurement Rejects Empty Category Ref Array
+
+- Type: error
+- EX-Ref: EX-0012-0181
+- AC-Refs: AC-0012-0157
+
+| Step | Action | Expected |
+|------|--------|----------|
+| 1 | Provide MeasurementInput with `browserQaRefs: []` | Input ready |
+| 2 | Call runMeasurement() | Error returned/thrown (empty category) |
+| 3 | Verify computation did not proceed | No partial result |
+
+## TC-0012-0275: runMeasurement Rejects Non-Canonical screenContractRef
+
+- Type: error
+- EX-Ref: EX-0012-0182
+- AC-Refs: AC-0012-0158
+
+| Step | Action | Expected |
+|------|--------|----------|
+| 1 | Set screenContractRefs: ["#screen:dashboard"] | Input ready |
+| 2 | Call runMeasurement() | Error returned/thrown (#screen: form rejected) |
+| 3 | Set screenContractRefs: [".qfai/discussion/p/uiux/40_screen_contracts.md#dashboard"] | Canonical form |
+| 4 | Call runMeasurement() with all other valid refs | Passes validation |
+
+## TC-0012-0276: runMeasurement Rejects Empty l1.axes Before validatePanelScore
+
+- Type: boundary
+- EX-Ref: EX-0012-0183
+- AC-Refs: AC-0012-0159
+
+| Step | Action | Expected |
+|------|--------|----------|
+| 1 | Provide MeasurementInput with `l1: { axes: [], total: 0 }` | Input ready |
+| 2 | Call runMeasurement() | Error before validatePanelScore invocation |
+| 3 | Verify validatePanelScore was NOT called | Spy/mock confirms no call |
+
+## TC-0012-0277: validatePanelScore Rejects Empty Axes
+
+- Type: error
+- EX-Ref: EX-0012-0184
+- AC-Refs: AC-0012-0161
+
+| Step | Action | Expected |
+|------|--------|----------|
+| 1 | Create PanelScore with `axes: []` | Input ready |
+| 2 | Call validatePanelScore() | Error returned/thrown |
+
+## TC-0012-0278: validatePanelScore Rejects Empty evidenceRefs
+
+- Type: error
+- EX-Ref: EX-0012-0185
+- AC-Refs: AC-0012-0162
+
+| Step | Action | Expected |
+|------|--------|----------|
+| 1 | Create axis with `evidenceRefs: []` | Input ready |
+| 2 | Call validatePanelScore() | Error: empty evidenceRefs |
+| 3 | Set evidenceRefs to absolute path "/abs/path.md" | Input ready |
+| 4 | Call validatePanelScore() | Error: non-concrete ref |
+
+## TC-0012-0279: specCoverage Ignores notes.md and appendix.md
+
+- Type: normal
+- EX-Ref: EX-0012-0186
+- AC-Refs: AC-0012-0163
+
+| Step | Action | Expected |
+|------|--------|----------|
+| 1 | Create spec dir with 01_Spec.md (ui_route: /home) and notes.md (ui_route: /notes) | Files ready |
+| 2 | Call buildSpecCoverageSummary() | Result generated |
+| 3 | Check declared routes | Only /home present; /notes absent |
+
+## TC-0012-0280: isSpecDeclarationRef Accepts Line-Ref Format
+
+- Type: normal
+- EX-Ref: EX-0012-0187
+- AC-Refs: AC-0012-0164
+
+| Step | Action | Expected |
+|------|--------|----------|
+| 1 | Call isSpecDeclarationRef(".qfai/specs/spec-0001/01_Spec.md#L42") | Returns true |
+| 2 | Call isSpecDeclarationRef(".qfai/specs/spec-0012/01_Spec.md#L1") | Returns true |
+
+## TC-0012-0281: isSpecDeclarationRef Rejects Non-Line-Ref Forms
+
+- Type: error
+- EX-Ref: EX-0012-0187
+- AC-Refs: AC-0012-0165
+
+| Step | Action | Expected |
+|------|--------|----------|
+| 1 | Call isSpecDeclarationRef(".qfai/specs/spec-0001/01_Spec.md#L0") | Returns false (#L0) |
+| 2 | Call isSpecDeclarationRef(".qfai/specs/spec-0001/notes.md#L5") | Returns false (notes.md) |
+| 3 | Call isSpecDeclarationRef(".qfai/discussion/d/06_REQ.md#REQ-0001") | Returns false (discussion ref) |
+| 4 | Call isSpecDeclarationRef(".qfai/specs/spec-0001/01_Spec.md#route-home") | Returns false (anchor, not Ln) |
+| 5 | Call isSpecDeclarationRef("/absolute/path/01_Spec.md#L1") | Returns false (absolute path) |
+
+## TC-0012-0282: measurement.test.ts All Tests GREEN with Current DTO
+
+- Type: normal
+- EX-Ref: EX-0012-0188
+- AC-Refs: AC-0012-0166
+
+| Step | Action | Expected |
+|------|--------|----------|
+| 1 | Run `pnpm test --project validators` (or equivalent) | Tests execute |
+| 2 | Check measurement.test.ts results | All tests GREEN; no skip/todo markers |
+| 3 | Verify no deleted-field fixtures exist | No stale field references |
+
+## TC-0012-0283: panelScore.test.ts All Tests GREEN with Current Shape
+
+- Type: normal
+- EX-Ref: EX-0012-0189
+- AC-Refs: AC-0012-0167
+
+| Step | Action | Expected |
+|------|--------|----------|
+| 1 | Run tests for panelScore.test.ts | Tests execute |
+| 2 | Check results | All tests GREEN; empty axes + empty evidenceRefs error cases exist |
+
+## TC-0012-0284: specCoverage.test.ts and refSemantics.test.ts Exist and Pass
+
+- Type: normal
+- EX-Ref: EX-0012-0190, EX-0012-0191
+- AC-Refs: AC-0012-0168, AC-0012-0169
+
+| Step | Action | Expected |
+|------|--------|----------|
+| 1 | Check file existence of specCoverage.test.ts and refSemantics.test.ts | Both files exist |
+| 2 | Run tests for both files | All tests GREEN |
+| 3 | Verify 01_Spec.md#L<n> positive case in specCoverage.test.ts | Test present |
+| 4 | Verify notes.md/anchor/discussion ref negative cases in refSemantics.test.ts | Tests present |

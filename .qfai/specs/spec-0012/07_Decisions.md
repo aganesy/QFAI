@@ -484,3 +484,22 @@
 - Status: Adopted
 - Impact: specCoverage.ts (regex defined inline; no separate refSemantics.ts)
 - Rejected: bare path allowed (RJ: insufficient traceability precision)
+
+
+## DR-0012-0057: OQ-0001 Resolution — PerSpecCoverage Dead Fields Removal (v1.7.15 rev11)
+
+- Decision: `PerSpecCoverage` 型から dead fields (`apiEndpoints`, `dbObjects`) を削除し、0/empty 初期化コードを除去する。
+- Context: discussion-20260417072340789 OQ-0001 — specCoverage.ts の型定義を SDD フェーズで確認して決定。
+- Rationale: 型定義とコードを確認したところ、`apiEndpoints`/`dbObjects` は常に 0/empty で返却されており実際の値を持たない dead fields である。削除することで型が実態を正確に反映し、不必要な 0 初期化コードが除去される。
+- Status: Adopted
+- Impact: specCoverage.ts の型定義更新、buildPerSpecCoverage() 初期化コード更新
+- Source: OQ-0001, discussion-20260417072340789
+
+## DR-0012-0058: OQ-0004 Resolution — specCoverage/refSemantics Test File Policy (v1.7.15 rev11)
+
+- Decision: TDD フェーズ開始時に `packages/qfai/tests/core/prototyping/` 配下を確認し、ファイルが存在すれば拡張、存在しなければ新規作成する。
+- Context: discussion-20260417072340789 OQ-0004 — 設計書 rev11 sec.7-8/7-9 は「新規または既存拡張」と記載。
+- Rationale: BR-0012-0134/0135 に "new if absent, extend if present" ポリシーとして反映済み。TDD フェーズでの実装時にファイル存在確認が必要。
+- Status: Adopted (deferred to TDD phase for implementation decision)
+- Impact: specCoverage.test.ts / refSemantics.test.ts の新規作成または拡張
+- Source: OQ-0004, discussion-20260417072340789

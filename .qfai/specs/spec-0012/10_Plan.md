@@ -560,3 +560,56 @@ Close 4 semantic gaps (WS-1~WS-4) and sync all layers (WS-5) in a single PR.
 
 - Breaking change: no backward compatibility. Existing evidence bundles with in-progress+terminationReason will fail. Intent is fail-closed.
 - Mitigation: negative fixtures prove validators reject previously-valid-but-incorrect bundles
+
+## v1.7.15 rev11 Implementation Strategy
+
+### Scope Boundary
+
+Single-PR: `packages/qfai/**` only. 3 residual semantic closure gaps from v1.7.15 audit (discussion-20260417072340789).
+
+### Modules Touched (rev11 Change Obligation)
+
+| Module | Change Obligation | WS |
+| --- | --- | --- |
+| `src/core/index.ts` | Remove `runMeasurement` and `validatePanelScore` from public exports. Barrel chain: `harness/measurement.ts` → `harness/index.ts`; `src/core/index.ts` must not carry explicit named re-exports of these functions. `validatePanelScore` in `harness/panelScore.ts` is similarly excluded from the explicit export set. | WS-1 |
+| `src/core/prototyping/measurement.ts` | Add strict validation: reject unknown/null category refs; enforce all 8 ref categories present | WS-1 |
+| `src/core/validators/prototypingEvidence.ts` | `validatePanelScore`: reject missing/invalid score fields; add strict panel validation rules (DR-0012-0057) | WS-1 |
+| `src/core/prototyping/specCoverage.ts` | Restrict spec scan to `01_Spec.md` only; remove fallback to other spec files | WS-2 |
+| `src/core/prototyping/pathUtils.ts` | `isSpecDeclarationRef()`: accept only `.qfai/specs/*/01_Spec.md#L\d+` line-refs; reject non-line-ref anchors and non-01_Spec.md paths | WS-2 |
+| `tests/core/prototyping/measurement.test.ts` | Update DTOs to match strict category validation expectations | WS-3 |
+| `tests/validators/prototypingEvidence.test.ts` | Update/extend for strict `validatePanelScore` rules | WS-3 |
+| `tests/core/prototyping/specCoverage.test.ts` | New or extend: cover 01_Spec.md-only scan; negative cases for other spec files | WS-3 |
+| `tests/core/prototyping/refSemantics.test.ts` | New or extend: `isSpecDeclarationRef` line-ref-only grammar; negative cases for non-L-ref, non-01_Spec.md, discussion refs | WS-3 |
+
+### OQ Resolutions Applied
+
+- DR-0012-0057: Delete `apiEndpoints`/`dbObjects` dead fields from `PerSpecCoverage` type (OQ-0001)
+- DR-0012-0058: Test file policy — "new if absent, extend if present" (OQ-0004)
+
+### Implementation Order (rev11 dependency chain)
+
+WS-1 and WS-2 are independent (parallel). WS-3 depends on both.
+
+1. **Step 1** (WS-1): `index.ts` — remove `runMeasurement`/`validatePanelScore` from public exports
+2. **Step 2** (WS-1): `measurement.ts` — add strict category ref validation (all 8 categories required; reject null/unknown)
+3. **Step 3** (WS-1): `prototypingEvidence.ts` — strict `validatePanelScore` rules; dead-field deletion per DR-0012-0057
+4. **Step 4** (WS-2): `specCoverage.ts` — 01_Spec.md-only scan; remove fallback scan paths
+5. **Step 5** (WS-2): `pathUtils.ts` — `isSpecDeclarationRef()` line-ref-only grammar (`.qfai/specs/*/01_Spec.md#L\d+`)
+6. **Step 6** (WS-3): Update `measurement.test.ts` and `prototypingEvidence.test.ts` DTOs; create/extend `specCoverage.test.ts` and `refSemantics.test.ts`
+
+### Test Strategy (rev11)
+
+| Layer | Location | Coverage Target |
+| --- | --- | --- |
+| Unit | `tests/core/prototyping/measurement.test.ts` | Strict 8-category ref validation; reject null/unknown categories |
+| Validators | `tests/validators/prototypingEvidence.test.ts` | `validatePanelScore` strict rules; reject missing/invalid fields |
+| Unit | `tests/core/prototyping/specCoverage.test.ts` (new or extend) | 01_Spec.md-only scan; reject paths outside `01_Spec.md` |
+| Unit | `tests/core/prototyping/refSemantics.test.ts` (new or extend) | `isSpecDeclarationRef`: accept `L\d+` anchors only; reject non-line-ref, non-01_Spec.md, discussion refs |
+| ATDD annotation map | `spec-0012/tdd/test-list.md` | TC-0012-0272..TC-0012-0284 mapped to TDD-IDs |
+
+### Docs Sync (rev11)
+
+| Artifact | Sync Target |
+| --- | --- |
+| `README.md` | Reflect WS-1 export removal; WS-2 specDeclarationRef grammar |
+| `SKILL.md` | isSpecDeclarationRef constraint; specCoverage 01_Spec.md-only policy |

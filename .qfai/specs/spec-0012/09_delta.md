@@ -746,3 +746,37 @@ Leaf-field traceability closure for packages/qfai. Rev8 closed top-level summary
 - **TC-0218 note**: TC-0012-0218 was accidentally skipped when TDD-0217 was recorded (TDD numbering jumped from 0217 to 0219). The test exists in `prototypingRev8Integration.test.ts` and passes.
 - **TC-0249..TC-0271 note**: These are source-inspection tests (not full behavioral coverage for all TCs; D-3 gaps for TC-0249..0253 noted as advisory F-4 from ATDD). Behavioral coverage deferred per ATDD advisory F-4.
 - **RE-OPEN-0001 cross-reference**: TDD-0266 (TC-0012-0266) uses RE-OPEN-0001 acceptance of `refSemantics.ts` (the source-inspection test verifies `refSemantics.ts` imports from `pathUtils.ts` rather than asserting it doesn't exist).
+
+
+## v1.7.15-rev11 Semantic Closure Completion (DR-0012-0057, DR-0012-0058)
+
+### Summary
+
+v1.7.15-11 監査で特定された3残存 semantic closure ギャップを単一 PR で閉じる:
+- WS-1: `runMeasurement`/`validatePanelScore` public export 削除 + strict 検証
+- WS-2: `isSpecDeclarationRef()` line-ref only grammar + `specCoverage.ts` 01_Spec.md-only scan
+- WS-3: テストファイル同期 (measurement/panelScore 更新 + specCoverage/refSemantics 新規/拡張)
+
+### Discussion Pack Reference
+
+- discussion-20260417072340789 (v1.7.15-rev11 semantic closure completion)
+
+### Requirements Added
+
+- REQ-0001〜0013 (WS-1: 0001〜0007, WS-2: 0008〜0009, WS-3: 0010〜0013)
+
+### Artifacts Added
+
+| Layer | IDs Added | Description |
+|-------|-----------|-------------|
+| US | US-0012-0077〜0083 | User stories for WS-1/WS-2/WS-3 |
+| AC | AC-0012-0156〜0169 | Acceptance criteria |
+| BR | BR-0012-0124〜0135 | Business rules |
+| EX | EX-0012-0180〜0191 | Examples |
+| TC | TC-0012-0272〜0284 | Test cases (normal/error/boundary) |
+| DR | DR-0012-0057〜0058 | Decision records (OQ-0001/OQ-0004 resolution) |
+
+### OQ Resolutions
+
+- OQ-0001 (PerSpecCoverage dead fields): Delete `apiEndpoints`/`dbObjects` from type (DR-0012-0057)
+- OQ-0004 (test file new vs extend): "new if absent, extend if present" policy (DR-0012-0058)

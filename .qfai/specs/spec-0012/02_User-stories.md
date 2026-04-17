@@ -506,3 +506,66 @@ REQ: REQ-0129
 
 Parent: CAP-0012
 REQ: REQ-0130, REQ-0131
+
+## US-0012-0077: Public API Surface Closure (v1.7.15 rev11, WS-1)
+
+- As a QFAI package consumer,
+- I want `runMeasurement` and `validatePanelScore` to be unexported internal helpers (not accessible from `src/core/index.ts`),
+- So that only `runFullHarness()` is the public entry point and no caller can bypass panel validation or category ref enforcement.
+
+Parent: CAP-0012
+REQ: REQ-0001
+
+## US-0012-0078: runMeasurement Strict Validation (v1.7.15 rev11, WS-1)
+
+- As a QFAI package consumer,
+- I want `runMeasurement()` to strictly validate all 8 category ref arrays (renderRefs, browserQaRefs, runtimeGateRefs, uiObservationRefs, specCoverageRefs, discussionRefs, trendRefs, screenContractRefs) for non-emptiness and concrete artifact refs, enforce `screenContractRefs` canonical form, validate `l1.axes`/`l2.axes` are non-empty, and call `validatePanelScore()` before any computation,
+- So that measurement can never proceed with missing evidence, synthetic tokens, or structurally invalid panel inputs.
+
+Parent: CAP-0012
+REQ: REQ-0002, REQ-0003, REQ-0004, REQ-0005
+
+## US-0012-0079: validatePanelScore Strict Validation (v1.7.15 rev11, WS-1)
+
+- As a QFAI package consumer,
+- I want `validatePanelScore()` to reject empty `axes` arrays and require at least one concrete `evidenceRef` per axis,
+- So that panel score computation cannot proceed with zero evaluation axes or ungrounded evidence references.
+
+Parent: CAP-0012
+REQ: REQ-0006, REQ-0007
+
+## US-0012-0080: specCoverage 01_Spec.md-Only Scan (v1.7.15 rev11, WS-2)
+
+- As a QFAI package consumer,
+- I want `buildSpecCoverageSummary()` and `buildPerSpecCoverage()` to read only `01_Spec.md` as the declaration source for each spec (ignoring all other `.md` files in the spec directory),
+- So that `notes.md`, `appendix.md`, and other supplementary files cannot inject spurious `declaredRef` entries into the coverage map.
+
+Parent: CAP-0012
+REQ: REQ-0008
+
+## US-0012-0081: isSpecDeclarationRef Line-Ref Only Grammar (v1.7.15 rev11, WS-2)
+
+- As a QFAI package consumer,
+- I want `isSpecDeclarationRef()` to return `true` only for the pattern `.qfai/specs/<specId>/01_Spec.md#L<positive integer>`, and return `false` for anchor fragments, notes.md/appendix.md paths, discussion refs, screen contract refs, `#L0`, and absolute paths,
+- So that spec declaration refs have a single canonical grammar and all off-grammar refs are structurally rejected.
+
+Parent: CAP-0012
+REQ: REQ-0009
+
+## US-0012-0082: Harness Test DTO Synchronization (v1.7.15 rev11, WS-3)
+
+- As a QFAI developer,
+- I want `measurement.test.ts` and `panelScore.test.ts` to be fully updated to the current DTO shape (removing deleted fields, adding `screenContractRefs` canonical reject cases, adding `evidenceRefs` strict validation cases),
+- So that the test suite validates the current rev11 runtime contract and no stale fixture assumptions exist.
+
+Parent: CAP-0012
+REQ: REQ-0010, REQ-0011
+
+## US-0012-0083: Prototyping Semantic Boundary Test Coverage (v1.7.15 rev11, WS-3)
+
+- As a QFAI developer,
+- I want `specCoverage.test.ts` and `refSemantics.test.ts` to exist (created if absent, extended if present) with comprehensive coverage of the rev11 semantic boundaries (`01_Spec.md`-only scan, `#L<n>`-only grammar, `notes.md`/`appendix.md`/`#anchor`/`#L0`/discussion ref/screen contract ref rejection),
+- So that regressions in semantic closure constraints are caught automatically.
+
+Parent: CAP-0012
+REQ: REQ-0012, REQ-0013

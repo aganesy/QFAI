@@ -1047,3 +1047,111 @@ Confirmed: 52 errors identical in HEAD (pre-rev7) and working tree. **New errors
 - DR-IDs: DR-0041..0045 ✅
 - OQ closed: OQ-0001..0005 → all resolved ✅
 - Subagents: real (general-purpose `sdd-spec0012-rev7`, reviewer roles R01/R02/R03)
+
+---
+
+## v1.7.15 rev11 Section (appended)
+
+### Objective
+
+Update spec-0012 (qfai-prototyping) with v1.7.15 rev11 discussion pack (`discussion-20260417072340789`) content: 3 residual semantic closure gaps:
+- WS-1: Public API surface closure + `runMeasurement`/`validatePanelScore` strict validation
+- WS-2: `isSpecDeclarationRef()` line-ref-only grammar + `specCoverage.ts` 01_Spec.md-only scan
+- WS-3: Harness test DTO synchronization + semantic boundary test creation
+
+### Inputs Reviewed
+
+| Priority | Path | Purpose |
+|---|---|---|
+| P1 | `.qfai/assistant/instructions/*` | Agent instructions |
+| P2 | `.qfai/assistant/steering/*` | Steering files |
+| P3 | `.qfai/specs/spec-0012/**` | Existing spec-0012 artifacts (rev4..rev10) |
+| P4 | `.qfai/discussion/discussion-20260417072340789/**` | Rev11 discussion pack (15 files) |
+
+### Preflight Summary Path
+
+`.qfai/report/preflight_summary.md` (updated to reference discussion-20260417072340789)
+
+### Open Questions Summary
+
+| ID | Status | Resolution |
+|---|---|---|
+| OQ-0001 | Resolved at SDD | DR-0012-0057: Delete dead fields from PerSpecCoverage |
+| OQ-0002 | Resolved at discussion | Carried from pack |
+| OQ-0003 | Resolved at discussion | Carried from pack |
+| OQ-0004 | Resolved at SDD | DR-0012-0058: "new if absent, extend if present" policy |
+
+Open: 0 / Answered: 4 / Deferred: 0
+
+### Decisions Made
+
+| DR-ID | Decision | Rationale |
+|---|---|---|
+| DR-0012-0057 | Delete `apiEndpoints`/`dbObjects` dead fields from `PerSpecCoverage` | Never populated; removes dead-code confusion (OQ-0001) |
+| DR-0012-0058 | Test file policy: "new if absent, extend if present" | Minimizes orphaned files and isolation churn (OQ-0004) |
+
+### Work Performed
+
+| File | Changes |
+|---|---|
+| `manifest.md` | discussion-20260417072340789 entry added |
+| `preflight_summary.md` | Updated to rev11 |
+| `_policies/05_Contracts.md` | v1.7.15-rev11 Contract Posture appended |
+| `_policies/10_delta.md` | rev11 delta entry appended |
+| `spec-0012/01_Spec.md` | rev11 NOTE inserted |
+| `spec-0012/02_User-stories.md` | US-0012-0077~0083 appended |
+| `spec-0012/03_Acceptance-Criteria.md` | AC-0012-0156~0169 appended |
+| `spec-0012/04_Business-Rules.md` | BR-0012-0124~0135 appended |
+| `spec-0012/05_Examples.md` | EX-0012-0180~0191 appended |
+| `spec-0012/06_Test-Cases.md` | TC-0012-0272~0284 appended; TC-0273 updated with AC-0160 |
+| `spec-0012/07_Decisions.md` | DR-0012-0057~0058 appended |
+| `spec-0012/08_Open-questions.md` | OQ-0001-rev11 / OQ-0004-rev11 resolution entries appended |
+| `spec-0012/09_delta.md` | v1.7.15-rev11 section appended |
+| `spec-0012/10_Plan.md` | v1.7.15 rev11 Implementation Strategy section appended |
+
+### Commands Executed
+
+```sh
+npx qfai validate --fail-on error --format github | tee .qfai/report/validate.log  # run 1: found COV-201 + TRACE
+# fix: _policies/10_delta.md (removed spec IDs) + 06_TC (added AC-0160 to TC-0273)
+npx qfai validate --fail-on error --format github | tee .qfai/report/validate.log  # run 2: SDD-scope clean
+```
+
+### Validate Evidence
+
+- Log: `.qfai/report/validate.log`
+- Coverage: `.qfai/report/specs-coverage/spec-0012.md`
+
+| Code | Status | Notes |
+|---|---|---|
+| QFAI-COV-201~206 | 0 (PASS) | All ACs have 1+ TC |
+| TRACE_SHARED_SCOPE_VIOLATION | 0 (PASS) | Fixed in _policies/10_delta.md |
+| QFAI-ATDD-111/112 | Non-zero (expected) | SDD phase; addressed in /qfai-atdd |
+| QFAI-COV-207 | Warnings only | Pre-existing multi-BR EX; new EX-0180~0191 clean |
+| Pre-existing errors | Not in scope | REVIEW-003/005/007, PROT-171/150 |
+
+### Work Orders Summary
+
+| Step | Role | Task | Output | Status |
+|---|---|---|---|---|
+| 1 | delivery-planner | preflight_summary + manifest.md | preflight_summary.md, manifest.md | PASS |
+| 2 | requirements-analyst | US-0077~0083, AC-0156~0169 | 02_US.md, 03_AC.md | PASS |
+| 3 | solution-architect | 01_Spec.md NOTE, _policies/05,10 | 01_Spec.md, _policies/05,10 | PASS |
+| 4 | test-design-analyst | BR/EX/TC/DR/09_delta | 04_BR, 05_EX, 06_TC, 07_DR, 09_delta | PASS |
+| 5 | orchestrator | Phase 3 Plan + OQ + validate fixes | 10_Plan.md, 08_OQ, validate.log | PASS |
+
+### Final Status
+
+**PASS** — SDD-scope quality gates satisfied. Phase order: Contracts-first → Outline → Slice → Plan → Delta ✅. QFAI-COV-201~206: 0 ✅. No rejected option reintroduced ✅. DR-0012-0057, DR-0012-0058 recorded ✅.
+
+### Rev11 Review Cycle Round 2 — Fixes Applied
+
+**architecture-reviewer (Round 1) REVISE → Fixed:**
+- F-1 (Blocking): `spec-0012/01_Spec.md` line 31 updated: "Coverage Matrix (uiRoutes, apiEndpoints, dbObjects)" → "Coverage Matrix (uiRoutes only; apiEndpoints/dbObjects retired per DR-0012-0057, rev11)"
+- F-2 (Minor): `spec-0012/10_Plan.md` WS-1 module row corrected: `src/core/prototyping/index.ts` → `src/core/index.ts` with barrel-chain clarification
+
+**completion-reviewer (Round 1) REVISE → Fixed:**
+- FIX-1: `spec-0012/05_Examples.md` EX-0012-0187 — replaced 4× `spec-0001` with `spec-XXXX` (E_ID_INVALID_FORMAT resolved)
+- FIX-2: Validate re-run confirmed E_ID_INVALID_FORMAT = 0, COV-201~206 = 0, TRACE = 0
+
+**Validate (Round 3):** SDD-scope errors = 0 (remaining: pre-existing REVIEW-007/003/005/PROT-171/150 + expected SDD ATDD-111/112)

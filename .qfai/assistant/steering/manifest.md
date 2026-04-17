@@ -62,7 +62,9 @@
     `.qfai/discussion/discussion-20260416092414328/`
     (v1.7.15 rev9 — leaf-field traceability closure: ui[].declaredRef/renderEvidenceRefs[]/browserQaEvidenceRefs[] per-row validation, axes[].evidenceRefs[] per-axis validation, reviewerLogs[].evidenceRefs[] validation, bundleWriter strict schema, test fixture concrete refs, README full enumeration),
     `.qfai/discussion/discussion-20260416195444737/`
-    (v1.7.15 rev10 — semantic closure hardening: WS-1 terminal state machine (in-progress/completed strict field bundles), WS-2 canonical screen contract sourceRef (slug anchor generation removed), WS-3 all 8 evidenceRefs categories via assertConcreteArtifactRefs() in pathUtils.ts, WS-4 declaredRef regex validation (.qfai/specs/+anchor mandatory))
+    (v1.7.15 rev10 — semantic closure hardening: WS-1 terminal state machine (in-progress/completed strict field bundles), WS-2 canonical screen contract sourceRef (slug anchor generation removed), WS-3 all 8 evidenceRefs categories via assertConcreteArtifactRefs() in pathUtils.ts, WS-4 declaredRef regex validation (.qfai/specs/+anchor mandatory)),
+    `.qfai/discussion/discussion-20260417072340789/`
+    (v1.7.15 rev11 — semantic closure closure: WS-1 public helper export removal + strict validation (runMeasurement/validatePanelScore non-public, all 8 category refs non-empty+concrete, validatePanelScore axes+evidenceRefs strict), WS-2 declaredRef semantic closure (isSpecDeclarationRef line-ref only: .qfai/specs/<id>/01_Spec.md#L<n>, specCoverage.ts 01_Spec.md-only scan), WS-3 test synchronization (measurement.test.ts/panelScore.test.ts current DTO, specCoverage.test.ts/refSemantics.test.ts new/extend))
   - Assumptions: None (all verified from repository analysis)
 
 ## Non-goals / Not-now (Optional)

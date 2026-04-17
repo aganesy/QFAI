@@ -476,3 +476,4 @@
 - OQ-0002 resolved at SDD level → DR-0012-0054 (assertConcreteArtifactRefs() in pathUtils.ts; no refSemantics.ts)
 - OQ-0003 resolved at discussion → DR-0012-0055 (all 8 evidenceRefs categories use assertConcreteArtifactRefs)
 - OQ-0004 resolved at discussion → DR-0012-0056 (anchor always required in declaredRef)
+| 2026-04-17 | adopted | spec-0012 | v1.7.15-rev11: 3件の semantic closure ギャップ（WS-1 public export 削除+strict 検証、WS-2 declaredRef grammar、WS-3 テスト同期）を spec-0012 に反映。DR-0012-0057/0058 で OQ 解決。 | discussion-20260417072340789 |

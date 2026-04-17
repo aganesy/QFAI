@@ -1379,3 +1379,93 @@ BR-Ref: BR-0012-0122
 - Negative path C: "packages/qfai/src/core/prototyping/runtime.ts#L42" → ERROR
 
 BR-Ref: BR-0012-0123
+
+
+## EX-0012-0180: index.ts Export Removal Verification (BR-0012-0124)
+
+- BR-Ref: BR-0012-0124
+- Given: `src/core/index.ts` after v1.7.15-rev11 changes
+- When: file is scanned for `runMeasurement` and `validatePanelScore` exports
+- Then: neither appears in named exports or via `export *` barrel re-exports
+
+## EX-0012-0181: runMeasurement All 8 Categories (BR-0012-0125)
+
+- BR-Ref: BR-0012-0125
+- Given: `MeasurementInput` with valid refs in all 8 categories
+- When: `runMeasurement()` is called
+- Then: validation passes (all 8 categories: non-empty + concrete)
+- Negative: Given `browserQaRefs: []` (empty) — Then: validation rejects before computation
+
+## EX-0012-0182: screenContractRefs Canonical vs Non-Canonical (BR-0012-0126)
+
+- BR-Ref: BR-0012-0126
+- Given: `screenContractRefs: [".qfai/discussion/pack-1/uiux/40_screen_contracts.md#dashboard"]`
+- When: `runMeasurement()` validates screenContractRefs
+- Then: accepts (canonical form)
+- Negative: Given `screenContractRefs: ["#screen:dashboard"]` — Then: rejects (`#screen:` form rejected)
+
+## EX-0012-0183: Axes Pre-Validation in runMeasurement (BR-0012-0127)
+
+- BR-Ref: BR-0012-0127
+- Given: `l1.axes: []` (empty)
+- When: `runMeasurement()` is called
+- Then: rejects before `validatePanelScore()` is invoked
+
+## EX-0012-0184: validatePanelScore Empty Axes (BR-0012-0128)
+
+- BR-Ref: BR-0012-0128
+- Given: `PanelScore` with `axes: []`
+- When: `validatePanelScore()` is called
+- Then: error returned/thrown
+
+## EX-0012-0185: validatePanelScore evidenceRefs Strict (BR-0012-0129)
+
+- BR-Ref: BR-0012-0129
+- Given: `PanelScore` with `axes: [{ evidenceRefs: [] }]`
+- When: `validatePanelScore()` is called
+- Then: error returned (empty evidenceRefs)
+- Negative: Given `axes: [{ evidenceRefs: ["/absolute/path/file.md"] }]` — Then: error (absolute path)
+
+## EX-0012-0186: specCoverage 01_Spec.md-Only Scan (BR-0012-0130)
+
+- BR-Ref: BR-0012-0130
+- Given: spec directory with `01_Spec.md` (has `ui_route: /home`) and `notes.md` (has `ui_route: /notes`)
+- When: `buildSpecCoverageSummary()` runs
+- Then: only `/home` appears in declared routes (from `01_Spec.md`); `/notes` is not included
+
+## EX-0012-0187: isSpecDeclarationRef Boundary Cases (BR-0012-0131)
+
+- BR-Ref: BR-0012-0131
+- Given: `.qfai/specs/spec-XXXX/01_Spec.md#L42` — Then: `true`
+- Given: `.qfai/specs/spec-XXXX/01_Spec.md#L0` — Then: `false` (#L0 = not positive integer)
+- Given: `.qfai/specs/spec-XXXX/notes.md#L5` — Then: `false`
+- Given: `.qfai/discussion/discussion-xxx/06_REQ.md#REQ-0001` — Then: `false`
+- Given: `.qfai/specs/spec-XXXX/01_Spec.md#route-home` — Then: `false` (anchor, not line ref)
+
+## EX-0012-0188: measurement.test.ts Fixture Update (BR-0012-0132)
+
+- BR-Ref: BR-0012-0132
+- Given: updated `measurement.test.ts` with current `MeasurementInput` DTO
+- When: test suite runs
+- Then: all tests GREEN; no deleted-field references; `#screen:dashboard` reject case exists
+
+## EX-0012-0189: panelScore.test.ts Shape Update (BR-0012-0133)
+
+- BR-Ref: BR-0012-0133
+- Given: updated `panelScore.test.ts` with current `PanelScore` shape
+- When: test suite runs
+- Then: all tests GREEN; empty axes/evidenceRefs error cases exist
+
+## EX-0012-0190: specCoverage.test.ts Semantic Coverage (BR-0012-0134)
+
+- BR-Ref: BR-0012-0134
+- Given: `tests/core/prototyping/specCoverage.test.ts` (new or extended)
+- When: test suite runs
+- Then: all tests GREEN; `01_Spec.md#L5` passes; `notes.md#L10` / `appendix.md#L3` / `#route-home` / discussion ref / screen contract ref all fail
+
+## EX-0012-0191: refSemantics.test.ts Grammar Coverage (BR-0012-0135)
+
+- BR-Ref: BR-0012-0135
+- Given: `tests/core/prototyping/refSemantics.test.ts` (new or extended)
+- When: test suite runs
+- Then: all tests GREEN; `01_Spec.md#L14` true; `#L0`/`#anchor`/`notes.md`/discussion ref/abs path all false

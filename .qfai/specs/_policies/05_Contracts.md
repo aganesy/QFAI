@@ -231,6 +231,13 @@ QFAI は GUI を持たない CLI ツールである。`/qfai-prototyping` スキ
 - TC-3 (breaking change): in-progress+terminationReason が存在 / completed+terminationReason 欠如 / bare declaredRef / empty evidenceRefs category を含む既存 evidence bundle は rev10 以降 validation に失敗する。backward compatibility は明示的に放棄。migration shim なし。
 - したがって Contract Index の `0 items` は v1.7.15 rev10 でも意図的な none-rationale であり、discussion-20260416195444737 のスコープ境界に整合する。
 
+## v1.7.15-rev11 Contract Posture
+
+- Contracts-first review completed for v1.7.15-rev11 (spec-0012 update).
+- Semantic Closure Hardening (WS-1/WS-2/WS-3) は `packages/qfai/src/core/` 内部モジュールのみへの変更であり、外部向け stable contract は新設しない。
+- `runMeasurement()` / `validatePanelScore()` は `index.ts` からの export を削除するが、これらは元々外部契約ではなく internal helper である。
+- したがって Contract Index の `0 items` は意図的な none-rationale であり、spec-0012 のスコープ境界に整合する。
+
 ## ER Diagram
 
 QFAI はデータベースを使用しないため、ER Diagram は省略する。
