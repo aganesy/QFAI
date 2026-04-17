@@ -1,0 +1,37 @@
+{
+  "version": "2.0",
+  "created_at": "2026-04-17T07:23:40Z",
+  "target": {
+    "kind": "discussion",
+    "path": ".qfai/discussion/discussion-20260417072340789"
+  },
+  "routing_profile": "requirements-heavy",
+  "reviewers": [
+    {
+      "reviewer": "completion-reviewer",
+      "status": "PASS",
+      "feedback_count": 0
+    },
+    {
+      "reviewer": "requirements-reviewer",
+      "status": "PASS",
+      "feedback_count": 4,
+      "cycles": 2,
+      "note": "Cycle 1 FAIL (4 issues): traceability notes shifted + REQ-0013/NFR-0006 missing + REQ-0002 screenContractRefs absent. Cycle 2 PASS after fixes."
+    },
+    {
+      "reviewer": "architecture-reviewer",
+      "status": "PASS",
+      "feedback_count": 3,
+      "condition": "architecture-affecting decisions (WS-1: public surface removal, WS-2: semantic predicate narrowing)",
+      "note": "3 minor findings (test path clarification, Inception Deck arrow direction, CHANGELOG policy). No blockers."
+    }
+  ],
+  "conditional_reviewers": ["architecture-reviewer"],
+  "roster": [
+    "completion-reviewer",
+    "requirements-reviewer",
+    "architecture-reviewer"
+  ],
+  "overall_status": "PASS"
+}
