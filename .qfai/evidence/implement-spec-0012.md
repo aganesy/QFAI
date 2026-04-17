@@ -537,3 +537,98 @@ Subagents: real (inline execution)
 
 **PASS** — All 20 TDD-0198..0217 items done (impl-first backfill), vitest core 822/822 + unit 36/36 PASS.
 Confirmed by: completion-reviewer (PASS), qa-gatekeeper (PASS), implementation-reviewer (PASS).
+
+---
+
+## v1.7.15 rev10 — TDD Ledger Backfill: ATDD-first (2026-04-17)
+
+### Objective
+
+Close the TDD ledger for spec-0012 by backfilling two gaps:
+1. **TDD-0218** — TC-0012-0218 accidentally skipped during rev8 (numbering jumped 0217→0219); xception/DR-0012-0046 (rev8 ATDD-first backfill DR)
+2. **TDD-0249..TDD-0271** (23 items) — TC-0012-0249..0271 (rev10 WS-1..WS-5) not added after ATDD phase; xception/DR-0012-0057 (new rev10 ATDD-first backfill DR)
+
+No new production code written. All tests pre-exist in prototypingRev8Integration.test.ts (TDD-0218) and prototypingRev10Integration.test.ts (TDD-0249..0271).
+
+### Items processed
+
+| TDD-ID   | TC-Refs      | Status    | DR-ID        |
+|----------|--------------|-----------|--------------|
+| TDD-0218 | TC-0012-0218 | exception | DR-0012-0046 |
+| TDD-0249 | TC-0012-0249 | exception | DR-0012-0057 |
+| TDD-0250 | TC-0012-0250 | exception | DR-0012-0057 |
+| TDD-0251 | TC-0012-0251 | exception | DR-0012-0057 |
+| TDD-0252 | TC-0012-0252 | exception | DR-0012-0057 |
+| TDD-0253 | TC-0012-0253 | exception | DR-0012-0057 |
+| TDD-0254 | TC-0012-0254 | exception | DR-0012-0057 |
+| TDD-0255 | TC-0012-0255 | exception | DR-0012-0057 |
+| TDD-0256 | TC-0012-0256 | exception | DR-0012-0057 |
+| TDD-0257 | TC-0012-0257 | exception | DR-0012-0057 |
+| TDD-0258 | TC-0012-0258 | exception | DR-0012-0057 |
+| TDD-0259 | TC-0012-0259 | exception | DR-0012-0057 |
+| TDD-0260 | TC-0012-0260 | exception | DR-0012-0057 |
+| TDD-0261 | TC-0012-0261 | exception | DR-0012-0057 |
+| TDD-0262 | TC-0012-0262 | exception | DR-0012-0057 |
+| TDD-0263 | TC-0012-0263 | exception | DR-0012-0057 |
+| TDD-0264 | TC-0012-0264 | exception | DR-0012-0057 |
+| TDD-0265 | TC-0012-0265 | exception | DR-0012-0057 |
+| TDD-0266 | TC-0012-0266 | exception | DR-0012-0057 |
+| TDD-0267 | TC-0012-0267 | exception | DR-0012-0057 |
+| TDD-0268 | TC-0012-0268 | exception | DR-0012-0057 |
+| TDD-0269 | TC-0012-0269 | exception | DR-0012-0057 |
+| TDD-0270 | TC-0012-0270 | exception | DR-0012-0057 |
+| TDD-0271 | TC-0012-0271 | exception | DR-0012-0057 |
+
+Total added: 24 items (1 × DR-0012-0046 + 23 × DR-0012-0057).
+
+### Test results summary
+
+`
+pnpm --filter qfai exec vitest run --project integration
+# 824/824 PASS (2026-04-17)
+
+pnpm --filter qfai exec vitest run --project e2e
+# 456/456 PASS (2026-04-17)
+
+qfai validate --fail-on error
+# error=31, warning=88, info=3 (baseline unchanged)
+`
+
+### Quality gates
+
+- Format: PASS (pnpm format:check after pnpm format)
+- Lint: 7 pre-existing errors (not introduced by this phase — confirmed via git stash && pnpm lint)
+- Types: PASS (pnpm check-types)
+
+### Decision Records
+
+- **DR-0012-0046** (existing): rev8 ATDD-first — applies to TDD-0218
+- **DR-0012-0057** (new): rev10 ATDD-first backfill for WS-1..WS-5, TC-0249..0271
+  Source: .qfai/specs/spec-0012/09_delta.md § Implement Phase — TDD Ledger Backfill (v1.7.15 rev10)
+- **RE-OPEN-0001** (existing): accepts efSemantics.ts location for TDD-0266 (cross-ref from ATDD phase)
+
+### Work Orders Summary
+
+| Step | Role (sub-agent)    | Task title                             | Input (refs)            | Output (refs)                  | Status |
+|------|---------------------|----------------------------------------|-------------------------|--------------------------------|--------|
+| 1    | delivery-planner    | Gap analysis on test-list.md           | test-list.md, TC-0271   | Gaps: TDD-0218, TDD-0249..0271 | PASS   |
+| 2    | backend-engineer    | Add TDD-0218 & TDD-0249..0271          | test-list.md, 09_delta  | 24 entries + DR-0012-0057      | PASS   |
+| 3    | qa-gatekeeper       | Verify integration+e2e tests still PASS| vitest integration+e2e  | 824/824 + 456/456 PASS         | PASS   |
+| 4    | completion-reviewer | REVISE: uncommitted changes            | git status              | Files staged, not committed    | REVISE |
+| 5    | orchestrator        | Commit + push (1c59df41)             | staged files            | 16 files, feature/v1.7.15      | PASS   |
+| 6    | completion-reviewer | Final PASS gate                        | git log HEAD            | All files committed, DR valid  | PASS   |
+
+Subagents: real (background agent delegation)
+
+### Final ledger totals
+
+- Total TDD items: **271** (TDD-0001..TDD-0271)
+- Done: **39** (genuine TDD cycle — tests written test-first)
+- Exception: **232** (ATDD-first or impl-first backfill with DR)
+- Todo / red / green / refactor: **0**
+- All 271 TC-0012-0001..TC-0012-0271 covered — 1:1 TC↔TDD mapping confirmed
+
+### Final status (rev10 ATDD-first backfill cycle)
+
+**PASS** — spec-0012 TDD ledger complete. All 271 test cases registered.  
+completion-reviewer: PASS (commit 1c59df41 verified).

@@ -1,4 +1,3 @@
-
 {
   "header": {
     "reportVersion": 5,
@@ -275,11 +274,8 @@
   },
   "javascriptStack": {
     "message": "No stack.",
-    "stack": [
-      "Unavailable."
-    ],
-    "errorProperties": {
-    }
+    "stack": ["Unavailable."],
+    "errorProperties": {}
   },
   "javascriptHeap": {
     "totalMemory": 8708096,
@@ -631,8 +627,7 @@
       "loopIdleTimeSeconds": 8.66138
     }
   ],
-  "workers": [
-  ],
+  "workers": [],
   "environmentVariables": {
     "ALLUSERSPROFILE": "C:\\ProgramData",
     "APPDATA": "C:\\Users\\YusukeSenaga\\AppData\\Roaming",
