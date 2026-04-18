@@ -6,6 +6,8 @@
  * QFAI:SPEC-0002:TC-0002-0015
  * QFAI:SPEC-0002:TC-0002-0025
  * QFAI:SPEC-0002:TC-0002-0028
+ * QFAI:SPEC-0004:TC-0004-0065
+ * QFAI:SPEC-0004:TC-0004-0066
  */
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -64,6 +66,38 @@ function completeAxisContent(): string {
     } else {
       lines.push(`- ${field}: Valid value for ${field}`);
     }
+  }
+  return lines.join("\n");
+}
+
+function trendAxisContent(low: string, mid: string, high: string): string {
+  const lines = ["# Scoring Axes", "", "## Axis: typographic-rhythm", ""];
+  for (const field of ALL_AXIS_FIELDS) {
+    if (field === "layer") {
+      lines.push("- layer: trend-derived");
+      continue;
+    }
+    if (field === "axis_id") {
+      lines.push("- axis_id: TRD-01");
+      continue;
+    }
+    if (field === "axis_name") {
+      lines.push("- axis_name: Typographic Rhythm");
+      continue;
+    }
+    if (field === "score_anchors") {
+      lines.push("- score_anchors:");
+      lines.push(`  - low: ${low}`);
+      lines.push(`  - mid: ${mid}`);
+      lines.push(`  - high: ${high}`);
+      continue;
+    }
+    if (field === "source_refs") {
+      lines.push("- source_refs:");
+      lines.push("  - SRC-TREND-01");
+      continue;
+    }
+    lines.push(`- ${field}: Valid value for ${field}`);
   }
   return lines.join("\n");
 }
@@ -186,5 +220,46 @@ describe("scoring-ready validator", () => {
 
     // Both per-axis and aggregate pass
     expect(issues).toHaveLength(0);
+  });
+
+  // QFAI:SPEC-0004:TC-0004-0065
+  it("warns when score anchors are adjective-only with no quantitative proxy", async () => {
+    const root = await newTempDir();
+    await createUiBearingPack(root);
+    await writeFile(
+      path.join(root, "uiux", "21_design_eval_trend_derived.md"),
+      trendAxisContent(
+        "very rough and inconsistent",
+        "reasonably polished and modern",
+        "very polished and modern",
+      ),
+      "utf-8",
+    );
+
+    const issues = await validateScoringReady(root, defaultConfig);
+    const warnings = issues.filter((issue) => issue.code === "UIX-VAL-T06");
+
+    expect(warnings).toHaveLength(1);
+    expect(warnings[0]?.severity).toBe("warning");
+    expect(warnings[0]?.message).toContain("TRD-01");
+    expect(warnings[0]?.message).toContain("high");
+  });
+
+  // QFAI:SPEC-0004:TC-0004-0066
+  it("accepts score anchors that include quantitative proxies", async () => {
+    const root = await newTempDir();
+    await createUiBearingPack(root);
+    await writeFile(
+      path.join(root, "uiux", "21_design_eval_trend_derived.md"),
+      trendAxisContent(
+        "<14px body text and contrast below 3:1",
+        "16px body text with 4.5:1 contrast on primary routes",
+        "16px body text, 1.25 modular ratio, and WCAG AA contrast on every screen",
+      ),
+      "utf-8",
+    );
+
+    const issues = await validateScoringReady(root, defaultConfig);
+    expect(issues.filter((issue) => issue.code === "UIX-VAL-T06")).toHaveLength(0);
   });
 });
