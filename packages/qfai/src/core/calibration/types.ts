@@ -11,6 +11,11 @@ export type AlignmentExample = {
   rationale: string;
 };
 
+export type CalibrationOverrides = {
+  perAxisMinimum?: number;
+  maxIterationsByMode?: Record<string, number>;
+};
+
 export type CalibrationPack = {
   version: string;
   examples: AlignmentExample[];
@@ -18,6 +23,19 @@ export type CalibrationPack = {
   maxIterations: number;
   plateauDelta: number;
   plateauLookback: number;
+  overrides?: CalibrationOverrides;
+};
+
+export type EffectiveCalibrationConfig = {
+  maxIterations: number;
+  perAxisMinimum: number;
+  maxIterationsByMode: Record<string, number>;
+};
+
+export const DEFAULT_EFFECTIVE_CONFIG: EffectiveCalibrationConfig = {
+  maxIterations: 5,
+  perAxisMinimum: 0.6,
+  maxIterationsByMode: {},
 };
 
 export type ThresholdConfig = {
