@@ -503,3 +503,22 @@
 - OQ-0003〜0007 deferred to tdd/ops gates with full metadata
 - OQ-0008 (スキーマ後方互換性) resolved at SDD → REQ-0001〜0018 target file list re-confirmed in this run (preflight_summary.md slice decision section).
 - Reviewer gate (discussion phase): completion-reviewer / requirements-reviewer / architecture-reviewer = all PASS.
+
+## v1.7.17 — Design Guideline Traceability Hardening (Adopted)
+
+### Phase: SDD (Contracts-first / Outline / Slice / Plan / Delta)
+
+| Date       | Status  | Artifact                 | Change | Source |
+| ---------- | ------- | ------------------------ | ------ | ------ |
+| 2026-04-18 | adopted | 05_Contracts.md          | v1.7.17 Contract Posture 追加（内部 skill/template/validator 拡張のみ、外部 stable contract なし; 0 items 維持） | discussion-20260418170937652 |
+| 2026-04-18 | adopted | spec-0010                | design guideline research mandatory step、`design_guideline_research` category、quantitative `score_anchors` guidance を追加 | discussion-20260418170937652 REQ-0001〜0003, 0006, 0007 |
+| 2026-04-18 | adopted | spec-0004                | UIX-VAL-T05（guideline coverage, warning）/ UIX-VAL-T06（anchor concreteness, warning）と warning-first rollout / module ownership を追加 | discussion-20260418170937652 REQ-0004, 0005 |
+| 2026-04-18 | adopted | 08_Decisions.md          | DR-0227..0230 追加（mandatory research / category SSOT / warning-first proxy / validator ownership split） | discussion-20260418170937652 DR-001..004 |
+| 2026-04-18 | adopted | 11_Slice-Policy.md       | v1.7.17 slicing confirmation 追加（UPDATE only: spec-0010 / spec-0004） | preflight_summary.md |
+
+### Discussion Pack Reference
+
+- `discussion-20260418170937652`
+- Classification: non-ui
+- OQ-0003 resolved at SDD → DR-0229 (warning-first rollout)
+- OQ-0004 resolved at SDD → DR-0230 (validator ownership split)

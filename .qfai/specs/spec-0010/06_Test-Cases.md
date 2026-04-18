@@ -323,3 +323,43 @@ Verify that `templates/uiux/12_design_system.md` declares all 8 canonical sectio
 - Type: unit
 
 Verify that `UIX-VAL-T04` severity constant resolves to `warning` in v1.7.16, honoring NFR-0007 staged introduction.
+
+## TC-0010-0049: SKILL.md mandates design guideline research for UI-bearing packs
+
+- EX-Ref: EX-0010-0035
+- AC-Refs: AC-0010-0028
+- Type: unit
+
+Verify that `/qfai-discussion` SKILL.md contains explicit mandatory wording requiring design guideline research before finalizing trend-derived axes for UI-bearing runs.
+
+## TC-0010-0050: `04_Sources.md` template defines `design_guideline_research` category
+
+- EX-Ref: EX-0010-0035
+- AC-Refs: AC-0010-0029
+- Type: unit
+
+Verify that the canonical `templates/04_Sources.md` contains a `design_guideline_research` section and each scaffolded entry includes `guideline_name`, `rule_refs`, `local_translation`, and `source_id`.
+
+## TC-0010-0051: Non-UI discussion pack does not require guideline research
+
+- EX-Ref: EX-0010-0036
+- AC-Refs: AC-0010-0028
+- Type: integration
+
+Verify that a non-UI pack can complete without `design_guideline_research` entries and emits no guideline-research-specific validation issue.
+
+## TC-0010-0052: Trend-derived template requires quantitative proxy in score_anchors
+
+- EX-Ref: EX-0010-0037
+- AC-Refs: AC-0010-0030
+- Type: unit
+
+Verify that `templates/uiux/21_design_eval_trend_derived.md` guidance explicitly requires quantitative proxy in `score_anchors.low/mid/high`.
+
+## TC-0010-0053: Adjective-only anchor example is marked non-compliant
+
+- EX-Ref: EX-0010-0038
+- AC-Refs: AC-0010-0030
+- Type: integration
+
+Verify that a fixture using adjective-only `score_anchors` text is rejected by the authored rule set and linked to downstream validator warning T06.

@@ -24,6 +24,8 @@
 - NFR-0011: ウェイバー正確性 - ウェイバー適用による意図しない Issue 消失なし
 - NFR-0012: 冪等性 - 同一入力に対して同一出力を保証
 - NFR-0061: 終了コード規約 - 0=成功, 1=失敗（failOn 基準）
+- NFR-0062: staged rollout - 新 guideline validator は v1.7.17 では warning-first とし、次版以降の error 昇格は migration note 前提
+- NFR-0063: actionability - guideline validator message は不足 category / anchor / proxy type を具体的に含む
 
 ## Applicable Policy
 
@@ -81,10 +83,12 @@
 - REQ-0135: Validator rules: additional full-harness integrity checks (QFAI-PROT-299, PROT-300, PROT-302, PROT-303) — status=completed + terminationReason 欠落 (PROT-299 error)、plateau + insufficient iterations (PROT-300 error)、全 iteration 同一 commitSha (PROT-302 warning)、reviewerLog summary too short (PROT-303 warning)
 - REQ-0136: Validator 14 項目 error 昇格 rev2 (v1.7.15 rev2; discussion REQ-0055) — 以下の追加/昇格: discussion/screenContract/trend の evidenceRefs===0 を error 化 / declared DB 無観測を error 化 / uiFidelity completed で screen-level 不足を error 化 / iterations[].evidenceRefs 必須カテゴリ欠落を error 化 / request.l1/l2 旧 schema 由来 evidence 検出を error 化。既存ルールのうち semantic 変更分は新 rule ID に分離
 - REQ-0137: Validator tests fixture rev2 改定 (v1.7.15 rev2; discussion REQ-0057) — 正常系 fixture から旧前提を削除し異常系 fixture に新ケースを追加
+- REQ-0138: Guideline Coverage Validator (v1.7.17) — UI-bearing discussion pack の `04_Sources.md` に `design_guideline_research` が存在し、最低 1 entry が rule refs / local translation を持つかを warning で検証する
+- REQ-0139: Anchor Concreteness Validator (v1.7.17) — `21_design_eval_trend_derived.md` の `score_anchors` が adjective-only ではないことを warning で検証する
 
 ## Entry points
 
-- US range in this spec: US-0004-0001..US-0004-0027
+- US range in this spec: US-0004-0001..US-0004-0029
 - Primary actors: QA エンジニア / AI エージェント
 - Notes: `qfai validate` でスペック・コントラクト・トレーサビリティを包括検証する
 

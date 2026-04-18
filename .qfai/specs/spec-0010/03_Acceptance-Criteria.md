@@ -142,3 +142,24 @@ Given a UI-bearing discussion-pack, when prototyping.yaml is generated, then sur
 - Given `templates/uiux/12_design_system.md`
 - When the template is inspected
 - Then it defines all 8 sections (Visual Theme / Color Palette / Typography / Spacing & Layout / Component Style / Animation & Motion / Do's and Don'ts / Agent Implementation Guide) with required-field markers and authoring guidance comments
+
+## AC-0010-0028: UI-bearing runs include design guideline research step (v1.7.17)
+
+- US-Ref: US-0010-0023
+- Given a UI-bearing discussion run
+- When the required workflow is inspected
+- Then it explicitly requires at least one design-guideline research step referencing platform or library guidance before Trend-derived axis finalization
+
+## AC-0010-0029: `04_Sources.md` exposes `design_guideline_research` category (v1.7.17)
+
+- US-Ref: US-0010-0024
+- Given the canonical `templates/04_Sources.md`
+- When the Trend Scan categories are inspected
+- Then a `design_guideline_research` category exists and each scaffolded entry includes guideline name, rule_refs, local_translation, and source_id fields
+
+## AC-0010-0030: `score_anchors` guidance requires quantitative proxy (v1.7.17)
+
+- US-Ref: US-0010-0025
+- Given the canonical `templates/uiux/21_design_eval_trend_derived.md`
+- When the `score_anchors` authoring guidance is inspected
+- Then it states that `low`, `mid`, and `high` anchors must include at least one quantitative proxy such as px value, ratio, WCAG rule id, class name, or library default value

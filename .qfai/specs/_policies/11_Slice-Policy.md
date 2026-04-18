@@ -62,3 +62,12 @@ spec-XXXX (${subject}) を削除します。
 ## v1.7.15 Slicing Confirmation
 
 v1.7.15 の scope extension (runtime truthfulness hardening) は spec-0012 (qfai-prototyping, category: skill) 内に閉じており、既存のスライスモデルと整合する。新規 spec の作成や re-slicing は不要。
+
+## v1.7.17 Slicing Confirmation
+
+v1.7.17 の DGS-axis traceability hardening は既存の slice model に閉じる。
+
+- spec-0010 (qfai-discussion, category: skill): design guideline research step / sources category / score-anchor authoring guidance
+- spec-0004 (qfai validate, category: CLI): guideline coverage / anchor concreteness validators
+
+新規 spec の作成や re-slicing は不要。

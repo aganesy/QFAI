@@ -87,3 +87,15 @@ As a discussion facilitator, I want a `references/design-md-brand-catalog.md` fi
 ## US-0010-0022: 12_design_system.md Template 8-Section Schema (v1.7.16)
 
 As a QFAI user, I want `templates/uiux/12_design_system.md` to define 8 sections (Visual Theme / Color Palette / Typography / Spacing & Layout / Component Style / Animation & Motion / Do's and Don'ts / Agent Implementation Guide), so that auto-generated DESIGN.md files have a uniform structure that downstream agents can consume.
+
+## US-0010-0023: UI-bearing design guideline research mandatory step (v1.7.17)
+
+As a discussion facilitator, I want UI-bearing discussion runs to research external design guidelines such as Material Design, WCAG, Apple HIG, and adopted UI-library guidance before finalizing Trend Scan, so that downstream evaluation criteria are grounded in concrete design standards rather than taste alone.
+
+## US-0010-0024: `design_guideline_research` canonical source category (v1.7.17)
+
+As a QFAI user, I want `04_Sources.md` to include a `design_guideline_research` category with traceable entries, so that guideline findings are stored in the same canonical source registry as trend and competitive research.
+
+## US-0010-0025: Trend-derived score anchors require quantitative proxy (v1.7.17)
+
+As a QFAI user, I want `uiux/21_design_eval_trend_derived.md` authoring guidance to require quantitative proxy in `score_anchors`, so that axis scoring cannot rely on abstract adjectives alone.

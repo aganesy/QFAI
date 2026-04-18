@@ -147,3 +147,27 @@
 - `templates/uiux/21_design_eval_trend_derived.md` MUST contain at least 2 visual axis examples.
 - Each example MUST demonstrate a `source_refs` field linking back to a 04_Sources entry.
 - Authoring guidance MUST include the rule "source_refs must point to existing 04_Sources.md entries" (enforced by UIX-VAL-T03 WARNING).
+
+## BR-0010-0021: Design guideline research is mandatory for UI-bearing packs (v1.7.17)
+
+- AC-Refs: AC-0010-0028
+
+- UI-bearing discussion runs MUST research at least one external design-guideline source family before finalizing Trend-derived axes.
+- Allowed source families include platform guidelines, accessibility guidelines, and adopted UI-library guidance.
+- Non-UI discussion runs MUST skip this rule entirely.
+
+## BR-0010-0022: `design_guideline_research` is part of canonical `04_Sources.md` (v1.7.17)
+
+- AC-Refs: AC-0010-0029
+
+- `design_guideline_research` entries MUST live in `04_Sources.md`, not a side file.
+- Each entry MUST expose `source_id`, `guideline_name`, `rule_refs`, `local_translation`, and `evidence`.
+- Project-specific libraries are allowed; the category is not restricted to one vendor.
+
+## BR-0010-0023: Trend-derived `score_anchors` forbid adjective-only anchors (v1.7.17)
+
+- AC-Refs: AC-0010-0030
+
+- Every `score_anchors.low`, `score_anchors.mid`, and `score_anchors.high` text MUST include at least one quantitative proxy.
+- Adjective-only anchors such as "clean", "modern", or "beautiful" without supporting proxy are invalid authoring.
+- Accepted proxies include px values, ratios, rule IDs, class names, token names, or library defaults.

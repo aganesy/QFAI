@@ -188,3 +188,13 @@
 | CON-019 | 実装順序は 6 ステップの依存関係を遵守                 | WS 間の入出力依存                         | 並行開発は同一ステップ内に限定     |
 | CON-020 | `40_screen_contracts.md` パース仕様が確定していること | WS-2/WS-4/WS-5 がパース結果に依存         | パース仕様未確定時は WS-2 着手不可 |
 | CON-021 | 公開 API シグネチャに破壊的変更を加えない             | 利用者への影響最小化                      | 内部実装変更のみ                   |
+
+## v1.7.17 Constraints
+
+### Technical Constraints (v1.7.17)
+
+| CON-ID  | Constraint | Rationale | Impact |
+| ------- | ---------- | --------- | ------ |
+| CON-022 | design guideline research は UI-bearing pack のみ必須 | non-UI pack への over-fire 防止 | non-UI では validator short-circuit 必須 |
+| CON-023 | 新 validator は warning-first 導入 | 既存 discussion pack への即時破壊を避ける | T05/T06 は次版で error ratchet 可否を再評価 |
+| CON-024 | validator ownership は `uix/trendScan.ts` と `uix/scoringReady.ts` に閉じる | 現行 canonical UIX validator 構造と整合 | top-level bespoke validator 新設禁止 |

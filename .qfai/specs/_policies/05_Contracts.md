@@ -245,6 +245,13 @@ QFAI は GUI を持たない CLI ツールである。`/qfai-prototyping` スキ
 - `runMeasurement()` / `validatePanelScore()` は `index.ts` からの export を削除するが、これらは元々外部契約ではなく internal helper である。
 - したがって Contract Index の `0 items` は意図的な none-rationale であり、spec-0012 のスコープ境界に整合する。
 
+## v1.7.17 Contract Posture
+
+- Contracts-first review completed for `discussion-20260418170937652` (spec-0010 / spec-0004 update).
+- v1.7.17 は `packages/qfai/assets/init/.qfai/assistant/skills/qfai-discussion/**` と `packages/qfai/src/core/validators/uix/**` の内部 skill/template/validator を拡張する変更であり、外部向け stable DB/API/UI contract は新設しない。
+- `design_guideline_research` category と quantitative `score_anchors` guidance は discussion-side SSOT の強化であり、QFAI 自体の API/UI contract には昇格しない。
+- したがって Contract Index の `0 items` は v1.7.17 でも意図的な none-rationale であり、discussion-20260418170937652 のスコープ境界に整合する。
+
 ## ER Diagram
 
 QFAI はデータベースを使用しないため、ER Diagram は省略する。

@@ -102,3 +102,24 @@
 
 - Ecosystem availability: `npx getdesign@latest` downtime blocks Phase A. Mitigation: document the dependency in README and surface a clear error; offline fallback deferred.
 - Archetype-selection drift: taste-interview scoring may shift across `awesome-design-md` upstream versions. Mitigation: pin the ecosystem version in Phase A invocation and surface the version in evidence.
+
+## v1.7.17 Implementation Notes (How-only)
+
+### SKILL / Template Touchpoints
+
+- `packages/qfai/assets/init/.qfai/assistant/skills/qfai-discussion/SKILL.md`
+  Add explicit design guideline research step for UI-bearing runs before trend-derived axis finalization.
+- `packages/qfai/assets/init/.qfai/assistant/skills/qfai-discussion/templates/04_Sources.md`
+  Add `design_guideline_research` category with `guideline_name`, `rule_refs`, `local_translation`, `source_id`, `evidence`.
+- `packages/qfai/assets/init/.qfai/assistant/skills/qfai-discussion/templates/uiux/21_design_eval_trend_derived.md`
+  Strengthen `score_anchors` guidance to require quantitative proxy in every anchor level.
+
+### Test Files (spec -> implementation mapping)
+
+- `packages/qfai/tests/skills/discussionGuidelineResearch.test.ts` — TC-0010-0049, TC-0010-0051
+- `packages/qfai/tests/templates/sourcesGuidelineCategory.test.ts` — TC-0010-0050
+- `packages/qfai/tests/templates/trendAnchorProxyGuidance.test.ts` — TC-0010-0052, TC-0010-0053
+
+### Risk
+
+- Over-prescription risk: hard-coding one vendor guideline would reduce flexibility. Mitigation: require at least one applicable family, not a fixed list.

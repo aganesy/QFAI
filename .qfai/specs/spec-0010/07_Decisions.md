@@ -73,3 +73,33 @@ Rejected:
 - DO NOT keep two parallel category systems (04_Sources.md + 20_trend_scan.md).
   - Temptation: preserve the legacy trend_scan layout for readability.
   - Reason: drift risk; validators already read 04_Sources.md per REQ-0015.
+
+## DR-0010-v1717-01: Design guideline research is an upstream discussion obligation
+
+- Discussion-Ref: discussion-20260418170937652 (DR-001)
+- Date: 2026-04-18
+- Status: Adopted
+
+Decision: UI-bearing discussion runs MUST perform design guideline research before locking trend-derived axes. The requirement is upstream and belongs to `/qfai-discussion`, not to `/qfai-prototyping`.
+
+Rationale: the failure mode reported in the source discussion is caused by missing upstream criteria, not by downstream prototype execution. Root cause must be closed at discussion time.
+
+## DR-0010-v1717-02: `design_guideline_research` is stored in `04_Sources.md`
+
+- Discussion-Ref: discussion-20260418170937652 (DR-002)
+- Date: 2026-04-18
+- Status: Adopted
+
+Decision: guideline research uses `04_Sources.md` as its canonical storage surface via a `design_guideline_research` category rather than a new file.
+
+Rationale: a single source registry keeps traceability simple for both SDD and validation.
+
+## DR-0010-v1717-03: Quantitative proxy is mandatory in TRD score anchors
+
+- Discussion-Ref: discussion-20260418170937652 (DR-003)
+- Date: 2026-04-18
+- Status: Adopted
+
+Decision: trend-derived `score_anchors` must include quantitative proxy in low/mid/high anchor text. Adjective-only anchors are explicitly rejected.
+
+Rationale: design review scoring must be explainable and testable; pure adjectives are too weak to block low-quality UI.

@@ -696,3 +696,21 @@ flowchart LR
 
     S1 -.-> |"WS-1 は独立 (並行可能)"| WS1["WS-1: full-harness 拒否"]
 ```
+
+## v1.7.17 Design Guideline Traceability Flow
+
+```mermaid
+flowchart TD
+    A["/qfai-discussion UI-bearing 判定"] --> B["design guideline research 実施"]
+    B --> C["04_Sources.md に design_guideline_research を記録"]
+    C --> D["21_design_eval_trend_derived.md に quantitative score_anchors を導出"]
+    D --> E["qfai validate: UIX-VAL-T05 guideline coverage"]
+    D --> F["qfai validate: UIX-VAL-T06 anchor concreteness"]
+    E --> G["warning-first triage / migration note"]
+    F --> G
+```
+
+補足:
+
+- non-UI pack では B〜F は not-applicable とする。
+- guideline research は固定ルール集の強制ではなく、Material Design / WCAG / Apple HIG / 採用 UI ライブラリなど project-context に応じた参照を許容する。

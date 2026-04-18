@@ -263,6 +263,9 @@
 | canonical screen contract | screen contract の正規化された表現。画面 ID / ルート / 期待 DOM 構造 / 期待アクションを定義 (v1.7.15 rev4) |
 | missing_observation | 画面契約に存在するがオブザベーションにないルートに対する specCoverage のレポートステータス (v1.7.15 rev4) |
 | reality sync | docs / SKILL / README が runtime / validator / tests の実体と一致した状態 (v1.7.15 rev4) |
+| Design Guideline Research | UI-bearing discussion で Material Design / WCAG / Apple HIG / 採用 UI ライブラリ等の基準を収集し、`04_Sources.md` に traceable に記録する research step (v1.7.17) |
+| design_guideline_research | `04_Sources.md` に追加される canonical category。デザイン指南書由来の定量基準や rule ID を保持するための領域 (v1.7.17) |
+| Quantitative Proxy | `score_anchors` の concreteness を支える具体表現。px 値、比率、WCAG rule ID、class 名、library default value などを含む (v1.7.17) |
 
 ## 使用ルール
 

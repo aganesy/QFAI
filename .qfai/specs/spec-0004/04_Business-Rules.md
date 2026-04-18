@@ -199,3 +199,23 @@
 - REQ-Refs: REQ-0137
 - 正常系 fixture: l1/l2 直渡し / packVersion:"1.0.0" / single-iteration converged / actionsWired=0 / flattened DOM labels を含まない
 - 異常系 fixture: missing pack / missing reviewer / missing discussion|trend|screenContract evidence / insufficient ui observation / per-spec coverage build failure を含む
+
+## BR-0004-0041: UIX-VAL-T05 validates `design_guideline_research` coverage (v1.7.17)
+
+- AC-Refs: AC-0004-0039
+
+- Rule ID: UIX-VAL-T05
+- Severity: warning
+- Ownership: extend `packages/qfai/src/core/validators/uix/trendScan.ts`
+- Detection: UI-bearing pack with no `design_guideline_research` category, or only placeholder entries lacking `rule_refs` / `local_translation`
+- Non-UI packs MUST return zero findings
+
+## BR-0004-0042: UIX-VAL-T06 validates quantitative proxy in trend-derived anchors (v1.7.17)
+
+- AC-Refs: AC-0004-0040
+
+- Rule ID: UIX-VAL-T06
+- Severity: warning
+- Ownership: extend `packages/qfai/src/core/validators/uix/scoringReady.ts`
+- Detection: any `score_anchors.low|mid|high` text in `21_design_eval_trend_derived.md` that lacks quantitative proxy (px / ratio / rule id / class / token / library default)
+- Pure adjective wording alone is insufficient

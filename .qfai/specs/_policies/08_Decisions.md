@@ -1369,3 +1369,35 @@ discussion-20260416023323603（v1.7.15 rev8 leaf-field ref grammar closure）、
 - Rationale: DoD §5-6「docs/validator partial-strictness mismatch をゼロにする」が hard gate。design doc §9 が「README の表現を弱めて整合したことにする」を明示禁止している
 - Alternatives: (A) full enumeration (adopted) / (B) minimal note — DoD §5-6 違反
 - Source: discussion-20260416092414328, OQ-0004
+
+### DR-0227: UI-bearing discussion requires design guideline research (v1.7.17)
+
+- Decision: UI-bearing discussion では Trend Scan に加えて design guideline research を mandatory step とする。Material Design / WCAG / Apple HIG / platform/library guideline など、project-context に応じた参照を少なくとも 1 系統含める
+- Status: Adopted
+- Rationale: visual quality failure の root cause が prototyping ではなく upstream research 欠落であるため、discussion で閉じる必要がある
+- Alternatives: (A) prototyping skill で後追い補正 — root cause を閉じられない / (B) discussion mandatory step 化 (adopted)
+- Source: discussion-20260418170937652, DR-001
+
+### DR-0228: `design_guideline_research` becomes canonical Trend Scan category (v1.7.17)
+
+- Decision: `04_Sources.md` の canonical category に `design_guideline_research` を追加する
+- Status: Adopted
+- Rationale: guideline evidence を既存 source registry と同じ traceability surface に置くことで、validator と downstream spec が同じ SSOT を参照できる
+- Alternatives: (A) 別ファイル新設 — category drift / (B) 04_Sources に統合 (adopted)
+- Source: discussion-20260418170937652, DR-002
+
+### DR-0229: Trend-derived `score_anchors` require quantitative proxy and warning-first rollout (v1.7.17)
+
+- Decision: `21_design_eval_trend_derived.md` の `score_anchors` は抽象形容詞のみを禁止し、px 値 / 比率 / rule ID / class 名 / library default などの quantitative proxy を 1 つ以上含める。validator severity は v1.7.17 では warning とする
+- Status: Adopted
+- Rationale: concreteness がない anchor は高スコアでも低品質 UI を通してしまう。一方で既存 pack 影響は staged rollout が妥当
+- Alternatives: (A) 即時 error — migration shock / (B) warning-first ratchet (adopted)
+- Source: discussion-20260418170937652, DR-003 / OQ-0003 resolution
+
+### DR-0230: Validator ownership split = trendScan coverage + scoringReady concreteness (v1.7.17)
+
+- Decision: guideline coverage validator は `packages/qfai/src/core/validators/uix/trendScan.ts` を拡張し、anchor concreteness validator は `packages/qfai/src/core/validators/uix/scoringReady.ts` を拡張する。top-level 新規 validator を追加しない
+- Status: Adopted
+- Rationale: category completeness は sources schema の責務、anchor concreteness は scoring-ready schema の責務であり、現行 canonical validator 境界と一致する
+- Alternatives: (A) 新規 top-level validator — ownership split を曖昧化 / (B) 既存 uix module 拡張 (adopted)
+- Source: discussion-20260418170937652, DR-004 / OQ-0004 resolution

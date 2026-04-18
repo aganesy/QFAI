@@ -625,3 +625,47 @@ Verify:
 | 1    | Grep normal fixtures for l1/l2 direct pass               | Zero matches |
 | 2    | Grep normal fixtures for packVersion:"1.0.0"             | Zero matches |
 | 3    | Check error fixtures include missing evidence categories | Present      |
+
+## TC-0004-0063: UIX-VAL-T05 warns on missing guideline category (v1.7.17)
+
+- EX-Ref: EX-0004-0044
+- AC-Refs: AC-0004-0039
+- Type: warning
+
+| Step | Action | Expected |
+| ---- | ------ | -------- |
+| 1 | Create UI-bearing pack without `design_guideline_research` entries | Fixture ready |
+| 2 | Run trendScan validator | UIX-VAL-T05 warning |
+
+## TC-0004-0064: UIX-VAL-T05 accepts one concrete guideline entry (v1.7.17)
+
+- EX-Ref: EX-0004-0044
+- AC-Refs: AC-0004-0039
+- Type: normal
+
+| Step | Action | Expected |
+| ---- | ------ | -------- |
+| 1 | Create UI-bearing pack with one guideline entry containing `rule_refs` and `local_translation` | Fixture ready |
+| 2 | Run trendScan validator | No UIX-VAL-T05 |
+
+## TC-0004-0065: UIX-VAL-T06 warns on adjective-only anchor (v1.7.17)
+
+- EX-Ref: EX-0004-0045
+- AC-Refs: AC-0004-0040
+- Type: warning
+
+| Step | Action | Expected |
+| ---- | ------ | -------- |
+| 1 | Create trend-derived axis whose `score_anchors.high` contains only adjectives | Fixture ready |
+| 2 | Run scoringReady validator extension | UIX-VAL-T06 warning |
+
+## TC-0004-0066: UIX-VAL-T06 accepts quantitative proxy anchor (v1.7.17)
+
+- EX-Ref: EX-0004-0045
+- AC-Refs: AC-0004-0040
+- Type: normal
+
+| Step | Action | Expected |
+| ---- | ------ | -------- |
+| 1 | Create trend-derived axis with px/ratio/token proxy in all score anchors | Fixture ready |
+| 2 | Run scoringReady validator extension | No UIX-VAL-T06 |

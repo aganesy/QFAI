@@ -220,3 +220,12 @@ US-0004-0025 → AC-0004-0028..AC-0004-0031 → BR-0004-0031..BR-0004-0037 → E
 - adopted: REQ-0117 / BR-0004-0022 / EX-0004-0024 / TC-0004-0031 を実装実態に合わせて canonical validator count=12 に補正
 - removed: BR-0004-0021 に紐づく stale EX-0004-0022 / TC-0004-0028（phase1 ratchet）。rollout.ts 削除後の production 実装に存在しないため再採用しない
 - rationale: spec-0004 と tests/e2e / tests/integration の ATDD coverage 監査で、placeholder・削除済み機能・Test Case Table 欠落が実装と乖離していたため
+
+## v1.7.17 (2026-04-18) — Guideline Coverage & Anchor Concreteness
+
+- adopted: REQ-0138（UIX-VAL-T05 guideline coverage warning）, REQ-0139（UIX-VAL-T06 anchor concreteness warning）追加
+- adopted: US-0004-0028..0029, AC-0004-0039..0040, BR-0004-0041..0042, EX-0004-0044..0045, TC-0004-0063..0066 追加
+- adopted: DR-0004-0011..0013 追加（warning-first rollout, trendScan ownership, scoringReady ownership）
+- rationale:
+  - guideline evidence の欠落と adjective-only anchors は downstream quality failure の主要因だが、既存 pack 影響を考慮して warning-first が妥当
+  - category completeness は `trendScan.ts`、anchor schema は `scoringReady.ts` に寄せることで canonical validator 境界を維持

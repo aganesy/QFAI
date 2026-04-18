@@ -9,7 +9,7 @@
 | Key                | Value                                                           |
 | ------------------ | --------------------------------------------------------------- |
 | プロダクト名       | QFAI (Quality-First AI)                                         |
-| バージョン         | v1.7.13 Canonical Sidecar Convergence SDD 進行中                |
+| バージョン         | v1.7.17 Design Guideline Traceability Hardening SDD 進行中      |
 | カテゴリ           | CLI ツール / 品質第一開発キット                                 |
 | ターゲットユーザー | AI コーディングエージェント（Claude, GitHub Copilot, Codex 等） |
 | 技術スタック       | TypeScript 5.6.3, Node.js >=18.0.0, pnpm monorepo, tsup, Vitest |
@@ -53,6 +53,7 @@
 | v1.7.11 (SDD 進行中)                     | Completion / Correction / Integration Release — 全 surface (discussion / templates / validators / runtime / docs / tests) を canonical 3-layer evaluation model に収束。10 workstreams: discussion canonical (A), template replacement (B), sources schema (C), strategy strong schema (D), contracts strong schema (E), validator truth-path (F), render evidence (G), browser QA (H), prototyping contracts (I), docs/tests normalization (J) |
 | v1.7.13 (SDD 進行中)                     | Canonical Sidecar Convergence — canonical/legacy validator separation, prototyping module (mode.ts, recommendationArtifact.ts), prototyping.yaml required side artifact, existence-based precedence, report prototyping observability, config prototyping.calibration, DDS→sidecar-first validator rewrite                                                                                                                                      |
 | v1.7.15 (SDD 進行中)                     | packages/qfai single-PR completion — runtime truthfulness hardening: panel scoring from real evidence, converged>=2 iterations, reviewer/commitSha mandatory, specCoverage from real diffs, uiFidelity observation-only, CalibrationLoader wired, fail-fast on missing evidence, docs/SKILL/README reality sync                                                                                                                                 |
+| v1.7.17 (SDD 進行中)                     | Design Guideline Traceability Hardening — `/qfai-discussion` に design guideline research 必須化、`04_Sources.md` canonical category 拡張、TRD `score_anchors` quantitative proxy 要求、`qfai validate` に warning-first validator 追加 |
 
 ## v1.7.15 Initiative — packages/qfai single-PR completion
 

@@ -53,6 +53,8 @@
 - NFR-0009 (v1.7.16): Package independence — 改善は QFAI パッケージ自体（`packages/qfai/src/`, `skills/`）に閉じる。`.qfai/` 運用ディレクトリへの変更を含めない
 - NFR-0010 (v1.7.16): Validate-speed budget — 新ルール追加による `qfai validate` 実行時間増加は既存 validate 時間の 20% 以内
 - NFR-0011 (v1.7.16): Online premise — awesome-design-md エコシステム（npx getdesign@latest）はオンライン前提。オフラインフォールバックは実装しない
+- NFR-0012 (v1.7.17): Guideline flexibility — 固定ルール集の押し付けを避け、project-specific library guideline を research 対象に含められる
+- NFR-0013 (v1.7.17): Non-UI safety — non-ui discussion pack では design guideline research を要求しない
 
 ## Applicable Policy
 
@@ -86,10 +88,13 @@
 - REQ-0017: Classification-Aware prototyping.yaml Requiredness (v1.7.14, DR-0110) — prototyping.yaml の必須性を classification に基づいて判定。ui_bearing=true のパックのみ prototyping.yaml を必須とし、ui_bearing=false（non-UI）のパックは prototyping.yaml 不要
 - REQ-0018: Namespaced-Only Schema Mandatory (v1.7.14, DR-0112) — prototyping.yaml 生成時は必ず `prototyping:` namespaced block を使用。legacy top-level keys（recommended_mode 等をルートに配置）は生成禁止
 - REQ-0019: Score Scope Annotation (v1.7.14) — discussion 3-layer scores は design direction quality を測定する旨を SKILL.md に明記。prototyping.yaml 生成時に `recommended_mode: full-harness` の場合は `iteration_expectations` ブロック（min_iterations, evaluation_axes_source, score_scope, note）を追加し、スコア射程の違いを明示
+- REQ-0027: Design Guideline Research Step (v1.7.17) — UI-bearing のとき、Trend Scan 内で design guideline research を mandatory step として要求する
+- REQ-0028: Trend Scan Guideline Category (v1.7.17) — `04_Sources.md` template に `design_guideline_research` category を追加し、guide name / rule refs / local translation を保持する
+- REQ-0029: Quantitative Score Anchors Guidance (v1.7.17) — `21_design_eval_trend_derived.md` は `score_anchors` に quantitative proxy 必須を明記する
 
 ## Entry points
 
-- US range in this spec: US-0010-0001..US-0010-0022
+- US range in this spec: US-0010-0001..US-0010-0025
 - Primary actors: QFAI user (product owner/developer), AI Agent (discovery-analyst, requirements-analyst)
 - Notes: This is the entry point for new projects. Output feeds `/qfai-sdd`.
 

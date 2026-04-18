@@ -59,3 +59,22 @@
 - Decision: v1.7.15 rev2 の validator 実装が先行完了しているため、TC-0004-0054..0062 の TDD エントリは exception (impl-first backfill) として登録
 - Rationale: PROT-310..315 validator rules は prototypingEvidence.ts に実装済み。unit tests を追加し PASS 確認済み
 - Status: Adopted
+
+### DR-0004-0011: Guideline validators start at warning severity (v1.7.17)
+
+- Decision: UIX-VAL-T05 / UIX-VAL-T06 は v1.7.17 では warning とする
+- Context: discussion-20260418170937652 OQ-0003 で staged rollout が deferred されていた
+- Rationale: 既存 discussion pack の migration note なしに即時 error 化すると導入ノイズが大きい
+- Status: Adopted
+
+### DR-0004-0012: Guideline coverage belongs to trendScan validator ownership (v1.7.17)
+
+- Decision: `design_guideline_research` coverage check は `uix/trendScan.ts` に追加する
+- Rationale: `04_Sources.md` category completeness は Trend Scan schema responsibility であり、trend validator に最も近い
+- Status: Adopted
+
+### DR-0004-0013: Anchor concreteness belongs to scoringReady validator ownership (v1.7.17)
+
+- Decision: quantitative proxy check は `uix/scoringReady.ts` に追加する
+- Rationale: `score_anchors` は scoring-ready schema の一部であり、新規 top-level validator より責務境界が明確
+- Status: Adopted

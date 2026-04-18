@@ -106,3 +106,21 @@ All functionality is already implemented. This spec documents existing behavior.
 - Normal-path fixtures: remove l1/l2 direct pass, packVersion:"1.0.0", single-iteration converged, actionsWired=0
 - Error-path fixtures: add missing discussion/trend/screenContract evidence, unobserved DB, insufficient UI observation
 - Each new rule: at least 1 positive + 1 negative test case
+
+## v1.7.17 Validator Plan (How-only)
+
+### File Touchpoints
+
+| File | Changes |
+| ---- | ------- |
+| `packages/qfai/src/core/validators/uix/trendScan.ts` | add `design_guideline_research` category recognition and UIX-VAL-T05 warning logic |
+| `packages/qfai/src/core/validators/uix/scoringReady.ts` | add quantitative-proxy detection for `score_anchors.low/mid/high` and emit UIX-VAL-T06 warning |
+| `packages/qfai/src/core/validators/uix/canonical.ts` | no new ownership layer; continue to call existing modules |
+| `packages/qfai/tests/validators/trendScan.test.ts` | TC-0004-0063, TC-0004-0064 |
+| `packages/qfai/tests/validators/scoringReady.test.ts` | TC-0004-0065, TC-0004-0066 |
+
+### Implementation Notes
+
+- T05 and T06 are warning-first by decision DR-0004-0011.
+- T05 should report the missing category or missing `rule_refs` / `local_translation` fields directly in the message.
+- T06 should inspect anchor text heuristically for quantitative proxy markers (`px`, `%`, ratio pattern, `WCAG`, token/class/default naming).

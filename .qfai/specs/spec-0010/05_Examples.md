@@ -237,3 +237,35 @@
 - Given a pack where no visual axis is derived
 - When `qfai validate` runs under v1.7.16
 - Then UIX-VAL-T04 emits severity `warning` (not `error`) to honor NFR-0007 backward compatibility; a future ratchet may promote to ERROR per DR-0014-v1716-02
+
+## EX-0010-0035: UI-bearing pack records WCAG and component-library guidance (Happy)
+
+- BR-Ref: BR-0010-0021, BR-0010-0022
+
+- Given a UI-bearing discussion pack for a web product
+- When `04_Sources.md` is authored
+- Then `design_guideline_research` contains entries for WCAG and the adopted component library, each with rule refs and local translation into the product context
+
+## EX-0010-0036: Non-UI pack skips guideline research without error (Negative)
+
+- BR-Ref: BR-0010-0021
+
+- Given a non-UI discussion pack
+- When discussion completes
+- Then no `design_guideline_research` entry is required and no validator finding is emitted for its absence
+
+## EX-0010-0037: Trend-derived axis anchor includes px and WCAG proxy (Happy)
+
+- BR-Ref: BR-0010-0023
+
+- Given `uiux/21_design_eval_trend_derived.md`
+- When a visual accessibility axis is authored
+- Then its `score_anchors` include concrete proxy such as `44px tap target`, `4.5:1 contrast`, or a token/class reference instead of adjective-only prose
+
+## EX-0010-0038: Adjective-only anchor guidance is rejected (Negative)
+
+- BR-Ref: BR-0010-0023
+
+- Given a draft axis whose `score_anchors.high` says only "very polished and modern"
+- When the authoring guidance is checked
+- Then the draft is treated as non-compliant because no quantitative proxy is present

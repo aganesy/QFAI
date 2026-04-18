@@ -301,3 +301,21 @@ Scenario: Valid full-harness evidence passes all v1.7.15 validators
 | AC-0004-0036 | Iteration evidenceRefs missing category error            | REQ-0136           | P1       |
 | AC-0004-0037 | Old schema l1/l2 evidence detected error                 | REQ-0136           | P1       |
 | AC-0004-0038 | Validator test fixtures rev2 aligned                     | REQ-0137           | P1       |
+| AC-0004-0039 | Guideline coverage warning validator                     | REQ-0138           | P2       |
+| AC-0004-0040 | Anchor concreteness warning validator                    | REQ-0139           | P2       |
+
+```gherkin
+# AC-0004-0039
+Scenario: UIX-VAL-T05 warns on missing design guideline research coverage
+  Given a UI-bearing discussion pack whose 04_Sources.md lacks usable design_guideline_research entries
+  When `qfai validate` runs
+  Then UIX-VAL-T05 warning is emitted with the missing category name and the process still exits 0 under `--fail-on error`
+```
+
+```gherkin
+# AC-0004-0040
+Scenario: UIX-VAL-T06 warns on adjective-only score anchors
+  Given uiux/21_design_eval_trend_derived.md contains a TRD axis whose score_anchors use only abstract adjectives
+  When `qfai validate` runs
+  Then UIX-VAL-T06 warning is emitted naming the offending axis and anchor level
+```

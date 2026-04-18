@@ -284,3 +284,22 @@
 - Given error-path test fixtures
 - When checked for missing discussion/trend/screenContract evidence cases
 - Then all cases present
+
+## EX-0004-0044: Missing guideline research coverage emits warning (v1.7.17)
+
+- BR-Ref: BR-0004-0041
+
+| Input | Expected |
+| ----- | -------- |
+| UI-bearing pack with no `design_guideline_research` category | UIX-VAL-T05 warning |
+| UI-bearing pack with placeholders only, no rule_refs/local_translation | UIX-VAL-T05 warning |
+| UI-bearing pack with one valid guideline entry | No UIX-VAL-T05 |
+
+## EX-0004-0045: Adjective-only score anchors emit warning (v1.7.17)
+
+- BR-Ref: BR-0004-0042
+
+| Input | Expected |
+| ----- | -------- |
+| `score_anchors.high = "very polished and modern"` | UIX-VAL-T06 warning |
+| `score_anchors.high = ">=44px targets and contrast >=4.5:1"` | No UIX-VAL-T06 |

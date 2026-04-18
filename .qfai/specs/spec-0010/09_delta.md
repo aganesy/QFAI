@@ -180,3 +180,39 @@ US-0010-0022 -> AC-0010-0020, AC-0010-0027 -> BR-0010-0015 -> EX-0010-0018, EX-0
 ### Rationale
 
 The v1.7.16 slice installs the upstream half of the Trend→Axis→Design-System→Prototyping chain inside the discussion skill: Step 11.3 produces the DESIGN.md SSOT (`uiux/12_design_system.md`), Step 11.5 derives TRD-XX axes from Trend Scan entries, and the canonical templates (`04_Sources.md`, `21_design_eval_trend_derived.md`, `12_design_system.md`) carry the traceability fields (`evaluation_connection`, `source_refs`) that spec-0014 validators enforce. Non-UI packs remain untouched (NFR-0007), and AI-only operability (NFR-0008) ensures the full Phase A / Phase B cycle runs without human confirmation steps.
+
+## v1.7.17 (2026-04-18) — Design Guideline Traceability Hardening
+
+### Context
+
+- Source: discussion-20260418170937652
+- In-scope REQs for spec-0010 this revision: REQ-0027 (design guideline research step), REQ-0028 (`design_guideline_research` category), REQ-0029 (quantitative score anchor guidance)
+- Applicable NFRs: NFR-0012 (guideline flexibility), NFR-0013 (non-UI safety)
+
+### Added
+
+| ID | Layer | Summary |
+| -- | ----- | ------- |
+| US-0010-0023..0025 | US | guideline research mandatory step, canonical source category, quantitative anchor guidance |
+| AC-0010-0028..0030 | AC | workflow presence, source schema, score_anchors proxy requirement |
+| BR-0010-0021..0023 | BR | mandatory research, category storage rule, adjective-only anchor prohibition |
+| EX-0010-0035..0038 | EX | happy/non-ui/quantitative/negative examples |
+| TC-0010-0049..0053 | TC | SKILL/template/non-ui/template guidance coverage |
+| DR-0010-v1717-01..03 | DR | upstream obligation, source SSOT, quantitative proxy mandate |
+
+### Rejected
+
+- RJ-0010-v1717-01: Leave guideline research to `/qfai-prototyping`.
+  - DO NOT shift this responsibility downstream.
+  - Temptation: avoid changing discussion artifacts.
+  - Reason: root cause remains unresolved upstream.
+
+- RJ-0010-v1717-02: Store guideline research in a separate file outside `04_Sources.md`.
+  - DO NOT create a parallel source registry.
+  - Temptation: keep guideline research visually isolated.
+  - Reason: parallel taxonomies drift quickly and complicate validation.
+
+- RJ-0010-v1717-03: Allow adjective-only score anchors.
+  - DO NOT accept purely qualitative anchor text.
+  - Temptation: faster authoring with softer prose.
+  - Reason: such anchors cannot support deterministic review or validator messaging.

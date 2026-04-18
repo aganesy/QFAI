@@ -196,3 +196,17 @@ As a QFAI user, I want `qfai validate` to check prototyping.yaml schema (require
 - Goal: Test fixtures for prototypingEvidence validators are updated to reflect rev2 runtime contract, removing obsolete normal-path patterns and adding rev2 error-path fixtures
 - Non-goals: Comprehensive runtime testing (covered by spec-0012 tests)
 - Notes: REQ-0137
+
+## US-0004-0028: Design guideline coverage warning validator (v1.7.17)
+
+- Parent: CAP-0004
+- Goal: Validator warns when a UI-bearing discussion pack has no usable `design_guideline_research` coverage in `04_Sources.md`
+- Non-goals: Validating the factual correctness of the external guideline itself
+- Notes: REQ-0138
+
+## US-0004-0029: Trend-derived anchor concreteness warning validator (v1.7.17)
+
+- Parent: CAP-0004
+- Goal: Validator warns when `score_anchors` in trend-derived axes use abstract adjectives without quantitative proxy
+- Non-goals: Scoring the quality of the chosen threshold values
+- Notes: REQ-0139
