@@ -65,38 +65,26 @@
 - Only validators registered in the canonical set are executed; unregistered validators MUST be rejected with an error.
 - The canonical set is defined by the project configuration and MUST NOT be overridden at runtime without explicit waiver.
 
-## BR-0014-0013: Phase1 Ratchet in Verify Context
+## BR-0014-0013: Removed Compatibility Surface
 
-- AC-Refs: AC-0014-0012
+- AC-Refs: AC-0014-0013
 
-- verify 経由で qfai validate が実行される際、config.uiux.phase1ReleaseDate が設定されている場合は applyPhase1Ratchet() が適用される
-- リリース日から 30 日以内: 全 UIX-VAL-\* エラーが warning に降格
-- 30 日超過: ratchet 期限切れ、UIX-VAL-\* はそのまま error
-- verify は常に full-scan であるため、ratchet は全 UIX-VAL issues に適用される
+- Package surface から `validators/legacy/` namespace を除去し、production path は canonical exports のみを利用する。
+- IssueCategory は `"canonical" | "change"` のみとし、`"compatibility"` は再導入しない。
+- 互換性判定は hidden shim ではなく canonical validators が返す migration errors で扱う。
 
 ## BR-0014-0014: Canonical Validator Set in Verify
 
 - AC-Refs: AC-0014-0012
 
-- verify が使用する runCanonicalUixValidators() は 11 modular validators を並列実行する（v1.7.14: rollout.ts 削除により 12→11。canonical.ts, foundation.ts, comparisonValidator.ts, oqClosure.ts, scoringReady.ts, strategy.ts, screenContract.ts, trend.ts, threeLayer.ts, tasteInterview, prototypingRecommendation.ts）
+- verify が使用する runCanonicalUixValidators() は canonical.ts 経由で 12 validator functions を実行する（classification, foundation, taste, trend, threeLayerModel, forbiddenLegacyFiles, threeLayerFamilyCompleteness, scoringReady, strategy, screenContract, comparisonValidator, oqClosure）。
 - verify 固有の制約: --phase refinement は local-only、CI は default/full のみ
 - UIX-REV semantic reviewers は runCanonicalUixValidators() とは別に、verify skill 内で実行される
 
-## BR-0014-0015: Docs/Runtime Drift Detection (v1.7.15)
-
-- AC-Refs: AC-0014-0014, AC-0014-0015
-
-- Integration test MUST enumerate all constraint claims in SKILL.md, evidence README, and discussion README
-- Each documented claim MUST have a corresponding runtime error condition (validator rule or runtime exception)
-- Each runtime error condition MUST have a corresponding documented claim
-- Drift in either direction (docs claims unmatched runtime, runtime enforces undocumented constraint) MUST cause verify failure
-- Drift gate runs as part of the integration test suite, not as a separate binary
-
-## BR-0014-0016: Docs/Runtime Drift Is Bidirectional (v1.7.15)
+## BR-0014-0015: Stale Sidecar Migration Errors
 
 - AC-Refs: AC-0014-0014
 
-- The drift gate MUST detect both directions of drift:
-  1. Docs claim → no matching runtime enforcement (doc is stale or aspirational)
-  2. Runtime enforcement → no matching docs claim (doc is incomplete)
-- The gate MUST NOT auto-sync docs from runtime or vice versa; it only detects and reports
+- Legacy `uiux/10_strategy.md` は `UIX-VAL-STRATEGY-LEGACY-FILENAME` で fail し、canonical filename への rename guidance を返す。
+- Legacy 4-axis evaluation content や forbidden legacy files は `UIX-VAL-3LAYER-*` で fail し、3-layer canonical family への移行を要求する。
+- warning-only compatibility window を前提にせず、stale artifacts は canonical validator family で明示的に拒否する。

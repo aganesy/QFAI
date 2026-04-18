@@ -6,6 +6,7 @@ import { getConfigPath, resolvePath } from "../config.js";
 import { parseStructuredContract } from "../contracts.js";
 import { buildContractIndex } from "../contractIndex.js";
 import { stripContractDeclarationLines } from "../contractsDecl.js";
+import { inspectLatestDiscussionPack } from "../discussionPack.js";
 import type {
   DiscussionModeRecommendation,
   ModeSelectionSource,
@@ -246,6 +247,12 @@ export async function validatePrototypingEvidence(
   const specsRoot = resolvePath(root, config, "specsDir");
   const specEntries = await collectSpecEntries(specsRoot);
   if (specEntries.length === 0) {
+    return [];
+  }
+
+  const discussionRoot = resolvePath(root, config, "discussionDir");
+  const discussionReadiness = await inspectLatestDiscussionPack(discussionRoot);
+  if (discussionReadiness.latestPackDir && !discussionReadiness.prototypingRequired) {
     return [];
   }
 

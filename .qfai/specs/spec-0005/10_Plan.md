@@ -40,4 +40,4 @@ All functionality is already implemented. This spec documents existing behavior.
 - Prototyping report section: `packages/qfai/src/core/report.ts` — ReportPrototypingSummary, collectPrototypingSummary()
 - Subsections: recommendationArtifact, mode, evidence, fullHarness, render, browserQa, calibration
 - Foundation-only: not integrated into blocking validation in v1.7.13
-- Status: implemented (v1.7.13-22)
+- Implemented in v1.7.13-22.

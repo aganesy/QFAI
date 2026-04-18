@@ -101,6 +101,29 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     expect(missing).toEqual([]);
   });
 
+  // QFAI:SPEC-0014:TC-0014-0003
+  it("keeps qfai-verify fix-until-PASS contract", async () => {
+    const skillPath = path.join(templateQfaiDir, "assistant", "skills", "qfai-verify", "SKILL.md");
+    const content = await readFile(skillPath, "utf-8");
+
+    expect(content).toContain(
+      'description: "Run and document quality gates (repo + qfai validate/report), fix until PASS."',
+    );
+    expect(content).toContain("Fix until PASS.");
+    expect(content).toContain("If failing, produce an actionable fix list");
+  });
+
+  // QFAI:SPEC-0014:TC-0014-0007
+  it("keeps qfai-verify evidence summary contract", async () => {
+    const skillPath = path.join(templateQfaiDir, "assistant", "skills", "qfai-verify", "SKILL.md");
+    const content = await readFile(skillPath, "utf-8");
+
+    expect(content).toContain("A concise evidence summary exists (copy‑paste for PR).");
+    expect(content).toContain("Change Classification (Primary/Tags)");
+    expect(content).toContain("Run listed commands and record outputs.");
+    expect(content).toContain("command list + pass/fail + next actions");
+  });
+
   it("ensures canonical skills include drift/test-layer reviewer gate guardrails", async () => {
     const files = [
       path.join(templateQfaiDir, "assistant", "skills", "qfai-prototyping", "SKILL.md"),
@@ -926,6 +949,14 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     }
   });
 
+  it("keeps review README schema examples aligned with validator target kinds", async () => {
+    const reviewReadmePath = path.join(templateQfaiDir, "review", "README.md");
+    const content = await readFile(reviewReadmePath, "utf-8");
+
+    expect(content).toContain('"kind": "spec|discussion"');
+    expect(content).not.toContain('"kind": "spec|require|discussion"');
+  });
+
   it("ensures qfai-sdd no longer ships legacy spec-pack templates", async () => {
     const legacySpecPackDir = path.join(
       templateQfaiDir,
@@ -1016,6 +1047,20 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     expect(workflow).toContain(
       "Without argument (`/qfai-sdd`): scope is all capabilities from `.qfai/specs/_policies/03_Capabilities.md` in order.",
     );
+  });
+
+  it("keeps qfai-sdd and qfai-discussion SKILL.md compact enough for progressive disclosure", async () => {
+    const targets = [
+      ["qfai-sdd", 360],
+      ["qfai-discussion", 400],
+    ] as const;
+
+    for (const [skillId, maxLines] of targets) {
+      const skillPath = path.join(templateQfaiDir, "assistant", "skills", skillId, "SKILL.md");
+      const content = await readFile(skillPath, "utf-8");
+      const lineCount = content.split(/\r?\n/).length;
+      expect(lineCount).toBeLessThanOrEqual(maxLines);
+    }
   });
 
   it("ensures v1.4.36 layered spec templates exist for sdd", async () => {

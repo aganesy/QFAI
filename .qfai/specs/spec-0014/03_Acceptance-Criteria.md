@@ -46,16 +46,12 @@ Given the verify workflow uses the 3-layer evaluation model (D-001), when valida
 
 ## AC-0014-0012: Canonical UIX in Verify Production Path
 
-Given verify runs qfai validate, when UIX validation executes, then runCanonicalUixValidators() is invoked (not legacy runAllUixValidators or runLegacyUixCompatibilityValidators).
+Given verify runs qfai validate, when UIX validation executes, then runCanonicalUixValidators() is invoked directly and the production path does not call removed legacy aggregators.
 
-## AC-0014-0013: Legacy Validators Not in Production
+## AC-0014-0013: Removed Compatibility Surface
 
-Given verify runs qfai validate, when the validator pipeline executes, then no validators from validators/legacy/ namespace are invoked.
+Given the package surface is inspected, when validator exports and issue categories are checked, then no `validators/legacy/` export path or IssueCategory `compatibility` remains.
 
-## AC-0014-0014: Docs/Runtime Drift Detected (v1.7.15)
+## AC-0014-0014: Stale Sidecar Migration Errors
 
-Given SKILL.md claims a constraint (e.g., "reviewer is required") but the runtime error condition for that constraint does not exist or is disabled, when verify runs the docs/runtime drift gate, then verify fails with a drift detection error listing the undocumented or unmatched claims.
-
-## AC-0014-0015: Docs/Runtime Drift Clean (v1.7.15)
-
-Given all documented claims in SKILL.md, evidence README, and discussion README have matching runtime error conditions (1:1 correspondence), when verify runs the docs/runtime drift gate, then the drift gate passes with zero drift findings.
+Given a project contains stale UIX sidecar artifacts, when canonical validators run, then they emit explicit migration errors for legacy filenames or legacy 4-axis artifacts instead of silently accepting them.

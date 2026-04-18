@@ -44,6 +44,23 @@ function assetPath(...segments: string[]): string {
   return path.join(repoRoot, "packages", "qfai", "assets", "init", ".qfai", ...segments);
 }
 
+function requireMatch(source: string, pattern: RegExp, description: string): RegExpMatchArray {
+  const match = source.match(pattern);
+  expect(match, `${description} should exist`).not.toBeNull();
+  if (!match) {
+    throw new Error(`${description} was not found.`);
+  }
+  return match;
+}
+
+function requireMatches(value: RegExpMatchArray | null, description: string): RegExpMatchArray {
+  expect(value, `${description} should exist`).not.toBeNull();
+  if (!value) {
+    throw new Error(`${description} was not found.`);
+  }
+  return value;
+}
+
 // ---------------------------------------------------------------------------
 // US-0012-0008: Skill-centered truth
 // ---------------------------------------------------------------------------
@@ -552,9 +569,11 @@ describe("E2E: US-0012-0030 — request type has no l1/l2 fields", () => {
   it("PrototypingExecutionRequest has no l1 or l2 score fields", async () => {
     const src = await readFile(srcPath("prototyping", "execution.ts"), "utf-8");
     // Extract the PrototypingExecutionRequest type block
-    const typeMatch = src.match(/export\s+type\s+PrototypingExecutionRequest\s*=\s*\{([^}]+)\}/s);
-    expect(typeMatch).not.toBeNull();
-    const typeBody = typeMatch![1];
+    const typeBody = requireMatch(
+      src,
+      /export\s+type\s+PrototypingExecutionRequest\s*=\s*\{([^}]+)\}/s,
+      "PrototypingExecutionRequest type",
+    )[1];
     expect(typeBody).not.toContain("l1:");
     expect(typeBody).not.toContain("l2:");
     expect(typeBody).not.toContain("dimensionScores");
@@ -687,12 +706,16 @@ describe("E2E: US-0012-0036 — 8 categories, strict length, schema v2", () => {
   it("FullHarnessIteration evidenceRefs has exactly 8 categories", async () => {
     const src = await readFile(srcPath("harness", "types.ts"), "utf-8");
     // Extract the evidenceRefs block from FullHarnessIteration
-    const erefMatch = src.match(/evidenceRefs:\s*\{([^}]+)\}/s);
-    expect(erefMatch).not.toBeNull();
-    const erefBody = erefMatch![1];
-    const categories = erefBody.match(/\w+:\s*string\[\]/g);
-    expect(categories).not.toBeNull();
-    expect(categories!.length).toBe(8);
+    const erefBody = requireMatch(
+      src,
+      /evidenceRefs:\s*\{([^}]+)\}/s,
+      "FullHarnessIteration evidenceRefs block",
+    )[1];
+    const categories = requireMatches(
+      erefBody.match(/\w+:\s*string\[\]/g),
+      "evidenceRefs categories",
+    );
+    expect(categories).toHaveLength(8);
   });
 
   it("bundleWriter.ts includes fullHarness block with reviewerLogs and scoringTrace", async () => {
@@ -718,9 +741,11 @@ describe("E2E: US-0012-0036 — 8 categories, strict length, schema v2", () => {
 describe("E2E: US-0012-0037 — no l1/l2 direct pass, no packVersion 1.0.0, no single-iteration converged in normal fixtures", () => {
   it("PrototypingExecutionRequest does not carry pre-computed l1/l2 scores", async () => {
     const src = await readFile(srcPath("prototyping", "execution.ts"), "utf-8");
-    const reqMatch = src.match(/export\s+type\s+PrototypingExecutionRequest\s*=\s*\{([^}]+)\}/s);
-    expect(reqMatch).not.toBeNull();
-    const reqBody = reqMatch![1];
+    const reqBody = requireMatch(
+      src,
+      /export\s+type\s+PrototypingExecutionRequest\s*=\s*\{([^}]+)\}/s,
+      "PrototypingExecutionRequest type",
+    )[1];
     // No l1Score, l2Score, or dimensionScores
     expect(reqBody).not.toMatch(/l1Score|l2Score|dimensionScores/);
   });

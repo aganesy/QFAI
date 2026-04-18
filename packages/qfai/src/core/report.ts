@@ -2,6 +2,7 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { buildContractIndex } from "./contractIndex.js";
 import { loadConfig, resolvePath, type ConfigLoadResult } from "./config.js";
+import { inspectLatestDiscussionPack } from "./discussionPack.js";
 import { collectSpecEntries, type SpecEntry } from "./specLayout.js";
 import { parseFirstMarkdownTable } from "./specPackParsers.js";
 import {
@@ -1710,6 +1711,11 @@ async function collectPrototypingSummary(
   config: ConfigLoadResult["config"],
 ): Promise<ReportPrototypingSummary | undefined> {
   const specsRoot = resolvePath(root, config, "specsDir");
+  const discussionRoot = resolvePath(root, config, "discussionDir");
+  const discussionReadiness = await inspectLatestDiscussionPack(discussionRoot);
+  if (discussionReadiness.latestPackDir && !discussionReadiness.prototypingRequired) {
+    return undefined;
+  }
   const evidenceRoot = path.join(path.dirname(specsRoot), "evidence");
   const evidencePath = path.join(evidenceRoot, "prototyping.json");
   let raw: string;

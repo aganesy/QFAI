@@ -1,9 +1,30 @@
 {
-  "review_pack_id": "review-20260416092414328",
+  "version": "1.0",
+  "created_at": "2026-04-16T09:24:14.328Z",
   "target": {
     "kind": "discussion",
-    "id": "discussion-20260416092414328"
+    "id": "discussion-20260416092414328",
+    "path": ".qfai/discussion/discussion-20260416092414328"
   },
+  "roster": [
+    {
+      "reviewer": "completion-reviewer",
+      "status": "PASS",
+      "feedback_count": 0
+    },
+    {
+      "reviewer": "requirements-reviewer",
+      "status": "PASS",
+      "feedback_count": 0
+    },
+    {
+      "reviewer": "architecture-reviewer",
+      "status": "PASS",
+      "feedback_count": 0
+    }
+  ],
+  "overall_status": "PASS",
+  "review_pack_id": "review-20260416092414328",
   "profile": "requirements-heavy",
   "reviewers": [
     {

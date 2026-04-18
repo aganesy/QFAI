@@ -49,14 +49,12 @@ When no explicit argument is given, detect the candidate spec and constrain exec
 
 ## User Questions (AskUserQuestion Protocol)
 
-- When a question to the user is needed (e.g., exception handling, scope confirmation),
-  the agent MUST use AskUserQuestion if the tool is available.
-- When AskUserQuestion supports structured choices (radio/multi-select),
-  the agent MUST prefer structured choices over free-text input.
-- If AskUserQuestion is technically unavailable, present the same question as a normal message
-  with explicit numbered choices.
-  The agent SHOULD preserve structured choice semantics (enumerated options, selection constraints).
-  The reason for unavailability MUST be stated.
+Follow `.qfai/assistant/instructions/shared-skill-operating-baseline.md#user-questions-askuserquestion-protocol`.
+
+Skill-specific examples:
+
+- exception handling
+- scope confirmation
 
 ## CRITICAL CONSTRAINTS (Read First)
 
@@ -162,11 +160,14 @@ When transitioning to `exception`:
 
 ## Sub-agent Delegation (MANDATORY)
 
+Follow `.qfai/assistant/instructions/shared-skill-delegation-baseline.md`.
+
 ### Orchestrator Protocol (MUST)
 
-- Orchestrator reads `test-list.md`, determines the next pending item, and delegates each TDD phase.
-- Orchestrator MUST NOT write test or production code directly.
-- Orchestrator updates `test-list.md` status after each phase completes.
+- Additional implement-specific overrides:
+- read `test-list.md`, determine the next pending item, and delegate each TDD phase;
+- do not write test or production code directly;
+- update `test-list.md` status after each phase completes.
 
 ### Formal Sub-agent Roster
 
@@ -198,28 +199,21 @@ All agent-to-agent transitions follow these contracts:
 
 ### Capability Probe (MUST)
 
-1. Run one harmless Probe Task once at stage start.
-2. If subagents are unavailable, explicitly ask for Simulation mode approval.
-3. Without explicit approval, stop the stage.
+- No additional overrides.
 
 ### Simulation mode (Opt-in only)
 
-- Allowed only when user explicitly states `Simulation mode allowed`.
-- Record both:
-  - `Subagents: simulated (reason: <why unavailable>)`
-  - `User approval: <quote or reference>`
+- No additional overrides.
+- Simulation mode allowed only with explicit user approval.
 
 ## Work Orders Summary
 
-Every major artifact in this stage MUST include this table schema:
-
-| Step | Role (sub-agent) | Task title | Input (refs) | Output (refs) | Status (PASS/REVISE) |
-| ---- | ---------------- | ---------- | ------------ | ------------- | -------------------- |
-| 1    | `role`           | `task`     | `refs`       | `refs`        | PASS/REVISE          |
+Use the shared schema.
 
 ### Reviewer Gate (MUST)
 
 - Delegate final completion gate to an independent Reviewer.
+- Reviewer response must include `Status (PASS/REVISE)`.
 - Reviewer checks Drift Protocol compliance and alignment with `.qfai/assistant/steering/test-layers.md`.
 - Test volume floors/ratios are not gates; they are signals.
 - Do not declare DONE until Reviewer returns `PASS`; otherwise apply `REVISE`.
@@ -255,6 +249,8 @@ Every major artifact in this stage MUST include this table schema:
 - If integration verify passes, state transitions back to `delivery-planner` for sequential flow
 
 ## Completion Contract (Shared)
+
+Follow `.qfai/assistant/instructions/shared-skill-operating-baseline.md#completion-contract-shared`.
 
 ### Item completion checklist (10-point gate)
 

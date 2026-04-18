@@ -75,7 +75,7 @@
 - BR-Ref: BR-0010-0009, BR-0010-0010
 - Given a UI-bearing project (`web`) with discussion completed under v1.7.12
 - When sidecar is generated
-- Then `00_index.md` lists only canonical 3-layer family files, `10_strategy.md` has surface classification + strategy + rationale, `40_screen_contracts.md` has screen-obligation entries, and no 4-axis files (20–23) exist
+- Then `00_index.md` lists only canonical 3-layer family files, `10_implementation_strategy.md` has surface classification + strategy + rationale, `40_screen_contracts.md` has screen-obligation entries, and no 4-axis files (20–23) exist
 
 ## EX-0010-0012: Pack Missing Taste Interview (Fail)
 

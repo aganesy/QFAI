@@ -1439,3 +1439,35 @@ describe("TC-0012-0219..0248: leaf field concrete-ref validators (v1.7.15 rev9)"
     });
   });
 });
+
+describe("prototypingEvidence inactive discussion packs", () => {
+  it("ignores stale prototyping evidence when the latest discussion pack is non-ui", async () => {
+    await withTempRoot(async (root) => {
+      await seedSpecs(root);
+      const latestPackDir = path.join(root, ".qfai", "discussion", "discussion-20260405000000000");
+      await mkdir(latestPackDir, { recursive: true });
+      await writeFile(
+        path.join(latestPackDir, "01_Context.md"),
+        [
+          "# Context",
+          "",
+          "- ui_bearing: false",
+          "- primary_surface: non-ui",
+          "- secondary_surfaces:",
+          "- classification_rationale: internal library change only",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+      await seedEvidence(root, {
+        runtimeGate: {
+          ui: [],
+          evidenceRefs: 123,
+        },
+      });
+
+      const issues = await validatePrototypingEvidence(root, defaultConfig);
+      expect(issues).toEqual([]);
+    });
+  });
+});

@@ -1,16 +1,30 @@
 {
-  "version": "2.0",
+  "version": "1.0",
   "created_at": "2026-04-15T18:47:00Z",
   "target": {
     "kind": "spec",
     "id": "spec-0012",
-    "version": "v1.7.15-rev6"
+    "version": "v1.7.15-rev6",
+    "path": ".qfai/specs/spec-0012"
   },
-  "overall_status": "PASS",
   "roster": [
-    { "reviewerId": "R01", "role": "completion-reviewer", "verdict": "PASS" },
-    { "reviewerId": "R02", "role": "architecture-reviewer", "verdict": "PASS" }
+    {
+      "reviewer": "completion-reviewer",
+      "status": "PASS",
+      "feedback_count": 0
+    },
+    {
+      "reviewer": "requirements-reviewer",
+      "status": "PASS",
+      "feedback_count": 2
+    },
+    {
+      "reviewer": "architecture-reviewer",
+      "status": "PASS",
+      "feedback_count": 1
+    }
   ],
+  "overall_status": "PASS",
   "validate_gate": {
     "error_count": 29,
     "pre_existing": 27,

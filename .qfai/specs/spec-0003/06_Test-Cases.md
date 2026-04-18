@@ -23,6 +23,8 @@
 | TC-0003-0013 | integration | AC-0003-0013 | EX-0003-0011 | --force でも instructions 保護           |
 | TC-0003-0014 | integration | AC-0003-0014 | EX-0003-0012 | instructions アクティベーション案内表示  |
 | TC-0003-0015 | integration | AC-0003-0002 | EX-0003-0013 | symlink idempotency (3 consecutive runs) |
+| TC-0003-0016 | integration | AC-0003-0001 | EX-0003-0014 | migrated example EX-0003-0014 coverage   |
+| TC-0003-0017 | integration | AC-0003-0001 | EX-0003-0015 | migrated example EX-0003-0015 coverage   |
 
 ## TC-0003-0001: 空ディレクトリでの初期化
 

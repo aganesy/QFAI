@@ -13,6 +13,8 @@
 | TC-0007-0007 | integration | AC-0007-0006 | EX-0007-0007 | check 違反検出（error>0, exit 1） |
 | TC-0007-0008 | unit        | AC-0007-0007 | EX-0007-0008 | action 未指定エラー（exit 2）     |
 | TC-0007-0009 | integration | AC-0007-0008 | EX-0007-0009 | パス読み込みエラー（exit 2）      |
+| TC-0007-0010 | integration | AC-0007-0001 | EX-0007-0010 | migrated example EX-0007-0010 coverage |
+| TC-0007-0011 | integration | AC-0007-0001 | EX-0007-0011 | migrated example EX-0007-0011 coverage |
 
 ## TC-0007-0001: ガードレール検出ソース網羅性
 

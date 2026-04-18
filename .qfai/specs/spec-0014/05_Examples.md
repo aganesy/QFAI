@@ -30,10 +30,10 @@
 
 ## EX-0014-0005: Migration Detection
 
-- BR-Ref: BR-0014-0006
-- Given a project with pre-v1.7.3 sidecar format
+- BR-Ref: BR-0014-0015
+- Given a project with stale sidecar artifacts such as `uiux/10_strategy.md` or legacy 4-axis evaluation content
 - When migration check runs
-- Then warning with step-by-step upgrade guidance is produced
+- Then explicit canonical migration errors with rename / 3-layer upgrade guidance are produced
 
 ## EX-0014-0006: Coverage Placeholder for BR-0014-0004
 
@@ -79,7 +79,7 @@
 
 ## EX-0014-0012: Canonical Validator Set Enforced (Pass)
 
-- BR-Ref: BR-0014-0009
+- BR-Ref: BR-0014-0009, BR-0014-0014
 - Given a verify workflow configured with the 3-layer evaluation model
 - When all executed validators belong to the canonical set
 - Then verification proceeds without validator-family errors
@@ -91,33 +91,21 @@
 - When the verify workflow checks validator registration
 - Then the validator is rejected with: "Validator not in canonical family; register or remove"
 
-## EX-0014-0014: Phase1 Ratchet in Verify
+## EX-0014-0014: Removed Compatibility Surface
 
 - BR-Ref: BR-0014-0013
 
-| Input                                         | Expected                                  |
-| --------------------------------------------- | ----------------------------------------- |
-| phase1ReleaseDate 10 days ago + UIX-VAL error | Error downgraded to warning during verify |
-| phase1ReleaseDate 40 days ago + UIX-VAL error | Error stays as error                      |
+| Input                                      | Expected                                                           |
+| ------------------------------------------ | ------------------------------------------------------------------ |
+| Read `validators/index.ts`                 | No legacy compatibility re-exports                                 |
+| Read `types.ts`                            | IssueCategory is `"canonical" | "change"` only                    |
+| Inspect package surface for `legacy/` path | No `validators/legacy/` namespace remains                          |
 
-## EX-0014-0015: Verify Canonical Validator Set
-
-- BR-Ref: BR-0014-0014
-
-| Input                             | Expected                                              |
-| --------------------------------- | ----------------------------------------------------- |
-| Run verify on well-formed project | 12 canonical validators execute, no legacy validators |
-
-## EX-0014-0016: Docs/Runtime Drift Detected (v1.7.15)
-
-- BR-Ref: BR-0014-0015, BR-0014-0016
-- Given SKILL.md claims "specCoverage must be non-zero-seeded" but the corresponding validator rule PROT-305 has been disabled or removed from prototypingEvidence.ts
-- When verify runs the docs/runtime drift gate
-- Then drift is detected: "SKILL.md claim 'specCoverage must be non-zero-seeded' has no matching runtime error condition" and verify fails
-
-## EX-0014-0017: Docs/Runtime Drift Clean (v1.7.15)
+## EX-0014-0015: Stale Sidecar Migration Errors
 
 - BR-Ref: BR-0014-0015
-- Given all SKILL.md claims (reviewer required, convergence >=2 iterations, specCoverage non-zero-seeded, etc.) each have a matching runtime validator rule (PROT-295, PROT-308, PROT-305, etc.)
-- When verify runs the docs/runtime drift gate
-- Then zero drift findings, gate passes
+
+| Input                                               | Expected                                                                 |
+| --------------------------------------------------- | ------------------------------------------------------------------------ |
+| Only `uiux/10_strategy.md` exists                   | `UIX-VAL-STRATEGY-LEGACY-FILENAME` error with canonical rename guidance  |
+| Legacy 4-axis content exists in evaluation artifact | `UIX-VAL-3LAYER-LEGACY-FORMAT` error with 3-layer migration guidance     |

@@ -44,14 +44,14 @@ As a QFAI user, I want the verify workflow to enforce the canonical validator fa
 
 ## US-0014-0010: Canonical UIX Validator Production Path
 
-As a QA engineer, I want verify to use only canonical UIX validators (12 modular validators) in production, so that verification results are not polluted by legacy DDP-era rules.
+As a QA engineer, I want verify to use only the canonical UIX validator production path (runCanonicalUixValidators and its 12 validator functions), so that verification results are not polluted by removed compatibility wrappers.
 
-## US-0014-0011: Legacy Validator Isolation
+## US-0014-0011: Removed Compatibility Surface
 
-As a QFAI maintainer, I want legacy DDP validators isolated in the `validators/legacy/` namespace and excluded from the production verify path, so that they remain available for migration tooling without affecting new projects.
+As a QFAI maintainer, I want the package surface to expose no `validators/legacy/` namespace and no IssueCategory `compatibility`, so that stale integrations cannot depend on dead compatibility paths.
 
-## US-0014-0012: Docs/Runtime Drift Gate (v1.7.15)
+## US-0014-0012: Stale Sidecar Migration Errors
 
-As a QA engineer, I want verify to fail when SKILL.md or evidence README claims a constraint that runtime no longer enforces (or runtime enforces a constraint not documented in docs), so that documentation drift is caught before merge.
+As a QFAI maintainer, I want stale sidecar artifacts (legacy filenames and legacy 4-axis evaluation content) to fail with explicit canonical migration errors, so that upgrades are guided by the active validator family instead of hidden compatibility layers.
 
-- Refs: REQ-0015, NFR-0005, discussion REQ-0025
+- Refs: REQ-0010, REQ-0014

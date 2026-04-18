@@ -54,7 +54,7 @@
 - Evidence integration: `packages/qfai/src/core/validators/prototypingEvidence.ts` — null safety fixes
 - Harness status normalization: "accepted"→"converged", "cap-reached"→"max-iterations"
 - ModeGuidance alignment: "premium"→"full-harness"
-- Status: implemented (v1.7.13 full module)
+- Implemented in v1.7.13 as the full module baseline.
 
 ## v1.7.15 Implementation Strategy
 

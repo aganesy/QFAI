@@ -3,7 +3,7 @@
 ## Purpose
 
 - Concretize BR into executable examples.
-- Every EX must reference one BR via `BR-Ref`.
+- Every EX must reference at least one BR via `BR-Ref`.
 
 ## Example Table (required)
 

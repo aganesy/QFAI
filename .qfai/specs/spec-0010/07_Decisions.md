@@ -9,7 +9,7 @@
 
 The old 4-axis evaluation model (usability / consistency / accessibility / delight as separate template files 20–23) is replaced by the 3-layer model (invariant / trend-derived / product-specific).
 Old 4-axis files are removed from `qfai init` defaults and `00_index.md` manifest.
-Migration window (v1.7.8 warning → v1.8.0 error) is already in effect for existing packs; v1.7.12 ensures new generation never produces legacy files.
+The warning-only migration window is closed; stale 4-axis artifacts now fail with explicit canonical migration errors, and v1.7.12 ensures new generation never produces legacy files.
 
 Rationale: The 3-layer model is evaluation-theory-grounded and avoids the overlap between the old axes (e.g., accessibility was both invariant and product-specific). Consolidation into layers enables trend-derived evaluation sourced from competitive research.
 

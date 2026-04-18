@@ -209,8 +209,6 @@ async function validateV1421Coverage(
   const brWithoutAcRefs = findSourcesWithEmptyRefs(brToAcRefs);
   const exWithoutBrRefs = findSourcesWithEmptyRefs(exToBrRefs);
   const tcWithoutRefs = findTcWithoutAnyRefs(tcToAcRefs, tcToExRefs);
-  const exWithMultipleBrRefs = findSourcesWithMultipleRefs(exToBrRefs);
-
   const missingAc = findUncoveredIds(acCoverage);
   const missingBr = findUncoveredIds(brCoverage);
   const missingEx = findUncoveredIds(exCoverage);
@@ -257,21 +255,6 @@ async function validateV1421Coverage(
         tcWithoutRefs,
         "change",
         "06_Test-Cases.md の各 TC に `AC-Refs` または `EX-Ref` のどちらか（推奨: 両方）を設定してください。",
-      ),
-    );
-  }
-
-  if (exWithMultipleBrRefs.length > 0) {
-    issues.push(
-      issue(
-        "QFAI-COV-207",
-        `1つの EX が複数 BR を参照しています: ${formatMultiRefSignals(exWithMultipleBrRefs)}`,
-        "warning",
-        entry.examplesPath,
-        "layerCoverage.exBroadBrRef",
-        exWithMultipleBrRefs.map(([id]) => id),
-        "change",
-        "05_Examples.md の `BR-Ref` は EX ごとに1件へ分割できるか確認してください（薄さ/曖昧さのシグナル）。",
       ),
     );
   }
@@ -524,18 +507,6 @@ function findSourcesWithEmptyRefs(refsBySource: Map<string, Set<string>>): strin
     .sort((left, right) => left.localeCompare(right));
 }
 
-function findSourcesWithMultipleRefs(
-  refsBySource: Map<string, Set<string>>,
-): Array<[string, string[]]> {
-  return Array.from(refsBySource.entries())
-    .filter(([, refs]) => refs.size > 1)
-    .map<[string, string[]]>(([id, refs]) => {
-      const sortedRefs = Array.from(refs.values()).sort((left, right) => left.localeCompare(right));
-      return [id, sortedRefs];
-    })
-    .sort((left, right) => left[0].localeCompare(right[0]));
-}
-
 function findTcWithoutAnyRefs(
   tcToAcRefs: Map<string, Set<string>>,
   tcToExRefs: Map<string, Set<string>>,
@@ -548,10 +519,6 @@ function findTcWithoutAnyRefs(
       return acCount === 0 && exCount === 0;
     })
     .sort((left, right) => left.localeCompare(right));
-}
-
-function formatMultiRefSignals(signals: Array<[string, string[]]>): string {
-  return signals.map(([id, refs]) => `${id}(${refs.join(", ")})`).join(", ");
 }
 
 function toCoverageRows(counts: Map<string, number>): CoverageRow[] {

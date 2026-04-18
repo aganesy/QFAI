@@ -1,7 +1,7 @@
 # 07 Decisions
 
-### DR-0014-0001: Docs/Runtime Drift Integration Test Location and Scope (v1.7.15)
+### DR-0014-0001: Compatibility Removal Is Enforced by Canonical Surface Checks
 
-- Decision: The docs/runtime drift gate runs as an integration test within `packages/qfai/tests/integration/`, not as a separate CLI command or binary
-- Context: NFR-0005 requires docs claims and runtime error conditions to correspond 1:1. This could be implemented as a standalone tool, a validator rule, or an integration test
-- Rationale: An integration test can import both the SKILL.md parser and the validator rule registry, checking correspondence at the code level. This avoids introducing a new CLI surface and keeps the drift check co-located with the code it verifies. The test runs as part of `qfai-verify`'s existing integration harness
+- Decision: compatibility semantics are enforced by inspecting the canonical package surface (`validate.ts`, `validators/index.ts`, `types.ts`) and by letting canonical validators reject stale sidecar artifacts with explicit migration errors.
+- Context: the previous spec text still assumed rollout ratchets, `validators/legacy/`, and docs/runtime drift hooks, but the current source has already removed those paths.
+- Rationale: a semantics audit should follow the executable surface. Verifying the active exports and canonical migration errors gives stable, implementation-backed compatibility guarantees without reintroducing dead compatibility layers.

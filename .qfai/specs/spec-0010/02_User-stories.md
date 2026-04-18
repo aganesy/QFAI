@@ -42,7 +42,7 @@ As a QFAI user, I want `qfai init` to generate the 3-layer template family only 
 
 ## US-0010-0011: Canonical Sidecar Index and Strategy Upgrade
 
-As a QFAI user, I want `00_index.md` to list only the canonical 3-layer family and `10_strategy.md` to enforce a strong schema (surface classification, strategy, rationale), so that the sidecar manifest and strategy are always structurally valid.
+As a QFAI user, I want `00_index.md` to list only the canonical 3-layer family and `10_implementation_strategy.md` to enforce a strong schema (surface classification, strategy, rationale), so that the sidecar manifest and strategy are always structurally valid.
 
 ## US-0010-0012: Sources Template Trend Translation
 

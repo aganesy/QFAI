@@ -111,6 +111,7 @@ Build the minimum runnable slice for all specs and produce canonical `full-harne
 ### Reviewer Gate (MUST)
 
 - Reviewer must verify full-harness evidence completeness.
+- Reviewer response must include `Status (PASS/REVISE)`.
 - Reviewer must verify calibration pack usage via `calibrationRef`.
 - Reviewer must reject self-reference, synthetic refs, and `mockPaths.status="pass"`.
 - Reviewer must verify `reviewerSignoff`, `reviewerLogs`, `terminationReason`, and `finalDecision` are semantically aligned.
@@ -120,33 +121,37 @@ Build the minimum runnable slice for all specs and produce canonical `full-harne
 
 ## Sub-agent Delegation (MANDATORY)
 
+Follow `.qfai/assistant/instructions/shared-skill-delegation-baseline.md`.
+
 ### Orchestrator Protocol (MUST)
 
-- Orchestrator MUST NOT self-approve.
-- Orchestrator MUST keep evidence paths canonical and integrate delegated results only.
+- Additional prototyping-specific overrides:
+- do not self-approve;
+- keep evidence paths canonical and integrate delegated results only.
 
 ### Capability Probe (MUST)
 
-1. Run one harmless Probe Task once at stage start.
-2. If subagents are unavailable, explicitly ask for Simulation mode approval.
-3. Without explicit approval, stop the stage.
+- No additional overrides.
 
 ### Simulation mode (Opt-in only)
 
-- Simulation mode allowed only when the user explicitly states `Simulation mode allowed`.
+- No additional overrides.
+- Simulation mode allowed only with explicit user approval.
 
 ## Work Orders Summary
 
-| Step | Role (sub-agent) | Task title | Input (refs) | Output (refs) | Status (PASS/REVISE) |
-| ---- | ---------------- | ---------- | ------------ | ------------- | -------------------- |
-| 1    | `role`           | `task`     | `refs`       | `refs`        | PASS/REVISE          |
+Use the shared schema.
 
 ## Completion Contract (Shared)
 
-- All specs are covered.
-- Full-harness evidence is complete and truthful.
-- `qfai validate --fail-on error` passes.
-- Reviewer returns `PASS`.
+Follow `.qfai/assistant/instructions/shared-skill-operating-baseline.md#completion-contract-shared`.
+
+Prototyping-specific additions:
+
+- all specs are covered;
+- full-harness evidence is complete and truthful;
+- `qfai validate --fail-on error` passes;
+- reviewer returns `PASS`.
 
 ## FINAL CHECKLIST (Check Last)
 

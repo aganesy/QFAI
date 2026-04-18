@@ -1,10 +1,8 @@
 prototyping:
-  recommended_mode: standard
+  recommended_mode: full-harness
   rationale: >
-    Fill this with a concrete reason tied to evidence obligations.
+    Fill this with a concrete reason tied to the full-harness evidence obligations.
   allowed_modes:
-    - low-cost
-    - standard
     - full-harness
   surface: web
   mode_expectations:

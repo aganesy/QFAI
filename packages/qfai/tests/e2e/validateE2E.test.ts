@@ -1,5 +1,5 @@
 /**
- * E2E: qfai validate (spec-0002)
+ * E2E: qfai validate (spec-0004)
  *
  * Verifies high-level user journeys for the validate command:
  * validator execution and aggregation, phase control, exit code control,

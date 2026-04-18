@@ -23,12 +23,11 @@
   - UIX-VAL deterministic validators (from spec-0027)
   - UIX-REV semantic reviewers (from spec-0027)
   - Non-UI validator safety (zero UIX fires on non-UI projects)
-  - Migration/upgrade support (old/intermediate/final version paths)
+  - Stale sidecar compatibility detection (legacy filenames / 4-axis artifacts -> canonical migration errors)
   - Feature maturity vocabulary normalization (from spec-0037)
   - Waiver handling: waivers for warning/info only, error waivers rejected
-  - Canonical UIX validators (runCanonicalUixValidators — 11 modular validators, v1.7.14: rollout.ts 削除により 12→11)
-  - [REMOVED v1.7.14] Legacy compatibility path — validators/legacy/ namespace は完全削除済み（DR-0115）
-  - v1.7.15: docs/runtime drift integration test gate (SKILL.md / evidence README / discussion README claims vs runtime error conditions must correspond 1:1)
+  - Canonical UIX validators (runCanonicalUixValidators — 12 validator functions executed by the canonical production path)
+  - Removed compatibility surface — package surface no longer exposes `validators/legacy/` or IssueCategory `compatibility`
 - Out:
   - Incremental/diff-only verification (DR-0007: verify is always full-scan)
   - Spec artifact authoring (belongs to `/qfai-sdd`)
@@ -65,16 +64,16 @@
 - REQ-0007: UIX-VAL validators -- deterministic UI/UX artifact validation (sidecar presence, strategy completeness, etc.)
 - REQ-0008: UIX-REV reviewers -- semantic review prompts with accept/refine/pivot recommendations
 - REQ-0009: Non-UI safety -- zero UIX fires on non-UI projects
-- REQ-0010: Migration support -- old/intermediate/final version detection and upgrade guidance
+- REQ-0010: Stale sidecar migration detection -- legacy sidecar filenames/content (for example `uiux/10_strategy.md`, legacy 4-axis evaluation artifacts) are rejected with explicit canonical migration errors and rename guidance
 - REQ-0011: Feature maturity normalization -- canonical vocabulary across README/CHANGELOG/steering/source
 - REQ-0012: Waiver handling -- warning/info waivers accepted, error waivers rejected
-- REQ-0013: Canonical UIX Validators — verify は runCanonicalUixValidators() を使用。11 modular validators（v1.7.14: rollout.ts 削除により 12→11）:
-  canonical.ts（aggregator）, classification.ts（明示的 UI 分類検証）, foundation.ts（サイドカー存在検証）,
-  comparisonValidator.ts（option comparison + selected anchor）, oqClosure.ts（OQ 参照解決）,
-  scoringReady.ts（scoring schema 完全性）, strategy.ts（strategy artifact 完全性）, screenContract.ts（screen contract schema）,
-  trend.ts（trend research 検証）, threeLayer.ts（3-layer evaluation 完全性）を canonical.ts が順次実行
-- REQ-0014: [REMOVED v1.7.14] Legacy Compatibility Path — v1.7.14 で legacy/ ディレクトリおよび IssueCategory "compatibility" は完全削除済み（DR-0108, DR-0115）
-- REQ-0015: v1.7.15 Docs/Runtime drift gate — integration test が docs claims（SKILL.md, evidence README, discussion README）と runtime error conditions の 1:1 対応を検証する。docs が runtime で enforced されない制約を主張している場合、または runtime が docs に記載されていない制約を enforce している場合に fail する（discussion NFR-0005, REQ-0025）
+- REQ-0013: Canonical UIX Validators — verify は runCanonicalUixValidators() を使用。canonical.ts が以下 12 validator functions を順次実行する:
+  classification.ts（明示的 UI 分類検証）, foundation.ts（サイドカー存在検証）, taste.ts（design taste interview 完全性）,
+  trend.ts（trend research 検証）, threeLayer.ts（3-layer evaluation format 検証）, forbiddenLegacyFiles（legacy file reject）,
+  threeLayerFamilyCompleteness（canonical family 完全性）, scoringReady.ts（scoring schema 完全性）,
+  strategy.ts（strategy artifact 完全性）, screenContract.ts（screen contract schema）, comparisonValidator.ts（option comparison + selected anchor）,
+  oqClosure.ts（OQ 参照解決）
+- REQ-0014: Removed Compatibility Surface — package surface から `validators/legacy/` namespace と IssueCategory `compatibility` を除去し、互換性判定は canonical validators の migration errors で扱う
 
 ## Entry points
 

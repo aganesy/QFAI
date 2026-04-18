@@ -9,12 +9,12 @@
 5. UIX-VAL validators: deterministic async validators for UI/UX artifacts
 6. UIX-REV reviewers: semantic review prompt templates
 7. Non-UI safety: surface detection and validator skip logic
-8. Migration support: version detection and upgrade guidance
+8. Migration support: stale sidecar detection and canonical upgrade guidance
 9. Evidence summary: Change Classification, gate results, commands
 
 ## Test Strategy
 
-- Unit tests: UIX-VAL determinism, waiver handling, non-UI skip logic, migration detection
+- Unit tests: UIX-VAL determinism, waiver handling, non-UI skip logic, stale sidecar migration errors
 - Integration tests: full verify workflow, fix loop, gate execution order
 - E2E tests: end-to-end verification from dirty state to all gates PASS
 
@@ -26,7 +26,7 @@
 ## Risk
 
 - UIX-VAL/UIX-REV validator additions may affect existing test suites
-- Mitigation: NFR-0004 ensures non-UI projects are unaffected; backward compatibility tests included
+- Mitigation: NFR-0004 ensures non-UI projects are unaffected; compatibility is checked through canonical surface assertions and stale-artifact migration tests
 
 ## v1.7.12 Implementation Strategy
 
@@ -47,15 +47,7 @@
 
 ## v1.7.13 Implementation Notes
 
-- Canonical UIX validators: verify uses runCanonicalUixValidators() (11 modular validators, v1.7.14: rollout.ts 削除により 12→11)
-- [REMOVED v1.7.14] Legacy isolation: `validators/legacy/` ディレクトリは v1.7.14 で完全削除（DR-0115）
-- [REMOVED v1.7.14] Rollout ratchet: `uix/rollout.ts` は v1.7.14 で完全削除（DR-0115）
-- Status: implemented (v1.7.13 canonical/legacy separation → v1.7.14 legacy infrastructure 完全削除)
-
-## v1.7.15 Integration Hook — Docs/Runtime Drift Gate
-
-- verify calls existing `packages/qfai/tests/integration/` harness; no new binary path
-- Integration test parses SKILL.md constraint claims and enumerates runtime validator rule registry
-- Test asserts 1:1 correspondence between docs claims and runtime error conditions
-- Runs as part of standard `vitest` integration suite
-- No changes to verify CLI surface; drift gate is transparent to the user (verify just reports pass/fail)
+- Canonical UIX validators: verify uses runCanonicalUixValidators() (12 validator functions via canonical.ts)
+- Compatibility surface: `validators/legacy/` と IssueCategory `compatibility` は package surface から除去済み
+- Stale sidecar support: migration guidance は hidden compatibility path ではなく canonical validator errors で提供
+- Implemented surface confirmed by semantics audit.

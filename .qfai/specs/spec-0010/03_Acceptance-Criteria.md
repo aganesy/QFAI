@@ -58,7 +58,7 @@ Given the uiux/ sidecar, when `00_index.md` is checked, then it lists only the c
 
 ## AC-0010-0015: Strategy Template Strong Schema
 
-Given `10_strategy.md`, when it is checked, then it contains mandatory fields: surface classification, implementation strategy, and rationale — each with non-placeholder values.
+Given `uiux/10_implementation_strategy.md`, when it is checked, then it contains mandatory fields: surface classification, implementation strategy, and rationale — each with non-placeholder values.
 
 ## AC-0010-0016: Contracts Screen-Obligation Schema
 

@@ -9,6 +9,7 @@
 | TC-0004-0003 | unit        | AC-0004-0003      | EX-0004-0003 | --fail-on error で warning は pass                        |
 | TC-0004-0004 | unit        | AC-0004-0004      | EX-0004-0004 | --fail-on warning で warning は fail                      |
 | TC-0004-0005 | integration | AC-0004-0005      | EX-0004-0005 | --format github アノテーション出力                        |
+| TC-0004-0016 | integration | AC-0004-0005      | EX-0004-0013 | GitHub annotation value escape                            |
 | TC-0004-0006 | integration | AC-0004-0006      | EX-0004-0006 | validate.json 出力                                        |
 | TC-0004-0007 | integration | AC-0004-0007      | EX-0004-0007 | ランログ生成                                              |
 | TC-0004-0008 | integration | AC-0004-0008      | EX-0004-0008 | ウェイバー suppress 適用                                  |
@@ -25,6 +26,17 @@
 | TC-0004-0020 | integration | AC-0004-0019      | EX-0004-0016 | Non-UI パック UIX スキップ                                |
 | TC-0004-0021 | unit        | AC-0004-0020      | EX-0004-0017 | render-evidence truthful state                            |
 | TC-0004-0022 | unit        | AC-0004-0021      | EX-0004-0018 | Browser QA minimal runner truthful                        |
+| TC-0004-0023 | integration | AC-0004-0022      | EX-0004-0019 | Canonical Production Path Only                            |
+| TC-0004-0024 | integration | AC-0004-0022      | EX-0004-0019 | DDP Validator Not in Production                           |
+| TC-0004-0025 | integration | AC-0004-0023      | EX-0004-0020 | IssueCategory on Canonical Issues                         |
+| TC-0004-0026 | integration | AC-0004-0024      | EX-0004-0020 | prototypingRecommendation Schema Error                    |
+| TC-0004-0027 | integration | AC-0004-0022      | EX-0004-0021 | Canonical Production Path Inspection                      |
+| TC-0004-0029 | integration | AC-0004-0016      | EX-0004-0023 | QFAI-AUD-021 Selected Anchor Check                        |
+| TC-0004-0030 | integration | AC-0004-0022      | EX-0004-0026 | Canonical Barrel No Legacy Re-export                      |
+| TC-0004-0031 | integration | AC-0004-0022      | EX-0004-0024 | Canonical Validator Count                                 |
+| TC-0004-0032 | integration | AC-0004-0016      | EX-0004-0025 | QFAI-VIS-002 Info Severity                                |
+| TC-0004-0033 | integration | AC-0004-0022      | EX-0004-0026 | Canonical Barrel Isolation                                |
+| TC-0004-0034 | integration | AC-0004-0016      | EX-0004-0027 | CRIT-005 Read-Order                                       |
 | TC-0004-0035 | unit        | AC-0004-0025      | EX-0004-0028 | PROT-292 max-iterations error (v1.7.15)                   |
 | TC-0004-0036 | unit        | AC-0004-0025,0032 | EX-0004-0028 | PROT-292 valid max-iterations (v1.7.15)                   |
 | TC-0004-0037 | unit        | AC-0004-0026      | EX-0004-0029 | PROT-290/308 single-iteration converged error (v1.7.15)   |
@@ -44,6 +56,15 @@
 | TC-0004-0051 | unit        | AC-0004-0031      | EX-0004-0038 | PROT-298 limitations missing error (v1.7.15)              |
 | TC-0004-0052 | unit        | AC-0004-0025      | EX-0004-0039 | Additional integrity checks (v1.7.15)                     |
 | TC-0004-0053 | unit        | AC-0004-0032      | EX-0004-0040 | Valid evidence passes all v1.7.15 (v1.7.15)               |
+| TC-0004-0054 | unit        | AC-0004-0033      | EX-0004-0041 | discussion evidenceRefs empty error (v1.7.15 rev2)        |
+| TC-0004-0055 | unit        | AC-0004-0033      | EX-0004-0041 | screenContract evidenceRefs empty error (v1.7.15 rev2)    |
+| TC-0004-0056 | unit        | AC-0004-0033      | EX-0004-0041 | trend evidenceRefs empty error (v1.7.15 rev2)             |
+| TC-0004-0057 | unit        | AC-0004-0034      | EX-0004-0041 | Declared DB no observation error (v1.7.15 rev2)           |
+| TC-0004-0058 | unit        | AC-0004-0035      | EX-0004-0041 | uiFidelity completed without screen-level (v1.7.15 rev2)  |
+| TC-0004-0059 | unit        | AC-0004-0036      | EX-0004-0041 | Iteration evidenceRefs missing category (v1.7.15 rev2)    |
+| TC-0004-0060 | unit        | AC-0004-0037      | EX-0004-0041 | Old schema l1/l2 detection (v1.7.15 rev2)                 |
+| TC-0004-0061 | unit        | AC-0004-0033,0034,0035,0036,0037 | EX-0004-0042 | Rev2 compliant evidence happy path (v1.7.15 rev2) |
+| TC-0004-0062 | unit        | AC-0004-0038      | EX-0004-0043 | Validator test fixtures rev2 clean (v1.7.15 rev2)         |
 
 ## TC-0004-0001: 全バリデータ実行と Issue 集約
 
@@ -70,11 +91,19 @@ Verify:
 - 重複排除されている
 - summary 行に counts が含まれる
 
-## TC-0004-0016: Coverage Placeholder for EX-0004-0013
+## TC-0004-0016: GitHub annotation value escape
 
-- EX-Ref: EX-0004-0013
-- AC-Refs: AC-0004-0001
-- Verify that migrated example EX-0004-0013 is covered by at least one test case.
+**Level:** integration
+**AC Refs:** AC-0004-0005
+**EX Ref:** EX-0004-0013
+
+Setup: GitHub annotation に流す fix text に `%`, `\r`, `\n` を含む Issue を発生させる。
+Action: `runValidate({ root, format: 'github', failOn: 'never' })` を実行する。
+Verify:
+
+- annotation value 内の `%` が `%25` にエスケープされる
+- annotation value 内の `\r` が `%0D` にエスケープされる
+- annotation value 内の `\n` が `%0A` にエスケープされる
 
 ## TC-0004-0017: Canonical UIX aggregator 動作確認
 
@@ -216,19 +245,6 @@ Verify:
 | 2    | Check for runCanonicalUixValidators        | Present in exports                 |
 | 3    | Check for validateDdpFields                | NOT in exports (moved to legacy/)  |
 | 4    | Run validate on well-formed project        | Only canonical issue codes emitted |
-
-## TC-0004-0028: Phase1 Ratchet Downgrades Within Window
-
-- EX-Ref: EX-0004-0022
-- AC-Refs: AC-0004-0022
-- Type: normal
-
-| Step | Action                                           | Expected                    |
-| ---- | ------------------------------------------------ | --------------------------- |
-| 1    | Set config.uiux.phase1ReleaseDate to 10 days ago | Config ready                |
-| 2    | Run canonical UIX validators with UIX-VAL error  | Error downgraded to warning |
-| 3    | Set phase1ReleaseDate to 40 days ago             | Config updated              |
-| 4    | Run validators again                             | Error remains as error      |
 
 ## TC-0004-0029: QFAI-AUD-021 Selected Anchor Check
 

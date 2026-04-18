@@ -1,5 +1,7 @@
 dist
 node_modules
+# Root .qfai is a runtime-managed workspace snapshot, not the package source template.
+.qfai
 pnpm-lock.yaml
 tmp
 *.min.js

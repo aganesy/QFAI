@@ -4,7 +4,7 @@ paths:
   discussionDir: .qfai/discussion
   outDir: .qfai/report
   skillsDir: .qfai/assistant/skills
-  srcDir: src
+  srcDir: packages/qfai/src
   testsDir: tests
 validation:
   failOn: error
@@ -21,9 +21,14 @@ validation:
     testFileGlobs:
       - tests/**/*.test.ts
       - tests/**/*.spec.ts
+      - packages/*/tests/**/*.test.ts
+      - packages/*/tests/**/*.spec.ts
       - src/**/*.test.ts
       - src/**/*.spec.ts
+      - packages/*/src/**/*.test.ts
+      - packages/*/src/**/*.spec.ts
       - features/**/*.feature
+      - packages/*/features/**/*.feature
     testFileExcludeGlobs: []
     scNoTestSeverity: error
     orphanContractsPolicy: error

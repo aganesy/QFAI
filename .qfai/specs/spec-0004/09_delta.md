@@ -212,3 +212,11 @@ US-0004-0025 → AC-0004-0028..AC-0004-0031 → BR-0004-0031..BR-0004-0037 → E
   - DO NOT reuse existing rule IDs when detection target changes semantically
   - Temptation: keep rule count low by overloading existing IDs
   - Reason: overloaded IDs break waiver targeting and CI filtering
+
+## 2026-04-18 ATDD audit correction
+
+- adopted: EX-0004-0013 / TC-0004-0016 を placeholder から GitHub annotation escape の具体例へ更新
+- adopted: 06_Test-Cases.md の Test Case Table に TC-0004-0023..0027, TC-0004-0029..0034, TC-0004-0054..0062 を追記し、TDD ledger と整合させた
+- adopted: REQ-0117 / BR-0004-0022 / EX-0004-0024 / TC-0004-0031 を実装実態に合わせて canonical validator count=12 に補正
+- removed: BR-0004-0021 に紐づく stale EX-0004-0022 / TC-0004-0028（phase1 ratchet）。rollout.ts 削除後の production 実装に存在しないため再採用しない
+- rationale: spec-0004 と tests/e2e / tests/integration の ATDD coverage 監査で、placeholder・削除済み機能・Test Case Table 欠落が実装と乖離していたため

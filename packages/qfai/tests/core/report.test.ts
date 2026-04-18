@@ -412,6 +412,50 @@ describe("report contract coverage", () => {
     await rm(root, { recursive: true, force: true });
   });
 
+  it("omits prototyping summary when the latest discussion pack is non-ui", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-report-core-"));
+    const specsRoot = path.join(root, ".qfai", "specs");
+    const discussionDir = path.join(root, ".qfai", "discussion", "discussion-20260405000000000");
+    const evidenceRoot = path.join(root, ".qfai", "evidence");
+
+    await mkdir(specsRoot, { recursive: true });
+    await mkdir(discussionDir, { recursive: true });
+    await mkdir(evidenceRoot, { recursive: true });
+    await writeSpecPack(specsRoot, "spec-0001", "SPEC-0001");
+    await writeFile(
+      path.join(discussionDir, "01_Context.md"),
+      [
+        "# Context",
+        "",
+        "- ui_bearing: false",
+        "- primary_surface: non-ui",
+        "- secondary_surfaces:",
+        "- classification_rationale: internal library change only",
+        "",
+      ].join("\n"),
+      "utf-8",
+    );
+    await writeFile(path.join(evidenceRoot, "prototyping.md"), "# Evidence\n", "utf-8");
+    await writeFile(
+      path.join(evidenceRoot, "prototyping.json"),
+      JSON.stringify({
+        surface: "web",
+        specs: [],
+        mode: {
+          effective: "full-harness",
+          source: "discussion-recommendation",
+          rationale: "stale ui evidence",
+        },
+      }),
+      "utf-8",
+    );
+
+    const data = await createReportData(root);
+    expect(data.prototyping).toBeUndefined();
+
+    await rm(root, { recursive: true, force: true });
+  });
+
   it("excludes suppressed issues from summary table counts", () => {
     const data = createReportDataForLinks();
     data.summary.counts = { info: 0, warning: 0, error: 0 };

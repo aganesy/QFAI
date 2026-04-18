@@ -58,7 +58,7 @@
 - AC-Refs: AC-0010-0013, AC-0010-0014
 
 - Old 4-axis evaluation files (`20_eval_axis_usability.md`, `21_eval_axis_consistency.md`, `22_eval_axis_accessibility.md`, `23_eval_axis_delight.md`) must not appear in `qfai init` output or in `00_index.md` manifest.
-- Existing packs with 4-axis files are handled by the migration path (warning → error) but new generation is prohibited.
+- Existing packs with 4-axis files must be migrated before validation passes; canonical validators now emit explicit migration errors rather than relying on a warning-only compatibility window.
 
 ## BR-0010-0010: Init and Dogfood Semantic Parity
 

@@ -901,6 +901,7 @@ describe("runValidate", { timeout: 15000 }, () => {
     });
   });
 
+  // QFAI:SPEC-0004:TC-0004-0016
   it("escapes multiline fix text in github annotation output", async () => {
     await withProject(async (root) => {
       const skillPath = path.join(root, ".qfai", "assistant", "skills", "qfai-sdd", "SKILL.md");

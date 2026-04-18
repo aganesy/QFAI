@@ -66,7 +66,7 @@ All functionality is already implemented. This spec documents existing behavior.
 - Legacy namespace: `packages/qfai/src/core/validators/legacy/` — ddpCompatibility.ts, uixCompatibility.ts
 - IssueCategory: `packages/qfai/src/core/types.ts` — added "canonical"
 - prototypingRecommendation: `packages/qfai/src/core/validators/prototypingRecommendation.ts`
-- Status: implemented (v1.7.13-18..22)
+- Implemented in v1.7.13-18..22.
 
 ## v1.7.15 Validator Rules Plan
 

@@ -96,4 +96,18 @@ describe("validateDiscussionMermaid", () => {
       expect(issues.some((entry) => entry.code === "QFAI-DPACK-009")).toBe(false);
     });
   });
+
+  it("ignores stale canonical discussion packs when the latest pack is valid", async () => {
+    await withTempRoot(async (root) => {
+      await seedBusinessFlow(
+        root,
+        "discussion-20260215205220203",
+        "# Business Flows\n\nNo diagram.\n",
+      );
+      await seedBusinessFlow(root, "discussion-20260216205220203", mermaidSequence);
+
+      const issues = await validateDiscussionMermaid(root);
+      expect(issues.some((entry) => entry.code === "QFAI-DPACK-009")).toBe(false);
+    });
+  });
 });

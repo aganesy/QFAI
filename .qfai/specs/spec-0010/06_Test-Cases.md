@@ -126,11 +126,11 @@
 - AC-Refs: AC-0010-0014
 - Verify that `00_index.md` lists only canonical 3-layer family files and contains no entries for legacy 4-axis files (20–23).
 
-## TC-0010-0022: 10_strategy.md Strong Schema Validation
+## TC-0010-0022: 10_implementation_strategy.md Strong Schema Validation
 
 - EX-Ref: EX-0010-0011
 - AC-Refs: AC-0010-0015
-- Verify that `10_strategy.md` contains mandatory fields (surface classification, implementation strategy, rationale) with non-placeholder values.
+- Verify that `uiux/10_implementation_strategy.md` contains mandatory fields (surface classification, implementation strategy, rationale) with non-placeholder values.
 
 ## TC-0010-0023: 40_screen_contracts.md Screen-Obligation Schema
 

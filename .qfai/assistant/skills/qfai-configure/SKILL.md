@@ -29,25 +29,22 @@ QFAI Skill Body (SSOT)
 
 ## User Questions (AskUserQuestion Protocol)
 
-- When a question to the user is needed (e.g., configuration decisions, glob pattern confirmation),
-  the agent MUST use AskUserQuestion if the tool is available.
-- When AskUserQuestion supports structured choices (radio/multi-select),
-  the agent MUST prefer structured choices over free-text input.
-- If AskUserQuestion is technically unavailable, present the same question as a normal message
-  with explicit numbered choices.
-  The agent SHOULD preserve structured choice semantics (enumerated options, selection constraints).
-  The reason for unavailability MUST be stated.
+Follow `.qfai/assistant/instructions/shared-skill-operating-baseline.md#user-questions-askuserquestion-protocol`.
+
+Skill-specific examples:
+
+- configuration decisions
+- glob pattern confirmation
 
 ## FORMAT SSOT (Mandatory)
 
-- **Before writing or editing any `.qfai/**` artifact\*\*, read and follow the relevant directory README template and sample:
+- Follow `.qfai/assistant/instructions/shared-skill-operating-baseline.md#format-ssot-mandatory`.
+
+- Before writing or editing any `.qfai/**` artifact, read and follow the relevant directory README template and sample:
   - `.qfai/discussion/README.md`
   - `.qfai/specs/README.md`
   - `.qfai/contracts/**/README.md`
   - `.qfai/evidence/README.md`
-- **Do NOT copy** templates/samples into this prompt or into other prompt markdown.
-- The generated artifacts must match the README-defined structure (headings, ordering, table columns).
-- Completion requires a **Format Self-Check** in the evidence: list each artifact and confirm “matches README template”.
 
 ## Inputs Priority (Preflight)
 
@@ -60,36 +57,24 @@ When unsure, read inputs in this order:
 
 ## Sub-agent Delegation (MANDATORY)
 
-This section is mandatory and overrides any conflicting fallback text in this file.
+Follow `.qfai/assistant/instructions/shared-skill-delegation-baseline.md`.
 
 ### Orchestrator Protocol (MUST)
 
-- Orchestrator may only create work orders, delegate tasks, integrate outputs, and present results to the user.
-- Orchestrator MUST NOT generate the primary artifact first draft.
-- Orchestrator MUST NOT serve as Reviewer or skip delegation for convenience.
+- No additional overrides.
 
 ### Capability Probe (MUST)
 
-1. Run one harmless Probe Task (for example: "reply with ok") once at stage start.
-2. If subagents are unavailable, explicitly ask the user for Simulation mode approval.
-3. Without explicit approval, stop the stage and do not continue.
+- No additional overrides.
 
 ### Simulation mode (Opt-in only)
 
-- Allowed only when the user explicitly states `Simulation mode allowed`.
-- When used, record both of the following in outputs/evidence:
-  - `Subagents: simulated (reason: <why unavailable>)`
-  - `User approval: <quote or reference>`
+- No additional overrides.
+- Simulation mode allowed only with explicit user approval.
 
 ### Work Orders Summary (MANDATORY evidence)
 
-Every major artifact in this stage MUST include a `## Work Orders Summary` section with this fixed table schema:
-
-| Step | Role (sub-agent) | Task title | Input (refs) | Output (refs) | Status (PASS/REVISE) |
-| ---- | ---------------- | ---------- | ------------ | ------------- | -------------------- |
-| 1    | <role>           | <task>     | <refs>       | <refs>        | PASS/REVISE          |
-
-- `Output (refs)` must point to in-file anchors or relative evidence file paths.
+Use the shared schema.
 
 ### Stage Minimum Roles (MUST)
 
@@ -100,80 +85,35 @@ Every major artifact in this stage MUST include a `## Work Orders Summary` secti
 
 ### Reviewer Gate (MUST)
 
-- Final completion gate MUST be delegated to an independent `completion-reviewer`.
-- Reviewer checks (minimum):
-  - Required roles were delegated (no orchestrator self-authoring).
-  - DoD satisfied (validate gate, test-layer hard gate, evidence, DR-IDs).
-  - Validate gate evidence exists: `qfai validate --fail-on error` completed with `error=0`.
-  - **Drift Protocol enforced**:
-    - No upstream artifact edits were made without an explicit user-approved Change Request.
-    - If upstream changes exist, the correct owner skill was re-run after approval; downstream did not patch upstream directly.
-  - **Test-layer policy enforced**:
-    - E2E/API/Integration coverage aligns with `steering/test-layers.md` and the project’s plan.
-    - Do not use pyramid ratios as a gate; use floors/ratios only as signals. Coverage obligations are the gate.
+- Follow `.qfai/assistant/instructions/shared-skill-delegation-baseline.md#reviewer-gate-baseline`.
+- Reviewer checks:
+  - required roles were delegated;
+  - validate evidence exists: `qfai validate --fail-on error` completed with `error=0`;
+  - Drift Protocol enforced;
+  - test-layer policy enforced where applicable.
 - Route specialist reviewers from `.qfai/assistant/steering/agent-routing.yml`.
 - Default configure review set:
   - `completion-reviewer`
   - `qa-gatekeeper`
 - Do not declare DONE or handoff until all routed blocking reviewers return `PASS`.
-- Every reviewer MUST provide a concrete alternative or fix proposal when returning FAIL.
 
 ### Work order template (copy/paste)
 
-```text
-Task title: <short>
-Role: <sub-agent role>
-Goal: <what to decide/produce>
-Inputs (refs):
-- <file/section>
-Constraints:
-- must: enforce Drift Protocol (no upstream edits without user approval + CR)
-- must: verify plan/test-layer adherence (`steering/test-layers.md` + plan)
-- must: check `qfai validate --fail-on error` passes with evidence (`error=0`)
-- must: enforce `.qfai/assistant/steering/test-layers.md` hard gates
-- must_not: accept test-volume ratios/floors as a hard gate
-- must_not: accept upstream edits made directly by downstream phase
-Output format:
-- <headings / bullet schema>
-Quality bar:
-- PASS if ...
-- REVISE if ...
-```
+Use the shared template.
 
 ### Reviewer response template
 
-```text
-Result: PASS | REVISE
-Findings:
-- <issue>
-Required fixes:
-- <action>
-Evidence checked:
-- <refs>
-```
+Use the shared template.
+- Required field: `Status (PASS/REVISE)`.
 
 ## Stage 0 — Steering completion refresh (mandatory)
 
-Before moving forward in this stage, refresh these files:
-
-- `.qfai/assistant/steering/manifest.md`
-- `.qfai/assistant/steering/product.md`
-- `.qfai/assistant/steering/structure.md`
-- `.qfai/assistant/steering/tech.md`
-
-Rules:
-
-- Detect incomplete content (empty sections, placeholder-only lines, `<...>`, `TBD`, stale facts).
-- Fill what is verifiable from repository evidence (tree, docs, require/spec artifacts, package.json, CI definitions).
-- If something cannot be verified, record it as an Open Question and ask the user.
-- Even if steering is already complete, update it when new facts are discovered in this stage.
+Follow `.qfai/assistant/instructions/shared-skill-operating-baseline.md#stage-0---steering-completion-refresh-mandatory`.
+- Fill steering from verifiable repository evidence first; when evidence is missing, mark the field `TBD` and record the gap in the evidence file.
 
 ## Delta Rejected Guard (Mandatory)
 
-- Do NOT reintroduce options marked as rejected in 09_delta.md.
-- If a rejected option must be reconsidered, create a **[RE-OPEN]** Decision
-  Record in 09_delta.md that references the prior DR-ID, states what changed +
-  new criteria, and includes explicit approval (user or instructions/steering).
+Follow `.qfai/assistant/instructions/shared-skill-operating-baseline.md#delta-rejected-guard-mandatory`.
 
 ## CRITICAL CONSTRAINTS (Read First)
 
@@ -187,19 +127,7 @@ Rules:
 
 ## Completion Contract (Shared)
 
-Before declaring completion, you MUST:
-
-- OQ / undefined resolution: detect undefined or ambiguous items; resolve them or explicitly defer them with documented rationale and (when required by this prompt) user approval.
-- Deliverable completeness: verify every expected artifact listed in this prompt (and required README templates) exists and is fully populated; no missing required sections.
-- OQ / placeholder scan: scan all generated artifacts (including evidence) for
-  placeholders such as "TBD", "TODO", "TBA", "TBC", "XXX", "???", "OQ",
-  "OPEN QUESTION", "UNDEFINED", "PLACEHOLDER", and localized equivalents in
-  the user's language. Resolve or explicitly defer; do not leave silent
-  placeholders.
-- Smoke check (if applicable): when the prompt produces runnable code, tests,
-  or configs, execute the smallest command that proves basic run/start/operate
-  and record evidence. If not applicable, state "not applicable" with a short
-  rationale.
+Follow `.qfai/assistant/instructions/shared-skill-operating-baseline.md#completion-contract-shared`.
 
 ## Goal
 

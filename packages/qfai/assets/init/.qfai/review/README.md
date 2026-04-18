@@ -27,13 +27,13 @@ Routing SSOT:
     └── summary.json
 ```
 
-## summary.json (minimum schema)
+## summary.json (minimum schema; prefer v2.0 for new packs)
 
 ```json
 {
   "version": "2.0",
   "created_at": "2026-02-18T12:34:56+09:00",
-  "target": { "kind": "spec|require|discussion", "path": "..." },
+  "target": { "kind": "spec|discussion", "path": "..." },
   "routing_profile": "default",
   "reviewers": [{ "reviewer": "name-or-id", "status": "PASS|FAIL", "feedback_count": 0 }],
   "conditional_reviewers": [],

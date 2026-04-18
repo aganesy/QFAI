@@ -138,4 +138,22 @@ describe("validateMermaidEnforcement", () => {
       expect(issues).toEqual([]);
     });
   });
+
+  it("ignores stale discussion packs when the latest pack is clean", async () => {
+    await withTempRoot(async (root) => {
+      await writeArtifact(
+        root,
+        ".qfai/discussion/discussion-20260216160000000/03_Story-Workshop.md",
+        ["# Flow", "", "flowchart TD", "  A --> B", ""].join("\n"),
+      );
+      await writeArtifact(
+        root,
+        ".qfai/discussion/discussion-20260217160000000/03_Story-Workshop.md",
+        ["# Flow", "", "```mermaid", "flowchart TD", "  A --> B", "```", ""].join("\n"),
+      );
+
+      const issues = await validateMermaidEnforcement(root);
+      expect(issues).toEqual([]);
+    });
+  });
 });

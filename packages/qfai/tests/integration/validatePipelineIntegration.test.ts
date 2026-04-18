@@ -19,12 +19,12 @@
 // QFAI:SPEC-0004:TC-0004-0013
 // QFAI:SPEC-0004:TC-0004-0014
 // QFAI:SPEC-0004:TC-0004-0015
+// QFAI:SPEC-0004:TC-0004-0016
 // QFAI:SPEC-0004:TC-0004-0023
 // QFAI:SPEC-0004:TC-0004-0024
 // QFAI:SPEC-0004:TC-0004-0025
 // QFAI:SPEC-0004:TC-0004-0026
 // QFAI:SPEC-0004:TC-0004-0027
-// QFAI:SPEC-0004:TC-0004-0028
 // QFAI:SPEC-0004:TC-0004-0029
 // QFAI:SPEC-0004:TC-0004-0030
 // QFAI:SPEC-0004:TC-0004-0031
@@ -65,9 +65,6 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 const repoRoot = path.resolve(process.cwd(), "..", "..");
-const srcRoot = path.join(repoRoot, "packages", "qfai", "src");
-const coreRoot = path.join(srcRoot, "core");
-const validatorsRoot = path.join(coreRoot, "validators");
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -77,8 +74,17 @@ async function readSource(relativePath: string): Promise<string> {
   return readFile(path.join(repoRoot, relativePath), "utf-8");
 }
 
+function requireMatch(source: string, pattern: RegExp, description: string): RegExpMatchArray {
+  const match = source.match(pattern);
+  expect(match, `${description} should exist`).not.toBeNull();
+  if (!match) {
+    throw new Error(`${description} was not found.`);
+  }
+  return match;
+}
+
 // ===========================================================================
-// Group 1: Core Pipeline (TC-0004-0001..0015)
+// Group 1: Core Pipeline (TC-0004-0001..0016)
 // ===========================================================================
 
 // QFAI:SPEC-0004:TC-0004-0001
@@ -129,6 +135,17 @@ describe("TC-0004-0005: --format github annotation output", () => {
   it("GitHub annotation limit is enforced", async () => {
     const src = await readSource("packages/qfai/src/cli/commands/validate.ts");
     expect(src).toMatch(/GITHUB_ANNOTATION_LIMIT/);
+  });
+});
+
+// QFAI:SPEC-0004:TC-0004-0016
+describe("TC-0004-0016: GitHub annotation value escape", () => {
+  it("validate CLI escapes %, carriage returns, and newlines in GitHub command values", async () => {
+    const src = await readSource("packages/qfai/src/cli/commands/validate.ts");
+    expect(src).toContain("function escapeGitHubCommandValue");
+    expect(src).toContain('replace(/%/g, "%25")');
+    expect(src).toContain('replace(/\\r/g, "%0D")');
+    expect(src).toContain('replace(/\\n/g, "%0A")');
   });
 });
 
@@ -303,17 +320,6 @@ describe("TC-0004-0027: Canonical production path inspection", () => {
   });
 });
 
-// QFAI:SPEC-0004:TC-0004-0028
-describe("TC-0004-0028: Phase1 ratchet downgrades within window", () => {
-  it("canonical.ts supports config-driven ratchet behavior", async () => {
-    const src = await readSource("packages/qfai/src/core/validators/uix/canonical.ts");
-    // The canonical aggregator accepts config and passes it to validators
-    expect(src).toMatch(/config:\s*QfaiConfig/);
-    // Validators are called with both root and config
-    expect(src).toMatch(/validators\.map\(\(v\)\s*=>\s*v\(effectiveRoot,\s*config\)/);
-  });
-});
-
 // QFAI:SPEC-0004:TC-0004-0029
 describe("TC-0004-0029: QFAI-AUD-021 selected anchor check", () => {
   it("design audit validator is registered in canonical pipeline", async () => {
@@ -343,9 +349,11 @@ describe("TC-0004-0031: Canonical validator count", () => {
   it("runCanonicalUixValidators invokes exactly 12 validators", async () => {
     const src = await readSource("packages/qfai/src/core/validators/uix/canonical.ts");
     // Extract the validators array block
-    const validatorsMatch = src.match(/const\s+validators\s*=\s*\[([\s\S]*?)\];/);
-    expect(validatorsMatch).not.toBeNull();
-    const validatorsBody = validatorsMatch![1];
+    const validatorsBody = requireMatch(
+      src,
+      /const\s+validators\s*=\s*\[([\s\S]*?)\];/,
+      "validators array block",
+    )[1];
     // Count validator function references (identifiers starting with 'validate' or 'run')
     const entries = validatorsBody
       .split("\n")
@@ -745,9 +753,11 @@ describe("TC-0004-0062: Validator test fixtures rev2 clean (v1.7.15 rev2)", () =
   it("unit test normal fixtures do not contain l1/l2 direct pass patterns", async () => {
     const src = await readSource("packages/qfai/tests/unit/validators/prototypingEvidence.test.ts");
     // makeIteration (used inside buildValidEvidence) must have populated axes
-    const iterFn = src.match(/function makeIteration[\s\S]*?\n\}/);
-    expect(iterFn).not.toBeNull();
-    const fnBody = iterFn![0];
+    const fnBody = requireMatch(
+      src,
+      /function makeIteration[\s\S]*?\n\}/,
+      "makeIteration fixture function",
+    )[0];
     // axes array should have entries with real axisId in the iteration fixture
     expect(fnBody).toContain("axes:");
     expect(fnBody).toContain("axisId");

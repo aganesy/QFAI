@@ -45,28 +45,23 @@
 - allowed_modes に recommended_mode が含まれない場合は QFAI-PROT-154（semantic invariant error）
 - v1.7.14: legacy top-level keys の存在は hard error（DR-0112）。QFAI-PROT-231/232 warning は廃止
 
-## BR-0004-0021: [REMOVED v1.7.14] Phase1 Ratchet Mechanism
-
-- AC-Refs: AC-0004-0022
-- Status: **REMOVED** — v1.7.14 で rollout.ts と共に完全削除（DR-0115）
-- 旧内容: `applyPhase1Ratchet()` in `uix/rollout.ts` は config.uiux.phase1ReleaseDate に基づく ratchet を適用していた
-
 ## BR-0004-0022: Canonical Validator Enumeration
 
 - AC-Refs: AC-0004-0022
 
-- runCanonicalUixValidators() は以下の 11 modular validators を並列実行する（v1.7.14: rollout.ts 削除により 12→11）:
-  1. validateSidecarMissing (foundation.ts)
-  2. validateStrategyStrong (strategy.ts)
-  3. validateScoringReady (scoringReady.ts)
-  4. validateScreenContractSchema (screenContract.ts)
-  5. validateTasteInterview (tasteInterview — 既存)
-  6. validateTrendScan (trend.ts)
-  7. validateThreeLayerPresence (threeLayer.ts)
-  8. validateOptionComparison (comparisonValidator.ts)
-  9. validateOqClosure (oqClosure.ts)
-  10. validateDiscussionDesignHardening (discussionDesignHardening.ts — 7 sub-validators)
-  11. validatePrototypingRecommendation (prototypingRecommendation.ts)
+- runCanonicalUixValidators() は以下の 12 validator を並列実行する:
+  1. validateClassification (classification.ts)
+  2. validateSidecarMissing (foundation.ts)
+  3. validateTasteInterview (taste.ts)
+  4. validateTrendScan (trend.ts)
+  5. validateThreeLayerModel (threeLayer.ts)
+  6. validateForbiddenLegacyFiles (threeLayer.ts)
+  7. validateThreeLayerFamilyCompleteness (threeLayer.ts)
+  8. validateScoringReady (scoringReady.ts)
+  9. validateStrategyStrong (strategy.ts)
+  10. validateScreenContractSchema (screenContract.ts)
+  11. validateOptionComparison (comparisonValidator.ts)
+  12. validateOqClosure (oqClosure.ts)
 
 ## BR-0004-0023: QFAI-VIS-002 Severity Downgrade
 
@@ -87,7 +82,7 @@
 ## BR-0004-0025: [REMOVED v1.7.14] Canonical Barrel Isolation Rule
 
 - AC-Refs: AC-0004-0022
-- Status: **REMOVED** — v1.7.14 で validators/legacy/ ディレクトリ自体が完全削除されたため、barrel isolation ルールは不要（DR-0115）
+- Removal note: v1.7.14 で validators/legacy/ ディレクトリ自体が完全削除されたため、barrel isolation ルールは不要（DR-0115）
 
 ## BR-0004-0026: QFAI-CRIT-005 Read-Order Requirement
 
