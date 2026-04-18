@@ -1,16 +1,13 @@
-qfai validate summary: error=5 warning=4 info=3 annotations=12/12 failOn=error result=FAIL
+qfai validate summary: error=2 warning=4 info=3 annotations=9/9 failOn=error result=FAIL
 qfai validate note: 詳細は .qfai/report/validate.json または --format text を参照してください。
-qfai validate note: run-log は .qfai/report/run-20260418142549887 を参照してください。
+qfai validate note: run-log は .qfai/report/run-20260418171641832 を参照してください。
 qfai validate note: 次は qfai report で report.md を生成できます（例: qfai report）。
+::error::QFAI-SKILLS-001: 標準資産 '.qfai/assistant/skills/**' が改変されています（変更: 4 / 削除: 2）。 例: qfai-discussion/SKILL.md, qfai-discussion/templates/04_Sources.md, qfai-discussion/templates/uiux/21_design_eval_trend_derived.md, qfai-prototyping/SKILL.md, qfai-discussion/references/design-md-brand-catalog.md, qfai-discussion/templates/uiux/12_design_system.md expected=skills.integrity | fix=skills の直編集は非推奨です（アップデート/再 init で上書きされ得ます）。%0A次のいずれかを実施してください:%0A- 変更したい場合: 同一相対パスで '.qfai/assistant/skills.local/**' に置いて override%0A- 標準状態へ戻す場合: 'qfai init --force' を実行（skills のみ上書き、skills.local は保護）
 ::warning file=.qfai/assistant/skills/qfai-atdd/SKILL.md::QFAI-SKILLS-012: Reviewer Gate に Drift/test-layer 観点が不足しています（不足: Drift Protocol, test-layers.md, not gates/signals）。
 ::warning file=.qfai/assistant/skills/qfai-configure/SKILL.md::QFAI-SKILLS-012: Reviewer Gate に Drift/test-layer 観点が不足しています（不足: test-layers.md, not gates/signals）。
 ::warning file=.qfai/assistant/skills/qfai-verify/SKILL.md::QFAI-SKILLS-012: Reviewer Gate に Drift/test-layer 観点が不足しています（不足: not gates/signals）。
-::error file=.qfai/discussion/discussion-20260418093755100::QFAI-DPACK-002: discussion-pack の必須ファイルが不足しています: prototyping.yaml expected=The latest discussion-pack contains 15 required markdown files, and prototyping.yaml is required only when the latest pack is ui_bearing=true. | fix=不足ファイルを作成してください: prototyping.yaml。latest UI-bearing discussion pack では prototyping.yaml が必須です。
 ::error file=.qfai/review/review-20260418094607607/summary.json::QFAI-REVIEW-007: summary.json の最小スキーマを満たしていません: `version` は "1.0" または "2.0" が必須です / `created_at` は日時文字列が必須です / `target.path` は非空文字列が必須です / `overall_status` は PASS|FAIL のいずれかが必須です / `roster` は1件以上の配列が必須です expected=Each review summary satisfies the minimum schema. | fix=Follow the expected rule and rerun validate.
-::error file=.qfai/discussion/discussion-20260418093755100::QFAI-PROT-153: latest UI-bearing discussion pack では prototyping.yaml が必須です。 expected=prototyping.yaml invalid; canonical namespaced prototyping block is required, top-level recommendation keys are not supported, and semantic mismatch (recommended_mode not in allowed_modes) is invalid. | fix=latest discussion pack の classification を確認し、UI-bearing pack なら prototyping.yaml を追加してください。
-::error file=.qfai/evidence/prototyping.json::QFAI-PROT-101: prototyping evidence JSON が不正です: `runtimeGate.evidenceRefs` must be a string array expected=Both prototyping evidence files exist and prototyping.json follows the required schema. | fix=`.qfai/evidence/prototyping.json` の `specs/runtimeGate/meta` 構造を仕様どおりに修正してください。
 ::notice file=.qfai/contracts/ui::QFAI-CONTRACT-000: UI 契約ファイルが見つかりません。
 ::notice file=.qfai/contracts/api::QFAI-CONTRACT-000: API 契約ファイルが見つかりません。
 ::notice file=.qfai/contracts/db::QFAI-CONTRACT-000: DB 契約ファイルが見つかりません。
 ::warning file=.qfai/specs/spec-0010/16_Traceability-ledger.md::QFAI-TRACE-002: Traceability ledger not found for spec-0010. Skipping integrity check.
-::error file=01_Context.md::UIX-VAL-CLASSIFICATION-MISSING: 01_Context.md must contain the explicit UI-bearing Classification block. expected=Rule compliance | fix=Add ui_bearing, primary_surface, secondary_surfaces, and classification_rationale to the classification block.

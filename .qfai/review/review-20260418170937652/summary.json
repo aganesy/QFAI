@@ -1,0 +1,26 @@
+{
+  "version": "1.0",
+  "created_at": "2026-04-18T17:15:00+09:00",
+  "target": {
+    "kind": "discussion",
+    "path": ".qfai/discussion/discussion-20260418170937652"
+  },
+  "overall_status": "PASS",
+  "roster": [
+    {
+      "reviewer": "completion-reviewer",
+      "status": "PASS",
+      "feedback_count": 0
+    },
+    {
+      "reviewer": "requirements-reviewer",
+      "status": "PASS",
+      "feedback_count": 0
+    },
+    {
+      "reviewer": "architecture-reviewer",
+      "status": "PASS",
+      "feedback_count": 0
+    }
+  ]
+}
