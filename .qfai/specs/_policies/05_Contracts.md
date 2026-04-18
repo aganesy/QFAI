@@ -40,6 +40,13 @@ QFAI は GUI を持たない CLI ツールである。`/qfai-prototyping` スキ
 - `validate.json` は内部契約として扱い、Contract Index には含めない。
 - 将来的にコントラクトが必要になった場合は、本ファイルにエントリを追加する。
 
+## v1.7.16 Contract Posture
+
+- Contracts-first review completed for discussion-20260418093755100（QFAI Package Design Quality Pipeline Restructure; spec-0010 / spec-0012 / spec-0014 UPDATE）.
+- 追加バリデータ（UIX-VAL-T01〜T04, UIX-VAL-DS01〜DS02, PROT-DS01）、SKILL.md 拡張（Step 0, Step 11.3, Step 11.5, 反復ゲート, 5-step cycle, DESIGN.md準拠チェック）、テンプレート追加（`uiux/12_design_system.md`）および references 新設（`design-md-brand-catalog.md`）は全て QFAI パッケージ内部の SSOT/SKILL/バリデータ拡張であり、外部向け DB/API/UI contract は新設しない。
+- したがって Contract Index の `0 items` は意図的な none-rationale であり、spec-0010 / spec-0012 / spec-0014 のスコープ境界に整合する。
+- 既存 discussion-pack / prototyping.json への後方互換性は NFR-0001（discussion-20260418093755100）により担保する（新フィールドは任意拡張、UIX-VAL-T01/T02 は既存パック非影響のため ERROR 直接導入可）。
+
 ## v1.7.1 Contract Posture
 
 - Contracts-first review completed for `CAP-0024 / spec-0024`.

@@ -28,6 +28,9 @@
   - Waiver handling: waivers for warning/info only, error waivers rejected
   - Canonical UIX validators (runCanonicalUixValidators — 12 validator functions executed by the canonical production path)
   - Removed compatibility surface — package surface no longer exposes `validators/legacy/` or IssueCategory `compatibility`
+  - UIX-VAL-T01..T04 (Trend->Axis traceability validators: evaluation_connection field presence/resolution, source_refs resolution, visual axis derivation coverage)
+  - UIX-VAL-DS01/DS02 (uiux/12_design_system.md presence and required 3-section non-empty validators)
+  - PROT-DS01 (prototyping.json scoringTrace.designSystemCompliance recording validator)
 - Out:
   - Incremental/diff-only verification (DR-0007: verify is always full-scan)
   - Spec artifact authoring (belongs to `/qfai-sdd`)
@@ -41,6 +44,8 @@
 - NFR-0004: Non-UI safety -- zero UI-bearing validator fires on non-UI projects
 - NFR-0005: Waiver integrity -- error-level waivers are rejected and treated as failures
 - NFR-0006: Evidence actionability -- all gate results include exact commands and outcomes
+- NFR-0001 (v1.7.16 source: discussion-20260418093755100): backward compatibility — new validators must not produce ERRORs on legacy packs generated before v1.7.15 (WARNING-first introduction for rules that reference fields existing in legacy packs)
+- NFR-0004 (v1.7.16 source: discussion-20260418093755100): validation speed — adding UIX-VAL-T01..T04, UIX-VAL-DS01/DS02, PROT-DS01 must keep qfai validate total runtime increase <= 20% over v1.7.15 baseline
 
 ## Applicable Policy
 
@@ -74,10 +79,12 @@
   strategy.ts（strategy artifact 完全性）, screenContract.ts（screen contract schema）, comparisonValidator.ts（option comparison + selected anchor）,
   oqClosure.ts（OQ 参照解決）
 - REQ-0014: Removed Compatibility Surface — package surface から `validators/legacy/` namespace と IssueCategory `compatibility` を除去し、互換性判定は canonical validators の migration errors で扱う
+- REQ-0015: Trend->Axis traceability validators — UIX-VAL-T01 (ERROR: 04_Sources.md Trend Scan entries MUST have evaluation_connection), UIX-VAL-T02 (ERROR: evaluation_connection MUST reference existing TRD-XX axis), UIX-VAL-T03 (WARNING: TRD-XX source_refs MUST reference real 04_Sources.md entries), UIX-VAL-T04 (WARNING: visual Trend Scan categories present implies at least one visual axis derived in 21_design_eval_trend_derived.md). Non-UI packs MUST produce zero T01..T04 fires.
+- REQ-0016: Design system presence and scoring validators — UIX-VAL-DS01 (ERROR: UI-bearing packs MUST contain uiux/12_design_system.md), UIX-VAL-DS02 (ERROR: 12_design_system.md MUST have non-empty Visual Theme, Color Palette, Do's and Don'ts sections), PROT-DS01 (ERROR when UI-bearing + 12_design_system.md exists + full-harness, WARNING otherwise: prototyping.json scoringTrace MUST record designSystemCompliance score). Non-UI packs MUST produce zero DS01/DS02/PROT-DS01 fires.
 
 ## Entry points
 
-- US range in this spec: US-0014-0001..US-0014-0012
+- US range in this spec: US-0014-0001..US-0014-0019
 - Primary actors: QFAI user (developer), CI/CD pipeline, DevOps/CI Engineer
 - Notes: Verify is the final quality gate before PR creation. It produces evidence for PR descriptions.
 
@@ -96,3 +103,11 @@
 - \_policies/02_Initiative.md
 - \_policies/07_Constraints.md
 - \_policies/08_Decisions.md
+
+## v1.7.16 Scope Delta (2026-04-18)
+
+- Source: discussion-20260418093755100 (REQ-0008, REQ-0018; NFR-0001, NFR-0004)
+- Added validators: UIX-VAL-T01, UIX-VAL-T02, UIX-VAL-T03, UIX-VAL-T04, UIX-VAL-DS01, UIX-VAL-DS02, PROT-DS01
+- Severity: T01/T02/DS01/DS02 = ERROR; T03/T04 = WARNING; PROT-DS01 = ERROR under (UI-bearing + 12_design_system.md exists + full-harness) else WARNING (see DR-0014-v1716-01)
+- Non-UI safety (NFR-0004 of spec-0014 existing "Non-UI safety"): these 7 rules MUST fire zero times on non-UI projects
+- Backward compatibility (NFR-0001 of discussion pack): UIX-VAL-T01/T02 may introduce as ERROR because legacy packs lack the evaluation_connection field entirely and validators only fire on packs already containing Trend Scan entries with the canonical v1.7.16 template marker — existing pre-v1.7.16 packs are not retro-validated for T01/T02 (see DR-0014-v1716-02)

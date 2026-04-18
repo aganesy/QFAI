@@ -114,3 +114,62 @@ US-0014-0010 → AC-0014-0012 → BR-0014-0014 → EX-0014-0012 → TC-0014-0018
 US-0014-0011 → AC-0014-0013 → BR-0014-0013 → EX-0014-0014 → TC-0014-0019
 US-0014-0012 → AC-0014-0014 → BR-0014-0015 → EX-0014-0015 → TC-0014-0009
 ```
+
+## v1.7.16 (2026-04-18) — QFAI Package Design Quality Pipeline Restructure (Validator Extensions)
+
+### Context
+
+- Source: discussion-20260418093755100 (18 REQs, non-UI pack)
+- In-scope REQs for spec-0014 this revision: REQ-0008 (UIX-VAL-T01..T04), REQ-0018 (UIX-VAL-DS01/DS02, PROT-DS01)
+- Applicable NFRs: NFR-0001 (backward compatibility), NFR-0004 (validation speed <= 20% increase)
+
+### Added
+
+| ID                     | Layer | Summary                                                                 |
+| ---------------------- | ----- | ----------------------------------------------------------------------- |
+| REQ-0015               | REQ   | Trend->Axis traceability validators (UIX-VAL-T01..T04)                  |
+| REQ-0016               | REQ   | Design system validators and PROT-DS01 evidence recording               |
+| US-0014-0013           | US    | Enforce evaluation_connection presence on Trend Scan entries (T01)      |
+| US-0014-0014           | US    | Reject dangling evaluation_connection references (T02)                  |
+| US-0014-0015           | US    | Warn on dangling TRD source_refs (T03)                                  |
+| US-0014-0016           | US    | Warn when visual Trend has no visual axis (T04)                         |
+| US-0014-0017           | US    | Require uiux/12_design_system.md on UI-bearing packs (DS01)             |
+| US-0014-0018           | US    | Require non-empty required sections in 12_design_system.md (DS02)       |
+| US-0014-0019           | US    | Require designSystemCompliance score in prototyping evidence (PROT-DS01)|
+| AC-0014-0015           | AC    | UIX-VAL-T01 ERROR on missing evaluation_connection                      |
+| AC-0014-0016           | AC    | UIX-VAL-T02 ERROR on dangling evaluation_connection                     |
+| AC-0014-0017           | AC    | UIX-VAL-T03 WARNING on dangling source_refs                             |
+| AC-0014-0018           | AC    | UIX-VAL-T04 WARNING on missing visual axis                              |
+| AC-0014-0019           | AC    | UIX-VAL-DS01 ERROR when design_system.md missing                        |
+| AC-0014-0020           | AC    | UIX-VAL-DS02 ERROR on empty required sections                           |
+| AC-0014-0021           | AC    | PROT-DS01 conditional severity                                          |
+| BR-0014-0016..0024     | BR    | Trigger rules, severity map, non-UI safety (9 rules)                    |
+| EX-0014-0016..0028     | EX    | Happy/negative/edge/state/idempotency/permission examples (13 entries)  |
+| TC-0014-0020..0032     | TC    | Unit tests per validator plus cross-cutting (13 entries)                |
+| DR-0014-v1716-01       | DR    | Severity mapping (T01/T02/DS01/DS02 = ERROR, T03/T04 = WARNING, PROT-DS01 conditional) |
+| DR-0014-v1716-02       | DR    | Backward-compatible staged introduction                                 |
+| OQ-0005 (carried)      | OQ    | CSS value auto-extraction precision (deferred to TDD)                   |
+
+### Traceability Chain (v1.7.16 additions)
+
+```text
+US-0014-0013 -> AC-0014-0015 -> BR-0014-0016 -> EX-0014-0016, EX-0014-0017, EX-0014-0018 -> TC-0014-0020, TC-0014-0021, TC-0014-0022
+US-0014-0014 -> AC-0014-0016 -> BR-0014-0017 -> EX-0014-0019 -> TC-0014-0023
+US-0014-0015 -> AC-0014-0017 -> BR-0014-0018 -> EX-0014-0020 -> TC-0014-0024
+US-0014-0016 -> AC-0014-0018 -> BR-0014-0019 -> EX-0014-0021 -> TC-0014-0025
+US-0014-0017 -> AC-0014-0019 -> BR-0014-0020 -> EX-0014-0022, EX-0014-0028 -> TC-0014-0026, TC-0014-0032
+US-0014-0018 -> AC-0014-0020 -> BR-0014-0021 -> EX-0014-0023 -> TC-0014-0027
+US-0014-0019 -> AC-0014-0021 -> BR-0014-0022 -> EX-0014-0024, EX-0014-0025 -> TC-0014-0028, TC-0014-0029
+Cross-cutting: BR-0014-0023 (severity map) covered by EX-0014-0027 -> TC-0014-0031; BR-0014-0024 (non-UI safety) covered by EX-0014-0026 -> TC-0014-0030
+```
+
+### Rejected
+
+- RJ-0014-v1716-01: Uniform WARNING rollout for all v1.7.16 rules.
+  - DO NOT introduce UIX-VAL-T01/T02 as WARNING.
+  - Temptation: minimize any theoretical risk of retro-CI-failure.
+  - Reason: T01/T02 reference a field that cannot appear in legacy packs; WARNING would weaken the traceability invariant with zero rollout benefit (DR-0014-v1716-02).
+
+### Rationale
+
+The v1.7.16 slice installs the validator contract that makes the Trend Scan -> TRD axis -> design-system -> prototyping scoring chain observable. Severity is calibrated so that traceability breaks (T01/T02) and SSOT presence/completeness (DS01/DS02) block, while coverage hints (T03/T04) warn. PROT-DS01 is the only conditional-severity rule because its meaning depends on the upstream context (mode + 12_design_system.md presence) and would produce noise if unconditionally ERROR.

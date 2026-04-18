@@ -59,3 +59,31 @@ As a QFAI user, I want `40_screen_contracts.md` to enforce a screen-obligation s
 ## US-0010-0015: Prototyping Recommendation Artifact
 
 As a discussion facilitator, I want the discussion workflow to produce a `prototyping.yaml` side artifact with mode recommendation, rationale, allowed modes, and surface classification, so that the prototyping skill has a structured input for mode resolution.
+
+## US-0010-0016: Step 11.3 Brand→Aesthetic Mapping DESIGN.md 自律生成 (v1.7.16)
+
+As a discussion facilitator, I want Step 11.3 to autonomously select a representative brand archetype from the taste interview and then customize it into `uiux/12_design_system.md` (8 sections), so that UI-bearing packs receive an executable DESIGN.md without human intervention.
+
+## US-0010-0017: Step 11.5 Trend→Axis Derivation (v1.7.16)
+
+As a discussion facilitator, I want Step 11.5 to derive `21_design_eval_trend_derived.md` axes from `04_Sources.md` Trend Scan entries, with at least one visual axis when visual categories exist, so that evaluation criteria are traceable to competitive research.
+
+## US-0010-0018: 04_Sources.md evaluation_connection Field (v1.7.16)
+
+As a QFAI user, I want every Trend Scan entry in `04_Sources.md` (all 6 visual categories) to include an `evaluation_connection` field pointing to a `TRD-XX` axis, so that trend-to-axis traceability can be automatically validated.
+
+## US-0010-0019: 21_design_eval_trend_derived.md Visual Axis Examples (v1.7.16)
+
+As a QFAI user, I want `templates/uiux/21_design_eval_trend_derived.md` to show at least two visual axis examples (e.g., Visual Warmth & Color Harmony) plus `source_refs` guidance, so that authors have a concrete template for deriving visual axes.
+
+## US-0010-0020: Sidecar Generation Flow Step 1c → Step 1d Ordering (v1.7.16)
+
+As a discussion facilitator, I want the Sidecar Generation Flow to enforce Step 1c (Trend Scan creation) before Step 1d (trend-derived axis derivation), with no parallel execution, so that trend axes have complete Trend Scan input.
+
+## US-0010-0021: Brand Catalog for AI Autonomous Selection (v1.7.16)
+
+As a discussion facilitator, I want a `references/design-md-brand-catalog.md` file containing 8 archetypes (Elegant Minimalist, Bold & Dynamic, Warm Organic, Technical Precision, Playful Creative, Trustworthy Professional, Futuristic Innovation, Heritage Classic) with representative brand + aesthetic fields, so that the AI can score and select an archetype from the taste interview input.
+
+## US-0010-0022: 12_design_system.md Template 8-Section Schema (v1.7.16)
+
+As a QFAI user, I want `templates/uiux/12_design_system.md` to define 8 sections (Visual Theme / Color Palette / Typography / Spacing & Layout / Component Style / Animation & Motion / Do's and Don'ts / Agent Implementation Guide), so that auto-generated DESIGN.md files have a uniform structure that downstream agents can consume.

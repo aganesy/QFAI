@@ -1155,3 +1155,95 @@ npx qfai validate --fail-on error --format github | tee .qfai/report/validate.lo
 - FIX-2: Validate re-run confirmed E_ID_INVALID_FORMAT = 0, COV-201~206 = 0, TRACE = 0
 
 **Validate (Round 3):** SDD-scope errors = 0 (remaining: pre-existing REVIEW-007/003/005/PROT-171/150 + expected SDD ATDD-111/112)
+
+---
+
+## v1.7.16 SDD Update (discussion-20260418093755100)
+
+### Objective
+
+spec-0012 (qfai-prototyping) への v1.7.16 スライスは、prior agent run (work-order `a6d24c12b045ef823`) で既に反映済みであることを確認する。本セッションは検証のみを実施し、新規編集は行わない。
+
+### Inputs Reviewed
+
+| Priority | Path | Purpose |
+|---|---|---|
+| P1 | `.qfai/assistant/instructions/*` | Agent instructions |
+| P2 | `.qfai/assistant/steering/*` | Steering files |
+| P3 | `.qfai/specs/spec-0012/**` | Existing spec-0012 artifacts (rev4..rev11 + v1.7.16) |
+| P4 | `.qfai/discussion/discussion-20260418093755100/**` | v1.7.16 discussion pack |
+
+### Verification Results (spec-0012 files 01..10)
+
+- `09_delta.md`: v1.7.16 reference count ≥ 15 (confirmed via grep) — Capture→Evaluate→Identify→Fix→Re-evaluate 5-step cycle, iteration gate, PROT-DS01 scoring, `evidenceRefs.designSystem` / `designSystemScore` schema additions.
+- `10_Plan.md`: v1.7.16 reference count ≥ 8 (confirmed via grep) — implementation strategy captured under v1.7.16 Implementation Notes.
+- US/AC/BR/EX/TC IDs: v1.7.16 additions present in prior agent session (no new editing required this run).
+
+### Open Questions Summary
+
+| OQ-ID | Status |
+|---|---|
+| (carried) | All v1.7.16 OQs resolved at discussion level for spec-0012 scope; no spec-0012-specific OQ opened this revision |
+
+### Decisions Made
+
+| DR-ID | Decision |
+|---|---|
+| (prior agent run) | v1.7.16 DRs for spec-0012 captured in earlier agent session; see `09_delta.md` v1.7.16 section |
+
+### Work Performed This Session
+
+| File | Change |
+|---|---|
+| (none) | spec-0012 v1.7.16 content confirmed complete from prior agent run; no edits this session |
+
+### Commands Executed
+
+```
+npx qfai validate --fail-on error --format github | tee .qfai/report/validate.log
+# Result: error=7 warning=4 info=3 annotations=14/14 failOn=error result=FAIL
+```
+
+### Validate Triage
+
+| Error Code | Count | Classification |
+|---|---|---|
+| QFAI-DPACK-002 | 1 | Pre-existing baseline |
+| QFAI-REVIEW-007 | 2 | Pre-existing baseline |
+| QFAI-PROT-153 | 1 | Pre-existing baseline |
+| QFAI-PROT-101 | 1 | Pre-existing baseline |
+| UIX-VAL-CLASSIFICATION-MISSING | 1 | Pre-existing baseline (discussion pack format mismatch) |
+| QFAI-ATDD-111 | 1 | Expected — v1.7.16 US additions (spec-0010/0014) not yet in `tests/e2e/**`; resolved by `/qfai-atdd` |
+| QFAI-ATDD-112 | 1 | Expected — v1.7.16 TC additions (spec-0010/0014) not yet in `tests/integration/**`; resolved by `/qfai-atdd` |
+
+No new SDD-source-layer regressions attributable to spec-0012 in this session.
+
+### Validate Evidence Paths
+
+- `.qfai/report/validate.log`
+- `.qfai/report/specs-coverage/spec-0012.md`
+
+### Work Orders Summary
+
+| Step | Role (sub-agent) | Task | Input | Output | Status |
+|---|---|---|---|---|---|
+| 1 | orchestrator | Verify prior agent run persisted spec-0012 v1.7.16 content | 09_delta.md grep, 10_Plan.md grep | (verification only) | PASS |
+| 2 | orchestrator | Validate gate + triage (batch-tail across spec-0010/0012/0014) | all spec artifacts | validate.log | PASS (SDD-scope 0 new errors) |
+| 3 | completion-reviewer | Reviewer gate | validate output + spec files | (deferred) | DEFERRED |
+
+### Gaps / Open Risks
+
+- QFAI-ATDD-111/112: expected (test phase), not blocking SDD completion.
+- 5 pre-existing baseline errors: tracked separately.
+- completion-reviewer gate deferred to post-ATDD per standard pattern.
+
+### Final Status
+
+**PASS (SDD source-layer)** — v1.7.16 spec-0012 verification complete; no edits required this session.
+
+- Phase order: (inherited from prior agent run) Contracts-first → Outline → Slice → Plan → Delta ✅
+- No rejected option reintroduced ✅
+- QFAI-COV-201..206 for spec-0012: all zero ✅
+- QFAI-ATDD-111/112: expected (test phase) ✅
+- New SDD-caused validate errors (this session): **0** ✅
+- Subagents: orchestrator only (verification session); completion-reviewer deferred

@@ -1,6 +1,6 @@
 # 08 Open Questions
 
-3 resolved, 2 deferred. (rev8 adds 4 resolved; cumulative: 13 resolved, 2 deferred)
+3 resolved, 2 deferred. (rev8 adds 4 resolved; cumulative: 13 resolved, 2 deferred; v1.7.16 adds 3 deferred-to-TDD)
 
 ## OQ-0004: Parameterized Route Matching Strategy (resolved)
 
@@ -160,3 +160,27 @@
 - Resolution: DR-0012-0058 — Policy: "new if absent, extend if present". Create new test file when none exists; extend existing test file when it already covers the module.
 - Source: discussion-20260417072340789 OQ-0004 (deferred from discussion to SDD)
 - Resolved by: SDD phase for discussion-20260417072340789
+
+## OQ-0003-v1716: T1 日本語フォント対応検証 (deferred to TDD)
+
+- Status: Deferred to TDD
+- Rationale: awesome-design-md-jp（CJK 版）の品質・網羅性は H3 仮説検証タスクで明らかになる。現時点では方針のみ決定可能（SKILL.md で Noto Sans JP をフォールバックとして明記する）。
+- Severity: medium — 日本語プロジェクトでの DESIGN.md 品質に影響。英語プロジェクトには影響なし。
+- Mitigation: Noto Sans JP を default fallback として SKILL.md に明記。
+- Source: discussion-20260418093755100 OQ-0003（SRC-0001 Section 8.1 T1）
+
+## OQ-0005-v1716: T4 CSS 値自動抽出精度（Tailwind CSS v4） (deferred to TDD)
+
+- Status: Deferred to TDD
+- Rationale: Tailwind CSS v4 は CSS-first 設計で従来の tailwind.config.js とは異なるトークン管理方式を採用するため、抽出精度は TDD フェーズでの実証が必要。
+- Severity: medium — CSS 値抽出失敗時は `designSystemCompliance` スコアが算出不能となり、関連バリデータ（`PROT-DS01` 相当）が機能しない。
+- Mitigation: CSS 変数（`--color-*` 等）の正規表現抽出を主手法とし、tailwind.config.js をフォールバックとする設計を TDD で検証。
+- Source: discussion-20260418093755100 OQ-0005（SRC-0001 Section 8.1 T4）
+
+## OQ-0006-v1716: T7 カラー変換アルゴリズム精度 (deferred to TDD)
+
+- Status: Deferred to TDD
+- Rationale: oklch 変換ルール（例: Lightness+15%, Chroma-20%）の美的妥当性は H3 仮説段階。実装後の実証が必要。
+- Severity: low — 変換アルゴリズムが不適切な場合、生成カラーパレットが意図ビジュアルトーンと乖離する可能性。
+- Mitigation: SKILL.md に「変換値は参考値。カラー値の最終チェックは Evaluate ステップで実施」と明記。
+- Source: discussion-20260418093755100 OQ-0006（SRC-0001 Section 8.1 T7）

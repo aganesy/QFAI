@@ -1469,3 +1469,163 @@ BR-Ref: BR-0012-0123
 - Given: `tests/core/prototyping/refSemantics.test.ts` (new or extended)
 - When: test suite runs
 - Then: all tests GREEN; `01_Spec.md#L14` true; `#L0`/`#anchor`/`notes.md`/discussion ref/abs path all false
+
+## EX-0012-0192: Delegation Scope Table — Happy Path (v1.7.16, BR-0012-0136)
+
+- BR-Ref: BR-0012-0136
+- Perspective: happy-path
+- Given: Prototyper reads prototyping SKILL.md
+- When: Delegation Scope Table is parsed
+- Then: 4 categories (UI実装 / スクリーンショット / 評価 L1-L2 / ビルド) each map to concrete roles (frontend-engineer, devops-ci-engineer, product-surface-reviewer + product-experience-architect, devops-ci-engineer) and the text notes that non-listed delegation is a violation
+
+## EX-0012-0193: Delegation Scope Table — Violation Detected (v1.7.16, BR-0012-0136)
+
+- BR-Ref: BR-0012-0136
+- Perspective: negative
+- Given: reviewer inspects a run that delegated UI 実装 to `generic-code-writer`（テーブル未定義ロール）
+- When: reviewer compares delegationMap with SKILL.md Delegation Scope Table
+- Then: reviewer records a finding "Delegation violation: undefined role 'generic-code-writer' for category UI実装"
+
+## EX-0012-0194: Iteration Gate — iterationCount==1 && converged Rejected (v1.7.16, BR-0012-0137)
+
+- BR-Ref: BR-0012-0137
+- Perspective: negative
+- Given: `prototyping.json.fullHarness.iterations = [{ iterationCount: 1, converged: true, ... }]`
+- When: validator/reviewer runs
+- Then: ERROR "Iteration gate: iterationCount==1 && converged is not permitted; minimum 2 iterations required"
+
+## EX-0012-0195: Iteration Gate — Phase Transition Blocked (v1.7.16, BR-0012-0137)
+
+- BR-Ref: BR-0012-0137
+- Perspective: boundary
+- Given: full-harness run at iteration 1 with converged=false and terminationCondition not met
+- When: Prototyper attempts to move to next phase
+- Then: SKILL.md iteration gate blocks transition; run continues into iteration 2
+
+## EX-0012-0196: Step 0 executionPlan Happy Path (v1.7.16, BR-0012-0138)
+
+- BR-Ref: BR-0012-0138
+- Perspective: happy-path
+- Given: Prototyper writes `prototyping.json.executionPlan = { targetIterations: 3, evaluationAxesSource: "uiux/21_design_eval_trend_derived.md", delegationMap: {...}, plannedAt: "2026-04-18T10:00:00Z" }`
+- When: validator runs
+- Then: validation passes; executionPlan present with all 4 fields
+
+## EX-0012-0197: Step 0 executionPlan Missing — Full-Harness Error (v1.7.16, BR-0012-0138)
+
+- BR-Ref: BR-0012-0138
+- Perspective: negative
+- Given: `prototyping.json` has no `executionPlan` block and `mode === "full-harness"`
+- When: validator runs
+- Then: ERROR "executionPlan is required in full-harness mode"
+
+## EX-0012-0198: capture-screenshots.js SSOT Path (v1.7.16, BR-0012-0139)
+
+- BR-Ref: BR-0012-0139
+- Perspective: happy-path
+- Given: QFAI package installed at `node_modules/qfai/`
+- When: Prototyper invokes `node node_modules/qfai/assets/scripts/capture-screenshots.js --url http://localhost:3000 --out /tmp/ss`
+- Then: script emits `[{"path":"/tmp/ss/2026-04-18T10-00-00_home.png","ts":"2026-04-18T10:00:00Z"}, ...]`
+
+## EX-0012-0199: SKILL.md References capture-screenshots.js (v1.7.16, BR-0012-0139)
+
+- BR-Ref: BR-0012-0139
+- Perspective: boundary
+- Given: prototyping SKILL.md Capture step
+- When: reader looks up the screenshot tool
+- Then: the Capture step names `capture-screenshots.js` with input/output contract documented
+
+## EX-0012-0200: 5-Step Cycle + screenshotDir Recorded (v1.7.16, BR-0012-0140)
+
+- BR-Ref: BR-0012-0140
+- Perspective: happy-path
+- Given: full-harness iteration 2 records `scoringTrace[1] = { iteration: 2, screenshotDir: ".qfai/evidence/2026-04-18T10-00-00/iter-2/", ... }`
+- When: Prototyper follows Capture → Evaluate → Identify → Fix → Re-evaluate
+- Then: each iteration's scoringTrace entry carries screenshotDir; validator accepts record
+
+## EX-0012-0201: screenshotDir Missing — Full-Harness Error (v1.7.16, BR-0012-0140)
+
+- BR-Ref: BR-0012-0140
+- Perspective: negative
+- Given: full-harness scoringTrace entry lacks `screenshotDir`
+- When: validator runs
+- Then: ERROR "scoringTrace[i].screenshotDir is required for full-harness iteration records"
+
+## EX-0012-0202: Evaluator 4 Inputs Prepared (v1.7.16, BR-0012-0141)
+
+- BR-Ref: BR-0012-0141
+- Perspective: happy-path
+- Given: Prototyper prepares evaluator context with screenshots=[...], axisDefs="...", previousScore=0.72, designSystemChecklist=[...]
+- When: L1 evaluator sub-agent is launched via `task` tool
+- Then: all 4 elements are present in the evaluator context; evaluator proceeds
+
+## EX-0012-0203: Evaluator Missing DESIGN.md Checklist (v1.7.16, BR-0012-0141)
+
+- BR-Ref: BR-0012-0141
+- Perspective: negative
+- Given: Prototyper launches L2 evaluator without the DESIGN.md compliance checklist element
+- When: reviewer inspects evaluator input log
+- Then: reviewer records finding "Evaluator input missing element (d): DESIGN.md compliance checklist"
+
+## EX-0012-0204: Visual Quality Structural Checklist 6 Categories Present (v1.7.16, BR-0012-0142)
+
+- BR-Ref: BR-0012-0142
+- Perspective: happy-path
+- Given: SKILL.md Visual Quality Structural Checklist section
+- When: reviewer parses it
+- Then: 6 categories confirmed: カラー, タイポグラフィ, スペーシング, 角丸, シャドウ, Do's&Don'ts
+
+## EX-0012-0205: Lighthouse MUST for Web Full-Harness (v1.7.16, BR-0012-0143)
+
+- BR-Ref: BR-0012-0143
+- Perspective: happy-path
+- Given: `mode === "full-harness" && surface === "web"`
+- When: reviewer inspects evidence for Lighthouse report
+- Then: Lighthouse report is present (MUST); absence raises reviewer ERROR
+
+## EX-0012-0206: Lighthouse Absence on Web Full-Harness — Error (v1.7.16, BR-0012-0143)
+
+- BR-Ref: BR-0012-0143
+- Perspective: negative
+- Given: full-harness web surface run without Lighthouse evidence
+- When: reviewer gate runs
+- Then: ERROR "Lighthouse Gate is MUST for full-harness + web surface; no Lighthouse evidence found"
+
+## EX-0012-0207: designSystemCompliance — 85% Passes (v1.7.16, BR-0012-0144)
+
+- BR-Ref: BR-0012-0144
+- Perspective: happy-path
+- Given: `uiux/12_design_system.md` present; CSS extraction vs spec comparison yields 0.85 (85% match)
+- When: Evaluate step classifies findings
+- Then: `designSystemCompliance: 0.85` recorded; no L1 finding raised for this check (threshold 0.80)
+
+## EX-0012-0208: designSystemCompliance — 65% Triggers L1 Finding (v1.7.16, BR-0012-0144)
+
+- BR-Ref: BR-0012-0144
+- Perspective: negative
+- Given: `uiux/12_design_system.md` present; match ratio = 0.65
+- When: Evaluate step runs
+- Then: L1 finding raised: "designSystemCompliance=0.65 < 0.80 threshold; immediate fix required in next iteration"
+
+## EX-0012-0209: designSystemCompliance Skipped Without 12_design_system.md (v1.7.16, BR-0012-0144)
+
+- BR-Ref: BR-0012-0144
+- Perspective: boundary
+- Given: discussion pack without `uiux/12_design_system.md`
+- When: Evaluate step runs
+- Then: `designSystemCompliance` is not computed and no error/finding is raised for this check
+
+## EX-0012-0210: calibration.overrides Applied (v1.7.16, BR-0012-0145)
+
+- BR-Ref: BR-0012-0145
+- Perspective: happy-path
+- Given: `qfai.config.yaml` contains `prototyping.calibration.overrides.perAxisMinimum: 0.92` and `maxIterationsByMode.full-harness: 20`
+- When: calibration loader resolves effective config
+- Then: effective `perAxisMinimum=0.92` and effective max iterations for full-harness=20 (project override wins over system default)
+
+## EX-0012-0211: calibration.overrides Absent — Defaults Used (v1.7.16, BR-0012-0145, NFR-0046)
+
+- BR-Ref: BR-0012-0145
+- Perspective: boundary
+- Given: existing `qfai.config.yaml` has `prototyping.calibration.*` but no `overrides` sub-block
+- When: calibration loader runs
+- Then: no parse error; system defaults are applied; backward compatibility preserved

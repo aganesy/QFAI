@@ -502,4 +502,44 @@
 - Rationale: BR-0012-0134/0135 に "new if absent, extend if present" ポリシーとして反映済み。TDD フェーズでの実装時にファイル存在確認が必要。
 - Status: Adopted (deferred to TDD phase for implementation decision)
 - Impact: specCoverage.test.ts / refSemantics.test.ts の新規作成または拡張
+
+## DR-0012-v1716-01: Iteration Gate = ERROR for iterationCount==1 && converged
+
+- Decision: full-harness 実行時、`iterationCount === 1 && converged === true` を常に ERROR として拒否し、最低 2 反復を強制する。
+- Context: discussion-20260418093755100 REQ-0002（v1.7.16 scope extension）— デザイン品質パイプラインで L1/L2 評価の鋭敏性が不足し、1 反復目で converged となる偽陽性が観察された。
+- Rationale: 1 反復目の converged=true は L1/L2 評価者の採点が甘すぎることを示唆する。最低 2 反復を強制することで再評価の厳格性を強制し、Fix→Re-evaluate のループが機能することを保証できる。
+- Status: Adopted
+- Impact: SKILL.md iteration gate セクション、`prototypingEvidence.ts` validator、`packages/qfai/src/core/prototyping/` バリデータロジック
+- Rejected: (A) WARNING 扱い — DO NOT: 1 反復目の converged を「稀な happy path」として通してしまう誘惑があるが、運用上は L1/L2 が基準を満たしていないケースを見逃す。(B) iterationCount による制限なし（純粋な threshold のみ）— DO NOT: max-delta/平均値基準で converged を決めたくなるが、反復構造そのものが形骸化する。
+- Source: discussion-20260418093755100 REQ-0002
+
+## DR-0012-v1716-02: Per-Axis Scoring（全軸最低 95 点）vs Weighted Average — Adopt Per-Axis
+
+- Decision: full-harness の最終採点は per-axis minimum（例: 全軸最低 95 点） を優先ゲートとし、単なる重み付き平均を採用しない。`calibration.overrides.perAxisMinimum` でプロジェクトが上書き可能。
+- Context: discussion-20260418093755100 REQ-0004（calibration.overrides）および REQ-0013（Visual Quality Structural Checklist）— 加重平均採点は「高得点軸が低得点軸の欠陥を隠す」compensation リスクを内包する。
+- Rationale: per-axis しきい値は「どれか 1 軸でも不合格なら未完了」を表現でき、ビジュアル品質のような非可換観点で不可欠。加重平均は高得点軸が低得点軸を補填してしまうため、欠陥検知力が下がる。
+- Status: Adopted
+- Impact: `qfai.config.yaml` calibration スキーマ、`calibrationLoader` resolver、SKILL.md 採点ルール記述
+- Rejected: (A) weighted average — DO NOT: 運用中「平均で見やすい」という誘惑があるが、軸間 compensation により致命的欠陥を看過する。(B) scalar 最低閾値のみ（軸別設定不可）— DO NOT: 実装が簡単だが、軸ごとの要求水準差を無視する。
+- Source: discussion-20260418093755100 REQ-0004, REQ-0013
+
+## DR-0012-v1716-03: Full-Harness Iteration Protocol MUST — 5-Step Cycle + Short-Circuit 禁止
+
+- Decision: full-harness の反復プロトコルは Capture → Evaluate → Identify → Fix → Re-evaluate の 5 ステップ MUST。1 反復目の converged-on-first によるショートサーキット（DR-0012-v1716-01 と同様）を禁止する。各反復の `scoringTrace[].screenshotDir` を記録する。
+- Context: discussion-20260418093755100 REQ-0011（5 ステップ化）および REQ-0002（反復ゲート）— 従来の 4 ステップ（Evaluate→Identify→Fix→Re-evaluate）では Capture 工程が暗黙的で、スクリーンショットディレクトリの対応関係が追跡不能だった。
+- Rationale: Capture を明示的な独立ステップに昇格させ、その出力ディレクトリを scoringTrace に記録することで反復ごとの評価対象が一意に追跡可能になる。ショートサーキットは evaluation rigor を無効化するため禁止。
+- Status: Adopted
+- Impact: SKILL.md 反復サイクル章、`prototyping.json.scoringTrace[].screenshotDir` スキーマ、validator、reviewer チェックリスト
+- Rejected: (A) 4 ステップ維持（Capture を Evaluate 内に含める）— DO NOT: SKILL.md が簡潔で魅力的だが Capture 出力と採点対象の紐付けが曖昧化し、事後検証が困難。(B) converged-on-first 許容（速さ優先）— DO NOT: 反復で fix→再評価する構造的価値を失う。
+- Source: discussion-20260418093755100 REQ-0002, REQ-0011
+
+## DR-0012-v1716-04: calibration.overrides は任意拡張 — Existence-Based Precedence
+
+- Decision: `qfai.config.yaml` の `prototyping.calibration.overrides.{perAxisMinimum, maxIterationsByMode}` は任意拡張フィールドとする。キーが存在する場合のみ system default を上書きする（existence-based precedence）。キーが無ければ system default を維持する。
+- Context: discussion-20260418093755100 REQ-0004 および NFR-0001（後方互換性）— 既存のプロジェクト `qfai.config.yaml` は `calibration.overrides` を持たないため、破壊的変更を避けつつプロジェクト固有チューニングを可能にする必要がある。
+- Rationale: existence-based precedence は QFAI の他の箇所（`prototyping:` namespaced block 等、DR-0012-0012 など）でも採用済みの SSOT パターン。値妥当性ではなくキー存在で判定することで、不存在=default という意図が明確になり、malformed 値は静かなフォールバックでなく explicit error を発生させる。
+- Status: Adopted
+- Impact: `qfai.config.yaml` schema / calibration loader / SKILL.md configuration 参照、`packages/qfai/src/core/config/` の calibration 解決経路
+- Rejected: (A) overrides 非導入（system default 固定）— DO NOT: プロジェクト固有チューニングを強制的に諦めることになり、評価厳格度が場面にそぐわないときの手当てができない。(B) value-based precedence（値が valid なら上書き）— DO NOT: 「書き間違い値」を silent fallback してしまい、ユーザー意図から乖離する。
+- Source: discussion-20260418093755100 REQ-0004, NFR-0001
 - Source: OQ-0004, discussion-20260417072340789

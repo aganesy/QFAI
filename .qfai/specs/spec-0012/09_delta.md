@@ -780,3 +780,61 @@ v1.7.15-11 監査で特定された3残存 semantic closure ギャップを単�
 
 - OQ-0001 (PerSpecCoverage dead fields): Delete `apiEndpoints`/`dbObjects` from type (DR-0012-0057)
 - OQ-0004 (test file new vs extend): "new if absent, extend if present" policy (DR-0012-0058)
+
+
+## v1.7.16 QFAI Package Design Quality Pipeline Restructure (DR-0012-v1716-01..04)
+
+### Summary
+
+discussion-20260418093755100（QFAI パッケージ改善 — デザイン品質パイプラインの構造改善）で提案された 9 件の Functional REQ と 5 件の NFR のうち、prototyping SKILL.md／`qfai.config.yaml`／shared script `capture-screenshots.js` の 3 軸にまたがる構造改善を spec-0012 に組み込む。
+
+### Discussion Pack Reference
+
+- discussion-20260418093755100（QFAI パッケージ改善 — デザイン品質パイプラインの構造改善、2026-04-18）
+
+### Requirements Added
+
+- Functional: REQ-0123〜REQ-0131（9 件、discussion-local REQ-0001/0002/0003/0004/0010/0011/0012/0013/0017 に対応）
+- Non-Functional: NFR-0046〜NFR-0050（5 件、discussion-local NFR-0001〜NFR-0005 に対応）
+
+### Scope Extension (v1.7.16)
+
+| Area | Change | Source REQ |
+|------|--------|-----------|
+| prototyping SKILL.md | Delegation Scope Table 追加（4 カテゴリ × 対応ロール） | REQ-0123 |
+| prototyping SKILL.md | 反復ゲート追加（iterationCount==1 && converged=true を ERROR） | REQ-0124 |
+| prototyping SKILL.md | Required Process Step 0（executionPlan MUST）追加 | REQ-0125 |
+| `qfai.config.yaml` | `prototyping.calibration.overrides` セクション（perAxisMinimum / maxIterationsByMode） | REQ-0126 |
+| `capture-screenshots.js` | QFAI パッケージに共有スクリプトを配置、prototyping SKILL.md から参照 | REQ-0127 |
+| prototyping SKILL.md | 反復サイクル 5 ステップ化（Capture→Evaluate→Identify→Fix→Re-evaluate）、scoringTrace.screenshotDir 追加 | REQ-0128 |
+| prototyping SKILL.md | 評価者入力準備プロトコル（4 要素 MUST） | REQ-0129 |
+| prototyping SKILL.md | Visual Quality Structural Checklist（6 カテゴリ）、Lighthouse Gate MUST（full-harness && web） | REQ-0130 |
+| prototyping SKILL.md | Evaluate ステップの designSystemCompliance チェック（80% 未満を L1 finding） | REQ-0131 |
+
+### Artifacts Added
+
+| Layer | IDs Added | Description |
+|-------|-----------|-------------|
+| US | US-0012-0084〜0093 | 10 user stories covering Delegation Scope, iteration gate, Step 0, capture script, 5-step cycle, evaluator input prep, VQ checklist, Lighthouse MUST, designSystemCompliance, calibration overrides |
+| AC | AC-0012-0170〜0186 | 17 acceptance criteria |
+| BR | BR-0012-0136〜0145 | 10 business rules |
+| EX | EX-0012-0192〜0211 | 20 examples across 6 perspectives (happy / negative / boundary) |
+| TC | TC-0012-0285〜0305 | 21 test cases (normal / error / boundary types) |
+| DR | DR-0012-v1716-01〜04 | 4 decision records |
+| OQ | OQ-0003-v1716, OQ-0005-v1716, OQ-0006-v1716 | 3 deferred-to-TDD open questions |
+
+### Rationale
+
+- v1.7.16 scope は QFAI パッケージ本体（`packages/qfai/`）のデザイン品質パイプライン構造改善に閉じる（NFR-0048 package independence）。運用ディレクトリ `.qfai/` は変更しない。
+- v1.7.15 rev11 までで構築した semantic closure（8 カテゴリ evidenceRefs / per-axis validation / canonical refs 等）の上に、反復品質と評価者入力厳格性を加える。
+- Iteration gate（DR-0012-v1716-01）と 5-step cycle（DR-0012-v1716-03）は semantic rigor の補強。per-axis scoring（DR-0012-v1716-02）は compensation 問題への対応。calibration.overrides（DR-0012-v1716-04）は後方互換性を保ちつつプロジェクト個別要件を吸収する拡張ポイント。
+
+### Compatibility
+
+- NFR-0046 後方互換性により、既存 `prototyping.json` / `qfai.config.yaml` / discussion pack は破壊せずパース可能。
+- 新規バリデータは段階的移行（WARNING→ERROR）を想定し、既存パックに対して新ルール起因の ERROR は発生しない（UIX-VAL-T01/T02 相当の新バリデータは次バージョンで ERROR 昇格を検討）。
+
+### Deferred / Out of Scope (v1.7.16)
+
+- discussion-20260418093755100 の UI-bearing 側 REQ（REQ-0005〜0009, REQ-0014〜0016, REQ-0018: discussion SKILL.md Step 11.3/11.5、templates、brand catalog、UIX-VAL-DS01/DS02, PROT-DS01 等）は本 delta には含めない（別 spec/別 delta 範囲）。
+- OQ-0003 日本語フォント対応 / OQ-0005 CSS 抽出精度 / OQ-0006 カラー変換アルゴリズム精度 は TDD フェーズに持ち越し（08_Open-questions.md 参照）。

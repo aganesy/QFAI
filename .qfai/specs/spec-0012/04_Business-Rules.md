@@ -1037,3 +1037,62 @@
 - `tests/core/prototyping/refSemantics.test.ts` が存在しない場合は新規作成、存在する場合は拡張する。
 - `isSpecDeclarationRef()` の許可文法（`01_Spec.md#L14`）と拒否文法（`#L0`, `#anchor`, `notes.md`, discussion ref, absolute path）を網羅的にテストする。
 - OQ-0004 解決: 実装着手時にファイル存在を確認し、存在すれば拡張、なければ新規作成する。
+
+## BR-0012-0136: Delegation Scope Table — 4 Categories × Defined Roles Only (v1.7.16)
+
+- AC-Refs: AC-0012-0170, AC-0012-0171
+- prototyping SKILL.md の Delegation Scope Table は 4 カテゴリ（UI実装 / スクリーンショット / 評価 L1-L2 / ビルド）を定義し、各カテゴリに対応する concrete role（frontend-engineer / devops-ci-engineer / product-surface-reviewer & product-experience-architect / devops-ci-engineer）を明記する。
+- 定義外ロールへの移譲は違反（reviewer finding 対象）。reviewer は SKILL.md テーブルに基づいて移譲ログを検証する。
+
+## BR-0012-0137: Full-Harness Iteration Gate — ERROR on iterationCount==1 && converged (v1.7.16)
+
+- AC-Refs: AC-0012-0172, AC-0012-0173
+- full-harness 実行で `iterationCount === 1 && converged === true` の組み合わせは常に ERROR。バリデータと reviewer の双方で拒否する。
+- `terminationCondition` が成立するまで次フェーズへの移行は禁止され、最低 2 反復を強制する。
+
+## BR-0012-0138: executionPlan MUST for Full-Harness (v1.7.16)
+
+- AC-Refs: AC-0012-0174, AC-0012-0175
+- full-harness 実行時、`prototyping.json.executionPlan` ブロックは必須。`targetIterations`, `evaluationAxesSource`, `delegationMap`, `plannedAt` の 4 フィールドを含むこと。
+- 欠落時はバリデーション ERROR（full-harness 以外のモードでは任意フィールドとして無視する）。
+
+## BR-0012-0139: capture-screenshots.js SSOT Location and Contract (v1.7.16)
+
+- AC-Refs: AC-0012-0176, AC-0012-0177
+- `capture-screenshots.js` は QFAI パッケージ内（`packages/qfai/assets/scripts/` 想定）に配置し、入力=URL/port + 出力 dir、出力=タイムスタンプ付きスクリーンショットパス一覧を保証する。
+- prototyping SKILL.md は当スクリプトを Capture ステップの SSOT として参照し、他の代替スクリプトは公式ワークフローに含めない。
+
+## BR-0012-0140: 5-Step Iteration Cycle with screenshotDir (v1.7.16)
+
+- AC-Refs: AC-0012-0178, AC-0012-0179
+- 反復サイクルは Capture → Evaluate → Identify → Fix → Re-evaluate の 5 ステップ構造として SKILL.md に定義され、`prototyping.json.scoringTrace[].screenshotDir` に各反復で使用したスクリーンショットディレクトリを記録する。
+- `screenshotDir` 欠落は full-harness で ERROR、それ以外のモードでは任意。
+
+## BR-0012-0141: Evaluator Input Preparation — 4 MUST Elements (v1.7.16)
+
+- AC-Refs: AC-0012-0180
+- L1/L2 評価者（サブエージェント）起動前に、(a) スクリーンショットパス / (b) 評価軸定義テキスト展開 / (c) 前回スコア / (d) DESIGN.md 準拠チェックリスト の 4 要素すべてを入力として渡す。
+- いずれかが欠落した状態での評価者起動は SKILL.md 違反であり、reviewer finding 対象。
+
+## BR-0012-0142: Visual Quality Structural Checklist — 6 Categories (v1.7.16)
+
+- AC-Refs: AC-0012-0181
+- SKILL.md の Visual Quality Structural Checklist は カラー / タイポグラフィ / スペーシング / 角丸 / シャドウ / Do's&Don'ts の 6 カテゴリを必ず含む。カテゴリ数不足は SKILL.md 不整合として修正対象。
+
+## BR-0012-0143: Lighthouse MUST for Full-Harness && Web Surface (v1.7.16)
+
+- AC-Refs: AC-0012-0182
+- `mode === "full-harness" && surface === "web"` の場合、Lighthouse Gate は MUST。Lighthouse 未実行の証跡は reviewer gate で ERROR として扱う（従前の SHOULD 扱いを撤廃）。
+
+## BR-0012-0144: designSystemCompliance Score — 80% Threshold = L1 Finding (v1.7.16)
+
+- AC-Refs: AC-0012-0183, AC-0012-0184
+- discussion pack に `uiux/12_design_system.md` が存在する場合、Evaluate ステップは CSS 実装値と design system 仕様値の一致率を `designSystemCompliance` として算出し `prototyping.json` に記録する。
+- `designSystemCompliance < 0.80` は L1 finding（即時修正対象）として分類し、次反復の Fix ステップで優先対応する。
+- `uiux/12_design_system.md` が存在しない場合、本チェックはスキップしエラー扱いしない。
+
+## BR-0012-0145: calibration.overrides — Existence-Based Precedence (v1.7.16)
+
+- AC-Refs: AC-0012-0185, AC-0012-0186
+- `qfai.config.yaml` の `prototyping.calibration.overrides.perAxisMinimum` と `prototyping.calibration.overrides.maxIterationsByMode` が存在する場合、その値が system default を上書きする（existence-based precedence）。
+- 当該キー不在時は system default を使用し、既存 config の後方互換性（NFR-0046）を保持する。

@@ -569,3 +569,93 @@ REQ: REQ-0010, REQ-0011
 
 Parent: CAP-0012
 REQ: REQ-0012, REQ-0013
+
+## US-0012-0084: Delegation Scope Table Routing (v1.7.16, REQ-0123)
+
+- As a Prototyper（AI agent），
+- I want prototyping SKILL.md の Delegation Scope Table を読んで UI実装 / スクリーンショット / 評価 L1-L2 / ビルド の 4 カテゴリごとに正しいロール（frontend-engineer, devops-ci-engineer, product-surface-reviewer, product-experience-architect）に作業を振り分け、定義外ロールへの移譲を行わない、
+- So that 役割混線と品質低下を防止できる。
+
+Parent: CAP-0012
+REQ: REQ-0123
+
+## US-0012-0085: Full-Harness Iteration Gate Enforcement (v1.7.16, REQ-0124)
+
+- As a Prototyper（AI agent），
+- I want full-harness 実行時に `iterationCount === 1 && converged === true` が ERROR として拒否され、最低 2 反復が強制される、
+- So that 1 反復目の偶発的収束による品質誤認を防ぎ、評価厳格性を担保できる。
+
+Parent: CAP-0012
+REQ: REQ-0124
+
+## US-0012-0086: Step 0 Execution Plan MUST (v1.7.16, REQ-0125)
+
+- As a Prototyper（AI agent），
+- I want 反復に入る前に Step 0 で `executionPlan`（targetIterations / evaluationAxesSource / delegationMap / plannedAt）を `prototyping.json` に記録し、full-harness では欠落時にバリデーションが失敗する、
+- So that 実行計画が事後的でなく事前に固定され、後続フェーズがその前提で走れる。
+
+Parent: CAP-0012
+REQ: REQ-0125
+
+## US-0012-0087: Shared Screenshot Capture Script (v1.7.16, REQ-0127)
+
+- As a Prototyper（AI agent），
+- I want QFAI パッケージに配置された `capture-screenshots.js` を使って URL/port と出力ディレクトリからタイムスタンプ付きファイル名のスクリーンショット一覧を取得する、
+- So that 反復ごとのスクリーンショット取得がプロジェクト横断で一貫した手法になる。
+
+Parent: CAP-0012
+REQ: REQ-0127
+
+## US-0012-0088: 5-Step Iteration Cycle (v1.7.16, REQ-0128)
+
+- As a Prototyper（AI agent），
+- I want 反復サイクルを Capture → Evaluate → Identify → Fix → Re-evaluate の 5 ステップで回し、各反復の `scoringTrace[].screenshotDir` に使用ディレクトリを記録する、
+- So that 各反復でどのスクリーンショット集合を評価対象としたかが事後追跡可能になる。
+
+Parent: CAP-0012
+REQ: REQ-0128
+
+## US-0012-0089: Evaluator Input Preparation Protocol (v1.7.16, REQ-0129)
+
+- As a Prototyper（AI agent），
+- I want L1/L2 評価者（サブエージェント）を起動する前に、(a) スクリーンショットパス / (b) 評価軸定義テキスト / (c) 前回スコア / (d) DESIGN.md 準拠チェックリスト の 4 要素を MUST 入力として準備する、
+- So that 評価者が欠落した前提のまま採点するゆらぎを排除できる。
+
+Parent: CAP-0012
+REQ: REQ-0129
+
+## US-0012-0090: Visual Quality Structural Checklist (v1.7.16, REQ-0130)
+
+- As a Reviewer（product-surface-reviewer），
+- I want カラー / タイポグラフィ / スペーシング / 角丸 / シャドウ / Do's&Don'ts の 6 カテゴリからなる Visual Quality Structural Checklist を SKILL.md から参照できる、
+- So that ビジュアル品質レビュー観点が属人化せず横断的に統一される。
+
+Parent: CAP-0012
+REQ: REQ-0130
+
+## US-0012-0091: Lighthouse MUST for Full-Harness + Web Surface (v1.7.16, REQ-0130)
+
+- As a Prototyper（AI agent），
+- I want full-harness かつ web surface の場合に Lighthouse Gate が MUST として扱われ、実行・記録・reviewer 検証の対象になる、
+- So that Web Surface の完了証跡が Lighthouse 未実行で流れてしまうことを防げる。
+
+Parent: CAP-0012
+REQ: REQ-0130
+
+## US-0012-0092: designSystemCompliance Evaluate Check (v1.7.16, REQ-0131)
+
+- As a Prototyper（AI agent），
+- I want Evaluate ステップで `uiux/12_design_system.md` が存在する場合に CSS 実装値と design system 仕様値の一致率を `designSystemCompliance` スコアとして算出し、80% 未満を L1 finding（即時修正対象）とする、
+- So that DESIGN.md が規定されているプロジェクトで逸脱を定量的に検出し反復 fix にフィードできる。
+
+Parent: CAP-0012
+REQ: REQ-0131
+
+## US-0012-0093: Project-Side Calibration Overrides (v1.7.16, REQ-0126)
+
+- As a QFAI user（project maintainer），
+- I want `qfai.config.yaml` の `prototyping.calibration.overrides` に `perAxisMinimum` / `maxIterationsByMode` を記述してプロジェクト側で system default を上書きできる、
+- So that プロジェクト固有の評価厳格度と反復上限を破壊的変更なしに調整できる。
+
+Parent: CAP-0012
+REQ: REQ-0126

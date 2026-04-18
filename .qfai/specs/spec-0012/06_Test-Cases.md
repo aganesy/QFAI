@@ -2603,3 +2603,250 @@
 | 2 | Run tests for both files | All tests GREEN |
 | 3 | Verify 01_Spec.md#L<n> positive case in specCoverage.test.ts | Test present |
 | 4 | Verify notes.md/anchor/discussion ref negative cases in refSemantics.test.ts | Tests present |
+
+## TC-0012-0285: Delegation Scope Table Exists with 4 Categories (v1.7.16)
+
+- Type: normal
+- EX-Ref: EX-0012-0192
+- AC-Refs: AC-0012-0170
+
+| Step | Action | Expected |
+|------|--------|----------|
+| 1 | Read `packages/qfai/assets/init/.qfai/assistant/skills/qfai-prototyping/SKILL.md` | File loaded |
+| 2 | Parse Delegation Scope Table section | 4 categories present: UI実装 / スクリーンショット / 評価 L1-L2 / ビルド |
+| 3 | Check role mapping per category | Roles include frontend-engineer, devops-ci-engineer, product-surface-reviewer, product-experience-architect |
+| 4 | Check violation-detection narrative | Text explains undefined-role delegation MUST be flagged |
+
+## TC-0012-0286: Delegation Violation Detected by Reviewer (v1.7.16)
+
+- Type: error
+- EX-Ref: EX-0012-0193
+- AC-Refs: AC-0012-0171
+
+| Step | Action | Expected |
+|------|--------|----------|
+| 1 | Prepare a prototyping.json whose delegationMap has UI実装→"generic-code-writer" | Input ready |
+| 2 | Run reviewer check against SKILL.md Delegation Scope Table | Violation finding emitted |
+| 3 | Inspect finding message | Names undefined role and category UI実装 |
+
+## TC-0012-0287: Iteration Gate Rejects iterationCount==1 && converged (v1.7.16)
+
+- Type: error
+- EX-Ref: EX-0012-0194
+- AC-Refs: AC-0012-0172
+
+| Step | Action | Expected |
+|------|--------|----------|
+| 1 | Build fullHarness.iterations=[{iterationCount:1, converged:true, ...}] | Input ready |
+| 2 | Run validator / iteration gate | ERROR raised |
+| 3 | Check error message | Mentions "minimum 2 iterations" |
+
+## TC-0012-0288: Iteration Gate Blocks Phase Transition (v1.7.16)
+
+- Type: boundary
+- EX-Ref: EX-0012-0195
+- AC-Refs: AC-0012-0173
+
+| Step | Action | Expected |
+|------|--------|----------|
+| 1 | Set iteration state: count=1, converged=false, terminationCondition unmet | State ready |
+| 2 | Attempt next-phase transition | Transition blocked by SKILL.md iteration gate |
+| 3 | Continue to iteration 2 | Run proceeds into iter-2 |
+
+## TC-0012-0289: Step 0 executionPlan Required in SKILL.md (v1.7.16)
+
+- Type: normal
+- EX-Ref: EX-0012-0196
+- AC-Refs: AC-0012-0174
+
+| Step | Action | Expected |
+|------|--------|----------|
+| 1 | Read SKILL.md Required Process section | Section loaded |
+| 2 | Verify Step 0 is the first step | Step 0 header present |
+| 3 | Verify executionPlan fields enumerated | targetIterations / evaluationAxesSource / delegationMap / plannedAt listed |
+
+## TC-0012-0290: Missing executionPlan in Full-Harness — Validator Error (v1.7.16)
+
+- Type: error
+- EX-Ref: EX-0012-0197
+- AC-Refs: AC-0012-0175
+
+| Step | Action | Expected |
+|------|--------|----------|
+| 1 | Build prototyping.json with mode=full-harness and no executionPlan key | Input ready |
+| 2 | Run validator | ERROR "executionPlan is required in full-harness mode" |
+
+## TC-0012-0291: capture-screenshots.js Exists in QFAI Package (v1.7.16)
+
+- Type: normal
+- EX-Ref: EX-0012-0198
+- AC-Refs: AC-0012-0176
+
+| Step | Action | Expected |
+|------|--------|----------|
+| 1 | Check file existence at `packages/qfai/assets/scripts/capture-screenshots.js` | File exists |
+| 2 | Invoke with --url http://localhost:3000 --out /tmp/ss | Runs successfully |
+| 3 | Verify output contains timestamped paths | Output has filenames matching ISO-like timestamp pattern |
+
+## TC-0012-0292: prototyping SKILL.md References capture-screenshots.js (v1.7.16)
+
+- Type: boundary
+- EX-Ref: EX-0012-0199
+- AC-Refs: AC-0012-0177
+
+| Step | Action | Expected |
+|------|--------|----------|
+| 1 | Read prototyping SKILL.md Capture step | Section loaded |
+| 2 | Search for "capture-screenshots.js" reference | Reference present |
+| 3 | Verify input/output contract description | Contract documented inline or via pointer |
+
+## TC-0012-0293: 5-Step Iteration Cycle Documented (v1.7.16)
+
+- Type: normal
+- EX-Ref: EX-0012-0200
+- AC-Refs: AC-0012-0178
+
+| Step | Action | Expected |
+|------|--------|----------|
+| 1 | Read SKILL.md iteration section | Section loaded |
+| 2 | Match step sequence | Capture → Evaluate → Identify → Fix → Re-evaluate present in this order |
+
+## TC-0012-0294: scoringTrace.screenshotDir Recorded Per Iteration (v1.7.16)
+
+- Type: normal
+- EX-Ref: EX-0012-0200
+- AC-Refs: AC-0012-0179
+
+| Step | Action | Expected |
+|------|--------|----------|
+| 1 | Build full-harness record with 3 iterations, each scoringTrace entry carries screenshotDir | Input ready |
+| 2 | Run validator | Validation passes |
+| 3 | Verify screenshotDir values are distinct per iteration | Distinct paths per iteration |
+
+## TC-0012-0295: screenshotDir Missing — Validator Error (v1.7.16)
+
+- Type: error
+- EX-Ref: EX-0012-0201
+- AC-Refs: AC-0012-0179
+
+| Step | Action | Expected |
+|------|--------|----------|
+| 1 | Remove screenshotDir from a scoringTrace entry | Input ready |
+| 2 | Run validator with mode=full-harness | ERROR about missing scoringTrace[i].screenshotDir |
+
+## TC-0012-0296: Evaluator Input — 4 Elements Present (v1.7.16)
+
+- Type: normal
+- EX-Ref: EX-0012-0202
+- AC-Refs: AC-0012-0180
+
+| Step | Action | Expected |
+|------|--------|----------|
+| 1 | Prepare evaluator context with screenshots, axisDefs, previousScore, designSystemChecklist | Context ready |
+| 2 | Launch L1 evaluator sub-agent | Agent starts with full context |
+| 3 | Inspect input log | All 4 elements confirmed |
+
+## TC-0012-0297: Evaluator Input — Missing Element Detected (v1.7.16)
+
+- Type: error
+- EX-Ref: EX-0012-0203
+- AC-Refs: AC-0012-0180
+
+| Step | Action | Expected |
+|------|--------|----------|
+| 1 | Launch L2 evaluator without DESIGN.md compliance checklist element | Agent launched with 3 of 4 elements |
+| 2 | Run reviewer check on evaluator input log | Finding raised naming missing element (d) |
+
+## TC-0012-0298: Visual Quality Structural Checklist 6 Categories (v1.7.16)
+
+- Type: normal
+- EX-Ref: EX-0012-0204
+- AC-Refs: AC-0012-0181
+
+| Step | Action | Expected |
+|------|--------|----------|
+| 1 | Read SKILL.md Visual Quality Structural Checklist section | Section loaded |
+| 2 | Count categories | 6 categories present |
+| 3 | Enumerate categories | カラー / タイポグラフィ / スペーシング / 角丸 / シャドウ / Do's&Don'ts all listed |
+
+## TC-0012-0299: Lighthouse MUST — Happy Path (v1.7.16)
+
+- Type: normal
+- EX-Ref: EX-0012-0205
+- AC-Refs: AC-0012-0182
+
+| Step | Action | Expected |
+|------|--------|----------|
+| 1 | Prepare full-harness web run with Lighthouse report present | Evidence ready |
+| 2 | Run reviewer gate | Passes; Lighthouse requirement satisfied |
+
+## TC-0012-0300: Lighthouse Absent on Web Full-Harness — Error (v1.7.16)
+
+- Type: error
+- EX-Ref: EX-0012-0206
+- AC-Refs: AC-0012-0182
+
+| Step | Action | Expected |
+|------|--------|----------|
+| 1 | Prepare full-harness web run without Lighthouse report | Evidence incomplete |
+| 2 | Run reviewer gate | ERROR "Lighthouse Gate is MUST for full-harness + web surface" |
+
+## TC-0012-0301: designSystemCompliance 85% — Passes (v1.7.16)
+
+- Type: normal
+- EX-Ref: EX-0012-0207
+- AC-Refs: AC-0012-0183
+
+| Step | Action | Expected |
+|------|--------|----------|
+| 1 | Ensure `uiux/12_design_system.md` present in discussion pack | Input ready |
+| 2 | Run Evaluate with CSS-vs-spec match ratio 0.85 | designSystemCompliance=0.85 recorded |
+| 3 | Check L1 findings | No L1 finding triggered by this check |
+
+## TC-0012-0302: designSystemCompliance 65% — L1 Finding (v1.7.16)
+
+- Type: error
+- EX-Ref: EX-0012-0208
+- AC-Refs: AC-0012-0184
+
+| Step | Action | Expected |
+|------|--------|----------|
+| 1 | Ensure `uiux/12_design_system.md` present; simulate match ratio 0.65 | Input ready |
+| 2 | Run Evaluate | designSystemCompliance=0.65; L1 finding raised |
+| 3 | Verify finding classification | Immediate-fix flag set for next iteration |
+
+## TC-0012-0303: designSystemCompliance Skipped Without 12_design_system.md (v1.7.16)
+
+- Type: boundary
+- EX-Ref: EX-0012-0209
+- AC-Refs: AC-0012-0183
+
+| Step | Action | Expected |
+|------|--------|----------|
+| 1 | Use discussion pack without `uiux/12_design_system.md` | Input ready |
+| 2 | Run Evaluate | designSystemCompliance not computed |
+| 3 | Check findings | No error or finding raised for this check |
+
+## TC-0012-0304: calibration.overrides Applied via Project Config (v1.7.16)
+
+- Type: normal
+- EX-Ref: EX-0012-0210
+- AC-Refs: AC-0012-0185
+
+| Step | Action | Expected |
+|------|--------|----------|
+| 1 | Populate `prototyping.calibration.overrides.perAxisMinimum=0.92` and `maxIterationsByMode.full-harness=20` | Config ready |
+| 2 | Run calibration loader | Effective config returned |
+| 3 | Verify effective values | perAxisMinimum=0.92, full-harness max iterations=20 |
+
+## TC-0012-0305: calibration.overrides Absent — Defaults Preserved (v1.7.16)
+
+- Type: boundary
+- EX-Ref: EX-0012-0211
+- AC-Refs: AC-0012-0186
+
+| Step | Action | Expected |
+|------|--------|----------|
+| 1 | Use legacy `qfai.config.yaml` without `overrides` sub-block | Config ready |
+| 2 | Run calibration loader | No parse error |
+| 3 | Check effective config | System defaults used; no breaking change |

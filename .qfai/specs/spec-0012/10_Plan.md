@@ -613,3 +613,84 @@ WS-1 and WS-2 are independent (parallel). WS-3 depends on both.
 | --- | --- |
 | `README.md` | Reflect WS-1 export removal; WS-2 specDeclarationRef grammar |
 | `SKILL.md` | isSpecDeclarationRef constraint; specCoverage 01_Spec.md-only policy |
+
+
+## v1.7.16 Implementation Strategy (How-only)
+
+### Scope Boundary
+
+Single-PR: `packages/qfai/**` のみ。discussion-20260418093755100 由来の 9 Functional REQ（REQ-0123〜0131）+ 5 NFR（NFR-0046〜0050）を反映する。運用ディレクトリ `.qfai/` への変更は含まない（NFR-0048）。
+
+### Modules Touched (v1.7.16 Change Obligation)
+
+| Module | Change Obligation | REQ |
+| --- | --- | --- |
+| `packages/qfai/assets/init/.qfai/assistant/skills/qfai-prototyping/SKILL.md` | Delegation Scope Table（4 カテゴリ × ロール）を追加。reviewer 検出文を含める | REQ-0123 |
+| `packages/qfai/assets/init/.qfai/assistant/skills/qfai-prototyping/SKILL.md` | 反復ゲートセクションを追加。`iterationCount===1 && converged===true` の ERROR 扱いを明記 | REQ-0124 |
+| `packages/qfai/assets/init/.qfai/assistant/skills/qfai-prototyping/SKILL.md` | Required Process 先頭に Step 0（実行計画 MUST）を追加。executionPlan の 4 フィールドを文書化 | REQ-0125 |
+| `packages/qfai/src/core/prototyping/types.ts`（or equivalent schema定義ファイル） | `ExecutionPlan` 型の追加（targetIterations, evaluationAxesSource, delegationMap, plannedAt） | REQ-0125 |
+| `packages/qfai/src/core/validators/prototypingEvidence.ts` | full-harness 時 `executionPlan` 欠落を ERROR 化するバリデータフック | REQ-0125 |
+| `packages/qfai/src/core/validators/prototypingEvidence.ts` | `iterationCount===1 && converged===true` を ERROR 化する反復ゲートバリデータ | REQ-0124 |
+| `packages/qfai/src/core/config/` (calibration 解決経路) | `prototyping.calibration.overrides.{perAxisMinimum, maxIterationsByMode}` の存在ベース解決を追加（existence-based precedence） | REQ-0126 |
+| `packages/qfai/assets/init/qfai.config.yaml` テンプレート（既存の prototyping.calibration stanza） | `overrides:` セクション例を任意拡張としてコメント付きで追加 | REQ-0126 |
+| `packages/qfai/assets/scripts/capture-screenshots.js`（新規作成） | 入力 URL/port + 出力 dir、出力 タイムスタンプ付きファイルパス一覧を返す Node.js スクリプト（Playwright or Puppeteer 前提、オンライン専用 NFR-0050） | REQ-0127 |
+| `packages/qfai/assets/init/.qfai/assistant/skills/qfai-prototyping/SKILL.md` | Capture ステップで `capture-screenshots.js` を参照。入出力契約を inline またはスクリプトヘッダで記述 | REQ-0127 |
+| `packages/qfai/assets/init/.qfai/assistant/skills/qfai-prototyping/SKILL.md` | 反復サイクルセクションを 5 ステップ化（Capture → Evaluate → Identify → Fix → Re-evaluate） | REQ-0128 |
+| `packages/qfai/src/core/prototyping/types.ts` | `scoringTrace[].screenshotDir: string` を必須（full-harness）フィールドとして型定義 | REQ-0128 |
+| `packages/qfai/src/core/validators/prototypingEvidence.ts` | full-harness 時 `scoringTrace[].screenshotDir` 欠落を ERROR 化 | REQ-0128 |
+| `packages/qfai/assets/init/.qfai/assistant/skills/qfai-prototyping/SKILL.md` | 評価者入力準備プロトコルセクション追加（4 要素 MUST） | REQ-0129 |
+| `packages/qfai/assets/init/.qfai/assistant/skills/qfai-prototyping/SKILL.md` | Visual Quality Structural Checklist（6 カテゴリ）を追加。Lighthouse Gate を full-harness && web surface 時 MUST と明記 | REQ-0130 |
+| `packages/qfai/src/core/validators/prototypingEvidence.ts` or reviewer gate | `mode==="full-harness" && surface==="web"` で Lighthouse 未実行を ERROR 化 | REQ-0130 |
+| `packages/qfai/assets/init/.qfai/assistant/skills/qfai-prototyping/SKILL.md` | Evaluate ステップに designSystemCompliance チェック記述を追加（12_design_system.md 存在時、80% 未満を L1 finding） | REQ-0131 |
+| `packages/qfai/src/core/prototyping/` (Evaluate 周辺モジュール) | `designSystemCompliance` スコア算出ヘルパ（CSS 実装値 ↔ design system 仕様値の一致率）を追加。スコアを scoringTrace または Evaluate 出力に記録 | REQ-0131 |
+| `packages/qfai/README.md` | v1.7.16 の executionPlan / scoringTrace.screenshotDir / calibration.overrides / designSystemCompliance を documentation に反映 | REQ-0123〜0131 |
+
+### Validator Hook Points
+
+| Hook | Layer | ERROR Condition | REQ |
+| --- | --- | --- | --- |
+| `validateExecutionPlan()` | `prototypingEvidence.ts` | full-harness で executionPlan 欠落 or 4 フィールドのいずれか欠落 | REQ-0125 |
+| `validateIterationGate()` | `prototypingEvidence.ts` | any iteration with `iterationCount===1 && converged===true` | REQ-0124 |
+| `validateScreenshotDir()` | `prototypingEvidence.ts` | full-harness で scoringTrace[].screenshotDir 欠落 | REQ-0128 |
+| `validateLighthouseMust()` | reviewer gate / validator | full-harness + web surface で Lighthouse 証跡なし | REQ-0130 |
+| `validateDesignSystemCompliance()` | Evaluate step | 12_design_system.md 存在 + 算出スコア < 0.80 → L1 finding | REQ-0131 |
+| `validateDelegationMap()` | reviewer gate | delegationMap に Delegation Scope Table 未定義ロール | REQ-0123 |
+| `validateCalibrationOverrides()` | calibration loader | overrides 値型不一致・不正値（実存時のみ） | REQ-0126 |
+
+### Implementation Order (v1.7.16 dependency chain)
+
+SKILL.md 文書改訂系（REQ-0123/0128/0129/0130）は相互独立。スキーマ拡張系（REQ-0125/0128 scoringTrace / REQ-0126 calibration overrides）はバリデータ追加に先行する。capture-screenshots.js（REQ-0127）は独立新規ファイル。
+
+1. **Step 1** (REQ-0127): `capture-screenshots.js` 新規作成（Node.js + Playwright/Puppeteer、timestamped filename 生成）
+2. **Step 2** (REQ-0125/0128): `types.ts` に `ExecutionPlan` / `scoringTrace[].screenshotDir` 追加
+3. **Step 3** (REQ-0126): `qfai.config.yaml` schema + calibration loader に `prototyping.calibration.overrides` existence-based resolution 追加
+4. **Step 4** (REQ-0124/0125/0128/0130): `prototypingEvidence.ts` validator hooks 追加（iteration gate / executionPlan / screenshotDir / Lighthouse MUST）
+5. **Step 5** (REQ-0131): Evaluate ステップ側で `designSystemCompliance` スコア算出ヘルパを実装
+6. **Step 6** (REQ-0123/0124/0125/0128/0129/0130/0131): `SKILL.md` 一括更新（Delegation Scope Table / 反復ゲート / Step 0 / 5 ステップ化 / 評価者入力プロトコル / VQ Checklist / Lighthouse MUST / designSystemCompliance 記述）
+7. **Step 7** (REQ-0123/0127/0128/0131): `packages/qfai/README.md` 更新
+
+### Test Strategy (v1.7.16)
+
+| Layer | Location | Coverage Target |
+| --- | --- | --- |
+| Unit | `tests/core/prototyping/captureScreenshots.test.ts`（新規） | capture-screenshots.js 入出力契約、timestamped 命名、出力配列順序 |
+| Unit | `tests/core/prototyping/executionPlan.test.ts`（新規 or types.test.ts 拡張） | ExecutionPlan 型の 4 フィールド必須性、full-harness モード判定 |
+| Validators | `tests/validators/prototypingEvidence.test.ts` | iteration gate ERROR（iterationCount==1 && converged）、executionPlan 欠落 ERROR、screenshotDir 欠落 ERROR、Lighthouse MUST violation |
+| Validators | `tests/validators/designSystemCompliance.test.ts`（新規） | 12_design_system.md 存在時 80% 未満で L1 finding、85% で passes、不在時スキップ |
+| Config | `tests/core/config/calibrationOverrides.test.ts`（新規 or config.test.ts 拡張） | existence-based precedence (project override > system default)、overrides 不在時 default preserved |
+| Reviewer | `tests/core/prototyping/delegationMap.test.ts`（新規） | Delegation Scope Table 未定義ロールへの移譲を finding 化 |
+| ATDD annotation map | `spec-0012/tdd/test-list.md` | TC-0012-0285..TC-0012-0305 を TDD-ID に対応付け |
+
+### Docs Sync (v1.7.16)
+
+| Artifact | Sync Target |
+| --- | --- |
+| `packages/qfai/README.md` | v1.7.16 スキーマ追加（executionPlan / screenshotDir / calibration.overrides / designSystemCompliance）を documentation に反映 |
+| `packages/qfai/assets/init/.qfai/assistant/skills/qfai-prototyping/SKILL.md` | Delegation Scope Table / 反復ゲート / Step 0 / 5 ステップ化 / 評価者入力 / VQ Checklist / Lighthouse MUST / designSystemCompliance |
+| `packages/qfai/assets/scripts/capture-screenshots.js` (ヘッダコメント) | 入出力契約と利用例を documented |
+
+### Breaking Change / Backward Compatibility (v1.7.16)
+
+- 非破壊拡張: 新フィールド（executionPlan / screenshotDir / calibration.overrides / designSystemCompliance）はすべて任意拡張として追加し、既存 `prototyping.json` / `qfai.config.yaml` は継続動作（NFR-0046）。
+- full-harness 専用 ERROR: iteration gate と executionPlan/screenshotDir 必須チェックは mode==="full-harness" に限定されるため、非 full-harness の既存運用は影響を受けない。
+- Lighthouse MUST: full-harness && web surface 限定の ERROR 化。非 web surface や非 full-harness の既存運用は影響を受けない。

@@ -1478,3 +1478,71 @@ Given `tests/core/prototyping/specCoverage.test.ts` (created or extended), when 
 ## AC-0012-0169: refSemantics.test.ts Exists and Passes (v1.7.15 rev11, REQ-0013)
 
 Given `tests/core/prototyping/refSemantics.test.ts` (created or extended), when the test suite runs, then `01_Spec.md#L14` is a pass case, and `#L0`/`#anchor`/`notes.md`/discussion ref/absolute path are all reject cases, and all tests pass GREEN.
+
+## AC-0012-0170: Delegation Scope Table Exists with 4 Categories (v1.7.16, US-0012-0084, REQ-0123)
+
+Given prototyping SKILL.md, when a Prototyper reads the file, then a Delegation Scope Table is present with exactly 4 categories (UI実装, スクリーンショット, 評価 L1-L2, ビルド) mapped to concrete roles (frontend-engineer, devops-ci-engineer, product-surface-reviewer / product-experience-architect, devops-ci-engineer respectively), and reviewer-facing text explains that delegation to undefined roles MUST be flagged as a violation.
+
+## AC-0012-0171: Delegation Violation Detectable by Reviewer (v1.7.16, US-0012-0084, REQ-0123)
+
+Given a prototyping run that delegated UI 実装 to an undefined role, when reviewer checks SKILL.md Delegation Scope Table, then the delegation is detected as a violation and recorded as a reviewer finding.
+
+## AC-0012-0172: Iteration Gate Rejects iterationCount==1 && converged (v1.7.16, US-0012-0085, REQ-0124)
+
+Given a full-harness iteration record with `iterationCount === 1` and `converged === true`, when validator/reviewer processes the record, then an ERROR is raised and the bundle is rejected; minimum 2 iterations are required.
+
+## AC-0012-0173: Iteration Gate Blocks Phase Transition Until Termination (v1.7.16, US-0012-0085, REQ-0124)
+
+Given a full-harness run where `terminationCondition` is not yet satisfied, when the Prototyper attempts to move to the next phase, then the transition is blocked by SKILL.md iteration gate and the run continues iterating.
+
+## AC-0012-0174: Step 0 Execution Plan Is Required in Required Process (v1.7.16, US-0012-0086, REQ-0125)
+
+Given prototyping SKILL.md, when a Prototyper reads the Required Process section, then Step 0 (実行計画 MUST) appears at the top and enumerates `executionPlan.{targetIterations, evaluationAxesSource, delegationMap, plannedAt}` as required fields for `prototyping.json` in full-harness mode.
+
+## AC-0012-0175: Missing executionPlan in Full-Harness Triggers Validation Error (v1.7.16, US-0012-0086, REQ-0125)
+
+Given a full-harness `prototyping.json` without `executionPlan` block, when validator runs, then a validation error is raised naming the missing `executionPlan` field.
+
+## AC-0012-0176: capture-screenshots.js Is Present in QFAI Package (v1.7.16, US-0012-0087, REQ-0127)
+
+Given the installed QFAI package, when inspecting package assets, then `capture-screenshots.js` is located under `packages/qfai/assets/scripts/` (or documented equivalent) and exposes a CLI contract accepting target URL/port + output directory and producing timestamped screenshot file paths.
+
+## AC-0012-0177: prototyping SKILL.md References capture-screenshots.js (v1.7.16, US-0012-0087, REQ-0127)
+
+Given prototyping SKILL.md, when a Prototyper reads the Capture step, then the script path/invocation of `capture-screenshots.js` is referenced explicitly and its input/output contract is documented (either inline or via pointer to script header comments).
+
+## AC-0012-0178: 5-Step Iteration Cycle Is Documented (v1.7.16, US-0012-0088, REQ-0128)
+
+Given prototyping SKILL.md, when a Prototyper reads the iteration section, then Capture → Evaluate → Identify → Fix → Re-evaluate is listed as an ordered 5-step cycle.
+
+## AC-0012-0179: scoringTrace.screenshotDir Field Is Recorded Per Iteration (v1.7.16, US-0012-0088, REQ-0128)
+
+Given a full-harness iteration, when the Prototyper writes `prototyping.json.scoringTrace[]`, then each entry has a `screenshotDir` field identifying the screenshot directory used for that iteration.
+
+## AC-0012-0180: Evaluator Input Has 4 Required Elements (v1.7.16, US-0012-0089, REQ-0129)
+
+Given an L1 or L2 evaluator sub-agent is about to be launched, when the Prototyper prepares the evaluator context, then all 4 elements are present: (a) screenshot paths, (b) evaluation-axis definition text (expanded), (c) previous iteration's score, (d) DESIGN.md compliance checklist; SKILL.md marks these as MUST.
+
+## AC-0012-0181: Visual Quality Structural Checklist Has 6 Categories (v1.7.16, US-0012-0090, REQ-0130)
+
+Given prototyping SKILL.md, when a Reviewer reads the Visual Quality Structural Checklist section, then 6 categories (カラー, タイポグラフィ, スペーシング, 角丸, シャドウ, Do's&Don'ts) are defined.
+
+## AC-0012-0182: Lighthouse Gate Is MUST for Full-Harness + Web Surface (v1.7.16, US-0012-0091, REQ-0130)
+
+Given a full-harness run with `surface = web`, when the Prototyper/Reviewer consults SKILL.md, then the Lighthouse Gate is explicitly marked MUST (not SHOULD) for this combination; absence of Lighthouse execution is a reviewer-level error.
+
+## AC-0012-0183: designSystemCompliance Score Computed When 12_design_system.md Present (v1.7.16, US-0012-0092, REQ-0131)
+
+Given a discussion pack containing `uiux/12_design_system.md`, when the Evaluate step runs, then a `designSystemCompliance` score (percent match between CSS implementation values and design system specification values) is computed and recorded in `prototyping.json`.
+
+## AC-0012-0184: designSystemCompliance < 80% Is L1 Finding (v1.7.16, US-0012-0092, REQ-0131)
+
+Given `designSystemCompliance` < 80%, when the Evaluate step classifies findings, then the result is recorded as an L1 finding flagged for immediate fix in the current iteration.
+
+## AC-0012-0185: calibration.overrides Is Recognized (v1.7.16, US-0012-0093, REQ-0126)
+
+Given `qfai.config.yaml` with `prototyping.calibration.overrides.perAxisMinimum` and `prototyping.calibration.overrides.maxIterationsByMode` populated, when the calibration loader resolves effective configuration, then project-side overrides are applied via existence-based precedence (project override > system default).
+
+## AC-0012-0186: Absent calibration.overrides Does Not Break Existing Config (v1.7.16, US-0012-0093, REQ-0126, NFR-0046)
+
+Given an existing `qfai.config.yaml` without `prototyping.calibration.overrides`, when the calibration loader runs, then it uses system default values and does not raise parse errors or breaking changes (backward compatibility preserved).

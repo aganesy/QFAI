@@ -28,6 +28,13 @@
   - Review Cycle Protocol (RCP) with 12-reviewer roster (10 standard + devils-advocate + pattern-doubler)
   - Drift Protocol enforcement
   - prototyping.yaml 生成（prototyping mode recommendation の構造化キャプチャ）
+  - (v1.7.16) Step 11.3 Brand→Aesthetic Mapping による DESIGN.md 自律生成 — Phase A (brand 選定) + Phase B (customization)、出力先 `uiux/12_design_system.md`
+  - (v1.7.16) Step 11.5 Trend→Axis derivation — UI-bearing 時に `04_Sources.md` Trend Scan から `21_design_eval_trend_derived.md` 評価軸を導出、ビジュアル系最低1軸必須
+  - (v1.7.16) Sidecar Generation Flow 依存順序明示 — Step 1c（04_Sources Trend Scan）→ Step 1d（21_design_eval_trend_derived）、並列禁止
+  - (v1.7.16) `references/design-md-brand-catalog.md` — 8 アーキタイプ × 代表ブランド × 美的特性カタログ
+  - (v1.7.16) `templates/uiux/12_design_system.md` — DESIGN.md 形式 8 セクションテンプレート
+  - (v1.7.16) `templates/04_Sources.md` evaluation_connection フィールド追加（全6ビジュアルカテゴリ）
+  - (v1.7.16) `templates/uiux/21_design_eval_trend_derived.md` ビジュアル軸例示 + source_refs ガイダンス追加
 - Out:
   - Editing `.qfai/specs/**` directly (belongs to `/qfai-sdd`)
   - Writing implementation-level details
@@ -41,6 +48,11 @@
 - NFR-0004: Example Mapping coverage -- 6 perspectives per BR/AC candidate
 - NFR-0005: DDP completeness -- UI-bearing packs include Design Direction Summary with all 6 subsections
 - NFR-0006: Competitive references -- 3+ references with adopted/rejected/local_translation fields (UI-bearing only)
+- NFR-0007 (v1.7.16): Backward compatibility — 既存 12 ファイル discussion pack および既存 prototyping.json を破壊しない。新フィールド（evaluation_connection 等）は任意拡張として追加し、未使用時もパース可能。新ルールは原則 WARNING 導入、次バージョンで ERROR 昇格の段階的移行（ただし T01/T02 は既存パック非影響のため ERROR 直接導入可）
+- NFR-0008 (v1.7.16): AI-only operability — Brand 選定 / DESIGN.md カスタマイズ / 評価 / 反復の全工程が AI 自律実行可能。人間介入ステップを必須フロー内に含めない
+- NFR-0009 (v1.7.16): Package independence — 改善は QFAI パッケージ自体（`packages/qfai/src/`, `skills/`）に閉じる。`.qfai/` 運用ディレクトリへの変更を含めない
+- NFR-0010 (v1.7.16): Validate-speed budget — 新ルール追加による `qfai validate` 実行時間増加は既存 validate 時間の 20% 以内
+- NFR-0011 (v1.7.16): Online premise — awesome-design-md エコシステム（npx getdesign@latest）はオンライン前提。オフラインフォールバックは実装しない
 
 ## Applicable Policy
 
@@ -77,7 +89,7 @@
 
 ## Entry points
 
-- US range in this spec: US-0010-0001..US-0010-0015
+- US range in this spec: US-0010-0001..US-0010-0022
 - Primary actors: QFAI user (product owner/developer), AI Agent (discovery-analyst, requirements-analyst)
 - Notes: This is the entry point for new projects. Output feeds `/qfai-sdd`.
 
