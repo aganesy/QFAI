@@ -34,6 +34,7 @@ import { buildUiFidelity, type BuiltUiFidelity } from "./uiFidelityBuilder.js";
 import { buildRuntimeGate } from "./runtimeGateBuilder.js";
 import {
   isBrowserQaPassthroughRef,
+  normalizeBrowserQaEvidenceRef as normalizeBrowserQaEvidenceRefFromRoot,
   normalizeConcreteArtifactRef,
   toConcreteArtifactRef,
 } from "./pathUtils.js";
@@ -666,6 +667,7 @@ async function buildPrototypingSummaryBundle(input: {
 }): Promise<PrototypingSummaryBundle> {
   const resolved = await loadConfig(input.root);
   const specsDir = resolvePath(input.root, resolved.config, "specsDir");
+  const specsDirRelative = toRelativeSummaryPath(input.root, specsDir);
   const perSpecCoverage = await buildPerSpecCoverage(
     specsDir,
     runtimeGateToObservation(input.runtimeGate),
@@ -697,6 +699,7 @@ async function buildPrototypingSummaryBundle(input: {
           declaredRef: assertSpecDeclarationRef(
             coverage.declaredRef,
             `specs[${name}].coverageRefs[${coverage.route}].declaredRef`,
+            specsDirRelative,
           ),
           observedRefs: [...coverage.observedRefs],
         })),
@@ -757,13 +760,6 @@ function runtimeGateToObservation(
   };
 }
 
-function normalizeBrowserQaEvidenceRef(ref: string): string {
-  if (isBrowserQaPassthroughRef(ref)) {
-    return ref.trim();
-  }
-  return normalizeConcreteArtifactRef(ref);
-}
-
 function normalizeRuntimeObservationRefs(
   root: string,
   runtimeObservation: RuntimeObservation,
@@ -776,7 +772,7 @@ function normalizeRuntimeObservationRefs(
         entry.renderEvidenceRefs.map((ref) => toConcreteArtifactRef(root, ref)),
       ),
       browserQaEvidenceRefs: dedupeRefs(
-        entry.browserQaEvidenceRefs.map((ref) => normalizeBrowserQaEvidenceRef(ref)),
+        entry.browserQaEvidenceRefs.map((ref) => normalizeBrowserQaEvidenceRefFromRoot(root, ref)),
       ),
     })),
   };
@@ -837,9 +833,15 @@ function assertRuntimeGateLeafRefs(
   }
 }
 
-function assertSpecDeclarationRef(ref: string, fieldPath: string): string {
-  if (!isSpecDeclarationRef(ref)) {
-    throw new Error(`${fieldPath} must point to a spec declaration ref under .qfai/specs/.`);
+function assertSpecDeclarationRef(
+  ref: string,
+  fieldPath: string,
+  specsDirRelative = ".qfai/specs",
+): string {
+  if (!isSpecDeclarationRef(ref, specsDirRelative)) {
+    throw new Error(
+      `${fieldPath} must point to a spec declaration ref under ${specsDirRelative}/.`,
+    );
   }
   return ref;
 }

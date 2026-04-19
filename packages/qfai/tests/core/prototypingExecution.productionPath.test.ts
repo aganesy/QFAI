@@ -40,7 +40,10 @@ function createFakeRenderAdapter(): RenderCaptureAdapter {
   };
 }
 
-function createFakeProviderRegistry(): ProviderRegistry {
+function createFakeProviderRegistry(options?: {
+  root?: string;
+  usePathEvidenceRefs?: boolean;
+}): ProviderRegistry {
   const registry = new ProviderRegistry();
   const createPhase = (phase: BrowserQaPhase, input: BrowserQaInput): BrowserQaPhaseResult => ({
     phase,
@@ -53,12 +56,24 @@ function createFakeProviderRegistry(): ProviderRegistry {
         detail: `${phase} executed`,
         route: input.routes?.[0] ?? "/dashboard",
         screen_id: input.screenContracts?.[0]?.screen_id ?? "dashboard",
-        evidence_refs: [`.qfai/evidence/browser-qa.json#/phases/${phase}`],
+        evidence_refs:
+          options?.usePathEvidenceRefs && options.root
+            ? [
+                path.join(options.root, ".qfai", "evidence", "browser-qa", `${phase}.png`),
+                `.qfai/evidence/browser-qa/${phase}.html`,
+              ]
+            : [`.qfai/evidence/browser-qa.json#/phases/${phase}`],
         repair_suggestions: [],
       },
     ],
     repair_suggestions: [],
-    evidence_refs: [`.qfai/evidence/browser-qa.json#/phases/${phase}`],
+    evidence_refs:
+      options?.usePathEvidenceRefs && options.root
+        ? [
+            path.join(options.root, ".qfai", "evidence", "browser-qa", `${phase}.png`),
+            `.qfai/evidence/browser-qa/${phase}.html`,
+          ]
+        : [`.qfai/evidence/browser-qa.json#/phases/${phase}`],
     checks_performed: [`${phase} executed`],
   });
   registry.registerQaProvider({
@@ -81,9 +96,18 @@ function createFakeProviderRegistry(): ProviderRegistry {
 }
 
 async function withRoot(task: (root: string) => Promise<void>): Promise<void> {
+  await withRootOptions({}, task);
+}
+
+async function withRootOptions(
+  options: { specsDirRelative?: string },
+  task: (root: string) => Promise<void>,
+): Promise<void> {
   const root = await mkdtemp(path.join(os.tmpdir(), "qfai-prototyping-closure-"));
+  const specsDirRelative = options.specsDirRelative ?? ".qfai/specs";
+  const specsDir = path.join(root, ...specsDirRelative.split("/"));
   try {
-    await mkdir(path.join(root, ".qfai", "specs", "spec-0001"), { recursive: true });
+    await mkdir(path.join(specsDir, "spec-0001"), { recursive: true });
     await mkdir(path.join(root, ".qfai", "contracts", "ui"), { recursive: true });
     await mkdir(path.join(root, ".qfai", "evidence"), { recursive: true });
     await mkdir(path.join(root, ".git", "refs", "heads"), { recursive: true });
@@ -98,6 +122,7 @@ async function withRoot(task: (root: string) => Promise<void>): Promise<void> {
       [
         "paths:",
         "  discussionDir: .qfai/discussion",
+        `  specsDir: ${specsDirRelative}`,
         "prototyping:",
         "  calibration:",
         "    packPath: .qfai/evidence/calibration.yaml",
@@ -150,7 +175,7 @@ async function withRoot(task: (root: string) => Promise<void>): Promise<void> {
       "utf-8",
     );
     await writeFile(
-      path.join(root, ".qfai", "specs", "spec-0001", "01_Spec.md"),
+      path.join(specsDir, "spec-0001", "01_Spec.md"),
       ["# Spec", "", "- ui_route: /dashboard", ""].join("\n"),
       "utf-8",
     );
@@ -367,6 +392,55 @@ describe("prototyping execution production path", () => {
 
       const issues = await validatePrototypingEvidence(root, defaultConfig);
       expect(issues.some((i) => i.code === "QFAI-PROT-101")).toBe(true);
+    });
+  });
+
+  it("supports configured specsDir when building per-spec declaredRef coverage", async () => {
+    await withRootOptions({ specsDirRelative: ".qfai/spec-catalog" }, async (root) => {
+      const result = await runPrototypingExecution({
+        root,
+        requestedMode: "full-harness",
+        reviewer: "qa-reviewer",
+        renderAdapter: createFakeRenderAdapter(),
+        providerRegistry: createFakeProviderRegistry(),
+        browserQaProviderId: "test-browser-qa",
+      });
+
+      const prototyping = JSON.parse(
+        await readFile(result.evidencePaths.prototyping, "utf-8"),
+      ) as Record<string, unknown>;
+      const specs = prototyping.specs as Array<{
+        coverageRefs: Array<{ declaredRef: string }>;
+      }>;
+      expect(specs[0]?.coverageRefs[0]?.declaredRef).toBe(
+        ".qfai/spec-catalog/spec-0001/01_Spec.md#L2",
+      );
+    });
+  });
+
+  it("normalizes Browser QA path refs against the repo root during execution", async () => {
+    await withRoot(async (root) => {
+      const result = await runPrototypingExecution({
+        root,
+        requestedMode: "full-harness",
+        reviewer: "qa-reviewer",
+        renderAdapter: createFakeRenderAdapter(),
+        providerRegistry: createFakeProviderRegistry({ root, usePathEvidenceRefs: true }),
+        browserQaProviderId: "test-browser-qa",
+      });
+
+      const prototyping = JSON.parse(
+        await readFile(result.evidencePaths.prototyping, "utf-8"),
+      ) as Record<string, unknown>;
+      const runtimeGate = prototyping.runtimeGate as {
+        ui: Array<{ browserQaEvidenceRefs: string[] }>;
+      };
+      expect(runtimeGate.ui[0]?.browserQaEvidenceRefs).toContain(
+        ".qfai/evidence/browser-qa/smoke.png",
+      );
+      expect(runtimeGate.ui[0]?.browserQaEvidenceRefs).toContain(
+        ".qfai/evidence/browser-qa/smoke.html",
+      );
     });
   });
 });

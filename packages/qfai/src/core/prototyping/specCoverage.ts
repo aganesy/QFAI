@@ -140,6 +140,9 @@ export async function buildSpecCoverageSummary(input: {
   const repoRoot = input.root
     ? path.resolve(input.root)
     : inferRepoRootFromSpecsDir(input.specsDir);
+  const specsDirRelative = path
+    .relative(repoRoot, path.resolve(input.specsDir))
+    .replaceAll("\\", "/");
   const declared = await loadDeclaredSpecArtifacts(input.specsDir);
   const observed = collectObservedRuntimeArtifacts(input.runtimeObservation);
 
@@ -176,10 +179,10 @@ export async function buildSpecCoverageSummary(input: {
   for (const spec of declared) {
     for (const route of spec.uiRoutes) {
       assertConcreteArtifactRef(route.declaredRef);
-      if (!isSpecDeclarationRef(route.declaredRef)) {
+      if (!isSpecDeclarationRef(route.declaredRef, specsDirRelative)) {
         throw new Error(
           `Spec coverage failure: declaredRef must point to ` +
-            `.qfai/specs/<specId>/01_Spec.md#L<line>. Got: ${route.declaredRef}`,
+            `${specsDirRelative}/<specId>/01_Spec.md#L<line>. Got: ${route.declaredRef}`,
         );
       }
       evidenceRefs.push(route.declaredRef);
