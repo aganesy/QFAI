@@ -1,3 +1,5 @@
+<!-- markdownlint-disable-file MD024 -->
+
 # 08 Open Questions
 
 3 resolved, 2 deferred. (rev8 adds 4 resolved; cumulative: 13 resolved, 2 deferred; v1.7.16 adds 3 deferred-to-TDD)

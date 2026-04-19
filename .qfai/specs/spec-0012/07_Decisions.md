@@ -1,3 +1,5 @@
+<!-- markdownlint-disable-file MD024 -->
+
 # 07 Decisions
 
 ## DR-0012-0001: CLI Command Removal

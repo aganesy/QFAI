@@ -29,9 +29,10 @@
   // Heading increment: some historical/generated decision logs still skip
   // levels; keep this local exemption until those packs are normalized.
   "MD001": false,
-  // Duplicate headings: revisioned delta/decision logs intentionally reuse
-  // section titles across appended change batches.
-  "MD024": false,
+  // Duplicate headings: revisioned delta/decision logs may intentionally
+  // reuse section titles across appended change batches, but keep sibling
+  // duplicates detectable so authored specs still surface accidental repeats.
+  "MD024": { "siblings_only": true },
   // Inline HTML: rare `<n>` / `<id>` / `<skill>` placeholders in examples —
   // allow-list just those so the lint still flags unintended HTML tags.
   "MD033": { "allowed_elements": ["n", "id", "skill"] },
