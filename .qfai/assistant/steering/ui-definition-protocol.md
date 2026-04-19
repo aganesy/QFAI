@@ -47,8 +47,8 @@ spec-0013 (CAP-0013) で定義された、下流 skill（prototyping / ATDD / TD
 
 ## Priority and Override Semantics
 
-- sidecar artifacts（selected anchor / strategy / contracts）が **primary truth**
-- UI Contracts と Design Token は **存在する場合のみ読む supporting input**（primary truth ではない）
+- discussion sidecar artifacts（selected anchor / implementation strategy / **screen contracts** `uiux/40_screen_contracts.md`）が **primary truth**
+- `.qfai/contracts/ui/` の UI Contracts と Design Token は **存在する場合のみ読む supporting input**（primary truth ではない）
 - Optional fallback mock はさらに後順位の **fallback**
 - Design Token の値と HTML Mock の fallback 値が矛盾する場合は warning を発行
 - UI Contract の screen ID と sidecar contracts の対応がない場合は warning を発行

@@ -99,12 +99,12 @@ Build the minimum runnable slice for all specs and produce canonical `full-harne
 All sub-agent delegation in this skill MUST follow the category-to-role mapping below.
 Assigning a task to a role not listed for the category is a violation and MUST be flagged.
 
-| Category              | Allowed Role(s)                                              |
-| --------------------- | ------------------------------------------------------------ |
-| UI implementation     | frontend-engineer, product-experience-architect              |
-| Screenshot capture    | devops-ci-engineer                                           |
-| Evaluation L1-L2      | product-surface-reviewer, product-experience-architect       |
-| Build                 | devops-ci-engineer, backend-engineer                         |
+| Category           | Allowed Role(s)                                        |
+| ------------------ | ------------------------------------------------------ |
+| UI implementation  | frontend-engineer, product-experience-architect        |
+| Screenshot capture | devops-ci-engineer                                     |
+| Evaluation L1-L2   | product-surface-reviewer, product-experience-architect |
+| Build              | devops-ci-engineer, backend-engineer                   |
 
 Any delegation map entry that assigns a category to an undefined or unlisted role (e.g., `"generic-code-writer"`) MUST produce a violation finding naming the undefined role and the category.
 

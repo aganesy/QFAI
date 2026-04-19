@@ -1380,7 +1380,6 @@ BR-Ref: BR-0012-0122
 
 BR-Ref: BR-0012-0123
 
-
 ## EX-0012-0180: index.ts Export Removal Verification (BR-0012-0124)
 
 - BR-Ref: BR-0012-0124

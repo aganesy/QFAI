@@ -947,7 +947,6 @@
 - Rationale: OQ-0004 resolved (DR-0012-0056): traceability requires specific declaration location
 - Single source: regex defined once in specCoverage.ts (inline, no refSemantics.ts)
 
-
 ## BR-0012-0124: index.ts Must Not Export runMeasurement or validatePanelScore (v1.7.15 rev11, WS-1)
 
 - AC-Refs: AC-0012-0156

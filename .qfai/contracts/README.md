@@ -8,7 +8,7 @@ They are the boundary between "what we promise" and "how we implement".
 QFAI organizes contracts into four directories:
 
 ```text
-contracts/
+.qfai/contracts/
 ├── api/      # OpenAPI YAML (endpoints, request/response)
 ├── db/       # SQL schema contracts (tables, columns, constraints)
 ├── design/   # Design token YAML — optional supporting input
@@ -24,7 +24,7 @@ contracts/
 - Prefer additive changes; breaking changes require delta notes.
 
 ```text
-contracts/
+.qfai/contracts/
 ├── README.md
 ├── api/
 │   ├── README.md

@@ -61,43 +61,43 @@
 
 ## v1.7.12 Addition Log
 
-| ID           | Type     | Description                                         |
-| ------------ | -------- | --------------------------------------------------- |
-| US-0010-0009 | US       | SKILL.md rewrite for 3-layer model                  |
-| US-0010-0010 | US       | 3-layer template family replacement                 |
-| US-0010-0011 | US       | Canonical sidecar index and strategy upgrade        |
-| US-0010-0012 | US       | Sources template trend translation                  |
-| US-0010-0013 | US       | HTML/CSS mock demotion to optional                  |
-| US-0010-0014 | US       | Contracts template screen-obligation schema         |
-| AC-0010-0012 | AC       | SKILL.md 3-layer model exclusivity                  |
-| AC-0010-0013 | AC       | Init generates 3-layer family only                  |
-| AC-0010-0014 | AC       | Canonical index manifest                            |
-| AC-0010-0015 | AC       | Strategy template strong schema                     |
-| AC-0010-0016 | AC       | Contracts screen-obligation schema                  |
-| AC-0010-0017 | AC       | Sources trend evaluation support                    |
-| AC-0010-0018 | AC       | HTML/CSS mock not a completion gate                 |
-| BR-0010-0009 | BR       | 4-axis exclusion from active generation             |
-| BR-0010-0010 | BR       | Init and dogfood semantic parity                    |
-| BR-0010-0011 | BR       | HTML/CSS mock not a completion gate                 |
-| BR-0010-0012 | BR       | Template file naming validator alignment            |
-| EX-0010-0011 | EX       | UI-bearing pack with 3-layer sidecar (happy)        |
-| EX-0010-0012 | EX       | Pack missing taste interview (fail)                 |
-| EX-0010-0013 | EX       | Pack missing trend-derived evaluation (fail)        |
-| EX-0010-0014 | EX       | Non-UI pack skips 3-layer sidecar without errors    |
-| EX-0010-0015 | EX       | Init copy vs dogfood copy parity check              |
-| TC-0010-0018 | TC       | SKILL.md 3-layer model exclusivity                  |
-| TC-0010-0019 | TC       | Init generates 3-layer family only                  |
-| TC-0010-0020 | TC       | HTML/CSS mock not blocking completion               |
-| TC-0010-0021 | TC       | 00_index.md canonical family listing                |
+| ID           | Type     | Description                                            |
+| ------------ | -------- | ------------------------------------------------------ |
+| US-0010-0009 | US       | SKILL.md rewrite for 3-layer model                     |
+| US-0010-0010 | US       | 3-layer template family replacement                    |
+| US-0010-0011 | US       | Canonical sidecar index and strategy upgrade           |
+| US-0010-0012 | US       | Sources template trend translation                     |
+| US-0010-0013 | US       | HTML/CSS mock demotion to optional                     |
+| US-0010-0014 | US       | Contracts template screen-obligation schema            |
+| AC-0010-0012 | AC       | SKILL.md 3-layer model exclusivity                     |
+| AC-0010-0013 | AC       | Init generates 3-layer family only                     |
+| AC-0010-0014 | AC       | Canonical index manifest                               |
+| AC-0010-0015 | AC       | Strategy template strong schema                        |
+| AC-0010-0016 | AC       | Contracts screen-obligation schema                     |
+| AC-0010-0017 | AC       | Sources trend evaluation support                       |
+| AC-0010-0018 | AC       | HTML/CSS mock not a completion gate                    |
+| BR-0010-0009 | BR       | 4-axis exclusion from active generation                |
+| BR-0010-0010 | BR       | Init and dogfood semantic parity                       |
+| BR-0010-0011 | BR       | HTML/CSS mock not a completion gate                    |
+| BR-0010-0012 | BR       | Template file naming validator alignment               |
+| EX-0010-0011 | EX       | UI-bearing pack with 3-layer sidecar (happy)           |
+| EX-0010-0012 | EX       | Pack missing taste interview (fail)                    |
+| EX-0010-0013 | EX       | Pack missing trend-derived evaluation (fail)           |
+| EX-0010-0014 | EX       | Non-UI pack skips 3-layer sidecar without errors       |
+| EX-0010-0015 | EX       | Init copy vs dogfood copy parity check                 |
+| TC-0010-0018 | TC       | SKILL.md 3-layer model exclusivity                     |
+| TC-0010-0019 | TC       | Init generates 3-layer family only                     |
+| TC-0010-0020 | TC       | HTML/CSS mock not blocking completion                  |
+| TC-0010-0021 | TC       | 00_index.md canonical family listing                   |
 | TC-0010-0022 | TC       | 10_implementation_strategy.md strong schema validation |
-| TC-0010-0023 | TC       | 40_screen_contracts.md screen-obligation schema     |
-| TC-0010-0024 | TC       | 04_Sources.md trend evaluation support              |
-| TC-0010-0025 | TC       | No 4-axis files in active generation                |
-| TC-0010-0026 | TC       | Init vs dogfood semantic parity                     |
-| TC-0010-0027 | TC       | Taste interview absence fails sidecar validation    |
-| TC-0010-0028 | TC       | Trend-derived axis missing source translation fails |
-| SD-0010-0001 | Decision | 3-layer canonical replaces 4-axis (DR-0106)         |
-| SD-0010-0002 | Decision | HTML/CSS mock optional/fallback (DR-0107)           |
+| TC-0010-0023 | TC       | 40_screen_contracts.md screen-obligation schema        |
+| TC-0010-0024 | TC       | 04_Sources.md trend evaluation support                 |
+| TC-0010-0025 | TC       | No 4-axis files in active generation                   |
+| TC-0010-0026 | TC       | Init vs dogfood semantic parity                        |
+| TC-0010-0027 | TC       | Taste interview absence fails sidecar validation       |
+| TC-0010-0028 | TC       | Trend-derived axis missing source translation fails    |
+| SD-0010-0001 | Decision | 3-layer canonical replaces 4-axis (DR-0106)            |
+| SD-0010-0002 | Decision | HTML/CSS mock optional/fallback (DR-0107)              |
 
 ## v1.7.13 (2026-04-04) — Canonical Sidecar Convergence
 
@@ -134,19 +134,19 @@
 
 ### Added
 
-| ID                     | Layer | Summary                                                                 |
-| ---------------------- | ----- | ----------------------------------------------------------------------- |
-| REQ-0020..REQ-0026     | REQ   | Step 11.5, 04_Sources evaluation_connection, 21_design_eval_trend_derived visual axes, Sidecar Gen Flow dep, Step 11.3 Brand→Aesthetic Mapping, brand catalog reference, 12_design_system.md template |
-| NFR-0007..NFR-0011     | NFR   | Backward compatibility, AI-only operability, package independence, validate-speed budget, online premise |
-| US-0010-0016..0022     | US    | 7 user stories covering Step 11.3 / Step 11.5 / templates / catalog / sidecar flow |
-| AC-0010-0019..0027     | AC    | 9 acceptance criteria with Given/When/Then and US-Ref                   |
-| BR-0010-0013..0020     | BR    | 8 business rules (Step 11.5 visual axis, T04 trigger, 12_design_system.md 8 sections, brand catalog lookup, phase sequencing, Sidecar 1c→1d, evaluation_connection mandate, visual axis example requirement) |
-| EX-0010-0018..0034     | EX    | 17 examples covering happy/negative/edge/permission/state/idempotency   |
-| TC-0010-0031..0048     | TC    | 18 test cases with EX-Ref, AC-Refs, Type                                |
-| DR-0010-v1716-01       | DR    | Adopt DESIGN.md ecosystem as archetype + brand dictionary supplier      |
-| DR-0010-v1716-02       | DR    | Brand catalog Phase 1 scope = 8 archetypes representative brand only    |
-| DR-0010-v1716-03       | DR    | Category system SSOT = templates/04_Sources.md                          |
-| OQ-0010-v1716-01 (carried) | OQ | DESIGN.md auto-customization quality (deferred to TDD, carries OQ-0004) |
+| ID                         | Layer | Summary                                                                                                                                                                                                      |
+| -------------------------- | ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| REQ-0020..REQ-0026         | REQ   | Step 11.5, 04_Sources evaluation_connection, 21_design_eval_trend_derived visual axes, Sidecar Gen Flow dep, Step 11.3 Brand→Aesthetic Mapping, brand catalog reference, 12_design_system.md template        |
+| NFR-0007..NFR-0011         | NFR   | Backward compatibility, AI-only operability, package independence, validate-speed budget, online premise                                                                                                     |
+| US-0010-0016..0022         | US    | 7 user stories covering Step 11.3 / Step 11.5 / templates / catalog / sidecar flow                                                                                                                           |
+| AC-0010-0019..0027         | AC    | 9 acceptance criteria with Given/When/Then and US-Ref                                                                                                                                                        |
+| BR-0010-0013..0020         | BR    | 8 business rules (Step 11.5 visual axis, T04 trigger, 12_design_system.md 8 sections, brand catalog lookup, phase sequencing, Sidecar 1c→1d, evaluation_connection mandate, visual axis example requirement) |
+| EX-0010-0018..0034         | EX    | 17 examples covering happy/negative/edge/permission/state/idempotency                                                                                                                                        |
+| TC-0010-0031..0048         | TC    | 18 test cases with EX-Ref, AC-Refs, Type                                                                                                                                                                     |
+| DR-0010-v1716-01           | DR    | Adopt DESIGN.md ecosystem as archetype + brand dictionary supplier                                                                                                                                           |
+| DR-0010-v1716-02           | DR    | Brand catalog Phase 1 scope = 8 archetypes representative brand only                                                                                                                                         |
+| DR-0010-v1716-03           | DR    | Category system SSOT = templates/04_Sources.md                                                                                                                                                               |
+| OQ-0010-v1716-01 (carried) | OQ    | DESIGN.md auto-customization quality (deferred to TDD, carries OQ-0004)                                                                                                                                      |
 
 ### Traceability Chain (v1.7.16 additions)
 
@@ -191,14 +191,14 @@ The v1.7.16 slice installs the upstream half of the Trend→Axis→Design-System
 
 ### Added
 
-| ID | Layer | Summary |
-| -- | ----- | ------- |
-| US-0010-0023..0025 | US | guideline research mandatory step, canonical source category, quantitative anchor guidance |
-| AC-0010-0028..0030 | AC | workflow presence, source schema, score_anchors proxy requirement |
-| BR-0010-0021..0023 | BR | mandatory research, category storage rule, adjective-only anchor prohibition |
-| EX-0010-0035..0038 | EX | happy/non-ui/quantitative/negative examples |
-| TC-0010-0049..0053 | TC | SKILL/template/non-ui/template guidance coverage |
-| DR-0010-v1717-01..03 | DR | upstream obligation, source SSOT, quantitative proxy mandate |
+| ID                   | Layer | Summary                                                                                    |
+| -------------------- | ----- | ------------------------------------------------------------------------------------------ |
+| US-0010-0023..0025   | US    | guideline research mandatory step, canonical source category, quantitative anchor guidance |
+| AC-0010-0028..0030   | AC    | workflow presence, source schema, score_anchors proxy requirement                          |
+| BR-0010-0021..0023   | BR    | mandatory research, category storage rule, adjective-only anchor prohibition               |
+| EX-0010-0035..0038   | EX    | happy/non-ui/quantitative/negative examples                                                |
+| TC-0010-0049..0053   | TC    | SKILL/template/non-ui/template guidance coverage                                           |
+| DR-0010-v1717-01..03 | DR    | upstream obligation, source SSOT, quantitative proxy mandate                               |
 
 ### Rejected
 

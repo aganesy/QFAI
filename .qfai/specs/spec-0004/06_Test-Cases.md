@@ -2,69 +2,69 @@
 
 ## Test Case Table (required)
 
-| TC-ID        | Level       | AC-Refs           | EX-Ref       | Title                                                     |
-| ------------ | ----------- | ----------------- | ------------ | --------------------------------------------------------- |
-| TC-0004-0001 | integration | AC-0004-0001      | EX-0004-0001 | 全バリデータ実行と Issue 集約                             |
-| TC-0004-0002 | integration | AC-0004-0002      | EX-0004-0002 | デフォルト full フェーズ                                  |
-| TC-0004-0003 | unit        | AC-0004-0003      | EX-0004-0003 | --fail-on error で warning は pass                        |
-| TC-0004-0004 | unit        | AC-0004-0004      | EX-0004-0004 | --fail-on warning で warning は fail                      |
-| TC-0004-0005 | integration | AC-0004-0005      | EX-0004-0005 | --format github アノテーション出力                        |
-| TC-0004-0016 | integration | AC-0004-0005      | EX-0004-0013 | GitHub annotation value escape                            |
-| TC-0004-0006 | integration | AC-0004-0006      | EX-0004-0006 | validate.json 出力                                        |
-| TC-0004-0007 | integration | AC-0004-0007      | EX-0004-0007 | ランログ生成                                              |
-| TC-0004-0008 | integration | AC-0004-0008      | EX-0004-0008 | ウェイバー suppress 適用                                  |
-| TC-0004-0009 | integration | AC-0004-0009      | EX-0004-0009 | 必須ファイル欠落検出                                      |
-| TC-0004-0010 | integration | AC-0004-0010      | EX-0004-0010 | ID フォーマット不正検出                                   |
-| TC-0004-0011 | integration | AC-0004-0011      | EX-0004-0011 | トレーサビリティエッジ欠落                                |
-| TC-0004-0012 | integration | AC-0004-0012      |              | ATDD アノテーション検証                                   |
-| TC-0004-0013 | integration | AC-0004-0013      |              | blocking OQ 検出                                          |
-| TC-0004-0014 | integration | AC-0004-0014      |              | 冪等性 - 2回実行で同一結果                                |
-| TC-0004-0015 | integration | AC-0004-0015      | EX-0004-0012 | phase guard refinement ブロック                           |
-| TC-0004-0017 | integration | AC-0004-0016      | EX-0004-0014 | Canonical UIX aggregator 動作確認                         |
-| TC-0004-0018 | integration | AC-0004-0017      | EX-0004-0014 | 新 3-layer ファイル名期待の検証                           |
-| TC-0004-0019 | integration | AC-0004-0018      | EX-0004-0015 | 旧 4-axis ファイル検出 error                              |
-| TC-0004-0020 | integration | AC-0004-0019      | EX-0004-0016 | Non-UI パック UIX スキップ                                |
-| TC-0004-0021 | unit        | AC-0004-0020      | EX-0004-0017 | render-evidence truthful state                            |
-| TC-0004-0022 | unit        | AC-0004-0021      | EX-0004-0018 | Browser QA minimal runner truthful                        |
-| TC-0004-0023 | integration | AC-0004-0022      | EX-0004-0019 | Canonical Production Path Only                            |
-| TC-0004-0024 | integration | AC-0004-0022      | EX-0004-0019 | DDP Validator Not in Production                           |
-| TC-0004-0025 | integration | AC-0004-0023      | EX-0004-0020 | IssueCategory on Canonical Issues                         |
-| TC-0004-0026 | integration | AC-0004-0024      | EX-0004-0020 | prototypingRecommendation Schema Error                    |
-| TC-0004-0027 | integration | AC-0004-0022      | EX-0004-0021 | Canonical Production Path Inspection                      |
-| TC-0004-0029 | integration | AC-0004-0016      | EX-0004-0023 | QFAI-AUD-021 Selected Anchor Check                        |
-| TC-0004-0030 | integration | AC-0004-0022      | EX-0004-0026 | Canonical Barrel No Legacy Re-export                      |
-| TC-0004-0031 | integration | AC-0004-0022      | EX-0004-0024 | Canonical Validator Count                                 |
-| TC-0004-0032 | integration | AC-0004-0016      | EX-0004-0025 | QFAI-VIS-002 Info Severity                                |
-| TC-0004-0033 | integration | AC-0004-0022      | EX-0004-0026 | Canonical Barrel Isolation                                |
-| TC-0004-0034 | integration | AC-0004-0016      | EX-0004-0027 | CRIT-005 Read-Order                                       |
-| TC-0004-0035 | unit        | AC-0004-0025      | EX-0004-0028 | PROT-292 max-iterations error (v1.7.15)                   |
-| TC-0004-0036 | unit        | AC-0004-0025,0032 | EX-0004-0028 | PROT-292 valid max-iterations (v1.7.15)                   |
-| TC-0004-0037 | unit        | AC-0004-0026      | EX-0004-0029 | PROT-290/308 single-iteration converged error (v1.7.15)   |
-| TC-0004-0038 | unit        | AC-0004-0026,0032 | EX-0004-0029 | Valid multi-iteration converged (v1.7.15)                 |
-| TC-0004-0039 | unit        | AC-0004-0025      | EX-0004-0030 | PROT-296 weightedTotal mismatch error (v1.7.15)           |
-| TC-0004-0040 | unit        | AC-0004-0025,0032 | EX-0004-0030 | PROT-296 correct weightedTotal (v1.7.15)                  |
-| TC-0004-0041 | unit        | AC-0004-0027      | EX-0004-0031 | PROT-295/309 reviewer placeholder error (v1.7.15)         |
-| TC-0004-0042 | unit        | AC-0004-0027,0032 | EX-0004-0031 | Valid reviewer passes (v1.7.15)                           |
-| TC-0004-0043 | unit        | AC-0004-0028      | EX-0004-0032 | PROT-305 zero-seeded specCoverage error (v1.7.15)         |
-| TC-0004-0044 | unit        | AC-0004-0028,0032 | EX-0004-0032 | Non-zero specCoverage passes (v1.7.15)                    |
-| TC-0004-0045 | unit        | AC-0004-0029      | EX-0004-0033 | PROT-306 synthetic mockPaths error (v1.7.15)              |
-| TC-0004-0046 | unit        | AC-0004-0029,0032 | EX-0004-0033 | Fail-only mockPaths passes (v1.7.15)                      |
-| TC-0004-0047 | unit        | AC-0004-0031      | EX-0004-0034 | PROT-301 calibrationRef empty error (v1.7.15)             |
-| TC-0004-0048 | unit        | AC-0004-0030      | EX-0004-0035 | PROT-304 reviewerLogs count mismatch (v1.7.15)            |
-| TC-0004-0049 | unit        | AC-0004-0030      | EX-0004-0036 | PROT-291 iterations/scoringTrace count mismatch (v1.7.15) |
-| TC-0004-0050 | unit        | AC-0004-0031      | EX-0004-0037 | PROT-297 commitSha missing error (v1.7.15)                |
-| TC-0004-0051 | unit        | AC-0004-0031      | EX-0004-0038 | PROT-298 limitations missing error (v1.7.15)              |
-| TC-0004-0052 | unit        | AC-0004-0025      | EX-0004-0039 | Additional integrity checks (v1.7.15)                     |
-| TC-0004-0053 | unit        | AC-0004-0032      | EX-0004-0040 | Valid evidence passes all v1.7.15 (v1.7.15)               |
-| TC-0004-0054 | unit        | AC-0004-0033      | EX-0004-0041 | discussion evidenceRefs empty error (v1.7.15 rev2)        |
-| TC-0004-0055 | unit        | AC-0004-0033      | EX-0004-0041 | screenContract evidenceRefs empty error (v1.7.15 rev2)    |
-| TC-0004-0056 | unit        | AC-0004-0033      | EX-0004-0041 | trend evidenceRefs empty error (v1.7.15 rev2)             |
-| TC-0004-0057 | unit        | AC-0004-0034      | EX-0004-0041 | Declared DB no observation error (v1.7.15 rev2)           |
-| TC-0004-0058 | unit        | AC-0004-0035      | EX-0004-0041 | uiFidelity completed without screen-level (v1.7.15 rev2)  |
-| TC-0004-0059 | unit        | AC-0004-0036      | EX-0004-0041 | Iteration evidenceRefs missing category (v1.7.15 rev2)    |
-| TC-0004-0060 | unit        | AC-0004-0037      | EX-0004-0041 | Old schema l1/l2 detection (v1.7.15 rev2)                 |
-| TC-0004-0061 | unit        | AC-0004-0033,0034,0035,0036,0037 | EX-0004-0042 | Rev2 compliant evidence happy path (v1.7.15 rev2) |
-| TC-0004-0062 | unit        | AC-0004-0038      | EX-0004-0043 | Validator test fixtures rev2 clean (v1.7.15 rev2)         |
+| TC-ID        | Level       | AC-Refs                          | EX-Ref       | Title                                                     |
+| ------------ | ----------- | -------------------------------- | ------------ | --------------------------------------------------------- |
+| TC-0004-0001 | integration | AC-0004-0001                     | EX-0004-0001 | 全バリデータ実行と Issue 集約                             |
+| TC-0004-0002 | integration | AC-0004-0002                     | EX-0004-0002 | デフォルト full フェーズ                                  |
+| TC-0004-0003 | unit        | AC-0004-0003                     | EX-0004-0003 | --fail-on error で warning は pass                        |
+| TC-0004-0004 | unit        | AC-0004-0004                     | EX-0004-0004 | --fail-on warning で warning は fail                      |
+| TC-0004-0005 | integration | AC-0004-0005                     | EX-0004-0005 | --format github アノテーション出力                        |
+| TC-0004-0016 | integration | AC-0004-0005                     | EX-0004-0013 | GitHub annotation value escape                            |
+| TC-0004-0006 | integration | AC-0004-0006                     | EX-0004-0006 | validate.json 出力                                        |
+| TC-0004-0007 | integration | AC-0004-0007                     | EX-0004-0007 | ランログ生成                                              |
+| TC-0004-0008 | integration | AC-0004-0008                     | EX-0004-0008 | ウェイバー suppress 適用                                  |
+| TC-0004-0009 | integration | AC-0004-0009                     | EX-0004-0009 | 必須ファイル欠落検出                                      |
+| TC-0004-0010 | integration | AC-0004-0010                     | EX-0004-0010 | ID フォーマット不正検出                                   |
+| TC-0004-0011 | integration | AC-0004-0011                     | EX-0004-0011 | トレーサビリティエッジ欠落                                |
+| TC-0004-0012 | integration | AC-0004-0012                     |              | ATDD アノテーション検証                                   |
+| TC-0004-0013 | integration | AC-0004-0013                     |              | blocking OQ 検出                                          |
+| TC-0004-0014 | integration | AC-0004-0014                     |              | 冪等性 - 2回実行で同一結果                                |
+| TC-0004-0015 | integration | AC-0004-0015                     | EX-0004-0012 | phase guard refinement ブロック                           |
+| TC-0004-0017 | integration | AC-0004-0016                     | EX-0004-0014 | Canonical UIX aggregator 動作確認                         |
+| TC-0004-0018 | integration | AC-0004-0017                     | EX-0004-0014 | 新 3-layer ファイル名期待の検証                           |
+| TC-0004-0019 | integration | AC-0004-0018                     | EX-0004-0015 | 旧 4-axis ファイル検出 error                              |
+| TC-0004-0020 | integration | AC-0004-0019                     | EX-0004-0016 | Non-UI パック UIX スキップ                                |
+| TC-0004-0021 | unit        | AC-0004-0020                     | EX-0004-0017 | render-evidence truthful state                            |
+| TC-0004-0022 | unit        | AC-0004-0021                     | EX-0004-0018 | Browser QA minimal runner truthful                        |
+| TC-0004-0023 | integration | AC-0004-0022                     | EX-0004-0019 | Canonical Production Path Only                            |
+| TC-0004-0024 | integration | AC-0004-0022                     | EX-0004-0019 | DDP Validator Not in Production                           |
+| TC-0004-0025 | integration | AC-0004-0023                     | EX-0004-0020 | IssueCategory on Canonical Issues                         |
+| TC-0004-0026 | integration | AC-0004-0024                     | EX-0004-0020 | prototypingRecommendation Schema Error                    |
+| TC-0004-0027 | integration | AC-0004-0022                     | EX-0004-0021 | Canonical Production Path Inspection                      |
+| TC-0004-0029 | integration | AC-0004-0016                     | EX-0004-0023 | QFAI-AUD-021 Selected Anchor Check                        |
+| TC-0004-0030 | integration | AC-0004-0022                     | EX-0004-0026 | Canonical Barrel No Legacy Re-export                      |
+| TC-0004-0031 | integration | AC-0004-0022                     | EX-0004-0024 | Canonical Validator Count                                 |
+| TC-0004-0032 | integration | AC-0004-0016                     | EX-0004-0025 | QFAI-VIS-002 Info Severity                                |
+| TC-0004-0033 | integration | AC-0004-0022                     | EX-0004-0026 | Canonical Barrel Isolation                                |
+| TC-0004-0034 | integration | AC-0004-0016                     | EX-0004-0027 | CRIT-005 Read-Order                                       |
+| TC-0004-0035 | unit        | AC-0004-0025                     | EX-0004-0028 | PROT-292 max-iterations error (v1.7.15)                   |
+| TC-0004-0036 | unit        | AC-0004-0025,0032                | EX-0004-0028 | PROT-292 valid max-iterations (v1.7.15)                   |
+| TC-0004-0037 | unit        | AC-0004-0026                     | EX-0004-0029 | PROT-290/308 single-iteration converged error (v1.7.15)   |
+| TC-0004-0038 | unit        | AC-0004-0026,0032                | EX-0004-0029 | Valid multi-iteration converged (v1.7.15)                 |
+| TC-0004-0039 | unit        | AC-0004-0025                     | EX-0004-0030 | PROT-296 weightedTotal mismatch error (v1.7.15)           |
+| TC-0004-0040 | unit        | AC-0004-0025,0032                | EX-0004-0030 | PROT-296 correct weightedTotal (v1.7.15)                  |
+| TC-0004-0041 | unit        | AC-0004-0027                     | EX-0004-0031 | PROT-295/309 reviewer placeholder error (v1.7.15)         |
+| TC-0004-0042 | unit        | AC-0004-0027,0032                | EX-0004-0031 | Valid reviewer passes (v1.7.15)                           |
+| TC-0004-0043 | unit        | AC-0004-0028                     | EX-0004-0032 | PROT-305 zero-seeded specCoverage error (v1.7.15)         |
+| TC-0004-0044 | unit        | AC-0004-0028,0032                | EX-0004-0032 | Non-zero specCoverage passes (v1.7.15)                    |
+| TC-0004-0045 | unit        | AC-0004-0029                     | EX-0004-0033 | PROT-306 synthetic mockPaths error (v1.7.15)              |
+| TC-0004-0046 | unit        | AC-0004-0029,0032                | EX-0004-0033 | Fail-only mockPaths passes (v1.7.15)                      |
+| TC-0004-0047 | unit        | AC-0004-0031                     | EX-0004-0034 | PROT-301 calibrationRef empty error (v1.7.15)             |
+| TC-0004-0048 | unit        | AC-0004-0030                     | EX-0004-0035 | PROT-304 reviewerLogs count mismatch (v1.7.15)            |
+| TC-0004-0049 | unit        | AC-0004-0030                     | EX-0004-0036 | PROT-291 iterations/scoringTrace count mismatch (v1.7.15) |
+| TC-0004-0050 | unit        | AC-0004-0031                     | EX-0004-0037 | PROT-297 commitSha missing error (v1.7.15)                |
+| TC-0004-0051 | unit        | AC-0004-0031                     | EX-0004-0038 | PROT-298 limitations missing error (v1.7.15)              |
+| TC-0004-0052 | unit        | AC-0004-0025                     | EX-0004-0039 | Additional integrity checks (v1.7.15)                     |
+| TC-0004-0053 | unit        | AC-0004-0032                     | EX-0004-0040 | Valid evidence passes all v1.7.15 (v1.7.15)               |
+| TC-0004-0054 | unit        | AC-0004-0033                     | EX-0004-0041 | discussion evidenceRefs empty error (v1.7.15 rev2)        |
+| TC-0004-0055 | unit        | AC-0004-0033                     | EX-0004-0041 | screenContract evidenceRefs empty error (v1.7.15 rev2)    |
+| TC-0004-0056 | unit        | AC-0004-0033                     | EX-0004-0041 | trend evidenceRefs empty error (v1.7.15 rev2)             |
+| TC-0004-0057 | unit        | AC-0004-0034                     | EX-0004-0041 | Declared DB no observation error (v1.7.15 rev2)           |
+| TC-0004-0058 | unit        | AC-0004-0035                     | EX-0004-0041 | uiFidelity completed without screen-level (v1.7.15 rev2)  |
+| TC-0004-0059 | unit        | AC-0004-0036                     | EX-0004-0041 | Iteration evidenceRefs missing category (v1.7.15 rev2)    |
+| TC-0004-0060 | unit        | AC-0004-0037                     | EX-0004-0041 | Old schema l1/l2 detection (v1.7.15 rev2)                 |
+| TC-0004-0061 | unit        | AC-0004-0033,0034,0035,0036,0037 | EX-0004-0042 | Rev2 compliant evidence happy path (v1.7.15 rev2)         |
+| TC-0004-0062 | unit        | AC-0004-0038                     | EX-0004-0043 | Validator test fixtures rev2 clean (v1.7.15 rev2)         |
 
 ## TC-0004-0001: 全バリデータ実行と Issue 集約
 
@@ -632,10 +632,10 @@ Verify:
 - AC-Refs: AC-0004-0039
 - Type: warning
 
-| Step | Action | Expected |
-| ---- | ------ | -------- |
-| 1 | Create UI-bearing pack without `design_guideline_research` entries | Fixture ready |
-| 2 | Run trendScan validator | UIX-VAL-T05 warning |
+| Step | Action                                                             | Expected            |
+| ---- | ------------------------------------------------------------------ | ------------------- |
+| 1    | Create UI-bearing pack without `design_guideline_research` entries | Fixture ready       |
+| 2    | Run trendScan validator                                            | UIX-VAL-T05 warning |
 
 ## TC-0004-0064: UIX-VAL-T05 accepts one concrete guideline entry (v1.7.17)
 
@@ -643,10 +643,10 @@ Verify:
 - AC-Refs: AC-0004-0039
 - Type: normal
 
-| Step | Action | Expected |
-| ---- | ------ | -------- |
-| 1 | Create UI-bearing pack with one guideline entry containing `rule_refs` and `local_translation` | Fixture ready |
-| 2 | Run trendScan validator | No UIX-VAL-T05 |
+| Step | Action                                                                                         | Expected       |
+| ---- | ---------------------------------------------------------------------------------------------- | -------------- |
+| 1    | Create UI-bearing pack with one guideline entry containing `rule_refs` and `local_translation` | Fixture ready  |
+| 2    | Run trendScan validator                                                                        | No UIX-VAL-T05 |
 
 ## TC-0004-0065: UIX-VAL-T06 warns on adjective-only anchor (v1.7.17)
 
@@ -654,10 +654,10 @@ Verify:
 - AC-Refs: AC-0004-0040
 - Type: warning
 
-| Step | Action | Expected |
-| ---- | ------ | -------- |
-| 1 | Create trend-derived axis whose `score_anchors.high` contains only adjectives | Fixture ready |
-| 2 | Run scoringReady validator extension | UIX-VAL-T06 warning |
+| Step | Action                                                                        | Expected            |
+| ---- | ----------------------------------------------------------------------------- | ------------------- |
+| 1    | Create trend-derived axis whose `score_anchors.high` contains only adjectives | Fixture ready       |
+| 2    | Run scoringReady validator extension                                          | UIX-VAL-T06 warning |
 
 ## TC-0004-0066: UIX-VAL-T06 accepts quantitative proxy anchor (v1.7.17)
 
@@ -665,7 +665,7 @@ Verify:
 - AC-Refs: AC-0004-0040
 - Type: normal
 
-| Step | Action | Expected |
-| ---- | ------ | -------- |
-| 1 | Create trend-derived axis with px/ratio/token proxy in all score anchors | Fixture ready |
-| 2 | Run scoringReady validator extension | No UIX-VAL-T06 |
+| Step | Action                                                                   | Expected       |
+| ---- | ------------------------------------------------------------------------ | -------------- |
+| 1    | Create trend-derived axis with px/ratio/token proxy in all score anchors | Fixture ready  |
+| 2    | Run scoringReady validator extension                                     | No UIX-VAL-T06 |

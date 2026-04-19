@@ -747,12 +747,12 @@ Leaf-field traceability closure for packages/qfai. Rev8 closed top-level summary
 - **TC-0249..TC-0271 note**: These are source-inspection tests (not full behavioral coverage for all TCs; D-3 gaps for TC-0249..0253 noted as advisory F-4 from ATDD). Behavioral coverage deferred per ATDD advisory F-4.
 - **RE-OPEN-0001 cross-reference**: TDD-0266 (TC-0012-0266) uses RE-OPEN-0001 acceptance of `refSemantics.ts` (the source-inspection test verifies `refSemantics.ts` imports from `pathUtils.ts` rather than asserting it doesn't exist).
 
-
 ## v1.7.15-rev11 Semantic Closure Completion (DR-0012-0057, DR-0012-0058)
 
 ### Summary
 
 v1.7.15-11 監査で特定された3残存 semantic closure ギャップを単一 PR で閉じる:
+
 - WS-1: `runMeasurement`/`validatePanelScore` public export 削除 + strict 検証
 - WS-2: `isSpecDeclarationRef()` line-ref only grammar + `specCoverage.ts` 01_Spec.md-only scan
 - WS-3: テストファイル同期 (measurement/panelScore 更新 + specCoverage/refSemantics 新規/拡張)
@@ -767,20 +767,19 @@ v1.7.15-11 監査で特定された3残存 semantic closure ギャップを単�
 
 ### Artifacts Added
 
-| Layer | IDs Added | Description |
-|-------|-----------|-------------|
-| US | US-0012-0077〜0083 | User stories for WS-1/WS-2/WS-3 |
-| AC | AC-0012-0156〜0169 | Acceptance criteria |
-| BR | BR-0012-0124〜0135 | Business rules |
-| EX | EX-0012-0180〜0191 | Examples |
-| TC | TC-0012-0272〜0284 | Test cases (normal/error/boundary) |
-| DR | DR-0012-0057〜0058 | Decision records (OQ-0001/OQ-0004 resolution) |
+| Layer | IDs Added          | Description                                   |
+| ----- | ------------------ | --------------------------------------------- |
+| US    | US-0012-0077〜0083 | User stories for WS-1/WS-2/WS-3               |
+| AC    | AC-0012-0156〜0169 | Acceptance criteria                           |
+| BR    | BR-0012-0124〜0135 | Business rules                                |
+| EX    | EX-0012-0180〜0191 | Examples                                      |
+| TC    | TC-0012-0272〜0284 | Test cases (normal/error/boundary)            |
+| DR    | DR-0012-0057〜0058 | Decision records (OQ-0001/OQ-0004 resolution) |
 
 ### OQ Resolutions
 
 - OQ-0001 (PerSpecCoverage dead fields): Delete `apiEndpoints`/`dbObjects` from type (DR-0012-0057)
 - OQ-0004 (test file new vs extend): "new if absent, extend if present" policy (DR-0012-0058)
-
 
 ## v1.7.16 QFAI Package Design Quality Pipeline Restructure (DR-0012-v1716-01..04)
 
@@ -799,29 +798,29 @@ discussion-20260418093755100（QFAI パッケージ改善 — デザイン品質
 
 ### Scope Extension (v1.7.16)
 
-| Area | Change | Source REQ |
-|------|--------|-----------|
-| prototyping SKILL.md | Delegation Scope Table 追加（4 カテゴリ × 対応ロール） | REQ-0123 |
-| prototyping SKILL.md | 反復ゲート追加（iterationCount==1 && converged=true を ERROR） | REQ-0124 |
-| prototyping SKILL.md | Required Process Step 0（executionPlan MUST）追加 | REQ-0125 |
-| `qfai.config.yaml` | `prototyping.calibration.overrides` セクション（perAxisMinimum / maxIterationsByMode） | REQ-0126 |
-| `capture-screenshots.js` | QFAI パッケージに共有スクリプトを配置、prototyping SKILL.md から参照 | REQ-0127 |
-| prototyping SKILL.md | 反復サイクル 5 ステップ化（Capture→Evaluate→Identify→Fix→Re-evaluate）、scoringTrace.screenshotDir 追加 | REQ-0128 |
-| prototyping SKILL.md | 評価者入力準備プロトコル（4 要素 MUST） | REQ-0129 |
-| prototyping SKILL.md | Visual Quality Structural Checklist（6 カテゴリ）、Lighthouse Gate MUST（full-harness && web） | REQ-0130 |
-| prototyping SKILL.md | Evaluate ステップの designSystemCompliance チェック（80% 未満を L1 finding） | REQ-0131 |
+| Area                     | Change                                                                                                  | Source REQ |
+| ------------------------ | ------------------------------------------------------------------------------------------------------- | ---------- |
+| prototyping SKILL.md     | Delegation Scope Table 追加（4 カテゴリ × 対応ロール）                                                  | REQ-0123   |
+| prototyping SKILL.md     | 反復ゲート追加（iterationCount==1 && converged=true を ERROR）                                          | REQ-0124   |
+| prototyping SKILL.md     | Required Process Step 0（executionPlan MUST）追加                                                       | REQ-0125   |
+| `qfai.config.yaml`       | `prototyping.calibration.overrides` セクション（perAxisMinimum / maxIterationsByMode）                  | REQ-0126   |
+| `capture-screenshots.js` | QFAI パッケージに共有スクリプトを配置、prototyping SKILL.md から参照                                    | REQ-0127   |
+| prototyping SKILL.md     | 反復サイクル 5 ステップ化（Capture→Evaluate→Identify→Fix→Re-evaluate）、scoringTrace.screenshotDir 追加 | REQ-0128   |
+| prototyping SKILL.md     | 評価者入力準備プロトコル（4 要素 MUST）                                                                 | REQ-0129   |
+| prototyping SKILL.md     | Visual Quality Structural Checklist（6 カテゴリ）、Lighthouse Gate MUST（full-harness && web）          | REQ-0130   |
+| prototyping SKILL.md     | Evaluate ステップの designSystemCompliance チェック（80% 未満を L1 finding）                            | REQ-0131   |
 
 ### Artifacts Added
 
-| Layer | IDs Added | Description |
-|-------|-----------|-------------|
-| US | US-0012-0084〜0093 | 10 user stories covering Delegation Scope, iteration gate, Step 0, capture script, 5-step cycle, evaluator input prep, VQ checklist, Lighthouse MUST, designSystemCompliance, calibration overrides |
-| AC | AC-0012-0170〜0186 | 17 acceptance criteria |
-| BR | BR-0012-0136〜0145 | 10 business rules |
-| EX | EX-0012-0192〜0211 | 20 examples across 6 perspectives (happy / negative / boundary) |
-| TC | TC-0012-0285〜0305 | 21 test cases (normal / error / boundary types) |
-| DR | DR-0012-v1716-01〜04 | 4 decision records |
-| OQ | OQ-0003-v1716, OQ-0005-v1716, OQ-0006-v1716 | 3 deferred-to-TDD open questions |
+| Layer | IDs Added                                   | Description                                                                                                                                                                                         |
+| ----- | ------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| US    | US-0012-0084〜0093                          | 10 user stories covering Delegation Scope, iteration gate, Step 0, capture script, 5-step cycle, evaluator input prep, VQ checklist, Lighthouse MUST, designSystemCompliance, calibration overrides |
+| AC    | AC-0012-0170〜0186                          | 17 acceptance criteria                                                                                                                                                                              |
+| BR    | BR-0012-0136〜0145                          | 10 business rules                                                                                                                                                                                   |
+| EX    | EX-0012-0192〜0211                          | 20 examples across 6 perspectives (happy / negative / boundary)                                                                                                                                     |
+| TC    | TC-0012-0285〜0305                          | 21 test cases (normal / error / boundary types)                                                                                                                                                     |
+| DR    | DR-0012-v1716-01〜04                        | 4 decision records                                                                                                                                                                                  |
+| OQ    | OQ-0003-v1716, OQ-0005-v1716, OQ-0006-v1716 | 3 deferred-to-TDD open questions                                                                                                                                                                    |
 
 ### Rationale
 

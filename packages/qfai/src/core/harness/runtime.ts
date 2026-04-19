@@ -38,6 +38,25 @@ import type { RenderRunnerResult } from "../evidence/types.js";
 import type { BrowserQaRunResult } from "../browserQa/types.js";
 import { toConcreteArtifactRef } from "../prototyping/pathUtils.js";
 
+// Browser QA providers emit logical refs like `provider:playwright:<phase>`,
+// `phase:<name>`, `surface:<name>`, `input:<field>`, and `html:<slug>` in
+// addition to real file paths. Those scheme-prefixed refs are not repo-relative
+// artifacts and must pass through unchanged so the full-harness runtime can
+// keep the provider's causal trace without forcing path conversion.
+const BROWSER_QA_PASSTHROUGH_SCHEMES = new Set(["provider", "phase", "surface", "input", "html"]);
+
+function toBrowserQaEvidenceRef(root: string, ref: string): string {
+  const trimmed = ref.trim();
+  const colonIndex = trimmed.indexOf(":");
+  if (colonIndex > 0) {
+    const scheme = trimmed.slice(0, colonIndex);
+    if (BROWSER_QA_PASSTHROUGH_SCHEMES.has(scheme)) {
+      return trimmed;
+    }
+  }
+  return toConcreteArtifactRef(root, ref);
+}
+
 export type FullHarnessRequest = {
   root: string;
   reviewer: string;
@@ -115,11 +134,11 @@ export async function runFullHarness(request: FullHarnessRequest): Promise<FullH
   const aggregatedBrowserQaRefs = new Set<string>();
   for (const phase of qaResult.phases) {
     for (const ref of phase.evidence_refs) {
-      aggregatedBrowserQaRefs.add(toConcreteArtifactRef(request.root, ref));
+      aggregatedBrowserQaRefs.add(toBrowserQaEvidenceRef(request.root, ref));
     }
     for (const finding of phase.findings) {
       for (const ref of finding.evidence_refs) {
-        aggregatedBrowserQaRefs.add(toConcreteArtifactRef(request.root, ref));
+        aggregatedBrowserQaRefs.add(toBrowserQaEvidenceRef(request.root, ref));
       }
     }
   }

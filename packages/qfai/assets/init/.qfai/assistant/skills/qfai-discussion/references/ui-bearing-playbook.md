@@ -8,14 +8,14 @@ Use this file when `/qfai-discussion` needs the full UI-bearing decision logic.
 
 ## Surface Mapping
 
-| Surface | UI-bearing | Result |
-| ------- | ---------- | ------ |
-| web | Yes | Generate full uiux sidecar family |
-| mobile | Yes | Generate full uiux sidecar family |
-| desktop | Yes | Generate full uiux sidecar family |
-| cli | Yes | Generate full uiux sidecar family |
-| mixed | Yes | Generate full uiux sidecar family |
-| non-ui | No | Skip uiux sidecars |
+| Surface | UI-bearing | Result                            |
+| ------- | ---------- | --------------------------------- |
+| web     | Yes        | Generate full uiux sidecar family |
+| mobile  | Yes        | Generate full uiux sidecar family |
+| desktop | Yes        | Generate full uiux sidecar family |
+| cli     | Yes        | Generate full uiux sidecar family |
+| mixed   | Yes        | Generate full uiux sidecar family |
+| non-ui  | No         | Skip uiux sidecars                |
 
 ## Detection Signals
 

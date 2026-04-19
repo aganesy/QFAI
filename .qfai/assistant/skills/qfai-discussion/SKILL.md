@@ -134,13 +134,13 @@ Use `.qfai/assistant/skills/qfai-discussion/references/ui-bearing-playbook.md` f
 
 Classification is based on surface type, not interaction complexity.
 
-| Surface Type | UI-bearing | Sidecar Generation | Notes |
-| ------------ | ---------- | ------------------ | ----- |
-| web          | Yes        | Full uiux/ sidecar | UI-bearing |
-| mobile       | Yes        | Full uiux/ sidecar | UI-bearing |
-| desktop      | Yes        | Full uiux/ sidecar | UI-bearing |
-| cli          | Yes        | Full uiux/ sidecar | UI-bearing |
-| mixed        | Yes        | Full uiux/ sidecar | UI-bearing |
+| Surface Type | UI-bearing | Sidecar Generation | Notes                        |
+| ------------ | ---------- | ------------------ | ---------------------------- |
+| web          | Yes        | Full uiux/ sidecar | UI-bearing                   |
+| mobile       | Yes        | Full uiux/ sidecar | UI-bearing                   |
+| desktop      | Yes        | Full uiux/ sidecar | UI-bearing                   |
+| cli          | Yes        | Full uiux/ sidecar | UI-bearing                   |
+| mixed        | Yes        | Full uiux/ sidecar | UI-bearing                   |
 | non-ui       | No         | No uiux/ directory | non-ui sidecar not generated |
 
 ### Detection Signals

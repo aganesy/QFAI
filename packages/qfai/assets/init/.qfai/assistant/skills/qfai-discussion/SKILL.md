@@ -134,13 +134,13 @@ Use `.qfai/assistant/skills/qfai-discussion/references/ui-bearing-playbook.md` f
 
 Classification is based on surface type, not interaction complexity.
 
-| Surface Type | UI-bearing | Sidecar Generation | Notes |
-| ------------ | ---------- | ------------------ | ----- |
-| web          | Yes        | Full uiux/ sidecar | UI-bearing |
-| mobile       | Yes        | Full uiux/ sidecar | UI-bearing |
-| desktop      | Yes        | Full uiux/ sidecar | UI-bearing |
-| cli          | Yes        | Full uiux/ sidecar | UI-bearing |
-| mixed        | Yes        | Full uiux/ sidecar | UI-bearing |
+| Surface Type | UI-bearing | Sidecar Generation | Notes                        |
+| ------------ | ---------- | ------------------ | ---------------------------- |
+| web          | Yes        | Full uiux/ sidecar | UI-bearing                   |
+| mobile       | Yes        | Full uiux/ sidecar | UI-bearing                   |
+| desktop      | Yes        | Full uiux/ sidecar | UI-bearing                   |
+| cli          | Yes        | Full uiux/ sidecar | UI-bearing                   |
+| mixed        | Yes        | Full uiux/ sidecar | UI-bearing                   |
 | non-ui       | No         | No uiux/ directory | non-ui sidecar not generated |
 
 ### Detection Signals
@@ -176,10 +176,10 @@ UI-bearing completion is blocked until all of the following are true:
 For non-UI projects, no additional UI/UX conditions apply, no sidecar artifacts are required, and `prototyping.yaml` is not required. uiux sidecar generation is skipped.
 
 ## UI-bearing Authoring Requirements
+
 - Detection uses **surface type classification** as primary SSOT; HTML tags / Mermaid flows are **supplementary detection hints, not the primary SSOT**. **Non-UI packs are exempt** from sidecar validators (UIX-VAL series) — **zero new issues** when properly classified.
 - UI-bearing packs rely on the **canonical sidecar family** as primary truth: `uiux/10_implementation_strategy.md`, `uiux/11_design_taste_interview.md`, `uiux/12_design_system.md`, `uiux/20..24_design_eval_*.md`, `uiux/30_option_comparison.md` (**option comparison**), `uiux/31_selected_anchor_screen.md`, `uiux/40_screen_contracts.md`, `uiux/50_review_input_bundle.md`.
-- **Competitive Reference Registry** (`04_Sources.md`) entries must populate `adopted_points`, `rejected_points`, `local_translation`. **Placeholder-like values (TBD/N/A/TODO/empty) are treated as missing**.
-- `99_delta.md` must include `## Rejected Visual Directions` with rationale and recurrence prevention. **Sidecar-family validators** (UIX-VAL series) are the primary quality gates for UI-bearing packs; non-ui packs stay exempt. Playbook detail: `references/ui-bearing-playbook.md` / `references/discussion-completion-matrix.md`.
+- **Competitive Reference Registry** (`04_Sources.md`) entries must populate `adopted_points`, `rejected_points`, `local_translation`. **Placeholder-like values (TBD/N/A/TODO/empty) are treated as missing**. `99_delta.md` must include `## Rejected Visual Directions` with rationale and recurrence prevention. **Sidecar-family validators** (UIX-VAL series) are the primary quality gates for UI-bearing packs; non-ui packs stay exempt. Playbook detail: `references/ui-bearing-playbook.md` / `references/discussion-completion-matrix.md`.
 
 ## Goal
 

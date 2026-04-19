@@ -1,7 +1,11 @@
 dist
 node_modules
-# Root .qfai is a runtime-managed workspace snapshot, not the package source template.
-.qfai
+# Scope prettier ignore to the runtime-generated outputs under .qfai so SSOT
+# sources (.qfai/specs, .qfai/assistant, .qfai/contracts, .qfai/discussion)
+# stay formatted.
+.qfai/report/
+.qfai/review/
+.qfai/evidence/
 pnpm-lock.yaml
 tmp
 *.min.js

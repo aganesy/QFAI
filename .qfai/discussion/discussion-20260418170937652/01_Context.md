@@ -14,7 +14,7 @@
 | Discussion ID | discussion-20260418170937652 |
 | Date | 2026-04-18 |
 | Owner | agent |
-| Input | `C:\Users\YusukeSenaga\Documents\GitHub\qfai-virtual-product-2\tmp\qfai-package-feedback-dgs-axis.md` |
+| Input | `<local-path>/tmp/qfai-package-feedback-dgs-axis.md` |
 | Stage mode | Simulation mode allowed |
 | Output target | `packages/qfai/` の discussion/validator/template 改善方針 |
 

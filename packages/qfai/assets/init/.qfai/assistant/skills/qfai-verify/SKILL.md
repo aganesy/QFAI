@@ -112,6 +112,7 @@ Use the shared template.
 ### Reviewer response template
 
 Use the shared template.
+
 - Required field: `Status (PASS/REVISE)`.
 
 ## Stage 0 — Steering completion refresh (mandatory)

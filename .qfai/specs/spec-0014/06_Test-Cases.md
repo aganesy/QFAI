@@ -108,11 +108,11 @@
 - AC-Refs: AC-0014-0012
 - Type: normal
 
-| Step | Action                                                               | Expected                          |
-| ---- | -------------------------------------------------------------------- | --------------------------------- |
-| 1    | Inspect `src/core/validate.ts`                                       | `runCanonicalUixValidators` is imported |
-| 2    | Inspect the UIX validation pipeline                                  | `runCanonicalUixValidators` is invoked  |
-| 3    | Check for removed legacy aggregators                                 | No legacy aggregator call remains       |
+| Step | Action                               | Expected                                |
+| ---- | ------------------------------------ | --------------------------------------- |
+| 1    | Inspect `src/core/validate.ts`       | `runCanonicalUixValidators` is imported |
+| 2    | Inspect the UIX validation pipeline  | `runCanonicalUixValidators` is invoked  |
+| 3    | Check for removed legacy aggregators | No legacy aggregator call remains       |
 
 ## TC-0014-0019: Removed Compatibility Surface
 
@@ -120,11 +120,11 @@
 - AC-Refs: AC-0014-0013
 - Type: boundary
 
-| Step | Action                        | Expected                                                  |
-| ---- | --------------------------- | ---------------------------------------------------------- |
-| 1    | Inspect `validators/index.ts` | No legacy compatibility re-exports remain               |
-| 2    | Inspect `types.ts`            | IssueCategory excludes `"compatibility"`                |
-| 3    | Search package surface        | No `validators/legacy/` namespace remains               |
+| Step | Action                        | Expected                                  |
+| ---- | ----------------------------- | ----------------------------------------- |
+| 1    | Inspect `validators/index.ts` | No legacy compatibility re-exports remain |
+| 2    | Inspect `types.ts`            | IssueCategory excludes `"compatibility"`  |
+| 3    | Search package surface        | No `validators/legacy/` namespace remains |
 
 ## TC-0014-0020: UIX-VAL-T01 — missing evaluation_connection fires ERROR
 
@@ -229,4 +229,3 @@ Verify that running the v1.7.16 validators twice against identical input produce
 - Type: unit (permission)
 
 Verify that a read-only but readable `uiux/12_design_system.md` does not trigger a false DS01 and that EACCES reads are surfaced as a distinct `system error` issue rather than as DS01.
-

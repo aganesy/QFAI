@@ -485,7 +485,6 @@
 - Impact: specCoverage.ts (regex defined inline; no separate refSemantics.ts)
 - Rejected: bare path allowed (RJ: insufficient traceability precision)
 
-
 ## DR-0012-0057: OQ-0001 Resolution — PerSpecCoverage Dead Fields Removal (v1.7.15 rev11)
 
 - Decision: `PerSpecCoverage` 型から dead fields (`apiEndpoints`, `dbObjects`) を削除し、0/empty 初期化コードを除去する。

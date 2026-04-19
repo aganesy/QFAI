@@ -4,8 +4,8 @@
 **Date**: 2026-04-18  
 **Routing Source**: `.qfai/assistant/steering/agent-routing.yml`  
 **Review Profile**: `requirements-heavy`  
-**Subagents**: simulated (reason: sub-agent execution unavailable in current run)  
-**User approval**: `imulation mode allowed`
+**Subagents**: historical pack — reviewer artifacts were generated under the prior Simulation Mode policy (abolished in v1.7.17). Delegation-failure-hard-stop is the canonical policy going forward per `.qfai/assistant/instructions/shared-skill-delegation-baseline.md`.  
+**User approval (historical)**: `Simulation mode allowed`
 
 ## Required Reviewers
 
@@ -25,7 +25,7 @@
 
 ## Review Notes
 
-- 本 cycle は simulation mode による reviewer artifacts 生成である
+- 本 cycle は legacy Simulation Mode 期間中に生成されたレビュー成果物である (v1.7.17 以降は `shared-skill-delegation-baseline.md` の delegation-failure-hard-stop が正本)
 - Validate hard gate は `.qfai/report/validate.log` を参照する
 
 ## Footer

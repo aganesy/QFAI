@@ -104,11 +104,13 @@ Use the shared template.
 ### Reviewer response template
 
 Use the shared template.
+
 - Required field: `Status (PASS/REVISE)`.
 
 ## Stage 0 — Steering completion refresh (mandatory)
 
 Follow `.qfai/assistant/instructions/shared-skill-operating-baseline.md#stage-0---steering-completion-refresh-mandatory`.
+
 - Fill steering from verifiable repository evidence first; when evidence is missing, mark the field `TBD` and record the gap in the evidence file.
 
 ## Delta Rejected Guard (Mandatory)

@@ -111,13 +111,13 @@ All functionality is already implemented. This spec documents existing behavior.
 
 ### File Touchpoints
 
-| File | Changes |
-| ---- | ------- |
-| `packages/qfai/src/core/validators/uix/trendScan.ts` | add `design_guideline_research` category recognition and UIX-VAL-T05 warning logic |
+| File                                                    | Changes                                                                                        |
+| ------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| `packages/qfai/src/core/validators/uix/trendScan.ts`    | add `design_guideline_research` category recognition and UIX-VAL-T05 warning logic             |
 | `packages/qfai/src/core/validators/uix/scoringReady.ts` | add quantitative-proxy detection for `score_anchors.low/mid/high` and emit UIX-VAL-T06 warning |
-| `packages/qfai/src/core/validators/uix/canonical.ts` | no new ownership layer; continue to call existing modules |
-| `packages/qfai/tests/validators/trendScan.test.ts` | TC-0004-0063, TC-0004-0064 |
-| `packages/qfai/tests/validators/scoringReady.test.ts` | TC-0004-0065, TC-0004-0066 |
+| `packages/qfai/src/core/validators/uix/canonical.ts`    | no new ownership layer; continue to call existing modules                                      |
+| `packages/qfai/tests/validators/trendScan.test.ts`      | TC-0004-0063, TC-0004-0064                                                                     |
+| `packages/qfai/tests/validators/scoringReady.test.ts`   | TC-0004-0065, TC-0004-0066                                                                     |
 
 ### Implementation Notes
 

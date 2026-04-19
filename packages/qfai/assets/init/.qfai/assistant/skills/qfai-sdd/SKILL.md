@@ -139,6 +139,7 @@ Use the shared template.
 ### Reviewer response template
 
 Use the shared template.
+
 - Required field: `Status (PASS/REVISE)`.
 
 ## Review Cycle Protocol (RCP)

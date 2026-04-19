@@ -37,6 +37,7 @@ Context: Discussion pack D-002 evaluated three archetype-dictionary options (bui
 Rationale: Delegates brand-catalog curation to an external maintained ecosystem so the QFAI package stays focused on the discovery-to-prototyping pipeline. Online-only operation is acceptable per NFR-0011.
 
 Rejected:
+
 - DO NOT ship a self-contained static YAML brand catalog inside the QFAI package.
   - Temptation: zero-network-dependency operation.
   - Reason: catalog rot; duplicating an ecosystem slower than upstream.
@@ -55,6 +56,7 @@ Decision: v1.7.16 ships `references/design-md-brand-catalog.md` populated with e
 Rationale: 8 archetypes are sufficient to exercise Phase A selection logic and cover the top-level brand personality axes. Expanding to 66 brands adds curation load without proportional selection quality in v1.7.16's AI-only selection path.
 
 Rejected:
+
 - DO NOT ship the 66-brand catalog in v1.7.16.
   - Temptation: richer selection surface on day one.
   - Reason: deferred by D-004; prioritize ecosystem-wiring correctness over catalog breadth.
@@ -70,6 +72,7 @@ Decision: The single source of truth for Trend Scan category taxonomy (color, ty
 Rationale: Two parallel category taxonomies caused drift (discussion-20260418093755100 D-007). Unifying under 04_Sources.md simplifies validator wiring (UIX-VAL-T01..T04 read a single file) and honors NFR-0009 package independence (changes stay inside `packages/qfai/`).
 
 Rejected:
+
 - DO NOT keep two parallel category systems (04_Sources.md + 20_trend_scan.md).
   - Temptation: preserve the legacy trend_scan layout for readability.
   - Reason: drift risk; validators already read 04_Sources.md per REQ-0015.

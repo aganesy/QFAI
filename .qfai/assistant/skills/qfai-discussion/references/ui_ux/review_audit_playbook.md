@@ -64,6 +64,7 @@ Check for:
 - screen-reader-compatible semantics where custom UI exists
 
 Note:
+
 - automated accessibility tools catch only part of the problem;
 - manual keyboard and screen-reader review is still required.
 

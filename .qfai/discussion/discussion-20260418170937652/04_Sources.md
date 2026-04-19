@@ -6,7 +6,7 @@
 
 - type: feedback_report
 - title: QFAI Package Feedback Report — Design Guideline Research in Trend Scan & Concrete TRD Axis Scoring
-- location: `C:\Users\YusukeSenaga\Documents\GitHub\qfai-virtual-product-2\tmp\qfai-package-feedback-dgs-axis.md`
+- location: `<local-path>/tmp/qfai-package-feedback-dgs-axis.md`
 - date: 2026-04-15
 - trust: high
 - summary: root cause、proposed fix、affected package files、local mitigation を整理した一次資料
