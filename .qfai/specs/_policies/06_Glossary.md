@@ -23,7 +23,7 @@
 | Waiver                       | ウェイバー。特定ルールの suppress（抑制）または downgrade（重要度下げ）                                                                                                                                  |
 | CAP                          | Capability - 能力/機能単位。`CAP-XXXX` 形式。`_policies/03_Capabilities.md` で定義                                                                                                                       |
 | ATDD Annotation              | テストファイル内のトレーサビリティアノテーション                                                                                                                                                         |
-| Review Pack                  | レビューパック。`review-*/` 配下のレビュー成果物                                                                                                                                                         |
+| Review Pack                  | レビューパック。`review-*/` 配下のレビュー成果物。`qfai init` 管理ブロックによりデフォルトで gitignore 対象（v1.7.18 以降）。追跡したい場合はプロジェクト側で明示的 negation を追加する                  |
 | Drift Protocol               | ドリフトプロトコル。仕様とコードの乖離を検出・記録する仕組み                                                                                                                                             |
 | Skill                        | スキル。QFAI ワークフローの独立した実行単位。SKILL.md で定義され、入力・出力・ロール・完了契約・Evidence 要件を持つ                                                                                      |
 | Agent                        | エージェント（サブエージェント）。Skill 内で委任される専門化された作業者。19 の統合 taxonomy が定義され、Mission・Inputs・Deliverables・Stop Conditions・Sign-off 構造を持つ                             |

@@ -25,6 +25,9 @@
 | TC-0003-0015 | integration | AC-0003-0002 | EX-0003-0013 | symlink idempotency (3 consecutive runs) |
 | TC-0003-0016 | integration | AC-0003-0001 | EX-0003-0014 | migrated example EX-0003-0014 coverage   |
 | TC-0003-0017 | integration | AC-0003-0001 | EX-0003-0015 | migrated example EX-0003-0015 coverage   |
+| TC-0003-0018 | integration | AC-0003-0015 | EX-0003-0016 | gitignore 管理ブロック追記（新規）        |
+| TC-0003-0019 | integration | AC-0003-0016 | EX-0003-0017 | レガシー行除去と管理ブロック置換           |
+| TC-0003-0020 | integration | AC-0003-0015 | EX-0003-0016 | review-*/ サブディレクトリが gitignore 対象 |
 
 ## TC-0003-0001: 空ディレクトリでの初期化
 
@@ -78,3 +81,46 @@ Verify:
 - EX-Ref: EX-0003-0015
 - AC-Refs: AC-0003-0001
 - Verify that migrated example EX-0003-0015 is covered by at least one test case.
+
+## TC-0003-0018: gitignore 管理ブロック追記（新規）
+
+**Level:** integration
+**EX Refs:** EX-0003-0016
+**AC Refs:** AC-0003-0015
+
+Setup: 一時ディレクトリを作成する（`.gitignore` 未存在）。
+Action: `runInit({ dir, force: false, dryRun: false, yes: true })` を実行する。
+Verify:
+
+- `.gitignore` が生成されている
+- `QFAI_GITIGNORE_MARKER` が 1 件存在する
+- 必須 7 エントリ（`.qfai/report/*`, `!.qfai/report/README.md`, `.qfai/evidence/*`, `!.qfai/evidence/README.md`, `.qfai/review/*`, `!.qfai/review/README.md`, `.qfai/discussion/discussion-*/`）が含まれる
+- レガシー 2 エントリ（`!.qfai/review/review-*/`, `!.qfai/review/review-*/**`）は含まれない
+
+## TC-0003-0019: レガシー行除去と管理ブロック置換
+
+**Level:** integration
+**EX Refs:** EX-0003-0017
+**AC Refs:** AC-0003-0016
+
+Setup: 一時ディレクトリを作成し、旧ブロック（marker + 現行 7 エントリ + `!.qfai/review/review-*/` + `!.qfai/review/review-*/**`）を `.gitignore` に書き込む。
+Action: `runInit` を実行する。
+Verify:
+
+- marker 件数が 1 件である
+- `!.qfai/review/review-*/` と `!.qfai/review/review-*/**` が除去されている
+- 新ブロックの必須 7 エントリが含まれている
+
+## TC-0003-0020: review-*/ サブディレクトリが gitignore 対象
+
+**Level:** integration
+**EX Refs:** EX-0003-0016
+**AC Refs:** AC-0003-0015
+
+Setup: `runInit` を実行した後のプロジェクトディレクトリ。
+Action: `.gitignore` を読み取り、review-*/ に関する negation が存在しないことを確認する。
+Verify:
+
+- `.qfai/review/*` が含まれる
+- `!.qfai/review/review-*/` が含まれない
+- `!.qfai/review/review-*/**` が含まれない

@@ -54,11 +54,11 @@ Rules:
     2. Resolve the corresponding scope tags, components, and domains via `agent-routing.yml` / `review-profiles.yml` to enumerate the changed scope.
     3. For each reviewer, check whether its assigned scope intersects the changed scope or whether its routing definition was modified; mark matching reviewers as "affected".
     4. Rerun only "previously FAIL reviewers" + "affected reviewers"; carry forward previous results for all others.
-- Validation evidence for each review pack must archive the latest
-  `.qfai/report/validate.log` and ATDD traceability report
-  (`.qfai/report/atdd-traceability/summary.{json,md}`) by copying them from
-  `.qfai/report` into the corresponding `review-*/evidence/` directory
-  (since `.qfai/report` may be git-ignored).
+- Both `.qfai/report` and `.qfai/review/review-*/` are git-ignored by default
+  (managed by `qfai init`). Review packs are therefore local-only unless a
+  project opts in by adding explicit negation rules to its `.gitignore` (e.g.
+  `!.qfai/review/review-<timestamp>/`) or by archiving packs to an external
+  store before cleanup.
 - Reviewers must confirm no unresolved ATDD hard gates (`QFAI-ATDD-101/102/103/111/112/113/121/122`).
 
 ## Prototyping review quick checklist

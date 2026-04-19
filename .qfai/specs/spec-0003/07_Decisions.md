@@ -2,7 +2,7 @@
 
 ## Decisions
 
-5 items.
+7 items.
 
 ### DR-0003-0001: symlink ベースの統合方式
 
@@ -31,6 +31,16 @@
 
 - 統合ディレクトリの README.md は symlink 化せず通常ファイルとして配置する
 - Why: README は統合先ごとに内容が異なるため
+
+### DR-0003-0007: `.qfai/review/review-*/` を default gitignore に変更 (v1.7.18)
+
+- Decision: `qfai init` が追記する管理ブロックから `!.qfai/review/review-*/` および `!.qfai/review/review-*/**` の negation を削除し、review-pack を default gitignore 対象とする
+- Context: 従来は review-pack サブディレクトリのみ `.qfai/review/*` の ignore から除外し、レビュー履歴を git に追跡させていた。一方で `.qfai/evidence/` と `.qfai/report/` は従来から gitignore 対象で、evidence/report を review pack 内へコピー保全する運用（`.qfai/review/review-*/evidence/`）に前提の歪みがあった
+- Rationale:
+  - 生成成果物を横断的に gitignore する方針に統一することで、リポジトリ肥大と誤コミットを防ぐ（OC-03 参照）
+  - review-pack を共有したい場合はプロジェクト側で明示的な negation を追加する二段構造とし、default は保守的（ignore）にする
+  - レガシーブロック（v1.7.17 以前）を持つ既存プロジェクトでも再 init で自動的に新形式に移行する（`QFAI_GITIGNORE_LEGACY_LINES` による migration ロジック）
+- Source: SSOT は `packages/qfai/src/core/gitignore.ts`（`QFAI_GITIGNORE_BLOCK`, `QFAI_GITIGNORE_REQUIRED_ENTRIES`, `QFAI_GITIGNORE_LEGACY_LINES`）
 
 ### DR-0003-0006: TDD Ledger Backfill from Migrated Coverage (v1.7.15)
 

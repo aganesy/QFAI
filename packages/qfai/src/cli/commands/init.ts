@@ -20,6 +20,7 @@ import { info } from "../lib/logger.js";
 import {
   QFAI_GITIGNORE_MARKER,
   QFAI_GITIGNORE_BLOCK,
+  QFAI_GITIGNORE_LEGACY_LINES,
   QFAI_GITIGNORE_REQUIRED_ENTRIES,
 } from "../../core/gitignore.js";
 
@@ -149,7 +150,8 @@ async function ensureRootGitignoreEntries(
 
   if (
     existing.includes(QFAI_GITIGNORE_MARKER) &&
-    QFAI_GITIGNORE_REQUIRED_ENTRIES.every((entry) => existing.includes(entry))
+    QFAI_GITIGNORE_REQUIRED_ENTRIES.every((entry) => existing.includes(entry)) &&
+    QFAI_GITIGNORE_LEGACY_LINES.every((entry) => !existing.includes(entry))
   ) {
     return { copied: [], skipped: [gitignorePath] };
   }
@@ -175,28 +177,23 @@ async function ensureRootGitignoreEntries(
 /** Remove all QFAI managed blocks (known block lines only; stops at unknown lines). */
 function removeManagedBlock(content: string): string {
   const lines = content.split("\n");
-  const blockLines = QFAI_GITIGNORE_BLOCK.split("\n");
+
+  // Known lines: current block + legacy lines from previous versions
+  const knownLines = new Set([
+    ...QFAI_GITIGNORE_BLOCK.split("\n"),
+    ...QFAI_GITIGNORE_LEGACY_LINES,
+  ]);
 
   // Loop to handle multiple managed blocks (e.g. from past duplicates)
   while (true) {
     const startIdx = lines.findIndex((line) => line.includes(QFAI_GITIGNORE_MARKER));
     if (startIdx === -1) break;
 
-    let endIdx = startIdx;
-    let blockIdx = 0;
+    let endIdx = startIdx + 1; // marker is always consumed
 
-    // Remove only lines that exactly match the known managed block
-    while (endIdx < lines.length && blockIdx < blockLines.length) {
-      const expected = blockLines[blockIdx];
-      const actual = lines[endIdx];
-      if (actual !== expected) break;
+    // Consume contiguous lines that belong to any known block line (order-independent)
+    while (endIdx < lines.length && knownLines.has(lines[endIdx] ?? "")) {
       endIdx++;
-      blockIdx++;
-    }
-
-    // If nothing matched beyond the marker, remove just the marker line
-    if (endIdx === startIdx) {
-      endIdx = startIdx + 1;
     }
 
     // Also remove one trailing blank line if present

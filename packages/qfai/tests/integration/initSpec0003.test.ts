@@ -22,6 +22,9 @@
 // QFAI:SPEC-0003:TC-0003-0013
 // QFAI:SPEC-0003:TC-0003-0014
 // QFAI:SPEC-0003:TC-0003-0015
+// QFAI:SPEC-0003:TC-0003-0018
+// QFAI:SPEC-0003:TC-0003-0019
+// QFAI:SPEC-0003:TC-0003-0020
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
@@ -149,5 +152,39 @@ describe("TC-0003-0015: Symlink idempotency (3 consecutive runs)", () => {
   it("init handles consecutive runs idempotently", async () => {
     const content = await readFile(INIT_CLI, "utf-8");
     expect(content).toMatch(/symlink/i);
+  });
+});
+
+// TC-0003-0018: gitignore 管理ブロック追記（新規）
+// Actual assertions live in tests/cli/init.test.ts ("appends QFAI entries to root .gitignore on init").
+// This block records the TC→implementation coverage link for traceability.
+describe("TC-0003-0018: gitignore 管理ブロック追記（新規）", () => {
+  it("init wires QFAI_GITIGNORE_BLOCK writer into runInit", async () => {
+    const content = await readFile(INIT_CLI, "utf-8");
+    expect(content).toContain("ensureRootGitignoreEntries");
+    expect(content).toContain("QFAI_GITIGNORE_BLOCK");
+  });
+});
+
+// TC-0003-0019: レガシー行除去と管理ブロック置換
+// Actual assertions live in tests/cli/init.test.ts ("strips legacy review-*/ negation lines when migrating from old managed block").
+describe("TC-0003-0019: レガシー行除去と管理ブロック置換", () => {
+  it("init references QFAI_GITIGNORE_LEGACY_LINES for migration", async () => {
+    const content = await readFile(INIT_CLI, "utf-8");
+    expect(content).toContain("QFAI_GITIGNORE_LEGACY_LINES");
+    expect(content).toContain("removeManagedBlock");
+  });
+});
+
+// TC-0003-0020: review-*/ サブディレクトリが gitignore 対象
+// Actual assertions live in tests/cli/init.test.ts ("does not track review-*/ subdirectories after init").
+describe("TC-0003-0020: review-*/ サブディレクトリが gitignore 対象", () => {
+  it("QFAI_GITIGNORE_BLOCK SSOT excludes review-*/ negations from REQUIRED_ENTRIES", async () => {
+    const { QFAI_GITIGNORE_BLOCK, QFAI_GITIGNORE_REQUIRED_ENTRIES } = await import(
+      "../../src/core/gitignore.js"
+    );
+    expect(QFAI_GITIGNORE_BLOCK).not.toContain("!.qfai/review/review-*/");
+    expect(QFAI_GITIGNORE_REQUIRED_ENTRIES).not.toContain("!.qfai/review/review-*/");
+    expect(QFAI_GITIGNORE_REQUIRED_ENTRIES).not.toContain("!.qfai/review/review-*/**");
   });
 });

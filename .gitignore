@@ -58,5 +58,3 @@ coverage/
 .qfai/discussion/discussion-*/
 .qfai/review/*
 !.qfai/review/README.md
-!.qfai/review/review-*/
-!.qfai/review/review-*/**
