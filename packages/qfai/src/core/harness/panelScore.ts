@@ -12,7 +12,7 @@
 import type { FullHarnessPanelScore } from "./types.js";
 import type { Decision } from "../calibration/types.js";
 import type { FullHarnessPanelInputs } from "./panelInputs.js";
-import { assertConcreteArtifactRef } from "../prototyping/pathUtils.js";
+import { assertConcreteArtifactRef, isBrowserQaPassthroughRef } from "../prototyping/pathUtils.js";
 
 export function scoreL1(inputs: FullHarnessPanelInputs): FullHarnessPanelScore {
   const axes: FullHarnessPanelScore["axes"] = [];
@@ -232,11 +232,17 @@ export function validatePanelScore(panel: FullHarnessPanelScore): string[] {
     if (!Array.isArray(axis.evidenceRefs) || axis.evidenceRefs.length === 0) {
       errors.push(`${axisLabel} must have at least one evidenceRef`);
     } else {
+      // Browser QA-derived axes may cite scheme-prefixed provider logical
+      // refs (`provider:*`, `phase:*`, etc.). Accept those alongside
+      // concrete repo-relative refs for the affected axis IDs.
+      const allowBrowserQaSchemes =
+        axis.axisId === "browser-qa-blocking" || axis.axisId.startsWith("ui-observation");
       for (const ref of axis.evidenceRefs) {
         if (typeof ref !== "string" || ref.trim().length === 0) {
           errors.push(`${axisLabel} evidenceRef must be a non-empty string`);
           continue;
         }
+        if (allowBrowserQaSchemes && isBrowserQaPassthroughRef(ref)) continue;
         try {
           assertConcreteArtifactRef(ref);
         } catch (error) {

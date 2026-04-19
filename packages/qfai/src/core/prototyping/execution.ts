@@ -833,18 +833,26 @@ function assertSpecDeclarationRef(ref: string, fieldPath: string): string {
 
 function assertFullHarnessLeafRefs(iterations: FullHarnessIteration[], label: string): void {
   for (const iteration of iterations) {
-    const categories = [
+    // browserQa and uiObservation carry provider logical refs that must pass
+    // through scheme-aware validation (matching runMeasurement's assertion);
+    // all other categories require concrete repo-relative refs.
+    const concreteCategories = [
       "runtimeGate",
       "specCoverage",
       "render",
-      "browserQa",
-      "uiObservation",
       "discussion",
       "screenContract",
       "trend",
     ] as const;
-    for (const category of categories) {
+    const browserQaCategories = ["browserQa", "uiObservation"] as const;
+    for (const category of concreteCategories) {
       assertConcreteArtifactRefs(
+        `${label}[${iteration.iteration}].evidenceRefs.${category}`,
+        iteration.evidenceRefs[category],
+      );
+    }
+    for (const category of browserQaCategories) {
+      assertBrowserQaEvidenceRefs(
         `${label}[${iteration.iteration}].evidenceRefs.${category}`,
         iteration.evidenceRefs[category],
       );

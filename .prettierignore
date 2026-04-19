@@ -2,13 +2,17 @@ dist
 node_modules
 # Scope prettier ignore to the runtime-generated outputs under .qfai so SSOT
 # sources (.qfai/specs, .qfai/assistant, .qfai/contracts, .qfai/discussion)
-# stay formatted. Keep authored README files formatted so diffs stay readable.
+# stay formatted. Negate authored files that we commit (README.md, the
+# preflight summary, evidence markdown files that become part of the
+# traceability record) so prettier still keeps them readable.
 .qfai/report/**
 !.qfai/report/README.md
+!.qfai/report/preflight_summary.md
 .qfai/review/**
 !.qfai/review/README.md
 .qfai/evidence/**
 !.qfai/evidence/README.md
+!.qfai/evidence/*.md
 pnpm-lock.yaml
 tmp
 *.min.js
