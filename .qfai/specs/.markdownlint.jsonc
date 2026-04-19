@@ -5,6 +5,17 @@
   // gates, for this directory only. Other projects and repo-root markdown are
   // still covered by the top-level .markdownlint-cli2.jsonc config.
   //
+  // Resolution: `markdownlint-cli2` merges a per-directory `.markdownlint.jsonc`
+  // with the nearest `.markdownlint-cli2.jsonc` up-tree, so running
+  // `pnpm lint:md` (which invokes `markdownlint-cli2 "**/*.md"`) from the repo
+  // root picks up this file automatically for every file under `.qfai/specs/`.
+  // A regression guard lives in
+  // `packages/qfai/tests/integration/specsMarkdownlintConfig.test.ts` — it
+  // writes a synthetic over-length line under `.qfai/specs/spec-XXXX/` and
+  // confirms lint stays green, proving this file is being applied. If that
+  // test fails, the nested-config loading has been broken and this block is
+  // no longer active.
+  //
   // Kept ON (inherited): MD009, MD010, MD011, MD014, MD018-MD022, MD025-MD028,
   // MD031, MD035-MD040, MD042-MD046, MD048-MD055 (heading anchors, list hygiene,
   // code fence hygiene, link text validity).
