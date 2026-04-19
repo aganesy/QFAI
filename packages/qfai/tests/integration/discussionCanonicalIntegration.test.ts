@@ -153,7 +153,7 @@ function trendEntry(
   imp: string,
 ): string {
   return [
-    "### Entry 1",
+    "#### Entry 1",
     "",
     `- reference: ${ref}`,
     `- observation: ${obs}`,
@@ -170,9 +170,9 @@ function completeTrendContent(): string {
     "platform convention",
     "accessibility / compliance relevant signal",
   ];
-  const lines = ["# Trend Scan", ""];
+  const lines = ["# Sources", "", "## Trend Scan", ""];
   for (const cat of categories) {
-    lines.push(`## ${cat}`, "");
+    lines.push(`### ${cat}`, "");
     lines.push(
       trendEntry(
         "Ref A",
@@ -194,9 +194,9 @@ function allLowConfidenceTrendContent(): string {
     "platform convention",
     "accessibility / compliance relevant signal",
   ];
-  const lines = ["# Trend Scan", ""];
+  const lines = ["# Sources", "", "## Trend Scan", ""];
   for (const cat of categories) {
-    lines.push(`## ${cat}`, "");
+    lines.push(`### ${cat}`, "");
     lines.push(
       trendEntry(
         "Ref A",
@@ -468,7 +468,7 @@ describe("Trend validator", () => {
   it("TC-0002-0006: complete trend scan with freshness metadata passes", async () => {
     const root = await newTempDir();
     await createUiBearingPack(root);
-    await writeFile(path.join(root, "uiux", "20_trend_scan.md"), completeTrendContent(), "utf-8");
+    await writeFile(path.join(root, "04_Sources.md"), completeTrendContent(), "utf-8");
 
     const issues = await validateTrendScan(root, defaultConfig);
 
@@ -496,19 +496,21 @@ describe("Trend validator", () => {
     const root = await newTempDir();
     await createUiBearingPack(root);
     const content = [
-      "# Trend Scan",
+      "# Sources",
       "",
-      "## user expectation / market norm",
+      "## Trend Scan",
       "",
-      "### Entry 1",
+      "### user expectation / market norm",
+      "",
+      "#### Entry 1",
       "",
       "- reference: Ref A",
       "- observation: Observed a minimalist tone signal",
       "- local_implication: Apply minimalist tone locally",
       "",
-      "## product neighbor / comparable flow",
+      "### product neighbor / comparable flow",
       "",
-      "### Entry 1",
+      "#### Entry 1",
       "",
       "- reference: Ref B",
       "- observation: Observed grid layout signal",
@@ -516,9 +518,9 @@ describe("Trend validator", () => {
       "- evaluation_connection: Eval connection B",
       "- local_implication: Apply grid layout locally",
       "",
-      "## platform convention",
+      "### platform convention",
       "",
-      "### Entry 1",
+      "#### Entry 1",
       "",
       "- reference: Ref C",
       "- observation: Observed density signal",
@@ -526,9 +528,9 @@ describe("Trend validator", () => {
       "- evaluation_connection: Eval connection C",
       "- local_implication: Apply flat hierarchy locally",
       "",
-      "## accessibility / compliance relevant signal",
+      "### accessibility / compliance relevant signal",
       "",
-      "### Entry 1",
+      "#### Entry 1",
       "",
       "- reference: Ref D",
       "- observation: Observed a11y signal",
@@ -536,7 +538,7 @@ describe("Trend validator", () => {
       "- evaluation_connection: Eval connection D",
       "- local_implication: Apply a11y locally",
     ].join("\n");
-    await writeFile(path.join(root, "uiux", "20_trend_scan.md"), content, "utf-8");
+    await writeFile(path.join(root, "04_Sources.md"), content, "utf-8");
 
     const issues = await validateTrendScan(root, defaultConfig);
 
@@ -558,11 +560,7 @@ describe("Trend validator", () => {
   it("TC-0002-0027: all low confidence references pass (confidence field exists)", async () => {
     const root = await newTempDir();
     await createUiBearingPack(root);
-    await writeFile(
-      path.join(root, "uiux", "20_trend_scan.md"),
-      allLowConfidenceTrendContent(),
-      "utf-8",
-    );
+    await writeFile(path.join(root, "04_Sources.md"), allLowConfidenceTrendContent(), "utf-8");
 
     const issues = await validateTrendScan(root, defaultConfig);
 

@@ -4,7 +4,7 @@
 // QFAI:SPEC-0012:TC-0012-0013
 // QFAI:SPEC-0012:TC-0012-0015
 // QFAI:SPEC-0012:TC-0012-0016
-import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
+import { describe, expect, it, beforeEach, afterEach } from "vitest";
 import { mkdtemp, writeFile, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
@@ -40,6 +40,9 @@ examples:
 thresholds:
   accept: 0.8
   refine: 0.5
+maxIterations: 10
+plateauDelta: 0.02
+plateauLookback: 3
 `;
       await writeFile(packPath, yaml);
 
@@ -52,20 +55,20 @@ thresholds:
       expect(pack.examples[0]?.rationale).toBe("minor issues");
       expect(pack.thresholds?.accept).toBe(0.8);
       expect(pack.thresholds?.refine).toBe(0.5);
+      expect(pack.maxIterations).toBe(10);
+      expect(pack.plateauDelta).toBe(0.02);
+      expect(pack.plateauLookback).toBe(3);
     });
   });
 
-  describe("missing pack fallback (TC-0012-0002)", () => {
-    it("falls back to defaults with warning when pack is missing", async () => {
-      const loader = new CalibrationLoader(join(tmpDir, "nonexistent.yaml"));
-      const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+  describe("missing pack throws (TC-0012-0002)", () => {
+    it("throws when calibration pack file is missing", async () => {
+      const missingPath = join(tmpDir, "nonexistent.yaml");
+      const loader = new CalibrationLoader(missingPath);
 
-      const pack = await loader.load();
-
-      expect(pack.examples).toHaveLength(0);
-      expect(warnSpy).toHaveBeenCalledWith("Calibration pack not found, using defaults");
-
-      warnSpy.mockRestore();
+      await expect(loader.load()).rejects.toThrow(
+        /Calibration pack not found.*Full-harness requires a valid calibration pack file/,
+      );
     });
   });
 
@@ -78,6 +81,12 @@ examples:
   - input: "original"
     expectedScore: 0.70
     rationale: "first version"
+thresholds:
+  accept: 0.8
+  refine: 0.5
+maxIterations: 10
+plateauDelta: 0.02
+plateauLookback: 3
 `;
       await writeFile(packPath, yaml1);
 
@@ -97,6 +106,12 @@ examples:
   - input: "new entry"
     expectedScore: 0.60
     rationale: "added"
+thresholds:
+  accept: 0.85
+  refine: 0.55
+maxIterations: 15
+plateauDelta: 0.01
+plateauLookback: 4
 `;
       await writeFile(packPath, yaml2);
 
@@ -138,6 +153,12 @@ examples:
   - input: "example 3"
     expectedScore: 0.90
     rationale: "test 3"
+thresholds:
+  accept: 0.8
+  refine: 0.5
+maxIterations: 10
+plateauDelta: 0.02
+plateauLookback: 3
 `;
       await writeFile(packPath, yaml);
 

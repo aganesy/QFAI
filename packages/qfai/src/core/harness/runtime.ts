@@ -1,126 +1,286 @@
 /**
- * Full-harness runtime — WS-D
+ * Full-harness runtime — v1.7.15
  *
- * Production-path entry point for `mode=full-harness`.
- * Orchestrates the planner → generator → evaluator loop with
- * render evidence, Browser QA, critique, and observability.
+ * Measurement-driven orchestration.
+ * Does NOT contain a self-modifying loop.
+ * Each CLI invocation records exactly one iteration of real observation.
+ *
+ * v1.7.15 breaking changes:
+ * - Panel scores computed from real evidence (no dummy l1/l2=0)
+ * - calibration pack required (no silent fallback)
+ * - reviewer required (no placeholder)
+ * - commitSha required (no silent failure)
  */
 
+import { FULL_HARNESS_INVALID_COMBINATION_MESSAGE } from "../prototyping/mode.js";
 import { requiresVisualBrowserEvidence } from "../detection/surfaceType.js";
-import type { CritiqueAdapter } from "../critique/adapter.js";
-import { createFullHarnessHandoff, type FullHarnessHandoff } from "./handoff.js";
+import type { CalibrationPack } from "../calibration/types.js";
 import { detectFakeUi, type FakeUiDetectionResult } from "./fakeUiDetection.js";
 import { mapLoopStatusToExitReason, type FullHarnessExitReason } from "./exitReason.js";
-import { HarnessLoop } from "./loop.js";
-import type { HarnessConfig, LoopResult, SpecInputs } from "./types.js";
+import { createFullHarnessHandoff, type FullHarnessHandoff } from "./handoff.js";
 import type { FullHarnessAdapters } from "./adapters.js";
-import { buildFullHarnessResult, type FullHarnessOutput } from "./resultWriter.js";
-import { generateEvidence, generateReviewSummary } from "./evidence.js";
-import type { BrowserQaRunResult } from "../browserQa/types.js";
+import type {
+  FullHarnessHistory,
+  FullHarnessIteration,
+  MeasurementInput,
+  MeasurementResult,
+  TerminationReason,
+  FullHarnessCalibrationRef,
+  FinalDecision,
+  ReviewerLogVerdict,
+  ReviewerSignoffStatus,
+} from "./types.js";
+import { runMeasurement } from "./measurement.js";
+import type { FullHarnessPanelInputs } from "./panelInputs.js";
+import { validatePanelInputs } from "./panelInputs.js";
+import { scorePanelsFromInputs } from "./panelScore.js";
 import type { RenderRunnerResult } from "../evidence/types.js";
+import type { BrowserQaRunResult } from "../browserQa/types.js";
+import { normalizeBrowserQaEvidenceRef, toConcreteArtifactRef } from "../prototyping/pathUtils.js";
+
+// Browser QA providers emit logical refs like `provider:playwright:<phase>`
+// alongside real file paths. The shared helper preserves those scheme refs
+// so the full-harness runtime does not reject provider-side causal traces.
+function toBrowserQaEvidenceRef(root: string, ref: string): string {
+  return normalizeBrowserQaEvidenceRef(root, ref);
+}
 
 export type FullHarnessRequest = {
-  inputs: SpecInputs;
-  config?: Partial<HarnessConfig>;
-  adapters?: FullHarnessAdapters;
-  critiqueAdapter?: CritiqueAdapter;
+  root: string;
+  reviewer: string;
+  changeSummary: string[];
+  limitations: string[];
+  discussionDirRelative?: string;
+  calibrationPack: CalibrationPack;
+  calibrationRef: {
+    packPath: string;
+    packVersion: string;
+    configPath?: string;
+  };
+  adapters: FullHarnessAdapters;
+  screenContracts: Array<{ screenId: string; route: string }>;
+  panelInputs: FullHarnessPanelInputs;
 };
 
 export type FullHarnessResult = {
-  loopResult: LoopResult;
-  output: FullHarnessOutput;
-  evidence: ReturnType<typeof generateEvidence>;
-  reviewSummary: ReturnType<typeof generateReviewSummary>;
+  iteration: FullHarnessIteration;
+  history: FullHarnessHistory;
+  calibrationRef: FullHarnessCalibrationRef;
   fakeUiDetection: FakeUiDetectionResult;
   exitReason: FullHarnessExitReason;
   handoff: FullHarnessHandoff;
+  terminationReason: TerminationReason | undefined;
+  isTerminal: boolean;
+  finalDecision: FinalDecision;
+  signoffStatus: ReviewerSignoffStatus;
+  logVerdict: ReviewerLogVerdict;
 };
 
 /**
- * Run the full-harness mode.
+ * Run a single full-harness measurement iteration.
  *
- * Termination policy:
- * - `accept` reached → exit
- * - `max_iterations` reached → exit
- * - plateau detected → exit
- * - hard execution failure → throw
+ * This does NOT loop. Each invocation:
+ * 1. Captures render/browserQa evidence
+ * 2. Scores panels from real evidence inputs
+ * 3. Appends iteration to history
+ * 4. Computes termination
  */
 export async function runFullHarness(request: FullHarnessRequest): Promise<FullHarnessResult> {
-  const { inputs, config, adapters, critiqueAdapter } = request;
+  const { adapters } = request;
+  const surface = adapters.surface;
+  if (typeof surface !== "string" || surface.length === 0) {
+    throw new Error("Full-harness requires adapters.surface.");
+  }
 
-  const loop = new HarnessLoop(config, critiqueAdapter);
-  const loopResult = await loop.run(inputs);
+  if (request.screenContracts.length === 0) {
+    throw new Error("Full-harness requires canonical screenContracts.");
+  }
+
+  const requiresVisualEvidence = requiresVisualBrowserEvidence(surface);
+
+  if (!requiresVisualEvidence) {
+    throw new Error(FULL_HARNESS_INVALID_COMBINATION_MESSAGE);
+  }
 
   const renderResults: RenderRunnerResult[] = [];
   const browserQaResults: BrowserQaRunResult[] = [];
+  const renderRefs: string[] = [];
+  const browserQaRefs: string[] = [];
 
-  const surface = adapters?.surface;
-  const requiresVisualEvidence = surface ? requiresVisualBrowserEvidence(surface) : false;
-
-  // Post-loop: render evidence (UI-bearing only)
-  if (requiresVisualEvidence && adapters?.render) {
-    try {
-      const renderResult = await adapters.render.captureEvidence(loopResult.iterationCount);
-      renderResults.push(renderResult);
-    } catch {
-      // Render capture failure is non-fatal in full-harness
-    }
+  const renderResult = await adapters.render.captureEvidence(1);
+  renderResults.push(renderResult);
+  renderRefs.push(
+    ...renderResult.filesWritten.map((ref) => toConcreteArtifactRef(request.root, ref)),
+  );
+  const hasCapturedRender = renderResult.entries.some((entry) => entry.status === "captured");
+  const hasRenderFailure = renderResult.entries.some((entry) => entry.status === "failed");
+  if (!hasCapturedRender || hasRenderFailure) {
+    throw new Error("Full-harness requires successful render capture for UI-bearing surfaces.");
   }
 
-  // Post-loop: Browser QA (UI-bearing only)
-  if (requiresVisualEvidence && adapters?.browserQa) {
-    try {
-      const qaResult = await adapters.browserQa.runQa(loopResult.iterationCount);
-      browserQaResults.push(qaResult);
-    } catch {
-      // Browser QA failure is non-fatal in full-harness
+  const qaResult = await adapters.browserQa.runQa(1);
+  browserQaResults.push(qaResult);
+  const aggregatedBrowserQaRefs = new Set<string>();
+  for (const phase of qaResult.phases) {
+    for (const ref of phase.evidence_refs) {
+      aggregatedBrowserQaRefs.add(toBrowserQaEvidenceRef(request.root, ref));
+    }
+    for (const finding of phase.findings) {
+      for (const ref of finding.evidence_refs) {
+        aggregatedBrowserQaRefs.add(toBrowserQaEvidenceRef(request.root, ref));
+      }
     }
   }
+  browserQaRefs.push(...aggregatedBrowserQaRefs);
+  const hasExecutedPhase = qaResult.phases.some(
+    (phase) => phase.status === "executed" || phase.status === "passed",
+  );
+  const hasBrowserQaFailure = qaResult.phases.some((phase) => phase.status === "failed");
+  if (!hasExecutedPhase || hasBrowserQaFailure) {
+    throw new Error(
+      "Full-harness requires successful browser QA execution for UI-bearing surfaces.",
+    );
+  }
+  if (browserQaRefs.length === 0) {
+    throw new Error(
+      "Full-harness requires Browser QA evidence refs for executed Browser QA phases.",
+    );
+  }
 
-  // Observability
-  if (adapters?.observability) {
-    for (const iter of loopResult.iterations) {
-      adapters.observability.recordIteration({
-        iteration: iter.iteration,
-        score: iter.evaluatorResult.weightedTotal,
-        decision: iter.evaluatorResult.decision,
-      });
-    }
+  // Validate and score panels from real evidence inputs only
+  validatePanelInputs(request.panelInputs);
+  const scored = scorePanelsFromInputs(request.panelInputs);
+  const l1 = scored.l1;
+  const l2 = scored.l2;
+  const calibrationPack = request.calibrationPack;
+
+  const measurementInput: MeasurementInput = {
+    root: request.root,
+    reviewer: request.reviewer,
+    changeSummary: request.changeSummary,
+    limitations: request.limitations,
+    calibration: {
+      packPath: request.calibrationRef.packPath,
+      thresholds: calibrationPack.thresholds,
+      maxIterations: calibrationPack.maxIterations,
+      plateauDelta: calibrationPack.plateauDelta,
+      plateauLookback: calibrationPack.plateauLookback,
+    },
+    renderRefs,
+    browserQaRefs,
+    runtimeGateRefs: request.panelInputs.runtimeGate.evidenceRefs,
+    uiObservationRefs: request.panelInputs.uiObservation.evidenceRefs,
+    specCoverageRefs: request.panelInputs.specCoverage.evidenceRefs,
+    discussionRefs: request.panelInputs.discussionAxes.evidenceRefs,
+    screenContractRefs: request.panelInputs.screenContract.evidenceRefs,
+    trendRefs: request.panelInputs.trendAlignment.evidenceRefs,
+    l1,
+    l2,
+    ...(request.discussionDirRelative !== undefined
+      ? { discussionDirRelative: request.discussionDirRelative }
+      : {}),
+  };
+
+  const measurementResult = await runMeasurement(measurementInput);
+
+  if (adapters.observability) {
     adapters.observability.recordIteration({
-      iteration: loopResult.iterationCount,
-      score: loopResult.finalScore,
-      decision: loopResult.status,
-      terminationReason: loopResult.terminationReason,
+      iteration: measurementResult.iteration.iteration,
+      score: measurementResult.iteration.weightedTotal,
+      decision: measurementResult.iteration.decision,
     });
     await adapters.observability.flush();
   }
 
-  const thresholds = config?.thresholds ?? { accept: 0.8, refine: 0.5 };
-  const output = buildFullHarnessResult(loopResult, renderResults, browserQaResults, thresholds);
+  const calibrationRef: FullHarnessCalibrationRef = {
+    configPath: request.calibrationRef.configPath ?? "",
+    packPath: request.calibrationRef.packPath,
+    packVersion: request.calibrationRef.packVersion,
+  };
 
-  const evidence = generateEvidence(loopResult);
-  const reviewSummary = generateReviewSummary(loopResult);
-  // Only run fake-UI detection when visual evidence was required and attempted.
-  // CLI / non-UI surfaces never collect render/browserQa evidence, so checking
-  // empty arrays would always produce a false positive.
-  const fakeUiDetection = requiresVisualEvidence
-    ? detectFakeUi({ renderResults, browserQaResults })
-    : { detected: false, reasons: [], evidence_refs: [], confidence: "low" as const };
-  const exitReason = fakeUiDetection.detected
+  const fakeUiDetection = detectFakeUi({ renderResults, browserQaResults });
+
+  const terminationStatus = measurementResult.terminationReason;
+  const exitReason: FullHarnessExitReason = fakeUiDetection.detected
     ? "fake-ui-detected"
-    : mapLoopStatusToExitReason(loopResult.terminationReason);
+    : terminationStatus
+      ? mapLoopStatusToExitReason(terminationStatus)
+      : "human-review-required";
+
   const handoff = createFullHarnessHandoff({
-    selectedBuild: loopResult.finalOutput.content,
-    artifactRefs: [
-      `run:${evidence.runId}`,
-      ...renderResults.flatMap((result) => result.filesWritten),
-    ],
+    selectedBuild: `iteration-${measurementResult.iteration.iteration}`,
+    artifactRefs: [`run:${measurementResult.history.runId}`, ...renderRefs],
     exitReason,
-    outstandingIssues: fakeUiDetection.reasons,
+    outstandingIssues: [...fakeUiDetection.reasons, ...measurementResult.iteration.limitations],
     requiredHumanReviewPoints: fakeUiDetection.detected
       ? ["Verify that the selected build performs real state and route changes."]
       : [],
   });
+  const finalDecision = deriveFinalDecision(measurementResult);
+  const signoffStatus = mapFinalDecisionToSignoffStatus(finalDecision);
+  const logVerdict = deriveLogVerdict(finalDecision, measurementResult);
 
-  return { loopResult, output, evidence, reviewSummary, fakeUiDetection, exitReason, handoff };
+  return {
+    iteration: measurementResult.iteration,
+    history: measurementResult.history,
+    calibrationRef,
+    fakeUiDetection,
+    exitReason,
+    handoff,
+    terminationReason: measurementResult.terminationReason,
+    isTerminal: measurementResult.isTerminal,
+    finalDecision,
+    signoffStatus,
+    logVerdict,
+  };
+}
+
+function deriveFinalDecision(result: MeasurementResult): FinalDecision {
+  // Terminal mapping is fixed:
+  // terminationReason undefined -> pending/pending
+  // terminationReason=converged -> accepted/approved
+  // terminationReason in {max-iterations,plateau,manual-stop} with iteration.decision=reject -> rejected/rejected
+  // otherwise non-converged terminationReason -> abandoned/abandoned
+  if (result.terminationReason === undefined) {
+    return "pending";
+  }
+  if (result.terminationReason === "converged") {
+    return "accepted";
+  }
+  if (result.iteration.decision === "reject") {
+    return "rejected";
+  }
+  return "abandoned";
+}
+
+function mapFinalDecisionToSignoffStatus(finalDecision: FinalDecision): ReviewerSignoffStatus {
+  switch (finalDecision) {
+    case "pending":
+      return "pending";
+    case "accepted":
+      return "approved";
+    case "rejected":
+      return "rejected";
+    case "abandoned":
+      return "abandoned";
+  }
+}
+
+function deriveLogVerdict(
+  finalDecision: FinalDecision,
+  result: { iteration: { decision: string }; isTerminal: boolean },
+): ReviewerLogVerdict {
+  if (finalDecision === "pending") {
+    return "revise";
+  }
+  if (finalDecision === "accepted") {
+    return "approve";
+  }
+  if (finalDecision === "rejected") {
+    return "reject";
+  }
+  if (result.isTerminal) {
+    return "abandon";
+  }
+  return "revise";
 }

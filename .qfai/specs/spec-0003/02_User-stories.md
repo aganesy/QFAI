@@ -16,6 +16,7 @@
 - US-0003-0012: instructions の force 無効保護 - --force でも instructions は上書きしない
 - US-0003-0013: instructions アクティベーション案内 - 作成時にガイダンスメッセージ表示
 - US-0003-0014: README ファイル生成 - 各統合ディレクトリに README.md を通常ファイルとして配置
+- US-0003-0015: `.gitignore` 管理ブロック自動追記 (v1.7.18) - `qfai init` 時に QFAI 生成成果物（report/evidence/review-pack/discussion-pack）が自動で gitignore される
 
 ## US-0003-0001: ワークスペース初期化
 
@@ -104,3 +105,10 @@
 - Parent: CAP-0003
 - Goal: `.agents/`, `.codex/`, `.claude/agents/`, `.github/agents/` に README.md を通常ファイルとして配置する
 - Non-goals: README の自動更新
+
+## US-0003-0015: `.gitignore` 管理ブロック自動追記
+
+- Parent: CAP-0003
+- Goal: `qfai init` 時に導入プロジェクトのルート `.gitignore` に QFAI 管理ブロック（marker 行 + `.qfai/report/*`, `.qfai/evidence/*`, `.qfai/review/*`, `.qfai/discussion/discussion-*/`, README ファイルの negation）を追記する。旧バージョンで追記されたレガシー行（`!.qfai/review/review-*/`, `!.qfai/review/review-*/**`）は再実行時に自動除去する
+- Non-goals: ユーザー独自の gitignore エントリの変更/削除、review-pack を追跡したい場合のプロジェクト固有 negation 追加（プロジェクト側で明示追加する）
+- Notes: NFR-0012（冪等性）を満たす。`review-*/` ディレクトリはデフォルトで gitignore されるため、必要に応じてプロジェクト側で negation を追加して追跡できる

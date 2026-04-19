@@ -2,137 +2,78 @@
 
 ## Purpose
 
-Evidence files record **what was actually executed** for each custom prompt run:
+Evidence files record what was actually executed and observed.
+`packages/qfai` v1.7.15 treats prototyping as `full-harness` only and UI-only.
 
-- commands executed
-- relevant logs (summary)
-- gaps / exceptions
-- reviewer approval
+## Prototyping artifacts
 
-## Version control policy
+Canonical files:
 
-Evidence is **not versioned by default**.
-Recommended approach:
+- `.qfai/evidence/prototyping.md`
+- `.qfai/evidence/prototyping.json`
+- `.qfai/evidence/render.json`
+- `.qfai/evidence/browser-qa.json`
+- `.qfai/evidence/fullHarness.exit.json`
+- `.qfai/evidence/fullHarness.handoff.json`
+- `.qfai/evidence/fullHarness.fakeUiDetection.json`
 
-- Add `.qfai/evidence/` to `.gitignore` (project-level), OR
-- Add it to `.git/info/exclude` (local only), OR
-- Store evidence outside the repository (artifact store, issue attachments).
+## Execution contract
 
-## Naming
+Supported prototyping surfaces are `web`, `mobile`, `desktop`, and `mixed`.
+`cli`, API-only, backend-only, and `ui_bearing: false` classifications are not prototyping execution targets.
 
-- Summary file: `.qfai/evidence/<prompt>-<run-id>.md`
-- Optional artifacts: `.qfai/evidence/<prompt>/<YYYY-MM-DD>/<run-id>/...`
-- `<run-id>`: prefer `spec-XXXX` when applicable.
+## Obligation matrix
 
-### Prototyping stage required evidence
+| surface / mode         | specs    | runtimeGate | uiFidelity | render evidence | browser QA | fullHarness |
+| ---------------------- | -------- | ----------- | ---------- | --------------- | ---------- | ----------- |
+| web / full-harness     | required | required    | required   | required        | required   | required    |
+| mobile / full-harness  | required | required    | required   | required        | required   | required    |
+| desktop / full-harness | required | required    | required   | required        | required   | required    |
+| mixed / full-harness   | required | required    | required   | required        | required   | required    |
 
-`/qfai-prototyping` requires two evidence artifacts in the evidence directory:
+`low-cost` and `standard` are unsupported in `packages/qfai` v1.7.15.
 
-- one markdown evidence file for human-readable coverage/runtime logs
-- one json evidence file for machine validation
+## Truthfulness rules
 
-### Prototyping JSON minimum + uiFidelity mode rule
+- `mode.effective` must be `full-harness`.
+- `uiFidelity.mode` must be `interactive`.
+- Canonical screen contracts in `discussion-*/uiux/40_screen_contracts.md` are mandatory.
+- Browser QA is mandatory per screen.
+- Calibration is resolved from `fullHarness.calibrationRef.packPath`; scalar caller overrides are invalid.
+- `runtimeGate.evidenceRefs` must contain concrete render/browser QA/spec refs only.
+- `specCoverage` refs must use concrete declared refs plus concrete observed refs. Self-reference and synthetic strings are invalid.
+- `mockPaths` is a negative-only ledger. Allowed values are `fail|finding` only.
 
-`prototyping.json` keeps the existing minimum schema for validation:
+## fullHarness semantics
 
-- `specs[]`
-- `runtimeGate.ui[]`
-- `runtimeGate.api[]`
-- `meta.generatedAt`
-- `meta.toolVersion`
-- `meta.commands[]`
+Required fields:
 
-`uiFidelity` handling depends on `mode`:
+- `enabled = true`
+- `runId`
+- `calibrationRef.configPath`
+- `calibrationRef.packPath`
+- `calibrationRef.packVersion`
+- `iterationCount`
+- `bestIteration`
+- `status`
+- `reviewerSignoff`
+- `reviewerLogs`
+- `iterations`
+- `scoringTrace`
+- `limitations`
 
-- `mode: interactive` (default): `uiFidelity` is required.
-- `mode: skeleton`: keep `uiFidelity` with `screens: []` for L1 evidence.
+Review semantics:
 
-When `uiFidelity` is present, keep all minimum fields above.
+- `finalDecision = accepted` -> `reviewerSignoff.status = approved`
+- `finalDecision = rejected` -> `reviewerSignoff.status = rejected`
+- `finalDecision = abandoned` -> `reviewerSignoff.status = abandoned`
+- `reviewerLogs[last].verdict` must align with the final decision and termination semantics.
 
-Good example references:
+## Prohibited patterns
 
-- Repository docs sample: `docs/examples/prototyping-ui-fidelity.good.json`
-- UI contract pair sample: `docs/examples/ui-contract.good.yaml`
-
-```json
-{
-  "specs": [
-    {
-      "specId": "spec-0001",
-      "declared": { "uiRoutes": 1, "apiEndpoints": 1, "dbObjects": 1 },
-      "checked": { "uiOk": 1, "apiNon404": 1, "dbPresent": 1 },
-      "missing": { "uiRoutes": [], "apiEndpoints": [], "dbObjects": [] }
-    }
-  ],
-  "runtimeGate": {
-    "ui": [{ "route": "/orders", "status": 200 }],
-    "api": [{ "method": "GET", "path": "/api/orders", "status": 200 }]
-  },
-  "uiFidelity": {
-    "version": "0.1",
-    "mode": "interactive",
-    "screens": [
-      {
-        "route": "/orders",
-        "uiContractId": "CON-UI-0001",
-        "expected": { "elements": 6, "actions": 2 },
-        "observed": {
-          "elementsPlaced": 6,
-          "actionsWired": 2,
-          "markersEmitted": 5
-        },
-        "mockPaths": [
-          {
-            "id": "mp_create_to_list",
-            "status": "pass",
-            "notes": "create -> list reflects (client mock)"
-          }
-        ],
-        "placeholders": { "hasPlaceholderText": false, "notes": "" }
-      }
-    ]
-  },
-  "meta": {
-    "generatedAt": "2026-02-27T00:00:00.000Z",
-    "toolVersion": "<current-tool-version>",
-    "commands": ["qfai validate --fail-on error"]
-  }
-}
-```
-
-## Minimal content template
-
-```md
-# Evidence: <prompt> (<run-id>)
-
-## Scope
-
-- Spec: <SPEC-XXXX or none>
-- Branch: <name>
-- Commit: <hash>
-
-## Commands executed
-
-- <cmd1>
-- <cmd2>
-
-## Results summary
-
-- <what passed / what failed>
-
-## Exceptions / gaps
-
-- <explicit gaps>
-
-## Reviewer approval
-
-- Reviewer: <name/role>
-- Approved at: <YYYY-MM-DD>
-```
-
-## Checklist
-
-- [ ] Contains executed commands and outcomes.
-- [ ] Notes any intentional gaps.
-- [ ] Has non-author approval (when required by prompt).
-- [ ] Prototyping stage includes both markdown and json evidence files.
+- `low-cost` or `standard` prototyping metadata
+- `cli` prototyping execution
+- self-reference such as `prototyping.json#/runtimeGate`
+- synthetic refs such as `specs: ...`
+- synthetic `mockPaths.status="pass"`
+- hardcoded calibration pack version

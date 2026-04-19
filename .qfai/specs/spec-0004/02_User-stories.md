@@ -24,6 +24,9 @@
 - US-0004-0020: Canonical/Legacy Validator Separation
 - US-0004-0021: IssueCategory Discrimination
 - US-0004-0022: Prototyping Recommendation Validation（REQ-0014）
+- US-0004-0023: Full-Harness Iteration Integrity Error Enforcement (v1.7.15, REQ-0124..REQ-0134)
+- US-0004-0024: Reviewer and Convergence Evidence Truthfulness (v1.7.15, REQ-0125..REQ-0127)
+- US-0004-0025: Evidence Grounding Validators (v1.7.15, REQ-0128..REQ-0134)
 
 ## US-0004-0001: バリデーション実行
 
@@ -158,3 +161,52 @@ As a CI/CD engineer, I want validator issues tagged with `category: "canonical"`
 ## US-0004-0022: Prototyping Recommendation Validation
 
 As a QFAI user, I want `qfai validate` to check prototyping.yaml schema (required fields, mode validity, allowed_modes consistency), so that invalid prototyping recommendations are caught early.
+
+## US-0004-0023: Full-Harness Iteration Integrity Error Enforcement (v1.7.15)
+
+- Parent: CAP-0004
+- Goal: CI rejects full-harness evidence containing synthetic/zero-seeded/single-iteration-converged patterns by enforcing PROT-295..306, PROT-308..309 as error severity
+- Non-goals: Downgrading these rules to warnings
+- Notes: REQ-0124..REQ-0134。v1.7.15 で PROT-290..292 を warning→error に昇格し、PROT-295..306, PROT-308..309 を新規 error として追加
+
+## US-0004-0024: Reviewer and Convergence Evidence Truthfulness (v1.7.15)
+
+- Parent: CAP-0004
+- Goal: Validator rejects evidence where reviewer is placeholder, convergence claims single-iteration, or weightedTotal is pre-scored, ensuring full-harness evidence reflects real iterative review
+- Non-goals: Validating reviewer identity against external systems
+- Notes: REQ-0125..REQ-0127。PROT-290, PROT-295, PROT-296, PROT-308, PROT-309 が対応
+
+## US-0004-0025: Evidence Grounding Validators (v1.7.15)
+
+- Parent: CAP-0004
+- Goal: Validator rejects evidence where specCoverage is zero-seeded, mockPaths contain synthetic passes, calibrationRef is empty, or structural counts (reviewerLogs/iterations/scoringTrace) do not match iterationCount
+- Non-goals: Validating evidence content quality beyond structural integrity
+- Notes: REQ-0128..REQ-0134。PROT-291, PROT-297, PROT-298, PROT-301, PROT-304, PROT-305, PROT-306 が対応
+
+## US-0004-0026: Rev2 Evidence Category and Schema Validators (v1.7.15 rev2)
+
+- Parent: CAP-0004
+- Goal: Validator rejects evidence where discussion/screenContract/trend evidenceRefs are empty, declared DB objects lack observation, uiFidelity claims completed without screen-level data, iteration evidenceRefs miss required categories, or request.l1/l2 from old schema is detected
+- Non-goals: Implementing the runtime checks themselves (covered by spec-0012)
+- Notes: REQ-0136。既存 rule ID の severity upgrade と新 rule ID の追加
+
+## US-0004-0027: Validator Tests Fixture Rev2 Alignment (v1.7.15 rev2)
+
+- Parent: CAP-0004
+- Goal: Test fixtures for prototypingEvidence validators are updated to reflect rev2 runtime contract, removing obsolete normal-path patterns and adding rev2 error-path fixtures
+- Non-goals: Comprehensive runtime testing (covered by spec-0012 tests)
+- Notes: REQ-0137
+
+## US-0004-0028: Design guideline coverage warning validator (v1.7.17)
+
+- Parent: CAP-0004
+- Goal: Validator warns when a UI-bearing discussion pack has no usable `design_guideline_research` coverage in `04_Sources.md`
+- Non-goals: Validating the factual correctness of the external guideline itself
+- Notes: REQ-0138
+
+## US-0004-0029: Trend-derived anchor concreteness warning validator (v1.7.17)
+
+- Parent: CAP-0004
+- Goal: Validator warns when `score_anchors` in trend-derived axes use abstract adjectives without quantitative proxy
+- Non-goals: Scoring the quality of the chosen threshold values
+- Notes: REQ-0139

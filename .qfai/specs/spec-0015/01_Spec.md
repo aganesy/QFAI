@@ -17,7 +17,7 @@
   - 19-agent catalog with ID, name, mission, category (worker / reviewer)
   - Standard agent contract structure (Mission, Inputs You Must Read, Deliverables, Stop Conditions, Sign-off Checklist, Output Format)
   - Orchestrator Protocol (delegation only, no direct generation, no self-approval)
-  - Capability Probe and Simulation Mode protocol
+  - Real-delegation Capability Probe and delegation-failure hard-stop protocol
   - Work Orders schema (Step, Role, Task title, Input refs, Output refs, Status)
   - Optional review modes (`devils-advocate`, `pattern-doubler`)
   - Routing registration (`agent-routing.yml`, `review-profiles.yml`)
@@ -64,7 +64,7 @@
 
 - REQ-0001: Agent catalog -- 19 agents with ID, kind, mission, domain, and replacement map
 - REQ-0002: Standard contract structure -- Mission, Inputs, Deliverables, Stop Conditions, Sign-off, Output Format
-- REQ-0003: Orchestrator Protocol -- delegation only, no direct generation, no self-approval, Capability Probe
+- REQ-0003: Orchestrator Protocol -- delegation only, no direct generation, no self-approval, real-delegation Capability Probe
 - REQ-0004: Work Orders schema -- Step, Role, Task title, Input refs, Output refs, Status
 - REQ-0005: Review mode registration -- optional review modes define advisory-only devils-advocate / pattern-doubler behavior
 - REQ-0006: Routing policy -- skill/phase/condition based reviewer and worker selection
@@ -77,6 +77,7 @@
 - REQ-0013: Full-Harness Review Profile (v1.7.14) — `review-profiles.yml` に full-harness プロファイルを追加。always_required: [completion-reviewer, product-surface-reviewer, qa-gatekeeper]。
   product-experience-architect は `kind: worker` のため review-profiles.yml ではなく `agent-routing.yml` の prototyping evidence phase conditional_agents に配置
 - REQ-0014: Prototyping Evidence Phase Routing (v1.7.14) — `agent-routing.yml` の prototyping evidence phase に product-experience-architect を conditional_agents として追加。full-harness 独立評価パネルの L2 レイヤーとして、別コンテキストで implementation fidelity を評価
+- REQ-0015: Delegation failure hard-stop output -- failed first delegation stops the stage and reports attempted role/task, failure summary, required user remediation, and retry condition
 
 ## Entry points
 

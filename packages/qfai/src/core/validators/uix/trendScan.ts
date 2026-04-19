@@ -19,6 +19,12 @@ const REQUIRED_ENTRY_FIELDS = [
   "evaluation_connection",
   "local_implication",
 ] as const;
+const GUIDELINE_REQUIRED_FIELDS = [
+  "source_id",
+  "guideline_name",
+  "rule_refs",
+  "local_translation",
+] as const;
 
 const PLACEHOLDER_RE = /^(?:tbd|todo|example|lorem|placeholder|n\/a|none)$/i;
 
@@ -33,22 +39,38 @@ function trendIssue(
     severity,
     category: "canonical",
     message,
-    file: "uiux/20_trend_scan.md",
+    file: "04_Sources.md",
     suggested_action: suggestedAction,
   };
+}
+
+function extractTrendScanSection(content: string): string | null {
+  const lines = content.split("\n");
+  const start = lines.findIndex((line) => line.trim().toLowerCase() === "## trend scan");
+  if (start === -1) {
+    return null;
+  }
+  let end = lines.length;
+  for (let index = start + 1; index < lines.length; index += 1) {
+    if (/^##\s+/.test(lines[index] ?? "") && !/^###/.test(lines[index] ?? "")) {
+      end = index;
+      break;
+    }
+  }
+  return lines.slice(start, end).join("\n");
 }
 
 function extractCategoryBody(content: string, category: string): string | null {
   const lines = content.split("\n");
   const start = lines.findIndex(
-    (line) => line.trim().toLowerCase() === `## ${category}`.toLowerCase(),
+    (line) => line.trim().toLowerCase() === `### ${category}`.toLowerCase(),
   );
   if (start === -1) {
     return null;
   }
   let end = lines.length;
   for (let index = start + 1; index < lines.length; index += 1) {
-    if (/^##\s+/.test(lines[index] ?? "")) {
+    if (/^###\s+/.test(lines[index] ?? "")) {
       end = index;
       break;
     }
@@ -58,9 +80,9 @@ function extractCategoryBody(content: string, category: string): string | null {
 
 function parseEntries(categoryBody: string): string[] {
   return categoryBody
-    .split(/(?=^###\s+)/m)
+    .split(/(?=^####\s+)/m)
     .map((entry) => entry.trim())
-    .filter((entry) => entry.startsWith("### "));
+    .filter((entry) => entry.startsWith("#### "));
 }
 
 function extractField(entry: string, field: string): string | undefined {
@@ -73,29 +95,41 @@ export async function validateTrendScan(root: string, _config: QfaiConfig): Prom
     return [];
   }
 
-  const trendPath = path.join(root, "uiux", "20_trend_scan.md");
-  const content = await readSafe(trendPath);
+  const sourcesPath = path.join(root, "04_Sources.md");
+  const content = await readSafe(sourcesPath);
   if (!content) {
     return [
       trendIssue(
         "UIX-VAL-TREND-SCAN-MISSING",
-        "uiux/20_trend_scan.md is required for UI-bearing packs.",
+        "04_Sources.md is required for UI-bearing packs.",
         "error",
-        "Add uiux/20_trend_scan.md with all required categories and complete entries.",
+        "Add 04_Sources.md with a '## Trend Scan' section containing all required categories.",
+      ),
+    ];
+  }
+
+  const trendSection = extractTrendScanSection(content);
+  if (!trendSection) {
+    return [
+      trendIssue(
+        "UIX-VAL-TREND-SCAN-MISSING",
+        "04_Sources.md must contain a '## Trend Scan' section for UI-bearing packs.",
+        "error",
+        "Add '## Trend Scan' section to 04_Sources.md with all required categories.",
       ),
     ];
   }
 
   const issues: Issue[] = [];
   for (const category of REQUIRED_CATEGORIES) {
-    const categoryBody = extractCategoryBody(content, category);
+    const categoryBody = extractCategoryBody(trendSection, category);
     if (!categoryBody) {
       issues.push(
         trendIssue(
           "UIX-VAL-TREND-CATEGORY-MISSING",
           `Trend scan is missing required category '${category}'.`,
           "error",
-          `Add '## ${category}' with at least one complete entry.`,
+          `Add '### ${category}' under '## Trend Scan' with at least one complete entry.`,
         ),
       );
       continue;
@@ -108,7 +142,7 @@ export async function validateTrendScan(root: string, _config: QfaiConfig): Prom
           "UIX-VAL-TREND-ENTRY-MISSING",
           `Category '${category}' must contain at least one complete entry.`,
           "error",
-          `Add at least one '### Entry' block under '${category}'.`,
+          `Add at least one '#### Entry' block under '### ${category}'.`,
         ),
       );
       continue;
@@ -129,6 +163,26 @@ export async function validateTrendScan(root: string, _config: QfaiConfig): Prom
         }
       }
     }
+  }
+
+  const guidelineCategory = extractCategoryBody(trendSection, "design_guideline_research");
+  const guidelineEntries = guidelineCategory ? parseEntries(guidelineCategory) : [];
+  const hasConcreteGuidelineEntry = guidelineEntries.some((entry) =>
+    GUIDELINE_REQUIRED_FIELDS.every((field) => {
+      const value = extractField(entry, field);
+      return Boolean(value) && !PLACEHOLDER_RE.test(value ?? "");
+    }),
+  );
+
+  if (!hasConcreteGuidelineEntry) {
+    issues.push(
+      trendIssue(
+        "UIX-VAL-T05",
+        "UI-bearing packs should include at least one concrete design_guideline_research entry in 04_Sources.md before finalizing trend-derived axes.",
+        "warning",
+        "Add a design_guideline_research entry with guideline_name, rule_refs, and local_translation grounded in an applicable platform or library guideline.",
+      ),
+    );
   }
 
   return issues;

@@ -40,6 +40,8 @@ export type BrowserQaPhaseResult = {
   evidence_refs: string[];
   checks_performed: string[];
   skippedReason?: string;
+  screen_id?: string;
+  route?: string;
 };
 
 export type BrowserQaInput = {

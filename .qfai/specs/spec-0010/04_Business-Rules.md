@@ -58,7 +58,7 @@
 - AC-Refs: AC-0010-0013, AC-0010-0014
 
 - Old 4-axis evaluation files (`20_eval_axis_usability.md`, `21_eval_axis_consistency.md`, `22_eval_axis_accessibility.md`, `23_eval_axis_delight.md`) must not appear in `qfai init` output or in `00_index.md` manifest.
-- Existing packs with 4-axis files are handled by the migration path (warning → error) but new generation is prohibited.
+- Existing packs with 4-axis files must be migrated before validation passes; canonical validators now emit explicit migration errors rather than relying on a warning-only compatibility window.
 
 ## BR-0010-0010: Init and Dogfood Semantic Parity
 
@@ -81,3 +81,93 @@
 
 - Template file names in `uiux/` must match the patterns expected by `UIX-VAL-*` validators.
 - Renaming a template file requires a corresponding validator update; mismatches are treated as broken traceability.
+
+## BR-0010-0013: Step 11.5 Visual Axis Derivation Mandate (v1.7.16)
+
+- AC-Refs: AC-0010-0021, AC-0010-0022
+
+- UI-bearing discussion packs MUST derive at least one visual axis in `21_design_eval_trend_derived.md` when `04_Sources.md` contains visual-category Trend Scan entries.
+- Visual categories include (but are not limited to): color, typography, spacing-and-layout, shape/geometry, imagery/illustration, motion.
+- The derived visual axis MUST populate `source_refs` pointing to the originating 04_Sources entry.
+
+## BR-0010-0014: UIX-VAL-T04 Trigger Condition (v1.7.16)
+
+- AC-Refs: AC-0010-0022
+
+- UIX-VAL-T04 fires WARNING when `04_Sources.md` contains at least one visual-category Trend Scan entry but `21_design_eval_trend_derived.md` contains no visual axis.
+- Severity is WARNING (per NFR-0007 backward-compatibility) — ERROR escalation is reserved for the next version.
+- Non-UI packs MUST trigger zero T04 fires.
+
+## BR-0010-0015: Step 11.3 MUST Produce 12_design_system.md with 8 Sections (v1.7.16)
+
+- AC-Refs: AC-0010-0019, AC-0010-0020, AC-0010-0027
+
+- For every UI-bearing discussion-pack, Step 11.3 MUST produce `uiux/12_design_system.md` populated with all 8 sections.
+- Phase A (brand selection) MUST output a chosen archetype with rationale.
+- Phase B (customization) MUST populate remaining sections using brand catalog defaults + taste-interview-derived overrides.
+- Missing or empty required sections (Visual Theme / Color Palette / Do's and Don'ts) MUST fail UIX-VAL-DS02.
+
+## BR-0010-0016: Brand Catalog Lookup Protocol (v1.7.16)
+
+- AC-Refs: AC-0010-0019, AC-0010-0026
+
+- Taste interview answers are scored against the 8 archetypes defined in `references/design-md-brand-catalog.md`.
+- The top-scoring archetype is selected as the base brand.
+- Ties are broken deterministically by category weight order (Visual Theme > Color Palette > Typography > ...).
+- Brand catalog Phase 1 scope = 8 archetype representative brands only (66-brand full catalog is deferred per DR-0010-v1716-02).
+
+## BR-0010-0017: Phase A/Phase B Sequencing (v1.7.16)
+
+- AC-Refs: AC-0010-0019, AC-0010-0020
+
+- Phase A (brand selection) MUST complete before Phase B (customization) starts.
+- Phase B MUST reference the Phase A output (chosen archetype) in its generated content.
+- Reverse ordering (Phase B before Phase A) MUST be detected as a SKILL.md violation.
+
+## BR-0010-0018: Sidecar Generation Flow Step 1c → Step 1d Dependency (v1.7.16)
+
+- AC-Refs: AC-0010-0025
+
+- Step 1c (04_Sources Trend Scan creation) MUST precede Step 1d (21_design_eval_trend_derived derivation).
+- Parallel execution of 1c and 1d MUST be explicitly forbidden in the SKILL.md wording.
+- Consumers (AI agents) that parallelize 1c/1d MUST be treated as violating this contract.
+
+## BR-0010-0019: 04_Sources.md evaluation_connection Mandatory (v1.7.16)
+
+- AC-Refs: AC-0010-0023
+
+- `templates/04_Sources.md` MUST include the `evaluation_connection` field on every Trend Scan entry across all 6 visual categories.
+- UIX-VAL-T01 ERROR fires when this field is missing in a UI-bearing pack.
+- UIX-VAL-T02 ERROR fires when the field value does not reference an existing TRD-XX axis ID.
+
+## BR-0010-0020: 21_design_eval_trend_derived.md Visual Axis Examples + source_refs Guidance (v1.7.16)
+
+- AC-Refs: AC-0010-0024
+
+- `templates/uiux/21_design_eval_trend_derived.md` MUST contain at least 2 visual axis examples.
+- Each example MUST demonstrate a `source_refs` field linking back to a 04_Sources entry.
+- Authoring guidance MUST include the rule "source_refs must point to existing 04_Sources.md entries" (enforced by UIX-VAL-T03 WARNING).
+
+## BR-0010-0021: Design guideline research is mandatory for UI-bearing packs (v1.7.17)
+
+- AC-Refs: AC-0010-0028
+
+- UI-bearing discussion runs MUST research at least one external design-guideline source family before finalizing Trend-derived axes.
+- Allowed source families include platform guidelines, accessibility guidelines, and adopted UI-library guidance.
+- Non-UI discussion runs MUST skip this rule entirely.
+
+## BR-0010-0022: `design_guideline_research` is part of canonical `04_Sources.md` (v1.7.17)
+
+- AC-Refs: AC-0010-0029
+
+- `design_guideline_research` entries MUST live in `04_Sources.md`, not a side file.
+- Each entry MUST expose `source_id`, `guideline_name`, `rule_refs`, `local_translation`, and `evidence`.
+- Project-specific libraries are allowed; the category is not restricted to one vendor.
+
+## BR-0010-0023: Trend-derived `score_anchors` forbid adjective-only anchors (v1.7.17)
+
+- AC-Refs: AC-0010-0030
+
+- Every `score_anchors.low`, `score_anchors.mid`, and `score_anchors.high` text MUST include at least one quantitative proxy.
+- Adjective-only anchors such as "clean", "modern", or "beautiful" without supporting proxy are invalid authoring.
+- Accepted proxies include px values, ratios, rule IDs, class names, token names, or library defaults.

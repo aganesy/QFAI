@@ -8,14 +8,12 @@ spec-0013 (CAP-0013) で定義された、下流 skill（prototyping / ATDD / TD
 **Primary truth** は step 1 の discussion sidecar artifacts にある。step 2 以降は **存在する場合のみ読む supporting input / fallback** であり、init 直後に未作成でも正常である。
 
 1. **Discussion-side UI/UX Sidecar Artifacts** (`discussion-*/uiux/`) — **primary source of truth**
-   - `30_option_comparison.md` — オプション比較（2+ 案の構造化比較）
-   - `31_selected_anchor_screen.md` — **Selected Direction**（選択方向の単一正本）+ アンカースクリーン
-   - `10_strategy.md` — 実装戦略（8-field strong schema）
+   - `30_option_comparison.md` — オプション比較（比較 artifact）
+   - `31_selected_anchor_screen.md` — 選定結果 + selected anchor の SSOT
+   - `10_implementation_strategy.md` — 実装戦略（strict canonical schema）
    - `11_design_taste_interview.md` — デザインテイストインタビュー
-   - `04_Sources` — 競合リファレンスレジストリ
-   - `20-23` — 3-layer 評価ファミリー（invariant / trend-derived / product-specific / aggregate）
-   - `24_design_eval_dynamic_overrides.md` — 動的オーバーライド（OPTIONAL）
-   - `40_screen_contracts.md` — スクリーンコントラクト（11 required fields, secondary_tasks 含む）
+   - `20-24` — 3-layer 評価ファミリー（**invariant / trend-derived / product-specific / aggregate / dynamic overrides** の 5 sidecar のみ。`20` は invariant axes, **Trend Scan は sidecar ではなく `04_Sources.md#Trend Scan` が正本**。旧 `uiux/20_trend_scan.md` は廃止。）
+   - `40_screen_contracts.md` — スクリーンコントラクト（strong schema）
    - `50_review_input_bundle.md` — レビュー入力バンドル
 
 2. **UI Contracts / Route-level Obligations** (`.qfai/contracts/ui/*.yaml`) — **supporting input; read only if present**
@@ -49,8 +47,16 @@ spec-0013 (CAP-0013) で定義された、下流 skill（prototyping / ATDD / TD
 
 ## Priority and Override Semantics
 
-- sidecar artifacts（selected anchor screen / option comparison / strategy / screen contracts）が **primary truth**
-- UI Contracts と Design Token は **存在する場合のみ読む supporting input**（primary truth ではない）
-- Optional fallback mock はさらに後順位の **fallback**
-- Design Token の値と HTML Mock の fallback 値が矛盾する場合は warning を発行
-- UI Contract の screen ID と sidecar contracts の対応がない場合は warning を発行
+- discussion sidecar artifacts が **primary truth**。
+  具体的には以下の順で読む。
+  - (a) `uiux/30_option_comparison.md`（option comparison）
+  - (b) `uiux/31_selected_anchor_screen.md`（selected anchor）
+  - (c) `uiux/10_implementation_strategy.md`（implementation strategy）
+  - (d) `uiux/40_screen_contracts.md`（screen contracts / 強スキーマ）
+- `.qfai/contracts/ui/` の UI Contracts と Design Token は
+  **存在する場合のみ読む supporting input**（primary truth ではない）。
+- Optional fallback mock はさらに後順位の **fallback**。
+- Design Token の値と HTML Mock の fallback 値が矛盾する場合は
+  warning を発行。
+- UI Contract の screen ID と sidecar screen contracts の対応がない場合は
+  warning を発行。

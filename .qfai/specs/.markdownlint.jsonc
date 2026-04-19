@@ -1,12 +1,44 @@
 {
-  "MD013": {
-    "line_length": 300,
-    "tables": false,
-  },
-  "MD024": {
-    "siblings_only": true,
-  },
-  "MD033": {
-    "allowed_elements": ["skill", "id"],
-  },
+  // spec packs contain decision-record paragraphs, embedded YAML/JSON blocks,
+  // and generator-produced tables that routinely exceed normal markdown
+  // heuristics. Keep as many structural rules inherited from the repo root as
+  // possible, and relax only the rules that are still noisy by construction
+  // for this directory.
+  //
+  // Resolution: `markdownlint-cli2` merges a per-directory `.markdownlint.jsonc`
+  // with the nearest `.markdownlint-cli2.jsonc` up-tree, so running
+  // `pnpm lint:md` (which invokes `markdownlint-cli2 "**/*.md"`) from the repo
+  // root picks up this file automatically for every file under `.qfai/specs/`.
+  // A regression guard lives in
+  // `packages/qfai/tests/integration/specsMarkdownlintConfig.test.ts` — it
+  // writes a synthetic over-length line under `.qfai/specs/spec-XXXX/` and
+  // confirms lint stays green for a line that exceeds the repo default but
+  // stays within the spec-pack override, proving this file is being applied.
+  // If that test fails, the nested-config loading has been broken and this
+  // block is no longer active.
+  //
+  // Kept ON (inherited): MD009-MD014, MD018-MD023, MD025-MD032,
+  // MD035-MD040, MD042-MD055 (heading anchors, list hygiene, code fence
+  // hygiene, link text validity).
+
+  // Long lines: spec decisions cite external designs / commands verbatim.
+  // Raise the threshold instead of disabling the rule so authored specs still
+  // surface genuinely unreadable lines while wide generated blocks keep
+  // passing without per-file churn.
+  "MD013": { "line_length": 1200, "code_blocks": false, "tables": false },
+  // Heading increment: some historical/generated decision logs still skip
+  // levels; keep this local exemption until those packs are normalized.
+  "MD001": false,
+  // Duplicate headings: revisioned delta/decision logs may intentionally
+  // reuse section titles across appended change batches, but keep sibling
+  // duplicates detectable so authored specs still surface accidental repeats.
+  "MD024": { "siblings_only": true },
+  // Inline HTML: rare `<n>` / `<id>` / `<skill>` placeholders in examples —
+  // allow-list just those so the lint still flags unintended HTML tags.
+  "MD033": { "allowed_elements": ["n", "id", "skill"] },
+  // Bare URLs: test-case examples include raw http://localhost URLs.
+  "MD034": false,
+  // MD047 (trailing newline) intentionally left ON: authored files must end
+  // with a newline; generator output that previously tripped this rule has
+  // been corrected at source (see spec-0012 tail-append fixup).
 }

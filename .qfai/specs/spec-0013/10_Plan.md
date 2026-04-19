@@ -31,4 +31,4 @@
 
 - Preflight prototyping.yaml gate: `packages/qfai/src/core/preflight/sddPreflight.ts` — missingSideArtifacts propagation
 - Recommendation schema gate: `packages/qfai/src/core/preflight/sddPreflight.ts` — resolveRecommendationBlockers()
-- Status: implemented (v1.7.13-20)
+- Implemented in v1.7.13-20.

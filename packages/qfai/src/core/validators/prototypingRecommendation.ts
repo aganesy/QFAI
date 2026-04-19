@@ -21,7 +21,7 @@ import type { PrototypingMode } from "../prototyping/types.js";
 import type { Issue } from "../types.js";
 import { issue } from "./utils.js";
 
-const VALID_MODES = new Set(["low-cost", "standard", "full-harness"]);
+const VALID_MODES = new Set(["full-harness"]);
 const VALID_SURFACES = new Set(CANONICAL_PROTOTYPING_SURFACES);
 
 export async function validatePrototypingRecommendation(
@@ -152,7 +152,7 @@ export async function validatePrototypingRecommendation(
         "prototypingRecommendation.recommendedMode",
         undefined,
         "canonical",
-        "recommended_mode は low-cost|standard|full-harness のいずれかにしてください。",
+        "recommended_mode は full-harness のみにしてください。",
       ),
     );
   }
@@ -183,7 +183,7 @@ export async function validatePrototypingRecommendation(
         "prototypingRecommendation.allowedModesRequired",
         undefined,
         "canonical",
-        "allowed_modes は low-cost|standard|full-harness の重複なし配列で必須です。",
+        "allowed_modes は full-harness のみを含む配列で必須です。",
       ),
     );
   } else if (
@@ -199,7 +199,7 @@ export async function validatePrototypingRecommendation(
         "prototypingRecommendation.allowedModes",
         undefined,
         "canonical",
-        "allowed_modes は low-cost|standard|full-harness の重複なし配列にしてください。",
+        "allowed_modes は full-harness のみを含む配列にしてください。",
       ),
     );
   } else {

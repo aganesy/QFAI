@@ -48,6 +48,15 @@
 | TC-0002-0037 | L3    | AC-0002-0021 | EX-0002-0036 | uiux/ with 30_option_comparison.md + 31_selected_anchor_screen.md, no old files; run validator | Validator passes                                   | Canonical rename pass      |
 | TC-0002-0038 | L3    | AC-0002-0022 | EX-0002-0037 | uiux/ with all 5 eval files (20~24) 3-layer compliant; run validator                           | Validator passes                                   | 3-layer family complete    |
 | TC-0002-0039 | L3    | AC-0002-0022 | EX-0002-0038 | uiux/ missing 24_design_eval_dynamic_overrides.md; run validator                               | Validator passes (OPTIONAL file)                   | Optional file absent pass  |
+| TC-0002-0040 | L3    | AC-0002-0023 | EX-0002-0040 | discussion-pack with 15 files but no prototyping.yaml                                          | missingSideArtifacts contains prototyping.yaml     | prototyping readiness      |
+| TC-0002-0041 | L3    | AC-0002-0023 | EX-0002-0040 | discussion-pack with valid prototyping.yaml                                                    | missingSideArtifacts is empty                      | prototyping present        |
+| TC-0002-0042 | L3    | AC-0002-0024 | EX-0002-0041 | UI-bearing pack emits canonical DDH issue codes                                                | UIX-VAL-DDH-\* pattern only                        | canonical code emission    |
+| TC-0002-0043 | L3    | AC-0002-0023 | EX-0002-0040 | invalid prototyping.yaml schema                                                                | QFAI-PROT-153/154/155/156 errors emitted           | invalid schema             |
+| TC-0002-0044 | L3    | AC-0002-0024 | EX-0002-0042 | selected anchor source validation                                                              | selected anchor validator passes/fails truthfully  | selected anchor source     |
+| TC-0002-0045 | L3    | AC-0002-0015 | EX-0002-0043 | nested bullet screen contract parsing                                                          | nested bullet and CSV forms both parse             | screen contract parse      |
+| TC-0002-0046 | L3    | AC-0002-0006 | EX-0002-0044 | required states check using default/loading/empty/error                                        | default required, populated alias rejected         | state coverage v1.7.13     |
+| TC-0002-0047 | L3    | AC-0002-0014 | EX-0002-0045 | nested bullet strategy candidate_options parse                                                 | nested bullet and CSV forms both parse             | strategy parse             |
+| TC-0002-0048 | L3    | AC-0002-0024 | EX-0002-0046 | review request selected anchor wording                                                         | review request validation passes                   | review request anchor      |
 
 ## TC-0002-0040: prototyping.yaml Readiness Check
 

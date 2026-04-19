@@ -21,9 +21,14 @@ validation:
     testFileGlobs:
       - tests/**/*.test.ts
       - tests/**/*.spec.ts
+      - packages/*/tests/**/*.test.ts
+      - packages/*/tests/**/*.spec.ts
       - src/**/*.test.ts
       - src/**/*.spec.ts
+      - packages/*/src/**/*.test.ts
+      - packages/*/src/**/*.spec.ts
       - features/**/*.feature
+      - packages/*/features/**/*.feature
     testFileExcludeGlobs: []
     scNoTestSeverity: error
     orphanContractsPolicy: error
@@ -33,12 +38,6 @@ output:
 prototyping:
   calibration:
     packPath: .qfai/evidence/calibration.yaml
-    thresholds:
-      accept: 0.8
-      refine: 0.5
-    maxIterations: 15
-    plateauDelta: 0.02
-    plateauLookback: 3
   execution:
     targetUrl: null
     browserProvider: playwright

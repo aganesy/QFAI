@@ -31,10 +31,11 @@ describe("package-only SSOT prototyping assets", () => {
 
     for (const token of [
       "surface / mode",
-      "low-cost",
-      "standard",
       "full-harness",
-      "cli",
+      "web",
+      "mobile",
+      "desktop",
+      "mixed",
       "web",
       "render.json",
       "browser-qa.json",
@@ -50,11 +51,9 @@ describe("package-only SSOT prototyping assets", () => {
     expect(skill).not.toMatch(/npx\s+qfai\s+prototyping\b/i);
   });
 
-  it("README documents cli absent-is-normal semantics", async () => {
+  it("README documents cli rejection semantics", async () => {
     const readme = await readFile(evidenceReadmePath, "utf-8");
-    expect(readme).toContain(
-      "Contradictory UI-only payloads on `cli` surface are validation errors.",
-    );
-    expect(readme).toContain("absent is normal success");
+    expect(readme).toContain("`cli`, API-only, backend-only");
+    expect(readme).toContain("are not prototyping execution targets");
   });
 });

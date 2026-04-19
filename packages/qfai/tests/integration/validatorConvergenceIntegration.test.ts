@@ -122,6 +122,7 @@ describe("TC-0004-0019: Old 4-axis format is error", () => {
 // ---------------------------------------------------------------------------
 
 // QFAI:SPEC-0004:TC-0004-0020
+// QFAI:SPEC-0014:TC-0014-0005
 describe("TC-0004-0020: Non-UI pack UIX skip", () => {
   it("non-UI pack produces zero UIX-VAL issues from threeLayer", async () => {
     const root = await newTempDir();
@@ -129,6 +130,34 @@ describe("TC-0004-0020: Non-UI pack UIX skip", () => {
 
     const issues = await validateThreeLayerModel(root, defaultConfig);
     expect(issues.filter((i) => i.code.startsWith("UIX-VAL-"))).toHaveLength(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// TC-0014-0004: UIX-VAL determinism
+// ---------------------------------------------------------------------------
+
+// QFAI:SPEC-0014:TC-0014-0004
+describe("TC-0014-0004: UIX-VAL determinism", () => {
+  it("same input produces identical output on repeated runs", async () => {
+    const root = await newTempDir();
+    await createUiBearingPack(root);
+
+    const legacyContent =
+      "## usability\n\nContent.\n\n## consistency\n\nContent.\n\n## accessibility\n\nContent.\n\n## delight\n\nContent.\n";
+    for (const fileName of [
+      "20_design_eval_invariant.md",
+      "21_design_eval_trend_derived.md",
+      "22_design_eval_product_specific.md",
+      "23_design_eval_aggregate.md",
+    ]) {
+      await writeFile(path.join(root, "uiux", fileName), legacyContent, "utf-8");
+    }
+
+    const first = await validateThreeLayerModel(root, defaultConfig);
+    const second = await validateThreeLayerModel(root, defaultConfig);
+
+    expect(second).toEqual(first);
   });
 });
 

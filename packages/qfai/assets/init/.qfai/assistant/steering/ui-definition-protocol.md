@@ -12,7 +12,7 @@ spec-0013 (CAP-0013) で定義された、下流 skill（prototyping / ATDD / TD
    - `31_selected_anchor_screen.md` — 選定結果 + selected anchor の SSOT
    - `10_implementation_strategy.md` — 実装戦略（strict canonical schema）
    - `11_design_taste_interview.md` — デザインテイストインタビュー
-   - `20-24` — 3-layer 評価ファミリー（invariant / trend-derived / product-specific / aggregate / dynamic overrides）
+   - `20-24` — 3-layer 評価ファミリー（**invariant / trend-derived / product-specific / aggregate / dynamic overrides** の 5 sidecar のみ。`20` は invariant axes, **Trend Scan は sidecar ではなく `04_Sources.md#Trend Scan` が正本**。旧 `uiux/20_trend_scan.md` は廃止。）
    - `40_screen_contracts.md` — スクリーンコントラクト（strong schema）
    - `50_review_input_bundle.md` — レビュー入力バンドル
 
@@ -47,8 +47,8 @@ spec-0013 (CAP-0013) で定義された、下流 skill（prototyping / ATDD / TD
 
 ## Priority and Override Semantics
 
-- sidecar artifacts（selected anchor / strategy / contracts）が **primary truth**
-- UI Contracts と Design Token は **存在する場合のみ読む supporting input**（primary truth ではない）
-- Optional fallback mock はさらに後順位の **fallback**
-- Design Token の値と HTML Mock の fallback 値が矛盾する場合は warning を発行
-- UI Contract の screen ID と sidecar contracts の対応がない場合は warning を発行
+- discussion sidecar artifacts が **primary truth**。具体的には (a) `uiux/30_option_comparison.md`（option comparison）、(b) `uiux/31_selected_anchor_screen.md`（selected anchor）、(c) `uiux/10_implementation_strategy.md`（implementation strategy）、(d) `uiux/40_screen_contracts.md`（screen contracts / 強スキーマ）の順で読む。
+- `.qfai/contracts/ui/` の UI Contracts と Design Token は **存在する場合のみ読む supporting input**（primary truth ではない）。
+- Optional fallback mock はさらに後順位の **fallback**。
+- Design Token の値と HTML Mock の fallback 値が矛盾する場合は warning を発行。
+- UI Contract の screen ID と sidecar screen contracts の対応がない場合は warning を発行。

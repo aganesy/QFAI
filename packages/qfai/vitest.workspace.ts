@@ -13,6 +13,13 @@ export default defineWorkspace([
   {
     test: {
       ...shared,
+      name: "unit",
+      include: ["tests/unit/**/*.test.ts"],
+    },
+  },
+  {
+    test: {
+      ...shared,
       name: "validators",
       include: ["tests/validators/**/*.test.ts"],
     },

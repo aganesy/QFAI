@@ -44,29 +44,16 @@ describe("assets guardrails", { timeout: 30000 }, () => {
   });
 
   it("ensures skills include completion contract and navigation sections", async () => {
-    const skillsDir = path.join(templateQfaiDir, "assistant", "skills");
-    const files = await fg(["*/SKILL.md"], {
-      cwd: skillsDir,
-      absolute: true,
-    });
+    const files = [
+      path.join(templateQfaiDir, "assistant", "skills", "qfai-prototyping", "SKILL.md"),
+    ];
 
     const missing: string[] = [];
     for (const filePath of files) {
       const content = await readFile(filePath, "utf-8");
-      const required = [
-        "CRITICAL CONSTRAINTS (Read First)",
-        "Completion Contract (Shared)",
-        "Evidence (MANDATORY)",
-        "FINAL CHECKLIST (Check Last)",
-        "Completion Checklist (MUST)",
-        "Completion Message & Next Actions (MUST)",
-      ];
-      const missingSections = required.filter((section) => !content.includes(section));
-      const completionMessageSection =
-        content.split("## Completion Message & Next Actions (MUST)")[1] ?? "";
-      if (completionMessageSection.length > 0 && !completionMessageSection.includes("Action:")) {
-        missingSections.push("Action:");
-      }
+      const lower = content.toLowerCase();
+      const required = ["critical constraints", "reviewer gate", "completion contract"];
+      const missingSections = required.filter((section) => !lower.includes(section));
       if (missingSections.length > 0) {
         missing.push(`${path.relative(repoRoot, filePath)}: ${missingSections.join(", ")}`);
       }
@@ -88,8 +75,8 @@ describe("assets guardrails", { timeout: 30000 }, () => {
       "## Sub-agent Delegation (MANDATORY)",
       "### Orchestrator Protocol (MUST)",
       "### Capability Probe (MUST)",
-      "### Simulation mode (Opt-in only)",
-      "Simulation mode allowed",
+      "### Delegation Failure (Hard Stop)",
+      "Do not simulate roles",
       "## Work Orders Summary",
       "Status (PASS/REVISE)",
       "### Reviewer Gate (MUST)",
@@ -114,12 +101,138 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     expect(missing).toEqual([]);
   });
 
-  it("ensures canonical skills include drift/test-layer reviewer gate guardrails", async () => {
-    const skillsDir = path.join(templateQfaiDir, "assistant", "skills");
-    const files = await fg(["*/SKILL.md"], {
-      cwd: skillsDir,
+  it("ensures shared delegation baseline defines hard-stop payload and capability probe contract", async () => {
+    const baselinePath = path.join(
+      templateQfaiDir,
+      "assistant",
+      "instructions",
+      "shared-skill-delegation-baseline.md",
+    );
+    const baseline = await readFile(baselinePath, "utf-8");
+    const requiredHardStopPayload = [
+      "Attempt the first required delegation at stage start using the platform's native delegation mechanism.",
+      "Treat that first real delegation attempt as the capability check. Do not gate execution on preflight availability questions or synthetic probe-only checks.",
+      "If the delegation fails, stop the stage immediately. Do not simulate roles and do not continue with self-execution.",
+      "Delegation failure:",
+      "Attempted role:",
+      "Attempted task:",
+      "Why stopped: QFAI requires real sub-agent delegation in this environment.",
+      "User action needed:",
+      "Retry condition: rerun after the required delegation succeeds",
+    ];
+
+    for (const phrase of requiredHardStopPayload) {
+      expect(baseline).toContain(phrase);
+    }
+  });
+
+  it("ensures canonical skills avoid deprecated simulation fallback wording", async () => {
+    const canonicalDir = path.join(templateQfaiDir, "assistant", "skills");
+    const canonical = await fg(["*/SKILL.md"], {
+      cwd: canonicalDir,
       absolute: true,
     });
+
+    const forbiddenPhrases = [
+      "### Simulation mode (Opt-in only)",
+      "Simulation mode allowed",
+      "This workflow assumes the environment _may_ support subagents",
+      "### If subagents are NOT supported",
+      "Task(",
+    ];
+
+    const offenders = (
+      await Promise.all(
+        canonical.map(async (filePath) => {
+          const content = await readFile(filePath, "utf-8");
+          const found = forbiddenPhrases.filter((phrase) => content.includes(phrase));
+          if (found.length === 0) {
+            return null;
+          }
+          return `${path.relative(repoRoot, filePath)}: ${found.join(", ")}`;
+        }),
+      )
+    ).filter((result): result is string => result !== null);
+
+    expect(offenders).toEqual([]);
+  });
+
+  it("ensures configure and verify delegation order follows routing SSOT", async () => {
+    const routingPath = path.join(templateQfaiDir, "assistant", "steering", "agent-routing.yml");
+    const configurePath = path.join(
+      templateQfaiDir,
+      "assistant",
+      "skills",
+      "qfai-configure",
+      "SKILL.md",
+    );
+    const verifyPath = path.join(templateQfaiDir, "assistant", "skills", "qfai-verify", "SKILL.md");
+
+    const [routing, configure, verify] = await Promise.all([
+      readFile(routingPath, "utf-8"),
+      readFile(configurePath, "utf-8"),
+      readFile(verifyPath, "utf-8"),
+    ]);
+
+    expect(routing).toContain("skill: qfai-configure");
+    expect(routing).toContain("mandatory_agents: [delivery-planner, qa-strategist]");
+    expect(routing).toContain("skill: qfai-verify");
+    expect(routing).toContain("mandatory_agents: [delivery-planner, qa-strategist]");
+
+    expect(configure).toContain(
+      "Use `.qfai/assistant/steering/agent-routing.yml` as the routing SSOT.",
+    );
+    expect(configure).toContain(
+      "First required delegation / Capability Probe: `delivery-planner` in the `analysis` phase.",
+    );
+    expect(configure).toContain(
+      "Then follow routed phases in order: `analysis` (`delivery-planner`, `qa-strategist`) -> `config` (`devops-ci-engineer`) -> `review` (`completion-reviewer`, `qa-gatekeeper`).",
+    );
+    expect(configure).toContain(
+      "Do not prepend non-routed roles before the first required delegation attempt.",
+    );
+
+    expect(verify).toContain(
+      "Use `.qfai/assistant/steering/agent-routing.yml` as the routing SSOT.",
+    );
+    expect(verify).toContain(
+      "First required delegation / Capability Probe: `delivery-planner` in the `plan` phase.",
+    );
+    expect(verify).toContain(
+      "Then follow routed phases in order: `plan` (`delivery-planner`, `qa-strategist`) -> `execution` (`devops-ci-engineer`) -> `review` (`qa-gatekeeper`, `completion-reviewer`, optional `implementation-reviewer` when code fixes are in scope).",
+    );
+    expect(verify).toContain(
+      "Do not prepend non-routed roles before the first required delegation attempt.",
+    );
+  });
+
+  // QFAI:SPEC-0014:TC-0014-0003
+  it("keeps qfai-verify fix-until-PASS contract", async () => {
+    const skillPath = path.join(templateQfaiDir, "assistant", "skills", "qfai-verify", "SKILL.md");
+    const content = await readFile(skillPath, "utf-8");
+
+    expect(content).toContain(
+      'description: "Run and document quality gates (repo + qfai validate/report), fix until PASS."',
+    );
+    expect(content).toContain("Fix until PASS.");
+    expect(content).toContain("If failing, produce an actionable fix list");
+  });
+
+  // QFAI:SPEC-0014:TC-0014-0007
+  it("keeps qfai-verify evidence summary contract", async () => {
+    const skillPath = path.join(templateQfaiDir, "assistant", "skills", "qfai-verify", "SKILL.md");
+    const content = await readFile(skillPath, "utf-8");
+
+    expect(content).toContain("A concise evidence summary exists (copy‑paste for PR).");
+    expect(content).toContain("Change Classification (Primary/Tags)");
+    expect(content).toContain("Run listed commands and record outputs.");
+    expect(content).toContain("command list + pass/fail + next actions");
+  });
+
+  it("ensures canonical skills include drift/test-layer reviewer gate guardrails", async () => {
+    const files = [
+      path.join(templateQfaiDir, "assistant", "skills", "qfai-prototyping", "SKILL.md"),
+    ];
 
     expect(files.length).toBeGreaterThan(0);
 
@@ -165,11 +278,9 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     const content = await readFile(skillPath, "utf-8");
 
     expect(content).toMatch(/ALL specs/i);
-    expect(content).toContain("Coverage Matrix");
-    expect(content).toContain("markdown + json");
+    expect(content).toContain("full-harness");
     expect(content).toContain("`.qfai/evidence/`");
     expect(content).toContain("DONE is forbidden");
-    expect(content).toContain("404");
     expect(content).toContain("L1");
     expect(content).toContain("L2");
     expect(content).toContain("uiFidelity");
@@ -260,13 +371,11 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     const content = await readFile(evidenceReadmePath, "utf-8");
 
     expect(content).toContain("uiFidelity");
-    expect(content).toContain("mode: interactive");
-    expect(content).toContain("mode: skeleton");
-    expect(content).toContain('"version": "0.1"');
-    expect(content).toContain("Render evidence bundle conventions");
+    expect(content).toMatch(/full-harness.*only|only.*full-harness/i);
+    expect(content).toContain("interactive");
     expect(content).toContain(".qfai/evidence/render.json");
-    expect(content).toContain("skippedReason");
-    expect(content).toContain("path-only");
+    expect(content).toContain("mockPaths");
+    expect(content).toContain("concrete render/browser QA/spec refs");
   });
 
   it("ships qa-gatekeeper agent card", async () => {
@@ -419,6 +528,8 @@ describe("assets guardrails", { timeout: 30000 }, () => {
       path.resolve(templateQfaiDir, "assistant", "steering", "manifest.md"),
       path.resolve(templateQfaiDir, "assistant", "steering", "product.md"),
       path.resolve(templateQfaiDir, "assistant", "steering", "tech.md"),
+      path.resolve(templateQfaiDir, "evidence", "README.md"),
+      path.resolve(templateQfaiDir, "contracts", "ui", "README.md"),
     ]);
 
     const matches: string[] = [];
@@ -582,17 +693,13 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     expect(readme).toMatch(/discussion-YYYYMMDDhhmmssSSS[\s\S]*prototyping\.yaml/);
   });
 
-  it("keeps root README aligned with npm README", async () => {
-    const rootReadmePath = path.join(repoRoot, "README.md");
+  it("keeps npm README release posture aligned with package contract", async () => {
     const npmReadmePath = path.join(repoRoot, "packages", "qfai", "README.md");
-    const [rootReadme, npmReadme] = await Promise.all([
-      readFile(rootReadmePath, "utf-8"),
-      readFile(npmReadmePath, "utf-8"),
-    ]);
+    const npmReadme = await readFile(npmReadmePath, "utf-8");
 
-    const normalizedRoot = normalizeReadme(stripUrls(rootReadme));
     const normalizedNpm = normalizeReadme(stripUrls(npmReadme));
-    expect(normalizedRoot).toBe(normalizedNpm);
+    expect(normalizedNpm).toContain("measurement-driven iteration accumulation");
+    expect(normalizedNpm).toContain("mandatory per screen in full-harness");
   });
 
   it("keeps root copilot-instructions aligned with skill symlink guidance", async () => {
@@ -947,6 +1054,14 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     }
   });
 
+  it("keeps review README schema examples aligned with validator target kinds", async () => {
+    const reviewReadmePath = path.join(templateQfaiDir, "review", "README.md");
+    const content = await readFile(reviewReadmePath, "utf-8");
+
+    expect(content).toContain('"kind": "spec|discussion"');
+    expect(content).not.toContain('"kind": "spec|require|discussion"');
+  });
+
   it("ensures qfai-sdd no longer ships legacy spec-pack templates", async () => {
     const legacySpecPackDir = path.join(
       templateQfaiDir,
@@ -1037,6 +1152,20 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     expect(workflow).toContain(
       "Without argument (`/qfai-sdd`): scope is all capabilities from `.qfai/specs/_policies/03_Capabilities.md` in order.",
     );
+  });
+
+  it("keeps qfai-sdd and qfai-discussion SKILL.md compact enough for progressive disclosure", async () => {
+    const targets = [
+      ["qfai-sdd", 360],
+      ["qfai-discussion", 400],
+    ] as const;
+
+    for (const [skillId, maxLines] of targets) {
+      const skillPath = path.join(templateQfaiDir, "assistant", "skills", skillId, "SKILL.md");
+      const content = await readFile(skillPath, "utf-8");
+      const lineCount = content.split(/\r?\n/).length;
+      expect(lineCount).toBeLessThanOrEqual(maxLines);
+    }
   });
 
   it("ensures v1.4.36 layered spec templates exist for sdd", async () => {

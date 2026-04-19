@@ -1,7 +1,6 @@
 /**
  * Anti-preference validator test — spec-0037 TDD-0013
  *
- * QFAI:SPEC-0014:TC-0014-0013
  */
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";

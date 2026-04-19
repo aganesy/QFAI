@@ -45,28 +45,23 @@
 - allowed_modes に recommended_mode が含まれない場合は QFAI-PROT-154（semantic invariant error）
 - v1.7.14: legacy top-level keys の存在は hard error（DR-0112）。QFAI-PROT-231/232 warning は廃止
 
-## BR-0004-0021: [REMOVED v1.7.14] Phase1 Ratchet Mechanism
-
-- AC-Refs: AC-0004-0022
-- Status: **REMOVED** — v1.7.14 で rollout.ts と共に完全削除（DR-0115）
-- 旧内容: `applyPhase1Ratchet()` in `uix/rollout.ts` は config.uiux.phase1ReleaseDate に基づく ratchet を適用していた
-
 ## BR-0004-0022: Canonical Validator Enumeration
 
 - AC-Refs: AC-0004-0022
 
-- runCanonicalUixValidators() は以下の 11 modular validators を並列実行する（v1.7.14: rollout.ts 削除により 12→11）:
-  1. validateSidecarMissing (foundation.ts)
-  2. validateStrategyStrong (strategy.ts)
-  3. validateScoringReady (scoringReady.ts)
-  4. validateScreenContractSchema (screenContract.ts)
-  5. validateTasteInterview (tasteInterview — 既存)
-  6. validateTrendScan (trend.ts)
-  7. validateThreeLayerPresence (threeLayer.ts)
-  8. validateOptionComparison (comparisonValidator.ts)
-  9. validateOqClosure (oqClosure.ts)
-  10. validateDiscussionDesignHardening (discussionDesignHardening.ts — 7 sub-validators)
-  11. validatePrototypingRecommendation (prototypingRecommendation.ts)
+- runCanonicalUixValidators() は以下の 12 validator を並列実行する:
+  1. validateClassification (classification.ts)
+  2. validateSidecarMissing (foundation.ts)
+  3. validateTasteInterview (taste.ts)
+  4. validateTrendScan (trend.ts)
+  5. validateThreeLayerModel (threeLayer.ts)
+  6. validateForbiddenLegacyFiles (threeLayer.ts)
+  7. validateThreeLayerFamilyCompleteness (threeLayer.ts)
+  8. validateScoringReady (scoringReady.ts)
+  9. validateStrategyStrong (strategy.ts)
+  10. validateScreenContractSchema (screenContract.ts)
+  11. validateOptionComparison (comparisonValidator.ts)
+  12. validateOqClosure (oqClosure.ts)
 
 ## BR-0004-0023: QFAI-VIS-002 Severity Downgrade
 
@@ -87,7 +82,7 @@
 ## BR-0004-0025: [REMOVED v1.7.14] Canonical Barrel Isolation Rule
 
 - AC-Refs: AC-0004-0022
-- Status: **REMOVED** — v1.7.14 で validators/legacy/ ディレクトリ自体が完全削除されたため、barrel isolation ルールは不要（DR-0115）
+- Removal note: v1.7.14 で validators/legacy/ ディレクトリ自体が完全削除されたため、barrel isolation ルールは不要（DR-0115）
 
 ## BR-0004-0026: QFAI-CRIT-005 Read-Order Requirement
 
@@ -99,3 +94,128 @@
   3. Contracts tokens
   4. Taste/Trend/3-layer evaluation family tokens
 - 旧: DDP → Design Token → UI Contract → HTML Mock → Flow
+
+## BR-0004-0027: PROT-292 terminationReason=max-iterations integrity (v1.7.15)
+
+- AC-Refs: AC-0004-0025
+- Detection: terminationReason=max-iterations AND iterationCount < calibration.maxIterations
+- Severity: error (upgraded from warning in v1.7.14)
+- Rule ID: QFAI-PROT-292
+
+## BR-0004-0028: PROT-290/308 single-iteration converged reject (v1.7.15)
+
+- AC-Refs: AC-0004-0026
+- Detection: terminationReason=converged AND iterationCount < 2
+- Severity: error (PROT-290 upgraded from warning; PROT-308 new error)
+- Rule IDs: QFAI-PROT-290, QFAI-PROT-308
+
+## BR-0004-0029: PROT-296 weightedTotal mismatch reject (v1.7.15)
+
+- AC-Refs: AC-0004-0025
+- Detection: iteration.weightedTotal !== min(iteration.l1.total, iteration.l2.total) (tolerance 0.001)
+- Severity: error
+- Rule ID: QFAI-PROT-296
+
+## BR-0004-0030: PROT-295/309 reviewer placeholder reject (v1.7.15)
+
+- AC-Refs: AC-0004-0027
+- Detection: reviewerSignoff.reviewerId or iteration.reviewerId is placeholder (qfai, default, auto, system, unknown, empty)
+- Severity: error
+- Rule IDs: QFAI-PROT-295 (top-level), QFAI-PROT-309 (iteration-level)
+
+## BR-0004-0031: PROT-305 zero-seeded specCoverage reject (v1.7.15)
+
+- AC-Refs: AC-0004-0028
+- Detection: all specs have declared/checked counts = 0 and missing arrays empty
+- Severity: error
+- Rule ID: QFAI-PROT-305
+
+## BR-0004-0032: PROT-306 synthetic mockPaths pass reject (v1.7.15)
+
+- AC-Refs: AC-0004-0029
+- Detection: uiFidelity.screens[].mockPaths contains status="pass", id ending "-default", or id containing "auto"
+- Severity: error
+- Rule ID: QFAI-PROT-306
+
+## BR-0004-0033: PROT-301 calibrationRef missing/empty reject (v1.7.15)
+
+- AC-Refs: AC-0004-0031
+- Detection: calibrationRef.configPath or calibrationRef.packPath is empty
+- Severity: error
+- Rule ID: QFAI-PROT-301
+
+## BR-0004-0034: PROT-304 reviewerLogs count mismatch (v1.7.15)
+
+- AC-Refs: AC-0004-0030
+- Detection: reviewerLogs.length !== iterationCount
+- Severity: error
+- Rule ID: QFAI-PROT-304
+
+## BR-0004-0035: PROT-291 iterations/scoringTrace count mismatch (v1.7.15)
+
+- AC-Refs: AC-0004-0030
+- Detection: iterations.length !== iterationCount OR scoringTrace.length !== iterationCount
+- Severity: error (upgraded from warning in v1.7.14)
+- Rule ID: QFAI-PROT-291
+
+## BR-0004-0036: PROT-297 commitSha missing reject (v1.7.15)
+
+- AC-Refs: AC-0004-0031
+- Detection: iteration.commitSha is empty or missing
+- Severity: error
+- Rule ID: QFAI-PROT-297
+
+## BR-0004-0037: PROT-298 limitations missing reject (v1.7.15)
+
+- AC-Refs: AC-0004-0031
+- Detection: fullHarness.limitations is undefined/missing
+- Severity: error
+- Rule ID: QFAI-PROT-298
+
+## BR-0004-0038: Additional full-harness integrity rules (v1.7.15)
+
+- AC-Refs: AC-0004-0025
+- PROT-299: status=completed but terminationReason missing → error
+- PROT-300: terminationReason=plateau but iterationCount < plateauLookback → error
+- PROT-302: all iterations have identical commitSha → warning
+- PROT-303: reviewerLog summary < 10 chars → warning
+
+## BR-0004-0039: Rev2 Evidence Category Validators (v1.7.15 rev2)
+
+- AC-Refs: AC-0004-0033, AC-0004-0034, AC-0004-0035, AC-0004-0036, AC-0004-0037
+- REQ-Refs: REQ-0136
+- discussion.evidenceRefs.length === 0 → error（新 rule ID）
+- screenContract.evidenceRefs.length === 0 → error（新 rule ID）
+- trend.evidenceRefs.length === 0 → error（新 rule ID）
+- declared DB objects > 0 && observed DB objects === 0 → error（新 rule ID）
+- uiFidelity.status === "completed" && screen-level data 不足 → error（新 rule ID）
+- iterations[i].evidenceRefs に 8 必須カテゴリのいずれかが欠落 → error（新 rule ID）
+- evidence に request.l1/l2 旧 schema 由来の痕跡を検出 → error（新 rule ID）
+- 既存ルールの severity 変更は rule ID を維持し severity のみ upgrade
+
+## BR-0004-0040: Validator Tests Rev2 Fixture Policy (v1.7.15 rev2)
+
+- AC-Refs: AC-0004-0038
+- REQ-Refs: REQ-0137
+- 正常系 fixture: l1/l2 直渡し / packVersion:"1.0.0" / single-iteration converged / actionsWired=0 / flattened DOM labels を含まない
+- 異常系 fixture: missing pack / missing reviewer / missing discussion|trend|screenContract evidence / insufficient ui observation / per-spec coverage build failure を含む
+
+## BR-0004-0041: UIX-VAL-T05 validates `design_guideline_research` coverage (v1.7.17)
+
+- AC-Refs: AC-0004-0039
+
+- Rule ID: UIX-VAL-T05
+- Severity: warning
+- Ownership: extend `packages/qfai/src/core/validators/uix/trendScan.ts`
+- Detection: UI-bearing pack with no `design_guideline_research` category, or only placeholder entries lacking `rule_refs` / `local_translation`
+- Non-UI packs MUST return zero findings
+
+## BR-0004-0042: UIX-VAL-T06 validates quantitative proxy in trend-derived anchors (v1.7.17)
+
+- AC-Refs: AC-0004-0040
+
+- Rule ID: UIX-VAL-T06
+- Severity: warning
+- Ownership: extend `packages/qfai/src/core/validators/uix/scoringReady.ts`
+- Detection: any `score_anchors.low|mid|high` text in `21_design_eval_trend_derived.md` that lacks quantitative proxy (px / ratio / rule id / class / token / library default)
+- Pure adjective wording alone is insufficient

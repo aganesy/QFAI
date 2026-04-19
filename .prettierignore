@@ -1,5 +1,22 @@
 dist
 node_modules
+# Scope prettier ignore to the runtime-generated outputs under .qfai so SSOT
+# sources (.qfai/specs, .qfai/assistant, .qfai/contracts, .qfai/discussion)
+# stay formatted. Negate only the authored files that should remain
+# auto-formatted (`README.md` and the preflight summary). Historical evidence
+# markdown stays ignored so frozen records do not churn under auto-formatting.
+# Parent directories are also explicitly un-ignored so the negated file
+# entries survive prettier's gitignore-style matching.
+.qfai/report/**
+!.qfai/report/
+!.qfai/report/README.md
+!.qfai/report/preflight_summary.md
+.qfai/review/**
+!.qfai/review/
+!.qfai/review/README.md
+.qfai/evidence/**
+!.qfai/evidence/
+!.qfai/evidence/README.md
 pnpm-lock.yaml
 tmp
 *.min.js

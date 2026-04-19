@@ -70,10 +70,25 @@ function buildMinimalPrototypingEvidence(specIds: string[]): object {
       checked: { uiOk: 1, apiNon404: 0, dbPresent: 0 },
       missing: { uiRoutes: [], apiEndpoints: [], dbObjects: [] },
     })),
-    runtimeGate: { ui: [{ route: "/", status: 200 }], api: [] },
+    runtimeGate: {
+      ui: [
+        {
+          screenId: "screen-orders",
+          route: "/orders",
+          declaredRef: `.qfai/specs/${specIds[0]}/01_Spec.md`,
+          url: "http://127.0.0.1:4173/orders",
+          rendered: true,
+          browserVisited: true,
+          httpStatus: 200,
+          renderEvidenceRefs: [],
+          browserQaEvidenceRefs: [],
+        },
+      ],
+      evidenceRefs: [],
+    },
     meta: {
       generatedAt: "2026-03-31T00:00:00Z",
-      toolVersion: "1.7.14",
+      toolVersion: "1.7.15",
       commands: ["prototyping"],
     },
   };
@@ -95,7 +110,7 @@ function buildScreenWithRenders(renders: object[]): object {
     uiContractId: "CON-UI-0001",
     expected: { elements: 3, actions: 1 },
     observed: { elementsPlaced: 3, actionsWired: 1 },
-    mockPaths: [{ id: "mock-1", status: "pass" }],
+    mockPaths: [{ id: "mock-1", status: "finding" }],
     renders,
   };
 }
@@ -320,7 +335,7 @@ describe("E2E: US-0012-0005 — legacy critique artifact parsing", () => {
         uiContractId: "CON-UI-0001",
         expected: { elements: 3, actions: 1 },
         observed: { elementsPlaced: 3, actionsWired: 1 },
-        mockPaths: [{ id: "mock-1", status: "pass" }],
+        mockPaths: [{ id: "mock-1", status: "finding" }],
         renders: [],
       };
       const evidence = buildEvidenceWithUiFidelity(["spec-0001"], [screen]);

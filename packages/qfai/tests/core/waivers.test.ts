@@ -238,6 +238,47 @@ describe("applyWaivers", () => {
     }
   });
 
+  // QFAI:SPEC-0014:TC-0014-0006
+  it("rejects waiver targeting an error finding", async () => {
+    const root = await createRoot();
+    try {
+      await writeWaivers(
+        root,
+        [
+          "version: 1",
+          "waivers:",
+          "  - id: WVR-20260208-04B",
+          "    rule: COMPAT-003",
+          "    scope:",
+          '      paths: [".qfai/specs/spec-0001/**"]',
+          '    reason: "attempt to waive error finding"',
+          '    expires: "2099-01-01"',
+          '    evidence: "delta.md#DL-20260208-01"',
+          "",
+        ].join("\n"),
+      );
+
+      const matchedFile = path.join(root, ".qfai", "specs", "spec-0001", "delta.md");
+      const findings: Issue[] = [
+        buildIssue({
+          rule: "COMPAT-003",
+          file: matchedFile,
+          severity: "error",
+        }),
+      ];
+
+      const result = await applyWaivers(root, findings);
+      const codes = result.issues.map((item) => item.code);
+
+      expect(codes).toContain("QFAI-COMPAT-003");
+      expect(codes).toContain("QFAI-WAIVER-002");
+      expect(result.waivers.suppressed.total).toBe(0);
+      expect(result.waivers.active.some((item) => item.id === "WVR-20260208-04B")).toBe(false);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("excludes blocked waivers from active list", async () => {
     const root = await createRoot();
     try {

@@ -298,7 +298,7 @@ const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-PROT-101":
     "Both prototyping evidence files exist and prototyping.json follows the required schema.",
   "QFAI-PROT-150": "prototyping.json is missing the canonical mode block.",
-  "QFAI-PROT-151": "mode.effective must be low-cost|standard|full-harness.",
+  "QFAI-PROT-151": "mode.effective must be full-harness.",
   "QFAI-PROT-152":
     "mode.source must be explicit-request|discussion-recommendation|system-default and rationale must be non-empty.",
   "QFAI-PROT-171": "surface field must be one of: web, mobile, desktop, cli, mixed.",
@@ -308,29 +308,23 @@ const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-PROT-174": "required browser QA bundle is missing.",
   "QFAI-PROT-175":
     "non-UI prototyping surface but UI-only evidence present (runtimeGate.ui, uiFidelity, render, browserQa).",
-  "QFAI-PROT-176": "ui-bearing standard/full-harness mode requires uiFidelity.",
+  "QFAI-PROT-176": "ui-bearing full-harness mode requires uiFidelity.",
   "QFAI-PROT-177": "ui-bearing full-harness mode requires runtimeGate.",
   "QFAI-PROT-111":
     "Coverage Matrix rows in prototyping evidence include every `.qfai/specs/spec-*` entry.",
   "QFAI-PROT-112":
     "Per-spec UI checks satisfy declared route counts and leave no unresolved UI routes.",
-  "QFAI-PROT-113":
-    "Per-spec API checks satisfy declared endpoint counts and runtime gate contains no 404 statuses.",
-  "QFAI-PROT-114":
-    "Per-spec DB checks satisfy declared object counts and leave no unresolved DB objects.",
   "QFAI-PROT-153":
     "prototyping.yaml invalid; canonical namespaced prototyping block is required, top-level recommendation keys are not supported, and semantic mismatch (recommended_mode not in allowed_modes) is invalid.",
   "QFAI-PROT-154": "prototyping.yaml allowed_modes must include recommended_mode.",
   "QFAI-PROT-155": "prototyping.yaml requires allowed_modes field.",
   "QFAI-PROT-156": "prototyping.yaml requires surface field.",
-  "QFAI-PROT-233":
-    "evidence effective mode differs from resolved discussion recommendation precedence.",
   "QFAI-PROT-234": "discussion recommendation exists but evidence mode.source is system-default.",
   "QFAI-PROT-235":
     "evidence mode.source is discussion-recommendation but recommendation artifact is missing or invalid.",
   "QFAI-PROT-236": "explicit requested mode is not allowed by discussion allowed_modes.",
   "QFAI-PROT-237":
-    "interactive uiFidelity requires at least one passing mock flow (mockPaths.status=pass).",
+    "interactive uiFidelity requires observed mockPaths issue ledger entries (fail|finding).",
   "QFAI-PROT-238":
     "uiFidelity does not satisfy UI contract coverage (screens empty or contract mismatch).",
   "QFAI-PROT-241":
@@ -351,30 +345,27 @@ const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-PROT-254": "render bundle contradicts non-UI prototyping surface / mode expectation.",
   "QFAI-PROT-255": "captured render evidence screen references a file that does not exist on disk.",
   "QFAI-PROT-256": "skipped/failed render evidence screen is missing required reason/error field.",
-  "QFAI-PROT-261": "browser QA bundle mode does not match prototyping effective mode.",
   "QFAI-PROT-262":
     "browser QA completed status without usable evidence (no summary and no findings).",
   "QFAI-PROT-263":
     "browser QA bundle exists but executed=false for full-harness ui-bearing project.",
   "QFAI-PROT-264": "fullHarness reviewer signoff is incomplete (missing reviewer or timestamp).",
-  "QFAI-PROT-265":
-    "full-harness evidence present without calibration configuration in qfai.config.yaml.",
-  "QFAI-PROT-266": "calibration threshold configured but scoring trace is empty.",
+  "QFAI-PROT-265": "full-harness calibration pack could not be resolved from packPath.",
+  "QFAI-PROT-266": "full-harness evidence exists but scoring trace is empty.",
   "QFAI-PROT-273": "browser QA bundle schema is invalid (missing or malformed browserQa block).",
   "QFAI-PROT-274":
     "browser QA executed/status contradiction (e.g. executed=true but status!=completed).",
   "QFAI-PROT-275": "browser QA summary is malformed (non-object or invalid bucket counts).",
   "QFAI-PROT-276": "browser QA findings are malformed (non-array or invalid finding structure).",
-  "QFAI-PROT-270":
-    "uiFidelity is required for UI-bearing surfaces in standard/full-harness mode but is absent.",
-  "QFAI-PROT-271":
-    "uiFidelity.mode='skeleton' is not allowed in standard/full-harness mode for UI-bearing surfaces.",
+  "QFAI-PROT-270": "uiFidelity is required for full-harness UI prototyping but is absent.",
+  "QFAI-PROT-271": "uiFidelity.mode='skeleton' is not allowed in full-harness UI prototyping.",
   "QFAI-PROT-272":
     "uiFidelity screen is missing required fields (uiContractId, route, expected, observed).",
   "QFAI-PROT-281": "mode.effective is full-harness but fullHarness block is missing.",
   "QFAI-PROT-282":
     "fullHarness.terminationReason is invalid; must be converged|max-iterations|plateau|manual-stop.",
   "QFAI-PROT-283": "fullHarness.scoringTrace must contain at least one entry.",
+  "QFAI-PROT-284": "emoji characters (U+1F000–U+1FAFF) are forbidden in full-harness output.",
   "QFAI-PROT-290":
     "fullHarness.iterationCount is 1 with converged; single-iteration convergence is suspicious.",
   "QFAI-PROT-291": "fullHarness.scoringTrace entry count does not match iterationCount.",
@@ -382,6 +373,43 @@ const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "terminationReason is max-iterations but iterationCount is below configured maxIterations.",
   "QFAI-PROT-293": "fullHarness.iterationCount exceeds configured maxIterations.",
   "QFAI-PROT-294": "fullHarness.scoringTrace shows no improvement across iterations.",
+  "QFAI-PROT-295": "fullHarness reviewer is a placeholder value.",
+  "QFAI-PROT-296": "fullHarness iteration weightedTotal does not equal min(l1.total, l2.total).",
+  "QFAI-PROT-297": "fullHarness iteration commitSha is required.",
+  "QFAI-PROT-298": "fullHarness.limitations is required.",
+  "QFAI-PROT-299": "fullHarness.status is completed but terminationReason is missing.",
+  "QFAI-PROT-300": "terminationReason is plateau but iterationCount is less than plateauLookback.",
+  "QFAI-PROT-301": "fullHarness.calibrationRef is missing or has empty configPath/packPath.",
+  "QFAI-PROT-302": "All fullHarness iterations have the same commitSha.",
+  "QFAI-PROT-303": "fullHarness reviewerLog summary is too short.",
+  "QFAI-PROT-304": "fullHarness reviewerLogs count does not match iterationCount.",
+  "QFAI-PROT-305":
+    "fullHarness specCoverage is zero-seeded (all declared/checked counts are zero).",
+  "QFAI-PROT-306":
+    "fullHarness uiFidelity mockPaths must be fail|finding only and must not contain synthetic pass entries.",
+  "QFAI-PROT-308": "fullHarness status is converged but iterationCount < 2.",
+  "QFAI-PROT-309": "fullHarness iteration reviewer is a placeholder value.",
+  "QFAI-PROT-316": "reviewerSignoff.status does not match fullHarness.finalDecision.",
+  "QFAI-PROT-317": "final reviewerLogs verdict does not match fullHarness termination semantics.",
+  "QFAI-PROT-318":
+    "runtimeGate/specCoverage evidenceRefs contain a non-concrete artifact reference.",
+  "QFAI-PROT-319": "fullHarness.calibrationRef.packPath does not match the resolved pack path.",
+  "QFAI-PROT-320":
+    "fullHarness.calibrationRef.packVersion does not match the resolved calibration pack version.",
+  "QFAI-PROT-321":
+    "fullHarness.calibrationRef.configPath does not match the active qfai.config.yaml path.",
+  "QFAI-PROT-322": "fullHarness.status is in-progress but finalDecision is not pending.",
+  "QFAI-PROT-323": "fullHarness.status is in-progress but reviewerSignoff.status is not pending.",
+  "QFAI-PROT-324": "fullHarness.status is in-progress but terminationReason is still present.",
+  "QFAI-PROT-325": "fullHarness.status is completed but reviewerSignoff.status is still pending.",
+  "QFAI-PROT-326": "runtimeGate.ui[].declaredRef must use the canonical screen contract sourceRef.",
+  "QFAI-PROT-327":
+    "fullHarness.iterations[].evidenceRefs.screenContract must use canonical screen contract refs.",
+  "QFAI-PROT-328":
+    "specs[].coverageRefs[].declaredRef must point to a spec declaration under .qfai/specs/.",
+  "QFAI-PROT-329": "fullHarness.status is completed but reviewerSignoff.timestamp is missing.",
+  "QFAI-PROT-330":
+    "uiFidelity screen actionsWired exceeds actionsDeclared (expected.actions). actionsWired must not exceed the number of declared actions.",
   "QFAI-CONTRACT-030":
     "Contract index references must match declared contract IDs in .qfai/contracts/**.",
 };

@@ -70,25 +70,30 @@ describe("validateProject (spec pack)", { timeout: 15000 }, () => {
     });
   });
 
-  it("fails when prototyping runtime gate records API 404", async () => {
+  it("fails when prototyping evidence declares API coverage on UI-only contract", async () => {
     await withProject(async (root) => {
       const evidencePath = path.join(root, ".qfai", "evidence", "prototyping.json");
       const evidence = JSON.parse(await readFile(evidencePath, "utf-8")) as Record<string, unknown>;
-      evidence.runtimeGate = {
-        ui: [{ route: "/orders", status: 200 }],
-        api: [{ method: "GET", path: "/api/orders", status: 404 }],
-      };
+      evidence.specs = [
+        {
+          specId: "spec-0001",
+          declared: { uiRoutes: 1, apiEndpoints: 1, dbObjects: 0 },
+          checked: { uiOk: 1, apiNon404: 1, dbPresent: 0 },
+          missing: { uiRoutes: [], apiEndpoints: ["/api/orders"], dbObjects: [] },
+        },
+      ];
       await writeFile(evidencePath, `${JSON.stringify(evidence, null, 2)}\n`);
 
       const result = await validateProject(root);
       const issue = result.issues.find(
         (item) =>
-          item.code === "QFAI-PROT-113" && item.rule === "prototypingEvidence.apiRuntime404",
+          item.code === "QFAI-PROT-313" &&
+          item.rule === "prototypingEvidence.nonUiCoverageDeclaration",
       );
 
       expect(issue).toBeDefined();
       expect(issue?.severity).toBe("error");
-      expect(issue?.refs).toContain("GET /api/orders");
+      expect(issue?.refs).toContain("spec-0001");
     });
   });
 
@@ -896,6 +901,7 @@ describe("runValidate", { timeout: 15000 }, () => {
     });
   });
 
+  // QFAI:SPEC-0004:TC-0004-0016
   it("escapes multiline fix text in github annotation output", async () => {
     await withProject(async (root) => {
       const skillPath = path.join(root, ".qfai", "assistant", "skills", "qfai-sdd", "SKILL.md");
@@ -1473,6 +1479,22 @@ async function seedDiscussionPackFixtures(root: string): Promise<void> {
       ],
     },
     {
+      name: "uiux/12_design_system.md",
+      lines: [
+        "# 12 Design System",
+        "",
+        "## Visual Theme",
+        "Bold but restrained visual system aligned with admired dashboard references.",
+        "",
+        "## Color Palette",
+        "Primary: #1A1A1A on light surface. Accent: #2F80ED. Background: #F7F8FA.",
+        "",
+        "## Do's and Don'ts",
+        "Do: keep a single primary CTA visible on dashboards.",
+        "Don't: stack competing accent colors on interactive elements.",
+      ],
+    },
+    {
       name: "uiux/11_design_taste_interview.md",
       lines: [
         "# Taste Interview",
@@ -1509,13 +1531,15 @@ async function seedDiscussionPackFixtures(root: string): Promise<void> {
       ],
     },
     {
-      name: "uiux/20_trend_scan.md",
+      name: "04_Sources.md",
       lines: [
-        "# Trend Scan",
+        "# Sources",
         "",
-        "## user expectation / market norm",
+        "## Trend Scan",
         "",
-        "### Dashboard single-action pattern",
+        "### user expectation / market norm",
+        "",
+        "#### Dashboard single-action pattern",
         "",
         "- reference: NNG Dashboard Guidelines 2026",
         "- observation: Users expect a single primary CTA on dashboards",
@@ -1523,9 +1547,9 @@ async function seedDiscussionPackFixtures(root: string): Promise<void> {
         "- evaluation_connection: Supports hierarchy invariant evaluation",
         "- local_implication: Keep one primary action visible above fold",
         "",
-        "## product neighbor / comparable flow",
+        "### product neighbor / comparable flow",
         "",
-        "### Competitor onboarding flow",
+        "#### Competitor onboarding flow",
         "",
         "- reference: https://competitor-alpha.example.com/onboarding",
         "- observation: Focused onboarding with clear step indicators",
@@ -1533,9 +1557,9 @@ async function seedDiscussionPackFixtures(root: string): Promise<void> {
         "- evaluation_connection: Validates clarity evaluation criteria",
         "- local_implication: Use step indicator component for onboarding",
         "",
-        "## platform convention",
+        "### platform convention",
         "",
-        "### Material Design 3 tonal system",
+        "#### Material Design 3 tonal system",
         "",
         "- reference: Material Design 3 Guidelines",
         "- observation: Tonal elevation patterns for card hierarchy",
@@ -1543,9 +1567,9 @@ async function seedDiscussionPackFixtures(root: string): Promise<void> {
         "- evaluation_connection: Feeds into visual hierarchy evaluation",
         "- local_implication: Apply tonal palette for dashboard card hierarchy",
         "",
-        "## accessibility / compliance relevant signal",
+        "### accessibility / compliance relevant signal",
         "",
-        "### WCAG 2.2 Level AA contrast",
+        "#### WCAG 2.2 Level AA contrast",
         "",
         "- reference: WCAG 2.2 Guidelines",
         "- observation: Contrast ratio requirements for interactive elements",
@@ -1749,13 +1773,13 @@ async function seedDiscussionPackFixtures(root: string): Promise<void> {
     path.join(discussionPackDir, "prototyping.yaml"),
     [
       "prototyping:",
-      "  recommended_mode: standard",
+      "  recommended_mode: full-harness",
       "  rationale: UI validation is recommended.",
       "  allowed_modes:",
-      "    - low-cost",
-      "    - standard",
       "    - full-harness",
       "  surface: web",
+      "scoringTrace:",
+      "  designSystemCompliance: 90",
     ].join("\n"),
     "utf-8",
   );
@@ -1835,13 +1859,13 @@ async function seedPrototypingEvidenceFixture(root: string): Promise<void> {
             specId: "spec-0001",
             declared: {
               uiRoutes: 1,
-              apiEndpoints: 1,
-              dbObjects: 1,
+              apiEndpoints: 0,
+              dbObjects: 0,
             },
             checked: {
               uiOk: 1,
-              apiNon404: 1,
-              dbPresent: 1,
+              apiNon404: 0,
+              dbPresent: 0,
             },
             missing: {
               uiRoutes: [],
@@ -1851,13 +1875,29 @@ async function seedPrototypingEvidenceFixture(root: string): Promise<void> {
           },
         ],
         mode: {
-          effective: "standard",
+          effective: "full-harness",
           source: "discussion-recommendation",
           rationale: "UI validation is recommended.",
         },
         runtimeGate: {
-          ui: [{ route: "/orders", status: 200 }],
-          api: [{ method: "GET", path: "/api/orders", status: 200 }],
+          ui: [
+            {
+              screenId: "orders",
+              route: "/orders/new",
+              declaredRef:
+                ".qfai/discussion/discussion-20260216000000000/uiux/40_screen_contracts.md#orders",
+              rendered: true,
+              browserVisited: true,
+              httpStatus: 200,
+              renderEvidenceRefs: [".qfai/evidence/render.json#/screens/0"],
+              browserQaEvidenceRefs: [".qfai/evidence/browser-qa.json#/findings"],
+            },
+          ],
+          evidenceRefs: [
+            ".qfai/discussion/discussion-20260216000000000/uiux/40_screen_contracts.md#orders",
+            ".qfai/evidence/render.json#/screens/0",
+            ".qfai/evidence/browser-qa.json#/findings",
+          ],
         },
         uiFidelity: {
           version: "0.1",
@@ -1871,27 +1911,124 @@ async function seedPrototypingEvidenceFixture(root: string): Promise<void> {
                 elementsPlaced: 3,
                 actionsWired: 1,
               },
-              mockPaths: [{ id: "mp_create_to_list", status: "pass" }],
+              mockPaths: [{ id: "mp_create_to_list", status: "finding" }],
               renders: [
                 {
                   viewport: "desktop",
                   width: 1280,
                   height: 960,
                   status: "captured",
-                  imagePath: ".qfai/evidence/renders/dashboard-desktop.png",
-                  htmlPath: ".qfai/evidence/renders/dashboard-desktop.html",
+                  imagePath: ".qfai/evidence/render/orders.desktop.png",
+                  htmlPath: ".qfai/evidence/render/orders.desktop.html",
                 },
                 {
                   viewport: "mobile",
                   width: 390,
                   height: 844,
                   status: "captured",
-                  imagePath: ".qfai/evidence/renders/dashboard-mobile.png",
-                  htmlPath: ".qfai/evidence/renders/dashboard-mobile.html",
+                  imagePath: ".qfai/evidence/render/orders.mobile.png",
+                  htmlPath: ".qfai/evidence/render/orders.mobile.html",
                 },
               ],
             },
           ],
+        },
+        fullHarness: {
+          enabled: true,
+          runId: "fh-validate-1",
+          calibrationRef: {
+            configPath: "qfai.config.yaml",
+            packPath: ".qfai/evidence/calibration.yaml",
+            packVersion: "1.7.15",
+          },
+          iterationCount: 1,
+          bestIteration: 1,
+          status: "in-progress",
+          finalDecision: "pending",
+          reviewerSignoff: {
+            reviewerId: "qa-reviewer",
+            status: "pending",
+            source: "cli",
+          },
+          reviewerLogs: [
+            {
+              iteration: 1,
+              reviewerId: "qa-reviewer",
+              verdict: "revise",
+              summary: "Iteration 1 requires another pass before terminal signoff.",
+              evidenceRefs: [".qfai/evidence/render.json#/screens/0"],
+            },
+          ],
+          iterations: [
+            {
+              iteration: 1,
+              commitSha: "abc0001",
+              reviewerId: "qa-reviewer",
+              timestamp: "2026-02-23T00:00:00Z",
+              changeSummary: ["Initial measurement"],
+              limitations: [],
+              evidenceRefs: {
+                render: [".qfai/evidence/render.json#/screens/0"],
+                browserQa: [".qfai/evidence/browser-qa.json#/findings"],
+                runtimeGate: [
+                  ".qfai/discussion/discussion-20260216000000000/uiux/40_screen_contracts.md#orders",
+                ],
+                uiObservation: [".qfai/evidence/render/orders.desktop.html"],
+                specCoverage: [
+                  ".qfai/discussion/discussion-20260216000000000/uiux/40_screen_contracts.md#orders",
+                ],
+                discussion: [
+                  ".qfai/discussion/discussion-20260216000000000/uiux/20_design_eval_invariant.md#discussion-axes-invariant",
+                ],
+                screenContract: [
+                  ".qfai/discussion/discussion-20260216000000000/uiux/40_screen_contracts.md#orders",
+                ],
+                trend: [".qfai/discussion/discussion-20260216000000000/04_Sources.md#trend-scan"],
+              },
+              l1: {
+                panel: "L1",
+                total: 0.9,
+                axes: [
+                  {
+                    axisId: "runtime",
+                    score: 0.9,
+                    rationale: "ok",
+                    evidenceRefs: [".qfai/evidence/render.json#/screens/0"],
+                  },
+                ],
+              },
+              l2: {
+                panel: "L2",
+                total: 0.9,
+                axes: [
+                  {
+                    axisId: "design",
+                    score: 0.9,
+                    rationale: "ok",
+                    evidenceRefs: [
+                      ".qfai/discussion/discussion-20260216000000000/uiux/20_design_eval_invariant.md#axis-1",
+                    ],
+                  },
+                ],
+              },
+              weightedTotal: 0.9,
+              deltaFromPrevious: null,
+              decision: "accept",
+            },
+          ],
+          scoringTrace: [
+            {
+              iteration: 1,
+              l1Total: 0.9,
+              l2Total: 0.9,
+              weightedTotal: 0.9,
+              deltaFromPrevious: null,
+              decision: "accept",
+              commitSha: "abc0001",
+              designSystemCompliance: 90,
+            },
+          ],
+          limitations: [],
         },
         meta: {
           generatedAt: "2026-02-23T00:00:00.000Z",
@@ -1902,6 +2039,92 @@ async function seedPrototypingEvidenceFixture(root: string): Promise<void> {
       null,
       2,
     )}\n`,
+    "utf-8",
+  );
+  await mkdir(path.join(evidenceRoot, "render"), { recursive: true });
+  await writeFile(path.join(evidenceRoot, "render", "orders.desktop.png"), "png", "utf-8");
+  await writeFile(
+    path.join(evidenceRoot, "render", "orders.desktop.html"),
+    "<html></html>",
+    "utf-8",
+  );
+  await writeFile(path.join(evidenceRoot, "render", "orders.mobile.png"), "png", "utf-8");
+  await writeFile(
+    path.join(evidenceRoot, "render", "orders.mobile.html"),
+    "<html></html>",
+    "utf-8",
+  );
+  await writeFile(
+    path.join(evidenceRoot, "render.json"),
+    JSON.stringify(
+      {
+        renderEvidence: {
+          status: "captured",
+          requested: true,
+          viewports: ["desktop", "mobile"],
+          outputPath: ".qfai/evidence/render.json",
+        },
+        screens: [
+          {
+            route: "/orders/new",
+            viewport: "desktop",
+            status: "captured",
+            width: 1280,
+            height: 960,
+            imagePath: ".qfai/evidence/render/orders.desktop.png",
+            htmlPath: ".qfai/evidence/render/orders.desktop.html",
+          },
+          {
+            route: "/orders/new",
+            viewport: "mobile",
+            status: "captured",
+            width: 390,
+            height: 844,
+            imagePath: ".qfai/evidence/render/orders.mobile.png",
+            htmlPath: ".qfai/evidence/render/orders.mobile.html",
+          },
+        ],
+      },
+      null,
+      2,
+    ),
+    "utf-8",
+  );
+  await writeFile(
+    path.join(evidenceRoot, "browser-qa.json"),
+    JSON.stringify(
+      {
+        browserQa: {
+          executed: true,
+          status: "completed",
+          mode: "full-harness",
+          summary: {
+            smoke: { status: "passed", findingsCount: 0, checksCount: 1 },
+            interaction: { status: "passed", findingsCount: 0, checksCount: 1 },
+            visual: { status: "passed", findingsCount: 0, checksCount: 1 },
+            accessibility: { status: "passed", findingsCount: 0, checksCount: 1 },
+          },
+        },
+        findings: [],
+      },
+      null,
+      2,
+    ),
+    "utf-8",
+  );
+  await writeFile(
+    path.join(evidenceRoot, "calibration.yaml"),
+    [
+      "version: 1.7.15",
+      "thresholds:",
+      "  accept: 0.8",
+      "  refine: 0.5",
+      "maxIterations: 5",
+      "plateauDelta: 0.02",
+      "plateauLookback: 3",
+      "examples: []",
+      "",
+    ].join("\n"),
     "utf-8",
   );
 }

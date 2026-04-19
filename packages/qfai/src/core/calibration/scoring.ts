@@ -1,6 +1,6 @@
 /**
  * Scoring engine — evaluates scores against thresholds and produces
- * accept/refine/pivot decisions (BR-0030-0005 through BR-0030-0008).
+ * accept/refine/reject decisions (BR-0030-0005 through BR-0030-0008).
  */
 
 import type { Decision, DecisionResult, ThresholdConfig } from "./types.js";
@@ -39,7 +39,7 @@ export class ScoringEngine {
   classify(score: number): Decision {
     if (score >= this.thresholds.accept) return "accept";
     if (score >= this.thresholds.refine) return "refine";
-    return "pivot";
+    return "reject";
   }
 
   evaluate(score: number, feedback?: string): DecisionResult {

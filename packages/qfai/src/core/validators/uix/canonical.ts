@@ -14,12 +14,14 @@ import { readSafe } from "../utils.js";
 // Canonical validators — owned by uix/ modules
 import { validateClassification } from "./classification.js";
 import { validateSidecarMissing } from "./foundation.js";
+import { validateDesignSystemPresence } from "./designSystemPresence.js";
 import { validateOptionComparison } from "./comparisonValidator.js";
 import { validateOqClosure } from "./oqClosure.js";
 
 // Strong validators from uix/
 import { validateTasteInterview } from "./taste.js";
 import { validateTrendScan } from "./trend.js";
+import { validateTrendAxisTraceability } from "./trendAxisTraceability.js";
 import {
   validateThreeLayerModel,
   validateForbiddenLegacyFiles,
@@ -53,10 +55,14 @@ export async function runCanonicalUixValidators(
     validateClassification,
     // Sidecar presence
     validateSidecarMissing,
+    // Design system presence (UIX-VAL-DS01/DS02)
+    validateDesignSystemPresence,
     // Design taste interview (10 sections)
     validateTasteInterview,
     // Trend scan freshness
     validateTrendScan,
+    // Trend->Axis traceability (UIX-VAL-T01..T04)
+    validateTrendAxisTraceability,
     // 3-layer model enforcement
     validateThreeLayerModel,
     validateForbiddenLegacyFiles,

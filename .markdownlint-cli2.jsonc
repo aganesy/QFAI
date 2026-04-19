@@ -41,7 +41,10 @@
     ".qfai/assistant/agents/**",
     ".qfai/assistant/skills/*/references/**",
     ".qfai/assistant/skills/*/templates/**",
+    ".qfai/assistant/skills/qfai-*/SKILL.md",
     ".qfai/assistant/skills.local/**",
+    ".qfai/assistant/steering/**",
+    ".qfai/contracts/**",
     ".qfai/evidence/*[0-9]*.md",
     ".qfai/report/atdd-traceability/**",
     ".qfai/report/preflight_summary.md",
@@ -51,6 +54,12 @@
     ".qfai/report/validate.log",
     ".qfai/report/report.md",
     ".qfai/review/review-*/**",
+    // Repo-root `review/` (different from `.qfai/review/` above) stores local
+    // review packs from ad-hoc runs before they are moved under
+    // `.qfai/review/`. Only generated review packs follow the `review-*`
+    // naming convention; authored Markdown placed elsewhere under repo-root
+    // `review/` remains linted to preserve the quality gate.
+    "review/review-*/**",
     ".agents/skills/qfai-*",
     ".agents/skills/qfai-*/**",
     ".claude/skills/qfai-*",

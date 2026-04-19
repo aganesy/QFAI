@@ -5,7 +5,6 @@ import { parse as parseYaml } from "yaml";
 import {
   CANONICAL_PROTOTYPING_SURFACES,
   isCanonicalPrototypingSurface,
-  requiresVisualBrowserEvidenceSurface,
 } from "../domain/surface.js";
 import {
   hasLegacyRecommendationKeys,
@@ -24,9 +23,18 @@ import type {
   ResolveModeInput,
   ResolvedModeSummary,
 } from "./types.js";
+import { isSupportedPrototypingSurface } from "./surfacePolicy.js";
 
-const VALID_MODES = new Set<PrototypingMode>(["low-cost", "standard", "full-harness"]);
+const VALID_MODES = new Set<PrototypingMode>(["full-harness"]);
 const VALID_SURFACES = new Set<PrototypingSurface>(CANONICAL_PROTOTYPING_SURFACES);
+export const FULL_HARNESS_INVALID_COMBINATION_MESSAGE =
+  "packages/qfai v1.7.15 では prototyping は full-harness / UI-only です。";
+export const UNSUPPORTED_PROTOTYPING_MODE_REASON_CODE = "unsupported_prototyping_mode";
+export const UNSUPPORTED_PROTOTYPING_MODE_MESSAGE =
+  "packages/qfai v1.7.15 では prototyping は full-harness のみサポートします。";
+export const NON_UI_PROTOTYPING_SURFACE_REASON_CODE = "unsupported_non_ui_prototyping_surface";
+export const NON_UI_PROTOTYPING_SURFACE_MESSAGE =
+  "packages/qfai v1.7.15 では prototyping は UI-bearing surface のみサポートします。";
 
 // ---------------------------------------------------------------------------
 // Discussion recommendation parsing (canonical namespaced only)
@@ -160,7 +168,7 @@ function extractRecommendation(
 // ---------------------------------------------------------------------------
 
 export function resolvePrototypingMode(input: ModeResolutionInput): ModeResolutionResult {
-  const defaultMode = input.defaultMode ?? "standard";
+  const defaultMode = "full-harness";
   if (input.explicitMode) {
     return {
       requested: input.explicitMode,
@@ -274,46 +282,41 @@ export function inferSurfaceFromRecommendationAndEvidence(input: {
 
 export function derivePrototypingObligations(input: {
   surface: PrototypingSurface;
-  effectiveMode: PrototypingMode;
+  effectiveMode: string;
 }): PrototypingObligations {
-  // This check is only for visual/browser evidence obligations, not discussion UI-bearing.
-  const needsVisualBrowserEvidence = requiresVisualBrowserEvidence(input.surface);
-  if (!needsVisualBrowserEvidence) {
+  if (!isSupportedPrototypingSurface(input.surface)) {
     return {
       requireRuntimeGate: false,
       requireUiFidelity: false,
       requireRenderBundle: false,
       requireBrowserQaBundle: false,
-      requireFullHarness: input.effectiveMode === "full-harness",
+      requireFullHarness: false,
+      validCombination: false,
+      invalidReasonCode: NON_UI_PROTOTYPING_SURFACE_REASON_CODE,
+      invalidReason: NON_UI_PROTOTYPING_SURFACE_MESSAGE,
     };
   }
 
-  if (input.effectiveMode === "full-harness") {
-    return {
-      requireRuntimeGate: true,
-      requireUiFidelity: true,
-      requireRenderBundle: true,
-      requireBrowserQaBundle: true,
-      requireFullHarness: true,
-    };
-  }
-
-  if (input.effectiveMode === "standard") {
+  if (input.effectiveMode !== "full-harness") {
     return {
       requireRuntimeGate: false,
-      requireUiFidelity: true,
+      requireUiFidelity: false,
       requireRenderBundle: false,
       requireBrowserQaBundle: false,
       requireFullHarness: false,
+      validCombination: false,
+      invalidReasonCode: UNSUPPORTED_PROTOTYPING_MODE_REASON_CODE,
+      invalidReason: UNSUPPORTED_PROTOTYPING_MODE_MESSAGE,
     };
   }
 
   return {
-    requireRuntimeGate: false,
-    requireUiFidelity: false,
-    requireRenderBundle: false,
-    requireBrowserQaBundle: false,
-    requireFullHarness: false,
+    requireRuntimeGate: true,
+    requireUiFidelity: true,
+    requireRenderBundle: true,
+    requireBrowserQaBundle: true,
+    requireFullHarness: true,
+    validCombination: true,
   };
 }
 
@@ -330,7 +333,7 @@ export function isValidPrototypingSurface(value: unknown): value is PrototypingS
 }
 
 export function requiresVisualBrowserEvidence(surface: PrototypingSurface): boolean {
-  return requiresVisualBrowserEvidenceSurface(surface);
+  return isSupportedPrototypingSurface(surface);
 }
 
 export function normalizeAllowedModes(modes?: string[]): PrototypingMode[] {

@@ -17,8 +17,12 @@ The agent reads the repository, produces the required artifacts, and iterates un
 
 ## Release status
 
-- Current package version: `1.7.14`
-- Release posture: v1.7.14 converges init assets, validators, and docs on the canonical sidecar model.
+- Current package version: `1.7.15`
+- Release posture: v1.7.15 enforces runtime truthfulness.
+- Prototyping is UI-only; `full-harness` is measurement-driven iteration accumulation for UI-bearing surfaces only.
+- Runtime observation is observed-only (no synthetic 200 / API / DB prototyping coverage).
+- Browser QA is mandatory per screen in full-harness, and `actionsWired` reports action coverage rather than finding count.
+- Calibration SSOT is the calibration pack referenced by `calibrationRef.packPath`.
 - Current repo note: some repo-wide `qfai validate --fail-on error` blockers still come from historical review/evidence/ATDD/TDD artifacts and are being cleaned incrementally.
 
 ## Quick start
@@ -54,8 +58,27 @@ npx qfai report
 - `npx qfai doctor`
   - Diagnoses configuration discovery, path resolution, glob scanning, and `validate.json` inputs before running validate/report; use `--fail-on` to enforce failures in CI.
     Note: prototyping evidence (`.qfai/evidence/prototyping.json`) is produced by the AI workflow / skills
-    (`/qfai-prototyping` with `mode=low-cost|standard|full-harness`), not by a CLI command.
+    (`/qfai-prototyping` with `mode=full-harness` for supported UI surfaces only), not by a general-purpose end-user CLI flow.
     `qfai validate` consumes the resulting evidence files, including `mode.effective` and `fullHarness` metadata when present.
+    Traceability refs inside prototyping evidence must use repo-root-relative concrete artifact refs (for example `.qfai/specs/spec-0001/01_Spec.md#L3` or `.qfai/evidence/render.json#/screens/0`).
+    Absolute paths are invalid. The same strict ref grammar is enforced for top-level and leaf evidence-bearing fields, including
+    `runtimeGate.evidenceRefs`, `runtimeGate.ui[].declaredRef`, `runtimeGate.ui[].renderEvidenceRefs[]`,
+    `runtimeGate.ui[].browserQaEvidenceRefs[]`, `specs[].coverageRefs[].declaredRef`, `specs[].coverageRefs[].observedRefs[]`,
+    `fullHarness.iterations[].evidenceRefs.runtimeGate`, `fullHarness.iterations[].evidenceRefs.specCoverage`,
+    `fullHarness.iterations[].evidenceRefs.render`, `fullHarness.iterations[].evidenceRefs.browserQa`,
+    `fullHarness.iterations[].evidenceRefs.uiObservation`, `fullHarness.iterations[].evidenceRefs.discussion`,
+    `fullHarness.iterations[].evidenceRefs.screenContract`, `fullHarness.iterations[].evidenceRefs.trend`,
+    `fullHarness.iterations[].l1.axes[].evidenceRefs[]`, `fullHarness.iterations[].l2.axes[].evidenceRefs[]`, and
+    `fullHarness.reviewerLogs[].evidenceRefs[]`.
+    Semantic rules are also strict: `runtimeGate.ui[].declaredRef` and `fullHarness.iterations[].evidenceRefs.screenContract[]`
+    must use the canonical screen contract sourceRef `.qfai/discussion/<pack>/uiux/40_screen_contracts.md#<screenId>`,
+    and `specs[].coverageRefs[].declaredRef` must use the canonical spec declaration form
+    `.qfai/specs/<specId>/01_Spec.md#L<line>` (for example `.qfai/specs/spec-0001/01_Spec.md#L3`);
+    `notes.md`, `appendix.md`, anchor-fragment forms such as `#route-home`, discussion refs, and screen contract refs
+    are NOT valid `declaredRef` values.
+    `fullHarness` follows a terminal-first state machine: `status="in-progress"` requires `finalDecision="pending"`,
+    `reviewerSignoff.status="pending"`, and no `terminationReason`; `status="completed"` requires `terminationReason`,
+    a non-pending `finalDecision`, and a terminal `reviewerSignoff`.
 
 ## ATDD annotation hard gate
 
@@ -89,7 +112,7 @@ QFAI includes a small set of custom skills (stored under `.qfai/assistant/skills
   as 15 required markdown files under `.qfai/discussion/discussion-<ts>/`.
   UI-bearing discussion packs require `prototyping.yaml`; non-ui discussion packs do not.
 - **qfai-sdd**: Unified SDD entrypoint with discussion-pack preflight guard (missing/incomplete/blocking OQ causes stop + next action guidance).
-- **qfai-prototyping**: Build a contract-aligned implementation skeleton with static-first evidence by default, and escalate to full-harness only when explicitly justified.
+- **qfai-prototyping**: Build a contract-aligned UI prototype under the `full-harness` only / UI-only contract, with calibration-pack SSOT and screen-level Browser QA evidence.
 - **qfai-atdd**: Implement acceptance tests driven by specs/scenarios.
 - **qfai-implement**: Unified TDD micro-cycle (Red/Green/Refactor) one test at a time using `test-list.md` as the execution ledger, including ledger status updates and exception closure.
 - **qfai-verify**: Run full-scan local quality gates (`validate --fail-on error`, `report`, repo gates) and produce reviewer-approved evidence under `.qfai/evidence/`.
@@ -191,7 +214,9 @@ Notes.
 
 - `validate.json`, `report.json`, `doctor.json`, and `run-*` JSON logs are internal exports and are not a stable external contract; prefer `report.md` for integrations that must survive tool upgrades.
 - Scenario files are expected to use the Gherkin extension `*.feature` (not `*.md`).
-- `prototyping.calibration` in `qfai.config.yaml` connects full-harness scoring thresholds to the report and validator.
+- `prototyping.calibration.packPath` points to the calibration pack SSOT; runtime and validator both resolve thresholds and iteration parameters from that pack.
+- `prototyping.calibration.thresholds`, `maxIterations`, `plateauDelta`, and `plateauLookback` are unsupported public config fields in v1.7.15.
+  Put calibration values in the referenced pack instead of `qfai.config.yaml`.
 - Observability modules (`src/core/observability/`) exist as foundation code but are **not integrated into blocking validation** in v1.7.14. They are reserved for future operational instrumentation.
 
 ## Specifications and contracts (SDD)

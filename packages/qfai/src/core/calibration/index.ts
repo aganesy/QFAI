@@ -1,4 +1,5 @@
 export { CalibrationLoader } from "./loader.js";
+export { resolveCalibrationPack } from "./packResolver.js";
 export { ScoringEngine } from "./scoring.js";
 export { DisagreementHandler } from "./disagreement.js";
 export { PlateauDetector } from "./plateau.js";

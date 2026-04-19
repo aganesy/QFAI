@@ -155,3 +155,77 @@
   - **QFAI-PROT-294**: non-increasing scoringTrace → info（改善が見られない）
   - **Taxonomy range 拡張**: fullHarness reserved range 281-283 → 281-294, TAXONOMY_RANGE_MAX 283 → 294
   - **validate.ts**: PROT-290~294 description を issue code description map に追加
+
+## v1.7.15 Adopted
+
+- adopted: REQ-0124..REQ-0135（12 new validator rules QFAI-PROT-295..306, PROT-308..309）追加
+- adopted: PROT-290..292 severity を warning→error に昇格
+- adopted: US-0004-0023..US-0004-0025, AC-0004-0025..AC-0004-0032, BR-0004-0027..BR-0004-0038, EX-0004-0028..EX-0004-0040, TC-0004-0035..TC-0004-0053 追加
+- adopted: DR-0004-0006..DR-0004-0008 追加
+- adopted: taxonomy range 拡張 281-294 → 281-321
+- rationale: v1.7.15 は破壊的変更リリース。full-harness evidence の truthfulness を error-level enforcement で保証する:
+  - **QFAI-PROT-295**: reviewer placeholder → error
+  - **QFAI-PROT-296**: weightedTotal mismatch → error
+  - **QFAI-PROT-297**: commitSha missing → error
+  - **QFAI-PROT-298**: limitations missing → error
+  - **QFAI-PROT-299**: completed + terminationReason missing → error
+  - **QFAI-PROT-300**: plateau + insufficient iterations → error
+  - **QFAI-PROT-301**: calibrationRef empty → error
+  - **QFAI-PROT-302**: identical commitSha across iterations → warning
+  - **QFAI-PROT-303**: reviewerLog summary too short → warning
+  - **QFAI-PROT-304**: reviewerLogs count mismatch → error
+  - **QFAI-PROT-305**: zero-seeded specCoverage → error
+  - **QFAI-PROT-306**: synthetic mockPaths pass → error
+  - **QFAI-PROT-308**: converged + iterationCount<2 → error (strengthened from PROT-290)
+  - **QFAI-PROT-309**: iteration reviewer placeholder → error
+
+### v1.7.15 Traceability Chain
+
+```text
+US-0004-0023 → AC-0004-0025, AC-0004-0030, AC-0004-0032 → BR-0004-0027..BR-0004-0038 → EX-0004-0028..EX-0004-0040 → TC-0004-0035..TC-0004-0053
+US-0004-0024 → AC-0004-0026, AC-0004-0027 → BR-0004-0028..BR-0004-0030 → EX-0004-0029..EX-0004-0031 → TC-0004-0037..TC-0004-0042
+US-0004-0025 → AC-0004-0028..AC-0004-0031 → BR-0004-0031..BR-0004-0037 → EX-0004-0032..EX-0004-0038 → TC-0004-0043..TC-0004-0051
+```
+
+## v1.7.15 Rejected
+
+- RJ-v1715-001: Downgrade PROT-295..306 to warning
+  - DO NOT downgrade any of PROT-295..306, PROT-308..309 to warning severity
+  - Temptation: keep CI green during transition period by making new rules warnings first
+  - Reason: v1.7.15 is a breaking-change release. Warning-level rules do not enforce truthfulness — they merely inform. The entire purpose of these rules is to prevent synthetic/fabricated evidence from passing CI gates
+
+- RJ-v1715-002: Allow waivers for PROT-295..309 error rules
+  - DO NOT allow waivers to suppress these error-level findings
+  - Temptation: unblock stalled PRs that fail on new validator rules
+  - Reason: these rules enforce evidence truthfulness at the structural level. Waiving them defeats the purpose of the v1.7.15 hardening effort. Fix the evidence, not the gate
+
+## v1.7.15 rev2 — Adopted
+
+- AD-v1715r2-001: REQ-0136 追加（14 項目 error 昇格 rev2: evidence category empty / DB no observation / uiFidelity screen-level / iteration evidenceRefs / old schema detection）
+- AD-v1715r2-002: REQ-0137 追加（validator tests fixture rev2 改定）
+- AD-v1715r2-003: DR-0004-0009 追加（新 rule ID for semantic changes）
+- AD-v1715r2-004: US-0004-0026..0027, AC-0004-0033..0038, BR-0004-0039..0040, EX-0004-0041..0043, TC-0004-0054..0062 追加
+
+## v1.7.15 rev2 — Rejected
+
+- RJ-v1715r2-001: Reuse existing rule IDs for semantic changes
+  - DO NOT reuse existing rule IDs when detection target changes semantically
+  - Temptation: keep rule count low by overloading existing IDs
+  - Reason: overloaded IDs break waiver targeting and CI filtering
+
+## 2026-04-18 ATDD audit correction
+
+- adopted: EX-0004-0013 / TC-0004-0016 を placeholder から GitHub annotation escape の具体例へ更新
+- adopted: 06_Test-Cases.md の Test Case Table に TC-0004-0023..0027, TC-0004-0029..0034, TC-0004-0054..0062 を追記し、TDD ledger と整合させた
+- adopted: REQ-0117 / BR-0004-0022 / EX-0004-0024 / TC-0004-0031 を実装実態に合わせて canonical validator count=12 に補正
+- removed: BR-0004-0021 に紐づく stale EX-0004-0022 / TC-0004-0028（phase1 ratchet）。rollout.ts 削除後の production 実装に存在しないため再採用しない
+- rationale: spec-0004 と tests/e2e / tests/integration の ATDD coverage 監査で、placeholder・削除済み機能・Test Case Table 欠落が実装と乖離していたため
+
+## v1.7.17 (2026-04-18) — Guideline Coverage & Anchor Concreteness
+
+- adopted: REQ-0138（UIX-VAL-T05 guideline coverage warning）, REQ-0139（UIX-VAL-T06 anchor concreteness warning）追加
+- adopted: US-0004-0028..0029, AC-0004-0039..0040, BR-0004-0041..0042, EX-0004-0044..0045, TC-0004-0063..0066 追加
+- adopted: DR-0004-0011..0013 追加（warning-first rollout, trendScan ownership, scoringReady ownership）
+- rationale:
+  - guideline evidence の欠落と adjective-only anchors は downstream quality failure の主要因だが、既存 pack 影響を考慮して warning-first が妥当
+  - category completeness は `trendScan.ts`、anchor schema は `scoringReady.ts` に寄せることで canonical validator 境界を維持

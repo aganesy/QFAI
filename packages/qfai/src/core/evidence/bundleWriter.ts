@@ -9,6 +9,14 @@ import type { PrototypingMode, PrototypingSurface } from "../prototyping/types.j
 import type { FakeUiDetectionResult } from "../harness/fakeUiDetection.js";
 import type { FullHarnessHandoff } from "../harness/handoff.js";
 import type { FullHarnessExitReason } from "../harness/exitReason.js";
+import type {
+  FullHarnessIteration,
+  FullHarnessCalibrationRef,
+  TerminationReason,
+  FinalDecision,
+  ReviewerLogVerdict,
+  ReviewerSignoffStatus,
+} from "../harness/types.js";
 
 export type PrototypingSummaryBundle = {
   surface: PrototypingSurface;
@@ -17,6 +25,11 @@ export type PrototypingSummaryBundle = {
     declared: { uiRoutes: number; apiEndpoints: number; dbObjects: number };
     checked: { uiOk: number; apiNon404: number; dbPresent: number };
     missing: { uiRoutes: string[]; apiEndpoints: string[]; dbObjects: string[] };
+    coverageRefs?: Array<{
+      route: string;
+      declaredRef: string;
+      observedRefs: string[];
+    }>;
   }>;
   mode: {
     requested?: PrototypingMode;
@@ -34,13 +47,23 @@ export type PrototypingSummaryBundle = {
   };
   uiFidelityStatus?: {
     required: boolean;
-    status: "completed" | "failed" | "n/a";
+    status: "completed" | "failed" | "insufficient-evidence" | "n/a";
     reason?: string;
   };
   missingRequiredEvidence?: string[];
   runtimeGate?: {
-    ui: Array<{ route: string; status: number }>;
-    api: Array<{ method: string; path: string; status: number }>;
+    ui: Array<{
+      screenId: string;
+      route: string;
+      declaredRef: string;
+      url?: string;
+      rendered: boolean;
+      browserVisited: boolean;
+      httpStatus?: number;
+      renderEvidenceRefs: string[];
+      browserQaEvidenceRefs: string[];
+    }>;
+    evidenceRefs: string[];
   };
   uiFidelity?: {
     mode: "interactive" | "skeleton";
@@ -48,17 +71,37 @@ export type PrototypingSummaryBundle = {
   };
   fullHarness?: {
     enabled: true;
-    available: boolean;
     runId: string;
+    calibrationRef: FullHarnessCalibrationRef;
     iterationCount: number;
     bestIteration: number;
-    terminationReason: string;
+    status: "in-progress" | "completed";
+    terminationReason?: TerminationReason;
+    finalDecision: FinalDecision;
     reviewerSignoff: {
-      status: string;
-      reviewer: string;
-      timestamp: string;
+      reviewerId: string;
+      status: ReviewerSignoffStatus;
+      timestamp?: string;
+      source: "cli";
     };
-    scoringTrace: Array<{ iteration: number; weightedTotal: number; decision: string }>;
+    reviewerLogs: Array<{
+      iteration: number;
+      reviewerId: string;
+      verdict: ReviewerLogVerdict;
+      summary: string;
+      evidenceRefs: string[];
+    }>;
+    iterations: FullHarnessIteration[];
+    scoringTrace: Array<{
+      iteration: number;
+      l1Total: number;
+      l2Total: number;
+      weightedTotal: number;
+      deltaFromPrevious: number | null;
+      decision: "accept" | "refine" | "reject";
+      commitSha: string;
+    }>;
+    limitations: string[];
   };
 };
 

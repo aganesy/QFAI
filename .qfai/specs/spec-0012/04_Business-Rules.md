@@ -298,3 +298,800 @@
 - 各評価軸のイテレーションあたりスコア改善上限: maxDeltaPerAxisPerIteration = 0.15
 - この上限を超える delta は再評価または正当化を必須とする
 - single-iteration score inflation を防止する仕組み
+
+## BR-0012-0041: L1 Panel Scoring from Real Evidence (v1.7.15)
+
+- AC-Refs: AC-0012-0026-01
+- REQ-Refs: REQ-0041
+
+- scoreL1(inputs) は runtime gate / render coverage / browser QA blocking findings / screen contract coverage / spec coverage を必須入力とする
+- l1: { total: 0, axes: [] } の固定値生成を禁止する
+- 入力のいずれかが欠落している場合は MeasurementError を投げる
+
+## BR-0012-0042: L2 Panel Scoring from Real Evidence (v1.7.15)
+
+- AC-Refs: AC-0012-0026-01
+- REQ-Refs: REQ-0042
+
+- scoreL2(inputs) は discussion 3-layer axes / screen contract fidelity / trend translation consistency / visual findings / browser QA experience findings を必須入力とする
+- 全入力が実 evidence から供給されること
+
+## BR-0012-0043: weightedTotal Always Minimum (v1.7.15)
+
+- AC-Refs: AC-0012-0026-03
+- REQ-Refs: REQ-0043
+
+- computeWeightedTotal(l1, l2) は常に Math.min(l1.total, l2.total) を返す
+- 平均、加重平均、または pre-scored 値の流用を禁止する
+
+## BR-0012-0044: Converged Requires Two Iterations (v1.7.15)
+
+- AC-Refs: AC-0012-0026-02
+- REQ-Refs: REQ-0044
+
+- converged は iterationCount >= 2 を必須とする
+- 1 iteration 目で weightedTotal >= acceptThreshold であっても status は in-progress のまま
+- converged には追加条件として plateauLookback >= 2 区間の score delta が plateauDelta 以下であることを要求
+
+## BR-0012-0045: Plateau Requires Two Iterations (v1.7.15)
+
+- AC-Refs: AC-0012-0026-02
+- REQ-Refs: REQ-0045
+
+- plateau は iterationCount >= 2 かつ plateau 条件成立だが accept threshold 未達の場合のみ設定
+- single-iteration plateau は矛盾として reject
+
+## BR-0012-0046: max-iterations Exact Match (v1.7.15)
+
+- AC-Refs: AC-0012-0026-02
+- REQ-Refs: REQ-0046
+
+- terminationReason = max-iterations は iterationCount === calibration.maxIterations の場合のみ設定
+- iterationCount < maxIterations で max-iterations を設定することは禁止
+
+## BR-0012-0047: reviewerLogs Append-Only (v1.7.15)
+
+- AC-Refs: AC-0012-0026-02
+- REQ-Refs: REQ-0047
+
+- reviewerLogs[] は iteration ごとに 1 エントリを append する
+- 既存エントリの上書き・削除・単一要素置換を禁止
+- reviewerLogs.length === iterationCount を常に満たす
+
+## BR-0012-0048: Reviewer Placeholder Reject List (v1.7.15)
+
+- AC-Refs: AC-0012-0027-01
+- REQ-Refs: REQ-0048
+
+- 以下の placeholder 値を reject する（frozen list）: "qfai", "default", "auto", "system", "unknown", "" (空文字)
+- CLI 引数未指定時は CLI レベルで失敗させる
+- runtime 内の resolvedReviewer ?? "qfai" 的フォールバックを禁止する
+
+## BR-0012-0049: commitSha Mandatory in Full-Harness (v1.7.15)
+
+- AC-Refs: AC-0012-0027-02
+- REQ-Refs: REQ-0049
+
+- full-harness 実行時に commit SHA 取得が必須
+- 取得不能時は runtime error で失敗させる（空文字やプレースホルダーへのフォールバック禁止）
+
+## BR-0012-0050: specCoverage from Real Diffs Only (v1.7.15)
+
+- AC-Refs: AC-0012-0028-01
+- REQ-Refs: REQ-0050
+
+- specCoverage は loadDeclaredSpecArtifacts() と collectObservedRuntimeArtifacts() の実差分から生成
+- uiRoutes, apiEndpoints, dbObjects の 3 系統を最低限扱う
+- 全軸 {declared:0, observed:0, ratio:0} の zero-seeded 出力を禁止
+
+## BR-0012-0051: uiFidelity Observation-Only (v1.7.15)
+
+- AC-Refs: AC-0012-0028-02
+- REQ-Refs: REQ-0051
+
+- uiFidelity は DOM parse (jsdom) / browser QA / render evidence からのみ構成する
+- mockPaths.status = "pass" の自動生成を禁止
+- evidence 不足時は status = "insufficient-evidence" を返す
+
+## BR-0012-0052: extractHtmlLabelsFromString Removal (v1.7.15)
+
+- AC-Refs: AC-0012-0028-03
+- REQ-Refs: REQ-0052
+
+- extractHtmlLabelsFromString() の空実装を削除する
+- label extraction は uiObservation.ts の extractDomLabelsWithJsdom() が担う
+
+## BR-0012-0053: CalibrationLoader Wired in execution.ts (v1.7.15)
+
+- AC-Refs: AC-0012-0027-03
+- REQ-Refs: REQ-0053
+
+- CalibrationLoader は execution.ts で loadConfig() 後に呼び出す（config.ts ではない）
+- pack 不在・読取不可・schema 不整合時は runtime error で失敗させる
+
+## BR-0012-0054: packVersion from Pack Metadata Only (v1.7.15)
+
+- AC-Refs: AC-0012-0029-02
+- REQ-Refs: REQ-0054
+
+- packVersion は CalibrationLoader 経由で pack metadata から動的に取得する
+- packVersion: "1.0.0" のハードコードを禁止する
+
+## BR-0012-0055: Docs Reality Sync (v1.7.15)
+
+- AC-Refs: AC-0012-0029-01
+- REQ-Refs: REQ-0055
+
+- SKILL.md / evidence README / discussion README の各制約主張は validator rule または runtime error condition に 1:1 対応する
+- runtime 未実装の機能を docs で主張してはならない
+
+## BR-0012-0056: Fail-Fast No Silent Fallback (v1.7.15)
+
+- AC-Refs: AC-0012-0027-01, AC-0012-0027-02, AC-0012-0027-03, AC-0012-0027-04
+- REQ-Refs: REQ-0056
+
+- full-harness で必須 evidence (calibration / reviewer / commitSha / render / browserQa / uiObservation / specCoverage) のいずれかが欠落した場合は runtime error で即座に失敗させる
+- デフォルト値での補完・silent fallback・graceful degradation を禁止する
+
+## BR-0012-0057: Pre-Scored Path Prohibition (v1.7.15 rev2)
+
+- AC-Refs: AC-0012-0030-01, AC-0012-0030-02, AC-0012-0030-03
+- REQ-Refs: REQ-0057, REQ-0058
+
+- runFullHarness() request 型に l1/l2 フィールドを含めない
+- panelInputs が request に存在しない場合は即 throw
+- scoring は validatePanelInputs → scorePanelsFromInputs → determineDecision の直列実行のみ
+
+## BR-0012-0058: FullHarnessIteration Evidence-Driven Type (v1.7.15 rev2)
+
+- AC-Refs: AC-0012-0030-03
+- REQ-Refs: REQ-0059, REQ-0060, REQ-0061
+
+- FullHarnessIteration の全必須フィールド: l1, l2, weightedTotal, commitSha, reviewerId, limitations, evidenceRefs
+- MeasurementResult は panelInputs と 8 カテゴリ evidenceRefs を同時に返す
+- evidenceRefs の 8 カテゴリ（runtimeGate/render/browserQa/uiObservation/specCoverage/discussion/screenContract/trend）は全て非空必須
+
+## BR-0012-0059: validatePanelInputs 10-Check Gate (v1.7.15 rev2)
+
+- AC-Refs: AC-0012-0030-02
+- REQ-Refs: REQ-0062
+
+- 以下の 10 条件で throw: renderEvidence.totalScreens===0 / renderEvidence.evidenceRefs.length===0 / browserQa.executed===false / browserQa.evidenceRefs.length===0 / specCoverage.evidenceRefs.length===0 / uiObservation.htmlCaptureRefs.length===0 / discussionAxes.evidenceRefs.length===0 / screenContract.evidenceRefs.length===0 / trendAlignment.evidenceRefs.length===0 / screenContract.totalContracts>0 && fidelityScore===0
+
+## BR-0012-0060: l2Evidence Builder Contract (v1.7.15 rev2)
+
+- AC-Refs: AC-0012-0031-01, AC-0012-0031-02, AC-0012-0031-03
+- REQ-Refs: REQ-0063, REQ-0064, REQ-0065, REQ-0066
+
+- buildDiscussionAxisInputs(root): 実 discussion artifact から invariant/trend-derived/product-specific 軸数を抽出。artifact 内評価値の再利用禁止。不足時 throw
+- buildScreenContractInputs: fidelityScore の 0 初期化禁止。contract ありで coveredContracts=0 は evidence failure
+- buildTrendAlignmentInputs: trendSourcesChecked===0 で必ず失敗
+- execution.ts の L2 dummy object（aggregateScore:0/fidelityScore:0/translationConsistency:0 + evidenceRefs:[]）を全廃し builder 呼び出しに差し替え
+
+## BR-0012-0061: panelScore Double Defense (v1.7.15 rev2)
+
+- AC-Refs: AC-0012-0030-03
+- REQ-Refs: REQ-0067
+
+- discussionAxes.aggregateScore は 0〜1 の範囲必須
+- trendSourcesChecked===0 は validator でも reject
+- screenContract.totalContracts>0 && fidelityScore===0 は runtime fail（rationale 埋めで通さない）
+
+## BR-0012-0062: CalibrationLoader Fail-Closed (v1.7.15 rev2)
+
+- AC-Refs: AC-0012-0032-01, AC-0012-0032-02, AC-0012-0032-03
+- REQ-Refs: REQ-0068, REQ-0069, REQ-0070
+
+- pack 不在 → throw / YAML parse 不正 → throw / version 欠落 → throw / thresholds.accept|refine 欠落 → throw / maxIterations|plateauDelta|plateauLookback 欠落 → throw
+- DEFAULT_PACK fallback 削除 / version="1.0.0" 補完削除
+- config 側は packPath 解決用のみ。thresholds/maxIterations/plateauDelta/plateauLookback の config 補完を削除
+- TerminationContext は { calibration: CalibrationPack; history: FullHarnessHistory } のみ受け入れ
+
+## BR-0012-0063: Termination Guard (v1.7.15 rev2)
+
+- AC-Refs: AC-0012-0033-01, AC-0012-0033-02
+- REQ-Refs: REQ-0071, REQ-0072
+
+- count < plateauLookback の場合: status="in-progress", terminationReason=undefined
+- plateau/converged 判定は count >= plateauLookback の後でのみ
+- validator: terminationReason=plateau|converged && iterationCount<plateauLookback は error
+
+## BR-0012-0064: specCoverage Strict (v1.7.15 rev2)
+
+- AC-Refs: AC-0012-0034-01, AC-0012-0034-02, AC-0012-0034-03
+- REQ-Refs: REQ-0073, REQ-0074, REQ-0075
+
+- specNames に存在する spec が perSpecMap に無い場合は error（0 初期化禁止）
+- loadDeclaredSpecArtifacts の宣言抽出結果完全空 / evidenceRefs 作成不可 / DB 未実装通過を error 化
+- declared DB objects > 0 で観測無し → full-harness failure
+
+## BR-0012-0065: Screen-Level UiObservation (v1.7.15 rev2)
+
+- AC-Refs: AC-0012-0035-01, AC-0012-0035-02, AC-0012-0035-03, AC-0012-0035-04, AC-0012-0035-05
+- REQ-Refs: REQ-0076, REQ-0077, REQ-0078, REQ-0079, REQ-0080, REQ-0081
+
+- UiObservationSummary は screens: ScreenObservation[] を返す（flatten 廃止）
+- actionsWired: browser QA interaction phase 由来。0 固定廃止。観測不能は "unknown"
+- mockPath.pass は明示的成功導線観測がある時のみ
+- uiFidelityBuilder: screen 単位で html capture → DOM labels / actions / mockPaths を構築（cross-screen 共有禁止）
+- uiFidelity insufficient-evidence: html capture 無/render evidence 無/browser QA 無/action 観測不可のいずれかで status="insufficient-evidence" or error
+- mockPaths status="pass" 自動生成禁止 / expected→observed コピー禁止
+
+## BR-0012-0066: ReviewerLog and History Integrity (v1.7.15 rev2)
+
+- AC-Refs: AC-0012-0036-01, AC-0012-0036-02, AC-0012-0036-03
+- REQ-Refs: REQ-0082, REQ-0083, REQ-0084
+
+- reviewerLog.evidenceRefs は 8 カテゴリ全体を含む（render/browserQa のみ不可）
+- reviewerLog.summary に decision / weightedTotal / limitations summary を含む
+- iterations.length === iterationCount === scoringTrace.length === reviewerLogs.length（ズレで throw）
+- bundleWriter は schema v2（8 カテゴリ evidenceRefs + FullHarnessIteration 新型）のみ出力
+
+## BR-0012-0067: Tests Fixture Rev2 (v1.7.15 rev2)
+
+- AC-Refs: AC-0012-0037-01, AC-0012-0037-02
+- REQ-Refs: REQ-0085, REQ-0086
+
+- 正常系 fixture から削除: l1/l2 直渡し / packVersion:"1.0.0" / single-iteration converged / actionsWired=0 / flattened DOM labels
+- 異常系 fixture に追加: missing pack / missing reviewer / missing discussion|trend|screenContract evidence / insufficient ui observation / per-spec coverage build failure
+
+## BR-0012-0068: UI-bearing Surface Classification (v1.7.15 rev4)
+
+- AC-Refs: AC-0012-0038-05
+- UI-bearing surface は `web`, `mobile`, `desktop`, `mixed` に限定される
+- `cli` は非ビジュアルとして分類され、full-harness mode との組み合わせは無効
+
+## BR-0012-0069: 4-Layer full-harness Reject Guard (v1.7.15 rev4)
+
+- AC-Refs: AC-0012-0038-01, AC-0012-0038-02, AC-0012-0038-03, AC-0012-0038-04
+- CLI / derivePrototypingObligations / runFullHarness / バリデータの 4 層すべてで cli + full-harness を拒否
+- 1 層でもバイパスされた場合、次の層で拒否が発動する（多層防御）
+
+## BR-0012-0070: Screen Contract Target Derivation (v1.7.15 rev4)
+
+- AC-Refs: AC-0012-0039-02, AC-0012-0039-03
+- Browser QA ターゲットは `40_screen_contracts.md` のスクリーン定義から動的に導出する
+- `"/primary"` ハードコードの使用を禁止する
+
+## BR-0012-0071: Screen Count Consistency (v1.7.15 rev4)
+
+- AC-Refs: AC-0012-0039-05, AC-0012-0039-06
+- 画面契約のスクリーン数とターゲット数は必ず一致する
+- 各スクリーンに対して個別のエビデンスレコードを生成する
+
+## BR-0012-0072: Browser QA Evidence Chain Non-Empty (v1.7.15 rev4)
+
+- AC-Refs: AC-0012-0040-03, AC-0012-0040-04
+- `iterations[].evidenceRefs.browserQa` は非空であることが必須
+- 空の場合はハードフェイルとし、サイレントパスを禁止する
+
+## BR-0012-0073: Evidence Refs Summary Inclusion (v1.7.15 rev4)
+
+- AC-Refs: AC-0012-0040-01, AC-0012-0040-02
+- フェーズ参照とファインディング参照はサマリーレベルに必ず含める
+
+## BR-0012-0074: Canonical Path Comparison (v1.7.15 rev4)
+
+- AC-Refs: AC-0012-0041-01, AC-0012-0041-02, AC-0012-0041-03
+- ルート比較は canonical path で行い、URL をルートとして扱わない
+- 末尾スラッシュの有無に関わらず一貫した結果を返す
+
+## BR-0012-0075: Missing Observation Reporting (v1.7.15 rev4)
+
+- AC-Refs: AC-0012-0041-04
+- 画面契約に存在するがオブザベーションにないルートは `missing_observation` としてレポートする
+- レポートには対象ルート名を具体的に列挙する
+
+## BR-0012-0076: Structured Parse Priority (v1.7.15 rev4)
+
+- AC-Refs: AC-0012-0042-01, AC-0012-0042-02, AC-0012-0042-03
+- L2 エビデンス収集では構造化パースを優先する
+- ヒューリスティックフォールバックは構造化ソースが不在の場合のみ許可
+
+## BR-0012-0077: Stale Semantics Cleanup Rules (v1.7.15 rev4)
+
+- AC-Refs: AC-0012-0043-01, AC-0012-0043-02, AC-0012-0043-03, AC-0012-0043-04
+- 陳腐化 remediation は除去する
+- `skip` → `reject` 変換、URL-as-route → canonical route 変換、`"/primary"` 除去を実施
+
+## BR-0012-0078: Docs Reality Sync (v1.7.15 rev4)
+
+- AC-Refs: AC-0012-0043-05, AC-0012-0043-06
+- README / SKILL.md / evidence README は runtime / validator / tests の実体と一致させる
+
+## BR-0012-0079: Parameterized Route Pattern Matching (v1.7.15 rev4)
+
+- AC-Refs: AC-0012-0041-01
+- パラメタライズドルート（e.g., `/orders/:id`）はパターンベースマッチングで Browser QA エビデンスチェーンと照合する
+- OQ-0004 resolution: DR-0012-0027 / DR-0222
+
+## BR-0012-0080: All-Mode Non-UI Surface Rejection (v1.7.15 rev5 WS-1)
+
+- AC-Refs: AC-0012-0044-01, AC-0012-0044-02, AC-0012-0044-03
+- derivePrototypingObligations() returns invalidCombination=true for non-UI surface regardless of mode (low-cost/standard/full-harness)
+- reason code is unsupported_non_ui_prototyping_surface across all rejection layers
+- UI-bearing allowlist: web, mobile-web, desktop-web, native-mobile (requiresVisualBrowserEvidence===true)
+- execution.ts rejects non-UI surface immediately after classification; runtime.ts runFullHarness() throws on non-UI surface; CLI rejects at entry point; prototypingEvidence.ts validator hard-errors non-UI evidence
+
+## BR-0012-0081: Observed-Only RuntimeGate Ledger (v1.7.15 rev5 WS-2)
+
+- AC-Refs: AC-0012-0045-01, AC-0012-0045-02, AC-0012-0045-03, AC-0012-0045-04
+- runtimeObservation.ts defines ObservedUiRoute (screenId, route, url, rendered, browserVisited, httpStatus?, renderEvidenceRefs[], browserQaEvidenceRefs[]) and RuntimeObservation (ui: ObservedUiRoute[])
+- RuntimeObservation builder includes ONLY routes with successful observations; unobserved routes are excluded
+- runtimeGate.api and runtimeGate.db fields are removed from type definitions
+- synthetic status:200 generation is completely removed from runtimeGateBuilder.ts
+- specCoverage calculation: set-compare declaredUiRoutes vs observed.ui[].route
+
+## BR-0012-0082: Per-Screen Browser QA Mandatory (v1.7.15 rev5 WS-3)
+
+- AC-Refs: AC-0012-0046-01, AC-0012-0046-02, AC-0012-0046-03, AC-0012-0046-04
+- browserQaPerScreen.ts generates one Browser QA input per canonical screen contract
+- capturedHtmlPath single-file representing all screens is prohibited
+- generic phaseLevelRefs fallback from uiObservation.ts is removed
+- Screen without its own refs: UIScreenObservation (in uiObservation.ts) sets observed=false / evidenceMissing=true
+- NOTE: observed=false belongs to UIScreenObservation in uiObservation.ts; ObservedUiRoute in runtimeObservation.ts is observed-only (never contains unobserved entries)
+- runtime.ts iterations[].evidenceRefs.browserQa stores runtime-collected refs only; request.panelInputs.browserQa.evidenceRefs fallback is removed
+- browserQa executed with 0 refs → hard fail
+
+## BR-0012-0083: actionsWired = Action Coverage Semantics (v1.7.15 rev5 WS-4)
+
+- AC-Refs: AC-0012-0047-01, AC-0012-0047-02, AC-0012-0047-03, AC-0012-0047-04
+- actionCoverage.ts computes: actionsDeclared, actionsObserved, actionsWired, missingActions[]
+- actionsWired += 1 ONLY when: declared action exists AND DOM control observed AND resolved as interaction target AND no blocking error
+- finding count MUST NOT contribute to actionsWired
+- uiObservation.ts removes finding-count-to-action-count conversion
+- uiFidelityBuilder.ts actionsWired derives from ActionCoverageResult only
+- Validator: actionsWired > actionsDeclared → error; actionsDeclared>0 + DOM observed + actionsWired=0 → error
+- Exception: actionsDeclared=0 screen → actionsWired=0 is normal (OQ-0003 resolved)
+
+## BR-0012-0084: runFullHarness() Required Fields Contract (v1.7.15 rev5 WS-5)
+
+- AC-Refs: AC-0012-0048-01, AC-0012-0048-02, AC-0012-0048-03, AC-0012-0048-04, AC-0012-0048-05, AC-0012-0048-06
+- FullHarnessRequest.adapters.surface is required (not optional)
+- FullHarnessRequest.adapters.render is required
+- FullHarnessRequest.adapters.browserQa is required
+- screenContracts is promoted to required field in FullHarnessRequest
+- panelInputs.browserQa.evidenceRefs fallback is removed
+- Adapter failures are propagated, not caught-and-continued
+- browserQa.executed === true with 0 evidenceRefs → throw
+- execution.ts passes surface/adapters/screenContracts/calibration pack ref explicitly to runFullHarness()
+
+## BR-0012-0085: Calibration Pack as SSOT (v1.7.15 rev5 WS-6)
+
+- AC-Refs: AC-0012-0049-01, AC-0012-0049-02, AC-0012-0049-03, AC-0012-0049-04, AC-0012-0049-05
+- packResolver.ts provides shared calibration pack resolution for both runtime and validator
+- Input: calibrationRef.packPath; Output: pack body + canonical thresholds
+- prototypingEvidence.ts reads maxIterations/plateauDelta/plateauLookback from pack (not from config)
+- Config calibration override (thresholds/maxIterations/plateauDelta/plateauLookback) is ignored; only packPath from config is used
+- API/DB coverage declaration in prototyping artifact → hard error in validator
+- structuredArtifactReaders.ts provides structured section parsers for 20-23 files, 04_Sources.md, 40_screen_contracts.md
+- l2Evidence.ts keyword/bullet fallback downgraded to last-resort (only on complete parse failure)
+- l2Evidence.ts: failure to parse 04_Sources.md structured section → fail
+- docs/README/SKILL updated to remove non-UI prototyping language, API/DB coverage from prototyping contract, and reflect new contracts (OQ-0002 resolved: validator reject only, no schema change)
+
+## BR-0012-0086: Full-Harness Only Enforcement (v1.7.15 rev6 WS-1)
+
+- AC-Refs: AC-0012-0050-01, AC-0012-0050-02, AC-0012-0050-03, AC-0012-0050-04, AC-0012-0050-05
+- Only `full-harness` mode is supported in packages/qfai v1.7.15; `standard` and `low-cost` are rejected at all layers
+- CLI layer (`cli/commands/prototyping.ts`): reject `--mode standard` and `--mode low-cost` before any processing; error message MUST contain "full-harness mode only"
+- execution.ts layer: reject `mode !== "full-harness"` as defense-in-depth after CLI; do not rely on CLI rejection
+- prototypingEvidence.ts validator layer: reject recorded output containing `mode !== "full-harness"`
+- Mode check MUST fire before calibration loading and before any iteration begins
+- Case-sensitive: "FULL-HARNESS" and "" (empty) are also rejected
+
+## BR-0012-0087: Surface Rejection at All Layers (v1.7.15 rev6 WS-1)
+
+- AC-Refs: AC-0012-0051-01, AC-0012-0051-02, AC-0012-0051-03, AC-0012-0051-04, AC-0012-0051-05
+- Non-UI surfaces (`cli`, `api`, `backend`, and any surface not in PROTOTYPING_SUPPORTED_SURFACES) are rejected at all layers
+- CLI layer: reject `--surface cli`, `--surface api`, `--surface backend` before any processing; error MUST name the rejected surface
+- execution.ts layer: calls `assertSupportedPrototypingSurface()` from `surfacePolicy.ts` as defense-in-depth
+- prototypingEvidence.ts validator layer: rejects any surface not in `PROTOTYPING_SUPPORTED_SURFACES`
+- Surface rejection fires before file I/O and before calibration load attempt
+- Unknown surfaces (not in PROTOTYPING_SUPPORTED_SURFACES) are also rejected
+
+## BR-0012-0088: surfacePolicy.ts as SSOT Standalone Module (v1.7.15 rev6 WS-2)
+
+- AC-Refs: AC-0012-0052-01, AC-0012-0052-02
+- `packages/qfai/src/core/prototyping/surfacePolicy.ts` is the single source of truth for surface allowlist
+- Must export: `PROTOTYPING_SUPPORTED_SURFACES: readonly string[]`, `isSupportedPrototypingSurface(surface: string): boolean`, `assertSupportedPrototypingSurface(surface: string): void`
+- `PROTOTYPING_SUPPORTED_SURFACES` value MUST be `["web", "mobile", "desktop", "mixed"]` exactly
+- `mixed` is included as a legitimate cross-platform UI surface (OQ-0001 resolution)
+- `cli`, `api`, `backend` are explicitly excluded
+- No other module may define surface allowlist as SSOT; mode.ts must not duplicate these constants
+- `assertSupportedPrototypingSurface()` throws immediately when surface is not in PROTOTYPING_SUPPORTED_SURFACES
+- `isSupportedPrototypingSurface()` is a pure function (deterministic, no side effects)
+
+## BR-0012-0089: runFullHarness CalibrationLoader Internal Resolution (v1.7.15 rev6 WS-3)
+
+- AC-Refs: AC-0012-0053-01, AC-0012-0053-02, AC-0012-0053-03, AC-0012-0053-04, AC-0012-0053-05, AC-0012-0053-06
+- `runFullHarness()` signature MUST NOT include scalar threshold parameters (e.g., passingThreshold, maxIterations as direct args)
+- `runFullHarness()` accepts `calibrationRef: { packPath: string }` OR a pre-resolved `calibrationPack` object
+- When `packPath` is provided, `CalibrationLoader` is invoked INTERNALLY to resolve the pack
+- If `packPath` is missing or the file is not found, an `Error` is thrown IMMEDIATELY before any iteration begins; error message includes packPath
+- If `packPath` points to malformed YAML, an `Error` is thrown at parse time before any iteration
+- The resolved pack's path is recorded in the runtime summary's `calibrationRef.packPath`
+- Validator checks that `calibrationRef.packPath` in the recorded output matches the pack used at runtime
+- TypeScript: removing scalar params from the signature causes a compile error if caller tries to pass them (type safety enforced)
+- Pack resolution error fires before `iteration[0]` begins; no partial iteration state in output on failure
+
+## BR-0012-0090: Concrete evidenceRefs Enforcement (v1.7.15 rev6 WS-4)
+
+- AC-Refs: AC-0012-0054-01, AC-0012-0054-02, AC-0012-0054-03, AC-0012-0054-04, AC-0012-0054-05, AC-0012-0054-06
+- `runtimeGate.evidenceRefs` MUST contain only concrete, resolvable artifact refs:
+  - Render summary refs: e.g., `prototyping.json#/iterations/N/renderSummary`
+  - Screenshot refs: e.g., `screenshots/iter-N-screen-login.png`
+  - Browser QA phase/finding refs: e.g., `browserQa/iter-N-smoke.json#/findings/0`
+- Self-references pointing to `prototyping.json#/runtimeGate` or similar are FORBIDDEN
+- Synthetic free-text strings (e.g., `"specs: UI matches design"`) are FORBIDDEN
+- Empty `evidenceRefs` array is forbidden; at least one concrete ref is required
+- `specCoverage.evidenceRefs` MUST contain only `40_screen_contracts.md#<screen-id>` spec refs and concrete observation artifact refs
+- `prototypingEvidence.ts` validator MUST reject self-references and synthetic strings with distinct error codes
+- Validation must check all entries; any single invalid entry causes rejection
+- Validator check is idempotent: same evidenceRefs validated twice returns same result
+
+## BR-0012-0091: reviewerSignoff Semantics and screenId Matching (v1.7.15 rev6 WS-5/WS-6/WS-7)
+
+- AC-Refs: AC-0012-0055-01, AC-0012-0055-02, AC-0012-0055-03, AC-0012-0055-04, AC-0012-0055-05, AC-0012-0055-06
+- `reviewerSignoff.status` MUST be one of: `approved`, `rejected`, `abandoned`
+- Mapping from `terminationReason`:
+  - `terminationReason = "accepted"` → `status = "approved"`
+  - `terminationReason = "rejected"` → `status = "rejected"`
+  - `terminationReason = "plateau"`, `"maxIterations"`, or `"runtimeFailure"` → `status = "abandoned"`
+- `isCompleted: true` alone MUST NOT produce `status = "approved"`; terminationReason is authoritative
+- `reviewerLogs[].verdict` MUST use mapped vocabulary: `approve`, `revise`, `reject`, `abandon`
+- Pre-mapping values (e.g., `accept`, `plateau-stop`) MUST NOT appear in recorded output (OQ-0004 resolution)
+- Validator enforces that `status` and `terminationReason` are mutually consistent; inconsistency is an error
+- Mapping is applied once at harness execution end; result is immutable after
+- `uiFidelityBuilder.ts` MUST use `obs.screenId === screen.screenId` for observation-to-screen matching
+- Old matching code `obs.screenId === screen.uiContractId` MUST be fully removed
+- Observations with a `screenId` matching no screen contract produce no match (no uiContractId fallback)
+- Any observation record containing a `uiContractId` field MUST be hard-errored by the validator (OQ-0005 resolution: backward compat abandoned)
+- Stale semantics removal: shipped docs, SKILL.md, evidence/README.md, review/README.md, contracts/ui/README.md, packages/qfai/README.md must not contain `standard`, `low-cost`, `cli prototyping`, or `mockPaths.status=pass`
+- Test fixtures must not assert `approved` for plateau/maxIterations termination, or allow `cli + standard` prototyping
+
+## BR-0012-0092: CalibrationLoader Called in execution.ts Pre-Harness Phase
+
+- AC-Refs: AC-0012-0056, AC-0012-0057, AC-0012-0058
+- Rule: `runPrototypingExecution()` MUST call `CalibrationLoader` (or equivalent) in its pre-harness phase to obtain a resolved `CalibrationPack` object before invoking `runFullHarness()`. `runtime.ts` MUST NOT import `CalibrationLoader`.
+- Source: REQ-0041, REQ-0042, REQ-0043
+
+## BR-0012-0093: uiFidelity Guard Position — After buildUiFidelity, Before runFullHarness
+
+- AC-Refs: AC-0012-0059, AC-0012-0060, AC-0012-0061, AC-0012-0062
+- Rule: The uiFidelity guard MUST be evaluated after `buildUiFidelity()` returns and before `buildSpecCoverageSummary()`, `buildL2Evidence()`, and `runFullHarness()` are called. Any incomplete condition (status≠completed, missingRequired>0, missing screen) MUST throw `UiFidelityEvidenceError` immediately.
+- Source: REQ-0044, REQ-0045, REQ-0046, REQ-0047
+
+## BR-0012-0094: isConcreteArtifactRef Defines Forbidden Patterns
+
+- AC-Refs: AC-0012-0063, AC-0012-0064, AC-0012-0065
+- Rule: `isConcreteArtifactRef(ref)` MUST return `false` for: directory paths, pack root paths, `.qfai/evidence/prototyping.json#/...` self-refs, `specs:` prefix synthetic tokens, and extension-less paths without anchors. `specCoverage.evidenceRefs` and `runtimeGate.evidenceRefs` MUST pass all entries through this check.
+- Source: REQ-0048, REQ-0049
+
+## BR-0012-0095: Validator Uses Real Pack Comparison — No Heuristics
+
+- AC-Refs: AC-0012-0066, AC-0012-0067, AC-0012-0068
+- Rule: `prototypingEvidence.ts` MUST resolve `evidence.fullHarness.calibrationRef.packPath`, read the actual pack, and compare `packPath` (normalized), `packVersion` (strict equality), and `configPath` (strict equality if present in summary). Any mismatch MUST be `issues.push(error(...))`. Hardcoded version heuristics (e.g., `packVersion === "1.0.0"` special-case) are forbidden.
+- Source: REQ-0050, REQ-0051, REQ-0052
+
+## BR-0012-0096: Six Error Classes — Co-Located in prototyping/errors.ts
+
+- AC-Refs: AC-0012-0069, AC-0012-0070
+- Rule: `packages/qfai/src/core/prototyping/errors.ts` MUST export exactly: `CalibrationResolutionError`, `UiFidelityEvidenceError`, `SpecCoverageBuildError`, `L2EvidenceBuildError`, `FullHarnessRuntimeError`, `EvidenceWriteError`. Each MUST extend `Error`. Each catch block in `execution.ts` MUST use only the appropriate error class for its phase.
+- Source: REQ-0053, REQ-0054
+
+## BR-0012-0097: Scalar Calibration Fields Removed — Obsolete Input Causes Error
+
+- AC-Refs: AC-0012-0071, AC-0012-0072, AC-0012-0073
+- Rule: `PrototypingCalibrationConfig` in `config.ts` MUST NOT contain `thresholds.accept`, `thresholds.refine`, `maxIterations`, `plateauDelta`, or `plateauLookback`. If any of these fields are present in a user's config input, the normalize step MUST throw an error naming the obsolete field(s). `qfai.config.yaml` template and `README.md` examples MUST use packPath-only.
+- Source: REQ-0055, REQ-0056, REQ-0057
+
+## BR-0012-0098: surfacePolicy Rejection Message — Derived, Never Hardcoded
+
+- AC-Refs: AC-0012-0074, AC-0012-0075
+- Rule: `assertSupportedPrototypingSurface()` in `surfacePolicy.ts` MUST generate its rejection message by joining `PROTOTYPING_SUPPORTED_SURFACES` (e.g., `.join(", ")`). The message MUST NOT hardcode any surface name. When `PROTOTYPING_SUPPORTED_SURFACES` changes, the message auto-updates.
+- Source: REQ-0058
+
+## BR-0012-0099: pathUtils.ts Is a Leaf Module — No Import from execution.ts or Its Transitive Importers (v1.7.15 rev8 WS-1)
+
+- AC-Refs: AC-0012-0076, AC-0012-0080, AC-0012-0081, AC-0012-0082
+- Rule: `packages/qfai/src/core/prototyping/pathUtils.ts` MUST NOT import from `execution.ts` or any module that transitively imports `execution.ts`. Circular import prevention is mandatory. Any type shared between pathUtils.ts and execution-layer modules MUST be defined in a neutral location (e.g., a shared types file).
+- Source: REQ-0059, TC-2 (discussion constraints)
+
+## BR-0012-0100: toRepoRelativeArtifactRef() Normalizes to POSIX Separator — Windows Backslash Forbidden (v1.7.15 rev8 WS-1)
+
+- AC-Refs: AC-0012-0083
+- Rule: `toRepoRelativeArtifactRef()` MUST normalize all path separators to POSIX `/` in its output regardless of the host OS. Windows `\\` separators in `absolutePath` input MUST be converted. The returned string MUST NOT contain `\\`.
+- Source: REQ-0059, TC-1 (discussion constraints)
+
+## BR-0012-0101: runtimeGate.evidenceRefs Absence or Empty Array Is Always a Validator Error (Fail-Closed) (v1.7.15 rev8 WS-2)
+
+- AC-Refs: AC-0012-0087, AC-0012-0088
+- Rule: `validatePrototypingEvidence()` MUST produce a validator error when `runtimeGate.evidenceRefs` is absent OR when it is an empty array `[]`. There is no valid use case for an absent or empty `runtimeGate.evidenceRefs` in full-harness UI-only output. This is a fail-closed rule (DR-0012-0048).
+- Source: REQ-0066, REQ-0067
+
+## BR-0012-0102: All Malformed Ref Forms in runtimeGate.evidenceRefs Are Individual Validator Errors (v1.7.15 rev8 WS-2)
+
+- AC-Refs: AC-0012-0089, AC-0012-0090, AC-0012-0091, AC-0012-0092, AC-0012-0093
+- Rule: Each of the following forms in `runtimeGate.evidenceRefs` MUST individually produce a validator error: (a) absolute path (starts with `/` or drive letter), (b) self-ref (`.qfai/evidence/prototyping.json#/...`), (c) synthetic token (non-path string like `"routes: all observed"`), (d) directory path (no file extension), (e) empty string `""`. Checks MUST be performed per-entry using `isConcreteArtifactRef()` from `pathUtils.ts`.
+- Source: REQ-0068
+
+## BR-0012-0103: Single Grammar SSOT — No Parallel Implementations of Concrete-Ref Grammar Outside pathUtils.ts (v1.7.15 rev8 WS-3)
+
+- AC-Refs: AC-0012-0094, AC-0012-0096
+- Rule: The concrete-ref grammar MUST have a single SSOT in `pathUtils.ts`. No module in `packages/qfai/src` may define an independent regex or pattern for "is concrete ref" outside of `pathUtils.ts`. All consumers MUST import and use the shared helpers. Violation is detectable by grep.
+- Source: REQ-0069, NFR-0003
+
+## BR-0012-0104: execution.ts Guards All Builder Outputs with assertConcreteArtifactRef() Before Bundle Write (v1.7.15 rev8 WS-3)
+
+- AC-Refs: AC-0012-0098
+- Rule: `execution.ts` MUST call `assertConcreteArtifactRef()` on builder outputs (at minimum specCoverage evidenceRefs and runtimeGate evidenceRefs) before writing the bundle to disk. An absolute path or invalid ref in any builder output MUST cause an assertion throw before bundle write, not a silent write of invalid data.
+- Source: REQ-0069
+
+## BR-0012-0105: Closure Test Required — Builder Output Must Pass Its Own Validator with Zero Errors (v1.7.15 rev8 WS-4)
+
+- AC-Refs: AC-0012-0099, AC-0012-0100
+- Rule: `prototypingExecution.productionPath.test.ts` MUST exist and MUST contain at least one test that calls `runPrototypingExecution()` end-to-end with valid inputs and passes its output to `validatePrototypingEvidence()`, asserting zero errors. This test prevents the class of regression where builders produce output that fails their own validator.
+- Source: REQ-0073, NFR-0004
+
+## BR-0012-0106: specCoverage.test.ts and prototypingEvidence.test.ts Must Include Negative Ref Cases (v1.7.15 rev8 WS-4)
+
+- AC-Refs: AC-0012-0101, AC-0012-0102, AC-0012-0103
+- Rule: `specCoverage.test.ts` MUST include negative cases: absolute path input → repo-relative output, outside-root path → throw, directory path → throw, `coverageRefs[].declaredRef` format verified. `prototypingEvidence.test.ts` MUST include negative cases for `runtimeGate.evidenceRefs`: absolute path → error, self-ref → error, synthetic token → error, absent → error, empty array → error.
+- Source: REQ-0071, REQ-0072
+
+## BR-0012-0107: runtimeGate.ui[].declaredRef Required Field Rule (v1.7.15 rev9 WS-1)
+
+- AC-Refs: AC-0012-0104
+- Rule: validatePrototypingEvidence() must check each runtimeGate.ui[] row for the presence of `declaredRef`. Absence of the field (undefined or null) produces a QFAI-PROT validator error. The field check must occur before the concrete-ref grammar check (fail fast on missing).
+
+## BR-0012-0108: runtimeGate.ui[] Leaf Fields Concrete-Ref Grammar Rule (v1.7.15 rev9 WS-1)
+
+- AC-Refs: AC-0012-0105, AC-0012-0107, AC-0012-0109
+- Rule: For each `runtimeGate.ui[]` row, after presence checks pass, `isConcreteArtifactRef()` from `pathUtils.ts` is applied to `declaredRef` and every entry in `renderEvidenceRefs[]` and `browserQaEvidenceRefs[]`. Any value that fails `isConcreteArtifactRef()` produces an individual QFAI-PROT validator error. The helper is the single grammar SSOT; no parallel implementation may be introduced.
+
+## BR-0012-0109: runtimeGate.ui[] Leaf Arrays Non-Empty Rule (v1.7.15 rev9 WS-1)
+
+- AC-Refs: AC-0012-0106, AC-0012-0108
+- Rule: `renderEvidenceRefs[]` and `browserQaEvidenceRefs[]` on each `runtimeGate.ui[]` row must be non-empty arrays. An empty array `[]` or absent field produces a QFAI-PROT validator error. This applies regardless of whether a browser QA run was performed — if the run cannot be completed, the builder must fail rather than emit an empty array.
+
+## BR-0012-0110: axes[].evidenceRefs[] Per-Axis Validation Rule (v1.7.15 rev9 WS-1)
+
+- AC-Refs: AC-0012-0111, AC-0012-0112, AC-0012-0113, AC-0012-0114, AC-0012-0115, AC-0012-0116
+- Rule: For each axis in `l1.axes[]` and `l2.axes[]` across all iterations, `evidenceRefs[]` must be non-empty and every entry must pass `isConcreteArtifactRef()`. Validation is per-axis: a single axis with a malformed or empty evidenceRefs[] produces a QFAI-PROT error regardless of other axes. Self-refs (pointing to prototyping.json) are explicitly forbidden.
+
+## BR-0012-0111: reviewerLogs[].evidenceRefs[] Non-Empty and Concrete Rule (v1.7.15 rev9 WS-1)
+
+- AC-Refs: AC-0012-0117, AC-0012-0118, AC-0012-0119, AC-0012-0120, AC-0012-0121
+- Rule: For each entry in `reviewerLogs[]`, `evidenceRefs[]` must be non-empty and every entry must pass `isConcreteArtifactRef()`. Synthetic tokens (e.g., "reviewer:1"), absolute paths, self-refs, empty strings — all produce individual QFAI-PROT validator errors.
+
+## BR-0012-0112: bundleWriter.ts Strict Schema Rule (v1.7.15 rev9 WS-2)
+
+- AC-Refs: AC-0012-0122, AC-0012-0123, AC-0012-0126
+- Rule: The TypeScript type in `bundleWriter.ts` (or the shared type it uses) must mark `runtimeGate.ui[].declaredRef` as required (not optional `?`). All leaf array fields (`renderEvidenceRefs[]`, `browserQaEvidenceRefs[]`, `l1/l2.axes[].evidenceRefs[]`, `reviewerLogs[].evidenceRefs[]`) must be typed as required non-nullable arrays (not `T | undefined | null`). Any code omitting these fields must be a TypeScript compile error.
+
+## BR-0012-0113: Runtime Builder Null-Emission Prevention Rule (v1.7.15 rev9 WS-2)
+
+- AC-Refs: AC-0012-0124, AC-0012-0125
+- Rule: Runtime builders (`runtimeObservation.ts`, `runtimeGateBuilder.ts`) must not emit null, undefined, or omitted values for any required leaf field. If a builder cannot populate a required leaf array, it must throw a runtime error before the bundle is written. Silent null/empty pass-through is prohibited.
+
+## BR-0012-0114: Synthetic Token Fixture Replacement Rule (v1.7.15 rev9 WS-3)
+
+- AC-Refs: AC-0012-0130
+- Rule: All test fixtures in `packages/qfai/tests/core/` that use synthetic tokens ("a", "b", "reviewer:1", or similar non-path strings) as `evidenceRefs` values must be replaced with repo-root relative concrete artifact refs (e.g., `.qfai/evidence/iter-0/fidelity-eval.md#finding-1`). The replacement values do not need to point to existing files on disk; they must only satisfy `isConcreteArtifactRef()` grammar.
+
+## BR-0012-0115: Leaf-Field Negative Test Coverage Rule (v1.7.15 rev9 WS-3)
+
+- AC-Refs: AC-0012-0127, AC-0012-0128, AC-0012-0129, AC-0012-0131
+- Rule: `prototypingEvidence.test.ts` must include the full set of negative cases: (a) 7 cases for `runtimeGate.ui[]` (declaredRef absent, absolute path, self-ref, synthetic token, bare filename, directory path, Windows `\\` separator); (b) 5 cases for axis-level `evidenceRefs[]` (l1 synthetic token, l2 synthetic token, absolute path, self-ref, empty array); (c) 3 cases for reviewer-level `evidenceRefs[]` (synthetic token "reviewer:1", absolute path, empty array). `prototypingExecution.productionPath.test.ts` must include at least 1 positive closure assertion and 1 negative injection for a leaf field.
+
+## BR-0012-0116: README Leaf-Field Enumeration Rule (v1.7.15 rev9 WS-4)
+
+- AC-Refs: AC-0012-0132
+- Rule: `packages/qfai/README.md` must explicitly list all fields under the concrete artifact ref contract after WS-4. The list must include all rev9 leaf fields: `runtimeGate.ui[].declaredRef`, `runtimeGate.ui[].renderEvidenceRefs[]`, `runtimeGate.ui[].browserQaEvidenceRefs[]`, `fullHarness.iterations[].l1/l2.axes[].evidenceRefs[]`, `fullHarness.reviewerLogs[].evidenceRefs[]`. The description must not use language that implies only top-level fields are under the strict ref contract.
+
+## BR-0012-0117: in-progress terminationReason absent (v1.7.15 rev10, WS-1)
+
+- AC-Refs: AC-0012-0133
+
+- Rule: terminationReason MUST be absent when status=in-progress
+- Rationale: in-progress bundles represent ongoing harness runs; a termination reason has no semantic meaning until the run completes
+- Enforcement: prototypingEvidence.ts validator error (fail-closed)
+
+## BR-0012-0118: in-progress field constraints (v1.7.15 rev10, WS-1)
+
+- AC-Refs: AC-0012-0134, AC-0012-0135
+
+- Rule: When status=in-progress: finalDecision MUST be "pending", reviewerSignoff.status MUST be "pending"
+- Rationale: terminal fields have no meaning while harness is still running
+- Enforcement: prototypingEvidence.ts validator error (fail-closed)
+
+## BR-0012-0119: completed terminationReason required (v1.7.15 rev10, WS-1)
+
+- AC-Refs: AC-0012-0136, AC-0012-0137
+
+- Rule: When status=completed: terminationReason MUST be present and MUST be one of {abandoned, max-iterations, plateau}
+- Rationale: all three completion paths map to the same finalDecision (abandoned); terminationReason preserves audit trail
+- Enforcement: prototypingEvidence.ts validator error (fail-closed)
+
+## BR-0012-0120: terminationReason→finalDecision/reviewerSignoff mapping (v1.7.15 rev10, WS-1)
+
+- AC-Refs: AC-0012-0138, AC-0012-0139
+
+- Rule: All three terminationReason values (abandoned, max-iterations, plateau) map to finalDecision=abandoned and reviewerSignoff.status=abandoned
+- Rationale: OQ-0001 resolved (DR-0012-0053): automatic termination is always abandonment; accepted status requires separate human signoff
+- Single source: mapping defined once in prototypingEvidence.ts
+
+## BR-0012-0121: buildScreenContractInputs uses sourceRef (v1.7.15 rev10, WS-2)
+
+- AC-Refs: AC-0012-0140, AC-0012-0141
+
+- Rule: buildScreenContractInputs() output refs MUST equal readCanonicalScreenContracts() sourceRef exactly
+- Rule: Slug-based anchor generation code MUST NOT exist in screenContracts.ts
+- Rationale: canonical sourceRef provides the correct, stable reference; slug derivation was error-prone
+
+## BR-0012-0122: All 8 evidenceRefs categories via assertConcreteArtifactRefs (v1.7.15 rev10, WS-3)
+
+- AC-Refs: AC-0012-0142, AC-0012-0143, AC-0012-0144, AC-0012-0145, AC-0012-0146, AC-0012-0147, AC-0012-0148, AC-0012-0149
+
+- Rule: iterations[].evidenceRefs.{render,browserQa,uiObservation,discussion,screenContract,trend,runtimeGate,specCoverage} MUST be non-empty
+- Rule: Every entry in each category MUST pass assertConcreteArtifactRefs() from pathUtils.ts
+- Rule: assertConcreteArtifactRefs() (plural) is added to pathUtils.ts as an array-level wrapper (OQ-0002 resolution: DR-0012-0054)
+- Enforcement: prototypingEvidence.ts validator error (fail-closed)
+
+## BR-0012-0123: declaredRef path+anchor constraint (v1.7.15 rev10, WS-4)
+
+- AC-Refs: AC-0012-0151, AC-0012-0152, AC-0012-0153
+
+- Rule: declaredRef MUST match /^\.qfai\/specs\/.+#(L\d+|\S+)$/
+- Rule: .qfai/discussion/ paths, screen contract refs, bare file paths are all invalid
+- Rationale: OQ-0004 resolved (DR-0012-0056): traceability requires specific declaration location
+- Single source: regex defined once in specCoverage.ts (inline, no refSemantics.ts)
+
+## BR-0012-0124: index.ts Must Not Export runMeasurement or validatePanelScore (v1.7.15 rev11, WS-1)
+
+- AC-Refs: AC-0012-0156
+- `src/core/index.ts` は `runMeasurement` および `validatePanelScore` を named export または barrel re-export しない。
+- `export *` による間接露出も含め、すべての export 経路を閉じる。
+- これらは `runFullHarness()` の内部実装であり、外部 API として設計されていない。
+
+## BR-0012-0125: runMeasurement Validates All 8 Category Refs (v1.7.15 rev11, WS-1)
+
+- AC-Refs: AC-0012-0157
+- `runMeasurement()` は次の全カテゴリ ref 配列が非空かつ concrete artifact ref であることを検証する:
+  renderRefs, browserQaRefs, runtimeGateRefs, uiObservationRefs, specCoverageRefs, discussionRefs, trendRefs, screenContractRefs
+- 空配列、絶対パス、synthetic token (`.qfai/placeholder` 等) は reject する。
+- 検証は assertConcreteArtifactRefs() を利用する。
+
+## BR-0012-0126: screenContractRefs Must Use Canonical Form (v1.7.15 rev11, WS-1)
+
+- AC-Refs: AC-0012-0158
+- `runMeasurement()` の `screenContractRefs[]` は `.qfai/discussion/<pack>/uiux/40_screen_contracts.md#<screenId>` 形式のみ受け付ける。
+- `#screen:<slug>` 形式（例: `#screen:dashboard`）は reject する。
+- この検証は assertConcreteArtifactRefs() の範囲内で実施する（具体的には相対パス形式チェック）。
+
+## BR-0012-0127: runMeasurement Pre-Validates Axes Before validatePanelScore (v1.7.15 rev11, WS-1)
+
+- AC-Refs: AC-0012-0159, AC-0012-0160
+- `runMeasurement()` は `l1.axes` と `l2.axes` のいずれかが空配列の場合、`validatePanelScore()` 呼び出し前に reject する。
+- `runMeasurement()` は計算開始前に必ず `validatePanelScore(l1)` と `validatePanelScore(l2)` を呼び出す。
+- validator が失敗した場合は計算を中断してエラーを返す。
+
+## BR-0012-0128: validatePanelScore Rejects Empty Axes (v1.7.15 rev11, WS-1)
+
+- AC-Refs: AC-0012-0161
+- `validatePanelScore()` は `axes.length === 0` を reject する。
+- axes が 1 件以上あることが必須。
+
+## BR-0012-0129: validatePanelScore Requires Non-Empty Concrete evidenceRefs Per Axis (v1.7.15 rev11, WS-1)
+
+- AC-Refs: AC-0012-0162
+- `validatePanelScore()` は各 axis につき `evidenceRefs.length >= 1` を必須とし、各 ref が concrete artifact ref であることを検証する。
+- 空文字列・絶対パス・synthetic token は reject する。
+
+## BR-0012-0130: specCoverage Scans Only 01_Spec.md Per Spec Directory (v1.7.15 rev11, WS-2)
+
+- AC-Refs: AC-0012-0163
+- `buildSpecCoverageSummary()` / `buildPerSpecCoverage()` は spec ディレクトリ配下の全 `.md` ファイルの走査を廃止し、各 spec の `01_Spec.md` のみを declaration source として読む。
+- `01_Spec.md` が存在しない spec は宣言 source 不在として扱う（エラーではなく空として処理）。
+- `notes.md`・`appendix.md`・その他の `.md` ファイルは対象外。
+
+## BR-0012-0131: isSpecDeclarationRef Accepts Only Line-Ref Grammar (v1.7.15 rev11, WS-2)
+
+- AC-Refs: AC-0012-0164, AC-0012-0165
+- `isSpecDeclarationRef()` は `.qfai/specs/<specId>/01_Spec.md#L<正の整数>` のみを `true` とする。
+- 以下はすべて `false` を返す:
+  - `#anchor` 形式（#L0 を含む）
+  - `notes.md` / `appendix.md` / その他 `.md` ファイルへの参照
+  - discussion ref (`.qfai/discussion/...`)
+  - screen contract ref (`.qfai/discussion/.../uiux/...`)
+  - 絶対パス
+  - ネストされたパス（`spec-0001/sub/01_Spec.md` 等）
+- `prototypingEvidence.ts` が独自 declaredRef ロジックを持つ場合は本関数に一本化する。
+
+## BR-0012-0132: measurement.test.ts Must Use Current DTO (v1.7.15 rev11, WS-3)
+
+- AC-Refs: AC-0012-0166
+- `tests/core/harness/measurement.test.ts` のフィクスチャを現行 `MeasurementInput` DTO に全面更新する。
+- 削除済みフィールドを持つフィクスチャを削除する。
+- `#screen:dashboard` reject などの負例ケースを追加する。
+- `as unknown as` キャスト・`skip`/`todo` フラグの新規追加を禁止する。
+
+## BR-0012-0133: panelScore.test.ts Must Use Current Panel Score Shape (v1.7.15 rev11, WS-3)
+
+- AC-Refs: AC-0012-0167
+- `tests/core/harness/panelScore.test.ts` を現行 `PanelScore` 型（axes + evidenceRefs 構造）に全面更新する。
+- `evidenceRefs` 厳格検証・empty axes・rationale 空・score 範囲外の各負例テストを含める。
+- 旧 DTO フィールド前提のテストを削除する。
+
+## BR-0012-0134: specCoverage.test.ts Must Cover 01_Spec.md Semantic Boundaries (v1.7.15 rev11, WS-3)
+
+- AC-Refs: AC-0012-0168
+- `tests/core/prototyping/specCoverage.test.ts` が存在しない場合は新規作成、存在する場合は拡張する。
+- `01_Spec.md#L<n>` を正例とし、`notes.md#L10` / `appendix.md#L3` / `01_Spec.md#route-home` / discussion ref / screen contract ref の各否定例を含める。
+- OQ-0004 解決: 実装着手時にファイル存在を確認し、存在すれば拡張、なければ新規作成する。
+
+## BR-0012-0135: refSemantics.test.ts Must Cover isSpecDeclarationRef Grammar (v1.7.15 rev11, WS-3)
+
+- AC-Refs: AC-0012-0169
+- `tests/core/prototyping/refSemantics.test.ts` が存在しない場合は新規作成、存在する場合は拡張する。
+- `isSpecDeclarationRef()` の許可文法（`01_Spec.md#L14`）と拒否文法（`#L0`, `#anchor`, `notes.md`, discussion ref, absolute path）を網羅的にテストする。
+- OQ-0004 解決: 実装着手時にファイル存在を確認し、存在すれば拡張、なければ新規作成する。
+
+## BR-0012-0136: Delegation Scope Table — 4 Categories × Defined Roles Only (v1.7.16)
+
+- AC-Refs: AC-0012-0170, AC-0012-0171
+- prototyping SKILL.md の Delegation Scope Table は 4 カテゴリ（UI実装 / スクリーンショット / 評価 L1-L2 / ビルド）を定義し、各カテゴリに対応する concrete role（frontend-engineer / devops-ci-engineer / product-surface-reviewer & product-experience-architect / devops-ci-engineer）を明記する。
+- 定義外ロールへの移譲は違反（reviewer finding 対象）。reviewer は SKILL.md テーブルに基づいて移譲ログを検証する。
+
+## BR-0012-0137: Full-Harness Iteration Gate — ERROR on iterationCount==1 && converged (v1.7.16)
+
+- AC-Refs: AC-0012-0172, AC-0012-0173
+- full-harness 実行で `iterationCount === 1 && converged === true` の組み合わせは常に ERROR。バリデータと reviewer の双方で拒否する。
+- `terminationCondition` が成立するまで次フェーズへの移行は禁止され、最低 2 反復を強制する。
+
+## BR-0012-0138: executionPlan MUST for Full-Harness (v1.7.16)
+
+- AC-Refs: AC-0012-0174, AC-0012-0175
+- full-harness 実行時、`prototyping.json.executionPlan` ブロックは必須。`targetIterations`, `evaluationAxesSource`, `delegationMap`, `plannedAt` の 4 フィールドを含むこと。
+- 欠落時はバリデーション ERROR（full-harness 以外のモードでは任意フィールドとして無視する）。
+
+## BR-0012-0139: capture-screenshots.js SSOT Location and Contract (v1.7.16)
+
+- AC-Refs: AC-0012-0176, AC-0012-0177
+- `capture-screenshots.js` は QFAI パッケージ内（`packages/qfai/assets/scripts/` 想定）に配置し、入力=URL/port + 出力 dir、出力=タイムスタンプ付きスクリーンショットパス一覧を保証する。
+- prototyping SKILL.md は当スクリプトを Capture ステップの SSOT として参照し、他の代替スクリプトは公式ワークフローに含めない。
+
+## BR-0012-0140: 5-Step Iteration Cycle with screenshotDir (v1.7.16)
+
+- AC-Refs: AC-0012-0178, AC-0012-0179
+- 反復サイクルは Capture → Evaluate → Identify → Fix → Re-evaluate の 5 ステップ構造として SKILL.md に定義され、`prototyping.json.scoringTrace[].screenshotDir` に各反復で使用したスクリーンショットディレクトリを記録する。
+- `screenshotDir` 欠落は full-harness で ERROR、それ以外のモードでは任意。
+
+## BR-0012-0141: Evaluator Input Preparation — 4 MUST Elements (v1.7.16)
+
+- AC-Refs: AC-0012-0180
+- L1/L2 評価者（サブエージェント）起動前に、(a) スクリーンショットパス / (b) 評価軸定義テキスト展開 / (c) 前回スコア / (d) DESIGN.md 準拠チェックリスト の 4 要素すべてを入力として渡す。
+- いずれかが欠落した状態での評価者起動は SKILL.md 違反であり、reviewer finding 対象。
+
+## BR-0012-0142: Visual Quality Structural Checklist — 6 Categories (v1.7.16)
+
+- AC-Refs: AC-0012-0181
+- SKILL.md の Visual Quality Structural Checklist は カラー / タイポグラフィ / スペーシング / 角丸 / シャドウ / Do's&Don'ts の 6 カテゴリを必ず含む。カテゴリ数不足は SKILL.md 不整合として修正対象。
+
+## BR-0012-0143: Lighthouse MUST for Full-Harness && Web Surface (v1.7.16)
+
+- AC-Refs: AC-0012-0182
+- `mode === "full-harness" && surface === "web"` の場合、Lighthouse Gate は MUST。Lighthouse 未実行の証跡は reviewer gate で ERROR として扱う（従前の SHOULD 扱いを撤廃）。
+
+## BR-0012-0144: designSystemCompliance Score — 80% Threshold = L1 Finding (v1.7.16)
+
+- AC-Refs: AC-0012-0183, AC-0012-0184
+- discussion pack に `uiux/12_design_system.md` が存在する場合、Evaluate ステップは CSS 実装値と design system 仕様値の一致率を `designSystemCompliance` として算出し `prototyping.json` に記録する。
+- `designSystemCompliance < 0.80` は L1 finding（即時修正対象）として分類し、次反復の Fix ステップで優先対応する。
+- `uiux/12_design_system.md` が存在しない場合、本チェックはスキップしエラー扱いしない。
+
+## BR-0012-0145: calibration.overrides — Existence-Based Precedence (v1.7.16)
+
+- AC-Refs: AC-0012-0185, AC-0012-0186
+- `qfai.config.yaml` の `prototyping.calibration.overrides.perAxisMinimum` と `prototyping.calibration.overrides.maxIterationsByMode` が存在する場合、その値が system default を上書きする（existence-based precedence）。
+- 当該キー不在時は system default を使用し、既存 config の後方互換性（NFR-0046）を保持する。

@@ -59,12 +59,6 @@ describe("prototyping calibration config", () => {
           "prototyping:",
           "  calibration:",
           "    packPath: .qfai/evidence/custom-calibration.yaml",
-          "    thresholds:",
-          "      accept: 0.9",
-          "      refine: 0.4",
-          "    maxIterations: 7",
-          "    plateauDelta: 0.01",
-          "    plateauLookback: 2",
           "",
         ].join("\n"),
         "utf-8",
@@ -74,17 +68,13 @@ describe("prototyping calibration config", () => {
       expect(issues).toEqual([]);
       expect(config.prototyping?.calibration).toEqual({
         packPath: ".qfai/evidence/custom-calibration.yaml",
-        thresholds: { accept: 0.9, refine: 0.4 },
-        maxIterations: 7,
-        plateauDelta: 0.01,
-        plateauLookback: 2,
       });
     } finally {
       await rm(root, { recursive: true, force: true });
     }
   });
 
-  it("reports issue for invalid threshold", async () => {
+  it("reports issue for obsolete thresholds block", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-config-prototyping-"));
     try {
       await writeFile(
@@ -94,25 +84,33 @@ describe("prototyping calibration config", () => {
       );
 
       const { config, issues } = await loadConfig(root);
-      expect(issues.some((issue) => issue.message.includes("thresholds.accept"))).toBe(true);
-      expect(config.prototyping?.calibration?.thresholds?.accept).toBe(0.8);
+      expect(
+        issues.some((issue) => issue.message.includes("prototyping.calibration.thresholds")),
+      ).toBe(true);
+      expect(config.prototyping?.calibration).toEqual({
+        packPath: ".qfai/evidence/calibration.yaml",
+      });
     } finally {
       await rm(root, { recursive: true, force: true });
     }
   });
 
-  it("reports issue for invalid maxIterations", async () => {
+  it("reports issue for obsolete scalar calibration fields", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-config-prototyping-"));
     try {
       await writeFile(
         path.join(root, "qfai.config.yaml"),
-        ["prototyping:", "  calibration:", "    maxIterations: 0", ""].join("\n"),
+        ["prototyping:", "  calibration:", "    maxIterations: 7", ""].join("\n"),
         "utf-8",
       );
 
       const { config, issues } = await loadConfig(root);
-      expect(issues.some((issue) => issue.message.includes("maxIterations"))).toBe(true);
-      expect(config.prototyping?.calibration?.maxIterations).toBe(15);
+      expect(
+        issues.some((issue) => issue.message.includes("prototyping.calibration.maxIterations")),
+      ).toBe(true);
+      expect(config.prototyping?.calibration).toEqual({
+        packPath: ".qfai/evidence/calibration.yaml",
+      });
     } finally {
       await rm(root, { recursive: true, force: true });
     }

@@ -2,32 +2,34 @@
 
 ## Example Table (required)
 
-| EX-ID        | BR-Ref                     | Input                                             | Expected                                                                  |
-| ------------ | -------------------------- | ------------------------------------------------- | ------------------------------------------------------------------------- |
-| EX-0004-0001 | BR-0004-0001               | 正常なスペック構造で `qfai validate`              | 全バリデータ実行、issues + counts + traceability が出力される             |
-| EX-0004-0002 | BR-0004-0002               | `qfai validate`（phase 未指定）                   | full フェーズとして全バリデータが実行される                               |
-| EX-0004-0003 | BR-0004-0003               | `qfai validate --fail-on error`、warning のみ検出 | 終了コード 0                                                              |
-| EX-0004-0004 | BR-0004-0003               | `qfai validate --fail-on warning`、warning 検出   | 終了コード 1                                                              |
-| EX-0004-0005 | BR-0004-0004               | `qfai validate --format github`、120件の Issue    | 100件のアノテーション + 重複/超過 summary                                 |
-| EX-0004-0006 | BR-0004-0005               | `qfai validate`                                   | validate.json が config.output.validateJsonPath に出力される              |
-| EX-0004-0007 | BR-0004-0006               | `qfai validate`                                   | .qfai/report/run-\*/ にランログが保存される                               |
-| EX-0004-0008 | BR-0004-0007               | waivers.yml に suppress ルールあり                | 該当 Issue が suppressed=true                                             |
-| EX-0004-0009 | BR-0004-0008               | 対象 spec/01_Spec.md が欠落                       | E_SPEC_MISSING_FILESET エラー                                             |
-| EX-0004-0010 | BR-0004-0009               | 不正な ID 形式がある                              | E_ID_INVALID_FORMAT エラー                                                |
-| EX-0004-0011 | BR-0004-0010               | AC を参照する TC が存在しない                     | QFAI-COV-201 エラー                                                       |
-| EX-0004-0012 | BR-0004-0012               | `qfai validate --phase refinement`（CI 環境）     | refinement blocking issue が生成、終了コード 1                            |
-| EX-0004-0014 | BR-0004-0013, BR-0004-0016 | UI-bearing パック、新 3-layer 全ファイル完備      | canonical aggregator 経由で pass（構造エラーなし）                        |
-| EX-0004-0015 | BR-0004-0017               | uiux/ に旧 4-axis ファイル残存、新 3-layer 欠落   | UIX-VAL-3LAYER-LEGACY-FORMAT / UIX-VAL-3LAYER-FORBIDDEN-FILE warning 発行 |
-| EX-0004-0016 | BR-0004-0014               | UI コントラクトなしスペック                       | UIX バリデータ skip、UIX 関連 issue なし                                  |
-| EX-0004-0017 | BR-0004-0015               | render-evidence 対象あり、キャプチャ環境未構成    | status=skipped + 理由明示（プレースホルダーなし）                         |
-| EX-0004-0018 | BR-0004-0015               | Browser QA テスト定義あり、未実行                 | not-run 報告（fake pass なし）                                            |
+| EX-ID        | BR-Ref                     | Input                                                   | Expected                                                                  |
+| ------------ | -------------------------- | ------------------------------------------------------- | ------------------------------------------------------------------------- |
+| EX-0004-0001 | BR-0004-0001               | 正常なスペック構造で `qfai validate`                    | 全バリデータ実行、issues + counts + traceability が出力される             |
+| EX-0004-0002 | BR-0004-0002               | `qfai validate`（phase 未指定）                         | full フェーズとして全バリデータが実行される                               |
+| EX-0004-0003 | BR-0004-0003               | `qfai validate --fail-on error`、warning のみ検出       | 終了コード 0                                                              |
+| EX-0004-0004 | BR-0004-0003               | `qfai validate --fail-on warning`、warning 検出         | 終了コード 1                                                              |
+| EX-0004-0005 | BR-0004-0004               | `qfai validate --format github`、120件の Issue          | 100件のアノテーション + 重複/超過 summary                                 |
+| EX-0004-0006 | BR-0004-0005               | `qfai validate`                                         | validate.json が config.output.validateJsonPath に出力される              |
+| EX-0004-0007 | BR-0004-0006               | `qfai validate`                                         | .qfai/report/run-\*/ にランログが保存される                               |
+| EX-0004-0008 | BR-0004-0007               | waivers.yml に suppress ルールあり                      | 該当 Issue が suppressed=true                                             |
+| EX-0004-0009 | BR-0004-0008               | 対象 spec/01_Spec.md が欠落                             | E_SPEC_MISSING_FILESET エラー                                             |
+| EX-0004-0010 | BR-0004-0009               | 不正な ID 形式がある                                    | E_ID_INVALID_FORMAT エラー                                                |
+| EX-0004-0011 | BR-0004-0010               | AC を参照する TC が存在しない                           | QFAI-COV-201 エラー                                                       |
+| EX-0004-0012 | BR-0004-0012               | `qfai validate --phase refinement`（CI 環境）           | refinement blocking issue が生成、終了コード 1                            |
+| EX-0004-0013 | BR-0004-0011               | GitHub annotation の fix text に `%`, `\r`, `\n` を含む | annotation value が `%25`, `%0D`, `%0A` にエスケープされる                |
+| EX-0004-0014 | BR-0004-0013, BR-0004-0016 | UI-bearing パック、新 3-layer 全ファイル完備            | canonical aggregator 経由で pass（構造エラーなし）                        |
+| EX-0004-0015 | BR-0004-0017               | uiux/ に旧 4-axis ファイル残存、新 3-layer 欠落         | UIX-VAL-3LAYER-LEGACY-FORMAT / UIX-VAL-3LAYER-FORBIDDEN-FILE warning 発行 |
+| EX-0004-0016 | BR-0004-0014               | UI コントラクトなしスペック                             | UIX バリデータ skip、UIX 関連 issue なし                                  |
+| EX-0004-0017 | BR-0004-0015               | render-evidence 対象あり、キャプチャ環境未構成          | status=skipped + 理由明示（プレースホルダーなし）                         |
+| EX-0004-0018 | BR-0004-0015               | Browser QA テスト定義あり、未実行                       | not-run 報告（fake pass なし）                                            |
 
-## EX-0004-0013: Coverage Placeholder for BR-0004-0011
+## EX-0004-0013: GitHub annotation value escape
 
 - BR-Ref: BR-0004-0011
-- Given the consolidated rule BR-0004-0011
-- When layer coverage is evaluated
-- Then at least one example exists for BR-0004-0011
+
+| Input                                                 | Expected                                                    |
+| ----------------------------------------------------- | ----------------------------------------------------------- |
+| fix text containing `%`, carriage return, and newline | GitHub annotation value escapes them as `%25`, `%0D`, `%0A` |
 
 ## EX-0004-0014: UI-bearing パックで新 3-layer ファイル完備 → pass
 
@@ -89,16 +91,6 @@
 | ---------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
 | Inspect validate.ts registered validators at runtime | runCanonicalUixValidators present, validateDdpFields absent, legacy namespace removed (v1.7.14) |
 
-## EX-0004-0022: Phase1 Ratchet Active
-
-- BR-Ref: BR-0004-0021
-
-| Input                                                      | Expected                              |
-| ---------------------------------------------------------- | ------------------------------------- |
-| phase1ReleaseDate set to 10 days ago, UIX-VAL error exists | Error downgraded to warning           |
-| phase1ReleaseDate set to 40 days ago, UIX-VAL error exists | Error remains as-is (ratchet expired) |
-| phase1ReleaseDate not set                                  | All UIX-VAL severities unchanged      |
-
 ## EX-0004-0023: QFAI-AUD-021 Selected Anchor
 
 - BR-Ref: BR-0004-0024
@@ -140,3 +132,174 @@
 | -------------------------------------------------------------------------- | --------------------- |
 | Critique evidence referencing sidecar + strategy + contracts + eval tokens | QFAI-CRIT-005 passes  |
 | Critique evidence missing eval family tokens                               | QFAI-CRIT-005 warning |
+
+## EX-0004-0028: terminationReason=max-iterations with low iterationCount (v1.7.15)
+
+- BR-Ref: BR-0004-0027
+
+| Input                                                                             | Expected                    |
+| --------------------------------------------------------------------------------- | --------------------------- |
+| evidence with terminationReason=max-iterations, iterationCount=2, maxIterations=5 | QFAI-PROT-292 error emitted |
+| evidence with terminationReason=max-iterations, iterationCount=5, maxIterations=5 | No PROT-292 error           |
+
+## EX-0004-0029: Single-iteration converged reject (v1.7.15)
+
+- BR-Ref: BR-0004-0028
+
+| Input                                                       | Expected                             |
+| ----------------------------------------------------------- | ------------------------------------ |
+| evidence with terminationReason=converged, iterationCount=1 | QFAI-PROT-290 + QFAI-PROT-308 errors |
+| evidence with terminationReason=converged, iterationCount=3 | No PROT-290/308 errors               |
+
+## EX-0004-0030: weightedTotal mismatch (v1.7.15)
+
+- BR-Ref: BR-0004-0029
+
+| Input                                                        | Expected                           |
+| ------------------------------------------------------------ | ---------------------------------- |
+| iteration with l1.total=0.7, l2.total=0.8, weightedTotal=0.8 | QFAI-PROT-296 error (expected 0.7) |
+| iteration with l1.total=0.7, l2.total=0.8, weightedTotal=0.7 | No PROT-296 error                  |
+
+## EX-0004-0031: Reviewer placeholder reject (v1.7.15)
+
+- BR-Ref: BR-0004-0030
+
+| Input                                          | Expected               |
+| ---------------------------------------------- | ---------------------- |
+| reviewerSignoff.reviewerId="qfai"              | QFAI-PROT-295 error    |
+| iteration.reviewerId="default"                 | QFAI-PROT-309 error    |
+| reviewerSignoff.reviewerId="alice@example.com" | No PROT-295/309 errors |
+
+## EX-0004-0032: Zero-seeded specCoverage (v1.7.15)
+
+- BR-Ref: BR-0004-0031
+
+| Input                                                               | Expected            |
+| ------------------------------------------------------------------- | ------------------- |
+| all specs: declared.uiRoutes=0, checked.uiOk=0, missing.uiRoutes=[] | QFAI-PROT-305 error |
+| specs with declared.uiRoutes=3, checked.uiOk=2                      | No PROT-305 error   |
+
+## EX-0004-0033: Synthetic mockPaths pass (v1.7.15)
+
+- BR-Ref: BR-0004-0032
+
+| Input                                                 | Expected            |
+| ----------------------------------------------------- | ------------------- |
+| uiFidelity screen with mockPaths[].status="pass"      | QFAI-PROT-306 error |
+| uiFidelity screen with mockPaths[].status="fail" only | No PROT-306 error   |
+
+## EX-0004-0034: CalibrationRef empty (v1.7.15)
+
+- BR-Ref: BR-0004-0033
+
+| Input                                                                  | Expected            |
+| ---------------------------------------------------------------------- | ------------------- |
+| calibrationRef.configPath=""                                           | QFAI-PROT-301 error |
+| calibrationRef.configPath="qfai.config.yaml", packPath="packs/default" | No PROT-301 error   |
+
+## EX-0004-0035: reviewerLogs count mismatch (v1.7.15)
+
+- BR-Ref: BR-0004-0034
+
+| Input                                   | Expected            |
+| --------------------------------------- | ------------------- |
+| iterationCount=3, reviewerLogs.length=2 | QFAI-PROT-304 error |
+| iterationCount=3, reviewerLogs.length=3 | No PROT-304 error   |
+
+## EX-0004-0036: iterations/scoringTrace count mismatch (v1.7.15)
+
+- BR-Ref: BR-0004-0035
+
+| Input                                                        | Expected            |
+| ------------------------------------------------------------ | ------------------- |
+| iterationCount=3, iterations.length=2, scoringTrace.length=3 | QFAI-PROT-291 error |
+| iterationCount=3, iterations.length=3, scoringTrace.length=3 | No PROT-291 error   |
+
+## EX-0004-0037: commitSha missing (v1.7.15)
+
+- BR-Ref: BR-0004-0036
+
+| Input                           | Expected            |
+| ------------------------------- | ------------------- |
+| iteration.commitSha=""          | QFAI-PROT-297 error |
+| iteration.commitSha="abc123def" | No PROT-297 error   |
+
+## EX-0004-0038: limitations missing (v1.7.15)
+
+- BR-Ref: BR-0004-0037
+
+| Input                             | Expected            |
+| --------------------------------- | ------------------- |
+| fullHarness.limitations=undefined | QFAI-PROT-298 error |
+| fullHarness.limitations=[]        | No PROT-298 error   |
+
+## EX-0004-0039: Additional integrity checks (v1.7.15)
+
+- BR-Ref: BR-0004-0038
+
+| Input                                                          | Expected              |
+| -------------------------------------------------------------- | --------------------- |
+| status=completed, terminationReason=undefined                  | QFAI-PROT-299 error   |
+| terminationReason=plateau, iterationCount=1, plateauLookback=3 | QFAI-PROT-300 error   |
+| 3 iterations all with commitSha="abc123"                       | QFAI-PROT-302 warning |
+| reviewerLog.summary="ok" (3 chars)                             | QFAI-PROT-303 warning |
+
+## EX-0004-0040: Valid evidence passes all v1.7.15 rules
+
+- BR-Ref: BR-0004-0027..BR-0004-0038
+
+| Input                                                                                                                                                                                                        | Expected                  |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------- |
+| Well-formed evidence: real reviewer, iterationCount=3 for converged, correct min(l1,l2), non-zero specCoverage, no synthetic mockPaths, matching counts, valid calibrationRef, present commitSha/limitations | Zero PROT-290..309 errors |
+
+## EX-0004-0041: Rev2 evidence category validator cases (v1.7.15 rev2)
+
+- BR-Ref: BR-0004-0039
+
+| Input                                                 | Expected      |
+| ----------------------------------------------------- | ------------- |
+| discussion.evidenceRefs = []                          | Error emitted |
+| screenContract.evidenceRefs = []                      | Error emitted |
+| trend.evidenceRefs = []                               | Error emitted |
+| declared DB = 3, observed = 0                         | Error emitted |
+| uiFidelity.status = "completed", no screen-level data | Error emitted |
+| iteration[0].evidenceRefs missing "discussion" key    | Error emitted |
+| evidence contains request.l1 field (old schema)       | Error emitted |
+
+## EX-0004-0042: Rev2 validator happy path (v1.7.15 rev2)
+
+- BR-Ref: BR-0004-0039, BR-0004-0040
+
+| Input                                                                                                            | Expected                    |
+| ---------------------------------------------------------------------------------------------------------------- | --------------------------- |
+| All 8 category evidenceRefs non-empty, screen-level uiFidelity, no old schema artifacts, rev2-compliant fixtures | Zero errors from rev2 rules |
+
+## EX-0004-0043: Rev2 fixture validation (v1.7.15 rev2)
+
+- BR-Ref: BR-0004-0040
+
+- Given normal-path test fixtures in validator tests
+- When grepped for l1/l2 direct pass or packVersion:"1.0.0"
+- Then zero matches found
+- Given error-path test fixtures
+- When checked for missing discussion/trend/screenContract evidence cases
+- Then all cases present
+
+## EX-0004-0044: Missing guideline research coverage emits warning (v1.7.17)
+
+- BR-Ref: BR-0004-0041
+
+| Input                                                                  | Expected            |
+| ---------------------------------------------------------------------- | ------------------- |
+| UI-bearing pack with no `design_guideline_research` category           | UIX-VAL-T05 warning |
+| UI-bearing pack with placeholders only, no rule_refs/local_translation | UIX-VAL-T05 warning |
+| UI-bearing pack with one valid guideline entry                         | No UIX-VAL-T05      |
+
+## EX-0004-0045: Adjective-only score anchors emit warning (v1.7.17)
+
+- BR-Ref: BR-0004-0042
+
+| Input                                                        | Expected            |
+| ------------------------------------------------------------ | ------------------- |
+| `score_anchors.high = "very polished and modern"`            | UIX-VAL-T06 warning |
+| `score_anchors.high = ">=44px targets and contrast >=4.5:1"` | No UIX-VAL-T06      |

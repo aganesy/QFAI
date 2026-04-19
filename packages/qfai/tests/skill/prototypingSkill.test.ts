@@ -15,43 +15,33 @@ const VALID_SKILL_CONTENT = [
   "",
   "This workflow is static-first and file-based by default.",
   "",
-  "Canonical prototyping surfaces are: web, mobile, desktop, cli, mixed.",
-  "cli surface: uiFidelity is n/a, render evidence is not required, browser QA is not required.",
+  "Supported UI prototyping surfaces are: web, mobile, desktop, mixed.",
+  "cli is not a prototyping execution target and is rejected.",
   "ui_bearing: false specs are not prototyping execution targets.",
   "",
-  "## Low-cost",
-  "Static checks only. web, mobile, desktop, mixed surfaces may keep skeleton evidence.",
-  "",
-  "## Standard",
-  "Static checks plus optional light validation.",
-  "",
   "## Full-harness",
-  "Explicit request only. Never full-harness by default.",
+  "Full-harness is the package default when prototyping execution is valid.",
   "",
   "## Obligation Matrix",
   "| surface / mode | specs | runtimeGate | uiFidelity | render evidence | browser QA | fullHarness |",
-  "| web / low-cost | required | optional | optional | optional | optional | absent |",
-  "| web / standard | required | optional | required | optional | optional | absent |",
   "| web / full-harness | required | required | required | required | required | required |",
-  "| mobile / low-cost | required | optional | optional | optional | optional | absent |",
-  "| desktop / standard | required | optional | required | optional | optional | absent |",
-  "| cli / low-cost | required | optional | n/a | n/a | n/a | absent |",
-  "| cli / standard | required | optional | n/a | n/a | n/a | absent |",
-  "| cli / full-harness | required | optional | n/a | n/a | n/a | required |",
-  "| mixed / standard | required | optional | required | optional | optional | absent |",
+  "| mobile / full-harness | required | required | required | required | required | required |",
+  "| desktop / full-harness | required | required | required | required | required | required |",
+  "| mixed / full-harness | required | required | required | required | required | required |",
 ].join("\n");
 
 describe("prototyping skill validator", () => {
-  it("has all mode section headings", () => {
+  it("has the full-harness section heading", () => {
     const result = checkModeHeadings(VALID_SKILL_CONTENT);
+    expect(result.present).toEqual(["full-harness"]);
     expect(result.missing).toHaveLength(0);
   });
 
-  it("documents canonical 5 surfaces", () => {
+  it("documents supported UI prototyping surfaces", () => {
     expect(hasCanonicalSurfaceDocumentation(VALID_SKILL_CONTENT)).toBe(true);
   });
 
-  it("documents cli surface obligations", () => {
+  it("documents cli rejection", () => {
     expect(hasCliSurfaceDocumentation(VALID_SKILL_CONTENT)).toBe(true);
   });
 
@@ -63,17 +53,25 @@ describe("prototyping skill validator", () => {
     expect(isStaticFirstAligned(VALID_SKILL_CONTENT)).toBe(true);
   });
 
-  it("documents mode/surface obligation matrix", () => {
+  it("documents full-harness-only obligation matrix", () => {
     expect(hasModeSurfaceMatrix(VALID_SKILL_CONTENT)).toBe(true);
   });
 
-  it("flags banned phrases when full-harness is defaulted", () => {
-    const invalid = `${VALID_SKILL_CONTENT}\nfull-harness by default`;
-    expect(scanBannedPhrases(invalid)).toContain("full-harness by default");
+  it("flags banned phrases when low-cost or standard are reintroduced", () => {
+    const invalid = `${VALID_SKILL_CONTENT}\nmode=low-cost\nmode=standard`;
+    expect(scanBannedPhrases(invalid)).toEqual(
+      expect.arrayContaining(["mode=low-cost", "mode=standard"]),
+    );
   });
 
-  it("rejects content missing canonical surface in obligation matrix", () => {
-    const invalid = VALID_SKILL_CONTENT.replaceAll("cli", "non-ui");
+  it("rejects content missing supported UI surface in obligation matrix", () => {
+    const invalid = VALID_SKILL_CONTENT.replace(
+      "Supported UI prototyping surfaces are: web, mobile, desktop, mixed.",
+      "Supported UI prototyping surfaces are: web, mobile, desktop.",
+    ).replace(
+      "| mixed / full-harness | required | required | required | required | required | required |",
+      "",
+    );
     expect(hasModeSurfaceMatrix(invalid)).toBe(false);
   });
 });

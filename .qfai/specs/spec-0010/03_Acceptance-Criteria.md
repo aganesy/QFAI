@@ -58,7 +58,7 @@ Given the uiux/ sidecar, when `00_index.md` is checked, then it lists only the c
 
 ## AC-0010-0015: Strategy Template Strong Schema
 
-Given `10_strategy.md`, when it is checked, then it contains mandatory fields: surface classification, implementation strategy, and rationale — each with non-placeholder values.
+Given `uiux/10_implementation_strategy.md`, when it is checked, then it contains mandatory fields: surface classification, implementation strategy, and rationale — each with non-placeholder values.
 
 ## AC-0010-0016: Contracts Screen-Obligation Schema
 
@@ -79,3 +79,87 @@ Given a discussion-pack is being completed, when all 15 markdown files are final
 ## AC-0010-0016: prototyping.yaml Surface Classification
 
 Given a UI-bearing discussion-pack, when prototyping.yaml is generated, then surface field is set to the detected surface type (web, mobile, desktop, mixed). For non-UI packs, surface is "non-ui".
+
+## AC-0010-0019: Step 11.3 SKILL.md Presence and Phase A/B Definition (v1.7.16)
+
+- US-Ref: US-0010-0016
+- Given the qfai-discussion SKILL.md
+- When its Required Process section is inspected
+- Then Step 11.3 exists and contains both Phase A (brand autonomous selection) and Phase B (customization) labels with MUST wording
+
+## AC-0010-0020: 12_design_system.md Produced for UI-Bearing Packs (v1.7.16)
+
+- US-Refs: US-0010-0016, US-0010-0022
+- Given a UI-bearing discussion-pack executing Step 11.3
+- When the pack completes
+- Then `uiux/12_design_system.md` exists with all 8 sections filled (Visual Theme / Color Palette / Typography / Spacing & Layout / Component Style / Animation & Motion / Do's and Don'ts / Agent Implementation Guide)
+
+## AC-0010-0021: Step 11.5 Visual Axis Derivation Required (v1.7.16)
+
+- US-Ref: US-0010-0017
+- Given a UI-bearing discussion-pack with visual-category Trend Scan entries in `04_Sources.md`
+- When Step 11.5 runs
+- Then `21_design_eval_trend_derived.md` contains at least one visual axis whose `source_refs` points to those entries
+
+## AC-0010-0022: UIX-VAL-T04 WARNING on Missing Visual Axis (v1.7.16)
+
+- US-Ref: US-0010-0017
+- Given a UI-bearing discussion-pack with visual-category Trend Scan entries but no visual axis derived
+- When `qfai validate` runs
+- Then UIX-VAL-T04 emits a WARNING (not ERROR per NFR-0007 backward-compat)
+
+## AC-0010-0023: 04_Sources.md evaluation_connection on All 6 Categories (v1.7.16)
+
+- US-Ref: US-0010-0018
+- Given the `04_Sources.md` template (dogfood and `qfai init` output)
+- When the template is inspected
+- Then every Trend Scan entry across all 6 visual categories includes an `evaluation_connection` field (even if the value is a placeholder guidance comment)
+
+## AC-0010-0024: 21_design_eval_trend_derived.md Visual Examples + Guidance (v1.7.16)
+
+- US-Ref: US-0010-0019
+- Given the `templates/uiux/21_design_eval_trend_derived.md` template
+- When the template is inspected
+- Then it contains at least 2 visual axis examples (e.g., Visual Warmth & Color Harmony) and explicit `source_refs` authoring guidance
+
+## AC-0010-0025: Sidecar Generation Flow Step 1c → Step 1d Dependency (v1.7.16)
+
+- US-Ref: US-0010-0020
+- Given the qfai-discussion SKILL.md Sidecar Generation Flow section
+- When it is inspected
+- Then Step 1c (Trend Scan creation) is explicitly declared to precede Step 1d (trend-derived axis), with "並列禁止 (no parallel)" wording present
+
+## AC-0010-0026: design-md-brand-catalog.md 8 Archetypes Schema (v1.7.16)
+
+- US-Ref: US-0010-0021
+- Given `references/design-md-brand-catalog.md`
+- When the file is inspected
+- Then it defines all 8 archetypes with representative_brand and aesthetic_traits fields (color tendency, typography, spacing); each archetype has non-placeholder values
+
+## AC-0010-0027: 12_design_system.md Template 8 Sections Defined (v1.7.16)
+
+- US-Ref: US-0010-0022
+- Given `templates/uiux/12_design_system.md`
+- When the template is inspected
+- Then it defines all 8 sections (Visual Theme / Color Palette / Typography / Spacing & Layout / Component Style / Animation & Motion / Do's and Don'ts / Agent Implementation Guide) with required-field markers and authoring guidance comments
+
+## AC-0010-0028: UI-bearing runs include design guideline research step (v1.7.17)
+
+- US-Ref: US-0010-0023
+- Given a UI-bearing discussion run
+- When the required workflow is inspected
+- Then it explicitly requires at least one design-guideline research step referencing platform or library guidance before Trend-derived axis finalization
+
+## AC-0010-0029: `04_Sources.md` exposes `design_guideline_research` category (v1.7.17)
+
+- US-Ref: US-0010-0024
+- Given the canonical `templates/04_Sources.md`
+- When the Trend Scan categories are inspected
+- Then a `design_guideline_research` category exists and each scaffolded entry includes guideline name, rule_refs, local_translation, and source_id fields
+
+## AC-0010-0030: `score_anchors` guidance requires quantitative proxy (v1.7.17)
+
+- US-Ref: US-0010-0025
+- Given the canonical `templates/uiux/21_design_eval_trend_derived.md`
+- When the `score_anchors` authoring guidance is inspected
+- Then it states that `low`, `mid`, and `high` anchors must include at least one quantitative proxy such as px value, ratio, WCAG rule id, class name, or library default value

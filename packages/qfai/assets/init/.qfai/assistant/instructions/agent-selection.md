@@ -7,6 +7,8 @@ dependencies:
 version: 2.0.0
 ---
 
+<!-- markdownlint-disable MD041 -->
+
 > **言語指示（厳守）**
 >
 > - 報告・出力: 日本語（Plan も含む）

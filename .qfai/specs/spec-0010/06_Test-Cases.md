@@ -126,11 +126,11 @@
 - AC-Refs: AC-0010-0014
 - Verify that `00_index.md` lists only canonical 3-layer family files and contains no entries for legacy 4-axis files (20–23).
 
-## TC-0010-0022: 10_strategy.md Strong Schema Validation
+## TC-0010-0022: 10_implementation_strategy.md Strong Schema Validation
 
 - EX-Ref: EX-0010-0011
 - AC-Refs: AC-0010-0015
-- Verify that `10_strategy.md` contains mandatory fields (surface classification, implementation strategy, rationale) with non-placeholder values.
+- Verify that `uiux/10_implementation_strategy.md` contains mandatory fields (surface classification, implementation strategy, rationale) with non-placeholder values.
 
 ## TC-0010-0023: 40_screen_contracts.md Screen-Obligation Schema
 
@@ -179,3 +179,187 @@
 - EX-Ref: EX-0010-0017
 - AC-Refs: AC-0010-0013, AC-0010-0015, AC-0010-0016
 - Verify that every template file name in `uiux/` matches the pattern expected by `UIX-VAL-*` validators; mismatches are reported as broken traceability errors.
+
+## TC-0010-0031: Step 11.3 presence in SKILL.md with Phase A/B labels
+
+- EX-Ref: EX-0010-0018
+- AC-Refs: AC-0010-0019
+- Type: unit
+
+Verify that `/qfai-discussion` SKILL.md contains a Step 11.3 section with explicit "Phase A" (brand selection) and "Phase B" (customization) labels.
+
+## TC-0010-0032: 12_design_system.md produced with 8 sections for UI-bearing pack
+
+- EX-Ref: EX-0010-0018
+- AC-Refs: AC-0010-0020, AC-0010-0027
+- Type: integration
+
+Verify that running `/qfai-discussion` to completion on a UI-bearing pack produces `uiux/12_design_system.md` with all 8 required sections present as ATX headings and non-empty bodies.
+
+## TC-0010-0033: Step 11.3 skipped when surface is non-UI
+
+- EX-Ref: EX-0010-0019
+- AC-Refs: AC-0010-0019
+- Type: integration
+
+Verify that for a pack with `surface: non-ui`, `/qfai-discussion` does not invoke Step 11.3 and does not produce `uiux/12_design_system.md`; no uiux/ directory is created.
+
+## TC-0010-0034: Archetype scoring tie-breaker is deterministic
+
+- EX-Ref: EX-0010-0020
+- AC-Refs: AC-0010-0019
+- Type: unit (boundary)
+
+Verify that when taste-interview scoring ties between two archetypes, the tie-breaker (highest visual-theme weight, then alphabetical) selects the same archetype across reruns.
+
+## TC-0010-0035: Phase A contains no human-confirmation markers
+
+- EX-Ref: EX-0010-0021
+- AC-Refs: AC-0010-0019
+- Type: unit
+
+Verify that SKILL.md Step 11.3 Phase A content contains no human-confirmation prompts (e.g., "Please confirm", "Ask user to approve", "Wait for human") — autonomous execution per NFR-0008.
+
+## TC-0010-0036: Phase ordering — Phase A before Phase B
+
+- EX-Ref: EX-0010-0022
+- AC-Refs: AC-0010-0019
+- Type: integration
+
+Verify that a modified SKILL.md attempting Phase B before Phase A is rejected by the SKILL.md phase-ordering validator with a clear diagnostic.
+
+## TC-0010-0037: Idempotent Step 11.3 given identical taste interview
+
+- EX-Ref: EX-0010-0023
+- AC-Refs: AC-0010-0020
+- Type: integration
+
+Verify that running Step 11.3 twice against the same taste interview produces byte-identical `uiux/12_design_system.md`.
+
+## TC-0010-0038: SKILL.md contains Step 11.5 with visual-axis mandate
+
+- EX-Ref: EX-0010-0024
+- AC-Refs: AC-0010-0021
+- Type: unit
+
+Verify that `/qfai-discussion` SKILL.md contains a Step 11.5 section that mandates deriving at least one visual-category TRD-XX axis for UI-bearing packs.
+
+## TC-0010-0039: UIX-VAL-T04 emits WARNING when no visual axis derived
+
+- EX-Ref: EX-0010-0025
+- AC-Refs: AC-0010-0022
+- Type: integration
+
+Verify that on a pack with no visual axis in `21_design_eval_trend_derived.md`, `qfai validate` emits UIX-VAL-T04 with severity `warning` and exits 0 under `--fail-on error`.
+
+## TC-0010-0040: Multiple visual categories → at least one derived axis passes
+
+- EX-Ref: EX-0010-0026
+- AC-Refs: AC-0010-0021
+- Type: integration
+
+Verify that a pack with two visual Trend Scan categories (e.g., color + typography) and one derived visual axis produces zero UIX-VAL-T04 issues.
+
+## TC-0010-0041: 04_Sources.md template exposes evaluation_connection on all 6 categories
+
+- EX-Ref: EX-0010-0027
+- AC-Refs: AC-0010-0023
+- Type: unit
+
+Verify that `packages/qfai/assets/init/.qfai/assistant/skills/qfai-discussion/templates/04_Sources.md` declares the `evaluation_connection` field on each of the 6 Trend Scan category sections (color, typography, visual motif, spacing, shape, imagery).
+
+## TC-0010-0042: UIX-VAL-T01 fires when evaluation_connection is missing
+
+- EX-Ref: EX-0010-0028
+- AC-Refs: AC-0010-0023
+- Type: integration
+
+Verify that a UI-bearing pack whose color-category Trend Scan entry omits `evaluation_connection` causes `qfai validate --fail-on error` to exit non-zero with UIX-VAL-T01.
+
+## TC-0010-0043: 21_design_eval_trend_derived.md template ships visual-axis examples + source_refs guidance
+
+- EX-Ref: EX-0010-0029
+- AC-Refs: AC-0010-0024
+- Type: unit
+
+Verify that the canonical template `templates/uiux/21_design_eval_trend_derived.md` contains at least two visual-axis example entries and commentary guiding authors to set `source_refs` from `04_Sources.md`.
+
+## TC-0010-0044: Sidecar Generation Flow order — Step 1c before Step 1d, parallel forbidden
+
+- EX-Ref: EX-0010-0030
+- AC-Refs: AC-0010-0025
+- Type: unit
+
+Verify that `/qfai-discussion` SKILL.md Sidecar Generation Flow declares Step 1c before Step 1d and contains an explicit "parallel execution forbidden" marker on the dependency edge.
+
+## TC-0010-0045: Parallel 1c/1d detection
+
+- EX-Ref: EX-0010-0031
+- AC-Refs: AC-0010-0025
+- Type: integration
+
+Verify that a SKILL.md mutation marking Step 1c and 1d parallel is flagged as a dependency violation by the SKILL.md validator.
+
+## TC-0010-0046: design-md-brand-catalog.md contains 8 archetypes with required fields
+
+- EX-Ref: EX-0010-0032
+- AC-Refs: AC-0010-0026
+- Type: unit
+
+Verify that `references/design-md-brand-catalog.md` contains all 8 archetypes, each with `representative_brand` and `aesthetic_properties` fields populated.
+
+## TC-0010-0047: 12_design_system.md template defines 8 sections with guidance
+
+- EX-Ref: EX-0010-0033
+- AC-Refs: AC-0010-0027
+- Type: unit
+
+Verify that `templates/uiux/12_design_system.md` declares all 8 canonical sections as ATX headings, each with non-empty guidance content.
+
+## TC-0010-0048: UIX-VAL-T04 severity is WARNING (not ERROR) per NFR-0007
+
+- EX-Ref: EX-0010-0034
+- AC-Refs: AC-0010-0022
+- Type: unit
+
+Verify that `UIX-VAL-T04` severity constant resolves to `warning` in v1.7.16, honoring NFR-0007 staged introduction.
+
+## TC-0010-0049: SKILL.md mandates design guideline research for UI-bearing packs
+
+- EX-Ref: EX-0010-0035
+- AC-Refs: AC-0010-0028
+- Type: unit
+
+Verify that `/qfai-discussion` SKILL.md contains explicit mandatory wording requiring design guideline research before finalizing trend-derived axes for UI-bearing runs.
+
+## TC-0010-0050: `04_Sources.md` template defines `design_guideline_research` category
+
+- EX-Ref: EX-0010-0035
+- AC-Refs: AC-0010-0029
+- Type: unit
+
+Verify that the canonical `templates/04_Sources.md` contains a `design_guideline_research` section and each scaffolded entry includes `guideline_name`, `rule_refs`, `local_translation`, and `source_id`.
+
+## TC-0010-0051: Non-UI discussion pack does not require guideline research
+
+- EX-Ref: EX-0010-0036
+- AC-Refs: AC-0010-0028
+- Type: integration
+
+Verify that a non-UI pack can complete without `design_guideline_research` entries and emits no guideline-research-specific validation issue.
+
+## TC-0010-0052: Trend-derived template requires quantitative proxy in score_anchors
+
+- EX-Ref: EX-0010-0037
+- AC-Refs: AC-0010-0030
+- Type: unit
+
+Verify that `templates/uiux/21_design_eval_trend_derived.md` guidance explicitly requires quantitative proxy in `score_anchors.low/mid/high`.
+
+## TC-0010-0053: Adjective-only anchor example is marked non-compliant
+
+- EX-Ref: EX-0010-0038
+- AC-Refs: AC-0010-0030
+- Type: integration
+
+Verify that a fixture using adjective-only `score_anchors` text is rejected by the authored rule set and linked to downstream validator warning T06.

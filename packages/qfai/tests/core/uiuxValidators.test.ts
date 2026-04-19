@@ -265,6 +265,48 @@ describe("uiux validators", () => {
     expect(issues).toHaveLength(0);
   });
 
+  it("ignores stale discussion packs when mermaid screen flow validates the latest pack", async () => {
+    const root = await newTempDir();
+    const stalePackPath = path.join(
+      root,
+      ".qfai",
+      "discussion",
+      "discussion-20260416000000000",
+      "02_Inception-Deck.md",
+    );
+    const latestPackPath = path.join(
+      root,
+      ".qfai",
+      "discussion",
+      "discussion-20260417000000000",
+      "02_Inception-Deck.md",
+    );
+    await mkdir(path.dirname(stalePackPath), { recursive: true });
+    await mkdir(path.dirname(latestPackPath), { recursive: true });
+    await writeFile(
+      stalePackPath,
+      ["# Inception", "", "```mermaid", "stateDiagram-v2", "  [*] --> draft", "```", ""].join("\n"),
+      "utf-8",
+    );
+    await writeFile(
+      latestPackPath,
+      [
+        "# Inception",
+        "",
+        "```mermaid",
+        "stateDiagram-v2",
+        "  [*] --> ready: start",
+        "  ready --> [*]: done",
+        "```",
+        "",
+      ].join("\n"),
+      "utf-8",
+    );
+
+    const issues = await validateMermaidScreenFlow(root, defaultConfig);
+    expect(issues).toEqual([]);
+  });
+
   it("returns empty issues for ui definition consistency validator when inputs are absent", async () => {
     const root = await newTempDir();
     const issues = await validateUiDefinitionConsistency(root, defaultConfig);

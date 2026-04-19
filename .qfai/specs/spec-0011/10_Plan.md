@@ -24,4 +24,4 @@
 ## Risk
 
 - Complex agent orchestration may be difficult to test in isolation
-- Mitigation: simulation mode with explicit user approval for environments without subagent support
+- Mitigation: stop immediately on failed first delegation and return concrete remediation steps for unsupported or misconfigured subagent environments

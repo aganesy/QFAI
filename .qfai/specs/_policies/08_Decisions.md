@@ -2,7 +2,7 @@
 
 ## Decisions
 
-108 items — discussion-20260312143000000（symlink アーキテクチャ移行）、
+116 items — discussion-20260312143000000（symlink アーキテクチャ移行）、
 discussion-20260313143000000（SDP）、discussion-20260314053646704（AskUserQuestion MUST 化）、
 discussion-20260317102145554（実装フェーズ統一）、discussion-20260322091309602（Copilot レビューインストラクション配布）、
 discussion-20260323111959112（Codex サブエージェント）、discussion-20260324054332396（デザインディレクション＆UI品質強化）、
@@ -14,7 +14,10 @@ discussion-20260329120000000（UIX-VAL/UIX-REV Validation, Review, and Migration
 discussion-20260329130000123（Runtime & Evidence Foundation）、
 discussion-20260329175059391（Critique, Calibration & Full-Harness Expansion）、
 discussion-20260329195516830（v1.7.6 Audit Remediation）、
-および discussion-20260330035428071（Canonical Convergence）で解決された OQ に基づく。
+discussion-20260330035428071（Canonical Convergence）、
+discussion-20260414195449523（v1.7.15 rev4 Browser QA chain）、
+discussion-20260416023323603（v1.7.15 rev8 leaf-field ref grammar closure）、
+および discussion-20260416092414328（v1.7.15 rev9 leaf-field traceability closure）で解決された OQ に基づく。
 
 ### DR-0012: AskUserQuestion MUST 化（discussion-20260314053646704）
 
@@ -1185,3 +1188,216 @@ discussion-20260329195516830（v1.7.6 Audit Remediation）、
 - Rationale: discussion scores は「どのデザイン方向が最も評価基準を満たすか」（what）を測定し、prototyping scores は「選択したアンカーに対する実装品質がどの程度か」（how well）を測定する。評価対象が根本的に異なるため、スコアの再利用は意味的に不正
 - Rejected-A: discussion scores を prototyping の初期値として使用（評価対象の違いにより、初期値としても不適切）
   - DO NOT: discussion aggregate scores を prototyping scoringTrace の初期値・参照値として使用しない。Temptation: discussion で高スコアなら prototyping も高スコアから始めたい
+
+### DR-0200: converged requires iterationCount>=2 (v1.7.15)
+
+- Decision: converged 判定は iterationCount >= 2 を必須条件とし、CalibrationLoader schema で plateauLookback >= 2 を強制する
+- Status: Adopted
+
+### DR-0201: Reviewer placeholder reject list frozen (v1.7.15)
+
+- Decision: reviewer placeholder reject list を "qfai", "default", "auto", "system", "unknown", "" の 6 値に凍結。resolvedReviewer ?? "qfai" フォールバック禁止
+- Status: Adopted
+
+### DR-0202: commitSha mandatory in full-harness (v1.7.15)
+
+- Decision: full-harness 実行時に commitSha を必須とし、取得不能時は runtime error
+- Status: Adopted
+
+### DR-0203: packVersion from pack metadata only (v1.7.15)
+
+- Decision: packVersion は CalibrationLoader 経由で pack metadata から動的取得。ハードコード禁止
+- Status: Adopted
+
+### DR-0204: weightedTotal = min(l1.total, l2.total) always (v1.7.15)
+
+- Decision: computeWeightedTotal は常に Math.min(l1.total, l2.total) を返す
+- Status: Adopted
+
+### DR-0205: specCoverage from real diffs only (v1.7.15)
+
+- Decision: specCoverage は実 spec/runtime evidence から導出。zero-seeded 出力を禁止
+- Status: Adopted
+
+### DR-0206: uiFidelity observation-only (v1.7.15)
+
+- Decision: uiFidelity は DOM parse / browser QA / render evidence からのみ構成。synthetic mockPaths pass を禁止
+- Status: Adopted
+
+### DR-0207: CalibrationLoader wired in execution.ts (v1.7.15)
+
+- Decision: CalibrationLoader は execution.ts で loadConfig() 後に呼び出す（config.ts ではない）
+- Status: Adopted
+
+### DR-0208: Fail-fast no silent fallback (v1.7.15)
+
+- Decision: 必須 evidence 欠落時は runtime error で即座に失敗。デフォルト値補完を禁止
+- Status: Adopted
+
+### DR-0209: Pre-scored l1/l2 path elimination (v1.7.15 rev2)
+
+- Decision: runFullHarness() の request 型から l1/l2 を削除。scoring は runtime 内部で一元実行。panelInputs 欠如時は即 throw
+- Context: request.l1/l2 が外部で pre-scored された値を受け入れ、runtime が scoring をスキップする経路が存在した。これにより evidence-grounded でないスコアが converged 判定に使用される
+- Rationale: scoring の唯一の経路を runtime 内に閉じることで、evidence からの逸脱を構造的に防止
+- Rejected: request.l1/l2 を optional で残す（silent bypass の温床になる）
+  - DO NOT: request 型に pre-scored path を残さない。Temptation: 後方互換のため optional にしたい
+- Status: Adopted
+
+### DR-0210: l2Evidence.ts new file for real artifact derivation (v1.7.15 rev2)
+
+- Decision: l2Evidence.ts を packages/qfai/src/core/prototyping/ に新設。buildDiscussionAxisInputs / buildScreenContractInputs / buildTrendAlignmentInputs で実 artifact から L2 入力を導出
+- Context: execution.ts 内で L2 dummy object（aggregateScore:0, evidenceRefs:[]）が inline 生成されていた
+- Rationale: 実 artifact 読み取りを専用モジュールに集約し、dummy object の再発を防止。evidence 不足時は throw
+- Rejected: execution.ts 内に inline で build 関数を追加（モジュール責務の曖昧化）
+  - DO NOT: L2 evidence 導出を execution.ts に埋め込まない。Temptation: 1 ファイルで完結させたい
+- Status: Adopted
+
+### DR-0211: CalibrationLoader fail-open removal (v1.7.15 rev2)
+
+- Decision: CalibrationLoader の全 fail-open パスを削除。DEFAULT_PACK fallback / version="1.0.0" 補完 / thresholds 欠落時の default 値注入を廃止
+- Context: pack 不在でも DEFAULT_PACK で続行できたため、calibration なしの full-harness 実行が可能だった
+- Rationale: fail-closed 設計により calibration pack の存在と正当性を構造的に保証
+- Rejected: DEFAULT_PACK を pack 不在時のみの safe default として維持（fail-open の最後の砦になる）
+  - DO NOT: CalibrationLoader に fallback を残さない。Temptation: 初回セットアップの摩擦を減らしたい
+- Status: Adopted
+
+### DR-0212: TerminationContext receives CalibrationPack only (v1.7.15 rev2)
+
+- Decision: history.ts の computeTerminationReason() / computeStatus() は { calibration: CalibrationPack; history: FullHarnessHistory } を受ける。pack 以外からの plateauLookback 解決を廃止
+- Status: Adopted
+
+### DR-0213: Screen-level UiObservation with ScreenObservation type (v1.7.15 rev2)
+
+- Decision: UiObservationSummary を ScreenObservation[] ベースに再構築。flatten 集約を廃止し screen-level で観測結果を保持
+- Context: 全 screen の DOM labels / actions / mockPaths を flatten して集約していたため、screen 単位の品質判定が不可能だった
+- Rationale: screen-level 保持により個別 screen の insufficient-evidence 検出が可能に。uiFidelityBuilder も screen 単位で observed を構築
+- Rejected: flatten 集約を維持し summary 内に screen breakdown を追加（二重構造）
+  - DO NOT: flatten 集約と screen-level を並存させない。Temptation: 後方互換のため両方持ちたい
+- Status: Adopted
+
+### DR-0214: bundleWriter schema v2 only (v1.7.15 rev2)
+
+- Decision: bundleWriter は schema v2（8 カテゴリ evidenceRefs + FullHarnessIteration 新型）のみ出力。v1/v2 並存を禁止
+- Status: Adopted
+
+### DR-0215: Validator 14-rule error upgrade (v1.7.15 rev2)
+
+- Decision: prototypingEvidence.ts の 14 項目を warning から error に昇格。新 semantic 変更分は新 rule ID に分離
+- Status: Adopted
+
+### DR-0216: DB coverage binary policy (v1.7.15 rev2)
+
+- Decision: declared DB objects ありで観測なしの場合は full-harness failure。「常に missing 扱いで続行」を禁止
+- Status: Adopted
+
+### DR-0217: cli/full-harness reject at 4 layers (v1.7.15 rev4)
+
+- Decision: `cli` + `full-harness` の組み合わせを CLI / derivePrototypingObligations / runFullHarness / バリデータの 4 層で拒否する
+- Status: Adopted
+- Rationale: non-UI surface で full-harness を実行しても無意味な Browser QA サイクルが走るだけ。3 層（rev2 DR-0210）から 4 層に拡張
+- Alternatives: (A) CLI 層のみで拒否 — 不十分、バイパス可能 / (B) 4 層防御 (adopted)
+- Source: discussion-20260414195449523, WS-1
+
+### DR-0218: screen contract-based Browser QA targets (v1.7.15 rev4)
+
+- Decision: Browser QA ターゲットを `"/primary"` 固定値から `40_screen_contracts.md` のスクリーン定義に基づく動的導出に変更
+- Status: Adopted
+- Rationale: 固定値では複数画面の測定漏れが発生し、監査で齟齬として検出された
+- Alternatives: (A) "/primary" 維持 — 測定漏れ / (B) screen contract 導出 (adopted)
+- Source: discussion-20260414195449523, WS-2
+
+### DR-0219: Browser QA evidence chain hard-fail on empty (v1.7.15 rev4)
+
+- Decision: `iterations[].evidenceRefs.browserQa` が空の場合はハードフェイルとし、サイレントパスを禁止
+- Status: Adopted
+- Rationale: エビデンスチェーン中断は監査追跡不能を意味する。fail-closed ポリシーの一環
+- Alternatives: (A) 空でも続行 — 監査チェーン断裂 / (B) ハードフェイル (adopted)
+- Source: discussion-20260414195449523, WS-3
+
+### DR-0220: canonical route semantics for runtimeGate/specCoverage (v1.7.15 rev4)
+
+- Decision: `runtimeGateBuilder.ts` / `specCoverage.ts` で URL ではなく canonical path（正規パス）で比較する
+- Status: Adopted
+- Rationale: クエリパラメータやフラグメントを含む URL が誤って別ルートと判定されるバグを排除
+- Alternatives: (A) URL そのまま使用 — 誤判定 / (B) canonical path 比較 (adopted)
+- Source: discussion-20260414195449523, WS-4
+
+### DR-0221: L2 structured parse priority over heuristic (v1.7.15 rev4)
+
+- Decision: L2 エビデンス収集で構造化パース（20-23 系、04_Sources.md、40_screen_contracts.md）を優先し、ヒューリスティックフォールバックは構造化ソース不在時のみ許可
+- Status: Adopted
+- Rationale: ヒューリスティック依存はエビデンス精度と再現性を低下させる
+- Alternatives: (A) ヒューリスティック優先 — 精度低下 / (B) 構造化パース優先 (adopted)
+- Source: discussion-20260414195449523, WS-5
+
+### DR-0222: parameterized route pattern-based matching (v1.7.15 rev4, OQ-0004 resolution)
+
+- Decision: Browser QA のパラメタライズドルート（e.g., `/orders/:id`）のマッチングにパターンベースマッチング（Option B）を採用
+- Status: Adopted
+- Rationale: exact match のみでは動的ルートの Browser QA エビデンスチェーンが断裂する。canonical normalization はオーバーエンジニアリング
+- Alternatives: (A) Exact match only — 動的ルート未対応 / (B) Pattern-based matching (adopted) / (C) Canonical normalization — 過度な複雑化
+- Source: discussion-20260414195449523, OQ-0004
+
+### DR-0223: ui[] row validation inline in prototypingEvidence.ts (v1.7.15 rev9, OQ-0001 resolution)
+
+- Decision: `runtimeGate.ui[]` 行レベル3フィールド（declaredRef/renderEvidenceRefs[]/browserQaEvidenceRefs[]）の validation を `prototypingEvidence.ts` 内インラインで実装（Option A）
+- Status: Adopted
+- Rationale: design doc §6-1-2 が変更ファイルとして `prototypingEvidence.ts` を明示。小規模な凝集した validation ユニットを別モジュールに抽出してもアーキテクチャ上の利点がない。インラインは凝集性を保つ
+- Alternatives: (A) inline in prototypingEvidence.ts (adopted) / (B) extract validateRuntimeGateUiRow() to separate utility — 不要な module 分割
+- Source: discussion-20260416092414328, OQ-0001
+
+### DR-0224: browserQaEvidenceRefs[] always required non-empty (v1.7.15 rev9, OQ-0002 resolution)
+
+- Decision: `runtimeGate.ui[].browserQaEvidenceRefs[]` は「browser QA 未実施」の場合でも常に required non-empty とし、空配列はハードフェイル（Option A）
+- Status: Adopted
+- Rationale: design doc §3-2 の fail-closed ポリシー。rev8 OQ-0003 で `runtimeGate.evidenceRefs` 空配列を拒否した precedent と一貫させる。空を許可するとビルダーが空を出力して validator がパスする抜け穴になる
+- Alternatives: (A) always required non-empty (adopted) / (B) allow empty when no browser QA run — fail-closed 違反
+- Source: discussion-20260416092414328, OQ-0002
+
+### DR-0225: per-axis evidenceRefs validation granularity (v1.7.15 rev9, OQ-0003 resolution)
+
+- Decision: `fullHarness.iterations[].l1/l2.axes[].evidenceRefs[]` の validation を per-axis 粒度で実施（Option A）。任意の axis が空配列であれば validator error
+- Status: Adopted
+- Rationale: design doc §6-1-3 の per-element 記述に準拠。集約レニエンシー（全 axis が空のときのみエラー）を許すと一部の axis がエビデンスなしでもパスする
+- Alternatives: (A) per-axis validation (adopted) / (B) aggregate leniency — per-axis traceability contract を破壊
+- Source: discussion-20260416092414328, OQ-0003
+
+### DR-0226: full README enumeration of all concrete-ref leaf fields (v1.7.15 rev9, OQ-0004 resolution)
+
+- Decision: README に concrete-ref contract の全 leaf フィールド（ui[].declaredRef、ui[].renderEvidenceRefs[]、ui[].browserQaEvidenceRefs[]、axes[].evidenceRefs[]、reviewerLogs[].evidenceRefs[]）を明記（Option A）
+- Status: Adopted
+- Rationale: DoD §5-6「docs/validator partial-strictness mismatch をゼロにする」が hard gate。design doc §9 が「README の表現を弱めて整合したことにする」を明示禁止している
+- Alternatives: (A) full enumeration (adopted) / (B) minimal note — DoD §5-6 違反
+- Source: discussion-20260416092414328, OQ-0004
+
+### DR-0227: UI-bearing discussion requires design guideline research (v1.7.17)
+
+- Decision: UI-bearing discussion では Trend Scan に加えて design guideline research を mandatory step とする。Material Design / WCAG / Apple HIG / platform/library guideline など、project-context に応じた参照を少なくとも 1 系統含める
+- Status: Adopted
+- Rationale: visual quality failure の root cause が prototyping ではなく upstream research 欠落であるため、discussion で閉じる必要がある
+- Alternatives: (A) prototyping skill で後追い補正 — root cause を閉じられない / (B) discussion mandatory step 化 (adopted)
+- Source: discussion-20260418170937652, DR-001
+
+### DR-0228: `design_guideline_research` becomes canonical Trend Scan category (v1.7.17)
+
+- Decision: `04_Sources.md` の canonical category に `design_guideline_research` を追加する
+- Status: Adopted
+- Rationale: guideline evidence を既存 source registry と同じ traceability surface に置くことで、validator と downstream spec が同じ SSOT を参照できる
+- Alternatives: (A) 別ファイル新設 — category drift / (B) 04_Sources に統合 (adopted)
+- Source: discussion-20260418170937652, DR-002
+
+### DR-0229: Trend-derived `score_anchors` require quantitative proxy and warning-first rollout (v1.7.17)
+
+- Decision: `21_design_eval_trend_derived.md` の `score_anchors` は抽象形容詞のみを禁止し、px 値 / 比率 / rule ID / class 名 / library default などの quantitative proxy を 1 つ以上含める。validator severity は v1.7.17 では warning とする
+- Status: Adopted
+- Rationale: concreteness がない anchor は高スコアでも低品質 UI を通してしまう。一方で既存 pack 影響は staged rollout が妥当
+- Alternatives: (A) 即時 error — migration shock / (B) warning-first ratchet (adopted)
+- Source: discussion-20260418170937652, DR-003 / OQ-0003 resolution
+
+### DR-0230: Validator ownership split = trendScan coverage + scoringReady concreteness (v1.7.17)
+
+- Decision: guideline coverage validator は `packages/qfai/src/core/validators/uix/trendScan.ts` を拡張し、anchor concreteness validator は `packages/qfai/src/core/validators/uix/scoringReady.ts` を拡張する。top-level 新規 validator を追加しない
+- Status: Adopted
+- Rationale: category completeness は sources schema の責務、anchor concreteness は scoring-ready schema の責務であり、現行 canonical validator 境界と一致する
+- Alternatives: (A) 新規 top-level validator — ownership split を曖昧化 / (B) 既存 uix module 拡張 (adopted)
+- Source: discussion-20260418170937652, DR-004 / OQ-0004 resolution

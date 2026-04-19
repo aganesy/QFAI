@@ -1,6 +1,6 @@
 import type { CanonicalPrototypingSurface } from "../domain/surface.js";
 
-export type PrototypingMode = "low-cost" | "standard" | "full-harness";
+export type PrototypingMode = "full-harness";
 
 export type ModeSelectionSource =
   | "explicit-request"
@@ -50,6 +50,9 @@ export type PrototypingObligations = {
   requireRenderBundle: boolean;
   requireBrowserQaBundle: boolean;
   requireFullHarness: boolean;
+  validCombination: boolean;
+  invalidReasonCode?: string | undefined;
+  invalidReason?: string | undefined;
 };
 
 export type ResolveModeInput = {
@@ -66,6 +69,6 @@ export type PrototypingExecutionConfig = {
 
 export type UiFidelityStatus = {
   required: boolean;
-  status: "completed" | "failed" | "n/a";
+  status: "completed" | "failed" | "insufficient-evidence" | "n/a";
   reason?: string;
 };

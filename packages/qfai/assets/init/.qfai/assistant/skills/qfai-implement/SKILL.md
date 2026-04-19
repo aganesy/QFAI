@@ -49,14 +49,12 @@ When no explicit argument is given, detect the candidate spec and constrain exec
 
 ## User Questions (AskUserQuestion Protocol)
 
-- When a question to the user is needed (e.g., exception handling, scope confirmation),
-  the agent MUST use AskUserQuestion if the tool is available.
-- When AskUserQuestion supports structured choices (radio/multi-select),
-  the agent MUST prefer structured choices over free-text input.
-- If AskUserQuestion is technically unavailable, present the same question as a normal message
-  with explicit numbered choices.
-  The agent SHOULD preserve structured choice semantics (enumerated options, selection constraints).
-  The reason for unavailability MUST be stated.
+Follow `.qfai/assistant/instructions/shared-skill-operating-baseline.md#user-questions-askuserquestion-protocol`.
+
+Skill-specific examples:
+
+- exception handling
+- scope confirmation
 
 ## CRITICAL CONSTRAINTS (Read First)
 
@@ -80,7 +78,7 @@ Execute the TDD micro-cycle for each pending item in `test-list.md`, transitioni
 - Read the sidecar family first (selected anchor, strategy, screen contracts) whenever implementation touches UI or critique-driven behavior.
 - Read order: option comparison (30_option_comparison.md) → selected anchor screen (31_selected_anchor_screen.md) →
   strategy (10_implementation_strategy.md) → taste interview (11_design_taste_interview.md) →
-  trend scan (uiux/20_trend_scan.md) → 3-layer evaluation family (20/21/22/23 + optional 24) →
+  trend scan (04_Sources.md#Trend Scan) → 3-layer evaluation family (20/21/22/23 + optional 24) →
   screen contracts (40_screen_contracts.md) → review input bundle (50_review_input_bundle.md) →
   optional design tokens → optional fallback mock → mermaid flows.
 - If code intent and rendered output diverge, treat the rendered/HTML result as the blocking review input and reconcile before DONE.
@@ -162,18 +160,21 @@ When transitioning to `exception`:
 
 ## Sub-agent Delegation (MANDATORY)
 
+Follow `.qfai/assistant/instructions/shared-skill-delegation-baseline.md`.
+
 ### Orchestrator Protocol (MUST)
 
-- Orchestrator reads `test-list.md`, determines the next pending item, and delegates each TDD phase.
-- Orchestrator MUST NOT write test or production code directly.
-- Orchestrator updates `test-list.md` status after each phase completes.
+- Orchestrator MUST NOT write test or production code directly; delegate every TDD phase to the routed implementation agents.
+- Additional implement-specific overrides:
+  - read `test-list.md`, determine the next pending item, and delegate each TDD phase;
+  - update `test-list.md` status after each phase completes.
 
 ### Formal Sub-agent Roster
 
 This skill delegates through the centralized routing policy in `.qfai/assistant/steering/agent-routing.yml`.
 
 - `delivery-planner`
-  - reads `test-list.md`, selects the next pending item, enforces Red-Green-Refactor ordering, and decides parallel safety
+  - reads `test-list.md`, selects the next pending item, enforces Red-Green-Refactor ordering, and is the sole authority for parallel dispatch decisions
 - `frontend-engineer` / `backend-engineer`
   - implement the selected item only, write the failing test first, write minimal passing code, and refactor without unrelated changes
 - `qa-gatekeeper`
@@ -198,28 +199,21 @@ All agent-to-agent transitions follow these contracts:
 
 ### Capability Probe (MUST)
 
-1. Run one harmless Probe Task once at stage start.
-2. If subagents are unavailable, explicitly ask for Simulation mode approval.
-3. Without explicit approval, stop the stage.
+- No additional overrides.
 
-### Simulation mode (Opt-in only)
+### Delegation Failure (Hard Stop)
 
-- Allowed only when user explicitly states `Simulation mode allowed`.
-- Record both:
-  - `Subagents: simulated (reason: <why unavailable>)`
-  - `User approval: <quote or reference>`
+- No additional overrides.
+- Do not simulate roles. If the first required delegation fails, stop the stage and report remediation.
 
 ## Work Orders Summary
 
-Every major artifact in this stage MUST include this table schema:
-
-| Step | Role (sub-agent) | Task title | Input (refs) | Output (refs) | Status (PASS/REVISE) |
-| ---- | ---------------- | ---------- | ------------ | ------------- | -------------------- |
-| 1    | `role`           | `task`     | `refs`       | `refs`        | PASS/REVISE          |
+Use the shared schema (per-row `Status (PASS/REVISE)` column, reviewer response `Result: PASS | REVISE`).
 
 ### Reviewer Gate (MUST)
 
 - Delegate final completion gate to an independent Reviewer.
+- Reviewer response must include `Result: PASS | REVISE` (matching shared-skill-delegation-baseline.md#reviewer-response-template).
 - Reviewer checks Drift Protocol compliance and alignment with `.qfai/assistant/steering/test-layers.md`.
 - Test volume floors/ratios are not gates; they are signals.
 - Do not declare DONE until Reviewer returns `PASS`; otherwise apply `REVISE`.
@@ -255,6 +249,8 @@ Every major artifact in this stage MUST include this table schema:
 - If integration verify passes, state transitions back to `delivery-planner` for sequential flow
 
 ## Completion Contract (Shared)
+
+Follow `.qfai/assistant/instructions/shared-skill-operating-baseline.md#completion-contract-shared`.
 
 ### Item completion checklist (10-point gate)
 

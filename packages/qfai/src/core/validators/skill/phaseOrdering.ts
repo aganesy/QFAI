@@ -1,0 +1,32 @@
+/**
+ * SKILL.md phase-ordering validator (spec-0010 TC-0010-0036).
+ *
+ * Checks that Phase A appears before Phase B in the Step 11.3 section.
+ * A mutation swapping their order is a dependency violation.
+ */
+
+export interface PhaseOrderingIssue {
+  readonly rule: "SKILL-PHASE-ORDER";
+  readonly message: string;
+}
+
+export function validatePhaseOrdering(skillMdContent: string): PhaseOrderingIssue[] {
+  const phaseAIdx = skillMdContent.indexOf("Phase A");
+  const phaseBIdx = skillMdContent.indexOf("Phase B");
+
+  if (phaseAIdx === -1 || phaseBIdx === -1) {
+    return [];
+  }
+
+  if (phaseBIdx < phaseAIdx) {
+    return [
+      {
+        rule: "SKILL-PHASE-ORDER",
+        message:
+          "Phase B appears before Phase A in SKILL.md Step 11.3; Phase A (brand selection) MUST precede Phase B (customization).",
+      },
+    ];
+  }
+
+  return [];
+}

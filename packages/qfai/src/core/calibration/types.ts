@@ -11,10 +11,31 @@ export type AlignmentExample = {
   rationale: string;
 };
 
+export type CalibrationOverrides = {
+  perAxisMinimum?: number;
+  maxIterationsByMode?: Record<string, number>;
+};
+
 export type CalibrationPack = {
   version: string;
   examples: AlignmentExample[];
-  thresholds?: ThresholdConfig;
+  thresholds: ThresholdConfig;
+  maxIterations: number;
+  plateauDelta: number;
+  plateauLookback: number;
+  overrides?: CalibrationOverrides;
+};
+
+export type EffectiveCalibrationConfig = {
+  maxIterations: number;
+  perAxisMinimum: number;
+  maxIterationsByMode: Record<string, number>;
+};
+
+export const DEFAULT_EFFECTIVE_CONFIG: EffectiveCalibrationConfig = {
+  maxIterations: 5,
+  perAxisMinimum: 0.6,
+  maxIterationsByMode: {},
 };
 
 export type ThresholdConfig = {
@@ -27,7 +48,7 @@ export const DEFAULT_THRESHOLDS: ThresholdConfig = {
   refine: 0.5,
 };
 
-export type Decision = "accept" | "refine" | "pivot";
+export type Decision = "accept" | "refine" | "reject";
 
 export type DecisionResult = {
   decision: Decision;

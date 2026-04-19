@@ -2,6 +2,7 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { buildContractIndex } from "./contractIndex.js";
 import { loadConfig, resolvePath, type ConfigLoadResult } from "./config.js";
+import { inspectLatestDiscussionPack } from "./discussionPack.js";
 import { collectSpecEntries, type SpecEntry } from "./specLayout.js";
 import { parseFirstMarkdownTable } from "./specPackParsers.js";
 import {
@@ -262,13 +263,24 @@ export type ReportPrototypingSummary = {
   };
   fullHarness?: {
     enabled: boolean;
-    available?: boolean;
     runId?: string;
+    calibrationRef?: {
+      configPath: string;
+      packPath: string;
+      packVersion: string;
+    };
     iterationCount?: number;
     bestIteration?: number;
+    status?: string;
     terminationReason?: string;
+    reviewerId?: string;
     reviewerSignoffStatus?: string;
     scoringTraceCount?: number;
+    latestWeightedTotal?: number;
+    latestL1Total?: number;
+    latestL2Total?: number;
+    limitations?: string[];
+    reviewerLogsCount?: number;
   };
   render?: {
     status?: string;
@@ -1300,22 +1312,36 @@ export function formatReportMarkdown(
     );
     lines.push(`- obligation profile: ${data.prototyping.evidence.obligationProfile}`);
     if (data.prototyping.fullHarness) {
+      const fh = data.prototyping.fullHarness;
       lines.push("");
       lines.push("### prototyping.fullHarness");
       lines.push("");
-      lines.push(`- enabled: ${data.prototyping.fullHarness.enabled}`);
-      lines.push(`- available: ${data.prototyping.fullHarness.available ?? "(n/a)"}`);
-      lines.push(`- runId: ${data.prototyping.fullHarness.runId ?? "(none)"}`);
-      lines.push(`- iterationCount: ${data.prototyping.fullHarness.iterationCount ?? "(none)"}`);
-      lines.push(`- bestIteration: ${data.prototyping.fullHarness.bestIteration ?? "(none)"}`);
-      lines.push(
-        `- terminationReason: ${data.prototyping.fullHarness.terminationReason ?? "(none)"}`,
-      );
-      lines.push(
-        `- reviewerSignoff.status: ${data.prototyping.fullHarness.reviewerSignoffStatus ?? "(none)"}`,
-      );
-      if (data.prototyping.fullHarness.scoringTraceCount !== undefined) {
-        lines.push(`- scoringTrace: ${data.prototyping.fullHarness.scoringTraceCount} entries`);
+      lines.push(`- enabled: ${fh.enabled}`);
+      lines.push(`- runId: ${fh.runId ?? "(none)"}`);
+      lines.push(`- status: ${fh.status ?? "(none)"}`);
+      lines.push(`- iterationCount: ${fh.iterationCount ?? "(none)"}`);
+      lines.push(`- bestIteration: ${fh.bestIteration ?? "(none)"}`);
+      lines.push(`- terminationReason: ${fh.terminationReason ?? "(none)"}`);
+      lines.push(`- reviewerId: ${fh.reviewerId ?? "(none)"}`);
+      lines.push(`- reviewerSignoff.status: ${fh.reviewerSignoffStatus ?? "(none)"}`);
+      if (fh.calibrationRef) {
+        lines.push(`- calibrationRef.configPath: ${fh.calibrationRef.configPath}`);
+        lines.push(`- calibrationRef.packPath: ${fh.calibrationRef.packPath}`);
+        lines.push(`- calibrationRef.packVersion: ${fh.calibrationRef.packVersion}`);
+      }
+      if (fh.latestWeightedTotal !== undefined) {
+        lines.push(`- latest weightedTotal: ${fh.latestWeightedTotal}`);
+        lines.push(`- latest L1 total: ${fh.latestL1Total ?? "(none)"}`);
+        lines.push(`- latest L2 total: ${fh.latestL2Total ?? "(none)"}`);
+      }
+      if (fh.scoringTraceCount !== undefined) {
+        lines.push(`- scoringTrace: ${fh.scoringTraceCount} entries`);
+      }
+      if (fh.reviewerLogsCount !== undefined) {
+        lines.push(`- reviewerLogs: ${fh.reviewerLogsCount} entries`);
+      }
+      if (fh.limitations && fh.limitations.length > 0) {
+        lines.push(`- limitations: ${fh.limitations.length} items`);
       }
     }
     if (data.prototyping.render) {
@@ -1563,7 +1589,7 @@ export function formatReportMarkdown(
       "- render evidence が不足または不完全です。viewport coverage と artifact path を確認してください。",
     );
     lines.push(
-      "- recover: `qfai prototyping run --mode standard` を実行し、`.qfai/evidence/prototyping.json` / `render.json` / `browser-qa.json` を再生成します。",
+      "- recover: `qfai prototyping run --mode full-harness --reviewer <id>` を実行し、`.qfai/evidence/prototyping.json` / `render.json` / `browser-qa.json` を再生成します。",
     );
     lines.push(
       "- why it matters: render evidence は viewport coverage と missing artifact の切り分けに使われ、strict/high profile では gate に影響します。",
@@ -1578,11 +1604,21 @@ export function formatReportMarkdown(
     );
   }
   const fullHarnessCompletenessIssues = data.issues.filter((item) =>
-    ["QFAI-PROT-264", "QFAI-PROT-281", "QFAI-PROT-282", "QFAI-PROT-283"].includes(item.code),
+    [
+      "QFAI-PROT-264",
+      "QFAI-PROT-281",
+      "QFAI-PROT-282",
+      "QFAI-PROT-283",
+      "QFAI-PROT-295",
+      "QFAI-PROT-296",
+      "QFAI-PROT-297",
+      "QFAI-PROT-298",
+      "QFAI-PROT-299",
+    ].includes(item.code),
   );
   if (fullHarnessCompletenessIssues.length > 0) {
     lines.push(
-      "- fullHarness evidence が不完全です。terminationReason / scoringTrace / reviewerSignoff を確認してください。",
+      "- fullHarness evidence が不完全です。reviewer / commitSha / weightedTotal / terminationReason / scoringTrace を確認してください。",
     );
   }
   lines.push("- 変更内容・受入観点は `.qfai/specs/*/18_delta.md` に記録します。");
@@ -1675,6 +1711,11 @@ async function collectPrototypingSummary(
   config: ConfigLoadResult["config"],
 ): Promise<ReportPrototypingSummary | undefined> {
   const specsRoot = resolvePath(root, config, "specsDir");
+  const discussionRoot = resolvePath(root, config, "discussionDir");
+  const discussionReadiness = await inspectLatestDiscussionPack(discussionRoot);
+  if (discussionReadiness.latestPackDir && !discussionReadiness.prototypingRequired) {
+    return undefined;
+  }
   const evidenceRoot = path.join(path.dirname(specsRoot), "evidence");
   const evidencePath = path.join(evidenceRoot, "prototyping.json");
   let raw: string;
@@ -1696,9 +1737,13 @@ async function collectPrototypingSummary(
 
   const record = parsed as Record<string, unknown>;
   const mode = asRecord(record.mode);
-  if (!mode || !isValidPrototypingMode(mode.effective) || typeof mode.source !== "string") {
+  if (!mode || typeof mode.source !== "string") {
     return undefined;
   }
+  const rawEffectiveMode =
+    typeof mode.effective === "string" && mode.effective.trim().length > 0
+      ? mode.effective.trim()
+      : "full-harness";
 
   const warnings: string[] = [];
 
@@ -1719,9 +1764,12 @@ async function collectPrototypingSummary(
   const modeSummary = summarizeResolvedMode({
     explicitMode: isValidPrototypingMode(mode.requested) ? mode.requested : undefined,
     discussionRecommendation: effectiveRec,
-    defaultMode: mode.effective,
+    ...(isValidPrototypingMode(rawEffectiveMode) ? { defaultMode: rawEffectiveMode } : {}),
   });
   warnings.push(...modeSummary.warnings);
+  if (!isValidPrototypingMode(rawEffectiveMode)) {
+    warnings.push(`prototyping evidence effective mode is non-canonical: ${rawEffectiveMode}`);
+  }
 
   const discussionSummary = effectiveRec
     ? effectiveRec.rationale
@@ -1762,7 +1810,7 @@ async function collectPrototypingSummary(
       "prototyping surface could not be derived from evidence or recommendation; report defaulted to mixed.",
     );
   }
-  const effectiveMode = mode.effective;
+  const effectiveMode = rawEffectiveMode;
 
   // WS-3: Use shared obligation matrix
   const obligations = derivePrototypingObligations({ surface: effectiveSurface, effectiveMode });
@@ -1795,16 +1843,6 @@ async function collectPrototypingSummary(
       `evidence mode source is "system-default" but discussion recommendation exists (${effectiveRec.recommendedMode})`,
     );
   }
-  if (
-    mode.source === "discussion-recommendation" &&
-    effectiveRec &&
-    mode.effective !== effectiveRec.recommendedMode
-  ) {
-    warnings.push(
-      `evidence effective mode (${mode.effective}) does not match discussion recommendation (${effectiveRec.recommendedMode})`,
-    );
-  }
-
   const renderSummary = summarizeRenderEvidence(renderBundle);
   const renderCounts = {
     captured: renderSummary.captured,
@@ -1840,10 +1878,6 @@ async function collectPrototypingSummary(
       browserQaTotalFailed += failed || (status === "failed" ? 1 : 0);
     }
   }
-  const browserQaModeMismatch =
-    browserQaBundle?.browserQa.mode !== undefined &&
-    browserQaBundle.browserQa.mode !== effectiveMode;
-
   // WS-8: Calibration summary
   const calibrationConfig = config.prototyping?.calibration;
   const scoringTrace =
@@ -1852,28 +1886,7 @@ async function collectPrototypingSummary(
     calibrationConfig || scoringTrace
       ? {
           configPresent: Boolean(calibrationConfig),
-          ...(calibrationConfig?.thresholds
-            ? {
-                thresholdSummary: {
-                  accept: calibrationConfig.thresholds.accept ?? 0.8,
-                  refine: calibrationConfig.thresholds.refine ?? 0.5,
-                },
-              }
-            : {}),
           scoringTraceAvailable: Boolean(scoringTrace && scoringTrace.length > 0),
-          ...(scoringTrace && scoringTrace.length > 0 && calibrationConfig?.thresholds
-            ? {
-                belowThresholdWarning: scoringTrace.some(
-                  (row: unknown) =>
-                    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-                    asRecord(row) !== null &&
-                    typeof asRecord(row)?.weightedTotal === "number" &&
-                    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-                    (asRecord(row)!.weightedTotal as number) <
-                      (calibrationConfig.thresholds?.accept ?? 0.8),
-                ),
-              }
-            : {}),
         }
       : undefined;
 
@@ -1930,10 +1943,8 @@ async function collectPrototypingSummary(
       ? {
           fullHarness: {
             enabled: fullHarness.enabled === true,
-            ...(typeof fullHarness.available === "boolean"
-              ? { available: fullHarness.available }
-              : {}),
             ...(typeof fullHarness.runId === "string" ? { runId: fullHarness.runId } : {}),
+            ...(typeof fullHarness.status === "string" ? { status: fullHarness.status } : {}),
             ...(typeof fullHarness.iterationCount === "number"
               ? { iterationCount: fullHarness.iterationCount }
               : {}),
@@ -1943,6 +1954,21 @@ async function collectPrototypingSummary(
             ...(typeof fullHarness.terminationReason === "string"
               ? { terminationReason: fullHarness.terminationReason }
               : {}),
+            ...(() => {
+              const cr = asRecord(fullHarness.calibrationRef);
+              if (!cr) return {};
+              return {
+                calibrationRef: {
+                  configPath: typeof cr.configPath === "string" ? cr.configPath : "",
+                  packPath: typeof cr.packPath === "string" ? cr.packPath : "",
+                  packVersion: typeof cr.packVersion === "string" ? cr.packVersion : "",
+                },
+              };
+            })(),
+            ...(asRecord(fullHarness.reviewerSignoff) &&
+            typeof asRecord(fullHarness.reviewerSignoff)?.reviewerId === "string"
+              ? { reviewerId: String(asRecord(fullHarness.reviewerSignoff)?.reviewerId) }
+              : {}),
             ...(asRecord(fullHarness.reviewerSignoff)?.status &&
             typeof asRecord(fullHarness.reviewerSignoff)?.status === "string"
               ? {
@@ -1950,7 +1976,27 @@ async function collectPrototypingSummary(
                 }
               : {}),
             ...(scoringTrace && scoringTrace.length > 0
-              ? { scoringTraceCount: scoringTrace.length }
+              ? (() => {
+                  const latest = asRecord(scoringTrace[scoringTrace.length - 1]);
+                  return {
+                    scoringTraceCount: scoringTrace.length,
+                    ...(typeof latest?.weightedTotal === "number"
+                      ? { latestWeightedTotal: latest.weightedTotal }
+                      : {}),
+                    ...(typeof latest?.l1Total === "number"
+                      ? { latestL1Total: latest.l1Total }
+                      : {}),
+                    ...(typeof latest?.l2Total === "number"
+                      ? { latestL2Total: latest.l2Total }
+                      : {}),
+                  };
+                })()
+              : {}),
+            ...(Array.isArray(fullHarness.reviewerLogs)
+              ? { reviewerLogsCount: fullHarness.reviewerLogs.length }
+              : {}),
+            ...(Array.isArray(fullHarness.limitations)
+              ? { limitations: fullHarness.limitations as string[] }
               : {}),
           },
         }
@@ -1986,7 +2032,6 @@ async function collectPrototypingSummary(
             phaseSummary: browserQaBundle.browserQa.summary,
           }
         : {}),
-      ...(browserQaModeMismatch ? { modeMismatch: true } : {}),
     },
     ...(calibrationSummary ? { calibration: calibrationSummary } : {}),
     warnings,

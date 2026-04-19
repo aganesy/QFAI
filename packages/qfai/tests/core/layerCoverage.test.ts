@@ -277,7 +277,7 @@ describe("validateLayerCoverage (v1421 hard gates)", () => {
     }
   });
 
-  it("emits QFAI-COV-207 warning when EX references multiple BR IDs", async () => {
+  it("allows EX rows to reference multiple BR IDs when one example covers a cohesive rule bundle", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-cov-v1421-"));
     try {
       await seedPolicies(root, ["CAP-0001"]);
@@ -298,9 +298,7 @@ describe("validateLayerCoverage (v1421 hard gates)", () => {
       );
 
       const issues = await validateLayerCoverage(root, defaultConfig);
-      const warning = issues.find((entry) => entry.code === "QFAI-COV-207");
-      expect(warning?.severity).toBe("warning");
-      expect(warning?.refs).toContain("EX-0001");
+      expect(issues.some((entry) => entry.code === "QFAI-COV-207")).toBe(false);
     } finally {
       await rm(root, { recursive: true, force: true });
     }

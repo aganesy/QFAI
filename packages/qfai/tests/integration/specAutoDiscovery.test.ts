@@ -8,13 +8,6 @@
 // QFAI:SPEC-0012:TC-0012-0020
 // QFAI:SPEC-0012:TC-0012-0021
 // QFAI:SPEC-0012:TC-0012-0022
-// QFAI:SPEC-0014:TC-0014-0023
-// QFAI:SPEC-0014:TC-0014-0024
-// QFAI:SPEC-0014:TC-0014-0025
-// QFAI:SPEC-0014:TC-0014-0026
-// QFAI:SPEC-0014:TC-0014-0027
-// QFAI:SPEC-0014:TC-0014-0028
-// QFAI:SPEC-0014:TC-0014-0029
 import { execFileSync } from "node:child_process";
 import { mkdir, mkdtemp, readFile, rm, utimes, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -871,7 +864,6 @@ describe("TC-0012-0022: cross-doc routing consistency", () => {
 // spec-0037: Vocabulary, fixture alignment, integration (TC-0014-0023..0029)
 // ═══════════════════════════════════════════════════════════════════════════
 
-// QFAI:SPEC-0014:TC-0014-0023
 describe("TC-0014-0023: vocabulary pass scan", () => {
   it("SKILL.md uses canonical spec-related vocabulary", async () => {
     const repoRoot = path.resolve(process.cwd(), "..", "..");
@@ -894,7 +886,6 @@ describe("TC-0014-0023: vocabulary pass scan", () => {
   });
 });
 
-// QFAI:SPEC-0014:TC-0014-0024
 describe("TC-0014-0024: contradiction detection", () => {
   it("detectSpecChanges result structure has no contradictions", async () => {
     const tmpRoot = await mkdtemp(path.join(os.tmpdir(), "qfai-atdd-vocab-"));
@@ -918,7 +909,6 @@ describe("TC-0014-0024: contradiction detection", () => {
   });
 });
 
-// QFAI:SPEC-0014:TC-0014-0025
 describe("TC-0014-0025: vocabulary fail — prohibited terms", () => {
   it("specDiffDetector source does not use prohibited legacy terms", async () => {
     const repoRoot = path.resolve(process.cwd(), "..", "..");
@@ -930,7 +920,6 @@ describe("TC-0014-0025: vocabulary fail — prohibited terms", () => {
   });
 });
 
-// QFAI:SPEC-0014:TC-0014-0026
 describe("TC-0014-0026: fixture alignment — 3-layer model", () => {
   it("discussion SKILL.md references scoring axes and evaluation axis files", async () => {
     const repoRoot = path.resolve(process.cwd(), "..", "..");
@@ -952,7 +941,6 @@ describe("TC-0014-0026: fixture alignment — 3-layer model", () => {
   });
 });
 
-// QFAI:SPEC-0014:TC-0014-0027
 describe("TC-0014-0027: fixture 4-axis reject", () => {
   it("discussion SKILL.md completion conditions do not use 4-axis model keyword", async () => {
     const repoRoot = path.resolve(process.cwd(), "..", "..");
@@ -977,7 +965,6 @@ describe("TC-0014-0027: fixture 4-axis reject", () => {
   });
 });
 
-// QFAI:SPEC-0014:TC-0014-0028
 describe("TC-0014-0028: integration e2e — validateProject entrypoint", () => {
   it("validateProject function is importable and callable", async () => {
     const { validateProject } = await import("../../src/core/validate.js");
@@ -985,7 +972,6 @@ describe("TC-0014-0028: integration e2e — validateProject entrypoint", () => {
   });
 });
 
-// QFAI:SPEC-0014:TC-0014-0029
 describe("TC-0014-0029: integration test existence", () => {
   it("integration test directory contains expected test files", async () => {
     const { readdir } = await import("node:fs/promises");

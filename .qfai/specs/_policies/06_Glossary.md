@@ -23,7 +23,7 @@
 | Waiver                       | ウェイバー。特定ルールの suppress（抑制）または downgrade（重要度下げ）                                                                                                                                  |
 | CAP                          | Capability - 能力/機能単位。`CAP-XXXX` 形式。`_policies/03_Capabilities.md` で定義                                                                                                                       |
 | ATDD Annotation              | テストファイル内のトレーサビリティアノテーション                                                                                                                                                         |
-| Review Pack                  | レビューパック。`review-*/` 配下のレビュー成果物                                                                                                                                                         |
+| Review Pack                  | レビューパック。`review-*/` 配下のレビュー成果物。`qfai init` 管理ブロックによりデフォルトで gitignore 対象（v1.7.18 以降）。追跡したい場合はプロジェクト側で明示的 negation を追加する                  |
 | Drift Protocol               | ドリフトプロトコル。仕様とコードの乖離を検出・記録する仕組み                                                                                                                                             |
 | Skill                        | スキル。QFAI ワークフローの独立した実行単位。SKILL.md で定義され、入力・出力・ロール・完了契約・Evidence 要件を持つ                                                                                      |
 | Agent                        | エージェント（サブエージェント）。Skill 内で委任される専門化された作業者。19 の統合 taxonomy が定義され、Mission・Inputs・Deliverables・Stop Conditions・Sign-off 構造を持つ                             |
@@ -31,8 +31,7 @@
 | Steering                     | ステアリング。manifest, product, structure, tech, test-layers の 5 文書で構成される意思決定の背骨                                                                                                        |
 | Instructions                 | 操作プレイブック。workflow, drift-protocol, constitution, agent-selection, requirements-decomposition の 5 文書                                                                                          |
 | Constitution                 | 10 個の非交渉条項（Article I〜X）。Evidence over confidence、No invented facts、SDD is SSOT、AskUserQuestion MUST 等。例外なし                                                                           |
-| Capability Probe             | Skill 開始時にサブエージェント利用可否を確認する軽量テスト。失敗時は Simulation Mode の承認を要求する                                                                                                    |
-| Simulation Mode              | サブエージェント利用不可時にユーザー承認のもとでロールを逐次エミュレートするフォールバック。明示的 opt-in 必須                                                                                           |
+| Capability Probe             | Skill 開始時に最初の必須委任を実行し、その実委任の成否でサブエージェント利用可否を判定するプロトコル。事前確認や自己代行フォールバックは行わない                                                         |
 | Escalation Hook              | spec-XXXX/01_Spec.md に記載される `_policies` への参照委譲メカニズム。NFR・policy・requirements の copy-down を行う                                                                                      |
 | AskUserQuestion              | VS Code Copilot Chat が提供するユーザーへの質問機能。Chat UI 上で構造化選択肢付きの質問を提示できる。Article X により全 Skill で MUST 使用が規定される                                                   |
 | AskUserQuestion Protocol     | 各 Skill の SKILL.md に定義される、AskUserQuestion 使用方法のルール。MUST 使用→構造化選択肢→フォールバックの 3 行パターンで統一される。Article X で非交渉条項化                                          |
@@ -215,37 +214,57 @@
 
 ## 略語一覧
 
-| Abbreviation | Full Form                                                                    |
-| ------------ | ---------------------------------------------------------------------------- | ----------------------------------- |
-| CLI          | Command-Line Interface                                                       |
-| CI/CD        | Continuous Integration / Continuous Delivery                                 |
-| DOM          | Document Object Model                                                        |
-| ESM          | ECMAScript Modules                                                           |
-| CJS          | CommonJS                                                                     |
-| SSOT         | Single Source of Truth                                                       |
-| NFR          | Non-Functional Requirement                                                   |
-| REQ          | Functional Requirement                                                       |
-| API          | Application Programming Interface                                            |
-| UI           | User Interface                                                               |
-| DB           | Database                                                                     |
-| YAML         | YAML Ain't Markup Language                                                   |
-| JSON         | JavaScript Object Notation                                                   |
-| OSS          | Open Source Software                                                         |
-| CR           | Change Request                                                               |
-| RCP          | Review Cycle Protocol                                                        |
-| SDP          | Spec Diff Protocol                                                           |
-| ISA          | Implementation State Analysis                                                |
-| TDD-ID       | Test-Driven Development Item Identifier                                      |
-| DR-ID        | Decision Record Identifier                                                   |
-| DDP          | Design Direction Pack                                                        |
-| DDS          | Design Direction Summary                                                     |
-| REA          | Render Evidence Automation                                                   |
-| SLP          | Slop Pattern — AI slop カテゴリ ID プレフィックス (v1.7.2)                   |
-| AUD          | Audit — Design Audit ルール ID プレフィックス (v1.7.2)                       |
-| UIX-VAL      | UI/UX Validation — deterministic validator ルール ID プレフィックス (v1.7.4) |
-| UIX-REV      | UI/UX Review — semantic reviewer ルール ID プレフィックス (v1.7.4)           |
-| FH           | Full-Harness — premium prototyping mode の反復ループ構造                     |
-| SDP          | Spec Diff Protocol                                                           | Spec Auto-Discovery Protocol の略称 |
+| Abbreviation              | Full Form                                                                                                                                                                                                                        |
+| ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------- |
+| CLI                       | Command-Line Interface                                                                                                                                                                                                           |
+| CI/CD                     | Continuous Integration / Continuous Delivery                                                                                                                                                                                     |
+| DOM                       | Document Object Model                                                                                                                                                                                                            |
+| ESM                       | ECMAScript Modules                                                                                                                                                                                                               |
+| CJS                       | CommonJS                                                                                                                                                                                                                         |
+| SSOT                      | Single Source of Truth                                                                                                                                                                                                           |
+| NFR                       | Non-Functional Requirement                                                                                                                                                                                                       |
+| REQ                       | Functional Requirement                                                                                                                                                                                                           |
+| API                       | Application Programming Interface                                                                                                                                                                                                |
+| UI                        | User Interface                                                                                                                                                                                                                   |
+| DB                        | Database                                                                                                                                                                                                                         |
+| YAML                      | YAML Ain't Markup Language                                                                                                                                                                                                       |
+| JSON                      | JavaScript Object Notation                                                                                                                                                                                                       |
+| OSS                       | Open Source Software                                                                                                                                                                                                             |
+| CR                        | Change Request                                                                                                                                                                                                                   |
+| RCP                       | Review Cycle Protocol                                                                                                                                                                                                            |
+| SDP                       | Spec Diff Protocol                                                                                                                                                                                                               |
+| ISA                       | Implementation State Analysis                                                                                                                                                                                                    |
+| TDD-ID                    | Test-Driven Development Item Identifier                                                                                                                                                                                          |
+| DR-ID                     | Decision Record Identifier                                                                                                                                                                                                       |
+| DDP                       | Design Direction Pack                                                                                                                                                                                                            |
+| DDS                       | Design Direction Summary                                                                                                                                                                                                         |
+| REA                       | Render Evidence Automation                                                                                                                                                                                                       |
+| SLP                       | Slop Pattern — AI slop カテゴリ ID プレフィックス (v1.7.2)                                                                                                                                                                       |
+| AUD                       | Audit — Design Audit ルール ID プレフィックス (v1.7.2)                                                                                                                                                                           |
+| UIX-VAL                   | UI/UX Validation — deterministic validator ルール ID プレフィックス (v1.7.4)                                                                                                                                                     |
+| UIX-REV                   | UI/UX Review — semantic reviewer ルール ID プレフィックス (v1.7.4)                                                                                                                                                               |
+| FH                        | Full-Harness — premium prototyping mode の反復ループ構造                                                                                                                                                                         |
+| SDP                       | Spec Diff Protocol                                                                                                                                                                                                               | Spec Auto-Discovery Protocol の略称 |
+| l2Evidence                | L2 Evidence Module — `l2Evidence.ts` が提供する 3 つの builder 関数（buildDiscussionAxisInputs / buildScreenContractInputs / buildTrendAlignmentInputs）で実 discussion artifact から L2 入力を導出するモジュール (v1.7.15 rev2) |
+| ScreenObservation         | Screen-level UI 観測型。route / htmlCaptureRef / domLabelsFound / elementsPlaced / actionsWired / mockPathFindings を screen 単位で保持する (v1.7.15 rev2)                                                                       |
+| TerminationContext        | Full-harness 終了判定コンテキスト。`{ calibration: CalibrationPack; history: FullHarnessHistory }` を受け、CalibrationPack 以外からの plateauLookback 解決を禁止 (v1.7.15 rev2)                                                  |
+| MeasurementResult         | Full-harness 計測結果型。panelInputs と 8 カテゴリ evidenceRefs を同時に返す strict 型 (v1.7.15 rev2)                                                                                                                            |
+| evidenceRefs 8 categories | iteration ごとに必須の 8 つの evidence カテゴリ: runtimeGate / render / browserQa / uiObservation / specCoverage / discussion / screenContract / trend (v1.7.15 rev2)                                                            |
+| schema v2 (bundleWriter)  | bundleWriter の新 iteration schema。8 カテゴリ evidenceRefs + FullHarnessIteration 新型の required fields を定義。v1 との並存を禁止 (v1.7.15 rev2)                                                                               |
+| fail-closed               | 入力不備時にデフォルト値で続行せず即座に失敗する設計方針。CalibrationLoader / validatePanelInputs / specCoverage 等に適用 (v1.7.15 rev2)                                                                                         |
+| validatePanelInputs       | panelInputs の必須項目欠落を検出する検証関数。10 種類の silent pass を error に昇格 (v1.7.15 rev2)                                                                                                                               |
+
+| canonical route | URL パスとは分離された、spec 定義上の論理ルート識別子。`runtimeGate` / `specCoverage` はこの canonical route を基準に計測する (v1.7.15 rev4) |
+| screen-level measurement | 各 screen contract に対して個別に render / Browser QA / observation を実施する測定方式 (v1.7.15 rev4) |
+| render target | render パネルの測定対象画面。rev4 では `"/primary"` 固定値を廃止し、canonical screen contract から動的に決定 (v1.7.15 rev4) |
+| structured parse | L2 evidence の構築において、artifact を構造化パーサーで解析する方式。heuristic fallback より優先 (v1.7.15 rev4) |
+| heuristic fallback | structured parse が利用できない場合に、テキストパターンマッチ等の経験則で L2 入力を推定する方式。rev4 では適用範囲を縮小 (v1.7.15 rev4) |
+| canonical screen contract | screen contract の正規化された表現。画面 ID / ルート / 期待 DOM 構造 / 期待アクションを定義 (v1.7.15 rev4) |
+| missing_observation | 画面契約に存在するがオブザベーションにないルートに対する specCoverage のレポートステータス (v1.7.15 rev4) |
+| reality sync | docs / SKILL / README が runtime / validator / tests の実体と一致した状態 (v1.7.15 rev4) |
+| Design Guideline Research | UI-bearing discussion で Material Design / WCAG / Apple HIG / 採用 UI ライブラリ等の基準を収集し、`04_Sources.md` に traceable に記録する research step (v1.7.17) |
+| design_guideline_research | `04_Sources.md` に追加される canonical category。デザイン指南書由来の定量基準や rule ID を保持するための領域 (v1.7.17) |
+| Quantitative Proxy | `score_anchors` の concreteness を支える具体表現。px 値、比率、WCAG rule ID、class 名、library default value などを含む (v1.7.17) |
 
 ## 使用ルール
 

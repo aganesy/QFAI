@@ -96,8 +96,8 @@ export async function runBrowserQaOrchestrated(
   const hasHtml = typeof input.htmlContent === "string" && input.htmlContent.trim().length > 0;
   const hasTargetUrl = typeof input.targetUrl === "string" && input.targetUrl.trim().length > 0;
   if (!hasHtml && !hasTargetUrl) {
-    // When browser QA is not required (standard/low-cost), missing input is a
-    // normal skip — not a smoke failure.
+    // When Browser QA is explicitly marked optional, missing input is a normal
+    // skip rather than a smoke failure.
     if (input.required === false) {
       return {
         phases: BROWSER_QA_PHASES.map((phase) => ({

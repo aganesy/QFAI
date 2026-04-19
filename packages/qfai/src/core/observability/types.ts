@@ -24,7 +24,7 @@ export type AggregateMetric = {
 export type MetricRecord = PerIterationMetric | AggregateMetric;
 
 export type ModeRecommendation = {
-  mode: "standard" | "full-harness";
+  mode: "full-harness";
   reasoning: string;
 };
 

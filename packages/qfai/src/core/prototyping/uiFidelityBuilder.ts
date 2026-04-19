@@ -1,5 +1,3 @@
-import path from "node:path";
-
 import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
 import { buildContractIndex } from "../contractIndex.js";
@@ -10,16 +8,13 @@ import type { RenderRunnerResult } from "../evidence/types.js";
 import type { UiFidelityStatus } from "./types.js";
 import { findLatestDiscussionPackDir } from "../discussionPack.js";
 import { readSafe } from "../validators/utils.js";
-
-type ScreenContractEntry = {
-  screenId: string;
-  route: string;
-  expectedStates: string[];
-};
+import { readCanonicalScreenContracts } from "./screenContracts.js";
+import { buildUiObservationSummary, deriveMockPathFindingsFromBrowserQa } from "./uiObservation.js";
 
 type ContractScreenSummary = {
   contractId: string;
   route: string;
+  screenId: string;
   expected: {
     elements: number;
     actions: number;
@@ -32,6 +27,7 @@ export type BuiltUiFidelity = {
   uiFidelity?: {
     mode: "interactive";
     screens: Array<{
+      screenId: string;
       route: string;
       uiContractId: string;
       expected: {
@@ -48,7 +44,7 @@ export type BuiltUiFidelity = {
         elementsPlaced: number;
         actionsWired: number;
       };
-      mockPaths: Array<{ id: string; status: string }>;
+      mockPaths: Array<{ id: string; status: "fail" | "finding" }>;
       renders: Array<{
         viewport: string;
         status: "captured" | "skipped" | "failed";
@@ -74,8 +70,28 @@ export async function buildUiFidelity(input: {
 }): Promise<BuiltUiFidelity> {
   const discussionRoot = resolvePath(input.root, input.config, "discussionDir");
   const latestPack = await findLatestDiscussionPackDir(discussionRoot);
-  const screenContracts = await readScreenContracts(latestPack);
+  // Anchor generated sourceRefs at the configured discussion dir so custom
+  // paths.discussionDir values produce non-dangling refs.
+  const screenContracts = await readCanonicalScreenContracts(
+    latestPack,
+    input.config.paths.discussionDir,
+  );
   const contractSummaries = await collectUiContractScreens(input.root, input.config);
+  const enrichedScreenContracts = screenContracts.map((screen) => {
+    const contract = contractSummaries.find((candidate) => candidate.route === screen.route);
+    return {
+      ...screen,
+      actionIds: contract?.expected.ids ?? [],
+    };
+  });
+
+  // v1.7.15: screen-level observation from uiObservation.ts
+  const uiObservation = await buildUiObservationSummary(
+    input.renderResult,
+    input.browserQaResult,
+    enrichedScreenContracts,
+  );
+  const mockPathFindings = deriveMockPathFindingsFromBrowserQa(input.browserQaResult);
 
   const screens = screenContracts
     .map((screen) => {
@@ -87,41 +103,32 @@ export async function buildUiFidelity(input: {
       const renderEntries = (input.renderResult?.entries ?? []).filter(
         (entry) => entry.target === screen.route || entry.target === screen.screenId,
       );
-      const capturedHtml = renderEntries.find(
-        (entry) => entry.status === "captured" && entry.html_path,
+
+      // v1.7.15: screen-level observation — find the specific screen's observation
+      const screenObs = uiObservation.screens.find(
+        (obs) => obs.route === screen.route || obs.screenId === screen.screenId,
       );
-      const htmlLabels = capturedHtml?.html_path
-        ? extractHtmlLabelsFromString(capturedHtml.html_path)
-        : [];
-      const browserFindingsCount =
-        input.browserQaResult?.phases
-          .flatMap((phase) => phase.findings)
-          .filter((finding) => finding.route === undefined || finding.route === screen.route)
-          .length ?? 0;
+      const domLabels = screenObs?.domLabelsFound ?? [];
+      const actionsWired = screenObs?.actionsWired ?? 0;
+
+      // v1.7.15: mockPaths derived from browser QA findings only (no auto-pass)
+      const screenMockPaths =
+        screenObs?.mockPathFindings ??
+        mockPathFindings.filter(
+          (f) => f.id.startsWith(screen.screenId) || f.id.includes(screen.route),
+        );
 
       return {
+        screenId: screen.screenId,
         route: screen.route,
         uiContractId: contract.contractId,
         expected: contract.expected,
-        ...(htmlLabels.length > 0 ? { found: { labels: htmlLabels } } : {}),
-        // Foundation fallback: when no browser QA or render capture data is
-        // available, observed metrics are seeded from contract expected values.
-        // Real measurements take precedence via Math.max / conditional logic.
+        ...(domLabels.length > 0 ? { found: { labels: domLabels } } : {}),
         observed: {
-          elementsPlaced: Math.max(contract.expected.elements, htmlLabels.length),
-          actionsWired:
-            contract.expected.actions > 0
-              ? contract.expected.actions
-              : browserFindingsCount > 0
-                ? 1
-                : 0,
+          elementsPlaced: domLabels.length,
+          actionsWired,
         },
-        mockPaths: [
-          {
-            id: `${screen.screenId}-default`,
-            status: "pass",
-          },
-        ],
+        mockPaths: screenMockPaths,
         renders: renderEntries.map((entry) => ({
           viewport: entry.viewport,
           status: entry.status,
@@ -153,71 +160,47 @@ export async function buildUiFidelity(input: {
     };
   }
 
+  // v1.7.15: check for insufficient evidence per screen
+  const insufficientScreens = screens.filter((screen) => {
+    const hasCapturedRender = screen.renders.some((render) => render.status === "captured");
+    const hasHtmlCapture = screen.renders.some(
+      (render) => render.status === "captured" && typeof render.htmlPath === "string",
+    );
+    const screenObservation = uiObservation.screens.find(
+      (obs) => obs.screenId === screen.screenId || obs.route === screen.route,
+    );
+    const hasBrowserQaObservation =
+      screenObservation?.browserQaObserved === true ||
+      (screenObservation?.browserQaEvidenceRefs.length ?? 0) > 0;
+    const hasCompletedScreenEvidence =
+      hasCapturedRender &&
+      hasHtmlCapture &&
+      Boolean(screenObservation) &&
+      hasBrowserQaObservation &&
+      screenObservation?.screenId === screen.screenId;
+    return !hasCompletedScreenEvidence;
+  });
+  const hasInsufficientEvidence = insufficientScreens.length > 0;
+
   return {
     uiFidelity: {
       mode: "interactive",
       screens,
     },
+    // Execution is fail-closed: callers must treat any non-completed status as execution failure.
     status: {
       required: input.required,
-      status: "completed",
+      status: hasInsufficientEvidence ? "insufficient-evidence" : "completed",
+      ...(hasInsufficientEvidence
+        ? {
+            reason: `${insufficientScreens.length} screen(s) lack render/observation evidence: ${insufficientScreens.map((s) => s.route).join(", ")}`,
+          }
+        : {}),
     },
-    missingRequiredEvidence: [],
+    missingRequiredEvidence: hasInsufficientEvidence
+      ? insufficientScreens.map((s) => `uiFidelity:${s.route}`)
+      : [],
   };
-}
-
-async function readScreenContracts(packDir: string | null): Promise<ScreenContractEntry[]> {
-  if (!packDir) {
-    return [];
-  }
-  const filePath = path.join(packDir, "uiux", "40_screen_contracts.md");
-  const raw = await readSafe(filePath);
-  if (!raw) {
-    return [];
-  }
-
-  const lines = raw.split("\n");
-  const screens: ScreenContractEntry[] = [];
-  let current: ScreenContractEntry | null = null;
-  let inStates = false;
-  for (const line of lines) {
-    const headingMatch = /^###\s+Screen:\s*(.+)$/.exec(line);
-    if (headingMatch) {
-      if (current?.route) {
-        screens.push(current);
-      }
-      current = { screenId: (headingMatch[1] ?? "").trim(), route: "", expectedStates: [] };
-      inStates = false;
-      continue;
-    }
-    if (!current) {
-      continue;
-    }
-    const fieldMatch = /^\s*-\s+(\w[\w_]*):\s*(.*)$/.exec(line);
-    if (fieldMatch) {
-      const key = fieldMatch[1];
-      const value = (fieldMatch[2] ?? "").trim();
-      if (key === "screen_id" && value) {
-        current.screenId = value;
-      } else if (key === "route" && value) {
-        current.route = value;
-      }
-      inStates = key === "required_states" && value.length === 0;
-      continue;
-    }
-    if (inStates) {
-      const stateMatch = /^\s{2,}-\s+([^:]+):?/.exec(line);
-      if (stateMatch?.[1]) {
-        current.expectedStates.push(stateMatch[1].trim());
-      } else if (line.trim() !== "") {
-        inStates = false;
-      }
-    }
-  }
-  if (current?.route) {
-    screens.push(current);
-  }
-  return screens;
 }
 
 async function collectUiContractScreens(
@@ -263,6 +246,10 @@ async function collectUiContractScreens(
       screens.push({
         contractId,
         route,
+        screenId:
+          typeof (screen as { id?: unknown }).id === "string"
+            ? (screen as { id: string }).id.trim()
+            : route,
         expected: {
           elements: elements.filter(
             (item) => typeof item.id === "string" && item.id.trim().length > 0,
@@ -282,11 +269,4 @@ async function collectUiContractScreens(
   }
 
   return screens;
-}
-
-function extractHtmlLabelsFromString(filePath: string): string[] {
-  if (!filePath.endsWith(".html")) {
-    return [];
-  }
-  return [];
 }

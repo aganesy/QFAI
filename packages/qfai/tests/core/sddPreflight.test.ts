@@ -270,11 +270,10 @@ describe("runSddPreflight", () => {
       await writeFile(
         path.join(packDir, "prototyping.yaml"),
         [
-          "recommended_mode: standard",
+          "recommended_mode: full-harness",
           "rationale: top-level legacy valid",
           "allowed_modes:",
-          "  - low-cost",
-          "  - standard",
+          "  - full-harness",
           "surface: web",
         ].join("\n"),
         "utf-8",
@@ -398,11 +397,9 @@ async function seedDiscussionPack(
     path.join(discussionDir, "prototyping.yaml"),
     [
       "prototyping:",
-      "  recommended_mode: standard",
+      "  recommended_mode: full-harness",
       "  rationale: UI validation is recommended.",
       "  allowed_modes:",
-      "    - low-cost",
-      "    - standard",
       "    - full-harness",
       "  surface: web",
     ].join("\n"),

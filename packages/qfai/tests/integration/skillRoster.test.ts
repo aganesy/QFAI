@@ -135,7 +135,7 @@ describe("watch-it-fail enforcement and resubmission", () => {
 // ---------------------------------------------------------------------------
 
 // QFAI:SPEC-0012:TC-0012-0042
-describe("TC-0012-0042: wording alignment standard mode", () => {
+describe("TC-0012-0042: wording alignment implementation mode", () => {
   it("SKILL.md claims match implementation keywords", async () => {
     const content = await readFile(implementSkillPath, "utf-8");
     const agents = ["delivery-planner", "qa-gatekeeper", "implementation-reviewer"];

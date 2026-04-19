@@ -3,11 +3,13 @@ export type ParsedArgs = {
   invalid: boolean;
   options: {
     prototypingAction?: "run";
-    prototypingMode?: "low-cost" | "standard" | "full-harness";
+    prototypingMode?: "full-harness";
     prototypingTargetUrl?: string;
     prototypingBrowserProvider?: string;
     prototypingRenderProvider?: string;
     prototypingReviewer?: string;
+    prototypingChangeSummary?: string[];
+    prototypingLimitations?: string[];
     root: string;
     rootExplicit: boolean;
     dir: string;
@@ -153,7 +155,7 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
           markInvalid();
           break;
         }
-        if (next === "low-cost" || next === "standard" || next === "full-harness") {
+        if (next === "full-harness") {
           options.prototypingMode = next;
         } else {
           markInvalid();
@@ -210,6 +212,34 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
           break;
         }
         options.prototypingReviewer = next;
+        i += 1;
+        break;
+      }
+      case "--change-summary": {
+        if (command !== "prototyping") {
+          break;
+        }
+        const next = readOptionValue(args, i);
+        if (next === null) {
+          markInvalid();
+          break;
+        }
+        options.prototypingChangeSummary ??= [];
+        options.prototypingChangeSummary.push(next);
+        i += 1;
+        break;
+      }
+      case "--limitation": {
+        if (command !== "prototyping") {
+          break;
+        }
+        const next = readOptionValue(args, i);
+        if (next === null) {
+          markInvalid();
+          break;
+        }
+        options.prototypingLimitations ??= [];
+        options.prototypingLimitations.push(next);
         i += 1;
         break;
       }

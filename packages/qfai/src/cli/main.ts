@@ -81,6 +81,12 @@ export async function run(argv: string[], cwd: string): Promise<void> {
             ? { renderProvider: options.prototypingRenderProvider }
             : {}),
           ...(options.prototypingReviewer ? { reviewer: options.prototypingReviewer } : {}),
+          ...(options.prototypingChangeSummary
+            ? { changeSummary: options.prototypingChangeSummary }
+            : {}),
+          ...(options.prototypingLimitations
+            ? { limitations: options.prototypingLimitations }
+            : {}),
         });
       }
       return;
@@ -137,7 +143,7 @@ Options:
   --run-validate                report: validate を実行してから report を生成
   --base-url <url>              report: 基準URL
   --path <path>                 guardrails: 対象ファイル/ディレクトリ（複数指定可）
-  --mode <low-cost|standard|full-harness>  prototyping: 実行モード
+  --mode <full-harness>         prototyping: packages/qfai v1.7.15 では full-harness / UI-only のみ
   --target-url <url>            prototyping: Browser QA / render 対象 URL
   --browser-provider <id>       prototyping: Browser QA provider ID
   --render-provider <id>        prototyping: render provider ID

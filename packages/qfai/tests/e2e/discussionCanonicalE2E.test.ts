@@ -132,11 +132,13 @@ function completeTasteContent(): string {
 
 function completeTrendContent(): string {
   return [
-    "# Trend Scan",
+    "# Sources",
     "",
-    "## user expectation / market norm",
+    "## Trend Scan",
     "",
-    "### Entry",
+    "### user expectation / market norm",
+    "",
+    "#### Entry",
     "",
     "- reference: Modern Design System Report 2025",
     "- observation: Shift toward muted pastel palettes",
@@ -144,9 +146,9 @@ function completeTrendContent(): string {
     "- evaluation_connection: Supports invariant layer accessibility compliance",
     "- local_implication: Apply muted palette to primary surfaces",
     "",
-    "## product neighbor / comparable flow",
+    "### product neighbor / comparable flow",
     "",
-    "### Entry",
+    "#### Entry",
     "",
     "- reference: Layout Patterns Survey Q4",
     "- observation: Bento grid layouts gaining traction",
@@ -154,9 +156,9 @@ function completeTrendContent(): string {
     "- evaluation_connection: Aligns with trend-derived layer layout scoring",
     "- local_implication: Use bento grid on main dashboard view",
     "",
-    "## platform convention",
+    "### platform convention",
     "",
-    "### Entry",
+    "#### Entry",
     "",
     "- reference: Information Density Study 2025",
     "- observation: Progressive disclosure preferred",
@@ -164,15 +166,24 @@ function completeTrendContent(): string {
     "- evaluation_connection: Improves product-specific density scoring",
     "- local_implication: Apply progressive disclosure to complex forms",
     "",
-    "## accessibility / compliance relevant signal",
+    "### accessibility / compliance relevant signal",
     "",
-    "### Entry",
+    "#### Entry",
     "",
     "- reference: WCAG 2.2 Compliance Guide",
     "- observation: Color contrast minimums enforced by new regulations",
     "- decision_connection: Adopted high-contrast token set for all text",
     "- evaluation_connection: Directly validates invariant accessibility axis",
     "- local_implication: Standardize contrast ratios across all components",
+    "",
+    "### design_guideline_research",
+    "",
+    "#### Entry",
+    "",
+    "- source_id: SRC-0001",
+    "- guideline_name: Material Design 3",
+    "- rule_refs: m3.material.io/styles/color",
+    "- local_translation: Adopted muted tonal palette for primary surfaces",
   ].join("\n");
 }
 
@@ -350,7 +361,7 @@ describe("US-0002-0002: Trend/Reference Research mandatory", () => {
   it("complete trend scan with freshness metadata passes", async () => {
     const root = await newTempDir();
     await createUiBearingPack(root);
-    await writeFile(path.join(root, "uiux", "20_trend_scan.md"), completeTrendContent(), "utf-8");
+    await writeFile(path.join(root, "04_Sources.md"), completeTrendContent(), "utf-8");
 
     const issues = await validateTrendScan(root, defaultConfig);
 

@@ -1,14 +1,15 @@
 # TDD Execution Ledger
 
-| TDD-ID   | TC-Refs      | Layer       | Test file | Selector              | Status | DR-ID | Evidence                        |
-| -------- | ------------ | ----------- | --------- | --------------------- | ------ | ----- | ------------------------------- |
-| TDD-0001 | TC-0006-0001 | integration | TBD       | migrated coverage row | todo   |       | generated from 06_Test-Cases.md |
-| TDD-0002 | TC-0006-0002 | integration | TBD       | migrated coverage row | todo   |       | generated from 06_Test-Cases.md |
-| TDD-0003 | TC-0006-0003 | integration | TBD       | migrated coverage row | todo   |       | generated from 06_Test-Cases.md |
-| TDD-0004 | TC-0006-0004 | integration | TBD       | migrated coverage row | todo   |       | generated from 06_Test-Cases.md |
-| TDD-0005 | TC-0006-0005 | integration | TBD       | migrated coverage row | todo   |       | generated from 06_Test-Cases.md |
-| TDD-0006 | TC-0006-0006 | integration | TBD       | migrated coverage row | todo   |       | generated from 06_Test-Cases.md |
-| TDD-0007 | TC-0006-0007 | integration | TBD       | migrated coverage row | todo   |       | generated from 06_Test-Cases.md |
-| TDD-0008 | TC-0006-0008 | integration | TBD       | migrated coverage row | todo   |       | generated from 06_Test-Cases.md |
-| TDD-0009 | TC-0006-0009 | integration | TBD       | migrated coverage row | todo   |       | generated from 06_Test-Cases.md |
-| TDD-0010 | TC-0006-0010 | integration | TBD       | migrated coverage row | todo   |       | generated from 06_Test-Cases.md |
+| TDD-ID   | TC-Refs      | Layer       | Test file                                              | Selector                                            | Status    | DR-ID        | Evidence                                                    |
+| -------- | ------------ | ----------- | ------------------------------------------------------ | --------------------------------------------------- | --------- | ------------ | ----------------------------------------------------------- |
+| TDD-0001 | TC-0006-0001 | integration | packages/qfai/tests/integration/doctorSpec0006.test.ts | TC-0006-0001: config found - text output            | exception | DR-0006-0002 | one-shot GREEN 2026-04-14 + existing cli/doctor.test.ts     |
+| TDD-0002 | TC-0006-0002 | integration | packages/qfai/tests/integration/doctorSpec0006.test.ts | TC-0006-0002: config missing detection              | exception | DR-0006-0002 | one-shot GREEN 2026-04-14 + existing cli/doctor.test.ts     |
+| TDD-0003 | TC-0006-0003 | integration | packages/qfai/tests/integration/doctorSpec0006.test.ts | TC-0006-0003: directory structure diagnosis         | exception | DR-0006-0002 | one-shot GREEN 2026-04-14 + existing cli/doctor.test.ts     |
+| TDD-0004 | TC-0006-0004 | integration | packages/qfai/tests/integration/doctorSpec0006.test.ts | TC-0006-0004: path resolution diagnosis             | exception | DR-0006-0002 | one-shot GREEN 2026-04-14 10 pass                           |
+| TDD-0005 | TC-0006-0005 | integration | packages/qfai/tests/integration/doctorSpec0006.test.ts | TC-0006-0005: legacy warning                        | exception | DR-0006-0002 | one-shot GREEN 2026-04-14 + existing cli/doctor.test.ts     |
+| TDD-0006 | TC-0006-0006 | integration | packages/qfai/tests/integration/doctorSpec0006.test.ts | TC-0006-0006: JSON output format                    | exception | DR-0006-0002 | one-shot GREEN 2026-04-14 + existing cli/doctor.test.ts     |
+| TDD-0007 | TC-0006-0007 | integration | packages/qfai/tests/integration/doctorSpec0006.test.ts | TC-0006-0007: --fail-on error pass                  | exception | DR-0006-0002 | one-shot GREEN 2026-04-14 + existing cli/doctor.test.ts     |
+| TDD-0008 | TC-0006-0008 | integration | packages/qfai/tests/integration/doctorSpec0006.test.ts | TC-0006-0008: --fail-on warning fail                | exception | DR-0006-0002 | one-shot GREEN 2026-04-14 + existing cli/doctor.test.ts     |
+| TDD-0009 | TC-0006-0009 | integration | packages/qfai/tests/integration/doctorSpec0006.test.ts | TC-0006-0009: --out file output                     | exception | DR-0006-0002 | one-shot GREEN 2026-04-14 + existing cli/doctor.test.ts     |
+| TDD-0010 | TC-0006-0010 | integration | packages/qfai/tests/integration/doctorSpec0006.test.ts | TC-0006-0010: Coverage Placeholder for EX-0006-0003 | exception | DR-0006-0002 | one-shot GREEN 2026-04-14 10 pass                           |
+| TDD-0011 | TC-0006-0011 | integration | —                                                      | TC-0006-0011: Coverage Placeholder for EX-0006-0009 | exception | DR-0006-0100 | exception:DR-0006-0100 deferred — no impl yet, v1.7.15 rev3 |
