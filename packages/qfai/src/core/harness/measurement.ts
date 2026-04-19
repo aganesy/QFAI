@@ -20,19 +20,25 @@ import { computeWeightedTotal, determineDecision, validatePanelScore } from "./p
 import { appendIteration, computeTerminationReason, loadHistory } from "./history.js";
 import { validateReviewer } from "./reviewerIdentity.js";
 import { resolveCommitSha } from "./gitRevision.js";
-import { assertConcreteArtifactRef } from "../prototyping/pathUtils.js";
+import { assertConcreteArtifactRef, isBrowserQaPassthroughRef } from "../prototyping/pathUtils.js";
 import { isCanonicalScreenContractRef } from "../prototyping/refSemantics.js";
+
+// Categories whose refs may include Browser QA provider logical refs
+// (`provider:*`, `phase:*`, ...) in addition to concrete artifact refs.
+const BROWSER_QA_REF_CATEGORIES = new Set(["browserQaRefs", "uiObservationRefs"]);
 
 function assertCategoryRefs(category: string, refs: readonly string[]): void {
   if (!Array.isArray(refs) || refs.length === 0) {
     throw new Error(`Full-harness measurement requires non-empty ${category} evidence refs.`);
   }
+  const allowBrowserQaSchemes = BROWSER_QA_REF_CATEGORIES.has(category);
   for (const ref of refs) {
     if (typeof ref !== "string" || ref.trim().length === 0) {
       throw new Error(
         `Full-harness measurement ${category} evidence ref must be a non-empty string.`,
       );
     }
+    if (allowBrowserQaSchemes && isBrowserQaPassthroughRef(ref)) continue;
     try {
       assertConcreteArtifactRef(ref);
     } catch (error) {

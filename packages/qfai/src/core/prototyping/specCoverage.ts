@@ -11,9 +11,15 @@ import type { SpecCoverageSummary } from "../harness/panelInputs.js";
 import type { RuntimeObservation } from "./runtimeObservation.js";
 import {
   assertConcreteArtifactRef,
+  isBrowserQaPassthroughRef,
   toConcreteArtifactRef,
   toRepoRelativeArtifactRef,
 } from "./pathUtils.js";
+
+function toEvidenceRef(repoRoot: string, ref: string): string {
+  if (isBrowserQaPassthroughRef(ref)) return ref.trim();
+  return toConcreteArtifactRef(repoRoot, ref);
+}
 import { isSpecDeclarationRef } from "./refSemantics.js";
 
 type SpecDeclaration = {
@@ -160,9 +166,12 @@ export async function buildSpecCoverageSummary(input: {
     }
   }
 
+  // declaredSpecRefs are always concrete artifact refs; observedEvidenceRefs
+  // may include Browser QA provider logical refs (`provider:*`, `phase:*`,
+  // ...) that are preserved as-is by `toEvidenceRef`.
   const evidenceRefs: string[] = [
     ...(input.declaredSpecRefs ?? []).map((ref) => toConcreteArtifactRef(repoRoot, ref)),
-    ...(input.observedEvidenceRefs ?? []).map((ref) => toConcreteArtifactRef(repoRoot, ref)),
+    ...(input.observedEvidenceRefs ?? []).map((ref) => toEvidenceRef(repoRoot, ref)),
   ];
   for (const spec of declared) {
     for (const route of spec.uiRoutes) {
@@ -175,7 +184,7 @@ export async function buildSpecCoverageSummary(input: {
       }
       evidenceRefs.push(route.declaredRef);
       for (const observedRef of observed.observedRefsByRoute.get(route.route) ?? []) {
-        evidenceRefs.push(toConcreteArtifactRef(repoRoot, observedRef));
+        evidenceRefs.push(toEvidenceRef(repoRoot, observedRef));
       }
     }
   }
@@ -222,7 +231,7 @@ export async function buildPerSpecCoverage(
       route: route.route,
       declaredRef: route.declaredRef,
       observedRefs: (observed.observedRefsByRoute.get(route.route) ?? []).map((ref) =>
-        toConcreteArtifactRef(repoRoot, ref),
+        toEvidenceRef(repoRoot, ref),
       ),
     }));
 

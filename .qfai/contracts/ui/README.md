@@ -5,7 +5,7 @@
 Define UI surface contracts for prototyping and E2E selection.
 The contract must describe screen structure, action coverage targets, and inspection anchors for full-harness evidence.
 
-> **Note:** UI contracts are supporting input that supplements the discussion sidecar artifacts (`discussion-*/uiux/*`), which remain the primary truth for UI/UX definitions. In `packages/qfai` v1.7.15, prototyping execution is `full-harness` only and requires both canonical screen contracts and matching `CON-UI-*` YAML contracts.
+> **Note:** UI contracts are supporting input that supplements the discussion sidecar artifacts (`discussion-*/uiux/*`), which remain the primary truth for UI/UX definitions. In `packages/qfai` v1.7.15, prototyping execution is `full-harness` only; therefore, running the prototype harness requires both canonical screen contracts and matching `CON-UI-*` YAML contracts.
 
 ## File rules
 
