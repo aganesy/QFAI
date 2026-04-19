@@ -76,3 +76,13 @@ Required fixes:
 Evidence checked:
 - <refs>
 ```
+
+### Verdict vocabulary
+
+- Reviewer responses in-flight use `Result: PASS | REVISE` (this file).
+- `summary.json` archived into review packs historically uses
+  `status: "PASS|FAIL"` (validated by
+  `packages/qfai/src/core/validators/reviewArtifacts.ts`).
+- A `REVISE` verdict during iteration maps to `status: "FAIL"` when the
+  final `summary.json` is written; they represent the same outcome.
+  Review packs should not invent a third verdict.

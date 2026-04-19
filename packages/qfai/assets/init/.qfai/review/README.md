@@ -33,6 +33,14 @@ single managed block in the repo root is the SSOT.
 
 ## summary.json (minimum schema; prefer v2.0 for new packs)
 
+> **Verdict vocabulary:** `summary.json` uses `PASS|FAIL` historically (the
+> active validator in `packages/qfai/src/core/validators/reviewArtifacts.ts`
+> enforces that set). The in-flight reviewer response template in
+> `shared-skill-delegation-baseline.md` uses `Result: PASS | REVISE` — this
+> is the same concept viewed from two angles (reviewer-side verdict vs.
+> serialised summary). A reviewer `REVISE` maps to `status: "FAIL"` in
+> summary.json until the validator schema is broadened in a future release.
+
 ```json
 {
   "version": "2.0",
@@ -48,7 +56,9 @@ single managed block in the repo root is the SSOT.
 Rules:
 
 - Execute only the reviewers routed for the current skill/phase.
-- If any reviewer returns `FAIL`, return/fix and rerun only failed reviewers and reviewers **affected by the changed scope**.
+- If any reviewer returns `FAIL` (equivalent to `REVISE` in the in-flight
+  reviewer response template; see the vocabulary note above), return/fix
+  and rerun only failed reviewers and reviewers **affected by the changed scope**.
   - "changed scope" is defined as the set of file paths affected by the latest fix and the scope tags (component, domain, layer, etc.) associated with those files.
   - An "affected reviewer" is any reviewer matching either of the following:
     - Its assigned scope (path prefix or scope tag) in `.qfai/assistant/steering/agent-routing.yml` or `review-profiles.yml` intersects the changed scope.
