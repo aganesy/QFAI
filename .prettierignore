@@ -2,10 +2,13 @@ dist
 node_modules
 # Scope prettier ignore to the runtime-generated outputs under .qfai so SSOT
 # sources (.qfai/specs, .qfai/assistant, .qfai/contracts, .qfai/discussion)
-# stay formatted.
-.qfai/report/
-.qfai/review/
-.qfai/evidence/
+# stay formatted. Keep authored README files formatted so diffs stay readable.
+.qfai/report/**
+!.qfai/report/README.md
+.qfai/review/**
+!.qfai/review/README.md
+.qfai/evidence/**
+!.qfai/evidence/README.md
 pnpm-lock.yaml
 tmp
 *.min.js

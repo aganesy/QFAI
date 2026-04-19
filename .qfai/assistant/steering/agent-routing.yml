@@ -124,10 +124,12 @@ routing:
         blocking_agents: [qa-gatekeeper]
         rerun_policy: changed-scope-dependents
       - id: review
+        # full-harness requires product-surface sign-off as a hard gate — the
+        # profile exists specifically to enforce surface reviewer blocking.
         mandatory_agents: [completion-reviewer, product-surface-reviewer]
         conditional_agents: []
         parallel_groups: []
-        blocking_agents: [completion-reviewer]
+        blocking_agents: [completion-reviewer, product-surface-reviewer]
         rerun_policy: changed-scope-dependents
     review_profile: full-harness
 

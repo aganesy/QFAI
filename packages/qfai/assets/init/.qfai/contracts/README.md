@@ -20,7 +20,8 @@ QFAI organizes contracts into four directories:
 ## Directory rules
 
 - Contract files are **minimal**: only what specs actually need.
-- Each contract file must declare `QFAI-CONTRACT-ID` at the top (`CON-UI-*` / `CON-API-*` / `CON-DB-*`).
+- Each contract file in `api/`, `db/`, and `ui/` must declare `QFAI-CONTRACT-ID` at the top (`CON-UI-*` / `CON-API-*` / `CON-DB-*`).
+- `design/` (design token YAML) is a supporting input — **not** a contract in the traceability ledger. It does not require a `QFAI-CONTRACT-ID` header and is referenced indirectly from `ui/*.yaml` contracts via token IDs.
 - Prefer additive changes; breaking changes require delta notes.
 
 ```text
