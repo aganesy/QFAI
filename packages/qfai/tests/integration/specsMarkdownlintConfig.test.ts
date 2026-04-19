@@ -4,7 +4,7 @@
  *
  * Rationale (addresses PR #196 review thread on `.qfai/specs/.markdownlint.jsonc`):
  * if `markdownlint-cli2` stops merging the per-directory config, every
- * spec-pack MD013/MD024/etc. violation would start firing again and CI
+ * spec-pack MD013 threshold regressions would start firing again and CI
  * `pnpm ci:lint` would flake on content that has been intentionally exempted.
  *
  * We run the linter programmatically against a temp directory that mirrors
@@ -25,7 +25,7 @@ const rootCli2Config = path.join(repoRoot, ".markdownlint-cli2.jsonc");
 const specsDirConfig = path.join(repoRoot, ".qfai", "specs", ".markdownlint.jsonc");
 
 describe("nested markdownlint config under .qfai/specs/", () => {
-  it("disables MD013 for spec-pack files via the per-directory .markdownlint.jsonc", async () => {
+  it("relaxes MD013 for spec-pack files via the per-directory .markdownlint.jsonc", async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), "qfai-md-cfg-"));
     try {
       await copyFile(rootCli2Config, path.join(tempRoot, ".markdownlint-cli2.jsonc"));
@@ -35,7 +35,7 @@ describe("nested markdownlint config under .qfai/specs/", () => {
 
       const specPackDir = path.join(specsDir, "spec-9999");
       await mkdir(specPackDir, { recursive: true });
-      const overLongLine = "decision: " + "x".repeat(400);
+      const overLongLine = "decision: " + "x".repeat(150);
       const markdownBody = ["# 07 Decisions", "", "### DR-0001", "", `- ${overLongLine}`, ""].join(
         "\n",
       );
