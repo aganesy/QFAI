@@ -2164,17 +2164,17 @@ async function validateModeMetadata(
         guidance:
           "specs[].coverageRefs[].declaredRef には concrete artifact ref のみを保持してください。",
       });
-      if (!isSpecDeclarationRef(coverage.declaredRef)) {
+      if (!isSpecDeclarationRef(coverage.declaredRef, config.paths.specsDir)) {
         issues.push(
           issue(
             "QFAI-PROT-328",
-            `specs[${spec.specId}].coverageRefs[${coverage.route}].declaredRef must point to a spec declaration under .qfai/specs/: ${coverage.declaredRef}`,
+            `specs[${spec.specId}].coverageRefs[${coverage.route}].declaredRef must point to a spec declaration under ${config.paths.specsDir}/: ${coverage.declaredRef}`,
             "error",
             evidenceJsonPath,
             "prototypingEvidence.specCoverageDeclaredRefSemantic",
             [coverage.declaredRef],
             "canonical",
-            "specs[].coverageRefs[].declaredRef には .qfai/specs/.../01_Spec.md#L<line> などの spec declaration ref のみを保持してください。",
+            `specs[].coverageRefs[].declaredRef には ${config.paths.specsDir}/.../01_Spec.md#L<line> などの spec declaration ref のみを保持してください。`,
           ),
         );
       }

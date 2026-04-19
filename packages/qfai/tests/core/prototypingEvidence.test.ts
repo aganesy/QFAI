@@ -867,6 +867,40 @@ describe("validatePrototypingEvidence", () => {
     });
   });
 
+  it("accepts per-spec coverage declaredRef under a configured specsDir path", async () => {
+    await withTempRoot(async (root) => {
+      const customConfig = {
+        ...defaultConfig,
+        paths: {
+          ...defaultConfig.paths,
+          specsDir: ".qfai/specs-alt",
+        },
+      };
+      const specDir = path.join(root, ".qfai", "specs-alt", "spec-0001");
+      await mkdir(specDir, { recursive: true });
+      await writeFile(
+        path.join(specDir, "01_Spec.md"),
+        ["# Spec", "", "- ui_route: /orders", ""].join("\n"),
+        "utf-8",
+      );
+      await seedDiscussion(root);
+      await seedContracts(root);
+      await seedCalibration(root);
+      await seedRenderBundle(root);
+      await seedBrowserQaBundle(root);
+      const valid = buildValidEvidence();
+      (
+        (valid.specs as Array<Record<string, unknown>>)[0]?.coverageRefs as Array<
+          Record<string, unknown>
+        >
+      )[0].declaredRef = ".qfai/specs-alt/spec-0001/01_Spec.md#L2";
+      await seedEvidence(root, valid);
+
+      const issues = await validatePrototypingEvidence(root, customConfig);
+      expect(issues.some((item) => item.code === "QFAI-PROT-328")).toBe(false);
+    });
+  });
+
   it.each([
     ["render", "render", "specs:render"],
     ["browserQa", "browserQa", "/abs/browser-qa.json#/phases/0"],

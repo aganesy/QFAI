@@ -31,6 +31,8 @@ export async function runBrowserQaPerScreen(input: {
     for (const phase of result.phases) {
       allPhases.push({
         ...phase,
+        screen_id: phase.screen_id ?? screen.screenId,
+        route: phase.route ?? screen.route,
         findings: phase.findings.map((finding) => ({
           ...finding,
           route: finding.route ?? screen.route,

@@ -362,6 +362,34 @@ describe("WS-11: actionsWired semantics", () => {
       });
       expect(result.ui).toHaveLength(0);
     });
+
+    it("phase-level Browser QA refs stay scoped to the matching screen when findings are empty", () => {
+      const result = buildRuntimeObservation({
+        screenContracts: SCREEN_CONTRACTS_3,
+        renderResult: { entries: [], filesWritten: [] },
+        browserQaResult: {
+          phases: [
+            {
+              phase: "smoke",
+              status: "passed",
+              findings: [],
+              repair_suggestions: [],
+              evidence_refs: [".qfai/evidence/browser-qa.json#/phases/0"],
+              checks_performed: ["visited /orders"],
+              screen_id: "scr-orders",
+              route: "/orders",
+            },
+          ],
+          provider: "test",
+          timestamp: new Date().toISOString(),
+        },
+      });
+
+      expect(result.ui.map((entry) => entry.screenId)).toEqual(["scr-orders"]);
+      expect(result.ui[0]?.browserQaEvidenceRefs).toEqual([
+        ".qfai/evidence/browser-qa.json#/phases/0",
+      ]);
+    });
   });
 
   describe("TC-0012-0134: actionsWired Counts Only Wired Controls", () => {
