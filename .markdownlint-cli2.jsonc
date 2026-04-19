@@ -54,14 +54,12 @@
     ".qfai/report/validate.log",
     ".qfai/report/report.md",
     ".qfai/review/review-*/**",
-    // Repo-root `review/` (note: different from `.qfai/review/` above) is
-    // where local review packs from ad-hoc runs land before they are moved
-    // under `.qfai/review/`. The content is provider-generated reviewer
-    // notes and summary.json which destabilises MD032/MD036/MD013 without
-    // improving authored-source quality. If a future repo-root `review/`
-    // pattern needs to be linted, move the authored files under a separate
-    // subdirectory that is not matched by this glob.
-    "review/**",
+    // Repo-root `review/` (different from `.qfai/review/` above) stores local
+    // review packs from ad-hoc runs before they are moved under
+    // `.qfai/review/`. Only generated review packs follow the `review-*`
+    // naming convention; authored Markdown placed elsewhere under repo-root
+    // `review/` remains linted to preserve the quality gate.
+    "review/review-*/**",
     ".agents/skills/qfai-*",
     ".agents/skills/qfai-*/**",
     ".claude/skills/qfai-*",

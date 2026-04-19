@@ -15,7 +15,7 @@
     "build": "pnpm -C packages/qfai build",
     "sync:ssot": "node ./scripts/sync-init-to-root.mjs",
     "ci:gate": "pnpm sync:ssot && git diff --exit-code .qfai/ qfai.config.yaml && pnpm format:check && pnpm lint && pnpm lint:md && pnpm check-types && node ./scripts/check-bidi.mjs && node ./scripts/check-instructions-size.mjs && node ./scripts/check-build-warnings.mjs && pnpm -C packages/qfai test && pnpm verify:pack",
-    "ci:lint": "pnpm format:check && pnpm lint && pnpm lint:md && node ./scripts/check-bidi.mjs && node ./scripts/check-instructions-size.mjs",
+    "ci:lint": "pnpm format:check && pnpm lint && pnpm lint:md && node ./scripts/check-bidi.mjs && node ./scripts/check-instructions-size.mjs && node ./scripts/check-review-profile-consistency.mjs",
     "ci:build-verify": "node ./scripts/check-build-warnings.mjs && pnpm verify:pack && node ./scripts/check-publish-dry-run.mjs",
     "lint": "eslint . --max-warnings 0",
     "lint:md": "markdownlint-cli2 \"**/*.md\"",

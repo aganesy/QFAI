@@ -67,15 +67,32 @@ export function isCanonicalScreenContractRef(ref: string): boolean {
  * - The only canonical declaration source is the spec's `01_Spec.md`.
  * - The only canonical fragment form is `#L<positive integer>`.
  * - `notes.md`, `appendix.md`, `discussion.md`, `.json`, `#anchor` etc. are NOT declarations.
+ *
+ * `specsDirRelative` is the repo-relative specs directory (e.g. `.qfai/specs`
+ * by default). Callers that override `paths.specsDir` in `qfai.config.yaml`
+ * should pass the configured path so the regex matches configured layout.
  */
-export function isSpecDeclarationRef(ref: string): boolean {
+// Canonical default regex for the stock `.qfai/specs/` layout. Kept as a
+// regex literal so static snapshot tests can assert the grammar.
+const DEFAULT_SPEC_DECLARATION_PATTERN = /^\.qfai\/specs\/[^/#]+\/01_Spec\.md#L[1-9]\d*$/;
+
+export function isSpecDeclarationRef(ref: string, specsDirRelative = ".qfai/specs"): boolean {
   try {
     assertConcreteArtifactRef(ref);
   } catch {
     return false;
   }
 
-  return /^\.qfai\/specs\/[^/#]+\/01_Spec\.md#L[1-9]\d*$/.test(ref);
+  if (specsDirRelative === ".qfai/specs") {
+    return DEFAULT_SPEC_DECLARATION_PATTERN.test(ref);
+  }
+
+  // Escape regex metacharacters in the caller-supplied specsDir segment and
+  // reuse the same line-ref-only tail as the canonical regex so custom
+  // `paths.specsDir` values stay grammatically identical.
+  const escaped = specsDirRelative.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const pattern = new RegExp(`^${escaped}/[^/#]+/01_Spec\\.md#L[1-9]\\d*$`);
+  return pattern.test(ref);
 }
 
 function formatError(error: unknown): string {

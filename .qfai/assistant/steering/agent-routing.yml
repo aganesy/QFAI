@@ -16,10 +16,13 @@ routing:
         blocking_agents: [requirements-analyst]
         rerun_policy: changed-scope-dependents
       - id: review
+        # requirements-heavy always_required is
+        # [completion-reviewer, requirements-reviewer]; both must be blocking.
+        # See scripts/check-review-profile-consistency.mjs for the drift guard.
         mandatory_agents: [completion-reviewer, requirements-reviewer]
         conditional_agents: [architecture-reviewer, product-surface-reviewer]
         parallel_groups: []
-        blocking_agents: [completion-reviewer]
+        blocking_agents: [completion-reviewer, requirements-reviewer]
         rerun_policy: changed-scope-dependents
     review_profile: requirements-heavy
 

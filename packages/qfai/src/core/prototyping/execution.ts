@@ -331,7 +331,10 @@ export async function runPrototypingExecution(
 
   if (runtimeGate) {
     assertRuntimeGateLeafRefs(runtimeGate);
-    assertConcreteArtifactRefs("runtimeGate.evidenceRefs", runtimeGate.evidenceRefs);
+    // `runtimeGate.evidenceRefs` aggregates per-entry evidence including
+    // Browser QA scheme refs (`provider:*`, `phase:*`). Allow those here;
+    // real file refs are still normalised to repo-relative form upstream.
+    assertBrowserQaEvidenceRefs("runtimeGate.evidenceRefs", runtimeGate.evidenceRefs);
   }
   assertConcreteArtifactRefs("specCoverage.evidenceRefs", specCoverage.evidenceRefs);
   assertFullHarnessLeafRefs(fullHarness.history.iterations, "fullHarness.iterations");
