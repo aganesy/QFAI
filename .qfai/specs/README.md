@@ -8,7 +8,8 @@
 - capability-specific details: `.qfai/specs/spec-XXXX/**`
 
 The slice policy SSOT lives in `_policies/11_Slice-Policy.md`.
-The current approved model is **1 CAP = 1 spec directory**, but `/qfai-sdd` must refresh that policy file before making create/update/delete slice decisions.
+A `CAP-XXXX` entry in `_policies/03_Capabilities.md` maps to exactly one `spec-XXXX/` directory.
+The current approved model is **1 CAP = 1 spec-XXXX directory**, but `/qfai-sdd` must refresh that policy file before making create/update/delete slice decisions.
 
 ## Required layout
 
