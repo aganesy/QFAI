@@ -2,17 +2,24 @@
 
 Use this file when working on traceability-heavy parts of `/qfai-sdd`.
 
-## Required Edge Model
+## Required Edge Model (Conceptual Decomposition)
 
-- `US` decomposes into `AC`
-- `AC` decomposes into `BR`
-- `BR` is concretized by `EX`
-- `EX` is realized by `TC`
+Conceptual decomposition / realization hierarchy (how specs are _authored_, not how
+IDs reference each other):
 
-## Reference Direction
+- `US` conceptually decomposes into `AC`
+- `AC` conceptually decomposes into `BR`
+- `BR` is conceptually concretized by `EX`
+- `EX` is conceptually realized by `TC`
 
-- Upper-to-lower references are forbidden.
-- Lower-to-upper references are allowed.
+## Reference Direction (`Refs` ID fields)
+
+ID reference direction (the value of `Refs:` columns) must be lower-to-upper only:
+
+- Upper-to-lower ID references are forbidden (`US.Refs: AC-0001` is not allowed).
+- Lower-to-upper ID references are allowed (`AC.Refs: US-0001` is the canonical form).
+- The conceptual hierarchy above describes authoring direction; the `Refs` direction
+  is the _inverse_ so downstream specs cite upstream IDs, never the other way round.
 
 ## Depth Expectations
 

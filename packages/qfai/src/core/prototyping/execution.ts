@@ -251,7 +251,8 @@ export async function runPrototypingExecution(
   summary.uiFidelity = uiFidelity.uiFidelity;
   summary.uiFidelityStatus = uiFidelity.status;
 
-  const specsDir = path.join(request.root, ".qfai", "specs");
+  const specsDir = resolvePath(request.root, config, "specsDir");
+  const discussionDir = resolvePath(request.root, config, "discussionDir");
   const specCoverage = await buildSpecCoverageOrThrow({
     root: request.root,
     specsDir,
@@ -275,6 +276,7 @@ export async function runPrototypingExecution(
 
   const panelInputs = await buildPanelInputsOrThrow({
     root: request.root,
+    discussionDir,
     uiFidelityScreens: uiFidelity.uiFidelity.screens,
     renderResult,
     browserQaSummary,
@@ -460,6 +462,7 @@ async function buildSpecCoverageOrThrow(input: {
 
 async function buildPanelInputsOrThrow(input: {
   root: string;
+  discussionDir: string;
   uiFidelityScreens: NonNullable<BuiltUiFidelity["uiFidelity"]>["screens"];
   renderResult: Awaited<ReturnType<typeof runRenderCapture>>;
   browserQaSummary: ReturnType<typeof buildBrowserQaSummaryFromResult>;
@@ -468,12 +471,13 @@ async function buildPanelInputsOrThrow(input: {
   runtimeGateEvidence: FullHarnessPanelInputs["runtimeGate"];
 }): Promise<FullHarnessPanelInputs> {
   try {
-    const discussionAxes = await buildDiscussionAxisInputs(input.root);
+    const discussionAxes = await buildDiscussionAxisInputs(input.root, input.discussionDir);
     const screenContractInputs = await buildScreenContractInputs(
       input.root,
       input.uiFidelityScreens,
+      input.discussionDir,
     );
-    const trendAlignment = await buildTrendAlignmentInputs(input.root);
+    const trendAlignment = await buildTrendAlignmentInputs(input.root, input.discussionDir);
     const uiObservation = normalizeUiObservationSummary(input.root, input.uiObservation);
 
     const panelInputs: FullHarnessPanelInputs = {
@@ -647,7 +651,8 @@ async function buildPrototypingSummaryBundle(input: {
     evidenceRefs: string[];
   };
 }): Promise<PrototypingSummaryBundle> {
-  const specsDir = path.join(input.root, ".qfai", "specs");
+  const resolved = await loadConfig(input.root);
+  const specsDir = resolvePath(input.root, resolved.config, "specsDir");
   const perSpecCoverage = await buildPerSpecCoverage(
     specsDir,
     runtimeGateToObservation(input.runtimeGate),

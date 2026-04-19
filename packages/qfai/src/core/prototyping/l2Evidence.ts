@@ -27,9 +27,16 @@ import {
  * Build discussion axis inputs from real discussion artifacts.
  * Reads discussion pack and extracts axis counts + aggregate score.
  * Throws if no discussion pack or no evaluatable axes exist.
+ *
+ * `discussionDir` is the absolute path of the configured discussion directory
+ * (resolved from `paths.discussionDir`). Defaults to `<root>/.qfai/discussion`
+ * when omitted so standalone callers / tests work without the config layer.
  */
-export async function buildDiscussionAxisInputs(root: string): Promise<DiscussionAxisInputs> {
-  const discussionRoot = path.join(root, ".qfai", "discussion");
+export async function buildDiscussionAxisInputs(
+  root: string,
+  discussionDir?: string,
+): Promise<DiscussionAxisInputs> {
+  const discussionRoot = discussionDir ?? path.join(root, ".qfai", "discussion");
   const latestPack = await findLatestDiscussionPackDir(discussionRoot);
   if (!latestPack) {
     throw new Error(
@@ -95,6 +102,7 @@ export async function buildScreenContractInputs(
     observed: { elementsPlaced: number; actionsWired: number };
     expected: { elements: number; actions: number };
   }>,
+  discussionDir?: string,
 ): Promise<ScreenContractInputs> {
   if (uiFidelityScreens.length === 0) {
     throw new Error(
@@ -119,7 +127,9 @@ export async function buildScreenContractInputs(
   }
   const fidelityScore = totalFidelity / totalContracts;
 
-  const latestPack = await findLatestDiscussionPackDir(path.join(root, ".qfai", "discussion"));
+  const latestPack = await findLatestDiscussionPackDir(
+    discussionDir ?? path.join(root, ".qfai", "discussion"),
+  );
   if (!latestPack) {
     throw new Error(
       "L2 evidence failure: no discussion pack found for screen contract evidence. " +
@@ -156,8 +166,11 @@ export async function buildScreenContractInputs(
  * Reads trend scan / competitive analysis files.
  * Throws if no trend source evidence exists.
  */
-export async function buildTrendAlignmentInputs(root: string): Promise<TrendAlignmentInputs> {
-  const discussionRoot = path.join(root, ".qfai", "discussion");
+export async function buildTrendAlignmentInputs(
+  root: string,
+  discussionDir?: string,
+): Promise<TrendAlignmentInputs> {
+  const discussionRoot = discussionDir ?? path.join(root, ".qfai", "discussion");
   const latestPack = await findLatestDiscussionPackDir(discussionRoot);
   if (!latestPack) {
     throw new Error(
