@@ -9,7 +9,8 @@
 
 The slice policy SSOT lives in `_policies/11_Slice-Policy.md`.
 A `CAP-XXXX` entry in `_policies/03_Capabilities.md` maps to exactly one `spec-XXXX/` directory.
-The current approved model is **1 CAP = 1 spec-XXXX directory**, but `/qfai-sdd` must refresh that policy file before making create/update/delete slice decisions.
+The current approved model is **1 CAP = 1 spec-XXXX directory**, but `/qfai-sdd` must refresh `_policies/11_Slice-Policy.md` before making create/update/delete slice decisions.
+Use `_policies/11_Slice-Policy.md` as the primary SSOT for slice decisions, and consult `_policies/03_Capabilities.md` only to confirm the CAP-to-directory mapping.
 
 ## Required layout
 
