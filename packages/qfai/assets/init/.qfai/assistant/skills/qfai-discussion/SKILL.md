@@ -73,12 +73,12 @@ Follow `.qfai/assistant/instructions/shared-skill-delegation-baseline.md`.
 
 ## Work Orders Summary
 
-Use the shared schema.
+Use the shared schema (per-row `Status (PASS/REVISE)` column, reviewer response `Result: PASS | REVISE`).
 
 ### Reviewer Gate (MUST)
 
 - Delegate final completion gate to an independent `completion-reviewer`.
-- Reviewer response must include `Status (PASS/REVISE)`.
+- Reviewer response must include `Result: PASS | REVISE` (matching shared-skill-delegation-baseline.md#reviewer-response-template).
 - Route specialist reviewers from `.qfai/assistant/steering/agent-routing.yml` and `.qfai/assistant/steering/review-profiles.yml`.
 - Default discussion review set:
   - `completion-reviewer`

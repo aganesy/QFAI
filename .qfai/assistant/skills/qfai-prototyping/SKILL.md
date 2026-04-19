@@ -184,7 +184,7 @@ When `surface=web` and `mode=full-harness`, a Lighthouse performance/accessibili
 ### Reviewer Gate (MUST)
 
 - Reviewer must verify full-harness evidence completeness.
-- Reviewer response must include `Status (PASS/REVISE)`.
+- Reviewer response must include `Result: PASS | REVISE` (matching shared-skill-delegation-baseline.md#reviewer-response-template).
 - Reviewer must verify calibration pack usage via `calibrationRef`.
 - Reviewer must reject self-reference, synthetic refs, and `mockPaths.status="pass"`.
 - Reviewer must verify `reviewerSignoff`, `reviewerLogs`, `terminationReason`, and `finalDecision` are semantically aligned.
@@ -213,7 +213,7 @@ Follow `.qfai/assistant/instructions/shared-skill-delegation-baseline.md`.
 
 ## Work Orders Summary
 
-Use the shared schema.
+Use the shared schema (per-row `Status (PASS/REVISE)` column, reviewer response `Result: PASS | REVISE`).
 
 ## Completion Contract (Shared)
 

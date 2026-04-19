@@ -208,12 +208,12 @@ All agent-to-agent transitions follow these contracts:
 
 ## Work Orders Summary
 
-Use the shared schema.
+Use the shared schema (per-row `Status (PASS/REVISE)` column, reviewer response `Result: PASS | REVISE`).
 
 ### Reviewer Gate (MUST)
 
 - Delegate final completion gate to an independent Reviewer.
-- Reviewer response must include `Status (PASS/REVISE)`.
+- Reviewer response must include `Result: PASS | REVISE` (matching shared-skill-delegation-baseline.md#reviewer-response-template).
 - Reviewer checks Drift Protocol compliance and alignment with `.qfai/assistant/steering/test-layers.md`.
 - Test volume floors/ratios are not gates; they are signals.
 - Do not declare DONE until Reviewer returns `PASS`; otherwise apply `REVISE`.
