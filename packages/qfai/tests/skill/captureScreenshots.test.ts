@@ -8,7 +8,9 @@
  */
 
 import path from "node:path";
-import { access } from "node:fs/promises";
+import os from "node:os";
+import { spawnSync } from "node:child_process";
+import { access, mkdtemp, readdir, rm } from "node:fs/promises";
 
 import { describe, expect, it } from "vitest";
 
@@ -26,5 +28,24 @@ describe("TC-0012-0291 — capture-screenshots.js exists in QFAI package", () =>
 
   it("script filename matches expected pattern capture-screenshots.js", () => {
     expect(path.basename(SCRIPT_PATH)).toBe("capture-screenshots.js");
+  });
+
+  it("fails instead of writing a stub PNG when capture cannot complete", async () => {
+    const outDir = await mkdtemp(path.join(os.tmpdir(), "qfai-capture-fail-"));
+    try {
+      const result = spawnSync(
+        process.execPath,
+        [SCRIPT_PATH, "--url", "http://127.0.0.1:9", "--out", outDir],
+        { encoding: "utf-8" },
+      );
+
+      expect(result.status).toBe(2);
+      expect(result.stderr).toContain("Error: capture failed");
+      await expect(access(path.join(outDir, "manifest.json"))).rejects.toThrow();
+      const files = await readdir(outDir);
+      expect(files.some((file) => file.endsWith(".png"))).toBe(false);
+    } finally {
+      await rm(outDir, { recursive: true, force: true });
+    }
   });
 });

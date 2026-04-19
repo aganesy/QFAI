@@ -29,9 +29,9 @@
 
 "use strict";
 
-const fs = require("node:fs");
-const path = require("node:path");
-const { execSync } = require("node:child_process");
+import fs from "node:fs";
+import path from "node:path";
+import { execSync } from "node:child_process";
 
 function parseArgs(argv) {
   const args = {};
@@ -72,10 +72,12 @@ function main() {
   const filename = `screenshot-${timestamp}.png`;
   const screenshotPath = path.join(outDir, filename);
 
-  // Attempt to use puppeteer if available, otherwise use a lightweight fallback.
   let captured = false;
+  let captureError = null;
   try {
-    // Try puppeteer-based capture (available when installed)
+    // Try puppeteer-based capture (available when installed). Any failure
+    // must surface as a capture error; writing fake PNG bytes would corrupt
+    // the evidence chain by making downstream steps think capture succeeded.
     const puppeteerScript = `
 const puppeteer = require('puppeteer');
 (async () => {
@@ -99,18 +101,16 @@ const puppeteer = require('puppeteer');
         /* ignore */
       }
     }
-  } catch {
-    // Puppeteer not available; write a stub file so the path contract is met
-    fs.writeFileSync(screenshotPath, `STUB:${args.url}:${timestamp}`, "utf-8");
-    captured = true;
-    console.warn(
-      "Warning: puppeteer not installed; wrote stub file. " +
-        "Install puppeteer for real screenshot capture.",
-    );
+  } catch (error) {
+    captureError = error;
   }
 
   if (!captured) {
-    console.error("Error: capture failed");
+    const detail =
+      captureError && typeof captureError.message === "string"
+        ? captureError.message
+        : String(captureError || "unknown error");
+    console.error(`Error: capture failed (${detail})`);
     process.exit(2);
   }
 
