@@ -1,11 +1,17 @@
-# .qfai/contracts
+# .qfai/contracts (contracts + supporting inputs)
 
 ## Purpose
 
-Contracts define the **stable surface** that specs and tests may reference.
-They are the boundary between "what we promise" and "how we implement".
+This directory holds two related categories of inputs:
 
-QFAI organizes contracts into four directories:
+- **Contracts** (`api/`, `db/`, `ui/`) define the **stable surface** that
+  specs and tests may reference. Each contract file requires a
+  `QFAI-CONTRACT-ID` header and participates in the traceability ledger.
+- **Supporting inputs** (`design/`) supplement contracts — they do **not**
+  carry contract IDs and are not directly cited by specs. Design tokens are
+  referenced indirectly from `ui/*.yaml` via token IDs.
+
+QFAI organizes this directory into four subdirectories:
 
 ```text
 .qfai/contracts/

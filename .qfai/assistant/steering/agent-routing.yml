@@ -121,10 +121,14 @@ routing:
         blocking_agents: []
         rerun_policy: changed-scope-dependents
       - id: evidence
+        # product-surface-reviewer is mandatory here (surface sign-off must
+        # be collected as part of evidence). Keep it blocking so a surface
+        # FAIL/REVISE blocks the phase — drops the mandatory+non-blocking
+        # drift flagged during PR review.
         mandatory_agents: [product-surface-reviewer, qa-gatekeeper]
         conditional_agents: [devops-ci-engineer, product-experience-architect]
         parallel_groups: []
-        blocking_agents: [qa-gatekeeper]
+        blocking_agents: [product-surface-reviewer, qa-gatekeeper]
         rerun_policy: changed-scope-dependents
       - id: review
         # full-harness always_required set (see review-profiles.yml →

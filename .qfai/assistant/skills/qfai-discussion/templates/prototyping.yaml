@@ -4,12 +4,12 @@ prototyping:
     Fill this with a concrete reason tied to the full-harness evidence obligations.
   allowed_modes:
     - full-harness
-  # Replace with one of the prototyping-supported surfaces:
+  # Replace `web` with one of the prototyping-supported surfaces if needed:
   #   web | mobile | desktop | mixed
   # (discussion classification also allows `cli` and `non-ui`, but those are
   #  not valid prototyping execution surfaces; see
   #  `packages/qfai/src/core/prototyping/surfacePolicy.ts` — PROTOTYPING_SUPPORTED_SURFACES.)
-  surface: <web|mobile|desktop|mixed>
+  surface: web
   mode_expectations:
     full-harness:
       expected_iterations: "2+"
