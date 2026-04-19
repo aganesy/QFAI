@@ -4,7 +4,7 @@ paths:
   discussionDir: .qfai/discussion
   outDir: .qfai/report
   skillsDir: .qfai/assistant/skills
-  srcDir: packages/qfai/src
+  srcDir: src
   testsDir: tests
 validation:
   failOn: error

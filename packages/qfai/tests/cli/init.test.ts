@@ -250,7 +250,11 @@ describe("qfai init", { timeout: 60000 }, () => {
       );
       const unexpected = scaffoldFiles.filter((relativePath) => {
         const fileName = path.basename(relativePath);
-        return fileName !== "README.md" && fileName !== "test-list.md";
+        if (fileName === "README.md" || fileName === "test-list.md") return false;
+        // Default calibration pack is intentionally shipped so full-harness
+        // runs right after init without requiring a manual setup step.
+        if (relativePath === ".qfai/evidence/calibration.yaml") return false;
+        return true;
       });
       expect(unexpected).toEqual([]);
 

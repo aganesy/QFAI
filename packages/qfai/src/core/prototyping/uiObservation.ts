@@ -152,6 +152,24 @@ export async function buildUiObservationSummary(
         existing.findings.push(finding);
         browserQaByScreen.set(key, existing);
       }
+      // Phase-level fallback: when a phase executed successfully but produced
+      // no findings, its evidence_refs would otherwise be dropped for every
+      // screen. Attach them to each known screen contract so downstream
+      // `hasBrowserQaObservation` checks still register the observation.
+      const phaseExecuted = phase.status === "executed" || phase.status === "passed";
+      if (phaseExecuted && phase.findings.length === 0 && phase.evidence_refs.length > 0) {
+        for (const contract of screenContracts) {
+          const key = contract.screenId;
+          const existing = browserQaByScreen.get(key) ?? {
+            refs: new Set<string>(),
+            findings: [],
+          };
+          for (const ref of phase.evidence_refs) {
+            existing.refs.add(ref);
+          }
+          browserQaByScreen.set(key, existing);
+        }
+      }
     }
   }
 
