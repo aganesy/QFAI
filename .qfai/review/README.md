@@ -33,13 +33,44 @@ single managed block in the repo root is the SSOT.
 
 ## summary.json (minimum schema; prefer v2.0 for new packs)
 
+> **Accepted schema versions:** the active validator
+> (`packages/qfai/src/core/validators/reviewArtifacts.ts`) accepts
+> `version: "1.0"` and `version: "2.0"` as `ALLOWED_VERSIONS`. Both
+> versions share the top-level envelope (`version`, `created_at`,
+> `target: { kind, path }`, `overall_status`) but carry reviewer entries
+> under different keys:
+>
+> - **v1.0** uses a `roster` array of reviewer entries.
+> - **v2.0** uses a `reviewers` array plus required `routing_profile`
+>   (string) and optional `conditional_reviewers` array. v2.0 is the
+>   canonical choice for new packs.
+>
+> Reviewer entry fields validated in both versions:
+> `{ reviewer: string, status: "PASS" | "FAIL" | "NA", feedback_count?: integer }`.
+> No future-only keys are required. If `summary.json` drifts from this
+> schema, `QFAI-REVIEW-007` fires with the failing field list.
+>
 > **Verdict vocabulary:** `summary.json` uses `PASS|FAIL` historically (the
-> active validator in `packages/qfai/src/core/validators/reviewArtifacts.ts`
-> enforces that set). The in-flight reviewer response template in
-> `shared-skill-delegation-baseline.md` uses `Result: PASS | REVISE` — this
-> is the same concept viewed from two angles (reviewer-side verdict vs.
-> serialised summary). A reviewer `REVISE` maps to `status: "FAIL"` in
-> summary.json until the validator schema is broadened in a future release.
+> validator above enforces that set). The in-flight reviewer response
+> template in `shared-skill-delegation-baseline.md` uses
+> `Result: PASS | REVISE` — this is the same concept viewed from two
+> angles (reviewer-side verdict vs. serialised summary). A reviewer
+> `REVISE` maps to `status: "FAIL"` in summary.json until the validator
+> schema is broadened in a future release.
+
+### v1.0 example
+
+```json
+{
+  "version": "1.0",
+  "created_at": "2026-02-18T12:34:56+09:00",
+  "target": { "kind": "spec|discussion", "path": "..." },
+  "roster": [{ "reviewer": "name-or-id", "status": "PASS|FAIL|NA", "feedback_count": 0 }],
+  "overall_status": "PASS|FAIL"
+}
+```
+
+### v2.0 example (preferred)
 
 ```json
 {
@@ -47,7 +78,7 @@ single managed block in the repo root is the SSOT.
   "created_at": "2026-02-18T12:34:56+09:00",
   "target": { "kind": "spec|discussion", "path": "..." },
   "routing_profile": "default",
-  "reviewers": [{ "reviewer": "name-or-id", "status": "PASS|FAIL", "feedback_count": 0 }],
+  "reviewers": [{ "reviewer": "name-or-id", "status": "PASS|FAIL|NA", "feedback_count": 0 }],
   "conditional_reviewers": [],
   "overall_status": "PASS|FAIL"
 }
