@@ -96,19 +96,32 @@ export class CalibrationLoader {
     const examples = rawExamples.map((e, i) => validateExample(e, i));
     const thresholds = validateThresholds(raw.thresholds);
 
-    // maxIterations, plateauDelta, plateauLookback are required
+    // maxIterations, plateauDelta, plateauLookback are required.
+    // They must also be strictly positive — `computeTerminationReason` relies
+    // on `count >= maxIterations` and `slice(-plateauLookback)`, so `0` or
+    // negative values would mark the very first iteration as terminal and
+    // record a false convergence event.
     if (typeof raw.maxIterations !== "number" || !Number.isFinite(raw.maxIterations)) {
       throw new Error(
         "Calibration pack missing required 'maxIterations' (must be a finite number)",
       );
     }
+    if (!Number.isInteger(raw.maxIterations) || raw.maxIterations < 1) {
+      throw new Error("Calibration pack 'maxIterations' must be a positive integer (>= 1).");
+    }
     if (typeof raw.plateauDelta !== "number" || !Number.isFinite(raw.plateauDelta)) {
       throw new Error("Calibration pack missing required 'plateauDelta' (must be a finite number)");
+    }
+    if (raw.plateauDelta <= 0) {
+      throw new Error("Calibration pack 'plateauDelta' must be a finite number greater than 0.");
     }
     if (typeof raw.plateauLookback !== "number" || !Number.isFinite(raw.plateauLookback)) {
       throw new Error(
         "Calibration pack missing required 'plateauLookback' (must be a finite number)",
       );
+    }
+    if (!Number.isInteger(raw.plateauLookback) || raw.plateauLookback < 1) {
+      throw new Error("Calibration pack 'plateauLookback' must be a positive integer (>= 1).");
     }
 
     this.pack = {

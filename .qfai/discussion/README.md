@@ -50,6 +50,19 @@ discussion/
 - `14_Review-Request.md` – Review request for review artifact generation.
 - `99_delta.md` – Change history (adopted, rejected, drift, recurrence prevention).
 
+## UI/UX canonical family
+
+For UI-bearing packs, the canonical design-evaluation source-of-truth is:
+
+- `04_Sources.md` for trend translation and competitive reference registry
+- `uiux/20_design_eval_invariant.md`
+- `uiux/21_design_eval_trend_derived.md`
+- `uiux/22_design_eval_product_specific.md`
+- `uiux/23_design_eval_aggregate.md`
+- `uiux/40_screen_contracts.md`
+
+`05_Scope.md` is not a trend source-of-truth for L2 scoring, and fallback scans such as `uiux/*trend*` or `uiux/*competitive*` must not replace these canonical files.
+
 ## OQ Register rules
 
 `11_OQ-Register.md` must include these mandatory columns:
@@ -111,11 +124,9 @@ Each UI-bearing discussion pack (`ui_bearing: true`) **must** include a `prototy
 
 ```yaml
 prototyping:
-  recommended_mode: standard
-  rationale: UI validation is recommended but full-harness is not justified by default.
+  recommended_mode: full-harness
+  rationale: UI validation requires the full-harness runtime loop in packages/qfai.
   allowed_modes:
-    - low-cost
-    - standard
     - full-harness
   surface: web
 ```
@@ -124,18 +135,18 @@ prototyping:
 
 All 4 fields are **required**. An artifact missing any field will fail validation.
 
-| Field              | Required | Description                                                  |
-| ------------------ | -------- | ------------------------------------------------------------ |
-| `recommended_mode` | yes      | `low-cost`, `standard`, or `full-harness`                    |
-| `rationale`        | yes      | Non-empty string explaining the recommendation               |
-| `allowed_modes`    | yes      | Unique array of valid modes; must include `recommended_mode` |
-| `surface`          | yes      | `web`, `mobile`, `desktop`, `cli`, or `mixed`                |
+| Field              | Required | Description                                    |
+| ------------------ | -------- | ---------------------------------------------- |
+| `recommended_mode` | yes      | `full-harness`                                 |
+| `rationale`        | yes      | Non-empty string explaining the recommendation |
+| `allowed_modes`    | yes      | Unique array; must contain only `full-harness` |
+| `surface`          | yes      | `web`, `mobile`, `desktop`, or `mixed`         |
 
 ### Validation rules
 
 - Only the canonical namespaced schema under the `prototyping:` key is accepted. Top-level recommendation keys (`recommended_mode`, `rationale`, `allowed_modes`, `surface` at root level) are not supported and will cause validation failure.
 - Coexistence of top-level recommendation keys with the namespaced `prototyping:` block is invalid.
-- `recommended_mode` must be included in `allowed_modes`. An artifact where `recommended_mode` is not in `allowed_modes` is invalid.
+- `recommended_mode` must be included in `allowed_modes`. In packages/qfai, this means `recommended_mode` must be `full-harness` and `allowed_modes` must only contain `full-harness`.
 - An artifact that does not conform to the canonical namespaced schema is invalid and will be rejected by both validation and execution/CLI. No fallback to explicit mode or default mode is performed for invalid artifacts.
 
 ## Suggested naming

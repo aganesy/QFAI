@@ -166,8 +166,8 @@ Follow `.qfai/assistant/instructions/shared-skill-delegation-baseline.md`.
 
 - Orchestrator MUST NOT write test or production code directly; delegate every TDD phase to the routed implementation agents.
 - Additional implement-specific overrides:
-- read `test-list.md`, determine the next pending item, and delegate each TDD phase;
-- update `test-list.md` status after each phase completes.
+  - read `test-list.md`, determine the next pending item, and delegate each TDD phase;
+  - update `test-list.md` status after each phase completes.
 
 ### Formal Sub-agent Roster
 

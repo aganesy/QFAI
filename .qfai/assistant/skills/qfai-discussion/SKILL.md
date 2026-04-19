@@ -151,7 +151,7 @@ Classification is based on surface type, not interaction complexity.
 
 ### Sidecar Generation Flow
 
-Sidecar steps must execute in the order below. **並列禁止 (no parallel)** across Step 1c and Step 1d — Step 1c MUST complete before Step 1d starts.
+Sidecar steps must execute in the order below. **(no parallel)** across Step 1c and Step 1d — Step 1c MUST complete before Step 1d starts.
 
 - Step 1a — Detect surface type from `01_Context.md`.
 - Step 1b — If non-UI, skip steps 1c–1d; no uiux/ directory is created.
@@ -173,7 +173,13 @@ UI-bearing completion is blocked until all of the following are true:
 
 ### Non-UI Completion
 
-For non-UI projects, no additional UI-bearing completion conditions apply. `prototyping.yaml` is not required and uiux sidecar generation is skipped.
+For non-UI projects, no additional UI/UX conditions apply, no sidecar artifacts are required, and `prototyping.yaml` is not required. uiux sidecar generation is skipped.
+
+## UI-bearing Authoring Requirements
+
+- Detection uses **surface type classification** as primary SSOT; HTML tags / Mermaid flows are **supplementary detection hints, not the primary SSOT**. **Non-UI packs are exempt** from sidecar validators (UIX-VAL series) — **zero new issues** when properly classified.
+- UI-bearing packs rely on the **canonical sidecar family** as primary truth: `uiux/10_implementation_strategy.md`, `uiux/11_design_taste_interview.md`, `uiux/12_design_system.md`, `uiux/20..24_design_eval_*.md`, `uiux/30_option_comparison.md` (**option comparison**), `uiux/31_selected_anchor_screen.md`, `uiux/40_screen_contracts.md`, `uiux/50_review_input_bundle.md`.
+- **Competitive Reference Registry** (`04_Sources.md`) entries must populate `adopted_points`, `rejected_points`, `local_translation`. **Placeholder-like values (TBD/N/A/TODO/empty) are treated as missing**. `99_delta.md` must include `## Rejected Visual Directions` with rationale and recurrence prevention. **Sidecar-family validators** (UIX-VAL series) are the primary quality gates for UI-bearing packs; non-ui packs stay exempt. Playbook detail: `references/ui-bearing-playbook.md` / `references/discussion-completion-matrix.md`.
 
 ## Goal
 
@@ -219,7 +225,7 @@ Produce a unified 15-file discussion pack with explicit decisions, requirements,
 8. Update `12_OQ-Resolution-Log.md`, `14_Review-Request.md`, and `99_delta.md`.
 9. Generate `prototyping.yaml` only when the latest discussion pack is UI-bearing.
 10. Request review and record the Reviewer result.
-11. **UI-bearing only — Design system initialization (v1.7.16).**
+11. **UI-bearing only — Design system initialization.**
     - **Step 11.3 — Brand archetype selection and design system scaffold (autonomous; skip when `surface: non-ui`).**
       - Phase A (brand autonomous selection): The agent MUST select one of the 8 canonical brand archetypes from `references/design-md-brand-catalog.md` by scoring each archetype against the taste-interview data in `uiux/11_design_taste_interview.md`. No human-confirmation prompt is issued; the agent selects autonomously using the highest aggregate score. When two archetypes tie, apply the tie-breaker: highest visual-theme weight, then alphabetical archetype name. The selected archetype name and rationale MUST be written into `uiux/12_design_system.md` under `## Visual Theme`.
       - Phase B (customization): Apply the selected archetype's `aesthetic_properties` as defaults for Color Palette, Typography, Spacing & Layout, Component Style, and Animation & Motion. Override any default that conflicts with explicit constraints captured in `06_REQ.md`, `09_Constraints.md`, or taste-interview directives. Record each override and its rationale.

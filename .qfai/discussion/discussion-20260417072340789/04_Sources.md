@@ -6,7 +6,7 @@
 
 | SRC-ID   | Title                                                                         | Type     | URL / Path                                                                          | Retrieved  | Notes                                       |
 | -------- | ----------------------------------------------------------------------------- | -------- | ----------------------------------------------------------------------------------- | ---------- | ------------------------------------------- |
-| SRC-0001 | QFAI v1.7.15 継続開発設計書（rev11）                                          | primary  | `C:\Users\YusukeSenaga\Downloads\qfai_v1_7_15_packages_qfai_single_pr_completion_design_rev11.md` | 2026-04-17 | rev11 本ディスカッションの直接入力            |
+| SRC-0001 | QFAI v1.7.15 継続開発設計書（rev11）                                          | primary  | `Provided by user: qfai_v1_7_15_packages_qfai_single_pr_completion_design_rev11.md` | 2026-04-17 | rev11 本ディスカッションの直接入力            |
 | SRC-0002 | v1.7.15-11 監査レポート                                                       | primary  | `qfai_v1_7_15_11_packages_qfai_audit_report.md`                                     | 2026-04-17 | rev11 設計の起点となった監査報告書            |
 | SRC-0003 | QFAI v1.7.15 継続開発設計書（rev10）                                          | primary  | `qfai_v1_7_15_packages_qfai_single_pr_completion_design_rev10.md`                   | 2026-04-16 | rev10 ディスカッション（discussion-20260416195444737）の入力 |
 | SRC-0004 | qfai canonical unified requirements spec design v1.0                          | primary  | `qfai_v1.7_canonical_unified_requirements_spec_design_v1.0.md`                      | 2026-04-16 | v1.7 系の統合要件・仕様設計のベースライン      |

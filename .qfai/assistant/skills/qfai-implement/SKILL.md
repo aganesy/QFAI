@@ -164,17 +164,17 @@ Follow `.qfai/assistant/instructions/shared-skill-delegation-baseline.md`.
 
 ### Orchestrator Protocol (MUST)
 
+- Orchestrator MUST NOT write test or production code directly; delegate every TDD phase to the routed implementation agents.
 - Additional implement-specific overrides:
-- read `test-list.md`, determine the next pending item, and delegate each TDD phase;
-- do not write test or production code directly;
-- update `test-list.md` status after each phase completes.
+  - read `test-list.md`, determine the next pending item, and delegate each TDD phase;
+  - update `test-list.md` status after each phase completes.
 
 ### Formal Sub-agent Roster
 
 This skill delegates through the centralized routing policy in `.qfai/assistant/steering/agent-routing.yml`.
 
 - `delivery-planner`
-  - reads `test-list.md`, selects the next pending item, enforces Red-Green-Refactor ordering, and decides parallel safety
+  - reads `test-list.md`, selects the next pending item, enforces Red-Green-Refactor ordering, and is the sole authority for parallel dispatch decisions
 - `frontend-engineer` / `backend-engineer`
   - implement the selected item only, write the failing test first, write minimal passing code, and refactor without unrelated changes
 - `qa-gatekeeper`

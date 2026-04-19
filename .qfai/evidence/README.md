@@ -2,224 +2,78 @@
 
 ## Purpose
 
-Evidence files record what was actually executed, observed, skipped, or deferred.
+Evidence files record what was actually executed and observed.
+`packages/qfai` v1.7.15 treats prototyping as `full-harness` only and UI-only.
 
-## Prototyping stage required artifacts
+## Prototyping artifacts
 
-`/qfai-prototyping` uses these canonical files:
+Canonical files:
 
 - `.qfai/evidence/prototyping.md`
 - `.qfai/evidence/prototyping.json`
-- `.qfai/evidence/render.json` (when render evidence is emitted)
-- `.qfai/evidence/browser-qa.json` (when browser QA is emitted)
+- `.qfai/evidence/render.json`
+- `.qfai/evidence/browser-qa.json`
+- `.qfai/evidence/fullHarness.exit.json`
+- `.qfai/evidence/fullHarness.handoff.json`
+- `.qfai/evidence/fullHarness.fakeUiDetection.json`
 
-## prototyping.json minimum schema
+## Execution contract
 
-Always required:
-
-- `specs[]`
-- `meta.generatedAt`
-- `meta.toolVersion`
-- `meta.commands[]`
-- `mode.effective`
-- `mode.source`
-- `mode.rationale`
-
-Optional:
-
-- `surface`
-- `mode.requested`
-- `mode.discussionRecommendation`
-- `runtimeGate`
-- `uiFidelity`
-- `renderEvidence`
-- `browserQa`
-- `fullHarness`
+Supported prototyping surfaces are `web`, `mobile`, `desktop`, and `mixed`.
+`cli`, API-only, backend-only, and `ui_bearing: false` classifications are not prototyping execution targets.
 
 ## Obligation matrix
 
-| surface / mode         | specs    | runtimeGate | uiFidelity                    | render evidence | browser QA | fullHarness |
-| ---------------------- | -------- | ----------- | ----------------------------- | --------------- | ---------- | ----------- |
-| web / low-cost         | required | optional    | optional (`skeleton` allowed) | optional        | optional   | absent      |
-| web / standard         | required | optional    | required                      | optional        | optional   | absent      |
-| web / full-harness     | required | required    | required                      | required        | required   | required    |
-| mobile / low-cost      | required | optional    | optional (`skeleton` allowed) | optional        | optional   | absent      |
-| mobile / standard      | required | optional    | required                      | optional        | optional   | absent      |
-| mobile / full-harness  | required | required    | required                      | required        | required   | required    |
-| desktop / low-cost     | required | optional    | optional (`skeleton` allowed) | optional        | optional   | absent      |
-| desktop / standard     | required | optional    | required                      | optional        | optional   | absent      |
-| desktop / full-harness | required | required    | required                      | required        | required   | required    |
-| cli / low-cost         | required | optional    | n/a                           | n/a             | n/a        | absent      |
-| cli / standard         | required | optional    | n/a                           | n/a             | n/a        | absent      |
-| cli / full-harness     | required | optional    | n/a                           | n/a             | n/a        | required    |
-| mixed / low-cost       | required | optional    | optional (`skeleton` allowed) | optional        | optional   | absent      |
-| mixed / standard       | required | optional    | required                      | optional        | optional   | absent      |
-| mixed / full-harness   | required | required    | required                      | required        | required   | required    |
+| surface / mode         | specs    | runtimeGate | uiFidelity | render evidence | browser QA | fullHarness |
+| ---------------------- | -------- | ----------- | ---------- | --------------- | ---------- | ----------- |
+| web / full-harness     | required | required    | required   | required        | required   | required    |
+| mobile / full-harness  | required | required    | required   | required        | required   | required    |
+| desktop / full-harness | required | required    | required   | required        | required   | required    |
+| mixed / full-harness   | required | required    | required   | required        | required   | required    |
 
-Interpretation:
+`low-cost` and `standard` are unsupported in `packages/qfai` v1.7.15.
 
-- `required`: schema and completeness are enforced
-- `optional`: if present, schema must be valid
-- `n/a`: absent is normal success
+## Truthfulness rules
 
-## cli surface canonical semantics
+- `mode.effective` must be `full-harness`.
+- `uiFidelity.mode` must be `interactive`.
+- Canonical screen contracts in `discussion-*/uiux/40_screen_contracts.md` are mandatory.
+- Browser QA is mandatory per screen.
+- Calibration is resolved from `fullHarness.calibrationRef.packPath`; scalar caller overrides are invalid.
+- `runtimeGate.evidenceRefs` must contain concrete render/browser QA/spec refs only.
+- `specCoverage` refs must use concrete declared refs plus concrete observed refs. Self-reference and synthetic strings are invalid.
+- `mockPaths` is a negative-only ledger. Allowed values are `fail|finding` only.
 
-For `cli` surface, the following are normal success when absent:
+## fullHarness semantics
 
-- `uiFidelity`
-- render evidence bundle
-- browser QA bundle
-- `runtimeGate.ui`
+Required fields:
 
-`ui_bearing: false` specs are not prototyping execution targets. Contradictory UI-only payloads on `cli` surface are validation errors.
+- `enabled = true`
+- `runId`
+- `calibrationRef.configPath`
+- `calibrationRef.packPath`
+- `calibrationRef.packVersion`
+- `iterationCount`
+- `bestIteration`
+- `status`
+- `reviewerSignoff`
+- `reviewerLogs`
+- `iterations`
+- `scoringTrace`
+- `limitations`
 
-## uiFidelity notes
+Review semantics:
 
-- `uiFidelity` is the canonical UI evidence block.
-- `mode: interactive` is the default when a working UI flow is exercised.
-- `mode: skeleton` is allowed for low-cost UI proof where structure exists but wiring is intentionally partial.
-- Keep `"version": "0.1"` in the `uiFidelity` payload until the schema version changes.
+- `finalDecision = accepted` -> `reviewerSignoff.status = approved`
+- `finalDecision = rejected` -> `reviewerSignoff.status = rejected`
+- `finalDecision = abandoned` -> `reviewerSignoff.status = abandoned`
+- `reviewerLogs[last].verdict` must align with the final decision and termination semantics.
 
-## fullHarness schema v2
+## Prohibited patterns
 
-When `mode.effective = "full-harness"`:
-
-| Field                        | Type                                                                  | Required       | Description                                             |
-| ---------------------------- | --------------------------------------------------------------------- | -------------- | ------------------------------------------------------- |
-| `enabled`                    | `true`                                                                | yes            | Always true for full-harness                            |
-| `runId`                      | string                                                                | yes            | Unique run identifier                                   |
-| `calibrationRef.configPath`  | string                                                                | yes            | Path to qfai.config.yaml                                |
-| `calibrationRef.packPath`    | string                                                                | yes            | Path to calibration pack                                |
-| `calibrationRef.packVersion` | string                                                                | yes            | Calibration pack version                                |
-| `iterationCount`             | number                                                                | yes            | Total iterations recorded                               |
-| `bestIteration`              | number                                                                | yes            | Iteration with highest weightedTotal                    |
-| `status`                     | `"in-progress"` \| `"completed"`                                      | yes            | Current harness status                                  |
-| `terminationReason`          | `"converged"` \| `"max-iterations"` \| `"plateau"` \| `"manual-stop"` | when completed | Required when status=completed                          |
-| `reviewerSignoff.reviewerId` | string                                                                | yes            | Real reviewer identifier (placeholders rejected)        |
-| `reviewerSignoff.status`     | `"approved"` \| `"rejected"`                                          | yes            | Signoff status                                          |
-| `reviewerSignoff.timestamp`  | string                                                                | yes            | ISO timestamp                                           |
-| `reviewerSignoff.source`     | `"cli"`                                                               | yes            | Always "cli"                                            |
-| `reviewerLogs[]`             | array                                                                 | yes            | Per-iteration reviewer verdicts                         |
-| `iterations[]`               | array                                                                 | yes            | Full iteration records with L1/L2/commitSha/limitations |
-| `scoringTrace[]`             | array                                                                 | yes            | Per-iteration scoring summary                           |
-| `limitations[]`              | string[]                                                              | yes            | Unresolved limitations                                  |
-
-**Truthfulness rules:**
-
-- `weightedTotal = min(l1.total, l2.total)` — validator enforces this invariant
-- `commitSha` is mandatory on every iteration — must be a real git commit
-- `limitations` is mandatory — empty array is valid, absent is not
-- `reviewerId` must not be a placeholder (e.g., "qfai", "default", "none")
-- `observed` values in uiFidelity must come from real measurement, not copied from `expected`
-- `mockPaths` must come from real browser QA findings, not auto-generated as "pass"
-- `specCoverage` must come from real spec/runtime evidence, not zero-seeded
-
-## Render evidence bundle conventions
-
-Canonical path: `.qfai/evidence/render.json`
-
-```json
-{
-  "renderEvidence": {
-    "status": "captured",
-    "requested": true,
-    "viewports": ["desktop", "mobile"],
-    "outputPath": ".qfai/evidence/render.json"
-  },
-  "screens": [
-    {
-      "route": "/orders",
-      "viewport": "desktop",
-      "status": "captured",
-      "width": 1440,
-      "height": 900,
-      "imagePath": ".qfai/evidence/render/orders.desktop.png",
-      "htmlPath": ".qfai/evidence/render/orders.desktop.html"
-    },
-    {
-      "route": "/orders",
-      "viewport": "mobile",
-      "status": "skipped",
-      "skippedReason": "path-only review for non-blocking mobile check"
-    }
-  ]
-}
-```
-
-Rules:
-
-- `status`: `captured | skipped | failed`
-- `captured`: `imagePath` and `htmlPath` required (QFAI-PROT-252)
-- `skipped`: `skippedReason` required (QFAI-PROT-252)
-- `failed`: `error` required (QFAI-PROT-252)
-- external bundle is the source of truth
-- in-band `uiFidelity.screens[].renders[]` is summary/projection only
-- render evidence must remain `path-only`; `data:` URIs, `base64,` payloads, and inline HTML are invalid (QFAI-PROT-251)
-- extremely long single-line payloads (>500 chars) are treated as inline payload violations
-- top-level `renderEvidence.status` and individual `screens[].status` must not contradict (QFAI-PROT-253)
-
-## browser-qa.json canonical contract
-
-```json
-{
-  "browserQa": {
-    "executed": true,
-    "status": "completed",
-    "mode": "full-harness",
-    "summary": {
-      "smoke": { "passed": 3, "failed": 0 },
-      "interaction": { "passed": 4, "failed": 1 }
-    }
-  },
-  "findings": [
-    {
-      "category": "interaction",
-      "severity": "error",
-      "route": "/orders",
-      "message": "Save button submits duplicate request"
-    }
-  ]
-}
-```
-
-Rules:
-
-- required only for `ui-bearing / full-harness` (QFAI-PROT-263)
-- optional for `ui-bearing / low-cost|standard`
-- n/a for `non-ui`
-- `executed=true` requires `status=completed`; `executed=false` permits `status=skipped|failed` only
-- `status=completed` without `summary` or `findings` produces a warning (QFAI-PROT-262)
-- `browserQa.mode` must match `prototyping.json.mode.effective` (QFAI-PROT-261)
-- `summary.*.passed/failed` must be non-negative integers
-- each finding requires `category`, `severity`, and `message`
-
-## Example prototyping.json
-
-```json
-{
-  "surface": "web",
-  "specs": [
-    {
-      "specId": "spec-0001",
-      "declared": { "uiRoutes": 1, "apiEndpoints": 1, "dbObjects": 1 },
-      "checked": { "uiOk": 1, "apiNon404": 1, "dbPresent": 1 },
-      "missing": { "uiRoutes": [], "apiEndpoints": [], "dbObjects": [] }
-    }
-  ],
-  "mode": {
-    "effective": "standard",
-    "source": "default",
-    "rationale": "No explicit request or discussion recommendation was provided."
-  },
-  "meta": {
-    "generatedAt": "2026-04-04T00:00:00.000Z",
-    "toolVersion": "<current-tool-version>",
-    "commands": ["qfai validate --fail-on error"]
-  },
-  "uiFidelity": {
-    "version": "0.1",
-    "mode": "interactive",
-    "screens": []
-  }
-}
-```
+- `low-cost` or `standard` prototyping metadata
+- `cli` prototyping execution
+- self-reference such as `prototyping.json#/runtimeGate`
+- synthetic refs such as `specs: ...`
+- synthetic `mockPaths.status="pass"`
+- hardcoded calibration pack version

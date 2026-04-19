@@ -1,11 +1,30 @@
 {
+  // spec packs contain decision-record paragraphs, embedded YAML/JSON blocks,
+  // and generator-produced tables that routinely exceed normal markdown
+  // heuristics. The rules disabled below are regression sources, not quality
+  // gates, for this directory only. Other projects and repo-root markdown are
+  // still covered by the top-level .markdownlint-cli2.jsonc config.
+  //
+  // Kept ON (inherited): MD009, MD010, MD011, MD014, MD018-MD022, MD025-MD028,
+  // MD031, MD035-MD040, MD042-MD046, MD048-MD055 (heading anchors, list hygiene,
+  // code fence hygiene, link text validity).
+
+  // Long lines: spec decisions cite external designs / commands verbatim.
   "MD013": false,
+  // Heading increment: auto-generated audit sections sometimes skip levels.
   "MD001": false,
+  // Multiple blank lines: tolerated in generated tables/lists for readability.
   "MD012": false,
+  // Duplicate headings: DR-ID / OQ-ID revision suffixes reuse base titles.
   "MD024": false,
+  // Blanks around lists: generator output interleaves lists with prose.
   "MD032": false,
+  // Inline HTML: rare `<n>` / `<id>` / `<skill>` placeholders in examples.
   "MD033": false,
+  // Bare URLs: test-case examples include raw http://localhost URLs.
   "MD034": false,
+  // Trailing newline: a handful of generator-produced files end mid-table.
   "MD047": false,
+  // Table column count: some cells embed pipe characters inside code spans.
   "MD056": false,
 }

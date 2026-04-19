@@ -48,25 +48,7 @@
     `.qfai/discussion/discussion-20260329195516830/`
     (v1.7.6 Audit Remediation — targeted correction pass for 13 issues across P0/P1/P2),
     `.qfai/discussion/discussion-20260330153902875/`
-    (v1.7.9 Convergence Correction Release — truthful implementation alignment across validate/discussion/prototyping/docs),
-    `.qfai/discussion/discussion-20260414072809763/`
-    (v1.7.15 Runtime Truthfulness Hardening — fail-closed runtime, pre-scored path elimination, screen-level UiObservation, l2Evidence, validator error upgrades),
-    `.qfai/discussion/discussion-20260414195449523/`
-    (v1.7.15 rev4 Single-PR Completion — 5 remaining audit issues: cli/full-harness reject, screen contract targets, evidence chain completeness, canonical route semantics, L2 structured parse, stale cleanup),
-    `.qfai/discussion/discussion-20260415161758193/`
-    (v1.7.15 rev6 — full-harness-only mode enforcement, surfacePolicy.ts, CalibrationLoader internal resolution, concrete evidenceRefs, reviewerSignoff semantics, uiFidelityBuilder screenId matching, stale cleanup),
-    `.qfai/discussion/discussion-20260415203030886/`
-    (v1.7.15 rev7 — 6 contract gaps: pack resolution upstream move, uiFidelity fail-closed, concrete evidenceRefs, validator calibration metadata check, error taxonomy, config packPath-only; WS-7: surfacePolicy rejection message from constant),
-    `.qfai/discussion/discussion-20260416023323603/`
-    (v1.7.15 rev8 — leaf-field ref grammar closure: pathUtils.ts helpers, specCoverage/runtimeGate evidenceRefs top-level validation, execution→validate closure test),
-    `.qfai/discussion/discussion-20260416092414328/`
-    (v1.7.15 rev9 — leaf-field traceability closure: ui[].declaredRef/renderEvidenceRefs[]/browserQaEvidenceRefs[] per-row validation, axes[].evidenceRefs[] per-axis validation, reviewerLogs[].evidenceRefs[] validation, bundleWriter strict schema, test fixture concrete refs, README full enumeration),
-    `.qfai/discussion/discussion-20260416195444737/`
-    (v1.7.15 rev10 — semantic closure hardening: WS-1 terminal state machine (in-progress/completed strict field bundles), WS-2 canonical screen contract sourceRef (slug anchor generation removed), WS-3 all 8 evidenceRefs categories via assertConcreteArtifactRefs() in pathUtils.ts, WS-4 declaredRef regex validation (.qfai/specs/+anchor mandatory)),
-    `.qfai/discussion/discussion-20260417072340789/`
-    (v1.7.15 rev11 — semantic closure closure: WS-1 public helper export removal + strict validation (runMeasurement/validatePanelScore non-public, all 8 category refs non-empty+concrete, validatePanelScore axes+evidenceRefs strict), WS-2 declaredRef semantic closure (isSpecDeclarationRef line-ref only: .qfai/specs/<id>/01_Spec.md#L<n>, specCoverage.ts 01_Spec.md-only scan), WS-3 test synchronization (measurement.test.ts/panelScore.test.ts current DTO, specCoverage.test.ts/refSemantics.test.ts new/extend)),
-    `.qfai/discussion/discussion-20260418093755100/`
-    (v1.7.16 — QFAI Package Design Quality Pipeline Restructure: 18 REQs across 3 specs — (spec-0010) qfai-discussion Step 11.3 DESIGN.md autonomous generation + Step 11.5 Trend→Axis derivation + brand-catalog references + templates/uiux/12_design_system.md + 04_Sources.md evaluation_connection; (spec-0012) qfai-prototyping Step 0 execution plan + iteration gate (iterationCount≥2) + 5-step cycle (Capture→Evaluate→Identify→Fix→Re-evaluate) + DESIGN.md compliance check + calibration.overrides + capture-screenshots.js + Visual Quality Structural Checklist; (spec-0014) qfai-verify validators UIX-VAL-T01..T04 (trend-axis traceability) + UIX-VAL-DS01/DS02 (design_system schema) + PROT-DS01 (designSystemCompliance score recording))
+    (v1.7.9 Convergence Correction Release — truthful implementation alignment across validate/discussion/prototyping/docs)
   - Assumptions: None (all verified from repository analysis)
 
 ## Non-goals / Not-now (Optional)

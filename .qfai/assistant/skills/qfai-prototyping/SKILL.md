@@ -99,12 +99,12 @@ Build the minimum runnable slice for all specs and produce canonical `full-harne
 All sub-agent delegation in this skill MUST follow the category-to-role mapping below.
 Assigning a task to a role not listed for the category is a violation and MUST be flagged.
 
-| Category (工程)    | Allowed Role(s)                                        |
+| Category           | Allowed Role(s)                                        |
 | ------------------ | ------------------------------------------------------ |
-| UI実装             | frontend-engineer, product-experience-architect        |
-| スクリーンショット | devops-ci-engineer                                     |
-| 評価 L1-L2         | product-surface-reviewer, product-experience-architect |
-| ビルド             | devops-ci-engineer, backend-engineer                   |
+| UI implementation  | frontend-engineer, product-experience-architect        |
+| Screenshot capture | devops-ci-engineer                                     |
+| Evaluation L1-L2   | product-surface-reviewer, product-experience-architect |
+| Build              | devops-ci-engineer, backend-engineer                   |
 
 Any delegation map entry that assigns a category to an undefined or unlisted role (e.g., `"generic-code-writer"`) MUST produce a violation finding naming the undefined role and the category.
 
@@ -155,11 +155,11 @@ Missing element (d) is a common error when `uiux/12_design_system.md` is absent;
 
 Each iteration evaluation MUST score all 6 visual categories:
 
-1. カラー — color palette adherence to design system tokens
-2. タイポグラフィ — type scale, weight, line-height compliance
-3. スペーシング — spacing scale and grid alignment
-4. 角丸 — border-radius consistency across components
-5. シャドウ — shadow elevation and opacity standards
+1. Color — color palette adherence to design system tokens
+2. Typography — type scale, weight, line-height compliance
+3. Spacing — spacing scale and grid alignment
+4. Border radius — border-radius consistency across components
+5. Shadow — shadow elevation and opacity standards
 6. Do's&Don'ts — adherence to explicit do/don't rules from `uiux/12_design_system.md`
 
 ### Lighthouse Gate (MUST for web full-harness)

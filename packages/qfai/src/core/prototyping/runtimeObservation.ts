@@ -65,6 +65,25 @@ export function buildRuntimeObservation(input: {
         browserByScreenId.set(finding.screen_id, refs);
       }
     }
+    // Phase-level fallback: when Browser QA finishes a phase with no findings
+    // (e.g. Playwright smoke passed cleanly), `phase.evidence_refs` would
+    // otherwise never reach the per-screen maps. Attach them to every known
+    // screen contract so `assertRuntimeGateLeafRefs` still sees the observation.
+    const phaseExecuted = phase.status === "executed" || phase.status === "passed";
+    if (phaseExecuted && phase.findings.length === 0 && phase.evidence_refs.length > 0) {
+      for (const screen of input.screenContracts) {
+        const byScreen = browserByScreenId.get(screen.screenId) ?? new Set<string>();
+        for (const ref of phaseRefs) {
+          byScreen.add(ref);
+        }
+        browserByScreenId.set(screen.screenId, byScreen);
+        const byRoute = browserByRoute.get(screen.route) ?? new Set<string>();
+        for (const ref of phaseRefs) {
+          byRoute.add(ref);
+        }
+        browserByRoute.set(screen.route, byRoute);
+      }
+    }
   }
 
   const ui = input.screenContracts

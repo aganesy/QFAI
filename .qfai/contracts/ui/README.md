@@ -3,9 +3,9 @@
 ## Purpose
 
 Define UI surface contracts for prototyping and E2E selection.
-The contract must describe both screen structure and minimum mockable behavior.
+The contract must describe screen structure, action coverage targets, and inspection anchors for full-harness evidence.
 
-> **Note:** UI contracts are **supporting input** that supplements the discussion sidecar artifacts (`discussion-*/uiux/*`), which remain the primary truth for UI/UX definitions. Screen contract YAML files are read **only when present**; after `qfai init`, this directory may contain only this README — that is the normal initial state.
+> **Note:** UI contracts are supporting input that supplements the discussion sidecar artifacts (`discussion-*/uiux/*`), which remain the primary truth for UI/UX definitions. In `packages/qfai` v1.7.15, prototyping execution is `full-harness` only and requires both canonical screen contracts and matching `CON-UI-*` YAML contracts.
 
 ## File rules
 
@@ -41,15 +41,15 @@ The contract must describe both screen structure and minimum mockable behavior.
 - autogen generates expected markers from `elements[].id` automatically.
 - The id-based format (`CONTRACT_ID:ELEMENT_ID`) is the only canonical marker format.
 
-## Mockable prototype minimum (L2)
+## Prototype metadata
 
 Add `prototype` at the top level.
 
-- `mode`: `skeleton | interactive` (`interactive` is the recommended default)
-- `mockPaths`: minimum happy-path checks to validate mock behavior
+- `mode`: `interactive`
+- `mockPaths`: negative-only review ledger derived from real browser QA findings
 - `markers`: selector/marker convention for runtime inspection and future automation
 
-### `prototype.mode` and `mockPaths[]` examples
+### `prototype.mode` and `mockPaths[]` example
 
 ```yaml
 prototype:
@@ -57,12 +57,6 @@ prototype:
   mockPaths:
     - id: mp_create_to_list
       flow: create -> list reflects
-```
-
-```yaml
-prototype:
-  mode: skeleton
-  mockPaths: []
 ```
 
 ## Screen contract rules
@@ -82,7 +76,7 @@ prototype:
 ### L2 `actions[]` minimum set
 
 - For each interactive primary route, define at least one action that changes UI state (`navigate`, `submit`, `toggle`, ...).
-- Tie at least one action to a `prototype.mockPaths[]` flow so reviewers can trace mockable behavior.
+- Tie at least one action to observed browser QA findings so reviewers can trace action coverage.
 - Keep `effect` concrete and testable (`navigates to /orders`, `shows success toast`, ...).
 
 ## Template (YAML)
@@ -148,11 +142,9 @@ screens:
 
 ### Q3. "Can I treat this as a static screen?"
 
-- Use static/skeleton handling only when the screen has no meaningful interactive behavior yet.
-- Configuration options:
-  - Temporary L1: `uiFidelity.mode: skeleton` with `screens: []`
-  - L2 target: keep `mode: interactive`, but define actionable routes with minimum `actions[]` and `mockPaths[]`
-- Move back to `interactive` before ATDD to avoid hidden behavior drift.
+- No. `packages/qfai` v1.7.15 prototyping is `full-harness` only.
+- `uiFidelity.mode: skeleton` is not a valid prototyping execution target.
+- Define actionable routes and `actions[]`, then collect real render and Browser QA evidence.
 
 ## Checklist
 
@@ -160,4 +152,4 @@ screens:
 - [ ] `elements[].id` follows stable naming policy and change policy is respected.
 - [ ] `elements[].label` matches runtime-visible inspection text or documented marker mapping.
 - [ ] `elements` and `actions` include the minimum fields above.
-- [ ] `prototype.mode/mockPaths/markers` are defined for L2 mockable flow.
+- [ ] `prototype.mode` is `interactive` and `mockPaths` is treated as a negative-only issue ledger.

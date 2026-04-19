@@ -4,7 +4,7 @@
 
 | SRC-ID   | Title | Path/URL | Kind | Date | Notes |
 |----------|-------|----------|------|------|-------|
-| SRC-0001 | QFAI v1.7.15 単一PR完了設計書 rev6 | C:\Users\YusukeSenaga\Downloads\qfai_v1_7_15_packages_qfai_single_pr_completion_design_rev6.md | design-doc | 2026-04-15 | Primary design input; defines WS-1 to WS-7 and DoD |
+| SRC-0001 | QFAI v1.7.15 単一PR完了設計書 rev6 | Provided by user: qfai_v1_7_15_packages_qfai_single_pr_completion_design_rev6.md | design-doc | 2026-04-15 | Primary design input; defines WS-1 to WS-7 and DoD |
 | SRC-0002 | QFAI v1.7 Canonical Unified Requirements Spec v1.0 | (baseline reference doc) | requirements-spec | 2026 | Referenced as baseline judgment standard |
 | SRC-0003 | QFAI v1.7.15-06 Audit Report | (audit report doc) | audit-report | 2026 | Audit findings that triggered rev6; lists 5 unresolved contradictions |
 | SRC-0004 | packages/qfai/src/core/prototyping/ | packages/qfai/src/core/prototyping/ | source-code | 2026 | Existing implementation being changed |
