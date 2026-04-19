@@ -120,6 +120,40 @@ describe("specCoverage", () => {
     expect(summary.evidenceRefs).toContain(".qfai/spec-catalog/spec-0001/01_Spec.md#L2");
   });
 
+  it("uses the explicit repo root for deep configured specsDir paths", async () => {
+    const root = await createRoot();
+    const specsDir = path.join(root, ".qfai", "worktrees", "specs");
+    await mkdir(path.join(specsDir, "spec-0001"), { recursive: true });
+    await writeFile(
+      path.join(specsDir, "spec-0001", "01_Spec.md"),
+      ["# Spec", "", "- ui_route: /deep", ""].join("\n"),
+      "utf-8",
+    );
+
+    const coverage = await buildPerSpecCoverage(
+      specsDir,
+      {
+        ui: [
+          {
+            screenId: "deep",
+            route: "/deep",
+            declaredRef:
+              ".qfai/discussion/discussion-20260404000000000/uiux/40_screen_contracts.md#deep",
+            rendered: true,
+            browserVisited: true,
+            renderEvidenceRefs: [".qfai/evidence/render/deep.png"],
+            browserQaEvidenceRefs: [".qfai/evidence/browser-qa.json#/phases/0"],
+          },
+        ],
+      },
+      root,
+    );
+
+    expect(coverage[0]?.coverageRefs[0]?.declaredRef).toBe(
+      ".qfai/worktrees/specs/spec-0001/01_Spec.md#L2",
+    );
+  });
+
   // QFAI:SPEC-0012:TC-0012-0217
   it("rejects repo-external paths during normalization", async () => {
     const root = await createRoot();

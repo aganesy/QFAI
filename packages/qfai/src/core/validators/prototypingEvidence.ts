@@ -2036,11 +2036,11 @@ async function validateModeMetadata(
         guidance:
           "runtimeGate.ui[].declaredRef には concrete artifact ref のみを保持してください。",
       });
-      if (!isCanonicalScreenContractRef(row.declaredRef)) {
+      if (!isCanonicalScreenContractRef(row.declaredRef, config.paths.discussionDir)) {
         issues.push(
           issue(
             "QFAI-PROT-326",
-            `runtimeGate.ui[${row.screenId}].declaredRef must use the canonical 40_screen_contracts.md#<screenId> sourceRef.`,
+            `runtimeGate.ui[${row.screenId}].declaredRef must use the canonical 40_screen_contracts.md#<screenId> sourceRef under ${config.paths.discussionDir}/.`,
             "error",
             evidenceJsonPath,
             "prototypingEvidence.runtimeGateCanonicalScreenContractRef",
@@ -2106,11 +2106,11 @@ async function validateModeMetadata(
       });
     }
     for (const ref of iter.evidenceRefs.screenContract) {
-      if (!isCanonicalScreenContractRef(ref)) {
+      if (!isCanonicalScreenContractRef(ref, config.paths.discussionDir)) {
         issues.push(
           issue(
             "QFAI-PROT-327",
-            `fullHarness.iterations[${iter.iteration}].evidenceRefs.screenContract contains a non-canonical screen contract ref: ${ref}`,
+            `fullHarness.iterations[${iter.iteration}].evidenceRefs.screenContract contains a non-canonical screen contract ref under ${config.paths.discussionDir}/: ${ref}`,
             "error",
             evidenceJsonPath,
             "prototypingEvidence.fullHarnessCanonicalScreenContractRef",

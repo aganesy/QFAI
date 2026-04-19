@@ -37,7 +37,13 @@ export function assertBrowserQaEvidenceRefs(fieldPath: string, refs: string[]): 
   }
 }
 
-export function isCanonicalScreenContractRef(ref: string): boolean {
+const DEFAULT_SCREEN_CONTRACT_PATTERN =
+  /^\.qfai\/discussion\/[^/]+\/uiux\/40_screen_contracts\.md#([A-Za-z0-9][A-Za-z0-9._-]*)$/;
+
+export function isCanonicalScreenContractRef(
+  ref: string,
+  discussionDirRelative = ".qfai/discussion",
+): boolean {
   try {
     assertConcreteArtifactRef(ref);
   } catch {
@@ -45,9 +51,11 @@ export function isCanonicalScreenContractRef(ref: string): boolean {
   }
 
   const match =
-    /^\.qfai\/discussion\/[^/]+\/uiux\/40_screen_contracts\.md#([A-Za-z0-9][A-Za-z0-9._-]*)$/.exec(
-      ref,
-    );
+    discussionDirRelative === ".qfai/discussion"
+      ? DEFAULT_SCREEN_CONTRACT_PATTERN.exec(ref)
+      : new RegExp(
+          `^${discussionDirRelative.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}/[^/]+/uiux/40_screen_contracts\\.md#([A-Za-z0-9][A-Za-z0-9._-]*)$`,
+        ).exec(ref);
   if (!match) {
     return false;
   }

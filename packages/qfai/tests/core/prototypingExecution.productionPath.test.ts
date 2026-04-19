@@ -100,12 +100,14 @@ async function withRoot(task: (root: string) => Promise<void>): Promise<void> {
 }
 
 async function withRootOptions(
-  options: { specsDirRelative?: string },
+  options: { specsDirRelative?: string; discussionDirRelative?: string },
   task: (root: string) => Promise<void>,
 ): Promise<void> {
   const root = await mkdtemp(path.join(os.tmpdir(), "qfai-prototyping-closure-"));
   const specsDirRelative = options.specsDirRelative ?? ".qfai/specs";
+  const discussionDirRelative = options.discussionDirRelative ?? ".qfai/discussion";
   const specsDir = path.join(root, ...specsDirRelative.split("/"));
+  const discussionDir = path.join(root, ...discussionDirRelative.split("/"));
   try {
     await mkdir(path.join(specsDir, "spec-0001"), { recursive: true });
     await mkdir(path.join(root, ".qfai", "contracts", "ui"), { recursive: true });
@@ -121,7 +123,7 @@ async function withRootOptions(
       path.join(root, "qfai.config.yaml"),
       [
         "paths:",
-        "  discussionDir: .qfai/discussion",
+        `  discussionDir: ${discussionDirRelative}`,
         `  specsDir: ${specsDirRelative}`,
         "prototyping:",
         "  calibration:",
@@ -145,7 +147,7 @@ async function withRootOptions(
       ].join("\n"),
       "utf-8",
     );
-    const packDir = path.join(root, ".qfai", "discussion", "discussion-20260406000000000");
+    const packDir = path.join(discussionDir, "discussion-20260406000000000");
     await mkdir(path.join(packDir, "uiux"), { recursive: true });
     await writeFile(
       path.join(packDir, "01_Context.md"),
@@ -396,7 +398,7 @@ describe("prototyping execution production path", () => {
   });
 
   it("supports configured specsDir when building per-spec declaredRef coverage", async () => {
-    await withRootOptions({ specsDirRelative: ".qfai/spec-catalog" }, async (root) => {
+    await withRootOptions({ specsDirRelative: ".qfai/worktrees/specs" }, async (root) => {
       const result = await runPrototypingExecution({
         root,
         requestedMode: "full-harness",
@@ -413,7 +415,30 @@ describe("prototyping execution production path", () => {
         coverageRefs: Array<{ declaredRef: string }>;
       }>;
       expect(specs[0]?.coverageRefs[0]?.declaredRef).toBe(
-        ".qfai/spec-catalog/spec-0001/01_Spec.md#L2",
+        ".qfai/worktrees/specs/spec-0001/01_Spec.md#L2",
+      );
+    });
+  });
+
+  it("supports configured discussionDir when validating canonical screen contract refs", async () => {
+    await withRootOptions({ discussionDirRelative: ".qfai/discussion-alt" }, async (root) => {
+      const result = await runPrototypingExecution({
+        root,
+        requestedMode: "full-harness",
+        reviewer: "qa-reviewer",
+        renderAdapter: createFakeRenderAdapter(),
+        providerRegistry: createFakeProviderRegistry(),
+        browserQaProviderId: "test-browser-qa",
+      });
+
+      const prototyping = JSON.parse(
+        await readFile(result.evidencePaths.prototyping, "utf-8"),
+      ) as Record<string, unknown>;
+      const runtimeGate = prototyping.runtimeGate as {
+        ui: Array<{ declaredRef: string }>;
+      };
+      expect(runtimeGate.ui[0]?.declaredRef).toBe(
+        ".qfai/discussion-alt/discussion-20260406000000000/uiux/40_screen_contracts.md#dashboard",
       );
     });
   });

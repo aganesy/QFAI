@@ -50,13 +50,16 @@ function assertCategoryRefs(category: string, refs: readonly string[]): void {
   }
 }
 
-function assertScreenContractRefs(refs: readonly string[]): void {
+function assertScreenContractRefs(
+  refs: readonly string[],
+  discussionDirRelative = ".qfai/discussion",
+): void {
   assertCategoryRefs("screenContractRefs", refs);
   for (const ref of refs) {
-    if (!isCanonicalScreenContractRef(ref)) {
+    if (!isCanonicalScreenContractRef(ref, discussionDirRelative)) {
       throw new Error(
         `Full-harness measurement screenContractRefs must be canonical ` +
-          `.qfai/discussion/<pack>/uiux/40_screen_contracts.md#<slug> refs. Got: ${ref}`,
+          `${discussionDirRelative}/<pack>/uiux/40_screen_contracts.md#<slug> refs. Got: ${ref}`,
       );
     }
   }
@@ -70,7 +73,7 @@ export async function runMeasurement(input: MeasurementInput): Promise<Measureme
   assertCategoryRefs("specCoverageRefs", input.specCoverageRefs);
   assertCategoryRefs("discussionRefs", input.discussionRefs);
   assertCategoryRefs("trendRefs", input.trendRefs);
-  assertScreenContractRefs(input.screenContractRefs);
+  assertScreenContractRefs(input.screenContractRefs, input.discussionDirRelative);
 
   const l1Errors = validatePanelScore(input.l1);
   if (l1Errors.length > 0) {

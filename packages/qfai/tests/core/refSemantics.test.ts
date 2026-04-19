@@ -58,6 +58,15 @@ describe("isCanonicalScreenContractRef", () => {
     ).toBe(true);
   });
 
+  it("accepts canonical refs under a configured discussionDir", () => {
+    expect(
+      isCanonicalScreenContractRef(
+        ".qfai/discussion-alt/pack-1/uiux/40_screen_contracts.md#dashboard",
+        ".qfai/discussion-alt",
+      ),
+    ).toBe(true);
+  });
+
   it("rejects legacy `#screen:<slug>` form", () => {
     expect(
       isCanonicalScreenContractRef(

@@ -50,6 +50,7 @@ export type FullHarnessRequest = {
   reviewer: string;
   changeSummary: string[];
   limitations: string[];
+  discussionDirRelative?: string;
   calibrationPack: CalibrationPack;
   calibrationRef: {
     packPath: string;
@@ -175,6 +176,9 @@ export async function runFullHarness(request: FullHarnessRequest): Promise<FullH
     trendRefs: request.panelInputs.trendAlignment.evidenceRefs,
     l1,
     l2,
+    ...(request.discussionDirRelative !== undefined
+      ? { discussionDirRelative: request.discussionDirRelative }
+      : {}),
   };
 
   const measurementResult = await runMeasurement(measurementInput);

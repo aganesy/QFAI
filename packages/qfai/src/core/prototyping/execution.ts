@@ -296,6 +296,7 @@ export async function runPrototypingExecution(
     request,
     reviewer: request.reviewer,
     supportedSurface,
+    discussionDirRelative: config.paths.discussionDir,
     resolvedCalibration,
     configPathForSummary,
     renderResult,
@@ -337,14 +338,18 @@ export async function runPrototypingExecution(
   };
 
   if (runtimeGate) {
-    assertRuntimeGateLeafRefs(runtimeGate);
+    assertRuntimeGateLeafRefs(runtimeGate, config.paths.discussionDir);
     // `runtimeGate.evidenceRefs` aggregates per-entry evidence including
     // Browser QA scheme refs (`provider:*`, `phase:*`). Allow those here;
     // real file refs are still normalised to repo-relative form upstream.
     assertBrowserQaEvidenceRefs("runtimeGate.evidenceRefs", runtimeGate.evidenceRefs);
   }
   assertConcreteArtifactRefs("specCoverage.evidenceRefs", specCoverage.evidenceRefs);
-  assertFullHarnessLeafRefs(fullHarness.history.iterations, "fullHarness.iterations");
+  assertFullHarnessLeafRefs(
+    fullHarness.history.iterations,
+    "fullHarness.iterations",
+    config.paths.discussionDir,
+  );
   for (const log of cumulativeReviewerLogs) {
     // Reviewer log refs concatenate per-iteration evidence including
     // Browser QA scheme refs. Use the Browser QA-aware assertion so
@@ -545,6 +550,7 @@ async function runFullHarnessOrThrow(input: {
   reviewer: string;
   supportedSurface: PrototypingSurface;
   resolvedCalibration: ResolvedCalibrationPack;
+  discussionDirRelative: string;
   configPathForSummary: string;
   renderResult: Awaited<ReturnType<typeof runRenderCapture>>;
   browserQaResult: Awaited<ReturnType<typeof runBrowserQaPerScreen>>;
@@ -557,6 +563,7 @@ async function runFullHarnessOrThrow(input: {
       reviewer: input.reviewer,
       changeSummary: input.request.changeSummary ?? ["Initial measurement"],
       limitations: input.request.limitations ?? [],
+      discussionDirRelative: input.discussionDirRelative,
       calibrationPack: input.resolvedCalibration.pack,
       calibrationRef: {
         packPath: input.resolvedCalibration.packPath,
@@ -671,6 +678,7 @@ async function buildPrototypingSummaryBundle(input: {
   const perSpecCoverage = await buildPerSpecCoverage(
     specsDir,
     runtimeGateToObservation(input.runtimeGate),
+    input.root,
   );
   const perSpecMap = new Map(perSpecCoverage.map((spec) => [spec.specId, spec]));
   const specNames = await safeReadDir(specsDir);
@@ -815,11 +823,12 @@ function normalizeBrowserQaEvidenceRefList(root: string, refs: string[]): string
 
 function assertRuntimeGateLeafRefs(
   runtimeGate: NonNullable<PrototypingSummaryBundle["runtimeGate"]>,
+  discussionDirRelative = ".qfai/discussion",
 ): void {
   for (const entry of runtimeGate.ui) {
-    if (!isCanonicalScreenContractRef(entry.declaredRef)) {
+    if (!isCanonicalScreenContractRef(entry.declaredRef, discussionDirRelative)) {
       throw new Error(
-        `runtimeGate.ui[${entry.screenId}].declaredRef must use the canonical screen contract sourceRef.`,
+        `runtimeGate.ui[${entry.screenId}].declaredRef must use the canonical screen contract sourceRef under ${discussionDirRelative}/.`,
       );
     }
     assertConcreteArtifactRefs(
@@ -846,7 +855,11 @@ function assertSpecDeclarationRef(
   return ref;
 }
 
-function assertFullHarnessLeafRefs(iterations: FullHarnessIteration[], label: string): void {
+function assertFullHarnessLeafRefs(
+  iterations: FullHarnessIteration[],
+  label: string,
+  discussionDirRelative = ".qfai/discussion",
+): void {
   for (const iteration of iterations) {
     // browserQa and uiObservation carry provider logical refs that must pass
     // through scheme-aware validation (matching runMeasurement's assertion);
@@ -873,9 +886,9 @@ function assertFullHarnessLeafRefs(iterations: FullHarnessIteration[], label: st
       );
     }
     for (const ref of iteration.evidenceRefs.screenContract) {
-      if (!isCanonicalScreenContractRef(ref)) {
+      if (!isCanonicalScreenContractRef(ref, discussionDirRelative)) {
         throw new Error(
-          `${label}[${iteration.iteration}].evidenceRefs.screenContract must use canonical screen contract refs.`,
+          `${label}[${iteration.iteration}].evidenceRefs.screenContract must use canonical screen contract refs under ${discussionDirRelative}/.`,
         );
       }
     }

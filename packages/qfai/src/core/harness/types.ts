@@ -84,6 +84,7 @@ export type MeasurementInput = {
   specCoverageRefs: string[];
   discussionRefs: string[];
   screenContractRefs: string[];
+  discussionDirRelative?: string;
   trendRefs: string[];
   l1: FullHarnessPanelScore;
   l2: FullHarnessPanelScore;

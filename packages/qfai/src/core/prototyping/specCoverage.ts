@@ -29,9 +29,11 @@ type SpecDeclaration = {
   dbObjects: string[];
 };
 
-export async function loadDeclaredSpecArtifacts(specsDir: string): Promise<SpecDeclaration[]> {
+export async function loadDeclaredSpecArtifacts(
+  specsDir: string,
+  repoRoot = inferRepoRootFromSpecsDir(specsDir),
+): Promise<SpecDeclaration[]> {
   const declarations: SpecDeclaration[] = [];
-  const repoRoot = inferRepoRootFromSpecsDir(specsDir);
   let entries: string[];
   try {
     entries = await readdir(specsDir);
@@ -143,7 +145,7 @@ export async function buildSpecCoverageSummary(input: {
   const specsDirRelative = path
     .relative(repoRoot, path.resolve(input.specsDir))
     .replaceAll("\\", "/");
-  const declared = await loadDeclaredSpecArtifacts(input.specsDir);
+  const declared = await loadDeclaredSpecArtifacts(input.specsDir, repoRoot);
   const observed = collectObservedRuntimeArtifacts(input.runtimeObservation);
 
   let totalUiRoutes = 0;
@@ -221,9 +223,9 @@ export type PerSpecCoverage = {
 export async function buildPerSpecCoverage(
   specsDir: string,
   runtimeObservation?: RuntimeObservation,
+  repoRoot = inferRepoRootFromSpecsDir(specsDir),
 ): Promise<PerSpecCoverage[]> {
-  const repoRoot = inferRepoRootFromSpecsDir(specsDir);
-  const declared = await loadDeclaredSpecArtifacts(specsDir);
+  const declared = await loadDeclaredSpecArtifacts(specsDir, repoRoot);
   const observed = collectObservedRuntimeArtifacts(runtimeObservation);
 
   return declared.map((spec) => {
