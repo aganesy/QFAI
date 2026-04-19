@@ -23,4 +23,11 @@ These artifacts are reporting outputs, not SSOT.
 - Keep this directory as report-only output.
 - Do not move requirement/spec SSOT into this directory.
 - If `preflight_summary.md` exists, treat it as review-exempt context for the next SDD step.
-- Keep `.gitignore` entries in the project root (managed by `qfai init`) to exclude generated artifacts.
+- Keep generated artifacts excluded via the project root `.gitignore` managed
+  block (managed by `qfai init`).
+- The root `.gitignore` is expected to ignore at least:
+  - `.qfai/report/**`
+  - `.qfai/review/**`
+  - `.qfai/evidence/**`
+- If those root ignore entries are missing, generated outputs in this
+  directory may be committed unintentionally.
