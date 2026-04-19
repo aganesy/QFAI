@@ -32,8 +32,13 @@ import {
 } from "./providerResolution.js";
 import { buildUiFidelity, type BuiltUiFidelity } from "./uiFidelityBuilder.js";
 import { buildRuntimeGate } from "./runtimeGateBuilder.js";
-import { normalizeConcreteArtifactRef, toConcreteArtifactRef } from "./pathUtils.js";
 import {
+  isBrowserQaPassthroughRef,
+  normalizeConcreteArtifactRef,
+  toConcreteArtifactRef,
+} from "./pathUtils.js";
+import {
+  assertBrowserQaEvidenceRefs,
   assertConcreteArtifactRefs,
   isCanonicalScreenContractRef,
   isSpecDeclarationRef,
@@ -727,6 +732,13 @@ function runtimeGateToObservation(
   };
 }
 
+function normalizeBrowserQaEvidenceRef(ref: string): string {
+  if (isBrowserQaPassthroughRef(ref)) {
+    return ref.trim();
+  }
+  return normalizeConcreteArtifactRef(ref);
+}
+
 function normalizeRuntimeObservationRefs(
   root: string,
   runtimeObservation: RuntimeObservation,
@@ -739,7 +751,7 @@ function normalizeRuntimeObservationRefs(
         entry.renderEvidenceRefs.map((ref) => toConcreteArtifactRef(root, ref)),
       ),
       browserQaEvidenceRefs: dedupeRefs(
-        entry.browserQaEvidenceRefs.map((ref) => normalizeConcreteArtifactRef(ref)),
+        entry.browserQaEvidenceRefs.map((ref) => normalizeBrowserQaEvidenceRef(ref)),
       ),
     })),
   };
@@ -781,7 +793,7 @@ function assertRuntimeGateLeafRefs(
       `runtimeGate.ui[${entry.screenId}].renderEvidenceRefs`,
       entry.renderEvidenceRefs,
     );
-    assertConcreteArtifactRefs(
+    assertBrowserQaEvidenceRefs(
       `runtimeGate.ui[${entry.screenId}].browserQaEvidenceRefs`,
       entry.browserQaEvidenceRefs,
     );

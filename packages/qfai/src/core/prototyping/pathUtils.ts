@@ -51,6 +51,35 @@ export function assertConcreteArtifactRef(ref: string): void {
   normalizeConcreteArtifactRef(ref);
 }
 
+/**
+ * Browser QA providers emit scheme-prefixed logical refs (e.g.
+ * `provider:playwright:<phase>`, `phase:<name>`, `surface:<name>`,
+ * `input:<field>`, `html:<slug>`) alongside real file paths. These refs must
+ * not be rejected by the concrete-artifact normalizer — they are metadata
+ * that preserves the provider-side causal trace for Browser QA evidence.
+ */
+export const BROWSER_QA_PASSTHROUGH_SCHEMES = new Set([
+  "provider",
+  "phase",
+  "surface",
+  "input",
+  "html",
+]);
+
+export function isBrowserQaPassthroughRef(ref: string): boolean {
+  const trimmed = ref.trim();
+  const colonIndex = trimmed.indexOf(":");
+  if (colonIndex <= 0) return false;
+  return BROWSER_QA_PASSTHROUGH_SCHEMES.has(trimmed.slice(0, colonIndex));
+}
+
+export function normalizeBrowserQaEvidenceRef(root: string, ref: string): string {
+  if (isBrowserQaPassthroughRef(ref)) {
+    return ref.trim();
+  }
+  return toConcreteArtifactRef(root, ref);
+}
+
 export function isConcreteArtifactRef(ref: string): boolean {
   try {
     normalizeConcreteArtifactRef(ref);

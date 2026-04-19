@@ -1,4 +1,4 @@
-import { assertConcreteArtifactRef } from "./pathUtils.js";
+import { assertConcreteArtifactRef, isBrowserQaPassthroughRef } from "./pathUtils.js";
 
 export function assertConcreteArtifactRefs(fieldPath: string, refs: string[]): void {
   if (refs.length === 0) {
@@ -10,6 +10,29 @@ export function assertConcreteArtifactRefs(fieldPath: string, refs: string[]): v
       assertConcreteArtifactRef(ref);
     } catch (error) {
       throw new Error(`${fieldPath} contains a non-concrete artifact ref: ${formatError(error)}`);
+    }
+  }
+}
+
+/**
+ * Browser QA evidence refs may include scheme-prefixed logical refs such as
+ * `provider:playwright:<phase>`. Those are valid observational references
+ * emitted by Browser QA providers and must pass assertion alongside concrete
+ * `.qfai/...` file refs.
+ */
+export function assertBrowserQaEvidenceRefs(fieldPath: string, refs: string[]): void {
+  if (refs.length === 0) {
+    throw new Error(`${fieldPath} must not be empty.`);
+  }
+
+  for (const ref of refs) {
+    if (isBrowserQaPassthroughRef(ref)) continue;
+    try {
+      assertConcreteArtifactRef(ref);
+    } catch (error) {
+      throw new Error(
+        `${fieldPath} contains a non-concrete artifact ref and is not a Browser QA scheme ref: ${formatError(error)}`,
+      );
     }
   }
 }

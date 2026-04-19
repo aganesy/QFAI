@@ -4,7 +4,8 @@ prototyping:
     Fill this with a concrete reason tied to the full-harness evidence obligations.
   allowed_modes:
     - full-harness
-  surface: web
+  # Replace with one of: web | mobile | desktop | cli | mixed
+  surface: <web|mobile|desktop|cli|mixed>
   mode_expectations:
     full-harness:
       expected_iterations: "2+"

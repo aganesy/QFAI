@@ -54,6 +54,12 @@
     ".qfai/report/validate.log",
     ".qfai/report/report.md",
     ".qfai/review/review-*/**",
+    // `review/` stores review artifacts pulled in from QFAI runs (append-only
+    // reviewer notes, summary.json). These are not authored markdown and can
+    // contain provider-generated text that destabilises MD032/MD036/MD013;
+    // linting them would flake CI without improving quality of authored
+    // sources. Keep the whole tree ignored and lint generated markdown only
+    // where it is intentionally authored (e.g. packages/qfai/README.md).
     "review/**",
     ".agents/skills/qfai-*",
     ".agents/skills/qfai-*/**",

@@ -1,5 +1,9 @@
 import type { RuntimeObservation } from "./runtimeObservation.js";
-import { assertConcreteArtifactRef, normalizeConcreteArtifactRef } from "./pathUtils.js";
+import {
+  assertConcreteArtifactRef,
+  isBrowserQaPassthroughRef,
+  normalizeConcreteArtifactRef,
+} from "./pathUtils.js";
 
 export function buildRuntimeGate(input: { runtimeObservation: RuntimeObservation }):
   | {
@@ -28,7 +32,12 @@ export function buildRuntimeGate(input: { runtimeObservation: RuntimeObservation
         return [
           normalizeConcreteArtifactRef(entry.declaredRef),
           ...entry.renderEvidenceRefs.map((ref) => normalizeConcreteArtifactRef(ref)),
-          ...entry.browserQaEvidenceRefs.map((ref) => normalizeConcreteArtifactRef(ref)),
+          // Browser QA refs may be scheme-prefixed provider logical refs
+          // (e.g. `provider:playwright:<phase>`); pass those through so they
+          // are not rejected by the concrete-artifact normalizer.
+          ...entry.browserQaEvidenceRefs.map((ref) =>
+            isBrowserQaPassthroughRef(ref) ? ref.trim() : normalizeConcreteArtifactRef(ref),
+          ),
         ];
       }),
     ),
