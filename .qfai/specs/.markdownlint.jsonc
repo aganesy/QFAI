@@ -23,8 +23,9 @@
   "MD033": false,
   // Bare URLs: test-case examples include raw http://localhost URLs.
   "MD034": false,
-  // Trailing newline: a handful of generator-produced files end mid-table.
-  "MD047": false,
+  // MD047 (trailing newline) intentionally left ON: authored files must end
+  // with a newline; generator output that previously tripped this rule has
+  // been corrected at source (see spec-0012 tail-append fixup).
   // Table column count: some cells embed pipe characters inside code spans.
   "MD056": false,
 }
