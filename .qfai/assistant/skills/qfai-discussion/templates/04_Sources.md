@@ -54,6 +54,83 @@
 - evaluation_connection: [How the signal should be evaluated in design review]
 - local_implication: [What should change locally]
 
+### color
+
+#### Entry 1
+
+- source_id: [SRC-ID from Source Registry]
+- reference: [Source name or URL]
+- observation: [What color trend or signal was observed]
+- decision_connection: [How the color signal translates into this project]
+- evaluation_connection: [Which TRD-XX axis evaluates this color signal; leave blank to trigger UIX-VAL-T01]
+- local_implication: [What color choices should change locally]
+
+### typography
+
+#### Entry 1
+
+- source_id: [SRC-ID from Source Registry]
+- reference: [Source name or URL]
+- observation: [What typographic trend or signal was observed]
+- decision_connection: [How the typography signal translates into this project]
+- evaluation_connection: [Which TRD-XX axis evaluates this typography signal; leave blank to trigger UIX-VAL-T01]
+- local_implication: [What typeface or scale choices should change locally]
+
+### Visual
+
+#### Entry 1
+
+- source_id: [SRC-ID from Source Registry]
+- reference: [Source name or URL]
+- observation: [What visual motif trend or signal was observed]
+- decision_connection: [How the visual motif translates into this project]
+- evaluation_connection: [Which TRD-XX axis evaluates this visual motif; leave blank to trigger UIX-VAL-T01]
+- local_implication: [What visual motif choices should change locally]
+
+### spacing
+
+#### Entry 1
+
+- source_id: [SRC-ID from Source Registry]
+- reference: [Source name or URL]
+- observation: [What spacing convention or density trend was observed]
+- decision_connection: [How the spacing signal translates into this project]
+- evaluation_connection: [Which TRD-XX axis evaluates this spacing signal; leave blank to trigger UIX-VAL-T01]
+- local_implication: [What spacing or density choices should change locally]
+
+### shape
+
+#### Entry 1
+
+- source_id: [SRC-ID from Source Registry]
+- reference: [Source name or URL]
+- observation: [What shape language trend was observed (border-radius, geometric vs organic, etc.)]
+- decision_connection: [How the shape language translates into this project]
+- evaluation_connection: [Which TRD-XX axis evaluates this shape signal; leave blank to trigger UIX-VAL-T01]
+- local_implication: [What shape-language choices should change locally]
+
+### imagery
+
+#### Entry 1
+
+- source_id: [SRC-ID from Source Registry]
+- reference: [Source name or URL]
+- observation: [What imagery or illustration style trend was observed]
+- decision_connection: [How the imagery signal translates into this project]
+- evaluation_connection: [Which TRD-XX axis evaluates this imagery signal; leave blank to trigger UIX-VAL-T01]
+- local_implication: [What imagery or illustration choices should change locally]
+
+### design_guideline_research
+
+#### Entry 1
+
+- source_id: [SRC-ID from Source Registry]
+- guideline_name: [Applicable platform or library guideline family]
+- rule_refs:
+  - [Specific rule or section reference]
+- local_translation: [How the guideline changes this project's local design decisions]
+- evidence: [Concrete note, screenshot, or doc excerpt reference supporting the translation]
+
 ## Competitive Reference Registry
 
 ### Reference: [Product/Service Name]

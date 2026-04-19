@@ -120,6 +120,17 @@
 - evaluation_connection: [Which TRD-XX axis evaluates this imagery signal; leave blank to trigger UIX-VAL-T01]
 - local_implication: [What imagery or illustration choices should change locally]
 
+### design_guideline_research
+
+#### Entry 1
+
+- source_id: [SRC-ID from Source Registry]
+- guideline_name: [Applicable platform or library guideline family]
+- rule_refs:
+  - [Specific rule or section reference]
+- local_translation: [How the guideline changes this project's local design decisions]
+- evidence: [Concrete note, screenshot, or doc excerpt reference supporting the translation]
+
 ## Competitive Reference Registry
 
 ### Reference: [Product/Service Name]

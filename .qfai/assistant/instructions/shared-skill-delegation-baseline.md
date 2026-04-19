@@ -13,16 +13,19 @@ Skill files should reference this baseline and only add role-, stage-, or gate-s
 
 ### Capability Probe (MUST)
 
-1. Run one harmless Probe Task once at stage start.
-2. If subagents are unavailable, explicitly ask for Simulation mode approval.
-3. Without explicit approval, stop the stage.
+1. Attempt the first required delegation at stage start using the platform's native delegation mechanism.
+2. Treat that first real delegation attempt as the capability check. Do not gate execution on preflight availability questions or synthetic probe-only checks.
+3. If the delegation fails, stop the stage immediately. Do not simulate roles and do not continue with self-execution.
 
-### Simulation mode (Opt-in only)
+### Delegation Failure (Hard Stop)
 
-- Allowed only when the user explicitly states `Simulation mode allowed`.
-- Record both:
-  - `Subagents: simulated (reason: <why unavailable>)`
-  - `User approval: <quote or reference>`
+- Report all of:
+  - `Delegation failure: <raw reason or concise summary>`
+  - `Attempted role: <role>`
+  - `Attempted task: <task title>`
+  - `Why stopped: QFAI requires real sub-agent delegation in this environment.`
+  - `User action needed: <settings or tooling changes required>`
+  - `Retry condition: rerun after the required delegation succeeds`
 
 ## Work Orders Summary
 

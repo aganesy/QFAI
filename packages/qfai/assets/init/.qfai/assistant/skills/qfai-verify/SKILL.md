@@ -74,10 +74,10 @@ Follow `.qfai/assistant/instructions/shared-skill-delegation-baseline.md`.
 
 - No additional overrides.
 
-### Simulation mode (Opt-in only)
+### Delegation Failure (Hard Stop)
 
 - No additional overrides.
-- Simulation mode allowed only with explicit user approval.
+- Do not simulate roles. If the first required delegation fails, stop the stage and report remediation.
 
 ### Work Orders Summary (MANDATORY evidence)
 
@@ -207,29 +207,36 @@ Do not edit any `.qfai/**/README.md` file; raise an Open Question instead.
 
 ## Multi‑Role Orchestration (Subagents)
 
-This workflow assumes the environment _may_ support subagents (e.g., Claude Code “Task” tool) or may not.
+Use the platform's native sub-agent delegation mechanism for Claude Code, GitHub Copilot, and Codex.
 
-### If subagents are supported
+### Delegation order
 
-Delegate to multiple roles and then merge the results. Use a “real‑world workflow” order:
+Use `.qfai/assistant/steering/agent-routing.yml` as the routing SSOT.
 
-- discovery-analyst -> requirements-analyst -> delivery-planner -> solution-architect -> test-design-analyst -> qa-strategist -> devops-ci-engineer -> completion-reviewer / qa-gatekeeper
+- First required delegation / Capability Probe: `delivery-planner` in the `plan` phase.
+- Then follow routed phases in order: `plan` (`delivery-planner`, `qa-strategist`) -> `execution` (`devops-ci-engineer`) -> `review` (`qa-gatekeeper`, `completion-reviewer`, optional `implementation-reviewer` when code fixes are in scope).
+- Do not prepend non-routed roles before the first required delegation attempt.
 
-**Pseudo‑invocation pattern** (adjust to your tool):
+### Delegation contract (tool-neutral)
 
 ```text
-Task(
-  subagent_type="planner",
-  description="Create an execution plan and DoD",
-  prompt="Context: ...\nGoal: ...\nConstraints: ...\nReturn: phases + risks + DoD"
-)
+Role: delivery-planner
+Task title: Create an execution plan and DoD
+Goal: sequence quality gates and evidence work
+Inputs:
+- current change context
+- required gates
+Constraints:
+- evidence-first
+- no self-approval
+Return:
+- phases + risks + DoD
 ```
 
-### If subagents are NOT supported
+### Failure rule
 
-Only with explicit user approval (`Simulation mode allowed`), simulate roles by running the same sequence yourself:
-
-- Write a short “role output” section per role, then consolidate into the final deliverable(s).
+- The first required delegation attempt doubles as the capability check.
+- If that delegation fails, stop immediately. Do not simulate roles or continue with self-execution.
 
 ## Completion Separation (mandatory)
 

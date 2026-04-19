@@ -38,10 +38,10 @@ describe("TC-0012-0285 — Delegation Scope Table has 4 categories", () => {
     expect(content).toMatch(/Delegation Scope Table/i);
 
     // 4 required categories
-    expect(content).toContain("UI実装");
-    expect(content).toContain("スクリーンショット");
-    expect(content).toContain("評価 L1-L2");
-    expect(content).toContain("ビルド");
+    expect(content).toContain("UI implementation");
+    expect(content).toContain("Screenshot capture");
+    expect(content).toContain("Evaluation L1-L2");
+    expect(content).toContain("Build");
 
     // Required roles present in the table
     expect(content).toContain("frontend-engineer");
@@ -150,11 +150,11 @@ describe("TC-0012-0298 — Visual Quality Structural Checklist has 6 categories"
     expect(content).toMatch(/Visual Quality Structural Checklist/i);
 
     // 6 required categories
-    expect(content).toContain("カラー");
-    expect(content).toContain("タイポグラフィ");
-    expect(content).toContain("スペーシング");
-    expect(content).toContain("角丸");
-    expect(content).toContain("シャドウ");
+    expect(content).toContain("Color");
+    expect(content).toContain("Typography");
+    expect(content).toContain("Spacing");
+    expect(content).toContain("Border radius");
+    expect(content).toContain("Shadow");
     expect(content).toMatch(/Do'?s.*Don'?ts|Don'?ts.*Do'?s/i);
   });
 });

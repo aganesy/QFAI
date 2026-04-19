@@ -19,6 +19,12 @@ const REQUIRED_ENTRY_FIELDS = [
   "evaluation_connection",
   "local_implication",
 ] as const;
+const GUIDELINE_REQUIRED_FIELDS = [
+  "source_id",
+  "guideline_name",
+  "rule_refs",
+  "local_translation",
+] as const;
 
 const PLACEHOLDER_RE = /^(?:tbd|todo|example|lorem|placeholder|n\/a|none)$/i;
 
@@ -157,6 +163,26 @@ export async function validateTrendScan(root: string, _config: QfaiConfig): Prom
         }
       }
     }
+  }
+
+  const guidelineCategory = extractCategoryBody(trendSection, "design_guideline_research");
+  const guidelineEntries = guidelineCategory ? parseEntries(guidelineCategory) : [];
+  const hasConcreteGuidelineEntry = guidelineEntries.some((entry) =>
+    GUIDELINE_REQUIRED_FIELDS.every((field) => {
+      const value = extractField(entry, field);
+      return Boolean(value) && !PLACEHOLDER_RE.test(value ?? "");
+    }),
+  );
+
+  if (!hasConcreteGuidelineEntry) {
+    issues.push(
+      trendIssue(
+        "UIX-VAL-T05",
+        "UI-bearing packs should include at least one concrete design_guideline_research entry in 04_Sources.md before finalizing trend-derived axes.",
+        "warning",
+        "Add a design_guideline_research entry with guideline_name, rule_refs, and local_translation grounded in an applicable platform or library guideline.",
+      ),
+    );
   }
 
   return issues;

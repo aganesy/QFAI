@@ -359,7 +359,7 @@ describe("TC-0004-0031: Canonical validator count", () => {
       .split("\n")
       .map((l) => l.trim())
       .filter((l) => /^validate\w|^run\w/.test(l));
-    expect(entries.length).toBe(12);
+    expect(entries.length).toBe(14);
   });
 });
 

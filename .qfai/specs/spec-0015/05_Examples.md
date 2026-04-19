@@ -28,19 +28,19 @@
 - When pattern-doubler evaluates
 - Then returns N/A (no patterns to double)
 
-## EX-0015-0005: Simulation Mode Recording
+## EX-0015-0005: Delegation Failure Hard Stop Reporting
 
 - BR-Ref: BR-0015-0003
-- Given subagents unavailable, user approves simulation
-- When simulation mode is used
-- Then evidence records: `Subagents: simulated (reason: Task tool unavailable)` and `User approval: "Simulation mode allowed"`
+- Given the first required delegation to `delivery-planner` fails with a native tool error
+- When the stage starts
+- Then the stage stops immediately and reports the attempted role/task, failure summary, required user remediation, and retry condition
 
-## EX-0015-0006: Coverage Placeholder for BR-0015-0002
+## EX-0015-0006: Capability Probe Uses First Required Delegation
 
 - BR-Ref: BR-0015-0002
-- Given the consolidated rule BR-0015-0002
-- When layer coverage is evaluated
-- Then at least one example exists for BR-0015-0002
+- Given a skill stage such as `/qfai-implement` whose first required delegation is `delivery-planner`
+- When the orchestrator starts the stage in a native sub-agent environment
+- Then it attempts `delivery-planner` immediately, treats that real delegation attempt as the Capability Probe, and does not wait for any separate availability confirmation before execution
 
 ## EX-0015-0007: Coverage Placeholder for BR-0015-0006
 

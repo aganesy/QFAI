@@ -13,6 +13,12 @@
      at least one visual TRD-XX axis MUST reference those entries via `source_refs`;
      omitting this will trigger UIX-VAL-T04 at validation time. -->
 
+## Score Anchor Guidance
+
+- Every `score_anchors.low`, `score_anchors.mid`, and `score_anchors.high` entry MUST include a quantitative proxy, not adjectives alone.
+- Acceptable quantitative proxies include concrete values such as `44px` target size, contrast `ratio`, `WCAG` level, modular scale steps, explicit `class name`, or a measurable `default value`.
+- Adjective-only anchors such as "modern", "polished", or "clean" without a measurable proxy are non-compliant and will trigger downstream warning `UIX-VAL-T06`.
+
 ## Axes
 
 <!-- VISUAL AXIS EXAMPLE 1: Visual Warmth & Color Harmony
@@ -29,9 +35,9 @@
 - why_it_matters: Color harmony directly impacts brand trust and perceived quality; misaligned warmth signals confuse users about product positioning
 - score_scale: 1-5
 - score_anchors:
-  - low: 1 — Cold, discordant palette; no intentional warmth signal
-  - mid: 3 — Neutral warmth; does not conflict but lacks intentional expression
-  - high: 5 — Palette actively reinforces product personality; warmth is consistent across surfaces
+  - low: 1 — Accent/background pair falls below 3:1 contrast or uses more than 3 conflicting hue families on one screen
+  - mid: 3 — Primary palette keeps a consistent 2-hue system and semantic colors stay within one temperature family
+  - high: 5 — Palette maintains semantic consistency across screens with 4.5:1 contrast and no off-brand hue drift
 - positive_signals:
   - Accent hue and background hue share a harmonious temperature relationship
   - Semantic colors (success, warning, error) do not break the palette's tonal identity
@@ -66,9 +72,9 @@
 - why_it_matters: Poor legibility harms conversion and trust; typographic misalignment signals a dated or unpolished product
 - score_scale: 1-5
 - score_anchors:
-  - low: 1 — System default font, no typographic intentionality; WCAG AA contrast fails
-  - mid: 3 — Legible at normal sizes; typeface choice is safe but does not signal quality
-  - high: 5 — Purpose-selected typeface pair; strong scale ratio; WCAG AA passes at all sizes
+  - low: 1 — Body text drops below 14px or fails WCAG AA contrast on primary routes
+  - mid: 3 — Body text stays at 16px with a consistent heading/body pairing on core screens
+  - high: 5 — Body text remains 16px+, uses a 1.25 modular ratio, and passes WCAG AA across all defined states
 - positive_signals:
   - Typeface pairing (heading + body) is harmonious with the selected brand archetype
   - Base font size 16px or larger on body text
@@ -104,9 +110,9 @@
 - why_it_matters: [impact]
 - score_scale: 1-5
 - score_anchors:
-  - low: [1 — poor]
-  - mid: [3 — acceptable]
-  - high: [5 — excellent]
+  - low: [1 — poor with a measurable quantitative proxy]
+  - mid: [3 — acceptable with a measurable quantitative proxy]
+  - high: [5 — excellent with a measurable quantitative proxy]
 - positive_signals:
   - [signal]
 - negative_signals:

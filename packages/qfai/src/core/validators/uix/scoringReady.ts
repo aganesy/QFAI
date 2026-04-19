@@ -124,6 +124,25 @@ function parseFields(block: string): Set<string> {
   return fields;
 }
 
+function extractFieldValue(block: string, field: string): string | undefined {
+  const match = new RegExp(`^\\s*-\\s*${field}\\s*:\\s*(.*)$`, "im").exec(block);
+  return match?.[1]?.trim();
+}
+
+function extractScoreAnchorValue(
+  block: string,
+  level: (typeof SCORE_ANCHOR_SUBFIELDS)[number],
+): string {
+  const match = new RegExp(`^\\s{2,}-\\s+${level}\\s*:\\s*(.*)$`, "im").exec(block);
+  return match?.[1]?.trim() ?? "";
+}
+
+function hasQuantitativeProxy(value: string): boolean {
+  return (
+    /\d/.test(value) || /\b(?:wcag|ratio|class name|default value|px|rem|em|%|ms)\b/i.test(value)
+  );
+}
+
 export async function validateScoringReady(root: string, _config: QfaiConfig): Promise<Issue[]> {
   if (!(await isUiBearingSpec(root))) return [];
 
@@ -170,6 +189,26 @@ export async function validateScoringReady(root: string, _config: QfaiConfig): P
             `Add the missing fields to axis '${axisName}' in ${relPath}.`,
           ),
         );
+      }
+
+      const layer = extractFieldValue(block, "layer");
+      if (layer?.toLowerCase() === "trend-derived") {
+        const axisId = extractFieldValue(block, "axis_id") ?? axisName;
+        const missingProxyLevels = SCORE_ANCHOR_SUBFIELDS.filter(
+          (level) => !hasQuantitativeProxy(extractScoreAnchorValue(block, level)),
+        );
+
+        if (missingProxyLevels.length > 0) {
+          issues.push(
+            scoringIssue(
+              "UIX-VAL-T06",
+              `Trend-derived axis '${axisId}' uses adjective-only score anchors without quantitative proxy for: ${missingProxyLevels.join(", ")}.`,
+              "warning",
+              relPath,
+              `Add measurable proxies to score_anchors.${missingProxyLevels.join(", ")} in ${relPath}.`,
+            ),
+          );
+        }
       }
     }
   }

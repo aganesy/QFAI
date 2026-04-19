@@ -201,10 +201,10 @@ All agent-to-agent transitions follow these contracts:
 
 - No additional overrides.
 
-### Simulation mode (Opt-in only)
+### Delegation Failure (Hard Stop)
 
 - No additional overrides.
-- Simulation mode allowed only with explicit user approval.
+- Do not simulate roles. If the first required delegation fails, stop the stage and report remediation.
 
 ## Work Orders Summary
 

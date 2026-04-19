@@ -75,8 +75,8 @@ describe("assets guardrails", { timeout: 30000 }, () => {
       "## Sub-agent Delegation (MANDATORY)",
       "### Orchestrator Protocol (MUST)",
       "### Capability Probe (MUST)",
-      "### Simulation mode (Opt-in only)",
-      "Simulation mode allowed",
+      "### Delegation Failure (Hard Stop)",
+      "Do not simulate roles",
       "## Work Orders Summary",
       "Status (PASS/REVISE)",
       "### Reviewer Gate (MUST)",
@@ -99,6 +99,111 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     ).filter((result): result is string => result !== null);
 
     expect(missing).toEqual([]);
+  });
+
+  it("ensures shared delegation baseline defines hard-stop payload and capability probe contract", async () => {
+    const baselinePath = path.join(
+      templateQfaiDir,
+      "assistant",
+      "instructions",
+      "shared-skill-delegation-baseline.md",
+    );
+    const baseline = await readFile(baselinePath, "utf-8");
+    const requiredHardStopPayload = [
+      "Attempt the first required delegation at stage start using the platform's native delegation mechanism.",
+      "Treat that first real delegation attempt as the capability check. Do not gate execution on preflight availability questions or synthetic probe-only checks.",
+      "If the delegation fails, stop the stage immediately. Do not simulate roles and do not continue with self-execution.",
+      "Delegation failure:",
+      "Attempted role:",
+      "Attempted task:",
+      "Why stopped: QFAI requires real sub-agent delegation in this environment.",
+      "User action needed:",
+      "Retry condition: rerun after the required delegation succeeds",
+    ];
+
+    for (const phrase of requiredHardStopPayload) {
+      expect(baseline).toContain(phrase);
+    }
+  });
+
+  it("ensures canonical skills avoid deprecated simulation fallback wording", async () => {
+    const canonicalDir = path.join(templateQfaiDir, "assistant", "skills");
+    const canonical = await fg(["*/SKILL.md"], {
+      cwd: canonicalDir,
+      absolute: true,
+    });
+
+    const forbiddenPhrases = [
+      "### Simulation mode (Opt-in only)",
+      "Simulation mode allowed",
+      "This workflow assumes the environment _may_ support subagents",
+      "### If subagents are NOT supported",
+      "Task(",
+    ];
+
+    const offenders = (
+      await Promise.all(
+        canonical.map(async (filePath) => {
+          const content = await readFile(filePath, "utf-8");
+          const found = forbiddenPhrases.filter((phrase) => content.includes(phrase));
+          if (found.length === 0) {
+            return null;
+          }
+          return `${path.relative(repoRoot, filePath)}: ${found.join(", ")}`;
+        }),
+      )
+    ).filter((result): result is string => result !== null);
+
+    expect(offenders).toEqual([]);
+  });
+
+  it("ensures configure and verify delegation order follows routing SSOT", async () => {
+    const routingPath = path.join(templateQfaiDir, "assistant", "steering", "agent-routing.yml");
+    const configurePath = path.join(
+      templateQfaiDir,
+      "assistant",
+      "skills",
+      "qfai-configure",
+      "SKILL.md",
+    );
+    const verifyPath = path.join(templateQfaiDir, "assistant", "skills", "qfai-verify", "SKILL.md");
+
+    const [routing, configure, verify] = await Promise.all([
+      readFile(routingPath, "utf-8"),
+      readFile(configurePath, "utf-8"),
+      readFile(verifyPath, "utf-8"),
+    ]);
+
+    expect(routing).toContain("skill: qfai-configure");
+    expect(routing).toContain("mandatory_agents: [delivery-planner, qa-strategist]");
+    expect(routing).toContain("skill: qfai-verify");
+    expect(routing).toContain("mandatory_agents: [delivery-planner, qa-strategist]");
+
+    expect(configure).toContain(
+      "Use `.qfai/assistant/steering/agent-routing.yml` as the routing SSOT.",
+    );
+    expect(configure).toContain(
+      "First required delegation / Capability Probe: `delivery-planner` in the `analysis` phase.",
+    );
+    expect(configure).toContain(
+      "Then follow routed phases in order: `analysis` (`delivery-planner`, `qa-strategist`) -> `config` (`devops-ci-engineer`) -> `review` (`completion-reviewer`, `qa-gatekeeper`).",
+    );
+    expect(configure).toContain(
+      "Do not prepend non-routed roles before the first required delegation attempt.",
+    );
+
+    expect(verify).toContain(
+      "Use `.qfai/assistant/steering/agent-routing.yml` as the routing SSOT.",
+    );
+    expect(verify).toContain(
+      "First required delegation / Capability Probe: `delivery-planner` in the `plan` phase.",
+    );
+    expect(verify).toContain(
+      "Then follow routed phases in order: `plan` (`delivery-planner`, `qa-strategist`) -> `execution` (`devops-ci-engineer`) -> `review` (`qa-gatekeeper`, `completion-reviewer`, optional `implementation-reviewer` when code fixes are in scope).",
+    );
+    expect(verify).toContain(
+      "Do not prepend non-routed roles before the first required delegation attempt.",
+    );
   });
 
   // QFAI:SPEC-0014:TC-0014-0003

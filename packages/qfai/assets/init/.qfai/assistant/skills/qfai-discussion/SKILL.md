@@ -37,7 +37,6 @@ Follow `.qfai/assistant/instructions/shared-skill-operating-baseline.md#user-que
 
 Skill-specific examples:
 
-- Simulation mode approval
 - scope confirmation
 
 ## FORMAT SSOT (Mandatory)
@@ -63,14 +62,14 @@ Follow `.qfai/assistant/instructions/shared-skill-delegation-baseline.md`.
 
 ### Capability Probe (MUST)
 
-1. Run one harmless Probe Task once at stage start.
-2. If subagents are unavailable, explicitly ask for Simulation mode approval.
-3. Without explicit approval, stop the stage.
+1. Attempt the first required delegation at stage start.
+2. Treat that real delegation attempt as the capability check.
+3. If the delegation fails, stop the stage immediately and report remediation.
 
-### Simulation mode (Opt-in only)
+### Delegation Failure (Hard Stop)
 
 - No additional overrides.
-- Simulation mode allowed only with explicit user approval.
+- Do not simulate roles. If the first required delegation fails, stop the stage and report remediation.
 
 ## Work Orders Summary
 
@@ -152,7 +151,7 @@ Classification is based on surface type, not interaction complexity.
 
 ### Sidecar Generation Flow
 
-Sidecar steps must execute in the order below. **並列禁止 (no parallel)** across Step 1c and Step 1d — Step 1c MUST complete before Step 1d starts.
+Sidecar steps must execute in the order below. **(no parallel)** across Step 1c and Step 1d — Step 1c MUST complete before Step 1d starts.
 
 - Step 1a — Detect surface type from `01_Context.md`.
 - Step 1b — If non-UI, skip steps 1c–1d; no uiux/ directory is created.
@@ -220,12 +219,13 @@ Produce a unified 15-file discussion pack with explicit decisions, requirements,
 8. Update `12_OQ-Resolution-Log.md`, `14_Review-Request.md`, and `99_delta.md`.
 9. Generate `prototyping.yaml` only when the latest discussion pack is UI-bearing.
 10. Request review and record the Reviewer result.
-11. **UI-bearing only — Design system initialization (v1.7.16).**
+11. **UI-bearing only — Design system initialization.**
     - **Step 11.3 — Brand archetype selection and design system scaffold (autonomous; skip when `surface: non-ui`).**
       - Phase A (brand autonomous selection): The agent MUST select one of the 8 canonical brand archetypes from `references/design-md-brand-catalog.md` by scoring each archetype against the taste-interview data in `uiux/11_design_taste_interview.md`. No human-confirmation prompt is issued; the agent selects autonomously using the highest aggregate score. When two archetypes tie, apply the tie-breaker: highest visual-theme weight, then alphabetical archetype name. The selected archetype name and rationale MUST be written into `uiux/12_design_system.md` under `## Visual Theme`.
       - Phase B (customization): Apply the selected archetype's `aesthetic_properties` as defaults for Color Palette, Typography, Spacing & Layout, Component Style, and Animation & Motion. Override any default that conflicts with explicit constraints captured in `06_REQ.md`, `09_Constraints.md`, or taste-interview directives. Record each override and its rationale.
       - Step 11.3 is idempotent: running it twice against the same `11_design_taste_interview.md` MUST produce byte-identical `12_design_system.md`.
     - **Step 11.5 — Visual-axis derivation mandate (UI-bearing packs with visual-category Trend Scan entries).**
+      Before trend-derived axis finalization for any UI-bearing run, the agent MUST perform design guideline research against the applicable platform or library guidance and record the findings in `04_Sources.md` under `design_guideline_research`. The resulting TRD-XX visual axes MUST then be written in `uiux/21_design_eval_trend_derived.md`.
       For every visual-category Trend Scan entry in `04_Sources.md` (color, typography, visual motif, spacing, shape, imagery), the agent MUST derive at least one corresponding TRD-XX axis in `uiux/21_design_eval_trend_derived.md` with `source_refs` pointing to that entry. If no visual axis is derived despite visual Trend Scan entries existing, UIX-VAL-T04 (WARNING per NFR-0007) will fire at validation time.
 
 Detailed execution guidance lives in:
