@@ -19,13 +19,17 @@ Routing SSOT:
 
 ```text
 .qfai/review/
-├── README.md
 └── review-YYYYMMDDhhmmssSSS/
     ├── review_request.md
     ├── R01_<reviewer>.md
     ├── R02_<reviewer>.md
     └── summary.json
 ```
+
+Git ignore management: `review-*/` packs are ignored via the QFAI managed
+block in the **repo-root `.gitignore`** (added/updated by `qfai init`).
+`.qfai/review/` itself does **not** contain a nested `.gitignore`; the
+single managed block in the repo root is the SSOT.
 
 ## summary.json (minimum schema; prefer v2.0 for new packs)
 

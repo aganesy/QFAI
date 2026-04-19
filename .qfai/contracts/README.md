@@ -21,7 +21,7 @@ QFAI organizes this directory into four subdirectories:
 └── ui/       # UI contract YAML (screens, elements, user actions)
 ```
 
-> **Note:** `ui/` and `design/` are **supporting input** that supplements the discussion sidecar artifacts (`discussion-*/uiux/*`), which remain the primary truth. After `qfai init`, these directories may contain only placeholder READMEs — this is the normal initial state.
+> **Note:** `ui/` is a contract (QFAI-CONTRACT-ID required, cited by specs), but the **primary truth** for UI/UX definitions still lives in the discussion sidecar artifacts (`discussion-*/uiux/*`). UI contracts cite sidecar content by ID and exist specifically to make that sidecar machine-consumable for prototyping and selectors. `design/` is supporting input only (design tokens referenced indirectly from `ui/*.yaml`). After `qfai init`, these directories may contain only placeholder READMEs — this is the normal initial state.
 
 ## Directory rules
 
