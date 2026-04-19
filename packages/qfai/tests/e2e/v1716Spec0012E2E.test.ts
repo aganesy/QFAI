@@ -43,9 +43,7 @@ async function exists(p: string): Promise<boolean> {
 
 // QFAI:SPEC-0012:US-0012-0084
 describe("E2E: US-0012-0084 — Delegation Scope Table routing", () => {
-  it.todo(
-    "SKILL.md Delegation Scope Table routes UI/screenshot/L1-L2/build to declared roles",
-  );
+  it.todo("SKILL.md Delegation Scope Table routes UI/screenshot/L1-L2/build to declared roles");
 });
 
 // QFAI:SPEC-0012:US-0012-0085
@@ -92,9 +90,7 @@ describe("E2E: US-0012-0090 — Visual Quality Structural Checklist", () => {
 
 // QFAI:SPEC-0012:US-0012-0091
 describe("E2E: US-0012-0091 — Lighthouse MUST for full-harness + web surface", () => {
-  it.todo(
-    "full-harness + surface=web treats Lighthouse Gate as MUST; missing run is ERROR",
-  );
+  it.todo("full-harness + surface=web treats Lighthouse Gate as MUST; missing run is ERROR");
 });
 
 // QFAI:SPEC-0012:US-0012-0092

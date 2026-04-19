@@ -75,7 +75,9 @@ describe("TC-0010-0037: idempotent Step 11.3 given identical taste interview", (
 
 // QFAI:SPEC-0010:TC-0010-0038
 describe("TC-0010-0038: SKILL.md contains Step 11.5 with visual-axis mandate", () => {
-  it.todo("SKILL.md Step 11.5 mandates at least one visual-category TRD-XX axis for UI-bearing packs");
+  it.todo(
+    "SKILL.md Step 11.5 mandates at least one visual-category TRD-XX axis for UI-bearing packs",
+  );
 });
 
 // QFAI:SPEC-0010:TC-0010-0039
@@ -85,12 +87,16 @@ describe("TC-0010-0039: UIX-VAL-T04 emits WARNING when no visual axis derived", 
 
 // QFAI:SPEC-0010:TC-0010-0040
 describe("TC-0010-0040: multiple visual categories → at least one derived axis passes", () => {
-  it.todo("two visual Trend Scan categories with one derived visual axis produces zero UIX-VAL-T04 issues");
+  it.todo(
+    "two visual Trend Scan categories with one derived visual axis produces zero UIX-VAL-T04 issues",
+  );
 });
 
 // QFAI:SPEC-0010:TC-0010-0041
 describe("TC-0010-0041: 04_Sources.md template exposes evaluation_connection on all 6 categories", () => {
-  it.todo("templates/04_Sources.md declares evaluation_connection field on all 6 Trend Scan category sections");
+  it.todo(
+    "templates/04_Sources.md declares evaluation_connection field on all 6 Trend Scan category sections",
+  );
 });
 
 // QFAI:SPEC-0010:TC-0010-0042
@@ -100,7 +106,9 @@ describe("TC-0010-0042: UIX-VAL-T01 fires when evaluation_connection is missing"
 
 // QFAI:SPEC-0010:TC-0010-0043
 describe("TC-0010-0043: 21_design_eval_trend_derived.md template ships visual-axis examples + source_refs guidance", () => {
-  it.todo("templates/uiux/21_design_eval_trend_derived.md contains ≥2 visual-axis examples + source_refs guidance");
+  it.todo(
+    "templates/uiux/21_design_eval_trend_derived.md contains ≥2 visual-axis examples + source_refs guidance",
+  );
 });
 
 // QFAI:SPEC-0010:TC-0010-0044
@@ -124,7 +132,9 @@ describe("TC-0010-0046: design-md-brand-catalog.md contains 8 archetypes with re
 
 // QFAI:SPEC-0010:TC-0010-0047
 describe("TC-0010-0047: 12_design_system.md template defines 8 sections with guidance", () => {
-  it.todo("templates/uiux/12_design_system.md declares 8 canonical sections as ATX headings with guidance");
+  it.todo(
+    "templates/uiux/12_design_system.md declares 8 canonical sections as ATX headings with guidance",
+  );
 });
 
 // QFAI:SPEC-0010:TC-0010-0048

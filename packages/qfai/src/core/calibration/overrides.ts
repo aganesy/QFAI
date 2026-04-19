@@ -8,18 +8,14 @@
  * spec-0012 TC-0012-0304 / TC-0012-0305 / AC-0012-0185, AC-0012-0186
  */
 
-import type {
-  CalibrationOverrides,
-  CalibrationPack,
-  EffectiveCalibrationConfig,
-} from "./types.js";
+import type { CalibrationOverrides, CalibrationPack, EffectiveCalibrationConfig } from "./types.js";
 import { DEFAULT_EFFECTIVE_CONFIG } from "./types.js";
 
 export function applyCalibrationOverrides(
   pack: CalibrationPack,
   overrides?: CalibrationOverrides,
 ): EffectiveCalibrationConfig {
-  const baseMaxIterations = pack.maxIterations ?? DEFAULT_EFFECTIVE_CONFIG.maxIterations;
+  const baseMaxIterations = pack.maxIterations;
   const merged = overrides ?? pack.overrides;
 
   if (!merged) {
@@ -36,9 +32,7 @@ export function applyCalibrationOverrides(
       : DEFAULT_EFFECTIVE_CONFIG.perAxisMinimum;
 
   const maxIterationsByMode =
-    merged.maxIterationsByMode !== undefined
-      ? { ...merged.maxIterationsByMode }
-      : {};
+    merged.maxIterationsByMode !== undefined ? { ...merged.maxIterationsByMode } : {};
 
   return {
     maxIterations: baseMaxIterations,

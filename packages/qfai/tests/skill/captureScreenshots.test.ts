@@ -12,10 +12,7 @@ import { access } from "node:fs/promises";
 
 import { describe, expect, it } from "vitest";
 
-const SCRIPTS_DIR = path.resolve(
-  import.meta.dirname,
-  "../../assets/scripts",
-);
+const SCRIPTS_DIR = path.resolve(import.meta.dirname, "../../assets/scripts");
 
 const SCRIPT_PATH = path.join(SCRIPTS_DIR, "capture-screenshots.js");
 

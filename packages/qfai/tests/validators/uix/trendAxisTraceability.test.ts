@@ -176,11 +176,7 @@ function buildAxes(axes: string[]): string {
   ].join("\n");
 }
 
-async function writePack(
-  root: string,
-  sources: string,
-  axesContent: string | null,
-): Promise<void> {
+async function writePack(root: string, sources: string, axesContent: string | null): Promise<void> {
   await writeFile(path.join(root, "04_Sources.md"), sources, "utf-8");
   if (axesContent !== null) {
     await writeFile(
@@ -202,7 +198,9 @@ describe("validateTrendAxisTraceability", () => {
       platformConventionEntries: [entry({ sourceId: "SRC-3", evaluationConnection: "TRD-01" })],
       accessibilityEntries: [entry({ sourceId: "SRC-4", evaluationConnection: "TRD-01" })],
     });
-    const axes = buildAxes([axis({ id: "TRD-01", sourceRefs: ["SRC-1", "SRC-2", "SRC-3", "SRC-4"] })]);
+    const axes = buildAxes([
+      axis({ id: "TRD-01", sourceRefs: ["SRC-1", "SRC-2", "SRC-3", "SRC-4"] }),
+    ]);
     await writePack(root, sources, axes);
 
     const issues = await validateTrendAxisTraceability(root, defaultConfig);
@@ -224,7 +222,9 @@ describe("validateTrendAxisTraceability", () => {
       platformConventionEntries: [entry({ sourceId: "SRC-3", evaluationConnection: "TRD-01" })],
       accessibilityEntries: [entry({ sourceId: "SRC-4", evaluationConnection: "TRD-01" })],
     });
-    const axes = buildAxes([axis({ id: "TRD-01", sourceRefs: ["SRC-1", "SRC-2", "SRC-3", "SRC-4"] })]);
+    const axes = buildAxes([
+      axis({ id: "TRD-01", sourceRefs: ["SRC-1", "SRC-2", "SRC-3", "SRC-4"] }),
+    ]);
     await writePack(root, sources, axes);
 
     const issues = await validateTrendAxisTraceability(root, defaultConfig);
@@ -241,7 +241,9 @@ describe("validateTrendAxisTraceability", () => {
       platformConventionEntries: [entry({ sourceId: "SRC-3", evaluationConnection: "TRD-01" })],
       accessibilityEntries: [entry({ sourceId: "SRC-4", evaluationConnection: "TRD-01" })],
     });
-    const axes = buildAxes([axis({ id: "TRD-01", sourceRefs: ["SRC-1", "SRC-2", "SRC-3", "SRC-4"] })]);
+    const axes = buildAxes([
+      axis({ id: "TRD-01", sourceRefs: ["SRC-1", "SRC-2", "SRC-3", "SRC-4"] }),
+    ]);
     await writePack(root, sources, axes);
 
     const issues = await validateTrendAxisTraceability(root, defaultConfig);

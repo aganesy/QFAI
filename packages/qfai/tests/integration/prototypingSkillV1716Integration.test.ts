@@ -76,8 +76,8 @@ describe("TC-0012-0286 — Delegation violation detected by reviewer", () => {
   // QFAI:SPEC-0012:TC-0012-0286
   it("delegationMap with invalid role for UI実装 emits violation finding", () => {
     const delegationMap = {
-      "UI実装": "generic-code-writer",
-      "スクリーンショット": "devops-ci-engineer",
+      UI実装: "generic-code-writer",
+      スクリーンショット: "devops-ci-engineer",
     };
 
     const issues = validateDelegationMap(delegationMap);
@@ -94,10 +94,10 @@ describe("TC-0012-0286 — Delegation violation detected by reviewer", () => {
 
   it("valid delegation map produces no violations", () => {
     const delegationMap = {
-      "UI実装": "frontend-engineer",
-      "スクリーンショット": "devops-ci-engineer",
+      UI実装: "frontend-engineer",
+      スクリーンショット: "devops-ci-engineer",
       "評価 L1-L2": "product-surface-reviewer",
-      "ビルド": "devops-ci-engineer",
+      ビルド: "devops-ci-engineer",
     };
 
     const issues = validateDelegationMap(delegationMap);
@@ -110,9 +110,7 @@ describe("TC-0012-0286 — Delegation violation detected by reviewer", () => {
 describe("TC-0012-0287 — Iteration gate rejects iterationCount==1 && converged", () => {
   // QFAI:SPEC-0012:TC-0012-0287
   it("single iteration with converged=true raises PROT-ITER-GATE error", () => {
-    const iterations: FullHarnessIterationEntry[] = [
-      { iterationCount: 1, converged: true },
-    ];
+    const iterations: FullHarnessIterationEntry[] = [{ iterationCount: 1, converged: true }];
 
     const issues = validateIterationGate(iterations);
 
@@ -173,7 +171,7 @@ describe("TC-0012-0290 — Missing executionPlan in full-harness → PROT-EXEC-P
       executionPlan: {
         targetIterations: 3,
         evaluationAxesSource: "20/21/22/23",
-        delegationMap: { "UI実装": "frontend-engineer" },
+        delegationMap: { UI実装: "frontend-engineer" },
         plannedAt: "2026-04-18T00:00:00.000Z",
       },
     };
@@ -327,7 +325,7 @@ describe("TC-0012-0303 — designSystemCompliance skipped without 12_design_syst
     // deliberately do NOT create uiux/12_design_system.md
 
     const prototypingRecord = {
-      scoringTrace: { designSystemCompliance: 0.50 },
+      scoringTrace: { designSystemCompliance: 0.5 },
     };
 
     const issues = await validateDesignSystemThreshold(root, prototypingRecord);

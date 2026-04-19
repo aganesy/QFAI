@@ -27,27 +27,37 @@ export function breakTie(candidates: readonly ArchetypeScore[]): TieBreakResult 
   const maxScore = Math.max(...candidates.map((c) => c.score));
   const topScorers = candidates.filter((c) => c.score === maxScore);
 
+  const [topFirst] = topScorers;
+  if (topFirst === undefined) {
+    throw new Error("breakTie: no top scorer resolved");
+  }
   if (topScorers.length === 1) {
-    return { winner: topScorers[0], isTie: false, tieBreakReason: null };
+    return { winner: topFirst, isTie: false, tieBreakReason: null };
   }
 
-  const visualThemeWeight = (c: ArchetypeScore): number =>
-    c.dimensionWeights["visualTheme"] ?? 0;
+  const visualThemeWeight = (c: ArchetypeScore): number => c.dimensionWeights["visualTheme"] ?? 0;
 
   const maxVisual = Math.max(...topScorers.map(visualThemeWeight));
   const byVisual = topScorers.filter((c) => visualThemeWeight(c) === maxVisual);
 
+  const [visualFirst] = byVisual;
+  if (visualFirst === undefined) {
+    throw new Error("breakTie: no visual-theme winner resolved");
+  }
   if (byVisual.length === 1) {
     return {
-      winner: byVisual[0],
+      winner: visualFirst,
       isTie: true,
       tieBreakReason: "highest visual-theme weight",
     };
   }
 
-  const winner = [...byVisual].sort((a, b) => a.name.localeCompare(b.name))[0];
+  const [alphaFirst] = [...byVisual].sort((a, b) => a.name.localeCompare(b.name));
+  if (alphaFirst === undefined) {
+    throw new Error("breakTie: no alphabetical winner resolved");
+  }
   return {
-    winner,
+    winner: alphaFirst,
     isTie: true,
     tieBreakReason: "alphabetical name (visual-theme weights equal)",
   };

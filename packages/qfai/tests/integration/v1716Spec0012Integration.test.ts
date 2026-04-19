@@ -57,9 +57,7 @@ describe("TC-0012-0288: full-harness missing executionPlan fires ERROR", () => {
 
 // QFAI:SPEC-0012:TC-0012-0289
 describe("TC-0012-0289: iteration gate rejects iterationCount===1 && converged", () => {
-  it.todo(
-    "validator rejects single-iteration converged full-harness bundles as ERROR",
-  );
+  it.todo("validator rejects single-iteration converged full-harness bundles as ERROR");
 });
 
 // QFAI:SPEC-0012:TC-0012-0290
@@ -74,9 +72,7 @@ describe("TC-0012-0291: 5-step iteration cycle records screenshotDir per trace",
 
 // QFAI:SPEC-0012:TC-0012-0292
 describe("TC-0012-0292: calibration.overrides existence-based precedence", () => {
-  it.todo(
-    "project override present → project values win; absent → system default preserved",
-  );
+  it.todo("project override present → project values win; absent → system default preserved");
 });
 
 // QFAI:SPEC-0012:TC-0012-0293
@@ -86,28 +82,24 @@ describe("TC-0012-0293: calibration.overrides invalid value rejected", () => {
 
 // QFAI:SPEC-0012:TC-0012-0294
 describe("TC-0012-0294: Delegation Scope Table enumerates 4 categories + roles", () => {
-  it.todo(
-    "SKILL.md Delegation Scope Table lists UI/screenshot/L1-L2/build with declared roles",
-  );
+  it.todo("SKILL.md Delegation Scope Table lists UI/screenshot/L1-L2/build with declared roles");
 });
 
 // QFAI:SPEC-0012:TC-0012-0295
 describe("TC-0012-0295: undefined delegationMap entry surfaced as reviewer finding", () => {
-  it.todo("delegationMap referencing role absent from Delegation Scope Table yields reviewer finding");
+  it.todo(
+    "delegationMap referencing role absent from Delegation Scope Table yields reviewer finding",
+  );
 });
 
 // QFAI:SPEC-0012:TC-0012-0296
 describe("TC-0012-0296: evaluator input 4-element MUST protocol", () => {
-  it.todo(
-    "L1/L2 panels must receive screenshots + axes + prior scores + DESIGN.md checklist",
-  );
+  it.todo("L1/L2 panels must receive screenshots + axes + prior scores + DESIGN.md checklist");
 });
 
 // QFAI:SPEC-0012:TC-0012-0297
 describe("TC-0012-0297: Visual Quality Structural Checklist covers 6 categories", () => {
-  it.todo(
-    "checklist references color, typography, spacing, radius, shadow, do's/don'ts",
-  );
+  it.todo("checklist references color, typography, spacing, radius, shadow, do's/don'ts");
 });
 
 // QFAI:SPEC-0012:TC-0012-0298
@@ -144,9 +136,7 @@ describe("TC-0012-0303: backward compatibility — existing prototyping.json tol
 
 // QFAI:SPEC-0012:TC-0012-0304
 describe("TC-0012-0304: non-UI surface skips v1.7.16 prototyping ERRORs", () => {
-  it.todo(
-    "non-ui surface does not invoke executionPlan/screenshotDir/Lighthouse MUST checks",
-  );
+  it.todo("non-ui surface does not invoke executionPlan/screenshotDir/Lighthouse MUST checks");
 });
 
 // QFAI:SPEC-0012:TC-0012-0305

@@ -180,9 +180,8 @@ describe("TC-0003-0019: レガシー行除去と管理ブロック置換", () =>
 // Actual assertions live in tests/cli/init.test.ts ("does not track review-*/ subdirectories after init").
 describe("TC-0003-0020: review-*/ サブディレクトリが gitignore 対象", () => {
   it("QFAI_GITIGNORE_BLOCK SSOT excludes review-*/ negations from REQUIRED_ENTRIES", async () => {
-    const { QFAI_GITIGNORE_BLOCK, QFAI_GITIGNORE_REQUIRED_ENTRIES } = await import(
-      "../../src/core/gitignore.js"
-    );
+    const { QFAI_GITIGNORE_BLOCK, QFAI_GITIGNORE_REQUIRED_ENTRIES } =
+      await import("../../src/core/gitignore.js");
     expect(QFAI_GITIGNORE_BLOCK).not.toContain("!.qfai/review/review-*/");
     expect(QFAI_GITIGNORE_REQUIRED_ENTRIES).not.toContain("!.qfai/review/review-*/");
     expect(QFAI_GITIGNORE_REQUIRED_ENTRIES).not.toContain("!.qfai/review/review-*/**");

@@ -175,6 +175,15 @@ function completeTrendContent(): string {
     "- decision_connection: Adopted high-contrast token set for all text",
     "- evaluation_connection: Directly validates invariant accessibility axis",
     "- local_implication: Standardize contrast ratios across all components",
+    "",
+    "### design_guideline_research",
+    "",
+    "#### Entry",
+    "",
+    "- source_id: SRC-0001",
+    "- guideline_name: Material Design 3",
+    "- rule_refs: m3.material.io/styles/color",
+    "- local_translation: Adopted muted tonal palette for primary surfaces",
   ].join("\n");
 }
 

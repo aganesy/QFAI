@@ -62,7 +62,7 @@ function uiBearingContext(): string {
   ].join("\n");
 }
 
-function nonUiContext(): string {
+function _nonUiContext(): string {
   return [
     "# Context",
     "",
@@ -84,12 +84,7 @@ async function setupUiBearingPack(
   } = {},
 ): Promise<string> {
   const root = await newTempRoot();
-  const packDir = path.join(
-    root,
-    ".qfai",
-    "discussion",
-    "discussion-20260418130000000",
-  );
+  const packDir = path.join(root, ".qfai", "discussion", "discussion-20260418130000000");
   await mkdir(path.join(packDir, "uiux"), { recursive: true });
 
   await writeFile(path.join(packDir, "01_Context.md"), uiBearingContext(), "utf-8");
@@ -217,10 +212,9 @@ describe("TC-0032 — 12_design_system.md template has 8 sections (documentation
     ];
 
     for (const section of requiredSections) {
-      expect(
-        content,
-        `Section '${section}' not found in 12_design_system.md template`,
-      ).toContain(`## ${section}`);
+      expect(content, `Section '${section}' not found in 12_design_system.md template`).toContain(
+        `## ${section}`,
+      );
     }
   });
 });

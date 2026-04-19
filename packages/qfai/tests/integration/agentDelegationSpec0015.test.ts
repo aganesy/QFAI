@@ -352,10 +352,7 @@ describe("TC-0015-0012: Capability Probe First Real Delegation Contract", () => 
       liveBaselineContent,
       "### Delegation Failure (Hard Stop)",
     );
-    const liveSkillCapabilitySection = getSection(
-      liveSkillContent,
-      "### Capability Probe (MUST)",
-    );
+    const liveSkillCapabilitySection = getSection(liveSkillContent, "### Capability Probe (MUST)");
     const liveSkillHardStopSection = getSection(
       liveSkillContent,
       "### Delegation Failure (Hard Stop)",

@@ -33,9 +33,7 @@ describe("TC-0014-0020: UIX-VAL-T01 — missing evaluation_connection fires ERRO
 
 // QFAI:SPEC-0014:TC-0014-0021
 describe("TC-0014-0021: UIX-VAL-T01 — present evaluation_connection passes", () => {
-  it.todo(
-    "every Trend Scan entry with valid evaluation_connection yields zero UIX-VAL-T01 issues",
-  );
+  it.todo("every Trend Scan entry with valid evaluation_connection yields zero UIX-VAL-T01 issues");
 });
 
 // QFAI:SPEC-0014:TC-0014-0022
@@ -52,12 +50,16 @@ describe("TC-0014-0023: UIX-VAL-T02 — dangling evaluation_connection fires ERR
 
 // QFAI:SPEC-0014:TC-0014-0024
 describe("TC-0014-0024: UIX-VAL-T03 — dangling source_refs fires WARNING", () => {
-  it.todo("TRD axis referencing non-existent source id produces UIX-VAL-T03 warning (does not fail --fail-on error)");
+  it.todo(
+    "TRD axis referencing non-existent source id produces UIX-VAL-T03 warning (does not fail --fail-on error)",
+  );
 });
 
 // QFAI:SPEC-0014:TC-0014-0025
 describe("TC-0014-0025: UIX-VAL-T04 — visual trend without visual axis fires WARNING", () => {
-  it.todo("visual-category Trend Scan entry with no visual axis in 21_design_eval_trend_derived.md produces UIX-VAL-T04 warning");
+  it.todo(
+    "visual-category Trend Scan entry with no visual axis in 21_design_eval_trend_derived.md produces UIX-VAL-T04 warning",
+  );
 });
 
 // QFAI:SPEC-0014:TC-0014-0026
@@ -86,17 +88,19 @@ describe("TC-0014-0029: PROT-DS01 — non-full-harness missing score fires WARNI
 
 // QFAI:SPEC-0014:TC-0014-0030
 describe("TC-0014-0030: non-UI pack yields zero v1.7.16 fires", () => {
-  it.todo(
-    "surface:non-ui — none of UIX-VAL-T01..T04, UIX-VAL-DS01, UIX-VAL-DS02, PROT-DS01 fire",
-  );
+  it.todo("surface:non-ui — none of UIX-VAL-T01..T04, UIX-VAL-DS01, UIX-VAL-DS02, PROT-DS01 fire");
 });
 
 // QFAI:SPEC-0014:TC-0014-0031
 describe("TC-0014-0031: v1.7.16 validators are idempotent", () => {
-  it.todo("running v1.7.16 validators twice against identical input produces byte-identical issue lists");
+  it.todo(
+    "running v1.7.16 validators twice against identical input produces byte-identical issue lists",
+  );
 });
 
 // QFAI:SPEC-0014:TC-0014-0032
 describe("TC-0014-0032: DS01 respects read-only but readable file", () => {
-  it.todo("read-only but readable uiux/12_design_system.md does not trigger false DS01; EACCES surfaces as distinct system-error issue");
+  it.todo(
+    "read-only but readable uiux/12_design_system.md does not trigger false DS01; EACCES surfaces as distinct system-error issue",
+  );
 });

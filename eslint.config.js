@@ -70,6 +70,27 @@ export default [
       "no-console": "off",
     },
   },
+  // Asset scripts (shipped to user projects) – CommonJS-compatible Node scripts
+  {
+    files: ["packages/qfai/assets/scripts/**/*.{js,cjs}"],
+    languageOptions: {
+      globals: {
+        require: "readonly",
+        module: "readonly",
+        exports: "readonly",
+        __dirname: "readonly",
+        __filename: "readonly",
+        process: "readonly",
+        console: "readonly",
+        Buffer: "readonly",
+      },
+      sourceType: "commonjs",
+    },
+    rules: {
+      "no-console": "off",
+      "@typescript-eslint/no-require-imports": "off",
+    },
+  },
   // Prettier must be last to disable conflicting formatting rules
   prettierConfig,
 ];

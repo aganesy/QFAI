@@ -179,10 +179,7 @@ function removeManagedBlock(content: string): string {
   const lines = content.split("\n");
 
   // Known lines: current block + legacy lines from previous versions
-  const knownLines = new Set([
-    ...QFAI_GITIGNORE_BLOCK.split("\n"),
-    ...QFAI_GITIGNORE_LEGACY_LINES,
-  ]);
+  const knownLines = new Set([...QFAI_GITIGNORE_BLOCK.split("\n"), ...QFAI_GITIGNORE_LEGACY_LINES]);
 
   // Loop to handle multiple managed blocks (e.g. from past duplicates)
   while (true) {

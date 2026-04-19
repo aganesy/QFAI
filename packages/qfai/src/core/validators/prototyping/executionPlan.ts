@@ -36,7 +36,8 @@ export function validateExecutionPlan(prototypingJson: unknown): ExecutionPlanIs
     return [
       {
         rule: "PROT-EXEC-PLAN",
-        message: "executionPlan is required in full-harness mode but prototyping record is invalid.",
+        message:
+          "executionPlan is required in full-harness mode but prototyping record is invalid.",
       },
     ];
   }

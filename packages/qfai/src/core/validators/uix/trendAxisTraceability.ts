@@ -208,12 +208,7 @@ function extractAxisSourceRefs(block: string): string[] {
 }
 
 function stripRefToken(raw: string): string {
-  return raw
-    .trim()
-    .replace(/^["']/, "")
-    .replace(/["']$/, "")
-    .replace(/,$/, "")
-    .trim();
+  return raw.trim().replace(/^["']/, "").replace(/["']$/, "").replace(/,$/, "").trim();
 }
 
 function collectTrdAxes(axesContent: string): TrdAxis[] {

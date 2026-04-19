@@ -18,7 +18,11 @@ The agent reads the repository, produces the required artifacts, and iterates un
 ## Release status
 
 - Current package version: `1.7.15`
-- Release posture: v1.7.15 enforces runtime truthfulness. Prototyping is UI-only, `full-harness` is measurement-driven iteration accumulation for UI-bearing surfaces only, runtime observation is observed-only (no synthetic 200 / API / DB prototyping coverage), Browser QA is mandatory per screen in full-harness, `actionsWired` is action coverage rather than finding count, and calibration SSOT is the calibration pack referenced by `calibrationRef.packPath`.
+- Release posture: v1.7.15 enforces runtime truthfulness.
+- Prototyping is UI-only; `full-harness` is measurement-driven iteration accumulation for UI-bearing surfaces only.
+- Runtime observation is observed-only (no synthetic 200 / API / DB prototyping coverage).
+- Browser QA is mandatory per screen in full-harness, and `actionsWired` reports action coverage rather than finding count.
+- Calibration SSOT is the calibration pack referenced by `calibrationRef.packPath`.
 - Current repo note: some repo-wide `qfai validate --fail-on error` blockers still come from historical review/evidence/ATDD/TDD artifacts and are being cleaned incrementally.
 
 ## Quick start
@@ -211,7 +215,8 @@ Notes.
 - `validate.json`, `report.json`, `doctor.json`, and `run-*` JSON logs are internal exports and are not a stable external contract; prefer `report.md` for integrations that must survive tool upgrades.
 - Scenario files are expected to use the Gherkin extension `*.feature` (not `*.md`).
 - `prototyping.calibration.packPath` points to the calibration pack SSOT; runtime and validator both resolve thresholds and iteration parameters from that pack.
-- `prototyping.calibration.thresholds`, `maxIterations`, `plateauDelta`, and `plateauLookback` are unsupported public config fields in v1.7.15. Put calibration values in the referenced pack instead of `qfai.config.yaml`.
+- `prototyping.calibration.thresholds`, `maxIterations`, `plateauDelta`, and `plateauLookback` are unsupported public config fields in v1.7.15.
+  Put calibration values in the referenced pack instead of `qfai.config.yaml`.
 - Observability modules (`src/core/observability/`) exist as foundation code but are **not integrated into blocking validation** in v1.7.14. They are reserved for future operational instrumentation.
 
 ## Specifications and contracts (SDD)

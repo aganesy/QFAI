@@ -7,11 +7,13 @@ dependencies:
 version: 2.0.0
 ---
 
-# エージェント選択ガイド（QFAI Toolkit）
+<!-- markdownlint-disable MD041 -->
 
 > **言語指示（厳守）**
 >
 > - 報告・出力: 日本語（Plan も含む）
+
+# エージェント選択ガイド（QFAI Toolkit）
 
 QFAI のサブエージェントは、**agent-catalog + agent-routing + review-profiles** を SSOT とする。  
 選定は「成果物の種類」と「phase の役割」で行い、skill 本文の直感では決めない。

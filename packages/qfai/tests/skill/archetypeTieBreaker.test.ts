@@ -6,10 +6,7 @@
 
 import { describe, expect, it } from "vitest";
 
-import {
-  type ArchetypeScore,
-  breakTie,
-} from "../../src/core/skill/archetypeTieBreaker.js";
+import { type ArchetypeScore, breakTie } from "../../src/core/skill/archetypeTieBreaker.js";
 
 function make(name: string, score: number, visualTheme: number): ArchetypeScore {
   return { name, score, dimensionWeights: { visualTheme } };

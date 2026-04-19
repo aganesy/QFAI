@@ -146,11 +146,7 @@ describe("validateDesignSystemPresence (UIX-VAL-DS01/DS02)", () => {
     const root = await newTempDir();
     await writeFile(path.join(root, "01_Context.md"), completeContext(), "utf-8");
     await mkdir(path.join(root, "uiux"), { recursive: true });
-    await writeFile(
-      path.join(root, "uiux", "12_design_system.md"),
-      happyDesignSystem(),
-      "utf-8",
-    );
+    await writeFile(path.join(root, "uiux", "12_design_system.md"), happyDesignSystem(), "utf-8");
 
     const issues = await validateDesignSystemPresence(root, defaultConfig);
     expect(issues).toEqual([]);

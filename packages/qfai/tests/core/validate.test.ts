@@ -1479,6 +1479,22 @@ async function seedDiscussionPackFixtures(root: string): Promise<void> {
       ],
     },
     {
+      name: "uiux/12_design_system.md",
+      lines: [
+        "# 12 Design System",
+        "",
+        "## Visual Theme",
+        "Bold but restrained visual system aligned with admired dashboard references.",
+        "",
+        "## Color Palette",
+        "Primary: #1A1A1A on light surface. Accent: #2F80ED. Background: #F7F8FA.",
+        "",
+        "## Do's and Don'ts",
+        "Do: keep a single primary CTA visible on dashboards.",
+        "Don't: stack competing accent colors on interactive elements.",
+      ],
+    },
+    {
       name: "uiux/11_design_taste_interview.md",
       lines: [
         "# Taste Interview",
@@ -1762,6 +1778,8 @@ async function seedDiscussionPackFixtures(root: string): Promise<void> {
       "  allowed_modes:",
       "    - full-harness",
       "  surface: web",
+      "scoringTrace:",
+      "  designSystemCompliance: 90",
     ].join("\n"),
     "utf-8",
   );
@@ -2007,6 +2025,7 @@ async function seedPrototypingEvidenceFixture(root: string): Promise<void> {
               deltaFromPrevious: null,
               decision: "accept",
               commitSha: "abc0001",
+              designSystemCompliance: 90,
             },
           ],
           limitations: [],

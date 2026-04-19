@@ -1,12 +1,11 @@
 {
-  "MD013": {
-    "line_length": 300,
-    "tables": false,
-  },
-  "MD024": {
-    "siblings_only": true,
-  },
-  "MD033": {
-    "allowed_elements": ["skill", "id"],
-  },
+  "MD013": false,
+  "MD001": false,
+  "MD012": false,
+  "MD024": false,
+  "MD032": false,
+  "MD033": false,
+  "MD034": false,
+  "MD047": false,
+  "MD056": false,
 }

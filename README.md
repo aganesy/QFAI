@@ -18,7 +18,11 @@ The agent reads the repository, produces the required artifacts, and iterates un
 ## Release status
 
 - Current package version: `1.7.15`
-- Release posture: v1.7.15 enforces runtime truthfulness. Prototyping is UI-only, `full-harness` is measurement-driven iteration accumulation for UI-bearing surfaces only, runtime observation is observed-only (no synthetic 200 / API / DB prototyping coverage), Browser QA is mandatory per screen in full-harness, `actionsWired` is action coverage rather than finding count, and calibration SSOT is the calibration pack referenced by `calibrationRef.packPath`.
+- Release posture: v1.7.15 enforces runtime truthfulness.
+- Prototyping is UI-only; `full-harness` is measurement-driven iteration accumulation for UI-bearing surfaces only.
+- Runtime observation is observed-only (no synthetic 200 / API / DB prototyping coverage).
+- Browser QA is mandatory per screen in full-harness, and `actionsWired` reports action coverage rather than finding count.
+- Calibration SSOT is the calibration pack referenced by `calibrationRef.packPath`.
 - Current repo note: some repo-wide `qfai validate --fail-on error` blockers still come from historical review/evidence/ATDD/TDD artifacts and are being cleaned incrementally.
 
 ## Quick start

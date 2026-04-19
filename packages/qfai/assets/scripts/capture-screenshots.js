@@ -50,11 +50,7 @@ function parseArgs(argv) {
 }
 
 function isoTimestamp() {
-  return new Date()
-    .toISOString()
-    .replace(/[:.]/g, "")
-    .replace("T", "T")
-    .slice(0, -1) + "Z";
+  return new Date().toISOString().replace(/[:.]/g, "").replace("T", "T").slice(0, -1) + "Z";
 }
 
 function main() {
@@ -97,15 +93,15 @@ const puppeteer = require('puppeteer');
       execSync(`node "${tmpScript}"`, { timeout: 60000, stdio: "pipe" });
       captured = true;
     } finally {
-      try { fs.unlinkSync(tmpScript); } catch { /* ignore */ }
+      try {
+        fs.unlinkSync(tmpScript);
+      } catch {
+        /* ignore */
+      }
     }
   } catch {
     // Puppeteer not available; write a stub file so the path contract is met
-    fs.writeFileSync(
-      screenshotPath,
-      `STUB:${args.url}:${timestamp}`,
-      "utf-8",
-    );
+    fs.writeFileSync(screenshotPath, `STUB:${args.url}:${timestamp}`, "utf-8");
     captured = true;
     console.warn(
       "Warning: puppeteer not installed; wrote stub file. " +
@@ -123,11 +119,7 @@ const puppeteer = require('puppeteer');
     capturedAt: new Date().toISOString(),
     files: [{ path: screenshotPath, timestamp }],
   };
-  fs.writeFileSync(
-    path.join(outDir, "manifest.json"),
-    JSON.stringify(manifest, null, 2),
-    "utf-8",
-  );
+  fs.writeFileSync(path.join(outDir, "manifest.json"), JSON.stringify(manifest, null, 2), "utf-8");
 
   console.log(screenshotPath);
   process.exit(0);

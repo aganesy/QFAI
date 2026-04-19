@@ -54,16 +54,12 @@ describe("E2E: US-0010-0017 — Step 11.5 Trend→Axis derivation", () => {
 
 // QFAI:SPEC-0010:US-0010-0018
 describe("E2E: US-0010-0018 — 04_Sources.md evaluation_connection field", () => {
-  it.todo(
-    "Template exposes evaluation_connection on all 6 visual Trend Scan categories",
-  );
+  it.todo("Template exposes evaluation_connection on all 6 visual Trend Scan categories");
 });
 
 // QFAI:SPEC-0010:US-0010-0019
 describe("E2E: US-0010-0019 — 21_design_eval_trend_derived.md visual-axis examples", () => {
-  it.todo(
-    "Template ships ≥2 visual-axis example entries plus source_refs guidance",
-  );
+  it.todo("Template ships ≥2 visual-axis example entries plus source_refs guidance");
 });
 
 // QFAI:SPEC-0010:US-0010-0020
@@ -82,9 +78,7 @@ describe("E2E: US-0010-0021 — Brand catalog for autonomous selection", () => {
 
 // QFAI:SPEC-0010:US-0010-0022
 describe("E2E: US-0010-0022 — 12_design_system.md template 8-section schema", () => {
-  it.todo(
-    "templates/uiux/12_design_system.md defines 8 canonical sections as ATX headings",
-  );
+  it.todo("templates/uiux/12_design_system.md defines 8 canonical sections as ATX headings");
 });
 
 // Sanity: ensure the qfai-discussion skill root (pre-v1.7.16) still resolves.
