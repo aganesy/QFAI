@@ -6,7 +6,7 @@
 
 - type: feedback_report
 - title: QFAI Package Feedback Report — Design Guideline Research in Trend Scan & Concrete TRD Axis Scoring
-- location: `local-only:<local-path>/tmp/qfai-package-feedback-dgs-axis.md`
+- location: `local-only:<redacted>`
 - availability: この参照はローカル専用であり、他環境では直接解決不能
 - retrieval: 原本が必要な場合は discussion pack 作成者に同名レポートの共有を依頼すること
 - date: 2026-04-15
