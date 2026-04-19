@@ -5,7 +5,7 @@
 Define UI surface contracts for prototyping and E2E selection.
 The contract must describe screen structure, action coverage targets, and inspection anchors for full-harness evidence.
 
-> **Note:** UI contracts are supporting input that supplements the discussion sidecar artifacts (`discussion-*/uiux/*`), which remain the primary truth for UI/UX definitions. In `packages/qfai` v1.7.15, prototyping execution is `full-harness` only and requires both canonical screen contracts and matching `CON-UI-*` YAML contracts.
+> **Note:** UI contracts are supporting input that supplements the discussion sidecar artifacts (`discussion-*/uiux/*`), which remain the primary truth for UI/UX definitions. In `packages/qfai` v1.7.15, prototyping execution is `full-harness` only; therefore, running the prototype harness requires both canonical screen contracts and matching `CON-UI-*` YAML contracts.
 
 ## File rules
 
@@ -39,7 +39,8 @@ The contract must describe screen structure, action coverage targets, and inspec
 - Use `elements[].id` (stable ID) for the marker suffix, not `elements[].label`.
 - Even when label text is not visible in the UI, markers ensure fidelity coverage.
 - autogen generates expected markers from `elements[].id` automatically.
-- The id-based format (`CONTRACT_ID:ELEMENT_ID`) is the only canonical marker format.
+- The id-based format (`CONTRACT_ID:ELEMENT_ID`) is the canonical format for new and updated contracts.
+- Legacy label-based markers may still exist in older contracts or downstream tooling; when updating those flows, migrate them to the id-based format and verify any selector/evidence wiring that still depends on label-based markers.
 
 ## Prototype metadata
 
@@ -51,12 +52,16 @@ Add `prototype` at the top level.
 
 ### `prototype.mode` and `mockPaths[]` example
 
+The `mockPaths[]` entry is a **negative-only review ledger** — only populate it when a Browser QA finding or review outcome has identified a failure/gap in the mockable path. Do **not** populate it with expected success flows; those belong in `screens[].actions[]` (contracts) and the discussion sidecar.
+
 ```yaml
 prototype:
   mode: interactive
   mockPaths:
-    - id: mp_create_to_list
-      flow: create -> list reflects
+    - id: mp_create_to_list_mobile_reflow
+      finding_ref: "BQ-2026-04-18-014"
+      failure_condition: "Mobile viewport: created row not reflected in list within 2s (browser QA: stale cache)."
+      status: open
 ```
 
 ## Screen contract rules
@@ -85,9 +90,10 @@ prototype:
 # QFAI-CONTRACT-ID: CON-UI-0001
 prototype:
   mode: interactive
-  mockPaths:
-    - id: mp_create_to_list
-      flow: create -> list reflects
+  # mockPaths is a negative-only ledger: leave it empty when there are no
+  # open Browser QA findings against this contract's mockable paths. Only
+  # add entries that cite a finding or review outcome.
+  mockPaths: []
   markers:
     - id: mk_order_form
       selector: "[data-qfai='order-form']"
