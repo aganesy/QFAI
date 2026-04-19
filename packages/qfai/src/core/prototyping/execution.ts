@@ -489,7 +489,14 @@ async function buildPanelInputsOrThrow(input: {
       },
       browserQa: {
         ...input.browserQaSummary,
-        evidenceRefs: normalizeEvidenceRefList(input.root, input.browserQaSummary.evidenceRefs),
+        // Browser QA summary carries phase/finding evidence_refs verbatim
+        // (concrete artifact refs mixed with provider-logical refs such as
+        // `html:*` / `input:*` / `provider:*`). Preserve the logical refs;
+        // only concrete file paths go through toConcreteArtifactRef.
+        evidenceRefs: normalizeBrowserQaEvidenceRefList(
+          input.root,
+          input.browserQaSummary.evidenceRefs,
+        ),
       },
       uiObservation,
       specCoverage: input.specCoverage,
@@ -770,7 +777,8 @@ function normalizeUiObservationSummary(
     screens: summary.screens.map((screen) => ({
       ...screen,
       htmlCaptureRef: toConcreteArtifactRef(root, screen.htmlCaptureRef),
-      browserQaEvidenceRefs: normalizeEvidenceRefList(root, screen.browserQaEvidenceRefs),
+      // Per-screen Browser QA refs may include provider logical refs.
+      browserQaEvidenceRefs: normalizeBrowserQaEvidenceRefList(root, screen.browserQaEvidenceRefs),
     })),
     evidenceRefs: normalizeEvidenceRefList(root, summary.evidenceRefs),
   };
@@ -778,6 +786,17 @@ function normalizeUiObservationSummary(
 
 function normalizeEvidenceRefList(root: string, refs: string[]): string[] {
   return dedupeRefs(refs.map((ref) => toConcreteArtifactRef(root, ref)));
+}
+
+// For lists that aggregate Browser QA phase/finding evidence_refs, a scheme-
+// prefixed logical ref (`html:*`, `input:*`, `provider:*`, ...) must stay
+// intact; only real file paths should be repo-root-relativised.
+function normalizeBrowserQaEvidenceRefList(root: string, refs: string[]): string[] {
+  return dedupeRefs(
+    refs.map((ref) =>
+      isBrowserQaPassthroughRef(ref) ? ref.trim() : toConcreteArtifactRef(root, ref),
+    ),
+  );
 }
 
 function assertRuntimeGateLeafRefs(

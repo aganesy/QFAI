@@ -3,7 +3,10 @@
  *
  * Resolves current commit SHA from `.git/HEAD`, with support for:
  *   - Standard `.git/` directory layouts
- *   - Linked worktrees (where `.git` is a file containing `gitdir: <path>`)
+ *   - Linked worktrees (where `.git` is a file containing `gitdir: <path>`
+ *     and the worktree gitdir has a `commondir` file pointing at the main
+ *     repository's `.git` directory; `refs/heads/*` and `packed-refs` live
+ *     in that common gitdir, not the worktree-local gitdir)
  *   - `packed-refs` fallback when the loose ref file is absent
  *
  * Full-harness requires commitSha on every iteration.
@@ -12,25 +15,50 @@
 import { readFile, stat } from "node:fs/promises";
 import path from "node:path";
 
-async function resolveGitDir(root: string): Promise<string> {
+type GitDirs = {
+  /** Worktree-local gitdir: where `HEAD` lives. */
+  gitDir: string;
+  /** Common gitdir: where `refs/heads/*` and `packed-refs` live. Same as
+   * gitDir for non-worktree layouts; resolved from `commondir` otherwise. */
+  commonDir: string;
+};
+
+async function resolveGitDirs(root: string): Promise<GitDirs> {
   const dotGit = path.join(root, ".git");
   const info = await stat(dotGit);
-  if (info.isDirectory()) {
-    return dotGit;
+  const gitDir = info.isDirectory() ? dotGit : await resolveWorktreeGitDir(root, dotGit);
+
+  // Linked worktrees write a `commondir` file (relative or absolute path)
+  // pointing to the main repository's .git directory. Non-worktree layouts
+  // don't have this file; treat gitDir as the common dir.
+  try {
+    const commondirText = (await readFile(path.join(gitDir, "commondir"), "utf-8")).trim();
+    if (commondirText.length > 0) {
+      const commonDir = path.isAbsolute(commondirText)
+        ? commondirText
+        : path.resolve(gitDir, commondirText);
+      return { gitDir, commonDir };
+    }
+  } catch {
+    // No commondir file — standard layout.
   }
-  // Linked worktree: `.git` is a file of the form `gitdir: <absolute-or-relative-path>`
-  const text = (await readFile(dotGit, "utf-8")).trim();
+
+  return { gitDir, commonDir: gitDir };
+}
+
+async function resolveWorktreeGitDir(root: string, dotGitFile: string): Promise<string> {
+  const text = (await readFile(dotGitFile, "utf-8")).trim();
   const match = /^gitdir:\s*(.+)$/m.exec(text);
   if (!match?.[1]) {
-    throw new Error(`Unrecognized .git file format at ${dotGit}`);
+    throw new Error(`Unrecognized .git file format at ${dotGitFile}`);
   }
   const gitdirValue = match[1].trim();
   return path.isAbsolute(gitdirValue) ? gitdirValue : path.resolve(root, gitdirValue);
 }
 
-async function lookupPackedRef(gitDir: string, refName: string): Promise<string | null> {
+async function lookupPackedRef(commonDir: string, refName: string): Promise<string | null> {
   try {
-    const packedPath = path.join(gitDir, "packed-refs");
+    const packedPath = path.join(commonDir, "packed-refs");
     const content = await readFile(packedPath, "utf-8");
     for (const rawLine of content.split(/\r?\n/)) {
       const line = rawLine.trim();
@@ -46,22 +74,33 @@ async function lookupPackedRef(gitDir: string, refName: string): Promise<string 
   }
 }
 
+async function readRefLoose(dir: string, refName: string): Promise<string | null> {
+  try {
+    const sha = (await readFile(path.join(dir, refName), "utf-8")).trim();
+    return sha.length > 0 ? sha : null;
+  } catch {
+    return null;
+  }
+}
+
 export async function resolveCommitSha(root: string): Promise<string> {
   try {
-    const gitDir = await resolveGitDir(root);
+    const { gitDir, commonDir } = await resolveGitDirs(root);
     const headPath = path.join(gitDir, "HEAD");
     const headContent = (await readFile(headPath, "utf-8")).trim();
 
     if (headContent.startsWith("ref: ")) {
       const refName = headContent.slice(5).trim();
-      const refPath = path.join(gitDir, refName);
-      try {
-        const sha = (await readFile(refPath, "utf-8")).trim();
-        if (sha.length > 0) return sha;
-      } catch {
-        // Loose ref missing — fall through to packed-refs lookup
+      // Try the worktree-local gitdir first (e.g. per-worktree HEAD refs),
+      // then fall back to the common gitdir where branch refs actually live,
+      // then to packed-refs in the common gitdir.
+      const looseLocal = await readRefLoose(gitDir, refName);
+      if (looseLocal) return looseLocal;
+      if (commonDir !== gitDir) {
+        const looseCommon = await readRefLoose(commonDir, refName);
+        if (looseCommon) return looseCommon;
       }
-      const packed = await lookupPackedRef(gitDir, refName);
+      const packed = await lookupPackedRef(commonDir, refName);
       if (packed) return packed;
       throw new Error(`Could not resolve ${refName} via loose ref or packed-refs.`);
     }
