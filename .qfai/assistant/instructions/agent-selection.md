@@ -7,7 +7,7 @@ dependencies:
 version: 2.0.0
 ---
 
-<!-- markdownlint-disable MD041 -->
+<!-- markdownlint-disable-file MD041 -->
 
 > **言語指示（厳守）**
 >
