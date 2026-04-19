@@ -13,8 +13,17 @@ export type CanonicalScreenContract = {
   sourceRef: string;
 };
 
+/**
+ * `discussionDirRelative` is the repo-relative discussion directory (e.g.
+ * `.qfai/discussion`). It defaults to the stock location so standalone
+ * callers / tests don't need to resolve config first, but callers that
+ * override `paths.discussionDir` in `qfai.config.yaml` must pass the
+ * configured value so the generated `sourceRef` points at the real file
+ * instead of a dangling `.qfai/discussion/<pack>/...` path.
+ */
 export async function readCanonicalScreenContracts(
   packDir: string | null,
+  discussionDirRelative = ".qfai/discussion",
 ): Promise<CanonicalScreenContract[]> {
   if (!packDir) {
     return [];
@@ -26,12 +35,15 @@ export async function readCanonicalScreenContracts(
     return [];
   }
 
+  // Normalise to POSIX separators before concatenation so Windows callers
+  // that pass `.qfai\\discussion` still produce valid repo-relative refs.
+  const normalisedDiscussionDir = discussionDirRelative.replace(/\\/g, "/");
+
   return parseCanonicalScreenContracts(raw).map((screen) => ({
     ...screen,
     sourceRef:
       path.posix.join(
-        ".qfai",
-        "discussion",
+        normalisedDiscussionDir,
         path.basename(packDir),
         "uiux",
         "40_screen_contracts.md",

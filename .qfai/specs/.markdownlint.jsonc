@@ -19,8 +19,9 @@
   "MD024": false,
   // Blanks around lists: generator output interleaves lists with prose.
   "MD032": false,
-  // Inline HTML: rare `<n>` / `<id>` / `<skill>` placeholders in examples.
-  "MD033": false,
+  // Inline HTML: rare `<n>` / `<id>` / `<skill>` placeholders in examples —
+  // allow-list just those so the lint still flags unintended HTML tags.
+  "MD033": { "allowed_elements": ["n", "id", "skill"] },
   // Bare URLs: test-case examples include raw http://localhost URLs.
   "MD034": false,
   // MD047 (trailing newline) intentionally left ON: authored files must end

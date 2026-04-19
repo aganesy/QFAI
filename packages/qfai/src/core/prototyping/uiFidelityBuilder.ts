@@ -70,7 +70,12 @@ export async function buildUiFidelity(input: {
 }): Promise<BuiltUiFidelity> {
   const discussionRoot = resolvePath(input.root, input.config, "discussionDir");
   const latestPack = await findLatestDiscussionPackDir(discussionRoot);
-  const screenContracts = await readCanonicalScreenContracts(latestPack);
+  // Anchor generated sourceRefs at the configured discussion dir so custom
+  // paths.discussionDir values produce non-dangling refs.
+  const screenContracts = await readCanonicalScreenContracts(
+    latestPack,
+    input.config.paths.discussionDir,
+  );
   const contractSummaries = await collectUiContractScreens(input.root, input.config);
   const enrichedScreenContracts = screenContracts.map((screen) => {
     const contract = contractSummaries.find((candidate) => candidate.route === screen.route);

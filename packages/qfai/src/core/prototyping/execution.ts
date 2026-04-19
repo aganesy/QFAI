@@ -177,7 +177,13 @@ export async function runPrototypingExecution(
 
   const visualFullHarness = isSupportedPrototypingSurface(supportedSurface);
   const effectiveRenderAdapter = request.renderAdapter ?? resolvedProviders.renderAdapter;
-  const screenContracts = visualFullHarness ? await readCanonicalScreenContracts(latestPack) : [];
+  // Pass the repo-relative discussion dir from config so generated sourceRefs
+  // stay anchored at the configured location even when paths.discussionDir
+  // is customised.
+  const discussionDirRelative = config.paths.discussionDir;
+  const screenContracts = visualFullHarness
+    ? await readCanonicalScreenContracts(latestPack, discussionDirRelative)
+    : [];
   if (screenContracts.length === 0) {
     throw new Error(
       "Full-harness requires canonical screen contracts in uiux/40_screen_contracts.md for UI-bearing surfaces.",
@@ -339,7 +345,11 @@ export async function runPrototypingExecution(
   assertConcreteArtifactRefs("specCoverage.evidenceRefs", specCoverage.evidenceRefs);
   assertFullHarnessLeafRefs(fullHarness.history.iterations, "fullHarness.iterations");
   for (const log of cumulativeReviewerLogs) {
-    assertConcreteArtifactRefs(
+    // Reviewer log refs concatenate per-iteration evidence including
+    // Browser QA scheme refs. Use the Browser QA-aware assertion so
+    // logical refs (`provider:*`, `phase:*`, ...) are preserved through
+    // the evidence bundle boundary.
+    assertBrowserQaEvidenceRefs(
       `fullHarness.reviewerLogs[${log.iteration}:${log.reviewerId}].evidenceRefs`,
       log.evidenceRefs,
     );
@@ -867,14 +877,30 @@ function assertFullHarnessLeafRefs(iterations: FullHarnessIteration[], label: st
         );
       }
     }
+    // Browser QA-derived axes (browser-qa-blocking, browser-qa-experience,
+    // visual-findings, ui-observation*) inherit browserQa.evidenceRefs
+    // which can legitimately contain provider logical refs.
+    const browserQaAxes = new Set([
+      "browser-qa-blocking",
+      "browser-qa-experience",
+      "visual-findings",
+    ]);
+    const isBrowserQaAxis = (axisId: string): boolean =>
+      browserQaAxes.has(axisId) || axisId.startsWith("ui-observation");
     for (const axis of iteration.l1.axes) {
-      assertConcreteArtifactRefs(
+      const assertRefs = isBrowserQaAxis(axis.axisId)
+        ? assertBrowserQaEvidenceRefs
+        : assertConcreteArtifactRefs;
+      assertRefs(
         `${label}[${iteration.iteration}].l1.axes[${axis.axisId}].evidenceRefs`,
         axis.evidenceRefs,
       );
     }
     for (const axis of iteration.l2.axes) {
-      assertConcreteArtifactRefs(
+      const assertRefs = isBrowserQaAxis(axis.axisId)
+        ? assertBrowserQaEvidenceRefs
+        : assertConcreteArtifactRefs;
+      assertRefs(
         `${label}[${iteration.iteration}].l2.axes[${axis.axisId}].evidenceRefs`,
         axis.evidenceRefs,
       );

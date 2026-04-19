@@ -127,16 +127,18 @@ export async function buildScreenContractInputs(
   }
   const fidelityScore = totalFidelity / totalContracts;
 
-  const latestPack = await findLatestDiscussionPackDir(
-    discussionDir ?? path.join(root, ".qfai", "discussion"),
-  );
+  const effectiveDiscussionDir = discussionDir ?? path.join(root, ".qfai", "discussion");
+  const latestPack = await findLatestDiscussionPackDir(effectiveDiscussionDir);
   if (!latestPack) {
     throw new Error(
       "L2 evidence failure: no discussion pack found for screen contract evidence. " +
         "Full-harness requires 40_screen_contracts.md.",
     );
   }
-  const declaredContracts = await readCanonicalScreenContracts(latestPack);
+  // Compute repo-relative discussion dir from the absolute path so the
+  // canonical sourceRef stays anchored at the caller's configured location.
+  const discussionDirRelative = path.relative(root, effectiveDiscussionDir).replace(/\\/g, "/");
+  const declaredContracts = await readCanonicalScreenContracts(latestPack, discussionDirRelative);
   const degradedScoring = declaredContracts.length === 0;
   const declaredByScreenId = new Map(declaredContracts.map((screen) => [screen.screenId, screen]));
   const declaredByRoute = new Map(declaredContracts.map((screen) => [screen.route, screen]));

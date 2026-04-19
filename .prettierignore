@@ -4,13 +4,18 @@ node_modules
 # sources (.qfai/specs, .qfai/assistant, .qfai/contracts, .qfai/discussion)
 # stay formatted. Negate authored files that we commit (README.md, the
 # preflight summary, evidence markdown files that become part of the
-# traceability record) so prettier still keeps them readable.
+# traceability record) so prettier still keeps them readable. Parent
+# directories are also explicitly un-ignored so the negated file entries
+# survive prettier's gitignore-style matching.
 .qfai/report/**
+!.qfai/report/
 !.qfai/report/README.md
 !.qfai/report/preflight_summary.md
 .qfai/review/**
+!.qfai/review/
 !.qfai/review/README.md
 .qfai/evidence/**
+!.qfai/evidence/
 !.qfai/evidence/README.md
 !.qfai/evidence/*.md
 pnpm-lock.yaml
