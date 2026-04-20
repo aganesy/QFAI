@@ -255,3 +255,10 @@ QFAI は GUI を持たない CLI ツールである。`/qfai-prototyping` スキ
 ## ER Diagram
 
 QFAI はデータベースを使用しないため、ER Diagram は省略する。
+
+## v1.8.0 Contract Posture
+
+- Contracts-first review completed for `CAP-0034 / spec-0034`.
+- Web Research Enhancement は CLI エージェント向けの research skill / MCP template / security policy / evaluation guidance 拡張であり、外部向け stable DB/API/UI contract は新設しない。
+- MCP 設定テンプレート、allowlist 設定、research session log schema は内部・配布資産であり、Contract Index には含めない。
+- したがって Contract Index の `0 items` は意図的な none-rationale であり、spec-0034 のスコープ境界に整合する。

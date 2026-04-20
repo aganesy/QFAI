@@ -714,3 +714,41 @@ flowchart TD
 
 - non-UI pack では B〜F は not-applicable とする。
 - guideline research は固定ルール集の強制ではなく、Material Design / WCAG / Apple HIG / 採用 UI ライブラリなど project-context に応じた参照を許容する。
+
+## v1.8.0 Web Research Enhancement Flow
+
+```mermaid
+sequenceDiagram
+    participant Dev as Developer
+    participant CLI as CLI Agent
+    participant Skill as Research Skill
+    participant MCP as MCP Servers
+    participant San as Sanitizer
+    participant HITL as HITL Gate
+
+    Dev->>CLI: Task requiring web research
+    CLI->>Skill: Load research skill (progressive disclosure)
+    Skill->>CLI: Pipeline steps loaded
+
+    CLI->>MCP: 1. Search (Brave Search MCP)
+    MCP-->>CLI: Search results (3-5 candidates)
+
+    CLI->>CLI: 2. Rank & select sources
+
+    CLI->>MCP: 3. Fetch & extract (Firecrawl / Playwright)
+    MCP-->>CLI: Raw content
+
+    CLI->>San: 4. Sanitize (strip hidden/control chars)
+    San-->>CLI: Clean content
+
+    CLI->>CLI: 5. Cache (hash URL+etag)
+    CLI->>CLI: 6. Verify (cross-check sources)
+    CLI->>CLI: 7. Draft answer with citations
+
+    alt High risk / Low confidence
+        CLI->>HITL: Request human review
+        HITL-->>CLI: Approved / Rejected
+    end
+
+    CLI-->>Dev: Research result with citations + audit log
+```

@@ -21,3 +21,15 @@ pnpm-lock.yaml
 tmp
 *.min.js
 *.min.css
+
+# Generated QFAI artifacts (not versioned)
+.qfai/review/review-*
+.qfai/review_archive/review-*
+.qfai/evidence/*[0-9]*.md
+.qfai/evidence/*[0-9]*.json
+.qfai/report/run-*
+.qfai/report/validate.*
+.qfai/report/report.md
+.qfai/report/atdd-traceability
+.qfai/report/preflight_summary.md
+.qfai/report/specs-coverage

@@ -25,6 +25,7 @@
 | CAP-0013 | skill      | SDD 統一ワークフロー (qfai-sdd)               | Contracts-first/Outline/Slice/Plan/Delta 全フェーズ・Spec Auto-Discovery が動作する                   |
 | CAP-0014 | skill      | 品質検証 (qfai-verify)                        | UIX-VAL/UIX-REV バリデータ・品質ゲート・SSOT 統一が動作する                                           |
 | CAP-0015 | agent      | サブエージェント定義 (19 consolidated agents) | 全エージェントのカタログ・標準契約・routing policy・Work Orders が定義・動作する                      |
+| CAP-0016 | skill      | Web リサーチ強化 (Web Research Enhancement)   | 標準リサーチパイプライン・MCP 統合・セキュリティ・評価ハーネス・HITL ゲートが spec で定義される       |
 
 ## Authoring rules
 

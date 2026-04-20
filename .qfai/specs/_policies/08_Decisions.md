@@ -1401,3 +1401,67 @@ discussion-20260416023323603（v1.7.15 rev8 leaf-field ref grammar closure）、
 - Rationale: category completeness は sources schema の責務、anchor concreteness は scoring-ready schema の責務であり、現行 canonical validator 境界と一致する
 - Alternatives: (A) 新規 top-level validator — ownership split を曖昧化 / (B) 既存 uix module 拡張 (adopted)
 - Source: discussion-20260418170937652, DR-004 / OQ-0004 resolution
+
+### DR-0231: Brave Search MCP を primary search provider とする (v1.8.0)
+
+- Decision: Web Research Enhancement の primary search MCP は Brave Search を採用する
+- Status: Adopted
+- Rationale: community adoption、ドキュメント整備、CLI エージェントとの統合容易性のバランスが最も良い
+- Alternatives: (A) Tavily を primary にする / (B) 複数 provider を同列 primary にする
+- Source: discussion-20260328212829687, OQ-0001
+
+### DR-0232: Firecrawl は hosted/local npx の両モードを文書化し、機微環境では local を推奨する (v1.8.0)
+
+- Decision: Firecrawl integration は hosted URL と local `npx` の両構成を提供し、sensitive environment では local を推奨する
+- Status: Adopted
+- Rationale: セキュリティと導入容易性の両立が必要であり、単一モード固定は運用要件を満たさない
+- Alternatives: (A) hosted のみ / (B) local のみ
+- Source: discussion-20260328212829687, OQ-0002
+
+### DR-0233: SSE transport は v1.8.0 の対象外とし、post-v1.8.0 へ延期する (v1.8.0)
+
+- Decision: MCP transport は stdio と HTTP のみを対象とし、SSE ベース統合は v1.8.0 では扱わない
+- Status: Adopted
+- Rationale: Apify SSE deprecation を踏まえると、現時点で SSE を正式採用すると保守コストと不確実性が高い
+- Alternatives: (A) SSE を v1.8.0 に含める / (B) transport ごとに個別方針を持たず曖昧に残す
+- Source: discussion-20260328212829687, OQ-0003
+
+### DR-0234: Content sanitization は moderate scope に固定する (v1.8.0)
+
+- Decision: sanitizer は control chars、`aria-hidden`、`display:none` の除去に限定し、ML ベース判定や過剰除去を行わない
+- Status: Adopted
+- Rationale: セキュリティ対策とコンテンツ忠実性の均衡点として moderate scope が最適
+- Alternatives: (A) basic only / (B) aggressive semantic sanitization
+- Source: discussion-20260328212829687, OQ-0004
+
+### DR-0235: 評価ハーネスは metrics 定義に留め、特定ツールへ固定しない (v1.8.0)
+
+- Decision: evaluation は citation precision、coverage、freshness、security hygiene の指標定義までを共通仕様とし、特定ベンダー/特定評価ツールへ固定しない
+- Status: Adopted
+- Rationale: 評価基盤の差し替え可能性を残しつつ、品質ゲートの観点だけを共通化する
+- Alternatives: (A) 特定評価ツールを必須化 / (B) 指標自体を定義しない
+- Source: discussion-20260328212829687, OQ-0005
+
+### DR-0236: Research sub-agents は conservative defaults を採用する (v1.8.0)
+
+- Decision: research sub-agents の既定値を `max_threads=2`, `max_depth=2` とし、より高い値は explicit opt-in とする
+- Status: Adopted
+- Rationale: 並列度と探索深度の暴走を防ぎ、レート制限・コスト・追跡可能性のバランスを保つ
+- Alternatives: (A) 制限なし / (B) 1 固定
+- Source: discussion-20260328212829687, OQ-0006
+
+### DR-0237: Cache staleness threshold は 24 時間デフォルトで config override 可能とする (v1.8.0)
+
+- Decision: research cache の既定 stale threshold は 24 時間とし、設定で上書き可能にする
+- Status: Adopted
+- Rationale: freshness と API コストの実務的な均衡点であり、ユースケース差異は config で吸収できる
+- Alternatives: (A) 固定値で override 不可 / (B) cache 無効
+- Source: discussion-20260328212829687, OQ-0007
+
+### DR-0238: HITL gate はリスクベースで発火させる (v1.8.0)
+
+- Decision: HITL は高リスク・低信頼ケースに限定して発火し、per-fetch approval のような過剰承認フローは採用しない
+- Status: Adopted
+- Rationale: 人手承認を必要な場面に集中させ、通常ケースのスループットを損なわない
+- Alternatives: (A) すべての fetch に承認を要求 / (B) HITL なし
+- Source: discussion-20260328212829687, OQ-0008

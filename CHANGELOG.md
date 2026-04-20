@@ -8,6 +8,24 @@
 
 - なし
 
+## [1.8.0] - 2026-03-29
+
+### Added
+
+- skills: Web Research Enhancement skill template (CAP-0034, spec-0034)
+  - 8-stage standard research pipeline (search, rank, fetch, extract, sanitize, cache, verify, cite)
+  - MCP integration templates for Brave Search, Firecrawl, Playwright (3 agent formats each)
+  - Content sanitization layer (control chars, aria-hidden, display:none removal)
+  - Domain/URL allowlist with default-deny enforcement
+  - Research session log schema with secret exclusion
+  - Cache strategy (hash(URL+etag) key, 24h default TTL)
+  - Evaluation metrics (citation precision, coverage, freshness, security hygiene)
+  - HITL risk-based review gates
+- specs: spec-0034 SDD artifacts (Web Research Enhancement, CAP-0034)
+- specs: spec-0034 TDD execution ledger (28 items, all done)
+- discussion: v1.8.0 Web Research Enhancement discussion pack (`discussion-20260328212829687`)
+- tests: 28 integration tests for web-research skill (pipeline, security, skill, observability, evaluation)
+
 ## [1.7.15] - 2026-04-08
 
 ### Added

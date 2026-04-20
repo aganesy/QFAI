@@ -516,6 +516,18 @@ describe("assets guardrails", { timeout: 30000 }, () => {
   // .npmignore files removed — gitignore entries now live in root .gitignore
   // (see ensureRootGitignoreEntries in init.ts)
 
+  it("ships review_archive gitignore in init template", async () => {
+    const reviewArchiveIgnorePath = path.join(templateQfaiDir, "review_archive", ".gitignore");
+    const content = await readFile(reviewArchiveIgnorePath, "utf-8");
+
+    expect(content).toContain("*");
+    expect(content).toContain("!.gitignore");
+    expect(content).toContain("!README.md");
+  });
+
+  // review .gitignore removed — entries now in root .gitignore managed block
+  // (see ensureRootGitignoreEntries in init.ts)
+
   it("keeps init template docs free of hard-coded versions", async () => {
     const markdownFiles = await fg(["**/*.md"], {
       cwd: templateQfaiDir,

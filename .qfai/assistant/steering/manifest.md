@@ -35,6 +35,8 @@
 
 - Rule: All claims must have repo evidence (source code, config, CHANGELOG, discussion-pack)
   - Evidence:
+    `.qfai/discussion/discussion-20260328212829687/`
+    (v1.8.0 Web Research Enhancement),
     `.qfai/discussion/discussion-20260326072322818/`
     (v1.7.2 Design Audit & Slop Guardrails),
     `.qfai/discussion/discussion-20260328120000000/`

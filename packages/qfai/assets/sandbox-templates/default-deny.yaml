@@ -1,0 +1,53 @@
+# Sandbox Default-Deny Policy Template
+# Applied to all web-research sub-agent executions.
+# Only explicitly allowed capabilities are granted; everything else is denied.
+
+sandbox:
+  name: web-research-default-deny
+  version: "1.0.0"
+
+  # Filesystem restrictions — deny by default
+  filesystem:
+    policy: deny
+    allow:
+      - path: ".qfai/cache/web-research/**"
+        permissions: [read, write]
+      - path: ".qfai/evidence/web-research/**"
+        permissions: [read, write]
+    restrict:
+      - path: "**"
+        permissions: [read, write, execute]
+
+  # Network restrictions — deny by default
+  network:
+    policy: deny
+    allow:
+      # Only allowlisted domains from qfai.config.yaml are permitted at runtime.
+      # This template enforces that no network access is granted unless the
+      # domain appears in webResearch.allowlist.
+      - scope: allowlisted-domains-only
+    deny:
+      - scope: "*"
+        reason: "default-deny: all network access blocked unless explicitly allowlisted"
+
+  # Process restrictions
+  process:
+    policy: deny
+    allow:
+      - command: "node"
+      - command: "npx"
+    deny:
+      - command: "*"
+        reason: "default-deny: arbitrary process execution not permitted"
+
+  # Environment variable restrictions
+  environment:
+    policy: deny
+    allow:
+      - "QFAI_*"
+      - "NODE_ENV"
+      - "BRAVE_API_KEY"
+      - "FIRECRAWL_API_KEY"
+      - "FIRECRAWL_API_URL"
+    deny:
+      - "*"

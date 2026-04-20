@@ -211,6 +211,13 @@
 | Provider Registry | `providers/registry.ts` — `QfaiPrototypingConfig` から concrete provider（Playwright/custom）を解決する依存逆転パターン。|
 | Surface Type Detection | `detection/surfaceType.ts` — 01_Context.md の明示的分類ブロック（ui_bearing/primary_surface）を優先し、フォールバックとして surface_type フィールドを使用する判定モジュール。|
 | Classification Block | 01_Context.md に記載する構造化ブロック。`ui_bearing`, `primary_surface`, `secondary_surfaces`, `classification_rationale` の 4 フィールドで構成。`classification.ts` バリデータが検証。|
+| Research Pipeline | Web リサーチの標準 8 ステージ実行順序。search → rank → fetch → extract → sanitize → cache → verify → cite を固定順で実行する。 |
+| Content Sanitization | 取得コンテンツから制御文字、`aria-hidden` 要素、`display:none` 要素を除去する安全化処理。ML ベース判定は使わない。 |
+| Domain Allowlist | 既定拒否のネットワークアクセス制御。明示許可したドメインのみ fetch / redirect を許可する。 |
+| Research Session Log | リサーチ実行の監査ログ。検索語、取得 URL、content hash、sanitization event、verification 結果、最終 citation を含み、秘密情報を含めない。 |
+| HITL Gate | Human-in-the-Loop によるリスクベース承認ゲート。高リスクまたは低信頼の結果のみ人手承認を要求する。 |
+| Citation Precision | 最終回答の引用が実ソース内容を正確に裏づけている度合いを測る評価指標。 |
+| Source Freshness | 使用ソースの更新性・時点妥当性を表す評価観点。キャッシュしきい値や再取得判断の基準となる。 |
 
 ## 略語一覧
 
@@ -244,6 +251,7 @@
 | UIX-VAL                   | UI/UX Validation — deterministic validator ルール ID プレフィックス (v1.7.4)                                                                                                                                                     |
 | UIX-REV                   | UI/UX Review — semantic reviewer ルール ID プレフィックス (v1.7.4)                                                                                                                                                               |
 | FH                        | Full-Harness — premium prototyping mode の反復ループ構造                                                                                                                                                                         |
+| HITL                      | Human-in-the-Loop                                                                                                                                                                                                                |
 | SDP                       | Spec Diff Protocol                                                                                                                                                                                                               | Spec Auto-Discovery Protocol の略称 |
 | l2Evidence                | L2 Evidence Module — `l2Evidence.ts` が提供する 3 つの builder 関数（buildDiscussionAxisInputs / buildScreenContractInputs / buildTrendAlignmentInputs）で実 discussion artifact から L2 入力を導出するモジュール (v1.7.15 rev2) |
 | ScreenObservation         | Screen-level UI 観測型。route / htmlCaptureRef / domLabelsFound / elementsPlaced / actionsWired / mockPathFindings を screen 単位で保持する (v1.7.15 rev2)                                                                       |

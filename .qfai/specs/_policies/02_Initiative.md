@@ -9,7 +9,7 @@
 | Key                | Value                                                           |
 | ------------------ | --------------------------------------------------------------- |
 | プロダクト名       | QFAI (Quality-First AI)                                         |
-| バージョン         | v1.7.17 Design Guideline Traceability Hardening SDD 進行中      |
+| バージョン         | v1.8.0 実装進行中                                               |
 | カテゴリ           | CLI ツール / 品質第一開発キット                                 |
 | ターゲットユーザー | AI コーディングエージェント（Claude, GitHub Copilot, Codex 等） |
 | 技術スタック       | TypeScript 5.6.3, Node.js >=18.0.0, pnpm monorepo, tsup, Vitest |
@@ -55,6 +55,7 @@
 | v1.7.15 (SDD 進行中)                     | packages/qfai single-PR completion — runtime truthfulness hardening: panel scoring from real evidence, converged>=2 iterations, reviewer/commitSha mandatory, specCoverage from real diffs, uiFidelity observation-only, CalibrationLoader wired, fail-fast on missing evidence, docs/SKILL/README reality sync                                                                                                                                 |
 | v1.7.17 (SDD 進行中)                     | Design Guideline Traceability Hardening — `/qfai-discussion` に design guideline research 必須化、`04_Sources.md` canonical category 拡張、TRD `score_anchors` quantitative proxy 要求、`qfai validate` に warning-first validator 追加                                                                                                                                                                                                         |
 | v1.7.18 (SDD 進行中)                     | Gitignore Managed Block Formalization — `qfai init` の `.gitignore` 管理ブロック追記挙動を spec-0003 に正式登録（REQ-0016/0017 + US/AC/BR/EX/TC + DR-0003-0007）。`.qfai/review/review-*/` を default gitignore 対象に変更し、`QFAI_GITIGNORE_LEGACY_LINES` による旧ブロック自動移行を追加。`_policies/07_Constraints.md` OC-03 を生成成果物横断に拡張                                                                                          |
+| v1.8.0 (実装進行中)                      | Web Research Enhancement — CLI エージェントの Web リサーチ強化（標準パイプライン・MCP 統合・セキュリティ・評価・HITL）                                                                                                                                                                                                                                                                                                                          |
 
 ## v1.7.15 Initiative — packages/qfai single-PR completion
 

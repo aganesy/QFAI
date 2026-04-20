@@ -523,3 +523,26 @@
 - Classification: non-ui
 - OQ-0003 resolved at SDD → DR-0229 (warning-first rollout)
 - OQ-0004 resolved at SDD → DR-0230 (validator ownership split)
+
+## v1.8.0 — Web Research Enhancement (Adopted)
+
+### Phase: SDD Outline (Phase 1)
+
+| Date       | Status  | Artifact            | Change                                                                                                                                    | Source                       |
+| ---------- | ------- | ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------- |
+| 2026-03-29 | adopted | 02_Initiative.md    | v1.8.0 マイルストーン追加、プロダクトバージョンを v1.8.0 実装進行中へ更新                                                                 | discussion-20260328212829687 |
+| 2026-03-29 | adopted | 03_Capabilities.md  | CAP-0034（Web Research Enhancement）追加                                                                                                  | discussion-20260328212829687 |
+| 2026-03-29 | adopted | 04_Business-Flow.md | Web Research の標準パイプラインと HITL gate を示すフローを追加                                                                            | discussion-20260328212829687 |
+| 2026-03-29 | adopted | 05_Contracts.md     | v1.8.0 Contract Posture 追加（外部 stable contract なし、none-rationale を明記）                                                          | discussion-20260328212829687 |
+| 2026-03-29 | adopted | 06_Glossary.md      | Research Pipeline / Content Sanitization / Domain Allowlist / Research Session Log / HITL Gate などの用語を追加                           | discussion-20260328212829687 |
+| 2026-03-29 | adopted | 07_Constraints.md   | MCP transport、sanitization、cache、fallback、rate limit、secret exclusionに関する制約を追加                                              | discussion-20260328212829687 |
+| 2026-03-29 | adopted | 08_Decisions.md     | DR-0231..0238 追加（Brave primary, Firecrawl 両モード, SSE defer, moderate sanitization, metrics-only evaluation, conservative defaults） | discussion-20260328212829687 |
+| 2026-03-29 | adopted | spec-0034           | CAP-0034 を spec-0034 として新規作成                                                                                                      | discussion-20260328212829687 |
+
+### Discussion Pack Reference
+
+- `discussion-20260328212829687` (v1.8.0 — Web Research Enhancement)
+- Classification: non-ui
+- OQ-0001..0008 resolved at policy/spec layer
+- OQ-0009 (Jina AI MCP) deferred to v1.9.0
+- OQ-0010 (OTel integration depth) deferred to v1.9.0
