@@ -26,13 +26,26 @@ function Info([string]$Message) { Write-Host "[INFO] $Message" }
 function Warn([string]$Message) { Write-Host "[WARN] $Message" }
 
 function Run([string]$FilePath, [string[]]$Arguments, [string]$FailureMessage) {
-  $output = & $FilePath @Arguments 2>&1
-  if ($LASTEXITCODE -ne 0) {
-    $text = ($output | Out-String).Trim()
-    if ([string]::IsNullOrWhiteSpace($text)) { throw $FailureMessage }
-    throw "$FailureMessage`n$text"
+  $previousNativeCommandPreference = $null
+  $hasNativeCommandPreference = Get-Variable -Name PSNativeCommandUseErrorActionPreference -Scope Global -ErrorAction SilentlyContinue
+  if ($hasNativeCommandPreference) {
+    $previousNativeCommandPreference = $Global:PSNativeCommandUseErrorActionPreference
+    $Global:PSNativeCommandUseErrorActionPreference = $false
   }
-  return [string[]]$output
+
+  try {
+    $output = & $FilePath @Arguments 2>&1
+    if ($LASTEXITCODE -ne 0) {
+      $text = ($output | Out-String).Trim()
+      if ([string]::IsNullOrWhiteSpace($text)) { throw $FailureMessage }
+      throw "$FailureMessage`n$text"
+    }
+    return [string[]]$output
+  } finally {
+    if ($hasNativeCommandPreference) {
+      $Global:PSNativeCommandUseErrorActionPreference = $previousNativeCommandPreference
+    }
+  }
 }
 
 function RunJson([string]$FilePath, [string[]]$Arguments, [string]$FailureMessage) {
