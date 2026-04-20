@@ -27,13 +27,15 @@ function Warn([string]$Message) { Write-Host "[WARN] $Message" }
 
 function Run([string]$FilePath, [string[]]$Arguments, [string]$FailureMessage) {
   $previousNativeCommandPreference = $null
-  $hasNativeCommandPreference = Get-Variable -Name PSNativeCommandUseErrorActionPreference -Scope Global -ErrorAction SilentlyContinue
-  if ($hasNativeCommandPreference) {
-    $previousNativeCommandPreference = $Global:PSNativeCommandUseErrorActionPreference
-    $Global:PSNativeCommandUseErrorActionPreference = $false
+  $nativeCommandPreferenceVar = Get-Variable -Name PSNativeCommandUseErrorActionPreference -Scope Global -ErrorAction SilentlyContinue
+  if ($nativeCommandPreferenceVar) {
+    $previousNativeCommandPreference = $nativeCommandPreferenceVar.Value
   }
 
   try {
+    if ($nativeCommandPreferenceVar) {
+      $PSNativeCommandUseErrorActionPreference = $false
+    }
     $output = & $FilePath @Arguments 2>&1
     if ($LASTEXITCODE -ne 0) {
       $text = ($output | Out-String).Trim()
@@ -42,8 +44,8 @@ function Run([string]$FilePath, [string[]]$Arguments, [string]$FailureMessage) {
     }
     return [string[]]$output
   } finally {
-    if ($hasNativeCommandPreference) {
-      $Global:PSNativeCommandUseErrorActionPreference = $previousNativeCommandPreference
+    if ($nativeCommandPreferenceVar) {
+      $PSNativeCommandUseErrorActionPreference = $previousNativeCommandPreference
     }
   }
 }
