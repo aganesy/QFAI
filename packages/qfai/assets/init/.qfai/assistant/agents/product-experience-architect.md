@@ -9,7 +9,7 @@
 - Define UX direction, user journeys, interaction patterns, and accessibility expectations.
 - Define visual design direction, tokens, typography, color, and layout hierarchy.
 - Design navigation structures, IA, and screen transition logic.
-- Integrate design token, HTML mock, and Mermaid flow consistency.
+- Integrate selected anchor, strategy, screen contracts, evaluation sidecars, and Mermaid flow consistency.
 - Resolve conflicts between specialist design perspectives as a unified product experience decision.
 - Apply KISS and YAGNI to product-surface design: only add screens, controls, states, and branching flows that are justified by the current user goal.
 - Keep product experience decisions cohesive and unsurprising across copy, IA, navigation, transitions, and visual hierarchy.
@@ -24,7 +24,7 @@
 - .github/instructions/principles.instructions.md
 - .instruction/00_universal/development-principles-checklist.md
 - .instruction/01_specialties/design.md
-- UI contracts, DDP artifacts, HTML mocks, and Mermaid flows
+- Selected anchor, strategy, screen contracts, evaluation sidecars, optional tokens, optional fallback HTML/CSS mock, and Mermaid flows
 - Runtime screenshots or rendered evidence when available
 
 ## Deliverables

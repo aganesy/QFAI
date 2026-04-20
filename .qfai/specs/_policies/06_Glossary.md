@@ -23,7 +23,7 @@
 | Waiver                       | ウェイバー。特定ルールの suppress（抑制）または downgrade（重要度下げ）                                                                                                                                  |
 | CAP                          | Capability - 能力/機能単位。`CAP-XXXX` 形式。`_policies/03_Capabilities.md` で定義                                                                                                                       |
 | ATDD Annotation              | テストファイル内のトレーサビリティアノテーション                                                                                                                                                         |
-| Review Pack                  | レビューパック。`review-*/` 配下のレビュー成果物                                                                                                                                                         |
+| Review Pack                  | レビューパック。`review-*/` 配下のレビュー成果物。`qfai init` 管理ブロックによりデフォルトで gitignore 対象（v1.7.18 以降）。追跡したい場合はプロジェクト側で明示的 negation を追加する                  |
 | Drift Protocol               | ドリフトプロトコル。仕様とコードの乖離を検出・記録する仕組み                                                                                                                                             |
 | Skill                        | スキル。QFAI ワークフローの独立した実行単位。SKILL.md で定義され、入力・出力・ロール・完了契約・Evidence 要件を持つ                                                                                      |
 | Agent                        | エージェント（サブエージェント）。Skill 内で委任される専門化された作業者。19 の統合 taxonomy が定義され、Mission・Inputs・Deliverables・Stop Conditions・Sign-off 構造を持つ                             |
@@ -31,8 +31,7 @@
 | Steering                     | ステアリング。manifest, product, structure, tech, test-layers の 5 文書で構成される意思決定の背骨                                                                                                        |
 | Instructions                 | 操作プレイブック。workflow, drift-protocol, constitution, agent-selection, requirements-decomposition の 5 文書                                                                                          |
 | Constitution                 | 10 個の非交渉条項（Article I〜X）。Evidence over confidence、No invented facts、SDD is SSOT、AskUserQuestion MUST 等。例外なし                                                                           |
-| Capability Probe             | Skill 開始時にサブエージェント利用可否を確認する軽量テスト。失敗時は Simulation Mode の承認を要求する                                                                                                    |
-| Simulation Mode              | サブエージェント利用不可時にユーザー承認のもとでロールを逐次エミュレートするフォールバック。明示的 opt-in 必須                                                                                           |
+| Capability Probe             | Skill 開始時に最初の必須委任を実行し、その実委任の成否でサブエージェント利用可否を判定するプロトコル。事前確認や自己代行フォールバックは行わない                                                         |
 | Escalation Hook              | spec-XXXX/01_Spec.md に記載される `_policies` への参照委譲メカニズム。NFR・policy・requirements の copy-down を行う                                                                                      |
 | AskUserQuestion              | VS Code Copilot Chat が提供するユーザーへの質問機能。Chat UI 上で構造化選択肢付きの質問を提示できる。Article X により全 Skill で MUST 使用が規定される                                                   |
 | AskUserQuestion Protocol     | 各 Skill の SKILL.md に定義される、AskUserQuestion 使用方法のルール。MUST 使用→構造化選択肢→フォールバックの 3 行パターンで統一される。Article X で非交渉条項化                                          |
@@ -70,7 +69,7 @@
 | Primitive Token              | 生の値を保持する最低層のデザイントークン。例: `color.blue.600: #2563eb`                                                                                                                                  |
 | Semantic Token               | 意味的な名前を持ち、Primitive Token を参照するトークン。例: `color.primary: {color.blue.600}`                                                                                                            |
 | Component Token              | 特定の UI コンポーネントに紐づくトークン。例: `button.primary.bg: {color.primary}`                                                                                                                       |
-| HTML+CSS Visual Mock         | discussion/spec 内に埋め込まれる自己完結型の HTML+CSS スニペット。Design Token のフォールバック値を持ち、ブラウザで直接プレビュー可能。                                                                  |
+| HTML+CSS Visual Mock         | discussion 内に埋め込まれる自己完結型の HTML+CSS スニペット。v1.7.12 以降はオプション/フォールバックであり、UI-bearing パック完了の必須要件ではない。                                                    |
 | UI 定義 3 点セット           | Design Token YAML + HTML+CSS Visual Mock + Mermaid 画面遷移図の組み合わせ。UI の見た目・構造・遷移を網羅的に定義する。                                                                                   |
 | Research-First Protocol      | 専門家サブエージェントが作業開始前に必ず実施するリサーチプロトコル。対象プラットフォーム・ドメインに関する最新のベストプラクティスとアンチパターンを調査し、作業の基盤とする。                           |
 | UI/UX Expert                 | ユーザビリティ評価・認知負荷分析・情報設計・インタラクション設計を専門とするサブエージェント。                                                                                                           |
@@ -122,12 +121,12 @@
 | Quality Profile | qfai.config.yaml で宣言するプロジェクト固有の UI/UX 方針。b2b-dense / consumer / mobile-first 等のプリセット |
 | max_primary_steps | primary task を完遂するための最大許容ステップ数。デフォルト 3 |
 | BP/AP Rule DB | contracts/design 配下に配置するベストプラクティス/アンチパターンの実データ YAML。schema だけでなく実ルールを持つ |
-| UI-bearing discussion pack | UI アーティファクト（HTML+CSS モック、Mermaid 画面遷移図等）を含むディスカッションパック。v1.7.0 で DDS 必須化の対象となる |
+| UI-bearing discussion pack | UI アーティファクト（taste interview、trend/reference scan、3-layer evaluation 等）を含むディスカッションパック。v1.7.0 で DDS 必須化、v1.7.12 で 3-layer canonical model に統一、v1.7.13 で canonical file rename (30_option_comparison, 31_selected_anchor_screen, 40_screen_contracts, 50_review_input_bundle) |
 | Design Direction Summary (DDS) | 03_Story-Workshop.md に配置される設計方向性セクション。ビジュアルテーゼ、オプション比較、アンカースクリーン、CTA 階層、ステート網羅性、アンチゴールを含む |
 | Competitive Reference Registry | 04_Sources.md に配置される競合参考 UI の構造化レジストリ。adopted_points, rejected_points, local_translation の 3 フィールドが必須 |
 | Structural check | プレゼンス（存在/不在）を検証するバイナリチェック。v1.7.0 で error 重大度が割り当てられる |
 | Heuristic check | 品質・美観を判定する主観的チェック。v1.7.2+ に延期 |
-| Render Evidence | `qfai prototyping` が route × viewport ごとに保存する screenshot / HTML snapshot の構造化証跡。`captured` / `skipped` / `failed` を区別する |
+| Render Evidence | `/qfai-prototyping` スキルが route × viewport ごとに保存する screenshot / HTML snapshot の構造化証跡。`captured` / `skipped` / `failed` を区別する |
 | Typed Outcome | render capture helper が返す型付き結果。成功・退避・失敗を throw ではなく明示状態として返す |
 | Design Audit | UI-bearing artifact に対する静的設計品質監査。tokenDiscipline, visualHierarchy, stateCoverage, densityBalance, referenceTranslation, antiPatternRisk, flowClarity の 7 dimension で構造的不備を検知する。Context: v1.7.2 新機能 |
 | Slop | AI 生成 UI に再現性のある低品質パターン。generic AI SaaS shell, token bypass, CTA inflation 等。Context: v1.7.2 のガードレール対象 |
@@ -137,14 +136,16 @@
 | Quality Profile (v1.7.2) | Rule Tier から severity へのマッピングを制御するプロファイル。default, high, strict の 3 種。Context: config.uiux.qualityProfile |
 | Token Drift | design token 定義があるにもかかわらず contracts/mocks で raw 値が繰り返し使用される状態。Context: tokenDiscipline dimension の検査対象 |
 | uiux/ サイドカー (uiux/ sidecar) | UI-bearing プロジェクト向けに qfai-discussion が生成する補助アーティファクトディレクトリ。11ファイルで構成される |
-| Surface Classification (サーフェス分類) | プロジェクトの UI surface type (web-ui, mobile-ui, desktop-ui, mixed, non-ui) を分類する仕組み |
+| Surface Classification (サーフェス分類) | プロジェクトの UI surface type (web, mobile, desktop, mixed, non-ui) を分類する仕組み。01_Context.md に explicit classification block として記載される |
 | Implementation Strategy (実装戦略) | UI/UX 実装アプローチを YAML で定義するサイドカーアーティファクト (10_strategy.md) |
 | Scoring Axes (スコアリング軸) | invariant, trend-derived, product-specific の3層評価フレームワーク |
-| Anchor Screen (アンカースクリーン) | オプション比較から選定される参照画面デザイン |
-| Screen Contract (スクリーンコントラクト) | 画面レベルの UI 義務を構造化 Markdown（表形式）で定義するサイドカーアーティファクト (uiux/40_contracts.md)。将来 YAML 化される可能性がある |
-| Option Comparison (オプション比較) | 2つ以上のデザイン代替案をスコアリング軸に沿って構造化比較すること |
-| Review Input Bundle (レビュー入力バンドル) | サイドカー出力をまとめた統合アーティファクトパッケージ |
-| Critique Loop (クリティークループ) | デザイン批評サイクルを追跡する反復レビューアーティファクト |
+| Anchor Screen (アンカースクリーン) | オプション比較から選定される参照画面デザイン。canonical record は uiux/31_selected_anchor_screen.md |
+| Screen Contract (スクリーンコントラクト) | 画面レベルの UI 義務を構造化 Markdown（表形式）で定義するサイドカーアーティファクト (uiux/40_screen_contracts.md)。11 required fields（secondary_tasks 含む）。将来 YAML 化される可能性がある |
+| Option Comparison (オプション比較) | 2つ以上のデザイン代替案をスコアリング軸に沿って構造化比較すること。canonical file は uiux/30_option_comparison.md（Selected Direction は含まず、31_selected_anchor_screen.md に分離） |
+| Selected Anchor (選択アンカー) | オプション比較から選定された方向性とアンカースクリーンの canonical record。uiux/31_selected_anchor_screen.md に記載 |
+| Review Input Bundle (レビュー入力バンドル) | サイドカー出力をまとめた統合アーティファクトパッケージ (uiux/50_review_input_bundle.md) |
+| Dynamic Overrides (動的オーバーライド) | 3-layer evaluation の動的上書き定義 (uiux/24_design_eval_dynamic_overrides.md)。OPTIONAL — 存在しなくてもファミリ完全性エラーにはならない |
+| UI-bearing Classification (UI-bearing 分類) | 01_Context.md に配置される explicit classification block。surface type (web, mobile, desktop, mixed, non-ui) を宣言し、UI-bearing 判定の primary SSOT となる |
 | Direct Template (ダイレクトテンプレート) | v1.7.3 で置換される3テンプレート (03, 04, 14) |
 | Batch A/B Templates (バッチA/Bテンプレート) | UX intent クロスリファレンスで拡張されるコアテンプレート群 (01, 02, 05-12, 99) |
 | UIX-VAL | Deterministic validator rule family for UI/UX artifacts。Shape/completeness/contradiction checks のみ。LLM 非依存。Context: v1.7.4 新機能 |
@@ -195,41 +196,83 @@
 | Traceability Drift | specのBR/ACが変更されたのに対応する実装コードに変更がない状態（トレーサビリティ断絶） | validation | discussion-20260330183225659 |
 | Implementation State | 各specの実装状態分類: implemented（実装済み）, missing（未実装）, stale（古い実装）, unchanged（変更なし） | diff detection | spec-0011 |
 | Diff Context | evidenceファイルに記録される差分検出の実行コンテキスト（last_commit_sha, last_run_timestamp, changed_specs, execution_mode） | evidence | spec-0011 |
+| Canonical Validator | production-path validator registered in `validate.ts` pipeline. Distinguished from legacy/compatibility validators by `category: "canonical"` in emitted issues. |
+| Existence-Based Precedence (D-5) | mode resolution rule where the mere existence of the `prototyping` key in `prototyping.yaml` makes the namespaced contract authoritative, regardless of value validity. |
+| IssueCategory | type discriminator for validator findings — `"canonical"` (production contract violations), `"change"` (change-related findings). v1.7.14: `"compatibility"` は削除済み（DR-0108）。 |
+| Legacy Validator | [REMOVED v1.7.14] `validators/legacy/` namespace は v1.7.14 で完全削除済み（DR-0115）。 |
+| prototyping.yaml | required side artifact in discussion-pack alongside 15 markdown files. Contains `prototyping.recommended_mode`, `rationale`, `allowed_modes`, `surface` fields. |
+| Prototyping Mode | one of `low-cost` (static only), `standard` (default), `full-harness` (opt-in runtime-heavy). Resolved via precedence: user-specified > discussion recommendation > system default. |
+| Recommendation Artifact | `prototyping.yaml` file in discussion-pack. Status: valid/invalid/missing/no-pack. Resolved by `resolveLatestRecommendationArtifact()`. |
+| runCanonicalUixValidators | production-path UIX validator entrypoint replacing `runAllUixValidators`. Runs 11 modular validators in parallel from `uix/canonical.ts`（v1.7.14: rollout.ts 削除により 12→11）。 |
+| Browser QA 4-Phase Model | browser-level QA を smoke → interaction → visual → accessibility の 4 フェーズで順次実行するモデル。`browserQa/runner.ts` が orchestrate し `BrowserQaRunResult` を集約。|
+| Evidence Bundle | render capture + Browser QA 結果 + prototyping summary を `.qfai/evidence/` に JSON バンドルとして永続化する単位。`evidence/bundleWriter.ts` が生成。|
+| UI Fidelity Builder | render evidence + Browser QA 結果から UI fidelity artifact を合成するモジュール。required evidence 欠落時は QFAI-PROT-270/271/272 を emit。|
+| Prototyping Execution Orchestrator | `prototyping/execution.ts` — mode resolution → evidence capture → Browser QA → full-harness の本番パスを統合実行するエントリポイント。|
+| Provider Registry | `providers/registry.ts` — `QfaiPrototypingConfig` から concrete provider（Playwright/custom）を解決する依存逆転パターン。|
+| Surface Type Detection | `detection/surfaceType.ts` — 01_Context.md の明示的分類ブロック（ui_bearing/primary_surface）を優先し、フォールバックとして surface_type フィールドを使用する判定モジュール。|
+| Classification Block | 01_Context.md に記載する構造化ブロック。`ui_bearing`, `primary_surface`, `secondary_surfaces`, `classification_rationale` の 4 フィールドで構成。`classification.ts` バリデータが検証。|
+| Research Pipeline | Web リサーチの標準 8 ステージ実行順序。search → rank → fetch → extract → sanitize → cache → verify → cite を固定順で実行する。 |
+| Content Sanitization | 取得コンテンツから制御文字、`aria-hidden` 要素、`display:none` 要素を除去する安全化処理。ML ベース判定は使わない。 |
+| Domain Allowlist | 既定拒否のネットワークアクセス制御。明示許可したドメインのみ fetch / redirect を許可する。 |
+| Research Session Log | リサーチ実行の監査ログ。検索語、取得 URL、content hash、sanitization event、verification 結果、最終 citation を含み、秘密情報を含めない。 |
+| HITL Gate | Human-in-the-Loop によるリスクベース承認ゲート。高リスクまたは低信頼の結果のみ人手承認を要求する。 |
+| Citation Precision | 最終回答の引用が実ソース内容を正確に裏づけている度合いを測る評価指標。 |
+| Source Freshness | 使用ソースの更新性・時点妥当性を表す評価観点。キャッシュしきい値や再取得判断の基準となる。 |
 
 ## 略語一覧
 
-| Abbreviation | Full Form                                                                    |
-| ------------ | ---------------------------------------------------------------------------- | ----------------------------------- |
-| CLI          | Command-Line Interface                                                       |
-| CI/CD        | Continuous Integration / Continuous Delivery                                 |
-| DOM          | Document Object Model                                                        |
-| ESM          | ECMAScript Modules                                                           |
-| CJS          | CommonJS                                                                     |
-| SSOT         | Single Source of Truth                                                       |
-| NFR          | Non-Functional Requirement                                                   |
-| REQ          | Functional Requirement                                                       |
-| API          | Application Programming Interface                                            |
-| UI           | User Interface                                                               |
-| DB           | Database                                                                     |
-| YAML         | YAML Ain't Markup Language                                                   |
-| JSON         | JavaScript Object Notation                                                   |
-| OSS          | Open Source Software                                                         |
-| CR           | Change Request                                                               |
-| RCP          | Review Cycle Protocol                                                        |
-| SDP          | Spec Diff Protocol                                                           |
-| ISA          | Implementation State Analysis                                                |
-| TDD-ID       | Test-Driven Development Item Identifier                                      |
-| DR-ID        | Decision Record Identifier                                                   |
-| DDP          | Design Direction Pack                                                        |
-| DDS          | Design Direction Summary                                                     |
-| REA          | Render Evidence Automation                                                   |
-| SLP          | Slop Pattern — AI slop カテゴリ ID プレフィックス (v1.7.2)                   |
-| AUD          | Audit — Design Audit ルール ID プレフィックス (v1.7.2)                       |
-| UIX-VAL      | UI/UX Validation — deterministic validator ルール ID プレフィックス (v1.7.4) |
-| UIX-REV      | UI/UX Review — semantic reviewer ルール ID プレフィックス (v1.7.4)           |
-| FH           | Full-Harness — premium prototyping mode の反復ループ構造                     |
-| HITL         | Human-in-the-Loop                                                            |
-| SDP          | Spec Diff Protocol                                                           | Spec Auto-Discovery Protocol の略称 |
+| Abbreviation              | Full Form                                                                                                                                                                                                                        |
+| ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------- |
+| CLI                       | Command-Line Interface                                                                                                                                                                                                           |
+| CI/CD                     | Continuous Integration / Continuous Delivery                                                                                                                                                                                     |
+| DOM                       | Document Object Model                                                                                                                                                                                                            |
+| ESM                       | ECMAScript Modules                                                                                                                                                                                                               |
+| CJS                       | CommonJS                                                                                                                                                                                                                         |
+| SSOT                      | Single Source of Truth                                                                                                                                                                                                           |
+| NFR                       | Non-Functional Requirement                                                                                                                                                                                                       |
+| REQ                       | Functional Requirement                                                                                                                                                                                                           |
+| API                       | Application Programming Interface                                                                                                                                                                                                |
+| UI                        | User Interface                                                                                                                                                                                                                   |
+| DB                        | Database                                                                                                                                                                                                                         |
+| YAML                      | YAML Ain't Markup Language                                                                                                                                                                                                       |
+| JSON                      | JavaScript Object Notation                                                                                                                                                                                                       |
+| OSS                       | Open Source Software                                                                                                                                                                                                             |
+| CR                        | Change Request                                                                                                                                                                                                                   |
+| RCP                       | Review Cycle Protocol                                                                                                                                                                                                            |
+| SDP                       | Spec Diff Protocol                                                                                                                                                                                                               |
+| ISA                       | Implementation State Analysis                                                                                                                                                                                                    |
+| TDD-ID                    | Test-Driven Development Item Identifier                                                                                                                                                                                          |
+| DR-ID                     | Decision Record Identifier                                                                                                                                                                                                       |
+| DDP                       | Design Direction Pack                                                                                                                                                                                                            |
+| DDS                       | Design Direction Summary                                                                                                                                                                                                         |
+| REA                       | Render Evidence Automation                                                                                                                                                                                                       |
+| SLP                       | Slop Pattern — AI slop カテゴリ ID プレフィックス (v1.7.2)                                                                                                                                                                       |
+| AUD                       | Audit — Design Audit ルール ID プレフィックス (v1.7.2)                                                                                                                                                                           |
+| UIX-VAL                   | UI/UX Validation — deterministic validator ルール ID プレフィックス (v1.7.4)                                                                                                                                                     |
+| UIX-REV                   | UI/UX Review — semantic reviewer ルール ID プレフィックス (v1.7.4)                                                                                                                                                               |
+| FH                        | Full-Harness — premium prototyping mode の反復ループ構造                                                                                                                                                                         |
+| HITL                      | Human-in-the-Loop                                                                                                                                                                                                                |
+| SDP                       | Spec Diff Protocol                                                                                                                                                                                                               | Spec Auto-Discovery Protocol の略称 |
+| l2Evidence                | L2 Evidence Module — `l2Evidence.ts` が提供する 3 つの builder 関数（buildDiscussionAxisInputs / buildScreenContractInputs / buildTrendAlignmentInputs）で実 discussion artifact から L2 入力を導出するモジュール (v1.7.15 rev2) |
+| ScreenObservation         | Screen-level UI 観測型。route / htmlCaptureRef / domLabelsFound / elementsPlaced / actionsWired / mockPathFindings を screen 単位で保持する (v1.7.15 rev2)                                                                       |
+| TerminationContext        | Full-harness 終了判定コンテキスト。`{ calibration: CalibrationPack; history: FullHarnessHistory }` を受け、CalibrationPack 以外からの plateauLookback 解決を禁止 (v1.7.15 rev2)                                                  |
+| MeasurementResult         | Full-harness 計測結果型。panelInputs と 8 カテゴリ evidenceRefs を同時に返す strict 型 (v1.7.15 rev2)                                                                                                                            |
+| evidenceRefs 8 categories | iteration ごとに必須の 8 つの evidence カテゴリ: runtimeGate / render / browserQa / uiObservation / specCoverage / discussion / screenContract / trend (v1.7.15 rev2)                                                            |
+| schema v2 (bundleWriter)  | bundleWriter の新 iteration schema。8 カテゴリ evidenceRefs + FullHarnessIteration 新型の required fields を定義。v1 との並存を禁止 (v1.7.15 rev2)                                                                               |
+| fail-closed               | 入力不備時にデフォルト値で続行せず即座に失敗する設計方針。CalibrationLoader / validatePanelInputs / specCoverage 等に適用 (v1.7.15 rev2)                                                                                         |
+| validatePanelInputs       | panelInputs の必須項目欠落を検出する検証関数。10 種類の silent pass を error に昇格 (v1.7.15 rev2)                                                                                                                               |
+
+| canonical route | URL パスとは分離された、spec 定義上の論理ルート識別子。`runtimeGate` / `specCoverage` はこの canonical route を基準に計測する (v1.7.15 rev4) |
+| screen-level measurement | 各 screen contract に対して個別に render / Browser QA / observation を実施する測定方式 (v1.7.15 rev4) |
+| render target | render パネルの測定対象画面。rev4 では `"/primary"` 固定値を廃止し、canonical screen contract から動的に決定 (v1.7.15 rev4) |
+| structured parse | L2 evidence の構築において、artifact を構造化パーサーで解析する方式。heuristic fallback より優先 (v1.7.15 rev4) |
+| heuristic fallback | structured parse が利用できない場合に、テキストパターンマッチ等の経験則で L2 入力を推定する方式。rev4 では適用範囲を縮小 (v1.7.15 rev4) |
+| canonical screen contract | screen contract の正規化された表現。画面 ID / ルート / 期待 DOM 構造 / 期待アクションを定義 (v1.7.15 rev4) |
+| missing_observation | 画面契約に存在するがオブザベーションにないルートに対する specCoverage のレポートステータス (v1.7.15 rev4) |
+| reality sync | docs / SKILL / README が runtime / validator / tests の実体と一致した状態 (v1.7.15 rev4) |
+| Design Guideline Research | UI-bearing discussion で Material Design / WCAG / Apple HIG / 採用 UI ライブラリ等の基準を収集し、`04_Sources.md` に traceable に記録する research step (v1.7.17) |
+| design_guideline_research | `04_Sources.md` に追加される canonical category。デザイン指南書由来の定量基準や rule ID を保持するための領域 (v1.7.17) |
+| Quantitative Proxy | `score_anchors` の concreteness を支える具体表現。px 値、比率、WCAG rule ID、class 名、library default value などを含む (v1.7.17) |
 
 ## 使用ルール
 

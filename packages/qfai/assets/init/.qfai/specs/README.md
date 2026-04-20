@@ -72,9 +72,9 @@ Each `spec-XXXX/` must satisfy:
 
 Each `spec-XXXX/tdd/test-list.md` is the execution ledger for the TDD micro-cycle.
 
-- **8 required columns**: TDD-ID, TC-Refs, Layer, Test file, Selector, Status, DR-ID, Evidence
+- **8 required columns** (in `tdd/test-list.md`): TDD-ID, TC-Refs, Layer, Test file, Selector, Status, DR-ID, Evidence
 - **Coverage** is measured as unit/component TC references from `06_Test-Cases.md` appearing in TC-Refs
-- **Level column fallback**: when `06_Test-Cases.md` has no `Level` column, all TCs are treated as coverage targets (equivalent to all being unit/component)
+- **Test-case classification fallback** (for `06_Test-Cases.md`, which uses its own classification column — typically named `Level`): when that file has no test-case classification column, every TC is treated as a coverage target (equivalent to all being unit/component). This fallback does **not** apply to the `tdd/test-list.md` `Layer` column, which remains required.
 - **Status=exception** rows must have a non-empty DR-ID (Decision Record reference)
 - **Status in {green, refactor, done}** rows must have an existing Test file (resolved relative to project root)
 - **TDD-ID** must match `TDD-NNNN` format and be unique within the spec (case-insensitive)

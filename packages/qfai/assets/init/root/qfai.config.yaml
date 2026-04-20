@@ -21,12 +21,24 @@ validation:
     testFileGlobs:
       - tests/**/*.test.ts
       - tests/**/*.spec.ts
+      - packages/*/tests/**/*.test.ts
+      - packages/*/tests/**/*.spec.ts
       - src/**/*.test.ts
       - src/**/*.spec.ts
+      - packages/*/src/**/*.test.ts
+      - packages/*/src/**/*.spec.ts
       - features/**/*.feature
+      - packages/*/features/**/*.feature
     testFileExcludeGlobs: []
     scNoTestSeverity: error
     orphanContractsPolicy: error
     unknownContractIdSeverity: error
 output:
   validateJsonPath: .qfai/report/validate.json
+prototyping:
+  calibration:
+    packPath: .qfai/evidence/calibration.yaml
+  execution:
+    targetUrl: null
+    browserProvider: playwright
+    renderProvider: playwright

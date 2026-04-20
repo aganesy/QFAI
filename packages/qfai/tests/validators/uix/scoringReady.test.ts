@@ -6,6 +6,8 @@
  * QFAI:SPEC-0002:TC-0002-0015
  * QFAI:SPEC-0002:TC-0002-0025
  * QFAI:SPEC-0002:TC-0002-0028
+ * QFAI:SPEC-0004:TC-0004-0065
+ * QFAI:SPEC-0004:TC-0004-0066
  */
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -25,7 +27,7 @@ async function newTempDir(): Promise<string> {
 }
 
 async function createUiBearingPack(root: string): Promise<void> {
-  await writeFile(path.join(root, "01_Spec.md"), "# Spec\n\n- surface: web-ui\n", "utf-8");
+  await writeFile(path.join(root, "01_Spec.md"), "# Spec\n\n- surface: web\n", "utf-8");
   await mkdir(path.join(root, "uiux"), { recursive: true });
 }
 
@@ -33,28 +35,68 @@ async function createNonUiPack(root: string): Promise<void> {
   await writeFile(path.join(root, "01_Spec.md"), "# Spec\n\n- surface: non-ui\n", "utf-8");
 }
 
-const ALL_16_FIELDS = [
+const ALL_AXIS_FIELDS = [
   "axis_id",
   "axis_name",
   "layer",
-  "definition",
-  "rationale",
-  "scoring_rubric",
+  "origin",
+  "intent",
+  "why_it_matters",
+  "score_scale",
+  "score_anchors",
+  "positive_signals",
+  "negative_signals",
+  "anti_patterns",
+  "evidence_required",
   "weight",
-  "min_score",
-  "max_score",
-  "pass_threshold",
-  "evidence_type",
-  "evidence_source",
-  "review_prompt",
-  "calibration_anchor",
-  "dependencies",
+  "minimum_floor",
+  "source_refs",
+  "goal_refs",
   "review_questions",
 ] as const;
 
 function completeAxisContent(): string {
   const lines = ["# Scoring Axes", "", "## Axis: accessibility", ""];
-  for (const field of ALL_16_FIELDS) {
+  for (const field of ALL_AXIS_FIELDS) {
+    if (field === "score_anchors") {
+      lines.push("- score_anchors:");
+      lines.push("  - low: Poor performance");
+      lines.push("  - mid: Adequate performance");
+      lines.push("  - high: Excellent performance");
+    } else {
+      lines.push(`- ${field}: Valid value for ${field}`);
+    }
+  }
+  return lines.join("\n");
+}
+
+function trendAxisContent(low: string, mid: string, high: string): string {
+  const lines = ["# Scoring Axes", "", "## Axis: typographic-rhythm", ""];
+  for (const field of ALL_AXIS_FIELDS) {
+    if (field === "layer") {
+      lines.push("- layer: trend-derived");
+      continue;
+    }
+    if (field === "axis_id") {
+      lines.push("- axis_id: TRD-01");
+      continue;
+    }
+    if (field === "axis_name") {
+      lines.push("- axis_name: Typographic Rhythm");
+      continue;
+    }
+    if (field === "score_anchors") {
+      lines.push("- score_anchors:");
+      lines.push(`  - low: ${low}`);
+      lines.push(`  - mid: ${mid}`);
+      lines.push(`  - high: ${high}`);
+      continue;
+    }
+    if (field === "source_refs") {
+      lines.push("- source_refs:");
+      lines.push("  - SRC-TREND-01");
+      continue;
+    }
     lines.push(`- ${field}: Valid value for ${field}`);
   }
   return lines.join("\n");
@@ -64,10 +106,18 @@ function aggregateScoringContent(): string {
   return [
     "# Aggregate Scoring Rules",
     "",
-    "- thresholds: min 70 overall",
-    "- floors: no axis below 50",
-    "- plateau: diminishing returns above 90",
+    "- total_score_formula: weighted_sum",
+    "- layer_weights:",
+    "  - invariant: 0.60",
+    "  - trend_derived: 0.25",
+    "  - product_specific: 0.15",
+    "- accept_threshold: 3.5",
+    "- refine_band: 2.5-3.4",
+    "- pivot_band: < 2.5",
+    "- max_iterations: 3",
+    "- plateau_rule: 3 consecutive iterations with delta < 0.1",
     "- missing_score_policy: exclude from aggregate",
+    "- disagreement_rule: average scores, escalate if delta > 1.0",
   ].join("\n");
 }
 
@@ -82,7 +132,12 @@ describe("scoring-ready validator", () => {
   it("complete pass", async () => {
     const root = await newTempDir();
     await createUiBearingPack(root);
-    await writeFile(path.join(root, "uiux", "20_eval_axes.md"), completeAxisContent(), "utf-8");
+    // Write to canonical split file
+    await writeFile(
+      path.join(root, "uiux", "20_design_eval_invariant.md"),
+      completeAxisContent(),
+      "utf-8",
+    );
 
     const issues = await validateScoringReady(root, defaultConfig);
 
@@ -92,20 +147,31 @@ describe("scoring-ready validator", () => {
   it("incomplete fail", async () => {
     const root = await newTempDir();
     await createUiBearingPack(root);
-    // Axis missing scoring_rubric and calibration_anchor
+    // Axis missing origin and why_it_matters
     const lines = ["# Scoring Axes", "", "## Axis: accessibility", ""];
-    for (const field of ALL_16_FIELDS) {
-      if (field === "scoring_rubric" || field === "calibration_anchor") continue;
-      lines.push(`- ${field}: Valid value for ${field}`);
+    for (const field of ALL_AXIS_FIELDS) {
+      if (field === "origin" || field === "why_it_matters") continue;
+      if (field === "score_anchors") {
+        lines.push("- score_anchors:");
+        lines.push("  - low: Poor performance");
+        lines.push("  - mid: Adequate performance");
+        lines.push("  - high: Excellent performance");
+      } else {
+        lines.push(`- ${field}: Valid value for ${field}`);
+      }
     }
-    await writeFile(path.join(root, "uiux", "20_eval_axes.md"), lines.join("\n"), "utf-8");
+    await writeFile(
+      path.join(root, "uiux", "20_design_eval_invariant.md"),
+      lines.join("\n"),
+      "utf-8",
+    );
 
     const issues = await validateScoringReady(root, defaultConfig);
 
     const incomplete = issues.filter((i) => i.code === "UIX-VAL-DYNAMIC-AXIS-INCOMPLETE");
     expect(incomplete.length).toBeGreaterThan(0);
-    expect(incomplete[0]?.message).toContain("scoring_rubric");
-    expect(incomplete[0]?.message).toContain("calibration_anchor");
+    expect(incomplete[0]?.message).toContain("origin");
+    expect(incomplete[0]?.message).toContain("why_it_matters");
   });
 
   it("non-UI skip", async () => {
@@ -120,9 +186,13 @@ describe("scoring-ready validator", () => {
   it("aggregate rules pass", async () => {
     const root = await newTempDir();
     await createUiBearingPack(root);
-    await writeFile(path.join(root, "uiux", "20_eval_axes.md"), completeAxisContent(), "utf-8");
     await writeFile(
-      path.join(root, "uiux", "21_aggregate_scoring.md"),
+      path.join(root, "uiux", "20_design_eval_invariant.md"),
+      completeAxisContent(),
+      "utf-8",
+    );
+    await writeFile(
+      path.join(root, "uiux", "23_design_eval_aggregate.md"),
       aggregateScoringContent(),
       "utf-8",
     );
@@ -135,9 +205,13 @@ describe("scoring-ready validator", () => {
   it("full mandatory pass", async () => {
     const root = await newTempDir();
     await createUiBearingPack(root);
-    await writeFile(path.join(root, "uiux", "20_eval_axes.md"), completeAxisContent(), "utf-8");
     await writeFile(
-      path.join(root, "uiux", "21_aggregate_scoring.md"),
+      path.join(root, "uiux", "20_design_eval_invariant.md"),
+      completeAxisContent(),
+      "utf-8",
+    );
+    await writeFile(
+      path.join(root, "uiux", "23_design_eval_aggregate.md"),
       aggregateScoringContent(),
       "utf-8",
     );
@@ -146,5 +220,46 @@ describe("scoring-ready validator", () => {
 
     // Both per-axis and aggregate pass
     expect(issues).toHaveLength(0);
+  });
+
+  // QFAI:SPEC-0004:TC-0004-0065
+  it("warns when score anchors are adjective-only with no quantitative proxy", async () => {
+    const root = await newTempDir();
+    await createUiBearingPack(root);
+    await writeFile(
+      path.join(root, "uiux", "21_design_eval_trend_derived.md"),
+      trendAxisContent(
+        "very rough and inconsistent",
+        "reasonably polished and modern",
+        "very polished and modern",
+      ),
+      "utf-8",
+    );
+
+    const issues = await validateScoringReady(root, defaultConfig);
+    const warnings = issues.filter((issue) => issue.code === "UIX-VAL-T06");
+
+    expect(warnings).toHaveLength(1);
+    expect(warnings[0]?.severity).toBe("warning");
+    expect(warnings[0]?.message).toContain("TRD-01");
+    expect(warnings[0]?.message).toContain("high");
+  });
+
+  // QFAI:SPEC-0004:TC-0004-0066
+  it("accepts score anchors that include quantitative proxies", async () => {
+    const root = await newTempDir();
+    await createUiBearingPack(root);
+    await writeFile(
+      path.join(root, "uiux", "21_design_eval_trend_derived.md"),
+      trendAxisContent(
+        "<14px body text and contrast below 3:1",
+        "16px body text with 4.5:1 contrast on primary routes",
+        "16px body text, 1.25 modular ratio, and WCAG AA contrast on every screen",
+      ),
+      "utf-8",
+    );
+
+    const issues = await validateScoringReady(root, defaultConfig);
+    expect(issues.filter((issue) => issue.code === "UIX-VAL-T06")).toHaveLength(0);
   });
 });

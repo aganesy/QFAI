@@ -1,6 +1,6 @@
 # 12 OQ Resolution Log
 
-<!-- UX-INTENT: If UI-bearing, log design critique resolutions from uiux/60_critique_loop.md -->
+<!-- UX-INTENT: If UI-bearing, log design critique resolutions from uiux/30_option_comparison.md and uiux/31_selected_anchor_screen.md -->
 
 ## Resolution Timeline
 

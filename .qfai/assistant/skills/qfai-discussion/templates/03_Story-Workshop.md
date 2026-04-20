@@ -45,22 +45,22 @@ flowchart TD
 
 ## Behavior Obligations
 
-<!-- Primary focus for UI-bearing packs. Define behavioral requirements before visual mockups. -->
+<!-- Primary focus for UI-bearing packs. Capture behavioral discovery before screen-level contracts.
+     Screen-level contract SSOT lives in uiux/40_screen_contracts.md. -->
 
 ### State Coverage
 
-| State     | Trigger   | Display   | Transitions   |
-| --------- | --------- | --------- | ------------- |
-| empty     | [trigger] | [display] | [transitions] |
-| loading   | [trigger] | [display] | [transitions] |
-| error     | [trigger] | [display] | [transitions] |
-| populated | [trigger] | [display] | [transitions] |
+| State / Risk    | Discovery Notes                                   | Handoff to Contract                                                           |
+| --------------- | ------------------------------------------------- | ----------------------------------------------------------------------------- |
+| [state or risk] | [what might trigger confusion, delay, or failure] | Reflect the final `required_states` contract in `uiux/40_screen_contracts.md` |
 
 ### Interaction Contracts
 
-| Element   | Action   | Expected Result | Error Handling |
-| --------- | -------- | --------------- | -------------- |
-| [element] | [action] | [result]        | [error case]   |
+| Primary Task     | Key Action         | Priority Hint            | Expected Result | Error Handling |
+| ---------------- | ------------------ | ------------------------ | --------------- | -------------- |
+| [main user goal] | [main interaction] | [primary/high/secondary] | [result]        | [error case]   |
+
+Screen-level contract details are finalized in `uiux/40_screen_contracts.md`. Primary tasks, required states, transitions, and observable outcomes are finalized there; Story Workshop is for discovery and handoff, not final contract fixation.
 
 ### Error Handling
 
@@ -68,11 +68,14 @@ flowchart TD
 - Network failure: [approach]
 - Timeout: [approach]
 
-## Screen Mock — Fallback (HTML+CSS)
+---
 
-- Secondary: required when UI requirements exist, but subordinate to Behavior Obligations above.
-- Visual mock only; do not include JavaScript behavior.
-- This HTML/CSS mock is a fallback visual aid that supplements (not replaces) the behavioral definitions.
+## Appendix: Screen Mock — Optional Fallback (HTML+CSS)
+
+<!-- Optional fallback only — do not use as the primary UI definition artifact.
+     Include only when it materially clarifies the selected anchor.
+     Behavior Obligations and sidecar artifacts (uiux/) are the primary UI definitions.
+     The required state SSOT is uiux/40_screen_contracts.md (`default/loading/empty/error`). -->
 
 ```html
 <section class="screen-mock">
@@ -91,49 +94,3 @@ flowchart TD
   border-radius: 12px;
 }
 ```
-
-## Design Direction Summary
-
-<!-- Required for UI-bearing packs. Validated by QFAI-DDP-019..025. -->
-
-### Option Comparison
-
-<!-- List 2+ design options. Each must be a separate entry. (QFAI-DDP-020) -->
-
-- **Option A**: [Name and description]
-- **Option B**: [Name and description]
-
-### Anchor Screen Selection
-
-<!-- Select one of the compared options as the anchor. (QFAI-DDP-021) -->
-
-Selected: [Option X] — [Reason for selection]
-
-### Competitive References
-
-<!-- Summarize competitive references from 04_Sources.md. (QFAI-DDP-022) -->
-
-See 04_Sources.md for full competitive reference registry.
-
-### CTA Hierarchy
-
-<!-- Define CTA hierarchy with at least a primary CTA. (QFAI-DDP-023) -->
-
-- Primary: [CTA label and placement]
-- Secondary: [CTA label and placement]
-
-### State Coverage
-
-<!-- Define all 4 required states. (QFAI-DDP-024) -->
-<!-- SSOT for state details: Behavior Obligations > State Coverage table above. Keep these bullets for validator compliance; fill display-level details or reference the table. -->
-
-- empty: [Empty state display — see Behavior Obligations table for triggers/transitions]
-- loading: [Loading state display — see Behavior Obligations table for triggers/transitions]
-- error: [Error state display — see Behavior Obligations table for triggers/transitions]
-- populated: [Populated state display — see Behavior Obligations table for triggers/transitions]
-
-### Design Anti-goals
-
-<!-- List 1+ design patterns to intentionally avoid. (QFAI-DDP-025) -->
-
-- Anti-goal: [Pattern to avoid and reason]

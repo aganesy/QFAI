@@ -129,19 +129,21 @@ export async function validateUiDefinitionConsistency(
     }
   }
 
-  // Check Contract↔Mock screen alignment
-  for (const screenId of contractScreenIds) {
-    if (!mockScreenIds.has(screenId)) {
-      issues.push(
-        issue(
-          "QFAI-CONSISTENCY-002",
-          `HTML Mock missing for screen: ${screenId} (defined in UI Contract)`,
-          "warning",
-          undefined,
-          "uiDefinitionConsistency.screenAlignment",
-          [screenId],
-        ),
-      );
+  // Check Contract↔Mock screen alignment (advisory only — mock is optional supplemental evidence)
+  if (mockScreenIds.size > 0) {
+    for (const screenId of contractScreenIds) {
+      if (!mockScreenIds.has(screenId)) {
+        issues.push(
+          issue(
+            "QFAI-CONSISTENCY-002",
+            `HTML Mock missing for screen: ${screenId} (defined in UI Contract). Mock is optional supplemental evidence.`,
+            "info",
+            undefined,
+            "uiDefinitionConsistency.screenAlignment",
+            [screenId],
+          ),
+        );
+      }
     }
   }
 

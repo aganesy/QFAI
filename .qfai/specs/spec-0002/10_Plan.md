@@ -65,3 +65,28 @@ CAP-0002 の多くは既に実装済みである。本 spec は設計意図と�
 | サイドカー構造の後方互換性                | 中     | YAML スキーマにバージョンフィールドを含め、後方互換を保証 |
 | 非 UI パックへの誤影響                    | 高     | 全 UI-bearing バリデータに non-UI guard pattern を適用    |
 | scoring-ready schema の 16 フィールド負荷 | 低     | フィールドは必須だが内容の質はレビュアーが判断            |
+
+## v1.7.12 Implementation Strategy
+
+- **Phase**: Template family replacement
+- **Bundle**: A (discussion-pack canonicalization)
+
+### Steps
+
+1. Delete old 4-axis template files (20-23*eval_axis*\*) from both dogfood and init paths
+2. Create new 3-layer files (11*design_taste_interview, 20-24_design_eval*\*) in both paths
+3. Rewrite 00_index.md to list only new canonical family
+4. Update UI-bearing completion conditions to reference 3-layer model
+5. Verify dogfood/init parity
+
+### Test Strategy
+
+- Vitest unit tests for sidecar structure validation
+- Parity tests for dogfood/init sync
+
+## v1.7.13 Implementation Notes
+
+- prototyping.yaml side artifact: `packages/qfai/src/core/discussionPack.ts` — REQUIRED_DISCUSSION_PACK_SIDE_ARTIFACTS, DiscussionPackReadiness.missingSideArtifacts
+- Discussion design hardening sidecar-first rewrite: `packages/qfai/src/core/validators/discussionDesignHardening.ts` — all 7 validators rewritten for uiux/ sidecar primary truth
+- Issue code migration: QFAI-DDP-019~025 → UIX-VAL-DDH-\* canonical codes
+- Implemented in v1.7.13-18..22.

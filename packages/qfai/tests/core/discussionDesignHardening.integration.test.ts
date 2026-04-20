@@ -56,27 +56,20 @@ async function seedUiBearingDiscussionPack(root: string): Promise<void> {
     "",
     "<style>.screen { background: #fff; }</style>",
     "",
-    "## Design Direction Summary",
-    "",
-    "### Option Comparison",
-    "- **Option A**: Card-based layout",
-    "- **Option B**: List-based layout",
-    "",
-    "### Anchor Screen Selection",
-    "Selected: Option A — Better visual hierarchy",
-    "",
-    "### Competitive References",
-    "See 04_Sources.md",
-    "",
-    "### CTA Hierarchy",
-    '- Primary: "Get Started" button, hero section',
-    '- Secondary: "Learn More" link',
+    "## Behavior Obligations",
     "",
     "### State Coverage",
-    "- empty: No items message with Create CTA",
-    "- loading: Skeleton cards",
-    "- error: Error banner with retry",
-    "- populated: Card grid",
+    "| State / Risk | Discovery Notes | Handoff to Contract |",
+    "| ------------ | --------------- | ------------------- |",
+    "| loading | Skeleton cards can obscure the main task | Final `required_states` contract lives in `uiux/40_screen_contracts.md` |",
+    "| error | Retry action must remain obvious | Final `required_states` contract lives in `uiux/40_screen_contracts.md` |",
+    "",
+    "### Interaction Contracts",
+    "| Primary Task | Key Action | Priority Hint | Expected Result | Error Handling |",
+    "| ------------ | ---------- | ------------- | --------------- | -------------- |",
+    '| Start evaluation | "Get Started" button | primary | User enters the main flow | Retry paths remain visible during failures |',
+    "",
+    "Screen-level contract details are finalized in `uiux/40_screen_contracts.md`. Primary tasks, required states, transitions, and observable outcomes are finalized there; Story Workshop is for discovery and handoff, not final contract fixation.",
     "",
     "### Design Anti-goals",
     "- Anti-goal: Avoid modal-heavy flows",
@@ -88,6 +81,7 @@ async function seedUiBearingDiscussionPack(root: string): Promise<void> {
     "## Competitive Reference Registry",
     "",
     "### Reference: Notion",
+    "- reference: https://notion.so/design-system",
     "- adopted_points: Clean card layout with hierarchy",
     "- rejected_points: Complex sidebar navigation",
     "- local_translation: Adapted card sizes for Japanese text",
@@ -126,6 +120,80 @@ async function seedUiBearingDiscussionPack(root: string): Promise<void> {
   for (const file of minimalFiles) {
     await writeFile(path.join(packDir, file.name), file.content, "utf-8");
   }
+
+  // Seed uiux sidecar files for UI-bearing validation
+  const uiuxDir = path.join(packDir, "uiux");
+  await mkdir(uiuxDir, { recursive: true });
+
+  const strategyContent = [
+    "# Strategy",
+    "",
+    "## Layer Classification",
+    "Layer: strategy",
+    "",
+    "### Surface: web",
+    "- surface: web",
+    "- selection_required: yes",
+    "- decision: component-library",
+    "- candidate_options: component-library, design-system",
+    "- chosen_option: component-library",
+    "- rationale: Better visual hierarchy",
+    "- verification_expectations: Responsive card grid",
+    "- notes_for_reviewer: None",
+  ].join("\n");
+
+  const comparisonContent = [
+    "# 30 Option Comparison",
+    "",
+    "- **Option A**: Card-based layout",
+    "- **Option B**: List-based layout",
+  ].join("\n");
+
+  const selectedAnchorContent = [
+    "# 31 Selected Anchor Screen",
+    "",
+    "- selected_option: Option A",
+    "- why_selected: Better visual hierarchy for card-based layout.",
+  ].join("\n");
+
+  const contractsContent = [
+    "# 40 Screen Contracts",
+    "",
+    "### Screen: Dashboard",
+    "- screen_id: SCR-001",
+    "- route: /dashboard",
+    "- purpose: Main dashboard view",
+    "- actor: user",
+    "- primary_tasks:",
+    "  - View overview: open dashboard summary",
+    "- secondary_tasks:",
+    "  - Export data: download a report",
+    "- required_states:",
+    "  - default: Main dashboard data is visible",
+    "  - loading: Loading skeleton is visible",
+    "  - empty: Empty state explains next steps",
+    "  - error: Retry action is visible",
+    "- transitions:",
+    "  - default -> loading: refresh requested",
+    "- observable_outcomes:",
+    "  - Data displayed: summary cards are visible",
+    "- notes_for_verify: Check states",
+    "- notes_for_reviewer: None",
+  ].join("\n");
+
+  await writeFile(path.join(uiuxDir, "10_implementation_strategy.md"), strategyContent, "utf-8");
+  await writeFile(path.join(uiuxDir, "30_option_comparison.md"), comparisonContent, "utf-8");
+  await writeFile(
+    path.join(uiuxDir, "31_selected_anchor_screen.md"),
+    selectedAnchorContent,
+    "utf-8",
+  );
+  await writeFile(path.join(uiuxDir, "40_screen_contracts.md"), contractsContent, "utf-8");
+  await writeFile(
+    path.join(uiuxDir, "50_review_input_bundle.md"),
+    "# Review Input Bundle\n\n## Trend-derived review focus\n\nReview focus items derived from trends.\n",
+    "utf-8",
+  );
 }
 
 async function seedNonUiDiscussionPack(root: string): Promise<void> {
@@ -177,16 +245,16 @@ async function seedNonUiDiscussionPack(root: string): Promise<void> {
 
 describe("Discussion Design Hardening — Integration", { timeout: 30000 }, () => {
   // TDD-0025: TC-0002-0025
-  it("Review-Request template has Design Direction Decisions section", async () => {
+  it("Review-Request template has Selected Anchor Consistency section", async () => {
     const templatePath = path.resolve(
       process.cwd(),
       "assets/init/.qfai/assistant/skills/qfai-discussion/templates/14_Review-Request.md",
     );
     const content = await readFile(templatePath, "utf-8");
-    expect(content).toContain("## Design Direction Decisions");
-    expect(content).toContain("Anchor screen");
-    expect(content).toContain("Rejection rationale");
-    expect(content).toContain("Adopted competitive references");
+    expect(content).toContain("## Selected Anchor Consistency");
+    expect(content).toMatch(/selected anchor/i);
+    expect(content).toMatch(/strategy alignment/i);
+    expect(content).toMatch(/evaluation traceability/i);
   });
 
   // TDD-0026: TC-0002-0026
@@ -202,32 +270,29 @@ describe("Discussion Design Hardening — Integration", { timeout: 30000 }, () =
   });
 
   // TDD-0027: TC-0002-0027
-  it("SKILL.md lists all 7 validators with pass criteria", async () => {
+  it("SKILL.md lists sidecar-family validators for UI-bearing packs", async () => {
     const skillPath = path.resolve(
       process.cwd(),
       "assets/init/.qfai/assistant/skills/qfai-discussion/SKILL.md",
     );
     const content = await readFile(skillPath, "utf-8");
     expect(content).toContain("UI-bearing Authoring Requirements");
-    for (let i = 19; i <= 25; i++) {
-      expect(content).toContain(`QFAI-DDP-0${i}`);
-    }
+    // Sidecar-family validators are the primary quality gates
+    expect(content).toMatch(/Sidecar-family validators|UIX-VAL/i);
+    expect(content).toMatch(/non-ui.*exempt|exempt.*sidecar/i);
   });
 
   // TDD-0028: TC-0002-0028
-  it("Template 03_Story-Workshop.md contains DDS placeholder with 6 subsection stubs", async () => {
+  it("Template 03_Story-Workshop.md contains Behavior Obligations with state coverage", async () => {
     const templatePath = path.resolve(
       process.cwd(),
       "assets/init/.qfai/assistant/skills/qfai-discussion/templates/03_Story-Workshop.md",
     );
     const content = await readFile(templatePath, "utf-8");
-    expect(content).toContain("## Design Direction Summary");
-    expect(content).toContain("### Option Comparison");
-    expect(content).toContain("### Anchor Screen Selection");
-    expect(content).toContain("### Competitive References");
-    expect(content).toContain("### CTA Hierarchy");
+    expect(content).toContain("## Behavior Obligations");
     expect(content).toContain("### State Coverage");
-    expect(content).toContain("### Design Anti-goals");
+    expect(content).toContain("### Interaction Contracts");
+    expect(content).toContain("### Error Handling");
   });
 
   // TDD-0029: TC-0002-0029
@@ -235,28 +300,26 @@ describe("Discussion Design Hardening — Integration", { timeout: 30000 }, () =
     await withProject(async (root) => {
       await seedUiBearingDiscussionPack(root);
       const result = await validateProject(root);
-      // If the DDS is complete, QFAI-DDP-019..025 should not produce errors
-      const ddhCodes = result.issues
-        .filter((i) => i.code.startsWith("QFAI-DDP-01") || i.code.startsWith("QFAI-DDP-02"))
-        .filter((i) => parseInt(i.code.replace("QFAI-DDP-0", ""), 10) >= 19);
+      // If the discussion sidecars are complete, discussion hardening validators should not produce errors
+      const ddhCodes = result.issues.filter((i) => i.code.startsWith("UIX-VAL-DDH-"));
       expect(ddhCodes).toEqual([]);
     });
   });
 
   // TDD-0030: TC-0002-0030
-  it("non-UI pack backward compatibility — zero new QFAI-DDP-019..025 issues", async () => {
+  it("non-UI pack keeps zero discussion hardening issues", async () => {
     await withProject(async (root) => {
       await seedNonUiDiscussionPack(root);
       const result = await validateProject(root);
       const ddhIssues = result.issues.filter(
         (i) =>
-          i.code === "QFAI-DDP-019" ||
-          i.code === "QFAI-DDP-020" ||
-          i.code === "QFAI-DDP-021" ||
-          i.code === "QFAI-DDP-022" ||
-          i.code === "QFAI-DDP-023" ||
-          i.code === "QFAI-DDP-024" ||
-          i.code === "QFAI-DDP-025",
+          i.code === "UIX-VAL-DDH-SIDECAR-PRIMARY-TRUTH" ||
+          i.code === "UIX-VAL-DDH-OPTION-COMPARISON" ||
+          i.code === "UIX-VAL-DDH-SELECTED-ANCHOR" ||
+          i.code === "UIX-VAL-DDH-COMPETITIVE-REFERENCES" ||
+          i.code === "UIX-VAL-DDH-INTERACTION-HANDOFF" ||
+          i.code === "UIX-VAL-DDH-STATE-COVERAGE" ||
+          i.code === "UIX-VAL-DDH-DESIGN-ANTI-GOALS",
       );
       expect(ddhIssues).toEqual([]);
     });
@@ -289,13 +352,13 @@ describe("Discussion Design Hardening — Integration", { timeout: 30000 }, () =
       // Non-UI pack should still produce zero DDH issues even with strict profile
       const ddhIssues = result.issues.filter((i) =>
         [
-          "QFAI-DDP-019",
-          "QFAI-DDP-020",
-          "QFAI-DDP-021",
-          "QFAI-DDP-022",
-          "QFAI-DDP-023",
-          "QFAI-DDP-024",
-          "QFAI-DDP-025",
+          "UIX-VAL-DDH-SIDECAR-PRIMARY-TRUTH",
+          "UIX-VAL-DDH-OPTION-COMPARISON",
+          "UIX-VAL-DDH-SELECTED-ANCHOR",
+          "UIX-VAL-DDH-COMPETITIVE-REFERENCES",
+          "UIX-VAL-DDH-INTERACTION-HANDOFF",
+          "UIX-VAL-DDH-STATE-COVERAGE",
+          "UIX-VAL-DDH-DESIGN-ANTI-GOALS",
         ].includes(i.code),
       );
       expect(ddhIssues).toEqual([]);
@@ -319,7 +382,7 @@ describe("Discussion Design Hardening — Integration", { timeout: 30000 }, () =
     );
     expect(existsSync(skillPath)).toBe(true);
     const skillContent = await readFile(skillPath, "utf-8");
-    expect(skillContent).toContain("QFAI-DDP-019");
+    expect(skillContent).toContain("UI-bearing Authoring Requirements");
 
     // Template updated
     const templatePath = path.join(
@@ -328,6 +391,6 @@ describe("Discussion Design Hardening — Integration", { timeout: 30000 }, () =
     );
     expect(existsSync(templatePath)).toBe(true);
     const templateContent = await readFile(templatePath, "utf-8");
-    expect(templateContent).toContain("Design Direction Summary");
+    expect(templateContent).toContain("Behavior Obligations");
   });
 });

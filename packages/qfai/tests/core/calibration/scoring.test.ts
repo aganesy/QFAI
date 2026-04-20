@@ -48,11 +48,11 @@ describe("ScoringEngine", () => {
     });
   });
 
-  describe("pivot decision (TC-0012-0006)", () => {
-    it("returns pivot when score < refine threshold", () => {
+  describe("reject decision (TC-0012-0006)", () => {
+    it("returns reject when score < refine threshold", () => {
       const engine = new ScoringEngine({ accept: 0.8, refine: 0.5 });
       const result = engine.evaluate(0.35);
-      expect(result.decision).toBe("pivot");
+      expect(result.decision).toBe("reject");
       expect(result.score).toBe(0.35);
     });
   });

@@ -32,13 +32,13 @@ afterEach(async () => {
 });
 
 describe("surface detection", () => {
-  it("shared module import returns web-ui", async () => {
+  it("shared module import returns web", async () => {
     const root = await newTempDir();
-    await writeFile(path.join(root, "01_Spec.md"), "# Spec\n\n- surface: web-ui\n", "utf-8");
+    await writeFile(path.join(root, "01_Spec.md"), "# Spec\n\n- surface: web\n", "utf-8");
 
     const result = await detectSurfaceType(root);
 
-    expect(result).toBe("web-ui");
+    expect(result).toBe("web");
   });
 
   it("no inline parsing in consumers", async () => {
@@ -50,23 +50,23 @@ describe("surface detection", () => {
 
   it("cross-validator consistency", async () => {
     const root = await newTempDir();
-    await writeFile(path.join(root, "01_Spec.md"), "# Spec\n\n- surface: web-ui\n", "utf-8");
+    await writeFile(path.join(root, "01_Spec.md"), "# Spec\n\n- surface: web\n", "utf-8");
 
     const result1 = await detectSurfaceType(root);
     const result2 = await detectSurfaceType(root);
 
     expect(result1).toBe(result2);
-    expect(result1).toBe("web-ui");
+    expect(result1).toBe("web");
   });
 
-  it("explicit web-ui metadata", async () => {
+  it("explicit web metadata", async () => {
     const root = await newTempDir();
-    await writeFile(path.join(root, "01_Spec.md"), "# Spec\n\n- surface: web-ui\n", "utf-8");
+    await writeFile(path.join(root, "01_Spec.md"), "# Spec\n\n- surface: web\n", "utf-8");
     await mkdir(path.join(root, "uiux"), { recursive: true });
 
     const result = await detectSurfaceType(root);
 
-    expect(result).toBe("web-ui");
+    expect(result).toBe("web");
   });
 
   it("explicit non-ui metadata", async () => {
@@ -90,7 +90,7 @@ describe("surface detection", () => {
 
     const result = await detectSurfaceType(root);
 
-    expect(["web-ui", "mobile-ui", "desktop-ui", "mixed", "non-ui"]).toContain(result);
-    expect(result).toBe("web-ui");
+    expect(["web", "mobile", "desktop", "cli", "mixed", "non-ui"]).toContain(result);
+    expect(result).toBe("web");
   });
 });

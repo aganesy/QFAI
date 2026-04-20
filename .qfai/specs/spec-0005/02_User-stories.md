@@ -53,3 +53,7 @@
 - Parent: CAP-0005
 - Goal: レポート生成後に writeSpecPackReports() で spec 単位のレポートも出力する
 - Non-goals: spec-pack レポートのフォーマットカスタマイズ
+
+## US-0005-0008: Prototyping Observability Section
+
+As a project lead, I want `qfai report` to include a `## Prototyping` section showing mode resolution, obligation profile, evidence coverage, and runtime details, so that I can understand the prototyping state at a glance.

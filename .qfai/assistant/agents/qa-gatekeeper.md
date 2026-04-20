@@ -10,6 +10,17 @@
 - Review QA evidence for acceptance readiness.
 - Audit prototyping coverage evidence and unresolved spec coverage.
 - Treat density or volume smells as review signals, not standalone hard gates.
+- Verify test-case quality depth using the Coverage Depth Matrix (see below).
+
+## Test Case Quality Depth Check (MUST)
+
+In addition to traceability-based coverage (US/TC/CON-API existence), verify the **depth** of test cases:
+
+- Confirm a Coverage Depth Matrix exists (produced by `test-design-analyst`). If missing, return FAIL.
+- Check that each US/TC has test cases for at minimum: normal path AND error/failure path.
+- Flag any US/TC that has only normal-path test cases as a coverage gap.
+- Reference: `.qfai/assistant/skills/qfai-atdd/references/test-case-depth-checklist.md`
+- This check is a review signal (not a hard gate that blocks validation), but unjustified gaps MUST be documented as findings.
 
 ## Inputs you must read
 

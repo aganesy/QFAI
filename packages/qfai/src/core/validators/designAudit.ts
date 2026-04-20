@@ -85,7 +85,7 @@ export function findingToIssue(
     finding.file,
     `${rulePrefix}.${finding.dimension}`,
     finding.evidence.length > 0 ? finding.evidence : undefined,
-    "compatibility",
+    "canonical",
     finding.guidance,
   );
 }
@@ -94,7 +94,7 @@ export function findingToIssue(
 // Section Extraction
 // ---------------------------------------------------------------------------
 
-function extractSection(content: string, heading: string): string | null {
+function _extractSection(content: string, heading: string): string | null {
   const idx = content.indexOf(heading);
   if (idx === -1) return null;
   const start = idx + heading.length;
@@ -107,47 +107,102 @@ function extractSection(content: string, heading: string): string | null {
 }
 
 // ---------------------------------------------------------------------------
-// CTA Hierarchy Check
+// Contracts / Selected Anchor Checks
 // ---------------------------------------------------------------------------
 
-function checkCtaHierarchy(
-  content: string,
+function parseScreenBlocks(content: string): Array<{ screenId: string; primaryTasks: string[] }> {
+  const blocks: Array<{ screenId: string; primaryTasks: string[] }> = [];
+  const sections = content.split(/(?=^###\s+Screen:)/m);
+  for (const section of sections) {
+    if (!/^###\s+Screen:/m.test(section)) {
+      continue;
+    }
+    const lines = section.split("\n");
+    const screenId =
+      lines
+        .map((line) => /^\s*-\s+screen_id:\s*(.+)$/.exec(line)?.[1]?.trim() ?? "")
+        .find(Boolean) ?? "unknown";
+    const primaryTasks: string[] = [];
+
+    let inPrimaryTasks = false;
+    for (const line of lines) {
+      if (/^\s*-\s+primary_tasks:\s*$/i.test(line)) {
+        inPrimaryTasks = true;
+        continue;
+      }
+      if (!inPrimaryTasks) {
+        continue;
+      }
+      if (/^\s*-\s+\w[\w_]*:\s*/.test(line) || /^###\s+Screen:/i.test(line)) {
+        break;
+      }
+      const primaryTaskMatch = /^\s{2,}-\s+(.+)$/.exec(line);
+      if (primaryTaskMatch?.[1]) {
+        primaryTasks.push(primaryTaskMatch[1].trim());
+      }
+    }
+
+    blocks.push({
+      screenId,
+      primaryTasks,
+    });
+  }
+  return blocks;
+}
+
+function checkContractsHierarchy(
+  contractsContent: string,
   auditConfig: DesignAuditConfig,
   file: string,
 ): DesignFinding[] {
   const findings: DesignFinding[] = [];
-  const ctaSection = extractSection(content, "### CTA Hierarchy");
-  if (!ctaSection) return findings;
+  const screens = parseScreenBlocks(contractsContent);
+  for (const screen of screens) {
+    if (screen.primaryTasks.length === 0) {
+      findings.push({
+        ruleId: "QFAI-AUD-001",
+        dimension: "visualHierarchy",
+        severityTier: 1,
+        message: `Screen '${screen.screenId}' has no primary task defined in screen contracts`,
+        why: "Each screen contract needs a clear primary task to anchor the core user action",
+        evidence: [],
+        guidance: "Add at least one primary_tasks entry to the screen contract.",
+        file,
+      });
+      continue;
+    }
+    if (screen.primaryTasks.length > auditConfig.maxPrimaryCtas) {
+      findings.push({
+        ruleId: "QFAI-AUD-020",
+        dimension: "visualHierarchy",
+        severityTier: 2,
+        message: `Screen '${screen.screenId}' defines multiple primary tasks (${screen.primaryTasks.length} > ${auditConfig.maxPrimaryCtas})`,
+        why: "Multiple primary tasks weaken the selected anchor and blur the intended primary action",
+        evidence: screen.primaryTasks,
+        guidance: "Reduce primary_tasks to the single most important user action for this screen.",
+        file,
+      });
+    }
+  }
 
-  const primaryLines = ctaSection.match(/^-\s*Primary:/gm) || [];
-  const primaryCount = primaryLines.length;
+  return findings;
+}
 
-  if (primaryCount === 0) {
+function checkSelectedAnchor(anchorContent: string, file: string): DesignFinding[] {
+  const findings: DesignFinding[] = [];
+  const hasSelectedOption = /selected_option\s*:/i.test(anchorContent);
+  if (!hasSelectedOption) {
     findings.push({
-      ruleId: "QFAI-AUD-001",
-      dimension: "visualHierarchy",
+      ruleId: "QFAI-AUD-021",
+      dimension: "consistency",
       severityTier: 1,
-      message: "No primary CTA defined in CTA Hierarchy",
-      why: "Every UI screen needs a clear primary action to guide users",
+      message: "Selected anchor is missing selected_option in uiux/31_selected_anchor_screen.md",
+      why: "The selected anchor screen is the canonical source for the chosen UI direction",
       evidence: [],
-      guidance: "Define at least one primary CTA in the CTA Hierarchy section",
+      guidance: "Add a selected_option field in uiux/31_selected_anchor_screen.md.",
       file,
     });
   }
-
-  if (primaryCount > auditConfig.maxPrimaryCtas) {
-    findings.push({
-      ruleId: "QFAI-AUD-020",
-      dimension: "visualHierarchy",
-      severityTier: 2,
-      message: `Multiple primary CTAs detected (${primaryCount} > ${auditConfig.maxPrimaryCtas})`,
-      why: "Multiple primary CTAs create decision paralysis and weaken visual hierarchy",
-      evidence: primaryLines.map((l) => l.trim()),
-      guidance: "Reduce to a single primary CTA per screen; demote others to secondary",
-      file,
-    });
-  }
-
   return findings;
 }
 
@@ -187,7 +242,7 @@ async function checkTokenDrift(
     return findings;
   }
 
-  // Count total occurrences (not unique) — AC-0025-0005 is occurrence-based
+  // Count total occurrences (not unique) - AC-0025-0005 is occurrence-based
   let rawCount = 0;
   const sampleLiterals: string[] = [];
   for (const htmlFile of htmlFiles) {
@@ -240,7 +295,7 @@ export function deduplicateFindings(issues: Issue[], maxPerRule: number): Issue[
       result.push({
         code,
         severity: "info",
-        category: "compatibility",
+        category: "canonical",
         message: `${count - maxPerRule} additional "${code}" finding(s) suppressed (max ${maxPerRule} per rule)`,
         rule: `audit.dedup.${code}`,
       });
@@ -265,14 +320,22 @@ export async function validateDesignAudit(root: string, config: QfaiConfig): Pro
   const uiBearing = await isUiBearing(packRoot);
   if (!uiBearing) return [];
 
-  const storyPath = path.join(packRoot, "03_Story-Workshop.md");
-  const content = await readSafe(storyPath);
-  if (!content) return [];
+  const contractsPath = path.join(packRoot, "uiux", "40_screen_contracts.md");
+  const contractsContent = await readSafe(contractsPath);
+  const anchorPath = path.join(packRoot, "uiux", "31_selected_anchor_screen.md");
+  const anchorContent = await readSafe(anchorPath);
+  if (!contractsContent && !anchorContent) return [];
 
   const findings: DesignFinding[] = [];
 
-  // CTA Hierarchy checks
-  findings.push(...checkCtaHierarchy(content, auditConfig, "03_Story-Workshop.md"));
+  if (contractsContent) {
+    findings.push(
+      ...checkContractsHierarchy(contractsContent, auditConfig, "uiux/40_screen_contracts.md"),
+    );
+  }
+  if (anchorContent) {
+    findings.push(...checkSelectedAnchor(anchorContent, "uiux/31_selected_anchor_screen.md"));
+  }
 
   // Token drift check
   findings.push(...(await checkTokenDrift(root, auditConfig, config)));

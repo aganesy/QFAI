@@ -12,7 +12,7 @@
 
 ## Scope
 
-- In: init コマンドの全機能（ディレクトリ生成、設定ファイル生成、symlink ベースのスキル/エージェント統合、旧ラッパー prune、git config 設定、copilot-instructions.md 生成、Copilot review instructions 配布、Codex サブエージェント TOML 統合、--force、--dry-run、レガシー退避）
+- In: init コマンドの全機能（ディレクトリ生成、設定ファイル生成、symlink ベースのスキル/エージェント統合、旧ラッパー prune、git config 設定、copilot-instructions.md 生成、Copilot review instructions 配布、Codex サブエージェント TOML 統合、--force、--dry-run、レガシー退避、contracts/design/ ディレクトリ（v1.7.13 追加: design contracts 用）、ルート `.gitignore` の QFAI 管理ブロック追記と旧バージョンで追記されたレガシー行の自動移行（v1.7.18 追加））
 - Out: validate/report/doctor/guardrails
 
 ## Applicable NFR
@@ -52,10 +52,12 @@
 - REQ-0013: instructions の --force 無効 - `--force` でも instructions ファイルは上書きしない
 - REQ-0014: instructions アクティベーション案内 - instructions 新規作成時にアクティベーションガイダンスを表示する
 - REQ-0015: Windows symlink fallback - EPERM 時に Developer Mode 有効化の案内を含むエラーメッセージを表示する
+- REQ-0016: ルート `.gitignore` 管理ブロック追記 (v1.7.18) - `qfai init` は導入プロジェクトのルート `.gitignore` に QFAI 管理ブロック（marker 行 + `.qfai/report/*` + `.qfai/evidence/*` + `.qfai/review/*` + `.qfai/discussion/discussion-*/` + README negation）を冪等に追記する。既存ユーザー記述は保護する
+- REQ-0017: レガシー管理ブロック移行 (v1.7.18) - 旧バージョンで追記されたレガシー行（`!.qfai/review/review-*/`, `!.qfai/review/review-*/**`）を再実行時に自動除去し、新ブロックで置換する
 
 ## Entry points
 
-- US range in this spec: US-0003-0001..US-0003-0014
+- US range in this spec: US-0003-0001..US-0003-0015
 - Primary actors: AI エージェント統合開発者
 - Notes: `npx qfai init` でプロジェクトに QFAI ワークスペースを導入する
 

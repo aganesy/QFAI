@@ -70,25 +70,30 @@ describe("validateProject (spec pack)", { timeout: 15000 }, () => {
     });
   });
 
-  it("fails when prototyping runtime gate records API 404", async () => {
+  it("fails when prototyping evidence declares API coverage on UI-only contract", async () => {
     await withProject(async (root) => {
       const evidencePath = path.join(root, ".qfai", "evidence", "prototyping.json");
       const evidence = JSON.parse(await readFile(evidencePath, "utf-8")) as Record<string, unknown>;
-      evidence.runtimeGate = {
-        ui: [{ route: "/orders", status: 200 }],
-        api: [{ method: "GET", path: "/api/orders", status: 404 }],
-      };
+      evidence.specs = [
+        {
+          specId: "spec-0001",
+          declared: { uiRoutes: 1, apiEndpoints: 1, dbObjects: 0 },
+          checked: { uiOk: 1, apiNon404: 1, dbPresent: 0 },
+          missing: { uiRoutes: [], apiEndpoints: ["/api/orders"], dbObjects: [] },
+        },
+      ];
       await writeFile(evidencePath, `${JSON.stringify(evidence, null, 2)}\n`);
 
       const result = await validateProject(root);
       const issue = result.issues.find(
         (item) =>
-          item.code === "QFAI-PROT-113" && item.rule === "prototypingEvidence.apiRuntime404",
+          item.code === "QFAI-PROT-313" &&
+          item.rule === "prototypingEvidence.nonUiCoverageDeclaration",
       );
 
       expect(issue).toBeDefined();
       expect(issue?.severity).toBe("error");
-      expect(issue?.refs).toContain("GET /api/orders");
+      expect(issue?.refs).toContain("spec-0001");
     });
   });
 
@@ -271,7 +276,7 @@ describe("validateProject (spec pack)", { timeout: 15000 }, () => {
     });
   });
 
-  it("does not elevate OQ gate from legacy status JSON", async () => {
+  it("ignores legacy status JSON for OQ gate decisions", async () => {
     await withProject(async (root) => {
       const statusPath = path.join(root, ".qfai", "status", "release.json");
       await mkdir(path.dirname(statusPath), { recursive: true });
@@ -283,13 +288,10 @@ describe("validateProject (spec pack)", { timeout: 15000 }, () => {
 
       const result = await validateProject(root);
       const oqIssue = result.issues.find((item) => item.code === "E_OQ_OPEN_RELEASE_BLOCK");
-      const legacyIssue = result.issues.find((item) => item.code === "LEGACY_STATUS_DIR_NONEMPTY");
 
       expect(oqIssue).toBeDefined();
       expect(oqIssue?.severity).toBe("warning");
       expect(oqIssue?.refs).toContain("OQ-0001");
-      expect(legacyIssue).toBeDefined();
-      expect(legacyIssue?.severity).toBe("warning");
     });
   });
 
@@ -338,22 +340,18 @@ describe("validateProject (spec pack)", { timeout: 15000 }, () => {
     });
   });
 
-  it("warns when legacy status directory exists", async () => {
+  it("does not emit legacy status directory warnings anymore", async () => {
     await withProject(async (root) => {
       const statusDir = path.join(root, ".qfai", "status");
       await mkdir(statusDir, { recursive: true });
       await writeFile(path.join(statusDir, "README.md"), "# status\n", "utf-8");
 
       const result = await validateProject(root);
-      const issue = result.issues.find((item) => item.code === "LEGACY_STATUS_DIR");
-
-      expect(issue).toBeDefined();
-      expect(issue?.severity).toBe("warning");
-      expect(issue?.file).toBe(statusDir);
+      expect(result.issues.some((item) => item.code === "LEGACY_STATUS_DIR")).toBe(false);
     });
   });
 
-  it("warns stronger when legacy status directory is non-empty", async () => {
+  it("does not emit legacy status directory non-empty warnings anymore", async () => {
     await withProject(async (root) => {
       const statusDir = path.join(root, ".qfai", "status");
       await mkdir(statusDir, { recursive: true });
@@ -364,11 +362,7 @@ describe("validateProject (spec pack)", { timeout: 15000 }, () => {
       );
 
       const result = await validateProject(root);
-      const issue = result.issues.find((item) => item.code === "LEGACY_STATUS_DIR_NONEMPTY");
-
-      expect(issue).toBeDefined();
-      expect(issue?.severity).toBe("warning");
-      expect(issue?.refs).toContain("release.json");
+      expect(result.issues.some((item) => item.code === "LEGACY_STATUS_DIR_NONEMPTY")).toBe(false);
     });
   });
 
@@ -605,14 +599,14 @@ describe("validateProject (spec pack)", { timeout: 15000 }, () => {
     });
   });
 
-  it("warns when story workshop has UI hints but no HTML+CSS mock (QFAI-VIS-002)", async () => {
+  it("warns when story workshop explicitly references HTML+CSS mock but omits the fallback artifact (QFAI-VIS-002)", async () => {
     await withProject(async (root) => {
       await writeFile(
         path.join(resolveDiscussionPackDir(root), "03_Story-Workshop.md"),
         [
           "# 03 Story Workshop",
           "",
-          "The UI screen for order creation needs a clear form layout and button placement.",
+          "The UI screen for order creation references an HTML+CSS mock for handoff review.",
           "",
           "```mermaid",
           "flowchart TD",
@@ -620,7 +614,7 @@ describe("validateProject (spec pack)", { timeout: 15000 }, () => {
           "  B --> C[Submit]",
           "```",
           "",
-          "This fixture intentionally omits HTML+CSS screen mock details.",
+          "This fixture intentionally references the HTML+CSS mock without including it.",
           "",
         ].join("\n"),
         "utf-8",
@@ -630,7 +624,7 @@ describe("validateProject (spec pack)", { timeout: 15000 }, () => {
       const issue = result.issues.find((item) => item.code === "QFAI-VIS-002");
 
       expect(issue).toBeDefined();
-      expect(issue?.severity).toBe("warning");
+      expect(issue?.severity).toBe("info");
     });
   });
 
@@ -907,6 +901,7 @@ describe("runValidate", { timeout: 15000 }, () => {
     });
   });
 
+  // QFAI:SPEC-0004:TC-0004-0016
   it("escapes multiline fix text in github annotation output", async () => {
     await withProject(async (root) => {
       const skillPath = path.join(root, ".qfai", "assistant", "skills", "qfai-sdd", "SKILL.md");
@@ -1076,6 +1071,20 @@ async function seedValidationFixtures(root: string): Promise<void> {
   await mkdir(path.join(testsRoot, "e2e"), { recursive: true });
   await mkdir(path.join(testsRoot, "integration"), { recursive: true });
   await mkdir(path.join(testsRoot, "api"), { recursive: true });
+  await mkdir(path.join(root, ".qfai", "specs", "spec-0001", "tdd"), { recursive: true });
+
+  await writeFile(
+    path.join(root, ".qfai", "specs", "spec-0001", "tdd", "test-list.md"),
+    [
+      "# Test List",
+      "",
+      "| TDD-ID | TC-Refs | Layer | Test file | Selector | Status | DR-ID | Evidence |",
+      "| ------ | ------- | ----- | --------- | -------- | ------ | ----- | -------- |",
+      "| TDD-0001 | TC-0001 | integration | tests/integration/orderDraft.integration.test.ts | covers tc set | done |  | red=observed;green=observed |",
+      "",
+    ].join("\n"),
+    "utf-8",
+  );
 
   await writeFile(
     path.join(testsRoot, "e2e", "orderDraft.e2e.test.ts"),
@@ -1125,7 +1134,7 @@ async function seedValidationFixtures(root: string): Promise<void> {
 
 async function seedDiscussionPackFixtures(root: string): Promise<void> {
   const discussionPackDir = resolveDiscussionPackDir(root);
-  await mkdir(discussionPackDir, { recursive: true });
+  await mkdir(path.join(discussionPackDir, "uiux"), { recursive: true });
 
   const files: Array<{ name: string; lines: string[] }> = [
     {
@@ -1137,6 +1146,13 @@ async function seedDiscussionPackFixtures(root: string): Promise<void> {
         "",
         "This discussion pack provides the baseline context for validator fixture stability.",
         "It captures the product concept, stakeholders, and constraints to enable deterministic validation.",
+        "",
+        "## UI-bearing Classification",
+        "",
+        "- ui_bearing: true",
+        "- primary_surface: web",
+        "- secondary_surfaces: none",
+        "- classification_rationale: UI-bearing web application for validator testing baseline.",
         "",
       ],
     },
@@ -1156,6 +1172,27 @@ async function seedDiscussionPackFixtures(root: string): Promise<void> {
       lines: [
         "# 03 Story Workshop",
         "",
+        "## Behavior Obligations",
+        "",
+        "### State Coverage",
+        "",
+        "| State / Risk | Discovery Notes | Handoff to Contract |",
+        "| ------------ | --------------- | ------------------- |",
+        "| loading | Loading delays can hide the main action | Reflect `required_states` in `uiux/40_screen_contracts.md` |",
+        "| error | Retry and recovery paths need explicit review | Final state contract lives in `uiux/40_screen_contracts.md` |",
+        "",
+        "### Interaction Contracts",
+        "",
+        "| Primary Task | Key Action | Priority Hint | Expected Result | Error Handling |",
+        "| ------------ | ---------- | ------------- | --------------- | -------------- |",
+        "| Start evaluation | Start free trial | primary | Trial flow begins from the dashboard | Keep retry paths visible during service failures |",
+        "",
+        "Screen-level contract details are finalized in `uiux/40_screen_contracts.md`. Primary tasks, required states, transitions, and observable outcomes are finalized there; Story Workshop is for discovery and handoff, not final contract fixation.",
+        "",
+        "### Design Anti-goals",
+        "",
+        "- Anti-goal: Avoid cluttered dashboards with competing CTAs",
+        "",
         "```mermaid",
         "sequenceDiagram",
         "  participant U as User",
@@ -1171,6 +1208,89 @@ async function seedDiscussionPackFixtures(root: string): Promise<void> {
       name: "04_Sources.md",
       lines: [
         "# 04 Sources",
+        "",
+        "## Trend Scan",
+        "",
+        "### Visual Tone Trends",
+        "",
+        "#### Material Design 3 tonal palette",
+        "",
+        "- reference: Material Design 3 Guidelines",
+        "- observation: Tonal palette and surface elevation patterns",
+        "- freshness_date: 2026-02-16",
+        "- confidence: high",
+        "- decision_connection: Reinforces a card hierarchy with clear emphasis on the primary action.",
+        "- evaluation_connection: Adds a scoring lens for hierarchy clarity and tonal separation.",
+        "- local_implication: Use tonal elevation for card hierarchy in dashboard",
+        "",
+        "### Layout / Composition Trends",
+        "",
+        "#### Single-column hero layout",
+        "",
+        "- reference: Figma Design Systems Report 2026",
+        "- observation: Single-column hero layout for focused actions",
+        "- freshness_date: 2026-02-16",
+        "- confidence: high",
+        "- decision_connection: Favors a single dominant action above the fold.",
+        "- evaluation_connection: Adds comparison pressure toward focused hero-action layouts.",
+        "- local_implication: Apply single hero CTA for dashboard entry point",
+        "",
+        "### Density / Hierarchy Trends",
+        "",
+        "#### Medium density dashboard",
+        "",
+        "- reference: NNG Dashboard Design 2026",
+        "- observation: Medium density with clear CTA hierarchy",
+        "- freshness_date: 2026-02-16",
+        "- confidence: high",
+        "- decision_connection: Pushes against overcrowded dashboards with competing CTAs.",
+        "- evaluation_connection: Adds an evaluation lens for scan speed and CTA hierarchy.",
+        "- local_implication: Keep dashboard density moderate with clear primary action",
+        "",
+        "### Interaction / Motion Trends",
+        "",
+        "#### Purposeful motion",
+        "",
+        "- reference: Apple HIG Motion Guidelines",
+        "- observation: Motion supports state change, not decoration",
+        "- freshness_date: 2026-02-16",
+        "- confidence: high",
+        "- decision_connection: Limits motion to state-change reinforcement only.",
+        "- evaluation_connection: Adds explicit review checks for purposeful motion usage.",
+        "- local_implication: State transitions use purposeful animation only",
+        "",
+        "### Component Styling Trends",
+        "",
+        "#### Unstyled primitives",
+        "",
+        "- reference: Radix UI Primitives",
+        "- observation: Unstyled accessible primitives with customizable theming",
+        "- freshness_date: 2026-02-16",
+        "- confidence: high",
+        "- decision_connection: Prefers composable primitives over bespoke one-off widgets.",
+        "- evaluation_connection: Adds a criterion for consistency through reusable primitives.",
+        "- local_implication: Use composable primitives for dashboard components",
+        "",
+        "### Stale / Overused AI Slop Patterns",
+        "",
+        "#### Generic gradient hero sections",
+        "",
+        "- reference: Internal Design Review",
+        "- observation: Generic gradient hero sections with stock illustrations",
+        "- freshness_date: 2026-02-16",
+        "- confidence: high",
+        "- decision_connection: Rejects generic hero sections that dilute product specificity.",
+        "- evaluation_connection: Adds explicit anti-pattern checks for AI-slop hero treatments.",
+        "- local_implication: Use product-specific content instead of generic hero sections",
+        "",
+        "## Competitive Reference Registry",
+        "",
+        "### Competitor Alpha",
+        "",
+        "- reference: https://competitor-alpha.example.com/dashboard",
+        "- adopted_points: Clear onboarding flow with focused primary action framing",
+        "- rejected_points: Hidden navigation patterns that slow first-run completion",
+        "- local_translation: Adapted onboarding to the current single-flow dashboard context",
         "",
         "## Source Registry",
         "",
@@ -1230,7 +1350,7 @@ async function seedDiscussionPackFixtures(root: string): Promise<void> {
         "",
         "| Term | Definition | Synonyms | Source refs |",
         "| ---- | ---------- | -------- | ----------- |",
-        "| Discussion-pack | A timestamped 15-file intake package under `.qfai/discussion/discussion-<ts>/`. | discussion pack | SRC-0001 |",
+        "| Discussion-pack | A timestamped discussion pack consisting of 15 required markdown files under `.qfai/discussion/discussion-<ts>/`; `prototyping.yaml` is required only when the latest pack is ui_bearing=true. | discussion pack | SRC-0001 |",
         "",
       ],
     },
@@ -1305,6 +1425,9 @@ async function seedDiscussionPackFixtures(root: string): Promise<void> {
         "",
         "Review request for discussion pack baseline validator fixtures.",
         "This file captures the review scope and expected reviewers.",
+        "Selected anchor: verify `uiux/31_selected_anchor_screen.md` selected_option is populated and references a compared option.",
+        "Strategy alignment: verify `uiux/10_implementation_strategy.md` chosen_option matches the selected anchor.",
+        "Verify screen contracts use all 4 required states (default/loading/empty/error).",
         "",
       ],
     },
@@ -1328,6 +1451,338 @@ async function seedDiscussionPackFixtures(root: string): Promise<void> {
   for (const file of files) {
     await writeFile(path.join(discussionPackDir, file.name), `${file.lines.join("\n")}\n`, "utf-8");
   }
+
+  const sidecarFiles: Array<{ name: string; lines: string[] }> = [
+    {
+      name: "uiux/00_index.md",
+      lines: ["# uiux Index", "", "- canonical sidecar family"],
+    },
+    {
+      name: "uiux/10_implementation_strategy.md",
+      lines: [
+        "# Strategy",
+        "",
+        "- surface: web",
+        "- selection_required: true",
+        "- decision: component-library",
+        "- candidate_options:",
+        "  - component-library",
+        "  - bespoke",
+        "- chosen_option: component-library",
+        "- rationale: component-library provides the clearest primary action for the dashboard workflow.",
+        "- why_this_strategy: Component-library strategy leverages proven accessible primitives and reduces custom styling overhead.",
+        "- expected_strengths: Consistent styling, built-in accessibility, fast iteration on new screens.",
+        "- known_risks: Limited customization for highly bespoke brand expression; dependency on library release cadence.",
+        "- fit_for_this_product: Dashboard-focused product benefits from pre-built data display and action components.",
+        "- verification_expectations: Check responsive layout and task completion behavior.",
+        "- notes_for_reviewer: Focus on selected anchor consistency.",
+      ],
+    },
+    {
+      name: "uiux/12_design_system.md",
+      lines: [
+        "# 12 Design System",
+        "",
+        "## Visual Theme",
+        "Bold but restrained visual system aligned with admired dashboard references.",
+        "",
+        "## Color Palette",
+        "Primary: #1A1A1A on light surface. Accent: #2F80ED. Background: #F7F8FA.",
+        "",
+        "## Do's and Don'ts",
+        "Do: keep a single primary CTA visible on dashboards.",
+        "Don't: stack competing accent colors on interactive elements.",
+      ],
+    },
+    {
+      name: "uiux/11_design_taste_interview.md",
+      lines: [
+        "# Taste Interview",
+        "",
+        "## visual_character",
+        "Bold but restrained visual system.",
+        "",
+        "## emotional_tone",
+        "Confident and calm product tone.",
+        "",
+        "## anti_preferences",
+        "Avoid noisy cluttered layouts.",
+        "",
+        "## admired_rejected_references",
+        "Admire clear dashboards; reject hidden navigation.",
+        "",
+        "## novelty_vs_safety",
+        "Bias toward safe core interactions with one focused novelty accent.",
+        "",
+        "## density_hierarchy",
+        "Medium density with one dominant CTA zone.",
+        "",
+        "## motion_material",
+        "Motion should support state changes, not decorate.",
+        "",
+        "## brand_tone",
+        "Professional and direct.",
+        "",
+        "## unresolved_taste_questions",
+        "Confirm dashboard density on smaller screens.",
+        "",
+        "## taste_reflection_depth",
+        "These answers should be reflected in selected anchor and contracts.",
+      ],
+    },
+    {
+      name: "04_Sources.md",
+      lines: [
+        "# Sources",
+        "",
+        "## Trend Scan",
+        "",
+        "### user expectation / market norm",
+        "",
+        "#### Dashboard single-action pattern",
+        "",
+        "- reference: NNG Dashboard Guidelines 2026",
+        "- observation: Users expect a single primary CTA on dashboards",
+        "- decision_connection: Aligns with single-hero strategy selection",
+        "- evaluation_connection: Supports hierarchy invariant evaluation",
+        "- local_implication: Keep one primary action visible above fold",
+        "",
+        "### product neighbor / comparable flow",
+        "",
+        "#### Competitor onboarding flow",
+        "",
+        "- reference: https://competitor-alpha.example.com/onboarding",
+        "- observation: Focused onboarding with clear step indicators",
+        "- decision_connection: Reinforces component-library decision for step UI",
+        "- evaluation_connection: Validates clarity evaluation criteria",
+        "- local_implication: Use step indicator component for onboarding",
+        "",
+        "### platform convention",
+        "",
+        "#### Material Design 3 tonal system",
+        "",
+        "- reference: Material Design 3 Guidelines",
+        "- observation: Tonal elevation patterns for card hierarchy",
+        "- decision_connection: Supports component-library strategy",
+        "- evaluation_connection: Feeds into visual hierarchy evaluation",
+        "- local_implication: Apply tonal palette for dashboard card hierarchy",
+        "",
+        "### accessibility / compliance relevant signal",
+        "",
+        "#### WCAG 2.2 Level AA contrast",
+        "",
+        "- reference: WCAG 2.2 Guidelines",
+        "- observation: Contrast ratio requirements for interactive elements",
+        "- decision_connection: Primitives library includes accessible defaults",
+        "- evaluation_connection: Validates accessibility invariant evaluation",
+        "- local_implication: Verify contrast ratios on all interactive elements",
+      ],
+    },
+    {
+      name: "uiux/20_design_eval_invariant.md",
+      lines: [
+        "# Invariant Evaluation",
+        "",
+        "## invariant",
+        "",
+        "## Axis: accessibility",
+        "- axis_id: AX-001",
+        "- axis_name: accessibility",
+        "- layer: invariant",
+        "- origin: WCAG 2.1 AA",
+        "- intent: Ensure baseline accessibility for all users",
+        "- why_it_matters: Legal compliance and user inclusion",
+        "- score_scale: 1-5",
+        "- score_anchors:",
+        "  - low: No accessibility consideration",
+        "  - mid: Partial WCAG compliance",
+        "  - high: Full WCAG AA compliance",
+        "- positive_signals: Semantic HTML, ARIA labels, keyboard navigation",
+        "- negative_signals: Missing alt text, no focus indicators",
+        "- anti_patterns: Decorative images without empty alt",
+        "- evidence_required: Accessibility audit report",
+        "- weight: 1",
+        "- minimum_floor: 3",
+        "- source_refs: WCAG 2.1",
+        "- goal_refs: REQ-0001",
+        "- review_questions: Are accessibility basics present?",
+      ],
+    },
+    {
+      name: "uiux/21_design_eval_trend_derived.md",
+      lines: [
+        "# Trend-derived Evaluation",
+        "",
+        "## trend-derived",
+        "",
+        "## Axis: motion_clarity",
+        "- axis_id: AX-002",
+        "- axis_name: motion_clarity",
+        "- layer: trend-derived",
+        "- origin: Industry trend scan 2026",
+        "- intent: Ensure motion supports state clarity",
+        "- why_it_matters: Users expect purposeful motion not decoration",
+        "- score_scale: 1-5",
+        "- score_anchors:",
+        "  - low: No motion or confusing motion",
+        "  - mid: Some purposeful motion",
+        "  - high: All transitions explain state change",
+        "- positive_signals: Meaningful transitions, loading indicators",
+        "- negative_signals: Decorative animation, jarring transitions",
+        "- anti_patterns: Autoplay animations without purpose",
+        "- evidence_required: Motion audit review",
+        "- weight: 1",
+        "- minimum_floor: 3",
+        "- source_refs: 04_Sources.md",
+        "- goal_refs: REQ-0001",
+        "- review_questions: Does motion clarify state change?",
+      ],
+    },
+    {
+      name: "uiux/22_design_eval_product_specific.md",
+      lines: [
+        "# Product-specific Evaluation",
+        "",
+        "## product-specific",
+        "",
+        "## Axis: dashboard_focus",
+        "- axis_id: AX-003",
+        "- axis_name: dashboard_focus",
+        "- layer: product-specific",
+        "- origin: Product requirements dashboard workflow",
+        "- intent: Keep dashboard focused on primary task",
+        "- why_it_matters: Competing CTAs reduce task completion rate",
+        "- score_scale: 1-5",
+        "- score_anchors:",
+        "  - low: Multiple competing primary actions",
+        "  - mid: Clear primary action with some distractions",
+        "  - high: Single obvious primary action path",
+        "- positive_signals: Clear CTA hierarchy, focused layout",
+        "- negative_signals: Competing primary actions, cluttered dashboard",
+        "- anti_patterns: Multiple equal-weight CTAs on same viewport",
+        "- evidence_required: Screen contract review",
+        "- weight: 1",
+        "- minimum_floor: 3",
+        "- source_refs: 40_screen_contracts.md",
+        "- goal_refs: REQ-0001",
+        "- review_questions: Is the primary task obvious?",
+      ],
+    },
+    {
+      name: "uiux/23_design_eval_aggregate.md",
+      lines: [
+        "# Aggregate Evaluation",
+        "",
+        "## invariant",
+        "Baseline aggregate context.",
+        "",
+        "- total_score_formula: weighted_average",
+        "- layer_weights: invariant=0.4, trend-derived=0.3, product-specific=0.3",
+        "- accept_threshold: 3.5",
+        "- refine_band: 2.5-3.5",
+        "- pivot_band: below 2.5",
+        "- max_iterations: 3",
+        "- plateau_rule: diminishing returns above 4.5",
+        "- missing_score_policy: exclude from aggregate",
+        "- disagreement_rule: flag when layer scores differ by more than 1.5",
+      ],
+    },
+    {
+      name: "uiux/24_design_eval_dynamic_overrides.md",
+      lines: ["# Dynamic Overrides", "", "- override_rule: none by default"],
+    },
+    {
+      name: "uiux/30_option_comparison.md",
+      lines: [
+        "# 30 Option Comparison",
+        "",
+        "## Option Comparison",
+        "",
+        "- **Option A**: Focused dashboard with a clear hero action",
+        "- **Option B**: Dense table-first dashboard",
+      ],
+    },
+    {
+      name: "uiux/31_selected_anchor_screen.md",
+      lines: [
+        "# 31 Selected Anchor Screen",
+        "",
+        "- selected_option: Option A",
+        "- why_selected: best fit for the current workflow and review criteria",
+        "",
+        "## rejected_or_deferred_options",
+        "",
+        "- option: Option B",
+        "- disposition: rejected",
+        "- reason: dense table-first presentation weakens first-run task focus and increases initial cognitive load",
+      ],
+    },
+    {
+      name: "uiux/40_screen_contracts.md",
+      lines: [
+        "# Screen Contracts",
+        "",
+        "### Screen: Dashboard",
+        "",
+        "- screen_id: dashboard",
+        "- route: /dashboard",
+        "- purpose: Review current order status",
+        "- actor: end-user",
+        "- primary_tasks:",
+        "  - Start Free Trial",
+        "- secondary_tasks:",
+        "  - View reports",
+        "- required_states:",
+        "  - default: Standard dashboard state",
+        "  - loading: Skeleton loading state",
+        "  - empty: Empty dashboard state",
+        "  - error: Retry dashboard state",
+        "- transitions:",
+        "  - default -> loading: Refresh requested",
+        "- observable_outcomes:",
+        "  - Dashboard summary is visible",
+        "- notes_for_verify: Verify state coverage and task completion path",
+        "- notes_for_reviewer: Focus on primary task clarity",
+      ],
+    },
+    {
+      name: "uiux/50_review_input_bundle.md",
+      lines: [
+        "# Review Input Bundle",
+        "",
+        "## Trend-derived review focus",
+        "",
+        "- Visual tone: Verify tonal palette hierarchy in card layout.",
+        "- Layout: Confirm single hero CTA is dominant on dashboard entry.",
+        "- Motion: State transitions use purposeful animation only.",
+        "",
+        "## Strategy summary",
+        "",
+        "- strategy",
+        "- contracts",
+      ],
+    },
+  ];
+
+  for (const file of sidecarFiles) {
+    await writeFile(path.join(discussionPackDir, file.name), `${file.lines.join("\n")}\n`, "utf-8");
+  }
+
+  // Required side artifact: prototyping.yaml
+  await writeFile(
+    path.join(discussionPackDir, "prototyping.yaml"),
+    [
+      "prototyping:",
+      "  recommended_mode: full-harness",
+      "  rationale: UI validation is recommended.",
+      "  allowed_modes:",
+      "    - full-harness",
+      "  surface: web",
+      "scoringTrace:",
+      "  designSystemCompliance: 90",
+    ].join("\n"),
+    "utf-8",
+  );
 }
 
 function resolveSpecPackDir(root: string): string {
@@ -1340,7 +1795,21 @@ function resolveDiscussionPackDir(root: string): string {
 
 async function seedPrototypingEvidenceFixture(root: string): Promise<void> {
   const evidenceRoot = path.join(root, ".qfai", "evidence");
+  const renderRoot = path.join(evidenceRoot, "renders");
   await mkdir(evidenceRoot, { recursive: true });
+  await mkdir(renderRoot, { recursive: true });
+  await writeFile(path.join(renderRoot, "dashboard-desktop.png"), "png", "utf-8");
+  await writeFile(
+    path.join(renderRoot, "dashboard-desktop.html"),
+    "<html><body>desktop</body></html>\n",
+    "utf-8",
+  );
+  await writeFile(path.join(renderRoot, "dashboard-mobile.png"), "png", "utf-8");
+  await writeFile(
+    path.join(renderRoot, "dashboard-mobile.html"),
+    "<html><body>mobile</body></html>\n",
+    "utf-8",
+  );
   await writeFile(
     path.join(evidenceRoot, "prototyping.md"),
     [
@@ -1352,6 +1821,31 @@ async function seedPrototypingEvidenceFixture(root: string): Promise<void> {
       "| ---- | ----------------- | ---------------------- | --------------------- | ----- |",
       "| spec-0001 | 1/1 | 1/1 | 1/1 | fixture baseline |",
       "",
+      "## Render Critique Log",
+      "",
+      "### Desktop Review",
+      "- date: 2026-02-23",
+      "- viewport: desktop 1280px",
+      "- verdict: PASS",
+      "- findings: The primary task remains clear and state transitions are visible.",
+      "",
+      "### Mobile Review",
+      "- date: 2026-02-23",
+      "- viewport: mobile 390px",
+      "- verdict: PASS",
+      "- findings: The primary action remains visible without competing actions.",
+      "",
+      "## Evaluation Criteria",
+      "",
+      "- rubric: hierarchy, clarity, responsive behavior, taskFidelity",
+      "",
+      "## taskFidelity",
+      "",
+      "- max_primary_steps: 3",
+      "- step_count: 2",
+      "- cta_visibility: pass",
+      "- four_state_check: pass",
+      "",
     ].join("\n"),
     "utf-8",
   );
@@ -1359,18 +1853,19 @@ async function seedPrototypingEvidenceFixture(root: string): Promise<void> {
     path.join(evidenceRoot, "prototyping.json"),
     `${JSON.stringify(
       {
+        surface: "web",
         specs: [
           {
             specId: "spec-0001",
             declared: {
               uiRoutes: 1,
-              apiEndpoints: 1,
-              dbObjects: 1,
+              apiEndpoints: 0,
+              dbObjects: 0,
             },
             checked: {
               uiOk: 1,
-              apiNon404: 1,
-              dbPresent: 1,
+              apiNon404: 0,
+              dbPresent: 0,
             },
             missing: {
               uiRoutes: [],
@@ -1379,9 +1874,30 @@ async function seedPrototypingEvidenceFixture(root: string): Promise<void> {
             },
           },
         ],
+        mode: {
+          effective: "full-harness",
+          source: "discussion-recommendation",
+          rationale: "UI validation is recommended.",
+        },
         runtimeGate: {
-          ui: [{ route: "/orders", status: 200 }],
-          api: [{ method: "GET", path: "/api/orders", status: 200 }],
+          ui: [
+            {
+              screenId: "orders",
+              route: "/orders/new",
+              declaredRef:
+                ".qfai/discussion/discussion-20260216000000000/uiux/40_screen_contracts.md#orders",
+              rendered: true,
+              browserVisited: true,
+              httpStatus: 200,
+              renderEvidenceRefs: [".qfai/evidence/render.json#/screens/0"],
+              browserQaEvidenceRefs: [".qfai/evidence/browser-qa.json#/findings"],
+            },
+          ],
+          evidenceRefs: [
+            ".qfai/discussion/discussion-20260216000000000/uiux/40_screen_contracts.md#orders",
+            ".qfai/evidence/render.json#/screens/0",
+            ".qfai/evidence/browser-qa.json#/findings",
+          ],
         },
         uiFidelity: {
           version: "0.1",
@@ -1395,9 +1911,124 @@ async function seedPrototypingEvidenceFixture(root: string): Promise<void> {
                 elementsPlaced: 3,
                 actionsWired: 1,
               },
-              mockPaths: [{ id: "mp_create_to_list", status: "pass" }],
+              mockPaths: [{ id: "mp_create_to_list", status: "finding" }],
+              renders: [
+                {
+                  viewport: "desktop",
+                  width: 1280,
+                  height: 960,
+                  status: "captured",
+                  imagePath: ".qfai/evidence/render/orders.desktop.png",
+                  htmlPath: ".qfai/evidence/render/orders.desktop.html",
+                },
+                {
+                  viewport: "mobile",
+                  width: 390,
+                  height: 844,
+                  status: "captured",
+                  imagePath: ".qfai/evidence/render/orders.mobile.png",
+                  htmlPath: ".qfai/evidence/render/orders.mobile.html",
+                },
+              ],
             },
           ],
+        },
+        fullHarness: {
+          enabled: true,
+          runId: "fh-validate-1",
+          calibrationRef: {
+            configPath: "qfai.config.yaml",
+            packPath: ".qfai/evidence/calibration.yaml",
+            packVersion: "1.7.15",
+          },
+          iterationCount: 1,
+          bestIteration: 1,
+          status: "in-progress",
+          finalDecision: "pending",
+          reviewerSignoff: {
+            reviewerId: "qa-reviewer",
+            status: "pending",
+            source: "cli",
+          },
+          reviewerLogs: [
+            {
+              iteration: 1,
+              reviewerId: "qa-reviewer",
+              verdict: "revise",
+              summary: "Iteration 1 requires another pass before terminal signoff.",
+              evidenceRefs: [".qfai/evidence/render.json#/screens/0"],
+            },
+          ],
+          iterations: [
+            {
+              iteration: 1,
+              commitSha: "abc0001",
+              reviewerId: "qa-reviewer",
+              timestamp: "2026-02-23T00:00:00Z",
+              changeSummary: ["Initial measurement"],
+              limitations: [],
+              evidenceRefs: {
+                render: [".qfai/evidence/render.json#/screens/0"],
+                browserQa: [".qfai/evidence/browser-qa.json#/findings"],
+                runtimeGate: [
+                  ".qfai/discussion/discussion-20260216000000000/uiux/40_screen_contracts.md#orders",
+                ],
+                uiObservation: [".qfai/evidence/render/orders.desktop.html"],
+                specCoverage: [
+                  ".qfai/discussion/discussion-20260216000000000/uiux/40_screen_contracts.md#orders",
+                ],
+                discussion: [
+                  ".qfai/discussion/discussion-20260216000000000/uiux/20_design_eval_invariant.md#discussion-axes-invariant",
+                ],
+                screenContract: [
+                  ".qfai/discussion/discussion-20260216000000000/uiux/40_screen_contracts.md#orders",
+                ],
+                trend: [".qfai/discussion/discussion-20260216000000000/04_Sources.md#trend-scan"],
+              },
+              l1: {
+                panel: "L1",
+                total: 0.9,
+                axes: [
+                  {
+                    axisId: "runtime",
+                    score: 0.9,
+                    rationale: "ok",
+                    evidenceRefs: [".qfai/evidence/render.json#/screens/0"],
+                  },
+                ],
+              },
+              l2: {
+                panel: "L2",
+                total: 0.9,
+                axes: [
+                  {
+                    axisId: "design",
+                    score: 0.9,
+                    rationale: "ok",
+                    evidenceRefs: [
+                      ".qfai/discussion/discussion-20260216000000000/uiux/20_design_eval_invariant.md#axis-1",
+                    ],
+                  },
+                ],
+              },
+              weightedTotal: 0.9,
+              deltaFromPrevious: null,
+              decision: "accept",
+            },
+          ],
+          scoringTrace: [
+            {
+              iteration: 1,
+              l1Total: 0.9,
+              l2Total: 0.9,
+              weightedTotal: 0.9,
+              deltaFromPrevious: null,
+              decision: "accept",
+              commitSha: "abc0001",
+              designSystemCompliance: 90,
+            },
+          ],
+          limitations: [],
         },
         meta: {
           generatedAt: "2026-02-23T00:00:00.000Z",
@@ -1408,6 +2039,92 @@ async function seedPrototypingEvidenceFixture(root: string): Promise<void> {
       null,
       2,
     )}\n`,
+    "utf-8",
+  );
+  await mkdir(path.join(evidenceRoot, "render"), { recursive: true });
+  await writeFile(path.join(evidenceRoot, "render", "orders.desktop.png"), "png", "utf-8");
+  await writeFile(
+    path.join(evidenceRoot, "render", "orders.desktop.html"),
+    "<html></html>",
+    "utf-8",
+  );
+  await writeFile(path.join(evidenceRoot, "render", "orders.mobile.png"), "png", "utf-8");
+  await writeFile(
+    path.join(evidenceRoot, "render", "orders.mobile.html"),
+    "<html></html>",
+    "utf-8",
+  );
+  await writeFile(
+    path.join(evidenceRoot, "render.json"),
+    JSON.stringify(
+      {
+        renderEvidence: {
+          status: "captured",
+          requested: true,
+          viewports: ["desktop", "mobile"],
+          outputPath: ".qfai/evidence/render.json",
+        },
+        screens: [
+          {
+            route: "/orders/new",
+            viewport: "desktop",
+            status: "captured",
+            width: 1280,
+            height: 960,
+            imagePath: ".qfai/evidence/render/orders.desktop.png",
+            htmlPath: ".qfai/evidence/render/orders.desktop.html",
+          },
+          {
+            route: "/orders/new",
+            viewport: "mobile",
+            status: "captured",
+            width: 390,
+            height: 844,
+            imagePath: ".qfai/evidence/render/orders.mobile.png",
+            htmlPath: ".qfai/evidence/render/orders.mobile.html",
+          },
+        ],
+      },
+      null,
+      2,
+    ),
+    "utf-8",
+  );
+  await writeFile(
+    path.join(evidenceRoot, "browser-qa.json"),
+    JSON.stringify(
+      {
+        browserQa: {
+          executed: true,
+          status: "completed",
+          mode: "full-harness",
+          summary: {
+            smoke: { status: "passed", findingsCount: 0, checksCount: 1 },
+            interaction: { status: "passed", findingsCount: 0, checksCount: 1 },
+            visual: { status: "passed", findingsCount: 0, checksCount: 1 },
+            accessibility: { status: "passed", findingsCount: 0, checksCount: 1 },
+          },
+        },
+        findings: [],
+      },
+      null,
+      2,
+    ),
+    "utf-8",
+  );
+  await writeFile(
+    path.join(evidenceRoot, "calibration.yaml"),
+    [
+      "version: 1.7.15",
+      "thresholds:",
+      "  accept: 0.8",
+      "  refine: 0.5",
+      "maxIterations: 5",
+      "plateauDelta: 0.02",
+      "plateauLookback: 3",
+      "examples: []",
+      "",
+    ].join("\n"),
     "utf-8",
   );
 }

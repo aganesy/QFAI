@@ -151,8 +151,6 @@ const requiredGitignorePatterns = [
   "!.qfai/evidence/README.md",
   ".qfai/review/*",
   "!.qfai/review/README.md",
-  "!.qfai/review/review-*/",
-  "!.qfai/review/review-*/**",
   ".qfai/discussion/discussion-*/",
 ];
 const missingPatterns = requiredGitignorePatterns.filter(
@@ -331,6 +329,13 @@ const seededDiscussionPackFiles = {
     "- Captured at: 2026-02-16.",
     "- Purpose: provide stable evidence for seeded discussion.",
     "",
+    "## Classification",
+    "",
+    "- ui_bearing: false",
+    "- primary_surface: non-ui",
+    "- secondary_surfaces: []",
+    "- classification_rationale: Packaging validation fixture — no user-facing UI.",
+    "",
   ],
   "02_Inception-Deck.md": [
     "# 02 Inception Deck",
@@ -467,6 +472,9 @@ const seededDiscussionPackFiles = {
     "",
   ],
 };
+
+// prototyping.yaml is only required for UI-bearing packs (v1.7.14).
+// This fixture is ui_bearing: false / primary_surface: non-ui, so omit it.
 
 for (const [fileName, lines] of Object.entries(seededDiscussionPackFiles)) {
   writeFileSync(path.join(seededDiscussionPackDir, fileName), lines.join("\n"));

@@ -2,14 +2,12 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 
 import { collectFiles } from "../fs.js";
+import { findLatestDiscussionPackDir } from "../discussionPack.js";
 import { escapeRegExp } from "../regex.js";
 import type { Issue } from "../types.js";
 import { exists, issue } from "./utils.js";
 
-const TARGETS = [
-  { segments: [".qfai", "specs"] as const, extensions: [".md", ".feature"] },
-  { segments: [".qfai", "discussion"] as const, extensions: [".md"] },
-] as const;
+const SPEC_TARGET = { segments: [".qfai", "specs"] as const, extensions: [".md", ".feature"] };
 
 const BUSINESS_FLOW_RELATIVE_CANDIDATES = [
   path.join(".qfai", "specs", "_policies", "04_Business-Flow.md"),
@@ -96,12 +94,18 @@ export async function validateMermaidEnforcement(root: string): Promise<Issue[]>
 }
 
 async function collectTargetFiles(root: string): Promise<string[]> {
-  const files: string[] = [];
-  for (const target of TARGETS) {
-    const targetDir = path.join(root, ...target.segments);
+  const files = [
+    ...(await collectFiles(path.join(root, ...SPEC_TARGET.segments), {
+      extensions: [...SPEC_TARGET.extensions],
+    })),
+  ];
+  const latestDiscussionPackDir = await findLatestDiscussionPackDir(
+    path.join(root, ".qfai", "discussion"),
+  );
+  if (latestDiscussionPackDir) {
     files.push(
-      ...(await collectFiles(targetDir, {
-        extensions: [...target.extensions],
+      ...(await collectFiles(latestDiscussionPackDir, {
+        extensions: [".md"],
       })),
     );
   }

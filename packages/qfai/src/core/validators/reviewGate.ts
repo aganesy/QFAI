@@ -759,7 +759,7 @@ async function validateFingerprint(root: string, record: SummaryRecord): Promise
         record.filePath,
         "reviewGate.fingerprintDrift",
         record.fingerprintInputs,
-        "compatibility",
+        "canonical",
         "修正後は attempt を増やして再レビューを最初から実施してください。",
       ),
     );

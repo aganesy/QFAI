@@ -50,7 +50,12 @@ export default [
   },
   // Test files & config files outside tsconfig – disable type-checked rules
   {
-    files: ["**/tests/**/*.ts", "packages/qfai/vitest.config.ts", "packages/qfai/tsup.config.ts"],
+    files: [
+      "**/tests/**/*.ts",
+      "packages/qfai/vitest.config.ts",
+      "packages/qfai/vitest.workspace.ts",
+      "packages/qfai/tsup.config.ts",
+    ],
     ...tseslint.configs.disableTypeChecked,
   },
   // JS/MJS files – no type-checked rules
@@ -63,6 +68,27 @@ export default [
     files: ["scripts/**/*.{js,mjs,cjs}"],
     rules: {
       "no-console": "off",
+    },
+  },
+  // Asset scripts (shipped to user projects) – CommonJS-compatible Node scripts
+  {
+    files: ["packages/qfai/assets/scripts/**/*.{js,cjs}"],
+    languageOptions: {
+      globals: {
+        require: "readonly",
+        module: "readonly",
+        exports: "readonly",
+        __dirname: "readonly",
+        __filename: "readonly",
+        process: "readonly",
+        console: "readonly",
+        Buffer: "readonly",
+      },
+      sourceType: "commonjs",
+    },
+    rules: {
+      "no-console": "off",
+      "@typescript-eslint/no-require-imports": "off",
     },
   },
   // Prettier must be last to disable conflicting formatting rules

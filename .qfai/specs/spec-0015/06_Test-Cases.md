@@ -60,17 +60,17 @@
 - AC-Refs: AC-0015-0010
 - Verify merged agent definitions preserve prior specialist responsibilities through catalog replacement mappings and merged responsibilities.
 
-## TC-0015-0011: Coverage Placeholder for EX-0015-0005
+## TC-0015-0011: Delegation Failure Hard Stop Reporting
 
 - EX-Ref: EX-0015-0005
-- AC-Refs: AC-0015-0001
-- Verify that migrated traceability includes EX-0015-0005.
+- AC-Refs: AC-0015-0012
+- Verify failed first delegation stops the stage, does not simulate or self-execute, and reports remediation details.
 
-## TC-0015-0012: Coverage Placeholder for EX-0015-0006
+## TC-0015-0012: Capability Probe First Real Delegation Contract
 
 - EX-Ref: EX-0015-0006
-- AC-Refs: AC-0015-0001
-- Verify that migrated example EX-0015-0006 is covered by at least one test case.
+- AC-Refs: AC-0015-0011
+- Verify the shared delegation baseline requires the stage to attempt the first required delegation as the Capability Probe, and `qfai-implement` inherits that contract without adding any separate probe step before the hard-stop handling path.
 
 ## TC-0015-0013: Coverage Placeholder for EX-0015-0007
 

@@ -1,12 +1,12 @@
 ---
 name: web-research
-title: "Web Research Pipeline (CAP-0027)"
+title: "Web Research Pipeline (CAP-0034)"
 description: "8-stage web research pipeline with MCP integration, caching, and citation generation."
 argument-hint: "[query] [--max-depth N] [--yolo]"
 allowed-tools: [Read, Glob, Bash, Write, WebSearch, WebFetch]
 roles: [Researcher, Analyst, FactChecker]
 mode: research-pipeline
-spec: spec-0027
+spec: spec-0034
 ---
 
 <!--
@@ -28,14 +28,14 @@ QFAI Skill Body (SSOT)
 
 ### Capability Probe (MUST)
 
-1. Run one harmless probe task at stage start to confirm sub-agent availability.
-2. If sub-agents are unavailable, explicitly ask the user for Simulation mode approval.
-3. Without explicit approval, stop and do not continue delegation.
+1. Attempt the first required delegation at stage start.
+2. Treat that real delegation attempt as the capability check.
+3. If the delegation fails, stop the stage immediately and report remediation.
 
-### Simulation mode (Opt-in only)
+### Delegation Failure (Hard Stop)
 
-- Allowed only when the user explicitly states `Simulation mode allowed`.
-- When used, record the reason sub-agents were unavailable and the user approval reference.
+- No additional overrides.
+- Do not simulate roles. If the first required delegation fails, stop the stage and report remediation.
 
 ## Work Orders Summary
 

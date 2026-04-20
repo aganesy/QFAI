@@ -71,15 +71,35 @@ Scenario: --run-validate + --phase refinement の phase guard
   And exit code 1 で終了する
 ```
 
+```gherkin
+# AC-0005-0009
+Scenario: Prototyping セクション出力
+  Given prototyping evidence が存在する
+  When `qfai report --format md` を実行する
+  Then report.md に ## Prototyping セクションが含まれる
+  And mode, obligations, evidence coverage, render, browserQa, calibration サブセクションが含まれる
+```
+
+```gherkin
+# AC-0005-0010
+Scenario: Prototyping セクション — evidence なし
+  Given prototyping evidence が存在しない
+  When `qfai report --format md` を実行する
+  Then report.md に ## Prototyping セクションが含まれる
+  And recommendationArtifact status が "missing" または "no-pack" と表示される
+```
+
 ## AC Catalog (optional)
 
-| AC_ID        | Title                    | Notes    | Priority |
-| ------------ | ------------------------ | -------- | -------- |
-| AC-0005-0001 | Markdown レポート        | REQ-0020 | P1       |
-| AC-0005-0002 | JSON レポート            | REQ-0021 | P1       |
-| AC-0005-0003 | --base-url リンク        | REQ-0022 | P2       |
-| AC-0005-0004 | --run-validate           | REQ-0023 | P1       |
-| AC-0005-0005 | validate.json 不在エラー | REQ-0024 | P1       |
-| AC-0005-0006 | --out 出力先             | REQ-0025 | P2       |
-| AC-0005-0007 | spec-pack レポート       | REQ-0026 | P2       |
-| AC-0005-0008 | phase guard              | REQ-0027 | P1       |
+| AC_ID        | Title                     | Notes    | Priority |
+| ------------ | ------------------------- | -------- | -------- |
+| AC-0005-0001 | Markdown レポート         | REQ-0020 | P1       |
+| AC-0005-0002 | JSON レポート             | REQ-0021 | P1       |
+| AC-0005-0003 | --base-url リンク         | REQ-0022 | P2       |
+| AC-0005-0004 | --run-validate            | REQ-0023 | P1       |
+| AC-0005-0005 | validate.json 不在エラー  | REQ-0024 | P1       |
+| AC-0005-0006 | --out 出力先              | REQ-0025 | P2       |
+| AC-0005-0007 | spec-pack レポート        | REQ-0026 | P2       |
+| AC-0005-0008 | phase guard               | REQ-0027 | P1       |
+| AC-0005-0009 | Prototyping セクション    | REQ-0028 | P2       |
+| AC-0005-0010 | Prototyping evidence なし | REQ-0028 | P2       |

@@ -8,6 +8,7 @@ import { issue } from "./utils.js";
 
 const BR_ID_RE = /\bBR-[A-Za-z0-9-]+\b/g;
 const SCENARIO_RE = /^\s*Scenario(?:\s+Outline)?\s*:/gim;
+const EX_ID_RE = /\bEX-[A-Za-z0-9-]+\b/g;
 const TC_OR_CASE_RE = /\b(?:TC|CASE)-[A-Za-z0-9-]+\b/g;
 
 export async function validateDensityHints(root: string, config: QfaiConfig): Promise<Issue[]> {
@@ -37,7 +38,7 @@ export async function validateDensityHints(root: string, config: QfaiConfig): Pr
       );
     }
 
-    if (examplesText.length > 0 && countMatches(examplesText, SCENARIO_RE) === 0) {
+    if (examplesText.length > 0 && !hasStructuredExamples(examplesText)) {
       issues.push(
         issue(
           "QFAI-DENSITY-002",
@@ -67,7 +68,7 @@ export async function validateDensityHints(root: string, config: QfaiConfig): Pr
       );
     }
 
-    if (testCasesText.length > 0 && isCoverageMatrixEmpty(testCasesText)) {
+    if (testCasesText.length > 0 && !hasStructuredCoverage(testCasesText)) {
       issues.push(
         issue(
           "QFAI-DENSITY-004",
@@ -89,6 +90,26 @@ export async function validateDensityHints(root: string, config: QfaiConfig): Pr
 function countMatches(text: string, pattern: RegExp): number {
   const matcher = new RegExp(pattern.source, pattern.flags);
   return Array.from(text.matchAll(matcher)).length;
+}
+
+function hasStructuredExamples(text: string): boolean {
+  if (countMatches(text, SCENARIO_RE) > 0) {
+    return true;
+  }
+  if (hasMarkdownTableColumn(text, "EX-ID") && countMatches(text, EX_ID_RE) > 0) {
+    return true;
+  }
+  return /^##\s*EX-[A-Za-z0-9-]+\b/im.test(text);
+}
+
+function hasStructuredCoverage(text: string): boolean {
+  if (hasMarkdownTableColumn(text, "TC-ID")) {
+    return true;
+  }
+  if (/^##\s*TC-[A-Za-z0-9-]+\b/im.test(text)) {
+    return true;
+  }
+  return !isCoverageMatrixEmpty(text);
 }
 
 function isCoverageMatrixEmpty(text: string): boolean {
@@ -117,6 +138,26 @@ function isCoverageMatrixEmpty(text: string): boolean {
 
 function isSeparatorRow(line: string): boolean {
   return /^\|\s*[-:| ]+\|\s*$/.test(line);
+}
+
+function hasMarkdownTableColumn(text: string, column: string): boolean {
+  const lines = text.replace(/\r\n/g, "\n").split("\n");
+  for (let index = 0; index < lines.length - 1; index += 1) {
+    const line = lines[index]?.trim() ?? "";
+    const nextLine = lines[index + 1]?.trim() ?? "";
+    if (!line.startsWith("|") || !nextLine.startsWith("|")) {
+      continue;
+    }
+    if (!isSeparatorRow(nextLine)) {
+      continue;
+    }
+    const cells = line
+      .split("|")
+      .map((cell) => cell.trim())
+      .filter((cell) => cell.length > 0);
+    return cells.includes(column);
+  }
+  return false;
 }
 
 async function readSafe(filePath: string): Promise<string> {

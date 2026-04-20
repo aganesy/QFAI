@@ -48,7 +48,7 @@ Do not proceed without a declared Change Type.
 
 0. Steering refresh (project memory bootstrap)
 1. Discussion (optional): clarify idea → requirement seed
-2. Requirements: requirements document in `.qfai/require/`
+2. Requirements: discussion pack in `.qfai/discussion/`
 3. Specification (SDD): unified preflight + `_policies` / `spec-XXXX/01..10`
 4. Prototyping (optional): contract-aligned implementation skeleton
 5. Acceptance tests (ATDD): runnable E2E/API/Integration tests derived from specs/contracts obligations (`US` / `TC` / `CON-API`)

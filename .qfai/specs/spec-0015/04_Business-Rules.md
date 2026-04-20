@@ -7,19 +7,20 @@
 - Orchestrator may only: create work orders, delegate tasks, integrate outputs, present results.
 - Orchestrator MUST NOT: generate primary artifact first draft, serve as Reviewer, skip delegation.
 
-## BR-0015-0002: Capability Probe Before Delegation
+## BR-0015-0002: Capability Probe By Real Delegation
 
-- AC-Refs: AC-0015-0002
+- AC-Refs: AC-0015-0011
 
-- Run one harmless Probe Task once at stage start to check subagent availability.
-- If unavailable, ask for Simulation mode approval. Without approval, stop.
+- Attempt the first required delegation at stage start; do not use preflight availability confirmation as the execution gate.
+- Treat that first real delegation attempt as the capability check.
 
-## BR-0015-0003: Simulation Mode Opt-In
+## BR-0015-0003: Delegation Failure Hard Stop Output
 
-- AC-Refs: AC-0015-0003
+- AC-Refs: AC-0015-0012
 
-- Allowed only when user explicitly states `Simulation mode allowed`.
-- Record: simulated reason and user approval reference.
+- If the first required delegation fails, stop immediately.
+- Do not simulate roles and do not continue with self-execution.
+- Report: attempted role, attempted task, failure summary, why the stage stopped, required user remediation, and retry condition.
 
 ## BR-0015-0004: Devils-Advocate Gate
 

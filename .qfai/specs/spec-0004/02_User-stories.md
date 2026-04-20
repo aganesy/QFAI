@@ -17,6 +17,16 @@
 - US-0004-0013: コントラクト検証 - UI/API/DB コントラクト ID 整合性
 - US-0004-0014: Mermaid 図検証 - mermaid フェンスブロック形式チェック
 - US-0004-0015: Phase guard - CI で --phase refinement をブロック
+- US-0004-0016: Canonical UIX validator aggregation - runAllUixValidators() を canonical aggregator 化（REQ-0011）
+- US-0004-0017: 3-layer テンプレートファミリーバリデータ整合 - 新 3-layer ファイル名・スキーマ期待（REQ-0012）
+- US-0004-0018: Truthful render-evidence state handling - プレースホルダー排除、truthful state 返却（REQ-0013）
+- US-0004-0019: Browser QA truthful implementation - minimal runner で truthful 報告
+- US-0004-0020: Canonical/Legacy Validator Separation
+- US-0004-0021: IssueCategory Discrimination
+- US-0004-0022: Prototyping Recommendation Validation（REQ-0014）
+- US-0004-0023: Full-Harness Iteration Integrity Error Enforcement (v1.7.15, REQ-0124..REQ-0134)
+- US-0004-0024: Reviewer and Convergence Evidence Truthfulness (v1.7.15, REQ-0125..REQ-0127)
+- US-0004-0025: Evidence Grounding Validators (v1.7.15, REQ-0128..REQ-0134)
 
 ## US-0004-0001: バリデーション実行
 
@@ -111,3 +121,92 @@
 - Parent: CAP-0004
 - Goal: CI 環境で `--phase refinement` が指定された場合、バリデーションをブロックし refinement issue を生成する
 - Non-goals: 他フェーズのブロック
+
+## US-0004-0016: Canonical UIX validator aggregation
+
+- Parent: CAP-0004
+- Goal: `runAllUixValidators()` をレガシー互換ラッパーではなく canonical aggregator として動作させ、validate.ts が直接ルーティングする
+- Non-goals: レガシー 4-axis 集約ロジックの維持
+- Notes: REQ-0011。D-001（3-layer evaluation model as canonical）に基づく。旧集約パスは完全に除去する
+
+## US-0004-0017: 3-layer テンプレートファミリーバリデータ整合
+
+- Parent: CAP-0004
+- Goal: UIX バリデータが新 3-layer テンプレートファミリー（11_design_taste_interview, 20_design_eval_invariant, 21_design_eval_trend_derived, 22_design_eval_product_specific, 23_design_eval_aggregate, 24_design_eval_dynamic_overrides）のファイル名・スキーマを期待するように整合させる
+- Non-goals: テンプレート内容の自動生成
+- Notes: REQ-0012。D-004（旧 4-axis テンプレートの完全除去）に基づく
+
+## US-0004-0018: Truthful render-evidence state handling
+
+- Parent: CAP-0004
+- Goal: render-evidence バリデータがプレースホルダーではなく truthful な状態（captured | skipped | failed）を返す
+- Non-goals: render-evidence の自動キャプチャ実行
+- Notes: REQ-0013。スキップ理由を明示し、fake-complete な evidence を排除する
+
+## US-0004-0019: Browser QA truthful implementation
+
+- Parent: CAP-0004
+- Goal: Browser QA バリデータが minimal runner を維持しつつ、fake-complete ではなく実際のテスト実行状態を truthful に報告する
+- Non-goals: フル Browser QA フレームワークの実装
+- Notes: REQ-0014。minimal runner のスコープを明確にし、未実行テストを pass と偽らない
+
+## US-0004-0020: Canonical Validator Pipeline
+
+As a QFAI user, I want the validate pipeline to use only canonical validators in production, so that validation results are accurate and consistent. v1.7.14: legacy validators are completely removed from the source tree (DR-0115).
+
+## US-0004-0021: IssueCategory Discrimination
+
+As a CI/CD engineer, I want validator issues tagged with `category: "canonical"` or `"change"`, so that I can filter and prioritize findings by their source. v1.7.14: "compatibility" category removed (DR-0108).
+
+## US-0004-0022: Prototyping Recommendation Validation
+
+As a QFAI user, I want `qfai validate` to check prototyping.yaml schema (required fields, mode validity, allowed_modes consistency), so that invalid prototyping recommendations are caught early.
+
+## US-0004-0023: Full-Harness Iteration Integrity Error Enforcement (v1.7.15)
+
+- Parent: CAP-0004
+- Goal: CI rejects full-harness evidence containing synthetic/zero-seeded/single-iteration-converged patterns by enforcing PROT-295..306, PROT-308..309 as error severity
+- Non-goals: Downgrading these rules to warnings
+- Notes: REQ-0124..REQ-0134。v1.7.15 で PROT-290..292 を warning→error に昇格し、PROT-295..306, PROT-308..309 を新規 error として追加
+
+## US-0004-0024: Reviewer and Convergence Evidence Truthfulness (v1.7.15)
+
+- Parent: CAP-0004
+- Goal: Validator rejects evidence where reviewer is placeholder, convergence claims single-iteration, or weightedTotal is pre-scored, ensuring full-harness evidence reflects real iterative review
+- Non-goals: Validating reviewer identity against external systems
+- Notes: REQ-0125..REQ-0127。PROT-290, PROT-295, PROT-296, PROT-308, PROT-309 が対応
+
+## US-0004-0025: Evidence Grounding Validators (v1.7.15)
+
+- Parent: CAP-0004
+- Goal: Validator rejects evidence where specCoverage is zero-seeded, mockPaths contain synthetic passes, calibrationRef is empty, or structural counts (reviewerLogs/iterations/scoringTrace) do not match iterationCount
+- Non-goals: Validating evidence content quality beyond structural integrity
+- Notes: REQ-0128..REQ-0134。PROT-291, PROT-297, PROT-298, PROT-301, PROT-304, PROT-305, PROT-306 が対応
+
+## US-0004-0026: Rev2 Evidence Category and Schema Validators (v1.7.15 rev2)
+
+- Parent: CAP-0004
+- Goal: Validator rejects evidence where discussion/screenContract/trend evidenceRefs are empty, declared DB objects lack observation, uiFidelity claims completed without screen-level data, iteration evidenceRefs miss required categories, or request.l1/l2 from old schema is detected
+- Non-goals: Implementing the runtime checks themselves (covered by spec-0012)
+- Notes: REQ-0136。既存 rule ID の severity upgrade と新 rule ID の追加
+
+## US-0004-0027: Validator Tests Fixture Rev2 Alignment (v1.7.15 rev2)
+
+- Parent: CAP-0004
+- Goal: Test fixtures for prototypingEvidence validators are updated to reflect rev2 runtime contract, removing obsolete normal-path patterns and adding rev2 error-path fixtures
+- Non-goals: Comprehensive runtime testing (covered by spec-0012 tests)
+- Notes: REQ-0137
+
+## US-0004-0028: Design guideline coverage warning validator (v1.7.17)
+
+- Parent: CAP-0004
+- Goal: Validator warns when a UI-bearing discussion pack has no usable `design_guideline_research` coverage in `04_Sources.md`
+- Non-goals: Validating the factual correctness of the external guideline itself
+- Notes: REQ-0138
+
+## US-0004-0029: Trend-derived anchor concreteness warning validator (v1.7.17)
+
+- Parent: CAP-0004
+- Goal: Validator warns when `score_anchors` in trend-derived axes use abstract adjectives without quantitative proxy
+- Non-goals: Scoring the quality of the chosen threshold values
+- Notes: REQ-0139

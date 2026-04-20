@@ -1,7 +1,7 @@
 /**
  * Integration tests for spec-0023: Discussion Design Hardening
  *
- * Tests individual DDS validators (QFAI-DDP-019..025) with temp directory
+ * Tests individual sidecar-first discussion hardening validators with temp directory
  * fixtures to verify structural validation logic.
  */
 
@@ -60,11 +60,11 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import {
   isUiBearing,
-  validateDdsPresence,
+  validateSidecarPrimaryTruth,
   validateOptionComparison,
-  validateAnchorScreen,
+  validateSelectedAnchor,
   validateCompetitiveRefs,
-  validateCtaHierarchy,
+  validateInteractionPriorityHandoff,
   validateStateCoverage,
   validateDesignAntiGoals,
 } from "../../src/core/validators/discussionDesignHardening.js";
@@ -93,7 +93,7 @@ afterEach(async () => {
 // ---------------------------------------------------------------------------
 
 async function _createUiBearingPack(root: string): Promise<void> {
-  await writeFile(path.join(root, "01_Spec.md"), "# Spec\n\n- surface: web-ui\n", "utf-8");
+  await writeFile(path.join(root, "01_Spec.md"), "# Spec\n\n- surface: web\n", "utf-8");
   await mkdir(path.join(root, "uiux"), { recursive: true });
 }
 
@@ -105,41 +105,81 @@ async function createNonUiPack(root: string): Promise<void> {
 // Fixture content builders
 // ---------------------------------------------------------------------------
 
-function buildFullDds(): string {
+function buildBehaviorObligations(): string {
   return [
     "# 03 Story Workshop",
     "",
-    "## Design Direction Summary",
-    "",
-    "### Option Comparison",
-    "",
-    "- **Option A**: Tab navigation with bottom bar",
-    "- **Option B**: Drawer navigation with hamburger menu",
-    "",
-    "### Anchor Screen Selection",
-    "",
-    "Selected: Option A — familiar pattern for mobile users",
-    "",
-    "### Competitive References",
-    "",
-    "See 04_Sources.md for detailed competitive reference registry.",
-    "",
-    "### CTA Hierarchy",
-    "",
-    "- Primary: Start Free Trial — hero section",
-    "- Secondary: Learn More — below fold",
+    "## Behavior Obligations",
     "",
     "### State Coverage",
     "",
-    "- empty: Show onboarding prompt with action button",
-    "- loading: Skeleton screen with shimmer animation",
-    "- error: Retry button with error description",
-    "- populated: Standard data display with filters",
+    "| State / Risk | Discovery Notes | Handoff to Contract |",
+    "| ------------ | --------------- | ------------------- |",
+    "| loading | Skeleton screen can hide the main path | Final `required_states` contract lives in `uiux/40_screen_contracts.md` |",
+    "| error | Retry copy must stay visible during failure | Final `required_states` contract lives in `uiux/40_screen_contracts.md` |",
+    "",
+    "### Interaction Contracts",
+    "",
+    "| Primary Task | Key Action | Priority Hint | Expected Result | Error Handling |",
+    "| ------------ | ---------- | ------------- | --------------- | -------------- |",
+    "| Start Free Trial | Start Free Trial | primary | User enters the trial flow | Keep retry and support paths visible |",
+    "",
+    "Screen-level contract details are finalized in `uiux/40_screen_contracts.md`. Primary tasks, required states, transitions, and observable outcomes are finalized there; Story Workshop is for discovery and handoff, not final contract fixation.",
     "",
     "### Design Anti-goals",
     "",
     "- Anti-goal: Avoid cluttered dashboard with too many competing CTAs",
   ].join("\n");
+}
+
+function buildOptionComparisonFile(): string {
+  return [
+    "# 30 Option Comparison",
+    "",
+    "- **Option A**: Tab navigation with bottom bar",
+    "- **Option B**: Drawer navigation with hamburger menu",
+  ].join("\n");
+}
+
+function buildSelectedAnchorFile(): string {
+  return [
+    "# 31 Selected Anchor Screen",
+    "",
+    "- selected_option: Option A",
+    "- why_selected: familiar pattern for mobile users",
+  ].join("\n");
+}
+
+/**
+ * Create minimal sidecar canonical files so validateSidecarPrimaryTruth passes.
+ */
+async function createSidecarFiles(root: string): Promise<void> {
+  await mkdir(path.join(root, "uiux"), { recursive: true });
+  await writeFile(
+    path.join(root, "uiux", "10_implementation_strategy.md"),
+    "# Strategy\n\nContent.\n",
+    "utf-8",
+  );
+  await writeFile(
+    path.join(root, "uiux", "30_option_comparison.md"),
+    buildOptionComparisonFile(),
+    "utf-8",
+  );
+  await writeFile(
+    path.join(root, "uiux", "31_selected_anchor_screen.md"),
+    buildSelectedAnchorFile(),
+    "utf-8",
+  );
+  await writeFile(
+    path.join(root, "uiux", "40_screen_contracts.md"),
+    "# Screen Contracts\n\n### Screen: Dashboard\n- screen_id: dashboard\n- route: /dashboard\n- purpose: Main view\n- actor: user\n- primary_tasks: View dashboard\n- secondary_tasks: Export data\n- required_states: default, loading, empty, error\n- transitions: navigate to detail\n- observable_outcomes: Data displayed\n- notes_for_verify: Check states\n- notes_for_reviewer: None\n",
+    "utf-8",
+  );
+  await writeFile(
+    path.join(root, "uiux", "50_review_input_bundle.md"),
+    "# Review Input Bundle\n\n## Trend-derived review focus\n\nFocus on modern minimalist patterns.\n",
+    "utf-8",
+  );
 }
 
 function buildCompetitiveRefRegistry(): string {
@@ -150,6 +190,7 @@ function buildCompetitiveRefRegistry(): string {
     "",
     "### Competitor Alpha",
     "",
+    "- reference: Competitor Alpha App",
     "- adopted_points: Clean onboarding flow with progressive disclosure",
     "- rejected_points: Overly complex settings panel with nested menus",
     "- local_translation: Simplified onboarding adapted for our single-page flow",
@@ -247,48 +288,59 @@ describe("isUiBearing detection", () => {
 });
 
 // ---------------------------------------------------------------------------
-// TC-0002-0005..0007: validateDdsPresence (QFAI-DDP-019)
+// TC-0002-0005..0007: validateSidecarPrimaryTruth (UIX-VAL-DDH-SIDECAR-PRIMARY-TRUTH)
 // ---------------------------------------------------------------------------
 
-describe("QFAI-DDP-019: DDS presence", () => {
+describe("UIX-VAL-DDH-SIDECAR-PRIMARY-TRUTH: Sidecar primary truth", () => {
   // TC-0002-0005
-  it("TC-0002-0005: complete DDS with all 6 subsections passes", async () => {
+  it("TC-0002-0005: complete sidecar family with all canonical files passes", async () => {
     const root = await newTempDir();
-    await writeFile(path.join(root, "03_Story-Workshop.md"), buildFullDds(), "utf-8");
+    await createSidecarFiles(root);
 
-    const issues = await validateDdsPresence(root);
+    const issues = await validateSidecarPrimaryTruth(root);
 
     expect(issues).toHaveLength(0);
   });
 
   // TC-0002-0006
-  it("TC-0002-0006: missing State Coverage subsection emits error", async () => {
+  it("TC-0002-0006: missing 40_screen_contracts.md emits error", async () => {
     const root = await newTempDir();
-    const content = buildFullDds().replace(
-      /### State Coverage[\s\S]*?(?=### Design Anti-goals)/,
-      "",
+    await mkdir(path.join(root, "uiux"), { recursive: true });
+    await writeFile(
+      path.join(root, "uiux", "10_implementation_strategy.md"),
+      "# Strategy\n\nContent.\n",
+      "utf-8",
     );
-    await writeFile(path.join(root, "03_Story-Workshop.md"), content, "utf-8");
+    await writeFile(
+      path.join(root, "uiux", "30_option_comparison.md"),
+      buildOptionComparisonFile(),
+      "utf-8",
+    );
+    await writeFile(
+      path.join(root, "uiux", "31_selected_anchor_screen.md"),
+      buildSelectedAnchorFile(),
+      "utf-8",
+    );
+    // Deliberately omit 40_screen_contracts.md
 
-    const issues = await validateDdsPresence(root);
+    const issues = await validateSidecarPrimaryTruth(root);
 
     expect(issues.length).toBeGreaterThan(0);
-    const stateIssue = issues.find((i) => i.message.includes("State Coverage"));
-    expect(stateIssue).toBeDefined();
-    expect(stateIssue?.severity).toBe("error");
+    const contractsIssue = issues.find((i) => i.message.includes("40_screen_contracts.md"));
+    expect(contractsIssue).toBeDefined();
+    expect(contractsIssue?.severity).toBe("error");
   });
 
   // TC-0002-0007
-  it("TC-0002-0007: DDS in wrong file (02_Scope.md) not found", async () => {
+  it("TC-0002-0007: no uiux/ directory at all emits errors for all canonical files", async () => {
     const root = await newTempDir();
     await writeFile(
-      path.join(root, "02_Scope.md"),
-      "# Scope\n\n## Design Direction Summary\n\n### Option Comparison\n\nContent here.\n",
+      path.join(root, "03_Story-Workshop.md"),
+      "# Story\n\nNo sidecar here.\n",
       "utf-8",
     );
-    await writeFile(path.join(root, "03_Story-Workshop.md"), "# Story\n\nNo DDS here.\n", "utf-8");
 
-    const issues = await validateDdsPresence(root);
+    const issues = await validateSidecarPrimaryTruth(root);
 
     expect(issues.length).toBeGreaterThan(0);
     expect(issues[0]?.message).toMatch(/not found/i);
@@ -296,14 +348,19 @@ describe("QFAI-DDP-019: DDS presence", () => {
 });
 
 // ---------------------------------------------------------------------------
-// TC-0002-0008..0009: validateOptionComparison (QFAI-DDP-020)
+// TC-0002-0008..0009: validateOptionComparison (UIX-VAL-DDH-OPTION-COMPARISON)
 // ---------------------------------------------------------------------------
 
-describe("QFAI-DDP-020: Option comparison", () => {
+describe("UIX-VAL-DDH-OPTION-COMPARISON: Option comparison", () => {
   // TC-0002-0008
-  it("TC-0002-0008: DDS with 2 options passes", async () => {
+  it("TC-0002-0008: 30_option_comparison.md with 2 options passes", async () => {
     const root = await newTempDir();
-    await writeFile(path.join(root, "03_Story-Workshop.md"), buildFullDds(), "utf-8");
+    await mkdir(path.join(root, "uiux"), { recursive: true });
+    await writeFile(
+      path.join(root, "uiux", "30_option_comparison.md"),
+      buildOptionComparisonFile(),
+      "utf-8",
+    );
 
     const issues = await validateOptionComparison(root);
 
@@ -311,58 +368,61 @@ describe("QFAI-DDP-020: Option comparison", () => {
   });
 
   // TC-0002-0009
-  it("TC-0002-0009: DDS with 1 option fails", async () => {
+  it("TC-0002-0009: 30_option_comparison.md with 1 option fails", async () => {
     const root = await newTempDir();
-    const content = buildFullDds().replace(
-      "- **Option B**: Drawer navigation with hamburger menu\n",
+    await mkdir(path.join(root, "uiux"), { recursive: true });
+    const content = buildOptionComparisonFile().replace(
+      "- **Option B**: Drawer navigation with hamburger menu",
       "",
     );
-    await writeFile(path.join(root, "03_Story-Workshop.md"), content, "utf-8");
+    await writeFile(path.join(root, "uiux", "30_option_comparison.md"), content, "utf-8");
 
     const issues = await validateOptionComparison(root);
 
     expect(issues.length).toBeGreaterThan(0);
-    expect(issues[0]?.code).toBe("QFAI-DDP-020");
+    expect(issues[0]?.code).toBe("UIX-VAL-DDH-OPTION-COMPARISON");
     expect(issues[0]?.message).toMatch(/1.*minimum.*2|found 1/i);
   });
 });
 
 // ---------------------------------------------------------------------------
-// TC-0002-0010..0011: validateAnchorScreen (QFAI-DDP-021)
+// TC-0002-0010..0011: validateSelectedAnchor (UIX-VAL-DDH-SELECTED-ANCHOR)
 // ---------------------------------------------------------------------------
 
-describe("QFAI-DDP-021: Anchor screen", () => {
+describe("UIX-VAL-DDH-SELECTED-ANCHOR: Selected anchor", () => {
   // TC-0002-0010
-  it("TC-0002-0010: valid anchor referencing compared option passes", async () => {
+  it("TC-0002-0010: valid 31_selected_anchor_screen.md with selected_option and why_selected passes", async () => {
     const root = await newTempDir();
-    await writeFile(path.join(root, "03_Story-Workshop.md"), buildFullDds(), "utf-8");
+    await mkdir(path.join(root, "uiux"), { recursive: true });
+    await writeFile(
+      path.join(root, "uiux", "31_selected_anchor_screen.md"),
+      buildSelectedAnchorFile(),
+      "utf-8",
+    );
 
-    const issues = await validateAnchorScreen(root);
+    const issues = await validateSelectedAnchor(root);
 
     expect(issues).toHaveLength(0);
   });
 
   // TC-0002-0011
-  it("TC-0002-0011: no anchor selection fails", async () => {
+  it("TC-0002-0011: missing 31_selected_anchor_screen.md fails", async () => {
     const root = await newTempDir();
-    const content = buildFullDds().replace(
-      "Selected: Option A — familiar pattern for mobile users",
-      "TBD",
-    );
-    await writeFile(path.join(root, "03_Story-Workshop.md"), content, "utf-8");
+    await mkdir(path.join(root, "uiux"), { recursive: true });
+    // No 31_selected_anchor_screen.md created
 
-    const issues = await validateAnchorScreen(root);
+    const issues = await validateSelectedAnchor(root);
 
     expect(issues.length).toBeGreaterThan(0);
-    expect(issues[0]?.code).toBe("QFAI-DDP-021");
+    expect(issues[0]?.code).toBe("UIX-VAL-DDH-SELECTED-ANCHOR");
   });
 });
 
 // ---------------------------------------------------------------------------
-// TC-0002-0012..0016: validateCompetitiveRefs (QFAI-DDP-022)
+// TC-0002-0012..0016: validateCompetitiveRefs (UIX-VAL-DDH-COMPETITIVE-REFERENCES)
 // ---------------------------------------------------------------------------
 
-describe("QFAI-DDP-022: Competitive references", () => {
+describe("UIX-VAL-DDH-COMPETITIVE-REFERENCES: Competitive references", () => {
   // TC-0002-0012
   it("TC-0002-0012: all 3 fields with substantive content passes", async () => {
     const root = await newTempDir();
@@ -437,45 +497,45 @@ describe("QFAI-DDP-022: Competitive references", () => {
 });
 
 // ---------------------------------------------------------------------------
-// TC-0002-0017..0018: validateCtaHierarchy (QFAI-DDP-023)
+// TC-0002-0017..0018: validateInteractionPriorityHandoff (UIX-VAL-DDH-INTERACTION-HANDOFF)
 // ---------------------------------------------------------------------------
 
-describe("QFAI-DDP-023: CTA hierarchy", () => {
+describe("UIX-VAL-DDH-INTERACTION-HANDOFF: interaction priority handoff", () => {
   // TC-0002-0017
-  it("TC-0002-0017: primary CTA defined passes", async () => {
+  it("TC-0002-0017: primary task and key action defined passes", async () => {
     const root = await newTempDir();
-    await writeFile(path.join(root, "03_Story-Workshop.md"), buildFullDds(), "utf-8");
+    await writeFile(path.join(root, "03_Story-Workshop.md"), buildBehaviorObligations(), "utf-8");
 
-    const issues = await validateCtaHierarchy(root);
+    const issues = await validateInteractionPriorityHandoff(root);
 
     expect(issues).toHaveLength(0);
   });
 
   // TC-0002-0018
-  it("TC-0002-0018: no primary CTA fails", async () => {
+  it("TC-0002-0018: no prioritized main action fails", async () => {
     const root = await newTempDir();
-    const content = buildFullDds().replace(
-      "- Primary: Start Free Trial — hero section\n- Secondary: Learn More — below fold",
-      "- Secondary: Learn More\n- Tertiary: View Pricing",
+    const content = buildBehaviorObligations().replace(
+      "| Start Free Trial | Start Free Trial | primary | User enters the trial flow | Keep retry and support paths visible |",
+      "| Help | Learn More | secondary | User opens docs | Show generic fallback |",
     );
     await writeFile(path.join(root, "03_Story-Workshop.md"), content, "utf-8");
 
-    const issues = await validateCtaHierarchy(root);
+    const issues = await validateInteractionPriorityHandoff(root);
 
     expect(issues.length).toBeGreaterThan(0);
-    expect(issues[0]?.code).toBe("QFAI-DDP-023");
+    expect(issues[0]?.code).toBe("UIX-VAL-DDH-INTERACTION-HANDOFF");
   });
 });
 
 // ---------------------------------------------------------------------------
-// TC-0002-0019..0020: validateStateCoverage (QFAI-DDP-024)
+// TC-0002-0019..0020: validateStateCoverage (UIX-VAL-DDH-STATE-COVERAGE)
 // ---------------------------------------------------------------------------
 
-describe("QFAI-DDP-024: State coverage", () => {
+describe("UIX-VAL-DDH-STATE-COVERAGE: State coverage", () => {
   // TC-0002-0019
-  it("TC-0002-0019: all 4 states defined passes", async () => {
+  it("TC-0002-0019: state risk notes and contract handoff pass", async () => {
     const root = await newTempDir();
-    await writeFile(path.join(root, "03_Story-Workshop.md"), buildFullDds(), "utf-8");
+    await writeFile(path.join(root, "03_Story-Workshop.md"), buildBehaviorObligations(), "utf-8");
 
     const issues = await validateStateCoverage(root);
 
@@ -483,28 +543,51 @@ describe("QFAI-DDP-024: State coverage", () => {
   });
 
   // TC-0002-0020
-  it("TC-0002-0020: missing error state emits error", async () => {
+  it("TC-0002-0020: missing contract handoff emits error", async () => {
     const root = await newTempDir();
-    const content = buildFullDds().replace("- error: Retry button with error description\n", "");
+    const content = [
+      "# 03 Story Workshop",
+      "",
+      "## Behavior Obligations",
+      "",
+      "### State Coverage",
+      "",
+      "| State / Risk | Discovery Notes | Handoff to Contract |",
+      "| ------------ | --------------- | ------------------- |",
+      "| loading | Skeleton screen can hide the main path | review later |",
+      "| error | Retry copy must stay visible during failure | review later |",
+      "",
+      "### Interaction Contracts",
+      "",
+      "| Primary Task | Key Action | Priority Hint | Expected Result | Error Handling |",
+      "| ------------ | ---------- | ------------- | --------------- | -------------- |",
+      "| Start Free Trial | Start Free Trial | primary | User enters the trial flow | Keep retry and support paths visible |",
+      "",
+      "Screen-level contract details are finalized in `uiux/40_screen_contracts.md`. Primary tasks, required states, transitions, and observable outcomes are finalized there; Story Workshop is for discovery and handoff, not final contract fixation.",
+      "",
+      "### Design Anti-goals",
+      "",
+      "- Anti-goal: Avoid cluttered dashboard with too many competing CTAs",
+    ].join("\n");
     await writeFile(path.join(root, "03_Story-Workshop.md"), content, "utf-8");
 
     const issues = await validateStateCoverage(root);
 
     expect(issues.length).toBeGreaterThan(0);
-    expect(issues[0]?.code).toBe("QFAI-DDP-024");
-    expect(issues[0]?.message).toMatch(/error/);
+    expect(issues[0]?.code).toBe("UIX-VAL-DDH-STATE-COVERAGE");
+    expect(issues[0]?.message).toMatch(/handoff/i);
   });
 });
 
 // ---------------------------------------------------------------------------
-// TC-0002-0021..0022: validateDesignAntiGoals (QFAI-DDP-025)
+// TC-0002-0021..0022: validateDesignAntiGoals (UIX-VAL-DDH-DESIGN-ANTI-GOALS)
 // ---------------------------------------------------------------------------
 
-describe("QFAI-DDP-025: Design anti-goals", () => {
+describe("UIX-VAL-DDH-DESIGN-ANTI-GOALS: Design anti-goals", () => {
   // TC-0002-0021
   it("TC-0002-0021: 1 anti-goal defined passes", async () => {
     const root = await newTempDir();
-    await writeFile(path.join(root, "03_Story-Workshop.md"), buildFullDds(), "utf-8");
+    await writeFile(path.join(root, "03_Story-Workshop.md"), buildBehaviorObligations(), "utf-8");
 
     const issues = await validateDesignAntiGoals(root);
 
@@ -514,7 +597,7 @@ describe("QFAI-DDP-025: Design anti-goals", () => {
   // TC-0002-0022
   it("TC-0002-0022: no anti-goals defined fails", async () => {
     const root = await newTempDir();
-    const content = buildFullDds().replace(
+    const content = buildBehaviorObligations().replace(
       "- Anti-goal: Avoid cluttered dashboard with too many competing CTAs",
       "",
     );
@@ -523,7 +606,7 @@ describe("QFAI-DDP-025: Design anti-goals", () => {
     const issues = await validateDesignAntiGoals(root);
 
     expect(issues.length).toBeGreaterThan(0);
-    expect(issues[0]?.code).toBe("QFAI-DDP-025");
+    expect(issues[0]?.code).toBe("UIX-VAL-DDH-DESIGN-ANTI-GOALS");
     expect(issues[0]?.message).toMatch(/minimum 1/i);
   });
 });
@@ -534,16 +617,11 @@ describe("QFAI-DDP-025: Design anti-goals", () => {
 
 describe("Error severity enforcement", () => {
   // TC-0002-0023
-  it("TC-0002-0023: all DDS validator violations emit severity error", async () => {
+  it("TC-0002-0023: all sidecar validator violations emit severity error", async () => {
     const root = await newTempDir();
-    // Provide a pack with DDS section but missing all subsections
-    await writeFile(
-      path.join(root, "03_Story-Workshop.md"),
-      "# Story\n\n## Design Direction Summary\n\nMinimal content.\n",
-      "utf-8",
-    );
+    // Provide a pack with no uiux/ directory — all canonical files missing
 
-    const issues = await validateDdsPresence(root);
+    const issues = await validateSidecarPrimaryTruth(root);
 
     expect(issues.length).toBeGreaterThan(0);
     for (const issue of issues) {
@@ -558,7 +636,7 @@ describe("Error severity enforcement", () => {
 
 describe("3-part error message format", () => {
   // TC-0002-0024
-  it("TC-0002-0024: QFAI-DDP-022 error contains field name, reason, and fix", async () => {
+  it("TC-0002-0024: competitive reference error contains field name, reason, and fix", async () => {
     const root = await newTempDir();
     const content = buildCompetitiveRefRegistry().replace(/- rejected_points:.*\n/, "");
     await writeFile(path.join(root, "04_Sources.md"), content, "utf-8");
@@ -566,7 +644,9 @@ describe("3-part error message format", () => {
     const issues = await validateCompetitiveRefs(root);
 
     expect(issues.length).toBeGreaterThan(0);
-    const msg = issues[0]?.message ?? "";
+    const rejectedIssue = issues.find((i) => i.message.includes("rejected_points"));
+    expect(rejectedIssue).toBeDefined();
+    const msg = rejectedIssue?.message ?? "";
     // field name
     expect(msg).toMatch(/rejected_points/);
     // reason (missing)
@@ -589,7 +669,7 @@ describe("Review-Request and Delta log content", () => {
       "",
       "## Design Direction Decisions",
       "",
-      "- Anchor: Option A (tab navigation) selected for mobile familiarity",
+      "- Selected Anchor: Option A (tab navigation) chosen for mobile familiarity",
       "- Rejection: Option B (drawer) rejected — hidden navigation increases onboarding time",
       "- Adopted: Competitor Alpha onboarding flow adapted for single-page layout",
     ].join("\n");
@@ -598,7 +678,7 @@ describe("Review-Request and Delta log content", () => {
     const content = await readFile(path.join(root, "14_Review-Request.md"), "utf-8");
 
     expect(content).toMatch(/Design Direction Decisions/);
-    expect(content).toMatch(/[Aa]nchor/);
+    expect(content).toMatch(/Selected Anchor/);
     expect(content).toMatch(/[Rr]ejection|[Rr]ejected/);
     expect(content).toMatch(/[Aa]dopted/);
   });
@@ -632,34 +712,52 @@ describe("Review-Request and Delta log content", () => {
 
 describe("SKILL.md and template documentation", () => {
   // TC-0002-0027
-  it("TC-0002-0027: SKILL.md lists all 7 validators with pass criteria", async () => {
+  it("TC-0002-0027: SKILL.md references sidecar validators and placeholder rules", async () => {
     const content = await readFile(skillPath, "utf-8");
 
-    expect(content).toMatch(/QFAI-DDP-019/);
-    expect(content).toMatch(/QFAI-DDP-020/);
-    expect(content).toMatch(/QFAI-DDP-021/);
-    expect(content).toMatch(/QFAI-DDP-022/);
-    expect(content).toMatch(/QFAI-DDP-023/);
-    expect(content).toMatch(/QFAI-DDP-024/);
-    expect(content).toMatch(/QFAI-DDP-025/);
+    // Sidecar-family validators are now the primary quality gates
+    expect(content).toMatch(/UIX-VAL/);
+    expect(content).toMatch(
+      /[Pp]laceholder-like values .* treated as missing|[Pp]laceholder.*treated as missing/,
+    );
+    // Completion conditions reference canonical sidecar files
+    expect(content).toMatch(/10_implementation_strategy\.md/);
+    expect(content).toMatch(/30_option_comparison\.md/);
+    expect(content).toMatch(/40_screen_contracts\.md/);
   });
 
   // TC-0002-0028
-  it("TC-0002-0028: SKILL.md describes DDS section with 6 subsection stubs", async () => {
+  it("TC-0002-0028: SKILL.md describes sidecar-family completion conditions", async () => {
     const content = await readFile(skillPath, "utf-8");
 
-    expect(content).toMatch(/Design Direction Summary/);
-    expect(content).toMatch(/Option Comparison/);
-    expect(content).toMatch(/Anchor Screen Selection/);
-    expect(content).toMatch(/Competitive References/);
-    expect(content).toMatch(/CTA Hierarchy/);
-    expect(content).toMatch(/State Coverage/);
-    expect(content).toMatch(/Design Anti-goals/);
+    expect(content).toMatch(/canonical sidecar family/);
+    expect(content).toMatch(/10_implementation_strategy\.md/);
+    expect(content).toMatch(/30_option_comparison\.md/);
+    expect(content).toMatch(/31_selected_anchor_screen\.md/);
+    expect(content).toMatch(/40_screen_contracts\.md/);
+    expect(content).toMatch(/Selected Anchor|selected anchor|selected_option/i);
+    expect(content).toMatch(/Competitive Reference Registry/);
+  });
+
+  it("TC-0002-0028a: package-facing assets do not leak legacy DDP namespace", async () => {
+    const templatePath = path.join(path.dirname(skillPath), "templates", "04_Sources.md");
+    const [skillContent, templateContent] = await Promise.all([
+      readFile(skillPath, "utf-8"),
+      readFile(templatePath, "utf-8"),
+    ]);
+
+    expect(skillContent).toMatch(/[Pp]laceholder-like values .* treated as missing/);
+    // Template contains structured Competitive Reference Registry and Trend Scan sections
+    expect(templateContent).toMatch(/Competitive Reference Registry/);
+    expect(templateContent).toMatch(/Trend Scan/);
+    expect(templateContent).toMatch(/adopted_points/);
+    expect(templateContent).toMatch(/rejected_points/);
+    expect(templateContent).toMatch(/local_translation/);
   });
 });
 
 // ---------------------------------------------------------------------------
-// TC-0002-0029..0031: Integration pipeline and backward compatibility
+// TC-0002-0029..0031: Integration pipeline validation
 // ---------------------------------------------------------------------------
 
 describe("Validation pipeline integration", () => {
@@ -667,15 +765,16 @@ describe("Validation pipeline integration", () => {
   it("TC-0002-0029: validators run as part of standard validate flow", async () => {
     // Verify the validators are importable and callable (integration check)
     const root = await newTempDir();
-    await writeFile(path.join(root, "03_Story-Workshop.md"), buildFullDds(), "utf-8");
+    await writeFile(path.join(root, "03_Story-Workshop.md"), buildBehaviorObligations(), "utf-8");
     await writeFile(path.join(root, "04_Sources.md"), buildCompetitiveRefRegistry(), "utf-8");
+    await createSidecarFiles(root);
 
     const allIssues = [
-      ...(await validateDdsPresence(root)),
+      ...(await validateSidecarPrimaryTruth(root)),
       ...(await validateOptionComparison(root)),
-      ...(await validateAnchorScreen(root)),
+      ...(await validateSelectedAnchor(root)),
       ...(await validateCompetitiveRefs(root)),
-      ...(await validateCtaHierarchy(root)),
+      ...(await validateInteractionPriorityHandoff(root)),
       ...(await validateStateCoverage(root)),
       ...(await validateDesignAntiGoals(root)),
     ];
@@ -684,10 +783,10 @@ describe("Validation pipeline integration", () => {
   });
 
   // TC-0002-0030
-  it("TC-0002-0030: non-UI pack produces zero DDS issues", async () => {
+  it("TC-0002-0030: non-UI pack produces zero sidecar hardening issues", async () => {
     const root = await newTempDir();
     await createNonUiPack(root);
-    // Non-UI pack: plain text, no DDS, no UI artifacts
+    // Non-UI pack: plain text, no sidecar, no UI artifacts
     await writeFile(
       path.join(root, "03_Story-Workshop.md"),
       "# Story\n\nAPI rate limiting discussion.\n",
@@ -702,16 +801,17 @@ describe("Validation pipeline integration", () => {
   // TC-0002-0031
   it("TC-0002-0031: validator execution completes within performance budget", async () => {
     const root = await newTempDir();
-    await writeFile(path.join(root, "03_Story-Workshop.md"), buildFullDds(), "utf-8");
+    await writeFile(path.join(root, "03_Story-Workshop.md"), buildBehaviorObligations(), "utf-8");
     await writeFile(path.join(root, "04_Sources.md"), buildCompetitiveRefRegistry(), "utf-8");
+    await createSidecarFiles(root);
 
     const start = performance.now();
     await Promise.all([
-      validateDdsPresence(root),
+      validateSidecarPrimaryTruth(root),
       validateOptionComparison(root),
-      validateAnchorScreen(root),
+      validateSelectedAnchor(root),
       validateCompetitiveRefs(root),
-      validateCtaHierarchy(root),
+      validateInteractionPriorityHandoff(root),
       validateStateCoverage(root),
       validateDesignAntiGoals(root),
     ]);
@@ -728,38 +828,38 @@ describe("Validation pipeline integration", () => {
 
 describe("Coverage and traceability", () => {
   // TC-0002-0032
-  it("TC-0002-0032: DDS presence validator has testable branches", async () => {
-    // Verify empty pack path (null content) and populated path both work
+  it("TC-0002-0032: sidecar primary truth validator has testable branches", async () => {
+    // Verify empty pack path (no uiux/) and populated path both work
     const root = await newTempDir();
 
-    // null content path
-    const emptyIssues = await validateDdsPresence(root);
+    // no sidecar path
+    const emptyIssues = await validateSidecarPrimaryTruth(root);
     expect(emptyIssues.length).toBeGreaterThan(0);
 
     // populated path
-    await writeFile(path.join(root, "03_Story-Workshop.md"), buildFullDds(), "utf-8");
-    const fullIssues = await validateDdsPresence(root);
+    await createSidecarFiles(root);
+    const fullIssues = await validateSidecarPrimaryTruth(root);
     expect(fullIssues).toHaveLength(0);
   });
 
   // TC-0002-0033
   it("TC-0002-0033: validators execute regardless of qualityProfile", async () => {
     const root = await newTempDir();
-    await writeFile(path.join(root, "03_Story-Workshop.md"), buildFullDds(), "utf-8");
+    await createSidecarFiles(root);
 
     // Validators are pure functions, not gated by qualityProfile
-    const issues = await validateDdsPresence(root);
+    const issues = await validateSidecarPrimaryTruth(root);
     expect(issues).toHaveLength(0);
   });
 
   // TC-0002-0034
-  it("TC-0002-0034: SKILL.md contains validator, template, and documentation content", async () => {
+  it("TC-0002-0034: SKILL.md contains validator, sidecar, and documentation content", async () => {
     const content = await readFile(skillPath, "utf-8");
 
-    // Validators documented
-    expect(content).toMatch(/QFAI-DDP-019/);
-    // Template structure documented
-    expect(content).toMatch(/Design Direction Summary/);
+    // Validators documented with UIX-VAL series and self-contained placeholder guidance
+    expect(content).toMatch(/UIX-VAL/);
+    // Sidecar family documented
+    expect(content).toMatch(/canonical sidecar family/);
     // Documentation references
     expect(content).toMatch(/UI-bearing/);
   });
@@ -848,8 +948,8 @@ describe("Surface classification SSOT", () => {
   it("TC-0002-0040: reclassification takes immediate effect", async () => {
     const root = await newTempDir();
 
-    // Initially web-ui
-    await writeFile(path.join(root, "01_Spec.md"), "# Spec\n\n- surface: web-ui\n", "utf-8");
+    // Initially web
+    await writeFile(path.join(root, "01_Spec.md"), "# Spec\n\n- surface: web\n", "utf-8");
     const before = await isUiBearing(root);
     expect(before).toBe(true);
 
@@ -862,7 +962,7 @@ describe("Surface classification SSOT", () => {
   // TC-0002-0041
   it("TC-0002-0041: detection is idempotent", async () => {
     const root = await newTempDir();
-    await writeFile(path.join(root, "01_Spec.md"), "# Spec\n\n- surface: web-ui\n", "utf-8");
+    await writeFile(path.join(root, "01_Spec.md"), "# Spec\n\n- surface: web\n", "utf-8");
 
     const first = await isUiBearing(root);
     const second = await isUiBearing(root);
@@ -900,9 +1000,9 @@ describe("SKILL.md 3-layer model verification", () => {
   it("TC-0002-0043: SKILL.md completion conditions reference scoring axes files", async () => {
     const content = await readFile(skillPath, "utf-8");
 
-    // The completion conditions should reference eval axis files
+    // The completion conditions should reference design eval files
     expect(content).toMatch(/Scoring axes defined|scoring axes/i);
-    expect(content).toMatch(/eval_axis|eval.*axis/i);
+    expect(content).toMatch(/design_eval|scoring axes/i);
   });
 
   // TC-0002-0044
@@ -914,7 +1014,7 @@ describe("SKILL.md 3-layer model verification", () => {
     if (completionMatch?.[1]) {
       const completionSection = completionMatch[1];
       // The completion conditions should not use 4-axis as axis MODEL keywords
-      // Note: individual axis file names like "eval_axis_usability.md" are file references, not model keywords
+      // Note: individual file names like "design_eval_invariant.md" are file references, not model keywords
       expect(completionSection).not.toMatch(/\b4-axis\b/i);
       expect(completionSection).not.toMatch(/\bfour-axis\b/i);
     }
@@ -942,6 +1042,6 @@ describe("SKILL.md 3-layer model verification", () => {
 
     // Verify non-ui section explicitly states exemption
     expect(content).toMatch(/[Nn]on-ui.*completion|[Nn]on-UI Completion/i);
-    expect(content).toMatch(/[Nn]o additional UI\/UX conditions|unchanged from prior/i);
+    expect(content).toMatch(/[Nn]o additional UI\/UX.*conditions|unchanged from prior/i);
   });
 });

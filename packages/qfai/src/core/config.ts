@@ -60,10 +60,6 @@ export type QfaiUiuxAuditConfig = {
   maxDuplicateFindingsPerRule?: number;
 };
 
-export type QfaiUiuxMigrationConfig = {
-  strict?: boolean;
-};
-
 export type QfaiUiuxConfig = {
   platform?: string;
   designTokensDir?: string;
@@ -72,10 +68,21 @@ export type QfaiUiuxConfig = {
   requireResearchSummary?: boolean;
   competitive_refs_min?: number;
   warning_as_error_override?: string[];
-  phase1ReleaseDate?: string;
   renderEvidence?: RenderEvidenceConfig;
   audit?: QfaiUiuxAuditConfig;
-  migration?: QfaiUiuxMigrationConfig;
+};
+
+export type QfaiPrototypingCalibrationConfig = {
+  packPath?: string;
+};
+
+export type QfaiPrototypingConfig = {
+  calibration?: QfaiPrototypingCalibrationConfig;
+  execution?: {
+    targetUrl?: string | null;
+    browserProvider?: string;
+    renderProvider?: string;
+  };
 };
 
 export type QfaiConfig = {
@@ -83,6 +90,7 @@ export type QfaiConfig = {
   validation: QfaiValidationConfig;
   output: QfaiOutputConfig;
   uiux?: QfaiUiuxConfig;
+  prototyping?: QfaiPrototypingConfig;
   baseBranch?: string;
 };
 
@@ -134,6 +142,16 @@ export const defaultConfig: QfaiConfig = {
   },
   output: {
     validateJsonPath: ".qfai/report/validate.json",
+  },
+  prototyping: {
+    calibration: {
+      packPath: ".qfai/evidence/calibration.yaml",
+    },
+    execution: {
+      targetUrl: null,
+      browserProvider: "playwright",
+      renderProvider: "playwright",
+    },
   },
 };
 
@@ -195,6 +213,7 @@ function normalizeConfig(raw: unknown, configPath: string, issues: Issue[]): Qfa
   }
 
   const uiux = normalizeUiux(raw.uiux, configPath, issues);
+  const prototyping = normalizePrototyping(raw.prototyping, configPath, issues);
   const base: QfaiConfig = {
     paths: normalizePaths(raw.paths, configPath, issues),
     validation: normalizeValidation(raw.validation, configPath, issues),
@@ -202,6 +221,9 @@ function normalizeConfig(raw: unknown, configPath: string, issues: Issue[]): Qfa
   };
   if (uiux) {
     base.uiux = uiux;
+  }
+  if (prototyping) {
+    base.prototyping = prototyping;
   }
   const baseBranch = readOptionalString(raw.baseBranch, "baseBranch", configPath, issues);
   if (baseBranch !== undefined) {
@@ -222,7 +244,7 @@ function normalizePaths(raw: unknown, configPath: string, issues: Issue[]): Qfai
 
   const promptsDir = readString(
     raw.promptsDir,
-    // eslint-disable-next-line @typescript-eslint/no-deprecated -- backward compat: read deprecated promptsDir for migration
+    // eslint-disable-next-line @typescript-eslint/no-deprecated -- read deprecated promptsDir
     base.promptsDir,
     "paths.promptsDir",
     configPath,
@@ -418,6 +440,124 @@ function normalizeOutput(raw: unknown, configPath: string, issues: Issue[]): Qfa
       issues,
     ),
   };
+}
+
+function normalizePrototyping(
+  raw: unknown,
+  configPath: string,
+  issues: Issue[],
+): QfaiPrototypingConfig | undefined {
+  if (raw === undefined || raw === null) {
+    return undefined;
+  }
+  if (!isRecord(raw)) {
+    issues.push(configIssue(configPath, "prototyping はオブジェクトである必要があります。"));
+    return undefined;
+  }
+
+  const calibration = normalizePrototypingCalibration(raw.calibration, configPath, issues);
+  const execution = normalizePrototypingExecution(raw.execution, configPath, issues);
+  if (!calibration && !execution) {
+    return undefined;
+  }
+  return {
+    ...(calibration ? { calibration } : {}),
+    ...(execution ? { execution } : {}),
+  };
+}
+
+function normalizePrototypingCalibration(
+  raw: unknown,
+  configPath: string,
+  issues: Issue[],
+): QfaiPrototypingCalibrationConfig | undefined {
+  const base = defaultConfig.prototyping?.calibration;
+  if (raw === undefined || raw === null) {
+    return base ? { ...base } : undefined;
+  }
+  if (!isRecord(raw)) {
+    issues.push(
+      configIssue(configPath, "prototyping.calibration はオブジェクトである必要があります。"),
+    );
+    return base ? { ...base } : undefined;
+  }
+
+  validateObsoleteCalibrationFields(raw, configPath, issues);
+  return {
+    packPath: readString(
+      raw.packPath,
+      base?.packPath ?? ".qfai/evidence/calibration.yaml",
+      "prototyping.calibration.packPath",
+      configPath,
+      issues,
+    ),
+  };
+}
+
+function normalizePrototypingExecution(
+  raw: unknown,
+  configPath: string,
+  issues: Issue[],
+): NonNullable<QfaiPrototypingConfig["execution"]> | undefined {
+  const base = defaultConfig.prototyping?.execution;
+  if (raw === undefined || raw === null) {
+    return base ? { ...base } : undefined;
+  }
+  if (!isRecord(raw)) {
+    issues.push(
+      configIssue(configPath, "prototyping.execution はオブジェクトである必要があります。"),
+    );
+    return base ? { ...base } : undefined;
+  }
+
+  return {
+    targetUrl:
+      raw.targetUrl === null
+        ? null
+        : (readOptionalString(
+            raw.targetUrl,
+            "prototyping.execution.targetUrl",
+            configPath,
+            issues,
+          ) ?? null),
+    browserProvider: readString(
+      raw.browserProvider,
+      base?.browserProvider ?? "playwright",
+      "prototyping.execution.browserProvider",
+      configPath,
+      issues,
+    ),
+    renderProvider: readString(
+      raw.renderProvider,
+      base?.renderProvider ?? "playwright",
+      "prototyping.execution.renderProvider",
+      configPath,
+      issues,
+    ),
+  };
+}
+
+function validateObsoleteCalibrationFields(
+  raw: Record<string, unknown>,
+  configPath: string,
+  issues: Issue[],
+): void {
+  const obsoleteFields = [
+    "thresholds",
+    "maxIterations",
+    "plateauDelta",
+    "plateauLookback",
+  ] as const;
+  for (const field of obsoleteFields) {
+    if (raw[field] !== undefined) {
+      issues.push(
+        configIssue(
+          configPath,
+          `prototyping.calibration.${field} は廃止されました。calibration pack のみを使用し、prototyping.calibration.packPath だけを設定してください。`,
+        ),
+      );
+    }
+  }
 }
 
 function readString(
@@ -660,18 +800,6 @@ function normalizeUiux(
       );
     }
   }
-  if (raw.phase1ReleaseDate !== undefined) {
-    if (
-      typeof raw.phase1ReleaseDate === "string" &&
-      !isNaN(new Date(raw.phase1ReleaseDate).getTime())
-    ) {
-      result.phase1ReleaseDate = raw.phase1ReleaseDate;
-    } else {
-      issues.push(
-        configIssue(configPath, "uiux.phase1ReleaseDate は有効な日付文字列である必要があります。"),
-      );
-    }
-  }
   if (raw.warning_as_error_override !== undefined) {
     if (
       Array.isArray(raw.warning_as_error_override) &&
@@ -697,12 +825,6 @@ function normalizeUiux(
     const audit = normalizeUiuxAudit(raw.audit, configPath, issues);
     if (audit) {
       result.audit = audit;
-    }
-  }
-  if (raw.migration !== undefined) {
-    const migration = normalizeUiuxMigration(raw.migration, configPath, issues);
-    if (migration) {
-      result.migration = migration;
     }
   }
   return Object.keys(result).length > 0 ? result : undefined;
@@ -776,28 +898,6 @@ function normalizeUiuxAudit(
           configPath,
           "uiux.audit.maxDuplicateFindingsPerRule は0以上の数値である必要があります。",
         ),
-      );
-    }
-  }
-  return Object.keys(result).length > 0 ? result : undefined;
-}
-
-function normalizeUiuxMigration(
-  raw: unknown,
-  configPath: string,
-  issues: Issue[],
-): QfaiUiuxMigrationConfig | undefined {
-  if (!isRecord(raw)) {
-    issues.push(configIssue(configPath, "uiux.migration はオブジェクトである必要があります。"));
-    return undefined;
-  }
-  const result: QfaiUiuxMigrationConfig = {};
-  if (raw.strict !== undefined) {
-    if (typeof raw.strict === "boolean") {
-      result.strict = raw.strict;
-    } else {
-      issues.push(
-        configIssue(configPath, "uiux.migration.strict はブール値である必要があります。"),
       );
     }
   }
@@ -878,7 +978,7 @@ function configIssue(file: string, message: string): Issue {
   return {
     code: "QFAI_CONFIG_INVALID",
     severity: "error",
-    category: "compatibility",
+    category: "canonical",
     message,
     file,
     rule: "config.invalid",

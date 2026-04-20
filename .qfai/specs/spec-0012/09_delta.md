@@ -36,3 +36,804 @@
 | spec-0028-0033 US/TC | US-0012-YYYY / TC-0012-YYYY | Runtime/harness                     |
 | spec-0035 US/TC      | US-0012-YYYY / TC-0012-YYYY | Canonical                           |
 | spec-0036 US/TC      | US-0012-YYYY / TC-0012-YYYY | Foundation                          |
+
+## v1.7.12 Convergence Correction (DR-0108)
+
+### Summary
+
+Skill-centered truth unification. spec-0012 already stated the CLI command was removed, but policies and docs still referenced `qfai prototyping` command. v1.7.12 resolves this inconsistency so that spec, policies, docs, and code unanimously agree the skill is the only interface.
+
+### Discussion Pack Reference
+
+- D-003: Prototyping as skill-centered truth (no CLI command)
+
+### Requirements Added
+
+- REQ-0012: Resolve prototyping truth — all layers must agree skill is sole interface
+- REQ-0013: Archive/label superseded content referencing CLI command
+- REQ-0014: Eliminate responsibility leakage between skill and CLI
+- REQ-0015: Normalize static-first/mode-aware prototyping contract
+
+### Artifacts Added
+
+| Layer | IDs Added                  | Description                                                               |
+| ----- | -------------------------- | ------------------------------------------------------------------------- |
+| US    | US-0012-0008..US-0012-0010 | Skill-centered truth, CLI ref elimination, mode-aware contract            |
+| AC    | AC-0012-0010..AC-0012-0012 | No CLI refs in active docs, skill SSOT, static-first contract             |
+| BR    | BR-0012-0008..BR-0012-0010 | Active doc prohibition, skill SSOT boundary, mode self-containment        |
+| EX    | EX-0012-0010..EX-0012-0013 | Correct invocation, CLI not-found, doc violation, contract self-contained |
+| TC    | TC-0012-0014..TC-0012-0016 | Doc scan for CLI refs, skill SSOT verification, mode contract check       |
+
+### Traceability Chain (v1.7.12 additions)
+
+```text
+REQ-0012 → US-0012-0008 → AC-0012-0010, AC-0012-0011 → BR-0012-0008, BR-0012-0009 → EX-0012-0010..0012 → TC-0012-0014, TC-0012-0015
+REQ-0013 → US-0012-0009 → AC-0012-0010 → BR-0012-0008 → EX-0012-0011, EX-0012-0012 → TC-0012-0014
+REQ-0014 → US-0012-0008 → AC-0012-0011 → BR-0012-0009 → EX-0012-0010 → TC-0012-0015
+REQ-0015 → US-0012-0010 → AC-0012-0012 → BR-0012-0010 → EX-0012-0013 → TC-0012-0016
+```
+
+## v1.7.13 (2026-04-04) — Canonical Sidecar Convergence
+
+- adopted: REQ-0016~0021 追加（prototyping mode module, existence-based precedence, recommendation artifact, recommendation schema, calibration config, report integration）
+- adopted: US-0012-0011~0016, AC-0012-0013~0019, BR-0012-0011~0015, EX-0012-0014~0016, TC-0012-0017~0022 追加
+- rationale: v1.7.13 で prototyping/ モジュール新設、mode resolution engine 実装、existence-based precedence 導入、calibration config 追加の実装の仕様反映
+
+### v1.7.13 補完 (2026-04-04)
+
+- adopted: BR-0012-0016~0019, EX-0012-0019~0020, TC-0012-0026~0027 追加
+- rationale: コミット履歴分析で特定された fullHarness schema, calibration config fields, mode provenance, surface inference の設計意図補完
+
+### v1.7.13 収束 (2026-04-05)
+
+- adopted: REQ-0022~0027 追加（Browser QA 4-phase model, evidence bundle persistence, render evidence capture, provider registry, UI fidelity builder, prototyping execution orchestrator）
+- adopted: Scope 拡張: Browser QA phases, evidence bundling, render capture, provider registry, full-harness runtime, uiFidelityBuilder, execution orchestrator
+- rationale: 実装分析で特定された v1.7.13 の主要新規モジュール群の仕様反映:
+  - `browserQa/` 4-phase model（smoke/interaction/visual/accessibility）
+  - `evidence/` bundling system（bundleWriter, fsEvidenceWriter, playwrightRenderAdapter, renderRunner）
+  - `providers/` registry pattern（config → concrete provider 依存逆転）
+  - `prototyping/uiFidelityBuilder.ts`（QFAI-PROT-270/271/272 emit）
+  - `prototyping/execution.ts`（本番パスオーケストレータ）
+  - `harness/` runtime（runtime.ts, adapters.ts, resultWriter.ts）
+
+## v1.7.14 (2026-04-07) — Current-Only SSOT & Strict Semantic Enforcement
+
+- adopted: REQ-0028（Canonical Prototyping Surfaces）, REQ-0029（Execution Hard Gates）, REQ-0030（Namespaced-Only Schema）, REQ-0031（Semantic Invariant SSOT）, REQ-0032（Classification Separation）, REQ-0033（Surface Inference Nullable）追加
+- adopted: US-0012-0017~0021, AC-0012-0020~0026, BR-0012-0020~0023 追加
+- adopted: DR-0012-0002~0005 追加
+- adopted: BR-0012-0012 更新（QFAI-PROT-231/232 warning → hard error）, BR-0012-0018 更新（sourceSchema "top-level" 廃止）, BR-0012-0019 更新（surface inference null default）
+- adopted: US range 更新 US-0012-0001..US-0012-0021
+- rationale: v1.7.14 は QFAI の current-only SSOT リリース。以下の破壊的変更を仕様に反映:
+  - **Canonical surfaces**: web-ui/mobile-ui/desktop-ui → web/mobile/desktop。cli/mixed 追加。non-ui を prototyping surface 外に分離（DR-0109）
+  - **Execution hard gates**: invalid classification/recommendation を即座に reject。non-UI パックを prototyping execution 対象外として明示拒否（DR-0111）
+  - **Namespaced-only schema**: legacy top-level keys の存在を hard error に昇格。QFAI-PROT-231/232 warning 廃止（DR-0112）
+  - **Semantic invariant SSOT**: recommendationSemantics.ts に recommended_mode ∈ allowed_modes 検証を集約。parser/resolver/execution/CLI/validator/preflight 全レイヤーで共有（DR-0113）
+  - **Classification separation**: isUiBearingSurface() → isDiscussionUiBearingPrototypingSurface() + requiresVisualBrowserEvidenceSurface() に分割。cli は discussion UI-bearing だが browser evidence は不要（DR-0110）
+  - **Surface inference nullable**: inferSurfaceFromRecommendationAndEvidence() が推定不能時に null を返す（旧 "non-ui" デフォルト廃止）
+  - **Legacy infrastructure 完全削除**: rollout.ts, legacy/ validators, migration/ validators, compatibility tests をソースツリーから完全除去
+
+### Traceability Chain (v1.7.14 additions)
+
+```text
+REQ-0028 → US-0012-0017 → AC-0012-0020 → BR-0012-0020 → DR-0012-0002
+REQ-0029 → US-0012-0018 → AC-0012-0021, AC-0012-0022 → BR-0012-0021 → DR-0012-0002, DR-0012-0005
+REQ-0030 → US-0012-0019 → AC-0012-0023 → BR-0012-0012 (updated) → DR-0012-0003
+REQ-0031 → US-0012-0020 → AC-0012-0024 → BR-0012-0022 → DR-0012-0004
+REQ-0032 → US-0012-0021 → AC-0012-0025 → BR-0012-0023 → DR-0012-0005
+REQ-0033 → US-0012-0021 → AC-0012-0026 → BR-0012-0019 (updated)
+```
+
+### Deleted Source Files (v1.7.14)
+
+| File                                      | Reason                                                  |
+| ----------------------------------------- | ------------------------------------------------------- |
+| `validators/legacy/ddpCompatibility.ts`   | Legacy DDP compatibility path 不要（current-only SSOT） |
+| `validators/legacy/uixCompatibility.ts`   | Legacy UIX compatibility path 不要                      |
+| `validators/legacy/index.ts`              | Legacy barrel 不要                                      |
+| `validators/legacyStatusDir.ts`           | Legacy status directory check 不要                      |
+| `validators/migration/formatDetection.ts` | Migration format detection 不要                         |
+| `validators/uix/rollout.ts`               | Rollout/phase-1 ratchet infrastructure 不要             |
+| `assets/uix-rev/migration-review.md`      | Migration review asset 不要                             |
+
+### Added Source Files (v1.7.14)
+
+| File                                          | Purpose                                          |
+| --------------------------------------------- | ------------------------------------------------ |
+| `core/domain/strategyDecision.ts`             | Canonical strategy decision vocabulary (DR-0114) |
+| `core/prototyping/recommendationSemantics.ts` | Semantic invariant SSOT helper (DR-0113)         |
+| `core/validators/uix/types.ts`                | UIX validator shared types                       |
+| `core/validators/uix/index.ts`                | UIX validator barrel refactoring                 |
+
+### v1.7.14 Full-Harness Iteration Protocol & Validator Rules (2026-04-08)
+
+- adopted: REQ-0034（Full-Harness Iteration Protocol）, REQ-0035（Independent Evaluator Panel）, REQ-0036（Score Scope Separation）, REQ-0037（Evaluation Rigor Rules）, REQ-0038（Asset Acquisition Strategy）, REQ-0039（Reviewer Gate Strengthening）, REQ-0040（Full-Harness Validator Rules QFAI-PROT-290~294）追加
+- adopted: US-0012-0022~0025, AC-0012-0027~0033, BR-0012-0024~0031 追加
+- adopted: DR-0012-0006~0009 追加
+- adopted: BR-0012-0016 更新（fullHarness schema: reviewerSignoff boolean→object, scoringTrace boolean→array, terminationReason に "plateau"/"manual-stop" 追加）
+- adopted: US range 更新 US-0012-0001..US-0012-0025
+- rationale: 2 つの full-harness インシデントレポートに基づく改善:
+  - **Iteration Protocol**: single-pass evidence dump を反復改善ループに拡張。4-step cycle, MIN_ITERATIONS=5, 4 termination conditions
+  - **Independent Evaluator Panel**: 3-layer（product-surface-reviewer/product-experience-architect/qa-gatekeeper）で self-evaluation bias を構造的に排除
+  - **Score Scope Separation**: discussion 3-layer scores ≠ prototyping scoringTrace を明確化。コピー禁止
+  - **Evaluation Rigor**: 3-tier rubric（existence_gate/quality_criteria/excellence_criteria）, L1/L2/L1-manual finding 分類
+  - **Asset Strategy**: free assets MUST, emoji/placeholder prohibition, WCAG 2.1 AA checklist
+  - **Reviewer Gate**: 6 full-harness-specific checks, Limitations section obligation
+  - **QFAI-PROT-290~294**: 5 新規 validator rules（iteration integrity）。taxonomy range 281-294 に拡張
+
+### Traceability Chain (v1.7.14 Full-Harness additions)
+
+```text
+REQ-0034 → US-0012-0022 → AC-0012-0027 → BR-0012-0024, BR-0012-0031 → DR-0012-0006
+REQ-0035 → US-0012-0023 → AC-0012-0028 → BR-0012-0025 → DR-0012-0006, DR-0012-0009
+REQ-0036 → US-0012-0024 → AC-0012-0029 → BR-0012-0026 → DR-0012-0007
+REQ-0037 → US-0012-0022 → AC-0012-0030 → BR-0012-0027 → DR-0012-0008
+REQ-0038 → US-0012-0022 → AC-0012-0031 → BR-0012-0028
+REQ-0039 → US-0012-0022 → AC-0012-0032 → BR-0012-0029
+REQ-0040 → US-0012-0025 → AC-0012-0033 → BR-0012-0030
+```
+
+### Modified Skill/Steering Files (v1.7.14 Full-Harness)
+
+| File                                                                                            | Change                                                                           |
+| ----------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| `assets/init/.qfai/assistant/skills/qfai-prototyping/SKILL.md`                                  | +200行: Iteration Protocol, Evaluation Rigor, Asset Strategy, Reviewer Gate 追加 |
+| `assets/init/.qfai/assistant/skills/qfai-discussion/SKILL.md`                                   | Score Scope 注記 + iteration_expectations ブロック追加                           |
+| `assets/init/.qfai/assistant/skills/qfai-discussion/templates/uiux/23_design_eval_aggregate.md` | Score Scope Limitation セクション追加                                            |
+| `assets/init/.qfai/assistant/steering/review-profiles.yml`                                      | full-harness プロファイル追加                                                    |
+| `assets/init/.qfai/assistant/steering/agent-routing.yml`                                        | prototyping evidence phase に product-experience-architect 追加                  |
+| `core/validators/prototypingEvidence.ts`                                                        | QFAI-PROT-290~294 追加（+104行）                                                 |
+| `cli/commands/validate.ts`                                                                      | PROT-290~294 description 追加                                                    |
+| `tests/core/prototypingEvidence.test.ts`                                                        | 5 test cases 追加（+270行）                                                      |
+| `tests/core/issueCodeUniqueness.test.ts`                                                        | TAXONOMY_RANGE_MAX 283→294, fullHarness range 281→294                            |
+
+## v1.7.15 Adopted
+
+- AD-0012-0007: Panel scoring L1/L2 from real evidence — l1/l2 fixed-zero generation prohibited (REQ-0041, REQ-0042)
+- AD-0012-0008: weightedTotal = min(l1.total, l2.total) always enforced (REQ-0043)
+- AD-0012-0009: converged requires iterationCount >= 2 + plateauLookback >= 2 in CalibrationLoader schema (REQ-0044)
+- AD-0012-0010: plateau/max-iterations termination rules hardened (REQ-0045, REQ-0046)
+- AD-0012-0011: reviewerLogs[] append-only cumulative (REQ-0047)
+- AD-0012-0012: reviewer CLI mandatory, placeholder reject list frozen (REQ-0048)
+- AD-0012-0013: commitSha mandatory in full-harness (REQ-0049)
+- AD-0012-0014: specCoverage from real diffs only, zero-seeded prohibited (REQ-0050)
+- AD-0012-0015: uiFidelity observation-only, synthetic mockPaths pass prohibited (REQ-0051)
+- AD-0012-0016: extractHtmlLabelsFromString empty impl removed, moved to uiObservation.ts (REQ-0052)
+- AD-0012-0017: CalibrationLoader wired in execution.ts (not config.ts) (REQ-0053)
+- AD-0012-0018: packVersion from pack metadata only, hardcode prohibited (REQ-0054)
+- AD-0012-0019: docs/SKILL/README reality sync — claims match runtime failure conditions (REQ-0055)
+- AD-0012-0020: fail-fast on missing evidence — no silent fallback (REQ-0056)
+
+### Traceability Chain (v1.7.15 additions)
+
+```text
+REQ-0041..0044 → US-0012-0026 → AC-0012-0026-01..03 → BR-0012-0041..0047 → EX-0012-0041..0045 → TC-0012-0030..0035
+REQ-0048..0049,0053,0056 → US-0012-0027 → AC-0012-0027-01..04 → BR-0012-0048..0049,0053,0056 → EX-0012-0046..0047,0050,0053 → TC-0012-0036..0039
+REQ-0050..0052 → US-0012-0028 → AC-0012-0028-01..03 → BR-0012-0050..0052 → EX-0012-0048..0049,0054 → TC-0012-0040..0042
+REQ-0054..0055 → US-0012-0029 → AC-0012-0029-01..02 → BR-0012-0054..0055 → EX-0012-0051..0052 → TC-0012-0043..0045
+```
+
+## v1.7.15 Rejected
+
+- RJ-0012-0003: Silent fallback on missing evidence
+  - DO NOT reintroduce silent fallback on missing evidence
+  - Temptation: fill default values to keep pipeline green when evidence is partially available
+  - Reason: silent fallback produces partially-grounded evidence that appears valid but is not truthful
+
+- RJ-0012-0004: Copy discussion 3-layer scores to scoringTrace
+  - DO NOT copy discussion 3-layer scores to scoringTrace
+  - Temptation: reduce re-compute cost by reusing discussion evaluation results
+  - Reason: discussion scores measure design direction quality (what); prototyping scores measure implementation fidelity (how well) — different evaluation targets
+
+- RJ-0012-0005: Single-iteration converged
+  - DO NOT accept single-iteration converged
+  - Temptation: short-circuit to save runtime when first iteration exceeds threshold
+  - Reason: single iteration provides no plateau data, no score progression, and no convergence evidence
+
+- RJ-0012-0006: Auto-generate mockPaths.status="pass"
+  - DO NOT auto-generate mockPaths.status="pass"
+  - Temptation: reduce evidence authoring burden by generating pass entries for all declared mock paths
+  - Reason: synthetic pass entries bypass actual browser QA verification and produce false-positive fidelity reports
+
+- RJ-0012-0007: Hardcode packVersion
+  - DO NOT hardcode packVersion
+  - Temptation: bypass calibration plumbing by setting packVersion: "1.0.0" directly
+  - Reason: hardcoded packVersion creates drift between calibration pack metadata and runtime summary
+
+- RJ-0012-0008: Fallback resolvedReviewer ?? "qfai"
+  - DO NOT use fallback resolvedReviewer ?? "qfai"
+  - Temptation: keep CLI frictionless by auto-filling reviewer when not specified
+  - Reason: auto-filled reviewer identity defeats the purpose of human accountability in review signoff
+
+## v1.7.15 rev2 — Adopted
+
+- AD-0012-0019: Pre-scored l1/l2 path elimination (DR-0012-0019)
+- AD-0012-0020: l2Evidence.ts new file for real artifact derivation (DR-0012-0020)
+- AD-0012-0021: CalibrationLoader fail-open removal (DR-0012-0021)
+- AD-0012-0022: TerminationContext CalibrationPack only (DR-0012-0022)
+- AD-0012-0023: Screen-level UiObservation (DR-0012-0023)
+- AD-0012-0024: bundleWriter schema v2 only (DR-0012-0024)
+- AD-0012-0025: DB coverage binary policy (DR-0012-0025)
+- AD-0012-0026: REQ-0057〜0086 追加（rev2 discussion REQ-0027〜0054, 0056〜0057 の spec 反映）
+- AD-0012-0027: US-0012-0030〜0037, AC/BR/EX/TC 追加（rev2 全 workstream の slice 拡張）
+
+## v1.7.15 rev2 — Rejected
+
+- RJ-0012-0009: Keep request.l1/l2 as optional
+  - DO NOT keep pre-scored l1/l2 in request type
+  - Temptation: backward compatibility allows optional fields
+  - Reason: optional pre-scored paths silently bypass runtime scoring, defeating evidence grounding
+
+- RJ-0012-0010: L2 dummy objects inline in execution.ts
+  - DO NOT inline L2 dummy objects in execution.ts
+  - Temptation: avoid new file creation, keep everything in one place
+  - Reason: dummy zero-values mask missing evidence and pass validation as if grounded
+
+- RJ-0012-0011: DEFAULT_PACK as safe calibration fallback
+  - DO NOT keep DEFAULT_PACK fallback in CalibrationLoader
+  - Temptation: reduce first-run friction when calibration pack is not yet configured
+  - Reason: uncalibrated full-harness runs produce meaningless convergence results
+
+- RJ-0012-0012: Flatten UiObservation + screen breakdown dual structure
+  - DO NOT maintain flatten + screen-level dual structures
+  - Temptation: backward compatibility with consumers that read flattened aggregates
+  - Reason: dual structure creates conflicting aggregation semantics and maintenance burden
+
+- RJ-0012-0013: bundleWriter schema v1/v2 coexistence
+  - DO NOT allow v1/v2 parallel schemas in bundleWriter
+  - Temptation: gradual migration for consumers
+  - Reason: schema divergence creates consumer confusion and maintenance cost
+
+- RJ-0012-0014: DB coverage missing = continue with zeros
+  - DO NOT continue with zeros when DB is declared but unobserved
+  - Temptation: avoid pipeline breakage for projects that haven't set up DB observation
+  - Reason: declared DB objects passing validation without observation is evidence fraud
+
+## v1.7.15 rev4 — Adopted
+
+- AD-0012-0028: cli/full-harness 4-layer reject (DR-0012-0028 / DR-0217)
+  - derivePrototypingObligations / runFullHarness / CLI / バリデータの 4 層で拒否
+  - UI-bearing surface: web/mobile/desktop/mixed のみ。cli は非ビジュアル
+- AD-0012-0029: screen contract-based Browser QA targets (DR-0012-0029 / DR-0218)
+  - `"/primary"` ハードコード廃止。`40_screen_contracts.md` からスクリーン一覧を導出
+  - `screenContracts.ts` パーサー新設
+- AD-0012-0030: Browser QA evidence chain hard-fail (DR-0012-0030 / DR-0219)
+  - `iterations[].evidenceRefs.browserQa` 空時ハードフェイル。サイレントパス禁止
+- AD-0012-0031: canonical route semantics (DR-0012-0031 / DR-0220)
+  - runtimeGateBuilder / specCoverage で canonical path 比較。URL をルートとして扱わない
+- AD-0012-0032: L2 structured parse priority (DR-0012-0032 / DR-0221)
+  - 構造化パース（20-23 系、04_Sources.md、40_screen_contracts.md）優先
+  - ヒューリスティックフォールバックは構造化ソース不在時のみ
+- AD-0012-0033: parameterized route pattern-based matching (DR-0012-0027 / DR-0222, OQ-0004 resolution)
+  - パラメタライズドルートはパターンベースマッチングで照合
+- AD-0012-0034: REQ-0087〜0092 追加（rev4 discussion REQ-0001〜0033 の spec 反映）
+- AD-0012-0035: US-0012-0038〜0043, AC/BR/EX/TC 追加（rev4 全 6 workstream の slice 拡張）
+
+### Traceability Chain (v1.7.15 rev4 additions)
+
+```text
+REQ-0087 (WS-1) → US-0012-0038 → AC-0012-0038-01..05 → BR-0012-0068..0069 → EX-0012-0082..0083 → TC-0012-0092..0097
+REQ-0088 (WS-2) → US-0012-0039 → AC-0012-0039-01..06 → BR-0012-0070..0071 → EX-0012-0084..0085 → TC-0012-0098..0102
+REQ-0089 (WS-3) → US-0012-0040 → AC-0012-0040-01..04 → BR-0012-0072..0073 → EX-0012-0086..0087 → TC-0012-0103..0105
+REQ-0090 (WS-4) → US-0012-0041 → AC-0012-0041-01..04 → BR-0012-0074..0075,0079 → EX-0012-0088..0090,0095 → TC-0012-0106..0110,0120
+REQ-0091 (WS-5) → US-0012-0042 → AC-0012-0042-01..03 → BR-0012-0076 → EX-0012-0091..0092 → TC-0012-0111..0113
+REQ-0092 (WS-6) → US-0012-0043 → AC-0012-0043-01..06 → BR-0012-0077..0078 → EX-0012-0093..0094 → TC-0012-0114..0119
+```
+
+## v1.7.15 rev4 — Rejected
+
+- RJ-0012-0015: Keep "/primary" as default Browser QA target
+  - DO NOT keep "/primary" as Browser QA target
+  - Temptation: simplicity of a single fixed target, backward compatibility
+  - Reason: fixed target causes measurement gaps for multi-screen applications; screen contract derivation is the correct approach
+
+- RJ-0012-0016: Silent pass on empty browserQa evidenceRefs
+  - DO NOT silently pass when browserQa evidenceRefs are empty
+  - Temptation: avoid pipeline breakage when Browser QA results are not yet available
+  - Reason: empty evidence chain breaks audit traceability; fail-closed is the correct policy
+
+- RJ-0012-0017: URL as route in specCoverage
+  - DO NOT use full URL as route identifier in specCoverage
+  - Temptation: URLs contain all information needed for routing
+  - Reason: query parameters and fragments cause false route mismatches; canonical path is the correct abstraction
+
+- RJ-0012-0018: Heuristic-first L2 evidence collection
+  - DO NOT prioritize heuristic parsing over structured parsing for L2 evidence
+  - Temptation: heuristic parsing is simpler and handles varied formats
+  - Reason: heuristic dependence reduces evidence accuracy and reproducibility; structured parse provides deterministic results
+
+## v1.7.15 rev5 — Adopted (discussion-20260415014056471)
+
+- AD-0012-0036: All-mode non-UI surface rejection — derivePrototypingObligations() + execution.ts + runtime.ts + CLI + prototypingEvidence.ts 全層で standard/low-cost/full-harness 共通 reject (REQ-0001..0007, WS-1)
+- AD-0012-0037: runtimeObservation.ts new module — ObservedUiRoute + RuntimeObservation observed-only ledger; runtimeGate.api/db 型削除; synthetic status:200 削除; specCoverage 集合比較に変更 (REQ-0008..0015, WS-2)
+- AD-0012-0038: browserQaPerScreen.ts new module — per-screen Browser QA mandatory; phaseLevelRefs fallback 削除; observed=false/evidenceMissing=true をUIScreenObservation に追加; runtime refs empty → hard fail (REQ-0016..0025, WS-3)
+- AD-0012-0039: actionCoverage.ts new module — actionsWired = action coverage only (finding count 流用禁止); uiFidelityBuilder.ts ActionCoverageResult 由来に限定; validator error 追加 (REQ-0026..0032, WS-4)
+- AD-0012-0040: runFullHarness() required fields — adapters.surface/render/browserQa + screenContracts が required に昇格; panelInputs.browserQa.evidenceRefs fallback 削除; adapter failure propagated (REQ-0033..0040, WS-5)
+- AD-0012-0041: packResolver.ts + structuredArtifactReaders.ts new modules — calibration pack SSOT; prototypingEvidence.ts でconfig override禁止; l2Evidence.ts structured-first; API/DB coverage in artifact → hard error; docs/README/SKILL reality sync (REQ-0041..0053, WS-6)
+- AD-0012-0042: OQ-0002 resolved at SDD — DR-0012-0033 (validator reject only, no schema change)
+- AD-0012-0043: OQ-0004 resolved at SDD — DR-0012-0034 (pattern-based matching for parameterized routes)
+- AD-0012-0044: OQ-0006 resolved at SDD — DR-0012-0035 (PrototypingError derived type for packResolver)
+
+### Traceability Chain (v1.7.15 rev5 additions)
+
+```text
+REQ-0001..0007 (WS-1) → US-0012-0044 → AC-0012-0044-01..03 → BR-0012-0080 → EX-0012-0097 → TC-0012-0121..0123
+REQ-0008..0015 (WS-2) → US-0012-0045 → AC-0012-0045-01..04 → BR-0012-0081 → EX-0012-0098 → TC-0012-0128..0130
+REQ-0016..0025 (WS-3) → US-0012-0046 → AC-0012-0046-01..04 → BR-0012-0082 → EX-0012-0099 → TC-0012-0131..0133
+REQ-0026..0032 (WS-4) → US-0012-0047 → AC-0012-0047-01..04 → BR-0012-0083 → EX-0012-0100 → TC-0012-0134..0137
+REQ-0033..0040 (WS-5) → US-0012-0048 → AC-0012-0048-01..06 → BR-0012-0084 → EX-0012-0101 → TC-0012-0124..0127
+REQ-0041..0053 (WS-6) → US-0012-0049 → AC-0012-0049-01..05 → BR-0012-0085 → EX-0012-0102 → TC-0012-0138..0140
+```
+
+### New Source Files (v1.7.15 rev5)
+
+| File                                            | WS   | Purpose                                    |
+| ----------------------------------------------- | ---- | ------------------------------------------ |
+| `core/prototyping/runtimeObservation.ts`        | WS-2 | ObservedUiRoute + RuntimeObservation types |
+| `core/prototyping/browserQaPerScreen.ts`        | WS-3 | Per-screen Browser QA input generator      |
+| `core/prototyping/actionCoverage.ts`            | WS-4 | Action coverage computation                |
+| `core/prototyping/packResolver.ts`              | WS-6 | Calibration pack resolution SSOT           |
+| `core/prototyping/structuredArtifactReaders.ts` | WS-6 | Structured section parsers                 |
+
+## v1.7.15 rev5 — Rejected
+
+- RJ-0012-0019: Extend non-UI rejection to full-harness only (rev5 supersedes rev4)
+  - DO NOT limit non-UI surface rejection to full-harness mode only
+  - Temptation: rev4 already rejects cli+full-harness; standard/low-cost seem less risky for non-UI
+  - Reason: prototyping contract is UI-only by definition; all modes must be consistent
+
+- RJ-0012-0020: Keep runtimeGate.api/runtimeGate.db fields
+  - DO NOT retain runtimeGate.api/db fields in type definitions
+  - Temptation: backward compatibility with consumers that read these fields
+  - Reason: API/DB coverage is not measured by the prototyping runtime; retaining the fields creates false expectations
+
+- RJ-0012-0021: Aggregate capturedHtmlPath across all screens
+  - DO NOT use a single capturedHtmlPath to represent all screens
+  - Temptation: one HTML capture is simpler and cheaper
+  - Reason: single-file evidence cannot verify per-screen completeness; per-screen refs are mandatory for audit
+
+- RJ-0012-0022: Retain finding count as actionsWired source
+  - DO NOT use finding count as a proxy for actionsWired
+  - Temptation: finding count is already available and easy to aggregate
+  - Reason: finding count and action wiring are orthogonal concepts; mixing them produces meaningless fidelity metrics
+
+- RJ-0012-0023: Config-based calibration threshold override
+  - DO NOT allow config to override calibration thresholds from the pack
+  - Temptation: per-project tuning via config is convenient
+  - Reason: runtime and validator must read from the same pack to ensure consistent evaluation
+
+## v1.7.15 rev6 — Adopted (discussion-20260415161758193)
+
+- AD-0012-0045: Full-harness only enforcement — CLI/execution.ts/prototypingEvidence.ts all-layer rejection of standard/low-cost mode; error message "full-harness mode only" (REQ-0093, WS-1)
+- AD-0012-0046: surfacePolicy.ts standalone module + surface rejection — PROTOTYPING_SUPPORTED_SURFACES=[web,mobile,desktop,mixed]; assertSupportedPrototypingSurface() SSOT; all-layer cli/api/backend rejection (REQ-0094, REQ-0095, WS-1/WS-2)
+- AD-0012-0047: OQ-0001 resolved at SDD — DR-0012-0036 (PROTOTYPING_SUPPORTED_SURFACES includes mixed)
+- AD-0012-0048: OQ-0002 resolved at SDD — DR-0012-0037 (surfacePolicy.ts standalone, not inlined in mode.ts)
+- AD-0012-0049: CalibrationLoader internal resolution — runFullHarness() scalar params removed; calibrationRef.packPath -> CalibrationLoader; throw on missing/unresolvable (REQ-0096, WS-3)
+- AD-0012-0050: OQ-0003 resolved at SDD — DR-0012-0038 (throw Error immediately, not typed error or result object)
+- AD-0012-0051: Concrete evidenceRefs enforcement — runtimeGate.evidenceRefs and specCoverage.evidenceRefs: self-ref and synthetic string forbidden; validator rejects both (REQ-0097, REQ-0098, WS-4)
+- AD-0012-0052: reviewerSignoff.status semantics — approved/rejected/abandoned mapping from terminationReason; isCompleted alone does not produce approved; reviewerLogs.verdict mapped vocabulary (REQ-0099, WS-5)
+- AD-0012-0053: OQ-0004 resolved at SDD — DR-0012-0039 (reviewerLogs verdict stores mapped vocabulary)
+- AD-0012-0054: uiFidelityBuilder screenId matching — obs.screenId === screen.screenId; old uiContractId matching removed; uiContractId in observation = hard-error (REQ-0100, WS-6)
+- AD-0012-0055: OQ-0005 resolved at SDD — DR-0012-0040 (uiContractId in observation -> hard-error; backward compat abandoned)
+- AD-0012-0056: Stale semantics cleanup — shipped docs/assets/tests: standard/low-cost/cli prototyping/mockPaths.status=pass removed; test fixtures updated for new semantics (REQ-0101, REQ-0102, WS-7)
+
+### Traceability Chain (v1.7.15 rev6 additions)
+
+```text
+REQ-0093 (WS-1) → US-0012-0050 → AC-0012-0050-01..05 → BR-0012-0086 → EX-0012-0103 → TC-0012-0141..0145
+REQ-0094 (WS-1) → US-0012-0051 → AC-0012-0051-01..05 → BR-0012-0087 → EX-0012-0104 → TC-0012-0146..0150
+REQ-0095 (WS-2) → US-0012-0052 → AC-0012-0052-01..02 → BR-0012-0088 → EX-0012-0105 → TC-0012-0151..0153
+REQ-0096 (WS-3) → US-0012-0053 → AC-0012-0053-01..06 → BR-0012-0089 → EX-0012-0106 → TC-0012-0154..0159
+REQ-0097,0098 (WS-4) → US-0012-0054 → AC-0012-0054-01..06 → BR-0012-0090 → EX-0012-0107 → TC-0012-0160..0163
+REQ-0099,0100,0101,0102 (WS-5/6/7) → US-0012-0055 → AC-0012-0055-01..06 → BR-0012-0091 → EX-0012-0108 → TC-0012-0164..0172
+```
+
+### New Source Files (v1.7.15 rev6)
+
+| File                                | WS   | Purpose                                                                                                                   |
+| ----------------------------------- | ---- | ------------------------------------------------------------------------------------------------------------------------- |
+| `core/prototyping/surfacePolicy.ts` | WS-2 | Surface allowlist SSOT (PROTOTYPING_SUPPORTED_SURFACES, isSupportedPrototypingSurface, assertSupportedPrototypingSurface) |
+
+## v1.7.15 rev6 — Rejected
+
+- RJ-0012-0024: Keep standard/low-cost modes in packages/qfai v1.7.15
+  - DO NOT retain standard or low-cost mode support in v1.7.15
+  - Temptation: some users may want lighter-weight prototyping without full runtime
+  - Reason: packages/qfai v1.7.15 commits to full-harness-only; keeping other modes creates inconsistent evidence quality and validator confusion
+
+- RJ-0012-0025: Inline surface policy constants in mode.ts (instead of standalone surfacePolicy.ts)
+  - DO NOT add PROTOTYPING_SUPPORTED_SURFACES to mode.ts
+  - Temptation: fewer files; mode.ts already knows about surfaces
+  - Reason: mode.ts owns obligations logic; surface allowlist is a separate concern (SRP violation); standalone file enables isolated testing and clean imports
+
+- RJ-0012-0026: Return typed CalibrationPackError from CalibrationLoader (instead of throw Error)
+  - DO NOT create a CalibrationPackError subclass unless callers need instanceof checks
+  - Temptation: typed errors provide more structured error handling
+  - Reason: no caller currently needs to distinguish CalibrationPackError; throw Error with packPath in message is sufficient for all consumers
+
+- RJ-0012-0027: Store pre-mapping vocabulary in reviewerLogs[].verdict (instead of mapped vocabulary)
+  - DO NOT store pre-mapping values (accept, plateau-stop) in reviewerLogs[].verdict
+  - Temptation: preserving original signals maintains full trace of harness behavior
+  - Reason: validators check against mapped vocabulary; pre-mapping values would require translation in every consumer
+
+- RJ-0012-0028: Silently ignore uiContractId field in observation records
+  - DO NOT silently ignore uiContractId in observation records
+  - Temptation: silent ignore is backward-compatible and avoids breaking changes
+  - Reason: backward compat is explicitly abandoned in rev6; silent ignore masks stale fixtures that need cleanup
+
+## v1.7.15 rev7 Contract Gap Closure (DR-0012-0041..0045)
+
+### Summary
+
+6 contract gaps from v1.7.15-07 audit closed in single PR + WS-7 minor surfacePolicy fix. Backward compatibility explicitly abandoned. No migration tooling required.
+
+### Discussion Pack Reference
+
+- `discussion-20260415203030886` (v1.7.15 rev7)
+
+### Requirements Added
+
+- REQ-0041..0058: 18 new requirements covering WS-1 through WS-7
+
+### Artifacts Added
+
+| Layer | IDs Added          | Description                                 |
+| ----- | ------------------ | ------------------------------------------- |
+| US    | US-0012-0056..0062 | 7 new user stories for WS-1..WS-7           |
+| AC    | AC-0012-0056..0075 | 20 new acceptance criteria                  |
+| BR    | BR-0012-0092..0098 | 7 new business rules                        |
+| EX    | EX-0012-0109..0128 | 20 new examples                             |
+| TC    | TC-0012-0173..0197 | 25 new test cases                           |
+| DR    | DR-0012-0041..0045 | 5 decision records from rev7 OQ resolutions |
+
+### Decisions Made
+
+- AD-rev7-001: packHash deferred — packPath+packVersion+configPath sufficient for v1.7.15-07 audit closure (DR-0012-0041)
+- AD-rev7-002: Error classes in prototyping/errors.ts — SRP, independently testable, co-located (DR-0012-0042)
+- AD-rev7-003: configPath optional in calibrationRef — design doc conditional phrasing confirmed (DR-0012-0043)
+- AD-rev7-004: Obsolete field detection normalize-time — consistent with existing config.ts patterns (DR-0012-0044)
+- AD-rev7-005: surfacePolicy message from constant — DRY; prevents stale recurrence (DR-0012-0045)
+
+### Rejected Options (rev7)
+
+- RJ-rev7-001: Add packHash to calibrationRef
+  - DO NOT add packHash in v1.7.15. Temptation: stronger integrity guarantee.
+  - Reason: no audit requirement; infrastructure cost; design doc conditional phrasing.
+
+- RJ-rev7-002: Error classes in core/errors.ts
+  - DO NOT add prototyping-domain error classes to core/errors.ts. Temptation: fewer files.
+  - Reason: violates SRP; couples prototyping domain to general module.
+
+- RJ-rev7-003: Mandatory configPath in calibrationRef
+  - DO NOT make configPath mandatory. Temptation: stricter API.
+  - Reason: breaks configurations without config overlay; design doc conditional.
+
+- RJ-rev7-004: parse-time scalar field detection
+  - DO NOT implement parse-time detection for obsolete scalar fields. Temptation: earlier error.
+  - Reason: inconsistent with existing config.ts normalization approach.
+
+- RJ-rev7-005: Hardcode surface list in rejection message
+  - DO NOT hardcode "web/mobile/desktop/mixed" in surfacePolicy.ts message string. Temptation: simpler.
+  - Reason: same staleness problem recurs when PROTOTYPING_SUPPORTED_SURFACES changes.
+
+---
+
+## v1.7.15 rev8 — Adopted (discussion-20260416023323603)
+
+### Summary
+
+4 workstreams (WS-1..WS-4) introducing a shared ref grammar leaf module (`pathUtils.ts`), extending the validator contract to cover top-level `runtimeGate.evidenceRefs`, unifying all 5 traceability ref sites under shared helpers, and adding a production-path closure regression test. Breaking change: existing evidence without `runtimeGate.evidenceRefs` will fail validation after rev8.
+
+### Discussion Pack Reference
+
+- `discussion-20260416023323603` (v1.7.15 rev8)
+
+### Requirements Added
+
+- REQ-0059..0073: 15 new requirements covering WS-1 through WS-4
+
+### Artifacts Added
+
+| Layer | IDs Added          | Description                                 |
+| ----- | ------------------ | ------------------------------------------- |
+| US    | US-0012-0063..0066 | 4 new user stories for WS-1..WS-4           |
+| AC    | AC-0012-0076..0103 | 28 new acceptance criteria                  |
+| BR    | BR-0012-0099..0106 | 8 new business rules                        |
+| EX    | EX-0012-0129..0148 | 20 new examples                             |
+| TC    | TC-0012-0198..0217 | 20 new test cases                           |
+| DR    | DR-0012-0046..0048 | 3 decision records from rev8 OQ resolutions |
+| NFR   | NFR-0037..0040     | 4 NFRs from rev8 discussion                 |
+
+### Decisions Made
+
+- AD-rev8-001: pathUtils.ts as standalone leaf module — no import from execution.ts or its importers; circular import prevention (DR-0012-0046)
+- AD-rev8-002: measurement.ts scope conditional — update to shared helpers only if confirmed to use absolute paths; conservative scope (DR-0012-0047)
+- AD-rev8-003: runtimeGate.evidenceRefs empty array always error — fail-closed; no valid case for empty array in full-harness output (DR-0012-0048)
+- AD-rev8-004: README.md update conditional — update only if obsolete/absent description; no new DR
+
+### Rejected Options (rev8)
+
+- RJ-rev8-001: Inline helpers in each consumer (specCoverage.ts, prototypingEvidence.ts, etc.)
+  - DO NOT implement ref grammar helpers inline in individual modules. Temptation: fewer files, no shared dependency.
+  - Reason: divergence across 5 ref sites would recur; single SSOT in pathUtils.ts is the only maintainable approach.
+
+- RJ-rev8-002: Unconditionally include measurement.ts in rev8 scope
+  - DO NOT unconditionally touch measurement.ts without confirming absolute path usage. Temptation: completeness.
+  - Reason: unnecessary scope creep if measurement.ts doesn't use absolute paths; DR-0012-0047 mandates conditional scope.
+
+### Traceability Chain
+
+| WS   | REQ            | US      | AC            | BR            | EX            | TC            |
+| ---- | -------------- | ------- | ------------- | ------------- | ------------- | ------------- |
+| WS-1 | REQ-0059..0062 | US-0063 | AC-0076..0083 | BR-0099..0100 | EX-0129..0133 | TC-0198..0202 |
+| WS-2 | REQ-0063..0068 | US-0064 | AC-0084..0093 | BR-0101..0102 | EX-0134..0138 | TC-0203..0208 |
+| WS-3 | REQ-0069..0070 | US-0065 | AC-0094..0098 | BR-0103..0104 | EX-0139..0143 | TC-0209..0213 |
+| WS-4 | REQ-0071..0073 | US-0066 | AC-0099..0103 | BR-0105..0106 | EX-0144..0148 | TC-0214..0217 |
+
+## v1.7.15 rev9 Leaf-Field Traceability Closure (DR-0012-0049..0052)
+
+### Summary
+
+Leaf-field traceability closure for packages/qfai. Rev8 closed top-level summary fields (specCoverage.evidenceRefs, runtimeGate.evidenceRefs top-level). Rev9 closes the three remaining leaf-field blind spots: runtimeGate.ui[] row-level fields (declaredRef, renderEvidenceRefs[], browserQaEvidenceRefs[]), axis-level evidenceRefs[], and reviewerLogs[].evidenceRefs[].
+
+### Discussion Pack Reference
+
+- discussion-20260416092414328 (rev9 — final leaf-field closure)
+
+### Requirements Added
+
+- REQ-0103..REQ-0122 (20 requirements across WS-1 through WS-4)
+
+### Decision Records
+
+| DR-ID        | Decision                                                           | Source       |
+| ------------ | ------------------------------------------------------------------ | ------------ |
+| DR-0012-0049 | ui[] row validation inline in prototypingEvidence.ts (Option A)    | OQ-0001 rev9 |
+| DR-0012-0050 | browserQaEvidenceRefs[] always required non-empty (Option A)       | OQ-0002 rev9 |
+| DR-0012-0051 | Per-axis validation granularity (Option A)                         | OQ-0003 rev9 |
+| DR-0012-0052 | Full README enumeration of all concrete-ref leaf fields (Option A) | OQ-0004 rev9 |
+
+### Artifacts Added
+
+| Layer | IDs Added          | Description                                                                         |
+| ----- | ------------------ | ----------------------------------------------------------------------------------- |
+| US    | US-0012-0067..0071 | 5 user stories (WS-1: 3 leaf field groups, WS-2: schema, WS-3+WS-4: tests+docs)     |
+| AC    | AC-0012-0104..0132 | 29 acceptance criteria                                                              |
+| BR    | BR-0012-0107..0116 | 10 business rules                                                                   |
+| EX    | EX-0012-0150..0172 | 23 examples                                                                         |
+| TC    | TC-0012-0219..0242 | 24 test cases (7 ui[] errors + 5 axis errors + 3 reviewer errors + normal/boundary) |
+| DR    | DR-0012-0049..0052 | 4 decision records                                                                  |
+| NFR   | NFR-0041..0045     | 5 non-functional requirements                                                       |
+| REQ   | REQ-0103..0122     | 20 requirements                                                                     |
+
+## v1.7.15 rev9 — Leaf-Field Traceability Closure
+
+### Scope Summary
+
+- **Rev**: v1.7.15 rev9
+- **Discussion**: discussion-20260416092414328
+- **Upstream**: discussion-20260416023323603 (rev8)
+- **Objective**: Complete leaf-field traceability closure — close all three remaining leaf-field blind spots after rev8 closed top-level summary fields.
+
+### Decisions Made
+
+- AD-rev9-001: ui[] row validation inline in prototypingEvidence.ts — no separate utility file; design doc §6-1-2 (DR-0012-0049)
+- AD-rev9-002: browserQaEvidenceRefs[] always required non-empty — fail-closed; rev8 OQ-0003 precedent (DR-0012-0050)
+- AD-rev9-003: per-axis evidenceRefs[] validation — per-element not aggregate; design doc §6-1-3 (DR-0012-0051)
+- AD-rev9-004: full README enumeration — all concrete-ref leaf fields listed; DoD §5-6 hard gate (DR-0012-0052)
+
+### Rejected Options (rev9)
+
+- RJ-rev9-001: Extract validateRuntimeGateUiRow() to separate utility
+  - DO NOT extract small cohesive row-level validation to separate module. Temptation: cleaner isolation.
+  - Reason: unnecessary module boundary; design doc §6-1-2 specifies prototypingEvidence.ts as the changed file.
+
+- RJ-rev9-002: Allow empty browserQaEvidenceRefs[] for partial runs
+  - DO NOT allow empty browserQaEvidenceRefs[]. Temptation: lenient for dev-only or partial runs.
+  - Reason: design doc §3-2 fail-closed; §3-3 no leniency; rev8 OQ-0003 precedent.
+
+- RJ-rev9-003: Aggregate leniency for axis evidenceRefs[]
+  - DO NOT use aggregate leniency (error only if all axes empty). Temptation: fewer errors on partial runs.
+  - Reason: per-axis is the only logically consistent fail-closed granularity; design doc §6-1-3 literal.
+
+- RJ-rev9-004: Minimal README note instead of full enumeration
+  - DO NOT use brief note approach for README. Temptation: minimize README churn.
+  - Reason: DoD §5-6 hard gate; design doc §9 explicitly prohibits weakening README description.
+
+### Traceability Chain
+
+| WS                    | REQ            | US            | AC            | BR            | EX            | TC            |
+| --------------------- | -------------- | ------------- | ------------- | ------------- | ------------- | ------------- |
+| WS-1a (ui[] row)      | REQ-0103..0109 | US-0067       | AC-0104..0113 | BR-0107..0109 | EX-0150..0159 | TC-0219..0226 |
+| WS-1b (axis/reviewer) | REQ-0110..0115 | US-0068..0069 | AC-0114..0123 | BR-0110..0111 | EX-0160..0168 | TC-0227..0233 |
+| WS-2 (bundleWriter)   | REQ-0116..0118 | US-0070       | AC-0124..0127 | BR-0112..0113 | EX-0169..0170 | TC-0234..0237 |
+| WS-3+4 (tests+README) | REQ-0119..0122 | US-0071       | AC-0128..0132 | BR-0114..0116 | EX-0171..0172 | TC-0238..0242 |
+
+## v1.7.15 rev10 — Semantic Closure Hardening
+
+### Summary
+
+4 workstreams (WS-1..WS-4) + WS-5 sync. Closes semantic gaps identified in rev10 audit: terminal state machine enforcement, canonical screen contract refs, 8-category evidenceRefs strictness, declaredRef semantic validation. Breaking change: backward compatibility explicitly abandoned. No migration tooling.
+
+### Discussion Pack Reference
+
+- `discussion-20260416195444737` (v1.7.15 rev10, 3 reviewer PASS)
+- Classification: non-ui
+
+### OQ Resolutions
+
+- OQ-0001 resolved at discussion → DR-0012-0053 (all terminationReason values → abandoned mapping)
+- OQ-0002 resolved at SDD → DR-0012-0054 (assertConcreteArtifactRefs in pathUtils.ts, no refSemantics.ts)
+- OQ-0003 resolved at discussion → DR-0012-0055 (all 8 categories use assertConcreteArtifactRefs)
+- OQ-0004 resolved at discussion → DR-0012-0056 (anchor always required in declaredRef)
+
+### Requirements Added
+
+- REQ-0123..REQ-0131 (9 requirements: terminal state machine, field constraints, terminationReason required, mapping consistency, canonical sourceRef, 8-category refs, declaredRef semantic, sync, negative fixtures)
+
+### Artifacts Added
+
+| Layer | IDs Added          | Description                                             |
+| ----- | ------------------ | ------------------------------------------------------- |
+| US    | US-0012-0072..0076 | 5 user stories (WS-1..WS-4 + sync)                      |
+| AC    | AC-0012-0133..0155 | 23 acceptance criteria                                  |
+| BR    | BR-0012-0117..0123 | 7 business rules                                        |
+| EX    | EX-0012-0173..0179 | 7 examples                                              |
+| TC    | TC-0012-0243..0271 | 29 test cases (normal + error/boundary coverage per WS) |
+| DR    | DR-0012-0053..0056 | 4 decision records (OQ-0001..0004 resolutions)          |
+| REQ   | REQ-0123..REQ-0131 | 9 requirements                                          |
+
+### Traceability Chain
+
+| WS   | REQ            | US      | AC            | BR            | EX            | TC            |
+| ---- | -------------- | ------- | ------------- | ------------- | ------------- | ------------- |
+| WS-1 | REQ-0123..0126 | US-0072 | AC-0133..0139 | BR-0117..0120 | EX-0173..0176 | TC-0243..0253 |
+| WS-2 | REQ-0127       | US-0073 | AC-0140..0141 | BR-0121       | EX-0177       | TC-0254..0255 |
+| WS-3 | REQ-0128       | US-0074 | AC-0142..0150 | BR-0122       | EX-0178       | TC-0256..0266 |
+| WS-4 | REQ-0129       | US-0075 | AC-0151..0153 | BR-0123       | EX-0179       | TC-0267..0270 |
+| WS-5 | REQ-0130..0131 | US-0076 | AC-0154..0155 | (sync)        | (sync)        | TC-0271       |
+
+### Affected Source Files
+
+| File                                                                   | WS         | Change                                                                      |
+| ---------------------------------------------------------------------- | ---------- | --------------------------------------------------------------------------- |
+| `packages/qfai/src/core/prototyping/pathUtils.ts`                      | WS-3       | +assertConcreteArtifactRefs() array helper                                  |
+| `packages/qfai/src/core/evidence/l2Evidence.ts`                        | WS-3       | use assertConcreteArtifactRefs() from pathUtils.ts                          |
+| `packages/qfai/src/core/evidence/screenContracts.ts`                   | WS-2       | use readCanonicalScreenContracts() sourceRef; remove slug anchor generation |
+| `packages/qfai/src/core/validators/specCoverage.ts`                    | WS-4       | declaredRef regex validation                                                |
+| `packages/qfai/src/core/validators/prototypingEvidence.ts`             | WS-1, WS-3 | terminal state machine + 8-category refs                                    |
+| `packages/qfai/src/core/prototyping/execution.ts`                      | WS-1, WS-4 | state machine enforcement + declaredRef validation                          |
+| `packages/qfai/src/core/prototyping/runtime.ts`                        | WS-1       | terminal state machine transitions                                          |
+| `packages/qfai/src/core/prototyping/history.ts`                        | WS-1       | history tracking for state machine                                          |
+| `packages/qfai/tests/core/fullHarnessRuntime.test.ts`                  | WS-1       | negative fixtures (min 3)                                                   |
+| `packages/qfai/tests/core/prototypingEvidence.test.ts`                 | WS-3       | 8-category negative fixtures (min 8)                                        |
+| `packages/qfai/tests/core/prototypingExecution.productionPath.test.ts` | WS-4       | declaredRef negative fixtures (min 2)                                       |
+| `packages/qfai/README.md`                                              | WS-5       | WS-1~WS-4 API changes                                                       |
+
+### Rejected Options (rev10)
+
+- RJ-rev10-001: Allow terminationReason in in-progress bundles
+  - DO NOT allow terminationReason when status=in-progress. Temptation: backward compat.
+  - Reason: terminationReason has no semantic meaning for running harnesses; presence indicates stale data.
+
+- RJ-rev10-002: Create refSemantics.ts for assertConcreteArtifactRefs
+  - DO NOT create refSemantics.ts in rev10. Temptation: clean module separation.
+  - Reason: pathUtils.ts already owns ref grammar helpers (rev8); extraction threshold not reached (< 3 consumers).
+
+- RJ-rev10-003: map plateau terminationReason to accepted
+  - DO NOT map plateau to accepted/approved. Temptation: plateau sounds positive.
+  - Reason: accepted requires explicit human reviewer signoff; auto-termination is never accepted by default.
+
+- RJ-rev10-004: Allow bare file paths in declaredRef
+  - DO NOT allow bare file paths. Temptation: simpler spec authoring.
+  - Reason: anchor is required to identify the specific declaration location; file-level refs break traceability.
+
+## ATDD Phase — RE-OPEN Record (v1.7.15 rev10 ATDD)
+
+### RE-OPEN-0001: refSemantics.ts creation (re-opens RJ-rev10-002)
+
+- **Prior rejection**: RJ-rev10-002 — Do NOT create `refSemantics.ts`; rationale: pathUtils.ts already owns ref helpers, threshold < 3 consumers.
+- **Finding**: The rev10 implementation created `refSemantics.ts` in `packages/qfai/src/core/prototyping/` with 4 source consumers (`measurement.ts`, `execution.ts`, `specCoverage.ts`, `prototypingEvidence.ts`) and a dedicated unit test file (`tests/core/refSemantics.test.ts`). The extraction threshold (< 3 consumers) from RJ-rev10-002 has been exceeded.
+- **Decision**: Accept the divergence. The module separation is coherent: `pathUtils.ts` handles file-system path semantics; `refSemantics.ts` handles ref-format semantics and spec-declaration validation. With 4 consumers and a dedicated test, the module has earned its existence.
+- **ATDD impact**: TC-0012-0265/0266/0271 test stubs updated to reflect actual location (`refSemantics.ts` instead of `pathUtils.ts`). Tests verify behavioral correctness; the file-location design decision is recorded here.
+- **Approved by**: ATDD phase orchestrator (this RE-OPEN record constitutes approval for ATDD test alignment).
+
+## Implement Phase — TDD Ledger Backfill (v1.7.15 rev10)
+
+### DR-0012-0057: ATDD-first backfill for v1.7.15 rev10 WS-1..WS-5
+
+- **Decision**: Accept ATDD-first TDD ledger backfill for TC-0012-0249..TC-0012-0271 and the missed TC-0012-0218 entry.
+- **Rationale**: These tests were created during the ATDD phase (`prototypingRev10Integration.test.ts` for TC-0249..TC-0271; `prototypingRev8Integration.test.ts` for TC-0218) before the `/qfai-implement` TDD ledger cycle. All tests pass (vitest integration PASS, 2026-04-16). The ATDD-first pattern follows the precedent of DR-0012-0026, DR-0012-0049..0052.
+- **TC-0218 note**: TC-0012-0218 was accidentally skipped when TDD-0217 was recorded (TDD numbering jumped from 0217 to 0219). The test exists in `prototypingRev8Integration.test.ts` and passes.
+- **TC-0249..TC-0271 note**: These are source-inspection tests (not full behavioral coverage for all TCs; D-3 gaps for TC-0249..0253 noted as advisory F-4 from ATDD). Behavioral coverage deferred per ATDD advisory F-4.
+- **RE-OPEN-0001 cross-reference**: TDD-0266 (TC-0012-0266) uses RE-OPEN-0001 acceptance of `refSemantics.ts` (the source-inspection test verifies `refSemantics.ts` imports from `pathUtils.ts` rather than asserting it doesn't exist).
+
+## v1.7.15-rev11 Semantic Closure Completion (DR-0012-0057, DR-0012-0058)
+
+### Summary
+
+v1.7.15-11 監査で特定された3残存 semantic closure ギャップを単一 PR で閉じる:
+
+- WS-1: `runMeasurement`/`validatePanelScore` public export 削除 + strict 検証
+- WS-2: `isSpecDeclarationRef()` line-ref only grammar + `specCoverage.ts` 01_Spec.md-only scan
+- WS-3: テストファイル同期 (measurement/panelScore 更新 + specCoverage/refSemantics 新規/拡張)
+
+### Discussion Pack Reference
+
+- discussion-20260417072340789 (v1.7.15-rev11 semantic closure completion)
+
+### Requirements Added
+
+- REQ-0001〜0013 (WS-1: 0001〜0007, WS-2: 0008〜0009, WS-3: 0010〜0013)
+
+### Artifacts Added
+
+| Layer | IDs Added          | Description                                   |
+| ----- | ------------------ | --------------------------------------------- |
+| US    | US-0012-0077〜0083 | User stories for WS-1/WS-2/WS-3               |
+| AC    | AC-0012-0156〜0169 | Acceptance criteria                           |
+| BR    | BR-0012-0124〜0135 | Business rules                                |
+| EX    | EX-0012-0180〜0191 | Examples                                      |
+| TC    | TC-0012-0272〜0284 | Test cases (normal/error/boundary)            |
+| DR    | DR-0012-0057〜0058 | Decision records (OQ-0001/OQ-0004 resolution) |
+
+### OQ Resolutions
+
+- OQ-0001 (PerSpecCoverage dead fields): Delete `apiEndpoints`/`dbObjects` from type (DR-0012-0057)
+- OQ-0004 (test file new vs extend): "new if absent, extend if present" policy (DR-0012-0058)
+
+## v1.7.16 QFAI Package Design Quality Pipeline Restructure (DR-0012-v1716-01..04)
+
+### Summary
+
+discussion-20260418093755100（QFAI パッケージ改善 — デザイン品質パイプラインの構造改善）で提案された 9 件の Functional REQ と 5 件の NFR のうち、prototyping SKILL.md／`qfai.config.yaml`／shared script `capture-screenshots.js` の 3 軸にまたがる構造改善を spec-0012 に組み込む。
+
+### Discussion Pack Reference
+
+- discussion-20260418093755100（QFAI パッケージ改善 — デザイン品質パイプラインの構造改善、2026-04-18）
+
+### Requirements Added
+
+- Functional: REQ-0123〜REQ-0131（9 件、discussion-local REQ-0001/0002/0003/0004/0010/0011/0012/0013/0017 に対応）
+- Non-Functional: NFR-0046〜NFR-0050（5 件、discussion-local NFR-0001〜NFR-0005 に対応）
+
+### Scope Extension (v1.7.16)
+
+| Area                     | Change                                                                                                  | Source REQ |
+| ------------------------ | ------------------------------------------------------------------------------------------------------- | ---------- |
+| prototyping SKILL.md     | Delegation Scope Table 追加（4 カテゴリ × 対応ロール）                                                  | REQ-0123   |
+| prototyping SKILL.md     | 反復ゲート追加（iterationCount==1 && converged=true を ERROR）                                          | REQ-0124   |
+| prototyping SKILL.md     | Required Process Step 0（executionPlan MUST）追加                                                       | REQ-0125   |
+| `qfai.config.yaml`       | `prototyping.calibration.overrides` セクション（perAxisMinimum / maxIterationsByMode）                  | REQ-0126   |
+| `capture-screenshots.js` | QFAI パッケージに共有スクリプトを配置、prototyping SKILL.md から参照                                    | REQ-0127   |
+| prototyping SKILL.md     | 反復サイクル 5 ステップ化（Capture→Evaluate→Identify→Fix→Re-evaluate）、scoringTrace.screenshotDir 追加 | REQ-0128   |
+| prototyping SKILL.md     | 評価者入力準備プロトコル（4 要素 MUST）                                                                 | REQ-0129   |
+| prototyping SKILL.md     | Visual Quality Structural Checklist（6 カテゴリ）、Lighthouse Gate MUST（full-harness && web）          | REQ-0130   |
+| prototyping SKILL.md     | Evaluate ステップの designSystemCompliance チェック（80% 未満を L1 finding）                            | REQ-0131   |
+
+### Artifacts Added
+
+| Layer | IDs Added                                   | Description                                                                                                                                                                                         |
+| ----- | ------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| US    | US-0012-0084〜0093                          | 10 user stories covering Delegation Scope, iteration gate, Step 0, capture script, 5-step cycle, evaluator input prep, VQ checklist, Lighthouse MUST, designSystemCompliance, calibration overrides |
+| AC    | AC-0012-0170〜0186                          | 17 acceptance criteria                                                                                                                                                                              |
+| BR    | BR-0012-0136〜0145                          | 10 business rules                                                                                                                                                                                   |
+| EX    | EX-0012-0192〜0211                          | 20 examples across 6 perspectives (happy / negative / boundary)                                                                                                                                     |
+| TC    | TC-0012-0285〜0305                          | 21 test cases (normal / error / boundary types)                                                                                                                                                     |
+| DR    | DR-0012-v1716-01〜04                        | 4 decision records                                                                                                                                                                                  |
+| OQ    | OQ-0003-v1716, OQ-0005-v1716, OQ-0006-v1716 | 3 deferred-to-TDD open questions                                                                                                                                                                    |
+
+### Rationale
+
+- v1.7.16 scope は QFAI パッケージ本体（`packages/qfai/`）のデザイン品質パイプライン構造改善に閉じる（NFR-0048 package independence）。運用ディレクトリ `.qfai/` は変更しない。
+- v1.7.15 rev11 までで構築した semantic closure（8 カテゴリ evidenceRefs / per-axis validation / canonical refs 等）の上に、反復品質と評価者入力厳格性を加える。
+- Iteration gate（DR-0012-v1716-01）と 5-step cycle（DR-0012-v1716-03）は semantic rigor の補強。per-axis scoring（DR-0012-v1716-02）は compensation 問題への対応。calibration.overrides（DR-0012-v1716-04）は後方互換性を保ちつつプロジェクト個別要件を吸収する拡張ポイント。
+
+### Compatibility
+
+- NFR-0046 後方互換性により、既存 `prototyping.json` / `qfai.config.yaml` / discussion pack は破壊せずパース可能。
+- 新規バリデータは段階的移行（WARNING→ERROR）を想定し、既存パックに対して新ルール起因の ERROR は発生しない（UIX-VAL-T01/T02 相当の新バリデータは次バージョンで ERROR 昇格を検討）。
+
+### Deferred / Out of Scope (v1.7.16)
+
+- discussion-20260418093755100 の UI-bearing 側 REQ（REQ-0005〜0009, REQ-0014〜0016, REQ-0018: discussion SKILL.md Step 11.3/11.5、templates、brand catalog、UIX-VAL-DS01/DS02, PROT-DS01 等）は本 delta には含めない（別 spec/別 delta 範囲）。
+- OQ-0003 日本語フォント対応 / OQ-0005 CSS 抽出精度 / OQ-0006 カラー変換アルゴリズム精度 は TDD フェーズに持ち越し（08_Open-questions.md 参照）。

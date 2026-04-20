@@ -1,7 +1,7 @@
 /**
  * E2E tests for spec-0023: Discussion Design Hardening
  *
- * Verifies high-level behavior of DDS validators (QFAI-DDP-019..025),
+ * Verifies high-level behavior of sidecar-first discussion hardening validators,
  * SKILL.md content, and template presence.
  */
 
@@ -57,7 +57,7 @@ describe("US-0002-0001: UI-bearing pack detection", () => {
     expect(c).toMatch(/UI-bearing Detection/i);
     expect(c).toMatch(/Surface Classification/i);
     expect(c).toMatch(/\|\s*Surface Type\s*\|/i);
-    expect(c).toMatch(/\|\s*(?:web-ui|mobile-ui|desktop-ui|mixed|non-ui)\s*\|/i);
+    expect(c).toMatch(/\|\s*(?:web|mobile|desktop|cli|mixed)\s*\|/i);
   });
 
   it("SKILL.md describes detection signals for UI-bearing packs", async () => {
@@ -67,32 +67,32 @@ describe("US-0002-0001: UI-bearing pack detection", () => {
     expect(c).toMatch(/03_Story-Workshop\.md/);
   });
 
-  it("SKILL.md states non-UI packs are exempt from DDS validators", async () => {
+  it("SKILL.md states non-UI packs are exempt from sidecar validators", async () => {
     const c = await loadSkill();
     expect(c).toMatch(/Non-UI packs are exempt|non-ui.*exempt|zero new issues/i);
   });
 });
 
 // ---------------------------------------------------------------------------
-// US-0002-0002: DDS section mandatory
+// US-0002-0002: Sidecar primary truth for design direction
 // ---------------------------------------------------------------------------
 
 // QFAI:SPEC-0002:US-0002-0002
-describe("US-0002-0002: DDS section mandatory", () => {
-  it("SKILL.md requires Design Direction Summary in 03_Story-Workshop.md", async () => {
+describe("US-0002-0002: Sidecar primary truth for design direction", () => {
+  it("SKILL.md references sidecar family as primary truth for UI-bearing packs", async () => {
     const c = await loadSkill();
-    expect(c).toMatch(/Design Direction Summary/);
-    expect(c).toMatch(/03_Story-Workshop\.md/);
+    expect(c).toMatch(/canonical sidecar family|sidecar.*primary truth/i);
+    expect(c).toMatch(/uiux\/10_implementation_strategy\.md/);
   });
 
-  it("SKILL.md lists all 6 DDS subsections", async () => {
+  it("SKILL.md lists key sidecar artifacts for design direction", async () => {
     const c = await loadSkill();
-    expect(c).toMatch(/Option Comparison/);
-    expect(c).toMatch(/Anchor Screen Selection/);
-    expect(c).toMatch(/Competitive References/);
-    expect(c).toMatch(/CTA Hierarchy/);
-    expect(c).toMatch(/State Coverage/);
-    expect(c).toMatch(/Design Anti-goals/);
+    expect(c).toMatch(/30_option_comparison\.md/);
+    expect(c).toMatch(/40_screen_contracts\.md/);
+    expect(c).toMatch(/Competitive Reference Registry/);
+    expect(c).toMatch(/10_implementation_strategy\.md/);
+    expect(c).toMatch(/50_review_input_bundle\.md/);
+    expect(c).toMatch(/Rejected Visual Directions/);
   });
 });
 
@@ -102,23 +102,23 @@ describe("US-0002-0002: DDS section mandatory", () => {
 
 // QFAI:SPEC-0002:US-0002-0003
 describe("US-0002-0003: Option comparison validation", () => {
-  it("SKILL.md documents QFAI-DDP-020 option comparison validator", async () => {
+  it("SKILL.md documents option comparison in uiux/30_option_comparison.md", async () => {
     const c = await loadSkill();
-    expect(c).toMatch(/QFAI-DDP-020/);
-    expect(c).toMatch(/2\+\s*distinct design options|2.*design options/i);
+    expect(c).toMatch(/30_option_comparison\.md/);
+    expect(c).toMatch(/option comparison|compared option/i);
   });
 });
 
 // ---------------------------------------------------------------------------
-// US-0002-0004: Anchor screen selection
+// US-0002-0004: Selected anchor
 // ---------------------------------------------------------------------------
 
 // QFAI:SPEC-0002:US-0002-0004
-describe("US-0002-0004: Anchor screen selection", () => {
-  it("SKILL.md documents QFAI-DDP-021 anchor screen validator", async () => {
+describe("US-0002-0004: Selected anchor", () => {
+  it("SKILL.md documents selected anchor in uiux/31_selected_anchor_screen.md", async () => {
     const c = await loadSkill();
-    expect(c).toMatch(/QFAI-DDP-021/);
-    expect(c).toMatch(/anchor screen/i);
+    expect(c).toMatch(/selected anchor/i);
+    expect(c).toMatch(/31_selected_anchor_screen\.md/);
   });
 });
 
@@ -128,9 +128,8 @@ describe("US-0002-0004: Anchor screen selection", () => {
 
 // QFAI:SPEC-0002:US-0002-0005
 describe("US-0002-0005: Competitive reference validation", () => {
-  it("SKILL.md documents QFAI-DDP-022 competitive reference requirements", async () => {
+  it("SKILL.md documents competitive reference requirements without legacy validator codes", async () => {
     const c = await loadSkill();
-    expect(c).toMatch(/QFAI-DDP-022/);
     expect(c).toMatch(/adopted_points/);
     expect(c).toMatch(/rejected_points/);
     expect(c).toMatch(/local_translation/);
@@ -147,11 +146,11 @@ describe("US-0002-0005: Competitive reference validation", () => {
 // ---------------------------------------------------------------------------
 
 // QFAI:SPEC-0002:US-0002-0006
-describe("US-0002-0006: Review-Request design direction capture", () => {
-  it("SKILL.md requires Design Direction Decisions in 14_Review-Request.md", async () => {
+describe("US-0002-0006: Review-Request selected anchor consistency", () => {
+  it("SKILL.md requires selected anchor review in 14_Review-Request.md", async () => {
     const c = await loadSkill();
     expect(c).toMatch(/14_Review-Request\.md/);
-    expect(c).toMatch(/Design Direction Decisions/);
+    expect(c).toMatch(/selected anchor|chosen_option/i);
   });
 });
 
@@ -174,21 +173,15 @@ describe("US-0002-0007: Delta log rejected visual directions", () => {
 
 // QFAI:SPEC-0002:US-0002-0008
 describe("US-0002-0008: SKILL.md update", () => {
-  it("SKILL.md documents all 7 DDS validators (QFAI-DDP-019..025)", async () => {
+  it("SKILL.md documents sidecar-family validators (UIX-VAL series)", async () => {
     const c = await loadSkill();
-    expect(c).toMatch(/QFAI-DDP-019/);
-    expect(c).toMatch(/QFAI-DDP-020/);
-    expect(c).toMatch(/QFAI-DDP-021/);
-    expect(c).toMatch(/QFAI-DDP-022/);
-    expect(c).toMatch(/QFAI-DDP-023/);
-    expect(c).toMatch(/QFAI-DDP-024/);
-    expect(c).toMatch(/QFAI-DDP-025/);
+    expect(c).toMatch(/UIX-VAL|Sidecar-family validators|sidecar validators/i);
   });
 
-  it("SKILL.md states all validators emit severity error", async () => {
+  it("SKILL.md states non-UI packs are exempt from sidecar validators", async () => {
     const c = await loadSkill();
-    expect(c).toMatch(/severity.*error|error.*severity/i);
-    expect(c).toMatch(/violations block validation|block.*validation/i);
+    expect(c).toMatch(/non-ui.*exempt|exempt.*sidecar/i);
+    expect(c).toMatch(/zero new issues/i);
   });
 });
 

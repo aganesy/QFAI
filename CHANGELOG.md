@@ -23,8 +23,137 @@
   - HITL risk-based review gates
 - specs: spec-0034 SDD artifacts (Web Research Enhancement, CAP-0034)
 - specs: spec-0034 TDD execution ledger (28 items, all done)
-- discussion: v1.8.0 Web Research Enhancement discussion pack (discussion-20260328212829687)
+- discussion: v1.8.0 Web Research Enhancement discussion pack (`discussion-20260328212829687`)
 - tests: 28 integration tests for web-research skill (pipeline, security, skill, observability, evaluation)
+
+## [1.7.15] - 2026-04-08
+
+### Added
+
+- Full-harness runtime truthfulization: measurement-driven iteration engine replaces fake planner/generator/evaluator loop
+- Trend scan canonicalization: `04_Sources.md#Trend Scan` is the sole canonical location; `uiux/20_trend_scan.md` removed
+- Root/init SSOT unification: `scripts/sync-init-to-root.mjs` ensures `packages/qfai/assets/init/` is the single source of truth
+- Evidence schema v2: `fullHarness` block requires calibrationRef, L1/L2 panel scores, commitSha, limitations, reviewer logs
+- New harness modules: `measurement.ts`, `panelScore.ts`, `history.ts`, `reviewerIdentity.ts`, `gitRevision.ts`
+- Validator hardening: reviewer placeholder rejection, weightedTotal = min(L1, L2) enforcement, commitSha/limitations mandatory
+- Calibration wiring: `qfai.config.yaml > prototyping.calibration` is the sole runtime parameter source for full-harness
+
+### Changed
+
+- **BREAKING**: full-harness is now measurement-driven; 1 CLI invocation = 1 iteration measurement, multiple iterations require real code changes between runs
+- **BREAKING**: `--reviewer <id>` is mandatory for full-harness mode; `config.prototyping.execution.reviewer` removed
+- **BREAKING**: `weightedTotal = min(l1.total, l2.total)` replaces generic weighted average
+- **BREAKING**: `fullHarness` evidence schema v2 with calibrationRef, iterations array, scoringTrace, reviewerLogs, limitations
+- `04_Sources.md` template restructured: Source Registry, Trend Scan (4 canonical categories), Competitive Reference Registry, Traceability
+- CLI: added `--change-summary` and `--limitation` flags for full-harness mode
+- Prototyping SKILL.md: full-harness described as measurement-driven iterative workflow
+- Discussion README: `04_Sources.md` responsibilities expanded to include trend scan and competitive registry
+- Evidence README: fullHarness schema v2 field table added, uiFidelity observation-only policy documented
+- Review profiles and agent routing synced between root and init assets
+
+### Removed
+
+- Fake planner/generator/evaluator loop (`planner.ts`, `generator.ts`, `evaluator.ts`, `loop.ts`)
+- `uiux/20_trend_scan.md` template and all references
+- `config.prototyping.execution.reviewer` config option
+- `resolvedReviewer ?? "qfai"` placeholder reviewer logic
+- uiFidelity expected→observed synthetic fallback
+- Legacy fullHarness schema v1 compatibility
+
+## [1.7.14] - 2026-04-07
+
+### Added
+
+- Full-harness iteration protocol: 4-step cycle (Evaluate→Identify→Fix→Re-evaluate), MIN_ITERATIONS=5, 4 termination conditions (converged/max-iterations/plateau/manual-stop)
+- Independent evaluator panel: 3-layer structure (product-surface-reviewer L1, product-experience-architect L2, qa-gatekeeper L3) with background mode invocation
+- Score scope separation: discussion 3-layer scores ≠ prototyping scoringTrace, copy prohibition
+- Evaluation rigor rules: 3-tier rubric (existence_gate/quality_criteria/excellence_criteria), L1/L2/L1-manual finding classification
+- Asset acquisition strategy: free assets MUST, emoji prohibition (U+1F000–U+1FAFF, U+2600–U+27BF), placeholder prohibition, WCAG 2.1 AA checklist
+- Reviewer gate strengthening: 6 full-harness-specific checks, Limitations section obligation
+- Full-harness validator rules QFAI-PROT-290~294: iteration integrity validators (single-pass convergence, scoringTrace count, terminationReason cross-check, maxIterations cap, score progression)
+- Full-harness review profile in review-profiles.yml (always_required: completion-reviewer, product-surface-reviewer, qa-gatekeeper)
+- product-experience-architect added to agent-routing.yml prototyping evidence phase
+- Semantic invariant SSOT: validateRecommendationSemantics() shared across parser/resolver/execution/CLI/validator/preflight
+- Canonical strategy decision vocabulary (template, component-library, design-system, native-pattern, bespoke, none)
+
+### Changed
+
+- PrototypingSurface canonical names: web-ui/mobile-ui/desktop-ui → web/mobile/desktop, cli/mixed added
+- IssueCategory simplified: "compatibility" removed, "canonical" | "change" only
+- prototyping.yaml schema: namespaced-only (`prototyping:` block mandatory), legacy top-level keys hard-rejected
+- Classification separation: isUiBearingSurface() split into isDiscussionUiBearingPrototypingSurface() + requiresVisualBrowserEvidenceSurface()
+- Surface inference: null default (was "non-ui"), explicit surface specification promoted
+- fullHarness schema: reviewerSignoff boolean→object, scoringTrace boolean→array, terminationReason +plateau/manual-stop
+- Validator taxonomy: fullHarness reserved range 281-283 → 281-294, TAXONOMY_RANGE_MAX 283 → 294
+- "selected direction" → "selected anchor" wording normalization
+
+### Removed
+
+- Legacy validator infrastructure: legacy/ directory, legacyStatusDir.ts, migration/formatDetection.ts, uix/rollout.ts
+- IssueCategory "compatibility" from union type
+- Legacy top-level prototyping.yaml keys support (QFAI-PROT-231/232 warnings removed)
+- Compatibility test files (ddpCompatibility, uixCompatibility)
+
+### Fixed
+
+- Strict classification validation: semantic contradictions in classification block detected as hard errors
+- Execution hard gates: invalid classification/recommendation immediately rejected
+- readValidatedClassification() enforced in execution path (readClassificationBlock non-strict prohibited)
+
+## [1.7.13] - 2026-04-04
+
+### Added
+
+- CLI flags for prototyping production path: --target-url, --browser-provider, --render-provider, --reviewer
+- Built-in Playwright render adapter and browser QA provider (optionalDependencies)
+- uiFidelity validator error codes: QFAI-PROT-270 (absent), QFAI-PROT-271 (skeleton rejection), QFAI-PROT-272 (missing fields)
+- prototyping.execution config section with reviewer field and priority cascade (CLI > config > env)
+- Production path test suites: CLI flag parsing, obligation matrix, uiFidelity validator
+
+### Changed
+
+- uiFidelity.mode=skeleton rejected in standard/full-harness for UI-bearing surfaces (truthfulization)
+- Calibration error codes relocated: QFAI-PROT-271/272 → QFAI-PROT-265/266
+- Review assets (scoring/comparison/strategy-review) aligned to canonical vocabulary and responsibility split
+- comparison-review split into Comparison Quality (30_option_comparison) + Selected Direction Quality (31_selected_anchor_screen)
+- SKILL.md: "not a public CLI command" → "auxiliary generate-side command"
+
+### Fixed
+
+- SSOT contradictions across README, SKILL.md, steering, product note
+- Stale filenames in ui-definition-protocol.md (30_comparison→30_option_comparison, etc.)
+- Stale filenames in canonical test suite (integration/e2e/core/assets)
+- exactOptionalPropertyTypes issues in prototyping execution pipeline
+- 23_design_eval_aggregate.md total_score_formula formatting
+
+## [1.7.12] - 2026-04-02
+
+### Added
+
+- 3-layer 評価テンプレート（invariant/trend-derived/product-specific/aggregate/dynamic-overrides）
+- Design taste interview テンプレート（11_design_taste_interview.md）
+- browserQa minimal truthful runner
+- テスト並列実行: Vitest workspace による 5 スライス（core/validators/integration/e2e/cli）
+- CI: Node 20 単一 + 5 スライス並列マトリクスに移行
+- pr-fix skill にバージョン整合チェックを追加
+
+### Changed
+
+- 評価軸テンプレートを 3-layer 正規名にリネーム（20-23*eval_axis*\* → 20-23_design_eval\_\*）
+- SKILL.md: HTML/CSS mock をオプション化
+- US-0012-0008..0010 テストを prototyping SKILL.md に切り替え
+
+### Removed
+
+- 31_anchor.md, 60_critique_loop.md（レガシーテンプレート）
+
+### Fixed
+
+- delta/AC の migration warning → error 整合
+- source_translation バリデーションをバレット行のみに制限
+- threeLayer relPath 表記を実際のファイル範囲（2[0-3]\_design_eval\_\*）に修正
+- prototypingWordingAlignment テストの silent return → throw Error
+- renderEvidenceIntegration テストの truncated expected string 補完
 
 ## [1.7.11] - 2026-03-31
 

@@ -35,29 +35,36 @@
   - Acceptance criteria are consistent with flows/state transitions
   - Security/operations risks are reflected in diagrams where relevant
 - Mermaid diagrams use ` ```mermaid ` fences only
-- HTML+CSS screen mock is usable for UI alignment when UI requirements exist
-  - If UI requirements exist and no screen mock is provided, request changes
+- Strategy alignment and chosen_option consistency (when UI-bearing)
+- Taste reflection completeness and clarity (when UI-bearing)
+- Trend scan freshness and evidence traceability (when UI-bearing)
+- 3-layer axes evaluation quality and traceability (when UI-bearing)
+- Option comparison integrity (when UI-bearing)
+- Selected anchor screen clarity and anchor justification (when UI-bearing)
+- Screen contract sufficiency and strong schema completeness (when UI-bearing)
+- Generic fallback risk — ensure no unreviewed generic/placeholder UI remains (when UI-bearing)
 - OQ register exit condition (open count = 0)
 - Deferred items have full metadata
 
-## Design Direction Decisions
+## Selected Anchor Consistency
 
-<!-- Required for UI-bearing packs. Populated from DDS in 03_Story-Workshop.md. -->
+<!-- Required for UI-bearing packs. Verifies sidecar-family alignment. -->
 
-- Anchor screen: [Selected option reference]
-- Rejection rationale: [Why other options were not selected]
-- Adopted competitive references: [Key references adopted from 04_Sources.md]
+- Selected anchor: verify `uiux/31_selected_anchor_screen.md` selected anchor is populated and references a compared option from `uiux/30_option_comparison.md`
+- Strategy alignment: verify `uiux/10_implementation_strategy.md` aligns with the selected anchor in `uiux/31_selected_anchor_screen.md`
+- Evaluation traceability: verify selected anchor rationale aligns with 3-layer evaluation family (20/21/22/23 + optional 24)
 
 ## Sidecar Artifact Review Scope
 
 <!-- Required for UI-bearing packs. Reviews uiux/ sidecar artifacts. -->
 
 - Verify all 11 uiux/ sidecar files are present (when UI-bearing)
-- Verify uiux/10_strategy.md YAML schema conforms to version `"0.1"`
+- Verify uiux/10_implementation_strategy.md strict canonical schema is complete
 - Verify scoring axes have evaluation criteria and measurement approaches
-- Verify option comparison covers 2+ options against all scoring axes
-- Verify anchor screen selection references a compared option
-- Verify screen contracts define all 4 required states (empty/loading/error/populated)
+- Verify option comparison covers 2+ options against all scoring axes in `uiux/30_option_comparison.md`
+- Verify `uiux/31_selected_anchor_screen.md` selected anchor references a compared option
+- Verify `uiux/24_design_eval_dynamic_overrides.md` has documented override rules
+- Verify screen contracts use nested strong schema with all 4 required states (default/loading/empty/error) and treat `uiux/40_screen_contracts.md` as the state SSOT
 
 ## Required Reviewers
 

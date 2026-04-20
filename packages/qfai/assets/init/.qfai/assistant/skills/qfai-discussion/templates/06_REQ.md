@@ -1,6 +1,6 @@
 # 06 REQ (Functional Requirements)
 
-<!-- UX-INTENT: If UI-bearing, see uiux/40_contracts.md for screen interaction requirements -->
+<!-- UX-INTENT: If UI-bearing, see uiux/40_screen_contracts.md for screen interaction requirements -->
 
 ## Requirements Table
 

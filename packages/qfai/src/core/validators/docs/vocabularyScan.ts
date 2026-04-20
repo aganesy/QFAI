@@ -1,5 +1,5 @@
 /**
- * Doc vocabulary scan validator — spec-0037
+ * Doc vocabulary scan validator - spec-0037
  *
  * Scans documentation files for allowed/prohibited maturity terms
  * and detects contradictions across documents.
@@ -171,7 +171,7 @@ export async function runVocabularyScan(
     issues.push({
       code: "QFAI-DOC-VOCABULARY-PROHIBITED",
       severity: "error",
-      category: "compatibility",
+      category: "canonical",
       message: `Prohibited maturity term "${finding.term}" found in ${finding.file} at line ${finding.line}`,
       file: finding.file,
       suggested_action: `Replace "${finding.term}" with an allowed term: ${[...ALLOWED_TERMS].join(", ")}`,
@@ -183,7 +183,7 @@ export async function runVocabularyScan(
     issues.push({
       code: "QFAI-DOC-VOCABULARY-CONTRADICTION",
       severity: "error",
-      category: "compatibility",
+      category: "canonical",
       message: `Contradiction: subsystem "${c.subsystem}" has "${c.term1}" in ${c.file1} but "${c.term2}" in ${c.file2}`,
       file: `${c.file1}, ${c.file2}`,
       suggested_action:

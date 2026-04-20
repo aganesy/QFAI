@@ -124,6 +124,238 @@ describe("runSddPreflight", () => {
     }
   });
 
+  it("blocks when latest UI-bearing discussion pack is missing prototyping.yaml", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-preflight-"));
+    try {
+      const packDir = path.join(root, ".qfai", "discussion", "discussion-20260216010203010");
+      await mkdir(packDir, { recursive: true });
+
+      for (const fileName of DISCUSSION_PACK_FILES) {
+        const content = defaultDiscussionPackContent(fileName);
+        await writeFile(path.join(packDir, fileName), `${content}\n`, "utf-8");
+      }
+      // Do NOT write prototyping.yaml
+
+      const result = await runSddPreflight(root, defaultConfig);
+
+      expect(result.status).toBe("blocked");
+      expect(
+        result.blockers.some(
+          (item) =>
+            item.includes("UI-bearing discussion pack") && item.includes("prototyping.yaml"),
+        ),
+      ).toBe(true);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("does not block when latest non-ui discussion pack omits prototyping.yaml", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-preflight-"));
+    try {
+      const packDir = path.join(root, ".qfai", "discussion", "discussion-20260216010203016");
+      await mkdir(packDir, { recursive: true });
+
+      for (const fileName of DISCUSSION_PACK_FILES) {
+        const content =
+          fileName === "01_Context.md"
+            ? [
+                "# 01_Context.md",
+                "",
+                "## UI-bearing Classification",
+                "",
+                "- ui_bearing: false",
+                "- primary_surface: non-ui",
+                "- secondary_surfaces:",
+                "- classification_rationale: This pack documents a non-UI workflow.",
+                "",
+                "補足: non-ui latest discussion pack では prototyping.yaml は不要。",
+              ].join("\n")
+            : defaultDiscussionPackContent(fileName);
+        await writeFile(path.join(packDir, fileName), `${content}\n`, "utf-8");
+      }
+
+      const result = await runSddPreflight(root, defaultConfig);
+
+      expect(result.status).toBe("ready");
+      expect(result.blockers).toHaveLength(0);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("blocks when prototyping.yaml exists but namespaced schema is invalid", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-preflight-"));
+    try {
+      await seedDiscussionPack(root, "20260216010203011");
+      // Overwrite prototyping.yaml with invalid namespaced schema
+      const packDir = path.join(root, ".qfai", "discussion", "discussion-20260216010203011");
+      await writeFile(
+        path.join(packDir, "prototyping.yaml"),
+        ["prototyping:", "  recommended_mode: invalid-mode", "  rationale: ''", ""].join("\n"),
+        "utf-8",
+      );
+
+      const result = await runSddPreflight(root, defaultConfig);
+
+      expect(result.status).toBe("blocked");
+      expect(result.blockers.some((item) => item.includes("schema-invalid"))).toBe(true);
+      expect(
+        result.blockers.some(
+          (item) =>
+            item.includes("QFAI-PROT-153") ||
+            item.includes("QFAI-PROT-155") ||
+            item.includes("QFAI-PROT-156"),
+        ),
+      ).toBe(true);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  // W-4.10: non-object namespaced block blocks preflight
+  it("blocks when prototyping.yaml has scalar namespaced block", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-preflight-"));
+    try {
+      await seedDiscussionPack(root, "20260216010203014");
+      const packDir = path.join(root, ".qfai", "discussion", "discussion-20260216010203014");
+      await writeFile(path.join(packDir, "prototyping.yaml"), "prototyping: invalid\n", "utf-8");
+
+      const result = await runSddPreflight(root, defaultConfig);
+
+      expect(result.status).toBe("blocked");
+      expect(result.blockers.some((item) => item.includes("schema-invalid"))).toBe(true);
+      expect(result.blockers.some((item) => item.includes("QFAI-PROT-153"))).toBe(true);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("blocks when prototyping.yaml has null namespaced block", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-preflight-"));
+    try {
+      await seedDiscussionPack(root, "20260216010203015");
+      const packDir = path.join(root, ".qfai", "discussion", "discussion-20260216010203015");
+      await writeFile(path.join(packDir, "prototyping.yaml"), "prototyping: null\n", "utf-8");
+
+      const result = await runSddPreflight(root, defaultConfig);
+
+      expect(result.status).toBe("blocked");
+      expect(result.blockers.some((item) => item.includes("schema-invalid"))).toBe(true);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("does not block when prototyping.yaml has valid namespaced schema", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-preflight-"));
+    try {
+      await seedDiscussionPack(root, "20260216010203012");
+
+      const result = await runSddPreflight(root, defaultConfig);
+
+      expect(result.status).toBe("ready");
+      expect(result.blockers).toHaveLength(0);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("blocks when prototyping.yaml uses legacy-only schema (no prototyping namespace)", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-preflight-"));
+    try {
+      await seedDiscussionPack(root, "20260216010203013");
+      // Overwrite with legacy-only schema (no prototyping namespace)
+      const packDir = path.join(root, ".qfai", "discussion", "discussion-20260216010203013");
+      await writeFile(
+        path.join(packDir, "prototyping.yaml"),
+        [
+          "recommended_mode: full-harness",
+          "rationale: top-level legacy valid",
+          "allowed_modes:",
+          "  - full-harness",
+          "surface: web",
+        ].join("\n"),
+        "utf-8",
+      );
+
+      const result = await runSddPreflight(root, defaultConfig);
+
+      expect(result.status).toBe("blocked");
+      expect(result.blockers.some((item) => item.includes("schema-invalid"))).toBe(true);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("blocks when contradictory non-ui classification should not exempt prototyping", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-preflight-"));
+    try {
+      const packDir = path.join(root, ".qfai", "discussion", "discussion-20260216010203020");
+      await mkdir(packDir, { recursive: true });
+
+      for (const fileName of DISCUSSION_PACK_FILES) {
+        const content =
+          fileName === "01_Context.md"
+            ? [
+                "# 01_Context.md",
+                "",
+                "## UI-bearing Classification",
+                "",
+                "- ui_bearing: false",
+                "- primary_surface: non-ui",
+                "- secondary_surfaces:",
+                "  - web",
+                "- classification_rationale: Contradictory classification.",
+                "",
+              ].join("\n")
+            : defaultDiscussionPackContent(fileName);
+        await writeFile(path.join(packDir, fileName), `${content}\n`, "utf-8");
+      }
+      // Do NOT write prototyping.yaml
+
+      const result = await runSddPreflight(root, defaultConfig);
+
+      expect(result.status).toBe("blocked");
+      expect(
+        result.blockers.some(
+          (item) => item.includes("prototyping.yaml") || item.includes("UI-bearing"),
+        ),
+      ).toBe(true);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("blocks when classification is missing and prototyping.yaml is absent", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-preflight-"));
+    try {
+      const packDir = path.join(root, ".qfai", "discussion", "discussion-20260216010203021");
+      await mkdir(packDir, { recursive: true });
+
+      for (const fileName of DISCUSSION_PACK_FILES) {
+        const content =
+          fileName === "01_Context.md"
+            ? [
+                "# 01_Context.md",
+                "",
+                "This context file has no classification block at all.",
+                "The validator should treat this as prototyping-required.",
+                "",
+              ].join("\n")
+            : defaultDiscussionPackContent(fileName);
+        await writeFile(path.join(packDir, fileName), `${content}\n`, "utf-8");
+      }
+      // Do NOT write prototyping.yaml
+
+      const result = await runSddPreflight(root, defaultConfig);
+
+      expect(result.status).toBe("blocked");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("returns blocked with dangerous naming details when canonical pack is missing", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-preflight-"));
     try {
@@ -159,6 +391,20 @@ async function seedDiscussionPack(
     const content = overrides[fileName] ?? defaultDiscussionPackContent(fileName);
     await writeFile(path.join(discussionDir, fileName), `${content}\n`, "utf-8");
   }
+
+  // Required side artifact
+  await writeFile(
+    path.join(discussionDir, "prototyping.yaml"),
+    [
+      "prototyping:",
+      "  recommended_mode: full-harness",
+      "  rationale: UI validation is recommended.",
+      "  allowed_modes:",
+      "    - full-harness",
+      "  surface: web",
+    ].join("\n"),
+    "utf-8",
+  );
 }
 
 function defaultDiscussionPackContent(fileName: (typeof DISCUSSION_PACK_FILES)[number]): string {

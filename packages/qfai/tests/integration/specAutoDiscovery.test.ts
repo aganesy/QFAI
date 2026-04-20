@@ -8,13 +8,6 @@
 // QFAI:SPEC-0012:TC-0012-0020
 // QFAI:SPEC-0012:TC-0012-0021
 // QFAI:SPEC-0012:TC-0012-0022
-// QFAI:SPEC-0014:TC-0014-0023
-// QFAI:SPEC-0014:TC-0014-0024
-// QFAI:SPEC-0014:TC-0014-0025
-// QFAI:SPEC-0014:TC-0014-0026
-// QFAI:SPEC-0014:TC-0014-0027
-// QFAI:SPEC-0014:TC-0014-0028
-// QFAI:SPEC-0014:TC-0014-0029
 import { execFileSync } from "node:child_process";
 import { mkdir, mkdtemp, readFile, rm, utimes, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -703,7 +696,7 @@ describe("TC-0013-0016: config baseBranch — loadConfig reads baseBranch from y
 
 // TC-0013-0017
 // QFAI:SPEC-0013:TC-0013-0017
-describe("TC-0013-0017: backward compatibility — old evidence without Diff Context", () => {
+describe("TC-0013-0017: old evidence without Diff Context remains parseable", () => {
   let tmpRoot: string;
 
   beforeEach(async () => {
@@ -738,7 +731,7 @@ describe("TC-0013-0017: backward compatibility — old evidence without Diff Con
       throw new Error("git not found");
     });
 
-    // Should not throw — backward compatible
+    // Should not throw for current parser behavior
     const result = await detectSpecChanges(tmpRoot, stubConfig);
     expect(result).toBeDefined();
     expect(result.entries.length).toBeGreaterThanOrEqual(0);
@@ -871,7 +864,6 @@ describe("TC-0012-0022: cross-doc routing consistency", () => {
 // spec-0037: Vocabulary, fixture alignment, integration (TC-0014-0023..0029)
 // ═══════════════════════════════════════════════════════════════════════════
 
-// QFAI:SPEC-0014:TC-0014-0023
 describe("TC-0014-0023: vocabulary pass scan", () => {
   it("SKILL.md uses canonical spec-related vocabulary", async () => {
     const repoRoot = path.resolve(process.cwd(), "..", "..");
@@ -894,7 +886,6 @@ describe("TC-0014-0023: vocabulary pass scan", () => {
   });
 });
 
-// QFAI:SPEC-0014:TC-0014-0024
 describe("TC-0014-0024: contradiction detection", () => {
   it("detectSpecChanges result structure has no contradictions", async () => {
     const tmpRoot = await mkdtemp(path.join(os.tmpdir(), "qfai-atdd-vocab-"));
@@ -918,7 +909,6 @@ describe("TC-0014-0024: contradiction detection", () => {
   });
 });
 
-// QFAI:SPEC-0014:TC-0014-0025
 describe("TC-0014-0025: vocabulary fail — prohibited terms", () => {
   it("specDiffDetector source does not use prohibited legacy terms", async () => {
     const repoRoot = path.resolve(process.cwd(), "..", "..");
@@ -930,7 +920,6 @@ describe("TC-0014-0025: vocabulary fail — prohibited terms", () => {
   });
 });
 
-// QFAI:SPEC-0014:TC-0014-0026
 describe("TC-0014-0026: fixture alignment — 3-layer model", () => {
   it("discussion SKILL.md references scoring axes and evaluation axis files", async () => {
     const repoRoot = path.resolve(process.cwd(), "..", "..");
@@ -952,7 +941,6 @@ describe("TC-0014-0026: fixture alignment — 3-layer model", () => {
   });
 });
 
-// QFAI:SPEC-0014:TC-0014-0027
 describe("TC-0014-0027: fixture 4-axis reject", () => {
   it("discussion SKILL.md completion conditions do not use 4-axis model keyword", async () => {
     const repoRoot = path.resolve(process.cwd(), "..", "..");
@@ -977,7 +965,6 @@ describe("TC-0014-0027: fixture 4-axis reject", () => {
   });
 });
 
-// QFAI:SPEC-0014:TC-0014-0028
 describe("TC-0014-0028: integration e2e — validateProject entrypoint", () => {
   it("validateProject function is importable and callable", async () => {
     const { validateProject } = await import("../../src/core/validate.js");
@@ -985,7 +972,6 @@ describe("TC-0014-0028: integration e2e — validateProject entrypoint", () => {
   });
 });
 
-// QFAI:SPEC-0014:TC-0014-0029
 describe("TC-0014-0029: integration test existence", () => {
   it("integration test directory contains expected test files", async () => {
     const { readdir } = await import("node:fs/promises");
@@ -996,5 +982,78 @@ describe("TC-0014-0029: integration test existence", () => {
     // Key test files must exist
     expect(testFiles).toContain("specAutoDiscovery.test.ts");
     expect(testFiles).toContain("sliceRevertIndependence.test.ts");
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Group 5: Quality Depth (TC-0008-0011..0012)
+// ═══════════════════════════════════════════════════════════════════════════
+
+// TC-0008-0011
+// QFAI:SPEC-0008:TC-0008-0011
+describe("TC-0008-0011: Coverage Depth Matrix Produced and Verified", () => {
+  it("spec-0008 06_Test-Cases.md contains depth matrix columns", async () => {
+    const tcPath = path.resolve(
+      process.cwd(),
+      "..",
+      "..",
+      ".qfai",
+      "specs",
+      "spec-0008",
+      "06_Test-Cases.md",
+    );
+    const content = await readFile(tcPath, "utf-8");
+    expect(content).toContain("Coverage Depth Matrix");
+    expect(content).toContain("normal");
+    expect(content).toContain("error");
+  });
+
+  it("AC-0008-0009 specifies depth categories", async () => {
+    const acPath = path.resolve(
+      process.cwd(),
+      "..",
+      "..",
+      ".qfai",
+      "specs",
+      "spec-0008",
+      "03_Acceptance-Criteria.md",
+    );
+    const content = await readFile(acPath, "utf-8");
+    expect(content).toContain("AC-0008-0009");
+    expect(content).toMatch(/normal.*error.*boundary/i);
+  });
+});
+
+// TC-0008-0012
+// QFAI:SPEC-0008:TC-0008-0012
+describe("TC-0008-0012: Normal-Path-Only Flagged as Incomplete", () => {
+  it("spec defines normal-path-only detection rule", async () => {
+    const tcPath = path.resolve(
+      process.cwd(),
+      "..",
+      "..",
+      ".qfai",
+      "specs",
+      "spec-0008",
+      "06_Test-Cases.md",
+    );
+    const content = await readFile(tcPath, "utf-8");
+    expect(content).toContain("Normal-Path-Only Flagged as Incomplete");
+    expect(content).toMatch(/flagged as incomplete/i);
+  });
+
+  it("EX-0008-0008 shows incomplete status for normal-only US", async () => {
+    const exPath = path.resolve(
+      process.cwd(),
+      "..",
+      "..",
+      ".qfai",
+      "specs",
+      "spec-0008",
+      "05_Examples.md",
+    );
+    const content = await readFile(exPath, "utf-8");
+    expect(content).toContain("EX-0008-0008");
+    expect(content).toContain("incomplete");
   });
 });

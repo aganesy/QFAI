@@ -17,8 +17,12 @@ The agent reads the repository, produces the required artifacts, and iterates un
 
 ## Release status
 
-- Current package version: `1.7.7`
-- Release posture: v1.7.7 is the correction release that aligns the v1.7.6 remediation line before deeper prototyping work.
+- Current package version: `1.7.15`
+- Release posture: v1.7.15 enforces runtime truthfulness.
+- Prototyping is UI-only; `full-harness` is measurement-driven iteration accumulation for UI-bearing surfaces only.
+- Runtime observation is observed-only (no synthetic 200 / API / DB prototyping coverage).
+- Browser QA is mandatory per screen in full-harness, and `actionsWired` reports action coverage rather than finding count.
+- Calibration SSOT is the calibration pack referenced by `calibrationRef.packPath`.
 - Current repo note: some repo-wide `qfai validate --fail-on error` blockers still come from historical review/evidence/ATDD/TDD artifacts and are being cleaned incrementally.
 
 ## Quick start
@@ -53,12 +57,28 @@ npx qfai report
   - Produces a human-readable report (`report.md` by default) or an internal JSON export (`report.json`) from `validate.json`; use `--base-url` to link file paths in Markdown to your repository viewer.
 - `npx qfai doctor`
   - Diagnoses configuration discovery, path resolution, glob scanning, and `validate.json` inputs before running validate/report; use `--fail-on` to enforce failures in CI.
-- `npx qfai prototyping --autogen-ui-fidelity --base-url <url>`
-  - Auto-generates `uiFidelity` evidence by crawling UI routes and collecting DOM labels;
-    writes to `.qfai/evidence/prototyping.json` (or `--evidence-out <path>`).
-    Requires `--base-url` or `QFAI_PROTOTYPE_BASE_URL` to specify the running application URL.
-    Use `--autogen-only` to fail when generation fails (for CI gates).
-    Enable with `QFAI_PROTOTYPE_FIDELITY_AUTOGEN=1` as an alternative to `--autogen-ui-fidelity`.
+    Note: prototyping evidence (`.qfai/evidence/prototyping.json`) is produced by the AI workflow / skills
+    (`/qfai-prototyping` with `mode=full-harness` for supported UI surfaces only), not by a general-purpose end-user CLI flow.
+    `qfai validate` consumes the resulting evidence files, including `mode.effective` and `fullHarness` metadata when present.
+    Traceability refs inside prototyping evidence must use repo-root-relative concrete artifact refs (for example `.qfai/specs/spec-0001/01_Spec.md#L3` or `.qfai/evidence/render.json#/screens/0`).
+    Absolute paths are invalid. The same strict ref grammar is enforced for top-level and leaf evidence-bearing fields, including
+    `runtimeGate.evidenceRefs`, `runtimeGate.ui[].declaredRef`, `runtimeGate.ui[].renderEvidenceRefs[]`,
+    `runtimeGate.ui[].browserQaEvidenceRefs[]`, `specs[].coverageRefs[].declaredRef`, `specs[].coverageRefs[].observedRefs[]`,
+    `fullHarness.iterations[].evidenceRefs.runtimeGate`, `fullHarness.iterations[].evidenceRefs.specCoverage`,
+    `fullHarness.iterations[].evidenceRefs.render`, `fullHarness.iterations[].evidenceRefs.browserQa`,
+    `fullHarness.iterations[].evidenceRefs.uiObservation`, `fullHarness.iterations[].evidenceRefs.discussion`,
+    `fullHarness.iterations[].evidenceRefs.screenContract`, `fullHarness.iterations[].evidenceRefs.trend`,
+    `fullHarness.iterations[].l1.axes[].evidenceRefs[]`, `fullHarness.iterations[].l2.axes[].evidenceRefs[]`, and
+    `fullHarness.reviewerLogs[].evidenceRefs[]`.
+    Semantic rules are also strict: `runtimeGate.ui[].declaredRef` and `fullHarness.iterations[].evidenceRefs.screenContract[]`
+    must use the canonical screen contract sourceRef `.qfai/discussion/<pack>/uiux/40_screen_contracts.md#<screenId>`,
+    and `specs[].coverageRefs[].declaredRef` must use the canonical spec declaration form
+    `.qfai/specs/<specId>/01_Spec.md#L<line>` (for example `.qfai/specs/spec-0001/01_Spec.md#L3`);
+    `notes.md`, `appendix.md`, anchor-fragment forms such as `#route-home`, discussion refs, and screen contract refs
+    are NOT valid `declaredRef` values.
+    `fullHarness` follows a terminal-first state machine: `status="in-progress"` requires `finalDecision="pending"`,
+    `reviewerSignoff.status="pending"`, and no `terminationReason`; `status="completed"` requires `terminationReason`,
+    a non-pending `finalDecision`, and a terminal `reviewerSignoff`.
 
 ## ATDD annotation hard gate
 
@@ -69,43 +89,6 @@ npx qfai report
 - `tests/api/**`: annotate all covered API contracts with `QFAI:CON-API-XXXX`.
 - `tests/api/**` and `tests/e2e/**` must not use `TC` annotations.
 - `AC` annotations are not required in code; AC coverage is treated as indirect through full `TC` coverage.
-
-## Prototyping uiFidelity autogen
-
-`qfai prototyping --autogen-ui-fidelity` auto-generates `uiFidelity` evidence by:
-
-1. Extracting expected labels/actions from `contracts/ui/**` (YAML).
-2. Crawling the running application routes via headless fetch + jsdom.
-3. Computing label coverage (found vs. missing).
-4. Heuristically evaluating `mockPaths` (route reachability + navigate targets).
-5. Writing the result to `.qfai/evidence/prototyping.json`.
-
-### Prerequisites
-
-- Labels must be rendered in the DOM (text, aria-label, placeholder, etc.).
-- Routes must be reachable (authentication bypass or test fixtures as needed).
-- `--base-url` must point to a running instance of the application.
-
-### CI integration example
-
-```yaml
-- name: Start app (background)
-  run: npm start &
-  env:
-    DISABLE_AUTH: "true"
-
-- name: Wait for app
-  run: npx wait-on http://localhost:3000
-
-- name: Run qfai prototyping autogen
-  run: |
-    npx qfai prototyping --autogen-ui-fidelity --base-url http://localhost:3000 --autogen-only
-```
-
-### Failure handling
-
-- If autogen fails, `uiFidelityAutogen.status=failed` is recorded in the evidence, but existing `uiFidelity` data is not removed.
-- `--autogen-only` causes exit code 1 on failure; without it, exit code is always 0 (safe fallback).
 
 ## Operating model (skills-driven workflow)
 
@@ -125,9 +108,11 @@ QFAI includes a small set of custom skills (stored under `.qfai/assistant/skills
 - **qfai-configure**: Analyze the repository (language, frameworks, test layout, directory structure)
   and tailor `qfai.config.yaml` accordingly (especially `testFileGlobs`).
   Run this once right after `npx qfai init`, and re-run it when the repository structure changes.
-- **qfai-discussion**: Run a unified structured discussion that merges discuss and require into a single 15-file discussion pack under `.qfai/discussion/discussion-<ts>/`.
+- **qfai-discussion**: Run a unified structured discussion that produces and maintains the latest discussion pack
+  as 15 required markdown files under `.qfai/discussion/discussion-<ts>/`.
+  UI-bearing discussion packs require `prototyping.yaml`; non-ui discussion packs do not.
 - **qfai-sdd**: Unified SDD entrypoint with discussion-pack preflight guard (missing/incomplete/blocking OQ causes stop + next action guidance).
-- **qfai-prototyping**: Build an all-spec contract-aligned skeleton and prove runtime coverage before deep coding.
+- **qfai-prototyping**: Build a contract-aligned UI prototype under the `full-harness` only / UI-only contract, with calibration-pack SSOT and screen-level Browser QA evidence.
 - **qfai-atdd**: Implement acceptance tests driven by specs/scenarios.
 - **qfai-implement**: Unified TDD micro-cycle (Red/Green/Refactor) one test at a time using `test-list.md` as the execution ledger, including ledger status updates and exception closure.
 - **qfai-verify**: Run full-scan local quality gates (`validate --fail-on error`, `report`, repo gates) and produce reviewer-approved evidence under `.qfai/evidence/`.
@@ -229,6 +214,10 @@ Notes.
 
 - `validate.json`, `report.json`, `doctor.json`, and `run-*` JSON logs are internal exports and are not a stable external contract; prefer `report.md` for integrations that must survive tool upgrades.
 - Scenario files are expected to use the Gherkin extension `*.feature` (not `*.md`).
+- `prototyping.calibration.packPath` points to the calibration pack SSOT; runtime and validator both resolve thresholds and iteration parameters from that pack.
+- `prototyping.calibration.thresholds`, `maxIterations`, `plateauDelta`, and `plateauLookback` are unsupported public config fields in v1.7.15.
+  Put calibration values in the referenced pack instead of `qfai.config.yaml`.
+- Observability modules (`src/core/observability/`) exist as foundation code but are **not integrated into blocking validation** in v1.7.14. They are reserved for future operational instrumentation.
 
 ## Specifications and contracts (SDD)
 
@@ -304,7 +293,7 @@ Recommended baseline.
 
 Waiver policy.
 
-- Use waivers only for `warning` / `info` findings (false positives, phased migration noise).
+- Use waivers only for `warning` / `info` findings (false positives).
 - Waivers that target `error` findings are invalid and fail validation (`QFAI-WAIVER-002`).
 - Expired waivers are reported as warnings (`QFAI-WAIVER-003`) and must be renewed or removed with evidence.
 - Suppressed findings remain visible in reports as `suppressed=true`; waivers do not erase findings.
@@ -386,12 +375,14 @@ Typical customizations.
 │   │   │   ├── structure.md
 │   │   │   └── tech.md
 │   │   └── README.md
-│   ├── discuss
+│   ├── discussion
 │   │   ├── README.md
-│   │   └── discuss-20260215205220203
+│   │   └── discussion-YYYYMMDDhhmmssSSS
 │   │       ├── 01_Context.md
 │   │       ├── ...
-│   │       └── 09_delta.md
+│   │       ├── 14_Review-Request.md
+│   │       ├── 99_delta.md
+│   │       └── prototyping.yaml
 │   ├── contracts
 │   │   ├── api
 │   │   │   └── README.md
@@ -408,14 +399,6 @@ Typical customizations.
 │   │       ├── validator.json
 │   │       ├── traceability.json
 │   │       └── summary.md
-│   ├── require
-│   │   ├── README.md
-│   │   └── require-20260215205220203
-│   │       ├── 01_Sources.md
-│   │       ├── 02_Scope.md
-│   │       ├── 03_REQ.md
-│   │       ├── ...
-│   │       └── 09_delta.md
 │   ├── review
 │   │   ├── .gitignore
 │   │   └── README.md

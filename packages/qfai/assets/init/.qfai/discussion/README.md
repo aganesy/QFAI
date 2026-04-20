@@ -2,7 +2,7 @@
 
 ## Purpose
 
-`discussion/` stores the unified discussion pack that merges interview outputs (discuss) and requirement intake (require) into a single fixed 15-file structure.
+`discussion/` stores the unified discussion pack that merges interview outputs (discuss) and requirement intake (require). Discussion packs use 15 required markdown files. When the latest pack is `ui_bearing: true`, it must also include `prototyping.yaml`; when `ui_bearing: false`, `prototyping.yaml` is not required.
 
 This directory does not directly update `specs/`; it prepares decisions, requirements, open questions, and rationale as inputs for `/qfai-sdd`.
 
@@ -28,7 +28,8 @@ discussion/
     ├── 12_OQ-Resolution-Log.md
     ├── 13_Deferred.md
     ├── 14_Review-Request.md
-    └── 99_delta.md
+    ├── 99_delta.md
+    └── prototyping.yaml  # required only when ui_bearing: true
 ```
 
 ## File responsibilities
@@ -36,7 +37,7 @@ discussion/
 - `01_Context.md` – Background, purpose, stakeholders, assumptions, and issues.
 - `02_Inception-Deck.md` – Inception Deck (10 questions) for ambiguity removal and alignment.
 - `03_Story-Workshop.md` – Story workshop with user stories, user flows, and Mermaid diagrams.
-- `04_Sources.md` – Input sources (primary info, evidence, links) with `SRC-XXXX` IDs.
+- `04_Sources.md` – Source registry, trend scan, competitive reference registry, and traceability. This is the canonical location for trend translation, competitive analysis, and source-to-requirement traceability (`SRC-XXXX` IDs).
 - `05_Scope.md` – Scope, out-of-scope, constraints, and success criteria.
 - `06_REQ.md` – Functional requirements list (`REQ-0001` format).
 - `07_NFR.md` – Non-functional requirements list (`NFR-0001` format).
@@ -49,6 +50,19 @@ discussion/
 - `14_Review-Request.md` – Review request for review artifact generation.
 - `99_delta.md` – Change history (adopted, rejected, drift, recurrence prevention).
 
+## UI/UX canonical family
+
+For UI-bearing packs, the canonical design-evaluation source-of-truth is:
+
+- `04_Sources.md` for trend translation and competitive reference registry
+- `uiux/20_design_eval_invariant.md`
+- `uiux/21_design_eval_trend_derived.md`
+- `uiux/22_design_eval_product_specific.md`
+- `uiux/23_design_eval_aggregate.md`
+- `uiux/40_screen_contracts.md`
+
+`05_Scope.md` is not a trend source-of-truth for L2 scoring, and fallback scans such as `uiux/*trend*` or `uiux/*competitive*` must not replace these canonical files.
+
 ## OQ Register rules
 
 `11_OQ-Register.md` must include these mandatory columns:
@@ -57,7 +71,7 @@ discussion/
 | ------------------- | ---------------------------------------------------- |
 | OQ-ID               | `OQ-0001` format                                     |
 | Title               | Short descriptive title                              |
-| Gate                | `discuss`, `require`, or `sdd`                       |
+| Gate                | `discussion`, `sdd`, `atdd`, `tdd`, or `ops`         |
 | Disposition         | `open`, `resolved`, `deferred`, or `rejected`        |
 | Owner               | `user`, `agent`, or `team`                           |
 | Rationale           | Required for `deferred` and `rejected`               |
@@ -78,7 +92,7 @@ discussion/
 | --------------- | -------------------------------------------------- |
 | OQ-ID           | `OQ-0001` format                                   |
 | Title           | Short descriptive title                            |
-| Gate            | `discuss`, `require`, or `sdd`                     |
+| Gate            | `discussion`, `sdd`, `atdd`, `tdd`, or `ops`       |
 | Deferred-Reason | Why deferral is justified                          |
 | Deferred-Until  | Milestone, date, or trigger                        |
 | Owner           | `user`, `agent`, or `team`                         |
@@ -101,6 +115,39 @@ discussion/
 - If diagrams are written elsewhere, use ` ```mermaid ` fences only (do not use ` ```text ` or language-less fences).
 - Use timestamp directory naming for new outputs: `discussion-YYYYMMDDhhmmssSSS`.
 - `14_Review-Request.md` must reference routing SSOT: `.qfai/assistant/steering/agent-routing.yml` and `.qfai/assistant/steering/review-profiles.yml`.
+
+## prototyping.yaml (Classification-aware Recommendation Artifact)
+
+Each UI-bearing discussion pack (`ui_bearing: true`) **must** include a `prototyping.yaml` file that recommends the prototyping mode for the project. Non-UI discussion packs (`ui_bearing: false`) do not require `prototyping.yaml`.
+
+### Canonical namespaced schema (required)
+
+```yaml
+prototyping:
+  recommended_mode: full-harness
+  rationale: UI validation requires the full-harness runtime loop in packages/qfai.
+  allowed_modes:
+    - full-harness
+  surface: web
+```
+
+### Field reference
+
+All 4 fields are **required**. An artifact missing any field will fail validation.
+
+| Field              | Required | Description                                    |
+| ------------------ | -------- | ---------------------------------------------- |
+| `recommended_mode` | yes      | `full-harness`                                 |
+| `rationale`        | yes      | Non-empty string explaining the recommendation |
+| `allowed_modes`    | yes      | Unique array; must contain only `full-harness` |
+| `surface`          | yes      | `web`, `mobile`, `desktop`, or `mixed`         |
+
+### Validation rules
+
+- Only the canonical namespaced schema under the `prototyping:` key is accepted. Top-level recommendation keys (`recommended_mode`, `rationale`, `allowed_modes`, `surface` at root level) are not supported and will cause validation failure.
+- Coexistence of top-level recommendation keys with the namespaced `prototyping:` block is invalid.
+- `recommended_mode` must be included in `allowed_modes`. In packages/qfai, this means `recommended_mode` must be `full-harness` and `allowed_modes` must only contain `full-harness`.
+- An artifact that does not conform to the canonical namespaced schema is invalid and will be rejected by both validation and execution/CLI. No fallback to explicit mode or default mode is performed for invalid artifacts.
 
 ## Suggested naming
 

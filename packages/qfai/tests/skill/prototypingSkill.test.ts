@@ -1,16 +1,11 @@
-/**
- * Prototyping skill validator tests — spec-0035 TDD-0007..TDD-0009, TDD-0015
- *
- * QFAI:SPEC-0012:TC-0012-0007
- * QFAI:SPEC-0012:TC-0012-0008
- * QFAI:SPEC-0012:TC-0012-0009
- * QFAI:SPEC-0012:TC-0012-0015
- */
 import { describe, expect, it } from "vitest";
 
 import {
   checkModeHeadings,
-  hasNonUiNaDocumentation,
+  hasModeSurfaceMatrix,
+  hasCanonicalSurfaceDocumentation,
+  hasCliSurfaceDocumentation,
+  hasUiBearingFalseExclusion,
   isStaticFirstAligned,
   scanBannedPhrases,
 } from "../../src/core/validators/skill/prototypingSkill.js";
@@ -18,50 +13,65 @@ import {
 const VALID_SKILL_CONTENT = [
   "# Prototyping Skill",
   "",
-  "Static-first architecture ensures prototyping completes without browser or backend.",
-  "Static checks are the default obligation set. No runtime infrastructure needed.",
+  "This workflow is static-first and file-based by default.",
   "",
-  "## Low-cost Mode",
+  "Supported UI prototyping surfaces are: web, mobile, desktop, mixed.",
+  "cli is not a prototyping execution target and is rejected.",
+  "ui_bearing: false specs are not prototyping execution targets.",
   "",
-  "Obligations: static checks only, no evidence loop.",
-  "Non-UI projects: visual-review steps are n/a for non-ui surface type.",
+  "## Full-harness",
+  "Full-harness is the package default when prototyping execution is valid.",
   "",
-  "## Standard Mode",
-  "",
-  "Obligations: static checks + basic evidence, single iteration.",
-  "Non-UI projects: UI-specific steps are n/a for non-ui surface type.",
-  "",
-  "## Full-harness Mode",
-  "",
-  "Obligations: evidence loop + reviewer + calibration, multi-iteration.",
-  "Non-UI projects: visual-review and UI calibration are n/a for non-ui surface type.",
+  "## Obligation Matrix",
+  "| surface / mode | specs | runtimeGate | uiFidelity | render evidence | browser QA | fullHarness |",
+  "| web / full-harness | required | required | required | required | required | required |",
+  "| mobile / full-harness | required | required | required | required | required | required |",
+  "| desktop / full-harness | required | required | required | required | required | required |",
+  "| mixed / full-harness | required | required | required | required | required | required |",
 ].join("\n");
 
-describe("skill rewrite", () => {
-  it("banned phrase scan zero matches", () => {
-    const matches = scanBannedPhrases(VALID_SKILL_CONTENT);
-
-    expect(matches).toHaveLength(0);
-  });
-
-  it("mode section headings present", () => {
+describe("prototyping skill validator", () => {
+  it("has the full-harness section heading", () => {
     const result = checkModeHeadings(VALID_SKILL_CONTENT);
-
-    expect(result.present).toContain("low-cost");
-    expect(result.present).toContain("standard");
-    expect(result.present).toContain("full-harness");
+    expect(result.present).toEqual(["full-harness"]);
     expect(result.missing).toHaveLength(0);
   });
 
-  it("non-UI steps marked n/a", () => {
-    const result = hasNonUiNaDocumentation(VALID_SKILL_CONTENT);
-
-    expect(result).toBe(true);
+  it("documents supported UI prototyping surfaces", () => {
+    expect(hasCanonicalSurfaceDocumentation(VALID_SKILL_CONTENT)).toBe(true);
   });
 
-  it("static-first alignment", () => {
-    const result = isStaticFirstAligned(VALID_SKILL_CONTENT);
+  it("documents cli rejection", () => {
+    expect(hasCliSurfaceDocumentation(VALID_SKILL_CONTENT)).toBe(true);
+  });
 
-    expect(result).toBe(true);
+  it("documents ui_bearing: false exclusion", () => {
+    expect(hasUiBearingFalseExclusion(VALID_SKILL_CONTENT)).toBe(true);
+  });
+
+  it("documents static-first semantics", () => {
+    expect(isStaticFirstAligned(VALID_SKILL_CONTENT)).toBe(true);
+  });
+
+  it("documents full-harness-only obligation matrix", () => {
+    expect(hasModeSurfaceMatrix(VALID_SKILL_CONTENT)).toBe(true);
+  });
+
+  it("flags banned phrases when low-cost or standard are reintroduced", () => {
+    const invalid = `${VALID_SKILL_CONTENT}\nmode=low-cost\nmode=standard`;
+    expect(scanBannedPhrases(invalid)).toEqual(
+      expect.arrayContaining(["mode=low-cost", "mode=standard"]),
+    );
+  });
+
+  it("rejects content missing supported UI surface in obligation matrix", () => {
+    const invalid = VALID_SKILL_CONTENT.replace(
+      "Supported UI prototyping surfaces are: web, mobile, desktop, mixed.",
+      "Supported UI prototyping surfaces are: web, mobile, desktop.",
+    ).replace(
+      "| mixed / full-harness | required | required | required | required | required | required |",
+      "",
+    );
+    expect(hasModeSurfaceMatrix(invalid)).toBe(false);
   });
 });

@@ -2,6 +2,7 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { buildContractIndex } from "./contractIndex.js";
 import { loadConfig, resolvePath, type ConfigLoadResult } from "./config.js";
+import { inspectLatestDiscussionPack } from "./discussionPack.js";
 import { collectSpecEntries, type SpecEntry } from "./specLayout.js";
 import { parseFirstMarkdownTable } from "./specPackParsers.js";
 import {
@@ -20,6 +21,14 @@ import { collectFiles } from "./fs.js";
 import { ID_PREFIXES, extractAllIds, extractIds, type IdPrefix } from "./ids.js";
 import { normalizeValidationResult } from "./normalize.js";
 import { parseSpec } from "./parse/spec.js";
+import {
+  summarizeResolvedMode,
+  isValidPrototypingMode,
+  isValidPrototypingSurface,
+  derivePrototypingObligations,
+  inferSurfaceFromRecommendationAndEvidence,
+} from "./prototyping/mode.js";
+import { resolveLatestRecommendationArtifact } from "./prototyping/recommendationArtifact.js";
 import { parseScenarioDocument } from "./scenarioModel.js";
 import { classifyLayer, classifySize } from "./testStrategyTags.js";
 import { toRelativePath } from "./paths.js";
@@ -45,6 +54,9 @@ import {
 import type { Issue, ValidationCounts, ValidationResult, ValidationWaiverEntry } from "./types.js";
 import { validateProject } from "./validate.js";
 import { resolveToolVersion } from "./version.js";
+import { readRenderEvidenceBundle, summarizeRenderEvidence } from "./uiux/renderEvidence.js";
+import { readBrowserQaBundle } from "./browserQa/index.js";
+import type { DiscussionModeRecommendation } from "./prototyping/types.js";
 
 export type ReportSummary = {
   specs: number;
@@ -197,6 +209,121 @@ export type ReportTddCoverage = {
   specs: ReportTddCoverageSpec[];
 };
 
+export type ReportSurfaceClassification = {
+  primarySurface: string;
+  uiBearing: boolean;
+  secondarySurfaces?: string[];
+  classificationRationale?: string;
+};
+
+export type ReportFullHarnessExecution = {
+  mode: "full-harness";
+  iterations: number;
+  terminationReason: string;
+  finalScore: number;
+  bestIteration: number;
+  renderCaptured: number;
+  renderSkipped: number;
+  renderFailed: number;
+  browserQaPhasesExecuted: number;
+  browserQaPhasesSkipped: number;
+  browserQaTotalFindings: number;
+};
+
+export type ReportPrototypingSummary = {
+  surfaceClassification?: ReportSurfaceClassification;
+  fullHarnessExecution?: ReportFullHarnessExecution;
+  recommendationArtifact?: {
+    status: "valid" | "missing" | "invalid" | "no-pack";
+    path?: string;
+  };
+  mode: {
+    requested?: string;
+    effective: string;
+    source: string;
+    rationale: string;
+    discussionRecommendation?: string;
+    allowedModes?: string[];
+    surface: string;
+    sourceSchema?: string;
+  };
+  evidence: {
+    specsCoverageStatus: "complete" | "incomplete";
+    specsCoverage?: {
+      expectedSpecIds: string[];
+      observedSpecIds: string[];
+      missingSpecIds: string[];
+      unexpectedSpecIds: string[];
+    };
+    runtimeGate: { present: boolean; required: boolean };
+    uiFidelity: { present: boolean; required: boolean };
+    renderBundle: { present: boolean; required: boolean };
+    browserQaBundle: { present: boolean; required: boolean };
+    obligationProfile: string;
+  };
+  fullHarness?: {
+    enabled: boolean;
+    runId?: string;
+    calibrationRef?: {
+      configPath: string;
+      packPath: string;
+      packVersion: string;
+    };
+    iterationCount?: number;
+    bestIteration?: number;
+    status?: string;
+    terminationReason?: string;
+    reviewerId?: string;
+    reviewerSignoffStatus?: string;
+    scoringTraceCount?: number;
+    latestWeightedTotal?: number;
+    latestL1Total?: number;
+    latestL2Total?: number;
+    limitations?: string[];
+    reviewerLogsCount?: number;
+  };
+  render?: {
+    status?: string;
+    requested?: boolean;
+    captured: number;
+    skipped: number;
+    failed: number;
+    malformed: boolean;
+    inlinePayloadViolation?: boolean;
+  };
+  browserQa?: {
+    status?: string;
+    executed?: boolean;
+    findingsBySeverity: Record<"error" | "warning" | "info", number>;
+    findingsByCategory?: Record<string, number>;
+    summaryAggregates?: {
+      totalPassed: number;
+      totalFailed: number;
+    };
+    phaseSummary?: Record<
+      string,
+      {
+        status: string;
+        findingsCount: number;
+        checksCount: number;
+        passed?: number;
+        failed?: number;
+      }
+    >;
+    modeMismatch?: boolean;
+  };
+  calibration?: {
+    configPresent: boolean;
+    thresholdSummary?: {
+      accept: number;
+      refine: number;
+    };
+    scoringTraceAvailable: boolean;
+    belowThresholdWarning?: boolean;
+  };
+  warnings: string[];
+};
+
 export type ReportData = {
   tool: "qfai";
   version: string;
@@ -208,6 +335,7 @@ export type ReportData = {
   traceability: ReportTraceability;
   testStrategy: ReportTestStrategy;
   tddCoverage: ReportTddCoverage;
+  prototyping?: ReportPrototypingSummary;
   guardrails: ReportGuardrails;
   changeType: ReportChangeType;
   waivers: ReportWaivers;
@@ -355,6 +483,7 @@ export async function createReportData(
     .map((item) => toReportRuleFinding(item));
 
   const tddCoverage = await collectTddCoverage(specEntries);
+  const prototyping = await collectPrototypingSummary(resolvedRoot, config);
 
   const version = await resolveToolVersion();
   const displayRoot = toRelativePath(resolvedRoot, resolvedRoot);
@@ -408,6 +537,7 @@ export async function createReportData(
     },
     testStrategy,
     tddCoverage,
+    ...(prototyping ? { prototyping } : {}),
     guardrails: {
       total: guardrailsAll.length,
       max: REPORT_GUARDRAILS_MAX,
@@ -489,12 +619,12 @@ export function formatReportMarkdown(
     info: 2,
   };
   const categoryOrder: Record<string, number> = {
-    compatibility: 0,
+    canonical: 0,
     change: 1,
   };
 
   const issuesByCategory = {
-    compatibility: [] as Issue[],
+    canonical: [] as Issue[],
     change: [] as Issue[],
   };
   for (const issue of data.issues) {
@@ -502,7 +632,7 @@ export function formatReportMarkdown(
     if (cat === "change") {
       issuesByCategory.change.push(issue);
     } else {
-      issuesByCategory.compatibility.push(issue);
+      issuesByCategory.canonical.push(issue);
     }
   }
 
@@ -526,7 +656,7 @@ export function formatReportMarkdown(
       { info: 0, warning: 0, error: 0 },
     );
 
-  const compatCounts = countIssuesBySeverity(issuesByCategory.compatibility);
+  const canonicalCounts = countIssuesBySeverity(issuesByCategory.canonical);
   const changeCounts = countIssuesBySeverity(issuesByCategory.change);
   const compatFindingCounts = countFindingsBySeverity(data.changeType.compatFindings);
   const scopeMismatchCounts = countFindingsBySeverity(data.changeType.scopeMismatches);
@@ -546,7 +676,7 @@ export function formatReportMarkdown(
     `- issues(total): info ${data.summary.counts.info} / warning ${data.summary.counts.warning} / error ${data.summary.counts.error}`,
   );
   lines.push(
-    `- issues(compatibility): info ${compatCounts.info} / warning ${compatCounts.warning} / error ${compatCounts.error}`,
+    `- issues(canonical): info ${canonicalCounts.info} / warning ${canonicalCounts.warning} / error ${canonicalCounts.error}`,
   );
   lines.push(
     `- issues(change): info ${changeCounts.info} / warning ${changeCounts.warning} / error ${changeCounts.error}`,
@@ -594,7 +724,7 @@ export function formatReportMarkdown(
 
   lines.push("### Index");
   lines.push("");
-  lines.push("- [Compatibility Issues](#compatibility-issues)");
+  lines.push("- [Canonical Issues](#canonical-issues)");
   lines.push("- [Change Issues](#change-issues)");
   lines.push("- [Design Audit Findings](#design-audit-findings)");
   lines.push("- [Slop Guardrails Findings](#slop-guardrails-findings)");
@@ -605,6 +735,7 @@ export function formatReportMarkdown(
   lines.push("- [Traceability](#traceability)");
   lines.push("- [Test Strategy](#test-strategy)");
   lines.push("- [TDD Coverage](#tdd-coverage)");
+  lines.push("- [Prototyping](#prototyping)");
   lines.push("- [Contract Coverage](#contract-coverage)");
   lines.push("- [SC Coverage](#sc-coverage)");
   lines.push("- [SC → Referenced Tests](#sc--referenced-tests)");
@@ -748,15 +879,15 @@ export function formatReportMarkdown(
     return rows.map(([key, count]) => `- ${key}: ${count}`);
   };
 
-  lines.push("## Compatibility Issues");
+  lines.push("## Canonical Issues");
   lines.push("");
   lines.push("### Summary");
   lines.push("");
-  lines.push(...formatIssueSummaryTable(issuesByCategory.compatibility));
+  lines.push(...formatIssueSummaryTable(issuesByCategory.canonical));
   lines.push("");
   lines.push("### Issues");
   lines.push("");
-  lines.push(...formatIssueCards(issuesByCategory.compatibility));
+  lines.push(...formatIssueCards(issuesByCategory.canonical));
 
   lines.push("## Change Issues");
   lines.push("");
@@ -1072,6 +1203,227 @@ export function formatReportMarkdown(
   }
   lines.push("");
 
+  lines.push("## Prototyping");
+  lines.push("");
+  if (!data.prototyping) {
+    lines.push("- (none)");
+  } else {
+    // D-4: Always output recommendationArtifact status
+    if (data.prototyping.recommendationArtifact) {
+      lines.push("### prototyping.recommendationArtifact");
+      lines.push("");
+      lines.push(`- status: ${data.prototyping.recommendationArtifact.status}`);
+      if (data.prototyping.recommendationArtifact.path) {
+        lines.push(`- path: ${data.prototyping.recommendationArtifact.path}`);
+      }
+      const artifactStatus = data.prototyping.recommendationArtifact.status;
+      if (artifactStatus === "invalid") {
+        lines.push("- action: fix prototyping.yaml schema in the latest discussion pack");
+      } else if (artifactStatus === "missing") {
+        lines.push("- action: add prototyping.yaml to the latest discussion pack");
+      } else if (artifactStatus === "no-pack") {
+        lines.push(
+          "- action: create a discussion pack before relying on discussion-recommendation mode",
+        );
+      }
+      lines.push("");
+    }
+
+    // WS-F: Surface classification summary
+    if (data.prototyping.surfaceClassification) {
+      lines.push("### prototyping.surfaceClassification");
+      lines.push("");
+      lines.push(`- primary surface: ${data.prototyping.surfaceClassification.primarySurface}`);
+      lines.push(`- UI-bearing: ${data.prototyping.surfaceClassification.uiBearing}`);
+      if (data.prototyping.surfaceClassification.secondarySurfaces?.length) {
+        lines.push(
+          `- secondary surfaces: ${data.prototyping.surfaceClassification.secondarySurfaces.join(", ")}`,
+        );
+      }
+      if (data.prototyping.surfaceClassification.classificationRationale) {
+        lines.push(
+          `- rationale: ${data.prototyping.surfaceClassification.classificationRationale}`,
+        );
+      }
+      lines.push("");
+    }
+
+    // WS-F: Full-harness execution summary
+    if (data.prototyping.fullHarnessExecution) {
+      const fhe = data.prototyping.fullHarnessExecution;
+      lines.push("### prototyping.fullHarnessExecution");
+      lines.push("");
+      lines.push(`- mode: ${fhe.mode}`);
+      lines.push(`- iterations: ${fhe.iterations}`);
+      lines.push(`- termination reason: ${fhe.terminationReason}`);
+      lines.push(`- final score: ${fhe.finalScore.toFixed(3)}`);
+      lines.push(`- best iteration: ${fhe.bestIteration}`);
+      lines.push(
+        `- render: captured ${fhe.renderCaptured} / skipped ${fhe.renderSkipped} / failed ${fhe.renderFailed}`,
+      );
+      lines.push(
+        `- browser QA: phases executed ${fhe.browserQaPhasesExecuted} / skipped ${fhe.browserQaPhasesSkipped} / findings ${fhe.browserQaTotalFindings}`,
+      );
+      lines.push("");
+    }
+
+    lines.push("### prototyping.mode");
+    lines.push("");
+    lines.push(`- requested: ${data.prototyping.mode.requested ?? "(none)"}`);
+    lines.push(`- effective: ${data.prototyping.mode.effective}`);
+    lines.push(`- source: ${data.prototyping.mode.source}`);
+    lines.push(`- rationale: ${data.prototyping.mode.rationale}`);
+    lines.push(
+      `- discussion recommendation: ${data.prototyping.mode.discussionRecommendation ?? "(none)"}`,
+    );
+    if (data.prototyping.mode.allowedModes) {
+      lines.push(`- allowed_modes: ${data.prototyping.mode.allowedModes.join(", ")}`);
+    }
+    lines.push(`- surface: ${data.prototyping.mode.surface}`);
+    if (data.prototyping.mode.sourceSchema) {
+      lines.push(`- source schema: ${data.prototyping.mode.sourceSchema}`);
+    }
+    lines.push("");
+    lines.push("### prototyping.evidence");
+    lines.push("");
+    lines.push(`- specs coverage status: ${data.prototyping.evidence.specsCoverageStatus}`);
+    if (data.prototyping.evidence.specsCoverage) {
+      const cov = data.prototyping.evidence.specsCoverage;
+      lines.push(`- specs expected: ${cov.expectedSpecIds.length}`);
+      lines.push(`- specs observed: ${cov.observedSpecIds.length}`);
+      if (cov.missingSpecIds.length > 0) {
+        lines.push(`- specs missing: ${cov.missingSpecIds.join(", ")}`);
+      }
+      if (cov.unexpectedSpecIds.length > 0) {
+        lines.push(`- specs unexpected: ${cov.unexpectedSpecIds.join(", ")}`);
+      }
+    }
+    lines.push(
+      `- runtimeGate: present=${data.prototyping.evidence.runtimeGate.present} required=${data.prototyping.evidence.runtimeGate.required}`,
+    );
+    lines.push(
+      `- uiFidelity: present=${data.prototyping.evidence.uiFidelity.present} required=${data.prototyping.evidence.uiFidelity.required}`,
+    );
+    lines.push(
+      `- render bundle: present=${data.prototyping.evidence.renderBundle.present} required=${data.prototyping.evidence.renderBundle.required}`,
+    );
+    lines.push(
+      `- browser QA bundle: present=${data.prototyping.evidence.browserQaBundle.present} required=${data.prototyping.evidence.browserQaBundle.required}`,
+    );
+    lines.push(`- obligation profile: ${data.prototyping.evidence.obligationProfile}`);
+    if (data.prototyping.fullHarness) {
+      const fh = data.prototyping.fullHarness;
+      lines.push("");
+      lines.push("### prototyping.fullHarness");
+      lines.push("");
+      lines.push(`- enabled: ${fh.enabled}`);
+      lines.push(`- runId: ${fh.runId ?? "(none)"}`);
+      lines.push(`- status: ${fh.status ?? "(none)"}`);
+      lines.push(`- iterationCount: ${fh.iterationCount ?? "(none)"}`);
+      lines.push(`- bestIteration: ${fh.bestIteration ?? "(none)"}`);
+      lines.push(`- terminationReason: ${fh.terminationReason ?? "(none)"}`);
+      lines.push(`- reviewerId: ${fh.reviewerId ?? "(none)"}`);
+      lines.push(`- reviewerSignoff.status: ${fh.reviewerSignoffStatus ?? "(none)"}`);
+      if (fh.calibrationRef) {
+        lines.push(`- calibrationRef.configPath: ${fh.calibrationRef.configPath}`);
+        lines.push(`- calibrationRef.packPath: ${fh.calibrationRef.packPath}`);
+        lines.push(`- calibrationRef.packVersion: ${fh.calibrationRef.packVersion}`);
+      }
+      if (fh.latestWeightedTotal !== undefined) {
+        lines.push(`- latest weightedTotal: ${fh.latestWeightedTotal}`);
+        lines.push(`- latest L1 total: ${fh.latestL1Total ?? "(none)"}`);
+        lines.push(`- latest L2 total: ${fh.latestL2Total ?? "(none)"}`);
+      }
+      if (fh.scoringTraceCount !== undefined) {
+        lines.push(`- scoringTrace: ${fh.scoringTraceCount} entries`);
+      }
+      if (fh.reviewerLogsCount !== undefined) {
+        lines.push(`- reviewerLogs: ${fh.reviewerLogsCount} entries`);
+      }
+      if (fh.limitations && fh.limitations.length > 0) {
+        lines.push(`- limitations: ${fh.limitations.length} items`);
+      }
+    }
+    if (data.prototyping.render) {
+      lines.push("");
+      lines.push("### prototyping.render");
+      lines.push("");
+      lines.push(`- status: ${data.prototyping.render.status ?? "(none)"}`);
+      lines.push(`- requested: ${data.prototyping.render.requested ?? "(none)"}`);
+      lines.push(`- captured: ${data.prototyping.render.captured}`);
+      lines.push(`- skipped: ${data.prototyping.render.skipped}`);
+      lines.push(`- failed: ${data.prototyping.render.failed}`);
+      lines.push(`- malformed: ${data.prototyping.render.malformed}`);
+      if (data.prototyping.render.inlinePayloadViolation) {
+        lines.push(`- inline payload violation: true`);
+      }
+    }
+    if (data.prototyping.browserQa) {
+      lines.push("");
+      lines.push("### prototyping.browserQa");
+      lines.push("");
+      lines.push(`- status: ${data.prototyping.browserQa.status ?? "(none)"}`);
+      lines.push(`- executed: ${data.prototyping.browserQa.executed ?? "(none)"}`);
+      lines.push(
+        `- findings by severity: error ${data.prototyping.browserQa.findingsBySeverity.error} / warning ${data.prototyping.browserQa.findingsBySeverity.warning} / info ${data.prototyping.browserQa.findingsBySeverity.info}`,
+      );
+      if (data.prototyping.browserQa.findingsByCategory) {
+        const cats = Object.entries(data.prototyping.browserQa.findingsByCategory)
+          .map(([cat, count]) => `${cat}=${count}`)
+          .join(", ");
+        lines.push(`- findings by category: ${cats}`);
+      }
+      if (data.prototyping.browserQa.summaryAggregates) {
+        lines.push(
+          `- summary aggregates: passed=${data.prototyping.browserQa.summaryAggregates.totalPassed} failed=${data.prototyping.browserQa.summaryAggregates.totalFailed}`,
+        );
+      }
+      if (data.prototyping.browserQa.phaseSummary) {
+        lines.push(`- phase summary:`);
+        for (const [phase, counts] of Object.entries(data.prototyping.browserQa.phaseSummary)) {
+          const c = counts as { passed: number; failed: number };
+          lines.push(`  - ${phase}: passed=${c.passed} failed=${c.failed}`);
+        }
+      }
+      if (data.prototyping.browserQa.modeMismatch) {
+        lines.push(`- mode mismatch: true`);
+      }
+    }
+    if (data.prototyping.calibration) {
+      lines.push("");
+      lines.push("### prototyping.calibration");
+      lines.push("");
+      lines.push(`- config present: ${data.prototyping.calibration.configPresent}`);
+      if (data.prototyping.calibration.thresholdSummary) {
+        lines.push(
+          `- thresholds: accept=${data.prototyping.calibration.thresholdSummary.accept} refine=${data.prototyping.calibration.thresholdSummary.refine}`,
+        );
+      }
+      lines.push(
+        `- scoring trace available: ${data.prototyping.calibration.scoringTraceAvailable}`,
+      );
+      if (data.prototyping.calibration.belowThresholdWarning) {
+        lines.push(`- below threshold warning: true`);
+      }
+    }
+    // WS-8: Observability note
+    lines.push("");
+    lines.push("### prototyping.observability");
+    lines.push("");
+    lines.push("- status: foundation-only (not integrated into blocking validation in v1.7.14)");
+    // Warnings
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+    if (data.prototyping.warnings && data.prototyping.warnings.length > 0) {
+      lines.push("");
+      lines.push("### prototyping.warnings");
+      lines.push("");
+      for (const warning of data.prototyping.warnings) {
+        lines.push(`- ${warning}`);
+      }
+    }
+  }
+  lines.push("");
+
   lines.push("## Contract Coverage");
   lines.push("");
   lines.push(`- total: ${data.traceability.contracts.total}`);
@@ -1222,17 +1574,51 @@ export function formatReportMarkdown(
     lines.push("- issue は検出されませんでした。運用テンプレに沿って継続してください。");
   }
   const renderEvidenceIssues = data.issues.filter((item) =>
-    ["QFAI-PROT-101", "QFAI-PROT-244", "QFAI-PROT-245"].includes(item.code),
+    [
+      "QFAI-PROT-101",
+      "QFAI-PROT-244",
+      "QFAI-PROT-245",
+      "QFAI-PROT-251",
+      "QFAI-PROT-252",
+      "QFAI-PROT-253",
+      "QFAI-PROT-254",
+    ].includes(item.code),
   );
   if (renderEvidenceIssues.length > 0) {
     lines.push(
       "- render evidence が不足または不完全です。viewport coverage と artifact path を確認してください。",
     );
     lines.push(
-      "- recover: `/qfai-prototyping` skill を実行し、`.qfai/evidence/prototyping.json` と render bundle を更新します。",
+      "- recover: `qfai prototyping run --mode full-harness --reviewer <id>` を実行し、`.qfai/evidence/prototyping.json` / `render.json` / `browser-qa.json` を再生成します。",
     );
     lines.push(
       "- why it matters: render evidence は viewport coverage と missing artifact の切り分けに使われ、strict/high profile では gate に影響します。",
+    );
+  }
+  const calibrationIssues = data.issues.filter((item) =>
+    ["QFAI-PROT-271", "QFAI-PROT-272"].includes(item.code),
+  );
+  if (calibrationIssues.length > 0) {
+    lines.push(
+      "- calibration 設定が不足しています。full-harness evidence に calibration config と scoring trace を追加してください。",
+    );
+  }
+  const fullHarnessCompletenessIssues = data.issues.filter((item) =>
+    [
+      "QFAI-PROT-264",
+      "QFAI-PROT-281",
+      "QFAI-PROT-282",
+      "QFAI-PROT-283",
+      "QFAI-PROT-295",
+      "QFAI-PROT-296",
+      "QFAI-PROT-297",
+      "QFAI-PROT-298",
+      "QFAI-PROT-299",
+    ].includes(item.code),
+  );
+  if (fullHarnessCompletenessIssues.length > 0) {
+    lines.push(
+      "- fullHarness evidence が不完全です。reviewer / commitSha / weightedTotal / terminationReason / scoringTrace を確認してください。",
     );
   }
   lines.push("- 変更内容・受入観点は `.qfai/specs/*/18_delta.md` に記録します。");
@@ -1318,6 +1704,338 @@ async function collectChangeTypeSummary(specsRoot: string): Promise<ReportChange
   }
 
   return summary;
+}
+
+async function collectPrototypingSummary(
+  root: string,
+  config: ConfigLoadResult["config"],
+): Promise<ReportPrototypingSummary | undefined> {
+  const specsRoot = resolvePath(root, config, "specsDir");
+  const discussionRoot = resolvePath(root, config, "discussionDir");
+  const discussionReadiness = await inspectLatestDiscussionPack(discussionRoot);
+  if (discussionReadiness.latestPackDir && !discussionReadiness.prototypingRequired) {
+    return undefined;
+  }
+  const evidenceRoot = path.join(path.dirname(specsRoot), "evidence");
+  const evidencePath = path.join(evidenceRoot, "prototyping.json");
+  let raw: string;
+  try {
+    raw = await readFile(evidencePath, "utf-8");
+  } catch {
+    return undefined;
+  }
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return undefined;
+  }
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+    return undefined;
+  }
+
+  const record = parsed as Record<string, unknown>;
+  const mode = asRecord(record.mode);
+  if (!mode || typeof mode.source !== "string") {
+    return undefined;
+  }
+  const rawEffectiveMode =
+    typeof mode.effective === "string" && mode.effective.trim().length > 0
+      ? mode.effective.trim()
+      : "full-harness";
+
+  const warnings: string[] = [];
+
+  // O-2: Track recommendation artifact status for report visibility (artifact-first)
+  const resolvedArtifact = await resolveLatestRecommendationArtifact(root, config);
+  warnings.push(...resolvedArtifact.warnings);
+  const recommendationArtifact: ReportPrototypingSummary["recommendationArtifact"] = {
+    status: resolvedArtifact.status,
+    ...(resolvedArtifact.path ? { path: resolvedArtifact.path } : {}),
+  };
+
+  // Artifact-first: only use canonical artifact recommendation, never embedded fallback
+  const discussionRec =
+    resolvedArtifact.status === "valid" ? resolvedArtifact.recommendation : null;
+
+  const effectiveRec: DiscussionModeRecommendation | undefined = discussionRec ?? undefined;
+
+  const modeSummary = summarizeResolvedMode({
+    explicitMode: isValidPrototypingMode(mode.requested) ? mode.requested : undefined,
+    discussionRecommendation: effectiveRec,
+    ...(isValidPrototypingMode(rawEffectiveMode) ? { defaultMode: rawEffectiveMode } : {}),
+  });
+  warnings.push(...modeSummary.warnings);
+  if (!isValidPrototypingMode(rawEffectiveMode)) {
+    warnings.push(`prototyping evidence effective mode is non-canonical: ${rawEffectiveMode}`);
+  }
+
+  const discussionSummary = effectiveRec
+    ? effectiveRec.rationale
+      ? `${effectiveRec.recommendedMode} (${effectiveRec.rationale})`
+      : effectiveRec.recommendedMode
+    : undefined;
+
+  // WS-3: Use shared surface inference
+  const surface = inferSurfaceFromRecommendationAndEvidence({
+    evidenceSurface: isValidPrototypingSurface(record.surface) ? record.surface : undefined,
+    recommendationSurface: effectiveRec?.surface,
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+    hasUiFidelity: asRecord(record.uiFidelity) !== null,
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+    hasRenderBundle: asRecord(record.renderEvidence) !== null,
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+    hasBrowserQaBundle: asRecord(record.browserQa) !== null,
+    hasUiRoutes:
+      Array.isArray(record.specs) &&
+      record.specs.some(
+        (spec: unknown) =>
+          // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+          asRecord(spec) !== null &&
+          // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+          asRecord(asRecord(spec)?.declared) !== null &&
+          typeof asRecord(asRecord(spec)?.declared)?.uiRoutes === "number" &&
+          (asRecord(asRecord(spec)?.declared)?.uiRoutes as number) > 0,
+      ),
+    hasRuntimeGateUi:
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+      asRecord(record.runtimeGate) !== null &&
+      Array.isArray(asRecord(record.runtimeGate)?.ui) &&
+      (asRecord(record.runtimeGate)?.ui as unknown[]).length > 0,
+  });
+  const effectiveSurface = surface ?? effectiveRec?.surface ?? "mixed";
+  if (!surface) {
+    warnings.push(
+      "prototyping surface could not be derived from evidence or recommendation; report defaulted to mixed.",
+    );
+  }
+  const effectiveMode = rawEffectiveMode;
+
+  // WS-3: Use shared obligation matrix
+  const obligations = derivePrototypingObligations({ surface: effectiveSurface, effectiveMode });
+
+  const fullHarness = asRecord(record.fullHarness);
+  const runtimeGate = asRecord(record.runtimeGate);
+  const uiFidelity = asRecord(record.uiFidelity);
+  const renderBundle = await readRenderEvidenceBundle(path.join(evidenceRoot, "render.json"));
+  const browserQaBundle = await readBrowserQaBundle(path.join(evidenceRoot, "browser-qa.json"));
+  const specs = Array.isArray(record.specs) ? record.specs : [];
+
+  // WS-6: Fix spec coverage — compare against project spec list
+  const specEntries = await collectSpecEntries(specsRoot);
+  const expectedSpecIds = specEntries.map((entry) => `spec-${entry.specNumber}`.toLowerCase());
+  const observedSpecIds = specs
+    .filter(
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+      (spec: unknown) => asRecord(spec) !== null && typeof asRecord(spec)?.specId === "string",
+    )
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    .map((spec: unknown) => (asRecord(spec)!.specId as string).toLowerCase());
+  const missingSpecIds = expectedSpecIds.filter((id) => !observedSpecIds.includes(id));
+  const unexpectedSpecIds = observedSpecIds.filter((id) => !expectedSpecIds.includes(id));
+  const specsCoverageStatus =
+    expectedSpecIds.length > 0 && missingSpecIds.length === 0 ? "complete" : "incomplete";
+
+  // WS-2: Mode precedence mismatch warning
+  if (mode.source === "system-default" && effectiveRec) {
+    warnings.push(
+      `evidence mode source is "system-default" but discussion recommendation exists (${effectiveRec.recommendedMode})`,
+    );
+  }
+  const renderSummary = summarizeRenderEvidence(renderBundle);
+  const renderCounts = {
+    captured: renderSummary.captured,
+    skipped: renderSummary.skipped,
+    failed: renderSummary.failed,
+  };
+  const inlinePayloadViolation = renderSummary.inlinePayloadViolation;
+
+  const browserQaCounts = { error: 0, warning: 0, info: 0 } as Record<
+    "error" | "warning" | "info",
+    number
+  >;
+  const browserQaCategoryCounts: Record<string, number> = {};
+  let browserQaTotalPassed = 0;
+  let browserQaTotalFailed = 0;
+  if (browserQaBundle?.findings) {
+    for (const finding of browserQaBundle.findings) {
+      const severity = finding.severity === "warn" ? "warning" : finding.severity;
+      browserQaCounts[severity] += 1;
+      const category = finding.category ?? finding.phase;
+      browserQaCategoryCounts[category] = (browserQaCategoryCounts[category] ?? 0) + 1;
+    }
+  }
+  if (browserQaBundle?.browserQa.summary) {
+    const summary = browserQaBundle.browserQa.summary;
+    for (const category of ["smoke", "interaction", "visual", "accessibility"] as const) {
+      const bucket = summary[category] as Record<string, unknown> | undefined;
+      if (!bucket || typeof bucket !== "object") continue;
+      const passed = typeof bucket.passed === "number" ? bucket.passed : 0;
+      const failed = typeof bucket.failed === "number" ? bucket.failed : 0;
+      const status = typeof bucket.status === "string" ? bucket.status : "";
+      browserQaTotalPassed += passed || (status === "passed" || status === "executed" ? 1 : 0);
+      browserQaTotalFailed += failed || (status === "failed" ? 1 : 0);
+    }
+  }
+  // WS-8: Calibration summary
+  const calibrationConfig = config.prototyping?.calibration;
+  const scoringTrace =
+    fullHarness && Array.isArray(fullHarness.scoringTrace) ? fullHarness.scoringTrace : undefined;
+  const calibrationSummary =
+    calibrationConfig || scoringTrace
+      ? {
+          configPresent: Boolean(calibrationConfig),
+          scoringTraceAvailable: Boolean(scoringTrace && scoringTrace.length > 0),
+        }
+      : undefined;
+
+  // WS-F: Surface classification summary
+  const { readClassificationBlock, isDiscussionUiBearingSurfaceType } =
+    await import("./detection/surfaceType.js");
+  const classificationBlock = await readClassificationBlock(root);
+  const surfaceClassification: ReportPrototypingSummary["surfaceClassification"] = {
+    primarySurface: effectiveSurface,
+    uiBearing: isDiscussionUiBearingSurfaceType(effectiveSurface),
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+    ...(classificationBlock?.secondary_surfaces?.length
+      ? { secondarySurfaces: classificationBlock.secondary_surfaces }
+      : {}),
+    ...(classificationBlock?.classification_rationale
+      ? { classificationRationale: classificationBlock.classification_rationale }
+      : {}),
+  };
+
+  return {
+    surfaceClassification,
+    recommendationArtifact,
+    mode: {
+      ...(modeSummary.requested ? { requested: modeSummary.requested } : {}),
+      effective: effectiveMode,
+      source: modeSummary.source,
+      rationale:
+        typeof mode.rationale === "string" && mode.rationale.trim().length > 0
+          ? mode.rationale
+          : modeSummary.rationale,
+      ...(discussionSummary ? { discussionRecommendation: discussionSummary } : {}),
+      ...(effectiveRec?.allowedModes ? { allowedModes: effectiveRec.allowedModes } : {}),
+      surface: effectiveSurface,
+      ...(effectiveRec?.sourceSchema ? { sourceSchema: effectiveRec.sourceSchema } : {}),
+    },
+    evidence: {
+      specsCoverageStatus,
+      specsCoverage: {
+        expectedSpecIds,
+        observedSpecIds,
+        missingSpecIds,
+        unexpectedSpecIds,
+      },
+      runtimeGate: { present: Boolean(runtimeGate), required: obligations.requireRuntimeGate },
+      uiFidelity: { present: Boolean(uiFidelity), required: obligations.requireUiFidelity },
+      renderBundle: { present: Boolean(renderBundle), required: obligations.requireRenderBundle },
+      browserQaBundle: {
+        present: Boolean(browserQaBundle),
+        required: obligations.requireBrowserQaBundle,
+      },
+      obligationProfile: `${effectiveSurface}/${effectiveMode}`,
+    },
+    ...(fullHarness
+      ? {
+          fullHarness: {
+            enabled: fullHarness.enabled === true,
+            ...(typeof fullHarness.runId === "string" ? { runId: fullHarness.runId } : {}),
+            ...(typeof fullHarness.status === "string" ? { status: fullHarness.status } : {}),
+            ...(typeof fullHarness.iterationCount === "number"
+              ? { iterationCount: fullHarness.iterationCount }
+              : {}),
+            ...(typeof fullHarness.bestIteration === "number"
+              ? { bestIteration: fullHarness.bestIteration }
+              : {}),
+            ...(typeof fullHarness.terminationReason === "string"
+              ? { terminationReason: fullHarness.terminationReason }
+              : {}),
+            ...(() => {
+              const cr = asRecord(fullHarness.calibrationRef);
+              if (!cr) return {};
+              return {
+                calibrationRef: {
+                  configPath: typeof cr.configPath === "string" ? cr.configPath : "",
+                  packPath: typeof cr.packPath === "string" ? cr.packPath : "",
+                  packVersion: typeof cr.packVersion === "string" ? cr.packVersion : "",
+                },
+              };
+            })(),
+            ...(asRecord(fullHarness.reviewerSignoff) &&
+            typeof asRecord(fullHarness.reviewerSignoff)?.reviewerId === "string"
+              ? { reviewerId: String(asRecord(fullHarness.reviewerSignoff)?.reviewerId) }
+              : {}),
+            ...(asRecord(fullHarness.reviewerSignoff)?.status &&
+            typeof asRecord(fullHarness.reviewerSignoff)?.status === "string"
+              ? {
+                  reviewerSignoffStatus: String(asRecord(fullHarness.reviewerSignoff)?.status),
+                }
+              : {}),
+            ...(scoringTrace && scoringTrace.length > 0
+              ? (() => {
+                  const latest = asRecord(scoringTrace[scoringTrace.length - 1]);
+                  return {
+                    scoringTraceCount: scoringTrace.length,
+                    ...(typeof latest?.weightedTotal === "number"
+                      ? { latestWeightedTotal: latest.weightedTotal }
+                      : {}),
+                    ...(typeof latest?.l1Total === "number"
+                      ? { latestL1Total: latest.l1Total }
+                      : {}),
+                    ...(typeof latest?.l2Total === "number"
+                      ? { latestL2Total: latest.l2Total }
+                      : {}),
+                  };
+                })()
+              : {}),
+            ...(Array.isArray(fullHarness.reviewerLogs)
+              ? { reviewerLogsCount: fullHarness.reviewerLogs.length }
+              : {}),
+            ...(Array.isArray(fullHarness.limitations)
+              ? { limitations: fullHarness.limitations as string[] }
+              : {}),
+          },
+        }
+      : {}),
+    render: {
+      ...(renderBundle?.renderEvidence.status
+        ? { status: renderBundle.renderEvidence.status }
+        : {}),
+      ...(renderBundle?.renderEvidence.requested !== undefined
+        ? { requested: renderBundle.renderEvidence.requested }
+        : {}),
+      captured: renderCounts.captured,
+      skipped: renderCounts.skipped,
+      failed: renderCounts.failed,
+      malformed: renderBundle === null && Boolean(record.renderEvidence),
+      inlinePayloadViolation,
+    },
+    browserQa: {
+      ...(browserQaBundle?.browserQa.status ? { status: browserQaBundle.browserQa.status } : {}),
+      ...(browserQaBundle?.browserQa.executed !== undefined
+        ? { executed: browserQaBundle.browserQa.executed }
+        : {}),
+      findingsBySeverity: browserQaCounts,
+      ...(Object.keys(browserQaCategoryCounts).length > 0
+        ? { findingsByCategory: browserQaCategoryCounts }
+        : {}),
+      ...(browserQaBundle?.browserQa.summary
+        ? {
+            summaryAggregates: {
+              totalPassed: browserQaTotalPassed,
+              totalFailed: browserQaTotalFailed,
+            },
+            phaseSummary: browserQaBundle.browserQa.summary,
+          }
+        : {}),
+    },
+    ...(calibrationSummary ? { calibration: calibrationSummary } : {}),
+    warnings,
+  };
 }
 
 async function collectSpecContractRefs(
@@ -1436,6 +2154,12 @@ async function evaluateTraceability(
 function buildIdPattern(ids: string[]): RegExp {
   const escaped = ids.map((id) => id.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
   return new RegExp(`\\b(${escaped.join("|")})\\b`);
+}
+
+function asRecord(value: unknown): Record<string, unknown> | undefined {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : undefined;
 }
 
 function formatIdLine(label: string, values: string[]): string {

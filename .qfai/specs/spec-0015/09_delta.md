@@ -11,7 +11,7 @@
 
 - AD-0015-0001: Agent catalog -- 19 consolidated agents across planning/implementation/review/operations with routing-based invocation
 - AD-0015-0002: Standard contract structure -- Mission, Inputs, Deliverables, Stop Conditions, Sign-off (from spec-0008)
-- AD-0015-0003: Orchestrator Protocol -- delegation only, Capability Probe, Simulation Mode (from spec-0008)
+- AD-0015-0003: Orchestrator Protocol -- delegation only, real-delegation Capability Probe, delegation-failure hard stop (from spec-0008)
 - AD-0015-0004: Devils-advocate reviewer -- concrete alternative obligation, 3-FAIL demotion (from spec-0012)
 - AD-0015-0005: Pattern-doubler reviewer -- rationale obligation, N/A default (from spec-0012)
 - AD-0015-0006: All-reviewer FAIL obligation -- concrete alternative required from all reviewers (from spec-0012)
@@ -38,6 +38,8 @@
 
 ## Post-Migration Changes
 
-| Date       | Change Type | IDs Affected | Summary                                                                                                                                                |
-| ---------- | ----------- | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| 2026-04-01 | adopted     | —            | test-design-analyst: Coverage Depth Matrix 出力義務・品質深度チェックリスト参照義務を追加。qa-gatekeeper: テストケース品質深度チェックセクション追加。 |
+| Date       | Change Type | IDs Affected       | Summary                                                                                                                                                                                                                             |
+| ---------- | ----------- | ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-04-19 | adopted     | REQ-0003, REQ-0015 | Capability Probe を事前確認ではなく最初の実委任で判定する方式へ更新し、旧フォールバックを撤廃。委任失敗時は即停止し、失敗要約・修正案内・再試行条件を返す hard-stop 契約を追加。                                                    |
+| 2026-04-01 | adopted     | —                  | test-design-analyst: Coverage Depth Matrix 出力義務・品質深度チェックリスト参照義務を追加。qa-gatekeeper: テストケース品質深度チェックセクション追加。                                                                              |
+| 2026-04-08 | adopted     | REQ-0013, REQ-0014 | Full-Harness Review Profile 追加（review-profiles.yml）、Prototyping Evidence Phase Routing 追加（agent-routing.yml に product-experience-architect）。full-harness インシデントレポートに基づく独立評価パネル構成の routing 反映。 |

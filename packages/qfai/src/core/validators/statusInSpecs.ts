@@ -31,7 +31,7 @@ export async function validateStatusInSpecs(root: string, config: QfaiConfig): P
   const issues: Issue[] = [];
 
   for (const file of files) {
-    if (isOpenQuestionsFile(file)) {
+    if (isOpenQuestionsFile(file) || isDecisionFile(file)) {
       continue;
     }
 
@@ -90,4 +90,8 @@ async function readSafe(filePath: string): Promise<string> {
 
 function isOpenQuestionsFile(filePath: string): boolean {
   return /open-questions\.md$/i.test(path.basename(filePath));
+}
+
+function isDecisionFile(filePath: string): boolean {
+  return /decisions\.md$/i.test(path.basename(filePath));
 }

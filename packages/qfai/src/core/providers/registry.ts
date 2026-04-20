@@ -5,7 +5,12 @@
  * so callers can handle absence without try/catch.
  */
 
-import type { BrowserProvider, ProviderCapability, ProviderLookupResult } from "./types.js";
+import type {
+  BrowserProvider,
+  BrowserQaProvider,
+  ProviderCapability,
+  ProviderLookupResult,
+} from "./types.js";
 
 const CAPABILITY_METHOD_MAP = new Map<ProviderCapability, (keyof BrowserProvider)[]>([
   ["screenshot", ["captureScreenshot"]],
@@ -65,5 +70,25 @@ export class ProviderRegistry {
       return { status: "available", provider };
     }
     return { status: "skipped", provider: undefined };
+  }
+
+  // --- Browser QA provider (WS-B canonical 4-phase) ---
+
+  private qaProviders = new Map<string, BrowserQaProvider>();
+
+  registerQaProvider(provider: BrowserQaProvider): void {
+    if (this.qaProviders.has(provider.providerId)) {
+      throw new Error(`BrowserQaProvider "${provider.providerId}" is already registered.`);
+    }
+    this.qaProviders.set(provider.providerId, provider);
+  }
+
+  getQaProvider(name: string): BrowserQaProvider | undefined {
+    return this.qaProviders.get(name);
+  }
+
+  getFirstQaProvider(): BrowserQaProvider | undefined {
+    const first = this.qaProviders.values().next();
+    return first.done ? undefined : first.value;
   }
 }

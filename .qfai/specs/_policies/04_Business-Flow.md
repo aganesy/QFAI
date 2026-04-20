@@ -419,8 +419,8 @@ flowchart TD
     L --> M
 ```
 
-- UI-bearing 検出: SKILL.md のヒューリスティックで surface type (web-ui, mobile-ui, desktop-ui, mixed, non-ui) を分類
-- サイドカー: 00_index, 10_strategy, 20-23_eval axes, 30_comparison, 31_anchor, 40_contracts, 50_review_bundle, 60_critique_loop
+- UI-bearing 検出: SKILL.md のヒューリスティックで surface type (web, mobile, desktop, mixed, non-ui) を分類
+- サイドカー: 00_index, 10_strategy, 11_design_taste_interview, 20_design_eval_invariant, 21_design_eval_trend_derived, 22_design_eval_product_specific, 23_design_eval_aggregate, 24_design_eval_dynamic_overrides (OPTIONAL), 30_option_comparison, 31_selected_anchor_screen, 40_screen_contracts, 50_review_input_bundle
 - 非 UI プロジェクト: サイドカーは生成されず、既存15ファイルパックのみ出力
 
 ## v1.7.4 UIX-VAL/UIX-REV Validation Flow
@@ -589,6 +589,131 @@ flowchart TD
 | Loop exit         | Accept, plateau, or max cap reached             |
 | Fail-open         | Adapter-level; provider failure never blocks    |
 | Cost ceiling      | Deferred to post-implementation (OQ-0005)       |
+
+## v1.7.13 Canonical Sidecar Convergence
+
+```mermaid
+flowchart TD
+    A[validate.ts pipeline] --> B{Canonical or Legacy?}
+    B -->|Canonical| C[runCanonicalUixValidators]
+    B -->|Legacy/Migration| D[legacy/ddpCompatibility.ts]
+    C --> E[12 modular validators in uix/]
+    E --> F{prototyping.yaml exists?}
+    F -->|Yes| G[validatePrototypingRecommendation]
+    F -->|No| H[QFAI-PROT-153 error]
+    G --> I[sddPreflight gates]
+    I --> J[report.ts prototyping section]
+```
+
+**Canonical/Legacy Separation:**
+
+- Production path: `runCanonicalUixValidators()` in `uix/canonical.ts` runs 12 modular validators
+- Legacy path: `legacy/ddpCompatibility.ts` and `legacy/uixCompatibility.ts` for migration tooling only
+- `validateDdpFields` removed from `validate.ts` pipeline
+
+**Prototyping Module:**
+
+- `prototyping/mode.ts`: mode resolution with existence-based precedence (D-5)
+- `prototyping/recommendationArtifact.ts`: single source of truth for recommendation artifact status
+- `prototyping/recommendationSchema.ts`: key existence checks for precedence decisions
+- SDD preflight gates on valid `prototyping.yaml`
+
+**Report Observability:**
+
+- `report.ts` now includes `## Prototyping` section with mode, obligations, evidence, harness, render, browserQa, calibration subsections
+- Marked as "foundation-only (not integrated into blocking validation in v1.7.13)"
+
+## v1.7.15 rev4 — Prototyping Audit Resolution Flows
+
+### full-harness 拒否フロー (WS-1)
+
+```mermaid
+flowchart TD
+    A[ユーザー: prototyping.yaml 設定] --> B{surface は UI-bearing?}
+    B -- Yes --> C[CLI: mode/surface バリデーション OK]
+    C --> D[derivePrototypingObligations]
+    D --> E[runFullHarness 実行]
+    E --> F[Browser QA サイクル開始]
+    B -- No --> G[CLI: 即座にエラー終了]
+    G --> H[エラー: cli surface では full-harness 不可]
+
+    subgraph 多層防御
+        I[CLI ガード] --> J[derivePrototypingObligations ガード]
+        J --> K[runFullHarness ガード]
+    end
+```
+
+### 画面契約ベース Browser QA フロー (WS-2 + WS-3)
+
+```mermaid
+flowchart TD
+    A[40_screen_contracts.md ロード] --> B[screenContracts.ts: スクリーン一覧パース]
+    B --> C{スクリーン数 > 0?}
+    C -- Yes --> D[uiFidelityBuilder: ターゲット生成]
+    D --> E[browserQa: 各スクリーン測定]
+    E --> F[uiObservation: フェーズ/ファインディング参照収集]
+    F --> G{evidenceRefs.browserQa 非空?}
+    G -- Yes --> H[runtime: iterations に格納]
+    H --> I[prototypingEvidence: サマリー集約]
+    G -- No --> J[ハードフェイル: エビデンスチェーン不完全]
+    C -- No --> K[エラー: 画面定義なし]
+```
+
+### 正規ルートカバレッジフロー (WS-4)
+
+```mermaid
+flowchart TD
+    A[画面契約: ルート定義] --> B[runtimeGateBuilder: canonical path 正規化]
+    B --> C[specCoverage: canonical path 比較]
+    C --> D{全ルートにオブザベーションあり?}
+    D -- Yes --> E[カバレッジ 100%]
+    D -- No --> F[missing_observation レポート]
+```
+
+### L2 構造化パース優先フロー (WS-5)
+
+```mermaid
+flowchart TD
+    A[l2Evidence: 正規アーティファクト確認] --> B[20-23 系ファイル構造化セクションパース]
+    B --> C[04_Sources.md 構造化フィールドパース]
+    C --> D[40_screen_contracts.md スクリーン情報パース]
+    D --> E{構造化パース結果あり?}
+    E -- Yes --> F[ヒューリスティックフォールバック skip]
+    F --> G[panelScore: 構造化データからスコア算出]
+    E -- No --> H[ヒューリスティックフォールバック実行 + warning ログ]
+    H --> G
+```
+
+### 実装依存関係 (全 WS)
+
+```mermaid
+flowchart LR
+    S1["Step 1: 契約ソース確立\n(WS-2 基盤)"] --> S2["Step 2: 画面レベルターゲット\n(WS-2)"]
+    S2 --> S3["Step 3: Browser QA エビデンス\n(WS-3)"]
+    S3 --> S4["Step 4: ルート/カバレッジ\n(WS-4)"]
+    S4 --> S5["Step 5: L2 構造化パース\n(WS-5)"]
+    S5 --> S6["Step 6: Docs/Tests 整理\n(WS-6)"]
+
+    S1 -.-> |"WS-1 は独立 (並行可能)"| WS1["WS-1: full-harness 拒否"]
+```
+
+## v1.7.17 Design Guideline Traceability Flow
+
+```mermaid
+flowchart TD
+    A["/qfai-discussion UI-bearing 判定"] --> B["design guideline research 実施"]
+    B --> C["04_Sources.md に design_guideline_research を記録"]
+    C --> D["21_design_eval_trend_derived.md に quantitative score_anchors を導出"]
+    D --> E["qfai validate: UIX-VAL-T05 guideline coverage"]
+    D --> F["qfai validate: UIX-VAL-T06 anchor concreteness"]
+    E --> G["warning-first triage / migration note"]
+    F --> G
+```
+
+補足:
+
+- non-UI pack では B〜F は not-applicable とする。
+- guideline research は固定ルール集の強制ではなく、Material Design / WCAG / Apple HIG / 採用 UI ライブラリなど project-context に応じた参照を許容する。
 
 ## v1.8.0 Web Research Enhancement Flow
 

@@ -182,8 +182,8 @@ describe("findingToIssue", () => {
     const finding = makeFinding({
       ruleId: "DA-001",
       severityTier: 1,
-      message: "CTA hierarchy violation",
-      guidance: "Reduce to single primary CTA",
+      message: "Primary action hierarchy violation",
+      guidance: "Reduce to a single primary task",
       evidence: ["button.primary x3"],
       file: "03_Story-Workshop.md",
     });
@@ -193,11 +193,11 @@ describe("findingToIssue", () => {
     expect(result.code).toBe("DA-001");
     expect(result.severity).toBe("error");
     expect(result.rule).toBe("audit.hierarchy");
-    expect(result.message).toBe("CTA hierarchy violation");
-    expect(result.suggested_action).toBe("Reduce to single primary CTA");
+    expect(result.message).toBe("Primary action hierarchy violation");
+    expect(result.suggested_action).toBe("Reduce to a single primary task");
     expect(result.file).toBe("03_Story-Workshop.md");
     expect(result.refs).toEqual(["button.primary x3"]);
-    expect(result.category).toBe("compatibility");
+    expect(result.category).toBe("canonical");
   });
 
   it("omits refs when evidence is empty", () => {
@@ -208,7 +208,7 @@ describe("findingToIssue", () => {
 });
 
 // ---------------------------------------------------------------------------
-// TDD-0005 (TC-0010-0009): Profile T1 default → error
+// TDD-0005 (TC-0010-0009): Profile T1 default ↁEerror
 // ---------------------------------------------------------------------------
 
 describe("mapSeverity", () => {
@@ -225,7 +225,7 @@ describe("mapSeverity", () => {
   });
 
   // ---------------------------------------------------------------------------
-  // TDD-0006 (TC-0010-0010): Profile T2 default → warning
+  // TDD-0006 (TC-0010-0010): Profile T2 default ↁEwarning
   // ---------------------------------------------------------------------------
 
   it("returns warning for tier 2 with default profile", () => {
@@ -237,7 +237,7 @@ describe("mapSeverity", () => {
   });
 
   // ---------------------------------------------------------------------------
-  // TDD-0007 (TC-0010-0011): Profile T2 strict → error
+  // TDD-0007 (TC-0010-0011): Profile T2 strict ↁEerror
   // ---------------------------------------------------------------------------
 
   it("returns error for tier 2 with strict profile", () => {
@@ -270,13 +270,13 @@ describe("mapSeverity", () => {
 
 // ---------------------------------------------------------------------------
 // TDD-0012 (TC-0010-0002): Clean UI-bearing all pass
-// TDD-0013 (TC-0010-0003): Missing primary CTA → QFAI-AUD-001
-// TDD-0014 (TC-0010-0004): Token drift over threshold → QFAI-AUD-004
+// TDD-0013 (TC-0010-0003): Missing primary task ↁEQFAI-AUD-001
+// TDD-0014 (TC-0010-0004): Token drift over threshold ↁEQFAI-AUD-004
 // TDD-0015 (TC-0010-0005): Token drift under threshold (boundary)
-// TDD-0016 (TC-0010-0006): Dual-primary CTA → QFAI-AUD-020 warning
+// TDD-0016 (TC-0010-0006): Multiple primary tasks ↁEQFAI-AUD-020 warning
 // ---------------------------------------------------------------------------
 
-describe("validateDesignAudit — audit rules", { timeout: 10000 }, () => {
+describe("validateDesignAudit  Eaudit rules", { timeout: 10000 }, () => {
   let root: string;
 
   beforeEach(async () => {
@@ -292,49 +292,100 @@ describe("validateDesignAudit — audit rules", { timeout: 10000 }, () => {
 
   async function createUiBearingPack(content: string): Promise<void> {
     const packDir = path.join(root, ".qfai", "discussion", "discussion-20240101000000000");
-    await mkdir(packDir, { recursive: true });
+    await mkdir(path.join(packDir, "uiux"), { recursive: true });
     await writeFile(path.join(packDir, "03_Story-Workshop.md"), content, "utf-8");
   }
 
-  it("TDD-0012: returns empty array for clean UI-bearing fixture", async () => {
-    await createUiBearingPack(
-      [
-        "# 03 Story Workshop",
-        "<div>UI content</div>",
-        "## Design Direction Summary",
-        "### CTA Hierarchy",
-        "- Primary: Submit order",
-        "- Secondary: Cancel",
-        "### State Coverage",
-        "- empty: Shows empty state",
-        "- loading: Shows spinner",
-        "- error: Shows error message",
-        "- populated: Shows data",
-        "### Anchor Screen Selection",
-        "Selected: Option A — best fit for workflow",
-      ].join("\n"),
+  async function writeCanonicalAuditArtifacts(
+    contractsLines: string[],
+    comparisonLines = [
+      "# 30 Option Comparison",
+      "",
+      "## Option Comparison",
+      "",
+      "- **Option A**: Primary dashboard",
+      "- **Option B**: Dense table view",
+    ],
+    anchorLines = [
+      "# 31 Selected Anchor Screen",
+      "",
+      "selected_option: Option A",
+      "",
+      "Best matches current workflow",
+    ],
+  ): Promise<void> {
+    const packDir = path.join(root, ".qfai", "discussion", "discussion-20240101000000000", "uiux");
+    await writeFile(
+      path.join(packDir, "40_screen_contracts.md"),
+      contractsLines.join("\n"),
+      "utf-8",
     );
+    await writeFile(
+      path.join(packDir, "30_option_comparison.md"),
+      comparisonLines.join("\n"),
+      "utf-8",
+    );
+    await writeFile(
+      path.join(packDir, "31_selected_anchor_screen.md"),
+      anchorLines.join("\n"),
+      "utf-8",
+    );
+  }
+
+  it("TDD-0012: returns empty array for clean UI-bearing fixture", async () => {
+    await createUiBearingPack(["# 03 Story Workshop", "<div>UI content</div>"].join("\n"));
+    await writeCanonicalAuditArtifacts([
+      "# Screen Contracts",
+      "",
+      "### Screen: Dashboard",
+      "",
+      "- screen_id: dashboard",
+      "- route: /dashboard",
+      "- purpose: Review current status",
+      "- actor: end-user",
+      "- primary_tasks:",
+      "  - Submit order",
+      "- required_states:",
+      "  - default: Data visible",
+      "  - loading: Spinner",
+      "  - empty: Empty state",
+      "  - error: Error with retry",
+      "- transitions:",
+      "  - default -> loading: Refresh requested",
+      "- observable_outcomes:",
+      "  - Order summary is visible",
+      "- notes_for_verify: Check state coverage",
+      "- notes_for_reviewer: Focus on primary action",
+    ]);
     const cfg = config();
     const issues = await validateDesignAudit(root, cfg);
     expect(issues).toEqual([]);
   });
 
-  it("TDD-0013: missing primary CTA → QFAI-AUD-001 error", async () => {
-    await createUiBearingPack(
-      [
-        "# 03 Story Workshop",
-        "<div>UI content</div>",
-        "## Design Direction Summary",
-        "### CTA Hierarchy",
-        "- Secondary: Cancel",
-        "- Tertiary: Help",
-        "### State Coverage",
-        "- empty: Shows empty state",
-        "- loading: Shows spinner",
-        "- error: Shows error message",
-        "- populated: Shows data",
-      ].join("\n"),
-    );
+  it("TDD-0013: missing primary task ↁEQFAI-AUD-001 error", async () => {
+    await createUiBearingPack(["# 03 Story Workshop", "<div>UI content</div>"].join("\n"));
+    await writeCanonicalAuditArtifacts([
+      "# Screen Contracts",
+      "",
+      "### Screen: Dashboard",
+      "",
+      "- screen_id: dashboard",
+      "- route: /dashboard",
+      "- purpose: Review current status",
+      "- actor: end-user",
+      "- primary_tasks:",
+      "- required_states:",
+      "  - default: Data visible",
+      "  - loading: Spinner",
+      "  - empty: Empty state",
+      "  - error: Error with retry",
+      "- transitions:",
+      "  - default -> loading: Refresh requested",
+      "- observable_outcomes:",
+      "  - Order summary is visible",
+      "- notes_for_verify: Check state coverage",
+      "- notes_for_reviewer: Focus on primary action",
+    ]);
     const cfg = config();
     const issues = await validateDesignAudit(root, cfg);
     const ctaIssue = issues.find((i) => i.code === "QFAI-AUD-001");
@@ -342,18 +393,31 @@ describe("validateDesignAudit — audit rules", { timeout: 10000 }, () => {
     expect(ctaIssue?.severity).toBe("error");
   });
 
-  it("TDD-0014: token drift over threshold → QFAI-AUD-004", async () => {
-    await createUiBearingPack(
-      [
-        "# 03 Story Workshop",
-        "<div>UI content</div>",
-        "## Design Direction Summary",
-        "### CTA Hierarchy",
-        "- Primary: Submit",
-        "### State Coverage",
-        "- empty: Shows empty state",
-      ].join("\n"),
-    );
+  it("TDD-0014: token drift over threshold ↁEQFAI-AUD-004", async () => {
+    await createUiBearingPack(["# 03 Story Workshop", "<div>UI content</div>"].join("\n"));
+    await writeCanonicalAuditArtifacts([
+      "# Screen Contracts",
+      "",
+      "### Screen: Dashboard",
+      "",
+      "- screen_id: dashboard",
+      "- route: /dashboard",
+      "- purpose: Review current status",
+      "- actor: end-user",
+      "- primary_tasks:",
+      "  - Submit",
+      "- required_states:",
+      "  - default: Data visible",
+      "  - loading: Spinner",
+      "  - empty: Empty state",
+      "  - error: Error with retry",
+      "- transitions:",
+      "  - default -> loading: Refresh requested",
+      "- observable_outcomes:",
+      "  - Order summary is visible",
+      "- notes_for_verify: Check state coverage",
+      "- notes_for_reviewer: Focus on primary action",
+    ]);
     // Default token dir: contractsDir/design (.qfai/contracts/design)
     const tokensDir = path.join(root, ".qfai", "contracts", "design");
     await mkdir(tokensDir, { recursive: true });
@@ -383,18 +447,31 @@ describe("validateDesignAudit — audit rules", { timeout: 10000 }, () => {
     expect(tokenIssue?.severity).toBe("error");
   });
 
-  it("TDD-0015: token drift under threshold → no QFAI-AUD-004", async () => {
-    await createUiBearingPack(
-      [
-        "# 03 Story Workshop",
-        "<div>UI content</div>",
-        "## Design Direction Summary",
-        "### CTA Hierarchy",
-        "- Primary: Submit",
-        "### State Coverage",
-        "- empty: Shows empty state",
-      ].join("\n"),
-    );
+  it("TDD-0015: token drift under threshold ↁEno QFAI-AUD-004", async () => {
+    await createUiBearingPack(["# 03 Story Workshop", "<div>UI content</div>"].join("\n"));
+    await writeCanonicalAuditArtifacts([
+      "# Screen Contracts",
+      "",
+      "### Screen: Dashboard",
+      "",
+      "- screen_id: dashboard",
+      "- route: /dashboard",
+      "- purpose: Review current status",
+      "- actor: end-user",
+      "- primary_tasks:",
+      "  - Submit",
+      "- required_states:",
+      "  - default: Data visible",
+      "  - loading: Spinner",
+      "  - empty: Empty state",
+      "  - error: Error with retry",
+      "- transitions:",
+      "  - default -> loading: Refresh requested",
+      "- observable_outcomes:",
+      "  - Order summary is visible",
+      "- notes_for_verify: Check state coverage",
+      "- notes_for_reviewer: Focus on primary action",
+    ]);
     // Default token dir: contractsDir/design (.qfai/contracts/design)
     const tokensDir = path.join(root, ".qfai", "contracts", "design");
     await mkdir(tokensDir, { recursive: true });
@@ -421,20 +498,32 @@ describe("validateDesignAudit — audit rules", { timeout: 10000 }, () => {
     expect(tokenIssue).toBeUndefined();
   });
 
-  it("TDD-0016: dual primary CTAs → QFAI-AUD-020 warning", async () => {
-    await createUiBearingPack(
-      [
-        "# 03 Story Workshop",
-        "<div>UI content</div>",
-        "## Design Direction Summary",
-        "### CTA Hierarchy",
-        "- Primary: Submit order",
-        "- Primary: Save draft",
-        "- Secondary: Cancel",
-        "### State Coverage",
-        "- empty: Shows empty state",
-      ].join("\n"),
-    );
+  it("TDD-0016: multiple primary tasks ↁEQFAI-AUD-020 warning", async () => {
+    await createUiBearingPack(["# 03 Story Workshop", "<div>UI content</div>"].join("\n"));
+    await writeCanonicalAuditArtifacts([
+      "# Screen Contracts",
+      "",
+      "### Screen: Dashboard",
+      "",
+      "- screen_id: dashboard",
+      "- route: /dashboard",
+      "- purpose: Review current status",
+      "- actor: end-user",
+      "- primary_tasks:",
+      "  - Submit order",
+      "  - Save draft",
+      "- required_states:",
+      "  - default: Data visible",
+      "  - loading: Spinner",
+      "  - empty: Empty state",
+      "  - error: Error with retry",
+      "- transitions:",
+      "  - default -> loading: Refresh requested",
+      "- observable_outcomes:",
+      "  - Order summary is visible",
+      "- notes_for_verify: Check state coverage",
+      "- notes_for_reviewer: Focus on primary action",
+    ]);
     const cfg = config();
     const issues = await validateDesignAudit(root, cfg);
     const ctaIssue = issues.find((i) => i.code === "QFAI-AUD-020");
@@ -463,7 +552,7 @@ describe("deduplicateFindings", () => {
     return {
       code,
       severity: "warning",
-      category: "compatibility",
+      category: "canonical",
       message,
     };
   }

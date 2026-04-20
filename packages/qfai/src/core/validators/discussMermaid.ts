@@ -1,8 +1,7 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
-import { collectFiles } from "../fs.js";
-import { validatePackName } from "../packLocator.js";
+import { findPacks, latestPack } from "../packLocator.js";
 import { escapeRegExp } from "../regex.js";
 import type { Issue } from "../types.js";
 import { issue } from "./utils.js";
@@ -11,42 +10,14 @@ const DISCUSSION_PACK_FLOW_FILE = "03_Story-Workshop.md";
 const MERMAID_START_RE = /^\s*(`{3,}|~{3,})\s*mermaid\b/i;
 const FLOW_OR_SEQUENCE_RE = /\b(?:sequenceDiagram|flowchart)\b/;
 
-type DiscussPackFile = {
-  file: string;
-  kind: "current" | "legacy";
-};
-
 export async function validateDiscussionMermaid(root: string): Promise<Issue[]> {
   const discussionRootDir = path.join(root, ".qfai", "discussion");
-
-  const discussionPackMarkdownFiles = await collectFiles(discussionRootDir, {
-    extensions: [".md"],
-  });
-  const discussionPackFiles: DiscussPackFile[] = [];
-  for (const file of discussionPackMarkdownFiles) {
-    const fileName = path.basename(file);
-    if (fileName !== DISCUSSION_PACK_FLOW_FILE) {
-      continue;
-    }
-    const discussionDirName = path.basename(path.dirname(file));
-    const nameValidation = validatePackName("discussion", discussionDirName);
-    if (nameValidation.isCanonical) {
-      discussionPackFiles.push({ file, kind: "current" });
-      continue;
-    }
-    if (nameValidation.isLegacy) {
-      discussionPackFiles.push({ file, kind: "legacy" });
-    }
-  }
-  if (discussionPackFiles.length === 0) {
-    return [];
-  }
-
-  const hasCurrentPack = discussionPackFiles.some(({ kind }) => kind === "current");
-  const hasLegacyPack = discussionPackFiles.some(({ kind }) => kind === "legacy");
+  const discussionPacks = await findPacks(discussionRootDir, "discussion");
+  const currentPack = latestPack(discussionPacks);
+  const hasLegacyPack = discussionPacks.some((pack) => pack.isLegacy);
 
   const issues: Issue[] = [];
-  if (!hasCurrentPack && hasLegacyPack) {
+  if (!currentPack && hasLegacyPack) {
     issues.push(
       issue(
         "QFAI-DPACK-010",
@@ -59,24 +30,29 @@ export async function validateDiscussionMermaid(root: string): Promise<Issue[]> 
       ),
     );
   }
+  if (!currentPack) {
+    return issues;
+  }
 
-  for (const { file } of discussionPackFiles) {
+  const file = path.join(currentPack.path, DISCUSSION_PACK_FLOW_FILE);
+  try {
     const text = await readFile(file, "utf-8");
-    if (containsMermaidFlowDiagram(text)) {
-      continue;
+    if (!containsMermaidFlowDiagram(text)) {
+      issues.push(
+        issue(
+          "QFAI-DPACK-009",
+          "03_Story-Workshop.md の Mermaid block に flowchart または sequenceDiagram が見つかりません。",
+          "error",
+          file,
+          "discussionMermaid.flowOrSequence",
+          undefined,
+          "change",
+          "Story Workshop セクションに mermaid fenced block で flowchart または sequenceDiagram を記述してください。",
+        ),
+      );
     }
-    issues.push(
-      issue(
-        "QFAI-DPACK-009",
-        "03_Story-Workshop.md の Mermaid block に flowchart または sequenceDiagram が見つかりません。",
-        "error",
-        file,
-        "discussionMermaid.flowOrSequence",
-        undefined,
-        "change",
-        "Story Workshop セクションに mermaid fenced block で flowchart または sequenceDiagram を記述してください。",
-      ),
-    );
+  } catch {
+    return issues;
   }
   return issues;
 }

@@ -149,7 +149,7 @@ describe("TC-0003-0053: 00_index.md references canonical family", () => {
     const indexPath = path.join(uiuxTemplateDir, "00_index.md");
     const content = await readFile(indexPath, "utf-8");
     // References evaluation axis files
-    expect(content).toMatch(/eval_axis|evaluation axis|scoring axes/i);
+    expect(content).toMatch(/design_eval|evaluation layer|scoring axes/i);
     // No standalone 4-axis model references
     expect(content).not.toMatch(/\b4-axis model\b/i);
     expect(content).not.toMatch(/\bfour-axis model\b/i);
@@ -160,11 +160,11 @@ describe("TC-0003-0053: 00_index.md references canonical family", () => {
 describe("TC-0003-0054: old template deprecation marking", () => {
   it("canonical templates use evaluation axis naming, not deprecated 4-axis", async () => {
     const files = await readdir(uiuxTemplateDir);
-    const evalAxisFiles = files.filter((f) => f.includes("eval_axis"));
+    const evalAxisFiles = files.filter((f) => /^2[0-3]_design_eval_/.test(f));
     expect(evalAxisFiles.length).toBeGreaterThanOrEqual(4);
-    // Each eval axis file uses individual axis naming (usability, consistency, etc.)
+    // Each eval file uses 3-layer naming
     for (const f of evalAxisFiles) {
-      expect(f).toMatch(/eval_axis_(usability|consistency|accessibility|delight)/);
+      expect(f).toMatch(/design_eval_(invariant|trend_derived|product_specific|aggregate)/);
     }
   });
 });
@@ -175,22 +175,11 @@ describe("TC-0003-0054: old template deprecation marking", () => {
 
 // QFAI:SPEC-0004:TC-0004-0035
 describe("TC-0004-0035: canonical entrypoint wiring", () => {
-  it("validateProject source calls runAllUixValidators", async () => {
+  it("validateProject source calls runCanonicalUixValidators", async () => {
     const validateSrc = await readFile(
       path.join(repoRoot, "packages", "qfai", "src", "core", "validate.ts"),
       "utf-8",
     );
-    expect(validateSrc).toContain("runAllUixValidators");
-  });
-});
-
-// QFAI:SPEC-0004:TC-0004-0036
-describe("TC-0004-0036: runAllUixValidators export exists", () => {
-  it("runAllUixValidators is exported from uixValidators module", async () => {
-    const validatorsSrc = await readFile(
-      path.join(repoRoot, "packages", "qfai", "src", "core", "validators", "uixValidators.ts"),
-      "utf-8",
-    );
-    expect(validatorsSrc).toMatch(/export\s+(async\s+)?function\s+runAllUixValidators/);
+    expect(validateSrc).toContain("runCanonicalUixValidators");
   });
 });

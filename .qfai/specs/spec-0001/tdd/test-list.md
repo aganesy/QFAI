@@ -1,28 +1,28 @@
 # TDD Execution Ledger
 
-| TDD-ID   | TC-Refs      | Layer       | Test file | Selector              | Status | DR-ID | Evidence                        |
-| -------- | ------------ | ----------- | --------- | --------------------- | ------ | ----- | ------------------------------- |
-| TDD-0001 | TC-0001-0001 | integration | TBD       | migrated coverage row | todo   |       | generated from 06_Test-Cases.md |
-| TDD-0002 | TC-0001-0002 | integration | TBD       | migrated coverage row | todo   |       | generated from 06_Test-Cases.md |
-| TDD-0003 | TC-0001-0003 | integration | TBD       | migrated coverage row | todo   |       | generated from 06_Test-Cases.md |
-| TDD-0004 | TC-0001-0004 | integration | TBD       | migrated coverage row | todo   |       | generated from 06_Test-Cases.md |
-| TDD-0005 | TC-0001-0005 | integration | TBD       | migrated coverage row | todo   |       | generated from 06_Test-Cases.md |
-| TDD-0006 | TC-0001-0006 | integration | TBD       | migrated coverage row | todo   |       | generated from 06_Test-Cases.md |
-| TDD-0007 | TC-0001-0007 | integration | TBD       | migrated coverage row | todo   |       | generated from 06_Test-Cases.md |
-| TDD-0008 | TC-0001-0008 | integration | TBD       | migrated coverage row | todo   |       | generated from 06_Test-Cases.md |
-| TDD-0009 | TC-0001-0009 | integration | TBD       | migrated coverage row | todo   |       | generated from 06_Test-Cases.md |
-| TDD-0010 | TC-0001-0010 | integration | TBD       | migrated coverage row | todo   |       | generated from 06_Test-Cases.md |
-| TDD-0011 | TC-0001-0011 | integration | TBD       | migrated coverage row | todo   |       | generated from 06_Test-Cases.md |
-| TDD-0012 | TC-0001-0012 | integration | TBD       | migrated coverage row | todo   |       | generated from 06_Test-Cases.md |
-| TDD-0013 | TC-0001-0013 | integration | TBD       | migrated coverage row | todo   |       | generated from 06_Test-Cases.md |
-| TDD-0014 | TC-0001-0014 | integration | TBD       | migrated coverage row | todo   |       | generated from 06_Test-Cases.md |
-| TDD-0015 | TC-0001-0015 | integration | TBD       | migrated coverage row | todo   |       | generated from 06_Test-Cases.md |
-| TDD-0016 | TC-0001-0016 | integration | TBD       | migrated coverage row | todo   |       | generated from 06_Test-Cases.md |
-| TDD-0017 | TC-0001-0017 | integration | TBD       | migrated coverage row | todo   |       | generated from 06_Test-Cases.md |
-| TDD-0018 | TC-0001-0018 | integration | TBD       | migrated coverage row | todo   |       | generated from 06_Test-Cases.md |
-| TDD-0019 | TC-0001-0019 | integration | TBD       | migrated coverage row | todo   |       | generated from 06_Test-Cases.md |
-| TDD-0020 | TC-0001-0020 | integration | TBD       | migrated coverage row | todo   |       | generated from 06_Test-Cases.md |
-| TDD-0021 | TC-0001-0021 | integration | TBD       | migrated coverage row | todo   |       | generated from 06_Test-Cases.md |
-| TDD-0022 | TC-0001-0022 | integration | TBD       | migrated coverage row | todo   |       | generated from 06_Test-Cases.md |
-| TDD-0023 | TC-0001-0023 | integration | TBD       | migrated coverage row | todo   |       | generated from 06_Test-Cases.md |
-| TDD-0024 | TC-0001-0024 | integration | TBD       | migrated coverage row | todo   |       | generated from 06_Test-Cases.md |
+| TDD-ID   | TC-Refs      | Layer       | Test file                                                | Selector                                                  | Status    | DR-ID        | Evidence                          |
+| -------- | ------------ | ----------- | -------------------------------------------------------- | --------------------------------------------------------- | --------- | ------------ | --------------------------------- |
+| TDD-0001 | TC-0001-0001 | integration | packages/qfai/tests/integration/specPackSpec0001.test.ts | TC-0001-0001: REQUIRED_LAYERED_SPEC_FILES_V1421 entries   | exception | DR-0001-0002 | one-shot GREEN 2026-04-14 24 pass |
+| TDD-0002 | TC-0001-0002 | integration | packages/qfai/tests/integration/specPackSpec0001.test.ts | TC-0001-0002: REQUIRED_LAYERED_SHARED_FILES_V1421 entries | exception | DR-0001-0002 | one-shot GREEN 2026-04-14 24 pass |
+| TDD-0003 | TC-0001-0003 | integration | packages/qfai/tests/integration/specPackSpec0001.test.ts | TC-0001-0003: v1421 marker detection                      | exception | DR-0001-0002 | one-shot GREEN 2026-04-14 24 pass |
+| TDD-0004 | TC-0001-0004 | integration | packages/qfai/tests/integration/specPackSpec0001.test.ts | TC-0001-0004: v1417 fallback detection                    | exception | DR-0001-0002 | one-shot GREEN 2026-04-14 24 pass |
+| TDD-0005 | TC-0001-0005 | integration | packages/qfai/tests/integration/specPackSpec0001.test.ts | TC-0001-0005: ID format rules                             | exception | DR-0001-0002 | one-shot GREEN 2026-04-14 24 pass |
+| TDD-0006 | TC-0001-0006 | integration | packages/qfai/tests/integration/specPackSpec0001.test.ts | TC-0001-0006: 5-stage traceability chain                  | exception | DR-0001-0002 | one-shot GREEN 2026-04-14 24 pass |
+| TDD-0007 | TC-0001-0007 | integration | packages/qfai/tests/integration/specPackSpec0001.test.ts | TC-0001-0007: AC -> TC traceability                       | exception | DR-0001-0002 | one-shot GREEN 2026-04-14 24 pass |
+| TDD-0008 | TC-0001-0008 | integration | packages/qfai/tests/integration/specPackSpec0001.test.ts | TC-0001-0008: BR -> EX traceability                       | exception | DR-0001-0002 | one-shot GREEN 2026-04-14 24 pass |
+| TDD-0009 | TC-0001-0009 | integration | packages/qfai/tests/integration/specPackSpec0001.test.ts | TC-0001-0009: EX -> TC traceability                       | exception | DR-0001-0002 | one-shot GREEN 2026-04-14 24 pass |
+| TDD-0010 | TC-0001-0010 | integration | packages/qfai/tests/integration/specPackSpec0001.test.ts | TC-0001-0010: Upper-to-lower reference prohibition        | exception | DR-0001-0002 | one-shot GREEN 2026-04-14 24 pass |
+| TDD-0011 | TC-0001-0011 | integration | packages/qfai/tests/integration/specPackSpec0001.test.ts | TC-0001-0011: Lower-to-upper reference allowed            | exception | DR-0001-0002 | one-shot GREEN 2026-04-14 24 pass |
+| TDD-0012 | TC-0001-0012 | integration | packages/qfai/tests/integration/specPackSpec0001.test.ts | TC-0001-0012: Escalation Hook triggers                    | exception | DR-0001-0002 | one-shot GREEN 2026-04-14 24 pass |
+| TDD-0013 | TC-0001-0013 | integration | packages/qfai/tests/integration/specPackSpec0001.test.ts | TC-0001-0013: Drift Protocol core rule                    | exception | DR-0001-0002 | one-shot GREEN 2026-04-14 24 pass |
+| TDD-0014 | TC-0001-0014 | integration | packages/qfai/tests/integration/specPackSpec0001.test.ts | TC-0001-0014: Drift Protocol 5-step procedure             | exception | DR-0001-0002 | one-shot GREEN 2026-04-14 24 pass |
+| TDD-0015 | TC-0001-0015 | integration | packages/qfai/tests/integration/specPackSpec0001.test.ts | TC-0001-0015: Drift Protocol allowed exceptions           | exception | DR-0001-0002 | one-shot GREEN 2026-04-14 24 pass |
+| TDD-0016 | TC-0001-0016 | integration | packages/qfai/tests/integration/specPackSpec0001.test.ts | TC-0001-0016: Skill catalog entries                       | exception | DR-0001-0002 | one-shot GREEN 2026-04-14 24 pass |
+| TDD-0017 | TC-0001-0017 | integration | packages/qfai/tests/integration/specPackSpec0001.test.ts | TC-0001-0017: Skill dependency DAG                        | exception | DR-0001-0002 | one-shot GREEN 2026-04-14 24 pass |
+| TDD-0018 | TC-0001-0018 | integration | packages/qfai/tests/integration/specPackSpec0001.test.ts | TC-0001-0018: Deprecated skill status                     | exception | DR-0001-0002 | one-shot GREEN 2026-04-14 24 pass |
+| TDD-0019 | TC-0001-0019 | integration | packages/qfai/tests/integration/specPackSpec0001.test.ts | TC-0001-0019: Canonical Workflow Stages                   | exception | DR-0001-0002 | one-shot GREEN 2026-04-14 24 pass |
+| TDD-0020 | TC-0001-0020 | integration | packages/qfai/tests/integration/specPackSpec0001.test.ts | TC-0001-0020: Constitution Articles                       | exception | DR-0001-0002 | one-shot GREEN 2026-04-14 24 pass |
+| TDD-0021 | TC-0001-0021 | integration | packages/qfai/tests/integration/specPackSpec0001.test.ts | TC-0001-0021: Discussion stage artifacts                  | exception | DR-0001-0002 | one-shot GREEN 2026-04-14 24 pass |
+| TDD-0022 | TC-0001-0022 | integration | packages/qfai/tests/integration/specPackSpec0001.test.ts | TC-0001-0022: Specs stage artifacts                       | exception | DR-0001-0002 | one-shot GREEN 2026-04-14 24 pass |
+| TDD-0023 | TC-0001-0023 | integration | packages/qfai/tests/integration/specPackSpec0001.test.ts | TC-0001-0023: 01_Spec Parent CAP reference                | exception | DR-0001-0002 | one-shot GREEN 2026-04-14 24 pass |
+| TDD-0024 | TC-0001-0024 | integration | packages/qfai/tests/integration/specPackSpec0001.test.ts | TC-0001-0024: spec-0001 Parent CAP verification           | exception | DR-0001-0002 | one-shot GREEN 2026-04-14 24 pass |

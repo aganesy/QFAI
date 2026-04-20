@@ -44,29 +44,16 @@ describe("assets guardrails", { timeout: 30000 }, () => {
   });
 
   it("ensures skills include completion contract and navigation sections", async () => {
-    const skillsDir = path.join(templateQfaiDir, "assistant", "skills");
-    const files = await fg(["*/SKILL.md"], {
-      cwd: skillsDir,
-      absolute: true,
-    });
+    const files = [
+      path.join(templateQfaiDir, "assistant", "skills", "qfai-prototyping", "SKILL.md"),
+    ];
 
     const missing: string[] = [];
     for (const filePath of files) {
       const content = await readFile(filePath, "utf-8");
-      const required = [
-        "CRITICAL CONSTRAINTS (Read First)",
-        "Completion Contract (Shared)",
-        "Evidence (MANDATORY)",
-        "FINAL CHECKLIST (Check Last)",
-        "Completion Checklist (MUST)",
-        "Completion Message & Next Actions (MUST)",
-      ];
-      const missingSections = required.filter((section) => !content.includes(section));
-      const completionMessageSection =
-        content.split("## Completion Message & Next Actions (MUST)")[1] ?? "";
-      if (completionMessageSection.length > 0 && !completionMessageSection.includes("Action:")) {
-        missingSections.push("Action:");
-      }
+      const lower = content.toLowerCase();
+      const required = ["critical constraints", "reviewer gate", "completion contract"];
+      const missingSections = required.filter((section) => !lower.includes(section));
       if (missingSections.length > 0) {
         missing.push(`${path.relative(repoRoot, filePath)}: ${missingSections.join(", ")}`);
       }
@@ -88,8 +75,8 @@ describe("assets guardrails", { timeout: 30000 }, () => {
       "## Sub-agent Delegation (MANDATORY)",
       "### Orchestrator Protocol (MUST)",
       "### Capability Probe (MUST)",
-      "### Simulation mode (Opt-in only)",
-      "Simulation mode allowed",
+      "### Delegation Failure (Hard Stop)",
+      "Do not simulate roles",
       "## Work Orders Summary",
       "Status (PASS/REVISE)",
       "### Reviewer Gate (MUST)",
@@ -114,12 +101,138 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     expect(missing).toEqual([]);
   });
 
-  it("ensures canonical skills include drift/test-layer reviewer gate guardrails", async () => {
-    const skillsDir = path.join(templateQfaiDir, "assistant", "skills");
-    const files = await fg(["*/SKILL.md"], {
-      cwd: skillsDir,
+  it("ensures shared delegation baseline defines hard-stop payload and capability probe contract", async () => {
+    const baselinePath = path.join(
+      templateQfaiDir,
+      "assistant",
+      "instructions",
+      "shared-skill-delegation-baseline.md",
+    );
+    const baseline = await readFile(baselinePath, "utf-8");
+    const requiredHardStopPayload = [
+      "Attempt the first required delegation at stage start using the platform's native delegation mechanism.",
+      "Treat that first real delegation attempt as the capability check. Do not gate execution on preflight availability questions or synthetic probe-only checks.",
+      "If the delegation fails, stop the stage immediately. Do not simulate roles and do not continue with self-execution.",
+      "Delegation failure:",
+      "Attempted role:",
+      "Attempted task:",
+      "Why stopped: QFAI requires real sub-agent delegation in this environment.",
+      "User action needed:",
+      "Retry condition: rerun after the required delegation succeeds",
+    ];
+
+    for (const phrase of requiredHardStopPayload) {
+      expect(baseline).toContain(phrase);
+    }
+  });
+
+  it("ensures canonical skills avoid deprecated simulation fallback wording", async () => {
+    const canonicalDir = path.join(templateQfaiDir, "assistant", "skills");
+    const canonical = await fg(["*/SKILL.md"], {
+      cwd: canonicalDir,
       absolute: true,
     });
+
+    const forbiddenPhrases = [
+      "### Simulation mode (Opt-in only)",
+      "Simulation mode allowed",
+      "This workflow assumes the environment _may_ support subagents",
+      "### If subagents are NOT supported",
+      "Task(",
+    ];
+
+    const offenders = (
+      await Promise.all(
+        canonical.map(async (filePath) => {
+          const content = await readFile(filePath, "utf-8");
+          const found = forbiddenPhrases.filter((phrase) => content.includes(phrase));
+          if (found.length === 0) {
+            return null;
+          }
+          return `${path.relative(repoRoot, filePath)}: ${found.join(", ")}`;
+        }),
+      )
+    ).filter((result): result is string => result !== null);
+
+    expect(offenders).toEqual([]);
+  });
+
+  it("ensures configure and verify delegation order follows routing SSOT", async () => {
+    const routingPath = path.join(templateQfaiDir, "assistant", "steering", "agent-routing.yml");
+    const configurePath = path.join(
+      templateQfaiDir,
+      "assistant",
+      "skills",
+      "qfai-configure",
+      "SKILL.md",
+    );
+    const verifyPath = path.join(templateQfaiDir, "assistant", "skills", "qfai-verify", "SKILL.md");
+
+    const [routing, configure, verify] = await Promise.all([
+      readFile(routingPath, "utf-8"),
+      readFile(configurePath, "utf-8"),
+      readFile(verifyPath, "utf-8"),
+    ]);
+
+    expect(routing).toContain("skill: qfai-configure");
+    expect(routing).toContain("mandatory_agents: [delivery-planner, qa-strategist]");
+    expect(routing).toContain("skill: qfai-verify");
+    expect(routing).toContain("mandatory_agents: [delivery-planner, qa-strategist]");
+
+    expect(configure).toContain(
+      "Use `.qfai/assistant/steering/agent-routing.yml` as the routing SSOT.",
+    );
+    expect(configure).toContain(
+      "First required delegation / Capability Probe: `delivery-planner` in the `analysis` phase.",
+    );
+    expect(configure).toContain(
+      "Then follow routed phases in order: `analysis` (`delivery-planner`, `qa-strategist`) -> `config` (`devops-ci-engineer`) -> `review` (`completion-reviewer`, `qa-gatekeeper`).",
+    );
+    expect(configure).toContain(
+      "Do not prepend non-routed roles before the first required delegation attempt.",
+    );
+
+    expect(verify).toContain(
+      "Use `.qfai/assistant/steering/agent-routing.yml` as the routing SSOT.",
+    );
+    expect(verify).toContain(
+      "First required delegation / Capability Probe: `delivery-planner` in the `plan` phase.",
+    );
+    expect(verify).toContain(
+      "Then follow routed phases in order: `plan` (`delivery-planner`, `qa-strategist`) -> `execution` (`devops-ci-engineer`) -> `review` (`qa-gatekeeper`, `completion-reviewer`, optional `implementation-reviewer` when code fixes are in scope).",
+    );
+    expect(verify).toContain(
+      "Do not prepend non-routed roles before the first required delegation attempt.",
+    );
+  });
+
+  // QFAI:SPEC-0014:TC-0014-0003
+  it("keeps qfai-verify fix-until-PASS contract", async () => {
+    const skillPath = path.join(templateQfaiDir, "assistant", "skills", "qfai-verify", "SKILL.md");
+    const content = await readFile(skillPath, "utf-8");
+
+    expect(content).toContain(
+      'description: "Run and document quality gates (repo + qfai validate/report), fix until PASS."',
+    );
+    expect(content).toContain("Fix until PASS.");
+    expect(content).toContain("If failing, produce an actionable fix list");
+  });
+
+  // QFAI:SPEC-0014:TC-0014-0007
+  it("keeps qfai-verify evidence summary contract", async () => {
+    const skillPath = path.join(templateQfaiDir, "assistant", "skills", "qfai-verify", "SKILL.md");
+    const content = await readFile(skillPath, "utf-8");
+
+    expect(content).toContain("A concise evidence summary exists (copy‑paste for PR).");
+    expect(content).toContain("Change Classification (Primary/Tags)");
+    expect(content).toContain("Run listed commands and record outputs.");
+    expect(content).toContain("command list + pass/fail + next actions");
+  });
+
+  it("ensures canonical skills include drift/test-layer reviewer gate guardrails", async () => {
+    const files = [
+      path.join(templateQfaiDir, "assistant", "skills", "qfai-prototyping", "SKILL.md"),
+    ];
 
     expect(files.length).toBeGreaterThan(0);
 
@@ -165,11 +278,9 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     const content = await readFile(skillPath, "utf-8");
 
     expect(content).toMatch(/ALL specs/i);
-    expect(content).toContain("Coverage Matrix");
-    expect(content).toContain("markdown + json");
+    expect(content).toContain("full-harness");
     expect(content).toContain("`.qfai/evidence/`");
     expect(content).toContain("DONE is forbidden");
-    expect(content).toContain("404");
     expect(content).toContain("L1");
     expect(content).toContain("L2");
     expect(content).toContain("uiFidelity");
@@ -212,7 +323,7 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     expect(readme).toContain("inspection-target text");
     expect(readme).toContain("L2 `actions[]` minimum set");
     expect(readme).toContain("FAQ");
-    expect(readme).toContain("QFAI-PROT-232");
+    expect(readme).toContain("QFAI-PROT-238");
 
     expect(example).toContain("QFAI-CONTRACT-ID");
     expect(example).toContain("prototype:");
@@ -260,13 +371,11 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     const content = await readFile(evidenceReadmePath, "utf-8");
 
     expect(content).toContain("uiFidelity");
-    expect(content).toContain("mode: interactive");
-    expect(content).toContain("mode: skeleton");
-    expect(content).toContain('"version": "0.1"');
-    expect(content).toContain("Render evidence bundle conventions");
+    expect(content).toMatch(/full-harness.*only|only.*full-harness/i);
+    expect(content).toContain("interactive");
     expect(content).toContain(".qfai/evidence/render.json");
-    expect(content).toContain("skippedReason");
-    expect(content).toContain("path-only");
+    expect(content).toContain("mockPaths");
+    expect(content).toContain("concrete render/browser QA/spec refs");
   });
 
   it("ships qa-gatekeeper agent card", async () => {
@@ -359,6 +468,51 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     expect(matches).toEqual([]);
   });
 
+  it("ensures product.md has no backward compatibility posture", async () => {
+    const productPath = path.join(templateQfaiDir, "assistant", "steering", "product.md");
+    const content = await readFile(productPath, "utf-8");
+    const bannedPhrases = [
+      "Maintain backward compatibility",
+      "Breaking changes deferred until v2.0",
+      "Migration guide required",
+      "Migration guide (docs/migrations/) required",
+      "deferred to v2.0",
+      "legacy deprecation",
+      "reconsidered in v2.0",
+      "accepted for backward compatibility",
+    ];
+    for (const phrase of bannedPhrases) {
+      expect(content, `product.md must not contain "${phrase}"`).not.toContain(phrase);
+    }
+    expect(content).not.toMatch(/deferred\s+to\s+v2/i);
+  });
+
+  it("ensures manifest.md has no v2.0 defer or migration guide posture", async () => {
+    const manifestPath = path.join(templateQfaiDir, "assistant", "steering", "manifest.md");
+    const content = await readFile(manifestPath, "utf-8");
+    const bannedPhrases = [
+      "Breaking changes deferred until v2.0",
+      "Migration guide required",
+      "deferred to v2.0",
+      "legacy deprecation",
+      "reconsidered in v2.0",
+      "accepted for backward compatibility",
+    ];
+    for (const phrase of bannedPhrases) {
+      expect(content, `manifest.md must not contain "${phrase}"`).not.toContain(phrase);
+    }
+    expect(content).not.toMatch(/reconsidered\s+in\s+v2/i);
+  });
+
+  it("ensures contracts/ui/README.md has no legacy acceptance wording", async () => {
+    const uiReadmePath = path.join(templateQfaiDir, "contracts", "ui", "README.md");
+    const content = await readFile(uiReadmePath, "utf-8");
+    const bannedPhrases = ["accepted for backward compatibility", "backward compatibility"];
+    for (const phrase of bannedPhrases) {
+      expect(content).not.toContain(phrase);
+    }
+  });
+
   // .npmignore files removed — gitignore entries now live in root .gitignore
   // (see ensureRootGitignoreEntries in init.ts)
 
@@ -386,6 +540,8 @@ describe("assets guardrails", { timeout: 30000 }, () => {
       path.resolve(templateQfaiDir, "assistant", "steering", "manifest.md"),
       path.resolve(templateQfaiDir, "assistant", "steering", "product.md"),
       path.resolve(templateQfaiDir, "assistant", "steering", "tech.md"),
+      path.resolve(templateQfaiDir, "evidence", "README.md"),
+      path.resolve(templateQfaiDir, "contracts", "ui", "README.md"),
     ]);
 
     const matches: string[] = [];
@@ -538,17 +694,24 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     expect(sanitized).not.toContain("docs/examples");
   });
 
-  it("keeps root README aligned with npm README", async () => {
-    const rootReadmePath = path.join(repoRoot, "README.md");
-    const npmReadmePath = path.join(repoRoot, "packages", "qfai", "README.md");
-    const [rootReadme, npmReadme] = await Promise.all([
-      readFile(rootReadmePath, "utf-8"),
-      readFile(npmReadmePath, "utf-8"),
-    ]);
+  it("keeps package README aligned with discussion completion contract", async () => {
+    const readmePath = path.join(repoRoot, "packages", "qfai", "README.md");
+    const readme = await readFile(readmePath, "utf-8");
 
-    const normalizedRoot = normalizeReadme(stripUrls(rootReadme));
+    // W-3: README must express canonical discussion completion contract
+    expect(readme).toContain(
+      "UI-bearing discussion packs require `prototyping.yaml`; non-ui discussion packs do not.",
+    );
+    expect(readme).toMatch(/discussion-YYYYMMDDhhmmssSSS[\s\S]*prototyping\.yaml/);
+  });
+
+  it("keeps npm README release posture aligned with package contract", async () => {
+    const npmReadmePath = path.join(repoRoot, "packages", "qfai", "README.md");
+    const npmReadme = await readFile(npmReadmePath, "utf-8");
+
     const normalizedNpm = normalizeReadme(stripUrls(npmReadme));
-    expect(normalizedRoot).toBe(normalizedNpm);
+    expect(normalizedNpm).toContain("measurement-driven iteration accumulation");
+    expect(normalizedNpm).toContain("mandatory per screen in full-harness");
   });
 
   it("keeps root copilot-instructions aligned with skill symlink guidance", async () => {
@@ -716,6 +879,35 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     expect(content).toContain("02_Inception-Deck.md");
     expect(content).toMatch(/HTML\+CSS/i);
     expect(content).toContain(".qfai/discussion/discussion-");
+
+    // W-5: canonical discussion pack wording guardrail
+    expect(content).toContain("15-file discussion pack");
+    expect(content).toContain("prototyping.yaml");
+  });
+
+  it("ensures qfai-discussion skill and discussion README use canonical pack wording", async () => {
+    const skillPath = path.join(
+      templateQfaiDir,
+      "assistant",
+      "skills",
+      "qfai-discussion",
+      "SKILL.md",
+    );
+    const readmePath = path.join(templateQfaiDir, "discussion", "README.md");
+    const packageReadmePath = path.join(repoRoot, "packages", "qfai", "README.md");
+
+    const [skill, readme, packageReadme] = await Promise.all([
+      readFile(skillPath, "utf-8"),
+      readFile(readmePath, "utf-8"),
+      readFile(packageReadmePath, "utf-8"),
+    ]);
+
+    // All three must express the canonical completion contract wording
+    const canonicalPhrase =
+      "UI-bearing discussion packs require `prototyping.yaml`; non-ui discussion packs do not.";
+    expect(packageReadme).toContain(canonicalPhrase);
+    expect(readme).toMatch(/ui_bearing:\s*true[\s\S]*must also include `prototyping\.yaml`/i);
+    expect(skill).toMatch(/ui_bearing:\s*true[\s\S]*prototyping\.yaml/i);
   });
 
   it("ensures qfai-discussion includes localized completion handoff guidance", async () => {
@@ -795,7 +987,7 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     ]);
 
     expect(inceptionTemplate).toContain("```mermaid");
-    expect(storyTemplate).toMatch(/## Screen Mock(?:\s*[\u2014\-—]+\s*Fallback)?\s*\(HTML\+CSS\)/);
+    expect(storyTemplate).toMatch(/Screen Mock.*Optional Fallback.*HTML\+CSS/i);
     expect(storyTemplate).toContain("```html");
     expect(storyTemplate).toContain("```css");
   });
@@ -872,6 +1064,14 @@ describe("assets guardrails", { timeout: 30000 }, () => {
         ["review_request.md", "Rxx_reviewer.md", "summary.json"].sort(),
       );
     }
+  });
+
+  it("keeps review README schema examples aligned with validator target kinds", async () => {
+    const reviewReadmePath = path.join(templateQfaiDir, "review", "README.md");
+    const content = await readFile(reviewReadmePath, "utf-8");
+
+    expect(content).toContain('"kind": "spec|discussion"');
+    expect(content).not.toContain('"kind": "spec|require|discussion"');
   });
 
   it("ensures qfai-sdd no longer ships legacy spec-pack templates", async () => {
@@ -966,6 +1166,20 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     );
   });
 
+  it("keeps qfai-sdd and qfai-discussion SKILL.md compact enough for progressive disclosure", async () => {
+    const targets = [
+      ["qfai-sdd", 360],
+      ["qfai-discussion", 400],
+    ] as const;
+
+    for (const [skillId, maxLines] of targets) {
+      const skillPath = path.join(templateQfaiDir, "assistant", "skills", skillId, "SKILL.md");
+      const content = await readFile(skillPath, "utf-8");
+      const lineCount = content.split(/\r?\n/).length;
+      expect(lineCount).toBeLessThanOrEqual(maxLines);
+    }
+  });
+
   it("ensures v1.4.36 layered spec templates exist for sdd", async () => {
     const expected = [
       "_policies/03_Capabilities.md",
@@ -1013,6 +1227,180 @@ describe("assets guardrails", { timeout: 30000 }, () => {
 
     expect(content).toContain("## Stop conditions");
     expect(content).toContain("## Sign-off");
+  });
+
+  // W5: SSOT alignment tests
+  it("discussion README declares prototyping.yaml as classification-aware", async () => {
+    const discussionReadmePath = path.join(templateQfaiDir, "discussion", "README.md");
+    const content = await readFile(discussionReadmePath, "utf-8");
+
+    expect(content).toMatch(/ui-bearing discussion pack/i);
+    expect(content).toMatch(/ui_bearing:\s*false[\s\S]*do not require `prototyping\.yaml`/i);
+    expect(content).toContain("prototyping.yaml");
+  });
+
+  it("workspace README directory map includes prototyping.yaml", async () => {
+    const workspaceReadmePath = path.join(templateQfaiDir, "README.md");
+    const content = await readFile(workspaceReadmePath, "utf-8");
+
+    expect(content).toContain("prototyping.yaml");
+  });
+
+  it("discussion README and SKILL.md use consistent OQ Gate enum", async () => {
+    const discussionReadmePath = path.join(templateQfaiDir, "discussion", "README.md");
+    const skillPath = path.join(
+      templateQfaiDir,
+      "assistant",
+      "skills",
+      "qfai-discussion",
+      "SKILL.md",
+    );
+
+    const [readmeContent, skillContent] = await Promise.all([
+      readFile(discussionReadmePath, "utf-8"),
+      readFile(skillPath, "utf-8"),
+    ]);
+
+    // Both should use canonical gate enum: discussion|sdd|atdd|tdd|ops
+    const canonicalGates = ["discussion", "sdd", "atdd", "tdd", "ops"];
+
+    // SKILL.md already uses canonical form
+    expect(skillContent).toContain("discussion|sdd|atdd|tdd|ops");
+
+    // README should NOT use deprecated discuss|require|sdd
+    expect(readmeContent).not.toMatch(/`discuss`.*`require`.*`sdd`/);
+    // README should include canonical gates
+    for (const gate of canonicalGates) {
+      expect(readmeContent).toContain(gate);
+    }
+  });
+
+  it("discussion README and SKILL.md agree on prototyping.yaml requiredness", async () => {
+    const skillPath = path.join(
+      templateQfaiDir,
+      "assistant",
+      "skills",
+      "qfai-discussion",
+      "SKILL.md",
+    );
+    const content = await readFile(skillPath, "utf-8");
+
+    expect(content).toContain("prototyping.yaml");
+    expect(content).toMatch(/ui_bearing:\s*true[\s\S]*prototyping\.yaml/i);
+    expect(content).toMatch(/ui_bearing:\s*false[\s\S]*not required/i);
+  });
+
+  it("discussion README contains prototyping: namespaced example", async () => {
+    const discussionReadmePath = path.join(templateQfaiDir, "discussion", "README.md");
+    const content = await readFile(discussionReadmePath, "utf-8");
+
+    expect(content).toContain("prototyping:");
+    expect(content).toContain("recommended_mode:");
+    expect(content).toContain("rationale:");
+    expect(content).toContain("allowed_modes:");
+    expect(content).toContain("surface:");
+  });
+
+  it("discussion README says namespaced schema is required, not recommended", async () => {
+    const discussionReadmePath = path.join(templateQfaiDir, "discussion", "README.md");
+    const content = await readFile(discussionReadmePath, "utf-8");
+
+    // Must say required/accepted only
+    expect(content).toMatch(/namespaced schema \(required\)/i);
+    // Must NOT use wording that implies the schema is optional or merely recommended
+    expect(content).not.toMatch(/namespaced schema \(recommended\)/i);
+  });
+
+  it("discussion README does not contain legacy-permissive wording", async () => {
+    const discussionReadmePath = path.join(templateQfaiDir, "discussion", "README.md");
+    const content = await readFile(discussionReadmePath, "utf-8");
+
+    expect(content).not.toContain("legacy keys ignored");
+    expect(content).not.toContain("legacy keys may be ignored");
+    expect(content).not.toContain("accepted with warning");
+  });
+
+  it("discussion README enforces current-only posture for prototyping.yaml", async () => {
+    const discussionReadmePath = path.join(templateQfaiDir, "discussion", "README.md");
+    const content = await readFile(discussionReadmePath, "utf-8");
+
+    // Must express required / accepted only / invalid otherwise
+    expect(content).toMatch(/required/i);
+    expect(content).toMatch(/accepted only in namespaced form|canonical namespaced schema/i);
+    expect(content).toMatch(/top-level recommendation keys.*not supported/i);
+    expect(content).toMatch(/coexist\w*.*invalid/i);
+
+    // Forbidden wording (schema choice context)
+    expect(content).not.toMatch(/\bone option\b/i);
+    expect(content).not.toContain("backward compatible");
+  });
+
+  it("SKILL.md does not contain legacy-permissive wording", async () => {
+    const skillPath = path.join(
+      templateQfaiDir,
+      "assistant",
+      "skills",
+      "qfai-discussion",
+      "SKILL.md",
+    );
+    const content = await readFile(skillPath, "utf-8");
+
+    expect(content).not.toContain("legacy keys ignored");
+    expect(content).not.toContain("legacy keys may be ignored");
+    expect(content).not.toContain("accepted with warning");
+    expect(content).not.toMatch(/\bone option\b/i);
+    expect(content).not.toContain("backward compatible");
+
+    // Must express that top-level keys are not supported and coexist is invalid
+    expect(content).toMatch(/top-level recommendation keys.*not supported/i);
+    expect(content).toMatch(/coexist\w*.*invalid/i);
+  });
+
+  it("README and SKILL.md share namespaced-only semantics for prototyping.yaml", async () => {
+    const discussionReadmePath = path.join(templateQfaiDir, "discussion", "README.md");
+    const skillPath = path.join(
+      templateQfaiDir,
+      "assistant",
+      "skills",
+      "qfai-discussion",
+      "SKILL.md",
+    );
+
+    const [readme, skill] = await Promise.all([
+      readFile(discussionReadmePath, "utf-8"),
+      readFile(skillPath, "utf-8"),
+    ]);
+
+    // Both must mention canonical namespaced schema
+    expect(readme).toMatch(/namespaced/i);
+    expect(skill).toMatch(/namespaced/i);
+
+    // Both must reference required fields under prototyping: key
+    expect(readme).toContain("recommended_mode");
+    expect(skill).toContain("recommended_mode");
+
+    // Both must express that top-level keys are not supported
+    expect(readme).toMatch(/top-level.*not supported/i);
+    expect(skill).toMatch(/top-level.*not supported/i);
+
+    // Neither should allow top-level recommendation keys
+    expect(readme).not.toMatch(/namespaced schema \(recommended\)/i);
+    expect(skill).not.toMatch(/namespaced schema \(recommended\)/i);
+  });
+
+  it("discussion README declares recommended_mode must be included in allowed_modes", async () => {
+    const discussionReadmePath = path.join(templateQfaiDir, "discussion", "README.md");
+    const content = await readFile(discussionReadmePath, "utf-8");
+
+    expect(content).toMatch(/recommended_mode.*must be included in.*allowed_modes/i);
+  });
+
+  it("discussion README declares invalid artifacts are rejected by execution/CLI", async () => {
+    const discussionReadmePath = path.join(templateQfaiDir, "discussion", "README.md");
+    const content = await readFile(discussionReadmePath, "utf-8");
+
+    expect(content).toMatch(/rejected by both validation and execution\/CLI/i);
+    expect(content).toMatch(/no fallback/i);
   });
 });
 

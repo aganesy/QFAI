@@ -1,6 +1,23 @@
 # 01 Context
 
-<!-- UX-INTENT: If UI-bearing, see uiux/10_strategy.md for implementation strategy context -->
+<!-- UX-INTENT: If UI-bearing, see uiux/10_implementation_strategy.md for implementation strategy context -->
+
+## UI-bearing Classification
+
+Classification determines whether UI/UX sidecar artifacts are required.
+
+- ui_bearing: [true|false]
+- primary_surface: [web|mobile|desktop|cli|mixed|non-ui]
+- secondary_surfaces:
+  - [optional]
+- classification_rationale: [Why this classification was chosen]
+
+Notes:
+
+- `primary_surface` is a classification field. Valid values: `web|mobile|desktop|cli|mixed|non-ui`.
+- `non-ui` is only valid when `ui_bearing: false`. It is a classification value, not a prototyping surface.
+- `cli` is a UI-bearing surface. When classified as `cli`, set `ui_bearing: true`.
+- Prototyping surfaces (used in `prototyping.yaml`) are a subset: `web|mobile|desktop|cli|mixed`.
 
 ## Metadata
 

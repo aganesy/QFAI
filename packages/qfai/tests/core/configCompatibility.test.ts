@@ -6,7 +6,7 @@ import { describe, expect, it } from "vitest";
 
 import { defaultConfig, loadConfig } from "../../src/core/config.js";
 
-describe("config compatibility (promptsDir -> skillsDir)", () => {
+describe("config legacy promptsDir alias (promptsDir -> skillsDir)", () => {
   it("falls back skillsDir to promptsDir when skillsDir is omitted", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-config-compat-"));
     try {
@@ -96,6 +96,39 @@ describe("config compatibility (promptsDir -> skillsDir)", () => {
         out: ".qfai/evidence/custom-render.json",
         baseUrl: "http://localhost:3000",
         failOpen: true,
+      });
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("keeps canonical defaults when prototyping block is absent", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-config-prototyping-compat-"));
+    try {
+      await writeFile(path.join(root, "qfai.config.yaml"), "{}\n", "utf-8");
+      const { config, issues } = await loadConfig(root);
+      expect(issues).toEqual([]);
+      expect(config.prototyping).toBeUndefined();
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("fills defaults for partial prototyping calibration config", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-config-prototyping-compat-"));
+    try {
+      await writeFile(
+        path.join(root, "qfai.config.yaml"),
+        ["prototyping:", "  calibration:", "    packPath: .qfai/evidence/custom.yaml", ""].join(
+          "\n",
+        ),
+        "utf-8",
+      );
+
+      const { config, issues } = await loadConfig(root);
+      expect(issues).toEqual([]);
+      expect(config.prototyping?.calibration).toEqual({
+        packPath: ".qfai/evidence/custom.yaml",
       });
     } finally {
       await rm(root, { recursive: true, force: true });

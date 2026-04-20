@@ -7,1309 +7,1000 @@ import { describe, expect, it } from "vitest";
 import { defaultConfig } from "../../src/core/config.js";
 import { validatePrototypingEvidence } from "../../src/core/validators/prototypingEvidence.js";
 
-describe("validatePrototypingEvidence", () => {
-  async function withTempRoot(task: (root: string) => Promise<void>) {
-    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-prot-evidence-"));
-    try {
-      await task(root);
-    } finally {
-      await rm(root, { recursive: true, force: true });
-    }
-  }
-
-  it("fails when prototyping evidence files are missing", async () => {
-    await withTempRoot(async (root) => {
-      await seedSpecs(root, ["0001"]);
-
-      const issues = await validatePrototypingEvidence(root, defaultConfig);
-      const missingIssue = issues.find((item) => item.code === "QFAI-PROT-101");
-
-      expect(missingIssue).toBeDefined();
-      expect(missingIssue?.severity).toBe("error");
-    });
-  });
-
-  it("fails when runtimeGate.ui or meta is missing from evidence schema", async () => {
-    await withTempRoot(async (root) => {
-      await seedSpecs(root, ["0001"]);
-      const evidenceRoot = path.join(root, ".qfai", "evidence");
-      await mkdir(evidenceRoot, { recursive: true });
-      await writeFile(
-        path.join(evidenceRoot, "prototyping.md"),
-        "# Prototyping Evidence\n",
-        "utf-8",
-      );
-      await writeFile(
-        path.join(evidenceRoot, "prototyping.json"),
-        `${JSON.stringify(
-          {
-            specs: [buildSpecRow("spec-0001", { ui: 1, api: 1, db: 1 })],
-            runtimeGate: {
-              api: [{ method: "GET", path: "/api/orders", status: 200 }],
-            },
-          },
-          null,
-          2,
-        )}\n`,
-        "utf-8",
-      );
-
-      const issues = await validatePrototypingEvidence(root, defaultConfig);
-      const schemaIssue = issues.find((item) => item.code === "QFAI-PROT-101");
-
-      expect(schemaIssue).toBeDefined();
-      expect(schemaIssue?.severity).toBe("error");
-      expect(schemaIssue?.rule).toBe("prototypingEvidence.schema");
-    });
-  });
-
-  it("fails when evidence does not cover all specs", async () => {
-    await withTempRoot(async (root) => {
-      await seedSpecs(root, ["0001", "0002"]);
-      await seedEvidence(root, {
-        specs: [buildSpecRow("spec-0001", { ui: 1, api: 1, db: 1 })],
-      });
-
-      const issues = await validatePrototypingEvidence(root, defaultConfig);
-      const coverageIssue = issues.find((item) => item.code === "QFAI-PROT-111");
-
-      expect(coverageIssue).toBeDefined();
-      expect(coverageIssue?.severity).toBe("error");
-      expect(coverageIssue?.refs).toContain("spec-0002");
-    });
-  });
-
-  it("fails when interactive uiFidelity is missing", async () => {
-    await withTempRoot(async (root) => {
-      await seedSpecs(root, ["0001"]);
-      await seedEvidence(root, {
-        specs: [buildSpecRow("spec-0001", { ui: 1, api: 1, db: 1 })],
-        runtimeGate: {
-          ui: [{ route: "/orders", status: 200 }],
-          api: [{ method: "GET", path: "/api/orders", status: 200 }],
-        },
-      });
-
-      const issues = await validatePrototypingEvidence(root, defaultConfig);
-      const missingIssue = issues.find((item) => item.code === "QFAI-PROT-231");
-
-      expect(missingIssue).toBeDefined();
-      expect(missingIssue?.severity).toBe("error");
-    });
-  });
-
-  it("fails when uiFidelity elementsPlaced does not match expected elements", async () => {
-    await withTempRoot(async (root) => {
-      await seedSpecs(root, ["0001"]);
-      await seedUiContract(root, {
-        contractId: "CON-UI-0001",
-        route: "/orders",
-        elements: ["search_input", "orders_table"],
-        actions: ["go_to_create"],
-      });
-      await seedEvidence(root, {
-        specs: [buildSpecRow("spec-0001", { ui: 1, api: 1, db: 1 })],
-        runtimeGate: {
-          ui: [{ route: "/orders", status: 200 }],
-          api: [{ method: "GET", path: "/api/orders", status: 200 }],
-        },
-        uiFidelity: {
-          version: "0.1",
-          mode: "interactive",
-          screens: [
-            {
-              route: "/orders",
-              uiContractId: "CON-UI-0001",
-              expected: { elements: 2, actions: 1 },
-              observed: {
-                elementsPlaced: 1,
-                actionsWired: 1,
-              },
-              mockPaths: [{ id: "mp_create_to_list", status: "pass" }],
-            },
-          ],
-        },
-      });
-
-      const issues = await validatePrototypingEvidence(root, defaultConfig);
-      const mismatchIssue = issues.find((item) => item.code === "QFAI-PROT-232");
-
-      expect(mismatchIssue).toBeDefined();
-      expect(mismatchIssue?.severity).toBe("error");
-      expect(mismatchIssue?.refs).toContain("contract_id=CON-UI-0001");
-      expect(mismatchIssue?.refs).toContain("route=/orders");
-      expect(mismatchIssue?.refs).toContain("contract_route=CON-UI-0001|/orders");
-      expect(mismatchIssue?.refs).toContain("missing_labels=orders_table|search_input");
-      expect(mismatchIssue?.refs).toContain("contract_element_labels=orders_table|search_input");
-      expect(mismatchIssue?.refs).toContain(
-        "missing_labels_by_contract_route=CON-UI-0001|/orders:orders_table|search_input",
-      );
-      expect(mismatchIssue?.refs).toContain(
-        "contract_element_labels_by_contract_route=CON-UI-0001|/orders:orders_table|search_input",
-      );
-    });
-  });
-
-  it("fails when interactive uiFidelity has no screens", async () => {
-    await withTempRoot(async (root) => {
-      await seedSpecs(root, ["0001"]);
-      await seedEvidence(root, {
-        specs: [buildSpecRow("spec-0001", { ui: 1, api: 1, db: 1 })],
-        runtimeGate: {
-          ui: [{ route: "/orders", status: 200 }],
-          api: [{ method: "GET", path: "/api/orders", status: 200 }],
-        },
-        uiFidelity: {
-          version: "0.1",
-          mode: "interactive",
-          screens: [],
-        },
-      });
-
-      const issues = await validatePrototypingEvidence(root, defaultConfig);
-      const mismatchIssue = issues.find((item) => item.code === "QFAI-PROT-232");
-
-      expect(mismatchIssue).toBeDefined();
-      expect(mismatchIssue?.severity).toBe("error");
-      expect(mismatchIssue?.refs).toContain("uiFidelity.screens[]");
-    });
-  });
-
-  it("fails when uiFidelity references unknown uiContractId", async () => {
-    await withTempRoot(async (root) => {
-      await seedSpecs(root, ["0001"]);
-      await seedEvidence(root, {
-        specs: [buildSpecRow("spec-0001", { ui: 1, api: 1, db: 1 })],
-        runtimeGate: {
-          ui: [{ route: "/orders", status: 200 }],
-          api: [{ method: "GET", path: "/api/orders", status: 200 }],
-        },
-        uiFidelity: {
-          version: "0.1",
-          mode: "interactive",
-          screens: [
-            {
-              route: "/orders",
-              uiContractId: "CON-UI-9999",
-              expected: { elements: 2, actions: 1 },
-              observed: {
-                elementsPlaced: 2,
-                actionsWired: 1,
-              },
-              mockPaths: [{ id: "mp_create_to_list", status: "pass" }],
-            },
-          ],
-        },
-      });
-
-      const issues = await validatePrototypingEvidence(root, defaultConfig);
-      const mismatchIssue = issues.find((item) => item.code === "QFAI-PROT-232");
-
-      expect(mismatchIssue).toBeDefined();
-      expect(mismatchIssue?.severity).toBe("error");
-      expect(mismatchIssue?.refs).toContain("contract_id=CON-UI-9999");
-      expect(mismatchIssue?.refs).toContain("route=/orders");
-    });
-  });
-
-  it("fails when uiFidelity actionsWired is zero and UI contract has actions", async () => {
-    await withTempRoot(async (root) => {
-      await seedSpecs(root, ["0001"]);
-      await seedUiContract(root, {
-        contractId: "CON-UI-0001",
-        route: "/orders",
-        elements: ["search_input", "orders_table"],
-        actions: ["go_to_create"],
-      });
-      await seedEvidence(root, {
-        specs: [buildSpecRow("spec-0001", { ui: 1, api: 1, db: 1 })],
-        runtimeGate: {
-          ui: [{ route: "/orders", status: 200 }],
-          api: [{ method: "GET", path: "/api/orders", status: 200 }],
-        },
-        uiFidelity: {
-          version: "0.1",
-          mode: "interactive",
-          screens: [
-            {
-              route: "/orders",
-              uiContractId: "CON-UI-0001",
-              expected: { elements: 2, actions: 1 },
-              observed: {
-                elementsPlaced: 2,
-                actionsWired: 0,
-              },
-              mockPaths: [{ id: "mp_create_to_list", status: "pass" }],
-            },
-          ],
-        },
-      });
-
-      const issues = await validatePrototypingEvidence(root, defaultConfig);
-      const mismatchIssue = issues.find((item) => item.code === "QFAI-PROT-232");
-
-      expect(mismatchIssue).toBeDefined();
-      expect(mismatchIssue?.severity).toBe("error");
-      expect(mismatchIssue?.refs).toContain("required_actions=go_to_create");
-      expect(mismatchIssue?.refs).toContain(
-        "required_actions_by_contract_route=CON-UI-0001|/orders:go_to_create",
-      );
-    });
-  });
-
-  it("keeps contract-route pairing refs when multiple screens mismatch", async () => {
-    await withTempRoot(async (root) => {
-      await seedSpecs(root, ["0001"]);
-      const uiRoot = path.join(root, ".qfai", "contracts", "ui");
-      await mkdir(uiRoot, { recursive: true });
-      await writeFile(
-        path.join(uiRoot, "ui-contract.orders.yaml"),
-        [
-          "# QFAI-CONTRACT-ID: CON-UI-0001",
-          "screens:",
-          "  - id: orders_screen",
-          "    route: /orders",
-          "    elements:",
-          "      - id: search_input",
-          "        label: search_input",
-          "      - id: orders_table",
-          "        label: orders_table",
-          "    actions:",
-          "      - id: go_to_create",
-          "",
-        ].join("\n"),
-        "utf-8",
-      );
-      await writeFile(
-        path.join(uiRoot, "ui-contract.users.yaml"),
-        [
-          "# QFAI-CONTRACT-ID: CON-UI-0002",
-          "screens:",
-          "  - id: users_screen",
-          "    route: /users",
-          "    elements:",
-          "      - id: users_table",
-          "        label: users_table",
-          "    actions:",
-          "      - id: go_to_invite",
-          "",
-        ].join("\n"),
-        "utf-8",
-      );
-      await seedEvidence(root, {
-        specs: [buildSpecRow("spec-0001", { ui: 1, api: 1, db: 1 })],
-        runtimeGate: {
-          ui: [
-            { route: "/orders", status: 200 },
-            { route: "/users", status: 200 },
-          ],
-          api: [{ method: "GET", path: "/api/orders", status: 200 }],
-        },
-        uiFidelity: {
-          version: "0.1",
-          mode: "interactive",
-          screens: [
-            {
-              route: "/orders",
-              uiContractId: "CON-UI-0001",
-              expected: { elements: 2, actions: 1 },
-              observed: {
-                elementsPlaced: 1,
-                actionsWired: 0,
-              },
-              mockPaths: [{ id: "mp_orders", status: "pass" }],
-            },
-            {
-              route: "/users",
-              uiContractId: "CON-UI-0002",
-              expected: { elements: 1, actions: 1 },
-              observed: {
-                elementsPlaced: 0,
-                actionsWired: 0,
-              },
-              mockPaths: [{ id: "mp_users", status: "pass" }],
-            },
-          ],
-        },
-      });
-
-      const issues = await validatePrototypingEvidence(root, defaultConfig);
-      const mismatchIssue = issues.find((item) => item.code === "QFAI-PROT-232");
-
-      expect(mismatchIssue).toBeDefined();
-      expect(mismatchIssue?.refs).toContain("contract_route=CON-UI-0001|/orders");
-      expect(mismatchIssue?.refs).toContain("contract_route=CON-UI-0002|/users");
-      expect(mismatchIssue?.refs).toContain(
-        "missing_labels_by_contract_route=CON-UI-0001|/orders:orders_table|search_input",
-      );
-      expect(mismatchIssue?.refs).toContain(
-        "contract_element_labels_by_contract_route=CON-UI-0001|/orders:orders_table|search_input",
-      );
-      expect(mismatchIssue?.refs).toContain(
-        "required_actions_by_contract_route=CON-UI-0002|/users:go_to_invite",
-      );
-    });
-  });
-
-  it("warns when interactive uiFidelity has no mockPaths pass", async () => {
-    await withTempRoot(async (root) => {
-      await seedSpecs(root, ["0001"]);
-      await seedUiContract(root, {
-        contractId: "CON-UI-0001",
-        route: "/orders",
-        elements: ["search_input", "orders_table"],
-        actions: ["go_to_create"],
-      });
-      await seedEvidence(root, {
-        specs: [buildSpecRow("spec-0001", { ui: 1, api: 1, db: 1 })],
-        runtimeGate: {
-          ui: [{ route: "/orders", status: 200 }],
-          api: [{ method: "GET", path: "/api/orders", status: 200 }],
-        },
-        uiFidelity: {
-          version: "0.1",
-          mode: "interactive",
-          screens: [
-            {
-              route: "/orders",
-              uiContractId: "CON-UI-0001",
-              expected: { elements: 2, actions: 1 },
-              observed: {
-                elementsPlaced: 2,
-                actionsWired: 1,
-              },
-              mockPaths: [],
-            },
-          ],
-        },
-      });
-
-      const issues = await validatePrototypingEvidence(root, defaultConfig);
-      const warnIssue = issues.find((item) => item.code === "QFAI-PROT-233");
-
-      expect(warnIssue).toBeDefined();
-      expect(warnIssue?.severity).toBe("warning");
-    });
-  });
-
-  it("fails when declared checks are unresolved or runtime API has 404", async () => {
-    await withTempRoot(async (root) => {
-      await seedSpecs(root, ["0001"]);
-      await seedEvidence(root, {
-        specs: [
-          {
-            specId: "spec-0001",
-            declared: { uiRoutes: 2, apiEndpoints: 2, dbObjects: 1 },
-            checked: { uiOk: 1, apiNon404: 1, dbPresent: 0 },
-            missing: {
-              uiRoutes: ["/orders/new"],
-              apiEndpoints: ["POST /api/orders"],
-              dbObjects: ["orders"],
-            },
-          },
-        ],
-        runtimeGate: {
-          ui: [{ route: "/orders", status: 200 }],
-          api: [{ method: "GET", path: "/api/orders", status: 404 }],
-        },
-      });
-
-      const issues = await validatePrototypingEvidence(root, defaultConfig);
-      expect(issues.some((item) => item.code === "QFAI-PROT-112")).toBe(true);
-      expect(issues.some((item) => item.code === "QFAI-PROT-113")).toBe(true);
-      expect(issues.some((item) => item.code === "QFAI-PROT-114")).toBe(true);
-    });
-  });
-
-  it("passes when all specs are covered and runtime API has no 404", async () => {
-    await withTempRoot(async (root) => {
-      await seedSpecs(root, ["0001", "0002"]);
-      await seedUiContract(root, {
-        contractId: "CON-UI-0001",
-        route: "/orders",
-        elements: ["search_input", "orders_table"],
-        actions: ["go_to_create"],
-      });
-      await seedEvidence(root, {
-        specs: [
-          buildSpecRow("spec-0001", { ui: 1, api: 1, db: 1 }),
-          buildSpecRow("spec-0002", { ui: 2, api: 2, db: 1 }),
-        ],
-        runtimeGate: {
-          ui: [
-            { route: "/orders", status: 200 },
-            { route: "/orders/new", status: 200 },
-          ],
-          api: [
-            { method: "GET", path: "/api/orders", status: 200 },
-            { method: "POST", path: "/api/orders", status: 201 },
-            { method: "GET", path: "/api/health", status: 200 },
-          ],
-        },
-        uiFidelity: {
-          version: "0.1",
-          mode: "interactive",
-          screens: [
-            {
-              route: "/orders",
-              uiContractId: "CON-UI-0001",
-              expected: { elements: 2, actions: 1 },
-              observed: {
-                elementsPlaced: 2,
-                actionsWired: 1,
-              },
-              mockPaths: [{ id: "mp_create_to_list", status: "pass" }],
-            },
-          ],
-        },
-      });
-
-      const issues = await validatePrototypingEvidence(root, defaultConfig);
-      expect(issues).toEqual([]);
-    });
-  });
-
-  it("passes when uiFidelity satisfies referenced UI contract", async () => {
-    await withTempRoot(async (root) => {
-      await seedSpecs(root, ["0001"]);
-      await seedUiContract(root, {
-        contractId: "CON-UI-0001",
-        route: "/orders",
-        elements: ["search_input", "orders_table"],
-        actions: ["go_to_create"],
-      });
-      await seedEvidence(root, {
-        specs: [buildSpecRow("spec-0001", { ui: 1, api: 1, db: 1 })],
-        runtimeGate: {
-          ui: [{ route: "/orders", status: 200 }],
-          api: [{ method: "GET", path: "/api/orders", status: 200 }],
-        },
-        uiFidelity: {
-          version: "0.1",
-          mode: "interactive",
-          screens: [
-            {
-              route: "/orders",
-              uiContractId: "CON-UI-0001",
-              expected: { elements: 2, actions: 1 },
-              observed: {
-                elementsPlaced: 2,
-                actionsWired: 1,
-                markersEmitted: 2,
-              },
-              mockPaths: [
-                {
-                  id: "mp_create_to_list",
-                  status: "pass",
-                  notes: "create -> list reflects",
-                },
-              ],
-              placeholders: { hasPlaceholderText: false, notes: "" },
-            },
-          ],
-        },
-      });
-
-      const issues = await validatePrototypingEvidence(root, defaultConfig);
-      expect(issues).toEqual([]);
-    });
-  });
-
-  it("fails QFAI-PROT-241 when expected.labels exists and missing.labels is non-empty", async () => {
-    await withTempRoot(async (root) => {
-      await seedSpecs(root, ["0001"]);
-      await seedUiContract(root, {
-        contractId: "CON-UI-0001",
-        route: "/orders",
-        elements: ["search_input", "orders_table"],
-        actions: ["go_to_create"],
-      });
-      await seedEvidence(root, {
-        specs: [buildSpecRow("spec-0001", { ui: 1, api: 1, db: 1 })],
-        runtimeGate: {
-          ui: [{ route: "/orders", status: 200 }],
-          api: [{ method: "GET", path: "/api/orders", status: 200 }],
-        },
-        uiFidelity: {
-          version: "0.1",
-          mode: "interactive",
-          screens: [
-            {
-              route: "/orders",
-              uiContractId: "CON-UI-0001",
-              expected: {
-                elements: 2,
-                actions: 1,
-                labels: ["search_input", "orders_table"],
-              },
-              found: { labels: ["search_input"] },
-              missing: { labels: ["orders_table"] },
-              coverage: 0.5,
-              observed: { elementsPlaced: 2, actionsWired: 1 },
-              mockPaths: [{ id: "mp_create_to_list", status: "pass" }],
-            },
-          ],
-        },
-      });
-
-      const issues = await validatePrototypingEvidence(root, defaultConfig);
-      const labelIssue = issues.find((item) => item.code === "QFAI-PROT-241");
-
-      expect(labelIssue).toBeDefined();
-      expect(labelIssue?.severity).toBe("error");
-      expect(labelIssue?.refs).toContain("missing_labels=orders_table");
-      expect(labelIssue?.refs).toContain("contract_id=CON-UI-0001");
-    });
-  });
-
-  it("does not emit QFAI-PROT-241 when expected.labels is absent (backward compat)", async () => {
-    await withTempRoot(async (root) => {
-      await seedSpecs(root, ["0001"]);
-      await seedUiContract(root, {
-        contractId: "CON-UI-0001",
-        route: "/orders",
-        elements: ["search_input", "orders_table"],
-        actions: ["go_to_create"],
-      });
-      await seedEvidence(root, {
-        specs: [buildSpecRow("spec-0001", { ui: 1, api: 1, db: 1 })],
-        runtimeGate: {
-          ui: [{ route: "/orders", status: 200 }],
-          api: [{ method: "GET", path: "/api/orders", status: 200 }],
-        },
-        uiFidelity: {
-          version: "0.1",
-          mode: "interactive",
-          screens: [
-            {
-              route: "/orders",
-              uiContractId: "CON-UI-0001",
-              expected: { elements: 2, actions: 1 },
-              observed: { elementsPlaced: 2, actionsWired: 1 },
-              mockPaths: [{ id: "mp_create_to_list", status: "pass" }],
-            },
-          ],
-        },
-      });
-
-      const issues = await validatePrototypingEvidence(root, defaultConfig);
-      const labelIssue = issues.find((item) => item.code === "QFAI-PROT-241");
-
-      expect(labelIssue).toBeUndefined();
-    });
-  });
-
-  it("fails QFAI-PROT-242 when expected.elements > 0 and missing.markers is non-empty", async () => {
-    await withTempRoot(async (root) => {
-      await seedSpecs(root, ["0001"]);
-      await seedUiContract(root, {
-        contractId: "CON-UI-0001",
-        route: "/orders",
-        elements: ["search_input", "orders_table"],
-        actions: ["go_to_create"],
-      });
-      await seedEvidence(root, {
-        specs: [buildSpecRow("spec-0001", { ui: 1, api: 1, db: 1 })],
-        runtimeGate: {
-          ui: [{ route: "/orders", status: 200 }],
-          api: [{ method: "GET", path: "/api/orders", status: 200 }],
-        },
-        uiFidelity: {
-          version: "0.1",
-          mode: "interactive",
-          screens: [
-            {
-              route: "/orders",
-              uiContractId: "CON-UI-0001",
-              expected: { elements: 2, actions: 1 },
-              found: { markers: ["CON-UI-0001:search_input"] },
-              missing: {
-                markers: ["CON-UI-0001:orders_table"],
-              },
-              observed: { elementsPlaced: 2, actionsWired: 1 },
-              mockPaths: [{ id: "mp_create_to_list", status: "pass" }],
-            },
-          ],
-        },
-      });
-
-      const issues = await validatePrototypingEvidence(root, defaultConfig);
-      const markerIssue = issues.find((item) => item.code === "QFAI-PROT-242");
-
-      expect(markerIssue).toBeDefined();
-      expect(markerIssue?.severity).toBe("error");
-      expect(markerIssue?.refs).toContain("missing_markers=CON-UI-0001:orders_table");
-    });
-  });
-
-  it("passes QFAI-PROT-242 when expected.ids present and all id-based markers found", async () => {
-    await withTempRoot(async (root) => {
-      await seedSpecs(root, ["0001"]);
-      await seedUiContract(root, {
-        contractId: "CON-UI-0001",
-        route: "/orders",
-        elements: ["search_input", "orders_table"],
-        actions: ["go_to_create"],
-      });
-      await seedEvidence(root, {
-        specs: [buildSpecRow("spec-0001", { ui: 1, api: 1, db: 1 })],
-        runtimeGate: {
-          ui: [{ route: "/orders", status: 200 }],
-          api: [{ method: "GET", path: "/api/orders", status: 200 }],
-        },
-        uiFidelity: {
-          version: "0.1",
-          mode: "interactive",
-          screens: [
-            {
-              route: "/orders",
-              uiContractId: "CON-UI-0001",
-              expected: {
-                elements: 2,
-                actions: 1,
-                ids: ["search_input", "orders_table"],
-              },
-              found: {
-                markers: ["CON-UI-0001:search_input", "CON-UI-0001:orders_table"],
-              },
-              missing: { markers: [] },
-              observed: { elementsPlaced: 2, actionsWired: 1 },
-              mockPaths: [{ id: "mp_create_to_list", status: "pass" }],
-            },
-          ],
-        },
-      });
-
-      const issues = await validatePrototypingEvidence(root, defaultConfig);
-      const markerIssue = issues.find((item) => item.code === "QFAI-PROT-242");
-
-      expect(markerIssue).toBeUndefined();
-    });
-  });
-
-  it("fails QFAI-PROT-242 when expected.ids absent and missing.markers is non-empty (legacy evidence)", async () => {
-    await withTempRoot(async (root) => {
-      await seedSpecs(root, ["0001"]);
-      await seedUiContract(root, {
-        contractId: "CON-UI-0001",
-        route: "/orders",
-        elements: ["search_input", "orders_table"],
-        actions: ["go_to_create"],
-      });
-      await seedEvidence(root, {
-        specs: [buildSpecRow("spec-0001", { ui: 1, api: 1, db: 1 })],
-        runtimeGate: {
-          ui: [{ route: "/orders", status: 200 }],
-          api: [{ method: "GET", path: "/api/orders", status: 200 }],
-        },
-        uiFidelity: {
-          version: "0.1",
-          mode: "interactive",
-          screens: [
-            {
-              route: "/orders",
-              uiContractId: "CON-UI-0001",
-              expected: { elements: 2, actions: 1 },
-              found: { markers: ["CON-UI-0001:search_input"] },
-              missing: { markers: ["CON-UI-0001:orders_table"] },
-              observed: { elementsPlaced: 2, actionsWired: 1 },
-              mockPaths: [{ id: "mp_create_to_list", status: "pass" }],
-            },
-          ],
-        },
-      });
-
-      const issues = await validatePrototypingEvidence(root, defaultConfig);
-      const markerIssue = issues.find((item) => item.code === "QFAI-PROT-242");
-
-      expect(markerIssue).toBeDefined();
-      expect(markerIssue?.severity).toBe("error");
-      expect(markerIssue?.refs).toContain("missing_markers=CON-UI-0001:orders_table");
-    });
-  });
-
-  it("fails QFAI-PROT-242 when expected.ids present but markers still missing", async () => {
-    await withTempRoot(async (root) => {
-      await seedSpecs(root, ["0001"]);
-      await seedUiContract(root, {
-        contractId: "CON-UI-0001",
-        route: "/orders",
-        elements: ["search_input", "orders_table"],
-        actions: ["go_to_create"],
-      });
-      await seedEvidence(root, {
-        specs: [buildSpecRow("spec-0001", { ui: 1, api: 1, db: 1 })],
-        runtimeGate: {
-          ui: [{ route: "/orders", status: 200 }],
-          api: [{ method: "GET", path: "/api/orders", status: 200 }],
-        },
-        uiFidelity: {
-          version: "0.1",
-          mode: "interactive",
-          screens: [
-            {
-              route: "/orders",
-              uiContractId: "CON-UI-0001",
-              expected: {
-                elements: 2,
-                actions: 1,
-                ids: ["search_input", "orders_table"],
-              },
-              found: { markers: ["CON-UI-0001:search_input"] },
-              missing: { markers: ["CON-UI-0001:orders_table"] },
-              observed: { elementsPlaced: 2, actionsWired: 1 },
-              mockPaths: [{ id: "mp_create_to_list", status: "pass" }],
-            },
-          ],
-        },
-      });
-
-      const issues = await validatePrototypingEvidence(root, defaultConfig);
-      const markerIssue = issues.find((item) => item.code === "QFAI-PROT-242");
-
-      expect(markerIssue).toBeDefined();
-      expect(markerIssue?.severity).toBe("error");
-      expect(markerIssue?.refs).toContain("missing_markers=CON-UI-0001:orders_table");
-    });
-  });
-
-  it("warns QFAI-PROT-243 when placeholder page detected", async () => {
-    await withTempRoot(async (root) => {
-      await seedSpecs(root, ["0001"]);
-      await seedUiContract(root, {
-        contractId: "CON-UI-0001",
-        route: "/orders",
-        elements: ["search_input", "orders_table", "status_col"],
-        actions: ["go_to_create"],
-      });
-      await seedEvidence(root, {
-        specs: [buildSpecRow("spec-0001", { ui: 1, api: 1, db: 1 })],
-        runtimeGate: {
-          ui: [{ route: "/orders", status: 200 }],
-          api: [{ method: "GET", path: "/api/orders", status: 200 }],
-        },
-        uiFidelity: {
-          version: "0.1",
-          mode: "interactive",
-          screens: [
-            {
-              route: "/orders",
-              uiContractId: "CON-UI-0001",
-              expected: {
-                elements: 3,
-                actions: 1,
-                labels: ["search_input", "orders_table", "status_col"],
-              },
-              found: { labels: [] },
-              missing: {
-                labels: ["search_input", "orders_table", "status_col"],
-              },
-              coverage: 0,
-              observed: { elementsPlaced: 1, actionsWired: 1 },
-              mockPaths: [{ id: "mp_create_to_list", status: "pass" }],
-            },
-          ],
-        },
-      });
-
-      const issues = await validatePrototypingEvidence(root, defaultConfig);
-      const placeholderIssue = issues.find((item) => item.code === "QFAI-PROT-243");
-      // QFAI-PROT-241 is also expected to fire here because all expected labels are missing.
-      const missingLabelsIssue = issues.find((item) => item.code === "QFAI-PROT-241");
-
-      expect(placeholderIssue).toBeDefined();
-      expect(placeholderIssue?.severity).toBe("warning");
-      expect(missingLabelsIssue).toBeDefined();
-    });
-  });
-
-  it("does not warn QFAI-PROT-243 on legacy evidence without found block", async () => {
-    await withTempRoot(async (root) => {
-      await seedSpecs(root, ["0001"]);
-      await seedUiContract(root, {
-        contractId: "CON-UI-0001",
-        route: "/orders",
-        elements: ["search_input", "orders_table", "status_col"],
-        actions: ["go_to_create"],
-      });
-      await seedEvidence(root, {
-        specs: [buildSpecRow("spec-0001", { ui: 1, api: 1, db: 1 })],
-        runtimeGate: {
-          ui: [{ route: "/orders", status: 200 }],
-          api: [{ method: "GET", path: "/api/orders", status: 200 }],
-        },
-        uiFidelity: {
-          version: "0.1",
-          mode: "interactive",
-          screens: [
-            {
-              route: "/orders",
-              uiContractId: "CON-UI-0001",
-              expected: {
-                elements: 3,
-                actions: 1,
-              },
-              // No found/missing/coverage — legacy format
-              observed: { elementsPlaced: 1, actionsWired: 1 },
-              mockPaths: [{ id: "mp_create_to_list", status: "pass" }],
-            },
-          ],
-        },
-      });
-
-      const issues = await validatePrototypingEvidence(root, defaultConfig);
-      const placeholderIssue = issues.find((item) => item.code === "QFAI-PROT-243");
-
-      expect(placeholderIssue).toBeUndefined();
-    });
-  });
-
-  it("accepts mixed captured and failed renders without discarding the screen", async () => {
-    await withTempRoot(async (root) => {
-      await seedSpecs(root, ["0001"]);
-      await seedUiContract(root, {
-        contractId: "CON-UI-0001",
-        route: "/orders",
-        elements: ["search_input", "orders_table"],
-        actions: ["go_to_create"],
-      });
-      const artifactRoot = path.join(root, ".qfai", "evidence", "renders");
-      await mkdir(artifactRoot, { recursive: true });
-      await writeFile(path.join(artifactRoot, "orders.desktop.png"), "png", "utf-8");
-      await writeFile(path.join(artifactRoot, "orders.desktop.html"), "<html></html>", "utf-8");
-
-      await seedEvidence(root, {
-        specs: [buildSpecRow("spec-0001", { ui: 1, api: 1, db: 1 })],
-        runtimeGate: {
-          ui: [{ route: "/orders", status: 200 }],
-          api: [{ method: "GET", path: "/api/orders", status: 200 }],
-        },
-        uiFidelity: {
-          version: "0.1",
-          mode: "interactive",
-          screens: [
-            {
-              route: "/orders",
-              uiContractId: "CON-UI-0001",
-              expected: { elements: 2, actions: 1 },
-              observed: { elementsPlaced: 2, actionsWired: 1 },
-              mockPaths: [{ id: "mp_create_to_list", status: "pass" }],
-              renders: [
-                {
-                  viewport: "desktop",
-                  status: "captured",
-                  width: 1440,
-                  height: 900,
-                  imagePath: ".qfai/evidence/renders/orders.desktop.png",
-                  htmlPath: ".qfai/evidence/renders/orders.desktop.html",
-                },
-                {
-                  viewport: "mobile",
-                  status: "failed",
-                  width: 390,
-                  height: 844,
-                  error: "browser launch failed",
-                },
-              ],
-            },
-          ],
-        },
-      });
-
-      const issues = await validatePrototypingEvidence(root, defaultConfig);
-      expect(issues.find((item) => item.code === "QFAI-PROT-244")).toBeUndefined();
-      expect(issues.find((item) => item.code === "QFAI-PROT-245")).toBeUndefined();
-    });
-  });
-
-  it("fails when skipped render entries omit skippedReason", async () => {
-    await withTempRoot(async (root) => {
-      await seedSpecs(root, ["0001"]);
-      await seedUiContract(root, {
-        contractId: "CON-UI-0001",
-        route: "/orders",
-        elements: ["search_input", "orders_table"],
-        actions: ["go_to_create"],
-      });
-
-      await seedEvidence(root, {
-        specs: [buildSpecRow("spec-0001", { ui: 1, api: 1, db: 1 })],
-        runtimeGate: {
-          ui: [{ route: "/orders", status: 200 }],
-          api: [{ method: "GET", path: "/api/orders", status: 200 }],
-        },
-        uiFidelity: {
-          version: "0.1",
-          mode: "interactive",
-          screens: [
-            {
-              route: "/orders",
-              uiContractId: "CON-UI-0001",
-              expected: { elements: 2, actions: 1 },
-              observed: { elementsPlaced: 2, actionsWired: 1 },
-              mockPaths: [{ id: "mp_create_to_list", status: "pass" }],
-              renders: [
-                {
-                  viewport: "desktop",
-                  status: "skipped",
-                  width: 1440,
-                  height: 900,
-                },
-              ],
-            },
-          ],
-        },
-      });
-
-      const issues = await validatePrototypingEvidence(root, defaultConfig);
-      const shapeIssue = issues.find((item) => item.code === "QFAI-PROT-101");
-
-      expect(shapeIssue).toBeDefined();
-      expect(shapeIssue?.severity).toBe("error");
-      expect(shapeIssue?.message).toContain("skippedReason");
-      expect(shapeIssue?.rule).toBe("prototypingEvidence.schema");
-    });
-  });
-
-  it("fails when captured render artifact files are missing", async () => {
-    await withTempRoot(async (root) => {
-      await seedSpecs(root, ["0001"]);
-      await seedUiContract(root, {
-        contractId: "CON-UI-0001",
-        route: "/orders",
-        elements: ["search_input", "orders_table"],
-        actions: ["go_to_create"],
-      });
-
-      await seedEvidence(root, {
-        specs: [buildSpecRow("spec-0001", { ui: 1, api: 1, db: 1 })],
-        runtimeGate: {
-          ui: [{ route: "/orders", status: 200 }],
-          api: [{ method: "GET", path: "/api/orders", status: 200 }],
-        },
-        uiFidelity: {
-          version: "0.1",
-          mode: "interactive",
-          screens: [
-            {
-              route: "/orders",
-              uiContractId: "CON-UI-0001",
-              expected: { elements: 2, actions: 1 },
-              observed: { elementsPlaced: 2, actionsWired: 1 },
-              mockPaths: [{ id: "mp_create_to_list", status: "pass" }],
-              renders: [
-                {
-                  viewport: "desktop",
-                  status: "captured",
-                  width: 1440,
-                  height: 900,
-                  imagePath: ".qfai/evidence/renders/orders.desktop.png",
-                  htmlPath: ".qfai/evidence/renders/orders.desktop.html",
-                },
-                {
-                  viewport: "mobile",
-                  status: "captured",
-                  width: 390,
-                  height: 844,
-                  imagePath: ".qfai/evidence/renders/orders.mobile.png",
-                  htmlPath: ".qfai/evidence/renders/orders.mobile.html",
-                },
-              ],
-            },
-          ],
-        },
-      });
-
-      const issues = await validatePrototypingEvidence(root, defaultConfig);
-      const artifactIssue = issues.find((item) => item.code === "QFAI-PROT-244");
-
-      expect(artifactIssue).toBeDefined();
-      expect(artifactIssue?.severity).toBe("error");
-      expect(artifactIssue?.refs).toContain("route=/orders");
-      expect(artifactIssue?.refs).toContain("viewport=desktop");
-      expect(artifactIssue?.refs).toContain("artifact=imagePath");
-      expect(artifactIssue?.refs).toContain("artifact=htmlPath");
-    });
-  });
-
-  it("warns under default qualityProfile when a default viewport is missing", async () => {
-    await withTempRoot(async (root) => {
-      await seedSpecs(root, ["0001"]);
-      await seedUiContract(root, {
-        contractId: "CON-UI-0001",
-        route: "/orders",
-        elements: ["search_input", "orders_table"],
-        actions: ["go_to_create"],
-      });
-      const artifactRoot = path.join(root, ".qfai", "evidence", "renders");
-      await mkdir(artifactRoot, { recursive: true });
-      await writeFile(path.join(artifactRoot, "orders.desktop.png"), "png", "utf-8");
-      await writeFile(path.join(artifactRoot, "orders.desktop.html"), "<html></html>", "utf-8");
-
-      await seedEvidence(root, {
-        specs: [buildSpecRow("spec-0001", { ui: 1, api: 1, db: 1 })],
-        runtimeGate: {
-          ui: [{ route: "/orders", status: 200 }],
-          api: [{ method: "GET", path: "/api/orders", status: 200 }],
-        },
-        uiFidelity: {
-          version: "0.1",
-          mode: "interactive",
-          screens: [
-            {
-              route: "/orders",
-              uiContractId: "CON-UI-0001",
-              expected: { elements: 2, actions: 1 },
-              observed: { elementsPlaced: 2, actionsWired: 1 },
-              mockPaths: [{ id: "mp_create_to_list", status: "pass" }],
-              renders: [
-                {
-                  viewport: "desktop",
-                  status: "captured",
-                  width: 1440,
-                  height: 900,
-                  imagePath: ".qfai/evidence/renders/orders.desktop.png",
-                  htmlPath: ".qfai/evidence/renders/orders.desktop.html",
-                },
-              ],
-            },
-          ],
-        },
-      });
-
-      const issues = await validatePrototypingEvidence(root, defaultConfig);
-      const coverageIssue = issues.find((item) => item.code === "QFAI-PROT-245");
-
-      expect(coverageIssue).toBeDefined();
-      expect(coverageIssue?.severity).toBe("warning");
-      expect(coverageIssue?.refs).toContain("viewport=mobile");
-    });
-  });
-
-  it("errors under high qualityProfile when a default viewport is missing", async () => {
-    await withTempRoot(async (root) => {
-      await seedSpecs(root, ["0001"]);
-      await seedUiContract(root, {
-        contractId: "CON-UI-0001",
-        route: "/orders",
-        elements: ["search_input", "orders_table"],
-        actions: ["go_to_create"],
-      });
-      const artifactRoot = path.join(root, ".qfai", "evidence", "renders");
-      await mkdir(artifactRoot, { recursive: true });
-      await writeFile(path.join(artifactRoot, "orders.desktop.png"), "png", "utf-8");
-      await writeFile(path.join(artifactRoot, "orders.desktop.html"), "<html></html>", "utf-8");
-      await writeFile(
-        path.join(root, "qfai.config.yaml"),
-        ["uiux:", "  qualityProfile: high", ""].join("\n"),
-        "utf-8",
-      );
-      const highConfig = {
-        ...defaultConfig,
-        uiux: { qualityProfile: "high" as const },
-      };
-
-      await seedEvidence(root, {
-        specs: [buildSpecRow("spec-0001", { ui: 1, api: 1, db: 1 })],
-        runtimeGate: {
-          ui: [{ route: "/orders", status: 200 }],
-          api: [{ method: "GET", path: "/api/orders", status: 200 }],
-        },
-        uiFidelity: {
-          version: "0.1",
-          mode: "interactive",
-          screens: [
-            {
-              route: "/orders",
-              uiContractId: "CON-UI-0001",
-              expected: { elements: 2, actions: 1 },
-              observed: { elementsPlaced: 2, actionsWired: 1 },
-              mockPaths: [{ id: "mp_create_to_list", status: "pass" }],
-              renders: [
-                {
-                  viewport: "desktop",
-                  status: "captured",
-                  width: 1440,
-                  height: 900,
-                  imagePath: ".qfai/evidence/renders/orders.desktop.png",
-                  htmlPath: ".qfai/evidence/renders/orders.desktop.html",
-                },
-              ],
-            },
-          ],
-        },
-      });
-
-      const issues = await validatePrototypingEvidence(root, highConfig);
-      const coverageIssue = issues.find((item) => item.code === "QFAI-PROT-245");
-
-      expect(coverageIssue).toBeDefined();
-      expect(coverageIssue?.severity).toBe("error");
-      expect(coverageIssue?.refs).toContain("qualityProfile=high");
-    });
-  });
-
-  it("errors under strict qualityProfile when all renders are skipped", async () => {
-    await withTempRoot(async (root) => {
-      await seedSpecs(root, ["0001"]);
-      await seedUiContract(root, {
-        contractId: "CON-UI-0001",
-        route: "/orders",
-        elements: ["search_input", "orders_table"],
-        actions: ["go_to_create"],
-      });
-      const strictConfig = {
-        ...defaultConfig,
-        uiux: { qualityProfile: "strict" as const },
-      };
-
-      await seedEvidence(root, {
-        specs: [buildSpecRow("spec-0001", { ui: 1, api: 1, db: 1 })],
-        runtimeGate: {
-          ui: [{ route: "/orders", status: 200 }],
-          api: [{ method: "GET", path: "/api/orders", status: 200 }],
-        },
-        uiFidelity: {
-          version: "0.1",
-          mode: "interactive",
-          screens: [
-            {
-              route: "/orders",
-              uiContractId: "CON-UI-0001",
-              expected: { elements: 2, actions: 1 },
-              observed: { elementsPlaced: 2, actionsWired: 1 },
-              mockPaths: [{ id: "mp_create_to_list", status: "pass" }],
-              renders: [
-                {
-                  viewport: "desktop",
-                  status: "skipped",
-                  width: 1440,
-                  height: 900,
-                  skippedReason: "playwright not installed",
-                },
-                {
-                  viewport: "mobile",
-                  status: "skipped",
-                  width: 390,
-                  height: 844,
-                  skippedReason: "playwright not installed",
-                },
-              ],
-            },
-          ],
-        },
-      });
-
-      const issues = await validatePrototypingEvidence(root, strictConfig);
-      const coverageIssue = issues.find((item) => item.code === "QFAI-PROT-245");
-
-      expect(coverageIssue).toBeDefined();
-      expect(coverageIssue?.severity).toBe("error");
-      expect(coverageIssue?.refs).toContain("qualityProfile=strict");
-    });
-  });
-});
-
-async function seedSpecs(root: string, specNumbers: string[]): Promise<void> {
-  for (const specNumber of specNumbers) {
-    await mkdir(path.join(root, ".qfai", "specs", `spec-${specNumber}`), {
-      recursive: true,
-    });
+async function withTempRoot(task: (root: string) => Promise<void>): Promise<void> {
+  const root = await mkdtemp(path.join(os.tmpdir(), "qfai-prot-evidence-"));
+  try {
+    await task(root);
+  } finally {
+    await rm(root, { recursive: true, force: true });
   }
 }
 
-async function seedUiContract(
-  root: string,
-  payload: {
-    contractId: string;
-    route: string;
-    elements: string[];
-    actions: string[];
-  },
-): Promise<void> {
-  const uiRoot = path.join(root, ".qfai", "contracts", "ui");
-  await mkdir(uiRoot, { recursive: true });
-  const elementsBlock = payload.elements
-    .map((id) => `      - id: ${id}\n        label: ${id}`)
-    .join("\n");
-  const actionsBlock = payload.actions.map((id) => `      - id: ${id}`).join("\n");
+async function seedSpecs(root: string): Promise<void> {
+  const specDir = path.join(root, ".qfai", "specs", "spec-0001");
+  await mkdir(specDir, { recursive: true });
   await writeFile(
-    path.join(uiRoot, "ui-contract.sample.yaml"),
+    path.join(specDir, "01_Spec.md"),
+    ["# Spec", "", "- ui_route: /orders", ""].join("\n"),
+    "utf-8",
+  );
+}
+
+async function seedDiscussion(root: string): Promise<void> {
+  const packDir = path.join(root, ".qfai", "discussion", "discussion-20260404000000000", "uiux");
+  await mkdir(packDir, { recursive: true });
+  await writeFile(
+    path.join(path.dirname(packDir), "prototyping.yaml"),
     [
-      `# QFAI-CONTRACT-ID: ${payload.contractId}`,
-      "screens:",
-      "  - id: orders_screen",
-      `    route: ${payload.route}`,
-      "    elements:",
-      elementsBlock,
-      "    actions:",
-      actionsBlock,
+      "prototyping:",
+      "  recommended_mode: full-harness",
+      "  rationale: runtime proof required",
+      "  allowed_modes:",
+      "    - full-harness",
+      "  surface: web",
+      "",
+    ].join("\n"),
+    "utf-8",
+  );
+  await writeFile(
+    path.join(packDir, "40_screen_contracts.md"),
+    [
+      "# Screen Contracts",
+      "",
+      "### Screen: Orders",
+      "- screen_id: orders",
+      "- route: /orders",
       "",
     ].join("\n"),
     "utf-8",
   );
 }
 
-type EvidenceSpecRow = {
-  specId: string;
-  declared: { uiRoutes: number; apiEndpoints: number; dbObjects: number };
-  checked: { uiOk: number; apiNon404: number; dbPresent: number };
-  missing: { uiRoutes: string[]; apiEndpoints: string[]; dbObjects: string[] };
-};
+async function seedContracts(root: string): Promise<void> {
+  const uiRoot = path.join(root, ".qfai", "contracts", "ui");
+  await mkdir(uiRoot, { recursive: true });
+  await writeFile(
+    path.join(uiRoot, "orders.yaml"),
+    [
+      "# QFAI-CONTRACT-ID: CON-UI-0001",
+      "screens:",
+      "  - id: orders",
+      "    route: /orders",
+      "    elements:",
+      "      - id: orders_table",
+      "        label: Orders",
+      "    actions:",
+      "      - id: create_order",
+      "",
+    ].join("\n"),
+    "utf-8",
+  );
+}
 
-type EvidencePayload = {
-  specs: EvidenceSpecRow[];
-  runtimeGate?: {
-    ui: Array<{ route: string; status: number }>;
-    api: Array<{ method: string; path: string; status: number }>;
-  };
-  uiFidelity?: Record<string, unknown>;
-};
+async function seedRenderBundle(root: string): Promise<void> {
+  const renderDir = path.join(root, ".qfai", "evidence", "render");
+  await mkdir(renderDir, { recursive: true });
+  await writeFile(path.join(renderDir, "orders.desktop.png"), "png", "utf-8");
+  await writeFile(path.join(renderDir, "orders.desktop.html"), "<html></html>", "utf-8");
+  await writeFile(path.join(renderDir, "orders.mobile.png"), "png", "utf-8");
+  await writeFile(path.join(renderDir, "orders.mobile.html"), "<html></html>", "utf-8");
+  await writeFile(
+    path.join(root, ".qfai", "evidence", "render.json"),
+    JSON.stringify(
+      {
+        renderEvidence: {
+          status: "captured",
+          requested: true,
+          viewports: ["desktop"],
+          outputPath: ".qfai/evidence/render.json",
+        },
+        screens: [
+          {
+            route: "/orders",
+            viewport: "desktop",
+            status: "captured",
+            width: 1440,
+            height: 900,
+            imagePath: ".qfai/evidence/render/orders.desktop.png",
+            htmlPath: ".qfai/evidence/render/orders.desktop.html",
+          },
+          {
+            route: "/orders",
+            viewport: "mobile",
+            status: "captured",
+            width: 390,
+            height: 844,
+            imagePath: ".qfai/evidence/render/orders.mobile.png",
+            htmlPath: ".qfai/evidence/render/orders.mobile.html",
+          },
+        ],
+      },
+      null,
+      2,
+    ),
+    "utf-8",
+  );
+}
 
-async function seedEvidence(root: string, payload: EvidencePayload): Promise<void> {
+async function seedBrowserQaBundle(root: string): Promise<void> {
+  await writeFile(
+    path.join(root, ".qfai", "evidence", "browser-qa.json"),
+    JSON.stringify(
+      {
+        browserQa: {
+          executed: true,
+          status: "completed",
+          mode: "full-harness",
+          summary: {
+            smoke: { status: "passed", findingsCount: 0, checksCount: 1 },
+            interaction: { status: "passed", findingsCount: 0, checksCount: 1 },
+            visual: { status: "passed", findingsCount: 0, checksCount: 1 },
+            accessibility: { status: "passed", findingsCount: 0, checksCount: 1 },
+          },
+        },
+        findings: [],
+      },
+      null,
+      2,
+    ),
+    "utf-8",
+  );
+}
+
+async function seedCalibration(root: string): Promise<void> {
+  await mkdir(path.join(root, ".qfai", "evidence"), { recursive: true });
+  await writeFile(
+    path.join(root, ".qfai", "evidence", "calibration.yaml"),
+    [
+      "version: 1.7.15",
+      "thresholds:",
+      "  accept: 0.8",
+      "  refine: 0.5",
+      "maxIterations: 5",
+      "plateauDelta: 0.02",
+      "plateauLookback: 3",
+      "examples: []",
+      "",
+    ].join("\n"),
+    "utf-8",
+  );
+}
+
+async function seedEvidence(root: string, payload: Record<string, unknown>): Promise<void> {
   const evidenceRoot = path.join(root, ".qfai", "evidence");
   await mkdir(evidenceRoot, { recursive: true });
   await writeFile(path.join(evidenceRoot, "prototyping.md"), "# Prototyping Evidence\n", "utf-8");
   await writeFile(
     path.join(evidenceRoot, "prototyping.json"),
-    `${JSON.stringify(
-      {
-        specs: payload.specs,
-        runtimeGate: payload.runtimeGate ?? { ui: [], api: [] },
-        ...(payload.uiFidelity ? { uiFidelity: payload.uiFidelity } : {}),
-        meta: {
-          generatedAt: "2026-02-23T00:00:00.000Z",
-          toolVersion: "1.4.36",
-          commands: ["pnpm dev"],
-        },
-      },
-      null,
-      2,
-    )}\n`,
+    JSON.stringify(payload, null, 2),
     "utf-8",
   );
 }
 
-function buildSpecRow(
-  specId: string,
-  counts: { ui: number; api: number; db: number },
-): EvidenceSpecRow {
+function buildValidEvidence(overrides: Record<string, unknown> = {}): Record<string, unknown> {
   return {
-    specId,
-    declared: {
-      uiRoutes: counts.ui,
-      apiEndpoints: counts.api,
-      dbObjects: counts.db,
+    surface: "web",
+    specs: [
+      {
+        specId: "spec-0001",
+        declared: { uiRoutes: 1, apiEndpoints: 0, dbObjects: 0 },
+        checked: { uiOk: 1, apiNon404: 0, dbPresent: 0 },
+        missing: { uiRoutes: [], apiEndpoints: [], dbObjects: [] },
+        coverageRefs: [
+          {
+            route: "/orders",
+            declaredRef: ".qfai/specs/spec-0001/01_Spec.md#L2",
+            observedRefs: [".qfai/evidence/render.json#/screens/0"],
+          },
+        ],
+      },
+    ],
+    mode: {
+      requested: "full-harness",
+      effective: "full-harness",
+      source: "explicit-request",
+      rationale: "runtime proof requested",
     },
-    checked: {
-      uiOk: counts.ui,
-      apiNon404: counts.api,
-      dbPresent: counts.db,
+    runtimeGate: {
+      ui: [
+        {
+          screenId: "orders",
+          route: "/orders",
+          declaredRef:
+            ".qfai/discussion/discussion-20260404000000000/uiux/40_screen_contracts.md#orders",
+          rendered: true,
+          browserVisited: true,
+          renderEvidenceRefs: [".qfai/evidence/render.json#/screens/0"],
+          browserQaEvidenceRefs: [".qfai/evidence/browser-qa.json#/phases/0"],
+        },
+      ],
+      evidenceRefs: [
+        ".qfai/discussion/discussion-20260404000000000/uiux/40_screen_contracts.md#orders",
+        ".qfai/evidence/render.json#/screens/0",
+        ".qfai/evidence/browser-qa.json#/phases/0",
+      ],
     },
-    missing: {
-      uiRoutes: [],
-      apiEndpoints: [],
-      dbObjects: [],
+    uiFidelity: {
+      mode: "interactive",
+      screens: [
+        {
+          screenId: "orders",
+          route: "/orders",
+          uiContractId: "CON-UI-0001",
+          expected: { elements: 1, actions: 1 },
+          observed: { elementsPlaced: 1, actionsWired: 1 },
+          mockPaths: [{ id: "orders-missing-empty-state", status: "finding" }],
+          renders: [
+            {
+              viewport: "desktop",
+              status: "captured",
+              width: 1440,
+              height: 900,
+              imagePath: ".qfai/evidence/render/orders.desktop.png",
+              htmlPath: ".qfai/evidence/render/orders.desktop.html",
+            },
+            {
+              viewport: "mobile",
+              status: "captured",
+              width: 390,
+              height: 844,
+              imagePath: ".qfai/evidence/render/orders.mobile.png",
+              htmlPath: ".qfai/evidence/render/orders.mobile.html",
+            },
+          ],
+        },
+      ],
     },
+    fullHarness: {
+      enabled: true,
+      runId: "fh-1",
+      calibrationRef: {
+        configPath: "qfai.config.yaml",
+        packPath: ".qfai/evidence/calibration.yaml",
+        packVersion: "1.7.15",
+      },
+      iterationCount: 1,
+      bestIteration: 1,
+      status: "in-progress",
+      finalDecision: "pending",
+      reviewerSignoff: {
+        reviewerId: "qa-reviewer",
+        status: "pending",
+        source: "cli",
+      },
+      reviewerLogs: [
+        {
+          iteration: 1,
+          reviewerId: "qa-reviewer",
+          verdict: "revise",
+          summary: "Iteration 1 requires another pass before terminal signoff.",
+          evidenceRefs: [".qfai/evidence/render.json#/screens/0"],
+        },
+      ],
+      iterations: [
+        {
+          iteration: 1,
+          commitSha: "abc0001",
+          reviewerId: "qa-reviewer",
+          timestamp: "2026-04-04T00:00:00Z",
+          changeSummary: ["Initial measurement"],
+          limitations: [],
+          evidenceRefs: {
+            render: [".qfai/evidence/render.json#/screens/0"],
+            browserQa: [".qfai/evidence/browser-qa.json#/phases/0"],
+            runtimeGate: [
+              ".qfai/discussion/discussion-20260404000000000/uiux/40_screen_contracts.md#orders",
+            ],
+            uiObservation: [".qfai/evidence/render/orders.desktop.html"],
+            specCoverage: [
+              ".qfai/discussion/discussion-20260404000000000/uiux/40_screen_contracts.md#orders",
+            ],
+            discussion: [
+              ".qfai/discussion/discussion-20260404000000000/uiux/20_design_eval_invariant.md#discussion-axes-invariant",
+            ],
+            screenContract: [
+              ".qfai/discussion/discussion-20260404000000000/uiux/40_screen_contracts.md#orders",
+            ],
+            trend: [".qfai/discussion/discussion-20260404000000000/04_Sources.md#trend-scan"],
+          },
+          l1: {
+            panel: "L1",
+            total: 0.9,
+            axes: [
+              {
+                axisId: "runtime",
+                score: 0.9,
+                rationale: "ok",
+                evidenceRefs: [".qfai/evidence/render.json#/screens/0"],
+              },
+            ],
+          },
+          l2: {
+            panel: "L2",
+            total: 0.9,
+            axes: [
+              {
+                axisId: "design",
+                score: 0.9,
+                rationale: "ok",
+                evidenceRefs: [
+                  ".qfai/discussion/discussion-20260404000000000/uiux/20_design_eval_invariant.md#axis-1",
+                ],
+              },
+            ],
+          },
+          weightedTotal: 0.9,
+          deltaFromPrevious: null,
+          decision: "accept",
+        },
+      ],
+      scoringTrace: [
+        {
+          iteration: 1,
+          l1Total: 0.9,
+          l2Total: 0.9,
+          weightedTotal: 0.9,
+          deltaFromPrevious: null,
+          decision: "accept",
+          commitSha: "abc0001",
+        },
+      ],
+      limitations: [],
+    },
+    meta: {
+      generatedAt: "2026-04-04T00:00:00.000Z",
+      toolVersion: "1.7.15",
+      commands: ["qfai prototyping run --mode full-harness"],
+    },
+    ...overrides,
   };
 }
+
+describe("validatePrototypingEvidence", () => {
+  it("fails when prototyping evidence files are missing", async () => {
+    await withTempRoot(async (root) => {
+      await seedSpecs(root);
+      const issues = await validatePrototypingEvidence(root, defaultConfig);
+      expect(issues.some((item) => item.code === "QFAI-PROT-101")).toBe(true);
+    });
+  });
+
+  it("accepts full-harness UI-only evidence with concrete refs", async () => {
+    await withTempRoot(async (root) => {
+      await seedSpecs(root);
+      await seedDiscussion(root);
+      await seedContracts(root);
+      await seedCalibration(root);
+      await seedRenderBundle(root);
+      await seedBrowserQaBundle(root);
+      await seedEvidence(root, buildValidEvidence());
+
+      const issues = await validatePrototypingEvidence(root, defaultConfig);
+      expect(issues).toEqual([]);
+    });
+  });
+
+  it("rejects unsupported legacy mode metadata", async () => {
+    await withTempRoot(async (root) => {
+      await seedSpecs(root);
+      await seedEvidence(
+        root,
+        buildValidEvidence({
+          mode: {
+            requested: "standard",
+            effective: "standard",
+            source: "explicit-request",
+            rationale: "legacy mode",
+          },
+        }),
+      );
+
+      const issues = await validatePrototypingEvidence(root, defaultConfig);
+      expect(issues.some((item) => item.code === "QFAI-PROT-101")).toBe(true);
+    });
+  });
+
+  it("rejects synthetic runtimeGate/specCoverage refs", async () => {
+    await withTempRoot(async (root) => {
+      await seedSpecs(root);
+      await seedDiscussion(root);
+      await seedContracts(root);
+      await seedCalibration(root);
+      await seedRenderBundle(root);
+      await seedBrowserQaBundle(root);
+      const invalid = buildValidEvidence();
+      const fullHarness = invalid.fullHarness as {
+        iterations: Array<{ evidenceRefs: { runtimeGate: string[]; specCoverage: string[] } }>;
+      };
+      fullHarness.iterations[0].evidenceRefs.runtimeGate = [".qfai/evidence/render"];
+      fullHarness.iterations[0].evidenceRefs.specCoverage = ["specs: spec-0001"];
+      await seedEvidence(root, invalid);
+
+      const issues = await validatePrototypingEvidence(root, defaultConfig);
+      expect(issues.some((item) => item.code === "QFAI-PROT-318")).toBe(true);
+    });
+  });
+
+  it("rejects malformed top-level runtimeGate.evidenceRefs", async () => {
+    await withTempRoot(async (root) => {
+      await seedSpecs(root);
+      await seedDiscussion(root);
+      await seedContracts(root);
+      await seedCalibration(root);
+      await seedRenderBundle(root);
+      await seedBrowserQaBundle(root);
+      const invalid = buildValidEvidence();
+      (invalid.runtimeGate as { evidenceRefs: string[] }).evidenceRefs = [
+        path.join(root, ".qfai", "evidence", "render", "orders.desktop.png"),
+      ];
+      await seedEvidence(root, invalid);
+
+      const issues = await validatePrototypingEvidence(root, defaultConfig);
+      expect(issues.some((item) => item.code === "QFAI-PROT-318")).toBe(true);
+    });
+  });
+
+  it("rejects self refs in top-level runtimeGate.evidenceRefs", async () => {
+    await withTempRoot(async (root) => {
+      await seedSpecs(root);
+      await seedDiscussion(root);
+      await seedContracts(root);
+      await seedCalibration(root);
+      await seedRenderBundle(root);
+      await seedBrowserQaBundle(root);
+      const invalid = buildValidEvidence();
+      (invalid.runtimeGate as { evidenceRefs: string[] }).evidenceRefs = [
+        ".qfai/evidence/prototyping.json#/runtimeGate",
+      ];
+      await seedEvidence(root, invalid);
+
+      const issues = await validatePrototypingEvidence(root, defaultConfig);
+      expect(issues.some((item) => item.code === "QFAI-PROT-318")).toBe(true);
+    });
+  });
+
+  it("rejects missing runtimeGate.ui[].declaredRef at parse time", async () => {
+    await withTempRoot(async (root) => {
+      await seedSpecs(root);
+      await seedDiscussion(root);
+      await seedContracts(root);
+      await seedCalibration(root);
+      await seedRenderBundle(root);
+      await seedBrowserQaBundle(root);
+      const invalid = buildValidEvidence();
+      delete (
+        (invalid.runtimeGate as { ui: Array<Record<string, unknown>> }).ui[0] as Record<
+          string,
+          unknown
+        >
+      ).declaredRef;
+      await seedEvidence(root, invalid);
+
+      const issues = await validatePrototypingEvidence(root, defaultConfig);
+      expect(issues.some((item) => item.code === "QFAI-PROT-101")).toBe(true);
+    });
+  });
+
+  it("rejects malformed runtimeGate.ui leaf refs", async () => {
+    await withTempRoot(async (root) => {
+      await seedSpecs(root);
+      await seedDiscussion(root);
+      await seedContracts(root);
+      await seedCalibration(root);
+      await seedRenderBundle(root);
+      await seedBrowserQaBundle(root);
+      const invalid = buildValidEvidence();
+      const row = (invalid.runtimeGate as { ui: Array<Record<string, unknown>> }).ui[0] as Record<
+        string,
+        unknown
+      >;
+      row.declaredRef = path.join(root, ".qfai", "specs", "spec-0001", "01_Spec.md");
+      row.renderEvidenceRefs = [".qfai/evidence/render"];
+      row.browserQaEvidenceRefs = ["browser-qa.json"];
+      await seedEvidence(root, invalid);
+
+      const issues = await validatePrototypingEvidence(root, defaultConfig);
+      expect(issues.filter((item) => item.code === "QFAI-PROT-318").length).toBeGreaterThanOrEqual(
+        3,
+      );
+    });
+  });
+
+  it("rejects windows-style runtimeGate.ui browserQa refs", async () => {
+    await withTempRoot(async (root) => {
+      await seedSpecs(root);
+      await seedDiscussion(root);
+      await seedContracts(root);
+      await seedCalibration(root);
+      await seedRenderBundle(root);
+      await seedBrowserQaBundle(root);
+      const invalid = buildValidEvidence();
+      const row = (invalid.runtimeGate as { ui: Array<Record<string, unknown>> }).ui[0] as Record<
+        string,
+        unknown
+      >;
+      (row.browserQaEvidenceRefs as string[])[0] = ".qfai\\evidence\\browser-qa.json#/phases/0";
+      await seedEvidence(root, invalid);
+
+      const issues = await validatePrototypingEvidence(root, defaultConfig);
+      expect(issues.some((item) => item.code === "QFAI-PROT-318")).toBe(true);
+    });
+  });
+
+  it("rejects empty runtimeGate.ui leaf evidence arrays", async () => {
+    await withTempRoot(async (root) => {
+      await seedSpecs(root);
+      await seedDiscussion(root);
+      await seedContracts(root);
+      await seedCalibration(root);
+      await seedRenderBundle(root);
+      await seedBrowserQaBundle(root);
+      const invalid = buildValidEvidence();
+      const row = (invalid.runtimeGate as { ui: Array<Record<string, unknown>> }).ui[0] as Record<
+        string,
+        unknown
+      >;
+      row.renderEvidenceRefs = [];
+      row.browserQaEvidenceRefs = [];
+      await seedEvidence(root, invalid);
+
+      const issues = await validatePrototypingEvidence(root, defaultConfig);
+      expect(issues.filter((item) => item.code === "QFAI-PROT-318").length).toBeGreaterThanOrEqual(
+        2,
+      );
+    });
+  });
+
+  it("rejects missing top-level runtimeGate.evidenceRefs at parse time", async () => {
+    await withTempRoot(async (root) => {
+      await seedSpecs(root);
+      await seedDiscussion(root);
+      await seedContracts(root);
+      await seedCalibration(root);
+      await seedRenderBundle(root);
+      await seedBrowserQaBundle(root);
+      const invalid = buildValidEvidence();
+      delete (invalid.runtimeGate as Record<string, unknown>).evidenceRefs;
+      await seedEvidence(root, invalid);
+
+      const issues = await validatePrototypingEvidence(root, defaultConfig);
+      expect(issues.some((item) => item.code === "QFAI-PROT-101")).toBe(true);
+    });
+  });
+
+  it("rejects empty top-level runtimeGate.evidenceRefs", async () => {
+    await withTempRoot(async (root) => {
+      await seedSpecs(root);
+      await seedDiscussion(root);
+      await seedContracts(root);
+      await seedCalibration(root);
+      await seedRenderBundle(root);
+      await seedBrowserQaBundle(root);
+      const invalid = buildValidEvidence();
+      (invalid.runtimeGate as { evidenceRefs: string[] }).evidenceRefs = [];
+      await seedEvidence(root, invalid);
+
+      const issues = await validatePrototypingEvidence(root, defaultConfig);
+      expect(issues.some((item) => item.code === "QFAI-PROT-177")).toBe(true);
+    });
+  });
+
+  it("rejects non-concrete per-spec coverage declaredRef", async () => {
+    await withTempRoot(async (root) => {
+      await seedSpecs(root);
+      await seedDiscussion(root);
+      await seedContracts(root);
+      await seedCalibration(root);
+      await seedRenderBundle(root);
+      await seedBrowserQaBundle(root);
+      const invalid = buildValidEvidence();
+      (
+        (invalid.specs as Array<Record<string, unknown>>)[0]?.coverageRefs as Array<
+          Record<string, unknown>
+        >
+      )[0].declaredRef = path.join(root, ".qfai", "specs", "spec-0001", "01_Spec.md");
+      await seedEvidence(root, invalid);
+
+      const issues = await validatePrototypingEvidence(root, defaultConfig);
+      expect(issues.some((item) => item.code === "QFAI-PROT-318")).toBe(true);
+    });
+  });
+
+  it("rejects non-concrete fullHarness axis evidence refs", async () => {
+    await withTempRoot(async (root) => {
+      await seedSpecs(root);
+      await seedDiscussion(root);
+      await seedContracts(root);
+      await seedCalibration(root);
+      await seedRenderBundle(root);
+      await seedBrowserQaBundle(root);
+      const invalid = buildValidEvidence();
+      const iteration = (invalid.fullHarness as { iterations: Array<Record<string, unknown>> })
+        .iterations[0] as Record<string, unknown>;
+      const l1Axis = (
+        (iteration.l1 as Record<string, unknown>).axes as Array<Record<string, unknown>>
+      )[0] as Record<string, unknown>;
+      const l2Axis = (
+        (iteration.l2 as Record<string, unknown>).axes as Array<Record<string, unknown>>
+      )[0] as Record<string, unknown>;
+      (l1Axis.evidenceRefs as string[])[0] = "a";
+      (l2Axis.evidenceRefs as string[])[0] = ".qfai/evidence/prototyping.json#/fullHarness";
+      await seedEvidence(root, invalid);
+
+      const issues = await validatePrototypingEvidence(root, defaultConfig);
+      expect(issues.filter((item) => item.code === "QFAI-PROT-318").length).toBeGreaterThanOrEqual(
+        2,
+      );
+    });
+  });
+
+  it("rejects empty fullHarness axis evidence refs", async () => {
+    await withTempRoot(async (root) => {
+      await seedSpecs(root);
+      await seedDiscussion(root);
+      await seedContracts(root);
+      await seedCalibration(root);
+      await seedRenderBundle(root);
+      await seedBrowserQaBundle(root);
+      const invalid = buildValidEvidence();
+      const iteration = (invalid.fullHarness as { iterations: Array<Record<string, unknown>> })
+        .iterations[0] as Record<string, unknown>;
+      const l1Axis = (
+        (iteration.l1 as Record<string, unknown>).axes as Array<Record<string, unknown>>
+      )[0] as Record<string, unknown>;
+      l1Axis.evidenceRefs = [];
+      await seedEvidence(root, invalid);
+
+      const issues = await validatePrototypingEvidence(root, defaultConfig);
+      expect(issues.some((item) => item.code === "QFAI-PROT-318")).toBe(true);
+    });
+  });
+
+  it("rejects non-concrete reviewer log evidence refs", async () => {
+    await withTempRoot(async (root) => {
+      await seedSpecs(root);
+      await seedDiscussion(root);
+      await seedContracts(root);
+      await seedCalibration(root);
+      await seedRenderBundle(root);
+      await seedBrowserQaBundle(root);
+      const invalid = buildValidEvidence();
+      const log = (invalid.fullHarness as { reviewerLogs: Array<Record<string, unknown>> })
+        .reviewerLogs[0] as Record<string, unknown>;
+      (log.evidenceRefs as string[])[0] = "reviewer:1";
+      await seedEvidence(root, invalid);
+
+      const issues = await validatePrototypingEvidence(root, defaultConfig);
+      expect(issues.some((item) => item.code === "QFAI-PROT-318")).toBe(true);
+    });
+  });
+
+  it("rejects empty reviewer log evidence refs", async () => {
+    await withTempRoot(async (root) => {
+      await seedSpecs(root);
+      await seedDiscussion(root);
+      await seedContracts(root);
+      await seedCalibration(root);
+      await seedRenderBundle(root);
+      await seedBrowserQaBundle(root);
+      const invalid = buildValidEvidence();
+      const log = (invalid.fullHarness as { reviewerLogs: Array<Record<string, unknown>> })
+        .reviewerLogs[0] as Record<string, unknown>;
+      log.evidenceRefs = [];
+      await seedEvidence(root, invalid);
+
+      const issues = await validatePrototypingEvidence(root, defaultConfig);
+      expect(issues.some((item) => item.code === "QFAI-PROT-318")).toBe(true);
+    });
+  });
+
+  it("rejects mismatched reviewer semantics", async () => {
+    await withTempRoot(async (root) => {
+      await seedSpecs(root);
+      await seedDiscussion(root);
+      await seedContracts(root);
+      await seedCalibration(root);
+      await seedRenderBundle(root);
+      await seedBrowserQaBundle(root);
+      await seedEvidence(
+        root,
+        buildValidEvidence({
+          fullHarness: {
+            ...(buildValidEvidence().fullHarness as Record<string, unknown>),
+            finalDecision: "abandoned",
+            reviewerSignoff: {
+              reviewerId: "qa-reviewer",
+              status: "approved",
+              timestamp: "2026-04-04T00:00:00Z",
+              source: "cli",
+            },
+            reviewerLogs: [
+              {
+                iteration: 1,
+                reviewerId: "qa-reviewer",
+                verdict: "approve",
+                summary: "mismatched",
+                evidenceRefs: [".qfai/evidence/render.json#/screens/0"],
+              },
+            ],
+          },
+        }),
+      );
+
+      const issues = await validatePrototypingEvidence(root, defaultConfig);
+      expect(issues.some((item) => item.code === "QFAI-PROT-316")).toBe(true);
+      expect(issues.some((item) => item.code === "QFAI-PROT-317")).toBe(true);
+    });
+  });
+
+  it("rejects mismatched calibration metadata", async () => {
+    await withTempRoot(async (root) => {
+      await seedSpecs(root);
+      await seedDiscussion(root);
+      await seedContracts(root);
+      await seedCalibration(root);
+      await seedRenderBundle(root);
+      await seedBrowserQaBundle(root);
+      await seedEvidence(
+        root,
+        buildValidEvidence({
+          fullHarness: {
+            ...(buildValidEvidence().fullHarness as Record<string, unknown>),
+            calibrationRef: {
+              configPath: "custom.config.yaml",
+              packPath: ".qfai/evidence/calibration.yaml",
+              packVersion: "9.9.9",
+            },
+          },
+        }),
+      );
+
+      const issues = await validatePrototypingEvidence(root, defaultConfig);
+      expect(issues.some((item) => item.code === "QFAI-PROT-320")).toBe(true);
+      expect(issues.some((item) => item.code === "QFAI-PROT-321")).toBe(true);
+    });
+  });
+
+  it("rejects non-terminal accepted or approved semantics", async () => {
+    await withTempRoot(async (root) => {
+      await seedSpecs(root);
+      await seedDiscussion(root);
+      await seedContracts(root);
+      await seedCalibration(root);
+      await seedRenderBundle(root);
+      await seedBrowserQaBundle(root);
+      await seedEvidence(
+        root,
+        buildValidEvidence({
+          fullHarness: {
+            ...(buildValidEvidence().fullHarness as Record<string, unknown>),
+            finalDecision: "accepted",
+            reviewerSignoff: {
+              reviewerId: "qa-reviewer",
+              status: "approved",
+              source: "cli",
+            },
+          },
+        }),
+      );
+
+      const issues = await validatePrototypingEvidence(root, defaultConfig);
+      expect(issues.some((item) => item.code === "QFAI-PROT-322")).toBe(true);
+      expect(issues.some((item) => item.code === "QFAI-PROT-323")).toBe(true);
+    });
+  });
+
+  it("rejects terminationReason on in-progress fullHarness", async () => {
+    await withTempRoot(async (root) => {
+      await seedSpecs(root);
+      await seedDiscussion(root);
+      await seedContracts(root);
+      await seedCalibration(root);
+      await seedRenderBundle(root);
+      await seedBrowserQaBundle(root);
+      await seedEvidence(
+        root,
+        buildValidEvidence({
+          fullHarness: {
+            ...(buildValidEvidence().fullHarness as Record<string, unknown>),
+            terminationReason: "plateau",
+          },
+        }),
+      );
+
+      const issues = await validatePrototypingEvidence(root, defaultConfig);
+      expect(issues.some((item) => item.code === "QFAI-PROT-324")).toBe(true);
+    });
+  });
+
+  it("rejects route-slug screen contract refs in runtimeGate and iteration evidence", async () => {
+    await withTempRoot(async (root) => {
+      await seedSpecs(root);
+      await seedDiscussion(root);
+      await seedContracts(root);
+      await seedCalibration(root);
+      await seedRenderBundle(root);
+      await seedBrowserQaBundle(root);
+      const invalid = buildValidEvidence();
+      (
+        (invalid.runtimeGate as { ui: Array<Record<string, unknown>> }).ui[0] as Record<
+          string,
+          unknown
+        >
+      ).declaredRef =
+        ".qfai/discussion/discussion-20260404000000000/uiux/40_screen_contracts.md#screen:orders";
+      (
+        (
+          (invalid.fullHarness as { iterations: Array<Record<string, unknown>> })
+            .iterations[0] as Record<string, unknown>
+        ).evidenceRefs as Record<string, string[]>
+      ).screenContract = [
+        ".qfai/discussion/discussion-20260404000000000/uiux/40_screen_contracts.md#screen:orders",
+      ];
+      await seedEvidence(root, invalid);
+
+      const issues = await validatePrototypingEvidence(root, defaultConfig);
+      expect(issues.some((item) => item.code === "QFAI-PROT-326")).toBe(true);
+      expect(issues.some((item) => item.code === "QFAI-PROT-327")).toBe(true);
+    });
+  });
+
+  it("rejects non-spec declaredRef even when it is concrete", async () => {
+    await withTempRoot(async (root) => {
+      await seedSpecs(root);
+      await seedDiscussion(root);
+      await seedContracts(root);
+      await seedCalibration(root);
+      await seedRenderBundle(root);
+      await seedBrowserQaBundle(root);
+      const invalid = buildValidEvidence();
+      (
+        (invalid.specs as Array<Record<string, unknown>>)[0]?.coverageRefs as Array<
+          Record<string, unknown>
+        >
+      )[0].declaredRef =
+        ".qfai/discussion/discussion-20260404000000000/uiux/40_screen_contracts.md#orders";
+      await seedEvidence(root, invalid);
+
+      const issues = await validatePrototypingEvidence(root, defaultConfig);
+      expect(issues.some((item) => item.code === "QFAI-PROT-328")).toBe(true);
+    });
+  });
+
+  it("accepts per-spec coverage declaredRef under a configured specsDir path", async () => {
+    await withTempRoot(async (root) => {
+      const customConfig = {
+        ...defaultConfig,
+        paths: {
+          ...defaultConfig.paths,
+          specsDir: ".qfai/specs-alt",
+        },
+      };
+      const specDir = path.join(root, ".qfai", "specs-alt", "spec-0001");
+      await mkdir(specDir, { recursive: true });
+      await writeFile(
+        path.join(specDir, "01_Spec.md"),
+        ["# Spec", "", "- ui_route: /orders", ""].join("\n"),
+        "utf-8",
+      );
+      await seedDiscussion(root);
+      await seedContracts(root);
+      await seedCalibration(root);
+      await seedRenderBundle(root);
+      await seedBrowserQaBundle(root);
+      const valid = buildValidEvidence();
+      (
+        (valid.specs as Array<Record<string, unknown>>)[0]?.coverageRefs as Array<
+          Record<string, unknown>
+        >
+      )[0].declaredRef = ".qfai/specs-alt/spec-0001/01_Spec.md#L2";
+      await seedEvidence(root, valid);
+
+      const issues = await validatePrototypingEvidence(root, customConfig);
+      expect(issues.some((item) => item.code === "QFAI-PROT-328")).toBe(false);
+    });
+  });
+
+  it.each([
+    ["render", "render", "specs:render"],
+    ["browserQa", "browserQa", "/abs/browser-qa.json#/phases/0"],
+    ["uiObservation", "uiObservation", ".qfai/evidence/prototyping.json#/uiObservation"],
+    ["discussion", "discussion", "discussion-axes"],
+    ["trend", "trend", ".qfai\\evidence\\trend.md#trend"],
+  ] as const)(
+    "rejects non-concrete iteration evidenceRefs.%s",
+    async (_label, category, badRef) => {
+      await withTempRoot(async (root) => {
+        await seedSpecs(root);
+        await seedDiscussion(root);
+        await seedContracts(root);
+        await seedCalibration(root);
+        await seedRenderBundle(root);
+        await seedBrowserQaBundle(root);
+        const invalid = buildValidEvidence();
+        const iteration = (invalid.fullHarness as { iterations: Array<Record<string, unknown>> })
+          .iterations[0] as Record<string, unknown>;
+        (iteration.evidenceRefs as Record<string, string[]>)[category] = [badRef];
+        await seedEvidence(root, invalid);
+
+        const issues = await validatePrototypingEvidence(root, defaultConfig);
+        expect(issues.some((item) => item.code === "QFAI-PROT-318")).toBe(true);
+      });
+    },
+  );
+
+  it.each([
+    "render",
+    "browserQa",
+    "uiObservation",
+    "discussion",
+    "screenContract",
+    "trend",
+  ] as const)("rejects empty iteration evidenceRefs.%s", async (category) => {
+    await withTempRoot(async (root) => {
+      await seedSpecs(root);
+      await seedDiscussion(root);
+      await seedContracts(root);
+      await seedCalibration(root);
+      await seedRenderBundle(root);
+      await seedBrowserQaBundle(root);
+      const invalid = buildValidEvidence();
+      const iteration = (invalid.fullHarness as { iterations: Array<Record<string, unknown>> })
+        .iterations[0] as Record<string, unknown>;
+      (iteration.evidenceRefs as Record<string, string[]>)[category] = [];
+      await seedEvidence(root, invalid);
+
+      const issues = await validatePrototypingEvidence(root, defaultConfig);
+      expect(
+        issues.some((item) => item.code === "QFAI-PROT-314" || item.code === "QFAI-PROT-318"),
+      ).toBe(true);
+    });
+  });
+
+  it("rejects status=completed when reviewerSignoff is still pending", async () => {
+    await withTempRoot(async (root) => {
+      await seedSpecs(root);
+      await seedDiscussion(root);
+      await seedContracts(root);
+      await seedCalibration(root);
+      await seedRenderBundle(root);
+      await seedBrowserQaBundle(root);
+      const invalid = buildValidEvidence();
+      const fh = invalid.fullHarness as Record<string, unknown>;
+      fh.status = "completed";
+      fh.terminationReason = "converged";
+      fh.finalDecision = "accepted";
+      (fh.reviewerSignoff as Record<string, unknown>).status = "pending";
+      delete (fh.reviewerSignoff as Record<string, unknown>).timestamp;
+      await seedEvidence(root, invalid);
+
+      const issues = await validatePrototypingEvidence(root, defaultConfig);
+      expect(issues.some((item) => item.code === "QFAI-PROT-325")).toBe(true);
+      expect(issues.some((item) => item.code === "QFAI-PROT-329")).toBe(true);
+    });
+  });
+
+  it("rejects status=completed when finalDecision and reviewerSignoff disagree", async () => {
+    await withTempRoot(async (root) => {
+      await seedSpecs(root);
+      await seedDiscussion(root);
+      await seedContracts(root);
+      await seedCalibration(root);
+      await seedRenderBundle(root);
+      await seedBrowserQaBundle(root);
+      const invalid = buildValidEvidence();
+      const fh = invalid.fullHarness as Record<string, unknown>;
+      fh.status = "completed";
+      fh.terminationReason = "converged";
+      fh.finalDecision = "accepted";
+      const signoff = fh.reviewerSignoff as Record<string, unknown>;
+      signoff.status = "rejected";
+      signoff.timestamp = "2026-04-04T00:00:00Z";
+      await seedEvidence(root, invalid);
+
+      const issues = await validatePrototypingEvidence(root, defaultConfig);
+      // expectedSignoffStatus mismatch — finalDecision=accepted requires approved
+      expect(issues.some((item) => item.message.includes("reviewerSignoff.status"))).toBe(true);
+    });
+  });
+});

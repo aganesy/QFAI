@@ -30,7 +30,7 @@
     "LICENSE"
   ],
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=20.0.0"
   },
   "scripts": {
     "build": "tsup",
@@ -38,6 +38,11 @@
     "lint": "eslint src",
     "check-types": "tsc --noEmit",
     "test": "vitest run",
+    "test:core": "vitest run --project core",
+    "test:validators": "vitest run --project validators",
+    "test:integration": "vitest run --project integration",
+    "test:e2e": "vitest run --project e2e",
+    "test:cli": "vitest run --project cli",
     "test:assets": "vitest run tests/assets"
   },
   "dependencies": {
@@ -46,6 +51,9 @@
     "fast-glob": "^3.3.2",
     "jsdom": "^26.1.0",
     "yaml": "^2.5.1"
+  },
+  "optionalDependencies": {
+    "playwright": "^1.52.0"
   },
   "devDependencies": {
     "@types/jsdom": "^21.1.7",

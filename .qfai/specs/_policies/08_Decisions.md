@@ -2,7 +2,7 @@
 
 ## Decisions
 
-92 items — discussion-20260312143000000（symlink アーキテクチャ移行）、
+116 items — discussion-20260312143000000（symlink アーキテクチャ移行）、
 discussion-20260313143000000（SDP）、discussion-20260314053646704（AskUserQuestion MUST 化）、
 discussion-20260317102145554（実装フェーズ統一）、discussion-20260322091309602（Copilot レビューインストラクション配布）、
 discussion-20260323111959112（Codex サブエージェント）、discussion-20260324054332396（デザインディレクション＆UI品質強化）、
@@ -14,7 +14,10 @@ discussion-20260329120000000（UIX-VAL/UIX-REV Validation, Review, and Migration
 discussion-20260329130000123（Runtime & Evidence Foundation）、
 discussion-20260329175059391（Critique, Calibration & Full-Harness Expansion）、
 discussion-20260329195516830（v1.7.6 Audit Remediation）、
-および discussion-20260330035428071（Canonical Convergence）で解決された OQ に基づく。
+discussion-20260330035428071（Canonical Convergence）、
+discussion-20260414195449523（v1.7.15 rev4 Browser QA chain）、
+discussion-20260416023323603（v1.7.15 rev8 leaf-field ref grammar closure）、
+および discussion-20260416092414328（v1.7.15 rev9 leaf-field traceability closure）で解決された OQ に基づく。
 
 ### DR-0012: AskUserQuestion MUST 化（discussion-20260314053646704）
 
@@ -513,7 +516,7 @@ discussion-20260329195516830（v1.7.6 Audit Remediation）、
 
 ### DR-0057: UI-bearing 分類は surface type のみで判定する（OQ-0002 discussion-20260328120000000）
 
-- Decision: UI-bearing 分類は surface type (web-ui, mobile-ui, desktop-ui, mixed, non-ui) のみで判定し、interaction complexity は使用しない
+- Decision: UI-bearing 分類は surface type (web, mobile, desktop, mixed, non-ui) のみで判定し、interaction complexity は使用しない
 - Context: discussion-20260328120000000 OQ-0002 で3つの選択肢を比較
 - Rationale: surface type は決定論的に判定可能であり、interaction complexity は主観的で自動化が困難
 - Rejected-A: Interaction complexity ベースの分類（主観的、自動化困難）
@@ -956,49 +959,509 @@ discussion-20260329195516830（v1.7.6 Audit Remediation）、
   - (a) Release v1.7.10 retroactively: 実体のないバージョンがタイムラインに混入。DO NOT: 未リリース番号を retroactively 発行しない。Temptation: 番号の連続性を保ちたい
 - Consequence: v1.7.11 が v1.7.9 直後の completion release として位置づけ
 
-### DR-0106: Primary Search MCP 縺ｨ縺励※ Brave Search MCP 繧呈治逕ｨ縺吶ｋ・・Q-0001 discussion-20260328212829687・・
+### DR-0106
 
-- Decision: Web Research Enhancement 縺ｮ讀懃ｴ｢ MCP 縺ｨ縺励※ Brave Search MCP 繧呈治逕ｨ縺吶ｋ
-- Context: 隍・焚縺ｮ讀懃ｴ｢ MCP・・rave Search, Tavily, Serper 遲会ｼ峨°繧・primary 繧帝∈螳壹☆繧句ｿ・ｦ√′縺ゅｋ
-- Rationale: Brave Search MCP 縺ｯ繝峨く繝･繝｡繝ｳ繝医′譛繧ょ・螳溘＠縺ｦ縺翫ｊ縲√い繧ｯ繝・ぅ繝悶↓髢狗匱縺檎ｶ壹＞縺ｦ縺・ｋ縲・ommunity adoption 繧るｫ倥￥縲｀CP 莉墓ｧ俶ｺ匁侠蠎ｦ縺悟ｮ牙ｮ壹＠縺ｦ縺・ｋ
-- Rejected-A: Tavily MCP 繧・primary 縺ｫ縺吶ｋ・医ラ繧ｭ繝･繝｡繝ｳ繝医′荳榊香蛻・｀CP 莉墓ｧ倩ｿｽ蠕薙′驕・＞・・ - DO NOT: 繝峨く繝･繝｡繝ｳ繝域悴謨ｴ蛯吶・ MCP 繧・primary 縺ｫ謗｡逕ｨ縺励↑縺・５emptation: Tavily 縺ｮ讀懃ｴ｢蜩∬ｳｪ縺碁ｫ倥＞縺九ｉ謗｡逕ｨ縺励◆縺・- Rejected-B: 隍・焚 MCP 繧貞酔譎ゅ↓ primary 縺ｨ縺励※驕狗畑縺吶ｋ・育ｵｱ蜷医さ繧ｹ繝亥｢怜､ｧ縲・囿螳ｳ蛻・ｊ蛻・￠蝗ｰ髮｣・・ - DO NOT: 隍・焚縺ｮ讀懃ｴ｢ MCP 繧貞酔譎ゅ↓ primary 驕狗畑縺励↑縺・５emptation: 蜀鈴聞諤ｧ繧堤｢ｺ菫昴＠縺溘＞
+- Date: 2026-04-01
+- Title: v1.7.12 4-axis template complete removal（discussion-20260401215536131 D-004）
+- Status: adopted
+- Context: DR-0087 で段階的移行（v1.7.8 warning → v1.8.0 error）を採用していたが、v1.7.12 で init 生成物から旧 4-axis テンプレートを完全削除する判断。deprecation marking 完了済みのため移行猶予を充分に確保
+- Decision: v1.7.12 で旧 4-axis テンプレート（20_eval_axis_usability, 21_consistency, 22_accessibility, 23_delight）をアクティブパスから完全削除。新規 3-layer ファミリー（invariant, trend-derived, product-specific, aggregate, dynamic-overrides）のみをデフォルトとする
+- Alternatives rejected:
+  - (a) 並行維持: 1リポジトリ2真実の状態が継続。DO NOT: 旧 4-axis をアクティブデフォルトに残さない。Temptation: 変更リスクを避けたい
+- Consequence: init 生成、バリデータ、テストすべてが新ファミリーのみを参照
+- Evidence: discussion-20260401215536131 D-001, D-004, R-001
 
-### DR-0107: Firecrawl 繝・・繝ｭ繧､繝｡繝ｳ繝医・繝ｭ繝ｼ繧ｫ繝ｫ謗ｨ螂ｨ縺ｧ荳｡譁ｹ繝峨く繝･繝｡繝ｳ繝亥喧縺吶ｋ・・Q-0002 discussion-20260328212829687・・
+### DR-0107
 
-- Decision: Firecrawl 縺ｮ繝・・繝ｭ繧､繝｡繝ｳ繝医↓縺､縺・※繧ｯ繝ｩ繧ｦ繝峨・繝ｭ繝ｼ繧ｫ繝ｫ荳｡譁ｹ繧偵ラ繧ｭ繝･繝｡繝ｳ繝亥喧縺励√そ繧ｭ繝･繝ｪ繝・ぅ荳翫・繝ｭ繝ｼ繧ｫ繝ｫ繧呈耳螂ｨ縺吶ｋ
-- Context: Firecrawl MCP 縺ｯ繧ｯ繝ｩ繧ｦ繝峨・繧ｹ繝育沿縺ｨ繧ｻ繝ｫ繝輔・繧ｹ繝育沿縺後≠繧翫√←縺｡繧峨ｒ謗ｨ螂ｨ縺吶ｋ縺区ｱｺ螳壹′蠢・ｦ・- Rationale: 繝ｭ繝ｼ繧ｫ繝ｫ繝・・繝ｭ繧､縺ｧ縺ｯ繧ｹ繧ｯ繝ｬ繧､繝斐Φ繧ｰ蟇ｾ雎｡ URL 繧・さ繝ｳ繝・Φ繝・′螟夜Κ縺ｫ騾∽ｿ｡縺輔ｌ縺ｪ縺・◆繧√∵ｩ溷ｯ・ｧ縺ｮ鬮倥＞繝ｪ繧ｵ繝ｼ繝√↓驕ｩ縺吶ｋ縲ゅけ繝ｩ繧ｦ繝臥沿縺ｯ繧ｻ繝・ヨ繧｢繝・・縺悟ｮｹ譏薙↑縺溘ａ菴ｵ險倥☆繧・- Rejected-A: 繧ｯ繝ｩ繧ｦ繝臥沿縺ｮ縺ｿ繝峨く繝･繝｡繝ｳ繝亥喧縺吶ｋ・医そ繧ｭ繝･繝ｪ繝・ぅ諛ｸ蠢ｵ縺ｮ縺ゅｋ繝ｦ繝ｼ繧ｹ繧ｱ繝ｼ繧ｹ縺ｫ蟇ｾ蠢懊〒縺阪↑縺・ｼ・ - DO NOT: 繧ｯ繝ｩ繧ｦ繝臥沿縺ｮ縺ｿ繧呈耳螂ｨ縺励↑縺・５emptation: 繧ｻ繝・ヨ繧｢繝・・縺檎ｰ｡蜊倥□縺九ｉ繧ｯ繝ｩ繧ｦ繝峨□縺代〒蜊∝・
-- Rejected-B: 繝ｭ繝ｼ繧ｫ繝ｫ迚医・縺ｿ繝峨く繝･繝｡繝ｳ繝亥喧縺吶ｋ・医そ繝・ヨ繧｢繝・・縺ｮ謨ｷ螻・′鬮倥￥縺ｪ繧頑治逕ｨ邇・′菴惹ｸ九☆繧具ｼ・ - DO NOT: 繝ｭ繝ｼ繧ｫ繝ｫ迚医・縺ｿ縺ｫ髯仙ｮ壹＠縺ｪ縺・５emptation: 繧ｻ繧ｭ繝･繝ｪ繝・ぅ繧呈怙蜆ｪ蜈医＠縺ｦ驕ｸ謚櫁い繧堤ｵ槭ｊ縺溘＞
+- Date: 2026-04-01
+- Title: HTML/CSS mock → optional/fallback（discussion-20260401215536131 D-002）
+- Status: adopted
+- Context: spec-0010 の AC/TC が HTML/CSS mock を UI-bearing 完了の必須要件として記載。v1.7.12 canonical truth model では visual layout は discussion アーティファクトに属し、spec/policy の完了条件ではない
+- Decision: HTML/CSS mock を optional/fallback に降格。spec/policy/validator で completion gate として使用しない
+- Alternatives rejected:
+  - (a) HTML/CSS mock 完全削除: フォールバック価値が残る。DO NOT: 完全削除しない（discussion 内でオプション利用可）。Temptation: 不要物を全て消したい
+- Consequence: AC/TC rewrite, validator 期待値変更
+- Evidence: discussion-20260401215536131 D-002, R-003
 
-### DR-0108: Apify MCP 縺ｯ v1.8.0 繧ｹ繧ｳ繝ｼ繝励°繧蛾勁螟悶＠ post-v1.8.0 縺ｫ蟒ｶ譛溘☆繧具ｼ・Q-0003 discussion-20260328212829687・・
+### DR-0108
 
-- Decision: Apify MCP 縺ｮ邨ｱ蜷医ｒ v1.8.0 繧ｹ繧ｳ繝ｼ繝励°繧蛾勁螟悶＠縲｝ost-v1.8.0 縺ｫ蟒ｶ譛溘☆繧・- Context: Apify MCP 縺ｯ SSE・・erver-Sent Events・峨ヨ繝ｩ繝ｳ繧ｹ繝昴・繝医・髱樊耳螂ｨ蛹悶′騾ｲ陦御ｸｭ縺ｧ縺ゅｊ縲∝ｮ牙ｮ壽ｧ繝ｪ繧ｹ繧ｯ縺後≠繧・- Rationale: SSE deprecation 縺ｫ繧医ｊ MCP 謗･邯壹・遐ｴ謳阪Μ繧ｹ繧ｯ縺碁ｫ倥￥縲」1.8.0 縺ｮ螳牙ｮ壹Μ繝ｪ繝ｼ繧ｹ繧貞━蜈医☆繧九４treamable HTTP 縺ｸ縺ｮ遘ｻ陦悟ｮ御ｺ・ｾ後↓蜀崎ｩ穂ｾ｡縺吶ｋ
-- Rejected-A: v1.8.0 縺ｫ蜷ｫ繧√ｋ・・SE deprecation 縺ｫ繧医ｋ遐ｴ謳阪Μ繧ｹ繧ｯ縺後Μ繝ｪ繝ｼ繧ｹ蜩∬ｳｪ繧呈錐縺ｪ縺・ｼ・ - DO NOT: 繝医Λ繝ｳ繧ｹ繝昴・繝磯撼謗ｨ螂ｨ蛹悶Μ繧ｹ繧ｯ縺ｮ縺ゅｋ MCP 繧貞ｮ牙ｮ壹Μ繝ｪ繝ｼ繧ｹ縺ｫ蜷ｫ繧√↑縺・５emptation: 繧ｹ繧ｯ繝ｬ繧､繝斐Φ繧ｰ閭ｽ蜉帙ｒ譌ｩ譛溘↓諡｡蜈・＠縺溘＞
+- Date: 2026-04-01
+- Title: Prototyping skill-centered truth（discussion-20260401215536131 D-003）
+- Status: adopted
+- Context: spec-0012 は CLI コマンド削除を記録済みだが、\_policies/docs/steering が `qfai prototyping` コマンドを現行として記述。v1.7.12 で全レイヤーを統一
+- Decision: `/qfai-prototyping` スキルをユーザー向け唯一の真実とし、CLI コマンド参照をすべて削除
+- Alternatives rejected:
+  - (a) CLI コマンド復活: v1.7.12 correction release のスコープ外。DO NOT: 存在しないコマンドを文書化しない。Temptation: CLI command-first の方が伝統的
+- Consequence: README, steering, policy, spec すべてからコマンド参照削除
+- Evidence: discussion-20260401215536131 D-003, R-002
 
-### DR-0109: HTML 繧ｵ繝九ち繧､繧ｼ繝ｼ繧ｷ繝ｧ繝ｳ繧ｹ繧ｳ繝ｼ繝励・ Moderate・亥渕譛ｬ + aria-hidden/display:none 髯､蜴ｻ・峨→縺吶ｋ・・Q-0004 discussion-20260328212829687・・
+### DR-0109
 
-- Decision: Web 繝ｪ繧ｵ繝ｼ繝√〒蜿門ｾ励＠縺・HTML 縺ｮ繧ｵ繝九ち繧､繧ｼ繝ｼ繧ｷ繝ｧ繝ｳ繧ｹ繧ｳ繝ｼ繝励ｒ Moderate 縺ｨ縺励∝渕譛ｬ繧ｵ繝九ち繧､繧ｼ繝ｼ繧ｷ繝ｧ繝ｳ・・cript/style 髯､蜴ｻ・峨↓蜉縺医※ aria-hidden 隕∫ｴ縺ｨ display:none 隕∫ｴ縺ｮ髯､蜴ｻ繧定｡後≧
-- Context: 蜿門ｾ・HTML 縺九ｉ繝弱う繧ｺ繧帝勁蜴ｻ縺吶ｋ遽・峇繧呈ｱｺ螳壹☆繧句ｿ・ｦ√′縺ゅｋ縲る℃蜑ｰ髯､蜴ｻ縺ｯ譛臥畑繧ｳ繝ｳ繝・Φ繝・・謳榊､ｱ縲∽ｸ崎ｶｳ縺ｯ繝医・繧ｯ繝ｳ豬ｪ雋ｻ繧呈魚縺・- Rationale: aria-hidden 縺ｨ display:none 縺ｯ隕冶ｦ夂噪縺ｫ髱櫁｡ｨ遉ｺ縺ｧ縺ゅｊ繝ｪ繧ｵ繝ｼ繝√さ繝ｳ繝・Φ繝・→縺励※縺ｮ萓｡蛟､縺御ｽ弱＞縲・ggressive・医そ繝槭Φ繝・ぅ繝・け隗｣譫舌・繝ｼ繧ｹ・峨・繧ｳ繧ｹ繝医・隍・尅諤ｧ縺碁ｫ倥￥ v1.8.0 縺ｫ荳埼←
-- Rejected-A: Basic 縺ｮ縺ｿ・・cript/style 髯､蜴ｻ縺縺托ｼ会ｼ磯國縺苓ｦ∫ｴ縺後ヨ繝ｼ繧ｯ繝ｳ繧呈ｵｪ雋ｻ縺吶ｋ・・ - DO NOT: 髫縺苓ｦ∫ｴ繧呈ｮ九＠縺溘∪縺ｾ LLM 縺ｫ貂｡縺輔↑縺・５emptation: 螳溯｣・ｒ譛蟆城剞縺ｫ縺励◆縺・- Rejected-B: Aggressive・医そ繝槭Φ繝・ぅ繝・け隗｣譫舌・繝ｼ繧ｹ縺ｮ髯､蜴ｻ・会ｼ亥ｮ溯｣・さ繧ｹ繝医′鬮倥￥ false positive 縺ｧ譛臥畑繧ｳ繝ｳ繝・Φ繝・ｒ謳榊､ｱ縺吶ｋ・・ - DO NOT: 繧ｻ繝槭Φ繝・ぅ繝・け隗｣譫舌・繝ｼ繧ｹ縺ｮ繧ｵ繝九ち繧､繧ｼ繝ｼ繧ｷ繝ｧ繝ｳ繧・v1.8.0 縺ｧ螳溯｣・＠縺ｪ縺・５emptation: 譛螟ｧ髯舌↓繧ｯ繝ｪ繝ｼ繝ｳ縺ｪ蜈･蜉帙ｒ逶ｮ謖・＠縺溘＞
+- Date: 2026-04-01
+- Title: README command count 6 → 5（discussion-20260401215536131 D-005）
+- Status: adopted
+- Context: README.md/product.md が 6 コマンドと記載しているが、実装は 5 コマンド（init, validate, report, doctor, guardrails）
+- Decision: 正しいコマンド数 5 に修正
+- Alternatives rejected:
+  - (a) prototyping command 復活で 6 に: DR-0108 と矛盾。DO NOT: 未実装コマンドを数に含めない。Temptation: ドキュメントの数字が大きい方が印象が良い
+- Consequence: docs/steering 修正
+- Evidence: discussion-20260401215536131 D-005
 
-### DR-0110: 隧穂ｾ｡繝上・繝阪せ縺ｯ繝｡繝医Μ繧ｯ繧ｹ螳夂ｾｩ縺ｮ縺ｿ縺ｧ繝・・繝ｫ髱樔ｾ晏ｭ倥→縺吶ｋ・・Q-0005 discussion-20260328212829687・・
+### v1.7.13 Canonical Sidecar Convergence (implementation-derived, 2026-04-04)
 
-- Decision: Web 繝ｪ繧ｵ繝ｼ繝∫ｵ先棡縺ｮ隧穂ｾ｡繝上・繝阪せ縺ｯ繝｡繝医Μ繧ｯ繧ｹ・育ｲｾ蠎ｦ縲・未騾｣諤ｧ縲・ｮｮ蠎ｦ遲会ｼ峨・螳夂ｾｩ縺ｮ縺ｿ繧定｡後＞縲∫音螳壹・隧穂ｾ｡繝・・繝ｫ縺ｫ縺ｯ萓晏ｭ倥＠縺ｪ縺・- Context: 繝ｪ繧ｵ繝ｼ繝∝刀雉ｪ縺ｮ隧穂ｾ｡譁ｹ豕輔ｒ螳夂ｾｩ縺吶ｋ蠢・ｦ√′縺ゅｋ縺後∬ｩ穂ｾ｡繝・・繝ｫ縺ｮ驕ｸ螳壹・繝励Ο繧ｸ繧ｧ繧ｯ繝医＃縺ｨ縺ｫ逡ｰ縺ｪ繧・- Rationale: 繝｡繝医Μ繧ｯ繧ｹ螳夂ｾｩ繧偵ヤ繝ｼ繝ｫ髱樔ｾ晏ｭ倥↓縺吶ｋ縺薙→縺ｧ縲∽ｻｻ諢上・隧穂ｾ｡繝輔Ξ繝ｼ繝繝ｯ繝ｼ繧ｯ・・LM-as-judge縲∽ｺｺ謇玖ｩ穂ｾ｡縲∬・蜍輔ユ繧ｹ繝育ｭ会ｼ峨〒螳溯｣・庄閭ｽ縲ゅヤ繝ｼ繝ｫ繝ｭ繝・け繧､繝ｳ繧貞屓驕ｿ縺吶ｋ
-- Rejected-A: 迚ｹ螳壹・隧穂ｾ｡繝・・繝ｫ・井ｾ・ RAGAS・峨ｒ蠢・医↓縺吶ｋ・医ヤ繝ｼ繝ｫ繝ｭ繝・け繧､繝ｳ縲∽ｾ晏ｭ俶ｧ蠅怜､ｧ・・ - DO NOT: 迚ｹ螳壹・隧穂ｾ｡繝・・繝ｫ繧貞ｿ・井ｾ晏ｭ倥↓縺励↑縺・５emptation: 邨ｱ荳繝・・繝ｫ縺ｧ隧穂ｾ｡繧呈ｨ呎ｺ門喧縺励◆縺・- Rejected-B: 繝｡繝医Μ繧ｯ繧ｹ螳夂ｾｩ繧堤怐逡･縺励※繝・・繝ｫ縺ｫ莉ｻ縺帙ｋ・郁ｩ穂ｾ｡蝓ｺ貅悶′荳肴・遒ｺ縺ｫ縺ｪ繧雁刀雉ｪ菫晁ｨｼ縺後〒縺阪↑縺・ｼ・ - DO NOT: 繝｡繝医Μ繧ｯ繧ｹ螳夂ｾｩ繧堤怐逡･縺励↑縺・５emptation: 隧穂ｾ｡縺ｯ荳区ｵ√ヤ繝ｼ繝ｫ縺ｫ荳ｸ謚輔￡縺励◆縺・
+### DR-0093: Canonical/Legacy Validator Separation
 
-### DR-0111: 繧ｵ繝悶お繝ｼ繧ｸ繧ｧ繝ｳ繝医・繧ｹ繝ｬ繝・ラ繝ｻ豺ｱ蠎ｦ蛻ｶ髯舌・菫晏ｮ育噪繝・ヵ繧ｩ繝ｫ繝茨ｼ・ax_threads=2, max_depth=2・峨→縺吶ｋ・・Q-0006 discussion-20260328212829687・・
+- Decision: production-path `validate.ts` に `runCanonicalUixValidators()` のみを登録し、DDP validators を `legacy/` namespace に移動する
+- Context: 旧 monolithic `uixValidators.ts` が canonical と legacy の責務を混在させていた
+- Rationale: production path の信頼性向上と legacy migration tooling の分離。canonical validators は `category: "canonical"` を emit し、downstream tooling で区別可能
+- Rejected: legacy validators を production path に残す（canonical contract 違反の検出精度が下がる）
+  - DO NOT: legacy validator を validate.ts pipeline に登録しない。Temptation: 後方互換性のために残したい
 
-- Decision: Web 繝ｪ繧ｵ繝ｼ繝√し繝悶お繝ｼ繧ｸ繧ｧ繝ｳ繝医・荳ｦ蛻怜ｮ溯｡悟宛髯舌ｒ max_threads=2縲∝・蟶ｰ逧・Μ繧ｵ繝ｼ繝√・豺ｱ蠎ｦ蛻ｶ髯舌ｒ max_depth=2 縺ｨ縺吶ｋ
-- Context: 繧ｵ繝悶お繝ｼ繧ｸ繧ｧ繝ｳ繝医・荳ｦ蛻怜ｺｦ縺ｨ蜀榊ｸｰ豺ｱ蠎ｦ縺ｮ繝・ヵ繧ｩ繝ｫ繝亥､繧呈ｱｺ螳壹☆繧句ｿ・ｦ√′縺ゅｋ縲る℃螟ｧ縺ｪ蛟､縺ｯ繝ｪ繧ｽ繝ｼ繧ｹ豸郁ｲｻ縺ｨ繝ｬ繝ｼ繝亥宛髯占ｶ・℃繧呈魚縺・- Rationale: max_threads=2 縺ｯ MCP 繧ｵ繝ｼ繝舌・縺ｸ縺ｮ蜷梧凾謗･邯壽焚繧呈椛蛻ｶ縺励Ξ繝ｼ繝亥宛髯舌Μ繧ｹ繧ｯ繧剃ｽ取ｸ帙☆繧九Ｎax_depth=2 縺ｯ繝ｪ繧ｵ繝ｼ繝√・豺ｱ謗倥ｊ繧・谿ｵ髫弱・繝輔か繝ｭ繝ｼ繧｢繝・・縺ｾ縺ｧ縺ｫ蛻ｶ髯舌＠縲∫┌髯仙・蟶ｰ繧帝亟豁｢縺吶ｋ縲Ｄonfig 縺ｧ荳頑嶌縺榊庄閭ｽ
-- Rejected-A: 蛻ｶ髯舌↑縺暦ｼ医Μ繧ｽ繝ｼ繧ｹ豸郁ｲｻ縺檎┌蛻ｶ髯舌√Ξ繝ｼ繝亥宛髯占ｶ・℃縲∫┌髯仙・蟶ｰ縺ｮ繝ｪ繧ｹ繧ｯ・・ - DO NOT: 繧ｹ繝ｬ繝・ラ繝ｻ豺ｱ蠎ｦ蛻ｶ髯舌↑縺励〒繧ｵ繝悶お繝ｼ繧ｸ繧ｧ繝ｳ繝医ｒ螳溯｡後＠縺ｪ縺・５emptation: 蛻ｶ髯舌↑縺励・譁ｹ縺後Μ繧ｵ繝ｼ繝√′豺ｱ縺上↑繧・- Rejected-B: max_threads=1, max_depth=1・磯℃蠎ｦ縺ｫ菫晏ｮ育噪縺ｧ螳溽畑逧・↑繝ｪ繧ｵ繝ｼ繝∝刀雉ｪ縺檎｢ｺ菫昴〒縺阪↑縺・ｼ・ - DO NOT: 荳ｦ蛻怜ｺｦ1繝ｻ豺ｱ蠎ｦ1縺ｫ蛻ｶ髯舌＠縺ｪ縺・５emptation: 螳牙・蛛ｴ縺ｫ謖ｯ繧雁・繧翫◆縺・
+### DR-0094: prototyping.yaml as Required Side Artifact
 
-### DR-0112: 繧ｭ繝｣繝・す繝･譛牙柑譛滄剞縺ｯ 24 譎る俣繝・ヵ繧ｩ繝ｫ繝医〒 config 蜿ｯ螟峨→縺吶ｋ・・Q-0007 discussion-20260328212829687・・
+- Decision: discussion-pack の必須アーティファクトとして prototyping.yaml を追加し、SDD preflight のブロッカーとする
+- Context: prototyping mode recommendation が discussion-pack 内に構造化されておらず、mode 選択の根拠がトレースできなかった
+- Rationale: prototyping.yaml により mode selection の根拠が明示的にキャプチャされ、SDD preflight で schema validation が可能になる
+- Rejected: prototyping.yaml を optional にする（mode recommendation の欠落を検出できない）
+  - DO NOT: prototyping.yaml を optional にしない。Temptation: 非 UI プロジェクトでは不要に見える
 
-- Decision: Web 繝ｪ繧ｵ繝ｼ繝∫ｵ先棡縺ｮ繧ｭ繝｣繝・す繝･譛牙柑譛滄剞・・taleness threshold・峨ｒ 24 譎る俣繧偵ョ繝輔か繝ｫ繝医→縺励…onfig 縺ｧ螟画峩蜿ｯ閭ｽ縺ｫ縺吶ｋ
-- Context: 蜷御ｸ繧ｯ繧ｨ繝ｪ縺ｮ蜀肴､懃ｴ｢繧帝∩縺代ｋ繧ｭ繝｣繝・す繝･縺ｮ譛牙柑譛滄剞繧呈ｱｺ螳壹☆繧句ｿ・ｦ√′縺ゅｋ縲ら洒縺吶℃繧九→荳崎ｦ√↑蜀榊叙蠕励・聞縺吶℃繧九→蜿､縺・ュ蝣ｱ縺ｮ菴ｿ逕ｨ繧呈魚縺・- Rationale: 24 譎る俣縺ｯ荳闊ｬ逧・↑ Web 繧ｳ繝ｳ繝・Φ繝・・譖ｴ譁ｰ鬆ｻ蠎ｦ縺ｨ MCP API 繧ｳ繧ｹ繝亥炎貂帙・繝舌Λ繝ｳ繧ｹ縺瑚憶縺・ゅル繝･繝ｼ繧ｹ邉ｻ縺ｪ縺ｩ魄ｮ蠎ｦ縺碁㍾隕√↑繝ｦ繝ｼ繧ｹ繧ｱ繝ｼ繧ｹ縺ｧ縺ｯ config 縺ｧ遏ｭ邵ｮ蜿ｯ閭ｽ
-- Rejected-A: 蝗ｺ螳壼､・・onfig 荳榊庄・会ｼ医Θ繝ｼ繧ｹ繧ｱ繝ｼ繧ｹ縺斐→縺ｮ譟碑ｻ滓ｧ縺後↑縺・ｼ・ - DO NOT: 繧ｭ繝｣繝・す繝･譛牙柑譛滄剞繧貞崋螳壼､縺ｫ縺励↑縺・５emptation: 險ｭ螳夐・岼繧貞｢励ｄ縺励◆縺上↑縺・- Rejected-B: 繧ｭ繝｣繝・す繝･縺ｪ縺暦ｼ域ｯ主屓蜀榊叙蠕暦ｼ会ｼ・PI 繧ｳ繧ｹ繝亥｢怜､ｧ縲√Ξ繝ｼ繝亥宛髯占ｶ・℃繝ｪ繧ｹ繧ｯ・・ - DO NOT: 繧ｭ繝｣繝・す繝･繧堤┌蜉ｹ縺ｫ縺励↑縺・５emptation: 蟶ｸ縺ｫ譛譁ｰ諠・ｱ繧貞叙蠕励＠縺溘＞
+### DR-0095: Existence-Based Precedence (D-5)
 
-### DR-0113: HITL 繧ｲ繝ｼ繝医・繝ｪ繧ｹ繧ｯ繝吶・繧ｹ・井ｽ弱Μ繧ｹ繧ｯ閾ｪ蜍墓価隱阪・ｫ倥Μ繧ｹ繧ｯ繧ｲ繝ｼ繝茨ｼ峨→縺吶ｋ・・Q-0008 discussion-20260328212829687・・
+- Decision: prototyping.yaml 内の `prototyping` key の存在自体（値の妥当性ではなく）で namespaced contract を権威的とする
+- Context: 旧実装では値の妥当性チェックで legacy fallback が発動し、意図しない mode 選択が発生していた
+- Rationale: key existence check により、malformed な namespaced block でも legacy fallback を防止し、明示的なエラーを表示する
+- Rejected: 値の妥当性に基づく precedence（legacy fallback が silent に発動する）
+  - DO NOT: 値ベースの precedence を使わない。Temptation: 空の prototyping block でもデフォルトにフォールバックしたい
 
-- Decision: Human-in-the-Loop 繧ｲ繝ｼ繝医・邊貞ｺｦ繧偵Μ繧ｹ繧ｯ繝吶・繧ｹ縺ｨ縺励∽ｽ弱Μ繧ｹ繧ｯ謫堺ｽ懶ｼ域､懃ｴ｢繧ｯ繧ｨ繝ｪ逋ｺ陦後√く繝｣繝・す繝･貂医∩邨先棡蜿ら・・峨・閾ｪ蜍墓価隱阪・ｫ倥Μ繧ｹ繧ｯ謫堺ｽ懶ｼ亥､夜Κ繧ｵ繧､繝医∈縺ｮ繝・・繧ｿ騾∽ｿ｡縲∵怏譁・API 縺ｮ螟ｧ驥丞他縺ｳ蜃ｺ縺暦ｼ峨・繧ｲ繝ｼ繝医〒莠ｺ髢薙・謇ｿ隱阪ｒ隕∵ｱゅ☆繧・- Context: HITL 繧ｲ繝ｼ繝医・邊貞ｺｦ繧呈ｱｺ螳壹☆繧句ｿ・ｦ√′縺ゅｋ縲ょ・謫堺ｽ懊↓繧ｲ繝ｼ繝医ｒ險ｭ縺代ｋ縺ｨ繝ｪ繧ｵ繝ｼ繝√・豬√ｌ縺梧ｭ｢縺ｾ繧翫√ご繝ｼ繝医↑縺励〒縺ｯ繝ｪ繧ｹ繧ｯ縺ｮ縺ゅｋ謫堺ｽ懊′辟｡謇ｿ隱阪〒螳溯｡後＆繧後ｋ
-- Rationale: 繝ｪ繧ｹ繧ｯ繝吶・繧ｹ縺ｮ蛻・｡槭↓繧医ｊ縲∵律蟶ｸ逧・↑讀懃ｴ｢謫堺ｽ懊・豬√ｌ繧貞ｦｨ縺偵★縺ｫ縲√そ繧ｭ繝･繝ｪ繝・ぅ繝ｻ繧ｳ繧ｹ繝医Μ繧ｹ繧ｯ縺ｮ縺ゅｋ謫堺ｽ懊・縺ｿ莠ｺ髢薙′遒ｺ隱阪〒縺阪ｋ縲ゅΜ繧ｹ繧ｯ蛻・｡槭・ config 縺ｧ繧ｫ繧ｹ繧ｿ繝槭う繧ｺ蜿ｯ閭ｽ
-- Rejected-A: 蜈ｨ謫堺ｽ懊↓繧ｲ繝ｼ繝医ｒ險ｭ縺代ｋ・医Μ繧ｵ繝ｼ繝√ヵ繝ｭ繝ｼ縺碁ｻ郢√↓荳ｭ譁ｭ縺怜ｮ溽畑諤ｧ縺御ｽ惹ｸ九☆繧具ｼ・ - DO NOT: 蜈ｨ謫堺ｽ懊↓ HITL 繧ｲ繝ｼ繝医ｒ險ｭ縺代↑縺・５emptation: 螳牙・縺ｮ縺溘ａ蜈ｨ縺ｦ莠ｺ髢薙′遒ｺ隱阪☆縺ｹ縺・- Rejected-B: 繧ｲ繝ｼ繝医↑縺暦ｼ亥・謫堺ｽ懊ｒ閾ｪ蜍墓価隱搾ｼ会ｼ磯ｫ倥Μ繧ｹ繧ｯ謫堺ｽ懊′辟｡謇ｿ隱阪〒螳溯｡後＆繧後ｋ・・ - DO NOT: HITL 繧ｲ繝ｼ繝医ｒ逵∫払縺励↑縺・５emptation: 閾ｪ蜍募喧繧呈怙螟ｧ蛹悶＠縺溘＞
+### DR-0096: IssueCategory "canonical" 追加
+
+- Decision: IssueCategory type に "canonical" を追加し、新規 canonical validator が emit する issue の category とする
+- Context: "compatibility" と "change" の 2 値では canonical contract violation と legacy warning を区別できなかった
+- Rationale: downstream tooling（report, CI checks）が canonical vs compatibility vs change を区別可能になる
+
+### DR-0097: Report Prototyping Section as Foundation-Only
+
+- Decision: report.ts に prototyping observability section を追加するが、v1.7.13 では blocking validation には統合しない
+- Context: prototyping data の品質が安定するまで、observability としてのみ提供する
+- Rationale: foundation-only として段階的に導入し、将来の validation 統合に向けた data model を確立する
+
+### DR-0098: Harness Loop Status Normalization
+
+- Decision: harness loop の termination status を "converged" / "max-iterations" に正規化する（旧 "accepted" / "cap-reached" を置換）
+- Context: evidence summary が "accepted" を参照していたが、loop が "converged" を emit していたため、switch case が一致しなかった（バグ）
+- Rationale: terminology alignment + bug fix
+
+### DR-0099: ModeGuidance "premium" → "full-harness"
+
+- Decision: ModeGuidance.recommend() が返す mode を "premium" から "full-harness" に変更し、有効な PrototypingMode 値にする
+- Context: "premium" は PrototypingMode の有効値ではなく、type mismatch が silent に発生していた
+- Rationale: type safety + terminology alignment
+
+### DR-0100: Prototyping Calibration Config Block
+
+- Decision: qfai.config.yaml に prototyping.calibration stanza を追加し、デフォルト値（accept: 0.8, refine: 0.5, maxIterations: 15）を設定する
+- Context: calibration thresholds がハードコードされており、プロジェクト固有の調整ができなかった
+- Rationale: config-driven calibration により、プロジェクトごとのチューニングが可能になる
+
+### v1.7.13 補完 (コミット履歴分析由来, 2026-04-04)
+
+### DR-0101: Phase1 Ratchet Mechanism
+
+- Decision: config.uiux.phase1ReleaseDate 設定時、リリース日から 30 日以内の UIX-VAL-\* エラーを warning に降格する
+- Context: canonical UIX validator の初期ロールアウト期間中に hard failure が多発すると採用障壁が高くなる
+- Rationale: 30 日の grace period で段階的な移行を可能にし、期限後は full enforcement に移行
+
+### DR-0102: DDH Validator Sidecar Source Mapping
+
+- Decision: discussionDesignHardening の 7 バリデータを sidecar-first モデルに完全書き換え。読み取り先を 03_Story-Workshop.md DDS セクションから uiux/ sidecar ファイルに変更
+- Context: DDS セクションは monolithic で保守性が低く、sidecar ファイルは modular
+- Rationale: 各バリデータが明確な sidecar ファイルを primary source として参照することで、責務分離と保守性向上
+
+### DR-0103: State Coverage Required States Change
+
+- Decision: state coverage 必須状態を ["empty","loading","error","populated"] から ["default","loading","empty","error"] に変更
+- Context: "populated" は "default" の部分集合であり、"default" が初期表示状態としてより正確
+- Rationale: "default" は画面の初期表示を意味し、populated/empty は default の variant として扱う方が概念的に正しい
+
+### DR-0104: Nested Bullet Canonical Format with CSV Fallback
+
+- Decision: strategy と screen contract の list-type フィールドに nested bullet list を canonical format とし、CSV inline を legacy fallback として維持
+- Context: CSV format では複雑なデータ構造の表現力が不足
+- Rationale: nested bullet は可読性と構造化に優れ、CSV fallback は既存パックの後方互換性を維持
+
+### DR-0105: QFAI-VIS-002 Severity Downgrade to Info
+
+- Decision: HTML+CSS visual mock 不在の QFAI-VIS-002 を warning → info に降格
+- Context: sidecar-first モデルで HTML mock は primary truth ではなく optional fallback
+- Rationale: sidecar artifacts が primary UI definition となり、HTML mock の不在は品質問題ではなくなった
+
+### DR-0106-A: QFAI-AUD-021 Selected Direction Audit Rule
+
+- Decision: uiux/31_selected_anchor_screen.md に `## Selected Direction` セクションが存在しない場合に QFAI-AUD-021 error を追加
+- Context: selected direction は sidecar-first モデルの中核的 design decision。v1.7.13 で 30_comparison.md から 31_selected_anchor_screen.md に分離
+- Rationale: design audit で selected direction の存在を強制し、設計意思決定の欠落を防止
+
+### DR-0107-A: Canonical Barrel Isolation
+
+- Decision: validators/index.ts（canonical barrel）からの legacy/ re-export を禁止
+- Context: barrel export に legacy validator が混入すると production path の信頼性が低下
+- Rationale: 明確な module boundary により、意図しない legacy validator の production path 混入を構造的に防止
+
+### DR-0108: compatibility IssueCategory 完全削除 (v1.7.14)
+
+- Decision: IssueCategory union type から "compatibility" を完全削除し、"canonical" | "change" のみとする
+- Context: v1.7.13 で canonical/legacy validator 分離を導入したが、IssueCategory に "compatibility" が残存しており意味が曖昧だった
+- Rationale: QFAI v1.7.14 は current-only SSOT を宣言するリリース。legacy/compatibility の概念を型レベルで排除し、全 issue を "canonical"（仕様準拠性）または "change"（変更追跡）に二分することで、レポート出力とバリデータのカテゴリ体系を単純化する
+- Rejected-A: "compatibility" を "legacy" にリネームして残す（legacy 自体が current-only SSOT に反する）
+  - DO NOT: IssueCategory に compatibility/legacy/migration を意味するカテゴリを再導入しない。Temptation: 後方互換チェックのためにカテゴリを残したい
+
+### DR-0109: Canonical Prototyping Surfaces — -ui suffix 廃止 (v1.7.14)
+
+- Decision: PrototypingSurface を web-ui/mobile-ui/desktop-ui から web/mobile/desktop/cli/mixed の 5 値に変更。"non-ui" は prototyping surface 外の分類とする
+- Context: v1.7.13 では web-ui 等の -ui suffix 付き surface が存在し、"non-ui" も prototyping surface に含まれていた
+- Rationale: -ui suffix は冗長（prototyping 自体が UI 関連前提）。cli を新規追加し、non-ui を prototyping surface 外に明示的に分離することで、discussion UI-bearing 判定と prototyping surface 列挙の混同を解消する
+- Rejected-A: -ui suffix を維持し cli だけ追加（suffix の不統一が拡大する）
+  - DO NOT: prototyping surface 名に -ui suffix を復帰させない。Temptation: 既存パックとの互換性のため
+
+### DR-0110: Surface Classification 二分割 — discussion UI-bearing vs visual/browser evidence (v1.7.14)
+
+- Decision: "UI-bearing" 判定を 2 つの独立した関数に分割: isDiscussionUiBearingPrototypingSurface()（web/mobile/desktop/cli/mixed）と requiresVisualBrowserEvidenceSurface()（web/mobile/desktop/mixed、cli 除外）
+- Context: v1.7.13 では単一の isUiBearingSurface() で discussion pack 構造要件と prototyping evidence 義務の両方を判定していた。cli は discussion UI-bearing だが browser evidence は不要
+- Rationale: cli surface は UI 定義ファイル（sidecar 等）を必要とするが、screenshot/Playwright による visual evidence は不要。関心事の分離により、cli パックが誤って browser QA 義務を課されることを防止する
+- Rejected-A: cli を非 UI-bearing に分類する（cli も UI 設計意図の文書化が必要）
+  - DO NOT: cli を discussion UI-bearing から除外しない。Temptation: cli は CUI だから UI-bearing ではないと思う
+
+### DR-0111: Strict Classification Validation — 矛盾検出ゲート (v1.7.14)
+
+- Decision: readValidatedClassificationBlock() を新設し、分類ブロック内の意味的矛盾（ui_bearing=false + 空でない secondary_surfaces、ui_bearing=true + primary_surface=non-ui 等）を hard error とする
+- Context: v1.7.13 の readClassificationBlock() はパース結果を返すのみで、矛盾チェックは各 validator が個別に実施していた
+- Rationale: execution.ts 等の本番パスが invalid classification で動作継続するリスクを排除。矛盾検出を parser 層の共通ゲートに集約し、全消費者が一貫した strict validation を受ける
+- Rejected-A: validator 個別チェックを維持（重複実装と不整合リスク）
+  - DO NOT: execution path で readClassificationBlock()（non-strict）を使用しない。Temptation: strict validation が重すぎるケースがあるかも
+
+### DR-0112: Namespaced-Only Schema — legacy top-level keys hard-reject (v1.7.14)
+
+- Decision: prototyping.yaml の legacy top-level recommendation keys（recommended_mode, allowed_modes 等）が存在する場合、namespaced `prototyping:` ブロックの有無に関わらず hard error とする
+- Context: v1.7.13 の existence-based precedence（DR-0095）では namespaced block 優先だが legacy keys は warning（QFAI-PROT-231/232）で許容していた
+- Rationale: current-only SSOT リリースとして、legacy schema の存在自体を構造的に禁止する。warning→error 昇格により、migration 期間を明確に終了させる
+- Rejected-A: warning を維持し v1.8.0 で error に昇格（migration 延長は convergence を遅延させる）
+  - DO NOT: legacy top-level keys の存在を warning で許容しない。Temptation: 既存プロジェクトへの影響を緩和したい
+
+### DR-0113: Semantic Invariant SSOT — recommended_mode ∈ allowed_modes (v1.7.14)
+
+- Decision: validateRecommendationSemantics() を recommendationSemantics.ts に新設し、recommended_mode が allowed_modes に含まれることを validator/runtime/execution/CLI の全レイヤーで共有する SSOT とする（QFAI-PROT-154）
+- Context: v1.7.13 では semantic mismatch チェックが validator（prototypingRecommendation.ts）のみに存在し、execution/CLI パスは未検証だった
+- Rationale: semantic invariant の検証漏れは runtime error に直結する。shared helper を単一の真実源とし、parser（extractRecommendation）、resolver、execution、CLI、validator、preflight の全レイヤーが同一ロジックを参照する
+- Rejected-A: execution.ts に個別チェックを追加（重複実装、不整合リスク）
+  - DO NOT: semantic invariant チェックを helper 以外の場所に実装しない。Temptation: 各レイヤーに inline で書く方が早い
+
+### DR-0114: Canonical Strategy Decision Vocabulary (v1.7.14)
+
+- Decision: strategy decision フィールド（decision, chosen_option, candidate_options）に canonical enum（template, component-library, design-system, native-pattern, bespoke, none）を導入し、free-form text を禁止する
+- Context: v1.7.13 の strategy validator は 8 フィールドの構造チェックのみで、decision の値は任意文字列だった
+- Rationale: canonical vocabulary により、strategy 意思決定の比較・集計・自動分析が可能になる。selection_required=true → ≥2 candidates + non-"none" decision、selection_required=false → decision="none" の状態機械を強制し、意味的整合性を保証する
+- Rejected-A: free-form を許容し enum は推奨のみとする（比較・集計が困難）
+  - DO NOT: strategy decision フィールドに canonical enum 外の値を許容しない。Temptation: プロジェクト固有の選択肢を自由入力したい
+
+### DR-0115: Current-Only SSOT — migration/defer wording 完全削除 (v1.7.14)
+
+- Decision: product.md, manifest.md 等の steering ドキュメントから v2.0 defer、legacy deprecation、reconsidered-in-v2.0、migration guide 等の wording を完全削除する
+- Context: v1.7.13 までの steering docs には「v2.0 で再検討」「legacy は deprecated」等の migration 期間の名残が存在
+- Rationale: v1.7.14 は current-only SSOT リリース。shipped ドキュメントは現在の仕様のみを記述し、将来の移行や過去の互換性に関する言及を排除する。これにより、ドキュメント読者が migration status を誤解するリスクを排除する
+- Rejected-A: migration 履歴を appendix として残す（current-only 原則に反する）
+  - DO NOT: steering/product/manifest に migration/defer/reconsidered wording を再導入しない。Temptation: 経緯を残したい
+
+### DR-0116: Independent Evaluator Panel 3-Layer Structure (v1.7.14)
+
+- Decision: full-harness mode の反復改善ループに 3 層独立評価パネルを導入。L1: product-surface-reviewer（UI/UX design quality）、L2: product-experience-architect（product experience）、L3: qa-gatekeeper（process audit）
+- Context: 2 つのインシデントレポートで、generator が自己評価を行い、品質スコアを過大に報告する self-evaluation bias が確認された。scoringTrace のスコアが改善なしに converged と判定されるケースや、独立した reviewer の invocation が fabricated names で偽装されるケースが発生
+- Rationale: L1/L2 を task tool の background mode で別コンテキスト起動し、改善履歴・前回スコア・generator 計画を入力から排除することで、構造的にバイアスを排除する。weightedTotal は L1/L2 の最小値とし、一方のみの高スコアでは accept に至らない設計。product-experience-architect は kind: worker のため review-profiles.yml ではなく agent-routing.yml の evidence phase に配置
+- Rejected-A: 単一 reviewer による評価（multi-perspective 評価ができず、blind spot が残る）
+  - DO NOT: full-harness の iteration evaluation を単一エージェントで実施しない。Temptation: reviewer 1 名で十分と思う
+- Rejected-B: product-experience-architect を review-profiles.yml の always_required に登録（kind: worker のため QFAI-AGENT-010 validator が reject）
+  - DO NOT: kind: worker のエージェントを review-profiles.yml に登録しない。Temptation: 全 evaluator を review profile に統一管理したい
+
+### DR-0117: Score Scope Separation — Discussion ≠ Prototyping (v1.7.14)
+
+- Decision: discussion 3-layer aggregate scores（design direction quality）と prototyping scoringTrace（implementation fidelity）を明確に分離し、コピーを禁止する
+- Context: インシデントレポートで、discussion 完了時の aggregate scores がそのまま prototyping scoringTrace にコピーされ、実装品質の独立評価が行われなかったケースが確認された。結果として全イテレーションが同一スコアで converged と偽装された
+- Rationale: discussion scores は「どのデザイン方向が最も評価基準を満たすか」（what）を測定し、prototyping scores は「選択したアンカーに対する実装品質がどの程度か」（how well）を測定する。評価対象が根本的に異なるため、スコアの再利用は意味的に不正
+- Rejected-A: discussion scores を prototyping の初期値として使用（評価対象の違いにより、初期値としても不適切）
+  - DO NOT: discussion aggregate scores を prototyping scoringTrace の初期値・参照値として使用しない。Temptation: discussion で高スコアなら prototyping も高スコアから始めたい
+
+### DR-0200: converged requires iterationCount>=2 (v1.7.15)
+
+- Decision: converged 判定は iterationCount >= 2 を必須条件とし、CalibrationLoader schema で plateauLookback >= 2 を強制する
+- Status: Adopted
+
+### DR-0201: Reviewer placeholder reject list frozen (v1.7.15)
+
+- Decision: reviewer placeholder reject list を "qfai", "default", "auto", "system", "unknown", "" の 6 値に凍結。resolvedReviewer ?? "qfai" フォールバック禁止
+- Status: Adopted
+
+### DR-0202: commitSha mandatory in full-harness (v1.7.15)
+
+- Decision: full-harness 実行時に commitSha を必須とし、取得不能時は runtime error
+- Status: Adopted
+
+### DR-0203: packVersion from pack metadata only (v1.7.15)
+
+- Decision: packVersion は CalibrationLoader 経由で pack metadata から動的取得。ハードコード禁止
+- Status: Adopted
+
+### DR-0204: weightedTotal = min(l1.total, l2.total) always (v1.7.15)
+
+- Decision: computeWeightedTotal は常に Math.min(l1.total, l2.total) を返す
+- Status: Adopted
+
+### DR-0205: specCoverage from real diffs only (v1.7.15)
+
+- Decision: specCoverage は実 spec/runtime evidence から導出。zero-seeded 出力を禁止
+- Status: Adopted
+
+### DR-0206: uiFidelity observation-only (v1.7.15)
+
+- Decision: uiFidelity は DOM parse / browser QA / render evidence からのみ構成。synthetic mockPaths pass を禁止
+- Status: Adopted
+
+### DR-0207: CalibrationLoader wired in execution.ts (v1.7.15)
+
+- Decision: CalibrationLoader は execution.ts で loadConfig() 後に呼び出す（config.ts ではない）
+- Status: Adopted
+
+### DR-0208: Fail-fast no silent fallback (v1.7.15)
+
+- Decision: 必須 evidence 欠落時は runtime error で即座に失敗。デフォルト値補完を禁止
+- Status: Adopted
+
+### DR-0209: Pre-scored l1/l2 path elimination (v1.7.15 rev2)
+
+- Decision: runFullHarness() の request 型から l1/l2 を削除。scoring は runtime 内部で一元実行。panelInputs 欠如時は即 throw
+- Context: request.l1/l2 が外部で pre-scored された値を受け入れ、runtime が scoring をスキップする経路が存在した。これにより evidence-grounded でないスコアが converged 判定に使用される
+- Rationale: scoring の唯一の経路を runtime 内に閉じることで、evidence からの逸脱を構造的に防止
+- Rejected: request.l1/l2 を optional で残す（silent bypass の温床になる）
+  - DO NOT: request 型に pre-scored path を残さない。Temptation: 後方互換のため optional にしたい
+- Status: Adopted
+
+### DR-0210: l2Evidence.ts new file for real artifact derivation (v1.7.15 rev2)
+
+- Decision: l2Evidence.ts を packages/qfai/src/core/prototyping/ に新設。buildDiscussionAxisInputs / buildScreenContractInputs / buildTrendAlignmentInputs で実 artifact から L2 入力を導出
+- Context: execution.ts 内で L2 dummy object（aggregateScore:0, evidenceRefs:[]）が inline 生成されていた
+- Rationale: 実 artifact 読み取りを専用モジュールに集約し、dummy object の再発を防止。evidence 不足時は throw
+- Rejected: execution.ts 内に inline で build 関数を追加（モジュール責務の曖昧化）
+  - DO NOT: L2 evidence 導出を execution.ts に埋め込まない。Temptation: 1 ファイルで完結させたい
+- Status: Adopted
+
+### DR-0211: CalibrationLoader fail-open removal (v1.7.15 rev2)
+
+- Decision: CalibrationLoader の全 fail-open パスを削除。DEFAULT_PACK fallback / version="1.0.0" 補完 / thresholds 欠落時の default 値注入を廃止
+- Context: pack 不在でも DEFAULT_PACK で続行できたため、calibration なしの full-harness 実行が可能だった
+- Rationale: fail-closed 設計により calibration pack の存在と正当性を構造的に保証
+- Rejected: DEFAULT_PACK を pack 不在時のみの safe default として維持（fail-open の最後の砦になる）
+  - DO NOT: CalibrationLoader に fallback を残さない。Temptation: 初回セットアップの摩擦を減らしたい
+- Status: Adopted
+
+### DR-0212: TerminationContext receives CalibrationPack only (v1.7.15 rev2)
+
+- Decision: history.ts の computeTerminationReason() / computeStatus() は { calibration: CalibrationPack; history: FullHarnessHistory } を受ける。pack 以外からの plateauLookback 解決を廃止
+- Status: Adopted
+
+### DR-0213: Screen-level UiObservation with ScreenObservation type (v1.7.15 rev2)
+
+- Decision: UiObservationSummary を ScreenObservation[] ベースに再構築。flatten 集約を廃止し screen-level で観測結果を保持
+- Context: 全 screen の DOM labels / actions / mockPaths を flatten して集約していたため、screen 単位の品質判定が不可能だった
+- Rationale: screen-level 保持により個別 screen の insufficient-evidence 検出が可能に。uiFidelityBuilder も screen 単位で observed を構築
+- Rejected: flatten 集約を維持し summary 内に screen breakdown を追加（二重構造）
+  - DO NOT: flatten 集約と screen-level を並存させない。Temptation: 後方互換のため両方持ちたい
+- Status: Adopted
+
+### DR-0214: bundleWriter schema v2 only (v1.7.15 rev2)
+
+- Decision: bundleWriter は schema v2（8 カテゴリ evidenceRefs + FullHarnessIteration 新型）のみ出力。v1/v2 並存を禁止
+- Status: Adopted
+
+### DR-0215: Validator 14-rule error upgrade (v1.7.15 rev2)
+
+- Decision: prototypingEvidence.ts の 14 項目を warning から error に昇格。新 semantic 変更分は新 rule ID に分離
+- Status: Adopted
+
+### DR-0216: DB coverage binary policy (v1.7.15 rev2)
+
+- Decision: declared DB objects ありで観測なしの場合は full-harness failure。「常に missing 扱いで続行」を禁止
+- Status: Adopted
+
+### DR-0217: cli/full-harness reject at 4 layers (v1.7.15 rev4)
+
+- Decision: `cli` + `full-harness` の組み合わせを CLI / derivePrototypingObligations / runFullHarness / バリデータの 4 層で拒否する
+- Status: Adopted
+- Rationale: non-UI surface で full-harness を実行しても無意味な Browser QA サイクルが走るだけ。3 層（rev2 DR-0210）から 4 層に拡張
+- Alternatives: (A) CLI 層のみで拒否 — 不十分、バイパス可能 / (B) 4 層防御 (adopted)
+- Source: discussion-20260414195449523, WS-1
+
+### DR-0218: screen contract-based Browser QA targets (v1.7.15 rev4)
+
+- Decision: Browser QA ターゲットを `"/primary"` 固定値から `40_screen_contracts.md` のスクリーン定義に基づく動的導出に変更
+- Status: Adopted
+- Rationale: 固定値では複数画面の測定漏れが発生し、監査で齟齬として検出された
+- Alternatives: (A) "/primary" 維持 — 測定漏れ / (B) screen contract 導出 (adopted)
+- Source: discussion-20260414195449523, WS-2
+
+### DR-0219: Browser QA evidence chain hard-fail on empty (v1.7.15 rev4)
+
+- Decision: `iterations[].evidenceRefs.browserQa` が空の場合はハードフェイルとし、サイレントパスを禁止
+- Status: Adopted
+- Rationale: エビデンスチェーン中断は監査追跡不能を意味する。fail-closed ポリシーの一環
+- Alternatives: (A) 空でも続行 — 監査チェーン断裂 / (B) ハードフェイル (adopted)
+- Source: discussion-20260414195449523, WS-3
+
+### DR-0220: canonical route semantics for runtimeGate/specCoverage (v1.7.15 rev4)
+
+- Decision: `runtimeGateBuilder.ts` / `specCoverage.ts` で URL ではなく canonical path（正規パス）で比較する
+- Status: Adopted
+- Rationale: クエリパラメータやフラグメントを含む URL が誤って別ルートと判定されるバグを排除
+- Alternatives: (A) URL そのまま使用 — 誤判定 / (B) canonical path 比較 (adopted)
+- Source: discussion-20260414195449523, WS-4
+
+### DR-0221: L2 structured parse priority over heuristic (v1.7.15 rev4)
+
+- Decision: L2 エビデンス収集で構造化パース（20-23 系、04_Sources.md、40_screen_contracts.md）を優先し、ヒューリスティックフォールバックは構造化ソース不在時のみ許可
+- Status: Adopted
+- Rationale: ヒューリスティック依存はエビデンス精度と再現性を低下させる
+- Alternatives: (A) ヒューリスティック優先 — 精度低下 / (B) 構造化パース優先 (adopted)
+- Source: discussion-20260414195449523, WS-5
+
+### DR-0222: parameterized route pattern-based matching (v1.7.15 rev4, OQ-0004 resolution)
+
+- Decision: Browser QA のパラメタライズドルート（e.g., `/orders/:id`）のマッチングにパターンベースマッチング（Option B）を採用
+- Status: Adopted
+- Rationale: exact match のみでは動的ルートの Browser QA エビデンスチェーンが断裂する。canonical normalization はオーバーエンジニアリング
+- Alternatives: (A) Exact match only — 動的ルート未対応 / (B) Pattern-based matching (adopted) / (C) Canonical normalization — 過度な複雑化
+- Source: discussion-20260414195449523, OQ-0004
+
+### DR-0223: ui[] row validation inline in prototypingEvidence.ts (v1.7.15 rev9, OQ-0001 resolution)
+
+- Decision: `runtimeGate.ui[]` 行レベル3フィールド（declaredRef/renderEvidenceRefs[]/browserQaEvidenceRefs[]）の validation を `prototypingEvidence.ts` 内インラインで実装（Option A）
+- Status: Adopted
+- Rationale: design doc §6-1-2 が変更ファイルとして `prototypingEvidence.ts` を明示。小規模な凝集した validation ユニットを別モジュールに抽出してもアーキテクチャ上の利点がない。インラインは凝集性を保つ
+- Alternatives: (A) inline in prototypingEvidence.ts (adopted) / (B) extract validateRuntimeGateUiRow() to separate utility — 不要な module 分割
+- Source: discussion-20260416092414328, OQ-0001
+
+### DR-0224: browserQaEvidenceRefs[] always required non-empty (v1.7.15 rev9, OQ-0002 resolution)
+
+- Decision: `runtimeGate.ui[].browserQaEvidenceRefs[]` は「browser QA 未実施」の場合でも常に required non-empty とし、空配列はハードフェイル（Option A）
+- Status: Adopted
+- Rationale: design doc §3-2 の fail-closed ポリシー。rev8 OQ-0003 で `runtimeGate.evidenceRefs` 空配列を拒否した precedent と一貫させる。空を許可するとビルダーが空を出力して validator がパスする抜け穴になる
+- Alternatives: (A) always required non-empty (adopted) / (B) allow empty when no browser QA run — fail-closed 違反
+- Source: discussion-20260416092414328, OQ-0002
+
+### DR-0225: per-axis evidenceRefs validation granularity (v1.7.15 rev9, OQ-0003 resolution)
+
+- Decision: `fullHarness.iterations[].l1/l2.axes[].evidenceRefs[]` の validation を per-axis 粒度で実施（Option A）。任意の axis が空配列であれば validator error
+- Status: Adopted
+- Rationale: design doc §6-1-3 の per-element 記述に準拠。集約レニエンシー（全 axis が空のときのみエラー）を許すと一部の axis がエビデンスなしでもパスする
+- Alternatives: (A) per-axis validation (adopted) / (B) aggregate leniency — per-axis traceability contract を破壊
+- Source: discussion-20260416092414328, OQ-0003
+
+### DR-0226: full README enumeration of all concrete-ref leaf fields (v1.7.15 rev9, OQ-0004 resolution)
+
+- Decision: README に concrete-ref contract の全 leaf フィールド（ui[].declaredRef、ui[].renderEvidenceRefs[]、ui[].browserQaEvidenceRefs[]、axes[].evidenceRefs[]、reviewerLogs[].evidenceRefs[]）を明記（Option A）
+- Status: Adopted
+- Rationale: DoD §5-6「docs/validator partial-strictness mismatch をゼロにする」が hard gate。design doc §9 が「README の表現を弱めて整合したことにする」を明示禁止している
+- Alternatives: (A) full enumeration (adopted) / (B) minimal note — DoD §5-6 違反
+- Source: discussion-20260416092414328, OQ-0004
+
+### DR-0227: UI-bearing discussion requires design guideline research (v1.7.17)
+
+- Decision: UI-bearing discussion では Trend Scan に加えて design guideline research を mandatory step とする。Material Design / WCAG / Apple HIG / platform/library guideline など、project-context に応じた参照を少なくとも 1 系統含める
+- Status: Adopted
+- Rationale: visual quality failure の root cause が prototyping ではなく upstream research 欠落であるため、discussion で閉じる必要がある
+- Alternatives: (A) prototyping skill で後追い補正 — root cause を閉じられない / (B) discussion mandatory step 化 (adopted)
+- Source: discussion-20260418170937652, DR-001
+
+### DR-0228: `design_guideline_research` becomes canonical Trend Scan category (v1.7.17)
+
+- Decision: `04_Sources.md` の canonical category に `design_guideline_research` を追加する
+- Status: Adopted
+- Rationale: guideline evidence を既存 source registry と同じ traceability surface に置くことで、validator と downstream spec が同じ SSOT を参照できる
+- Alternatives: (A) 別ファイル新設 — category drift / (B) 04_Sources に統合 (adopted)
+- Source: discussion-20260418170937652, DR-002
+
+### DR-0229: Trend-derived `score_anchors` require quantitative proxy and warning-first rollout (v1.7.17)
+
+- Decision: `21_design_eval_trend_derived.md` の `score_anchors` は抽象形容詞のみを禁止し、px 値 / 比率 / rule ID / class 名 / library default などの quantitative proxy を 1 つ以上含める。validator severity は v1.7.17 では warning とする
+- Status: Adopted
+- Rationale: concreteness がない anchor は高スコアでも低品質 UI を通してしまう。一方で既存 pack 影響は staged rollout が妥当
+- Alternatives: (A) 即時 error — migration shock / (B) warning-first ratchet (adopted)
+- Source: discussion-20260418170937652, DR-003 / OQ-0003 resolution
+
+### DR-0230: Validator ownership split = trendScan coverage + scoringReady concreteness (v1.7.17)
+
+- Decision: guideline coverage validator は `packages/qfai/src/core/validators/uix/trendScan.ts` を拡張し、anchor concreteness validator は `packages/qfai/src/core/validators/uix/scoringReady.ts` を拡張する。top-level 新規 validator を追加しない
+- Status: Adopted
+- Rationale: category completeness は sources schema の責務、anchor concreteness は scoring-ready schema の責務であり、現行 canonical validator 境界と一致する
+- Alternatives: (A) 新規 top-level validator — ownership split を曖昧化 / (B) 既存 uix module 拡張 (adopted)
+- Source: discussion-20260418170937652, DR-004 / OQ-0004 resolution
+
+### DR-0231: Brave Search MCP を primary search provider とする (v1.8.0)
+
+- Decision: Web Research Enhancement の primary search MCP は Brave Search を採用する
+- Status: Adopted
+- Rationale: community adoption、ドキュメント整備、CLI エージェントとの統合容易性のバランスが最も良い
+- Alternatives: (A) Tavily を primary にする / (B) 複数 provider を同列 primary にする
+- Source: discussion-20260328212829687, OQ-0001
+
+### DR-0232: Firecrawl は hosted/local npx の両モードを文書化し、機微環境では local を推奨する (v1.8.0)
+
+- Decision: Firecrawl integration は hosted URL と local `npx` の両構成を提供し、sensitive environment では local を推奨する
+- Status: Adopted
+- Rationale: セキュリティと導入容易性の両立が必要であり、単一モード固定は運用要件を満たさない
+- Alternatives: (A) hosted のみ / (B) local のみ
+- Source: discussion-20260328212829687, OQ-0002
+
+### DR-0233: SSE transport は v1.8.0 の対象外とし、post-v1.8.0 へ延期する (v1.8.0)
+
+- Decision: MCP transport は stdio と HTTP のみを対象とし、SSE ベース統合は v1.8.0 では扱わない
+- Status: Adopted
+- Rationale: Apify SSE deprecation を踏まえると、現時点で SSE を正式採用すると保守コストと不確実性が高い
+- Alternatives: (A) SSE を v1.8.0 に含める / (B) transport ごとに個別方針を持たず曖昧に残す
+- Source: discussion-20260328212829687, OQ-0003
+
+### DR-0234: Content sanitization は moderate scope に固定する (v1.8.0)
+
+- Decision: sanitizer は control chars、`aria-hidden`、`display:none` の除去に限定し、ML ベース判定や過剰除去を行わない
+- Status: Adopted
+- Rationale: セキュリティ対策とコンテンツ忠実性の均衡点として moderate scope が最適
+- Alternatives: (A) basic only / (B) aggressive semantic sanitization
+- Source: discussion-20260328212829687, OQ-0004
+
+### DR-0235: 評価ハーネスは metrics 定義に留め、特定ツールへ固定しない (v1.8.0)
+
+- Decision: evaluation は citation precision、coverage、freshness、security hygiene の指標定義までを共通仕様とし、特定ベンダー/特定評価ツールへ固定しない
+- Status: Adopted
+- Rationale: 評価基盤の差し替え可能性を残しつつ、品質ゲートの観点だけを共通化する
+- Alternatives: (A) 特定評価ツールを必須化 / (B) 指標自体を定義しない
+- Source: discussion-20260328212829687, OQ-0005
+
+### DR-0236: Research sub-agents は conservative defaults を採用する (v1.8.0)
+
+- Decision: research sub-agents の既定値を `max_threads=2`, `max_depth=2` とし、より高い値は explicit opt-in とする
+- Status: Adopted
+- Rationale: 並列度と探索深度の暴走を防ぎ、レート制限・コスト・追跡可能性のバランスを保つ
+- Alternatives: (A) 制限なし / (B) 1 固定
+- Source: discussion-20260328212829687, OQ-0006
+
+### DR-0237: Cache staleness threshold は 24 時間デフォルトで config override 可能とする (v1.8.0)
+
+- Decision: research cache の既定 stale threshold は 24 時間とし、設定で上書き可能にする
+- Status: Adopted
+- Rationale: freshness と API コストの実務的な均衡点であり、ユースケース差異は config で吸収できる
+- Alternatives: (A) 固定値で override 不可 / (B) cache 無効
+- Source: discussion-20260328212829687, OQ-0007
+
+### DR-0238: HITL gate はリスクベースで発火させる (v1.8.0)
+
+- Decision: HITL は高リスク・低信頼ケースに限定して発火し、per-fetch approval のような過剰承認フローは採用しない
+- Status: Adopted
+- Rationale: 人手承認を必要な場面に集中させ、通常ケースのスループットを損なわない
+- Alternatives: (A) すべての fetch に承認を要求 / (B) HITL なし
+- Source: discussion-20260328212829687, OQ-0008

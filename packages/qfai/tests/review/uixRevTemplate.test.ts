@@ -23,11 +23,16 @@ const EXPECTED_IDS = [
   "trend-relevance-freshness",
   "dynamic-axis-specificity",
   "generic-fallback-persistence",
+  "strategy-appropriateness",
+  "scoring-schema-completeness",
+  "selected-anchor-adequacy",
+  "screen-contract-sufficiency",
+  "accept-refine-pivot-judgement",
 ] as const;
 
 describe("uix-rev template", () => {
-  it("5 review items present", () => {
-    expect(CANONICAL_REVIEW_ITEMS).toHaveLength(5);
+  it("10 review items present (canonical WS-E)", () => {
+    expect(CANONICAL_REVIEW_ITEMS).toHaveLength(10);
 
     const ids = getCanonicalReviewItemIds();
     for (const expected of EXPECTED_IDS) {
@@ -78,14 +83,14 @@ describe("uix-rev template", () => {
       "",
       "## trend-derived",
       "",
-      "- micro_interaction: source_translation: From 2025 trends",
+      "- micro_interaction: local_translation: From 2025 trends",
     ].join("\n");
 
     const genericAxes = detectGenericFallbackAxes(axesWithGeneric);
     expect(genericAxes.length).toBeGreaterThan(0);
   });
 
-  it("canonical names check", () => {
+  it("canonical names check (WS-E: 10 review items)", () => {
     const ids = getCanonicalReviewItemIds();
     expect(ids).toEqual([
       "taste-reflection-quality",
@@ -93,9 +98,13 @@ describe("uix-rev template", () => {
       "trend-relevance-freshness",
       "dynamic-axis-specificity",
       "generic-fallback-persistence",
+      "strategy-appropriateness",
+      "scoring-schema-completeness",
+      "selected-anchor-adequacy",
+      "screen-contract-sufficiency",
+      "accept-refine-pivot-judgement",
     ]);
 
-    // No extra or missing items
-    expect(ids).toHaveLength(5);
+    expect(ids).toHaveLength(10);
   });
 });

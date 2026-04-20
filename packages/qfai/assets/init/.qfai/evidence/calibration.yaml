@@ -1,0 +1,26 @@
+# QFAI default calibration pack.
+#
+# The full-harness loader (`packages/qfai/src/core/calibration/loader.ts`)
+# requires a calibration pack at the path declared in
+# `qfai.config.yaml > prototyping.calibration.packPath`. This file ships as
+# the zero-configuration default so `qfai init` projects can run full-harness
+# without a manual setup step. Edit the values below to tune iteration limits
+# and score thresholds for your team's review cadence.
+
+version: "1.0.0-default"
+
+thresholds:
+  accept: 0.8
+  refine: 0.5
+
+maxIterations: 5
+plateauDelta: 0.02
+plateauLookback: 3
+
+examples:
+  - input: "Example UI surface with clear primary call-to-action and WCAG AA contrast."
+    expectedScore: 0.9
+    rationale: "High-quality example: explicit primary action, accessible contrast, no layout clutter."
+  - input: "Placeholder layout with lorem-ipsum copy and no primary action."
+    expectedScore: 0.3
+    rationale: "Low-quality example: placeholder content and absent decision path."

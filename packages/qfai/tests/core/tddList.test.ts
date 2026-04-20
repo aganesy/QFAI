@@ -86,7 +86,7 @@ function row(
 // ── Tests ──
 
 describe("tddList Phase 2 validators", { timeout: 15000 }, () => {
-  // Phase 1 backward compatibility: TDDLIST_MISSING = warning
+  // Current canonical behavior: TDDLIST_MISSING = warning
   it("emits TDDLIST_MISSING as warning when test-list.md absent", async () => {
     await withTddProject(async (root) => {
       await seedSpec(root, "0001", {});

@@ -1,5 +1,5 @@
 /**
- * ModeGuidance — recommends standard or premium mode based on project characteristics.
+ * ModeGuidance — full-harness-only advisory for prototyping.
  * SPEC-0032
  *
  * Advisory only — does not change mode.
@@ -9,22 +9,13 @@ import type { ModeRecommendation, ProjectCharacteristics } from "./types.js";
 
 export class ModeGuidance {
   /**
-   * Recommends a mode based on project characteristics.
-   *
-   * Standard: fileCount <= 1000 AND testRatio >= 0.3 AND specCoverage >= 0.5 AND codeComplexity <= 0.7
-   * Premium: otherwise
+   * `packages/qfai` v1.7.15 prototyping is full-harness only.
+   * Project characteristics are retained only to explain why runtime proof is required.
    */
   recommend(characteristics: ProjectCharacteristics): ModeRecommendation {
     const { fileCount, testRatio, specCoverage, codeComplexity } = characteristics;
-
-    if (fileCount <= 1000 && testRatio >= 0.3 && specCoverage >= 0.5 && codeComplexity <= 0.7) {
-      return {
-        mode: "standard",
-        reasoning: `Project size, test ratio, spec coverage, and code complexity (${codeComplexity}) are within standard thresholds.`,
-      };
-    }
-
     const reasons: string[] = [];
+
     if (fileCount > 1000) {
       reasons.push(`fileCount ${fileCount} exceeds 1000`);
     }
@@ -39,8 +30,11 @@ export class ModeGuidance {
     }
 
     return {
-      mode: "premium",
-      reasoning: `Premium recommended: ${reasons.join("; ")}.`,
+      mode: "full-harness",
+      reasoning:
+        reasons.length > 0
+          ? `packages/qfai v1.7.15 prototyping is full-harness only. Runtime proof is required: ${reasons.join("; ")}.`
+          : "packages/qfai v1.7.15 prototyping is full-harness only. Runtime proof remains required even when project characteristics are favorable.",
     };
   }
 }

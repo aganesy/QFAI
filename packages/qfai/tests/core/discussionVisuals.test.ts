@@ -74,7 +74,7 @@ describe("validateDiscussionVisuals", () => {
     });
   });
 
-  it("emits QFAI-VIS-002 warning when UI hints exist without HTML/CSS mock", async () => {
+  it("emits QFAI-VIS-002 only when HTML/CSS mock is explicitly referenced without the fallback artifact", async () => {
     await withTempRoot(async (root) => {
       await writePackFile(
         root,
@@ -89,7 +89,7 @@ describe("validateDiscussionVisuals", () => {
         [
           "# 03 Story Workshop",
           "",
-          "The UI screen layout for the order page is still under review.",
+          "The selected anchor references an HTML+CSS mock for the order page.",
           "",
         ].join("\n"),
       );
@@ -97,8 +97,33 @@ describe("validateDiscussionVisuals", () => {
       const issues = await validateDiscussionVisuals(root);
       const warning = issues.find((item) => item.code === "QFAI-VIS-002");
 
-      expect(warning?.severity).toBe("warning");
+      expect(warning?.severity).toBe("info");
       expect(warning?.file).toBe(storyPath);
+    });
+  });
+
+  it("does not emit QFAI-VIS-002 when UI hints exist without an explicit mock reference", async () => {
+    await withTempRoot(async (root) => {
+      await writePackFile(
+        root,
+        "02_Inception-Deck.md",
+        ["# 02 Inception Deck", "", "```mermaid", "flowchart TD", "  A --> B", "```", ""].join(
+          "\n",
+        ),
+      );
+      await writePackFile(
+        root,
+        "03_Story-Workshop.md",
+        [
+          "# 03 Story Workshop",
+          "",
+          "The UI screen layout for the order page is still under review.",
+          "",
+        ].join("\n"),
+      );
+
+      const issues = await validateDiscussionVisuals(root);
+      expect(issues.some((item) => item.code === "QFAI-VIS-002")).toBe(false);
     });
   });
 
