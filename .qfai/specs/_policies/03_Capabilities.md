@@ -21,7 +21,7 @@
 | CAP-0009 | skill      | 構成チューニング (qfai-configure)             | qfai.config.yaml の自動分析・チューニングが動作する                                                   |
 | CAP-0010 | skill      | 構造化ディスカッション (qfai-discussion)      | 15 ファイルディスカッションパック生成・OQ 駆動終了・UIUX サイドカーが動作する                         |
 | CAP-0011 | skill      | 統一実装 (qfai-implement)                     | TDD マイクロサイクル (Red/Green/Refactor)・test-list.md 台帳・バリデータが動作する                    |
-| CAP-0012 | skill      | プロトタイピング検証 (qfai-prototyping)       | 全 spec ランナブルスケルトン・Coverage Matrix・モード切替 (low-cost/standard/full-harness) が動作する |
+| CAP-0012 | skill      | プロトタイピング検証 (qfai-prototyping)       | skill 主導の prototyping、mandatory screenshot/html evidence、validate/verify gate が動作する         |
 | CAP-0013 | skill      | SDD 統一ワークフロー (qfai-sdd)               | Contracts-first/Outline/Slice/Plan/Delta 全フェーズ・Spec Auto-Discovery が動作する                   |
 | CAP-0014 | skill      | 品質検証 (qfai-verify)                        | UIX-VAL/UIX-REV バリデータ・品質ゲート・SSOT 統一が動作する                                           |
 | CAP-0015 | agent      | サブエージェント定義 (19 consolidated agents) | 全エージェントのカタログ・標準契約・routing policy・Work Orders が定義・動作する                      |

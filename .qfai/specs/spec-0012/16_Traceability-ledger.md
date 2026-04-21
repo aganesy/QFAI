@@ -1,7 +1,14 @@
 # 16 Traceability Ledger
 
-| BR/AC        | Implementation File                                | Test File                                           |
-| ------------ | -------------------------------------------------- | --------------------------------------------------- |
-| BR-0012-0002 | packages/qfai/src/core/prototyping/execution.ts    | packages/qfai/tests/e2e/prototypingSkillE2E.test.ts |
-| BR-0012-0009 | packages/qfai/src/core/prototyping/specCoverage.ts | packages/qfai/tests/core/specCoverage.test.ts       |
-| AC-0012-0030 | packages/qfai/src/core/prototyping/types.ts        | packages/qfai/tests/e2e/prototypingSkillE2E.test.ts |
+| Layer | Current SSOT |
+| ----- | ------------ |
+| Skill | `packages/qfai/assets/init/.qfai/assistant/skills/qfai-prototyping/SKILL.md` |
+| References | `packages/qfai/assets/init/.qfai/assistant/skills/qfai-prototyping/references/*` |
+| Validate gate | `packages/qfai/src/core/validate.ts` |
+| UI evidence validator | `packages/qfai/src/core/validators/uiEvidenceArtifacts.ts` |
+| Report wording | `packages/qfai/src/core/report.ts` |
+
+## Notes
+
+- `US-0012-0001..0093` and `TC-0012-0001..0305` remain valid traceability namespaces.
+- Active posture is skill-first; legacy validator slices remain traceable but are not public runtime surfaces.

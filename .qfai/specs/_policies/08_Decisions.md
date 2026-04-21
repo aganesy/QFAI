@@ -1465,3 +1465,10 @@ discussion-20260416023323603（v1.7.15 rev8 leaf-field ref grammar closure）、
 - Rationale: 人手承認を必要な場面に集中させ、通常ケースのスループットを損なわない
 - Alternatives: (A) すべての fetch に承認を要求 / (B) HITL なし
 - Source: discussion-20260328212829687, OQ-0008
+
+### DR-0239: Skill-First Prototyping Posture (2026-04-22)
+
+- Decision: active prototyping contract is `/qfai-prototyping [--auto]` plus `qfai validate` / `/qfai-verify`
+- Decision: declared screen evidence requires both screenshot and HTML snapshot
+- Decision: legacy full-harness / mode / runtime terminology remains historical or validator-slice vocabulary only
+- Rationale: simplify user-facing execution while preserving deterministic evidence integrity checks

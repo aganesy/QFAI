@@ -532,13 +532,13 @@ flowchart TD
     REPORT --> DONE_OPT(["DONE<br/>(optional capabilities)"])
 ```
 
-### v1.7.5 Mode Expectation 分離
+### Current Prototyping Posture
 
-| Mode               | Static Obligations             | Runtime Obligations                        | Evidence Capture | Browser QA          |
-| ------------------ | ------------------------------ | ------------------------------------------ | ---------------- | ------------------- |
-| standard (default) | source, route, state, contract | opt-in only                                | optional         | optional            |
-| low-cost           | source, route, state, contract | opt-in only                                | optional         | smoke + interaction |
-| full-harness       | source, route, state, contract | API non-404, DB existence, UI reachability | required         | required            |
+| Layer | Responsibility |
+| ----- | -------------- |
+| `/qfai-prototyping` | UI implementation, delegation, capture, evaluation, rerun |
+| `qfai validate` | schema/evidence integrity check |
+| `/qfai-verify` | reviewer gate and completion decision |
 
 ### v1.7.5 非 Web プロジェクト安全保証
 
@@ -547,37 +547,20 @@ flowchart TD
 - browser QA は skip で表現（blocking error にしない）
 - 新規 universal dependency の追加禁止
 
-## v1.7.6 Critique, Calibration & Full-Harness Expansion フロー
-
-v1.7.6 では CAP-0029〜CAP-0033 として、premium prototyping mode with iterative critique loops を導入する。
+## Current Prototyping Flow
 
 ```mermaid
 flowchart TD
-    START([ユーザーリクエスト]) --> MODE{モード選択}
-    MODE -->|Standard| STD[標準プロトタイピングパス]
-    MODE -->|Premium| FH[/qfai-prototyping --mode full-harness<br/>明示的オプトイン]
-    FH --> OBS_START[Observability: コスト/時間追跡開始]
-    OBS_START --> PLAN[Planner: 生成戦略策定]
-    PLAN --> GEN[Generator: 出力生成]
-    GEN --> EVAL[Evaluator: 評価]
-    EVAL --> CAL[Calibration Pack: スコアリング整合性確認]
-    EVAL --> CRIT{Critique Adapter}
-    CRIT -->|provider available| CRITIQUE[構造化批評取得]
-    CRIT -->|provider unavailable| FAILOPEN[Fail-Open: 批評スキップ]
-    CRITIQUE --> SCORE[スコアリング]
-    FAILOPEN --> SCORE
-    CAL --> SCORE
-    SCORE --> DECISION{Accept / Refine / Pivot}
-    DECISION -->|Accept| OUTPUT[最終出力]
-    DECISION -->|Refine| GEN
-    DECISION -->|Pivot| PLAN
-    DECISION -->|Plateau/Cap| OUTPUT
-    OUTPUT --> OBS_END[Observability: メトリクス出力]
-    OBS_END --> HANDOFF[Handoff Artifact 生成]
-    HANDOFF --> DETECT[Display/Stub Detection]
-    DETECT --> EVIDENCE[Evidence + Review]
-    STD --> STD_OUT[標準出力]
-    STD_OUT --> EVIDENCE
+    A[/qfai-prototyping/] --> B[Step 0 plan]
+    B --> C[Capture screenshot + HTML]
+    C --> D[L1/L2 evaluators]
+    D --> E[Aggregate findings]
+    E --> F[Fix and re-capture]
+    F --> G[qfai validate --fail-on error]
+    G --> H[/qfai-verify/]
+    H --> I{PASS?}
+    I -->|No| C
+    I -->|Yes| J[Complete]
 ```
 
 ### Premium Path Iteration Policy

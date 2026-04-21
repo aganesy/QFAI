@@ -166,12 +166,12 @@
 | Skipped semantics | capability や環境不足により未実行であることを明示的に表す状態。evidence の capture status に反映 |
 | Browser QA | smoke、interaction、visual、accessibility を扱う browser-based quality check。structured findings を返す |
 | Structured finding | phase、repair suggestion 等を持つ機械可読な QA 出力。browser QA の標準出力形式 |
-| Mode-aware obligations | standard / low-cost / full-harness など mode ごとに異なる完了判定条件。義務の混線を防ぐ |
+| Mode-aware obligations | [Superseded] 旧 mode split を指す歴史用語。現行 active posture の public contract ではない。 |
 | Critique Adapter | 外部批評プロバイダーへのインターフェース層。fail-open semantics を持ち、プロバイダー障害時は批評をスキップする |
 | Critique Provider | Critique Adapter の背後にある実際の外部批評サービス。generic command interface で接続 |
 | Calibration Pack | スコアリング整合性、accept/refine/pivot ポリシー、プラトー処理を定義するファイルベースのアセット群 |
-| Full-Harness | premium prototyping mode で使用される planner/generator/evaluator の反復ループ構造 |
-| Premium Path | `/qfai-prototyping --mode full-harness` で明示的にオプトインする高品質プロトタイピングモード |
+| Full-Harness | 旧 runtime-centered artifact/validator slice を指す歴史用語。現行では public entrypoint ではない。 |
+| Premium Path | [Superseded] 旧 `/qfai-prototyping --mode full-harness` posture。現行では `/qfai-prototyping` が唯一の public path。 |
 | Plateau Detection | スコアデルタ閾値と lookback で改善停滞を検出し、ループを早期終了させるメカニズム |
 | Loop Exit Policy | accept（品質達成）、plateau（改善停滞）、cap（最大反復数到達）の 3 条件で loop を終了するポリシー |
 | Handoff Artifact | long-running session の中断時に生成される再開可能なアーティファクト。planner/generator/evaluator の状態をキャプチャ |
@@ -201,13 +201,13 @@
 | IssueCategory | type discriminator for validator findings — `"canonical"` (production contract violations), `"change"` (change-related findings). v1.7.14: `"compatibility"` は削除済み（DR-0108）。 |
 | Legacy Validator | [REMOVED v1.7.14] `validators/legacy/` namespace は v1.7.14 で完全削除済み（DR-0115）。 |
 | prototyping.yaml | required side artifact in discussion-pack alongside 15 markdown files. Contains `prototyping.recommended_mode`, `rationale`, `allowed_modes`, `surface` fields. |
-| Prototyping Mode | one of `low-cost` (static only), `standard` (default), `full-harness` (opt-in runtime-heavy). Resolved via precedence: user-specified > discussion recommendation > system default. |
+| Prototyping Mode | [Superseded] 旧 mode engine の用語。現行 active posture では skill-first execution を採用し、mode split を public contract にしない。 |
 | Recommendation Artifact | `prototyping.yaml` file in discussion-pack. Status: valid/invalid/missing/no-pack. Resolved by `resolveLatestRecommendationArtifact()`. |
 | runCanonicalUixValidators | production-path UIX validator entrypoint replacing `runAllUixValidators`. Runs 11 modular validators in parallel from `uix/canonical.ts`（v1.7.14: rollout.ts 削除により 12→11）。 |
 | Browser QA 4-Phase Model | browser-level QA を smoke → interaction → visual → accessibility の 4 フェーズで順次実行するモデル。`browserQa/runner.ts` が orchestrate し `BrowserQaRunResult` を集約。|
-| Evidence Bundle | render capture + Browser QA 結果 + prototyping summary を `.qfai/evidence/` に JSON バンドルとして永続化する単位。`evidence/bundleWriter.ts` が生成。|
-| UI Fidelity Builder | render evidence + Browser QA 結果から UI fidelity artifact を合成するモジュール。required evidence 欠落時は QFAI-PROT-270/271/272 を emit。|
-| Prototyping Execution Orchestrator | `prototyping/execution.ts` — mode resolution → evidence capture → Browser QA → full-harness の本番パスを統合実行するエントリポイント。|
+| Evidence Bundle | prototyping で収集した evidence の総称。現行の blocking minimum は screenshot / HTML snapshot / review artifact / validate output。 |
+| UI Fidelity Builder | discussion axes, contracts, screenshots, HTML snapshots, design-system checklist を基に evaluator が参照する fidelity guidance。 |
+| Prototyping Execution Orchestrator | [Removed] 旧 `prototyping/execution.ts` を指す歴史用語。現行 orchestration は skill 側に移管済み。 |
 | Provider Registry | `providers/registry.ts` — `QfaiPrototypingConfig` から concrete provider（Playwright/custom）を解決する依存逆転パターン。|
 | Surface Type Detection | `detection/surfaceType.ts` — 01_Context.md の明示的分類ブロック（ui_bearing/primary_surface）を優先し、フォールバックとして surface_type フィールドを使用する判定モジュール。|
 | Classification Block | 01_Context.md に記載する構造化ブロック。`ui_bearing`, `primary_surface`, `secondary_surfaces`, `classification_rationale` の 4 フィールドで構成。`classification.ts` バリデータが検証。|

@@ -546,3 +546,5 @@
 - OQ-0001..0008 resolved at policy/spec layer
 - OQ-0009 (Jina AI MCP) deferred to v1.9.0
 - OQ-0010 (OTel integration depth) deferred to v1.9.0
+
+| 2026-04-22 | adopted | 02_Initiative.md / 03_Capabilities.md / 04_Business-Flow.md / 06_Glossary.md / 07_Constraints.md / 08_Decisions.md | prototyping posture shifted to skill-first execution with validate/verify gates and mandatory screenshot/html evidence; old CLI/runtime/mode wording explicitly superseded | current implementation alignment |
