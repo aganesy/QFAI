@@ -72,33 +72,34 @@ describe("TC-0012-0289 — Step 0 executionPlan documented in SKILL.md", () => {
   });
 });
 
-// ─── TC-0012-0292: capture-screenshots.js reference ──────────────────────────
+// ─── TC-0012-0292: canonical evidence capture instructions ───────────────────
 
-describe("TC-0012-0292 — SKILL.md references capture-screenshots.js", () => {
+describe("TC-0012-0292 — SKILL.md documents canonical evidence capture", () => {
   // QFAI:SPEC-0012:TC-0012-0292
-  it("SKILL.md Capture step references capture-screenshots.js", async () => {
+  it("SKILL.md Capture step references canonical screenshot and HTML evidence paths", async () => {
     const content = await readSkillMd();
-    expect(content).toContain("capture-screenshots.js");
+    expect(content).toContain(".qfai/evidence/prototyping/screenshots/<screen-id>.png");
+    expect(content).toContain(".qfai/evidence/prototyping/html/<screen-id>.html");
   });
 });
 
 // ─── TC-0012-0293: 5-step iteration cycle documented ─────────────────────────
 
-describe("TC-0012-0293 — 5-Step Iteration Cycle documented in SKILL.md", () => {
+describe("TC-0012-0293 — iteration loop documented in SKILL.md", () => {
   // QFAI:SPEC-0012:TC-0012-0293
-  it("SKILL.md iteration section contains all 5 steps in correct order", async () => {
+  it("SKILL.md iteration section contains capture, evaluator launch, findings, fix, and re-evaluate in order", async () => {
     const content = await readSkillMd();
 
-    const captureIdx = content.indexOf("Capture");
-    const evaluateIdx = content.indexOf("Evaluate");
-    const identifyIdx = content.indexOf("Identify");
-    const fixIdx = content.indexOf("Fix");
+    const captureIdx = content.indexOf("Capture Mandatory Evidence");
+    const evaluateIdx = content.indexOf("Launch L1 and L2 Evaluators");
+    const identifyIdx = content.indexOf("Aggregate Findings");
+    const fixIdx = content.indexOf("Fix and Re-capture");
     const reevaluateIdx = content.indexOf("Re-evaluate");
 
     // All steps present
     expect(captureIdx, "Capture step missing").toBeGreaterThan(-1);
-    expect(evaluateIdx, "Evaluate step missing").toBeGreaterThan(-1);
-    expect(identifyIdx, "Identify step missing").toBeGreaterThan(-1);
+    expect(evaluateIdx, "Evaluator launch step missing").toBeGreaterThan(-1);
+    expect(identifyIdx, "Findings aggregation step missing").toBeGreaterThan(-1);
     expect(fixIdx, "Fix step missing").toBeGreaterThan(-1);
     expect(reevaluateIdx, "Re-evaluate step missing").toBeGreaterThan(-1);
 
@@ -112,13 +113,14 @@ describe("TC-0012-0293 — 5-Step Iteration Cycle documented in SKILL.md", () =>
 
 // ─── TC-0012-0296: Evaluator input 4 elements documented ─────────────────────
 
-describe("TC-0012-0296 — Evaluator input 4 elements documented in SKILL.md", () => {
+describe("TC-0012-0296 — Evaluator input elements documented in SKILL.md", () => {
   // QFAI:SPEC-0012:TC-0012-0296
-  it("SKILL.md Evaluate step documents all 4 required input elements", async () => {
+  it("SKILL.md Evaluate step documents all required input elements", async () => {
     const content = await readSkillMd();
 
-    // 4 elements: (a) screenshots, (b) axisDefs, (c) previousScore, (d) designSystemChecklist
+    // Current skill requires 5 elements including HTML snapshots.
     expect(content).toContain("screenshots");
+    expect(content).toContain("HTML snapshots");
     expect(content).toContain("axisDefs");
     expect(content).toContain("previousScore");
     expect(content).toContain("designSystemChecklist");
@@ -132,9 +134,9 @@ describe("TC-0012-0297 — SKILL.md documents missing evaluator input detection"
   it("SKILL.md describes reviewer check for missing evaluator input elements", async () => {
     const content = await readSkillMd();
 
-    // Reviewer check narrative: names missing element (d) specifically
-    expect(content).toMatch(/missing.*element|element.*missing/i);
-    // References element (d) — designSystemChecklist / 12_design_system.md
+    expect(content).toMatch(
+      /required input is missing|missing evidence|missing mandatory evidence/i,
+    );
     expect(content).toContain("12_design_system.md");
   });
 });

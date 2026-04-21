@@ -166,7 +166,7 @@ export async function buildSpecCoverageSummary(input: {
     if (spec.apiEndpoints.length > 0 || spec.dbObjects.length > 0) {
       throw new Error(
         `Spec coverage failure: spec "${spec.specId}" declares non-UI prototyping coverage. ` +
-          `packages/qfai prototyping supports UI route coverage only.`,
+          `QFAI validation supports UI route coverage only.`,
       );
     }
   }

@@ -48,6 +48,6 @@ describe("E2E: prototyping SKILL.md defines full-harness-only contract", () => {
     const c = await load();
     expect(c).toMatch(/## Required process/i);
     expect(c).toContain("qfai validate --fail-on error");
-    expect(c).toContain("qfai prototyping run --mode full-harness --reviewer <id>");
+    expect(c).toContain("Launch L1 and L2 evaluator sub-agents");
   });
 });

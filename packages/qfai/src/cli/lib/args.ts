@@ -2,14 +2,6 @@ export type ParsedArgs = {
   command: string | null;
   invalid: boolean;
   options: {
-    prototypingAction?: "run";
-    prototypingMode?: "full-harness";
-    prototypingTargetUrl?: string;
-    prototypingBrowserProvider?: string;
-    prototypingRenderProvider?: string;
-    prototypingReviewer?: string;
-    prototypingChangeSummary?: string[];
-    prototypingLimitations?: string[];
     root: string;
     rootExplicit: boolean;
     dir: string;
@@ -85,18 +77,6 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
     }
   }
 
-  if (command === "prototyping") {
-    const candidate = args[0];
-    if (candidate && !candidate.startsWith("--")) {
-      if (candidate === "run") {
-        options.prototypingAction = "run";
-      } else {
-        markInvalid();
-      }
-      args.shift();
-    }
-  }
-
   for (let i = 0; i < args.length; i += 1) {
     const arg = args[i];
     switch (arg) {
@@ -146,103 +126,6 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
       case "--strict":
         options.strict = true;
         break;
-      case "--mode": {
-        if (command !== "prototyping") {
-          break;
-        }
-        const next = readOptionValue(args, i);
-        if (next === null) {
-          markInvalid();
-          break;
-        }
-        if (next === "full-harness") {
-          options.prototypingMode = next;
-        } else {
-          markInvalid();
-        }
-        i += 1;
-        break;
-      }
-      case "--target-url": {
-        if (command !== "prototyping") {
-          break;
-        }
-        const next = readOptionValue(args, i);
-        if (next === null) {
-          markInvalid();
-          break;
-        }
-        options.prototypingTargetUrl = next;
-        i += 1;
-        break;
-      }
-      case "--browser-provider": {
-        if (command !== "prototyping") {
-          break;
-        }
-        const next = readOptionValue(args, i);
-        if (next === null) {
-          markInvalid();
-          break;
-        }
-        options.prototypingBrowserProvider = next;
-        i += 1;
-        break;
-      }
-      case "--render-provider": {
-        if (command !== "prototyping") {
-          break;
-        }
-        const next = readOptionValue(args, i);
-        if (next === null) {
-          markInvalid();
-          break;
-        }
-        options.prototypingRenderProvider = next;
-        i += 1;
-        break;
-      }
-      case "--reviewer": {
-        if (command !== "prototyping") {
-          break;
-        }
-        const next = readOptionValue(args, i);
-        if (next === null) {
-          markInvalid();
-          break;
-        }
-        options.prototypingReviewer = next;
-        i += 1;
-        break;
-      }
-      case "--change-summary": {
-        if (command !== "prototyping") {
-          break;
-        }
-        const next = readOptionValue(args, i);
-        if (next === null) {
-          markInvalid();
-          break;
-        }
-        options.prototypingChangeSummary ??= [];
-        options.prototypingChangeSummary.push(next);
-        i += 1;
-        break;
-      }
-      case "--limitation": {
-        if (command !== "prototyping") {
-          break;
-        }
-        const next = readOptionValue(args, i);
-        if (next === null) {
-          markInvalid();
-          break;
-        }
-        options.prototypingLimitations ??= [];
-        options.prototypingLimitations.push(next);
-        i += 1;
-        break;
-      }
       case "--phase": {
         const next = readOptionValue(args, i);
         if (next === null) {
@@ -375,10 +258,6 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
   if (command === "guardrails" && !options.help && !options.guardrailsAction) {
     markInvalid();
   }
-  if (command === "prototyping" && !options.help && !options.prototypingAction) {
-    markInvalid();
-  }
-
   return { command, invalid, options };
 }
 

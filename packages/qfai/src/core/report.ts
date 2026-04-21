@@ -1589,10 +1589,10 @@ export function formatReportMarkdown(
       "- render evidence が不足または不完全です。viewport coverage と artifact path を確認してください。",
     );
     lines.push(
-      "- recover: `qfai prototyping run --mode full-harness --reviewer <id>` を実行し、`.qfai/evidence/prototyping.json` / `render.json` / `browser-qa.json` を再生成します。",
+      "- recover: `/qfai-prototyping` を再実行し、宣言された screen ごとの screenshot と HTML snapshot を再取得してください。",
     );
     lines.push(
-      "- why it matters: render evidence は viewport coverage と missing artifact の切り分けに使われ、strict/high profile では gate に影響します。",
+      "- why it matters: screenshot / HTML evidence は validate と verify の gate 判定に使われます。",
     );
   }
   const calibrationIssues = data.issues.filter((item) =>

@@ -1,13 +1,14 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  checkModeHeadings,
-  hasModeSurfaceMatrix,
+  checkRequiredSections,
   hasCanonicalSurfaceDocumentation,
   hasCliSurfaceDocumentation,
   hasUiBearingFalseExclusion,
   isStaticFirstAligned,
   scanBannedPhrases,
+  hasDelegationScopeTable,
+  hasMandatoryEvidencePaths,
 } from "../../src/core/validators/skill/prototypingSkill.js";
 
 const VALID_SKILL_CONTENT = [
@@ -19,21 +20,31 @@ const VALID_SKILL_CONTENT = [
   "cli is not a prototyping execution target and is rejected.",
   "ui_bearing: false specs are not prototyping execution targets.",
   "",
-  "## Full-harness",
-  "Full-harness is the package default when prototyping execution is valid.",
+  "## Required References",
+  "Read the reference documents before execution.",
   "",
-  "## Obligation Matrix",
-  "| surface / mode | specs | runtimeGate | uiFidelity | render evidence | browser QA | fullHarness |",
-  "| web / full-harness | required | required | required | required | required | required |",
-  "| mobile / full-harness | required | required | required | required | required | required |",
-  "| desktop / full-harness | required | required | required | required | required | required |",
-  "| mixed / full-harness | required | required | required | required | required | required |",
+  "## Required Process",
+  "Follow the skill-orchestrated process.",
+  "",
+  "## Evaluator Inputs (Mandatory)",
+  "screenshots, HTML snapshots, axisDefs, previousScore, designSystemChecklist",
+  "",
+  "## Delegation Scope Table",
+  "| Screenshot capture | devops-ci-engineer |",
+  "| Evaluation L1-L2 | product-surface-reviewer, product-experience-architect |",
+  "",
+  "Screenshot evidence path: .qfai/evidence/prototyping/screenshots/<screen-id>.png",
+  "HTML snapshot path: .qfai/evidence/prototyping/html/<screen-id>.html",
 ].join("\n");
 
 describe("prototyping skill validator", () => {
-  it("has the full-harness section heading", () => {
-    const result = checkModeHeadings(VALID_SKILL_CONTENT);
-    expect(result.present).toEqual(["full-harness"]);
+  it("has the required section headings", () => {
+    const result = checkRequiredSections(VALID_SKILL_CONTENT);
+    expect(result.present).toEqual([
+      "## Required References",
+      "## Required Process",
+      "## Evaluator Inputs (Mandatory)",
+    ]);
     expect(result.missing).toHaveLength(0);
   });
 
@@ -53,8 +64,12 @@ describe("prototyping skill validator", () => {
     expect(isStaticFirstAligned(VALID_SKILL_CONTENT)).toBe(true);
   });
 
-  it("documents full-harness-only obligation matrix", () => {
-    expect(hasModeSurfaceMatrix(VALID_SKILL_CONTENT)).toBe(true);
+  it("documents delegation scope table", () => {
+    expect(hasDelegationScopeTable(VALID_SKILL_CONTENT)).toBe(true);
+  });
+
+  it("documents canonical mandatory evidence paths", () => {
+    expect(hasMandatoryEvidencePaths(VALID_SKILL_CONTENT)).toBe(true);
   });
 
   it("flags banned phrases when low-cost or standard are reintroduced", () => {
@@ -64,14 +79,11 @@ describe("prototyping skill validator", () => {
     );
   });
 
-  it("rejects content missing supported UI surface in obligation matrix", () => {
+  it("rejects content missing supported UI surface documentation", () => {
     const invalid = VALID_SKILL_CONTENT.replace(
       "Supported UI prototyping surfaces are: web, mobile, desktop, mixed.",
       "Supported UI prototyping surfaces are: web, mobile, desktop.",
-    ).replace(
-      "| mixed / full-harness | required | required | required | required | required | required |",
-      "",
     );
-    expect(hasModeSurfaceMatrix(invalid)).toBe(false);
+    expect(hasCanonicalSurfaceDocumentation(invalid)).toBe(false);
   });
 });

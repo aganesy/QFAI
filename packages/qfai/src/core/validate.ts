@@ -35,7 +35,6 @@ import {
   validateMermaidEnforcement,
   validateOrphanProhibition,
   validatePrototypingDesignSystem,
-  validatePrototypingEvidence,
   validatePrototypingRecommendation,
   validateResearchSummary,
   validateRepositoryHygiene,
@@ -52,6 +51,7 @@ import {
   validatePrototypingSkillContent,
   runCanonicalUixValidators,
   validateTraceabilityIntegrity,
+  validateUiEvidenceArtifacts,
 } from "./validators/index.js";
 import { readSafe } from "./validators/utils.js";
 
@@ -129,8 +129,8 @@ export async function validateProject(
     ...(await validateDensityHints(root, config)),
     ...(await validateReviewArtifacts(root)),
     ...(await validatePrototypingRecommendation(root, config)),
-    ...(await validatePrototypingEvidence(root, config)),
     ...(await validatePrototypingDesignSystem(root, config)),
+    ...(await validateUiEvidenceArtifacts(root, config)),
     ...(await validateSpecSplitByCapability(root, config)),
     ...(await validateLayeredTraceability(root, config)),
     ...(await validateOrphanProhibition(root, config)),

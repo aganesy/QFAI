@@ -96,6 +96,7 @@ Use the shared schema.
 - Reviewer checks:
   - required roles were delegated;
   - validate evidence exists: `qfai validate --fail-on error` completed with `error=0`;
+  - declared screens have mandatory screenshot and HTML evidence under `.qfai/evidence/prototyping/`;
   - Drift Protocol enforced;
   - test-layer policy enforced against `test-layers.md`.
 - Route specialist reviewers from `.qfai/assistant/steering/agent-routing.yml`.
@@ -147,6 +148,7 @@ Run quality gates and produce evidence that the change is correct and safe.
 
 - Repo quality gates PASS (format/lint/type/test/build/etc).
 - QFAI checks PASS (at minimum: `qfai validate`, and optionally `qfai report`).
+- Declared screens have mandatory screenshot and HTML evidence.
 - A concise evidence summary exists (copy‑paste for PR).
 - The PR-ready summary includes **Change Classification (Primary/Tags)** per `.qfai/assistant/instructions/change-classification.md`.
 - Evidence file exists: `.qfai/evidence/verify-<spec-id>.md`.

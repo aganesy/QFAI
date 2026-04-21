@@ -735,10 +735,10 @@ describe("E2E: test fixtures rev2 (US-0004-0027)", () => {
 
   it("unit tests for prototypingEvidence exist", async () => {
     const src = await readFile(
-      path.join(repoRoot, "packages", "qfai", "tests", "core", "prototypingEvidence.test.ts"),
+      path.join(repoRoot, "packages", "qfai", "tests", "validators", "uiEvidenceArtifacts.test.ts"),
       "utf-8",
     );
-    expect(src).toContain("validatePrototypingEvidence");
+    expect(src).toContain("validateUiEvidenceArtifacts");
     expect(src).toContain("describe");
   });
 });
