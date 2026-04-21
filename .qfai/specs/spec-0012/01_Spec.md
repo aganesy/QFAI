@@ -84,7 +84,7 @@
 - Primary actors: QFAI user, frontend-engineer, product-surface-reviewer, product-experience-architect, qa-gatekeeper
 - Notes: current active posture is skill-led prototyping plus validate/verify gating
 
-## Escalation Hook (Read _policies only when needed)
+## Escalation Hook (Read \_policies only when needed)
 
 ### When to Escalate
 

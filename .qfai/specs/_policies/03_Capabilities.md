@@ -8,24 +8,24 @@
 
 ## CAP Catalog
 
-| CAP ID   | Category   | Statement (what)                              | Success metrics (optional)                                                                            |
-| -------- | ---------- | --------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
-| CAP-0001 | structural | spec-pack 構造定義                            | v1421 layered 10-file + \_policies 10-file の構造・検出・検証が正確に動作する                         |
-| CAP-0002 | structural | discussion-pack 構造定義                      | 15 コアファイル + UIUX 拡張 + レビューテンプレートの構造・検出・検証が正確に動作する                  |
-| CAP-0003 | CLI        | プロジェクト初期化 (qfai init)                | .qfai/ 構造・ラッパー・設定が正常に生成される                                                         |
-| CAP-0004 | CLI        | スペックバリデーション (qfai validate)        | 50 以上のルールで全検証パス、exit code 制御が正確                                                     |
-| CAP-0005 | CLI        | レポート生成 (qfai report)                    | Markdown/JSON 形式でレポートが正確に出力される                                                        |
-| CAP-0006 | CLI        | 診断ツール (qfai doctor)                      | 設定・構造の問題を正確に検出・報告する                                                                |
-| CAP-0007 | CLI        | ガードレール抽出 (qfai guardrails)            | ガードレール一覧・フィルタ・整合性チェックが動作する                                                  |
-| CAP-0008 | skill      | ATDD 自動受入テスト (qfai-atdd)               | E2E/API/Integration テストの自動生成・トレーサビリティ・レビューゲートが動作する                      |
-| CAP-0009 | skill      | 構成チューニング (qfai-configure)             | qfai.config.yaml の自動分析・チューニングが動作する                                                   |
-| CAP-0010 | skill      | 構造化ディスカッション (qfai-discussion)      | 15 ファイルディスカッションパック生成・OQ 駆動終了・UIUX サイドカーが動作する                         |
-| CAP-0011 | skill      | 統一実装 (qfai-implement)                     | TDD マイクロサイクル (Red/Green/Refactor)・test-list.md 台帳・バリデータが動作する                    |
-| CAP-0012 | skill      | プロトタイピング検証 (qfai-prototyping)       | skill 主導の prototyping、mandatory screenshot/html evidence、validate/verify gate が動作する         |
-| CAP-0013 | skill      | SDD 統一ワークフロー (qfai-sdd)               | Contracts-first/Outline/Slice/Plan/Delta 全フェーズ・Spec Auto-Discovery が動作する                   |
-| CAP-0014 | skill      | 品質検証 (qfai-verify)                        | UIX-VAL/UIX-REV バリデータ・品質ゲート・SSOT 統一が動作する                                           |
-| CAP-0015 | agent      | サブエージェント定義 (19 consolidated agents) | 全エージェントのカタログ・標準契約・routing policy・Work Orders が定義・動作する                      |
-| CAP-0016 | skill      | Web リサーチ強化 (Web Research Enhancement)   | 標準リサーチパイプライン・MCP 統合・セキュリティ・評価ハーネス・HITL ゲートが spec で定義される       |
+| CAP ID   | Category   | Statement (what)                              | Success metrics (optional)                                                                      |
+| -------- | ---------- | --------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| CAP-0001 | structural | spec-pack 構造定義                            | v1421 layered 10-file + \_policies 10-file の構造・検出・検証が正確に動作する                   |
+| CAP-0002 | structural | discussion-pack 構造定義                      | 15 コアファイル + UIUX 拡張 + レビューテンプレートの構造・検出・検証が正確に動作する            |
+| CAP-0003 | CLI        | プロジェクト初期化 (qfai init)                | .qfai/ 構造・ラッパー・設定が正常に生成される                                                   |
+| CAP-0004 | CLI        | スペックバリデーション (qfai validate)        | 50 以上のルールで全検証パス、exit code 制御が正確                                               |
+| CAP-0005 | CLI        | レポート生成 (qfai report)                    | Markdown/JSON 形式でレポートが正確に出力される                                                  |
+| CAP-0006 | CLI        | 診断ツール (qfai doctor)                      | 設定・構造の問題を正確に検出・報告する                                                          |
+| CAP-0007 | CLI        | ガードレール抽出 (qfai guardrails)            | ガードレール一覧・フィルタ・整合性チェックが動作する                                            |
+| CAP-0008 | skill      | ATDD 自動受入テスト (qfai-atdd)               | E2E/API/Integration テストの自動生成・トレーサビリティ・レビューゲートが動作する                |
+| CAP-0009 | skill      | 構成チューニング (qfai-configure)             | qfai.config.yaml の自動分析・チューニングが動作する                                             |
+| CAP-0010 | skill      | 構造化ディスカッション (qfai-discussion)      | 15 ファイルディスカッションパック生成・OQ 駆動終了・UIUX サイドカーが動作する                   |
+| CAP-0011 | skill      | 統一実装 (qfai-implement)                     | TDD マイクロサイクル (Red/Green/Refactor)・test-list.md 台帳・バリデータが動作する              |
+| CAP-0012 | skill      | プロトタイピング検証 (qfai-prototyping)       | skill 主導の prototyping、mandatory screenshot/html evidence、validate/verify gate が動作する   |
+| CAP-0013 | skill      | SDD 統一ワークフロー (qfai-sdd)               | Contracts-first/Outline/Slice/Plan/Delta 全フェーズ・Spec Auto-Discovery が動作する             |
+| CAP-0014 | skill      | 品質検証 (qfai-verify)                        | UIX-VAL/UIX-REV バリデータ・品質ゲート・SSOT 統一が動作する                                     |
+| CAP-0015 | agent      | サブエージェント定義 (19 consolidated agents) | 全エージェントのカタログ・標準契約・routing policy・Work Orders が定義・動作する                |
+| CAP-0016 | skill      | Web リサーチ強化 (Web Research Enhancement)   | 標準リサーチパイプライン・MCP 統合・セキュリティ・評価ハーネス・HITL ゲートが spec で定義される |
 
 ## Authoring rules
 

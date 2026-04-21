@@ -24,18 +24,19 @@ afterEach(async () => {
   }
 });
 
-async function seedDiscussionPack(root: string): Promise<void> {
-  const packDir = path.join(root, ".qfai", "discussion", "discussion-20260422000000000", "uiux");
-  await mkdir(packDir, { recursive: true });
+async function seedUiContracts(root: string): Promise<void> {
+  const contractsDir = path.join(root, ".qfai", "contracts", "ui");
+  await mkdir(contractsDir, { recursive: true });
   await writeFile(
-    path.join(packDir, "40_screen_contracts.md"),
+    path.join(contractsDir, "ui-0001-orders.yaml"),
     [
-      "### Screen: Orders Dashboard",
-      "- screen_id: orders-dashboard",
-      "- route: /orders",
-      "- primary_tasks:",
-      "  - View latest orders",
-      "",
+      "# QFAI-CONTRACT-ID: CON-UI-0001",
+      "screens:",
+      "  - id: orders-dashboard",
+      "    title: Orders Dashboard",
+      "    route: /orders",
+      "    primary_tasks:",
+      "      - View latest orders",
     ].join("\n"),
     "utf-8",
   );
@@ -44,7 +45,7 @@ async function seedDiscussionPack(root: string): Promise<void> {
 describe("validateUiEvidenceArtifacts", () => {
   it("declared screen に screenshot と HTML が無い場合は両方 error を返す", async () => {
     const root = await newTempRoot();
-    await seedDiscussionPack(root);
+    await seedUiContracts(root);
 
     const issues = await validateUiEvidenceArtifacts(root, defaultConfig);
 
@@ -54,7 +55,7 @@ describe("validateUiEvidenceArtifacts", () => {
 
   it("declared screen の screenshot と HTML が揃っていれば issue を返さない", async () => {
     const root = await newTempRoot();
-    await seedDiscussionPack(root);
+    await seedUiContracts(root);
 
     const screenshotDir = path.join(root, ".qfai", "evidence", "prototyping", "screenshots");
     const htmlDir = path.join(root, ".qfai", "evidence", "prototyping", "html");
@@ -68,7 +69,7 @@ describe("validateUiEvidenceArtifacts", () => {
     expect(issues).toEqual([]);
   });
 
-  it("screen contract が無い場合はチェックをスキップする", async () => {
+  it("contracts/ui が無い場合はチェックをスキップする", async () => {
     const root = await newTempRoot();
 
     const issues = await validateUiEvidenceArtifacts(root, defaultConfig);

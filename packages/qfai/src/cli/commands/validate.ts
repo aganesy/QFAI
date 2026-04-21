@@ -411,9 +411,18 @@ const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-PROT-330":
     "uiFidelity screen actionsWired exceeds actionsDeclared (expected.actions). actionsWired must not exceed the number of declared actions.",
   "QFAI-UIE-001":
-    "Every declared screen under the canonical screen contract has a screenshot evidence file at `.qfai/evidence/prototyping/screenshots/<screen-id>.png`.",
+    "Every declared screen declared in `.qfai/contracts/ui/*.yaml` has a screenshot evidence file at `.qfai/evidence/prototyping/screenshots/<screen-id>.png`.",
   "QFAI-UIE-002":
-    "Every declared screen under the canonical screen contract has an HTML snapshot evidence file at `.qfai/evidence/prototyping/html/<screen-id>.html`.",
+    "Every declared screen declared in `.qfai/contracts/ui/*.yaml` has an HTML snapshot evidence file at `.qfai/evidence/prototyping/html/<screen-id>.html`.",
+  "QFAI-DCON-001":
+    "UI-bearing downstream execution requires `.qfai/contracts/design/design-system.yaml`, `evaluation-axes.yaml`, and `anchor-selection.yaml` when UI contracts exist.",
+  "QFAI-DCON-002":
+    "design-system.yaml must define checklist entries for color, typography, spacing, border_radius, shadow, and dos_and_donts.",
+  "QFAI-DCON-003":
+    "evaluation-axes.yaml must define invariant_axes, trend_derived_axes, and product_specific_axes arrays.",
+  "QFAI-DCON-004": "evaluation-axes.yaml must define aggregate_rules.",
+  "QFAI-DCON-005":
+    "anchor-selection.yaml must define selected_anchor.option_id, title, and rationale.",
   "QFAI-CONTRACT-030":
     "Contract index references must match declared contract IDs in .qfai/contracts/**.",
 };

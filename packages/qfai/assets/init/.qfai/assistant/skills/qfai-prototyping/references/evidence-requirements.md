@@ -2,7 +2,7 @@
 
 ## Mandatory evidence
 
-For every declared screen in `uiux/40_screen_contracts.md`, collect both:
+For every declared screen in `.qfai/contracts/ui/*.yaml`, collect both:
 
 - screenshot: `.qfai/evidence/prototyping/screenshots/<screen-id>.png`
 - HTML snapshot: `.qfai/evidence/prototyping/html/<screen-id>.html`
@@ -17,7 +17,7 @@ Optional evidence is not allowed.
 
 ## Capture rules
 
-- Use stable `screen-id` names from the canonical screen contract.
+- Use stable `screen-id` names from the canonical UI contracts.
 - Overwrite stale evidence with fresh evidence from the current iteration.
 - Do not reuse an older screenshot or HTML snapshot after a fix.
 - If capture fails, record the failure in work evidence and stop pretending the screen was evaluated.

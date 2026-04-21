@@ -6,19 +6,19 @@ L2 checks product experience and design alignment.
 
 - screenshots
 - HTML snapshots
-- evaluation family `20/21/22/23`
-- selected anchor screen
-- design system checklist
+- `.qfai/contracts/design/evaluation-axes.yaml`
+- `.qfai/contracts/design/anchor-selection.yaml`
+- `.qfai/contracts/design/design-system.yaml`
 - previous iteration score
 
 ## 3-layer evaluation family
 
 L2 must explicitly use all of:
 
-- invariant axes (`20_design_eval_invariant.md`)
-- trend-derived axes (`21_design_eval_trend_derived.md`)
-- product-specific axes (`22_design_eval_product_specific.md`)
-- aggregate rules (`23_design_eval_aggregate.md`)
+- invariant axes
+- trend-derived axes
+- product-specific axes
+- aggregate rules
 
 ## Required checks
 

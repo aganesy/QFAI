@@ -6,7 +6,7 @@ L1 checks implementation fidelity.
 
 - screenshots
 - HTML snapshots
-- canonical screen contracts
+- canonical UI contracts from `.qfai/contracts/ui/*.yaml`
 - latest code state
 
 ## Required checks

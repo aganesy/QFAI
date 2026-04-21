@@ -534,11 +534,11 @@ flowchart TD
 
 ### Current Prototyping Posture
 
-| Layer | Responsibility |
-| ----- | -------------- |
+| Layer               | Responsibility                                            |
+| ------------------- | --------------------------------------------------------- |
 | `/qfai-prototyping` | UI implementation, delegation, capture, evaluation, rerun |
-| `qfai validate` | schema/evidence integrity check |
-| `/qfai-verify` | reviewer gate and completion decision |
+| `qfai validate`     | schema/evidence integrity check                           |
+| `/qfai-verify`      | reviewer gate and completion decision                     |
 
 ### v1.7.5 非 Web プロジェクト安全保証
 

@@ -38,7 +38,7 @@ Do not rely on a CLI entrypoint or package runtime loop.
 - DONE is forbidden until `qfai validate --fail-on error` passes and `/qfai-verify` can approve the run.
 - Supported UI prototyping surfaces are `web`, `mobile`, `desktop`, and `mixed`.
 - `cli`, API-only, backend-only, and `ui_bearing: false` classifications are not prototyping execution targets.
-- Canonical screen contracts in `discussion-*/uiux/40_screen_contracts.md` are mandatory.
+- Canonical screen contracts in `.qfai/contracts/ui/*.yaml` are mandatory.
 - Evaluation is performed by sub-agents; machine checks are limited to schema/evidence validation.
 - L1 and L2 findings must be fixed or explicitly dispositioned before PASS.
 
@@ -80,33 +80,29 @@ Before any code is written, create an execution plan record in the work evidence
 Required fields:
 
 - `targetIterations`: integer; minimum 2
-- `evaluationAxesSource`: refs to the discussion pack evaluation-family files (`20/21/22/23`)
+- `evaluationAxesSource`: ref to `.qfai/contracts/design/evaluation-axes.yaml`
 - `delegationMap`: category-to-role assignments per Delegation Scope Table
 - `plannedAt`: ISO-8601 timestamp
 
 ### Step 1 — Read Inputs
 
-Read the latest discussion pack and verify:
+Read the downstream-ready spec/contract inputs and verify:
 
-- `prototyping.yaml`
-- `04_Sources.md`
-- `20_design_eval_invariant.md`
-- `21_design_eval_trend_derived.md`
-- `22_design_eval_product_specific.md`
-- `23_design_eval_aggregate.md`
-- `40_screen_contracts.md`
-- `12_design_system.md` when required by the discussion pack
+- `.qfai/specs/<spec-id>/01_Spec.md`
+- `.qfai/specs/<spec-id>/03_Acceptance-Criteria.md`
+- `.qfai/contracts/design/evaluation-axes.yaml`
+- `.qfai/contracts/design/anchor-selection.yaml`
+- `.qfai/contracts/design/design-system.yaml` when required by the spec
+- `.qfai/contracts/ui/*.yaml`
 
 Read order:
 
-1. `30_option_comparison.md`
-2. `31_selected_anchor_screen.md`
-3. `10_implementation_strategy.md`
-4. `11_design_taste_interview.md`
-5. `04_Sources.md`
-6. `20/21/22/23`
-7. `40_screen_contracts.md`
-8. `12_design_system.md`
+1. `.qfai/specs/<spec-id>/01_Spec.md`
+2. `.qfai/specs/<spec-id>/03_Acceptance-Criteria.md`
+3. `.qfai/contracts/design/anchor-selection.yaml`
+4. `.qfai/contracts/design/evaluation-axes.yaml`
+5. `.qfai/contracts/design/design-system.yaml`
+6. `.qfai/contracts/ui/*.yaml`
 
 ### Step 2 — Verify Execution Preconditions
 
@@ -115,7 +111,7 @@ Confirm all of the following before any evaluation:
 - classification is UI-bearing
 - surface is `web`, `mobile`, `desktop`, or `mixed`
 - every declared screen has a stable `screen-id`
-- the evaluation-family files satisfy the required schema
+- the design evaluation contract satisfies the required schema
 - the design system checklist is available when required
 
 ### Step 3 — Implement the Minimum Runnable Slice
@@ -136,9 +132,9 @@ Launch L1 and L2 evaluator sub-agents with the full context bundle:
 
 - screenshots from Step 4
 - HTML snapshots from Step 4
-- `axisDefs` from the evaluation-family files (`20/21/22/23`)
+- `axisDefs` from `.qfai/contracts/design/evaluation-axes.yaml`
 - `previousScore` from the prior iteration (`null` for iteration 1)
-- `designSystemChecklist` from `uiux/12_design_system.md`
+- `designSystemChecklist` from `.qfai/contracts/design/design-system.yaml`
 
 If any required input is missing, stop the evaluation and classify the screen as `0` points with rerun required.
 
@@ -192,7 +188,7 @@ Each iteration evaluation MUST score all 6 visual categories:
 5. Shadow
 6. Do's&Don'ts
 
-## Reviewer Gate
+### Reviewer Gate (MUST)
 
 Reviewer checks are defined in:
 
@@ -204,6 +200,8 @@ Minimum reviewer responsibilities:
 - verify 3-layer evaluation references were used
 - verify missing evidence caused rerun rather than waiver
 - verify `qfai validate --fail-on error` completed successfully
+- verify Drift Protocol compliance and alignment with `.qfai/assistant/steering/test-layers.md`
+- treat score/volume heuristics as signals, not gates
 - return `Result: PASS | REVISE`
 
 ## Sub-agent Delegation (MANDATORY)

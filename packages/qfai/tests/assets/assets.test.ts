@@ -278,12 +278,12 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     const content = await readFile(skillPath, "utf-8");
 
     expect(content).toMatch(/ALL specs/i);
-    expect(content).toContain("full-harness");
-    expect(content).toContain("`.qfai/evidence/`");
+    expect(content).toContain(".qfai/contracts/design/evaluation-axes.yaml");
+    expect(content).toContain(".qfai/contracts/ui/*.yaml");
+    expect(content).toContain(".qfai/evidence/prototyping/");
     expect(content).toContain("DONE is forbidden");
     expect(content).toContain("L1");
     expect(content).toContain("L2");
-    expect(content).toContain("uiFidelity");
     expect(content).toContain("REVISE");
   });
 
@@ -511,6 +511,8 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     for (const phrase of bannedPhrases) {
       expect(content).not.toContain(phrase);
     }
+    expect(content).not.toMatch(/primary truth.*discussion/i);
+    expect(content).toMatch(/downstream execution truth/i);
   });
 
   // .npmignore files removed — gitignore entries now live in root .gitignore
@@ -852,7 +854,14 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     });
 
     expect(templates.sort()).toEqual(
-      ["api-contract.sample.yaml", "db-contract.sample.sql", "ui-contract.sample.yaml"].sort(),
+      [
+        "anchor-selection.sample.yaml",
+        "api-contract.sample.yaml",
+        "db-contract.sample.sql",
+        "design-system.sample.yaml",
+        "evaluation-axes.sample.yaml",
+        "ui-contract.sample.yaml",
+      ].sort(),
     );
 
     const skillPath = path.join(templateQfaiDir, "assistant", "skills", "qfai-sdd", "SKILL.md");

@@ -1,12 +1,12 @@
 # 16 Traceability Ledger
 
-| Layer | Current SSOT |
-| ----- | ------------ |
-| Skill | `packages/qfai/assets/init/.qfai/assistant/skills/qfai-prototyping/SKILL.md` |
-| References | `packages/qfai/assets/init/.qfai/assistant/skills/qfai-prototyping/references/*` |
-| Validate gate | `packages/qfai/src/core/validate.ts` |
-| UI evidence validator | `packages/qfai/src/core/validators/uiEvidenceArtifacts.ts` |
-| Report wording | `packages/qfai/src/core/report.ts` |
+| Layer                 | Current SSOT                                                                     |
+| --------------------- | -------------------------------------------------------------------------------- |
+| Skill                 | `packages/qfai/assets/init/.qfai/assistant/skills/qfai-prototyping/SKILL.md`     |
+| References            | `packages/qfai/assets/init/.qfai/assistant/skills/qfai-prototyping/references/*` |
+| Validate gate         | `packages/qfai/src/core/validate.ts`                                             |
+| UI evidence validator | `packages/qfai/src/core/validators/uiEvidenceArtifacts.ts`                       |
+| Report wording        | `packages/qfai/src/core/report.ts`                                               |
 
 ## Notes
 

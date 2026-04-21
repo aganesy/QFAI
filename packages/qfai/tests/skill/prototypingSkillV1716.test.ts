@@ -137,7 +137,7 @@ describe("TC-0012-0297 — SKILL.md documents missing evaluator input detection"
     expect(content).toMatch(
       /required input is missing|missing evidence|missing mandatory evidence/i,
     );
-    expect(content).toContain("12_design_system.md");
+    expect(content).toContain(".qfai/contracts/design/design-system.yaml");
   });
 });
 

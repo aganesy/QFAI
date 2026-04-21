@@ -1,6 +1,6 @@
 # Design System Compliance
 
-When `uiux/12_design_system.md` exists and is required, evaluators must compare the implementation against:
+When `.qfai/contracts/design/design-system.yaml` exists and is required, evaluators must compare the implementation against:
 
 - color palette
 - typography scale and weights

@@ -2,10 +2,10 @@
 
 ## Purpose
 
-Define UI surface contracts for prototyping and E2E selection.
-The contract must describe screen structure, action coverage targets, and inspection anchors for full-harness evidence.
+Define UI surface contracts for prototyping, implementation review, and E2E selection.
+The contract must describe screen structure, action coverage targets, and stable inspection anchors.
 
-> **Note:** UI contracts are supporting input that supplements the discussion sidecar artifacts (`discussion-*/uiux/*`), which remain the primary truth for UI/UX definitions. In `packages/qfai` v1.7.15, prototyping execution is `full-harness` only; therefore, running the prototype harness requires both canonical screen contracts and matching `CON-UI-*` YAML contracts.
+> **Note:** UI contracts are the downstream execution truth for screen obligations. `/qfai-sdd` may derive them from discussion-side exploration, but `/qfai-prototyping`, `/qfai-implement`, and `/qfai-atdd` must read `contracts/ui/*.yaml` instead of reading `discussion-*/uiux/40_screen_contracts.md` directly.
 
 ## File rules
 
@@ -52,7 +52,7 @@ Add `prototype` at the top level.
 
 ### `prototype.mode` and `mockPaths[]` example
 
-The `mockPaths[]` entry is a **negative-only review ledger** — only populate it when a Browser QA finding or review outcome has identified a failure/gap in the mockable path. Do **not** populate it with expected success flows; those belong in `screens[].actions[]` (contracts) and the discussion sidecar.
+The `mockPaths[]` entry is a **negative-only review ledger** — only populate it when a Browser QA finding or review outcome has identified a failure/gap in the mockable path. Do **not** populate it with expected success flows; those belong in `screens[].actions[]`.
 
 ```yaml
 prototype:
@@ -146,11 +146,11 @@ screens:
   3. Prototyping evidence (`.qfai/evidence/prototyping.json`)
 - If only one side is updated, `QFAI-PROT-238` can remain unresolved in review.
 
-### Q3. "Can I treat this as a static screen?"
+### Q3. "Can I skip this because the discussion pack already has 40_screen_contracts.md?"
 
-- No. `packages/qfai` v1.7.15 prototyping is `full-harness` only.
-- `uiFidelity.mode: skeleton` is not a valid prototyping execution target.
-- Define actionable routes and `actions[]`, then collect real render and Browser QA evidence.
+- No.
+- `discussion-*/uiux/40_screen_contracts.md` is upstream discovery output.
+- Downstream execution and validation read `contracts/ui/*.yaml`; keep them synchronized via `/qfai-sdd`.
 
 ## Checklist
 
@@ -159,3 +159,4 @@ screens:
 - [ ] `elements[].label` matches runtime-visible inspection text or documented marker mapping.
 - [ ] `elements` and `actions` include the minimum fields above.
 - [ ] `prototype.mode` is `interactive` and `mockPaths` is treated as a negative-only issue ledger.
+- [ ] Every declared screen needed by downstream skills exists in `contracts/ui/*.yaml`.

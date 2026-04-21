@@ -1,15 +1,16 @@
-# .qfai/contracts (contracts + supporting inputs)
+# .qfai/contracts (downstream truth)
 
 ## Purpose
 
-This directory holds two related categories of inputs:
+This directory holds the version-managed artifacts that downstream execution skills consume.
 
 - **Contracts** (`api/`, `db/`, `ui/`) define the **stable surface** that
   specs and tests may reference. Each contract file requires a
   `QFAI-CONTRACT-ID` header and participates in the traceability ledger.
-- **Supporting inputs** (`design/`) supplement contracts — they do **not**
-  carry contract IDs and are not directly cited by specs. Design tokens are
-  referenced indirectly from `ui/*.yaml` via token IDs.
+- **Design definitions** (`design/`) hold downstream-ready design inputs that
+  `/qfai-sdd` normalizes from discussion-side exploration. They are
+  version-managed and may be consumed directly by `/qfai-prototyping`,
+  `/qfai-implement`, and `/qfai-atdd`.
 
 QFAI organizes this directory into four subdirectories:
 
@@ -17,17 +18,17 @@ QFAI organizes this directory into four subdirectories:
 .qfai/contracts/
 ├── api/      # OpenAPI YAML (endpoints, request/response)
 ├── db/       # SQL schema contracts (tables, columns, constraints)
-├── design/   # Design token YAML — optional supporting input
+├── design/   # Design system / axes / anchor YAML
 └── ui/       # UI contract YAML (screens, elements, user actions)
 ```
 
-> **Note:** `ui/` is a contract (QFAI-CONTRACT-ID required, cited by specs), but the **primary truth** for UI/UX definitions still lives in the discussion sidecar artifacts (`discussion-*/uiux/*`). UI contracts cite sidecar content by ID and exist specifically to make that sidecar machine-consumable for prototyping and selectors. `design/` is supporting input only (design tokens referenced indirectly from `ui/*.yaml`). After `qfai init`, these directories may contain only placeholder READMEs — this is the normal initial state.
+> **Note:** Discussion-pack UIUX files are upstream discovery artifacts. `/qfai-sdd` is responsible for normalizing the approved design/system/screen decisions into `.qfai/contracts/**`. Downstream execution skills must read these contracts instead of reading `discussion-*/uiux/*` directly.
 
 ## Directory rules
 
 - Contract files are **minimal**: only what specs actually need.
 - Each contract file in `api/`, `db/`, and `ui/` must declare `QFAI-CONTRACT-ID` at the top (`CON-UI-*` / `CON-API-*` / `CON-DB-*`).
-- `design/` (design token YAML) is a supporting input — **not** a contract in the traceability ledger. It does not require a `QFAI-CONTRACT-ID` header and is referenced indirectly from `ui/*.yaml` contracts via token IDs.
+- `design/` files are version-managed downstream inputs. They do not require `QFAI-CONTRACT-ID`, but they are part of the execution-time SSOT.
 - Prefer additive changes; breaking changes require delta notes.
 
 ```text
@@ -41,7 +42,10 @@ QFAI organizes this directory into four subdirectories:
 │   └── db-0001-<slug>.sql
 ├── design/
 │   ├── README.md
-│   └── design-tokens.yaml          (created when needed)
+│   ├── design-system.yaml
+│   ├── evaluation-axes.yaml
+│   ├── anchor-selection.yaml
+│   └── design-tokens.yaml          (optional)
 └── ui/
     ├── README.md
     └── ui-0001-<slug>.yaml
@@ -52,9 +56,10 @@ QFAI organizes this directory into four subdirectories:
 - Traceability Ledger (`16_Traceability-ledger.md`) references contracts via `con_ids`.
 - Layered overlays (`09_Examples.feature`, `11_Contracts.md`) may also reference contracts.
 - `11_Contracts.md` is an index layer and must not become behavior SSOT.
+- Discussion packs may explain where a contract came from, but they are not downstream execution inputs.
 
 ## Checklist
 
 - [ ] Contract IDs exist and are unique.
 - [ ] Contracts match what specs reference (no missing IDs).
-- [ ] Contracts are minimal but sufficient for prototyping and test automation.
+- [ ] Contracts/design files are sufficient for downstream skills without discussion-pack fallback.

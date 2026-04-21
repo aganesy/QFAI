@@ -1,5 +1,8 @@
 import path from "node:path";
 
+import fg from "fast-glob";
+import { parse as parseYaml } from "yaml";
+
 import type { BrowserQaScreenContractRef } from "../browserQa/types.js";
 import type { RenderCaptureTarget } from "../evidence/types.js";
 import { DEFAULT_RENDER_VIEWPORTS } from "../uiux/renderEvidenceTypes.js";
@@ -49,6 +52,42 @@ export async function readCanonicalScreenContracts(
         "40_screen_contracts.md",
       ) + `#${screen.screenId}`,
   }));
+}
+
+export async function readUiContractScreenContracts(
+  root: string,
+  contractsDirRelative = ".qfai/contracts",
+): Promise<CanonicalScreenContract[]> {
+  const uiDir = path.join(root, contractsDirRelative, "ui");
+  const pattern = path.posix.join(uiDir.replace(/\\/g, "/"), "**/*.yaml");
+  const files = await fg(pattern, { absolute: true });
+  const screens: CanonicalScreenContract[] = [];
+
+  for (const filePath of files) {
+    const raw = await readSafe(filePath);
+    if (!raw) {
+      continue;
+    }
+
+    let parsed: unknown;
+    try {
+      parsed = parseYaml(raw);
+    } catch {
+      continue;
+    }
+
+    const fileScreens = extractUiScreens(parsed).map((screen) => ({
+      ...screen,
+      sourceRef: `${path.relative(root, filePath).replace(/\\/g, "/")}#${screen.screenId}`,
+    }));
+
+    screens.push(...fileScreens);
+  }
+
+  return screens.filter(
+    (screen, index, all) =>
+      all.findIndex((candidate) => candidate.screenId === screen.screenId) === index,
+  );
 }
 
 export function parseCanonicalScreenContracts(content: string): CanonicalScreenContract[] {
@@ -146,4 +185,48 @@ function slugifyScreenId(value: string): string {
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
+}
+
+function extractUiScreens(parsed: unknown): CanonicalScreenContract[] {
+  if (!parsed || typeof parsed !== "object") {
+    return [];
+  }
+
+  const screens = (parsed as Record<string, unknown>).screens;
+  if (!Array.isArray(screens)) {
+    return [];
+  }
+
+  return screens.flatMap((screen) => {
+    if (!screen || typeof screen !== "object") {
+      return [];
+    }
+
+    const record = screen as Record<string, unknown>;
+    const screenId = typeof record.id === "string" ? record.id.trim() : "";
+    const route = typeof record.route === "string" ? record.route.trim() : "";
+    if (!screenId || !route) {
+      return [];
+    }
+
+    const name =
+      typeof record.title === "string" && record.title.trim().length > 0
+        ? record.title.trim()
+        : screenId;
+    const primaryTasks = Array.isArray(record.primary_tasks)
+      ? record.primary_tasks
+          .filter((entry): entry is string => typeof entry === "string" && entry.trim().length > 0)
+          .map((entry) => entry.trim())
+      : [];
+
+    return [
+      {
+        name,
+        screenId,
+        route,
+        primaryTasks,
+        sourceRef: "",
+      },
+    ];
+  });
 }

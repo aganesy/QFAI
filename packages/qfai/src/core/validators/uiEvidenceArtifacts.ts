@@ -1,9 +1,7 @@
 import path from "node:path";
 
 import type { QfaiConfig } from "../config.js";
-import { resolvePath } from "../config.js";
-import { findLatestDiscussionPackDir } from "../discussionPack.js";
-import { readCanonicalScreenContracts } from "../prototyping/screenContracts.js";
+import { readUiContractScreenContracts } from "../prototyping/screenContracts.js";
 import type { Issue } from "../types.js";
 import { exists, issue } from "./utils.js";
 
@@ -12,9 +10,7 @@ export async function validateUiEvidenceArtifacts(
   config: QfaiConfig,
 ): Promise<Issue[]> {
   const issues: Issue[] = [];
-  const discussionRoot = resolvePath(root, config, "discussionDir");
-  const latestPack = await findLatestDiscussionPackDir(discussionRoot);
-  const screens = await readCanonicalScreenContracts(latestPack, config.paths.discussionDir);
+  const screens = await readUiContractScreenContracts(root, config.paths.contractsDir);
 
   if (screens.length === 0) {
     return issues;
@@ -37,7 +33,7 @@ export async function validateUiEvidenceArtifacts(
           "uiEvidenceArtifacts.screenshotRequired",
           [screen.sourceRef],
           "canonical",
-          "Generate `.qfai/evidence/prototyping/screenshots/<screen-id>.png` for every declared screen before rerunning validate.",
+          "Generate `.qfai/evidence/prototyping/screenshots/<screen-id>.png` for every declared screen in `.qfai/contracts/ui/*.yaml` before rerunning validate.",
         ),
       );
     }
@@ -52,7 +48,7 @@ export async function validateUiEvidenceArtifacts(
           "uiEvidenceArtifacts.htmlRequired",
           [screen.sourceRef],
           "canonical",
-          "Generate `.qfai/evidence/prototyping/html/<screen-id>.html` for every declared screen before rerunning validate.",
+          "Generate `.qfai/evidence/prototyping/html/<screen-id>.html` for every declared screen in `.qfai/contracts/ui/*.yaml` before rerunning validate.",
         ),
       );
     }
