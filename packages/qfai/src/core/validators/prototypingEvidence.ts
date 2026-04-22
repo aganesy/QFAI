@@ -55,7 +55,7 @@ export async function validatePrototypingEvidence(
     "prototyping.json",
   );
   const raw = await readJsonFile(evidencePath);
-  if (raw === null) {
+  if (raw.status === "missing") {
     return [
       issue(
         "QFAI-PROT-150",
@@ -69,8 +69,17 @@ export async function validatePrototypingEvidence(
       ),
     ];
   }
+  if (raw.status === "invalid") {
+    return [
+      makeSchemaIssue(
+        root,
+        evidencePath,
+        "prototyping.json must be a valid JSON object.",
+      ),
+    ];
+  }
 
-  const record = raw as PrototypingEvidenceRecord;
+  const record = raw.value as PrototypingEvidenceRecord;
   const issues: Issue[] = [];
   const surface = normalizeSurface(record.surface);
   const mode = normalizeMode(record.mode);
@@ -315,13 +324,24 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }
 
-async function readJsonFile(filePath: string): Promise<Record<string, unknown> | null> {
+async function readJsonFile(
+  filePath: string,
+): Promise<
+  | { status: "missing" }
+  | { status: "invalid" }
+  | { status: "ok"; value: Record<string, unknown> }
+> {
   try {
     const raw = await readFile(filePath, "utf-8");
     const parsed: unknown = JSON.parse(raw);
-    return isRecord(parsed) ? parsed : null;
+    return isRecord(parsed) ? { status: "ok", value: parsed } : { status: "invalid" };
   } catch {
-    return null;
+    try {
+      await readFile(filePath, "utf-8");
+      return { status: "invalid" };
+    } catch {
+      return { status: "missing" };
+    }
   }
 }
 

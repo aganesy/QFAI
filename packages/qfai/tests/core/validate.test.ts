@@ -172,6 +172,16 @@ describe("validateProject (spec pack)", { timeout: 15000 }, () => {
     });
   });
 
+  it("fails when prototyping evidence JSON is syntactically invalid", async () => {
+    await withProject(async (root) => {
+      const evidencePath = path.join(root, ".qfai", "evidence", "prototyping.json");
+      await writeFile(evidencePath, "{ invalid json\n", "utf-8");
+
+      const result = await validateProject(root);
+      expect(result.issues.some((item) => item.code === "QFAI-PROT-299")).toBe(true);
+    });
+  });
+
   it("does not emit delta structure errors when 18_delta.md is missing", async () => {
     await withProject(async (root) => {
       const specDir = resolveSpecPackDir(root);
