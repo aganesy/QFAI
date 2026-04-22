@@ -2,6 +2,8 @@
 
 ## Decisions
 
+### DR-0018: Contract-first downstream
+
 116 items — discussion-20260312143000000（symlink アーキテクチャ移行）、
 discussion-20260313143000000（SDP）、discussion-20260314053646704（AskUserQuestion MUST 化）、
 discussion-20260317102145554（実装フェーズ統一）、discussion-20260322091309602（Copilot レビューインストラクション配布）、
@@ -18,6 +20,28 @@ discussion-20260330035428071（Canonical Convergence）、
 discussion-20260414195449523（v1.7.15 rev4 Browser QA chain）、
 discussion-20260416023323603（v1.7.15 rev8 leaf-field ref grammar closure）、
 および discussion-20260416092414328（v1.7.15 rev9 leaf-field traceability closure）で解決された OQ に基づく。
+
+- Decision: `/qfai-sdd` 以降の downstream skill / validate / verify は discussion pack を直接読まず、`specs + .qfai/contracts/**` を truth source とする
+- Context: discussion-side UIUX artifacts を downstream execution truth に使うと、skill ごとに read-order が分岐し drift が起きる
+- Rationale: discussion は upstream authoring、contracts は downstream execution という境界を固定すると、validate/verify と skill の責務が単純になる
+- Rejected-A: downstream も discussion pack を直接読めるようにする
+  - DO NOT: downstream の fallback source に discussion pack を残さない。Temptation: 既存 sidecar をそのまま使いたい
+
+### DR-0019: Canonical UIX validators are direct-pack only
+
+- Decision: `runCanonicalUixValidators` は direct discussion-pack validation 用に限定し、repo-root downstream validate の production path とはみなさない
+- Context: 旧 posture では canonical runner が repo-root validate の主経路だったが、current code は contract-first validator 群を primary path にしている
+- Rationale: direct-pack validation と downstream validate を分けることで、discussion quality gate と execution quality gate の境界が明確になる
+- Rejected: canonical runner を repo-root validate の唯一経路として残す
+  - DO NOT: latest discussion pack の暗黙解決を downstream validate に戻さない。Temptation: 1 runner に統合したい
+
+### DR-0020: Web Research spec ID convergence
+
+- Decision: Web Research Enhancement の active spec は `spec-0016` とし、`spec-0034` は historical migration record に降格する
+- Context: `_policies/03_Capabilities.md` では active capability ID が `CAP-0016` であり、`spec-0034` は orphan ID になっていた
+- Rationale: CAP-to-spec mapping を 1:1 に戻し、slice policy と capability table を一致させる
+- Rejected: `spec-0034` を active のまま残す
+  - DO NOT: active capability mapping に orphan spec ID を残さない。Temptation: 既存番号を触りたくない
 
 ### DR-0012: AskUserQuestion MUST 化（discussion-20260314053646704）
 

@@ -15,6 +15,7 @@
   - `/qfai-sdd` unified SDD workflow (Contracts-first -> Outline -> Slice -> Plan -> Delta)
   - Layered artifact generation: `_policies/01..10` + `spec-XXXX/01..10`
   - Contract-first mandatory outputs: `.qfai/contracts/(api|db|ui)/**`
+  - UI-bearing discussion UIUX sidecar の downstream contract への正規化
   - Contract Index in `_policies/05_Contracts.md` with short IDs (DB-001, API-001, UI-001)
   - Discussion-pack preflight validation (latest pack, readiness checks)
   - Phase order enforcement (Contracts-first -> Outline -> Slice -> Plan -> Delta)
@@ -70,12 +71,17 @@
 - REQ-0013: Density Review -- `QFAI-COV-207` warnings triaged from specs-coverage reports
 - REQ-0014: Prototyping.yaml Preflight Gate — SDD preflight は discussion-pack 内の prototyping.yaml の存在を検証し、欠落時は SDD をブロックする
 - REQ-0015: Recommendation Schema Gate — SDD preflight は validatePrototypingRecommendation を実行し、schema エラー（QFAI-PROT-153~156）が存在する場合は SDD をブロックする
+- REQ-0016: Design-system normalization — `uiux/12_design_system.md` を `.qfai/contracts/design/design-system.yaml` に正規化する
+- REQ-0017: Evaluation-axes normalization — `uiux/20/21/22/23` を `.qfai/contracts/design/evaluation-axes.yaml` に正規化する
+- REQ-0018: Anchor normalization — `uiux/30_option_comparison.md` と `31_selected_anchor_screen.md` の downstream 必要情報を `.qfai/contracts/design/anchor-selection.yaml` に正規化する
+- REQ-0019: UI contract normalization — `uiux/40_screen_contracts.md` を `.qfai/contracts/ui/*.yaml` に正規化する
+- REQ-0020: Downstream boundary — `/qfai-sdd` 以降の skill は discussion pack を直接読まず、正規化済み specs/contracts を読む
 
 ## Entry points
 
 - US range in this spec: US-0013-0001..US-0013-0008
 - Primary actors: QFAI user (developer), AI Agent (requirements-analyst, solution-architect, test-design-analyst)
-- Notes: Receives discussion-pack as input; produces spec artifacts for downstream execution skills
+- Notes: Receives discussion-pack as input; produces spec artifacts and downstream-ready contracts for later execution skills
 
 ## Escalation Hook (Read \_policies only when needed)
 

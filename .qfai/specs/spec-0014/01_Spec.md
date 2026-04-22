@@ -15,8 +15,9 @@
   - `/qfai-verify` quality gates
   - `qfai validate --fail-on error`
   - review artifact presence and PASS/REVISE semantics
-  - canonical UIX validators
+  - contract-first design/UI validators
   - prototyping design-system and evidence-related validators that still exist in code
+  - direct discussion-pack validation path の coexistence
 - Out:
   - diff-only verification
   - resurrecting a removed prototyping runtime
@@ -42,14 +43,15 @@
 - REQ-0001: `/qfai-verify` runs repo gates plus `qfai validate --fail-on error`
 - REQ-0002: verify loops until PASS or explicit stop
 - REQ-0003: verify produces copy-pasteable evidence summaries
-- REQ-0013: canonical UIX validators remain in the verify path through validate
-- REQ-0015: trend/axis traceability validators remain part of the canonical gate
-- REQ-0016: design-system validators remain part of the canonical gate
+- REQ-0013: contract-first validators remain in the verify path through validate
+- REQ-0015: trend/axis traceability validators remain part of the downstream validate gate when expressed as contracts
+- REQ-0016: design-system validators remain part of the downstream validate gate when expressed as contracts
 - REQ-0017: review artifacts are inspected as part of verify completion
-- REQ-0018: validate imports and uses the canonical validator entrypoint
+- REQ-0018: verify does not require repo-root validate to import `runCanonicalUixValidators` as its primary path
 - REQ-0019: removed compatibility surface stays removed
 - REQ-0028: `PROT-DS01` remains a validator for design-system compliance artifacts when that slice exists
 - REQ-0029: legacy full-harness wording in validators is treated as artifact compatibility language, not as a public entrypoint
+- REQ-0030: direct discussion-pack canonical validation may still exist, but is not the primary downstream completion gate
 
 ## Entry points
 

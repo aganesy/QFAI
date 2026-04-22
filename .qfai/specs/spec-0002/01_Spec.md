@@ -12,7 +12,7 @@
 
 ## Scope
 
-- In: 15 ファイル discussion-pack 構造、uiux/ サイドカー（11 ファイル; 3-layer canonical family）、UI-bearing 検出と DDS バリデータ、Review テンプレート、OQ Register、Deferred items、
+- In: 15 ファイル discussion-pack 構造、uiux/ サイドカー（11 ファイル; 3-layer canonical family）、UI-bearing 検出と DDS バリデータ、Review テンプレート、OQ Register、Deferred items、`/qfai-sdd` への handoff 用 upstream design intent
   discussion-to-SDD ハンドオフ、3-layer 評価モデル（canonical; 旧 4-axis 完全削除）、scoring-ready schema、strategy artifact、screen contract、
   prototyping.yaml 必須サイドアーティファクト、missingSideArtifacts readiness field
 - Out: spec-pack 構造（spec-0001）、CLI コマンド実装、ブラウザ QA、レンダリング証跡、旧 4-axis テンプレート（20*eval_axis*\*.md は active path から完全排除）
@@ -62,6 +62,8 @@
 - REQ-0021: DDS バリデータ canonical コード移行 — 旧 QFAI-DDP-019~025 を UIX-VAL-DDH-\* canonical コードに置換。sidecar-first 読み取り順序に変更
 - REQ-0022: 明示的 UI 分類ブロック — 01_Context.md に `ui_bearing`/`primary_surface`/`secondary_surfaces`/`classification_rationale` の構造化ブロックを必須とする。`detection/surfaceType.ts` が分類ブロック優先ルールで surface type を判定
 - REQ-0023: サイドカーファイルリネーム（v1.7.13）— 10_strategy.md → 10_implementation_strategy.md、30_comparison.md → 30_option_comparison.md、40_contracts.md → 40_screen_contracts.md。バリデータはリネーム後のファイル名のみを期待
+- REQ-0024: Upstream-only posture — `uiux/*.md` は discussion / SDD 用 authoring artifact であり、`/qfai-sdd` 以降の downstream execution truth ではない
+- REQ-0025: Contract normalization handoff — `/qfai-sdd` は `uiux/12`, `20/21/22/23`, `30/31`, `40` を `.qfai/contracts/design/**` と `.qfai/contracts/ui/**` に正規化する
 - REQ-0024: Surface Classification 二分割 (v1.7.14, DR-0110) — isDiscussionUiBearingPrototypingSurface()（web/mobile/desktop/cli/mixed）と requiresVisualBrowserEvidenceSurface()（web/mobile/desktop/mixed、cli 除外）を独立した判定関数として提供。cli は discussion UI-bearing だが browser evidence 義務は免除
 - REQ-0025: Strategy Decision Canonical Vocabulary (v1.7.14, DR-0114) — strategy artifact の decision/chosen_option/candidate_options フィールドに canonical enum（template, component-library, design-system, native-pattern, bespoke, none）を導入。selection_required=true/false に対応する状態機械を強制
 - REQ-0026: "selected anchor" Wording 正規化 (v1.7.14) — 全アーティファクトで "selected direction" → "selected anchor" に統一。DDH-SELECTED-DIRECTION → DDH-SELECTED-ANCHOR にエラーコード変更
@@ -72,6 +74,7 @@
 - US range in this spec: US-0002-0001..US-0002-0014
 - Primary actors: Pack author, Reviewer, Skill maintainer, Discussion facilitator
 - Notes: 旧 spec-0023（Discussion Design Hardening）、spec-0026（UIUX Authoring Foundation）、spec-0034（Discussion Canonical Architecture）を統合
+- Notes: current downstream truth は spec/contracts であり、discussion pack は `/qfai-sdd` の入力専用
 
 ## Escalation Hook (Read \_policies only when needed)
 

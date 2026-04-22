@@ -8,5 +8,5 @@
 
 ## Empty State
 
-- 0 open questions in spec-0034 scope.
+- 0 open questions in spec-0016 scope.
 - Discussion-level deferred items (OQ-0009: Jina AI MCP, OQ-0010: OTel depth) are tracked in `_policies/09_Open-questions.md`.

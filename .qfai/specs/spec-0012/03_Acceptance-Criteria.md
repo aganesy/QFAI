@@ -52,7 +52,7 @@
 
 ### AC-0012-0092
 
-- If `uiux/12_design_system.md` exists, design-system compliance may be evaluated.
+- If `.qfai/contracts/design/design-system.yaml` exists, design-system compliance may be evaluated.
 - If the file does not exist, design-system scoring is skipped without erroring solely for the missing score artifact.
 
 ### AC-0012-0093

@@ -4,7 +4,7 @@
 
 ### Overview
 
-CAP-0034 (Web Research Enhancement) は CLI エージェントの Web リサーチ能力を標準化するフレームワーク仕様である。実装は以下の 4 フェーズで段階的に進める。
+CAP-0016 (Web Research Enhancement) は CLI エージェントの Web リサーチ能力を標準化するフレームワーク仕様である。実装は以下の 4 フェーズで段階的に進める。
 
 ### Phase 1: Pipeline Foundation + MCP Templates
 

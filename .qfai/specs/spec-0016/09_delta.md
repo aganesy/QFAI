@@ -2,9 +2,10 @@
 
 ## Change Summary
 
-| Change ID | Date       | Primary             | Tags           | Summary                                 |
-| --------- | ---------- | ------------------- | -------------- | --------------------------------------- |
-| CHG-001   | 2026-03-29 | spec-0034 (initial) | new-capability | CAP-0034 新規作成: Web リサーチ能力強化 |
+| Change ID | Date       | Primary             | Tags           | Summary                                                    |
+| --------- | ---------- | ------------------- | -------------- | ---------------------------------------------------------- |
+| CHG-001   | 2026-03-29 | spec-0034 (initial) | new-capability | Historical origin before convergence to CAP-0016/spec-0016 |
+| CHG-002   | 2026-04-22 | spec-0016           | migration      | Active spec ID converged from spec-0034 to spec-0016       |
 
 ## CHG-001: spec-0034 Initial Creation
 
@@ -42,7 +43,12 @@ discussion-20260328212829687 で Web Research Enhancement のディスカッシ�
 
 ### Impact
 
-- Affects: `_policies/03_Capabilities.md` (CAP-0034 追加), `_policies/04_Business-Flow.md` (フロー追加), `_policies/06_Glossary.md` (8 用語追加), `_policies/07_Constraints.md` (TC/OC 追加), `_policies/08_Decisions.md` (DR-0080〜DR-0087 追加)
+- Affects: historical origin only
+
+## CHG-002: spec-0016 Convergence
+
+- adopted: active capability/spec mapping was converged from `CAP-0034/spec-0034` to `CAP-0016/spec-0016`
+- rationale: current `_policies/03_Capabilities.md` uses `CAP-0016`, and active slice policy must remain 1 CAP = 1 spec directory
 - Validation: `qfai validate --fail-on error --format github` で検証
 
 ### Follow-ups

@@ -1,11 +1,11 @@
 # 01 Spec — Web Research Enhancement
 
-- Spec: spec-0034
-- Parent: CAP-0034: Web リサーチ能力強化
+- Spec: spec-0016
+- Parent: CAP-0016: Web リサーチ能力強化
 
 ## Consumer View
 
-- Primary SSOT for execution: `spec-0034/01_Spec.md`
+- Primary SSOT for execution: `spec-0016/01_Spec.md`
 - Default read set: this file + relevant contracts only
 - `_policies` is read-only escalation context and must not be read by default
 

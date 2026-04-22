@@ -47,3 +47,7 @@ Given a discussion-pack without prototyping.yaml, when SDD preflight runs, then 
 ## AC-0013-0009: Recommendation Schema Preflight Block
 
 Given a discussion-pack with invalid prototyping.yaml (e.g., missing recommended_mode), when SDD preflight runs, then SDD is blocked with QFAI-PROT-153 error detail.
+
+## AC-0013-0010: Design Contract Normalization
+
+Given a UI-bearing discussion pack with UIUX sidecar files, when `/qfai-sdd` completes, then `.qfai/contracts/design/design-system.yaml`, `evaluation-axes.yaml`, `anchor-selection.yaml`, and `.qfai/contracts/ui/*.yaml` are generated or refreshed for downstream use.

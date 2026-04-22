@@ -15,10 +15,12 @@
 - In:
   - `qfai validate` command
   - layered spec / traceability / contract / discussion validators
-  - canonical UIX validators
+  - contract-first design/ui validators
+  - direct discussion-pack canonical UIX validators
   - prototyping recommendation validator
   - prototyping skill content validator
   - UI evidence artifact validator
+  - design contract readiness validator
   - non-UI safe skip behavior
   - waiver handling
 - Out:
@@ -48,7 +50,7 @@
 
 - REQ-0010: `qfai validate` aggregates validator issues and writes structured output
 - REQ-0011: `--phase`, `--format`, and `--fail-on` continue to control validate behavior
-- REQ-0012: canonical UIX validators remain the production path
+- REQ-0012: contract-first validators remain the repo-root downstream production path
 - REQ-0013: prototyping recommendation validator checks `prototyping.yaml`
 - REQ-0014: prototyping skill validator checks current `/qfai-prototyping` documentation contract
 - REQ-0015: UI evidence artifact validator checks declared screen evidence paths
@@ -57,9 +59,11 @@
 - REQ-0018: absence of screen contracts skips UI evidence artifact validation safely
 - REQ-0019: validate no longer treats full runtime-scoring integrity as its primary prototyping responsibility
 - REQ-0020: deterministic validators retained from v1.7.16 stay under validate when still present in code
+- REQ-0021: `validateDesignContractReadiness` checks `design-system.yaml`, `evaluation-axes.yaml`, `anchor-selection.yaml`, and UI contract presence using `QFAI-DCON-001..005`
+- REQ-0022: `runCanonicalUixValidators` is limited to direct discussion-pack validation and is not the repo-root downstream primary path
 
 ## Entry points
 
 - US range in this spec: US-0004-0001..US-0004-0027
 - Primary actors: QA engineer, AI agent, CI pipeline
-- Notes: validate is the machine gate for current skill-first prototyping
+- Notes: validate is the machine gate for current skill-first, contract-first downstream

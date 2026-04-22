@@ -62,7 +62,8 @@ All functionality is already implemented. This spec documents existing behavior.
 ## v1.7.13 Implementation Notes
 
 - Canonical/legacy separation: `packages/qfai/src/core/validators/index.ts` — removed DDP, added canonical UIX + prototypingRecommendation
-- Production entrypoint: `packages/qfai/src/core/validators/uix/canonical.ts` — runCanonicalUixValidators()
+- Direct-pack entrypoint: `packages/qfai/src/core/validators/uix/canonical.ts` — `runCanonicalUixValidators()` は discussion pack を直接検証する場合のみ使用
+- Repo-root downstream entrypoint: `packages/qfai/src/core/validate.ts` から contract-first validator 群を実行
 - Legacy namespace: `packages/qfai/src/core/validators/legacy/` — ddpCompatibility.ts, uixCompatibility.ts
 - IssueCategory: `packages/qfai/src/core/types.ts` — added "canonical"
 - prototypingRecommendation: `packages/qfai/src/core/validators/prototypingRecommendation.ts`

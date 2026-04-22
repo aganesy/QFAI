@@ -6,7 +6,7 @@
 
 ### TC-0014-0018
 
-- validate imports and invokes `runCanonicalUixValidators`
+- repo-root validate relies on contract-first validator groups for downstream completion
 
 ### TC-0014-0019
 

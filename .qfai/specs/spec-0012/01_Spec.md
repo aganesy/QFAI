@@ -20,7 +20,9 @@
   - L3 reviewer / quality gate workflow through `/qfai-verify`
   - `qfai validate --fail-on error` による機械検査
   - `QFAI-UIE-001` / `QFAI-UIE-002` による screen 単位 evidence 欠落検知
-  - `uiux/12_design_system.md` の存在時に適用される design-system checks
+  - `.qfai/contracts/design/design-system.yaml` を基準にした design-system checks
+  - `.qfai/contracts/design/evaluation-axes.yaml` を基準にした L2 axis inputs
+  - `.qfai/contracts/ui/*.yaml` を基準にした declared screen / route inputs
   - v1.7.16 legacy validation slice:
     - `executionPlan`
     - `scoringTrace[].screenshotDir`
@@ -71,11 +73,13 @@
 - REQ-0011: L3 role -- reviewer / verify gate として completion 可否を監査する
 - REQ-0012: Validate gate -- `qfai validate --fail-on error` は prototyping completion の blocking gate である
 - REQ-0013: UI evidence validator -- validate は declared screen ごとに screenshot / HTML の存在をチェックし、欠落時 `QFAI-UIE-001/002` を返す
-- REQ-0014: Design system requiredness -- `uiux/12_design_system.md` は UI-bearing prototyping で参照対象とする
-- REQ-0015: Verify gate -- `/qfai-verify` は validate pass、review artifact、reviewer PASS/REVISE を completion gate として扱う
-- REQ-0016: v1.7.16 validation slice retention -- `executionPlan`, `scoringTrace[].screenshotDir`, Lighthouse gate, designSystemCompliance, calibration override validators は validate/reference 用 artifact contract として残してよい
-- REQ-0017: No runtime resurrection -- REQ-0016 は CLI/runtime orchestration 再導入の根拠として使ってはならない
-- REQ-0018: Legacy coverage continuity -- 既存 traceability のため `US-0012-0001..0093` と `TC-0012-0001..0305` の ID 空間は維持する
+- REQ-0014: Design system requiredness -- `.qfai/contracts/design/design-system.yaml` は UI-bearing prototyping の正式参照対象とする
+- REQ-0015: Axis contract requiredness -- `.qfai/contracts/design/evaluation-axes.yaml` は L2 evaluation の正式参照対象とする
+- REQ-0016: UI contract requiredness -- `.qfai/contracts/ui/*.yaml` は declared screen / route の正式参照対象とする
+- REQ-0017: Verify gate -- `/qfai-verify` は validate pass、review artifact、reviewer PASS/REVISE を completion gate として扱う
+- REQ-0018: v1.7.16 validation slice retention -- `executionPlan`, `scoringTrace[].screenshotDir`, Lighthouse gate, designSystemCompliance, calibration override validators は validate/reference 用 artifact contract として残してよい
+- REQ-0019: No runtime resurrection -- REQ-0018 は CLI/runtime orchestration 再導入の根拠として使ってはならない
+- REQ-0020: Legacy coverage continuity -- 既存 traceability のため `US-0012-0001..0093` と `TC-0012-0001..0305` の ID 空間は維持する
 
 ## Entry points
 

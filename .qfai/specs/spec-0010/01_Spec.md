@@ -17,7 +17,7 @@
   - UI-bearing sidecar generation
   - design system generation
   - trend-to-axis derivation
-  - optional prototyping guidance artifacts for downstream skill consumption
+  - `/qfai-sdd` へ渡す upstream design/UI authoring artifacts
 - Out:
   - public prototyping mode negotiation as an active user contract
   - runtime/full-harness execution model
@@ -32,6 +32,7 @@
 
 - Discussion defines evaluation axes and design intent.
 - Prototyping execution is downstream and skill-led.
+- downstream skill は discussion pack を直接読まず、`/qfai-sdd` が正規化した spec/contracts を読む。
 
 ## Evidence Summary
 
@@ -41,8 +42,9 @@
 
 - REQ-0001: discussion creates the canonical 3-layer evaluation family
 - REQ-0002: discussion creates UI-bearing sidecars when required
-- REQ-0003: discussion may emit prototyping hints as downstream references
+- REQ-0003: discussion may emit prototyping hints as `/qfai-sdd` input references
 - REQ-0004: downstream prototyping hints do not define a public mode engine
+- REQ-0005: discussion-side `uiux/*.md` are upstream-only and must be normalized by `/qfai-sdd` before downstream execution
 - REQ-0019: score scope annotations describe how discussion scoring differs from downstream prototyping evaluation
 - REQ-0027: design guideline research remains mandatory for UI-bearing packs
 - REQ-0028: guideline research is recorded in `04_Sources.md`
@@ -52,4 +54,4 @@
 
 - US range in this spec: US-0010-0001..US-0010-0022
 - Primary actors: QFAI user, discussion agents
-- Notes: discussion outputs feed `/qfai-prototyping`, but do not reintroduce runtime mode negotiation
+- Notes: discussion outputs feed `/qfai-sdd`; downstream skills consume the normalized specs/contracts, not the discussion pack directly

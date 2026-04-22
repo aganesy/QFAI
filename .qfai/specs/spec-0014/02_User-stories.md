@@ -10,7 +10,7 @@ As a reviewer, I want truthful evidence and placeholder rejection to remain enfo
 
 ### US-0014-0018
 
-As a maintainer, I want validate to stay wired to `runCanonicalUixValidators`, so that verify depends on one canonical path.
+As a maintainer, I want verify to depend on contract-first validate gates rather than implicit discussion-pack runners, so that downstream completion reflects the current execution architecture.
 
 ### US-0014-0019
 

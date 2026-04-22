@@ -48,7 +48,7 @@
 - REQ-0006: routing policy remains centralized
 - REQ-0012: all-reviewer FAIL obligations stay in force
 - REQ-0013: prototyping review profile is defined in terms of current skill-led evaluation/reviewer routing, not a removed runtime entrypoint
-- REQ-0014: prototyping evidence-phase routing may require `product-experience-architect` and related reviewers based on the current skill flow
+- REQ-0014: prototyping evidence-phase routing may require `product-experience-architect` and related reviewers based on specs + contracts inputs
 - REQ-0015: delegation failure hard-stop output remains mandatory
 
 ## Entry points

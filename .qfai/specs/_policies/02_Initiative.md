@@ -28,6 +28,10 @@
 
 ## マイルストーン
 
+- 注記: この表は initiative 履歴を保持するため、旧 `qfai prototyping` / runtime / full-harness / sidecar-first wording を含みうる。
+- 注記: それらは current public contract ではない。active execution contract は spec-0012 / spec-0013 / spec-0014 / `_policies/04_Business-Flow.md` / `_policies/05_Contracts.md` を優先する。
+- 注記: downstream skill の current truth source は `specs + .qfai/contracts/**` であり、discussion direct-read や removed runtime surface は superseded である。
+
 | Milestone                                | Description                                                                                                                                                                                                                                                                                                                                                                                                                                     |
 | ---------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | v1.0 (完了)                              | 基本バリデーション・レポート                                                                                                                                                                                                                                                                                                                                                                                                                    |
@@ -57,7 +61,9 @@
 | v1.7.18 (SDD 進行中)                     | Skill-First Prototyping Convergence — `/qfai-prototyping` を唯一の public interface に固定し、機械ゲートを `qfai validate` / `/qfai-verify` に移管。declared screen ごとに screenshot + HTML snapshot を mandatory evidence とし、旧 CLI/runtime/mode posture を superseded history に明示整理                                                                                                                                                  |
 | v1.8.0 (実装進行中)                      | Web Research Enhancement — CLI エージェントの Web リサーチ強化（標準パイプライン・MCP 統合・セキュリティ・評価・HITL）                                                                                                                                                                                                                                                                                                                          |
 
-## v1.7.15 Initiative — packages/qfai single-PR completion
+## Historical Appendix: v1.7.15 Initiative — packages/qfai single-PR completion
+
+- この節は historical implementation notes であり、current contract を上書きしない。
 
 Source: SRC-0001 — QFAI v1.7.15 継続開発設計書
 
@@ -83,7 +89,9 @@ Source: SRC-0001 — QFAI v1.7.15 継続開発設計書
 | DOM クローリングの不安定性           | Medium      | Low    | jsdom のバージョン固定・テスト             |
 | 大規模プロジェクトでのパフォーマンス | Low         | Medium | fast-glob のストリーム処理・ファイル数制限 |
 
-### v1.7.15 rev4 — Single-PR Completion (5 Audit Issues)
+### Historical Appendix: v1.7.15 rev4 — Single-PR Completion (5 Audit Issues)
+
+- この節は audit remediation 履歴であり、current public prototyping/runtime contract を定義しない。
 
 **Discussion Pack**: `discussion-20260414195449523`
 **Classification**: non-ui

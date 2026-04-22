@@ -7,7 +7,7 @@
 
 ## BR-0012-0002: Mandatory UI Evidence
 
-- Every declared screen in `uiux/40_screen_contracts.md` must have:
+- Every declared screen in `.qfai/contracts/ui/*.yaml` must have:
   - `.qfai/evidence/prototyping/screenshots/<screen-id>.png`
   - `.qfai/evidence/prototyping/html/<screen-id>.html`
 

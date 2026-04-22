@@ -1,5 +1,15 @@
 # 10 Delta
 
+## 2026-04-22 Contract-First Downstream Alignment
+
+- adopted: downstream execution truth を `specs + .qfai/contracts/**` に固定
+- adopted: discussion UIUX sidecar は `/qfai-sdd` 入力専用に再定義
+- adopted: `runCanonicalUixValidators` を direct discussion-pack validation 専用に再定義
+- adopted: Web Research Enhancement の active spec ID を `spec-0016` に収束し、`spec-0034` を historical に降格
+- superseded: downstream skill が discussion pack を直接読む posture
+- superseded: repo-root validate の production path を canonical UIX direct-pack runner に置く posture
+- superseded: `spec-0034` を active capability mapping に使う運用
+
 ## Change Summary
 
 | Date       | Change Type | Section                         | Summary                                                                                                                                                                                     | Rationale                                                                                                                       |
