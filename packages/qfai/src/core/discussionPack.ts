@@ -32,7 +32,8 @@ export const REQUIRED_DISCUSSION_PACK_FILES = REQUIRED_DISCUSSION_PACK_MARKDOWN_
 
 export type RequiredDiscussionPackMarkdownFile =
   (typeof REQUIRED_DISCUSSION_PACK_MARKDOWN_FILES)[number];
-export type RequiredDiscussionPackSideArtifact = string;
+export type RequiredDiscussionPackSideArtifact =
+  (typeof REQUIRED_DISCUSSION_PACK_SIDE_ARTIFACTS)[number];
 export type RequiredDiscussionPackFile = RequiredDiscussionPackMarkdownFile;
 
 type DiscussionPackOqState = {

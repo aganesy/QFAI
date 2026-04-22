@@ -297,11 +297,10 @@ const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "HTML+CSS visual mock is an optional fallback aid and should only be referenced when intentionally selected. Sidecar artifacts (uiux/) are the primary UI definition.",
   "QFAI-PROT-101":
     "Both prototyping evidence files exist and prototyping.json follows the required schema.",
-  "QFAI-PROT-150": "prototyping.json is missing the canonical mode block.",
-  "QFAI-PROT-151":
-    "mode.effective must be one of low-cost|standard|full-harness, and omitted mode defaults to standard.",
+  "QFAI-PROT-150": "prototyping.json exists at the canonical evidence path for UI prototyping.",
+  "QFAI-PROT-151": "surface must be one of web|mobile|desktop|mixed.",
   "QFAI-PROT-152":
-    "mode.source must be explicit-request|system-default and rationale must be non-empty.",
+    "mode.requested/mode.effective/mode.source/mode.rationale must follow the current prototyping evidence schema.",
   "QFAI-PROT-171": "surface field must be one of: web, mobile, desktop, mixed.",
   "QFAI-PROT-172":
     "surface/mode obligation matrix mismatch — required evidence bundles are missing.",

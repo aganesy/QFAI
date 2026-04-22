@@ -142,7 +142,7 @@ function toIssue(severity: IssueSeverity, file: string): Issue {
 }
 
 function resolveEvidenceRoot(root: string, config: QfaiConfig): string {
-  return path.join(path.dirname(resolvePath(root, config, "contractsDir")), "evidence");
+  return path.join(path.dirname(resolvePath(root, config, "specsDir")), "evidence");
 }
 
 /**

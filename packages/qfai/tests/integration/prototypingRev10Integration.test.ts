@@ -57,6 +57,26 @@ describe("prototyping evidence integration wiring", () => {
     }
   });
 
+  it("discussion pack side artifact type stays derived from the SSOT const tuple", async () => {
+    const src = await readFile(srcPath("discussionPack.ts"), "utf-8");
+    expect(src).toContain("REQUIRED_DISCUSSION_PACK_SIDE_ARTIFACTS");
+    expect(src).toContain("(typeof REQUIRED_DISCUSSION_PACK_SIDE_ARTIFACTS)[number]");
+  });
+
+  it("validate.ts keeps PROT-150/151/152 expected text aligned with current validator semantics", async () => {
+    const src = await readFile(
+      path.join(repoRoot, "packages", "qfai", "src", "cli", "commands", "validate.ts"),
+      "utf-8",
+    );
+    expect(src).toContain(
+      '"QFAI-PROT-150": "prototyping.json exists at the canonical evidence path for UI prototyping."',
+    );
+    expect(src).toContain('"QFAI-PROT-151": "surface must be one of web|mobile|desktop|mixed."');
+    expect(src).toContain(
+      '"QFAI-PROT-152":\n    "mode.requested/mode.effective/mode.source/mode.rationale must follow the current prototyping evidence schema."',
+    );
+  });
+
   it("core/index.ts keeps non-runtime harness helpers on the package root export", async () => {
     const src = await readFile(srcPath("index.ts"), "utf-8");
     for (const exportName of [

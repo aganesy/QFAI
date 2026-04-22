@@ -210,4 +210,73 @@ describe("validatePrototypingDesignSystem (PROT-DS01)", () => {
     expect(ds01[0]?.severity).toBe("error");
     expect(ds01[0]?.file).toContain("prototyping.json");
   });
+
+  it("custom specsDir を使う場合も prototyping.json は specs 親の evidence から解決する", async () => {
+    const root = await newTempRoot();
+    const config = {
+      ...defaultConfig,
+      paths: {
+        ...defaultConfig.paths,
+        contractsDir: "workspace/contracts",
+        specsDir: "workspace/specs",
+      },
+    };
+    const contractsRoot = path.join(root, "workspace", "contracts");
+    const specsEvidenceRoot = path.join(root, "workspace", "evidence");
+    const contractsEvidenceRoot = path.join(root, "workspace", "contracts-parent", "evidence");
+
+    await mkdir(path.join(contractsRoot, "ui"), { recursive: true });
+    await writeFile(
+      path.join(contractsRoot, "ui", "sample.yaml"),
+      ["screens:", "  - id: home", '    title: "Home"', '    route: "/"'].join("\n"),
+      "utf-8",
+    );
+
+    await mkdir(path.join(contractsRoot, "design"), { recursive: true });
+    await writeFile(
+      path.join(contractsRoot, "design", "design-system.yaml"),
+      "name: sample-design-system\n",
+      "utf-8",
+    );
+
+    await mkdir(specsEvidenceRoot, { recursive: true });
+    await writeFile(
+      path.join(specsEvidenceRoot, "prototyping.json"),
+      JSON.stringify(
+        {
+          mode: {
+            effective: "full-harness",
+            source: "explicit-request",
+            rationale: "required by test",
+          },
+          scoringTrace: { designSystemCompliance: 97 },
+        },
+        null,
+        2,
+      ),
+      "utf-8",
+    );
+
+    await mkdir(contractsEvidenceRoot, { recursive: true });
+    await writeFile(
+      path.join(contractsEvidenceRoot, "prototyping.json"),
+      JSON.stringify(
+        {
+          mode: {
+            effective: "full-harness",
+            source: "explicit-request",
+            rationale: "stale wrong root",
+          },
+          scoringTrace: {},
+        },
+        null,
+        2,
+      ),
+      "utf-8",
+    );
+
+    const issues = await validatePrototypingDesignSystem(root, config);
+
+    expect(issues.filter((issue) => issue.code === "PROT-DS01")).toHaveLength(0);
+  });
 });
