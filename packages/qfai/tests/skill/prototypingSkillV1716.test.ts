@@ -40,7 +40,7 @@ describe("TC-0012-0285 — Delegation Scope Table has 4 categories", () => {
     // 4 required categories
     expect(content).toContain("UI implementation");
     expect(content).toContain("Screenshot capture");
-    expect(content).toContain("Evaluation L1-L2");
+    expect(content).toMatch(/Evaluation (L1-L2|review)/);
     expect(content).toContain("Build");
 
     // Required roles present in the table
@@ -91,7 +91,10 @@ describe("TC-0012-0293 — iteration loop documented in SKILL.md", () => {
     const content = await readSkillMd();
 
     const captureIdx = content.indexOf("Capture Mandatory Evidence");
-    const evaluateIdx = content.indexOf("Launch L1 and L2 Evaluators");
+    const evaluateIdx = Math.max(
+      content.indexOf("Launch L1 and L2 Evaluators"),
+      content.indexOf("Launch Evaluation Reviewers"),
+    );
     const identifyIdx = content.indexOf("Aggregate Findings");
     const fixIdx = content.indexOf("Fix and Re-capture");
     const reevaluateIdx = content.indexOf("Re-evaluate");

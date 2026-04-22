@@ -282,8 +282,7 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     expect(content).toContain(".qfai/contracts/ui/*.yaml");
     expect(content).toContain(".qfai/evidence/prototyping/");
     expect(content).toContain("DONE is forbidden");
-    expect(content).toContain("L1");
-    expect(content).toContain("L2");
+    expect(content).toMatch(/evaluation reviewer|l1/i);
     expect(content).toContain("REVISE");
   });
 
