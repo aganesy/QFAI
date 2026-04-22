@@ -19,9 +19,39 @@ describe("validateProject (spec pack)", { timeout: 15000 }, () => {
     await withProject(async (root) => {
       const result = await validateProject(root);
       const codes = result.issues.map((item) => item.code);
+      const errorCodes = result.issues
+        .filter((item) => item.severity === "error")
+        .map((item) => item.code)
+        .sort();
+      const warningCodes = result.issues
+        .filter((item) => item.severity === "warning")
+        .map((item) => item.code)
+        .sort();
+      const infoCodes = result.issues
+        .filter((item) => item.severity === "info")
+        .map((item) => item.code)
+        .sort();
 
       expect(typeof result.toolVersion).toBe("string");
-      expect(result.counts.error).toBeGreaterThanOrEqual(0);
+      expect(errorCodes).toEqual([
+        "QFAI-DCON-001",
+        "QFAI-DCON-001",
+        "QFAI-DCON-001",
+        "QFAI-PROT-280",
+        "QFAI-UIE-001",
+        "QFAI-UIE-002",
+      ]);
+      expect(warningCodes).toEqual([
+        "E_OQ_OPEN_RELEASE_BLOCK",
+        "PROT-DS01",
+        "QFAI-DENSITY-004",
+        "QFAI-SKILLS-012",
+        "QFAI-SKILLS-012",
+        "QFAI-SKILLS-012",
+        "QFAI-STATUS-001",
+        "QFAI-VIS-001",
+      ]);
+      expect(infoCodes).toEqual(["QFAI-CONSISTENCY-002"]);
       expect(codes).not.toContain("E_SPEC_MISSING_FILESET");
       expect(codes).not.toContain("E_AC_NOT_VERIFIED");
       expect(codes).not.toContain("E_TC_ORPHAN");
@@ -63,26 +93,19 @@ describe("validateProject (spec pack)", { timeout: 15000 }, () => {
       });
 
       const result = await validateProject(root);
-      expect(result.counts.error).toBeGreaterThan(0);
+      expect(result.issues.some((item) => item.code === "QFAI-PROT-150")).toBe(true);
     });
   });
 
-  it("fails when prototyping evidence declares API coverage on UI-only contract", async () => {
+  it("fails when prototyping evidence omits required iterations", async () => {
     await withProject(async (root) => {
       const evidencePath = path.join(root, ".qfai", "evidence", "prototyping.json");
       const evidence = JSON.parse(await readFile(evidencePath, "utf-8")) as Record<string, unknown>;
-      evidence.specs = [
-        {
-          specId: "spec-0001",
-          declared: { uiRoutes: 1, apiEndpoints: 1, dbObjects: 0 },
-          checked: { uiOk: 1, apiNon404: 1, dbPresent: 0 },
-          missing: { uiRoutes: [], apiEndpoints: ["/api/orders"], dbObjects: [] },
-        },
-      ];
+      delete evidence.iterations;
       await writeFile(evidencePath, `${JSON.stringify(evidence, null, 2)}\n`);
 
       const result = await validateProject(root);
-      expect(result.counts.error).toBeGreaterThan(0);
+      expect(result.issues.some((item) => item.code === "QFAI-PROT-280")).toBe(true);
     });
   });
 
