@@ -27,8 +27,8 @@
   - Density Review Pass using `QFAI-COV-207` warnings
   - Preflight summary report (`.qfai/report/preflight_summary.md`)
   - Validate gate (`qfai validate --fail-on error`)
-  - Prototyping.yaml preflight gate（discussion-pack 内の prototyping.yaml 存在・schema validation）
-  - Recommendation schema preflight blocker（validatePrototypingRecommendation エラーが SDD 開始をブロック）
+  - discussion-pack markdown readiness gate
+  - optional side artifacts are ignored by preflight
 - Out:
   - Writing production code or runnable tests
   - Skipping phase order or bypassing gates
@@ -69,8 +69,8 @@
 - REQ-0011: Required edges -- US -> AC -> BR -> EX -> TC completeness
 - REQ-0012: Validate gate -- `qfai validate --fail-on error --format github` with error=0
 - REQ-0013: Density Review -- `QFAI-COV-207` warnings triaged from specs-coverage reports
-- REQ-0014: Prototyping.yaml Preflight Gate — SDD preflight は discussion-pack 内の prototyping.yaml の存在を検証し、欠落時は SDD をブロックする
-- REQ-0015: Recommendation Schema Gate — SDD preflight は validatePrototypingRecommendation を実行し、schema エラー（QFAI-PROT-153~156）が存在する場合は SDD をブロックする
+- REQ-0014: Discussion-Pack Markdown Gate — SDD preflight は discussion-pack の必須 markdown readiness を検証し、欠落・未完成時のみブロックする
+- REQ-0015: Optional Side Artifact Neutrality — SDD preflight は optional side artifact の欠落や旧形式の補助 prototyping artifact だけではブロックしない
 - REQ-0016: Design-system normalization — `uiux/12_design_system.md` を `.qfai/contracts/design/design-system.yaml` に正規化する
 - REQ-0017: Evaluation-axes normalization — `uiux/20/21/22/23` を `.qfai/contracts/design/evaluation-axes.yaml` に正規化する
 - REQ-0018: Anchor normalization — `uiux/30_option_comparison.md` と `31_selected_anchor_screen.md` の downstream 必要情報を `.qfai/contracts/design/anchor-selection.yaml` に正規化する
