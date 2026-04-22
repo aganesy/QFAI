@@ -14,6 +14,11 @@ const REQUIRED_DESIGN_FILES = [
   "anchor-selection.yaml",
 ] as const;
 
+type YamlReadResult =
+  | { kind: "missing" }
+  | { kind: "invalid" }
+  | { kind: "ok"; value: Record<string, unknown> };
+
 export async function validateDesignContractReadiness(
   root: string,
   config: QfaiConfig,
@@ -59,11 +64,21 @@ export async function validateDesignContractReadiness(
 async function validateDesignSystem(root: string, config: QfaiConfig): Promise<Issue[]> {
   const filePath = path.join(root, config.paths.contractsDir, "design", "design-system.yaml");
   const parsed = await readYaml(filePath);
-  if (!parsed || typeof parsed !== "object") {
-    return [];
+  if (parsed.kind !== "ok") {
+    return parsed.kind === "invalid"
+      ? [
+          issue(
+            "QFAI-DCON-006",
+            "design-system.yaml must parse as an object-shaped YAML document.",
+            "error",
+            path.relative(root, filePath).replace(/\\/g, "/"),
+            "designContractReadiness.designSystemDocument",
+          ),
+        ]
+      : [];
   }
 
-  const checklist = (parsed as Record<string, unknown>).checklist;
+  const checklist = parsed.value.checklist;
   const requiredKeys = [
     "color",
     "typography",
@@ -96,11 +111,21 @@ async function validateDesignSystem(root: string, config: QfaiConfig): Promise<I
 async function validateEvaluationAxes(root: string, config: QfaiConfig): Promise<Issue[]> {
   const filePath = path.join(root, config.paths.contractsDir, "design", "evaluation-axes.yaml");
   const parsed = await readYaml(filePath);
-  if (!parsed || typeof parsed !== "object") {
-    return [];
+  if (parsed.kind !== "ok") {
+    return parsed.kind === "invalid"
+      ? [
+          issue(
+            "QFAI-DCON-007",
+            "evaluation-axes.yaml must parse as an object-shaped YAML document.",
+            "error",
+            path.relative(root, filePath).replace(/\\/g, "/"),
+            "designContractReadiness.evaluationAxesDocument",
+          ),
+        ]
+      : [];
   }
 
-  const record = parsed as Record<string, unknown>;
+  const record = parsed.value;
   const requiredArrays = ["invariant_axes", "trend_derived_axes", "product_specific_axes"];
   const issues: Issue[] = [];
 
@@ -136,11 +161,21 @@ async function validateEvaluationAxes(root: string, config: QfaiConfig): Promise
 async function validateAnchorSelection(root: string, config: QfaiConfig): Promise<Issue[]> {
   const filePath = path.join(root, config.paths.contractsDir, "design", "anchor-selection.yaml");
   const parsed = await readYaml(filePath);
-  if (!parsed || typeof parsed !== "object") {
-    return [];
+  if (parsed.kind !== "ok") {
+    return parsed.kind === "invalid"
+      ? [
+          issue(
+            "QFAI-DCON-008",
+            "anchor-selection.yaml must parse as an object-shaped YAML document.",
+            "error",
+            path.relative(root, filePath).replace(/\\/g, "/"),
+            "designContractReadiness.anchorSelectionDocument",
+          ),
+        ]
+      : [];
   }
 
-  const selected = (parsed as Record<string, unknown>).selected_anchor;
+  const selected = parsed.value.selected_anchor;
   const requiredKeys = ["option_id", "title", "rationale"];
   const issues: Issue[] = [];
 
@@ -167,10 +202,19 @@ async function validateAnchorSelection(root: string, config: QfaiConfig): Promis
   return issues;
 }
 
-async function readYaml(filePath: string): Promise<unknown> {
+async function readYaml(filePath: string): Promise<YamlReadResult> {
   try {
-    return parseYaml(await readFile(filePath, "utf-8"));
+    const parsed: unknown = parseYaml(await readFile(filePath, "utf-8"));
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      return { kind: "invalid" };
+    }
+    return { kind: "ok", value: parsed as Record<string, unknown> };
   } catch {
-    return null;
+    try {
+      await readFile(filePath, "utf-8");
+      return { kind: "invalid" };
+    } catch {
+      return { kind: "missing" };
+    }
   }
 }

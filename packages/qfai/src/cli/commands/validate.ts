@@ -426,6 +426,9 @@ const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-DCON-004": "evaluation-axes.yaml must define aggregate_rules.",
   "QFAI-DCON-005":
     "anchor-selection.yaml must define selected_anchor.option_id, title, and rationale.",
+  "QFAI-DCON-006": "design-system.yaml must parse as an object-shaped YAML document.",
+  "QFAI-DCON-007": "evaluation-axes.yaml must parse as an object-shaped YAML document.",
+  "QFAI-DCON-008": "anchor-selection.yaml must parse as an object-shaped YAML document.",
   "QFAI-CONTRACT-030":
     "Contract index references must match declared contract IDs in .qfai/contracts/**.",
 };

@@ -1,9 +1,13 @@
 import path from "node:path";
 
-import type { QfaiConfig } from "../config.js";
+import { resolvePath, type QfaiConfig } from "../config.js";
 import { readUiContractScreenContracts } from "../contracts/screenContracts.js";
 import type { Issue } from "../types.js";
 import { exists, issue } from "./utils.js";
+
+function resolveEvidenceRoot(root: string, config: QfaiConfig): string {
+  return path.join(path.dirname(resolvePath(root, config, "contractsDir")), "evidence");
+}
 
 export async function validateUiEvidenceArtifacts(
   root: string,
@@ -16,8 +20,9 @@ export async function validateUiEvidenceArtifacts(
     return issues;
   }
 
-  const screenshotRoot = path.join(root, ".qfai", "evidence", "prototyping", "screenshots");
-  const htmlRoot = path.join(root, ".qfai", "evidence", "prototyping", "html");
+  const evidenceRoot = resolveEvidenceRoot(root, config);
+  const screenshotRoot = path.join(evidenceRoot, "prototyping", "screenshots");
+  const htmlRoot = path.join(evidenceRoot, "prototyping", "html");
 
   for (const screen of screens) {
     const screenshotPath = path.join(screenshotRoot, `${screen.screenId}.png`);

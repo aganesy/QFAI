@@ -76,4 +76,38 @@ describe("validateUiEvidenceArtifacts", () => {
 
     expect(issues).toEqual([]);
   });
+
+  it("custom contractsDir から導出した evidence 配下を参照する", async () => {
+    const root = await newTempRoot();
+    const config = {
+      ...defaultConfig,
+      paths: {
+        ...defaultConfig.paths,
+        contractsDir: "workspace/contracts",
+      },
+    };
+    const contractsDir = path.join(root, "workspace", "contracts", "ui");
+    await mkdir(contractsDir, { recursive: true });
+    await writeFile(
+      path.join(contractsDir, "ui-0001-orders.yaml"),
+      [
+        "screens:",
+        "  - id: orders-dashboard",
+        '    title: "Orders Dashboard"',
+        '    route: "/orders"',
+      ].join("\n"),
+      "utf-8",
+    );
+
+    const screenshotDir = path.join(root, "workspace", "evidence", "prototyping", "screenshots");
+    const htmlDir = path.join(root, "workspace", "evidence", "prototyping", "html");
+    await mkdir(screenshotDir, { recursive: true });
+    await mkdir(htmlDir, { recursive: true });
+    await writeFile(path.join(screenshotDir, "orders-dashboard.png"), "png", "utf-8");
+    await writeFile(path.join(htmlDir, "orders-dashboard.html"), "<html></html>", "utf-8");
+
+    const issues = await validateUiEvidenceArtifacts(root, config);
+
+    expect(issues).toEqual([]);
+  });
 });

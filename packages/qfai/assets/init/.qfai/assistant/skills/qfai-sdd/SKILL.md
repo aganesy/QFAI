@@ -193,7 +193,7 @@ Follow `.qfai/assistant/instructions/shared-skill-operating-baseline.md#delta-re
 - UI-bearing targets must be normalized into downstream-ready contracts under `.qfai/contracts/design/**` and `.qfai/contracts/ui/**`.
 - `_policies/05_Contracts.md` must include a Contract Index.
 - `/qfai-sdd` must stop when discussion-pack is missing, incomplete, or has blocking OQ.
-- Discussion-pack preflight is mandatory, including classification-aware `prototyping.yaml` validation.
+- Discussion-pack preflight is mandatory, including contract-first checks that UI-bearing targets are normalized into required design/ui contracts before downstream generation.
 - Reviewer routing is fixed by `.qfai/assistant/steering/agent-routing.yml` and `.qfai/assistant/steering/review-profiles.yml`.
 - RCP wording must be sourced from `.qfai/assistant/skills/qfai-sdd/references/rcp_footer.md`.
 - `_policies/04_Business-Flow.md` must be Markdown and include Mermaid `flowchart` or `sequenceDiagram`.

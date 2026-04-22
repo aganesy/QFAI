@@ -141,9 +141,13 @@ function toIssue(severity: IssueSeverity, file: string): Issue {
   };
 }
 
+function resolveEvidenceRoot(root: string, config: QfaiConfig): string {
+  return path.join(path.dirname(resolvePath(root, config, "contractsDir")), "evidence");
+}
+
 /**
- * Run the PROT-DS01 validator against the latest discussion pack under
- * the given root. Returns zero issues on non-UI packs.
+ * Run the PROT-DS01 validator against contract-first UI inputs and the
+ * canonical prototyping evidence file. Returns zero issues on non-UI packs.
  */
 export async function validatePrototypingDesignSystem(
   root: string,
@@ -154,7 +158,7 @@ export async function validatePrototypingDesignSystem(
     return [];
   }
 
-  const evidenceDir = path.join(path.dirname(resolvePath(root, config, "specsDir")), "evidence");
+  const evidenceDir = resolveEvidenceRoot(root, config);
   const artifact = await loadPrototypingArtifact(evidenceDir);
   if (artifact.designSystemCompliancePresent) {
     return [];

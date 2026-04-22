@@ -95,4 +95,37 @@ describe("validateDesignContractReadiness", () => {
 
     expect(issues).toEqual([]);
   });
+
+  it("required design contract が壊れた YAML の場合は parse error を返す", async () => {
+    const root = await newTempRoot();
+    await seedUiContract(root);
+
+    const designDir = path.join(root, ".qfai", "contracts", "design");
+    await mkdir(designDir, { recursive: true });
+    await writeFile(path.join(designDir, "design-system.yaml"), "checklist: [\n", "utf-8");
+    await writeFile(
+      path.join(designDir, "evaluation-axes.yaml"),
+      [
+        "invariant_axes: []",
+        "trend_derived_axes: []",
+        "product_specific_axes: []",
+        "aggregate_rules: {}",
+      ].join("\n"),
+      "utf-8",
+    );
+    await writeFile(
+      path.join(designDir, "anchor-selection.yaml"),
+      [
+        "selected_anchor:",
+        "  option_id: OPT-01",
+        "  title: Dashboard",
+        "  rationale: Stable baseline",
+      ].join("\n"),
+      "utf-8",
+    );
+
+    const issues = await validateDesignContractReadiness(root, defaultConfig);
+
+    expect(issues.map((issue) => issue.code)).toContain("QFAI-DCON-006");
+  });
 });
