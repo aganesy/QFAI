@@ -10,6 +10,20 @@
 
 ### Changed
 
+- なし
+
+### Removed
+
+- なし
+
+## [1.8.1] - 2026-04-23
+
+### Added
+
+- なし
+
+### Changed
+
 - package root export (`qfai`) で full-harness helper の互換公開を維持
   - restored: `loadHistory`, `appendIteration`, `computeTerminationReason`
   - restored: `validateReviewer`, `resolveCommitSha`, `REVIEWER_PLACEHOLDERS`
