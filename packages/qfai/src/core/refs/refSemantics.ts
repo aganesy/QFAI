@@ -1,4 +1,4 @@
-import { assertConcreteArtifactRef, isBrowserQaPassthroughRef } from "./pathUtils.js";
+import { assertConcreteArtifactRef, isBrowserQaPassthroughRef } from "../artifacts/pathUtils.js";
 
 export function assertConcreteArtifactRefs(fieldPath: string, refs: string[]): void {
   if (refs.length === 0) {

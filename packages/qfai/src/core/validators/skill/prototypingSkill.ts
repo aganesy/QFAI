@@ -5,10 +5,11 @@ const BANNED_PHRASES = [
   "ui routes reachable",
   "api non-404",
   "db objects present",
-  "do not default to full-harness",
-  "mode=low-cost",
-  "mode=standard",
-  "qfai prototyping run --mode full-harness",
+  "discussion recommendation",
+  "recommended_mode",
+  "allowed_modes",
+  "l1 and l2",
+  "weightedtotal",
 ] as const;
 
 const REQUIRED_SECTIONS = [
@@ -125,7 +126,7 @@ export function hasDelegationScopeTable(content: string): boolean {
   const lower = content.toLowerCase();
   return (
     lower.includes("delegation scope table") &&
-    lower.includes("evaluation l1-l2") &&
+    lower.includes("evaluation scoring") &&
     lower.includes("screenshot capture")
   );
 }
@@ -169,13 +170,8 @@ export function checkRoutingConsistency(
       contradictions.push(`${condition.mode}: mode section missing`);
       continue;
     }
-    if (condition.mode === "full-harness") {
-      if (!/default.*full-harness|full-harness.*default/i.test(content)) {
-        contradictions.push("full-harness: default wording missing");
-      }
-      if (/do not default to full-harness|explicit opt-in only/i.test(content)) {
-        contradictions.push("full-harness: stale opt-in wording detected");
-      }
+    if (condition.mode === "standard" && !/default.*standard|standard.*default/i.test(content)) {
+      contradictions.push("standard: default wording missing");
     }
   }
 

@@ -5,10 +5,10 @@ import { parseStructuredContract } from "../contracts.js";
 import { stripContractDeclarationLines } from "../contractsDecl.js";
 import type { BrowserQaRunResult } from "../browserQa/types.js";
 import type { RenderRunnerResult } from "../evidence/types.js";
-import type { UiFidelityStatus } from "./types.js";
+import type { UiFidelityStatus } from "../review/prototyping.js";
 import { findLatestDiscussionPackDir } from "../discussionPack.js";
 import { readSafe } from "../validators/utils.js";
-import { readCanonicalScreenContracts } from "./screenContracts.js";
+import { readCanonicalScreenContracts } from "../contracts/screenContracts.js";
 import { buildUiObservationSummary, deriveMockPathFindingsFromBrowserQa } from "./uiObservation.js";
 
 type ContractScreenSummary = {

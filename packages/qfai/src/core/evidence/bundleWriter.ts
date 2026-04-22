@@ -5,13 +5,14 @@ import { writeEvidenceFile } from "./fsEvidenceWriter.js";
 import type { RenderRunnerResult } from "./types.js";
 import type { BrowserQaRunResult } from "../browserQa/types.js";
 import type { BrowserQaBundle } from "../browserQa/index.js";
-import type { PrototypingMode, PrototypingSurface } from "../prototyping/types.js";
+import type { PrototypingMode, PrototypingSurface } from "../review/prototyping.js";
 import type { FakeUiDetectionResult } from "../harness/fakeUiDetection.js";
 import type { FullHarnessHandoff } from "../harness/handoff.js";
 import type { FullHarnessExitReason } from "../harness/exitReason.js";
 import type {
   FullHarnessIteration,
   FullHarnessCalibrationRef,
+  FullHarnessScoreSnapshot,
   TerminationReason,
   FinalDecision,
   ReviewerLogVerdict,
@@ -92,15 +93,7 @@ export type PrototypingSummaryBundle = {
       evidenceRefs: string[];
     }>;
     iterations: FullHarnessIteration[];
-    scoringTrace: Array<{
-      iteration: number;
-      l1Total: number;
-      l2Total: number;
-      weightedTotal: number;
-      deltaFromPrevious: number | null;
-      decision: "accept" | "refine" | "reject";
-      commitSha: string;
-    }>;
+    scoringTrace: FullHarnessScoreSnapshot[];
     limitations: string[];
   };
 };

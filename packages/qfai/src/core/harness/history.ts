@@ -1,13 +1,19 @@
 /**
- * Iteration history management — v1.7.15
+ * Iteration history management.
  *
  * Reads previous iterations from prototyping.json,
- * appends new iteration, recomputes bestIteration/scoringTrace/terminationReason.
+ * appends new iteration, and recomputes bestIteration/scoringTrace from
+ * reviewerScores/allItemsPass95 evidence.
  */
 
 import { readFile } from "node:fs/promises";
 import path from "node:path";
-import type { FullHarnessHistory, FullHarnessIteration, TerminationReason } from "./types.js";
+import type {
+  FullHarnessHistory,
+  FullHarnessIteration,
+  FullHarnessScoreSnapshot,
+  TerminationReason,
+} from "./types.js";
 
 const EVIDENCE_PATH = ".qfai/evidence/prototyping.json";
 
@@ -16,18 +22,16 @@ export async function loadHistory(root: string): Promise<FullHarnessHistory | nu
     const filePath = path.join(root, EVIDENCE_PATH);
     const content = await readFile(filePath, "utf-8");
     const parsed: unknown = JSON.parse(content);
-    if (
-      typeof parsed === "object" &&
-      parsed !== null &&
-      "fullHarness" in parsed &&
-      typeof (parsed as Record<string, unknown>).fullHarness === "object"
-    ) {
-      const fh = (parsed as { fullHarness: Record<string, unknown> }).fullHarness;
+    if (isRecord(parsed) && isRecord(parsed.fullHarness)) {
+      const fh = parsed.fullHarness;
       if (Array.isArray(fh.iterations)) {
         return {
           runId: typeof fh.runId === "string" ? fh.runId : crypto.randomUUID(),
           iterations: fh.iterations as FullHarnessIteration[],
           bestIteration: typeof fh.bestIteration === "number" ? fh.bestIteration : 0,
+          ...(typeof fh.terminationReason === "string"
+            ? { terminationReason: fh.terminationReason as TerminationReason }
+            : {}),
           scoringTrace: Array.isArray(fh.scoringTrace)
             ? (fh.scoringTrace as FullHarnessHistory["scoringTrace"])
             : [],
@@ -56,29 +60,15 @@ export function appendIteration(
     iteration: existing.iterations.length + 1,
   };
 
-  const lastExisting = existing.iterations[existing.iterations.length - 1];
-  const previousTotal = lastExisting !== undefined ? lastExisting.weightedTotal : null;
-  newIteration.deltaFromPrevious =
-    previousTotal !== null ? newIteration.weightedTotal - previousTotal : null;
-
   const iterations = [...existing.iterations, newIteration];
-
-  const bestIteration = iterations.reduce((best, it) => {
-    const bestEntry = iterations[best - 1];
-    return bestEntry !== undefined && it.weightedTotal > bestEntry.weightedTotal
-      ? it.iteration
-      : best;
-  }, iterations[0]?.iteration ?? 1);
-
-  const scoringTrace = iterations.map((it) => ({
-    iteration: it.iteration,
-    l1Total: it.l1.total,
-    l2Total: it.l2.total,
-    weightedTotal: it.weightedTotal,
-    deltaFromPrevious: it.deltaFromPrevious,
-    decision: it.decision,
-    commitSha: it.commitSha,
-  }));
+  const scoringTrace = iterations.map(buildScoreSnapshot);
+  const bestIteration =
+    scoringTrace.reduce<FullHarnessScoreSnapshot | undefined>((best, entry) => {
+      if (!best || compareSnapshots(entry, best) > 0) {
+        return entry;
+      }
+      return best;
+    }, undefined)?.iteration ?? 1;
 
   return {
     runId: existing.runId,
@@ -126,35 +116,72 @@ export function validateHistoryConsistency(
 
 export function computeTerminationReason(
   history: FullHarnessHistory,
-  calibration: {
+  iterationPolicy: {
     maxIterations: number;
-    plateauDelta: number;
-    plateauLookback: number;
-    thresholds: { accept: number };
   },
 ): TerminationReason | undefined {
   const count = history.iterations.length;
-  if (count === 0) return undefined;
-
-  if (count >= calibration.maxIterations) return "max-iterations";
-
-  // v1.7.15: plateau/converged require count >= plateauLookback (strict).
-  // Do not use Math.min to adapt lookback to shorter history.
-  if (count < calibration.plateauLookback) {
+  if (count === 0) {
     return undefined;
   }
 
-  const recentScores = history.iterations
-    .slice(-calibration.plateauLookback)
-    .map((i) => i.weightedTotal);
-  const maxDelta = Math.max(...recentScores) - Math.min(...recentScores);
-  if (maxDelta < calibration.plateauDelta) {
-    const latestEntry = history.iterations[count - 1];
-    const latestTotal = latestEntry?.weightedTotal ?? 0;
-    return latestTotal >= calibration.thresholds.accept ? "converged" : "plateau";
+  const latestIteration = history.iterations[count - 1];
+  if (latestIteration?.allItemsPass95) {
+    return "converged";
   }
 
-  // v1.7.15: single-iteration accept does NOT produce converged.
-  // Convergence requires iterationCount >= 2 AND plateau condition.
+  if (count >= iterationPolicy.maxIterations) {
+    return "max-iterations";
+  }
+
   return undefined;
+}
+
+function buildScoreSnapshot(iteration: FullHarnessIteration): FullHarnessScoreSnapshot {
+  const axisScores = iteration.reviewerScores.flatMap((reviewer) =>
+    reviewer.scores.map((score) => score.score),
+  );
+  if (axisScores.length === 0) {
+    return {
+      iteration: iteration.iteration,
+      reviewerCount: iteration.reviewerScores.length,
+      axisCount: 0,
+      minScore: null,
+      averageScore: null,
+      allItemsPass95: iteration.allItemsPass95,
+      commitSha: iteration.commitSha,
+    };
+  }
+
+  const total = axisScores.reduce((sum, score) => sum + score, 0);
+  return {
+    iteration: iteration.iteration,
+    reviewerCount: iteration.reviewerScores.length,
+    axisCount: axisScores.length,
+    minScore: Math.min(...axisScores),
+    averageScore: total / axisScores.length,
+    allItemsPass95: iteration.allItemsPass95,
+    commitSha: iteration.commitSha,
+  };
+}
+
+function compareSnapshots(left: FullHarnessScoreSnapshot, right: FullHarnessScoreSnapshot): number {
+  if (left.allItemsPass95 !== right.allItemsPass95) {
+    return left.allItemsPass95 ? 1 : -1;
+  }
+  const leftMin = left.minScore ?? -1;
+  const rightMin = right.minScore ?? -1;
+  if (leftMin !== rightMin) {
+    return leftMin - rightMin;
+  }
+  const leftAverage = left.averageScore ?? -1;
+  const rightAverage = right.averageScore ?? -1;
+  if (leftAverage !== rightAverage) {
+    return leftAverage - rightAverage;
+  }
+  return left.iteration - right.iteration;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }

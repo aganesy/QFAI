@@ -1,7 +1,7 @@
 import path from "node:path";
 
 import type { QfaiConfig } from "../config.js";
-import { readUiContractScreenContracts } from "../prototyping/screenContracts.js";
+import { readUiContractScreenContracts } from "../contracts/screenContracts.js";
 import type { Issue } from "../types.js";
 import { exists, issue } from "./utils.js";
 

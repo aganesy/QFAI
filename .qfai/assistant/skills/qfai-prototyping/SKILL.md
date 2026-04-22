@@ -2,7 +2,7 @@
 name: qfai-prototyping
 title: QFAI Prototyping (Skill-Orchestrated)
 description: "Build a contract-aligned UI prototype, run agent-led visual evaluation, and gate completion through validate/verify."
-argument-hint: "[--auto]"
+argument-hint: "[--mode low-cost|standard|full-harness] [--auto]"
 allowed-tools: [Read, Glob, Write, TodoWrite, Task, Bash]
 roles:
   [
@@ -35,12 +35,18 @@ Do not rely on a CLI entrypoint or package runtime loop.
 - HTML snapshot path: `.qfai/evidence/prototyping/html/<screen-id>.html`
 - If either screenshot or HTML is missing for a declared screen, that screen scores `0` and the run is incomplete.
 - Optional evidence is abolished. Missing mandatory evidence must trigger rerun, not waiver.
+- Mode is selected only from this skill's `--mode` argument. If omitted, default to `standard`.
+- Supported modes and iteration caps are:
+  - `low-cost`: 1 iteration
+  - `standard`: 3 iterations
+  - `full-harness`: 20 iterations
 - DONE is forbidden until `qfai validate --fail-on error` passes and `/qfai-verify` can approve the run.
 - Supported UI prototyping surfaces are `web`, `mobile`, `desktop`, and `mixed`.
 - `cli`, API-only, backend-only, and `ui_bearing: false` classifications are not prototyping execution targets.
 - Canonical screen contracts in `.qfai/contracts/ui/*.yaml` are mandatory.
 - Evaluation is performed by sub-agents; machine checks are limited to schema/evidence validation.
-- L1 and L2 findings must be fixed or explicitly dispositioned before PASS.
+- Evaluation uses 3-layer item scoring only. L1/L2 panels and weightedTotal are forbidden.
+- Evaluation completion is reached when every evaluation reviewer scores every axis at `>=95`, or when the mode iteration cap is reached.
 
 ## Goal
 
@@ -52,8 +58,6 @@ Read and follow these references before execution:
 
 - `.qfai/assistant/skills/qfai-prototyping/references/evidence-requirements.md`
 - `.qfai/assistant/skills/qfai-prototyping/references/iteration-cycle.md`
-- `.qfai/assistant/skills/qfai-prototyping/references/l1-review-guide.md`
-- `.qfai/assistant/skills/qfai-prototyping/references/l2-review-guide.md`
 - `.qfai/assistant/skills/qfai-prototyping/references/design-system-compliance.md`
 - `.qfai/assistant/skills/qfai-prototyping/references/reviewer-gate.md`
 
@@ -66,7 +70,7 @@ Assigning a task to a role not listed for the category is a violation and MUST b
 | ------------------ | ------------------------------------------------------ |
 | UI implementation  | frontend-engineer, product-experience-architect        |
 | Screenshot capture | devops-ci-engineer                                     |
-| Evaluation L1-L2   | product-surface-reviewer, product-experience-architect |
+| Evaluation scoring | product-surface-reviewer, product-experience-architect |
 | Build              | devops-ci-engineer, backend-engineer                   |
 
 Any delegation map entry that assigns a category to an undefined or unlisted role MUST produce a violation finding naming the undefined role and the category.
@@ -79,7 +83,8 @@ Before any code is written, create an execution plan record in the work evidence
 
 Required fields:
 
-- `targetIterations`: integer; minimum 2
+- `mode`: `low-cost | standard | full-harness`
+- `targetIterations`: integer; use the mode cap (1/3/20)
 - `evaluationAxesSource`: ref to `.qfai/contracts/design/evaluation-axes.yaml`
 - `delegationMap`: category-to-role assignments per Delegation Scope Table
 - `plannedAt`: ISO-8601 timestamp
@@ -126,9 +131,9 @@ For every declared screen:
 - capture one HTML snapshot and store it at the canonical HTML path
 - record missing evidence immediately; do not continue as if capture succeeded
 
-### Step 5 — Launch L1 and L2 Evaluators
+### Step 5 — Launch Evaluation Reviewers
 
-Launch L1 and L2 evaluator sub-agents with the full context bundle:
+Launch evaluation reviewer sub-agents with the full context bundle:
 
 - screenshots from Step 4
 - HTML snapshots from Step 4
@@ -138,9 +143,16 @@ Launch L1 and L2 evaluator sub-agents with the full context bundle:
 
 If any required input is missing, stop the evaluation and classify the screen as `0` points with rerun required.
 
+Each evaluation reviewer MUST:
+
+- score every invariant axis from `0..100`
+- score every trend-derived axis from `0..100`
+- score every product-specific axis from `0..100`
+- include rationale and evidence refs for every score
+
 ### Step 6 — Aggregate Findings
 
-Aggregate L1 + L2 findings and classify them as:
+Aggregate reviewer findings and classify them as:
 
 - blocking
 - immediate-fix
@@ -156,9 +168,9 @@ Do not close a finding without fresh evidence.
 
 Repeat Steps 4–7 until:
 
-- at least 2 iterations have completed
 - all declared screens have screenshot + HTML evidence
-- blocking findings are closed or dispositioned
+- every evaluation reviewer has scored every axis
+- either all axis scores are `>=95` across all evaluation reviewers, or the mode iteration cap is reached
 - validate can pass on required schema/evidence gates
 
 ### Step 9 — Validate and Verify
@@ -169,7 +181,7 @@ Repeat Steps 4–7 until:
 
 ## Evaluator Inputs (Mandatory)
 
-When launching any L1 or L2 evaluator sub-agent, all 5 elements MUST be present:
+When launching any evaluation reviewer sub-agent, all 5 elements MUST be present:
 
 1. screenshots
 2. HTML snapshots
@@ -201,7 +213,7 @@ Minimum reviewer responsibilities:
 - verify missing evidence caused rerun rather than waiver
 - verify `qfai validate --fail-on error` completed successfully
 - verify Drift Protocol compliance and alignment with `.qfai/assistant/steering/test-layers.md`
-- treat score/volume heuristics as signals, not gates
+- verify iteration completion used either `all-items-pass-95` or the mode cap
 - return `Result: PASS | REVISE`
 
 ## Sub-agent Delegation (MANDATORY)

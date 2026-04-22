@@ -25,18 +25,15 @@ export const REQUIRED_DISCUSSION_PACK_MARKDOWN_FILES = [
   "99_delta.md",
 ] as const;
 
-export const REQUIRED_DISCUSSION_PACK_SIDE_ARTIFACTS = ["prototyping.yaml"] as const;
+export const REQUIRED_DISCUSSION_PACK_SIDE_ARTIFACTS = [] as const;
 
 /** @deprecated Use REQUIRED_DISCUSSION_PACK_MARKDOWN_FILES instead */
 export const REQUIRED_DISCUSSION_PACK_FILES = REQUIRED_DISCUSSION_PACK_MARKDOWN_FILES;
 
 export type RequiredDiscussionPackMarkdownFile =
   (typeof REQUIRED_DISCUSSION_PACK_MARKDOWN_FILES)[number];
-export type RequiredDiscussionPackSideArtifact =
-  (typeof REQUIRED_DISCUSSION_PACK_SIDE_ARTIFACTS)[number];
-export type RequiredDiscussionPackFile =
-  | RequiredDiscussionPackMarkdownFile
-  | RequiredDiscussionPackSideArtifact;
+export type RequiredDiscussionPackSideArtifact = string;
+export type RequiredDiscussionPackFile = RequiredDiscussionPackMarkdownFile;
 
 type DiscussionPackOqState = {
   disposition: string | null;
@@ -57,9 +54,9 @@ export type DiscussionPackReadiness = {
 };
 
 export function isPrototypingRequiredForDiscussionPack(
-  classification: Pick<UiBearingClassification, "ui_bearing" | "primary_surface"> | null,
+  _classification: Pick<UiBearingClassification, "ui_bearing" | "primary_surface"> | null,
 ): boolean {
-  return !(classification?.ui_bearing === false && classification.primary_surface === "non-ui");
+  return false;
 }
 
 const PLACEHOLDER_LINE_RE =
@@ -88,11 +85,11 @@ export async function inspectLatestDiscussionPack(
       legacyPackNames,
       dangerousPackNames,
       missingFiles: [...REQUIRED_DISCUSSION_PACK_MARKDOWN_FILES],
-      missingSideArtifacts: [...REQUIRED_DISCUSSION_PACK_SIDE_ARTIFACTS],
+      missingSideArtifacts: [],
       incompleteFiles: [],
       blockingOqIds: [],
       deferredWithoutDetails: [],
-      prototypingRequired: true,
+      prototypingRequired: false,
     };
   }
 
@@ -101,8 +98,8 @@ export async function inspectLatestDiscussionPack(
   const incompleteFiles: RequiredDiscussionPackMarkdownFile[] = [];
   let blockingOqIds: string[] = [];
   let deferredWithoutDetails: string[] = [];
-  const classification = await readValidatedClassification(latestPackDir);
-  const prototypingRequired = isPrototypingRequiredForDiscussionPack(classification);
+  await readValidatedClassification(latestPackDir);
+  const prototypingRequired = false;
 
   for (const fileName of REQUIRED_DISCUSSION_PACK_MARKDOWN_FILES) {
     const target = path.join(latestPackDir, fileName);
@@ -116,18 +113,6 @@ export async function inspectLatestDiscussionPack(
     }
     if (fileName === "11_OQ-Register.md") {
       blockingOqIds = extractBlockingOqIds(content);
-    }
-  }
-
-  // Check required side artifacts
-  for (const artifact of REQUIRED_DISCUSSION_PACK_SIDE_ARTIFACTS) {
-    if (!prototypingRequired) {
-      continue;
-    }
-    const artifactPath = path.join(latestPackDir, artifact);
-    const content = await readSafe(artifactPath);
-    if (content === null) {
-      missingSideArtifacts.push(artifact);
     }
   }
 

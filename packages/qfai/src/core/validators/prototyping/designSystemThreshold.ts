@@ -3,7 +3,7 @@
  *
  * Checks the `scoringTrace.designSystemCompliance` score value:
  * - score >= DS_PASS_THRESHOLD  → no finding
- * - score <  DS_PASS_THRESHOLD  → L1 finding with immediate-fix flag
+ * - score <  DS_PASS_THRESHOLD  → threshold finding with immediate-fix flag
  * - 12_design_system.md absent  → check skipped entirely
  *
  * DS_PASS_THRESHOLD = 0.75  (scores >= 0.75 pass, < 0.75 fail)

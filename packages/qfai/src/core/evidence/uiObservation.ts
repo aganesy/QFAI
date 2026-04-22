@@ -15,7 +15,7 @@ import type {
 } from "../harness/panelInputs.js";
 import type { RenderRunnerResult } from "../evidence/types.js";
 import type { BrowserQaFinding, BrowserQaRunResult } from "../browserQa/types.js";
-import type { CanonicalScreenContract } from "./screenContracts.js";
+import type { CanonicalScreenContract } from "../contracts/screenContracts.js";
 import { buildActionCoverage, type ObservedActionControl } from "./actionCoverage.js";
 
 export async function loadCapturedHtml(htmlPath: string): Promise<string | null> {

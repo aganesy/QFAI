@@ -1,7 +1,7 @@
 import type { BrowserQaRunResult } from "../browserQa/types.js";
 import type { RenderRunnerResult } from "../evidence/types.js";
 
-import type { CanonicalScreenContract } from "./screenContracts.js";
+import type { CanonicalScreenContract } from "../contracts/screenContracts.js";
 
 export type ObservedUiRoute = {
   screenId: string;

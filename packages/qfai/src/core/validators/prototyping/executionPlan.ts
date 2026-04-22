@@ -19,9 +19,8 @@ function isRecord(v: unknown): v is Record<string, unknown> {
 function detectMode(raw: unknown): string {
   if (!isRecord(raw)) return "other";
   if (typeof raw.mode === "string") return raw.mode;
-  if (typeof raw.recommended_mode === "string") return raw.recommended_mode;
-  if (isRecord(raw.prototyping) && typeof raw.prototyping.recommended_mode === "string") {
-    return raw.prototyping.recommended_mode;
+  if (isRecord(raw.mode) && typeof raw.mode.effective === "string") {
+    return raw.mode.effective;
   }
   return "other";
 }

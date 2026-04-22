@@ -1,9 +1,9 @@
 /**
  * Canonical prototyping design-system compliance validator (PROT-DS01)
  *
- * Verifies that the latest discussion pack's `prototyping.json`
- * (or `prototyping.yaml`) records a `scoringTrace.designSystemCompliance`
- * score. The severity is condition-sensitive:
+ * Verifies that the latest prototyping evidence records a
+ * `scoringTrace.designSystemCompliance` score. The severity is
+ * condition-sensitive:
  *
  * | UI-bearing | 12_design_system.md | mode           | absent ds score -> |
  * | ---------- | ------------------- | -------------- | ------------------ |
@@ -20,13 +20,10 @@
 import { access, readFile } from "node:fs/promises";
 import path from "node:path";
 
-import { parse as parseYaml } from "yaml";
-
 import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
-import { findLatestDiscussionPackDir } from "../discussionPack.js";
 import type { Issue, IssueSeverity } from "../types.js";
-import { isUiBearingSpec } from "./uixDetection.js";
+import { readUiContractScreenContracts } from "../contracts/screenContracts.js";
 
 const RULE_CODE = "PROT-DS01";
 const RULE_NAME = "prototyping.designSystemCompliance";
@@ -37,7 +34,7 @@ const SUGGESTED_ACTION =
 type PrototypingMode = "full-harness" | "other";
 
 type PrototypingArtifactShape = {
-  source: "json" | "yaml" | "none";
+  source: "json" | "none";
   fileName: string;
   mode: PrototypingMode;
   designSystemCompliancePresent: boolean;
@@ -51,15 +48,9 @@ function detectMode(raw: unknown): PrototypingMode {
   if (!isRecord(raw)) {
     return "other";
   }
-  const topLevel = raw.recommended_mode;
-  if (typeof topLevel === "string" && topLevel === "full-harness") {
+  const topLevel = raw.mode;
+  if (isRecord(topLevel) && topLevel.effective === "full-harness") {
     return "full-harness";
-  }
-  const nested = raw.prototyping;
-  if (isRecord(nested) && typeof nested.recommended_mode === "string") {
-    if (nested.recommended_mode === "full-harness") {
-      return "full-harness";
-    }
   }
   return "other";
 }
@@ -111,9 +102,8 @@ async function readFileSafe(filePath: string): Promise<string | null> {
   }
 }
 
-async function loadPrototypingArtifact(packDir: string): Promise<PrototypingArtifactShape> {
-  const jsonPath = path.join(packDir, "prototyping.json");
-  const yamlPath = path.join(packDir, "prototyping.yaml");
+async function loadPrototypingArtifact(evidenceDir: string): Promise<PrototypingArtifactShape> {
+  const jsonPath = path.join(evidenceDir, "prototyping.json");
 
   const jsonRaw = await readFileSafe(jsonPath);
   if (jsonRaw !== null) {
@@ -126,22 +116,6 @@ async function loadPrototypingArtifact(packDir: string): Promise<PrototypingArti
     return {
       source: "json",
       fileName: "prototyping.json",
-      mode: detectMode(parsed),
-      designSystemCompliancePresent: detectScorePresence(parsed),
-    };
-  }
-
-  const yamlRaw = await readFileSafe(yamlPath);
-  if (yamlRaw !== null) {
-    let parsed: unknown = null;
-    try {
-      parsed = parseYaml(yamlRaw);
-    } catch {
-      parsed = null;
-    }
-    return {
-      source: "yaml",
-      fileName: "prototyping.yaml",
       mode: detectMode(parsed),
       designSystemCompliancePresent: detectScorePresence(parsed),
     };
@@ -175,23 +149,23 @@ export async function validatePrototypingDesignSystem(
   root: string,
   config: QfaiConfig,
 ): Promise<Issue[]> {
-  const discussionRoot = resolvePath(root, config, "discussionDir");
-  const packDir = await findLatestDiscussionPackDir(discussionRoot);
-  if (!packDir) {
+  const screens = await readUiContractScreenContracts(root, config.paths.contractsDir);
+  if (screens.length === 0) {
     return [];
   }
 
-  const uiBearing = await isUiBearingSpec(packDir);
-  if (!uiBearing) {
-    return [];
-  }
-
-  const artifact = await loadPrototypingArtifact(packDir);
+  const evidenceDir = path.join(path.dirname(resolvePath(root, config, "specsDir")), "evidence");
+  const artifact = await loadPrototypingArtifact(evidenceDir);
   if (artifact.designSystemCompliancePresent) {
     return [];
   }
 
-  const designSystemPath = path.join(packDir, "uiux", "12_design_system.md");
+  const designSystemPath = path.join(
+    root,
+    config.paths.contractsDir,
+    "design",
+    "design-system.yaml",
+  );
   const designSystemPresent = await fileExists(designSystemPath);
 
   const severity: IssueSeverity =

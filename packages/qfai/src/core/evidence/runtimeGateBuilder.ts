@@ -3,7 +3,7 @@ import {
   assertConcreteArtifactRef,
   isBrowserQaPassthroughRef,
   normalizeConcreteArtifactRef,
-} from "./pathUtils.js";
+} from "../artifacts/pathUtils.js";
 
 export function buildRuntimeGate(input: { runtimeObservation: RuntimeObservation }):
   | {

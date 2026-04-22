@@ -83,9 +83,7 @@ export async function validateDiscussionPackReadiness(
           "discussionPack.requiredFiles",
           allMissing,
           "change",
-          readiness.prototypingRequired
-            ? `不足ファイルを作成してください: ${allMissing.join(", ")}。latest UI-bearing discussion pack では prototyping.yaml が必須です。`
-            : `不足ファイルを作成してください: ${allMissing.join(", ")}。non-ui discussion pack では prototyping.yaml は不要です。`,
+          `不足ファイルを作成してください: ${allMissing.join(", ")}。`,
         ),
       );
     }

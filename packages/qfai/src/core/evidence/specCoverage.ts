@@ -14,13 +14,13 @@ import {
   isBrowserQaPassthroughRef,
   toConcreteArtifactRef,
   toRepoRelativeArtifactRef,
-} from "./pathUtils.js";
+} from "../artifacts/pathUtils.js";
 
 function toEvidenceRef(repoRoot: string, ref: string): string {
   if (isBrowserQaPassthroughRef(ref)) return ref.trim();
   return toConcreteArtifactRef(repoRoot, ref);
 }
-import { isSpecDeclarationRef } from "./refSemantics.js";
+import { isSpecDeclarationRef } from "../refs/refSemantics.js";
 
 type SpecDeclaration = {
   specId: string;

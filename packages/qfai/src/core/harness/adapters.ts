@@ -26,8 +26,9 @@ export type HarnessCritiqueInput = {
 export type HarnessObservabilityAdapter = {
   recordIteration(data: {
     iteration: number;
-    score: number;
-    decision: string;
+    allItemsPass95: boolean;
+    minScore: number | null;
+    averageScore: number | null;
     terminationReason?: string;
   }): void;
   flush(): Promise<void>;
