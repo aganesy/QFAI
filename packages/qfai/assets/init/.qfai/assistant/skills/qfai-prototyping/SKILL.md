@@ -41,7 +41,7 @@ Do not rely on a CLI entrypoint or package runtime loop.
 - `cli` is not supported and is not an execution target for prototyping.
 - Canonical screen contracts in `.qfai/contracts/ui/*.yaml` are mandatory.
 - Evaluation is performed by sub-agents; machine checks are limited to schema/evidence validation.
-- L1 and L2 findings must be fixed or explicitly dispositioned before PASS.
+- Evaluation reviewer findings must be fixed or explicitly dispositioned before PASS.
 - Shared evidence vocabulary includes `render.json` and `browser-qa.json` alongside screenshot and HTML evidence.
 
 ## Goal
@@ -75,7 +75,7 @@ Evaluation scoring and screenshot capture must use only the allowed roles below.
 | ------------------ | ------------------------------------------------------ |
 | UI implementation  | frontend-engineer, product-experience-architect        |
 | Screenshot capture | devops-ci-engineer                                     |
-| Evaluation L1-L2   | product-surface-reviewer, product-experience-architect |
+| Evaluation review  | product-surface-reviewer, product-experience-architect |
 | Build              | devops-ci-engineer, backend-engineer                   |
 
 Any delegation map entry that assigns a category to an undefined or unlisted role MUST produce a violation finding naming the undefined role and the category.
@@ -135,9 +135,9 @@ For every declared screen:
 - capture one HTML snapshot and store it at the canonical HTML path
 - record missing evidence immediately; do not continue as if capture succeeded
 
-### Step 5 — Launch L1 and L2 Evaluators
+### Step 5 — Launch Evaluation Reviewers
 
-Launch L1 and L2 evaluator sub-agents with the full context bundle:
+Launch evaluation reviewer sub-agents with the full context bundle:
 
 - screenshots from Step 4
 - HTML snapshots from Step 4
@@ -149,7 +149,7 @@ If any required input is missing, stop the evaluation and classify the screen as
 
 ### Step 6 — Aggregate Findings
 
-Aggregate L1 + L2 findings and classify them as:
+Aggregate reviewer findings and classify them as:
 
 - blocking
 - immediate-fix
@@ -199,7 +199,7 @@ Repeat Steps 4–7 until:
 
 ## Evaluator Inputs (Mandatory)
 
-When launching any L1 or L2 evaluator sub-agent, all 5 elements MUST be present:
+When launching any evaluation reviewer sub-agent, all 5 elements MUST be present:
 
 1. screenshots
 2. HTML snapshots
