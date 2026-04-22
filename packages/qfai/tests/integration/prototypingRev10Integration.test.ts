@@ -56,4 +56,20 @@ describe("prototyping evidence integration wiring", () => {
       expect(src).toContain(code);
     }
   });
+
+  it("core/index.ts keeps non-runtime harness helpers on the package root export", async () => {
+    const src = await readFile(srcPath("index.ts"), "utf-8");
+    for (const exportName of [
+      "loadHistory",
+      "appendIteration",
+      "computeTerminationReason",
+      "validateReviewer",
+      "resolveCommitSha",
+      "REVIEWER_PLACEHOLDERS",
+      "FullHarnessHistory",
+      "MeasurementInput",
+    ]) {
+      expect(src).toContain(exportName);
+    }
+  });
 });

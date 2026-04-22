@@ -109,6 +109,69 @@ describe("validateProject (spec pack)", { timeout: 15000 }, () => {
     });
   });
 
+  it("fails when prototyping evidence uses an unsupported surface", async () => {
+    await withProject(async (root) => {
+      const evidencePath = path.join(root, ".qfai", "evidence", "prototyping.json");
+      const evidence = JSON.parse(await readFile(evidencePath, "utf-8")) as Record<string, unknown>;
+      evidence.surface = "cli";
+      await writeFile(evidencePath, `${JSON.stringify(evidence, null, 2)}\n`);
+
+      const result = await validateProject(root);
+      expect(result.issues.some((item) => item.code === "QFAI-PROT-151")).toBe(true);
+    });
+  });
+
+  it("fails when prototyping evidence mode uses unsupported values", async () => {
+    await withProject(async (root) => {
+      const evidencePath = path.join(root, ".qfai", "evidence", "prototyping.json");
+      const evidence = JSON.parse(await readFile(evidencePath, "utf-8")) as Record<string, unknown>;
+      evidence.mode = {
+        requested: "prototype-first",
+        effective: "experimental",
+        source: "mystery-source",
+        rationale: "invalid fixture",
+      };
+      await writeFile(evidencePath, `${JSON.stringify(evidence, null, 2)}\n`);
+
+      const result = await validateProject(root);
+      expect(result.issues.some((item) => item.code === "QFAI-PROT-152")).toBe(true);
+    });
+  });
+
+  it("fails when prototyping evidence contains malformed iteration entries", async () => {
+    await withProject(async (root) => {
+      const evidencePath = path.join(root, ".qfai", "evidence", "prototyping.json");
+      const evidence = JSON.parse(await readFile(evidencePath, "utf-8")) as Record<string, unknown>;
+      evidence.iterations = [
+        {
+          iteration: 1,
+          allItemsPass95: false,
+          reviewerScores: [
+            {
+              reviewerId: "qa-reviewer",
+              scores: [
+                {
+                  axisId: "clarity",
+                  score: 94,
+                  rationale: "nearly complete",
+                  evidenceRefs: [".qfai/evidence/render/orders.desktop.html"],
+                },
+              ],
+            },
+          ],
+        },
+        {
+          iteration: 2,
+          allItemsPass95: false,
+        },
+      ];
+      await writeFile(evidencePath, `${JSON.stringify(evidence, null, 2)}\n`);
+
+      const result = await validateProject(root);
+      expect(result.issues.some((item) => item.code === "QFAI-PROT-299")).toBe(true);
+    });
+  });
+
   it("does not emit delta structure errors when 18_delta.md is missing", async () => {
     await withProject(async (root) => {
       const specDir = resolveSpecPackDir(root);

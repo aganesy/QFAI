@@ -31,6 +31,26 @@ export { BROWSER_QA_PHASES } from "./browserQa/types.js";
 // WS-C: Render evidence runner
 export { runRenderCapture } from "./evidence/renderRunner.js";
 export { writeEvidenceBundles } from "./evidence/bundleWriter.js";
+// Compatibility: keep non-runtime full-harness helpers on the public root export.
+export { loadHistory, appendIteration, computeTerminationReason } from "./harness/history.js";
+export { validateReviewer } from "./harness/reviewerIdentity.js";
+export { resolveCommitSha } from "./harness/gitRevision.js";
+export { REVIEWER_PLACEHOLDERS } from "./harness/types.js";
+export type {
+  FullHarnessAxisScore,
+  FullHarnessReviewerScore,
+  FullHarnessEvidenceRefs,
+  FullHarnessIteration,
+  FinalDecision,
+  ReviewerSignoffStatus,
+  ReviewerLogVerdict,
+  FullHarnessScoreSnapshot,
+  FullHarnessHistory,
+  TerminationReason,
+  MeasurementInput,
+  MeasurementResult,
+  FullHarnessCalibrationRef,
+} from "./harness/types.js";
 // WS-A: Built-in Playwright providers
 export { createPlaywrightRenderAdapter } from "./evidence/playwrightRenderAdapter.js";
 export { createPlaywrightBrowserQaProvider } from "./providers/playwrightBrowserQaProvider.js";

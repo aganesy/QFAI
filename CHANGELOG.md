@@ -8,6 +8,18 @@
 
 - なし
 
+### Changed
+
+- package root export (`qfai`) で full-harness helper の互換公開を維持
+  - restored: `loadHistory`, `appendIteration`, `computeTerminationReason`
+  - restored: `validateReviewer`, `resolveCommitSha`, `REVIEWER_PLACEHOLDERS`
+  - restored: `FullHarnessHistory`, `MeasurementInput` などの harness type export
+
+### Removed
+
+- **BREAKING**: experimental full-harness runtime entrypoints `runFullHarness`, `computeWeightedTotal`, `determineDecision` are no longer exported from the package root
+  - migration: runtime execution is now skill/workflow driven; package consumers should use persisted evidence plus validator/report APIs instead of invoking the removed runtime helpers directly
+
 ## [1.8.0] - 2026-03-29
 
 ### Added

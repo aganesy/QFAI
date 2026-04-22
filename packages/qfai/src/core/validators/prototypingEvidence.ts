@@ -5,35 +5,15 @@ import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
 import { readUiContractScreenContracts } from "../contracts/screenContracts.js";
 import {
-  DEFAULT_PROTOTYPING_MODE,
   PROTOTYPING_MAX_ITERATIONS,
   derivePrototypingObligations,
   isSupportedPrototypingSurface,
   isValidPrototypingMode,
-  isValidPrototypingSurface,
   type PrototypingMode,
 } from "../review/prototyping.js";
 import { isConcreteArtifactRef } from "../artifacts/pathUtils.js";
 import type { Issue } from "../types.js";
 import { issue } from "./utils.js";
-
-type ReviewerScore = {
-  reviewerId: string;
-  role?: string;
-  scores: Array<{
-    axisId: string;
-    score: number;
-    rationale: string;
-    evidenceRefs: string[];
-  }>;
-};
-
-type IterationEntry = {
-  iteration: number;
-  reviewerScores: ReviewerScore[];
-  allItemsPass95: boolean;
-  stopReason?: string;
-};
 
 type PrototypingEvidenceRecord = {
   surface?: unknown;
@@ -52,6 +32,13 @@ type PrototypingEvidenceRecord = {
   runtimeGate?: unknown;
   uiFidelity?: unknown;
 };
+
+const VALID_MODE_SOURCE_SET = new Set([
+  "explicit-request",
+  "system-default",
+  "discussion-recommendation",
+  "cli",
+]);
 
 export async function validatePrototypingEvidence(
   root: string,
@@ -125,7 +112,7 @@ export async function validatePrototypingEvidence(
       : undefined;
 
   const iterations = normalizeIterations(record.iterations);
-  if (iterations.length === 0) {
+  if (!iterations || iterations.length === 0) {
     issues.push(
       issue(
         "QFAI-PROT-280",
@@ -157,12 +144,30 @@ export async function validatePrototypingEvidence(
   }
 
   let foundPass95 = false;
-  for (const [index, iteration] of iterations.entries()) {
+  for (const [index, candidate] of iterations.entries()) {
     const prefix = `iterations[${index}]`;
-    if (!Number.isInteger(iteration.iteration) || iteration.iteration <= 0) {
+    if (!isRecord(candidate)) {
+      issues.push(makeSchemaIssue(root, evidencePath, `${prefix} must be an object.`));
+      continue;
+    }
+
+    const iteration = candidate;
+    const iterationNumber = iteration.iteration;
+    if (
+      typeof iterationNumber !== "number" ||
+      !Number.isInteger(iterationNumber) ||
+      iterationNumber <= 0
+    ) {
       issues.push(
         makeSchemaIssue(root, evidencePath, `${prefix}.iteration must be a positive integer.`),
       );
+    }
+    if (typeof iteration.allItemsPass95 !== "boolean") {
+      issues.push(
+        makeSchemaIssue(root, evidencePath, `${prefix}.allItemsPass95 must be a boolean.`),
+      );
+    } else if (iteration.allItemsPass95) {
+      foundPass95 = true;
     }
     if (!Array.isArray(iteration.reviewerScores) || iteration.reviewerScores.length === 0) {
       issues.push(
@@ -170,12 +175,13 @@ export async function validatePrototypingEvidence(
       );
       continue;
     }
-    if (iteration.allItemsPass95) {
-      foundPass95 = true;
-    }
 
     for (const [reviewerIndex, reviewer] of iteration.reviewerScores.entries()) {
       const reviewerPath = `${prefix}.reviewerScores[${reviewerIndex}]`;
+      if (!isRecord(reviewer)) {
+        issues.push(makeSchemaIssue(root, evidencePath, `${reviewerPath} must be an object.`));
+        continue;
+      }
       if (typeof reviewer.reviewerId !== "string" || reviewer.reviewerId.trim().length === 0) {
         issues.push(
           makeSchemaIssue(root, evidencePath, `${reviewerPath}.reviewerId must be non-empty.`),
@@ -189,6 +195,10 @@ export async function validatePrototypingEvidence(
       }
       for (const [scoreIndex, score] of reviewer.scores.entries()) {
         const scorePath = `${reviewerPath}.scores[${scoreIndex}]`;
+        if (!isRecord(score)) {
+          issues.push(makeSchemaIssue(root, evidencePath, `${scorePath} must be an object.`));
+          continue;
+        }
         if (typeof score.axisId !== "string" || score.axisId.trim().length === 0) {
           issues.push(
             makeSchemaIssue(root, evidencePath, `${scorePath}.axisId must be non-empty.`),
@@ -262,7 +272,7 @@ export async function validatePrototypingEvidence(
 }
 
 function normalizeSurface(value: unknown) {
-  return isValidPrototypingSurface(value) ? value : null;
+  return typeof value === "string" && isSupportedPrototypingSurface(value) ? value : null;
 }
 
 function normalizeMode(value: PrototypingEvidenceRecord["mode"]): {
@@ -274,38 +284,31 @@ function normalizeMode(value: PrototypingEvidenceRecord["mode"]): {
   if (!value || typeof value !== "object") {
     return null;
   }
-  if (typeof value.source !== "string" || value.source.trim().length === 0) {
+  if (typeof value.source !== "string" || !VALID_MODE_SOURCE_SET.has(value.source.trim())) {
     return null;
   }
   if (typeof value.rationale !== "string" || value.rationale.trim().length === 0) {
     return null;
   }
-  const effective = isValidPrototypingMode(value.effective)
-    ? value.effective
-    : DEFAULT_PROTOTYPING_MODE;
-  const requested = isValidPrototypingMode(value.requested) ? value.requested : undefined;
+  if (!isValidPrototypingMode(value.effective)) {
+    return null;
+  }
+  if (value.requested !== undefined && !isValidPrototypingMode(value.requested)) {
+    return null;
+  }
   return {
-    ...(requested ? { requested } : {}),
-    effective,
-    source: value.source,
+    ...(value.requested !== undefined ? { requested: value.requested } : {}),
+    effective: value.effective,
+    source: value.source.trim(),
     rationale: value.rationale.trim(),
   };
 }
 
-function normalizeIterations(value: unknown): IterationEntry[] {
+function normalizeIterations(value: unknown): unknown[] | null {
   if (!Array.isArray(value)) {
-    return [];
+    return null;
   }
-  return value.filter(isIterationEntry);
-}
-
-function isIterationEntry(value: unknown): value is IterationEntry {
-  return (
-    isRecord(value) &&
-    typeof value.iteration === "number" &&
-    Array.isArray(value.reviewerScores) &&
-    typeof value.allItemsPass95 === "boolean"
-  );
+  return value as unknown[];
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
