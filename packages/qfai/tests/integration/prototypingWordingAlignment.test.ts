@@ -4,10 +4,11 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 import {
-  checkModeHeadings,
   checkRoutingConsistency,
   detectAspirationalClaims,
-  hasModeSurfaceMatrix,
+  hasCanonicalSurfaceDocumentation,
+  hasCliSurfaceDocumentation,
+  hasDelegationScopeTable,
 } from "../../src/core/validators/skill/prototypingSkill.js";
 import type { RoutingCondition } from "../../src/core/validators/skill/prototypingSkill.js";
 
@@ -32,20 +33,25 @@ describe("prototyping wording alignment", () => {
     expect(detectAspirationalClaims(content)).toEqual([]);
   });
 
-  it("package asset skill defines the full-harness section and obligation matrix", async () => {
+  it("package asset skill documents canonical surfaces and delegation scope", async () => {
     const content = await readSkillMd();
-    expect(checkModeHeadings(content).present).toEqual(["full-harness"]);
-    expect(checkModeHeadings(content).missing).toHaveLength(0);
-    expect(hasModeSurfaceMatrix(content)).toBe(true);
+    expect(hasCanonicalSurfaceDocumentation(content)).toBe(true);
+    expect(hasCliSurfaceDocumentation(content)).toBe(true);
+    expect(hasDelegationScopeTable(content)).toBe(true);
   });
 
-  it("routing wording matches full-harness-only expectations", async () => {
+  it("routing wording matches current execution-focused expectations", async () => {
     const content = await readSkillMd();
     const conditions: RoutingCondition[] = [
       {
+        mode: "standard",
+        trigger: "default execution",
+        target: "static-first obligations",
+      },
+      {
         mode: "full-harness",
-        trigger: "explicit request",
-        target: "runtime-heavy obligations",
+        trigger: "explicit escalation",
+        target: "review-heavy obligations",
       },
     ];
 

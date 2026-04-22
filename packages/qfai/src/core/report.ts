@@ -2,7 +2,6 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { buildContractIndex } from "./contractIndex.js";
 import { loadConfig, resolvePath, type ConfigLoadResult } from "./config.js";
-import { inspectLatestDiscussionPack } from "./discussionPack.js";
 import { collectSpecEntries, type SpecEntry } from "./specLayout.js";
 import { parseFirstMarkdownTable } from "./specPackParsers.js";
 import {
@@ -22,13 +21,12 @@ import { ID_PREFIXES, extractAllIds, extractIds, type IdPrefix } from "./ids.js"
 import { normalizeValidationResult } from "./normalize.js";
 import { parseSpec } from "./parse/spec.js";
 import {
-  summarizeResolvedMode,
+  resolvePrototypingMode,
   isValidPrototypingMode,
   isValidPrototypingSurface,
   derivePrototypingObligations,
-  inferSurfaceFromRecommendationAndEvidence,
-} from "./prototyping/mode.js";
-import { resolveLatestRecommendationArtifact } from "./prototyping/recommendationArtifact.js";
+  DEFAULT_PROTOTYPING_MODE,
+} from "./review/prototyping.js";
 import { parseScenarioDocument } from "./scenarioModel.js";
 import { classifyLayer, classifySize } from "./testStrategyTags.js";
 import { toRelativePath } from "./paths.js";
@@ -56,7 +54,6 @@ import { validateProject } from "./validate.js";
 import { resolveToolVersion } from "./version.js";
 import { readRenderEvidenceBundle, summarizeRenderEvidence } from "./uiux/renderEvidence.js";
 import { readBrowserQaBundle } from "./browserQa/index.js";
-import type { DiscussionModeRecommendation } from "./prototyping/types.js";
 
 export type ReportSummary = {
   specs: number;
@@ -233,19 +230,12 @@ export type ReportFullHarnessExecution = {
 export type ReportPrototypingSummary = {
   surfaceClassification?: ReportSurfaceClassification;
   fullHarnessExecution?: ReportFullHarnessExecution;
-  recommendationArtifact?: {
-    status: "valid" | "missing" | "invalid" | "no-pack";
-    path?: string;
-  };
   mode: {
     requested?: string;
     effective: string;
     source: string;
     rationale: string;
-    discussionRecommendation?: string;
-    allowedModes?: string[];
     surface: string;
-    sourceSchema?: string;
   };
   evidence: {
     specsCoverageStatus: "complete" | "incomplete";
@@ -276,9 +266,7 @@ export type ReportPrototypingSummary = {
     reviewerId?: string;
     reviewerSignoffStatus?: string;
     scoringTraceCount?: number;
-    latestWeightedTotal?: number;
-    latestL1Total?: number;
-    latestL2Total?: number;
+    latestScoredIteration?: number;
     limitations?: string[];
     reviewerLogsCount?: number;
   };
@@ -1208,27 +1196,6 @@ export function formatReportMarkdown(
   if (!data.prototyping) {
     lines.push("- (none)");
   } else {
-    // D-4: Always output recommendationArtifact status
-    if (data.prototyping.recommendationArtifact) {
-      lines.push("### prototyping.recommendationArtifact");
-      lines.push("");
-      lines.push(`- status: ${data.prototyping.recommendationArtifact.status}`);
-      if (data.prototyping.recommendationArtifact.path) {
-        lines.push(`- path: ${data.prototyping.recommendationArtifact.path}`);
-      }
-      const artifactStatus = data.prototyping.recommendationArtifact.status;
-      if (artifactStatus === "invalid") {
-        lines.push("- action: fix prototyping.yaml schema in the latest discussion pack");
-      } else if (artifactStatus === "missing") {
-        lines.push("- action: add prototyping.yaml to the latest discussion pack");
-      } else if (artifactStatus === "no-pack") {
-        lines.push(
-          "- action: create a discussion pack before relying on discussion-recommendation mode",
-        );
-      }
-      lines.push("");
-    }
-
     // WS-F: Surface classification summary
     if (data.prototyping.surfaceClassification) {
       lines.push("### prototyping.surfaceClassification");
@@ -1273,16 +1240,7 @@ export function formatReportMarkdown(
     lines.push(`- effective: ${data.prototyping.mode.effective}`);
     lines.push(`- source: ${data.prototyping.mode.source}`);
     lines.push(`- rationale: ${data.prototyping.mode.rationale}`);
-    lines.push(
-      `- discussion recommendation: ${data.prototyping.mode.discussionRecommendation ?? "(none)"}`,
-    );
-    if (data.prototyping.mode.allowedModes) {
-      lines.push(`- allowed_modes: ${data.prototyping.mode.allowedModes.join(", ")}`);
-    }
     lines.push(`- surface: ${data.prototyping.mode.surface}`);
-    if (data.prototyping.mode.sourceSchema) {
-      lines.push(`- source schema: ${data.prototyping.mode.sourceSchema}`);
-    }
     lines.push("");
     lines.push("### prototyping.evidence");
     lines.push("");
@@ -1329,10 +1287,8 @@ export function formatReportMarkdown(
         lines.push(`- calibrationRef.packPath: ${fh.calibrationRef.packPath}`);
         lines.push(`- calibrationRef.packVersion: ${fh.calibrationRef.packVersion}`);
       }
-      if (fh.latestWeightedTotal !== undefined) {
-        lines.push(`- latest weightedTotal: ${fh.latestWeightedTotal}`);
-        lines.push(`- latest L1 total: ${fh.latestL1Total ?? "(none)"}`);
-        lines.push(`- latest L2 total: ${fh.latestL2Total ?? "(none)"}`);
+      if (fh.latestScoredIteration !== undefined) {
+        lines.push(`- latest scored iteration: ${fh.latestScoredIteration}`);
       }
       if (fh.scoringTraceCount !== undefined) {
         lines.push(`- scoringTrace: ${fh.scoringTraceCount} entries`);
@@ -1589,10 +1545,10 @@ export function formatReportMarkdown(
       "- render evidence が不足または不完全です。viewport coverage と artifact path を確認してください。",
     );
     lines.push(
-      "- recover: `qfai prototyping run --mode full-harness --reviewer <id>` を実行し、`.qfai/evidence/prototyping.json` / `render.json` / `browser-qa.json` を再生成します。",
+      "- recover: `/qfai-prototyping` を再実行し、宣言された screen ごとの screenshot と HTML snapshot を再取得してください。",
     );
     lines.push(
-      "- why it matters: render evidence は viewport coverage と missing artifact の切り分けに使われ、strict/high profile では gate に影響します。",
+      "- why it matters: screenshot / HTML evidence は validate と verify の gate 判定に使われます。",
     );
   }
   const calibrationIssues = data.issues.filter((item) =>
@@ -1618,7 +1574,7 @@ export function formatReportMarkdown(
   );
   if (fullHarnessCompletenessIssues.length > 0) {
     lines.push(
-      "- fullHarness evidence が不完全です。reviewer / commitSha / weightedTotal / terminationReason / scoringTrace を確認してください。",
+      "- fullHarness evidence が不完全です。reviewer / commitSha / terminationReason / reviewerScores を確認してください。",
     );
   }
   lines.push("- 変更内容・受入観点は `.qfai/specs/*/18_delta.md` に記録します。");
@@ -1711,11 +1667,6 @@ async function collectPrototypingSummary(
   config: ConfigLoadResult["config"],
 ): Promise<ReportPrototypingSummary | undefined> {
   const specsRoot = resolvePath(root, config, "specsDir");
-  const discussionRoot = resolvePath(root, config, "discussionDir");
-  const discussionReadiness = await inspectLatestDiscussionPack(discussionRoot);
-  if (discussionReadiness.latestPackDir && !discussionReadiness.prototypingRequired) {
-    return undefined;
-  }
   const evidenceRoot = path.join(path.dirname(specsRoot), "evidence");
   const evidencePath = path.join(evidenceRoot, "prototyping.json");
   let raw: string;
@@ -1743,74 +1694,16 @@ async function collectPrototypingSummary(
   const rawEffectiveMode =
     typeof mode.effective === "string" && mode.effective.trim().length > 0
       ? mode.effective.trim()
-      : "full-harness";
+      : DEFAULT_PROTOTYPING_MODE;
 
+  const resolvedMode = resolvePrototypingMode(
+    isValidPrototypingMode(mode.requested) ? mode.requested : undefined,
+  );
+  const effectiveMode = isValidPrototypingMode(rawEffectiveMode)
+    ? rawEffectiveMode
+    : resolvedMode.effective;
+  const effectiveSurface = isValidPrototypingSurface(record.surface) ? record.surface : "mixed";
   const warnings: string[] = [];
-
-  // O-2: Track recommendation artifact status for report visibility (artifact-first)
-  const resolvedArtifact = await resolveLatestRecommendationArtifact(root, config);
-  warnings.push(...resolvedArtifact.warnings);
-  const recommendationArtifact: ReportPrototypingSummary["recommendationArtifact"] = {
-    status: resolvedArtifact.status,
-    ...(resolvedArtifact.path ? { path: resolvedArtifact.path } : {}),
-  };
-
-  // Artifact-first: only use canonical artifact recommendation, never embedded fallback
-  const discussionRec =
-    resolvedArtifact.status === "valid" ? resolvedArtifact.recommendation : null;
-
-  const effectiveRec: DiscussionModeRecommendation | undefined = discussionRec ?? undefined;
-
-  const modeSummary = summarizeResolvedMode({
-    explicitMode: isValidPrototypingMode(mode.requested) ? mode.requested : undefined,
-    discussionRecommendation: effectiveRec,
-    ...(isValidPrototypingMode(rawEffectiveMode) ? { defaultMode: rawEffectiveMode } : {}),
-  });
-  warnings.push(...modeSummary.warnings);
-  if (!isValidPrototypingMode(rawEffectiveMode)) {
-    warnings.push(`prototyping evidence effective mode is non-canonical: ${rawEffectiveMode}`);
-  }
-
-  const discussionSummary = effectiveRec
-    ? effectiveRec.rationale
-      ? `${effectiveRec.recommendedMode} (${effectiveRec.rationale})`
-      : effectiveRec.recommendedMode
-    : undefined;
-
-  // WS-3: Use shared surface inference
-  const surface = inferSurfaceFromRecommendationAndEvidence({
-    evidenceSurface: isValidPrototypingSurface(record.surface) ? record.surface : undefined,
-    recommendationSurface: effectiveRec?.surface,
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-    hasUiFidelity: asRecord(record.uiFidelity) !== null,
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-    hasRenderBundle: asRecord(record.renderEvidence) !== null,
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-    hasBrowserQaBundle: asRecord(record.browserQa) !== null,
-    hasUiRoutes:
-      Array.isArray(record.specs) &&
-      record.specs.some(
-        (spec: unknown) =>
-          // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-          asRecord(spec) !== null &&
-          // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-          asRecord(asRecord(spec)?.declared) !== null &&
-          typeof asRecord(asRecord(spec)?.declared)?.uiRoutes === "number" &&
-          (asRecord(asRecord(spec)?.declared)?.uiRoutes as number) > 0,
-      ),
-    hasRuntimeGateUi:
-      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-      asRecord(record.runtimeGate) !== null &&
-      Array.isArray(asRecord(record.runtimeGate)?.ui) &&
-      (asRecord(record.runtimeGate)?.ui as unknown[]).length > 0,
-  });
-  const effectiveSurface = surface ?? effectiveRec?.surface ?? "mixed";
-  if (!surface) {
-    warnings.push(
-      "prototyping surface could not be derived from evidence or recommendation; report defaulted to mixed.",
-    );
-  }
-  const effectiveMode = rawEffectiveMode;
 
   // WS-3: Use shared obligation matrix
   const obligations = derivePrototypingObligations({ surface: effectiveSurface, effectiveMode });
@@ -1837,12 +1730,6 @@ async function collectPrototypingSummary(
   const specsCoverageStatus =
     expectedSpecIds.length > 0 && missingSpecIds.length === 0 ? "complete" : "incomplete";
 
-  // WS-2: Mode precedence mismatch warning
-  if (mode.source === "system-default" && effectiveRec) {
-    warnings.push(
-      `evidence mode source is "system-default" but discussion recommendation exists (${effectiveRec.recommendedMode})`,
-    );
-  }
   const renderSummary = summarizeRenderEvidence(renderBundle);
   const renderCounts = {
     captured: renderSummary.captured,
@@ -1908,19 +1795,15 @@ async function collectPrototypingSummary(
 
   return {
     surfaceClassification,
-    recommendationArtifact,
     mode: {
-      ...(modeSummary.requested ? { requested: modeSummary.requested } : {}),
+      ...(resolvedMode.requested ? { requested: resolvedMode.requested } : {}),
       effective: effectiveMode,
-      source: modeSummary.source,
+      source: typeof mode.source === "string" ? mode.source : resolvedMode.source,
       rationale:
         typeof mode.rationale === "string" && mode.rationale.trim().length > 0
           ? mode.rationale
-          : modeSummary.rationale,
-      ...(discussionSummary ? { discussionRecommendation: discussionSummary } : {}),
-      ...(effectiveRec?.allowedModes ? { allowedModes: effectiveRec.allowedModes } : {}),
+          : resolvedMode.rationale,
       surface: effectiveSurface,
-      ...(effectiveRec?.sourceSchema ? { sourceSchema: effectiveRec.sourceSchema } : {}),
     },
     evidence: {
       specsCoverageStatus,
@@ -1980,14 +1863,8 @@ async function collectPrototypingSummary(
                   const latest = asRecord(scoringTrace[scoringTrace.length - 1]);
                   return {
                     scoringTraceCount: scoringTrace.length,
-                    ...(typeof latest?.weightedTotal === "number"
-                      ? { latestWeightedTotal: latest.weightedTotal }
-                      : {}),
-                    ...(typeof latest?.l1Total === "number"
-                      ? { latestL1Total: latest.l1Total }
-                      : {}),
-                    ...(typeof latest?.l2Total === "number"
-                      ? { latestL2Total: latest.l2Total }
+                    ...(typeof latest?.iteration === "number"
+                      ? { latestScoredIteration: latest.iteration }
                       : {}),
                   };
                 })()

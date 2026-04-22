@@ -28,6 +28,10 @@
 
 ## マイルストーン
 
+- 注記: この表は initiative 履歴を保持するため、旧 `qfai prototyping` / runtime / full-harness / sidecar-first wording を含みうる。
+- 注記: それらは current public contract ではない。active execution contract は spec-0012 / spec-0013 / spec-0014 / `_policies/04_Business-Flow.md` / `_policies/05_Contracts.md` を優先する。
+- 注記: downstream skill の current truth source は `specs + .qfai/contracts/**` であり、discussion direct-read や removed runtime surface は superseded である。
+
 | Milestone                                | Description                                                                                                                                                                                                                                                                                                                                                                                                                                     |
 | ---------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | v1.0 (完了)                              | 基本バリデーション・レポート                                                                                                                                                                                                                                                                                                                                                                                                                    |
@@ -54,10 +58,12 @@
 | v1.7.13 (SDD 進行中)                     | Canonical Sidecar Convergence — canonical/legacy validator separation, prototyping module (mode.ts, recommendationArtifact.ts), prototyping.yaml required side artifact, existence-based precedence, report prototyping observability, config prototyping.calibration, DDS→sidecar-first validator rewrite                                                                                                                                      |
 | v1.7.15 (SDD 進行中)                     | packages/qfai single-PR completion — runtime truthfulness hardening: panel scoring from real evidence, converged>=2 iterations, reviewer/commitSha mandatory, specCoverage from real diffs, uiFidelity observation-only, CalibrationLoader wired, fail-fast on missing evidence, docs/SKILL/README reality sync                                                                                                                                 |
 | v1.7.17 (SDD 進行中)                     | Design Guideline Traceability Hardening — `/qfai-discussion` に design guideline research 必須化、`04_Sources.md` canonical category 拡張、TRD `score_anchors` quantitative proxy 要求、`qfai validate` に warning-first validator 追加                                                                                                                                                                                                         |
-| v1.7.18 (SDD 進行中)                     | Gitignore Managed Block Formalization — `qfai init` の `.gitignore` 管理ブロック追記挙動を spec-0003 に正式登録（REQ-0016/0017 + US/AC/BR/EX/TC + DR-0003-0007）。`.qfai/review/review-*/` を default gitignore 対象に変更し、`QFAI_GITIGNORE_LEGACY_LINES` による旧ブロック自動移行を追加。`_policies/07_Constraints.md` OC-03 を生成成果物横断に拡張                                                                                          |
+| v1.7.18 (SDD 進行中)                     | Skill-First Prototyping Convergence — `/qfai-prototyping` を唯一の public interface に固定し、機械ゲートを `qfai validate` / `/qfai-verify` に移管。declared screen ごとに screenshot + HTML snapshot を mandatory evidence とし、旧 CLI/runtime/mode posture を superseded history に明示整理                                                                                                                                                  |
 | v1.8.0 (実装進行中)                      | Web Research Enhancement — CLI エージェントの Web リサーチ強化（標準パイプライン・MCP 統合・セキュリティ・評価・HITL）                                                                                                                                                                                                                                                                                                                          |
 
-## v1.7.15 Initiative — packages/qfai single-PR completion
+## Historical Appendix: v1.7.15 Initiative — packages/qfai single-PR completion
+
+- この節は historical implementation notes であり、current contract を上書きしない。
 
 Source: SRC-0001 — QFAI v1.7.15 継続開発設計書
 
@@ -83,7 +89,9 @@ Source: SRC-0001 — QFAI v1.7.15 継続開発設計書
 | DOM クローリングの不安定性           | Medium      | Low    | jsdom のバージョン固定・テスト             |
 | 大規模プロジェクトでのパフォーマンス | Low         | Medium | fast-glob のストリーム処理・ファイル数制限 |
 
-### v1.7.15 rev4 — Single-PR Completion (5 Audit Issues)
+### Historical Appendix: v1.7.15 rev4 — Single-PR Completion (5 Audit Issues)
+
+- この節は audit remediation 履歴であり、current public prototyping/runtime contract を定義しない。
 
 **Discussion Pack**: `discussion-20260414195449523`
 **Classification**: non-ui

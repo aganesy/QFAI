@@ -14,7 +14,6 @@ export { validateAtddCodeTraceability } from "./atddCodeTraceability.js";
 export { validateOrphanProhibition } from "./orphanProhibition.js";
 export { validatePrototypingEvidence } from "./prototypingEvidence.js";
 export { validatePrototypingDesignSystem } from "./prototypingDesignSystem.js";
-export { validatePrototypingRecommendation } from "./prototypingRecommendation.js";
 export { validateRequireIndexShape } from "./requireIndex.js";
 export { validateRepositoryHygiene } from "./repositoryHygiene.js";
 export { validateReviewArtifacts } from "./reviewArtifacts.js";
@@ -35,6 +34,8 @@ export { validateDesignFidelity } from "./designFidelity.js";
 export { validateDiscussionDesignHardening } from "./discussionDesignHardening.js";
 export { validateDesignAudit } from "./designAudit.js";
 export { validateDesignSlop } from "./designSlop.js";
+export { validateDesignContractReadiness } from "./designContractReadiness.js";
+export { validateUiEvidenceArtifacts } from "./uiEvidenceArtifacts.js";
 export { isUiBearingSpec } from "./uixDetection.js";
 export {
   validateThreeLayerModel,

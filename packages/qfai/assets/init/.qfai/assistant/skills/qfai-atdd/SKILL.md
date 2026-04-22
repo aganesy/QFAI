@@ -54,6 +54,7 @@ When unsure, read inputs in this order:
   - `.qfai/specs/<spec-id>/05_Examples.md` (EX)
   - `.qfai/specs/<spec-id>/06_Test-Cases.md` (TC)
   - `.qfai/contracts/api/**` (CON-API)
+  - `.qfai/contracts/ui/**` and `.qfai/contracts/design/**` when the target spec is UI-bearing
 - P5: `.qfai/specs/<spec-id>/09_delta.md` (Decision Records; if no spec yet, state "not applicable")
 - P6: legacy artifacts (optional only)
   - `.qfai/specs/<spec-id>/scenario.feature`

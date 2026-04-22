@@ -1,106 +1,150 @@
-// QFAI:SPEC-0012:TC-0012-0014
-// QFAI:SPEC-0012:TC-0012-0015
-// QFAI:SPEC-0012:TC-0012-0016
+import { mkdir, writeFile } from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
+
 import { describe, expect, it } from "vitest";
 
-import {
-  appendIteration,
-  computeTerminationReason,
-  loadHistory,
-} from "../../../src/core/harness/history.js";
+import { loadHistory, validateHistoryConsistency } from "../../../src/core/harness/history.js";
 import type { FullHarnessHistory, FullHarnessIteration } from "../../../src/core/harness/types.js";
 
-function makePanelScore(panel: "L1" | "L2", total: number) {
+function makeIteration(overrides: Partial<FullHarnessIteration> = {}): FullHarnessIteration {
   return {
-    panel,
-    total,
-    axes: [{ axisId: "test", score: total, rationale: "test rationale", evidenceRefs: [] }],
-  };
-}
-
-function makeIteration(overrides?: Partial<FullHarnessIteration>): FullHarnessIteration {
-  return {
-    iteration: 0,
+    iteration: 1,
     commitSha: "abc123",
-    reviewerId: "test-reviewer",
-    timestamp: new Date().toISOString(),
-    changeSummary: ["test change"],
-    limitations: [],
+    timestamp: "2026-04-22T00:00:00.000Z",
+    changeSummary: ["Measured current UI"],
+    limitations: ["none"],
     evidenceRefs: {
-      render: [],
-      browserQa: [],
-      runtimeGate: [],
-      uiFidelity: [],
-      specCoverage: [],
+      render: [".qfai/evidence/render.json#/screens/0"],
+      browserQa: [".qfai/evidence/browser-qa.json#/findings/0"],
+      runtimeGate: [".qfai/evidence/runtime-gate.json#/ui/0"],
+      uiObservation: [".qfai/evidence/render/orders.desktop.html"],
+      specCoverage: [".qfai/evidence/spec-coverage.json#/specs/0"],
+      discussion: [
+        ".qfai/discussion/discussion-20260422000000000/20_design_eval_invariant.md#axis-1",
+      ],
+      screenContract: [".qfai/contracts/ui/screen-contracts.yaml#/screens/orders"],
+      trend: [".qfai/discussion/discussion-20260422000000000/04_Sources.md#trend-scan"],
     },
-    l1: makePanelScore("L1", 0.85),
-    l2: makePanelScore("L2", 0.8),
-    weightedTotal: 0.8,
-    deltaFromPrevious: null,
-    decision: "refine",
+    reviewerScores: [
+      {
+        reviewerId: "reviewer-1",
+        role: "ux-reviewer",
+        scores: [
+          {
+            axisId: "runtime",
+            score: 97,
+            rationale: "runtime is solid",
+            evidenceRefs: [".qfai/evidence/runtime-gate.json#/ui/0"],
+          },
+        ],
+      },
+    ],
+    allItemsPass95: true,
     ...overrides,
   };
 }
 
-describe("Harness Evidence (v1.7.15)", () => {
-  describe("appendIteration accept (TC-0012-0014)", () => {
-    it("appends iteration to history with correct numbering and scoring trace", () => {
-      const iteration = makeIteration({ decision: "accept", weightedTotal: 0.85 });
-      const history = appendIteration(null, iteration);
+describe("harness evidence history", () => {
+  it("returns null when evidence file does not exist", async () => {
+    const history = await loadHistory(path.join(os.tmpdir(), "qfai-missing-history"));
 
-      expect(history.runId).toBeTruthy();
-      expect(history.iterations).toHaveLength(1);
-      expect(history.iterations[0].iteration).toBe(1);
-      expect(history.iterations[0].decision).toBe("accept");
-      expect(history.scoringTrace).toHaveLength(1);
-      expect(history.scoringTrace[0].weightedTotal).toBe(0.85);
-    });
+    expect(history).toBeNull();
   });
 
-  describe("appendIteration max-iterations (TC-0012-0015)", () => {
-    it("computes termination reason as max-iterations when limit is reached", () => {
-      let history: FullHarnessHistory | null = null;
-      for (let i = 0; i < 3; i++) {
-        const iteration = makeIteration({ weightedTotal: 0.5 + i * 0.1 });
-        history = appendIteration(history, iteration);
-      }
+  it("loads the fullHarness history from prototyping.json", async () => {
+    const root = path.join(os.tmpdir(), `qfai-history-${Date.now()}`);
+    await mkdir(root, { recursive: true });
+    const evidenceRoot = path.join(root, ".qfai", "evidence");
+    await mkdir(evidenceRoot, { recursive: true });
 
-      if (!history) throw new Error("Expected history after iterations");
+    const iteration = makeIteration();
+    const json = {
+      fullHarness: {
+        runId: "fh-1",
+        iterationCount: 1,
+        bestIteration: 1,
+        terminationReason: "converged",
+        iterations: [iteration],
+        scoringTrace: [
+          {
+            iteration: 1,
+            reviewerCount: 1,
+            axisCount: 1,
+            minScore: 97,
+            averageScore: 97,
+            allItemsPass95: true,
+            commitSha: "abc123",
+          },
+        ],
+      },
+    };
+    await writeFile(
+      path.join(evidenceRoot, "prototyping.json"),
+      JSON.stringify(json, null, 2),
+      "utf-8",
+    );
 
-      const reason = computeTerminationReason(history, {
-        maxIterations: 3,
-        plateauDelta: 0.02,
-        plateauLookback: 3,
-        thresholds: { accept: 0.8 },
-      });
+    const history = await loadHistory(root);
 
-      expect(reason).toBe("max-iterations");
-      expect(history.iterations).toHaveLength(3);
-    });
+    expect(history).not.toBeNull();
+    expect(history?.runId).toBe("fh-1");
+    expect(history?.bestIteration).toBe(1);
+    expect(history?.terminationReason).toBe("converged");
+    expect(history?.scoringTrace[0]?.allItemsPass95).toBe(true);
+  });
+});
+
+describe("validateHistoryConsistency", () => {
+  it("returns no errors for a structurally complete history", () => {
+    const history: FullHarnessHistory = {
+      runId: "fh-1",
+      iterations: [makeIteration()],
+      bestIteration: 1,
+      scoringTrace: [
+        {
+          iteration: 1,
+          reviewerCount: 1,
+          axisCount: 1,
+          minScore: 97,
+          averageScore: 97,
+          allItemsPass95: true,
+          commitSha: "abc123",
+        },
+      ],
+    };
+
+    expect(validateHistoryConsistency(history, 1)).toEqual([]);
   });
 
-  describe("scoring trace generation (TC-0012-0016)", () => {
-    it("generates scoring trace with delta from previous for multiple iterations", () => {
-      const iter1 = makeIteration({ weightedTotal: 0.6, decision: "refine" });
-      const iter2 = makeIteration({ weightedTotal: 0.75, decision: "refine" });
-      const iter3 = makeIteration({ weightedTotal: 0.85, decision: "accept" });
+  it("reports empty evidence categories", () => {
+    const history: FullHarnessHistory = {
+      runId: "fh-1",
+      iterations: [
+        makeIteration({
+          evidenceRefs: {
+            render: [],
+            browserQa: [".qfai/evidence/browser-qa.json#/findings/0"],
+            runtimeGate: [".qfai/evidence/runtime-gate.json#/ui/0"],
+            uiObservation: [".qfai/evidence/render/orders.desktop.html"],
+            specCoverage: [".qfai/evidence/spec-coverage.json#/specs/0"],
+            discussion: [
+              ".qfai/discussion/discussion-20260422000000000/20_design_eval_invariant.md#axis-1",
+            ],
+            screenContract: [".qfai/contracts/ui/screen-contracts.yaml#/screens/orders"],
+            trend: [".qfai/discussion/discussion-20260422000000000/04_Sources.md#trend-scan"],
+          },
+        }),
+      ],
+      bestIteration: 1,
+      scoringTrace: [],
+    };
 
-      let history = appendIteration(null, iter1);
-      history = appendIteration(history, iter2);
-      history = appendIteration(history, iter3);
-
-      expect(history.scoringTrace).toHaveLength(3);
-      expect(history.scoringTrace[0].deltaFromPrevious).toBeNull();
-      expect(history.scoringTrace[1].deltaFromPrevious).toBeCloseTo(0.15);
-      expect(history.scoringTrace[2].deltaFromPrevious).toBeCloseTo(0.1);
-      expect(history.bestIteration).toBe(3);
-    });
-  });
-
-  describe("loadHistory returns null for missing file", () => {
-    it("returns null when evidence file does not exist", async () => {
-      const history = await loadHistory("/nonexistent/path");
-      expect(history).toBeNull();
-    });
+    expect(validateHistoryConsistency(history)).toContain(
+      "History consistency violation: iterations.length (1) !== scoringTrace.length (0)",
+    );
+    expect(validateHistoryConsistency(history)).toContain(
+      "Iteration 1 has empty evidenceRefs categories",
+    );
   });
 });

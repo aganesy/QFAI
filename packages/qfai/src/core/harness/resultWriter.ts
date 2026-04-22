@@ -14,9 +14,12 @@ export type FullHarnessOutput = {
   iterations: number;
   terminationReason: string;
   evaluationSummary: {
-    finalScore: number;
+    allItemsPass95: boolean;
     bestIteration: number;
-    decision: string;
+    minScore: number | null;
+    averageScore: number | null;
+    reviewerCount: number;
+    axisCount: number;
   };
   evidenceSummary: {
     renderCaptured: number;
@@ -29,8 +32,9 @@ export type FullHarnessOutput = {
     phasesSkipped: number;
     totalFindings: number;
   };
-  calibrationSummary: {
-    thresholds: { accept: number; refine: number };
+  iterationBudget: {
+    maxIterations: number;
+    remainingIterations: number;
   };
   observabilityRefs: string[];
 };
@@ -39,7 +43,7 @@ export function buildFullHarnessResult(
   history: FullHarnessHistory,
   renderResults: RenderRunnerResult[],
   browserQaResults: BrowserQaRunResult[],
-  thresholds: { accept: number; refine: number },
+  maxIterations: number,
   terminationReason?: TerminationReason,
   observabilityRefs: string[] = [],
 ): FullHarnessOutput {
@@ -65,18 +69,19 @@ export function buildFullHarnessResult(
     }
   }
 
-  const lastIteration = history.iterations[history.iterations.length - 1];
-  const lastDecision = lastIteration ? lastIteration.decision : "unknown";
-  const finalScore = lastIteration ? lastIteration.weightedTotal : 0;
+  const latestSnapshot = history.scoringTrace[history.scoringTrace.length - 1];
 
   return {
     mode: "full-harness",
     iterations: history.iterations.length,
     terminationReason: terminationReason ?? "in-progress",
     evaluationSummary: {
-      finalScore,
+      allItemsPass95: latestSnapshot?.allItemsPass95 ?? false,
       bestIteration: history.bestIteration,
-      decision: lastDecision,
+      minScore: latestSnapshot?.minScore ?? null,
+      averageScore: latestSnapshot?.averageScore ?? null,
+      reviewerCount: latestSnapshot?.reviewerCount ?? 0,
+      axisCount: latestSnapshot?.axisCount ?? 0,
     },
     evidenceSummary: {
       renderCaptured: renderCounts.captured,
@@ -89,8 +94,9 @@ export function buildFullHarnessResult(
       phasesSkipped,
       totalFindings,
     },
-    calibrationSummary: {
-      thresholds,
+    iterationBudget: {
+      maxIterations,
+      remainingIterations: Math.max(0, maxIterations - history.iterations.length),
     },
     observabilityRefs,
   };

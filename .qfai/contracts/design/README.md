@@ -1,32 +1,36 @@
-# contracts/design (Design Token YAML) — Optional Supporting Input
+# contracts/design (Design Execution Inputs)
 
 ## Purpose
 
-Provide a designated location for design token files (`design-tokens*.yaml`) that serve as **optional supporting input** for UI review, validation, and implementation.
+Provide the downstream execution truth for design-system and design-evaluation inputs that `/qfai-sdd` normalizes from UI-bearing discussion packs.
 
-**Primary truth** for UI/UX definitions resides in the discussion sidecar artifacts (`discussion-*/uiux/*`). Design token files in this directory supplement — but never override — those primary artifacts.
+These files are version-managed and may be read directly by `/qfai-prototyping`, `/qfai-implement`, `/qfai-atdd`, and `qfai validate`.
 
 ## Status After Init
 
-After `qfai init`, this directory contains only this README. This is the normal initial state. Design token files are created later when the project needs explicit token definitions.
+After `qfai init`, this directory contains only this README. This is the normal initial state. `/qfai-sdd` creates design files when a UI-bearing capability is normalized for downstream execution.
 
-The absence of design token files is **not** a defect and does not affect the canonical discussion or contracts flow.
+The absence of design files is not a defect for non-UI capabilities. For UI-bearing capabilities, missing required design files should be resolved in `/qfai-sdd`.
 
 ## When Design Tokens Are Used
 
-Design token files are consumed **only when they exist**:
+Typical files:
 
-- `qfai validate` runs token-level checks (schema, circular references, platform coverage) if token files are present
-- `ui-definition-protocol.md` read-order includes this path as a conditional step
-- Prototyping and review skills reference tokens as supplementary color/spacing/typography values
+- `design-system.yaml` — normalized checklist for color, typography, spacing, radius, shadow, and do/don't rules
+- `evaluation-axes.yaml` — normalized invariant / trend-derived / product-specific / aggregate axes
+- `anchor-selection.yaml` — selected anchor and adoption rationale needed by downstream review
+- `design-tokens*.yaml` — optional token definitions
 
 ## Expected File Names
 
-- `design-tokens.yaml` — primary token definitions (primitive → semantic → component)
-- `design-tokens.mobile.yaml` — mobile-specific overrides (optional)
+- `design-system.yaml`
+- `evaluation-axes.yaml`
+- `anchor-selection.yaml`
+- `design-tokens.yaml`
+- `design-tokens.mobile.yaml`
 
 ## What This Directory Is NOT
 
-- **Not** the primary truth for screen layout or component hierarchy
-- **Not** a required baseline for discussion or spec authoring
-- **Not** a substitute for sidecar artifacts or UI contracts
+- **Not** a replacement for specs or UI contracts
+- **Not** an excuse for downstream skills to read discussion-side artifacts directly
+- **Not** limited to optional token files only

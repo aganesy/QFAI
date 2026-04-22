@@ -10,7 +10,7 @@ import { describe, expect, it } from "vitest";
 
 const packageRoot = process.cwd();
 
-describe("E2E: prototyping SKILL.md defines full-harness-only contract", () => {
+describe("E2E: prototyping SKILL.md defines mode-aware contract", () => {
   const skillPath = path.join(
     packageRoot,
     "assets",
@@ -48,6 +48,6 @@ describe("E2E: prototyping SKILL.md defines full-harness-only contract", () => {
     const c = await load();
     expect(c).toMatch(/## Required process/i);
     expect(c).toContain("qfai validate --fail-on error");
-    expect(c).toContain("qfai prototyping run --mode full-harness --reviewer <id>");
+    expect(c).toMatch(/Launch (L1 and L2 Evaluators|Evaluation Reviewers)/);
   });
 });

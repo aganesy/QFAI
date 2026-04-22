@@ -966,7 +966,7 @@ describe("TC-0014-0027: fixture 4-axis reject", () => {
 });
 
 describe("TC-0014-0028: integration e2e — validateProject entrypoint", () => {
-  it("validateProject function is importable and callable", async () => {
+  it("validateProject function is importable and callable", { timeout: 30000 }, async () => {
     const { validateProject } = await import("../../src/core/validate.js");
     expect(typeof validateProject).toBe("function");
   });

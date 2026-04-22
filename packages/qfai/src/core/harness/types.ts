@@ -1,47 +1,44 @@
 /**
- * Full-harness mode types — v1.7.15 measurement-driven model.
+ * Full-harness mode types.
  *
- * Each iteration is a real observation of code state.
- * No planner/generator/evaluator loop.
+ * Full-harness now follows the reviewerScores/allItemsPass95 evidence schema
+ * used by prototyping.json. Legacy weighted totals are intentionally excluded.
  */
 
-import type { Decision } from "../calibration/types.js";
+export type FullHarnessAxisScore = {
+  axisId: string;
+  score: number;
+  rationale: string;
+  evidenceRefs: string[];
+};
 
-export type FullHarnessPanelScore = {
-  panel: "L1" | "L2";
-  total: number;
-  degradedScoring?: boolean;
-  axes: Array<{
-    axisId: string;
-    score: number;
-    rationale: string;
-    evidenceRefs: string[];
-  }>;
+export type FullHarnessReviewerScore = {
+  reviewerId: string;
+  role?: string;
+  scores: FullHarnessAxisScore[];
+};
+
+export type FullHarnessEvidenceRefs = {
+  render: string[];
+  browserQa: string[];
+  runtimeGate: string[];
+  uiObservation: string[];
+  specCoverage: string[];
+  discussion: string[];
+  screenContract: string[];
+  trend: string[];
 };
 
 export type FullHarnessIteration = {
   iteration: number;
   commitSha: string;
-  reviewerId: string;
   timestamp: string;
   changeSummary: string[];
   limitations: string[];
-  // Breaking contract from v1.7.15 onward: all evidence categories are mandatory.
-  evidenceRefs: {
-    render: string[];
-    browserQa: string[];
-    runtimeGate: string[];
-    uiObservation: string[];
-    specCoverage: string[];
-    discussion: string[];
-    screenContract: string[];
-    trend: string[];
-  };
-  l1: FullHarnessPanelScore;
-  l2: FullHarnessPanelScore;
-  weightedTotal: number;
-  deltaFromPrevious: number | null;
-  decision: Decision;
+  evidenceRefs: FullHarnessEvidenceRefs;
+  reviewerScores: FullHarnessReviewerScore[];
+  allItemsPass95: boolean;
+  stopReason?: string;
 };
 
 export type TerminationReason = "converged" | "max-iterations" | "plateau" | "manual-stop";
@@ -49,20 +46,22 @@ export type FinalDecision = "pending" | "accepted" | "rejected" | "abandoned";
 export type ReviewerSignoffStatus = "pending" | "approved" | "rejected" | "abandoned";
 export type ReviewerLogVerdict = "approve" | "revise" | "reject" | "abandon";
 
+export type FullHarnessScoreSnapshot = {
+  iteration: number;
+  reviewerCount: number;
+  axisCount: number;
+  minScore: number | null;
+  averageScore: number | null;
+  allItemsPass95: boolean;
+  commitSha: string;
+};
+
 export type FullHarnessHistory = {
   runId: string;
   iterations: FullHarnessIteration[];
   bestIteration: number;
   terminationReason?: TerminationReason;
-  scoringTrace: Array<{
-    iteration: number;
-    l1Total: number;
-    l2Total: number;
-    weightedTotal: number;
-    deltaFromPrevious: number | null;
-    decision: Decision;
-    commitSha: string;
-  }>;
+  scoringTrace: FullHarnessScoreSnapshot[];
 };
 
 export type MeasurementInput = {
@@ -70,12 +69,8 @@ export type MeasurementInput = {
   reviewer: string;
   changeSummary: string[];
   limitations: string[];
-  calibration: {
-    packPath: string;
-    thresholds: { accept: number; refine: number };
+  iterationPolicy: {
     maxIterations: number;
-    plateauDelta: number;
-    plateauLookback: number;
   };
   renderRefs: string[];
   browserQaRefs: string[];
@@ -86,8 +81,9 @@ export type MeasurementInput = {
   screenContractRefs: string[];
   discussionDirRelative?: string;
   trendRefs: string[];
-  l1: FullHarnessPanelScore;
-  l2: FullHarnessPanelScore;
+  reviewerScores: FullHarnessReviewerScore[];
+  allItemsPass95: boolean;
+  stopReason?: string;
 };
 
 export type MeasurementResult = {

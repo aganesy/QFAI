@@ -190,9 +190,10 @@ Follow `.qfai/assistant/instructions/shared-skill-operating-baseline.md#delta-re
 - Use only skill-local templates under `.qfai/assistant/skills/qfai-sdd/templates/`, including `templates/contracts`, `templates/report`, and `templates/specs`.
 - Always write `.qfai/report/preflight_summary.md` before generating shared/spec artifacts.
 - Contracts are contract-first mandatory outputs in this skill.
+- UI-bearing targets must be normalized into downstream-ready contracts under `.qfai/contracts/design/**` and `.qfai/contracts/ui/**`.
 - `_policies/05_Contracts.md` must include a Contract Index.
 - `/qfai-sdd` must stop when discussion-pack is missing, incomplete, or has blocking OQ.
-- Discussion-pack preflight is mandatory, including classification-aware `prototyping.yaml` validation.
+- Discussion-pack preflight is mandatory, including contract-first checks that UI-bearing targets are normalized into required design/ui contracts before downstream generation.
 - Reviewer routing is fixed by `.qfai/assistant/steering/agent-routing.yml` and `.qfai/assistant/steering/review-profiles.yml`.
 - RCP wording must be sourced from `.qfai/assistant/skills/qfai-sdd/references/rcp_footer.md`.
 - `_policies/04_Business-Flow.md` must be Markdown and include Mermaid `flowchart` or `sequenceDiagram`.
@@ -221,6 +222,11 @@ Create or update layered SDD artifacts in one run so downstream execution phases
 - Shared `_policies/01..11` layered files
 - Target `spec-XXXX/01..10` layered files
 - Updated contracts under `.qfai/contracts/**`
+- UI-bearing normalized contracts:
+  - `.qfai/contracts/design/design-system.yaml`
+  - `.qfai/contracts/design/evaluation-axes.yaml`
+  - `.qfai/contracts/design/anchor-selection.yaml`
+  - `.qfai/contracts/ui/*.yaml`
 - `.qfai/report/preflight_summary.md`
 - Evidence file: `.qfai/evidence/sdd-spec-XXXX.md`
 
@@ -232,14 +238,15 @@ The canonical file set is defined by skill templates under `.qfai/assistant/skil
 2. Analyze repository context, existing artifacts, constraints, and open decisions.
 3. Write `.qfai/report/preflight_summary.md`.
 4. Execute Phase 0 (Contracts-first).
-5. Execute Phase 1 (Outline).
-6. Ensure `_policies/11_Slice-Policy.md` exists and matches the current slicing model.
-7. Execute Phase 2 (Slice) and pass slice gate for each target spec.
-8. Execute Phase 3 (Plan finalize) after at least one slice gate passes.
-9. Execute Phase 4 (Delta update).
-10. Run `qfai validate --fail-on error --format github | tee .qfai/report/validate.log`.
-11. Review `.qfai/report/specs-coverage/spec-*.md` and triage density-smell warnings.
-12. If validate fails, fix source-layer artifacts and repeat until `error=0`.
+5. For UI-bearing targets, normalize discussion UIUX artifacts into design/ui contracts for downstream execution.
+6. Execute Phase 1 (Outline).
+7. Ensure `_policies/11_Slice-Policy.md` exists and matches the current slicing model.
+8. Execute Phase 2 (Slice) and pass slice gate for each target spec.
+9. Execute Phase 3 (Plan finalize) after at least one slice gate passes.
+10. Execute Phase 4 (Delta update).
+11. Run `qfai validate --fail-on error --format github | tee .qfai/report/validate.log`.
+12. Review `.qfai/report/specs-coverage/spec-*.md` and triage density-smell warnings.
+13. If validate fails, fix source-layer artifacts and repeat until `error=0`.
 
 Use:
 

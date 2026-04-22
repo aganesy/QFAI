@@ -267,7 +267,7 @@ const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-DPACK-001":
     "A latest discussion-pack directory exists under `.qfai/discussion/discussion-<timestamp>/`.",
   "QFAI-DPACK-002":
-    "The latest discussion-pack contains 15 required markdown files, and prototyping.yaml is required only when the latest pack is ui_bearing=true.",
+    "The latest discussion-pack contains the required markdown files; no prototyping sidecar artifact is required.",
   "QFAI-DPACK-003": "The latest discussion-pack files contain minimum substantive content.",
   "QFAI-DPACK-004":
     "No open OQ remains in `11_OQ-Register.md` (`Disposition: open` blocks discussion completion).",
@@ -297,11 +297,11 @@ const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "HTML+CSS visual mock is an optional fallback aid and should only be referenced when intentionally selected. Sidecar artifacts (uiux/) are the primary UI definition.",
   "QFAI-PROT-101":
     "Both prototyping evidence files exist and prototyping.json follows the required schema.",
-  "QFAI-PROT-150": "prototyping.json is missing the canonical mode block.",
-  "QFAI-PROT-151": "mode.effective must be full-harness.",
+  "QFAI-PROT-150": "prototyping.json exists at the canonical evidence path for UI prototyping.",
+  "QFAI-PROT-151": "surface must be one of web|mobile|desktop|mixed.",
   "QFAI-PROT-152":
-    "mode.source must be explicit-request|discussion-recommendation|system-default and rationale must be non-empty.",
-  "QFAI-PROT-171": "surface field must be one of: web, mobile, desktop, cli, mixed.",
+    "mode.requested/mode.effective/mode.source/mode.rationale must follow the current prototyping evidence schema.",
+  "QFAI-PROT-171": "surface field must be one of: web, mobile, desktop, mixed.",
   "QFAI-PROT-172":
     "surface/mode obligation matrix mismatch — required evidence bundles are missing.",
   "QFAI-PROT-173": "required render evidence bundle is missing.",
@@ -315,14 +315,15 @@ const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-PROT-112":
     "Per-spec UI checks satisfy declared route counts and leave no unresolved UI routes.",
   "QFAI-PROT-153":
-    "prototyping.yaml invalid; canonical namespaced prototyping block is required, top-level recommendation keys are not supported, and semantic mismatch (recommended_mode not in allowed_modes) is invalid.",
-  "QFAI-PROT-154": "prototyping.yaml allowed_modes must include recommended_mode.",
-  "QFAI-PROT-155": "prototyping.yaml requires allowed_modes field.",
-  "QFAI-PROT-156": "prototyping.yaml requires surface field.",
-  "QFAI-PROT-234": "discussion recommendation exists but evidence mode.source is system-default.",
+    "iteration reviewer scores are malformed; every evaluation reviewer must score every axis with 0..100 and evidence refs.",
+  "QFAI-PROT-154": "iteration count exceeds the configured maximum for the effective mode.",
+  "QFAI-PROT-155":
+    "iteration stopReason is invalid; must be threshold-reached|max-iterations|manual-stop.",
+  "QFAI-PROT-156": "allItemsPass95 must be true when stopReason is threshold-reached.",
+  "QFAI-PROT-234": "unused legacy prototyping recommendation fields are not supported.",
   "QFAI-PROT-235":
-    "evidence mode.source is discussion-recommendation but recommendation artifact is missing or invalid.",
-  "QFAI-PROT-236": "explicit requested mode is not allowed by discussion allowed_modes.",
+    "legacy discussion recommendation fields are not supported in prototyping evidence.",
+  "QFAI-PROT-236": "explicit requested mode is invalid.",
   "QFAI-PROT-237":
     "interactive uiFidelity requires observed mockPaths issue ledger entries (fail|finding).",
   "QFAI-PROT-238":
@@ -351,7 +352,7 @@ const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "browser QA bundle exists but executed=false for full-harness ui-bearing project.",
   "QFAI-PROT-264": "fullHarness reviewer signoff is incomplete (missing reviewer or timestamp).",
   "QFAI-PROT-265": "full-harness calibration pack could not be resolved from packPath.",
-  "QFAI-PROT-266": "full-harness evidence exists but scoring trace is empty.",
+  "QFAI-PROT-266": "full-harness evidence exists but iteration reviewer scores are empty.",
   "QFAI-PROT-273": "browser QA bundle schema is invalid (missing or malformed browserQa block).",
   "QFAI-PROT-274":
     "browser QA executed/status contradiction (e.g. executed=true but status!=completed).",
@@ -374,7 +375,8 @@ const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-PROT-293": "fullHarness.iterationCount exceeds configured maxIterations.",
   "QFAI-PROT-294": "fullHarness.scoringTrace shows no improvement across iterations.",
   "QFAI-PROT-295": "fullHarness reviewer is a placeholder value.",
-  "QFAI-PROT-296": "fullHarness iteration weightedTotal does not equal min(l1.total, l2.total).",
+  "QFAI-PROT-296":
+    "fullHarness legacy weighted score fields are deprecated and should not be used for completion decisions.",
   "QFAI-PROT-297": "fullHarness iteration commitSha is required.",
   "QFAI-PROT-298": "fullHarness.limitations is required.",
   "QFAI-PROT-299": "fullHarness.status is completed but terminationReason is missing.",
@@ -410,6 +412,24 @@ const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-PROT-329": "fullHarness.status is completed but reviewerSignoff.timestamp is missing.",
   "QFAI-PROT-330":
     "uiFidelity screen actionsWired exceeds actionsDeclared (expected.actions). actionsWired must not exceed the number of declared actions.",
+  "QFAI-UIE-001":
+    "Every declared screen declared in `.qfai/contracts/ui/*.yaml` has a screenshot evidence file at `.qfai/evidence/prototyping/screenshots/<screen-id>.png`.",
+  "QFAI-UIE-002":
+    "Every declared screen declared in `.qfai/contracts/ui/*.yaml` has an HTML snapshot evidence file at `.qfai/evidence/prototyping/html/<screen-id>.html`.",
+  "QFAI-UIE-003":
+    "Every declared screen id used for prototyping evidence filenames must be path-safe (`[A-Za-z0-9._-]+`).",
+  "QFAI-DCON-001":
+    "UI-bearing downstream execution requires `.qfai/contracts/design/design-system.yaml`, `evaluation-axes.yaml`, and `anchor-selection.yaml` when UI contracts exist.",
+  "QFAI-DCON-002":
+    "design-system.yaml must define checklist entries for color, typography, spacing, border_radius, shadow, and dos_and_donts.",
+  "QFAI-DCON-003":
+    "evaluation-axes.yaml must define invariant_axes, trend_derived_axes, and product_specific_axes arrays.",
+  "QFAI-DCON-004": "evaluation-axes.yaml must define aggregate_rules.",
+  "QFAI-DCON-005":
+    "anchor-selection.yaml must define selected_anchor.option_id, title, and rationale.",
+  "QFAI-DCON-006": "design-system.yaml must parse as an object-shaped YAML document.",
+  "QFAI-DCON-007": "evaluation-axes.yaml must parse as an object-shaped YAML document.",
+  "QFAI-DCON-008": "anchor-selection.yaml must parse as an object-shaped YAML document.",
   "QFAI-CONTRACT-030":
     "Contract index references must match declared contract IDs in .qfai/contracts/**.",
 };

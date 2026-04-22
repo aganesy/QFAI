@@ -1,8 +1,8 @@
 ---
 name: qfai-prototyping
-title: QFAI Prototyping (Full-Harness Only)
-description: "Build a contract-aligned UI prototype and block completion until full-harness evidence and validate gate pass."
-argument-hint: "[--auto]"
+title: QFAI Prototyping (Skill-Orchestrated)
+description: "Build a contract-aligned UI prototype, run agent-led visual evaluation, and gate completion through validate/verify."
+argument-hint: "[--mode low-cost|standard|full-harness] [--auto]"
 allowed-tools: [Read, Glob, Write, TodoWrite, Task, Bash]
 roles:
   [
@@ -24,75 +24,42 @@ mode: execution-focused
 
 [DRIFT-PROTOCOL:MANDATORY]
 
-This skill is static-first for planning and file review, but the package execution contract is `full-harness` only.
-Do not default or downgrade prototyping modes.
+This skill owns prototyping orchestration directly.
+Do not rely on a CLI entrypoint or package runtime loop.
 
 ## CRITICAL CONSTRAINTS (Read First)
 
 - Scope is all specs from `.qfai/specs/spec-*`.
-- Evidence is mandatory in markdown + json under `.qfai/evidence/`.
-- DONE is forbidden until prototyping evidence, reviewer gate, and `qfai validate --fail-on error` pass.
-- Supported prototyping surfaces are `web`, `mobile`, `desktop`, and `mixed`.
+- Screenshot evidence and HTML snapshot evidence are mandatory.
+- Screenshot evidence path: `.qfai/evidence/prototyping/screenshots/<screen-id>.png`
+- HTML snapshot path: `.qfai/evidence/prototyping/html/<screen-id>.html`
+- If either screenshot or HTML is missing for a declared screen, that screen scores `0` and the run is incomplete.
+- Optional evidence is abolished. Missing mandatory evidence must trigger rerun, not waiver.
+- Mode is selected only from this skill's `--mode` argument. If omitted, default to `standard`.
+- Supported modes and iteration caps are:
+  - `low-cost`: 1 iteration
+  - `standard`: 3 iterations
+  - `full-harness`: 20 iterations
+- DONE is forbidden until `qfai validate --fail-on error` passes and `/qfai-verify` can approve the run.
+- Supported UI prototyping surfaces are `web`, `mobile`, `desktop`, and `mixed`.
 - `cli`, API-only, backend-only, and `ui_bearing: false` classifications are not prototyping execution targets.
-- Canonical screen contracts in `discussion-*/uiux/40_screen_contracts.md` are mandatory.
-- Browser QA, render evidence, runtimeGate, uiFidelity, specCoverage, and `fullHarness` are mandatory.
-- `uiFidelity` is screen-level and must be built from real render/browser evidence.
-- `mockPaths` is a negative-only issue ledger with `fail|finding` only.
-- Calibration pack is the SSOT. Runtime and validator both resolve from `calibrationRef.packPath`.
-- `--reviewer <id>` is mandatory and placeholder reviewer ids are rejected.
-- L1 and L2 findings must be fixed or dispositioned before PASS.
+- Canonical screen contracts in `.qfai/contracts/ui/*.yaml` are mandatory.
+- Evaluation is performed by sub-agents; machine checks are limited to schema/evidence validation.
+- Evaluation uses 3-layer item scoring only. L1/L2 panels and weightedTotal are forbidden.
+- Evaluation completion is reached when every evaluation reviewer scores every axis at `>=95`, or when the mode iteration cap is reached.
 
 ## Goal
 
-Build the minimum runnable slice for all specs and produce canonical `full-harness` evidence under `.qfai/evidence/`.
+Build the minimum runnable slice for all specs and produce reviewable screenshot/HTML evidence for every declared screen.
 
-## Mode
+## Required References
 
-### Full-harness
+Read and follow these references before execution:
 
-- Full-harness is the package default when prototyping execution is valid.
-- Each `qfai prototyping run --mode full-harness --reviewer <id>` invocation records exactly one measured iteration.
-- Multiple iterations are formed only by real code changes between runs.
-- The runtime does not self-modify code and does not fabricate evidence.
-
-## Obligation matrix
-
-| surface / mode         | specs    | runtimeGate | uiFidelity | render evidence | browser QA | fullHarness |
-| ---------------------- | -------- | ----------- | ---------- | --------------- | ---------- | ----------- |
-| web / full-harness     | required | required    | required   | required        | required   | required    |
-| mobile / full-harness  | required | required    | required   | required        | required   | required    |
-| desktop / full-harness | required | required    | required   | required        | required   | required    |
-| mixed / full-harness   | required | required    | required   | required        | required   | required    |
-
-## Required evidence
-
-## Evidence (MANDATORY)
-
-- `.qfai/evidence/prototyping.md`
-- `.qfai/evidence/prototyping.json`
-- `.qfai/evidence/render.json`
-- `.qfai/evidence/browser-qa.json`
-- `.qfai/evidence/fullHarness.exit.json`
-- `.qfai/evidence/fullHarness.handoff.json`
-- `.qfai/evidence/fullHarness.fakeUiDetection.json`
-
-## Truthfulness rules
-
-- `mode.effective` must be `full-harness`.
-- `runtimeGate` is observed-only. Synthetic status codes are invalid.
-- `runtimeGate.evidenceRefs` must contain concrete render/browser QA/spec refs only.
-- `specCoverage` must use concrete declared refs and concrete observed refs only.
-- Browser QA evidence must be preserved per screen.
-- `actionsWired` must reflect actionable control coverage, not finding counts.
-- `reviewerSignoff.status` represents final decision, not mere completion.
-- `reviewerLogs[].verdict` must align with decision/termination semantics.
-
-## Review semantics
-
-- `accepted` -> `approved`
-- `rejected` -> `rejected`
-- `abandoned` -> `abandoned`
-- Plateau stop or max-iterations stop must not produce `approved`.
+- `.qfai/assistant/skills/qfai-prototyping/references/evidence-requirements.md`
+- `.qfai/assistant/skills/qfai-prototyping/references/iteration-cycle.md`
+- `.qfai/assistant/skills/qfai-prototyping/references/design-system-compliance.md`
+- `.qfai/assistant/skills/qfai-prototyping/references/reviewer-gate.md`
 
 ## Delegation Scope Table
 
@@ -103,94 +70,151 @@ Assigning a task to a role not listed for the category is a violation and MUST b
 | ------------------ | ------------------------------------------------------ |
 | UI implementation  | frontend-engineer, product-experience-architect        |
 | Screenshot capture | devops-ci-engineer                                     |
-| Evaluation L1-L2   | product-surface-reviewer, product-experience-architect |
+| Evaluation scoring | product-surface-reviewer, product-experience-architect |
 | Build              | devops-ci-engineer, backend-engineer                   |
 
-Any delegation map entry that assigns a category to an undefined or unlisted role (e.g., `"generic-code-writer"`) MUST produce a violation finding naming the undefined role and the category.
+Any delegation map entry that assigns a category to an undefined or unlisted role MUST produce a violation finding naming the undefined role and the category.
 
-## Required process
+## Required Process
 
-### Step 0 — Execution Plan (executionPlan)
+### Step 0 — Execution Plan
 
-Before any code is written, create an `executionPlan` record with the following fields:
+Before any code is written, create an execution plan record in the work evidence.
 
-- `targetIterations`: integer; minimum 2 for full-harness
-- `evaluationAxesSource`: reference to the discussion pack evaluation-family files (20/21/22/23)
-- `delegationMap`: category-to-role assignments per Delegation Scope Table above
+Required fields:
+
+- `mode`: `low-cost | standard | full-harness`
+- `targetIterations`: integer; use the mode cap (1/3/20)
+- `evaluationAxesSource`: ref to `.qfai/contracts/design/evaluation-axes.yaml`
+- `delegationMap`: category-to-role assignments per Delegation Scope Table
 - `plannedAt`: ISO-8601 timestamp
 
-The executionPlan MUST be present in `prototyping.json` when `mode=full-harness`. A validator MUST reject any full-harness record without an executionPlan.
+### Step 1 — Read Inputs
 
-### Iteration Gate
+Read the downstream-ready spec/contract inputs and verify:
 
-- full-harness convergence requires a minimum of 2 iterations.
-- A single-iteration run that reports `converged=true` is invalid; the iteration gate MUST raise an error with message "minimum 2 iterations required before convergence".
-- The phase transition from iteration N to N+1 is blocked until `terminationCondition` is met or the gate explicitly authorizes continuation.
+- `.qfai/specs/<spec-id>/01_Spec.md`
+- `.qfai/specs/<spec-id>/03_Acceptance-Criteria.md`
+- `.qfai/contracts/design/evaluation-axes.yaml`
+- `.qfai/contracts/design/anchor-selection.yaml`
+- `.qfai/contracts/design/design-system.yaml` when required by the spec
+- `.qfai/contracts/ui/*.yaml`
 
-### 5-Step Iteration Cycle
+Read order:
 
-Each full-harness iteration follows this fixed sequence:
+1. `.qfai/specs/<spec-id>/01_Spec.md`
+2. `.qfai/specs/<spec-id>/03_Acceptance-Criteria.md`
+3. `.qfai/contracts/design/anchor-selection.yaml`
+4. `.qfai/contracts/design/evaluation-axes.yaml`
+5. `.qfai/contracts/design/design-system.yaml`
+6. `.qfai/contracts/ui/*.yaml`
 
-1. **Capture** — Run `packages/qfai/assets/scripts/capture-screenshots.js --url <url> --out <dir>` and record screenshot paths with timestamps under `scoringTrace[i].screenshotDir`.
-2. **Evaluate** — Launch L1 and L2 evaluator sub-agents with full context bundle: (a) screenshots from Step 1, (b) axisDefs from evaluation-family 20/21/22/23, (c) previousScore from prior iteration, (d) designSystemChecklist from `uiux/12_design_system.md`.
-3. **Identify** — Aggregate L1 + L2 findings; flag immediate-fix items.
-4. **Fix** — Apply fixes per finding disposition; do not close items without evidence.
-5. **Re-evaluate** — Re-run Steps 1–4; compare new score to prior score to check plateau.
+### Step 2 — Verify Execution Preconditions
 
-The sequence MUST NOT be permuted. Parallel execution of Capture+Evaluate is prohibited.
+Confirm all of the following before any evaluation:
 
-### Evaluator Input — 4 Required Elements
+- classification is UI-bearing
+- surface is `web`, `mobile`, `desktop`, or `mixed`
+- every declared screen has a stable `screen-id`
+- the design evaluation contract satisfies the required schema
+- the design system checklist is available when required
 
-When launching any L1 or L2 evaluator sub-agent, all 4 elements MUST be present in the input:
+### Step 3 — Implement the Minimum Runnable Slice
 
-(a) screenshots — paths produced by capture-screenshots.js for the current iteration
-(b) axisDefs — scoring axes from discussion-pack evaluation-family (20/21/22/23)
-(c) previousScore — aggregate score from the prior iteration (null for iteration 1)
-(d) designSystemChecklist — the compliance checklist derived from `uiux/12_design_system.md`
+Implement the smallest UI slice that covers all declared screens and primary interactions.
 
-If any element is missing, a reviewer check MUST raise a finding naming the missing element.
-Missing element (d) is a common error when `uiux/12_design_system.md` is absent; the reviewer MUST still flag it.
+### Step 4 — Capture Mandatory Evidence
 
-### Visual Quality Structural Checklist
+For every declared screen:
+
+- capture one screenshot and store it at the canonical screenshot path
+- capture one HTML snapshot and store it at the canonical HTML path
+- record missing evidence immediately; do not continue as if capture succeeded
+
+### Step 5 — Launch Evaluation Reviewers
+
+Launch evaluation reviewer sub-agents with the full context bundle:
+
+- screenshots from Step 4
+- HTML snapshots from Step 4
+- `axisDefs` from `.qfai/contracts/design/evaluation-axes.yaml`
+- `previousScore` from the prior iteration (`null` for iteration 1)
+- `designSystemChecklist` from `.qfai/contracts/design/design-system.yaml`
+
+If any required input is missing, stop the evaluation and classify the screen as `0` points with rerun required.
+
+Each evaluation reviewer MUST:
+
+- score every invariant axis from `0..100`
+- score every trend-derived axis from `0..100`
+- score every product-specific axis from `0..100`
+- include rationale and evidence refs for every score
+
+### Step 6 — Aggregate Findings
+
+Aggregate reviewer findings and classify them as:
+
+- blocking
+- immediate-fix
+- revise
+- manual-review
+
+### Step 7 — Fix and Re-capture
+
+Apply fixes per finding disposition, then re-capture screenshot and HTML evidence for every changed screen.
+Do not close a finding without fresh evidence.
+
+### Step 8 — Re-evaluate
+
+Repeat Steps 4–7 until:
+
+- all declared screens have screenshot + HTML evidence
+- every evaluation reviewer has scored every axis
+- either all axis scores are `>=95` across all evaluation reviewers, or the mode iteration cap is reached
+- validate can pass on required schema/evidence gates
+
+### Step 9 — Validate and Verify
+
+- Run `qfai validate --fail-on error`.
+- Route `/qfai-verify` or its equivalent gate workflow for final quality approval.
+- Do not declare completion until the reviewer result is `PASS`.
+
+## Evaluator Inputs (Mandatory)
+
+When launching any evaluation reviewer sub-agent, all 5 elements MUST be present:
+
+1. screenshots
+2. HTML snapshots
+3. axisDefs
+4. previousScore
+5. designSystemChecklist
+
+## Visual Quality Structural Checklist
 
 Each iteration evaluation MUST score all 6 visual categories:
 
-1. Color — color palette adherence to design system tokens
-2. Typography — type scale, weight, line-height compliance
-3. Spacing — spacing scale and grid alignment
-4. Border radius — border-radius consistency across components
-5. Shadow — shadow elevation and opacity standards
-6. Do's&Don'ts — adherence to explicit do/don't rules from `uiux/12_design_system.md`
-
-### Lighthouse Gate (MUST for web full-harness)
-
-When `surface=web` and `mode=full-harness`, a Lighthouse performance/accessibility report MUST be captured and attached to the evidence. The reviewer gate MUST raise an error "Lighthouse Gate is MUST for full-harness + web surface" when the report is absent.
-
-### Steps (continued)
-
-1. Read the latest discussion pack and verify `prototyping.yaml`, `04_Sources.md`, `20/21/22/23`, and `40_screen_contracts.md`.
-   Read order: option comparison / `30_option_comparison.md` -> selected anchor screen / `31_selected_anchor_screen.md` -> strategy / `10_implementation_strategy.md` -> taste interview / `11_design_taste_interview.md` -> trend scan / `04_Sources.md` -> 3-layer evaluation family (`20/21/22/23`) -> screen contracts / `40_screen_contracts.md`.
-2. Verify the classification is UI-bearing and the surface is `web`, `mobile`, `desktop`, or `mixed`.
-3. Create the executionPlan (Step 0 above).
-4. Implement the minimum runnable slice for all specs.
-5. Run `qfai prototyping run --mode full-harness --reviewer <id>` — this executes the 5-Step Iteration Cycle per iteration.
-6. Review render evidence, HTML snapshots, Browser QA, runtimeGate, uiFidelity, and specCoverage for every declared screen.
-7. Fix findings and rerun until the evidence is coherent.
-8. Run `qfai validate --fail-on error`.
-9. Route an independent reviewer and do not declare completion until the result is `PASS`.
-
-## Reviewer gate
+1. Color
+2. Typography
+3. Spacing
+4. Border radius
+5. Shadow
+6. Do's&Don'ts
 
 ### Reviewer Gate (MUST)
 
-- Reviewer must verify full-harness evidence completeness.
-- Reviewer response must include `Result: PASS | REVISE` (matching shared-skill-delegation-baseline.md#reviewer-response-template).
-- Reviewer must verify calibration pack usage via `calibrationRef`.
-- Reviewer must reject self-reference, synthetic refs, and `mockPaths.status="pass"`.
-- Reviewer must verify `reviewerSignoff`, `reviewerLogs`, `terminationReason`, and `finalDecision` are semantically aligned.
-- Reviewer must verify Drift Protocol compliance and alignment with `test-layers.md`.
-- Review volume guidance remains signals, not gates.
-- Reviewer returns PASS or REVISE only.
+Reviewer checks are defined in:
+
+- `.qfai/assistant/skills/qfai-prototyping/references/reviewer-gate.md`
+
+Minimum reviewer responsibilities:
+
+- verify mandatory screenshot/HTML evidence exists for every declared screen
+- verify 3-layer evaluation references were used
+- verify missing evidence caused rerun rather than waiver
+- verify `qfai validate --fail-on error` completed successfully
+- verify Drift Protocol compliance and alignment with `.qfai/assistant/steering/test-layers.md`
+- verify iteration completion used either `all-items-pass-95` or the mode cap
+- return `Result: PASS | REVISE`
 
 ## Sub-agent Delegation (MANDATORY)
 
@@ -198,9 +222,9 @@ Follow `.qfai/assistant/instructions/shared-skill-delegation-baseline.md`.
 
 ### Orchestrator Protocol (MUST)
 
-- Additional prototyping-specific overrides:
-- do not self-approve;
-- keep evidence paths canonical and integrate delegated results only.
+- do not self-approve
+- keep evidence paths canonical
+- integrate delegated results only
 
 ### Capability Probe (MUST)
 
@@ -221,19 +245,17 @@ Follow `.qfai/assistant/instructions/shared-skill-operating-baseline.md#completi
 
 Prototyping-specific additions:
 
-- all specs are covered;
-- full-harness evidence is complete and truthful;
-- `qfai validate --fail-on error` passes;
-- reviewer returns `PASS`.
+- all specs are covered
+- all declared screens have screenshot + HTML evidence
+- `qfai validate --fail-on error` passes
+- reviewer returns `PASS`
 
 ## FINAL CHECKLIST (Check Last)
 
-### Completion Checklist (MUST)
-
 - All specs are covered in the Coverage Matrix.
-- Required full-harness evidence is present.
-- 404 findings are resolved or the run is not complete.
-- uiFidelity is present when required.
+- Every declared screen has screenshot evidence.
+- Every declared screen has HTML evidence.
+- Missing evidence triggered rerun instead of waiver.
 - Reviewer returned PASS; otherwise status is REVISE.
 
 ## Completion Message & Next Actions (MUST)
@@ -242,4 +264,4 @@ Action:
 
 - Proceed: `/qfai-atdd`
 - Quality gate: `/qfai-verify`
-- Rework prototyping: rerun `/qfai-prototyping` with corrected evidence
+- Rework prototyping: rerun `/qfai-prototyping` with corrected screenshot/HTML evidence

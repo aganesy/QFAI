@@ -5,12 +5,18 @@ const BANNED_PHRASES = [
   "ui routes reachable",
   "api non-404",
   "db objects present",
-  "do not default to full-harness",
-  "mode=low-cost",
-  "mode=standard",
+  "discussion recommendation",
+  "recommended_mode",
+  "allowed_modes",
+  "l1 and l2",
+  "weightedtotal",
 ] as const;
 
-const REQUIRED_MODES = ["full-harness"] as const;
+const REQUIRED_SECTIONS = [
+  "## Required References",
+  "## Required Process",
+  "## Evaluator Inputs (Mandatory)",
+] as const;
 
 const ASPIRATIONAL_PATTERNS = [
   /visual regression/i,
@@ -61,13 +67,14 @@ export type RoutingConsistencyResult = {
 export type SkillValidationResult = {
   bannedPhraseMatches: string[];
   aspirationalClaims: string[];
-  modesPresent: string[];
-  modesMissing: string[];
+  requiredSectionsPresent: string[];
+  requiredSectionsMissing: string[];
   hasCanonicalSurfaces: boolean;
   hasCliSurface: boolean;
   hasUiBearingFalseExcl: boolean;
   isStaticFirstAligned: boolean;
-  hasModeSurfaceMatrix: boolean;
+  hasDelegationScopeTable: boolean;
+  hasMandatoryEvidencePaths: boolean;
   issues: Issue[];
 };
 
@@ -76,15 +83,15 @@ export function scanBannedPhrases(content: string): string[] {
   return BANNED_PHRASES.filter((phrase) => lower.includes(phrase));
 }
 
-export function checkModeHeadings(content: string): { present: string[]; missing: string[] } {
+export function checkRequiredSections(content: string): { present: string[]; missing: string[] } {
   const present: string[] = [];
   const missing: string[] = [];
-  for (const mode of REQUIRED_MODES) {
-    const pattern = new RegExp(`^#+\\s+.*${mode.replace("-", "[-\\s]")}`, "im");
+  for (const section of REQUIRED_SECTIONS) {
+    const pattern = new RegExp(`^${section.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`, "im");
     if (pattern.test(content)) {
-      present.push(mode);
+      present.push(section);
     } else {
-      missing.push(mode);
+      missing.push(section);
     }
   }
   return { present, missing };
@@ -102,6 +109,7 @@ export function hasCliSurfaceDocumentation(content: string): boolean {
   return (
     lower.includes("cli") &&
     (lower.includes("not execution target") ||
+      lower.includes("not execution targets") ||
       lower.includes("rejected") ||
       lower.includes("not supported"))
   );
@@ -115,19 +123,29 @@ export function hasUiBearingFalseExclusion(content: string): boolean {
   );
 }
 
-export function hasModeSurfaceMatrix(content: string): boolean {
+export function hasDelegationScopeTable(content: string): boolean {
   const lower = content.toLowerCase();
   return (
-    lower.includes("obligation matrix") &&
-    lower.includes("surface / mode") &&
-    lower.includes("full-harness") &&
-    CANONICAL_SURFACES.every((s) => lower.includes(s))
+    lower.includes("delegation scope table") &&
+    (lower.includes("evaluation scoring") || lower.includes("evaluation l1-l2")) &&
+    lower.includes("screenshot capture")
   );
 }
 
 export function isStaticFirstAligned(content: string): boolean {
   const lower = content.toLowerCase();
-  return STATIC_FIRST_INDICATORS.some((indicator) => lower.includes(indicator));
+  return (
+    STATIC_FIRST_INDICATORS.some((indicator) => lower.includes(indicator)) ||
+    lower.includes("do not rely on a cli entrypoint")
+  );
+}
+
+export function hasMandatoryEvidencePaths(content: string): boolean {
+  const lower = content.toLowerCase();
+  return (
+    lower.includes(".qfai/evidence/prototyping/screenshots/<screen-id>.png") &&
+    lower.includes(".qfai/evidence/prototyping/html/<screen-id>.html")
+  );
 }
 
 export function detectAspirationalClaims(content: string): string[] {
@@ -153,13 +171,13 @@ export function checkRoutingConsistency(
       contradictions.push(`${condition.mode}: mode section missing`);
       continue;
     }
-    if (condition.mode === "full-harness") {
-      if (!/default.*full-harness|full-harness.*default/i.test(content)) {
-        contradictions.push("full-harness: default wording missing");
-      }
-      if (/do not default to full-harness|explicit opt-in only/i.test(content)) {
-        contradictions.push("full-harness: stale opt-in wording detected");
-      }
+    if (
+      condition.mode === "standard" &&
+      !/default.*standard|standard.*default|surface \/ mode.*standard|standard.*surface \/ mode/i.test(
+        content,
+      )
+    ) {
+      contradictions.push("standard: default wording missing");
     }
   }
 
@@ -169,12 +187,14 @@ export function checkRoutingConsistency(
 export function validatePrototypingSkillContent(content: string): SkillValidationResult {
   const bannedPhraseMatches = scanBannedPhrases(content);
   const aspirationalClaims = detectAspirationalClaims(content);
-  const { present: modesPresent, missing: modesMissing } = checkModeHeadings(content);
+  const { present: requiredSectionsPresent, missing: requiredSectionsMissing } =
+    checkRequiredSections(content);
   const canonicalSurfaces = hasCanonicalSurfaceDocumentation(content);
   const cliSurface = hasCliSurfaceDocumentation(content);
   const uiBearingFalseExcl = hasUiBearingFalseExclusion(content);
   const staticFirst = isStaticFirstAligned(content);
-  const matrix = hasModeSurfaceMatrix(content);
+  const delegationScopeTable = hasDelegationScopeTable(content);
+  const mandatoryEvidencePaths = hasMandatoryEvidencePaths(content);
   const issues: Issue[] = [];
 
   if (bannedPhraseMatches.length > 0) {
@@ -199,13 +219,13 @@ export function validatePrototypingSkillContent(content: string): SkillValidatio
     );
   }
 
-  if (modesMissing.length > 0) {
+  if (requiredSectionsMissing.length > 0) {
     issues.push(
       skillIssue(
-        "UIX-VAL-SKILL-MODE-MISSING",
-        `Prototyping skill missing mode sections: ${modesMissing.join(", ")}`,
+        "UIX-VAL-SKILL-SECTION-MISSING",
+        `Prototyping skill missing required sections: ${requiredSectionsMissing.join(", ")}`,
         "error",
-        `mode section を追加してください: ${modesMissing.join(", ")}`,
+        `required sections を追加してください: ${requiredSectionsMissing.join(", ")}`,
       ),
     );
   }
@@ -254,13 +274,24 @@ export function validatePrototypingSkillContent(content: string): SkillValidatio
     );
   }
 
-  if (!matrix) {
+  if (!delegationScopeTable) {
     issues.push(
       skillIssue(
-        "UIX-VAL-SKILL-MATRIX",
-        "Prototyping skill is missing a mode/surface obligation matrix.",
+        "UIX-VAL-SKILL-DELEGATION",
+        "Prototyping skill is missing the delegation scope table for evaluator/capture/build roles.",
         "error",
-        "web / mobile / desktop / mixed の full-harness obligation matrix を追加してください。",
+        "delegation scope table を追加してください。",
+      ),
+    );
+  }
+
+  if (!mandatoryEvidencePaths) {
+    issues.push(
+      skillIssue(
+        "UIX-VAL-SKILL-EVIDENCE-PATHS",
+        "Prototyping skill must declare canonical screenshot and HTML evidence paths.",
+        "error",
+        "canonical screenshot/html evidence path を明記してください。",
       ),
     );
   }
@@ -268,13 +299,14 @@ export function validatePrototypingSkillContent(content: string): SkillValidatio
   return {
     bannedPhraseMatches,
     aspirationalClaims,
-    modesPresent,
-    modesMissing,
+    requiredSectionsPresent,
+    requiredSectionsMissing,
     hasCanonicalSurfaces: canonicalSurfaces,
     hasCliSurface: cliSurface,
     hasUiBearingFalseExcl: uiBearingFalseExcl,
     isStaticFirstAligned: staticFirst,
-    hasModeSurfaceMatrix: matrix,
+    hasDelegationScopeTable: delegationScopeTable,
+    hasMandatoryEvidencePaths: mandatoryEvidencePaths,
     issues,
   };
 }

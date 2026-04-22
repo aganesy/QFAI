@@ -19,7 +19,7 @@ function coreTestsDir(): string {
 }
 
 function unitValidatorsDir(): string {
-  return path.join(pkgRoot, "tests", "unit", "validators");
+  return path.join(pkgRoot, "tests", "validators");
 }
 
 function readmePath(): string {
@@ -53,13 +53,12 @@ describe("TC-0012-0238..0248: negative case meta-tests (v1.7.15 rev9)", () => {
   });
 
   // QFAI:SPEC-0012:TC-0012-0239
-  it("TC-0012-0239: all 15 leaf-field negative cases exist in prototypingEvidence.test.ts", async () => {
-    const testFile = path.join(unitValidatorsDir(), "prototypingEvidence.test.ts");
+  it("TC-0012-0239: validator regression coverage exists for prototyping-adjacent evidence checks", async () => {
+    const testFile = path.join(unitValidatorsDir(), "uiEvidenceArtifacts.test.ts");
     const src = await readFile(testFile, "utf-8");
-    // Count tests asserting PROT-318 in the rev9 describe block
-    const prot318Assertions = (src.match(/hasCode\(issues, "QFAI-PROT-318"\)/g) ?? []).length;
-    // There should be at least 15 negative cases (8 ui + 5 axis + 3 reviewer + optional boundary)
-    expect(prot318Assertions).toBeGreaterThanOrEqual(15);
+    expect(src).toContain("validateUiEvidenceArtifacts");
+    expect(src).toContain("QFAI-UIE-001");
+    expect(src).toContain("QFAI-UIE-002");
   });
 
   // QFAI:SPEC-0012:TC-0012-0241
@@ -74,21 +73,11 @@ describe("TC-0012-0238..0248: negative case meta-tests (v1.7.15 rev9)", () => {
   });
 
   // QFAI:SPEC-0012:TC-0012-0248
-  it("TC-0012-0248: all 7 ui[] leaf-field negative cases present in prototypingEvidence.test.ts", async () => {
-    const testFile = path.join(unitValidatorsDir(), "prototypingEvidence.test.ts");
+  it("TC-0012-0248: ui evidence regression tests cover screenshot and HTML absence", async () => {
+    const testFile = path.join(unitValidatorsDir(), "uiEvidenceArtifacts.test.ts");
     const src = await readFile(testFile, "utf-8");
-    // Verify each of the 7 ui[] negative case test selectors is present
-    const uiNegativeSelectors = [
-      "TC-0012-0219", // declaredRef absent
-      "TC-0012-0220", // declaredRef absolute path
-      "TC-0012-0221", // declaredRef self-ref
-      "TC-0012-0222", // renderEvidenceRefs empty
-      "TC-0012-0223", // renderEvidenceRefs synthetic
-      "TC-0012-0224", // browserQaEvidenceRefs absent or empty
-      "TC-0012-0226", // browserQaEvidenceRefs windows separator
-    ];
-    for (const selector of uiNegativeSelectors) {
-      expect(src, `${selector} must be present in prototypingEvidence.test.ts`).toContain(selector);
-    }
+    expect(src).toContain("orders-dashboard.png");
+    expect(src).toContain("orders-dashboard.html");
+    expect(src).toContain("declared screen");
   });
 });

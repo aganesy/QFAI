@@ -30,38 +30,13 @@ afterEach(async () => {
   }
 });
 
-function uiBearingContext(): string {
-  return [
-    "# Context",
-    "",
-    "## UI-bearing Classification",
-    "",
-    "- ui_bearing: true",
-    "- primary_surface: web",
-    "- secondary_surfaces:",
-    "  - mobile",
-    "- classification_rationale: Primary workflow is screen-based.",
-    "",
-  ].join("\n");
-}
-
-function nonUiContext(): string {
-  return [
-    "# Context",
-    "",
-    "## UI-bearing Classification",
-    "",
-    "- ui_bearing: false",
-    "- primary_surface: non-ui",
-    "- secondary_surfaces: []",
-    "- classification_rationale: API-only pipeline; no user-facing surface.",
-    "",
-  ].join("\n");
-}
-
 type PrototypingJson = {
-  recommended_mode?: string;
-  prototyping?: { recommended_mode?: string };
+  mode?: {
+    requested?: string;
+    effective?: string;
+    source?: string;
+    rationale?: string;
+  };
   scoringTrace?: Record<string, unknown>;
 };
 
@@ -74,48 +49,42 @@ type SetupOptions = {
 
 async function setupPack(options: SetupOptions): Promise<string> {
   const root = await newTempRoot();
-  const packDir = path.join(root, ".qfai", "discussion", "discussion-20260418120000000");
-  await mkdir(packDir, { recursive: true });
-  await writeFile(
-    path.join(packDir, "01_Context.md"),
-    options.uiBearing ? uiBearingContext() : nonUiContext(),
-    "utf-8",
-  );
+  const contractsRoot = path.join(root, ".qfai", "contracts");
+  const evidenceRoot = path.join(root, ".qfai", "evidence");
+  await mkdir(evidenceRoot, { recursive: true });
+
+  if (options.uiBearing) {
+    await mkdir(path.join(contractsRoot, "ui"), { recursive: true });
+    await writeFile(
+      path.join(contractsRoot, "ui", "sample.yaml"),
+      [
+        "screens:",
+        "  - id: home",
+        '    title: "Home"',
+        '    route: "/"',
+        "    primary_tasks:",
+        '      - "browse"',
+        "",
+      ].join("\n"),
+      "utf-8",
+    );
+  }
 
   if (options.designSystemPresent) {
-    await mkdir(path.join(packDir, "uiux"), { recursive: true });
+    await mkdir(path.join(contractsRoot, "design"), { recursive: true });
     await writeFile(
-      path.join(packDir, "uiux", "12_design_system.md"),
-      "# Design System\n\n## Visual Theme\n\nNeutral.\n",
+      path.join(contractsRoot, "design", "design-system.yaml"),
+      "name: sample-design-system\n",
       "utf-8",
     );
   }
 
   if (options.prototyping) {
-    const fmt = options.prototypingFormat ?? "json";
-    if (fmt === "json") {
-      await writeFile(
-        path.join(packDir, "prototyping.json"),
-        JSON.stringify(options.prototyping, null, 2),
-        "utf-8",
-      );
-    } else {
-      const lines: string[] = [];
-      const proto = options.prototyping.prototyping;
-      if (proto?.recommended_mode) {
-        lines.push("prototyping:");
-        lines.push(`  recommended_mode: ${proto.recommended_mode}`);
-      } else if (options.prototyping.recommended_mode) {
-        lines.push(`recommended_mode: ${options.prototyping.recommended_mode}`);
-      }
-      if (options.prototyping.scoringTrace) {
-        lines.push("scoringTrace:");
-        for (const [k, v] of Object.entries(options.prototyping.scoringTrace)) {
-          lines.push(`  ${k}: ${v === null ? "null" : JSON.stringify(v)}`);
-        }
-      }
-      await writeFile(path.join(packDir, "prototyping.yaml"), lines.join("\n") + "\n", "utf-8");
-    }
+    await writeFile(
+      path.join(evidenceRoot, "prototyping.json"),
+      JSON.stringify(options.prototyping, null, 2),
+      "utf-8",
+    );
   }
 
   return root;
@@ -128,7 +97,11 @@ describe("validatePrototypingDesignSystem (PROT-DS01)", () => {
       uiBearing: true,
       designSystemPresent: true,
       prototyping: {
-        recommended_mode: "full-harness",
+        mode: {
+          effective: "full-harness",
+          source: "explicit-request",
+          rationale: "required by test",
+        },
         scoringTrace: {},
       },
     });
@@ -146,7 +119,11 @@ describe("validatePrototypingDesignSystem (PROT-DS01)", () => {
       uiBearing: true,
       designSystemPresent: true,
       prototyping: {
-        recommended_mode: "minimal",
+        mode: {
+          effective: "standard",
+          source: "explicit-request",
+          rationale: "required by test",
+        },
         scoringTrace: {},
       },
     });
@@ -162,7 +139,11 @@ describe("validatePrototypingDesignSystem (PROT-DS01)", () => {
       uiBearing: true,
       designSystemPresent: true,
       prototyping: {
-        recommended_mode: "full-harness",
+        mode: {
+          effective: "full-harness",
+          source: "explicit-request",
+          rationale: "required by test",
+        },
         scoringTrace: { designSystemCompliance: null },
       },
     });
@@ -176,7 +157,11 @@ describe("validatePrototypingDesignSystem (PROT-DS01)", () => {
       uiBearing: false,
       designSystemPresent: false,
       prototyping: {
-        recommended_mode: "full-harness",
+        mode: {
+          effective: "full-harness",
+          source: "explicit-request",
+          rationale: "required by test",
+        },
         scoringTrace: {},
       },
     });
@@ -190,7 +175,11 @@ describe("validatePrototypingDesignSystem (PROT-DS01)", () => {
       uiBearing: true,
       designSystemPresent: false,
       prototyping: {
-        recommended_mode: "full-harness",
+        mode: {
+          effective: "full-harness",
+          source: "explicit-request",
+          rationale: "required by test",
+        },
         scoringTrace: {},
       },
     });
@@ -201,21 +190,93 @@ describe("validatePrototypingDesignSystem (PROT-DS01)", () => {
     expect(ds01[0]?.severity).toBe("warning");
   });
 
-  it("reads namespaced prototyping.yaml when prototyping.json is absent", async () => {
+  it("uses prototyping.json as the canonical evidence file", async () => {
     const root = await setupPack({
       uiBearing: true,
       designSystemPresent: true,
       prototyping: {
-        prototyping: { recommended_mode: "full-harness" },
+        mode: {
+          effective: "full-harness",
+          source: "explicit-request",
+          rationale: "required by test",
+        },
         scoringTrace: {},
       },
-      prototypingFormat: "yaml",
     });
 
     const issues = await validatePrototypingDesignSystem(root, defaultConfig);
     const ds01 = issues.filter((issue) => issue.code === "PROT-DS01");
     expect(ds01).toHaveLength(1);
     expect(ds01[0]?.severity).toBe("error");
-    expect(ds01[0]?.file).toContain("prototyping.yaml");
+    expect(ds01[0]?.file).toContain("prototyping.json");
+  });
+
+  it("custom specsDir を使う場合も prototyping.json は specs 親の evidence から解決する", async () => {
+    const root = await newTempRoot();
+    const config = {
+      ...defaultConfig,
+      paths: {
+        ...defaultConfig.paths,
+        contractsDir: "workspace/contracts",
+        specsDir: "workspace/specs",
+      },
+    };
+    const contractsRoot = path.join(root, "workspace", "contracts");
+    const specsEvidenceRoot = path.join(root, "workspace", "evidence");
+    const contractsEvidenceRoot = path.join(root, "workspace", "contracts-parent", "evidence");
+
+    await mkdir(path.join(contractsRoot, "ui"), { recursive: true });
+    await writeFile(
+      path.join(contractsRoot, "ui", "sample.yaml"),
+      ["screens:", "  - id: home", '    title: "Home"', '    route: "/"'].join("\n"),
+      "utf-8",
+    );
+
+    await mkdir(path.join(contractsRoot, "design"), { recursive: true });
+    await writeFile(
+      path.join(contractsRoot, "design", "design-system.yaml"),
+      "name: sample-design-system\n",
+      "utf-8",
+    );
+
+    await mkdir(specsEvidenceRoot, { recursive: true });
+    await writeFile(
+      path.join(specsEvidenceRoot, "prototyping.json"),
+      JSON.stringify(
+        {
+          mode: {
+            effective: "full-harness",
+            source: "explicit-request",
+            rationale: "required by test",
+          },
+          scoringTrace: { designSystemCompliance: 97 },
+        },
+        null,
+        2,
+      ),
+      "utf-8",
+    );
+
+    await mkdir(contractsEvidenceRoot, { recursive: true });
+    await writeFile(
+      path.join(contractsEvidenceRoot, "prototyping.json"),
+      JSON.stringify(
+        {
+          mode: {
+            effective: "full-harness",
+            source: "explicit-request",
+            rationale: "stale wrong root",
+          },
+          scoringTrace: {},
+        },
+        null,
+        2,
+      ),
+      "utf-8",
+    );
+
+    const issues = await validatePrototypingDesignSystem(root, config);
+
+    expect(issues.filter((issue) => issue.code === "PROT-DS01")).toHaveLength(0);
   });
 });

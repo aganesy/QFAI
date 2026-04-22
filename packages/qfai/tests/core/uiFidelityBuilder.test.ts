@@ -5,7 +5,7 @@ import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { defaultConfig } from "../../src/core/config.js";
-import { buildUiFidelity } from "../../src/core/prototyping/uiFidelityBuilder.js";
+import { buildUiFidelity } from "../../src/core/evidence/uiFidelityBuilder.js";
 import type { BrowserQaRunResult } from "../../src/core/browserQa/types.js";
 import type { RenderRunnerResult } from "../../src/core/evidence/types.js";
 
@@ -117,5 +117,6 @@ describe("uiFidelityBuilder", () => {
     expect(result.uiFidelity?.screens).toHaveLength(1);
     expect(result.uiFidelity?.screens[0]?.route).toBe("/dashboard");
     expect(result.uiFidelity?.screens[0]?.uiContractId).toBe("CON-UI-0001");
+    expect(result.uiFidelity?.screens[0]?.renders[0]?.htmlPath).toBe(htmlPath);
   });
 });

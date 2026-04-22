@@ -75,11 +75,10 @@ Execute the TDD micro-cycle for each pending item in `test-list.md`, transitioni
 ## Visual Review Guard
 
 - Review rendered output, screenshot evidence, or HTML output before closing any UI-affecting item.
-- Read the sidecar family first (selected anchor, strategy, screen contracts) whenever implementation touches UI or critique-driven behavior.
-- Read order: option comparison (30_option_comparison.md) → selected anchor screen (31_selected_anchor_screen.md) →
-  strategy (10_implementation_strategy.md) → taste interview (11_design_taste_interview.md) →
-  trend scan (04_Sources.md#Trend Scan) → 3-layer evaluation family (20/21/22/23 + optional 24) →
-  screen contracts (40_screen_contracts.md) → review input bundle (50_review_input_bundle.md) →
+- Read spec + contract inputs first whenever implementation touches UI or critique-driven behavior.
+- Read order: `01_Spec.md` → `03_Acceptance-Criteria.md` → `05_Examples.md` →
+  `.qfai/contracts/design/anchor-selection.yaml` → `.qfai/contracts/design/evaluation-axes.yaml` →
+  `.qfai/contracts/design/design-system.yaml` → `.qfai/contracts/ui/*.yaml` →
   optional design tokens → optional fallback mock → mermaid flows.
 - If code intent and rendered output diverge, treat the rendered/HTML result as the blocking review input and reconcile before DONE.
 

@@ -103,4 +103,6 @@ Each `spec-XXXX/tdd/test-list.md` is the execution ledger for the TDD micro-cycl
 - `07_Decisions.md` / `08_Open-questions.md` and `_policies/08_Decisions.md` / `_policies/09_Open-questions.md` / `_policies/10_delta.md` are required even when empty.
 - When empty, explicitly write `0 items` (or equivalent wording) in each file.
 - Contracts SSOT remains `.qfai/contracts/**`.
+- downstream execution skills (`/qfai-sdd` 以降) は discussion pack を直接読まず、`specs + .qfai/contracts/**` を読む。
+- discussion pack は `/qfai-sdd` の入力専用であり、UIUX sidecar は `/qfai-sdd` で contracts に正規化されてから下流へ渡される。
 - Report artifacts under `.qfai/report/**` are derived outputs (non-SSOT).

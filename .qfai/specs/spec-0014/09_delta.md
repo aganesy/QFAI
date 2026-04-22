@@ -14,6 +14,8 @@
 - AD-0014-0004: Non-UI safety -- zero UIX fires on non-UI projects (from spec-0037)
 - AD-0014-0005: Migration support -- stale sidecar compatibility detection with canonical migration errors from spec-0037
 - AD-0014-0006: Feature maturity normalization -- canonical vocabulary from spec-0037
+- AD-0014-0007: contract-first downstream gate -- repo-root verify/validate uses specs + contracts as the active completion path
+- AD-0014-0008: canonical UIX direct-pack path -- `runCanonicalUixValidators` remains only for direct discussion-pack validation
 
 ## Rejected
 

@@ -7,10 +7,10 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   buildBrowserQaSummaryFromResult,
   buildUiObservationSummary,
-} from "../../src/core/prototyping/uiObservation.js";
+} from "../../src/core/evidence/uiObservation.js";
 import type { BrowserQaRunResult } from "../../src/core/browserQa/types.js";
 import type { RenderRunnerResult } from "../../src/core/evidence/types.js";
-import type { CanonicalScreenContract } from "../../src/core/prototyping/screenContracts.js";
+import type { CanonicalScreenContract } from "../../src/core/contracts/screenContracts.js";
 
 describe("uiObservation", () => {
   let tempDir = "";
@@ -65,7 +65,13 @@ describe("uiObservation", () => {
       timestamp: new Date().toISOString(),
     };
     const screenContracts: CanonicalScreenContract[] = [
-      { name: "Dashboard", screenId: "dashboard", route: "/dashboard", primaryTasks: [] },
+      {
+        name: "Dashboard",
+        screenId: "dashboard",
+        route: "/dashboard",
+        primaryTasks: [],
+        sourceRef: ".qfai/discussion/discussion-1/uiux/40_screen_contracts.md#dashboard",
+      },
     ];
 
     const summary = await buildUiObservationSummary(renderResult, browserQaResult, screenContracts);

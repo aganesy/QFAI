@@ -15,7 +15,7 @@ export interface DelegationViolationIssue {
 const DELEGATION_SCOPE: Record<string, readonly string[]> = {
   UI実装: ["frontend-engineer", "product-experience-architect"],
   スクリーンショット: ["devops-ci-engineer"],
-  "評価 L1-L2": ["product-surface-reviewer", "product-experience-architect"],
+  評価スコアリング: ["product-surface-reviewer", "product-experience-architect"],
   ビルド: ["devops-ci-engineer", "backend-engineer"],
 };
 

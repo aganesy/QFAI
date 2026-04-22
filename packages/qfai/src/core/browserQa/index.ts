@@ -1,6 +1,6 @@
 import { readFile } from "node:fs/promises";
 
-import type { PrototypingMode } from "../prototyping/types.js";
+import type { PrototypingMode } from "../review/prototyping.js";
 import type { Issue } from "../types.js";
 
 export type {

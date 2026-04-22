@@ -31,8 +31,8 @@ const OBSERVABILITY_PATH = path.resolve(
   "..",
   "src",
   "core",
-  "prototyping",
-  "observabilityAdapter.ts",
+  "evidence",
+  "runtimeObservation.ts",
 );
 
 // TC-0005-0001: Default Markdown report generation

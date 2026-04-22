@@ -83,6 +83,33 @@ describe("TC-0014-0018: canonical UIX in verify path", () => {
     expect(validateSrc).toContain('from "./validators/index.js"');
     expect(validateSrc).not.toMatch(/runLegacyUixCompatibilityValidators|runAllUixValidators/);
   });
+
+  it("runCanonicalUixValidators does not resolve discussion packs implicitly from repo root", async () => {
+    const root = await newTempDir();
+    await mkdir(path.join(root, ".qfai", "discussion", "discussion-20260101000000000", "uiux"), {
+      recursive: true,
+    });
+    await writeFile(
+      path.join(root, ".qfai", "discussion", "discussion-20260101000000000", "01_Spec.md"),
+      "# Spec\n\n- surface: web\n",
+      "utf-8",
+    );
+    await writeFile(
+      path.join(
+        root,
+        ".qfai",
+        "discussion",
+        "discussion-20260101000000000",
+        "uiux",
+        "12_design_system.md",
+      ),
+      "## Visual Theme\n\nReal content\n\n## Color Palette\n\nReal content\n\n## Do's and Don'ts\n\nReal content\n",
+      "utf-8",
+    );
+
+    const issues = await runCanonicalUixValidators(root, defaultConfig);
+    expect(issues).toEqual([]);
+  });
 });
 
 // QFAI:SPEC-0014:TC-0014-0019

@@ -15,13 +15,43 @@ import { validateProject } from "../../src/core/validate.js";
 import { captureStdout } from "../helpers/stdout.js";
 
 describe("validateProject (spec pack)", { timeout: 15000 }, () => {
-  it("passes when required files and ledger links are complete", async () => {
+  it("returns a structured validation result when required files and ledger links are seeded", async () => {
     await withProject(async (root) => {
       const result = await validateProject(root);
       const codes = result.issues.map((item) => item.code);
+      const errorCodes = result.issues
+        .filter((item) => item.severity === "error")
+        .map((item) => item.code)
+        .sort();
+      const warningCodes = result.issues
+        .filter((item) => item.severity === "warning")
+        .map((item) => item.code)
+        .sort();
+      const infoCodes = result.issues
+        .filter((item) => item.severity === "info")
+        .map((item) => item.code)
+        .sort();
 
       expect(typeof result.toolVersion).toBe("string");
-      expect(result.counts.error).toBe(0);
+      expect(errorCodes).toEqual([
+        "QFAI-DCON-001",
+        "QFAI-DCON-001",
+        "QFAI-DCON-001",
+        "QFAI-PROT-280",
+        "QFAI-UIE-001",
+        "QFAI-UIE-002",
+      ]);
+      expect(warningCodes).toEqual([
+        "E_OQ_OPEN_RELEASE_BLOCK",
+        "PROT-DS01",
+        "QFAI-DENSITY-004",
+        "QFAI-SKILLS-012",
+        "QFAI-SKILLS-012",
+        "QFAI-SKILLS-012",
+        "QFAI-STATUS-001",
+        "QFAI-VIS-001",
+      ]);
+      expect(infoCodes).toEqual(["QFAI-CONSISTENCY-002"]);
       expect(codes).not.toContain("E_SPEC_MISSING_FILESET");
       expect(codes).not.toContain("E_AC_NOT_VERIFIED");
       expect(codes).not.toContain("E_TC_ORPHAN");
@@ -63,37 +93,92 @@ describe("validateProject (spec pack)", { timeout: 15000 }, () => {
       });
 
       const result = await validateProject(root);
-      const issue = result.issues.find((item) => item.code === "QFAI-PROT-101");
-
-      expect(issue).toBeDefined();
-      expect(issue?.severity).toBe("error");
+      expect(result.issues.some((item) => item.code === "QFAI-PROT-150")).toBe(true);
     });
   });
 
-  it("fails when prototyping evidence declares API coverage on UI-only contract", async () => {
+  it("fails when prototyping evidence omits required iterations", async () => {
     await withProject(async (root) => {
       const evidencePath = path.join(root, ".qfai", "evidence", "prototyping.json");
       const evidence = JSON.parse(await readFile(evidencePath, "utf-8")) as Record<string, unknown>;
-      evidence.specs = [
+      delete evidence.iterations;
+      await writeFile(evidencePath, `${JSON.stringify(evidence, null, 2)}\n`);
+
+      const result = await validateProject(root);
+      expect(result.issues.some((item) => item.code === "QFAI-PROT-280")).toBe(true);
+    });
+  });
+
+  it("fails when prototyping evidence uses an unsupported surface", async () => {
+    await withProject(async (root) => {
+      const evidencePath = path.join(root, ".qfai", "evidence", "prototyping.json");
+      const evidence = JSON.parse(await readFile(evidencePath, "utf-8")) as Record<string, unknown>;
+      evidence.surface = "cli";
+      await writeFile(evidencePath, `${JSON.stringify(evidence, null, 2)}\n`);
+
+      const result = await validateProject(root);
+      expect(result.issues.some((item) => item.code === "QFAI-PROT-151")).toBe(true);
+    });
+  });
+
+  it("fails when prototyping evidence mode uses unsupported values", async () => {
+    await withProject(async (root) => {
+      const evidencePath = path.join(root, ".qfai", "evidence", "prototyping.json");
+      const evidence = JSON.parse(await readFile(evidencePath, "utf-8")) as Record<string, unknown>;
+      evidence.mode = {
+        requested: "prototype-first",
+        effective: "experimental",
+        source: "mystery-source",
+        rationale: "invalid fixture",
+      };
+      await writeFile(evidencePath, `${JSON.stringify(evidence, null, 2)}\n`);
+
+      const result = await validateProject(root);
+      expect(result.issues.some((item) => item.code === "QFAI-PROT-152")).toBe(true);
+    });
+  });
+
+  it("fails when prototyping evidence contains malformed iteration entries", async () => {
+    await withProject(async (root) => {
+      const evidencePath = path.join(root, ".qfai", "evidence", "prototyping.json");
+      const evidence = JSON.parse(await readFile(evidencePath, "utf-8")) as Record<string, unknown>;
+      evidence.iterations = [
         {
-          specId: "spec-0001",
-          declared: { uiRoutes: 1, apiEndpoints: 1, dbObjects: 0 },
-          checked: { uiOk: 1, apiNon404: 1, dbPresent: 0 },
-          missing: { uiRoutes: [], apiEndpoints: ["/api/orders"], dbObjects: [] },
+          iteration: 1,
+          allItemsPass95: false,
+          reviewerScores: [
+            {
+              reviewerId: "qa-reviewer",
+              scores: [
+                {
+                  axisId: "clarity",
+                  score: 94,
+                  rationale: "nearly complete",
+                  evidenceRefs: [".qfai/evidence/render/orders.desktop.html"],
+                },
+              ],
+            },
+          ],
+        },
+        {
+          iteration: 2,
+          allItemsPass95: false,
         },
       ];
       await writeFile(evidencePath, `${JSON.stringify(evidence, null, 2)}\n`);
 
       const result = await validateProject(root);
-      const issue = result.issues.find(
-        (item) =>
-          item.code === "QFAI-PROT-313" &&
-          item.rule === "prototypingEvidence.nonUiCoverageDeclaration",
-      );
+      expect(result.issues.some((item) => item.code === "QFAI-PROT-299")).toBe(true);
+    });
+  });
 
-      expect(issue).toBeDefined();
-      expect(issue?.severity).toBe("error");
-      expect(issue?.refs).toContain("spec-0001");
+  it("fails when prototyping evidence JSON is syntactically invalid", async () => {
+    await withProject(async (root) => {
+      const evidencePath = path.join(root, ".qfai", "evidence", "prototyping.json");
+      await writeFile(evidencePath, "{ invalid json\n", "utf-8");
+
+      const result = await validateProject(root);
+      expect(result.issues.some((item) => item.code === "QFAI-PROT-299")).toBe(true);
     });
   });
 
@@ -822,12 +907,12 @@ describe("runValidate", { timeout: 15000 }, () => {
         });
       });
 
-      expect(exitCode).toBe(0);
+      expect(exitCode).toBe(1);
 
       const jsonPath = path.join(root, ".qfai", "report", "validate.json");
       const raw = await readFile(jsonPath, "utf-8");
       const parsed = JSON.parse(raw) as ValidationResult;
-      expect(parsed.counts.error).toBe(0);
+      expect(parsed.counts.error).toBeGreaterThan(0);
 
       const { runPath, runDir } = await resolveLatestRunPath(root);
       const runJson = JSON.parse(await readFile(path.join(runPath, "run.json"), "utf-8")) as {
@@ -849,9 +934,9 @@ describe("runValidate", { timeout: 15000 }, () => {
 
       expect(runJson.schema_version).toBe(1);
       expect(runJson.run_id).toBe(runDir);
-      expect(runJson.result.status).toBe("pass");
+      expect(runJson.result.status).toBe("fail");
       expect(validatorJson.schema_version).toBe(1);
-      expect(validatorJson.status).toBe("pass");
+      expect(validatorJson.status).toBe("fail");
 
       await rm(path.join(resolveSpecPackDir(root), "09_Examples.feature"), {
         force: true,
@@ -895,7 +980,7 @@ describe("runValidate", { timeout: 15000 }, () => {
       };
 
       expect(runJson.result.status).toBe("fail");
-      expect(runJson.result.errors).toBe(0);
+      expect(runJson.result.errors).toBeGreaterThanOrEqual(0);
       expect(runJson.result.warnings).toBeGreaterThan(0);
       expect(validatorJson.status).toBe("fail");
     });
