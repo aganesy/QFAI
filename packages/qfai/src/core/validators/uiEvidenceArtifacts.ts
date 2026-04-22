@@ -6,8 +6,10 @@ import type { Issue } from "../types.js";
 import { exists, issue } from "./utils.js";
 
 function resolveEvidenceRoot(root: string, config: QfaiConfig): string {
-  return path.join(path.dirname(resolvePath(root, config, "contractsDir")), "evidence");
+  return path.join(path.dirname(resolvePath(root, config, "specsDir")), "evidence");
 }
+
+const SAFE_SCREEN_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]*$/u;
 
 export async function validateUiEvidenceArtifacts(
   root: string,
@@ -25,6 +27,22 @@ export async function validateUiEvidenceArtifacts(
   const htmlRoot = path.join(evidenceRoot, "prototyping", "html");
 
   for (const screen of screens) {
+    if (!SAFE_SCREEN_ID_PATTERN.test(screen.screenId)) {
+      issues.push(
+        issue(
+          "QFAI-UIE-003",
+          `Declared screen "${screen.screenId}" cannot be used as an evidence file name.`,
+          "error",
+          screen.sourceRef,
+          "uiEvidenceArtifacts.screenIdSafeFilename",
+          [screen.sourceRef],
+          "canonical",
+          "Use a screen id containing only letters, numbers, dot, underscore, and hyphen.",
+        ),
+      );
+      continue;
+    }
+
     const screenshotPath = path.join(screenshotRoot, `${screen.screenId}.png`);
     const htmlPath = path.join(htmlRoot, `${screen.screenId}.html`);
 

@@ -417,6 +417,8 @@ const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "Every declared screen declared in `.qfai/contracts/ui/*.yaml` has a screenshot evidence file at `.qfai/evidence/prototyping/screenshots/<screen-id>.png`.",
   "QFAI-UIE-002":
     "Every declared screen declared in `.qfai/contracts/ui/*.yaml` has an HTML snapshot evidence file at `.qfai/evidence/prototyping/html/<screen-id>.html`.",
+  "QFAI-UIE-003":
+    "Every declared screen id used for prototyping evidence filenames must be path-safe (`[A-Za-z0-9._-]+`).",
   "QFAI-DCON-001":
     "UI-bearing downstream execution requires `.qfai/contracts/design/design-system.yaml`, `evaluation-axes.yaml`, and `anchor-selection.yaml` when UI contracts exist.",
   "QFAI-DCON-002":

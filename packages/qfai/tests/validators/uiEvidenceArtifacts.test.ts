@@ -99,8 +99,8 @@ describe("validateUiEvidenceArtifacts", () => {
       "utf-8",
     );
 
-    const screenshotDir = path.join(root, "workspace", "evidence", "prototyping", "screenshots");
-    const htmlDir = path.join(root, "workspace", "evidence", "prototyping", "html");
+    const screenshotDir = path.join(root, ".qfai", "evidence", "prototyping", "screenshots");
+    const htmlDir = path.join(root, ".qfai", "evidence", "prototyping", "html");
     await mkdir(screenshotDir, { recursive: true });
     await mkdir(htmlDir, { recursive: true });
     await writeFile(path.join(screenshotDir, "orders-dashboard.png"), "png", "utf-8");
@@ -109,5 +109,26 @@ describe("validateUiEvidenceArtifacts", () => {
     const issues = await validateUiEvidenceArtifacts(root, config);
 
     expect(issues).toEqual([]);
+  });
+
+  it("危険な screenId を evidence filename として使わず error を返す", async () => {
+    const root = await newTempRoot();
+    const contractsDir = path.join(root, ".qfai", "contracts", "ui");
+    await mkdir(contractsDir, { recursive: true });
+    await writeFile(
+      path.join(contractsDir, "ui-0001-orders.yaml"),
+      [
+        "screens:",
+        "  - id: ../escape",
+        '    title: "Orders Dashboard"',
+        '    route: "/orders"',
+      ].join("\n"),
+      "utf-8",
+    );
+
+    const issues = await validateUiEvidenceArtifacts(root, defaultConfig);
+
+    expect(issues.map((issue) => issue.code)).toEqual(["QFAI-UIE-003"]);
+    expect(issues[0]?.file).toContain(".qfai/contracts/ui/ui-0001-orders.yaml#../escape");
   });
 });
