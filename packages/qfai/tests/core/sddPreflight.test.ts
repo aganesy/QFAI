@@ -124,7 +124,7 @@ describe("runSddPreflight", () => {
     }
   });
 
-  it("blocks when latest UI-bearing discussion pack is missing prototyping.yaml", async () => {
+  it("does not block when latest UI-bearing discussion pack is missing prototyping.yaml", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-preflight-"));
     try {
       const packDir = path.join(root, ".qfai", "discussion", "discussion-20260216010203010");
@@ -138,13 +138,8 @@ describe("runSddPreflight", () => {
 
       const result = await runSddPreflight(root, defaultConfig);
 
-      expect(result.status).toBe("blocked");
-      expect(
-        result.blockers.some(
-          (item) =>
-            item.includes("UI-bearing discussion pack") && item.includes("prototyping.yaml"),
-        ),
-      ).toBe(true);
+      expect(result.status).toBe("ready");
+      expect(result.blockers).toHaveLength(0);
     } finally {
       await rm(root, { recursive: true, force: true });
     }
@@ -184,7 +179,7 @@ describe("runSddPreflight", () => {
     }
   });
 
-  it("blocks when prototyping.yaml exists but namespaced schema is invalid", async () => {
+  it("does not block when prototyping.yaml exists but namespaced schema is invalid", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-preflight-"));
     try {
       await seedDiscussionPack(root, "20260216010203011");
@@ -198,23 +193,15 @@ describe("runSddPreflight", () => {
 
       const result = await runSddPreflight(root, defaultConfig);
 
-      expect(result.status).toBe("blocked");
-      expect(result.blockers.some((item) => item.includes("schema-invalid"))).toBe(true);
-      expect(
-        result.blockers.some(
-          (item) =>
-            item.includes("QFAI-PROT-153") ||
-            item.includes("QFAI-PROT-155") ||
-            item.includes("QFAI-PROT-156"),
-        ),
-      ).toBe(true);
+      expect(result.status).toBe("ready");
+      expect(result.blockers).toHaveLength(0);
     } finally {
       await rm(root, { recursive: true, force: true });
     }
   });
 
   // W-4.10: non-object namespaced block blocks preflight
-  it("blocks when prototyping.yaml has scalar namespaced block", async () => {
+  it("does not block when prototyping.yaml has scalar namespaced block", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-preflight-"));
     try {
       await seedDiscussionPack(root, "20260216010203014");
@@ -223,15 +210,14 @@ describe("runSddPreflight", () => {
 
       const result = await runSddPreflight(root, defaultConfig);
 
-      expect(result.status).toBe("blocked");
-      expect(result.blockers.some((item) => item.includes("schema-invalid"))).toBe(true);
-      expect(result.blockers.some((item) => item.includes("QFAI-PROT-153"))).toBe(true);
+      expect(result.status).toBe("ready");
+      expect(result.blockers).toHaveLength(0);
     } finally {
       await rm(root, { recursive: true, force: true });
     }
   });
 
-  it("blocks when prototyping.yaml has null namespaced block", async () => {
+  it("does not block when prototyping.yaml has null namespaced block", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-preflight-"));
     try {
       await seedDiscussionPack(root, "20260216010203015");
@@ -240,8 +226,8 @@ describe("runSddPreflight", () => {
 
       const result = await runSddPreflight(root, defaultConfig);
 
-      expect(result.status).toBe("blocked");
-      expect(result.blockers.some((item) => item.includes("schema-invalid"))).toBe(true);
+      expect(result.status).toBe("ready");
+      expect(result.blockers).toHaveLength(0);
     } finally {
       await rm(root, { recursive: true, force: true });
     }
@@ -261,7 +247,7 @@ describe("runSddPreflight", () => {
     }
   });
 
-  it("blocks when prototyping.yaml uses legacy-only schema (no prototyping namespace)", async () => {
+  it("does not block when prototyping.yaml uses legacy-only schema (no prototyping namespace)", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-preflight-"));
     try {
       await seedDiscussionPack(root, "20260216010203013");
@@ -281,14 +267,14 @@ describe("runSddPreflight", () => {
 
       const result = await runSddPreflight(root, defaultConfig);
 
-      expect(result.status).toBe("blocked");
-      expect(result.blockers.some((item) => item.includes("schema-invalid"))).toBe(true);
+      expect(result.status).toBe("ready");
+      expect(result.blockers).toHaveLength(0);
     } finally {
       await rm(root, { recursive: true, force: true });
     }
   });
 
-  it("blocks when contradictory non-ui classification should not exempt prototyping", async () => {
+  it("does not block when contradictory non-ui classification omits prototyping.yaml", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-preflight-"));
     try {
       const packDir = path.join(root, ".qfai", "discussion", "discussion-20260216010203020");
@@ -316,18 +302,14 @@ describe("runSddPreflight", () => {
 
       const result = await runSddPreflight(root, defaultConfig);
 
-      expect(result.status).toBe("blocked");
-      expect(
-        result.blockers.some(
-          (item) => item.includes("prototyping.yaml") || item.includes("UI-bearing"),
-        ),
-      ).toBe(true);
+      expect(result.status).toBe("ready");
+      expect(result.blockers).toHaveLength(0);
     } finally {
       await rm(root, { recursive: true, force: true });
     }
   });
 
-  it("blocks when classification is missing and prototyping.yaml is absent", async () => {
+  it("does not block when classification is missing and prototyping.yaml is absent", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-preflight-"));
     try {
       const packDir = path.join(root, ".qfai", "discussion", "discussion-20260216010203021");
@@ -350,7 +332,8 @@ describe("runSddPreflight", () => {
 
       const result = await runSddPreflight(root, defaultConfig);
 
-      expect(result.status).toBe("blocked");
+      expect(result.status).toBe("ready");
+      expect(result.blockers).toHaveLength(0);
     } finally {
       await rm(root, { recursive: true, force: true });
     }

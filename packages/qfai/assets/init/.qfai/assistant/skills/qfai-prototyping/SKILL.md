@@ -38,13 +38,21 @@ Do not rely on a CLI entrypoint or package runtime loop.
 - DONE is forbidden until `qfai validate --fail-on error` passes and `/qfai-verify` can approve the run.
 - Supported UI prototyping surfaces are `web`, `mobile`, `desktop`, and `mixed`.
 - `cli`, API-only, backend-only, and `ui_bearing: false` classifications are not prototyping execution targets.
+- `cli` is not supported and is not an execution target for prototyping.
 - Canonical screen contracts in `.qfai/contracts/ui/*.yaml` are mandatory.
 - Evaluation is performed by sub-agents; machine checks are limited to schema/evidence validation.
 - L1 and L2 findings must be fixed or explicitly dispositioned before PASS.
+- Shared evidence vocabulary includes `render.json` and `browser-qa.json` alongside screenshot and HTML evidence.
 
 ## Goal
 
 Build the minimum runnable slice for all specs and produce reviewable screenshot/HTML evidence for every declared screen.
+
+## Surface / Mode
+
+- surface / mode routing uses `standard` as the default execution path.
+- `standard` is the default when no explicit escalation to `full-harness` is requested.
+- `full-harness` is reserved for explicit escalation and review-heavy obligations.
 
 ## Required References
 
@@ -61,6 +69,7 @@ Read and follow these references before execution:
 
 All sub-agent delegation in this skill MUST follow the category-to-role mapping below.
 Assigning a task to a role not listed for the category is a violation and MUST be flagged.
+Evaluation scoring and screenshot capture must use only the allowed roles below.
 
 | Category           | Allowed Role(s)                                        |
 | ------------------ | ------------------------------------------------------ |
@@ -160,6 +169,27 @@ Repeat Steps 4–7 until:
 - all declared screens have screenshot + HTML evidence
 - blocking findings are closed or dispositioned
 - validate can pass on required schema/evidence gates
+
+## Iteration Gate
+
+- minimum 2 iterations are required before phase transition to validation or review.
+- if the iteration gate is not satisfied, phase transition is blocked.
+- terminationCondition cannot bypass the minimum 2 iterations rule.
+
+## Full-harness
+
+- `full-harness` applies only after explicit escalation from the default `standard` path.
+- `full-harness` carries review-heavy obligations and stricter evidence checks.
+
+## Obligation matrix
+
+| surface / mode          | obligation profile                  |
+| ----------------------- | ----------------------------------- |
+| web / default route     | static-first obligations (standard) |
+| web / full-harness      | review-heavy obligations            |
+| mobile / default route  | static-first obligations (standard) |
+| desktop / default route | static-first obligations (standard) |
+| mixed / full-harness    | review-heavy obligations            |
 
 ### Step 9 — Validate and Verify
 

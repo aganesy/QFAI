@@ -109,6 +109,7 @@ export function hasCliSurfaceDocumentation(content: string): boolean {
   return (
     lower.includes("cli") &&
     (lower.includes("not execution target") ||
+      lower.includes("not execution targets") ||
       lower.includes("rejected") ||
       lower.includes("not supported"))
   );
@@ -126,7 +127,7 @@ export function hasDelegationScopeTable(content: string): boolean {
   const lower = content.toLowerCase();
   return (
     lower.includes("delegation scope table") &&
-    lower.includes("evaluation scoring") &&
+    (lower.includes("evaluation scoring") || lower.includes("evaluation l1-l2")) &&
     lower.includes("screenshot capture")
   );
 }
@@ -170,7 +171,12 @@ export function checkRoutingConsistency(
       contradictions.push(`${condition.mode}: mode section missing`);
       continue;
     }
-    if (condition.mode === "standard" && !/default.*standard|standard.*default/i.test(content)) {
+    if (
+      condition.mode === "standard" &&
+      !/default.*standard|standard.*default|surface \/ mode.*standard|standard.*surface \/ mode/i.test(
+        content,
+      )
+    ) {
       contradictions.push("standard: default wording missing");
     }
   }

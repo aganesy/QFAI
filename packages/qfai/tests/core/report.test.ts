@@ -303,7 +303,6 @@ describe("report contract coverage", () => {
         effective: "full-harness",
         source: "explicit-request",
         rationale: "runtime proof requested",
-        discussionRecommendation: "full-harness (validated recommendation)",
         surface: "web",
       },
       evidence: {
@@ -344,17 +343,13 @@ describe("report contract coverage", () => {
     expect(markdown).toContain("### prototyping.mode");
     expect(markdown).toContain("- effective: full-harness");
     expect(markdown).toContain("- source: explicit-request");
-    expect(markdown).toContain(
-      "- discussion recommendation: full-harness (validated recommendation)",
-    );
     expect(markdown).toContain("### prototyping.evidence");
     expect(markdown).toContain("- obligation profile: web/full-harness");
     expect(markdown).toContain("### prototyping.fullHarness");
     expect(markdown).toContain("- terminationReason: converged");
   });
 
-  // W-4.12: non-object namespaced block → recommendationArtifact=invalid
-  it("marks recommendation artifact as invalid when non-object namespaced block exists", async () => {
+  it("ignores legacy discussion artifact fields when prototyping summary is generated", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-report-core-"));
     const specsRoot = path.join(root, ".qfai", "specs");
     const discussionDir = path.join(root, ".qfai", "discussion", "discussion-20260404000000000");
@@ -374,7 +369,8 @@ describe("report contract coverage", () => {
         "allowed_modes:",
         "  - bogus",
         "surface: web",
-        "prototyping: invalid",
+        "prototyping:",
+        "  invalid: true",
         "",
       ].join("\n"),
       "utf-8",
@@ -407,7 +403,17 @@ describe("report contract coverage", () => {
     );
 
     const data = await createReportData(root);
-    expect(data.prototyping?.recommendationArtifact?.status).toBe("invalid");
+    expect(data.prototyping).toBeDefined();
+    expect(data.prototyping?.mode.effective).toBe("full-harness");
+    expect(data.prototyping?.mode.source).toBe("system-default");
+
+    const markdown = formatReportMarkdown(data);
+    expect(markdown).toContain("### prototyping.mode");
+    expect(markdown).toContain("- effective: full-harness");
+    expect(markdown).not.toContain("### prototyping.recommendationArtifact");
+    expect(markdown).not.toContain("discussion recommendation");
+    expect(markdown).not.toContain("allowed_modes");
+    expect(markdown).not.toContain("source schema");
 
     await rm(root, { recursive: true, force: true });
   });
@@ -451,7 +457,9 @@ describe("report contract coverage", () => {
     );
 
     const data = await createReportData(root);
-    expect(data.prototyping).toBeUndefined();
+    expect(data.prototyping).toBeDefined();
+    expect(data.prototyping?.mode.effective).toBe("full-harness");
+    expect(data.prototyping?.mode.source).toBe("discussion-recommendation");
 
     await rm(root, { recursive: true, force: true });
   });
@@ -1063,209 +1071,140 @@ function createReportDataForLinks(): ReportData {
   };
 }
 
-// ---------------------------------------------------------------------------
-// Artifact-first regression tests (v1.7.13 correction)
-// ---------------------------------------------------------------------------
-
-describe("report artifact-first recommendation", () => {
-  function buildPrototypingSummary(overrides: {
-    artifactStatus: "valid" | "invalid" | "missing" | "no-pack";
-    artifactPath?: string;
-    discussionRecommendation?: string;
-    allowedModes?: string[];
-    surface?: string;
-    sourceSchema?: string;
-  }): NonNullable<ReportData["prototyping"]> {
+describe("report prototyping markdown", () => {
+  function buildPrototypingSummary(
+    overrides: Partial<NonNullable<ReportData["prototyping"]>> = {},
+  ): NonNullable<ReportData["prototyping"]> {
     return {
-      recommendationArtifact: {
-        status: overrides.artifactStatus,
-        ...(overrides.artifactPath ? { path: overrides.artifactPath } : {}),
-      },
       mode: {
+        requested: "full-harness",
         effective: "full-harness",
-        source: "system-default",
-        rationale: "default full-harness mode",
-        ...(overrides.discussionRecommendation
-          ? { discussionRecommendation: overrides.discussionRecommendation }
-          : {}),
-        ...(overrides.allowedModes ? { allowedModes: overrides.allowedModes } : {}),
-        surface: overrides.surface ?? "web",
-        ...(overrides.sourceSchema ? { sourceSchema: overrides.sourceSchema } : {}),
+        source: "explicit-request",
+        rationale: "runtime proof requested",
+        surface: "web",
       },
       evidence: {
         specsCoverageStatus: "complete",
+        specsCoverage: {
+          expectedSpecIds: ["spec-0001", "spec-0002"],
+          observedSpecIds: ["spec-0001"],
+          missingSpecIds: ["spec-0002"],
+          unexpectedSpecIds: ["spec-9999"],
+        },
         runtimeGate: { present: true, required: true },
         uiFidelity: { present: true, required: true },
         renderBundle: { present: true, required: true },
         browserQaBundle: { present: true, required: true },
         obligationProfile: "web/full-harness",
       },
-      warnings: [],
+      fullHarness: {
+        enabled: true,
+        runId: "fh-1",
+        status: "completed",
+        iterationCount: 2,
+        bestIteration: 2,
+        terminationReason: "converged",
+        reviewerId: "reviewer-1",
+        reviewerSignoffStatus: "approved",
+        calibrationRef: {
+          configPath: ".qfai/prototyping/calibration/config.yaml",
+          packPath: ".qfai/prototyping/calibration/pack.yaml",
+          packVersion: "1.0.0",
+        },
+        latestScoredIteration: 2,
+        scoringTraceCount: 3,
+        reviewerLogsCount: 1,
+        limitations: ["manual review required"],
+      },
+      render: {
+        status: "captured",
+        requested: true,
+        captured: 2,
+        skipped: 1,
+        failed: 0,
+        malformed: false,
+        inlinePayloadViolation: true,
+      },
+      browserQa: {
+        status: "completed",
+        executed: true,
+        findingsBySeverity: { error: 1, warning: 2, info: 3 },
+        findingsByCategory: { accessibility: 2, visual: 1 },
+        summaryAggregates: { totalPassed: 10, totalFailed: 2 },
+        phaseSummary: {
+          smoke: { status: "completed", findingsCount: 1, checksCount: 4, passed: 3, failed: 1 },
+        },
+        modeMismatch: true,
+      },
+      calibration: {
+        configPresent: true,
+        thresholdSummary: { accept: 0.9, refine: 0.75 },
+        scoringTraceAvailable: true,
+        belowThresholdWarning: true,
+      },
+      warnings: ["late review risk remains"],
+      ...overrides,
     };
   }
 
-  function buildReportDataWithPrototyping(
-    proto: NonNullable<ReportData["prototyping"]>,
-  ): ReportData {
-    const base = createReportDataForLinks();
-    return { ...base, prototyping: proto };
-  }
+  it("renders the current prototyping sections and omits legacy artifact-first fields", () => {
+    const data = createReportDataForLinks();
+    data.prototyping = buildPrototypingSummary();
 
-  // Case D: invalid artifact + embedded valid recommendation
-  it("shows artifact status=invalid and no canonical recommendation fields", () => {
-    const proto = buildPrototypingSummary({
-      artifactStatus: "invalid",
-      artifactPath: ".qfai/discussion/discussion-20260404000000000/prototyping.yaml",
+    const markdown = formatReportMarkdown(data);
+
+    expect(markdown).toContain("### prototyping.mode");
+    expect(markdown).toContain("- requested: full-harness");
+    expect(markdown).toContain("- effective: full-harness");
+    expect(markdown).toContain("### prototyping.evidence");
+    expect(markdown).toContain("- specs expected: 2");
+    expect(markdown).toContain("- specs missing: spec-0002");
+    expect(markdown).toContain("- specs unexpected: spec-9999");
+    expect(markdown).toContain("### prototyping.fullHarness");
+    expect(markdown).toContain("- reviewerSignoff.status: approved");
+    expect(markdown).toContain("- calibrationRef.packVersion: 1.0.0");
+    expect(markdown).toContain("### prototyping.render");
+    expect(markdown).toContain("- inline payload violation: true");
+    expect(markdown).toContain("### prototyping.browserQa");
+    expect(markdown).toContain("- findings by category: accessibility=2, visual=1");
+    expect(markdown).toContain("- summary aggregates: passed=10 failed=2");
+    expect(markdown).toContain("### prototyping.calibration");
+    expect(markdown).toContain("- thresholds: accept=0.9 refine=0.75");
+    expect(markdown).toContain("### prototyping.observability");
+    expect(markdown).toContain("### prototyping.warnings");
+    expect(markdown).not.toContain("### prototyping.recommendationArtifact");
+    expect(markdown).not.toContain("discussion recommendation");
+    expect(markdown).not.toContain("allowed_modes");
+    expect(markdown).not.toContain("source schema");
+  });
+
+  it("omits optional prototyping subsections when data is absent", () => {
+    const data = createReportDataForLinks();
+    data.prototyping = buildPrototypingSummary({
+      fullHarness: undefined,
+      render: undefined,
+      browserQa: undefined,
+      calibration: undefined,
+      warnings: [],
+      evidence: {
+        specsCoverageStatus: "complete",
+        runtimeGate: { present: true, required: true },
+        uiFidelity: { present: true, required: true },
+        renderBundle: { present: false, required: true },
+        browserQaBundle: { present: false, required: true },
+        obligationProfile: "web/full-harness",
+      },
     });
-    // No discussionRecommendation, allowedModes, sourceSchema — they must be absent
-    const data = buildReportDataWithPrototyping(proto);
+
     const markdown = formatReportMarkdown(data);
 
-    expect(markdown).toContain("### prototyping.recommendationArtifact");
-    expect(markdown).toContain("- status: invalid");
-    expect(markdown).toContain(
-      "- action: fix prototyping.yaml schema in the latest discussion pack",
-    );
-    expect(markdown).toContain("- discussion recommendation: (none)");
-    expect(markdown).not.toContain("- allowed_modes:");
-    expect(markdown).not.toContain("- source schema:");
-  });
-
-  // Case E: missing artifact + embedded valid recommendation
-  it("shows artifact status=missing and no canonical recommendation fields", () => {
-    const proto = buildPrototypingSummary({
-      artifactStatus: "missing",
-      artifactPath: ".qfai/discussion/discussion-20260404000000000/prototyping.yaml",
-    });
-    const data = buildReportDataWithPrototyping(proto);
-    const markdown = formatReportMarkdown(data);
-
-    expect(markdown).toContain("### prototyping.recommendationArtifact");
-    expect(markdown).toContain("- status: missing");
-    expect(markdown).toContain("- action: add prototyping.yaml to the latest discussion pack");
-    expect(markdown).toContain("- discussion recommendation: (none)");
-  });
-
-  // Case: no-pack
-  it("shows artifact status=no-pack with recovery hint", () => {
-    const proto = buildPrototypingSummary({ artifactStatus: "no-pack" });
-    const data = buildReportDataWithPrototyping(proto);
-    const markdown = formatReportMarkdown(data);
-
-    expect(markdown).toContain("### prototyping.recommendationArtifact");
-    expect(markdown).toContain("- status: no-pack");
-    expect(markdown).toContain(
-      "- action: create a discussion pack before relying on discussion-recommendation mode",
-    );
-    expect(markdown).not.toContain("- path:");
-  });
-
-  // Case F: valid artifact + report uses artifact recommendation
-  it("shows artifact status=valid and displays canonical recommendation", () => {
-    const proto = buildPrototypingSummary({
-      artifactStatus: "valid",
-      artifactPath: ".qfai/discussion/discussion-20260404000000000/prototyping.yaml",
-      discussionRecommendation: "full-harness (validated recommendation)",
-      allowedModes: ["full-harness"],
-      surface: "web",
-      sourceSchema: "canonical-namespaced",
-    });
-    const data = buildReportDataWithPrototyping(proto);
-    const markdown = formatReportMarkdown(data);
-
-    expect(markdown).toContain("### prototyping.recommendationArtifact");
-    expect(markdown).toContain("- status: valid");
-    expect(markdown).toContain(
-      "- discussion recommendation: full-harness (validated recommendation)",
-    );
-    expect(markdown).toContain("- allowed_modes: full-harness");
-    expect(markdown).toContain("- source schema: canonical-namespaced");
-    // No recovery hint for valid status
-    expect(markdown).not.toContain("- action:");
-  });
-
-  // Integration: createReportData with artifact-first
-  it("createReportData does not use embedded fallback when artifact is invalid", async () => {
-    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-report-artifact-"));
-    try {
-      const specsRoot = path.join(root, ".qfai", "specs");
-      await mkdir(specsRoot, { recursive: true });
-
-      // Create spec
-      const packDir = path.join(specsRoot, "spec-0001");
-      await mkdir(packDir, { recursive: true });
-      await writeFile(path.join(packDir, "01_Spec.md"), "# Sample\n\nQFAI-SPEC-ID: SPEC-0001\n");
-
-      // Create evidence with embedded recommendation
-      const evidenceRoot = path.join(root, ".qfai", "evidence");
-      await mkdir(evidenceRoot, { recursive: true });
-      await writeFile(
-        path.join(evidenceRoot, "prototyping.json"),
-        JSON.stringify({
-          surface: "web",
-          specs: [
-            {
-              specId: "spec-0001",
-              declared: { uiRoutes: 0, apiEndpoints: 1, dbObjects: 1 },
-              checked: { uiOk: 0, apiNon404: 1, dbPresent: 1 },
-              missing: { uiRoutes: [], apiEndpoints: [], dbObjects: [] },
-            },
-          ],
-          mode: {
-            effective: "full-harness",
-            source: "system-default",
-            rationale: "default",
-            discussionRecommendation: {
-              recommendedMode: "full-harness",
-              rationale: "stale embedded payload",
-              allowedModes: ["full-harness"],
-              surface: "web",
-            },
-          },
-          meta: { generatedAt: "2026-04-04T00:00:00.000Z", toolVersion: "1.7.13", commands: [] },
-        }),
-      );
-      await writeFile(path.join(evidenceRoot, "prototyping.md"), "# Prototyping Evidence\n");
-
-      // Create invalid discussion artifact
-      const discPackDir = path.join(root, ".qfai", "discussion", "discussion-20260404000000000");
-      await mkdir(discPackDir, { recursive: true });
-      await writeFile(
-        path.join(discPackDir, "prototyping.yaml"),
-        "prototyping:\n  recommended_mode: bogus\n",
-      );
-
-      const validation = {
-        toolVersion: "test",
-        issues: [],
-        counts: { info: 0, warning: 0, error: 0 },
-        traceability: {
-          sc: { total: 0, covered: 0, missing: 0, missingIds: [], refs: {} },
-          testFiles: {
-            globs: [],
-            excludeGlobs: [],
-            matchedFileCount: 0,
-            truncated: false,
-            limit: 20000,
-          },
-        },
-      };
-
-      const data = await createReportData(root, validation);
-      expect(data.prototyping).toBeDefined();
-      if (!data.prototyping) throw new Error("prototyping should be defined");
-      expect(data.prototyping.recommendationArtifact?.status).toBe("invalid");
-
-      // Embedded fallback must NOT be used — no discussion recommendation in canonical summary
-      expect(data.prototyping.mode.discussionRecommendation).toBeUndefined();
-      expect(data.prototyping.mode.allowedModes).toBeUndefined();
-
-      const markdown = formatReportMarkdown(data);
-      expect(markdown).toContain("### prototyping.recommendationArtifact");
-      expect(markdown).toContain("- status: invalid");
-      expect(markdown).toContain("- discussion recommendation: (none)");
-    } finally {
-      await rm(root, { recursive: true, force: true });
-    }
+    expect(markdown).toContain("### prototyping.mode");
+    expect(markdown).toContain("### prototyping.evidence");
+    expect(markdown).toContain("### prototyping.observability");
+    expect(markdown).not.toContain("### prototyping.fullHarness");
+    expect(markdown).not.toContain("### prototyping.render");
+    expect(markdown).not.toContain("### prototyping.browserQa");
+    expect(markdown).not.toContain("### prototyping.calibration");
+    expect(markdown).not.toContain("### prototyping.warnings");
   });
 });

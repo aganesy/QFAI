@@ -115,6 +115,9 @@ async function setupFixture(): Promise<{ root: string; packDir: string }> {
   const root = await newTempRoot();
   const packDir = path.join(root, ".qfai", "discussion", "discussion-20260418120000000");
   await mkdir(path.join(packDir, "uiux"), { recursive: true });
+  await mkdir(path.join(root, ".qfai", "contracts", "ui"), { recursive: true });
+  await mkdir(path.join(root, ".qfai", "contracts", "design"), { recursive: true });
+  await mkdir(path.join(root, ".qfai", "evidence"), { recursive: true });
 
   await writeFile(path.join(packDir, "01_Context.md"), uiBearingContext(), "utf-8");
   await writeFile(path.join(packDir, "04_Sources.md"), sourcesWithMultipleTrendEntries(), "utf-8");
@@ -129,8 +132,25 @@ async function setupFixture(): Promise<{ root: string; packDir: string }> {
     "utf-8",
   );
   await writeFile(
-    path.join(packDir, "prototyping.json"),
-    JSON.stringify({ recommended_mode: "full-harness", scoringTrace: {} }),
+    path.join(root, ".qfai", "contracts", "ui", "sample.yaml"),
+    ["screens:", "  - id: home", '    route: "/"', '    title: "Home"', ""].join("\n"),
+    "utf-8",
+  );
+  await writeFile(
+    path.join(root, ".qfai", "contracts", "design", "design-system.yaml"),
+    "name: sample-design-system\n",
+    "utf-8",
+  );
+  await writeFile(
+    path.join(root, ".qfai", "evidence", "prototyping.json"),
+    JSON.stringify({
+      mode: {
+        effective: "full-harness",
+        source: "explicit-request",
+        rationale: "required by test",
+      },
+      scoringTrace: {},
+    }),
     "utf-8",
   );
 

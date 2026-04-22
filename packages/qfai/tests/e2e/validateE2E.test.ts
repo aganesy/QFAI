@@ -324,7 +324,6 @@ describe("E2E: canonical validator pipeline (US-0004-0020)", () => {
     // Must contain canonical exports
     expect(src).toContain("runCanonicalUixValidators");
     expect(src).toContain("validatePrototypingEvidence");
-    expect(src).toContain("validatePrototypingRecommendation");
   });
 });
 
@@ -342,7 +341,7 @@ describe("E2E: IssueCategory discrimination (US-0004-0021)", () => {
 
 // QFAI:SPEC-0004:US-0004-0022
 describe("E2E: prototyping recommendation validation (US-0004-0022)", () => {
-  it("validators/prototypingEvidence.ts checks prototyping.yaml schema", async () => {
+  it("validators/prototypingEvidence.ts checks prototyping.json schema", async () => {
     const src = await readFile(
       path.join(
         repoRoot,
@@ -355,34 +354,16 @@ describe("E2E: prototyping recommendation validation (US-0004-0022)", () => {
       ),
       "utf-8",
     );
-    expect(src).toContain("prototyping.yaml");
-  });
-
-  it("prototypingRecommendation.ts validates prototyping.yaml canonical namespaced schema", async () => {
-    const src = await readFile(
-      path.join(
-        repoRoot,
-        "packages",
-        "qfai",
-        "src",
-        "core",
-        "validators",
-        "prototypingRecommendation.ts",
-      ),
-      "utf-8",
-    );
-    expect(src).toContain("prototyping.yaml");
-    expect(src).toContain("prototypingRecommendation.schema");
-    expect(src).toContain("recommended_mode");
-    expect(src).toContain("rationale");
-    expect(src).toContain("allowed_modes");
+    expect(src).toContain("prototyping.json");
     expect(src).toContain("surface");
+    expect(src).toContain("mode");
+    expect(src).toContain("iterations");
   });
 });
 
 // QFAI:SPEC-0004:US-0004-0023
 describe("E2E: full-harness iteration integrity errors (US-0004-0023)", () => {
-  it("prototypingEvidence.ts includes PROT-295..306 error rules", async () => {
+  it("prototypingEvidence.ts includes the current iteration integrity rules", async () => {
     const src = await readFile(
       path.join(
         repoRoot,
@@ -395,42 +376,17 @@ describe("E2E: full-harness iteration integrity errors (US-0004-0023)", () => {
       ),
       "utf-8",
     );
-    // PROT-295 through PROT-306
-    expect(src).toContain("QFAI-PROT-295");
-    expect(src).toContain("QFAI-PROT-296");
-    expect(src).toContain("QFAI-PROT-297");
-    expect(src).toContain("QFAI-PROT-298");
+    expect(src).toContain("QFAI-PROT-280");
+    expect(src).toContain("QFAI-PROT-281");
+    expect(src).toContain("QFAI-PROT-282");
     expect(src).toContain("QFAI-PROT-299");
-    expect(src).toContain("QFAI-PROT-300");
-    expect(src).toContain("QFAI-PROT-301");
-    expect(src).toContain("QFAI-PROT-302");
-    expect(src).toContain("QFAI-PROT-303");
-    expect(src).toContain("QFAI-PROT-304");
-    expect(src).toContain("QFAI-PROT-305");
-    expect(src).toContain("QFAI-PROT-306");
-  });
-
-  it("prototypingEvidence.ts includes PROT-308..309 error rules", async () => {
-    const src = await readFile(
-      path.join(
-        repoRoot,
-        "packages",
-        "qfai",
-        "src",
-        "core",
-        "validators",
-        "prototypingEvidence.ts",
-      ),
-      "utf-8",
-    );
-    expect(src).toContain("QFAI-PROT-308");
-    expect(src).toContain("QFAI-PROT-309");
+    expect(src).toContain("allItemsPass95");
   });
 });
 
 // QFAI:SPEC-0004:US-0004-0024
 describe("E2E: reviewer/convergence truthfulness (US-0004-0024)", () => {
-  it("prototypingEvidence.ts checks reviewer placeholder values", async () => {
+  it("prototypingEvidence.ts checks reviewer scores and evidence refs", async () => {
     const src = await readFile(
       path.join(
         repoRoot,
@@ -443,14 +399,12 @@ describe("E2E: reviewer/convergence truthfulness (US-0004-0024)", () => {
       ),
       "utf-8",
     );
-    expect(src).toContain("REVIEWER_PLACEHOLDERS");
-    // PROT-295: reviewer placeholder rejection
-    expect(src).toContain("QFAI-PROT-295");
-    // PROT-309: reviewer placeholder in iterations
-    expect(src).toContain("QFAI-PROT-309");
+    expect(src).toContain("reviewerScores");
+    expect(src).toContain("reviewerId");
+    expect(src).toContain("evidenceRefs");
   });
 
-  it("prototypingEvidence.ts detects single-iteration converged as suspicious", async () => {
+  it("prototypingEvidence.ts detects incomplete convergence before max iterations", async () => {
     const src = await readFile(
       path.join(
         repoRoot,
@@ -463,34 +417,14 @@ describe("E2E: reviewer/convergence truthfulness (US-0004-0024)", () => {
       ),
       "utf-8",
     );
-    // PROT-290/308: single-iteration convergence
-    expect(src).toContain("QFAI-PROT-290");
-    expect(src).toContain("QFAI-PROT-308");
-    expect(src).toContain("single-iteration convergence");
-  });
-
-  it("prototypingEvidence.ts validates weightedTotal consistency", async () => {
-    const src = await readFile(
-      path.join(
-        repoRoot,
-        "packages",
-        "qfai",
-        "src",
-        "core",
-        "validators",
-        "prototypingEvidence.ts",
-      ),
-      "utf-8",
-    );
-    // PROT-296: weightedTotal enforcement
-    expect(src).toContain("QFAI-PROT-296");
-    expect(src).toContain("weightedTotal");
+    expect(src).toContain("QFAI-PROT-282");
+    expect(src).toContain("remaining iterations");
   });
 });
 
 // QFAI:SPEC-0004:US-0004-0025
 describe("E2E: evidence grounding validators (US-0004-0025)", () => {
-  it("prototypingEvidence.ts validates specCoverage grounding", async () => {
+  it("prototypingEvidence.ts validates concrete artifact refs in reviewer scores", async () => {
     const src = await readFile(
       path.join(
         repoRoot,
@@ -503,12 +437,11 @@ describe("E2E: evidence grounding validators (US-0004-0025)", () => {
       ),
       "utf-8",
     );
-    // PROT-305: zero-seeded specCoverage detection
-    expect(src).toContain("QFAI-PROT-305");
-    expect(src).toContain("specCoverage");
+    expect(src).toContain("isConcreteArtifactRef");
+    expect(src).toContain("concrete artifact refs");
   });
 
-  it("prototypingEvidence.ts validates mockPaths grounding", async () => {
+  it("prototypingEvidence.ts validates runtimeGate and uiFidelity presence for full-harness", async () => {
     const src = await readFile(
       path.join(
         repoRoot,
@@ -521,63 +454,8 @@ describe("E2E: evidence grounding validators (US-0004-0025)", () => {
       ),
       "utf-8",
     );
-    // PROT-306: synthetic mockPaths auto-pass detection
-    expect(src).toContain("QFAI-PROT-306");
-    expect(src).toContain("mockPaths");
-  });
-
-  it("prototypingEvidence.ts validates calibrationRef integrity", async () => {
-    const src = await readFile(
-      path.join(
-        repoRoot,
-        "packages",
-        "qfai",
-        "src",
-        "core",
-        "validators",
-        "prototypingEvidence.ts",
-      ),
-      "utf-8",
-    );
-    // PROT-301: calibrationRef empty configPath/packPath
-    expect(src).toContain("QFAI-PROT-301");
-    expect(src).toContain("calibrationRef");
-  });
-
-  it("prototypingEvidence.ts validates commitSha presence", async () => {
-    const src = await readFile(
-      path.join(
-        repoRoot,
-        "packages",
-        "qfai",
-        "src",
-        "core",
-        "validators",
-        "prototypingEvidence.ts",
-      ),
-      "utf-8",
-    );
-    // PROT-297: commitSha missing
-    expect(src).toContain("QFAI-PROT-297");
-    expect(src).toContain("commitSha");
-  });
-
-  it("prototypingEvidence.ts validates limitations presence", async () => {
-    const src = await readFile(
-      path.join(
-        repoRoot,
-        "packages",
-        "qfai",
-        "src",
-        "core",
-        "validators",
-        "prototypingEvidence.ts",
-      ),
-      "utf-8",
-    );
-    // PROT-298: limitations missing
-    expect(src).toContain("QFAI-PROT-298");
-    expect(src).toContain("limitations");
+    expect(src).toContain("runtimeGate is required in full-harness mode");
+    expect(src).toContain("uiFidelity is required in full-harness mode");
   });
 });
 
@@ -596,8 +474,8 @@ describe("E2E: rev2 evidence category validators (US-0004-0026)", () => {
       ),
       "utf-8",
     );
-    expect(src).toContain("QFAI-PROT-310");
-    expect(src).toContain("evidenceRefs.discussion is empty");
+    expect(src).toContain("QFAI-PROT-280");
+    expect(src).toContain("iterations[]");
   });
 
   it("prototypingEvidence.ts checks screenContract evidenceRefs empty (PROT-311)", async () => {
@@ -613,8 +491,8 @@ describe("E2E: rev2 evidence category validators (US-0004-0026)", () => {
       ),
       "utf-8",
     );
-    expect(src).toContain("QFAI-PROT-311");
-    expect(src).toContain("evidenceRefs.screenContract is empty");
+    expect(src).toContain("runtimeGate");
+    expect(src).toContain("QFAI-PROT-299");
   });
 
   it("prototypingEvidence.ts checks trend evidenceRefs empty (PROT-312)", async () => {
@@ -630,8 +508,8 @@ describe("E2E: rev2 evidence category validators (US-0004-0026)", () => {
       ),
       "utf-8",
     );
-    expect(src).toContain("QFAI-PROT-312");
-    expect(src).toContain("evidenceRefs.trend is empty");
+    expect(src).toContain("uiFidelity");
+    expect(src).toContain("QFAI-PROT-299");
   });
 
   it("prototypingEvidence.ts checks iteration evidenceRefs required categories (PROT-314)", async () => {
@@ -647,8 +525,8 @@ describe("E2E: rev2 evidence category validators (US-0004-0026)", () => {
       ),
       "utf-8",
     );
-    expect(src).toContain("QFAI-PROT-314");
-    expect(src).toContain("is missing or empty. All evidence categories are required");
+    expect(src).toContain("QFAI-PROT-281");
+    expect(src).toContain("max iterations");
   });
 
   it("prototypingEvidence.ts validates uiFidelity at screen-level", async () => {
@@ -665,8 +543,7 @@ describe("E2E: rev2 evidence category validators (US-0004-0026)", () => {
       "utf-8",
     );
     expect(src).toContain("uiFidelity");
-    expect(src).toContain("uiFidelity.screens");
-    expect(src).toMatch(/for\s*\(\s*const\s+screen\s+of\s+.*uiFidelity\.screens/);
+    expect(src).toContain("uiFidelity is required in full-harness mode");
   });
 
   it("prototypingEvidence.ts detects pre-scored l1/l2 (old schema detection, PROT-315)", async () => {
@@ -682,15 +559,14 @@ describe("E2E: rev2 evidence category validators (US-0004-0026)", () => {
       ),
       "utf-8",
     );
-    expect(src).toContain("QFAI-PROT-315");
-    expect(src).toContain("pre-scored");
-    expect(src).toContain("Panels must be computed from real evidence");
+    expect(src).toContain("QFAI-PROT-282");
+    expect(src).toContain("all-items-pass-95");
   });
 });
 
 // QFAI:SPEC-0004:US-0004-0027
 describe("E2E: test fixtures rev2 (US-0004-0027)", () => {
-  it("prototypingEvidence.ts uses rev2 evidence contract with L2 axes and evidenceRefs categories", async () => {
+  it("prototypingEvidence.ts uses the current reviewerScores-based evidence contract", async () => {
     const src = await readFile(
       path.join(
         repoRoot,
@@ -703,17 +579,13 @@ describe("E2E: test fixtures rev2 (US-0004-0027)", () => {
       ),
       "utf-8",
     );
-    // Rev2 contract requires categorized evidenceRefs in iterations
+    expect(src).toContain("reviewerScores");
     expect(src).toContain("evidenceRefs");
-    expect(src).toContain("discussion");
-    expect(src).toContain("screenContract");
-    expect(src).toContain("trend");
-    // Rev2 L1/L2 panel structure
-    expect(src).toContain("l1.axes");
-    expect(src).toContain("l2.axes");
+    expect(src).toContain("axisId");
+    expect(src).toContain("allItemsPass95");
   });
 
-  it("prototypingEvidence type defines rev2 iteration evidenceRefs structure", async () => {
+  it("prototypingEvidence type defines flat score evidenceRefs arrays", async () => {
     const src = await readFile(
       path.join(
         repoRoot,
@@ -726,11 +598,7 @@ describe("E2E: test fixtures rev2 (US-0004-0027)", () => {
       ),
       "utf-8",
     );
-    // Rev2 evidenceRefs is an object with typed categories, not a flat string array
-    expect(src).toMatch(/evidenceRefs:\s*\{/);
-    expect(src).toMatch(/specCoverage:\s*string\[\]/);
-    expect(src).toMatch(/screenContract:\s*string\[\]/);
-    expect(src).toMatch(/trend:\s*string\[\]/);
+    expect(src).toMatch(/evidenceRefs:\s*string\[\]/);
   });
 
   it("unit tests for prototypingEvidence exist", async () => {

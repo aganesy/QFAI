@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   isCanonicalScreenContractRef,
   isSpecDeclarationRef,
-} from "../../src/core/prototyping/refSemantics.js";
+} from "../../src/core/refs/refSemantics.js";
 
 describe("isSpecDeclarationRef (rev11 canonical grammar)", () => {
   it("accepts `.qfai/specs/<specId>/01_Spec.md#L<line>`", () => {

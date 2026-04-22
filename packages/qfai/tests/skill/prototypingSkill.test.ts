@@ -73,9 +73,9 @@ describe("prototyping skill validator", () => {
   });
 
   it("flags banned phrases when low-cost or standard are reintroduced", () => {
-    const invalid = `${VALID_SKILL_CONTENT}\nmode=low-cost\nmode=standard`;
+    const invalid = `${VALID_SKILL_CONTENT}\nl1 and l2 must run runtime checks\nrecommended_mode: full-harness`;
     expect(scanBannedPhrases(invalid)).toEqual(
-      expect.arrayContaining(["mode=low-cost", "mode=standard"]),
+      expect.arrayContaining(["must run runtime checks", "recommended_mode", "l1 and l2"]),
     );
   });
 
