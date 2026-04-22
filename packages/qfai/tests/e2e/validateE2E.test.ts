@@ -585,7 +585,7 @@ describe("E2E: test fixtures rev2 (US-0004-0027)", () => {
     expect(src).toContain("allItemsPass95");
   });
 
-  it("prototypingEvidence type defines flat score evidenceRefs arrays", async () => {
+  it("prototypingEvidence validates flat score evidenceRefs arrays", async () => {
     const src = await readFile(
       path.join(
         repoRoot,
@@ -598,7 +598,9 @@ describe("E2E: test fixtures rev2 (US-0004-0027)", () => {
       ),
       "utf-8",
     );
-    expect(src).toMatch(/evidenceRefs:\s*string\[\]/);
+    expect(src).toContain("Array.isArray(score.evidenceRefs)");
+    expect(src).toContain("score.evidenceRefs");
+    expect(src).toContain("isConcreteArtifactRef");
   });
 
   it("unit tests for prototypingEvidence exist", async () => {

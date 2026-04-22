@@ -70,13 +70,7 @@ export async function validatePrototypingEvidence(
     ];
   }
   if (raw.status === "invalid") {
-    return [
-      makeSchemaIssue(
-        root,
-        evidencePath,
-        "prototyping.json must be a valid JSON object.",
-      ),
-    ];
+    return [makeSchemaIssue(root, evidencePath, "prototyping.json must be a valid JSON object.")];
   }
 
   const record = raw.value as PrototypingEvidenceRecord;
@@ -327,9 +321,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 async function readJsonFile(
   filePath: string,
 ): Promise<
-  | { status: "missing" }
-  | { status: "invalid" }
-  | { status: "ok"; value: Record<string, unknown> }
+  { status: "missing" } | { status: "invalid" } | { status: "ok"; value: Record<string, unknown> }
 > {
   try {
     const raw = await readFile(filePath, "utf-8");
