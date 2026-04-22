@@ -14,6 +14,10 @@ const REQUIRED_DESIGN_FILES = [
   "anchor-selection.yaml",
 ] as const;
 
+function toPosixRelative(root: string, targetPath: string): string {
+  return path.relative(root, targetPath).replace(/\\/g, "/");
+}
+
 type YamlReadResult =
   | { kind: "missing" }
   | { kind: "invalid" }
@@ -33,6 +37,7 @@ export async function validateDesignContractReadiness(
   }
 
   const designDir = path.join(root, config.paths.contractsDir, "design");
+  const designDirRelative = toPosixRelative(root, designDir);
   const issues: Issue[] = [];
 
   for (const fileName of REQUIRED_DESIGN_FILES) {
@@ -45,11 +50,11 @@ export async function validateDesignContractReadiness(
           "QFAI-DCON-001",
           `Missing downstream design contract: ${fileName}.`,
           "error",
-          path.relative(root, filePath).replace(/\\/g, "/"),
+          toPosixRelative(root, filePath),
           "designContractReadiness.requiredFile",
           undefined,
           "canonical",
-          "UI-bearing downstream execution requires design-system.yaml, evaluation-axes.yaml, and anchor-selection.yaml under `.qfai/contracts/design/`.",
+          `UI-bearing downstream execution requires design-system.yaml, evaluation-axes.yaml, and anchor-selection.yaml under \`${designDirRelative}/\`.`,
         ),
       );
     }
@@ -71,7 +76,7 @@ async function validateDesignSystem(root: string, config: QfaiConfig): Promise<I
             "QFAI-DCON-006",
             "design-system.yaml must parse as an object-shaped YAML document.",
             "error",
-            path.relative(root, filePath).replace(/\\/g, "/"),
+            toPosixRelative(root, filePath),
             "designContractReadiness.designSystemDocument",
           ),
         ]
@@ -98,7 +103,7 @@ async function validateDesignSystem(root: string, config: QfaiConfig): Promise<I
           "QFAI-DCON-002",
           `design-system.yaml is missing checklist key '${key}'.`,
           "error",
-          path.relative(root, filePath).replace(/\\/g, "/"),
+          toPosixRelative(root, filePath),
           "designContractReadiness.designSystemChecklist",
         ),
       );
@@ -118,7 +123,7 @@ async function validateEvaluationAxes(root: string, config: QfaiConfig): Promise
             "QFAI-DCON-007",
             "evaluation-axes.yaml must parse as an object-shaped YAML document.",
             "error",
-            path.relative(root, filePath).replace(/\\/g, "/"),
+            toPosixRelative(root, filePath),
             "designContractReadiness.evaluationAxesDocument",
           ),
         ]
@@ -136,7 +141,7 @@ async function validateEvaluationAxes(root: string, config: QfaiConfig): Promise
           "QFAI-DCON-003",
           `evaluation-axes.yaml is missing array '${key}'.`,
           "error",
-          path.relative(root, filePath).replace(/\\/g, "/"),
+          toPosixRelative(root, filePath),
           "designContractReadiness.axesArray",
         ),
       );
@@ -149,7 +154,7 @@ async function validateEvaluationAxes(root: string, config: QfaiConfig): Promise
         "QFAI-DCON-004",
         "evaluation-axes.yaml is missing 'aggregate_rules'.",
         "error",
-        path.relative(root, filePath).replace(/\\/g, "/"),
+        toPosixRelative(root, filePath),
         "designContractReadiness.aggregateRules",
       ),
     );
@@ -168,7 +173,7 @@ async function validateAnchorSelection(root: string, config: QfaiConfig): Promis
             "QFAI-DCON-008",
             "anchor-selection.yaml must parse as an object-shaped YAML document.",
             "error",
-            path.relative(root, filePath).replace(/\\/g, "/"),
+            toPosixRelative(root, filePath),
             "designContractReadiness.anchorSelectionDocument",
           ),
         ]
@@ -192,7 +197,7 @@ async function validateAnchorSelection(root: string, config: QfaiConfig): Promis
           "QFAI-DCON-005",
           `anchor-selection.yaml is missing selected_anchor.${key}.`,
           "error",
-          path.relative(root, filePath).replace(/\\/g, "/"),
+          toPosixRelative(root, filePath),
           "designContractReadiness.anchorSelection",
         ),
       );

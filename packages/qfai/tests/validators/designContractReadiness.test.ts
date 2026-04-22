@@ -128,4 +128,34 @@ describe("validateDesignContractReadiness", () => {
 
     expect(issues.map((issue) => issue.code)).toContain("QFAI-DCON-006");
   });
+
+  it("custom contractsDir でも suggested_action は実際の design contract path を案内する", async () => {
+    const root = await newTempRoot();
+    const config = {
+      ...defaultConfig,
+      paths: {
+        ...defaultConfig.paths,
+        contractsDir: "workspace/contracts",
+      },
+    };
+    const uiDir = path.join(root, "workspace", "contracts", "ui");
+    await mkdir(uiDir, { recursive: true });
+    await writeFile(
+      path.join(uiDir, "ui-0001-dashboard.yaml"),
+      [
+        "# QFAI-CONTRACT-ID: CON-UI-0001",
+        "screens:",
+        "  - id: dashboard",
+        "    title: Dashboard",
+        "    route: /dashboard",
+      ].join("\n"),
+      "utf-8",
+    );
+
+    const issues = await validateDesignContractReadiness(root, config);
+    const missingDesignIssues = issues.filter((issue) => issue.code === "QFAI-DCON-001");
+
+    expect(missingDesignIssues).toHaveLength(3);
+    expect(missingDesignIssues[0]?.suggested_action).toContain("workspace/contracts/design/");
+  });
 });

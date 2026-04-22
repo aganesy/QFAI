@@ -131,4 +131,36 @@ describe("validateUiEvidenceArtifacts", () => {
     expect(issues.map((issue) => issue.code)).toEqual(["QFAI-UIE-003"]);
     expect(issues[0]?.file).toContain(".qfai/contracts/ui/ui-0001-orders.yaml#../escape");
   });
+
+  it("custom contractsDir でも suggested_action は実際の evidence path を案内する", async () => {
+    const root = await newTempRoot();
+    const config = {
+      ...defaultConfig,
+      paths: {
+        ...defaultConfig.paths,
+        contractsDir: "workspace/contracts",
+        specsDir: "workspace/specs",
+      },
+    };
+    const contractsDir = path.join(root, "workspace", "contracts", "ui");
+    await mkdir(contractsDir, { recursive: true });
+    await writeFile(
+      path.join(contractsDir, "ui-0001-orders.yaml"),
+      [
+        "screens:",
+        "  - id: orders-dashboard",
+        '    title: "Orders Dashboard"',
+        '    route: "/orders"',
+      ].join("\n"),
+      "utf-8",
+    );
+
+    const issues = await validateUiEvidenceArtifacts(root, config);
+
+    expect(issues.map((issue) => issue.code).sort()).toEqual(["QFAI-UIE-001", "QFAI-UIE-002"]);
+    expect(issues[0]?.suggested_action).toContain("workspace/evidence/prototyping/");
+    expect(issues[0]?.suggested_action).toContain("workspace/contracts/ui/*.yaml");
+    expect(issues[1]?.suggested_action).toContain("workspace/evidence/prototyping/");
+    expect(issues[1]?.suggested_action).toContain("workspace/contracts/ui/*.yaml");
+  });
 });
