@@ -67,6 +67,7 @@ describe("validateBreakthroughEvidence", () => {
     const missingIssue = issues.find((issue) => issue.code === "QFAI-BREAK-001");
 
     expect(missingIssue?.file).toBe("workspace/evidence/breakthrough.json");
+    expect(missingIssue?.severity).toBe("error");
     expect(missingIssue?.suggested_action).toContain("workspace/evidence/breakthrough.json");
   });
 

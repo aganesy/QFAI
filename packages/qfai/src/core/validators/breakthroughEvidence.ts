@@ -41,7 +41,7 @@ export async function validateBreakthroughEvidence(
       issue(
         "QFAI-BREAK-001",
         "breakthrough.json is required for exploration-first UI prototyping evidence but is missing.",
-        "warning",
+        "error",
         evidenceRelativePath,
         "breakthroughEvidence.presence",
         undefined,

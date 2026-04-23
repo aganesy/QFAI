@@ -96,7 +96,7 @@ export type PrototypingSummaryBundle = {
     scoringTrace: FullHarnessScoreSnapshot[];
     limitations: string[];
   };
-  breakthrough?: {
+  breakthrough: {
     latestIteration: number;
     triggerResult: boolean;
     triggerReasons: string[];
@@ -189,14 +189,7 @@ export async function writeEvidenceBundles(input: {
       JSON.stringify(browserQaBundle.findings ?? [], null, 2),
     ),
     writeEvidenceFile(browserQaRepairsPath, JSON.stringify(browserQaBundle.repairs ?? [], null, 2)),
-    ...(input.prototyping.breakthrough
-      ? [
-          writeEvidenceFile(
-            breakthroughPath,
-            JSON.stringify(input.prototyping.breakthrough, null, 2),
-          ),
-        ]
-      : []),
+    writeEvidenceFile(breakthroughPath, JSON.stringify(input.prototyping.breakthrough, null, 2)),
     ...(input.fullHarnessArtifacts
       ? [
           writeEvidenceFile(
