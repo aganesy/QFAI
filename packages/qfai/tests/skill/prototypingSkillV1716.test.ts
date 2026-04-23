@@ -87,7 +87,7 @@ describe("TC-0012-0292 — SKILL.md documents canonical evidence capture", () =>
 
 describe("TC-0012-0293 — iteration loop documented in SKILL.md", () => {
   // QFAI:SPEC-0012:TC-0012-0293
-  it("SKILL.md iteration section contains capture, evaluator launch, findings, fix, and re-evaluate in order", async () => {
+  it("SKILL.md iteration section contains capture, evaluator launch, funnel, breakthrough, and validate phases in order", async () => {
     const content = await readSkillMd();
 
     const captureIdx = content.indexOf("Capture Mandatory Evidence");
@@ -95,22 +95,20 @@ describe("TC-0012-0293 — iteration loop documented in SKILL.md", () => {
       content.indexOf("Launch L1 and L2 Evaluators"),
       content.indexOf("Launch Evaluation Reviewers"),
     );
-    const identifyIdx = content.indexOf("Aggregate Findings");
-    const fixIdx = content.indexOf("Fix and Re-capture");
-    const reevaluateIdx = content.indexOf("Re-evaluate");
+    const funnelIdx = content.indexOf("Direction Funnel");
+    const breakthroughIdx = content.indexOf("Breakthrough Detection");
+    const validateIdx = content.indexOf("Validate and Verify");
 
-    // All steps present
     expect(captureIdx, "Capture step missing").toBeGreaterThan(-1);
     expect(evaluateIdx, "Evaluator launch step missing").toBeGreaterThan(-1);
-    expect(identifyIdx, "Findings aggregation step missing").toBeGreaterThan(-1);
-    expect(fixIdx, "Fix step missing").toBeGreaterThan(-1);
-    expect(reevaluateIdx, "Re-evaluate step missing").toBeGreaterThan(-1);
+    expect(funnelIdx, "Direction funnel step missing").toBeGreaterThan(-1);
+    expect(breakthroughIdx, "Breakthrough step missing").toBeGreaterThan(-1);
+    expect(validateIdx, "Validate step missing").toBeGreaterThan(-1);
 
-    // Correct order: Capture → Evaluate → Identify → Fix → Re-evaluate
     expect(captureIdx).toBeLessThan(evaluateIdx);
-    expect(evaluateIdx).toBeLessThan(identifyIdx);
-    expect(identifyIdx).toBeLessThan(fixIdx);
-    expect(fixIdx).toBeLessThan(reevaluateIdx);
+    expect(evaluateIdx).toBeLessThan(funnelIdx);
+    expect(funnelIdx).toBeLessThan(breakthroughIdx);
+    expect(breakthroughIdx).toBeLessThan(validateIdx);
   });
 });
 
@@ -154,12 +152,11 @@ describe("TC-0012-0298 — Visual Quality Structural Checklist has 6 categories"
     // Checklist section present
     expect(content).toMatch(/Visual Quality Structural Checklist/i);
 
-    // 6 required categories
-    expect(content).toContain("Color");
-    expect(content).toContain("Typography");
-    expect(content).toContain("Spacing");
-    expect(content).toContain("Border radius");
-    expect(content).toContain("Shadow");
-    expect(content).toMatch(/Do'?s.*Don'?ts|Don'?ts.*Do'?s/i);
+    expect(content).toContain("Design quality");
+    expect(content).toContain("Originality");
+    expect(content).toContain("Craft");
+    expect(content).toContain("Functionality");
+    expect(content).toContain("Accessibility risk");
+    expect(content).toContain("Implementation plausibility");
   });
 });

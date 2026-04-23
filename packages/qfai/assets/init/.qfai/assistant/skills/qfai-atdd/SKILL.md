@@ -112,6 +112,9 @@ Use the shared schema.
   - coverage obligations met: E2E covers `US`, Integration covers `TC`, API covers `CON-API`;
   - Coverage Depth Matrix is reviewed and no unjustified `X` cells remain;
   - validation evidence exists and `qfai validate --fail-on error` passes;
+  - Drift Protocol is enforced;
+  - test-layer policy is checked against `.qfai/assistant/steering/test-layers.md`;
+  - coverage floors and ratios are signals, not gates;
   - `scenario.feature` and coverage ledgers remain optional legacy inputs, not completion gates.
 - Route specialist reviewers from `.qfai/assistant/steering/agent-routing.yml`.
 - Default ATDD review set:

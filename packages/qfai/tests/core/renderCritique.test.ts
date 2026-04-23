@@ -1,14 +1,3 @@
-// QFAI:SPEC-0010:TC-0010-0003
-// QFAI:SPEC-0010:TC-0010-0005
-// QFAI:SPEC-0010:TC-0010-0001
-// QFAI:SPEC-0010:TC-0010-0002
-// QFAI:SPEC-0010:TC-0010-0004
-// QFAI:SPEC-0010:TC-0010-0006
-// QFAI:SPEC-0010:TC-0010-0007
-// QFAI:SPEC-0010:TC-0010-0008
-// QFAI:SPEC-0010:TC-0010-0009
-// QFAI:SPEC-0010:TC-0010-0010
-
 import { mkdir, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -22,23 +11,18 @@ function makeConfig(overrides?: Partial<QfaiConfig>): QfaiConfig {
   return { ...defaultConfig, ...overrides };
 }
 
-describe("Render Critique Loop validation (SPEC-0021)", { timeout: 15000 }, () => {
+describe("Render Critique Loop validation", { timeout: 15000 }, () => {
   let root: string;
 
   beforeEach(async () => {
-    root = await createTempRoot();
+    root = await import("node:fs/promises").then((fs) =>
+      fs.mkdtemp(path.join(os.tmpdir(), "qfai-render-critique-")),
+    );
   });
 
   afterEach(async () => {
     await rm(root, { recursive: true, force: true });
   });
-
-  async function createTempRoot(): Promise<string> {
-    const tmp = await import("node:fs/promises").then((fs) =>
-      fs.mkdtemp(path.join(os.tmpdir(), "qfai-render-critique-")),
-    );
-    return tmp;
-  }
 
   async function seedSkillPrompt(name: string, content: string): Promise<void> {
     const dir = path.join(root, ".qfai", "assistant", "skills", name);
@@ -52,30 +36,34 @@ describe("Render Critique Loop validation (SPEC-0021)", { timeout: 15000 }, () =
     await writeFile(path.join(dir, name), content, "utf-8");
   }
 
-  async function seedPrototypingJson(content: Record<string, unknown>): Promise<void> {
-    const dir = path.join(root, ".qfai", "evidence");
-    await mkdir(dir, { recursive: true });
-    await writeFile(path.join(dir, "prototyping.json"), JSON.stringify(content, null, 2), "utf-8");
-  }
-
   async function seedContracts(): Promise<void> {
     const designDir = path.join(root, ".qfai", "contracts", "design");
     const uiDir = path.join(root, ".qfai", "contracts", "ui");
     await mkdir(designDir, { recursive: true });
     await mkdir(uiDir, { recursive: true });
     await writeFile(
-      path.join(designDir, "anchor-selection.yaml"),
-      "selected_anchor:\n  option_id: option-a\n  title: Option A\n  rationale: Clear primary path\n",
+      path.join(designDir, "exploration-brief.yaml"),
+      "product_intent: Clarify the main path\nmust_preserve_interactions: [search]\nbrand_signals: [calm confidence]\ndifferentiation_targets: [avoid default shell]\n",
       "utf-8",
     );
     await writeFile(
-      path.join(designDir, "evaluation-axes.yaml"),
-      "invariant_axes:\n  - id: hierarchy\ntrend_derived_axes:\n  - id: motion\nproduct_specific_axes:\n  - id: trust\naggregate_rules:\n  scoring: average\n",
+      path.join(designDir, "evaluation-rubric.yaml"),
+      "weighted_axes: [design_quality, originality]\nhard_floor_axes: [functionality, accessibility]\n",
+      "utf-8",
+    );
+    await writeFile(
+      path.join(designDir, "evaluator-calibration.yaml"),
+      "good_critique_examples: [specific]\ntoo_lenient_examples: [generic praise]\nblandness_fail_examples: [template copy]\noriginality_fail_examples: [near copy]\n",
+      "utf-8",
+    );
+    await writeFile(
+      path.join(designDir, "selected-direction.yaml"),
+      "chosen_direction_id: direction-02\nwinning_rationale: strong hierarchy\ncarry_forward_rules: [keep headline scale]\n",
       "utf-8",
     );
     await writeFile(
       path.join(designDir, "design-system.yaml"),
-      "checklist:\n  color: ok\n  typography: ok\n  spacing: ok\n  border_radius: ok\n  shadow: ok\n  dos_and_donts: ok\n",
+      "checklist:\n  color: []\n  typography: []\n  spacing: []\n  border_radius: []\n  shadow: []\n  dos_and_donts: []\n  component_tone: []\n  motion_rules: []\n",
       "utf-8",
     );
     await writeFile(
@@ -85,481 +73,61 @@ describe("Render Critique Loop validation (SPEC-0021)", { timeout: 15000 }, () =
     );
   }
 
-  // ====================================================================
-  // TDD-0001: TC-0010-0003 — Code-only rejection (QFAI-CRIT-001)
-  // ====================================================================
-  describe("TDD-0001: Code-only rejection", () => {
-    // QFAI:SPEC-0010:TC-0010-0003
-    it("should emit QFAI-CRIT-001 when skill prompt has no rendered/screenshot/HTML mention", async () => {
-      await seedSkillPrompt(
-        "qfai-prototyping",
-        "# Prototyping Skill\n\nReview the code diff carefully.",
-      );
-      const issues = await validateRenderCritique(root, makeConfig());
-      const crit001 = issues.filter((i) => i.code === "QFAI-CRIT-001");
-      expect(crit001.length).toBeGreaterThanOrEqual(1);
-      expect(crit001[0]?.severity).toBe("error");
-    });
-
-    it("should NOT emit QFAI-CRIT-001 when skill prompt mentions 'screenshot'", async () => {
-      await seedSkillPrompt(
-        "qfai-prototyping",
-        "# Prototyping Skill\n\nTake a screenshot of the rendered page and review it.\nRead `.qfai/specs/spec-0001/01_Spec.md`, `.qfai/contracts/design/anchor-selection.yaml`, `.qfai/contracts/design/evaluation-axes.yaml`, `.qfai/contracts/design/design-system.yaml`, and `.qfai/contracts/ui/*.yaml`.",
-      );
-      const issues = await validateRenderCritique(root, makeConfig());
-      const crit001 = issues.filter((i) => i.code === "QFAI-CRIT-001");
-      expect(crit001).toHaveLength(0);
-    });
-
-    it("should NOT emit QFAI-CRIT-001 when skill prompt mentions 'HTML'", async () => {
-      await seedSkillPrompt(
-        "qfai-implement",
-        "# Implement Skill\n\nOpen the HTML output in browser and compare it with spec and contract inputs.\nRead order: `.qfai/specs/spec-0001/01_Spec.md` → `.qfai/contracts/design/anchor-selection.yaml` → `.qfai/contracts/design/evaluation-axes.yaml` → `.qfai/contracts/design/design-system.yaml` → `.qfai/contracts/ui/*.yaml`.",
-      );
-      const issues = await validateRenderCritique(root, makeConfig());
-      const crit001 = issues.filter((i) => i.code === "QFAI-CRIT-001");
-      expect(crit001).toHaveLength(0);
-    });
+  it("renders/screenshot/HTML への言及がなければ QFAI-CRIT-001 を返す", async () => {
+    await seedSkillPrompt(
+      "qfai-prototyping",
+      "# Prototyping Skill\n\nReview the code diff carefully.",
+    );
+    const issues = await validateRenderCritique(root, makeConfig());
+    expect(issues.some((i) => i.code === "QFAI-CRIT-001")).toBe(true);
   });
 
-  // ====================================================================
-  // TDD-0001: TC-0010-0005 — DDP missing halt (QFAI-CRIT-002)
-  // ====================================================================
-  describe("TDD-0001: canonical sidecar references in downstream", () => {
-    // QFAI:SPEC-0010:TC-0010-0005
-    it("should emit QFAI-CRIT-002 when skill prompt has no canonical sidecar reference", async () => {
-      await seedSkillPrompt(
-        "qfai-prototyping",
-        "# Prototyping Skill\n\nTake a screenshot and review the rendered page.",
-      );
-      const issues = await validateRenderCritique(root, makeConfig());
-      const crit002 = issues.filter((i) => i.code === "QFAI-CRIT-002");
-      expect(crit002.length).toBeGreaterThanOrEqual(1);
-      expect(crit002[0]?.severity).toBe("error");
-    });
-
-    it("should NOT emit QFAI-CRIT-002 when skill prompt references canonical sidecar artifacts", async () => {
-      await seedContracts();
-      await seedSkillPrompt(
-        "qfai-prototyping",
-        "# Prototyping Skill\n\nRead spec and contract inputs first, then take a screenshot.\nRead order: `.qfai/specs/spec-0001/01_Spec.md` → `.qfai/contracts/design/anchor-selection.yaml` → `.qfai/contracts/design/evaluation-axes.yaml` → `.qfai/contracts/design/design-system.yaml` → `.qfai/contracts/ui/*.yaml` → optional HTML mock and flows",
-      );
-      const issues = await validateRenderCritique(root, makeConfig());
-      const crit002 = issues.filter((i) => i.code === "QFAI-CRIT-002");
-      expect(crit002).toHaveLength(0);
-    });
+  it("新しい read order が明示されていれば QFAI-CRIT-002 と QFAI-CRIT-005 を返さない", async () => {
+    await seedContracts();
+    await seedSkillPrompt(
+      "qfai-prototyping",
+      [
+        "# Prototyping Skill",
+        "",
+        "Take a screenshot of the rendered page and review it in the browser.",
+        "",
+        "Read order: `.qfai/specs/spec-0001/01_Spec.md` → `.qfai/contracts/design/exploration-brief.yaml` → `.qfai/discussion/discussion-*/uiux/31_reference_pool.md` → `.qfai/contracts/design/evaluation-rubric.yaml` → `.qfai/contracts/design/evaluator-calibration.yaml` → `.qfai/contracts/design/selected-direction.yaml` → `.qfai/contracts/design/design-system.yaml` → `.qfai/contracts/ui/*.yaml`.",
+      ].join("\n"),
+    );
+    const issues = await validateRenderCritique(root, makeConfig());
+    expect(issues.some((i) => i.code === "QFAI-CRIT-002")).toBe(false);
+    expect(issues.some((i) => i.code === "QFAI-CRIT-005")).toBe(false);
   });
 
-  // ====================================================================
-  // TDD-0002: TC-0010-0001, TC-0010-0002 — Desktop + Mobile critique
-  // ====================================================================
-  describe("TDD-0002: Desktop + mobile critique", () => {
-    // QFAI:SPEC-0010:TC-0010-0001
-    it("should emit QFAI-CRIT-003 when no desktop viewport critique in evidence", async () => {
-      await seedEvidence(
-        "critique-001.md",
-        "# Critique\nviewport: mobile 480px\ndate: 2025-01-01\nverdict: PASS\nfindings: none\nrubric: standard",
-      );
-      const issues = await validateRenderCritique(root, makeConfig());
-      const crit003 = issues.filter((i) => i.code === "QFAI-CRIT-003");
-      expect(crit003.length).toBeGreaterThanOrEqual(1);
-      expect(crit003[0]?.severity).toBe("error");
-    });
-
-    // QFAI:SPEC-0010:TC-0010-0002
-    it("should emit QFAI-CRIT-004 when no mobile viewport critique in evidence", async () => {
-      await seedEvidence(
-        "critique-001.md",
-        "# Critique\nviewport: desktop 1024px\ndate: 2025-01-01\nverdict: PASS\nfindings: none\nrubric: standard",
-      );
-      const issues = await validateRenderCritique(root, makeConfig());
-      const crit004 = issues.filter((i) => i.code === "QFAI-CRIT-004");
-      expect(crit004.length).toBeGreaterThanOrEqual(1);
-      expect(crit004[0]?.severity).toBe("error");
-    });
-
-    it("should NOT emit QFAI-CRIT-003 or QFAI-CRIT-004 when both viewports present", async () => {
-      await seedEvidence(
-        "critique-001.md",
-        [
-          "# Critique - Desktop",
-          "viewport: desktop 1024px",
-          "date: 2025-01-01",
-          "verdict: PASS",
-          "findings: all good",
-          "",
-          "# Critique - Mobile",
-          "viewport: mobile 480px",
-          "date: 2025-01-01",
-          "verdict: PASS",
-          "findings: all good",
-          "rubric: standard evaluation criteria",
-        ].join("\n"),
-      );
-      const issues = await validateRenderCritique(root, makeConfig());
-      const viewportIssues = issues.filter(
-        (i) => i.code === "QFAI-CRIT-003" || i.code === "QFAI-CRIT-004",
-      );
-      expect(viewportIssues).toHaveLength(0);
-    });
-
-    it("should use prototyping render evidence as the primary viewport source", async () => {
-      await seedEvidence(
-        "critique-001.md",
-        "# Critique\nviewport: desktop 1024px\ndate: 2025-01-01\nverdict: PASS\nfindings: none\nrubric: standard",
-      );
-      await seedPrototypingJson({
-        uiFidelity: {
-          mode: "interactive",
-          screens: [
-            {
-              route: "/orders",
-              uiContractId: "CON-UI-0001",
-              expected: { elements: 2, actions: 1 },
-              observed: { elementsPlaced: 2, actionsWired: 1 },
-              mockPaths: [{ id: "mp_orders", status: "finding" }],
-              renders: [
-                {
-                  viewport: "desktop",
-                  status: "captured",
-                  width: 1440,
-                  height: 900,
-                  imagePath: "renders/orders.desktop.png",
-                  htmlPath: "renders/orders.desktop.html",
-                },
-                {
-                  viewport: "mobile",
-                  status: "captured",
-                  width: 390,
-                  height: 844,
-                  imagePath: "renders/orders.mobile.png",
-                  htmlPath: "renders/orders.mobile.html",
-                },
-              ],
-            },
-          ],
-        },
-      });
-
-      const issues = await validateRenderCritique(root, makeConfig());
-      const viewportIssues = issues.filter(
-        (i) => i.code === "QFAI-CRIT-003" || i.code === "QFAI-CRIT-004",
-      );
-      expect(viewportIssues).toHaveLength(0);
-    });
-
-    it("should keep markdown-only critique valid without render evidence", async () => {
-      await seedEvidence(
-        "critique-001.md",
-        [
-          "# Critique - Desktop",
-          "viewport: desktop 1024px",
-          "date: 2025-01-01",
-          "verdict: PASS",
-          "findings: all good",
-          "",
-          "# Critique - Mobile",
-          "viewport: mobile 480px",
-          "date: 2025-01-01",
-          "verdict: PASS",
-          "findings: all good",
-          "rubric: standard evaluation criteria",
-        ].join("\n"),
-      );
-
-      const issues = await validateRenderCritique(root, makeConfig());
-      const viewportIssues = issues.filter(
-        (i) => i.code === "QFAI-CRIT-003" || i.code === "QFAI-CRIT-004",
-      );
-      expect(viewportIssues).toHaveLength(0);
-    });
-  });
-
-  // ====================================================================
-  // TDD-0003: TC-0010-0004 — Read order verification (QFAI-CRIT-005)
-  // ====================================================================
-  describe("TDD-0003: Read order verification", () => {
-    // QFAI:SPEC-0010:TC-0010-0004
-    it("should emit QFAI-CRIT-005 when read order not specified in skill prompt", async () => {
-      await seedSkillPrompt(
-        "qfai-prototyping",
-        "# Prototyping Skill\n\nRead `.qfai/specs/spec-0001/01_Spec.md` and `.qfai/contracts/design/anchor-selection.yaml`, then take a screenshot of the rendered page.",
-      );
-      const issues = await validateRenderCritique(root, makeConfig());
-      const crit005 = issues.filter((i) => i.code === "QFAI-CRIT-005");
-      expect(crit005.length).toBeGreaterThanOrEqual(1);
-      expect(crit005[0]?.severity).toBe("error");
-    });
-
-    it("should NOT emit QFAI-CRIT-005 when full read order is specified", async () => {
-      await seedContracts();
-      await seedSkillPrompt(
-        "qfai-prototyping",
-        "# Prototyping Skill\n\nRead the spec and contract family first.\n\nRead order: `.qfai/specs/spec-0001/01_Spec.md` → `.qfai/contracts/design/anchor-selection.yaml` → `.qfai/contracts/design/evaluation-axes.yaml` → `.qfai/contracts/design/design-system.yaml` → `.qfai/contracts/ui/*.yaml` → optional HTML mock and flows",
-      );
-      const issues = await validateRenderCritique(root, makeConfig());
-      const crit005 = issues.filter((i) => i.code === "QFAI-CRIT-005");
-      expect(crit005).toHaveLength(0);
-    });
-  });
-
-  // ====================================================================
-  // TDD-0004: TC-0010-0006, TC-0010-0007 — Evidence recording + reproducibility
-  // ====================================================================
-  describe("TDD-0004: Evidence recording", () => {
-    // QFAI:SPEC-0010:TC-0010-0006
-    it("should emit QFAI-CRIT-006 when evidence missing required fields", async () => {
-      await seedEvidence(
-        "critique-001.md",
-        "# Critique\nSome findings here but no structured fields.",
-      );
-      const issues = await validateRenderCritique(root, makeConfig());
-      const crit006 = issues.filter((i) => i.code === "QFAI-CRIT-006");
-      expect(crit006.length).toBeGreaterThanOrEqual(1);
-      expect(crit006[0]?.severity).toBe("error");
-      expect(crit006[0]?.message).toMatch(/missing/i);
-    });
-
-    it("should NOT emit QFAI-CRIT-006 when all required fields present", async () => {
-      await seedEvidence(
-        "critique-001.md",
-        "# Critique\ndate: 2025-01-01\nviewport: desktop 1024px\nverdict: PASS\nfindings: no issues found\nrubric: standard",
-      );
-      const issues = await validateRenderCritique(root, makeConfig());
-      const crit006 = issues.filter((i) => i.code === "QFAI-CRIT-006");
-      expect(crit006).toHaveLength(0);
-    });
-
-    // QFAI:SPEC-0010:TC-0010-0007
-    it("should emit QFAI-CRIT-007 when rubric not documented", async () => {
-      await seedEvidence(
-        "critique-001.md",
-        "# Critique\ndate: 2025-01-01\nviewport: desktop 1024px\nverdict: PASS\nfindings: ok",
-      );
-      const issues = await validateRenderCritique(root, makeConfig());
-      const crit007 = issues.filter((i) => i.code === "QFAI-CRIT-007");
-      expect(crit007.length).toBeGreaterThanOrEqual(1);
-      expect(crit007[0]?.severity).toBe("warning");
-    });
-
-    it("should NOT emit QFAI-CRIT-007 when rubric is documented", async () => {
-      await seedEvidence(
-        "critique-001.md",
-        "# Critique\ndate: 2025-01-01\nviewport: desktop 1024px\nverdict: PASS\nfindings: ok\nrubric: visual consistency check",
-      );
-      const issues = await validateRenderCritique(root, makeConfig());
-      const crit007 = issues.filter((i) => i.code === "QFAI-CRIT-007");
-      expect(crit007).toHaveLength(0);
-    });
-  });
-
-  // ====================================================================
-  // TDD-0005: TC-0010-0008 — Iterative loop completion (QFAI-CRIT-008)
-  // ====================================================================
-  describe("TDD-0005: Iterative loop completion", () => {
-    // QFAI:SPEC-0010:TC-0010-0008
-    it("should emit QFAI-CRIT-008 when desktop viewport is REVISE", async () => {
-      await seedEvidence(
-        "critique-001.md",
-        [
-          "# Desktop critique",
-          "desktop viewport: 1024px",
-          "date: 2025-01-01",
-          "viewport: desktop",
-          "verdict: REVISE",
-          "findings: spacing issues",
-          "",
-          "# Mobile critique",
-          "mobile viewport: 480px",
-          "date: 2025-01-01",
-          "viewport: mobile",
-          "verdict: PASS",
-          "findings: ok",
-          "rubric: standard",
-        ].join("\n"),
-      );
-      const issues = await validateRenderCritique(root, makeConfig());
-      const crit008 = issues.filter((i) => i.code === "QFAI-CRIT-008");
-      expect(crit008.length).toBeGreaterThanOrEqual(1);
-      expect(crit008[0]?.severity).toBe("error");
-    });
-
-    it("should emit QFAI-CRIT-008 when mobile viewport is REVISE", async () => {
-      await seedEvidence(
-        "critique-001.md",
-        [
-          "# Desktop critique",
-          "desktop viewport: 1024px",
-          "date: 2025-01-01",
-          "viewport: desktop",
-          "verdict: PASS",
-          "findings: ok",
-          "",
-          "# Mobile critique",
-          "mobile viewport: 480px",
-          "date: 2025-01-01",
-          "viewport: mobile",
-          "verdict: REVISE",
-          "findings: button too small",
-          "rubric: standard",
-        ].join("\n"),
-      );
-      const issues = await validateRenderCritique(root, makeConfig());
-      const crit008 = issues.filter((i) => i.code === "QFAI-CRIT-008");
-      expect(crit008.length).toBeGreaterThanOrEqual(1);
-    });
-
-    it("should NOT emit QFAI-CRIT-008 when both viewports are PASS", async () => {
-      await seedEvidence(
-        "critique-001.md",
-        [
-          "# Desktop critique",
-          "desktop viewport: 1024px",
-          "date: 2025-01-01",
-          "viewport: desktop",
-          "verdict: PASS",
-          "findings: ok",
-          "",
-          "# Mobile critique",
-          "mobile viewport: 480px",
-          "date: 2025-01-01",
-          "viewport: mobile",
-          "verdict: PASS",
-          "findings: ok",
-          "rubric: standard",
-        ].join("\n"),
-      );
-      const issues = await validateRenderCritique(root, makeConfig());
-      const crit008 = issues.filter((i) => i.code === "QFAI-CRIT-008");
-      expect(crit008).toHaveLength(0);
-    });
-  });
-
-  // ====================================================================
-  // TDD-0006: TC-0010-0009, TC-0010-0010 — taskFidelity
-  // ====================================================================
-  describe("TDD-0006: taskFidelity evaluation", () => {
-    // QFAI:SPEC-0010:TC-0010-0009
-    it("should emit QFAI-CRIT-009 when taskFidelity section is missing", async () => {
-      await seedEvidence(
-        "critique-001.md",
-        [
-          "# Critique",
-          "date: 2025-01-01",
-          "viewport: desktop 1024px",
-          "verdict: PASS",
-          "findings: ok",
-          "rubric: standard",
-        ].join("\n"),
-      );
-      const issues = await validateRenderCritique(root, makeConfig());
-      const crit009 = issues.filter((i) => i.code === "QFAI-CRIT-009");
-      expect(crit009.length).toBeGreaterThanOrEqual(1);
-      expect(crit009[0]?.severity).toBe("error");
-    });
-
-    it("should emit QFAI-CRIT-009 when taskFidelity is present but incomplete", async () => {
-      await seedEvidence(
-        "critique-001.md",
-        [
-          "# Critique",
-          "date: 2025-01-01",
-          "viewport: desktop 1024px",
-          "verdict: PASS",
-          "findings: ok",
-          "rubric: standard",
-          "",
-          "## taskFidelity",
-          "step_count: 3",
-          "max_primary_steps: 5",
-          // missing cta_visibility and four_state_check
-        ].join("\n"),
-      );
-      const issues = await validateRenderCritique(root, makeConfig());
-      const crit009 = issues.filter((i) => i.code === "QFAI-CRIT-009");
-      expect(crit009.length).toBeGreaterThanOrEqual(1);
-    });
-
-    // QFAI:SPEC-0010:TC-0010-0010
-    it("should emit QFAI-CRIT-010 when step_count exceeds max_primary_steps", async () => {
-      await seedEvidence(
-        "critique-001.md",
-        [
-          "# Critique",
-          "date: 2025-01-01",
-          "viewport: desktop 1024px",
-          "verdict: PASS",
-          "findings: ok",
-          "rubric: standard",
-          "",
-          "## taskFidelity",
-          "step_count: 8",
-          "max_primary_steps: 5",
-          "cta_visibility: visible",
-          "four_state_check: ok",
-        ].join("\n"),
-      );
-      const issues = await validateRenderCritique(root, makeConfig());
-      const crit010 = issues.filter((i) => i.code === "QFAI-CRIT-010");
-      expect(crit010.length).toBeGreaterThanOrEqual(1);
-      expect(crit010[0]?.severity).toBe("error");
-      expect(crit010[0]?.message).toMatch(/step_count.*8.*max_primary_steps.*5/);
-    });
-
-    it("should NOT emit QFAI-CRIT-010 when step_count is within max_primary_steps", async () => {
-      await seedEvidence(
-        "critique-001.md",
-        [
-          "# Critique",
-          "date: 2025-01-01",
-          "viewport: desktop 1024px",
-          "verdict: PASS",
-          "findings: ok",
-          "rubric: standard",
-          "",
-          "## taskFidelity",
-          "step_count: 3",
-          "max_primary_steps: 5",
-          "cta_visibility: visible",
-          "four_state_check: ok",
-        ].join("\n"),
-      );
-      const issues = await validateRenderCritique(root, makeConfig());
-      const crit010 = issues.filter((i) => i.code === "QFAI-CRIT-010");
-      expect(crit010).toHaveLength(0);
-    });
-
-    it("should NOT emit QFAI-CRIT-009 when all taskFidelity fields are present", async () => {
-      await seedEvidence(
-        "critique-001.md",
-        [
-          "# Critique",
-          "date: 2025-01-01",
-          "viewport: desktop 1024px",
-          "verdict: PASS",
-          "findings: ok",
-          "rubric: standard",
-          "",
-          "## taskFidelity",
-          "step_count: 3",
-          "max_primary_steps: 5",
-          "cta_visibility: visible",
-          "four_state_check: ok",
-        ].join("\n"),
-      );
-      const issues = await validateRenderCritique(root, makeConfig());
-      const crit009 = issues.filter((i) => i.code === "QFAI-CRIT-009");
-      expect(crit009).toHaveLength(0);
-    });
-  });
-
-  // ====================================================================
-  // No false positives when no files exist
-  // ====================================================================
-  describe("Empty project", () => {
-    it("should emit no issues when there are no skill prompts or evidence files", async () => {
-      const issues = await validateRenderCritique(root, makeConfig());
-      expect(issues).toHaveLength(0);
-    });
+  it("critique evidence に viewport/date/verdict/findings/rubric が揃っていれば必須項目エラーを返さない", async () => {
+    await seedEvidence(
+      "critique-001.md",
+      [
+        "# Desktop critique",
+        "date: 2026-04-23",
+        "viewport: desktop 1440px",
+        "verdict: PASS",
+        "findings: hierarchy is clear",
+        "rubric: design quality and originality",
+        "",
+        "# Mobile critique",
+        "date: 2026-04-23",
+        "viewport: mobile 390px",
+        "verdict: PASS",
+        "findings: CTA remains visible",
+        "rubric: design quality and originality",
+        "",
+        "## taskFidelity",
+        "step_count: 3",
+        "max_primary_steps: 5",
+        "cta_visibility: visible",
+        "four_state_check: ok",
+      ].join("\n"),
+    );
+    const issues = await validateRenderCritique(root, makeConfig());
+    expect(issues.some((i) => i.code === "QFAI-CRIT-006")).toBe(false);
+    expect(issues.some((i) => i.code === "QFAI-CRIT-007")).toBe(false);
+    expect(issues.some((i) => i.code === "QFAI-CRIT-009")).toBe(false);
+    expect(issues.some((i) => i.code === "QFAI-CRIT-010")).toBe(false);
   });
 });

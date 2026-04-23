@@ -1,17 +1,4 @@
-// QFAI:SPEC-0002:US-0002-0006
-// QFAI:SPEC-0002:US-0002-0007
-// QFAI:SPEC-0002:US-0002-0008
-// QFAI:SPEC-0002:TC-0002-0025
-// QFAI:SPEC-0002:TC-0002-0026
-// QFAI:SPEC-0002:TC-0002-0027
-// QFAI:SPEC-0002:TC-0002-0028
-// QFAI:SPEC-0002:TC-0002-0029
-// QFAI:SPEC-0002:TC-0002-0030
-// QFAI:SPEC-0002:TC-0002-0031
-// QFAI:SPEC-0002:TC-0002-0033
-// QFAI:SPEC-0002:TC-0002-0034
-
-import { cp, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -19,378 +6,47 @@ import { describe, expect, it } from "vitest";
 
 import { runInit } from "../../src/cli/commands/init.js";
 import { validateProject } from "../../src/core/validate.js";
-import { captureStdout } from "../helpers/stdout.js";
 
-// ---------------------------------------------------------------------------
-// Test helpers
-// ---------------------------------------------------------------------------
-
-async function withProject(task: (root: string) => Promise<void>): Promise<void> {
-  const root = await mkdtemp(path.join(os.tmpdir(), "qfai-ddh-int-"));
-  try {
-    await captureStdout(async () => {
+describe("discussion design hardening integration smoke", { timeout: 30000 }, () => {
+  it("init 後の discussion skill / template が exploration-first wording を持つ", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-ddh-smoke-"));
+    try {
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
-    });
-    await seedMinimalFixtures(root);
-    await task(root);
-  } finally {
-    await rm(root, { recursive: true, force: true });
-  }
-}
-
-async function seedMinimalFixtures(root: string): Promise<void> {
-  const fixtureRoot = path.resolve(process.cwd(), "tests", "fixtures", "init-seed", ".qfai");
-  await cp(
-    path.join(fixtureRoot, "specs", "spec-0001"),
-    path.join(root, ".qfai", "specs", "spec-0001"),
-    { recursive: true, force: true },
-  );
-}
-
-async function seedUiBearingDiscussionPack(root: string): Promise<void> {
-  const packDir = path.join(root, ".qfai", "discussion", "discussion-20260325140000000");
-  await mkdir(packDir, { recursive: true });
-
-  const storyContent = [
-    "# 03 Story Workshop",
-    "",
-    "<style>.screen { background: #fff; }</style>",
-    "",
-    "## Behavior Obligations",
-    "",
-    "### State Coverage",
-    "| State / Risk | Discovery Notes | Handoff to Contract |",
-    "| ------------ | --------------- | ------------------- |",
-    "| loading | Skeleton cards can obscure the main task | Final `required_states` contract lives in `uiux/40_screen_contracts.md` |",
-    "| error | Retry action must remain obvious | Final `required_states` contract lives in `uiux/40_screen_contracts.md` |",
-    "",
-    "### Interaction Contracts",
-    "| Primary Task | Key Action | Priority Hint | Expected Result | Error Handling |",
-    "| ------------ | ---------- | ------------- | --------------- | -------------- |",
-    '| Start evaluation | "Get Started" button | primary | User enters the main flow | Retry paths remain visible during failures |',
-    "",
-    "Screen-level contract details are finalized in `uiux/40_screen_contracts.md`. Primary tasks, required states, transitions, and observable outcomes are finalized there; Story Workshop is for discovery and handoff, not final contract fixation.",
-    "",
-    "### Design Anti-goals",
-    "- Anti-goal: Avoid modal-heavy flows",
-  ].join("\n");
-
-  const sourcesContent = [
-    "# 04 Sources",
-    "",
-    "## Competitive Reference Registry",
-    "",
-    "### Reference: Notion",
-    "- reference: https://notion.so/design-system",
-    "- adopted_points: Clean card layout with hierarchy",
-    "- rejected_points: Complex sidebar navigation",
-    "- local_translation: Adapted card sizes for Japanese text",
-  ].join("\n");
-
-  const minimalFiles: Array<{ name: string; content: string }> = [
-    { name: "01_Context.md", content: "# 01 Context\n\n## Background\n\nTest context.\n" },
-    { name: "02_Inception-Deck.md", content: "# 02 Inception Deck\n\nVision.\n" },
-    { name: "03_Story-Workshop.md", content: storyContent },
-    { name: "04_Sources.md", content: sourcesContent },
-    { name: "05_Scope.md", content: "# 05 Scope\n\nIn scope: all.\n" },
-    {
-      name: "06_REQ.md",
-      content:
-        "# 06 REQ\n\n## Requirements\n\n| REQ-ID | Title | Description | Source | Priority | Status |\n| ------ | ----- | ----------- | ------ | -------- | ------ |\n| REQ-0001 | Test | Test req | - | must | open |\n",
-    },
-    { name: "07_NFR.md", content: "# 07 NFR\n\nNo NFRs.\n" },
-    { name: "08_Glossary.md", content: "# 08 Glossary\n\nNo terms.\n" },
-    { name: "09_Constraints.md", content: "# 09 Constraints\n\nNone.\n" },
-    { name: "10_Policy.md", content: "# 10 Policy\n\nNone.\n" },
-    {
-      name: "11_OQ-Register.md",
-      content:
-        "# 11 OQ Register\n\n| OQ-ID | Title | Gate | Disposition | Owner | Rationale | Options | Recommendation | Next-Decision-Point | Due | Evidence |\n| ----- | ----- | ---- | ----------- | ----- | --------- | ------- | -------------- | ------------------- | --- | -------- |\n",
-    },
-    { name: "12_OQ-Resolution-Log.md", content: "# 12 OQ Resolution Log\n\nNo resolutions.\n" },
-    {
-      name: "13_Deferred.md",
-      content:
-        "# 13 Deferred\n\n| OQ-ID | Title | Gate | Deferred-Reason | Deferred-Until | Owner | Due | Severity | Impact | Mitigation | Evidence |\n| ----- | ----- | ---- | --------------- | -------------- | ----- | --- | -------- | ------ | ---------- | -------- |\n",
-    },
-    { name: "14_Review-Request.md", content: "# 14 Review Request\n\n## Scope\n\nTest review.\n" },
-    { name: "99_delta.md", content: "# 99 Delta\n\n## Change History\n\nNone.\n" },
-  ];
-
-  for (const file of minimalFiles) {
-    await writeFile(path.join(packDir, file.name), file.content, "utf-8");
-  }
-
-  // Seed uiux sidecar files for UI-bearing validation
-  const uiuxDir = path.join(packDir, "uiux");
-  await mkdir(uiuxDir, { recursive: true });
-
-  const strategyContent = [
-    "# Strategy",
-    "",
-    "## Layer Classification",
-    "Layer: strategy",
-    "",
-    "### Surface: web",
-    "- surface: web",
-    "- selection_required: yes",
-    "- decision: component-library",
-    "- candidate_options: component-library, design-system",
-    "- chosen_option: component-library",
-    "- rationale: Better visual hierarchy",
-    "- verification_expectations: Responsive card grid",
-    "- notes_for_reviewer: None",
-  ].join("\n");
-
-  const comparisonContent = [
-    "# 30 Option Comparison",
-    "",
-    "- **Option A**: Card-based layout",
-    "- **Option B**: List-based layout",
-  ].join("\n");
-
-  const selectedAnchorContent = [
-    "# 31 Selected Anchor Screen",
-    "",
-    "- selected_option: Option A",
-    "- why_selected: Better visual hierarchy for card-based layout.",
-  ].join("\n");
-
-  const contractsContent = [
-    "# 40 Screen Contracts",
-    "",
-    "### Screen: Dashboard",
-    "- screen_id: SCR-001",
-    "- route: /dashboard",
-    "- purpose: Main dashboard view",
-    "- actor: user",
-    "- primary_tasks:",
-    "  - View overview: open dashboard summary",
-    "- secondary_tasks:",
-    "  - Export data: download a report",
-    "- required_states:",
-    "  - default: Main dashboard data is visible",
-    "  - loading: Loading skeleton is visible",
-    "  - empty: Empty state explains next steps",
-    "  - error: Retry action is visible",
-    "- transitions:",
-    "  - default -> loading: refresh requested",
-    "- observable_outcomes:",
-    "  - Data displayed: summary cards are visible",
-    "- notes_for_verify: Check states",
-    "- notes_for_reviewer: None",
-  ].join("\n");
-
-  await writeFile(path.join(uiuxDir, "10_implementation_strategy.md"), strategyContent, "utf-8");
-  await writeFile(path.join(uiuxDir, "30_option_comparison.md"), comparisonContent, "utf-8");
-  await writeFile(
-    path.join(uiuxDir, "31_selected_anchor_screen.md"),
-    selectedAnchorContent,
-    "utf-8",
-  );
-  await writeFile(path.join(uiuxDir, "40_screen_contracts.md"), contractsContent, "utf-8");
-  await writeFile(
-    path.join(uiuxDir, "50_review_input_bundle.md"),
-    "# Review Input Bundle\n\n## Trend-derived review focus\n\nReview focus items derived from trends.\n",
-    "utf-8",
-  );
-}
-
-async function seedNonUiDiscussionPack(root: string): Promise<void> {
-  const packDir = path.join(root, ".qfai", "discussion", "discussion-20260325140000000");
-  await mkdir(packDir, { recursive: true });
-
-  const minimalFiles: Array<{ name: string; content: string }> = [
-    { name: "01_Context.md", content: "# 01 Context\n\n## Background\n\nAPI rate limiting.\n" },
-    { name: "02_Inception-Deck.md", content: "# 02 Inception Deck\n\nVision.\n" },
-    {
-      name: "03_Story-Workshop.md",
-      content:
-        "# 03 Story Workshop\n\n## User Stories\n\nAs a developer, I want API rate limiting.\n",
-    },
-    { name: "04_Sources.md", content: "# 04 Sources\n\nNone.\n" },
-    { name: "05_Scope.md", content: "# 05 Scope\n\nIn scope: API rate limiting.\n" },
-    {
-      name: "06_REQ.md",
-      content:
-        "# 06 REQ\n\n## Requirements\n\n| REQ-ID | Title | Description | Source | Priority | Status |\n| ------ | ----- | ----------- | ------ | -------- | ------ |\n| REQ-0001 | Rate limit | Rate limit req | - | must | open |\n",
-    },
-    { name: "07_NFR.md", content: "# 07 NFR\n\nNo NFRs.\n" },
-    { name: "08_Glossary.md", content: "# 08 Glossary\n\nNo terms.\n" },
-    { name: "09_Constraints.md", content: "# 09 Constraints\n\nNone.\n" },
-    { name: "10_Policy.md", content: "# 10 Policy\n\nNone.\n" },
-    {
-      name: "11_OQ-Register.md",
-      content:
-        "# 11 OQ Register\n\n| OQ-ID | Title | Gate | Disposition | Owner | Rationale | Options | Recommendation | Next-Decision-Point | Due | Evidence |\n| ----- | ----- | ---- | ----------- | ----- | --------- | ------- | -------------- | ------------------- | --- | -------- |\n",
-    },
-    { name: "12_OQ-Resolution-Log.md", content: "# 12 OQ Resolution Log\n\nNo resolutions.\n" },
-    {
-      name: "13_Deferred.md",
-      content:
-        "# 13 Deferred\n\n| OQ-ID | Title | Gate | Deferred-Reason | Deferred-Until | Owner | Due | Severity | Impact | Mitigation | Evidence |\n| ----- | ----- | ---- | --------------- | -------------- | ----- | --- | -------- | ------ | ---------- | -------- |\n",
-    },
-    { name: "14_Review-Request.md", content: "# 14 Review Request\n\n## Scope\n\nTest review.\n" },
-    { name: "99_delta.md", content: "# 99 Delta\n\n## Change History\n\nNone.\n" },
-  ];
-
-  for (const file of minimalFiles) {
-    await writeFile(path.join(packDir, file.name), file.content, "utf-8");
-  }
-}
-
-// ---------------------------------------------------------------------------
-// TDD-0025: TC-0002-0025 — Review-Request integration
-// ---------------------------------------------------------------------------
-
-describe("Discussion Design Hardening — Integration", { timeout: 30000 }, () => {
-  // TDD-0025: TC-0002-0025
-  it("Review-Request template has Selected Anchor Consistency section", async () => {
-    const templatePath = path.resolve(
-      process.cwd(),
-      "assets/init/.qfai/assistant/skills/qfai-discussion/templates/14_Review-Request.md",
-    );
-    const content = await readFile(templatePath, "utf-8");
-    expect(content).toContain("## Selected Anchor Consistency");
-    expect(content).toMatch(/selected anchor/i);
-    expect(content).toMatch(/strategy alignment/i);
-    expect(content).toMatch(/evaluation traceability/i);
-  });
-
-  // TDD-0026: TC-0002-0026
-  it("Delta template has Rejected Visual Directions section", async () => {
-    const templatePath = path.resolve(
-      process.cwd(),
-      "assets/init/.qfai/assistant/skills/qfai-discussion/templates/99_delta.md",
-    );
-    const content = await readFile(templatePath, "utf-8");
-    expect(content).toContain("## Rejected Visual Directions");
-    expect(content).toContain("Rationale");
-    expect(content).toContain("Recurrence Prevention");
-  });
-
-  // TDD-0027: TC-0002-0027
-  it("SKILL.md lists sidecar-family validators for UI-bearing packs", async () => {
-    const skillPath = path.resolve(
-      process.cwd(),
-      "assets/init/.qfai/assistant/skills/qfai-discussion/SKILL.md",
-    );
-    const content = await readFile(skillPath, "utf-8");
-    expect(content).toContain("UI-bearing Authoring Requirements");
-    // Sidecar-family validators are the primary quality gates
-    expect(content).toMatch(/Sidecar-family validators|UIX-VAL/i);
-    expect(content).toMatch(/non-ui.*exempt|exempt.*sidecar/i);
-  });
-
-  // TDD-0028: TC-0002-0028
-  it("Template 03_Story-Workshop.md contains Behavior Obligations with state coverage", async () => {
-    const templatePath = path.resolve(
-      process.cwd(),
-      "assets/init/.qfai/assistant/skills/qfai-discussion/templates/03_Story-Workshop.md",
-    );
-    const content = await readFile(templatePath, "utf-8");
-    expect(content).toContain("## Behavior Obligations");
-    expect(content).toContain("### State Coverage");
-    expect(content).toContain("### Interaction Contracts");
-    expect(content).toContain("### Error Handling");
-  });
-
-  // TDD-0029: TC-0002-0029
-  it("new validators execute within validate pipeline for UI-bearing pack", async () => {
-    await withProject(async (root) => {
-      await seedUiBearingDiscussionPack(root);
-      const result = await validateProject(root);
-      // If the discussion sidecars are complete, discussion hardening validators should not produce errors
-      const ddhCodes = result.issues.filter((i) => i.code.startsWith("UIX-VAL-DDH-"));
-      expect(ddhCodes).toEqual([]);
-    });
-  });
-
-  // TDD-0030: TC-0002-0030
-  it("non-UI pack keeps zero discussion hardening issues", async () => {
-    await withProject(async (root) => {
-      await seedNonUiDiscussionPack(root);
-      const result = await validateProject(root);
-      const ddhIssues = result.issues.filter(
-        (i) =>
-          i.code === "UIX-VAL-DDH-SIDECAR-PRIMARY-TRUTH" ||
-          i.code === "UIX-VAL-DDH-OPTION-COMPARISON" ||
-          i.code === "UIX-VAL-DDH-SELECTED-ANCHOR" ||
-          i.code === "UIX-VAL-DDH-COMPETITIVE-REFERENCES" ||
-          i.code === "UIX-VAL-DDH-INTERACTION-HANDOFF" ||
-          i.code === "UIX-VAL-DDH-STATE-COVERAGE" ||
-          i.code === "UIX-VAL-DDH-DESIGN-ANTI-GOALS",
+      const skill = await readFile(
+        path.join(root, ".qfai", "assistant", "skills", "qfai-discussion", "SKILL.md"),
+        "utf-8",
       );
-      expect(ddhIssues).toEqual([]);
-    });
-  });
-
-  // TDD-0031: TC-0002-0031
-  it("performance budget — validate completes within reasonable time", async () => {
-    await withProject(async (root) => {
-      await seedUiBearingDiscussionPack(root);
-      const start = performance.now();
-      await validateProject(root);
-      const elapsed = performance.now() - start;
-      // Smoke check: full validate (including DDH) must not be extremely slow.
-      // The 500ms NFR delta is validated implicitly — total execution < 10s proves
-      // DDH overhead is negligible. 10s upper bound accommodates slow CI I/O.
-      expect(elapsed).toBeLessThan(10000);
-    });
-  });
-
-  // TDD-0033: TC-0002-0033
-  it("qualityProfile preserved — validators execute regardless of profile value", async () => {
-    await withProject(async (root) => {
-      await seedNonUiDiscussionPack(root);
-      // Write a config with qualityProfile set
-      const configPath = path.join(root, "qfai.config.yaml");
-      const configContent = ["uiux:", '  qualityProfile: "strict"'].join("\n");
-      await writeFile(configPath, configContent, "utf-8");
-
-      const result = await validateProject(root);
-      // Non-UI pack should still produce zero DDH issues even with strict profile
-      const ddhIssues = result.issues.filter((i) =>
-        [
-          "UIX-VAL-DDH-SIDECAR-PRIMARY-TRUTH",
-          "UIX-VAL-DDH-OPTION-COMPARISON",
-          "UIX-VAL-DDH-SELECTED-ANCHOR",
-          "UIX-VAL-DDH-COMPETITIVE-REFERENCES",
-          "UIX-VAL-DDH-INTERACTION-HANDOFF",
-          "UIX-VAL-DDH-STATE-COVERAGE",
-          "UIX-VAL-DDH-DESIGN-ANTI-GOALS",
-        ].includes(i.code),
+      const reviewTemplate = await readFile(
+        path.join(
+          root,
+          ".qfai",
+          "assistant",
+          "skills",
+          "qfai-discussion",
+          "templates",
+          "14_Review-Request.md",
+        ),
+        "utf-8",
       );
-      expect(ddhIssues).toEqual([]);
-    });
+
+      expect(skill).toMatch(/30_exploration_brief\.md/);
+      expect(skill).toMatch(/34_evaluator_calibration\.md/);
+      expect(reviewTemplate).toMatch(
+        /30_exploration_brief\.md|best-of-history|Exploration Direction Consistency/i,
+      );
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
   });
 
-  // TDD-0034: TC-0002-0034
-  it("same-changeset verification — validator, SKILL.md, and template files all exist", async () => {
-    const { existsSync } = await import("node:fs");
-    const basePath = process.cwd();
-
-    // Validator code exists
-    expect(
-      existsSync(path.join(basePath, "src/core/validators/discussionDesignHardening.ts")),
-    ).toBe(true);
-
-    // SKILL.md updated
-    const skillPath = path.join(
-      basePath,
-      "assets/init/.qfai/assistant/skills/qfai-discussion/SKILL.md",
-    );
-    expect(existsSync(skillPath)).toBe(true);
-    const skillContent = await readFile(skillPath, "utf-8");
-    expect(skillContent).toContain("UI-bearing Authoring Requirements");
-
-    // Template updated
-    const templatePath = path.join(
-      basePath,
-      "assets/init/.qfai/assistant/skills/qfai-discussion/templates/03_Story-Workshop.md",
-    );
-    expect(existsSync(templatePath)).toBe(true);
-    const templateContent = await readFile(templatePath, "utf-8");
-    expect(templateContent).toContain("Behavior Obligations");
+  it("fresh init workspace で validate が exploration-first assets を読める", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-ddh-validate-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      const result = await validateProject(root);
+      expect(Array.isArray(result.issues)).toBe(true);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
   });
 });

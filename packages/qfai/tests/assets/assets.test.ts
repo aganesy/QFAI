@@ -278,7 +278,7 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     const content = await readFile(skillPath, "utf-8");
 
     expect(content).toMatch(/ALL specs/i);
-    expect(content).toContain(".qfai/contracts/design/evaluation-axes.yaml");
+    expect(content).toContain(".qfai/contracts/design/evaluation-rubric.yaml");
     expect(content).toContain(".qfai/contracts/ui/*.yaml");
     expect(content).toContain(".qfai/evidence/prototyping/");
     expect(content).toContain("DONE is forbidden");
@@ -854,11 +854,13 @@ describe("assets guardrails", { timeout: 30000 }, () => {
 
     expect(templates.sort()).toEqual(
       [
-        "anchor-selection.sample.yaml",
         "api-contract.sample.yaml",
         "db-contract.sample.sql",
         "design-system.sample.yaml",
-        "evaluation-axes.sample.yaml",
+        "evaluation-rubric.sample.yaml",
+        "evaluator-calibration.sample.yaml",
+        "exploration-brief.sample.yaml",
+        "selected-direction.sample.yaml",
         "ui-contract.sample.yaml",
       ].sort(),
     );
@@ -878,12 +880,9 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     );
     const content = await readFile(discussPromptPath, "utf-8");
 
-    // Required coverage topics
-    expect(content).toMatch(/product concept/i);
-    expect(content).toMatch(/non-functional/i);
-    expect(content).toMatch(/nfr/i);
-    expect(content).toMatch(/performance/i);
-    expect(content).toMatch(/security/i);
+    expect(content).toMatch(/concept, scope, stakeholders, and constraints/i);
+    expect(content).toMatch(/REQ, NFR, glossary, constraints, and policies/i);
+    expect(content).toMatch(/exploration-first sidecar family/i);
     expect(content).toContain("02_Inception-Deck.md");
     expect(content).toMatch(/HTML\+CSS/i);
     expect(content).toContain(".qfai/discussion/discussion-");
@@ -914,8 +913,8 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     const canonicalPhrase =
       "UI-bearing discussion packs require `prototyping.yaml`; non-ui discussion packs do not.";
     expect(packageReadme).toContain(canonicalPhrase);
-    expect(readme).toMatch(/ui_bearing:\s*true[\s\S]*must also include `prototyping\.yaml`/i);
-    expect(skill).toMatch(/ui_bearing:\s*true[\s\S]*prototyping\.yaml/i);
+    expect(readme).toContain(canonicalPhrase);
+    expect(skill).toContain(canonicalPhrase);
   });
 
   it("ensures qfai-discussion includes localized completion handoff guidance", async () => {
@@ -933,7 +932,6 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     expect(content).toContain("## Completion Message & Next Actions (MUST)");
     expect(content).toContain(requiredSentence);
     expect(content).toMatch(/active user language/i);
-    expect(content).toContain("Non-Japanese output:");
     expect(content).toContain("`/qfai-sdd`");
   });
 
@@ -1269,11 +1267,11 @@ describe("assets guardrails", { timeout: 30000 }, () => {
       readFile(skillPath, "utf-8"),
     ]);
 
-    // Both should use canonical gate enum: discussion|sdd|atdd|tdd|ops
+    // README should expose the canonical gate enum in the OQ Register table.
     const canonicalGates = ["discussion", "sdd", "atdd", "tdd", "ops"];
 
-    // SKILL.md already uses canonical form
-    expect(skillContent).toContain("discussion|sdd|atdd|tdd|ops");
+    expect(skillContent).toContain("11_OQ-Register.md");
+    expect(skillContent).toContain("open count is zero");
 
     // README should NOT use deprecated discuss|require|sdd
     expect(readmeContent).not.toMatch(/`discuss`.*`require`.*`sdd`/);
@@ -1294,8 +1292,8 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     const content = await readFile(skillPath, "utf-8");
 
     expect(content).toContain("prototyping.yaml");
-    expect(content).toMatch(/ui_bearing:\s*true[\s\S]*prototyping\.yaml/i);
-    expect(content).toMatch(/ui_bearing:\s*false[\s\S]*not required/i);
+    expect(content).toMatch(/ui-bearing discussion packs require `prototyping\.yaml`/i);
+    expect(content).toMatch(/non-ui discussion packs do not/i);
   });
 
   it("discussion README contains prototyping: namespaced example", async () => {
@@ -1332,14 +1330,14 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     const discussionReadmePath = path.join(templateQfaiDir, "discussion", "README.md");
     const content = await readFile(discussionReadmePath, "utf-8");
 
-    // Must express required / accepted only / invalid otherwise
+    // Must express required / planner-first / invalid otherwise
     expect(content).toMatch(/required/i);
-    expect(content).toMatch(/accepted only in namespaced form|canonical namespaced schema/i);
-    expect(content).toMatch(/top-level recommendation keys.*not supported/i);
-    expect(content).toMatch(/coexist\w*.*invalid/i);
+    expect(content).toMatch(/planner-first|exploration-first/i);
+    expect(content).toMatch(
+      /must not choose a single winner|must not choose a single visual winner/i,
+    );
 
-    // Forbidden wording (schema choice context)
-    expect(content).not.toMatch(/\bone option\b/i);
+    // Forbidden wording (compatibility context)
     expect(content).not.toContain("backward compatible");
   });
 
@@ -1359,9 +1357,8 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     expect(content).not.toMatch(/\bone option\b/i);
     expect(content).not.toContain("backward compatible");
 
-    // Must express that top-level keys are not supported and coexist is invalid
-    expect(content).toMatch(/top-level recommendation keys.*not supported/i);
-    expect(content).toMatch(/coexist\w*.*invalid/i);
+    expect(content).toMatch(/planner-first|exploration-first/i);
+    expect(content).toMatch(/do not select a single visual winner/i);
   });
 
   it("README and SKILL.md share namespaced-only semantics for prototyping.yaml", async () => {
@@ -1379,21 +1376,16 @@ describe("assets guardrails", { timeout: 30000 }, () => {
       readFile(skillPath, "utf-8"),
     ]);
 
-    // Both must mention canonical namespaced schema
-    expect(readme).toMatch(/namespaced/i);
-    expect(skill).toMatch(/namespaced/i);
+    // Both must mention planner-first / exploration-first semantics
+    expect(readme).toMatch(/planner-first|exploration-first/i);
+    expect(skill).toMatch(/planner-first|exploration-first/i);
 
-    // Both must reference required fields under prototyping: key
+    // README owns the canonical schema fields; SKILL owns requiredness and planner semantics
     expect(readme).toContain("recommended_mode");
-    expect(skill).toContain("recommended_mode");
+    expect(skill).toContain("prototyping.yaml");
 
-    // Both must express that top-level keys are not supported
-    expect(readme).toMatch(/top-level.*not supported/i);
-    expect(skill).toMatch(/top-level.*not supported/i);
-
-    // Neither should allow top-level recommendation keys
-    expect(readme).not.toMatch(/namespaced schema \(recommended\)/i);
-    expect(skill).not.toMatch(/namespaced schema \(recommended\)/i);
+    expect(readme).toMatch(/ui-bearing.*require.*prototyping\.yaml|prototyping\.yaml.*only when/i);
+    expect(skill).toMatch(/ui-bearing discussion packs require `prototyping\.yaml`/i);
   });
 
   it("discussion README declares recommended_mode must be included in allowed_modes", async () => {

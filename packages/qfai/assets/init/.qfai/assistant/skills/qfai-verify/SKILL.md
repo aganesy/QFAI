@@ -99,6 +99,7 @@ Use the shared schema.
   - declared screens have mandatory screenshot and HTML evidence under `.qfai/evidence/prototyping/`;
   - Drift Protocol enforced;
   - test-layer policy enforced against `test-layers.md`.
+  - gate counts and ratios are signals, not gates.
 - Route specialist reviewers from `.qfai/assistant/steering/agent-routing.yml`.
 - Default verify review set:
   - `qa-gatekeeper`

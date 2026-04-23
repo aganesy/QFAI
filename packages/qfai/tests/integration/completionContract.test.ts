@@ -125,18 +125,20 @@ describe("reviewer rejection/re-approval cycle", () => {
 
 // QFAI:SPEC-0003:TC-0003-0052
 describe("TC-0003-0052: canonical template generation", () => {
-  it("verifies 6 canonical UIX evaluation templates exist after init", async () => {
+  it("verifies exploration-first UIX templates exist after init", async () => {
     const files = await readdir(uiuxTemplateDir);
-    const canonicalTemplates = files.filter(
-      (f) =>
-        f.startsWith("10_") ||
-        f.startsWith("20_") ||
-        f.startsWith("21_") ||
-        f.startsWith("22_") ||
-        f.startsWith("23_") ||
-        f.startsWith("30_"),
+    const canonicalTemplates = files.filter((f) =>
+      [
+        "30_exploration_brief.md",
+        "31_reference_pool.md",
+        "32_design_anti_goals.md",
+        "33_exploration_rubric.md",
+        "34_evaluator_calibration.md",
+        "40_screen_contracts.md",
+        "50_review_input_bundle.md",
+      ].includes(f),
     );
-    expect(canonicalTemplates.length).toBeGreaterThanOrEqual(6);
+    expect(canonicalTemplates.length).toBeGreaterThanOrEqual(7);
     for (const tpl of canonicalTemplates) {
       await expect(access(path.join(uiuxTemplateDir, tpl))).resolves.toBeUndefined();
     }
@@ -145,27 +147,23 @@ describe("TC-0003-0052: canonical template generation", () => {
 
 // QFAI:SPEC-0003:TC-0003-0053
 describe("TC-0003-0053: 00_index.md references canonical family", () => {
-  it("canonical family referenced in 00_index.md, no 4-axis model refs", async () => {
+  it("canonical family referenced in 00_index.md, no legacy evaluation family refs", async () => {
     const indexPath = path.join(uiuxTemplateDir, "00_index.md");
     const content = await readFile(indexPath, "utf-8");
-    // References evaluation axis files
-    expect(content).toMatch(/design_eval|evaluation layer|scoring axes/i);
-    // No standalone 4-axis model references
-    expect(content).not.toMatch(/\b4-axis model\b/i);
-    expect(content).not.toMatch(/\bfour-axis model\b/i);
+    expect(content).toMatch(/exploration brief|reference pool|exploration rubric/i);
+    expect(content).toMatch(/forbidden legacy files/i);
   });
 });
 
 // QFAI:SPEC-0003:TC-0003-0054
 describe("TC-0003-0054: old template deprecation marking", () => {
-  it("canonical templates use evaluation axis naming, not deprecated 4-axis", async () => {
+  it("canonical templates use exploration-first naming, not deprecated evaluation-axis files", async () => {
     const files = await readdir(uiuxTemplateDir);
-    const evalAxisFiles = files.filter((f) => /^2[0-3]_design_eval_/.test(f));
-    expect(evalAxisFiles.length).toBeGreaterThanOrEqual(4);
-    // Each eval file uses 3-layer naming
-    for (const f of evalAxisFiles) {
-      expect(f).toMatch(/design_eval_(invariant|trend_derived|product_specific|aggregate)/);
-    }
+    expect(files).not.toContain("30_option_comparison.md");
+    expect(files).not.toContain("31_selected_anchor_screen.md");
+    expect(files).not.toContain("20_design_eval_invariant.md");
+    expect(files).not.toContain("23_design_eval_aggregate.md");
+    expect(files).toContain("33_exploration_rubric.md");
   });
 });
 

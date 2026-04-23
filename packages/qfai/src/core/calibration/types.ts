@@ -16,6 +16,12 @@ export type CalibrationOverrides = {
   maxIterationsByMode?: Record<string, number>;
 };
 
+export type BreakthroughConfig = {
+  minIterationsBeforeBranch: number;
+  maxDiffLines: number;
+  branchCount: number;
+};
+
 export type CalibrationPack = {
   version: string;
   examples: AlignmentExample[];
@@ -23,6 +29,7 @@ export type CalibrationPack = {
   maxIterations: number;
   plateauDelta: number;
   plateauLookback: number;
+  breakthrough: BreakthroughConfig;
   overrides?: CalibrationOverrides;
 };
 
@@ -76,4 +83,10 @@ export type PlateauResult = {
   detected: boolean;
   delta: number;
   scores: number[];
+};
+
+export const DEFAULT_BREAKTHROUGH_CONFIG: BreakthroughConfig = {
+  minIterationsBeforeBranch: 2,
+  maxDiffLines: 40,
+  branchCount: 2,
 };

@@ -223,9 +223,11 @@ Create or update layered SDD artifacts in one run so downstream execution phases
 - Target `spec-XXXX/01..10` layered files
 - Updated contracts under `.qfai/contracts/**`
 - UI-bearing normalized contracts:
+  - `.qfai/contracts/design/exploration-brief.yaml`
+  - `.qfai/contracts/design/evaluation-rubric.yaml`
+  - `.qfai/contracts/design/evaluator-calibration.yaml`
+  - `.qfai/contracts/design/selected-direction.yaml`
   - `.qfai/contracts/design/design-system.yaml`
-  - `.qfai/contracts/design/evaluation-axes.yaml`
-  - `.qfai/contracts/design/anchor-selection.yaml`
   - `.qfai/contracts/ui/*.yaml`
 - `.qfai/report/preflight_summary.md`
 - Evidence file: `.qfai/evidence/sdd-spec-XXXX.md`

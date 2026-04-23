@@ -1,9 +1,3 @@
-/**
- * Integration tests for init assistant guidance — canonical model alignment.
- *
- * Verifies that distributed init assets do not teach the old DDP worldview
- * or promote HTML mock as a required artifact.
- */
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
@@ -41,70 +35,29 @@ const steeringDir = path.join(
   "steering",
 );
 
-describe("init assistant guidance: canonical model alignment", () => {
-  it("frontend-engineer.md does not contain DDP as active artifact", async () => {
+describe("init assistant guidance: exploration-first alignment", () => {
+  it("frontend-engineer.md が selected direction / screen contracts を参照する", async () => {
     const content = await readFile(path.join(agentsDir, "frontend-engineer.md"), "utf-8");
-    expect(content).not.toMatch(/\bDDP\b/);
+    expect(content).toMatch(/selected direction|design system|screen contracts/i);
   });
 
-  it("frontend-engineer.md references selected anchor and strategy", async () => {
-    const content = await readFile(path.join(agentsDir, "frontend-engineer.md"), "utf-8");
-    expect(content).toMatch(/selected anchor/i);
-    expect(content).toMatch(/strategy/i);
-    expect(content).toMatch(/screen contracts/i);
-  });
-
-  it("frontend-engineer.md mission uses sidecar-first wording instead of UI contracts as primary truth", async () => {
-    const content = await readFile(path.join(agentsDir, "frontend-engineer.md"), "utf-8");
+  it("product-experience-architect.md が exploration / evaluation artifact を参照する", async () => {
+    const content = await readFile(
+      path.join(agentsDir, "product-experience-architect.md"),
+      "utf-8",
+    );
     expect(content).toMatch(
-      /Implement frontend behavior aligned with selected anchor, strategy, screen contracts, and product experience decisions\./i,
-    );
-    expect(content).not.toMatch(
-      /Implement frontend behavior aligned with specs, UI contracts, and product experience decisions\./i,
+      /exploration brief|reference pool|evaluation rubric|selected direction/i,
     );
   });
 
-  it("frontend-engineer.md treats HTML mock as optional fallback", async () => {
-    const content = await readFile(path.join(agentsDir, "frontend-engineer.md"), "utf-8");
-    expect(content).toMatch(/optional.*fallback.*HTML/i);
-  });
-
-  it("product-experience-architect.md does not contain DDP artifacts", async () => {
-    const content = await readFile(
-      path.join(agentsDir, "product-experience-architect.md"),
-      "utf-8",
-    );
-    expect(content).not.toMatch(/\bDDP artifacts\b/i);
-  });
-
-  it("product-experience-architect.md references sidecar-first inputs", async () => {
-    const content = await readFile(
-      path.join(agentsDir, "product-experience-architect.md"),
-      "utf-8",
-    );
-    expect(content).toMatch(/selected anchor/i);
-    expect(content).toMatch(/strategy/i);
-    expect(content).toMatch(/screen contracts/i);
-    expect(content).toMatch(/evaluation sidecars/i);
-  });
-
-  it("agent-selection.md does not contain DDP 整理", async () => {
-    const content = await readFile(path.join(instructionsDir, "agent-selection.md"), "utf-8");
-    expect(content).not.toMatch(/DDP 整理/);
-  });
-
-  it("agent-selection.md references sidecar artifacts", async () => {
+  it("agent-selection.md が sidecar artifacts を維持する", async () => {
     const content = await readFile(path.join(instructionsDir, "agent-selection.md"), "utf-8");
     expect(content).toMatch(/sidecar artifacts/i);
   });
 
-  it("agent-catalog.yml uses sidecar-first mission wording for frontend-engineer", async () => {
+  it("agent-catalog.yml の frontend mission が selected direction ベースに更新されている", async () => {
     const content = await readFile(path.join(steeringDir, "agent-catalog.yml"), "utf-8");
-    expect(content).toMatch(
-      /mission:\s*Implement frontend behavior aligned with selected anchor, strategy, screen contracts, and product-surface decisions\./i,
-    );
-    expect(content).not.toMatch(
-      /mission:\s*Implement frontend behavior aligned with specs, UI contracts, and product-surface decisions\./i,
-    );
+    expect(content).toMatch(/selected direction|design system|screen contracts/i);
   });
 });

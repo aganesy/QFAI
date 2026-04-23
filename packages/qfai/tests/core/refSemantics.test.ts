@@ -27,9 +27,9 @@ describe("isSpecDeclarationRef (rev11 canonical grammar)", () => {
   });
 
   it("rejects discussion refs", () => {
-    expect(
-      isSpecDeclarationRef(".qfai/discussion/pack-1/uiux/20_design_eval_invariant.md#L12"),
-    ).toBe(false);
+    expect(isSpecDeclarationRef(".qfai/discussion/pack-1/uiux/33_exploration_rubric.md#L12")).toBe(
+      false,
+    );
   });
 
   it("rejects canonical screen contract refs", () => {

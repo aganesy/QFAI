@@ -1,7 +1,7 @@
 /**
  * E2E: Prototyping skill asset alignment
  *
- * Verifies the shipped package skill reflects the full-harness-only contract.
+ * Verifies the shipped package skill reflects the exploration-first harness contract.
  */
 import { readFile } from "node:fs/promises";
 import path from "node:path";
@@ -28,13 +28,13 @@ describe("E2E: prototyping SKILL.md defines mode-aware contract", () => {
     return content;
   }
 
-  it("contains the full-harness section and obligation matrix", async () => {
+  it("contains the exploration-first harness and surface/mode routing contract", async () => {
     const c = await load();
-    expect(c).toMatch(/## Full-harness/);
-    expect(c).toMatch(/## Obligation matrix/i);
-    expect(c).toContain("web / full-harness");
-    expect(c).not.toContain("web / low-cost");
-    expect(c).not.toContain("web / standard");
+    expect(c).toMatch(/Exploration-First Harness/i);
+    expect(c).toMatch(/## Surface \/ Mode/i);
+    expect(c).toContain("`standard` is the default");
+    expect(c).toContain("`full-harness` is reserved for explicit escalation");
+    expect(c).toContain("5->3->2->1");
   });
 
   it("documents cli and non-ui rejection", async () => {
@@ -49,5 +49,8 @@ describe("E2E: prototyping SKILL.md defines mode-aware contract", () => {
     expect(c).toMatch(/## Required process/i);
     expect(c).toContain("qfai validate --fail-on error");
     expect(c).toMatch(/Launch (L1 and L2 Evaluators|Evaluation Reviewers)/);
+    expect(c).toContain("Breakthrough Detection");
+    expect(c).toContain("selected-direction.yaml");
+    expect(c).toContain("design-system.yaml");
   });
 });

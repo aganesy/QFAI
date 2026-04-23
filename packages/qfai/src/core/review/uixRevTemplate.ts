@@ -7,15 +7,14 @@
  */
 
 export type ReviewItemId =
-  | "taste-reflection-quality"
-  | "anti-preference-enforcement"
-  | "trend-relevance-freshness"
-  | "dynamic-axis-specificity"
-  | "generic-fallback-persistence"
-  | "strategy-appropriateness"
-  | "scoring-schema-completeness"
-  | "selected-anchor-adequacy"
+  | "reference-pool-translation"
+  | "anti-goal-enforcement"
+  | "exploration-brief-quality"
+  | "rubric-specificity"
+  | "evaluator-calibration-quality"
+  | "selected-direction-adequacy"
   | "screen-contract-sufficiency"
+  | "breakthrough-readiness"
   | "accept-refine-pivot-judgement";
 
 export type ReviewItem = {
@@ -27,92 +26,69 @@ export type ReviewItem = {
 
 export const CANONICAL_REVIEW_ITEMS: readonly ReviewItem[] = [
   {
-    id: "taste-reflection-quality",
-    name: "Taste Reflection Quality",
+    id: "reference-pool-translation",
+    name: "Reference Pool Translation",
     description:
-      "Evaluates whether taste interview responses are reflected in selected anchor, strategy, and evaluation artifacts.",
+      "Evaluates whether the reference pool is translated into product-specific design inputs rather than copied verbatim.",
     evaluationCriteria: [
-      "Presence of taste themes in selected anchor / 3-layer evaluation family",
-      "Specificity of reflection vs generic parroting",
-      "Taste interview sections are reflected across selected anchor, strategy, and evaluation layers",
+      "Adopted and rejected reference points are both documented",
+      "Local translation is specific to the product context",
+      "Reference pool supports divergence instead of template fixation",
     ],
   },
   {
-    id: "anti-preference-enforcement",
-    name: "Anti-Preference Enforcement",
+    id: "anti-goal-enforcement",
+    name: "Anti-goal Enforcement",
     description:
-      "Verifies anti-preferences from the taste interview are excluded from selected anchor and strategy decisions.",
+      "Verifies anti-goals are explicit and actively excluded from exploration and polishing decisions.",
     evaluationCriteria: [
-      "No anti-preference themes appear as positive design direction",
-      "Explicit exclusion documentation present",
-      "Cross-reference with taste interview anti_preferences section",
+      "No anti-goal themes appear as positive design direction",
+      "Explicit exclusion documentation is present",
+      "Rejected directions align with anti-goals",
     ],
   },
   {
-    id: "trend-relevance-freshness",
-    name: "Trend Relevance & Freshness",
-    description: "Evaluates temporal relevance and session-specificity of referenced trends.",
+    id: "exploration-brief-quality",
+    name: "Exploration Brief Quality",
+    description:
+      "Evaluates whether the planner output gives enough structure for divergent exploration without prematurely fixing a solution.",
     evaluationCriteria: [
-      "Freshness date check against configurable window",
-      "Domain alignment between trend and project context",
-      "source_refs quality assessment",
-      "Confidence level appropriateness for use case",
+      "Product intent is concrete and measurable",
+      "Must-preserve interactions are explicit",
+      "Brand signals and differentiation targets are actionable",
     ],
   },
   {
-    id: "dynamic-axis-specificity",
-    name: "Dynamic Axis Specificity",
+    id: "rubric-specificity",
+    name: "Rubric Specificity",
     description:
-      "Checks axes are project-specific and derived from taste/trend inputs, not generic defaults.",
+      "Checks whether the evaluation rubric is gradable and strong enough to push beyond bland outputs.",
     evaluationCriteria: [
-      "Axes reference taste interview sources",
-      "Axes reference trend scan sources",
-      "No boilerplate axes without taste/trend derivation",
-      "Layer assignment matches source type (invariant/trend-derived/product-specific)",
+      "Design quality and originality are explicit weighted axes",
+      "Craft and functionality are present as floors, not dominant forces",
+      "Rubric language penalizes generic default outputs",
     ],
   },
   {
-    id: "generic-fallback-persistence",
-    name: "Generic Fallback Persistence",
+    id: "evaluator-calibration-quality",
+    name: "Evaluator Calibration Quality",
     description:
-      "Flags generic/placeholder axes remaining after taste/trend specialization should have occurred.",
+      "Flags evaluator prompts that are too lenient or insufficiently skeptical about bland work.",
     evaluationCriteria: [
-      "Count of generic axes that should have been specialized = 0",
-      "Generic axis names like 'visual consistency' without source derivation are flagged",
-      "Cross-check with trend scan for available specialization candidates",
+      "Good critique examples are distinct from too-lenient examples",
+      "Blandness-fail and originality-fail examples are documented",
+      "Evaluator guidance is strong enough to reject generic polish-only outputs",
     ],
   },
   {
-    id: "strategy-appropriateness",
-    name: "Strategy Appropriateness",
+    id: "selected-direction-adequacy",
+    name: "Selected Direction Adequacy",
     description:
-      "Evaluates whether the strategy in 10_implementation_strategy.md is appropriate for the project context and surface type.",
+      "Evaluates whether the selected direction artifact adequately captures the winner and carry-forward rules.",
     evaluationCriteria: [
-      "Strategy surface matches project classification",
-      "Decision and rationale are substantive (not placeholder)",
-      "Verification expectations are actionable",
-    ],
-  },
-  {
-    id: "scoring-schema-completeness",
-    name: "Scoring-Ready Schema Completeness",
-    description:
-      "Evaluates whether scoring-ready evaluation axes have all canonical fields populated.",
-    evaluationCriteria: [
-      "Canonical scoring-ready fields present (origin, layer, source_refs, goal_refs, evidence_required, review_questions)",
-      "Aggregate thresholds defined (accept/refine/pivot)",
-      "Plateau and disagreement rules documented",
-    ],
-  },
-  {
-    id: "selected-anchor-adequacy",
-    name: "Selected Anchor Adequacy",
-    description:
-      "Evaluates whether 31_selected_anchor_screen.md adequately represents the canonical visual direction.",
-    evaluationCriteria: [
-      "Anchor references selected option from 30_option_comparison.md",
-      "Anchor is independently assessable as a visual direction",
-      "Rejected/deferred options are documented with rationale",
+      "Winning rationale is specific and evidence-backed",
+      "Carry-forward rules are actionable",
+      "Rejected or superseded directions are summarized",
     ],
   },
   {
@@ -124,6 +100,17 @@ export const CANONICAL_REVIEW_ITEMS: readonly ReviewItem[] = [
       "All 11 canonical fields present per screen",
       "Routes are unique across all contracts",
       "Required states include default/loading/empty/error",
+    ],
+  },
+  {
+    id: "breakthrough-readiness",
+    name: "Breakthrough Readiness",
+    description:
+      "Evaluates whether the harness is prepared to branch when polishing stalls before completion.",
+    evaluationCriteria: [
+      "Best-of-history handling is documented",
+      "Plateau / breakthrough conditions are explicit",
+      "Breakthrough branches are compared against the incumbent instead of being ignored",
     ],
   },
   {
@@ -161,6 +148,8 @@ export function detectGenericFallbackAxes(axesContent: string): string[] {
     /\bvisual\s+consistency\b/i,
     /\busability\b/i,
     /\bgeneral\s+accessibility\b/i,
+    /\bmodern\b/i,
+    /\bclean\b/i,
   ];
 
   const genericAxes: string[] = [];

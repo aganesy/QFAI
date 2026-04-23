@@ -22,8 +22,12 @@ import { issue, readSafe } from "./utils.js";
 
 const RENDERED_KEYWORDS_RE = /\b(rendered|screenshot|html\b|preview|visual\s*review)/i;
 const SPEC_RE = /\b(01_spec|03_acceptance-criteria|spec-|\bspec\b)\b/i;
-const ANCHOR_RE = /\b(anchor-selection|selected\s*anchor|anchor\s*selection)\b/i;
-const EVAL_AXES_RE = /\b(evaluation-axes|evaluation\s*axes|3-layer|three-layer|axisdefs)\b/i;
+const EXPLORATION_BRIEF_RE = /\b(exploration-brief|exploration\s*brief|30_exploration_brief)\b/i;
+const REFERENCE_POOL_RE = /\b(reference-pool|reference\s*pool|31_reference_pool)\b/i;
+const EVAL_RUBRIC_RE = /\b(evaluation-rubric|evaluation\s*rubric|33_exploration_rubric)\b/i;
+const EVAL_CALIBRATION_RE =
+  /\b(evaluator-calibration|evaluator\s*calibration|34_evaluator_calibration)\b/i;
+const SELECTED_DIRECTION_RE = /\b(selected-direction|selected\s*direction|winner\s*direction)\b/i;
 const DESIGN_SYSTEM_RE = /\b(design-system|design\s*system|designsystemchecklist)\b/i;
 const UI_CONTRACTS_RE = /\b(contracts\/ui|ui\s*contracts|screen\s*contracts)\b/i;
 
@@ -79,8 +83,10 @@ export async function validateRenderCritique(root: string, config: QfaiConfig): 
     if (
       content.length > 0 &&
       (!SPEC_RE.test(content) ||
-        !ANCHOR_RE.test(content) ||
-        !EVAL_AXES_RE.test(content) ||
+        !EXPLORATION_BRIEF_RE.test(content) ||
+        !REFERENCE_POOL_RE.test(content) ||
+        !EVAL_RUBRIC_RE.test(content) ||
+        !EVAL_CALIBRATION_RE.test(content) ||
         !DESIGN_SYSTEM_RE.test(content) ||
         !UI_CONTRACTS_RE.test(content))
     ) {
@@ -93,7 +99,7 @@ export async function validateRenderCritique(root: string, config: QfaiConfig): 
           "renderCritique.contractMissing",
           undefined,
           "change",
-          "Reference spec inputs, anchor-selection, evaluation-axes, design-system, and UI contracts in the downstream skill prompt.",
+          "Reference spec inputs, exploration brief, reference pool, evaluation rubric, evaluator calibration, design-system, and UI contracts in the downstream skill prompt.",
         ),
       );
     }
@@ -147,15 +153,29 @@ export async function validateRenderCritique(root: string, config: QfaiConfig): 
     const content = await readSafe(sf);
     if (content.length > 0) {
       const hasSpec = SPEC_RE.test(content);
-      const hasAnchor = ANCHOR_RE.test(content);
-      const hasEvalAxes = EVAL_AXES_RE.test(content);
+      const hasExplorationBrief = EXPLORATION_BRIEF_RE.test(content);
+      const hasReferencePool = REFERENCE_POOL_RE.test(content);
+      const hasEvalRubric = EVAL_RUBRIC_RE.test(content);
+      const hasEvalCalibration = EVAL_CALIBRATION_RE.test(content);
+      const hasSelectedDirection = SELECTED_DIRECTION_RE.test(content);
       const hasDesignSystem = DESIGN_SYSTEM_RE.test(content);
       const hasUiContracts = UI_CONTRACTS_RE.test(content);
-      if (!hasSpec || !hasAnchor || !hasEvalAxes || !hasDesignSystem || !hasUiContracts) {
+      if (
+        !hasSpec ||
+        !hasExplorationBrief ||
+        !hasReferencePool ||
+        !hasEvalRubric ||
+        !hasEvalCalibration ||
+        !hasDesignSystem ||
+        !hasUiContracts
+      ) {
         const missing: string[] = [];
         if (!hasSpec) missing.push("spec inputs");
-        if (!hasAnchor) missing.push("anchor-selection");
-        if (!hasEvalAxes) missing.push("evaluation-axes");
+        if (!hasExplorationBrief) missing.push("exploration-brief");
+        if (!hasReferencePool) missing.push("reference-pool");
+        if (!hasEvalRubric) missing.push("evaluation-rubric");
+        if (!hasEvalCalibration) missing.push("evaluator-calibration");
+        if (!hasSelectedDirection) missing.push("selected-direction");
         if (!hasDesignSystem) missing.push("design-system");
         if (!hasUiContracts) missing.push("ui contracts");
         issues.push(
@@ -167,7 +187,7 @@ export async function validateRenderCritique(root: string, config: QfaiConfig): 
             "renderCritique.readOrder",
             undefined,
             "change",
-            "Specify read order with spec inputs, anchor-selection, evaluation-axes, design-system, and UI contracts.",
+            "Specify read order with spec inputs, exploration-brief, reference-pool, evaluation-rubric, evaluator-calibration, selected-direction, design-system, and UI contracts.",
           ),
         );
       }

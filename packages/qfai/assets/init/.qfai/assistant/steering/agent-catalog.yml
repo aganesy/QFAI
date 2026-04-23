@@ -65,7 +65,7 @@ agents:
   - id: frontend-engineer
     kind: worker
     domain: frontend
-    mission: Implement frontend behavior aligned with selected anchor, strategy, screen contracts, and product-surface decisions.
+    mission: Implement frontend behavior aligned with selected direction, finalized design system, screen contracts, and product-surface decisions.
     owned_artifacts: [ui-implementation, surface-evidence]
     tool_profile: frontend
     permission_profile: authoring

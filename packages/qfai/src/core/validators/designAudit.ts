@@ -2,9 +2,9 @@ import { readdir } from "node:fs/promises";
 import path from "node:path";
 
 import type { QfaiConfig } from "../config.js";
+import { isDiscussionUiBearingPack } from "../detection/surfaceType.js";
 import { findLatestDiscussionPackDir } from "../discussionPack.js";
 import type { Issue, IssueSeverity } from "../types.js";
-import { isUiBearing } from "./discussionDesignHardening.js";
 import { issue, readSafe } from "./utils.js";
 
 // ---------------------------------------------------------------------------
@@ -107,7 +107,7 @@ function _extractSection(content: string, heading: string): string | null {
 }
 
 // ---------------------------------------------------------------------------
-// Contracts / Selected Anchor Checks
+// Contracts / Selected Direction Checks
 // ---------------------------------------------------------------------------
 
 function parseScreenBlocks(content: string): Array<{ screenId: string; primaryTasks: string[] }> {
@@ -177,7 +177,7 @@ function checkContractsHierarchy(
         dimension: "visualHierarchy",
         severityTier: 2,
         message: `Screen '${screen.screenId}' defines multiple primary tasks (${screen.primaryTasks.length} > ${auditConfig.maxPrimaryCtas})`,
-        why: "Multiple primary tasks weaken the selected anchor and blur the intended primary action",
+        why: "Multiple primary tasks weaken the selected direction and blur the intended primary action",
         evidence: screen.primaryTasks,
         guidance: "Reduce primary_tasks to the single most important user action for this screen.",
         file,
@@ -188,18 +188,20 @@ function checkContractsHierarchy(
   return findings;
 }
 
-function checkSelectedAnchor(anchorContent: string, file: string): DesignFinding[] {
+function checkSelectedDirection(directionContent: string, file: string): DesignFinding[] {
   const findings: DesignFinding[] = [];
-  const hasSelectedOption = /selected_option\s*:/i.test(anchorContent);
-  if (!hasSelectedOption) {
+  const hasChosenDirection = /chosen_direction_id\s*:/i.test(directionContent);
+  if (!hasChosenDirection) {
     findings.push({
       ruleId: "QFAI-AUD-021",
       dimension: "consistency",
       severityTier: 1,
-      message: "Selected anchor is missing selected_option in uiux/31_selected_anchor_screen.md",
-      why: "The selected anchor screen is the canonical source for the chosen UI direction",
+      message:
+        "Selected direction is missing chosen_direction_id in .qfai/contracts/design/selected-direction.yaml",
+      why: "The selected direction contract is the canonical source for the chosen UI direction",
       evidence: [],
-      guidance: "Add a selected_option field in uiux/31_selected_anchor_screen.md.",
+      guidance:
+        "Add a chosen_direction_id field in .qfai/contracts/design/selected-direction.yaml.",
       file,
     });
   }
@@ -317,14 +319,19 @@ export async function validateDesignAudit(root: string, config: QfaiConfig): Pro
   const packRoot = await findLatestDiscussionPackDir(discussionDir);
   if (!packRoot) return [];
 
-  const uiBearing = await isUiBearing(packRoot);
+  const uiBearing = await isDiscussionUiBearingPack(packRoot);
   if (!uiBearing) return [];
 
   const contractsPath = path.join(packRoot, "uiux", "40_screen_contracts.md");
   const contractsContent = await readSafe(contractsPath);
-  const anchorPath = path.join(packRoot, "uiux", "31_selected_anchor_screen.md");
-  const anchorContent = await readSafe(anchorPath);
-  if (!contractsContent && !anchorContent) return [];
+  const selectedDirectionPath = path.join(
+    root,
+    config.paths.contractsDir,
+    "design",
+    "selected-direction.yaml",
+  );
+  const selectedDirectionContent = await readSafe(selectedDirectionPath);
+  if (!contractsContent && !selectedDirectionContent) return [];
 
   const findings: DesignFinding[] = [];
 
@@ -333,8 +340,13 @@ export async function validateDesignAudit(root: string, config: QfaiConfig): Pro
       ...checkContractsHierarchy(contractsContent, auditConfig, "uiux/40_screen_contracts.md"),
     );
   }
-  if (anchorContent) {
-    findings.push(...checkSelectedAnchor(anchorContent, "uiux/31_selected_anchor_screen.md"));
+  if (selectedDirectionContent) {
+    findings.push(
+      ...checkSelectedDirection(
+        selectedDirectionContent,
+        ".qfai/contracts/design/selected-direction.yaml",
+      ),
+    );
   }
 
   // Token drift check

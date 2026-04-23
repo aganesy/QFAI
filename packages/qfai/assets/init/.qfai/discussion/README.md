@@ -2,7 +2,7 @@
 
 ## Purpose
 
-`discussion/` stores the unified discussion pack that merges interview outputs (discuss) and requirement intake (require). Discussion packs use 15 required markdown files. When the latest pack is `ui_bearing: true`, it must also include `prototyping.yaml`; when `ui_bearing: false`, `prototyping.yaml` is not required.
+`discussion/` stores the unified discussion pack that merges interview outputs (discuss) and requirement intake (require). Discussion packs use 15 required markdown files. UI-bearing discussion packs require `prototyping.yaml`; non-ui discussion packs do not. When the latest pack is `ui_bearing: true`, it must also include `prototyping.yaml`; when `ui_bearing: false`, `prototyping.yaml` is not required.
 
 This directory does not directly update `specs/`; it prepares decisions, requirements, open questions, and rationale as inputs for `/qfai-sdd`.
 
@@ -52,16 +52,17 @@ discussion/
 
 ## UI/UX canonical family
 
-For UI-bearing packs, the canonical design-evaluation source-of-truth is:
+For UI-bearing packs, the canonical exploration-first source-of-truth is:
 
 - `04_Sources.md` for trend translation and competitive reference registry
-- `uiux/20_design_eval_invariant.md`
-- `uiux/21_design_eval_trend_derived.md`
-- `uiux/22_design_eval_product_specific.md`
-- `uiux/23_design_eval_aggregate.md`
+- `uiux/30_exploration_brief.md`
+- `uiux/31_reference_pool.md`
+- `uiux/32_design_anti_goals.md`
+- `uiux/33_exploration_rubric.md`
+- `uiux/34_evaluator_calibration.md`
 - `uiux/40_screen_contracts.md`
 
-`05_Scope.md` is not a trend source-of-truth for L2 scoring, and fallback scans such as `uiux/*trend*` or `uiux/*competitive*` must not replace these canonical files.
+Discussion must not choose a single winner or finalize a design system. Those are downstream prototyping outputs.
 
 ## OQ Register rules
 
@@ -125,7 +126,7 @@ Each UI-bearing discussion pack (`ui_bearing: true`) **must** include a `prototy
 ```yaml
 prototyping:
   recommended_mode: full-harness
-  rationale: UI validation requires the full-harness runtime loop in packages/qfai.
+  rationale: Exploration-first prototyping requires the full-harness runtime loop in packages/qfai.
   allowed_modes:
     - full-harness
   surface: web

@@ -9,8 +9,8 @@
 import type { QfaiConfig } from "../../config.js";
 import type { Issue } from "../../types.js";
 import { validateAntiPreference } from "./antiPreference.js";
+import { validateOptionComparison } from "./comparisonValidator.js";
 import { validateScreenContractSchema } from "./screenContract.js";
-import { validateScoringReady } from "./scoringReady.js";
 import { validateStrategyStrong } from "./strategy.js";
 import { validateTasteInterview } from "./taste.js";
 import { validateTasteReflection } from "./tasteReflection.js";
@@ -29,9 +29,9 @@ export async function countUiBearingFires(
     validateTasteInterview,
     validateTrendScan,
     validateThreeLayerModel,
-    validateScoringReady,
     validateStrategyStrong,
     validateScreenContractSchema,
+    validateOptionComparison,
     validateTasteReflection,
     validateAntiPreference,
   ];

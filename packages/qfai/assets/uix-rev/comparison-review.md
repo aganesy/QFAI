@@ -1,18 +1,16 @@
 # UIX-REV: Comparison Review
 
-Review only `30_option_comparison.md` as the option comparison artifact.
+Review exploration artifacts as comparison inputs, not a fixed option-comparison artifact.
 
-## Comparison Quality (30_option_comparison.md)
+## Comparison Quality
 
-- Must contain at least 2 options with structured evaluation
-- Each option should have pros/cons/trade-off analysis
-- Evaluation criteria must reference the 3-layer evaluation family
-- Rejected/deferred options must have explicit rationale
-- Reconsideration conditions must be documented for deferred options
-- Do not move selected anchor ownership back into `30_option_comparison.md`
+- Exploration must start from multiple divergent directions
+- Comparison criteria must reflect the exploration rubric and evaluator calibration
+- Rejected or superseded directions must have explicit rationale
+- Best-of-history handling must remain visible during later loops
 
 ### Trend-derived conversion check
 
-- Trend scan results are converted to comparison axes
+- Reference-pool inputs are translated into comparison pressure
 - Stale / overused AI slop avoidance is reflected in comparison criteria
-- Keep selected-anchor ownership in `31_selected_anchor_screen.md` and scoring-ready field ownership in `50_review_input_bundle.md`
+- Keep winner ownership in `selected-direction.yaml` and history handling in `50_review_input_bundle.md`

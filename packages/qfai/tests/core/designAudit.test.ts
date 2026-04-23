@@ -298,36 +298,25 @@ describe("validateDesignAudit  Eaudit rules", { timeout: 10000 }, () => {
 
   async function writeCanonicalAuditArtifacts(
     contractsLines: string[],
-    comparisonLines = [
-      "# 30 Option Comparison",
-      "",
-      "## Option Comparison",
-      "",
-      "- **Option A**: Primary dashboard",
-      "- **Option B**: Dense table view",
-    ],
-    anchorLines = [
-      "# 31 Selected Anchor Screen",
-      "",
-      "selected_option: Option A",
-      "",
-      "Best matches current workflow",
+    selectedDirectionLines = [
+      "chosen_direction_id: direction-primary",
+      "winning_rationale: Focused dashboard hierarchy best supports the primary workflow.",
+      "carry_forward_rules:",
+      "  - Keep a single primary CTA per screen.",
+      "  - Preserve the dashboard-first information hierarchy.",
     ],
   ): Promise<void> {
     const packDir = path.join(root, ".qfai", "discussion", "discussion-20240101000000000", "uiux");
+    const contractsDesignDir = path.join(root, ".qfai", "contracts", "design");
     await writeFile(
       path.join(packDir, "40_screen_contracts.md"),
       contractsLines.join("\n"),
       "utf-8",
     );
+    await mkdir(contractsDesignDir, { recursive: true });
     await writeFile(
-      path.join(packDir, "30_option_comparison.md"),
-      comparisonLines.join("\n"),
-      "utf-8",
-    );
-    await writeFile(
-      path.join(packDir, "31_selected_anchor_screen.md"),
-      anchorLines.join("\n"),
+      path.join(contractsDesignDir, "selected-direction.yaml"),
+      `${selectedDirectionLines.join("\n")}\n`,
       "utf-8",
     );
   }

@@ -1,7 +1,7 @@
 ---
 name: qfai-prototyping
-title: QFAI Prototyping (Skill-Orchestrated)
-description: "Build a contract-aligned UI prototype, run agent-led visual evaluation, and gate completion through validate/verify."
+title: QFAI Prototyping (Exploration-First Harness)
+description: "Run a planner/generator/evaluator UI harness with a 5→3→2→1 direction funnel, breakthrough detection, and final design-system extraction."
 argument-hint: "[--auto]"
 allowed-tools: [Read, Glob, Write, TodoWrite, Task, Bash]
 roles:
@@ -39,14 +39,13 @@ Do not rely on a CLI entrypoint or package runtime loop.
 - Supported UI prototyping surfaces are `web`, `mobile`, `desktop`, and `mixed`.
 - `cli`, API-only, backend-only, and `ui_bearing: false` classifications are not prototyping execution targets.
 - `cli` is not supported and is not an execution target for prototyping.
-- Canonical screen contracts in `.qfai/contracts/ui/*.yaml` are mandatory.
-- Evaluation is performed by sub-agents; machine checks are limited to schema/evidence validation.
-- Evaluation reviewer findings must be fixed or explicitly dispositioned before PASS.
-- Shared evidence vocabulary includes `render.json` and `browser-qa.json` alongside screenshot and HTML evidence.
+- Evaluation is performed by sub-agents; machine checks are limited to schema/evidence validation and breakthrough trigger detection.
+- Shared evidence vocabulary includes `render.json`, `browser-qa.json`, `prototyping.json`, and `breakthrough.json`.
+- static-first evidence capture remains mandatory even when interactive review is used.
 
 ## Goal
 
-Build the minimum runnable slice for all specs and produce reviewable screenshot/HTML evidence for every declared screen.
+Generate multiple design directions, converge on a winner, extract the selected direction and final design system, and keep the winner open to breakthrough pivots during later polish iterations.
 
 ## Surface / Mode
 
@@ -64,6 +63,7 @@ Read and follow these references before execution:
 - `.qfai/assistant/skills/qfai-prototyping/references/l2-review-guide.md`
 - `.qfai/assistant/skills/qfai-prototyping/references/design-system-compliance.md`
 - `.qfai/assistant/skills/qfai-prototyping/references/reviewer-gate.md`
+- `.qfai/assistant/steering/test-layers.md`
 
 ## Delegation Scope Table
 
@@ -71,12 +71,13 @@ All sub-agent delegation in this skill MUST follow the category-to-role mapping 
 Assigning a task to a role not listed for the category is a violation and MUST be flagged.
 Evaluation scoring and screenshot capture must use only the allowed roles below.
 
-| Category           | Allowed Role(s)                                        |
-| ------------------ | ------------------------------------------------------ |
-| UI implementation  | frontend-engineer, product-experience-architect        |
-| Screenshot capture | devops-ci-engineer                                     |
-| Evaluation review  | product-surface-reviewer, product-experience-architect |
-| Build              | devops-ci-engineer, backend-engineer                   |
+| Category              | Allowed Role(s)                                        |
+| --------------------- | ------------------------------------------------------ |
+| UI implementation     | frontend-engineer, product-experience-architect        |
+| Screenshot capture    | devops-ci-engineer                                     |
+| Evaluation review     | product-surface-reviewer, product-experience-architect |
+| Build                 | devops-ci-engineer, backend-engineer                   |
+| Breakthrough planning | product-experience-architect, frontend-engineer        |
 
 Any delegation map entry that assigns a category to an undefined or unlisted role MUST produce a violation finding naming the undefined role and the category.
 
@@ -89,7 +90,8 @@ Before any code is written, create an execution plan record in the work evidence
 Required fields:
 
 - `targetIterations`: integer; minimum 2
-- `evaluationAxesSource`: ref to `.qfai/contracts/design/evaluation-axes.yaml`
+- `funnelPolicy`: `5->3->2->1`
+- `evaluationAxesSource`: ref to `.qfai/contracts/design/evaluation-rubric.yaml`
 - `delegationMap`: category-to-role assignments per Delegation Scope Table
 - `plannedAt`: ISO-8601 timestamp
 
@@ -99,19 +101,25 @@ Read the downstream-ready spec/contract inputs and verify:
 
 - `.qfai/specs/<spec-id>/01_Spec.md`
 - `.qfai/specs/<spec-id>/03_Acceptance-Criteria.md`
-- `.qfai/contracts/design/evaluation-axes.yaml`
-- `.qfai/contracts/design/anchor-selection.yaml`
-- `.qfai/contracts/design/design-system.yaml` when required by the spec
+- `.qfai/contracts/design/exploration-brief.yaml`
+- `.qfai/discussion/discussion-*/uiux/31_reference_pool.md`
+- `.qfai/contracts/design/evaluation-rubric.yaml`
+- `.qfai/contracts/design/evaluator-calibration.yaml`
+- `.qfai/contracts/design/selected-direction.yaml` when already created
+- `.qfai/contracts/design/design-system.yaml` when already created
 - `.qfai/contracts/ui/*.yaml`
 
 Read order:
 
 1. `.qfai/specs/<spec-id>/01_Spec.md`
 2. `.qfai/specs/<spec-id>/03_Acceptance-Criteria.md`
-3. `.qfai/contracts/design/anchor-selection.yaml`
-4. `.qfai/contracts/design/evaluation-axes.yaml`
-5. `.qfai/contracts/design/design-system.yaml`
-6. `.qfai/contracts/ui/*.yaml`
+3. `.qfai/contracts/design/exploration-brief.yaml`
+4. `.qfai/discussion/discussion-*/uiux/31_reference_pool.md`
+5. `.qfai/contracts/design/evaluation-rubric.yaml`
+6. `.qfai/contracts/design/evaluator-calibration.yaml`
+7. `.qfai/contracts/design/selected-direction.yaml`
+8. `.qfai/contracts/design/design-system.yaml`
+9. `.qfai/contracts/ui/*.yaml`
 
 ### Step 2 — Verify Execution Preconditions
 
@@ -120,16 +128,16 @@ Confirm all of the following before any evaluation:
 - classification is UI-bearing
 - surface is `web`, `mobile`, `desktop`, or `mixed`
 - every declared screen has a stable `screen-id`
-- the design evaluation contract satisfies the required schema
-- the design system checklist is available when required
+- the exploration brief, evaluation rubric, and evaluator calibration contracts satisfy the required schema
 
-### Step 3 — Implement the Minimum Runnable Slice
+### Step 3 — Generate Divergent Directions
 
-Implement the smallest UI slice that covers all declared screens and primary interactions.
+Generate 5 clearly distinct design directions before selecting a winner.
+Do not begin with a single incumbent direction.
 
 ### Step 4 — Capture Mandatory Evidence
 
-For every declared screen:
+For every declared screen and every active direction:
 
 - capture one screenshot and store it at the canonical screenshot path
 - capture one HTML snapshot and store it at the canonical HTML path
@@ -141,57 +149,52 @@ Launch evaluation reviewer sub-agents with the full context bundle:
 
 - screenshots from Step 4
 - HTML snapshots from Step 4
-- `axisDefs` from `.qfai/contracts/design/evaluation-axes.yaml`
+- `axisDefs` from `.qfai/contracts/design/evaluation-rubric.yaml`
 - `previousScore` from the prior iteration (`null` for iteration 1)
 - `designSystemChecklist` from `.qfai/contracts/design/design-system.yaml`
 
-If any required input is missing, stop the evaluation and classify the screen as `0` points with rerun required.
+### Step 6 — Direction Funnel
 
-### Step 6 — Aggregate Findings
+Run the mandatory convergence funnel:
 
-Aggregate reviewer findings and classify them as:
+- 5 directions -> top 3
+- top 3 remixed -> top 2
+- top 2 -> selected winner 1
 
-- blocking
-- immediate-fix
-- revise
-- manual-review
+### Step 7 — Extract Winner Contracts
 
-### Step 7 — Fix and Re-capture
+After the first winner is selected:
 
-Apply fixes per finding disposition, then re-capture screenshot and HTML evidence for every changed screen.
-Do not close a finding without fresh evidence.
+- write `.qfai/contracts/design/selected-direction.yaml`
+- extract `.qfai/contracts/design/design-system.yaml`
 
-### Step 8 — Re-evaluate
+### Step 8 — Polish the Winner
 
-Repeat Steps 4–7 until:
-
-- at least 2 iterations have completed
-- all declared screens have screenshot + HTML evidence
-- blocking findings are closed or dispositioned
-- validate can pass on required schema/evidence gates
+Iterate on the selected winner with normal critique/rework loops.
+Do not assume the latest iteration is automatically best; keep best-of-history in evidence.
 
 ## Iteration Gate
 
-- minimum 2 iterations are required before phase transition to validation or review.
-- if the iteration gate is not satisfied, phase transition is blocked.
-- terminationCondition cannot bypass the minimum 2 iterations rule.
+- Minimum 2 iterations are required before any terminal phase transition is allowed.
+- Do not mark the run as converged or complete after a single iteration.
+- Any phase transition to completion must pass through the iteration gate and reviewer gate.
 
-## Full-harness
+### Step 9 — Breakthrough Detection
 
-- `full-harness` applies only after explicit escalation from the default `standard` path.
-- `full-harness` carries review-heavy obligations and stricter evidence checks.
+After each polish iteration, run the mechanical breakthrough detector.
+If `allItemsPass95` is false and score improvement is below the configured plateau threshold and code change is below the configured diff threshold, trigger breakthrough branching.
 
-## Obligation matrix
+### Step 10 — Breakthrough Branch Loop
 
-| surface / mode          | obligation profile                  |
-| ----------------------- | ----------------------------------- |
-| web / default route     | static-first obligations (standard) |
-| web / full-harness      | review-heavy obligations            |
-| mobile / default route  | static-first obligations (standard) |
-| desktop / default route | static-first obligations (standard) |
-| mixed / full-harness    | review-heavy obligations            |
+When breakthrough is triggered:
 
-### Step 9 — Validate and Verify
+- generate exactly 2 branch directions
+- compare incumbent + 2 branches
+- replace the mainline if a branch wins
+- refresh selected-direction/design-system if the winner changes
+- record the decision in `.qfai/evidence/breakthrough.json`
+
+### Step 11 — Validate and Verify
 
 - Run `qfai validate --fail-on error`.
 - Route `/qfai-verify` or its equivalent gate workflow for final quality approval.
@@ -211,26 +214,29 @@ When launching any evaluation reviewer sub-agent, all 5 elements MUST be present
 
 Each iteration evaluation MUST score all 6 visual categories:
 
-1. Color
-2. Typography
-3. Spacing
-4. Border radius
-5. Shadow
-6. Do's&Don'ts
+1. Design quality
+2. Originality
+3. Craft
+4. Functionality
+5. Accessibility risk
+6. Implementation plausibility
 
 ### Reviewer Gate (MUST)
 
 Reviewer checks are defined in:
 
 - `.qfai/assistant/skills/qfai-prototyping/references/reviewer-gate.md`
+- `.qfai/assistant/steering/test-layers.md`
 
 Minimum reviewer responsibilities:
 
+- enforce the Drift Protocol before approving a completion transition
 - verify mandatory screenshot/HTML evidence exists for every declared screen
-- verify 3-layer evaluation references were used
+- verify exploration brief, evaluation rubric, and evaluator calibration were used
 - verify missing evidence caused rerun rather than waiver
 - verify `qfai validate --fail-on error` completed successfully
-- verify Drift Protocol compliance and alignment with `.qfai/assistant/steering/test-layers.md`
+- verify breakthrough trigger evidence is present
+- verify best-of-history handling is documented
 - treat score/volume heuristics as signals, not gates
 - return `Result: PASS | REVISE`
 
@@ -265,6 +271,9 @@ Prototyping-specific additions:
 
 - all specs are covered
 - all declared screens have screenshot + HTML evidence
+- `selected-direction.yaml` exists
+- `design-system.yaml` exists
+- `breakthrough.json` exists
 - `qfai validate --fail-on error` passes
 - reviewer returns `PASS`
 
@@ -274,6 +283,8 @@ Prototyping-specific additions:
 - Every declared screen has screenshot evidence.
 - Every declared screen has HTML evidence.
 - Missing evidence triggered rerun instead of waiver.
+- Direction funnel `5->3->2->1` completed.
+- Breakthrough detector ran after polish iterations.
 - Reviewer returned PASS; otherwise status is REVISE.
 
 ## Completion Message & Next Actions (MUST)

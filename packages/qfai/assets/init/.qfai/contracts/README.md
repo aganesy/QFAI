@@ -18,7 +18,7 @@ QFAI organizes this directory into four subdirectories:
 .qfai/contracts/
 ├── api/      # OpenAPI YAML (endpoints, request/response)
 ├── db/       # SQL schema contracts (tables, columns, constraints)
-├── design/   # Design system / axes / anchor YAML
+├── design/   # Exploration brief / rubric / selected direction / design system YAML
 └── ui/       # UI contract YAML (screens, elements, user actions)
 ```
 
@@ -42,9 +42,11 @@ QFAI organizes this directory into four subdirectories:
 │   └── db-0001-<slug>.sql
 ├── design/
 │   ├── README.md
+│   ├── exploration-brief.yaml
+│   ├── evaluation-rubric.yaml
+│   ├── evaluator-calibration.yaml
+│   ├── selected-direction.yaml
 │   ├── design-system.yaml
-│   ├── evaluation-axes.yaml
-│   ├── anchor-selection.yaml
 │   └── design-tokens.yaml          (optional)
 └── ui/
     ├── README.md

@@ -920,8 +920,8 @@ describe("TC-0014-0025: vocabulary fail — prohibited terms", () => {
   });
 });
 
-describe("TC-0014-0026: fixture alignment — 3-layer model", () => {
-  it("discussion SKILL.md references scoring axes and evaluation axis files", async () => {
+describe("TC-0014-0026: fixture alignment — exploration-first model", () => {
+  it("discussion SKILL.md references exploration brief and rubric artifacts", async () => {
     const repoRoot = path.resolve(process.cwd(), "..", "..");
     const skillPath = path.join(
       repoRoot,
@@ -936,8 +936,7 @@ describe("TC-0014-0026: fixture alignment — 3-layer model", () => {
       "SKILL.md",
     );
     const content = await readFile(skillPath, "utf-8");
-    // SKILL.md must reference scoring axes and eval_axis files
-    expect(content).toMatch(/[Ss]coring axes|eval_axis/i);
+    expect(content).toMatch(/exploration brief|exploration-first|exploration rubric/i);
   });
 });
 
