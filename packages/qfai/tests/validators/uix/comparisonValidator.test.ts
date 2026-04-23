@@ -135,4 +135,13 @@ describe("comparisonValidator", () => {
 
     expect(issues.some((i) => i.code === "UIX-VAL-DIRECTION-RUBRIC-INCOMPLETE")).toBe(true);
   });
+
+  it("non-ui: returns empty array for non-ui specs", async () => {
+    const root = await newTempDir();
+    await writeFile(path.join(root, "01_Spec.md"), "# Spec\n\n- surface: non-ui\n", "utf-8");
+
+    const issues = await validateOptionComparison(root, defaultConfig);
+
+    expect(issues).toEqual([]);
+  });
 });

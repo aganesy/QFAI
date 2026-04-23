@@ -44,11 +44,14 @@ export function detectBreakthrough(input: {
   if (recentAvgDeltas.length < input.plateauLookback) {
     reasons.push("insufficient-lookback");
   }
-  if (
-    recentAvgDeltas.length === input.plateauLookback &&
-    !recentAvgDeltas.every((delta) => delta < input.plateauDelta)
-  ) {
-    reasons.push("score-still-improving");
+  if (recentAvgDeltas.length === input.plateauLookback) {
+    const hasRegression = recentAvgDeltas.some((delta) => delta < 0);
+    const isPlateau = recentAvgDeltas.every((delta) => delta >= 0 && delta < input.plateauDelta);
+    if (hasRegression) {
+      reasons.push("score-regressing");
+    } else if (!isPlateau) {
+      reasons.push("score-still-improving");
+    }
   }
   if (input.diffLines >= input.breakthrough.maxDiffLines) {
     reasons.push("code-change-too-large");

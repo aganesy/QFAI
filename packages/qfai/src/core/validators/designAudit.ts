@@ -37,6 +37,10 @@ export type DesignFinding = {
 
 const COSMETIC_CATEGORIES = ["generic-shell", "stock-imagery", "placeholder-copy"];
 
+function toPosixRelative(root: string, targetPath: string): string {
+  return path.relative(root, targetPath).replace(/\\/g, "/");
+}
+
 // ---------------------------------------------------------------------------
 // Config Resolution
 // ---------------------------------------------------------------------------
@@ -196,12 +200,10 @@ function checkSelectedDirection(directionContent: string, file: string): DesignF
       ruleId: "QFAI-AUD-021",
       dimension: "consistency",
       severityTier: 1,
-      message:
-        "Selected direction is missing chosen_direction_id in .qfai/contracts/design/selected-direction.yaml",
+      message: `Selected direction is missing chosen_direction_id in ${file}`,
       why: "The selected direction contract is the canonical source for the chosen UI direction",
       evidence: [],
-      guidance:
-        "Add a chosen_direction_id field in .qfai/contracts/design/selected-direction.yaml.",
+      guidance: `Add a chosen_direction_id field in ${file}.`,
       file,
     });
   }
@@ -341,11 +343,9 @@ export async function validateDesignAudit(root: string, config: QfaiConfig): Pro
     );
   }
   if (selectedDirectionContent) {
+    const selectedDirectionRelativePath = toPosixRelative(root, selectedDirectionPath);
     findings.push(
-      ...checkSelectedDirection(
-        selectedDirectionContent,
-        ".qfai/contracts/design/selected-direction.yaml",
-      ),
+      ...checkSelectedDirection(selectedDirectionContent, selectedDirectionRelativePath),
     );
   }
 

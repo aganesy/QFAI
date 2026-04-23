@@ -50,4 +50,40 @@ describe("detectBreakthrough", () => {
     expect(result.triggerResult).toBe(false);
     expect(result.triggerReasons).toContain("already-converged");
   });
+
+  it("スコアが悪化しているときは plateau 扱いせず score-regressing を返す", () => {
+    const result = detectBreakthrough({
+      scoringTrace: [
+        {
+          iteration: 1,
+          averageScore: 0.82,
+          minScore: 0.8,
+          allItemsPass95: false,
+          commitSha: "a".repeat(40),
+        },
+        {
+          iteration: 2,
+          averageScore: 0.81,
+          minScore: 0.79,
+          allItemsPass95: false,
+          commitSha: "b".repeat(40),
+        },
+        {
+          iteration: 3,
+          averageScore: 0.8,
+          minScore: 0.78,
+          allItemsPass95: false,
+          commitSha: "c".repeat(40),
+        },
+      ],
+      diffLines: 0,
+      plateauDelta: 0.02,
+      plateauLookback: 2,
+      breakthrough,
+    });
+
+    expect(result.triggerResult).toBe(false);
+    expect(result.triggerReasons).toContain("score-regressing");
+    expect(result.triggerReasons).not.toContain("score-still-improving");
+  });
 });

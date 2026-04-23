@@ -382,6 +382,74 @@ describe("validateDesignAudit  Eaudit rules", { timeout: 10000 }, () => {
     expect(ctaIssue?.severity).toBe("error");
   });
 
+  it("uses configured contractsDir in selected-direction diagnostics", async () => {
+    await createUiBearingPack(["# 03 Story Workshop", "<div>UI content</div>"].join("\n"));
+    const customContractsDir = path.join("custom", "contracts");
+    const selectedDirectionPath = path.join(
+      root,
+      customContractsDir,
+      "design",
+      "selected-direction.yaml",
+    );
+    await writeCanonicalAuditArtifacts(
+      [
+        "# Screen Contracts",
+        "",
+        "### Screen: Dashboard",
+        "",
+        "- screen_id: dashboard",
+        "- route: /dashboard",
+        "- purpose: Review current status",
+        "- actor: end-user",
+        "- primary_tasks:",
+        "  - Submit order",
+        "- required_states:",
+        "  - default: Data visible",
+        "  - loading: Spinner",
+        "  - empty: Empty state",
+        "  - error: Error with retry",
+        "- transitions:",
+        "  - default -> loading: Refresh requested",
+        "- observable_outcomes:",
+        "  - Order summary is visible",
+        "- notes_for_verify: Check state coverage",
+        "- notes_for_reviewer: Focus on primary action",
+      ],
+      [
+        "winning_rationale: Focused dashboard hierarchy best supports the primary workflow.",
+        "carry_forward_rules:",
+        "  - Keep a single primary CTA per screen.",
+      ],
+    );
+    await mkdir(path.dirname(selectedDirectionPath), { recursive: true });
+    await writeFile(
+      selectedDirectionPath,
+      [
+        "winning_rationale: Focused dashboard hierarchy best supports the primary workflow.",
+        "carry_forward_rules:",
+        "  - Keep a single primary CTA per screen.",
+      ].join("\n"),
+      "utf-8",
+    );
+
+    const cfg = config({
+      paths: {
+        ...defaultConfig.paths,
+        contractsDir: customContractsDir,
+      },
+    });
+    const issues = await validateDesignAudit(root, cfg);
+    const selectedDirectionIssue = issues.find((i) => i.code === "QFAI-AUD-021");
+
+    expect(selectedDirectionIssue?.file).toBe("custom/contracts/design/selected-direction.yaml");
+    expect(selectedDirectionIssue?.message).toContain(
+      "custom/contracts/design/selected-direction.yaml",
+    );
+    expect(selectedDirectionIssue?.suggested_action).toContain(
+      "custom/contracts/design/selected-direction.yaml",
+    );
+  });
+
   it("TDD-0014: token drift over threshold ↁEQFAI-AUD-004", async () => {
     await createUiBearingPack(["# 03 Story Workshop", "<div>UI content</div>"].join("\n"));
     await writeCanonicalAuditArtifacts([

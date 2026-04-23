@@ -39,7 +39,7 @@ describe("fixture coverage", () => {
 
     for (const v of validators) {
       const result = await checkFixtureCoverage(v.file, v.name);
-      expect(result.fixtureCount).toBeGreaterThanOrEqual(2);
+      expect(result.fixtureCount).toBeGreaterThanOrEqual(3);
     }
   });
 });
