@@ -80,6 +80,33 @@ describe("validateBreakthroughEvidence", () => {
     expect(issues.map((issue) => issue.code)).toContain("QFAI-BREAK-002");
   });
 
+  it("latestIteration が 0 以下なら QFAI-BREAK-003 を返す", async () => {
+    const root = await newTempRoot();
+    await seedUiContract(root);
+
+    for (const latestIteration of [0, -1]) {
+      await writeBreakthroughEvidence(
+        root,
+        `${JSON.stringify(
+          {
+            latestIteration,
+            triggerResult: false,
+            triggerReasons: ["insufficient-lookback"],
+            scoreDeltaWindow: 2,
+            avgScoreDeltas: [0.01, 0.015],
+            minScoreDeltas: [0.02, 0.01],
+            diffLines: 8,
+          },
+          null,
+          2,
+        )}\n`,
+      );
+
+      const issues = await validateBreakthroughEvidence(root, defaultConfig);
+      expect(issues.map((issue) => issue.code)).toContain("QFAI-BREAK-003");
+    }
+  });
+
   it("妥当な breakthrough.json なら issue を返さない", async () => {
     const root = await newTempRoot();
     await seedUiContract(root);

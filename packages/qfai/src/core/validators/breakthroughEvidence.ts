@@ -64,7 +64,11 @@ export async function validateBreakthroughEvidence(
 
   const record = raw.value as BreakthroughRecord;
   const issues: Issue[] = [];
-  if (!Number.isInteger(record.latestIteration)) {
+  if (
+    typeof record.latestIteration !== "number" ||
+    !Number.isInteger(record.latestIteration) ||
+    record.latestIteration < 1
+  ) {
     issues.push(
       issue(
         "QFAI-BREAK-003",
