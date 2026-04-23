@@ -90,7 +90,8 @@ Use the shared schema.
   - required roles were delegated;
   - validate evidence exists: `qfai validate --fail-on error` completed with `error=0`;
   - Drift Protocol enforced;
-  - test-layer policy enforced where applicable.
+  - test-layer policy enforced against `.qfai/assistant/steering/test-layers.md`;
+  - tool-count heuristics are signals, not gates.
 - Route specialist reviewers from `.qfai/assistant/steering/agent-routing.yml`.
 - Default configure review set:
   - `completion-reviewer`

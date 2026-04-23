@@ -2,12 +2,12 @@
 
 ## 2026-04-22
 
-- Adopted: skill-first prototyping SSOT
+- Adopted: reviewer-score centered full-harness evidence schema
 - Superseded:
-  - public CLI command `qfai prototyping`
-  - runtime orchestration as active contract
-  - mode split as active user-facing posture
+  - `weightedTotal` / `deltaFromPrevious` wording as active contract
+  - `previousScore` as the canonical convergence artifact
 - Added:
-  - mandatory screenshot/html evidence contract
-  - validate/verify gate wording
-  - legacy validator-slice clarification without runtime revival
+  - `reviewerScores[]` / `allItemsPass95` iteration wording
+  - snapshot-based `scoringTrace[]`
+  - `iterationBudget.maxIterations` / `remainingIterations`
+  - budget-driven termination semantics

@@ -1,8 +1,19 @@
 # 03 Acceptance Criteria
 
-- `/qfai-verify` runs `qfai validate --fail-on error`.
+## AC-0014-0001
+
+- `/qfai-verify` runs full-scan validation rather than a diff-only shortcut.
+
+## AC-0014-0002
+
 - Verify inspects reviewer artifacts and blocks on `REVISE`.
+
+## AC-0014-0003
+
 - Validate imports and uses the canonical validator entrypoint.
 - Removed compatibility surfaces are not present in the package surface.
+
+## AC-0014-0004
+
 - Design-system related validators continue to run when their prerequisite files/artifacts exist.
 - Legacy `full-harness` wording inside validator slices is treated as artifact vocabulary, not as a public command contract.

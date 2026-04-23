@@ -19,7 +19,4 @@ Use this file for detailed review-pack handling in `/qfai-discussion`.
 ## summary.json
 
 - `target.kind` must be `"discussion"`.
-- Keep rerun history append-only by storing each rerun as a new entry in a
-  `cycles[]` array within the same `summary.json`.
-- Treat `cycles[]` as append-only: add a new cycle object for each rerun, and
-  do not rewrite or delete prior cycle entries.
+- Keep rerun history append-only.

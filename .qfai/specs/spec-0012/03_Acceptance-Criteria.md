@@ -1,64 +1,78 @@
 # 03 Acceptance Criteria
 
-## Active Acceptance Criteria
+## AC-0012-0001
 
-### AC-0012-0084
-
-- `qfai-prototyping` SKILL.md contains a Delegation Scope Table.
-- The table includes `UI implementation`, `Screenshot capture`, `Evaluation L1-L2`, and `Build`.
-- Invalid or undefined roles are surfaced as findings instead of silently ignored.
-
-### AC-0012-0085
-
-- The skill documents an iteration gate.
-- A single-pass "converged" narrative is rejected.
-- Reviewer guidance requires rerun when mandatory evidence is missing.
-
-### AC-0012-0086
-
-- The skill documents Step 0 execution planning.
+- `/qfai-prototyping` documents Step 0 execution planning before the first capture/evaluation cycle.
 - Step 0 names `targetIterations`, `evaluationAxesSource`, `delegationMap`, and `plannedAt`.
-- Step 0 is positioned before the first capture/evaluation cycle.
+- Delegation scope and invalid role handling are documented in the same execution-planning posture.
 
-### AC-0012-0087
+## AC-0012-0002
 
-- Screenshot capture guidance exists as a shared asset/reference.
-- The asset is not described as a public CLI surface.
-- Failure behavior is fail-closed and does not generate fake PNG evidence.
+- Declared screen evidence uses the canonical screenshot and HTML snapshot paths.
+- Documentation names the canonical paths explicitly.
 
-### AC-0012-0088
+## AC-0012-0003
 
-- The skill or references document the ordered iteration cycle:
-  - Capture Mandatory Evidence
-  - Launch L1 and L2 Evaluators
-  - Aggregate Findings
-  - Fix and Re-capture
-  - Re-evaluate
+- Missing screenshot or HTML evidence is fail-closed.
+- Capture guidance does not allow fake evidence generation.
 
-### AC-0012-0089
+## AC-0012-0004
 
-- The evaluator input protocol names `screenshots`, `HTML snapshots`, `axisDefs`, `previousScore`, and `designSystemChecklist`.
-- Missing mandatory inputs are called out as findings or rerun triggers.
+- Evaluator/reviewer role ownership is documented.
+- The skill spells out which roles own implementation, screenshot capture, evaluation scoring, and build.
 
-### AC-0012-0090
+## AC-0012-0005
 
-- The visual checklist names Color, Typography, Spacing, Border radius, Shadow, and Do's & Don'ts.
-- The checklist is used as review guidance, not as a hidden runtime algorithm.
+- Evaluator input guidance names screenshots, HTML snapshots, rubric/calibration inputs, prior reviewer-score context, and design-system input.
+- Review guidance also names the visual checklist categories used during scoring.
 
-### AC-0012-0091
+## AC-0012-0006
 
-- When legacy `full-harness` evidence artifacts are being validated on `web`, Lighthouse evidence can still be required.
-- This requirement is documented as validator/reference behavior, not as a public mode contract.
+- `qfai validate --fail-on error` is documented as the machine gate before completion.
 
-### AC-0012-0092
+## AC-0012-0007
 
-- If `.qfai/contracts/design/design-system.yaml` exists, design-system compliance may be evaluated.
-- If the file does not exist, design-system scoring is skipped without erroring solely for the missing score artifact.
+- `/qfai-verify` is documented as the final review gate.
+- Completion remains blocked on `REVISE`.
 
-### AC-0012-0093
+## AC-0012-0008
 
-- Calibration override behavior is documented for existing validator/reference helpers.
-- The documentation does not reintroduce mode selection as a public user-facing contract.
+- Legacy validation slices may still require `executionPlan`, Lighthouse evidence, design-system compliance, and calibration overrides.
+- These requirements are documented as validator/reference behavior, not as a public mode contract.
+
+## AC-0012-0009
+
+- `ui_bearing: false` specs are excluded from prototyping execution.
+- Missing screen contracts do not over-fire UI-only requirements for non-UI specs.
+
+## AC-0012-0010
+
+- Legacy traceability identifier space remains reserved.
+- Active wording does not reintroduce superseded weighted-total narratives.
+
+## AC-0012-0011
+
+- Internal mode budgets are documented as low-cost=1, standard=3, and full-harness=20.
+- These values are framed as implementation detail rather than a negotiated public runtime interface.
+
+## AC-0012-0012
+
+- `fullHarness.iterations[]` stores `reviewerScores[]` and `allItemsPass95`.
+- Weighted-total-only summaries are not the active schema.
+
+## AC-0012-0013
+
+- `fullHarness.scoringTrace[]` is derived from iteration snapshots.
+- Snapshots record reviewer count, axis count, min score, average score, `allItemsPass95`, and commit SHA.
+
+## AC-0012-0014
+
+- Termination reason is `converged` when the latest iteration has `allItemsPass95=true`.
+- Termination reason is `max-iterations` when the configured budget is exhausted without convergence.
+
+## AC-0012-0015
+
+- Full-harness result output includes `iterationBudget.maxIterations` and `iterationBudget.remainingIterations`.
 
 ## Completion Gate
 
@@ -69,5 +83,5 @@
 ## Superseded Contract Notes
 
 - Active docs must not present `qfai prototyping` as a valid command.
-- Active docs must not present `low-cost`, `standard`, or `full-harness` as the current public mode surface.
-- Legacy validator slices may still refer to `full-harness` inside artifact semantics, provided they are clearly scoped as compatibility/reference behavior.
+- Active docs must not present weighted-total scoring as the current evidence contract.
+- Internal mode helpers may still exist, provided they are clearly scoped as implementation detail.

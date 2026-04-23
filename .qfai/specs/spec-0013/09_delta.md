@@ -44,3 +44,9 @@
 - adopted: US-0013-0008, AC-0013-0008~0009 追加
 - adopted: US range 更新 US-0013-0001..US-0013-0008
 - rationale: v1.7.13 sddPreflight.ts に prototyping.yaml 存在チェックと recommendation schema validation が追加された実装の仕様反映
+
+## v1.8.1 (2026-04-22) — Preflight Side Artifact Neutrality
+
+- updated: REQ-0014~0015 / US-0013-0008 / AC-0013-0008~0010 を current implementation に再同期
+- removed: prototyping.yaml 必須 preflight blocker 前提
+- rationale: `packages/qfai/src/core/discussionPack.ts` が side artifact requiredness を廃止し、`packages/qfai/src/core/preflight/sddPreflight.ts` は markdown readiness を主 blocker として扱うため

@@ -40,7 +40,7 @@ describe("TC-0012-0285 — Delegation Scope Table has 4 categories", () => {
     // 4 required categories
     expect(content).toContain("UI implementation");
     expect(content).toContain("Screenshot capture");
-    expect(content).toMatch(/Evaluation (L1-L2|review)/);
+    expect(content).toMatch(/Evaluation (L1-L2|review|scoring)/);
     expect(content).toContain("Build");
 
     // Required roles present in the table

@@ -1121,8 +1121,8 @@ discussion-20260416023323603（v1.7.15 rev8 leaf-field ref grammar closure）、
 
 ### DR-0106-A: QFAI-AUD-021 Selected Direction Audit Rule
 
-- Decision: uiux/31_selected_anchor_screen.md に `## Selected Direction` セクションが存在しない場合に QFAI-AUD-021 error を追加
-- Context: selected direction は sidecar-first モデルの中核的 design decision。v1.7.13 で 30_comparison.md から 31_selected_anchor_screen.md に分離
+- Decision: legacy single-winner sidecar に required selected-direction section が存在しない場合に migration error を追加
+- Context: 当時の sidecar-first モデルでは winner selection が discussion artifact に埋め込まれていたが、この posture は exploration-first rebuild で superseded となった
 - Rationale: design audit で selected direction の存在を強制し、設計意思決定の欠落を防止
 
 ### DR-0107-A: Canonical Barrel Isolation
@@ -1412,7 +1412,7 @@ discussion-20260416023323603（v1.7.15 rev8 leaf-field ref grammar closure）、
 
 ### DR-0229: Trend-derived `score_anchors` require quantitative proxy and warning-first rollout (v1.7.17)
 
-- Decision: `21_design_eval_trend_derived.md` の `score_anchors` は抽象形容詞のみを禁止し、px 値 / 比率 / rule ID / class 名 / library default などの quantitative proxy を 1 つ以上含める。validator severity は v1.7.17 では warning とする
+- Decision: legacy trend-derived scoring artifact の `score_anchors` は抽象形容詞のみを禁止し、px 値 / 比率 / rule ID / class 名 / library default などの quantitative proxy を 1 つ以上含める。validator severity は v1.7.17 では warning とする
 - Status: Adopted
 - Rationale: concreteness がない anchor は高スコアでも低品質 UI を通してしまう。一方で既存 pack 影響は staged rollout が妥当
 - Alternatives: (A) 即時 error — migration shock / (B) warning-first ratchet (adopted)
@@ -1496,3 +1496,15 @@ discussion-20260416023323603（v1.7.15 rev8 leaf-field ref grammar closure）、
 - Decision: declared screen evidence requires both screenshot and HTML snapshot
 - Decision: legacy full-harness / mode / runtime terminology remains historical or validator-slice vocabulary only
 - Rationale: simplify user-facing execution while preserving deterministic evidence integrity checks
+
+### DR-0240: Discussion / Preflight Side Artifact Neutrality (2026-04-22)
+
+- Decision: discussion-pack readiness と SDD preflight は required markdown を主 gate とし、`prototyping.yaml` を必須 side artifact として扱わない
+- Decision: `missingSideArtifacts` は compatibility-shaped field として残っても、current contract では readiness blocker に使わない
+- Rationale: `packages/qfai/src/core/discussionPack.ts` と `packages/qfai/src/core/preflight/sddPreflight.ts` の current behavior に同期するため
+
+### DR-0241: Reviewer-Score Snapshot Evidence Model (2026-04-22)
+
+- Decision: full-harness の active evidence schema は `reviewerScores[]`、`allItemsPass95`、snapshot-based `scoringTrace[]`、`iterationBudget` とする
+- Decision: `weightedTotal` / `deltaFromPrevious` は historical wording とし、current convergence contract には使わない
+- Rationale: `packages/qfai/src/core/harness/history.ts` / `resultWriter.ts` / `types.ts` の current implementation に同期するため

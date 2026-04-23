@@ -119,6 +119,12 @@ US-0014-0012 → AC-0014-0014 → BR-0014-0015 → EX-0014-0015 → TC-0014-0009
 
 ## v1.7.16 (2026-04-18) — QFAI Package Design Quality Pipeline Restructure (Validator Extensions)
 
+### Superseded Note (2026-04-22)
+
+- This slice is retained as migration history only.
+- Current-active downstream design contracts are `exploration-brief.yaml`, `evaluation-rubric.yaml`, `evaluator-calibration.yaml`, `selected-direction.yaml`, and `design-system.yaml`.
+- Historical references in this section to discussion-time design-system generation and legacy trend-derived scoring remain non-active.
+
 ### Context
 
 - Source: discussion-20260418093755100 (18 REQs, non-UI pack)
@@ -135,8 +141,8 @@ US-0014-0012 → AC-0014-0014 → BR-0014-0015 → EX-0014-0015 → TC-0014-0009
 | US-0014-0014       | US    | Reject dangling evaluation_connection references (T02)                                 |
 | US-0014-0015       | US    | Warn on dangling TRD source_refs (T03)                                                 |
 | US-0014-0016       | US    | Warn when visual Trend has no visual axis (T04)                                        |
-| US-0014-0017       | US    | Require uiux/12_design_system.md on UI-bearing packs (DS01)                            |
-| US-0014-0018       | US    | Require non-empty required sections in 12_design_system.md (DS02)                      |
+| US-0014-0017       | US    | Historical: require a legacy discussion-time design-system artifact on UI-bearing packs |
+| US-0014-0018       | US    | Historical: require mandatory sections in the legacy discussion-time design-system file |
 | US-0014-0019       | US    | Require designSystemCompliance score in prototyping evidence (PROT-DS01)               |
 | AC-0014-0015       | AC    | UIX-VAL-T01 ERROR on missing evaluation_connection                                     |
 | AC-0014-0016       | AC    | UIX-VAL-T02 ERROR on dangling evaluation_connection                                    |
@@ -174,4 +180,4 @@ Cross-cutting: BR-0014-0023 (severity map) covered by EX-0014-0027 -> TC-0014-00
 
 ### Rationale
 
-The v1.7.16 slice installs the validator contract that makes the Trend Scan -> TRD axis -> design-system -> prototyping scoring chain observable. Severity is calibrated so that traceability breaks (T01/T02) and SSOT presence/completeness (DS01/DS02) block, while coverage hints (T03/T04) warn. PROT-DS01 is the only conditional-severity rule because its meaning depends on the upstream context (mode + 12_design_system.md presence) and would produce noise if unconditionally ERROR.
+The v1.7.16 slice recorded a historical validator contract that made the legacy research-to-direction-to-design-system scoring chain observable. In the current exploration-first posture, active scoring and validation read finalized downstream contracts instead of a discussion-time design-system file.

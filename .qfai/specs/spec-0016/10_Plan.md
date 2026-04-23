@@ -26,7 +26,7 @@ CAP-0016 (Web Research Enhancement) は CLI エージェントの Web リサー�
 - `assets/mcp-templates/playwright/` (.mcp.json, config.toml, mcp-config.json)
 - `assets/sandbox-templates/` (per-agent sandbox configs)
 
-**Verification**: TC-0034-0001, TC-0034-0004, TC-0034-0021
+**Verification**: TC-0016-0001, TC-0016-0004, TC-0016-0021
 
 ### Phase 2: Security Hardening
 
@@ -48,7 +48,7 @@ CAP-0016 (Web Research Enhancement) は CLI エージェントの Web リサー�
 - Rate limit handling specification
 - MCP failure recovery specification
 
-**Verification**: TC-0034-0005, TC-0034-0006, TC-0034-0009, TC-0034-0010, TC-0034-0011, TC-0034-0012, TC-0034-0013, TC-0034-0014, TC-0034-0020, TC-0034-0022, TC-0034-0025
+**Verification**: TC-0016-0005, TC-0016-0006, TC-0016-0009, TC-0016-0010, TC-0016-0011, TC-0016-0012, TC-0016-0013, TC-0016-0014, TC-0016-0020, TC-0016-0022, TC-0016-0025
 
 ### Phase 3: Skills & Observability
 
@@ -66,7 +66,7 @@ CAP-0016 (Web Research Enhancement) は CLI エージェントの Web リサー�
 - Research session log schema (JSON)
 - Cache strategy specification
 
-**Verification**: TC-0034-0007, TC-0034-0008, TC-0034-0015, TC-0034-0016, TC-0034-0023, TC-0034-0024
+**Verification**: TC-0016-0007, TC-0016-0008, TC-0016-0015, TC-0016-0016, TC-0016-0023, TC-0016-0024
 
 ### Phase 4: Evaluation & HITL
 
@@ -84,7 +84,7 @@ CAP-0016 (Web Research Enhancement) は CLI エージェントの Web リサー�
 - HITL gate trigger condition specification
 - HITL gate behavior specification (approve/reject/timeout)
 
-**Verification**: TC-0034-0017, TC-0034-0018, TC-0034-0019, TC-0034-0020
+**Verification**: TC-0016-0017, TC-0016-0018, TC-0016-0019, TC-0016-0020
 
 ## Test Strategy
 
@@ -108,9 +108,9 @@ CAP-0016 (Web Research Enhancement) は CLI エージェントの Web リサー�
 
 ### Test Priorities
 
-1. **Must** (blocking): TC-0034-0001 (pipeline), TC-0034-0009 (injection defense), TC-0034-0012/TC-0034-0013 (allowlist), TC-0034-0015 (log completeness)
-2. **Should** (high value): TC-0034-0005 (MCP crash), TC-0034-0006 (rate limit), TC-0034-0018 (HITL trigger)
-3. **Could** (completeness): TC-0034-0017 (golden task eval), TC-0034-0024 (cache staleness)
+1. **Must** (blocking): TC-0016-0001 (pipeline), TC-0016-0009 (injection defense), TC-0016-0012/TC-0016-0013 (allowlist), TC-0016-0015 (log completeness)
+2. **Should** (high value): TC-0016-0005 (MCP crash), TC-0016-0006 (rate limit), TC-0016-0018 (HITL trigger)
+3. **Could** (completeness): TC-0016-0017 (golden task eval), TC-0016-0024 (cache staleness)
 
 ## Risk Mitigation
 

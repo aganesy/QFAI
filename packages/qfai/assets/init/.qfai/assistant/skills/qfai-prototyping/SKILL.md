@@ -61,6 +61,8 @@ Read and follow these references before execution:
 - `.qfai/assistant/skills/qfai-prototyping/references/iteration-cycle.md`
 - `.qfai/assistant/skills/qfai-prototyping/references/l1-review-guide.md`
 - `.qfai/assistant/skills/qfai-prototyping/references/l2-review-guide.md`
+- `.qfai/contracts/design/anchor-selection.yaml` when legacy validator slices are exercised
+- `.qfai/contracts/design/evaluation-axes.yaml` when legacy validator slices are exercised
 - `.qfai/assistant/skills/qfai-prototyping/references/design-system-compliance.md`
 - `.qfai/assistant/skills/qfai-prototyping/references/reviewer-gate.md`
 - `.qfai/assistant/steering/test-layers.md`
@@ -75,7 +77,7 @@ Evaluation scoring and screenshot capture must use only the allowed roles below.
 | --------------------- | ------------------------------------------------------ |
 | UI implementation     | frontend-engineer, product-experience-architect        |
 | Screenshot capture    | devops-ci-engineer                                     |
-| Evaluation review     | product-surface-reviewer, product-experience-architect |
+| Evaluation scoring    | product-surface-reviewer, product-experience-architect |
 | Build                 | devops-ci-engineer, backend-engineer                   |
 | Breakthrough planning | product-experience-architect, frontend-engineer        |
 
@@ -105,6 +107,8 @@ Read the downstream-ready spec/contract inputs and verify:
 - `.qfai/discussion/discussion-*/uiux/31_reference_pool.md`
 - `.qfai/contracts/design/evaluation-rubric.yaml`
 - `.qfai/contracts/design/evaluator-calibration.yaml`
+- `.qfai/contracts/design/anchor-selection.yaml` when legacy validator slices are exercised
+- `.qfai/contracts/design/evaluation-axes.yaml` when legacy validator slices are exercised
 - `.qfai/contracts/design/selected-direction.yaml` when already created
 - `.qfai/contracts/design/design-system.yaml` when already created
 - `.qfai/contracts/ui/*.yaml`
@@ -117,9 +121,11 @@ Read order:
 4. `.qfai/discussion/discussion-*/uiux/31_reference_pool.md`
 5. `.qfai/contracts/design/evaluation-rubric.yaml`
 6. `.qfai/contracts/design/evaluator-calibration.yaml`
-7. `.qfai/contracts/design/selected-direction.yaml`
-8. `.qfai/contracts/design/design-system.yaml`
-9. `.qfai/contracts/ui/*.yaml`
+7. `.qfai/contracts/design/anchor-selection.yaml` (legacy validator alias, when present)
+8. `.qfai/contracts/design/evaluation-axes.yaml` (legacy validator alias, when present)
+9. `.qfai/contracts/design/selected-direction.yaml`
+10. `.qfai/contracts/design/design-system.yaml`
+11. `.qfai/contracts/ui/*.yaml`
 
 ### Step 2 — Verify Execution Preconditions
 

@@ -14,7 +14,7 @@
 - In:
   - `/qfai-sdd` unified SDD workflow (Contracts-first -> Outline -> Slice -> Plan -> Delta)
   - Layered artifact generation: `_policies/01..10` + `spec-XXXX/01..10`
-  - Contract-first mandatory outputs: `.qfai/contracts/(api|db|ui)/**`
+  - Contract-first mandatory outputs: `.qfai/contracts/(api|db|ui|design)/**`
   - UI-bearing discussion UIUX sidecar の downstream contract への正規化
   - Contract Index in `_policies/05_Contracts.md` with short IDs (DB-001, API-001, UI-001)
   - Discussion-pack preflight validation (latest pack, readiness checks)
@@ -71,11 +71,12 @@
 - REQ-0013: Density Review -- `QFAI-COV-207` warnings triaged from specs-coverage reports
 - REQ-0014: Discussion-Pack Markdown Gate — SDD preflight は discussion-pack の必須 markdown readiness を検証し、欠落・未完成時のみブロックする
 - REQ-0015: Optional Side Artifact Neutrality — SDD preflight は optional side artifact の欠落や旧形式の補助 prototyping artifact だけではブロックしない
-- REQ-0016: Design-system normalization — `uiux/12_design_system.md` を `.qfai/contracts/design/design-system.yaml` に正規化する
-- REQ-0017: Evaluation-axes normalization — `uiux/20/21/22/23` を `.qfai/contracts/design/evaluation-axes.yaml` に正規化する
-- REQ-0018: Anchor normalization — `uiux/30_option_comparison.md` と `31_selected_anchor_screen.md` の downstream 必要情報を `.qfai/contracts/design/anchor-selection.yaml` に正規化する
+- REQ-0016: Exploration-brief normalization — `uiux/30_exploration_brief.md` を `.qfai/contracts/design/exploration-brief.yaml` に正規化する
+- REQ-0017: Evaluation-rubric normalization — `uiux/33_exploration_rubric.md` を `.qfai/contracts/design/evaluation-rubric.yaml` に正規化する
+- REQ-0018: Evaluator-calibration normalization — `uiux/34_evaluator_calibration.md` を `.qfai/contracts/design/evaluator-calibration.yaml` に正規化する
 - REQ-0019: UI contract normalization — `uiux/40_screen_contracts.md` を `.qfai/contracts/ui/*.yaml` に正規化する
 - REQ-0020: Downstream boundary — `/qfai-sdd` 以降の skill は discussion pack を直接読まず、正規化済み specs/contracts を読む
+- REQ-0021: `selected-direction.yaml` と `design-system.yaml` は prototyping winner selection 後の downstream outputs であり、discussion 初期状態では確定しない
 
 ## Entry points
 

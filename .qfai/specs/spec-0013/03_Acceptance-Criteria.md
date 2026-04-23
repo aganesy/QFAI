@@ -50,4 +50,8 @@ Given a discussion-pack whose required markdown is complete but optional side ar
 
 ## AC-0013-0010: Design Contract Normalization
 
-Given a UI-bearing discussion pack with UIUX sidecar files, when `/qfai-sdd` completes, then `.qfai/contracts/design/design-system.yaml`, `evaluation-axes.yaml`, `anchor-selection.yaml`, and `.qfai/contracts/ui/*.yaml` are generated or refreshed for downstream use.
+Given a UI-bearing discussion pack with exploration-first UIUX sidecar files, when `/qfai-sdd` completes, then `.qfai/contracts/design/exploration-brief.yaml`, `evaluation-rubric.yaml`, `evaluator-calibration.yaml`, and `.qfai/contracts/ui/*.yaml` are generated or refreshed for downstream use.
+
+## AC-0013-0011: Winner-Dependent Outputs Are Not Precommitted
+
+Given a UI-bearing discussion pack, when `/qfai-sdd` completes, then `selected-direction.yaml` と `design-system.yaml` は discussion だけでは required にならず、prototyping winner selection 後の downstream output として扱われる。
