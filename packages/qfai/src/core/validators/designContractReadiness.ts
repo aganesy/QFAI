@@ -11,6 +11,7 @@ import { issue } from "./utils.js";
 const REQUIRED_DESIGN_FILES = [
   "exploration-brief.yaml",
   "evaluation-rubric.yaml",
+  "evaluator-calibration.yaml",
   "selected-direction.yaml",
   "design-system.yaml",
 ] as const;
@@ -55,7 +56,7 @@ export async function validateDesignContractReadiness(
           "designContractReadiness.requiredFile",
           undefined,
           "canonical",
-          `UI-bearing downstream execution requires exploration-brief.yaml, evaluation-rubric.yaml, selected-direction.yaml, and design-system.yaml under \`${designDirRelative}/\`.`,
+          `UI-bearing downstream execution requires exploration-brief.yaml, evaluation-rubric.yaml, evaluator-calibration.yaml, selected-direction.yaml, and design-system.yaml under \`${designDirRelative}/\`.`,
         ),
       );
     }
@@ -63,6 +64,7 @@ export async function validateDesignContractReadiness(
 
   issues.push(...(await validateExplorationBrief(root, config)));
   issues.push(...(await validateEvaluationRubric(root, config)));
+  issues.push(...(await validateEvaluatorCalibration(root, config)));
   issues.push(...(await validateSelectedDirection(root, config)));
   issues.push(...(await validateDesignSystem(root, config)));
   return issues;
@@ -136,6 +138,44 @@ async function validateEvaluationRubric(root: string, config: QfaiConfig): Promi
     }
   }
   return issues;
+}
+
+async function validateEvaluatorCalibration(root: string, config: QfaiConfig): Promise<Issue[]> {
+  const filePath = path.join(
+    root,
+    config.paths.contractsDir,
+    "design",
+    "evaluator-calibration.yaml",
+  );
+  const parsed = await readYaml(filePath);
+  if (parsed.kind !== "ok") {
+    return parsed.kind === "invalid"
+      ? [
+          issue(
+            "QFAI-DCON-011",
+            "evaluator-calibration.yaml must parse as an object-shaped YAML document.",
+            "error",
+            toPosixRelative(root, filePath),
+            "designContractReadiness.evaluatorCalibrationDocument",
+          ),
+        ]
+      : [];
+  }
+
+  return validateRequiredStringArrayKeys(
+    filePath,
+    root,
+    parsed.value,
+    [
+      "good_critique_examples",
+      "too_lenient_examples",
+      "blandness_fail_examples",
+      "originality_fail_examples",
+    ],
+    "QFAI-DCON-010",
+    "evaluator-calibration.yaml is missing required field",
+    "designContractReadiness.evaluatorCalibrationField",
+  );
 }
 
 async function validateSelectedDirection(root: string, config: QfaiConfig): Promise<Issue[]> {

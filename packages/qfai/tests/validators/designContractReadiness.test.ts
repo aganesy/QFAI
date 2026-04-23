@@ -84,6 +84,20 @@ async function seedDesignContracts(root: string): Promise<void> {
     "utf-8",
   );
   await writeFile(
+    path.join(designDir, "evaluator-calibration.yaml"),
+    [
+      "good_critique_examples:",
+      "  - Specific critique tied to user goals",
+      "too_lenient_examples:",
+      "  - Generic praise without evidence",
+      "blandness_fail_examples:",
+      "  - Recycled default admin shell",
+      "originality_fail_examples:",
+      "  - Near-copy of reference product",
+    ].join("\n"),
+    "utf-8",
+  );
+  await writeFile(
     path.join(designDir, "design-system.yaml"),
     [
       "checklist:",
@@ -153,6 +167,45 @@ describe("validateDesignContractReadiness", () => {
     const issues = await validateDesignContractReadiness(root, defaultConfig);
 
     expect(issues.map((issue) => issue.code)).toContain("QFAI-DCON-006");
+  });
+
+  it("evaluator-calibration.yaml が壊れている場合は parse error を返す", async () => {
+    const root = await newTempRoot();
+    await seedUiContract(root);
+    await seedDesignContracts(root);
+
+    const designDir = path.join(root, ".qfai", "contracts", "design");
+    await writeFile(
+      path.join(designDir, "evaluator-calibration.yaml"),
+      "good_critique_examples: [\n",
+      "utf-8",
+    );
+
+    const issues = await validateDesignContractReadiness(root, defaultConfig);
+
+    expect(issues.map((issue) => issue.code)).toContain("QFAI-DCON-011");
+  });
+
+  it("evaluator-calibration.yaml の必須 field が欠けている場合は error を返す", async () => {
+    const root = await newTempRoot();
+    await seedUiContract(root);
+    await seedDesignContracts(root);
+
+    const designDir = path.join(root, ".qfai", "contracts", "design");
+    await writeFile(
+      path.join(designDir, "evaluator-calibration.yaml"),
+      [
+        "good_critique_examples:",
+        "  - Specific critique tied to user goals",
+        "too_lenient_examples:",
+        "  - Generic praise without evidence",
+      ].join("\n"),
+      "utf-8",
+    );
+
+    const issues = await validateDesignContractReadiness(root, defaultConfig);
+
+    expect(issues.map((issue) => issue.code)).toContain("QFAI-DCON-010");
   });
 
   it("custom contractsDir でも suggested_action は実際の design contract path を案内する", async () => {

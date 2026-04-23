@@ -22,7 +22,7 @@ function canonicalIssue(
   };
 }
 
-export async function validateOptionComparison(
+export async function validateExplorationArtifacts(
   root: string,
   _config: QfaiConfig,
 ): Promise<Issue[]> {
@@ -135,3 +135,5 @@ export async function validateOptionComparison(
 
   return issues;
 }
+
+export { validateExplorationArtifacts as validateOptionComparison };

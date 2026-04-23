@@ -419,7 +419,7 @@ const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-UIE-003":
     "Every declared screen id used for prototyping evidence filenames must be path-safe (`[A-Za-z0-9._-]+`).",
   "QFAI-DCON-001":
-    "UI-bearing downstream execution requires `.qfai/contracts/design/exploration-brief.yaml`, `evaluation-rubric.yaml`, `selected-direction.yaml`, and `design-system.yaml` when UI contracts exist.",
+    "UI-bearing downstream execution requires `.qfai/contracts/design/exploration-brief.yaml`, `evaluation-rubric.yaml`, `evaluator-calibration.yaml`, `selected-direction.yaml`, and `design-system.yaml` when UI contracts exist.",
   "QFAI-DCON-002":
     "exploration-brief.yaml must define product_intent, target_users, must_preserve_interactions, brand_signals, and differentiation_targets.",
   "QFAI-DCON-003":
@@ -432,6 +432,9 @@ const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-DCON-007": "evaluation-rubric.yaml must parse as an object-shaped YAML document.",
   "QFAI-DCON-008": "selected-direction.yaml must parse as an object-shaped YAML document.",
   "QFAI-DCON-009": "design-system.yaml must parse as an object-shaped YAML document.",
+  "QFAI-DCON-010":
+    "evaluator-calibration.yaml must define good_critique_examples, too_lenient_examples, blandness_fail_examples, and originality_fail_examples.",
+  "QFAI-DCON-011": "evaluator-calibration.yaml must parse as an object-shaped YAML document.",
   "QFAI-BREAK-001": "breakthrough.json is required for exploration-first UI prototyping evidence.",
   "QFAI-BREAK-002": "breakthrough.json must be a valid JSON object.",
   "QFAI-BREAK-003": "breakthrough.json.latestIteration must be a positive integer.",

@@ -5,7 +5,10 @@ import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { defaultConfig } from "../../../src/core/config.js";
-import { validateOptionComparison } from "../../../src/core/validators/uix/comparisonValidator.js";
+import {
+  validateExplorationArtifacts,
+  validateOptionComparison,
+} from "../../../src/core/validators/uix/comparisonValidator.js";
 
 const tempDirs: string[] = [];
 
@@ -28,6 +31,10 @@ afterEach(async () => {
 });
 
 describe("comparisonValidator", () => {
+  it("exports validateExplorationArtifacts alias", () => {
+    expect(validateExplorationArtifacts).toBe(validateOptionComparison);
+  });
+
   it("pass: exploration-first shape", async () => {
     const root = await newTempDir();
     await createUiBearingPack(root);

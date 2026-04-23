@@ -2,7 +2,7 @@
 
 ## Purpose
 
-`discussion/` stores the unified discussion pack that merges interview outputs (discuss) and requirement intake (require). Discussion packs use 15 required markdown files. When the latest pack is `ui_bearing: true`, it must also include `prototyping.yaml`; when `ui_bearing: false`, `prototyping.yaml` is not required.
+`discussion/` stores the unified discussion pack that merges interview outputs (discuss) and requirement intake (require). Discussion packs use 15 required markdown files. UI-bearing discussion packs require `prototyping.yaml`; non-ui discussion packs do not.
 
 This directory does not directly update `specs/`; it prepares decisions, requirements, open questions, and rationale as inputs for `/qfai-sdd`.
 

@@ -1110,6 +1110,9 @@ describe("runValidate", { timeout: 15000 }, () => {
       expect(output).toContain(
         "selected-direction.yaml must define chosen_direction_id (legacy alias: direction_id), winning_rationale, and carry_forward_rules.",
       );
+      expect(output).toContain(
+        "UI-bearing downstream execution requires `.qfai/contracts/design/exploration-brief.yaml`, `evaluation-rubric.yaml`, `evaluator-calibration.yaml`, `selected-direction.yaml`, and `design-system.yaml` when UI contracts exist.",
+      );
       expect(output).toContain("breakthrough.json.triggerReasons must be an array of strings.");
     });
   });

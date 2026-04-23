@@ -14,7 +14,7 @@ import { readSafe } from "../utils.js";
 // Canonical validators — owned by uix/ modules
 import { validateClassification } from "./classification.js";
 import { validateSidecarMissing } from "./foundation.js";
-import { validateOptionComparison } from "./comparisonValidator.js";
+import { validateExplorationArtifacts } from "./comparisonValidator.js";
 import { validateOqClosure } from "./oqClosure.js";
 
 import {
@@ -49,7 +49,7 @@ export async function runCanonicalUixValidators(
     // Strong screen contract schema
     validateScreenContractSchema,
     // Exploration brief / rubric / evaluator calibration
-    validateOptionComparison,
+    validateExplorationArtifacts,
     // OQ closure
     validateOqClosure,
   ];
