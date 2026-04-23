@@ -96,6 +96,18 @@ export type PrototypingSummaryBundle = {
     scoringTrace: FullHarnessScoreSnapshot[];
     limitations: string[];
   };
+  breakthrough: {
+    latestIteration: number;
+    triggerResult: boolean;
+    triggerReasons: string[];
+    scoreDeltaWindow: number;
+    avgScoreDeltas: number[];
+    minScoreDeltas: number[];
+    diffLines: number;
+    branchCount: number;
+    incumbentRef?: string;
+    branchRefs?: string[];
+  };
 };
 
 function toPosixRelative(root: string, targetPath: string): string {
@@ -132,6 +144,7 @@ export async function writeEvidenceBundles(input: {
   const browserQaSummaryPath = path.join(evidenceRoot, "browserQa.summary.json");
   const browserQaFindingsPath = path.join(evidenceRoot, "browserQa.findings.json");
   const browserQaRepairsPath = path.join(evidenceRoot, "browserQa.repairs.json");
+  const breakthroughPath = path.join(evidenceRoot, "breakthrough.json");
 
   const renderBundle =
     input.render === undefined
@@ -176,6 +189,7 @@ export async function writeEvidenceBundles(input: {
       JSON.stringify(browserQaBundle.findings ?? [], null, 2),
     ),
     writeEvidenceFile(browserQaRepairsPath, JSON.stringify(browserQaBundle.repairs ?? [], null, 2)),
+    writeEvidenceFile(breakthroughPath, JSON.stringify(input.prototyping.breakthrough, null, 2)),
     ...(input.fullHarnessArtifacts
       ? [
           writeEvidenceFile(

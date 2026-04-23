@@ -29,7 +29,10 @@ describe("fixture coverage", () => {
       { name: "taste", file: path.join(TESTS_ROOT, "uix", "taste.test.ts") },
       { name: "trend", file: path.join(TESTS_ROOT, "uix", "trend.test.ts") },
       { name: "threeLayer", file: path.join(TESTS_ROOT, "uix", "threeLayer.test.ts") },
-      { name: "scoringReady", file: path.join(TESTS_ROOT, "uix", "scoringReady.test.ts") },
+      {
+        name: "comparisonValidator",
+        file: path.join(TESTS_ROOT, "uix", "comparisonValidator.test.ts"),
+      },
       { name: "strategy", file: path.join(TESTS_ROOT, "uix", "strategy.test.ts") },
       { name: "screenContract", file: path.join(TESTS_ROOT, "uix", "screenContract.test.ts") },
     ];

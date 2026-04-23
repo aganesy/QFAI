@@ -9,9 +9,11 @@ import type { Issue } from "../types.js";
 import { issue } from "./utils.js";
 
 const REQUIRED_DESIGN_FILES = [
+  "exploration-brief.yaml",
+  "evaluation-rubric.yaml",
+  "evaluator-calibration.yaml",
+  "selected-direction.yaml",
   "design-system.yaml",
-  "evaluation-axes.yaml",
-  "anchor-selection.yaml",
 ] as const;
 
 function toPosixRelative(root: string, targetPath: string): string {
@@ -54,15 +56,169 @@ export async function validateDesignContractReadiness(
           "designContractReadiness.requiredFile",
           undefined,
           "canonical",
-          `UI-bearing downstream execution requires design-system.yaml, evaluation-axes.yaml, and anchor-selection.yaml under \`${designDirRelative}/\`.`,
+          `UI-bearing downstream execution requires exploration-brief.yaml, evaluation-rubric.yaml, evaluator-calibration.yaml, selected-direction.yaml, and design-system.yaml under \`${designDirRelative}/\`.`,
         ),
       );
     }
   }
 
+  issues.push(...(await validateExplorationBrief(root, config)));
+  issues.push(...(await validateEvaluationRubric(root, config)));
+  issues.push(...(await validateEvaluatorCalibration(root, config)));
+  issues.push(...(await validateSelectedDirection(root, config)));
   issues.push(...(await validateDesignSystem(root, config)));
-  issues.push(...(await validateEvaluationAxes(root, config)));
-  issues.push(...(await validateAnchorSelection(root, config)));
+  return issues;
+}
+
+async function validateExplorationBrief(root: string, config: QfaiConfig): Promise<Issue[]> {
+  const filePath = path.join(root, config.paths.contractsDir, "design", "exploration-brief.yaml");
+  const parsed = await readYaml(filePath);
+  if (parsed.kind !== "ok") {
+    return parsed.kind === "invalid"
+      ? [
+          issue(
+            "QFAI-DCON-006",
+            "exploration-brief.yaml must parse as an object-shaped YAML document.",
+            "error",
+            toPosixRelative(root, filePath),
+            "designContractReadiness.explorationBriefDocument",
+          ),
+        ]
+      : [];
+  }
+
+  const requiredKeys = [
+    "product_intent",
+    "target_users",
+    "must_preserve_interactions",
+    "brand_signals",
+    "differentiation_targets",
+  ];
+  return validateRequiredStringArrayKeys(
+    filePath,
+    root,
+    parsed.value,
+    requiredKeys,
+    "QFAI-DCON-002",
+    "exploration-brief.yaml is missing required field",
+    "designContractReadiness.explorationBriefField",
+  );
+}
+
+async function validateEvaluationRubric(root: string, config: QfaiConfig): Promise<Issue[]> {
+  const filePath = path.join(root, config.paths.contractsDir, "design", "evaluation-rubric.yaml");
+  const parsed = await readYaml(filePath);
+  if (parsed.kind !== "ok") {
+    return parsed.kind === "invalid"
+      ? [
+          issue(
+            "QFAI-DCON-007",
+            "evaluation-rubric.yaml must parse as an object-shaped YAML document.",
+            "error",
+            toPosixRelative(root, filePath),
+            "designContractReadiness.evaluationRubricDocument",
+          ),
+        ]
+      : [];
+  }
+
+  const requiredArrays = ["axes", "hard_floors", "weighted_axes"];
+  const issues: Issue[] = [];
+  for (const key of requiredArrays) {
+    if (!Array.isArray(parsed.value[key])) {
+      issues.push(
+        issue(
+          "QFAI-DCON-003",
+          `evaluation-rubric.yaml is missing array '${key}'.`,
+          "error",
+          toPosixRelative(root, filePath),
+          "designContractReadiness.evaluationRubricArray",
+        ),
+      );
+    }
+  }
+  return issues;
+}
+
+async function validateEvaluatorCalibration(root: string, config: QfaiConfig): Promise<Issue[]> {
+  const filePath = path.join(
+    root,
+    config.paths.contractsDir,
+    "design",
+    "evaluator-calibration.yaml",
+  );
+  const parsed = await readYaml(filePath);
+  if (parsed.kind !== "ok") {
+    return parsed.kind === "invalid"
+      ? [
+          issue(
+            "QFAI-DCON-011",
+            "evaluator-calibration.yaml must parse as an object-shaped YAML document.",
+            "error",
+            toPosixRelative(root, filePath),
+            "designContractReadiness.evaluatorCalibrationDocument",
+          ),
+        ]
+      : [];
+  }
+
+  return validateRequiredStringArrayKeys(
+    filePath,
+    root,
+    parsed.value,
+    [
+      "good_critique_examples",
+      "too_lenient_examples",
+      "blandness_fail_examples",
+      "originality_fail_examples",
+    ],
+    "QFAI-DCON-010",
+    "evaluator-calibration.yaml is missing required field",
+    "designContractReadiness.evaluatorCalibrationField",
+  );
+}
+
+async function validateSelectedDirection(root: string, config: QfaiConfig): Promise<Issue[]> {
+  const filePath = path.join(root, config.paths.contractsDir, "design", "selected-direction.yaml");
+  const parsed = await readYaml(filePath);
+  if (parsed.kind !== "ok") {
+    return parsed.kind === "invalid"
+      ? [
+          issue(
+            "QFAI-DCON-008",
+            "selected-direction.yaml must parse as an object-shaped YAML document.",
+            "error",
+            toPosixRelative(root, filePath),
+            "designContractReadiness.selectedDirectionDocument",
+          ),
+        ]
+      : [];
+  }
+
+  const issues = validateRequiredStringArrayKeys(
+    filePath,
+    root,
+    parsed.value,
+    ["winning_rationale", "carry_forward_rules"],
+    "QFAI-DCON-004",
+    "selected-direction.yaml is missing required field",
+    "designContractReadiness.selectedDirectionField",
+  );
+
+  const chosenDirectionId = parsed.value.chosen_direction_id;
+  const legacyDirectionId = parsed.value.direction_id;
+  if (!isNonEmptyStringValue(chosenDirectionId) && !isNonEmptyStringValue(legacyDirectionId)) {
+    issues.push(
+      issue(
+        "QFAI-DCON-004",
+        "selected-direction.yaml is missing required field 'chosen_direction_id'.",
+        "error",
+        toPosixRelative(root, filePath),
+        "designContractReadiness.selectedDirectionField",
+      ),
+    );
+  }
+
   return issues;
 }
 
@@ -73,7 +229,7 @@ async function validateDesignSystem(root: string, config: QfaiConfig): Promise<I
     return parsed.kind === "invalid"
       ? [
           issue(
-            "QFAI-DCON-006",
+            "QFAI-DCON-009",
             "design-system.yaml must parse as an object-shaped YAML document.",
             "error",
             toPosixRelative(root, filePath),
@@ -91,6 +247,8 @@ async function validateDesignSystem(root: string, config: QfaiConfig): Promise<I
     "border_radius",
     "shadow",
     "dos_and_donts",
+    "component_tone",
+    "motion_rules",
   ];
   const issues: Issue[] = [];
 
@@ -100,7 +258,7 @@ async function validateDesignSystem(root: string, config: QfaiConfig): Promise<I
     ) {
       issues.push(
         issue(
-          "QFAI-DCON-002",
+          "QFAI-DCON-005",
           `design-system.yaml is missing checklist key '${key}'.`,
           "error",
           toPosixRelative(root, filePath),
@@ -113,98 +271,33 @@ async function validateDesignSystem(root: string, config: QfaiConfig): Promise<I
   return issues;
 }
 
-async function validateEvaluationAxes(root: string, config: QfaiConfig): Promise<Issue[]> {
-  const filePath = path.join(root, config.paths.contractsDir, "design", "evaluation-axes.yaml");
-  const parsed = await readYaml(filePath);
-  if (parsed.kind !== "ok") {
-    return parsed.kind === "invalid"
-      ? [
-          issue(
-            "QFAI-DCON-007",
-            "evaluation-axes.yaml must parse as an object-shaped YAML document.",
-            "error",
-            toPosixRelative(root, filePath),
-            "designContractReadiness.evaluationAxesDocument",
-          ),
-        ]
-      : [];
-  }
-
-  const record = parsed.value;
-  const requiredArrays = ["invariant_axes", "trend_derived_axes", "product_specific_axes"];
+function validateRequiredStringArrayKeys(
+  filePath: string,
+  root: string,
+  record: Record<string, unknown>,
+  requiredKeys: string[],
+  code: string,
+  messagePrefix: string,
+  rule: string,
+): Issue[] {
   const issues: Issue[] = [];
-
-  for (const key of requiredArrays) {
-    if (!Array.isArray(record[key])) {
+  for (const key of requiredKeys) {
+    const value = record[key];
+    const valid =
+      typeof value === "string"
+        ? value.trim().length > 0
+        : Array.isArray(value) && value.every((item) => typeof item === "string");
+    if (!valid) {
       issues.push(
-        issue(
-          "QFAI-DCON-003",
-          `evaluation-axes.yaml is missing array '${key}'.`,
-          "error",
-          toPosixRelative(root, filePath),
-          "designContractReadiness.axesArray",
-        ),
+        issue(code, `${messagePrefix} '${key}'.`, "error", toPosixRelative(root, filePath), rule),
       );
     }
   }
-
-  if (!record.aggregate_rules || typeof record.aggregate_rules !== "object") {
-    issues.push(
-      issue(
-        "QFAI-DCON-004",
-        "evaluation-axes.yaml is missing 'aggregate_rules'.",
-        "error",
-        toPosixRelative(root, filePath),
-        "designContractReadiness.aggregateRules",
-      ),
-    );
-  }
-
   return issues;
 }
 
-async function validateAnchorSelection(root: string, config: QfaiConfig): Promise<Issue[]> {
-  const filePath = path.join(root, config.paths.contractsDir, "design", "anchor-selection.yaml");
-  const parsed = await readYaml(filePath);
-  if (parsed.kind !== "ok") {
-    return parsed.kind === "invalid"
-      ? [
-          issue(
-            "QFAI-DCON-008",
-            "anchor-selection.yaml must parse as an object-shaped YAML document.",
-            "error",
-            toPosixRelative(root, filePath),
-            "designContractReadiness.anchorSelectionDocument",
-          ),
-        ]
-      : [];
-  }
-
-  const selected = parsed.value.selected_anchor;
-  const requiredKeys = ["option_id", "title", "rationale"];
-  const issues: Issue[] = [];
-
-  for (const key of requiredKeys) {
-    if (
-      !(
-        selected &&
-        typeof selected === "object" &&
-        typeof (selected as Record<string, unknown>)[key] === "string"
-      )
-    ) {
-      issues.push(
-        issue(
-          "QFAI-DCON-005",
-          `anchor-selection.yaml is missing selected_anchor.${key}.`,
-          "error",
-          toPosixRelative(root, filePath),
-          "designContractReadiness.anchorSelection",
-        ),
-      );
-    }
-  }
-
-  return issues;
+function isNonEmptyStringValue(value: unknown): value is string {
+  return typeof value === "string" && value.trim().length > 0;
 }
 
 async function readYaml(filePath: string): Promise<YamlReadResult> {

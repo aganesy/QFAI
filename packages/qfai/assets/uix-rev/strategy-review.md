@@ -1,27 +1,22 @@
 # UIX-REV: Strategy Review
 
-Review the UI/UX strategy document (`10_implementation_strategy.md`) for completeness and quality.
+Review the exploration brief (`30_exploration_brief.md`) for completeness and quality.
 
-This review is scoped to strategy completeness only. Selected anchor evaluation belongs to `comparison-review.md`.
+This review is scoped to planner-quality only. Winner selection belongs to the prototyping harness and `comparison-review.md`.
 
-## Required Fields
+## Required Sections
 
-- `surface`
-- `selection_required`
-- `decision`
-- `candidate_options`
-- `chosen_option`
-- `rationale`
-- `verification_expectations`
-- `notes_for_reviewer`
+- `Product Intent`
+- `Must-preserve Interactions`
+- `Brand Signals`
+- `Differentiation Targets`
 
 ## Alignment Check
 
-- `chosen_option` must exist in `candidate_options`
-- `decision` and `chosen_option` should use coherent vocabulary
-- Strategy `decision` must be consistent with the selected anchor in `31_selected_anchor_screen.md` (cross-reference only; SSOT judgment is in comparison-review)
-- Strategy must not contradict screen contracts in `40_screen_contracts.md`
-- `selection_required=false` with multiple `candidate_options` should be treated as a warning
+- The brief must be specific enough to support divergent exploration
+- The brief must not prematurely collapse to a single chosen direction
+- Brief language must remain consistent with `40_screen_contracts.md`
+- Differentiation targets must explicitly push away from generic defaults
 
 ## Verdict
 

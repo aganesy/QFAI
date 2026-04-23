@@ -38,7 +38,7 @@ const repoRoot = path.resolve(process.cwd(), "..", "..");
 
 // QFAI:SPEC-0014:TC-0014-0009
 describe("TC-0014-0009: stale sidecar migration guidance", () => {
-  it("legacy strategy filename is rejected with canonical rename guidance", async () => {
+  it("legacy strategy-style filename is rejected with exploration-first migration guidance", async () => {
     const root = await newTempDir();
     await createUiBearingPack(root);
     await writeFile(
@@ -63,11 +63,11 @@ describe("TC-0014-0009: stale sidecar migration guidance", () => {
     );
 
     const issues = await runCanonicalUixValidators(root, defaultConfig);
-    const legacyIssue = issues.find((issue) => issue.code === "UIX-VAL-STRATEGY-LEGACY-FILENAME");
+    const legacyIssue = issues.find((issue) => issue.code === "UIX-VAL-3LAYER-FORBIDDEN-FILE");
 
     expect(legacyIssue).toBeDefined();
     expect(legacyIssue?.severity).toBe("error");
-    expect(legacyIssue?.suggested_action).toContain("10_implementation_strategy.md");
+    expect(legacyIssue?.suggested_action).toContain("exploration-first");
   });
 });
 
@@ -132,13 +132,13 @@ describe("TC-0014-0019: removed compatibility surface", () => {
 
 // QFAI:SPEC-0014:TC-0014-0009
 describe("TC-0014-0009: stale sidecar migration errors", () => {
-  it("legacy 4-axis evaluation content is rejected with 3-layer migration guidance", async () => {
+  it("legacy evaluation content is rejected with exploration-first migration guidance", async () => {
     const root = await newTempDir();
     await createUiBearingPack(root);
     await writeFile(
-      path.join(root, "uiux", "20_eval_axes.md"),
+      path.join(root, "uiux", "33_exploration_rubric.md"),
       [
-        "# Evaluation Axes",
+        "# Exploration Rubric",
         "",
         "## usability",
         "",
@@ -164,6 +164,6 @@ describe("TC-0014-0009: stale sidecar migration errors", () => {
 
     expect(legacyIssue).toBeDefined();
     expect(legacyIssue?.severity).toBe("error");
-    expect(legacyIssue?.suggested_action).toContain("3-layer model");
+    expect(legacyIssue?.suggested_action).toContain("exploration-first");
   });
 });

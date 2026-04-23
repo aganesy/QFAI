@@ -23,7 +23,7 @@ describe("buildFullHarnessResult", () => {
             uiObservation: [".qfai/evidence/render/orders.desktop.html"],
             specCoverage: [".qfai/evidence/spec-coverage.json#/specs/0"],
             discussion: [
-              ".qfai/discussion/discussion-20260422000000000/20_design_eval_invariant.md#axis-1",
+              ".qfai/discussion/discussion-20260422000000000/uiux/33_exploration_rubric.md#axis-1",
             ],
             screenContract: [".qfai/contracts/ui/screen-contracts.yaml#/screens/orders"],
             trend: [".qfai/discussion/discussion-20260422000000000/04_Sources.md#trend-scan"],

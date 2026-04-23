@@ -19,6 +19,7 @@ export { validateRepositoryHygiene } from "./repositoryHygiene.js";
 export { validateReviewArtifacts } from "./reviewArtifacts.js";
 export { validateSpecSplitByCapability } from "./specSplitByCapability.js";
 export { validateStatusInSpecs } from "./statusInSpecs.js";
+export { validateBreakthroughEvidence } from "./breakthroughEvidence.js";
 export { validateDesignToken } from "./designToken.js";
 export { validateHtmlMock } from "./htmlMock.js";
 export { validateMermaidScreenFlow } from "./mermaidScreenFlow.js";
@@ -44,7 +45,6 @@ export {
 } from "./uix/threeLayer.js";
 export { validateTasteInterview } from "./uix/taste.js";
 export { validateTrendScan } from "./uix/trend.js";
-export { validateScoringReady } from "./uix/scoringReady.js";
 export { validateStrategyStrong } from "./uix/strategy.js";
 export { validateScreenContractSchema } from "./uix/screenContract.js";
 export { runCanonicalUixValidators } from "./uix/canonical.js";

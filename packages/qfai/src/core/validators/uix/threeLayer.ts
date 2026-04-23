@@ -1,21 +1,50 @@
-/**
- * UIX-VAL 3-layer evaluation model validator — spec-0034
- *
- * Validates that evaluation axes use the 3-layer model
- * (invariant / trend-derived / product-specific) and detects
- * legacy 4-axis format or mixed formats.
- *
- * BR-0034-0009, BR-0034-0010, BR-0034-0011
- */
+import { readdir } from "node:fs/promises";
 import path from "node:path";
 
 import type { QfaiConfig } from "../../config.js";
 import type { Issue, IssueSeverity } from "../../types.js";
 import { isUiBearingSpec } from "../uixDetection.js";
-import { exists, readSafe } from "../utils.js";
+import { readSafe } from "../utils.js";
 
-const THREE_LAYER_SECTIONS = new Set(["invariant", "trend-derived", "product-specific"]);
-const FOUR_AXIS_SECTIONS = new Set(["usability", "consistency", "accessibility", "delight"]);
+const EXPLORATION_SECTIONS = [
+  "product_intent",
+  "product intent",
+  "brand_signals",
+  "brand signals",
+  "anti_goals",
+  "anti-goals",
+  "axes",
+  "design quality",
+  "originality",
+  "craft",
+  "functionality",
+  "good critique examples",
+  "good critique",
+  "best-of-history summary",
+] as const;
+
+const LEGACY_FOUR_AXIS_SECTIONS = ["usability", "consistency", "accessibility", "delight"];
+
+const CANONICAL_REQUIRED_SIDECAR_FILES = [
+  "00_index.md",
+  "30_exploration_brief.md",
+  "31_reference_pool.md",
+  "32_design_anti_goals.md",
+  "33_exploration_rubric.md",
+  "34_evaluator_calibration.md",
+  "40_screen_contracts.md",
+  "50_review_input_bundle.md",
+] as const;
+
+const FORBIDDEN_LEGACY_PATTERNS = [
+  /^30_.*comparison.*\.md$/i,
+  /^31_.*anchor.*\.md$/i,
+  /^1[0-2]_.*(?:strategy|taste|system).*\.md$/i,
+  /^2[0-4]_.*(?:eval|axis|aggregate|override).*\.md$/i,
+  /^40_contracts\.md$/i,
+  /^50_review_bundle\.md$/i,
+  /^60_critique_loop\.md$/i,
+];
 
 function threeLayerIssue(
   code: string,
@@ -34,150 +63,93 @@ function threeLayerIssue(
   };
 }
 
+function extractHeadings(content: string): string[] {
+  return content
+    .split("\n")
+    .map((line) => /^##\s+(.+)$/.exec(line)?.[1]?.trim().toLowerCase() ?? "")
+    .filter(Boolean);
+}
+
 export async function validateThreeLayerModel(root: string, _config: QfaiConfig): Promise<Issue[]> {
   if (!(await isUiBearingSpec(root))) return [];
 
-  // Read eval axes from single file or split files
-  const singlePath = path.join(root, "uiux", "20_eval_axes.md");
-  let content = await readSafe(singlePath);
-  let relPath = "uiux/20_eval_axes.md";
-
-  if (!content) {
-    const splitFiles = [
-      "20_design_eval_invariant.md",
-      "21_design_eval_trend_derived.md",
-      "22_design_eval_product_specific.md",
-      "23_design_eval_aggregate.md",
-    ];
-    const parts: string[] = [];
-    for (const f of splitFiles) {
-      const c = await readSafe(path.join(root, "uiux", f));
-      if (c) parts.push(c);
+  const issues: Issue[] = [];
+  for (const sidecar of CANONICAL_REQUIRED_SIDECAR_FILES) {
+    const content = await readSafe(path.join(root, "uiux", sidecar));
+    if (!content) {
+      continue;
     }
-    if (parts.length > 0) {
-      content = parts.join("\n");
-      relPath = "uiux/2[0-3]_design_eval_*.md";
+
+    const headings = extractHeadings(content);
+    const hasExplorationStructure = headings.some((heading) =>
+      EXPLORATION_SECTIONS.some((section) => heading.includes(section)),
+    );
+    const legacySections = headings.filter((heading) =>
+      LEGACY_FOUR_AXIS_SECTIONS.includes(heading),
+    );
+    const relPath = `uiux/${sidecar}`;
+
+    if (hasExplorationStructure && legacySections.length > 0) {
+      issues.push(
+        threeLayerIssue(
+          "UIX-VAL-3LAYER-MIXED-FORMAT",
+          `Inconsistent exploration-first sidecar: mixed exploration headings and legacy evaluation headings found in ${relPath}.`,
+          "error",
+          relPath,
+          "Remove legacy evaluation headings and keep exploration-first sections only.",
+        ),
+      );
+      continue;
+    }
+
+    if (legacySections.length > 0) {
+      issues.push(
+        threeLayerIssue(
+          "UIX-VAL-3LAYER-LEGACY-FORMAT",
+          `Legacy evaluation headings are not allowed in ${relPath}; use exploration brief, rubric, calibration, and screen contracts instead.`,
+          "error",
+          relPath,
+          "Replace legacy evaluation headings with exploration-first sidecar content.",
+        ),
+      );
     }
   }
 
-  if (!content) return [];
-
-  // Extract top-level section headings (## heading)
-  const headings: string[] = [];
-  for (const line of content.split("\n")) {
-    const match = /^##\s+(\S+)/.exec(line);
-    if (match?.[1]) {
-      headings.push(match[1].toLowerCase());
-    }
-  }
-
-  const hasThreeLayer = headings.some((h) => THREE_LAYER_SECTIONS.has(h));
-  const hasFourAxis = headings.some((h) => FOUR_AXIS_SECTIONS.has(h));
-
-  if (hasThreeLayer && hasFourAxis) {
-    const fourAxisNames = headings.filter((h) => FOUR_AXIS_SECTIONS.has(h));
-    return [
-      threeLayerIssue(
-        "UIX-VAL-3LAYER-MIXED-FORMAT",
-        `Inconsistent evaluation model: mixed 3-layer and 4-axis sections found. 4-axis sections: ${fourAxisNames.join(", ")}`,
-        "error",
-        relPath,
-        "Convert all evaluation axes to the 3-layer model (invariant / trend-derived / product-specific).",
-      ),
-    ];
-  }
-
-  // Pure 4-axis format is a canonical violation in v1.7.14.
-  // Use the 3-layer model (invariant / trend-derived / product-specific).
-  if (hasFourAxis && !hasThreeLayer) {
-    return [
-      threeLayerIssue(
-        "UIX-VAL-3LAYER-LEGACY-FORMAT",
-        "Legacy 4-axis evaluation format is not allowed in v1.7.14; use canonical 3-layer evaluation.",
-        "error",
-        relPath,
-        "Migrate evaluation axes to 3-layer model: invariant, trend-derived, product-specific.",
-      ),
-    ];
-  }
-
-  return [];
+  return issues;
 }
 
-/**
- * Forbidden legacy files that must not exist in a 3-layer canonical sidecar.
- */
-const FORBIDDEN_LEGACY_FILES = [
-  "30_comparison.md",
-  "31_anchor.md",
-  "40_contracts.md",
-  "50_review_bundle.md",
-  "60_critique_loop.md",
-  "20_eval_axis_usability.md",
-  "21_eval_axis_consistency.md",
-  "22_eval_axis_accessibility.md",
-  "23_eval_axis_delight.md",
-];
-
-/**
- * Validate that no forbidden legacy files exist in the uiux/ sidecar directory.
- */
 export async function validateForbiddenLegacyFiles(
   root: string,
   _config: QfaiConfig,
 ): Promise<Issue[]> {
   if (!(await isUiBearingSpec(root))) return [];
 
-  const issues: Issue[] = [];
-  for (const forbidden of FORBIDDEN_LEGACY_FILES) {
-    const fileExists = await exists(path.join(root, "uiux", forbidden));
-    if (fileExists) {
-      issues.push(
-        threeLayerIssue(
-          "UIX-VAL-3LAYER-FORBIDDEN-FILE",
-          `Forbidden legacy file detected: uiux/${forbidden}. This file is no longer part of the 3-layer canonical family.`,
-          "error",
-          `uiux/${forbidden}`,
-          `Remove uiux/${forbidden} and migrate content to the appropriate 3-layer file.`,
-        ),
-      );
-    }
+  let entries: string[] = [];
+  try {
+    entries = await readdir(path.join(root, "uiux"));
+  } catch {
+    return [];
   }
-  return issues;
+
+  return entries
+    .filter((entry) => FORBIDDEN_LEGACY_PATTERNS.some((pattern) => pattern.test(entry)))
+    .map((entry) =>
+      threeLayerIssue(
+        "UIX-VAL-3LAYER-FORBIDDEN-FILE",
+        `Forbidden legacy file detected: uiux/${entry}. This file is no longer part of the exploration-first canonical family.`,
+        "error",
+        `uiux/${entry}`,
+        `Remove uiux/${entry} and migrate content into the exploration-first artifact family.`,
+      ),
+    );
 }
 
-/**
- * Required files for canonical sidecar family completeness.
- * Note: 24_design_eval_dynamic_overrides.md is OPTIONAL per design spec.
- */
-const CANONICAL_REQUIRED_SIDECAR_FILES = [
-  "00_index.md",
-  "10_implementation_strategy.md",
-  "11_design_taste_interview.md",
-  "20_design_eval_invariant.md",
-  "21_design_eval_trend_derived.md",
-  "22_design_eval_product_specific.md",
-  "23_design_eval_aggregate.md",
-  "30_option_comparison.md",
-  "31_selected_anchor_screen.md",
-  "40_screen_contracts.md",
-  "50_review_input_bundle.md",
-];
-
-/**
- * Validate canonical sidecar family completeness — all required files must exist.
- * Note: despite the function name, this validates the entire canonical sidecar
- * family, not just the 3-layer evaluation files.
- *
- * @see validateCanonicalSidecarFamilyCompleteness — preferred alias
- */
 export async function validateThreeLayerFamilyCompleteness(
   root: string,
   _config: QfaiConfig,
 ): Promise<Issue[]> {
   if (!(await isUiBearingSpec(root))) return [];
 
-  // Only check if the uiux directory exists (sidecar present)
   const indexContent = await readSafe(path.join(root, "uiux", "00_index.md"));
   if (!indexContent) return [];
 
@@ -191,7 +163,7 @@ export async function validateThreeLayerFamilyCompleteness(
           `Required canonical sidecar file missing: uiux/${required}.`,
           "error",
           `uiux/${required}`,
-          `Create uiux/${required} using the canonical template.`,
+          `Create uiux/${required} using the exploration-first template.`,
         ),
       );
     }
@@ -199,5 +171,4 @@ export async function validateThreeLayerFamilyCompleteness(
   return issues;
 }
 
-/** Preferred alias - validates the full canonical sidecar family, not just 3-layer. */
 export const validateCanonicalSidecarFamilyCompleteness = validateThreeLayerFamilyCompleteness;

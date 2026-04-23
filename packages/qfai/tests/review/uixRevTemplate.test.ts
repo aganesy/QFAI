@@ -18,21 +18,20 @@ import {
 } from "../../src/core/review/uixRevTemplate.js";
 
 const EXPECTED_IDS = [
-  "taste-reflection-quality",
-  "anti-preference-enforcement",
-  "trend-relevance-freshness",
-  "dynamic-axis-specificity",
-  "generic-fallback-persistence",
-  "strategy-appropriateness",
-  "scoring-schema-completeness",
-  "selected-anchor-adequacy",
+  "reference-pool-translation",
+  "anti-goal-enforcement",
+  "exploration-brief-quality",
+  "rubric-specificity",
+  "evaluator-calibration-quality",
+  "selected-direction-adequacy",
   "screen-contract-sufficiency",
+  "breakthrough-readiness",
   "accept-refine-pivot-judgement",
 ] as const;
 
 describe("uix-rev template", () => {
-  it("10 review items present (canonical WS-E)", () => {
-    expect(CANONICAL_REVIEW_ITEMS).toHaveLength(10);
+  it("9 review items present (canonical WS-E)", () => {
+    expect(CANONICAL_REVIEW_ITEMS).toHaveLength(9);
 
     const ids = getCanonicalReviewItemIds();
     for (const expected of EXPECTED_IDS) {
@@ -40,39 +39,39 @@ describe("uix-rev template", () => {
     }
   });
 
-  it("taste + anti-preference execution", () => {
-    const taste = getReviewItem("taste-reflection-quality");
+  it("exploration brief + anti-goal execution", () => {
+    const taste = getReviewItem("exploration-brief-quality");
     expect(taste).toBeDefined();
     expect(taste?.evaluationCriteria.length).toBeGreaterThan(0);
 
-    const antiPref = getReviewItem("anti-preference-enforcement");
+    const antiPref = getReviewItem("anti-goal-enforcement");
     expect(antiPref).toBeDefined();
     expect(antiPref?.evaluationCriteria.length).toBeGreaterThan(0);
   });
 
-  it("trend relevance item verification", () => {
-    const trend = getReviewItem("trend-relevance-freshness");
+  it("reference pool translation item verification", () => {
+    const trend = getReviewItem("reference-pool-translation");
     expect(trend).toBeDefined();
-    expect(trend?.description).toContain("temporal");
+    expect(trend?.description).toContain("translated");
 
-    // Check criteria include freshness and domain alignment
+    // Check criteria include adopted/rejected translation checks
     const criteria = (trend?.evaluationCriteria ?? []).join(" ").toLowerCase();
-    expect(criteria).toContain("freshness");
-    expect(criteria).toContain("domain");
+    expect(criteria).toContain("adopted");
+    expect(criteria).toContain("rejected");
   });
 
-  it("axis specificity item verification", () => {
-    const axis = getReviewItem("dynamic-axis-specificity");
+  it("rubric specificity item verification", () => {
+    const axis = getReviewItem("rubric-specificity");
     expect(axis).toBeDefined();
 
-    // Check criteria reference taste/trend sources
+    // Check criteria reference originality / blandness pressure
     const criteria = (axis?.evaluationCriteria ?? []).join(" ").toLowerCase();
-    expect(criteria).toContain("taste");
-    expect(criteria).toContain("trend");
+    expect(criteria).toContain("originality");
+    expect(criteria).toContain("generic");
   });
 
-  it("generic fallback + trend cross-check", () => {
-    const generic = getReviewItem("generic-fallback-persistence");
+  it("evaluator calibration + generic fallback cross-check", () => {
+    const generic = getReviewItem("evaluator-calibration-quality");
     expect(generic).toBeDefined();
 
     // Check that generic axes are detectable
@@ -90,21 +89,20 @@ describe("uix-rev template", () => {
     expect(genericAxes.length).toBeGreaterThan(0);
   });
 
-  it("canonical names check (WS-E: 10 review items)", () => {
+  it("canonical names check (WS-E: 9 review items)", () => {
     const ids = getCanonicalReviewItemIds();
     expect(ids).toEqual([
-      "taste-reflection-quality",
-      "anti-preference-enforcement",
-      "trend-relevance-freshness",
-      "dynamic-axis-specificity",
-      "generic-fallback-persistence",
-      "strategy-appropriateness",
-      "scoring-schema-completeness",
-      "selected-anchor-adequacy",
+      "reference-pool-translation",
+      "anti-goal-enforcement",
+      "exploration-brief-quality",
+      "rubric-specificity",
+      "evaluator-calibration-quality",
+      "selected-direction-adequacy",
       "screen-contract-sufficiency",
+      "breakthrough-readiness",
       "accept-refine-pivot-judgement",
     ]);
 
-    expect(ids).toHaveLength(10);
+    expect(ids).toHaveLength(9);
   });
 });

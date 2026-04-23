@@ -298,36 +298,25 @@ describe("validateDesignAudit  Eaudit rules", { timeout: 10000 }, () => {
 
   async function writeCanonicalAuditArtifacts(
     contractsLines: string[],
-    comparisonLines = [
-      "# 30 Option Comparison",
-      "",
-      "## Option Comparison",
-      "",
-      "- **Option A**: Primary dashboard",
-      "- **Option B**: Dense table view",
-    ],
-    anchorLines = [
-      "# 31 Selected Anchor Screen",
-      "",
-      "selected_option: Option A",
-      "",
-      "Best matches current workflow",
+    selectedDirectionLines = [
+      "chosen_direction_id: direction-primary",
+      "winning_rationale: Focused dashboard hierarchy best supports the primary workflow.",
+      "carry_forward_rules:",
+      "  - Keep a single primary CTA per screen.",
+      "  - Preserve the dashboard-first information hierarchy.",
     ],
   ): Promise<void> {
     const packDir = path.join(root, ".qfai", "discussion", "discussion-20240101000000000", "uiux");
+    const contractsDesignDir = path.join(root, ".qfai", "contracts", "design");
     await writeFile(
       path.join(packDir, "40_screen_contracts.md"),
       contractsLines.join("\n"),
       "utf-8",
     );
+    await mkdir(contractsDesignDir, { recursive: true });
     await writeFile(
-      path.join(packDir, "30_option_comparison.md"),
-      comparisonLines.join("\n"),
-      "utf-8",
-    );
-    await writeFile(
-      path.join(packDir, "31_selected_anchor_screen.md"),
-      anchorLines.join("\n"),
+      path.join(contractsDesignDir, "selected-direction.yaml"),
+      `${selectedDirectionLines.join("\n")}\n`,
       "utf-8",
     );
   }
@@ -391,6 +380,74 @@ describe("validateDesignAudit  Eaudit rules", { timeout: 10000 }, () => {
     const ctaIssue = issues.find((i) => i.code === "QFAI-AUD-001");
     expect(ctaIssue).toBeDefined();
     expect(ctaIssue?.severity).toBe("error");
+  });
+
+  it("uses configured contractsDir in selected-direction diagnostics", async () => {
+    await createUiBearingPack(["# 03 Story Workshop", "<div>UI content</div>"].join("\n"));
+    const customContractsDir = path.join("custom", "contracts");
+    const selectedDirectionPath = path.join(
+      root,
+      customContractsDir,
+      "design",
+      "selected-direction.yaml",
+    );
+    await writeCanonicalAuditArtifacts(
+      [
+        "# Screen Contracts",
+        "",
+        "### Screen: Dashboard",
+        "",
+        "- screen_id: dashboard",
+        "- route: /dashboard",
+        "- purpose: Review current status",
+        "- actor: end-user",
+        "- primary_tasks:",
+        "  - Submit order",
+        "- required_states:",
+        "  - default: Data visible",
+        "  - loading: Spinner",
+        "  - empty: Empty state",
+        "  - error: Error with retry",
+        "- transitions:",
+        "  - default -> loading: Refresh requested",
+        "- observable_outcomes:",
+        "  - Order summary is visible",
+        "- notes_for_verify: Check state coverage",
+        "- notes_for_reviewer: Focus on primary action",
+      ],
+      [
+        "winning_rationale: Focused dashboard hierarchy best supports the primary workflow.",
+        "carry_forward_rules:",
+        "  - Keep a single primary CTA per screen.",
+      ],
+    );
+    await mkdir(path.dirname(selectedDirectionPath), { recursive: true });
+    await writeFile(
+      selectedDirectionPath,
+      [
+        "winning_rationale: Focused dashboard hierarchy best supports the primary workflow.",
+        "carry_forward_rules:",
+        "  - Keep a single primary CTA per screen.",
+      ].join("\n"),
+      "utf-8",
+    );
+
+    const cfg = config({
+      paths: {
+        ...defaultConfig.paths,
+        contractsDir: customContractsDir,
+      },
+    });
+    const issues = await validateDesignAudit(root, cfg);
+    const selectedDirectionIssue = issues.find((i) => i.code === "QFAI-AUD-021");
+
+    expect(selectedDirectionIssue?.file).toBe("custom/contracts/design/selected-direction.yaml");
+    expect(selectedDirectionIssue?.message).toContain(
+      "custom/contracts/design/selected-direction.yaml",
+    );
+    expect(selectedDirectionIssue?.suggested_action).toContain(
+      "custom/contracts/design/selected-direction.yaml",
+    );
   });
 
   it("TDD-0014: token drift over threshold ↁEQFAI-AUD-004", async () => {

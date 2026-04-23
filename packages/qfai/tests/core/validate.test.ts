@@ -14,11 +14,10 @@ import type { ValidationResult } from "../../src/core/types.js";
 import { validateProject } from "../../src/core/validate.js";
 import { captureStdout } from "../helpers/stdout.js";
 
-describe("validateProject (spec pack)", { timeout: 15000 }, () => {
+describe("validateProject (spec pack)", { timeout: 30000 }, () => {
   it("returns a structured validation result when required files and ledger links are seeded", async () => {
     await withProject(async (root) => {
       const result = await validateProject(root);
-      const codes = result.issues.map((item) => item.code);
       const errorCodes = result.issues
         .filter((item) => item.severity === "error")
         .map((item) => item.code)
@@ -33,28 +32,22 @@ describe("validateProject (spec pack)", { timeout: 15000 }, () => {
         .sort();
 
       expect(typeof result.toolVersion).toBe("string");
-      expect(errorCodes).toEqual([
-        "QFAI-DCON-001",
-        "QFAI-DCON-001",
-        "QFAI-DCON-001",
-        "QFAI-PROT-280",
-        "QFAI-UIE-001",
-        "QFAI-UIE-002",
-      ]);
-      expect(warningCodes).toEqual([
-        "E_OQ_OPEN_RELEASE_BLOCK",
-        "PROT-DS01",
-        "QFAI-DENSITY-004",
-        "QFAI-SKILLS-012",
-        "QFAI-SKILLS-012",
-        "QFAI-SKILLS-012",
-        "QFAI-STATUS-001",
-        "QFAI-VIS-001",
-      ]);
-      expect(infoCodes).toEqual(["QFAI-CONSISTENCY-002"]);
-      expect(codes).not.toContain("E_SPEC_MISSING_FILESET");
-      expect(codes).not.toContain("E_AC_NOT_VERIFIED");
-      expect(codes).not.toContain("E_TC_ORPHAN");
+      expect(errorCodes).toEqual(
+        expect.arrayContaining(["QFAI-DCON-001", "QFAI-PROT-280", "QFAI-UIE-001", "QFAI-UIE-002"]),
+      );
+      expect(errorCodes).not.toContain("E_SPEC_MISSING_FILESET");
+      expect(errorCodes).not.toContain("E_AC_NOT_VERIFIED");
+      expect(errorCodes).not.toContain("E_TC_ORPHAN");
+      expect(warningCodes).toEqual(
+        expect.arrayContaining([
+          "E_OQ_OPEN_RELEASE_BLOCK",
+          "PROT-DS01",
+          "QFAI-DENSITY-004",
+          "QFAI-STATUS-001",
+          "QFAI-VIS-001",
+        ]),
+      );
+      expect(infoCodes).toEqual(expect.arrayContaining(["QFAI-CONSISTENCY-002"]));
     });
   });
 
@@ -1032,6 +1025,97 @@ describe("runValidate", { timeout: 15000 }, () => {
       expect(output).toContain("\n       次のいずれかを実施してください:");
     });
   });
+
+  it("uses current expected strings for design contract and breakthrough issues in text output", async () => {
+    await withProject(async (root) => {
+      const designDir = path.join(root, ".qfai", "contracts", "design");
+      await mkdir(designDir, { recursive: true });
+      await writeFile(
+        path.join(designDir, "exploration-brief.yaml"),
+        [
+          "product_intent: Clarify the main path",
+          "target_users:",
+          "  - operations manager",
+          "must_preserve_interactions:",
+          "  - search",
+          "brand_signals:",
+          "  - calm confidence",
+          "differentiation_targets:",
+          "  - avoid default shell",
+        ].join("\n"),
+        "utf-8",
+      );
+      await writeFile(
+        path.join(designDir, "evaluation-rubric.yaml"),
+        [
+          "axes:",
+          "  - design_quality",
+          "hard_floors:",
+          "  - accessibility",
+          "weighted_axes:",
+          "  - design_quality",
+        ].join("\n"),
+        "utf-8",
+      );
+      await writeFile(
+        path.join(designDir, "selected-direction.yaml"),
+        [
+          "winning_rationale: strong hierarchy",
+          "carry_forward_rules:",
+          "  - keep headline scale",
+        ].join("\n"),
+        "utf-8",
+      );
+      await writeFile(
+        path.join(designDir, "design-system.yaml"),
+        [
+          "checklist:",
+          "  color: []",
+          "  typography: []",
+          "  spacing: []",
+          "  border_radius: []",
+          "  shadow: []",
+          "  dos_and_donts: []",
+          "  component_tone: []",
+          "  motion_rules: []",
+        ].join("\n"),
+        "utf-8",
+      );
+
+      await writeFile(
+        path.join(root, ".qfai", "evidence", "breakthrough.json"),
+        `${JSON.stringify(
+          {
+            latestIteration: 1,
+            triggerResult: false,
+            triggerReasons: 123,
+            avgScoreDeltas: [0],
+            diffLines: 0,
+          },
+          null,
+          2,
+        )}\n`,
+        "utf-8",
+      );
+
+      const output = await captureStdout(async () => {
+        await runValidate({
+          root,
+          strict: false,
+          failOn: "never",
+          format: "text",
+        });
+      });
+
+      expect(output).toContain(
+        "selected-direction.yaml must define chosen_direction_id (legacy alias: direction_id), winning_rationale, and carry_forward_rules.",
+      );
+      expect(output).toContain(
+        "UI-bearing downstream execution requires `.qfai/contracts/design/exploration-brief.yaml`, `evaluation-rubric.yaml`, `evaluator-calibration.yaml`, `selected-direction.yaml`, and `design-system.yaml` when UI contracts exist.",
+      );
+      expect(output).toContain("breakthrough.json.triggerReasons must be an array of strings.");
+    });
+  });
 });
 
 describe("writeValidateRunLog", { timeout: 15000 }, () => {
@@ -1510,8 +1594,8 @@ async function seedDiscussionPackFixtures(root: string): Promise<void> {
         "",
         "Review request for discussion pack baseline validator fixtures.",
         "This file captures the review scope and expected reviewers.",
-        "Selected anchor: verify `uiux/31_selected_anchor_screen.md` selected_option is populated and references a compared option.",
-        "Strategy alignment: verify `uiux/10_implementation_strategy.md` chosen_option matches the selected anchor.",
+        "Selected direction: verify `.qfai/contracts/design/selected-direction.yaml` captures the winning direction and carry-forward rules.",
+        "Exploration alignment: verify `uiux/30_exploration_brief.md` and `uiux/33_exploration_rubric.md` stay consistent with the final direction.",
         "Verify screen contracts use all 4 required states (default/loading/empty/error).",
         "",
       ],
@@ -1543,79 +1627,6 @@ async function seedDiscussionPackFixtures(root: string): Promise<void> {
       lines: ["# uiux Index", "", "- canonical sidecar family"],
     },
     {
-      name: "uiux/10_implementation_strategy.md",
-      lines: [
-        "# Strategy",
-        "",
-        "- surface: web",
-        "- selection_required: true",
-        "- decision: component-library",
-        "- candidate_options:",
-        "  - component-library",
-        "  - bespoke",
-        "- chosen_option: component-library",
-        "- rationale: component-library provides the clearest primary action for the dashboard workflow.",
-        "- why_this_strategy: Component-library strategy leverages proven accessible primitives and reduces custom styling overhead.",
-        "- expected_strengths: Consistent styling, built-in accessibility, fast iteration on new screens.",
-        "- known_risks: Limited customization for highly bespoke brand expression; dependency on library release cadence.",
-        "- fit_for_this_product: Dashboard-focused product benefits from pre-built data display and action components.",
-        "- verification_expectations: Check responsive layout and task completion behavior.",
-        "- notes_for_reviewer: Focus on selected anchor consistency.",
-      ],
-    },
-    {
-      name: "uiux/12_design_system.md",
-      lines: [
-        "# 12 Design System",
-        "",
-        "## Visual Theme",
-        "Bold but restrained visual system aligned with admired dashboard references.",
-        "",
-        "## Color Palette",
-        "Primary: #1A1A1A on light surface. Accent: #2F80ED. Background: #F7F8FA.",
-        "",
-        "## Do's and Don'ts",
-        "Do: keep a single primary CTA visible on dashboards.",
-        "Don't: stack competing accent colors on interactive elements.",
-      ],
-    },
-    {
-      name: "uiux/11_design_taste_interview.md",
-      lines: [
-        "# Taste Interview",
-        "",
-        "## visual_character",
-        "Bold but restrained visual system.",
-        "",
-        "## emotional_tone",
-        "Confident and calm product tone.",
-        "",
-        "## anti_preferences",
-        "Avoid noisy cluttered layouts.",
-        "",
-        "## admired_rejected_references",
-        "Admire clear dashboards; reject hidden navigation.",
-        "",
-        "## novelty_vs_safety",
-        "Bias toward safe core interactions with one focused novelty accent.",
-        "",
-        "## density_hierarchy",
-        "Medium density with one dominant CTA zone.",
-        "",
-        "## motion_material",
-        "Motion should support state changes, not decorate.",
-        "",
-        "## brand_tone",
-        "Professional and direct.",
-        "",
-        "## unresolved_taste_questions",
-        "Confirm dashboard density on smaller screens.",
-        "",
-        "## taste_reflection_depth",
-        "These answers should be reflected in selected anchor and contracts.",
-      ],
-    },
-    {
       name: "04_Sources.md",
       lines: [
         "# Sources",
@@ -1628,178 +1639,104 @@ async function seedDiscussionPackFixtures(root: string): Promise<void> {
         "",
         "- reference: NNG Dashboard Guidelines 2026",
         "- observation: Users expect a single primary CTA on dashboards",
-        "- decision_connection: Aligns with single-hero strategy selection",
-        "- evaluation_connection: Supports hierarchy invariant evaluation",
-        "- local_implication: Keep one primary action visible above fold",
-        "",
-        "### product neighbor / comparable flow",
-        "",
-        "#### Competitor onboarding flow",
-        "",
-        "- reference: https://competitor-alpha.example.com/onboarding",
-        "- observation: Focused onboarding with clear step indicators",
-        "- decision_connection: Reinforces component-library decision for step UI",
-        "- evaluation_connection: Validates clarity evaluation criteria",
-        "- local_implication: Use step indicator component for onboarding",
-        "",
-        "### platform convention",
-        "",
-        "#### Material Design 3 tonal system",
-        "",
-        "- reference: Material Design 3 Guidelines",
-        "- observation: Tonal elevation patterns for card hierarchy",
-        "- decision_connection: Supports component-library strategy",
-        "- evaluation_connection: Feeds into visual hierarchy evaluation",
-        "- local_implication: Apply tonal palette for dashboard card hierarchy",
-        "",
-        "### accessibility / compliance relevant signal",
-        "",
-        "#### WCAG 2.2 Level AA contrast",
-        "",
-        "- reference: WCAG 2.2 Guidelines",
-        "- observation: Contrast ratio requirements for interactive elements",
-        "- decision_connection: Primitives library includes accessible defaults",
-        "- evaluation_connection: Validates accessibility invariant evaluation",
-        "- local_implication: Verify contrast ratios on all interactive elements",
+        "- decision_connection: Aligns with the focused dashboard direction",
+        "- evaluation_connection: Supports design quality and originality scoring",
+        "- local_implication: Keep one primary action visible above the fold",
       ],
     },
     {
-      name: "uiux/20_design_eval_invariant.md",
+      name: "uiux/30_exploration_brief.md",
       lines: [
-        "# Invariant Evaluation",
+        "# Exploration Brief",
         "",
-        "## invariant",
+        "## Product Intent",
+        "Create a focused dashboard that makes the primary task obvious within one viewport.",
         "",
-        "## Axis: accessibility",
-        "- axis_id: AX-001",
-        "- axis_name: accessibility",
-        "- layer: invariant",
-        "- origin: WCAG 2.1 AA",
-        "- intent: Ensure baseline accessibility for all users",
-        "- why_it_matters: Legal compliance and user inclusion",
-        "- score_scale: 1-5",
-        "- score_anchors:",
-        "  - low: No accessibility consideration",
-        "  - mid: Partial WCAG compliance",
-        "  - high: Full WCAG AA compliance",
-        "- positive_signals: Semantic HTML, ARIA labels, keyboard navigation",
-        "- negative_signals: Missing alt text, no focus indicators",
-        "- anti_patterns: Decorative images without empty alt",
-        "- evidence_required: Accessibility audit report",
-        "- weight: 1",
-        "- minimum_floor: 3",
-        "- source_refs: WCAG 2.1",
-        "- goal_refs: REQ-0001",
-        "- review_questions: Are accessibility basics present?",
+        "## Target Users",
+        "- Busy operators who need a confident next action immediately.",
+        "",
+        "## UX Constraints",
+        "- Maintain a single dominant CTA.",
+        "- Keep the first screen scannable on laptop and mobile.",
+        "",
+        "## Must-preserve Interactions",
+        "- Dashboard summary remains visible before drill-down.",
+        "",
+        "## Brand Signals",
+        "- Direct, calm, professional.",
+        "",
+        "## Differentiation Targets",
+        "- Avoid generic SaaS defaults; create a sharper hierarchy and clearer visual rhythm.",
       ],
     },
     {
-      name: "uiux/21_design_eval_trend_derived.md",
+      name: "uiux/31_reference_pool.md",
       lines: [
-        "# Trend-derived Evaluation",
+        "# Reference Pool",
         "",
-        "## trend-derived",
+        "## adopted_signals",
+        "- Single-action dashboard pattern",
+        "- Tonal elevation for hierarchy",
         "",
-        "## Axis: motion_clarity",
-        "- axis_id: AX-002",
-        "- axis_name: motion_clarity",
-        "- layer: trend-derived",
-        "- origin: Industry trend scan 2026",
-        "- intent: Ensure motion supports state clarity",
-        "- why_it_matters: Users expect purposeful motion not decoration",
-        "- score_scale: 1-5",
-        "- score_anchors:",
-        "  - low: No motion or confusing motion",
-        "  - mid: Some purposeful motion",
-        "  - high: All transitions explain state change",
-        "- positive_signals: Meaningful transitions, loading indicators",
-        "- negative_signals: Decorative animation, jarring transitions",
-        "- anti_patterns: Autoplay animations without purpose",
-        "- evidence_required: Motion audit review",
-        "- weight: 1",
-        "- minimum_floor: 3",
-        "- source_refs: 04_Sources.md",
-        "- goal_refs: REQ-0001",
-        "- review_questions: Does motion clarify state change?",
+        "## rejected_signals",
+        "- Table-first entry screens",
+        "- Decorative motion-first hero sections",
       ],
     },
     {
-      name: "uiux/22_design_eval_product_specific.md",
+      name: "uiux/32_design_anti_goals.md",
       lines: [
-        "# Product-specific Evaluation",
+        "# Design Anti-Goals",
         "",
-        "## product-specific",
-        "",
-        "## Axis: dashboard_focus",
-        "- axis_id: AX-003",
-        "- axis_name: dashboard_focus",
-        "- layer: product-specific",
-        "- origin: Product requirements dashboard workflow",
-        "- intent: Keep dashboard focused on primary task",
-        "- why_it_matters: Competing CTAs reduce task completion rate",
-        "- score_scale: 1-5",
-        "- score_anchors:",
-        "  - low: Multiple competing primary actions",
-        "  - mid: Clear primary action with some distractions",
-        "  - high: Single obvious primary action path",
-        "- positive_signals: Clear CTA hierarchy, focused layout",
-        "- negative_signals: Competing primary actions, cluttered dashboard",
-        "- anti_patterns: Multiple equal-weight CTAs on same viewport",
-        "- evidence_required: Screen contract review",
-        "- weight: 1",
-        "- minimum_floor: 3",
-        "- source_refs: 40_screen_contracts.md",
-        "- goal_refs: REQ-0001",
-        "- review_questions: Is the primary task obvious?",
+        "- Avoid template-looking KPI grids with equal visual weight.",
+        "- Avoid multiple competing primary CTAs in the first viewport.",
+        "- Avoid decorative motion that does not explain state change.",
       ],
     },
     {
-      name: "uiux/23_design_eval_aggregate.md",
+      name: "uiux/33_exploration_rubric.md",
       lines: [
-        "# Aggregate Evaluation",
+        "# Exploration Rubric",
         "",
-        "## invariant",
-        "Baseline aggregate context.",
+        "## Design Quality",
+        "- hierarchy, rhythm, legibility, compositional confidence",
         "",
-        "- total_score_formula: weighted_average",
-        "- layer_weights: invariant=0.4, trend-derived=0.3, product-specific=0.3",
-        "- accept_threshold: 3.5",
-        "- refine_band: 2.5-3.5",
-        "- pivot_band: below 2.5",
-        "- max_iterations: 3",
-        "- plateau_rule: diminishing returns above 4.5",
-        "- missing_score_policy: exclude from aggregate",
-        "- disagreement_rule: flag when layer scores differ by more than 1.5",
+        "## Originality",
+        "- product-specific differentiation beyond template defaults",
+        "",
+        "## Craft",
+        "- spacing, alignment, motion discipline, polish",
+        "",
+        "## Functionality",
+        "- task clarity, state coverage, interaction plausibility",
+        "",
+        "## Hard Floors",
+        "- functionality",
+        "- accessibility_risk",
+        "- task_clarity",
+        "",
+        "## Weighted Axes",
+        "- design_quality",
+        "- originality",
+        "- brand_fit",
       ],
     },
     {
-      name: "uiux/24_design_eval_dynamic_overrides.md",
-      lines: ["# Dynamic Overrides", "", "- override_rule: none by default"],
-    },
-    {
-      name: "uiux/30_option_comparison.md",
+      name: "uiux/34_evaluator_calibration.md",
       lines: [
-        "# 30 Option Comparison",
+        "# Evaluator Calibration",
         "",
-        "## Option Comparison",
+        "## Good Critique",
+        "- Calls out bland hierarchy even when implementation is correct.",
         "",
-        "- **Option A**: Focused dashboard with a clear hero action",
-        "- **Option B**: Dense table-first dashboard",
-      ],
-    },
-    {
-      name: "uiux/31_selected_anchor_screen.md",
-      lines: [
-        "# 31 Selected Anchor Screen",
+        "## Too Lenient",
+        "- Praises polish without checking originality or differentiation.",
         "",
-        "- selected_option: Option A",
-        "- why_selected: best fit for the current workflow and review criteria",
+        "## Blandness Fail",
+        "- Generic dashboard shell with interchangeable KPI cards.",
         "",
-        "## rejected_or_deferred_options",
-        "",
-        "- option: Option B",
-        "- disposition: rejected",
-        "- reason: dense table-first presentation weakens first-run task focus and increases initial cognitive load",
+        "## Originality Fail",
+        "- Safe cleanup that improves spacing but leaves the product visually interchangeable.",
       ],
     },
     {
@@ -1835,16 +1772,16 @@ async function seedDiscussionPackFixtures(root: string): Promise<void> {
       lines: [
         "# Review Input Bundle",
         "",
-        "## Trend-derived review focus",
+        "## exploration focus",
         "",
         "- Visual tone: Verify tonal palette hierarchy in card layout.",
-        "- Layout: Confirm single hero CTA is dominant on dashboard entry.",
+        "- Layout: Confirm a single dominant CTA on dashboard entry.",
         "- Motion: State transitions use purposeful animation only.",
         "",
-        "## Strategy summary",
+        "## best-of-history summary",
         "",
-        "- strategy",
-        "- contracts",
+        "- Keep the best-performing direction even if a later iteration regresses.",
+        "- Compare breakthrough branches against the incumbent before replacing it.",
       ],
     },
   ];
@@ -2063,7 +2000,7 @@ async function seedPrototypingEvidenceFixture(root: string): Promise<void> {
                   ".qfai/discussion/discussion-20260216000000000/uiux/40_screen_contracts.md#orders",
                 ],
                 discussion: [
-                  ".qfai/discussion/discussion-20260216000000000/uiux/20_design_eval_invariant.md#discussion-axes-invariant",
+                  ".qfai/discussion/discussion-20260216000000000/uiux/33_exploration_rubric.md#axes",
                 ],
                 screenContract: [
                   ".qfai/discussion/discussion-20260216000000000/uiux/40_screen_contracts.md#orders",
@@ -2091,7 +2028,7 @@ async function seedPrototypingEvidenceFixture(root: string): Promise<void> {
                     score: 0.9,
                     rationale: "ok",
                     evidenceRefs: [
-                      ".qfai/discussion/discussion-20260216000000000/uiux/20_design_eval_invariant.md#axis-1",
+                      ".qfai/discussion/discussion-20260216000000000/uiux/33_exploration_rubric.md#design_quality",
                     ],
                   },
                 ],

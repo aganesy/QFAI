@@ -40,22 +40,25 @@ describe("3-layer validator", () => {
     const root = await newTempDir();
     await createUiBearingPack(root);
     const content = [
-      "# Evaluation Axes",
+      "# Exploration Rubric",
       "",
-      "## invariant",
+      "## Design Quality",
       "",
-      "- accessibility: Universal access compliance",
-      "- consistency: Design system adherence",
+      "- hierarchy: Universal access compliance",
       "",
-      "## trend-derived",
+      "## Originality",
       "",
-      "- micro_interaction: local_translation: Adopted from 2025 motion trends",
+      "- differentiation: Adopted from current product context",
       "",
-      "## product-specific",
+      "## Craft",
       "",
-      "- brand_alignment: Unique to this product context",
+      "- spacing: precise alignment and rhythm",
+      "",
+      "## Functionality",
+      "",
+      "- task_clarity: primary action remains obvious",
     ].join("\n");
-    await writeFile(path.join(root, "uiux", "20_eval_axes.md"), content, "utf-8");
+    await writeFile(path.join(root, "uiux", "33_exploration_rubric.md"), content, "utf-8");
 
     const issues = await validateThreeLayerModel(root, defaultConfig);
 
@@ -65,9 +68,8 @@ describe("3-layer validator", () => {
   it("legacy 4-axis format is error", async () => {
     const root = await newTempDir();
     await createUiBearingPack(root);
-    // v1.7.6 style 4-axis format
     const content = [
-      "# Evaluation Axes",
+      "# Exploration Rubric",
       "",
       "## usability",
       "",
@@ -85,7 +87,7 @@ describe("3-layer validator", () => {
       "",
       "- satisfaction: User satisfaction score",
     ].join("\n");
-    await writeFile(path.join(root, "uiux", "20_eval_axes.md"), content, "utf-8");
+    await writeFile(path.join(root, "uiux", "33_exploration_rubric.md"), content, "utf-8");
 
     const issues = await validateThreeLayerModel(root, defaultConfig);
 
@@ -97,23 +99,18 @@ describe("3-layer validator", () => {
   it("mixed error", async () => {
     const root = await newTempDir();
     await createUiBearingPack(root);
-    // Mix of 3-layer and 4-axis
     const content = [
-      "# Evaluation Axes",
+      "# Exploration Rubric",
       "",
-      "## invariant",
+      "## Design Quality",
       "",
       "- accessibility: Universal",
-      "",
-      "## trend-derived",
-      "",
-      "- micro_interaction: local_translation: Trends",
       "",
       "## delight",
       "",
       "- satisfaction: Old 4-axis format mixed in",
     ].join("\n");
-    await writeFile(path.join(root, "uiux", "20_eval_axes.md"), content, "utf-8");
+    await writeFile(path.join(root, "uiux", "33_exploration_rubric.md"), content, "utf-8");
 
     const issues = await validateThreeLayerModel(root, defaultConfig);
 
@@ -134,19 +131,18 @@ describe("3-layer validator", () => {
   it("code alignment verification", async () => {
     const root = await newTempDir();
     await createUiBearingPack(root);
-    // All axes correctly in 3-layer format
     const content = [
-      "# Evaluation Axes",
+      "# Exploration Rubric",
       "",
-      "## invariant",
+      "## Design Quality",
       "",
       "- accessibility: Universal",
       "",
-      "## product-specific",
+      "## Functionality",
       "",
       "- brand: Unique to product",
     ].join("\n");
-    await writeFile(path.join(root, "uiux", "20_eval_axes.md"), content, "utf-8");
+    await writeFile(path.join(root, "uiux", "33_exploration_rubric.md"), content, "utf-8");
 
     const issues = await validateThreeLayerModel(root, defaultConfig);
 

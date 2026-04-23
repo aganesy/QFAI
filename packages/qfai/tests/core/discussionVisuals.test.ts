@@ -89,7 +89,7 @@ describe("validateDiscussionVisuals", () => {
         [
           "# 03 Story Workshop",
           "",
-          "The selected anchor references an HTML+CSS mock for the order page.",
+          "The selected direction references an HTML+CSS mock for the order page.",
           "",
         ].join("\n"),
       );

@@ -2,7 +2,7 @@
  * Integration tests for spec-0014: Truthful Evidence & Canonical Validators
  *
  * Tests evidence truthfulness, placeholder rejection, browser QA findings,
- * and canonical validator set enforcement.
+ * and exploration-first canonical validator enforcement.
  */
 
 // QFAI:SPEC-0014:TC-0014-0012
@@ -190,25 +190,29 @@ describe("TC-0014-0015: Browser QA empty findings warning", () => {
 });
 
 // ---------------------------------------------------------------------------
-// TC-0014-0016: Canonical validator set enforcement (3-layer family)
+// TC-0014-0016: Canonical validator set enforcement (exploration-first family)
 // ---------------------------------------------------------------------------
 
-// QFAI:SPEC-0014:TC-0014-0016
-describe("TC-0014-0016: Canonical validator set enforcement (3-layer family)", () => {
-  it("3-layer content in eval axis files passes canonical validator", async () => {
+describe("TC-0014-0016: Canonical validator set enforcement (exploration-first family)", () => {
+  it("exploration-first content passes canonical validator", async () => {
     const root = await newTempDir();
     await createUiBearingPack(root);
 
-    const threeLayerContent =
-      "## invariant\n\nContent.\n\n## trend-derived\n\nContent.\n\n## product-specific\n\nContent.\n";
-    for (const f of [
-      "20_design_eval_invariant.md",
-      "21_design_eval_trend_derived.md",
-      "22_design_eval_product_specific.md",
-      "23_design_eval_aggregate.md",
-    ]) {
-      await writeFile(path.join(root, "uiux", f), threeLayerContent, "utf-8");
-    }
+    const explorationContent = [
+      "# Exploration Rubric",
+      "",
+      "## Axes",
+      "",
+      "- design_quality",
+      "- originality",
+      "- craft",
+      "- functionality",
+    ].join("\n");
+    await writeFile(
+      path.join(root, "uiux", "33_exploration_rubric.md"),
+      explorationContent,
+      "utf-8",
+    );
 
     const issues = await validateThreeLayerModel(root, defaultConfig);
     expect(issues).toHaveLength(0);
@@ -221,20 +225,22 @@ describe("TC-0014-0016: Canonical validator set enforcement (3-layer family)", (
 
 // QFAI:SPEC-0014:TC-0014-0017
 describe("TC-0014-0017: Non-canonical validator rejection", () => {
-  it("mixed 3-layer and 4-axis content is rejected by threeLayer validator", async () => {
+  it("mixed exploration and legacy 4-axis content is rejected by threeLayer validator", async () => {
     const root = await newTempDir();
     await createUiBearingPack(root);
 
-    const mixedContent =
-      "## invariant\n\nContent.\n\n## usability\n\nContent.\n\n## product-specific\n\nContent.\n";
-    for (const f of [
-      "20_design_eval_invariant.md",
-      "21_design_eval_trend_derived.md",
-      "22_design_eval_product_specific.md",
-      "23_design_eval_aggregate.md",
-    ]) {
-      await writeFile(path.join(root, "uiux", f), mixedContent, "utf-8");
-    }
+    const mixedContent = [
+      "# Exploration Rubric",
+      "",
+      "## Axes",
+      "",
+      "- design_quality",
+      "",
+      "## usability",
+      "",
+      "Legacy content.",
+    ].join("\n");
+    await writeFile(path.join(root, "uiux", "33_exploration_rubric.md"), mixedContent, "utf-8");
 
     const issues = await validateThreeLayerModel(root, defaultConfig);
     expect(issues.some((i) => i.code === "UIX-VAL-3LAYER-MIXED-FORMAT")).toBe(true);

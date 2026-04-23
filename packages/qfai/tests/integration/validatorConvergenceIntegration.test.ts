@@ -1,8 +1,8 @@
 /**
  * Integration tests for spec-0004: Validator Convergence
  *
- * Tests canonical UIX aggregator path, 3-layer filename expectations,
- * migration warnings, non-UI pack UIX skip, and truthful evidence/browser QA.
+ * Tests canonical UIX aggregator path, exploration-first sidecar expectations,
+ * legacy heading rejection, non-UI pack UIX skip, and truthful evidence/browser QA.
  */
 
 // QFAI:SPEC-0004:TC-0004-0017
@@ -72,20 +72,19 @@ describe("TC-0004-0017: Canonical UIX aggregator path verification", () => {
 });
 
 // ---------------------------------------------------------------------------
-// TC-0004-0018: 3-layer family filename expectations
+// TC-0004-0018: exploration-first family filename expectations
 // ---------------------------------------------------------------------------
 
-// QFAI:SPEC-0004:TC-0004-0018
-describe("TC-0004-0018: 3-layer family filename expectations", () => {
-  it("threeLayer validator recognizes split eval axis filenames (20-23)", async () => {
+describe("TC-0004-0018: exploration-first family filename expectations", () => {
+  it("threeLayer validator recognizes the exploration-first sidecar family", async () => {
     const validatorSrc = await readFile(
       path.join(repoRoot, "packages", "qfai", "src", "core", "validators", "uix", "threeLayer.ts"),
       "utf-8",
     );
-    expect(validatorSrc).toContain("20_design_eval_invariant.md");
-    expect(validatorSrc).toContain("21_design_eval_trend_derived.md");
-    expect(validatorSrc).toContain("22_design_eval_product_specific.md");
-    expect(validatorSrc).toContain("23_design_eval_aggregate.md");
+    expect(validatorSrc).toContain("30_exploration_brief.md");
+    expect(validatorSrc).toContain("31_reference_pool.md");
+    expect(validatorSrc).toContain("33_exploration_rubric.md");
+    expect(validatorSrc).toContain("34_evaluator_calibration.md");
   });
 });
 
@@ -95,20 +94,14 @@ describe("TC-0004-0018: 3-layer family filename expectations", () => {
 
 // QFAI:SPEC-0004:TC-0004-0019
 describe("TC-0004-0019: Old 4-axis format is error", () => {
-  it("4-axis content in eval files triggers legacy format error", async () => {
+  it("legacy 4-axis headings in exploration artifacts trigger legacy format error", async () => {
     const root = await newTempDir();
     await createUiBearingPack(root);
 
-    const legacyContent =
-      "## usability\n\nContent.\n\n## consistency\n\nContent.\n\n## accessibility\n\nContent.\n\n## delight\n\nContent.\n";
-    for (const f of [
-      "20_design_eval_invariant.md",
-      "21_design_eval_trend_derived.md",
-      "22_design_eval_product_specific.md",
-      "23_design_eval_aggregate.md",
-    ]) {
-      await writeFile(path.join(root, "uiux", f), legacyContent, "utf-8");
-    }
+    const legacyContent = ["# Exploration Rubric", "", "## usability", "", "Legacy content."].join(
+      "\n",
+    );
+    await writeFile(path.join(root, "uiux", "33_exploration_rubric.md"), legacyContent, "utf-8");
 
     const issues = await validateThreeLayerModel(root, defaultConfig);
     const legacyIssue = issues.find((i) => i.code === "UIX-VAL-3LAYER-LEGACY-FORMAT");
@@ -143,16 +136,10 @@ describe("TC-0014-0004: UIX-VAL determinism", () => {
     const root = await newTempDir();
     await createUiBearingPack(root);
 
-    const legacyContent =
-      "## usability\n\nContent.\n\n## consistency\n\nContent.\n\n## accessibility\n\nContent.\n\n## delight\n\nContent.\n";
-    for (const fileName of [
-      "20_design_eval_invariant.md",
-      "21_design_eval_trend_derived.md",
-      "22_design_eval_product_specific.md",
-      "23_design_eval_aggregate.md",
-    ]) {
-      await writeFile(path.join(root, "uiux", fileName), legacyContent, "utf-8");
-    }
+    const legacyContent = ["# Exploration Rubric", "", "## usability", "", "Legacy content."].join(
+      "\n",
+    );
+    await writeFile(path.join(root, "uiux", "33_exploration_rubric.md"), legacyContent, "utf-8");
 
     const first = await validateThreeLayerModel(root, defaultConfig);
     const second = await validateThreeLayerModel(root, defaultConfig);

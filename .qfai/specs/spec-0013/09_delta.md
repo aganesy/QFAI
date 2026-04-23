@@ -34,9 +34,10 @@
 
 ## Post-Migration Changes
 
-| Date       | Change Type | IDs Added                                              | Summary                                                                                                         |
-| ---------- | ----------- | ------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------- |
-| 2026-04-01 | adopted     | AC-0013-0010, BR-0013-0008, EX-0013-0008, TC-0013-0013 | 06_Test-Cases テンプレートに Type 列（normal/error/boundary/edge）を追加、各 AC に最低1つの非正常系 TC を義務化 |
+| Date       | Change Type | IDs Added                                              | Summary                                                                                                                                            |
+| ---------- | ----------- | ------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-04-01 | adopted     | AC-0013-0010, BR-0013-0008, EX-0013-0008, TC-0013-0013 | 06_Test-Cases テンプレートに Type 列（normal/error/boundary/edge）を追加、各 AC に最低1つの非正常系 TC を義務化                                    |
+| 2026-04-23 | updated     | REQ-0021, AC-0013-0011                                 | `/qfai-sdd` 完了時点で selected-direction/design-system も UI-bearing validate readiness の必須 design contract として扱うよう runtime gate に同期 |
 
 ## v1.7.13 (2026-04-04) — Canonical Sidecar Convergence
 
@@ -44,3 +45,9 @@
 - adopted: US-0013-0008, AC-0013-0008~0009 追加
 - adopted: US range 更新 US-0013-0001..US-0013-0008
 - rationale: v1.7.13 sddPreflight.ts に prototyping.yaml 存在チェックと recommendation schema validation が追加された実装の仕様反映
+
+## v1.8.1 (2026-04-22) — Preflight Side Artifact Neutrality
+
+- updated: REQ-0014~0015 / US-0013-0008 / AC-0013-0008~0010 を current implementation に再同期
+- removed: prototyping.yaml 必須 preflight blocker 前提
+- rationale: `packages/qfai/src/core/discussionPack.ts` が side artifact requiredness を廃止し、`packages/qfai/src/core/preflight/sddPreflight.ts` は markdown readiness を主 blocker として扱うため

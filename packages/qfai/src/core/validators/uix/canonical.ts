@@ -14,21 +14,14 @@ import { readSafe } from "../utils.js";
 // Canonical validators — owned by uix/ modules
 import { validateClassification } from "./classification.js";
 import { validateSidecarMissing } from "./foundation.js";
-import { validateDesignSystemPresence } from "./designSystemPresence.js";
-import { validateOptionComparison } from "./comparisonValidator.js";
+import { validateExplorationArtifacts } from "./comparisonValidator.js";
 import { validateOqClosure } from "./oqClosure.js";
 
-// Strong validators from uix/
-import { validateTasteInterview } from "./taste.js";
-import { validateTrendScan } from "./trend.js";
-import { validateTrendAxisTraceability } from "./trendAxisTraceability.js";
 import {
   validateThreeLayerModel,
   validateForbiddenLegacyFiles,
   validateThreeLayerFamilyCompleteness,
 } from "./threeLayer.js";
-import { validateScoringReady } from "./scoringReady.js";
-import { validateStrategyStrong } from "./strategy.js";
 import { validateScreenContractSchema } from "./screenContract.js";
 
 /**
@@ -49,26 +42,14 @@ export async function runCanonicalUixValidators(
     validateClassification,
     // Sidecar presence
     validateSidecarMissing,
-    // Design system presence (UIX-VAL-DS01/DS02)
-    validateDesignSystemPresence,
-    // Design taste interview (10 sections)
-    validateTasteInterview,
-    // Trend scan freshness
-    validateTrendScan,
-    // Trend->Axis traceability (UIX-VAL-T01..T04)
-    validateTrendAxisTraceability,
-    // 3-layer model enforcement
+    // Exploration-first sidecar family
     validateThreeLayerModel,
     validateForbiddenLegacyFiles,
     validateThreeLayerFamilyCompleteness,
-    // Scoring-ready (split 3-layer files)
-    validateScoringReady,
-    // Strong strategy (8-field schema)
-    validateStrategyStrong,
     // Strong screen contract schema
     validateScreenContractSchema,
-    // Option comparison & selected anchor
-    validateOptionComparison,
+    // Exploration brief / rubric / evaluator calibration
+    validateExplorationArtifacts,
     // OQ closure
     validateOqClosure,
   ];

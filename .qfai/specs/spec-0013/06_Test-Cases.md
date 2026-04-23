@@ -63,7 +63,7 @@
 ## TC-0013-0011: Coverage Placeholder for EX-0013-0006
 
 - EX-Ref: EX-0013-0006
-- AC-Refs: AC-0013-0001
+- AC-Refs: AC-0013-0011
 - Verify that migrated example EX-0013-0006 is covered by at least one test case.
 
 ## TC-0013-0012: Coverage Placeholder for EX-0013-0007

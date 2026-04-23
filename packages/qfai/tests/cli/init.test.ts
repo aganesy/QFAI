@@ -9,8 +9,10 @@ import {
   writeFile,
   symlink,
 } from "node:fs/promises";
+import { execFile as execFileCb } from "node:child_process";
 import os from "node:os";
 import path from "node:path";
+import { promisify } from "node:util";
 
 import fg from "fast-glob";
 import { describe, expect, it } from "vitest";
@@ -30,6 +32,8 @@ const REQUIRED_SKILLS = [
   "qfai-implement",
   "qfai-verify",
 ];
+
+const execFile = promisify(execFileCb);
 
 async function expectSymlink(linkPath: string): Promise<void> {
   const stat = await lstat(linkPath);
@@ -84,7 +88,9 @@ describe("qfai init", { timeout: 60000 }, () => {
       expect(content).toContain("!.qfai/review/README.md");
       expect(content).not.toContain("!.qfai/review/review-*/");
       expect(content).not.toContain("!.qfai/review/review-*/**");
-      expect(content).toContain(".qfai/discussion/discussion-*/");
+      expect(content).toContain(".qfai/discussion/*");
+      expect(content).toContain("!.qfai/discussion/README.md");
+      expect(content).not.toContain(".qfai/discussion/discussion-*/");
 
       // No subdirectory .gitignore files should be created
       await expect(access(path.join(root, ".qfai", "review", ".gitignore"))).rejects.toMatchObject({
@@ -103,6 +109,61 @@ describe("qfai init", { timeout: 60000 }, () => {
       ).rejects.toMatchObject({
         code: "ENOENT",
       });
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("ignores every discussion child except README.md on init", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+    try {
+      await execFile("git", ["init"], { cwd: root });
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      const discussionDir = path.join(root, ".qfai", "discussion");
+      const directUiuxFile = path.join(discussionDir, "uiux", "30_exploration_brief.md");
+      const generatedPackFile = path.join(
+        discussionDir,
+        "discussion-20260423174107000",
+        "uiux",
+        "30_exploration_brief.md",
+      );
+
+      await mkdir(path.dirname(directUiuxFile), { recursive: true });
+      await mkdir(path.dirname(generatedPackFile), { recursive: true });
+      await writeFile(directUiuxFile, "direct uiux");
+      await writeFile(generatedPackFile, "generated pack uiux");
+
+      const checkIgnore = async (relativePath: string): Promise<string | null> => {
+        try {
+          const { stdout } = await execFile("git", ["check-ignore", "-v", "--", relativePath], {
+            cwd: root,
+          });
+          return stdout.trim();
+        } catch (error: unknown) {
+          if (
+            typeof error === "object" &&
+            error !== null &&
+            "code" in error &&
+            (error as { code?: number }).code === 1
+          ) {
+            return null;
+          }
+          throw error;
+        }
+      };
+
+      expect(await checkIgnore(".qfai/discussion/README.md")).toContain(
+        "!.qfai/discussion/README.md",
+      );
+      expect(await checkIgnore(".qfai/discussion/uiux/30_exploration_brief.md")).toContain(
+        ".qfai/discussion/*",
+      );
+      expect(
+        await checkIgnore(
+          ".qfai/discussion/discussion-20260423174107000/uiux/30_exploration_brief.md",
+        ),
+      ).toContain(".qfai/discussion/*");
     } finally {
       await rm(root, { recursive: true, force: true });
     }
@@ -983,7 +1044,9 @@ describe("qfai init", { timeout: 60000 }, () => {
       expect(content).not.toContain("!.qfai/review/review-*/");
       expect(content).toContain(".qfai/report/*");
       expect(content).toContain(".qfai/evidence/*");
-      expect(content).toContain(".qfai/discussion/discussion-*/");
+      expect(content).toContain(".qfai/discussion/*");
+      expect(content).toContain("!.qfai/discussion/README.md");
+      expect(content).not.toContain(".qfai/discussion/discussion-*/");
     } finally {
       await rm(root, { recursive: true, force: true });
     }
@@ -1040,6 +1103,9 @@ describe("qfai init", { timeout: 60000 }, () => {
       const content = await readFile(path.join(root, ".gitignore"), "utf-8");
       const markerCount = content.split(QFAI_GITIGNORE_MARKER).length - 1;
       expect(markerCount).toBe(1);
+      expect(content).toContain(".qfai/discussion/*");
+      expect(content).toContain("!.qfai/discussion/README.md");
+      expect(content).not.toContain(".qfai/discussion/discussion-*/");
       expect(content).not.toContain("!.qfai/review/review-*/");
       expect(content).not.toContain("!.qfai/review/review-*/**");
       expect(content).toContain(".qfai/review/*");

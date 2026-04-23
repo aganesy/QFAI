@@ -72,7 +72,7 @@ Execution agents read this file first, then access child files (02-08) for detai
 
 ## Entry Points
 
-- US range in this spec: US-0034-0001..US-0034-0008
+- US range in this spec: US-0016-0001..US-0016-0008
 - Primary actors: Developer, CLI Agent, Security Reviewer, QA Engineer
 - Notes: User stories map from discussion US-WR-001..US-WR-008
 

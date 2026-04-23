@@ -1,17 +1,12 @@
 # 06 Test Cases
 
-### TC-0014-0009
-
-- stale sidecar migration guidance is surfaced
-
-### TC-0014-0018
-
-- repo-root validate relies on contract-first validator groups for downstream completion
-
-### TC-0014-0019
-
-- removed compatibility namespace does not appear in package surface
-
-### TC-0014-0026..0032
-
-- design-system and v1.7.16 validator slices remain covered by current validator tests
+| TC-ID        | Level       | AC-Refs                    | EX-Ref       | Steps                                                               | Expected                                                       | Notes                     |
+| ------------ | ----------- | -------------------------- | ------------ | ------------------------------------------------------------------- | -------------------------------------------------------------- | ------------------------- |
+| TC-0014-0009 | integration | AC-0014-0002               | EX-0014-0002 | feed `/qfai-verify` a `REVISE` review artifact                      | verify blocks completion                                       | reviewer gate             |
+| TC-0014-0018 | integration | AC-0014-0001, AC-0014-0003 | EX-0014-0001 | run repo-root verify flow against the canonical validate entrypoint | full-scan verify depends on canonical validate groups          | full-scan validate path   |
+| TC-0014-0019 | integration | AC-0014-0003               | EX-0014-0001 | inspect package surface and compatibility namespaces                | removed compatibility namespace does not reappear              | package surface           |
+| TC-0014-0026 | unit        | AC-0014-0004               | EX-0014-0025 | run design-system presence validator with prerequisite artifact     | scoped legacy validator slice remains active                   | design system presence    |
+| TC-0014-0027 | unit        | AC-0014-0004               | EX-0014-0025 | run malformed legacy design-system artifact through validator       | finding is surfaced without restoring old runtime contract     | malformed legacy artifact |
+| TC-0014-0028 | unit        | AC-0014-0004               | EX-0014-0025 | run prototyping design-system compliance happy path                 | legacy slice reads artifact vocabulary only                    | compliance happy path     |
+| TC-0014-0029 | unit        | AC-0014-0004               | EX-0014-0025 | run prototyping design-system compliance failure path               | failure remains scoped to validator semantics                  | compliance failure path   |
+| TC-0014-0032 | unit        | AC-0014-0004               | EX-0014-0025 | execute read-only / permission handling path                        | validator remains safe when prerequisite artifact is read-only | read-only handling        |

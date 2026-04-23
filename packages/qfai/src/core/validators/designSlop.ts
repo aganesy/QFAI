@@ -4,10 +4,10 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import type { QfaiConfig } from "../config.js";
+import { isDiscussionUiBearingPack } from "../detection/surfaceType.js";
 import { findLatestDiscussionPackDir } from "../discussionPack.js";
 import type { Issue } from "../types.js";
 import { findingToIssue, resolveAuditConfig, type DesignFinding } from "./designAudit.js";
-import { isUiBearing } from "./discussionDesignHardening.js";
 import { readSafe } from "./utils.js";
 
 // ---------------------------------------------------------------------------
@@ -83,7 +83,7 @@ export async function validateDesignSlop(root: string, config: QfaiConfig): Prom
   const packRoot = await findLatestDiscussionPackDir(discussionDir);
   if (!packRoot) return [];
 
-  const uiBearing = await isUiBearing(packRoot);
+  const uiBearing = await isDiscussionUiBearingPack(packRoot);
   if (!uiBearing) return [];
 
   let patterns: SlopPattern[];

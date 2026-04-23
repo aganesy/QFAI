@@ -6,7 +6,13 @@
 
 import { readFile, stat } from "node:fs/promises";
 import { parse as parseYaml } from "yaml";
-import type { AlignmentExample, CalibrationPack, ThresholdConfig } from "./types.js";
+import {
+  DEFAULT_BREAKTHROUGH_CONFIG,
+  type AlignmentExample,
+  type BreakthroughConfig,
+  type CalibrationPack,
+  type ThresholdConfig,
+} from "./types.js";
 
 function validateExample(entry: unknown, index: number): AlignmentExample {
   if (typeof entry !== "object" || entry === null) {
@@ -53,6 +59,46 @@ function validateThresholds(thresholds: unknown): ThresholdConfig {
   }
 
   return { accept, refine };
+}
+
+function validateBreakthrough(raw: unknown): BreakthroughConfig {
+  if (raw === undefined) {
+    return { ...DEFAULT_BREAKTHROUGH_CONFIG };
+  }
+  if (typeof raw !== "object" || raw === null) {
+    throw new Error("Calibration pack 'breakthrough' must be an object when provided.");
+  }
+  const block = raw as Record<string, unknown>;
+  const minIterationsBeforeBranch =
+    typeof block.minIterationsBeforeBranch === "number"
+      ? block.minIterationsBeforeBranch
+      : DEFAULT_BREAKTHROUGH_CONFIG.minIterationsBeforeBranch;
+  const maxDiffLines =
+    typeof block.maxDiffLines === "number"
+      ? block.maxDiffLines
+      : DEFAULT_BREAKTHROUGH_CONFIG.maxDiffLines;
+  const branchCount =
+    typeof block.branchCount === "number"
+      ? block.branchCount
+      : DEFAULT_BREAKTHROUGH_CONFIG.branchCount;
+
+  if (!Number.isInteger(minIterationsBeforeBranch) || minIterationsBeforeBranch < 1) {
+    throw new Error(
+      "Calibration pack 'breakthrough.minIterationsBeforeBranch' must be a positive integer.",
+    );
+  }
+  if (!Number.isInteger(maxDiffLines) || maxDiffLines < 0) {
+    throw new Error("Calibration pack 'breakthrough.maxDiffLines' must be a non-negative integer.");
+  }
+  if (!Number.isInteger(branchCount) || branchCount < 1) {
+    throw new Error("Calibration pack 'breakthrough.branchCount' must be a positive integer.");
+  }
+
+  return {
+    minIterationsBeforeBranch,
+    maxDiffLines,
+    branchCount,
+  };
 }
 
 export class CalibrationLoader {
@@ -131,6 +177,7 @@ export class CalibrationLoader {
       maxIterations: raw.maxIterations,
       plateauDelta: raw.plateauDelta,
       plateauLookback: raw.plateauLookback,
+      breakthrough: validateBreakthrough(raw.breakthrough),
     };
 
     try {

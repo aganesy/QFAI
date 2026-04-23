@@ -110,7 +110,7 @@ QFAI includes a small set of custom skills (stored under `.qfai/assistant/skills
   Run this once right after `npx qfai init`, and re-run it when the repository structure changes.
 - **qfai-discussion**: Run a unified structured discussion that produces and maintains the latest discussion pack
   as 15 required markdown files under `.qfai/discussion/discussion-<ts>/`.
-  UI-bearing discussion packs require `prototyping.yaml`; non-ui discussion packs do not.
+  UI-bearing discussion packs may include `prototyping.yaml` as an optional recommendation artifact; non-ui discussion packs typically omit it.
 - **qfai-sdd**: Unified SDD entrypoint with discussion-pack preflight guard (missing/incomplete/blocking OQ causes stop + next action guidance).
 - **qfai-prototyping**: Build a contract-aligned UI prototype under the `full-harness` only / UI-only contract, with calibration-pack SSOT and screen-level Browser QA evidence.
 - **qfai-atdd**: Implement acceptance tests driven by specs/scenarios.

@@ -2,7 +2,7 @@
 
 ## Purpose
 
-`discussion/` stores the unified discussion pack that merges interview outputs (discuss) and requirement intake (require). Discussion packs use 15 required markdown files. When the latest pack is `ui_bearing: true`, it must also include `prototyping.yaml`; when `ui_bearing: false`, `prototyping.yaml` is not required.
+`discussion/` stores the unified discussion pack that merges interview outputs (discuss) and requirement intake (require). Discussion packs use 15 required markdown files. UI-bearing discussion packs may include `prototyping.yaml` as an optional recommendation artifact; non-ui discussion packs typically omit it.
 
 This directory does not directly update `specs/`; it prepares decisions, requirements, open questions, and rationale as inputs for `/qfai-sdd`.
 
@@ -29,7 +29,7 @@ discussion/
     ├── 13_Deferred.md
     ├── 14_Review-Request.md
     ├── 99_delta.md
-    └── prototyping.yaml  # required only when ui_bearing: true
+    └── prototyping.yaml  # optional recommendation artifact for UI-bearing packs
 ```
 
 ## File responsibilities
@@ -52,16 +52,17 @@ discussion/
 
 ## UI/UX canonical family
 
-For UI-bearing packs, the canonical design-evaluation source-of-truth is:
+For UI-bearing packs, the canonical exploration-first source-of-truth is:
 
 - `04_Sources.md` for trend translation and competitive reference registry
-- `uiux/20_design_eval_invariant.md`
-- `uiux/21_design_eval_trend_derived.md`
-- `uiux/22_design_eval_product_specific.md`
-- `uiux/23_design_eval_aggregate.md`
+- `uiux/30_exploration_brief.md`
+- `uiux/31_reference_pool.md`
+- `uiux/32_design_anti_goals.md`
+- `uiux/33_exploration_rubric.md`
+- `uiux/34_evaluator_calibration.md`
 - `uiux/40_screen_contracts.md`
 
-`05_Scope.md` is not a trend source-of-truth for L2 scoring, and fallback scans such as `uiux/*trend*` or `uiux/*competitive*` must not replace these canonical files.
+Discussion must not choose a single winner or finalize a design system. Those are downstream prototyping outputs.
 
 ## OQ Register rules
 
@@ -116,11 +117,11 @@ For UI-bearing packs, the canonical design-evaluation source-of-truth is:
 - Use timestamp directory naming for new outputs: `discussion-YYYYMMDDhhmmssSSS`.
 - `14_Review-Request.md` must reference routing SSOT: `.qfai/assistant/steering/agent-routing.yml` and `.qfai/assistant/steering/review-profiles.yml`.
 
-## prototyping.yaml (Classification-aware Recommendation Artifact)
+## prototyping.yaml (Optional Recommendation Artifact)
 
-Each UI-bearing discussion pack (`ui_bearing: true`) **must** include a `prototyping.yaml` file that recommends the prototyping mode for the project. Non-UI discussion packs (`ui_bearing: false`) do not require `prototyping.yaml`.
+UI-bearing discussion packs (`ui_bearing: true`) may include a `prototyping.yaml` file to record a recommended prototyping mode. Non-UI discussion packs (`ui_bearing: false`) typically omit `prototyping.yaml`.
 
-### Canonical namespaced schema (required)
+### Canonical namespaced schema (when present)
 
 ```yaml
 prototyping:
@@ -133,7 +134,7 @@ prototyping:
 
 ### Field reference
 
-All 4 fields are **required**. An artifact missing any field will fail validation.
+If you create this artifact, populate all 4 fields.
 
 | Field              | Required | Description                                    |
 | ------------------ | -------- | ---------------------------------------------- |
@@ -142,12 +143,11 @@ All 4 fields are **required**. An artifact missing any field will fail validatio
 | `allowed_modes`    | yes      | Unique array; must contain only `full-harness` |
 | `surface`          | yes      | `web`, `mobile`, `desktop`, or `mixed`         |
 
-### Validation rules
+### Current behavior
 
-- Only the canonical namespaced schema under the `prototyping:` key is accepted. Top-level recommendation keys (`recommended_mode`, `rationale`, `allowed_modes`, `surface` at root level) are not supported and will cause validation failure.
-- Coexistence of top-level recommendation keys with the namespaced `prototyping:` block is invalid.
-- `recommended_mode` must be included in `allowed_modes`. In packages/qfai, this means `recommended_mode` must be `full-harness` and `allowed_modes` must only contain `full-harness`.
-- An artifact that does not conform to the canonical namespaced schema is invalid and will be rejected by both validation and execution/CLI. No fallback to explicit mode or default mode is performed for invalid artifacts.
+- Current discussion-pack readiness does not block on missing `prototyping.yaml`.
+- When `prototyping.yaml` is present, prefer the canonical namespaced schema under the `prototyping:` key.
+- `recommended_mode` should be included in `allowed_modes`. In packages/qfai, this means `recommended_mode` should be `full-harness` and `allowed_modes` should contain only `full-harness`.
 
 ## Suggested naming
 

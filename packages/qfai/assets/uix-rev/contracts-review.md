@@ -22,7 +22,7 @@ Review screen contracts for canonical 11-field schema completeness.
 - Routes must be unique across all contracts
 - Required states must include `default`, `loading`, `empty`, and `error`
 - All 11 fields must be present and non-empty for each screen
-- Screen contracts must stay consistent with `31_selected_anchor_screen.md`
+- Screen contracts must stay consistent with the exploration brief and selected direction
 - Screen contracts must stay consistent with Browser QA findings and screen-linked evidence
 - Do not reference legacy filenames such as `40_contracts.md`
 - Keep wording aligned with scoring-ready canonical fields and avoid stale migration vocabulary

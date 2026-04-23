@@ -419,17 +419,32 @@ const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-UIE-003":
     "Every declared screen id used for prototyping evidence filenames must be path-safe (`[A-Za-z0-9._-]+`).",
   "QFAI-DCON-001":
-    "UI-bearing downstream execution requires `.qfai/contracts/design/design-system.yaml`, `evaluation-axes.yaml`, and `anchor-selection.yaml` when UI contracts exist.",
+    "UI-bearing downstream execution requires `.qfai/contracts/design/exploration-brief.yaml`, `evaluation-rubric.yaml`, `evaluator-calibration.yaml`, `selected-direction.yaml`, and `design-system.yaml` when UI contracts exist.",
   "QFAI-DCON-002":
-    "design-system.yaml must define checklist entries for color, typography, spacing, border_radius, shadow, and dos_and_donts.",
+    "exploration-brief.yaml must define product_intent, target_users, must_preserve_interactions, brand_signals, and differentiation_targets.",
   "QFAI-DCON-003":
-    "evaluation-axes.yaml must define invariant_axes, trend_derived_axes, and product_specific_axes arrays.",
-  "QFAI-DCON-004": "evaluation-axes.yaml must define aggregate_rules.",
+    "evaluation-rubric.yaml must define axes, hard_floors, and weighted_axes arrays.",
+  "QFAI-DCON-004":
+    "selected-direction.yaml must define chosen_direction_id (legacy alias: direction_id), winning_rationale, and carry_forward_rules.",
   "QFAI-DCON-005":
-    "anchor-selection.yaml must define selected_anchor.option_id, title, and rationale.",
-  "QFAI-DCON-006": "design-system.yaml must parse as an object-shaped YAML document.",
-  "QFAI-DCON-007": "evaluation-axes.yaml must parse as an object-shaped YAML document.",
-  "QFAI-DCON-008": "anchor-selection.yaml must parse as an object-shaped YAML document.",
+    "design-system.yaml must define checklist entries for color, typography, spacing, border_radius, shadow, dos_and_donts, component_tone, and motion_rules.",
+  "QFAI-DCON-006": "exploration-brief.yaml must parse as an object-shaped YAML document.",
+  "QFAI-DCON-007": "evaluation-rubric.yaml must parse as an object-shaped YAML document.",
+  "QFAI-DCON-008": "selected-direction.yaml must parse as an object-shaped YAML document.",
+  "QFAI-DCON-009": "design-system.yaml must parse as an object-shaped YAML document.",
+  "QFAI-DCON-010":
+    "evaluator-calibration.yaml must define good_critique_examples, too_lenient_examples, blandness_fail_examples, and originality_fail_examples.",
+  "QFAI-DCON-011": "evaluator-calibration.yaml must parse as an object-shaped YAML document.",
+  "QFAI-BREAK-001": "breakthrough.json is required for exploration-first UI prototyping evidence.",
+  "QFAI-BREAK-002": "breakthrough.json must be a valid JSON object.",
+  "QFAI-BREAK-003": "breakthrough.json.latestIteration must be a positive integer.",
+  "QFAI-BREAK-004": "breakthrough.json.triggerResult must be a boolean.",
+  "QFAI-BREAK-005": "breakthrough.json.triggerReasons must be an array of strings.",
+  "QFAI-BREAK-006": "breakthrough.json.avgScoreDeltas must be an array of numbers.",
+  "QFAI-BREAK-007": "breakthrough.json.diffLines must be a non-negative number.",
+  "QFAI-BREAK-008":
+    "triggerResult=true requires breakthrough.json.branchCount to be a positive integer.",
+  "QFAI-BREAK-009": "triggerResult=true requires non-empty breakthrough.json.branchRefs evidence.",
   "QFAI-CONTRACT-030":
     "Contract index references must match declared contract IDs in .qfai/contracts/**.",
 };

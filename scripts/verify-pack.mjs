@@ -151,7 +151,8 @@ const requiredGitignorePatterns = [
   "!.qfai/evidence/README.md",
   ".qfai/review/*",
   "!.qfai/review/README.md",
-  ".qfai/discussion/discussion-*/",
+  ".qfai/discussion/*",
+  "!.qfai/discussion/README.md",
 ];
 const missingPatterns = requiredGitignorePatterns.filter(
   (pattern) => !rootGitignoreContent.includes(pattern),

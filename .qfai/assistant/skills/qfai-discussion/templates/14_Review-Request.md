@@ -35,35 +35,34 @@
   - Acceptance criteria are consistent with flows/state transitions
   - Security/operations risks are reflected in diagrams where relevant
 - Mermaid diagrams use ` ```mermaid ` fences only
-- Strategy alignment and chosen_option consistency (when UI-bearing)
-- Taste reflection completeness and clarity (when UI-bearing)
-- Trend scan freshness and evidence traceability (when UI-bearing)
-- 3-layer axes evaluation quality and traceability (when UI-bearing)
-- Option comparison integrity (when UI-bearing)
-- Selected anchor screen clarity and anchor justification (when UI-bearing)
+- Exploration brief completeness and differentiation clarity (when UI-bearing)
+- Reference pool freshness and translation quality (when UI-bearing)
+- Exploration rubric quality and evaluation traceability (when UI-bearing)
+- Evaluator calibration skepticism and blandness rejection quality (when UI-bearing)
+- Best-of-history handling and winner selection consistency (when UI-bearing)
 - Screen contract sufficiency and strong schema completeness (when UI-bearing)
 - Generic fallback risk — ensure no unreviewed generic/placeholder UI remains (when UI-bearing)
 - OQ register exit condition (open count = 0)
 - Deferred items have full metadata
 
-## Selected Anchor Consistency
+## Exploration Direction Consistency
 
 <!-- Required for UI-bearing packs. Verifies sidecar-family alignment. -->
 
-- Selected anchor: verify `uiux/31_selected_anchor_screen.md` selected anchor is populated and references a compared option from `uiux/30_option_comparison.md`
-- Strategy alignment: verify `uiux/10_implementation_strategy.md` aligns with the selected anchor in `uiux/31_selected_anchor_screen.md`
-- Evaluation traceability: verify selected anchor rationale aligns with 3-layer evaluation family (20/21/22/23 + optional 24)
+- Exploration brief: verify `uiux/30_exploration_brief.md` defines product intent, must-preserve interactions, brand signals, and differentiation targets
+- Evaluation alignment: verify `uiux/33_exploration_rubric.md` and `uiux/34_evaluator_calibration.md` support skeptical evaluation and originality pressure
+- History handling: verify `uiux/50_review_input_bundle.md` documents best-of-history comparison instead of latest-only preference
 
 ## Sidecar Artifact Review Scope
 
 <!-- Required for UI-bearing packs. Reviews uiux/ sidecar artifacts. -->
 
-- Verify all 11 uiux/ sidecar files are present (when UI-bearing)
-- Verify uiux/10_implementation_strategy.md strict canonical schema is complete
-- Verify scoring axes have evaluation criteria and measurement approaches
-- Verify option comparison covers 2+ options against all scoring axes in `uiux/30_option_comparison.md`
-- Verify `uiux/31_selected_anchor_screen.md` selected anchor references a compared option
-- Verify `uiux/24_design_eval_dynamic_overrides.md` has documented override rules
+- Verify exploration sidecars are present and complete (`30` to `34`, `40`, `50`)
+- Verify `uiux/30_exploration_brief.md` is specific enough to support divergent exploration
+- Verify `uiux/31_reference_pool.md` documents adopted, rejected, and locally translated references
+- Verify `uiux/33_exploration_rubric.md` weights design quality and originality explicitly
+- Verify `uiux/34_evaluator_calibration.md` contains good-critique / too-lenient / blandness-fail / originality-fail examples
+- Verify `uiux/50_review_input_bundle.md` preserves best-of-history handling
 - Verify screen contracts use nested strong schema with all 4 required states (default/loading/empty/error) and treat `uiux/40_screen_contracts.md` as the state SSOT
 
 ## Required Reviewers

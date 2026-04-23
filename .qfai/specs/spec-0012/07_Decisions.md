@@ -17,10 +17,25 @@
 
 ## DR-0012-0004: Legacy Validator Slice Retained Without Runtime Revival
 
-- Decision: `executionPlan`, `screenshotDir`, Lighthouse gate, designSystemCompliance, calibration override validators は互換/reference slice として残してよい。
+- Decision: `executionPlan`, Lighthouse gate, `designSystemCompliance`, calibration override validators は互換/reference slice として残してよい。
 - Rationale: 既存テストと artifact contract を維持しつつ、runtime orchestration を復活させないため。
 
-## DR-0012-0005: Historical Full-Harness Narrative Superseded
+## DR-0012-0005: Historical Runtime Narrative Superseded
 
-- Decision: 過去の `full-harness` / mode / runtime decisions は historical context としてのみ保持し、active execution contract には使わない。
+- Decision: 過去の runtime-heavy wording は historical context としてのみ保持し、active execution contract には使わない。
 - Rationale: 旧議論の追跡は残しつつ、現行 SSOT を skill-first posture に一本化するため。
+
+## DR-0012-0006: Reviewer-Score Evidence Model
+
+- Decision: full-harness iteration evidence は `reviewerScores[]` と `allItemsPass95` を中心に記録する。
+- Rationale: reviewer ごとの根拠と証跡を残しつつ、weighted-total dependence を解消するため。
+
+## DR-0012-0007: Snapshot-Based Scoring Trace
+
+- Decision: `scoringTrace[]` は iteration ごとの snapshot summary とし、`minScore` / `averageScore` / `allItemsPass95` を保持する。
+- Rationale: convergence と best-iteration 判定を reviewer-score model に合わせるため。
+
+## DR-0012-0008: Budget-Driven Termination
+
+- Decision: termination は `allItemsPass95` 達成で `converged`、未達のまま予算上限に達したら `max-iterations` とする。
+- Rationale: current history/result writer 実装と一致させるため。

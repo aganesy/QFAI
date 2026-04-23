@@ -58,6 +58,7 @@ coverage/
 !.qfai/report/README.md
 .qfai/evidence/*
 !.qfai/evidence/README.md
-.qfai/discussion/discussion-*/
+.qfai/discussion/*
+!.qfai/discussion/README.md
 .qfai/review/*
 !.qfai/review/README.md
