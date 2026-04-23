@@ -870,6 +870,28 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     expect(skillContent).toContain("templates/contracts");
   });
 
+  it("ensures evaluator-calibration sample uses validator-aligned keys", async () => {
+    const samplePath = path.join(
+      templateQfaiDir,
+      "assistant",
+      "skills",
+      "qfai-sdd",
+      "templates",
+      "contracts",
+      "evaluator-calibration.sample.yaml",
+    );
+    const content = await readFile(samplePath, "utf-8");
+
+    expect(content).toContain("good_critique_examples:");
+    expect(content).toContain("too_lenient_examples:");
+    expect(content).toContain("blandness_fail_examples:");
+    expect(content).toContain("originality_fail_examples:");
+    expect(content).not.toContain("good_critique:");
+    expect(content).not.toContain("too_lenient:");
+    expect(content).not.toContain("blandness_fail:");
+    expect(content).not.toContain("originality_fail:");
+  });
+
   it("ensures qfai-discussion skill contains required coverage topics", async () => {
     const discussPromptPath = path.join(
       templateQfaiDir,
