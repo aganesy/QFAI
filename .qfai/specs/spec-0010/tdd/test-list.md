@@ -11,7 +11,7 @@
 | TDD-0007 | TC-0010-0006 | integration | packages/qfai/tests/integration/discussionSkillTemplateIntegration.test.ts | SKILL.md が exploration artifact completion を要求   | done   | DR-0010-0001 | current integration test pass            |
 | TDD-0008 | TC-0010-0006 | integration | packages/qfai/tests/e2e/discussionHardeningE2E.test.ts                     | planner / exploration brief 中心の guidance          | done   | DR-0010-0001 | current e2e guidance test pass           |
 | TDD-0009 | TC-0010-0002 | integration | packages/qfai/tests/core/discussionDesignHardening.test.ts                 | required exploration sidecar completeness            | done   | DR-0010-0002 | current validator unit test pass         |
-| TDD-0010 | TC-0010-0006 | integration | packages/qfai/tests/core/discussionDesignHardening.integration.test.ts     | init 後 skill/template が exploration-first wording   | done   | DR-0010-0001 | current validator integration smoke pass |
+| TDD-0010 | TC-0010-0006 | integration | packages/qfai/tests/core/discussionDesignHardening.integration.test.ts     | init 後 skill/template が exploration-first wording  | done   | DR-0010-0001 | current validator integration smoke pass |
 
 ## Notes
 

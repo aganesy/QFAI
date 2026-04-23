@@ -1,7 +1,7 @@
 # TDD Execution Ledger
 
-| TDD-ID   | TC-Refs      | Layer       | Test file                                                                  | Selector       | Status | DR-ID        | Evidence                         |
-| -------- | ------------ | ----------- | -------------------------------------------------------------------------- | -------------- | ------ | ------------ | -------------------------------- |
+| TDD-ID   | TC-Refs      | Layer       | Test file                                                                | Selector     | Status | DR-ID        | Evidence                         |
+| -------- | ------------ | ----------- | ------------------------------------------------------------------------ | ------------ | ------ | ------------ | -------------------------------- |
 | TDD-0285 | TC-0012-0285 | unit        | packages/qfai/tests/skill/prototypingSkillV1716.test.ts                  | TC-0012-0285 | done   | DR-0012-0001 | skill asset guard                |
 | TDD-0286 | TC-0012-0286 | integration | packages/qfai/tests/integration/prototypingSkillV1716Integration.test.ts | TC-0012-0286 | done   | DR-0012-0001 | delegation validator             |
 | TDD-0287 | TC-0012-0287 | integration | packages/qfai/tests/integration/prototypingSkillV1716Integration.test.ts | TC-0012-0287 | done   | DR-0012-0004 | executionPlan validator          |

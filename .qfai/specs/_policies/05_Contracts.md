@@ -10,13 +10,13 @@
 
 ### Design Contracts
 
-| Short ID | Entity                | Declared ID           | File                                               | Purpose                                               |
-| -------- | --------------------- | --------------------- | -------------------------------------------------- | ----------------------------------------------------- |
-| DCON-001 | Exploration Brief     | exploration-brief     | `.qfai/contracts/design/exploration-brief.yaml`    | exploration 条件、must-keep、brand signals の SSOT    |
-| DCON-002 | Evaluation Rubric     | evaluation-rubric     | `.qfai/contracts/design/evaluation-rubric.yaml`    | evaluator 軸と hard floor / weighted pressure の SSOT |
-| DCON-003 | Evaluator Calibration | evaluator-calibration | `.qfai/contracts/design/evaluator-calibration.yaml` | critique quality の較正ルール                         |
-| DCON-004 | Selected Direction    | selected-direction    | `.qfai/contracts/design/selected-direction.yaml`    | winner direction と carry-forward rules の SSOT       |
-| DCON-005 | Design System         | design-system         | `.qfai/contracts/design/design-system.yaml`        | winner から抽出された downstream design system の SSOT |
+| Short ID | Entity                | Declared ID           | File                                                | Purpose                                                |
+| -------- | --------------------- | --------------------- | --------------------------------------------------- | ------------------------------------------------------ |
+| DCON-001 | Exploration Brief     | exploration-brief     | `.qfai/contracts/design/exploration-brief.yaml`     | exploration 条件、must-keep、brand signals の SSOT     |
+| DCON-002 | Evaluation Rubric     | evaluation-rubric     | `.qfai/contracts/design/evaluation-rubric.yaml`     | evaluator 軸と hard floor / weighted pressure の SSOT  |
+| DCON-003 | Evaluator Calibration | evaluator-calibration | `.qfai/contracts/design/evaluator-calibration.yaml` | critique quality の較正ルール                          |
+| DCON-004 | Selected Direction    | selected-direction    | `.qfai/contracts/design/selected-direction.yaml`    | winner direction と carry-forward rules の SSOT        |
+| DCON-005 | Design System         | design-system         | `.qfai/contracts/design/design-system.yaml`         | winner から抽出された downstream design system の SSOT |
 
 ### UI Contracts
 
@@ -26,8 +26,8 @@
 
 ### Evidence Contracts
 
-| Short ID   | Entity               | File                                | Purpose                                              |
-| ---------- | -------------------- | ----------------------------------- | ---------------------------------------------------- |
+| Short ID   | Entity                | File                               | Purpose                                                |
+| ---------- | --------------------- | ---------------------------------- | ------------------------------------------------------ |
 | EVID-DCON1 | Breakthrough Evidence | `.qfai/evidence/breakthrough.json` | plateau detector 判定と branch 実行証跡の canonical 先 |
 
 ### DB Contracts

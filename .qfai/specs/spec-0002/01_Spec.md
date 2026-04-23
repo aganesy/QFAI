@@ -68,7 +68,7 @@
 - Primary actors: Pack author, Reviewer, Discussion facilitator, Skill maintainer
 - Notes: current downstream truth は specs/contracts であり、discussion pack は `/qfai-sdd` の入力専用
 
-## Escalation Hook (Read _policies only when needed)
+## Escalation Hook (Read \_policies only when needed)
 
 ### When to Escalate
 
