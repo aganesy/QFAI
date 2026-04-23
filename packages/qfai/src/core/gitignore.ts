@@ -11,13 +11,15 @@ export const QFAI_GITIGNORE_REQUIRED_ENTRIES: readonly string[] = [
   "!.qfai/report/README.md",
   ".qfai/evidence/*",
   "!.qfai/evidence/README.md",
+  ".qfai/discussion/*",
+  "!.qfai/discussion/README.md",
   ".qfai/review/*",
   "!.qfai/review/README.md",
-  ".qfai/discussion/discussion-*/",
 ] as const;
 
 /** Lines removed from the managed block in previous versions; stripped during migration. */
 export const QFAI_GITIGNORE_LEGACY_LINES: readonly string[] = [
+  ".qfai/discussion/discussion-*/",
   "!.qfai/review/review-*/",
   "!.qfai/review/review-*/**",
 ] as const;
@@ -28,7 +30,8 @@ export const QFAI_GITIGNORE_BLOCK = [
   "!.qfai/report/README.md",
   ".qfai/evidence/*",
   "!.qfai/evidence/README.md",
-  ".qfai/discussion/discussion-*/",
+  ".qfai/discussion/*",
+  "!.qfai/discussion/README.md",
   ".qfai/review/*",
   "!.qfai/review/README.md",
   "",
