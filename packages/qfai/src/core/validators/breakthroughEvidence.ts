@@ -19,6 +19,10 @@ type BreakthroughRecord = {
   branchRefs?: unknown;
 };
 
+function toPosixRelative(root: string, targetPath: string): string {
+  return path.relative(root, targetPath).replace(/\\/g, "/");
+}
+
 export async function validateBreakthroughEvidence(
   root: string,
   config: QfaiConfig,
@@ -30,6 +34,7 @@ export async function validateBreakthroughEvidence(
 
   const evidenceRoot = path.join(path.dirname(resolvePath(root, config, "specsDir")), "evidence");
   const evidencePath = path.join(evidenceRoot, "breakthrough.json");
+  const evidenceRelativePath = toPosixRelative(root, evidencePath);
   const raw = await readJsonFile(evidencePath);
   if (raw.status === "missing") {
     return [
@@ -37,11 +42,11 @@ export async function validateBreakthroughEvidence(
         "QFAI-BREAK-001",
         "breakthrough.json is required for exploration-first UI prototyping evidence but is missing.",
         "warning",
-        path.relative(root, evidencePath).replace(/\\/g, "/"),
+        evidenceRelativePath,
         "breakthroughEvidence.presence",
         undefined,
         "canonical",
-        "`.qfai/evidence/breakthrough.json` を生成してください。",
+        `\`${evidenceRelativePath}\` を生成してください。`,
       ),
     ];
   }
@@ -51,7 +56,7 @@ export async function validateBreakthroughEvidence(
         "QFAI-BREAK-002",
         "breakthrough.json must be a valid JSON object.",
         "error",
-        path.relative(root, evidencePath).replace(/\\/g, "/"),
+        evidenceRelativePath,
         "breakthroughEvidence.schema",
       ),
     ];
@@ -65,7 +70,7 @@ export async function validateBreakthroughEvidence(
         "QFAI-BREAK-003",
         "breakthrough.json.latestIteration must be a positive integer.",
         "error",
-        path.relative(root, evidencePath).replace(/\\/g, "/"),
+        evidenceRelativePath,
         "breakthroughEvidence.latestIteration",
       ),
     );
@@ -76,7 +81,7 @@ export async function validateBreakthroughEvidence(
         "QFAI-BREAK-004",
         "breakthrough.json.triggerResult must be a boolean.",
         "error",
-        path.relative(root, evidencePath).replace(/\\/g, "/"),
+        evidenceRelativePath,
         "breakthroughEvidence.triggerResult",
       ),
     );
@@ -87,7 +92,7 @@ export async function validateBreakthroughEvidence(
         "QFAI-BREAK-005",
         "breakthrough.json.triggerReasons must be an array of strings.",
         "error",
-        path.relative(root, evidencePath).replace(/\\/g, "/"),
+        evidenceRelativePath,
         "breakthroughEvidence.triggerReasons",
       ),
     );
@@ -101,7 +106,7 @@ export async function validateBreakthroughEvidence(
         "QFAI-BREAK-006",
         "breakthrough.json.avgScoreDeltas must be an array of numbers.",
         "error",
-        path.relative(root, evidencePath).replace(/\\/g, "/"),
+        evidenceRelativePath,
         "breakthroughEvidence.avgScoreDeltas",
       ),
     );
@@ -112,7 +117,7 @@ export async function validateBreakthroughEvidence(
         "QFAI-BREAK-007",
         "breakthrough.json.diffLines must be a non-negative number.",
         "error",
-        path.relative(root, evidencePath).replace(/\\/g, "/"),
+        evidenceRelativePath,
         "breakthroughEvidence.diffLines",
       ),
     );
@@ -126,9 +131,9 @@ export async function validateBreakthroughEvidence(
       issues.push(
         issue(
           "QFAI-BREAK-008",
-          "triggerResult=true requires branchCount to be a positive integer.",
+          "triggerResult=true requires breakthrough.json.branchCount to be a positive integer.",
           "error",
-          path.relative(root, evidencePath).replace(/\\/g, "/"),
+          evidenceRelativePath,
           "breakthroughEvidence.branchCount",
         ),
       );
@@ -141,9 +146,9 @@ export async function validateBreakthroughEvidence(
       issues.push(
         issue(
           "QFAI-BREAK-009",
-          "triggerResult=true requires non-empty branchRefs evidence.",
+          "triggerResult=true requires non-empty breakthrough.json.branchRefs evidence.",
           "error",
-          path.relative(root, evidencePath).replace(/\\/g, "/"),
+          evidenceRelativePath,
           "breakthroughEvidence.branchRefs",
         ),
       );
