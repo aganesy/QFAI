@@ -421,31 +421,27 @@ const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-DCON-001":
     "UI-bearing downstream execution requires `.qfai/contracts/design/exploration-brief.yaml`, `evaluation-rubric.yaml`, `selected-direction.yaml`, and `design-system.yaml` when UI contracts exist.",
   "QFAI-DCON-002":
-    "exploration-brief.yaml must define product_intent, must_preserve_interactions, brand_signals, and differentiation_targets.",
-  "QFAI-DCON-003": "evaluation-rubric.yaml must define weighted_axes and hard_floor_axes arrays.",
+    "exploration-brief.yaml must define product_intent, target_users, must_preserve_interactions, brand_signals, and differentiation_targets.",
+  "QFAI-DCON-003":
+    "evaluation-rubric.yaml must define axes, hard_floors, and weighted_axes arrays.",
   "QFAI-DCON-004":
-    "selected-direction.yaml must define chosen_direction_id, winning_rationale, and carry_forward_rules.",
+    "selected-direction.yaml must define chosen_direction_id (legacy alias: direction_id), winning_rationale, and carry_forward_rules.",
   "QFAI-DCON-005":
     "design-system.yaml must define checklist entries for color, typography, spacing, border_radius, shadow, dos_and_donts, component_tone, and motion_rules.",
   "QFAI-DCON-006": "exploration-brief.yaml must parse as an object-shaped YAML document.",
   "QFAI-DCON-007": "evaluation-rubric.yaml must parse as an object-shaped YAML document.",
   "QFAI-DCON-008": "selected-direction.yaml must parse as an object-shaped YAML document.",
   "QFAI-DCON-009": "design-system.yaml must parse as an object-shaped YAML document.",
-  "QFAI-BREAK-001":
-    "breakthrough.json must exist for full-harness prototyping evidence and plateau handling.",
-  "QFAI-BREAK-002":
-    "breakthrough.json must define latestIteration, allItemsPass95, scoreDeltaWindow, diffLines, and triggerResult.",
-  "QFAI-BREAK-003":
-    "breakthrough.json triggerReasons must be a non-empty array when triggerResult=true.",
-  "QFAI-BREAK-004":
-    "breakthrough.json branchRefs must contain the configured number of breakthrough branches when triggerResult=true.",
-  "QFAI-BREAK-005": "breakthrough.json incumbentRef is required when triggerResult=true.",
-  "QFAI-BREAK-006": "breakthrough.json branchCount must match branchRefs length.",
-  "QFAI-BREAK-007": "breakthrough.json must parse as an object-shaped JSON document.",
+  "QFAI-BREAK-001": "breakthrough.json is required for exploration-first UI prototyping evidence.",
+  "QFAI-BREAK-002": "breakthrough.json must be a valid JSON object.",
+  "QFAI-BREAK-003": "breakthrough.json.latestIteration must be a positive integer.",
+  "QFAI-BREAK-004": "breakthrough.json.triggerResult must be a boolean.",
+  "QFAI-BREAK-005": "breakthrough.json.triggerReasons must be an array of strings.",
+  "QFAI-BREAK-006": "breakthrough.json.avgScoreDeltas must be an array of numbers.",
+  "QFAI-BREAK-007": "breakthrough.json.diffLines must be a non-negative number.",
   "QFAI-BREAK-008":
-    "breakthrough.json score deltas must be numeric arrays for average and minimum score windows.",
-  "QFAI-BREAK-009":
-    "breakthrough.json trigger=false may omit branches, but trigger bookkeeping fields must remain coherent.",
+    "triggerResult=true requires breakthrough.json.branchCount to be a positive integer.",
+  "QFAI-BREAK-009": "triggerResult=true requires non-empty breakthrough.json.branchRefs evidence.",
   "QFAI-CONTRACT-030":
     "Contract index references must match declared contract IDs in .qfai/contracts/**.",
 };

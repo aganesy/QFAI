@@ -1025,6 +1025,94 @@ describe("runValidate", { timeout: 15000 }, () => {
       expect(output).toContain("\n       次のいずれかを実施してください:");
     });
   });
+
+  it("uses current expected strings for design contract and breakthrough issues in text output", async () => {
+    await withProject(async (root) => {
+      const designDir = path.join(root, ".qfai", "contracts", "design");
+      await mkdir(designDir, { recursive: true });
+      await writeFile(
+        path.join(designDir, "exploration-brief.yaml"),
+        [
+          "product_intent: Clarify the main path",
+          "target_users:",
+          "  - operations manager",
+          "must_preserve_interactions:",
+          "  - search",
+          "brand_signals:",
+          "  - calm confidence",
+          "differentiation_targets:",
+          "  - avoid default shell",
+        ].join("\n"),
+        "utf-8",
+      );
+      await writeFile(
+        path.join(designDir, "evaluation-rubric.yaml"),
+        [
+          "axes:",
+          "  - design_quality",
+          "hard_floors:",
+          "  - accessibility",
+          "weighted_axes:",
+          "  - design_quality",
+        ].join("\n"),
+        "utf-8",
+      );
+      await writeFile(
+        path.join(designDir, "selected-direction.yaml"),
+        [
+          "winning_rationale: strong hierarchy",
+          "carry_forward_rules:",
+          "  - keep headline scale",
+        ].join("\n"),
+        "utf-8",
+      );
+      await writeFile(
+        path.join(designDir, "design-system.yaml"),
+        [
+          "checklist:",
+          "  color: []",
+          "  typography: []",
+          "  spacing: []",
+          "  border_radius: []",
+          "  shadow: []",
+          "  dos_and_donts: []",
+          "  component_tone: []",
+          "  motion_rules: []",
+        ].join("\n"),
+        "utf-8",
+      );
+
+      await writeFile(
+        path.join(root, ".qfai", "evidence", "breakthrough.json"),
+        `${JSON.stringify(
+          {
+            latestIteration: 1,
+            triggerResult: false,
+            triggerReasons: 123,
+            avgScoreDeltas: [0],
+            diffLines: 0,
+          },
+          null,
+          2,
+        )}\n`,
+        "utf-8",
+      );
+
+      const output = await captureStdout(async () => {
+        await runValidate({
+          root,
+          strict: false,
+          failOn: "never",
+          format: "text",
+        });
+      });
+
+      expect(output).toContain(
+        "selected-direction.yaml must define chosen_direction_id (legacy alias: direction_id), winning_rationale, and carry_forward_rules.",
+      );
+      expect(output).toContain("breakthrough.json.triggerReasons must be an array of strings.");
+    });
+  });
 });
 
 describe("writeValidateRunLog", { timeout: 15000 }, () => {

@@ -155,16 +155,31 @@ async function validateSelectedDirection(root: string, config: QfaiConfig): Prom
       : [];
   }
 
-  const requiredKeys = ["direction_id", "winning_rationale", "carry_forward_rules"];
-  return validateRequiredStringArrayKeys(
+  const issues = validateRequiredStringArrayKeys(
     filePath,
     root,
     parsed.value,
-    requiredKeys,
+    ["winning_rationale", "carry_forward_rules"],
     "QFAI-DCON-004",
     "selected-direction.yaml is missing required field",
     "designContractReadiness.selectedDirectionField",
   );
+
+  const chosenDirectionId = parsed.value.chosen_direction_id;
+  const legacyDirectionId = parsed.value.direction_id;
+  if (!isNonEmptyStringValue(chosenDirectionId) && !isNonEmptyStringValue(legacyDirectionId)) {
+    issues.push(
+      issue(
+        "QFAI-DCON-004",
+        "selected-direction.yaml is missing required field 'chosen_direction_id'.",
+        "error",
+        toPosixRelative(root, filePath),
+        "designContractReadiness.selectedDirectionField",
+      ),
+    );
+  }
+
+  return issues;
 }
 
 async function validateDesignSystem(root: string, config: QfaiConfig): Promise<Issue[]> {
@@ -239,6 +254,10 @@ function validateRequiredStringArrayKeys(
     }
   }
   return issues;
+}
+
+function isNonEmptyStringValue(value: unknown): value is string {
+  return typeof value === "string" && value.trim().length > 0;
 }
 
 async function readYaml(filePath: string): Promise<YamlReadResult> {

@@ -76,7 +76,7 @@ async function seedDesignContracts(root: string): Promise<void> {
   await writeFile(
     path.join(designDir, "selected-direction.yaml"),
     [
-      "direction_id: direction-02",
+      "chosen_direction_id: direction-02",
       "winning_rationale: Strong hierarchy with differentiated typography.",
       "carry_forward_rules:",
       "  - Keep the asymmetrical hero and condensed headline pairing",
@@ -114,6 +114,28 @@ describe("validateDesignContractReadiness", () => {
     const root = await newTempRoot();
     await seedUiContract(root);
     await seedDesignContracts(root);
+
+    const issues = await validateDesignContractReadiness(root, defaultConfig);
+
+    expect(issues).toEqual([]);
+  });
+
+  it("legacy direction_id alias でも selected-direction contract を受理する", async () => {
+    const root = await newTempRoot();
+    await seedUiContract(root);
+    await seedDesignContracts(root);
+
+    const designDir = path.join(root, ".qfai", "contracts", "design");
+    await writeFile(
+      path.join(designDir, "selected-direction.yaml"),
+      [
+        "direction_id: direction-02",
+        "winning_rationale: Strong hierarchy with differentiated typography.",
+        "carry_forward_rules:",
+        "  - Keep the asymmetrical hero and condensed headline pairing",
+      ].join("\n"),
+      "utf-8",
+    );
 
     const issues = await validateDesignContractReadiness(root, defaultConfig);
 

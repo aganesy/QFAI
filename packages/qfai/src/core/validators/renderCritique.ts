@@ -87,6 +87,7 @@ export async function validateRenderCritique(root: string, config: QfaiConfig): 
         !REFERENCE_POOL_RE.test(content) ||
         !EVAL_RUBRIC_RE.test(content) ||
         !EVAL_CALIBRATION_RE.test(content) ||
+        !SELECTED_DIRECTION_RE.test(content) ||
         !DESIGN_SYSTEM_RE.test(content) ||
         !UI_CONTRACTS_RE.test(content))
     ) {
@@ -99,7 +100,7 @@ export async function validateRenderCritique(root: string, config: QfaiConfig): 
           "renderCritique.contractMissing",
           undefined,
           "change",
-          "Reference spec inputs, exploration brief, reference pool, evaluation rubric, evaluator calibration, design-system, and UI contracts in the downstream skill prompt.",
+          "Reference spec inputs, exploration brief, reference pool, evaluation rubric, evaluator calibration, selected-direction, design-system, and UI contracts in the downstream skill prompt.",
         ),
       );
     }
@@ -166,6 +167,7 @@ export async function validateRenderCritique(root: string, config: QfaiConfig): 
         !hasReferencePool ||
         !hasEvalRubric ||
         !hasEvalCalibration ||
+        !hasSelectedDirection ||
         !hasDesignSystem ||
         !hasUiContracts
       ) {

@@ -99,6 +99,25 @@ describe("Render Critique Loop validation", { timeout: 15000 }, () => {
     expect(issues.some((i) => i.code === "QFAI-CRIT-005")).toBe(false);
   });
 
+  it("selected-direction が欠けていれば QFAI-CRIT-002 と QFAI-CRIT-005 を返す", async () => {
+    await seedContracts();
+    await seedSkillPrompt(
+      "qfai-prototyping",
+      [
+        "# Prototyping Skill",
+        "",
+        "Review the rendered HTML and screenshot output in the browser.",
+        "",
+        "Read order: `.qfai/specs/spec-0001/01_Spec.md` → `.qfai/contracts/design/exploration-brief.yaml` → `.qfai/discussion/discussion-*/uiux/31_reference_pool.md` → `.qfai/contracts/design/evaluation-rubric.yaml` → `.qfai/contracts/design/evaluator-calibration.yaml` → `.qfai/contracts/design/design-system.yaml` → `.qfai/contracts/ui/*.yaml`.",
+      ].join("\n"),
+    );
+
+    const issues = await validateRenderCritique(root, makeConfig());
+
+    expect(issues.some((i) => i.code === "QFAI-CRIT-002")).toBe(true);
+    expect(issues.some((i) => i.code === "QFAI-CRIT-005")).toBe(true);
+  });
+
   it("critique evidence に viewport/date/verdict/findings/rubric が揃っていれば必須項目エラーを返さない", async () => {
     await seedEvidence(
       "critique-001.md",

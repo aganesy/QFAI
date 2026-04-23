@@ -36,7 +36,9 @@ export function detectBreakthrough(input: {
   if (!enoughIterations) {
     reasons.push("insufficient-iterations");
   }
-  if (!latest || latest.allItemsPass95) {
+  if (!latest) {
+    reasons.push("no-snapshots");
+  } else if (latest.allItemsPass95) {
     reasons.push("already-converged");
   }
   if (recentAvgDeltas.length < input.plateauLookback) {
