@@ -23,7 +23,6 @@ import { issue, readSafe } from "./utils.js";
 const RENDERED_KEYWORDS_RE = /\b(rendered|screenshot|html\b|preview|visual\s*review)/i;
 const SPEC_RE = /\b(01_spec|03_acceptance-criteria|spec-|\bspec\b)\b/i;
 const EXPLORATION_BRIEF_RE = /\b(exploration-brief|exploration\s*brief|30_exploration_brief)\b/i;
-const REFERENCE_POOL_RE = /\b(reference-pool|reference\s*pool|31_reference_pool)\b/i;
 const EVAL_RUBRIC_RE = /\b(evaluation-rubric|evaluation\s*rubric|33_exploration_rubric)\b/i;
 const EVAL_CALIBRATION_RE =
   /\b(evaluator-calibration|evaluator\s*calibration|34_evaluator_calibration)\b/i;
@@ -84,7 +83,6 @@ export async function validateRenderCritique(root: string, config: QfaiConfig): 
       content.length > 0 &&
       (!SPEC_RE.test(content) ||
         !EXPLORATION_BRIEF_RE.test(content) ||
-        !REFERENCE_POOL_RE.test(content) ||
         !EVAL_RUBRIC_RE.test(content) ||
         !EVAL_CALIBRATION_RE.test(content) ||
         !SELECTED_DIRECTION_RE.test(content) ||
@@ -100,7 +98,7 @@ export async function validateRenderCritique(root: string, config: QfaiConfig): 
           "renderCritique.contractMissing",
           undefined,
           "change",
-          "Reference spec inputs, exploration brief, reference pool, evaluation rubric, evaluator calibration, selected-direction, design-system, and UI contracts in the downstream skill prompt.",
+          "Reference spec inputs, exploration brief, evaluation rubric, evaluator calibration, selected-direction, design-system, and UI contracts in the downstream skill prompt.",
         ),
       );
     }
@@ -155,7 +153,6 @@ export async function validateRenderCritique(root: string, config: QfaiConfig): 
     if (content.length > 0) {
       const hasSpec = SPEC_RE.test(content);
       const hasExplorationBrief = EXPLORATION_BRIEF_RE.test(content);
-      const hasReferencePool = REFERENCE_POOL_RE.test(content);
       const hasEvalRubric = EVAL_RUBRIC_RE.test(content);
       const hasEvalCalibration = EVAL_CALIBRATION_RE.test(content);
       const hasSelectedDirection = SELECTED_DIRECTION_RE.test(content);
@@ -164,7 +161,6 @@ export async function validateRenderCritique(root: string, config: QfaiConfig): 
       if (
         !hasSpec ||
         !hasExplorationBrief ||
-        !hasReferencePool ||
         !hasEvalRubric ||
         !hasEvalCalibration ||
         !hasSelectedDirection ||
@@ -174,7 +170,6 @@ export async function validateRenderCritique(root: string, config: QfaiConfig): 
         const missing: string[] = [];
         if (!hasSpec) missing.push("spec inputs");
         if (!hasExplorationBrief) missing.push("exploration-brief");
-        if (!hasReferencePool) missing.push("reference-pool");
         if (!hasEvalRubric) missing.push("evaluation-rubric");
         if (!hasEvalCalibration) missing.push("evaluator-calibration");
         if (!hasSelectedDirection) missing.push("selected-direction");
@@ -189,7 +184,7 @@ export async function validateRenderCritique(root: string, config: QfaiConfig): 
             "renderCritique.readOrder",
             undefined,
             "change",
-            "Specify read order with spec inputs, exploration-brief, reference-pool, evaluation-rubric, evaluator-calibration, selected-direction, design-system, and UI contracts.",
+            "Specify read order with spec inputs, exploration-brief, evaluation-rubric, evaluator-calibration, selected-direction, design-system, and UI contracts.",
           ),
         );
       }

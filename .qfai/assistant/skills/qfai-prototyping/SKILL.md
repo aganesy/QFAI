@@ -104,7 +104,6 @@ Read the downstream-ready spec/contract inputs and verify:
 - `.qfai/specs/<spec-id>/01_Spec.md`
 - `.qfai/specs/<spec-id>/03_Acceptance-Criteria.md`
 - `.qfai/contracts/design/exploration-brief.yaml`
-- `.qfai/discussion/discussion-*/uiux/31_reference_pool.md`
 - `.qfai/contracts/design/evaluation-rubric.yaml`
 - `.qfai/contracts/design/evaluator-calibration.yaml`
 - `.qfai/contracts/design/anchor-selection.yaml` when legacy validator slices are exercised
@@ -118,14 +117,13 @@ Read order:
 1. `.qfai/specs/<spec-id>/01_Spec.md`
 2. `.qfai/specs/<spec-id>/03_Acceptance-Criteria.md`
 3. `.qfai/contracts/design/exploration-brief.yaml`
-4. `.qfai/discussion/discussion-*/uiux/31_reference_pool.md`
-5. `.qfai/contracts/design/evaluation-rubric.yaml`
-6. `.qfai/contracts/design/evaluator-calibration.yaml`
-7. `.qfai/contracts/design/anchor-selection.yaml` (legacy validator alias, when present)
-8. `.qfai/contracts/design/evaluation-axes.yaml` (legacy validator alias, when present)
-9. `.qfai/contracts/design/selected-direction.yaml`
-10. `.qfai/contracts/design/design-system.yaml`
-11. `.qfai/contracts/ui/*.yaml`
+4. `.qfai/contracts/design/evaluation-rubric.yaml`
+5. `.qfai/contracts/design/evaluator-calibration.yaml`
+6. `.qfai/contracts/design/anchor-selection.yaml` (legacy validator alias, when present)
+7. `.qfai/contracts/design/evaluation-axes.yaml` (legacy validator alias, when present)
+8. `.qfai/contracts/design/selected-direction.yaml`
+9. `.qfai/contracts/design/design-system.yaml`
+10. `.qfai/contracts/ui/*.yaml`
 
 ### Step 2 — Verify Execution Preconditions
 

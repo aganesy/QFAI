@@ -77,7 +77,7 @@ Execute the TDD micro-cycle for each pending item in `test-list.md`, transitioni
 - Review rendered output, screenshot evidence, or HTML output before closing any UI-affecting item.
 - Read spec + contract inputs first whenever implementation touches UI or critique-driven behavior.
 - Read order: `01_Spec.md` → `03_Acceptance-Criteria.md` → `05_Examples.md` →
-  `.qfai/contracts/design/exploration-brief.yaml` → `.qfai/discussion/discussion-*/uiux/31_reference_pool.md` →
+  `.qfai/contracts/design/exploration-brief.yaml` →
   `.qfai/contracts/design/anchor-selection.yaml` (legacy alias, when present) →
   `.qfai/contracts/design/evaluation-axes.yaml` (legacy alias, when present) →
   `.qfai/contracts/design/evaluation-rubric.yaml` → `.qfai/contracts/design/evaluator-calibration.yaml` →
