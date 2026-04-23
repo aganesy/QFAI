@@ -701,7 +701,7 @@ describe("assets guardrails", { timeout: 30000 }, () => {
 
     // W-3: README must express canonical discussion completion contract
     expect(readme).toContain(
-      "UI-bearing discussion packs require `prototyping.yaml`; non-ui discussion packs do not.",
+      "UI-bearing discussion packs may include `prototyping.yaml` as an optional recommendation artifact; non-ui discussion packs typically omit it.",
     );
     expect(readme).toMatch(/discussion-YYYYMMDDhhmmssSSS[\s\S]*prototyping\.yaml/);
   });
@@ -911,7 +911,7 @@ describe("assets guardrails", { timeout: 30000 }, () => {
 
     // All three must express the canonical completion contract wording
     const canonicalPhrase =
-      "UI-bearing discussion packs require `prototyping.yaml`; non-ui discussion packs do not.";
+      "UI-bearing discussion packs may include `prototyping.yaml` as an optional recommendation artifact; non-ui discussion packs typically omit it.";
     expect(packageReadme).toContain(canonicalPhrase);
     expect(readme).toContain(canonicalPhrase);
     expect(skill).toContain(canonicalPhrase);
@@ -1241,7 +1241,7 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     const content = await readFile(discussionReadmePath, "utf-8");
 
     expect(content).toMatch(/ui-bearing discussion pack/i);
-    expect(content).toMatch(/ui_bearing:\s*false[\s\S]*do not require `prototyping\.yaml`/i);
+    expect(content).toMatch(/ui_bearing:\s*false[\s\S]*typically omit `prototyping\.yaml`/i);
     expect(content).toContain("prototyping.yaml");
   });
 
@@ -1281,7 +1281,7 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     }
   });
 
-  it("discussion README and SKILL.md agree on prototyping.yaml requiredness", async () => {
+  it("discussion README and SKILL.md agree on prototyping.yaml optionality", async () => {
     const skillPath = path.join(
       templateQfaiDir,
       "assistant",
@@ -1292,8 +1292,8 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     const content = await readFile(skillPath, "utf-8");
 
     expect(content).toContain("prototyping.yaml");
-    expect(content).toMatch(/ui-bearing discussion packs require `prototyping\.yaml`/i);
-    expect(content).toMatch(/non-ui discussion packs do not/i);
+    expect(content).toMatch(/ui-bearing discussion packs may include `prototyping\.yaml`/i);
+    expect(content).toMatch(/non-ui discussion packs typically omit it/i);
   });
 
   it("discussion README contains prototyping: namespaced example", async () => {
@@ -1307,14 +1307,11 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     expect(content).toContain("surface:");
   });
 
-  it("discussion README says namespaced schema is required, not recommended", async () => {
+  it("discussion README says namespaced schema applies when present", async () => {
     const discussionReadmePath = path.join(templateQfaiDir, "discussion", "README.md");
     const content = await readFile(discussionReadmePath, "utf-8");
 
-    // Must say required/accepted only
-    expect(content).toMatch(/namespaced schema \(required\)/i);
-    // Must NOT use wording that implies the schema is optional or merely recommended
-    expect(content).not.toMatch(/namespaced schema \(recommended\)/i);
+    expect(content).toMatch(/namespaced schema \(when present\)/i);
   });
 
   it("discussion README does not contain legacy-permissive wording", async () => {
@@ -1330,8 +1327,8 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     const discussionReadmePath = path.join(templateQfaiDir, "discussion", "README.md");
     const content = await readFile(discussionReadmePath, "utf-8");
 
-    // Must express required / planner-first / invalid otherwise
-    expect(content).toMatch(/required/i);
+    // Must express optional artifact / planner-first posture
+    expect(content).toMatch(/optional recommendation artifact/i);
     expect(content).toMatch(/planner-first|exploration-first/i);
     expect(content).toMatch(
       /must not choose a single winner|must not choose a single visual winner/i,
@@ -1380,27 +1377,31 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     expect(readme).toMatch(/planner-first|exploration-first/i);
     expect(skill).toMatch(/planner-first|exploration-first/i);
 
-    // README owns the canonical schema fields; SKILL owns requiredness and planner semantics
+    // README owns the canonical schema fields; SKILL owns optional artifact semantics and planner guidance
     expect(readme).toContain("recommended_mode");
     expect(skill).toContain("prototyping.yaml");
 
-    expect(readme).toMatch(/ui-bearing.*require.*prototyping\.yaml|prototyping\.yaml.*only when/i);
-    expect(skill).toMatch(/ui-bearing discussion packs require `prototyping\.yaml`/i);
+    expect(readme).toMatch(
+      /ui-bearing.*may include.*prototyping\.yaml|optional recommendation artifact/i,
+    );
+    expect(skill).toMatch(/ui-bearing discussion packs may include `prototyping\.yaml`/i);
   });
 
-  it("discussion README declares recommended_mode must be included in allowed_modes", async () => {
+  it("discussion README declares recommended_mode should be included in allowed_modes", async () => {
     const discussionReadmePath = path.join(templateQfaiDir, "discussion", "README.md");
     const content = await readFile(discussionReadmePath, "utf-8");
 
-    expect(content).toMatch(/recommended_mode.*must be included in.*allowed_modes/i);
+    expect(content).toMatch(/recommended_mode.*should be included in.*allowed_modes/i);
   });
 
-  it("discussion README declares invalid artifacts are rejected by execution/CLI", async () => {
+  it("discussion README declares current non-blocking behavior for prototyping.yaml", async () => {
     const discussionReadmePath = path.join(templateQfaiDir, "discussion", "README.md");
     const content = await readFile(discussionReadmePath, "utf-8");
 
-    expect(content).toMatch(/rejected by both validation and execution\/CLI/i);
-    expect(content).toMatch(/no fallback/i);
+    expect(content).toMatch(/does not block on missing `prototyping\.yaml`/i);
+    expect(content).toMatch(
+      /when `prototyping\.yaml` is present, prefer the canonical namespaced schema/i,
+    );
   });
 });
 

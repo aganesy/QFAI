@@ -33,7 +33,7 @@ Produce a unified 15-file discussion pack plus exploration-first UI sidecars so 
 
 - Output path is fixed: `.qfai/discussion/discussion-YYYYMMDDhhmmssSSS/`.
 - Required fixed files (all 15 are mandatory) remain unchanged.
-- UI-bearing discussion packs require `prototyping.yaml`; non-ui discussion packs do not.
+- UI-bearing discussion packs may include `prototyping.yaml` as an optional recommendation artifact; non-ui discussion packs typically omit it.
 - Discussion completion requires `Disposition: open` count to be zero in `11_OQ-Register.md`.
 - If UI requirements exist, behavior obligations are primary and HTML+CSS mock is optional fallback only.
 - Discussion is planner-first: do not select a single visual winner and do not finalize the design system here.
@@ -61,7 +61,7 @@ UI-bearing packs must produce the following sidecars as primary truth:
 6. Run Example Mapping and capture `Example Seeds`.
 7. Update `11_OQ-Register.md`, resolve OQs until open count is zero, and move deferred items to `13_Deferred.md`.
 8. Generate the exploration-first sidecar family for UI-bearing targets.
-9. Generate `prototyping.yaml` only when the latest discussion pack is UI-bearing.
+9. Generate `prototyping.yaml` only when the latest discussion pack is UI-bearing and an explicit prototyping recommendation is useful.
 10. Request review and record the Reviewer result.
 
 ## UI-bearing Authoring Requirements
