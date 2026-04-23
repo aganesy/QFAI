@@ -37,6 +37,7 @@
 | Date       | Change Type | IDs Added                                              | Summary                                                                                                         |
 | ---------- | ----------- | ------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------- |
 | 2026-04-01 | adopted     | AC-0013-0010, BR-0013-0008, EX-0013-0008, TC-0013-0013 | 06_Test-Cases テンプレートに Type 列（normal/error/boundary/edge）を追加、各 AC に最低1つの非正常系 TC を義務化 |
+| 2026-04-23 | updated     | REQ-0021, AC-0013-0011                                 | `/qfai-sdd` 完了時点で selected-direction/design-system も UI-bearing validate readiness の必須 design contract として扱うよう runtime gate に同期 |
 
 ## v1.7.13 (2026-04-04) — Canonical Sidecar Convergence
 

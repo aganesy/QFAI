@@ -76,7 +76,7 @@
 - REQ-0018: Evaluator-calibration normalization — `uiux/34_evaluator_calibration.md` を `.qfai/contracts/design/evaluator-calibration.yaml` に正規化する
 - REQ-0019: UI contract normalization — `uiux/40_screen_contracts.md` を `.qfai/contracts/ui/*.yaml` に正規化する
 - REQ-0020: Downstream boundary — `/qfai-sdd` 以降の skill は discussion pack を直接読まず、正規化済み specs/contracts を読む
-- REQ-0021: `selected-direction.yaml` と `design-system.yaml` は prototyping winner selection 後の downstream outputs であり、discussion 初期状態では確定しない
+- REQ-0021: `selected-direction.yaml` と `design-system.yaml` は prototyping でさらに更新され得る downstream design contracts だが、UI-bearing flow では `/qfai-sdd` 完了時点で downstream validate readiness のために存在していなければならない
 
 ## Entry points
 
