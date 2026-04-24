@@ -75,7 +75,7 @@ describe("report", { timeout: 15000 }, () => {
     expect(validation).toContain('"toolVersion"');
   });
 
-  it("runs report with --run-validate --phase refinement", async () => {
+  it("runs report with --run-validate --profile sdd", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-report-"));
     await runInit({ dir: root, force: false, dryRun: false, yes: true });
     const previousCi = process.env.CI;
@@ -92,21 +92,21 @@ describe("report", { timeout: 15000 }, () => {
         format: "md",
         outPath: reportPath,
         runValidate: true,
-        phase: "refinement",
+        profile: "sdd",
       });
 
       const report = await readFile(reportPath, "utf-8");
       const validationRaw = await readFile(validatePath, "utf-8");
       const validation = JSON.parse(validationRaw) as {
-        phase?: string;
+        profile?: string;
         issues?: Array<{ code?: string }>;
       };
       const issueCodes = (validation.issues ?? []).map((item) => item.code);
 
       expect(report).toContain("# QFAI Report");
-      expect(validation.phase).toBe("refinement");
-      expect(issueCodes).not.toContain("QFAI-HOW-001");
-      expect(issueCodes).not.toContain("QFAI-HOW-002");
+      expect(validation.profile).toBe("sdd");
+      expect(issueCodes).not.toContain("QFAI-ATDD-111");
+      expect(issueCodes).not.toContain("QFAI-PROT-150");
     } finally {
       if (previousCi === undefined) {
         delete process.env.CI;
@@ -121,7 +121,7 @@ describe("report", { timeout: 15000 }, () => {
     }
   });
 
-  it("fails run-validate with refinement phase in CI", async () => {
+  it("fails run-validate with partial profile in CI", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-report-"));
     await runInit({ dir: root, force: false, dryRun: false, yes: true });
     const previousCi = process.env.CI;
@@ -139,7 +139,7 @@ describe("report", { timeout: 15000 }, () => {
         format: "md",
         outPath: reportPath,
         runValidate: true,
-        phase: "refinement",
+        profile: "sdd",
       });
 
       const validationRaw = await readFile(validatePath, "utf-8");

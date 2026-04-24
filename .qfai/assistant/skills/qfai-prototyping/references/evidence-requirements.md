@@ -24,7 +24,7 @@ Optional evidence is not allowed.
 
 ## Validate gate expectations
 
-`qfai validate --fail-on error` must be able to confirm:
+`qfai validate --profile prototyping --fail-on error` must be able to confirm:
 
 - every declared screen has a screenshot file
 - every declared screen has an HTML snapshot file

@@ -349,7 +349,7 @@ Each TDD item MUST have fresh evidence containing at minimum:
 When this skill is complete, provide a final user-facing completion message and enumerate all actionable next steps.
 
 - Verify gates: `/qfai-verify`.
-  Action: run `qfai validate --fail-on error` and confirm all gates pass.
+  Action: run `qfai validate --profile tdd --fail-on error` for this skill, then `/qfai-verify` for full-scan approval.
 - Spec updates needed: `/qfai-sdd`.
   Action: update spec artifacts if implementation revealed scope changes.
 - Acceptance tests: `/qfai-atdd`.

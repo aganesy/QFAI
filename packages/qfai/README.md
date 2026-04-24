@@ -52,7 +52,7 @@ npx qfai report
     (`.qfai/review/review-*/summary.json` + minimum schema), writes `.qfai/report/validate.json`,
     and appends run logs to `.qfai/report/run-*/`; use `--fail-on error` (or `--fail-on warning`) to turn it into a CI gate,
     and `--format github` to emit GitHub-friendly annotations.
-    Use `--phase refinement` only for local refinement checks; CI should use default/full validation.
+    Use `--profile discussion|sdd|prototyping|atdd|tdd` for local skill-owned checks; CI should use default/full validation.
 - `npx qfai report`
   - Produces a human-readable report (`report.md` by default) or an internal JSON export (`report.json`) from `validate.json`; use `--base-url` to link file paths in Markdown to your repository viewer.
 - `npx qfai doctor`
@@ -286,7 +286,7 @@ npx qfai validate --fail-on error
 
 Recommended baseline.
 
-- Keep CI on default/full validation (`qfai validate --fail-on error`); do not use `--phase refinement` in CI.
+- Keep CI on default/full validation (`qfai validate --fail-on error` or `qfai validate --profile verify --fail-on error`); do not use partial profiles in CI.
 - Keep `pnpm check-types:future` as a separate mandatory gate so future TS compatibility runs once without duplicating `pnpm ci:gate`.
 - Add a report step (`npx qfai report`) when you need a human-readable artifact.
 - Tune traceability globs in `qfai.config.yaml` to match your test layout.

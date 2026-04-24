@@ -200,7 +200,7 @@ Follow `.qfai/assistant/instructions/shared-skill-operating-baseline.md#delta-re
 - `05_Examples.md` must include `EX-ID` and `BR-Ref` mappings.
 - `06_Test-Cases.md` must include `TC-ID`, `EX-Ref`, `AC-Refs`, and `Type`.
 - `06_Test-Cases.md` quality depth must include normal-path plus error or boundary coverage.
-- Do not complete the stage until `qfai validate --fail-on error --format github | tee .qfai/report/validate.log` exits with `error=0`.
+- Do not complete the stage until `qfai validate --profile sdd --fail-on error --format github | tee .qfai/report/validate.log` exits with `error=0`.
 - Reference direction rules from `.qfai/specs/README.md` must be enforced.
 - Keep `specs/` definition-only and operational status under `.qfai/report/run-*`.
 - Traceability depth and density-smell review rules live in:
@@ -246,7 +246,7 @@ The canonical file set is defined by skill templates under `.qfai/assistant/skil
 8. Execute Phase 2 (Slice) and pass slice gate for each target spec.
 9. Execute Phase 3 (Plan finalize) after at least one slice gate passes.
 10. Execute Phase 4 (Delta update).
-11. Run `qfai validate --fail-on error --format github | tee .qfai/report/validate.log`.
+11. Run `qfai validate --profile sdd --fail-on error --format github | tee .qfai/report/validate.log`.
 12. Review `.qfai/report/specs-coverage/spec-*.md` and triage density-smell warnings.
 13. If validate fails, fix source-layer artifacts and repeat until `error=0`.
 
@@ -314,7 +314,7 @@ When declaring DONE, include:
 - [ ] `10_Plan.md` is finalized as How-only.
 - [ ] `specs/plan.md` was not created.
 - [ ] `09_delta.md` (or `*_delta.md`) contains adoption/rejection rationale.
-- [ ] `qfai validate --fail-on error --format github` ran and produced `error=0`.
+- [ ] `qfai validate --profile sdd --fail-on error --format github` ran and produced `error=0`.
 - [ ] `.qfai/report/specs-coverage/spec-*.md` was reviewed.
 - [ ] Quality gate checks are recorded in evidence.
 - [ ] Evidence file exists and is complete.

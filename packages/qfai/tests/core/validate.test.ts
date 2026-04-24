@@ -51,17 +51,33 @@ describe("validateProject (spec pack)", { timeout: 30000 }, () => {
     });
   });
 
-  it("skips ATDD hard gate checks in refinement phase", async () => {
+  it("skips ATDD hard gate checks in sdd profile", async () => {
     await withProject(async (root) => {
       await rm(path.join(root, "tests"), { recursive: true, force: true });
 
       const full = await validateProject(root);
       expect(full.issues.some((item) => item.code === "QFAI-ATDD-111")).toBe(true);
 
-      const refinement = await validateProject(root, undefined, {
-        phase: "refinement",
+      const sdd = await validateProject(root, undefined, {
+        profile: "sdd",
       });
-      expect(refinement.issues.some((item) => item.code.startsWith("QFAI-ATDD-"))).toBe(false);
+      expect(sdd.issues.some((item) => item.code.startsWith("QFAI-ATDD-"))).toBe(false);
+    });
+  });
+
+  it("runs prototyping profile without ATDD coverage blockers", async () => {
+    await withProject(async (root) => {
+      await rm(path.join(root, "tests"), { recursive: true, force: true });
+      await rm(path.join(root, ".qfai", "evidence", "prototyping.json"), { force: true });
+
+      const result = await validateProject(root, undefined, {
+        profile: "prototyping",
+      });
+      const codes = result.issues.map((item) => item.code);
+
+      expect(result.profile).toBe("prototyping");
+      expect(codes).toContain("QFAI-PROT-150");
+      expect(codes.some((code) => code.startsWith("QFAI-ATDD-"))).toBe(false);
     });
   });
 
@@ -185,7 +201,7 @@ describe("validateProject (spec pack)", { timeout: 30000 }, () => {
       evidence.postSelectionPolishCount = 1;
       evidence.completionCertificate = {
         reviewerGateResult: "PASS",
-        validateCommand: "qfai validate --fail-on error",
+        validateCommand: "qfai validate --profile prototyping --fail-on error",
         validatePassed: true,
         bestOfHistoryRef: ".qfai/evidence/prototyping.json#/iterations/0",
         breakthroughRef: ".qfai/evidence/breakthrough.json",
@@ -234,7 +250,7 @@ describe("validateProject (spec pack)", { timeout: 30000 }, () => {
       evidence.postSelectionPolishCount = 1;
       evidence.completionCertificate = {
         reviewerGateResult: "PASS",
-        validateCommand: "qfai validate --fail-on error",
+        validateCommand: "qfai validate --profile prototyping --fail-on error",
         validatePassed: true,
         bestOfHistoryRef: ".qfai/evidence/prototyping.json#/iterations/0",
         breakthroughRef: ".qfai/evidence/breakthrough.json",
@@ -2157,7 +2173,7 @@ async function seedPrototypingEvidenceFixture(root: string): Promise<void> {
         meta: {
           generatedAt: "2026-02-23T00:00:00.000Z",
           toolVersion: "1.4.36",
-          commands: ["pnpm dev", "qfai validate --fail-on error"],
+          commands: ["pnpm dev", "qfai validate --profile prototyping --fail-on error"],
         },
       },
       null,

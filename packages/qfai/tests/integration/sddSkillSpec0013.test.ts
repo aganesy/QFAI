@@ -91,9 +91,9 @@ describe("TC-0013-0006: Reference Direction Enforcement", () => {
 
 // TC-0013-0007: Validate Gate error=0
 describe("TC-0013-0007: Validate Gate error=0", () => {
-  it("SKILL.md requires qfai validate --fail-on error", async () => {
+  it("SKILL.md requires qfai validate --profile sdd --fail-on error", async () => {
     const content = await readFile(SKILL_PATH, "utf-8");
-    expect(content).toContain("qfai validate --fail-on error");
+    expect(content).toContain("qfai validate --profile sdd --fail-on error");
   });
 });
 

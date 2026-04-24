@@ -126,7 +126,7 @@ UI-bearing discussion packs (`ui_bearing: true`) may include a `prototyping.yaml
 ```yaml
 prototyping:
   recommended_mode: full-harness
-  rationale: UI validation requires the full-harness runtime loop in packages/qfai.
+  rationale: Exploration-first prototyping requires the full-harness runtime loop in packages/qfai.
   allowed_modes:
     - full-harness
   surface: web

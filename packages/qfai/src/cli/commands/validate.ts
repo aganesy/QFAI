@@ -4,9 +4,9 @@ import path from "node:path";
 import type { FailOn, OutputFormat } from "../../core/config.js";
 import { loadConfig } from "../../core/config.js";
 import { normalizeValidationResult } from "../../core/normalize.js";
-import { buildCiRefinementIssue, createPhaseGuardResult } from "../../core/phasePolicy.js";
+import { buildCiProfileIssue, createProfileGuardResult } from "../../core/phasePolicy.js";
 import { toRelativePath } from "../../core/paths.js";
-import type { Issue, ValidationPhase, ValidationResult } from "../../core/types.js";
+import type { Issue, ValidationProfile, ValidationResult } from "../../core/types.js";
 import { writeValidateRunLog } from "../../core/runLog.js";
 import { validateProject } from "../../core/validate.js";
 import { shouldFail } from "../lib/failOn.js";
@@ -17,7 +17,7 @@ export type ValidateOptions = {
   strict: boolean;
   failOn?: FailOn;
   format?: OutputFormat;
-  phase?: ValidationPhase;
+  profile?: ValidationProfile;
   platform?: string;
 };
 
@@ -25,19 +25,19 @@ export async function runValidate(options: ValidateOptions): Promise<number> {
   const startedAt = new Date();
   const root = path.resolve(options.root);
   const configResult = await loadConfig(root);
-  const blockedIssue = buildCiRefinementIssue(options.phase);
-  const blockedByPhaseGuard = blockedIssue !== null;
+  const blockedIssue = buildCiProfileIssue(options.profile);
+  const blockedByProfileGuard = blockedIssue !== null;
   const result = blockedIssue
-    ? await createPhaseGuardResult("refinement", blockedIssue)
+    ? await createProfileGuardResult(options.profile ?? "full", blockedIssue)
     : await validateProject(root, configResult, {
-        ...(options.phase ? { phase: options.phase } : {}),
+        ...(options.profile ? { profile: options.profile } : {}),
         ...(options.platform ? { platform: options.platform } : {}),
       });
   const normalized = normalizeValidationResult(root, result);
   warnIfTruncated(normalized.traceability.testFiles, "validate");
 
   const failOn = resolveFailOn(options, configResult.config.validation.failOn);
-  const willFail = blockedByPhaseGuard || shouldFail(normalized, failOn);
+  const willFail = blockedByProfileGuard || shouldFail(normalized, failOn);
 
   const runLog = await writeValidateRunLog({
     root,

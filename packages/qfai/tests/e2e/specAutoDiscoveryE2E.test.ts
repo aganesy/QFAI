@@ -47,7 +47,7 @@ describe("E2E: prototyping SKILL.md defines mode-aware contract", () => {
   it("contains required process section", async () => {
     const c = await load();
     expect(c).toMatch(/## Required process/i);
-    expect(c).toContain("qfai validate --fail-on error");
+    expect(c).toContain("qfai validate --profile prototyping --fail-on error");
     expect(c).toMatch(/Launch (L1 and L2 Evaluators|Evaluation Reviewers)/);
     expect(c).toContain("Breakthrough Detection");
     expect(c).toContain("selected-direction.yaml");

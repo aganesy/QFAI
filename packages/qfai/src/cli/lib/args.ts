@@ -16,7 +16,7 @@ export type ParsedArgs = {
     doctorFormat: "text" | "json";
     doctorOut?: string;
     validateFormat: "text" | "github";
-    phase?: "full" | "atdd" | "tdd" | "refinement";
+    profile?: "discussion" | "sdd" | "prototyping" | "atdd" | "tdd" | "verify" | "full";
     strict: boolean;
     failOn?: "never" | "warning" | "error";
     guardrailsAction?: "list" | "extract" | "check";
@@ -126,14 +126,20 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
       case "--strict":
         options.strict = true;
         break;
-      case "--phase": {
+      case "--phase":
+        markInvalid();
+        if (readOptionValue(args, i) !== null) {
+          i += 1;
+        }
+        break;
+      case "--profile": {
         const next = readOptionValue(args, i);
         if (next === null) {
           markInvalid();
           break;
         }
-        if (next === "full" || next === "atdd" || next === "tdd" || next === "refinement") {
-          options.phase = next;
+        if (isValidationProfile(next)) {
+          options.profile = next;
         } else {
           markInvalid();
         }
@@ -313,4 +319,18 @@ function normalizeGuardrailsAction(value: string): "list" | "extract" | "check" 
     default:
       return null;
   }
+}
+
+function isValidationProfile(
+  value: string,
+): value is "discussion" | "sdd" | "prototyping" | "atdd" | "tdd" | "verify" | "full" {
+  return (
+    value === "discussion" ||
+    value === "sdd" ||
+    value === "prototyping" ||
+    value === "atdd" ||
+    value === "tdd" ||
+    value === "verify" ||
+    value === "full"
+  );
 }

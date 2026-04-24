@@ -9,7 +9,7 @@ The reviewer is an independent gate, not the implementation author.
 - L1 and L2 evaluators used the required inputs
 - the 3-layer evaluation family was referenced
 - missing evidence triggered rerun rather than waiver
-- `qfai validate --fail-on error` passed
+- `qfai validate --profile prototyping --fail-on error` passed
 - winner_selected is true
 - post_selection_polish_completed is true
 - breakthrough_checked is true

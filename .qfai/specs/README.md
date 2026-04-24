@@ -8,9 +8,7 @@
 - capability-specific details: `.qfai/specs/spec-XXXX/**`
 
 The slice policy SSOT lives in `_policies/11_Slice-Policy.md`.
-A `CAP-XXXX` entry in `_policies/03_Capabilities.md` maps to exactly one `spec-XXXX/` directory.
-The current approved model is **1 CAP = 1 spec-XXXX directory**, but `/qfai-sdd` must refresh `_policies/11_Slice-Policy.md` before making create/update/delete slice decisions.
-Use `_policies/11_Slice-Policy.md` as the primary SSOT for slice decisions, and consult `_policies/03_Capabilities.md` only to confirm the CAP-to-directory mapping.
+The current approved model is **1 CAP = 1 spec directory**, but `/qfai-sdd` must refresh that policy file before making create/update/delete slice decisions.
 
 ## Required layout
 
@@ -75,12 +73,8 @@ Each `spec-XXXX/` must satisfy:
 Each `spec-XXXX/tdd/test-list.md` is the execution ledger for the TDD micro-cycle.
 
 - **8 required columns** (in `tdd/test-list.md`): TDD-ID, TC-Refs, Layer, Test file, Selector, Status, DR-ID, Evidence
-  - Here `Layer` means the execution test layer (`unit` / `component` etc.) and is unrelated to the L1/L2 review layers used elsewhere in the repo.
 - **Coverage** is measured as unit/component TC references from `06_Test-Cases.md` appearing in TC-Refs
-- **Test-case classification fallback** (for `06_Test-Cases.md`, which uses its own classification column — typically named `Level`): when that file has no test-case classification column, every TC is treated as a coverage target (equivalent to all being unit/component). This fallback does **not** apply to the `tdd/test-list.md` execution `Layer` column, which remains required.
-- **Status** is a case-sensitive enum with the allowed values: `green`, `refactor`, `done`, `exception`
-  - Unknown `Status` values must be treated as a validation error.
-  - **Evidence** is required for every row and must be non-empty regardless of `Status`.
+- **Test-case classification fallback** (for `06_Test-Cases.md`, which uses its own classification column — typically named `Level`): when that file has no test-case classification column, every TC is treated as a coverage target (equivalent to all being unit/component). This fallback does **not** apply to the `tdd/test-list.md` `Layer` column, which remains required.
 - **Status=exception** rows must have a non-empty DR-ID (Decision Record reference)
 - **Status in {green, refactor, done}** rows must have an existing Test file (resolved relative to project root)
 - **TDD-ID** must match `TDD-NNNN` format and be unique within the spec (case-insensitive)
@@ -103,6 +97,4 @@ Each `spec-XXXX/tdd/test-list.md` is the execution ledger for the TDD micro-cycl
 - `07_Decisions.md` / `08_Open-questions.md` and `_policies/08_Decisions.md` / `_policies/09_Open-questions.md` / `_policies/10_delta.md` are required even when empty.
 - When empty, explicitly write `0 items` (or equivalent wording) in each file.
 - Contracts SSOT remains `.qfai/contracts/**`.
-- downstream execution skills (`/qfai-sdd` 以降) は discussion pack を直接読まず、`specs + .qfai/contracts/**` を読む。
-- discussion pack は `/qfai-sdd` の入力専用であり、UIUX sidecar は `/qfai-sdd` で contracts に正規化されてから下流へ渡される。
 - Report artifacts under `.qfai/report/**` are derived outputs (non-SSOT).

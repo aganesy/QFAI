@@ -35,7 +35,7 @@ Do not rely on a CLI entrypoint or package runtime loop.
 - HTML snapshot path: `.qfai/evidence/prototyping/html/<screen-id>.html`
 - If either screenshot or HTML is missing for a declared screen, that screen scores `0` and the run is incomplete.
 - Optional evidence is abolished. Missing mandatory evidence must trigger rerun, not waiver.
-- DONE is forbidden until `qfai validate --fail-on error` passes and `/qfai-verify` can approve the run.
+- DONE is forbidden until `qfai validate --profile prototyping --fail-on error` passes and `/qfai-verify` can approve the run.
 - Supported UI prototyping surfaces are `web`, `mobile`, `desktop`, and `mixed`.
 - `cli`, API-only, backend-only, and `ui_bearing: false` classifications are not prototyping execution targets.
 - `cli` is not supported and is not an execution target for prototyping.
@@ -207,7 +207,7 @@ When breakthrough is triggered:
 
 ### Step 11 — Validate and Verify
 
-- Run `qfai validate --fail-on error`.
+- Run `qfai validate --profile prototyping --fail-on error`.
 - Route `/qfai-verify` or its equivalent gate workflow for final quality approval.
 - Do not declare completion until the reviewer result is `PASS`.
 
@@ -245,7 +245,7 @@ Minimum reviewer responsibilities:
 - verify mandatory screenshot/HTML evidence exists for every declared screen
 - verify exploration brief, evaluation rubric, and evaluator calibration were used
 - verify missing evidence caused rerun rather than waiver
-- verify `qfai validate --fail-on error` completed successfully
+- verify `qfai validate --profile prototyping --fail-on error` completed successfully
 - verify breakthrough trigger evidence is present
 - verify best-of-history handling is documented
 - verify at least one post-selection polish iteration completed after winner selection
@@ -290,7 +290,7 @@ Prototyping-specific additions:
 - `breakthrough.json` exists
 - at least one post-selection polish iteration completed after winner selection
 - every reviewer sub-agent scored every evaluation axis at `100/100`
-- `qfai validate --fail-on error` passes
+- `qfai validate --profile prototyping --fail-on error` passes
 - reviewer returns `PASS`
 
 ## FINAL CHECKLIST (Check Last)

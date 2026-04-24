@@ -92,11 +92,11 @@ describe("TC-0005-0007: spec-pack report generation", () => {
   });
 });
 
-// TC-0005-0008: phase guard refinement block
-describe("TC-0005-0008: phase guard refinement block", () => {
-  it("report CLI supports phase option", async () => {
+// TC-0005-0008: profile guard block
+describe("TC-0005-0008: profile guard block", () => {
+  it("report CLI supports profile option", async () => {
     const content = await readFile(REPORT_CLI, "utf-8");
-    expect(content).toMatch(/phase/i);
+    expect(content).toMatch(/profile/i);
   });
 });
 

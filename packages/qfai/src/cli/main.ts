@@ -34,7 +34,7 @@ export async function run(argv: string[], cwd: string): Promise<void> {
           root: resolvedRoot,
           strict: options.strict,
           format: options.validateFormat,
-          ...(options.phase ? { phase: options.phase } : {}),
+          ...(options.profile ? { profile: options.profile } : {}),
           ...(options.failOn !== undefined ? { failOn: options.failOn } : {}),
           ...(options.platform ? { platform: options.platform } : {}),
         });
@@ -50,7 +50,7 @@ export async function run(argv: string[], cwd: string): Promise<void> {
           ...(options.reportIn !== undefined ? { inputPath: options.reportIn } : {}),
           ...(options.reportBaseUrl !== undefined ? { baseUrl: options.reportBaseUrl } : {}),
           ...(options.reportRunValidate ? { runValidate: true } : {}),
-          ...(options.phase ? { phase: options.phase } : {}),
+          ...(options.profile ? { profile: options.profile } : {}),
         });
       }
       return;
@@ -109,7 +109,7 @@ Options:
   --format <md|json>           report の出力形式
   --format <text|json>         doctor の出力形式
   --strict                     validate: warning 以上で exit 1
-  --phase <full|atdd|tdd|refinement>       validate/report: 検証フェーズを指定
+  --profile <discussion|sdd|prototyping|atdd|tdd|verify|full>  validate/report: 検証profileを指定
   --fail-on <error|warning|never>  validate: 失敗条件
   --fail-on <error|warning>        doctor: 失敗条件
   --platform <web|windows|mobile-ios|mobile-android|cross-platform>  validate: UI/UXプラットフォーム指定
