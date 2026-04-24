@@ -1,6 +1,7 @@
 import { runDoctor } from "./commands/doctor.js";
 import { runGuardrails } from "./commands/guardrails.js";
 import { runInit } from "./commands/init.js";
+import { runPrototypingPrepare } from "./commands/prototyping.js";
 import { runReport } from "./commands/report.js";
 import { runValidate } from "./commands/validate.js";
 import { parseArgs } from "./lib/args.js";
@@ -81,6 +82,32 @@ export async function run(argv: string[], cwd: string): Promise<void> {
         process.exitCode = exitCode;
       }
       return;
+    case "prototyping":
+      {
+        if (options.prototypingAction !== "prepare") {
+          error("qfai prototyping: unknown or missing subcommand. Expected: prepare");
+          info(usage());
+          process.exitCode = options.invalidExitCode;
+          return;
+        }
+        if (!options.prototypingTargetUrl) {
+          error("qfai prototyping prepare: --target-url is required.");
+          info(usage());
+          process.exitCode = options.invalidExitCode;
+          return;
+        }
+        const resolvedRoot = await resolveRoot(options);
+        const mode = options.prototypingMode ?? "standard";
+        const cycle = options.prototypingCycle ?? 1;
+        const exitCode = await runPrototypingPrepare({
+          root: resolvedRoot,
+          targetUrl: options.prototypingTargetUrl,
+          mode,
+          cycle,
+        });
+        process.exitCode = exitCode;
+      }
+      return;
 
     default:
       error(`Unknown command: ${command}`);
@@ -93,11 +120,12 @@ function usage(): string {
   return `qfai <command> [options]
 
 Commands:
-  init        テンプレを生成
-  validate    仕様/契約/参照の検査
-  report      検証結果と集計を出力
-  doctor      設定/パス/出力前提の診断
-  guardrails  Decision Guardrails の抽出/検査（list|extract|check）
+  init                         テンプレを生成
+  validate                     仕様/契約/参照の検査
+  report                       検証結果と集計を出力
+  doctor                       設定/パス/出力前提の診断
+  guardrails                   Decision Guardrails の抽出/検査（list|extract|check）
+  prototyping prepare          /qfai-prototyping 用の Playwright CLI command plan と review bundle を生成 (spec-0017)
 
 Options:
   --root <path>   対象ディレクトリ
@@ -120,6 +148,9 @@ Options:
   --path <path>                 guardrails: 対象ファイル/ディレクトリ（複数指定可）
   --max <number>                guardrails extract: 最大件数
   --keyword <text>              guardrails list/extract: キーワードフィルタ
+  --target-url <url>            prototyping prepare: 評価対象の URL (必須)
+  --mode <low-cost|standard|full-harness>  prototyping prepare: 実行モード (既定: standard)
+  --cycle <number>              prototyping prepare: サイクル番号 (既定: 1)
   -h, --help      ヘルプ表示
 `;
 }

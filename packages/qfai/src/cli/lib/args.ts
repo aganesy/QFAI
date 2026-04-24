@@ -24,6 +24,11 @@ export type ParsedArgs = {
     guardrailsMax?: number;
     guardrailsKeyword?: string;
     platform?: string;
+    // spec-0017 REQ-0007: `qfai prototyping prepare ...`
+    prototypingAction?: "prepare";
+    prototypingTargetUrl?: string;
+    prototypingMode?: "low-cost" | "standard" | "full-harness";
+    prototypingCycle?: number;
     help: boolean;
     invalidExitCode: number;
   };
@@ -70,6 +75,20 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
       const action = normalizeGuardrailsAction(candidate);
       if (action) {
         options.guardrailsAction = action;
+      } else {
+        markInvalid();
+      }
+      args.shift();
+    }
+  }
+
+  // spec-0017 REQ-0007: `qfai prototyping <subcommand>` pulls the
+  // subcommand token before the flag loop.
+  if (command === "prototyping") {
+    const candidate = args[0];
+    if (candidate && !candidate.startsWith("--")) {
+      if (candidate === "prepare") {
+        options.prototypingAction = candidate;
       } else {
         markInvalid();
       }
@@ -252,6 +271,45 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         i += 1;
         break;
       }
+      case "--target-url": {
+        const next = readOptionValue(args, i);
+        if (next === null) {
+          markInvalid();
+          break;
+        }
+        options.prototypingTargetUrl = next;
+        i += 1;
+        break;
+      }
+      case "--mode": {
+        const next = readOptionValue(args, i);
+        if (next === null) {
+          markInvalid();
+          break;
+        }
+        if (next === "low-cost" || next === "standard" || next === "full-harness") {
+          options.prototypingMode = next;
+        } else {
+          markInvalid();
+        }
+        i += 1;
+        break;
+      }
+      case "--cycle": {
+        const next = readOptionValue(args, i);
+        if (next === null) {
+          markInvalid();
+          break;
+        }
+        const parsed = Number.parseInt(next, 10);
+        if (Number.isInteger(parsed) && parsed >= 1) {
+          options.prototypingCycle = parsed;
+        } else {
+          markInvalid();
+        }
+        i += 1;
+        break;
+      }
       case "--help":
       case "-h":
         options.help = true;
@@ -262,6 +320,9 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
   }
 
   if (command === "guardrails" && !options.help && !options.guardrailsAction) {
+    markInvalid();
+  }
+  if (command === "prototyping" && !options.help && !options.prototypingAction) {
     markInvalid();
   }
   return { command, invalid, options };
