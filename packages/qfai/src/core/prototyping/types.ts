@@ -146,3 +146,77 @@ export function canonicalLatestScreenshotPath(screenId: string): string {
 export function canonicalLatestHtmlPath(screenId: string): string {
   return `.qfai/evidence/prototyping/html/${screenId}.html`;
 }
+
+// ─── Cycle-centric evidence record (spec-0017 REQ-0005) ────────────────────
+
+/**
+ * Per-cycle evidence record written into `prototyping.json` under `cycles[]`.
+ *
+ * Shape mirrors the spec-0017 obligation to keep review-cycle completeness
+ * machine-verifiable: every cycle must reference the command plan, review
+ * bundle, evaluator review output, and per-screen artifacts.
+ */
+export type PrototypingCycleEvidence = {
+  cycle: number;
+  kind: PrototypingCyclePhase;
+  commandPlanRef: string;
+  reviewBundleRef: string;
+  evaluatorReviewRef: string;
+  screenEvidence: Array<{
+    screenId: string;
+    screenshotRef: string;
+    htmlRef: string;
+    snapshotRef: string;
+    commandLogRef: string;
+  }>;
+  reviewerScores: Array<{
+    reviewerId: string;
+    scores: Array<{
+      axisId: string;
+      score: number;
+      rationale: string;
+      evidenceRefs: string[];
+    }>;
+  }>;
+  allReviewerAxesPerfect100: boolean;
+};
+
+export type PrototypingBestOfHistoryRef = {
+  cycle: number;
+  evidenceRef: string;
+};
+
+export type PrototypingBreakthroughRef = {
+  checked: boolean;
+  evidenceRef: string;
+};
+
+export type PrototypingReviewerGateRef = {
+  result: "PASS" | "REVISE";
+  evidenceRef: string;
+};
+
+/**
+ * Top-level `prototyping.json` schema (spec-0017 REQ-0005).
+ *
+ * Kept cycle-centric so validators can enforce the strictest completion
+ * gate uniformly across modes: the only mode-dependent value is
+ * `maxCycles`, which must match `PROTOTYPING_MAX_CYCLES[mode.effective]`
+ * or `QFAI-PROT-MODE-001` is raised.
+ */
+export type PrototypingEvidenceRecord = {
+  surface: "web" | "mobile" | "desktop" | "mixed";
+  mode: {
+    effective: import("../review/prototyping.js").PrototypingMode;
+    source: string;
+    rationale: string;
+  };
+  browserTool: "playwright-cli";
+  maxCycles: number;
+  cycles: PrototypingCycleEvidence[];
+  bestOfHistory: PrototypingBestOfHistoryRef;
+  breakthrough: PrototypingBreakthroughRef;
+  reviewerGate: PrototypingReviewerGateRef;
+  completionClaimed: boolean;
+};
+

@@ -1,8 +1,11 @@
 /**
- * Full-harness mode types.
+ * Legacy full-harness mode types (spec-0012).
  *
- * Full-harness now follows the reviewerScores/allReviewerAxesPerfect100 evidence schema
- * used by prototyping.json. Legacy weighted totals are intentionally excluded.
+ * @deprecated These types are superseded by the cycle-centric
+ *   `PrototypingCycleEvidence` / `PrototypingEvidenceRecord` schema in
+ *   `packages/qfai/src/core/prototyping/types.ts` (spec-0017 REQ-0005).
+ *   New code should consume the prototyping schema. Legacy callers remain
+ *   supported until Phase 7 cleanup removes them.
  */
 
 export type FullHarnessAxisScore = {
