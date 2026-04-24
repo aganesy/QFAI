@@ -14,6 +14,7 @@ import {
 import { isConcreteArtifactRef } from "../artifacts/pathUtils.js";
 import type { Issue } from "../types.js";
 import { issue } from "./utils.js";
+import { validateModeInvariant } from "./prototyping/modeInvariant.js";
 
 type PrototypingEvidenceRecord = {
   surface?: unknown;
@@ -133,6 +134,15 @@ export async function validatePrototypingEvidence(
     surface && isSupportedPrototypingSurface(surface)
       ? derivePrototypingObligations({ surface, effectiveMode: mode.effective })
       : undefined;
+
+  // spec-0017 REQ-0001 mode invariant: maxCycles is the only mode-dependent
+  // value; browserTool must be "playwright-cli" if present. Emits QFAI-PROT-MODE-001.
+  issues.push(
+    ...validateModeInvariant(
+      record,
+      path.relative(root, evidencePath).replace(/\\/g, "/"),
+    ),
+  );
 
   const iterations = normalizeIterations(record.iterations);
   if (!iterations || iterations.length === 0) {
