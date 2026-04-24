@@ -30,16 +30,16 @@ async function readSkillMd(): Promise<string> {
 // ─── TC-0012-0285: Delegation Scope Table 4 categories ───────────────────────
 
 describe("TC-0012-0285 — Delegation Scope Table has 4 categories", () => {
-  // QFAI:SPEC-0012:TC-0012-0285
-  it("SKILL.md Delegation Scope Table contains 4 required categories with correct roles", async () => {
+  // QFAI:SPEC-0012:TC-0012-0285 (superseded by spec-0017 REQ-0002)
+  it("SKILL.md Delegation Scope Table contains required categories with correct roles", async () => {
     const content = await readSkillMd();
 
     // Table header present
     expect(content).toMatch(/Delegation Scope Table/i);
 
-    // 4 required categories
+    // Required categories (spec-0017 renames "Screenshot capture" → "Playwright CLI execution & capture")
     expect(content).toContain("UI implementation");
-    expect(content).toContain("Screenshot capture");
+    expect(content).toMatch(/Playwright CLI execution|Screenshot capture/);
     expect(content).toMatch(/Evaluation (L1-L2|review|scoring)/);
     expect(content).toContain("Build");
 
@@ -86,11 +86,16 @@ describe("TC-0012-0292 — SKILL.md documents canonical evidence capture", () =>
 // ─── TC-0012-0293: 5-step iteration cycle documented ─────────────────────────
 
 describe("TC-0012-0293 — iteration loop documented in SKILL.md", () => {
-  // QFAI:SPEC-0012:TC-0012-0293
-  it("SKILL.md iteration section contains capture, evaluator launch, funnel, breakthrough, and validate phases in order", async () => {
+  // QFAI:SPEC-0012:TC-0012-0293 (superseded by spec-0017 REQ-0002 — step rename)
+  it("SKILL.md cycle section contains prepare/capture, evaluator launch, funnel, breakthrough, and validate phases in order", async () => {
     const content = await readSkillMd();
 
-    const captureIdx = content.indexOf("Capture Mandatory Evidence");
+    // spec-0017 renames Step 4 to "Prepare Playwright CLI Command Plan & Review Bundle"
+    // and introduces Step 5 "AI Evaluator Executes the Command Plan and Captures Evidence".
+    const captureIdx = Math.max(
+      content.indexOf("Capture Mandatory Evidence"),
+      content.indexOf("Prepare Playwright CLI Command Plan"),
+    );
     const evaluateIdx = Math.max(
       content.indexOf("Launch L1 and L2 Evaluators"),
       content.indexOf("Launch Evaluation Reviewers"),
@@ -99,7 +104,7 @@ describe("TC-0012-0293 — iteration loop documented in SKILL.md", () => {
     const breakthroughIdx = content.indexOf("Breakthrough Detection");
     const validateIdx = content.indexOf("Validate and Verify");
 
-    expect(captureIdx, "Capture step missing").toBeGreaterThan(-1);
+    expect(captureIdx, "Prepare/Capture step missing").toBeGreaterThan(-1);
     expect(evaluateIdx, "Evaluator launch step missing").toBeGreaterThan(-1);
     expect(funnelIdx, "Direction funnel step missing").toBeGreaterThan(-1);
     expect(breakthroughIdx, "Breakthrough step missing").toBeGreaterThan(-1);

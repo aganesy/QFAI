@@ -6,6 +6,8 @@ Provide the downstream execution truth for exploration-first prototyping and fin
 
 These files are version-managed and may be read directly by `/qfai-prototyping`, `/qfai-implement`, `/qfai-atdd`, and `qfai validate`.
 
+> **Prototyping harness (spec-0017)**: `evaluation-rubric.yaml` is the source of `axisDefs` consumed by the review bundle. `design-system.yaml` provides the `designSystemChecklist` consumed by the AI evaluator sub-agent. For the Playwright CLI harness flow and evidence paths, see `.qfai/assistant/skills/qfai-prototyping/references/evidence-requirements.md` and `.qfai/specs/spec-0017/01_Spec.md`.
+
 ## Status After Init
 
 After `qfai init`, this directory contains only this README. This is the normal initial state. `/qfai-sdd` creates design files when a UI-bearing capability is normalized for downstream execution.
