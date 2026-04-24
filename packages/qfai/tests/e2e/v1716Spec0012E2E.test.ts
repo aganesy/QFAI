@@ -60,12 +60,10 @@ describe("E2E: US-0012-0086 — Step 0 execution plan MUST", () => {
   );
 });
 
-// QFAI:SPEC-0012:US-0012-0087
-describe("E2E: US-0012-0087 — shared screenshot capture script", () => {
-  it.todo(
-    "assets/scripts/capture-screenshots.js accepts URL/port + output dir and returns timestamped filenames",
-  );
-});
+// QFAI:SPEC-0012:US-0012-0087 (superseded by spec-0017 REQ-0002, REQ-0006)
+// assets/scripts/capture-screenshots.js has been removed. AI evaluator
+// sub-agents now execute the playwright-cli command plan emitted by
+// core/prototyping/playwrightCliPlan.ts; see spec-0017/01_Spec.md.
 
 // QFAI:SPEC-0012:US-0012-0088
 describe("E2E: US-0012-0088 — 5-step iteration cycle", () => {

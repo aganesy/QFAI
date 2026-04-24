@@ -72,17 +72,16 @@ export function validateModeInvariant(
       !Number.isInteger(maxCyclesRaw) ||
       maxCyclesRaw !== expectedMaxCycles
     ) {
+      const maxCyclesDisplay = JSON.stringify(maxCyclesRaw);
       issues.push(
         issue(
           "QFAI-PROT-MODE-001",
           `Mode differences are limited to maxCycles only. ` +
-            `Expected maxCycles=${expectedMaxCycles} for mode=${detected.mode}, got ${String(
-              maxCyclesRaw,
-            )}.`,
+            `Expected maxCycles=${expectedMaxCycles} for mode=${detected.mode}, got ${maxCyclesDisplay}.`,
           "error",
           evidencePathForIssue,
           "prototyping.modeInvariant",
-          [detected.mode, String(expectedMaxCycles), String(maxCyclesRaw)],
+          [detected.mode, String(expectedMaxCycles), maxCyclesDisplay],
           "canonical",
           `Set prototyping.json maxCycles to ${expectedMaxCycles} ` +
             `to match PROTOTYPING_MAX_CYCLES[${detected.mode}], ` +
@@ -94,16 +93,15 @@ export function validateModeInvariant(
 
   if (raw.browserTool !== undefined) {
     if (raw.browserTool !== "playwright-cli") {
+      const browserToolDisplay = JSON.stringify(raw.browserTool);
       issues.push(
         issue(
           "QFAI-PROT-MODE-001",
-          `browserTool must be "playwright-cli" (spec-0017 REQ-0002). Got: ${JSON.stringify(
-            raw.browserTool,
-          )}`,
+          `browserTool must be "playwright-cli" (spec-0017 REQ-0002). Got: ${browserToolDisplay}`,
           "error",
           evidencePathForIssue,
           "prototyping.modeInvariant.browserTool",
-          [String(raw.browserTool)],
+          [browserToolDisplay],
           "canonical",
           'Set prototyping.json browserTool to "playwright-cli". ' +
             "Playwright MCP and legacy providers are not supported in the standard harness.",

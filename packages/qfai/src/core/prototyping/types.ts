@@ -207,7 +207,7 @@ export type PrototypingReviewerGateRef = {
 export type PrototypingEvidenceRecord = {
   surface: "web" | "mobile" | "desktop" | "mixed";
   mode: {
-    effective: import("../review/prototyping.js").PrototypingMode;
+    effective: PrototypingMode;
     source: string;
     rationale: string;
   };

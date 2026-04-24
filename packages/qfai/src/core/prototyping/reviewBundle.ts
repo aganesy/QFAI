@@ -20,7 +20,6 @@ import {
   cycleCommandPlanPath,
   cycleEvaluatorReviewPath,
   cycleHtmlPath,
-  cycleReviewBundlePath,
   cycleScreenshotPath,
   cycleSnapshotPath,
   type PlaywrightCliCommandPlan,

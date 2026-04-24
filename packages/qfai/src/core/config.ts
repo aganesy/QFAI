@@ -528,7 +528,7 @@ function normalizePrototypingExecution(
   }
 
   const browserToolRaw = raw.browserTool;
-  let browserTool: "playwright-cli" = "playwright-cli";
+  let browserTool = "playwright-cli" as const;
   if (browserToolRaw !== undefined) {
     if (browserToolRaw !== "playwright-cli") {
       issues.push(
