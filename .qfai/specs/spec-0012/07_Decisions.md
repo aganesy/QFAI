@@ -27,15 +27,21 @@
 
 ## DR-0012-0006: Reviewer-Score Evidence Model
 
-- Decision: full-harness iteration evidence は `reviewerScores[]` と `allItemsPass95` を中心に記録する。
+- Decision: full-harness iteration evidence は `reviewerScores[]` と `allReviewerAxesPerfect100` を中心に記録する。
 - Rationale: reviewer ごとの根拠と証跡を残しつつ、weighted-total dependence を解消するため。
 
 ## DR-0012-0007: Snapshot-Based Scoring Trace
 
-- Decision: `scoringTrace[]` は iteration ごとの snapshot summary とし、`minScore` / `averageScore` / `allItemsPass95` を保持する。
+- Decision: `scoringTrace[]` は iteration ごとの snapshot summary とし、`minScore` / `averageScore` / `allReviewerAxesPerfect100` を保持する。
 - Rationale: convergence と best-iteration 判定を reviewer-score model に合わせるため。
 
 ## DR-0012-0008: Budget-Driven Termination
 
-- Decision: termination は `allItemsPass95` 達成で `converged`、未達のまま予算上限に達したら `max-iterations` とする。
+- Decision: termination は `allReviewerAxesPerfect100` 達成でのみ `converged`、未達のまま予算上限に達したら rework/revise とする。
+
+### DR-0012-0009: Perfect 100 Completion Gate
+
+- Decision: prototyping completion requires every reviewer sub-agent to score every evaluation axis at 100.
+- Context: repeated full-harness runs reached the previous 95-point border within a few iterations, making the completion gate too lenient.
+- Consequence: 95-point completion wording, variables, and validator paths are replaced by perfect-100 completion semantics.
 - Rationale: current history/result writer 実装と一致させるため。

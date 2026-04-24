@@ -120,7 +120,7 @@
 
 - EX-Ref: EX-0012-0094
 - AC-Refs: AC-0012-0012
-- `reviewerScores[]` and `allItemsPass95` are written into full-harness iterations.
+- `reviewerScores[]` and `allReviewerAxesPerfect100` are written into full-harness iterations.
 
 ## TC-0012-0305
 
@@ -150,7 +150,25 @@
 
 - EX-Ref: EX-0012-0092, EX-0012-0097
 - AC-Refs: AC-0012-0014
-- Termination reason is `converged` on `allItemsPass95=true` and `max-iterations` on exhausted budget.
+- Termination reason is `converged` on `allReviewerAxesPerfect100=true`; budget exhaustion without 100 remains rework/revise.
+
+## TC-0012-0314
+
+- EX-Ref: EX-0012-0103
+- AC-Refs: AC-0012-0017
+- Completion claim with any reviewer axis below 100 produces an error.
+
+## TC-0012-0315
+
+- EX-Ref: EX-0012-0104
+- AC-Refs: AC-0012-0017
+- Completion claim with all reviewer axes at 100 satisfies the perfect-score gate.
+
+## TC-0012-0316
+
+- EX-Ref: EX-0012-0104
+- AC-Refs: AC-0012-0016, AC-0012-0018
+- Completion claim requires post-selection polish checks and completion certificate.
 
 ## TC-0012-0310
 

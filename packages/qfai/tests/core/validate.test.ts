@@ -138,7 +138,7 @@ describe("validateProject (spec pack)", { timeout: 30000 }, () => {
       evidence.iterations = [
         {
           iteration: 1,
-          allItemsPass95: false,
+          allReviewerAxesPerfect100: false,
           reviewerScores: [
             {
               reviewerId: "qa-reviewer",
@@ -155,7 +155,7 @@ describe("validateProject (spec pack)", { timeout: 30000 }, () => {
         },
         {
           iteration: 2,
-          allItemsPass95: false,
+          allReviewerAxesPerfect100: false,
         },
       ];
       await writeFile(evidencePath, `${JSON.stringify(evidence, null, 2)}\n`);
@@ -172,6 +172,108 @@ describe("validateProject (spec pack)", { timeout: 30000 }, () => {
 
       const result = await validateProject(root);
       expect(result.issues.some((item) => item.code === "QFAI-PROT-299")).toBe(true);
+    });
+  });
+
+  it("fails when prototyping completion is claimed below perfect 100", async () => {
+    await withProject(async (root) => {
+      const evidencePath = path.join(root, ".qfai", "evidence", "prototyping.json");
+      const evidence = JSON.parse(await readFile(evidencePath, "utf-8")) as Record<string, unknown>;
+      evidence.phase = { current: "completed" };
+      evidence.completionClaimed = true;
+      evidence.completionEligible = true;
+      evidence.postSelectionPolishCount = 1;
+      evidence.completionCertificate = {
+        reviewerGateResult: "PASS",
+        validateCommand: "qfai validate --fail-on error",
+        validatePassed: true,
+        bestOfHistoryRef: ".qfai/evidence/prototyping.json#/iterations/0",
+        breakthroughRef: ".qfai/evidence/breakthrough.json",
+      };
+      evidence.iterations = [
+        {
+          iteration: 1,
+          kind: "polish",
+          checks: {
+            critique: true,
+            fix: true,
+            recapture: true,
+            rereview: true,
+            breakthrough: true,
+          },
+          allReviewerAxesPerfect100: false,
+          reviewerScores: [
+            {
+              reviewerId: "qa-reviewer",
+              scores: [
+                {
+                  axisId: "clarity",
+                  score: 99,
+                  rationale: "one point remains",
+                  evidenceRefs: [".qfai/evidence/render/orders.desktop.html"],
+                },
+              ],
+            },
+          ],
+        },
+      ];
+      await writeFile(evidencePath, `${JSON.stringify(evidence, null, 2)}\n`);
+
+      const result = await validateProject(root);
+      expect(result.issues.some((item) => item.code === "QFAI-PROT-287")).toBe(true);
+    });
+  });
+
+  it("accepts prototyping completion only when every reviewer axis is perfect 100", async () => {
+    await withProject(async (root) => {
+      const evidencePath = path.join(root, ".qfai", "evidence", "prototyping.json");
+      const evidence = JSON.parse(await readFile(evidencePath, "utf-8")) as Record<string, unknown>;
+      evidence.phase = { current: "completed" };
+      evidence.completionClaimed = true;
+      evidence.completionEligible = true;
+      evidence.postSelectionPolishCount = 1;
+      evidence.completionCertificate = {
+        reviewerGateResult: "PASS",
+        validateCommand: "qfai validate --fail-on error",
+        validatePassed: true,
+        bestOfHistoryRef: ".qfai/evidence/prototyping.json#/iterations/0",
+        breakthroughRef: ".qfai/evidence/breakthrough.json",
+      };
+      evidence.iterations = [
+        {
+          iteration: 1,
+          kind: "polish",
+          checks: {
+            critique: true,
+            fix: true,
+            recapture: true,
+            rereview: true,
+            breakthrough: true,
+          },
+          allReviewerAxesPerfect100: true,
+          reviewerScores: [
+            {
+              reviewerId: "qa-reviewer",
+              scores: [
+                {
+                  axisId: "clarity",
+                  score: 100,
+                  rationale: "perfect",
+                  evidenceRefs: [".qfai/evidence/render/orders.desktop.html"],
+                },
+              ],
+            },
+          ],
+        },
+      ];
+      await writeFile(evidencePath, `${JSON.stringify(evidence, null, 2)}\n`);
+
+      const result = await validateProject(root);
+      const codes = result.issues.map((item) => item.code);
+      expect(codes).not.toContain("QFAI-PROT-285");
+      expect(codes).not.toContain("QFAI-PROT-286");
+      expect(codes).not.toContain("QFAI-PROT-287");
+      expect(codes).not.toContain("QFAI-PROT-289");
     });
   });
 

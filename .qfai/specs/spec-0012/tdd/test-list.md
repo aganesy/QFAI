@@ -27,8 +27,12 @@
 | TDD-0307 | TC-0012-0307 | unit        | packages/qfai/tests/core/harness/resultWriter.test.ts                    | TC-0012-0307 | done   | DR-0012-0008 | iterationBudget output           |
 | TDD-0308 | TC-0012-0308 | unit        | packages/qfai/tests/core/prototypingMode.test.ts                         | TC-0012-0308 | done   | DR-0012-0008 | max iteration budget mapping     |
 | TDD-0309 | TC-0012-0309 | unit        | packages/qfai/tests/core/harness/history.test.ts                         | TC-0012-0309 | done   | DR-0012-0008 | termination semantics            |
+| TDD-0314 | TC-0012-0314 | unit        | packages/qfai/tests/core/validate.test.ts                                | TC-0012-0314 | done   | DR-0012-0009 | perfect-100 validator fail path  |
+| TDD-0315 | TC-0012-0315 | unit        | packages/qfai/tests/core/validate.test.ts                                | TC-0012-0315 | done   | DR-0012-0009 | perfect-100 validator pass path  |
+| TDD-0316 | TC-0012-0316 | unit        | packages/qfai/tests/core/validate.test.ts                                | TC-0012-0316 | done   | DR-0012-0009 | completion certificate gate      |
 
 ## Notes
 
 - This ledger intentionally tracks the currently extant post-runtime-removal tests and the current reviewer-score harness coverage.
+- New completion entries use implementation-as-SSOT evidence and replace the previous 95-point completion border with perfect-100 semantics.
 - Historical runtime-specific files removed from `packages/qfai/tests/**` are no longer listed.

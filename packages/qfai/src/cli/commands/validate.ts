@@ -319,7 +319,7 @@ const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-PROT-154": "iteration count exceeds the configured maximum for the effective mode.",
   "QFAI-PROT-155":
     "iteration stopReason is invalid; must be threshold-reached|max-iterations|manual-stop.",
-  "QFAI-PROT-156": "allItemsPass95 must be true when stopReason is threshold-reached.",
+  "QFAI-PROT-156": "allReviewerAxesPerfect100 must be true when stopReason is threshold-reached.",
   "QFAI-PROT-234": "unused legacy prototyping recommendation fields are not supported.",
   "QFAI-PROT-235":
     "legacy discussion recommendation fields are not supported in prototyping evidence.",
@@ -367,6 +367,11 @@ const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "fullHarness.terminationReason is invalid; must be converged|max-iterations|plateau|manual-stop.",
   "QFAI-PROT-283": "fullHarness.scoringTrace must contain at least one entry.",
   "QFAI-PROT-284": "emoji characters (U+1F000–U+1FAFF) are forbidden in full-harness output.",
+  "QFAI-PROT-285": "prototyping phase state machine is invalid for completion.",
+  "QFAI-PROT-286": "post-selection polish iteration evidence is missing for completion.",
+  "QFAI-PROT-287": "completion requires every reviewer axis score to be 100.",
+  "QFAI-PROT-288": "legacy 95-point completion marker is not a valid completion border.",
+  "QFAI-PROT-289": "completionCertificate is required when completion is claimed.",
   "QFAI-PROT-290":
     "fullHarness.iterationCount is 1 with converged; single-iteration convergence is suspicious.",
   "QFAI-PROT-291": "fullHarness.scoringTrace entry count does not match iterationCount.",

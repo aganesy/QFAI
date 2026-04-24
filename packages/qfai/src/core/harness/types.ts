@@ -1,7 +1,7 @@
 /**
  * Full-harness mode types.
  *
- * Full-harness now follows the reviewerScores/allItemsPass95 evidence schema
+ * Full-harness now follows the reviewerScores/allReviewerAxesPerfect100 evidence schema
  * used by prototyping.json. Legacy weighted totals are intentionally excluded.
  */
 
@@ -37,7 +37,7 @@ export type FullHarnessIteration = {
   limitations: string[];
   evidenceRefs: FullHarnessEvidenceRefs;
   reviewerScores: FullHarnessReviewerScore[];
-  allItemsPass95: boolean;
+  allReviewerAxesPerfect100: boolean;
   stopReason?: string;
 };
 
@@ -52,7 +52,7 @@ export type FullHarnessScoreSnapshot = {
   axisCount: number;
   minScore: number | null;
   averageScore: number | null;
-  allItemsPass95: boolean;
+  allReviewerAxesPerfect100: boolean;
   commitSha: string;
 };
 
@@ -82,7 +82,7 @@ export type MeasurementInput = {
   discussionDirRelative?: string;
   trendRefs: string[];
   reviewerScores: FullHarnessReviewerScore[];
-  allItemsPass95: boolean;
+  allReviewerAxesPerfect100: boolean;
   stopReason?: string;
 };
 

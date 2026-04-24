@@ -62,7 +62,7 @@
 ## EX-0012-0092: Breakthrough Trigger
 
 - BR-Ref: BR-0012-0014
-- Given `allItemsPass95` is false
+- Given `allReviewerAxesPerfect100` is false
 - And recent `averageScore` deltas are below the configured plateau threshold
 - And code diff lines are below the configured diff threshold
 - Then plateau detector sets `triggerResult=true`
@@ -73,7 +73,7 @@
 - BR-Ref: BR-0012-0012
 - Given `fullHarness.iterations[1]`
 - And it stores two reviewers with per-axis `score`, `rationale`, and `evidenceRefs`
-- And `allItemsPass95` is `true`
+- And `allReviewerAxesPerfect100` is `true`
 - Then the iteration is compliant with the current evidence schema
 
 ## EX-0012-0095: Snapshot-Based Scoring Trace
@@ -81,7 +81,7 @@
 - BR-Ref: BR-0012-0013
 - Given the latest iteration has two reviewers and six total axis scores
 - When history is recomputed
-- Then `scoringTrace` stores `reviewerCount=2`, `axisCount=6`, `minScore`, `averageScore`, `allItemsPass95`, and `commitSha`
+- Then `scoringTrace` stores `reviewerCount=2`, `axisCount=6`, `minScore`, `averageScore`, `allReviewerAxesPerfect100`, and `commitSha`
 
 ## EX-0012-0096: Iteration Budget Summary
 
@@ -93,8 +93,22 @@
 ## EX-0012-0097: Termination From Threshold Or Budget
 
 - BR-Ref: BR-0012-0014
-- Given the latest iteration has `allItemsPass95=true`
+- Given the latest iteration has `allReviewerAxesPerfect100=true`
 - Then termination is `converged`
+
+## EX-0012-0103: 95 Points Is Not Completion
+
+- BR-Ref: BR-0012-0012, BR-0012-0014
+- Given every reviewer score is at least 95 but one axis is 99
+- Then `completionEligible` is false
+- And completion claim is rejected
+
+## EX-0012-0104: Perfect 100 Completion
+
+- BR-Ref: BR-0012-0012, BR-0012-0014, BR-0012-0015
+- Given every reviewer sub-agent scores every evaluation axis at 100
+- And post-selection polish, breakthrough check, reviewer gate, and validate pass are recorded
+- Then `completionEligible` may be true
 - And if convergence is not reached by the last allowed iteration, termination becomes `max-iterations`
 
 ## EX-0012-0098: Delegation Scope And Reviewer Roles

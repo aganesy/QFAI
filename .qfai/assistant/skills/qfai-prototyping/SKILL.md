@@ -42,6 +42,10 @@ Do not rely on a CLI entrypoint or package runtime loop.
 - Evaluation is performed by sub-agents; machine checks are limited to schema/evidence validation and breakthrough trigger detection.
 - Shared evidence vocabulary includes `render.json`, `browser-qa.json`, `prototyping.json`, and `breakthrough.json`.
 - static-first evidence capture remains mandatory even when interactive review is used.
+- Direction funnel completion is not stage completion.
+- Selecting the first winner does not satisfy completion. Completion review is forbidden until at least one post-selection polish iteration has completed.
+- Completion requires every reviewer sub-agent to score every evaluation axis at `100/100`; `95` is not a completion border.
+- Do not use `complete`, `completed`, `done`, or equivalent completion wording in other languages before the completion checklist passes. Use `exploration complete`, `winner selected`, `polishing`, `breakthrough checking`, or `reviewer gate pending` for interim states.
 
 ## Goal
 
@@ -172,10 +176,13 @@ After the first winner is selected:
 - write `.qfai/contracts/design/selected-direction.yaml`
 - extract `.qfai/contracts/design/design-system.yaml`
 
+Selecting the first winner is not completion. Do not start completion review and do not use completion wording until Step 8, Step 9, Step 11, reviewer gate, and the perfect-100 score gate pass.
+
 ### Step 8 — Polish the Winner
 
 Iterate on the selected winner with normal critique/rework loops.
 Do not assume the latest iteration is automatically best; keep best-of-history in evidence.
+At least one full post-selection polish loop is mandatory. Each polish loop must include critique, fix, re-capture, re-review, and breakthrough check evidence.
 
 ## Iteration Gate
 
@@ -186,7 +193,7 @@ Do not assume the latest iteration is automatically best; keep best-of-history i
 ### Step 9 — Breakthrough Detection
 
 After each polish iteration, run the mechanical breakthrough detector.
-If `allItemsPass95` is false and score improvement is below the configured plateau threshold and code change is below the configured diff threshold, trigger breakthrough branching.
+If `allReviewerAxesPerfect100` is false and score improvement is below the configured plateau threshold and code change is below the configured diff threshold, trigger breakthrough branching.
 
 ### Step 10 — Breakthrough Branch Loop
 
@@ -241,6 +248,9 @@ Minimum reviewer responsibilities:
 - verify `qfai validate --fail-on error` completed successfully
 - verify breakthrough trigger evidence is present
 - verify best-of-history handling is documented
+- verify at least one post-selection polish iteration completed after winner selection
+- verify every reviewer sub-agent scored every evaluation axis at `100/100`
+- reject completion claims based on any 95-point threshold
 - treat score/volume heuristics as signals, not gates
 - return `Result: PASS | REVISE`
 
@@ -278,6 +288,8 @@ Prototyping-specific additions:
 - `selected-direction.yaml` exists
 - `design-system.yaml` exists
 - `breakthrough.json` exists
+- at least one post-selection polish iteration completed after winner selection
+- every reviewer sub-agent scored every evaluation axis at `100/100`
 - `qfai validate --fail-on error` passes
 - reviewer returns `PASS`
 
@@ -288,6 +300,9 @@ Prototyping-specific additions:
 - Every declared screen has HTML evidence.
 - Missing evidence triggered rerun instead of waiver.
 - Direction funnel `5->3->2->1` completed.
+- Direction funnel completion was not treated as stage completion.
+- At least one post-selection polish loop completed with critique/fix/re-capture/re-review/breakthrough checks.
+- Every reviewer sub-agent scored every evaluation axis at `100/100`.
 - Breakthrough detector ran after polish iterations.
 - Reviewer returned PASS; otherwise status is REVISE.
 

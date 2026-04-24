@@ -380,7 +380,7 @@ describe("E2E: full-harness iteration integrity errors (US-0004-0023)", () => {
     expect(src).toContain("QFAI-PROT-281");
     expect(src).toContain("QFAI-PROT-282");
     expect(src).toContain("QFAI-PROT-299");
-    expect(src).toContain("allItemsPass95");
+    expect(src).toContain("allReviewerAxesPerfect100");
   });
 });
 
@@ -560,7 +560,7 @@ describe("E2E: rev2 evidence category validators (US-0004-0026)", () => {
       "utf-8",
     );
     expect(src).toContain("QFAI-PROT-282");
-    expect(src).toContain("all-items-pass-95");
+    expect(src).toContain("all-reviewer-axes-perfect-100");
   });
 });
 
@@ -582,7 +582,7 @@ describe("E2E: test fixtures rev2 (US-0004-0027)", () => {
     expect(src).toContain("reviewerScores");
     expect(src).toContain("evidenceRefs");
     expect(src).toContain("axisId");
-    expect(src).toContain("allItemsPass95");
+    expect(src).toContain("allReviewerAxesPerfect100");
   });
 
   it("prototypingEvidence validates flat score evidenceRefs arrays", async () => {

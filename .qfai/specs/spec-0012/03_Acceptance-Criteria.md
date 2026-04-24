@@ -57,18 +57,35 @@
 
 ## AC-0012-0012
 
-- `fullHarness.iterations[]` stores `reviewerScores[]` and `allItemsPass95`.
+- `fullHarness.iterations[]` stores `reviewerScores[]` and `allReviewerAxesPerfect100`.
 - Weighted-total-only summaries are not the active schema.
 
 ## AC-0012-0013
 
 - `fullHarness.scoringTrace[]` is derived from iteration snapshots.
-- Snapshots record reviewer count, axis count, min score, average score, `allItemsPass95`, and commit SHA.
+- Snapshots record reviewer count, axis count, min score, average score, `allReviewerAxesPerfect100`, and commit SHA.
 
 ## AC-0012-0014
 
-- Termination reason is `converged` when the latest iteration has `allItemsPass95=true`.
-- Termination reason is `max-iterations` when the configured budget is exhausted without convergence.
+- Termination reason is `converged` only when the latest iteration has `allReviewerAxesPerfect100=true`.
+- Iteration budget exhaustion without perfect 100 is not stage completion and must be reported as rework/revise.
+
+## AC-0012-0016
+
+- Completion claim is invalid when the latest iteration is `select`.
+- Completion claim requires at least one post-selection `polish` iteration.
+- The `polish` iteration records critique, fix, re-capture, re-review, and breakthrough check.
+
+## AC-0012-0017
+
+- Completion claim requires every reviewer sub-agent to score every evaluation axis at 100.
+- Scores of 95 through 99 are insufficient for completion.
+- 95-point wording may remain only as a quality-scale explanation, not as a completion border.
+
+## AC-0012-0018
+
+- Completion claim requires a completion certificate with reviewer gate result, validate command/result, best-of-history ref, and breakthrough ref.
+- Validator emits an error when completed/completionEligible is recorded without this certificate.
 
 ## AC-0012-0015
 

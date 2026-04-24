@@ -14,7 +14,7 @@ export type FullHarnessOutput = {
   iterations: number;
   terminationReason: string;
   evaluationSummary: {
-    allItemsPass95: boolean;
+    allReviewerAxesPerfect100: boolean;
     bestIteration: number;
     minScore: number | null;
     averageScore: number | null;
@@ -76,7 +76,7 @@ export function buildFullHarnessResult(
     iterations: history.iterations.length,
     terminationReason: terminationReason ?? "in-progress",
     evaluationSummary: {
-      allItemsPass95: latestSnapshot?.allItemsPass95 ?? false,
+      allReviewerAxesPerfect100: latestSnapshot?.allReviewerAxesPerfect100 ?? false,
       bestIteration: history.bestIteration,
       minScore: latestSnapshot?.minScore ?? null,
       averageScore: latestSnapshot?.averageScore ?? null,

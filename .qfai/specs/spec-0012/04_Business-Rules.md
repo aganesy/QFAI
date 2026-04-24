@@ -75,19 +75,21 @@
 ## BR-0012-0012: Reviewer-Score Iteration Schema
 
 - AC-Refs: AC-0012-0012
-- `fullHarness.iterations[]` records `reviewerScores[]`, `allItemsPass95`, evidence refs, limitations, and change summary.
+- `fullHarness.iterations[]` records `reviewerScores[]`, `allReviewerAxesPerfect100`, evidence refs, limitations, and change summary.
 - Per-axis evidence is attached through reviewer score entries, not a weighted-total aggregate.
 
 ## BR-0012-0013: Snapshot Scoring Trace
 
 - AC-Refs: AC-0012-0013
 - `fullHarness.scoringTrace[]` is derived from iteration snapshots.
-- Each snapshot stores reviewer count, axis count, min score, average score, `allItemsPass95`, and commit SHA.
+- Each snapshot stores reviewer count, axis count, min score, average score, `allReviewerAxesPerfect100`, and commit SHA.
 
 ## BR-0012-0014: Termination Rule
 
 - AC-Refs: AC-0012-0014
-- If the latest iteration has `allItemsPass95=true`, termination reason is `converged`.
+- If the latest iteration has `allReviewerAxesPerfect100=true`, termination reason is `converged`.
+- If any reviewer axis is below 100, completion is blocked even when the score is 95 or higher.
+- Winner selection is not completion; stage completion requires post-selection polish and a completion certificate.
 - Otherwise, reaching the configured max iteration budget yields `max-iterations`.
 
 ## BR-0012-0015: Result Writer Summary

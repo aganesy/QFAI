@@ -29,13 +29,13 @@ function makeIteration(overrides: Partial<FullHarnessIteration> = {}): FullHarne
         scores: [
           {
             axisId: "runtime",
-            score: 96,
+            score: 100,
             rationale: "runtime gate passed",
             evidenceRefs: [".qfai/evidence/runtime-gate.json#/ui/0"],
           },
           {
             axisId: "fidelity",
-            score: 98,
+            score: 100,
             rationale: "screen fidelity is aligned",
             evidenceRefs: [".qfai/evidence/render.json#/screens/0"],
           },
@@ -47,14 +47,14 @@ function makeIteration(overrides: Partial<FullHarnessIteration> = {}): FullHarne
         scores: [
           {
             axisId: "spec-coverage",
-            score: 97,
+            score: 100,
             rationale: "coverage matches the contract",
             evidenceRefs: [".qfai/evidence/spec-coverage.json#/specs/0"],
           },
         ],
       },
     ],
-    allItemsPass95: true,
+    allReviewerAxesPerfect100: true,
     ...overrides,
   };
 }
@@ -71,11 +71,11 @@ describe("appendIteration", () => {
       iteration: 1,
       reviewerCount: 2,
       axisCount: 3,
-      minScore: 96,
-      allItemsPass95: true,
+      minScore: 100,
+      allReviewerAxesPerfect100: true,
       commitSha: "abc123",
     });
-    expect(history.scoringTrace[0]?.averageScore).toBeCloseTo(97);
+    expect(history.scoringTrace[0]?.averageScore).toBeCloseTo(100);
   });
 
   it("appends to existing history and auto-numbers iterations", () => {
@@ -95,7 +95,7 @@ describe("appendIteration", () => {
             ],
           },
         ],
-        allItemsPass95: false,
+        allReviewerAxesPerfect100: false,
       }),
     );
 
@@ -116,7 +116,7 @@ describe("appendIteration", () => {
             ],
           },
         ],
-        allItemsPass95: false,
+        allReviewerAxesPerfect100: false,
       }),
     );
 
@@ -127,12 +127,12 @@ describe("appendIteration", () => {
       reviewerCount: 1,
       axisCount: 1,
       minScore: 92,
-      allItemsPass95: false,
+      allReviewerAxesPerfect100: false,
       commitSha: "def456",
     });
   });
 
-  it("tracks best iteration using pass-95 first, then score quality", () => {
+  it("tracks best iteration using perfect-100 first, then score quality", () => {
     const h1 = appendIteration(
       null,
       makeIteration({
@@ -149,7 +149,7 @@ describe("appendIteration", () => {
             ],
           },
         ],
-        allItemsPass95: false,
+        allReviewerAxesPerfect100: false,
       }),
     );
     const h2 = appendIteration(
@@ -169,7 +169,7 @@ describe("appendIteration", () => {
             ],
           },
         ],
-        allItemsPass95: false,
+        allReviewerAxesPerfect100: false,
       }),
     );
     const h3 = appendIteration(h2, makeIteration({ commitSha: "ghi789" }));
@@ -192,13 +192,37 @@ describe("computeTerminationReason", () => {
     expect(computeTerminationReason(history, iterationPolicy)).toBeUndefined();
   });
 
-  it("returns converged when the latest iteration passes all items at 95", () => {
+  it("returns converged when every reviewer scores every axis at 100", () => {
     const history = appendIteration(null, makeIteration());
 
     expect(computeTerminationReason(history, iterationPolicy)).toBe("converged");
   });
 
-  it("returns max-iterations when the budget is exhausted without pass-95", () => {
+  it("does not return converged when the latest iteration is below perfect 100", () => {
+    const history = appendIteration(
+      null,
+      makeIteration({
+        reviewerScores: [
+          {
+            reviewerId: "reviewer-1",
+            scores: [
+              {
+                axisId: "runtime",
+                score: 99,
+                rationale: "one point remains",
+                evidenceRefs: [".qfai/evidence/runtime-gate.json#/ui/0"],
+              },
+            ],
+          },
+        ],
+        allReviewerAxesPerfect100: false,
+      }),
+    );
+
+    expect(computeTerminationReason(history, iterationPolicy)).toBeUndefined();
+  });
+
+  it("returns max-iterations when the budget is exhausted without perfect 100", () => {
     let history: FullHarnessHistory | null = null;
     for (let i = 0; i < 3; i++) {
       history = appendIteration(
@@ -218,7 +242,7 @@ describe("computeTerminationReason", () => {
               ],
             },
           ],
-          allItemsPass95: false,
+          allReviewerAxesPerfect100: false,
         }),
       );
     }
@@ -230,7 +254,7 @@ describe("computeTerminationReason", () => {
     expect(computeTerminationReason(history, iterationPolicy)).toBe("max-iterations");
   });
 
-  it("returns undefined while iterations remain and pass-95 is not reached", () => {
+  it("returns undefined while iterations remain and perfect 100 is not reached", () => {
     const history = appendIteration(
       null,
       makeIteration({
@@ -247,7 +271,7 @@ describe("computeTerminationReason", () => {
             ],
           },
         ],
-        allItemsPass95: false,
+        allReviewerAxesPerfect100: false,
       }),
     );
 

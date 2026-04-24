@@ -26,7 +26,7 @@
   - `.qfai/contracts/ui/*.yaml` を基準にした declared screen / route inputs
   - plateau detector による breakthrough trigger
   - branch planner による 2-branch breakthrough loop
-  - reviewer-score centered full-harness evidence schema
+  - reviewer-score centered full-harness evidence schema with perfect-100 completion gate
   - snapshot-based `scoringTrace` / `iterationBudget` / termination semantics
   - best-of-history winner retention
 - Out:
@@ -83,14 +83,17 @@
 - REQ-0015: Winner contract requiredness -- `.qfai/contracts/design/selected-direction.yaml` と `.qfai/contracts/design/design-system.yaml` は winner 確定後の正式参照対象とする
 - REQ-0016: UI contract requiredness -- `.qfai/contracts/ui/*.yaml` は declared screen / route の正式参照対象とする
 - REQ-0017: Verify gate -- `/qfai-verify` は validate pass、review artifact、reviewer PASS/REVISE を completion gate として扱う
-- REQ-0018: Breakthrough trigger -- `allItemsPass95=false` かつ score delta 停滞かつ diff lines 停滞で branch 2 本を強制生成する
+- REQ-0018: Breakthrough trigger -- `allReviewerAxesPerfect100=false` かつ score delta 停滞かつ diff lines 停滞で branch 2 本を強制生成する
 - REQ-0019: No runtime resurrection -- internal helper や evidence schema は CLI/runtime orchestration 再導入の根拠として使ってはならない
 - REQ-0020: Legacy coverage continuity -- 既存 traceability のため `US-0012-0001..0097` と `TC-0012-0001..0309` の ID 空間は維持する
 - REQ-0021: Best-of-history -- latest iteration が自動勝者ではなく、incumbent と breakthrough branch を比較して mainline を選び続ける
-- REQ-0022: Full-harness iteration schema -- `fullHarness.iterations[]` は `reviewerScores[]` と `allItemsPass95` を中心に記録する
+- REQ-0022: Full-harness iteration schema -- `fullHarness.iterations[]` は `reviewerScores[]` と `allReviewerAxesPerfect100` を中心に記録する
 - REQ-0023: Snapshot scoring trace -- `fullHarness.scoringTrace[]` は weighted total ではなく snapshot summary を記録する
 - REQ-0024: Result writer summary -- full-harness output は latest snapshot summary と `iterationBudget` を返す
-- REQ-0025: Termination semantics -- full-harness の収束判定は `allItemsPass95` または iteration budget 到達で決まる
+- REQ-0025: Termination semantics -- full-harness の収束判定は `allReviewerAxesPerfect100` でのみ `converged` となり、iteration budget 到達時に 100 点未達なら rework/revise 扱いとする
+- REQ-0026: Phase state machine -- `planning|explore|remix|select|polish|breakthrough|reviewer_gate|completed` を使い、`select->completed` を禁止する
+- REQ-0027: Post-selection polish -- completion claim には winner 後の `polish` iteration が 1 回以上必要で、critique/fix/re-capture/re-review/breakthrough check を含む
+- REQ-0028: Completion certificate -- completion claim には reviewer gate、validate pass、best-of-history、breakthrough evidence、perfect-100 gate を証明する certificate が必要
 
 ## Entry points
 
