@@ -36,6 +36,12 @@ export type QfaiValidationConfig = {
     requireSizeTags: boolean;
     maxE2eScenarioRatio: number | null;
     maxE2eScenarioCount: number | null;
+    /**
+     * When true (default), `qfai validate` rejects `it.todo` / `test.todo` /
+     * `describe.todo` stubs in test files (spec-0017 REQ-0009, QFAI-TEST-0001).
+     * Set to false to opt out while migrating an existing project.
+     */
+    forbidTestTodoStubs: boolean;
   };
   traceability: {
     brMustHaveSc: boolean;
@@ -134,6 +140,7 @@ export const defaultConfig: QfaiConfig = {
       requireSizeTags: false,
       maxE2eScenarioRatio: null,
       maxE2eScenarioCount: null,
+      forbidTestTodoStubs: true,
     },
     traceability: {
       brMustHaveSc: true,
@@ -367,6 +374,13 @@ function normalizeValidation(
         testStrategyRaw?.maxE2eScenarioCount,
         base.testStrategy.maxE2eScenarioCount,
         "validation.testStrategy.maxE2eScenarioCount",
+        configPath,
+        issues,
+      ),
+      forbidTestTodoStubs: readBoolean(
+        testStrategyRaw?.forbidTestTodoStubs,
+        base.testStrategy.forbidTestTodoStubs,
+        "validation.testStrategy.forbidTestTodoStubs",
         configPath,
         issues,
       ),

@@ -54,6 +54,7 @@ import {
   runCanonicalUixValidators,
   validateTraceabilityIntegrity,
   validateUiEvidenceArtifacts,
+  validateTestTodoStubs,
 } from "./validators/index.js";
 import { readSafe } from "./validators/utils.js";
 
@@ -193,6 +194,7 @@ async function runTddValidators(
 ): Promise<Issue[]> {
   return [
     ...(await validateTddList(root, config)),
+    ...(await validateTestTodoStubs(root, config)),
     ...(includeTraceability
       ? await validateTraceability(root, config, { includeCodeReferences: true })
       : []),

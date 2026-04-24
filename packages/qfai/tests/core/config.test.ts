@@ -217,3 +217,65 @@ describe("spec-0017 prototyping.execution config", () => {
     }
   });
 });
+
+describe("spec-0017 testStrategy.forbidTestTodoStubs", () => {
+  // TC-0017-0030 — default forbidTestTodoStubs is true
+  it("defaults to true when not specified (REQ-0009)", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-config-todo-default-"));
+    try {
+      await writeFile(path.join(root, "qfai.config.yaml"), "{}\n", "utf-8");
+
+      const { config, issues } = await loadConfig(root);
+      expect(issues).toEqual([]);
+      expect(config.validation.testStrategy.forbidTestTodoStubs).toBe(true);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("honors explicit forbidTestTodoStubs: false opt-out", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-config-todo-optout-"));
+    try {
+      await writeFile(
+        path.join(root, "qfai.config.yaml"),
+        [
+          "validation:",
+          "  testStrategy:",
+          "    forbidTestTodoStubs: false",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+
+      const { config, issues } = await loadConfig(root);
+      expect(issues).toEqual([]);
+      expect(config.validation.testStrategy.forbidTestTodoStubs).toBe(false);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("rejects non-boolean forbidTestTodoStubs value", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-config-todo-invalid-"));
+    try {
+      await writeFile(
+        path.join(root, "qfai.config.yaml"),
+        [
+          "validation:",
+          "  testStrategy:",
+          '    forbidTestTodoStubs: "nope"',
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+
+      const { issues } = await loadConfig(root);
+      const invalid = issues.find((issue) =>
+        issue.message.includes("validation.testStrategy.forbidTestTodoStubs"),
+      );
+      expect(invalid, "expected invalid type rejection").toBeDefined();
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+});
