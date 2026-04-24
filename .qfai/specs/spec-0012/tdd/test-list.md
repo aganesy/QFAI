@@ -8,7 +8,7 @@
 | TDD-0288 | TC-0012-0288 | integration | packages/qfai/tests/integration/prototypingSkillV1716Integration.test.ts | TC-0012-0288 | done   | DR-0012-0002 | iteration gate doc assertion     |
 | TDD-0289 | TC-0012-0289 | unit        | packages/qfai/tests/skill/prototypingSkillV1716.test.ts                  | TC-0012-0289 | done   | DR-0012-0002 | Step 0 documentation             |
 | TDD-0290 | TC-0012-0290 | unit        | packages/qfai/tests/skill/prototypingSkillV1716.test.ts                  | TC-0012-0290 | done   | DR-0012-0003 | canonical evidence paths         |
-| TDD-0291 | TC-0012-0291 | unit        | packages/qfai/tests/skill/captureScreenshots.test.ts                     | TC-0012-0291 | done   | DR-0012-0003 | capture script fail-closed       |
+| TDD-0291 | TC-0012-0291 | unit        | packages/qfai/tests/core/prototyping/playwrightCliPlan.test.ts           | TC-0012-0291 | done   | DR-0012-0003 | capture contract (superseded by spec-0017) |
 | TDD-0292 | TC-0012-0292 | unit        | packages/qfai/tests/skill/prototypingSkillV1716.test.ts                  | TC-0012-0292 | done   | DR-0012-0002 | iteration cycle wording          |
 | TDD-0293 | TC-0012-0293 | integration | packages/qfai/tests/integration/prototypingSkillV1716Integration.test.ts | TC-0012-0293 | done   | DR-0012-0001 | delegation violation path        |
 | TDD-0294 | TC-0012-0294 | unit        | packages/qfai/tests/skill/prototypingSkill.test.ts                       | TC-0012-0294 | done   | DR-0012-0002 | evaluator inputs                 |

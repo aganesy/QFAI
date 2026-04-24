@@ -29,7 +29,12 @@ validation:
       - packages/*/src/**/*.spec.ts
       - features/**/*.feature
       - packages/*/features/**/*.feature
-    testFileExcludeGlobs: []
+    testFileExcludeGlobs:
+      # Meta-test: the test-todo-stub validator's own fixture builder contains
+      # `it.todo(...)` / `test.todo(...)` / `describe.todo(...)` as strings to
+      # feed into the validator. Excluding avoids self-referential false
+      # positives from spec-0017 REQ-0009 (QFAI-TEST-0001).
+      - "packages/qfai/tests/validators/testTodoStubs.test.ts"
     scNoTestSeverity: error
     orphanContractsPolicy: error
     unknownContractIdSeverity: error
