@@ -289,6 +289,7 @@ Completion MUST NOT be declared when any of the following are true:
 - Items with `todo`, `red`, `green`, or `refactor` status still exist (for spec-level completion)
 - Parallel slices were used but integration verify has not been run post-merge
 - Checkpoint boundary was reached but verification was not executed
+- `it.todo(...)` / `test.todo(...)` / `describe.todo(...)` stubs remain in any file covered by `validation.traceability.testFileGlobs` (`QFAI-TEST-0001`, spec-0017 REQ-0009). Implement the body or delete the stub — an opt-out via `validation.testStrategy.forbidTestTodoStubs: false` is permitted only with an accompanying waiver DR-ID.
 
 ## Evidence (MANDATORY)
 
@@ -335,6 +336,7 @@ Each TDD item MUST have fresh evidence containing at minimum:
 - [ ] No backward transitions occurred.
 - [ ] Exception items have DR-IDs recorded.
 - [ ] All tests pass.
+- [ ] `qfai validate --profile tdd --fail-on error` passes with zero `QFAI-TEST-0001` findings (no `it.todo` / `test.todo` / `describe.todo` stubs remain; spec-0017 REQ-0009).
 
 ## Completion Checklist (MUST)
 
