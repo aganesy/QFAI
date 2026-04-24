@@ -27,6 +27,10 @@ Execution agents read this file first, then access child files (02-10) for detai
 - 新 CLI コマンド `qfai prototyping prepare` を追加する
 - 旧 `browserProvider` / `renderProvider` config key、Node Playwright 直呼び provider、`capture-screenshots.js`、Playwright MCP 依存を破壊的に削除する
 - `FullHarnessIterationEvidence` を `PrototypingCycleEvidence` に置換する
+- `it.todo` / `test.todo` / `describe.todo` のスタブを `qfai validate` で検知して CI で弾く (QFAI-TEST-0001)
+- `qfai init` が出力する GitHub Actions ワークフロー (`qfai-validate.yml`) で、validate を downstream プロジェクトでも自動実行する
+- `/qfai-implement` skill の Completion prohibition に QFAI-TEST-0001 残存禁止を追加する
+- QFAI 本体 repo でも `qfai validate --profile tdd --fail-on error` を CI で self-host 実行する (dogfooding)
 
 ### Out
 
@@ -65,6 +69,7 @@ Execution agents read this file first, then access child files (02-10) for detai
 - REQ-0006: Review Bundle & Command Plan Artifacts
 - REQ-0007: `qfai prototyping prepare` CLI Command
 - REQ-0008: Breaking Change Enforcement
+- REQ-0009: Test Todo Stub Prohibition (QFAI-TEST-0001)
 
 ## Requirements
 
@@ -123,6 +128,16 @@ A new command `qfai prototyping prepare --target-url <url> --mode <mode> --cycle
 ### REQ-0008: Breaking Change Enforcement
 
 Legacy config keys (`prototyping.execution.browserProvider`, `prototyping.execution.renderProvider`) MUST cause config load error. Legacy files (`packages/qfai/assets/scripts/capture-screenshots.js`, `playwrightBrowserQaProvider.ts`, `playwrightRenderAdapter.ts`, `assets/mcp-templates/playwright/`) MUST be removed. No silent aliasing to new keys.
+
+### REQ-0009: Test Todo Stub Prohibition (QFAI-TEST-0001)
+
+`qfai validate` MUST detect `it.todo(...)` / `test.todo(...)` / `describe.todo(...)` placeholder stubs in any file matched by `validation.traceability.testFileGlobs` (respecting `testFileExcludeGlobs` + default excludes) and emit `QFAI-TEST-0001` (severity `error`) per occurrence, with file path and line number. Default: enabled. Opt-out: `validation.testStrategy.forbidTestTodoStubs: false` in `qfai.config.yaml` (opt-out requires a waiver DR-ID per the /qfai-implement completion gate).
+
+`qfai init` MUST ship `.github/workflows/qfai-validate.yml` that runs `qfai validate --profile full --fail-on error` on every push to main/master and every PR, so the QFAI-TEST-0001 gate activates in downstream CI without manual wiring.
+
+`/qfai-implement` skill completion MUST be blocked while QFAI-TEST-0001 findings remain; the skill's Completion prohibition conditions and FINAL CHECKLIST both list this constraint.
+
+QFAI self-validate: the QFAI repository itself MUST run `qfai validate --profile tdd --fail-on error --root .` in its CI (dogfooding). The repo MUST pass the same gate it ships to downstream projects.
 
 ## Entry Points
 

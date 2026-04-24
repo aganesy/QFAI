@@ -123,4 +123,34 @@ Scenario: Low-cost completion path is identical to full-harness
   When bestOfHistory is missing from prototyping.json
   Then validate emits an error tagged "bestOfHistory missing"
   And the same behavior holds for standard and full-harness modes
+
+# AC-0017-0016: qfai validate emits QFAI-TEST-0001 for each todo stub
+Scenario: Test todo stub detected
+  Given a test file matched by validation.traceability.testFileGlobs contains `it.todo(...)`
+  When `qfai validate --profile tdd --fail-on error` runs
+  Then validate exits non-zero
+  And the QFAI-TEST-0001 issue names the file path and line number
+  And the same applies to `test.todo(...)` and `describe.todo(...)` in any matched file
+
+# AC-0017-0017: qfai init ships the qfai-validate GitHub Actions workflow
+Scenario: Downstream project gets CI wiring for free
+  Given an empty project directory
+  When the developer runs `npx qfai init`
+  Then `.github/workflows/qfai-validate.yml` exists in the project
+  And the workflow runs `npx qfai validate --profile full --fail-on error`
+  And the workflow triggers on push to main/master and on pull_request
+
+# AC-0017-0018: /qfai-implement skill gates completion on zero QFAI-TEST-0001 findings
+Scenario: Implement skill prohibits stub residue at completion time
+  Given /qfai-implement is running
+  When any `it.todo` / `test.todo` / `describe.todo` remains in a file covered by testFileGlobs
+  Then the Completion prohibition conditions list blocks the completion transition
+  And the FINAL CHECKLIST item "qfai validate --profile tdd --fail-on error passes with zero QFAI-TEST-0001 findings" is unchecked
+
+# AC-0017-0019: QFAI repo self-validates in its own CI (dogfooding)
+Scenario: QFAI itself passes QFAI-TEST-0001
+  Given the QFAI monorepo at HEAD
+  When the CI `build` job runs `node packages/qfai/dist/cli/index.mjs validate --profile tdd --fail-on error --root .`
+  Then the step exits 0
+  And no QFAI-TEST-0001 findings surface against the repo
 ```

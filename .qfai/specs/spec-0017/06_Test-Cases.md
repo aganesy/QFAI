@@ -35,3 +35,8 @@ Test cases for spec-0017 (Prototyping Playwright CLI Agent Harness). Every TC re
 | TC-0017-0025  | Skill directories are byte-identical                      | REQ-0002 | AC-0017-0013               | 1/7   | `packages/qfai/tests/assets/assets.test.ts`                             |
 | TC-0017-0026  | capture-screenshots.js file does not exist                | REQ-0008 | AC-0017-0011               | 7     | `packages/qfai/tests/assets/noLegacyReferences.test.ts`                 |
 | TC-0017-0027  | E2E: all three modes pass validate with same fixture except maxCycles | REQ-0001, REQ-0004 | AC-0017-0001, AC-0017-0007 | 5/7 | `packages/qfai/tests/integration/prototypingCliHarness.test.ts`         |
+| TC-0017-0028  | it.todo / test.todo / describe.todo detected                    | REQ-0009 | AC-0017-0016               | 8/P1 | `packages/qfai/tests/validators/testTodoStubs.test.ts`                  |
+| TC-0017-0029  | forbidTestTodoStubs opt-out bypasses detection                   | REQ-0009 | AC-0017-0016               | 8/P1 | `packages/qfai/tests/validators/testTodoStubs.test.ts`                  |
+| TC-0017-0030  | validation.testStrategy.forbidTestTodoStubs defaults to true    | REQ-0009 | AC-0017-0016               | 8/P1 | `packages/qfai/tests/core/config.test.ts`                               |
+| TC-0017-0031  | qfai init ships .github/workflows/qfai-validate.yml             | REQ-0009 | AC-0017-0017               | 8/P2 | `packages/qfai/tests/cli/init.test.ts`                                  |
+| TC-0017-0032  | /qfai-implement Completion prohibition lists QFAI-TEST-0001     | REQ-0009 | AC-0017-0018               | 8/P3 | `packages/qfai/tests/skill/prototypingSkill*.test.ts` (skill content)    |

@@ -115,6 +115,56 @@ Mirror of approved plan: `C:\Users\YusukeSenaga\.claude\plans\ps-c-users-yusukes
 
 **Commit**: `chore!: remove Node Playwright adapters, capture-screenshots.js, MCP remnants; update report/docs`
 
+### Phase 8: Test Todo Stub Prohibition (REQ-0009)
+
+**Scope**: REQ-0009
+
+Follow-on workstream added after Phase 1-7 landed. Closes the gap where
+`it.todo` / `test.todo` / `describe.todo` stubs bypassed every QFAI /
+vitest gate and rotted as silent stale work.
+
+- New validator `packages/qfai/src/core/validators/testTodoStubs.ts`
+  emits `QFAI-TEST-0001` per stub found. Config flag
+  `validation.testStrategy.forbidTestTodoStubs` (default `true`) governs
+  the gate; wired into `runTddValidators` so `--profile full` inherits.
+- `qfai init` ships `.github/workflows/qfai-validate.yml` so downstream
+  projects run `qfai validate --profile full --fail-on error` on every
+  push / PR without per-project CI glue.
+- `/qfai-implement` skill Completion prohibition + FINAL CHECKLIST list
+  the QFAI-TEST-0001 constraint; completion is blocked while stubs remain.
+- QFAI repo CI `build` job adds a `QFAI self-validate this repo` step
+  that runs `--profile tdd --fail-on error --root .` (dogfooding).
+
+**Deliverables**:
+
+- `packages/qfai/src/core/validators/testTodoStubs.ts`
+- `packages/qfai/src/core/config.ts` (new testStrategy flag)
+- `packages/qfai/src/core/validate.ts` (runTddValidators wire-up)
+- `packages/qfai/src/core/validators/index.ts` (export)
+- `packages/qfai/tests/validators/testTodoStubs.test.ts` (10 cases)
+- `packages/qfai/tests/core/config.test.ts` (default + opt-out)
+- `packages/qfai/assets/init/root/.github/workflows/qfai-validate.yml`
+- `.qfai/assistant/skills/qfai-implement/SKILL.md` + mirror
+- `.github/workflows/ci.yml` (self-validate step)
+- `packages/qfai/package.json` (`self-validate` script)
+- `.qfai/specs/spec-0017/tdd/test-list.md` (new)
+- `packages/qfai/tests/integration/spec0017Integration.test.ts` (trace index)
+- `qfai.config.yaml` (testFileExcludeGlobs for meta-test self-reference)
+
+**Verification**:
+
+- `pnpm check-types && pnpm lint && pnpm test` → all green
+- `pnpm -C packages/qfai build && pnpm -C packages/qfai run self-validate` → 0 errors
+- Fresh `npx qfai init` in a temp dir places `.github/workflows/qfai-validate.yml` with expected content
+- Injecting `test.todo("probe", () => {})` into any test file under testFileGlobs reproduces a QFAI-TEST-0001 error
+
+**Commits**: 5 commits (one per sub-phase):
+1. `feat(validate): detect forbidden it.todo/test.todo stubs (QFAI-TEST-0001, spec-0017 REQ-0009)`
+2. `feat(init): ship .github/workflows/qfai-validate.yml for downstream CI`
+3. `docs(qfai-implement): gate completion on zero test-todo stubs (QFAI-TEST-0001)`
+4. `ci(qfai): self-validate this repo with qfai validate --profile tdd (dogfooding)`
+5. `docs(spec-0017): add REQ-0009 test-todo stub prohibition + AC/BR/TC`
+
 ## Phase Dependency Graph
 
 ```
