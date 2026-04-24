@@ -369,12 +369,15 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     const evidenceReadmePath = path.join(templateQfaiDir, "evidence", "README.md");
     const content = await readFile(evidenceReadmePath, "utf-8");
 
+    // spec-0017 replaces "full-harness only" with unified mode invariant where
+    // only maxCycles differs across modes, and replaces render.json with the
+    // per-cycle Playwright CLI artifacts.
     expect(content).toContain("uiFidelity");
-    expect(content).toMatch(/full-harness.*only|only.*full-harness/i);
+    expect(content).toMatch(/Mode [Ii]nvariant|full-harness.*only|only.*full-harness/);
     expect(content).toContain("interactive");
-    expect(content).toContain(".qfai/evidence/render.json");
+    expect(content).toMatch(/playwright-commands\.json|\.qfai\/evidence\/render\.json/);
     expect(content).toContain("mockPaths");
-    expect(content).toContain("concrete render/browser QA/spec refs");
+    expect(content).toMatch(/concrete (render\/browser QA\/spec refs|artifact|evidence)/i);
   });
 
   it("ships qa-gatekeeper agent card", async () => {

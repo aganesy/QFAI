@@ -29,19 +29,24 @@ describe("package-only SSOT prototyping assets", () => {
       readFile(evidenceReadmePath, "utf-8"),
     ]);
 
+    // spec-0017 (Playwright CLI agent harness) replaces render.json / browser-qa.json
+    // with playwright-commands.json / review-bundle.json / evaluator-review.json.
     for (const token of [
       "surface / mode",
       "full-harness",
+      "low-cost",
+      "standard",
       "web",
       "mobile",
       "desktop",
       "mixed",
-      "web",
-      "render.json",
-      "browser-qa.json",
+      "playwright-cli",
+      "playwright-commands.json",
+      "review-bundle.json",
+      "evaluator-review.json",
     ]) {
-      expect(skill).toContain(token);
-      expect(readme).toContain(token);
+      expect(skill, `SKILL.md missing token: ${token}`).toContain(token);
+      expect(readme, `evidence README missing token: ${token}`).toContain(token);
     }
   });
 

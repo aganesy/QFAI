@@ -76,13 +76,18 @@ export type QfaiPrototypingCalibrationConfig = {
   packPath?: string;
 };
 
+export type QfaiPrototypingExecutionConfig = {
+  targetUrl?: string | null;
+  /**
+   * Browser tool handed to the AI evaluator sub-agent (spec-0017 REQ-0002).
+   * The only accepted value is `"playwright-cli"`.
+   */
+  browserTool: "playwright-cli";
+};
+
 export type QfaiPrototypingConfig = {
   calibration?: QfaiPrototypingCalibrationConfig;
-  execution?: {
-    targetUrl?: string | null;
-    browserProvider?: string;
-    renderProvider?: string;
-  };
+  execution?: QfaiPrototypingExecutionConfig;
 };
 
 export type QfaiConfig = {
@@ -149,8 +154,7 @@ export const defaultConfig: QfaiConfig = {
     },
     execution: {
       targetUrl: null,
-      browserProvider: "playwright",
-      renderProvider: "playwright",
+      browserTool: "playwright-cli",
     },
   },
 };
@@ -510,6 +514,35 @@ function normalizePrototypingExecution(
     return base ? { ...base } : undefined;
   }
 
+  // spec-0017 REQ-0008: legacy keys are rejected, not silently aliased.
+  for (const legacyKey of ["browserProvider", "renderProvider"] as const) {
+    if (raw[legacyKey] !== undefined) {
+      issues.push(
+        configIssue(
+          configPath,
+          `prototyping.execution.${legacyKey} は廃止されました (spec-0017 REQ-0008)。` +
+            ` prototyping.execution.browserTool: playwright-cli に置き換えてください。`,
+        ),
+      );
+    }
+  }
+
+  const browserToolRaw = raw.browserTool;
+  let browserTool: "playwright-cli" = "playwright-cli";
+  if (browserToolRaw !== undefined) {
+    if (browserToolRaw !== "playwright-cli") {
+      issues.push(
+        configIssue(
+          configPath,
+          `prototyping.execution.browserTool は "playwright-cli" のみ有効です (spec-0017 REQ-0002)。` +
+            ` 受け取った値: ${JSON.stringify(browserToolRaw)}`,
+        ),
+      );
+    } else {
+      browserTool = browserToolRaw;
+    }
+  }
+
   return {
     targetUrl:
       raw.targetUrl === null
@@ -520,20 +553,7 @@ function normalizePrototypingExecution(
             configPath,
             issues,
           ) ?? null),
-    browserProvider: readString(
-      raw.browserProvider,
-      base?.browserProvider ?? "playwright",
-      "prototyping.execution.browserProvider",
-      configPath,
-      issues,
-    ),
-    renderProvider: readString(
-      raw.renderProvider,
-      base?.renderProvider ?? "playwright",
-      "prototyping.execution.renderProvider",
-      configPath,
-      issues,
-    ),
+    browserTool,
   };
 }
 

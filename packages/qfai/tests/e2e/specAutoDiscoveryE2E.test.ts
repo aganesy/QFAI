@@ -32,8 +32,10 @@ describe("E2E: prototyping SKILL.md defines mode-aware contract", () => {
     const c = await load();
     expect(c).toMatch(/Exploration-First Harness/i);
     expect(c).toMatch(/## Surface \/ Mode/i);
-    expect(c).toContain("`standard` is the default");
-    expect(c).toContain("`full-harness` is reserved for explicit escalation");
+    // spec-0017 replaces "standard is the default" / "full-harness is reserved"
+    // with a mode invariant that differs only by maxCycles.
+    expect(c).toMatch(/`standard` as the default|`standard` is the default/);
+    expect(c).toMatch(/Mode Invariant|full-harness.*reserved for explicit escalation/);
     expect(c).toContain("5->3->2->1");
   });
 
