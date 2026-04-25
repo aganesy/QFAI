@@ -631,16 +631,28 @@ function validateV2Lifecycle(
       validRound = candidate.round;
       // Round funnel order: rounds[0..N-1] must be the prefix of
       // EXPLORATION_ROUNDS = [r5, r3, r2, r1]. Recording r5 then jumping to
-      // r2 would corrupt the harvest/narrow lineage downstream.
-      const expectedRound = EXPLORATION_ROUNDS[index];
-      if (expectedRound !== undefined && validRound !== expectedRound) {
+      // r2 would corrupt the harvest/narrow lineage downstream. The funnel
+      // also caps at 4 rounds total — any further entry (5th round) is a
+      // contract violation regardless of its `round` value.
+      if (index >= EXPLORATION_ROUNDS.length) {
         issues.push(
           makeSchemaIssue(
             root,
             evidencePath,
-            `${prefix}.round must be ${expectedRound} (rounds[] must follow ${EXPLORATION_ROUNDS.join("→")}); got ${validRound}.`,
+            `${prefix} exceeds the funnel limit (rounds[] must contain at most ${EXPLORATION_ROUNDS.length} entries: ${EXPLORATION_ROUNDS.join("→")}).`,
           ),
         );
+      } else {
+        const expectedRound = EXPLORATION_ROUNDS[index];
+        if (expectedRound !== undefined && validRound !== expectedRound) {
+          issues.push(
+            makeSchemaIssue(
+              root,
+              evidencePath,
+              `${prefix}.round must be ${expectedRound} (rounds[] must follow ${EXPLORATION_ROUNDS.join("→")}); got ${validRound}.`,
+            ),
+          );
+        }
       }
     }
     const candidateIds: string[] = [];
@@ -692,12 +704,13 @@ function validateV2Lifecycle(
     // Per-candidate evidence references: every candidateId surfaced in
     // candidates[] MUST appear as a key in screenEvidenceByCandidate (array
     // of screen-artifact refs) and evaluatorReviewRefsByCandidate (string
-    // path). Missing maps would let downstream completion gates pass with
-    // no real evidence on disk.
+    // path). The maps themselves are required whenever candidates[] is
+    // populated — a record that omits them entirely would otherwise let
+    // downstream completion gates pass with zero evidence on disk.
     const screenMap = isRecord(candidate.screenEvidenceByCandidate)
       ? candidate.screenEvidenceByCandidate
       : null;
-    if (candidate.screenEvidenceByCandidate !== undefined && screenMap === null) {
+    if (screenMap === null) {
       issues.push(
         makeSchemaIssue(
           root,
@@ -709,7 +722,7 @@ function validateV2Lifecycle(
     const reviewMap = isRecord(candidate.evaluatorReviewRefsByCandidate)
       ? candidate.evaluatorReviewRefsByCandidate
       : null;
-    if (candidate.evaluatorReviewRefsByCandidate !== undefined && reviewMap === null) {
+    if (reviewMap === null) {
       issues.push(
         makeSchemaIssue(
           root,
@@ -730,15 +743,6 @@ function validateV2Lifecycle(
             ),
           );
         }
-      } else if (candidate.screenEvidenceByCandidate !== undefined) {
-        // map exists but missing this id
-        issues.push(
-          makeSchemaIssue(
-            root,
-            evidencePath,
-            `${prefix}.screenEvidenceByCandidate is missing key ${candidateId}.`,
-          ),
-        );
       }
       if (reviewMap) {
         const reviewRef = reviewMap[candidateId];
@@ -751,14 +755,6 @@ function validateV2Lifecycle(
             ),
           );
         }
-      } else if (candidate.evaluatorReviewRefsByCandidate !== undefined) {
-        issues.push(
-          makeSchemaIssue(
-            root,
-            evidencePath,
-            `${prefix}.evaluatorReviewRefsByCandidate is missing key ${candidateId}.`,
-          ),
-        );
       }
     }
 
