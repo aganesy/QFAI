@@ -1,6 +1,7 @@
 import { runDoctor } from "./commands/doctor.js";
 import { runGuardrails } from "./commands/guardrails.js";
 import { runInit } from "./commands/init.js";
+import { runPrototypingCommand } from "./commands/prototyping.js";
 import { runReport } from "./commands/report.js";
 import { runValidate } from "./commands/validate.js";
 import { parseArgs } from "./lib/args.js";
@@ -34,7 +35,7 @@ export async function run(argv: string[], cwd: string): Promise<void> {
           root: resolvedRoot,
           strict: options.strict,
           format: options.validateFormat,
-          ...(options.phase ? { phase: options.phase } : {}),
+          ...(options.profile ? { profile: options.profile } : {}),
           ...(options.failOn !== undefined ? { failOn: options.failOn } : {}),
           ...(options.platform ? { platform: options.platform } : {}),
         });
@@ -50,7 +51,7 @@ export async function run(argv: string[], cwd: string): Promise<void> {
           ...(options.reportIn !== undefined ? { inputPath: options.reportIn } : {}),
           ...(options.reportBaseUrl !== undefined ? { baseUrl: options.reportBaseUrl } : {}),
           ...(options.reportRunValidate ? { runValidate: true } : {}),
-          ...(options.phase ? { phase: options.phase } : {}),
+          ...(options.profile ? { profile: options.profile } : {}),
         });
       }
       return;
@@ -81,6 +82,41 @@ export async function run(argv: string[], cwd: string): Promise<void> {
         process.exitCode = exitCode;
       }
       return;
+    case "prototyping":
+      {
+        if (!options.prototypingAction) {
+          error(
+            "qfai prototyping: unknown or missing subcommand. Expected: round-start|round-harvest|round-narrow|round-absorb|round-reimplement-verify",
+          );
+          info(usage());
+          process.exitCode = options.invalidExitCode;
+          return;
+        }
+        if (!options.prototypingRound) {
+          error(`qfai prototyping ${options.prototypingAction}: --round is required.`);
+          info(usage());
+          process.exitCode = options.invalidExitCode;
+          return;
+        }
+        if (options.prototypingAction === "round-start" && !options.prototypingTargetUrl) {
+          error("qfai prototyping round-start: --target-url is required.");
+          info(usage());
+          process.exitCode = options.invalidExitCode;
+          return;
+        }
+        const resolvedRoot = await resolveRoot(options);
+        const exitCode = await runPrototypingCommand({
+          root: resolvedRoot,
+          action: options.prototypingAction,
+          ...(options.prototypingTargetUrl ? { targetUrl: options.prototypingTargetUrl } : {}),
+          mode: options.prototypingMode ?? "standard",
+          round: options.prototypingRound,
+          candidates: options.prototypingCandidates,
+          survivors: options.prototypingSurvivors,
+        });
+        process.exitCode = exitCode;
+      }
+      return;
 
     default:
       error(`Unknown command: ${command}`);
@@ -93,11 +129,16 @@ function usage(): string {
   return `qfai <command> [options]
 
 Commands:
-  init        テンプレを生成
-  validate    仕様/契約/参照の検査
-  report      検証結果と集計を出力
-  doctor      設定/パス/出力前提の診断
-  guardrails  Decision Guardrails の抽出/検査（list|extract|check）
+  init                         テンプレを生成
+  validate                     仕様/契約/参照の検査
+  report                       検証結果と集計を出力
+  doctor                       設定/パス/出力前提の診断
+  guardrails                   Decision Guardrails の抽出/検査（list|extract|check）
+  prototyping round-start      round review bundle と command plans を生成
+  prototyping round-harvest    evaluator review を前提に harvest template を生成
+  prototyping round-narrow     survivor 決定を記録
+  prototyping round-absorb     absorption plan template を生成
+  prototyping round-reimplement-verify  reimplementation.json の構造を検証
 
 Options:
   --root <path>   対象ディレクトリ
@@ -109,7 +150,7 @@ Options:
   --format <md|json>           report の出力形式
   --format <text|json>         doctor の出力形式
   --strict                     validate: warning 以上で exit 1
-  --phase <full|atdd|tdd|refinement>       validate/report: 検証フェーズを指定
+  --profile <discussion|sdd|prototyping|atdd|tdd|verify|full>  validate/report: 検証profileを指定
   --fail-on <error|warning|never>  validate: 失敗条件
   --fail-on <error|warning>        doctor: 失敗条件
   --platform <web|windows|mobile-ios|mobile-android|cross-platform>  validate: UI/UXプラットフォーム指定
@@ -120,6 +161,11 @@ Options:
   --path <path>                 guardrails: 対象ファイル/ディレクトリ（複数指定可）
   --max <number>                guardrails extract: 最大件数
   --keyword <text>              guardrails list/extract: キーワードフィルタ
+  --target-url <url>            prototyping round-start: 評価対象の URL (必須)
+  --mode <low-cost|standard|full-harness>  prototyping round-start: 実行モード (既定: standard)
+  --round <r5|r3|r2|r1>         prototyping: 対象 round
+  --candidates <csv>            prototyping round-start: active candidate IDs
+  --survivors <csv>             prototyping round-narrow/round-absorb: surviving candidate IDs
   -h, --help      ヘルプ表示
 `;
 }

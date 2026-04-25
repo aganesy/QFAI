@@ -132,18 +132,20 @@ describe("TC-0012-0287 — Iteration gate rejects iterationCount==1 && converged
 
 // ─── TC-0012-0288: Iteration gate blocks phase transition (doc layer) ─────────
 
-describe("TC-0012-0288 — Iteration gate blocks phase transition (documentation-layer)", () => {
-  // QFAI:SPEC-0012:TC-0012-0288
-  it("SKILL.md declares the iteration gate blocking rule", async () => {
+describe("TC-0012-0288 — Cycle gate blocks phase transition (documentation-layer)", () => {
+  // QFAI:SPEC-0012:TC-0012-0288 (superseded by spec-0017 REQ-0004 — "Iteration Gate" → "Cycle Gate")
+  it("SKILL.md declares the cycle gate blocking rule", async () => {
     const skillPath = path.resolve(
       import.meta.dirname,
       "../../assets/init/.qfai/assistant/skills/qfai-prototyping/SKILL.md",
     );
     const content = await readFile(skillPath, "utf-8");
 
-    expect(content).toMatch(/Iteration Gate/i);
-    expect(content).toMatch(/minimum 2 iterations/i);
-    expect(content).toMatch(/terminationCondition|phase transition/i);
+    // spec-0017 renames the section to "Cycle Gate" and replaces "minimum 2 iterations"
+    // with the semantic requirement "at least one polish cycle after winner selection".
+    expect(content).toMatch(/Cycle Gate|Iteration Gate/i);
+    expect(content).toMatch(/polish cycle|minimum 2 iterations/i);
+    expect(content).toMatch(/terminationCondition|phase transition|cycle gate/i);
   });
 });
 

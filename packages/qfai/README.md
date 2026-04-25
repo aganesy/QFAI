@@ -52,13 +52,16 @@ npx qfai report
     (`.qfai/review/review-*/summary.json` + minimum schema), writes `.qfai/report/validate.json`,
     and appends run logs to `.qfai/report/run-*/`; use `--fail-on error` (or `--fail-on warning`) to turn it into a CI gate,
     and `--format github` to emit GitHub-friendly annotations.
-    Use `--phase refinement` only for local refinement checks; CI should use default/full validation.
+    Use `--profile discussion|sdd|prototyping|atdd|tdd|verify` for local skill-owned checks; CI should use default/full validation (or `verify` / `tdd` for the dedicated CI gates).
 - `npx qfai report`
   - Produces a human-readable report (`report.md` by default) or an internal JSON export (`report.json`) from `validate.json`; use `--base-url` to link file paths in Markdown to your repository viewer.
 - `npx qfai doctor`
   - Diagnoses configuration discovery, path resolution, glob scanning, and `validate.json` inputs before running validate/report; use `--fail-on` to enforce failures in CI.
     Note: prototyping evidence (`.qfai/evidence/prototyping.json`) is produced by the AI workflow / skills
-    (`/qfai-prototyping` with `mode=full-harness` for supported UI surfaces only), not by a general-purpose end-user CLI flow.
+    (`/qfai-prototyping` — any mode; modes differ only in `maxCycles`, see spec-0012), not by a general-purpose end-user CLI flow.
+    Use `npx qfai prototyping round-start --round <r5|r3|r2|r1> --candidates <csv> --target-url <url> --mode <mode>`
+    to generate the round-scoped review bundle and command plans the AI evaluator sub-agent consumes, then use
+    `round-harvest`, `round-narrow`, `round-absorb`, and `round-reimplement-verify` to advance the candidate funnel.
     `qfai validate` consumes the resulting evidence files, including `mode.effective` and `fullHarness` metadata when present.
     Traceability refs inside prototyping evidence must use repo-root-relative concrete artifact refs (for example `.qfai/specs/spec-0001/01_Spec.md#L3` or `.qfai/evidence/render.json#/screens/0`).
     Absolute paths are invalid. The same strict ref grammar is enforced for top-level and leaf evidence-bearing fields, including
@@ -112,7 +115,9 @@ QFAI includes a small set of custom skills (stored under `.qfai/assistant/skills
   as 15 required markdown files under `.qfai/discussion/discussion-<ts>/`.
   UI-bearing discussion packs may include `prototyping.yaml` as an optional recommendation artifact; non-ui discussion packs typically omit it.
 - **qfai-sdd**: Unified SDD entrypoint with discussion-pack preflight guard (missing/incomplete/blocking OQ causes stop + next action guidance).
-- **qfai-prototyping**: Build a contract-aligned UI prototype under the `full-harness` only / UI-only contract, with calibration-pack SSOT and screen-level Browser QA evidence.
+- **qfai-prototyping**: Build a contract-aligned UI prototype using the Playwright CLI + AI
+  evaluator harness (spec-0012). Modes (`low-cost`/`standard`/`full-harness`) run the same
+  strictest review cycle; only `maxCycles` (1/3/20) differs.
 - **qfai-atdd**: Implement acceptance tests driven by specs/scenarios.
 - **qfai-implement**: Unified TDD micro-cycle (Red/Green/Refactor) one test at a time using `test-list.md` as the execution ledger, including ledger status updates and exception closure.
 - **qfai-verify**: Run full-scan local quality gates (`validate --fail-on error`, `report`, repo gates) and produce reviewer-approved evidence under `.qfai/evidence/`.
@@ -286,7 +291,7 @@ npx qfai validate --fail-on error
 
 Recommended baseline.
 
-- Keep CI on default/full validation (`qfai validate --fail-on error`); do not use `--phase refinement` in CI.
+- Keep CI on default/full validation (`qfai validate --fail-on error` or `qfai validate --profile verify --fail-on error`); do not use partial profiles in CI.
 - Keep `pnpm check-types:future` as a separate mandatory gate so future TS compatibility runs once without duplicating `pnpm ci:gate`.
 - Add a report step (`npx qfai report`) when you need a human-readable artifact.
 - Tune traceability globs in `qfai.config.yaml` to match your test layout.

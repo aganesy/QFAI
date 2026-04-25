@@ -44,7 +44,7 @@ As a project maintainer, I want calibration overrides to remain documented as va
 
 ### US-0012-0094
 
-As a maintainer, I want full-harness iterations to store `reviewerScores[]` and `allItemsPass95`, so that evidence history reflects the current reviewer-score model.
+As a maintainer, I want full-harness iterations to store `reviewerScores[]` and `allReviewerAxesPerfect100`, so that evidence history reflects the current reviewer-score model.
 
 ### US-0012-0095
 
@@ -56,7 +56,7 @@ As a consumer of full-harness results, I want the output to include `iterationBu
 
 ### US-0012-0097
 
-As a validator, I want termination to be derived from `allItemsPass95` or max-iteration reach, so that completion semantics match the current implementation.
+As a validator, I want termination to be derived from `allReviewerAxesPerfect100`, so that completion semantics require every reviewer sub-agent to score every evaluation axis at 100.
 
 ## Legacy Coverage Continuity
 

@@ -3,7 +3,7 @@
  *
  * Reads previous iterations from prototyping.json,
  * appends new iteration, and recomputes bestIteration/scoringTrace from
- * reviewerScores/allItemsPass95 evidence.
+ * reviewerScores/allReviewerAxesPerfect100 evidence.
  */
 
 import { readFile } from "node:fs/promises";
@@ -126,7 +126,7 @@ export function computeTerminationReason(
   }
 
   const latestIteration = history.iterations[count - 1];
-  if (latestIteration?.allItemsPass95) {
+  if (latestIteration && hasAllReviewerAxesPerfect100(latestIteration.reviewerScores)) {
     return "converged";
   }
 
@@ -141,6 +141,7 @@ function buildScoreSnapshot(iteration: FullHarnessIteration): FullHarnessScoreSn
   const axisScores = iteration.reviewerScores.flatMap((reviewer) =>
     reviewer.scores.map((score) => score.score),
   );
+  const allReviewerAxesPerfect100 = hasAllReviewerAxesPerfect100(iteration.reviewerScores);
   if (axisScores.length === 0) {
     return {
       iteration: iteration.iteration,
@@ -148,7 +149,7 @@ function buildScoreSnapshot(iteration: FullHarnessIteration): FullHarnessScoreSn
       axisCount: 0,
       minScore: null,
       averageScore: null,
-      allItemsPass95: iteration.allItemsPass95,
+      allReviewerAxesPerfect100: false,
       commitSha: iteration.commitSha,
     };
   }
@@ -160,14 +161,14 @@ function buildScoreSnapshot(iteration: FullHarnessIteration): FullHarnessScoreSn
     axisCount: axisScores.length,
     minScore: Math.min(...axisScores),
     averageScore: total / axisScores.length,
-    allItemsPass95: iteration.allItemsPass95,
+    allReviewerAxesPerfect100,
     commitSha: iteration.commitSha,
   };
 }
 
 function compareSnapshots(left: FullHarnessScoreSnapshot, right: FullHarnessScoreSnapshot): number {
-  if (left.allItemsPass95 !== right.allItemsPass95) {
-    return left.allItemsPass95 ? 1 : -1;
+  if (left.allReviewerAxesPerfect100 !== right.allReviewerAxesPerfect100) {
+    return left.allReviewerAxesPerfect100 ? 1 : -1;
   }
   const leftMin = left.minScore ?? -1;
   const rightMin = right.minScore ?? -1;
@@ -180,6 +181,18 @@ function compareSnapshots(left: FullHarnessScoreSnapshot, right: FullHarnessScor
     return leftAverage - rightAverage;
   }
   return left.iteration - right.iteration;
+}
+
+export function hasAllReviewerAxesPerfect100(
+  reviewerScores: FullHarnessIteration["reviewerScores"],
+): boolean {
+  if (reviewerScores.length === 0) {
+    return false;
+  }
+  return reviewerScores.every(
+    (reviewer) =>
+      reviewer.scores.length > 0 && reviewer.scores.every((score) => score.score === 100),
+  );
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

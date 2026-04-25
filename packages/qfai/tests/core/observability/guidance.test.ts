@@ -18,7 +18,7 @@ describe("ModeGuidance", () => {
       });
 
       expect(result.mode).toBe("full-harness");
-      expect(result.reasoning).toContain("full-harness only");
+      expect(result.reasoning).toContain("recommends full-harness");
     });
   });
 

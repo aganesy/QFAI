@@ -54,6 +54,10 @@ const TAXONOMY_RANGE_MAX = 299;
 // These are allowed to map to more than one rule name as long as the rules share the same category.
 const KNOWN_MULTI_RULE_CODES = new Set([
   "QFAI-PROT-244", // render artifact validation (bundle-level + screen-level checks)
+  // V1 lifecycle uses `prototypingEvidence.iterations`; V2 lifecycle (round
+  // workflow) uses `prototypingEvidence.rounds`. Both branches gate on the
+  // same "at least one primary lifecycle entry" rule.
+  "QFAI-PROT-280",
 ]);
 
 // Some codes are newly added and pending description registration in validate.ts.

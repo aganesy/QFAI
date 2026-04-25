@@ -2,7 +2,7 @@
  * E2E: qfai validate (spec-0004)
  *
  * Verifies high-level user journeys for the validate command:
- * validator execution and aggregation, phase control, exit code control,
+ * validator execution and aggregation, profile control, exit code control,
  * GitHub Actions output, JSON output, run log generation, waiver application,
  * spec file validation, ID format validation, traceability verification,
  * ATDD annotation verification, discussion pack validation,
@@ -41,22 +41,22 @@ describe("E2E: validation execution (US-0004-0001)", () => {
 });
 
 // QFAI:SPEC-0004:US-0004-0002
-describe("E2E: validation phase control (US-0004-0002)", () => {
-  it("validateProject accepts phase option", async () => {
+describe("E2E: validation profile control (US-0004-0002)", () => {
+  it("validateProject accepts profile option", async () => {
     const src = await readFile(
       path.join(repoRoot, "packages", "qfai", "src", "core", "validate.ts"),
       "utf-8",
     );
-    expect(src).toContain("phase");
-    expect(src).toMatch(/phase.*full|full.*phase/);
+    expect(src).toContain("profile");
+    expect(src).toMatch(/profile.*full|full.*profile/);
   });
 
-  it("validate CLI command accepts --phase option", async () => {
+  it("validate CLI command accepts --profile option", async () => {
     const src = await readFile(
       path.join(repoRoot, "packages", "qfai", "src", "cli", "commands", "validate.ts"),
       "utf-8",
     );
-    expect(src).toContain("phase");
+    expect(src).toContain("profile");
   });
 });
 
@@ -186,13 +186,13 @@ describe("E2E: traceability verification (US-0004-0010)", () => {
 
 // QFAI:SPEC-0004:US-0004-0011
 describe("E2E: ATDD annotation verification (US-0004-0011)", () => {
-  it("validates ATDD code traceability when phase is not refinement", async () => {
+  it("validates ATDD code traceability in the ATDD profile", async () => {
     const src = await readFile(
       path.join(repoRoot, "packages", "qfai", "src", "core", "validate.ts"),
       "utf-8",
     );
     expect(src).toContain("validateAtddCodeTraceability");
-    expect(src).toContain("refinement");
+    expect(src).toContain('case "atdd"');
   });
 });
 
@@ -380,7 +380,7 @@ describe("E2E: full-harness iteration integrity errors (US-0004-0023)", () => {
     expect(src).toContain("QFAI-PROT-281");
     expect(src).toContain("QFAI-PROT-282");
     expect(src).toContain("QFAI-PROT-299");
-    expect(src).toContain("allItemsPass95");
+    expect(src).toContain("allReviewerAxesPerfect100");
   });
 });
 
@@ -560,7 +560,7 @@ describe("E2E: rev2 evidence category validators (US-0004-0026)", () => {
       "utf-8",
     );
     expect(src).toContain("QFAI-PROT-282");
-    expect(src).toContain("all-items-pass-95");
+    expect(src).toContain("all-reviewer-axes-perfect-100");
   });
 });
 
@@ -582,7 +582,7 @@ describe("E2E: test fixtures rev2 (US-0004-0027)", () => {
     expect(src).toContain("reviewerScores");
     expect(src).toContain("evidenceRefs");
     expect(src).toContain("axisId");
-    expect(src).toContain("allItemsPass95");
+    expect(src).toContain("allReviewerAxesPerfect100");
   });
 
   it("prototypingEvidence validates flat score evidenceRefs arrays", async () => {

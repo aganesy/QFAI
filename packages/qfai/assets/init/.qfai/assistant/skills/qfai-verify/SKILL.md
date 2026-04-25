@@ -95,7 +95,7 @@ Use the shared schema.
 - Follow `.qfai/assistant/instructions/shared-skill-delegation-baseline.md#reviewer-gate-baseline`.
 - Reviewer checks:
   - required roles were delegated;
-  - validate evidence exists: `qfai validate --fail-on error` completed with `error=0`;
+  - validate evidence exists: `qfai validate --profile verify --fail-on error` completed with `error=0`;
   - declared screens have mandatory screenshot and HTML evidence under `.qfai/evidence/prototyping/`;
   - Drift Protocol enforced;
   - test-layer policy enforced against `test-layers.md`.
@@ -132,7 +132,7 @@ Follow `.qfai/assistant/instructions/shared-skill-operating-baseline.md#delta-re
   - `.qfai/evidence/` is intentionally NOT tracked by Git (it ships with a local `.gitignore`).
   - Do NOT commit evidence files; summarize key outcomes in the PR description instead.
 - You MUST run the mandatory checks listed below and record outcomes.
-- In CI, you MUST keep QFAI validation on default/full mode (`qfai validate --fail-on error`). Do NOT use `--phase refinement`.
+- In CI, you MUST keep QFAI validation on full-scan mode (`qfai validate --profile verify --fail-on error` or default `qfai validate --fail-on error`). Do NOT use partial profiles.
 - Waivers are only for `warning` / `info` findings. If a waiver attempts to suppress an `error`, treat it as a failure and fix the root cause.
 - You MUST stop and escalate if any gate fails without an actionable fix list.
 - Completion must be approved by a reviewer who did not run the gates.
@@ -148,7 +148,7 @@ Run quality gates and produce evidence that the change is correct and safe.
 ## Success Criteria (Definition of Done)
 
 - Repo quality gates PASS (format/lint/type/test/build/etc).
-- QFAI checks PASS (at minimum: `qfai validate`, and optionally `qfai report`).
+- QFAI checks PASS (at minimum: `qfai validate --profile verify`, and optionally `qfai report`).
 - Declared screens have mandatory screenshot and HTML evidence.
 - A concise evidence summary exists (copy‑paste for PR).
 - The PR-ready summary includes **Change Classification (Primary/Tags)** per `.qfai/assistant/instructions/change-classification.md`.
@@ -341,12 +341,12 @@ If unknown, propose defaults and mark assumptions.
 
 Run (adjust as needed):
 
-- `qfai validate --fail-on error`
+- `qfai validate --profile verify --fail-on error`
 - `qfai report` (if used in this repo)
 
 Notes:
 
-- CI must run default/full validation only. `--phase refinement` is local-only.
+- CI must run default/full validation only. Partial profiles are local skill checks only.
 - If `QFAI-WAIVER-002` appears, remove the invalid waiver and resolve the underlying `error` finding.
 
 Capture:
@@ -454,7 +454,7 @@ Evidence must include:
 1. QFAI validation:
 
    ```bash
-   qfai validate --fail-on error
+   qfai validate --profile verify --fail-on error
    ```
 
 2. Repository standard gates (discover from package.json/CI/docs):

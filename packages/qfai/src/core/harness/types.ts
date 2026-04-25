@@ -1,8 +1,11 @@
 /**
- * Full-harness mode types.
+ * Legacy full-harness mode types (spec-0012).
  *
- * Full-harness now follows the reviewerScores/allItemsPass95 evidence schema
- * used by prototyping.json. Legacy weighted totals are intentionally excluded.
+ * NOTE: superseded by the cycle-centric `PrototypingCycleEvidence` /
+ * `PrototypingEvidenceRecord` schema in
+ * `packages/qfai/src/core/prototyping/types.ts` (spec-0017 REQ-0005).
+ * New code should consume the prototyping schema. Legacy callers remain
+ * supported for back-compat with spec-0012 callers.
  */
 
 export type FullHarnessAxisScore = {
@@ -37,7 +40,7 @@ export type FullHarnessIteration = {
   limitations: string[];
   evidenceRefs: FullHarnessEvidenceRefs;
   reviewerScores: FullHarnessReviewerScore[];
-  allItemsPass95: boolean;
+  allReviewerAxesPerfect100: boolean;
   stopReason?: string;
 };
 
@@ -52,7 +55,7 @@ export type FullHarnessScoreSnapshot = {
   axisCount: number;
   minScore: number | null;
   averageScore: number | null;
-  allItemsPass95: boolean;
+  allReviewerAxesPerfect100: boolean;
   commitSha: string;
 };
 
@@ -82,7 +85,7 @@ export type MeasurementInput = {
   discussionDirRelative?: string;
   trendRefs: string[];
   reviewerScores: FullHarnessReviewerScore[];
-  allItemsPass95: boolean;
+  allReviewerAxesPerfect100: boolean;
   stopReason?: string;
 };
 

@@ -120,7 +120,7 @@
 
 - EX-Ref: EX-0012-0094
 - AC-Refs: AC-0012-0012
-- `reviewerScores[]` and `allItemsPass95` are written into full-harness iterations.
+- `reviewerScores[]` and `allReviewerAxesPerfect100` are written into full-harness iterations.
 
 ## TC-0012-0305
 
@@ -150,7 +150,25 @@
 
 - EX-Ref: EX-0012-0092, EX-0012-0097
 - AC-Refs: AC-0012-0014
-- Termination reason is `converged` on `allItemsPass95=true` and `max-iterations` on exhausted budget.
+- Termination reason is `converged` on `allReviewerAxesPerfect100=true`; budget exhaustion without 100 remains rework/revise.
+
+## TC-0012-0314
+
+- EX-Ref: EX-0012-0103
+- AC-Refs: AC-0012-0017
+- Completion claim with any reviewer axis below 100 produces an error.
+
+## TC-0012-0315
+
+- EX-Ref: EX-0012-0104
+- AC-Refs: AC-0012-0017
+- Completion claim with all reviewer axes at 100 satisfies the perfect-score gate.
+
+## TC-0012-0316
+
+- EX-Ref: EX-0012-0104
+- AC-Refs: AC-0012-0016, AC-0012-0018
+- Completion claim requires post-selection polish checks and completion certificate.
 
 ## TC-0012-0310
 
@@ -180,3 +198,70 @@
 
 - `TC-0012-0001..TC-0012-0284` remain reserved traceability IDs for existing implementation/test slices.
 - Their pre-v1.8.1 weighted-total narratives are superseded by the current reviewer-score-centered execution model.
+
+## Absorbed Legacy Coverage Registry
+
+`spec-0017/` and `spec-0018/` are deleted, but their still-relevant test-case IDs
+remain registered here so existing traceability comments and reviewer artifacts
+continue to resolve.
+
+### Former spec-0017 test cases (absorbed)
+
+| TC-ID        | Title                                                                                                                                                                                                   | Location                                                                   |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| TC-0017-0001 | derivePrototypingObligations returns same obligations (except maxCycles)                                                                                                                                | `packages/qfai/tests/core/prototypingMode.test.ts`                         |
+| TC-0017-0002 | Config load rejects legacy `browserProvider` key                                                                                                                                                        | `packages/qfai/tests/core/config.test.ts`                                  |
+| TC-0017-0003 | Config load rejects legacy `renderProvider` key                                                                                                                                                         | `packages/qfai/tests/core/config.test.ts`                                  |
+| TC-0017-0004 | Config accepts `browserTool: playwright-cli`                                                                                                                                                            | `packages/qfai/tests/core/config.test.ts`                                  |
+| TC-0017-0005 | buildPlaywrightCliCommandPlan is deterministic                                                                                                                                                          | `packages/qfai/tests/core/prototyping/playwrightCliPlan.test.ts`           |
+| TC-0017-0006 | Command plan has canonical command structure                                                                                                                                                            | `packages/qfai/tests/core/prototyping/playwrightCliPlan.test.ts`           |
+| TC-0017-0007 | Legacy V1 cycle evidence slice still emits `.qfai/evidence/prototyping/iterations/<cycle>/...` paths (V2 round flow uses `.qfai/evidence/prototyping/rounds/<round>/...` and is covered by TC-0018-\*). | `packages/qfai/tests/core/prototyping/playwrightCliPlan.test.ts`           |
+| TC-0017-0008 | Review bundle has all required evaluator-facing fields                                                                                                                                                  | `packages/qfai/tests/core/prototyping/reviewBundle.test.ts`                |
+| TC-0017-0009 | Review bundle references command plan file                                                                                                                                                              | `packages/qfai/tests/core/prototyping/reviewBundle.test.ts`                |
+| TC-0017-0010 | PrototypingCycleEvidence schema round-trips                                                                                                                                                             | `packages/qfai/tests/core/prototyping/evidenceRecord.test.ts`              |
+| TC-0017-0011 | Canonical latest paths mirror latest cycle                                                                                                                                                              | `packages/qfai/tests/core/prototyping/evidenceRecord.test.ts`              |
+| TC-0017-0012 | FullHarnessIteration type is no longer the active schema                                                                                                                                                | `packages/qfai/tests/integration/spec0017Integration.test.ts`              |
+| TC-0017-0013 | Mode invariant validator emits `QFAI-PROT-MODE-001`                                                                                                                                                     | `packages/qfai/tests/validators/prototyping/modeInvariant.test.ts`         |
+| TC-0017-0014 | uiEvidenceArtifacts emits error in all modes on missing screenshot                                                                                                                                      | `packages/qfai/tests/validators/uiEvidenceArtifacts.test.ts`               |
+| TC-0017-0015 | reviewerGate emits error in all modes on non-PASS                                                                                                                                                       | `packages/qfai/tests/validators/prototyping/reviewerGate.test.ts`          |
+| TC-0017-0016 | executionPlan validator applies to all modes                                                                                                                                                            | `packages/qfai/tests/integration/prototypingSkillV1716Integration.test.ts` |
+| TC-0017-0017 | bestOfHistory missing emits error in all modes                                                                                                                                                          | `packages/qfai/tests/integration/spec0017Integration.test.ts`              |
+| TC-0017-0018 | breakthrough missing emits error in all modes                                                                                                                                                           | `packages/qfai/tests/integration/spec0017Integration.test.ts`              |
+| TC-0017-0019 | evidenceRefs placeholder rejected                                                                                                                                                                       | `packages/qfai/tests/core/prototypingEvidence.negative.test.ts`            |
+| TC-0017-0020 | Internal round-start artifact generation writes review bundle + command plan                                                                                                                            | `packages/qfai/tests/cli/prototyping.test.ts`                              |
+| TC-0017-0021 | Internal round-start artifact generation exits 0 on success                                                                                                                                             | `packages/qfai/tests/cli/prototyping.test.ts`                              |
+| TC-0017-0022 | Internal round-start artifact generation does not capture screenshots                                                                                                                                   | `packages/qfai/tests/cli/prototyping.test.ts`                              |
+| TC-0017-0023 | No playwright-mcp references remain in active repo surfaces                                                                                                                                             | `packages/qfai/tests/assets/noLegacyReferences.test.ts`                    |
+| TC-0017-0024 | No Node Playwright imports remain in production src                                                                                                                                                     | `packages/qfai/tests/assets/noLegacyReferences.test.ts`                    |
+| TC-0017-0025 | Skill directories are byte-identical                                                                                                                                                                    | `packages/qfai/tests/assets/assets.test.ts`                                |
+| TC-0017-0026 | capture-screenshots.js file does not exist                                                                                                                                                              | `packages/qfai/tests/assets/noLegacyReferences.test.ts`                    |
+| TC-0017-0027 | All three modes still validate under the same obligation set except budgets                                                                                                                             | `packages/qfai/tests/integration/spec0017Integration.test.ts`              |
+| TC-0017-0028 | `it.todo` / `test.todo` / `describe.todo` are detected                                                                                                                                                  | `packages/qfai/tests/validators/testTodoStubs.test.ts`                     |
+| TC-0017-0029 | `forbidTestTodoStubs` opt-out bypasses detection                                                                                                                                                        | `packages/qfai/tests/validators/testTodoStubs.test.ts`                     |
+| TC-0017-0030 | `validation.testStrategy.forbidTestTodoStubs` defaults to true                                                                                                                                          | `packages/qfai/tests/core/config.test.ts`                                  |
+| TC-0017-0031 | `qfai init` ships `.github/workflows/qfai-validate.yml`                                                                                                                                                 | `packages/qfai/tests/cli/init.test.ts`                                     |
+| TC-0017-0032 | `/qfai-implement` completion blocks on `QFAI-TEST-0001`                                                                                                                                                 | `packages/qfai/tests/skill/prototypingSkill*.test.ts`                      |
+
+### Former spec-0018 test cases (absorbed)
+
+Only the implementation-backed v2 cases are retained here. Draft-only cases
+that were never implemented were intentionally dropped during consolidation.
+
+| TC-ID        | Title                                                                | Location                                                                        |
+| ------------ | -------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| TC-0018-0001 | Candidate helpers validate IDs and dropped-at-round semantics        | `packages/qfai/tests/core/prototyping/candidateRound.test.ts`                   |
+| TC-0018-0002 | Round helpers derive fixed-round transitions and artifact paths      | `packages/qfai/tests/core/prototyping/candidateRound.test.ts`                   |
+| TC-0018-0003 | Candidate concept payloads remain first-class artifacts              | `packages/qfai/tests/core/prototyping/candidateRound.test.ts`                   |
+| TC-0018-0004 | Evaluator review v2 computes regression alerts                       | `packages/qfai/tests/core/prototyping/evaluatorReviewV2.test.ts`                |
+| TC-0018-0005 | Evaluator review v2 enforces at least 3 strengths                    | `packages/qfai/tests/core/prototyping/evaluatorReviewV2.test.ts`                |
+| TC-0018-0006 | Harvest builder preserves harvested elements and next-round target   | `packages/qfai/tests/core/prototyping/harvestAbsorption.test.ts`                |
+| TC-0018-0007 | Absorption builder pre-enumerates prior harvest IDs                  | `packages/qfai/tests/core/prototyping/harvestAbsorption.test.ts`                |
+| TC-0018-0008 | Absorption builder rejects round mismatches and missing concept refs | `packages/qfai/tests/core/prototyping/harvestAbsorption.test.ts`                |
+| TC-0018-0009 | Candidate Playwright plans use candidate-prefixed routes             | `packages/qfai/tests/core/prototyping/playwrightCliPlanV2.test.ts`              |
+| TC-0018-0010 | Candidate Playwright plans flatten candidates × screens              | `packages/qfai/tests/core/prototyping/playwrightCliPlanV2.test.ts`              |
+| TC-0018-0011 | Round review bundles include candidate concepts and prior refs       | `packages/qfai/tests/core/prototyping/reviewBundleV2.test.ts`                   |
+| TC-0018-0012 | Round review bundles persist round-scoped artifacts                  | `packages/qfai/tests/core/prototyping/reviewBundleV2.test.ts`                   |
+| TC-0018-0013 | Round evidence v2 records candidate-scoped refs                      | `packages/qfai/tests/core/prototyping/reimplementationEvidenceRecordV2.test.ts` |
+| TC-0018-0014 | Prototyping evidence record v2 writes `schemaVersion: "2.0"`         | `packages/qfai/tests/core/prototyping/reimplementationEvidenceRecordV2.test.ts` |
+| TC-0018-0015 | Internal round CLI parses and writes round artifacts                 | `packages/qfai/tests/cli/prototyping.test.ts`                                   |
+| TC-0018-0016 | Report summarizes `rounds[]` / `polishCycles[]` as roundLifecycle    | `packages/qfai/tests/core/report.test.ts`                                       |

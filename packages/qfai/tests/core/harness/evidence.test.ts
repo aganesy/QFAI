@@ -33,14 +33,14 @@ function makeIteration(overrides: Partial<FullHarnessIteration> = {}): FullHarne
         scores: [
           {
             axisId: "runtime",
-            score: 97,
+            score: 100,
             rationale: "runtime is solid",
             evidenceRefs: [".qfai/evidence/runtime-gate.json#/ui/0"],
           },
         ],
       },
     ],
-    allItemsPass95: true,
+    allReviewerAxesPerfect100: true,
     ...overrides,
   };
 }
@@ -71,9 +71,9 @@ describe("harness evidence history", () => {
             iteration: 1,
             reviewerCount: 1,
             axisCount: 1,
-            minScore: 97,
-            averageScore: 97,
-            allItemsPass95: true,
+            minScore: 100,
+            averageScore: 100,
+            allReviewerAxesPerfect100: true,
             commitSha: "abc123",
           },
         ],
@@ -91,7 +91,7 @@ describe("harness evidence history", () => {
     expect(history?.runId).toBe("fh-1");
     expect(history?.bestIteration).toBe(1);
     expect(history?.terminationReason).toBe("converged");
-    expect(history?.scoringTrace[0]?.allItemsPass95).toBe(true);
+    expect(history?.scoringTrace[0]?.allReviewerAxesPerfect100).toBe(true);
   });
 });
 
@@ -106,9 +106,9 @@ describe("validateHistoryConsistency", () => {
           iteration: 1,
           reviewerCount: 1,
           axisCount: 1,
-          minScore: 97,
-          averageScore: 97,
-          allItemsPass95: true,
+          minScore: 100,
+          averageScore: 100,
+          allReviewerAxesPerfect100: true,
           commitSha: "abc123",
         },
       ],

@@ -88,7 +88,7 @@ Use the shared schema.
 - Follow `.qfai/assistant/instructions/shared-skill-delegation-baseline.md#reviewer-gate-baseline`.
 - Reviewer checks:
   - required roles were delegated;
-  - validate evidence exists: `qfai validate --fail-on error` completed with `error=0`;
+  - doctor evidence exists: `qfai doctor --fail-on error` completed without failing checks;
   - Drift Protocol enforced;
   - test-layer policy enforced against `.qfai/assistant/steering/test-layers.md`;
   - tool-count heuristics are signals, not gates.

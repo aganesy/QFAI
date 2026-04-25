@@ -36,6 +36,12 @@ export type QfaiValidationConfig = {
     requireSizeTags: boolean;
     maxE2eScenarioRatio: number | null;
     maxE2eScenarioCount: number | null;
+    /**
+     * When true (default), `qfai validate` rejects `it.todo` / `test.todo` /
+     * `describe.todo` stubs in test files (spec-0012, QFAI-TEST-001).
+     * Set to false to opt out while migrating an existing project.
+     */
+    forbidTestTodoStubs: boolean;
   };
   traceability: {
     brMustHaveSc: boolean;
@@ -76,13 +82,18 @@ export type QfaiPrototypingCalibrationConfig = {
   packPath?: string;
 };
 
+export type QfaiPrototypingExecutionConfig = {
+  targetUrl?: string | null;
+  /**
+   * Browser tool handed to the AI evaluator sub-agent (spec-0012).
+   * The only accepted value is `"playwright-cli"`.
+   */
+  browserTool: "playwright-cli";
+};
+
 export type QfaiPrototypingConfig = {
   calibration?: QfaiPrototypingCalibrationConfig;
-  execution?: {
-    targetUrl?: string | null;
-    browserProvider?: string;
-    renderProvider?: string;
-  };
+  execution?: QfaiPrototypingExecutionConfig;
 };
 
 export type QfaiConfig = {
@@ -129,6 +140,7 @@ export const defaultConfig: QfaiConfig = {
       requireSizeTags: false,
       maxE2eScenarioRatio: null,
       maxE2eScenarioCount: null,
+      forbidTestTodoStubs: true,
     },
     traceability: {
       brMustHaveSc: true,
@@ -149,8 +161,7 @@ export const defaultConfig: QfaiConfig = {
     },
     execution: {
       targetUrl: null,
-      browserProvider: "playwright",
-      renderProvider: "playwright",
+      browserTool: "playwright-cli",
     },
   },
 };
@@ -366,6 +377,13 @@ function normalizeValidation(
         configPath,
         issues,
       ),
+      forbidTestTodoStubs: readBoolean(
+        testStrategyRaw?.forbidTestTodoStubs,
+        base.testStrategy.forbidTestTodoStubs,
+        "validation.testStrategy.forbidTestTodoStubs",
+        configPath,
+        issues,
+      ),
     },
     traceability: {
       brMustHaveSc: readBoolean(
@@ -510,6 +528,35 @@ function normalizePrototypingExecution(
     return base ? { ...base } : undefined;
   }
 
+  // spec-0012: legacy keys are rejected, not silently aliased.
+  for (const legacyKey of ["browserProvider", "renderProvider"] as const) {
+    if (raw[legacyKey] !== undefined) {
+      issues.push(
+        configIssue(
+          configPath,
+          `prototyping.execution.${legacyKey} は廃止されました (spec-0012)。` +
+            ` prototyping.execution.browserTool: playwright-cli に置き換えてください。`,
+        ),
+      );
+    }
+  }
+
+  const browserToolRaw = raw.browserTool;
+  let browserTool = "playwright-cli" as const;
+  if (browserToolRaw !== undefined) {
+    if (browserToolRaw !== "playwright-cli") {
+      issues.push(
+        configIssue(
+          configPath,
+          `prototyping.execution.browserTool は "playwright-cli" のみ有効です (spec-0012)。` +
+            ` 受け取った値: ${JSON.stringify(browserToolRaw)}`,
+        ),
+      );
+    } else {
+      browserTool = browserToolRaw;
+    }
+  }
+
   return {
     targetUrl:
       raw.targetUrl === null
@@ -520,20 +567,7 @@ function normalizePrototypingExecution(
             configPath,
             issues,
           ) ?? null),
-    browserProvider: readString(
-      raw.browserProvider,
-      base?.browserProvider ?? "playwright",
-      "prototyping.execution.browserProvider",
-      configPath,
-      issues,
-    ),
-    renderProvider: readString(
-      raw.renderProvider,
-      base?.renderProvider ?? "playwright",
-      "prototyping.execution.renderProvider",
-      configPath,
-      issues,
-    ),
+    browserTool,
   };
 }
 

@@ -464,6 +464,92 @@ describe("report contract coverage", () => {
     await rm(root, { recursive: true, force: true });
   });
 
+  it("summarizes round-based prototyping evidence in report data", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-report-core-v2-"));
+    const specsRoot = path.join(root, ".qfai", "specs");
+    const evidenceRoot = path.join(root, ".qfai", "evidence");
+
+    await mkdir(specsRoot, { recursive: true });
+    await mkdir(evidenceRoot, { recursive: true });
+    await writeSpecPack(specsRoot, "spec-0001", "SPEC-0001");
+    await writeFile(path.join(evidenceRoot, "prototyping.md"), "# Evidence\n", "utf-8");
+    await writeFile(
+      path.join(evidenceRoot, "prototyping.json"),
+      JSON.stringify({
+        schemaVersion: "2.0",
+        surface: "web",
+        specs: [{ specId: "spec-0001" }],
+        mode: {
+          effective: "standard",
+          source: "explicit-request",
+          rationale: "round workflow selected",
+        },
+        rounds: [
+          {
+            round: "r5",
+            candidates: [{ candidateId: "c1" }, { candidateId: "c2" }, { candidateId: "c3" }],
+            harvestRef: ".qfai/evidence/prototyping/rounds/r5/harvest.json",
+            narrowDecisionRef: ".qfai/evidence/prototyping/rounds/r5/narrow-decision.json",
+            absorptionPlanRef: null,
+            reimplementationRef: null,
+            allAxesPerfect100: false,
+          },
+          {
+            round: "r3",
+            candidates: [{ candidateId: "c1" }, { candidateId: "c2" }],
+            harvestRef: ".qfai/evidence/prototyping/rounds/r3/harvest.json",
+            narrowDecisionRef: ".qfai/evidence/prototyping/rounds/r3/narrow-decision.json",
+            absorptionPlanRef: ".qfai/evidence/prototyping/rounds/r3/absorption-plan.json",
+            reimplementationRef: ".qfai/evidence/prototyping/rounds/r3/reimplementation.json",
+            allAxesPerfect100: true,
+          },
+        ],
+        polishCycles: [
+          {
+            cycle: 1,
+            kind: "polish",
+            allAxesPerfect100: false,
+          },
+          {
+            cycle: 2,
+            kind: "completed",
+            allAxesPerfect100: true,
+          },
+        ],
+      }),
+      "utf-8",
+    );
+
+    const data = await createReportData(root);
+
+    expect(data.prototyping?.roundLifecycle).toEqual({
+      schemaVersion: "2.0",
+      rounds: 2,
+      roundIds: ["r5", "r3"],
+      candidatesObserved: 5,
+      perfectRounds: 1,
+      harvestArtifacts: 2,
+      narrowDecisions: 2,
+      absorptionPlans: 1,
+      reimplementations: 1,
+      polishCycles: 2,
+      completedPolishCycles: 1,
+      perfectPolishCycles: 1,
+      polishKinds: {
+        polish: 1,
+        completed: 1,
+      },
+    });
+
+    const markdown = formatReportMarkdown(data);
+    expect(markdown).toContain("### prototyping.roundLifecycle");
+    expect(markdown).toContain("- round ids: r5, r3");
+    expect(markdown).toContain("- reimplementations: 1");
+    expect(markdown).toContain("- polish kinds: polish=1, completed=1");
+
+    await rm(root, { recursive: true, force: true });
+  });
+
   it("excludes suppressed issues from summary table counts", () => {
     const data = createReportDataForLinks();
     data.summary.counts = { info: 0, warning: 0, error: 0 };
@@ -1076,6 +1162,21 @@ describe("report prototyping markdown", () => {
     overrides: Partial<NonNullable<ReportData["prototyping"]>> = {},
   ): NonNullable<ReportData["prototyping"]> {
     return {
+      roundLifecycle: {
+        schemaVersion: "2.0",
+        rounds: 2,
+        roundIds: ["r5", "r3"],
+        candidatesObserved: 8,
+        perfectRounds: 1,
+        harvestArtifacts: 2,
+        narrowDecisions: 2,
+        absorptionPlans: 1,
+        reimplementations: 1,
+        polishCycles: 2,
+        completedPolishCycles: 1,
+        perfectPolishCycles: 1,
+        polishKinds: { polish: 1, completed: 1 },
+      },
       mode: {
         requested: "full-harness",
         effective: "full-harness",
@@ -1156,6 +1257,8 @@ describe("report prototyping markdown", () => {
     expect(markdown).toContain("### prototyping.mode");
     expect(markdown).toContain("- requested: full-harness");
     expect(markdown).toContain("- effective: full-harness");
+    expect(markdown).toContain("### prototyping.roundLifecycle");
+    expect(markdown).toContain("- candidates observed: 8");
     expect(markdown).toContain("### prototyping.evidence");
     expect(markdown).toContain("- specs expected: 2");
     expect(markdown).toContain("- specs missing: spec-0002");
@@ -1182,6 +1285,7 @@ describe("report prototyping markdown", () => {
     const data = createReportDataForLinks();
     data.prototyping = buildPrototypingSummary({
       fullHarness: undefined,
+      roundLifecycle: undefined,
       render: undefined,
       browserQa: undefined,
       calibration: undefined,
@@ -1201,6 +1305,7 @@ describe("report prototyping markdown", () => {
     expect(markdown).toContain("### prototyping.mode");
     expect(markdown).toContain("### prototyping.evidence");
     expect(markdown).toContain("### prototyping.observability");
+    expect(markdown).not.toContain("### prototyping.roundLifecycle");
     expect(markdown).not.toContain("### prototyping.fullHarness");
     expect(markdown).not.toContain("### prototyping.render");
     expect(markdown).not.toContain("### prototyping.browserQa");

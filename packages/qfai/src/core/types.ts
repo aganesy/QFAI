@@ -30,7 +30,14 @@ export type ValidationCounts = {
   error: number;
 };
 
-export type ValidationPhase = "full" | "atdd" | "tdd" | "refinement";
+export type ValidationProfile =
+  | "discussion"
+  | "sdd"
+  | "prototyping"
+  | "atdd"
+  | "tdd"
+  | "verify"
+  | "full";
 
 export type ValidationTraceability = {
   sc: ScCoverage;
@@ -82,8 +89,7 @@ export type ValidationWaivers = {
 
 export type ValidationResult = {
   toolVersion: string;
-  // optional because this report section is emitted only when phase is specified
-  phase?: ValidationPhase;
+  profile?: ValidationProfile;
   issues: Issue[];
   counts: ValidationCounts;
   traceability: ValidationTraceability;

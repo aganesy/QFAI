@@ -4,7 +4,7 @@ export type PlateauSnapshot = {
   iteration: number;
   averageScore: number | null;
   minScore: number | null;
-  allItemsPass95: boolean;
+  allReviewerAxesPerfect100: boolean;
   commitSha: string;
 };
 
@@ -38,7 +38,7 @@ export function detectBreakthrough(input: {
   }
   if (!latest) {
     reasons.push("no-snapshots");
-  } else if (latest.allItemsPass95) {
+  } else if (latest.allReviewerAxesPerfect100) {
     reasons.push("already-converged");
   }
   if (recentAvgDeltas.length < input.plateauLookback) {

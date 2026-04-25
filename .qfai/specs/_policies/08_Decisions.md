@@ -1505,6 +1505,6 @@ discussion-20260416023323603（v1.7.15 rev8 leaf-field ref grammar closure）、
 
 ### DR-0241: Reviewer-Score Snapshot Evidence Model (2026-04-22)
 
-- Decision: full-harness の active evidence schema は `reviewerScores[]`、`allItemsPass95`、snapshot-based `scoringTrace[]`、`iterationBudget` とする
+- Decision: full-harness の active evidence schema は `reviewerScores[]`、`allReviewerAxesPerfect100`、snapshot-based `scoringTrace[]`、`iterationBudget` とする
 - Decision: `weightedTotal` / `deltaFromPrevious` は historical wording とし、current convergence contract には使わない
 - Rationale: `packages/qfai/src/core/harness/history.ts` / `resultWriter.ts` / `types.ts` の current implementation に同期するため

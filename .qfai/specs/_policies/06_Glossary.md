@@ -15,7 +15,7 @@
 | UI contract                       | `.qfai/contracts/ui/*.yaml`。declared screen / route / obligations の SSOT。                                                                     |
 | direct discussion-pack validation | discussion pack root を明示的に入力して canonical UIX validators を回すこと。repo-root downstream validate と区別する。                          |
 | best-of-history                   | 後続 iteration が常に最良とはみなさず、過去勝者を incumbent と比較し続ける運用。                                                                 |
-| plateau detector                  | `allItemsPass95`, score delta, diff lines を使って breakthrough branch を機械判定で発火するロジック。                                            |
+| plateau detector                  | `allReviewerAxesPerfect100`, score delta, diff lines を使って breakthrough branch を機械判定で発火するロジック。                                 |
 | mandatory UI evidence             | `.qfai/evidence/prototyping/screenshots/<screen-id>.png` と `.qfai/evidence/prototyping/html/<screen-id>.html`。declared screen ごとに両方必須。 |
 | contract readiness                | design/ui contracts が downstream execution に必要な最小 schema を満たしている状態。                                                             |
 | historical layer                  | `07_Decisions.md`, `09_delta.md`, `_policies/08_Decisions.md`, `_policies/10_delta.md`。superseded wording を残せる層。                          |

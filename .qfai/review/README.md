@@ -4,6 +4,12 @@
 
 `.qfai/review/` stores review artifacts as append-only `review-<timestamp>` packs.
 
+## Version control policy
+
+Review artifacts are **not versioned by default**.
+The `.gitignore` in this directory excludes all generated review packs.
+Only `.gitignore` and `README.md` are tracked.
+
 Each review pack must include:
 
 - `review_request.md`

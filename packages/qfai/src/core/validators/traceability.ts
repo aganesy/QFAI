@@ -7,7 +7,7 @@ import { extractIds } from "../ids.js";
 import { parseScenarioDocument, type ScenarioNode } from "../scenarioModel.js";
 import { collectSpecEntries, type SpecEntry } from "../specLayout.js";
 import { collectScTestReferences } from "../traceability.js";
-import type { Issue, ValidationPhase } from "../types.js";
+import type { Issue } from "../types.js";
 import { issue } from "./utils.js";
 
 const SC_TAG_RE = /^SC-\d{4}-\d{4}$/;
@@ -32,7 +32,7 @@ type LayeredEdgeData = {
 export async function validateTraceability(
   root: string,
   config: QfaiConfig,
-  phase: ValidationPhase,
+  options: { includeCodeReferences: boolean },
 ): Promise<Issue[]> {
   const issues: Issue[] = [];
   const specsRoot = resolvePath(root, config, "specsDir");
@@ -123,7 +123,7 @@ export async function validateTraceability(
     issues.push(...validateLayeredHeuristics(entry, edgeData));
   }
 
-  if (phase !== "refinement" && allLayeredScIds.size > 0) {
+  if (options.includeCodeReferences && allLayeredScIds.size > 0) {
     issues.push(
       ...(await validateLayeredScCodeReferences(root, config, allLayeredScIds, specsRoot)),
     );

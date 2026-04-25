@@ -29,19 +29,24 @@ describe("package-only SSOT prototyping assets", () => {
       readFile(evidenceReadmePath, "utf-8"),
     ]);
 
+    // The absorbed prototyping harness replaces render/browser QA artifacts
+    // with command-plans.json / review-bundle.json / evaluator-reviews/<cid>.json.
     for (const token of [
       "surface / mode",
       "full-harness",
+      "low-cost",
+      "standard",
       "web",
       "mobile",
       "desktop",
       "mixed",
-      "web",
-      "render.json",
-      "browser-qa.json",
+      "playwright-cli",
+      "command-plans.json",
+      "review-bundle.json",
+      "evaluator-reviews",
     ]) {
-      expect(skill).toContain(token);
-      expect(readme).toContain(token);
+      expect(skill, `SKILL.md missing token: ${token}`).toContain(token);
+      expect(readme, `evidence README missing token: ${token}`).toContain(token);
     }
   });
 

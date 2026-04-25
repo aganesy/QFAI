@@ -71,23 +71,30 @@ describe("parseArgs", () => {
     expect(parsed.options.guardrailsKeyword).toBe("layout");
   });
 
-  it("parses --phase for validate", () => {
+  it("parses --profile for validate", () => {
+    const cwd = process.cwd();
+    const parsed = parseArgs(["validate", "--profile", "atdd"], cwd);
+    expect(parsed.invalid).toBe(false);
+    expect(parsed.options.profile).toBe("atdd");
+  });
+
+  it("parses sdd profile for validate", () => {
+    const cwd = process.cwd();
+    const parsed = parseArgs(["validate", "--profile", "sdd"], cwd);
+    expect(parsed.invalid).toBe(false);
+    expect(parsed.options.profile).toBe("sdd");
+  });
+
+  it("marks invalid --profile value", () => {
+    const cwd = process.cwd();
+    const parsed = parseArgs(["validate", "--profile", "unknown"], cwd);
+    expect(parsed.invalid).toBe(true);
+    expect(parsed.options.help).toBe(true);
+  });
+
+  it("marks removed --phase option as invalid", () => {
     const cwd = process.cwd();
     const parsed = parseArgs(["validate", "--phase", "atdd"], cwd);
-    expect(parsed.invalid).toBe(false);
-    expect(parsed.options.phase).toBe("atdd");
-  });
-
-  it("parses refinement phase for validate", () => {
-    const cwd = process.cwd();
-    const parsed = parseArgs(["validate", "--phase", "refinement"], cwd);
-    expect(parsed.invalid).toBe(false);
-    expect(parsed.options.phase).toBe("refinement");
-  });
-
-  it("marks invalid --phase value", () => {
-    const cwd = process.cwd();
-    const parsed = parseArgs(["validate", "--phase", "unknown"], cwd);
     expect(parsed.invalid).toBe(true);
     expect(parsed.options.help).toBe(true);
   });

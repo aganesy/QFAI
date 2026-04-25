@@ -14,7 +14,7 @@
 | TC-08 | design contracts の canonical file set は `exploration-brief.yaml`, `evaluation-rubric.yaml`, `evaluator-calibration.yaml`, `selected-direction.yaml`, `design-system.yaml` とする | exploration-first downstream を固定する | `QFAI-DCON-*` validator 対象                             |
 | TC-09 | UI contracts は `.qfai/contracts/ui/*.yaml` を canonical set とする                                                                                                                | screen contract truth source を固定する | downstream evaluator / validator の入力制約              |
 | TC-10 | `qfai prototyping` CLI と removed runtime/full-harness engine を public contract として再導入しない                                                                                | skill-first posture を維持する          | public interface の制約                                  |
-| TC-11 | breakthrough trigger は `allItemsPass95`, score delta, diff lines を使う deterministic な機械判定とする                                                                            | 再現性と監査性を保つ                    | `.qfai/evidence/breakthrough.json` が必要                |
+| TC-11 | breakthrough trigger は `allReviewerAxesPerfect100`, score delta, diff lines を使う deterministic な機械判定とする                                                                 | 再現性と監査性を保つ                    | `.qfai/evidence/breakthrough.json` が必要                |
 | TC-12 | design system は discussion 初期入力ではなく、prototyping の winner direction から抽出する                                                                                         | 早期収束を防ぐ                          | discussion / SDD / prototyping の責務分離                |
 
 ## Operational Constraints

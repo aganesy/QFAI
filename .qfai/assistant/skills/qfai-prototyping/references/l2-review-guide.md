@@ -2,14 +2,19 @@
 
 L2 checks product experience and design alignment.
 
-## Inputs
+## Inputs (read from review-bundle.json)
 
-- screenshots
-- HTML snapshots
-- `.qfai/contracts/design/evaluation-axes.yaml`
-- `.qfai/contracts/design/anchor-selection.yaml`
+- screenshots (round/candidate path, per declared screen)
+- HTML snapshots (round/candidate path, per declared screen)
+- accessibility snapshots (round/candidate path, per declared screen)
+- Playwright CLI command log (round/candidate path, per declared screen)
+- `.qfai/contracts/design/evaluation-rubric.yaml`
+- `.qfai/contracts/design/selected-direction.yaml`
 - `.qfai/contracts/design/design-system.yaml`
-- previous iteration score
+- legacy inputs, if present (skip if absent):
+  - `.qfai/contracts/design/evaluation-axes.yaml`
+  - `.qfai/contracts/design/anchor-selection.yaml`
+- previous round score
 
 ## 3-layer evaluation family
 
@@ -27,13 +32,14 @@ L2 must explicitly use all of:
 - product-specific differentiation is visible
 - selected anchor direction is reflected in the current UI
 - design system checklist is respected
+- interaction outcomes in the command log are consistent with the experience the designer intended
 - experience findings are recorded separately from blocking L1 findings
 
 ## Output
 
-Return:
+Write to `evaluator-reviews/<candidate-id>.json` with:
 
 - per-axis findings
 - revise/manual-review classification
-- a numeric score per axis in the range `0.0..1.0`
-- rationale tied to screenshot/HTML evidence and axis refs
+- a numeric score per axis in the range `0..100`
+- rationale tied to screenshot / HTML / snapshot / command log refs and axis refs (all entries in `evidenceRefs[]` MUST be concrete paths to existing artifacts)

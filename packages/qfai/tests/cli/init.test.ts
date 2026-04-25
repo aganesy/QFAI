@@ -114,6 +114,25 @@ describe("qfai init", { timeout: 60000 }, () => {
     }
   });
 
+  // TC-0017-0031 — qfai init ships GitHub Actions workflow for qfai validate
+  it("ships .github/workflows/qfai-validate.yml on init (spec-0017 REQ-0009)", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-workflow-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      const workflowPath = path.join(root, ".github", "workflows", "qfai-validate.yml");
+      await expect(access(workflowPath)).resolves.toBeUndefined();
+
+      const content = await readFile(workflowPath, "utf-8");
+      expect(content).toContain("qfai validate --profile full --fail-on error");
+      expect(content).toContain("actions/checkout@v4");
+      expect(content).toContain("actions/setup-node@v4");
+      expect(content).toContain("QFAI-TEST-001");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("ignores every discussion child except README.md on init", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
     try {

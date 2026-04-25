@@ -8,9 +8,26 @@ axes:
     weight: 1
   - id: functionality
     weight: 1
-hard_floors:
-  - functionality
-  - accessibility-risk
+  - id: accessibility-risk
+    weight: 1
+  - id: implementation-plausibility
+    weight: 1
 weighted_axes:
   - design-quality
   - originality
+hard_floors:
+  - id: functionality
+    min_score: 80
+  - id: accessibility-risk
+    min_score: 80
+  - id: conceptFit
+    min_score: 85
+absorbable_categories:
+  - layout
+  - interaction
+  - content-hierarchy
+  - visual-language
+  - navigation
+  - motion
+coherence:
+  regression_threshold: 5

@@ -108,6 +108,20 @@ jobs:
       - name: Run build & pack verification
         run: pnpm ci:build-verify
 
+      - name: QFAI self-validate this repo (spec-0017 REQ-0009 dogfooding)
+        shell: bash
+        run: |
+          set -euo pipefail
+          # `tdd` profile includes QFAI-TEST-001 (forbidden it.todo/test.todo
+          # stubs) and the TDD list / SC traceability gates. Running it against
+          # the repo root (`--root .`) means QFAI ships nothing to downstream
+          # users that its own repo wouldn't pass.
+          node packages/qfai/dist/cli/index.mjs validate \
+            --profile tdd \
+            --fail-on error \
+            --format github \
+            --root .
+
       - name: Run qfai validate gate (fail on error)
         shell: bash
         run: |

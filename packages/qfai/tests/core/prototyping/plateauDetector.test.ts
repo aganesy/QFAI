@@ -23,26 +23,26 @@ describe("detectBreakthrough", () => {
     expect(result.triggerReasons).not.toContain("already-converged");
   });
 
-  it("最新 snapshot が allItemsPass95=true のときは already-converged を返す", () => {
+  it("最新 snapshot が allReviewerAxesPerfect100=true のときは already-converged を返す", () => {
     const result = detectBreakthrough({
       scoringTrace: [
         {
           iteration: 1,
-          averageScore: 0.8,
-          minScore: 0.79,
-          allItemsPass95: false,
+          averageScore: 80,
+          minScore: 79,
+          allReviewerAxesPerfect100: false,
           commitSha: "a".repeat(40),
         },
         {
           iteration: 2,
-          averageScore: 0.96,
-          minScore: 0.95,
-          allItemsPass95: true,
+          averageScore: 100,
+          minScore: 100,
+          allReviewerAxesPerfect100: true,
           commitSha: "b".repeat(40),
         },
       ],
       diffLines: 0,
-      plateauDelta: 0.02,
+      plateauDelta: 2,
       plateauLookback: 1,
       breakthrough,
     });
@@ -56,28 +56,28 @@ describe("detectBreakthrough", () => {
       scoringTrace: [
         {
           iteration: 1,
-          averageScore: 0.82,
-          minScore: 0.8,
-          allItemsPass95: false,
+          averageScore: 82,
+          minScore: 80,
+          allReviewerAxesPerfect100: false,
           commitSha: "a".repeat(40),
         },
         {
           iteration: 2,
-          averageScore: 0.81,
-          minScore: 0.79,
-          allItemsPass95: false,
+          averageScore: 81,
+          minScore: 79,
+          allReviewerAxesPerfect100: false,
           commitSha: "b".repeat(40),
         },
         {
           iteration: 3,
-          averageScore: 0.8,
-          minScore: 0.78,
-          allItemsPass95: false,
+          averageScore: 80,
+          minScore: 78,
+          allReviewerAxesPerfect100: false,
           commitSha: "c".repeat(40),
         },
       ],
       diffLines: 0,
-      plateauDelta: 0.02,
+      plateauDelta: 2,
       plateauLookback: 2,
       breakthrough,
     });

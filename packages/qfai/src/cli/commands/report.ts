@@ -3,10 +3,10 @@ import path from "node:path";
 
 import { loadConfig, resolvePath } from "../../core/config.js";
 import { normalizeValidationResult } from "../../core/normalize.js";
-import { buildCiRefinementIssue, createPhaseGuardResult } from "../../core/phasePolicy.js";
+import { buildCiProfileIssue, createProfileGuardResult } from "../../core/phasePolicy.js";
 import { createReportData, formatReportJson, formatReportMarkdown } from "../../core/report.js";
 import { writeSpecPackReports } from "../../core/specPackReport.js";
-import type { ValidationPhase, ValidationResult } from "../../core/types.js";
+import type { ValidationProfile, ValidationResult } from "../../core/types.js";
 import { validateProject } from "../../core/validate.js";
 import { error, info, warn } from "../lib/logger.js";
 import { warnIfTruncated } from "../lib/warnings.js";
@@ -18,23 +18,27 @@ export type ReportOptions = {
   inputPath?: string;
   runValidate?: boolean;
   baseUrl?: string;
-  phase?: ValidationPhase;
+  profile?: ValidationProfile;
 };
 
 export async function runReport(options: ReportOptions): Promise<void> {
   const root = path.resolve(options.root);
   const configResult = await loadConfig(root);
   let validation: ValidationResult;
-  let blockedByPhaseGuard = false;
+  let blockedByProfileGuard = false;
   if (options.runValidate) {
     if (options.inputPath) {
       warn("report: --run-validate が指定されたため --in は無視します。");
     }
-    const blockedIssue = buildCiRefinementIssue(options.phase);
+    const blockedIssue = buildCiProfileIssue(options.profile);
     const result = blockedIssue
-      ? await createPhaseGuardResult("refinement", blockedIssue)
-      : await validateProject(root, configResult, options.phase ? { phase: options.phase } : {});
-    blockedByPhaseGuard = blockedIssue !== null;
+      ? await createProfileGuardResult(options.profile ?? "full", blockedIssue)
+      : await validateProject(
+          root,
+          configResult,
+          options.profile ? { profile: options.profile } : {},
+        );
+    blockedByProfileGuard = blockedIssue !== null;
     const normalized = normalizeValidationResult(root, result);
     await writeValidationResult(root, configResult.config.output.validateJsonPath, normalized);
     validation = normalized;
@@ -83,9 +87,9 @@ export async function runReport(options: ReportOptions): Promise<void> {
   await writeFile(outPath, `${output}\n`, "utf-8");
   await writeSpecPackReports(root, configResult.config);
 
-  if (blockedByPhaseGuard) {
+  if (blockedByProfileGuard) {
     error(
-      "report: CI では --phase refinement を使用できません。--phase full（または指定なし）で再実行してください。",
+      "report: CI では部分 validation profile を使用できません。--profile full / --profile verify / --profile tdd（または --profile 指定なし）で再実行してください。",
     );
     process.exitCode = 1;
   }
@@ -112,13 +116,16 @@ function isValidationResult(value: unknown): value is ValidationResult {
   if (typeof record.toolVersion !== "string") {
     return false;
   }
-  const phase = record.phase;
+  const profile = record.profile;
   if (
-    phase !== undefined &&
-    phase !== "full" &&
-    phase !== "atdd" &&
-    phase !== "tdd" &&
-    phase !== "refinement"
+    profile !== undefined &&
+    profile !== "discussion" &&
+    profile !== "sdd" &&
+    profile !== "prototyping" &&
+    profile !== "atdd" &&
+    profile !== "tdd" &&
+    profile !== "verify" &&
+    profile !== "full"
   ) {
     return false;
   }

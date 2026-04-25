@@ -34,14 +34,14 @@ describe("buildFullHarnessResult", () => {
               scores: [
                 {
                   axisId: "runtime",
-                  score: 96,
+                  score: 100,
                   rationale: "passed",
                   evidenceRefs: [".qfai/evidence/runtime-gate.json#/ui/0"],
                 },
               ],
             },
           ],
-          allItemsPass95: true,
+          allReviewerAxesPerfect100: true,
         },
       ],
       bestIteration: 1,
@@ -50,9 +50,9 @@ describe("buildFullHarnessResult", () => {
           iteration: 1,
           reviewerCount: 1,
           axisCount: 1,
-          minScore: 96,
-          averageScore: 96,
-          allItemsPass95: true,
+          minScore: 100,
+          averageScore: 100,
+          allReviewerAxesPerfect100: true,
           commitSha: "abc123",
         },
       ],
@@ -101,10 +101,10 @@ describe("buildFullHarnessResult", () => {
     );
 
     expect(result.evaluationSummary).toEqual({
-      allItemsPass95: true,
+      allReviewerAxesPerfect100: true,
       bestIteration: 1,
-      minScore: 96,
-      averageScore: 96,
+      minScore: 100,
+      averageScore: 100,
       reviewerCount: 1,
       axisCount: 1,
     });

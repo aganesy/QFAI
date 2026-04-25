@@ -1,5 +1,5 @@
 /**
- * ModeGuidance — full-harness-only advisory for prototyping.
+ * ModeGuidance — advisory for when runtime-proof-heavy prototyping is recommended.
  * SPEC-0032
  *
  * Advisory only — does not change mode.
@@ -9,8 +9,9 @@ import type { ModeRecommendation, ProjectCharacteristics } from "./types.js";
 
 export class ModeGuidance {
   /**
-   * `packages/qfai` v1.7.15 prototyping is full-harness only.
-   * Project characteristics are retained only to explain why runtime proof is required.
+   * The current guidance still recommends full-harness when stronger runtime proof
+   * is desirable. Project characteristics are retained only to explain that
+   * recommendation; they do not mutate the selected mode.
    */
   recommend(characteristics: ProjectCharacteristics): ModeRecommendation {
     const { fileCount, testRatio, specCoverage, codeComplexity } = characteristics;
@@ -33,8 +34,8 @@ export class ModeGuidance {
       mode: "full-harness",
       reasoning:
         reasons.length > 0
-          ? `packages/qfai v1.7.15 prototyping is full-harness only. Runtime proof is required: ${reasons.join("; ")}.`
-          : "packages/qfai v1.7.15 prototyping is full-harness only. Runtime proof remains required even when project characteristics are favorable.",
+          ? `packages/qfai prototyping recommends full-harness when stronger runtime proof is needed: ${reasons.join("; ")}.`
+          : "packages/qfai prototyping currently recommends full-harness as the strongest runtime-proof mode, even when project characteristics are favorable.",
     };
   }
 }

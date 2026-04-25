@@ -289,6 +289,7 @@ Completion MUST NOT be declared when any of the following are true:
 - Items with `todo`, `red`, `green`, or `refactor` status still exist (for spec-level completion)
 - Parallel slices were used but integration verify has not been run post-merge
 - Checkpoint boundary was reached but verification was not executed
+- `it.todo(...)` / `test.todo(...)` / `describe.todo(...)` stubs remain in any file covered by `validation.traceability.testFileGlobs` (`QFAI-TEST-001`, spec-0012). Implement the body or delete the stub — an opt-out via `validation.testStrategy.forbidTestTodoStubs: false` is permitted only with an accompanying waiver DR-ID.
 
 ## Evidence (MANDATORY)
 
@@ -335,6 +336,7 @@ Each TDD item MUST have fresh evidence containing at minimum:
 - [ ] No backward transitions occurred.
 - [ ] Exception items have DR-IDs recorded.
 - [ ] All tests pass.
+- [ ] `qfai validate --profile tdd --fail-on error` passes with zero `QFAI-TEST-001` findings (no `it.todo` / `test.todo` / `describe.todo` stubs remain; spec-0012).
 
 ## Completion Checklist (MUST)
 
@@ -349,7 +351,7 @@ Each TDD item MUST have fresh evidence containing at minimum:
 When this skill is complete, provide a final user-facing completion message and enumerate all actionable next steps.
 
 - Verify gates: `/qfai-verify`.
-  Action: run `qfai validate --fail-on error` and confirm all gates pass.
+  Action: run `qfai validate --profile tdd --fail-on error` for this skill, then `/qfai-verify` for full-scan approval.
 - Spec updates needed: `/qfai-sdd`.
   Action: update spec artifacts if implementation revealed scope changes.
 - Acceptance tests: `/qfai-atdd`.

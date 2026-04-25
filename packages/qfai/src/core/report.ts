@@ -227,9 +227,26 @@ export type ReportFullHarnessExecution = {
   browserQaTotalFindings: number;
 };
 
+export type ReportRoundLifecycle = {
+  schemaVersion: "2.0";
+  rounds: number;
+  roundIds: string[];
+  candidatesObserved: number;
+  perfectRounds: number;
+  harvestArtifacts: number;
+  narrowDecisions: number;
+  absorptionPlans: number;
+  reimplementations: number;
+  polishCycles: number;
+  completedPolishCycles: number;
+  perfectPolishCycles: number;
+  polishKinds: Record<string, number>;
+};
+
 export type ReportPrototypingSummary = {
   surfaceClassification?: ReportSurfaceClassification;
   fullHarnessExecution?: ReportFullHarnessExecution;
+  roundLifecycle?: ReportRoundLifecycle;
   mode: {
     requested?: string;
     effective: string;
@@ -1234,6 +1251,31 @@ export function formatReportMarkdown(
       lines.push("");
     }
 
+    if (data.prototyping.roundLifecycle) {
+      const lifecycle = data.prototyping.roundLifecycle;
+      lines.push("### prototyping.roundLifecycle");
+      lines.push("");
+      lines.push(`- schemaVersion: ${lifecycle.schemaVersion}`);
+      lines.push(`- rounds: ${lifecycle.rounds}`);
+      lines.push(`- round ids: ${lifecycle.roundIds.join(", ") || "(none)"}`);
+      lines.push(`- candidates observed: ${lifecycle.candidatesObserved}`);
+      lines.push(`- harvest artifacts: ${lifecycle.harvestArtifacts}`);
+      lines.push(`- narrow decisions: ${lifecycle.narrowDecisions}`);
+      lines.push(`- absorption plans: ${lifecycle.absorptionPlans}`);
+      lines.push(`- reimplementations: ${lifecycle.reimplementations}`);
+      lines.push(`- perfect rounds: ${lifecycle.perfectRounds}`);
+      lines.push(`- polish cycles: ${lifecycle.polishCycles}`);
+      lines.push(`- completed polish cycles: ${lifecycle.completedPolishCycles}`);
+      lines.push(`- perfect polish cycles: ${lifecycle.perfectPolishCycles}`);
+      if (Object.keys(lifecycle.polishKinds).length > 0) {
+        const kinds = Object.entries(lifecycle.polishKinds)
+          .map(([kind, count]) => `${kind}=${count}`)
+          .join(", ");
+        lines.push(`- polish kinds: ${kinds}`);
+      }
+      lines.push("");
+    }
+
     lines.push("### prototyping.mode");
     lines.push("");
     lines.push(`- requested: ${data.prototyping.mode.requested ?? "(none)"}`);
@@ -1709,6 +1751,8 @@ async function collectPrototypingSummary(
   const obligations = derivePrototypingObligations({ surface: effectiveSurface, effectiveMode });
 
   const fullHarness = asRecord(record.fullHarness);
+  const rounds = Array.isArray(record.rounds) ? record.rounds : [];
+  const polishCycles = Array.isArray(record.polishCycles) ? record.polishCycles : [];
   const runtimeGate = asRecord(record.runtimeGate);
   const uiFidelity = asRecord(record.uiFidelity);
   const renderBundle = await readRenderEvidenceBundle(path.join(evidenceRoot, "render.json"));
@@ -1793,8 +1837,93 @@ async function collectPrototypingSummary(
       : {}),
   };
 
+  const roundLifecycle =
+    record.schemaVersion === "2.0" || rounds.length > 0 || polishCycles.length > 0
+      ? (() => {
+          const polishKinds: Record<string, number> = {};
+          let candidatesObserved = 0;
+          let perfectRounds = 0;
+          let harvestArtifacts = 0;
+          let narrowDecisions = 0;
+          let absorptionPlans = 0;
+          let reimplementations = 0;
+          let completedPolishCycles = 0;
+          let perfectPolishCycles = 0;
+
+          for (const item of rounds) {
+            const round = asRecord(item);
+            if (!round) {
+              continue;
+            }
+
+            const candidates = Array.isArray(round.candidates) ? round.candidates : [];
+            candidatesObserved += candidates.length;
+
+            if (round.allAxesPerfect100 === true) {
+              perfectRounds += 1;
+            }
+            if (typeof round.harvestRef === "string" && round.harvestRef.length > 0) {
+              harvestArtifacts += 1;
+            }
+            if (typeof round.narrowDecisionRef === "string" && round.narrowDecisionRef.length > 0) {
+              narrowDecisions += 1;
+            }
+            if (typeof round.absorptionPlanRef === "string" && round.absorptionPlanRef.length > 0) {
+              absorptionPlans += 1;
+            }
+            if (
+              typeof round.reimplementationRef === "string" &&
+              round.reimplementationRef.length > 0
+            ) {
+              reimplementations += 1;
+            }
+          }
+
+          for (const item of polishCycles) {
+            const cycle = asRecord(item);
+            if (!cycle) {
+              continue;
+            }
+
+            if (typeof cycle.kind === "string" && cycle.kind.length > 0) {
+              polishKinds[cycle.kind] = (polishKinds[cycle.kind] ?? 0) + 1;
+              if (cycle.kind === "completed") {
+                completedPolishCycles += 1;
+              }
+            }
+
+            if (cycle.allAxesPerfect100 === true) {
+              perfectPolishCycles += 1;
+            }
+          }
+
+          return {
+            schemaVersion: "2.0" as const,
+            rounds: rounds.length,
+            roundIds: rounds
+              .map((item) => asRecord(item))
+              .flatMap((round) =>
+                round && typeof round.round === "string" && round.round.length > 0
+                  ? [round.round]
+                  : [],
+              ),
+            candidatesObserved,
+            perfectRounds,
+            harvestArtifacts,
+            narrowDecisions,
+            absorptionPlans,
+            reimplementations,
+            polishCycles: polishCycles.length,
+            completedPolishCycles,
+            perfectPolishCycles,
+            polishKinds,
+          };
+        })()
+      : undefined;
+
   return {
     surfaceClassification,
+    ...(roundLifecycle ? { roundLifecycle } : {}),
     mode: {
       ...(resolvedMode.requested ? { requested: resolvedMode.requested } : {}),
       effective: effectiveMode,
