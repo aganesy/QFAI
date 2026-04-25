@@ -121,6 +121,12 @@ for (const removedDir of [".claude", ".codex"]) {
 // at init time, not from the packed tarball.
 const rootGithubDir = path.join(rootAssetsDir, ".github");
 if (existsSync(rootGithubDir)) {
+  // Confirm `.github` itself is a directory before iterating; otherwise
+  // readdirSync would surface as an ENOTDIR stack trace and obscure the
+  // real packaging defect.
+  if (!lstatSync(rootGithubDir).isDirectory()) {
+    throw new Error("assets/init/root/.github must be a directory (got non-directory entry).");
+  }
   const allowedRootGithubEntries = new Set(["workflows"]);
   for (const entry of readdirSync(rootGithubDir)) {
     if (!allowedRootGithubEntries.has(entry)) {

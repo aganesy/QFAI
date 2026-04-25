@@ -17,7 +17,7 @@
  * QFAI:SPEC-0017:TC-0017-0004 — browserTool: playwright-cli accepted
  * QFAI:SPEC-0017:TC-0017-0005 — Deterministic Playwright CLI command plan
  * QFAI:SPEC-0017:TC-0017-0006 — Canonical command structure
- * QFAI:SPEC-0017:TC-0017-0007 — Output paths under iterations/<cycle>/
+ * QFAI:SPEC-0017:TC-0017-0007 — Output paths under iterations/<cycle>/ (legacy V1 slice; V2 round flow under .qfai/evidence/prototyping/rounds/)
  * QFAI:SPEC-0017:TC-0017-0008 — Review bundle required fields
  * QFAI:SPEC-0017:TC-0017-0009 — Review bundle references command plan
  * QFAI:SPEC-0017:TC-0017-0010 — PrototypingCycleEvidence schema round-trip

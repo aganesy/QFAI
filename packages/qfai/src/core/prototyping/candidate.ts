@@ -2,7 +2,15 @@ import type { ExplorationRound } from "./round.js";
 
 const CANDIDATE_ID_PATTERN = /^c[1-9]\d*$/;
 
-export type CandidateId = `c${number}`;
+// Nominal/brand type. Previously this was the template-literal type
+// `c${number}`, but `${number}` accepts any numeric literal including
+// `c0`, `c-1`, `c1.5`, and `cNaN`, none of which the runtime regex
+// CANDIDATE_ID_PATTERN allows. The brand keeps the value a plain string
+// at runtime while forcing every CandidateId to flow through
+// `parseCandidateIds` (the only public mint), so the type and the
+// validator agree.
+declare const CandidateIdBrand: unique symbol;
+export type CandidateId = string & { readonly [CandidateIdBrand]: "CandidateId" };
 
 export type Candidate = {
   candidateId: CandidateId;

@@ -112,7 +112,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          # `tdd` profile includes QFAI-TEST-0001 (forbidden it.todo/test.todo
+          # `tdd` profile includes QFAI-TEST-001 (forbidden it.todo/test.todo
           # stubs) and the TDD list / SC traceability gates. Running it against
           # the repo root (`--root .`) means QFAI ships nothing to downstream
           # users that its own repo wouldn't pass.

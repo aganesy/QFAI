@@ -3,7 +3,7 @@
  *
  * QFAI:SPEC-0017:TC-0017-0005 — deterministic plan
  * QFAI:SPEC-0017:TC-0017-0006 — canonical command structure
- * QFAI:SPEC-0017:TC-0017-0007 — output paths under iterations/<cycle>/
+ * QFAI:SPEC-0017:TC-0017-0007 — output paths under iterations/<cycle>/ (legacy V1 slice; V2 round flow under .qfai/evidence/prototyping/rounds/)
  */
 import { describe, expect, it } from "vitest";
 

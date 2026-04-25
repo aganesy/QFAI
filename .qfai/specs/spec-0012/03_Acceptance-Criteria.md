@@ -127,9 +127,9 @@ The following acceptance IDs remain valid after deleting `spec-0017/` and
 | AC-0017-0013 | Runtime `.qfai` and packaged init assets remain synchronized.                     |
 | AC-0017-0014 | Review bundles still contain the full evaluator input set.                        |
 | AC-0017-0015 | Best-of-history, breakthrough, and reviewer PASS remain required in every mode.   |
-| AC-0017-0016 | `qfai validate` still emits `QFAI-TEST-0001` per todo stub occurrence.            |
+| AC-0017-0016 | `qfai validate` still emits `QFAI-TEST-001` per todo stub occurrence.             |
 | AC-0017-0017 | `qfai init` still ships the `qfai-validate.yml` workflow.                         |
-| AC-0017-0018 | `/qfai-implement` still blocks completion while `QFAI-TEST-0001` findings remain. |
+| AC-0017-0018 | `/qfai-implement` still blocks completion while `QFAI-TEST-001` findings remain.  |
 | AC-0017-0019 | The QFAI repo still self-validates its shipped test-todo gate in CI.              |
 
 ### Former spec-0018 acceptance criteria (absorbed)

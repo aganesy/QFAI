@@ -80,6 +80,11 @@ export type PrototypingEvidenceRecordV2 = {
   breakthrough: PrototypingEvidenceRecord["breakthrough"];
   reviewerGate: PrototypingEvidenceRecord["reviewerGate"];
   completionClaimed: boolean;
+  // validatePrototypingEvidence emits QFAI-PROT-289 ("completionCertificate is
+  // required when completion is claimed") whenever completionClaimed is true and
+  // record.completionCertificate is absent. Surface the certificate on the V2
+  // type/builder so a record with completionClaimed=true is not self-contradictory.
+  completionCertificate?: Record<string, unknown>;
   // derivePrototypingObligations sets requireRuntimeGate / requireUiFidelity = true
   // for every mode, and validatePrototypingEvidence checks `record.runtimeGate` /
   // `record.uiFidelity` directly. Downstream writers (bundleWriter / uiFidelityBuilder)
@@ -238,6 +243,7 @@ export type BuildPrototypingEvidenceRecordV2Input = {
   breakthrough: PrototypingEvidenceRecordV2["breakthrough"];
   reviewerGate: PrototypingEvidenceRecordV2["reviewerGate"];
   completionClaimed?: boolean;
+  completionCertificate?: PrototypingEvidenceRecordV2["completionCertificate"];
   runtimeGate?: PrototypingEvidenceRecordV2["runtimeGate"];
   uiFidelity?: PrototypingEvidenceRecordV2["uiFidelity"];
 };
@@ -245,6 +251,15 @@ export type BuildPrototypingEvidenceRecordV2Input = {
 export function buildPrototypingEvidenceRecordV2(
   input: BuildPrototypingEvidenceRecordV2Input,
 ): PrototypingEvidenceRecordV2 {
+  const completionClaimed = input.completionClaimed ?? false;
+  // QFAI-PROT-289 hard-fails any record that claims completion without a
+  // completionCertificate. Refuse to emit such a record from the builder so
+  // callers cannot accidentally produce a guaranteed-invalid prototyping.json.
+  if (completionClaimed && input.completionCertificate === undefined) {
+    throw new Error(
+      "buildPrototypingEvidenceRecordV2: completionClaimed=true requires completionCertificate.",
+    );
+  }
   return {
     schemaVersion: "2.0",
     surface: input.surface,
@@ -260,7 +275,10 @@ export function buildPrototypingEvidenceRecordV2(
     bestOfHistory: input.bestOfHistory,
     breakthrough: input.breakthrough,
     reviewerGate: input.reviewerGate,
-    completionClaimed: input.completionClaimed ?? false,
+    completionClaimed,
+    ...(input.completionCertificate !== undefined
+      ? { completionCertificate: input.completionCertificate }
+      : {}),
     ...(input.runtimeGate !== undefined ? { runtimeGate: input.runtimeGate } : {}),
     ...(input.uiFidelity !== undefined ? { uiFidelity: input.uiFidelity } : {}),
   };
