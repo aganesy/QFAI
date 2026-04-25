@@ -16,9 +16,12 @@ weighted_axes:
   - design-quality
   - originality
 hard_floors:
-  functionality: 80
-  accessibility-risk: 80
-  conceptFit: 85
+  - id: functionality
+    min_score: 80
+  - id: accessibility-risk
+    min_score: 80
+  - id: conceptFit
+    min_score: 85
 absorbable_categories:
   - layout
   - interaction

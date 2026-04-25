@@ -127,7 +127,7 @@ describe("qfai init", { timeout: 60000 }, () => {
       expect(content).toContain("qfai validate --profile full --fail-on error");
       expect(content).toContain("actions/checkout@v4");
       expect(content).toContain("actions/setup-node@v4");
-      expect(content).toContain("QFAI-TEST-0001");
+      expect(content).toContain("QFAI-TEST-001");
     } finally {
       await rm(root, { recursive: true, force: true });
     }

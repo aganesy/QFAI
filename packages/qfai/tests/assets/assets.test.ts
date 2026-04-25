@@ -399,7 +399,7 @@ describe("assets guardrails", { timeout: 30000 }, () => {
 
     expect(content).toContain("name: qfai validate");
     expect(content).toContain("qfai validate --profile full --fail-on error");
-    expect(content).toContain("QFAI-TEST-0001");
+    expect(content).toContain("QFAI-TEST-001");
     expect(content).toMatch(/actions\/checkout@v4/);
     expect(content).toMatch(/actions\/setup-node@v4/);
   });

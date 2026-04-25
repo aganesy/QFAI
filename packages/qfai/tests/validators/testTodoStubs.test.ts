@@ -65,7 +65,7 @@ async function writeTestFile(root: string, relativePath: string, content: string
 
 describe("spec-0017 validateTestTodoStubs", () => {
   // TC-0017-0028 — it.todo / test.todo / describe.todo detected
-  it("emits QFAI-TEST-0001 for it" + TODO + " stubs", async () => {
+  it("emits QFAI-TEST-001 for it" + TODO + " stubs", async () => {
     const root = await newTempDir();
     await writeTestFile(
       root,
@@ -82,15 +82,16 @@ describe("spec-0017 validateTestTodoStubs", () => {
 
     const issues = await validateTestTodoStubs(root, configWith());
     expect(issues).toHaveLength(1);
-    expect(issues[0]?.code).toBe("QFAI-TEST-0001");
+    expect(issues[0]?.code).toBe("QFAI-TEST-001");
     expect(issues[0]?.severity).toBe("error");
-    expect(issues[0]?.file).toBe("tests/example.test.ts:4");
+    expect(issues[0]?.file).toBe("tests/example.test.ts");
+    expect(issues[0]?.loc?.line).toBe(4);
     expect(issues[0]?.rule).toBe("validation.testStrategy.forbidTestTodoStubs");
     expect(issues[0]?.message).toMatch(/it\.todo/);
     expect(issues[0]?.refs).toEqual(["it.todo"]);
   });
 
-  it("emits QFAI-TEST-0001 for test" + TODO + " stubs", async () => {
+  it("emits QFAI-TEST-001 for test" + TODO + " stubs", async () => {
     const root = await newTempDir();
     await writeTestFile(
       root,
@@ -101,10 +102,11 @@ describe("spec-0017 validateTestTodoStubs", () => {
     const issues = await validateTestTodoStubs(root, configWith());
     expect(issues).toHaveLength(1);
     expect(issues[0]?.refs).toEqual(["test.todo"]);
-    expect(issues[0]?.file).toBe("tests/a.test.ts:3");
+    expect(issues[0]?.file).toBe("tests/a.test.ts");
+    expect(issues[0]?.loc?.line).toBe(3);
   });
 
-  it("emits QFAI-TEST-0001 for describe" + TODO + " stubs", async () => {
+  it("emits QFAI-TEST-001 for describe" + TODO + " stubs", async () => {
     const root = await newTempDir();
     await writeTestFile(
       root,
@@ -219,7 +221,8 @@ describe("spec-0017 validateTestTodoStubs", () => {
       configWith({}, { testFileExcludeGlobs: ["tests/excluded/**"] }),
     );
     expect(issues).toHaveLength(1);
-    expect(issues[0]?.file).toBe("tests/included/b.test.ts:2");
+    expect(issues[0]?.file).toBe("tests/included/b.test.ts");
+    expect(issues[0]?.loc?.line).toBe(2);
   });
 
   it("reports line numbers per stub", async () => {
@@ -244,8 +247,9 @@ describe("spec-0017 validateTestTodoStubs", () => {
 
     const issues = await validateTestTodoStubs(root, configWith());
     expect(issues.map((issue) => issue.file)).toEqual([
-      "tests/lines.test.ts:6",
-      "tests/lines.test.ts:9",
+      "tests/lines.test.ts",
+      "tests/lines.test.ts",
     ]);
+    expect(issues.map((issue) => issue.loc?.line)).toEqual([6, 9]);
   });
 });

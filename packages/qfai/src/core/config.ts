@@ -38,7 +38,7 @@ export type QfaiValidationConfig = {
     maxE2eScenarioCount: number | null;
     /**
      * When true (default), `qfai validate` rejects `it.todo` / `test.todo` /
-     * `describe.todo` stubs in test files (spec-0012, QFAI-TEST-0001).
+     * `describe.todo` stubs in test files (spec-0012, QFAI-TEST-001).
      * Set to false to opt out while migrating an existing project.
      */
     forbidTestTodoStubs: boolean;

@@ -1,5 +1,5 @@
 /**
- * Test todo stub validator (spec-0017 REQ-0009, QFAI-TEST-0001).
+ * Test todo stub validator (spec-0017 REQ-0009, QFAI-TEST-001).
  *
  * Detects `it.todo(...)` / `test.todo(...)` / `describe.todo(...)` stubs in
  * test files. These are silent placeholders in vitest/jest: they count as
@@ -74,22 +74,27 @@ export async function validateTestTodoStubs(root: string, config: QfaiConfig): P
       }
       const lineNumber = i + 1;
       const matchedKind = match[1]; // "it" | "test" | "describe"
-      issues.push(
-        issue(
-          "QFAI-TEST-0001",
-          `Test todo stub found: ${matchedKind}.todo at ${relFile}:${lineNumber}. ` +
-            `Stubs are silent in vitest/jest and rot as missed work. ` +
-            `Implement the body or delete the stub (spec-0017 REQ-0009).`,
-          "error",
-          `${relFile}:${lineNumber}`,
-          "validation.testStrategy.forbidTestTodoStubs",
-          [`${matchedKind}.todo`],
-          "canonical",
-          "Implement the test body, or delete the stub entirely. " +
-            "If you need to temporarily opt out of this check, set " +
-            "`validation.testStrategy.forbidTestTodoStubs: false` in qfai.config.yaml.",
-        ),
+      // Code follows the QFAI-<RULE-###> convention so waivers.ts:resolveRuleId
+      // (^QFAI-([A-Z]+-\d{3})$) can match it; project-scoped waivers depend on
+      // this. file is kept as the bare repo path so emitGitHub / waiver path
+      // matchers (matchFindingPath in waivers.ts) work correctly; the line
+      // number is carried in `loc.line`.
+      const stubIssue = issue(
+        "QFAI-TEST-001",
+        `Test todo stub found: ${matchedKind}.todo at ${relFile}:${lineNumber}. ` +
+          `Stubs are silent in vitest/jest and rot as missed work. ` +
+          `Implement the body or delete the stub (spec-0017 REQ-0009).`,
+        "error",
+        relFile,
+        "validation.testStrategy.forbidTestTodoStubs",
+        [`${matchedKind}.todo`],
+        "canonical",
+        "Implement the test body, or delete the stub entirely. " +
+          "If you need to temporarily opt out of this check, set " +
+          "`validation.testStrategy.forbidTestTodoStubs: false` in qfai.config.yaml.",
       );
+      stubIssue.loc = { line: lineNumber };
+      issues.push(stubIssue);
     }
   }
 

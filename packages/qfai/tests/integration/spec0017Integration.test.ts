@@ -38,11 +38,11 @@
  * QFAI:SPEC-0017:TC-0017-0025 — Skill directories byte-identical
  * QFAI:SPEC-0017:TC-0017-0026 — capture-screenshots.js deleted
  * QFAI:SPEC-0017:TC-0017-0027 — E2E: all 3 modes pass validate (maxCycles only)
- * QFAI:SPEC-0017:TC-0017-0028 — it.todo / test.todo / describe.todo detected (QFAI-TEST-0001)
+ * QFAI:SPEC-0017:TC-0017-0028 — it.todo / test.todo / describe.todo detected (QFAI-TEST-001)
  * QFAI:SPEC-0017:TC-0017-0029 — forbidTestTodoStubs opt-out works
  * QFAI:SPEC-0017:TC-0017-0030 — config flag defaults to true
  * QFAI:SPEC-0017:TC-0017-0031 — init ships .github/workflows/qfai-validate.yml
- * QFAI:SPEC-0017:TC-0017-0032 — qfai-implement skill gate on QFAI-TEST-0001
+ * QFAI:SPEC-0017:TC-0017-0032 — qfai-implement skill gate on QFAI-TEST-001
  */
 
 import { access } from "node:fs/promises";
