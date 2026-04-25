@@ -115,7 +115,9 @@ QFAI includes a small set of custom skills (stored under `.qfai/assistant/skills
   as 15 required markdown files under `.qfai/discussion/discussion-<ts>/`.
   UI-bearing discussion packs may include `prototyping.yaml` as an optional recommendation artifact; non-ui discussion packs typically omit it.
 - **qfai-sdd**: Unified SDD entrypoint with discussion-pack preflight guard (missing/incomplete/blocking OQ causes stop + next action guidance).
-- **qfai-prototyping**: Build a contract-aligned UI prototype using the Playwright CLI + AI evaluator harness (spec-0012). Modes (`low-cost`/`standard`/`full-harness`) run the same strictest review cycle; only `maxCycles` (1/3/20) differs.
+- **qfai-prototyping**: Build a contract-aligned UI prototype using the Playwright CLI + AI
+  evaluator harness (spec-0012). Modes (`low-cost`/`standard`/`full-harness`) run the same
+  strictest review cycle; only `maxCycles` (1/3/20) differs.
 - **qfai-atdd**: Implement acceptance tests driven by specs/scenarios.
 - **qfai-implement**: Unified TDD micro-cycle (Red/Green/Refactor) one test at a time using `test-list.md` as the execution ledger, including ledger status updates and exception closure.
 - **qfai-verify**: Run full-scan local quality gates (`validate --fail-on error`, `report`, repo gates) and produce reviewer-approved evidence under `.qfai/evidence/`.

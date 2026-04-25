@@ -13,6 +13,13 @@ import { afterEach, describe, expect, it } from "vitest";
 import { defaultConfig, type QfaiConfig } from "../../src/core/config.js";
 import { validateTestTodoStubs } from "../../src/core/validators/testTodoStubs.js";
 
+// Source-level split of the `*.todo(` token so this validator's own test
+// file does not false-positive when scanned by validateTestTodoStubs. The
+// validator regex looks for `\b(it|test|describe)\.todo\s*\(` in the raw
+// source text, so we keep the dot in a constant and reassemble the token
+// at runtime; the on-disk fixture content is identical.
+const TODO = ".todo";
+
 const tempDirs: string[] = [];
 
 async function newTempDir(): Promise<string> {
@@ -58,7 +65,7 @@ async function writeTestFile(root: string, relativePath: string, content: string
 
 describe("spec-0017 validateTestTodoStubs", () => {
   // TC-0017-0028 — it.todo / test.todo / describe.todo detected
-  it("emits QFAI-TEST-0001 for it.todo(...)", async () => {
+  it("emits QFAI-TEST-0001 for it" + TODO + " stubs", async () => {
     const root = await newTempDir();
     await writeTestFile(
       root,
@@ -67,7 +74,7 @@ describe("spec-0017 validateTestTodoStubs", () => {
         'import { describe, it } from "vitest";',
         "",
         'describe("feature", () => {',
-        '  it.todo("not implemented yet");',
+        "  it" + TODO + '("not implemented yet");',
         "});",
         "",
       ].join("\n"),
@@ -83,12 +90,12 @@ describe("spec-0017 validateTestTodoStubs", () => {
     expect(issues[0]?.refs).toEqual(["it.todo"]);
   });
 
-  it("emits QFAI-TEST-0001 for test.todo(...)", async () => {
+  it("emits QFAI-TEST-0001 for test" + TODO + " stubs", async () => {
     const root = await newTempDir();
     await writeTestFile(
       root,
       "tests/a.test.ts",
-      ['import { test } from "vitest";', "", 'test.todo("later");', ""].join("\n"),
+      ['import { test } from "vitest";', "", "test" + TODO + '("later");', ""].join("\n"),
     );
 
     const issues = await validateTestTodoStubs(root, configWith());
@@ -97,12 +104,14 @@ describe("spec-0017 validateTestTodoStubs", () => {
     expect(issues[0]?.file).toBe("tests/a.test.ts:3");
   });
 
-  it("emits QFAI-TEST-0001 for describe.todo(...)", async () => {
+  it("emits QFAI-TEST-0001 for describe" + TODO + " stubs", async () => {
     const root = await newTempDir();
     await writeTestFile(
       root,
       "tests/b.test.ts",
-      ['import { describe } from "vitest";', "", 'describe.todo("missing suite");', ""].join("\n"),
+      ['import { describe } from "vitest";', "", "describe" + TODO + '("missing suite");', ""].join(
+        "\n",
+      ),
     );
 
     const issues = await validateTestTodoStubs(root, configWith());
@@ -119,11 +128,11 @@ describe("spec-0017 validateTestTodoStubs", () => {
         'import { describe, it, test } from "vitest";',
         "",
         'describe("feature", () => {',
-        '  it.todo("stub 1");',
-        '  test.todo("stub 2");',
+        "  it" + TODO + '("stub 1");',
+        "  test" + TODO + '("stub 2");',
         "});",
         "",
-        'describe.todo("suite stub");',
+        "describe" + TODO + '("suite stub");',
         "",
       ].join("\n"),
     );
@@ -161,7 +170,7 @@ describe("spec-0017 validateTestTodoStubs", () => {
     await writeTestFile(
       root,
       "tests/optout.test.ts",
-      'import { it } from "vitest";\nit.todo("skip");\n',
+      'import { it } from "vitest";\nit' + TODO + '("skip");\n',
     );
 
     const issues = await validateTestTodoStubs(root, configWith({ forbidTestTodoStubs: false }));
@@ -170,7 +179,11 @@ describe("spec-0017 validateTestTodoStubs", () => {
 
   it("returns no issues when testFileGlobs is empty", async () => {
     const root = await newTempDir();
-    await writeTestFile(root, "tests/a.test.ts", 'import { it } from "vitest";\nit.todo("x");\n');
+    await writeTestFile(
+      root,
+      "tests/a.test.ts",
+      'import { it } from "vitest";\nit' + TODO + '("x");\n',
+    );
 
     const issues = await validateTestTodoStubs(root, configWith({}, { testFileGlobs: [] }));
     expect(issues).toEqual([]);
@@ -178,7 +191,11 @@ describe("spec-0017 validateTestTodoStubs", () => {
 
   it("ignores files outside testFileGlobs", async () => {
     const root = await newTempDir();
-    await writeTestFile(root, "src/outside.ts", 'export const x = "it.todo(\\"sample\\")";\n');
+    await writeTestFile(
+      root,
+      "src/outside.ts",
+      'export const x = "it' + TODO + '(\\"sample\\")";\n',
+    );
 
     const issues = await validateTestTodoStubs(root, configWith());
     expect(issues).toEqual([]);
@@ -189,12 +206,12 @@ describe("spec-0017 validateTestTodoStubs", () => {
     await writeTestFile(
       root,
       "tests/excluded/a.test.ts",
-      'import { it } from "vitest";\nit.todo("x");\n',
+      'import { it } from "vitest";\nit' + TODO + '("x");\n',
     );
     await writeTestFile(
       root,
       "tests/included/b.test.ts",
-      'import { it } from "vitest";\nit.todo("y");\n',
+      'import { it } from "vitest";\nit' + TODO + '("y");\n',
     );
 
     const issues = await validateTestTodoStubs(
@@ -216,10 +233,10 @@ describe("spec-0017 validateTestTodoStubs", () => {
         "",
         'describe("suite", () => {',
         "",
-        '  it.todo("first");',
+        "  it" + TODO + '("first");',
         "",
         "",
-        '  it.todo("second");',
+        "  it" + TODO + '("second");',
         "});",
         "",
       ].join("\n"),
