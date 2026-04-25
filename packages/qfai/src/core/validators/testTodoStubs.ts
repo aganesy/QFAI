@@ -30,7 +30,7 @@ import { issue } from "./utils.js";
  * The common case — the stub written as executable code — is exactly what
  * we want to block, and regex catches it reliably.
  */
-const TEST_TODO_PATTERN = /\b(it|test|describe)\.todo\s*\(/;
+const TEST_TODO_PATTERN = /\b(it|test|describe)\.todo\s*\(/g;
 
 export async function validateTestTodoStubs(root: string, config: QfaiConfig): Promise<Issue[]> {
   if (!config.validation.testStrategy.forbidTestTodoStubs) {
@@ -68,33 +68,35 @@ export async function validateTestTodoStubs(root: string, config: QfaiConfig): P
     const lines = content.split(/\r?\n/);
     for (let i = 0; i < lines.length; i += 1) {
       const line = lines[i] ?? "";
-      const match = TEST_TODO_PATTERN.exec(line);
-      if (!match) {
-        continue;
-      }
+      // The docstring promises one issue per stub occurrence. Walk every
+      // match on the line via matchAll (the regex carries the `g` flag) so
+      // a line like `it.todo(...); test.todo(...);` produces two issues
+      // instead of just the first.
       const lineNumber = i + 1;
-      const matchedKind = match[1]; // "it" | "test" | "describe"
-      // Code follows the QFAI-<RULE-###> convention so waivers.ts:resolveRuleId
-      // (^QFAI-([A-Z]+-\d{3})$) can match it; project-scoped waivers depend on
-      // this. file is kept as the bare repo path so emitGitHub / waiver path
-      // matchers (matchFindingPath in waivers.ts) work correctly; the line
-      // number is carried in `loc.line`.
-      const stubIssue = issue(
-        "QFAI-TEST-001",
-        `Test todo stub found: ${matchedKind}.todo at ${relFile}:${lineNumber}. ` +
-          `Stubs are silent in vitest/jest and rot as missed work. ` +
-          `Implement the body or delete the stub (spec-0017 REQ-0009).`,
-        "error",
-        relFile,
-        "validation.testStrategy.forbidTestTodoStubs",
-        [`${matchedKind}.todo`],
-        "canonical",
-        "Implement the test body, or delete the stub entirely. " +
-          "If you need to temporarily opt out of this check, set " +
-          "`validation.testStrategy.forbidTestTodoStubs: false` in qfai.config.yaml.",
-      );
-      stubIssue.loc = { line: lineNumber };
-      issues.push(stubIssue);
+      for (const match of line.matchAll(TEST_TODO_PATTERN)) {
+        const matchedKind = match[1]; // "it" | "test" | "describe"
+        // Code follows the QFAI-<RULE-###> convention so waivers.ts:resolveRuleId
+        // (^QFAI-([A-Z]+-\d{3})$) can match it; project-scoped waivers depend on
+        // this. file is kept as the bare repo path so emitGitHub / waiver path
+        // matchers (matchFindingPath in waivers.ts) work correctly; the line
+        // number is carried in `loc.line`.
+        const stubIssue = issue(
+          "QFAI-TEST-001",
+          `Test todo stub found: ${matchedKind}.todo at ${relFile}:${lineNumber}. ` +
+            `Stubs are silent in vitest/jest and rot as missed work. ` +
+            `Implement the body or delete the stub (spec-0017 REQ-0009).`,
+          "error",
+          relFile,
+          "validation.testStrategy.forbidTestTodoStubs",
+          [`${matchedKind}.todo`],
+          "canonical",
+          "Implement the test body, or delete the stub entirely. " +
+            "If you need to temporarily opt out of this check, set " +
+            "`validation.testStrategy.forbidTestTodoStubs: false` in qfai.config.yaml.",
+        );
+        stubIssue.loc = { line: lineNumber };
+        issues.push(stubIssue);
+      }
     }
   }
 
