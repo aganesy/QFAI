@@ -16,6 +16,36 @@
 
 - なし
 
+## [1.8.3] - 2026-04-26
+
+### Added
+
+- prototyping V2 lifecycle (`rounds[]` / `polishCycles[]` / `completionCertificate` / `allReviewerAxesPerfect100`); V1 (`iterations[]`) lifecycle remains valid for existing packs.
+- `qfai init` ships `.github/workflows/qfai-validate.yml` for downstream CI (`npx qfai validate --profile full --fail-on error`, Node 20 / npm). Pinned-allow-list pack guard ensures the workflow file always ships (spec-0017 REQ-0009).
+- `QFAI-TEST-001` test-todo stub validator: detects `it.todo` / `test.todo` / `describe.todo` in files matched by `validation.traceability.testFileGlobs`. Configurable via `validation.testStrategy.forbidTestTodoStubs` (default: true).
+- `V2` round-funnel and per-candidate evidence validation in `validateV2Lifecycle`: enforces `r5 → r3 → r2 → r1` order, per-round candidate counts (5/3/2/1), unique candidateIds within a round, and the presence/shape of `screenEvidenceByCandidate` / `evaluatorReviewRefsByCandidate`.
+- `maxCycles` vs `maxIterations` conflict detection in mode invariant validator.
+- `round-absorb` and `round-start` (absorption rounds) now require `--candidates` / `--survivors` to match the prior `narrow-decision.json`.
+
+### Changed
+
+- spec-0012 absorbs the former spec-0017 (Playwright CLI harness) and spec-0018 (round/candidate/absorption harness) registries (REQ / AC / BR / DEC / TC). The standalone `spec-0017/` and `spec-0018/` directories are deleted.
+- prototyping skill / agent terminology unified to `round` / `absorption` (qfai-prototyping, qfai-sdd, qfai-implement, qfai-verify, qfai-discussion, qfai-atdd, qfai-configure).
+- `CandidateId` is now a nominal brand type (was the template-literal `c${number}` which over-accepted `c0` / `c-1` / `c1.5`); both `parseCandidateIds` and `isCandidateId` mint via `CANDIDATE_ID_PATTERN`.
+- V1 `PrototypingEvidenceRecord` field renamed `cycles` → `iterations` to match `validatePrototypingEvidence` and the on-disk `.qfai/evidence/prototyping/iterations/<n>/` URL convention.
+- CI profile guard now allows `tdd` alongside `full` / `verify` (was `full` / `verify` only); narrow phase profiles (discussion / sdd / prototyping / atdd) are still rejected in CI.
+- `QFAI-TEST-001` issues now set `issue.file` to the bare repo path with the line number in `issue.loc.line` (was `path:line`); rule code follows the `QFAI-<RULE-###>` waiver-resolver convention.
+
+### Removed
+
+- **BREAKING**: library exports `createPlaywrightRenderAdapter` and `createPlaywrightBrowserQaProvider` are no longer re-exported from `qfai` (Node Playwright runtime retired in spec-0017).
+  - migration: use the Playwright CLI path — `qfai prototyping round-start ...` for the supported entry point, or build command plans via `buildPlaywrightCliCommandPlan` (still exported) and run them through your own Playwright CLI invocation.
+- Active `spec-0017/` and `spec-0018/` directories (absorbed into `spec-0012`).
+
+### Fixed
+
+- Numerous late-review integrity findings: `verify-pack` `.github` allow-list (now requires the workflow file as a regular file), V2 evidence record now accepts `runtimeGate` / `uiFidelity` / `completionCertificate` so `writePrototypingEvidenceRecordV2({ completionClaimed: true, … })` cannot produce a self-contradicting record, V1-vs-validator `cycles`/`iterations` mismatch, prettier and markdownlint drift across docs / spec packs, plateau detector test fixtures aligned to the 0..100 scoring scale, downstream `qfai-validate.yml` Node version aligned with `engines: ">=20.0.0"`.
+
 ## [1.8.2] - 2026-04-23
 
 ### Added
