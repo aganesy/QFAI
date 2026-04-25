@@ -1441,11 +1441,11 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     expect(skill).toMatch(/ui-bearing discussion packs may include `prototyping\.yaml`/i);
   });
 
-  it("discussion README declares recommended_mode should be included in allowed_modes", async () => {
+  it("discussion README declares recommended_mode must be included in allowed_modes", async () => {
     const discussionReadmePath = path.join(templateQfaiDir, "discussion", "README.md");
     const content = await readFile(discussionReadmePath, "utf-8");
 
-    expect(content).toMatch(/recommended_mode.*should be included in.*allowed_modes/i);
+    expect(content).toMatch(/recommended_mode.*MUST be included in.*allowed_modes/i);
   });
 
   it("discussion README declares current non-blocking behavior for prototyping.yaml", async () => {
