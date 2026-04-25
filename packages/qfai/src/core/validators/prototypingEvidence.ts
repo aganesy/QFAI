@@ -13,7 +13,12 @@ import {
 } from "../review/prototyping.js";
 import { isConcreteArtifactRef } from "../artifacts/pathUtils.js";
 import { isCandidateId } from "../prototyping/candidate.js";
-import { isExplorationRound } from "../prototyping/round.js";
+import {
+  EXPLORATION_ROUNDS,
+  ROUND_SURVIVOR_COUNT,
+  isExplorationRound,
+  type ExplorationRound,
+} from "../prototyping/round.js";
 import type { Issue } from "../types.js";
 import { issue } from "./utils.js";
 import { validateModeInvariant } from "./prototyping/modeInvariant.js";
@@ -619,9 +624,26 @@ function validateV2Lifecycle(
       issues.push(makeSchemaIssue(root, evidencePath, `${prefix} must be an object.`));
       continue;
     }
+    let validRound: ExplorationRound | null = null;
     if (!isExplorationRound(candidate.round)) {
       issues.push(makeSchemaIssue(root, evidencePath, `${prefix}.round must be r5|r3|r2|r1.`));
+    } else {
+      validRound = candidate.round;
+      // Round funnel order: rounds[0..N-1] must be the prefix of
+      // EXPLORATION_ROUNDS = [r5, r3, r2, r1]. Recording r5 then jumping to
+      // r2 would corrupt the harvest/narrow lineage downstream.
+      const expectedRound = EXPLORATION_ROUNDS[index];
+      if (expectedRound !== undefined && validRound !== expectedRound) {
+        issues.push(
+          makeSchemaIssue(
+            root,
+            evidencePath,
+            `${prefix}.round must be ${expectedRound} (rounds[] must follow ${EXPLORATION_ROUNDS.join("→")}); got ${validRound}.`,
+          ),
+        );
+      }
     }
+    const candidateIds: string[] = [];
     if (!Array.isArray(candidate.candidates) || candidate.candidates.length === 0) {
       issues.push(
         makeSchemaIssue(root, evidencePath, `${prefix}.candidates must be a non-empty array.`),
@@ -646,9 +668,100 @@ function validateV2Lifecycle(
               `${prefix}.candidates[${candidateIndex}].candidateId must be a valid candidate id.`,
             ),
           );
+        } else {
+          candidateIds.push(roundCandidate.candidateId);
+        }
+      }
+      // Per-round candidate-count invariant: ROUND_SURVIVOR_COUNT
+      // (r5=5, r3=3, r2=2, r1=1). A record with the wrong count means the
+      // narrow funnel was bypassed.
+      if (validRound) {
+        const expectedCandidateCount = ROUND_SURVIVOR_COUNT[validRound];
+        if (candidate.candidates.length !== expectedCandidateCount) {
+          issues.push(
+            makeSchemaIssue(
+              root,
+              evidencePath,
+              `${prefix}.candidates must contain exactly ${expectedCandidateCount} entries for round ${validRound}; got ${candidate.candidates.length}.`,
+            ),
+          );
         }
       }
     }
+
+    // Per-candidate evidence references: every candidateId surfaced in
+    // candidates[] MUST appear as a key in screenEvidenceByCandidate (array
+    // of screen-artifact refs) and evaluatorReviewRefsByCandidate (string
+    // path). Missing maps would let downstream completion gates pass with
+    // no real evidence on disk.
+    const screenMap = isRecord(candidate.screenEvidenceByCandidate)
+      ? candidate.screenEvidenceByCandidate
+      : null;
+    if (candidate.screenEvidenceByCandidate !== undefined && screenMap === null) {
+      issues.push(
+        makeSchemaIssue(
+          root,
+          evidencePath,
+          `${prefix}.screenEvidenceByCandidate must be an object keyed by candidateId.`,
+        ),
+      );
+    }
+    const reviewMap = isRecord(candidate.evaluatorReviewRefsByCandidate)
+      ? candidate.evaluatorReviewRefsByCandidate
+      : null;
+    if (candidate.evaluatorReviewRefsByCandidate !== undefined && reviewMap === null) {
+      issues.push(
+        makeSchemaIssue(
+          root,
+          evidencePath,
+          `${prefix}.evaluatorReviewRefsByCandidate must be an object keyed by candidateId.`,
+        ),
+      );
+    }
+    for (const candidateId of candidateIds) {
+      if (screenMap) {
+        const screens = screenMap[candidateId];
+        if (!Array.isArray(screens) || screens.length === 0) {
+          issues.push(
+            makeSchemaIssue(
+              root,
+              evidencePath,
+              `${prefix}.screenEvidenceByCandidate.${candidateId} must be a non-empty array of screen artifact refs.`,
+            ),
+          );
+        }
+      } else if (candidate.screenEvidenceByCandidate !== undefined) {
+        // map exists but missing this id
+        issues.push(
+          makeSchemaIssue(
+            root,
+            evidencePath,
+            `${prefix}.screenEvidenceByCandidate is missing key ${candidateId}.`,
+          ),
+        );
+      }
+      if (reviewMap) {
+        const reviewRef = reviewMap[candidateId];
+        if (typeof reviewRef !== "string" || reviewRef.trim().length === 0) {
+          issues.push(
+            makeSchemaIssue(
+              root,
+              evidencePath,
+              `${prefix}.evaluatorReviewRefsByCandidate.${candidateId} must be a non-empty string.`,
+            ),
+          );
+        }
+      } else if (candidate.evaluatorReviewRefsByCandidate !== undefined) {
+        issues.push(
+          makeSchemaIssue(
+            root,
+            evidencePath,
+            `${prefix}.evaluatorReviewRefsByCandidate is missing key ${candidateId}.`,
+          ),
+        );
+      }
+    }
+
     if (typeof candidate.allAxesPerfect100 !== "boolean") {
       issues.push(
         makeSchemaIssue(root, evidencePath, `${prefix}.allAxesPerfect100 must be a boolean.`),
