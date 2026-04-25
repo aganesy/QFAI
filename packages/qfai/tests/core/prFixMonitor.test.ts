@@ -7,7 +7,14 @@ import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 const repoRoot = path.resolve(process.cwd(), "..", "..");
-const prFixScriptPath = path.join(repoRoot, "scripts", "pr-fix", "run-pr-fix.ps1");
+const prFixScriptPath = path.join(
+  repoRoot,
+  ".agents",
+  "skills",
+  "pr-fix",
+  "scripts",
+  "run-pr-fix.ps1",
+);
 const claudeSkillPath = path.join(repoRoot, ".claude", "skills", "pr-fix", "SKILL.md");
 const agentsSkillPath = path.join(repoRoot, ".agents", "skills", "pr-fix", "SKILL.md");
 const codexSkillPath = path.join(repoRoot, ".codex", "skills", "pr-fix", "SKILL.md");

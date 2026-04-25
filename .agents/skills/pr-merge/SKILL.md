@@ -19,7 +19,7 @@ description: "PR の最終確認、merge 実行、必要なら tag 作成/push �
 最初は必ず dry-run で実行する。
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File scripts/pr-merge/run-pr-merge.ps1 -PrNumber <PR番号> -DryRun
+powershell -NoProfile -ExecutionPolicy Bypass -File .agents/skills/pr-merge/scripts/run-pr-merge.ps1 -PrNumber <PR番号> -DryRun
 ```
 
 dry-run は `tmp/pr-merge/pr-<PR番号>-merge-plan.json` を生成し、`SuggestedReleaseTag` と `SuggestedAlternativeTag` を出力する。
@@ -42,13 +42,13 @@ dry-run は `tmp/pr-merge/pr-<PR番号>-merge-plan.json` を生成し、`Suggest
 1. `タグなし` を選んだら、次を実行する。
 
    ```powershell
-   powershell -NoProfile -ExecutionPolicy Bypass -File scripts/pr-merge/run-pr-merge.ps1 -PrNumber <PR番号> -NoTag
+   powershell -NoProfile -ExecutionPolicy Bypass -File .agents/skills/pr-merge/scripts/run-pr-merge.ps1 -PrNumber <PR番号> -NoTag
    ```
 
 2. tag を選んだら、次を実行する。
 
    ```powershell
-   powershell -NoProfile -ExecutionPolicy Bypass -File scripts/pr-merge/run-pr-merge.ps1 -PrNumber <PR番号> -Tag <tag>
+   powershell -NoProfile -ExecutionPolicy Bypass -File .agents/skills/pr-merge/scripts/run-pr-merge.ps1 -PrNumber <PR番号> -Tag <tag>
    ```
 
 3. merge method を明示指定された場合だけ `-MergeMethod merge|squash|rebase` を付ける。指定が無ければ `merge` を使う。
