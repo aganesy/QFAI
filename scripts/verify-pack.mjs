@@ -128,6 +128,15 @@ if (existsSync(rootGithubDir)) {
         `assets/init/root/.github/${entry} must not exist (only workflows/ is permitted).`,
       );
     }
+    // Allow-list passes only if the entry is a real directory. A regular file
+    // or broken symlink at .github/workflows would corrupt downstream `qfai
+    // init` consumers, so reject anything that is not a directory.
+    const entryPath = path.join(rootGithubDir, entry);
+    if (!lstatSync(entryPath).isDirectory()) {
+      throw new Error(
+        `assets/init/root/.github/${entry} must be a directory (got non-directory entry).`,
+      );
+    }
   }
 }
 
