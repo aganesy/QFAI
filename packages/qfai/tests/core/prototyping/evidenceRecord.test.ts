@@ -53,9 +53,7 @@ function makeCycle(cycle: number): PrototypingCycleEvidence {
             axisId: "design-quality",
             score: 100,
             rationale: "Matches design system tokens exactly.",
-            evidenceRefs: [
-              `.qfai/evidence/prototyping/iterations/${cycle}/order-list.png`,
-            ],
+            evidenceRefs: [`.qfai/evidence/prototyping/iterations/${cycle}/order-list.png`],
           },
         ],
       },

@@ -28,8 +28,10 @@ afterEach(async () => {
   }
 });
 
-function configWith(overrides: Partial<QfaiConfig["validation"]["testStrategy"]> = {},
-  traceabilityOverrides: Partial<QfaiConfig["validation"]["traceability"]> = {}): QfaiConfig {
+function configWith(
+  overrides: Partial<QfaiConfig["validation"]["testStrategy"]> = {},
+  traceabilityOverrides: Partial<QfaiConfig["validation"]["traceability"]> = {},
+): QfaiConfig {
   return {
     ...defaultConfig,
     validation: {
@@ -162,35 +164,21 @@ describe("spec-0017 validateTestTodoStubs", () => {
       'import { it } from "vitest";\nit.todo("skip");\n',
     );
 
-    const issues = await validateTestTodoStubs(
-      root,
-      configWith({ forbidTestTodoStubs: false }),
-    );
+    const issues = await validateTestTodoStubs(root, configWith({ forbidTestTodoStubs: false }));
     expect(issues).toEqual([]);
   });
 
   it("returns no issues when testFileGlobs is empty", async () => {
     const root = await newTempDir();
-    await writeTestFile(
-      root,
-      "tests/a.test.ts",
-      'import { it } from "vitest";\nit.todo("x");\n',
-    );
+    await writeTestFile(root, "tests/a.test.ts", 'import { it } from "vitest";\nit.todo("x");\n');
 
-    const issues = await validateTestTodoStubs(
-      root,
-      configWith({}, { testFileGlobs: [] }),
-    );
+    const issues = await validateTestTodoStubs(root, configWith({}, { testFileGlobs: [] }));
     expect(issues).toEqual([]);
   });
 
   it("ignores files outside testFileGlobs", async () => {
     const root = await newTempDir();
-    await writeTestFile(
-      root,
-      "src/outside.ts",
-      'export const x = "it.todo(\\"sample\\")";\n',
-    );
+    await writeTestFile(root, "src/outside.ts", 'export const x = "it.todo(\\"sample\\")";\n');
 
     const issues = await validateTestTodoStubs(root, configWith());
     expect(issues).toEqual([]);

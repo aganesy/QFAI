@@ -32,10 +32,7 @@ import { issue } from "./utils.js";
  */
 const TEST_TODO_PATTERN = /\b(it|test|describe)\.todo\s*\(/;
 
-export async function validateTestTodoStubs(
-  root: string,
-  config: QfaiConfig,
-): Promise<Issue[]> {
+export async function validateTestTodoStubs(root: string, config: QfaiConfig): Promise<Issue[]> {
   if (!config.validation.testStrategy.forbidTestTodoStubs) {
     return [];
   }

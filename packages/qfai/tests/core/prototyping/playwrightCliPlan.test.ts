@@ -10,9 +10,7 @@ import { describe, expect, it } from "vitest";
 import type { CanonicalScreenContract } from "../../../src/core/contracts/screenContracts.js";
 import { buildPlaywrightCliCommandPlan } from "../../../src/core/prototyping/playwrightCliPlan.js";
 
-function makeScreen(
-  overrides: Partial<CanonicalScreenContract> = {},
-): CanonicalScreenContract {
+function makeScreen(overrides: Partial<CanonicalScreenContract> = {}): CanonicalScreenContract {
   return {
     name: "Order List",
     screenId: "order-list",
