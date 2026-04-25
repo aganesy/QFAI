@@ -78,7 +78,7 @@ describe("spec-0017 validateTestTodoStubs", () => {
     expect(issues[0]?.code).toBe("QFAI-TEST-0001");
     expect(issues[0]?.severity).toBe("error");
     expect(issues[0]?.file).toBe("tests/example.test.ts:4");
-    expect(issues[0]?.rule).toBe("testStrategy.forbidTodoStubs");
+    expect(issues[0]?.rule).toBe("validation.testStrategy.forbidTestTodoStubs");
     expect(issues[0]?.message).toMatch(/it\.todo/);
     expect(issues[0]?.refs).toEqual(["it.todo"]);
   });

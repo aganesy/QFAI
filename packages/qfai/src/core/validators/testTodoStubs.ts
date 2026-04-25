@@ -82,7 +82,7 @@ export async function validateTestTodoStubs(root: string, config: QfaiConfig): P
             `Implement the body or delete the stub (spec-0017 REQ-0009).`,
           "error",
           `${relFile}:${lineNumber}`,
-          "testStrategy.forbidTodoStubs",
+          "validation.testStrategy.forbidTestTodoStubs",
           [`${matchedKind}.todo`],
           "canonical",
           "Implement the test body, or delete the stub entirely. " +

@@ -6,16 +6,20 @@ export function isCiEnvironment(env: NodeJS.ProcessEnv = process.env): boolean {
   return env.CI === "true" || env.GITHUB_ACTIONS === "true";
 }
 
+// Profiles permitted to run inside CI. `full` and `verify` cover the standard
+// downstream gate; `tdd` is allowed because QFAI's own ci.yml dogfoods the
+// test-todo-stub gate via `qfai validate --profile tdd` (spec-0017 REQ-0009),
+// and `tdd` is a comprehensive (not narrowing) profile from the perspective
+// of test-side gates. Narrow phase profiles (discussion / sdd / prototyping /
+// atdd) remain rejected to prevent CI from accidentally skipping unrelated
+// gates.
+const CI_ALLOWED_PROFILES = new Set<ValidationProfile>(["full", "verify", "tdd"]);
+
 export function buildCiProfileIssue(
   profile: ValidationProfile | undefined,
   env: NodeJS.ProcessEnv = process.env,
 ): Issue | null {
-  if (
-    profile === undefined ||
-    profile === "full" ||
-    profile === "verify" ||
-    !isCiEnvironment(env)
-  ) {
+  if (profile === undefined || CI_ALLOWED_PROFILES.has(profile) || !isCiEnvironment(env)) {
     return null;
   }
   return {
@@ -23,9 +27,10 @@ export function buildCiProfileIssue(
     severity: "error",
     category: "change",
     message:
-      "CI では部分 validation profile は使用できません。full/verify profile を使用してください。",
+      "CI では部分 validation profile は使用できません。full/verify/tdd profile を使用してください。",
     rule: "VALIDATE-017",
-    suggested_action: "CI では --profile full（または --profile 指定なし）で実行してください。",
+    suggested_action:
+      "CI では --profile full（または --profile 指定なし、test-todo-stub 専用なら --profile tdd）で実行してください。",
   };
 }
 

@@ -45,7 +45,7 @@ function makeScreens(): CanonicalScreenContract[] {
   ];
 }
 
-describe("spec-0018 round review bundle", () => {
+describe("spec-0017 round review bundle", () => {
   it("populates candidate-specific evaluator inputs", () => {
     const bundle = buildRoundReviewBundle({
       targetUrl: "http://localhost:3000",

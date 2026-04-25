@@ -126,7 +126,7 @@ export function computeTerminationReason(
   }
 
   const latestIteration = history.iterations[count - 1];
-  if (latestIteration?.allReviewerAxesPerfect100) {
+  if (latestIteration && hasAllReviewerAxesPerfect100(latestIteration.reviewerScores)) {
     return "converged";
   }
 

@@ -80,6 +80,13 @@ export type PrototypingEvidenceRecordV2 = {
   breakthrough: PrototypingEvidenceRecord["breakthrough"];
   reviewerGate: PrototypingEvidenceRecord["reviewerGate"];
   completionClaimed: boolean;
+  // derivePrototypingObligations sets requireRuntimeGate / requireUiFidelity = true
+  // for every mode, and validatePrototypingEvidence checks `record.runtimeGate` /
+  // `record.uiFidelity` directly. Downstream writers (bundleWriter / uiFidelityBuilder)
+  // populate these; keep them optional on the type so a partial pre-merge record
+  // is still typed correctly.
+  runtimeGate?: Record<string, unknown>;
+  uiFidelity?: Record<string, unknown>;
 };
 
 export type BuildCycleEvidenceInput = {
@@ -231,6 +238,8 @@ export type BuildPrototypingEvidenceRecordV2Input = {
   breakthrough: PrototypingEvidenceRecordV2["breakthrough"];
   reviewerGate: PrototypingEvidenceRecordV2["reviewerGate"];
   completionClaimed?: boolean;
+  runtimeGate?: PrototypingEvidenceRecordV2["runtimeGate"];
+  uiFidelity?: PrototypingEvidenceRecordV2["uiFidelity"];
 };
 
 export function buildPrototypingEvidenceRecordV2(
@@ -252,6 +261,8 @@ export function buildPrototypingEvidenceRecordV2(
     breakthrough: input.breakthrough,
     reviewerGate: input.reviewerGate,
     completionClaimed: input.completionClaimed ?? false,
+    ...(input.runtimeGate !== undefined ? { runtimeGate: input.runtimeGate } : {}),
+    ...(input.uiFidelity !== undefined ? { uiFidelity: input.uiFidelity } : {}),
   };
 }
 
