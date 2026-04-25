@@ -36,7 +36,9 @@ export type BuildAbsorptionPlanInput = {
   harvest: HarvestRecord;
   harvestRef: string;
   survivors: CandidateId[];
-  targetConceptRefs: Record<string, string>;
+  // Keyed by CandidateId so callers can't pass non-CandidateId strings here
+  // by accident; missing entries are checked at runtime in the loop below.
+  targetConceptRefs: Partial<Record<CandidateId, string>>;
   defaultRejectedReason?: string;
 };
 
