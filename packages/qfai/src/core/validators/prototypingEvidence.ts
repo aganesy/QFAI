@@ -656,6 +656,7 @@ function validateV2Lifecycle(
       }
     }
     const candidateIds: string[] = [];
+    const seenCandidateIds = new Set<string>();
     if (!Array.isArray(candidate.candidates) || candidate.candidates.length === 0) {
       issues.push(
         makeSchemaIssue(root, evidencePath, `${prefix}.candidates must be a non-empty array.`),
@@ -680,7 +681,20 @@ function validateV2Lifecycle(
               `${prefix}.candidates[${candidateIndex}].candidateId must be a valid candidate id.`,
             ),
           );
+        } else if (seenCandidateIds.has(roundCandidate.candidateId)) {
+          // The per-candidate evidence maps below are keyed by candidateId, so
+          // a duplicate id silently collapses two slots into one and lets the
+          // round funnel pass with fewer real survivors than the count check
+          // sees.
+          issues.push(
+            makeSchemaIssue(
+              root,
+              evidencePath,
+              `${prefix}.candidates[${candidateIndex}].candidateId must be unique within the round; ${roundCandidate.candidateId} already appears earlier.`,
+            ),
+          );
         } else {
+          seenCandidateIds.add(roundCandidate.candidateId);
           candidateIds.push(roundCandidate.candidateId);
         }
       }
