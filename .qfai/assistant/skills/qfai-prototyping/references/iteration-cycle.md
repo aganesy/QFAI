@@ -52,6 +52,6 @@ You may stop only when all of the following are true:
 - all declared screens have all 4 artifacts for the current accepted winner/polish state
 - canonical latest paths match the current accepted winner/polish state
 - blocking findings are closed or dispositioned
-- validate passes with `--fail-on error`
+- `qfai validate --profile prototyping --fail-on error` passes
 - independent reviewer returns `PASS`
 - the completion certificate proves `allReviewerAxesPerfect100=true`
