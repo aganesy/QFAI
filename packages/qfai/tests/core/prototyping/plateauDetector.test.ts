@@ -28,8 +28,8 @@ describe("detectBreakthrough", () => {
       scoringTrace: [
         {
           iteration: 1,
-          averageScore: 0.8,
-          minScore: 0.79,
+          averageScore: 80,
+          minScore: 79,
           allReviewerAxesPerfect100: false,
           commitSha: "a".repeat(40),
         },
@@ -42,7 +42,7 @@ describe("detectBreakthrough", () => {
         },
       ],
       diffLines: 0,
-      plateauDelta: 0.02,
+      plateauDelta: 2,
       plateauLookback: 1,
       breakthrough,
     });
@@ -56,28 +56,28 @@ describe("detectBreakthrough", () => {
       scoringTrace: [
         {
           iteration: 1,
-          averageScore: 0.82,
-          minScore: 0.8,
+          averageScore: 82,
+          minScore: 80,
           allReviewerAxesPerfect100: false,
           commitSha: "a".repeat(40),
         },
         {
           iteration: 2,
-          averageScore: 0.81,
-          minScore: 0.79,
+          averageScore: 81,
+          minScore: 79,
           allReviewerAxesPerfect100: false,
           commitSha: "b".repeat(40),
         },
         {
           iteration: 3,
-          averageScore: 0.8,
-          minScore: 0.78,
+          averageScore: 80,
+          minScore: 78,
           allReviewerAxesPerfect100: false,
           commitSha: "c".repeat(40),
         },
       ],
       diffLines: 0,
-      plateauDelta: 0.02,
+      plateauDelta: 2,
       plateauLookback: 2,
       breakthrough,
     });
