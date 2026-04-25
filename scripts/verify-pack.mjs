@@ -128,7 +128,17 @@ if (existsSync(rootGithubDir)) {
     throw new Error("assets/init/root/.github must be a directory (got non-directory entry).");
   }
   const allowedRootGithubEntries = new Set(["workflows"]);
-  for (const entry of readdirSync(rootGithubDir)) {
+  const githubEntries = readdirSync(rootGithubDir);
+  // The comment above promises ".github exists ONLY when its sole entry is
+  // workflows/" — i.e. workflows/ is required, not just allowed. An empty
+  // .github/ would silently strip the qfai-validate.yml shipping path
+  // (spec-0017 REQ-0009) on downstream init consumers, so reject it here.
+  if (!githubEntries.includes("workflows")) {
+    throw new Error(
+      "assets/init/root/.github must contain workflows/ (spec-0017 REQ-0009 qfai-validate.yml).",
+    );
+  }
+  for (const entry of githubEntries) {
     if (!allowedRootGithubEntries.has(entry)) {
       throw new Error(
         `assets/init/root/.github/${entry} must not exist (only workflows/ is permitted).`,
