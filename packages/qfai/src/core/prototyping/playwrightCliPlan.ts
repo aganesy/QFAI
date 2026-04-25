@@ -9,6 +9,9 @@
 
 import type { CanonicalScreenContract } from "../contracts/screenContracts.js";
 
+import type { CandidateId } from "./candidate.js";
+import type { ExplorationRound } from "./round.js";
+import { candidateRoutePath, roundCandidateEvidencePath } from "./round.js";
 import {
   cycleHtmlPath,
   cycleScreenshotPath,
@@ -16,6 +19,16 @@ import {
   type PlaywrightCliCommand,
   type PlaywrightCliCommandPlan,
 } from "./types.js";
+
+export type CandidatePlaywrightCliCommandPlan = {
+  round: ExplorationRound;
+  candidateId: CandidateId;
+  screenId: string;
+  route: string;
+  candidateRoute: string;
+  targetUrl: string;
+  commands: PlaywrightCliCommand[];
+};
 
 export type BuildPlaywrightCliCommandPlanInput = {
   targetUrl: string;
@@ -40,45 +53,56 @@ export function buildPlaywrightCliCommandPlan(
 
   const { screenId, route, primaryTasks } = input.screen;
   const absoluteUrl = resolveAbsoluteUrl(input.targetUrl, route);
-
-  const screenshotPath = cycleScreenshotPath(input.cycle, screenId);
-  const htmlPath = cycleHtmlPath(input.cycle, screenId);
-  const snapshotPath = cycleSnapshotPath(input.cycle, screenId);
-
-  const commands: PlaywrightCliCommand[] = [
-    {
-      purpose: "goto",
-      command: `playwright-cli goto ${quote(absoluteUrl)}`,
-    },
-    {
-      purpose: "snapshot",
-      command: `playwright-cli snapshot --save ${quote(snapshotPath)}`,
-      outputPath: snapshotPath,
-    },
-    ...primaryTasks.map<PlaywrightCliCommand>((task) => ({
-      purpose: "interaction",
-      command:
-        "# evaluator: perform the primary task below via playwright-cli click/fill/goto as appropriate",
-      note: task,
-    })),
-    {
-      purpose: "screenshot",
-      command: `playwright-cli screenshot --full-page --save ${quote(screenshotPath)}`,
-      outputPath: screenshotPath,
-    },
-    {
-      purpose: "html",
-      command:
-        `playwright-cli eval "document.documentElement.outerHTML" ` +
-        `> ${quote(htmlPath)}`,
-      outputPath: htmlPath,
-    },
-  ];
+  const commands = buildCommands({
+    absoluteUrl,
+    primaryTasks,
+    screenshotPath: cycleScreenshotPath(input.cycle, screenId),
+    htmlPath: cycleHtmlPath(input.cycle, screenId),
+    snapshotPath: cycleSnapshotPath(input.cycle, screenId),
+  });
 
   return {
     cycle: input.cycle,
     screenId,
     route,
+    targetUrl: absoluteUrl,
+    commands,
+  };
+}
+
+export type BuildCandidatePlaywrightCliCommandPlanInput = {
+  targetUrl: string;
+  round: ExplorationRound;
+  candidateId: CandidateId;
+  screen: CanonicalScreenContract;
+};
+
+export function buildCandidatePlaywrightCliCommandPlan(
+  input: BuildCandidatePlaywrightCliCommandPlanInput,
+): CandidatePlaywrightCliCommandPlan {
+  const { screenId, route, primaryTasks } = input.screen;
+  const candidateRoute = candidateRoutePath(input.candidateId, route);
+  const absoluteUrl = resolveAbsoluteUrl(input.targetUrl, candidateRoute);
+
+  const commands = buildCommands({
+    absoluteUrl,
+    primaryTasks,
+    screenshotPath: roundCandidateEvidencePath(input.round, input.candidateId, screenId, "png"),
+    htmlPath: roundCandidateEvidencePath(input.round, input.candidateId, screenId, "html"),
+    snapshotPath: roundCandidateEvidencePath(
+      input.round,
+      input.candidateId,
+      screenId,
+      "snapshot.txt",
+    ),
+  });
+
+  return {
+    round: input.round,
+    candidateId: input.candidateId,
+    screenId,
+    route,
+    candidateRoute,
     targetUrl: absoluteUrl,
     commands,
   };
@@ -102,6 +126,28 @@ export function buildPlaywrightCliCommandPlans(
   );
 }
 
+export type BuildCandidatePlaywrightCliCommandPlansInput = {
+  targetUrl: string;
+  round: ExplorationRound;
+  candidateIds: CandidateId[];
+  screens: CanonicalScreenContract[];
+};
+
+export function buildCandidatePlaywrightCliCommandPlans(
+  input: BuildCandidatePlaywrightCliCommandPlansInput,
+): CandidatePlaywrightCliCommandPlan[] {
+  return input.candidateIds.flatMap((candidateId) =>
+    input.screens.map((screen) =>
+      buildCandidatePlaywrightCliCommandPlan({
+        targetUrl: input.targetUrl,
+        round: input.round,
+        candidateId,
+        screen,
+      }),
+    ),
+  );
+}
+
 /**
  * Resolve a route against a target URL base. Tolerates both absolute routes
  * (starting with `/`) and bare segments.
@@ -115,6 +161,43 @@ function resolveAbsoluteUrl(targetUrl: string, route: string): string {
       `buildPlaywrightCliCommandPlan: invalid targetUrl or route (targetUrl=${targetUrl}, route=${route})`,
     );
   }
+}
+
+function buildCommands(input: {
+  absoluteUrl: string;
+  primaryTasks: string[];
+  screenshotPath: string;
+  htmlPath: string;
+  snapshotPath: string;
+}): PlaywrightCliCommand[] {
+  return [
+    {
+      purpose: "goto",
+      command: `playwright-cli goto ${quote(input.absoluteUrl)}`,
+    },
+    {
+      purpose: "snapshot",
+      command: `playwright-cli snapshot --save ${quote(input.snapshotPath)}`,
+      outputPath: input.snapshotPath,
+    },
+    ...input.primaryTasks.map<PlaywrightCliCommand>((task) => ({
+      purpose: "interaction",
+      command:
+        "# evaluator: perform the primary task below via playwright-cli click/fill/goto as appropriate",
+      note: task,
+    })),
+    {
+      purpose: "screenshot",
+      command: `playwright-cli screenshot --full-page --save ${quote(input.screenshotPath)}`,
+      outputPath: input.screenshotPath,
+    },
+    {
+      purpose: "html",
+      command:
+        `playwright-cli eval "document.documentElement.outerHTML" ` + `> ${quote(input.htmlPath)}`,
+      outputPath: input.htmlPath,
+    },
+  ];
 }
 
 function quote(value: string): string {

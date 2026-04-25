@@ -5,10 +5,18 @@
 | Skill                          | `packages/qfai/assets/init/.qfai/assistant/skills/qfai-prototyping/SKILL.md`     |
 | References                     | `packages/qfai/assets/init/.qfai/assistant/skills/qfai-prototyping/references/*` |
 | Internal mode helper           | `packages/qfai/src/core/review/prototyping.ts`                                   |
+| Round model                    | `packages/qfai/src/core/prototyping/round.ts`                                    |
+| Candidate model                | `packages/qfai/src/core/prototyping/candidate.ts`                                |
+| Candidate concept              | `packages/qfai/src/core/prototyping/candidateConcept.ts`                         |
+| Round review bundle            | `packages/qfai/src/core/prototyping/reviewBundle.ts`                             |
+| Round command plans            | `packages/qfai/src/core/prototyping/playwrightCliPlan.ts`                        |
+| Harvest / absorption           | `packages/qfai/src/core/prototyping/harvestBuilder.ts`, `absorptionBuilder.ts`   |
+| Reimplementation record        | `packages/qfai/src/core/prototyping/reimplementationBuilder.ts`                  |
 | Harness history                | `packages/qfai/src/core/harness/history.ts`                                      |
 | Harness result writer          | `packages/qfai/src/core/harness/resultWriter.ts`                                 |
 | Evidence bundle                | `packages/qfai/src/core/evidence/bundleWriter.ts`                                |
 | Prototyping evidence validator | `packages/qfai/src/core/validators/prototypingEvidence.ts`                       |
+| Test todo validator            | `packages/qfai/src/core/validators/testTodoStubs.ts`                             |
 | UI evidence validator          | `packages/qfai/src/core/validators/uiEvidenceArtifacts.ts`                       |
 | Validate gate                  | `packages/qfai/src/core/validate.ts`                                             |
 
@@ -26,3 +34,4 @@
 
 - `US-0012-0001..0097` and `TC-0012-0001..0309` remain valid traceability namespaces.
 - Active posture is skill-first; internal mode helpers and harness artifacts are traceable but not public runtime surfaces.
+- Former `spec-0017` / `spec-0018` identifiers are preserved inside `spec-0012` as absorbed appendices; references to those IDs remain valid even though the standalone directories were removed.

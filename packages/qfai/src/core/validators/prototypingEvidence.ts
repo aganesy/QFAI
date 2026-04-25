@@ -12,11 +12,14 @@ import {
   type PrototypingMode,
 } from "../review/prototyping.js";
 import { isConcreteArtifactRef } from "../artifacts/pathUtils.js";
+import { isCandidateId } from "../prototyping/candidate.js";
+import { isExplorationRound } from "../prototyping/round.js";
 import type { Issue } from "../types.js";
 import { issue } from "./utils.js";
 import { validateModeInvariant } from "./prototyping/modeInvariant.js";
 
 type PrototypingEvidenceRecord = {
+  schemaVersion?: unknown;
   surface?: unknown;
   mode?: {
     requested?: unknown;
@@ -25,6 +28,8 @@ type PrototypingEvidenceRecord = {
     rationale?: unknown;
   };
   iterations?: unknown;
+  rounds?: unknown;
+  polishCycles?: unknown;
   phase?: unknown;
   selectedWinnerAtIteration?: unknown;
   postSelectionPolishCount?: unknown;
@@ -138,11 +143,27 @@ export async function validatePrototypingEvidence(
   // spec-0017 REQ-0001 mode invariant: maxCycles is the only mode-dependent
   // value; browserTool must be "playwright-cli" if present. Emits QFAI-PROT-MODE-001.
   issues.push(
-    ...validateModeInvariant(
-      record,
-      path.relative(root, evidencePath).replace(/\\/g, "/"),
-    ),
+    ...validateModeInvariant(record, path.relative(root, evidencePath).replace(/\\/g, "/")),
   );
+
+  const isV2Record =
+    record.schemaVersion === "2.0" ||
+    record.rounds !== undefined ||
+    record.polishCycles !== undefined;
+  if (isV2Record) {
+    issues.push(...validateV2Lifecycle(root, evidencePath, record, mode, obligations));
+    if (obligations?.requireRuntimeGate && !isRecord(record.runtimeGate)) {
+      issues.push(
+        makeSchemaIssue(root, evidencePath, "runtimeGate is required in full-harness mode."),
+      );
+    }
+    if (obligations?.requireUiFidelity && !isRecord(record.uiFidelity)) {
+      issues.push(
+        makeSchemaIssue(root, evidencePath, "uiFidelity is required in full-harness mode."),
+      );
+    }
+    return issues;
+  }
 
   const iterations = normalizeIterations(record.iterations);
   if (!iterations || iterations.length === 0) {
@@ -494,6 +515,20 @@ function normalizeIterations(value: unknown): unknown[] | null {
   return value as unknown[];
 }
 
+function normalizeRounds(value: unknown): unknown[] | null {
+  if (!Array.isArray(value)) {
+    return null;
+  }
+  return value as unknown[];
+}
+
+function normalizePolishCycles(value: unknown): unknown[] | null {
+  if (!Array.isArray(value)) {
+    return null;
+  }
+  return value as unknown[];
+}
+
 function normalizePhaseCurrent(value: unknown): string | null {
   if (!isRecord(value)) {
     return null;
@@ -526,6 +561,252 @@ function allReviewerScoresArePerfect100(iterations: unknown[]): boolean {
     }
     return reviewer.scores.every((score) => isRecord(score) && score.score === 100);
   });
+}
+
+function validateV2Lifecycle(
+  root: string,
+  evidencePath: string,
+  record: PrototypingEvidenceRecord,
+  mode: {
+    requested?: PrototypingMode;
+    effective: PrototypingMode;
+    source: string;
+    rationale: string;
+  },
+  obligations: ReturnType<typeof derivePrototypingObligations> | undefined,
+): Issue[] {
+  const issues: Issue[] = [];
+  const rounds = normalizeRounds(record.rounds);
+  if (!rounds || rounds.length === 0) {
+    issues.push(
+      issue(
+        "QFAI-PROT-280",
+        "prototyping evidence requires at least one round entry.",
+        "error",
+        path.relative(root, evidencePath).replace(/\\/g, "/"),
+        "prototypingEvidence.rounds",
+        undefined,
+        "canonical",
+        "rounds[] に少なくとも 1 件の探索 round を記録してください。",
+      ),
+    );
+    return issues;
+  }
+
+  const polishCycles = normalizePolishCycles(record.polishCycles) ?? [];
+  if (obligations && polishCycles.length > obligations.maxIterations) {
+    issues.push(
+      issue(
+        "QFAI-PROT-281",
+        `mode=${mode.effective} exceeds max polish cycles (${obligations.maxIterations}).`,
+        "error",
+        path.relative(root, evidencePath).replace(/\\/g, "/"),
+        "prototypingEvidence.maxIterations",
+        [String(polishCycles.length), String(obligations.maxIterations)],
+        "canonical",
+        `mode=${mode.effective} の polish cycle 上限 ${obligations.maxIterations} を超えないようにしてください。`,
+      ),
+    );
+  }
+
+  let latestPerfect100 = false;
+  let completedPolishCount = 0;
+  let polishWithBreakthroughCheck = false;
+
+  for (const [index, candidate] of rounds.entries()) {
+    const prefix = `rounds[${index}]`;
+    if (!isRecord(candidate)) {
+      issues.push(makeSchemaIssue(root, evidencePath, `${prefix} must be an object.`));
+      continue;
+    }
+    if (!isExplorationRound(candidate.round)) {
+      issues.push(makeSchemaIssue(root, evidencePath, `${prefix}.round must be r5|r3|r2|r1.`));
+    }
+    if (!Array.isArray(candidate.candidates) || candidate.candidates.length === 0) {
+      issues.push(
+        makeSchemaIssue(root, evidencePath, `${prefix}.candidates must be a non-empty array.`),
+      );
+    } else {
+      for (const [candidateIndex, roundCandidate] of candidate.candidates.entries()) {
+        if (!isRecord(roundCandidate)) {
+          issues.push(
+            makeSchemaIssue(
+              root,
+              evidencePath,
+              `${prefix}.candidates[${candidateIndex}] must be an object.`,
+            ),
+          );
+          continue;
+        }
+        if (!isCandidateId(roundCandidate.candidateId)) {
+          issues.push(
+            makeSchemaIssue(
+              root,
+              evidencePath,
+              `${prefix}.candidates[${candidateIndex}].candidateId must be a valid candidate id.`,
+            ),
+          );
+        }
+      }
+    }
+    if (typeof candidate.allAxesPerfect100 !== "boolean") {
+      issues.push(
+        makeSchemaIssue(root, evidencePath, `${prefix}.allAxesPerfect100 must be a boolean.`),
+      );
+    } else {
+      latestPerfect100 = candidate.allAxesPerfect100;
+    }
+  }
+
+  for (const [index, cycle] of polishCycles.entries()) {
+    const prefix = `polishCycles[${index}]`;
+    if (!isRecord(cycle)) {
+      issues.push(makeSchemaIssue(root, evidencePath, `${prefix} must be an object.`));
+      continue;
+    }
+    if (typeof cycle.cycle !== "number" || !Number.isInteger(cycle.cycle) || cycle.cycle <= 0) {
+      issues.push(
+        makeSchemaIssue(root, evidencePath, `${prefix}.cycle must be a positive integer.`),
+      );
+    }
+    if (
+      typeof cycle.kind !== "string" ||
+      !["polish", "branch", "reviewer_gate", "completed"].includes(cycle.kind)
+    ) {
+      issues.push(
+        makeSchemaIssue(
+          root,
+          evidencePath,
+          `${prefix}.kind must be polish|branch|reviewer_gate|completed.`,
+        ),
+      );
+    }
+    if (
+      typeof cycle.evaluatorReviewRef !== "string" ||
+      cycle.evaluatorReviewRef.trim().length === 0
+    ) {
+      issues.push(
+        makeSchemaIssue(root, evidencePath, `${prefix}.evaluatorReviewRef must be non-empty.`),
+      );
+    }
+    if (typeof cycle.allAxesPerfect100 !== "boolean") {
+      issues.push(
+        makeSchemaIssue(root, evidencePath, `${prefix}.allAxesPerfect100 must be a boolean.`),
+      );
+    } else {
+      latestPerfect100 = cycle.allAxesPerfect100;
+    }
+    if (cycle.kind === "polish") {
+      completedPolishCount += 1;
+      if (typeof cycle.breakthroughRef === "string" && cycle.breakthroughRef.trim().length > 0) {
+        polishWithBreakthroughCheck = true;
+      }
+    }
+  }
+
+  const phaseCurrent = normalizePhaseCurrent(record.phase);
+  if (phaseCurrent !== null && !VALID_PHASE_SET.has(phaseCurrent)) {
+    issues.push(
+      issue(
+        "QFAI-PROT-285",
+        "phase.current must follow the prototyping phase state machine.",
+        "error",
+        path.relative(root, evidencePath).replace(/\\/g, "/"),
+        "prototypingEvidence.phase",
+        undefined,
+        "canonical",
+        "phase.current は planning|explore|remix|select|polish|breakthrough|reviewer_gate|completed のいずれかで記録してください。",
+      ),
+    );
+  }
+
+  const fullHarnessStatus = normalizeFullHarnessStatus(record.fullHarness);
+  const completionClaimed =
+    record.completionClaimed === true ||
+    record.completionEligible === true ||
+    phaseCurrent === "completed" ||
+    fullHarnessStatus === "completed";
+
+  if (completionClaimed) {
+    if (!latestPerfect100) {
+      issues.push(
+        issue(
+          "QFAI-PROT-287",
+          "Completion requires every reviewer to score every evaluation axis at 100.",
+          "error",
+          path.relative(root, evidencePath).replace(/\\/g, "/"),
+          "prototypingEvidence.perfect100",
+          undefined,
+          "canonical",
+          "completionClaimed/completed を記録する前に、最新 round または polish cycle の allAxesPerfect100 を true にしてください。",
+        ),
+      );
+    }
+    const postSelectionPolishCount =
+      typeof record.postSelectionPolishCount === "number"
+        ? record.postSelectionPolishCount
+        : completedPolishCount;
+    if (!Number.isInteger(postSelectionPolishCount) || postSelectionPolishCount < 1) {
+      issues.push(
+        issue(
+          "QFAI-PROT-286",
+          "Completion requires at least one completed post-selection polish cycle.",
+          "error",
+          path.relative(root, evidencePath).replace(/\\/g, "/"),
+          "prototypingEvidence.postSelectionPolish",
+          undefined,
+          "canonical",
+          "postSelectionPolishCount >= 1 とし、polish cycle を少なくとも 1 件記録してください。",
+        ),
+      );
+    }
+    if (!polishWithBreakthroughCheck) {
+      issues.push(
+        issue(
+          "QFAI-PROT-286",
+          "Completion requires a polish cycle with breakthrough evidence.",
+          "error",
+          path.relative(root, evidencePath).replace(/\\/g, "/"),
+          "prototypingEvidence.postSelectionPolish",
+          undefined,
+          "canonical",
+          "polish cycle に breakthroughRef を記録してください。",
+        ),
+      );
+    }
+    if (!isRecord(record.completionCertificate)) {
+      issues.push(
+        issue(
+          "QFAI-PROT-289",
+          "completionCertificate is required when completion is claimed.",
+          "error",
+          path.relative(root, evidencePath).replace(/\\/g, "/"),
+          "prototypingEvidence.completionCertificate",
+          undefined,
+          "canonical",
+          "reviewerGateResult/validateCommand/bestOfHistoryRef/breakthroughRef を含む completionCertificate を記録してください。",
+        ),
+      );
+    }
+  }
+
+  const maxIterations = PROTOTYPING_MAX_ITERATIONS[mode.effective];
+  if (!latestPerfect100 && polishCycles.length < maxIterations) {
+    issues.push(
+      issue(
+        "QFAI-PROT-282",
+        `mode=${mode.effective} has not reached all-reviewer-axes-perfect-100 and has remaining polish cycles.`,
+        "warning",
+        path.relative(root, evidencePath).replace(/\\/g, "/"),
+        "prototypingEvidence.convergence",
+        [String(polishCycles.length), String(maxIterations)],
+        "canonical",
+        "全 reviewer / 全 axis が 100 点に達していないため、mode 上限に達するまで polish cycle を継続してください。",
+      ),
+    );
+  }
+
+  return issues;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

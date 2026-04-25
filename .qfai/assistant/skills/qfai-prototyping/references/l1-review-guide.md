@@ -4,10 +4,10 @@ L1 checks implementation fidelity.
 
 ## Inputs (read from review-bundle.json)
 
-- screenshots (cycle path, per declared screen)
-- HTML snapshots (cycle path, per declared screen)
-- accessibility snapshots (cycle path, per declared screen)
-- Playwright CLI command log (cycle path, per declared screen)
+- screenshots (round/candidate path, per declared screen)
+- HTML snapshots (round/candidate path, per declared screen)
+- accessibility snapshots (round/candidate path, per declared screen)
+- Playwright CLI command log (round/candidate path, per declared screen)
 - canonical UI contracts from `.qfai/contracts/ui/*.yaml`
 - latest code state
 
@@ -16,7 +16,7 @@ L1 checks implementation fidelity.
 For each declared screen:
 
 - the screen is reachable/rendered (confirm via goto log in command log)
-- screenshot, HTML, accessibility snapshot, and command log all exist at the cycle path
+- screenshot, HTML, accessibility snapshot, and command log all exist at the round/candidate path
 - required elements are visibly present (cross-check screenshot + HTML + snapshot)
 - required actions are wired or explicitly marked missing (cross-check interaction commands in the command log vs `primaryTasks`)
 - blocking UI failures are identified
@@ -29,7 +29,7 @@ For each declared screen:
 
 ## Output
 
-Write `evaluator-review.json` with:
+Write `evaluator-reviews/<candidate-id>.json` with:
 
 - per-screen findings
 - blocking/immediate-fix classification

@@ -4,14 +4,14 @@ L2 checks product experience and design alignment.
 
 ## Inputs (read from review-bundle.json)
 
-- screenshots (cycle path, per declared screen)
-- HTML snapshots (cycle path, per declared screen)
-- accessibility snapshots (cycle path, per declared screen)
-- Playwright CLI command log (cycle path, per declared screen)
+- screenshots (round/candidate path, per declared screen)
+- HTML snapshots (round/candidate path, per declared screen)
+- accessibility snapshots (round/candidate path, per declared screen)
+- Playwright CLI command log (round/candidate path, per declared screen)
 - `.qfai/contracts/design/evaluation-axes.yaml`
 - `.qfai/contracts/design/anchor-selection.yaml`
 - `.qfai/contracts/design/design-system.yaml`
-- previous cycle score
+- previous round score
 
 ## 3-layer evaluation family
 
@@ -34,7 +34,7 @@ L2 must explicitly use all of:
 
 ## Output
 
-Write to `evaluator-review.json` with:
+Write to `evaluator-reviews/<candidate-id>.json` with:
 
 - per-axis findings
 - revise/manual-review classification

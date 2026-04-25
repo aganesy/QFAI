@@ -6,7 +6,7 @@ Provide the downstream execution truth for exploration-first prototyping and fin
 
 These files are version-managed and may be read directly by `/qfai-prototyping`, `/qfai-implement`, `/qfai-atdd`, and `qfai validate`.
 
-> **Prototyping harness (spec-0017)**: `evaluation-rubric.yaml` is the source of `axisDefs` consumed by the review bundle. `design-system.yaml` provides the `designSystemChecklist` consumed by the AI evaluator sub-agent. For the Playwright CLI harness flow and evidence paths, see `.qfai/assistant/skills/qfai-prototyping/references/evidence-requirements.md` and `.qfai/specs/spec-0017/01_Spec.md`.
+> **Prototyping harness (spec-0012)**: `evaluation-rubric.yaml` is the source of evaluator axes, absorbable categories, and concept-fit hard floors. `absorption-policy.yaml` defines minimum absorption and curation expectations between rounds. `design-system.yaml` remains the downstream checklist for winner extraction and polish.
 
 ## Status After Init
 
@@ -19,8 +19,9 @@ The absence of design files is not a defect for non-UI capabilities. For UI-bear
 Typical files:
 
 - `exploration-brief.yaml` — machine-readable exploration brief generated from discussion
-- `evaluation-rubric.yaml` — machine-readable evaluator rubric with weighted originality/design criteria
+- `evaluation-rubric.yaml` — machine-readable evaluator rubric with weighted axes, hard floors, and absorbable categories
 - `evaluator-calibration.yaml` — evaluator alignment examples and anti-leniency guidance
+- `absorption-policy.yaml` — round-to-round absorption thresholds and curation rules
 - `selected-direction.yaml` — current winning direction, rationale, and carry-forward rules
 - `design-system.yaml` — extracted final design system produced after direction convergence
 - `design-tokens*.yaml` — optional token definitions
@@ -30,6 +31,7 @@ Typical files:
 - `exploration-brief.yaml`
 - `evaluation-rubric.yaml`
 - `evaluator-calibration.yaml`
+- `absorption-policy.yaml`
 - `selected-direction.yaml`
 - `design-system.yaml`
 - `design-tokens.yaml`
@@ -40,3 +42,4 @@ Typical files:
 - **Not** a replacement for specs or UI contracts
 - **Not** an excuse for downstream skills to read discussion-side artifacts directly
 - **Not** a place to finalize a winner before prototyping convergence
+- **Not** a place to store round evidence; that belongs under `.qfai/evidence/prototyping/`

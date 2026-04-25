@@ -1,37 +1,32 @@
-# Cycle (Iteration) Lifecycle
+# Round Lifecycle
 
 ## Phase taxonomy
 
-Cycles are classified as one of:
+The exploration funnel is expressed as fixed rounds plus optional polish cycles:
 
-- `explore`
-- `remix`
-- `select`
-- `polish`
-- `branch`
-- `reviewer_gate`
-- `completed`
+- exploration rounds: `r5`, `r3`, `r2`, `r1`
+- post-selection loops: `polish`, `branch`, `reviewer_gate`, `completed`
 
-`select` is winner selection only. It does not count as a post-selection polish cycle and cannot be used as stage completion.
+`r1` is winner selection only. It does not count as a post-selection polish cycle and cannot be used as stage completion.
 
-## Cycle steps
+## Round steps
 
-Each cycle follows this order, driven by the AI evaluator sub-agent running Playwright CLI:
+Each exploration round follows this order, driven by the AI evaluator sub-agent running Playwright CLI:
 
-1. **Prepare**: run `qfai prototyping prepare --target-url <url> --mode <mode> --cycle <n>` (or read existing review-bundle for the cycle).
-2. **Capture**: execute the Playwright CLI command plan (goto, snapshot, interaction, screenshot, html) for every declared screen, saving evidence at the paths defined by the command plan.
-3. **Evaluate**: the L1 and L2 evaluator sub-agents read `review-bundle.json` and score the cycle. Write `evaluator-review.json` with concrete `evidenceRefs[]`.
-4. **Classify**: aggregate findings, mark blocking vs informational.
-5. **Fix**: the generator sub-agent rewrites UI for blocking findings.
-6. **Re-capture**: run the Playwright CLI command plan again for changed screens in cycle `n+1`.
-7. **Re-evaluate**: run L1/L2 evaluators again on the fresh evidence.
+1. **Round start**: run `qfai prototyping round-start --round <rN> --candidates <csv> --target-url <url> --mode <mode>`.
+2. **Capture**: execute `command-plans.json` (goto, snapshot, interaction, screenshot, html) for every declared screen of every active candidate, saving evidence at the assigned paths.
+3. **Evaluate**: evaluator sub-agents read `review-bundle.json` and write per-candidate `evaluator-reviews/<candidate-id>.json` with concrete `evidenceRefs[]`.
+4. **Harvest**: run `qfai prototyping round-harvest --round <rN>` to create the harvest template from the evaluated candidate set.
+5. **Narrow**: run `qfai prototyping round-narrow --round <rN> --survivors <csv>` to record which candidates survive to the next round.
+6. **Absorb**: for `r3|r2|r1`, run `qfai prototyping round-absorb --round <rN> --survivors <csv>` to generate the absorption plan for the surviving candidates.
+7. **Reimplement verify**: run `qfai prototyping round-reimplement-verify --round <rN>` after reimplementation evidence is written.
 
 ## Completion requirements
 
 Completion (independent of mode) requires ALL of the following:
 
 - at least one `polish` cycle completed after winner selection (capture + review + fix + re-capture + re-review)
-- all declared screens have all 4 artifacts in the completion cycle
+- all declared screens have all 4 artifacts in the completion round / polish cycle
 - blocking findings are closed or dispositioned
 - `bestOfHistory` evidence present
 - `breakthrough` evidence present
@@ -44,18 +39,18 @@ Completion (independent of mode) requires ALL of the following:
 
 The completion gate above applies identically to `low-cost`, `standard`, and `full-harness`. The only mode-specific value is `maxCycles`:
 
-- `low-cost`: `maxCycles = 1` — at most one cycle; completion is only reachable if the single cycle satisfies the full gate.
+- `low-cost`: `maxCycles = 1` — at most one polish cycle; completion is only reachable if the single polish cycle satisfies the full gate.
 - `standard`: `maxCycles = 3` — default.
-- `full-harness`: `maxCycles = 20` — extended exploration budget.
+- `full-harness`: `maxCycles = 20` — extended polish budget.
 
-If the cycle budget is exhausted before the gate is satisfied, the run does not complete and is returned as `REVISE`. A 95-point threshold is a signal only and is not a completion border.
+If the polish-cycle budget is exhausted before the gate is satisfied, the run does not complete and is returned as `REVISE`. A 95-point threshold is a signal only and is not a completion border.
 
 ## Stop conditions
 
 You may stop only when all of the following are true:
 
-- all declared screens have all 4 artifacts for the current cycle
-- canonical latest paths match the current cycle
+- all declared screens have all 4 artifacts for the current accepted winner/polish state
+- canonical latest paths match the current accepted winner/polish state
 - blocking findings are closed or dispositioned
 - validate passes with `--fail-on error`
 - independent reviewer returns `PASS`

@@ -8,9 +8,23 @@ axes:
     weight: 1
   - id: functionality
     weight: 1
-hard_floors:
-  - functionality
-  - accessibility-risk
+  - id: accessibility-risk
+    weight: 1
+  - id: implementation-plausibility
+    weight: 1
 weighted_axes:
   - design-quality
   - originality
+hard_floors:
+  functionality: 80
+  accessibility-risk: 80
+  conceptFit: 85
+absorbable_categories:
+  - layout
+  - interaction
+  - content-hierarchy
+  - visual-language
+  - navigation
+  - motion
+coherence:
+  regression_threshold: 5

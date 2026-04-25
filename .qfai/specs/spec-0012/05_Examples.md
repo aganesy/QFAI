@@ -145,3 +145,27 @@
 - Given legacy traceability IDs remain present in historical ledgers
 - Then current documentation keeps the identifier space reserved
 - And it does not restore weighted-total-only runtime narratives
+
+## EX-0012-0105: Round-Start Produces Candidate-Scoped Artifacts
+
+- BR-Ref: BR-0012-0016
+- Given round `r3` has survivors `c1`, `c3`, and `c5`
+- When internal prototyping artifact generation starts the round
+- Then QFAI writes `command-plans.json` and `review-bundle.json` under `.qfai/evidence/prototyping/rounds/r3/`
+- And each candidate uses `.qfai/evidence/prototyping/rounds/r3/candidates/<candidate-id>/<screen-id>.*`
+
+## EX-0012-0106: Harvest And Absorption Keep Losing Ideas Visible
+
+- BR-Ref: BR-0012-0017
+- Given round `r5` harvest captures strengths from dropped candidates
+- When round `r3` absorption planning begins
+- Then each survivor classifies every `harvestId` as `applied` or `rejected`
+- And rejected entries explain why the idea was not absorbed
+
+## EX-0012-0107: Concept Regression Blocks Advance
+
+- BR-Ref: BR-0012-0018
+- Given round `r2` evaluator review reports `conceptFit.regressionAlert=true`
+- When the next narrowing decision is evaluated
+- Then round advance is rejected
+- And the absorption plan must be re-curated before proceeding

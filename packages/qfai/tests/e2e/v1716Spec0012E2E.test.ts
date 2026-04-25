@@ -49,7 +49,7 @@
  *   (TC-0012-0304/0305 applyCalibrationOverrides)
  * -------------------------------------------------------------------------
  *
- * Refs: spec-0017/09_delta.md for the full spec-0012 → spec-0017 delta map.
+ * Refs: spec-0012/09_delta.md for the absorbed legacy delta map.
  */
 
 import { access } from "node:fs/promises";

@@ -24,11 +24,17 @@ export type ParsedArgs = {
     guardrailsMax?: number;
     guardrailsKeyword?: string;
     platform?: string;
-    // spec-0017 REQ-0007: `qfai prototyping prepare ...`
-    prototypingAction?: "prepare";
+    prototypingAction?:
+      | "round-start"
+      | "round-harvest"
+      | "round-narrow"
+      | "round-absorb"
+      | "round-reimplement-verify";
     prototypingTargetUrl?: string;
     prototypingMode?: "low-cost" | "standard" | "full-harness";
-    prototypingCycle?: number;
+    prototypingRound?: "r5" | "r3" | "r2" | "r1";
+    prototypingCandidates?: string[];
+    prototypingSurvivors?: string[];
     help: boolean;
     invalidExitCode: number;
   };
@@ -87,7 +93,13 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
   if (command === "prototyping") {
     const candidate = args[0];
     if (candidate && !candidate.startsWith("--")) {
-      if (candidate === "prepare") {
+      if (
+        candidate === "round-start" ||
+        candidate === "round-harvest" ||
+        candidate === "round-narrow" ||
+        candidate === "round-absorb" ||
+        candidate === "round-reimplement-verify"
+      ) {
         options.prototypingAction = candidate;
       } else {
         markInvalid();
@@ -295,18 +307,47 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         i += 1;
         break;
       }
-      case "--cycle": {
+      case "--round": {
         const next = readOptionValue(args, i);
         if (next === null) {
           markInvalid();
           break;
         }
-        const parsed = Number.parseInt(next, 10);
-        if (Number.isInteger(parsed) && parsed >= 1) {
-          options.prototypingCycle = parsed;
+        if (next === "r5" || next === "r3" || next === "r2" || next === "r1") {
+          options.prototypingRound = next;
         } else {
           markInvalid();
         }
+        i += 1;
+        break;
+      }
+      case "--candidates": {
+        const next = readOptionValue(args, i);
+        if (next === null) {
+          markInvalid();
+          break;
+        }
+        const values = splitCsvOption(next);
+        if (values.length === 0) {
+          markInvalid();
+          break;
+        }
+        options.prototypingCandidates = values;
+        i += 1;
+        break;
+      }
+      case "--survivors": {
+        const next = readOptionValue(args, i);
+        if (next === null) {
+          markInvalid();
+          break;
+        }
+        const values = splitCsvOption(next);
+        if (values.length === 0) {
+          markInvalid();
+          break;
+        }
+        options.prototypingSurvivors = values;
         i += 1;
         break;
       }
@@ -334,6 +375,13 @@ function readOptionValue(args: string[], index: number): string | null {
     return null;
   }
   return next;
+}
+
+function splitCsvOption(value: string): string[] {
+  return value
+    .split(",")
+    .map((item) => item.trim())
+    .filter((item) => item.length > 0);
 }
 
 function applyFormatOption(

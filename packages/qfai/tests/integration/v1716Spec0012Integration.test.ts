@@ -103,7 +103,7 @@
  *   fields are rejected with actionable messages).
  * -------------------------------------------------------------------------
  *
- * Refs: spec-0017/09_delta.md for the full spec-0012 → spec-0017 delta map.
+ * Refs: spec-0012/09_delta.md for the absorbed legacy delta map.
  */
 
 import { access } from "node:fs/promises";
@@ -122,9 +122,9 @@ async function exists(p: string): Promise<boolean> {
   }
 }
 
-describe("spec-0012 v1.7.16 → spec-0017 traceability", () => {
-  it("spec-0017 delta map exists and names the v1.7.16 predecessor", async () => {
-    const deltaPath = path.join(repoRoot, ".qfai", "specs", "spec-0017", "09_delta.md");
+describe("spec-0012 absorbed prototyping traceability", () => {
+  it("spec-0012 delta map records the absorbed v1.7.16 lineage", async () => {
+    const deltaPath = path.join(repoRoot, ".qfai", "specs", "spec-0012", "09_delta.md");
     expect(await exists(deltaPath)).toBe(true);
   });
 });

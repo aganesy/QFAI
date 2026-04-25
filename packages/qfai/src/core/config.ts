@@ -38,7 +38,7 @@ export type QfaiValidationConfig = {
     maxE2eScenarioCount: number | null;
     /**
      * When true (default), `qfai validate` rejects `it.todo` / `test.todo` /
-     * `describe.todo` stubs in test files (spec-0017 REQ-0009, QFAI-TEST-0001).
+     * `describe.todo` stubs in test files (spec-0012, QFAI-TEST-0001).
      * Set to false to opt out while migrating an existing project.
      */
     forbidTestTodoStubs: boolean;
@@ -85,7 +85,7 @@ export type QfaiPrototypingCalibrationConfig = {
 export type QfaiPrototypingExecutionConfig = {
   targetUrl?: string | null;
   /**
-   * Browser tool handed to the AI evaluator sub-agent (spec-0017 REQ-0002).
+   * Browser tool handed to the AI evaluator sub-agent (spec-0012).
    * The only accepted value is `"playwright-cli"`.
    */
   browserTool: "playwright-cli";
@@ -528,13 +528,13 @@ function normalizePrototypingExecution(
     return base ? { ...base } : undefined;
   }
 
-  // spec-0017 REQ-0008: legacy keys are rejected, not silently aliased.
+  // spec-0012: legacy keys are rejected, not silently aliased.
   for (const legacyKey of ["browserProvider", "renderProvider"] as const) {
     if (raw[legacyKey] !== undefined) {
       issues.push(
         configIssue(
           configPath,
-          `prototyping.execution.${legacyKey} は廃止されました (spec-0017 REQ-0008)。` +
+          `prototyping.execution.${legacyKey} は廃止されました (spec-0012)。` +
             ` prototyping.execution.browserTool: playwright-cli に置き換えてください。`,
         ),
       );
@@ -548,7 +548,7 @@ function normalizePrototypingExecution(
       issues.push(
         configIssue(
           configPath,
-          `prototyping.execution.browserTool は "playwright-cli" のみ有効です (spec-0017 REQ-0002)。` +
+          `prototyping.execution.browserTool は "playwright-cli" のみ有効です (spec-0012)。` +
             ` 受け取った値: ${JSON.stringify(browserToolRaw)}`,
         ),
       );

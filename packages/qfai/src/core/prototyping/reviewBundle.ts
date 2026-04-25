@@ -14,7 +14,22 @@ import type { CanonicalScreenContract } from "../contracts/screenContracts.js";
 import type { PrototypingMode } from "../review/prototyping.js";
 import { PROTOTYPING_MAX_CYCLES } from "../review/prototyping.js";
 
-import { buildPlaywrightCliCommandPlans } from "./playwrightCliPlan.js";
+import type { CandidateId } from "./candidate.js";
+import { candidateConceptPath } from "./candidateConcept.js";
+import {
+  buildCandidatePlaywrightCliCommandPlans,
+  buildPlaywrightCliCommandPlans,
+  type CandidatePlaywrightCliCommandPlan,
+} from "./playwrightCliPlan.js";
+import {
+  candidateRoutePath,
+  previousExplorationRound,
+  roundCandidateEvidencePath,
+  roundCommandPlansPath,
+  roundDir,
+  roundEvaluatorReviewPath,
+  type ExplorationRound,
+} from "./round.js";
 import {
   cycleCommandLogPath,
   cycleCommandPlanPath,
@@ -54,9 +69,7 @@ export type BuildReviewBundleInput = {
  */
 export function buildReviewBundle(input: BuildReviewBundleInput): ReviewBundle {
   if (!Number.isInteger(input.cycle) || input.cycle < 1) {
-    throw new Error(
-      `buildReviewBundle: cycle must be a positive integer, got ${input.cycle}`,
-    );
+    throw new Error(`buildReviewBundle: cycle must be a positive integer, got ${input.cycle}`);
   }
 
   const maxCycles = PROTOTYPING_MAX_CYCLES[input.mode];
@@ -85,8 +98,7 @@ export function buildReviewBundle(input: BuildReviewBundleInput): ReviewBundle {
     })),
     commandPlanRef: cycleCommandPlanPath(input.cycle),
     axisDefsRef: input.axisDefsRef ?? DEFAULT_AXIS_DEFS_REF,
-    designSystemChecklistRef:
-      input.designSystemChecklistRef ?? DEFAULT_DESIGN_SYSTEM_CHECKLIST_REF,
+    designSystemChecklistRef: input.designSystemChecklistRef ?? DEFAULT_DESIGN_SYSTEM_CHECKLIST_REF,
     previousScoreRef,
     evaluatorReviewOutputPath: cycleEvaluatorReviewPath(input.cycle),
   };
@@ -139,6 +151,129 @@ export async function writeReviewBundles(
   return { reviewBundlePath, commandPlanPath, reviewBundle: bundle, commandPlans };
 }
 
+export type RoundReviewBundle = {
+  spec: "0017";
+  round: ExplorationRound;
+  mode: PrototypingMode;
+  maxCycles: number;
+  targetUrl: string;
+  candidates: Array<{
+    candidateId: CandidateId;
+    conceptRef: string;
+    previousEvaluatorReviewRef: string | null;
+    evaluatorReviewOutputPath: string;
+    screens: Array<{
+      screenId: string;
+      route: string;
+      candidateRoute: string;
+      primaryTasks: string[];
+      sourceRef: string;
+      expectedEvidence: {
+        screenshotPath: string;
+        htmlPath: string;
+        snapshotPath: string;
+        commandLogPath: string;
+      };
+    }>;
+  }>;
+  commandPlanRef: string;
+  axisDefsRef: string;
+  designSystemChecklistRef: string;
+};
+
+export type BuildRoundReviewBundleInput = {
+  targetUrl: string;
+  round: ExplorationRound;
+  mode: PrototypingMode;
+  candidateIds: CandidateId[];
+  screens: CanonicalScreenContract[];
+  axisDefsRef?: string;
+  designSystemChecklistRef?: string;
+};
+
+export function buildRoundReviewBundle(input: BuildRoundReviewBundleInput): RoundReviewBundle {
+  return {
+    spec: "0017",
+    round: input.round,
+    mode: input.mode,
+    maxCycles: PROTOTYPING_MAX_CYCLES[input.mode],
+    targetUrl: input.targetUrl,
+    candidates: input.candidateIds.map((candidateId) => ({
+      candidateId,
+      conceptRef: candidateConceptPath(input.round, candidateId),
+      previousEvaluatorReviewRef: derivePreviousCandidateReviewRef(input.round, candidateId),
+      evaluatorReviewOutputPath: roundEvaluatorReviewPath(input.round, candidateId),
+      screens: input.screens.map((screen) => ({
+        screenId: screen.screenId,
+        route: screen.route,
+        candidateRoute: candidateRoutePath(candidateId, screen.route),
+        primaryTasks: [...screen.primaryTasks],
+        sourceRef: screen.sourceRef,
+        expectedEvidence: {
+          screenshotPath: roundCandidateEvidencePath(
+            input.round,
+            candidateId,
+            screen.screenId,
+            "png",
+          ),
+          htmlPath: roundCandidateEvidencePath(input.round, candidateId, screen.screenId, "html"),
+          snapshotPath: roundCandidateEvidencePath(
+            input.round,
+            candidateId,
+            screen.screenId,
+            "snapshot.txt",
+          ),
+          commandLogPath: roundCandidateEvidencePath(
+            input.round,
+            candidateId,
+            screen.screenId,
+            "commands.json",
+          ),
+        },
+      })),
+    })),
+    commandPlanRef: roundCommandPlansPath(input.round),
+    axisDefsRef: input.axisDefsRef ?? DEFAULT_AXIS_DEFS_REF,
+    designSystemChecklistRef: input.designSystemChecklistRef ?? DEFAULT_DESIGN_SYSTEM_CHECKLIST_REF,
+  };
+}
+
+export type WriteRoundReviewBundleInput = BuildRoundReviewBundleInput & {
+  root: string;
+};
+
+export type WrittenRoundReviewBundle = {
+  reviewBundlePath: string;
+  commandPlanPath: string;
+  reviewBundle: RoundReviewBundle;
+  commandPlans: CandidatePlaywrightCliCommandPlan[];
+};
+
+export async function writeRoundReviewBundle(
+  input: WriteRoundReviewBundleInput,
+): Promise<WrittenRoundReviewBundle> {
+  const reviewBundle = buildRoundReviewBundle(input);
+  const commandPlans = buildCandidatePlaywrightCliCommandPlans({
+    targetUrl: input.targetUrl,
+    round: input.round,
+    candidateIds: input.candidateIds,
+    screens: input.screens,
+  });
+
+  const roundEvidenceDir = path.join(input.root, ...roundDir(input.round).split("/"));
+  await mkdir(roundEvidenceDir, { recursive: true });
+
+  const reviewBundlePath = path.join(roundEvidenceDir, "review-bundle.json");
+  const commandPlanPath = path.join(roundEvidenceDir, "command-plans.json");
+
+  await Promise.all([
+    writeFile(reviewBundlePath, `${JSON.stringify(reviewBundle, null, 2)}\n`, "utf-8"),
+    writeFile(commandPlanPath, `${JSON.stringify(commandPlans, null, 2)}\n`, "utf-8"),
+  ]);
+
+  return { reviewBundlePath, commandPlanPath, reviewBundle, commandPlans };
+}
+
 /**
  * Default previousScoreRef: cycle 1 has none; later cycles point at the
  * prior cycle's evaluator-review.json.
@@ -150,9 +285,17 @@ export function deriveDefaultPreviousScoreRef(cycle: number): string | null {
   return cycleEvaluatorReviewPath(cycle - 1);
 }
 
+export function derivePreviousCandidateReviewRef(
+  round: ExplorationRound,
+  candidateId: CandidateId,
+): string | null {
+  if (round === "r5") {
+    return null;
+  }
+
+  return roundEvaluatorReviewPath(previousExplorationRound(round), candidateId);
+}
+
 /** Path helpers re-exported for convenience. */
-export {
-  cycleReviewBundlePath,
-  cycleCommandPlanPath,
-  cycleEvaluatorReviewPath,
-} from "./types.js";
+export { cycleReviewBundlePath, cycleCommandPlanPath, cycleEvaluatorReviewPath } from "./types.js";
+export { roundReviewBundlePath } from "./round.js";

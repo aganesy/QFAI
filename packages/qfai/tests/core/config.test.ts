@@ -133,7 +133,7 @@ describe("spec-0017 prototyping.execution config", () => {
         issue.message.includes("prototyping.execution.browserProvider"),
       );
       expect(legacy, "expected legacy browserProvider rejection").toBeDefined();
-      expect(legacy?.message).toContain("spec-0017");
+      expect(legacy?.message).toContain("spec-0012");
       expect(legacy?.message).toContain("playwright-cli");
     } finally {
       await rm(root, { recursive: true, force: true });
@@ -238,12 +238,7 @@ describe("spec-0017 testStrategy.forbidTestTodoStubs", () => {
     try {
       await writeFile(
         path.join(root, "qfai.config.yaml"),
-        [
-          "validation:",
-          "  testStrategy:",
-          "    forbidTestTodoStubs: false",
-          "",
-        ].join("\n"),
+        ["validation:", "  testStrategy:", "    forbidTestTodoStubs: false", ""].join("\n"),
         "utf-8",
       );
 
@@ -260,12 +255,7 @@ describe("spec-0017 testStrategy.forbidTestTodoStubs", () => {
     try {
       await writeFile(
         path.join(root, "qfai.config.yaml"),
-        [
-          "validation:",
-          "  testStrategy:",
-          '    forbidTestTodoStubs: "nope"',
-          "",
-        ].join("\n"),
+        ["validation:", "  testStrategy:", '    forbidTestTodoStubs: "nope"', ""].join("\n"),
         "utf-8",
       );
 

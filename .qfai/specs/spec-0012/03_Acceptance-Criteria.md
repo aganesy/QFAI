@@ -102,3 +102,47 @@
 - Active docs must not present `qfai prototyping` as a valid command.
 - Active docs must not present weighted-total scoring as the current evidence contract.
 - Internal mode helpers may still exist, provided they are clearly scoped as implementation detail.
+
+## Absorbed Legacy Acceptance Registry
+
+The following acceptance IDs remain valid after deleting `spec-0017/` and
+`spec-0018/`. They are preserved here as appendix-style registry entries.
+
+### Former spec-0017 acceptance criteria (absorbed)
+
+| Legacy AC    | Preserved expectation in spec-0012                                                |
+| ------------ | --------------------------------------------------------------------------------- |
+| AC-0017-0001 | Mode obligations remain identical except for `maxCycles`.                         |
+| AC-0017-0002 | Playwright CLI command plans remain deterministic.                                |
+| AC-0017-0003 | Evaluator reviews remain tied to concrete evidence refs.                          |
+| AC-0017-0004 | Review-cycle completeness remains machine-verifiable.                             |
+| AC-0017-0005 | Internal artifact-generation CLI helpers remain deterministic and non-evaluating. |
+| AC-0017-0006 | Legacy config keys remain hard errors with actionable migration text.             |
+| AC-0017-0007 | Missing screenshot evidence still fails all modes.                                |
+| AC-0017-0008 | Missing reviewer PASS still fails completion in all modes.                        |
+| AC-0017-0009 | `maxCycles` mismatches still emit `QFAI-PROT-MODE-001`.                           |
+| AC-0017-0010 | Legacy validator slices still apply across modes when exercised.                  |
+| AC-0017-0011 | Playwright MCP remnants remain absent from active package/runtime paths.          |
+| AC-0017-0012 | Node Playwright direct invocation remains removed from production code.           |
+| AC-0017-0013 | Runtime `.qfai` and packaged init assets remain synchronized.                     |
+| AC-0017-0014 | Review bundles still contain the full evaluator input set.                        |
+| AC-0017-0015 | Best-of-history, breakthrough, and reviewer PASS remain required in every mode.   |
+| AC-0017-0016 | `qfai validate` still emits `QFAI-TEST-0001` per todo stub occurrence.            |
+| AC-0017-0017 | `qfai init` still ships the `qfai-validate.yml` workflow.                         |
+| AC-0017-0018 | `/qfai-implement` still blocks completion while `QFAI-TEST-0001` findings remain. |
+| AC-0017-0019 | The QFAI repo still self-validates its shipped test-todo gate in CI.              |
+
+### Former spec-0018 acceptance criteria (absorbed)
+
+| Legacy AC    | Preserved expectation in spec-0012                                                                             |
+| ------------ | -------------------------------------------------------------------------------------------------------------- |
+| AC-0018-0001 | The funnel remains fixed to rounds `r5`, `r3`, `r2`, `r1` and those rounds do not consume polish-cycle budget. |
+| AC-0018-0002 | Evaluator review v2 remains structured with six axes, strengths, and concept/coherence sections.               |
+| AC-0018-0003 | Harvest completeness remains explicit and round-local.                                                         |
+| AC-0018-0004 | Absorption plans still classify every harvested element as `applied` or `rejected`.                            |
+| AC-0018-0005 | Concept coherence regression still blocks advance.                                                             |
+| AC-0018-0006 | Minimum absorptions per survivor remain enforced.                                                              |
+| AC-0018-0007 | Concept-fit hard floors still apply to narrowing.                                                              |
+| AC-0018-0008 | Candidate rendering remains path-based and parallel.                                                           |
+| AC-0018-0009 | Round CLI commands remain deterministic artifact writers.                                                      |
+| AC-0018-0010 | Legacy iteration artifacts remain superseded by round-aware evidence expectations.                             |

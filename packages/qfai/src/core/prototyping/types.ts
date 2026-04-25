@@ -219,4 +219,3 @@ export type PrototypingEvidenceRecord = {
   reviewerGate: PrototypingReviewerGateRef;
   completionClaimed: boolean;
 };
-

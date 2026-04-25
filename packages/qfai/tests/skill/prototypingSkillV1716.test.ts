@@ -65,7 +65,7 @@ describe("TC-0012-0289 — Step 0 executionPlan documented in SKILL.md", () => {
     expect(content).toMatch(/Step 0/i);
 
     // executionPlan fields enumerated
-    expect(content).toContain("targetIterations");
+    expect(content).toContain("targetRounds");
     expect(content).toContain("evaluationAxesSource");
     expect(content).toContain("delegationMap");
     expect(content).toContain("plannedAt");
@@ -85,16 +85,15 @@ describe("TC-0012-0292 — SKILL.md documents canonical evidence capture", () =>
 
 // ─── TC-0012-0293: 5-step iteration cycle documented ─────────────────────────
 
-describe("TC-0012-0293 — iteration loop documented in SKILL.md", () => {
+describe("TC-0012-0293 — round loop documented in SKILL.md", () => {
   // QFAI:SPEC-0012:TC-0012-0293 (superseded by spec-0017 REQ-0002 — step rename)
-  it("SKILL.md cycle section contains prepare/capture, evaluator launch, funnel, breakthrough, and validate phases in order", async () => {
+  it("SKILL.md cycle section contains round-start/capture, evaluator launch, funnel, breakthrough, and validate phases in order", async () => {
     const content = await readSkillMd();
 
-    // spec-0017 renames Step 4 to "Prepare Playwright CLI Command Plan & Review Bundle"
-    // and introduces Step 5 "AI Evaluator Executes the Command Plan and Captures Evidence".
+    // spec-0017 round v2 uses round-start while keeping evaluator / funnel / validate ordering.
     const captureIdx = Math.max(
-      content.indexOf("Capture Mandatory Evidence"),
-      content.indexOf("Prepare Playwright CLI Command Plan"),
+      content.indexOf("Round Start"),
+      content.indexOf("Prepare Candidate Review Bundle"),
     );
     const evaluateIdx = Math.max(
       content.indexOf("Launch L1 and L2 Evaluators"),

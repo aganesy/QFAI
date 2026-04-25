@@ -370,12 +370,14 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     const content = await readFile(evidenceReadmePath, "utf-8");
 
     // spec-0017 replaces "full-harness only" with unified mode invariant where
-    // only maxCycles differs across modes, and replaces render.json with the
-    // per-cycle Playwright CLI artifacts.
+    // only maxCycles differs across modes, and the round-based harness now
+    // uses command-plans.json instead of the older per-cycle plan filename.
     expect(content).toContain("uiFidelity");
     expect(content).toMatch(/Mode [Ii]nvariant|full-harness.*only|only.*full-harness/);
     expect(content).toContain("interactive");
-    expect(content).toMatch(/playwright-commands\.json|\.qfai\/evidence\/render\.json/);
+    expect(content).toMatch(
+      /command-plans\.json|playwright-commands\.json|\.qfai\/evidence\/render\.json/,
+    );
     expect(content).toContain("mockPaths");
     expect(content).toMatch(/concrete (render\/browser QA\/spec refs|artifact|evidence)/i);
   });
@@ -392,12 +394,7 @@ describe("assets guardrails", { timeout: 30000 }, () => {
 
   // TC-0017-0031 (static) — workflow template exists in init tree
   it("ships the qfai-validate GitHub Actions workflow template (spec-0017 REQ-0009)", async () => {
-    const workflowPath = path.join(
-      templateRootDir,
-      ".github",
-      "workflows",
-      "qfai-validate.yml",
-    );
+    const workflowPath = path.join(templateRootDir, ".github", "workflows", "qfai-validate.yml");
     const content = await readFile(workflowPath, "utf-8");
 
     expect(content).toContain("name: qfai validate");
@@ -889,6 +886,7 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     expect(templates.sort()).toEqual(
       [
         "api-contract.sample.yaml",
+        "absorption-policy.sample.yaml",
         "db-contract.sample.sql",
         "design-system.sample.yaml",
         "evaluation-rubric.sample.yaml",

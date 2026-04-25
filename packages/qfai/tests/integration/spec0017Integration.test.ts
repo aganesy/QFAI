@@ -1,15 +1,13 @@
 /**
- * Integration traceability index for spec-0017
- * (Prototyping Playwright CLI Agent Harness + Test Todo Stub Prohibition).
+ * Integration traceability index for the absorbed former spec-0017 coverage.
  *
  * Every TC listed below is covered by an executing test elsewhere (unit,
  * cli, assets, validators). This file serves as the `tests/integration/**`
  * reference surface that `validateAtddCodeTraceability` scans when confirming
  * TC coverage in integration scope.
  *
- * The single live assertion verifies that spec-0017 itself exists on disk,
- * so the file always runs at least one test (keeps vitest happy) while the
- * TC annotations carry the trace links.
+ * The single live assertion verifies that spec-0012 retains the absorbed
+ * `TC-0017-*` registry after the standalone spec-0017 directory was removed.
  *
  * Covered TC annotations:
  *
@@ -63,9 +61,9 @@ async function exists(p: string): Promise<boolean> {
   }
 }
 
-describe("spec-0017 integration traceability", () => {
-  it("spec-0017 directory exists on disk", async () => {
-    const specDir = path.join(repoRoot, ".qfai", "specs", "spec-0017", "01_Spec.md");
-    expect(await exists(specDir)).toBe(true);
+describe("absorbed spec-0017 integration traceability", () => {
+  it("spec-0012 keeps the absorbed TC-0017 registry on disk", async () => {
+    const specPath = path.join(repoRoot, ".qfai", "specs", "spec-0012", "06_Test-Cases.md");
+    expect(await exists(specPath)).toBe(true);
   });
 });

@@ -8,3 +8,12 @@ brand_signals:
   - Confident
 differentiation_targets:
   - Avoid generic dashboard defaults
+parallel_candidate_routing: required
+concept_anchors:
+  - id: CONCEPT-0001
+    statement: Calm operational confidence
+  - id: CONCEPT-0002
+    statement: Guided depth without clutter
+non_goals:
+  - Loud novelty-first visuals
+  - Route switching that depends on hidden runtime state

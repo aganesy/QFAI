@@ -7,7 +7,7 @@ The contract must describe screen structure, action coverage targets, and stable
 
 > **Note:** UI contracts are the downstream execution truth for screen obligations. `/qfai-sdd` may derive them from discussion-side exploration, but `/qfai-prototyping`, `/qfai-implement`, and `/qfai-atdd` must read `contracts/ui/*.yaml` instead of reading `discussion-*/uiux/40_screen_contracts.md` directly.
 
-> **Prototyping harness (spec-0017)**: `screens[].id`, `screens[].route`, and `primaryTasks` feed `buildPlaywrightCliCommandPlan` to generate the per-cycle Playwright CLI command plan consumed by the AI evaluator sub-agent. Changes to screen IDs or routes must propagate to `.qfai/evidence/prototyping/iterations/<n>/<screen-id>.*` evidence.
+> **Prototyping harness (spec-0012)**: `screens[].id`, `screens[].route`, and `primaryTasks` feed the round-based command-plan builders consumed by the AI evaluator sub-agent. Changes to screen IDs or routes must propagate to `.qfai/evidence/prototyping/rounds/<rN>/candidates/<candidate-id>/<screen-id>.*` evidence.
 
 ## File rules
 
