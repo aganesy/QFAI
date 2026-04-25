@@ -123,11 +123,15 @@ UI-bearing discussion packs (`ui_bearing: true`) may include a `prototyping.yaml
 
 ### Canonical namespaced schema (when present)
 
+The three modes (`low-cost`, `standard`, `full-harness`) share the same evidence obligations and validator gates; the only mode-dependent value is `maxCycles` (1 / 3 / 20). Choose `recommended_mode` based on the project's iteration budget, and list every mode the project allows under `allowed_modes`.
+
 ```yaml
 prototyping:
-  recommended_mode: full-harness
-  rationale: Exploration-first prototyping requires the full-harness runtime loop in packages/qfai.
+  recommended_mode: standard
+  rationale: Standard mode (maxCycles=3) matches our review cadence.
   allowed_modes:
+    - low-cost
+    - standard
     - full-harness
   surface: web
 ```
@@ -136,18 +140,19 @@ prototyping:
 
 If you create this artifact, populate all 4 fields.
 
-| Field              | Required | Description                                    |
-| ------------------ | -------- | ---------------------------------------------- |
-| `recommended_mode` | yes      | `full-harness`                                 |
-| `rationale`        | yes      | Non-empty string explaining the recommendation |
-| `allowed_modes`    | yes      | Unique array; must contain only `full-harness` |
-| `surface`          | yes      | `web`, `mobile`, `desktop`, or `mixed`         |
+| Field              | Required | Description                                                                |
+| ------------------ | -------- | -------------------------------------------------------------------------- |
+| `recommended_mode` | yes      | One of `low-cost`, `standard`, `full-harness`                              |
+| `rationale`        | yes      | Non-empty string explaining the recommendation                             |
+| `allowed_modes`    | yes      | Unique non-empty array drawn from `low-cost` / `standard` / `full-harness` |
+| `surface`          | yes      | `web`, `mobile`, `desktop`, or `mixed`                                     |
 
 ### Current behavior
 
 - Current discussion-pack readiness does not block on missing `prototyping.yaml`.
 - When `prototyping.yaml` is present, prefer the canonical namespaced schema under the `prototyping:` key.
-- `recommended_mode` should be included in `allowed_modes`. In packages/qfai, this means `recommended_mode` should be `full-harness` and `allowed_modes` should contain only `full-harness`.
+- `recommended_mode` MUST be included in `allowed_modes`.
+- Mode invariant (spec-0017 REQ-0001): the three modes share obligations except for `maxCycles` (1 for `low-cost`, 3 for `standard`, 20 for `full-harness`). Picking a different mode does not relax any other gate.
 
 ## Suggested naming
 
