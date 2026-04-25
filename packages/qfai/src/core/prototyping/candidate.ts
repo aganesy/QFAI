@@ -6,9 +6,15 @@ const CANDIDATE_ID_PATTERN = /^c[1-9]\d*$/;
 // `c${number}`, but `${number}` accepts any numeric literal including
 // `c0`, `c-1`, `c1.5`, and `cNaN`, none of which the runtime regex
 // CANDIDATE_ID_PATTERN allows. The brand keeps the value a plain string
-// at runtime while forcing every CandidateId to flow through
-// `parseCandidateIds` (the only public mint), so the type and the
-// validator agree.
+// at runtime while ensuring every CandidateId is verified against
+// CANDIDATE_ID_PATTERN before it crosses an API boundary.
+//
+// Two mint helpers are provided and both gate on CANDIDATE_ID_PATTERN:
+// - `isCandidateId(unknown): value is CandidateId` — type guard for a
+//   single value (validators use this when narrowing one element).
+// - `parseCandidateIds(Iterable<string>): CandidateId[]` — the canonical
+//   mint for user-supplied lists; adds dedup + invalid-id throw on top
+//   of isCandidateId.
 declare const CandidateIdBrand: unique symbol;
 export type CandidateId = string & { readonly [CandidateIdBrand]: "CandidateId" };
 
