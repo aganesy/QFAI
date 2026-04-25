@@ -154,6 +154,15 @@ if (existsSync(rootGithubDir)) {
       );
     }
   }
+  // Confirm the actual workflow file ships. workflows/ existing without
+  // qfai-validate.yml inside it is the same downstream regression as a
+  // missing workflows/ — REQ-0009 promises the file, not just the folder.
+  const workflowFile = path.join(rootGithubDir, "workflows", "qfai-validate.yml");
+  if (!existsSync(workflowFile) || !lstatSync(workflowFile).isFile()) {
+    throw new Error(
+      "assets/init/root/.github/workflows/qfai-validate.yml must exist as a regular file (spec-0017 REQ-0009).",
+    );
+  }
 }
 
 rmSync(sandboxDir, { recursive: true, force: true });

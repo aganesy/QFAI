@@ -45,7 +45,7 @@
  * QFAI:SPEC-0017:TC-0017-0032 — qfai-implement skill gate on QFAI-TEST-001
  */
 
-import { access } from "node:fs/promises";
+import { access, readFile } from "node:fs/promises";
 import path from "node:path";
 
 import { describe, expect, it } from "vitest";
@@ -65,5 +65,18 @@ describe("absorbed spec-0017 integration traceability", () => {
   it("spec-0012 keeps the absorbed TC-0017 registry on disk", async () => {
     const specPath = path.join(repoRoot, ".qfai", "specs", "spec-0012", "06_Test-Cases.md");
     expect(await exists(specPath)).toBe(true);
+    // File existence alone is insufficient — confirm the absorbed
+    // TC-0017-* IDs are still listed so removing them from the registry
+    // would fail this test instead of going unnoticed.
+    const content = await readFile(specPath, "utf-8");
+    for (const tcId of [
+      "TC-0017-0001",
+      "TC-0017-0009",
+      "TC-0017-0017",
+      "TC-0017-0028",
+      "TC-0017-0032",
+    ]) {
+      expect(content).toContain(tcId);
+    }
   });
 });
