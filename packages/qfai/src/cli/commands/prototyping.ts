@@ -239,6 +239,31 @@ async function runRoundAbsorb(options: RunPrototypingCommandOptions): Promise<nu
     return 2;
   }
 
+  // The prior round-narrow step recorded the canonical survivor set in
+  // narrow-decision.json. round-absorb MUST consume that same set so the
+  // absorption-plan and narrow-decision stay in lock-step; otherwise a
+  // mistyped --survivors flag could silently produce a plan that contradicts
+  // the recorded narrow choice (downstream candidate lineage / reimplement
+  // evidence would then be wrong).
+  const narrowDecision = await readNarrowDecisionRecord(options.root, previousRound, options.round);
+  if (!narrowDecision) {
+    error(
+      `qfai prototyping round-absorb: missing or invalid ${roundNarrowDecisionPath(previousRound)} (run round-narrow first).`,
+    );
+    return 2;
+  }
+  const narrowSurvivors = [...narrowDecision.survivorCandidateIds].sort();
+  const givenSurvivors = [...survivors].sort();
+  if (
+    narrowSurvivors.length !== givenSurvivors.length ||
+    narrowSurvivors.some((candidateId, index) => candidateId !== givenSurvivors[index])
+  ) {
+    error(
+      `qfai prototyping round-absorb: --survivors does not match narrow-decision.survivorCandidateIds (expected ${narrowSurvivors.join(",")}, got ${givenSurvivors.join(",")}).`,
+    );
+    return 2;
+  }
+
   const absorptionPlan = buildAbsorptionPlan({
     round: options.round,
     harvest,
@@ -346,6 +371,37 @@ async function readHarvestRecord(
   }
 
   return parsed as HarvestRecord;
+}
+
+type NarrowDecisionRecord = {
+  schemaVersion: "2.0";
+  fromRound: HarvestableExplorationRound;
+  toRound: AbsorptionRound;
+  allCandidatesConsidered: string[];
+  survivorCandidateIds: string[];
+  droppedCandidateIds: string[];
+};
+
+async function readNarrowDecisionRecord(
+  root: string,
+  fromRound: HarvestableExplorationRound,
+  expectedToRound: AbsorptionRound,
+): Promise<NarrowDecisionRecord | null> {
+  const narrowPath = path.join(root, ...roundNarrowDecisionPath(fromRound).split("/"));
+  const parsed = await readJsonFile(narrowPath);
+  if (
+    !parsed ||
+    parsed.schemaVersion !== "2.0" ||
+    parsed.fromRound !== fromRound ||
+    parsed.toRound !== expectedToRound ||
+    !Array.isArray(parsed.allCandidatesConsidered) ||
+    !Array.isArray(parsed.survivorCandidateIds) ||
+    !Array.isArray(parsed.droppedCandidateIds)
+  ) {
+    return null;
+  }
+
+  return parsed as NarrowDecisionRecord;
 }
 
 async function readJsonFile(filePath: string): Promise<Record<string, unknown> | null> {
