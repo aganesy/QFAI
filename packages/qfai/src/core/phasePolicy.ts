@@ -30,7 +30,7 @@ export function buildCiProfileIssue(
       "CI では部分 validation profile は使用できません。full/verify/tdd profile を使用してください。",
     rule: "VALIDATE-017",
     suggested_action:
-      "CI では --profile full（または --profile 指定なし、test-todo-stub 専用なら --profile tdd）で実行してください。",
+      "CI では --profile full / --profile verify / --profile tdd（または --profile 指定なし）のいずれかで実行してください。",
   };
 }
 

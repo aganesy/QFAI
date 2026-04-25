@@ -89,7 +89,7 @@ export async function runReport(options: ReportOptions): Promise<void> {
 
   if (blockedByProfileGuard) {
     error(
-      "report: CI では部分 validation profile を使用できません。--profile full（または指定なし）で再実行してください。",
+      "report: CI では部分 validation profile を使用できません。--profile full / --profile verify / --profile tdd（または --profile 指定なし）で再実行してください。",
     );
     process.exitCode = 1;
   }
