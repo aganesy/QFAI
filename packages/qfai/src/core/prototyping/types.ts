@@ -213,7 +213,12 @@ export type PrototypingEvidenceRecord = {
   };
   browserTool: "playwright-cli";
   maxCycles: number;
-  cycles: PrototypingCycleEvidence[];
+  // Field is named `iterations` (not `cycles`) to match validatePrototypingEvidence
+  // and the on-disk URL convention (.qfai/evidence/prototyping/iterations/<n>/...).
+  // Each element is still a PrototypingCycleEvidence — the "cycle" terminology
+  // refers to the inner step, while the outer record exposes its history of
+  // iterations.
+  iterations: PrototypingCycleEvidence[];
   bestOfHistory: PrototypingBestOfHistoryRef;
   breakthrough: PrototypingBreakthroughRef;
   reviewerGate: PrototypingReviewerGateRef;

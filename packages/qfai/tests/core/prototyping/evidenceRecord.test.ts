@@ -118,7 +118,7 @@ describe("spec-0017 buildPrototypingEvidenceRecord", () => {
         mode,
         modeSource: "test",
         modeRationale: "test",
-        cycles: [makeCycle(1)],
+        iterations: [makeCycle(1)],
         bestOfHistory: { cycle: 1, evidenceRef: "ref" },
         breakthrough: { checked: true, evidenceRef: "bt" },
         reviewerGate: { result: "PASS", evidenceRef: "rg" },
@@ -136,7 +136,7 @@ describe("spec-0017 buildPrototypingEvidenceRecord", () => {
       mode: "standard",
       modeSource: "config",
       modeRationale: "default",
-      cycles: [makeCycle(1), makeCycle(2)],
+      iterations: [makeCycle(1), makeCycle(2)],
       bestOfHistory: {
         cycle: 2,
         evidenceRef: ".qfai/evidence/prototyping/iterations/2/evaluator-review.json",
@@ -156,7 +156,7 @@ describe("spec-0017 buildPrototypingEvidenceRecord", () => {
     expect(record.breakthrough.checked).toBe(true);
     expect(record.reviewerGate.result).toBe("PASS");
     expect(record.completionClaimed).toBe(true);
-    expect(record.cycles).toHaveLength(2);
+    expect(record.iterations).toHaveLength(2);
   });
 });
 
@@ -169,7 +169,7 @@ describe("spec-0017 writePrototypingEvidenceRecord", () => {
       mode: "standard",
       modeSource: "test",
       modeRationale: "test",
-      cycles: [makeCycle(1)],
+      iterations: [makeCycle(1)],
       bestOfHistory: { cycle: 1, evidenceRef: "ref" },
       breakthrough: { checked: true, evidenceRef: "bt" },
       reviewerGate: { result: "PASS", evidenceRef: "rg" },
@@ -182,6 +182,6 @@ describe("spec-0017 writePrototypingEvidenceRecord", () => {
     expect(parsed.browserTool).toBe("playwright-cli");
     expect(parsed.mode.effective).toBe("standard");
     expect(parsed.maxCycles).toBe(3);
-    expect(parsed.cycles).toHaveLength(record.cycles.length);
+    expect(parsed.iterations).toHaveLength(record.iterations.length);
   });
 });

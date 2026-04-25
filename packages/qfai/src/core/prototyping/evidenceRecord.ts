@@ -130,7 +130,7 @@ export type BuildPrototypingEvidenceRecordInput = {
   mode: PrototypingMode;
   modeSource: string;
   modeRationale: string;
-  cycles: PrototypingCycleEvidence[];
+  iterations: PrototypingCycleEvidence[];
   bestOfHistory: PrototypingEvidenceRecord["bestOfHistory"];
   breakthrough: PrototypingEvidenceRecord["breakthrough"];
   reviewerGate: PrototypingEvidenceRecord["reviewerGate"];
@@ -152,7 +152,7 @@ export function buildPrototypingEvidenceRecord(
     },
     browserTool: "playwright-cli",
     maxCycles: PROTOTYPING_MAX_CYCLES[input.mode],
-    cycles: input.cycles,
+    iterations: input.iterations,
     bestOfHistory: input.bestOfHistory,
     breakthrough: input.breakthrough,
     reviewerGate: input.reviewerGate,

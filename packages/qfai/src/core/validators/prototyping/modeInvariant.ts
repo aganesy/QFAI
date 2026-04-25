@@ -65,6 +65,30 @@ export function validateModeInvariant(
   const issues: Issue[] = [];
   const expectedMaxCycles = PROTOTYPING_MAX_CYCLES[detected.mode];
 
+  // Mode invariant treats `maxIterations` as a deprecated alias of `maxCycles`.
+  // If both are present they MUST agree; otherwise budget/gate decisions
+  // disagree between readers and the canonical mode invariant is violated.
+  if (
+    raw.maxCycles !== undefined &&
+    raw.maxIterations !== undefined &&
+    raw.maxCycles !== raw.maxIterations
+  ) {
+    issues.push(
+      issue(
+        "QFAI-PROT-MODE-001",
+        `prototyping.json declares both maxCycles and maxIterations with conflicting values ` +
+          `(maxCycles=${JSON.stringify(raw.maxCycles)}, maxIterations=${JSON.stringify(raw.maxIterations)}). ` +
+          `They must agree (maxIterations is a deprecated alias).`,
+        "error",
+        evidencePathForIssue,
+        "prototyping.modeInvariant.maxCyclesAlias",
+        [JSON.stringify(raw.maxCycles), JSON.stringify(raw.maxIterations)],
+        "canonical",
+        "Remove the redundant key or align both values; prefer maxCycles (spec-0017 REQ-0001).",
+      ),
+    );
+  }
+
   const maxCyclesRaw = raw.maxCycles ?? raw.maxIterations;
   if (maxCyclesRaw !== undefined) {
     if (

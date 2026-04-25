@@ -29,7 +29,10 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: "22"
+          # Match the QFAI repo's CI baseline (Node 20 LTS) and the package
+          # `engines: ">=18.0.0"`. Bump deliberately when QFAI raises its
+          # supported floor.
+          node-version: "20"
           cache: npm
       - run: npm ci
       - name: qfai validate

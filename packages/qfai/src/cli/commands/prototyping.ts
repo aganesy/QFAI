@@ -77,6 +77,37 @@ async function runRoundStart(options: RunPrototypingCommandOptions): Promise<num
     );
     return 2;
   }
+  // Absorption rounds (r3 / r2 / r1) start AFTER round-narrow has recorded
+  // the canonical survivor set in narrow-decision.json. Re-running round-start
+  // with --candidates that disagree with that set would silently corrupt the
+  // candidate lineage (each candidate's evidence path is keyed off the round
+  // and the candidateId). Mirror the round-absorb consistency check here so
+  // the next review-bundle cannot diverge from the narrow decision.
+  if (isAbsorptionRound(options.round)) {
+    const previousRound = previousExplorationRound(options.round);
+    const narrowDecision = await readNarrowDecisionRecord(
+      options.root,
+      previousRound,
+      options.round,
+    );
+    if (!narrowDecision) {
+      error(
+        `qfai prototyping round-start: missing or invalid ${roundNarrowDecisionPath(previousRound)} (run round-narrow on ${previousRound} first).`,
+      );
+      return 2;
+    }
+    const narrowSurvivors = [...narrowDecision.survivorCandidateIds].sort();
+    const givenCandidates = [...candidateIds].sort();
+    if (
+      narrowSurvivors.length !== givenCandidates.length ||
+      narrowSurvivors.some((id, i) => id !== givenCandidates[i])
+    ) {
+      error(
+        `qfai prototyping round-start: --candidates does not match narrow-decision.survivorCandidateIds (expected ${narrowSurvivors.join(",")}, got ${givenCandidates.join(",")}).`,
+      );
+      return 2;
+    }
+  }
   const configResult = await loadConfig(options.root);
 
   const screens = await readUiContractScreenContracts(
