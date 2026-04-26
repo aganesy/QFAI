@@ -50,6 +50,7 @@ import {
   validateRenderCritique,
   validateDesignFidelity,
   validateDesignContractReadiness,
+  validateEvaluatorReviewHardFloor,
   validatePrototypingSkillContent,
   runCanonicalUixValidators,
   validateTraceabilityIntegrity,
@@ -177,6 +178,7 @@ async function runPrototypingValidators(
     ...(await validateRenderCritique(root, config)),
     ...(await validateDesignFidelity(root, config)),
     ...(await validateDesignContractReadiness(root, config)),
+    ...(await validateEvaluatorReviewHardFloor(root, config)),
   ];
 }
 

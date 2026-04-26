@@ -37,6 +37,7 @@ export { validateDiscussionDesignHardening } from "./discussionDesignHardening.j
 export { validateDesignAudit } from "./designAudit.js";
 export { validateDesignSlop } from "./designSlop.js";
 export { validateDesignContractReadiness } from "./designContractReadiness.js";
+export { validateEvaluatorReviewHardFloor } from "./evaluatorReviewHardFloor.js";
 export { validateUiEvidenceArtifacts } from "./uiEvidenceArtifacts.js";
 export { isUiBearingSpec } from "./uixDetection.js";
 export {

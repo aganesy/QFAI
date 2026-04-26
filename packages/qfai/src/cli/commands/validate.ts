@@ -417,6 +417,8 @@ const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-PROT-329": "fullHarness.status is completed but reviewerSignoff.timestamp is missing.",
   "QFAI-PROT-330":
     "uiFidelity screen actionsWired exceeds actionsDeclared (expected.actions). actionsWired must not exceed the number of declared actions.",
+  "QFAI-PROT-AXIS-FLOOR-001":
+    "Each candidate's evaluator-review perAxis[].score must meet evaluation-rubric.yaml hard_floors[].min_score in absorption rounds (r3|r2|r1). r5 is exempt.",
   "QFAI-UIE-001":
     "Every declared screen declared in `.qfai/contracts/ui/*.yaml` has a screenshot evidence file at `.qfai/evidence/prototyping/screenshots/<screen-id>.png`.",
   "QFAI-UIE-002":
