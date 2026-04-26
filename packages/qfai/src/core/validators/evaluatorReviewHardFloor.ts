@@ -26,17 +26,16 @@ function toPosixRelative(root: string, target: string): string {
   return path.relative(root, target).replace(/\\/g, "/");
 }
 
+function isEnoentError(error: unknown): boolean {
+  return error !== null && typeof error === "object" && "code" in error && error.code === "ENOENT";
+}
+
 async function readYamlObject(filePath: string): Promise<FileReadResult> {
   let raw: string;
   try {
     raw = await readFile(filePath, "utf-8");
   } catch (error) {
-    if (
-      error &&
-      typeof error === "object" &&
-      "code" in error &&
-      (error as NodeJS.ErrnoException).code === "ENOENT"
-    ) {
+    if (isEnoentError(error)) {
       return { kind: "missing" };
     }
     return { kind: "invalid" };
@@ -54,12 +53,7 @@ async function readJsonObject(filePath: string): Promise<FileReadResult> {
   try {
     raw = await readFile(filePath, "utf-8");
   } catch (error) {
-    if (
-      error &&
-      typeof error === "object" &&
-      "code" in error &&
-      (error as NodeJS.ErrnoException).code === "ENOENT"
-    ) {
+    if (isEnoentError(error)) {
       return { kind: "missing" };
     }
     return { kind: "invalid" };
@@ -97,19 +91,12 @@ function loadHardFloors(rubric: Record<string, unknown>): Map<string, number> {
   return map;
 }
 
-async function listCandidateReviewFiles(
-  reviewsDirAbsolute: string,
-): Promise<string[] | null> {
+async function listCandidateReviewFiles(reviewsDirAbsolute: string): Promise<string[] | null> {
   try {
     const names = await readdir(reviewsDirAbsolute);
     return names.filter((name) => name.endsWith(".json"));
   } catch (error) {
-    if (
-      error &&
-      typeof error === "object" &&
-      "code" in error &&
-      (error as NodeJS.ErrnoException).code === "ENOENT"
-    ) {
+    if (isEnoentError(error)) {
       return null;
     }
     throw error;
@@ -183,7 +170,13 @@ async function checkRound(
           "error",
           reviewPathRelative,
           RULE,
-          [round, candidateId, violation.axisId, String(violation.score), String(violation.minScore)],
+          [
+            round,
+            candidateId,
+            violation.axisId,
+            String(violation.score),
+            String(violation.minScore),
+          ],
           "canonical",
           `${reviewPathRelative} の ${violation.axisId} スコアを再評価し、hard_floors[].min_score (${violation.minScore}) 以上にしてください。`,
         ),
@@ -201,12 +194,7 @@ export async function validateEvaluatorReviewHardFloor(
   if (screens.length === 0) {
     return [];
   }
-  const rubricPath = path.join(
-    root,
-    config.paths.contractsDir,
-    "design",
-    "evaluation-rubric.yaml",
-  );
+  const rubricPath = path.join(root, config.paths.contractsDir, "design", "evaluation-rubric.yaml");
   const rubric = await readYamlObject(rubricPath);
   if (rubric.kind !== "ok") {
     return [];
