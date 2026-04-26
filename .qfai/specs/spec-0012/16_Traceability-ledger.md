@@ -18,6 +18,7 @@
 | Prototyping evidence validator | `packages/qfai/src/core/validators/prototypingEvidence.ts`                       |
 | Test todo validator            | `packages/qfai/src/core/validators/testTodoStubs.ts`                             |
 | UI evidence validator          | `packages/qfai/src/core/validators/uiEvidenceArtifacts.ts`                       |
+| Hard-floor validator           | `packages/qfai/src/core/validators/evaluatorReviewHardFloor.ts`                  |
 | Validate gate                  | `packages/qfai/src/core/validate.ts`                                             |
 
 ## Requirement Mapping
@@ -29,6 +30,7 @@
 | REQ-0023    | `packages/qfai/src/core/harness/history.ts`      | `packages/qfai/tests/core/harness/history.test.ts`      |
 | REQ-0024    | `packages/qfai/src/core/harness/resultWriter.ts` | `packages/qfai/tests/core/harness/resultWriter.test.ts` |
 | REQ-0025    | `packages/qfai/src/core/harness/history.ts`      | `packages/qfai/tests/core/harness/history.test.ts`      |
+| REQ-0029    | `packages/qfai/src/core/validators/evaluatorReviewHardFloor.ts` | `packages/qfai/tests/validators/evaluatorReviewHardFloor.test.ts` |
 
 ## Notes
 

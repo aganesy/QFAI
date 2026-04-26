@@ -110,6 +110,7 @@
 - REQ-0026: Phase state machine -- `planning|explore|remix|select|polish|breakthrough|reviewer_gate|completed` を使い、`select->completed` を禁止する
 - REQ-0027: Post-selection polish -- completion claim には winner 後の `polish` iteration が 1 回以上必要で、critique/fix/re-capture/re-review/breakthrough check を含む
 - REQ-0028: Completion certificate -- completion claim には reviewer gate、validate pass、best-of-history、breakthrough evidence、perfect-100 gate を証明する certificate が必要
+- REQ-0029: Hard-floor enforcement -- absorption rounds (`r3|r2|r1`) では各 active candidate の `evaluator-reviews/<candidate-id>.json` 内 `perAxis[].score` が `evaluation-rubric.yaml` の `hard_floors[].min_score` を下回る場合、`qfai validate --profile prototyping --fail-on error` は `QFAI-PROT-AXIS-FLOOR-001` を error で返す。`r5` は発散段階のため適用対象外。`hard_floors[].id` が `perAxis` に存在しない軸（例: `conceptFit`）はスキップする
 
 ## Absorbed Legacy Requirement Registry
 

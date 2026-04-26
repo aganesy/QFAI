@@ -47,6 +47,8 @@
 | TDD-0331 | TC-0017-0028, TC-0017-0029                             | unit        | packages/qfai/tests/validators/testTodoStubs.test.ts                     | TC-0017-0028 | done   | DR-0012-0010 | test-todo stub detection + opt-out                                |
 | TDD-0332 | TC-0017-0031                                           | integration | packages/qfai/tests/cli/init.test.ts                                     | TC-0017-0031 | done   | DR-0012-0010 | qfai init ships qfai-validate.yml                                 |
 | TDD-0333 | TC-0017-0032                                           | unit        | packages/qfai/tests/skill/prototypingSkillV1716.test.ts                  | TC-0017-0032 | done   | DR-0012-0010 | qfai-implement gates on QFAI-TEST-0001                            |
+| TDD-0334 | TC-0012-0317                                           | unit        | packages/qfai/tests/validators/evaluatorReviewHardFloor.test.ts          | TC-0012-0317 | todo    | DR-0012-0011 | hard_floor r3+ enforcement                                        |
+| TDD-0335 | TC-0012-0318                                           | unit        | packages/qfai/tests/validators/evaluatorReviewHardFloor.test.ts          | TC-0012-0318 | todo    | DR-0012-0011 | hard_floor r5 exemption                                           |
 
 ## Notes
 

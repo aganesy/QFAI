@@ -98,6 +98,15 @@
 - Full-harness result output reports the latest snapshot summary.
 - Result output reports `iterationBudget.maxIterations` and `iterationBudget.remainingIterations`.
 
+## BR-0012-0016: Originality and Hard-Floor Enforcement in Absorption Rounds
+
+- AC-Refs: AC-0012-0019
+- For each candidate present in an absorption round (`r3|r2|r1`), every `perAxis[].score` recorded in `<round>/evaluator-reviews/<candidate-id>.json` MUST be greater than or equal to the `min_score` declared in `evaluation-rubric.yaml` `hard_floors[]` for the matching `axisId`.
+- Violations MUST emit `QFAI-PROT-AXIS-FLOOR-001` at error severity. The round MUST NOT be considered ready for narrow advance until violations are resolved.
+- `r5` (initial divergent generation) is excluded so that exploration is not gated by hard floors before absorption begins.
+- `hard_floors[].id` whose value is not present in `perAxis` (例: `conceptFit`) is skipped here and is enforced through other gates.
+- Compatibility: `axisId` matching is exact-string against `axes[].id`; case or hyphen normalization is not performed.
+
 ## Absorbed Legacy Business Rules
 
 The following rule IDs remain valid after deleting `spec-0017/` and

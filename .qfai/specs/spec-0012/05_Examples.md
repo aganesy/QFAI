@@ -169,3 +169,21 @@
 - When the next narrowing decision is evaluated
 - Then round advance is rejected
 - And the absorption plan must be re-curated before proceeding
+
+## EX-0012-0108: Hard-Floor Violation Blocks Round Advance
+
+- BR-Ref: BR-0012-0016
+- Given round `r3` evaluator review for candidate `c2` reports `perAxis: [{axisId: "originality", score: 70, rationale: "...", evidenceRefs: ["..."]}]`
+- And `evaluation-rubric.yaml` declares `hard_floors: [{id: "originality", min_score: 80}]`
+- When `qfai validate --profile prototyping --fail-on error` runs
+- Then validate exits with error `QFAI-PROT-AXIS-FLOOR-001`
+- And the message identifies candidate `c2`, axis `originality`, score `70`, floor `80`
+
+## EX-0012-0109: r5 Hard-Floor Exemption
+
+- BR-Ref: BR-0012-0016
+- Given round `r5` evaluator review for candidate `c1` reports `perAxis: [{axisId: "originality", score: 60, rationale: "...", evidenceRefs: ["..."]}]`
+- And `evaluation-rubric.yaml` declares `hard_floors: [{id: "originality", min_score: 80}]`
+- When `qfai validate --profile prototyping --fail-on error` runs
+- Then no `QFAI-PROT-AXIS-FLOOR-001` error is emitted for round `r5`
+- And the funnel can proceed to `r3` without hard-floor gating at the divergent stage

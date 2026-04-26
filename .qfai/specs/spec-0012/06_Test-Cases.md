@@ -194,6 +194,18 @@
 - AC-Refs: AC-0012-0010
 - legacy identifier space is retained without reviving weighted-total narratives.
 
+## TC-0012-0317
+
+- EX-Ref: EX-0012-0108
+- AC-Refs: AC-0012-0019
+- Round `r3` で `originality` の per-axis スコアが `evaluation-rubric.yaml` の `hard_floors[].min_score` を下回る candidate が存在するとき、`validateEvaluatorReviewHardFloor` は `QFAI-PROT-AXIS-FLOOR-001` を error severity で emit する。
+
+## TC-0012-0318
+
+- EX-Ref: EX-0012-0109
+- AC-Refs: AC-0012-0019
+- Round `r5` で同様に hard_floor 未満の per-axis スコアがあっても、`validateEvaluatorReviewHardFloor` は `QFAI-PROT-AXIS-FLOOR-001` を emit しない（exemption の確認）。
+
 ## Legacy Coverage Continuity
 
 - `TC-0012-0001..TC-0012-0284` remain reserved traceability IDs for existing implementation/test slices.
