@@ -396,6 +396,10 @@ const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "fullHarness uiFidelity mockPaths must be fail|finding only and must not contain synthetic pass entries.",
   "QFAI-PROT-308": "fullHarness status is converged but iterationCount < 2.",
   "QFAI-PROT-309": "fullHarness iteration reviewer is a placeholder value.",
+  "QFAI-PROT-310":
+    "executionPlan is required in full-harness mode but is absent or not an object in prototyping.json.",
+  "QFAI-PROT-311":
+    "delegationMap entry assigns a category to a role outside the SKILL.md Delegation Scope Table.",
   "QFAI-PROT-316": "reviewerSignoff.status does not match fullHarness.finalDecision.",
   "QFAI-PROT-317": "final reviewerLogs verdict does not match fullHarness termination semantics.",
   "QFAI-PROT-318":

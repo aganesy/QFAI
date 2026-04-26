@@ -7,6 +7,15 @@
  * spec-0012 TC-0012-0290 / AC-0012-0175
  */
 
+import type { Issue } from "../../types.js";
+import { issue } from "../utils.js";
+
+/**
+ * @deprecated v1.8.4: kept for backward compatibility. New code MUST use
+ * `validateExecutionPlanIssues`, which returns standard `Issue[]` so the
+ * validator participates in `--fail-on error` aggregation. Will be removed
+ * once Phase 7 lands.
+ */
 export interface ExecutionPlanIssue {
   readonly rule: "PROT-EXEC-PLAN";
   readonly message: string;
@@ -25,6 +34,10 @@ function detectMode(raw: unknown): string {
   return "other";
 }
 
+/**
+ * @deprecated v1.8.4: use `validateExecutionPlanIssues`.
+ */
+// eslint-disable-next-line @typescript-eslint/no-deprecated -- self-reference in deprecated function signature
 export function validateExecutionPlan(prototypingJson: unknown): ExecutionPlanIssue[] {
   const mode = detectMode(prototypingJson);
   if (mode !== "full-harness") {
@@ -52,4 +65,29 @@ export function validateExecutionPlan(prototypingJson: unknown): ExecutionPlanIs
   }
 
   return [];
+}
+
+/**
+ * v1.8.4 standard adapter. Returns `Issue[]` so the validator participates in
+ * the standard `runPrototypingValidators` pipeline and `--fail-on error`
+ * aggregation. Issued code: `QFAI-PROT-310`.
+ */
+export function validateExecutionPlanIssues(
+  prototypingJson: unknown,
+  prototypingJsonPath: string,
+): Issue[] {
+  // eslint-disable-next-line @typescript-eslint/no-deprecated -- adapter intentionally bridges legacy implementation
+  return validateExecutionPlan(prototypingJson).map((custom) =>
+    issue(
+      "QFAI-PROT-310",
+      custom.message,
+      "error",
+      prototypingJsonPath,
+      "prototyping.executionPlan.presence",
+      undefined,
+      "canonical",
+      "full-harness モードでは `prototyping.json.executionPlan` を記録してください " +
+        "(targetIterations / evaluationAxesSource / delegationMap / plannedAt)。",
+    ),
+  );
 }
