@@ -351,16 +351,19 @@ describe("assets guardrails", { timeout: 30000 }, () => {
       "contracts",
       "ui-0001-order-mockable.yaml",
     );
-    const docsUiFidelityPath = path.join(
+    const fixtureUiFidelityPath = path.join(
       repoRoot,
-      "docs",
+      "packages",
+      "qfai",
+      "tests",
+      "fixtures",
       "examples",
       "prototyping-ui-fidelity.good.json",
     );
     const packageJsonPath = path.join(repoRoot, "packages", "qfai", "package.json");
     const [uiContract, uiFidelity] = await Promise.all([
       readFile(skillUiContractPath, "utf-8"),
-      readFile(docsUiFidelityPath, "utf-8"),
+      readFile(fixtureUiFidelityPath, "utf-8"),
     ]);
     const packageJsonRaw = await readFile(packageJsonPath, "utf-8");
     const packageJson = JSON.parse(packageJsonRaw) as { version?: unknown };
@@ -828,15 +831,13 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     }
   });
 
-  it("keeps docs/examples outputs relative", async () => {
-    const reportExample = await readFile(
-      path.join(repoRoot, "docs", "examples", "report.md"),
-      "utf-8",
-    );
+  it("keeps example outputs relative", async () => {
+    const fixturesDir = path.join(repoRoot, "packages", "qfai", "tests", "fixtures", "examples");
+    const reportExample = await readFile(path.join(fixturesDir, "report.md"), "utf-8");
     expect(reportExample).toContain("- ルート: .");
     expect(reportExample).toContain("- 設定: qfai.config.yaml");
 
-    const validateExamplePath = path.join(repoRoot, "docs", "examples", "validate.json");
+    const validateExamplePath = path.join(fixturesDir, "validate.json");
     const validateRaw = await readFile(validateExamplePath, "utf-8");
     const validate = JSON.parse(validateRaw) as {
       issues: Array<{ file?: string }>;
