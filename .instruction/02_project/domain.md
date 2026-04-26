@@ -38,4 +38,4 @@ QFAI は「要件 → 仕様 → 契約 → 検証/レポート」の流れを�
 - Spec は Scenario を参照しない（検証ルールで警告）
 - Contract ID の形式・重複は validate で検証される
 
-詳細な命名規約は `docs/rules/naming.md` を参照してください。
+詳細な命名規約は `02_project/naming.md` を参照してください。

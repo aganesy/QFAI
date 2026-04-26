@@ -336,8 +336,21 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     expect(template).toContain("effect:");
   });
 
-  it("ships docs examples for ui contract and uiFidelity evidence", async () => {
-    const docsUiContractPath = path.join(repoRoot, "docs", "examples", "ui-contract.good.yaml");
+  it("ships ui contract sample via skill template and uiFidelity evidence example", async () => {
+    const skillUiContractPath = path.join(
+      repoRoot,
+      "packages",
+      "qfai",
+      "assets",
+      "init",
+      ".qfai",
+      "assistant",
+      "skills",
+      "qfai-prototyping",
+      "templates",
+      "contracts",
+      "ui-0001-order-mockable.yaml",
+    );
     const docsUiFidelityPath = path.join(
       repoRoot,
       "docs",
@@ -346,7 +359,7 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     );
     const packageJsonPath = path.join(repoRoot, "packages", "qfai", "package.json");
     const [uiContract, uiFidelity] = await Promise.all([
-      readFile(docsUiContractPath, "utf-8"),
+      readFile(skillUiContractPath, "utf-8"),
       readFile(docsUiFidelityPath, "utf-8"),
     ]);
     const packageJsonRaw = await readFile(packageJsonPath, "utf-8");
