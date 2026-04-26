@@ -22,6 +22,8 @@ hard_floors:
     min_score: 80
   - id: conceptFit
     min_score: 85
+  - id: originality
+    min_score: 80
 absorbable_categories:
   - layout
   - interaction

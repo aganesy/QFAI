@@ -938,6 +938,21 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     expect(content).not.toContain("originality_fail:");
   });
 
+  it("ensures evaluation-rubric sample enforces originality hard_floor", async () => {
+    const samplePath = path.join(
+      templateQfaiDir,
+      "assistant",
+      "skills",
+      "qfai-sdd",
+      "templates",
+      "contracts",
+      "evaluation-rubric.sample.yaml",
+    );
+    const content = await readFile(samplePath, "utf-8");
+
+    expect(content).toMatch(/- id: originality\s+min_score: \d+/);
+  });
+
   it("ensures qfai-discussion skill contains required coverage topics", async () => {
     const discussPromptPath = path.join(
       templateQfaiDir,
