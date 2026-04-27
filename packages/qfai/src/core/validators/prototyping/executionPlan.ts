@@ -1,25 +1,14 @@
 /**
  * executionPlan presence validator for full-harness prototyping.
  *
- * When mode=full-harness, prototyping.json MUST contain an executionPlan object
- * with targetIterations, evaluationAxesSource, delegationMap, and plannedAt.
- *
- * spec-0012 TC-0012-0290 / AC-0012-0175
+ * When mode=full-harness, prototyping.json MUST contain an executionPlan
+ * object. v1.8.4 Phase 9 BREAKING: removed the legacy
+ * `validateExecutionPlan` / `ExecutionPlanIssue` exports; callers MUST use
+ * `validateExecutionPlanIssues` which returns standard `Issue[]`.
  */
 
 import type { Issue } from "../../types.js";
 import { issue } from "../utils.js";
-
-/**
- * @deprecated v1.8.4: kept for backward compatibility. New code MUST use
- * `validateExecutionPlanIssues`, which returns standard `Issue[]` so the
- * validator participates in `--fail-on error` aggregation. Will be removed
- * once Phase 7 lands.
- */
-export interface ExecutionPlanIssue {
-  readonly rule: "PROT-EXEC-PLAN";
-  readonly message: string;
-}
 
 function isRecord(v: unknown): v is Record<string, unknown> {
   return typeof v === "object" && v !== null && !Array.isArray(v);
@@ -35,52 +24,34 @@ function detectMode(raw: unknown): string {
 }
 
 /**
- * @deprecated v1.8.4: use `validateExecutionPlanIssues`.
- */
-// eslint-disable-next-line @typescript-eslint/no-deprecated -- self-reference in deprecated function signature
-export function validateExecutionPlan(prototypingJson: unknown): ExecutionPlanIssue[] {
-  const mode = detectMode(prototypingJson);
-  if (mode !== "full-harness") {
-    return [];
-  }
-
-  if (!isRecord(prototypingJson)) {
-    return [
-      {
-        rule: "PROT-EXEC-PLAN",
-        message:
-          "executionPlan is required in full-harness mode but prototyping record is invalid.",
-      },
-    ];
-  }
-
-  if (!isRecord(prototypingJson.executionPlan)) {
-    return [
-      {
-        rule: "PROT-EXEC-PLAN",
-        message:
-          "executionPlan is required in full-harness mode but is absent or not an object in prototyping.json.",
-      },
-    ];
-  }
-
-  return [];
-}
-
-/**
- * v1.8.4 standard adapter. Returns `Issue[]` so the validator participates in
- * the standard `runPrototypingValidators` pipeline and `--fail-on error`
- * aggregation. Issued code: `QFAI-PROT-310`.
+ * Verifies that prototyping.json has an `executionPlan` object when running
+ * in full-harness mode. Issues `QFAI-PROT-310` for absence/invalid input.
  */
 export function validateExecutionPlanIssues(
   prototypingJson: unknown,
   prototypingJsonPath: string,
 ): Issue[] {
-  // eslint-disable-next-line @typescript-eslint/no-deprecated -- adapter intentionally bridges legacy implementation
-  return validateExecutionPlan(prototypingJson).map((custom) =>
+  const mode = detectMode(prototypingJson);
+  if (mode !== "full-harness") {
+    return [];
+  }
+
+  const message = (() => {
+    if (!isRecord(prototypingJson)) {
+      return "executionPlan is required in full-harness mode but prototyping record is invalid.";
+    }
+    if (!isRecord(prototypingJson.executionPlan)) {
+      return "executionPlan is required in full-harness mode but is absent or not an object in prototyping.json.";
+    }
+    return null;
+  })();
+
+  if (message === null) return [];
+
+  return [
     issue(
       "QFAI-PROT-310",
-      custom.message,
+      message,
       "error",
       prototypingJsonPath,
       "prototyping.executionPlan.presence",
@@ -89,5 +60,5 @@ export function validateExecutionPlanIssues(
       "full-harness モードでは `prototyping.json.executionPlan` を記録してください " +
         "(targetIterations / evaluationAxesSource / delegationMap / plannedAt)。",
     ),
-  );
+  ];
 }

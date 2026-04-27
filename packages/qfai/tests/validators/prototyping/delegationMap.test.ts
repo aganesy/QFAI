@@ -7,10 +7,7 @@
  */
 import { describe, expect, it } from "vitest";
 
-import {
-  validateDelegationMap,
-  validateDelegationMapIssues,
-} from "../../../src/core/validators/prototyping/delegationMap.js";
+import { validateDelegationMapIssues } from "../../../src/core/validators/prototyping/delegationMap.js";
 
 describe("validateDelegationMapIssues (v1.8.4 standard adapter)", () => {
   const path = ".qfai/evidence/prototyping.json";
@@ -59,13 +56,3 @@ describe("validateDelegationMapIssues (v1.8.4 standard adapter)", () => {
   });
 });
 
-describe("validateDelegationMap (legacy/deprecated)", () => {
-  it("still returns the legacy DelegationViolationIssue shape for backward compat", () => {
-    const map = { UI実装: "qa-gatekeeper" };
-    const issues = validateDelegationMap(map);
-    expect(issues).toHaveLength(1);
-    expect(issues[0]?.rule).toBe("PROT-DELEGATION");
-    expect(issues[0]?.category).toBe("UI実装");
-    expect(issues[0]?.invalidRole).toBe("qa-gatekeeper");
-  });
-});

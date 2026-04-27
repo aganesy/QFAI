@@ -10,10 +10,7 @@
  */
 import { describe, expect, it } from "vitest";
 
-import {
-  validateExecutionPlan,
-  validateExecutionPlanIssues,
-} from "../../../src/core/validators/prototyping/executionPlan.js";
+import { validateExecutionPlanIssues } from "../../../src/core/validators/prototyping/executionPlan.js";
 
 describe("validateExecutionPlanIssues (v1.8.4 standard adapter)", () => {
   const path = ".qfai/evidence/prototyping.json";
@@ -64,14 +61,3 @@ describe("validateExecutionPlanIssues (v1.8.4 standard adapter)", () => {
   });
 });
 
-describe("validateExecutionPlan (legacy/deprecated)", () => {
-  it("still returns the legacy ExecutionPlanIssue shape for backward compat", () => {
-    const record = {
-      mode: { effective: "full-harness", source: "explicit-request", rationale: "test" },
-    };
-    const issues = validateExecutionPlan(record);
-    expect(issues).toHaveLength(1);
-    expect(issues[0]?.rule).toBe("PROT-EXEC-PLAN");
-    expect(issues[0]?.message).toMatch(/executionPlan is required/);
-  });
-});
