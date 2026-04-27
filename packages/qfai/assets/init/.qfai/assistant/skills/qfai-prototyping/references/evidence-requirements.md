@@ -47,7 +47,7 @@ Optional evidence is not allowed.
 
 ## Mode invariant
 
-Evidence requirements are identical for all modes (low-cost / standard / full-harness) per spec-0012. Modes differ only by `maxCycles` (1 / 3 / 20). Choosing a lower mode does NOT reduce evidence obligations.
+Evidence requirements are identical for all modes (low-cost / standard / full-harness) per the resolved primary prototyping spec (run `qfai prototyping show-spec` to see which one applies). Modes differ only by `maxCycles` (1 / 3 / 20). Choosing a lower mode does NOT reduce evidence obligations.
 
 ## Validate gate expectations
 

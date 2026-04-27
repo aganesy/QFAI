@@ -31,13 +31,18 @@ afterEach(async () => {
 });
 
 async function seedFixture(root: string): Promise<void> {
-  // minimal qfai.config.yaml + a UI contract with two screens
+  // minimal qfai.config.yaml + a UI contract with two screens.
+  // v1.8.4 Phase 6: also seed a primary prototyping spec so
+  // resolvePrimaryPrototypingSpec returns something (review-bundle.spec
+  // is parameterised at runtime; without a resolved spec, runRoundStart
+  // refuses to write a bundle).
   await writeFile(
     path.join(root, "qfai.config.yaml"),
     [
       "paths:",
       "  contractsDir: .qfai/contracts",
       "prototyping:",
+      "  primarySpecId: \"0001\"",
       "  execution:",
       "    targetUrl: null",
       "    browserTool: playwright-cli",
@@ -45,6 +50,15 @@ async function seedFixture(root: string): Promise<void> {
     ].join("\n"),
     "utf-8",
   );
+
+  const specDir = path.join(root, ".qfai", "specs", "spec-0001");
+  await mkdir(specDir, { recursive: true });
+  await writeFile(
+    path.join(specDir, "01_Spec.md"),
+    "---\nsurface_type: ui-bearing\n---\n\n# spec-0001 (test fixture)\n",
+    "utf-8",
+  );
+  await writeFile(path.join(specDir, "02_User-stories.md"), "# stories\n", "utf-8");
 
   const uiDir = path.join(root, ".qfai", "contracts", "ui");
   await mkdir(uiDir, { recursive: true });
@@ -159,7 +173,9 @@ describe("runPrototypingCommand", () => {
     expect(await exists(planPath)).toBe(true);
 
     const bundle = JSON.parse(await readFile(bundlePath, "utf-8"));
-    expect(bundle.spec).toBe("0017");
+    // v1.8.4 Phase 6: spec is now the resolved primary spec ID, not the
+    // hardcoded "0017" literal. The fixture seeds primarySpecId: "0001".
+    expect(bundle.spec).toBe("0001");
     expect(bundle.mode).toBe("standard");
     expect(bundle.round).toBe("r5");
     expect(bundle.maxCycles).toBe(3);

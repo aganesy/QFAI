@@ -59,6 +59,9 @@ describe("spec-0017 buildReviewBundle", () => {
       cycle: 1,
       mode: "standard",
       screens: makeScreens(),
+      // Test value — exercises the parameter pass-through; not a fixed
+      // production assumption (primarySpecId is resolved at CLI entry).
+      primarySpecId: "0001",
     });
 
     expect(bundle.screens.length).toBeGreaterThan(0);
@@ -99,6 +102,9 @@ describe("spec-0017 buildReviewBundle", () => {
       cycle: 1,
       mode: "standard",
       screens: makeScreens(),
+      // Test value — exercises the parameter pass-through; not a fixed
+      // production assumption (primarySpecId is resolved at CLI entry).
+      primarySpecId: "0001",
     });
     const full = buildReviewBundle({
       targetUrl: "http://localhost:5173",
@@ -156,6 +162,9 @@ describe("spec-0017 writeReviewBundles", () => {
       cycle: 1,
       mode: "standard",
       screens: makeScreens(),
+      // Test value — exercises the parameter pass-through; not a fixed
+      // production assumption (primarySpecId is resolved at CLI entry).
+      primarySpecId: "0001",
     });
 
     const expectedReviewBundlePath = path.join(

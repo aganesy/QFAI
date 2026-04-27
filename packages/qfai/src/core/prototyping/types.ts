@@ -69,7 +69,13 @@ export type PlaywrightCliCommandPlan = {
  * expected output path for `evaluator-review.json`.
  */
 export type ReviewBundle = {
-  spec: "0017";
+  /**
+   * Resolved primary spec ID (4-digit string). v1.8.4 widened from the
+   * "0017" literal: spec-0017 was absorbed into spec-0012 in v1.8.3 and the
+   * concrete value is now resolved at runtime via
+   * `resolvePrimaryPrototypingSpec`. The reader accepts any non-empty string.
+   */
+  spec: string;
   cycle: number;
   mode: PrototypingMode;
   maxCycles: number;
