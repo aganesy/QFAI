@@ -3,6 +3,7 @@ import path from "node:path";
 
 import { parse as parseYaml } from "yaml";
 
+import { parseAgentFrontmatter } from "../agentFrontmatter.js";
 import type { QfaiConfig } from "../config.js";
 import type { Issue } from "../types.js";
 import { exists, issue } from "./utils.js";
@@ -90,6 +91,30 @@ export async function validateAgentDefinition(root: string, _config: QfaiConfig)
     }
 
     const content = await readFile(filePath, "utf-8");
+    const frontmatter = parseAgentFrontmatter(content);
+    if (!frontmatter.ok) {
+      issues.push(
+        issue(
+          "QFAI-AGENT-011",
+          `Invalid Claude-compatible frontmatter in ${rel}: ${frontmatter.error}`,
+          "error",
+          rel,
+          "agentDefinition.invalidFrontmatter",
+        ),
+      );
+      continue;
+    }
+    if (frontmatter.frontmatter.name !== agent.id) {
+      issues.push(
+        issue(
+          "QFAI-AGENT-012",
+          `Frontmatter name mismatch in ${rel}: expected "${agent.id}", got "${frontmatter.frontmatter.name}"`,
+          "error",
+          rel,
+          "agentDefinition.frontmatterNameMismatch",
+        ),
+      );
+    }
     for (const heading of REQUIRED_AGENT_SECTIONS) {
       if (!content.includes(heading)) {
         issues.push(
