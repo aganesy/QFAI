@@ -421,6 +421,14 @@ const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-PROT-329": "fullHarness.status is completed but reviewerSignoff.timestamp is missing.",
   "QFAI-PROT-330":
     "uiFidelity screen actionsWired exceeds actionsDeclared (expected.actions). actionsWired must not exceed the number of declared actions.",
+  "QFAI-PROT-331":
+    "fullHarness.scoringTrace[<n>].screenshotDir is missing or empty; full-harness requires screenshot evidence per iteration.",
+  "QFAI-PROT-332":
+    "Lighthouse gate is required for full-harness + web surface but no lighthouse report is present in prototyping.json.",
+  "QFAI-PROT-333":
+    "fullHarness.iterations: minimum 2 iterations required before convergence; iteration 1 cannot be marked converged.",
+  "QFAI-PROT-334":
+    "scoringTrace.designSystemCompliance is below the 0.75 threshold while 12_design_system.md is present in the calibration pack; immediate fix required for next iteration.",
   "QFAI-PROT-AXIS-FLOOR-001":
     "Each candidate's evaluator-review perAxis[].score must meet evaluation-rubric.yaml hard_floors[].min_score in absorption rounds (r3|r2|r1). r5 is exempt.",
   "QFAI-UIE-001":

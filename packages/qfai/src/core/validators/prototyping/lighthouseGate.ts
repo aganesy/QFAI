@@ -3,8 +3,17 @@
  * when mode=full-harness and surface=web.
  *
  * spec-0012 TC-0012-0299 / TC-0012-0300 / AC-0012-0182
+ *
+ * v1.8.4 Phase 3: wired into validateStateGate via validateLighthouseGateIssues.
  */
 
+import type { Issue } from "../../types.js";
+import { issue } from "../utils.js";
+
+/**
+ * @deprecated v1.8.4: use `validateLighthouseGateIssues`. Will be removed
+ * in Phase 8.
+ */
 export interface LighthouseGateIssue {
   readonly rule: "PROT-LIGHTHOUSE";
   readonly message: string;
@@ -38,6 +47,10 @@ function hasLighthouseReport(raw: unknown): boolean {
   return false;
 }
 
+/**
+ * @deprecated v1.8.4: use `validateLighthouseGateIssues`.
+ */
+// eslint-disable-next-line @typescript-eslint/no-deprecated -- self-reference inside deprecated function
 export function validateLighthouseGate(prototypingJson: unknown): LighthouseGateIssue[] {
   const mode = detectMode(prototypingJson);
   const surface = detectSurface(prototypingJson);
@@ -57,4 +70,29 @@ export function validateLighthouseGate(prototypingJson: unknown): LighthouseGate
         "Lighthouse Gate is MUST for full-harness + web surface: no Lighthouse report found in prototyping evidence.",
     },
   ];
+}
+
+/**
+ * v1.8.4 standard adapter. Returns `Issue[]`.
+ *
+ * Issued code: `QFAI-PROT-332` (single issue when full-harness + web surface
+ * has no lighthouse report).
+ */
+export function validateLighthouseGateIssues(
+  prototypingJson: unknown,
+  prototypingJsonPath: string,
+): Issue[] {
+  // eslint-disable-next-line @typescript-eslint/no-deprecated -- adapter intentionally bridges legacy implementation
+  return validateLighthouseGate(prototypingJson).map((custom) =>
+    issue(
+      "QFAI-PROT-332",
+      custom.message,
+      "error",
+      prototypingJsonPath,
+      "prototyping.lighthouseReport",
+      undefined,
+      "canonical",
+      "full-harness + web surface では `prototyping.json.lighthouseReport` (または `lighthouse`) を記録してください。",
+    ),
+  );
 }

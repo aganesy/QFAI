@@ -163,4 +163,98 @@ describe("validateStateGate", () => {
     });
     expect(await validateStateGate(root, makeConfig())).toEqual([]);
   });
+
+  // ─── Phase 3 wiring: screenshotDir / lighthouseGate / iterationGate /
+  //     designSystemThreshold ────────────────────────────────────────────────
+
+  it("emits QFAI-PROT-331 when full-harness fullHarness.scoringTrace lacks screenshotDir", async () => {
+    const root = await newTempDir();
+    await seedPrototypingJson(root, {
+      mode: { effective: "full-harness", source: "explicit-request", rationale: "test" },
+      executionPlan: {
+        targetIterations: 20,
+        evaluationAxesSource: ".qfai/contracts/design/evaluation-rubric.yaml",
+        delegationMap: { UI実装: "frontend-engineer" },
+        plannedAt: "2026-04-26T00:00:00Z",
+      },
+      surface: "mobile", // avoid lighthouse gate
+      fullHarness: {
+        scoringTrace: [
+          { iteration: 1 }, // missing screenshotDir
+        ],
+        iterations: [],
+      },
+    });
+    const issues = await validateStateGate(root, makeConfig());
+    const codes = issues.map((i) => i.code);
+    expect(codes).toContain("QFAI-PROT-331");
+  });
+
+  it("emits QFAI-PROT-332 when full-harness + web has no lighthouse report", async () => {
+    const root = await newTempDir();
+    await seedPrototypingJson(root, {
+      mode: { effective: "full-harness", source: "explicit-request", rationale: "test" },
+      executionPlan: {
+        targetIterations: 20,
+        evaluationAxesSource: ".qfai/contracts/design/evaluation-rubric.yaml",
+        delegationMap: { UI実装: "frontend-engineer" },
+        plannedAt: "2026-04-26T00:00:00Z",
+      },
+      surface: "web",
+      // no lighthouseReport
+    });
+    const issues = await validateStateGate(root, makeConfig());
+    const codes = issues.map((i) => i.code);
+    expect(codes).toContain("QFAI-PROT-332");
+  });
+
+  it("emits QFAI-PROT-333 when fullHarness.iterations[0] is converged=true", async () => {
+    const root = await newTempDir();
+    await seedPrototypingJson(root, {
+      mode: { effective: "full-harness", source: "explicit-request", rationale: "test" },
+      executionPlan: {
+        targetIterations: 20,
+        evaluationAxesSource: ".qfai/contracts/design/evaluation-rubric.yaml",
+        delegationMap: { UI実装: "frontend-engineer" },
+        plannedAt: "2026-04-26T00:00:00Z",
+      },
+      surface: "mobile",
+      fullHarness: {
+        scoringTrace: [],
+        iterations: [{ iterationCount: 1, converged: true }],
+      },
+    });
+    const issues = await validateStateGate(root, makeConfig());
+    const codes = issues.map((i) => i.code);
+    expect(codes).toContain("QFAI-PROT-333");
+  });
+
+  it("emits QFAI-PROT-334 when calibration pack has 12_design_system.md and score is below threshold", async () => {
+    const root = await newTempDir();
+    // Place a calibration pack inside the temp root.
+    await mkdir(path.join(root, "pack/uiux"), { recursive: true });
+    await writeFile(path.join(root, "pack/uiux/12_design_system.md"), "# DS\n", "utf-8");
+
+    await seedPrototypingJson(root, {
+      mode: { effective: "full-harness", source: "explicit-request", rationale: "test" },
+      executionPlan: {
+        targetIterations: 20,
+        evaluationAxesSource: ".qfai/contracts/design/evaluation-rubric.yaml",
+        delegationMap: { UI実装: "frontend-engineer" },
+        plannedAt: "2026-04-26T00:00:00Z",
+      },
+      surface: "mobile", // avoid lighthouseGate
+      scoringTrace: { designSystemCompliance: 0.5 }, // below 0.75
+    });
+
+    const config = makeConfig();
+    config.prototyping = {
+      ...(config.prototyping ?? {}),
+      calibration: { packPath: "pack" },
+    };
+
+    const issues = await validateStateGate(root, config);
+    const codes = issues.map((i) => i.code);
+    expect(codes).toContain("QFAI-PROT-334");
+  });
 });

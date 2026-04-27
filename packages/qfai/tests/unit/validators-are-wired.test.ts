@@ -50,25 +50,17 @@ const DEPRECATED_LEGACY_VALIDATORS = new Set<string>([
 ]);
 
 /**
- * Validators known to be dead code as of v1.8.4 Phase 2. Wiring them into
- * the prototyping pipeline is tracked as a follow-up task (TODO: file an
- * issue once Phase 8 lands). Adding a NEW validator to this list requires
- * a comment justifying why it cannot be wired in the same PR.
+ * Validators known to be dead code awaiting wiring. As of v1.8.4 Phase 3
+ * this set is empty: the four validators discovered by the Phase 2 meta-test
+ * (validateScreenshotDir, validateLighthouseGate, validateIterationGate,
+ * validateDesignSystemThreshold) were each given a `*Issues` adapter and
+ * dispatched from validateStateGate.
  *
  * This list MUST shrink over time and MUST never grow without explicit
- * justification.
+ * justification. The sentinel `expect(PENDING_WIRING.size).toBe(0)` keeps
+ * accidental regressions visible.
  */
-const PENDING_WIRING: ReadonlySet<string> = new Set<string>([
-  // Discovered by Phase 2 meta-test on v1.8.4. Each is unit-tested in
-  // tests/integration/prototypingSkillV1716Integration.test.ts but is
-  // never invoked from runPrototypingValidators or any other production
-  // pipeline. Wire into validateStateGate (or a future stateGate-style
-  // orchestrator) in a follow-up commit.
-  "validateScreenshotDir",
-  "validateLighthouseGate",
-  "validateIterationGate",
-  "validateDesignSystemThreshold",
-]);
+const PENDING_WIRING: ReadonlySet<string> = new Set<string>();
 
 async function listTsFiles(dir: string): Promise<string[]> {
   const entries = await readdir(dir);
@@ -220,10 +212,14 @@ describe("meta-test: prototyping validators are wired into the pipeline", () => 
     ).toBe(true);
   });
 
-  it("PENDING_WIRING list does not grow silently", () => {
+  it("PENDING_WIRING list does not grow silently (target: stay at 0)", () => {
     // Tripwire: if a contributor adds to PENDING_WIRING without justification,
     // this assertion documents the current count and forces a deliberate
     // update when changing it. The list MUST shrink, not grow.
-    expect(PENDING_WIRING.size).toBe(4);
+    //
+    // v1.8.4 Phase 3: PENDING_WIRING is empty. Every prototyping validator
+    // is now reachable from runPrototypingValidators. NEW dead-code
+    // validators cannot enter the codebase silently.
+    expect(PENDING_WIRING.size).toBe(0);
   });
 });
