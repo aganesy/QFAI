@@ -109,7 +109,8 @@ describe("validateExecutionPlanIssues (v1.8.4 standard adapter)", () => {
     );
     expect(issues).toHaveLength(1);
     expect(issues[0]?.message).toMatch(/delegationMap/);
-    expect(issues[0]?.message).toMatch(/record/);
+    // User-facing label is "object (not array)" not the internal "record".
+    expect(issues[0]?.message).toMatch(/object/);
   });
 
   it("emits QFAI-PROT-310 when plannedAt is whitespace-only", () => {

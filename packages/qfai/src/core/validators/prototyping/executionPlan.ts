@@ -12,6 +12,17 @@ import { issue } from "../utils.js";
 
 type FieldShape = "number" | "non-empty-string" | "record";
 
+/**
+ * User-facing description for each shape. Avoid exposing the internal
+ * `non-empty-string` literal in error messages — operators care about
+ * "non-empty string" / "object". (Copilot MINOR review on PR #201.)
+ */
+const FIELD_SHAPE_LABEL: Record<FieldShape, string> = {
+  number: "finite number",
+  "non-empty-string": "non-empty string",
+  record: "object (not array)",
+};
+
 const REQUIRED_FIELDS: ReadonlyArray<{ key: string; shape: FieldShape }> = [
   { key: "targetIterations", shape: "number" },
   { key: "evaluationAxesSource", shape: "non-empty-string" },
@@ -89,7 +100,7 @@ export function validateExecutionPlanIssues(
     if (!matchesShape(value, shape)) {
       issues.push(
         buildIssue(
-          `executionPlan.${key} is required in full-harness mode and must be a ${shape} (got: ${typeof value}).`,
+          `executionPlan.${key} is required in full-harness mode and must be a ${FIELD_SHAPE_LABEL[shape]} (got: ${typeof value}).`,
           prototypingJsonPath,
         ),
       );

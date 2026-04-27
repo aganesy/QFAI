@@ -1946,8 +1946,11 @@ async function collectPrototypingSummary(
           }
 
           // Drift detection (RR §8.2): warn when index references differ
-          // from filesystem reality. Counts are filesystem-authoritative;
-          // these warnings surface user-visible disagreement.
+          // from filesystem reality for the two ref kinds we care about
+          // most (absorptionPlanRef and reimplementationRef — narrowDecision
+          // and harvest are tracked but not drift-checked here yet).
+          // Counts are filesystem-authoritative; warnings surface
+          // user-visible disagreement so operators can clean up the index.
           const indexAbsorptionRefs = rounds
             .map((item) => asRecord(item))
             .filter(
@@ -1975,8 +1978,10 @@ async function collectPrototypingSummary(
             );
           }
 
-          // Union of round IDs from index and filesystem (filesystem-first
-          // when both differ; ids dedup'd while preserving declared order).
+          // Union of round IDs from both sources. Set iteration preserves
+          // insertion order, so index-declared IDs appear first followed by
+          // any filesystem-only IDs. Either source counts as canonical
+          // existence — this is a UNION, not a precedence rule.
           const indexRoundIds = rounds
             .map((item) => asRecord(item))
             .flatMap((round) =>
