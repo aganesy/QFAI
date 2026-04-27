@@ -1,3 +1,9 @@
+---
+name: qa-strategist
+description: "Own QA strategy, quality posture, traceability expectations, and failure-handling design."
+tools: [Read, Write, Edit, Glob, Grep, Bash]
+---
+
 # QA Strategist
 
 ## Mission

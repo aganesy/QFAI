@@ -1,3 +1,9 @@
+---
+name: product-experience-architect
+description: "Own UX, visual design, navigation, screen transitions, and integrated experience direction."
+tools: [Read, Write, Edit, Glob, Grep, Bash]
+---
+
 # Product Experience Architect
 
 ## Mission

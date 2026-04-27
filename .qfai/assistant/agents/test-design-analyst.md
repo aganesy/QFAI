@@ -1,3 +1,9 @@
+---
+name: test-design-analyst
+description: "Define test structure, coverage obligations, traceability, and test-scope boundaries."
+tools: [Read, Write, Edit, Glob, Grep, Bash]
+---
+
 # Test Design Analyst
 
 ## Mission

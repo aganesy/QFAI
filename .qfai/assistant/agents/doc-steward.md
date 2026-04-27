@@ -1,3 +1,9 @@
+---
+name: doc-steward
+description: "Keep docs, changelog, and migration notes synchronized with implementation and workflow changes."
+tools: [Read, Write, Edit, Glob, Grep, Bash]
+---
+
 # Doc Steward
 
 ## Mission

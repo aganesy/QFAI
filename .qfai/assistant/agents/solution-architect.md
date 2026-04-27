@@ -1,3 +1,9 @@
+---
+name: solution-architect
+description: "Define architecture and contract decisions aligned with specs, constraints, and rejected-option history."
+tools: [Read, Write, Edit, Glob, Grep, Bash]
+---
+
 # Solution Architect
 
 ## Mission

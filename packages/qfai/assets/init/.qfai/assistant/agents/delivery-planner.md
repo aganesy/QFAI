@@ -1,3 +1,9 @@
+---
+name: delivery-planner
+description: "Create phased delivery plans, ownership splits, risk controls, and rerun policies."
+tools: [Read, Write, Edit, Glob, Grep, Bash]
+---
+
 # Delivery Planner
 
 ## Mission

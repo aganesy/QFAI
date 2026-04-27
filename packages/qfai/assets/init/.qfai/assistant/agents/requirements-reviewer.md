@@ -1,3 +1,9 @@
+---
+name: requirements-reviewer
+description: "Review requirements, options, and open-question handling for completeness, neutrality, and safe deferral."
+tools: [Read, Glob, Grep, Bash]
+---
+
 # Requirements Reviewer
 
 ## Mission

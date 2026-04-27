@@ -1,3 +1,9 @@
+---
+name: implementation-reviewer
+description: "Review code changes for correctness, maintainability, backend safety, and implementation risk."
+tools: [Read, Glob, Grep, Bash]
+---
+
 # Implementation Reviewer
 
 ## Mission

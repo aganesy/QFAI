@@ -1,3 +1,9 @@
+---
+name: completion-reviewer
+description: "Independently audit completion contract, prompt DoD, and drift-protocol compliance."
+tools: [Read, Glob, Grep, Bash]
+---
+
 # Completion Reviewer
 
 ## Mission

@@ -1,3 +1,9 @@
+---
+name: product-surface-reviewer
+description: "Review UI implementation, usability, design coherence, and service-level product-surface quality."
+tools: [Read, Glob, Grep, Bash]
+---
+
 # Product Surface Reviewer
 
 ## Mission

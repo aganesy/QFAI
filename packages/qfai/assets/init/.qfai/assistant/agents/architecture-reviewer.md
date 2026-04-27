@@ -1,3 +1,9 @@
+---
+name: architecture-reviewer
+description: "Review architecture and contract decisions for consistency, safety, and rejected-option protection."
+tools: [Read, Glob, Grep, Bash]
+---
+
 # Architecture Reviewer
 
 ## Mission

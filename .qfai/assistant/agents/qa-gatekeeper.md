@@ -1,3 +1,9 @@
+---
+name: qa-gatekeeper
+description: "Enforce validate, coverage, runtime-proof, and prototyping evidence gates before completion."
+tools: [Read, Glob, Grep, Bash]
+---
+
 # QA Gatekeeper
 
 ## Mission
