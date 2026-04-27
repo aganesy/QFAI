@@ -82,12 +82,33 @@ export async function validateSpecIdLinkage(root: string, config: QfaiConfig): P
       for (let i = 0; i < specs.length; i++) {
         const entry: unknown = specs[i];
         if (!isRecord(entry)) continue;
-        const id = normalizeSpecId(entry.specId);
-        if (id !== undefined && !knownSpecIds.has(id)) {
+        const rawSpecId = entry.specId;
+        if (rawSpecId === undefined) continue;
+        const id = normalizeSpecId(rawSpecId);
+        if (id === undefined) {
+          // Reviewer comment from PR #201 (Codex, P2): malformed spec IDs
+          // (e.g. "foo", "12") were silently passing because we only flagged
+          // when normalize succeeded but the resolved ID was missing. Now
+          // unparseable specId strings emit a warning of their own.
           issues.push(
             issue(
               "QFAI-PROT-LINK-001",
-              `${protoRel}: specs[${i}].specId="${String(entry.specId)}" but spec-${id} does not exist under ${path.relative(root, specsRoot).replace(/\\/g, "/")}/.`,
+              `${protoRel}: specs[${i}].specId="${JSON.stringify(rawSpecId)}" is malformed (expected 4-digit "NNNN" or "spec-NNNN").`,
+              "warning",
+              protoRel,
+              "prototyping.specs.idReality",
+              undefined,
+              "canonical",
+              'specs[].specId は 4 桁の "NNNN" 形式または "spec-NNNN" 形式で指定してください。',
+            ),
+          );
+          continue;
+        }
+        if (!knownSpecIds.has(id)) {
+          issues.push(
+            issue(
+              "QFAI-PROT-LINK-001",
+              `${protoRel}: specs[${i}].specId="${JSON.stringify(rawSpecId)}" but spec-${id} does not exist under ${path.relative(root, specsRoot).replace(/\\/g, "/")}/.`,
               "warning",
               protoRel,
               "prototyping.specs.idReality",

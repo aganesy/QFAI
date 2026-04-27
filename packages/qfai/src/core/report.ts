@@ -3,6 +3,7 @@ import path from "node:path";
 import { buildContractIndex } from "./contractIndex.js";
 import { loadConfig, resolvePath, type ConfigLoadResult } from "./config.js";
 import { collectSpecEntries, type SpecEntry } from "./specLayout.js";
+import { EXPLORATION_ROUNDS } from "./prototyping/round.js";
 import { parseFirstMarkdownTable } from "./specPackParsers.js";
 import {
   isCoverageTargetLevel,
@@ -1705,10 +1706,12 @@ async function collectChangeTypeSummary(specsRoot: string): Promise<ReportChange
 }
 
 /**
- * Names of valid exploration rounds (must match prototyping/round.ts).
- * Used by `scanPrototypingRoundsFilesystem` for directory-name validation.
+ * Source-of-truth import to avoid drift: previously this was a local literal
+ * Set that duplicated `EXPLORATION_ROUNDS` from prototyping/round.ts; if the
+ * round taxonomy ever changes, the report-side scan would silently miss
+ * new rounds (Copilot flag, PR #201).
  */
-const PROTOTYPING_ROUND_DIR_NAMES: ReadonlySet<string> = new Set(["r5", "r3", "r2", "r1"]);
+const PROTOTYPING_ROUND_DIR_NAMES: ReadonlySet<string> = new Set<string>(EXPLORATION_ROUNDS);
 
 /**
  * Filesystem-first scan of `.qfai/evidence/prototyping/rounds/` (v1.8.4 Phase 4).

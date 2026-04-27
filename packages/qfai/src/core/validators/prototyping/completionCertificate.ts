@@ -82,7 +82,15 @@ export async function validateCompletionCertificateIssues(
     return [];
   }
 
-  // Certificate exists — verify digest integrity.
+  // Certificate exists. Per Phase 5 contract, the certificate's authority is
+  // tied to the completion claim — if the user hasn't yet claimed completion,
+  // the certificate may legitimately be older than the latest evidence
+  // (e.g. they ran `certify` once, then continued iterating). We only flag
+  // a digest mismatch when the user explicitly claims completion.
+  //
+  // Reviewer comment from PR #201 (Copilot, MAJOR): align JSDoc with
+  // behaviour — "QFAI-PROT-336 fires only when completion is claimed".
+  if (!claimed) return [];
   const result = await checkCompletionCertificate(root);
   if (result.ok) return [];
   return [

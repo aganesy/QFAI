@@ -105,11 +105,36 @@ export async function loadCompletionCertificate(
   const fullPath = path.join(root, COMPLETION_CERTIFICATE_REL_PATH);
   try {
     const raw = await readFile(fullPath, "utf-8");
-    const parsed = JSON.parse(raw) as unknown;
-    return parsed as CompletionCertificate;
+    const parsed: unknown = JSON.parse(raw);
+    // Reviewer comment from PR #201 (Codex, P1): validate the parsed shape
+    // before casting. A malformed certificate (e.g. truncated, manually
+    // edited) used to crash downstream callers via property access on
+    // `undefined`. Now we return null and let `checkCompletionCertificate`
+    // emit a descriptive reason.
+    if (!isMinimallyValidCertificate(parsed)) {
+      return null;
+    }
+    return parsed;
   } catch {
     return null;
   }
+}
+
+function isMinimallyValidCertificate(value: unknown): value is CompletionCertificate {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const v = value as Record<string, unknown>;
+  if (v.schemaVersion !== "1.0") return false;
+  if (typeof v.runId !== "string") return false;
+  if (!Array.isArray(v.evidenceDigests)) return false;
+  for (const entry of v.evidenceDigests) {
+    if (!entry || typeof entry !== "object") return false;
+    const e = entry as Record<string, unknown>;
+    if (typeof e.path !== "string" || typeof e.sha256 !== "string") return false;
+  }
+  if (!v.validateRun || typeof v.validateRun !== "object") return false;
+  if (!v.verifyRun || typeof v.verifyRun !== "object") return false;
+  if (!v.reviewerSignoff || typeof v.reviewerSignoff !== "object") return false;
+  return true;
 }
 
 export type CertifyCheckResult =
