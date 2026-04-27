@@ -10,12 +10,25 @@
 import type { Issue } from "../../types.js";
 import { issue } from "../utils.js";
 
-const REQUIRED_FIELDS = [
-  "targetIterations",
-  "evaluationAxesSource",
-  "delegationMap",
-  "plannedAt",
-] as const;
+type FieldShape = "number" | "non-empty-string" | "record";
+
+const REQUIRED_FIELDS: ReadonlyArray<{ key: string; shape: FieldShape }> = [
+  { key: "targetIterations", shape: "number" },
+  { key: "evaluationAxesSource", shape: "non-empty-string" },
+  { key: "delegationMap", shape: "record" },
+  { key: "plannedAt", shape: "non-empty-string" },
+];
+
+function matchesShape(value: unknown, shape: FieldShape): boolean {
+  switch (shape) {
+    case "number":
+      return typeof value === "number" && Number.isFinite(value);
+    case "non-empty-string":
+      return typeof value === "string" && value.trim().length > 0;
+    case "record":
+      return typeof value === "object" && value !== null && !Array.isArray(value);
+  }
+}
 
 function isRecord(v: unknown): v is Record<string, unknown> {
   return typeof v === "object" && v !== null && !Array.isArray(v);
@@ -61,18 +74,18 @@ export function validateExecutionPlanIssues(
     ];
   }
 
-  // Field-level validation: each required field must be present and non-empty.
-  // Reviewer comment from PR #201 (Copilot, MAJOR): the validator previously
-  // only checked block presence even though the suggested_action enumerated
-  // these fields. Now we enforce them.
+  // Field-level validation: each required field must be present, non-empty,
+  // AND of the correct shape. Reviewer comments on PR #201 flagged that
+  // checking only presence let mis-typed values through (e.g. targetIterations
+  // as a string, delegationMap as an array).
   const issues: Issue[] = [];
   const executionPlan = prototypingJson.executionPlan;
-  for (const field of REQUIRED_FIELDS) {
-    const value = executionPlan[field];
-    if (value === undefined || value === null || value === "") {
+  for (const { key, shape } of REQUIRED_FIELDS) {
+    const value = executionPlan[key];
+    if (!matchesShape(value, shape)) {
       issues.push(
         buildIssue(
-          `executionPlan.${field} is required in full-harness mode but is missing or empty.`,
+          `executionPlan.${key} is required in full-harness mode and must be a ${shape} (got: ${typeof value}).`,
           prototypingJsonPath,
         ),
       );
