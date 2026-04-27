@@ -433,6 +433,22 @@ const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     ".qfai/evidence/prototyping/completion-certificate.json is required when prototyping completion is claimed (run `qfai prototyping certify` after all gates pass).",
   "QFAI-PROT-336":
     ".qfai/evidence/prototyping/completion-certificate.json digest mismatch — evidence has been modified since certify; re-run `qfai prototyping certify`.",
+  "QFAI-CFG-LINK-001":
+    "qfai.config.yaml: prototyping.primarySpecId points to a spec ID that does not exist under the configured specs directory.",
+  "QFAI-CFG-LINK-002":
+    "qfai.config.yaml: paths.* points to a directory that does not exist on disk.",
+  "QFAI-CFG-LINK-003":
+    "qfai.config.yaml: prototyping.calibration.packPath points to a directory that does not exist on disk.",
+  "QFAI-PROT-REF-001":
+    "An xxxRef string in prototyping.json / review-bundle.json / breakthrough.json points to a file that does not exist on disk.",
+  "QFAI-PROT-LINK-001":
+    "prototyping.json.specs[].specId references a spec that does not exist under .qfai/specs/.",
+  "QFAI-PROT-LINK-002":
+    "review-bundle.json.spec references a spec that does not exist under .qfai/specs/.",
+  "QFAI-PROT-LINK-003":
+    "prototyping.json.rounds[].candidates[].candidateId has no corresponding artifact directory under .qfai/evidence/prototyping/rounds/<rN>/candidates/.",
+  "QFAI-PROT-LINK-004":
+    "prototyping.json.polishCycles[].cycle has no corresponding iteration directory under .qfai/evidence/prototyping/iterations/.",
   "QFAI-PROT-AXIS-FLOOR-001":
     "Each candidate's evaluator-review perAxis[].score must meet evaluation-rubric.yaml hard_floors[].min_score in absorption rounds (r3|r2|r1). r5 is exempt.",
   "QFAI-UIE-001":

@@ -39,6 +39,9 @@ import {
   validatePrototypingDesignSystem,
   validateStateGate,
   validateCompletionCertificateIssues,
+  validateConfigReferenceIntegrity,
+  validatePrototypingArtifactRefIntegrity,
+  validateSpecIdLinkage,
   validateResearchSummary,
   validateRepositoryHygiene,
   validateSpecSplitByCapability,
@@ -183,6 +186,9 @@ async function runPrototypingValidators(
     ...(await validateEvaluatorReviewHardFloor(root, config)),
     ...(await validateStateGate(root, config)),
     ...(await validateCompletionCertificateIssues(root, config)),
+    ...(await validateConfigReferenceIntegrity(root, config)),
+    ...(await validatePrototypingArtifactRefIntegrity(root, config)),
+    ...(await validateSpecIdLinkage(root, config)),
   ];
 }
 
