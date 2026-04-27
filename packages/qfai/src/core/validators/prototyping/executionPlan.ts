@@ -72,25 +72,27 @@ function detectMode(raw: unknown): string {
 /**
  * Verifies that prototyping.json has an `executionPlan` object with the four
  * required fields populated when running in full-harness mode. Issues
- * `QFAI-PROT-310` for absence, invalid root, or missing/empty required field.
+ * `QFAI-PROT-310` for executionPlan absence, missing/empty required fields,
+ * or wrong field types (e.g. targetIterations as a string, delegationMap as
+ * an array). (Copilot NIT review on PR #202, comment 3145670472.)
+ *
+ * Implementation note: `isRecord` runs before `detectMode` so the rest of the
+ * function can rely on `prototypingJson` being a record. The previous order —
+ * `detectMode` first, then a second `isRecord` check — left the second branch
+ * unreachable because `detectMode` already returns `"other"` for non-records.
+ * (Copilot NIT review on PR #201, comment 3145610423.)
  */
 export function validateExecutionPlanIssues(
   prototypingJson: unknown,
   prototypingJsonPath: string,
 ): Issue[] {
-  const mode = detectMode(prototypingJson);
-  if (mode !== "full-harness") {
+  if (!isRecord(prototypingJson)) {
+    return [];
+  }
+  if (detectMode(prototypingJson) !== "full-harness") {
     return [];
   }
 
-  if (!isRecord(prototypingJson)) {
-    return [
-      buildIssue(
-        "executionPlan is required in full-harness mode but prototyping record is invalid.",
-        prototypingJsonPath,
-      ),
-    ];
-  }
   if (!isRecord(prototypingJson.executionPlan)) {
     return [
       buildIssue(
