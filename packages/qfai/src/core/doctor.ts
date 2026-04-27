@@ -11,6 +11,7 @@ import { resolvePrimaryPrototypingSpec } from "./prototyping/specResolution.js";
 import { collectSpecEntries } from "./specLayout.js";
 import { DEFAULT_TEST_FILE_EXCLUDE_GLOBS } from "./traceability.js";
 import { diffProjectSkillsAgainstInitAssets } from "./skillsIntegrity.js";
+import { validateDesignContractReadiness } from "./validators/designContractReadiness.js";
 import { resolveToolVersion } from "./version.js";
 import { loadDecisionGuardrails, normalizeDecisionGuardrails } from "./decisionGuardrails.js";
 
@@ -539,6 +540,7 @@ async function buildPrototypingDoctorChecks(
   return Promise.all([
     buildPrototypingPrimarySpecCheck(root, config),
     buildPrototypingUiContractsCheck(root, config),
+    buildPrototypingDesignContractsCheck(root, config),
     buildPrototypingRolesCheck(root),
     buildPlaywrightCliCheck(root),
     buildTargetUrlCheck(root, targetUrl, targetUrlOverride ? "cli" : "config"),
@@ -598,6 +600,48 @@ async function buildPrototypingUiContractsCheck(
     details: {
       contractsDir: config.paths.contractsDir,
       screenIds: screens.map((screen) => screen.screenId),
+    },
+  };
+}
+
+async function buildPrototypingDesignContractsCheck(
+  root: string,
+  config: Awaited<ReturnType<typeof loadConfig>>["config"],
+): Promise<DoctorCheck> {
+  const issues = await validateDesignContractReadiness(root, config);
+  if (issues.length === 0) {
+    return {
+      id: "prototyping.designContracts",
+      severity: "ok",
+      title: "Design contract readiness",
+      message: "design contracts satisfy prototyping readiness checks",
+      details: {
+        designDir: `${config.paths.contractsDir}/design`,
+      },
+    };
+  }
+
+  const codeCounts = new Map<string, number>();
+  for (const item of issues) {
+    codeCounts.set(item.code, (codeCounts.get(item.code) ?? 0) + 1);
+  }
+
+  return {
+    id: "prototyping.designContracts",
+    severity: issues.some((item) => item.severity === "error") ? "error" : "warning",
+    title: "Design contract readiness",
+    message: `design contract readiness has blocking issue(s) (count=${issues.length})`,
+    details: {
+      designDir: `${config.paths.contractsDir}/design`,
+      issues: issues.map((item) => ({
+        code: item.code,
+        severity: item.severity,
+        file: item.file,
+        message: item.message,
+      })),
+      codeSummary: Array.from(codeCounts.entries())
+        .map(([code, count]) => ({ code, count }))
+        .sort((left, right) => left.code.localeCompare(right.code)),
     },
   };
 }

@@ -172,7 +172,7 @@ Commands:
   report                       検証結果と集計を出力
   doctor                       設定/パス/出力前提の診断
   guardrails                   Decision Guardrails の抽出/検査（list|extract|check）
-  prototyping preflight        prototyping 実行前提（spec/ui/roles/browser/targetUrl）を診断
+  prototyping preflight        prototyping 実行前提（spec/ui/design contracts/roles/browser/targetUrl）を診断
   prototyping round-start      round review bundle と command plans を生成
   prototyping round-harvest    evaluator review を前提に harvest template を生成
   prototyping round-narrow     survivor 決定を記録
