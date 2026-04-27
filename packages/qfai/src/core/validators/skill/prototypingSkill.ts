@@ -75,6 +75,9 @@ export type SkillValidationResult = {
   isStaticFirstAligned: boolean;
   hasDelegationScopeTable: boolean;
   hasMandatoryEvidencePaths: boolean;
+  hasEnvironmentPreconditions: boolean;
+  hasPreflightGuidance: boolean;
+  hasPlaywrightCliFallback: boolean;
   issues: Issue[];
 };
 
@@ -148,6 +151,27 @@ export function hasMandatoryEvidencePaths(content: string): boolean {
   );
 }
 
+export function hasEnvironmentPreconditions(content: string): boolean {
+  return (
+    /Step 2-B/i.test(content) &&
+    /Environment Preconditions/i.test(content) &&
+    /Contract Preconditions/i.test(content)
+  );
+}
+
+export function hasPreflightGuidance(content: string): boolean {
+  const lower = content.toLowerCase();
+  return (
+    lower.includes("qfai prototyping preflight") ||
+    lower.includes("qfai doctor --profile prototyping")
+  );
+}
+
+export function hasPlaywrightCliFallback(content: string): boolean {
+  const lower = content.toLowerCase();
+  return lower.includes("npx playwright-cli") || lower.includes("node_modules/.bin/playwright-cli");
+}
+
 export function detectAspirationalClaims(content: string): string[] {
   const matches: string[] = [];
   for (const pattern of ASPIRATIONAL_PATTERNS) {
@@ -195,6 +219,9 @@ export function validatePrototypingSkillContent(content: string): SkillValidatio
   const staticFirst = isStaticFirstAligned(content);
   const delegationScopeTable = hasDelegationScopeTable(content);
   const mandatoryEvidencePaths = hasMandatoryEvidencePaths(content);
+  const environmentPreconditions = hasEnvironmentPreconditions(content);
+  const preflightGuidance = hasPreflightGuidance(content);
+  const playwrightCliFallback = hasPlaywrightCliFallback(content);
   const issues: Issue[] = [];
 
   if (bannedPhraseMatches.length > 0) {
@@ -296,6 +323,39 @@ export function validatePrototypingSkillContent(content: string): SkillValidatio
     );
   }
 
+  if (!environmentPreconditions) {
+    issues.push(
+      skillIssue(
+        "UIX-VAL-SKILL-ENV-PRECONDITIONS",
+        "Prototyping skill must separate contract preconditions and environment preconditions.",
+        "error",
+        "Step 2-A / Step 2-B で contract と environment の preconditions を分離してください。",
+      ),
+    );
+  }
+
+  if (!preflightGuidance) {
+    issues.push(
+      skillIssue(
+        "UIX-VAL-SKILL-PREFLIGHT",
+        "Prototyping skill must document qfai prototyping preflight or qfai doctor --profile prototyping guidance.",
+        "error",
+        "preflight 実行導線（qfai prototyping preflight または qfai doctor --profile prototyping）を明記してください。",
+      ),
+    );
+  }
+
+  if (!playwrightCliFallback) {
+    issues.push(
+      skillIssue(
+        "UIX-VAL-SKILL-PLAYWRIGHT-FALLBACK",
+        "Prototyping skill must document a safe Playwright CLI invocation path such as npx playwright-cli.",
+        "error",
+        "npx playwright-cli または node_modules/.bin/playwright-cli の経路を明記してください。",
+      ),
+    );
+  }
+
   return {
     bannedPhraseMatches,
     aspirationalClaims,
@@ -307,6 +367,9 @@ export function validatePrototypingSkillContent(content: string): SkillValidatio
     isStaticFirstAligned: staticFirst,
     hasDelegationScopeTable: delegationScopeTable,
     hasMandatoryEvidencePaths: mandatoryEvidencePaths,
+    hasEnvironmentPreconditions: environmentPreconditions,
+    hasPreflightGuidance: preflightGuidance,
+    hasPlaywrightCliFallback: playwrightCliFallback,
     issues,
   };
 }

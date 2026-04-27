@@ -30,8 +30,8 @@ Do not rely on a CLI entrypoint or package runtime loop.
 ## CRITICAL CONSTRAINTS (Read First)
 
 - Scope is all specs from `.qfai/specs/spec-*`.
-- The AI evaluator sub-agent performs visual evaluation. QFAI does not score visual quality. (spec-0012)
-- Playwright CLI (`playwright-cli`) is the sole standard browser tool. Playwright MCP, Node Playwright direct invocation, and screenshot-capture shell scripts are not used. (spec-0012)
+- The AI evaluator sub-agent performs visual evaluation. QFAI does not score visual quality. (per the resolved primary prototyping spec — see `qfai prototyping show-spec`)
+- Playwright CLI (`playwright-cli`) is the sole standard browser tool. Playwright MCP, Node Playwright direct invocation, and screenshot-capture shell scripts are not used. (per the resolved primary prototyping spec)
 - QFAI pre-assigns evidence paths. The evaluator MUST use the paths in the command plan (`review-bundle.json` → `command-plans.json`); it MUST NOT invent paths.
 - For every declared screen and every active candidate in every round, 4 evidence artifacts are mandatory:
   - screenshot: `.qfai/evidence/prototyping/rounds/<round>/candidates/<candidate-id>/<screen-id>.png`
@@ -42,7 +42,7 @@ Do not rely on a CLI entrypoint or package runtime loop.
 - Canonical latest HTML path: `.qfai/evidence/prototyping/html/<screen-id>.html`
 - Canonical latest paths MUST mirror the latest accepted winner/polish artifacts.
 - If any of the 4 artifacts is missing for a declared screen, the round is incomplete; rerun is mandatory, not waiver.
-- Mode differences are limited to `maxCycles` only (low-cost=1, standard=3, full-harness=20). Every other gate, obligation, reviewer severity, and completion criterion is identical across modes. (spec-0012)
+- Mode differences are limited to `maxCycles` only (low-cost=1, standard=3, full-harness=20). Every other gate, obligation, reviewer severity, and completion criterion is identical across modes. (per the resolved primary prototyping spec)
 - DONE is forbidden until `qfai validate --profile prototyping --fail-on error` passes and `/qfai-verify` can approve the run.
 - Supported UI prototyping surfaces are `web`, `mobile`, `desktop`, and `mixed`.
 - `cli`, API-only, backend-only, and `ui_bearing: false` classifications are not prototyping execution targets.
@@ -60,7 +60,7 @@ Generate multiple design directions, converge on a winner, extract the selected 
 ## Surface / Mode
 
 - surface / mode routing uses `standard` as the default execution path.
-- **Mode Invariant (spec-0012)**: modes differ only by `maxCycles`. Review gate, evidence requirements, reviewer severity, best-of-history, breakthrough detection, and completion criteria are identical across modes.
+- **Mode Invariant**: modes differ only by `maxCycles`. Review gate, evidence requirements, reviewer severity, best-of-history, breakthrough detection, and completion criteria are identical across modes.
   - `low-cost`: `maxCycles = 1`
   - `standard`: `maxCycles = 3` (default)
   - `full-harness`: `maxCycles = 20`
@@ -70,7 +70,12 @@ Generate multiple design directions, converge on a winner, extract the selected 
 
 Read and follow these references before execution:
 
-- `.qfai/specs/spec-0012/01_Spec.md` — primary SSOT for the prototyping harness
+- **Primary SSOT for the prototyping harness**: resolve at runtime by running
+  `qfai prototyping show-spec` from the repo root. The output gives you the
+  resolved spec ID and `01_Spec.md` path (configured via
+  `qfai.config.yaml: prototyping.primarySpecId`, or auto-detected via the
+  `surface_type: ui-bearing` marker in `01_Spec.md`). Do not assume any
+  particular spec ID exists — read whatever `show-spec` returns.
 - `.qfai/assistant/skills/qfai-prototyping/references/evidence-requirements.md`
 - `.qfai/assistant/skills/qfai-prototyping/references/iteration-cycle.md`
 - `.qfai/assistant/skills/qfai-prototyping/references/l1-review-guide.md`
@@ -139,7 +144,7 @@ Read order:
 9. `.qfai/contracts/design/design-system.yaml`
 10. `.qfai/contracts/ui/*.yaml`
 
-### Step 2 — Verify Execution Preconditions
+### Step 2-A — Verify Contract Preconditions
 
 Confirm all of the following before any evaluation:
 
@@ -147,6 +152,16 @@ Confirm all of the following before any evaluation:
 - surface is `web`, `mobile`, `desktop`, or `mixed`
 - every declared screen has a stable `screen-id`
 - the exploration brief, evaluation rubric, and evaluator calibration contracts satisfy the required schema
+
+### Step 2-B — Verify Environment Preconditions
+
+Confirm all of the following before launching the first required delegation:
+
+- Run `qfai prototyping preflight --target-url <url>` when a concrete target URL is known, or `qfai doctor --profile prototyping` to diagnose the same runtime assumptions from config.
+- `.claude/agents/<role>.md` exists for `frontend-engineer`, `product-experience-architect`, `product-surface-reviewer`, `backend-engineer`, and `devops-ci-engineer`, and each wrapper resolves to a canonical role card with valid Claude-compatible frontmatter.
+- `playwright-cli` is reachable either via PATH or the project-local `node_modules/.bin` installation. Prefer `npx playwright-cli` whenever PATH reachability is not guaranteed.
+- `targetUrl` responds with HTTP 200-399 before capture starts. If it does not, start or repair the dev server first; do not pretend the evaluator can proceed.
+- If the first required delegation fails, stop the stage and report remediation. Environment repair is part of preflight, not a reviewer-side waiver.
 
 ### Step 3 — Generate Divergent Directions
 
@@ -161,18 +176,18 @@ Before launching the evaluator, prepare the round-scoped artifacts via QFAI (not
 - QFAI produces:
   - `.qfai/evidence/prototyping/rounds/<rN>/command-plans.json` — the candidate-aware Playwright CLI command plans
   - `.qfai/evidence/prototyping/rounds/<rN>/review-bundle.json` — the evaluator input bundle (candidates, axisDefs, designSystemChecklist, commandPlanRef)
-- Do not invent evidence paths. Paths are fixed by QFAI per spec-0012.
+- Do not invent evidence paths. Paths are fixed by QFAI per the resolved primary prototyping spec.
 
 ### Step 5 — AI Evaluator Executes the Command Plans and Captures Evidence
 
 For every declared screen of every active candidate in the current round, the AI evaluator sub-agent:
 
 1. Reads `command-plans.json` for the round
-2. Runs `playwright-cli goto <url>` for the candidate route
-3. Runs `playwright-cli snapshot --save <candidate-path>/<screen-id>.snapshot.txt`
+2. Runs `npx playwright-cli goto <url>` for the candidate route (or the equivalent project-local `node_modules/.bin/playwright-cli` entrypoint)
+3. Runs `npx playwright-cli snapshot --save <candidate-path>/<screen-id>.snapshot.txt`
 4. Performs interaction commands (click/fill) to exercise `primaryTasks` noted in the plan
-5. Runs `playwright-cli screenshot --full-page --save <candidate-path>/<screen-id>.png`
-6. Runs `playwright-cli eval "document.documentElement.outerHTML" > <candidate-path>/<screen-id>.html`
+5. Runs `npx playwright-cli screenshot --full-page --save <candidate-path>/<screen-id>.png`
+6. Runs `npx playwright-cli eval "document.documentElement.outerHTML" > <candidate-path>/<screen-id>.html`
 7. Saves the sequence of executed commands to `<candidate-path>/<screen-id>.commands.json`
 
 If any capture step fails, the evaluator records the failure and stops pretending the screen was evaluated. The round is incomplete and must be rerun.
@@ -220,7 +235,7 @@ At least one full post-selection polish loop is mandatory. Each polish loop must
 
 ## Cycle Gate
 
-- Completion requires at least one `polish` cycle after winner selection (spec-0012). This applies to all modes.
+- Completion requires at least one `polish` cycle after winner selection (per the resolved primary prototyping spec). This applies to all modes.
 - The same gate applies in every mode; modes differ only in `maxCycles` (low-cost=1, standard=3, full-harness=20).
 - If the polish-cycle budget is exhausted before the gate is satisfied, the run does NOT complete. The evaluator returns `REVISE` and the developer may re-run at a higher mode.
 - Any phase transition to completion must pass through the cycle gate and the reviewer gate.

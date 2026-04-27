@@ -144,7 +144,7 @@ Read order:
 9. `.qfai/contracts/design/design-system.yaml`
 10. `.qfai/contracts/ui/*.yaml`
 
-### Step 2 — Verify Execution Preconditions
+### Step 2-A — Verify Contract Preconditions
 
 Confirm all of the following before any evaluation:
 
@@ -152,6 +152,16 @@ Confirm all of the following before any evaluation:
 - surface is `web`, `mobile`, `desktop`, or `mixed`
 - every declared screen has a stable `screen-id`
 - the exploration brief, evaluation rubric, and evaluator calibration contracts satisfy the required schema
+
+### Step 2-B — Verify Environment Preconditions
+
+Confirm all of the following before launching the first required delegation:
+
+- Run `qfai prototyping preflight --target-url <url>` when a concrete target URL is known, or `qfai doctor --profile prototyping` to diagnose the same runtime assumptions from config.
+- `.claude/agents/<role>.md` exists for `frontend-engineer`, `product-experience-architect`, `product-surface-reviewer`, `backend-engineer`, and `devops-ci-engineer`, and each wrapper resolves to a canonical role card with valid Claude-compatible frontmatter.
+- `playwright-cli` is reachable either via PATH or the project-local `node_modules/.bin` installation. Prefer `npx playwright-cli` whenever PATH reachability is not guaranteed.
+- `targetUrl` responds with HTTP 200-399 before capture starts. If it does not, start or repair the dev server first; do not pretend the evaluator can proceed.
+- If the first required delegation fails, stop the stage and report remediation. Environment repair is part of preflight, not a reviewer-side waiver.
 
 ### Step 3 — Generate Divergent Directions
 
@@ -173,11 +183,11 @@ Before launching the evaluator, prepare the round-scoped artifacts via QFAI (not
 For every declared screen of every active candidate in the current round, the AI evaluator sub-agent:
 
 1. Reads `command-plans.json` for the round
-2. Runs `playwright-cli goto <url>` for the candidate route
-3. Runs `playwright-cli snapshot --save <candidate-path>/<screen-id>.snapshot.txt`
+2. Runs `npx playwright-cli goto <url>` for the candidate route (or the equivalent project-local `node_modules/.bin/playwright-cli` entrypoint)
+3. Runs `npx playwright-cli snapshot --save <candidate-path>/<screen-id>.snapshot.txt`
 4. Performs interaction commands (click/fill) to exercise `primaryTasks` noted in the plan
-5. Runs `playwright-cli screenshot --full-page --save <candidate-path>/<screen-id>.png`
-6. Runs `playwright-cli eval "document.documentElement.outerHTML" > <candidate-path>/<screen-id>.html`
+5. Runs `npx playwright-cli screenshot --full-page --save <candidate-path>/<screen-id>.png`
+6. Runs `npx playwright-cli eval "document.documentElement.outerHTML" > <candidate-path>/<screen-id>.html`
 7. Saves the sequence of executed commands to `<candidate-path>/<screen-id>.commands.json`
 
 If any capture step fails, the evaluator records the failure and stops pretending the screen was evaluated. The round is incomplete and must be rerun.

@@ -9,6 +9,9 @@ import {
   scanBannedPhrases,
   hasDelegationScopeTable,
   hasMandatoryEvidencePaths,
+  hasEnvironmentPreconditions,
+  hasPreflightGuidance,
+  hasPlaywrightCliFallback,
 } from "../../src/core/validators/skill/prototypingSkill.js";
 
 const VALID_SKILL_CONTENT = [
@@ -25,6 +28,13 @@ const VALID_SKILL_CONTENT = [
   "",
   "## Required Process",
   "Follow the skill-orchestrated process.",
+  "",
+  "### Step 2-A — Verify Contract Preconditions",
+  "classification is UI-bearing",
+  "",
+  "### Step 2-B — Verify Environment Preconditions",
+  "Run qfai prototyping preflight --target-url <url> or qfai doctor --profile prototyping.",
+  "Prefer npx playwright-cli whenever PATH reachability is not guaranteed.",
   "",
   "## Evaluator Inputs (Mandatory)",
   "screenshots, HTML snapshots, axisDefs, previousScore, designSystemChecklist",
@@ -70,6 +80,18 @@ describe("prototyping skill validator", () => {
 
   it("documents canonical mandatory evidence paths", () => {
     expect(hasMandatoryEvidencePaths(VALID_SKILL_CONTENT)).toBe(true);
+  });
+
+  it("documents environment preconditions as a separate step", () => {
+    expect(hasEnvironmentPreconditions(VALID_SKILL_CONTENT)).toBe(true);
+  });
+
+  it("documents preflight guidance", () => {
+    expect(hasPreflightGuidance(VALID_SKILL_CONTENT)).toBe(true);
+  });
+
+  it("documents Playwright CLI fallback guidance", () => {
+    expect(hasPlaywrightCliFallback(VALID_SKILL_CONTENT)).toBe(true);
   });
 
   it("flags banned phrases when low-cost or standard are reintroduced", () => {
