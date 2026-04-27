@@ -3,8 +3,8 @@
  *
  * v1.8.4: validateExecutionPlanIssues is the standard `Issue[]` adapter,
  * required for `runPrototypingValidators` participation and `--fail-on error`
- * aggregation. The legacy `validateExecutionPlan` (custom Issue type) is
- * @deprecated and will be removed in Phase 7.
+ * aggregation. The legacy `validateExecutionPlan` (custom Issue type) was
+ * removed in Phase 9 (BREAKING).
  *
  * spec-0012 TC-0012-0290 / AC-0012-0175
  */

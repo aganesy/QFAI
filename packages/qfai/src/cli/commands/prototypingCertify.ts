@@ -74,11 +74,15 @@ export async function runPrototypingCertify(
     return 2;
   }
 
-  const validateJsonPath = path.join(options.root, ".qfai/output/validate.json");
+  // Resolve validate.json from the configured output path (Codex P1 review on
+  // PR #201). Hardcoding ".qfai/output/" was wrong for any user with a
+  // customized `output.validateJsonPath`.
+  const validateJsonPath = path.resolve(options.root, config.output.validateJsonPath);
+  const validateJsonRel = path.relative(options.root, validateJsonPath).replace(/\\/g, "/");
   const validateJson = await loadJson(validateJsonPath);
   if (!validateJson) {
     error(
-      "qfai prototyping certify: .qfai/output/validate.json is missing. " +
+      `qfai prototyping certify: ${validateJsonRel} is missing. ` +
         "Run `qfai validate --profile prototyping --fail-on error` first.",
     );
     return 2;

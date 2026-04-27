@@ -62,12 +62,15 @@ async function seedMinimalProject(root: string, opts?: { specMarker?: boolean })
 }
 
 async function seedAllGatesPass(root: string): Promise<void> {
+  // v1.8.4 Phase 11.7+: certify now reads validate.json from
+  // config.output.validateJsonPath (default: .qfai/report/validate.json),
+  // not hardcoded .qfai/output/. Seed both locations so tests work
+  // regardless of the default.
+  await mkdir(path.join(root, ".qfai/report"), { recursive: true });
   await mkdir(path.join(root, ".qfai/output"), { recursive: true });
-  await writeFile(
-    path.join(root, ".qfai/output/validate.json"),
-    JSON.stringify({ counts: { error: 0, warning: 0, info: 0 } }),
-    "utf-8",
-  );
+  const validateJson = JSON.stringify({ counts: { error: 0, warning: 0, info: 0 } });
+  await writeFile(path.join(root, ".qfai/report/validate.json"), validateJson, "utf-8");
+  await writeFile(path.join(root, ".qfai/output/validate.json"), validateJson, "utf-8");
   await writeFile(
     path.join(root, ".qfai/output/verify.json"),
     JSON.stringify({ status: "PASS" }),
@@ -138,9 +141,10 @@ describe("qfai prototyping certify (generate)", () => {
     const root = await newTempDir();
     await seedMinimalProject(root);
     await seedAllGatesPass(root);
-    // Override validate.json with errors
+    // Override the validate.json that certify actually reads (default
+    // config.output.validateJsonPath = .qfai/report/validate.json).
     await writeFile(
-      path.join(root, ".qfai/output/validate.json"),
+      path.join(root, ".qfai/report/validate.json"),
       JSON.stringify({ counts: { error: 3, warning: 0, info: 0 } }),
       "utf-8",
     );
