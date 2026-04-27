@@ -41,7 +41,7 @@ export type CompletionCertificate = {
    */
   readonly verifyRun: { readonly status: string; readonly ranAt: string };
   readonly reviewerSignoff: {
-    readonly reviewer: string;
+    readonly reviewerId: string;
     readonly approved: boolean;
     readonly timestamp: string;
   };
@@ -63,7 +63,7 @@ export type BuildCertificateInputs = {
   validateRun: { errorCount: number; ranAt: string };
   /** status must be "PASS"; widened-type field is enforced at runtime. */
   verifyRun: { status: string; ranAt: string };
-  reviewerSignoff: { reviewer: string; approved: boolean; timestamp: string };
+  reviewerSignoff: { reviewerId: string; approved: boolean; timestamp: string };
   iterationCount: number;
   polishCycleCount: number;
   specsCovered: readonly string[];
@@ -105,22 +105,13 @@ export async function loadCompletionCertificate(
   const fullPath = path.join(root, COMPLETION_CERTIFICATE_REL_PATH);
   try {
     const raw = await readFile(fullPath, "utf-8");
-    const parsed: unknown = JSON.parse(raw);
-    // Reviewer comment from PR #201 (Codex, P1): validate the parsed shape
-    // before casting. A malformed certificate (e.g. truncated, manually
-    // edited) used to crash downstream callers via property access on
-    // `undefined`. Now we return null and let `checkCompletionCertificate`
-    // emit a descriptive reason.
-    if (!isMinimallyValidCertificate(parsed)) {
-      return null;
-    }
-    return parsed;
+    return normalizeCompletionCertificate(JSON.parse(raw) as unknown);
   } catch {
     return null;
   }
 }
 
-function isMinimallyValidCertificate(value: unknown): value is CompletionCertificate {
+function isMinimallyValidCertificate(value: unknown): value is Record<string, unknown> {
   if (!value || typeof value !== "object" || Array.isArray(value)) return false;
   const v = value as Record<string, unknown>;
   if (v.schemaVersion !== "1.0") return false;
@@ -134,7 +125,38 @@ function isMinimallyValidCertificate(value: unknown): value is CompletionCertifi
   if (!v.validateRun || typeof v.validateRun !== "object") return false;
   if (!v.verifyRun || typeof v.verifyRun !== "object") return false;
   if (!v.reviewerSignoff || typeof v.reviewerSignoff !== "object") return false;
+  const reviewerSignoff = v.reviewerSignoff as Record<string, unknown>;
+  if (
+    typeof reviewerSignoff.reviewerId !== "string" &&
+    typeof reviewerSignoff.reviewer !== "string"
+  ) {
+    return false;
+  }
+  if (typeof reviewerSignoff.approved !== "boolean") return false;
+  if (typeof reviewerSignoff.timestamp !== "string") return false;
   return true;
+}
+
+function normalizeCompletionCertificate(value: unknown): CompletionCertificate | null {
+  if (!isMinimallyValidCertificate(value)) {
+    return null;
+  }
+
+  const record = value;
+  const reviewerSignoff = record.reviewerSignoff as Record<string, unknown>;
+  const reviewerId =
+    typeof reviewerSignoff.reviewerId === "string"
+      ? reviewerSignoff.reviewerId
+      : (reviewerSignoff.reviewer as string);
+
+  return {
+    ...(record as Omit<CompletionCertificate, "reviewerSignoff">),
+    reviewerSignoff: {
+      reviewerId,
+      approved: reviewerSignoff.approved as boolean,
+      timestamp: reviewerSignoff.timestamp as string,
+    },
+  };
 }
 
 export type CertifyCheckResult =

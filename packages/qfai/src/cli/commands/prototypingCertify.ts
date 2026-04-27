@@ -114,7 +114,10 @@ export async function runPrototypingCertify(
   }
 
   const reviewerSignoff = extractRecord(reviewerGate, "signoff");
-  const reviewer = extractString(reviewerSignoff, "reviewer") ?? "unknown";
+  const reviewerId =
+    extractString(reviewerSignoff, "reviewerId") ??
+    extractString(reviewerSignoff, "reviewer") ??
+    "unknown";
   const reviewerTimestamp = extractString(reviewerSignoff, "timestamp") ?? new Date().toISOString();
 
   const resolvedSpec = await resolvePrimaryPrototypingSpec(options.root, config);
@@ -129,7 +132,7 @@ export async function runPrototypingCertify(
     validateRun: { errorCount: 0, ranAt: new Date().toISOString() },
     verifyRun: { status: "PASS", ranAt: new Date().toISOString() },
     reviewerSignoff: {
-      reviewer,
+      reviewerId,
       approved: true,
       timestamp: reviewerTimestamp,
     },

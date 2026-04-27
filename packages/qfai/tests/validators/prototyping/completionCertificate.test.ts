@@ -133,7 +133,7 @@ describe("validateCompletionCertificateIssues", () => {
       validateRun: { errorCount: 0, ranAt: "2026-04-27T00:00:00Z" },
       verifyRun: { status: "PASS", ranAt: "2026-04-27T00:01:00Z" },
       reviewerSignoff: {
-        reviewer: "test",
+        reviewerId: "test",
         approved: true,
         timestamp: "2026-04-27T00:02:00Z",
       },
@@ -162,7 +162,7 @@ describe("validateCompletionCertificateIssues", () => {
       validateRun: { errorCount: 0, ranAt: "2026-04-27T00:00:00Z" },
       verifyRun: { status: "PASS", ranAt: "2026-04-27T00:01:00Z" },
       reviewerSignoff: {
-        reviewer: "test",
+        reviewerId: "test",
         approved: true,
         timestamp: "2026-04-27T00:02:00Z",
       },
