@@ -321,6 +321,16 @@ describe("validateDesignAudit  Eaudit rules", { timeout: 10000 }, () => {
     );
   }
 
+  async function writeUiContractYaml(lines: string[]): Promise<void> {
+    const contractsUiDir = path.join(root, ".qfai", "contracts", "ui");
+    await mkdir(contractsUiDir, { recursive: true });
+    await writeFile(
+      path.join(contractsUiDir, "ui-0001-dashboard.yaml"),
+      `${lines.join("\n")}\n`,
+      "utf-8",
+    );
+  }
+
   it("TDD-0012: returns empty array for clean UI-bearing fixture", async () => {
     await createUiBearingPack(["# 03 Story Workshop", "<div>UI content</div>"].join("\n"));
     await writeCanonicalAuditArtifacts([
@@ -380,6 +390,47 @@ describe("validateDesignAudit  Eaudit rules", { timeout: 10000 }, () => {
     const ctaIssue = issues.find((i) => i.code === "QFAI-AUD-001");
     expect(ctaIssue).toBeDefined();
     expect(ctaIssue?.severity).toBe("error");
+  });
+
+  it("prefers modern ui contract YAML over legacy discussion screen contracts", async () => {
+    await createUiBearingPack(["# 03 Story Workshop", "<div>UI content</div>"].join("\n"));
+    await writeCanonicalAuditArtifacts([
+      "# Screen Contracts",
+      "",
+      "### Screen: Dashboard",
+      "",
+      "- screen_id: dashboard",
+      "- route: /dashboard",
+      "- primary_tasks:",
+    ]);
+    await writeUiContractYaml([
+      "screens:",
+      "  - id: dashboard",
+      "    title: Dashboard",
+      "    route: /dashboard",
+      "    primary_tasks:",
+      "      - Submit order",
+    ]);
+
+    const issues = await validateDesignAudit(root, config());
+
+    expect(issues.find((issue) => issue.code === "QFAI-AUD-001")).toBeUndefined();
+  });
+
+  it("emits QFAI-AUD-001 from modern ui contract YAML when primary_tasks are absent", async () => {
+    await createUiBearingPack(["# 03 Story Workshop", "<div>UI content</div>"].join("\n"));
+    await writeUiContractYaml([
+      "screens:",
+      "  - id: dashboard",
+      "    title: Dashboard",
+      "    route: /dashboard",
+    ]);
+
+    const issues = await validateDesignAudit(root, config());
+    const ctaIssue = issues.find((issue) => issue.code === "QFAI-AUD-001");
+
+    expect(ctaIssue).toBeDefined();
+    expect(ctaIssue?.file).toBe(".qfai/contracts/ui/ui-0001-dashboard.yaml#dashboard");
   });
 
   it("uses configured contractsDir in selected-direction diagnostics", async () => {

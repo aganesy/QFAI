@@ -2,6 +2,10 @@ import { readdir } from "node:fs/promises";
 import path from "node:path";
 
 import type { QfaiConfig } from "../config.js";
+import {
+  readUiContractScreenContracts,
+  type CanonicalScreenContract,
+} from "../contracts/screenContracts.js";
 import { isDiscussionUiBearingPack } from "../detection/surfaceType.js";
 import { findLatestDiscussionPackDir } from "../discussionPack.js";
 import type { Issue, IssueSeverity } from "../types.js";
@@ -192,6 +196,42 @@ function checkContractsHierarchy(
   return findings;
 }
 
+function checkContractHierarchyFromScreens(
+  screens: CanonicalScreenContract[],
+  auditConfig: DesignAuditConfig,
+): DesignFinding[] {
+  const findings: DesignFinding[] = [];
+  for (const screen of screens) {
+    if (screen.primaryTasks.length === 0) {
+      findings.push({
+        ruleId: "QFAI-AUD-001",
+        dimension: "visualHierarchy",
+        severityTier: 1,
+        message: `Screen '${screen.screenId}' has no primary task defined in screen contracts`,
+        why: "Each screen contract needs a clear primary task to anchor the core user action",
+        evidence: [],
+        guidance: "Add at least one primary_tasks entry to the screen contract.",
+        file: screen.sourceRef,
+      });
+      continue;
+    }
+    if (screen.primaryTasks.length > auditConfig.maxPrimaryCtas) {
+      findings.push({
+        ruleId: "QFAI-AUD-020",
+        dimension: "visualHierarchy",
+        severityTier: 2,
+        message: `Screen '${screen.screenId}' defines multiple primary tasks (${screen.primaryTasks.length} > ${auditConfig.maxPrimaryCtas})`,
+        why: "Multiple primary tasks weaken the selected direction and blur the intended primary action",
+        evidence: screen.primaryTasks,
+        guidance: "Reduce primary_tasks to the single most important user action for this screen.",
+        file: screen.sourceRef,
+      });
+    }
+  }
+
+  return findings;
+}
+
 function checkSelectedDirection(directionContent: string, file: string): DesignFinding[] {
   const findings: DesignFinding[] = [];
   const hasChosenDirection = /(chosen_direction_id|direction_id)\s*:/i.test(directionContent);
@@ -318,14 +358,16 @@ export async function validateDesignAudit(root: string, config: QfaiConfig): Pro
   if (!auditConfig.enabled) return [];
 
   const discussionDir = path.join(root, config.paths.discussionDir);
+  const uiContractScreens = await readUiContractScreenContracts(root, config.paths.contractsDir);
   const packRoot = await findLatestDiscussionPackDir(discussionDir);
-  if (!packRoot) return [];
+  if (uiContractScreens.length === 0) {
+    if (!packRoot) return [];
+    const uiBearing = await isDiscussionUiBearingPack(packRoot);
+    if (!uiBearing) return [];
+  }
 
-  const uiBearing = await isDiscussionUiBearingPack(packRoot);
-  if (!uiBearing) return [];
-
-  const contractsPath = path.join(packRoot, "uiux", "40_screen_contracts.md");
-  const contractsContent = await readSafe(contractsPath);
+  const contractsPath = packRoot ? path.join(packRoot, "uiux", "40_screen_contracts.md") : null;
+  const contractsContent = contractsPath ? await readSafe(contractsPath) : "";
   const selectedDirectionPath = path.join(
     root,
     config.paths.contractsDir,
@@ -333,11 +375,13 @@ export async function validateDesignAudit(root: string, config: QfaiConfig): Pro
     "selected-direction.yaml",
   );
   const selectedDirectionContent = await readSafe(selectedDirectionPath);
-  if (!contractsContent && !selectedDirectionContent) return [];
+  if (uiContractScreens.length === 0 && !contractsContent && !selectedDirectionContent) return [];
 
   const findings: DesignFinding[] = [];
 
-  if (contractsContent) {
+  if (uiContractScreens.length > 0) {
+    findings.push(...checkContractHierarchyFromScreens(uiContractScreens, auditConfig));
+  } else if (contractsContent) {
     findings.push(
       ...checkContractsHierarchy(contractsContent, auditConfig, "uiux/40_screen_contracts.md"),
     );
