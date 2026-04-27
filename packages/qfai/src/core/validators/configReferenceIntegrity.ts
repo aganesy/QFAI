@@ -60,14 +60,9 @@ export async function validateConfigReferenceIntegrity(
   // ─── QFAI-CFG-LINK-001: primarySpecId existence ──────────────────────────
   const primarySpecId = config.prototyping?.primarySpecId;
   if (primarySpecId !== undefined) {
-    const specDir = path.join(
-      path.resolve(root, config.paths.specsDir),
-      `spec-${primarySpecId}`,
-    );
+    const specDir = path.join(path.resolve(root, config.paths.specsDir), `spec-${primarySpecId}`);
     if (!(await isDirectory(specDir))) {
-      const relSpecDir = path
-        .relative(root, specDir)
-        .replace(/\\/g, "/");
+      const relSpecDir = path.relative(root, specDir).replace(/\\/g, "/");
       issues.push(
         issue(
           "QFAI-CFG-LINK-001",

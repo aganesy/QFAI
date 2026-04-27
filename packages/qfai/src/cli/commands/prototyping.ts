@@ -128,10 +128,7 @@ async function runRoundStart(options: RunPrototypingCommandOptions): Promise<num
   // "0017" literal). The resolver returns config-explicit value or
   // marker-scans for `surface_type: ui-bearing`. Fail fast if no spec
   // matches so review-bundle.spec is never written with a placeholder.
-  const resolvedSpec = await resolvePrimaryPrototypingSpec(
-    options.root,
-    configResult.config,
-  );
+  const resolvedSpec = await resolvePrimaryPrototypingSpec(options.root, configResult.config);
   if (!resolvedSpec) {
     error(
       "qfai prototyping round-start: no primary prototyping spec found. " +

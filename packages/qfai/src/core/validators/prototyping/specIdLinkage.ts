@@ -64,10 +64,7 @@ function normalizeSpecId(raw: unknown): string | undefined {
   return undefined;
 }
 
-export async function validateSpecIdLinkage(
-  root: string,
-  config: QfaiConfig,
-): Promise<Issue[]> {
+export async function validateSpecIdLinkage(root: string, config: QfaiConfig): Promise<Issue[]> {
   const issues: Issue[] = [];
   const specsRoot = resolvePath(root, config, "specsDir");
   const evidenceRoot = path.join(path.dirname(specsRoot), "evidence");
@@ -126,9 +123,7 @@ export async function validateSpecIdLinkage(
             candidateId,
           );
           if (!(await isDirectory(candidateDir))) {
-            const relCandidateDir = path
-              .relative(root, candidateDir)
-              .replace(/\\/g, "/");
+            const relCandidateDir = path.relative(root, candidateDir).replace(/\\/g, "/");
             issues.push(
               issue(
                 "QFAI-PROT-LINK-003",
@@ -154,16 +149,9 @@ export async function validateSpecIdLinkage(
         if (!isRecord(cycle)) continue;
         const cycleNum = cycle.cycle;
         if (typeof cycleNum !== "number" || cycleNum < 1) continue;
-        const iterationDir = path.join(
-          evidenceRoot,
-          "prototyping",
-          "iterations",
-          String(cycleNum),
-        );
+        const iterationDir = path.join(evidenceRoot, "prototyping", "iterations", String(cycleNum));
         if (!(await isDirectory(iterationDir))) {
-          const relIterationDir = path
-            .relative(root, iterationDir)
-            .replace(/\\/g, "/");
+          const relIterationDir = path.relative(root, iterationDir).replace(/\\/g, "/");
           issues.push(
             issue(
               "QFAI-PROT-LINK-004",
@@ -183,10 +171,7 @@ export async function validateSpecIdLinkage(
 
   // ─── QFAI-PROT-LINK-002: review-bundle.json.spec existence (per round) ──
   for (const round of EXPLORATION_ROUNDS) {
-    const bundlePath = path.join(
-      root,
-      ...roundReviewBundlePath(round).split("/"),
-    );
+    const bundlePath = path.join(root, ...roundReviewBundlePath(round).split("/"));
     const bundleJson = await loadJson(bundlePath);
     if (!isRecord(bundleJson)) continue;
     const id = normalizeSpecId(bundleJson.spec);

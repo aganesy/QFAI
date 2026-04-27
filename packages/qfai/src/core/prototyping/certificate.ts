@@ -126,9 +126,7 @@ export type CertifyCheckResult =
  *   - verifyRun.status must be "PASS"
  *   - reviewerSignoff.approved must be true
  */
-export async function checkCompletionCertificate(
-  root: string,
-): Promise<CertifyCheckResult> {
+export async function checkCompletionCertificate(root: string): Promise<CertifyCheckResult> {
   const cert = await loadCompletionCertificate(root);
   if (!cert) {
     return {

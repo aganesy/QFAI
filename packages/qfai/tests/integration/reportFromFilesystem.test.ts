@@ -58,11 +58,7 @@ async function seedMinimalProject(root: string): Promise<void> {
     "utf-8",
   );
   await mkdir(path.join(root, ".qfai/specs/spec-0001"), { recursive: true });
-  await writeFile(
-    path.join(root, ".qfai/specs/spec-0001/01_Spec.md"),
-    "# spec-0001\n",
-    "utf-8",
-  );
+  await writeFile(path.join(root, ".qfai/specs/spec-0001/01_Spec.md"), "# spec-0001\n", "utf-8");
   await writeFile(
     path.join(root, ".qfai/specs/spec-0001/02_User-stories.md"),
     "# stories\n",
@@ -79,11 +75,7 @@ async function seedPrototypingJson(root: string, body: unknown): Promise<void> {
   );
 }
 
-async function writeRoundArtifact(
-  root: string,
-  round: string,
-  filename: string,
-): Promise<void> {
+async function writeRoundArtifact(root: string, round: string, filename: string): Promise<void> {
   const dir = path.join(root, ".qfai/evidence/prototyping/rounds", round);
   await mkdir(dir, { recursive: true });
   await writeFile(path.join(dir, filename), "{}\n", "utf-8");
@@ -159,7 +151,10 @@ describe("RR §8.2 regression — report aggregates round artifacts from filesys
     await seedPrototypingJson(root, {
       ...minimalProtoJsonV2,
       rounds: [
-        { round: "r3", absorptionPlanRef: ".qfai/evidence/prototyping/rounds/r3/absorption-plan.json" },
+        {
+          round: "r3",
+          absorptionPlanRef: ".qfai/evidence/prototyping/rounds/r3/absorption-plan.json",
+        },
       ],
     });
     await writeRoundArtifact(root, "r3", "absorption-plan.json");

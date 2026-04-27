@@ -18,10 +18,7 @@ import { fileURLToPath } from "node:url";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import {
-  formatViolations,
-  runLintShipping,
-} from "../../scripts/lint-shipping.js";
+import { formatViolations, runLintShipping } from "../../scripts/lint-shipping.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -71,7 +68,7 @@ describe("lint-shipping fixture — detection rules", () => {
         "waivers:",
         "  - id: WVR-0001",
         "    scope:",
-        "      paths: [\".qfai/specs/spec-0042/**\"]",
+        '      paths: [".qfai/specs/spec-0042/**"]',
         "",
       ].join("\n"),
       "utf-8",
@@ -201,11 +198,9 @@ describe("lint-shipping fixture — detection rules", () => {
     await mkdir(path.join(root, "assets/init/.qfai/contracts/design"), { recursive: true });
     await writeFile(
       path.join(root, "assets/init/.qfai/contracts/design/example.yaml"),
-      [
-        "# this comment mentions spec-0042 but is exempt as a YAML comment",
-        "items: []",
-        "",
-      ].join("\n"),
+      ["# this comment mentions spec-0042 but is exempt as a YAML comment", "items: []", ""].join(
+        "\n",
+      ),
       "utf-8",
     );
 

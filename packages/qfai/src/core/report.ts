@@ -1708,12 +1708,7 @@ async function collectChangeTypeSummary(specsRoot: string): Promise<ReportChange
  * Names of valid exploration rounds (must match prototyping/round.ts).
  * Used by `scanPrototypingRoundsFilesystem` for directory-name validation.
  */
-const PROTOTYPING_ROUND_DIR_NAMES: ReadonlySet<string> = new Set([
-  "r5",
-  "r3",
-  "r2",
-  "r1",
-]);
+const PROTOTYPING_ROUND_DIR_NAMES: ReadonlySet<string> = new Set(["r5", "r3", "r2", "r1"]);
 
 /**
  * Filesystem-first scan of `.qfai/evidence/prototyping/rounds/` (v1.8.4 Phase 4).
@@ -1986,10 +1981,7 @@ async function collectPrototypingSummary(
                 ? [round.round]
                 : [],
             );
-          const roundIdSet = new Set<string>([
-            ...indexRoundIds,
-            ...fsRoundScan.observedRoundIds,
-          ]);
+          const roundIdSet = new Set<string>([...indexRoundIds, ...fsRoundScan.observedRoundIds]);
 
           return {
             schemaVersion: "2.0" as const,

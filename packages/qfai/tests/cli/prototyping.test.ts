@@ -42,7 +42,7 @@ async function seedFixture(root: string): Promise<void> {
       "paths:",
       "  contractsDir: .qfai/contracts",
       "prototyping:",
-      "  primarySpecId: \"0001\"",
+      '  primarySpecId: "0001"',
       "  execution:",
       "    targetUrl: null",
       "    browserTool: playwright-cli",

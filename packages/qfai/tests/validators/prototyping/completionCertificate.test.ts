@@ -173,7 +173,7 @@ describe("validateCompletionCertificateIssues", () => {
     await writeCompletionCertificate(root, cert);
 
     // Tamper with evidence
-    await writeFile(path.join(evidenceRoot, "rounds/r5/harvest.json"), "{\"changed\":1}\n", "utf-8");
+    await writeFile(path.join(evidenceRoot, "rounds/r5/harvest.json"), '{"changed":1}\n', "utf-8");
 
     const issues = await validateCompletionCertificateIssues(root, makeConfig());
     expect(issues).toHaveLength(1);

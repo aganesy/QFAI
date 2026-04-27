@@ -505,7 +505,7 @@ function normalizePrimarySpecId(
     issues.push(
       configIssue(
         configPath,
-        "prototyping.primarySpecId は4桁の文字列で指定してください (例: \"0012\")。",
+        'prototyping.primarySpecId は4桁の文字列で指定してください (例: "0012")。',
       ),
     );
     return undefined;

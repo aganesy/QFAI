@@ -69,11 +69,7 @@ function makeConfig(overrides: Partial<QfaiConfig["prototyping"]> = {}): QfaiCon
   };
 }
 
-async function seedSpec(
-  root: string,
-  specNumber: string,
-  body: string,
-): Promise<void> {
+async function seedSpec(root: string, specNumber: string, body: string): Promise<void> {
   const specDir = path.join(root, ".qfai/specs", `spec-${specNumber}`);
   await mkdir(specDir, { recursive: true });
   await writeFile(path.join(specDir, "01_Spec.md"), body, "utf-8");
@@ -94,10 +90,7 @@ describe("resolvePrimaryPrototypingSpec", () => {
     const root = await newTempDir();
     await seedSpec(root, "0001", "# spec-0001\n\nNo prototyping.\n");
     await seedSpec(root, "0042", "# spec-0042\n\nAnother spec.\n");
-    const result = await resolvePrimaryPrototypingSpec(
-      root,
-      makeConfig({ primarySpecId: "0042" }),
-    );
+    const result = await resolvePrimaryPrototypingSpec(root, makeConfig({ primarySpecId: "0042" }));
     expect(result).toEqual(
       expect.objectContaining({
         specId: "0042",
@@ -110,10 +103,7 @@ describe("resolvePrimaryPrototypingSpec", () => {
   it("returns undefined when explicit primarySpecId references a missing spec", async () => {
     const root = await newTempDir();
     await seedSpec(root, "0001", "# spec-0001\n");
-    const result = await resolvePrimaryPrototypingSpec(
-      root,
-      makeConfig({ primarySpecId: "9999" }),
-    );
+    const result = await resolvePrimaryPrototypingSpec(root, makeConfig({ primarySpecId: "9999" }));
     expect(result).toBeUndefined();
   });
 
@@ -144,16 +134,8 @@ describe("resolvePrimaryPrototypingSpec", () => {
 
   it("picks the smallest spec ID among multiple marker matches", async () => {
     const root = await newTempDir();
-    await seedSpec(
-      root,
-      "0099",
-      "---\nsurface_type: ui-bearing\n---\n\n# spec-0099\n",
-    );
-    await seedSpec(
-      root,
-      "0012",
-      "---\nsurface_type: ui-bearing\n---\n\n# spec-0012\n",
-    );
+    await seedSpec(root, "0099", "---\nsurface_type: ui-bearing\n---\n\n# spec-0099\n");
+    await seedSpec(root, "0012", "---\nsurface_type: ui-bearing\n---\n\n# spec-0012\n");
     const result = await resolvePrimaryPrototypingSpec(root, makeConfig());
     expect(result?.specId).toBe("0012");
   });

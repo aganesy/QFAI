@@ -13,11 +13,7 @@ describe("validateScreenshotDirIssues", () => {
   it("returns empty when mode is not full-harness", () => {
     expect(validateScreenshotDirIssues([], "standard", path)).toEqual([]);
     expect(
-      validateScreenshotDirIssues(
-        [{ iteration: 1, screenshotDir: "" }],
-        "low-cost",
-        path,
-      ),
+      validateScreenshotDirIssues([{ iteration: 1, screenshotDir: "" }], "low-cost", path),
     ).toEqual([]);
   });
 

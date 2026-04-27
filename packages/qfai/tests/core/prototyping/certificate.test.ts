@@ -163,7 +163,11 @@ describe("checkCompletionCertificate", () => {
     await writeCompletionCertificate(root, cert);
 
     // Mutate the evidence after certify.
-    await writeFile(path.join(evidenceRoot, "rounds/r5/harvest.json"), "{\"changed\": true}\n", "utf-8");
+    await writeFile(
+      path.join(evidenceRoot, "rounds/r5/harvest.json"),
+      '{"changed": true}\n',
+      "utf-8",
+    );
 
     const result = await checkCompletionCertificate(root);
     expect(result.ok).toBe(false);
@@ -198,6 +202,8 @@ describe("checkCompletionCertificate", () => {
       "rounds/r5/harvest.json": "{}\n",
     });
     const cert = await buildCompletionCertificate(baseInputs(evidenceRoot));
-    expect(cert.evidenceDigests.find((e) => e.path.endsWith("completion-certificate.json"))).toBeUndefined();
+    expect(
+      cert.evidenceDigests.find((e) => e.path.endsWith("completion-certificate.json")),
+    ).toBeUndefined();
   });
 });

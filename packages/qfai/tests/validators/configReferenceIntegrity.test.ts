@@ -6,7 +6,7 @@
  *   002: paths.* points to a missing directory (warning)
  *   003: calibration.packPath points to a missing dir
  */
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -32,9 +32,7 @@ afterEach(async () => {
   }
 });
 
-function makeConfig(
-  overrides: { primarySpecId?: string; packPath?: string } = {},
-): QfaiConfig {
+function makeConfig(overrides: { primarySpecId?: string; packPath?: string } = {}): QfaiConfig {
   return {
     paths: {
       contractsDir: ".qfai/contracts",
@@ -68,9 +66,7 @@ function makeConfig(
     },
     output: { validateJsonPath: ".qfai/output/validate.json" },
     prototyping: {
-      ...(overrides.primarySpecId !== undefined
-        ? { primarySpecId: overrides.primarySpecId }
-        : {}),
+      ...(overrides.primarySpecId !== undefined ? { primarySpecId: overrides.primarySpecId } : {}),
       ...(overrides.packPath !== undefined
         ? { calibration: { packPath: overrides.packPath } }
         : {}),
@@ -167,9 +163,7 @@ describe("validateConfigReferenceIntegrity", () => {
     const issues = await validateConfigReferenceIntegrity(root, makeConfig());
     // outDir is excluded from VERIFIED_PATH_KEYS; should not produce an issue.
     const outDirIssues = issues.filter(
-      (i) =>
-        i.code === "QFAI-CFG-LINK-002" &&
-        i.message.includes("outDir"),
+      (i) => i.code === "QFAI-CFG-LINK-002" && i.message.includes("outDir"),
     );
     expect(outDirIssues).toEqual([]);
   });

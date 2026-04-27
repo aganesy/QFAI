@@ -53,10 +53,7 @@ type DanglingRef = {
  * surface; each call site is documented inline so future additions to the
  * schema have a single place to extend.
  */
-function collectPrototypingJsonRefs(
-  prototypingJson: unknown,
-  sourcePath: string,
-): DanglingRef[] {
+function collectPrototypingJsonRefs(prototypingJson: unknown, sourcePath: string): DanglingRef[] {
   const out: DanglingRef[] = [];
   if (!isRecord(prototypingJson)) return out;
 
@@ -96,10 +93,7 @@ function collectPrototypingJsonRefs(
               refs.screenshotRef,
               `rounds[${i}].screenEvidenceByCandidate.${cid}.${screenId}.screenshotRef`,
             );
-            push(
-              refs.htmlRef,
-              `rounds[${i}].screenEvidenceByCandidate.${cid}.${screenId}.htmlRef`,
-            );
+            push(refs.htmlRef, `rounds[${i}].screenEvidenceByCandidate.${cid}.${screenId}.htmlRef`);
             push(
               refs.snapshotRef,
               `rounds[${i}].screenEvidenceByCandidate.${cid}.${screenId}.snapshotRef`,
@@ -170,10 +164,7 @@ function collectPrototypingJsonRefs(
   return out;
 }
 
-function collectReviewBundleRefs(
-  bundle: unknown,
-  sourcePath: string,
-): DanglingRef[] {
+function collectReviewBundleRefs(bundle: unknown, sourcePath: string): DanglingRef[] {
   const out: DanglingRef[] = [];
   if (!isRecord(bundle)) return out;
   const push = (ref: unknown, field: string): void => {
@@ -187,10 +178,7 @@ function collectReviewBundleRefs(
   return out;
 }
 
-function collectBreakthroughRefs(
-  breakthroughJson: unknown,
-  sourcePath: string,
-): DanglingRef[] {
+function collectBreakthroughRefs(breakthroughJson: unknown, sourcePath: string): DanglingRef[] {
   const out: DanglingRef[] = [];
   if (!isRecord(breakthroughJson)) return out;
   const branchRefs = breakthroughJson.branchRefs;
@@ -210,10 +198,7 @@ export async function validatePrototypingArtifactRefIntegrity(
   config: QfaiConfig,
 ): Promise<Issue[]> {
   const issues: Issue[] = [];
-  const evidenceRoot = path.join(
-    path.dirname(resolvePath(root, config, "specsDir")),
-    "evidence",
-  );
+  const evidenceRoot = path.join(path.dirname(resolvePath(root, config, "specsDir")), "evidence");
 
   const collectedRefs: DanglingRef[] = [];
 
@@ -227,10 +212,7 @@ export async function validatePrototypingArtifactRefIntegrity(
 
   // 2) round review-bundle.json (per round)
   for (const round of EXPLORATION_ROUNDS) {
-    const bundlePath = path.join(
-      root,
-      ...roundReviewBundlePath(round).split("/"),
-    );
+    const bundlePath = path.join(root, ...roundReviewBundlePath(round).split("/"));
     const bundleJson = await loadJson(bundlePath);
     if (bundleJson) {
       const bundleRel = path.relative(root, bundlePath).replace(/\\/g, "/");
@@ -242,18 +224,14 @@ export async function validatePrototypingArtifactRefIntegrity(
   const breakthroughPath = path.join(evidenceRoot, "prototyping", "breakthrough.json");
   const breakthroughJson = await loadJson(breakthroughPath);
   if (breakthroughJson) {
-    const breakthroughRel = path
-      .relative(root, breakthroughPath)
-      .replace(/\\/g, "/");
+    const breakthroughRel = path.relative(root, breakthroughPath).replace(/\\/g, "/");
     collectedRefs.push(...collectBreakthroughRefs(breakthroughJson, breakthroughRel));
   }
 
   // Verify each collected ref. We accept any ref that resolves either
   // relative to the repo root or as already-rooted (legacy entries).
   for (const ref of collectedRefs) {
-    const candidatePath = path.isAbsolute(ref.ref)
-      ? ref.ref
-      : path.join(root, ref.ref);
+    const candidatePath = path.isAbsolute(ref.ref) ? ref.ref : path.join(root, ref.ref);
     if (!(await fileExists(candidatePath))) {
       issues.push(
         issue(

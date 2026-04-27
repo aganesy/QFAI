@@ -134,10 +134,9 @@ describe("validateSpecIdLinkage", () => {
       ],
     });
     // Only seed candidate c1's dir; c2 is missing
-    await mkdir(
-      path.join(root, ".qfai/evidence/prototyping/rounds/r5/candidates/c1"),
-      { recursive: true },
-    );
+    await mkdir(path.join(root, ".qfai/evidence/prototyping/rounds/r5/candidates/c1"), {
+      recursive: true,
+    });
 
     const issues = await validateSpecIdLinkage(root, makeConfig());
     const dirIssues = issues.filter((i) => i.code === "QFAI-PROT-LINK-003");
@@ -149,13 +148,13 @@ describe("validateSpecIdLinkage", () => {
     const root = await newTempDir();
     await seedSpec(root, "0001");
     await seedPrototypingJson(root, {
-      polishCycles: [{ cycle: 1, kind: "polish" }, { cycle: 2, kind: "completed" }],
+      polishCycles: [
+        { cycle: 1, kind: "polish" },
+        { cycle: 2, kind: "completed" },
+      ],
     });
     // Only seed iteration 1 dir; 2 is missing
-    await mkdir(
-      path.join(root, ".qfai/evidence/prototyping/iterations/1"),
-      { recursive: true },
-    );
+    await mkdir(path.join(root, ".qfai/evidence/prototyping/iterations/1"), { recursive: true });
 
     const issues = await validateSpecIdLinkage(root, makeConfig());
     const dirIssues = issues.filter((i) => i.code === "QFAI-PROT-LINK-004");

@@ -30,10 +30,7 @@ import { describe, expect, it } from "vitest";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const PROTOTYPING_VALIDATORS_DIR = path.resolve(
-  __dirname,
-  "../../src/core/validators/prototyping",
-);
+const PROTOTYPING_VALIDATORS_DIR = path.resolve(__dirname, "../../src/core/validators/prototyping");
 const VALIDATORS_INDEX = path.resolve(__dirname, "../../src/core/validators/index.ts");
 const VALIDATE_TS = path.resolve(__dirname, "../../src/core/validate.ts");
 const SRC_ROOT = path.resolve(__dirname, "../../src");

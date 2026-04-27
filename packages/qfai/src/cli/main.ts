@@ -2,10 +2,7 @@ import { runDoctor } from "./commands/doctor.js";
 import { runGuardrails } from "./commands/guardrails.js";
 import { runInit } from "./commands/init.js";
 import { runPrototypingCommand } from "./commands/prototyping.js";
-import {
-  runPrototypingCertify,
-  runPrototypingShowSpec,
-} from "./commands/prototypingCertify.js";
+import { runPrototypingCertify, runPrototypingShowSpec } from "./commands/prototypingCertify.js";
 import { runReport } from "./commands/report.js";
 import { runValidate } from "./commands/validate.js";
 import { parseArgs } from "./lib/args.js";

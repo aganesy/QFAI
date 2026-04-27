@@ -55,4 +55,3 @@ describe("validateDelegationMapIssues (v1.8.4 standard adapter)", () => {
     expect(new Set(issues.map((i) => i.code))).toEqual(new Set(["QFAI-PROT-311"]));
   });
 });
-

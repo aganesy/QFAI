@@ -109,8 +109,7 @@ describe("validatePrototypingArtifactRefIntegrity", () => {
       rounds: [
         {
           round: "r3",
-          absorptionPlanRef:
-            ".qfai/evidence/prototyping/rounds/r3/absorption-plan.json",
+          absorptionPlanRef: ".qfai/evidence/prototyping/rounds/r3/absorption-plan.json",
         },
       ],
     });

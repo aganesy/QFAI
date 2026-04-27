@@ -25,14 +25,9 @@ import path from "node:path";
 import type { QfaiConfig } from "../../config.js";
 import type { Issue } from "../../types.js";
 import { validateDelegationMapIssues } from "./delegationMap.js";
-import {
-  validateDesignSystemThresholdIssues,
-} from "./designSystemThreshold.js";
+import { validateDesignSystemThresholdIssues } from "./designSystemThreshold.js";
 import { validateExecutionPlanIssues } from "./executionPlan.js";
-import {
-  validateIterationGateIssues,
-  type FullHarnessIterationEntry,
-} from "./iterationGate.js";
+import { validateIterationGateIssues, type FullHarnessIterationEntry } from "./iterationGate.js";
 import { validateLighthouseGateIssues } from "./lighthouseGate.js";
 import { validateScreenshotDirIssues } from "./screenshotDir.js";
 
@@ -58,10 +53,7 @@ function extractDelegationMap(prototypingJson: unknown): Record<string, string> 
 function extractMode(prototypingJson: unknown): string {
   if (!isRecord(prototypingJson)) return "other";
   if (typeof prototypingJson.mode === "string") return prototypingJson.mode;
-  if (
-    isRecord(prototypingJson.mode) &&
-    typeof prototypingJson.mode.effective === "string"
-  ) {
+  if (isRecord(prototypingJson.mode) && typeof prototypingJson.mode.effective === "string") {
     return prototypingJson.mode.effective;
   }
   return "other";
@@ -93,19 +85,13 @@ function extractFullHarnessIterations(
   );
 }
 
-function resolveCalibrationPackDir(
-  root: string,
-  config: QfaiConfig,
-): string | undefined {
+function resolveCalibrationPackDir(root: string, config: QfaiConfig): string | undefined {
   const packPath = config.prototyping?.calibration?.packPath;
   if (!packPath || typeof packPath !== "string") return undefined;
   return path.resolve(root, packPath);
 }
 
-export async function validateStateGate(
-  root: string,
-  config: QfaiConfig,
-): Promise<Issue[]> {
+export async function validateStateGate(root: string, config: QfaiConfig): Promise<Issue[]> {
   const evidenceRoot = path.join(
     path.dirname(path.resolve(root, config.paths.specsDir)),
     "evidence",
@@ -136,16 +122,12 @@ export async function validateStateGate(
 
   // Phase 3 wiring
   issues.push(...validateScreenshotDirIssues(extractScoringTrace(parsed), mode, relPath));
-  issues.push(
-    ...validateIterationGateIssues(extractFullHarnessIterations(parsed), relPath),
-  );
+  issues.push(...validateIterationGateIssues(extractFullHarnessIterations(parsed), relPath));
   issues.push(...validateLighthouseGateIssues(parsed, relPath));
 
   const packDir = resolveCalibrationPackDir(root, config);
   if (packDir) {
-    issues.push(
-      ...(await validateDesignSystemThresholdIssues(packDir, parsed, relPath)),
-    );
+    issues.push(...(await validateDesignSystemThresholdIssues(packDir, parsed, relPath)));
   }
 
   return issues;

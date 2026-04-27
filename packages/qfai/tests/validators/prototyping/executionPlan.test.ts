@@ -60,4 +60,3 @@ describe("validateExecutionPlanIssues (v1.8.4 standard adapter)", () => {
     expect(validateExecutionPlanIssues(42, path)).toEqual([]);
   });
 });
-

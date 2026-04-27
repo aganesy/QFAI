@@ -30,7 +30,7 @@ ONE of:
 
 ```yaml
 prototyping:
-  primarySpecId: "0012"  # adjust to match your spec ID
+  primarySpecId: "0012" # adjust to match your spec ID
 ```
 
 **Option B (auto-detect)** — add to your spec's `01_Spec.md` frontmatter:
@@ -39,6 +39,7 @@ prototyping:
 ---
 surface_type: ui-bearing
 ---
+
 # spec-XXXX
 ```
 
@@ -85,13 +86,13 @@ You may see (warnings, not errors in v1.8.4):
 If your code imports any of the following from `qfai`, switch to the
 `*Issues` adapter that returns standard `Issue[]`:
 
-| Removed | Replacement |
-|---|---|
-| `validateExecutionPlan` / `ExecutionPlanIssue` | `validateExecutionPlanIssues(prototypingJson, prototypingJsonPath): Issue[]` |
-| `validateDelegationMap` / `DelegationViolationIssue` | `validateDelegationMapIssues(delegationMap, prototypingJsonPath): Issue[]` |
-| `validateScreenshotDir` / `ScreenshotDirIssue` | `validateScreenshotDirIssues(scoringTrace, mode, prototypingJsonPath): Issue[]` |
-| `validateLighthouseGate` / `LighthouseGateIssue` | `validateLighthouseGateIssues(prototypingJson, prototypingJsonPath): Issue[]` |
-| `validateIterationGate` / `IterationGateIssue` | `validateIterationGateIssues(iterations, prototypingJsonPath): Issue[]` |
+| Removed                                                        | Replacement                                                                                              |
+| -------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| `validateExecutionPlan` / `ExecutionPlanIssue`                 | `validateExecutionPlanIssues(prototypingJson, prototypingJsonPath): Issue[]`                             |
+| `validateDelegationMap` / `DelegationViolationIssue`           | `validateDelegationMapIssues(delegationMap, prototypingJsonPath): Issue[]`                               |
+| `validateScreenshotDir` / `ScreenshotDirIssue`                 | `validateScreenshotDirIssues(scoringTrace, mode, prototypingJsonPath): Issue[]`                          |
+| `validateLighthouseGate` / `LighthouseGateIssue`               | `validateLighthouseGateIssues(prototypingJson, prototypingJsonPath): Issue[]`                            |
+| `validateIterationGate` / `IterationGateIssue`                 | `validateIterationGateIssues(iterations, prototypingJsonPath): Issue[]`                                  |
 | `validateDesignSystemThreshold` / `DesignSystemThresholdIssue` | `validateDesignSystemThresholdIssues(packDir, prototypingRecord, prototypingJsonPath): Promise<Issue[]>` |
 
 The adapters' messages, error codes (`QFAI-PROT-310/311/331/332/333/334`)
@@ -137,7 +138,8 @@ manageable:
 ## Where to ask questions
 
 If something on this page didn't cover your migration scenario,
-file an issue at https://github.com/aganesy/QFAI/issues with:
+file an issue at <https://github.com/aganesy/QFAI/issues> with:
+
 - The exact error code(s) you're seeing
 - A redacted slice of `prototyping.json` showing the offending entry
 - Your `qfai validate` invocation

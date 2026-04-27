@@ -51,9 +51,7 @@ async function seedMinimalProject(root: string, opts?: { specMarker?: boolean })
   await mkdir(path.join(root, ".qfai/specs/spec-0012"), { recursive: true });
   await writeFile(
     path.join(root, ".qfai/specs/spec-0012/01_Spec.md"),
-    opts?.specMarker
-      ? "---\nsurface_type: ui-bearing\n---\n\n# spec-0012\n"
-      : "# spec-0012\n",
+    opts?.specMarker ? "---\nsurface_type: ui-bearing\n---\n\n# spec-0012\n" : "# spec-0012\n",
     "utf-8",
   );
   await writeFile(

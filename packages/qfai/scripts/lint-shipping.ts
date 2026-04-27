@@ -152,10 +152,7 @@ async function walk(dir: string, out: string[]): Promise<void> {
 function isTargetFile(absolutePath: string, pkgRoot: string): boolean {
   for (const target of TARGET_GLOBS) {
     const targetRoot = path.join(pkgRoot, target.rootRel);
-    if (
-      absolutePath === targetRoot ||
-      absolutePath.startsWith(targetRoot + path.sep)
-    ) {
+    if (absolutePath === targetRoot || absolutePath.startsWith(targetRoot + path.sep)) {
       const ext = path.extname(absolutePath);
       if (target.matchExtensions.includes(ext)) return true;
     }
@@ -191,9 +188,7 @@ async function lintFile(absolutePath: string, pkgRoot: string): Promise<LintViol
   const isTs = absolutePath.endsWith(".ts");
   const lines = body.split(/\r?\n/);
   const relPath = path.relative(pkgRoot, absolutePath).replace(/\\/g, "/");
-  const applicableRules = PATTERNS.filter((rule) =>
-    rule.appliesTo.includes(targetCategory),
-  );
+  const applicableRules = PATTERNS.filter((rule) => rule.appliesTo.includes(targetCategory));
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
@@ -207,8 +202,7 @@ async function lintFile(absolutePath: string, pkgRoot: string): Promise<LintViol
     // YAML files: comment lines are not runtime data; the parser ignores
     // them. References inside `# ...` are authority citation, not
     // install-site assumptions.
-    const isYaml =
-      absolutePath.endsWith(".yaml") || absolutePath.endsWith(".yml");
+    const isYaml = absolutePath.endsWith(".yaml") || absolutePath.endsWith(".yml");
     if (isYaml && YAML_COMMENT_LINE_RE.test(line)) continue;
 
     for (const rule of applicableRules) {

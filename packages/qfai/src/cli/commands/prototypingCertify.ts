@@ -56,9 +56,7 @@ export async function runPrototypingCertify(
   const { config } = await loadConfig(options.root);
   const evidenceRoot = path.join(options.root, ".qfai/evidence/prototyping");
 
-  const protoJson = await loadJson(
-    path.join(options.root, ".qfai/evidence/prototyping.json"),
-  );
+  const protoJson = await loadJson(path.join(options.root, ".qfai/evidence/prototyping.json"));
   if (!protoJson) {
     error(
       "qfai prototyping certify: .qfai/evidence/prototyping.json is missing or unparseable. " +
@@ -107,16 +105,13 @@ export async function runPrototypingCertify(
 
   const reviewerGate = extractRecord(protoJson, "reviewerGate");
   if (!reviewerGate || extractString(reviewerGate, "result") !== "PASS") {
-    error(
-      "qfai prototyping certify: prototyping.json.reviewerGate.result must be PASS.",
-    );
+    error("qfai prototyping certify: prototyping.json.reviewerGate.result must be PASS.");
     return 2;
   }
 
   const reviewerSignoff = extractRecord(reviewerGate, "signoff");
   const reviewer = extractString(reviewerSignoff, "reviewer") ?? "unknown";
-  const reviewerTimestamp =
-    extractString(reviewerSignoff, "timestamp") ?? new Date().toISOString();
+  const reviewerTimestamp = extractString(reviewerSignoff, "timestamp") ?? new Date().toISOString();
 
   const resolvedSpec = await resolvePrimaryPrototypingSpec(options.root, config);
   const specsCovered = resolvedSpec ? [resolvedSpec.specId] : [];
@@ -183,10 +178,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function extractRecord(
-  source: unknown,
-  key: string,
-): Record<string, unknown> | undefined {
+function extractRecord(source: unknown, key: string): Record<string, unknown> | undefined {
   if (!isRecord(source)) return undefined;
   const value = source[key];
   return isRecord(value) ? value : undefined;

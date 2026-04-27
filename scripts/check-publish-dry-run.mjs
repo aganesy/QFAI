@@ -26,7 +26,11 @@ const combined = `${stdout}\n${stderr}`;
 
 // CI runners are not logged in to npm, triggering a benign auth warning on dry-run.
 // Filter this known false-positive so real warnings still fail the check.
-const KNOWN_NOISE = [/requires you to be logged in/];
+//
+// gitignore-fallback: package.json `files` field already controls what gets
+// published; the .npmignore-fallback warning is informational, not a real
+// publish risk.
+const KNOWN_NOISE = [/requires you to be logged in/, /No \.npmignore file found/];
 
 const warnLines = combined
   .split(/\r?\n/)
