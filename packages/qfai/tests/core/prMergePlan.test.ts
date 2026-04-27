@@ -6,7 +6,14 @@ import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 const repoRoot = path.resolve(process.cwd(), "..", "..");
-const prMergeScriptPath = path.join(repoRoot, "scripts", "pr-merge", "run-pr-merge.ps1");
+const prMergeScriptPath = path.join(
+  repoRoot,
+  ".agents",
+  "skills",
+  "pr-merge",
+  "scripts",
+  "run-pr-merge.ps1",
+);
 
 type FakeCheck = {
   __typename: "CheckRun";

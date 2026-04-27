@@ -2,6 +2,7 @@ import { runDoctor } from "./commands/doctor.js";
 import { runGuardrails } from "./commands/guardrails.js";
 import { runInit } from "./commands/init.js";
 import { runPrototypingCommand } from "./commands/prototyping.js";
+import { runPrototypingCertify, runPrototypingShowSpec } from "./commands/prototypingCertify.js";
 import { runReport } from "./commands/report.js";
 import { runValidate } from "./commands/validate.js";
 import { parseArgs } from "./lib/args.js";
@@ -86,12 +87,29 @@ export async function run(argv: string[], cwd: string): Promise<void> {
       {
         if (!options.prototypingAction) {
           error(
-            "qfai prototyping: unknown or missing subcommand. Expected: round-start|round-harvest|round-narrow|round-absorb|round-reimplement-verify",
+            "qfai prototyping: unknown or missing subcommand. Expected: round-start|round-harvest|round-narrow|round-absorb|round-reimplement-verify|certify|show-spec",
           );
           info(usage());
           process.exitCode = options.invalidExitCode;
           return;
         }
+
+        // v1.8.4 Phase 5: certify / show-spec do not take --round (run-scoped, not round-scoped)
+        if (options.prototypingAction === "certify") {
+          const resolvedRoot = await resolveRoot(options);
+          process.exitCode = await runPrototypingCertify({
+            root: resolvedRoot,
+            check: Boolean(options.prototypingCheckOnly),
+          });
+          return;
+        }
+        if (options.prototypingAction === "show-spec") {
+          const resolvedRoot = await resolveRoot(options);
+          process.exitCode = await runPrototypingShowSpec({ root: resolvedRoot });
+          return;
+        }
+
+        // round-* subcommands
         if (!options.prototypingRound) {
           error(`qfai prototyping ${options.prototypingAction}: --round is required.`);
           info(usage());
@@ -139,6 +157,8 @@ Commands:
   prototyping round-narrow     survivor 決定を記録
   prototyping round-absorb     absorption plan template を生成
   prototyping round-reimplement-verify  reimplementation.json の構造を検証
+  prototyping certify [--check]         completion-certificate.json を生成 / 検証 (v1.8.4)
+  prototyping show-spec                 解決された primary prototyping spec を出力 (v1.8.4)
 
 Options:
   --root <path>   対象ディレクトリ

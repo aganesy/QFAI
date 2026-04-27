@@ -52,6 +52,7 @@ export default [
   {
     files: [
       "**/tests/**/*.ts",
+      "packages/qfai/scripts/**/*.ts",
       "packages/qfai/vitest.config.ts",
       "packages/qfai/vitest.workspace.ts",
       "packages/qfai/tsup.config.ts",

@@ -3,6 +3,7 @@ import path from "node:path";
 import { buildContractIndex } from "./contractIndex.js";
 import { loadConfig, resolvePath, type ConfigLoadResult } from "./config.js";
 import { collectSpecEntries, type SpecEntry } from "./specLayout.js";
+import { EXPLORATION_ROUNDS } from "./prototyping/round.js";
 import { parseFirstMarkdownTable } from "./specPackParsers.js";
 import {
   isCoverageTargetLevel,
@@ -1704,6 +1705,63 @@ async function collectChangeTypeSummary(specsRoot: string): Promise<ReportChange
   return summary;
 }
 
+/**
+ * Source-of-truth import to avoid drift: previously this was a local literal
+ * Set that duplicated `EXPLORATION_ROUNDS` from prototyping/round.ts; if the
+ * round taxonomy ever changes, the report-side scan would silently miss
+ * new rounds (Copilot flag, PR #201).
+ */
+const PROTOTYPING_ROUND_DIR_NAMES: ReadonlySet<string> = new Set<string>(EXPLORATION_ROUNDS);
+
+/**
+ * Filesystem-first scan of `.qfai/evidence/prototyping/rounds/` (v1.8.4 Phase 4).
+ *
+ * Counts artifact files present on disk, regardless of whether
+ * `prototyping.json.rounds[]` references them. This eliminates the dual-SoT
+ * drift that caused RR §8.2 (`absorption plans: 0` while files actually
+ * existed). The curated index continues to be authoritative for
+ * candidate-level metadata (allAxesPerfect100, candidate IDs) which is not
+ * derivable from filesystem alone.
+ */
+async function scanPrototypingRoundsFilesystem(evidenceRoot: string): Promise<{
+  observedRoundIds: string[];
+  harvestArtifacts: number;
+  narrowDecisions: number;
+  absorptionPlans: number;
+  reimplementations: number;
+}> {
+  const result = {
+    observedRoundIds: [] as string[],
+    harvestArtifacts: 0,
+    narrowDecisions: 0,
+    absorptionPlans: 0,
+    reimplementations: 0,
+  };
+  const roundsDir = path.join(evidenceRoot, "prototyping", "rounds");
+  const { readdir } = await import("node:fs/promises");
+  let entries: string[];
+  try {
+    entries = await readdir(roundsDir);
+  } catch {
+    return result;
+  }
+  for (const name of entries.sort()) {
+    if (!PROTOTYPING_ROUND_DIR_NAMES.has(name)) continue;
+    let files: string[];
+    try {
+      files = await readdir(path.join(roundsDir, name));
+    } catch {
+      continue;
+    }
+    result.observedRoundIds.push(name);
+    if (files.includes("harvest.json")) result.harvestArtifacts += 1;
+    if (files.includes("narrow-decision.json")) result.narrowDecisions += 1;
+    if (files.includes("absorption-plan.json")) result.absorptionPlans += 1;
+    if (files.includes("reimplementation.json")) result.reimplementations += 1;
+  }
+  return result;
+}
+
 async function collectPrototypingSummary(
   root: string,
   config: ConfigLoadResult["config"],
@@ -1837,16 +1895,21 @@ async function collectPrototypingSummary(
       : {}),
   };
 
+  // v1.8.4 Phase 4: filesystem-first aggregation. Round artifact counts are
+  // sourced from .qfai/evidence/prototyping/rounds/<rN>/*.json, NOT from the
+  // curated `rounds[].xxxRef` strings. This eliminates the RR §8.2 drift
+  // (report shows 0 when files exist on disk).
+  const fsRoundScan = await scanPrototypingRoundsFilesystem(evidenceRoot);
+
   const roundLifecycle =
-    record.schemaVersion === "2.0" || rounds.length > 0 || polishCycles.length > 0
+    record.schemaVersion === "2.0" ||
+    rounds.length > 0 ||
+    polishCycles.length > 0 ||
+    fsRoundScan.observedRoundIds.length > 0
       ? (() => {
           const polishKinds: Record<string, number> = {};
           let candidatesObserved = 0;
           let perfectRounds = 0;
-          let harvestArtifacts = 0;
-          let narrowDecisions = 0;
-          let absorptionPlans = 0;
-          let reimplementations = 0;
           let completedPolishCycles = 0;
           let perfectPolishCycles = 0;
 
@@ -1861,21 +1924,6 @@ async function collectPrototypingSummary(
 
             if (round.allAxesPerfect100 === true) {
               perfectRounds += 1;
-            }
-            if (typeof round.harvestRef === "string" && round.harvestRef.length > 0) {
-              harvestArtifacts += 1;
-            }
-            if (typeof round.narrowDecisionRef === "string" && round.narrowDecisionRef.length > 0) {
-              narrowDecisions += 1;
-            }
-            if (typeof round.absorptionPlanRef === "string" && round.absorptionPlanRef.length > 0) {
-              absorptionPlans += 1;
-            }
-            if (
-              typeof round.reimplementationRef === "string" &&
-              round.reimplementationRef.length > 0
-            ) {
-              reimplementations += 1;
             }
           }
 
@@ -1897,22 +1945,65 @@ async function collectPrototypingSummary(
             }
           }
 
+          // Drift detection (RR §8.2): warn when index references differ
+          // from filesystem reality for the two ref kinds we care about
+          // most (absorptionPlanRef and reimplementationRef — narrowDecision
+          // and harvest are tracked but not drift-checked here yet).
+          // Counts are filesystem-authoritative; warnings surface
+          // user-visible disagreement so operators can clean up the index.
+          const indexAbsorptionRefs = rounds
+            .map((item) => asRecord(item))
+            .filter(
+              (round) =>
+                round &&
+                typeof round.absorptionPlanRef === "string" &&
+                round.absorptionPlanRef.length > 0,
+            ).length;
+          if (indexAbsorptionRefs !== fsRoundScan.absorptionPlans) {
+            warnings.push(
+              `prototyping.json index references ${indexAbsorptionRefs} absorption-plan(s) but filesystem has ${fsRoundScan.absorptionPlans}; counts use filesystem (canonical SoT).`,
+            );
+          }
+          const indexReimplRefs = rounds
+            .map((item) => asRecord(item))
+            .filter(
+              (round) =>
+                round &&
+                typeof round.reimplementationRef === "string" &&
+                round.reimplementationRef.length > 0,
+            ).length;
+          if (indexReimplRefs !== fsRoundScan.reimplementations) {
+            warnings.push(
+              `prototyping.json index references ${indexReimplRefs} reimplementation record(s) but filesystem has ${fsRoundScan.reimplementations}; counts use filesystem (canonical SoT).`,
+            );
+          }
+
+          // Union of round IDs from both sources. Set iteration preserves
+          // insertion order, so index-declared IDs appear first followed by
+          // any filesystem-only IDs. Either source counts as canonical
+          // existence — this is a UNION, not a precedence rule.
+          const indexRoundIds = rounds
+            .map((item) => asRecord(item))
+            .flatMap((round) =>
+              round && typeof round.round === "string" && round.round.length > 0
+                ? [round.round]
+                : [],
+            );
+          const roundIdSet = new Set<string>([...indexRoundIds, ...fsRoundScan.observedRoundIds]);
+
           return {
             schemaVersion: "2.0" as const,
-            rounds: rounds.length,
-            roundIds: rounds
-              .map((item) => asRecord(item))
-              .flatMap((round) =>
-                round && typeof round.round === "string" && round.round.length > 0
-                  ? [round.round]
-                  : [],
-              ),
+            // Use the union size — Math.max underestimates when index and
+            // filesystem describe disjoint round IDs (Copilot MAJOR review
+            // on PR #201).
+            rounds: roundIdSet.size,
+            roundIds: Array.from(roundIdSet),
             candidatesObserved,
             perfectRounds,
-            harvestArtifacts,
-            narrowDecisions,
-            absorptionPlans,
-            reimplementations,
+            harvestArtifacts: fsRoundScan.harvestArtifacts,
+            narrowDecisions: fsRoundScan.narrowDecisions,
+            absorptionPlans: fsRoundScan.absorptionPlans,
+            reimplementations: fsRoundScan.reimplementations,
             polishCycles: polishCycles.length,
             completedPolishCycles,
             perfectPolishCycles,

@@ -84,3 +84,10 @@ resolve without keeping separate spec directories alive.
 
 - Decision: `spec-0017/` and `spec-0018/` are removed after their still-relevant identifiers and behaviors are absorbed into `spec-0012`.
 - Rationale: the implementation is authoritative, and the repository should expose a single active prototyping spec pack instead of three overlapping ones.
+
+## DR-0012-0011: Hard-Floor Machine Enforcement For Absorption Rounds
+
+- Decision: `qfai validate --profile prototyping` enforces `evaluation-rubric.yaml` `hard_floors[].min_score` against each candidate's `perAxis[].score` in absorption rounds (`r3|r2|r1`). `r5` is exempt.
+- Context: the rubric's `hard_floors` had `id` / `min_score` shape but only schema-presence was validated; the floor was advisory toward the evaluator agent. The funnel could homogenize candidates over r5→r1 if `originality` (or any other non-conceptFit axis) drifted below the contractual floor without `regressionAlert` firing (which compares against the prior round, not against the absolute floor).
+- Consequence: the new validator emits `QFAI-PROT-AXIS-FLOOR-001` at error severity. `r5` exemption is intentional so divergent-stage candidates with deliberately rough first cuts are not gated. `axisId` matching is exact-string against `axes[].id` to avoid silent normalization drift.
+- Rationale: keep contract intent and machine enforcement aligned, and protect funnel distinctness without forcing a new evaluator role.

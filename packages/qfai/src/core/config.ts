@@ -94,6 +94,13 @@ export type QfaiPrototypingExecutionConfig = {
 export type QfaiPrototypingConfig = {
   calibration?: QfaiPrototypingCalibrationConfig;
   execution?: QfaiPrototypingExecutionConfig;
+  /**
+   * v1.8.4: explicit primary spec ID for `/qfai-prototyping`. If omitted,
+   * `resolvePrimaryPrototypingSpec` auto-detects via the prototyping marker
+   * (`surface_type: ui-bearing`) in `01_Spec.md`. Format: 4-digit string,
+   * e.g. `"0012"`.
+   */
+  primarySpecId?: string;
 };
 
 export type QfaiConfig = {
@@ -475,13 +482,44 @@ function normalizePrototyping(
 
   const calibration = normalizePrototypingCalibration(raw.calibration, configPath, issues);
   const execution = normalizePrototypingExecution(raw.execution, configPath, issues);
-  if (!calibration && !execution) {
+  const primarySpecId = normalizePrimarySpecId(raw.primarySpecId, configPath, issues);
+  if (!calibration && !execution && primarySpecId === undefined) {
     return undefined;
   }
   return {
     ...(calibration ? { calibration } : {}),
     ...(execution ? { execution } : {}),
+    ...(primarySpecId !== undefined ? { primarySpecId } : {}),
   };
+}
+
+function normalizePrimarySpecId(
+  raw: unknown,
+  configPath: string,
+  issues: Issue[],
+): string | undefined {
+  if (raw === undefined || raw === null) {
+    return undefined;
+  }
+  if (typeof raw !== "string") {
+    issues.push(
+      configIssue(
+        configPath,
+        'prototyping.primarySpecId は4桁の文字列で指定してください (例: "0012")。',
+      ),
+    );
+    return undefined;
+  }
+  if (!/^\d{4}$/.test(raw)) {
+    issues.push(
+      configIssue(
+        configPath,
+        `prototyping.primarySpecId は4桁の数字文字列である必要があります (got "${raw}")。`,
+      ),
+    );
+    return undefined;
+  }
+  return raw;
 }
 
 function normalizePrototypingCalibration(

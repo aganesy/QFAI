@@ -396,6 +396,10 @@ const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "fullHarness uiFidelity mockPaths must be fail|finding only and must not contain synthetic pass entries.",
   "QFAI-PROT-308": "fullHarness status is converged but iterationCount < 2.",
   "QFAI-PROT-309": "fullHarness iteration reviewer is a placeholder value.",
+  "QFAI-PROT-310":
+    "executionPlan in prototyping.json must be present and well-formed in full-harness mode: the block itself must be an object, and each of targetIterations (number), evaluationAxesSource (non-empty string), delegationMap (object), plannedAt (non-empty string) must be present with the correct shape.",
+  "QFAI-PROT-311":
+    "delegationMap entry assigns a category to a role outside the SKILL.md Delegation Scope Table.",
   "QFAI-PROT-316": "reviewerSignoff.status does not match fullHarness.finalDecision.",
   "QFAI-PROT-317": "final reviewerLogs verdict does not match fullHarness termination semantics.",
   "QFAI-PROT-318":
@@ -417,6 +421,36 @@ const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-PROT-329": "fullHarness.status is completed but reviewerSignoff.timestamp is missing.",
   "QFAI-PROT-330":
     "uiFidelity screen actionsWired exceeds actionsDeclared (expected.actions). actionsWired must not exceed the number of declared actions.",
+  "QFAI-PROT-331":
+    "fullHarness.scoringTrace[<n>].screenshotDir is missing or empty; full-harness requires screenshot evidence per iteration.",
+  "QFAI-PROT-332":
+    "Lighthouse gate is required for full-harness + web surface but no lighthouse report is present in prototyping.json.",
+  "QFAI-PROT-333":
+    "fullHarness.iterations: minimum 2 iterations required before convergence; iteration 1 cannot be marked converged.",
+  "QFAI-PROT-334":
+    "scoringTrace.designSystemCompliance is below the 0.75 threshold while 12_design_system.md is present in the calibration pack; immediate fix required for next iteration.",
+  "QFAI-PROT-335":
+    ".qfai/evidence/prototyping/completion-certificate.json is required when prototyping completion is claimed (run `qfai prototyping certify` after all gates pass).",
+  "QFAI-PROT-336":
+    ".qfai/evidence/prototyping/completion-certificate.json digest mismatch — evidence has been modified since certify; re-run `qfai prototyping certify`.",
+  "QFAI-CFG-LINK-001":
+    "qfai.config.yaml: prototyping.primarySpecId points to a spec ID that does not exist under the configured specs directory.",
+  "QFAI-CFG-LINK-002":
+    "qfai.config.yaml: paths.* points to a directory that does not exist on disk.",
+  "QFAI-CFG-LINK-003":
+    "qfai.config.yaml: prototyping.calibration.packPath points to a directory that does not exist on disk.",
+  "QFAI-PROT-REF-001":
+    "An xxxRef string in prototyping.json / review-bundle.json / breakthrough.json points to a file that does not exist on disk.",
+  "QFAI-PROT-LINK-001":
+    "prototyping.json.specs[].specId references a spec that does not exist under .qfai/specs/.",
+  "QFAI-PROT-LINK-002":
+    "review-bundle.json.spec references a spec that does not exist under .qfai/specs/.",
+  "QFAI-PROT-LINK-003":
+    "prototyping.json.rounds[].candidates[].candidateId has no corresponding artifact directory under .qfai/evidence/prototyping/rounds/<rN>/candidates/.",
+  "QFAI-PROT-LINK-004":
+    "prototyping.json.polishCycles[].cycle has no corresponding iteration directory under .qfai/evidence/prototyping/iterations/.",
+  "QFAI-PROT-AXIS-FLOOR-001":
+    "Each candidate's evaluator-review perAxis[].score must meet evaluation-rubric.yaml hard_floors[].min_score in absorption rounds (r3|r2|r1). r5 is exempt.",
   "QFAI-UIE-001":
     "Every declared screen declared in `.qfai/contracts/ui/*.yaml` has a screenshot evidence file at `.qfai/evidence/prototyping/screenshots/<screen-id>.png`.",
   "QFAI-UIE-002":

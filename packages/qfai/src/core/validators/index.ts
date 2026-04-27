@@ -15,6 +15,17 @@ export { validateOrphanProhibition } from "./orphanProhibition.js";
 export { validatePrototypingEvidence } from "./prototypingEvidence.js";
 export { validatePrototypingDesignSystem } from "./prototypingDesignSystem.js";
 export { validateModeInvariant } from "./prototyping/modeInvariant.js";
+export { validateExecutionPlanIssues } from "./prototyping/executionPlan.js";
+export { validateDelegationMapIssues } from "./prototyping/delegationMap.js";
+export { validateScreenshotDirIssues } from "./prototyping/screenshotDir.js";
+export { validateLighthouseGateIssues } from "./prototyping/lighthouseGate.js";
+export { validateIterationGateIssues } from "./prototyping/iterationGate.js";
+export { validateDesignSystemThresholdIssues } from "./prototyping/designSystemThreshold.js";
+export { validateStateGate } from "./prototyping/stateGate.js";
+export { validateCompletionCertificateIssues } from "./prototyping/completionCertificate.js";
+export { validateConfigReferenceIntegrity } from "./configReferenceIntegrity.js";
+export { validatePrototypingArtifactRefIntegrity } from "./prototyping/refIntegrity.js";
+export { validateSpecIdLinkage } from "./prototyping/specIdLinkage.js";
 export { validateRequireIndexShape } from "./requireIndex.js";
 export { validateRepositoryHygiene } from "./repositoryHygiene.js";
 export { validateReviewArtifacts } from "./reviewArtifacts.js";
@@ -37,6 +48,7 @@ export { validateDiscussionDesignHardening } from "./discussionDesignHardening.j
 export { validateDesignAudit } from "./designAudit.js";
 export { validateDesignSlop } from "./designSlop.js";
 export { validateDesignContractReadiness } from "./designContractReadiness.js";
+export { validateEvaluatorReviewHardFloor } from "./evaluatorReviewHardFloor.js";
 export { validateUiEvidenceArtifacts } from "./uiEvidenceArtifacts.js";
 export { isUiBearingSpec } from "./uixDetection.js";
 export {

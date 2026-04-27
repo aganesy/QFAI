@@ -12,14 +12,14 @@ description: "PR本文修正、review thread 解消、CI 修復に加え、追�
 - `.github/PULL_REQUEST_TEMPLATE.md`
 - `.github/workflows/ci.yml`
 - `package.json`
-- `scripts/pr-fix/run-pr-fix.ps1`
+- `.agents/skills/pr-fix/scripts/run-pr-fix.ps1`
 
 ## 最初の実行
 
 最初は必ず dry-run で実行する。
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File scripts/pr-fix/run-pr-fix.ps1 -DryRun -SleepSeconds 0 -RequiredZeroStreak 1
+powershell -NoProfile -ExecutionPolicy Bypass -File .agents/skills/pr-fix/scripts/run-pr-fix.ps1 -DryRun -SleepSeconds 0 -RequiredZeroStreak 1
 ```
 
 ## 実行前ガード（必須）
@@ -97,7 +97,7 @@ $pr = gh pr view --json number,headRefName,baseRefName,url
 6. unresolved が 0 件かつ CI が green でも完了にしない。必ず live monitor を起動して late review 指摘の再流入を監視する。
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File scripts/pr-fix/run-pr-fix.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File .agents/skills/pr-fix/scripts/run-pr-fix.ps1
 ```
 
 - 60 秒間隔で `RequiredZeroStreak` 回連続の clean poll を満たしたら、script は handoff 情報を出して終了する。`handoff.json` が無い状態で `pr-fix` を完了扱いにしない。merge/tag は `pr-merge` skill に引き継ぐ。

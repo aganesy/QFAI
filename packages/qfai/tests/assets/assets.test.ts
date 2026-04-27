@@ -336,18 +336,34 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     expect(template).toContain("effect:");
   });
 
-  it("ships docs examples for ui contract and uiFidelity evidence", async () => {
-    const docsUiContractPath = path.join(repoRoot, "docs", "examples", "ui-contract.good.yaml");
-    const docsUiFidelityPath = path.join(
+  it("ships ui contract sample via skill template and uiFidelity evidence example", async () => {
+    const skillUiContractPath = path.join(
       repoRoot,
-      "docs",
+      "packages",
+      "qfai",
+      "assets",
+      "init",
+      ".qfai",
+      "assistant",
+      "skills",
+      "qfai-prototyping",
+      "templates",
+      "contracts",
+      "ui-0001-order-mockable.yaml",
+    );
+    const fixtureUiFidelityPath = path.join(
+      repoRoot,
+      "packages",
+      "qfai",
+      "tests",
+      "fixtures",
       "examples",
       "prototyping-ui-fidelity.good.json",
     );
     const packageJsonPath = path.join(repoRoot, "packages", "qfai", "package.json");
     const [uiContract, uiFidelity] = await Promise.all([
-      readFile(docsUiContractPath, "utf-8"),
-      readFile(docsUiFidelityPath, "utf-8"),
+      readFile(skillUiContractPath, "utf-8"),
+      readFile(fixtureUiFidelityPath, "utf-8"),
     ]);
     const packageJsonRaw = await readFile(packageJsonPath, "utf-8");
     const packageJson = JSON.parse(packageJsonRaw) as { version?: unknown };
@@ -815,15 +831,13 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     }
   });
 
-  it("keeps docs/examples outputs relative", async () => {
-    const reportExample = await readFile(
-      path.join(repoRoot, "docs", "examples", "report.md"),
-      "utf-8",
-    );
+  it("keeps example outputs relative", async () => {
+    const fixturesDir = path.join(repoRoot, "packages", "qfai", "tests", "fixtures", "examples");
+    const reportExample = await readFile(path.join(fixturesDir, "report.md"), "utf-8");
     expect(reportExample).toContain("- ルート: .");
     expect(reportExample).toContain("- 設定: qfai.config.yaml");
 
-    const validateExamplePath = path.join(repoRoot, "docs", "examples", "validate.json");
+    const validateExamplePath = path.join(fixturesDir, "validate.json");
     const validateRaw = await readFile(validateExamplePath, "utf-8");
     const validate = JSON.parse(validateRaw) as {
       issues: Array<{ file?: string }>;
@@ -922,6 +936,21 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     expect(content).not.toContain("too_lenient:");
     expect(content).not.toContain("blandness_fail:");
     expect(content).not.toContain("originality_fail:");
+  });
+
+  it("ensures evaluation-rubric sample enforces originality hard_floor", async () => {
+    const samplePath = path.join(
+      templateQfaiDir,
+      "assistant",
+      "skills",
+      "qfai-sdd",
+      "templates",
+      "contracts",
+      "evaluation-rubric.sample.yaml",
+    );
+    const content = await readFile(samplePath, "utf-8");
+
+    expect(content).toMatch(/- id: originality\s+min_score: \d+/);
   });
 
   it("ensures qfai-discussion skill contains required coverage topics", async () => {

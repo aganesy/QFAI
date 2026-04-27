@@ -2,13 +2,13 @@
  * Lighthouse gate validator — enforces that a Lighthouse report is present
  * when mode=full-harness and surface=web.
  *
- * spec-0012 TC-0012-0299 / TC-0012-0300 / AC-0012-0182
+ * v1.8.4 Phase 9 BREAKING: removed the legacy `validateLighthouseGate` /
+ * `LighthouseGateIssue` exports; callers MUST use
+ * `validateLighthouseGateIssues` which returns standard `Issue[]`.
  */
 
-export interface LighthouseGateIssue {
-  readonly rule: "PROT-LIGHTHOUSE";
-  readonly message: string;
-}
+import type { Issue } from "../../types.js";
+import { issue } from "../utils.js";
 
 function isRecord(v: unknown): v is Record<string, unknown> {
   return typeof v === "object" && v !== null && !Array.isArray(v);
@@ -38,7 +38,14 @@ function hasLighthouseReport(raw: unknown): boolean {
   return false;
 }
 
-export function validateLighthouseGate(prototypingJson: unknown): LighthouseGateIssue[] {
+/**
+ * Issues `QFAI-PROT-332` when full-harness + web surface lacks a
+ * lighthouse report.
+ */
+export function validateLighthouseGateIssues(
+  prototypingJson: unknown,
+  prototypingJsonPath: string,
+): Issue[] {
   const mode = detectMode(prototypingJson);
   const surface = detectSurface(prototypingJson);
 
@@ -51,10 +58,15 @@ export function validateLighthouseGate(prototypingJson: unknown): LighthouseGate
   }
 
   return [
-    {
-      rule: "PROT-LIGHTHOUSE",
-      message:
-        "Lighthouse Gate is MUST for full-harness + web surface: no Lighthouse report found in prototyping evidence.",
-    },
+    issue(
+      "QFAI-PROT-332",
+      "Lighthouse Gate is MUST for full-harness + web surface: no Lighthouse report found in prototyping evidence.",
+      "error",
+      prototypingJsonPath,
+      "prototyping.lighthouseReport",
+      undefined,
+      "canonical",
+      "full-harness + web surface では `prototyping.json.lighthouseReport` (または `lighthouse`) を記録してください。",
+    ),
   ];
 }

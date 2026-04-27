@@ -53,6 +53,13 @@ export type BuildReviewBundleInput = {
   cycle: number;
   mode: PrototypingMode;
   screens: CanonicalScreenContract[];
+  /**
+   * Resolved primary spec ID (4-digit string, e.g. "0012"). v1.8.4 added.
+   * Caller obtains via `resolvePrimaryPrototypingSpec`. Hardcoding spec
+   * literals in shipped templates is forbidden by the package self-containment
+   * lint (Phase 7).
+   */
+  primarySpecId: string;
   /** Optional override for the rubric ref (defaults to canonical path). */
   axisDefsRef?: string;
   /** Optional override for the design system ref (defaults to canonical path). */
@@ -79,7 +86,7 @@ export function buildReviewBundle(input: BuildReviewBundleInput): ReviewBundle {
       : deriveDefaultPreviousScoreRef(input.cycle);
 
   return {
-    spec: "0017",
+    spec: input.primarySpecId,
     cycle: input.cycle,
     mode: input.mode,
     maxCycles,
@@ -152,7 +159,11 @@ export async function writeReviewBundles(
 }
 
 export type RoundReviewBundle = {
-  spec: "0017";
+  /**
+   * Resolved primary spec ID. v1.8.4 widened from the "0017" literal — see
+   * `ReviewBundle.spec` for migration notes.
+   */
+  spec: string;
   round: ExplorationRound;
   mode: PrototypingMode;
   maxCycles: number;
@@ -187,13 +198,18 @@ export type BuildRoundReviewBundleInput = {
   mode: PrototypingMode;
   candidateIds: CandidateId[];
   screens: CanonicalScreenContract[];
+  /**
+   * Resolved primary spec ID (v1.8.4 added). Caller obtains via
+   * `resolvePrimaryPrototypingSpec`. See `BuildReviewBundleInput.primarySpecId`.
+   */
+  primarySpecId: string;
   axisDefsRef?: string;
   designSystemChecklistRef?: string;
 };
 
 export function buildRoundReviewBundle(input: BuildRoundReviewBundleInput): RoundReviewBundle {
   return {
-    spec: "0017",
+    spec: input.primarySpecId,
     round: input.round,
     mode: input.mode,
     maxCycles: PROTOTYPING_MAX_CYCLES[input.mode],

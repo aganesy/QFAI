@@ -45,7 +45,7 @@ function makeScreens(): CanonicalScreenContract[] {
   ];
 }
 
-describe("spec-0017 round review bundle", () => {
+describe("round review bundle (v2)", () => {
   it("populates candidate-specific evaluator inputs", () => {
     const bundle = buildRoundReviewBundle({
       targetUrl: "http://localhost:3000",
@@ -53,9 +53,12 @@ describe("spec-0017 round review bundle", () => {
       mode: "standard",
       candidateIds: ["c1", "c3", "c5"],
       screens: makeScreens(),
+      // Test value — exercises the parameter pass-through; not a fixed
+      // production assumption.
+      primarySpecId: "0001",
     });
 
-    expect(bundle.spec).toBe("0017");
+    expect(bundle.spec).toBe("0001");
     expect(bundle.commandPlanRef).toBe(".qfai/evidence/prototyping/rounds/r3/command-plans.json");
     expect(bundle.candidates[0]?.conceptRef).toBe(
       ".qfai/evidence/prototyping/rounds/r3/candidates/c1/concept.json",
@@ -82,6 +85,7 @@ describe("spec-0017 round review bundle", () => {
       mode: "standard",
       candidateIds: ["c1", "c2", "c3", "c4", "c5"],
       screens: makeScreens(),
+      primarySpecId: "0001",
     });
 
     expect(result.reviewBundlePath).toBe(

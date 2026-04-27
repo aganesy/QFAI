@@ -2,6 +2,7 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import { loadConfig } from "../../core/config.js";
+import { resolvePrimaryPrototypingSpec } from "../../core/prototyping/specResolution.js";
 import { readUiContractScreenContracts } from "../../core/contracts/screenContracts.js";
 import { buildAbsorptionPlan } from "../../core/prototyping/absorptionBuilder.js";
 import { parseCandidateIds } from "../../core/prototyping/candidate.js";
@@ -123,6 +124,20 @@ async function runRoundStart(options: RunPrototypingCommandOptions): Promise<num
     return 2;
   }
 
+  // v1.8.4 Phase 6: resolve primary spec at runtime (no more hardcoded
+  // "0017" literal). The resolver returns config-explicit value or
+  // marker-scans for `surface_type: ui-bearing`. Fail fast if no spec
+  // matches so review-bundle.spec is never written with a placeholder.
+  const resolvedSpec = await resolvePrimaryPrototypingSpec(options.root, configResult.config);
+  if (!resolvedSpec) {
+    error(
+      "qfai prototyping round-start: no primary prototyping spec found. " +
+        "Set qfai.config.yaml: prototyping.primarySpecId, or add " +
+        "`surface_type: ui-bearing` to one of your specs' 01_Spec.md.",
+    );
+    return 2;
+  }
+
   const result = await writeRoundReviewBundle({
     root: options.root,
     targetUrl: options.targetUrl,
@@ -130,6 +145,7 @@ async function runRoundStart(options: RunPrototypingCommandOptions): Promise<num
     round: options.round,
     candidateIds,
     screens,
+    primarySpecId: resolvedSpec.specId,
   });
 
   info(
@@ -374,9 +390,15 @@ async function readRoundReviewBundleFile(
 ): Promise<RoundReviewBundle | null> {
   const reviewBundlePath = path.join(root, ...roundReviewBundlePath(round).split("/"));
   const parsed = await readJsonFile(reviewBundlePath);
+  // v1.8.4 Phase 6: spec literal check loosened to "non-empty string". The
+  // bundle's spec field is now whatever resolvePrimaryPrototypingSpec
+  // returned at write time (e.g. "0012" after spec-0017 absorption). Use
+  // .trim() to also reject whitespace-only strings (Copilot MAJOR review on
+  // PR #201).
   if (
     !parsed ||
-    parsed.spec !== "0017" ||
+    typeof parsed.spec !== "string" ||
+    parsed.spec.trim().length === 0 ||
     parsed.round !== round ||
     !Array.isArray(parsed.candidates)
   ) {

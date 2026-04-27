@@ -91,6 +91,13 @@
 
 - Full-harness result output includes `iterationBudget.maxIterations` and `iterationBudget.remainingIterations`.
 
+## AC-0012-0019
+
+- For each active candidate in absorption rounds (`r3|r2|r1`), `evaluator-reviews/<candidate-id>.json` の `perAxis[].score` が `evaluation-rubric.yaml` の `hard_floors[].min_score` を下回ると `qfai validate --profile prototyping --fail-on error` は `QFAI-PROT-AXIS-FLOOR-001` を error で返す。
+- `r5` ラウンドはこの強制の対象外（発散段階を hard_floor で gate しない）。
+- `hard_floors[].id` が `perAxis` に存在しない軸（例: `conceptFit`）は本検証ではスキップする（別軸で検証される）。
+- `axisId` の表記は `evaluation-rubric.yaml` の `axes[].id` と完全一致を要する（ハイフンケース等の正規化はしない）。
+
 ## Completion Gate
 
 - `/qfai-prototyping` completion requires `qfai validate --fail-on error` pass.

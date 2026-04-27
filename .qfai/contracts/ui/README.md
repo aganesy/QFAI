@@ -125,9 +125,7 @@ screens:
 
 ## Example
 
-- Copy-ready repository sample:
-  `docs/examples/ui-contract.good.yaml`
-- Also available from prototyping skill template:
+- Copy-ready sample bundled with this package:
   `../../assistant/skills/qfai-prototyping/templates/contracts/ui-0001-order-mockable.yaml`
 
 ## FAQ (Typical failures)

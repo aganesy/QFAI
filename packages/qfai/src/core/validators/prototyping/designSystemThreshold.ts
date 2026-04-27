@@ -8,20 +8,18 @@
  *
  * DS_PASS_THRESHOLD = 0.75  (scores >= 0.75 pass, < 0.75 fail)
  *
- * spec-0012 TC-0012-0301 / TC-0012-0302 / TC-0012-0303 / AC-0012-0183, AC-0012-0184
+ * v1.8.4 Phase 9 BREAKING: removed the legacy `validateDesignSystemThreshold` /
+ * `DesignSystemThresholdIssue` exports; callers MUST use
+ * `validateDesignSystemThresholdIssues` which returns standard `Issue[]`.
  */
 
 import { access } from "node:fs/promises";
 import path from "node:path";
 
-export const DS_PASS_THRESHOLD = 0.75;
+import type { Issue } from "../../types.js";
+import { issue } from "../utils.js";
 
-export interface DesignSystemThresholdIssue {
-  readonly rule: "PROT-DS-THRESHOLD";
-  readonly score: number;
-  readonly immediateFixRequired: boolean;
-  readonly message: string;
-}
+export const DS_PASS_THRESHOLD = 0.75;
 
 function isRecord(v: unknown): v is Record<string, unknown> {
   return typeof v === "object" && v !== null && !Array.isArray(v);
@@ -45,10 +43,16 @@ function extractScore(prototypingRecord: unknown): number | null {
   return score;
 }
 
-export async function validateDesignSystemThreshold(
+/**
+ * Issues `QFAI-PROT-334` when scoringTrace.designSystemCompliance is below
+ * the 0.75 threshold while 12_design_system.md is present in the
+ * calibration pack.
+ */
+export async function validateDesignSystemThresholdIssues(
   packDir: string,
   prototypingRecord: unknown,
-): Promise<DesignSystemThresholdIssue[]> {
+  prototypingJsonPath: string,
+): Promise<Issue[]> {
   const hasDesignSystem = await designSystemMdPresent(packDir);
   if (!hasDesignSystem) {
     return [];
@@ -64,11 +68,15 @@ export async function validateDesignSystemThreshold(
   }
 
   return [
-    {
-      rule: "PROT-DS-THRESHOLD",
-      score,
-      immediateFixRequired: true,
-      message: `designSystemCompliance score ${(score * 100).toFixed(0)}% is below threshold ${(DS_PASS_THRESHOLD * 100).toFixed(0)}%; immediate fix required for next iteration.`,
-    },
+    issue(
+      "QFAI-PROT-334",
+      `designSystemCompliance score ${(score * 100).toFixed(0)}% is below threshold ${(DS_PASS_THRESHOLD * 100).toFixed(0)}%; immediate fix required for next iteration.`,
+      "error",
+      prototypingJsonPath,
+      "prototyping.scoringTrace.designSystemCompliance.threshold",
+      undefined,
+      "canonical",
+      `scoringTrace.designSystemCompliance を閾値 ${(DS_PASS_THRESHOLD * 100).toFixed(0)}% 以上に上げる修正を次イテレーションに含めてください。`,
+    ),
   ];
 }

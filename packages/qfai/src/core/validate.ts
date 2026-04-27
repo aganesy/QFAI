@@ -37,6 +37,11 @@ import {
   validateOrphanProhibition,
   validatePrototypingEvidence,
   validatePrototypingDesignSystem,
+  validateStateGate,
+  validateCompletionCertificateIssues,
+  validateConfigReferenceIntegrity,
+  validatePrototypingArtifactRefIntegrity,
+  validateSpecIdLinkage,
   validateResearchSummary,
   validateRepositoryHygiene,
   validateSpecSplitByCapability,
@@ -50,6 +55,7 @@ import {
   validateRenderCritique,
   validateDesignFidelity,
   validateDesignContractReadiness,
+  validateEvaluatorReviewHardFloor,
   validatePrototypingSkillContent,
   runCanonicalUixValidators,
   validateTraceabilityIntegrity,
@@ -177,6 +183,12 @@ async function runPrototypingValidators(
     ...(await validateRenderCritique(root, config)),
     ...(await validateDesignFidelity(root, config)),
     ...(await validateDesignContractReadiness(root, config)),
+    ...(await validateEvaluatorReviewHardFloor(root, config)),
+    ...(await validateStateGate(root, config)),
+    ...(await validateCompletionCertificateIssues(root, config)),
+    ...(await validateConfigReferenceIntegrity(root, config)),
+    ...(await validatePrototypingArtifactRefIntegrity(root, config)),
+    ...(await validateSpecIdLinkage(root, config)),
   ];
 }
 
