@@ -127,6 +127,36 @@ describe("validateExecutionPlanIssues (v1.8.4 standard adapter)", () => {
     expect(issues[0]?.message).toMatch(/plannedAt/);
   });
 
+  it("reports 'array' (not 'object') when a field has the wrong shape as an array", () => {
+    // Regression for Copilot NIT review on PR #201: typeof [] is "object",
+    // which obscures the actual problem when delegationMap is an array.
+    const issues = validateExecutionPlanIssues(
+      recordWithPlan({
+        targetIterations: 20,
+        evaluationAxesSource: ".qfai/contracts/design/evaluation-rubric.yaml",
+        delegationMap: ["frontend-engineer"], // wrong: array
+        plannedAt: "2026-04-26T00:00:00Z",
+      }),
+      path,
+    );
+    expect(issues).toHaveLength(1);
+    expect(issues[0]?.message).toMatch(/got: array/);
+  });
+
+  it("reports 'null' (not 'object') when a field is null", () => {
+    const issues = validateExecutionPlanIssues(
+      recordWithPlan({
+        targetIterations: 20,
+        evaluationAxesSource: ".qfai/contracts/design/evaluation-rubric.yaml",
+        delegationMap: null,
+        plannedAt: "2026-04-26T00:00:00Z",
+      }),
+      path,
+    );
+    expect(issues).toHaveLength(1);
+    expect(issues[0]?.message).toMatch(/got: null/);
+  });
+
   it("emits one issue per missing/wrong-shape field (multiple in single run)", () => {
     const issues = validateExecutionPlanIssues(
       recordWithPlan({

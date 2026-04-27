@@ -30,6 +30,17 @@ const REQUIRED_FIELDS: ReadonlyArray<{ key: string; shape: FieldShape }> = [
   { key: "plannedAt", shape: "non-empty-string" },
 ];
 
+/**
+ * User-facing type label. `typeof null` is "object" and `typeof []` is also
+ * "object", which leaves operators guessing what they actually passed in.
+ * Distinguish these explicitly. (Copilot NIT review on PR #201.)
+ */
+function describeType(value: unknown): string {
+  if (value === null) return "null";
+  if (Array.isArray(value)) return "array";
+  return typeof value;
+}
+
 function matchesShape(value: unknown, shape: FieldShape): boolean {
   switch (shape) {
     case "number":
@@ -100,7 +111,7 @@ export function validateExecutionPlanIssues(
     if (!matchesShape(value, shape)) {
       issues.push(
         buildIssue(
-          `executionPlan.${key} is required in full-harness mode and must be a ${FIELD_SHAPE_LABEL[shape]} (got: ${typeof value}).`,
+          `executionPlan.${key} is required in full-harness mode and must be a ${FIELD_SHAPE_LABEL[shape]} (got: ${describeType(value)}).`,
           prototypingJsonPath,
         ),
       );

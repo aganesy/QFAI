@@ -392,11 +392,13 @@ async function readRoundReviewBundleFile(
   const parsed = await readJsonFile(reviewBundlePath);
   // v1.8.4 Phase 6: spec literal check loosened to "non-empty string". The
   // bundle's spec field is now whatever resolvePrimaryPrototypingSpec
-  // returned at write time (e.g. "0012" after spec-0017 absorption).
+  // returned at write time (e.g. "0012" after spec-0017 absorption). Use
+  // .trim() to also reject whitespace-only strings (Copilot MAJOR review on
+  // PR #201).
   if (
     !parsed ||
     typeof parsed.spec !== "string" ||
-    parsed.spec.length === 0 ||
+    parsed.spec.trim().length === 0 ||
     parsed.round !== round ||
     !Array.isArray(parsed.candidates)
   ) {

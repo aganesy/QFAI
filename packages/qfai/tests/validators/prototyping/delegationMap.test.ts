@@ -54,4 +54,33 @@ describe("validateDelegationMapIssues (v1.8.4 standard adapter)", () => {
     expect(issues).toHaveLength(2);
     expect(new Set(issues.map((i) => i.code))).toEqual(new Set(["QFAI-PROT-311"]));
   });
+
+  // ─── Non-string value rejection (Codex review on PR #201) ────────────────
+  // Previously stateGate.extractDelegationMap silently filtered out non-string
+  // entries before validation, so { UI実装: 123 } was indistinguishable from
+  // { UI実装: <missing> } and never raised QFAI-PROT-311.
+
+  it("emits QFAI-PROT-311 for a non-string role (number)", () => {
+    const map = { UI実装: 123 };
+    const issues = validateDelegationMapIssues(map, path);
+    expect(issues).toHaveLength(1);
+    expect(issues[0]?.code).toBe("QFAI-PROT-311");
+    expect(issues[0]?.message).toMatch(/non-string/);
+    expect(issues[0]?.message).toMatch(/got: number/);
+  });
+
+  it("emits QFAI-PROT-311 for a non-string role (array)", () => {
+    const map = { UI実装: ["frontend-engineer"] };
+    const issues = validateDelegationMapIssues(map, path);
+    expect(issues).toHaveLength(1);
+    // typeof [] is "object", but we report "array" for clarity.
+    expect(issues[0]?.message).toMatch(/got: array/);
+  });
+
+  it("emits QFAI-PROT-311 for a non-string role (null)", () => {
+    const map = { UI実装: null };
+    const issues = validateDelegationMapIssues(map, path);
+    expect(issues).toHaveLength(1);
+    expect(issues[0]?.message).toMatch(/got: null/);
+  });
 });

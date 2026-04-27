@@ -16,7 +16,7 @@ import path from "node:path";
 import type { QfaiConfig } from "../../config.js";
 import { resolvePath } from "../../config.js";
 import type { Issue } from "../../types.js";
-import { EXPLORATION_ROUNDS, roundReviewBundlePath } from "../../prototyping/round.js";
+import { EXPLORATION_ROUNDS } from "../../prototyping/round.js";
 import { issue } from "../utils.js";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -175,6 +175,19 @@ function collectReviewBundleRefs(bundle: unknown, sourcePath: string): DanglingR
   push(bundle.axisDefsRef, "axisDefsRef");
   push(bundle.designSystemChecklistRef, "designSystemChecklistRef");
   push(bundle.commandPlanRef, "commandPlanRef");
+
+  // candidates[].{conceptRef,previousEvaluatorReviewRef} — without these,
+  // deleting a candidate concept file or previous review file would not
+  // raise QFAI-PROT-REF-001. (Codex review on PR #201.)
+  const candidates = bundle.candidates;
+  if (Array.isArray(candidates)) {
+    for (let i = 0; i < candidates.length; i++) {
+      const candidate: unknown = candidates[i];
+      if (!isRecord(candidate)) continue;
+      push(candidate.conceptRef, `candidates[${i}].conceptRef`);
+      push(candidate.previousEvaluatorReviewRef, `candidates[${i}].previousEvaluatorReviewRef`);
+    }
+  }
   return out;
 }
 
@@ -210,9 +223,19 @@ export async function validatePrototypingArtifactRefIntegrity(
     collectedRefs.push(...collectPrototypingJsonRefs(protoJson, protoRel));
   }
 
-  // 2) round review-bundle.json (per round)
+  // 2) round review-bundle.json (per round). Resolve under evidenceRoot so a
+  // non-default `paths.specsDir` does not silently skip half the evidence
+  // tree. (Codex review on PR #201: round bundles previously hardcoded
+  // `.qfai/evidence/prototyping/rounds/...` while prototyping.json /
+  // breakthrough.json were derived from `path.dirname(specsDir)/evidence`.)
   for (const round of EXPLORATION_ROUNDS) {
-    const bundlePath = path.join(root, ...roundReviewBundlePath(round).split("/"));
+    const bundlePath = path.join(
+      evidenceRoot,
+      "prototyping",
+      "rounds",
+      round,
+      "review-bundle.json",
+    );
     const bundleJson = await loadJson(bundlePath);
     if (bundleJson) {
       const bundleRel = path.relative(root, bundlePath).replace(/\\/g, "/");

@@ -35,19 +35,17 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function extractDelegationMap(prototypingJson: unknown): Record<string, string> | undefined {
+function extractDelegationMap(prototypingJson: unknown): Record<string, unknown> | undefined {
   if (!isRecord(prototypingJson)) return undefined;
   const executionPlan = prototypingJson.executionPlan;
   if (!isRecord(executionPlan)) return undefined;
   const delegationMap = executionPlan.delegationMap;
   if (!isRecord(delegationMap)) return undefined;
-  const normalized: Record<string, string> = {};
-  for (const [key, value] of Object.entries(delegationMap)) {
-    if (typeof value === "string") {
-      normalized[key] = value;
-    }
-  }
-  return normalized;
+  // Pass entries through verbatim — non-string values must be flagged by
+  // validateDelegationMapIssues, not silently dropped here. (Codex review
+  // on PR #201: malformed entries like { UI実装: 123 } previously slipped
+  // past the state gate.)
+  return delegationMap;
 }
 
 function extractMode(prototypingJson: unknown): string {

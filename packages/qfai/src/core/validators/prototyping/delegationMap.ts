@@ -29,7 +29,7 @@ export const DELEGATION_CATEGORIES = Object.keys(DELEGATION_SCOPE) as readonly s
  * "executionPlan absent" case and we silently no-op.
  */
 export function validateDelegationMapIssues(
-  delegationMap: Record<string, string> | undefined,
+  delegationMap: Record<string, unknown> | undefined,
   prototypingJsonPath: string,
 ): Issue[] {
   if (!delegationMap) {
@@ -37,18 +37,37 @@ export function validateDelegationMapIssues(
   }
 
   const issues: Issue[] = [];
-  for (const [category, role] of Object.entries(delegationMap)) {
+  for (const [category, rawRole] of Object.entries(delegationMap)) {
     const allowedRoles = DELEGATION_SCOPE[category];
     if (allowedRoles === undefined) {
       // Unknown category is not flagged here (scope violation is a separate
       // concern handled outside this validator).
       continue;
     }
-    if (!allowedRoles.includes(role)) {
+    // Non-string values used to be filtered out in stateGate.extractDelegationMap
+    // and slipped through silently. Flag them explicitly so malformed entries
+    // like { UI実装: 123 } surface a real violation. (Codex review on PR #201.)
+    if (typeof rawRole !== "string") {
       issues.push(
         issue(
           "QFAI-PROT-311",
-          `Delegation violation: category "${category}" assigned to undefined/invalid role "${role}". Allowed roles: ${allowedRoles.join(", ")}.`,
+          `Delegation violation: category "${category}" assigned to non-string value (got: ${describeRoleType(rawRole)}). Allowed roles: ${allowedRoles.join(", ")}.`,
+          "error",
+          prototypingJsonPath,
+          "prototyping.executionPlan.delegationMap",
+          undefined,
+          "canonical",
+          `category "${category}" には string の role を割り当ててください ` +
+            `(allowed: ${allowedRoles.join(", ")})。`,
+        ),
+      );
+      continue;
+    }
+    if (!allowedRoles.includes(rawRole)) {
+      issues.push(
+        issue(
+          "QFAI-PROT-311",
+          `Delegation violation: category "${category}" assigned to undefined/invalid role "${rawRole}". Allowed roles: ${allowedRoles.join(", ")}.`,
           "error",
           prototypingJsonPath,
           "prototyping.executionPlan.delegationMap",
@@ -61,4 +80,10 @@ export function validateDelegationMapIssues(
     }
   }
   return issues;
+}
+
+function describeRoleType(value: unknown): string {
+  if (value === null) return "null";
+  if (Array.isArray(value)) return "array";
+  return typeof value;
 }
