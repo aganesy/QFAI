@@ -1,10 +1,13 @@
-import { access } from "node:fs/promises";
+import { access, readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 
+import { parseAgentFrontmatter } from "./agentFrontmatter.js";
 import { defaultConfig, findConfigRoot, getConfigPath, loadConfig, resolvePath } from "./config.js";
+import { readUiContractScreenContracts } from "./contracts/screenContracts.js";
 import { collectScenarioFiles } from "./discovery.js";
 import { collectFilesByGlobs, DEFAULT_GLOB_FILE_LIMIT } from "./fs.js";
 import { toRelativePath } from "./paths.js";
+import { resolvePrimaryPrototypingSpec } from "./prototyping/specResolution.js";
 import { collectSpecEntries } from "./specLayout.js";
 import { DEFAULT_TEST_FILE_EXCLUDE_GLOBS } from "./traceability.js";
 import { diffProjectSkillsAgainstInitAssets } from "./skillsIntegrity.js";
@@ -12,6 +15,7 @@ import { resolveToolVersion } from "./version.js";
 import { loadDecisionGuardrails, normalizeDecisionGuardrails } from "./decisionGuardrails.js";
 
 export type DoctorSeverity = "ok" | "info" | "warning" | "error";
+export type DoctorProfile = "prototyping";
 
 export type DoctorCheck = {
   id: string;
@@ -26,6 +30,7 @@ export type DoctorData = {
   version: string;
   generatedAt: string;
   root: string;
+  profile?: DoctorProfile;
   config: {
     startDir: string;
     found: boolean;
@@ -38,6 +43,8 @@ export type DoctorData = {
 type CreateDoctorDataOptions = {
   startDir: string;
   rootExplicit: boolean;
+  profile?: DoctorProfile;
+  targetUrl?: string;
 };
 
 async function exists(target: string): Promise<boolean> {
@@ -196,6 +203,8 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
     }
   }
 
+  addCheck(checks, await buildAgentFrontmatterCheck(root));
+
   const deprecatedPromptsDir = resolvePath(root, config, "promptsDir");
   const deprecatedPromptsExists = await exists(deprecatedPromptsDir);
   // eslint-disable-next-line @typescript-eslint/no-deprecated -- intentional: checking deprecated promptsDir for diagnostic
@@ -214,6 +223,10 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
       configured: deprecatedPromptsConfigured,
     },
   });
+
+  if (options.profile === "prototyping") {
+    checks.push(...(await buildPrototypingDoctorChecks(root, config, options.targetUrl)));
+  }
 
   const specsRoot = resolvePath(root, config, "specsDir");
   const entries = await collectSpecEntries(specsRoot);
@@ -433,6 +446,7 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
     version,
     generatedAt,
     root: toRelativePath(process.cwd(), root),
+    ...(options.profile ? { profile: options.profile } : {}),
     config: {
       startDir: toRelativePath(process.cwd(), startDir),
       found: search.found,
@@ -441,6 +455,354 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
     summary: summarize(checks),
     checks,
   };
+}
+
+const REQUIRED_PROTOTYPING_ROLE_IDS = [
+  "frontend-engineer",
+  "product-experience-architect",
+  "product-surface-reviewer",
+  "backend-engineer",
+  "devops-ci-engineer",
+] as const;
+
+async function buildAgentFrontmatterCheck(root: string): Promise<DoctorCheck> {
+  const agentsDir = path.join(root, ".qfai", "assistant", "agents");
+  if (!(await exists(agentsDir))) {
+    return {
+      id: "agents.frontmatter",
+      severity: "warning",
+      title: "Agent frontmatter",
+      message: "canonical agent directory is missing (run 'qfai init')",
+      details: { path: toRelativePath(root, agentsDir) },
+    };
+  }
+
+  const entries = await readdir(agentsDir, { withFileTypes: true });
+  const markdownFiles = entries
+    .filter((entry) => entry.isFile() && entry.name.endsWith(".md") && entry.name !== "README.md")
+    .map((entry) => entry.name)
+    .sort((a, b) => a.localeCompare(b));
+
+  if (markdownFiles.length === 0) {
+    return {
+      id: "agents.frontmatter",
+      severity: "warning",
+      title: "Agent frontmatter",
+      message: "no canonical agent markdown files were found",
+      details: { path: toRelativePath(root, agentsDir) },
+    };
+  }
+
+  const invalidFiles: Array<{ file: string; error: string }> = [];
+  for (const fileName of markdownFiles) {
+    const filePath = path.join(agentsDir, fileName);
+    const parsed = parseAgentFrontmatter(await readFile(filePath, "utf-8"));
+    if (!parsed.ok) {
+      invalidFiles.push({
+        file: `.qfai/assistant/agents/${fileName}`,
+        error: parsed.error,
+      });
+    }
+  }
+
+  if (invalidFiles.length > 0) {
+    return {
+      id: "agents.frontmatter",
+      severity: "error",
+      title: "Agent frontmatter",
+      message: `invalid Claude-compatible frontmatter detected (count=${invalidFiles.length})`,
+      details: {
+        count: markdownFiles.length,
+        invalidFiles,
+      },
+    };
+  }
+
+  return {
+    id: "agents.frontmatter",
+    severity: "ok",
+    title: "Agent frontmatter",
+    message: `all canonical agent markdown files include valid Claude-compatible frontmatter (count=${markdownFiles.length})`,
+    details: {
+      count: markdownFiles.length,
+      path: toRelativePath(root, agentsDir),
+    },
+  };
+}
+
+async function buildPrototypingDoctorChecks(
+  root: string,
+  config: Awaited<ReturnType<typeof loadConfig>>["config"],
+  targetUrlOverride?: string,
+): Promise<DoctorCheck[]> {
+  const targetUrl = targetUrlOverride ?? config.prototyping?.execution?.targetUrl ?? undefined;
+  return Promise.all([
+    buildPrototypingPrimarySpecCheck(root, config),
+    buildPrototypingUiContractsCheck(root, config),
+    buildPrototypingRolesCheck(root),
+    buildPlaywrightCliCheck(root),
+    buildTargetUrlCheck(root, targetUrl, targetUrlOverride ? "cli" : "config"),
+  ]);
+}
+
+async function buildPrototypingPrimarySpecCheck(
+  root: string,
+  config: Awaited<ReturnType<typeof loadConfig>>["config"],
+): Promise<DoctorCheck> {
+  const resolvedSpec = await resolvePrimaryPrototypingSpec(root, config);
+  if (!resolvedSpec) {
+    return {
+      id: "prototyping.primarySpec",
+      severity: "error",
+      title: "Primary prototyping spec",
+      message:
+        "no primary prototyping spec resolved (set prototyping.primarySpecId or add `surface_type: ui-bearing` to 01_Spec.md)",
+    };
+  }
+
+  return {
+    id: "prototyping.primarySpec",
+    severity: "ok",
+    title: "Primary prototyping spec",
+    message: `resolved primary prototyping spec ${resolvedSpec.specId}`,
+    details: {
+      specId: resolvedSpec.specId,
+      path: toRelativePath(root, resolvedSpec.specMdPath),
+    },
+  };
+}
+
+async function buildPrototypingUiContractsCheck(
+  root: string,
+  config: Awaited<ReturnType<typeof loadConfig>>["config"],
+): Promise<DoctorCheck> {
+  const screens = await readUiContractScreenContracts(root, config.paths.contractsDir);
+  if (screens.length === 0) {
+    return {
+      id: "prototyping.uiContracts",
+      severity: "error",
+      title: "UI contracts",
+      message:
+        "no UI screens declared under contracts/ui; prototyping review bundle cannot be prepared",
+      details: {
+        contractsDir: config.paths.contractsDir,
+      },
+    };
+  }
+
+  return {
+    id: "prototyping.uiContracts",
+    severity: "ok",
+    title: "UI contracts",
+    message: `UI contracts declare ${screens.length} screen(s) for prototyping`,
+    details: {
+      contractsDir: config.paths.contractsDir,
+      screenIds: screens.map((screen) => screen.screenId),
+    },
+  };
+}
+
+async function buildPrototypingRolesCheck(root: string): Promise<DoctorCheck> {
+  const wrapperDir = path.join(root, ".claude", "agents");
+  const roleFindings: Array<Record<string, unknown>> = [];
+
+  for (const roleId of REQUIRED_PROTOTYPING_ROLE_IDS) {
+    const wrapperPath = path.join(wrapperDir, `${roleId}.md`);
+    const canonicalPath = path.join(root, ".qfai", "assistant", "agents", `${roleId}.md`);
+    const wrapperExists = await exists(wrapperPath);
+    const canonicalExists = await exists(canonicalPath);
+    const finding: Record<string, unknown> = {
+      roleId,
+      canonicalExists,
+      wrapperExists,
+      wrapperPath: toRelativePath(root, wrapperPath),
+    };
+
+    if (wrapperExists) {
+      const parsed = parseAgentFrontmatter(await readFile(wrapperPath, "utf-8"));
+      finding.frontmatterValid = parsed.ok;
+      if (parsed.ok) {
+        finding.frontmatterName = parsed.frontmatter.name;
+      } else {
+        finding.error = parsed.error;
+      }
+    }
+
+    roleFindings.push(finding);
+  }
+
+  const invalidRoles = roleFindings.filter(
+    (item) =>
+      item["canonicalExists"] !== true ||
+      item["wrapperExists"] !== true ||
+      item["frontmatterValid"] !== true ||
+      item["frontmatterName"] !== item["roleId"],
+  );
+
+  if (invalidRoles.length > 0) {
+    return {
+      id: "prototyping.requiredRoles",
+      severity: "error",
+      title: "Required prototyping roles",
+      message: `missing or invalid required role wrappers detected (count=${invalidRoles.length})`,
+      details: {
+        requiredRoles: REQUIRED_PROTOTYPING_ROLE_IDS,
+        invalidRoles,
+      },
+    };
+  }
+
+  return {
+    id: "prototyping.requiredRoles",
+    severity: "ok",
+    title: "Required prototyping roles",
+    message: `all required prototyping role wrappers are present and frontmatter-valid (count=${REQUIRED_PROTOTYPING_ROLE_IDS.length})`,
+    details: {
+      requiredRoles: REQUIRED_PROTOTYPING_ROLE_IDS,
+      wrapperDir: toRelativePath(root, wrapperDir),
+    },
+  };
+}
+
+async function buildPlaywrightCliCheck(root: string): Promise<DoctorCheck> {
+  const localBinDir = path.join(root, "node_modules", ".bin");
+  const localCandidate = await findCommandInDir(localBinDir, "playwright-cli");
+  if (localCandidate) {
+    return {
+      id: "prototyping.playwrightCli",
+      severity: "ok",
+      title: "Playwright CLI",
+      message: "playwright-cli is reachable via project-local node_modules/.bin",
+      details: {
+        origin: "node_modules/.bin",
+        path: toRelativePath(root, localCandidate),
+      },
+    };
+  }
+
+  const globalCandidate = await findCommandInPath("playwright-cli");
+  if (globalCandidate) {
+    return {
+      id: "prototyping.playwrightCli",
+      severity: "ok",
+      title: "Playwright CLI",
+      message: "playwright-cli is reachable via PATH",
+      details: {
+        origin: "PATH",
+        path: globalCandidate,
+      },
+    };
+  }
+
+  return {
+    id: "prototyping.playwrightCli",
+    severity: "error",
+    title: "Playwright CLI",
+    message:
+      "playwright-cli is not reachable via PATH or project-local node_modules/.bin (install it or use npx/playwright-cli local bin)",
+    details: {
+      lookedIn: {
+        path: process.env.PATH ?? "",
+        localBinDir: toRelativePath(root, localBinDir),
+      },
+    },
+  };
+}
+
+async function buildTargetUrlCheck(
+  root: string,
+  targetUrl: string | null | undefined,
+  source: "cli" | "config",
+): Promise<DoctorCheck> {
+  if (!targetUrl) {
+    return {
+      id: "prototyping.targetUrl",
+      severity: "warning",
+      title: "Target URL",
+      message:
+        "no targetUrl configured for prototyping preflight (set prototyping.execution.targetUrl or pass --target-url)",
+    };
+  }
+
+  const probe = await probeHttpUrl(targetUrl);
+  if (!probe.ok) {
+    return {
+      id: "prototyping.targetUrl",
+      severity: "error",
+      title: "Target URL",
+      message: probe.statusCode
+        ? `targetUrl responded with HTTP ${probe.statusCode}`
+        : `targetUrl probe failed: ${probe.error ?? "unknown error"}`,
+      details: {
+        source,
+        targetUrl,
+        ...(probe.statusCode ? { statusCode: probe.statusCode } : {}),
+      },
+    };
+  }
+
+  return {
+    id: "prototyping.targetUrl",
+    severity: "ok",
+    title: "Target URL",
+    message: `targetUrl responded with HTTP ${probe.statusCode}`,
+    details: {
+      source,
+      targetUrl,
+      statusCode: probe.statusCode,
+    },
+  };
+}
+
+async function findCommandInPath(command: string): Promise<string | null> {
+  const searchPath = process.env.PATH ?? "";
+  const dirs = searchPath.split(path.delimiter).filter((entry) => entry.length > 0);
+  for (const dir of dirs) {
+    const candidate = await findCommandInDir(dir, command);
+    if (candidate) {
+      return candidate;
+    }
+  }
+  return null;
+}
+
+async function findCommandInDir(dir: string, command: string): Promise<string | null> {
+  for (const fileName of commandCandidates(command)) {
+    const candidate = path.join(dir, fileName);
+    if (await exists(candidate)) {
+      return candidate;
+    }
+  }
+  return null;
+}
+
+function commandCandidates(command: string): string[] {
+  return [`${command}.cmd`, `${command}.ps1`, `${command}.exe`, `${command}.bat`, command];
+}
+
+async function probeHttpUrl(
+  targetUrl: string,
+): Promise<{ ok: boolean; statusCode?: number; error?: string }> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 3_000);
+  try {
+    const response = await fetch(targetUrl, {
+      method: "GET",
+      redirect: "manual",
+      signal: controller.signal,
+    });
+    return {
+      ok: response.status >= 200 && response.status < 400,
+      statusCode: response.status,
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : String(error),
+    };
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 const DEFAULT_CONFIG_SEARCH_IGNORE_GLOBS = [

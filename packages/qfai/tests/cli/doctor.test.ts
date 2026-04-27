@@ -1,3 +1,4 @@
+import { createServer, type Server } from "node:http";
 import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -306,6 +307,42 @@ describe("doctor", { timeout: 60000 }, () => {
       await rm(root, { recursive: true, force: true });
     }
   });
+
+  it("adds prototyping profile checks when preflight prerequisites exist", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-doctor-"));
+    const server = await startTestServer();
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      await seedPrototypingFixture(root, server.url);
+
+      const parsed = await readDoctorData(root, { profile: "prototyping", targetUrl: server.url });
+      expect(parsed.profile).toBe("prototyping");
+      expect(findCheck(parsed.checks, "prototyping.primarySpec")?.severity).toBe("ok");
+      expect(findCheck(parsed.checks, "prototyping.uiContracts")?.severity).toBe("ok");
+      expect(findCheck(parsed.checks, "prototyping.requiredRoles")?.severity).toBe("ok");
+      expect(findCheck(parsed.checks, "prototyping.playwrightCli")?.severity).toBe("ok");
+      expect(findCheck(parsed.checks, "prototyping.targetUrl")?.severity).toBe("ok");
+    } finally {
+      await stopTestServer(server.server);
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("reports prototyping role wrapper failures before runtime execution", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-doctor-"));
+    const server = await startTestServer();
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      await seedPrototypingFixture(root, server.url);
+      await rm(path.join(root, ".claude", "agents", "frontend-engineer.md"), { force: true });
+
+      const parsed = await readDoctorData(root, { profile: "prototyping", targetUrl: server.url });
+      expect(findCheck(parsed.checks, "prototyping.requiredRoles")?.severity).toBe("error");
+    } finally {
+      await stopTestServer(server.server);
+      await rm(root, { recursive: true, force: true });
+    }
+  });
 });
 
 type DoctorCheck = {
@@ -317,18 +354,24 @@ type DoctorCheck = {
 
 type DoctorData = {
   tool?: string;
+  profile?: string;
   checks: DoctorCheck[];
   config?: { found?: boolean };
   summary?: { ok?: number; info?: number; warning?: number; error?: number };
 };
 
-async function readDoctorData(root: string): Promise<DoctorData> {
+async function readDoctorData(
+  root: string,
+  options?: { profile?: "prototyping"; targetUrl?: string },
+): Promise<DoctorData> {
   const outPath = path.join(root, ".qfai", "report", "doctor.json");
   await runDoctor({
     root,
     rootExplicit: true,
     format: "json",
     outPath,
+    ...(options?.profile ? { profile: options.profile } : {}),
+    ...(options?.targetUrl ? { targetUrl: options.targetUrl } : {}),
   });
   const raw = await readFile(outPath, "utf-8");
   return JSON.parse(raw) as DoctorData;
@@ -336,4 +379,83 @@ async function readDoctorData(root: string): Promise<DoctorData> {
 
 function findCheck(checks: DoctorCheck[], id: string): DoctorCheck | undefined {
   return checks.find((check) => check.id === id);
+}
+
+async function seedPrototypingFixture(root: string, targetUrl: string): Promise<void> {
+  await writeFile(
+    path.join(root, "qfai.config.yaml"),
+    [
+      "paths:",
+      "  specsDir: .qfai/specs",
+      "  contractsDir: .qfai/contracts",
+      "  discussionDir: .qfai/discussion",
+      "  outDir: .qfai/report",
+      "  skillsDir: .qfai/assistant/skills",
+      "  srcDir: src",
+      "  testsDir: tests",
+      "prototyping:",
+      '  primarySpecId: "0001"',
+      "  execution:",
+      `    targetUrl: ${targetUrl}`,
+      "    browserTool: playwright-cli",
+      "",
+    ].join("\n"),
+    "utf-8",
+  );
+
+  const specDir = path.join(root, ".qfai", "specs", "spec-0001");
+  const uiDir = path.join(root, ".qfai", "contracts", "ui");
+  const binDir = path.join(root, "node_modules", ".bin");
+  await mkdir(specDir, { recursive: true });
+  await mkdir(uiDir, { recursive: true });
+  await mkdir(binDir, { recursive: true });
+
+  await writeFile(
+    path.join(specDir, "01_Spec.md"),
+    "---\nsurface_type: ui-bearing\n---\n\n# spec-0001 (doctor fixture)\n",
+    "utf-8",
+  );
+  await writeFile(path.join(specDir, "02_User-stories.md"), "# stories\n", "utf-8");
+  await writeFile(
+    path.join(uiDir, "ui-0001.yaml"),
+    [
+      "screens:",
+      "  - id: home",
+      "    title: Home",
+      "    route: /",
+      "    primary_tasks:",
+      "      - Browse the surface",
+      "",
+    ].join("\n"),
+    "utf-8",
+  );
+  await writeFile(path.join(binDir, "playwright-cli.cmd"), "@echo off\r\necho ok\r\n", "utf-8");
+}
+
+async function startTestServer(): Promise<{ server: Server; url: string }> {
+  const server = createServer((_, response) => {
+    response.statusCode = 200;
+    response.end("ok");
+  });
+  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", () => resolve()));
+  const address = server.address();
+  if (!address || typeof address === "string") {
+    throw new Error("failed to resolve test server address");
+  }
+  return {
+    server,
+    url: `http://127.0.0.1:${address.port}`,
+  };
+}
+
+async function stopTestServer(server: Server): Promise<void> {
+  await new Promise<void>((resolve, reject) => {
+    server.close((error) => {
+      if (error) {
+        reject(error);
+        return;
+      }
+      resolve();
+    });
+  });
 }

@@ -25,6 +25,7 @@ export type ParsedArgs = {
     guardrailsKeyword?: string;
     platform?: string;
     prototypingAction?:
+      | "preflight"
       | "round-start"
       | "round-harvest"
       | "round-narrow"
@@ -98,6 +99,7 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
     const candidate = args[0];
     if (candidate && !candidate.startsWith("--")) {
       if (
+        candidate === "preflight" ||
         candidate === "round-start" ||
         candidate === "round-harvest" ||
         candidate === "round-narrow" ||
@@ -201,7 +203,7 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
           markInvalid();
           break;
         }
-        if (command === "doctor") {
+        if (command === "doctor" || command === "prototyping") {
           options.doctorOut = next;
         } else {
           options.reportOut = next;
@@ -416,7 +418,7 @@ function applyFormatOption(
     }
     return;
   }
-  if (command === "doctor") {
+  if (command === "doctor" || command === "prototyping") {
     if (value === "text" || value === "json") {
       options.doctorFormat = value;
     }

@@ -58,12 +58,19 @@ export async function run(argv: string[], cwd: string): Promise<void> {
       return;
     case "doctor":
       {
+        if (options.profile && options.profile !== "prototyping") {
+          error("qfai doctor: only --profile prototyping is supported.");
+          info(usage());
+          process.exitCode = options.invalidExitCode;
+          return;
+        }
         const exitCode = await runDoctor({
           root: options.root,
           rootExplicit: options.rootExplicit,
           format: options.doctorFormat,
           ...(options.doctorOut !== undefined ? { outPath: options.doctorOut } : {}),
           ...(options.failOn && options.failOn !== "never" ? { failOn: options.failOn } : {}),
+          ...(options.profile === "prototyping" ? { profile: "prototyping" as const } : {}),
         });
         process.exitCode = exitCode;
       }
@@ -87,7 +94,7 @@ export async function run(argv: string[], cwd: string): Promise<void> {
       {
         if (!options.prototypingAction) {
           error(
-            "qfai prototyping: unknown or missing subcommand. Expected: round-start|round-harvest|round-narrow|round-absorb|round-reimplement-verify|certify|show-spec",
+            "qfai prototyping: unknown or missing subcommand. Expected: preflight|round-start|round-harvest|round-narrow|round-absorb|round-reimplement-verify|certify|show-spec",
           );
           info(usage());
           process.exitCode = options.invalidExitCode;
@@ -106,6 +113,19 @@ export async function run(argv: string[], cwd: string): Promise<void> {
         if (options.prototypingAction === "show-spec") {
           const resolvedRoot = await resolveRoot(options);
           process.exitCode = await runPrototypingShowSpec({ root: resolvedRoot });
+          return;
+        }
+        if (options.prototypingAction === "preflight") {
+          const resolvedRoot = await resolveRoot(options);
+          process.exitCode = await runDoctor({
+            root: resolvedRoot,
+            rootExplicit: true,
+            format: options.doctorFormat,
+            ...(options.doctorOut !== undefined ? { outPath: options.doctorOut } : {}),
+            ...(options.failOn && options.failOn !== "never" ? { failOn: options.failOn } : {}),
+            profile: "prototyping",
+            ...(options.prototypingTargetUrl ? { targetUrl: options.prototypingTargetUrl } : {}),
+          });
           return;
         }
 
@@ -152,6 +172,7 @@ Commands:
   report                       検証結果と集計を出力
   doctor                       設定/パス/出力前提の診断
   guardrails                   Decision Guardrails の抽出/検査（list|extract|check）
+  prototyping preflight        prototyping 実行前提（spec/ui/roles/browser/targetUrl）を診断
   prototyping round-start      round review bundle と command plans を生成
   prototyping round-harvest    evaluator review を前提に harvest template を生成
   prototyping round-narrow     survivor 決定を記録
@@ -168,20 +189,21 @@ Options:
   --dry-run       変更を行わず表示のみ
   --format <text|github>       validate の出力形式
   --format <md|json>           report の出力形式
-  --format <text|json>         doctor の出力形式
+  --format <text|json>         doctor / prototyping preflight の出力形式
   --strict                     validate: warning 以上で exit 1
   --profile <discussion|sdd|prototyping|atdd|tdd|verify|full>  validate/report: 検証profileを指定
+  --profile <prototyping>      doctor: prototyping 固有の preflight 診断を追加
   --fail-on <error|warning|never>  validate: 失敗条件
-  --fail-on <error|warning>        doctor: 失敗条件
+  --fail-on <error|warning>        doctor / prototyping preflight: 失敗条件
   --platform <web|windows|mobile-ios|mobile-android|cross-platform>  validate: UI/UXプラットフォーム指定
-  --out <path>                  report/doctor: 出力先
+  --out <path>                  report/doctor/prototyping preflight: 出力先
   --in <path>                   report: validate.json の入力先（configより優先）
   --run-validate                report: validate を実行してから report を生成
   --base-url <url>              report: 基準URL
   --path <path>                 guardrails: 対象ファイル/ディレクトリ（複数指定可）
   --max <number>                guardrails extract: 最大件数
   --keyword <text>              guardrails list/extract: キーワードフィルタ
-  --target-url <url>            prototyping round-start: 評価対象の URL (必須)
+  --target-url <url>            prototyping preflight/round-start: 評価対象の URL
   --mode <low-cost|standard|full-harness>  prototyping round-start: 実行モード (既定: standard)
   --round <r5|r3|r2|r1>         prototyping: 対象 round
   --candidates <csv>            prototyping round-start: active candidate IDs
