@@ -399,6 +399,9 @@ Integration wrappers are also generated for immediate use:
 
 `npx qfai init` installs canonical skills under `.qfai/assistant/skills/**` (SSOT)
 and generates thin wrapper assets for Agents/Codex VS Code / Copilot / Claude Code / Codex.
+Canonical agent markdown under `.qfai/assistant/agents/**` uses a shared YAML frontmatter
+subset (`name`, `description`, `tools`) compatible with Claude Code and GitHub Copilot,
+while Codex consumes mirrored `.codex/agents/*.toml` profiles.
 If wrapper assets drift from canonical skills, rerun `npx qfai init --force` to resync.
 
 ## Contributing (for QFAI maintainers)

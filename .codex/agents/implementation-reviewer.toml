@@ -1,5 +1,5 @@
 name = "implementation-reviewer"
-description = "Review implementation changes for correctness, maintainability, backend safety, and code-level risk."
+description = "Review code changes for correctness, maintainability, backend safety, and implementation risk."
 sandbox_mode = "read-only"
 
 developer_instructions = '''

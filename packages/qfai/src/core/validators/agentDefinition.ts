@@ -96,7 +96,7 @@ export async function validateAgentDefinition(root: string, _config: QfaiConfig)
       issues.push(
         issue(
           "QFAI-AGENT-011",
-          `Invalid Claude-compatible frontmatter in ${rel}: ${frontmatter.error}`,
+          `Invalid Claude/GitHub Copilot-compatible frontmatter in ${rel}: ${frontmatter.error}`,
           "error",
           rel,
           "agentDefinition.invalidFrontmatter",

@@ -1,5 +1,5 @@
 name = "backend-engineer"
-description = "Implement backend behavior aligned with specs, contracts, and operational constraints."
+description = "Implement backend behavior aligned with specs, API and DB contracts, and operational constraints."
 
 developer_instructions = '''
 ## Mission

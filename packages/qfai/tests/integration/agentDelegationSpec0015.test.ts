@@ -150,7 +150,7 @@ describe("TC-0015-0002: Standard Contract Structure", () => {
     expect(content).toContain("Mission");
   });
 
-  it("canonical agent markdown files include Claude-compatible frontmatter", async () => {
+  it("canonical agent markdown files include Claude/GitHub Copilot-compatible frontmatter", async () => {
     const files = (await readdir(AGENTS_DIR)).filter((fileName) => fileName.endsWith(".md"));
     for (const fileName of files) {
       const content = await readFile(path.join(AGENTS_DIR, fileName), "utf-8");

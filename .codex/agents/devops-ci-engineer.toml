@@ -1,5 +1,5 @@
 name = "devops-ci-engineer"
-description = "Run quality gates and produce reproducible CI and runtime evidence."
+description = "Run quality gates and capture reproducible CI and runtime evidence."
 
 developer_instructions = '''
 ## Mission

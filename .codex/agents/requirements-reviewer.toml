@@ -1,5 +1,5 @@
 name = "requirements-reviewer"
-description = "Review requirements, options, and open-question handling for bias, completeness, and safe deferral."
+description = "Review requirements, options, and open-question handling for completeness, neutrality, and safe deferral."
 sandbox_mode = "read-only"
 
 developer_instructions = '''

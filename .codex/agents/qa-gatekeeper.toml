@@ -1,5 +1,5 @@
 name = "qa-gatekeeper"
-description = "Enforce validation, coverage, runtime-proof, and prototyping evidence gates before completion."
+description = "Enforce validate, coverage, runtime-proof, and prototyping evidence gates before completion."
 sandbox_mode = "read-only"
 
 developer_instructions = '''

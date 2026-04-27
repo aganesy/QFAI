@@ -357,7 +357,7 @@ describe("uiux validators", () => {
     expect(issues.some((item) => item.code === "QFAI-AGENT-011")).toBe(true);
   });
 
-  it("accepts agent markdown with valid Claude-compatible frontmatter", async () => {
+  it("accepts agent markdown with valid Claude/GitHub Copilot-compatible frontmatter", async () => {
     const root = await newTempDir();
     await seedAgentDefinitionFixture(
       root,

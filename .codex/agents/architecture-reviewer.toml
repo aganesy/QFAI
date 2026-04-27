@@ -1,5 +1,5 @@
 name = "architecture-reviewer"
-description = "Review architecture and contract decisions for correctness, consistency, and rejected-option safety."
+description = "Review architecture and contract decisions for consistency, safety, and rejected-option protection."
 sandbox_mode = "read-only"
 
 developer_instructions = '''

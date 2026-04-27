@@ -511,7 +511,7 @@ async function buildAgentFrontmatterCheck(root: string): Promise<DoctorCheck> {
       id: "agents.frontmatter",
       severity: "error",
       title: "Agent frontmatter",
-      message: `invalid Claude-compatible frontmatter detected (count=${invalidFiles.length})`,
+      message: `invalid Claude/GitHub Copilot-compatible frontmatter detected (count=${invalidFiles.length})`,
       details: {
         count: markdownFiles.length,
         invalidFiles,
@@ -523,7 +523,7 @@ async function buildAgentFrontmatterCheck(root: string): Promise<DoctorCheck> {
     id: "agents.frontmatter",
     severity: "ok",
     title: "Agent frontmatter",
-    message: `all canonical agent markdown files include valid Claude-compatible frontmatter (count=${markdownFiles.length})`,
+    message: `all canonical agent markdown files include valid Claude/GitHub Copilot-compatible frontmatter (count=${markdownFiles.length})`,
     details: {
       count: markdownFiles.length,
       path: toRelativePath(root, agentsDir),

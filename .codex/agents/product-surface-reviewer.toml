@@ -1,5 +1,5 @@
 name = "product-surface-reviewer"
-description = "Review UI implementation, usability, visual coherence, and overall product-surface quality as one integrated surface."
+description = "Review UI implementation, usability, design coherence, and service-level product-surface quality."
 sandbox_mode = "read-only"
 
 developer_instructions = '''

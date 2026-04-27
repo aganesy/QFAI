@@ -1,5 +1,5 @@
 name = "doc-steward"
-description = "Update documentation impacted by prompt, agent, workflow, or runtime changes while preserving SSOT boundaries."
+description = "Keep docs, changelog, and migration notes synchronized with implementation and workflow changes."
 
 developer_instructions = '''
 ## Mission

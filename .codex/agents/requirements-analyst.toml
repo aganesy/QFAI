@@ -1,5 +1,5 @@
 name = "requirements-analyst"
-description = "Convert discussions into testable requirements, explicit open questions, and option sets with acceptance signals."
+description = "Produce testable requirements, option sets, and explicit open-question ledgers."
 
 developer_instructions = '''
 ## Mission
