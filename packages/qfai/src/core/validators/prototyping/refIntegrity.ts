@@ -259,7 +259,7 @@ export async function validatePrototypingArtifactRefIntegrity(
         issue(
           "QFAI-PROT-REF-001",
           `${ref.source}: ${ref.field}="${ref.ref}" points to a file that does not exist on disk.`,
-          "error",
+          "warning",
           ref.source,
           "prototyping.artifactRef.reality",
           undefined,

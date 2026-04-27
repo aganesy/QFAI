@@ -25,19 +25,19 @@
  *
  * TC-0012-0287 — ExecutionPlan 4-field requirement
  *   Still applicable under spec-0017 unified gate.
- *   Covered by: tests/integration/prototypingSkillV1716Integration.test.ts
+ *   Covered by: tests/validators/prototyping/*.test.ts (post v1.8.4 split)
  *   (TC-0012-0290 "Missing executionPlan → PROT-EXEC-PLAN error")
  *
  * TC-0012-0288 — full-harness missing executionPlan → ERROR
- *   Covered by: tests/integration/prototypingSkillV1716Integration.test.ts
+ *   Covered by: tests/validators/prototyping/*.test.ts (post v1.8.4 split)
  *   (TC-0012-0290 executionPlan validator)
  *
  * TC-0012-0289 — iteration gate rejects iterationCount===1 && converged
- *   Covered by: tests/integration/prototypingSkillV1716Integration.test.ts
+ *   Covered by: tests/validators/prototyping/*.test.ts (post v1.8.4 split)
  *   (TC-0012-0287 "Iteration gate rejects iterationCount==1 && converged")
  *
  * TC-0012-0290 — scoringTrace.screenshotDir missing → ERROR
- *   Covered by: tests/integration/prototypingSkillV1716Integration.test.ts
+ *   Covered by: tests/validators/prototyping/*.test.ts (post v1.8.4 split)
  *   (TC-0012-0295 screenshotDir validator)
  *
  * TC-0012-0291 — 5-step iteration cycle records screenshotDir
@@ -48,7 +48,7 @@
  *   .qfai/assistant/skills/qfai-prototyping/references/iteration-cycle.md
  *
  * TC-0012-0292 — calibration.overrides precedence
- *   Covered by: tests/integration/prototypingSkillV1716Integration.test.ts
+ *   Covered by: tests/validators/prototyping/*.test.ts (post v1.8.4 split)
  *   (TC-0012-0304 applyCalibrationOverrides)
  *
  * TC-0012-0293 — calibration.overrides invalid values rejected
@@ -59,7 +59,7 @@
  *   Covered by: tests/skill/prototypingSkillV1716.test.ts (TC-0012-0285)
  *
  * TC-0012-0295 — undefined delegationMap entry surfaces as reviewer finding
- *   Covered by: tests/integration/prototypingSkillV1716Integration.test.ts
+ *   Covered by: tests/validators/prototyping/*.test.ts (post v1.8.4 split)
  *   (TC-0012-0286 delegationMap validator)
  *
  * TC-0012-0296 — Evaluator input 4-element MUST protocol
@@ -77,15 +77,15 @@
  *   Superseded by spec-0017 DEC-0017-0007 (Lighthouse optional everywhere).
  *
  * TC-0012-0300 — designSystemCompliance < 80% emits L1 finding
- *   Covered by: tests/integration/prototypingSkillV1716Integration.test.ts
+ *   Covered by: tests/validators/prototyping/*.test.ts (post v1.8.4 split)
  *   (TC-0012-0302 designSystemCompliance 65% threshold)
  *
  * TC-0012-0301 — designSystemCompliance ≥ 85% passes
- *   Covered by: tests/integration/prototypingSkillV1716Integration.test.ts
+ *   Covered by: tests/validators/prototyping/*.test.ts (post v1.8.4 split)
  *   (TC-0012-0301 designSystemCompliance 85% pass)
  *
  * TC-0012-0302 — designSystemCompliance skipped without 12_design_system.md
- *   Covered by: tests/integration/prototypingSkillV1716Integration.test.ts
+ *   Covered by: tests/validators/prototyping/*.test.ts (post v1.8.4 split)
  *   (TC-0012-0303 absent design-system skips scoring)
  *
  * TC-0012-0303 — Backward compatibility with pre-v1.7.16 prototyping.json

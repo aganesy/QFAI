@@ -28,6 +28,15 @@ async function isDirectory(absolutePath: string): Promise<boolean> {
   }
 }
 
+async function pathExists(absolutePath: string): Promise<boolean> {
+  try {
+    await stat(absolutePath);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 /**
  * `paths.*` keys whose existence is verified. `outDir` is excluded because
  * QFAI creates it lazily on first write; checking it would emit warnings on
@@ -95,20 +104,24 @@ export async function validateConfigReferenceIntegrity(
   }
 
   // ─── QFAI-CFG-LINK-003: calibration.packPath existence ───────────────────
+  // packPath may be either a YAML file (legacy: pack as single file) or a
+  // directory (new: pack as directory tree). Accept either; reject only
+  // when neither resolves on disk.
   const packPath = config.prototyping?.calibration?.packPath;
   if (packPath !== undefined) {
     const absolutePackPath = path.resolve(root, packPath);
-    if (!(await isDirectory(absolutePackPath))) {
+    const exists = await pathExists(absolutePackPath);
+    if (!exists) {
       issues.push(
         issue(
           "QFAI-CFG-LINK-003",
-          `qfai.config.yaml: prototyping.calibration.packPath="${packPath}" but the directory does not exist.`,
+          `qfai.config.yaml: prototyping.calibration.packPath="${packPath}" but the path does not exist on disk.`,
           "error",
           "qfai.config.yaml",
           "config.prototyping.calibration.packPath.reality",
           undefined,
           "canonical",
-          "prototyping.calibration.packPath を実在する calibration pack ディレクトリに合わせてください。",
+          "prototyping.calibration.packPath を実在する calibration pack (YAML ファイル または ディレクトリ) に合わせてください。",
         ),
       );
     }

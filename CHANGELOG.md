@@ -106,9 +106,9 @@ preventive mechanisms at every layer of the stack.
     missing spec
   - `QFAI-PROT-LINK-003` — candidate artifact dir missing
   - `QFAI-PROT-LINK-004` — polish cycle iteration dir missing
-- **88 new tests** across 13 new test files (state gate, certificate,
-  ID linkage, lint-shipping, RR-8-2 regression, etc.). All 203 test
-  files / 1557 cases green.
+- **100+ new test cases** across 13 new test files (state gate,
+  certificate, ID linkage, lint-shipping, RR-8-2 regression, etc.).
+  Final test suite: 203 test files / 1557 cases, all green.
 
 ### Changed
 
@@ -155,6 +155,26 @@ preventive mechanisms at every layer of the stack.
 - Removed `tests/integration/prototypingSkillV1716Integration.test.ts`
   (redundant after spec-0017 absorption — every TC is now unit-tested
   in dedicated `*Issues` adapter test files).
+
+### Compatibility notes (severity escalation timeline)
+
+The new ID-linkage validators ship at **warning** severity in v1.8.4
+to give existing user repos a one-release transition window:
+
+- `QFAI-PROT-LINK-001..004` (spec ID linkage in prototyping.json
+  artifacts): warning. Escalates to error in **v1.9.0**.
+- `QFAI-PROT-REF-001` (dangling artifact ref): warning. Escalates
+  to error in **v1.9.0**.
+- `QFAI-CFG-LINK-001` / `QFAI-CFG-LINK-003` (config-time
+  primarySpecId / calibration packPath dangling): error from v1.8.4
+  (config typos benefit from immediate signal).
+- `QFAI-CFG-LINK-002` (paths.\* directory absent): warning (init-time
+  lazy creation rationale).
+
+`qfai validate --profile prototyping --fail-on error` therefore PASSes
+on v1.8.3 → v1.8.4 upgrade even when prototyping.json carries
+absorbed-spec history. See `packages/qfai/docs/MIGRATION-1.8.4.md`
+for the recommended cleanup path.
 
 ### Deferred to a follow-up release
 

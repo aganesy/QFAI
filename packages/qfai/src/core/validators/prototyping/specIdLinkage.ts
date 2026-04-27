@@ -91,7 +91,7 @@ export async function validateSpecIdLinkage(
             issue(
               "QFAI-PROT-LINK-001",
               `${protoRel}: specs[${i}].specId="${String(entry.specId)}" but spec-${id} does not exist under ${path.relative(root, specsRoot).replace(/\\/g, "/")}/.`,
-              "error",
+              "warning",
               protoRel,
               "prototyping.specs.idReality",
               undefined,
@@ -133,7 +133,7 @@ export async function validateSpecIdLinkage(
               issue(
                 "QFAI-PROT-LINK-003",
                 `${protoRel}: rounds[${i}].candidates[${j}].candidateId="${candidateId}" but ${relCandidateDir} does not exist.`,
-                "error",
+                "warning",
                 protoRel,
                 "prototyping.candidates.dirReality",
                 undefined,
@@ -168,7 +168,7 @@ export async function validateSpecIdLinkage(
             issue(
               "QFAI-PROT-LINK-004",
               `${protoRel}: polishCycles[${i}].cycle=${cycleNum} but ${relIterationDir} does not exist.`,
-              "error",
+              "warning",
               protoRel,
               "prototyping.polishCycles.iterationDirReality",
               undefined,

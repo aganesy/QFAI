@@ -117,7 +117,7 @@ describe("validatePrototypingArtifactRefIntegrity", () => {
     const issues = await validatePrototypingArtifactRefIntegrity(root, makeConfig());
     expect(issues).toHaveLength(1);
     expect(issues[0]?.code).toBe("QFAI-PROT-REF-001");
-    expect(issues[0]?.severity).toBe("error");
+    expect(issues[0]?.severity).toBe("warning");
     expect(issues[0]?.message).toMatch(/absorptionPlanRef/);
     expect(issues[0]?.message).toMatch(/does not exist/);
   });
