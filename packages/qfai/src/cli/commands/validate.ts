@@ -397,7 +397,7 @@ const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-PROT-308": "fullHarness status is converged but iterationCount < 2.",
   "QFAI-PROT-309": "fullHarness iteration reviewer is a placeholder value.",
   "QFAI-PROT-310":
-    "executionPlan is required in full-harness mode but is absent or not an object in prototyping.json.",
+    "executionPlan in prototyping.json must be present and well-formed in full-harness mode: the block itself must be an object, and each of targetIterations (number), evaluationAxesSource (non-empty string), delegationMap (object), plannedAt (non-empty string) must be present with the correct shape.",
   "QFAI-PROT-311":
     "delegationMap entry assigns a category to a role outside the SKILL.md Delegation Scope Table.",
   "QFAI-PROT-316": "reviewerSignoff.status does not match fullHarness.finalDecision.",

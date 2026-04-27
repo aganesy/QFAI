@@ -1993,7 +1993,10 @@ async function collectPrototypingSummary(
 
           return {
             schemaVersion: "2.0" as const,
-            rounds: Math.max(rounds.length, fsRoundScan.observedRoundIds.length),
+            // Use the union size — Math.max underestimates when index and
+            // filesystem describe disjoint round IDs (Copilot MAJOR review
+            // on PR #201).
+            rounds: roundIdSet.size,
             roundIds: Array.from(roundIdSet),
             candidatesObserved,
             perfectRounds,
