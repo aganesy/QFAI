@@ -473,6 +473,21 @@ describe("report contract coverage", () => {
     await mkdir(evidenceRoot, { recursive: true });
     await writeSpecPack(specsRoot, "spec-0001", "SPEC-0001");
     await writeFile(path.join(evidenceRoot, "prototyping.md"), "# Evidence\n", "utf-8");
+
+    // v1.8.4 Phase 4: counts come from filesystem, not index. Seed actual
+    // round artifact files so the filesystem-first scan matches the index
+    // declarations. (Pre-Phase-4 the index was authoritative; the new
+    // contract is filesystem-first per RR §8.2 fix.)
+    const roundsRoot = path.join(evidenceRoot, "prototyping", "rounds");
+    await mkdir(path.join(roundsRoot, "r5"), { recursive: true });
+    await mkdir(path.join(roundsRoot, "r3"), { recursive: true });
+    await writeFile(path.join(roundsRoot, "r5", "harvest.json"), "{}\n", "utf-8");
+    await writeFile(path.join(roundsRoot, "r5", "narrow-decision.json"), "{}\n", "utf-8");
+    await writeFile(path.join(roundsRoot, "r3", "harvest.json"), "{}\n", "utf-8");
+    await writeFile(path.join(roundsRoot, "r3", "narrow-decision.json"), "{}\n", "utf-8");
+    await writeFile(path.join(roundsRoot, "r3", "absorption-plan.json"), "{}\n", "utf-8");
+    await writeFile(path.join(roundsRoot, "r3", "reimplementation.json"), "{}\n", "utf-8");
+
     await writeFile(
       path.join(evidenceRoot, "prototyping.json"),
       JSON.stringify({
