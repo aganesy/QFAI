@@ -15,6 +15,17 @@ const REQUIRED_DESIGN_FILES = [
   "selected-direction.yaml",
   "design-system.yaml",
 ] as const;
+const REQUIRED_DESIGN_SYSTEM_CHECKLIST_KEYS = [
+  "color",
+  "typography",
+  "spacing",
+  "border_radius",
+  "shadow",
+  "dos_and_donts",
+  "motion_rules",
+] as const;
+const PROVISIONAL_SELECTION_STATUS_RE = /^provisional(?:$|[_-])/i;
+const PLACEHOLDER_RE = /^(?:tbd|todo|n\/a|none|placeholder|example|lorem|to be defined)$/i;
 
 function toPosixRelative(root: string, targetPath: string): string {
   return path.relative(root, targetPath).replace(/\\/g, "/");
@@ -199,11 +210,31 @@ async function validateSelectedDirection(root: string, config: QfaiConfig): Prom
     filePath,
     root,
     parsed.value,
-    ["winning_rationale", "carry_forward_rules"],
+    ["carry_forward_rules"],
     "QFAI-DCON-004",
     "selected-direction.yaml is missing required field",
     "designContractReadiness.selectedDirectionField",
   );
+
+  const winningRationale = parsed.value.winning_rationale;
+  const selectionRationale = parsed.value.selection_rationale;
+  if (
+    !hasMeaningfulContractContent(winningRationale) &&
+    !hasMeaningfulContractContent(selectionRationale)
+  ) {
+    const selectionStatus = getSelectionStatus(parsed.value);
+    issues.push(
+      issue(
+        "QFAI-DCON-004",
+        isProvisionalSelectionStatus(selectionStatus)
+          ? "selected-direction.yaml is missing required provisional rationale ('selection_rationale' or 'winning_rationale')."
+          : "selected-direction.yaml is missing required field 'winning_rationale' (legacy alias: 'selection_rationale').",
+        "error",
+        toPosixRelative(root, filePath),
+        "designContractReadiness.selectedDirectionField",
+      ),
+    );
+  }
 
   const chosenDirectionId = parsed.value.chosen_direction_id;
   const legacyDirectionId = parsed.value.direction_id;
@@ -240,19 +271,9 @@ async function validateDesignSystem(root: string, config: QfaiConfig): Promise<I
   }
 
   const checklist = parsed.value.checklist;
-  const requiredKeys = [
-    "color",
-    "typography",
-    "spacing",
-    "border_radius",
-    "shadow",
-    "dos_and_donts",
-    "component_tone",
-    "motion_rules",
-  ];
   const issues: Issue[] = [];
 
-  for (const key of requiredKeys) {
+  for (const key of REQUIRED_DESIGN_SYSTEM_CHECKLIST_KEYS) {
     if (
       !(checklist && typeof checklist === "object" && key in (checklist as Record<string, unknown>))
     ) {
@@ -266,6 +287,26 @@ async function validateDesignSystem(root: string, config: QfaiConfig): Promise<I
         ),
       );
     }
+  }
+
+  const hasComponentToneChecklistKey =
+    checklist &&
+    typeof checklist === "object" &&
+    "component_tone" in (checklist as Record<string, unknown>);
+  const hasComponentGuidanceAlias =
+    hasMeaningfulContractContent(parsed.value.component_tone) ||
+    hasMeaningfulContractContent(parsed.value.component_semantics) ||
+    hasMeaningfulContractContent(parsed.value.content_tone);
+  if (!hasComponentToneChecklistKey && !hasComponentGuidanceAlias) {
+    issues.push(
+      issue(
+        "QFAI-DCON-005",
+        "design-system.yaml is missing component guidance (expected checklist.component_tone or a richer component_tone/component_semantics/content_tone block).",
+        "error",
+        toPosixRelative(root, filePath),
+        "designContractReadiness.designSystemChecklist",
+      ),
+    );
   }
 
   return issues;
@@ -283,11 +324,7 @@ function validateRequiredStringArrayKeys(
   const issues: Issue[] = [];
   for (const key of requiredKeys) {
     const value = record[key];
-    const valid =
-      typeof value === "string"
-        ? value.trim().length > 0
-        : Array.isArray(value) && value.every((item) => typeof item === "string");
-    if (!valid) {
+    if (!hasMeaningfulContractContent(value)) {
       issues.push(
         issue(code, `${messagePrefix} '${key}'.`, "error", toPosixRelative(root, filePath), rule),
       );
@@ -298,6 +335,36 @@ function validateRequiredStringArrayKeys(
 
 function isNonEmptyStringValue(value: unknown): value is string {
   return typeof value === "string" && value.trim().length > 0;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function hasMeaningfulContractContent(value: unknown, depth = 0): boolean {
+  if (depth > 8) {
+    return false;
+  }
+  if (typeof value === "string") {
+    const normalized = value.trim();
+    return normalized.length > 0 && !PLACEHOLDER_RE.test(normalized);
+  }
+  if (Array.isArray(value)) {
+    return value.some((entry) => hasMeaningfulContractContent(entry, depth + 1));
+  }
+  if (isRecord(value)) {
+    return Object.values(value).some((entry) => hasMeaningfulContractContent(entry, depth + 1));
+  }
+  return false;
+}
+
+function getSelectionStatus(record: Record<string, unknown>): string | null {
+  const value = record.selection_status;
+  return typeof value === "string" && value.trim().length > 0 ? value.trim() : null;
+}
+
+function isProvisionalSelectionStatus(value: string | null): boolean {
+  return value !== null && PROVISIONAL_SELECTION_STATUS_RE.test(value);
 }
 
 async function readYaml(filePath: string): Promise<YamlReadResult> {
