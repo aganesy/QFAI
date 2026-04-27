@@ -36,6 +36,7 @@
     "build": "tsup",
     "prepack": "npm run build",
     "lint": "eslint src",
+    "lint:shipping": "vitest run tests/scripts/lintShipping.test.ts",
     "check-types": "tsc --noEmit",
     "test": "vitest run",
     "test:core": "vitest run --project core",

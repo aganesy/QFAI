@@ -58,4 +58,11 @@ export default defineWorkspace([
       include: ["tests/cli/**/*.test.ts"],
     },
   },
+  {
+    test: {
+      ...shared,
+      name: "scripts",
+      include: ["tests/scripts/**/*.test.ts"],
+    },
+  },
 ]);
