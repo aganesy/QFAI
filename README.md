@@ -17,8 +17,7 @@ The agent reads the repository, produces the required artifacts, and iterates un
 
 ## Release status
 
-- Current package version: `1.7.15`
-- Release posture: v1.7.15 enforces runtime truthfulness.
+- Release posture: runtime truthfulness is enforced.
 - Prototyping is UI-only; `full-harness` is measurement-driven iteration accumulation for UI-bearing surfaces only.
 - Runtime observation is observed-only (no synthetic 200 / API / DB prototyping coverage).
 - Browser QA is mandatory per screen in full-harness, and `actionsWired` reports action coverage rather than finding count.
@@ -196,7 +195,7 @@ Notes.
 - `validate.json`, `report.json`, `doctor.json`, and `run-*` JSON logs are internal exports and are not a stable external contract; prefer `report.md` for integrations that must survive tool upgrades.
 - Scenario files are expected to use the Gherkin extension `*.feature` (not `*.md`).
 - `prototyping.calibration.packPath` points to the calibration pack SSOT; runtime and validator both resolve thresholds and iteration parameters from that pack.
-- Observability modules (`src/core/observability/`) exist as foundation code but are **not integrated into blocking validation** in v1.7.14. They are reserved for future operational instrumentation.
+- Observability modules (`src/core/observability/`) exist as foundation code but are **not yet integrated into blocking validation**. They are reserved for future operational instrumentation.
 
 ## Specifications and contracts (SDD)
 
@@ -225,7 +224,7 @@ flowchart LR
 - Contracts SSOT: `.qfai/contracts/**`
 - Report outputs (`.qfai/report/**`) are derived artifacts and not SSOT.
 
-## Minimal tutorial (v1.7.7)
+## Minimal tutorial
 
 1. `npx qfai init`
 2. Run `/qfai-discussion` to structure scope, open questions, and produce a discussion pack under `.qfai/discussion/discussion-<ts>/`.
