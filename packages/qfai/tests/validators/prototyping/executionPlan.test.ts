@@ -59,4 +59,84 @@ describe("validateExecutionPlanIssues (v1.8.4 standard adapter)", () => {
     expect(validateExecutionPlanIssues(null, path)).toEqual([]);
     expect(validateExecutionPlanIssues(42, path)).toEqual([]);
   });
+
+  // ─── Field-level validation (added by PR #201 Copilot review) ────────────
+
+  function recordWithPlan(plan: Record<string, unknown>): unknown {
+    return {
+      mode: { effective: "full-harness", source: "explicit-request", rationale: "test" },
+      executionPlan: plan,
+    };
+  }
+
+  it("emits QFAI-PROT-310 when targetIterations is missing", () => {
+    const issues = validateExecutionPlanIssues(
+      recordWithPlan({
+        evaluationAxesSource: ".qfai/contracts/design/evaluation-rubric.yaml",
+        delegationMap: { UI実装: "frontend-engineer" },
+        plannedAt: "2026-04-26T00:00:00Z",
+      }),
+      path,
+    );
+    expect(issues).toHaveLength(1);
+    expect(issues[0]?.message).toMatch(/targetIterations.*required/);
+    expect(issues[0]?.message).toMatch(/number/);
+  });
+
+  it("emits QFAI-PROT-310 when targetIterations has the wrong shape (string)", () => {
+    const issues = validateExecutionPlanIssues(
+      recordWithPlan({
+        targetIterations: "20", // wrong: string instead of number
+        evaluationAxesSource: ".qfai/contracts/design/evaluation-rubric.yaml",
+        delegationMap: { UI実装: "frontend-engineer" },
+        plannedAt: "2026-04-26T00:00:00Z",
+      }),
+      path,
+    );
+    expect(issues).toHaveLength(1);
+    expect(issues[0]?.message).toMatch(/targetIterations/);
+  });
+
+  it("emits QFAI-PROT-310 when delegationMap is an array (not a record)", () => {
+    const issues = validateExecutionPlanIssues(
+      recordWithPlan({
+        targetIterations: 20,
+        evaluationAxesSource: ".qfai/contracts/design/evaluation-rubric.yaml",
+        delegationMap: ["frontend-engineer"], // wrong: array
+        plannedAt: "2026-04-26T00:00:00Z",
+      }),
+      path,
+    );
+    expect(issues).toHaveLength(1);
+    expect(issues[0]?.message).toMatch(/delegationMap/);
+    expect(issues[0]?.message).toMatch(/record/);
+  });
+
+  it("emits QFAI-PROT-310 when plannedAt is whitespace-only", () => {
+    const issues = validateExecutionPlanIssues(
+      recordWithPlan({
+        targetIterations: 20,
+        evaluationAxesSource: ".qfai/contracts/design/evaluation-rubric.yaml",
+        delegationMap: { UI実装: "frontend-engineer" },
+        plannedAt: "   ", // whitespace only — should fail trim() check
+      }),
+      path,
+    );
+    expect(issues).toHaveLength(1);
+    expect(issues[0]?.message).toMatch(/plannedAt/);
+  });
+
+  it("emits one issue per missing/wrong-shape field (multiple in single run)", () => {
+    const issues = validateExecutionPlanIssues(
+      recordWithPlan({
+        targetIterations: "20",
+        evaluationAxesSource: "", // empty
+        delegationMap: null, // missing
+        plannedAt: "2026-04-26T00:00:00Z",
+      }),
+      path,
+    );
+    expect(issues).toHaveLength(3);
+    expect(issues.every((i) => i.code === "QFAI-PROT-310")).toBe(true);
+  });
 });

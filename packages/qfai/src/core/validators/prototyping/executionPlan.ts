@@ -24,8 +24,12 @@ function matchesShape(value: unknown, shape: FieldShape): boolean {
     case "number":
       return typeof value === "number" && Number.isFinite(value);
     case "non-empty-string":
+      // .trim() catches whitespace-only strings (e.g. "   ") that would
+      // otherwise pass a length-only check (Copilot MAJOR review on PR #201).
       return typeof value === "string" && value.trim().length > 0;
     case "record":
+      // record === plain object (NOT array, NOT null). delegationMap as an
+      // array would otherwise pass typeof===object.
       return typeof value === "object" && value !== null && !Array.isArray(value);
   }
 }
