@@ -22,6 +22,7 @@ export { validateLighthouseGateIssues } from "./prototyping/lighthouseGate.js";
 export { validateIterationGateIssues } from "./prototyping/iterationGate.js";
 export { validateDesignSystemThresholdIssues } from "./prototyping/designSystemThreshold.js";
 export { validateStateGate } from "./prototyping/stateGate.js";
+export { validateCompletionCertificateIssues } from "./prototyping/completionCertificate.js";
 export { validateRequireIndexShape } from "./requireIndex.js";
 export { validateRepositoryHygiene } from "./repositoryHygiene.js";
 export { validateReviewArtifacts } from "./reviewArtifacts.js";

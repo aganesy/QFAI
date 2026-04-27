@@ -29,12 +29,16 @@ export type ParsedArgs = {
       | "round-harvest"
       | "round-narrow"
       | "round-absorb"
-      | "round-reimplement-verify";
+      | "round-reimplement-verify"
+      | "certify"
+      | "show-spec";
     prototypingTargetUrl?: string;
     prototypingMode?: "low-cost" | "standard" | "full-harness";
     prototypingRound?: "r5" | "r3" | "r2" | "r1";
     prototypingCandidates?: string[];
     prototypingSurvivors?: string[];
+    /** v1.8.4: --check flag for `qfai prototyping certify --check`. */
+    prototypingCheckOnly?: boolean;
     help: boolean;
     invalidExitCode: number;
   };
@@ -98,7 +102,9 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         candidate === "round-harvest" ||
         candidate === "round-narrow" ||
         candidate === "round-absorb" ||
-        candidate === "round-reimplement-verify"
+        candidate === "round-reimplement-verify" ||
+        candidate === "certify" ||
+        candidate === "show-spec"
       ) {
         options.prototypingAction = candidate;
       } else {
@@ -349,6 +355,12 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         }
         options.prototypingSurvivors = values;
         i += 1;
+        break;
+      }
+      case "--check": {
+        // v1.8.4: only used by `qfai prototyping certify --check`.
+        // The flag takes no value; presence flips the boolean.
+        options.prototypingCheckOnly = true;
         break;
       }
       case "--help":

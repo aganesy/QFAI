@@ -429,6 +429,10 @@ const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "fullHarness.iterations: minimum 2 iterations required before convergence; iteration 1 cannot be marked converged.",
   "QFAI-PROT-334":
     "scoringTrace.designSystemCompliance is below the 0.75 threshold while 12_design_system.md is present in the calibration pack; immediate fix required for next iteration.",
+  "QFAI-PROT-335":
+    ".qfai/evidence/prototyping/completion-certificate.json is required when prototyping completion is claimed (run `qfai prototyping certify` after all gates pass).",
+  "QFAI-PROT-336":
+    ".qfai/evidence/prototyping/completion-certificate.json digest mismatch — evidence has been modified since certify; re-run `qfai prototyping certify`.",
   "QFAI-PROT-AXIS-FLOOR-001":
     "Each candidate's evaluator-review perAxis[].score must meet evaluation-rubric.yaml hard_floors[].min_score in absorption rounds (r3|r2|r1). r5 is exempt.",
   "QFAI-UIE-001":
