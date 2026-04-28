@@ -114,6 +114,13 @@ describe("parseArgs", () => {
     expect(parsed.options.help).toBe(true);
   });
 
+  it("rejects unsupported --format values for prototyping preflight", () => {
+    const cwd = process.cwd();
+    const parsed = parseArgs(["prototyping", "preflight", "--format", "github"], cwd);
+    expect(parsed.invalid).toBe(true);
+    expect(parsed.options.help).toBe(true);
+  });
+
   it("parses sdd profile for validate", () => {
     const cwd = process.cwd();
     const parsed = parseArgs(["validate", "--profile", "sdd"], cwd);
