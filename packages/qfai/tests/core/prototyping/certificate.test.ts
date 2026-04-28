@@ -237,4 +237,30 @@ describe("checkCompletionCertificate", () => {
 
     expect(loaded?.reviewerSignoff.reviewerId).toBe("legacy-reviewer");
   });
+
+  it("returns null when required completion-certificate fields are missing", async () => {
+    const root = await newTempDir();
+    const certPath = path.join(root, COMPLETION_CERTIFICATE_REL_PATH);
+    await mkdir(path.dirname(certPath), { recursive: true });
+    await writeFile(
+      certPath,
+      `${JSON.stringify({
+        schemaVersion: "1.0",
+        runId: "broken-run",
+        evidenceDigests: [],
+        validateRun: { errorCount: 0, ranAt: "2026-04-27T00:00:00Z" },
+        verifyRun: { status: "PASS", ranAt: "2026-04-27T00:00:00Z" },
+        reviewerSignoff: {
+          reviewerId: "reviewer",
+          approved: true,
+          timestamp: "2026-04-27T00:00:00Z",
+        },
+      })}\n`,
+      "utf-8",
+    );
+
+    const loaded = await loadCompletionCertificate(root);
+
+    expect(loaded).toBeNull();
+  });
 });

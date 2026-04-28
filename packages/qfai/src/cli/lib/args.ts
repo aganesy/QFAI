@@ -158,6 +158,11 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
           markInvalid();
           break;
         }
+        if (command === "prototyping" && options.prototypingAction !== "preflight") {
+          markInvalid();
+          i += 1;
+          break;
+        }
         applyFormatOption(command, next, options);
         i += 1;
         break;

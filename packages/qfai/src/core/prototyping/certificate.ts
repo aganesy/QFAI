@@ -111,21 +111,64 @@ export async function loadCompletionCertificate(
   }
 }
 
-function isMinimallyValidCertificate(value: unknown): value is Record<string, unknown> {
+type CompletionCertificateRecord = {
+  schemaVersion: "1.0";
+  runId: string;
+  generatedAt: string;
+  generator: { tool: "qfai"; version: string };
+  evidenceDigests: Array<{ path: string; sha256: string }>;
+  validateRun: { errorCount: number; ranAt: string };
+  verifyRun: { status: string; ranAt: string };
+  reviewerSignoff: {
+    reviewerId?: string;
+    reviewer?: string;
+    approved: boolean;
+    timestamp: string;
+  };
+  iterationCount: number;
+  polishCycleCount: number;
+  specsCovered: string[];
+};
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return !!value && typeof value === "object" && !Array.isArray(value);
+}
+
+function isStringArray(value: unknown): value is string[] {
+  return Array.isArray(value) && value.every((item) => typeof item === "string");
+}
+
+function isEvidenceDigestArray(
+  value: unknown,
+): value is CompletionCertificateRecord["evidenceDigests"] {
+  return (
+    Array.isArray(value) &&
+    value.every(
+      (entry) =>
+        isRecord(entry) && typeof entry.path === "string" && typeof entry.sha256 === "string",
+    )
+  );
+}
+
+function isMinimallyValidCertificate(value: unknown): value is CompletionCertificateRecord {
   if (!value || typeof value !== "object" || Array.isArray(value)) return false;
   const v = value as Record<string, unknown>;
   if (v.schemaVersion !== "1.0") return false;
   if (typeof v.runId !== "string") return false;
-  if (!Array.isArray(v.evidenceDigests)) return false;
-  for (const entry of v.evidenceDigests) {
-    if (!entry || typeof entry !== "object") return false;
-    const e = entry as Record<string, unknown>;
-    if (typeof e.path !== "string" || typeof e.sha256 !== "string") return false;
+  if (typeof v.generatedAt !== "string") return false;
+  if (!isRecord(v.generator)) return false;
+  if (v.generator.tool !== "qfai" || typeof v.generator.version !== "string") return false;
+  if (!isEvidenceDigestArray(v.evidenceDigests)) return false;
+  if (!isRecord(v.validateRun)) return false;
+  if (typeof v.validateRun.errorCount !== "number" || typeof v.validateRun.ranAt !== "string") {
+    return false;
   }
-  if (!v.validateRun || typeof v.validateRun !== "object") return false;
-  if (!v.verifyRun || typeof v.verifyRun !== "object") return false;
-  if (!v.reviewerSignoff || typeof v.reviewerSignoff !== "object") return false;
-  const reviewerSignoff = v.reviewerSignoff as Record<string, unknown>;
+  if (!isRecord(v.verifyRun)) return false;
+  if (typeof v.verifyRun.status !== "string" || typeof v.verifyRun.ranAt !== "string") {
+    return false;
+  }
+  if (!isRecord(v.reviewerSignoff)) return false;
+  const reviewerSignoff = v.reviewerSignoff;
   if (
     typeof reviewerSignoff.reviewerId !== "string" &&
     typeof reviewerSignoff.reviewer !== "string"
@@ -134,6 +177,9 @@ function isMinimallyValidCertificate(value: unknown): value is Record<string, un
   }
   if (typeof reviewerSignoff.approved !== "boolean") return false;
   if (typeof reviewerSignoff.timestamp !== "string") return false;
+  if (typeof v.iterationCount !== "number") return false;
+  if (typeof v.polishCycleCount !== "number") return false;
+  if (!isStringArray(v.specsCovered)) return false;
   return true;
 }
 
@@ -143,19 +189,40 @@ function normalizeCompletionCertificate(value: unknown): CompletionCertificate |
   }
 
   const record = value;
-  const reviewerSignoff = record.reviewerSignoff as Record<string, unknown>;
+  const reviewerSignoff = record.reviewerSignoff;
   const reviewerId =
     typeof reviewerSignoff.reviewerId === "string"
       ? reviewerSignoff.reviewerId
       : (reviewerSignoff.reviewer as string);
 
   return {
-    ...(record as Omit<CompletionCertificate, "reviewerSignoff">),
+    schemaVersion: "1.0",
+    runId: record.runId,
+    generatedAt: record.generatedAt,
+    generator: {
+      tool: "qfai",
+      version: record.generator.version,
+    },
+    evidenceDigests: record.evidenceDigests.map((entry) => ({
+      path: entry.path,
+      sha256: entry.sha256,
+    })),
+    validateRun: {
+      errorCount: record.validateRun.errorCount,
+      ranAt: record.validateRun.ranAt,
+    },
+    verifyRun: {
+      status: record.verifyRun.status,
+      ranAt: record.verifyRun.ranAt,
+    },
     reviewerSignoff: {
       reviewerId,
-      approved: reviewerSignoff.approved as boolean,
-      timestamp: reviewerSignoff.timestamp as string,
+      approved: reviewerSignoff.approved,
+      timestamp: reviewerSignoff.timestamp,
     },
+    iterationCount: record.iterationCount,
+    polishCycleCount: record.polishCycleCount,
+    specsCovered: [...record.specsCovered],
   };
 }
 

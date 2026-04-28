@@ -104,6 +104,16 @@ describe("parseArgs", () => {
     expect(parsed.options.help).toBe(true);
   });
 
+  it("rejects --format for non-preflight prototyping actions", () => {
+    const cwd = process.cwd();
+    const parsed = parseArgs(
+      ["prototyping", "round-start", "--round", "r5", "--candidates", "c1", "--format", "json"],
+      cwd,
+    );
+    expect(parsed.invalid).toBe(true);
+    expect(parsed.options.help).toBe(true);
+  });
+
   it("parses sdd profile for validate", () => {
     const cwd = process.cwd();
     const parsed = parseArgs(["validate", "--profile", "sdd"], cwd);
