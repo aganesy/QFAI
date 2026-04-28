@@ -36,7 +36,7 @@ and distributed agent metadata before runtime delegation starts.
 ### Changed
 
 - **Doctor / preflight / skill alignment**: `qfai doctor --profile
-  prototyping`, `qfai prototyping preflight`, validators, and shipped
+prototyping`, `qfai prototyping preflight`, validators, and shipped
   `qfai-prototyping` assets now diagnose active wrapper integrations,
   literal required-input paths, launcher readiness, and runtime
   hard-stop expectations from the same policy.
