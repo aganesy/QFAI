@@ -39,6 +39,19 @@ Rules:
 - Do not reintroduce options marked as rejected in `09_delta.md`.
 - If a rejected option must be reconsidered, create a `[RE-OPEN]` decision record that references the prior DR-ID, states what changed, and includes explicit approval.
 
+## Gate Failure Autorepair Protocol
+
+When validate, doctor, test, lint, typecheck, build, capture, or report gates fail:
+
+- inspect exit code, logs, `validate.json`, and cited files before reporting;
+- classify each finding as skill-owned artifact, upstream spec/contract, code/test defect, environment/tooling, or user decision;
+- fix skill-owned artifacts and code/test defects autonomously when the fix is local and non-destructive;
+- rerun the same failing gate after each fix batch;
+- do not weaken profiles, lower `--fail-on`, waive errors, invent evidence, or skip required reviewers;
+- stop only for destructive changes, ambiguous product/spec decisions, missing permissions/tools, or repeated no-progress failures.
+
+When stopping, report: cause, attempted fixes, remaining blocker, user action, and retry gate.
+
 ## Completion Contract (Shared)
 
 Before declaring completion, you MUST:

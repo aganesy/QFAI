@@ -126,6 +126,31 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     }
   });
 
+  it("ensures shared operating baseline defines gate failure autorepair protocol", async () => {
+    const baselinePath = path.join(
+      templateQfaiDir,
+      "assistant",
+      "instructions",
+      "shared-skill-operating-baseline.md",
+    );
+    const baseline = await readFile(baselinePath, "utf-8");
+    const requiredPhrases = [
+      "## Gate Failure Autorepair Protocol",
+      "validate, doctor, test, lint, typecheck, build, capture, or report gates fail",
+      "inspect exit code, logs, `validate.json`, and cited files before reporting",
+      "skill-owned artifact, upstream spec/contract, code/test defect, environment/tooling, or user decision",
+      "fix skill-owned artifacts and code/test defects autonomously",
+      "rerun the same failing gate after each fix batch",
+      "do not weaken profiles, lower `--fail-on`, waive errors, invent evidence, or skip required reviewers",
+      "stop only for destructive changes, ambiguous product/spec decisions, missing permissions/tools, or repeated no-progress failures",
+      "cause, attempted fixes, remaining blocker, user action, and retry gate",
+    ];
+
+    for (const phrase of requiredPhrases) {
+      expect(baseline).toContain(phrase);
+    }
+  });
+
   it("ensures canonical skills avoid deprecated simulation fallback wording", async () => {
     const canonicalDir = path.join(templateQfaiDir, "assistant", "skills");
     const canonical = await fg(["*/SKILL.md"], {
