@@ -168,6 +168,8 @@ async function probeLauncherCandidate(
     let stderr = "";
     let settled = false;
     let timedOut = false;
+    let closed = false;
+    let escalateTimeout: NodeJS.Timeout | undefined;
 
     const finish = (result: Omit<PlaywrightCliLauncherProbe, "durationMs">) => {
       if (settled) {
@@ -183,7 +185,17 @@ async function probeLauncherCandidate(
 
     const timeout = setTimeout(() => {
       timedOut = true;
-      child.kill();
+      terminateTimedOutChild(child);
+      escalateTimeout = setTimeout(
+        () => {
+          if (closed) {
+            return;
+          }
+          terminateTimedOutChild(child, "SIGKILL");
+        },
+        Math.min(250, timeoutMs),
+      );
+      escalateTimeout.unref();
       finish({
         ok: false,
         exitCode: null,
@@ -215,6 +227,10 @@ async function probeLauncherCandidate(
     });
 
     child.on("close", (exitCode, signal) => {
+      closed = true;
+      if (escalateTimeout) {
+        clearTimeout(escalateTimeout);
+      }
       finish({
         ok: !timedOut && exitCode === 0,
         exitCode,
@@ -226,6 +242,17 @@ async function probeLauncherCandidate(
       });
     });
   });
+}
+
+function terminateTimedOutChild(child: ReturnType<typeof spawn>, signal?: NodeJS.Signals): void {
+  child.unref();
+  child.stdout?.destroy();
+  child.stderr?.destroy();
+  try {
+    child.kill(signal);
+  } catch {
+    // Probe cleanup should not mask the original timeout failure.
+  }
 }
 
 async function findCommandInPath(command: string): Promise<string | null> {
@@ -251,7 +278,10 @@ async function findCommandInDir(dir: string, command: string): Promise<string | 
 }
 
 function commandCandidates(command: string): string[] {
-  return [`${command}.cmd`, `${command}.exe`, `${command}.bat`, command];
+  if (process.platform === "win32") {
+    return [`${command}.cmd`, `${command}.exe`, `${command}.bat`, command];
+  }
+  return [command, `${command}.cmd`, `${command}.exe`, `${command}.bat`];
 }
 
 async function exists(target: string): Promise<boolean> {
