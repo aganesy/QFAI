@@ -127,6 +127,17 @@ describe("TC-0012-0293 — round loop documented in SKILL.md", () => {
   });
 });
 
+describe("prototyping git commit gate", () => {
+  it("SKILL.md requires commitSha recording for exploration rounds and polish cycles", async () => {
+    const content = await readSkillMd();
+
+    expect(content).toContain("git commit");
+    expect(content).toContain("commitSha");
+    expect(content).toMatch(/r5.*r3.*r2.*r1/s);
+    expect(content).toMatch(/polish.*commitSha/s);
+  });
+});
+
 // ─── TC-0012-0296: Evaluator input 4 elements documented ─────────────────────
 
 describe("TC-0012-0296 — Evaluator input elements documented in SKILL.md", () => {

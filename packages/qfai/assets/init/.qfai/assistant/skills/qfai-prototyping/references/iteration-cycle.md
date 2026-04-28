@@ -20,12 +20,23 @@ Each exploration round follows this order, driven by the capture role plus evalu
 5. **Narrow**: run `qfai prototyping round-narrow --round <rN> --survivors <csv>` to record which candidates survive to the next round.
 6. **Absorb**: for `r3|r2|r1`, run `qfai prototyping round-absorb --round <rN> --survivors <csv>` to generate the absorption plan for the surviving candidates.
 7. **Reimplement verify**: run `qfai prototyping round-reimplement-verify --round <rN>` after reimplementation evidence is written.
+8. **Commit gate**: create a git commit for the completed round and record the resulting `commitSha` on the round entry in `prototyping.json` before starting the next round.
+
+Round-specific commit points:
+
+- `r5`: after 5 directions are generated, captured, evaluated, harvested, and narrowed to 3.
+- `r3`: after the 3 surviving directions are improved/reimplemented, captured, evaluated, harvested, and narrowed to 2.
+- `r2`: after the 2 surviving directions are improved/reimplemented, captured, evaluated, harvested, and narrowed to 1.
+- `r1`: after winner selection and selected-direction/design-system extraction evidence are written.
+
+Each post-selection `polish` or `branch` cycle has the same commit gate: after critique, fix, re-capture, re-review, and breakthrough check evidence are written, create a git commit and record that cycle's `commitSha` before continuing.
 
 ## Completion requirements
 
 Completion (independent of mode) requires ALL of the following:
 
 - at least one `polish` cycle completed after winner selection (capture + review + fix + re-capture + re-review)
+- each exploration round and post-selection cycle has a unique recorded `commitSha`
 - all declared screens have all 4 artifacts in the completion round / polish cycle
 - blocking findings are closed or dispositioned
 - `bestOfHistory` evidence present
