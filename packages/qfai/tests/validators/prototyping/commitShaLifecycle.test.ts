@@ -168,35 +168,35 @@ describe("validatePrototypingEvidence commitSha lifecycle", () => {
       polishCycles: [makePolish(SHA_POLISH)],
     });
 
-    expect(codes).not.toContain("QFAI-PROT-337");
-    expect(codes).not.toContain("QFAI-PROT-338");
+    expect(codes).not.toContain("QFAI-PROT-277");
+    expect(codes).not.toContain("QFAI-PROT-278");
   });
 
-  it("emits QFAI-PROT-337 when a round commitSha is missing", async () => {
+  it("emits QFAI-PROT-277 when a round commitSha is missing", async () => {
     const round = makeRound("r5", ["c1", "c2", "c3", "c4", "c5"], SHA_R5);
     delete round.commitSha;
 
     const codes = await validateRecord(makeRecord({ rounds: [round] }));
 
-    expect(codes).toContain("QFAI-PROT-337");
+    expect(codes).toContain("QFAI-PROT-277");
   });
 
-  it("emits QFAI-PROT-337 when a polish commitSha is missing", async () => {
+  it("emits QFAI-PROT-277 when a polish commitSha is missing", async () => {
     const polish = makePolish(SHA_POLISH);
     delete polish.commitSha;
 
     const codes = await validateRecord(makeRecord({ polishCycles: [polish] }));
 
-    expect(codes).toContain("QFAI-PROT-337");
+    expect(codes).toContain("QFAI-PROT-277");
   });
 
-  it("emits QFAI-PROT-338 when a commitSha is reused", async () => {
+  it("emits QFAI-PROT-278 when a commitSha is reused", async () => {
     const codes = await validateRecord(
       makeRecord({
         polishCycles: [makePolish(SHA_R5)],
       }),
     );
 
-    expect(codes).toContain("QFAI-PROT-338");
+    expect(codes).toContain("QFAI-PROT-278");
   });
 });

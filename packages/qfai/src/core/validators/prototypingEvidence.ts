@@ -990,7 +990,7 @@ function validateLifecycleCommitSha(
   if (typeof value !== "string" || !COMMIT_SHA_PATTERN.test(value)) {
     return [
       issue(
-        "QFAI-PROT-337",
+        "QFAI-PROT-277",
         `${prefix}.commitSha must be a 40-character git commit SHA.`,
         "error",
         relPath,
@@ -1007,7 +1007,7 @@ function validateLifecycleCommitSha(
   if (previous) {
     return [
       issue(
-        "QFAI-PROT-338",
+        "QFAI-PROT-278",
         `${prefix}.commitSha duplicates ${previous}.commitSha; each prototyping round/cycle must have its own commit.`,
         "error",
         relPath,
