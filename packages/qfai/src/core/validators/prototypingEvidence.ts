@@ -64,6 +64,7 @@ const VALID_PHASE_SET = new Set([
 ]);
 const REQUIRED_POLISH_CHECKS = ["critique", "fix", "recapture", "rereview", "breakthrough"];
 const LEGACY_PASS_95_FIELD = "allItemsPass" + String(95);
+const COMMIT_SHA_PATTERN = /^[0-9a-f]{40}$/i;
 const VALID_MODE_SOURCE_SET = new Set([
   "explicit-request",
   "system-default",
@@ -617,6 +618,7 @@ function validateV2Lifecycle(
   let latestPerfect100 = false;
   let completedPolishCount = 0;
   let polishWithBreakthroughCheck = false;
+  const seenCommitShas = new Map<string, string>();
 
   for (const [index, candidate] of rounds.entries()) {
     const prefix = `rounds[${index}]`;
@@ -624,6 +626,15 @@ function validateV2Lifecycle(
       issues.push(makeSchemaIssue(root, evidencePath, `${prefix} must be an object.`));
       continue;
     }
+    issues.push(
+      ...validateLifecycleCommitSha(
+        root,
+        evidencePath,
+        prefix,
+        candidate.commitSha,
+        seenCommitShas,
+      ),
+    );
     let validRound: ExplorationRound | null = null;
     if (!isExplorationRound(candidate.round)) {
       issues.push(makeSchemaIssue(root, evidencePath, `${prefix}.round must be r5|r3|r2|r1.`));
@@ -787,6 +798,9 @@ function validateV2Lifecycle(
       issues.push(makeSchemaIssue(root, evidencePath, `${prefix} must be an object.`));
       continue;
     }
+    issues.push(
+      ...validateLifecycleCommitSha(root, evidencePath, prefix, cycle.commitSha, seenCommitShas),
+    );
     if (typeof cycle.cycle !== "number" || !Number.isInteger(cycle.cycle) || cycle.cycle <= 0) {
       issues.push(
         makeSchemaIssue(root, evidencePath, `${prefix}.cycle must be a positive integer.`),
@@ -963,4 +977,48 @@ function makeSchemaIssue(root: string, evidencePath: string, message: string): I
     path.relative(root, evidencePath).replace(/\\/g, "/"),
     "prototypingEvidence.schema",
   );
+}
+
+function validateLifecycleCommitSha(
+  root: string,
+  evidencePath: string,
+  prefix: string,
+  value: unknown,
+  seenCommitShas: Map<string, string>,
+): Issue[] {
+  const relPath = path.relative(root, evidencePath).replace(/\\/g, "/");
+  if (typeof value !== "string" || !COMMIT_SHA_PATTERN.test(value)) {
+    return [
+      issue(
+        "QFAI-PROT-337",
+        `${prefix}.commitSha must be a 40-character git commit SHA.`,
+        "error",
+        relPath,
+        "prototypingEvidence.commitSha",
+        undefined,
+        "canonical",
+        "各 exploration round / polish cycle の完了後に git commit し、その SHA を commitSha に記録してください。",
+      ),
+    ];
+  }
+
+  const normalized = value.toLowerCase();
+  const previous = seenCommitShas.get(normalized);
+  if (previous) {
+    return [
+      issue(
+        "QFAI-PROT-338",
+        `${prefix}.commitSha duplicates ${previous}.commitSha; each prototyping round/cycle must have its own commit.`,
+        "error",
+        relPath,
+        "prototypingEvidence.commitSha",
+        [previous, prefix],
+        "canonical",
+        "各回転ごとに別の git commit を作成し、重複しない commitSha を記録してください。",
+      ),
+    ];
+  }
+
+  seenCommitShas.set(normalized, prefix);
+  return [];
 }

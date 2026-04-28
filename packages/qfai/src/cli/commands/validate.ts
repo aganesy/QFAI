@@ -433,6 +433,10 @@ const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     ".qfai/evidence/prototyping/completion-certificate.json is required when prototyping completion is claimed (run `qfai prototyping certify` after all gates pass).",
   "QFAI-PROT-336":
     ".qfai/evidence/prototyping/completion-certificate.json digest mismatch — evidence has been modified since certify; re-run `qfai prototyping certify`.",
+  "QFAI-PROT-337":
+    "prototyping.json rounds[].commitSha / polishCycles[].commitSha must contain a 40-character git commit SHA.",
+  "QFAI-PROT-338":
+    "prototyping.json must use a distinct commitSha for each prototyping round and polish cycle.",
   "QFAI-CFG-LINK-001":
     "qfai.config.yaml: prototyping.primarySpecId points to a spec ID that does not exist under the configured specs directory.",
   "QFAI-CFG-LINK-002":
