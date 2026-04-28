@@ -1,4 +1,4 @@
-import { readFile } from "node:fs/promises";
+import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 
 import { describe, expect, it } from "vitest";
@@ -62,15 +62,9 @@ describe("init assistant guidance: exploration-first alignment", () => {
   });
 
   it("distributed agent cards do not require repo-private .instruction paths", async () => {
-    const agentFiles = [
-      "architecture-reviewer.md",
-      "backend-engineer.md",
-      "frontend-engineer.md",
-      "implementation-reviewer.md",
-      "product-experience-architect.md",
-      "product-surface-reviewer.md",
-      "solution-architect.md",
-    ];
+    const agentFiles = (await readdir(agentsDir))
+      .filter((fileName) => fileName.endsWith(".md") && fileName !== "README.md")
+      .sort((left, right) => left.localeCompare(right));
 
     for (const fileName of agentFiles) {
       const content = await readFile(path.join(agentsDir, fileName), "utf-8");

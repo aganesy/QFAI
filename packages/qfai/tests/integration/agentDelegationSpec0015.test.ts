@@ -25,6 +25,8 @@ import { access, readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 
+import { parseAgentFrontmatter } from "../../src/core/agentFrontmatter.js";
+
 const AGENTS_DIR = path.resolve(
   __dirname,
   "..",
@@ -154,14 +156,19 @@ describe("TC-0015-0002: Standard Contract Structure", () => {
     const files = (await readdir(AGENTS_DIR)).filter((fileName) => fileName.endsWith(".md"));
     for (const fileName of files) {
       const content = await readFile(path.join(AGENTS_DIR, fileName), "utf-8");
-      const frontmatterMatch = content.match(/^---\r?\n([\s\S]*?)\r?\n---/);
-      expect(frontmatterMatch, `${fileName}: missing frontmatter`).not.toBeNull();
-      const frontmatter = frontmatterMatch?.[1] ?? "";
-      expect(frontmatter, `${fileName}: missing name`).toContain(
-        `name: ${fileName.replace(/\.md$/, "")}`,
+      const parsed = parseAgentFrontmatter(content);
+      expect(parsed.ok, `${fileName}: invalid frontmatter`).toBe(true);
+      if (!parsed.ok) {
+        continue;
+      }
+      expect(parsed.frontmatter.name, `${fileName}: wrong name`).toBe(
+        fileName.replace(/\.md$/, ""),
       );
-      expect(frontmatter, `${fileName}: missing description`).toContain("description:");
-      expect(frontmatter, `${fileName}: missing tools`).toContain("tools:");
+      expect(
+        parsed.frontmatter.description.length,
+        `${fileName}: missing description`,
+      ).toBeGreaterThan(0);
+      expect(parsed.frontmatter.tools.length, `${fileName}: missing tools`).toBeGreaterThan(0);
     }
   });
 });
