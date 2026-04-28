@@ -133,4 +133,57 @@ describe("resolvePlaywrightCliLauncher", () => {
       }
     },
   );
+
+  it.runIf(process.platform !== "win32")(
+    "continues PATH search after an earlier non-runnable playwright-cli candidate",
+    async () => {
+      const root = await newTempDir();
+      const staleDir = path.join(root, "stale-bin");
+      const goodDir = path.join(root, "good-bin");
+      await mkdir(staleDir, { recursive: true });
+      await mkdir(goodDir, { recursive: true });
+
+      const staleLauncher = path.join(staleDir, "playwright-cli");
+      const goodLauncher = path.join(goodDir, "playwright-cli");
+      await writeFile(staleLauncher, "#!/bin/sh\nexit 1\n", "utf-8");
+      await writeFile(goodLauncher, "#!/bin/sh\necho ok\n", "utf-8");
+      await chmod(staleLauncher, 0o644);
+      await chmod(goodLauncher, 0o755);
+
+      mockSpawn.mockImplementation((command: string) => {
+        if (command === goodLauncher) {
+          return new SuccessfulChild();
+        }
+        const child = new EventEmitter() as EventEmitter & {
+          stdout: MockStream;
+          stderr: MockStream;
+          kill(): boolean;
+          unref(): void;
+        };
+        child.stdout = new MockStream();
+        child.stderr = new MockStream();
+        child.kill = () => true;
+        child.unref = () => {};
+        queueMicrotask(() => {
+          child.emit("error", new Error("permission denied"));
+        });
+        return child;
+      });
+
+      const originalPath = process.env.PATH;
+      process.env.PATH = [staleDir, goodDir].join(path.delimiter);
+
+      try {
+        const { resolvePlaywrightCliLauncher } =
+          await import("../../../src/core/prototyping/playwrightCliLauncher.js");
+        const result = await resolvePlaywrightCliLauncher(root, { timeoutMs: 20 });
+
+        expect(result.status).toBe("resolved");
+        expect(result.attempts.map((attempt) => attempt.executable)).toContain(staleLauncher);
+        expect(result.resolved?.executable).toBe(goodLauncher);
+      } finally {
+        process.env.PATH = originalPath;
+      }
+    },
+  );
 });

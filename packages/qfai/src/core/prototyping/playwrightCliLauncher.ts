@@ -127,8 +127,8 @@ async function collectCandidates(root: string): Promise<PlaywrightCliLauncherCan
     });
   }
 
-  const pathCandidate = await findCommandInPath("playwright-cli");
-  if (pathCandidate) {
+  const pathCandidates = await findCommandsInPath("playwright-cli");
+  for (const pathCandidate of pathCandidates) {
     candidates.push({
       origin: "PATH",
       executable: pathCandidate,
@@ -137,8 +137,8 @@ async function collectCandidates(root: string): Promise<PlaywrightCliLauncherCan
     });
   }
 
-  const npxCandidate = await findCommandInPath("npx");
-  if (npxCandidate) {
+  const npxCandidates = await findCommandsInPath("npx");
+  for (const npxCandidate of npxCandidates) {
     candidates.push({
       origin: "npx --no-install",
       executable: npxCandidate,
@@ -255,16 +255,19 @@ function terminateTimedOutChild(child: ReturnType<typeof spawn>, signal?: NodeJS
   }
 }
 
-async function findCommandInPath(command: string): Promise<string | null> {
+async function findCommandsInPath(command: string): Promise<string[]> {
   const searchPath = process.env.PATH ?? "";
   const dirs = searchPath.split(path.delimiter).filter((entry) => entry.length > 0);
+  const matches: string[] = [];
+  const seen = new Set<string>();
   for (const dir of dirs) {
     const candidate = await findCommandInDir(dir, command);
-    if (candidate) {
-      return candidate;
+    if (candidate && !seen.has(candidate)) {
+      seen.add(candidate);
+      matches.push(candidate);
     }
   }
-  return null;
+  return matches;
 }
 
 async function findCommandInDir(dir: string, command: string): Promise<string | null> {
