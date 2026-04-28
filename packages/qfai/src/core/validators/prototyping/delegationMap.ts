@@ -32,7 +32,7 @@ export function validateDelegationMapIssues(
 
   const issues: Issue[] = [];
   for (const [category, rawRole] of Object.entries(delegationMap)) {
-    if (!(category in PROTOTYPING_DELEGATION_SCOPE)) {
+    if (!Object.hasOwn(PROTOTYPING_DELEGATION_SCOPE, category)) {
       // Unknown category is not flagged here (scope violation is a separate
       // concern handled outside this validator).
       continue;

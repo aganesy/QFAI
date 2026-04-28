@@ -203,10 +203,15 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
           markInvalid();
           break;
         }
-        if (command === "doctor" || command === "prototyping") {
+        if (
+          command === "doctor" ||
+          (command === "prototyping" && options.prototypingAction === "preflight")
+        ) {
           options.doctorOut = next;
-        } else {
+        } else if (command === "report") {
           options.reportOut = next;
+        } else {
+          markInvalid();
         }
         i += 1;
         break;

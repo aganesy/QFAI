@@ -152,11 +152,9 @@ export function hasMandatoryEvidencePaths(content: string): boolean {
 }
 
 export function hasEnvironmentPreconditions(content: string): boolean {
-  return (
-    /Step 2-B/i.test(content) &&
-    /Environment Preconditions/i.test(content) &&
-    /Contract Preconditions/i.test(content)
-  );
+  const step2AIndex = content.search(/Step 2-A\s+—\s+Verify Contract Preconditions/i);
+  const step2BIndex = content.search(/Step 2-B\s+—\s+Verify Environment Preconditions/i);
+  return step2AIndex >= 0 && step2BIndex > step2AIndex;
 }
 
 export function hasPreflightGuidance(content: string): boolean {

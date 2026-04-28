@@ -184,6 +184,15 @@ async function probeLauncherCandidate(
     const timeout = setTimeout(() => {
       timedOut = true;
       child.kill();
+      finish({
+        ok: false,
+        exitCode: null,
+        signal: null,
+        timedOut: true,
+        stdout,
+        stderr,
+        error: `timed out after ${timeoutMs}ms`,
+      });
     }, timeoutMs);
 
     child.stdout.on("data", (chunk: Buffer | string) => {

@@ -78,6 +78,32 @@ describe("parseArgs", () => {
     expect(parsed.options.profile).toBe("atdd");
   });
 
+  it("allows --out for prototyping preflight only", () => {
+    const cwd = process.cwd();
+    const parsed = parseArgs(["prototyping", "preflight", "--out", "tmp/out.json"], cwd);
+    expect(parsed.invalid).toBe(false);
+    expect(parsed.options.doctorOut).toBe("tmp/out.json");
+  });
+
+  it("rejects --out for non-preflight prototyping actions", () => {
+    const cwd = process.cwd();
+    const parsed = parseArgs(
+      [
+        "prototyping",
+        "round-start",
+        "--round",
+        "r5",
+        "--candidates",
+        "c1",
+        "--out",
+        "tmp/out.json",
+      ],
+      cwd,
+    );
+    expect(parsed.invalid).toBe(true);
+    expect(parsed.options.help).toBe(true);
+  });
+
   it("parses sdd profile for validate", () => {
     const cwd = process.cwd();
     const parsed = parseArgs(["validate", "--profile", "sdd"], cwd);

@@ -86,6 +86,14 @@ describe("prototyping skill validator", () => {
     expect(hasEnvironmentPreconditions(VALID_SKILL_CONTENT)).toBe(true);
   });
 
+  it("rejects content missing Step 2-A even when Step 2-B is present", () => {
+    const invalid = VALID_SKILL_CONTENT.replace(
+      "### Step 2-A — Verify Contract Preconditions\nclassification is UI-bearing\n\n",
+      "",
+    );
+    expect(hasEnvironmentPreconditions(invalid)).toBe(false);
+  });
+
   it("documents preflight guidance", () => {
     expect(hasPreflightGuidance(VALID_SKILL_CONTENT)).toBe(true);
   });
