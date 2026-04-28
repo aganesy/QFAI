@@ -131,7 +131,7 @@ export function hasDelegationScopeTable(content: string): boolean {
   return (
     lower.includes("delegation scope table") &&
     (lower.includes("evaluation scoring") || lower.includes("evaluation l1-l2")) &&
-    lower.includes("screenshot capture")
+    (lower.includes("screenshot capture") || lower.includes("playwright cli execution & capture"))
   );
 }
 
@@ -169,7 +169,11 @@ export function hasPreflightGuidance(content: string): boolean {
 
 export function hasPlaywrightCliFallback(content: string): boolean {
   const lower = content.toLowerCase();
-  return lower.includes("npx playwright-cli") || lower.includes("node_modules/.bin/playwright-cli");
+  return (
+    lower.includes("npx playwright-cli") ||
+    lower.includes("npx --no-install playwright-cli") ||
+    lower.includes("node_modules/.bin/playwright-cli")
+  );
 }
 
 export function detectAspirationalClaims(content: string): string[] {
@@ -349,9 +353,9 @@ export function validatePrototypingSkillContent(content: string): SkillValidatio
     issues.push(
       skillIssue(
         "UIX-VAL-SKILL-PLAYWRIGHT-FALLBACK",
-        "Prototyping skill must document a safe Playwright CLI invocation path such as npx playwright-cli.",
+        "Prototyping skill must document a safe Playwright CLI invocation path such as npx --no-install playwright-cli.",
         "error",
-        "npx playwright-cli または node_modules/.bin/playwright-cli の経路を明記してください。",
+        "npx --no-install playwright-cli または node_modules/.bin/playwright-cli の経路を明記してください。",
       ),
     );
   }

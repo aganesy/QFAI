@@ -56,10 +56,10 @@ npx qfai report
   - Produces a human-readable report (`report.md` by default) or an internal JSON export (`report.json`) from `validate.json`; use `--base-url` to link file paths in Markdown to your repository viewer.
 - `npx qfai doctor`
   - Diagnoses configuration discovery, path resolution, glob scanning, and `validate.json` inputs before running validate/report; use `--fail-on` to enforce failures in CI.
-    Use `--profile prototyping` to add prototyping-specific preflight checks for the primary spec, UI contracts, design contract readiness, required Claude role wrappers, Playwright CLI reachability, and target URL reachability.
+    Use `--profile prototyping` to add prototyping-specific preflight checks for the primary spec, UI contracts, design contract readiness, active agent-wrapper integrations, shipped role-input readiness, Playwright CLI launcher resolution/probing, and target URL reachability.
     Note: prototyping evidence (`.qfai/evidence/prototyping.json`) is produced by the AI workflow / skills
     (`/qfai-prototyping` with `mode=low-cost|standard|full-harness`), not by a CLI command.
-    Use `npx qfai prototyping preflight --target-url <url>` for a focused prototyping preflight before the skill starts; it now surfaces blocking `QFAI-DCON-*` design-contract issues alongside runtime assumptions, then prefer `npx playwright-cli` (or the project-local `node_modules/.bin/playwright-cli` entrypoint) when PATH reachability is not guaranteed.
+    Use `npx qfai prototyping preflight --target-url <url>` for a focused prototyping preflight before the skill starts; it now surfaces blocking `QFAI-DCON-*` design-contract issues alongside runtime assumptions, resolves a runnable Playwright CLI launcher (project wrapper / local bin / PATH / `npx --no-install`), and still treats the first real delegation failure as a runtime hard-stop.
     `qfai validate` consumes the resulting evidence files, including `mode.effective` and `fullHarness` metadata when present.
 
 ## ATDD annotation hard gate

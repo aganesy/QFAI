@@ -171,35 +171,61 @@ function buildCommands(input: {
   snapshotPath: string;
 }): PlaywrightCliCommand[] {
   return [
-    {
-      purpose: "goto",
-      command: `playwright-cli goto ${quote(input.absoluteUrl)}`,
-    },
-    {
-      purpose: "snapshot",
-      command: `playwright-cli snapshot --save ${quote(input.snapshotPath)}`,
+    executableCommand("goto", ["goto", input.absoluteUrl]),
+    executableCommand("snapshot", ["snapshot", `--filename=${input.snapshotPath}`], {
       outputPath: input.snapshotPath,
-    },
+    }),
     ...input.primaryTasks.map<PlaywrightCliCommand>((task) => ({
       purpose: "interaction",
       command:
         "# evaluator: perform the primary task below via playwright-cli click/fill/goto as appropriate",
       note: task,
     })),
-    {
-      purpose: "screenshot",
-      command: `playwright-cli screenshot --full-page --save ${quote(input.screenshotPath)}`,
-      outputPath: input.screenshotPath,
-    },
-    {
-      purpose: "html",
-      command:
-        `playwright-cli eval "document.documentElement.outerHTML" ` + `> ${quote(input.htmlPath)}`,
+    executableCommand(
+      "screenshot",
+      ["screenshot", "--full-page", `--filename=${input.screenshotPath}`],
+      {
+        outputPath: input.screenshotPath,
+      },
+    ),
+    executableCommand("html", ["--raw", "eval", "document.documentElement.outerHTML"], {
       outputPath: input.htmlPath,
-    },
+      stdoutPath: input.htmlPath,
+    }),
   ];
 }
 
 function quote(value: string): string {
   return JSON.stringify(value);
+}
+
+function executableCommand(
+  purpose: Exclude<PlaywrightCliCommand["purpose"], "interaction">,
+  args: string[],
+  extras?: Pick<PlaywrightCliCommand, "outputPath" | "stdoutPath">,
+): PlaywrightCliCommand {
+  return {
+    purpose,
+    toolId: "playwright-cli",
+    args: [...args],
+    command: renderLogicalCommand(args),
+    ...(extras?.outputPath ? { outputPath: extras.outputPath } : {}),
+    ...(extras?.stdoutPath ? { stdoutPath: extras.stdoutPath } : {}),
+  };
+}
+
+function renderLogicalCommand(args: string[]): string {
+  return ["playwright-cli", ...args.map((arg) => renderArg(arg))].join(" ");
+}
+
+function renderArg(value: string): string {
+  const flagMatch = /^([^=]+)=(.*)$/.exec(value);
+  if (flagMatch) {
+    const flag = flagMatch.at(1);
+    const flagValue = flagMatch.at(2);
+    if (flag !== undefined && flagValue !== undefined) {
+      return `${flag}=${quote(flagValue)}`;
+    }
+  }
+  return /^[A-Za-z0-9._/-]+$/.test(value) ? value : quote(value);
 }

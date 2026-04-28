@@ -111,6 +111,42 @@ describe("spec-0017 buildPlaywrightCliCommandPlan", () => {
     ]);
   });
 
+  it("emits structured logical command metadata for non-interaction steps", () => {
+    const plan = buildPlaywrightCliCommandPlan({
+      targetUrl: "http://localhost:5173",
+      cycle: 1,
+      screen: makeScreen(),
+    });
+
+    const executableCommands = plan.commands.filter((command) => command.purpose !== "interaction");
+    for (const command of executableCommands) {
+      expect(command.toolId).toBe("playwright-cli");
+      expect(Array.isArray(command.args)).toBe(true);
+      expect(command.args?.length).toBeGreaterThan(0);
+    }
+
+    const html = plan.commands.find((command) => command.purpose === "html");
+    expect(html?.stdoutPath).toBe(".qfai/evidence/prototyping/iterations/1/order-list.html");
+    expect(html?.command).not.toContain(">");
+  });
+
+  it("uses Playwright CLI filename flags instead of shell save/redirection conventions", () => {
+    const plan = buildPlaywrightCliCommandPlan({
+      targetUrl: "http://localhost:5173",
+      cycle: 1,
+      screen: makeScreen(),
+    });
+
+    const snapshot = plan.commands.find((command) => command.purpose === "snapshot");
+    const screenshot = plan.commands.find((command) => command.purpose === "screenshot");
+    expect(snapshot?.command).toContain(
+      '--filename=".qfai/evidence/prototyping/iterations/1/order-list.snapshot.txt"',
+    );
+    expect(screenshot?.command).toContain(
+      '--filename=".qfai/evidence/prototyping/iterations/1/order-list.png"',
+    );
+  });
+
   it("resolves targetUrl + route into an absolute URL used in goto", () => {
     const screen = makeScreen();
     const plan = buildPlaywrightCliCommandPlan({

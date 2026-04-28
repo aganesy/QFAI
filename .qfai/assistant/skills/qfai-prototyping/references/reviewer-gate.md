@@ -1,6 +1,6 @@
 # Reviewer Gate
 
-The reviewer is an independent gate, not the implementation author. The reviewer gate applies identically to all modes (spec-0012); modes differ only in `maxCycles`.
+The reviewer is an independent gate, not the implementation author. The reviewer gate applies identically to all modes (per the resolved primary prototyping spec); modes differ only in `maxCycles`.
 
 ## Reviewer must verify
 

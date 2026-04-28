@@ -7,6 +7,11 @@ import { readUiContractScreenContracts } from "./contracts/screenContracts.js";
 import { collectScenarioFiles } from "./discovery.js";
 import { collectFilesByGlobs, DEFAULT_GLOB_FILE_LIMIT } from "./fs.js";
 import { toRelativePath } from "./paths.js";
+import {
+  PROTOTYPING_REQUIRED_ROLE_IDS,
+  PROTOTYPING_ROLE_WRAPPER_INTEGRATIONS,
+} from "./prototyping/policy.js";
+import { resolvePlaywrightCliLauncher } from "./prototyping/playwrightCliLauncher.js";
 import { resolvePrimaryPrototypingSpec } from "./prototyping/specResolution.js";
 import { collectSpecEntries } from "./specLayout.js";
 import { DEFAULT_TEST_FILE_EXCLUDE_GLOBS } from "./traceability.js";
@@ -458,14 +463,6 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
   };
 }
 
-const REQUIRED_PROTOTYPING_ROLE_IDS = [
-  "frontend-engineer",
-  "product-experience-architect",
-  "product-surface-reviewer",
-  "backend-engineer",
-  "devops-ci-engineer",
-] as const;
-
 async function buildAgentFrontmatterCheck(root: string): Promise<DoctorCheck> {
   const agentsDir = path.join(root, ".qfai", "assistant", "agents");
   if (!(await exists(agentsDir))) {
@@ -647,50 +644,116 @@ async function buildPrototypingDesignContractsCheck(
 }
 
 async function buildPrototypingRolesCheck(root: string): Promise<DoctorCheck> {
-  const wrapperDir = path.join(root, ".claude", "agents");
-  const roleFindings: Array<Record<string, unknown>> = [];
+  const activeIntegrations = await Promise.all(
+    PROTOTYPING_ROLE_WRAPPER_INTEGRATIONS.map(async (integration) => {
+      const absDir = path.join(root, integration.dir);
+      return (await exists(absDir)) ? { ...integration, absDir } : null;
+    }),
+  ).then((items) => items.filter((item) => item !== null));
 
-  for (const roleId of REQUIRED_PROTOTYPING_ROLE_IDS) {
-    const wrapperPath = path.join(wrapperDir, `${roleId}.md`);
+  if (activeIntegrations.length === 0) {
+    return {
+      id: "prototyping.requiredRoles",
+      severity: "error",
+      title: "Required prototyping roles",
+      message:
+        "no supported prototyping agent wrapper integrations were found (.claude/agents or .github/agents)",
+      details: {
+        requiredRoles: PROTOTYPING_REQUIRED_ROLE_IDS,
+        expectedIntegrations: PROTOTYPING_ROLE_WRAPPER_INTEGRATIONS,
+      },
+    };
+  }
+
+  const roleFindings: Array<Record<string, unknown>> = [];
+  for (const roleId of PROTOTYPING_REQUIRED_ROLE_IDS) {
     const canonicalPath = path.join(root, ".qfai", "assistant", "agents", `${roleId}.md`);
-    const wrapperExists = await exists(wrapperPath);
     const canonicalExists = await exists(canonicalPath);
     const finding: Record<string, unknown> = {
       roleId,
+      canonicalPath: toRelativePath(root, canonicalPath),
       canonicalExists,
-      wrapperExists,
-      wrapperPath: toRelativePath(root, wrapperPath),
+      activeIntegrations: activeIntegrations.map((integration) => integration.id),
+      wrappers: [] as Array<Record<string, unknown>>,
+      missingLiteralInputs: [] as string[],
     };
 
-    if (wrapperExists) {
-      const parsed = parseAgentFrontmatter(await readFile(wrapperPath, "utf-8"));
-      finding.frontmatterValid = parsed.ok;
-      if (parsed.ok) {
-        finding.frontmatterName = parsed.frontmatter.name;
+    if (canonicalExists) {
+      const canonicalContent = await readFile(canonicalPath, "utf-8");
+      const parsedCanonical = parseAgentFrontmatter(canonicalContent);
+      finding.canonicalFrontmatterValid = parsedCanonical.ok;
+      if (parsedCanonical.ok) {
+        finding.canonicalFrontmatterName = parsedCanonical.frontmatter.name;
       } else {
-        finding.error = parsed.error;
+        finding.canonicalFrontmatterError = parsedCanonical.error;
       }
+
+      const requiredInputs = extractLiteralRequiredInputs(canonicalContent);
+      const missingLiteralInputs = (
+        await Promise.all(
+          requiredInputs.map(async (relativePath) => {
+            const existsOnDisk = await exists(path.join(root, relativePath));
+            return existsOnDisk ? null : relativePath;
+          }),
+        )
+      ).filter((value) => value !== null);
+      finding.missingLiteralInputs = missingLiteralInputs;
+    }
+
+    for (const integration of activeIntegrations) {
+      const wrapperPath = path.join(integration.absDir, `${roleId}${integration.suffix}`);
+      const wrapperExists = await exists(wrapperPath);
+      const wrapperFinding: Record<string, unknown> = {
+        integration: integration.id,
+        label: integration.label,
+        wrapperPath: toRelativePath(root, wrapperPath),
+        wrapperExists,
+      };
+      if (wrapperExists) {
+        const parsedWrapper = parseAgentFrontmatter(await readFile(wrapperPath, "utf-8"));
+        wrapperFinding.frontmatterValid = parsedWrapper.ok;
+        if (parsedWrapper.ok) {
+          wrapperFinding.frontmatterName = parsedWrapper.frontmatter.name;
+        } else {
+          wrapperFinding.error = parsedWrapper.error;
+        }
+      }
+      (finding["wrappers"] as Array<Record<string, unknown>>).push(wrapperFinding);
     }
 
     roleFindings.push(finding);
   }
 
-  const invalidRoles = roleFindings.filter(
-    (item) =>
-      item["canonicalExists"] !== true ||
-      item["wrapperExists"] !== true ||
-      item["frontmatterValid"] !== true ||
-      item["frontmatterName"] !== item["roleId"],
-  );
+  const invalidRoles = roleFindings.filter((item) => {
+    if (item["canonicalExists"] !== true) {
+      return true;
+    }
+    if (
+      item["canonicalFrontmatterValid"] !== true ||
+      item["canonicalFrontmatterName"] !== item["roleId"]
+    ) {
+      return true;
+    }
+    if (((item["missingLiteralInputs"] as string[] | undefined) ?? []).length > 0) {
+      return true;
+    }
+    return ((item["wrappers"] as Array<Record<string, unknown>> | undefined) ?? []).some(
+      (wrapper) =>
+        wrapper["wrapperExists"] !== true ||
+        wrapper["frontmatterValid"] !== true ||
+        wrapper["frontmatterName"] !== item["roleId"],
+    );
+  });
 
   if (invalidRoles.length > 0) {
     return {
       id: "prototyping.requiredRoles",
       severity: "error",
       title: "Required prototyping roles",
-      message: `missing or invalid required role wrappers detected (count=${invalidRoles.length})`,
+      message: `required prototyping role readiness issues detected (count=${invalidRoles.length})`,
       details: {
-        requiredRoles: REQUIRED_PROTOTYPING_ROLE_IDS,
+        requiredRoles: PROTOTYPING_REQUIRED_ROLE_IDS,
+        activeIntegrations: activeIntegrations.map(({ id, dir, label }) => ({ id, dir, label })),
         invalidRoles,
       },
     };
@@ -700,40 +763,60 @@ async function buildPrototypingRolesCheck(root: string): Promise<DoctorCheck> {
     id: "prototyping.requiredRoles",
     severity: "ok",
     title: "Required prototyping roles",
-    message: `all required prototyping role wrappers are present and frontmatter-valid (count=${REQUIRED_PROTOTYPING_ROLE_IDS.length})`,
+    message:
+      `all required prototyping roles are ready across ${activeIntegrations.length} integration(s) ` +
+      `(count=${PROTOTYPING_REQUIRED_ROLE_IDS.length})`,
     details: {
-      requiredRoles: REQUIRED_PROTOTYPING_ROLE_IDS,
-      wrapperDir: toRelativePath(root, wrapperDir),
+      requiredRoles: PROTOTYPING_REQUIRED_ROLE_IDS,
+      activeIntegrations: activeIntegrations.map(({ id, dir, label }) => ({ id, dir, label })),
     },
   };
 }
 
 async function buildPlaywrightCliCheck(root: string): Promise<DoctorCheck> {
-  const localBinDir = path.join(root, "node_modules", ".bin");
-  const localCandidate = await findCommandInDir(localBinDir, "playwright-cli");
-  if (localCandidate) {
+  const resolution = await resolvePlaywrightCliLauncher(root);
+  if (resolution.status === "resolved" && resolution.resolved) {
+    const resolved = resolution.resolved;
     return {
       id: "prototyping.playwrightCli",
       severity: "ok",
-      title: "Playwright CLI",
-      message: "playwright-cli is reachable via project-local node_modules/.bin",
+      title: "Playwright CLI launcher",
+      message: `playwright-cli launcher resolved via ${resolved.origin} and passed bounded invocation probe`,
       details: {
-        origin: "node_modules/.bin",
-        path: toRelativePath(root, localCandidate),
+        origin: resolved.origin,
+        executable: relativizeMaybe(root, resolved.executable),
+        args: resolved.args,
+        displayCommand: resolved.displayCommand,
+        probe: resolved.probe,
+        lookedIn: {
+          ...resolution.lookedIn,
+          scriptsDir: toRelativePath(root, resolution.lookedIn.scriptsDir),
+          localBinDir: toRelativePath(root, resolution.lookedIn.localBinDir),
+        },
       },
     };
   }
 
-  const globalCandidate = await findCommandInPath("playwright-cli");
-  if (globalCandidate) {
+  if (resolution.status === "not_runnable") {
     return {
       id: "prototyping.playwrightCli",
-      severity: "ok",
-      title: "Playwright CLI",
-      message: "playwright-cli is reachable via PATH",
+      severity: "error",
+      title: "Playwright CLI launcher",
+      message:
+        "playwright-cli launcher candidates were found, but none passed the bounded invocation probe",
       details: {
-        origin: "PATH",
-        path: globalCandidate,
+        attempts: resolution.attempts.map((attempt) => ({
+          origin: attempt.origin,
+          executable: relativizeMaybe(root, attempt.executable),
+          args: attempt.args,
+          displayCommand: attempt.displayCommand,
+          probe: attempt.probe,
+        })),
+        lookedIn: {
+          ...resolution.lookedIn,
+          scriptsDir: toRelativePath(root, resolution.lookedIn.scriptsDir),
+          localBinDir: toRelativePath(root, resolution.lookedIn.localBinDir),
+        },
       },
     };
   }
@@ -741,13 +824,14 @@ async function buildPlaywrightCliCheck(root: string): Promise<DoctorCheck> {
   return {
     id: "prototyping.playwrightCli",
     severity: "error",
-    title: "Playwright CLI",
+    title: "Playwright CLI launcher",
     message:
-      "playwright-cli is not reachable via PATH or project-local node_modules/.bin (install it or use npx/playwright-cli local bin)",
+      "no runnable playwright-cli launcher resolved (checked project wrapper, node_modules/.bin, PATH, and npx --no-install)",
     details: {
       lookedIn: {
-        path: process.env.PATH ?? "",
-        localBinDir: toRelativePath(root, localBinDir),
+        ...resolution.lookedIn,
+        scriptsDir: toRelativePath(root, resolution.lookedIn.scriptsDir),
+        localBinDir: toRelativePath(root, resolution.lookedIn.localBinDir),
       },
     },
   };
@@ -798,32 +882,6 @@ async function buildTargetUrlCheck(
   };
 }
 
-async function findCommandInPath(command: string): Promise<string | null> {
-  const searchPath = process.env.PATH ?? "";
-  const dirs = searchPath.split(path.delimiter).filter((entry) => entry.length > 0);
-  for (const dir of dirs) {
-    const candidate = await findCommandInDir(dir, command);
-    if (candidate) {
-      return candidate;
-    }
-  }
-  return null;
-}
-
-async function findCommandInDir(dir: string, command: string): Promise<string | null> {
-  for (const fileName of commandCandidates(command)) {
-    const candidate = path.join(dir, fileName);
-    if (await exists(candidate)) {
-      return candidate;
-    }
-  }
-  return null;
-}
-
-function commandCandidates(command: string): string[] {
-  return [`${command}.cmd`, `${command}.ps1`, `${command}.exe`, `${command}.bat`, command];
-}
-
 async function probeHttpUrl(
   targetUrl: string,
 ): Promise<{ ok: boolean; statusCode?: number; error?: string }> {
@@ -847,6 +905,62 @@ async function probeHttpUrl(
   } finally {
     clearTimeout(timeout);
   }
+}
+
+function extractLiteralRequiredInputs(content: string): string[] {
+  const lines = content.split(/\r?\n/u);
+  const items: string[] = [];
+  let inInputsSection = false;
+  let currentItem: string | null = null;
+
+  for (const line of lines) {
+    if (/^##\s+Inputs you must read\s*$/iu.test(line)) {
+      inInputsSection = true;
+      continue;
+    }
+    if (!inInputsSection) {
+      continue;
+    }
+    if (/^##\s+/u.test(line)) {
+      break;
+    }
+    const bulletMatch = /^\s*-\s+(.*)$/u.exec(line);
+    if (bulletMatch) {
+      if (currentItem) {
+        items.push(currentItem.trim());
+      }
+      const bulletValue = bulletMatch.at(1);
+      if (bulletValue === undefined) {
+        continue;
+      }
+      currentItem = bulletValue.trim();
+      continue;
+    }
+    if (currentItem && /^\s{2,}\S/u.test(line)) {
+      currentItem = `${currentItem} ${line.trim()}`;
+    }
+  }
+
+  if (currentItem) {
+    items.push(currentItem.trim());
+  }
+
+  return Array.from(
+    new Set(
+      items
+        .map((item) => item.replace(/`/gu, "").replace(/[.,]$/u, "").trim())
+        .filter(
+          (item) =>
+            item.startsWith(".") &&
+            !/[*?]/u.test(item) &&
+            !/\boptional\b|\bwhen available\b/iu.test(item),
+        ),
+    ),
+  );
+}
+
+function relativizeMaybe(root: string, target: string): string {
+  return path.isAbsolute(target) ? toRelativePath(root, target) || target : target;
 }
 
 const DEFAULT_CONFIG_SEARCH_IGNORE_GLOBS = [
