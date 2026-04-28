@@ -329,6 +329,39 @@ describe("doctor", { timeout: 60000 }, () => {
     }
   });
 
+  it("forwards --target-url on doctor --profile prototyping", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-doctor-"));
+    const server = await startTestServer();
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      await seedPrototypingFixture(root, "http://127.0.0.1:9");
+
+      const outPath = path.join(root, ".qfai", "report", "doctor-cli.json");
+      await run(
+        [
+          "doctor",
+          "--root",
+          root,
+          "--profile",
+          "prototyping",
+          "--target-url",
+          server.url,
+          "--format",
+          "json",
+          "--out",
+          outPath,
+        ],
+        root,
+      );
+
+      const parsed = JSON.parse(await readFile(outPath, "utf-8")) as DoctorData;
+      expect(findCheck(parsed.checks, "prototyping.targetUrl")?.severity).toBe("ok");
+    } finally {
+      await stopTestServer(server.server);
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("reports prototyping role wrapper failures before runtime execution", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-doctor-"));
     const server = await startTestServer();

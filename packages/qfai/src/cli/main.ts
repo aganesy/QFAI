@@ -71,6 +71,9 @@ export async function run(argv: string[], cwd: string): Promise<void> {
           ...(options.doctorOut !== undefined ? { outPath: options.doctorOut } : {}),
           ...(options.failOn && options.failOn !== "never" ? { failOn: options.failOn } : {}),
           ...(options.profile === "prototyping" ? { profile: "prototyping" as const } : {}),
+          ...(options.profile === "prototyping" && options.prototypingTargetUrl
+            ? { targetUrl: options.prototypingTargetUrl }
+            : {}),
         });
         process.exitCode = exitCode;
       }
