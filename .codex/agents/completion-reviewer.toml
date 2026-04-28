@@ -1,5 +1,5 @@
 name = "completion-reviewer"
-description = "Independently audit Completion Contract, prompt DoD, and drift-protocol compliance."
+description = "Independently audit completion contract, prompt DoD, and drift-protocol compliance."
 sandbox_mode = "read-only"
 
 developer_instructions = '''

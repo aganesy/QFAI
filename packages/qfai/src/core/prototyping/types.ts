@@ -38,10 +38,26 @@ export type PlaywrightCliCommand = {
    */
   command: string;
   /**
+   * Logical browser tool identifier. This remains `playwright-cli` even when
+   * preflight resolves a project wrapper or `npx --no-install` launcher.
+   */
+  toolId?: "playwright-cli";
+  /**
+   * Structured argv (without the launcher executable) for executable commands.
+   * Evaluators should pair this with the preflight-resolved launcher instead of
+   * reparsing `command` when they need non-shell execution.
+   */
+  args?: string[];
+  /**
    * Absolute-from-repo-root path where the command's output MUST land.
    * Always POSIX-separated to keep the plan portable.
    */
   outputPath?: string;
+  /**
+   * Repo-relative path where stdout MUST be written when the command returns
+   * artifact content via stdout (for example HTML capture via `--raw eval`).
+   */
+  stdoutPath?: string;
   /**
    * Natural-language hint for interaction commands (derived from the
    * screen contract's `primaryTasks`).

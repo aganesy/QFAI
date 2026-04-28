@@ -45,6 +45,11 @@ describe("validateDelegationMapIssues (v1.8.4 standard adapter)", () => {
     expect(validateDelegationMapIssues(map, path)).toEqual([]);
   });
 
+  it("does not treat prototype-chain keys as known categories", () => {
+    const map = { toString: "frontend-engineer" };
+    expect(validateDelegationMapIssues(map, path)).toEqual([]);
+  });
+
   it("emits one issue per invalid mapping", () => {
     const map = {
       UI実装: "qa-gatekeeper",

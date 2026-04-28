@@ -1,3 +1,9 @@
+---
+name: orchestrator
+description: "Plan, delegate, integrate, and enforce stage gates without self-authoring."
+tools: [Read, Write, Edit, Glob, Grep, Bash]
+---
+
 # Orchestrator
 
 ## Mission

@@ -17,8 +17,7 @@ The agent reads the repository, produces the required artifacts, and iterates un
 
 ## Release status
 
-- Current package version: `1.7.15`
-- Release posture: v1.7.15 enforces runtime truthfulness.
+- Release posture: runtime truthfulness is enforced.
 - Prototyping is UI-only; `full-harness` is measurement-driven iteration accumulation for UI-bearing surfaces only.
 - Runtime observation is observed-only (no synthetic 200 / API / DB prototyping coverage).
 - Browser QA is mandatory per screen in full-harness, and `actionsWired` reports action coverage rather than finding count.
@@ -57,8 +56,18 @@ npx qfai report
   - Produces a human-readable report (`report.md` by default) or an internal JSON export (`report.json`) from `validate.json`; use `--base-url` to link file paths in Markdown to your repository viewer.
 - `npx qfai doctor`
   - Diagnoses configuration discovery, path resolution, glob scanning, and `validate.json` inputs before running validate/report; use `--fail-on` to enforce failures in CI.
+    Use `--profile prototyping` to add prototyping-specific preflight checks for the
+    primary spec, UI contracts, design contract readiness, active agent-wrapper
+    integrations, shipped role-input readiness, Playwright CLI launcher
+    resolution/probing, and target URL reachability.
     Note: prototyping evidence (`.qfai/evidence/prototyping.json`) is produced by the AI workflow / skills
     (`/qfai-prototyping` — any mode; modes differ only in `maxCycles`, see spec-0012), not by a general-purpose end-user CLI flow.
+    Use `npx qfai prototyping preflight --target-url <url>` for a focused
+    prototyping preflight before the skill starts; it now surfaces blocking
+    `QFAI-DCON-*` design-contract issues alongside runtime assumptions, resolves
+    a runnable Playwright CLI launcher (project wrapper / local bin / PATH /
+    `npx --no-install`), and still treats the first real delegation failure as a
+    runtime hard-stop.
     Use `npx qfai prototyping round-start --round <r5|r3|r2|r1> --candidates <csv> --target-url <url> --mode <mode>`
     to generate the round-scoped review bundle and command plans the AI evaluator sub-agent consumes, then use
     `round-harvest`, `round-narrow`, `round-absorb`, and `round-reimplement-verify` to advance the candidate funnel.
@@ -220,9 +229,9 @@ Notes.
 - `validate.json`, `report.json`, `doctor.json`, and `run-*` JSON logs are internal exports and are not a stable external contract; prefer `report.md` for integrations that must survive tool upgrades.
 - Scenario files are expected to use the Gherkin extension `*.feature` (not `*.md`).
 - `prototyping.calibration.packPath` points to the calibration pack SSOT; runtime and validator both resolve thresholds and iteration parameters from that pack.
-- `prototyping.calibration.thresholds`, `maxIterations`, `plateauDelta`, and `plateauLookback` are unsupported public config fields in v1.7.15.
+- `prototyping.calibration.thresholds`, `maxIterations`, `plateauDelta`, and `plateauLookback` are unsupported public config fields.
   Put calibration values in the referenced pack instead of `qfai.config.yaml`.
-- Observability modules (`src/core/observability/`) exist as foundation code but are **not integrated into blocking validation** in v1.7.14. They are reserved for future operational instrumentation.
+- Observability modules (`src/core/observability/`) exist as foundation code but are **not yet integrated into blocking validation**. They are reserved for future operational instrumentation.
 
 ## Specifications and contracts (SDD)
 
@@ -251,7 +260,7 @@ flowchart LR
 - Contracts SSOT: `.qfai/contracts/**`
 - Report outputs (`.qfai/report/**`) are derived artifacts and not SSOT.
 
-## Minimal tutorial (v1.7.7)
+## Minimal tutorial
 
 1. `npx qfai init`
 2. Run `/qfai-discussion` to structure scope, open questions, and produce a discussion pack under `.qfai/discussion/discussion-<ts>/`.
@@ -424,6 +433,9 @@ Integration wrappers are also generated for immediate use:
 
 `npx qfai init` installs canonical skills under `.qfai/assistant/skills/**` (SSOT)
 and generates thin wrapper assets for Agents/Codex VS Code / Copilot / Claude Code / Codex.
+Canonical agent markdown under `.qfai/assistant/agents/**` uses a shared YAML frontmatter
+subset (`name`, `description`, `tools`) compatible with Claude Code and GitHub Copilot,
+while Codex consumes mirrored `.codex/agents/*.toml` profiles.
 If wrapper assets drift from canonical skills, rerun `npx qfai init --force` to resync.
 
 ## Contributing (for QFAI maintainers)

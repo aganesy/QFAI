@@ -73,6 +73,36 @@ function loadAllAgents(): { name: string; data: Record<string, unknown> }[] {
     }));
 }
 
+function loadCanonicalFrontmatter(name: string): { name: string; description: string } {
+  const canonicalPath = join(CANONICAL_DIR, `${name}.md`);
+  const content = readFileSync(canonicalPath, "utf-8");
+  const frontmatterMatch = content.match(/^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/);
+  if (!frontmatterMatch) {
+    throw new Error(`${canonicalPath}: missing YAML frontmatter`);
+  }
+
+  const parsed = parseYaml(frontmatterMatch[1]);
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+    throw new Error(`${canonicalPath}: frontmatter must parse to an object`);
+  }
+
+  const frontmatter = parsed as Record<string, unknown>;
+  if (typeof frontmatter["name"] !== "string" || frontmatter["name"].trim().length === 0) {
+    throw new Error(`${canonicalPath}: frontmatter.name must be a non-empty string`);
+  }
+  if (
+    typeof frontmatter["description"] !== "string" ||
+    frontmatter["description"].trim().length === 0
+  ) {
+    throw new Error(`${canonicalPath}: frontmatter.description must be a non-empty string`);
+  }
+
+  return {
+    name: frontmatter["name"].trim(),
+    description: frontmatter["description"].trim(),
+  };
+}
+
 // QFAI:SPEC-0003:TC-0003-0006
 describe("TC-0003-0006: config.toml 存在・妥当性", () => {
   it("config.toml が存在し TOML としてパースできる", () => {
@@ -148,6 +178,23 @@ describe("TC-0003-0009: name フィールドとファイル名の一致", () => 
     const agents = loadAllAgents();
     for (const { name, data } of agents) {
       expect(data["name"], `${name}.toml: name mismatch`).toBe(name);
+    }
+  });
+});
+
+// QFAI:SPEC-0003:TC-0003-0011
+describe("TC-0003-0011: canonical metadata parity", () => {
+  it("各 TOML の name/description が canonical agent frontmatter と一致する", () => {
+    const agents = loadAllAgents();
+    for (const { name, data } of agents) {
+      const canonical = loadCanonicalFrontmatter(name);
+      expect(data["name"], `${name}.toml: name diverges from canonical frontmatter`).toBe(
+        canonical.name,
+      );
+      expect(
+        data["description"],
+        `${name}.toml: description diverges from canonical frontmatter`,
+      ).toBe(canonical.description);
     }
   });
 });

@@ -1,3 +1,9 @@
+---
+name: acceptance-test-engineer
+description: "Implement E2E, API, and integration acceptance coverage with explicit traceability."
+tools: [Read, Write, Edit, Glob, Grep, Bash]
+---
+
 # Acceptance Test Engineer
 
 ## Mission

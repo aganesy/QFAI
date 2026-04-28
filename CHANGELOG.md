@@ -16,6 +16,42 @@
 
 - なし
 
+## [1.8.5] - 2026-04-28
+
+Hardens prototyping full-harness readiness so preflight, doctor, and
+shipped skill assets agree on delegation roles, launcher availability,
+and distributed agent metadata before runtime delegation starts.
+
+### Added
+
+- **Prototyping readiness policy + launcher probing**: centralizes the
+  required full-harness roles / supported wrapper integrations and adds
+  bounded `playwright-cli` launcher resolution across project wrapper,
+  `node_modules/.bin`, `PATH`, and `npx --no-install`.
+- **Structured Playwright execution metadata**: command plans now carry
+  logical `toolId`, `args`, and `stdoutPath` fields alongside the
+  rendered command so evaluators can execute capture steps without
+  shell-redirection assumptions.
+
+### Changed
+
+- **Doctor / preflight / skill alignment**: `qfai doctor --profile
+prototyping`, `qfai prototyping preflight`, validators, and shipped
+  `qfai-prototyping` assets now diagnose active wrapper integrations,
+  literal required-input paths, launcher readiness, and runtime
+  hard-stop expectations from the same policy.
+- **Distributed agent asset compatibility**: shipped agent cards drop
+  undistributed `.instruction/...` required inputs and align shared
+  metadata/frontmatter across Claude Code, GitHub Copilot, and Codex.
+- **Full-harness follow-up hardening**: target URL forwarding,
+  certificate loading, invalid `--format` rejection, Linux launcher
+  cleanup, and integration coverage were tightened around prototyping
+  flows.
+
+### Removed
+
+- なし
+
 ## [1.8.4] - 2026-04-27
 
 Structural refactor of the prototyping skill driven by the v1.8.3

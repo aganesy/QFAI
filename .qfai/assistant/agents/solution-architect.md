@@ -1,3 +1,9 @@
+---
+name: solution-architect
+description: "Define architecture and contract decisions aligned with specs, constraints, and rejected-option history."
+tools: [Read, Write, Edit, Glob, Grep, Bash]
+---
+
 # Solution Architect
 
 ## Mission
@@ -23,8 +29,6 @@
 - .qfai/discussion/discussion-\*/04_Sources.md
 - .qfai/discussion/discussion-\*/06_REQ.md
 - .github/instructions/principles.instructions.md
-- .instruction/00_universal/development-principles-checklist.md
-- .instruction/01_specialties/design.md
 - Existing architecture docs and `.qfai/contracts/**`
 
 ## Deliverables

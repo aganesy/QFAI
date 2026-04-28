@@ -1226,7 +1226,7 @@ describe("runValidate", { timeout: 15000 }, () => {
       });
 
       expect(output).toContain(
-        "selected-direction.yaml must define chosen_direction_id (legacy alias: direction_id), winning_rationale, and carry_forward_rules.",
+        "selected-direction.yaml must define chosen_direction_id (legacy alias: direction_id), carry_forward_rules, and rationale content (`winning_rationale` or legacy/provisional `selection_rationale`).",
       );
       expect(output).toContain(
         "UI-bearing downstream execution requires `.qfai/contracts/design/exploration-brief.yaml`, `evaluation-rubric.yaml`, `evaluator-calibration.yaml`, `selected-direction.yaml`, and `design-system.yaml` when UI contracts exist.",

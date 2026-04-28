@@ -85,7 +85,7 @@ async function seedAllGatesPass(root: string): Promise<void> {
       fullHarness: { runId: "run-test-2026" },
       reviewerGate: {
         result: "PASS",
-        signoff: { reviewer: "test-reviewer", timestamp: "2026-04-27T00:00:00Z" },
+        signoff: { reviewerId: "test-reviewer", timestamp: "2026-04-27T00:00:00Z" },
       },
       rounds: [{ round: "r5" }, { round: "r3" }],
       polishCycles: [{ cycle: 1, kind: "polish" }],
@@ -111,10 +111,10 @@ describe("qfai prototyping certify (generate)", () => {
     const certPath = path.join(root, COMPLETION_CERTIFICATE_REL_PATH);
     const body = JSON.parse(
       await (await import("node:fs/promises")).readFile(certPath, "utf-8"),
-    ) as { runId: string; specsCovered: string[]; reviewerSignoff: { reviewer: string } };
+    ) as { runId: string; specsCovered: string[]; reviewerSignoff: { reviewerId: string } };
     expect(body.runId).toBe("run-test-2026");
     expect(body.specsCovered).toEqual(["0012"]);
-    expect(body.reviewerSignoff.reviewer).toBe("test-reviewer");
+    expect(body.reviewerSignoff.reviewerId).toBe("test-reviewer");
   });
 
   it("exits 2 when prototyping.json is missing", async () => {
@@ -181,6 +181,36 @@ describe("qfai prototyping certify (generate)", () => {
     );
     const exit = await runPrototypingCertify({ root, check: false });
     expect(exit).toBe(2);
+  });
+
+  it("accepts legacy reviewer signoff fields when issuing the certificate", async () => {
+    const root = await newTempDir();
+    await seedMinimalProject(root, { specMarker: true });
+    await seedAllGatesPass(root);
+    await writeFile(
+      path.join(root, ".qfai/evidence/prototyping.json"),
+      JSON.stringify({
+        mode: { effective: "standard", source: "test", rationale: "x" },
+        surface: "web",
+        fullHarness: { runId: "run-x" },
+        reviewerGate: {
+          result: "PASS",
+          signoff: { reviewer: "legacy-reviewer", timestamp: "2026-04-27T00:00:00Z" },
+        },
+        rounds: [{ round: "r5" }],
+        polishCycles: [{ cycle: 1, kind: "polish" }],
+      }),
+      "utf-8",
+    );
+
+    const exit = await runPrototypingCertify({ root, check: false });
+    expect(exit).toBe(0);
+
+    const certPath = path.join(root, COMPLETION_CERTIFICATE_REL_PATH);
+    const body = JSON.parse(
+      await (await import("node:fs/promises")).readFile(certPath, "utf-8"),
+    ) as { reviewerSignoff: { reviewerId: string } };
+    expect(body.reviewerSignoff.reviewerId).toBe("legacy-reviewer");
   });
 });
 

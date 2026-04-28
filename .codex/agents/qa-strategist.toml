@@ -1,5 +1,5 @@
 name = "qa-strategist"
-description = "Own QA strategy, coverage posture, traceability, and failure-handling design."
+description = "Own QA strategy, quality posture, traceability expectations, and failure-handling design."
 
 developer_instructions = '''
 ## Mission

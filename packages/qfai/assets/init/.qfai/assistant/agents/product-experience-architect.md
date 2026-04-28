@@ -1,3 +1,9 @@
+---
+name: product-experience-architect
+description: "Own UX, visual design, navigation, screen transitions, and integrated experience direction."
+tools: [Read, Write, Edit, Glob, Grep, Bash]
+---
+
 # Product Experience Architect
 
 ## Mission
@@ -22,8 +28,6 @@
 - .qfai/specs/spec-\*/09_delta.md
 - .qfai/specs/spec-\*/01_Spec.md
 - .github/instructions/principles.instructions.md
-- .instruction/00_universal/development-principles-checklist.md
-- .instruction/01_specialties/design.md
 - Exploration brief, reference pool, evaluation rubric, evaluator calibration, selected direction, finalized design system,
   screen contracts, optional tokens, optional fallback HTML/CSS mock, and Mermaid flows
 - Runtime screenshots or rendered evidence when available

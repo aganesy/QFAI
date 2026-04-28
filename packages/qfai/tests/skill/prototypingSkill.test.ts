@@ -9,6 +9,9 @@ import {
   scanBannedPhrases,
   hasDelegationScopeTable,
   hasMandatoryEvidencePaths,
+  hasEnvironmentPreconditions,
+  hasPreflightGuidance,
+  hasPlaywrightCliFallback,
 } from "../../src/core/validators/skill/prototypingSkill.js";
 
 const VALID_SKILL_CONTENT = [
@@ -26,12 +29,19 @@ const VALID_SKILL_CONTENT = [
   "## Required Process",
   "Follow the skill-orchestrated process.",
   "",
+  "### Step 2-A — Verify Contract Preconditions",
+  "classification is UI-bearing",
+  "",
+  "### Step 2-B — Verify Environment Preconditions",
+  "Run qfai prototyping preflight --target-url <url> or qfai doctor --profile prototyping.",
+  "Prefer npx --no-install playwright-cli whenever PATH reachability is not guaranteed.",
+  "",
   "## Evaluator Inputs (Mandatory)",
   "screenshots, HTML snapshots, axisDefs, previousScore, designSystemChecklist",
   "",
   "## Delegation Scope Table",
-  "| Screenshot capture | devops-ci-engineer |",
-  "| Evaluation L1-L2 | product-surface-reviewer, product-experience-architect |",
+  "| Playwright CLI execution & capture | devops-ci-engineer |",
+  "| Evaluation scoring | product-surface-reviewer, product-experience-architect |",
   "",
   "Screenshot evidence path: .qfai/evidence/prototyping/screenshots/<screen-id>.png",
   "HTML snapshot path: .qfai/evidence/prototyping/html/<screen-id>.html",
@@ -70,6 +80,34 @@ describe("prototyping skill validator", () => {
 
   it("documents canonical mandatory evidence paths", () => {
     expect(hasMandatoryEvidencePaths(VALID_SKILL_CONTENT)).toBe(true);
+  });
+
+  it("documents environment preconditions as a separate step", () => {
+    expect(hasEnvironmentPreconditions(VALID_SKILL_CONTENT)).toBe(true);
+  });
+
+  it("rejects content missing Step 2-A even when Step 2-B is present", () => {
+    const invalid = VALID_SKILL_CONTENT.replace(
+      "### Step 2-A — Verify Contract Preconditions\nclassification is UI-bearing\n\n",
+      "",
+    );
+    expect(hasEnvironmentPreconditions(invalid)).toBe(false);
+  });
+
+  it("documents preflight guidance", () => {
+    expect(hasPreflightGuidance(VALID_SKILL_CONTENT)).toBe(true);
+  });
+
+  it("documents Playwright CLI fallback guidance", () => {
+    expect(hasPlaywrightCliFallback(VALID_SKILL_CONTENT)).toBe(true);
+  });
+
+  it("rejects unsafe bare npx playwright-cli fallback guidance", () => {
+    const invalid = VALID_SKILL_CONTENT.replace(
+      "npx --no-install playwright-cli",
+      "npx playwright-cli",
+    );
+    expect(hasPlaywrightCliFallback(invalid)).toBe(false);
   });
 
   it("flags banned phrases when low-cost or standard are reintroduced", () => {

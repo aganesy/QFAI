@@ -1,3 +1,9 @@
+---
+name: implementation-reviewer
+description: "Review code changes for correctness, maintainability, backend safety, and implementation risk."
+tools: [Read, Glob, Grep, Bash]
+---
+
 # Implementation Reviewer
 
 ## Mission
@@ -23,7 +29,6 @@
 - .qfai/specs/spec-\*/09_delta.md
 - .github/instructions/code-review.instructions.md
 - .github/instructions/principles.instructions.md
-- .instruction/00_universal/development-principles-checklist.md
 - Diff of changed files
 - `.qfai/contracts/api/**` and `.qfai/contracts/db/**`
 

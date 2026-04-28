@@ -6,13 +6,15 @@
  * QFAI:SPEC-0017:TC-0017-0022 — round-start does not capture screenshots
  */
 
-import { access, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { access, chmod, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
+import { runInit } from "../../src/cli/commands/init.js";
 import { runPrototypingCommand } from "../../src/cli/commands/prototyping.js";
+import { run } from "../../src/cli/main.js";
 import { parseArgs } from "../../src/cli/lib/args.js";
 
 const tempDirs: string[] = [];
@@ -92,6 +94,17 @@ async function exists(p: string): Promise<boolean> {
   }
 }
 
+async function writeTestPlaywrightCli(binDir: string): Promise<void> {
+  if (process.platform === "win32") {
+    await writeFile(path.join(binDir, "playwright-cli.cmd"), "@echo off\r\necho ok\r\n", "utf-8");
+    return;
+  }
+
+  const launcherPath = path.join(binDir, "playwright-cli");
+  await writeFile(launcherPath, "#!/bin/sh\necho ok\n", "utf-8");
+  await chmod(launcherPath, 0o755);
+}
+
 describe("parseArgs — qfai prototyping round-start", () => {
   it("parses subcommand + required flags (REQ-0007)", () => {
     const parsed = parseArgs(
@@ -146,6 +159,19 @@ describe("parseArgs — qfai prototyping round-start", () => {
       process.cwd(),
     );
     expect(parsed.invalid).toBe(true);
+  });
+
+  it("parses prototyping preflight with target-url and json output", () => {
+    const parsed = parseArgs(
+      ["prototyping", "preflight", "--target-url", "http://localhost:5173", "--format", "json"],
+      process.cwd(),
+    );
+
+    expect(parsed.command).toBe("prototyping");
+    expect(parsed.invalid).toBe(false);
+    expect(parsed.options.prototypingAction).toBe("preflight");
+    expect(parsed.options.prototypingTargetUrl).toBe("http://localhost:5173");
+    expect(parsed.options.doctorFormat).toBe("json");
   });
 });
 
@@ -343,5 +369,38 @@ describe("runPrototypingCommand", () => {
         round: "r3",
       }),
     ).toBe(0);
+  });
+
+  it("routes prototyping preflight through doctor profile and writes json output", async () => {
+    const root = await newTempDir();
+    await runInit({ dir: root, force: false, dryRun: false, yes: true });
+    await seedFixture(root);
+    await mkdir(path.join(root, "node_modules", ".bin"), { recursive: true });
+    await writeTestPlaywrightCli(path.join(root, "node_modules", ".bin"));
+
+    const outPath = path.join(root, ".qfai", "report", "preflight.json");
+    await run(
+      [
+        "prototyping",
+        "preflight",
+        "--root",
+        root,
+        "--target-url",
+        "http://127.0.0.1:65535",
+        "--format",
+        "json",
+        "--out",
+        outPath,
+      ],
+      root,
+    );
+
+    const parsed = JSON.parse(await readFile(outPath, "utf-8")) as {
+      profile?: string;
+      checks: Array<{ id: string; severity: string }>;
+    };
+    expect(parsed.profile).toBe("prototyping");
+    expect(parsed.checks.some((check) => check.id === "prototyping.playwrightCli")).toBe(true);
+    expect(parsed.checks.some((check) => check.id === "prototyping.targetUrl")).toBe(true);
   });
 });

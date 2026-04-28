@@ -21,9 +21,11 @@
 // QFAI:SPEC-0015:TC-0015-0010
 // QFAI:SPEC-0015:TC-0015-0011
 // QFAI:SPEC-0015:TC-0015-0012
-import { access, readFile } from "node:fs/promises";
+import { access, readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
+
+import { parseAgentFrontmatter } from "../../src/core/agentFrontmatter.js";
 
 const AGENTS_DIR = path.resolve(
   __dirname,
@@ -148,6 +150,26 @@ describe("TC-0015-0002: Standard Contract Structure", () => {
   it("agentDefinition validator checks required sections", async () => {
     const content = await readFile(AGENT_VALIDATOR, "utf-8");
     expect(content).toContain("Mission");
+  });
+
+  it("canonical agent markdown files include Claude/GitHub Copilot-compatible frontmatter", async () => {
+    const files = (await readdir(AGENTS_DIR)).filter((fileName) => fileName.endsWith(".md"));
+    for (const fileName of files) {
+      const content = await readFile(path.join(AGENTS_DIR, fileName), "utf-8");
+      const parsed = parseAgentFrontmatter(content);
+      expect(parsed.ok, `${fileName}: invalid frontmatter`).toBe(true);
+      if (!parsed.ok) {
+        continue;
+      }
+      expect(parsed.frontmatter.name, `${fileName}: wrong name`).toBe(
+        fileName.replace(/\.md$/, ""),
+      );
+      expect(
+        parsed.frontmatter.description.length,
+        `${fileName}: missing description`,
+      ).toBeGreaterThan(0);
+      expect(parsed.frontmatter.tools.length, `${fileName}: missing tools`).toBeGreaterThan(0);
+    }
   });
 });
 

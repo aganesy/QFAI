@@ -1,4 +1,4 @@
-import { readFile } from "node:fs/promises";
+import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 
 import { describe, expect, it } from "vitest";
@@ -59,5 +59,16 @@ describe("init assistant guidance: exploration-first alignment", () => {
   it("agent-catalog.yml の frontend mission が selected direction ベースに更新されている", async () => {
     const content = await readFile(path.join(steeringDir, "agent-catalog.yml"), "utf-8");
     expect(content).toMatch(/selected direction|design system|screen contracts/i);
+  });
+
+  it("distributed agent cards do not require repo-private .instruction paths", async () => {
+    const agentFiles = (await readdir(agentsDir))
+      .filter((fileName) => fileName.endsWith(".md") && fileName !== "README.md")
+      .sort((left, right) => left.localeCompare(right));
+
+    for (const fileName of agentFiles) {
+      const content = await readFile(path.join(agentsDir, fileName), "utf-8");
+      expect(content).not.toContain(".instruction/");
+    }
   });
 });

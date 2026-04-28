@@ -72,6 +72,17 @@ describe("TC-0012-0289 — Step 0 executionPlan documented in SKILL.md", () => {
   });
 });
 
+describe("TC-0012-0289b — preflight and environment preconditions documented in SKILL.md", () => {
+  it("SKILL.md separates contract/environment preconditions and documents preflight guidance", async () => {
+    const content = await readSkillMd();
+
+    expect(content).toContain("Step 2-A — Verify Contract Preconditions");
+    expect(content).toContain("Step 2-B — Verify Environment Preconditions");
+    expect(content).toMatch(/qfai prototyping preflight|qfai doctor --profile prototyping/i);
+    expect(content).toMatch(/npx --no-install playwright-cli|node_modules\/\.bin\/playwright-cli/i);
+  });
+});
+
 // ─── TC-0012-0292: canonical evidence capture instructions ───────────────────
 
 describe("TC-0012-0292 — SKILL.md documents canonical evidence capture", () => {

@@ -1,5 +1,5 @@
 name = "delivery-planner"
-description = "Create phased execution plans with risks, dependencies, ownership, and DoD."
+description = "Create phased delivery plans, ownership splits, risk controls, and rerun policies."
 
 developer_instructions = '''
 ## Mission

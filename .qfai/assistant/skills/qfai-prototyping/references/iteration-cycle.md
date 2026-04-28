@@ -11,11 +11,11 @@ The exploration funnel is expressed as fixed rounds plus optional polish cycles:
 
 ## Round steps
 
-Each exploration round follows this order, driven by the AI evaluator sub-agent running Playwright CLI:
+Each exploration round follows this order, driven by the capture role plus evaluation reviewers:
 
 1. **Round start**: run `qfai prototyping round-start --round <rN> --candidates <csv> --target-url <url> --mode <mode>`.
-2. **Capture**: execute `command-plans.json` (goto, snapshot, interaction, screenshot, html) for every declared screen of every active candidate, saving evidence at the assigned paths.
-3. **Evaluate**: evaluator sub-agents read `review-bundle.json` and write per-candidate `evaluator-reviews/<candidate-id>.json` with concrete `evidenceRefs[]`.
+2. **Capture**: execute `command-plans.json` for every declared screen of every active candidate using the preflight-resolved Playwright CLI launcher, saving evidence at the assigned paths.
+3. **Evaluate**: reviewer sub-agents read `review-bundle.json`; the orchestrator persists per-candidate `evaluator-reviews/<candidate-id>.json` with concrete `evidenceRefs[]`.
 4. **Harvest**: run `qfai prototyping round-harvest --round <rN>` to create the harvest template from the evaluated candidate set.
 5. **Narrow**: run `qfai prototyping round-narrow --round <rN> --survivors <csv>` to record which candidates survive to the next round.
 6. **Absorb**: for `r3|r2|r1`, run `qfai prototyping round-absorb --round <rN> --survivors <csv>` to generate the absorption plan for the surviving candidates.

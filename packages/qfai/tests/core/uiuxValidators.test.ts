@@ -319,6 +319,88 @@ describe("uiux validators", () => {
     expect(issues).toHaveLength(0);
   });
 
+  it("reports invalid agent frontmatter before runtime delegation can fail", async () => {
+    const root = await newTempDir();
+    await seedAgentDefinitionFixture(
+      root,
+      [
+        "# Frontend Engineer",
+        "",
+        "## Mission",
+        "",
+        "- Implement frontend behavior.",
+        "",
+        "## Domain Responsibilities",
+        "",
+        "- Build UI.",
+        "",
+        "## Inputs you must read",
+        "",
+        "- .qfai/specs/spec-*/01_Spec.md",
+        "",
+        "## Deliverables",
+        "",
+        "- Implementation summary",
+        "",
+        "## Stop conditions",
+        "",
+        "- Missing source artifacts.",
+        "",
+        "## Sign-off",
+        "",
+        "- [ ] Deliverables are complete",
+        "",
+      ].join("\n"),
+    );
+
+    const issues = await validateAgentDefinition(root, defaultConfig);
+    expect(issues.some((item) => item.code === "QFAI-AGENT-011")).toBe(true);
+  });
+
+  it("accepts agent markdown with valid Claude/GitHub Copilot-compatible frontmatter", async () => {
+    const root = await newTempDir();
+    await seedAgentDefinitionFixture(
+      root,
+      [
+        "---",
+        "name: frontend-engineer",
+        'description: "Implement frontend behavior aligned with the selected direction."',
+        "tools: [Read, Write, Edit, Glob, Grep, Bash]",
+        "---",
+        "",
+        "# Frontend Engineer",
+        "",
+        "## Mission",
+        "",
+        "- Implement frontend behavior.",
+        "",
+        "## Domain Responsibilities",
+        "",
+        "- Build UI.",
+        "",
+        "## Inputs you must read",
+        "",
+        "- .qfai/specs/spec-*/01_Spec.md",
+        "",
+        "## Deliverables",
+        "",
+        "- Implementation summary",
+        "",
+        "## Stop conditions",
+        "",
+        "- Missing source artifacts.",
+        "",
+        "## Sign-off",
+        "",
+        "- [ ] Deliverables are complete",
+        "",
+      ].join("\n"),
+    );
+
+    const issues = await validateAgentDefinition(root, defaultConfig);
+    expect(issues).toEqual([]);
+  });
+
   it("detects key html mock violations with stable code/severity", async () => {
     const root = await newTempDir();
     const discussionDir = path.join(root, ".qfai", "discussion");
@@ -515,4 +597,32 @@ async function newTempDir(): Promise<string> {
   const dir = await mkdtemp(path.join(os.tmpdir(), "qfai-uiux-"));
   tempDirs.push(dir);
   return dir;
+}
+
+async function seedAgentDefinitionFixture(root: string, agentMarkdown: string): Promise<void> {
+  const steeringDir = path.join(root, ".qfai", "assistant", "steering");
+  const agentsDir = path.join(root, ".qfai", "assistant", "agents");
+  await mkdir(steeringDir, { recursive: true });
+  await mkdir(agentsDir, { recursive: true });
+
+  await writeFile(
+    path.join(steeringDir, "agent-catalog.yml"),
+    ['schema_version: "1.0"', "agents:", "  - id: frontend-engineer", "    kind: worker", ""].join(
+      "\n",
+    ),
+    "utf-8",
+  );
+  await writeFile(
+    path.join(steeringDir, "agent-routing.yml"),
+    [
+      "routing:",
+      "  - skill: qfai-prototyping",
+      "    phases:",
+      "      - mandatory_agents: [frontend-engineer]",
+      "",
+    ].join("\n"),
+    "utf-8",
+  );
+  await writeFile(path.join(steeringDir, "review-profiles.yml"), "profiles: {}\n", "utf-8");
+  await writeFile(path.join(agentsDir, "frontend-engineer.md"), `${agentMarkdown}\n`, "utf-8");
 }

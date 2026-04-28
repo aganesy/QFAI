@@ -95,7 +95,7 @@ Evaluation scoring and screenshot capture must use only the allowed roles below.
 | Category                           | Allowed Role(s)                                        |
 | ---------------------------------- | ------------------------------------------------------ |
 | UI implementation                  | frontend-engineer, product-experience-architect        |
-| Playwright CLI execution & capture | product-surface-reviewer, product-experience-architect |
+| Playwright CLI execution & capture | devops-ci-engineer                                     |
 | Evaluation scoring                 | product-surface-reviewer, product-experience-architect |
 | Build                              | devops-ci-engineer, backend-engineer                   |
 | Breakthrough planning              | product-experience-architect, frontend-engineer        |
@@ -144,7 +144,7 @@ Read order:
 9. `.qfai/contracts/design/design-system.yaml`
 10. `.qfai/contracts/ui/*.yaml`
 
-### Step 2 — Verify Execution Preconditions
+### Step 2-A — Verify Contract Preconditions
 
 Confirm all of the following before any evaluation:
 
@@ -152,6 +152,17 @@ Confirm all of the following before any evaluation:
 - surface is `web`, `mobile`, `desktop`, or `mixed`
 - every declared screen has a stable `screen-id`
 - the exploration brief, evaluation rubric, and evaluator calibration contracts satisfy the required schema
+
+### Step 2-B — Verify Environment Preconditions
+
+Confirm all of the following before launching the first required delegation:
+
+- Run `qfai prototyping preflight --target-url <url>` when a concrete target URL is known, or `qfai doctor --profile prototyping` to diagnose the same runtime assumptions from config.
+- Every active agent-wrapper integration under `.claude/agents/` and `.github/agents/` contains valid wrappers for `frontend-engineer`, `product-experience-architect`, `product-surface-reviewer`, `backend-engineer`, and `devops-ci-engineer`, and each wrapper resolves to a canonical role card with valid frontmatter.
+- The canonical role cards' literal required-input paths exist after init; do not proceed with dead references in shipped assets.
+- `qfai doctor --profile prototyping` resolves a runnable Playwright CLI launcher (project wrapper, `node_modules/.bin`, PATH, or `npx --no-install playwright-cli`) and verifies it with a bounded invocation probe.
+- `targetUrl` responds with HTTP 200-399 before capture starts. If it does not, start or repair the dev server first; do not pretend the evaluator can proceed.
+- Preflight diagnoses readiness only; it does NOT guarantee sub-agent success. If the first required delegation fails, stop the stage and report remediation. Environment repair is part of preflight, not a reviewer-side waiver.
 
 ### Step 3 — Generate Divergent Directions
 
@@ -168,19 +179,17 @@ Before launching the evaluator, prepare the round-scoped artifacts via QFAI (not
   - `.qfai/evidence/prototyping/rounds/<rN>/review-bundle.json` — the evaluator input bundle (candidates, axisDefs, designSystemChecklist, commandPlanRef)
 - Do not invent evidence paths. Paths are fixed by QFAI per the resolved primary prototyping spec.
 
-### Step 5 — AI Evaluator Executes the Command Plans and Captures Evidence
+### Step 5 — Capture Role Executes the Command Plans and Captures Evidence
 
-For every declared screen of every active candidate in the current round, the AI evaluator sub-agent:
+For every declared screen of every active candidate in the current round, the capture role (`devops-ci-engineer`):
 
 1. Reads `command-plans.json` for the round
-2. Runs `playwright-cli goto <url>` for the candidate route
-3. Runs `playwright-cli snapshot --save <candidate-path>/<screen-id>.snapshot.txt`
+2. Resolves the launcher from the preflight/doctor result and applies it to each logical `toolId + args` command entry
+3. Writes stdout to `stdoutPath` when the plan marks an output as stdout-backed (for example HTML capture)
 4. Performs interaction commands (click/fill) to exercise `primaryTasks` noted in the plan
-5. Runs `playwright-cli screenshot --full-page --save <candidate-path>/<screen-id>.png`
-6. Runs `playwright-cli eval "document.documentElement.outerHTML" > <candidate-path>/<screen-id>.html`
-7. Saves the sequence of executed commands to `<candidate-path>/<screen-id>.commands.json`
+5. Saves the executed command transcript to `<candidate-path>/<screen-id>.commands.json`
 
-If any capture step fails, the evaluator records the failure and stops pretending the screen was evaluated. The round is incomplete and must be rerun.
+If any capture step fails, the capture role records the failure and stops pretending the screen was evaluated. The round is incomplete and must be rerun.
 
 ### Step 6 — Launch Evaluation Reviewers
 
@@ -192,7 +201,7 @@ Launch evaluation reviewer sub-agents with the full context bundle. Inputs are r
 - `designSystemChecklist` (from `.qfai/contracts/design/design-system.yaml`)
 - `commandPlanRef` pointing at `command-plans.json`
 
-The reviewer writes `rounds/<round>/evaluator-reviews/<candidate-id>.json` with concrete `evidenceRefs[]` for every score. Placeholder refs are rejected.
+`product-surface-reviewer` and `product-experience-architect` own the scoring judgment. The orchestrator owns persistence of the returned scoring payload into `rounds/<round>/evaluator-reviews/<candidate-id>.json` with concrete `evidenceRefs[]` for every score. Placeholder refs are rejected.
 
 ### Step 7 — Harvest and Direction Funnel
 

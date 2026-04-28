@@ -8,16 +8,10 @@
  */
 
 import type { Issue } from "../../types.js";
+import { PROTOTYPING_DELEGATION_SCOPE } from "../../prototyping/policy.js";
 import { issue } from "../utils.js";
 
-const DELEGATION_SCOPE: Record<string, readonly string[]> = {
-  UI実装: ["frontend-engineer", "product-experience-architect"],
-  スクリーンショット: ["devops-ci-engineer"],
-  評価スコアリング: ["product-surface-reviewer", "product-experience-architect"],
-  ビルド: ["devops-ci-engineer", "backend-engineer"],
-};
-
-export const DELEGATION_CATEGORIES = Object.keys(DELEGATION_SCOPE) as readonly string[];
+export const DELEGATION_CATEGORIES = Object.keys(PROTOTYPING_DELEGATION_SCOPE) as readonly string[];
 
 /**
  * Verifies that every delegationMap entry assigns a category to a role from
@@ -38,12 +32,14 @@ export function validateDelegationMapIssues(
 
   const issues: Issue[] = [];
   for (const [category, rawRole] of Object.entries(delegationMap)) {
-    const allowedRoles = DELEGATION_SCOPE[category];
-    if (allowedRoles === undefined) {
+    if (!Object.hasOwn(PROTOTYPING_DELEGATION_SCOPE, category)) {
       // Unknown category is not flagged here (scope violation is a separate
       // concern handled outside this validator).
       continue;
     }
+    const allowedRoles = PROTOTYPING_DELEGATION_SCOPE[
+      category as keyof typeof PROTOTYPING_DELEGATION_SCOPE
+    ] as readonly string[];
     // Non-string values used to be filtered out in stateGate.extractDelegationMap
     // and slipped through silently. Flag them explicitly so malformed entries
     // like { UI実装: 123 } surface a real violation. (Codex review on PR #201.)

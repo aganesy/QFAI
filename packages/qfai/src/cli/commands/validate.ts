@@ -460,19 +460,19 @@ const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-DCON-001":
     "UI-bearing downstream execution requires `.qfai/contracts/design/exploration-brief.yaml`, `evaluation-rubric.yaml`, `evaluator-calibration.yaml`, `selected-direction.yaml`, and `design-system.yaml` when UI contracts exist.",
   "QFAI-DCON-002":
-    "exploration-brief.yaml must define product_intent, target_users, must_preserve_interactions, brand_signals, and differentiation_targets.",
+    "exploration-brief.yaml must define meaningful content for product_intent, target_users, must_preserve_interactions, brand_signals, and differentiation_targets.",
   "QFAI-DCON-003":
     "evaluation-rubric.yaml must define axes, hard_floors, and weighted_axes arrays.",
   "QFAI-DCON-004":
-    "selected-direction.yaml must define chosen_direction_id (legacy alias: direction_id), winning_rationale, and carry_forward_rules.",
+    "selected-direction.yaml must define chosen_direction_id (legacy alias: direction_id), carry_forward_rules, and rationale content (`winning_rationale` or legacy/provisional `selection_rationale`).",
   "QFAI-DCON-005":
-    "design-system.yaml must define checklist entries for color, typography, spacing, border_radius, shadow, dos_and_donts, component_tone, and motion_rules.",
+    "design-system.yaml must define checklist entries for color, typography, spacing, border_radius, shadow, dos_and_donts, and motion_rules, plus component guidance via checklist.component_tone or richer component guidance blocks.",
   "QFAI-DCON-006": "exploration-brief.yaml must parse as an object-shaped YAML document.",
   "QFAI-DCON-007": "evaluation-rubric.yaml must parse as an object-shaped YAML document.",
   "QFAI-DCON-008": "selected-direction.yaml must parse as an object-shaped YAML document.",
   "QFAI-DCON-009": "design-system.yaml must parse as an object-shaped YAML document.",
   "QFAI-DCON-010":
-    "evaluator-calibration.yaml must define good_critique_examples, too_lenient_examples, blandness_fail_examples, and originality_fail_examples.",
+    "evaluator-calibration.yaml must define meaningful content for good_critique_examples, too_lenient_examples, blandness_fail_examples, and originality_fail_examples.",
   "QFAI-DCON-011": "evaluator-calibration.yaml must parse as an object-shaped YAML document.",
   "QFAI-BREAK-001": "breakthrough.json is required for exploration-first UI prototyping evidence.",
   "QFAI-BREAK-002": "breakthrough.json must be a valid JSON object.",

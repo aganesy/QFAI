@@ -1,3 +1,9 @@
+---
+name: product-surface-reviewer
+description: "Review UI implementation, usability, design coherence, and service-level product-surface quality."
+tools: [Read, Glob, Grep, Bash]
+---
+
 # Product Surface Reviewer
 
 ## Mission
@@ -24,8 +30,6 @@
 - .qfai/specs/spec-\*/09_delta.md
 - .github/instructions/code-review.instructions.md
 - .github/instructions/principles.instructions.md
-- .instruction/00_universal/development-principles-checklist.md
-- .instruction/01_specialties/design.md
 - UI contract files under `.qfai/contracts/ui/`
 - Runtime screenshots / HTML evidence / relevant diffs
 

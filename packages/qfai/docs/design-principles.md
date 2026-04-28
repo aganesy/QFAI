@@ -1,8 +1,8 @@
-# QFAI Design Principles (v1.8.4)
+# QFAI Design Principles
 
 This document is internal to package development; it is **NOT** shipped via
-`qfai init`. It captures the structural principles that the v1.8.4 prototyping
-refactor establishes (RR §root-cause analysis), and that future contributions
+`qfai init`. It captures the structural principles established by the
+prototyping refactor (RR §root-cause analysis), and that future contributions
 must respect.
 
 ## P1. Mechanism over documentation

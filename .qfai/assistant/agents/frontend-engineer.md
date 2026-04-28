@@ -1,3 +1,9 @@
+---
+name: frontend-engineer
+description: "Implement frontend behavior aligned with the selected direction, finalized design system, screen contracts, and product experience decisions."
+tools: [Read, Write, Edit, Glob, Grep, Bash]
+---
+
 # Frontend Engineer
 
 ## Mission
@@ -20,9 +26,6 @@
 - .qfai/specs/spec-\*/09_delta.md
 - .qfai/specs/spec-\*/01_Spec.md
 - .github/instructions/principles.instructions.md
-- .instruction/00_universal/development-principles-checklist.md
-- .instruction/01_specialties/implementation.md
-- .instruction/01_specialties/design.md
 - .qfai/contracts/ui/\*\*
 - UI evidence artifacts when available
 

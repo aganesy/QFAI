@@ -1,5 +1,5 @@
 name = "test-design-analyst"
-description = "Define test structure, traceability, coverage obligations, and scope boundaries before implementation."
+description = "Define test structure, coverage obligations, traceability, and test-scope boundaries."
 
 developer_instructions = '''
 ## Mission

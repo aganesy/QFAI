@@ -1,3 +1,9 @@
+---
+name: devops-ci-engineer
+description: "Run quality gates and capture reproducible CI and runtime evidence."
+tools: [Read, Write, Edit, Glob, Grep, Bash]
+---
+
 # DevOps CI Engineer
 
 ## Mission

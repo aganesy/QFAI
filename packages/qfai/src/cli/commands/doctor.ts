@@ -1,7 +1,7 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 
-import { createDoctorData } from "../../core/doctor.js";
+import { createDoctorData, type DoctorProfile } from "../../core/doctor.js";
 import { info } from "../lib/logger.js";
 
 export type DoctorCommandOptions = {
@@ -10,12 +10,14 @@ export type DoctorCommandOptions = {
   format: "text" | "json";
   outPath?: string;
   failOn?: "warning" | "error";
+  profile?: DoctorProfile;
+  targetUrl?: string;
 };
 
 function formatDoctorText(data: Awaited<ReturnType<typeof createDoctorData>>): string {
   const lines: string[] = [];
   lines.push(
-    `qfai doctor: root=${data.root} config=${data.config.configPath} (${data.config.found ? "found" : "missing"})`,
+    `qfai doctor: root=${data.root} config=${data.config.configPath} (${data.config.found ? "found" : "missing"})${data.profile ? ` profile=${data.profile}` : ""}`,
   );
   for (const check of data.checks) {
     lines.push(`[${check.severity}] ${check.id}: ${check.message}`);
@@ -34,6 +36,8 @@ export async function runDoctor(options: DoctorCommandOptions): Promise<number> 
   const data = await createDoctorData({
     startDir: options.root,
     rootExplicit: options.rootExplicit,
+    ...(options.profile ? { profile: options.profile } : {}),
+    ...(options.targetUrl ? { targetUrl: options.targetUrl } : {}),
   });
 
   const output = options.format === "json" ? formatDoctorJson(data) : formatDoctorText(data);

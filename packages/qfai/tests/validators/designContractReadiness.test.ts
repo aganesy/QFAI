@@ -214,6 +214,121 @@ describe("validateDesignContractReadiness", () => {
     expect(issues.map((issue) => issue.code)).toContain("QFAI-DCON-010");
   });
 
+  it("structured /qfai-sdd contract shapes でも meaningful content があれば受理する", async () => {
+    const root = await newTempRoot();
+    await seedUiContract(root);
+    await seedDesignContracts(root);
+
+    const designDir = path.join(root, ".qfai", "contracts", "design");
+    await writeFile(
+      path.join(designDir, "exploration-brief.yaml"),
+      [
+        "product_intent:",
+        "  feeling:",
+        "    - role: seeker",
+        "      statement: 店舗物件特有条件を業務的に速く比較できる。",
+        "target_users:",
+        "  - role: seeker",
+        "    goals:",
+        "      - 条件比較",
+        "must_preserve_interactions:",
+        "  seeker:",
+        "    primary_flow:",
+        "      - 条件入力",
+        "brand_signals:",
+        "  tone:",
+        "    - 信頼できる",
+        "differentiation_targets:",
+        "  - id: DIFF-001",
+        "    statement: 店舗物件固有条件をカード上位へ出す。",
+      ].join("\n"),
+      "utf-8",
+    );
+    await writeFile(
+      path.join(designDir, "evaluator-calibration.yaml"),
+      [
+        "good_critique_examples:",
+        "  - example: primary task が card 上位に出ていない",
+        "    why:",
+        "      - failure location が具体的",
+        "too_lenient_examples:",
+        "  - example: 雰囲気がよい",
+        "    why:",
+        "      - 軸に接続していない",
+        "blandness_fail_examples:",
+        "  - example: generic dashboard",
+        "    why:",
+        "      - 店舗物件らしさがない",
+        "originality_fail_examples:",
+        "  - example: flashy AI hero",
+        "    why:",
+        "      - operational clarity を壊す",
+      ].join("\n"),
+      "utf-8",
+    );
+
+    const issues = await validateDesignContractReadiness(root, defaultConfig);
+
+    expect(issues).toEqual([]);
+  });
+
+  it("provisional selected-direction は selection_rationale で通す", async () => {
+    const root = await newTempRoot();
+    await seedUiContract(root);
+    await seedDesignContracts(root);
+
+    const designDir = path.join(root, ".qfai", "contracts", "design");
+    await writeFile(
+      path.join(designDir, "selected-direction.yaml"),
+      [
+        "selection_status: provisional_for_downstream",
+        "chosen_direction_id: direction-02",
+        "selection_rationale: 実装と prototyping の baseline として方向を正規化する。",
+        "carry_forward_rules:",
+        "  - search-first を保つ",
+      ].join("\n"),
+      "utf-8",
+    );
+
+    const issues = await validateDesignContractReadiness(root, defaultConfig);
+
+    expect(issues).toEqual([]);
+  });
+
+  it("design-system は component_semantics / content_tone でも component guidance を満たせる", async () => {
+    const root = await newTempRoot();
+    await seedUiContract(root);
+    await seedDesignContracts(root);
+
+    const designDir = path.join(root, ".qfai", "contracts", "design");
+    await writeFile(
+      path.join(designDir, "design-system.yaml"),
+      [
+        "checklist:",
+        "  color: []",
+        "  typography: []",
+        "  spacing: []",
+        "  border_radius: []",
+        "  shadow: []",
+        "  dos_and_donts: []",
+        "  motion_rules: []",
+        "component_semantics:",
+        "  - id: storefront_listing_card",
+        "    purpose: 店舗物件比較のカード",
+        "    semantics:",
+        "      - article",
+        "content_tone:",
+        "  labels:",
+        "    - 店舗物件ドメイン語彙を優先する",
+      ].join("\n"),
+      "utf-8",
+    );
+
+    const issues = await validateDesignContractReadiness(root, defaultConfig);
+
+    expect(issues).toEqual([]);
+  });
+
   it("custom contractsDir でも suggested_action は実際の design contract path を案内する", async () => {
     const root = await newTempRoot();
     const config = {

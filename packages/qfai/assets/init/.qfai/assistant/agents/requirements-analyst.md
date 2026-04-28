@@ -1,3 +1,9 @@
+---
+name: requirements-analyst
+description: "Produce testable requirements, option sets, and explicit open-question ledgers."
+tools: [Read, Write, Edit, Glob, Grep, Bash]
+---
+
 # Requirements Analyst
 
 ## Mission

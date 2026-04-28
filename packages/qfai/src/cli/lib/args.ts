@@ -25,6 +25,7 @@ export type ParsedArgs = {
     guardrailsKeyword?: string;
     platform?: string;
     prototypingAction?:
+      | "preflight"
       | "round-start"
       | "round-harvest"
       | "round-narrow"
@@ -98,6 +99,7 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
     const candidate = args[0];
     if (candidate && !candidate.startsWith("--")) {
       if (
+        candidate === "preflight" ||
         candidate === "round-start" ||
         candidate === "round-harvest" ||
         candidate === "round-narrow" ||
@@ -156,7 +158,14 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
           markInvalid();
           break;
         }
-        applyFormatOption(command, next, options);
+        if (command === "prototyping" && options.prototypingAction !== "preflight") {
+          markInvalid();
+          i += 1;
+          break;
+        }
+        if (!applyFormatOption(command, next, options)) {
+          markInvalid();
+        }
         i += 1;
         break;
       }
@@ -201,10 +210,15 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
           markInvalid();
           break;
         }
-        if (command === "doctor") {
+        if (
+          command === "doctor" ||
+          (command === "prototyping" && options.prototypingAction === "preflight")
+        ) {
           options.doctorOut = next;
-        } else {
+        } else if (command === "report") {
           options.reportOut = next;
+        } else {
+          markInvalid();
         }
         i += 1;
         break;
@@ -400,35 +414,32 @@ function applyFormatOption(
   command: string | null,
   value: string | undefined,
   options: ParsedArgs["options"],
-): void {
+): boolean {
   if (!value) {
-    return;
+    return false;
   }
   if (command === "report") {
     if (value === "md" || value === "json") {
       options.reportFormat = value;
+      return true;
     }
-    return;
+    return false;
   }
   if (command === "validate") {
     if (value === "text" || value === "github") {
       options.validateFormat = value;
+      return true;
     }
-    return;
+    return false;
   }
-  if (command === "doctor") {
+  if (command === "doctor" || command === "prototyping") {
     if (value === "text" || value === "json") {
       options.doctorFormat = value;
+      return true;
     }
-    return;
+    return false;
   }
-
-  if (value === "md" || value === "json") {
-    options.reportFormat = value;
-  }
-  if (value === "text" || value === "github") {
-    options.validateFormat = value;
-  }
+  return false;
 }
 
 function normalizeGuardrailsAction(value: string): "list" | "extract" | "check" | null {
