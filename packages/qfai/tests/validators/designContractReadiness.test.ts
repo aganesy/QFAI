@@ -118,6 +118,36 @@ async function seedDesignContracts(root: string): Promise<void> {
     ].join("\n"),
     "utf-8",
   );
+  await writeFile(
+    path.join(designDir, "prototype-handoff.yaml"),
+    [
+      'schemaVersion: "1.0"',
+      "sourcePrototypeRefs:",
+      "  winnerHtml: .qfai/prototypes/winner/index.html",
+      "  screenshots:",
+      "    - .qfai/evidence/prototyping/screenshots/dashboard.png",
+      "surfaceProfiles:",
+      "  primary: web",
+      "screens:",
+      "  - screenId: dashboard",
+      "    prototypeRef: .qfai/prototypes/winner/index.html#dashboard",
+      "    preserve:",
+      "      - Primary CTA hierarchy",
+      "visualDna:",
+      "  color:",
+      "    primary: '#2563eb'",
+      "  layout:",
+      "    density: compact",
+      "implementationHandoff:",
+      "  mustPreserve:",
+      "    - Visual hierarchy from winner screenshot",
+      "  mayAdapt:",
+      "    - Component names",
+      "  mustNotCopy:",
+      "    - Prototype-only fake data wiring",
+    ].join("\n"),
+    "utf-8",
+  );
 }
 
 describe("validateDesignContractReadiness", () => {
@@ -212,6 +242,40 @@ describe("validateDesignContractReadiness", () => {
     const issues = await validateDesignContractReadiness(root, defaultConfig);
 
     expect(issues.map((issue) => issue.code)).toContain("QFAI-DCON-010");
+  });
+
+  it("prototype-handoff.yaml が壊れている場合は parse error を返す", async () => {
+    const root = await newTempRoot();
+    await seedUiContract(root);
+    await seedDesignContracts(root);
+
+    const designDir = path.join(root, ".qfai", "contracts", "design");
+    await writeFile(path.join(designDir, "prototype-handoff.yaml"), "screens: [\n", "utf-8");
+
+    const issues = await validateDesignContractReadiness(root, defaultConfig);
+
+    expect(issues.map((issue) => issue.code)).toContain("QFAI-DCON-012");
+  });
+
+  it("prototype-handoff.yaml の必須 field が欠けている場合は error を返す", async () => {
+    const root = await newTempRoot();
+    await seedUiContract(root);
+    await seedDesignContracts(root);
+
+    const designDir = path.join(root, ".qfai", "contracts", "design");
+    await writeFile(
+      path.join(designDir, "prototype-handoff.yaml"),
+      [
+        'schemaVersion: "1.0"',
+        "sourcePrototypeRefs:",
+        "  winnerHtml: .qfai/prototypes/winner/index.html",
+      ].join("\n"),
+      "utf-8",
+    );
+
+    const issues = await validateDesignContractReadiness(root, defaultConfig);
+
+    expect(issues.map((issue) => issue.code)).toContain("QFAI-DCON-013");
   });
 
   it("structured /qfai-sdd contract shapes でも meaningful content があれば受理する", async () => {

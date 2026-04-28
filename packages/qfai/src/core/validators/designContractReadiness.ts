@@ -14,6 +14,7 @@ const REQUIRED_DESIGN_FILES = [
   "evaluator-calibration.yaml",
   "selected-direction.yaml",
   "design-system.yaml",
+  "prototype-handoff.yaml",
 ] as const;
 const REQUIRED_DESIGN_SYSTEM_CHECKLIST_KEYS = [
   "color",
@@ -67,7 +68,7 @@ export async function validateDesignContractReadiness(
           "designContractReadiness.requiredFile",
           undefined,
           "canonical",
-          `UI-bearing downstream execution requires exploration-brief.yaml, evaluation-rubric.yaml, evaluator-calibration.yaml, selected-direction.yaml, and design-system.yaml under \`${designDirRelative}/\`.`,
+          `UI-bearing downstream execution requires exploration-brief.yaml, evaluation-rubric.yaml, evaluator-calibration.yaml, selected-direction.yaml, design-system.yaml, and prototype-handoff.yaml under \`${designDirRelative}/\`.`,
         ),
       );
     }
@@ -78,6 +79,7 @@ export async function validateDesignContractReadiness(
   issues.push(...(await validateEvaluatorCalibration(root, config)));
   issues.push(...(await validateSelectedDirection(root, config)));
   issues.push(...(await validateDesignSystem(root, config)));
+  issues.push(...(await validatePrototypeHandoff(root, config)));
   return issues;
 }
 
@@ -310,6 +312,34 @@ async function validateDesignSystem(root: string, config: QfaiConfig): Promise<I
   }
 
   return issues;
+}
+
+async function validatePrototypeHandoff(root: string, config: QfaiConfig): Promise<Issue[]> {
+  const filePath = path.join(root, config.paths.contractsDir, "design", "prototype-handoff.yaml");
+  const parsed = await readYaml(filePath);
+  if (parsed.kind !== "ok") {
+    return parsed.kind === "invalid"
+      ? [
+          issue(
+            "QFAI-DCON-012",
+            "prototype-handoff.yaml must parse as an object-shaped YAML document.",
+            "error",
+            toPosixRelative(root, filePath),
+            "designContractReadiness.prototypeHandoffDocument",
+          ),
+        ]
+      : [];
+  }
+
+  return validateRequiredStringArrayKeys(
+    filePath,
+    root,
+    parsed.value,
+    ["sourcePrototypeRefs", "surfaceProfiles", "screens", "visualDna", "implementationHandoff"],
+    "QFAI-DCON-013",
+    "prototype-handoff.yaml is missing required field",
+    "designContractReadiness.prototypeHandoffField",
+  );
 }
 
 function validateRequiredStringArrayKeys(
