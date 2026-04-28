@@ -6,7 +6,7 @@
  * QFAI:SPEC-0017:TC-0017-0022 — round-start does not capture screenshots
  */
 
-import { access, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { access, chmod, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -92,6 +92,17 @@ async function exists(p: string): Promise<boolean> {
   } catch {
     return false;
   }
+}
+
+async function writeTestPlaywrightCli(binDir: string): Promise<void> {
+  if (process.platform === "win32") {
+    await writeFile(path.join(binDir, "playwright-cli.cmd"), "@echo off\r\necho ok\r\n", "utf-8");
+    return;
+  }
+
+  const launcherPath = path.join(binDir, "playwright-cli");
+  await writeFile(launcherPath, "#!/bin/sh\necho ok\n", "utf-8");
+  await chmod(launcherPath, 0o755);
 }
 
 describe("parseArgs — qfai prototyping round-start", () => {
@@ -365,11 +376,7 @@ describe("runPrototypingCommand", () => {
     await runInit({ dir: root, force: false, dryRun: false, yes: true });
     await seedFixture(root);
     await mkdir(path.join(root, "node_modules", ".bin"), { recursive: true });
-    await writeFile(
-      path.join(root, "node_modules", ".bin", "playwright-cli.cmd"),
-      "@echo off\r\necho ok\r\n",
-      "utf-8",
-    );
+    await writeTestPlaywrightCli(path.join(root, "node_modules", ".bin"));
 
     const outPath = path.join(root, ".qfai", "report", "preflight.json");
     await run(

@@ -56,10 +56,18 @@ npx qfai report
   - Produces a human-readable report (`report.md` by default) or an internal JSON export (`report.json`) from `validate.json`; use `--base-url` to link file paths in Markdown to your repository viewer.
 - `npx qfai doctor`
   - Diagnoses configuration discovery, path resolution, glob scanning, and `validate.json` inputs before running validate/report; use `--fail-on` to enforce failures in CI.
-    Use `--profile prototyping` to add prototyping-specific preflight checks for the primary spec, UI contracts, design contract readiness, active agent-wrapper integrations, shipped role-input readiness, Playwright CLI launcher resolution/probing, and target URL reachability.
+    Use `--profile prototyping` to add prototyping-specific preflight checks for the
+    primary spec, UI contracts, design contract readiness, active agent-wrapper
+    integrations, shipped role-input readiness, Playwright CLI launcher
+    resolution/probing, and target URL reachability.
     Note: prototyping evidence (`.qfai/evidence/prototyping.json`) is produced by the AI workflow / skills
     (`/qfai-prototyping` — any mode; modes differ only in `maxCycles`, see spec-0012), not by a general-purpose end-user CLI flow.
-    Use `npx qfai prototyping preflight --target-url <url>` for a focused prototyping preflight before the skill starts; it now surfaces blocking `QFAI-DCON-*` design-contract issues alongside runtime assumptions, resolves a runnable Playwright CLI launcher (project wrapper / local bin / PATH / `npx --no-install`), and still treats the first real delegation failure as a runtime hard-stop.
+    Use `npx qfai prototyping preflight --target-url <url>` for a focused
+    prototyping preflight before the skill starts; it now surfaces blocking
+    `QFAI-DCON-*` design-contract issues alongside runtime assumptions, resolves
+    a runnable Playwright CLI launcher (project wrapper / local bin / PATH /
+    `npx --no-install`), and still treats the first real delegation failure as a
+    runtime hard-stop.
     Use `npx qfai prototyping round-start --round <r5|r3|r2|r1> --candidates <csv> --target-url <url> --mode <mode>`
     to generate the round-scoped review bundle and command plans the AI evaluator sub-agent consumes, then use
     `round-harvest`, `round-narrow`, `round-absorb`, and `round-reimplement-verify` to advance the candidate funnel.

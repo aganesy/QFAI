@@ -1,5 +1,5 @@
 import { createServer, type Server } from "node:http";
-import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { chmod, mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -385,11 +385,7 @@ describe("doctor", { timeout: 60000 }, () => {
     try {
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
       await seedPrototypingFixture(root, server.url);
-      await writeFile(
-        path.join(root, "node_modules", ".bin", "playwright-cli.cmd"),
-        "@echo off\r\nexit /b 1\r\n",
-        "utf-8",
-      );
+      await writeTestPlaywrightCli(path.join(root, "node_modules", ".bin"), 1);
 
       const parsed = await readDoctorData(root, { profile: "prototyping", targetUrl: server.url });
       expect(findCheck(parsed.checks, "prototyping.playwrightCli")?.severity).toBe("error");
@@ -583,7 +579,20 @@ async function seedPrototypingFixture(root: string, targetUrl: string): Promise<
     ].join("\n"),
     "utf-8",
   );
-  await writeFile(path.join(binDir, "playwright-cli.cmd"), "@echo off\r\necho ok\r\n", "utf-8");
+  await writeTestPlaywrightCli(binDir, 0);
+}
+
+async function writeTestPlaywrightCli(binDir: string, exitCode: 0 | 1): Promise<void> {
+  if (process.platform === "win32") {
+    const content = exitCode === 0 ? "@echo off\r\necho ok\r\n" : "@echo off\r\nexit /b 1\r\n";
+    await writeFile(path.join(binDir, "playwright-cli.cmd"), content, "utf-8");
+    return;
+  }
+
+  const content = exitCode === 0 ? "#!/bin/sh\necho ok\n" : "#!/bin/sh\nexit 1\n";
+  const launcherPath = path.join(binDir, "playwright-cli");
+  await writeFile(launcherPath, content, "utf-8");
+  await chmod(launcherPath, 0o755);
 }
 
 async function startTestServer(): Promise<{ server: Server; url: string }> {
