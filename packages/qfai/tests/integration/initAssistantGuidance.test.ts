@@ -60,4 +60,21 @@ describe("init assistant guidance: exploration-first alignment", () => {
     const content = await readFile(path.join(steeringDir, "agent-catalog.yml"), "utf-8");
     expect(content).toMatch(/selected direction|design system|screen contracts/i);
   });
+
+  it("distributed agent cards do not require repo-private .instruction paths", async () => {
+    const agentFiles = [
+      "architecture-reviewer.md",
+      "backend-engineer.md",
+      "frontend-engineer.md",
+      "implementation-reviewer.md",
+      "product-experience-architect.md",
+      "product-surface-reviewer.md",
+      "solution-architect.md",
+    ];
+
+    for (const fileName of agentFiles) {
+      const content = await readFile(path.join(agentsDir, fileName), "utf-8");
+      expect(content).not.toContain(".instruction/");
+    }
+  });
 });

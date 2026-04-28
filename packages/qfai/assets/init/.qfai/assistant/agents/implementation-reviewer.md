@@ -29,7 +29,6 @@ tools: [Read, Glob, Grep, Bash]
 - .qfai/specs/spec-\*/09_delta.md
 - .github/instructions/code-review.instructions.md
 - .github/instructions/principles.instructions.md
-- .instruction/00_universal/development-principles-checklist.md
 - Diff of changed files
 - `.qfai/contracts/api/**` and `.qfai/contracts/db/**`
 

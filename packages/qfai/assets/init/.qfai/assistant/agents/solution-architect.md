@@ -29,8 +29,6 @@ tools: [Read, Write, Edit, Glob, Grep, Bash]
 - .qfai/discussion/discussion-\*/04_Sources.md
 - .qfai/discussion/discussion-\*/06_REQ.md
 - .github/instructions/principles.instructions.md
-- .instruction/00_universal/development-principles-checklist.md
-- .instruction/01_specialties/design.md
 - Existing architecture docs and `.qfai/contracts/**`
 
 ## Deliverables
