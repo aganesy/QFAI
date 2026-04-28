@@ -92,13 +92,13 @@ All sub-agent delegation in this skill MUST follow the category-to-role mapping 
 Assigning a task to a role not listed for the category is a violation and MUST be flagged.
 Evaluation scoring and screenshot capture must use only the allowed roles below.
 
-| Category                           | Allowed Role(s)                                 |
-| ---------------------------------- | ----------------------------------------------- |
-| UI implementation                  | frontend-engineer, product-experience-architect |
-| Playwright CLI execution & capture | devops-ci-engineer                              |
+| Category                           | Allowed Role(s)                                        |
+| ---------------------------------- | ------------------------------------------------------ |
+| UI implementation                  | frontend-engineer, product-experience-architect        |
+| Playwright CLI execution & capture | devops-ci-engineer                                     |
 | Evaluation scoring                 | product-surface-reviewer, product-experience-architect |
-| Build                              | devops-ci-engineer, backend-engineer            |
-| Breakthrough planning              | product-experience-architect, frontend-engineer |
+| Build                              | devops-ci-engineer, backend-engineer                   |
+| Breakthrough planning              | product-experience-architect, frontend-engineer        |
 
 Any delegation map entry that assigns a category to an undefined or unlisted role MUST produce a violation finding naming the undefined role and the category.
 
