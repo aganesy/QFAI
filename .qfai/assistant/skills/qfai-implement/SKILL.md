@@ -253,6 +253,7 @@ Use the shared schema (per-row `Status (PASS/REVISE)` column, reviewer response 
 ## Completion Contract (Shared)
 
 Follow `.qfai/assistant/instructions/shared-skill-operating-baseline.md#completion-contract-shared`.
+Follow `.qfai/assistant/instructions/shared-skill-operating-baseline.md#gate-failure-autorepair-protocol` for validate, doctor, and quality-gate failures.
 
 ### Item completion checklist (10-point gate)
 

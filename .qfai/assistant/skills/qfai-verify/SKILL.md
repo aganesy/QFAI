@@ -140,6 +140,7 @@ Follow `.qfai/assistant/instructions/shared-skill-operating-baseline.md#delta-re
 ## Completion Contract (Shared)
 
 Follow `.qfai/assistant/instructions/shared-skill-operating-baseline.md#completion-contract-shared`.
+Follow `.qfai/assistant/instructions/shared-skill-operating-baseline.md#gate-failure-autorepair-protocol` for validate, doctor, and quality-gate failures.
 
 ## Goal
 

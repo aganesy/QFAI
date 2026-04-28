@@ -49,6 +49,8 @@ Do not rely on a CLI entrypoint or package runtime loop.
 - Machine checks are limited to schema/evidence validation, mode invariant enforcement, review-cycle completeness, and breakthrough trigger detection.
 - Shared evidence vocabulary: `prototyping.json`, `review-bundle.json`, `command-plans.json`, `evaluator-reviews/<candidate-id>.json`, `harvest.json`, `absorption-plan.json`, `reimplementation.json`, `breakthrough.json`.
 - Direction funnel completion is not stage completion.
+- Each exploration round (`r5`, `r3`, `r2`, `r1`) MUST end with a git commit and a recorded `commitSha` before the next round starts.
+- Each post-selection `polish` or `branch` cycle MUST end with a git commit and a recorded `commitSha` before another cycle or completion review starts.
 - Selecting the first winner does not satisfy completion. Completion review is forbidden until at least one post-selection polish cycle has completed.
 - Completion requires every reviewer sub-agent to score every evaluation axis at `100/100`; `95` is not a completion border.
 - Do not use `complete`, `completed`, `done`, or equivalent completion wording in other languages before the completion checklist passes. Use `exploration complete`, `winner selected`, `polishing`, `breakthrough checking`, or `reviewer gate pending` for interim states.
@@ -189,7 +191,7 @@ For every declared screen of every active candidate in the current round, the ca
 4. Performs interaction commands (click/fill) to exercise `primaryTasks` noted in the plan
 5. Saves the executed command transcript to `<candidate-path>/<screen-id>.commands.json`
 
-If any capture step fails, the capture role records the failure and stops pretending the screen was evaluated. The round is incomplete and must be rerun.
+If any capture step fails, the capture role records the failure, fixes local causes such as launcher, server, URL, command-plan, or path issues, and reruns capture. Do not pretend the screen was evaluated until the required artifacts exist.
 
 ### Step 6 — Launch Evaluation Reviewers
 
@@ -216,6 +218,7 @@ At the end of each harvestable round:
 - run `qfai prototyping round-harvest --round <rN>`
 - record survivors with `qfai prototyping round-narrow --round <rN> --survivors <csv>`
 - for `r3|r2|r1`, generate absorption templates with `qfai prototyping round-absorb --round <rN> --survivors <csv>`
+- commit the completed round and record its `commitSha` in `prototyping.json`
 
 ### Step 8 — Extract Winner Contracts
 
@@ -231,6 +234,7 @@ Selecting the first winner is not completion. Do not start completion review and
 Iterate on the selected winner with normal critique/rework loops.
 Do not assume the latest iteration is automatically best; keep best-of-history in evidence.
 At least one full post-selection polish loop is mandatory. Each polish loop must include critique, fix, re-capture, re-review, and breakthrough check evidence.
+Commit every completed polish loop and record its `commitSha` in `prototyping.json`.
 
 ## Cycle Gate
 
@@ -334,6 +338,7 @@ Use the shared schema (per-row `Status (PASS/REVISE)` column, reviewer response 
 ## Completion Contract (Shared)
 
 Follow `.qfai/assistant/instructions/shared-skill-operating-baseline.md#completion-contract-shared`.
+Follow `.qfai/assistant/instructions/shared-skill-operating-baseline.md#gate-failure-autorepair-protocol` for validate, doctor, and quality-gate failures.
 
 Prototyping-specific additions (apply to all modes identically):
 
