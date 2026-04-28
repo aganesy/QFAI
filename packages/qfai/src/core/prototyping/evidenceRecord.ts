@@ -48,6 +48,7 @@ export type ScreenArtifactRefsV2 = {
 
 export type PrototypingRoundEvidence = {
   round: ExplorationRound;
+  commitSha: string;
   candidates: Candidate[];
   screenEvidenceByCandidate: Record<string, ScreenArtifactRefsV2[]>;
   evaluatorReviewRefsByCandidate: Record<string, string>;
@@ -61,6 +62,7 @@ export type PrototypingRoundEvidence = {
 export type PrototypingPolishCycleEvidenceV2 = {
   cycle: number;
   kind: "polish" | "branch" | "reviewer_gate" | "completed";
+  commitSha: string;
   screenEvidence: ScreenArtifactRefsV2[];
   evaluatorReviewRef: string;
   breakthroughRef: string | null;
@@ -172,6 +174,7 @@ export type WritePrototypingEvidenceRecordInput = BuildPrototypingEvidenceRecord
 
 export type BuildRoundEvidenceInput = {
   round: ExplorationRound;
+  commitSha: string;
   candidates: Candidate[];
   screens: Array<{ screenId: string }>;
   allAxesPerfect100?: boolean;
@@ -217,6 +220,7 @@ export function buildRoundEvidence(input: BuildRoundEvidenceInput): PrototypingR
 
   return {
     round: input.round,
+    commitSha: input.commitSha,
     candidates: [...input.candidates],
     screenEvidenceByCandidate,
     evaluatorReviewRefsByCandidate,
