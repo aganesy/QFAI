@@ -155,6 +155,7 @@ Follow `.qfai/assistant/instructions/shared-skill-operating-baseline.md#stage-0-
 ## Delta Rejected Guard (Mandatory)
 
 Follow `.qfai/assistant/instructions/shared-skill-operating-baseline.md#delta-rejected-guard-mandatory`.
+Follow `.qfai/assistant/instructions/shared-skill-operating-baseline.md#gate-failure-autorepair-protocol` for validate, doctor, and quality-gate failures.
 
 ## Workflow Convention (Mandatory)
 

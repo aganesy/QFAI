@@ -191,7 +191,7 @@ For every declared screen of every active candidate in the current round, the ca
 4. Performs interaction commands (click/fill) to exercise `primaryTasks` noted in the plan
 5. Saves the executed command transcript to `<candidate-path>/<screen-id>.commands.json`
 
-If any capture step fails, the capture role records the failure and stops pretending the screen was evaluated. The round is incomplete and must be rerun.
+If any capture step fails, the capture role records the failure, fixes local causes such as launcher, server, URL, command-plan, or path issues, and reruns capture. Do not pretend the screen was evaluated until the required artifacts exist.
 
 ### Step 6 — Launch Evaluation Reviewers
 
@@ -338,6 +338,7 @@ Use the shared schema (per-row `Status (PASS/REVISE)` column, reviewer response 
 ## Completion Contract (Shared)
 
 Follow `.qfai/assistant/instructions/shared-skill-operating-baseline.md#completion-contract-shared`.
+Follow `.qfai/assistant/instructions/shared-skill-operating-baseline.md#gate-failure-autorepair-protocol` for validate, doctor, and quality-gate failures.
 
 Prototyping-specific additions (apply to all modes identically):
 

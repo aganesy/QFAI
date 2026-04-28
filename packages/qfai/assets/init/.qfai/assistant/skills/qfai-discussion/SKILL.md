@@ -75,6 +75,8 @@ UI-bearing packs must produce the following sidecars as primary truth:
 
 ## Completion Contract (Shared)
 
+Follow `.qfai/assistant/instructions/shared-skill-operating-baseline.md#gate-failure-autorepair-protocol` for validate, doctor, and quality-gate failures.
+
 Before declaring completion, you MUST:
 
 - verify all 15 mandatory output files exist and are populated;

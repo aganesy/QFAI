@@ -151,6 +151,31 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     }
   });
 
+  it("ensures gate-running QFAI skills reference the autorepair protocol", async () => {
+    const skills = [
+      "qfai-discussion",
+      "qfai-sdd",
+      "qfai-prototyping",
+      "qfai-atdd",
+      "qfai-implement",
+      "qfai-verify",
+      "qfai-configure",
+    ];
+    const requiredPhrase = "shared-skill-operating-baseline.md#gate-failure-autorepair-protocol";
+
+    const missing = (
+      await Promise.all(
+        skills.map(async (skill) => {
+          const skillPath = path.join(templateQfaiDir, "assistant", "skills", skill, "SKILL.md");
+          const content = await readFile(skillPath, "utf-8");
+          return content.includes(requiredPhrase) ? null : skill;
+        }),
+      )
+    ).filter((skill): skill is string => skill !== null);
+
+    expect(missing).toEqual([]);
+  });
+
   it("ensures canonical skills avoid deprecated simulation fallback wording", async () => {
     const canonicalDir = path.join(templateQfaiDir, "assistant", "skills");
     const canonical = await fg(["*/SKILL.md"], {
