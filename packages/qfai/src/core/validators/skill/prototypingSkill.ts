@@ -168,7 +168,6 @@ export function hasPreflightGuidance(content: string): boolean {
 export function hasPlaywrightCliFallback(content: string): boolean {
   const lower = content.toLowerCase();
   return (
-    lower.includes("npx playwright-cli") ||
     lower.includes("npx --no-install playwright-cli") ||
     lower.includes("node_modules/.bin/playwright-cli")
   );

@@ -102,6 +102,14 @@ describe("prototyping skill validator", () => {
     expect(hasPlaywrightCliFallback(VALID_SKILL_CONTENT)).toBe(true);
   });
 
+  it("rejects unsafe bare npx playwright-cli fallback guidance", () => {
+    const invalid = VALID_SKILL_CONTENT.replace(
+      "npx --no-install playwright-cli",
+      "npx playwright-cli",
+    );
+    expect(hasPlaywrightCliFallback(invalid)).toBe(false);
+  });
+
   it("flags banned phrases when low-cost or standard are reintroduced", () => {
     const invalid = `${VALID_SKILL_CONTENT}\nl1 and l2 must run runtime checks\nrecommended_mode: full-harness`;
     expect(scanBannedPhrases(invalid)).toEqual(
