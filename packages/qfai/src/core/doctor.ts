@@ -16,7 +16,7 @@ import { resolvePrimaryPrototypingSpec } from "./prototyping/specResolution.js";
 import { collectSpecEntries } from "./specLayout.js";
 import { DEFAULT_TEST_FILE_EXCLUDE_GLOBS } from "./traceability.js";
 import { diffProjectSkillsAgainstInitAssets } from "./skillsIntegrity.js";
-import { validateDesignContractReadiness } from "./validators/designContractReadiness.js";
+import { validateSddDesignContractReadiness } from "./validators/designContractReadiness.js";
 import { resolveToolVersion } from "./version.js";
 import { loadDecisionGuardrails, normalizeDecisionGuardrails } from "./decisionGuardrails.js";
 
@@ -605,13 +605,13 @@ async function buildPrototypingDesignContractsCheck(
   root: string,
   config: Awaited<ReturnType<typeof loadConfig>>["config"],
 ): Promise<DoctorCheck> {
-  const issues = await validateDesignContractReadiness(root, config, { stage: "sdd" });
+  const issues = await validateSddDesignContractReadiness(root, config);
   if (issues.length === 0) {
     return {
       id: "prototyping.designContracts",
       severity: "ok",
-      title: "Design contract readiness",
-      message: "design contracts satisfy prototyping readiness checks",
+      title: "Pre-prototyping design contracts",
+      message: "pre-prototyping design contracts satisfy readiness checks",
       details: {
         designDir: `${config.paths.contractsDir}/design`,
       },
@@ -626,8 +626,8 @@ async function buildPrototypingDesignContractsCheck(
   return {
     id: "prototyping.designContracts",
     severity: issues.some((item) => item.severity === "error") ? "error" : "warning",
-    title: "Design contract readiness",
-    message: `design contract readiness has blocking issue(s) (count=${issues.length})`,
+    title: "Pre-prototyping design contracts",
+    message: `pre-prototyping design contracts have blocking issue(s) (count=${issues.length})`,
     details: {
       designDir: `${config.paths.contractsDir}/design`,
       issues: issues.map((item) => ({

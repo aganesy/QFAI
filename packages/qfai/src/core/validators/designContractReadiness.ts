@@ -40,10 +40,7 @@ const REFERENCE_KINDS = new Set([
 ]);
 const PLACEHOLDER_RE = /^(?:tbd|todo|n\/a|none|placeholder|example|lorem|to be defined)$/i;
 
-export type DesignContractReadinessStage = "sdd" | "prototyping";
-export type DesignContractReadinessOptions = {
-  stage?: DesignContractReadinessStage;
-};
+type DesignContractReadinessStage = "sdd" | "prototyping";
 
 function toPosixRelative(root: string, targetPath: string): string {
   return path.relative(root, targetPath).replace(/\\/g, "/");
@@ -54,10 +51,24 @@ type YamlReadResult =
   | { kind: "invalid" }
   | { kind: "ok"; value: Record<string, unknown> };
 
-export async function validateDesignContractReadiness(
+export async function validateSddDesignContractReadiness(
   root: string,
   config: QfaiConfig,
-  options: DesignContractReadinessOptions = {},
+): Promise<Issue[]> {
+  return validateDesignContractReadinessForStage(root, config, "sdd");
+}
+
+export async function validatePrototypingDesignContractReadiness(
+  root: string,
+  config: QfaiConfig,
+): Promise<Issue[]> {
+  return validateDesignContractReadinessForStage(root, config, "prototyping");
+}
+
+async function validateDesignContractReadinessForStage(
+  root: string,
+  config: QfaiConfig,
+  stage: DesignContractReadinessStage,
 ): Promise<Issue[]> {
   const uiPattern = path.posix.join(
     path.join(root, config.paths.contractsDir, "ui").replace(/\\/g, "/"),
@@ -71,7 +82,6 @@ export async function validateDesignContractReadiness(
   const designDir = path.join(root, config.paths.contractsDir, "design");
   const designDirRelative = toPosixRelative(root, designDir);
   const issues: Issue[] = [];
-  const stage = options.stage ?? "prototyping";
 
   for (const fileName of REQUIRED_SDD_DESIGN_FILES) {
     const filePath = path.join(designDir, fileName);

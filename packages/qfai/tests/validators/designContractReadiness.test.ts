@@ -5,7 +5,10 @@ import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { defaultConfig } from "../../src/core/config.js";
-import { validateDesignContractReadiness } from "../../src/core/validators/designContractReadiness.js";
+import {
+  validatePrototypingDesignContractReadiness,
+  validateSddDesignContractReadiness,
+} from "../../src/core/validators/designContractReadiness.js";
 
 const tempDirs: string[] = [];
 
@@ -189,12 +192,12 @@ async function seedPrototypingDesignContracts(root: string): Promise<void> {
   );
 }
 
-describe("validateDesignContractReadiness", () => {
+describe("design contract readiness validators", () => {
   it("UI contract があるのに SDD design contracts が無い場合は error を返す", async () => {
     const root = await newTempRoot();
     await seedUiContract(root);
 
-    const issues = await validateDesignContractReadiness(root, defaultConfig, { stage: "sdd" });
+    const issues = await validateSddDesignContractReadiness(root, defaultConfig);
 
     expect(issues.map((issue) => issue.code)).toContain("QFAI-DCON-001");
   });
@@ -204,7 +207,7 @@ describe("validateDesignContractReadiness", () => {
     await seedUiContract(root);
     await seedSddDesignContracts(root);
 
-    const issues = await validateDesignContractReadiness(root, defaultConfig, { stage: "sdd" });
+    const issues = await validateSddDesignContractReadiness(root, defaultConfig);
 
     expect(issues).toEqual([]);
   });
@@ -214,9 +217,7 @@ describe("validateDesignContractReadiness", () => {
     await seedUiContract(root);
     await seedSddDesignContracts(root);
 
-    const issues = await validateDesignContractReadiness(root, defaultConfig, {
-      stage: "prototyping",
-    });
+    const issues = await validatePrototypingDesignContractReadiness(root, defaultConfig);
 
     expect(issues.filter((issue) => issue.code === "QFAI-DCON-001")).toHaveLength(3);
   });
@@ -227,9 +228,7 @@ describe("validateDesignContractReadiness", () => {
     await seedSddDesignContracts(root);
     await seedPrototypingDesignContracts(root);
 
-    const issues = await validateDesignContractReadiness(root, defaultConfig, {
-      stage: "prototyping",
-    });
+    const issues = await validatePrototypingDesignContractReadiness(root, defaultConfig);
 
     expect(issues).toEqual([]);
   });
@@ -240,7 +239,7 @@ describe("validateDesignContractReadiness", () => {
     await seedSddDesignContracts(root);
     await seedPrototypingDesignContracts(root);
 
-    const issues = await validateDesignContractReadiness(root, defaultConfig, { stage: "sdd" });
+    const issues = await validateSddDesignContractReadiness(root, defaultConfig);
 
     expect(issues.map((issue) => issue.code)).toContain("QFAI-DCON-019");
   });
@@ -252,7 +251,7 @@ describe("validateDesignContractReadiness", () => {
     const designDir = path.join(root, ".qfai", "contracts", "design");
     await writeFile(path.join(designDir, "reference-pool.yaml"), "references: [\n", "utf-8");
 
-    const issues = await validateDesignContractReadiness(root, defaultConfig, { stage: "sdd" });
+    const issues = await validateSddDesignContractReadiness(root, defaultConfig);
 
     expect(issues.map((issue) => issue.code)).toContain("QFAI-DCON-014");
   });
@@ -268,7 +267,7 @@ describe("validateDesignContractReadiness", () => {
       "utf-8",
     );
 
-    const issues = await validateDesignContractReadiness(root, defaultConfig, { stage: "sdd" });
+    const issues = await validateSddDesignContractReadiness(root, defaultConfig);
 
     expect(issues.map((issue) => issue.code)).toContain("QFAI-DCON-015");
   });
@@ -280,7 +279,7 @@ describe("validateDesignContractReadiness", () => {
     const designDir = path.join(root, ".qfai", "contracts", "design");
     await writeFile(path.join(designDir, "brand-design.yaml"), "brand_personality: [\n", "utf-8");
 
-    const issues = await validateDesignContractReadiness(root, defaultConfig, { stage: "sdd" });
+    const issues = await validateSddDesignContractReadiness(root, defaultConfig);
 
     expect(issues.map((issue) => issue.code)).toContain("QFAI-DCON-016");
   });
@@ -296,7 +295,7 @@ describe("validateDesignContractReadiness", () => {
       "utf-8",
     );
 
-    const issues = await validateDesignContractReadiness(root, defaultConfig, { stage: "sdd" });
+    const issues = await validateSddDesignContractReadiness(root, defaultConfig);
 
     expect(issues.map((issue) => issue.code)).toContain("QFAI-DCON-017");
   });
@@ -308,7 +307,7 @@ describe("validateDesignContractReadiness", () => {
     const designDir = path.join(root, ".qfai", "contracts", "design");
     await writeFile(path.join(designDir, "anchor-selection.yaml"), "legacy: true\n", "utf-8");
 
-    const issues = await validateDesignContractReadiness(root, defaultConfig, { stage: "sdd" });
+    const issues = await validateSddDesignContractReadiness(root, defaultConfig);
 
     expect(issues.map((issue) => issue.code)).toContain("QFAI-DCON-018");
   });
@@ -330,9 +329,7 @@ describe("validateDesignContractReadiness", () => {
       "utf-8",
     );
 
-    const issues = await validateDesignContractReadiness(root, defaultConfig, {
-      stage: "prototyping",
-    });
+    const issues = await validatePrototypingDesignContractReadiness(root, defaultConfig);
 
     expect(issues.filter((issue) => issue.code === "QFAI-DCON-004")).toHaveLength(2);
   });
@@ -360,7 +357,7 @@ describe("validateDesignContractReadiness", () => {
       "utf-8",
     );
 
-    const issues = await validateDesignContractReadiness(root, config, { stage: "sdd" });
+    const issues = await validateSddDesignContractReadiness(root, config);
     const missingDesignIssues = issues.filter((issue) => issue.code === "QFAI-DCON-001");
 
     expect(missingDesignIssues.length).toBeGreaterThan(0);
