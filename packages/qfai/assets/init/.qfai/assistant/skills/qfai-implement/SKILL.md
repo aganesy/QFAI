@@ -81,8 +81,11 @@ Execute the TDD micro-cycle for each pending item in `test-list.md`, transitioni
   `.qfai/contracts/design/anchor-selection.yaml` (legacy alias, when present) →
   `.qfai/contracts/design/evaluation-axes.yaml` (legacy alias, when present) →
   `.qfai/contracts/design/evaluation-rubric.yaml` → `.qfai/contracts/design/evaluator-calibration.yaml` →
-  `.qfai/contracts/design/selected-direction.yaml` → `.qfai/contracts/design/design-system.yaml` → `.qfai/contracts/ui/*.yaml` →
-  optional design tokens → optional fallback mock → mermaid flows.
+  `.qfai/contracts/design/selected-direction.yaml` → `.qfai/contracts/design/design-system.yaml` →
+  `.qfai/contracts/design/prototype-handoff.yaml` → `.qfai/contracts/ui/*.yaml` →
+  canonical prototype screenshots / HTML snapshots → `.qfai/prototypes/winner/index.html` → optional design tokens → mermaid flows.
+- Prototype code is analysis input, not production source. Reimplement with project-native patterns while preserving `prototype-handoff.yaml` `mustPreserve`; adapt `mayAdapt`; do not copy `mustNotCopy`.
+- UI-affecting items require product-surface-reviewer prototype parity review before `done`.
 - If code intent and rendered output diverge, treat the rendered/HTML result as the blocking review input and reconcile before DONE.
 
 ## Non-goals
@@ -255,7 +258,7 @@ Use the shared schema (per-row `Status (PASS/REVISE)` column, reviewer response 
 Follow `.qfai/assistant/instructions/shared-skill-operating-baseline.md#completion-contract-shared`.
 Follow `.qfai/assistant/instructions/shared-skill-operating-baseline.md#gate-failure-autorepair-protocol` for validate, doctor, and quality-gate failures.
 
-### Item completion checklist (10-point gate)
+### Item completion checklist (11-point gate)
 
 An item in `test-list.md` may transition to `done` only when ALL of the following are satisfied:
 
@@ -267,8 +270,9 @@ An item in `test-list.md` may transition to `done` only when ALL of the followin
 6. Refactor was performed and GREEN was re-confirmed after refactor
 7. `completion-reviewer` returned PASS (spec / completion review gate)
 8. `implementation-reviewer` returned PASS (code quality review gate)
-9. `test-list.md` Status and Evidence columns are updated with fresh evidence
-10. Checkpoint verification passed
+9. UI-affecting items have prototype parity PASS from `product-surface-reviewer`
+10. `test-list.md` Status and Evidence columns are updated with fresh evidence
+11. Checkpoint verification passed
 
 ### Spec completion conditions
 
@@ -318,6 +322,7 @@ Each TDD item MUST have fresh evidence containing at minimum:
 - `Refactor verify result` — the output confirming GREEN is maintained
 - `Spec review` — completion-reviewer result (PASS or FAIL)
 - `Code quality review` — implementation-reviewer result (PASS or FAIL)
+- `Prototype parity` — product-surface-reviewer result for UI-affecting items (PASS or REVISE)
 
 ### Evidence hard rules
 

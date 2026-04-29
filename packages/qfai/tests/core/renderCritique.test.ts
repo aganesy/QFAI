@@ -91,7 +91,7 @@ describe("Render Critique Loop validation", { timeout: 15000 }, () => {
         "",
         "Take a screenshot of the rendered page and review it in the browser.",
         "",
-        "Read order: `.qfai/specs/spec-0001/01_Spec.md` → `.qfai/contracts/design/exploration-brief.yaml` → `.qfai/contracts/design/evaluation-rubric.yaml` → `.qfai/contracts/design/evaluator-calibration.yaml` → `.qfai/contracts/design/selected-direction.yaml` → `.qfai/contracts/design/design-system.yaml` → `.qfai/contracts/ui/*.yaml`.",
+        "Read order: `.qfai/specs/spec-0001/01_Spec.md` → `.qfai/contracts/design/exploration-brief.yaml` → `.qfai/contracts/design/evaluation-rubric.yaml` → `.qfai/contracts/design/evaluator-calibration.yaml` → `.qfai/contracts/design/selected-direction.yaml` → `.qfai/contracts/design/design-system.yaml` → `.qfai/contracts/design/prototype-handoff.yaml` → `.qfai/contracts/ui/*.yaml`.",
       ].join("\n"),
     );
     const issues = await validateRenderCritique(root, makeConfig());
@@ -108,7 +108,7 @@ describe("Render Critique Loop validation", { timeout: 15000 }, () => {
         "",
         "Review the rendered HTML and screenshot output in the browser.",
         "",
-        "Read order: `.qfai/specs/spec-0001/01_Spec.md` → `.qfai/contracts/design/exploration-brief.yaml` → `.qfai/contracts/design/evaluation-rubric.yaml` → `.qfai/contracts/design/evaluator-calibration.yaml` → `.qfai/contracts/design/design-system.yaml` → `.qfai/contracts/ui/*.yaml`.",
+        "Read order: `.qfai/specs/spec-0001/01_Spec.md` → `.qfai/contracts/design/exploration-brief.yaml` → `.qfai/contracts/design/evaluation-rubric.yaml` → `.qfai/contracts/design/evaluator-calibration.yaml` → `.qfai/contracts/design/design-system.yaml` → `.qfai/contracts/design/prototype-handoff.yaml` → `.qfai/contracts/ui/*.yaml`.",
       ].join("\n"),
     );
 
