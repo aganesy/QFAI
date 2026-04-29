@@ -40,7 +40,7 @@ async function seedUiContract(root: string): Promise<void> {
   );
 }
 
-async function seedDesignContracts(root: string): Promise<void> {
+async function seedSddDesignContracts(root: string): Promise<void> {
   const designDir = path.join(root, ".qfai", "contracts", "design");
   await mkdir(designDir, { recursive: true });
   await writeFile(
@@ -59,33 +59,59 @@ async function seedDesignContracts(root: string): Promise<void> {
     "utf-8",
   );
   await writeFile(
+    path.join(designDir, "reference-pool.yaml"),
+    [
+      'schemaVersion: "1.0"',
+      "references:",
+      "  - id: REF-001",
+      "    kind: template-seed",
+      "    source: https://ui.shadcn.com/blocks",
+      "    adopted_points:",
+      "      - Accessible composition",
+      "    rejected_points:",
+      "      - Default SaaS dashboard look",
+      "    local_translation:",
+      "      - Keep structure and replace visual language",
+      "    copy_risk: medium",
+      "    template_usage_policy: reference-only",
+    ].join("\n"),
+    "utf-8",
+  );
+  await writeFile(
+    path.join(designDir, "brand-design.yaml"),
+    [
+      'schemaVersion: "1.0"',
+      "brand_personality:",
+      "  - calm",
+      "audience_emotion:",
+      "  - confident comparison",
+      "category_conventions:",
+      "  - dense operational surfaces",
+      "differentiation_strategy:",
+      "  - domain-specific signals before generic cards",
+      "visual_language:",
+      "  color: restrained with one signature accent",
+      "content_tone:",
+      "  - direct labels",
+      "do_not_look_like:",
+      "  - generic SaaS dashboard",
+    ].join("\n"),
+    "utf-8",
+  );
+  await writeFile(
     path.join(designDir, "evaluation-rubric.yaml"),
     [
       "axes:",
       "  - id: design-quality",
       "    weight: 3",
-      "  - id: originality",
-      "    weight: 3",
+      "  - id: brand-memorability",
+      "    weight: 2",
       "hard_floors:",
       "  - id: functionality",
       "    min_score: 80",
-      "  - id: accessibility-risk",
-      "    min_score: 80",
-      "  - id: originality",
-      "    min_score: 80",
       "weighted_axes:",
       "  - design-quality",
-      "  - originality",
-    ].join("\n"),
-    "utf-8",
-  );
-  await writeFile(
-    path.join(designDir, "selected-direction.yaml"),
-    [
-      "chosen_direction_id: direction-02",
-      "winning_rationale: Strong hierarchy with differentiated typography.",
-      "carry_forward_rules:",
-      "  - Keep the asymmetrical hero and condensed headline pairing",
+      "  - brand-memorability",
     ].join("\n"),
     "utf-8",
   );
@@ -100,6 +126,29 @@ async function seedDesignContracts(root: string): Promise<void> {
       "  - Recycled default admin shell",
       "originality_fail_examples:",
       "  - Near-copy of reference product",
+    ].join("\n"),
+    "utf-8",
+  );
+  await writeFile(
+    path.join(designDir, "absorption-policy.yaml"),
+    [
+      "minAbsorptionsPerSurvivor: 2",
+      "require_rejected_reason: true",
+      "allow_adapt_required: true",
+    ].join("\n"),
+    "utf-8",
+  );
+}
+
+async function seedPrototypingDesignContracts(root: string): Promise<void> {
+  const designDir = path.join(root, ".qfai", "contracts", "design");
+  await writeFile(
+    path.join(designDir, "selected-direction.yaml"),
+    [
+      "chosen_direction_id: direction-02",
+      "winning_rationale: Strong hierarchy with differentiated typography.",
+      "carry_forward_rules:",
+      "  - Keep the asymmetrical hero and condensed headline pairing",
     ].join("\n"),
     "utf-8",
   );
@@ -124,273 +173,168 @@ async function seedDesignContracts(root: string): Promise<void> {
       'schemaVersion: "1.0"',
       "sourcePrototypeRefs:",
       "  winnerHtml: .qfai/prototypes/winner/index.html",
-      "  screenshots:",
-      "    - .qfai/evidence/prototyping/screenshots/dashboard.png",
       "surfaceProfiles:",
       "  primary: web",
       "screens:",
       "  - screenId: dashboard",
       "    prototypeRef: .qfai/prototypes/winner/index.html#dashboard",
-      "    preserve:",
-      "      - Primary CTA hierarchy",
       "visualDna:",
       "  color:",
       "    primary: '#2563eb'",
-      "  layout:",
-      "    density: compact",
       "implementationHandoff:",
       "  mustPreserve:",
       "    - Visual hierarchy from winner screenshot",
-      "  mayAdapt:",
-      "    - Component names",
-      "  mustNotCopy:",
-      "    - Prototype-only fake data wiring",
     ].join("\n"),
     "utf-8",
   );
 }
 
 describe("validateDesignContractReadiness", () => {
-  it("UI contract があるのに design contracts が無い場合は error を返す", async () => {
+  it("UI contract があるのに SDD design contracts が無い場合は error を返す", async () => {
     const root = await newTempRoot();
     await seedUiContract(root);
 
-    const issues = await validateDesignContractReadiness(root, defaultConfig);
+    const issues = await validateDesignContractReadiness(root, defaultConfig, { stage: "sdd" });
 
     expect(issues.map((issue) => issue.code)).toContain("QFAI-DCON-001");
   });
 
-  it("新しい required design contracts が揃っていれば issue を返さない", async () => {
+  it("SDD stage では canonical pre-prototyping design contracts が揃っていれば pass する", async () => {
     const root = await newTempRoot();
     await seedUiContract(root);
-    await seedDesignContracts(root);
+    await seedSddDesignContracts(root);
 
-    const issues = await validateDesignContractReadiness(root, defaultConfig);
+    const issues = await validateDesignContractReadiness(root, defaultConfig, { stage: "sdd" });
 
     expect(issues).toEqual([]);
   });
 
-  it("legacy direction_id alias でも selected-direction contract を受理する", async () => {
+  it("prototyping stage では winner contracts も必須にする", async () => {
     const root = await newTempRoot();
     await seedUiContract(root);
-    await seedDesignContracts(root);
+    await seedSddDesignContracts(root);
 
+    const issues = await validateDesignContractReadiness(root, defaultConfig, {
+      stage: "prototyping",
+    });
+
+    expect(issues.filter((issue) => issue.code === "QFAI-DCON-001")).toHaveLength(3);
+  });
+
+  it("prototyping stage の required contracts が揃っていれば pass する", async () => {
+    const root = await newTempRoot();
+    await seedUiContract(root);
+    await seedSddDesignContracts(root);
+    await seedPrototypingDesignContracts(root);
+
+    const issues = await validateDesignContractReadiness(root, defaultConfig, {
+      stage: "prototyping",
+    });
+
+    expect(issues).toEqual([]);
+  });
+
+  it("SDD stage で winner contracts が存在すると premature error を返す", async () => {
+    const root = await newTempRoot();
+    await seedUiContract(root);
+    await seedSddDesignContracts(root);
+    await seedPrototypingDesignContracts(root);
+
+    const issues = await validateDesignContractReadiness(root, defaultConfig, { stage: "sdd" });
+
+    expect(issues.map((issue) => issue.code)).toContain("QFAI-DCON-019");
+  });
+
+  it("reference-pool.yaml が壊れている場合は parse error を返す", async () => {
+    const root = await newTempRoot();
+    await seedUiContract(root);
+    await seedSddDesignContracts(root);
+    const designDir = path.join(root, ".qfai", "contracts", "design");
+    await writeFile(path.join(designDir, "reference-pool.yaml"), "references: [\n", "utf-8");
+
+    const issues = await validateDesignContractReadiness(root, defaultConfig, { stage: "sdd" });
+
+    expect(issues.map((issue) => issue.code)).toContain("QFAI-DCON-014");
+  });
+
+  it("reference-pool.yaml の必須 field が欠けている場合は error を返す", async () => {
+    const root = await newTempRoot();
+    await seedUiContract(root);
+    await seedSddDesignContracts(root);
+    const designDir = path.join(root, ".qfai", "contracts", "design");
+    await writeFile(
+      path.join(designDir, "reference-pool.yaml"),
+      ["references:", "  - id: REF-001", "    kind: unknown"].join("\n"),
+      "utf-8",
+    );
+
+    const issues = await validateDesignContractReadiness(root, defaultConfig, { stage: "sdd" });
+
+    expect(issues.map((issue) => issue.code)).toContain("QFAI-DCON-015");
+  });
+
+  it("brand-design.yaml が壊れている場合は parse error を返す", async () => {
+    const root = await newTempRoot();
+    await seedUiContract(root);
+    await seedSddDesignContracts(root);
+    const designDir = path.join(root, ".qfai", "contracts", "design");
+    await writeFile(path.join(designDir, "brand-design.yaml"), "brand_personality: [\n", "utf-8");
+
+    const issues = await validateDesignContractReadiness(root, defaultConfig, { stage: "sdd" });
+
+    expect(issues.map((issue) => issue.code)).toContain("QFAI-DCON-016");
+  });
+
+  it("brand-design.yaml の必須 field が欠けている場合は error を返す", async () => {
+    const root = await newTempRoot();
+    await seedUiContract(root);
+    await seedSddDesignContracts(root);
+    const designDir = path.join(root, ".qfai", "contracts", "design");
+    await writeFile(
+      path.join(designDir, "brand-design.yaml"),
+      ["brand_personality:", "  - calm"].join("\n"),
+      "utf-8",
+    );
+
+    const issues = await validateDesignContractReadiness(root, defaultConfig, { stage: "sdd" });
+
+    expect(issues.map((issue) => issue.code)).toContain("QFAI-DCON-017");
+  });
+
+  it("legacy design contract が存在すると error を返す", async () => {
+    const root = await newTempRoot();
+    await seedUiContract(root);
+    await seedSddDesignContracts(root);
+    const designDir = path.join(root, ".qfai", "contracts", "design");
+    await writeFile(path.join(designDir, "anchor-selection.yaml"), "legacy: true\n", "utf-8");
+
+    const issues = await validateDesignContractReadiness(root, defaultConfig, { stage: "sdd" });
+
+    expect(issues.map((issue) => issue.code)).toContain("QFAI-DCON-018");
+  });
+
+  it("legacy selected-direction alias は受理しない", async () => {
+    const root = await newTempRoot();
+    await seedUiContract(root);
+    await seedSddDesignContracts(root);
+    await seedPrototypingDesignContracts(root);
     const designDir = path.join(root, ".qfai", "contracts", "design");
     await writeFile(
       path.join(designDir, "selected-direction.yaml"),
       [
         "direction_id: direction-02",
-        "winning_rationale: Strong hierarchy with differentiated typography.",
+        "selection_rationale: legacy rationale",
         "carry_forward_rules:",
-        "  - Keep the asymmetrical hero and condensed headline pairing",
+        "  - search-first",
       ].join("\n"),
       "utf-8",
     );
 
-    const issues = await validateDesignContractReadiness(root, defaultConfig);
+    const issues = await validateDesignContractReadiness(root, defaultConfig, {
+      stage: "prototyping",
+    });
 
-    expect(issues).toEqual([]);
-  });
-
-  it("壊れた YAML の場合は parse error を返す", async () => {
-    const root = await newTempRoot();
-    await seedUiContract(root);
-    await seedDesignContracts(root);
-
-    const designDir = path.join(root, ".qfai", "contracts", "design");
-    await writeFile(path.join(designDir, "exploration-brief.yaml"), "product_intent: [\n", "utf-8");
-
-    const issues = await validateDesignContractReadiness(root, defaultConfig);
-
-    expect(issues.map((issue) => issue.code)).toContain("QFAI-DCON-006");
-  });
-
-  it("evaluator-calibration.yaml が壊れている場合は parse error を返す", async () => {
-    const root = await newTempRoot();
-    await seedUiContract(root);
-    await seedDesignContracts(root);
-
-    const designDir = path.join(root, ".qfai", "contracts", "design");
-    await writeFile(
-      path.join(designDir, "evaluator-calibration.yaml"),
-      "good_critique_examples: [\n",
-      "utf-8",
-    );
-
-    const issues = await validateDesignContractReadiness(root, defaultConfig);
-
-    expect(issues.map((issue) => issue.code)).toContain("QFAI-DCON-011");
-  });
-
-  it("evaluator-calibration.yaml の必須 field が欠けている場合は error を返す", async () => {
-    const root = await newTempRoot();
-    await seedUiContract(root);
-    await seedDesignContracts(root);
-
-    const designDir = path.join(root, ".qfai", "contracts", "design");
-    await writeFile(
-      path.join(designDir, "evaluator-calibration.yaml"),
-      [
-        "good_critique_examples:",
-        "  - Specific critique tied to user goals",
-        "too_lenient_examples:",
-        "  - Generic praise without evidence",
-      ].join("\n"),
-      "utf-8",
-    );
-
-    const issues = await validateDesignContractReadiness(root, defaultConfig);
-
-    expect(issues.map((issue) => issue.code)).toContain("QFAI-DCON-010");
-  });
-
-  it("prototype-handoff.yaml が壊れている場合は parse error を返す", async () => {
-    const root = await newTempRoot();
-    await seedUiContract(root);
-    await seedDesignContracts(root);
-
-    const designDir = path.join(root, ".qfai", "contracts", "design");
-    await writeFile(path.join(designDir, "prototype-handoff.yaml"), "screens: [\n", "utf-8");
-
-    const issues = await validateDesignContractReadiness(root, defaultConfig);
-
-    expect(issues.map((issue) => issue.code)).toContain("QFAI-DCON-012");
-  });
-
-  it("prototype-handoff.yaml の必須 field が欠けている場合は error を返す", async () => {
-    const root = await newTempRoot();
-    await seedUiContract(root);
-    await seedDesignContracts(root);
-
-    const designDir = path.join(root, ".qfai", "contracts", "design");
-    await writeFile(
-      path.join(designDir, "prototype-handoff.yaml"),
-      [
-        'schemaVersion: "1.0"',
-        "sourcePrototypeRefs:",
-        "  winnerHtml: .qfai/prototypes/winner/index.html",
-      ].join("\n"),
-      "utf-8",
-    );
-
-    const issues = await validateDesignContractReadiness(root, defaultConfig);
-
-    expect(issues.map((issue) => issue.code)).toContain("QFAI-DCON-013");
-  });
-
-  it("structured /qfai-sdd contract shapes でも meaningful content があれば受理する", async () => {
-    const root = await newTempRoot();
-    await seedUiContract(root);
-    await seedDesignContracts(root);
-
-    const designDir = path.join(root, ".qfai", "contracts", "design");
-    await writeFile(
-      path.join(designDir, "exploration-brief.yaml"),
-      [
-        "product_intent:",
-        "  feeling:",
-        "    - role: seeker",
-        "      statement: 店舗物件特有条件を業務的に速く比較できる。",
-        "target_users:",
-        "  - role: seeker",
-        "    goals:",
-        "      - 条件比較",
-        "must_preserve_interactions:",
-        "  seeker:",
-        "    primary_flow:",
-        "      - 条件入力",
-        "brand_signals:",
-        "  tone:",
-        "    - 信頼できる",
-        "differentiation_targets:",
-        "  - id: DIFF-001",
-        "    statement: 店舗物件固有条件をカード上位へ出す。",
-      ].join("\n"),
-      "utf-8",
-    );
-    await writeFile(
-      path.join(designDir, "evaluator-calibration.yaml"),
-      [
-        "good_critique_examples:",
-        "  - example: primary task が card 上位に出ていない",
-        "    why:",
-        "      - failure location が具体的",
-        "too_lenient_examples:",
-        "  - example: 雰囲気がよい",
-        "    why:",
-        "      - 軸に接続していない",
-        "blandness_fail_examples:",
-        "  - example: generic dashboard",
-        "    why:",
-        "      - 店舗物件らしさがない",
-        "originality_fail_examples:",
-        "  - example: flashy AI hero",
-        "    why:",
-        "      - operational clarity を壊す",
-      ].join("\n"),
-      "utf-8",
-    );
-
-    const issues = await validateDesignContractReadiness(root, defaultConfig);
-
-    expect(issues).toEqual([]);
-  });
-
-  it("provisional selected-direction は selection_rationale で通す", async () => {
-    const root = await newTempRoot();
-    await seedUiContract(root);
-    await seedDesignContracts(root);
-
-    const designDir = path.join(root, ".qfai", "contracts", "design");
-    await writeFile(
-      path.join(designDir, "selected-direction.yaml"),
-      [
-        "selection_status: provisional_for_downstream",
-        "chosen_direction_id: direction-02",
-        "selection_rationale: 実装と prototyping の baseline として方向を正規化する。",
-        "carry_forward_rules:",
-        "  - search-first を保つ",
-      ].join("\n"),
-      "utf-8",
-    );
-
-    const issues = await validateDesignContractReadiness(root, defaultConfig);
-
-    expect(issues).toEqual([]);
-  });
-
-  it("design-system は component_semantics / content_tone でも component guidance を満たせる", async () => {
-    const root = await newTempRoot();
-    await seedUiContract(root);
-    await seedDesignContracts(root);
-
-    const designDir = path.join(root, ".qfai", "contracts", "design");
-    await writeFile(
-      path.join(designDir, "design-system.yaml"),
-      [
-        "checklist:",
-        "  color: []",
-        "  typography: []",
-        "  spacing: []",
-        "  border_radius: []",
-        "  shadow: []",
-        "  dos_and_donts: []",
-        "  motion_rules: []",
-        "component_semantics:",
-        "  - id: storefront_listing_card",
-        "    purpose: 店舗物件比較のカード",
-        "    semantics:",
-        "      - article",
-        "content_tone:",
-        "  labels:",
-        "    - 店舗物件ドメイン語彙を優先する",
-      ].join("\n"),
-      "utf-8",
-    );
-
-    const issues = await validateDesignContractReadiness(root, defaultConfig);
-
-    expect(issues).toEqual([]);
+    expect(issues.filter((issue) => issue.code === "QFAI-DCON-004")).toHaveLength(2);
   });
 
   it("custom contractsDir でも suggested_action は実際の design contract path を案内する", async () => {
@@ -416,7 +360,7 @@ describe("validateDesignContractReadiness", () => {
       "utf-8",
     );
 
-    const issues = await validateDesignContractReadiness(root, config);
+    const issues = await validateDesignContractReadiness(root, config, { stage: "sdd" });
     const missingDesignIssues = issues.filter((issue) => issue.code === "QFAI-DCON-001");
 
     expect(missingDesignIssues.length).toBeGreaterThan(0);

@@ -462,13 +462,13 @@ const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-UIE-003":
     "Every declared screen id used for prototyping evidence filenames must be path-safe (`[A-Za-z0-9._-]+`).",
   "QFAI-DCON-001":
-    "UI-bearing downstream execution requires `.qfai/contracts/design/exploration-brief.yaml`, `evaluation-rubric.yaml`, `evaluator-calibration.yaml`, `selected-direction.yaml`, and `design-system.yaml` when UI contracts exist.",
+    "UI-bearing execution requires the canonical design contracts for the current phase when UI contracts exist.",
   "QFAI-DCON-002":
     "exploration-brief.yaml must define meaningful content for product_intent, target_users, must_preserve_interactions, brand_signals, and differentiation_targets.",
   "QFAI-DCON-003":
     "evaluation-rubric.yaml must define axes, hard_floors, and weighted_axes arrays.",
   "QFAI-DCON-004":
-    "selected-direction.yaml must define chosen_direction_id (legacy alias: direction_id), carry_forward_rules, and rationale content (`winning_rationale` or legacy/provisional `selection_rationale`).",
+    "selected-direction.yaml must define chosen_direction_id, carry_forward_rules, and winning_rationale.",
   "QFAI-DCON-005":
     "design-system.yaml must define checklist entries for color, typography, spacing, border_radius, shadow, dos_and_donts, and motion_rules, plus component guidance via checklist.component_tone or richer component guidance blocks.",
   "QFAI-DCON-006": "exploration-brief.yaml must parse as an object-shaped YAML document.",
@@ -481,6 +481,18 @@ const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-DCON-012": "prototype-handoff.yaml must parse as an object-shaped YAML document.",
   "QFAI-DCON-013":
     "prototype-handoff.yaml must contain source prototypes, surface profiles, screens, visual DNA, and implementation handoff guidance.",
+  "QFAI-DCON-014": "reference-pool.yaml must parse as an object-shaped YAML document.",
+  "QFAI-DCON-015":
+    "reference-pool.yaml must define complete reference records with kind, source, adopted/rejected points, local translation, copy risk, and template usage policy.",
+  "QFAI-DCON-016": "brand-design.yaml must parse as an object-shaped YAML document.",
+  "QFAI-DCON-017":
+    "brand-design.yaml must define brand personality, audience emotion, category conventions, differentiation strategy, visual language, content tone, and do-not-look-like rules.",
+  "QFAI-DCON-018": "Legacy design contracts are forbidden.",
+  "QFAI-DCON-019":
+    "selected-direction.yaml, design-system.yaml, and prototype-handoff.yaml are produced by prototyping, not SDD.",
+  "QFAI-DCON-020": "absorption-policy.yaml must parse as an object-shaped YAML document.",
+  "QFAI-DCON-021":
+    "absorption-policy.yaml must define absorption and curation policy fields.",
   "QFAI-BREAK-001": "breakthrough.json is required for exploration-first UI prototyping evidence.",
   "QFAI-BREAK-002": "breakthrough.json must be a valid JSON object.",
   "QFAI-BREAK-003": "breakthrough.json.latestIteration must be a positive integer.",

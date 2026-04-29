@@ -8,14 +8,20 @@ import type { QfaiConfig } from "../config.js";
 import type { Issue } from "../types.js";
 import { issue } from "./utils.js";
 
-const REQUIRED_DESIGN_FILES = [
+const REQUIRED_SDD_DESIGN_FILES = [
   "exploration-brief.yaml",
+  "reference-pool.yaml",
+  "brand-design.yaml",
   "evaluation-rubric.yaml",
   "evaluator-calibration.yaml",
+  "absorption-policy.yaml",
+] as const;
+const REQUIRED_PROTOTYPING_DESIGN_FILES = [
   "selected-direction.yaml",
   "design-system.yaml",
   "prototype-handoff.yaml",
 ] as const;
+const FORBIDDEN_LEGACY_DESIGN_FILES = ["anchor-selection.yaml", "evaluation-axes.yaml"] as const;
 const REQUIRED_DESIGN_SYSTEM_CHECKLIST_KEYS = [
   "color",
   "typography",
@@ -25,8 +31,19 @@ const REQUIRED_DESIGN_SYSTEM_CHECKLIST_KEYS = [
   "dos_and_donts",
   "motion_rules",
 ] as const;
-const PROVISIONAL_SELECTION_STATUS_RE = /^provisional(?:$|[_-])/i;
+const REFERENCE_KINDS = new Set([
+  "competitor",
+  "adjacent",
+  "aspirational",
+  "template-seed",
+  "anti-pattern",
+]);
 const PLACEHOLDER_RE = /^(?:tbd|todo|n\/a|none|placeholder|example|lorem|to be defined)$/i;
+
+export type DesignContractReadinessStage = "sdd" | "prototyping";
+export type DesignContractReadinessOptions = {
+  stage?: DesignContractReadinessStage;
+};
 
 function toPosixRelative(root: string, targetPath: string): string {
   return path.relative(root, targetPath).replace(/\\/g, "/");
@@ -40,6 +57,7 @@ type YamlReadResult =
 export async function validateDesignContractReadiness(
   root: string,
   config: QfaiConfig,
+  options: DesignContractReadinessOptions = {},
 ): Promise<Issue[]> {
   const uiPattern = path.posix.join(
     path.join(root, config.paths.contractsDir, "ui").replace(/\\/g, "/"),
@@ -53,8 +71,9 @@ export async function validateDesignContractReadiness(
   const designDir = path.join(root, config.paths.contractsDir, "design");
   const designDirRelative = toPosixRelative(root, designDir);
   const issues: Issue[] = [];
+  const stage = options.stage ?? "prototyping";
 
-  for (const fileName of REQUIRED_DESIGN_FILES) {
+  for (const fileName of REQUIRED_SDD_DESIGN_FILES) {
     const filePath = path.join(designDir, fileName);
     try {
       await readFile(filePath, "utf-8");
@@ -68,18 +87,67 @@ export async function validateDesignContractReadiness(
           "designContractReadiness.requiredFile",
           undefined,
           "canonical",
-          `UI-bearing downstream execution requires exploration-brief.yaml, evaluation-rubric.yaml, evaluator-calibration.yaml, selected-direction.yaml, design-system.yaml, and prototype-handoff.yaml under \`${designDirRelative}/\`.`,
+          `UI-bearing SDD execution requires exploration-brief.yaml, reference-pool.yaml, brand-design.yaml, evaluation-rubric.yaml, evaluator-calibration.yaml, and absorption-policy.yaml under \`${designDirRelative}/\`.`,
         ),
       );
     }
   }
+  if (stage === "prototyping") {
+    for (const fileName of REQUIRED_PROTOTYPING_DESIGN_FILES) {
+      const filePath = path.join(designDir, fileName);
+      try {
+        await readFile(filePath, "utf-8");
+      } catch {
+        issues.push(
+          issue(
+            "QFAI-DCON-001",
+            `Missing prototyping design contract: ${fileName}.`,
+            "error",
+            toPosixRelative(root, filePath),
+            "designContractReadiness.requiredFile",
+            undefined,
+            "canonical",
+            `UI-bearing prototyping completion requires selected-direction.yaml, design-system.yaml, and prototype-handoff.yaml under \`${designDirRelative}/\`.`,
+          ),
+        );
+      }
+    }
+  }
+
+  for (const fileName of FORBIDDEN_LEGACY_DESIGN_FILES) {
+    const filePath = path.join(designDir, fileName);
+    try {
+      await readFile(filePath, "utf-8");
+      issues.push(
+        issue(
+          "QFAI-DCON-018",
+          `Legacy design contract is forbidden: ${fileName}.`,
+          "error",
+          toPosixRelative(root, filePath),
+          "designContractReadiness.legacyDesignContract",
+          undefined,
+          "canonical",
+          `Remove ${fileName} and normalize the data into the canonical design contracts.`,
+        ),
+      );
+    } catch {
+      // missing is expected
+    }
+  }
 
   issues.push(...(await validateExplorationBrief(root, config)));
+  issues.push(...(await validateReferencePool(root, config)));
+  issues.push(...(await validateBrandDesign(root, config)));
   issues.push(...(await validateEvaluationRubric(root, config)));
   issues.push(...(await validateEvaluatorCalibration(root, config)));
-  issues.push(...(await validateSelectedDirection(root, config)));
-  issues.push(...(await validateDesignSystem(root, config)));
-  issues.push(...(await validatePrototypeHandoff(root, config)));
+  issues.push(...(await validateAbsorptionPolicy(root, config)));
+  if (stage === "prototyping") {
+    issues.push(...(await validateSelectedDirection(root, config)));
+    issues.push(...(await validateDesignSystem(root, config)));
+    issues.push(...(await validatePrototypeHandoff(root, config)));
+  } else {
+    issues.push(...(await validateNoPrematurePrototypingContracts(root, config)));
+  }
   return issues;
 }
 
@@ -115,6 +183,122 @@ async function validateExplorationBrief(root: string, config: QfaiConfig): Promi
     "QFAI-DCON-002",
     "exploration-brief.yaml is missing required field",
     "designContractReadiness.explorationBriefField",
+  );
+}
+
+async function validateReferencePool(root: string, config: QfaiConfig): Promise<Issue[]> {
+  const filePath = path.join(root, config.paths.contractsDir, "design", "reference-pool.yaml");
+  const parsed = await readYaml(filePath);
+  if (parsed.kind !== "ok") {
+    return parsed.kind === "invalid"
+      ? [
+          issue(
+            "QFAI-DCON-014",
+            "reference-pool.yaml must parse as an object-shaped YAML document.",
+            "error",
+            toPosixRelative(root, filePath),
+            "designContractReadiness.referencePoolDocument",
+          ),
+        ]
+      : [];
+  }
+
+  const references = parsed.value.references;
+  if (!Array.isArray(references) || references.length === 0) {
+    return [
+      issue(
+        "QFAI-DCON-015",
+        "reference-pool.yaml must define a non-empty references array.",
+        "error",
+        toPosixRelative(root, filePath),
+        "designContractReadiness.referencePoolReferences",
+      ),
+    ];
+  }
+
+  const issues: Issue[] = [];
+  const requiredKeys = [
+    "id",
+    "kind",
+    "source",
+    "adopted_points",
+    "rejected_points",
+    "local_translation",
+    "copy_risk",
+    "template_usage_policy",
+  ];
+  for (const [index, entry] of references.entries()) {
+    if (!isRecord(entry)) {
+      issues.push(referencePoolIssue(root, filePath, `references[${index}] must be an object.`));
+      continue;
+    }
+    for (const key of requiredKeys) {
+      if (!hasMeaningfulContractContent(entry[key])) {
+        issues.push(
+          referencePoolIssue(
+            root,
+            filePath,
+            `reference-pool.yaml references[${index}] is missing required field '${key}'.`,
+          ),
+        );
+      }
+    }
+    if (typeof entry.kind === "string" && !REFERENCE_KINDS.has(entry.kind)) {
+      issues.push(
+        referencePoolIssue(
+          root,
+          filePath,
+          `reference-pool.yaml references[${index}].kind is invalid: ${entry.kind}.`,
+        ),
+      );
+    }
+  }
+  return issues;
+}
+
+function referencePoolIssue(root: string, filePath: string, message: string): Issue {
+  return issue(
+    "QFAI-DCON-015",
+    message,
+    "error",
+    toPosixRelative(root, filePath),
+    "designContractReadiness.referencePoolField",
+  );
+}
+
+async function validateBrandDesign(root: string, config: QfaiConfig): Promise<Issue[]> {
+  const filePath = path.join(root, config.paths.contractsDir, "design", "brand-design.yaml");
+  const parsed = await readYaml(filePath);
+  if (parsed.kind !== "ok") {
+    return parsed.kind === "invalid"
+      ? [
+          issue(
+            "QFAI-DCON-016",
+            "brand-design.yaml must parse as an object-shaped YAML document.",
+            "error",
+            toPosixRelative(root, filePath),
+            "designContractReadiness.brandDesignDocument",
+          ),
+        ]
+      : [];
+  }
+
+  return validateRequiredStringArrayKeys(
+    filePath,
+    root,
+    parsed.value,
+    [
+      "brand_personality",
+      "audience_emotion",
+      "category_conventions",
+      "differentiation_strategy",
+      "visual_language",
+      "content_tone",
+      "do_not_look_like",
+    ],
+    "QFAI-DCON-017",
+    "brand-design.yaml is missing required field",
+    "designContractReadiness.brandDesignField",
   );
 }
 
@@ -219,18 +403,11 @@ async function validateSelectedDirection(root: string, config: QfaiConfig): Prom
   );
 
   const winningRationale = parsed.value.winning_rationale;
-  const selectionRationale = parsed.value.selection_rationale;
-  if (
-    !hasMeaningfulContractContent(winningRationale) &&
-    !hasMeaningfulContractContent(selectionRationale)
-  ) {
-    const selectionStatus = getSelectionStatus(parsed.value);
+  if (!hasMeaningfulContractContent(winningRationale)) {
     issues.push(
       issue(
         "QFAI-DCON-004",
-        isProvisionalSelectionStatus(selectionStatus)
-          ? "selected-direction.yaml is missing required provisional rationale ('selection_rationale' or 'winning_rationale')."
-          : "selected-direction.yaml is missing required field 'winning_rationale' (legacy alias: 'selection_rationale').",
+        "selected-direction.yaml is missing required field 'winning_rationale'.",
         "error",
         toPosixRelative(root, filePath),
         "designContractReadiness.selectedDirectionField",
@@ -239,8 +416,7 @@ async function validateSelectedDirection(root: string, config: QfaiConfig): Prom
   }
 
   const chosenDirectionId = parsed.value.chosen_direction_id;
-  const legacyDirectionId = parsed.value.direction_id;
-  if (!isNonEmptyStringValue(chosenDirectionId) && !isNonEmptyStringValue(legacyDirectionId)) {
+  if (!isNonEmptyStringValue(chosenDirectionId)) {
     issues.push(
       issue(
         "QFAI-DCON-004",
@@ -252,6 +428,59 @@ async function validateSelectedDirection(root: string, config: QfaiConfig): Prom
     );
   }
 
+  return issues;
+}
+
+async function validateAbsorptionPolicy(root: string, config: QfaiConfig): Promise<Issue[]> {
+  const filePath = path.join(root, config.paths.contractsDir, "design", "absorption-policy.yaml");
+  const parsed = await readYaml(filePath);
+  if (parsed.kind !== "ok") {
+    return parsed.kind === "invalid"
+      ? [
+          issue(
+            "QFAI-DCON-020",
+            "absorption-policy.yaml must parse as an object-shaped YAML document.",
+            "error",
+            toPosixRelative(root, filePath),
+            "designContractReadiness.absorptionPolicyDocument",
+          ),
+        ]
+      : [];
+  }
+  return validateRequiredStringArrayKeys(
+    filePath,
+    root,
+    parsed.value,
+    ["minAbsorptionsPerSurvivor", "require_rejected_reason", "allow_adapt_required"],
+    "QFAI-DCON-021",
+    "absorption-policy.yaml is missing required field",
+    "designContractReadiness.absorptionPolicyField",
+  );
+}
+
+async function validateNoPrematurePrototypingContracts(
+  root: string,
+  config: QfaiConfig,
+): Promise<Issue[]> {
+  const designDir = path.join(root, config.paths.contractsDir, "design");
+  const issues: Issue[] = [];
+  for (const fileName of REQUIRED_PROTOTYPING_DESIGN_FILES) {
+    const filePath = path.join(designDir, fileName);
+    try {
+      await readFile(filePath, "utf-8");
+      issues.push(
+        issue(
+          "QFAI-DCON-019",
+          `${fileName} must be produced by /qfai-prototyping, not /qfai-sdd.`,
+          "error",
+          toPosixRelative(root, filePath),
+          "designContractReadiness.prematurePrototypingContract",
+        ),
+      );
+    } catch {
+      // missing is expected before prototyping
+    }
+  }
   return issues;
 }
 
@@ -385,16 +614,13 @@ function hasMeaningfulContractContent(value: unknown, depth = 0): boolean {
   if (isRecord(value)) {
     return Object.values(value).some((entry) => hasMeaningfulContractContent(entry, depth + 1));
   }
+  if (typeof value === "number") {
+    return Number.isFinite(value);
+  }
+  if (typeof value === "boolean") {
+    return true;
+  }
   return false;
-}
-
-function getSelectionStatus(record: Record<string, unknown>): string | null {
-  const value = record.selection_status;
-  return typeof value === "string" && value.trim().length > 0 ? value.trim() : null;
-}
-
-function isProvisionalSelectionStatus(value: string | null): boolean {
-  return value !== null && PROVISIONAL_SELECTION_STATUS_RE.test(value);
 }
 
 async function readYaml(filePath: string): Promise<YamlReadResult> {
