@@ -173,6 +173,8 @@ function collectReviewBundleRefs(bundle: unknown, sourcePath: string): DanglingR
     }
   };
   push(bundle.axisDefsRef, "axisDefsRef");
+  push(bundle.referencePoolRef, "referencePoolRef");
+  push(bundle.brandDesignRef, "brandDesignRef");
   push(bundle.designSystemChecklistRef, "designSystemChecklistRef");
   push(bundle.commandPlanRef, "commandPlanRef");
 

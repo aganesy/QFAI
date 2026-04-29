@@ -43,6 +43,9 @@ const TEMPLATE_USAGE_POLICY_VALUES = new Set(["none", "reference-only", "impleme
 const PLACEHOLDER_RE = /^(?:tbd|todo|n\/a|none|placeholder|example|lorem|to be defined)$/i;
 
 type DesignContractReadinessStage = "sdd" | "prototyping";
+type SddDesignContractReadinessOptions = {
+  enforceNoPrematurePrototypingContracts?: boolean;
+};
 
 function toPosixRelative(root: string, targetPath: string): string {
   return path.relative(root, targetPath).replace(/\\/g, "/");
@@ -56,8 +59,11 @@ type YamlReadResult =
 export async function validateSddDesignContractReadiness(
   root: string,
   config: QfaiConfig,
+  options: SddDesignContractReadinessOptions = {},
 ): Promise<Issue[]> {
-  return validateDesignContractReadinessForStage(root, config, "sdd");
+  return validateDesignContractReadinessForStage(root, config, "sdd", {
+    enforceNoPrematurePrototypingContracts: options.enforceNoPrematurePrototypingContracts ?? true,
+  });
 }
 
 export async function validatePrototypingDesignContractReadiness(
@@ -71,6 +77,7 @@ async function validateDesignContractReadinessForStage(
   root: string,
   config: QfaiConfig,
   stage: DesignContractReadinessStage,
+  options: SddDesignContractReadinessOptions = {},
 ): Promise<Issue[]> {
   const uiPattern = path.posix.join(
     path.join(root, config.paths.contractsDir, "ui").replace(/\\/g, "/"),
@@ -157,7 +164,7 @@ async function validateDesignContractReadinessForStage(
     issues.push(...(await validateSelectedDirection(root, config)));
     issues.push(...(await validateDesignSystem(root, config)));
     issues.push(...(await validatePrototypeHandoff(root, config)));
-  } else {
+  } else if (options.enforceNoPrematurePrototypingContracts ?? true) {
     issues.push(...(await validateNoPrematurePrototypingContracts(root, config)));
   }
   return issues;
@@ -480,15 +487,7 @@ async function validateAbsorptionPolicy(root: string, config: QfaiConfig): Promi
         ]
       : [];
   }
-  const issues = validateRequiredStringArrayKeys(
-    filePath,
-    root,
-    parsed.value,
-    ["minAbsorptionsPerSurvivor", "require_rejected_reason", "allow_adapt_required"],
-    "QFAI-DCON-021",
-    "absorption-policy.yaml is missing required field",
-    "designContractReadiness.absorptionPolicyField",
-  );
+  const issues: Issue[] = [];
   if (
     typeof parsed.value.minAbsorptionsPerSurvivor !== "number" ||
     !Number.isInteger(parsed.value.minAbsorptionsPerSurvivor) ||
@@ -675,12 +674,6 @@ function hasMeaningfulContractContent(value: unknown, depth = 0): boolean {
   }
   if (isRecord(value)) {
     return Object.values(value).some((entry) => hasMeaningfulContractContent(entry, depth + 1));
-  }
-  if (typeof value === "number") {
-    return Number.isFinite(value);
-  }
-  if (typeof value === "boolean") {
-    return true;
   }
   return false;
 }

@@ -153,6 +153,7 @@ async function runSddValidators(
   root: string,
   config: ConfigLoadResult["config"],
   includeCodeReferences = false,
+  enforceNoPrematurePrototypingContracts = true,
 ): Promise<Issue[]> {
   return [
     ...(await validateMermaidEnforcement(root)),
@@ -164,7 +165,9 @@ async function runSddValidators(
     ...(await validateOrphanProhibition(root, config)),
     ...(await validateLayerCoverage(root, config)),
     ...(await validateContractReferences(root, config)),
-    ...(await validateSddDesignContractReadiness(root, config)),
+    ...(await validateSddDesignContractReadiness(root, config, {
+      enforceNoPrematurePrototypingContracts,
+    })),
     ...(await validateTraceability(root, config, { includeCodeReferences })),
     ...(await validateDefinedIds(root, config)),
     ...(await validateContracts(root, config)),
@@ -228,7 +231,7 @@ async function runFullValidators(
     ...(await validateSkillsIntegrity(root, config)),
     ...(await validateAssistantAssets(root, config)),
     ...(await runDiscussionValidators(root, config)),
-    ...(await runSddValidators(root, config, true)),
+    ...(await runSddValidators(root, config, true, false)),
     ...(await validateReviewArtifacts(root)),
     ...(await runPrototypingValidators(root, config, platformOption)),
     ...(await runAtddValidators(root, config)),

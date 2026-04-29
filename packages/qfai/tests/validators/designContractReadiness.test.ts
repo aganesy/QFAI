@@ -244,6 +244,19 @@ describe("design contract readiness validators", () => {
     expect(issues.map((issue) => issue.code)).toContain("QFAI-DCON-019");
   });
 
+  it("full validation 用に SDD の premature winner contract 検査を無効化できる", async () => {
+    const root = await newTempRoot();
+    await seedUiContract(root);
+    await seedSddDesignContracts(root);
+    await seedPrototypingDesignContracts(root);
+
+    const issues = await validateSddDesignContractReadiness(root, defaultConfig, {
+      enforceNoPrematurePrototypingContracts: false,
+    });
+
+    expect(issues.map((issue) => issue.code)).not.toContain("QFAI-DCON-019");
+  });
+
   it("reference-pool.yaml が壊れている場合は parse error を返す", async () => {
     const root = await newTempRoot();
     await seedUiContract(root);
@@ -328,6 +341,32 @@ describe("design contract readiness validators", () => {
     const issues = await validateSddDesignContractReadiness(root, defaultConfig);
 
     expect(issues.map((issue) => issue.code)).toContain("QFAI-DCON-017");
+  });
+
+  it("text/array contract field では scalar boolean を meaningful として扱わない", async () => {
+    const root = await newTempRoot();
+    await seedUiContract(root);
+    await seedSddDesignContracts(root);
+    const designDir = path.join(root, ".qfai", "contracts", "design");
+    await writeFile(
+      path.join(designDir, "exploration-brief.yaml"),
+      [
+        "product_intent: false",
+        "target_users:",
+        "  - operations manager",
+        "must_preserve_interactions:",
+        "  - Search remains visible above the fold",
+        "brand_signals:",
+        "  - Calm confidence",
+        "differentiation_targets:",
+        "  - Avoid generic admin-shell defaults",
+      ].join("\n"),
+      "utf-8",
+    );
+
+    const issues = await validateSddDesignContractReadiness(root, defaultConfig);
+
+    expect(issues.map((issue) => issue.code)).toContain("QFAI-DCON-002");
   });
 
   it("legacy design contract が存在すると error を返す", async () => {
