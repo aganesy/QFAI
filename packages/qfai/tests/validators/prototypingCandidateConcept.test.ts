@@ -134,4 +134,29 @@ describe("validatePrototypingCandidateConcept", () => {
 
     expect(issues.map((issue) => issue.code)).toContain("QFAI-PROT-CONCEPT-001");
   });
+
+  it("referenceLineage must contain a meaningful entry", async () => {
+    const root = await newRoot();
+    await seedUiContract(root);
+    await seedReviewBundle(root, ["c1"]);
+    await seedConcept(root, "c1", "Template translated surface");
+    const conceptPath = path.join(
+      root,
+      ".qfai",
+      "evidence",
+      "prototyping",
+      "rounds",
+      "r5",
+      "candidates",
+      "c1",
+      "concept.json",
+    );
+    const raw = JSON.parse(await readFile(conceptPath, "utf-8"));
+    raw.referenceLineage = [" ", "none"];
+    await writeFile(conceptPath, JSON.stringify(raw, null, 2), "utf-8");
+
+    const issues = await validatePrototypingCandidateConcept(root, defaultConfig);
+
+    expect(issues.map((issue) => issue.code)).toContain("QFAI-PROT-CONCEPT-001");
+  });
 });

@@ -107,7 +107,7 @@ function validateConceptShape(
       issues.push(conceptIssue(root, filePath, `candidate concept is missing ${key}.`));
     }
   }
-  if (!Array.isArray(concept.referenceLineage) || concept.referenceLineage.length === 0) {
+  if (!Array.isArray(concept.referenceLineage) || !concept.referenceLineage.some(hasMeaningful)) {
     issues.push(conceptIssue(root, filePath, "candidate concept needs referenceLineage[]."));
   }
   if (
