@@ -378,6 +378,19 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     expect(handoffTemplate).toContain("mustNotCopy:");
   });
 
+  it("keeps qfai-prototyping SKILL.md concise enough for agent execution", async () => {
+    const skillPath = path.join(
+      templateQfaiDir,
+      "assistant",
+      "skills",
+      "qfai-prototyping",
+      "SKILL.md",
+    );
+    const content = await readFile(skillPath, "utf-8");
+
+    expect(content.split(/\r?\n/).length).toBeLessThanOrEqual(280);
+  });
+
   it("ensures ui contract docs define mockable prototype and copy-ready example", async () => {
     const uiReadmePath = path.join(templateQfaiDir, "contracts", "ui", "README.md");
     const uiExamplePath = path.join(
