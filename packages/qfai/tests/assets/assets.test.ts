@@ -337,12 +337,7 @@ describe("assets guardrails", { timeout: 30000 }, () => {
   });
 
   it("ensures qfai-prototyping ships lightweight HTML prototype handoff assets", async () => {
-    const skillDir = path.join(
-      templateQfaiDir,
-      "assistant",
-      "skills",
-      "qfai-prototyping",
-    );
+    const skillDir = path.join(templateQfaiDir, "assistant", "skills", "qfai-prototyping");
     const skillPath = path.join(skillDir, "SKILL.md");
     const workspaceRefPath = path.join(skillDir, "references", "prototype-workspace.md");
     const surfaceRefPath = path.join(skillDir, "references", "surface-framing.md");

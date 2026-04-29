@@ -479,7 +479,8 @@ const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "evaluator-calibration.yaml must define meaningful content for good_critique_examples, too_lenient_examples, blandness_fail_examples, and originality_fail_examples.",
   "QFAI-DCON-011": "evaluator-calibration.yaml must parse as an object-shaped YAML document.",
   "QFAI-DCON-012": "prototype-handoff.yaml must parse as an object-shaped YAML document.",
-  "QFAI-DCON-013": "prototype-handoff.yaml must contain source prototypes, surface profiles, screens, visual DNA, and implementation handoff guidance.",
+  "QFAI-DCON-013":
+    "prototype-handoff.yaml must contain source prototypes, surface profiles, screens, visual DNA, and implementation handoff guidance.",
   "QFAI-BREAK-001": "breakthrough.json is required for exploration-first UI prototyping evidence.",
   "QFAI-BREAK-002": "breakthrough.json must be a valid JSON object.",
   "QFAI-BREAK-003": "breakthrough.json.latestIteration must be a positive integer.",
