@@ -98,6 +98,30 @@ describe("validatePrototypingCandidateConcept", () => {
     expect(issues.map((issue) => issue.code)).toContain("QFAI-PROT-CONCEPT-001");
   });
 
+  it("uses evidence root derived from configured specsDir", async () => {
+    const root = await newRoot();
+    const config = {
+      ...defaultConfig,
+      paths: {
+        ...defaultConfig.paths,
+        specsDir: ".custom/specs",
+      },
+    };
+    await seedUiContract(root);
+    const roundDir = path.join(root, ".custom", "evidence", "prototyping", "rounds", "r5");
+    await mkdir(roundDir, { recursive: true });
+    await writeFile(
+      path.join(roundDir, "review-bundle.json"),
+      JSON.stringify({ candidates: [{ candidateId: "c1" }] }, null, 2),
+      "utf-8",
+    );
+
+    const issues = await validatePrototypingCandidateConcept(root, config);
+
+    expect(issues.map((issue) => issue.code)).toContain("QFAI-PROT-CONCEPT-001");
+    expect(issues[0]?.file).toContain(".custom/evidence/prototyping/rounds/r5");
+  });
+
   it("duplicate r5 designThesis emits an error", async () => {
     const root = await newRoot();
     await seedUiContract(root);

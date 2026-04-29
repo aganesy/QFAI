@@ -1,9 +1,9 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
-import type { QfaiConfig } from "../config.js";
+import { resolvePath, type QfaiConfig } from "../config.js";
 import { readUiContractScreenContracts } from "../contracts/screenContracts.js";
-import { EXPLORATION_ROUNDS, roundReviewBundlePath } from "../prototyping/round.js";
+import { EXPLORATION_ROUNDS } from "../prototyping/round.js";
 import type { CandidateId } from "../prototyping/candidate.js";
 import type { ExplorationRound } from "../prototyping/round.js";
 import type { Issue } from "../types.js";
@@ -56,10 +56,17 @@ async function readJsonObject(filePath: string): Promise<Record<string, unknown>
   }
 }
 
-function conceptPath(round: ExplorationRound, candidateId: CandidateId): string {
+function resolveEvidenceRoot(root: string, config: QfaiConfig): string {
+  return path.join(path.dirname(resolvePath(root, config, "specsDir")), "evidence");
+}
+
+function conceptPath(
+  evidenceRoot: string,
+  round: ExplorationRound,
+  candidateId: CandidateId,
+): string {
   return path.join(
-    ".qfai",
-    "evidence",
+    evidenceRoot,
     "prototyping",
     "rounds",
     round,
@@ -132,8 +139,12 @@ function validateConceptShape(
   return issues;
 }
 
-async function validateRound(root: string, round: ExplorationRound): Promise<Issue[]> {
-  const bundlePath = path.join(root, ...roundReviewBundlePath(round).split("/"));
+async function validateRound(
+  root: string,
+  evidenceRoot: string,
+  round: ExplorationRound,
+): Promise<Issue[]> {
+  const bundlePath = path.join(evidenceRoot, "prototyping", "rounds", round, "review-bundle.json");
   const bundle = (await readJsonObject(bundlePath)) as RoundBundle | null;
   if (!bundle || !Array.isArray(bundle.candidates)) {
     return [];
@@ -146,7 +157,7 @@ async function validateRound(root: string, round: ExplorationRound): Promise<Iss
       continue;
     }
     const candidateId = entry.candidateId as CandidateId;
-    const filePath = path.join(root, conceptPath(round, candidateId));
+    const filePath = conceptPath(evidenceRoot, round, candidateId);
     const concept = (await readJsonObject(filePath)) as CandidateConceptRecord | null;
     if (!concept) {
       issues.push(
@@ -190,8 +201,9 @@ export async function validatePrototypingCandidateConcept(
   }
 
   const issues: Issue[] = [];
+  const evidenceRoot = resolveEvidenceRoot(root, config);
   for (const round of EXPLORATION_ROUNDS) {
-    issues.push(...(await validateRound(root, round)));
+    issues.push(...(await validateRound(root, evidenceRoot, round)));
   }
   return issues;
 }
