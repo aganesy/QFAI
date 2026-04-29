@@ -130,7 +130,7 @@ QFAI produces `command-plans.json` and `review-bundle.json`. Do not handwrite th
 
 For every declared screen of every active candidate, the capture role reads `command-plans.json`, applies the preflight-resolved Playwright CLI launcher, writes stdout to `stdoutPath` when needed, exercises `primaryTasks`, and saves `<candidate-path>/<screen-id>.commands.json`.
 
-If any capture step fails, the capture role records the failure, fixes local causes such as launcher, server, URL, command-plan, or path issues, and reruns capture. Do not pretend the screen was evaluated until the required artifacts exist.
+If any capture step fails, record the failure, fix local causes such as launcher, server, URL, command-plan, or path issues, and rerun capture. Do not pretend the screen was evaluated until the required artifacts exist.
 
 ### Step 6 - Launch Evaluation Reviewers
 
