@@ -243,7 +243,7 @@ function RepairBody([string]$Template, $Pr, [string[]]$ChangedFiles, $Classifica
 
 function ExpectedVersionFromBranch([string]$Branch) {
   if ([string]::IsNullOrWhiteSpace($Branch)) { return $null }
-  $match = [regex]::Match($Branch, "^.+/v(\d+\.\d+\.\d+.*)$")
+  $match = [regex]::Match($Branch, "^.+/v(\d+\.\d+\.\d+)(?:[-_].*)?$")
   if (-not $match.Success) { return $null }
   return $match.Groups[1].Value
 }

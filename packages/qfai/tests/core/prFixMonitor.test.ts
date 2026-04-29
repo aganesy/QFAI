@@ -116,7 +116,7 @@ describe("pr-fix wrapper docs", () => {
     expect(agentsSkill).toContain("`-RequiredZeroStreak` の既定値は `30`");
     expect(agentsSkill).toContain("live 監視モード（`-DryRun` なし）");
     expect(agentsSkill).toContain("`tmp/pr-fix/`");
-    expect(agentsSkill).toContain("`^.+/v(\\d+\\.\\d+\\.\\d+.*)$`");
+    expect(agentsSkill).toContain("`^.+/v(\\d+\\.\\d+\\.\\d+)(?:[-_].*)?$`");
   });
 });
 
@@ -163,6 +163,29 @@ describe("run-pr-fix strict monitor", { timeout: 120000 }, () => {
     expect(combinedOutput(result)).toContain(
       "Version alignment check passed for branch marker v1.8.5.",
     );
+  });
+
+  it("ignores non-version work suffixes after branch version markers", async () => {
+    const branch = "feature/v1.8.5-dds-validator";
+    const result = await runPrFix({
+      extraArgs: ["-DryRun", "-SleepSeconds", "0", "-RequiredZeroStreak", "1"],
+      scenario: makeScenario({
+        branch,
+        changelog: changelogWithVersion("1.8.5"),
+        packageVersion: "1.8.5",
+        prViews: [makePrView([successCheck()], { headRefName: branch })],
+      }),
+    });
+
+    expect(result.code).toBe(0);
+    expect(combinedOutput(result)).toContain(
+      "Version alignment check passed for branch marker v1.8.5.",
+    );
+
+    const versionCheck = await readJson(
+      path.join(result.repoDir, "tmp", "pr-fix", "pr-166-version-check.json"),
+    );
+    expect(versionCheck.ExpectedVersion).toBe("1.8.5");
   });
 
   it("rejects live overrides for SleepSeconds and RequiredZeroStreak", async () => {
