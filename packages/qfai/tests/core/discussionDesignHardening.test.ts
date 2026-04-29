@@ -58,8 +58,13 @@ function validUiuxFiles(): Record<string, string> {
       "## Differentiation Targets",
       "- Reject default admin-shell layouts",
     ].join("\n"),
-    "uiux/31_reference_pool.md":
-      "# Reference Pool\n\n- adopted: editorial rhythm\n- rejected: stock dashboard hero\n",
+    "uiux/31_reference_pool.md": [
+      "# Reference Pool",
+      "",
+      "| Ref | Kind | Source URL | Why it matters | Adopted points | Rejected points | Local translation | Copy risk | Template usage policy |",
+      "| --- | --- | --- | --- | --- | --- | --- | --- | --- |",
+      "| REF-001 | competitor | https://example.com | Category benchmark | editorial rhythm | stock dashboard hero | domain-first comparison | medium | reference-only |",
+    ].join("\n"),
     "uiux/32_design_anti_goals.md":
       "# Design Anti-goals\n\n- Do not use generic SaaS cards everywhere\n",
     "uiux/33_exploration_rubric.md": [
@@ -74,6 +79,18 @@ function validUiuxFiles(): Record<string, string> {
       "",
       "## Functionality",
       "Hard floor",
+      "",
+      "## Brand Memorability",
+      "Hard floor",
+      "",
+      "## Category Distinctiveness",
+      "Hard floor",
+      "",
+      "## Template Dependency Risk",
+      "Hard floor",
+      "",
+      "## Localization Fit",
+      "Hard floor",
     ].join("\n"),
     "uiux/34_evaluator_calibration.md": [
       "## Good Critique",
@@ -87,6 +104,9 @@ function validUiuxFiles(): Record<string, string> {
       "",
       "## Originality Fail",
       "Reject near-copy work.",
+      "",
+      "## Template Copy Fail",
+      "Reject default template surfaces.",
     ].join("\n"),
     "uiux/40_screen_contracts.md":
       "### Screen: Dashboard\n- screen_id: dashboard\n- route: /dashboard\n- purpose: Main view\n- actor: user\n- primary_tasks:\n  - Review main status\n- secondary_tasks:\n  - Filter list\n- required_states:\n  - default\n  - loading\n  - empty\n  - error\n- transitions:\n  - open detail\n- observable_outcomes:\n  - status visible\n- notes_for_verify: check state transitions\n- notes_for_reviewer: keep rhythm bold\n",
@@ -144,5 +164,17 @@ describe("validateDiscussionDesignHardening", () => {
 
     expect(issues.some((i) => i.code === "UIX-VAL-EXPLORE-ANTI-GOALS")).toBe(true);
     expect(issues.some((i) => i.code === "UIX-VAL-EXPLORE-HISTORY")).toBe(true);
+  });
+
+  it("reference pool の必須列や placeholder が欠けると error を返す", async () => {
+    const root = await newRoot();
+    const files = validUiuxFiles();
+    files["uiux/31_reference_pool.md"] =
+      "# Reference Pool\n\n| Ref | Kind | Source URL |\n| --- | --- | --- |\n| REF-001 | competitor | [why] |\n";
+    await seedLatestPack(root, files);
+
+    const issues = await validateDiscussionDesignHardening(root, defaultConfig);
+
+    expect(issues.some((i) => i.code === "UIX-VAL-REFERENCE-POOL")).toBe(true);
   });
 });
