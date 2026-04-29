@@ -78,12 +78,12 @@ Execute the TDD micro-cycle for each pending item in `test-list.md`, transitioni
 - Read spec + contract inputs first whenever implementation touches UI or critique-driven behavior.
 - Read order: `01_Spec.md` → `03_Acceptance-Criteria.md` → `05_Examples.md` →
   `.qfai/contracts/design/exploration-brief.yaml` →
-  `.qfai/contracts/design/anchor-selection.yaml` (legacy alias, when present) →
-  `.qfai/contracts/design/evaluation-axes.yaml` (legacy alias, when present) →
+  `.qfai/contracts/design/reference-pool.yaml` → `.qfai/contracts/design/brand-design.yaml` →
   `.qfai/contracts/design/evaluation-rubric.yaml` → `.qfai/contracts/design/evaluator-calibration.yaml` →
   `.qfai/contracts/design/selected-direction.yaml` → `.qfai/contracts/design/design-system.yaml` →
   `.qfai/contracts/design/prototype-handoff.yaml` → `.qfai/contracts/ui/*.yaml` →
-  canonical prototype screenshots / HTML snapshots → `.qfai/prototypes/winner/index.html` → optional design tokens → mermaid flows.
+  canonical prototype screenshots / HTML snapshots → `.qfai/prototypes/winner/index.html`.
+- Do not read discussion-pack UI/UX sidecars, fallback mocks, or legacy design aliases.
 - Prototype code is analysis input, not production source. Reimplement with project-native patterns while preserving `prototype-handoff.yaml` `mustPreserve`; adapt `mayAdapt`; do not copy `mustNotCopy`.
 - UI-affecting items require product-surface-reviewer prototype parity review before `done`.
 - If code intent and rendered output diverge, treat the rendered/HTML result as the blocking review input and reconcile before DONE.

@@ -63,6 +63,7 @@ Read and follow these references before execution:
 
 - Primary SSOT: run `qfai prototyping show-spec` from the repo root and read the returned `01_Spec.md`.
 - `.qfai/assistant/skills/qfai-prototyping/references/prototype-workspace.md`
+- `.qfai/assistant/skills/qfai-prototyping/references/design-differentiation.md`
 - `.qfai/assistant/skills/qfai-prototyping/references/surface-framing.md`
 - `.qfai/assistant/skills/qfai-prototyping/references/evidence-requirements.md`
 - `.qfai/assistant/skills/qfai-prototyping/references/iteration-cycle.md`
@@ -77,14 +78,15 @@ Contract inputs:
 1. `.qfai/specs/<spec-id>/01_Spec.md`
 2. `.qfai/specs/<spec-id>/03_Acceptance-Criteria.md`
 3. `.qfai/contracts/design/exploration-brief.yaml`
-4. `.qfai/contracts/design/evaluation-rubric.yaml`
-5. `.qfai/contracts/design/evaluator-calibration.yaml`
-6. `.qfai/contracts/design/anchor-selection.yaml` when legacy validator slices are exercised
-7. `.qfai/contracts/design/evaluation-axes.yaml` when legacy validator slices are exercised
-8. `.qfai/contracts/design/selected-direction.yaml` when already created
-9. `.qfai/contracts/design/design-system.yaml` when already created
-10. `.qfai/contracts/design/prototype-handoff.yaml` when already created
-11. `.qfai/contracts/ui/*.yaml`
+4. `.qfai/contracts/design/reference-pool.yaml`
+5. `.qfai/contracts/design/brand-design.yaml`
+6. `.qfai/contracts/design/evaluation-rubric.yaml`
+7. `.qfai/contracts/design/evaluator-calibration.yaml`
+8. `.qfai/contracts/design/absorption-policy.yaml`
+9. `.qfai/contracts/design/selected-direction.yaml` when already created by prototyping
+10. `.qfai/contracts/design/design-system.yaml` when already created by prototyping
+11. `.qfai/contracts/design/prototype-handoff.yaml` when already created by prototyping
+12. `.qfai/contracts/ui/*.yaml`
 
 ## Delegation Scope Table
 
@@ -116,7 +118,7 @@ Required fields:
 
 ### Step 1 - Read Inputs
 
-Read the Required References and Contract Inputs in order. Verify the prototype will answer the screen, state, transition, and visual questions rather than prematurely implementing production code.
+Read the Required References and Contract Inputs in order. Do not read discussion-pack UI/UX sidecars; `/qfai-sdd` must already have normalized them into contracts. Verify the prototype will answer the screen, state, transition, and visual questions rather than prematurely implementing production code.
 
 ### Step 2-A — Verify Contract Preconditions
 
@@ -142,6 +144,7 @@ Confirm:
 
 Generate 5 clearly distinct static HTML/CSS/JS prototype directions under `.qfai/prototypes/rounds/r5/candidates/<candidate-id>/`.
 Do not begin with a single incumbent direction.
+Each active candidate must include a complete `concept.json` following `references/design-differentiation.md`.
 
 ### Step 4 - Round Start
 
@@ -166,7 +169,7 @@ If any capture step fails, the capture role records the failure, fixes local cau
 ### Step 6 - Launch Evaluation Reviewers
 
 Launch evaluation reviewer sub-agents with `review-bundle.json`.
-Inputs include screenshots, HTML snapshots, accessibility snapshots, command logs, `axisDefs`, `previousScore`, `designSystemChecklist`, and `commandPlanRef`.
+Inputs include screenshots, HTML snapshots, accessibility snapshots, command logs, `axisDefs`, `referencePoolRef`, `brandDesignRef`, `previousScore`, `designSystemChecklist`, and `commandPlanRef`.
 Persist per-candidate reviews to `evaluator-reviews/<candidate-id>.json` with concrete `evidenceRefs[]`.
 
 ### Step 7 - Direction Funnel
@@ -214,10 +217,12 @@ Evaluation reviewer sub-agents MUST read `review-bundle.json` for the current ro
 3. accessibility snapshots
 4. Playwright CLI command logs
 5. `axisDefs` from `.qfai/contracts/design/evaluation-rubric.yaml`
-6. `previousScore` when available
-7. `designSystemChecklist` from `.qfai/contracts/design/design-system.yaml`
-8. `commandPlanRef`
-9. prototype source refs under `.qfai/prototypes/`
+6. `referencePoolRef` from `.qfai/contracts/design/reference-pool.yaml`
+7. `brandDesignRef` from `.qfai/contracts/design/brand-design.yaml`
+8. `previousScore` when available
+9. `designSystemChecklist` from `.qfai/contracts/design/design-system.yaml`
+10. `commandPlanRef`
+11. prototype source refs under `.qfai/prototypes/`
 
 ## Visual Quality Structural Checklist
 
