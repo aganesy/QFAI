@@ -234,7 +234,7 @@ function checkContractHierarchyFromScreens(
 
 function checkSelectedDirection(directionContent: string, file: string): DesignFinding[] {
   const findings: DesignFinding[] = [];
-  const hasChosenDirection = /(chosen_direction_id|direction_id)\s*:/i.test(directionContent);
+  const hasChosenDirection = /chosen_direction_id\s*:/i.test(directionContent);
   if (!hasChosenDirection) {
     findings.push({
       ruleId: "QFAI-AUD-021",

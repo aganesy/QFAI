@@ -592,6 +592,27 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     expect(matches).toEqual([]);
   });
 
+  it("prevents retired design contract references in assistant markdown", async () => {
+    const targets = await fg(["assistant/**/*.md"], {
+      cwd: templateQfaiDir,
+      absolute: true,
+    });
+    const retiredContracts = ["anchor-selection.yaml", "evaluation-axes.yaml"];
+    const matches: string[] = [];
+
+    for (const filePath of targets) {
+      const content = await readFile(filePath, "utf-8");
+      const relativePath = path.relative(templateQfaiDir, filePath);
+      for (const contractName of retiredContracts) {
+        if (content.includes(contractName)) {
+          matches.push(`${relativePath}: ${contractName}`);
+        }
+      }
+    }
+
+    expect(matches).toEqual([]);
+  });
+
   it("ensures product.md has no backward compatibility posture", async () => {
     const productPath = path.join(templateQfaiDir, "assistant", "steering", "product.md");
     const content = await readFile(productPath, "utf-8");

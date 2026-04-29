@@ -53,6 +53,6 @@ spec-0013 (CAP-0013) で定義された、下流 skill が UI 定義を読み取
 ## Forbidden Fallbacks
 
 - Do not infer downstream UI behavior from discussion-pack sidecars.
-- Do not use `anchor-selection.yaml` or `evaluation-axes.yaml`.
+- Do not use retired design contract files.
 - Do not use HTML mock sections as downstream source of truth.
 - Do not treat a template reference as a selected design direction.

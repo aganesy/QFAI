@@ -11,9 +11,8 @@ L2 checks product experience and design alignment.
 - `.qfai/contracts/design/evaluation-rubric.yaml`
 - `.qfai/contracts/design/selected-direction.yaml`
 - `.qfai/contracts/design/design-system.yaml`
-- legacy inputs, if present (skip if absent):
-  - `.qfai/contracts/design/evaluation-axes.yaml`
-  - `.qfai/contracts/design/anchor-selection.yaml`
+- `.qfai/contracts/design/reference-pool.yaml`
+- `.qfai/contracts/design/brand-design.yaml`
 - previous round score
 
 ## 3-layer evaluation family
