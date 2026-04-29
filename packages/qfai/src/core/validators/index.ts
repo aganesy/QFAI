@@ -47,8 +47,12 @@ export { validateDesignFidelity } from "./designFidelity.js";
 export { validateDiscussionDesignHardening } from "./discussionDesignHardening.js";
 export { validateDesignAudit } from "./designAudit.js";
 export { validateDesignSlop } from "./designSlop.js";
-export { validateDesignContractReadiness } from "./designContractReadiness.js";
+export {
+  validatePrototypingDesignContractReadiness,
+  validateSddDesignContractReadiness,
+} from "./designContractReadiness.js";
 export { validateEvaluatorReviewHardFloor } from "./evaluatorReviewHardFloor.js";
+export { validatePrototypingCandidateConcept } from "./prototypingCandidateConcept.js";
 export { validateUiEvidenceArtifacts } from "./uiEvidenceArtifacts.js";
 export { isUiBearingSpec } from "./uixDetection.js";
 export {

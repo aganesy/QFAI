@@ -59,7 +59,9 @@ type FakeThread = {
 type FakeScenario = {
   branch: string;
   changedFiles: string[];
+  changelog: string;
   headSha: string;
+  packageVersion: string;
   packageScripts: Record<string, string>;
   prViews: FakePrView[];
   repoView: {
@@ -114,10 +116,78 @@ describe("pr-fix wrapper docs", () => {
     expect(agentsSkill).toContain("`-RequiredZeroStreak` の既定値は `30`");
     expect(agentsSkill).toContain("live 監視モード（`-DryRun` なし）");
     expect(agentsSkill).toContain("`tmp/pr-fix/`");
+    expect(agentsSkill).toContain("`^.+/v(\\d+\\.\\d+\\.\\d+)(?:[-_].*)?$`");
   });
 });
 
 describe("run-pr-fix strict monitor", { timeout: 120000 }, () => {
+  it("extracts version markers from non-feature branch prefixes and blocks mismatches", async () => {
+    const branch = "topic/v1.8.5";
+    const result = await runPrFix({
+      extraArgs: ["-DryRun", "-SleepSeconds", "0", "-RequiredZeroStreak", "1"],
+      scenario: makeScenario({
+        branch,
+        packageVersion: "1.8.4",
+        prViews: [makePrView([successCheck()], { headRefName: branch })],
+      }),
+    });
+
+    expect(result.code).not.toBe(0);
+    expect(combinedOutput(result)).toContain("Branch version marker resolved v1.8.5");
+    expect(combinedOutput(result)).toContain(
+      "Version alignment is required before pr-fix can continue.",
+    );
+
+    const versionCheck = await readJson(
+      path.join(result.repoDir, "tmp", "pr-fix", "pr-166-version-check.json"),
+    );
+    expect(versionCheck.ExpectedVersion).toBe("1.8.5");
+    expect(versionCheck.PackageVersion).toBe("1.8.4");
+    expect(versionCheck.Status).toBe("mismatch");
+    expect(versionCheck.ChangelogSectionPresent).toBe(false);
+  });
+
+  it("accepts aligned topic/vX.Y.Z branches", async () => {
+    const branch = "topic/v1.8.5";
+    const result = await runPrFix({
+      extraArgs: ["-DryRun", "-SleepSeconds", "0", "-RequiredZeroStreak", "1"],
+      scenario: makeScenario({
+        branch,
+        changelog: changelogWithVersion("1.8.5"),
+        packageVersion: "1.8.5",
+        prViews: [makePrView([successCheck()], { headRefName: branch })],
+      }),
+    });
+
+    expect(result.code).toBe(0);
+    expect(combinedOutput(result)).toContain(
+      "Version alignment check passed for branch marker v1.8.5.",
+    );
+  });
+
+  it("ignores non-version work suffixes after branch version markers", async () => {
+    const branch = "feature/v1.8.5-dds-validator";
+    const result = await runPrFix({
+      extraArgs: ["-DryRun", "-SleepSeconds", "0", "-RequiredZeroStreak", "1"],
+      scenario: makeScenario({
+        branch,
+        changelog: changelogWithVersion("1.8.5"),
+        packageVersion: "1.8.5",
+        prViews: [makePrView([successCheck()], { headRefName: branch })],
+      }),
+    });
+
+    expect(result.code).toBe(0);
+    expect(combinedOutput(result)).toContain(
+      "Version alignment check passed for branch marker v1.8.5.",
+    );
+
+    const versionCheck = await readJson(
+      path.join(result.repoDir, "tmp", "pr-fix", "pr-166-version-check.json"),
+    );
+    expect(versionCheck.ExpectedVersion).toBe("1.8.5");
+  });
+
   it("rejects live overrides for SleepSeconds and RequiredZeroStreak", async () => {
     const result = await runPrFix({
       extraArgs: ["-SleepSeconds", "5", "-RequiredZeroStreak", "2"],
@@ -373,7 +443,9 @@ function makeScenario(overrides: Partial<FakeScenario>): FakeScenario {
   return {
     branch: "feature/pr-fix-strict",
     changedFiles: [],
+    changelog: defaultChangelog(),
     headSha: "023b4c2bece7a5e3d0ed53d5ebeff027e95bc2d5",
+    packageVersion: "1.8.4",
     packageScripts: { "ci:gate": "pnpm ci:gate" },
     prViews: [makePrView([successCheck()])],
     repoView: {
@@ -437,6 +509,54 @@ function compliantPrBody(): string {
     "## Open Questions / Follow-ups",
     "",
     "- None",
+  ].join("\n");
+}
+
+function defaultChangelog(): string {
+  return [
+    "# Changelog",
+    "",
+    "## [Unreleased]",
+    "",
+    "### Added",
+    "",
+    "- なし",
+    "",
+    "### Changed",
+    "",
+    "- なし",
+    "",
+    "### Removed",
+    "",
+    "- なし",
+    "",
+    "## [1.8.4] - 2026-04-27",
+    "",
+    "- Previous release notes.",
+  ].join("\n");
+}
+
+function changelogWithVersion(version: string): string {
+  return [
+    "# Changelog",
+    "",
+    "## [Unreleased]",
+    "",
+    "### Added",
+    "",
+    "- なし",
+    "",
+    "### Changed",
+    "",
+    "- なし",
+    "",
+    "### Removed",
+    "",
+    "- なし",
+    "",
+    `## [${version}] - 2026-04-28`,
+    "",
+    "- Release notes.",
   ].join("\n");
 }
 
@@ -511,7 +631,12 @@ async function runPrFix(options: {
 
   await mkdir(repoDir, { recursive: true });
   await mkdir(binDir, { recursive: true });
-  await createMinimalRepo(repoDir, options.scenario.packageScripts);
+  await createMinimalRepo(
+    repoDir,
+    options.scenario.changelog,
+    options.scenario.packageVersion,
+    options.scenario.packageScripts,
+  );
   await writeFile(scenarioPath, JSON.stringify(options.scenario), "utf-8");
   await writeFile(
     statePath,
@@ -557,18 +682,27 @@ function psQuote(value: string): string {
 
 async function createMinimalRepo(
   repoDir: string,
+  changelog: string,
+  packageVersion: string,
   packageScripts: Record<string, string>,
 ): Promise<void> {
   await mkdir(path.join(repoDir, ".github", "workflows"), { recursive: true });
+  await mkdir(path.join(repoDir, "packages", "qfai"), { recursive: true });
   await writeFile(
     path.join(repoDir, ".github", "PULL_REQUEST_TEMPLATE.md"),
     "# Template\n",
     "utf-8",
   );
   await writeFile(path.join(repoDir, ".github", "workflows", "ci.yml"), "name: CI\n", "utf-8");
+  await writeFile(path.join(repoDir, "CHANGELOG.md"), changelog, "utf-8");
   await writeFile(
     path.join(repoDir, "package.json"),
     JSON.stringify({ scripts: packageScripts }, null, 2),
+    "utf-8",
+  );
+  await writeFile(
+    path.join(repoDir, "packages", "qfai", "package.json"),
+    JSON.stringify({ name: "qfai", version: packageVersion }, null, 2),
     "utf-8",
   );
 }

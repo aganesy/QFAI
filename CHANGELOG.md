@@ -16,6 +16,33 @@
 
 - なし
 
+## [1.8.6] - 2026-04-30
+
+Simplifies the design workflow contracts as a deliberate breaking
+change, removing compatibility aliases that made the prototyping and
+SDD boundaries harder to reason about.
+
+### Added
+
+- **Design readiness phase split**: explicit SDD and prototyping design
+  contract readiness validators replace the previous stage option API.
+- **Skill size guardrail**: `qfai-prototyping/SKILL.md` now has an asset
+  test that keeps the orchestration file concise enough for agent use.
+
+### Changed
+
+- **Canonical design workflow only**: downstream design execution now
+  relies on normalized contracts and rejects retired selected-direction
+  aliases instead of preserving compatibility paths.
+- **Prototyping skill compression**: large workflow details are moved
+  into existing references while preserving mandatory execution intent.
+
+### Removed
+
+- **Legacy design contract aliases**: retired design contract references
+  and selected-direction alias handling were removed from shipped
+  assistant assets and validators.
+
 ## [1.8.5] - 2026-04-28
 
 Hardens prototyping full-harness readiness so preflight, doctor, and

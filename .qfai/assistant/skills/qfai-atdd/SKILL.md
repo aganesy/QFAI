@@ -60,6 +60,8 @@ When unsure, read inputs in this order:
   - `.qfai/specs/<spec-id>/scenario.feature`
   - coverage ledger files
 
+Do not read discussion-pack UI/UX sidecars. UI-bearing acceptance tests consume only specs and contracts normalized by `/qfai-sdd`.
+
 ## Read Set Contract (Mandatory)
 
 - Default Mode:
@@ -162,6 +164,7 @@ Follow `.qfai/assistant/instructions/shared-skill-operating-baseline.md#delta-re
 ## Completion Contract (Shared)
 
 Follow `.qfai/assistant/instructions/shared-skill-operating-baseline.md#completion-contract-shared`.
+Follow `.qfai/assistant/instructions/shared-skill-operating-baseline.md#gate-failure-autorepair-protocol` for validate, doctor, and quality-gate failures.
 
 ## Goal
 

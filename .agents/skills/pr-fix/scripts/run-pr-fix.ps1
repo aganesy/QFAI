@@ -241,6 +241,59 @@ function RepairBody([string]$Template, $Pr, [string[]]$ChangedFiles, $Classifica
   return ($body + ($append -join "`n"))
 }
 
+function ExpectedVersionFromBranch([string]$Branch) {
+  if ([string]::IsNullOrWhiteSpace($Branch)) { return $null }
+  $match = [regex]::Match($Branch, "^.+/v(\d+\.\d+\.\d+)(?:[-_].*)?$")
+  if (-not $match.Success) { return $null }
+  return $match.Groups[1].Value
+}
+
+function HasChangelogSection([string]$Content, [string]$Version) {
+  if ([string]::IsNullOrWhiteSpace($Content) -or [string]::IsNullOrWhiteSpace($Version)) {
+    return $false
+  }
+  $escapedVersion = [regex]::Escape($Version)
+  return [regex]::IsMatch($Content, "(?m)^## \[$escapedVersion\](?:\s+-\s+\d{4}-\d{2}-\d{2})?\s*$")
+}
+
+function CheckVersionAlignment([string]$Root, [string]$Branch) {
+  $expectedVersion = ExpectedVersionFromBranch $Branch
+  if ([string]::IsNullOrWhiteSpace($expectedVersion)) {
+    return [pscustomobject]@{
+      Enabled                 = $false
+      Branch                  = $Branch
+      ExpectedVersion         = $null
+      PackageVersion          = $null
+      ChangelogSectionPresent = $false
+      Status                  = "skipped"
+      PackagePath             = $null
+      ChangelogPath           = $null
+    }
+  }
+
+  $packagePath = Join-Path $Root "packages/qfai/package.json"
+  $changelogPath = Join-Path $Root "CHANGELOG.md"
+  EnsureFile $packagePath
+  EnsureFile $changelogPath
+
+  $package = ReadUtf8File $packagePath | ConvertFrom-Json
+  $packageVersion = [string]$package.version
+  $changelogContent = ReadUtf8File $changelogPath
+  $changelogSectionPresent = HasChangelogSection -Content $changelogContent -Version $expectedVersion
+  $isAligned = ($packageVersion -eq $expectedVersion) -and $changelogSectionPresent
+
+  return [pscustomobject]@{
+    Enabled                 = $true
+    Branch                  = $Branch
+    ExpectedVersion         = $expectedVersion
+    PackageVersion          = $packageVersion
+    ChangelogSectionPresent = $changelogSectionPresent
+    Status                  = if ($isAligned) { "aligned" } else { "mismatch" }
+    PackagePath             = $packagePath
+    ChangelogPath           = $changelogPath
+  }
+}
+
 function Threads([string]$Owner, [string]$Repo, [int]$Number) {
   $query = 'query($owner:String!,$repo:String!,$number:Int!,$after:String){repository(owner:$owner,name:$repo){pullRequest(number:$number){reviewThreads(first:100,after:$after){pageInfo{hasNextPage endCursor} nodes{id isResolved isOutdated comments(last:1){nodes{databaseId url body path author{login}}}}}}}}'
   $items = @()
@@ -409,6 +462,25 @@ if ($PSBoundParameters.ContainsKey("PrNumber")) {
   }
 } else {
   Info ("Resolved PR #{0} from current branch '{1}'." -f $targetPrNumber, $branch)
+}
+
+$versionCheck = CheckVersionAlignment -Root $root -Branch $branch
+if ($versionCheck.Enabled) {
+  $versionCheckPath = SaveJson -Root $root -Name ("pr-{0}-version-check.json" -f $targetPrNumber) -Value $versionCheck
+  Info ("Saved version alignment snapshot to {0}" -f $versionCheckPath)
+  if ($versionCheck.Status -ne "aligned") {
+    Warn ("Branch version marker resolved v{0} from '{1}'." -f $versionCheck.ExpectedVersion, $branch)
+    if ($versionCheck.PackageVersion -ne $versionCheck.ExpectedVersion) {
+      Warn ("packages/qfai/package.json version mismatch: expected {0}, current {1}" -f $versionCheck.ExpectedVersion, $versionCheck.PackageVersion)
+    }
+    if (-not $versionCheck.ChangelogSectionPresent) {
+      Warn ("CHANGELOG.md is missing the section for {0}" -f $versionCheck.ExpectedVersion)
+    }
+    throw ("Version alignment is required before pr-fix can continue. Update packages/qfai/package.json and CHANGELOG.md for version {0}, commit/push, then rerun pr-fix." -f $versionCheck.ExpectedVersion)
+  }
+  Info ("Version alignment check passed for branch marker v{0}." -f $versionCheck.ExpectedVersion)
+} else {
+  Info "No branch version marker '/vX.Y.Z' detected. Skipping version alignment check."
 }
 
 $pr = $currentPr

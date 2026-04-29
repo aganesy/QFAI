@@ -15,3 +15,7 @@
 ## Originality Fail
 
 - Example of a design that copies defaults without deliberate product-specific choices:
+
+## Template Copy Fail
+
+- Example of a shadcn/Tailwind/template-derived design that keeps default tokens, rhythm, or component composition without local translation:

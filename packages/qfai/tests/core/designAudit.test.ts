@@ -361,6 +361,35 @@ describe("validateDesignAudit  Eaudit rules", { timeout: 10000 }, () => {
     expect(issues).toEqual([]);
   });
 
+  it("rejects retired direction_id alias in selected-direction.yaml", async () => {
+    await createUiBearingPack(["# 03 Story Workshop", "<div>UI content</div>"].join("\n"));
+    await writeCanonicalAuditArtifacts(
+      [
+        "# Screen Contracts",
+        "",
+        "### Screen: Dashboard",
+        "",
+        "- screen_id: dashboard",
+        "- route: /dashboard",
+        "- purpose: Review current status",
+        "- actor: end-user",
+        "- primary_tasks:",
+        "  - Submit order",
+      ],
+      [
+        "direction_id: direction-primary",
+        "winning_rationale: Focused dashboard hierarchy best supports the primary workflow.",
+        "carry_forward_rules:",
+        "  - Keep a single primary CTA per screen.",
+      ],
+    );
+
+    const issues = await validateDesignAudit(root, config());
+    const selectedDirectionIssue = issues.find((issue) => issue.code === "QFAI-AUD-021");
+
+    expect(selectedDirectionIssue).toBeDefined();
+  });
+
   it("TDD-0013: missing primary task ↁEQFAI-AUD-001 error", async () => {
     await createUiBearingPack(["# 03 Story Workshop", "<div>UI content</div>"].join("\n"));
     await writeCanonicalAuditArtifacts([

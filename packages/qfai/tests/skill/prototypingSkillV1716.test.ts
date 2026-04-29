@@ -92,6 +92,18 @@ describe("TC-0012-0292 — SKILL.md documents canonical evidence capture", () =>
     expect(content).toContain(".qfai/evidence/prototyping/screenshots/<screen-id>.png");
     expect(content).toContain(".qfai/evidence/prototyping/html/<screen-id>.html");
   });
+
+  it("SKILL.md tells capture failures to fix local causes before rerun without inventing evaluation", async () => {
+    const content = await readSkillMd();
+
+    expect(content).toContain("If any capture step fails");
+    expect(content).toContain(
+      "fix local causes such as launcher, server, URL, command-plan, or path issues",
+    );
+    expect(content).toContain(
+      "Do not pretend the screen was evaluated until the required artifacts exist.",
+    );
+  });
 });
 
 // ─── TC-0012-0293: 5-step iteration cycle documented ─────────────────────────
@@ -124,6 +136,17 @@ describe("TC-0012-0293 — round loop documented in SKILL.md", () => {
     expect(evaluateIdx).toBeLessThan(funnelIdx);
     expect(funnelIdx).toBeLessThan(breakthroughIdx);
     expect(breakthroughIdx).toBeLessThan(validateIdx);
+  });
+});
+
+describe("prototyping git commit gate", () => {
+  it("SKILL.md requires commitSha recording for exploration rounds and polish cycles", async () => {
+    const content = await readSkillMd();
+
+    expect(content).toContain("git commit");
+    expect(content).toContain("commitSha");
+    expect(content).toMatch(/r5.*r3.*r2.*r1/s);
+    expect(content).toMatch(/polish.*commitSha/s);
   });
 });
 

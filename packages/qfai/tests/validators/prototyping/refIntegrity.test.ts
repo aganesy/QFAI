@@ -168,13 +168,17 @@ describe("validatePrototypingArtifactRefIntegrity", () => {
         candidates: [],
         commandPlanRef: ".qfai/evidence/prototyping/rounds/r5/command-plans.json",
         axisDefsRef: ".qfai/contracts/design/evaluation-rubric.yaml",
+        referencePoolRef: ".qfai/contracts/design/reference-pool.yaml",
+        brandDesignRef: ".qfai/contracts/design/brand-design.yaml",
         designSystemChecklistRef: ".qfai/contracts/design/design-system.yaml",
       }),
     );
     const issues = await validatePrototypingArtifactRefIntegrity(root, makeConfig());
-    // 3 dangling refs: commandPlan, axisDefs, designSystemChecklist
-    expect(issues.length).toBe(3);
+    // 5 dangling refs: commandPlan, axisDefs, referencePool, brandDesign, designSystemChecklist
+    expect(issues.length).toBe(5);
     expect(issues.every((i) => i.code === "QFAI-PROT-REF-001")).toBe(true);
+    expect(issues.some((i) => i.message.includes("referencePoolRef"))).toBe(true);
+    expect(issues.some((i) => i.message.includes("brandDesignRef"))).toBe(true);
   });
 
   it("emits QFAI-PROT-REF-001 for dangling breakthrough.json branchRefs", async () => {

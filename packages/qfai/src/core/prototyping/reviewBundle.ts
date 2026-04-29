@@ -46,6 +46,8 @@ import {
  * evaluator sub-agents. These live in `.qfai/contracts/design/`.
  */
 const DEFAULT_AXIS_DEFS_REF = ".qfai/contracts/design/evaluation-rubric.yaml";
+const DEFAULT_REFERENCE_POOL_REF = ".qfai/contracts/design/reference-pool.yaml";
+const DEFAULT_BRAND_DESIGN_REF = ".qfai/contracts/design/brand-design.yaml";
 const DEFAULT_DESIGN_SYSTEM_CHECKLIST_REF = ".qfai/contracts/design/design-system.yaml";
 
 export type BuildReviewBundleInput = {
@@ -64,6 +66,10 @@ export type BuildReviewBundleInput = {
   axisDefsRef?: string;
   /** Optional override for the design system ref (defaults to canonical path). */
   designSystemChecklistRef?: string;
+  /** Optional override for the reference-pool ref (defaults to canonical path). */
+  referencePoolRef?: string;
+  /** Optional override for the brand-design ref (defaults to canonical path). */
+  brandDesignRef?: string;
   /**
    * Ref to the prior cycle's evaluator-review.json, or `null` when this is
    * cycle 1. Most callers can leave this to `deriveDefaultPreviousScoreRef`.
@@ -105,6 +111,8 @@ export function buildReviewBundle(input: BuildReviewBundleInput): ReviewBundle {
     })),
     commandPlanRef: cycleCommandPlanPath(input.cycle),
     axisDefsRef: input.axisDefsRef ?? DEFAULT_AXIS_DEFS_REF,
+    referencePoolRef: input.referencePoolRef ?? DEFAULT_REFERENCE_POOL_REF,
+    brandDesignRef: input.brandDesignRef ?? DEFAULT_BRAND_DESIGN_REF,
     designSystemChecklistRef: input.designSystemChecklistRef ?? DEFAULT_DESIGN_SYSTEM_CHECKLIST_REF,
     previousScoreRef,
     evaluatorReviewOutputPath: cycleEvaluatorReviewPath(input.cycle),
@@ -189,6 +197,8 @@ export type RoundReviewBundle = {
   }>;
   commandPlanRef: string;
   axisDefsRef: string;
+  referencePoolRef: string;
+  brandDesignRef: string;
   designSystemChecklistRef: string;
 };
 
@@ -204,6 +214,8 @@ export type BuildRoundReviewBundleInput = {
    */
   primarySpecId: string;
   axisDefsRef?: string;
+  referencePoolRef?: string;
+  brandDesignRef?: string;
   designSystemChecklistRef?: string;
 };
 
@@ -250,6 +262,8 @@ export function buildRoundReviewBundle(input: BuildRoundReviewBundleInput): Roun
     })),
     commandPlanRef: roundCommandPlansPath(input.round),
     axisDefsRef: input.axisDefsRef ?? DEFAULT_AXIS_DEFS_REF,
+    referencePoolRef: input.referencePoolRef ?? DEFAULT_REFERENCE_POOL_REF,
+    brandDesignRef: input.brandDesignRef ?? DEFAULT_BRAND_DESIGN_REF,
     designSystemChecklistRef: input.designSystemChecklistRef ?? DEFAULT_DESIGN_SYSTEM_CHECKLIST_REF,
   };
 }

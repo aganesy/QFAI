@@ -60,6 +60,8 @@ describe("round review bundle (v2)", () => {
 
     expect(bundle.spec).toBe("0001");
     expect(bundle.commandPlanRef).toBe(".qfai/evidence/prototyping/rounds/r3/command-plans.json");
+    expect(bundle.referencePoolRef).toBe(".qfai/contracts/design/reference-pool.yaml");
+    expect(bundle.brandDesignRef).toBe(".qfai/contracts/design/brand-design.yaml");
     expect(bundle.candidates[0]?.conceptRef).toBe(
       ".qfai/evidence/prototyping/rounds/r3/candidates/c1/concept.json",
     );

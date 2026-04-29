@@ -13,6 +13,8 @@ import {
 import { buildReimplementationRecord } from "../../../src/core/prototyping/reimplementationBuilder.js";
 
 const tempDirs: string[] = [];
+const SHA_R5 = "a".repeat(40);
+const SHA_R3 = "b".repeat(40);
 
 async function newTempDir(): Promise<string> {
   const dir = await mkdtemp(path.join(os.tmpdir(), "qfai-evrec-v2-"));
@@ -52,12 +54,14 @@ describe("spec-0018 evidence record v2", () => {
     const candidates = buildCandidates(parseCandidateIds(["c1", "c3", "c5"]), "r5");
     const roundEvidence = buildRoundEvidence({
       round: "r3",
+      commitSha: SHA_R3,
       candidates,
       screens: [{ screenId: "home" }, { screenId: "orders" }],
       allAxesPerfect100: true,
     });
 
     expect(roundEvidence.harvestRef).toBe(".qfai/evidence/prototyping/rounds/r3/harvest.json");
+    expect(roundEvidence.commitSha).toBe(SHA_R3);
     expect(roundEvidence.absorptionPlanRef).toBe(
       ".qfai/evidence/prototyping/rounds/r3/absorption-plan.json",
     );
@@ -83,6 +87,7 @@ describe("spec-0018 evidence record v2", () => {
       rounds: [
         buildRoundEvidence({
           round: "r5",
+          commitSha: SHA_R5,
           candidates: buildCandidates(parseCandidateIds(["c1", "c2", "c3", "c4", "c5"]), "r5"),
           screens: [{ screenId: "home" }],
         }),

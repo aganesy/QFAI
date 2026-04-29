@@ -66,6 +66,8 @@ describe("spec-0017 buildReviewBundle", () => {
 
     expect(bundle.screens.length).toBeGreaterThan(0);
     expect(bundle.axisDefsRef).toBe(".qfai/contracts/design/evaluation-rubric.yaml");
+    expect(bundle.referencePoolRef).toBe(".qfai/contracts/design/reference-pool.yaml");
+    expect(bundle.brandDesignRef).toBe(".qfai/contracts/design/brand-design.yaml");
     expect(bundle.designSystemChecklistRef).toBe(".qfai/contracts/design/design-system.yaml");
     expect(bundle.previousScoreRef).toBeNull();
     expect(bundle.commandPlanRef).toBe(

@@ -438,6 +438,7 @@ describe("doctor", { timeout: 60000 }, () => {
         path.join(root, ".qfai", "contracts", "design", "selected-direction.yaml"),
         [
           "chosen_direction_id: direction-02",
+          "winning_rationale: This must be produced after prototyping, not before it.",
           "carry_forward_rules:",
           "  - Keep the asymmetrical hero and condensed headline pairing",
         ].join("\n"),
@@ -556,6 +557,48 @@ async function seedPrototypingFixture(root: string, targetUrl: string): Promise<
     "utf-8",
   );
   await writeFile(
+    path.join(designDir, "reference-pool.yaml"),
+    [
+      "references:",
+      "  - id: ref-competitor-01",
+      "    kind: competitor",
+      "    source: Example competitor product surface",
+      "    adopted_points:",
+      "      - Dense comparison layout with clear hierarchy",
+      "    rejected_points:",
+      "      - Generic sidebar shell",
+      "    local_translation:",
+      "      - Translate density into task-first grouping",
+      "    copy_risk: low",
+      "    template_usage_policy: reference-only",
+      "",
+    ].join("\n"),
+    "utf-8",
+  );
+  await writeFile(
+    path.join(designDir, "brand-design.yaml"),
+    [
+      "brand_personality:",
+      "  - precise",
+      "  - quietly confident",
+      "audience_emotion:",
+      "  - feels in control of operational tradeoffs",
+      "category_conventions:",
+      "  - admin surfaces prioritize predictable scanning",
+      "differentiation_strategy:",
+      "  - use compact editorial hierarchy instead of default dashboard cards",
+      "visual_language:",
+      "  - strong typographic contrast",
+      "  - restrained color accents",
+      "content_tone:",
+      "  - direct operational language",
+      "do_not_look_like:",
+      "  - generic shadcn dashboard starter",
+      "",
+    ].join("\n"),
+    "utf-8",
+  );
+  await writeFile(
     path.join(designDir, "evaluation-rubric.yaml"),
     [
       "axes:",
@@ -586,28 +629,11 @@ async function seedPrototypingFixture(root: string, targetUrl: string): Promise<
     "utf-8",
   );
   await writeFile(
-    path.join(designDir, "selected-direction.yaml"),
+    path.join(designDir, "absorption-policy.yaml"),
     [
-      "chosen_direction_id: direction-02",
-      "winning_rationale: Strong hierarchy with differentiated typography.",
-      "carry_forward_rules:",
-      "  - Keep the asymmetrical hero and condensed headline pairing",
-      "",
-    ].join("\n"),
-    "utf-8",
-  );
-  await writeFile(
-    path.join(designDir, "design-system.yaml"),
-    [
-      "checklist:",
-      "  color: []",
-      "  typography: []",
-      "  spacing: []",
-      "  border_radius: []",
-      "  shadow: []",
-      "  dos_and_donts: []",
-      "  component_tone: []",
-      "  motion_rules: []",
+      "minAbsorptionsPerSurvivor: 2",
+      "require_rejected_reason: true",
+      "allow_adapt_required: true",
       "",
     ].join("\n"),
     "utf-8",

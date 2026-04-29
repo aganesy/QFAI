@@ -41,8 +41,8 @@ gh pr view --json number,headRefName,baseRefName,url
 
 ### 手順
 
-1. 現在ブランチ名が `feature/vX.Y.Z` 形式（例: `feature/v1.7.12`）かを判定する。
-   - 正規表現: `^feature/v(\d+\.\d+\.\d+.*)$`
+1. 現在ブランチ名が `<任意のprefix>/vX.Y.Z` 形式（例: `feature/v1.7.12`, `topic/v1.8.5`）かを判定する。
+   - 正規表現: `^.+/v(\d+\.\d+\.\d+)(?:[-_].*)?$`
    - マッチしない場合はこのセクション全体をスキップし、次の「PR 対象の決め方」へ進む。
 
 2. マッチしたバージョン文字列（例: `1.7.12`）を期待バージョンとして保持する。
@@ -76,7 +76,7 @@ gh pr view --json number,headRefName,baseRefName,url
 
 ### 注意
 
-- このチェックはブランチ名が `feature/vX.Y.Z` 形式の場合にのみ実行する。それ以外の命名規則（`fix/...`, `chore/...` 等）ではスキップする。
+- このチェックはブランチ名に `/vX.Y.Z` 形式の version marker が含まれる場合に実行する。prefix は `feature`, `topic`, `release` など任意でよい。`fix/...`, `chore/...` のように version marker を含まない場合のみスキップする。
 - ランタイムの `toolVersion` は `packages/qfai/package.json` から導出されるため、ソースコード内に別の package version 定数を手で追加・更新しない。
 - `README.md` / `packages/qfai/README.md` / `packages/qfai/docs/design-principles.md` には現行 package version の固定表記を原則置かない。不要な版番号は増やさず、必要時のみ migration guide や changelog に集約する。
 - `.vscode/tasks.json` の `"version": "2.0.0"` や、review/prototyping JSON の `"version": "0.1" / "1.0" / "2.0"` のような**スキーマ version**は npm パッケージ版とは無関係なので、package version 更新では触らない。

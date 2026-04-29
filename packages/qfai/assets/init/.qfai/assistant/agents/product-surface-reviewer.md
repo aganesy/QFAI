@@ -17,6 +17,10 @@ tools: [Read, Glob, Grep, Bash]
 - Audit visual design, token alignment, and service-level UX coherence.
 - Reconcile sidecar artifacts (selected anchor, strategy, screen contracts), design tokens, mermaid flows, and rendered output consistency.
   HTML mock is optional fallback evidence only. Design tokens are supporting input.
+- For UI implementation, compare rendered output against `.qfai/contracts/design/prototype-handoff.yaml`, canonical prototype screenshots, HTML snapshots, and `.qfai/prototypes/winner/index.html`.
+- Reject prototype parity when implementation loses CTA hierarchy, spacing rhythm, information density,
+  surface framing intent, transition clarity, state coverage, or component character captured by the winning
+  prototype.
 - Review UI changes for KISS and YAGNI at the surface layer: avoid needless states, controls, flows, animations, and configuration that are not justified by the product goal.
 - Check naming, structure, and responsibility split of UI components for clarity, cohesion, and minimal surprise.
 - Validate docs/UX consistency so usage text, labels, error states, and user flows match the intended product behavior.
@@ -31,6 +35,7 @@ tools: [Read, Glob, Grep, Bash]
 - .github/instructions/code-review.instructions.md
 - .github/instructions/principles.instructions.md
 - UI contract files under `.qfai/contracts/ui/`
+- Prototype handoff contract under `.qfai/contracts/design/prototype-handoff.yaml` when available
 - Runtime screenshots / HTML evidence / relevant diffs
 
 ## Deliverables

@@ -126,6 +126,56 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     }
   });
 
+  it("ensures shared operating baseline defines gate failure autorepair protocol", async () => {
+    const baselinePath = path.join(
+      templateQfaiDir,
+      "assistant",
+      "instructions",
+      "shared-skill-operating-baseline.md",
+    );
+    const baseline = await readFile(baselinePath, "utf-8");
+    const requiredPhrases = [
+      "## Gate Failure Autorepair Protocol",
+      "validate, doctor, test, lint, typecheck, build, capture, or report gates fail",
+      "inspect exit code, logs, `validate.json`, and cited files before reporting",
+      "skill-owned artifact, upstream spec/contract, code/test defect, environment/tooling, or user decision",
+      "fix skill-owned artifacts and code/test defects autonomously",
+      "rerun the same failing gate after each fix batch",
+      "do not weaken profiles, lower `--fail-on`, waive errors, invent evidence, or skip required reviewers",
+      "stop only for destructive changes, ambiguous product/spec decisions, missing permissions/tools, or repeated no-progress failures",
+      "cause, attempted fixes, remaining blocker, user action, and retry gate",
+    ];
+
+    for (const phrase of requiredPhrases) {
+      expect(baseline).toContain(phrase);
+    }
+  });
+
+  it("ensures gate-running QFAI skills reference the autorepair protocol", async () => {
+    const skills = [
+      "qfai-discussion",
+      "qfai-sdd",
+      "qfai-prototyping",
+      "qfai-atdd",
+      "qfai-implement",
+      "qfai-verify",
+      "qfai-configure",
+    ];
+    const requiredPhrase = "shared-skill-operating-baseline.md#gate-failure-autorepair-protocol";
+
+    const missing = (
+      await Promise.all(
+        skills.map(async (skill) => {
+          const skillPath = path.join(templateQfaiDir, "assistant", "skills", skill, "SKILL.md");
+          const content = await readFile(skillPath, "utf-8");
+          return content.includes(requiredPhrase) ? null : skill;
+        }),
+      )
+    ).filter((skill): skill is string => skill !== null);
+
+    expect(missing).toEqual([]);
+  });
+
   it("ensures canonical skills avoid deprecated simulation fallback wording", async () => {
     const canonicalDir = path.join(templateQfaiDir, "assistant", "skills");
     const canonical = await fg(["*/SKILL.md"], {
@@ -284,6 +334,61 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     expect(content).toContain("DONE is forbidden");
     expect(content).toMatch(/evaluation reviewer|l1/i);
     expect(content).toContain("REVISE");
+  });
+
+  it("ensures qfai-prototyping ships lightweight HTML prototype handoff assets", async () => {
+    const skillDir = path.join(templateQfaiDir, "assistant", "skills", "qfai-prototyping");
+    const skillPath = path.join(skillDir, "SKILL.md");
+    const workspaceRefPath = path.join(skillDir, "references", "prototype-workspace.md");
+    const surfaceRefPath = path.join(skillDir, "references", "surface-framing.md");
+    const handoffTemplatePath = path.join(
+      skillDir,
+      "templates",
+      "contracts",
+      "prototype-handoff.sample.yaml",
+    );
+
+    const [skill, workspaceRef, surfaceRef, handoffTemplate] = await Promise.all([
+      readFile(skillPath, "utf-8"),
+      readFile(workspaceRefPath, "utf-8"),
+      readFile(surfaceRefPath, "utf-8"),
+      readFile(handoffTemplatePath, "utf-8"),
+    ]);
+
+    expect(skill).toContain("static-first");
+    expect(skill).toContain(".qfai/prototypes/");
+    expect(skill).toContain("production `src/`");
+    expect(skill).toContain(".qfai/contracts/design/prototype-handoff.yaml");
+    expect(skill).toContain(".qfai/contracts/design/reference-pool.yaml");
+    expect(skill).toContain(".qfai/contracts/design/brand-design.yaml");
+    expect(skill).toContain(".qfai/prototypes/winner/index.html");
+
+    expect(workspaceRef).toContain(".qfai/prototypes/");
+    expect(workspaceRef).toContain("not production implementation");
+    expect(workspaceRef).toContain(".qfai/prototypes/winner/index.html");
+    expect(workspaceRef).toContain(".qfai/contracts/design/prototype-handoff.yaml");
+
+    expect(surfaceRef).toContain("mobile app");
+    expect(surfaceRef).toContain("desktop app");
+    expect(surfaceRef).toContain("Do not carry");
+
+    expect(handoffTemplate).toContain("sourcePrototypeRefs:");
+    expect(handoffTemplate).toContain("surfaceProfiles:");
+    expect(handoffTemplate).toContain("mustPreserve:");
+    expect(handoffTemplate).toContain("mustNotCopy:");
+  });
+
+  it("keeps qfai-prototyping SKILL.md concise enough for agent execution", async () => {
+    const skillPath = path.join(
+      templateQfaiDir,
+      "assistant",
+      "skills",
+      "qfai-prototyping",
+      "SKILL.md",
+    );
+    const content = await readFile(skillPath, "utf-8");
+
+    expect(content.split(/\r?\n/).length).toBeLessThanOrEqual(280);
   });
 
   it("ensures ui contract docs define mockable prototype and copy-ready example", async () => {
@@ -493,6 +598,27 @@ describe("assets guardrails", { timeout: 30000 }, () => {
       for (const forbidden of forbiddenPatterns) {
         if (forbidden.pattern.test(content)) {
           matches.push(`${relativePath}: ${forbidden.label}`);
+        }
+      }
+    }
+
+    expect(matches).toEqual([]);
+  });
+
+  it("prevents retired design contract references in assistant markdown", async () => {
+    const targets = await fg(["assistant/**/*.md"], {
+      cwd: templateQfaiDir,
+      absolute: true,
+    });
+    const retiredContracts = ["anchor-selection.yaml", "evaluation-axes.yaml"];
+    const matches: string[] = [];
+
+    for (const filePath of targets) {
+      const content = await readFile(filePath, "utf-8");
+      const relativePath = path.relative(templateQfaiDir, filePath);
+      for (const contractName of retiredContracts) {
+        if (content.includes(contractName)) {
+          matches.push(`${relativePath}: ${contractName}`);
         }
       }
     }
@@ -901,12 +1027,12 @@ describe("assets guardrails", { timeout: 30000 }, () => {
       [
         "api-contract.sample.yaml",
         "absorption-policy.sample.yaml",
+        "brand-design.sample.yaml",
         "db-contract.sample.sql",
-        "design-system.sample.yaml",
         "evaluation-rubric.sample.yaml",
         "evaluator-calibration.sample.yaml",
         "exploration-brief.sample.yaml",
-        "selected-direction.sample.yaml",
+        "reference-pool.sample.yaml",
         "ui-contract.sample.yaml",
       ].sort(),
     );
@@ -1255,10 +1381,12 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     );
   });
 
-  it("keeps qfai-sdd and qfai-discussion SKILL.md compact enough for progressive disclosure", async () => {
+  it("keeps canonical SKILL.md files compact enough for progressive disclosure", async () => {
     const targets = [
       ["qfai-sdd", 360],
       ["qfai-discussion", 400],
+      ["qfai-prototyping", 320],
+      ["qfai-implement", 370],
     ] as const;
 
     for (const [skillId, maxLines] of targets) {

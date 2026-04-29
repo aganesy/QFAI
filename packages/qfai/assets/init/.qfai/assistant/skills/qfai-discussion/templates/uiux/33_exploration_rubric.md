@@ -25,3 +25,22 @@
 ## Implementation Plausibility
 
 - What level of complexity is acceptable for the current slice:
+
+## Brand Memorability
+
+- What makes the screen recognizable after one use:
+- What makes it forgettable:
+
+## Category Distinctiveness
+
+- Which category conventions are intentionally kept:
+- Which category conventions are intentionally broken:
+
+## Template Dependency Risk
+
+- What indicates an unmodified shadcn/Tailwind/template surface:
+- What local translation is required before passing:
+
+## Localization Fit
+
+- How language length, density, and domain terms affect the design:

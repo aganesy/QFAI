@@ -28,6 +28,7 @@ const EVAL_CALIBRATION_RE =
   /\b(evaluator-calibration|evaluator\s*calibration|34_evaluator_calibration)\b/i;
 const SELECTED_DIRECTION_RE = /\b(selected-direction|selected\s*direction|winner\s*direction)\b/i;
 const DESIGN_SYSTEM_RE = /\b(design-system|design\s*system|designsystemchecklist)\b/i;
+const PROTOTYPE_HANDOFF_RE = /\b(prototype-handoff|prototype\s*handoff)\b/i;
 const UI_CONTRACTS_RE = /\b(contracts\/ui|ui\s*contracts|screen\s*contracts)\b/i;
 
 const DESKTOP_RE = /\b(desktop|1024\s*px|1280\s*px|1440\s*px|viewport\s*[≥>=]+\s*1024)\b/i;
@@ -87,6 +88,7 @@ export async function validateRenderCritique(root: string, config: QfaiConfig): 
         !EVAL_CALIBRATION_RE.test(content) ||
         !SELECTED_DIRECTION_RE.test(content) ||
         !DESIGN_SYSTEM_RE.test(content) ||
+        !PROTOTYPE_HANDOFF_RE.test(content) ||
         !UI_CONTRACTS_RE.test(content))
     ) {
       issues.push(
@@ -98,7 +100,7 @@ export async function validateRenderCritique(root: string, config: QfaiConfig): 
           "renderCritique.contractMissing",
           undefined,
           "change",
-          "Reference spec inputs, exploration brief, evaluation rubric, evaluator calibration, selected-direction, design-system, and UI contracts in the downstream skill prompt.",
+          "Reference spec inputs, exploration brief, evaluation rubric, evaluator calibration, selected-direction, design-system, prototype-handoff, and UI contracts in the downstream skill prompt.",
         ),
       );
     }
@@ -157,6 +159,7 @@ export async function validateRenderCritique(root: string, config: QfaiConfig): 
       const hasEvalCalibration = EVAL_CALIBRATION_RE.test(content);
       const hasSelectedDirection = SELECTED_DIRECTION_RE.test(content);
       const hasDesignSystem = DESIGN_SYSTEM_RE.test(content);
+      const hasPrototypeHandoff = PROTOTYPE_HANDOFF_RE.test(content);
       const hasUiContracts = UI_CONTRACTS_RE.test(content);
       if (
         !hasSpec ||
@@ -165,6 +168,7 @@ export async function validateRenderCritique(root: string, config: QfaiConfig): 
         !hasEvalCalibration ||
         !hasSelectedDirection ||
         !hasDesignSystem ||
+        !hasPrototypeHandoff ||
         !hasUiContracts
       ) {
         const missing: string[] = [];
@@ -174,6 +178,7 @@ export async function validateRenderCritique(root: string, config: QfaiConfig): 
         if (!hasEvalCalibration) missing.push("evaluator-calibration");
         if (!hasSelectedDirection) missing.push("selected-direction");
         if (!hasDesignSystem) missing.push("design-system");
+        if (!hasPrototypeHandoff) missing.push("prototype-handoff");
         if (!hasUiContracts) missing.push("ui contracts");
         issues.push(
           issue(
@@ -184,7 +189,7 @@ export async function validateRenderCritique(root: string, config: QfaiConfig): 
             "renderCritique.readOrder",
             undefined,
             "change",
-            "Specify read order with spec inputs, exploration-brief, evaluation-rubric, evaluator-calibration, selected-direction, design-system, and UI contracts.",
+            "Specify read order with spec inputs, exploration-brief, evaluation-rubric, evaluator-calibration, selected-direction, design-system, prototype-handoff, and UI contracts.",
           ),
         );
       }

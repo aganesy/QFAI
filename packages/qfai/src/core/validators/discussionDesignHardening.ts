@@ -16,6 +16,18 @@ const REQUIRED_SIDECARS = [
   "uiux/50_review_input_bundle.md",
 ] as const;
 
+const REFERENCE_POOL_COLUMNS = [
+  "Kind",
+  "Source URL",
+  "Adopted points",
+  "Rejected points",
+  "Local translation",
+  "Copy risk",
+  "Template usage policy",
+] as const;
+
+const PLACEHOLDER_RE = /\[(?:adopted|rejected|translation|why|guideline|rule refs)\]/i;
+
 function canonicalIssue(
   code: string,
   message: string,
@@ -71,7 +83,16 @@ export async function validateDiscussionDesignHardening(
     ...(await validateSection(
       packRoot,
       "uiux/33_exploration_rubric.md",
-      ["## Design Quality", "## Originality", "## Craft", "## Functionality"],
+      [
+        "## Design Quality",
+        "## Originality",
+        "## Craft",
+        "## Functionality",
+        "## Brand Memorability",
+        "## Category Distinctiveness",
+        "## Template Dependency Risk",
+        "## Localization Fit",
+      ],
       "UIX-VAL-EXPLORE-RUBRIC",
     )),
   );
@@ -80,10 +101,18 @@ export async function validateDiscussionDesignHardening(
     ...(await validateSection(
       packRoot,
       "uiux/34_evaluator_calibration.md",
-      ["## Good Critique", "## Too Lenient", "## Blandness Fail", "## Originality Fail"],
+      [
+        "## Good Critique",
+        "## Too Lenient",
+        "## Blandness Fail",
+        "## Originality Fail",
+        "## Template Copy Fail",
+      ],
       "UIX-VAL-EVAL-CALIBRATION",
     )),
   );
+
+  issues.push(...(await validateReferencePool(packRoot)));
 
   const antiGoals = await readSafe(path.join(packRoot, "uiux/32_design_anti_goals.md"));
   if (antiGoals && !/^- /m.test(antiGoals)) {
@@ -107,6 +136,43 @@ export async function validateDiscussionDesignHardening(
         "warning",
         "uiux/50_review_input_bundle.md",
         "discussionDesignHardening.bestOfHistory",
+      ),
+    );
+  }
+
+  return issues;
+}
+
+async function validateReferencePool(packRoot: string): Promise<Issue[]> {
+  const relPath = "uiux/31_reference_pool.md";
+  const content = await readSafe(path.join(packRoot, relPath));
+  if (!content) {
+    return [];
+  }
+
+  const issues: Issue[] = [];
+  for (const column of REFERENCE_POOL_COLUMNS) {
+    if (!content.includes(column)) {
+      issues.push(
+        canonicalIssue(
+          "UIX-VAL-REFERENCE-POOL",
+          `${relPath} is missing required column '${column}'.`,
+          "error",
+          relPath,
+          "discussionDesignHardening.referencePoolColumn",
+        ),
+      );
+    }
+  }
+
+  if (PLACEHOLDER_RE.test(content)) {
+    issues.push(
+      canonicalIssue(
+        "UIX-VAL-REFERENCE-POOL",
+        `${relPath} contains unresolved placeholder text.`,
+        "error",
+        relPath,
+        "discussionDesignHardening.referencePoolPlaceholder",
       ),
     );
   }

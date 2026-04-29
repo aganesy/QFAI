@@ -16,6 +16,7 @@ Every exploration round MUST also produce these round-scoped artifacts:
 - Playwright CLI command plans: `.qfai/evidence/prototyping/rounds/<rN>/command-plans.json`
 - Review input bundle: `.qfai/evidence/prototyping/rounds/<rN>/review-bundle.json`
 - Evaluator outputs: `.qfai/evidence/prototyping/rounds/<rN>/evaluator-reviews/<candidate-id>.json`
+- Git commit SHA for the completed round: `rounds[].commitSha`
 - Harvest template for `r5|r3|r2`: `.qfai/evidence/prototyping/rounds/<rN>/harvest.json`
 - Narrow decision for `r5|r3|r2`: `.qfai/evidence/prototyping/rounds/<rN>/narrow-decision.json`
 - Absorption plan for `r3|r2|r1`: `.qfai/evidence/prototyping/rounds/<rN>/absorption-plan.json`
@@ -35,6 +36,12 @@ If either artifact is missing:
 - rerun is mandatory
 
 Optional evidence is not allowed.
+
+## Commit evidence
+
+- `rounds[].commitSha` is required for every exploration round entry.
+- `polishCycles[].commitSha` is required for every post-selection polish/branch cycle entry.
+- Each recorded `commitSha` must identify a distinct git commit for that round or cycle.
 
 ## Capture rules
 

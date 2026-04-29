@@ -1,7 +1,7 @@
 ---
 name: qfai-prototyping
-title: QFAI Prototyping (Exploration-First Harness)
-description: "Run a planner/generator/evaluator UI harness with a 5→3→2→1 direction funnel, breakthrough detection, and final design-system extraction."
+title: QFAI Prototyping (Lightweight HTML Exploration Harness)
+description: "Run a lightweight static-first HTML prototype funnel with visual evaluation, handoff extraction, and implementation-ready design evidence."
 argument-hint: "[--auto]"
 allowed-tools: [Read, Glob, Write, TodoWrite, Task, Bash]
 roles:
@@ -26,71 +26,53 @@ mode: execution-focused
 
 This skill owns prototyping orchestration directly.
 Do not rely on a CLI entrypoint or package runtime loop.
+This is the Exploration-First Harness: explore divergent visual directions before winner extraction.
 
 ## CRITICAL CONSTRAINTS (Read First)
 
-- Scope is all specs from `.qfai/specs/spec-*`.
-- The AI evaluator sub-agent performs visual evaluation. QFAI does not score visual quality. (per the resolved primary prototyping spec — see `qfai prototyping show-spec`)
-- Playwright CLI (`playwright-cli`) is the sole standard browser tool. Playwright MCP, Node Playwright direct invocation, and screenshot-capture shell scripts are not used. (per the resolved primary prototyping spec)
-- QFAI pre-assigns evidence paths. The evaluator MUST use the paths in the command plan (`review-bundle.json` → `command-plans.json`); it MUST NOT invent paths.
-- For every declared screen and every active candidate in every round, 4 evidence artifacts are mandatory:
-  - screenshot: `.qfai/evidence/prototyping/rounds/<round>/candidates/<candidate-id>/<screen-id>.png`
-  - HTML: `.qfai/evidence/prototyping/rounds/<round>/candidates/<candidate-id>/<screen-id>.html`
-  - accessibility snapshot: `.qfai/evidence/prototyping/rounds/<round>/candidates/<candidate-id>/<screen-id>.snapshot.txt`
-  - command log: `.qfai/evidence/prototyping/rounds/<round>/candidates/<candidate-id>/<screen-id>.commands.json`
+- Scope is ALL specs from `.qfai/specs/spec-*`.
+- Prototyping is static-first and file-based by default: build lightweight HTML/CSS/JS prototypes under `.qfai/prototypes/`.
+- Do not implement candidate prototypes in production `src/`, app routes, or the target runtime stack unless static HTML cannot represent the decision; record the exception rationale.
+- Playwright CLI (`playwright-cli`) is the sole standard browser tool. Use the preflight-resolved launcher, such as `npx --no-install playwright-cli` or `node_modules/.bin/playwright-cli`; do not hardcode local paths into evidence.
+- QFAI pre-assigns evidence paths. The evaluator MUST use the paths in `review-bundle.json` and `command-plans.json`; it MUST NOT invent paths.
+- For every declared screen and every active candidate in every round, screenshot, HTML snapshot, accessibility snapshot, and command log evidence are mandatory.
 - Canonical latest screenshot path: `.qfai/evidence/prototyping/screenshots/<screen-id>.png`
 - Canonical latest HTML path: `.qfai/evidence/prototyping/html/<screen-id>.html`
-- Canonical latest paths MUST mirror the latest accepted winner/polish artifacts.
-- If any of the 4 artifacts is missing for a declared screen, the round is incomplete; rerun is mandatory, not waiver.
-- Mode differences are limited to `maxCycles` only (low-cost=1, standard=3, full-harness=20). Every other gate, obligation, reviewer severity, and completion criterion is identical across modes. (per the resolved primary prototyping spec)
-- DONE is forbidden until `qfai validate --profile prototyping --fail-on error` passes and `/qfai-verify` can approve the run.
-- Supported UI prototyping surfaces are `web`, `mobile`, `desktop`, and `mixed`.
-- `cli`, API-only, backend-only, and `ui_bearing: false` classifications are not prototyping execution targets.
-- Machine checks are limited to schema/evidence validation, mode invariant enforcement, review-cycle completeness, and breakthrough trigger detection.
-- Shared evidence vocabulary: `prototyping.json`, `review-bundle.json`, `command-plans.json`, `evaluator-reviews/<candidate-id>.json`, `harvest.json`, `absorption-plan.json`, `reimplementation.json`, `breakthrough.json`.
-- Direction funnel completion is not stage completion.
-- Selecting the first winner does not satisfy completion. Completion review is forbidden until at least one post-selection polish cycle has completed.
+- `prototype-handoff.yaml`, `selected-direction.yaml`, and `design-system.yaml` are required before completion review.
+- Supported UI prototyping surfaces are `web`, `mobile`, `desktop`, and `mixed`; `cli`, API-only, backend-only, and `ui_bearing: false` specs are not prototyping execution targets.
+- Mode differences are limited to `maxCycles` only: low-cost=1, standard=3, full-harness=20.
+- Direction funnel completion is not stage completion. At least one post-selection polish cycle is mandatory.
+- Each exploration round (`r5`, `r3`, `r2`, `r1`) and each post-selection `polish` or `branch` cycle MUST end with a git commit and a recorded `commitSha`.
 - Completion requires every reviewer sub-agent to score every evaluation axis at `100/100`; `95` is not a completion border.
-- Do not use `complete`, `completed`, `done`, or equivalent completion wording in other languages before the completion checklist passes. Use `exploration complete`, `winner selected`, `polishing`, `breakthrough checking`, or `reviewer gate pending` for interim states.
+- DONE is forbidden until `qfai validate --profile prototyping --fail-on error` passes and `/qfai-verify` can approve the run.
 
-## Goal
-
-Generate multiple design directions, converge on a winner, extract the selected direction and final design system, and keep the winner open to breakthrough pivots during later polish iterations.
+Goal: generate divergent static prototypes, converge on a polished winner, extract handoff contracts, and preserve evidence for `/qfai-implement` without copying prototype-only code. surface / mode rules: `standard` is the default mode; see `references/surface-framing.md` and `.qfai/evidence/README.md`.
 
 ## Surface / Mode
 
-- surface / mode routing uses `standard` as the default execution path.
-- **Mode Invariant**: modes differ only by `maxCycles`. Review gate, evidence requirements, reviewer severity, best-of-history, breakthrough detection, and completion criteria are identical across modes.
-  - `low-cost`: `maxCycles = 1`
-  - `standard`: `maxCycles = 3` (default)
-  - `full-harness`: `maxCycles = 20`
-- No mode weakens obligations. Choosing a lower mode buys fewer chances to iterate, not a looser gate.
+Use only `web`, `mobile`, `desktop`, or `mixed`; Mode Invariant: only `maxCycles` changes.
 
 ## Required References
 
 Read and follow these references before execution:
 
-- **Primary SSOT for the prototyping harness**: resolve at runtime by running
-  `qfai prototyping show-spec` from the repo root. The output gives you the
-  resolved spec ID and `01_Spec.md` path (configured via
-  `qfai.config.yaml: prototyping.primarySpecId`, or auto-detected via the
-  `surface_type: ui-bearing` marker in `01_Spec.md`). Do not assume any
-  particular spec ID exists — read whatever `show-spec` returns.
+- Primary SSOT: run `qfai prototyping show-spec` from the repo root and read the returned `01_Spec.md`.
+- `.qfai/assistant/skills/qfai-prototyping/references/prototype-workspace.md`
+- `.qfai/assistant/skills/qfai-prototyping/references/design-differentiation.md`
+- `.qfai/assistant/skills/qfai-prototyping/references/surface-framing.md`
 - `.qfai/assistant/skills/qfai-prototyping/references/evidence-requirements.md`
 - `.qfai/assistant/skills/qfai-prototyping/references/iteration-cycle.md`
 - `.qfai/assistant/skills/qfai-prototyping/references/l1-review-guide.md`
 - `.qfai/assistant/skills/qfai-prototyping/references/l2-review-guide.md`
-- `.qfai/contracts/design/anchor-selection.yaml` when legacy validator slices are exercised
-- `.qfai/contracts/design/evaluation-axes.yaml` when legacy validator slices are exercised
 - `.qfai/assistant/skills/qfai-prototyping/references/design-system-compliance.md`
 - `.qfai/assistant/skills/qfai-prototyping/references/reviewer-gate.md`
 - `.qfai/assistant/steering/test-layers.md`
 
+Contract inputs: `.qfai/specs/<spec-id>/01_Spec.md`, `.qfai/specs/<spec-id>/03_Acceptance-Criteria.md`, `.qfai/contracts/ui/*.yaml`, and design contracts `exploration-brief.yaml`, `.qfai/contracts/design/reference-pool.yaml`, `.qfai/contracts/design/brand-design.yaml`, `.qfai/contracts/design/evaluation-rubric.yaml`, `evaluator-calibration.yaml`, `absorption-policy.yaml`, plus `selected-direction.yaml`, `design-system.yaml`, and `.qfai/contracts/design/prototype-handoff.yaml` when created by prototyping.
+
 ## Delegation Scope Table
 
-All sub-agent delegation in this skill MUST follow the category-to-role mapping below.
-Assigning a task to a role not listed for the category is a violation and MUST be flagged.
-Evaluation scoring and screenshot capture must use only the allowed roles below.
+All sub-agent delegation MUST follow this category-to-role mapping.
 
 | Category                           | Allowed Role(s)                                        |
 | ---------------------------------- | ------------------------------------------------------ |
@@ -104,9 +86,9 @@ Any delegation map entry that assigns a category to an undefined or unlisted rol
 
 ## Required Process
 
-### Step 0 — Execution Plan
+### Step 0 - Execution Plan
 
-Before any code is written, create an execution plan record in the work evidence.
+Before any prototype files are written, create an execution plan record in work evidence.
 
 Required fields:
 
@@ -116,164 +98,72 @@ Required fields:
 - `delegationMap`: category-to-role assignments per Delegation Scope Table
 - `plannedAt`: ISO-8601 timestamp
 
-### Step 1 — Read Inputs
+### Step 1 - Read Inputs
 
-Read the downstream-ready spec/contract inputs and verify:
-
-- `.qfai/specs/<spec-id>/01_Spec.md`
-- `.qfai/specs/<spec-id>/03_Acceptance-Criteria.md`
-- `.qfai/contracts/design/exploration-brief.yaml`
-- `.qfai/contracts/design/evaluation-rubric.yaml`
-- `.qfai/contracts/design/evaluator-calibration.yaml`
-- `.qfai/contracts/design/anchor-selection.yaml` when legacy validator slices are exercised
-- `.qfai/contracts/design/evaluation-axes.yaml` when legacy validator slices are exercised
-- `.qfai/contracts/design/selected-direction.yaml` when already created
-- `.qfai/contracts/design/design-system.yaml` when already created
-- `.qfai/contracts/ui/*.yaml`
-
-Read order:
-
-1. `.qfai/specs/<spec-id>/01_Spec.md`
-2. `.qfai/specs/<spec-id>/03_Acceptance-Criteria.md`
-3. `.qfai/contracts/design/exploration-brief.yaml`
-4. `.qfai/contracts/design/evaluation-rubric.yaml`
-5. `.qfai/contracts/design/evaluator-calibration.yaml`
-6. `.qfai/contracts/design/anchor-selection.yaml` (legacy validator alias, when present)
-7. `.qfai/contracts/design/evaluation-axes.yaml` (legacy validator alias, when present)
-8. `.qfai/contracts/design/selected-direction.yaml`
-9. `.qfai/contracts/design/design-system.yaml`
-10. `.qfai/contracts/ui/*.yaml`
+Read the Required References and Contract Inputs in order. Do not read discussion-pack UI/UX sidecars; `/qfai-sdd` must already have normalized them into contracts. Verify the prototype will answer the screen, state, transition, and visual questions rather than prematurely implementing production code.
 
 ### Step 2-A — Verify Contract Preconditions
 
-Confirm all of the following before any evaluation:
-
-- classification is UI-bearing
-- surface is `web`, `mobile`, `desktop`, or `mixed`
-- every declared screen has a stable `screen-id`
-- the exploration brief, evaluation rubric, and evaluator calibration contracts satisfy the required schema
+Before evaluation, confirm classification is UI-bearing, surface is `web|mobile|desktop|mixed`, each declared screen has a stable `screen-id`, and exploration brief / rubric / calibration contracts satisfy schema.
 
 ### Step 2-B — Verify Environment Preconditions
 
-Confirm all of the following before launching the first required delegation:
+Run `qfai prototyping preflight --target-url <url>` when a concrete target URL is known, or `qfai doctor --profile prototyping` to diagnose the same runtime assumptions from config.
 
-- Run `qfai prototyping preflight --target-url <url>` when a concrete target URL is known, or `qfai doctor --profile prototyping` to diagnose the same runtime assumptions from config.
-- Every active agent-wrapper integration under `.claude/agents/` and `.github/agents/` contains valid wrappers for `frontend-engineer`, `product-experience-architect`, `product-surface-reviewer`, `backend-engineer`, and `devops-ci-engineer`, and each wrapper resolves to a canonical role card with valid frontmatter.
-- The canonical role cards' literal required-input paths exist after init; do not proceed with dead references in shipped assets.
-- `qfai doctor --profile prototyping` resolves a runnable Playwright CLI launcher (project wrapper, `node_modules/.bin`, PATH, or `npx --no-install playwright-cli`) and verifies it with a bounded invocation probe.
-- `targetUrl` responds with HTTP 200-399 before capture starts. If it does not, start or repair the dev server first; do not pretend the evaluator can proceed.
-- Preflight diagnoses readiness only; it does NOT guarantee sub-agent success. If the first required delegation fails, stop the stage and report remediation. Environment repair is part of preflight, not a reviewer-side waiver.
+Confirm wrappers and role cards exist, `qfai doctor --profile prototyping` resolves a runnable Playwright CLI launcher, target URL responds with HTTP 200-399, and failed first delegation stops the stage without simulated roles.
 
-### Step 3 — Generate Divergent Directions
+### Step 3 - Generate Divergent Directions
 
-Generate 5 clearly distinct design directions before selecting a winner.
+Generate 5 clearly distinct static HTML/CSS/JS prototype directions under `.qfai/prototypes/rounds/r5/candidates/<candidate-id>/`.
 Do not begin with a single incumbent direction.
+Each active candidate must include a complete `concept.json` following `references/design-differentiation.md`.
 
-### Step 4 — Round Start: Prepare Candidate Review Bundle & Command Plans
+### Step 4 - Round Start
 
-Before launching the evaluator, prepare the round-scoped artifacts via QFAI (not by hand):
+Serve the active prototype candidates through a local target URL, then run:
 
-- Run `qfai prototyping round-start --round <rN> --candidates <csv> --target-url <url> --mode <mode>`.
-- QFAI produces:
-  - `.qfai/evidence/prototyping/rounds/<rN>/command-plans.json` — the candidate-aware Playwright CLI command plans
-  - `.qfai/evidence/prototyping/rounds/<rN>/review-bundle.json` — the evaluator input bundle (candidates, axisDefs, designSystemChecklist, commandPlanRef)
-- Do not invent evidence paths. Paths are fixed by QFAI per the resolved primary prototyping spec.
+`qfai prototyping round-start --round <rN> --candidates <csv> --target-url <url> --mode <mode>`
 
-### Step 5 — Capture Role Executes the Command Plans and Captures Evidence
+QFAI produces `command-plans.json` and `review-bundle.json`. Do not handwrite these files.
 
-For every declared screen of every active candidate in the current round, the capture role (`devops-ci-engineer`):
+### Step 5 - Capture Evidence
 
-1. Reads `command-plans.json` for the round
-2. Resolves the launcher from the preflight/doctor result and applies it to each logical `toolId + args` command entry
-3. Writes stdout to `stdoutPath` when the plan marks an output as stdout-backed (for example HTML capture)
-4. Performs interaction commands (click/fill) to exercise `primaryTasks` noted in the plan
-5. Saves the executed command transcript to `<candidate-path>/<screen-id>.commands.json`
+For every declared screen of every active candidate, the capture role reads `command-plans.json`, applies the preflight-resolved Playwright CLI launcher, writes stdout to `stdoutPath` when needed, exercises `primaryTasks`, and saves `<candidate-path>/<screen-id>.commands.json`.
 
-If any capture step fails, the capture role records the failure and stops pretending the screen was evaluated. The round is incomplete and must be rerun.
+If any capture step fails, record the failure, fix local causes such as launcher, server, URL, command-plan, or path issues, and rerun capture. Do not pretend the screen was evaluated until the required artifacts exist.
 
-### Step 6 — Launch Evaluation Reviewers
+### Step 6 - Launch Evaluation Reviewers
 
-Launch evaluation reviewer sub-agents with the full context bundle. Inputs are read from `review-bundle.json`:
+Launch evaluation reviewer sub-agents with `review-bundle.json`.
+Inputs include screenshots, HTML snapshots, accessibility snapshots, command logs, `axisDefs`, `referencePoolRef`, `brandDesignRef`, `previousScore`, `designSystemChecklist`, and `commandPlanRef`.
+Persist per-candidate reviews to `evaluator-reviews/<candidate-id>.json` with concrete `evidenceRefs[]`.
 
-- per-screen screenshot, HTML, accessibility snapshot, and command log under `rounds/<round>/candidates/<candidate-id>/`
-- `axisDefs` (from `.qfai/contracts/design/evaluation-rubric.yaml`)
-- `previousScore` from the prior round when available
-- `designSystemChecklist` (from `.qfai/contracts/design/design-system.yaml`)
-- `commandPlanRef` pointing at `command-plans.json`
+### Step 7 - Direction Funnel
 
-`product-surface-reviewer` and `product-experience-architect` own the scoring judgment. The orchestrator owns persistence of the returned scoring payload into `rounds/<round>/evaluator-reviews/<candidate-id>.json` with concrete `evidenceRefs[]` for every score. Placeholder refs are rejected.
+Run the convergence funnel `r5`: 5 directions -> top 3, `r3`: top 3 remixed -> top 2, `r2`: top 2 -> selected winner `r1`. For each harvestable round, run `round-harvest`, `round-narrow`, and `round-absorb` as defined in `iteration-cycle.md`; commit each completed round and record `commitSha` in `prototyping.json`.
 
-### Step 7 — Harvest and Direction Funnel
+### Step 8 - Extract Winner Contracts
 
-Run the mandatory convergence funnel:
+After first winner selection, write `.qfai/contracts/design/selected-direction.yaml`, `.qfai/contracts/design/design-system.yaml`, `.qfai/contracts/design/prototype-handoff.yaml`, and `.qfai/prototypes/winner/index.html`. `prototype-handoff.yaml` must describe what `/qfai-implement` must preserve, may adapt, and must not copy.
 
-- `r5`: 5 directions -> top 3
-- `r3`: top 3 remixed -> top 2
-- `r2`: top 2 -> selected winner `r1`
+### Step 9 - Polish Winner
 
-At the end of each harvestable round:
+Run at least one post-selection polish loop: critique, prototype fix, re-capture, re-review, breakthrough check, commit, and `commitSha` recording.
+Keep best-of-history; the latest iteration is not automatically best.
 
-- run `qfai prototyping round-harvest --round <rN>`
-- record survivors with `qfai prototyping round-narrow --round <rN> --survivors <csv>`
-- for `r3|r2|r1`, generate absorption templates with `qfai prototyping round-absorb --round <rN> --survivors <csv>`
+### Step 10 - Breakthrough Detection
 
-### Step 8 — Extract Winner Contracts
+After each polish iteration, run the mechanical breakthrough detector. If score improvement and code-change signals plateau before perfect reviewer scores, branch exactly 2 alternative prototype directions and compare incumbent + branches.
 
-After the first winner is selected:
-
-- write `.qfai/contracts/design/selected-direction.yaml`
-- extract `.qfai/contracts/design/design-system.yaml`
-
-Selecting the first winner is not completion. Do not start completion review and do not use completion wording until Step 9, Step 10, Step 12, reviewer gate, and the perfect-100 score gate pass.
-
-### Step 9 — Polish the Winner
-
-Iterate on the selected winner with normal critique/rework loops.
-Do not assume the latest iteration is automatically best; keep best-of-history in evidence.
-At least one full post-selection polish loop is mandatory. Each polish loop must include critique, fix, re-capture, re-review, and breakthrough check evidence.
-
-## Cycle Gate
-
-- Completion requires at least one `polish` cycle after winner selection (per the resolved primary prototyping spec). This applies to all modes.
-- The same gate applies in every mode; modes differ only in `maxCycles` (low-cost=1, standard=3, full-harness=20).
-- If the polish-cycle budget is exhausted before the gate is satisfied, the run does NOT complete. The evaluator returns `REVISE` and the developer may re-run at a higher mode.
-- Any phase transition to completion must pass through the cycle gate and the reviewer gate.
-
-### Step 10 — Breakthrough Detection
-
-After each polish iteration, run the mechanical breakthrough detector.
-If `allReviewerAxesPerfect100` is false and score improvement is below the configured plateau threshold and code change is below the configured diff threshold, trigger breakthrough branching.
-
-### Step 11 — Breakthrough Branch Loop
-
-When breakthrough is triggered:
-
-- generate exactly 2 branch directions
-- compare incumbent + 2 branches
-- replace the mainline if a branch wins
-- refresh selected-direction/design-system if the winner changes
-- record the decision in `.qfai/evidence/breakthrough.json`
-
-### Step 12 — Validate and Verify
+### Step 11 - Validate and Verify
 
 - Run `qfai validate --profile prototyping --fail-on error`.
-- Route `/qfai-verify` or its equivalent gate workflow for final quality approval.
-- Do not declare completion until the reviewer result is `PASS`.
+- Route `/qfai-verify` or equivalent gate workflow.
+- Do not declare completion until the independent reviewer returns `PASS`.
 
 ## Evaluator Inputs (Mandatory)
 
-Evaluation reviewer sub-agents MUST be launched with the `review-bundle.json` for the current round. The bundle contains all required inputs. At a minimum, the bundle MUST reference:
-
-1. screenshots (per declared screen, round/candidate path)
-2. HTML snapshots (per declared screen, round/candidate path)
-3. accessibility snapshots (`<screen-id>.snapshot.txt` per declared screen, round/candidate path)
-4. Playwright CLI command log (`<screen-id>.commands.json` per declared screen, round/candidate path)
-5. `axisDefs` from `.qfai/contracts/design/evaluation-rubric.yaml`
-6. `previousScore` from the prior round when available
-7. `designSystemChecklist` from `.qfai/contracts/design/design-system.yaml`
-8. `commandPlanRef` pointing at `command-plans.json`
-
-The evaluator writes `evaluator-reviews/<candidate-id>.json` with per-axis `score`, `rationale`, and `evidenceRefs[]`. Every `evidenceRefs[]` entry MUST point to an existing artifact; placeholder strings (`""`, `"tbd"`, `"TBD"`) are rejected by `qfai validate`.
+Evaluation reviewer sub-agents MUST read `review-bundle.json` for the current round and use screenshots, HTML snapshots, accessibility snapshots, Playwright CLI command logs, `axisDefs` from `.qfai/contracts/design/evaluation-rubric.yaml`, `referencePoolRef`, `brandDesignRef`, `previousScore`, `designSystemChecklist` from `.qfai/contracts/design/design-system.yaml`, `commandPlanRef`, and prototype source refs under `.qfai/prototypes/`.
 
 ## Visual Quality Structural Checklist
 
@@ -293,20 +183,7 @@ Reviewer checks are defined in:
 - `.qfai/assistant/skills/qfai-prototyping/references/reviewer-gate.md`
 - `.qfai/assistant/steering/test-layers.md`
 
-Minimum reviewer responsibilities:
-
-- enforce the Drift Protocol before approving a completion transition
-- verify mandatory screenshot/HTML evidence exists for every declared screen
-- verify exploration brief, evaluation rubric, and evaluator calibration were used
-- verify missing evidence caused rerun rather than waiver
-- verify `qfai validate --profile prototyping --fail-on error` completed successfully
-- verify breakthrough trigger evidence is present
-- verify best-of-history handling is documented
-- verify at least one post-selection polish iteration completed after winner selection
-- verify every reviewer sub-agent scored every evaluation axis at `100/100`
-- reject completion claims based on any 95-point threshold
-- treat score/volume heuristics as signals, not gates
-- return `Result: PASS | REVISE`
+Minimum reviewer responsibilities: enforce Drift Protocol, verify mandatory screenshot/HTML evidence for every declared screen, verify static prototype source plus selected-direction/design-system/prototype-handoff, verify missing evidence caused rerun rather than waiver, verify best-of-history/breakthrough/polish loop, verify every reviewer sub-agent scored every evaluation axis at `100/100`, treat heuristics as signals, not gates, and return `Result: PASS | REVISE`.
 
 ## Sub-agent Delegation (MANDATORY)
 
@@ -334,40 +211,19 @@ Use the shared schema (per-row `Status (PASS/REVISE)` column, reviewer response 
 ## Completion Contract (Shared)
 
 Follow `.qfai/assistant/instructions/shared-skill-operating-baseline.md#completion-contract-shared`.
+Follow `.qfai/assistant/instructions/shared-skill-operating-baseline.md#gate-failure-autorepair-protocol` for validate, doctor, and quality-gate failures.
 
-Prototyping-specific additions (apply to all modes identically):
-
-- all specs are covered
-- all declared screens have 4 artifacts per active candidate / round: screenshot, HTML, accessibility snapshot, Playwright CLI command log
-- canonical latest paths mirror the latest accepted winner/polish state
-- `review-bundle.json`, `command-plans.json`, and per-candidate evaluator reviews exist for every round
-- `selected-direction.yaml` exists
-- `design-system.yaml` exists
-- `breakthrough.json` exists
-- `bestOfHistory` and `breakthrough` sections present in `prototyping.json`
-- at least one post-selection polish cycle completed after winner selection
-- every reviewer sub-agent scored every evaluation axis at `100/100`
-- independent reviewer gate returned `PASS`
-- `qfai validate --profile prototyping --fail-on error` passes
+Prototyping-specific additions: all specs are covered; all declared screens have 4 artifacts per active candidate / round; canonical latest paths mirror the accepted winner/polish state; static prototype source exists under `.qfai/prototypes/`; `review-bundle.json`, `command-plans.json`, evaluator reviews, `selected-direction.yaml`, `design-system.yaml`, `prototype-handoff.yaml`, `bestOfHistory`, and `breakthrough` exist; at least one post-selection polish cycle completed; independent reviewer gate returned `PASS`; `qfai validate --profile prototyping --fail-on error` passes.
 
 ## FINAL CHECKLIST (Check Last)
 
-- All specs are covered in the Coverage Matrix.
-- Every declared screen has screenshot, HTML, accessibility snapshot, and command log evidence per active candidate / round.
-- Canonical latest paths mirror the latest accepted winner/polish artifacts.
-- Mode invariant: `maxCycles` is the only mode-dependent field in `prototyping.json` (validated by `QFAI-PROT-MODE-001`).
-- Missing evidence triggered rerun instead of waiver.
-- Direction funnel `5->3->2->1` completed.
-- Direction funnel completion was not treated as stage completion.
-- At least one post-selection polish cycle completed with critique/fix/re-capture/re-review/breakthrough checks.
-- Every reviewer sub-agent scored every evaluation axis at `100/100`.
-- Breakthrough detector ran after polish cycles.
-- Independent reviewer returned PASS; otherwise status is REVISE.
+Confirm ALL specs are covered, static prototype source is under `.qfai/prototypes/`, production code was not used for candidate exploration, every declared screen has screenshot / HTML snapshot / accessibility snapshot / command log evidence, canonical latest paths mirror the accepted winner or polish artifacts, direction funnel `5->3->2->1` completed, at least one polish cycle completed with critique/fix/re-capture/re-review/breakthrough checks, `prototype-handoff.yaml` captures must-preserve / may-adapt / must-not-copy guidance for `/qfai-implement`, every reviewer sub-agent scored every evaluation axis at `100/100`, and independent reviewer returned PASS; otherwise status is REVISE.
 
 ## Completion Message & Next Actions (MUST)
 
 Action:
 
 - Proceed: `/qfai-atdd`
+- Implement with prototype handoff: `/qfai-implement`
 - Quality gate: `/qfai-verify`
-- Rework prototyping: rerun `/qfai-prototyping` with corrected screenshot/HTML evidence
+- Rework prototyping: rerun `/qfai-prototyping` with corrected prototype and screenshot/HTML evidence

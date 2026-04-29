@@ -113,6 +113,8 @@ export function hasCliSurfaceDocumentation(content: string): boolean {
     lower.includes("cli") &&
     (lower.includes("not execution target") ||
       lower.includes("not execution targets") ||
+      lower.includes("not prototyping execution target") ||
+      lower.includes("not prototyping execution targets") ||
       lower.includes("rejected") ||
       lower.includes("not supported"))
   );
