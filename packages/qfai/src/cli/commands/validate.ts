@@ -455,6 +455,8 @@ const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "prototyping.json.polishCycles[].cycle has no corresponding iteration directory under .qfai/evidence/prototyping/iterations/.",
   "QFAI-PROT-AXIS-FLOOR-001":
     "Each candidate's evaluator-review perAxis[].score must meet evaluation-rubric.yaml hard_floors[].min_score in absorption rounds (r3|r2|r1). r5 is exempt.",
+  "QFAI-PROT-CONCEPT-001":
+    "Every active prototyping candidate must have a complete concept.json with differentiated design thesis and template-risk constraints.",
   "QFAI-UIE-001":
     "Every declared screen declared in `.qfai/contracts/ui/*.yaml` has a screenshot evidence file at `.qfai/evidence/prototyping/screenshots/<screen-id>.png`.",
   "QFAI-UIE-002":

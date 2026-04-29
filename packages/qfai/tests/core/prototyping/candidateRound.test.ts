@@ -68,12 +68,18 @@ describe("spec-0018 candidate concepts", () => {
       candidateId: "c1",
       round: "r5",
       statement: "Calm operational confidence",
+      designThesis: "Dense operational comparison surface",
+      referenceLineage: ["REF-001"],
+      templateSeedUsage: "reference-only",
+      antiTemplateConstraints: ["Replace default shadcn rhythm"],
+      noveltyBet: "Domain-specific comparison bands replace KPI cards",
       anchors: ["CONCEPT-0001"],
       nonGoals: ["Loud novelty-first visuals"],
       pivotFromPrior: null,
     });
 
     expect(concept.schemaVersion).toBe("2.0");
+    expect(concept.designThesis).toBe("Dense operational comparison surface");
     expect(concept.anchors).toEqual(["CONCEPT-0001"]);
     expect(candidateConceptPath("r5", "c1")).toBe(
       ".qfai/evidence/prototyping/rounds/r5/candidates/c1/concept.json",
@@ -86,10 +92,33 @@ describe("spec-0018 candidate concepts", () => {
         candidateId: "c1",
         round: "r5",
         statement: "   ",
+        designThesis: "x",
+        referenceLineage: [],
+        templateSeedUsage: "none",
+        antiTemplateConstraints: [],
+        noveltyBet: "x",
         anchors: [],
         nonGoals: [],
         pivotFromPrior: null,
       }),
     ).toThrow(/statement must be non-empty/);
+  });
+
+  it("requires anti-template constraints when a template seed is used", () => {
+    expect(() =>
+      buildCandidateConcept({
+        candidateId: "c1",
+        round: "r5",
+        statement: "x",
+        designThesis: "x",
+        referenceLineage: ["REF-001"],
+        templateSeedUsage: "implementation-seed",
+        antiTemplateConstraints: [],
+        noveltyBet: "x",
+        anchors: [],
+        nonGoals: [],
+        pivotFromPrior: null,
+      }),
+    ).toThrow(/templateSeedUsage requires antiTemplateConstraints/);
   });
 });

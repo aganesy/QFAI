@@ -112,6 +112,10 @@ export type ReviewBundle = {
   commandPlanRef: string;
   /** Path (relative to repo root) to the evaluation rubric contract. */
   axisDefsRef: string;
+  /** Path (relative to repo root) to the normalized reference pool contract. */
+  referencePoolRef: string;
+  /** Path (relative to repo root) to the normalized brand design contract. */
+  brandDesignRef: string;
   /** Path (relative to repo root) to the design system contract. */
   designSystemChecklistRef: string;
   /**
