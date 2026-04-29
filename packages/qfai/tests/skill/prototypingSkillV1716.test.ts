@@ -98,7 +98,7 @@ describe("TC-0012-0292 — SKILL.md documents canonical evidence capture", () =>
 
     expect(content).toContain("If any capture step fails");
     expect(content).toContain(
-      "fixes local causes such as launcher, server, URL, command-plan, or path issues",
+      "fix local causes such as launcher, server, URL, command-plan, or path issues",
     );
     expect(content).toContain(
       "Do not pretend the screen was evaluated until the required artifacts exist.",
