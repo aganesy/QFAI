@@ -222,6 +222,17 @@ describe("design contract readiness validators", () => {
     expect(issues.filter((issue) => issue.code === "QFAI-DCON-001")).toHaveLength(3);
   });
 
+  it("common design contract 欠落時の suggested_action は phase-neutral にする", async () => {
+    const root = await newTempRoot();
+    await seedUiContract(root);
+
+    const issues = await validatePrototypingDesignContractReadiness(root, defaultConfig);
+    const commonMissing = issues.find((issue) => issue.message.includes("exploration-brief.yaml"));
+
+    expect(commonMissing?.suggested_action).toContain("pre-prototyping design contracts");
+    expect(commonMissing?.suggested_action).not.toContain("SDD execution");
+  });
+
   it("prototyping stage の required contracts が揃っていれば pass する", async () => {
     const root = await newTempRoot();
     await seedUiContract(root);

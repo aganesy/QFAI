@@ -106,7 +106,7 @@ async function validateDesignContractReadinessForStage(
           "designContractReadiness.requiredFile",
           undefined,
           "canonical",
-          `UI-bearing SDD execution requires exploration-brief.yaml, reference-pool.yaml, brand-design.yaml, evaluation-rubric.yaml, evaluator-calibration.yaml, and absorption-policy.yaml under \`${designDirRelative}/\`.`,
+          `UI-bearing design workflows require pre-prototyping design contracts: exploration-brief.yaml, reference-pool.yaml, brand-design.yaml, evaluation-rubric.yaml, evaluator-calibration.yaml, and absorption-policy.yaml under \`${designDirRelative}/\`.`,
         ),
       );
     }
