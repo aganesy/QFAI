@@ -192,6 +192,7 @@ Follow `.qfai/assistant/instructions/shared-skill-operating-baseline.md#gate-fai
 - Always write `.qfai/report/preflight_summary.md` before generating shared/spec artifacts.
 - Contracts are contract-first mandatory outputs in this skill.
 - UI-bearing targets must be normalized into downstream-ready contracts under `.qfai/contracts/design/**` and `.qfai/contracts/ui/**`.
+- For UI-bearing targets, normalize discussion UI/UX sidecars by following `references/ui-design-contract-normalization.md`.
 - `_policies/05_Contracts.md` must include a Contract Index.
 - `/qfai-sdd` must stop when discussion-pack is missing, incomplete, or has blocking OQ.
 - Discussion-pack preflight is mandatory, including contract-first checks that UI-bearing targets are normalized into required design/ui contracts before downstream generation.
@@ -225,10 +226,11 @@ Create or update layered SDD artifacts in one run so downstream execution phases
 - Updated contracts under `.qfai/contracts/**`
 - UI-bearing normalized contracts:
   - `.qfai/contracts/design/exploration-brief.yaml`
+  - `.qfai/contracts/design/reference-pool.yaml`
+  - `.qfai/contracts/design/brand-design.yaml`
   - `.qfai/contracts/design/evaluation-rubric.yaml`
   - `.qfai/contracts/design/evaluator-calibration.yaml`
-  - `.qfai/contracts/design/selected-direction.yaml`
-  - `.qfai/contracts/design/design-system.yaml`
+  - `.qfai/contracts/design/absorption-policy.yaml`
   - `.qfai/contracts/ui/*.yaml`
 - `.qfai/report/preflight_summary.md`
 - Evidence file: `.qfai/evidence/sdd-spec-XXXX.md`

@@ -2,9 +2,9 @@
 
 ## Purpose
 
-Provide the downstream execution truth for exploration-first prototyping and final design-system extraction that `/qfai-sdd` and `/qfai-prototyping` normalize from UI-bearing discussion packs.
+Provide the downstream execution truth for exploration-first prototyping and final design-system extraction.
 
-These files are version-managed and may be read directly by `/qfai-prototyping`, `/qfai-implement`, `/qfai-atdd`, and `qfai validate`.
+`/qfai-sdd` is the only skill that reads discussion-pack UI/UX sidecars. It normalizes those sidecars into this directory. `/qfai-prototyping`, `/qfai-implement`, `/qfai-atdd`, `/qfai-verify`, and `qfai validate` read these contracts instead of reading discussion artifacts.
 
 > **Prototyping harness (spec-0012)**: `evaluation-rubric.yaml` is the source of evaluator axes, absorbable categories, and concept-fit hard floors. `absorption-policy.yaml` defines minimum absorption and curation expectations between rounds. `design-system.yaml` remains the downstream checklist for winner extraction and polish.
 
@@ -19,23 +19,26 @@ The absence of design files is not a defect for non-UI capabilities. For UI-bear
 Typical files:
 
 - `exploration-brief.yaml` — machine-readable exploration brief generated from discussion
+- `reference-pool.yaml` — normalized competitors, adjacent references, templates, and anti-patterns
+- `brand-design.yaml` — brand personality, category conventions, differentiation, and visual language
 - `evaluation-rubric.yaml` — machine-readable evaluator rubric with weighted axes, hard floors, and absorbable categories
 - `evaluator-calibration.yaml` — evaluator alignment examples and anti-leniency guidance
 - `absorption-policy.yaml` — round-to-round absorption thresholds and curation rules
-- `selected-direction.yaml` — current winning direction, rationale, and carry-forward rules
-- `design-system.yaml` — extracted final design system produced after direction convergence
-- `design-tokens*.yaml` — optional token definitions
+- `selected-direction.yaml` — produced by `/qfai-prototyping` after winner selection
+- `design-system.yaml` — extracted by `/qfai-prototyping` after direction convergence
+- `prototype-handoff.yaml` — implementation handoff produced by `/qfai-prototyping`
 
 ## Expected File Names
 
 - `exploration-brief.yaml`
+- `reference-pool.yaml`
+- `brand-design.yaml`
 - `evaluation-rubric.yaml`
 - `evaluator-calibration.yaml`
 - `absorption-policy.yaml`
 - `selected-direction.yaml`
 - `design-system.yaml`
-- `design-tokens.yaml`
-- `design-tokens.mobile.yaml`
+- `prototype-handoff.yaml`
 
 ## What This Directory Is NOT
 
