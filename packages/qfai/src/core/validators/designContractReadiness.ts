@@ -38,6 +38,8 @@ const REFERENCE_KINDS = new Set([
   "template-seed",
   "anti-pattern",
 ]);
+const COPY_RISK_VALUES = new Set(["low", "medium", "high"]);
+const TEMPLATE_USAGE_POLICY_VALUES = new Set(["none", "reference-only", "implementation-seed"]);
 const PLACEHOLDER_RE = /^(?:tbd|todo|n\/a|none|placeholder|example|lorem|to be defined)$/i;
 
 type DesignContractReadinessStage = "sdd" | "prototyping";
@@ -262,6 +264,27 @@ async function validateReferencePool(root: string, config: QfaiConfig): Promise<
         ),
       );
     }
+    if (typeof entry.copy_risk !== "string" || !COPY_RISK_VALUES.has(entry.copy_risk)) {
+      issues.push(
+        referencePoolIssue(
+          root,
+          filePath,
+          `reference-pool.yaml references[${index}].copy_risk must be one of: low, medium, high.`,
+        ),
+      );
+    }
+    if (
+      typeof entry.template_usage_policy !== "string" ||
+      !TEMPLATE_USAGE_POLICY_VALUES.has(entry.template_usage_policy)
+    ) {
+      issues.push(
+        referencePoolIssue(
+          root,
+          filePath,
+          `reference-pool.yaml references[${index}].template_usage_policy must be one of: none, reference-only, implementation-seed.`,
+        ),
+      );
+    }
   }
   return issues;
 }
@@ -457,13 +480,42 @@ async function validateAbsorptionPolicy(root: string, config: QfaiConfig): Promi
         ]
       : [];
   }
-  return validateRequiredStringArrayKeys(
+  const issues = validateRequiredStringArrayKeys(
     filePath,
     root,
     parsed.value,
     ["minAbsorptionsPerSurvivor", "require_rejected_reason", "allow_adapt_required"],
     "QFAI-DCON-021",
     "absorption-policy.yaml is missing required field",
+    "designContractReadiness.absorptionPolicyField",
+  );
+  if (
+    typeof parsed.value.minAbsorptionsPerSurvivor !== "number" ||
+    !Number.isInteger(parsed.value.minAbsorptionsPerSurvivor) ||
+    parsed.value.minAbsorptionsPerSurvivor <= 0
+  ) {
+    issues.push(
+      absorptionPolicyIssue(
+        root,
+        filePath,
+        "minAbsorptionsPerSurvivor must be a positive integer.",
+      ),
+    );
+  }
+  for (const key of ["require_rejected_reason", "allow_adapt_required"] as const) {
+    if (typeof parsed.value[key] !== "boolean") {
+      issues.push(absorptionPolicyIssue(root, filePath, `${key} must be a boolean.`));
+    }
+  }
+  return issues;
+}
+
+function absorptionPolicyIssue(root: string, filePath: string, message: string): Issue {
+  return issue(
+    "QFAI-DCON-021",
+    `absorption-policy.yaml ${message}`,
+    "error",
+    toPosixRelative(root, filePath),
     "designContractReadiness.absorptionPolicyField",
   );
 }

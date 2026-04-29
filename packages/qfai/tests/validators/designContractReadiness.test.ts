@@ -272,6 +272,36 @@ describe("design contract readiness validators", () => {
     expect(issues.map((issue) => issue.code)).toContain("QFAI-DCON-015");
   });
 
+  it("reference-pool.yaml の copy_risk と template_usage_policy は列挙値だけを許可する", async () => {
+    const root = await newTempRoot();
+    await seedUiContract(root);
+    await seedSddDesignContracts(root);
+    const designDir = path.join(root, ".qfai", "contracts", "design");
+    await writeFile(
+      path.join(designDir, "reference-pool.yaml"),
+      [
+        'schemaVersion: "1.0"',
+        "references:",
+        "  - id: REF-001",
+        "    kind: template-seed",
+        "    source: https://ui.shadcn.com/blocks",
+        "    adopted_points:",
+        "      - Accessible composition",
+        "    rejected_points:",
+        "      - Default SaaS dashboard look",
+        "    local_translation:",
+        "      - Keep structure and replace visual language",
+        "    copy_risk: low because only structural learning is reused",
+        "    template_usage_policy: reference_only",
+      ].join("\n"),
+      "utf-8",
+    );
+
+    const issues = await validateSddDesignContractReadiness(root, defaultConfig);
+
+    expect(issues.filter((issue) => issue.code === "QFAI-DCON-015")).toHaveLength(2);
+  });
+
   it("brand-design.yaml が壊れている場合は parse error を返す", async () => {
     const root = await newTempRoot();
     await seedUiContract(root);
@@ -332,6 +362,26 @@ describe("design contract readiness validators", () => {
     const issues = await validatePrototypingDesignContractReadiness(root, defaultConfig);
 
     expect(issues.filter((issue) => issue.code === "QFAI-DCON-004")).toHaveLength(2);
+  });
+
+  it("absorption-policy.yaml の数値と真偽値は型も検証する", async () => {
+    const root = await newTempRoot();
+    await seedUiContract(root);
+    await seedSddDesignContracts(root);
+    const designDir = path.join(root, ".qfai", "contracts", "design");
+    await writeFile(
+      path.join(designDir, "absorption-policy.yaml"),
+      [
+        'minAbsorptionsPerSurvivor: "2"',
+        'require_rejected_reason: "true"',
+        'allow_adapt_required: "true"',
+      ].join("\n"),
+      "utf-8",
+    );
+
+    const issues = await validateSddDesignContractReadiness(root, defaultConfig);
+
+    expect(issues.filter((issue) => issue.code === "QFAI-DCON-021")).toHaveLength(3);
   });
 
   it("custom contractsDir でも suggested_action は実際の design contract path を案内する", async () => {

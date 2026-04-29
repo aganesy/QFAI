@@ -121,4 +121,40 @@ describe("spec-0018 candidate concepts", () => {
       }),
     ).toThrow(/templateSeedUsage requires antiTemplateConstraints/);
   });
+
+  it("requires reference lineage at build time", () => {
+    expect(() =>
+      buildCandidateConcept({
+        candidateId: "c1",
+        round: "r5",
+        statement: "x",
+        designThesis: "x",
+        referenceLineage: [],
+        templateSeedUsage: "none",
+        antiTemplateConstraints: [],
+        noveltyBet: "x",
+        anchors: [],
+        nonGoals: [],
+        pivotFromPrior: null,
+      }),
+    ).toThrow(/referenceLineage must be non-empty/);
+  });
+
+  it("rejects placeholder anti-template constraints", () => {
+    expect(() =>
+      buildCandidateConcept({
+        candidateId: "c1",
+        round: "r5",
+        statement: "x",
+        designThesis: "x",
+        referenceLineage: ["REF-001"],
+        templateSeedUsage: "implementation-seed",
+        antiTemplateConstraints: ["placeholder"],
+        noveltyBet: "x",
+        anchors: [],
+        nonGoals: [],
+        pivotFromPrior: null,
+      }),
+    ).toThrow(/antiTemplateConstraints entries must be meaningful/);
+  });
 });

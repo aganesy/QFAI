@@ -569,7 +569,7 @@ async function seedPrototypingFixture(root: string, targetUrl: string): Promise<
       "      - Generic sidebar shell",
       "    local_translation:",
       "      - Translate density into task-first grouping",
-      "    copy_risk: low because only structural learning is reused",
+      "    copy_risk: low",
       "    template_usage_policy: reference-only",
       "",
     ].join("\n"),
