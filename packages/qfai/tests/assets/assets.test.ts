@@ -336,6 +336,51 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     expect(content).toContain("REVISE");
   });
 
+  it("ensures qfai-prototyping ships lightweight HTML prototype handoff assets", async () => {
+    const skillDir = path.join(
+      templateQfaiDir,
+      "assistant",
+      "skills",
+      "qfai-prototyping",
+    );
+    const skillPath = path.join(skillDir, "SKILL.md");
+    const workspaceRefPath = path.join(skillDir, "references", "prototype-workspace.md");
+    const surfaceRefPath = path.join(skillDir, "references", "surface-framing.md");
+    const handoffTemplatePath = path.join(
+      skillDir,
+      "templates",
+      "contracts",
+      "prototype-handoff.sample.yaml",
+    );
+
+    const [skill, workspaceRef, surfaceRef, handoffTemplate] = await Promise.all([
+      readFile(skillPath, "utf-8"),
+      readFile(workspaceRefPath, "utf-8"),
+      readFile(surfaceRefPath, "utf-8"),
+      readFile(handoffTemplatePath, "utf-8"),
+    ]);
+
+    expect(skill).toContain("static-first");
+    expect(skill).toContain(".qfai/prototypes/");
+    expect(skill).toContain("production `src/`");
+    expect(skill).toContain(".qfai/contracts/design/prototype-handoff.yaml");
+    expect(skill).toContain(".qfai/prototypes/winner/index.html");
+
+    expect(workspaceRef).toContain(".qfai/prototypes/");
+    expect(workspaceRef).toContain("not production implementation");
+    expect(workspaceRef).toContain(".qfai/prototypes/winner/index.html");
+    expect(workspaceRef).toContain(".qfai/contracts/design/prototype-handoff.yaml");
+
+    expect(surfaceRef).toContain("mobile app");
+    expect(surfaceRef).toContain("desktop app");
+    expect(surfaceRef).toContain("Do not carry");
+
+    expect(handoffTemplate).toContain("sourcePrototypeRefs:");
+    expect(handoffTemplate).toContain("surfaceProfiles:");
+    expect(handoffTemplate).toContain("mustPreserve:");
+    expect(handoffTemplate).toContain("mustNotCopy:");
+  });
+
   it("ensures ui contract docs define mockable prototype and copy-ready example", async () => {
     const uiReadmePath = path.join(templateQfaiDir, "contracts", "ui", "README.md");
     const uiExamplePath = path.join(
@@ -1305,10 +1350,12 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     );
   });
 
-  it("keeps qfai-sdd and qfai-discussion SKILL.md compact enough for progressive disclosure", async () => {
+  it("keeps canonical SKILL.md files compact enough for progressive disclosure", async () => {
     const targets = [
       ["qfai-sdd", 360],
       ["qfai-discussion", 400],
+      ["qfai-prototyping", 320],
+      ["qfai-implement", 370],
     ] as const;
 
     for (const [skillId, maxLines] of targets) {
