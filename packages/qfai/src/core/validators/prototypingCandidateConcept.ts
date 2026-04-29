@@ -69,12 +69,7 @@ function conceptPath(round: ExplorationRound, candidateId: CandidateId): string 
   );
 }
 
-function conceptIssue(
-  root: string,
-  filePath: string,
-  message: string,
-  refs: string[] = [],
-): Issue {
+function conceptIssue(root: string, filePath: string, message: string, refs: string[] = []): Issue {
   return issue(
     "QFAI-PROT-CONCEPT-001",
     message,

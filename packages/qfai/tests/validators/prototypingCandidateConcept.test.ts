@@ -37,11 +37,7 @@ async function seedReviewBundle(root: string, candidateIds: string[]): Promise<v
   await mkdir(roundDir, { recursive: true });
   await writeFile(
     path.join(roundDir, "review-bundle.json"),
-    JSON.stringify(
-      { candidates: candidateIds.map((candidateId) => ({ candidateId })) },
-      null,
-      2,
-    ),
+    JSON.stringify({ candidates: candidateIds.map((candidateId) => ({ candidateId })) }, null, 2),
     "utf-8",
   );
 }

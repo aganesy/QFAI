@@ -43,12 +43,12 @@ spec-0013 (CAP-0013) で定義された、下流 skill が UI 定義を読み取
 
 ## Failure Rules
 
-| Missing Definition              | Behavior                                      |
-| ------------------------------- | --------------------------------------------- |
-| UI contract                     | Stop UI-bearing downstream execution          |
-| Pre-prototyping design contract | Return to `/qfai-sdd` and normalize contracts |
+| Missing Definition               | Behavior                                                   |
+| -------------------------------- | ---------------------------------------------------------- |
+| UI contract                      | Stop UI-bearing downstream execution                       |
+| Pre-prototyping design contract  | Return to `/qfai-sdd` and normalize contracts              |
 | Post-prototyping design contract | Return to `/qfai-prototyping` and extract winner artifacts |
-| Discussion sidecar in downstream | Do not read it; normalize through `/qfai-sdd` |
+| Discussion sidecar in downstream | Do not read it; normalize through `/qfai-sdd`              |
 
 ## Forbidden Fallbacks
 

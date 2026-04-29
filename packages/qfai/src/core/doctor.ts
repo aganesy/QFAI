@@ -605,7 +605,7 @@ async function buildPrototypingDesignContractsCheck(
   root: string,
   config: Awaited<ReturnType<typeof loadConfig>>["config"],
 ): Promise<DoctorCheck> {
-  const issues = await validateDesignContractReadiness(root, config);
+  const issues = await validateDesignContractReadiness(root, config, { stage: "sdd" });
   if (issues.length === 0) {
     return {
       id: "prototyping.designContracts",

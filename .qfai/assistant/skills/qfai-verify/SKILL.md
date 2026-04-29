@@ -269,9 +269,11 @@ Every 5 major actions, pause and restate:
    - `.qfai/assistant/instructions/workflow.md` (or equivalent)
 
 3. Read existing artifacts for the current work item (if present):
-   - `.qfai/discussion/`
    - `.qfai/specs/spec-*/`
    - `.qfai/contracts/`
+   - `.qfai/evidence/`
+
+Do not use discussion-pack artifacts as verification inputs. Verify reads normalized specs, contracts, and evidence only.
 
 4. Inspect repo conventions:
    - package manager (pnpm/npm/yarn), test runner, lint/typecheck scripts, CI definitions

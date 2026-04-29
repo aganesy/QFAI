@@ -26,6 +26,7 @@ mode: execution-focused
 
 This skill owns prototyping orchestration directly.
 Do not rely on a CLI entrypoint or package runtime loop.
+This is the Exploration-First Harness: explore divergent visual directions before winner extraction.
 
 ## CRITICAL CONSTRAINTS (Read First)
 
@@ -40,7 +41,7 @@ Do not rely on a CLI entrypoint or package runtime loop.
 - Canonical latest HTML path: `.qfai/evidence/prototyping/html/<screen-id>.html`
 - `prototype-handoff.yaml`, `selected-direction.yaml`, and `design-system.yaml` are required before completion review.
 - Supported UI prototyping surfaces are `web`, `mobile`, `desktop`, and `mixed`.
-- `cli`, API-only, backend-only, and `ui_bearing: false` classifications are not execution targets for prototyping.
+- `cli`, API-only, backend-only, and `ui_bearing: false` classifications are not prototyping execution targets.
 - Mode differences are limited to `maxCycles` only: low-cost=1, standard=3, full-harness=20.
 - Direction funnel completion is not stage completion. At least one post-selection polish cycle is mandatory.
 - Each exploration round (`r5`, `r3`, `r2`, `r1`) and each post-selection `polish` or `branch` cycle MUST end with a git commit and a recorded `commitSha`.
@@ -54,7 +55,8 @@ Generate multiple lightweight prototype directions, converge on a polished winne
 ## Surface / Mode
 
 - `standard` is the default mode.
-- Modes differ only by `maxCycles`. No mode weakens evidence, reviewer, handoff, or completion obligations.
+- The `surface / mode` matrix is defined in `.qfai/evidence/README.md`.
+- Mode Invariant: modes differ only by `maxCycles`. No mode weakens evidence, reviewer, handoff, or completion obligations.
 - Surface framing rules live in `.qfai/assistant/skills/qfai-prototyping/references/surface-framing.md`.
 
 ## Required References

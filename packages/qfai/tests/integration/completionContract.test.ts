@@ -31,11 +31,11 @@ async function loadContent(): Promise<string> {
 }
 
 // QFAI:SPEC-0011:TC-0011-0005
-describe("10-point checklist end-to-end enforcement", () => {
-  it("defines a 10-point item completion checklist", async () => {
+describe("11-point checklist end-to-end enforcement", () => {
+  it("defines an 11-point item completion checklist", async () => {
     const c = await loadContent();
-    expect(c).toMatch(/10-point/i);
-    // Must contain all 10 gate items
+    expect(c).toMatch(/11-point/i);
+    // Must contain all 11 gate items
     expect(c).toMatch(/TDD-ID.*selected|selected.*TDD-ID/i);
     expect(c).toMatch(/failing test.*first|test.first/i);
     expect(c).toMatch(/RED.*observed|watch it fail/i);
@@ -44,6 +44,9 @@ describe("10-point checklist end-to-end enforcement", () => {
     expect(c).toMatch(/refactor.*GREEN|GREEN.*refactor/i);
     expect(c).toMatch(/completion-reviewer.*PASS|spec review.*PASS/i);
     expect(c).toMatch(/implementation-reviewer.*PASS|code quality review.*PASS/i);
+    expect(c).toMatch(
+      /prototype parity.*product-surface-reviewer|product-surface-reviewer.*prototype parity/i,
+    );
     expect(c).toMatch(/test-list\.md.*updated|Status.*Evidence.*updated/i);
     expect(c).toMatch(/checkpoint.*verif/i);
   });

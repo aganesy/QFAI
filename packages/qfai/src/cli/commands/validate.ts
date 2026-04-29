@@ -493,8 +493,7 @@ const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-DCON-019":
     "selected-direction.yaml, design-system.yaml, and prototype-handoff.yaml are produced by prototyping, not SDD.",
   "QFAI-DCON-020": "absorption-policy.yaml must parse as an object-shaped YAML document.",
-  "QFAI-DCON-021":
-    "absorption-policy.yaml must define absorption and curation policy fields.",
+  "QFAI-DCON-021": "absorption-policy.yaml must define absorption and curation policy fields.",
   "QFAI-BREAK-001": "breakthrough.json is required for exploration-first UI prototyping evidence.",
   "QFAI-BREAK-002": "breakthrough.json must be a valid JSON object.",
   "QFAI-BREAK-003": "breakthrough.json.latestIteration must be a positive integer.",

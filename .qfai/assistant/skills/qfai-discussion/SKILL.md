@@ -64,13 +64,15 @@ UI-bearing packs must produce the following sidecars as primary truth:
 9. Generate `prototyping.yaml` only when the latest discussion pack is UI-bearing and an explicit prototyping recommendation is useful.
 10. Request review and record the Reviewer result.
 
+For UI-bearing targets, follow `references/design-dna-intake.md` while authoring the UI/UX sidecars. Keep this `SKILL.md` compact; put detailed interview prompts and examples in the reference file.
+
 ## UI-bearing Authoring Requirements
 
 - `30_exploration_brief.md` must define product intent, must-preserve interactions, brand signals, and differentiation targets.
-- `31_reference_pool.md` must define exploration references, adopted points, rejected points, and local translation.
+- `31_reference_pool.md` must define exploration references, adopted points, rejected points, local translation, copy risk, and template usage policy.
 - `32_design_anti_goals.md` must contain explicit anti-goals and recurrence prevention notes.
-- `33_exploration_rubric.md` must define design quality, originality, craft, and functionality grading criteria.
-- `34_evaluator_calibration.md` must include good critique examples, too-lenient examples, blandness-fail examples, and originality-fail examples.
+- `33_exploration_rubric.md` must define design quality, originality, craft, functionality, brand memorability, category distinctiveness, template dependency risk, and localization-fit grading criteria.
+- `34_evaluator_calibration.md` must include good critique examples, too-lenient examples, blandness-fail examples, originality-fail examples, and template-copy fail examples.
 - `50_review_input_bundle.md` must document best-of-history handling so later iterations are not automatically preferred.
 
 ## Completion Contract (Shared)

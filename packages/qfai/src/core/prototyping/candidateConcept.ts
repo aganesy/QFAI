@@ -30,9 +30,7 @@ export function buildCandidateConcept(input: BuildCandidateConceptInput): Candid
     throw new Error("buildCandidateConcept: noveltyBet must be non-empty");
   }
   if (input.templateSeedUsage !== "none" && input.antiTemplateConstraints.length === 0) {
-    throw new Error(
-      "buildCandidateConcept: templateSeedUsage requires antiTemplateConstraints",
-    );
+    throw new Error("buildCandidateConcept: templateSeedUsage requires antiTemplateConstraints");
   }
 
   return {

@@ -359,6 +359,8 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     expect(skill).toContain(".qfai/prototypes/");
     expect(skill).toContain("production `src/`");
     expect(skill).toContain(".qfai/contracts/design/prototype-handoff.yaml");
+    expect(skill).toContain(".qfai/contracts/design/reference-pool.yaml");
+    expect(skill).toContain(".qfai/contracts/design/brand-design.yaml");
     expect(skill).toContain(".qfai/prototypes/winner/index.html");
 
     expect(workspaceRef).toContain(".qfai/prototypes/");
@@ -991,12 +993,12 @@ describe("assets guardrails", { timeout: 30000 }, () => {
       [
         "api-contract.sample.yaml",
         "absorption-policy.sample.yaml",
+        "brand-design.sample.yaml",
         "db-contract.sample.sql",
-        "design-system.sample.yaml",
         "evaluation-rubric.sample.yaml",
         "evaluator-calibration.sample.yaml",
         "exploration-brief.sample.yaml",
-        "selected-direction.sample.yaml",
+        "reference-pool.sample.yaml",
         "ui-contract.sample.yaml",
       ].sort(),
     );
