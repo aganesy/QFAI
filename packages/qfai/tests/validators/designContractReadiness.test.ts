@@ -326,6 +326,36 @@ describe("design contract readiness validators", () => {
     expect(issues.filter((issue) => issue.code === "QFAI-DCON-015")).toHaveLength(2);
   });
 
+  it("reference-pool.yaml の template_usage_policy は none を有効値として許可する", async () => {
+    const root = await newTempRoot();
+    await seedUiContract(root);
+    await seedSddDesignContracts(root);
+    const designDir = path.join(root, ".qfai", "contracts", "design");
+    await writeFile(
+      path.join(designDir, "reference-pool.yaml"),
+      [
+        'schemaVersion: "1.0"',
+        "references:",
+        "  - id: REF-001",
+        "    kind: adjacent",
+        "    source: https://example.com/product",
+        "    adopted_points:",
+        "      - Information density",
+        "    rejected_points:",
+        "      - Visual treatment",
+        "    local_translation:",
+        "      - Rebuild the pattern in local brand language",
+        "    copy_risk: low",
+        "    template_usage_policy: none",
+      ].join("\n"),
+      "utf-8",
+    );
+
+    const issues = await validateSddDesignContractReadiness(root, defaultConfig);
+
+    expect(issues).toEqual([]);
+  });
+
   it("brand-design.yaml が壊れている場合は parse error を返す", async () => {
     const root = await newTempRoot();
     await seedUiContract(root);

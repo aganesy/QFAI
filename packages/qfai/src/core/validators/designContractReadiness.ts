@@ -252,7 +252,7 @@ async function validateReferencePool(root: string, config: QfaiConfig): Promise<
       continue;
     }
     for (const key of requiredKeys) {
-      if (!hasMeaningfulContractContent(entry[key])) {
+      if (!hasRequiredReferencePoolField(key, entry[key])) {
         issues.push(
           referencePoolIssue(
             root,
@@ -294,6 +294,13 @@ async function validateReferencePool(root: string, config: QfaiConfig): Promise<
     }
   }
   return issues;
+}
+
+function hasRequiredReferencePoolField(key: string, value: unknown): boolean {
+  if (key === "template_usage_policy") {
+    return isNonEmptyStringValue(value);
+  }
+  return hasMeaningfulContractContent(value);
 }
 
 function referencePoolIssue(root: string, filePath: string, message: string): Issue {
