@@ -118,16 +118,29 @@ describe("validateConfigReferenceIntegrity", () => {
     expect(linkIssue?.message).toMatch(/9999/);
   });
 
-  it("emits QFAI-CFG-LINK-002 (warning) for each missing paths.* directory", async () => {
+  it("emits QFAI-CFG-LINK-002 (warning) for missing non-default generated paths", async () => {
     const root = await newTempDir();
-    // Only seed specs; everything else missing
-    await seedDirs(root, [".qfai/specs"]);
+    // specs/contracts/discussion use default skill-created paths, so their
+    // absence is no longer a config-reference warning after clean init.
     const issues = await validateConfigReferenceIntegrity(root, makeConfig());
     const warningIssues = issues.filter((i) => i.code === "QFAI-CFG-LINK-002");
-    expect(warningIssues.length).toBeGreaterThanOrEqual(4);
+    expect(warningIssues.map((i) => i.rule).sort()).toEqual([
+      "config.paths.skillsDir.reality",
+      "config.paths.srcDir.reality",
+      "config.paths.testsDir.reality",
+    ]);
     for (const i of warningIssues) {
       expect(i.severity).toBe("warning");
     }
+  });
+
+  it("still warns when a custom workflow artifact path is missing", async () => {
+    const root = await newTempDir();
+    const config = makeConfig();
+    config.paths.contractsDir = "custom-contracts";
+
+    const issues = await validateConfigReferenceIntegrity(root, config);
+    expect(issues.some((i) => i.rule === "config.paths.contractsDir.reality")).toBe(true);
   });
 
   it("emits QFAI-CFG-LINK-003 (error) when calibration.packPath is missing", async () => {

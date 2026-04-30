@@ -897,7 +897,9 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     expect(readme).toContain(
       "UI-bearing discussion packs may include `prototyping.yaml` as an optional recommendation artifact; non-ui discussion packs typically omit it.",
     );
-    expect(readme).toMatch(/discussion-YYYYMMDDhhmmssSSS[\s\S]*prototyping\.yaml/);
+    expect(readme).toContain(
+      "`qfai init` does not seed `.qfai` workflow artifacts such as specs, discussions,",
+    );
   });
 
   it("keeps npm README release posture aligned with package contract", async () => {

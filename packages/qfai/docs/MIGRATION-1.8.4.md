@@ -40,7 +40,7 @@ prototyping:
 surface_type: ui-bearing
 ---
 
-# spec-XXXX
+# spec-0012
 ```
 
 The marker scan picks the smallest matching spec ID. Verify with:

@@ -402,7 +402,7 @@ export async function validateNavigationFlow(root: string, config: QfaiConfig): 
   const specsDir = resolvePath(root, config, "specsDir");
   const allFiles = await collectFiles(specsDir, { extensions: [".md"] });
 
-  // Filter to spec directories (spec-XXXX)
+  // Filter to concrete spec directories.
   const specFiles = allFiles.filter((f) => /[\\/]spec-\d{4}[\\/]/.test(f));
   const issues: Issue[] = [];
 

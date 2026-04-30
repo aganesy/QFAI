@@ -156,14 +156,18 @@ async function probeLauncherCandidate(
 ): Promise<PlaywrightCliLauncherProbe> {
   const startedAt = Date.now();
   const args = [...candidate.args, "--help"];
-  const useShell = process.platform === "win32" && /\.(cmd|bat)$/i.test(candidate.executable);
+  const useCmdShim = process.platform === "win32" && /\.(cmd|bat)$/i.test(candidate.executable);
 
   return new Promise((resolve) => {
-    const child = spawn(candidate.executable, args, {
-      shell: useShell,
-      stdio: ["ignore", "pipe", "pipe"],
-      windowsHide: true,
-    });
+    const child = useCmdShim
+      ? spawn(process.env.ComSpec ?? "cmd.exe", ["/d", "/s", "/c", toCmdCommand(candidate, args)], {
+          stdio: ["ignore", "pipe", "pipe"],
+          windowsHide: true,
+        })
+      : spawn(candidate.executable, args, {
+          stdio: ["ignore", "pipe", "pipe"],
+          windowsHide: true,
+        });
     let stdout = "";
     let stderr = "";
     let settled = false;
@@ -242,6 +246,17 @@ async function probeLauncherCandidate(
       });
     });
   });
+}
+
+function quoteCmdArg(value: string): string {
+  if (!/[\s"&<>|^]/.test(value)) {
+    return value;
+  }
+  return `"${value.replace(/"/g, '\\"')}"`;
+}
+
+function toCmdCommand(candidate: PlaywrightCliLauncherCandidate, args: string[]): string {
+  return [quoteCmdArg(candidate.executable), ...args.map(quoteCmdArg)].join(" ");
 }
 
 function terminateTimedOutChild(child: ReturnType<typeof spawn>, signal?: NodeJS.Signals): void {

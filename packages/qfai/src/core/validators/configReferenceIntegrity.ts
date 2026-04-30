@@ -51,6 +51,16 @@ const VERIFIED_PATH_KEYS: ReadonlyArray<ConfigPathKey> = [
   "testsDir",
 ];
 
+const DEFAULT_SKILL_CREATED_PATH_KEYS = new Set<ConfigPathKey>([
+  "specsDir",
+  "contractsDir",
+  "discussionDir",
+]);
+
+function isDefaultSkillCreatedPath(key: ConfigPathKey, relPath: string): boolean {
+  return DEFAULT_SKILL_CREATED_PATH_KEYS.has(key) && relPath === defaultConfig.paths[key];
+}
+
 export async function validateConfigReferenceIntegrity(
   root: string,
   config: QfaiConfig,
@@ -83,6 +93,9 @@ export async function validateConfigReferenceIntegrity(
     const relPath = config.paths[key];
     const absolutePath = path.resolve(root, relPath);
     if (!(await isDirectory(absolutePath))) {
+      if (isDefaultSkillCreatedPath(key, relPath)) {
+        continue;
+      }
       issues.push(
         issue(
           "QFAI-CFG-LINK-002",

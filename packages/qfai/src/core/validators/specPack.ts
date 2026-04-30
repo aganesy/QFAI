@@ -138,7 +138,7 @@ async function validateSpecPackEntry(
         "specPack.requiredFiles",
         missingFiles,
         "canonical",
-        "spec-XXXX 配下に不足ファイルを追加し、01_Spec.md から 18_delta.md まで揃えてください。",
+        "対象 spec ディレクトリ配下に不足ファイルを追加し、01_Spec.md から 18_delta.md まで揃えてください。",
       ),
     );
   }
@@ -328,10 +328,10 @@ async function validateLayeredSpecEntry(entry: SpecEntry): Promise<Issue[]> {
   const missingFiles = await collectMissingLayeredRequiredFiles(entry);
   const requiredFilesHint =
     entry.layeredStyle === "v1421"
-      ? "spec-XXXX 配下に 01_Spec.md / 02_User-stories.md / 03_Acceptance-Criteria.md / 04_Business-Rules.md / 05_Examples.md / 06_Test-Cases.md / 07_Decisions.md / 08_Open-questions.md / 09_delta.md を揃えてください。"
+      ? "対象 spec ディレクトリ配下に 01_Spec.md / 02_User-stories.md / 03_Acceptance-Criteria.md / 04_Business-Rules.md / 05_Examples.md / 06_Test-Cases.md / 07_Decisions.md / 08_Open-questions.md / 09_delta.md を揃えてください。"
       : entry.layeredStyle === "v1417"
-        ? "spec-XXXX 配下に 01_Spec.md / 02_User-stories.md / 03_Acceptance-criteria.md / 04_Business-rules.md / 05_Examples.feature / 06_Test-cases.md / 07_Decisions.md / 08_Open-questions.md / 09_delta.md を揃えてください。"
-        : "spec-XXXX 配下に 01_User-stories.md / 02_Acceptance-criteria.md / 03_Business-rules.md / 04_Examples.feature / 05_Test-cases.md を揃えてください。";
+        ? "対象 spec ディレクトリ配下に 01_Spec.md / 02_User-stories.md / 03_Acceptance-criteria.md / 04_Business-rules.md / 05_Examples.feature / 06_Test-cases.md / 07_Decisions.md / 08_Open-questions.md / 09_delta.md を揃えてください。"
+        : "対象 spec ディレクトリ配下に 01_User-stories.md / 02_Acceptance-criteria.md / 03_Business-rules.md / 04_Examples.feature / 05_Test-cases.md を揃えてください。";
   if (missingFiles.length > 0) {
     issues.push(
       issue(
@@ -377,7 +377,7 @@ async function validateLayeredSpecEntry(entry: SpecEntry): Promise<Issue[]> {
           "specPack.layered.deltaFile",
           ["*_delta.md"],
           "canonical",
-          "spec-XXXX 配下に 09_delta.md（または *_delta.md）を追加してください。",
+          "対象 spec ディレクトリ配下に 09_delta.md（または *_delta.md）を追加してください。",
         ),
       );
     }

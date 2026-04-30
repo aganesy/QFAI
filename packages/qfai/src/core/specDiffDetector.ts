@@ -43,7 +43,7 @@ export type SpecDiffOptions = {
 // Stub implementations (to be filled via TDD)
 // ---------------------------------------------------------------------------
 
-// Canonical path: .qfai/specs/spec-XXXX — matches the fixed QFAI directory layout.
+// Canonical spec paths use `.qfai/specs/spec-<4 digits>/`.
 const SPEC_PATH_RE = /[/\\]specs[/\\](spec-\d{4})[/\\]/i;
 
 export function extractSpecIdsFromPaths(paths: string[]): Set<string> {
@@ -61,6 +61,7 @@ export function detectSourceA(root: string, baseBranch: string): Promise<Set<str
   const output = execFileSync("git", ["diff", "--name-only", `${baseBranch}..HEAD`], {
     cwd: root,
     encoding: "utf-8",
+    stdio: ["ignore", "pipe", "ignore"],
   });
   return Promise.resolve(extractSpecIdsFromPaths(output.split("\n").filter(Boolean)));
 }
@@ -69,10 +70,12 @@ export function detectSourceB(root: string): Promise<Set<string>> {
   const unstaged = execFileSync("git", ["diff", "--name-only"], {
     cwd: root,
     encoding: "utf-8",
+    stdio: ["ignore", "pipe", "ignore"],
   });
   const staged = execFileSync("git", ["diff", "--name-only", "--staged"], {
     cwd: root,
     encoding: "utf-8",
+    stdio: ["ignore", "pipe", "ignore"],
   });
   const all = [...unstaged.split("\n"), ...staged.split("\n")].filter(Boolean);
   return Promise.resolve(extractSpecIdsFromPaths(all));
@@ -200,6 +203,7 @@ export function detectPolicyChanges(root: string, baseBranch: string): Promise<b
     const output = execFileSync("git", ["diff", "--name-only", `${baseBranch}..HEAD`], {
       cwd: root,
       encoding: "utf-8",
+      stdio: ["ignore", "pipe", "ignore"],
     });
     return Promise.resolve(output.split("\n").some((line) => POLICY_PATH_RE.test(line)));
   } catch {

@@ -51,7 +51,7 @@ npx qfai report
     (`.qfai/review/review-*/summary.json` + minimum schema), writes `.qfai/report/validate.json`,
     and appends run logs to `.qfai/report/run-*/`; use `--fail-on error` (or `--fail-on warning`) to turn it into a CI gate,
     and `--format github` to emit GitHub-friendly annotations.
-    Use `--phase refinement` only for local refinement checks; CI should use default/full validation.
+    Use `--profile discussion|sdd|prototyping|atdd|tdd|verify` for local skill-owned checks; CI should use default/full validation (or `verify` / `tdd` for the dedicated CI gates).
 - `npx qfai report`
   - Produces a human-readable report (`report.md` by default) or an internal JSON export (`report.json`) from `validate.json`; use `--base-url` to link file paths in Markdown to your repository viewer.
 - `npx qfai doctor`
@@ -61,22 +61,44 @@ npx qfai report
     integrations, shipped role-input readiness, Playwright CLI launcher
     resolution/probing, and target URL reachability.
     Note: prototyping evidence (`.qfai/evidence/prototyping.json`) is produced by the AI workflow / skills
-    (`/qfai-prototyping` with `mode=low-cost|standard|full-harness`), not by a CLI command.
+    (`/qfai-prototyping` — any mode; modes differ only in `maxCycles`, see spec-0012), not by a general-purpose end-user CLI flow.
     Use `npx qfai prototyping preflight --target-url <url>` for a focused
     prototyping preflight before the skill starts; it now surfaces blocking
     `QFAI-DCON-*` design-contract issues alongside runtime assumptions, resolves
     a runnable Playwright CLI launcher (project wrapper / local bin / PATH /
     `npx --no-install`), and still treats the first real delegation failure as a
     runtime hard-stop.
+    Use `npx qfai prototyping round-start --round <r5|r3|r2|r1> --candidates <csv> --target-url <url> --mode <mode>`
+    to generate the round-scoped review bundle and command plans the AI evaluator sub-agent consumes, then use
+    `round-harvest`, `round-narrow`, `round-absorb`, and `round-reimplement-verify` to advance the candidate funnel.
     `qfai validate` consumes the resulting evidence files, including `mode.effective` and `fullHarness` metadata when present.
+    Traceability refs inside prototyping evidence must use repo-root-relative concrete artifact refs (for example `.qfai/specs/spec-0001/01_Spec.md#L3` or `.qfai/evidence/render.json#/screens/0`).
+    Absolute paths are invalid. The same strict ref grammar is enforced for top-level and leaf evidence-bearing fields, including
+    `runtimeGate.evidenceRefs`, `runtimeGate.ui[].declaredRef`, `runtimeGate.ui[].renderEvidenceRefs[]`,
+    `runtimeGate.ui[].browserQaEvidenceRefs[]`, `specs[].coverageRefs[].declaredRef`, `specs[].coverageRefs[].observedRefs[]`,
+    `fullHarness.iterations[].evidenceRefs.runtimeGate`, `fullHarness.iterations[].evidenceRefs.specCoverage`,
+    `fullHarness.iterations[].evidenceRefs.render`, `fullHarness.iterations[].evidenceRefs.browserQa`,
+    `fullHarness.iterations[].evidenceRefs.uiObservation`, `fullHarness.iterations[].evidenceRefs.discussion`,
+    `fullHarness.iterations[].evidenceRefs.screenContract`, `fullHarness.iterations[].evidenceRefs.trend`,
+    `fullHarness.iterations[].l1.axes[].evidenceRefs[]`, `fullHarness.iterations[].l2.axes[].evidenceRefs[]`, and
+    `fullHarness.reviewerLogs[].evidenceRefs[]`.
+    Semantic rules are also strict: `runtimeGate.ui[].declaredRef` and `fullHarness.iterations[].evidenceRefs.screenContract[]`
+    must use the canonical screen contract sourceRef `.qfai/discussion/<pack>/uiux/40_screen_contracts.md#<screenId>`,
+    and `specs[].coverageRefs[].declaredRef` must use the canonical spec declaration form
+    `.qfai/specs/<specId>/01_Spec.md#L<line>` (for example `.qfai/specs/spec-0001/01_Spec.md#L3`);
+    `notes.md`, `appendix.md`, anchor-fragment forms such as `#route-home`, discussion refs, and screen contract refs
+    are NOT valid `declaredRef` values.
+    `fullHarness` follows a terminal-first state machine: `status="in-progress"` requires `finalDecision="pending"`,
+    `reviewerSignoff.status="pending"`, and no `terminationReason`; `status="completed"` requires `terminationReason`,
+    a non-pending `finalDecision`, and a terminal `reviewerSignoff`.
 
 ## ATDD annotation hard gate
 
 `qfai validate` enforces spec-to-test traceability with directory-based rules.
 
-- `tests/e2e/**`: annotate all covered user stories with `QFAI:SPEC-XXXX:US-YYYY`.
-- `tests/integration/**`: annotate all covered test cases with `QFAI:SPEC-XXXX:TC-YYYY`.
-- `tests/api/**`: annotate all covered API contracts with `QFAI:CON-API-XXXX`.
+- `tests/e2e/**`: annotate all covered user stories with concrete IDs such as `QFAI:SPEC-0001:US-0001`.
+- `tests/integration/**`: annotate all covered test cases with concrete IDs such as `QFAI:SPEC-0001:TC-0001`.
+- `tests/api/**`: annotate all covered API contracts with concrete IDs such as `QFAI:CON-API-0001`.
 - `tests/api/**` and `tests/e2e/**` must not use `TC` annotations.
 - `AC` annotations are not required in code; AC coverage is treated as indirect through full `TC` coverage.
 
@@ -89,7 +111,7 @@ The agent reads QFAI assets under `.qfai/assistant/` and produces or updates SDD
 ### Where the skills live
 
 - QFAI canonical skills (SSOT): `.qfai/assistant/skills/**` (may be overwritten when you re-run `qfai init --force`).
-- Your local overrides: `.qfai/assistant/skills.local/**` (never overwritten by QFAI; prefer this for project-specific customizations).
+- QFAI no longer creates local override scaffolds. Project-specific guidance should live in your repository's normal agent docs or be created explicitly by your AI workflow.
 
 ### Minimal custom skill set
 
@@ -102,7 +124,9 @@ QFAI includes a small set of custom skills (stored under `.qfai/assistant/skills
   as 15 required markdown files under `.qfai/discussion/discussion-<ts>/`.
   UI-bearing discussion packs may include `prototyping.yaml` as an optional recommendation artifact; non-ui discussion packs typically omit it.
 - **qfai-sdd**: Unified SDD entrypoint with discussion-pack preflight guard (missing/incomplete/blocking OQ causes stop + next action guidance).
-- **qfai-prototyping**: Build a contract-aligned UI prototype with static-first evidence by default, and escalate to full-harness only when explicitly justified for UI-bearing surfaces.
+- **qfai-prototyping**: Build a contract-aligned UI prototype using the Playwright CLI + AI
+  evaluator harness (spec-0012). Modes (`low-cost`/`standard`/`full-harness`) run the same
+  strictest review cycle; only `maxCycles` (1/3/20) differs.
 - **qfai-atdd**: Implement acceptance tests driven by specs/scenarios.
 - **qfai-implement**: Unified TDD micro-cycle (Red/Green/Refactor) one test at a time using `test-list.md` as the execution ledger, including ledger status updates and exception closure.
 - **qfai-verify**: Run full-scan local quality gates (`validate --fail-on error`, `report`, repo gates) and produce reviewer-approved evidence under `.qfai/evidence/`.
@@ -205,6 +229,8 @@ Notes.
 - `validate.json`, `report.json`, `doctor.json`, and `run-*` JSON logs are internal exports and are not a stable external contract; prefer `report.md` for integrations that must survive tool upgrades.
 - Scenario files are expected to use the Gherkin extension `*.feature` (not `*.md`).
 - `prototyping.calibration.packPath` points to the calibration pack SSOT; runtime and validator both resolve thresholds and iteration parameters from that pack.
+- `prototyping.calibration.thresholds`, `maxIterations`, `plateauDelta`, and `plateauLookback` are unsupported public config fields.
+  Put calibration values in the referenced pack instead of `qfai.config.yaml`.
 - Observability modules (`src/core/observability/`) exist as foundation code but are **not yet integrated into blocking validation**. They are reserved for future operational instrumentation.
 
 ## Specifications and contracts (SDD)
@@ -274,7 +300,7 @@ npx qfai validate --fail-on error
 
 Recommended baseline.
 
-- Keep CI on default/full validation (`qfai validate --fail-on error`); do not use `--phase refinement` in CI.
+- Keep CI on default/full validation (`qfai validate --fail-on error` or `qfai validate --profile verify --fail-on error`); do not use partial profiles in CI.
 - Keep `pnpm check-types:future` as a separate mandatory gate so future TS compatibility runs once without duplicating `pnpm ci:gate`.
 - Add a report step (`npx qfai report`) when you need a human-readable artifact.
 - Tune traceability globs in `qfai.config.yaml` to match your test layout.
@@ -351,10 +377,7 @@ Typical customizations.
 │   │   │   │   └── SKILL.md
 │   │   │   └── qfai-verify
 │   │   │       └── SKILL.md
-│   │   ├── skills.local
-│   │   │   └── README.md
 │   │   ├── steering
-│   │   │   ├── README.md
 │   │   │   ├── agent-catalog.yml
 │   │   │   ├── agent-routing.yml
 │   │   │   ├── review-gate.rules.yml
@@ -362,39 +385,13 @@ Typical customizations.
 │   │   │   ├── product.md
 │   │   │   ├── structure.md
 │   │   │   └── tech.md
-│   │   └── README.md
-│   ├── discussion
-│   │   ├── README.md
-│   │   └── discussion-YYYYMMDDhhmmssSSS
-│   │       ├── 01_Context.md
-│   │       ├── ...
-│   │       ├── 14_Review-Request.md
-│   │       ├── 99_delta.md
-│   │       └── prototyping.yaml
-│   ├── contracts
-│   │   ├── api
-│   │   │   └── README.md
-│   │   ├── db
-│   │   │   └── README.md
-│   │   ├── ui
-│   │   │   └── README.md
-│   │   └── README.md
-│   ├── report
-│   │   ├── .gitignore
-│   │   ├── README.md
-│   │   └── run-20260218123456789
-│   │       ├── run.json
-│   │       ├── validator.json
-│   │       ├── traceability.json
-│   │       └── summary.md
-│   ├── review
-│   │   ├── .gitignore
-│   │   └── README.md
-│   ├── specs
-│   │   └── README.md
-│   └── README.md
+│   └── waivers.yml
 └── qfai.config.yaml
 ```
+
+`qfai init` does not seed `.qfai` workflow artifacts such as specs, discussions,
+contracts, evidence, reports, reviews, placeholder spec directories, or artifact
+README files. Those files are created later by QFAI skills when real work exists.
 
 Integration wrappers are also generated for immediate use:
 

@@ -2,7 +2,14 @@ import { access, readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 
 import { parseAgentFrontmatter } from "./agentFrontmatter.js";
-import { defaultConfig, findConfigRoot, getConfigPath, loadConfig, resolvePath } from "./config.js";
+import {
+  defaultConfig,
+  findConfigRoot,
+  getConfigPath,
+  loadConfig,
+  resolvePath,
+  type ConfigPathKey,
+} from "./config.js";
 import { readUiContractScreenContracts } from "./contracts/screenContracts.js";
 import { collectScenarioFiles } from "./discovery.js";
 import { collectFilesByGlobs, DEFAULT_GLOB_FILE_LIMIT } from "./fs.js";
@@ -78,6 +85,16 @@ function normalizeGlobs(values: string[]): string[] {
   return values.map((glob) => glob.trim()).filter((glob) => glob.length > 0);
 }
 
+const DEFAULT_SKILL_CREATED_PATH_KEYS = new Set<ConfigPathKey>([
+  "specsDir",
+  "contractsDir",
+  "discussionDir",
+]);
+
+function isDefaultSkillCreatedPath(key: ConfigPathKey, relPath: string): boolean {
+  return DEFAULT_SKILL_CREATED_PATH_KEYS.has(key) && relPath === defaultConfig.paths[key];
+}
+
 export async function createDoctorData(options: CreateDoctorDataOptions): Promise<DoctorData> {
   const startDir = path.resolve(options.startDir);
   const checks: DoctorCheck[] = [];
@@ -140,11 +157,16 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
   for (const key of pathKeys) {
     const resolved = resolvePath(root, config, key);
     const ok = await exists(resolved);
+    const missingDefaultSkillCreatedPath = !ok && isDefaultSkillCreatedPath(key, config.paths[key]);
     addCheck(checks, {
       id: `paths.${key}`,
-      severity: ok ? "ok" : "warning",
+      severity: ok ? "ok" : missingDefaultSkillCreatedPath ? "info" : "warning",
       title: `Path exists: ${key}`,
-      message: ok ? `${key} exists` : `${key} is missing (did you run 'qfai init'?)`,
+      message: ok
+        ? `${key} exists`
+        : missingDefaultSkillCreatedPath
+          ? `${key} is not created by init; QFAI skills create it when real artifacts exist`
+          : `${key} is missing (configure this path or create the directory)`,
       details: { path: toRelativePath(root, resolved) },
     });
 

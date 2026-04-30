@@ -96,9 +96,9 @@ npx qfai report
 
 `qfai validate` enforces spec-to-test traceability with directory-based rules.
 
-- `tests/e2e/**`: annotate all covered user stories with `QFAI:SPEC-XXXX:US-YYYY`.
-- `tests/integration/**`: annotate all covered test cases with `QFAI:SPEC-XXXX:TC-YYYY`.
-- `tests/api/**`: annotate all covered API contracts with `QFAI:CON-API-XXXX`.
+- `tests/e2e/**`: annotate all covered user stories with concrete IDs such as `QFAI:SPEC-0001:US-0001`.
+- `tests/integration/**`: annotate all covered test cases with concrete IDs such as `QFAI:SPEC-0001:TC-0001`.
+- `tests/api/**`: annotate all covered API contracts with concrete IDs such as `QFAI:CON-API-0001`.
 - `tests/api/**` and `tests/e2e/**` must not use `TC` annotations.
 - `AC` annotations are not required in code; AC coverage is treated as indirect through full `TC` coverage.
 
@@ -111,7 +111,7 @@ The agent reads QFAI assets under `.qfai/assistant/` and produces or updates SDD
 ### Where the skills live
 
 - QFAI canonical skills (SSOT): `.qfai/assistant/skills/**` (may be overwritten when you re-run `qfai init --force`).
-- Your local overrides: `.qfai/assistant/skills.local/**` (never overwritten by QFAI; prefer this for project-specific customizations).
+- QFAI no longer creates local override scaffolds. Project-specific guidance should live in your repository's normal agent docs or be created explicitly by your AI workflow.
 
 ### Minimal custom skill set
 
@@ -377,10 +377,7 @@ Typical customizations.
 │   │   │   │   └── SKILL.md
 │   │   │   └── qfai-verify
 │   │   │       └── SKILL.md
-│   │   ├── skills.local
-│   │   │   └── README.md
 │   │   ├── steering
-│   │   │   ├── README.md
 │   │   │   ├── agent-catalog.yml
 │   │   │   ├── agent-routing.yml
 │   │   │   ├── review-gate.rules.yml
@@ -388,39 +385,13 @@ Typical customizations.
 │   │   │   ├── product.md
 │   │   │   ├── structure.md
 │   │   │   └── tech.md
-│   │   └── README.md
-│   ├── discussion
-│   │   ├── README.md
-│   │   └── discussion-YYYYMMDDhhmmssSSS
-│   │       ├── 01_Context.md
-│   │       ├── ...
-│   │       ├── 14_Review-Request.md
-│   │       ├── 99_delta.md
-│   │       └── prototyping.yaml
-│   ├── contracts
-│   │   ├── api
-│   │   │   └── README.md
-│   │   ├── db
-│   │   │   └── README.md
-│   │   ├── ui
-│   │   │   └── README.md
-│   │   └── README.md
-│   ├── report
-│   │   ├── .gitignore
-│   │   ├── README.md
-│   │   └── run-20260218123456789
-│   │       ├── run.json
-│   │       ├── validator.json
-│   │       ├── traceability.json
-│   │       └── summary.md
-│   ├── review
-│   │   ├── .gitignore
-│   │   └── README.md
-│   ├── specs
-│   │   └── README.md
-│   └── README.md
+│   └── waivers.yml
 └── qfai.config.yaml
 ```
+
+`qfai init` does not seed `.qfai` workflow artifacts such as specs, discussions,
+contracts, evidence, reports, reviews, placeholder spec directories, or artifact
+README files. Those files are created later by QFAI skills when real work exists.
 
 Integration wrappers are also generated for immediate use:
 

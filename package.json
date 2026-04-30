@@ -9,7 +9,7 @@
   },
   "packageManager": "pnpm@9.12.3",
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=20.19.0"
   },
   "scripts": {
     "build": "pnpm -C packages/qfai build",

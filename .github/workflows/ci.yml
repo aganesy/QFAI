@@ -10,7 +10,7 @@ on:
 # Change these values to update the shared Node version for non-matrix jobs.
 # - NODE_LTS: used by lint, check-types, check-types-future, build
 env:
-  NODE_LTS: "20"
+  NODE_LTS: "20.19"
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
