@@ -24,11 +24,12 @@ Required files:
 - `14_Review-Request.md`
 - `99_delta.md`
 
-`prototyping.yaml` is optional and only for UI-bearing packs.
+UI-bearing discussion packs may include `prototyping.yaml` as an optional recommendation artifact; non-ui discussion packs typically omit it. For `ui_bearing: false`, typically omit `prototyping.yaml`. Current discussion-pack readiness does not block on missing `prototyping.yaml`.
 
 ## Rules
 
 - Run interview and requirement capture until `Disposition: open` is zero in `11_OQ-Register.md`.
+- OQ `Gate` values are `discussion`, `sdd`, `atdd`, `tdd`, or `ops`.
 - `deferred` is allowed only when `13_Deferred.md` has complete metadata.
 - Discussion outputs are rationale and intake logs; do not duplicate `.qfai/specs/**` SSOT.
 - `03_Story-Workshop.md` must include at least one Mermaid diagram.
@@ -47,11 +48,11 @@ For UI-bearing packs, use:
 - `uiux/34_evaluator_calibration.md`
 - `uiux/40_screen_contracts.md`
 
-Discussion must not choose a final winner or final design system. Those are downstream prototyping outputs.
+Discussion is exploration-first and must not choose a single visual winner or final design system. Those are downstream prototyping outputs.
 
 ## `prototyping.yaml`
 
-When present, use the namespaced schema:
+When `prototyping.yaml` is present, prefer the canonical namespaced schema:
 
 ```yaml
 prototyping:
@@ -64,4 +65,4 @@ prototyping:
   surface: web
 ```
 
-`recommended_mode` must be in `allowed_modes`; mode changes only `maxCycles`.
+`recommended_mode` MUST be included in `allowed_modes`; mode changes only `maxCycles`.

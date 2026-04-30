@@ -149,6 +149,23 @@ describe("validateConfigReferenceIntegrity", () => {
     expect(linkIssue?.severity).toBe("error");
   });
 
+  it("does not require the default calibration pack on a fresh init workspace", async () => {
+    const root = await newTempDir();
+    await seedDirs(root, [
+      ".qfai/specs",
+      ".qfai/contracts",
+      ".qfai/discussion",
+      ".qfai/assistant/skills",
+      "src",
+      "tests",
+    ]);
+    const issues = await validateConfigReferenceIntegrity(
+      root,
+      makeConfig({ packPath: ".qfai/evidence/calibration.yaml" }),
+    );
+    expect(issues.some((i) => i.code === "QFAI-CFG-LINK-003")).toBe(false);
+  });
+
   it("treats outDir absence as silent (lazy creation)", async () => {
     const root = await newTempDir();
     await seedDirs(root, [

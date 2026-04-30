@@ -391,8 +391,15 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     expect(content.split(/\r?\n/).length).toBeLessThanOrEqual(280);
   });
 
-  it("ensures ui contract docs define mockable prototype and copy-ready example", async () => {
-    const uiReadmePath = path.join(templateQfaiDir, "contracts", "ui", "README.md");
+  it("ensures ui contract guidance defines mockable prototype and copy-ready example", async () => {
+    const contractRulesPath = path.join(
+      templateQfaiDir,
+      "assistant",
+      "skills",
+      "qfai-sdd",
+      "references",
+      "contract-artifact-rules.md",
+    );
     const uiExamplePath = path.join(
       templateQfaiDir,
       "assistant",
@@ -412,22 +419,18 @@ describe("assets guardrails", { timeout: 30000 }, () => {
       "ui-contract.sample.yaml",
     );
 
-    const [readme, example, template] = await Promise.all([
-      readFile(uiReadmePath, "utf-8"),
+    const [rules, example, template] = await Promise.all([
+      readFile(contractRulesPath, "utf-8"),
       readFile(uiExamplePath, "utf-8"),
       readFile(uiContractTemplatePath, "utf-8"),
     ]);
 
-    expect(readme).toContain("prototype");
-    expect(readme).toContain("mockPaths");
-    expect(readme).toContain("markers");
-    expect(readme).toContain("elements");
-    expect(readme).toContain("actions");
-    expect(readme).toContain("elements[].id");
-    expect(readme).toContain("inspection-target text");
-    expect(readme).toContain("L2 `actions[]` minimum set");
-    expect(readme).toContain("FAQ");
-    expect(readme).toContain("QFAI-PROT-238");
+    expect(rules).toContain("mockable");
+    expect(rules).toContain("mockPaths");
+    expect(rules).toContain("markers");
+    expect(rules).toContain("elements");
+    expect(rules).toContain("actions");
+    expect(rules).toContain("inspection-target text");
 
     expect(example).toContain("QFAI-CONTRACT-ID");
     expect(example).toContain("prototype:");
@@ -486,9 +489,16 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     expect(uiFidelity).toContain(`"toolVersion": "${currentVersion}"`);
   });
 
-  it("ensures evidence readme documents uiFidelity mode requirements", async () => {
-    const evidenceReadmePath = path.join(templateQfaiDir, "evidence", "README.md");
-    const content = await readFile(evidenceReadmePath, "utf-8");
+  it("ensures prototyping evidence reference documents uiFidelity mode requirements", async () => {
+    const evidenceRulesPath = path.join(
+      templateQfaiDir,
+      "assistant",
+      "skills",
+      "qfai-prototyping",
+      "references",
+      "evidence-requirements.md",
+    );
+    const content = await readFile(evidenceRulesPath, "utf-8");
 
     // spec-0017 replaces "full-harness only" with unified mode invariant where
     // only maxCycles differs across modes, and the round-based harness now
@@ -662,9 +672,16 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     expect(content).not.toMatch(/reconsidered\s+in\s+v2/i);
   });
 
-  it("ensures contracts/ui/README.md has no legacy acceptance wording", async () => {
-    const uiReadmePath = path.join(templateQfaiDir, "contracts", "ui", "README.md");
-    const content = await readFile(uiReadmePath, "utf-8");
+  it("ensures contract artifact rules have no legacy acceptance wording", async () => {
+    const contractRulesPath = path.join(
+      templateQfaiDir,
+      "assistant",
+      "skills",
+      "qfai-sdd",
+      "references",
+      "contract-artifact-rules.md",
+    );
+    const content = await readFile(contractRulesPath, "utf-8");
     const bannedPhrases = ["accepted for backward compatibility", "backward compatibility"];
     for (const phrase of bannedPhrases) {
       expect(content).not.toContain(phrase);
@@ -676,13 +693,34 @@ describe("assets guardrails", { timeout: 30000 }, () => {
   // .npmignore files removed — gitignore entries now live in root .gitignore
   // (see ensureRootGitignoreEntries in init.ts)
 
-  it("ships review_archive gitignore in init template", async () => {
+  it("does not ship review_archive gitignore in init template", async () => {
     const reviewArchiveIgnorePath = path.join(templateQfaiDir, "review_archive", ".gitignore");
-    const content = await readFile(reviewArchiveIgnorePath, "utf-8");
+    expect(existsSync(reviewArchiveIgnorePath)).toBe(false);
+  });
 
-    expect(content).toContain("*");
-    expect(content).toContain("!.gitignore");
-    expect(content).toContain("!README.md");
+  it("does not ship .qfai artifact README or seed placeholder files", async () => {
+    const forbidden = await fg(
+      [
+        "**/README.md",
+        "specs/spec-XXXX/**",
+        "assistant/skills.local/**",
+        "evidence/calibration.yaml",
+      ],
+      {
+        cwd: templateQfaiDir,
+        absolute: false,
+        dot: true,
+      },
+    );
+
+    const artifactOnly = forbidden.filter(
+      (relativePath) => !relativePath.startsWith("assistant/"),
+    );
+    const deprecatedAssistantOnly = forbidden.filter((relativePath) =>
+      relativePath.startsWith("assistant/skills.local/"),
+    );
+
+    expect([...artifactOnly, ...deprecatedAssistantOnly].sort()).toEqual([]);
   });
 
   // review .gitignore removed — entries now in root .gitignore managed block
@@ -694,14 +732,11 @@ describe("assets guardrails", { timeout: 30000 }, () => {
       absolute: true,
     });
     const versionPattern = /\b(?:v)?\d+\.\d+\.\d+\b/;
-    const templateReadmePath = path.resolve(templateQfaiDir, "README.md");
     const approvedVersionedDocs = new Set([
       path.resolve(templateQfaiDir, "assistant", "instructions", "agent-selection.md"),
       path.resolve(templateQfaiDir, "assistant", "steering", "manifest.md"),
       path.resolve(templateQfaiDir, "assistant", "steering", "product.md"),
       path.resolve(templateQfaiDir, "assistant", "steering", "tech.md"),
-      path.resolve(templateQfaiDir, "evidence", "README.md"),
-      path.resolve(templateQfaiDir, "contracts", "ui", "README.md"),
     ]);
 
     const matches: string[] = [];
@@ -711,18 +746,6 @@ describe("assets guardrails", { timeout: 30000 }, () => {
         continue;
       }
       if (versionPattern.test(content)) {
-        if (path.resolve(filePath) === templateReadmePath) {
-          const lines = content.split(/\r?\n/);
-          const disallowed = lines.some((line) => {
-            if (!versionPattern.test(line)) {
-              return false;
-            }
-            return !/^Template version:\s*(?:v)?\d+\.\d+\.\d+\s*$/.test(line.trim());
-          });
-          if (!disallowed) {
-            continue;
-          }
-        }
         matches.push(path.relative(repoRoot, filePath));
       }
     }
@@ -1101,7 +1124,7 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     expect(content).toContain("prototyping.yaml");
   });
 
-  it("ensures qfai-discussion skill and discussion README use canonical pack wording", async () => {
+  it("ensures qfai-discussion skill and artifact rules use canonical pack wording", async () => {
     const skillPath = path.join(
       templateQfaiDir,
       "assistant",
@@ -1109,12 +1132,19 @@ describe("assets guardrails", { timeout: 30000 }, () => {
       "qfai-discussion",
       "SKILL.md",
     );
-    const readmePath = path.join(templateQfaiDir, "discussion", "README.md");
+    const rulesPath = path.join(
+      templateQfaiDir,
+      "assistant",
+      "skills",
+      "qfai-discussion",
+      "references",
+      "discussion-artifact-rules.md",
+    );
     const packageReadmePath = path.join(repoRoot, "packages", "qfai", "README.md");
 
-    const [skill, readme, packageReadme] = await Promise.all([
+    const [skill, rules, packageReadme] = await Promise.all([
       readFile(skillPath, "utf-8"),
-      readFile(readmePath, "utf-8"),
+      readFile(rulesPath, "utf-8"),
       readFile(packageReadmePath, "utf-8"),
     ]);
 
@@ -1122,7 +1152,7 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     const canonicalPhrase =
       "UI-bearing discussion packs may include `prototyping.yaml` as an optional recommendation artifact; non-ui discussion packs typically omit it.";
     expect(packageReadme).toContain(canonicalPhrase);
-    expect(readme).toContain(canonicalPhrase);
+    expect(rules).toContain(canonicalPhrase);
     expect(skill).toContain(canonicalPhrase);
   });
 
@@ -1281,12 +1311,31 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     }
   });
 
-  it("keeps review README schema examples aligned with validator target kinds", async () => {
-    const reviewReadmePath = path.join(templateQfaiDir, "review", "README.md");
-    const content = await readFile(reviewReadmePath, "utf-8");
+  it("keeps review playbooks aligned with validator target kinds", async () => {
+    const discussionPlaybookPath = path.join(
+      templateQfaiDir,
+      "assistant",
+      "skills",
+      "qfai-discussion",
+      "references",
+      "review-cycle-playbook.md",
+    );
+    const sddPlaybookPath = path.join(
+      templateQfaiDir,
+      "assistant",
+      "skills",
+      "qfai-sdd",
+      "references",
+      "review-cycle-playbook.md",
+    );
+    const [discussionPlaybook, sddPlaybook] = await Promise.all([
+      readFile(discussionPlaybookPath, "utf-8"),
+      readFile(sddPlaybookPath, "utf-8"),
+    ]);
 
-    expect(content).toContain('"kind": "spec|discussion"');
-    expect(content).not.toContain('"kind": "spec|require|discussion"');
+    expect(discussionPlaybook).toContain('target.kind` must be `"discussion"`');
+    expect(sddPlaybook).toContain('target.kind` must be `"spec"`');
+    expect(`${discussionPlaybook}\n${sddPlaybook}`).not.toContain("require");
   });
 
   it("ensures qfai-sdd no longer ships legacy spec-pack templates", async () => {
@@ -1447,24 +1496,45 @@ describe("assets guardrails", { timeout: 30000 }, () => {
   });
 
   // W5: SSOT alignment tests
-  it("discussion README declares prototyping.yaml as classification-aware", async () => {
-    const discussionReadmePath = path.join(templateQfaiDir, "discussion", "README.md");
-    const content = await readFile(discussionReadmePath, "utf-8");
+  it("discussion artifact rules declare prototyping.yaml as classification-aware", async () => {
+    const rulesPath = path.join(
+      templateQfaiDir,
+      "assistant",
+      "skills",
+      "qfai-discussion",
+      "references",
+      "discussion-artifact-rules.md",
+    );
+    const content = await readFile(rulesPath, "utf-8");
 
     expect(content).toMatch(/ui-bearing discussion pack/i);
     expect(content).toMatch(/ui_bearing:\s*false[\s\S]*typically omit `prototyping\.yaml`/i);
     expect(content).toContain("prototyping.yaml");
   });
 
-  it("workspace README directory map includes prototyping.yaml", async () => {
-    const workspaceReadmePath = path.join(templateQfaiDir, "README.md");
-    const content = await readFile(workspaceReadmePath, "utf-8");
+  it("discussion artifact rules include prototyping.yaml", async () => {
+    const rulesPath = path.join(
+      templateQfaiDir,
+      "assistant",
+      "skills",
+      "qfai-discussion",
+      "references",
+      "discussion-artifact-rules.md",
+    );
+    const content = await readFile(rulesPath, "utf-8");
 
     expect(content).toContain("prototyping.yaml");
   });
 
-  it("discussion README and SKILL.md use consistent OQ Gate enum", async () => {
-    const discussionReadmePath = path.join(templateQfaiDir, "discussion", "README.md");
+  it("discussion artifact rules and SKILL.md use consistent OQ Gate enum", async () => {
+    const rulesPath = path.join(
+      templateQfaiDir,
+      "assistant",
+      "skills",
+      "qfai-discussion",
+      "references",
+      "discussion-artifact-rules.md",
+    );
     const skillPath = path.join(
       templateQfaiDir,
       "assistant",
@@ -1474,19 +1544,16 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     );
 
     const [readmeContent, skillContent] = await Promise.all([
-      readFile(discussionReadmePath, "utf-8"),
+      readFile(rulesPath, "utf-8"),
       readFile(skillPath, "utf-8"),
     ]);
 
-    // README should expose the canonical gate enum in the OQ Register table.
     const canonicalGates = ["discussion", "sdd", "atdd", "tdd", "ops"];
 
     expect(skillContent).toContain("11_OQ-Register.md");
     expect(skillContent).toContain("open count is zero");
 
-    // README should NOT use deprecated discuss|require|sdd
     expect(readmeContent).not.toMatch(/`discuss`.*`require`.*`sdd`/);
-    // README should include canonical gates
     for (const gate of canonicalGates) {
       expect(readmeContent).toContain(gate);
     }
@@ -1507,9 +1574,16 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     expect(content).toMatch(/non-ui discussion packs typically omit it/i);
   });
 
-  it("discussion README contains prototyping: namespaced example", async () => {
-    const discussionReadmePath = path.join(templateQfaiDir, "discussion", "README.md");
-    const content = await readFile(discussionReadmePath, "utf-8");
+  it("discussion artifact rules contain prototyping: namespaced example", async () => {
+    const rulesPath = path.join(
+      templateQfaiDir,
+      "assistant",
+      "skills",
+      "qfai-discussion",
+      "references",
+      "discussion-artifact-rules.md",
+    );
+    const content = await readFile(rulesPath, "utf-8");
 
     expect(content).toContain("prototyping:");
     expect(content).toContain("recommended_mode:");
@@ -1518,25 +1592,46 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     expect(content).toContain("surface:");
   });
 
-  it("discussion README says namespaced schema applies when present", async () => {
-    const discussionReadmePath = path.join(templateQfaiDir, "discussion", "README.md");
-    const content = await readFile(discussionReadmePath, "utf-8");
+  it("discussion artifact rules say namespaced schema applies when present", async () => {
+    const rulesPath = path.join(
+      templateQfaiDir,
+      "assistant",
+      "skills",
+      "qfai-discussion",
+      "references",
+      "discussion-artifact-rules.md",
+    );
+    const content = await readFile(rulesPath, "utf-8");
 
-    expect(content).toMatch(/namespaced schema \(when present\)/i);
+    expect(content).toMatch(/when `prototyping\.yaml` is present, prefer the canonical namespaced schema/i);
   });
 
-  it("discussion README does not contain legacy-permissive wording", async () => {
-    const discussionReadmePath = path.join(templateQfaiDir, "discussion", "README.md");
-    const content = await readFile(discussionReadmePath, "utf-8");
+  it("discussion artifact rules do not contain legacy-permissive wording", async () => {
+    const rulesPath = path.join(
+      templateQfaiDir,
+      "assistant",
+      "skills",
+      "qfai-discussion",
+      "references",
+      "discussion-artifact-rules.md",
+    );
+    const content = await readFile(rulesPath, "utf-8");
 
     expect(content).not.toContain("legacy keys ignored");
     expect(content).not.toContain("legacy keys may be ignored");
     expect(content).not.toContain("accepted with warning");
   });
 
-  it("discussion README enforces current-only posture for prototyping.yaml", async () => {
-    const discussionReadmePath = path.join(templateQfaiDir, "discussion", "README.md");
-    const content = await readFile(discussionReadmePath, "utf-8");
+  it("discussion artifact rules enforce current-only posture for prototyping.yaml", async () => {
+    const rulesPath = path.join(
+      templateQfaiDir,
+      "assistant",
+      "skills",
+      "qfai-discussion",
+      "references",
+      "discussion-artifact-rules.md",
+    );
+    const content = await readFile(rulesPath, "utf-8");
 
     // Must express optional artifact / planner-first posture
     expect(content).toMatch(/optional recommendation artifact/i);
@@ -1569,8 +1664,15 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     expect(content).toMatch(/do not select a single visual winner/i);
   });
 
-  it("README and SKILL.md share namespaced-only semantics for prototyping.yaml", async () => {
-    const discussionReadmePath = path.join(templateQfaiDir, "discussion", "README.md");
+  it("artifact rules and SKILL.md share namespaced-only semantics for prototyping.yaml", async () => {
+    const rulesPath = path.join(
+      templateQfaiDir,
+      "assistant",
+      "skills",
+      "qfai-discussion",
+      "references",
+      "discussion-artifact-rules.md",
+    );
     const skillPath = path.join(
       templateQfaiDir,
       "assistant",
@@ -1580,7 +1682,7 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     );
 
     const [readme, skill] = await Promise.all([
-      readFile(discussionReadmePath, "utf-8"),
+      readFile(rulesPath, "utf-8"),
       readFile(skillPath, "utf-8"),
     ]);
 
@@ -1598,16 +1700,30 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     expect(skill).toMatch(/ui-bearing discussion packs may include `prototyping\.yaml`/i);
   });
 
-  it("discussion README declares recommended_mode must be included in allowed_modes", async () => {
-    const discussionReadmePath = path.join(templateQfaiDir, "discussion", "README.md");
-    const content = await readFile(discussionReadmePath, "utf-8");
+  it("discussion artifact rules declare recommended_mode must be included in allowed_modes", async () => {
+    const rulesPath = path.join(
+      templateQfaiDir,
+      "assistant",
+      "skills",
+      "qfai-discussion",
+      "references",
+      "discussion-artifact-rules.md",
+    );
+    const content = await readFile(rulesPath, "utf-8");
 
     expect(content).toMatch(/recommended_mode.*MUST be included in.*allowed_modes/i);
   });
 
-  it("discussion README declares current non-blocking behavior for prototyping.yaml", async () => {
-    const discussionReadmePath = path.join(templateQfaiDir, "discussion", "README.md");
-    const content = await readFile(discussionReadmePath, "utf-8");
+  it("discussion artifact rules declare current non-blocking behavior for prototyping.yaml", async () => {
+    const rulesPath = path.join(
+      templateQfaiDir,
+      "assistant",
+      "skills",
+      "qfai-discussion",
+      "references",
+      "discussion-artifact-rules.md",
+    );
+    const content = await readFile(rulesPath, "utf-8");
 
     expect(content).toMatch(/does not block on missing `prototyping\.yaml`/i);
     expect(content).toMatch(

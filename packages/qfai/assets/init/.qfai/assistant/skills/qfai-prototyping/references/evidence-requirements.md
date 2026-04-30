@@ -76,5 +76,6 @@ Evidence requirements are identical for all modes (low-cost / standard / full-ha
 - canonical latest paths mirror the newest accepted winner/polish artifacts
 - `review-bundle.json` has all required fields (candidates, axisDefs, designSystemChecklist, commandPlanRef)
 - evaluator review `evidenceRefs[]` entries are concrete paths to existing files (no placeholders)
+- evaluator review references must be concrete evidence refs, not synthetic labels
 - `prototyping.json` `maxCycles` matches the mode (QFAI-PROT-MODE-001)
 - `bestOfHistory`, `breakthrough`, and `reviewerGate` sections are present and populated

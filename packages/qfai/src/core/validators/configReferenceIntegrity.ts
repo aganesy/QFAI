@@ -15,7 +15,7 @@
 import { stat } from "node:fs/promises";
 import path from "node:path";
 
-import type { QfaiConfig, ConfigPathKey } from "../config.js";
+import { defaultConfig, type QfaiConfig, type ConfigPathKey } from "../config.js";
 import type { Issue } from "../types.js";
 import { issue } from "./utils.js";
 
@@ -104,6 +104,10 @@ export async function validateConfigReferenceIntegrity(
   // when neither resolves on disk.
   const packPath = config.prototyping?.calibration?.packPath;
   if (packPath !== undefined) {
+    const defaultPackPath = defaultConfig.prototyping?.calibration?.packPath;
+    if (packPath === defaultPackPath) {
+      return issues;
+    }
     const absolutePackPath = path.resolve(root, packPath);
     const exists = await pathExists(absolutePackPath);
     if (!exists) {

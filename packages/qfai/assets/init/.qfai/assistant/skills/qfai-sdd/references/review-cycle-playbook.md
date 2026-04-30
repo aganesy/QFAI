@@ -23,6 +23,11 @@ Use this file when you need the detailed review-cycle mechanics for `/qfai-sdd`.
 - `Rxx_<reviewer>.md`
 - evidence updates showing what changed after each failed cycle
 
+## summary.json
+
+- `target.kind` must be `"spec"` for SDD review packs.
+- Accepted serialized reviewer statuses are `PASS`, `FAIL`, and `NA`.
+
 ## Guardrails
 
 - Do not self-approve.

@@ -4,7 +4,7 @@ Use this file when `/qfai-sdd` creates or updates `.qfai/contracts/**`.
 
 ## Purpose
 
-Contracts are version-managed downstream execution inputs:
+Contracts are version-managed downstream execution truth and inputs:
 
 - `api/`: OpenAPI YAML
 - `db/`: SQL schema contracts
@@ -16,6 +16,7 @@ Discussion UI/UX files are upstream discovery artifacts. `/qfai-sdd` normalizes 
 ## Rules
 
 - Keep contract files minimal: only what specs and tests actually reference.
+- UI contracts must be mockable for prototypes: define stable `elements`, `actions`, `markers`, and `mockPaths` with enough inspection-target text for Playwright evidence.
 - `api/`, `db/`, and `ui/` contracts must declare `QFAI-CONTRACT-ID` at the top.
 - Use prefixes `CON-API-*`, `CON-DB-*`, and `CON-UI-*`.
 - `design/` files do not require `QFAI-CONTRACT-ID`, but they are execution-time SSOT for UI-bearing work.

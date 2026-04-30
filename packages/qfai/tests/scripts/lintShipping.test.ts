@@ -144,7 +144,7 @@ describe("lint-shipping fixture — detection rules", () => {
     expect(violations).toEqual([]);
   });
 
-  it("does NOT flag the seed spec-XXXX directory itself", async () => {
+  it("flags seed spec placeholder directories in init runtime assets", async () => {
     const root = await newTempDir();
     await mkdir(path.join(root, "assets/init/.qfai/specs/spec-XXXX/tdd"), { recursive: true });
     await writeFile(
@@ -154,7 +154,7 @@ describe("lint-shipping fixture — detection rules", () => {
     );
 
     const { violations } = await runLintShipping(root);
-    expect(violations).toEqual([]);
+    expect(violations.map((violation) => violation.pattern)).toContain("spec-path-literal");
   });
 
   it("does NOT flag JSDoc traceability lines in source files", async () => {
