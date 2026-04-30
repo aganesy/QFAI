@@ -40,11 +40,11 @@ Skill-specific examples:
 
 - Follow `.qfai/assistant/instructions/shared-skill-operating-baseline.md#format-ssot-mandatory`.
 
-- Before writing or editing any `.qfai/**` artifact, read and follow the relevant directory README template and sample:
-  - `.qfai/discussion/README.md`
-  - `.qfai/specs/README.md`
-  - `.qfai/contracts/**/README.md`
-  - `.qfai/evidence/README.md`
+- Before writing or editing any `.qfai/**` artifact, read the relevant skill-local reference or template:
+  - `.qfai/assistant/skills/qfai-discussion/references/discussion-artifact-rules.md`
+  - `.qfai/assistant/skills/qfai-sdd/references/spec-traceability-rules.md`
+  - `.qfai/assistant/skills/qfai-sdd/references/contract-artifact-rules.md`
+  - `.qfai/assistant/skills/qfai-prototyping/references/evidence-requirements.md`
 
 ## Inputs Priority (Preflight)
 
@@ -244,7 +244,7 @@ These principles are inspired by "constitution / articles" patterns used by othe
 
 ## README Rule
 
-Do not edit any `.qfai/**/README.md` file; raise an Open Question instead.
+Do not create `.qfai/**/README.md` files as scaffold or format documentation; keep artifact guidance in skill references/templates.
 
 - READMEs are reference guides. Follow their structure, templates, and checklists.
 

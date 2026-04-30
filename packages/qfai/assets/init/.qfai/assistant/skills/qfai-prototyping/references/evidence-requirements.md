@@ -57,6 +57,16 @@ Optional evidence is not allowed.
 
 Evidence requirements are identical for all modes (low-cost / standard / full-harness) per the resolved primary prototyping spec (run `qfai prototyping show-spec` to see which one applies). Modes differ only by `maxCycles` (1 / 3 / 20). Choosing a lower mode does NOT reduce evidence obligations.
 
+## Truthfulness rules
+
+- Supported prototyping surfaces are `web`, `mobile`, `desktop`, and `mixed`.
+- `cli`, API-only, backend-only, and `ui_bearing: false` specs are not prototyping execution targets.
+- Browser tool must be `playwright-cli`.
+- `uiFidelity.mode` must be `interactive`.
+- `mockPaths` is a negative-only ledger; allowed statuses are `fail` and `finding`.
+- Do not use synthetic refs such as `specs: ...`, self-references such as `prototyping.json#/runtimeGate`, or placeholder evidence refs.
+- Do not hardcode calibration pack versions.
+
 ## Validate gate expectations
 
 `qfai validate --profile prototyping --fail-on error` must be able to confirm, for every round:

@@ -46,7 +46,7 @@ This is the Exploration-First Harness: explore divergent visual directions befor
 - Completion requires every reviewer sub-agent to score every evaluation axis at `100/100`; `95` is not a completion border.
 - DONE is forbidden until `qfai validate --profile prototyping --fail-on error` passes and `/qfai-verify` can approve the run.
 
-Goal: generate divergent static prototypes, converge on a polished winner, extract handoff contracts, and preserve evidence for `/qfai-implement` without copying prototype-only code. surface / mode rules: `standard` is the default mode; see `references/surface-framing.md` and `.qfai/evidence/README.md`.
+Goal: generate divergent static prototypes, converge on a polished winner, extract handoff contracts, and preserve evidence for `/qfai-implement` without copying prototype-only code. surface / mode rules: `standard` is the default mode; see `references/surface-framing.md` and `references/evidence-requirements.md`.
 
 ## Surface / Mode
 

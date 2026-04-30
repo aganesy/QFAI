@@ -60,7 +60,7 @@ Skill-specific examples:
 
 - This skill processes **one test at a time** from `test-list.md`.
 - Each item goes through the full TDD micro-cycle: write a **failing test** first, then make it pass, then refactor.
-- The execution ledger is located at `.qfai/specs/spec-XXXX/tdd/test-list.md`.
+- The execution ledger is located at `.qfai/specs/<spec-id>/tdd/test-list.md`.
 - Items are processed **serially** by default. Parallel processing is allowed only when items target independent SUT slices with no shared state.
 - Status transitions follow a strict forward-only lifecycle: `todo` -> `red` -> `green` -> `refactor` -> `done`.
 - The `exception` status can be reached from any active status when an anomaly is detected.
@@ -97,7 +97,7 @@ Execute the TDD micro-cycle for each pending item in `test-list.md`, transitioni
 
 ## Execution Ledger: test-list.md
 
-The execution ledger at `.qfai/specs/spec-XXXX/tdd/test-list.md` tracks progress with these required columns:
+The execution ledger at `.qfai/specs/<spec-id>/tdd/test-list.md` tracks progress with these required columns:
 
 | Column    | Description                                              |
 | --------- | -------------------------------------------------------- |
@@ -298,7 +298,7 @@ Completion MUST NOT be declared when any of the following are true:
 
 ## Evidence (MANDATORY)
 
-Create/update: `.qfai/evidence/implement-spec-XXXX.md`
+Create/update: `.qfai/evidence/implement-<spec-id>.md`
 
 Required sections:
 
