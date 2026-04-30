@@ -14,7 +14,6 @@ const ANY_MARKDOWN_HEADING_PATTERN = /^\s*#{1,6}\s+/m;
 export async function validateAssistantAssets(root: string, config: QfaiConfig): Promise<Issue[]> {
   const skillsDir = resolvePath(root, config, "skillsDir");
   const assistantDir = path.dirname(skillsDir);
-  const skillsLocalDir = path.join(path.dirname(skillsDir), `${path.basename(skillsDir)}.local`);
 
   const driftProtocolPath = path.join(assistantDir, "instructions", "drift-protocol.md");
   const testLayersPath = path.join(assistantDir, "steering", "test-layers.md");
@@ -45,7 +44,7 @@ export async function validateAssistantAssets(root: string, config: QfaiConfig):
     );
   }
 
-  const skillFiles = await collectSkillFiles([skillsDir, skillsLocalDir]);
+  const skillFiles = await collectSkillFiles([skillsDir]);
   for (const skillFile of skillFiles) {
     const content = await readFile(skillFile, "utf-8");
 

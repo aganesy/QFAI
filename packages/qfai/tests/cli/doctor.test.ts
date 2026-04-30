@@ -45,16 +45,14 @@ describe("doctor", { timeout: 60000 }, () => {
     }
   });
 
-  it("reports skills.local as info when it exists", async () => {
+  it("does not report deprecated skills.local override checks", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-doctor-"));
     try {
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
 
       const parsed = await readDoctorData(root);
       const check = findCheck(parsed.checks, "paths.skillsLocalDir");
-      expect(check?.severity).toBe("info");
-      expect(typeof parsed.summary?.info).toBe("number");
-      expect((parsed.summary?.info ?? 0) >= 1).toBe(true);
+      expect(check).toBeUndefined();
     } finally {
       await rm(root, { recursive: true, force: true });
     }

@@ -149,18 +149,6 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
     });
 
     if (key === "skillsDir") {
-      const skillsLocalDir = path.join(path.dirname(resolved), `${path.basename(resolved)}.local`);
-      const found = await exists(skillsLocalDir);
-      addCheck(checks, {
-        id: "paths.skillsLocalDir",
-        severity: "info",
-        title: "Skills override (skills.local)",
-        message: found
-          ? "skills.local exists (local override can be used)"
-          : "skills.local is optional (create it to override skills)",
-        details: { path: toRelativePath(root, skillsLocalDir) },
-      });
-
       const diff = await diffProjectSkillsAgainstInitAssets(root, config);
       if (diff.status === "skipped_missing_skills") {
         addCheck(checks, {
@@ -199,10 +187,7 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
             missing: diff.missing,
             extra: diff.extra,
             changed: diff.changed,
-            nextActions: [
-              "変更内容を .qfai/assistant/skills.local/** に移す（同一相対パスで配置）",
-              "必要なら qfai init --force で skills を標準状態へ戻す（skills.local は保護されます）",
-            ],
+            nextActions: ["必要なら qfai init --force で skills を標準状態へ戻す"],
           },
         });
       }
