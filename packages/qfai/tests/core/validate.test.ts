@@ -1140,7 +1140,9 @@ describe("runValidate", { timeout: 15000 }, () => {
       expect(output).toContain(
         "  fix: skills の直編集は非推奨です（アップデート/再 init で上書きされ得ます）。",
       );
-      expect(output).toContain("\n       次のいずれかを実施してください:");
+      expect(output).toContain(
+        "\n       標準状態へ戻す場合は 'qfai init --force' を実行してください。",
+      );
     });
   });
 

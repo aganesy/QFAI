@@ -329,9 +329,7 @@ describe("qfai init", { timeout: 60000 }, () => {
       await expect(access(path.join(root, ".qfai", "specs", "_policies"))).rejects.toMatchObject({
         code: "ENOENT",
       });
-      await expect(
-        access(path.join(root, ".qfai", "specs", "spec-XXXX")),
-      ).rejects.toMatchObject({
+      await expect(access(path.join(root, ".qfai", "specs", "spec-XXXX"))).rejects.toMatchObject({
         code: "ENOENT",
       });
       await expect(

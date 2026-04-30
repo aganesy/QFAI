@@ -14,25 +14,27 @@ describe("package-only SSOT prototyping assets", () => {
     "qfai-prototyping",
     "SKILL.md",
   );
-  const evidenceReadmePath = path.resolve(
+  const evidenceRequirementsPath = path.resolve(
     process.cwd(),
     "assets",
     "init",
     ".qfai",
-    "evidence",
-    "README.md",
+    "assistant",
+    "skills",
+    "qfai-prototyping",
+    "references",
+    "evidence-requirements.md",
   );
 
-  it("SKILL.md and evidence README share mode/surface obligation vocabulary", async () => {
-    const [skill, readme] = await Promise.all([
+  it("SKILL.md and evidence requirements share mode/surface obligation vocabulary", async () => {
+    const [skill, evidenceRequirements] = await Promise.all([
       readFile(skillPath, "utf-8"),
-      readFile(evidenceReadmePath, "utf-8"),
+      readFile(evidenceRequirementsPath, "utf-8"),
     ]);
 
     // The absorbed prototyping harness replaces render/browser QA artifacts
     // with command-plans.json / review-bundle.json / evaluator-reviews/<cid>.json.
     for (const token of [
-      "surface / mode",
       "full-harness",
       "low-cost",
       "standard",
@@ -46,7 +48,9 @@ describe("package-only SSOT prototyping assets", () => {
       "evaluator-reviews",
     ]) {
       expect(skill, `SKILL.md missing token: ${token}`).toContain(token);
-      expect(readme, `evidence README missing token: ${token}`).toContain(token);
+      expect(evidenceRequirements, `evidence requirements missing token: ${token}`).toContain(
+        token,
+      );
     }
   });
 
@@ -56,9 +60,9 @@ describe("package-only SSOT prototyping assets", () => {
     expect(skill).not.toMatch(/npx\s+qfai\s+prototyping\b/i);
   });
 
-  it("README documents cli rejection semantics", async () => {
-    const readme = await readFile(evidenceReadmePath, "utf-8");
-    expect(readme).toContain("`cli`, API-only, backend-only");
-    expect(readme).toContain("are not prototyping execution targets");
+  it("evidence requirements document cli rejection semantics", async () => {
+    const evidenceRequirements = await readFile(evidenceRequirementsPath, "utf-8");
+    expect(evidenceRequirements).toContain("`cli`, API-only, backend-only");
+    expect(evidenceRequirements).toContain("are not prototyping execution targets");
   });
 });

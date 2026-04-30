@@ -713,9 +713,7 @@ describe("assets guardrails", { timeout: 30000 }, () => {
       },
     );
 
-    const artifactOnly = forbidden.filter(
-      (relativePath) => !relativePath.startsWith("assistant/"),
-    );
+    const artifactOnly = forbidden.filter((relativePath) => !relativePath.startsWith("assistant/"));
     const deprecatedAssistantOnly = forbidden.filter((relativePath) =>
       relativePath.startsWith("assistant/skills.local/"),
     );
@@ -1603,7 +1601,9 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     );
     const content = await readFile(rulesPath, "utf-8");
 
-    expect(content).toMatch(/when `prototyping\.yaml` is present, prefer the canonical namespaced schema/i);
+    expect(content).toMatch(
+      /when `prototyping\.yaml` is present, prefer the canonical namespaced schema/i,
+    );
   });
 
   it("discussion artifact rules do not contain legacy-permissive wording", async () => {
