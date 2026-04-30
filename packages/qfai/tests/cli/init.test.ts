@@ -81,15 +81,15 @@ describe("qfai init", { timeout: 60000 }, () => {
 
       expect(content).toContain(QFAI_GITIGNORE_MARKER);
       expect(content).toContain(".qfai/report/*");
-      expect(content).toContain("!.qfai/report/README.md");
+      expect(content).not.toContain("!.qfai/report/README.md");
       expect(content).toContain(".qfai/evidence/*");
-      expect(content).toContain("!.qfai/evidence/README.md");
+      expect(content).not.toContain("!.qfai/evidence/README.md");
       expect(content).toContain(".qfai/review/*");
-      expect(content).toContain("!.qfai/review/README.md");
+      expect(content).not.toContain("!.qfai/review/README.md");
       expect(content).not.toContain("!.qfai/review/review-*/");
       expect(content).not.toContain("!.qfai/review/review-*/**");
       expect(content).toContain(".qfai/discussion/*");
-      expect(content).toContain("!.qfai/discussion/README.md");
+      expect(content).not.toContain("!.qfai/discussion/README.md");
       expect(content).not.toContain(".qfai/discussion/discussion-*/");
 
       // No subdirectory .gitignore files should be created
@@ -133,7 +133,7 @@ describe("qfai init", { timeout: 60000 }, () => {
     }
   });
 
-  it("ignores every discussion child except README.md on init", async () => {
+  it("ignores every discussion child on init", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
     try {
       await execFile("git", ["init"], { cwd: root });
@@ -172,9 +172,7 @@ describe("qfai init", { timeout: 60000 }, () => {
         }
       };
 
-      expect(await checkIgnore(".qfai/discussion/README.md")).toContain(
-        "!.qfai/discussion/README.md",
-      );
+      expect(await checkIgnore(".qfai/discussion/README.md")).toContain(".qfai/discussion/*");
       expect(await checkIgnore(".qfai/discussion/uiux/30_exploration_brief.md")).toContain(
         ".qfai/discussion/*",
       );
@@ -243,10 +241,6 @@ describe("qfai init", { timeout: 60000 }, () => {
           "rcp_footer.md",
         ),
         path.join(root, ".qfai", "assistant", "skills", "qfai-sdd", "references", "rcp_footer.md"),
-        path.join(root, ".qfai", "discussion", "README.md"),
-        path.join(root, ".qfai", "review", "README.md"),
-        path.join(root, ".qfai", "review_archive", ".gitignore"),
-        path.join(root, ".qfai", "review_archive", "README.md"),
         // README files are regular files
         path.join(root, ".claude", "agents", "README.md"),
         path.join(root, ".github", "agents", "README.md"),
@@ -302,15 +296,15 @@ describe("qfai init", { timeout: 60000 }, () => {
         });
       }
 
-      const reportDir = path.join(root, ".qfai", "report");
-      await access(reportDir);
-      await access(path.join(reportDir, "README.md"));
+      await expect(access(path.join(root, ".qfai", "report", "README.md"))).rejects.toMatchObject({
+        code: "ENOENT",
+      });
     } finally {
       await rm(root, { recursive: true, force: true });
     }
   });
 
-  it("creates empty init scaffold outside assistant assets", async () => {
+  it("does not create artifact scaffold outside assistant assets", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
     try {
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
@@ -330,39 +324,25 @@ describe("qfai init", { timeout: 60000 }, () => {
           dot: true,
         },
       );
-      const unexpected = scaffoldFiles.filter((relativePath) => {
-        const fileName = path.basename(relativePath);
-        if (fileName === "README.md" || fileName === "test-list.md") return false;
-        // Default calibration pack is intentionally shipped so full-harness
-        // runs right after init without requiring a manual setup step.
-        if (relativePath === ".qfai/evidence/calibration.yaml") return false;
-        return true;
-      });
-      expect(unexpected).toEqual([]);
+      expect(scaffoldFiles).toEqual([]);
 
-      await access(path.join(root, ".qfai", "specs", "_policies"));
+      await expect(access(path.join(root, ".qfai", "specs", "_policies"))).rejects.toMatchObject({
+        code: "ENOENT",
+      });
+      await expect(
+        access(path.join(root, ".qfai", "specs", "spec-XXXX")),
+      ).rejects.toMatchObject({
+        code: "ENOENT",
+      });
+      await expect(
+        access(path.join(root, ".qfai", "assistant", "skills.local")),
+      ).rejects.toMatchObject({
+        code: "ENOENT",
+      });
 
       await expect(access(path.join(root, ".qfai", "discussions"))).rejects.toMatchObject({
         code: "ENOENT",
       });
-    } finally {
-      await rm(root, { recursive: true, force: true });
-    }
-  });
-
-  it("does not overwrite skills.local even with --force", async () => {
-    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
-    try {
-      await runInit({ dir: root, force: false, dryRun: false, yes: true });
-
-      const localReadme = path.join(root, ".qfai", "assistant", "skills.local", "README.md");
-      const customized = "customized skills.local\n";
-      await writeFile(localReadme, customized, "utf-8");
-
-      await runInit({ dir: root, force: true, dryRun: false, yes: true });
-
-      const after = await readFile(localReadme, "utf-8");
-      expect(after).toBe(customized);
     } finally {
       await rm(root, { recursive: true, force: true });
     }
@@ -379,9 +359,6 @@ describe("qfai init", { timeout: 60000 }, () => {
       const after = await readFile(existingConfig, "utf-8");
       expect(after).toBe("custom config\n");
 
-      const existingDiscussion = path.join(root, ".qfai", "discussion", "README.md");
-      await writeFile(existingDiscussion, "custom discussion\n", "utf-8");
-
       const existingConstitution = path.join(
         root,
         ".qfai",
@@ -392,9 +369,6 @@ describe("qfai init", { timeout: 60000 }, () => {
       await writeFile(existingConstitution, "custom constitution\n", "utf-8");
 
       await runInit({ dir: root, force: true, dryRun: false, yes: true });
-
-      const discussionAfter = await readFile(existingDiscussion, "utf-8");
-      expect(discussionAfter).toBe("custom discussion\n");
 
       const constitutionAfter = await readFile(existingConstitution, "utf-8");
       expect(constitutionAfter).toBe("custom constitution\n");
@@ -1059,12 +1033,12 @@ describe("qfai init", { timeout: 60000 }, () => {
       const content = await readFile(path.join(root, ".gitignore"), "utf-8");
       expect(content).toContain("# ── QFAI managed (generated by qfai init) ──");
       expect(content).toContain(".qfai/review/*");
-      expect(content).toContain("!.qfai/review/README.md");
+      expect(content).not.toContain("!.qfai/review/README.md");
       expect(content).not.toContain("!.qfai/review/review-*/");
       expect(content).toContain(".qfai/report/*");
       expect(content).toContain(".qfai/evidence/*");
       expect(content).toContain(".qfai/discussion/*");
-      expect(content).toContain("!.qfai/discussion/README.md");
+      expect(content).not.toContain("!.qfai/discussion/README.md");
       expect(content).not.toContain(".qfai/discussion/discussion-*/");
     } finally {
       await rm(root, { recursive: true, force: true });
@@ -1123,12 +1097,12 @@ describe("qfai init", { timeout: 60000 }, () => {
       const markerCount = content.split(QFAI_GITIGNORE_MARKER).length - 1;
       expect(markerCount).toBe(1);
       expect(content).toContain(".qfai/discussion/*");
-      expect(content).toContain("!.qfai/discussion/README.md");
+      expect(content).not.toContain("!.qfai/discussion/README.md");
       expect(content).not.toContain(".qfai/discussion/discussion-*/");
       expect(content).not.toContain("!.qfai/review/review-*/");
       expect(content).not.toContain("!.qfai/review/review-*/**");
       expect(content).toContain(".qfai/review/*");
-      expect(content).toContain("!.qfai/review/README.md");
+      expect(content).not.toContain("!.qfai/review/README.md");
     } finally {
       await rm(root, { recursive: true, force: true });
     }

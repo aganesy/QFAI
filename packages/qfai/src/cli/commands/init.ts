@@ -44,7 +44,7 @@ export async function runInit(options: InitOptions): Promise<void> {
 
   if (options.force) {
     info(
-      "NOTE: --force は .qfai/assistant/skills/** と symlink assets（.agents/.claude/.github/.codex）を再生成し、legacy 10_workflow.md と旧ラッパーを削除します（skills.local は保護され、specs/contracts 等は上書きしません）。",
+      "NOTE: --force は .qfai/assistant/skills/** と symlink assets（.agents/.claude/.github/.codex）を再生成し、legacy 10_workflow.md と旧ラッパーを削除します（specs/contracts 等は上書きしません）。",
     );
   }
 
@@ -59,14 +59,12 @@ export async function runInit(options: InitOptions): Promise<void> {
     force: false,
     dryRun: options.dryRun,
     conflictPolicy: "skip",
-    protect: ["assistant/skills.local"],
     exclude: ["assistant/skills"],
   });
   const skillsResult = await copyTemplatePaths(qfaiAssets, destQfai, ["assistant/skills"], {
     force: options.force,
     dryRun: options.dryRun,
     conflictPolicy: "skip",
-    protect: ["assistant/skills.local"],
   });
 
   // git config core.symlinks true（symlink 生成の前提条件）
@@ -77,7 +75,6 @@ export async function runInit(options: InitOptions): Promise<void> {
     force: options.force,
     dryRun: options.dryRun,
   });
-  await ensureRequiredEmptyScaffoldDirs(destQfai, options.dryRun);
   const gitignoreResult = await ensureRootGitignoreEntries(destRoot, options.dryRun);
   const removedLegacySkills = options.force
     ? await pruneLegacySkillFiles(destRoot, options.dryRun)
@@ -118,14 +115,6 @@ export async function runInit(options: InitOptions): Promise<void> {
     "init",
     destRoot,
   );
-}
-
-async function ensureRequiredEmptyScaffoldDirs(destQfai: string, dryRun: boolean): Promise<void> {
-  if (dryRun) {
-    return;
-  }
-
-  await mkdir(path.join(destQfai, "specs", "_policies"), { recursive: true });
 }
 
 // ---------------------------------------------------------------------------

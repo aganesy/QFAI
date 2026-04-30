@@ -48,8 +48,8 @@ describe("TC-0003-0002: Idempotent initialization", () => {
   });
 });
 
-// TC-0003-0003: --force skill overwrite + skills.local protection
-describe("TC-0003-0003: --force skill overwrite + skills.local protection", () => {
+// TC-0003-0003: --force skill overwrite
+describe("TC-0003-0003: --force skill overwrite", () => {
   it("init supports force option", async () => {
     const content = await readFile(INIT_CLI, "utf-8");
     expect(content).toMatch(/force/);
@@ -183,9 +183,10 @@ describe("TC-0003-0020: review-*/ サブディレクトリが gitignore 対象",
     const { QFAI_GITIGNORE_BLOCK, QFAI_GITIGNORE_REQUIRED_ENTRIES } =
       await import("../../src/core/gitignore.js");
     expect(QFAI_GITIGNORE_BLOCK).toContain(".qfai/discussion/*");
-    expect(QFAI_GITIGNORE_BLOCK).toContain("!.qfai/discussion/README.md");
+    expect(QFAI_GITIGNORE_BLOCK).not.toContain("!.qfai/discussion/README.md");
     expect(QFAI_GITIGNORE_BLOCK).not.toContain(".qfai/discussion/discussion-*/");
     expect(QFAI_GITIGNORE_BLOCK).not.toContain("!.qfai/review/review-*/");
+    expect(QFAI_GITIGNORE_REQUIRED_ENTRIES).not.toContain("!.qfai/discussion/README.md");
     expect(QFAI_GITIGNORE_REQUIRED_ENTRIES).not.toContain("!.qfai/review/review-*/");
     expect(QFAI_GITIGNORE_REQUIRED_ENTRIES).not.toContain("!.qfai/review/review-*/**");
   });
