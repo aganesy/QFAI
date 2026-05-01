@@ -3,7 +3,9 @@ import path from "node:path";
 import { buildContractIndex } from "./contractIndex.js";
 import { loadConfig, resolvePath, type ConfigLoadResult } from "./config.js";
 import { collectSpecEntries, type SpecEntry } from "./specLayout.js";
-import { EXPLORATION_ROUNDS } from "./prototyping/round.js";
+// v1.x EXPLORATION_ROUNDS removed in P2 (spec-0017). The roundLifecycle
+// scan below short-circuits to an empty rounds[] in v2.0.
+const EXPLORATION_ROUNDS: readonly string[] = [];
 import { parseFirstMarkdownTable } from "./specPackParsers.js";
 import {
   isCoverageTargetLevel,

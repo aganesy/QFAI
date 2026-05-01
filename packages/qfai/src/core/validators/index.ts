@@ -31,7 +31,6 @@ export { validateRepositoryHygiene } from "./repositoryHygiene.js";
 export { validateReviewArtifacts } from "./reviewArtifacts.js";
 export { validateSpecSplitByCapability } from "./specSplitByCapability.js";
 export { validateStatusInSpecs } from "./statusInSpecs.js";
-export { validateBreakthroughEvidence } from "./breakthroughEvidence.js";
 export { validateDesignToken } from "./designToken.js";
 export { validateHtmlMock } from "./htmlMock.js";
 export { validateMermaidScreenFlow } from "./mermaidScreenFlow.js";
@@ -51,8 +50,6 @@ export {
   validatePrototypingDesignContractReadiness,
   validateSddDesignContractReadiness,
 } from "./designContractReadiness.js";
-export { validateEvaluatorReviewHardFloor } from "./evaluatorReviewHardFloor.js";
-export { validatePrototypingCandidateConcept } from "./prototypingCandidateConcept.js";
 export { validateUiEvidenceArtifacts } from "./uiEvidenceArtifacts.js";
 export { isUiBearingSpec } from "./uixDetection.js";
 export {
