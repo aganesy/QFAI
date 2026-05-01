@@ -46,16 +46,21 @@ export type Iteration = {
 export type StopReason = "axes-exceptional" | "max-iterations";
 
 /** Pure function. No I/O. Used by both validator and CLI. */
-export function shouldStop(iterations: readonly Iteration[]): StopReason | null {
+export function shouldStop(iterations: readonly unknown[]): StopReason | null {
   if (iterations.length === 0) return null;
   const last = iterations[iterations.length - 1];
   if (last === undefined) return null;
   if (allFourAxesExceptional(last)) return "axes-exceptional";
-  if (last.index >= MAX_ITERATION_INDEX) return "max-iterations";
+  if (isRecord(last) && typeof last.index === "number" && last.index >= MAX_ITERATION_INDEX) {
+    return "max-iterations";
+  }
   return null;
 }
 
-export function allFourAxesExceptional(iter: Iteration): boolean {
+export function allFourAxesExceptional(iter: unknown): boolean {
+  if (!isRecord(iter) || !isRecord(iter.scores) || !Array.isArray(iter.slopPatternsDetected)) {
+    return false;
+  }
   return (
     iter.scores.designQuality === "exceptional" &&
     iter.scores.originality === "exceptional" &&
@@ -87,4 +92,8 @@ export function isOrdinalScore(value: unknown): value is OrdinalScore {
 
 export function isPivotDirective(value: unknown): value is PivotDirective {
   return typeof value === "string" && (PIVOT_DIRECTIVES as readonly string[]).includes(value);
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }

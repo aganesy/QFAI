@@ -106,6 +106,12 @@ async function seedPrototypingJson(
   );
 }
 
+async function seedRawPrototypingJson(root: string, body: unknown): Promise<void> {
+  const dir = path.join(root, ".qfai/evidence/prototyping");
+  await mkdir(dir, { recursive: true });
+  await writeFile(path.join(dir, "prototyping.json"), JSON.stringify(body), "utf-8");
+}
+
 // QFAI:SPEC-0017:TC-0017-0010
 describe("runPrototypingIterate cycle 0", () => {
   it("returns 0 and creates iter-00/ with iterate-plan.json (target-url provided)", async () => {
@@ -265,6 +271,28 @@ describe("runPrototypingIterate continue (exit 0)", () => {
         },
       },
     ]);
+
+    const exit = await runPrototypingIterate({ root, cycle: 1 });
+    expect(exit).toBe(0);
+
+    const planRaw = await readFile(
+      path.join(root, ".qfai/evidence/prototyping/iter-01/iterate-plan.json"),
+      "utf-8",
+    );
+    const plan = JSON.parse(planRaw) as { cycle: number };
+    expect(plan.cycle).toBe(1);
+  });
+
+  it("returns 0 instead of throwing when the latest prior iter is malformed", async () => {
+    const root = await newTempDir();
+    await seedMinimalProject(root);
+    await seedRawPrototypingJson(root, {
+      schemaVersion: "3.0",
+      specsCovered: ["0017"],
+      iterations: [{ index: 0, commitSha: "b".repeat(40) }],
+      acceptedIterationIndex: 0,
+      stopReason: null,
+    });
 
     const exit = await runPrototypingIterate({ root, cycle: 1 });
     expect(exit).toBe(0);

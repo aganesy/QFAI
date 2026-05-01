@@ -196,6 +196,35 @@ describe("validatePrototypingEvidenceV3", () => {
     expect(issues.some((i) => i.code === "QFAI-PROT2-005")).toBe(true);
   });
 
+  it("emits QFAI-PROT2-002 when slop is present but originality exceeds acceptable", async () => {
+    const root = await newTempDir();
+    const iter = validIter(0, false, ["slop-001-shadcn-zinc"]);
+    await seedPrototypingJson(root, {
+      schemaVersion: "3.0",
+      specsCovered: ["0017"],
+      iterations: [
+        {
+          ...iter,
+          scores: {
+            ...iter.scores,
+            originality: "strong",
+          },
+        },
+      ],
+      acceptedIterationIndex: 0,
+      stopReason: null,
+    });
+    const issues = await validatePrototypingEvidenceV3(root, makeConfig());
+    expect(
+      issues.some(
+        (i) =>
+          i.code === "QFAI-PROT2-002" &&
+          i.message.includes("scores.originality") &&
+          i.message.includes("slopPatternsDetected"),
+      ),
+    ).toBe(true);
+  });
+
   it("emits QFAI-PROT2-006 when iterations.length > 15", async () => {
     const root = await newTempDir();
     const iters = Array.from({ length: 16 }, (_, i) => validIter(i));

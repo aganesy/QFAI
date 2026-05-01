@@ -88,6 +88,10 @@ describe("shouldStop", () => {
     });
     expect(shouldStop([iter])).toBe("max-iterations");
   });
+
+  it("returns null instead of throwing when the latest iter is malformed", () => {
+    expect(shouldStop([{ index: 1, commitSha: "b".repeat(40) }])).toBeNull();
+  });
 });
 
 describe("allFourAxesExceptional", () => {
@@ -114,6 +118,10 @@ describe("allFourAxesExceptional", () => {
       slopPatternsDetected: ["slop-007-bento-grid"],
     });
     expect(allFourAxesExceptional(iter)).toBe(false);
+  });
+
+  it("returns false for malformed iteration-like values", () => {
+    expect(allFourAxesExceptional({ index: 0, scores: null })).toBe(false);
   });
 });
 

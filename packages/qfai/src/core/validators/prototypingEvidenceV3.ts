@@ -10,6 +10,7 @@
  *
  *   QFAI-PROT2-001  prototyping.json missing or unparseable
  *   QFAI-PROT2-002  schemaVersion must be "3.0"
+ *                     iteration field shape and score/slop invariants
  *   QFAI-PROT2-003  iterations[] must contain at least iter-00
  *   QFAI-PROT2-004  iterations[i].index must equal i (contiguous from 0)
  *   QFAI-PROT2-005  stopReason consistency:
@@ -254,6 +255,19 @@ export async function validatePrototypingEvidenceV3(
           "error",
           PROTO_JSON_REL,
           "prototypingEvidenceV3.slopPatternsDetected",
+        ),
+      );
+    } else if (
+      it.slopPatternsDetected.length > 0 &&
+      (it.scores.originality === "strong" || it.scores.originality === "exceptional")
+    ) {
+      issues.push(
+        issue(
+          "QFAI-PROT2-002",
+          `iterations[${i}].scores.originality must be weak|acceptable when slopPatternsDetected[] is non-empty.`,
+          "error",
+          PROTO_JSON_REL,
+          "prototypingEvidenceV3.scores.originality.slopCap",
         ),
       );
     }
