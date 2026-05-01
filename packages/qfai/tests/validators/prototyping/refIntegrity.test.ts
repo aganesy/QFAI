@@ -79,6 +79,18 @@ describe("validatePrototypingArtifactRefIntegrity", () => {
     expect(issues.map((issue) => issue.code)).toEqual(["QFAI-PROT2-009", "QFAI-PROT2-009"]);
   });
 
+  it("emits QFAI-PROT2-009 when iteration evidenceRefs are empty", async () => {
+    const root = await newTempDir();
+    await seedPrototypingJson(root, "", "   ");
+
+    const issues = await validatePrototypingArtifactRefIntegrity(root, defaultConfig);
+    expect(issues.map((issue) => issue.code)).toEqual(["QFAI-PROT2-009", "QFAI-PROT2-009"]);
+    expect(issues.map((issue) => issue.message)).toEqual([
+      "iterations[0].evidenceRefs.screenshot must be a non-empty repository-relative artifact path.",
+      "iterations[0].evidenceRefs.html must be a non-empty repository-relative artifact path.",
+    ]);
+  });
+
   it("checks prototype-handoff artifact references when present", async () => {
     const root = await newTempDir();
     const handoffDir = path.join(root, ".qfai", "contracts", "design");

@@ -25,8 +25,11 @@ export async function validatePrototypingArtifactRefIntegrity(
         refs?.screenshot,
         `iterations[${i}].evidenceRefs.screenshot`,
         issues,
+        { required: true },
       );
-      await validateArtifactRef(root, refs?.html, `iterations[${i}].evidenceRefs.html`, issues);
+      await validateArtifactRef(root, refs?.html, `iterations[${i}].evidenceRefs.html`, issues, {
+        required: true,
+      });
     }
   }
 
@@ -54,8 +57,20 @@ async function validateArtifactRef(
   value: unknown,
   field: string,
   issues: Issue[],
+  options: { required?: boolean } = {},
 ): Promise<void> {
   if (typeof value !== "string" || value.trim().length === 0) {
+    if (options.required) {
+      issues.push(
+        issue(
+          "QFAI-PROT2-009",
+          `${field} must be a non-empty repository-relative artifact path.`,
+          "error",
+          PROTO_JSON_REL,
+          "prototyping.refIntegrity.emptyArtifactRef",
+        ),
+      );
+    }
     return;
   }
   const resolved = resolveRepoRef(root, value);
