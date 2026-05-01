@@ -188,7 +188,7 @@ async function runPrototypingValidators(
     ...validateStateGate(root, config),
     ...(await validateCompletionCertificateIssues(root, config)),
     ...(await validateConfigReferenceIntegrity(root, config)),
-    ...validatePrototypingArtifactRefIntegrity(root, config),
+    ...(await validatePrototypingArtifactRefIntegrity(root, config)),
     ...(await validateSpecIdLinkage(root, config)),
   ];
 }

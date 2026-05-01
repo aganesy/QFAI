@@ -26,6 +26,7 @@ import path from "node:path";
 import type { QfaiConfig } from "../config.js";
 import type { Issue } from "../types.js";
 import { issue } from "./utils.js";
+import { resolvePrimaryPrototypingSpec } from "../prototyping/specResolution.js";
 import {
   MAX_ITERATIONS,
   MAX_ITERATION_INDEX,
@@ -58,7 +59,7 @@ function hasExceptionalStopShape(value: unknown): boolean {
 
 export async function validatePrototypingEvidenceV3(
   root: string,
-  _config: QfaiConfig,
+  config: QfaiConfig,
 ): Promise<Issue[]> {
   const issues: Issue[] = [];
   const protoJsonAbs = path.join(root, PROTO_JSON_REL);
@@ -67,15 +68,21 @@ export async function validatePrototypingEvidenceV3(
   try {
     parsed = JSON.parse(await readFile(protoJsonAbs, "utf-8"));
   } catch {
-    // Note: spec-0017 makes prototyping.json optional outside of an active
-    // run (you can have a repo with no prototyping run yet). Only emit the
-    // missing-file error when the file is referenced elsewhere; keep the
-    // unparseable case as a hard error so corrupted JSON is caught.
     try {
       // re-read to distinguish missing vs unparseable
       await readFile(protoJsonAbs, "utf-8");
     } catch {
-      // missing — silent
+      if (await resolvePrimaryPrototypingSpec(root, config)) {
+        issues.push(
+          issue(
+            "QFAI-PROT2-001",
+            "prototyping.json is missing for the primary UI-bearing prototyping spec.",
+            "error",
+            PROTO_JSON_REL,
+            "prototypingEvidenceV3.missing",
+          ),
+        );
+      }
       return issues;
     }
     issues.push(

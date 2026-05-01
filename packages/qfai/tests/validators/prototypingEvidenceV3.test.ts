@@ -91,6 +91,20 @@ describe("validatePrototypingEvidenceV3", () => {
     expect(issues).toEqual([]);
   });
 
+  it("emits QFAI-PROT2-001 when prototyping.json is missing for a UI-bearing prototyping spec", async () => {
+    const root = await newTempDir();
+    const specDir = path.join(root, ".qfai", "specs", "spec-0017");
+    await mkdir(specDir, { recursive: true });
+    await writeFile(
+      path.join(specDir, "01_Spec.md"),
+      "# Prototyping spec\n\nsurface_type: ui-bearing\n",
+      "utf-8",
+    );
+
+    const issues = await validatePrototypingEvidenceV3(root, makeConfig());
+    expect(issues.map((issue) => issue.code)).toEqual(["QFAI-PROT2-001"]);
+  });
+
   // QFAI:SPEC-0017:TC-0017-0015
   it("emits QFAI-PROT2-001 when prototyping.json is unparseable", async () => {
     const root = await newTempDir();
