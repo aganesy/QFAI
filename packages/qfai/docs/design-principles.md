@@ -75,8 +75,8 @@ ensures each layer has at least one preventive mechanism:
 | build-lint | `lint:shipping` (P6)                                                                      |
 | unit       | `validators-are-wired.test.ts` (P2)                                                       |
 | pipeline   | wired validators in `runPrototypingValidators` (P2)                                       |
-| E2E        | `prototyping-full-harness.test.ts` + `report-from-filesystem.test.ts` (P3, P8)            |
-| runtime    | `validateExecutionPlanIssues` / `validateDelegationMapIssues` / drift validators (P2, P3) |
+| E2E        | `prototypingV2E2E.test.ts` (spec-0017 P14)                                               |
+| runtime    | `validateDelegationMapIssues` / drift validators / `validatePrototypingEvidenceV3` (spec-0017) |
 | audit      | `completion-certificate.json` digest verification (P4)                                    |
 
 When adding new code, the contributor must ask: "if this code is silently

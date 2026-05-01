@@ -10,12 +10,12 @@ export type ReviewItemId =
   | "reference-pool-translation"
   | "anti-goal-enforcement"
   | "exploration-brief-quality"
-  | "rubric-specificity"
-  | "evaluator-calibration-quality"
-  | "selected-direction-adequacy"
   | "screen-contract-sufficiency"
   | "breakthrough-readiness"
   | "accept-refine-pivot-judgement";
+// v2.0 (spec-0017 P14): rubric-specificity, evaluator-calibration-quality,
+// and selected-direction-adequacy review items removed alongside their
+// underlying contracts.
 
 export type ReviewItem = {
   id: ReviewItemId;
@@ -58,39 +58,9 @@ export const CANONICAL_REVIEW_ITEMS: readonly ReviewItem[] = [
       "Brand signals and differentiation targets are actionable",
     ],
   },
-  {
-    id: "rubric-specificity",
-    name: "Rubric Specificity",
-    description:
-      "Checks whether the evaluation rubric is gradable and strong enough to push beyond bland outputs.",
-    evaluationCriteria: [
-      "Design quality and originality are explicit weighted axes",
-      "Craft and functionality are present as floors, not dominant forces",
-      "Rubric language penalizes generic default outputs",
-    ],
-  },
-  {
-    id: "evaluator-calibration-quality",
-    name: "Evaluator Calibration Quality",
-    description:
-      "Flags evaluator prompts that are too lenient or insufficiently skeptical about bland work.",
-    evaluationCriteria: [
-      "Good critique examples are distinct from too-lenient examples",
-      "Blandness-fail and originality-fail examples are documented",
-      "Evaluator guidance is strong enough to reject generic polish-only outputs",
-    ],
-  },
-  {
-    id: "selected-direction-adequacy",
-    name: "Selected Direction Adequacy",
-    description:
-      "Evaluates whether the selected direction artifact adequately captures the winner and carry-forward rules.",
-    evaluationCriteria: [
-      "Winning rationale is specific and evidence-backed",
-      "Carry-forward rules are actionable",
-      "Rejected or superseded directions are summarized",
-    ],
-  },
+  // v2.0 (spec-0017 P14): rubric-specificity, evaluator-calibration-quality,
+  // and selected-direction-adequacy review items were removed alongside
+  // their underlying v1.x contracts.
   {
     id: "screen-contract-sufficiency",
     name: "Screen Contract Sufficiency",

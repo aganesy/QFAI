@@ -67,47 +67,8 @@ function validUiuxFiles(): Record<string, string> {
     ].join("\n"),
     "uiux/32_design_anti_goals.md":
       "# Design Anti-goals\n\n- Do not use generic SaaS cards everywhere\n",
-    "uiux/33_exploration_rubric.md": [
-      "## Design Quality",
-      "Weighted axis",
-      "",
-      "## Originality",
-      "Weighted axis",
-      "",
-      "## Craft",
-      "Hard floor",
-      "",
-      "## Functionality",
-      "Hard floor",
-      "",
-      "## Brand Memorability",
-      "Hard floor",
-      "",
-      "## Category Distinctiveness",
-      "Hard floor",
-      "",
-      "## Template Dependency Risk",
-      "Hard floor",
-      "",
-      "## Localization Fit",
-      "Hard floor",
-    ].join("\n"),
-    "uiux/34_evaluator_calibration.md": [
-      "## Good Critique",
-      "Specific and skeptical.",
-      "",
-      "## Too Lenient",
-      "Avoid generic praise.",
-      "",
-      "## Blandness Fail",
-      "Reject safe defaults.",
-      "",
-      "## Originality Fail",
-      "Reject near-copy work.",
-      "",
-      "## Template Copy Fail",
-      "Reject default template surfaces.",
-    ].join("\n"),
+    // v2.0 (spec-0017 P14): rubric / calibration sidecars are no longer
+    // produced or validated.
     "uiux/40_screen_contracts.md":
       "### Screen: Dashboard\n- screen_id: dashboard\n- route: /dashboard\n- purpose: Main view\n- actor: user\n- primary_tasks:\n  - Review main status\n- secondary_tasks:\n  - Filter list\n- required_states:\n  - default\n  - loading\n  - empty\n  - error\n- transitions:\n  - open detail\n- observable_outcomes:\n  - status visible\n- notes_for_verify: check state transitions\n- notes_for_reviewer: keep rhythm bold\n",
     "uiux/50_review_input_bundle.md":
@@ -137,33 +98,28 @@ describe("validateDiscussionDesignHardening", () => {
     expect(issues.some((i) => i.file === "uiux/31_reference_pool.md")).toBe(true);
   });
 
-  it("brief / rubric / calibration の必須 heading が欠けると対応する error を返す", async () => {
+  it("brief の必須 heading が欠けると UIX-VAL-EXPLORE-BRIEF を返す", async () => {
+    // v2.0 (spec-0017 P14): rubric/calibration section validators were removed
+    // alongside the 33/34 sidecars; only the brief check remains.
     const root = await newRoot();
     const files = validUiuxFiles();
     files["uiux/30_exploration_brief.md"] = "## Product Intent\nOnly one section.";
-    files["uiux/33_exploration_rubric.md"] = "## Design Quality\nOnly one section.";
-    files["uiux/34_evaluator_calibration.md"] = "## Good Critique\nOnly one section.";
     await seedLatestPack(root, files);
 
     const issues = await validateDiscussionDesignHardening(root, defaultConfig);
 
     expect(issues.some((i) => i.code === "UIX-VAL-EXPLORE-BRIEF")).toBe(true);
-    expect(issues.some((i) => i.code === "UIX-VAL-EXPLORE-RUBRIC")).toBe(true);
-    expect(issues.some((i) => i.code === "UIX-VAL-EVAL-CALIBRATION")).toBe(true);
   });
 
-  it("anti-goals が箇条書きでなく review bundle に best-of-history が無いと issue を返す", async () => {
+  it("anti-goals が箇条書きでないと issue を返す (v2.0: best-of-history 検査は spec-0017 P14 で削除)", async () => {
     const root = await newRoot();
     const files = validUiuxFiles();
     files["uiux/32_design_anti_goals.md"] = "# Design Anti-goals\n\nAvoid blandness";
-    files["uiux/50_review_input_bundle.md"] =
-      "# Review Input Bundle\n\nReview the latest direction only.\n";
     await seedLatestPack(root, files);
 
     const issues = await validateDiscussionDesignHardening(root, defaultConfig);
 
     expect(issues.some((i) => i.code === "UIX-VAL-EXPLORE-ANTI-GOALS")).toBe(true);
-    expect(issues.some((i) => i.code === "UIX-VAL-EXPLORE-HISTORY")).toBe(true);
   });
 
   it("reference pool の必須列や placeholder が欠けると error を返す", async () => {

@@ -85,34 +85,10 @@ describe("parseArgs", () => {
     expect(parsed.options.doctorOut).toBe("tmp/out.json");
   });
 
-  it("rejects --out for non-preflight prototyping actions", () => {
-    const cwd = process.cwd();
-    const parsed = parseArgs(
-      [
-        "prototyping",
-        "round-start",
-        "--round",
-        "r5",
-        "--candidates",
-        "c1",
-        "--out",
-        "tmp/out.json",
-      ],
-      cwd,
-    );
-    expect(parsed.invalid).toBe(true);
-    expect(parsed.options.help).toBe(true);
-  });
-
-  it("rejects --format for non-preflight prototyping actions", () => {
-    const cwd = process.cwd();
-    const parsed = parseArgs(
-      ["prototyping", "round-start", "--round", "r5", "--candidates", "c1", "--format", "json"],
-      cwd,
-    );
-    expect(parsed.invalid).toBe(true);
-    expect(parsed.options.help).toBe(true);
-  });
+  // v2.0 (spec-0017 P3/P14): the v1.x round-* / --candidates / --survivors
+  // arg surface was removed; the iterate command takes only --cycle and
+  // --target-url. No equivalent --out / --format rejection tests are needed
+  // because the new CLI surface does not accept those flags for `iterate`.
 
   it("rejects unsupported --format values for prototyping preflight", () => {
     const cwd = process.cwd();

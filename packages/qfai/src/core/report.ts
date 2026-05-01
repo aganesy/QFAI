@@ -211,7 +211,10 @@ export type ReportSurfaceClassification = {
 };
 
 export type ReportFullHarnessExecution = {
-  mode: "full-harness";
+  // v2.0 (spec-0017 P14): mode tier removed. The single-thread loop is
+  // the only mode; this literal is retained for transitional report
+  // schema compatibility but the field is no longer populated.
+  mode: "single-thread-loop";
   iterations: number;
   terminationReason: string;
   finalScore: number;
@@ -225,19 +228,13 @@ export type ReportFullHarnessExecution = {
 };
 
 export type ReportRoundLifecycle = {
+  // v2.0 (spec-0017 P14): the v1.x ReportRoundLifecycle was anchored
+  // to the funnel + polish cycle taxonomy that is now removed. The shape
+  // is retained as a placeholder so legacy callers can opt in if they
+  // explicitly populate it, but the canonical /qfai-prototyping summary
+  // no longer emits it.
   schemaVersion: "2.0";
-  rounds: number;
-  roundIds: string[];
-  candidatesObserved: number;
-  perfectRounds: number;
-  harvestArtifacts: number;
-  narrowDecisions: number;
-  absorptionPlans: number;
-  reimplementations: number;
-  polishCycles: number;
-  completedPolishCycles: number;
-  perfectPolishCycles: number;
-  polishKinds: Record<string, number>;
+  iterations: number;
 };
 
 export type ReportPrototypingSummary = {
@@ -1250,26 +1247,10 @@ export function formatReportMarkdown(
 
     if (data.prototyping.roundLifecycle) {
       const lifecycle = data.prototyping.roundLifecycle;
-      lines.push("### prototyping.roundLifecycle");
+      lines.push("### prototyping.lifecycle (v2.0)");
       lines.push("");
       lines.push(`- schemaVersion: ${lifecycle.schemaVersion}`);
-      lines.push(`- rounds: ${lifecycle.rounds}`);
-      lines.push(`- round ids: ${lifecycle.roundIds.join(", ") || "(none)"}`);
-      lines.push(`- candidates observed: ${lifecycle.candidatesObserved}`);
-      lines.push(`- harvest artifacts: ${lifecycle.harvestArtifacts}`);
-      lines.push(`- narrow decisions: ${lifecycle.narrowDecisions}`);
-      lines.push(`- absorption plans: ${lifecycle.absorptionPlans}`);
-      lines.push(`- reimplementations: ${lifecycle.reimplementations}`);
-      lines.push(`- perfect rounds: ${lifecycle.perfectRounds}`);
-      lines.push(`- polish cycles: ${lifecycle.polishCycles}`);
-      lines.push(`- completed polish cycles: ${lifecycle.completedPolishCycles}`);
-      lines.push(`- perfect polish cycles: ${lifecycle.perfectPolishCycles}`);
-      if (Object.keys(lifecycle.polishKinds).length > 0) {
-        const kinds = Object.entries(lifecycle.polishKinds)
-          .map(([kind, count]) => `${kind}=${count}`)
-          .join(", ");
-        lines.push(`- polish kinds: ${kinds}`);
-      }
+      lines.push(`- iterations: ${lifecycle.iterations}`);
       lines.push("");
     }
 
@@ -1595,7 +1576,7 @@ export function formatReportMarkdown(
   );
   if (calibrationIssues.length > 0) {
     lines.push(
-      "- calibration 設定が不足しています。full-harness evidence に calibration config と scoring trace を追加してください。",
+      "- legacy v1.x calibration setting incomplete. (v2.0 prototyping removes per-mode calibration; this hint targets historical evidence files only.)",
     );
   }
   const fullHarnessCompletenessIssues = data.issues.filter((item) =>

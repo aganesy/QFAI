@@ -5,38 +5,38 @@
  *
  * When overrides are absent, system defaults are preserved with no error.
  *
- * spec-0012 TC-0012-0304 / TC-0012-0305 / AC-0012-0185, AC-0012-0186
+ * v2.0 (spec-0017 P14): the per-mode override map was removed alongside
+ * the v1.x mode tier; iteration count is global (15) via
+ * core/prototyping/iteration.ts#MAX_ITERATIONS.
  */
 
-import type { CalibrationOverrides, CalibrationPack, EffectiveCalibrationConfig } from "./types.js";
+import type { CalibrationPack, EffectiveCalibrationConfig } from "./types.js";
 import { DEFAULT_EFFECTIVE_CONFIG } from "./types.js";
+
+type CalibrationOverrideShape = {
+  perAxisMinimum?: number;
+};
 
 export function applyCalibrationOverrides(
   pack: CalibrationPack,
-  overrides?: CalibrationOverrides,
+  overrides?: CalibrationOverrideShape,
 ): EffectiveCalibrationConfig {
   const baseMaxIterations = pack.maxIterations;
-  const merged = overrides ?? pack.overrides;
 
-  if (!merged) {
+  if (!overrides) {
     return {
       maxIterations: baseMaxIterations,
       perAxisMinimum: DEFAULT_EFFECTIVE_CONFIG.perAxisMinimum,
-      maxIterationsByMode: {},
     };
   }
 
   const perAxisMinimum =
-    typeof merged.perAxisMinimum === "number"
-      ? merged.perAxisMinimum
+    typeof overrides.perAxisMinimum === "number"
+      ? overrides.perAxisMinimum
       : DEFAULT_EFFECTIVE_CONFIG.perAxisMinimum;
-
-  const maxIterationsByMode =
-    merged.maxIterationsByMode !== undefined ? { ...merged.maxIterationsByMode } : {};
 
   return {
     maxIterations: baseMaxIterations,
     perAxisMinimum,
-    maxIterationsByMode,
   };
 }

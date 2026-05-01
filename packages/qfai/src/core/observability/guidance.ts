@@ -1,18 +1,15 @@
 /**
- * ModeGuidance — advisory for when runtime-proof-heavy prototyping is recommended.
- * SPEC-0032
+ * ModeGuidance — advisory for prototyping runtime-proof recommendations.
  *
- * Advisory only — does not change mode.
+ * v2.0 (spec-0017 P14): the v1.x mode tier is removed. The guidance now
+ * always recommends the v2.0 single-thread evolution loop (the only mode)
+ * but retains the project-characteristic explanation so callers can
+ * explain *why* the loop is appropriate for the project shape.
  */
 
 import type { ModeRecommendation, ProjectCharacteristics } from "./types.js";
 
 export class ModeGuidance {
-  /**
-   * The current guidance still recommends full-harness when stronger runtime proof
-   * is desirable. Project characteristics are retained only to explain that
-   * recommendation; they do not mutate the selected mode.
-   */
   recommend(characteristics: ProjectCharacteristics): ModeRecommendation {
     const { fileCount, testRatio, specCoverage, codeComplexity } = characteristics;
     const reasons: string[] = [];
@@ -31,11 +28,11 @@ export class ModeGuidance {
     }
 
     return {
-      mode: "full-harness",
+      mode: "single-thread-loop",
       reasoning:
         reasons.length > 0
-          ? `packages/qfai prototyping recommends full-harness when stronger runtime proof is needed: ${reasons.join("; ")}.`
-          : "packages/qfai prototyping currently recommends full-harness as the strongest runtime-proof mode, even when project characteristics are favorable.",
+          ? `packages/qfai prototyping runs the single-thread evolution loop; project characteristics: ${reasons.join("; ")}.`
+          : "packages/qfai prototyping always runs the single-thread evolution loop (15 cycles, 4 ordinal axes).",
     };
   }
 }

@@ -1,12 +1,12 @@
 /**
  * Prototyping surface helpers (v2.0).
  *
- * v1.x mode (low-cost / standard / full-harness) and obligation derivation
- * are removed in P3 (spec-0017). v2.0 fixes iteration count globally to
- * MAX_ITERATIONS=15 in `core/prototyping/iteration.ts` (lands in P5).
+ * The v1.x mode tier and obligation derivation were removed in spec-0017
+ * P3. v2.0 fixes iteration count globally to MAX_ITERATIONS=15 in
+ * `core/prototyping/iteration.ts`.
  *
  * Kept here: surface-type helpers and a `playwright-cli` constant used by
- * v2.0 capture wiring (P5/P6).
+ * v2.0 capture wiring.
  */
 
 import {

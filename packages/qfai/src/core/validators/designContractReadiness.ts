@@ -8,20 +8,31 @@ import type { QfaiConfig } from "../config.js";
 import type { Issue } from "../types.js";
 import { issue } from "./utils.js";
 
+// v2.0 (spec-0017): SDD only normalizes the deviate-from / brand contracts.
+// The v1.x rubric / calibration / absorption-policy / selected-direction
+// contracts were removed; axes are global constants in
+// core/prototyping/iteration.ts.
 const REQUIRED_SDD_DESIGN_FILES = [
   "exploration-brief.yaml",
   "reference-pool.yaml",
   "brand-design.yaml",
-  "evaluation-rubric.yaml",
-  "evaluator-calibration.yaml",
-  "absorption-policy.yaml",
 ] as const;
+// v2.0: prototyping post-loop produces design-system.yaml (extracted from
+// final iter) and prototype-handoff.yaml (simplified schema, no
+// mustPreserve/mayAdapt/mustNotCopy).
 const REQUIRED_PROTOTYPING_DESIGN_FILES = [
-  "selected-direction.yaml",
   "design-system.yaml",
   "prototype-handoff.yaml",
 ] as const;
-const FORBIDDEN_LEGACY_DESIGN_FILES = ["anchor-selection.yaml", "evaluation-axes.yaml"] as const;
+const FORBIDDEN_LEGACY_DESIGN_FILES = [
+  "anchor-selection.yaml",
+  "evaluation-axes.yaml",
+  // spec-0017 v2.0: removed in P4
+  "evaluation-rubric.yaml",
+  "evaluator-calibration.yaml",
+  "absorption-policy.yaml",
+  "selected-direction.yaml",
+] as const;
 const REQUIRED_DESIGN_SYSTEM_CHECKLIST_KEYS = [
   "color",
   "typography",
@@ -106,7 +117,7 @@ async function validateDesignContractReadinessForStage(
           "designContractReadiness.requiredFile",
           undefined,
           "canonical",
-          `UI-bearing design workflows require pre-prototyping design contracts: exploration-brief.yaml, reference-pool.yaml, brand-design.yaml, evaluation-rubric.yaml, evaluator-calibration.yaml, and absorption-policy.yaml under \`${designDirRelative}/\`.`,
+          `UI-bearing design workflows require pre-prototyping design contracts: exploration-brief.yaml, reference-pool.yaml, and brand-design.yaml under \`${designDirRelative}/\`.`,
         ),
       );
     }
@@ -126,7 +137,7 @@ async function validateDesignContractReadinessForStage(
             "designContractReadiness.requiredFile",
             undefined,
             "canonical",
-            `UI-bearing prototyping completion requires selected-direction.yaml, design-system.yaml, and prototype-handoff.yaml under \`${designDirRelative}/\`.`,
+            `UI-bearing prototyping completion requires design-system.yaml and prototype-handoff.yaml under \`${designDirRelative}/\` (extracted from the final iter).`,
           ),
         );
       }
@@ -157,11 +168,10 @@ async function validateDesignContractReadinessForStage(
   issues.push(...(await validateExplorationBrief(root, config)));
   issues.push(...(await validateReferencePool(root, config)));
   issues.push(...(await validateBrandDesign(root, config)));
-  issues.push(...(await validateEvaluationRubric(root, config)));
-  issues.push(...(await validateEvaluatorCalibration(root, config)));
-  issues.push(...(await validateAbsorptionPolicy(root, config)));
+  // v2.0 (spec-0017 P4/P14): rubric/calibration/absorption-policy/
+  // selected-direction validators removed — those contracts no longer
+  // exist. Per-axis evaluation is encoded in core/prototyping/iteration.ts.
   if (stage === "prototyping") {
-    issues.push(...(await validateSelectedDirection(root, config)));
     issues.push(...(await validateDesignSystem(root, config)));
     issues.push(...(await validatePrototypeHandoff(root, config)));
   } else if (options.enforceNoPrematurePrototypingContracts ?? true) {
@@ -349,182 +359,10 @@ async function validateBrandDesign(root: string, config: QfaiConfig): Promise<Is
   );
 }
 
-async function validateEvaluationRubric(root: string, config: QfaiConfig): Promise<Issue[]> {
-  const filePath = path.join(root, config.paths.contractsDir, "design", "evaluation-rubric.yaml");
-  const parsed = await readYaml(filePath);
-  if (parsed.kind !== "ok") {
-    return parsed.kind === "invalid"
-      ? [
-          issue(
-            "QFAI-DCON-007",
-            "evaluation-rubric.yaml must parse as an object-shaped YAML document.",
-            "error",
-            toPosixRelative(root, filePath),
-            "designContractReadiness.evaluationRubricDocument",
-          ),
-        ]
-      : [];
-  }
-
-  const requiredArrays = ["axes", "hard_floors", "weighted_axes"];
-  const issues: Issue[] = [];
-  for (const key of requiredArrays) {
-    if (!Array.isArray(parsed.value[key])) {
-      issues.push(
-        issue(
-          "QFAI-DCON-003",
-          `evaluation-rubric.yaml is missing array '${key}'.`,
-          "error",
-          toPosixRelative(root, filePath),
-          "designContractReadiness.evaluationRubricArray",
-        ),
-      );
-    }
-  }
-  return issues;
-}
-
-async function validateEvaluatorCalibration(root: string, config: QfaiConfig): Promise<Issue[]> {
-  const filePath = path.join(
-    root,
-    config.paths.contractsDir,
-    "design",
-    "evaluator-calibration.yaml",
-  );
-  const parsed = await readYaml(filePath);
-  if (parsed.kind !== "ok") {
-    return parsed.kind === "invalid"
-      ? [
-          issue(
-            "QFAI-DCON-011",
-            "evaluator-calibration.yaml must parse as an object-shaped YAML document.",
-            "error",
-            toPosixRelative(root, filePath),
-            "designContractReadiness.evaluatorCalibrationDocument",
-          ),
-        ]
-      : [];
-  }
-
-  return validateRequiredStringArrayKeys(
-    filePath,
-    root,
-    parsed.value,
-    [
-      "good_critique_examples",
-      "too_lenient_examples",
-      "blandness_fail_examples",
-      "originality_fail_examples",
-    ],
-    "QFAI-DCON-010",
-    "evaluator-calibration.yaml is missing required field",
-    "designContractReadiness.evaluatorCalibrationField",
-  );
-}
-
-async function validateSelectedDirection(root: string, config: QfaiConfig): Promise<Issue[]> {
-  const filePath = path.join(root, config.paths.contractsDir, "design", "selected-direction.yaml");
-  const parsed = await readYaml(filePath);
-  if (parsed.kind !== "ok") {
-    return parsed.kind === "invalid"
-      ? [
-          issue(
-            "QFAI-DCON-008",
-            "selected-direction.yaml must parse as an object-shaped YAML document.",
-            "error",
-            toPosixRelative(root, filePath),
-            "designContractReadiness.selectedDirectionDocument",
-          ),
-        ]
-      : [];
-  }
-
-  const issues = validateRequiredStringArrayKeys(
-    filePath,
-    root,
-    parsed.value,
-    ["carry_forward_rules"],
-    "QFAI-DCON-004",
-    "selected-direction.yaml is missing required field",
-    "designContractReadiness.selectedDirectionField",
-  );
-
-  const winningRationale = parsed.value.winning_rationale;
-  if (!hasMeaningfulContractContent(winningRationale)) {
-    issues.push(
-      issue(
-        "QFAI-DCON-004",
-        "selected-direction.yaml is missing required field 'winning_rationale'.",
-        "error",
-        toPosixRelative(root, filePath),
-        "designContractReadiness.selectedDirectionField",
-      ),
-    );
-  }
-
-  const chosenDirectionId = parsed.value.chosen_direction_id;
-  if (!isNonEmptyStringValue(chosenDirectionId)) {
-    issues.push(
-      issue(
-        "QFAI-DCON-004",
-        "selected-direction.yaml is missing required field 'chosen_direction_id'.",
-        "error",
-        toPosixRelative(root, filePath),
-        "designContractReadiness.selectedDirectionField",
-      ),
-    );
-  }
-
-  return issues;
-}
-
-async function validateAbsorptionPolicy(root: string, config: QfaiConfig): Promise<Issue[]> {
-  const filePath = path.join(root, config.paths.contractsDir, "design", "absorption-policy.yaml");
-  const parsed = await readYaml(filePath);
-  if (parsed.kind !== "ok") {
-    return parsed.kind === "invalid"
-      ? [
-          issue(
-            "QFAI-DCON-020",
-            "absorption-policy.yaml must parse as an object-shaped YAML document.",
-            "error",
-            toPosixRelative(root, filePath),
-            "designContractReadiness.absorptionPolicyDocument",
-          ),
-        ]
-      : [];
-  }
-  const issues: Issue[] = [];
-  if (
-    typeof parsed.value.minAbsorptionsPerSurvivor !== "number" ||
-    !Number.isInteger(parsed.value.minAbsorptionsPerSurvivor) ||
-    parsed.value.minAbsorptionsPerSurvivor <= 0
-  ) {
-    issues.push(
-      absorptionPolicyIssue(
-        root,
-        filePath,
-        "minAbsorptionsPerSurvivor must be a positive integer.",
-      ),
-    );
-  }
-  for (const key of ["require_rejected_reason", "allow_adapt_required"] as const) {
-    if (typeof parsed.value[key] !== "boolean") {
-      issues.push(absorptionPolicyIssue(root, filePath, `${key} must be a boolean.`));
-    }
-  }
-  return issues;
-}
-
-function absorptionPolicyIssue(root: string, filePath: string, message: string): Issue {
-  return issue(
-    "QFAI-DCON-021",
-    `absorption-policy.yaml ${message}`,
-    "error",
-    toPosixRelative(root, filePath),
-    "designContractReadiness.absorptionPolicyField",
-  );
-}
+// v2.0: legacy validators (validateEvaluationRubric,
+// validateEvaluatorCalibration, validateSelectedDirection,
+// validateAbsorptionPolicy, absorptionPolicyIssue) removed in
+// spec-0017 P4/P14. Their target contracts no longer exist.
 
 async function validateNoPrematurePrototypingContracts(
   root: string,

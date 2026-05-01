@@ -832,13 +832,14 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     );
   });
 
-  it("keeps npm README release posture aligned with package contract", async () => {
+  it("keeps npm README release posture aligned with v2.0 prototyping contract", async () => {
     const npmReadmePath = path.join(repoRoot, "packages", "qfai", "README.md");
     const npmReadme = await readFile(npmReadmePath, "utf-8");
 
     const normalizedNpm = normalizeReadme(stripUrls(npmReadme));
-    expect(normalizedNpm).toContain("measurement-driven iteration accumulation");
-    expect(normalizedNpm).toContain("mandatory per screen in full-harness");
+    // v2.0 (spec-0017 P14): replaced v1.x phrasing with single-thread loop language.
+    expect(normalizedNpm).toMatch(/single-thread evolution loop|qfai prototyping iterate/);
+    expect(normalizedNpm).toMatch(/per-iter evidence|screenshot.*html.*review\.json/i);
   });
 
   it("keeps root copilot-instructions aligned with skill symlink guidance", async () => {

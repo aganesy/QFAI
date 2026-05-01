@@ -18,11 +18,10 @@ The agent reads the repository, produces the required artifacts, and iterates un
 ## Release status
 
 - Release posture: runtime truthfulness is enforced.
-- Prototyping is UI-only; `full-harness` is measurement-driven iteration accumulation for UI-bearing surfaces only.
+- Prototyping is UI-only; v2.0 (spec-0017) runs a single-thread evolution loop driven by `qfai prototyping iterate --cycle <n>`, with deterministic stop conditions (exit codes 0/64/65/2). The v1.x mode tier and full-harness machinery are removed.
 - Runtime observation is observed-only (no synthetic 200 / API / DB prototyping coverage).
-- Browser QA is mandatory per screen in full-harness, and `actionsWired` reports action coverage rather than finding count.
+- Per-iter evidence is `screenshot.png` + `index.html` per declared screen plus a single `review.json` (4-axis ordinal, prose critique, anti-slop detection, pivot directive).
 - Calibration SSOT is the calibration pack referenced by `calibrationRef.packPath`.
-- Current repo note: some repo-wide `qfai validate --fail-on error` blockers still come from historical review/evidence/ATDD/TDD artifacts and are being cleaned incrementally.
 
 ## Quick start
 
@@ -60,19 +59,15 @@ npx qfai report
     primary spec, UI contracts, design contract readiness, active agent-wrapper
     integrations, shipped role-input readiness, Playwright CLI launcher
     resolution/probing, and target URL reachability.
-    Note: prototyping evidence (`.qfai/evidence/prototyping.json`) is produced by the AI workflow / skills
-    (`/qfai-prototyping` — any mode; modes differ only in `maxCycles`, see spec-0012), not by a general-purpose end-user CLI flow.
+    Note: prototyping evidence (`.qfai/evidence/prototyping/prototyping.json` v3.0) is produced by the AI workflow
+    (`/qfai-prototyping` v2.0, see spec-0017), not by a general-purpose end-user CLI flow.
     Use `npx qfai prototyping preflight --target-url <url>` for a focused
-    prototyping preflight before the skill starts; it now surfaces blocking
-    `QFAI-DCON-*` design-contract issues alongside runtime assumptions, resolves
-    a runnable Playwright CLI launcher (project wrapper / local bin / PATH /
-    `npx --no-install`), and still treats the first real delegation failure as a
-    runtime hard-stop.
-    Use `npx qfai prototyping round-start --round <r5|r3|r2|r1> --candidates <csv> --target-url <url> --mode <mode>`
-    to generate the round-scoped review bundle and command plans the AI evaluator sub-agent consumes, then use
-    `round-harvest`, `round-narrow`, `round-absorb`, and `round-reimplement-verify` to advance the candidate funnel.
-    `qfai validate` consumes the resulting evidence files, including `mode.effective` and `fullHarness` metadata when present.
-    Traceability refs inside prototyping evidence must use repo-root-relative concrete artifact refs (for example `.qfai/specs/spec-0001/01_Spec.md#L3` or `.qfai/evidence/render.json#/screens/0`).
+    prototyping preflight before the skill starts; it surfaces blocking
+    `QFAI-DCON-*` design-contract issues alongside runtime assumptions and resolves a runnable Playwright CLI launcher.
+    Use `npx qfai prototyping iterate --cycle <n> --target-url <url>` to drive each cycle of the v2.0 single-thread
+    evolution loop. Exit codes: 0 (continue), 64 (convergence), 65 (max-iterations), 2 (input error).
+    Traceability refs inside prototyping evidence must use repo-root-relative concrete artifact refs
+    (for example `.qfai/specs/spec-0017/01_Spec.md#L3` or `.qfai/evidence/prototyping/iter-03/home.png`).
     Absolute paths are invalid. The same strict ref grammar is enforced for top-level and leaf evidence-bearing fields, including
     `runtimeGate.evidenceRefs`, `runtimeGate.ui[].declaredRef`, `runtimeGate.ui[].renderEvidenceRefs[]`,
     `runtimeGate.ui[].browserQaEvidenceRefs[]`, `specs[].coverageRefs[].declaredRef`, `specs[].coverageRefs[].observedRefs[]`,
@@ -124,9 +119,11 @@ QFAI includes a small set of custom skills (stored under `.qfai/assistant/skills
   as 15 required markdown files under `.qfai/discussion/discussion-<ts>/`.
   UI-bearing discussion packs may include `prototyping.yaml` as an optional recommendation artifact; non-ui discussion packs typically omit it.
 - **qfai-sdd**: Unified SDD entrypoint with discussion-pack preflight guard (missing/incomplete/blocking OQ causes stop + next action guidance).
-- **qfai-prototyping**: Build a contract-aligned UI prototype using the Playwright CLI + AI
-  evaluator harness (spec-0012). Modes (`low-cost`/`standard`/`full-harness`) run the same
-  strictest review cycle; only `maxCycles` (1/3/20) differs.
+- **qfai-prototyping** (v2.0, spec-0017): Single-thread design evolution loop. One prototype iterated
+  through up to 15 cycles of generate -> capture -> review with a 4-axis ordinal rubric, anti-slop
+  detection, prose critique, and explicit pivot permission. Stops deterministically when all four
+  axes hit `exceptional` (exit 64) or the iteration budget is exhausted (exit 65). The v1.x funnel,
+  mode tier, polish/branch cycles, and 100/100 completion gate are removed.
 - **qfai-atdd**: Implement acceptance tests driven by specs/scenarios.
 - **qfai-implement**: Unified TDD micro-cycle (Red/Green/Refactor) one test at a time using `test-list.md` as the execution ledger, including ledger status updates and exception closure.
 - **qfai-verify**: Run full-scan local quality gates (`validate --fail-on error`, `report`, repo gates) and produce reviewer-approved evidence under `.qfai/evidence/`.
