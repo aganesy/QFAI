@@ -45,6 +45,7 @@ import {
 import type { Issue, ValidationCounts, ValidationResult, ValidationWaiverEntry } from "./types.js";
 import { validateProject } from "./validate.js";
 import { resolveToolVersion } from "./version.js";
+import { resolvePrimaryPrototypingSpec } from "./prototyping/specResolution.js";
 
 export type ReportSummary = {
   specs: number;
@@ -1696,8 +1697,11 @@ async function collectPrototypingSummary(
   }
 
   const iterations = Array.isArray(doc.iterations) ? doc.iterations : [];
-  const expectedSpecIds = specEntries.map((entry) => entry.specNumber).sort();
   const observedSpecIds = readStringArray(doc.specsCovered).map(normalizeSpecNumber).sort();
+  const primaryPrototypingSpec = await resolvePrimaryPrototypingSpec(root, config);
+  const expectedSpecIds = primaryPrototypingSpec
+    ? [primaryPrototypingSpec.specId]
+    : specEntries.map((entry) => entry.specNumber).sort();
   const missingSpecIds = expectedSpecIds.filter((id) => !observedSpecIds.includes(id));
   const unexpectedSpecIds = observedSpecIds.filter((id) => !expectedSpecIds.includes(id));
   const specsCoverageStatus =

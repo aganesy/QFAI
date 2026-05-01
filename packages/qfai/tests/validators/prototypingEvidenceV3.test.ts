@@ -8,6 +8,10 @@ import { validatePrototypingEvidenceV3 } from "../../src/core/validators/prototy
 import type { QfaiConfig } from "../../src/core/config.js";
 
 const tempDirs: string[] = [];
+const VALID_PROSE_CRITIQUE = Array.from(
+  { length: 200 },
+  (_, index) => `critique-word-${index}`,
+).join(" ");
 
 async function newTempDir(): Promise<string> {
   const dir = await mkdtemp(path.join(os.tmpdir(), "qfai-protov3-"));
@@ -75,7 +79,7 @@ const validIter = (index: number, allExceptional = false, slop: string[] = []) =
         craft: "acceptable" as const,
         functionality: "acceptable" as const,
       },
-  proseCritique: "x".repeat(1500),
+  proseCritique: VALID_PROSE_CRITIQUE,
   slopPatternsDetected: slop,
   pivotDirective: "continue" as const,
   evidenceRefs: {
@@ -221,6 +225,26 @@ describe("validatePrototypingEvidenceV3", () => {
           i.code === "QFAI-PROT2-002" &&
           i.message.includes("scores.originality") &&
           i.message.includes("slopPatternsDetected"),
+      ),
+    ).toBe(true);
+  });
+
+  it("emits QFAI-PROT2-002 when proseCritique is outside the 200-500 word range", async () => {
+    const root = await newTempDir();
+    await seedPrototypingJson(root, {
+      schemaVersion: "3.0",
+      specsCovered: ["0017"],
+      iterations: [{ ...validIter(0), proseCritique: "too short" }],
+      acceptedIterationIndex: 0,
+      stopReason: null,
+    });
+    const issues = await validatePrototypingEvidenceV3(root, makeConfig());
+    expect(
+      issues.some(
+        (i) =>
+          i.code === "QFAI-PROT2-002" &&
+          i.message.includes("proseCritique") &&
+          i.message.includes("200-500"),
       ),
     ).toBe(true);
   });

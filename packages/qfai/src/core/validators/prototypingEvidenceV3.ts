@@ -10,7 +10,7 @@
  *
  *   QFAI-PROT2-001  prototyping.json missing or unparseable
  *   QFAI-PROT2-002  schemaVersion must be "3.0"
- *                     iteration field shape and score/slop invariants
+ *                     iteration field shape and score/prose invariants
  *   QFAI-PROT2-003  iterations[] must contain at least iter-00
  *   QFAI-PROT2-004  iterations[i].index must equal i (contiguous from 0)
  *   QFAI-PROT2-005  stopReason consistency:
@@ -36,6 +36,8 @@ import {
 } from "../prototyping/iteration.js";
 
 const PROTO_JSON_REL = ".qfai/evidence/prototyping/prototyping.json";
+const MIN_PROSE_CRITIQUE_WORDS = 200;
+const MAX_PROSE_CRITIQUE_WORDS = 500;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -211,6 +213,30 @@ export async function validatePrototypingEvidenceV3(
         ),
       );
     }
+    if (typeof it.proseCritique !== "string" || it.proseCritique.trim().length === 0) {
+      issues.push(
+        issue(
+          "QFAI-PROT2-002",
+          `iterations[${i}].proseCritique must be a non-empty 200-500 word string.`,
+          "error",
+          PROTO_JSON_REL,
+          "prototypingEvidenceV3.proseCritique",
+        ),
+      );
+    } else {
+      const wordCount = countWords(it.proseCritique);
+      if (wordCount < MIN_PROSE_CRITIQUE_WORDS || wordCount > MAX_PROSE_CRITIQUE_WORDS) {
+        issues.push(
+          issue(
+            "QFAI-PROT2-002",
+            `iterations[${i}].proseCritique must be 200-500 words (got ${wordCount}).`,
+            "error",
+            PROTO_JSON_REL,
+            "prototypingEvidenceV3.proseCritique.wordCount",
+          ),
+        );
+      }
+    }
     if (!isRecord(it.scores)) {
       issues.push(
         issue(
@@ -338,4 +364,9 @@ export async function validatePrototypingEvidenceV3(
   }
 
   return issues;
+}
+
+function countWords(value: string): number {
+  const trimmed = value.trim();
+  return trimmed.length === 0 ? 0 : trimmed.split(/\s+/u).length;
 }
