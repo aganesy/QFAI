@@ -44,8 +44,6 @@ For UI-bearing packs, use:
 - `uiux/30_exploration_brief.md`
 - `uiux/31_reference_pool.md`
 - `uiux/32_design_anti_goals.md`
-- `uiux/33_exploration_rubric.md`
-- `uiux/34_evaluator_calibration.md`
 - `uiux/40_screen_contracts.md`
 
 Discussion is exploration-first and must not choose a single visual winner or final design system. Those are downstream prototyping outputs.

@@ -1046,14 +1046,13 @@ describe("assets guardrails", { timeout: 30000 }, () => {
       absolute: false,
     });
 
+    // v2.0 (spec-0017 P4): the v1.x rubric/calibration/absorption-policy/
+    // selected-direction templates were removed.
     expect(templates.sort()).toEqual(
       [
         "api-contract.sample.yaml",
-        "absorption-policy.sample.yaml",
         "brand-design.sample.yaml",
         "db-contract.sample.sql",
-        "evaluation-rubric.sample.yaml",
-        "evaluator-calibration.sample.yaml",
         "exploration-brief.sample.yaml",
         "reference-pool.sample.yaml",
         "ui-contract.sample.yaml",
@@ -1063,43 +1062,6 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     const skillPath = path.join(templateQfaiDir, "assistant", "skills", "qfai-sdd", "SKILL.md");
     const skillContent = await readFile(skillPath, "utf-8");
     expect(skillContent).toContain("templates/contracts");
-  });
-
-  it("ensures evaluator-calibration sample uses validator-aligned keys", async () => {
-    const samplePath = path.join(
-      templateQfaiDir,
-      "assistant",
-      "skills",
-      "qfai-sdd",
-      "templates",
-      "contracts",
-      "evaluator-calibration.sample.yaml",
-    );
-    const content = await readFile(samplePath, "utf-8");
-
-    expect(content).toContain("good_critique_examples:");
-    expect(content).toContain("too_lenient_examples:");
-    expect(content).toContain("blandness_fail_examples:");
-    expect(content).toContain("originality_fail_examples:");
-    expect(content).not.toContain("good_critique:");
-    expect(content).not.toContain("too_lenient:");
-    expect(content).not.toContain("blandness_fail:");
-    expect(content).not.toContain("originality_fail:");
-  });
-
-  it("ensures evaluation-rubric sample enforces originality hard_floor", async () => {
-    const samplePath = path.join(
-      templateQfaiDir,
-      "assistant",
-      "skills",
-      "qfai-sdd",
-      "templates",
-      "contracts",
-      "evaluation-rubric.sample.yaml",
-    );
-    const content = await readFile(samplePath, "utf-8");
-
-    expect(content).toMatch(/- id: originality\s+min_score: \d+/);
   });
 
   it("ensures qfai-discussion skill contains required coverage topics", async () => {
@@ -1585,10 +1547,8 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     );
     const content = await readFile(rulesPath, "utf-8");
 
+    // v2.0 (spec-0017 P3): mode/recommended_mode/allowed_modes removed.
     expect(content).toContain("prototyping:");
-    expect(content).toContain("recommended_mode:");
-    expect(content).toContain("rationale:");
-    expect(content).toContain("allowed_modes:");
     expect(content).toContain("surface:");
   });
 
@@ -1603,9 +1563,7 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     );
     const content = await readFile(rulesPath, "utf-8");
 
-    expect(content).toMatch(
-      /when `prototyping\.yaml` is present, prefer the canonical namespaced schema/i,
-    );
+    expect(content).toMatch(/when `prototyping\.yaml` is present/i);
   });
 
   it("discussion artifact rules do not contain legacy-permissive wording", async () => {
@@ -1692,28 +1650,15 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     expect(readme).toMatch(/planner-first|exploration-first/i);
     expect(skill).toMatch(/planner-first|exploration-first/i);
 
-    // README owns the canonical schema fields; SKILL owns optional artifact semantics and planner guidance
-    expect(readme).toContain("recommended_mode");
+    // README owns the canonical schema fields; SKILL owns optional artifact semantics and planner guidance.
+    // v2.0 (spec-0017 P3): recommended_mode field removed.
+    expect(readme).toContain("prototyping.yaml");
     expect(skill).toContain("prototyping.yaml");
 
     expect(readme).toMatch(
       /ui-bearing.*may include.*prototyping\.yaml|optional recommendation artifact/i,
     );
     expect(skill).toMatch(/ui-bearing discussion packs may include `prototyping\.yaml`/i);
-  });
-
-  it("discussion artifact rules declare recommended_mode must be included in allowed_modes", async () => {
-    const rulesPath = path.join(
-      templateQfaiDir,
-      "assistant",
-      "skills",
-      "qfai-discussion",
-      "references",
-      "discussion-artifact-rules.md",
-    );
-    const content = await readFile(rulesPath, "utf-8");
-
-    expect(content).toMatch(/recommended_mode.*MUST be included in.*allowed_modes/i);
   });
 
   it("discussion artifact rules declare current non-blocking behavior for prototyping.yaml", async () => {
@@ -1728,9 +1673,7 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     const content = await readFile(rulesPath, "utf-8");
 
     expect(content).toMatch(/does not block on missing `prototyping\.yaml`/i);
-    expect(content).toMatch(
-      /when `prototyping\.yaml` is present, prefer the canonical namespaced schema/i,
-    );
+    expect(content).toMatch(/when `prototyping\.yaml` is present/i);
   });
 });
 

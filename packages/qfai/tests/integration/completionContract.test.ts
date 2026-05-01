@@ -128,20 +128,19 @@ describe("reviewer rejection/re-approval cycle", () => {
 
 // QFAI:SPEC-0003:TC-0003-0052
 describe("TC-0003-0052: canonical template generation", () => {
-  it("verifies exploration-first UIX templates exist after init", async () => {
+  it("verifies exploration-first UIX templates exist after init (v2.0)", async () => {
     const files = await readdir(uiuxTemplateDir);
     const canonicalTemplates = files.filter((f) =>
       [
         "30_exploration_brief.md",
         "31_reference_pool.md",
         "32_design_anti_goals.md",
-        "33_exploration_rubric.md",
-        "34_evaluator_calibration.md",
         "40_screen_contracts.md",
         "50_review_input_bundle.md",
       ].includes(f),
     );
-    expect(canonicalTemplates.length).toBeGreaterThanOrEqual(7);
+    // v2.0 (spec-0017 P4): 33_exploration_rubric.md and 34_evaluator_calibration.md removed.
+    expect(canonicalTemplates.length).toBeGreaterThanOrEqual(5);
     for (const tpl of canonicalTemplates) {
       await expect(access(path.join(uiuxTemplateDir, tpl))).resolves.toBeUndefined();
     }
@@ -166,7 +165,9 @@ describe("TC-0003-0054: old template deprecation marking", () => {
     expect(files).not.toContain("31_selected_anchor_screen.md");
     expect(files).not.toContain("20_design_eval_invariant.md");
     expect(files).not.toContain("23_design_eval_aggregate.md");
-    expect(files).toContain("33_exploration_rubric.md");
+    // v2.0: 33/34 also removed (replaced by global anti-slop in reviewer-prompt).
+    expect(files).not.toContain("33_exploration_rubric.md");
+    expect(files).not.toContain("34_evaluator_calibration.md");
   });
 });
 
