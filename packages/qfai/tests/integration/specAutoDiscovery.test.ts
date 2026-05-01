@@ -980,7 +980,6 @@ describe("TC-0014-0029: integration test existence", () => {
     expect(testFiles.length).toBeGreaterThanOrEqual(5);
     // Key test files must exist
     expect(testFiles).toContain("specAutoDiscovery.test.ts");
-    expect(testFiles).toContain("sliceRevertIndependence.test.ts");
   });
 });
 

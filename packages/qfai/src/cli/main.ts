@@ -97,14 +97,13 @@ export async function run(argv: string[], cwd: string): Promise<void> {
       {
         if (!options.prototypingAction) {
           error(
-            "qfai prototyping: unknown or missing subcommand. Expected: preflight|round-start|round-harvest|round-narrow|round-absorb|round-reimplement-verify|certify|show-spec",
+            "qfai prototyping: unknown or missing subcommand. Expected: preflight|iterate|certify|show-spec",
           );
           info(usage());
           process.exitCode = options.invalidExitCode;
           return;
         }
 
-        // v1.8.4 Phase 5: certify / show-spec do not take --round (run-scoped, not round-scoped)
         if (options.prototypingAction === "certify") {
           const resolvedRoot = await resolveRoot(options);
           process.exitCode = await runPrototypingCertify({
@@ -132,28 +131,13 @@ export async function run(argv: string[], cwd: string): Promise<void> {
           return;
         }
 
-        // round-* subcommands
-        if (!options.prototypingRound) {
-          error(`qfai prototyping ${options.prototypingAction}: --round is required.`);
-          info(usage());
-          process.exitCode = options.invalidExitCode;
-          return;
-        }
-        if (options.prototypingAction === "round-start" && !options.prototypingTargetUrl) {
-          error("qfai prototyping round-start: --target-url is required.");
-          info(usage());
-          process.exitCode = options.invalidExitCode;
-          return;
-        }
+        // iterate (v2.0): handled by stub `runPrototypingCommand` until P6
+        // implements `runPrototypingIterate`. The stub returns exit 2 with a
+        // migration message.
         const resolvedRoot = await resolveRoot(options);
         const exitCode = await runPrototypingCommand({
           root: resolvedRoot,
           action: options.prototypingAction,
-          ...(options.prototypingTargetUrl ? { targetUrl: options.prototypingTargetUrl } : {}),
-          mode: options.prototypingMode ?? "standard",
-          round: options.prototypingRound,
-          candidates: options.prototypingCandidates,
-          survivors: options.prototypingSurvivors,
         });
         process.exitCode = exitCode;
       }
@@ -176,11 +160,7 @@ Commands:
   doctor                       設定/パス/出力前提の診断
   guardrails                   Decision Guardrails の抽出/検査（list|extract|check）
   prototyping preflight        prototyping 実行前提（spec/ui/design contracts/roles/browser/targetUrl）を診断
-  prototyping round-start      round review bundle と command plans を生成
-  prototyping round-harvest    evaluator review を前提に harvest template を生成
-  prototyping round-narrow     survivor 決定を記録
-  prototyping round-absorb     absorption plan template を生成
-  prototyping round-reimplement-verify  reimplementation.json の構造を検証
+  prototyping iterate          single-thread evolution loop の cycle 確定 (v2.0、P6 実装予定)
   prototyping certify [--check]         completion-certificate.json を生成 / 検証 (v1.8.4)
   prototyping show-spec                 解決された primary prototyping spec を出力 (v1.8.4)
 
@@ -206,11 +186,8 @@ Options:
   --path <path>                 guardrails: 対象ファイル/ディレクトリ（複数指定可）
   --max <number>                guardrails extract: 最大件数
   --keyword <text>              guardrails list/extract: キーワードフィルタ
-  --target-url <url>            prototyping preflight/round-start: 評価対象の URL
-  --mode <low-cost|standard|full-harness>  prototyping round-start: 実行モード (既定: standard)
-  --round <r5|r3|r2|r1>         prototyping: 対象 round
-  --candidates <csv>            prototyping round-start: active candidate IDs
-  --survivors <csv>             prototyping round-narrow/round-absorb: surviving candidate IDs
+  --target-url <url>            prototyping preflight/iterate: 評価対象の URL
+  --cycle <number>              prototyping iterate: cycle index (0..14、v2.0)
   -h, --help      ヘルプ表示
 `;
 }

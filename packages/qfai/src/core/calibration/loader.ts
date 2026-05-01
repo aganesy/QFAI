@@ -1,15 +1,15 @@
 /**
- * Calibration pack loader — loads YAML-based calibration packs
- * with strict schema validation. Fail-closed: missing pack or invalid schema throws.
- * v1.7.15: no DEFAULT_PACK fallback, no version "1.0.0" complement.
+ * Calibration pack loader (v2.0).
+ *
+ * v1.x BreakthroughConfig / plateauDelta / plateauLookback fields removed
+ * in P3 (spec-0017). v2.0 fixes iteration count globally to 15 in
+ * `core/prototyping/iteration.ts#MAX_ITERATIONS`.
  */
 
 import { readFile, stat } from "node:fs/promises";
 import { parse as parseYaml } from "yaml";
 import {
-  DEFAULT_BREAKTHROUGH_CONFIG,
   type AlignmentExample,
-  type BreakthroughConfig,
   type CalibrationPack,
   type ThresholdConfig,
 } from "./types.js";
@@ -61,46 +61,6 @@ function validateThresholds(thresholds: unknown): ThresholdConfig {
   return { accept, refine };
 }
 
-function validateBreakthrough(raw: unknown): BreakthroughConfig {
-  if (raw === undefined) {
-    return { ...DEFAULT_BREAKTHROUGH_CONFIG };
-  }
-  if (typeof raw !== "object" || raw === null) {
-    throw new Error("Calibration pack 'breakthrough' must be an object when provided.");
-  }
-  const block = raw as Record<string, unknown>;
-  const minIterationsBeforeBranch =
-    typeof block.minIterationsBeforeBranch === "number"
-      ? block.minIterationsBeforeBranch
-      : DEFAULT_BREAKTHROUGH_CONFIG.minIterationsBeforeBranch;
-  const maxDiffLines =
-    typeof block.maxDiffLines === "number"
-      ? block.maxDiffLines
-      : DEFAULT_BREAKTHROUGH_CONFIG.maxDiffLines;
-  const branchCount =
-    typeof block.branchCount === "number"
-      ? block.branchCount
-      : DEFAULT_BREAKTHROUGH_CONFIG.branchCount;
-
-  if (!Number.isInteger(minIterationsBeforeBranch) || minIterationsBeforeBranch < 1) {
-    throw new Error(
-      "Calibration pack 'breakthrough.minIterationsBeforeBranch' must be a positive integer.",
-    );
-  }
-  if (!Number.isInteger(maxDiffLines) || maxDiffLines < 0) {
-    throw new Error("Calibration pack 'breakthrough.maxDiffLines' must be a non-negative integer.");
-  }
-  if (!Number.isInteger(branchCount) || branchCount < 1) {
-    throw new Error("Calibration pack 'breakthrough.branchCount' must be a positive integer.");
-  }
-
-  return {
-    minIterationsBeforeBranch,
-    maxDiffLines,
-    branchCount,
-  };
-}
-
 export class CalibrationLoader {
   private pack: CalibrationPack | null = null;
   private packPath: string;
@@ -122,7 +82,7 @@ export class CalibrationLoader {
       ) {
         throw new Error(
           `Calibration pack not found at ${this.packPath}. ` +
-            `Full-harness requires a valid calibration pack file.`,
+            `A valid calibration pack file is required.`,
         );
       }
       throw error;
@@ -130,11 +90,9 @@ export class CalibrationLoader {
 
     const raw = parseYaml(content) as Record<string, unknown>;
 
-    // version is required, no "1.0.0" fallback
     if (typeof raw.version !== "string" || raw.version.trim().length === 0) {
       throw new Error(
-        "Calibration pack missing required 'version' field. " +
-          "Provide an explicit version string.",
+        "Calibration pack missing required 'version' field. Provide an explicit version string.",
       );
     }
 
@@ -142,11 +100,6 @@ export class CalibrationLoader {
     const examples = rawExamples.map((e, i) => validateExample(e, i));
     const thresholds = validateThresholds(raw.thresholds);
 
-    // maxIterations, plateauDelta, plateauLookback are required.
-    // They must also be strictly positive — `computeTerminationReason` relies
-    // on `count >= maxIterations` and `slice(-plateauLookback)`, so `0` or
-    // negative values would mark the very first iteration as terminal and
-    // record a false convergence event.
     if (typeof raw.maxIterations !== "number" || !Number.isFinite(raw.maxIterations)) {
       throw new Error(
         "Calibration pack missing required 'maxIterations' (must be a finite number)",
@@ -155,29 +108,12 @@ export class CalibrationLoader {
     if (!Number.isInteger(raw.maxIterations) || raw.maxIterations < 1) {
       throw new Error("Calibration pack 'maxIterations' must be a positive integer (>= 1).");
     }
-    if (typeof raw.plateauDelta !== "number" || !Number.isFinite(raw.plateauDelta)) {
-      throw new Error("Calibration pack missing required 'plateauDelta' (must be a finite number)");
-    }
-    if (raw.plateauDelta <= 0) {
-      throw new Error("Calibration pack 'plateauDelta' must be a finite number greater than 0.");
-    }
-    if (typeof raw.plateauLookback !== "number" || !Number.isFinite(raw.plateauLookback)) {
-      throw new Error(
-        "Calibration pack missing required 'plateauLookback' (must be a finite number)",
-      );
-    }
-    if (!Number.isInteger(raw.plateauLookback) || raw.plateauLookback < 1) {
-      throw new Error("Calibration pack 'plateauLookback' must be a positive integer (>= 1).");
-    }
 
     this.pack = {
       version: raw.version,
       examples,
       thresholds,
       maxIterations: raw.maxIterations,
-      plateauDelta: raw.plateauDelta,
-      plateauLookback: raw.plateauLookback,
-      breakthrough: validateBreakthrough(raw.breakthrough),
     };
 
     try {

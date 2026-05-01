@@ -24,20 +24,10 @@ export type ParsedArgs = {
     guardrailsMax?: number;
     guardrailsKeyword?: string;
     platform?: string;
-    prototypingAction?:
-      | "preflight"
-      | "round-start"
-      | "round-harvest"
-      | "round-narrow"
-      | "round-absorb"
-      | "round-reimplement-verify"
-      | "certify"
-      | "show-spec";
+    prototypingAction?: "preflight" | "iterate" | "certify" | "show-spec";
     prototypingTargetUrl?: string;
-    prototypingMode?: "low-cost" | "standard" | "full-harness";
-    prototypingRound?: "r5" | "r3" | "r2" | "r1";
-    prototypingCandidates?: string[];
-    prototypingSurvivors?: string[];
+    /** v2.0: --cycle <n> for `qfai prototyping iterate --cycle <n>` (P5/P6). */
+    prototypingCycle?: number;
     /** v1.8.4: --check flag for `qfai prototyping certify --check`. */
     prototypingCheckOnly?: boolean;
     help: boolean;
@@ -100,11 +90,7 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
     if (candidate && !candidate.startsWith("--")) {
       if (
         candidate === "preflight" ||
-        candidate === "round-start" ||
-        candidate === "round-harvest" ||
-        candidate === "round-narrow" ||
-        candidate === "round-absorb" ||
-        candidate === "round-reimplement-verify" ||
+        candidate === "iterate" ||
         candidate === "certify" ||
         candidate === "show-spec"
       ) {
@@ -313,61 +299,18 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         i += 1;
         break;
       }
-      case "--mode": {
+      case "--cycle": {
         const next = readOptionValue(args, i);
         if (next === null) {
           markInvalid();
           break;
         }
-        if (next === "low-cost" || next === "standard" || next === "full-harness") {
-          options.prototypingMode = next;
+        const parsed = Number.parseInt(next, 10);
+        if (!Number.isInteger(parsed) || parsed < 0) {
+          markInvalid();
         } else {
-          markInvalid();
+          options.prototypingCycle = parsed;
         }
-        i += 1;
-        break;
-      }
-      case "--round": {
-        const next = readOptionValue(args, i);
-        if (next === null) {
-          markInvalid();
-          break;
-        }
-        if (next === "r5" || next === "r3" || next === "r2" || next === "r1") {
-          options.prototypingRound = next;
-        } else {
-          markInvalid();
-        }
-        i += 1;
-        break;
-      }
-      case "--candidates": {
-        const next = readOptionValue(args, i);
-        if (next === null) {
-          markInvalid();
-          break;
-        }
-        const values = splitCsvOption(next);
-        if (values.length === 0) {
-          markInvalid();
-          break;
-        }
-        options.prototypingCandidates = values;
-        i += 1;
-        break;
-      }
-      case "--survivors": {
-        const next = readOptionValue(args, i);
-        if (next === null) {
-          markInvalid();
-          break;
-        }
-        const values = splitCsvOption(next);
-        if (values.length === 0) {
-          markInvalid();
-          break;
-        }
-        options.prototypingSurvivors = values;
         i += 1;
         break;
       }
@@ -401,13 +344,6 @@ function readOptionValue(args: string[], index: number): string | null {
     return null;
   }
   return next;
-}
-
-function splitCsvOption(value: string): string[] {
-  return value
-    .split(",")
-    .map((item) => item.trim())
-    .filter((item) => item.length > 0);
 }
 
 function applyFormatOption(

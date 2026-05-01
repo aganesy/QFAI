@@ -52,17 +52,13 @@ Discussion is exploration-first and must not choose a single visual winner or fi
 
 ## `prototyping.yaml`
 
-When `prototyping.yaml` is present, prefer the canonical namespaced schema:
+When `prototyping.yaml` is present, use the v2.0 single-thread schema:
 
 ```yaml
 prototyping:
-  recommended_mode: standard
-  rationale: Standard mode matches our review cadence.
-  allowed_modes:
-    - low-cost
-    - standard
-    - full-harness
-  surface: web
+  surface: web      # web | mobile | desktop | mixed
 ```
 
-`recommended_mode` MUST be included in `allowed_modes`; mode changes only `maxCycles`.
+The v1.x `recommended_mode` / `allowed_modes` / `mode_expectations` fields
+were removed in spec-0017 P3 (the single-thread evolution loop fixes
+iteration count globally to 15).
