@@ -18,7 +18,10 @@ The agent reads the repository, produces the required artifacts, and iterates un
 ## Release status
 
 - Release posture: runtime truthfulness is enforced.
-- Prototyping is UI-only; v2.0 (spec-0017) runs a single-thread evolution loop driven by `qfai prototyping iterate --cycle <n>`, with deterministic stop conditions (exit codes 0/64/65/2). The v1.x mode tier and full-harness machinery are removed.
+- Prototyping is UI-only; v2.0 (spec-0017) runs a single-thread evolution loop
+  driven by `qfai prototyping iterate --cycle <n>`, with deterministic stop
+  conditions (exit codes 0/64/65/2). The v1.x mode tier and full-harness
+  machinery are removed.
 - Runtime observation is observed-only (no synthetic 200 / API / DB prototyping coverage).
 - Per-iter evidence is `screenshot.png` + `index.html` per declared screen plus a single `review.json` (4-axis ordinal, prose critique, anti-slop detection, pivot directive).
 - Calibration SSOT is the calibration pack referenced by `calibrationRef.packPath`.

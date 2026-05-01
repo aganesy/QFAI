@@ -210,4 +210,3 @@
 
 - `TC-0012-0001..TC-0012-0284` remain reserved traceability IDs for existing implementation/test slices.
 - Their pre-v1.8.1 weighted-total narratives are superseded by the current reviewer-score-centered execution model.
-

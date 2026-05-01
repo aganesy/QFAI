@@ -19,14 +19,14 @@ Use these checklists as the detailed operational guide for `/qfai-sdd`.
 
 ## Phase 2: Slice
 
-- Create or update `spec-XXXX/01..08`.
+- Create or update `<spec-id>/01..08`.
 - Check `US -> AC -> BR -> EX -> TC`.
 - Ensure `01_Spec.md` remains the execution Primary SSOT.
 - Stop if slice gate fails.
 
 ## Phase 3: Plan finalize
 
-- Create or update `spec-XXXX/10_Plan.md`.
+- Create or update `<spec-id>/10_Plan.md`.
 - Keep the file How-only.
 - Do not finalize the plan before at least one slice gate passes.
 

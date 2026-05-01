@@ -13,9 +13,9 @@
 import type { QfaiConfig } from "../../config.js";
 import type { Issue } from "../../types.js";
 
-export async function validatePrototypingArtifactRefIntegrity(
+export function validatePrototypingArtifactRefIntegrity(
   _root: string,
   _config: QfaiConfig,
-): Promise<Issue[]> {
+): Issue[] {
   return [];
 }

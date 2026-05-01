@@ -73,7 +73,11 @@ const PROTOTYPING_JSON_REL = ".qfai/evidence/prototyping/prototyping.json";
 export async function runPrototypingIterate(
   options: RunPrototypingIterateOptions,
 ): Promise<number> {
-  if (!Number.isInteger(options.cycle) || options.cycle < 0 || options.cycle > MAX_ITERATION_INDEX) {
+  if (
+    !Number.isInteger(options.cycle) ||
+    options.cycle < 0 ||
+    options.cycle > MAX_ITERATION_INDEX
+  ) {
     error(
       `qfai prototyping iterate: --cycle must be 0..${MAX_ITERATION_INDEX} (got ${String(options.cycle)}).`,
     );
@@ -96,9 +100,7 @@ export async function runPrototypingIterate(
   // 1) Stop-condition check at cycle >= 1: read the latest iteration and
   //    short-circuit with exit 64/65 when the deterministic gate fires.
   if (options.cycle >= 1) {
-    const iterations = await readIterations(
-      path.join(options.root, PROTOTYPING_JSON_REL),
-    );
+    const iterations = await readIterations(path.join(options.root, PROTOTYPING_JSON_REL));
     const stop = shouldStop(iterations);
     if (stop !== null) {
       return emitStop(stop);
@@ -173,10 +175,5 @@ function nextActionsFor(cycle: number): string[] {
   if (cycle === 0) {
     return ["generator-seed", "capture", "review", "iterate --cycle 1"];
   }
-  return [
-    "generator-iterate",
-    "capture",
-    "review",
-    `iterate --cycle ${cycle + 1}`,
-  ];
+  return ["generator-iterate", "capture", "review", `iterate --cycle ${cycle + 1}`];
 }

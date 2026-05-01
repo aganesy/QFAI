@@ -226,7 +226,7 @@ Create or update layered SDD artifacts in one run so downstream execution phases
 - Updated contracts under `.qfai/contracts/**`
 - UI-bearing normalized contracts:
   - `.qfai/contracts/design/exploration-brief.yaml`
-  - `.qfai/contracts/design/reference-pool.yaml`     (deviate-from input for prototyping reviewer)
+  - `.qfai/contracts/design/reference-pool.yaml` (deviate-from input for prototyping reviewer)
   - `.qfai/contracts/design/brand-design.yaml`
   - `.qfai/contracts/ui/*.yaml`
   - (post-loop, produced by /qfai-prototyping v2.0:

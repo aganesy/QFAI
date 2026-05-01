@@ -147,10 +147,13 @@ export function isStaticFirstAligned(content: string): boolean {
 
 export function hasMandatoryEvidencePaths(content: string): boolean {
   const lower = content.toLowerCase();
-  return (
+  const hasLegacyAggregatePaths =
     lower.includes(".qfai/evidence/prototyping/screenshots/<screen-id>.png") &&
-    lower.includes(".qfai/evidence/prototyping/html/<screen-id>.html")
-  );
+    lower.includes(".qfai/evidence/prototyping/html/<screen-id>.html");
+  const hasV2IterPaths =
+    lower.includes(".qfai/evidence/prototyping/iter-nn/<screen>.png") &&
+    lower.includes(".qfai/evidence/prototyping/iter-nn/<screen>.html");
+  return hasLegacyAggregatePaths || hasV2IterPaths;
 }
 
 export function hasEnvironmentPreconditions(content: string): boolean {

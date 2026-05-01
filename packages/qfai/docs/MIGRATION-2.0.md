@@ -6,24 +6,34 @@
 
 ## Why
 
-The v1.x `/qfai-prototyping` skill was designed for *safe convergent quality assurance* (5→3→2→1 funnel + absorption + 6-axis compliance + 100/100 completion gate + low-cost / standard / full-harness mode tier). In real usage it never produced the kind of self-driven creative leap described in the [Anthropic Dutch art museum example](https://www.anthropic.com/engineering/harness-design-long-running-apps): nine polished iterations followed by a tenth iteration that scrapped everything and reimagined the page as a 3D spatial experience.
+The v1.x `/qfai-prototyping` skill was designed for _safe convergent quality
+assurance_ (5→3→2→1 funnel + absorption + 6-axis compliance + 100/100
+completion gate + low-cost / standard / full-harness mode tier). In real usage
+it never produced the kind of self-driven creative leap described in the
+[Anthropic Dutch art museum example](https://www.anthropic.com/engineering/harness-design-long-running-apps):
+nine polished iterations followed by a tenth iteration that scrapped everything
+and reimagined the page as a 3D spatial experience.
 
-v2.0 redesigns the skill around the *environmental conditions* that elicit that behavior: a long single-thread iteration history, prose critique that accumulates over time, explicit pivot permission, no penalty for radical rewrites, deterministic stop conditions, and a teeth-bearing `originality` axis that punishes generic AI defaults instead of rewarding compliance.
+v2.0 redesigns the skill around the _environmental conditions_ that elicit that
+behavior: a long single-thread iteration history, prose critique that
+accumulates over time, explicit pivot permission, no penalty for radical
+rewrites, deterministic stop conditions, and a teeth-bearing `originality` axis
+that punishes generic AI defaults instead of rewarding compliance.
 
 ## What changed
 
 ### Skill flow
 
-| | v1.x | v2.0 |
-|---|---|---|
-| Lineage | 5 parallel candidates → 3 → 2 → 1 winner, then polish | One prototype, 15 cycles |
-| Cycle budget | mode-tiered: low-cost = 1, standard = 3, full-harness = 20 | fixed 15 (`MAX_ITERATIONS` constant) |
-| Completion | every reviewer scored every axis at 100/100 | all 4 axes `exceptional` AND `slopPatternsDetected` empty |
-| Stop check | LLM-driven, prone to early DONE | deterministic CLI exit code (`qfai prototyping iterate --cycle <n>`: 0 / 64 / 65 / 2) |
-| Acceptance rule | best-of-history (regressions blocked) | latest iter is always accepted (leap regression allowed) |
-| Critique form | 6-axis structured JSON | 4-axis ordinal + 200–500 word prose + `pivotDirective` |
-| Pivot | harness branched 2 alternates on plateau | AI chooses `continue / refine / pivot` per cycle |
-| Anti-slop | none | global pattern list in `qfai-prototyping/references/reviewer-prompt.md`; matches cap originality at `acceptable` |
+|                 | v1.x                                                       | v2.0                                                                                                             |
+| --------------- | ---------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| Lineage         | 5 parallel candidates → 3 → 2 → 1 winner, then polish      | One prototype, 15 cycles                                                                                         |
+| Cycle budget    | mode-tiered: low-cost = 1, standard = 3, full-harness = 20 | fixed 15 (`MAX_ITERATIONS` constant)                                                                             |
+| Completion      | every reviewer scored every axis at 100/100                | all 4 axes `exceptional` AND `slopPatternsDetected` empty                                                        |
+| Stop check      | LLM-driven, prone to early DONE                            | deterministic CLI exit code (`qfai prototyping iterate --cycle <n>`: 0 / 64 / 65 / 2)                            |
+| Acceptance rule | best-of-history (regressions blocked)                      | latest iter is always accepted (leap regression allowed)                                                         |
+| Critique form   | 6-axis structured JSON                                     | 4-axis ordinal + 200–500 word prose + `pivotDirective`                                                           |
+| Pivot           | harness branched 2 alternates on plateau                   | AI chooses `continue / refine / pivot` per cycle                                                                 |
+| Anti-slop       | none                                                       | global pattern list in `qfai-prototyping/references/reviewer-prompt.md`; matches cap originality at `acceptable` |
 
 ### CLI surface
 
@@ -61,7 +71,10 @@ Exit codes for `qfai prototyping iterate --cycle <n>`:
 
 - `prototyping.json` schema bumped from v2.0 → **v3.0**:
   - `rounds[]`, `polishCycles[]`, `bestOfHistory`, `breakthrough`, `mode`, `fullHarness` removed
-  - `iterations[]` replaces them. Each entry has `index` (contiguous from 0), `commitSha`, `scores.{designQuality,originality,craft,functionality}`, `proseCritique`, `slopPatternsDetected[]`, `pivotDirective`, `evidenceRefs.{screenshot,html}`
+  - `iterations[]` replaces them. Each entry has `index` (contiguous from 0),
+    `commitSha`, `scores.{designQuality,originality,craft,functionality}`,
+    `proseCritique`, `slopPatternsDetected[]`, `pivotDirective`, and
+    `evidenceRefs.{screenshot,html}`.
   - `acceptedIterationIndex` always equals `iterations.length - 1` (no best-of-history)
   - `stopReason` is `null | "axes-exceptional" | "max-iterations"`
 
@@ -70,7 +83,10 @@ Exit codes for `qfai prototyping iterate --cycle <n>`:
   - `iterationCount` retained
   - v1.x certificates fail to load at runtime
 
-- New per-iter review schema (`iter-NN/review.json`, schema v3.0): 4 ordinal axes, 200–500 word prose critique, `slopPatternsDetected[]`, `pivotDirective`. `buildEvaluatorReview()` enforces the anti-slop cap at construction time.
+- New per-iter review schema (`iter-NN/review.json`, schema v3.0): 4 ordinal
+  axes, 200–500 word prose critique, `slopPatternsDetected[]`, and
+  `pivotDirective`. `buildEvaluatorReview()` enforces the anti-slop cap at
+  construction time.
 
 ### Removed contracts
 
@@ -81,11 +97,13 @@ These design contracts no longer exist anywhere in the package or in init templa
 - `.qfai/contracts/design/absorption-policy.yaml` — absorption / harvest concept removed
 - `.qfai/contracts/design/selected-direction.yaml` — winner-selection concept removed
 
-The discussion sidecars `uiux/33_exploration_rubric.md` and `uiux/34_evaluator_calibration.md` are also removed; their content (axes definition + calibration examples) is no longer part of the per-project pack.
+The discussion sidecars `uiux/33_exploration_rubric.md` and
+`uiux/34_evaluator_calibration.md` are also removed; their content (axes
+definition + calibration examples) is no longer part of the per-project pack.
 
 ### Removed source modules
 
-```
+```text
 packages/qfai/src/core/prototyping/
   round.ts, harvestBuilder.ts, absorptionBuilder.ts,
   reimplementationBuilder.ts, branchPlanner.ts, plateauDetector.ts,
@@ -110,8 +128,14 @@ packages/qfai/src/core/validators/prototyping/
 ### Cross-skill effects
 
 - `/qfai-discussion`: stops generating `33_exploration_rubric.md` and `34_evaluator_calibration.md`. The `prototyping.yaml` sidecar is now `surface`-only (no `recommended_mode` / `allowed_modes`).
-- `/qfai-sdd`: stops normalizing the four removed design contracts. `ui-design-contract-normalization.md` rewritten. `prototype-handoff.sample.yaml` simplified (`mustPreserve / mayAdapt / mustNotCopy` triple is gone — the artifact itself is the SSOT).
-- `/qfai-implement`: visual review guard read-order updated to v2.0 path set; `.qfai/prototypes/winner/index.html` replaced by `.qfai/prototypes/final/index.html`; canonical screenshot mirrors replaced by `.qfai/evidence/prototyping/iter-NN/<screen>.{png,html}`.
+- `/qfai-sdd`: stops normalizing the four removed design contracts.
+  `ui-design-contract-normalization.md` rewritten.
+  `prototype-handoff.sample.yaml` simplified (`mustPreserve / mayAdapt /
+mustNotCopy` triple is gone — the artifact itself is the SSOT).
+- `/qfai-implement`: visual review guard read-order updated to v2.0 path set;
+  `.qfai/prototypes/winner/index.html` replaced by
+  `.qfai/prototypes/final/index.html`; canonical screenshot mirrors replaced by
+  `.qfai/evidence/prototyping/iter-NN/<screen>.{png,html}`.
 - `/qfai-verify`: required reading switched from `evidence-requirements.md` to `iteration-loop.md`; reviewer checks now require iter-NN evidence and a digest-valid `completion-certificate.json` v2.0.
 - `agent-routing.yml`: prototyping routing rewritten as the 3-phase v2.0 loop (seed / loop / handoff) with `review_profile: ui-bearing` (the `full-harness` profile in `review-profiles.yml` is removed).
 
@@ -142,5 +166,5 @@ The legacy `QFAI-PROT-NNN` codes for removed validators remain in the message di
 - `qfai validate` / `qfai report` / `qfai doctor` shells.
 - The shared completion-certificate digest mechanism (cert is still the only valid DONE signal).
 - `playwrightCliLauncher.ts` / `specResolution.ts` / `policy.ts`.
-- The QFAI-PROT-150..155 evidence error code numbers (still in the message dictionary; the v2.0 validator just emits a smaller set under the QFAI-PROT2-* namespace).
+- The QFAI-PROT-150..155 evidence error code numbers (still in the message dictionary; the v2.0 validator just emits a smaller set under the QFAI-PROT2-\* namespace).
 - All non-prototyping skills' core flow (`/qfai-atdd`, `/qfai-configure`, `web-research`, etc.).

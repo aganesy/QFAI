@@ -3,9 +3,6 @@ import path from "node:path";
 import { buildContractIndex } from "./contractIndex.js";
 import { loadConfig, resolvePath, type ConfigLoadResult } from "./config.js";
 import { collectSpecEntries, type SpecEntry } from "./specLayout.js";
-// v1.x EXPLORATION_ROUNDS removed in P2 (spec-0017). The roundLifecycle
-// scan below short-circuits to an empty rounds[] in v2.0.
-const EXPLORATION_ROUNDS: readonly string[] = [];
 import { parseFirstMarkdownTable } from "./specPackParsers.js";
 import {
   isCoverageTargetLevel,
@@ -23,7 +20,6 @@ import { collectFiles } from "./fs.js";
 import { ID_PREFIXES, extractAllIds, extractIds, type IdPrefix } from "./ids.js";
 import { normalizeValidationResult } from "./normalize.js";
 import { parseSpec } from "./parse/spec.js";
-import { isValidPrototypingSurface } from "./review/prototyping.js";
 import { parseScenarioDocument } from "./scenarioModel.js";
 import { classifyLayer, classifySize } from "./testStrategyTags.js";
 import { toRelativePath } from "./paths.js";
@@ -49,8 +45,6 @@ import {
 import type { Issue, ValidationCounts, ValidationResult, ValidationWaiverEntry } from "./types.js";
 import { validateProject } from "./validate.js";
 import { resolveToolVersion } from "./version.js";
-import { readRenderEvidenceBundle, summarizeRenderEvidence } from "./uiux/renderEvidence.js";
-import { readBrowserQaBundle } from "./browserQa/index.js";
 
 export type ReportSummary = {
   specs: number;
@@ -482,7 +476,7 @@ export async function createReportData(
     .map((item) => toReportRuleFinding(item));
 
   const tddCoverage = await collectTddCoverage(specEntries);
-  const prototyping = await collectPrototypingSummary(resolvedRoot, config);
+  const prototyping = collectPrototypingSummary(resolvedRoot, config);
 
   const version = await resolveToolVersion();
   const displayRoot = toRelativePath(resolvedRoot, resolvedRoot);
@@ -1682,72 +1676,14 @@ async function collectChangeTypeSummary(specsRoot: string): Promise<ReportChange
   return summary;
 }
 
-/**
- * Source-of-truth import to avoid drift: previously this was a local literal
- * Set that duplicated `EXPLORATION_ROUNDS` from prototyping/round.ts; if the
- * round taxonomy ever changes, the report-side scan would silently miss
- * new rounds (Copilot flag, PR #201).
- */
-const PROTOTYPING_ROUND_DIR_NAMES: ReadonlySet<string> = new Set<string>(EXPLORATION_ROUNDS);
-
-/**
- * Filesystem-first scan of `.qfai/evidence/prototyping/rounds/` (v1.8.4 Phase 4).
- *
- * Counts artifact files present on disk, regardless of whether
- * `prototyping.json.rounds[]` references them. This eliminates the dual-SoT
- * drift that caused RR §8.2 (`absorption plans: 0` while files actually
- * existed). The curated index continues to be authoritative for
- * candidate-level metadata (allAxesPerfect100, candidate IDs) which is not
- * derivable from filesystem alone.
- */
-async function scanPrototypingRoundsFilesystem(evidenceRoot: string): Promise<{
-  observedRoundIds: string[];
-  harvestArtifacts: number;
-  narrowDecisions: number;
-  absorptionPlans: number;
-  reimplementations: number;
-}> {
-  const result = {
-    observedRoundIds: [] as string[],
-    harvestArtifacts: 0,
-    narrowDecisions: 0,
-    absorptionPlans: 0,
-    reimplementations: 0,
-  };
-  const roundsDir = path.join(evidenceRoot, "prototyping", "rounds");
-  const { readdir } = await import("node:fs/promises");
-  let entries: string[];
-  try {
-    entries = await readdir(roundsDir);
-  } catch {
-    return result;
-  }
-  for (const name of entries.sort()) {
-    if (!PROTOTYPING_ROUND_DIR_NAMES.has(name)) continue;
-    let files: string[];
-    try {
-      files = await readdir(path.join(roundsDir, name));
-    } catch {
-      continue;
-    }
-    result.observedRoundIds.push(name);
-    if (files.includes("harvest.json")) result.harvestArtifacts += 1;
-    if (files.includes("narrow-decision.json")) result.narrowDecisions += 1;
-    if (files.includes("absorption-plan.json")) result.absorptionPlans += 1;
-    if (files.includes("reimplementation.json")) result.reimplementations += 1;
-  }
-  return result;
-}
-
-async function collectPrototypingSummary(
+function collectPrototypingSummary(
   _root: string,
   _config: ConfigLoadResult["config"],
-): Promise<ReportPrototypingSummary | undefined> {
+): ReportPrototypingSummary | undefined {
   // v1.x mode/full-harness/round-based prototyping summary removed in P3
   // (spec-0017). v2.0 iteration-based summary lands in P5/P15.
   return undefined;
 }
-
 
 async function collectSpecContractRefs(
   specFiles: string[],
@@ -1865,12 +1801,6 @@ async function evaluateTraceability(
 function buildIdPattern(ids: string[]): RegExp {
   const escaped = ids.map((id) => id.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
   return new RegExp(`\\b(${escaped.join("|")})\\b`);
-}
-
-function asRecord(value: unknown): Record<string, unknown> | undefined {
-  return value && typeof value === "object" && !Array.isArray(value)
-    ? (value as Record<string, unknown>)
-    : undefined;
 }
 
 function formatIdLine(label: string, values: string[]): string {

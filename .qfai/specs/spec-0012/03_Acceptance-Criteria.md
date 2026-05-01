@@ -109,4 +109,3 @@
 - Active docs must not present `qfai prototyping` as a valid command.
 - Active docs must not present weighted-total scoring as the current evidence contract.
 - Internal mode helpers may still exist, provided they are clearly scoped as implementation detail.
-

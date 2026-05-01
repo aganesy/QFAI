@@ -106,4 +106,3 @@
 - `r5` (initial divergent generation) is excluded so that exploration is not gated by hard floors before absorption begins.
 - `hard_floors[].id` whose value is not present in `perAxis` (例: `conceptFit`) is skipped here and is enforced through other gates.
 - Compatibility: `axisId` matching is exact-string against `axes[].id`; case or hyphen normalization is not performed.
-

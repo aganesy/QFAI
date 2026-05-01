@@ -15,16 +15,18 @@ mode: execution-focused
 
 This skill runs one prototype through up to 15 iterations. There is no funnel, no parallel candidates, no mode. Iteration count is fixed at 15.
 
+The workflow is static-first and file-based by default. Supported UI prototyping surfaces are: web, mobile, desktop, mixed. `cli` is not a prototyping execution target and is rejected. `ui_bearing: false` specs are excluded from prototyping execution.
+
 ## Goal
 
 Produce an artifact in which a creative breakthrough has emerged through serial iteration — the kind of self-driven "scrap and reimagine" that arises when the model accumulates enough critique signal that staying on the current path is worse than rebuilding (Anthropic Dutch art museum pattern).
 
 ## Required References
 
-- `references/iteration-loop.md`     — flow + evidence paths
-- `references/generator-prompt.md`   — generator system prompt + pivot permission
-- `references/reviewer-prompt.md`    — reviewer output schema + global anti-slop list
-- `references/handoff.md`            — design-system extraction + handoff yaml
+- `references/iteration-loop.md` — flow + evidence paths
+- `references/generator-prompt.md` — generator system prompt + pivot permission
+- `references/reviewer-prompt.md` — reviewer output schema + global anti-slop list
+- `references/handoff.md` — design-system extraction + handoff yaml
 
 ## Required Contracts
 
@@ -36,7 +38,18 @@ Produce an artifact in which a creative breakthrough has emerged through serial 
 
 `reference-pool.yaml` is read as **deviate-from**, not imitate-this.
 
-## Process
+## Required Process
+
+### Step 2-A — Verify Contract Preconditions
+
+- Confirm the selected spec is UI-bearing and has a supported `surface` value.
+- Confirm `.qfai/contracts/ui/*.yaml` and design contracts exist before generation.
+- Run `qfai prototyping preflight --target-url <url>` or `qfai doctor --profile prototyping`.
+
+### Step 2-B — Verify Environment Preconditions
+
+- Confirm a capture route exists for each declared screen.
+- Use `npx --no-install playwright-cli` or `node_modules/.bin/playwright-cli` when PATH reachability is uncertain.
 
 1. **Seed (cycle 0)**
    - Run `qfai prototyping iterate --cycle 0 --target-url <url>`.
@@ -60,6 +73,12 @@ Produce an artifact in which a creative breakthrough has emerged through serial 
    - Run `qfai prototyping certify`.
    - Run `qfai validate --profile prototyping --fail-on error` and `/qfai-verify`.
 
+## Evaluator Inputs (Mandatory)
+
+- Screenshot evidence path: `.qfai/evidence/prototyping/iter-NN/<screen>.png`
+- HTML snapshot path: `.qfai/evidence/prototyping/iter-NN/<screen>.html`
+- Review inputs: latest screenshot, latest HTML snapshot, prior `review.json` files, `progress.md`, and `reference-pool.yaml` as deviate-from input.
+
 ## Critical Constraints
 
 - DO NOT generate parallel candidates. One lineage only.
@@ -68,13 +87,19 @@ Produce an artifact in which a creative breakthrough has emerged through serial 
 - DO NOT add `mode/round/polish/branch/concept-fit/design-system-compliance` artifacts.
 - DO NOT score similarity to `reference-pool` positively; it is deviate-from input.
 
-## Sub-agent Delegation
+## Delegation Scope Table
 
-| Category    | Allowed Role                  |
-| ----------- | ----------------------------- |
-| Generation  | product-experience-architect  |
-| Capture     | devops-ci-engineer            |
-| Review      | product-surface-reviewer      |
+| Work                               | Allowed Role                 |
+| ---------------------------------- | ---------------------------- |
+| Generation                         | product-experience-architect |
+| Playwright CLI execution & capture | devops-ci-engineer           |
+| Evaluation scoring                 | product-surface-reviewer     |
+
+### Reviewer Gate
+
+- Check Drift Protocol compliance before DONE.
+- Check `.qfai/assistant/steering/test-layers.md` alignment.
+- Treat reviewer findings as signals, not gates, unless certify/validate/verify fails.
 
 ## Completion
 

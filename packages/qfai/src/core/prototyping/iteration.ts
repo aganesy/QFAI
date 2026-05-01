@@ -23,11 +23,7 @@ export const ORDINAL_SCORES: readonly OrdinalScore[] = [
 
 export type PivotDirective = "continue" | "refine" | "pivot";
 
-export const PIVOT_DIRECTIVES: readonly PivotDirective[] = [
-  "continue",
-  "refine",
-  "pivot",
-] as const;
+export const PIVOT_DIRECTIVES: readonly PivotDirective[] = ["continue", "refine", "pivot"] as const;
 
 export type Iteration = {
   readonly index: number;
@@ -52,7 +48,8 @@ export type StopReason = "axes-exceptional" | "max-iterations";
 /** Pure function. No I/O. Used by both validator and CLI. */
 export function shouldStop(iterations: readonly Iteration[]): StopReason | null {
   if (iterations.length === 0) return null;
-  const last = iterations[iterations.length - 1]!;
+  const last = iterations[iterations.length - 1];
+  if (last === undefined) return null;
   if (allFourAxesExceptional(last)) return "axes-exceptional";
   if (last.index >= MAX_ITERATION_INDEX) return "max-iterations";
   return null;

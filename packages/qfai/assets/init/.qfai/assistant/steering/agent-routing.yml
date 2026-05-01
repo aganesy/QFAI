@@ -118,7 +118,8 @@ routing:
         blocking_agents: [product-experience-architect]
         rerun_policy: failed-agents-only
       - id: loop
-        mandatory_agents: [devops-ci-engineer, product-surface-reviewer, product-experience-architect]
+        mandatory_agents:
+          [devops-ci-engineer, product-surface-reviewer, product-experience-architect]
         conditional_agents: []
         parallel_groups: []
         blocking_agents: [product-surface-reviewer]
@@ -130,7 +131,6 @@ routing:
         blocking_agents: [completion-reviewer]
         rerun_policy: changed-scope-dependents
     review_profile: ui-bearing
-
 
   - skill: qfai-configure
     phases:

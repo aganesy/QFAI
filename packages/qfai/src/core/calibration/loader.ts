@@ -8,11 +8,7 @@
 
 import { readFile, stat } from "node:fs/promises";
 import { parse as parseYaml } from "yaml";
-import {
-  type AlignmentExample,
-  type CalibrationPack,
-  type ThresholdConfig,
-} from "./types.js";
+import { type AlignmentExample, type CalibrationPack, type ThresholdConfig } from "./types.js";
 
 function validateExample(entry: unknown, index: number): AlignmentExample {
   if (typeof entry !== "object" || entry === null) {

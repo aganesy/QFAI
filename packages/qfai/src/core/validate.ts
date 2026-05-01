@@ -179,17 +179,17 @@ async function runPrototypingValidators(
 ): Promise<Issue[]> {
   return [
     ...(await runUiuxValidators(root, config, platformOption)),
-    ...(await validatePrototypingEvidence(root, config)),
+    ...validatePrototypingEvidence(root, config),
     ...(await validatePrototypingEvidenceV3(root, config)),
     ...(await validateUiEvidenceArtifacts(root, config)),
     ...(await validateRenderCritique(root, config)),
     ...(await validateDesignFidelity(root, config)),
     ...(await validatePrototypingDesignContractReadiness(root, config)),
-    ...(await validateStateGate(root, config)),
+    ...validateStateGate(root, config),
     ...(await validateCompletionCertificateIssues(root, config)),
     ...(await validateConfigReferenceIntegrity(root, config)),
-    ...(await validatePrototypingArtifactRefIntegrity(root, config)),
-    ...(await validateSpecIdLinkage(root, config)),
+    ...validatePrototypingArtifactRefIntegrity(root, config),
+    ...validateSpecIdLinkage(root, config),
   ];
 }
 

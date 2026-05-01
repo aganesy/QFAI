@@ -9,9 +9,6 @@
 import type { QfaiConfig } from "../config.js";
 import type { Issue } from "../types.js";
 
-export async function validatePrototypingEvidence(
-  _root: string,
-  _config: QfaiConfig,
-): Promise<Issue[]> {
+export function validatePrototypingEvidence(_root: string, _config: QfaiConfig): Issue[] {
   return [];
 }

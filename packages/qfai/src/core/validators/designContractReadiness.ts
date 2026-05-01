@@ -20,10 +20,7 @@ const REQUIRED_SDD_DESIGN_FILES = [
 // v2.0: prototyping post-loop produces design-system.yaml (extracted from
 // final iter) and prototype-handoff.yaml (simplified schema, no
 // mustPreserve/mayAdapt/mustNotCopy).
-const REQUIRED_PROTOTYPING_DESIGN_FILES = [
-  "design-system.yaml",
-  "prototype-handoff.yaml",
-] as const;
+const REQUIRED_PROTOTYPING_DESIGN_FILES = ["design-system.yaml", "prototype-handoff.yaml"] as const;
 const FORBIDDEN_LEGACY_DESIGN_FILES = [
   "anchor-selection.yaml",
   "evaluation-axes.yaml",

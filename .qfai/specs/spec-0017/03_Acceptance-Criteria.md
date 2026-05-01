@@ -55,6 +55,7 @@ Given the QFAI v2.0 codebase, when `packages/qfai/scripts/check-no-legacy-concep
 ## AC-0017-0014: Skill Size Budget
 
 Given the v2.0 skill assets, when measured, then:
+
 - `qfai-prototyping/SKILL.md` ≤ 130 lines
 - `qfai-prototyping/references/iteration-loop.md` ≤ 80 lines
 - `qfai-prototyping/references/generator-prompt.md` ≤ 60 lines

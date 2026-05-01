@@ -46,8 +46,6 @@ UI-bearing packs must produce the following sidecars as primary truth:
 - `uiux/30_exploration_brief.md`
 - `uiux/31_reference_pool.md`
 - `uiux/32_design_anti_goals.md`
-- `uiux/33_exploration_rubric.md`
-- `uiux/34_evaluator_calibration.md`
 - `uiux/40_screen_contracts.md`
 - `uiux/50_review_input_bundle.md`
 
@@ -68,12 +66,14 @@ For UI-bearing targets, follow `references/design-dna-intake.md` while authoring
 
 ## UI-bearing Authoring Requirements
 
-- `30_exploration_brief.md` must define product intent, must-preserve interactions, brand signals, and differentiation targets.
-- `31_reference_pool.md` must define exploration references, adopted points, rejected points, local translation, copy risk, and template usage policy.
-- `32_design_anti_goals.md` must contain explicit anti-goals and recurrence prevention notes.
-- `33_exploration_rubric.md` must define design quality, originality, craft, functionality, brand memorability, category distinctiveness, template dependency risk, and localization-fit grading criteria.
-- `34_evaluator_calibration.md` must include good critique examples, too-lenient examples, blandness-fail examples, originality-fail examples, and template-copy fail examples.
-- `50_review_input_bundle.md` must document best-of-history handling so later iterations are not automatically preferred.
+- `30_exploration_brief.md` must define product intent, brand signals, and differentiation targets.
+- `31_reference_pool.md` must define exploration references with adopted points, rejected points, and copy risk — framed as **deviate-from** inputs (not imitate-this) for downstream `/qfai-prototyping` reviewer.
+- `32_design_anti_goals.md` must contain explicit anti-goals; this also feeds the global anti-slop pattern list consulted by the v2.0 reviewer.
+- `50_review_input_bundle.md` must document review inputs for downstream skills.
+
+v1.x sidecars `33_exploration_rubric.md` and `34_evaluator_calibration.md`
+are removed in spec-0017 P4 (axes are global constants in
+`core/prototyping/iteration.ts#OrdinalScore`, ordinal 4-step scale).
 
 ## Completion Contract (Shared)
 

@@ -1,6 +1,5 @@
 import { readFile } from "node:fs/promises";
 
-import type { PrototypingMode } from "../review/prototyping.js";
 import type { Issue } from "../types.js";
 
 export type {
@@ -20,7 +19,7 @@ export type BrowserQaBundle = {
   browserQa: {
     executed: boolean;
     status: "completed" | "skipped" | "failed";
-    mode?: PrototypingMode;
+    mode?: "single-thread-loop";
     summary?: Record<
       "smoke" | "interaction" | "visual" | "accessibility",
       {

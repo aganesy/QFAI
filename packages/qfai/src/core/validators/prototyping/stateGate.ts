@@ -12,9 +12,6 @@
 import type { QfaiConfig } from "../../config.js";
 import type { Issue } from "../../types.js";
 
-export async function validateStateGate(
-  _root: string,
-  _config: QfaiConfig,
-): Promise<Issue[]> {
+export function validateStateGate(_root: string, _config: QfaiConfig): Issue[] {
   return [];
 }

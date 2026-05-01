@@ -6,7 +6,7 @@ Downstream skills read only specs, contracts, and evidence.
 ## Required UI-bearing Outputs (v2.0)
 
 - `.qfai/contracts/design/exploration-brief.yaml`
-- `.qfai/contracts/design/reference-pool.yaml`     (deviate-from input)
+- `.qfai/contracts/design/reference-pool.yaml` (deviate-from input)
 - `.qfai/contracts/design/brand-design.yaml`
 - `.qfai/contracts/ui/*.yaml`
 

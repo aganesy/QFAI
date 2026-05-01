@@ -132,27 +132,18 @@ export async function run(argv: string[], cwd: string): Promise<void> {
         }
 
         // iterate (v2.0): single-thread evolution loop driver.
-        if (options.prototypingAction === "iterate") {
-          if (options.prototypingCycle === undefined) {
-            error("qfai prototyping iterate: --cycle <number> is required.");
-            info(usage());
-            process.exitCode = options.invalidExitCode;
-            return;
-          }
-          const resolvedRoot = await resolveRoot(options);
-          process.exitCode = await runPrototypingIterate({
-            root: resolvedRoot,
-            cycle: options.prototypingCycle,
-            ...(options.prototypingTargetUrl
-              ? { targetUrl: options.prototypingTargetUrl }
-              : {}),
-          });
+        if (options.prototypingCycle === undefined) {
+          error("qfai prototyping iterate: --cycle <number> is required.");
+          info(usage());
+          process.exitCode = options.invalidExitCode;
           return;
         }
-
-        error(`qfai prototyping ${options.prototypingAction}: unknown subcommand.`);
-        info(usage());
-        process.exitCode = options.invalidExitCode;
+        const resolvedRoot = await resolveRoot(options);
+        process.exitCode = await runPrototypingIterate({
+          root: resolvedRoot,
+          cycle: options.prototypingCycle,
+          ...(options.prototypingTargetUrl ? { targetUrl: options.prototypingTargetUrl } : {}),
+        });
       }
       return;
 

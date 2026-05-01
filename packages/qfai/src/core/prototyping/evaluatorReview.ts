@@ -87,10 +87,7 @@ export function buildEvaluatorReview(input: BuildEvaluatorReviewInput): Evaluato
   // not reward a generic AI-default-looking artifact with a high
   // originality score, even if it scores well on other axes.
   if (input.slopPatternsDetected.length > 0) {
-    if (
-      input.scores.originality === "strong" ||
-      input.scores.originality === "exceptional"
-    ) {
+    if (input.scores.originality === "strong" || input.scores.originality === "exceptional") {
       throw new Error(
         "buildEvaluatorReview: originality cannot be strong or exceptional while " +
           `slopPatternsDetected[] is non-empty (current: ${input.scores.originality}, ` +
@@ -105,10 +102,7 @@ export function buildEvaluatorReview(input: BuildEvaluatorReviewInput): Evaluato
   ) {
     throw new Error("buildEvaluatorReview: evidenceRefs.screenshot must be a non-empty string");
   }
-  if (
-    typeof input.evidenceRefs.html !== "string" ||
-    input.evidenceRefs.html.trim().length === 0
-  ) {
+  if (typeof input.evidenceRefs.html !== "string" || input.evidenceRefs.html.trim().length === 0) {
     throw new Error("buildEvaluatorReview: evidenceRefs.html must be a non-empty string");
   }
 

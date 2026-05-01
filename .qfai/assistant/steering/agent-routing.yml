@@ -106,42 +106,31 @@ routing:
     review_profile: runtime-heavy
 
   - skill: qfai-prototyping
+    # v2.0 single-thread evolution loop (spec-0017): one prototype, 15 iter,
+    # 4 ordinal axes, prose critique, pivot directive. The v1.x 4-phase
+    # routing and `review_profile: full-harness` are removed; the v2.0
+    # routing is just the 3 active roles plus completion-reviewer at handoff.
     phases:
-      - id: plan
-        mandatory_agents: [delivery-planner]
-        conditional_agents: [product-experience-architect]
-        parallel_groups: []
-        blocking_agents: [delivery-planner]
-        rerun_policy: failed-agents-only
-      - id: build
-        mandatory_agents: []
-        conditional_agents: [frontend-engineer, backend-engineer]
-        parallel_groups:
-          - [frontend-engineer, backend-engineer]
-        blocking_agents: []
-        rerun_policy: changed-scope-dependents
-      - id: evidence
-        # product-surface-reviewer is mandatory here (surface sign-off must
-        # be collected as part of evidence). Keep it blocking so a surface
-        # FAIL/REVISE blocks the phase — drops the mandatory+non-blocking
-        # drift flagged during PR review.
-        mandatory_agents: [product-surface-reviewer, qa-gatekeeper]
-        conditional_agents: [devops-ci-engineer, product-experience-architect]
-        parallel_groups: []
-        blocking_agents: [product-surface-reviewer, qa-gatekeeper]
-        rerun_policy: changed-scope-dependents
-      - id: review
-        # full-harness always_required set (see review-profiles.yml →
-        # profiles.full-harness.always_required) is
-        # [completion-reviewer, product-surface-reviewer, qa-gatekeeper].
-        # Mirror that set as mandatory + blocking so agent-routing and
-        # review-profiles stay on one SSOT.
-        mandatory_agents: [completion-reviewer, product-surface-reviewer, qa-gatekeeper]
+      - id: seed
+        mandatory_agents: [product-experience-architect]
         conditional_agents: []
         parallel_groups: []
-        blocking_agents: [completion-reviewer, product-surface-reviewer, qa-gatekeeper]
+        blocking_agents: [product-experience-architect]
+        rerun_policy: failed-agents-only
+      - id: loop
+        mandatory_agents:
+          [devops-ci-engineer, product-surface-reviewer, product-experience-architect]
+        conditional_agents: []
+        parallel_groups: []
+        blocking_agents: [product-surface-reviewer]
         rerun_policy: changed-scope-dependents
-    review_profile: full-harness
+      - id: handoff
+        mandatory_agents: [completion-reviewer]
+        conditional_agents: []
+        parallel_groups: []
+        blocking_agents: [completion-reviewer]
+        rerun_policy: changed-scope-dependents
+    review_profile: ui-bearing
 
   - skill: qfai-configure
     phases:

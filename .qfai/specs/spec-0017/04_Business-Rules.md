@@ -24,12 +24,12 @@ Iteration indices are contiguous integers starting at 0. `prototyping.json#itera
 
 Ordinal score levels apply uniformly across all 4 axes:
 
-| Level | Meaning |
-|---|---|
-| `weak` | fails the axis. Distracting flaws, clearly off-target. |
-| `acceptable` | meets baseline. No critical flaws but unremarkable. |
-| `strong` | clearly above baseline. Memorable on this axis. |
-| `exceptional` | best-in-class. Use sparingly. |
+| Level         | Meaning                                                |
+| ------------- | ------------------------------------------------------ |
+| `weak`        | fails the axis. Distracting flaws, clearly off-target. |
+| `acceptable`  | meets baseline. No critical flaws but unremarkable.    |
+| `strong`      | clearly above baseline. Memorable on this axis.        |
+| `exceptional` | best-in-class. Use sparingly.                          |
 
 ## BR-0017-0005: Anti-Slop Cap
 
@@ -42,6 +42,7 @@ If `slopPatternsDetected.length > 0` for an iter, then `originality` is bounded 
 - AC-Refs: AC-0017-0006
 
 Reviewer emits `pivotDirective` per these rules:
+
 - `pivot` when the last 3 iters all have `originality ∈ {weak, acceptable}`
 - `continue` when at least 2 of 4 axes improved vs. the prior iter
 - `refine` when improvement has stalled but no slop is detected
@@ -52,6 +53,7 @@ Reviewer emits `pivotDirective` per these rules:
 - AC-Refs: AC-0017-0007, AC-0017-0008
 
 `/qfai-prototyping` stops when one of:
+
 - All 4 axes of the latest iter are `exceptional` AND `slopPatternsDetected.length === 0` (`stopReason: "axes-exceptional"`)
 - Latest iter `index === 14` (`stopReason: "max-iterations"`)
 
@@ -86,6 +88,7 @@ The v2.0 redesign adds zero new sidecars under `qfai-discussion/templates/` and 
 - AC-Refs: AC-0017-0014
 
 SKILL.md and reference file size budgets are enforced at the skill validator level:
+
 - `qfai-prototyping/SKILL.md` ≤ 130 lines
 - All `qfai-prototyping/references/*.md` total ≤ 290 lines
 - Other skills' SKILL.md must not grow beyond their current size after the redesign (`qfai-discussion ≤ 130`, `qfai-sdd ≤ 320`, `qfai-implement ≤ 350`, `qfai-verify ≤ 510`).

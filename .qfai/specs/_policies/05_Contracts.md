@@ -10,15 +10,15 @@
 
 ### Design Contracts
 
-| Short ID | Entity                | Declared ID           | File                                                | Purpose                                                |
-| -------- | --------------------- | --------------------- | --------------------------------------------------- | ------------------------------------------------------ |
-| DCON-001 | Exploration Brief     | exploration-brief     | `.qfai/contracts/design/exploration-brief.yaml`     | exploration 条件、brand signals の SSOT (v2.0: must-keep / non-goals 廃止) |
-| DCON-002 | Evaluation Rubric     | evaluation-rubric     | `.qfai/contracts/design/evaluation-rubric.yaml`     | (DEPRECATED v2.0: 軸は code constants に移行、本 contract は P4 で削除予定 — spec-0017) |
-| DCON-003 | Evaluator Calibration | evaluator-calibration | `.qfai/contracts/design/evaluator-calibration.yaml` | (DEPRECATED v2.0: ordinal scale + 散文 critique で代替、P4 で削除予定 — spec-0017) |
-| DCON-004 | Selected Direction    | selected-direction    | `.qfai/contracts/design/selected-direction.yaml`    | (DEPRECATED v2.0: winner 選定なし、P4 で削除予定 — spec-0017) |
-| DCON-005 | Design System         | design-system         | `.qfai/contracts/design/design-system.yaml`         | winner から抽出された downstream design system の SSOT |
-| DCON-006 | Reference Pool        | reference-pool        | `.qfai/contracts/design/reference-pool.yaml`        | reviewer/generator が deviate-from 入力として参照する  |
-| DCON-007 | Brand Design          | brand-design          | `.qfai/contracts/design/brand-design.yaml`          | brand 視覚情報の SSOT                                  |
+| Short ID | Entity                | Declared ID           | File                                                | Purpose                                                                                                                                     |
+| -------- | --------------------- | --------------------- | --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| DCON-001 | Exploration Brief     | exploration-brief     | `.qfai/contracts/design/exploration-brief.yaml`     | exploration 条件、brand signals の SSOT (v2.0: must-keep / non-goals 廃止)                                                                  |
+| DCON-002 | Evaluation Rubric     | evaluation-rubric     | `.qfai/contracts/design/evaluation-rubric.yaml`     | (DEPRECATED v2.0: 軸は code constants に移行、本 contract は P4 で削除予定 — spec-0017)                                                     |
+| DCON-003 | Evaluator Calibration | evaluator-calibration | `.qfai/contracts/design/evaluator-calibration.yaml` | (DEPRECATED v2.0: ordinal scale + 散文 critique で代替、P4 で削除予定 — spec-0017)                                                          |
+| DCON-004 | Selected Direction    | selected-direction    | `.qfai/contracts/design/selected-direction.yaml`    | (DEPRECATED v2.0: winner 選定なし、P4 で削除予定 — spec-0017)                                                                               |
+| DCON-005 | Design System         | design-system         | `.qfai/contracts/design/design-system.yaml`         | winner から抽出された downstream design system の SSOT                                                                                      |
+| DCON-006 | Reference Pool        | reference-pool        | `.qfai/contracts/design/reference-pool.yaml`        | reviewer/generator が deviate-from 入力として参照する                                                                                       |
+| DCON-007 | Brand Design          | brand-design          | `.qfai/contracts/design/brand-design.yaml`          | brand 視覚情報の SSOT                                                                                                                       |
 | DCON-008 | Prototype Handoff     | prototype-handoff     | `.qfai/contracts/design/prototype-handoff.yaml`     | v2.0: finalIterIndex / finalArtifact / extractedDesignSystem / implementationNotes (mustPreserve/mayAdapt/mustNotCopy 三分類は v2.0 で廃止) |
 
 ### UI Contracts
@@ -29,10 +29,10 @@
 
 ### Evidence Contracts
 
-| Short ID   | Entity                | File                               | Purpose                                                |
-| ---------- | --------------------- | ---------------------------------- | ------------------------------------------------------ |
-| EVID-DCON1 | Breakthrough Evidence | `.qfai/evidence/breakthrough.json` | (DEPRECATED v2.0: plateau detector / branchPlanner 廃止に伴い P4 で削除予定 — spec-0017) |
-| EVID-PROT2 | Prototyping Evidence  | `.qfai/evidence/prototyping/`      | v2.0: iter-NN/{<screen>.png,<screen>.html,review.json} + prototyping.json + completion-certificate.json |
+| Short ID   | Entity                | File                               | Purpose                                                                                                 |
+| ---------- | --------------------- | ---------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| EVID-DCON1 | Breakthrough Evidence | `.qfai/evidence/breakthrough.json` | (DEPRECATED v2.0: plateau detector / branchPlanner 廃止に伴い P4 で削除予定 — spec-0017)                |
+| EVID-PROT2 | Prototyping Evidence  | `.qfai/evidence/prototyping/`      | v2.0: `iter-NN/{screen.png, screen.html, review.json}` + prototyping.json + completion-certificate.json |
 
 ### DB Contracts
 

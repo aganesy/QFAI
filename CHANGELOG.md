@@ -2,7 +2,11 @@
 
 この変更履歴は Keep a Changelog と Semantic Versioning に基づきます。
 
-## [Unreleased] — v2.0 / spec-0017
+## [Unreleased]
+
+- なし
+
+## [1.8.7] - 2026-05-02
 
 ### Added
 

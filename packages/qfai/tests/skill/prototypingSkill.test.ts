@@ -43,8 +43,8 @@ const VALID_SKILL_CONTENT = [
   "| Playwright CLI execution & capture | devops-ci-engineer |",
   "| Evaluation scoring | product-surface-reviewer, product-experience-architect |",
   "",
-  "Screenshot evidence path: .qfai/evidence/prototyping/screenshots/<screen-id>.png",
-  "HTML snapshot path: .qfai/evidence/prototyping/html/<screen-id>.html",
+  "Screenshot evidence path: .qfai/evidence/prototyping/iter-NN/<screen>.png",
+  "HTML snapshot path: .qfai/evidence/prototyping/iter-NN/<screen>.html",
 ].join("\n");
 
 describe("prototyping skill validator", () => {

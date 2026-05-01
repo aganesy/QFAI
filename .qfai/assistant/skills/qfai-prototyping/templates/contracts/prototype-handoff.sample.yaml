@@ -1,38 +1,14 @@
-schemaVersion: "1.0"
-sourcePrototypeRefs:
-  winnerHtml: ".qfai/prototypes/winner/index.html"
-  screenshots:
-    - ".qfai/evidence/prototyping/screenshots/home.png"
-surfaceProfiles:
-  primary: mobile
-screens:
-  - screenId: home
-    prototypeRef: ".qfai/prototypes/winner/index.html#home"
-    preserve:
-      - "Primary CTA position and visual weight"
-      - "Bottom navigation shape and active state"
-visualDna:
-  color:
-    primary: "#2563eb"
-    background: "#f8fafc"
-  typography:
-    heading: "large, dense, high contrast"
-  layout:
-    density: "compact"
-    rhythm: "8px spacing scale"
-interactionMap:
-  - from: home
-    action: "tap primary CTA"
-    to: detail
-stateCoverage:
-  - screenId: home
-    states: ["default", "loading", "empty", "error"]
-implementationHandoff:
-  mustPreserve:
-    - "Visual hierarchy from winner screenshot"
-    - "Navigation flow and CTA prominence"
-  mayAdapt:
-    - "Component names and implementation framework"
-  mustNotCopy:
-    - "Prototype-only fake data wiring"
-    - "Device chrome as production UI unless the product actually needs it"
+# prototype-handoff.yaml v2.0 (spec-0017).
+# Produced by /qfai-prototyping post-loop. Consumed by /qfai-implement.
+# v1.x preserve/adapt/copy three-category split is removed: the final
+# artifact itself is the SSOT, not this handoff yaml.
+schemaVersion: "2.0"
+finalIterIndex: 8
+finalArtifact: ".qfai/prototypes/final/index.html"
+extractedDesignSystem: ".qfai/contracts/design/design-system.yaml"
+implementationNotes: |
+  The final prototype invented a spatial gallery metaphor distinct from
+  the AI-default dashboard / card-grid pattern that earlier iterations
+  produced. /qfai-implement should reproduce the visual identity (color
+  tokens, type scale, spacing rhythm) faithfully; micro-interactions
+  may be re-engineered against the project's component framework.

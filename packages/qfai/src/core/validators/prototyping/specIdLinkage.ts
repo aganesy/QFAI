@@ -9,9 +9,6 @@
 import type { QfaiConfig } from "../../config.js";
 import type { Issue } from "../../types.js";
 
-export async function validateSpecIdLinkage(
-  _root: string,
-  _config: QfaiConfig,
-): Promise<Issue[]> {
+export function validateSpecIdLinkage(_root: string, _config: QfaiConfig): Issue[] {
   return [];
 }

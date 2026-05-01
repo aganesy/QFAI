@@ -148,11 +148,7 @@ describe("/qfai-prototyping v2.0 end-to-end", () => {
     expect(c2).toBe(0);
 
     // Add iter-02 with all-exceptional scores and no slop -> convergence.
-    await seedIterations(root, [
-      { index: 0 },
-      { index: 1 },
-      { index: 2, allEx: true },
-    ]);
+    await seedIterations(root, [{ index: 0 }, { index: 1 }, { index: 2, allEx: true }]);
 
     // Cycle 3 — must short-circuit with convergence (exit 64).
     const c3 = await runPrototypingIterate({ root, cycle: 3 });

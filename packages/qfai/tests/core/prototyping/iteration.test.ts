@@ -126,9 +126,7 @@ describe("iteration paths", () => {
   });
 
   it("composes per-screen html path", () => {
-    expect(iterationHtmlPath(7, "home")).toBe(
-      ".qfai/evidence/prototyping/iter-07/home.html",
-    );
+    expect(iterationHtmlPath(7, "home")).toBe(".qfai/evidence/prototyping/iter-07/home.html");
   });
 
   it("composes per-screen screenshot path", () => {
@@ -138,9 +136,7 @@ describe("iteration paths", () => {
   });
 
   it("composes review path", () => {
-    expect(iterationReviewPath(12)).toBe(
-      ".qfai/evidence/prototyping/iter-12/review.json",
-    );
+    expect(iterationReviewPath(12)).toBe(".qfai/evidence/prototyping/iter-12/review.json");
   });
 });
 

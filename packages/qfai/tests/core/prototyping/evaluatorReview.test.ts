@@ -7,7 +7,9 @@ import {
   type BuildEvaluatorReviewInput,
 } from "../../../src/core/prototyping/evaluatorReview.js";
 
-const baseInput = (overrides: Partial<BuildEvaluatorReviewInput> = {}): BuildEvaluatorReviewInput => ({
+const baseInput = (
+  overrides: Partial<BuildEvaluatorReviewInput> = {},
+): BuildEvaluatorReviewInput => ({
   iterIndex: 0,
   reviewerId: "product-surface-reviewer",
   scores: {
@@ -37,17 +39,13 @@ describe("buildEvaluatorReview", () => {
   // QFAI:SPEC-0017:TC-0017-0006
   it("rejects prose with fewer than 200 words", () => {
     expect(() =>
-      buildEvaluatorReview(
-        baseInput({ proseCritique: Array(100).fill("word").join(" ") }),
-      ),
+      buildEvaluatorReview(baseInput({ proseCritique: Array(100).fill("word").join(" ") })),
     ).toThrow(/proseCritique must be 200..500 words/);
   });
 
   it("rejects prose with more than 500 words", () => {
     expect(() =>
-      buildEvaluatorReview(
-        baseInput({ proseCritique: Array(600).fill("word").join(" ") }),
-      ),
+      buildEvaluatorReview(baseInput({ proseCritique: Array(600).fill("word").join(" ") })),
     ).toThrow(/proseCritique must be 200..500 words/);
   });
 
@@ -129,15 +127,15 @@ describe("buildEvaluatorReview", () => {
   });
 
   it("rejects empty reviewerId", () => {
-    expect(() =>
-      buildEvaluatorReview(baseInput({ reviewerId: "" })),
-    ).toThrow(/reviewerId must be a non-empty string/);
+    expect(() => buildEvaluatorReview(baseInput({ reviewerId: "" }))).toThrow(
+      /reviewerId must be a non-empty string/,
+    );
   });
 
   it("rejects negative iterIndex", () => {
-    expect(() =>
-      buildEvaluatorReview(baseInput({ iterIndex: -1 })),
-    ).toThrow(/iterIndex must be a non-negative integer/);
+    expect(() => buildEvaluatorReview(baseInput({ iterIndex: -1 }))).toThrow(
+      /iterIndex must be a non-negative integer/,
+    );
   });
 
   it("rejects empty evidenceRefs.screenshot", () => {
