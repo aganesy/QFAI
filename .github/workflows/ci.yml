@@ -34,6 +34,8 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - name: Run lint gate
         run: pnpm ci:lint
+      - name: Sanity grep — no v1.x prototyping legacy concepts (spec-0017)
+        run: bash packages/qfai/scripts/check-no-legacy-concepts.sh
 
   # ── 2. Type checking (current TypeScript) ────────────────────────
   check-types:

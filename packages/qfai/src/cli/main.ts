@@ -173,9 +173,9 @@ Commands:
   doctor                       設定/パス/出力前提の診断
   guardrails                   Decision Guardrails の抽出/検査（list|extract|check）
   prototyping preflight        prototyping 実行前提（spec/ui/design contracts/roles/browser/targetUrl）を診断
-  prototyping iterate          single-thread evolution loop の cycle 確定 (v2.0、P6 実装予定)
-  prototyping certify [--check]         completion-certificate.json を生成 / 検証 (v1.8.4)
-  prototyping show-spec                 解決された primary prototyping spec を出力 (v1.8.4)
+  prototyping iterate          single-thread evolution loop の cycle 確定 (spec-0017 v2.0)
+  prototyping certify [--check]         completion-certificate.json を生成 / 検証 (schema v2.0)
+  prototyping show-spec                 解決された primary prototyping spec を出力
 
 Options:
   --root <path>   対象ディレクトリ
