@@ -45,7 +45,7 @@ Skill-specific examples:
   - `.qfai/assistant/skills/qfai-discussion/references/discussion-artifact-rules.md`
   - `.qfai/assistant/skills/qfai-sdd/references/spec-traceability-rules.md`
   - `.qfai/assistant/skills/qfai-sdd/references/contract-artifact-rules.md`
-  - `.qfai/assistant/skills/qfai-prototyping/references/evidence-requirements.md`
+  - `.qfai/assistant/skills/qfai-prototyping/references/iteration-loop.md`
 
 ## Inputs Priority (Preflight)
 
@@ -96,7 +96,7 @@ Use the shared schema.
 - Reviewer checks:
   - required roles were delegated;
   - validate evidence exists: `qfai validate --profile verify --fail-on error` completed with `error=0`;
-  - declared screens have mandatory screenshot and HTML evidence under `.qfai/evidence/prototyping/`;
+  - v2.0: per-iter evidence (screenshot + HTML + review.json) exists under `.qfai/evidence/prototyping/iter-NN/`, and `.qfai/evidence/prototyping/completion-certificate.json` v2.0 is present and digest-valid (`qfai prototyping certify --check`);
   - Drift Protocol enforced;
   - test-layer policy enforced against `test-layers.md`.
   - gate counts and ratios are signals, not gates.

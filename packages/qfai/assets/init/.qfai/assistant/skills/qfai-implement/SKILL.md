@@ -76,15 +76,20 @@ Execute the TDD micro-cycle for each pending item in `test-list.md`, transitioni
 
 - Review rendered output, screenshot evidence, or HTML output before closing any UI-affecting item.
 - Read spec + contract inputs first whenever implementation touches UI or critique-driven behavior.
-- Read order: `01_Spec.md` → `03_Acceptance-Criteria.md` → `05_Examples.md` →
+- Read order (v2.0, spec-0017 P11): `01_Spec.md` → `03_Acceptance-Criteria.md` → `05_Examples.md` →
   `.qfai/contracts/design/exploration-brief.yaml` →
   `.qfai/contracts/design/reference-pool.yaml` → `.qfai/contracts/design/brand-design.yaml` →
-  `.qfai/contracts/design/evaluation-rubric.yaml` → `.qfai/contracts/design/evaluator-calibration.yaml` →
-  `.qfai/contracts/design/selected-direction.yaml` → `.qfai/contracts/design/design-system.yaml` →
+  `.qfai/contracts/design/design-system.yaml` (extracted from final iter) →
   `.qfai/contracts/design/prototype-handoff.yaml` → `.qfai/contracts/ui/*.yaml` →
-  canonical prototype screenshots / HTML snapshots → `.qfai/prototypes/winner/index.html`.
+  canonical prototype evidence under `.qfai/evidence/prototyping/iter-NN/<screen>.{png,html}` →
+  `.qfai/prototypes/final/index.html`.
+- The v1.x evaluation-rubric / evaluator-calibration / selected-direction contracts and
+  `prototypes/winner/index.html` were removed in spec-0017 P4/P8.
 - Do not read discussion-pack UI/UX sidecars, fallback mocks, or legacy design aliases.
-- Prototype code is analysis input, not production source. Reimplement with project-native patterns while preserving `prototype-handoff.yaml` `mustPreserve`; adapt `mayAdapt`; do not copy `mustNotCopy`.
+- Prototype HTML is analysis input, not production source. Reimplement with project-native
+  patterns while preserving the visual identity captured in `prototype-handoff.yaml`
+  `implementationNotes` (free-form prose); the v1.x mustPreserve / mayAdapt / mustNotCopy
+  three-category split is removed.
 - UI-affecting items require product-surface-reviewer prototype parity review before `done`.
 - If code intent and rendered output diverge, treat the rendered/HTML result as the blocking review input and reconcile before DONE.
 
