@@ -111,10 +111,16 @@ describe("qfai prototyping certify (generate)", () => {
     const certPath = path.join(root, COMPLETION_CERTIFICATE_REL_PATH);
     const body = JSON.parse(
       await (await import("node:fs/promises")).readFile(certPath, "utf-8"),
-    ) as { runId: string; specsCovered: string[]; reviewerSignoff: { reviewerId: string } };
+    ) as {
+      runId: string;
+      specsCovered: string[];
+      reviewerSignoff: { reviewerId: string };
+      iterationCount: number;
+    };
     expect(body.runId).toBe("run-test-2026");
     expect(body.specsCovered).toEqual(["0012"]);
     expect(body.reviewerSignoff.reviewerId).toBe("test-reviewer");
+    expect(body.iterationCount).toBe(3);
   });
 
   it("exits 2 when prototyping.json is missing", async () => {
