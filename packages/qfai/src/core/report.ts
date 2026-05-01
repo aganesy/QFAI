@@ -1754,7 +1754,7 @@ function readStringArray(value: unknown): string[] {
 }
 
 function normalizeSpecNumber(value: string): string {
-  return value.replace(/^spec-/u, "");
+  return value.replace(/^spec-/iu, "");
 }
 
 async function collectSpecContractRefs(

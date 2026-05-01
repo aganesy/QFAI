@@ -237,7 +237,7 @@ describe("report", { timeout: 15000 }, () => {
       `${JSON.stringify(
         {
           schemaVersion: "3.0",
-          specsCovered: ["0001"],
+          specsCovered: ["SPEC-0001"],
           iterations: [
             {
               index: 0,
@@ -312,7 +312,7 @@ describe("report", { timeout: 15000 }, () => {
       `${JSON.stringify(
         {
           schemaVersion: "3.0",
-          specsCovered: ["0001"],
+          specsCovered: ["SPEC-0001"],
           iterations: [
             {
               index: 0,
