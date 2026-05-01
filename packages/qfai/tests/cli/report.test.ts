@@ -220,4 +220,65 @@ describe("report", { timeout: 15000 }, () => {
       "- 設定: [qfai.config.yaml](https://example.com/repo/qfai.config.yaml)",
     );
   });
+
+  it("includes v2.0 prototyping summary from prototyping.json", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-report-"));
+    await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+    const evidenceDir = path.join(root, ".qfai", "evidence", "prototyping");
+    await mkdir(evidenceDir, { recursive: true });
+    await writeFile(
+      path.join(evidenceDir, "prototyping.json"),
+      `${JSON.stringify(
+        {
+          schemaVersion: "3.0",
+          specsCovered: ["0001"],
+          iterations: [
+            {
+              index: 0,
+              commitSha: "a".repeat(40),
+              scores: {
+                designQuality: "acceptable",
+                originality: "acceptable",
+                craft: "acceptable",
+                functionality: "acceptable",
+              },
+              proseCritique: "x".repeat(1500),
+              slopPatternsDetected: [],
+              pivotDirective: "continue",
+              evidenceRefs: {
+                screenshot: ".qfai/evidence/prototyping/iter-00/home.png",
+                html: ".qfai/evidence/prototyping/iter-00/home.html",
+              },
+            },
+          ],
+          acceptedIterationIndex: 0,
+          stopReason: null,
+        },
+        null,
+        2,
+      )}\n`,
+      "utf-8",
+    );
+
+    await runValidate({
+      root,
+      strict: false,
+      failOn: "never",
+      format: "github",
+    });
+
+    const reportPath = path.join(root, ".qfai", "report", "report.md");
+    await runReport({
+      root,
+      format: "md",
+      outPath: reportPath,
+    });
+
+    const report = await readFile(reportPath, "utf-8");
+    expect(report).toContain("### prototyping.lifecycle (v2.0)");
+    expect(report).toContain("- iterations: 1");
+    expect(report).toContain("- effective: single-thread-loop");
+    expect(report).toContain("- obligation profile: v2.0-single-thread-loop");
+  });
 });

@@ -175,5 +175,8 @@ function nextActionsFor(cycle: number): string[] {
   if (cycle === 0) {
     return ["generator-seed", "capture", "review", "iterate --cycle 1"];
   }
+  if (cycle >= MAX_ITERATION_INDEX) {
+    return ["generator-iterate", "capture", "review", "handoff", "certify"];
+  }
   return ["generator-iterate", "capture", "review", `iterate --cycle ${cycle + 1}`];
 }

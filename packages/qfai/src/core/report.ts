@@ -476,7 +476,7 @@ export async function createReportData(
     .map((item) => toReportRuleFinding(item));
 
   const tddCoverage = await collectTddCoverage(specEntries);
-  const prototyping = collectPrototypingSummary(resolvedRoot, config);
+  const prototyping = await collectPrototypingSummary(resolvedRoot, config, specEntries);
 
   const version = await resolveToolVersion();
   const displayRoot = toRelativePath(resolvedRoot, resolvedRoot);
@@ -1676,13 +1676,81 @@ async function collectChangeTypeSummary(specsRoot: string): Promise<ReportChange
   return summary;
 }
 
-function collectPrototypingSummary(
-  _root: string,
-  _config: ConfigLoadResult["config"],
-): ReportPrototypingSummary | undefined {
-  // v1.x mode/full-harness/round-based prototyping summary removed in P3
-  // (spec-0017). v2.0 iteration-based summary lands in P5/P15.
-  return undefined;
+async function collectPrototypingSummary(
+  root: string,
+  config: ConfigLoadResult["config"],
+  specEntries: readonly SpecEntry[],
+): Promise<ReportPrototypingSummary | undefined> {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(
+      await readFile(path.join(root, ".qfai/evidence/prototyping/prototyping.json"), "utf-8"),
+    );
+  } catch {
+    return undefined;
+  }
+
+  const doc = asRecord(parsed);
+  if (!doc) {
+    return undefined;
+  }
+
+  const iterations = Array.isArray(doc.iterations) ? doc.iterations : [];
+  const expectedSpecIds = specEntries.map((entry) => entry.specNumber).sort();
+  const observedSpecIds = readStringArray(doc.specsCovered).map(normalizeSpecNumber).sort();
+  const missingSpecIds = expectedSpecIds.filter((id) => !observedSpecIds.includes(id));
+  const unexpectedSpecIds = observedSpecIds.filter((id) => !expectedSpecIds.includes(id));
+  const specsCoverageStatus =
+    expectedSpecIds.length > 0 && missingSpecIds.length === 0 ? "complete" : "incomplete";
+
+  const warnings: string[] = [];
+  if (iterations.length === 0) {
+    warnings.push("prototyping.json has no iterations.");
+  }
+
+  return {
+    roundLifecycle: {
+      schemaVersion: "2.0",
+      iterations: iterations.length,
+    },
+    mode: {
+      effective: "single-thread-loop",
+      source: ".qfai/evidence/prototyping/prototyping.json",
+      rationale: "spec-0017 v2.0 uses a fixed single-thread iteration loop.",
+      surface: config.uiux?.platform ?? "unknown",
+    },
+    evidence: {
+      specsCoverageStatus,
+      specsCoverage: {
+        expectedSpecIds,
+        observedSpecIds,
+        missingSpecIds,
+        unexpectedSpecIds,
+      },
+      runtimeGate: { present: false, required: false },
+      uiFidelity: { present: false, required: false },
+      renderBundle: { present: false, required: false },
+      browserQaBundle: { present: false, required: false },
+      obligationProfile: "v2.0-single-thread-loop",
+    },
+    warnings,
+  };
+}
+
+function asRecord(value: unknown): Record<string, unknown> | undefined {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : undefined;
+}
+
+function readStringArray(value: unknown): string[] {
+  return Array.isArray(value)
+    ? value.filter((item): item is string => typeof item === "string")
+    : [];
+}
+
+function normalizeSpecNumber(value: string): string {
+  return value.replace(/^spec-/u, "");
 }
 
 async function collectSpecContractRefs(

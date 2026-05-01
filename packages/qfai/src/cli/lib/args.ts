@@ -305,8 +305,8 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
           markInvalid();
           break;
         }
-        const parsed = Number.parseInt(next, 10);
-        if (!Number.isInteger(parsed) || parsed < 0) {
+        const parsed = parseNonNegativeInteger(next);
+        if (parsed === null) {
           markInvalid();
         } else {
           options.prototypingCycle = parsed;
@@ -344,6 +344,14 @@ function readOptionValue(args: string[], index: number): string | null {
     return null;
   }
   return next;
+}
+
+function parseNonNegativeInteger(value: string): number | null {
+  if (!/^\d+$/u.test(value)) {
+    return null;
+  }
+  const parsed = Number(value);
+  return Number.isSafeInteger(parsed) ? parsed : null;
 }
 
 function applyFormatOption(

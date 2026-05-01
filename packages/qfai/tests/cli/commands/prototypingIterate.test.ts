@@ -128,12 +128,14 @@ describe("runPrototypingIterate cycle 0", () => {
       targetUrl: string | null;
       paths: { iterationDir: string; reviewJson: string };
       specs: string[];
+      nextActions: string[];
     };
     expect(plan.cycle).toBe(0);
     expect(plan.targetUrl).toBe("http://localhost:5173");
     expect(plan.paths.iterationDir).toBe(".qfai/evidence/prototyping/iter-00");
     expect(plan.paths.reviewJson).toBe(".qfai/evidence/prototyping/iter-00/review.json");
     expect(plan.specs).toEqual(["0017"]);
+    expect(plan.nextActions).toContain("iterate --cycle 1");
   });
 
   // QFAI:SPEC-0017:TC-0017-0011
@@ -273,5 +275,34 @@ describe("runPrototypingIterate continue (exit 0)", () => {
     );
     const plan = JSON.parse(planRaw) as { cycle: number };
     expect(plan.cycle).toBe(1);
+  });
+
+  it("does not emit an unreachable iterate --cycle 15 action at cycle 14", async () => {
+    const root = await newTempDir();
+    await seedMinimalProject(root);
+    await seedPrototypingJson(root, [
+      {
+        index: 13,
+        scores: {
+          designQuality: "acceptable",
+          originality: "acceptable",
+          craft: "acceptable",
+          functionality: "acceptable",
+        },
+      },
+    ]);
+
+    const exit = await runPrototypingIterate({ root, cycle: 14 });
+    expect(exit).toBe(0);
+
+    const planRaw = await readFile(
+      path.join(root, ".qfai/evidence/prototyping/iter-14/iterate-plan.json"),
+      "utf-8",
+    );
+    const plan = JSON.parse(planRaw) as { cycle: number; nextActions: string[] };
+    expect(plan.cycle).toBe(14);
+    expect(plan.nextActions).not.toContain("iterate --cycle 15");
+    expect(plan.nextActions).toContain("handoff");
+    expect(plan.nextActions).toContain("certify");
   });
 });
