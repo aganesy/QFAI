@@ -31,7 +31,6 @@ import {
   MAX_ITERATION_INDEX,
   isOrdinalScore,
   isPivotDirective,
-  type Iteration,
 } from "../prototyping/iteration.js";
 
 const PROTO_JSON_REL = ".qfai/evidence/prototyping/prototyping.json";
@@ -42,6 +41,19 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function isStringArray(value: unknown): value is string[] {
   return Array.isArray(value) && value.every((v) => typeof v === "string");
+}
+
+function hasExceptionalStopShape(value: unknown): boolean {
+  if (!isRecord(value) || !isRecord(value.scores) || !isStringArray(value.slopPatternsDetected)) {
+    return false;
+  }
+  return (
+    value.scores.designQuality === "exceptional" &&
+    value.scores.originality === "exceptional" &&
+    value.scores.craft === "exceptional" &&
+    value.scores.functionality === "exceptional" &&
+    value.slopPatternsDetected.length === 0
+  );
 }
 
 export async function validatePrototypingEvidenceV3(
@@ -276,9 +288,9 @@ export async function validatePrototypingEvidenceV3(
       ),
     );
   }
-  const last = iterations[iterations.length - 1] as Iteration | undefined;
+  const last = iterations[iterations.length - 1];
   if (stopReason === "max-iterations") {
-    if (!last || last.index !== MAX_ITERATION_INDEX) {
+    if (!isRecord(last) || last.index !== MAX_ITERATION_INDEX) {
       issues.push(
         issue(
           "QFAI-PROT2-005",
@@ -291,14 +303,7 @@ export async function validatePrototypingEvidenceV3(
     }
   }
   if (stopReason === "axes-exceptional" && last) {
-    const allEx =
-      last.scores.designQuality === "exceptional" &&
-      last.scores.originality === "exceptional" &&
-      last.scores.craft === "exceptional" &&
-      last.scores.functionality === "exceptional" &&
-      Array.isArray(last.slopPatternsDetected) &&
-      last.slopPatternsDetected.length === 0;
-    if (!allEx) {
+    if (!hasExceptionalStopShape(last)) {
       issues.push(
         issue(
           "QFAI-PROT2-005",

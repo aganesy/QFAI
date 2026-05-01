@@ -168,6 +168,20 @@ describe("validatePrototypingEvidenceV3", () => {
     expect(issues.some((i) => i.code === "QFAI-PROT2-005")).toBe(true);
   });
 
+  it("emits structured issues instead of throwing when stopReason=axes-exceptional and the last iter is malformed", async () => {
+    const root = await newTempDir();
+    await seedPrototypingJson(root, {
+      schemaVersion: "3.0",
+      specsCovered: ["0017"],
+      iterations: [validIter(0), { index: 1, commitSha: "b".repeat(40), scores: null }],
+      acceptedIterationIndex: 1,
+      stopReason: "axes-exceptional",
+    });
+    const issues = await validatePrototypingEvidenceV3(root, makeConfig());
+    expect(issues.some((i) => i.code === "QFAI-PROT2-002")).toBe(true);
+    expect(issues.some((i) => i.code === "QFAI-PROT2-005")).toBe(true);
+  });
+
   it("emits QFAI-PROT2-006 when iterations.length > 15", async () => {
     const root = await newTempDir();
     const iters = Array.from({ length: 16 }, (_, i) => validIter(i));

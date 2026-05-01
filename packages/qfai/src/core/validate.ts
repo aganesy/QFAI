@@ -189,7 +189,7 @@ async function runPrototypingValidators(
     ...(await validateCompletionCertificateIssues(root, config)),
     ...(await validateConfigReferenceIntegrity(root, config)),
     ...validatePrototypingArtifactRefIntegrity(root, config),
-    ...validateSpecIdLinkage(root, config),
+    ...(await validateSpecIdLinkage(root, config)),
   ];
 }
 
