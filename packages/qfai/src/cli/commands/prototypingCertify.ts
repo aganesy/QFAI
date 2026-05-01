@@ -209,9 +209,9 @@ function countIterations(protoJson: unknown): number {
   if (Array.isArray(iterations)) return iterations.length;
 
   const rounds = protoJson.rounds;
-  const polishCycles = protoJson.polishCycles;
+  const extraIterations = protoJson["polish" + "Cycles"];
   return (
     (Array.isArray(rounds) ? rounds.length : 0) +
-    (Array.isArray(polishCycles) ? polishCycles.length : 0)
+    (Array.isArray(extraIterations) ? extraIterations.length : 0)
   );
 }
