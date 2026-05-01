@@ -1,7 +1,7 @@
 import { runDoctor } from "./commands/doctor.js";
 import { runGuardrails } from "./commands/guardrails.js";
 import { runInit } from "./commands/init.js";
-import { runPrototypingCommand } from "./commands/prototyping.js";
+import { runPrototypingIterate } from "./commands/prototypingIterate.js";
 import { runPrototypingCertify, runPrototypingShowSpec } from "./commands/prototypingCertify.js";
 import { runReport } from "./commands/report.js";
 import { runValidate } from "./commands/validate.js";
@@ -131,15 +131,28 @@ export async function run(argv: string[], cwd: string): Promise<void> {
           return;
         }
 
-        // iterate (v2.0): handled by stub `runPrototypingCommand` until P6
-        // implements `runPrototypingIterate`. The stub returns exit 2 with a
-        // migration message.
-        const resolvedRoot = await resolveRoot(options);
-        const exitCode = await runPrototypingCommand({
-          root: resolvedRoot,
-          action: options.prototypingAction,
-        });
-        process.exitCode = exitCode;
+        // iterate (v2.0): single-thread evolution loop driver.
+        if (options.prototypingAction === "iterate") {
+          if (options.prototypingCycle === undefined) {
+            error("qfai prototyping iterate: --cycle <number> is required.");
+            info(usage());
+            process.exitCode = options.invalidExitCode;
+            return;
+          }
+          const resolvedRoot = await resolveRoot(options);
+          process.exitCode = await runPrototypingIterate({
+            root: resolvedRoot,
+            cycle: options.prototypingCycle,
+            ...(options.prototypingTargetUrl
+              ? { targetUrl: options.prototypingTargetUrl }
+              : {}),
+          });
+          return;
+        }
+
+        error(`qfai prototyping ${options.prototypingAction}: unknown subcommand.`);
+        info(usage());
+        process.exitCode = options.invalidExitCode;
       }
       return;
 
