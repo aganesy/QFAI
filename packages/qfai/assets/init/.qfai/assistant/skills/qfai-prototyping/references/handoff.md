@@ -25,7 +25,6 @@ LLM assistance is allowed for naming (primary / surface / accent etc.).
 ### `.qfai/contracts/design/prototype-handoff.yaml`
 
 ```yaml
-schemaVersion: "2.0"
 finalIterIndex: <number>
 finalArtifact: ".qfai/prototypes/final/index.html"
 extractedDesignSystem: ".qfai/contracts/design/design-system.yaml"

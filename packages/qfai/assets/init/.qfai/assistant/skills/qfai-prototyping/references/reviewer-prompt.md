@@ -14,7 +14,6 @@ This file is injected into the product-surface-reviewer sub-agent on each cycle.
 
 ```json
 {
-  "schemaVersion": "3.0",
   "iterIndex": <NN>,
   "reviewerId": "product-surface-reviewer",
   "scores": {
