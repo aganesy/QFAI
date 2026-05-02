@@ -11,33 +11,28 @@ jobs:
   request-copilot-review:
     runs-on: ubuntu-latest
     steps:
-      - name: Request Copilot reviewer
-        # COPILOT_REVIEW_TOKEN is recommended (PAT with pull_requests: write).
-        # If not set, GH_TOKEN uses secrets.GH_TOKEN (PAT) and falls back to secrets.GITHUB_TOKEN.
+      - name: Request Copilot reviewer (GraphQL)
+        # COPILOT_REVIEW_TOKEN must be a fine-grained PAT with
+        # `Pull requests: write`. GITHUB_TOKEN and classic PATs are
+        # silently rejected by GitHub for bot reviewer assignment
+        # since the late-April 2026 Copilot platform tightening,
+        # so no fallback is provided.
         env:
-          COPILOT_REVIEW_TOKEN: ${{ secrets.COPILOT_REVIEW_TOKEN }}
-          GH_TOKEN: ${{ secrets.GH_TOKEN || secrets.GITHUB_TOKEN }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
-          REPO: ${{ github.repository }}
-          COPILOT_REVIEWER: copilot-pull-request-reviewer[bot]
+          GH_TOKEN: ${{ secrets.COPILOT_REVIEW_TOKEN }}
+          PR_NODE_ID: ${{ github.event.pull_request.node_id }}
+          # Copilot pull-request-reviewer bot node id (stable, GitHub-assigned).
+          COPILOT_BOT_ID: BOT_kgDOCnlnWA
         run: |
           set -euo pipefail
-          TOKEN="${COPILOT_REVIEW_TOKEN:-${GH_TOKEN:-}}"
-          if [ -z "${TOKEN:-}" ]; then
-            echo "COPILOT_REVIEW_TOKEN (preferred) or GH_TOKEN (legacy) is required (PAT with pull_requests: write). The default GITHUB_TOKEN may be insufficient." >&2
+          if [ -z "${GH_TOKEN:-}" ]; then
+            echo "ERROR: COPILOT_REVIEW_TOKEN is required (fine-grained PAT, Pull requests: write)." >&2
             exit 1
           fi
-          export GH_TOKEN="${TOKEN}"
-
-          if ! requested="$(gh api "repos/${REPO}/pulls/${PR_NUMBER}/requested_reviewers" --jq '.users[].login')"; then
-            echo "Failed to fetch existing reviewers for PR #${PR_NUMBER} in ${REPO}." >&2
-            exit 1
-          fi
-          if echo "$requested" | grep -Fxq "$COPILOT_REVIEWER"; then
-            echo "Copilot reviewer already requested."
-            exit 0
-          fi
-
-          gh api "repos/${REPO}/pulls/${PR_NUMBER}/requested_reviewers" \
-            -X POST \
-            -f "reviewers[]=${COPILOT_REVIEWER}"
+          gh api graphql \
+            -f query='mutation($prId: ID!, $botId: ID!) {
+              requestReviews(input: { pullRequestId: $prId, botIds: [$botId], union: true }) {
+                pullRequest { id }
+              }
+            }' \
+            -f prId="$PR_NODE_ID" \
+            -f botId="$COPILOT_BOT_ID"
