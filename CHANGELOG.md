@@ -4,7 +4,69 @@
 
 ## [Unreleased]
 
-- なし
+Strengthens `/qfai-sdd` so that, when specs already exist and a new
+requirement arrives, the skill chooses the right granularity
+(create / append / modify / remove / delete / split / merge / supersede)
+through a deliberate Stage 1 Triage step rather than implicit
+subject-existence checks.
+
+### Added
+
+- `/qfai-sdd` Stage 1 Triage: a mandatory step between preflight and
+  Phase 0 (Contracts-first). Documented in
+  `assets/init/.qfai/assistant/skills/qfai-sdd/references/sdd-triage.md`
+  and wired into the execution playbook and phase checklists.
+- 8 first-class triage operations: CREATE, UPDATE:APPEND / MODIFY /
+  REMOVE, DELETE, SPLIT, MERGE, SUPERSEDE. CREATE / DELETE / SPLIT /
+  MERGE / SUPERSEDE / UPDATE:REMOVE require AskUserQuestion approval.
+- Spec lifecycle `Status:` bullet on every `01_Spec.md`
+  (`active | superseded | deprecated | removed`) with
+  `Superseded-by:` and `Deprecated-at:` companions.
+- New validator codes:
+  - `QFAI-STATUS-001..006` — spec lifecycle status field validation
+    (missing / invalid enum / superseded chain / deprecated date).
+  - `QFAI-TRIAGE-001..005` — `## Triage` section structure on
+    `09_delta.md` and `_policies/10_delta.md` (warning when missing,
+    errors for missing columns / invalid Operation / invalid Sub-op /
+    missing approval).
+- Core helpers `src/core/specSummary.ts` (`collectSpecSummaries`) and
+  `src/core/sddTriage.ts` (`classifyTriage`, `renderTriageMarkdown`,
+  `requiresApproval`).
+- Templates updated:
+  `templates/specs/spec/01_Spec.md` declares `Status: active`;
+  `templates/specs/spec/09_delta.md` and
+  `templates/specs/_policies/10_delta.md` ship a `## Triage` skeleton;
+  `templates/specs/_policies/11_Slice-Policy.md` rewritten to the
+  8-operation table with the APPEND-vs-CREATE algorithm and
+  size-threshold rules.
+- Test coverage: `tests/core/parseSpecStatus.test.ts`,
+  `tests/core/specSummary.test.ts`, `tests/core/sddTriage.test.ts`,
+  `tests/validators/specPack/statusValidation.test.ts`,
+  `tests/validators/specPack/triageSection.test.ts`,
+  `tests/integration/sddTriageSection.test.ts`,
+  `tests/integration/sddSkillTriagePhase.test.ts`.
+
+### Changed (BREAKING)
+
+- Every `01_Spec.md` MUST declare a valid `Status:` bullet. Specs
+  without a Status now fail validation with `QFAI-STATUS-001`.
+  Operational specs in this repository are migrated to
+  `Status: active`.
+- `_policies/11_Slice-Policy.md` (template + operational) is rewritten
+  around the 8-operation triage model. The legacy 3-row table
+  (CREATE / UPDATE / DELETE only) is removed.
+- `validateStatusInSpecs` is renumbered from `QFAI-STATUS-001` to
+  `QFAI-STATUSLEAK-001` to free the `QFAI-STATUS-NNN` namespace for
+  the new spec lifecycle validator. The validator no longer matches
+  the bare `status:` token because the new `Status:` bullet is a
+  legitimate definition-level field; other operational fields
+  (`progress`, `risk_state`, `review_gate`, `last_updated_at`,
+  `release_candidate`) continue to fire `QFAI-STATUSLEAK-001`.
+- `assets/init/.qfai/assistant/skills/qfai-sdd/SKILL.md` rewritten as
+  a Stage 0 / Stage 1 / Phase 0..4 surface (346 -> 237 lines). Detailed
+  procedure pulled out into `references/sdd-triage.md`,
+  `references/sdd-execution-playbook.md`, and
+  `references/sdd-phase-checklists.md`.
 
 ## [1.8.8] - 2026-05-02
 

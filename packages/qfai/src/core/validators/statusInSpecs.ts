@@ -12,9 +12,12 @@ type StatusPattern = {
   pattern: RegExp;
 };
 
+// NOTE: `status:` is intentionally absent. The spec lifecycle
+// `Status: active|superseded|deprecated|removed` bullet is a legitimate
+// definition-only field (validated by `validateSpecStatus`). Other
+// operational fields (progress, risk_state, etc.) remain forbidden.
 const STRONG_PATTERNS: StatusPattern[] = [
   { label: "release_candidate:", pattern: /\brelease_candidate\s*:/i },
-  { label: "status:", pattern: /^\s*(?:-\s*)?status\s*:/im },
   { label: "progress:", pattern: /^\s*(?:-\s*)?progress\s*:/im },
   { label: "risk_state:", pattern: /\brisk_state\s*:/i },
   { label: "review_gate:", pattern: /\breview_gate\s*:/i },
@@ -56,14 +59,14 @@ export async function validateStatusInSpecs(root: string, config: QfaiConfig): P
 
     issues.push(
       issue(
-        "QFAI-STATUS-001",
+        "QFAI-STATUSLEAK-001",
         message,
         "warning",
         file,
         "specs.statusSeparation",
         refs,
         "change",
-        "status は `.qfai/report/run-*` の実行ログで管理し、specs には定義のみを残してください。",
+        "operational status は `.qfai/report/run-*` の実行ログで管理し、specs には definition のみを残してください。spec lifecycle は `Status: active|superseded|deprecated|removed` bullet を用います。",
       ),
     );
   }

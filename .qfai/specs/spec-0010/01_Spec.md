@@ -2,6 +2,9 @@
 
 - Spec: spec-0010
 - Parent: CAP-0010
+- Status: active
+- Superseded-by: -
+- Deprecated-at: -
 
 ## Consumer View
 

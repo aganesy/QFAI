@@ -560,3 +560,14 @@
 | 2026-04-22 | adopted | 02_Initiative.md / 03_Capabilities.md / 04_Business-Flow.md / 06_Glossary.md / 07_Constraints.md / 08_Decisions.md | prototyping posture shifted to skill-first execution with validate/verify gates and mandatory screenshot/html evidence; old CLI/runtime/mode wording explicitly superseded | current implementation alignment |
 | 2026-04-22 | adopted | 02_Initiative.md / 08_Decisions.md / spec-0002 / spec-0004 / spec-0010 / spec-0012 / spec-0013 | discussion/preflight no longer requires `prototyping.yaml`; full-harness evidence contract is reviewerScores/allReviewerAxesPerfect100 + snapshot scoringTrace + iterationBudget | v1.8.1 prototyping evidence model sync |
 | 2026-04-24 | adopted | spec-0012 / qfai-prototyping | prototyping completion now requires post-selection polish, completion certificate, and all reviewer axes scored 100/100; previous 95-point completion border removed | prototyping completion incident remediation |
+
+## Triage
+
+> v1.9.0 で Stage 1 Triage 規律を導入。今後、複数 spec をまたぐ
+> SPLIT / MERGE / SUPERSEDE などの triage 行はこのセクションに追記する。
+> 単一 spec のみを触る triage 行は `<spec>/09_delta.md` の `## Triage`
+> セクションに記録する。
+
+| Source       | Subject                                          | Existing Spec | Operation | Sub-op | Approved By | Rationale                                                              |
+|--------------|--------------------------------------------------|---------------|-----------|--------|-------------|------------------------------------------------------------------------|
+| internal/sdd | Stage 1 Triage 規律と spec status field モデル   | (none)        | CREATE    | -      | yusuke      | v1.9.0 SDD 強化: 8 ops + APPEND/MODIFY/REMOVE 細分化 + status lifecycle |

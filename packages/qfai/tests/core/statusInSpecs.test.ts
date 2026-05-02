@@ -27,7 +27,55 @@ describe("validateStatusInSpecs", () => {
       );
 
       const issues = await validateStatusInSpecs(root, defaultConfig);
-      expect(issues.some((entry) => entry.code === "QFAI-STATUS-001")).toBe(false);
+      expect(issues.some((entry) => entry.code === "QFAI-STATUSLEAK-001")).toBe(false);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("ignores legitimate spec lifecycle Status bullet on 01_Spec.md", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-status-"));
+    try {
+      const specDir = path.join(root, ".qfai", "specs", "spec-0001");
+      await mkdir(specDir, { recursive: true });
+      await writeFile(
+        path.join(specDir, "01_Spec.md"),
+        [
+          "# 01 Spec",
+          "",
+          "- Spec: spec-0001",
+          "- Parent: CAP-0001",
+          "- Status: active",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+
+      const issues = await validateStatusInSpecs(root, defaultConfig);
+      expect(issues.some((entry) => entry.code === "QFAI-STATUSLEAK-001")).toBe(false);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("flags operational progress fields under QFAI-STATUSLEAK-001", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-status-"));
+    try {
+      const specDir = path.join(root, ".qfai", "specs", "spec-0001");
+      await mkdir(specDir, { recursive: true });
+      await writeFile(
+        path.join(specDir, "10_Plan.md"),
+        [
+          "# 10 Plan",
+          "",
+          "- progress: in-progress",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+
+      const issues = await validateStatusInSpecs(root, defaultConfig);
+      expect(issues.map((entry) => entry.code)).toContain("QFAI-STATUSLEAK-001");
     } finally {
       await rm(root, { recursive: true, force: true });
     }
