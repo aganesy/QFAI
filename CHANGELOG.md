@@ -110,6 +110,16 @@ genuine scope deviations that introduce a new capability.
   has an explicit subject-overlap fallback step plus a CREATE step
   that requires citing a registered `CAP-NNNN`.
 
+### Fixed
+
+- Copilot code review reviewer assignment migrated from REST
+  `requested_reviewers` (silently ignored by GitHub since the
+  late-April 2026 Copilot platform tightening) to GraphQL
+  `requestReviews.botIds`. The workflow now requires
+  `COPILOT_REVIEW_TOKEN` (fine-grained PAT with `Pull requests: write`);
+  the `GH_TOKEN` / `GITHUB_TOKEN` fallback is removed since neither is
+  accepted for bot reviewer assignment.
+
 ## [1.8.8] - 2026-05-02
 
 ### Removed (BREAKING)
