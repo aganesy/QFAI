@@ -38,7 +38,7 @@ Enforcement: `npm run lint:shipping` (added in Phase 6) blocks
 `\b(?:AC|TC|REQ)-\d{4}-\d{4}\b` from `assets/init/**` and `src/**`
 (excluding tests and the seed dir itself).
 
-JSDoc traceability comments (`// spec-0012 TC-0012-0290`) in `src/` are
+JSDoc traceability comments (`// spec-NNNN TC-NNNN-NNNN`) in `src/` are
 allowed because they don't ship to user repos.
 
 ## P4. Wiring is part of the contract
@@ -75,8 +75,8 @@ ensures each layer has at least one preventive mechanism:
 | build-lint | `lint:shipping` (P6)                                                                           |
 | unit       | `validators-are-wired.test.ts` (P2)                                                            |
 | pipeline   | wired validators in `runPrototypingValidators` (P2)                                            |
-| E2E        | `prototypingV2E2E.test.ts` (spec-0017 P14)                                                     |
-| runtime    | `validateDelegationMapIssues` / drift validators / `validatePrototypingEvidenceV3` (spec-0017) |
+| E2E        | `prototypingE2E.test.ts`                                                                       |
+| runtime    | `validateDelegationMapIssues` / drift validators / `validatePrototypingEvidence`               |
 | audit      | `completion-certificate.json` digest verification (P4)                                         |
 
 When adding new code, the contributor must ask: "if this code is silently

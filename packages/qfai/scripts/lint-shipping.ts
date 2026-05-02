@@ -1,13 +1,9 @@
 /**
- * Package self-containment lint (v1.8.4 Phase 8).
+ * Package self-containment lint.
  *
- * Detects shipped templates that reference user-side specific spec / AC /
- * TC / REQ / etc. IDs. Such references break when QFAI is installed into a
- * user repo whose specs / contracts have different IDs.
- *
- * RR root cause class: install-site assumption — the package was previously
- * shipping `.qfai/assistant/skills/.../SKILL.md` with `.qfai/specs/spec-0012/`
- * hardcoded, which silently broke for any user repo not using spec-0012.
+ * Detects shipped templates that hardcode internal spec / AC / TC / REQ
+ * IDs. Such references break when QFAI is installed into a user repo
+ * whose specs / contracts have different IDs.
  *
  * Exposed two ways:
  *   1. Programmatic — `runLintShipping(pkgRoot)` returns violations.
@@ -55,9 +51,8 @@ const PATTERNS: ReadonlyArray<PatternRule> = [
     suggestion:
       "Resolve the spec at runtime via `qfai prototyping show-spec` or `resolvePrimaryPrototypingSpec`; do not hardcode spec IDs in runtime data.",
     // Bare spec-NNNN references in markdown docs are typically narrative
-    // citations (e.g. "this rule comes from spec-0012") — they are NOT
-    // install-site path lookups. Only flag in runtime data + src
-    // (still skipped by classifyTarget for src below).
+    // citations — they are NOT install-site path lookups. Only flag in
+    // runtime data + src (still skipped by classifyTarget for src below).
     appliesTo: ["init-runtime"],
   },
   {
