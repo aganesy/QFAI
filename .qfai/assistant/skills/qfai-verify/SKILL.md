@@ -41,11 +41,11 @@ Skill-specific examples:
 
 - Follow `.qfai/assistant/instructions/shared-skill-operating-baseline.md#format-ssot-mandatory`.
 
-- Before writing or editing any `.qfai/**` artifact, read and follow the relevant directory README template and sample:
-  - `.qfai/discussion/README.md`
-  - `.qfai/specs/README.md`
-  - `.qfai/contracts/**/README.md`
-  - `.qfai/evidence/README.md`
+- Before writing or editing any `.qfai/**` artifact, read the relevant skill-local reference or template:
+  - `.qfai/assistant/skills/qfai-discussion/references/discussion-artifact-rules.md`
+  - `.qfai/assistant/skills/qfai-sdd/references/spec-traceability-rules.md`
+  - `.qfai/assistant/skills/qfai-sdd/references/contract-artifact-rules.md`
+  - `.qfai/assistant/skills/qfai-prototyping/references/iteration-loop.md`
 
 ## Inputs Priority (Preflight)
 
@@ -96,7 +96,7 @@ Use the shared schema.
 - Reviewer checks:
   - required roles were delegated;
   - validate evidence exists: `qfai validate --profile verify --fail-on error` completed with `error=0`;
-  - declared screens have mandatory screenshot and HTML evidence under `.qfai/evidence/prototyping/`;
+  - v2.0: per-iter evidence (screenshot + HTML + review.json) exists under `.qfai/evidence/prototyping/iter-NN/`, and `.qfai/evidence/prototyping/completion-certificate.json` v2.0 is present and digest-valid (`qfai prototyping certify --check`);
   - Drift Protocol enforced;
   - test-layer policy enforced against `test-layers.md`.
   - gate counts and ratios are signals, not gates.
@@ -197,7 +197,7 @@ These principles are inspired by “constitution / articles” patterns used by 
 
 ## README Rule
 
-Do not edit any `.qfai/**/README.md` file; raise an Open Question instead.
+Do not create `.qfai/**/README.md` files as scaffold or format documentation; keep artifact guidance in skill references/templates.
 
 - READMEs are reference guides. Follow their structure, templates, and checklists.
 

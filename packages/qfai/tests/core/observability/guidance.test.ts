@@ -1,62 +1,52 @@
-// QFAI:SPEC-0012:TC-0012-0008
-// QFAI:SPEC-0012:TC-0012-0009
-// QFAI:SPEC-0012:TC-0012-0010
+// QFAI:SPEC-0017:TC-0017 (mode guidance v2.0)
+// v2.0 (spec-0017 P14): mode tier removed; the recommendation always
+// returns "single-thread-loop" but reasoning still surfaces project
+// characteristic hints.
 import { describe, expect, it } from "vitest";
 
 import { ModeGuidance } from "../../../src/core/observability/guidance.js";
 
-describe("ModeGuidance", () => {
+describe("ModeGuidance (v2.0)", () => {
   const guidance = new ModeGuidance();
 
-  describe("full-harness recommendation (TC-0012-0008)", () => {
-    it("recommends full-harness even for favorable characteristics", () => {
-      const result = guidance.recommend({
-        fileCount: 500,
-        testRatio: 0.5,
-        specCoverage: 0.7,
-        codeComplexity: 0.3,
-      });
-
-      expect(result.mode).toBe("full-harness");
-      expect(result.reasoning).toContain("recommends full-harness");
+  it("recommends single-thread-loop for favorable characteristics", () => {
+    const result = guidance.recommend({
+      fileCount: 500,
+      testRatio: 0.5,
+      specCoverage: 0.7,
+      codeComplexity: 0.3,
     });
+
+    expect(result.mode).toBe("single-thread-loop");
+    expect(result.reasoning).toContain("single-thread evolution loop");
   });
 
-  describe("full-harness recommendation (TC-0012-0009)", () => {
-    it("recommends full-harness for low test ratio and coverage", () => {
-      const result = guidance.recommend({
-        fileCount: 2000,
-        testRatio: 0.1,
-        specCoverage: 0.2,
-        codeComplexity: 0.9,
-      });
-
-      expect(result.mode).toBe("full-harness");
-      expect(result.reasoning).toBeTruthy();
+  it("surfaces project characteristic reasons in reasoning", () => {
+    const result = guidance.recommend({
+      fileCount: 2000,
+      testRatio: 0.1,
+      specCoverage: 0.2,
+      codeComplexity: 0.9,
     });
+
+    expect(result.mode).toBe("single-thread-loop");
+    expect(result.reasoning).toContain("fileCount 2000");
+    expect(result.reasoning).toContain("testRatio 0.1");
   });
 
-  describe("advisory only (TC-0012-0010)", () => {
-    it("recommendation does not change mode — returns advisory info only", () => {
-      const result = guidance.recommend({
-        fileCount: 100,
-        testRatio: 0.8,
-        specCoverage: 0.9,
-        codeComplexity: 0.1,
-      });
-
-      // The result is purely a recommendation object — it has no side effects
-      expect(result).toHaveProperty("mode");
-      expect(result).toHaveProperty("reasoning");
-      expect(result.mode).toBe("full-harness");
-      // No mode mutation — calling again with same input gives same result
-      const result2 = guidance.recommend({
-        fileCount: 100,
-        testRatio: 0.8,
-        specCoverage: 0.9,
-        codeComplexity: 0.1,
-      });
-      expect(result2).toEqual(result);
+  it("recommendation is advisory only — calling twice with same input gives same result", () => {
+    const a = guidance.recommend({
+      fileCount: 100,
+      testRatio: 0.8,
+      specCoverage: 0.9,
+      codeComplexity: 0.1,
     });
+    const b = guidance.recommend({
+      fileCount: 100,
+      testRatio: 0.8,
+      specCoverage: 0.9,
+      codeComplexity: 0.1,
+    });
+    expect(b).toEqual(a);
   });
 });

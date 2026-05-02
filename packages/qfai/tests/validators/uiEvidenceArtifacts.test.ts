@@ -69,6 +69,20 @@ describe("validateUiEvidenceArtifacts", () => {
     expect(issues).toEqual([]);
   });
 
+  it("iter-NN 配下の v2 screenshot と HTML が揃っていれば issue を返さない", async () => {
+    const root = await newTempRoot();
+    await seedUiContracts(root);
+
+    const iterDir = path.join(root, ".qfai", "evidence", "prototyping", "iter-03");
+    await mkdir(iterDir, { recursive: true });
+    await writeFile(path.join(iterDir, "orders-dashboard.png"), "png", "utf-8");
+    await writeFile(path.join(iterDir, "orders-dashboard.html"), "<html></html>", "utf-8");
+
+    const issues = await validateUiEvidenceArtifacts(root, defaultConfig);
+
+    expect(issues).toEqual([]);
+  });
+
   it("contracts/ui が無い場合はチェックをスキップする", async () => {
     const root = await newTempRoot();
 

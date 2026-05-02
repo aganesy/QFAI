@@ -8,6 +8,11 @@ import { runInit } from "../../src/cli/commands/init.js";
 import { runReport } from "../../src/cli/commands/report.js";
 import { runValidate } from "../../src/cli/commands/validate.js";
 
+const VALID_PROSE_CRITIQUE = Array.from(
+  { length: 200 },
+  (_, index) => `critique-word-${index}`,
+).join(" ");
+
 describe("report", { timeout: 15000 }, () => {
   it("runs init -> validate(json) -> report(md)", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-report-"));
@@ -219,5 +224,150 @@ describe("report", { timeout: 15000 }, () => {
     expect(report).toContain(
       "- 設定: [qfai.config.yaml](https://example.com/repo/qfai.config.yaml)",
     );
+  });
+
+  it("includes v2.0 prototyping summary from prototyping.json", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-report-"));
+    await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+    const evidenceDir = path.join(root, ".qfai", "evidence", "prototyping");
+    await mkdir(evidenceDir, { recursive: true });
+    await writeFile(
+      path.join(evidenceDir, "prototyping.json"),
+      `${JSON.stringify(
+        {
+          schemaVersion: "3.0",
+          specsCovered: ["SPEC-0001"],
+          iterations: [
+            {
+              index: 0,
+              commitSha: "a".repeat(40),
+              scores: {
+                designQuality: "acceptable",
+                originality: "acceptable",
+                craft: "acceptable",
+                functionality: "acceptable",
+              },
+              proseCritique: VALID_PROSE_CRITIQUE,
+              slopPatternsDetected: [],
+              pivotDirective: "continue",
+              evidenceRefs: {
+                screenshot: ".qfai/evidence/prototyping/iter-00/home.png",
+                html: ".qfai/evidence/prototyping/iter-00/home.html",
+              },
+            },
+          ],
+          acceptedIterationIndex: 0,
+          stopReason: null,
+        },
+        null,
+        2,
+      )}\n`,
+      "utf-8",
+    );
+
+    await runValidate({
+      root,
+      strict: false,
+      failOn: "never",
+      format: "github",
+    });
+
+    const reportPath = path.join(root, ".qfai", "report", "report.md");
+    await runReport({
+      root,
+      format: "md",
+      outPath: reportPath,
+    });
+
+    const report = await readFile(reportPath, "utf-8");
+    expect(report).toContain("### prototyping.lifecycle (v2.0)");
+    expect(report).toContain("- iterations: 1");
+    expect(report).toContain("- effective: single-thread-loop");
+    expect(report).toContain("- obligation profile: v2.0-single-thread-loop");
+  });
+
+  it("scopes v2.0 prototyping spec coverage to the primary prototyping spec", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-report-"));
+    await runInit({ dir: root, force: false, dryRun: false, yes: true });
+    const primarySpecDir = path.join(root, ".qfai", "specs", "spec-0001");
+    await mkdir(primarySpecDir, { recursive: true });
+    await writeFile(
+      path.join(primarySpecDir, "01_Spec.md"),
+      "# Primary UI spec\n\nsurface_type: ui-bearing\n",
+      "utf-8",
+    );
+    const extraSpecDir = path.join(root, ".qfai", "specs", "spec-0002");
+    await mkdir(extraSpecDir, { recursive: true });
+    await writeFile(path.join(extraSpecDir, "01_Spec.md"), "# Secondary API spec\n", "utf-8");
+
+    const evidenceDir = path.join(root, ".qfai", "evidence", "prototyping");
+    const iterDir = path.join(evidenceDir, "iter-00");
+    await mkdir(evidenceDir, { recursive: true });
+    await mkdir(iterDir, { recursive: true });
+    await writeFile(path.join(iterDir, "home.png"), "png", "utf-8");
+    await writeFile(path.join(iterDir, "home.html"), "<html></html>", "utf-8");
+    await writeFile(
+      path.join(evidenceDir, "prototyping.json"),
+      `${JSON.stringify(
+        {
+          schemaVersion: "3.0",
+          specsCovered: ["SPEC-0001"],
+          iterations: [
+            {
+              index: 0,
+              commitSha: "a".repeat(40),
+              scores: {
+                designQuality: "acceptable",
+                originality: "acceptable",
+                craft: "acceptable",
+                functionality: "acceptable",
+              },
+              proseCritique: VALID_PROSE_CRITIQUE,
+              slopPatternsDetected: [],
+              pivotDirective: "continue",
+              evidenceRefs: {
+                screenshot: ".qfai/evidence/prototyping/iter-00/home.png",
+                html: ".qfai/evidence/prototyping/iter-00/home.html",
+              },
+            },
+          ],
+          acceptedIterationIndex: 0,
+          stopReason: null,
+        },
+        null,
+        2,
+      )}\n`,
+      "utf-8",
+    );
+
+    await runValidate({
+      root,
+      strict: false,
+      failOn: "never",
+      format: "github",
+    });
+
+    const reportPath = path.join(root, ".qfai", "report", "report.json");
+    await runReport({
+      root,
+      format: "json",
+      outPath: reportPath,
+    });
+
+    const report = JSON.parse(await readFile(reportPath, "utf-8")) as {
+      prototyping?: {
+        evidence?: {
+          specsCoverage?: {
+            expectedSpecIds: string[];
+            missingSpecIds: string[];
+          };
+          specsCoverageStatus?: string;
+        };
+      };
+    };
+    expect(report.prototyping?.evidence?.specsCoverage?.expectedSpecIds).toEqual(["0001"]);
+    expect(report.prototyping?.evidence?.specsCoverage?.missingSpecIds).toEqual([]);
+    expect(report.prototyping?.evidence?.specsCoverageStatus).toBe("complete");
   });
 });

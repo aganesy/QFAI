@@ -24,7 +24,9 @@ export type AggregateMetric = {
 export type MetricRecord = PerIterationMetric | AggregateMetric;
 
 export type ModeRecommendation = {
-  mode: "full-harness";
+  // v2.0 (spec-0017): the v1.x mode tier was removed. The single
+  // remaining recommendation literal is the v2.0 single-thread loop.
+  mode: "single-thread-loop";
   reasoning: string;
 };
 

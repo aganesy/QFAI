@@ -1,48 +1,20 @@
 /**
- * Calibration pack types for harness scoring alignment.
+ * Calibration pack types (v2.0).
  *
- * Calibration packs are file-based YAML assets (SD-0030-003)
- * containing scoring alignment examples and threshold configuration.
+ * v1.x BreakthroughConfig / PlateauConfig / maxIterationsByMode removed in
+ * P3 (spec-0017). v2.0 fixes the iteration count globally to 15 in
+ * `core/prototyping/iteration.ts#MAX_ITERATIONS` (lands in P5).
+ *
+ * The remaining types here support the calibration pack file format
+ * (alignment examples + thresholds), which is still consumed by the
+ * design-system-threshold validator (planned for deletion in P4) and
+ * possibly by future v2.0 reviewer calibration helpers.
  */
 
 export type AlignmentExample = {
   input: string;
   expectedScore: number;
   rationale: string;
-};
-
-export type CalibrationOverrides = {
-  perAxisMinimum?: number;
-  maxIterationsByMode?: Record<string, number>;
-};
-
-export type BreakthroughConfig = {
-  minIterationsBeforeBranch: number;
-  maxDiffLines: number;
-  branchCount: number;
-};
-
-export type CalibrationPack = {
-  version: string;
-  examples: AlignmentExample[];
-  thresholds: ThresholdConfig;
-  maxIterations: number;
-  plateauDelta: number;
-  plateauLookback: number;
-  breakthrough: BreakthroughConfig;
-  overrides?: CalibrationOverrides;
-};
-
-export type EffectiveCalibrationConfig = {
-  maxIterations: number;
-  perAxisMinimum: number;
-  maxIterationsByMode: Record<string, number>;
-};
-
-export const DEFAULT_EFFECTIVE_CONFIG: EffectiveCalibrationConfig = {
-  maxIterations: 5,
-  perAxisMinimum: 0.6,
-  maxIterationsByMode: {},
 };
 
 export type ThresholdConfig = {
@@ -53,6 +25,23 @@ export type ThresholdConfig = {
 export const DEFAULT_THRESHOLDS: ThresholdConfig = {
   accept: 0.8,
   refine: 0.5,
+};
+
+export type CalibrationPack = {
+  version: string;
+  examples: AlignmentExample[];
+  thresholds: ThresholdConfig;
+  maxIterations: number;
+};
+
+export type EffectiveCalibrationConfig = {
+  maxIterations: number;
+  perAxisMinimum: number;
+};
+
+export const DEFAULT_EFFECTIVE_CONFIG: EffectiveCalibrationConfig = {
+  maxIterations: 5,
+  perAxisMinimum: 0.6,
 };
 
 export type Decision = "accept" | "refine" | "reject";
@@ -67,26 +56,4 @@ export type ReviewerScore = {
   score: number;
   confidence?: number;
   feedback?: string;
-};
-
-export type PlateauConfig = {
-  deltaThreshold: number;
-  lookbackWindow: number;
-};
-
-export const DEFAULT_PLATEAU_CONFIG: PlateauConfig = {
-  deltaThreshold: 0.02,
-  lookbackWindow: 3,
-};
-
-export type PlateauResult = {
-  detected: boolean;
-  delta: number;
-  scores: number[];
-};
-
-export const DEFAULT_BREAKTHROUGH_CONFIG: BreakthroughConfig = {
-  minIterationsBeforeBranch: 2,
-  maxDiffLines: 40,
-  branchCount: 2,
 };

@@ -41,7 +41,7 @@ This document is the decision rule SSOT for AI and humans when answering:
 ### Rule 3 - Keep ambiguity explicit
 
 - Unknowns remain explicit as Open Questions.
-- Resolved answers are promoted to `_policies` or `spec-XXXX` artifacts, then OQ status is updated.
+- Resolved answers are promoted to `_policies` or target spec artifacts, then OQ status is updated.
 
 ## How to decompose (mechanical procedure)
 

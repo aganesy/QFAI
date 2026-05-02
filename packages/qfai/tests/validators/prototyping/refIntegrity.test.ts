@@ -1,22 +1,16 @@
-/**
- * Tests for validatePrototypingArtifactRefIntegrity (v1.8.4 Phase 7).
- *
- * QFAI-PROT-REF-001: dangling artifact ref (string OK but file does not
- * exist on disk).
- */
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import type { QfaiConfig } from "../../../src/core/config.js";
+import { defaultConfig } from "../../../src/core/config.js";
 import { validatePrototypingArtifactRefIntegrity } from "../../../src/core/validators/prototyping/refIntegrity.js";
 
 const tempDirs: string[] = [];
 
 async function newTempDir(): Promise<string> {
-  const dir = await mkdtemp(path.join(os.tmpdir(), "qfai-ref-int-"));
+  const dir = await mkdtemp(path.join(os.tmpdir(), "qfai-ref-integrity-"));
   tempDirs.push(dir);
   return dir;
 }
@@ -30,174 +24,88 @@ afterEach(async () => {
   }
 });
 
-function makeConfig(): QfaiConfig {
-  return {
-    paths: {
-      contractsDir: ".qfai/contracts",
-      specsDir: ".qfai/specs",
-      discussionDir: ".qfai/discussion",
-      outDir: ".qfai/out",
-      skillsDir: ".qfai/assistant/skills",
-      promptsDir: ".qfai/assistant/skills",
-      srcDir: "src",
-      testsDir: "tests",
-    },
-    validation: {
-      failOn: "error",
-      require: { specSections: [] },
-      testStrategy: {
-        requireLayerTags: false,
-        requireSizeTags: false,
-        maxE2eScenarioRatio: null,
-        maxE2eScenarioCount: null,
-        forbidTestTodoStubs: true,
-      },
-      traceability: {
-        brMustHaveSc: true,
-        scMustHaveTest: true,
-        testFileGlobs: [],
-        testFileExcludeGlobs: [],
-        scNoTestSeverity: "error",
-        orphanContractsPolicy: "error",
-        unknownContractIdSeverity: "warning",
-      },
-    },
-    output: { validateJsonPath: ".qfai/output/validate.json" },
-  };
-}
-
-async function seedPrototypingJson(root: string, body: unknown): Promise<void> {
-  await mkdir(path.join(root, ".qfai/evidence"), { recursive: true });
+async function seedPrototypingJson(root: string, screenshot: string, html: string): Promise<void> {
+  const dir = path.join(root, ".qfai", "evidence", "prototyping");
+  await mkdir(dir, { recursive: true });
   await writeFile(
-    path.join(root, ".qfai/evidence/prototyping.json"),
-    JSON.stringify(body, null, 2),
+    path.join(dir, "prototyping.json"),
+    JSON.stringify({
+      schemaVersion: "3.0",
+      specsCovered: ["0017"],
+      iterations: [
+        {
+          index: 0,
+          evidenceRefs: { screenshot, html },
+        },
+      ],
+    }),
     "utf-8",
   );
 }
 
-async function seedFile(root: string, relPath: string, body = "{}\n"): Promise<void> {
-  const full = path.join(root, relPath);
-  await mkdir(path.dirname(full), { recursive: true });
-  await writeFile(full, body, "utf-8");
-}
-
 describe("validatePrototypingArtifactRefIntegrity", () => {
-  it("returns empty when prototyping.json is absent", async () => {
+  it("returns no issues when prototyping.json is missing", async () => {
     const root = await newTempDir();
-    expect(await validatePrototypingArtifactRefIntegrity(root, makeConfig())).toEqual([]);
+
+    const issues = await validatePrototypingArtifactRefIntegrity(root, defaultConfig);
+    expect(issues).toEqual([]);
   });
 
-  it("returns empty when every ref points to an existing file", async () => {
+  it("returns no issues when iteration evidenceRefs point to existing files", async () => {
     const root = await newTempDir();
-    await seedFile(root, ".qfai/evidence/prototyping/rounds/r3/absorption-plan.json");
-    await seedFile(root, ".qfai/evidence/prototyping/rounds/r3/reimplementation.json");
-    await seedPrototypingJson(root, {
-      rounds: [
-        {
-          round: "r3",
-          absorptionPlanRef: ".qfai/evidence/prototyping/rounds/r3/absorption-plan.json",
-          reimplementationRef: ".qfai/evidence/prototyping/rounds/r3/reimplementation.json",
-        },
-      ],
-    });
-    expect(await validatePrototypingArtifactRefIntegrity(root, makeConfig())).toEqual([]);
-  });
-
-  it("emits QFAI-PROT-REF-001 for a dangling absorptionPlanRef", async () => {
-    const root = await newTempDir();
-    await seedPrototypingJson(root, {
-      rounds: [
-        {
-          round: "r3",
-          absorptionPlanRef: ".qfai/evidence/prototyping/rounds/r3/absorption-plan.json",
-        },
-      ],
-    });
-    const issues = await validatePrototypingArtifactRefIntegrity(root, makeConfig());
-    expect(issues).toHaveLength(1);
-    expect(issues[0]?.code).toBe("QFAI-PROT-REF-001");
-    expect(issues[0]?.severity).toBe("warning");
-    expect(issues[0]?.message).toMatch(/absorptionPlanRef/);
-    expect(issues[0]?.message).toMatch(/does not exist/);
-  });
-
-  it("emits QFAI-PROT-REF-001 for a dangling polishCycle reviewerGateRef", async () => {
-    const root = await newTempDir();
-    await seedPrototypingJson(root, {
-      polishCycles: [
-        {
-          cycle: 1,
-          reviewerGateRef: ".qfai/evidence/prototyping/polish/1/gate.json",
-        },
-      ],
-    });
-    const issues = await validatePrototypingArtifactRefIntegrity(root, makeConfig());
-    const ref = issues.find((i) => i.message.includes("reviewerGateRef"));
-    expect(ref).toBeDefined();
-    expect(ref?.code).toBe("QFAI-PROT-REF-001");
-  });
-
-  it("emits QFAI-PROT-REF-001 for dangling fullHarness evidence refs", async () => {
-    const root = await newTempDir();
-    await seedPrototypingJson(root, {
-      fullHarness: {
-        iterations: [
-          {
-            iteration: 1,
-            evidenceRefs: {
-              render: [".qfai/evidence/render/1.png"],
-              browserQa: [".qfai/evidence/qa/1.json"],
-            },
-          },
-        ],
-      },
-    });
-    const issues = await validatePrototypingArtifactRefIntegrity(root, makeConfig());
-    expect(issues.length).toBe(2);
-    expect(issues.every((i) => i.code === "QFAI-PROT-REF-001")).toBe(true);
-  });
-
-  it("emits QFAI-PROT-REF-001 for dangling review-bundle.json refs", async () => {
-    const root = await newTempDir();
-    await seedFile(
+    const iterDir = path.join(root, ".qfai", "evidence", "prototyping", "iter-00");
+    await mkdir(iterDir, { recursive: true });
+    await writeFile(path.join(iterDir, "home.png"), "png", "utf-8");
+    await writeFile(path.join(iterDir, "home.html"), "<html></html>", "utf-8");
+    await seedPrototypingJson(
       root,
-      ".qfai/evidence/prototyping/rounds/r5/review-bundle.json",
-      JSON.stringify({
-        spec: "0001",
-        round: "r5",
-        candidates: [],
-        commandPlanRef: ".qfai/evidence/prototyping/rounds/r5/command-plans.json",
-        axisDefsRef: ".qfai/contracts/design/evaluation-rubric.yaml",
-        referencePoolRef: ".qfai/contracts/design/reference-pool.yaml",
-        brandDesignRef: ".qfai/contracts/design/brand-design.yaml",
-        designSystemChecklistRef: ".qfai/contracts/design/design-system.yaml",
-      }),
+      ".qfai/evidence/prototyping/iter-00/home.png",
+      ".qfai/evidence/prototyping/iter-00/home.html",
     );
-    const issues = await validatePrototypingArtifactRefIntegrity(root, makeConfig());
-    // 5 dangling refs: commandPlan, axisDefs, referencePool, brandDesign, designSystemChecklist
-    expect(issues.length).toBe(5);
-    expect(issues.every((i) => i.code === "QFAI-PROT-REF-001")).toBe(true);
-    expect(issues.some((i) => i.message.includes("referencePoolRef"))).toBe(true);
-    expect(issues.some((i) => i.message.includes("brandDesignRef"))).toBe(true);
+
+    const issues = await validatePrototypingArtifactRefIntegrity(root, defaultConfig);
+    expect(issues).toEqual([]);
   });
 
-  it("emits QFAI-PROT-REF-001 for dangling breakthrough.json branchRefs", async () => {
+  it("emits QFAI-PROT2-009 when iteration evidenceRefs point to missing files", async () => {
     const root = await newTempDir();
-    await seedFile(
+    await seedPrototypingJson(
       root,
-      ".qfai/evidence/prototyping/breakthrough.json",
-      JSON.stringify({
-        latestIteration: 3,
-        triggerResult: true,
-        branchCount: 2,
-        branchRefs: [
-          ".qfai/evidence/prototyping/branches/a.json",
-          ".qfai/evidence/prototyping/branches/b.json",
-        ],
-      }),
+      ".qfai/evidence/prototyping/iter-00/missing.png",
+      ".qfai/evidence/prototyping/iter-00/missing.html",
     );
-    const issues = await validatePrototypingArtifactRefIntegrity(root, makeConfig());
-    expect(issues.length).toBe(2);
-    expect(issues.every((i) => i.code === "QFAI-PROT-REF-001")).toBe(true);
+
+    const issues = await validatePrototypingArtifactRefIntegrity(root, defaultConfig);
+    expect(issues.map((issue) => issue.code)).toEqual(["QFAI-PROT2-009", "QFAI-PROT2-009"]);
+  });
+
+  it("emits QFAI-PROT2-009 when iteration evidenceRefs are empty", async () => {
+    const root = await newTempDir();
+    await seedPrototypingJson(root, "", "   ");
+
+    const issues = await validatePrototypingArtifactRefIntegrity(root, defaultConfig);
+    expect(issues.map((issue) => issue.code)).toEqual(["QFAI-PROT2-009", "QFAI-PROT2-009"]);
+    expect(issues.map((issue) => issue.message)).toEqual([
+      "iterations[0].evidenceRefs.screenshot must be a non-empty repository-relative artifact path.",
+      "iterations[0].evidenceRefs.html must be a non-empty repository-relative artifact path.",
+    ]);
+  });
+
+  it("checks prototype-handoff artifact references when present", async () => {
+    const root = await newTempDir();
+    const handoffDir = path.join(root, ".qfai", "contracts", "design");
+    await mkdir(handoffDir, { recursive: true });
+    await writeFile(
+      path.join(handoffDir, "prototype-handoff.yaml"),
+      [
+        'schemaVersion: "2.0"',
+        'finalArtifact: ".qfai/prototypes/final/index.html"',
+        'extractedDesignSystem: ".qfai/contracts/design/design-system.yaml"',
+      ].join("\n"),
+      "utf-8",
+    );
+
+    const issues = await validatePrototypingArtifactRefIntegrity(root, defaultConfig);
+    expect(issues.map((issue) => issue.code)).toEqual(["QFAI-PROT2-009", "QFAI-PROT2-009"]);
   });
 });

@@ -41,10 +41,6 @@ export type DesignFinding = {
 
 const COSMETIC_CATEGORIES = ["generic-shell", "stock-imagery", "placeholder-copy"];
 
-function toPosixRelative(root: string, targetPath: string): string {
-  return path.relative(root, targetPath).replace(/\\/g, "/");
-}
-
 // ---------------------------------------------------------------------------
 // Config Resolution
 // ---------------------------------------------------------------------------
@@ -232,24 +228,6 @@ function checkContractHierarchyFromScreens(
   return findings;
 }
 
-function checkSelectedDirection(directionContent: string, file: string): DesignFinding[] {
-  const findings: DesignFinding[] = [];
-  const hasChosenDirection = /chosen_direction_id\s*:/i.test(directionContent);
-  if (!hasChosenDirection) {
-    findings.push({
-      ruleId: "QFAI-AUD-021",
-      dimension: "consistency",
-      severityTier: 1,
-      message: `Selected direction is missing chosen_direction_id in ${file}`,
-      why: "The selected direction contract is the canonical source for the chosen UI direction",
-      evidence: [],
-      guidance: `Add a chosen_direction_id field in ${file}.`,
-      file,
-    });
-  }
-  return findings;
-}
-
 // ---------------------------------------------------------------------------
 // Token Drift Check
 // ---------------------------------------------------------------------------
@@ -368,14 +346,10 @@ export async function validateDesignAudit(root: string, config: QfaiConfig): Pro
 
   const contractsPath = packRoot ? path.join(packRoot, "uiux", "40_screen_contracts.md") : null;
   const contractsContent = contractsPath ? await readSafe(contractsPath) : "";
-  const selectedDirectionPath = path.join(
-    root,
-    config.paths.contractsDir,
-    "design",
-    "selected-direction.yaml",
-  );
-  const selectedDirectionContent = await readSafe(selectedDirectionPath);
-  if (uiContractScreens.length === 0 && !contractsContent && !selectedDirectionContent) return [];
+  // v2.0 (spec-0017 P14): selected-direction.yaml was removed alongside
+  // the funnel. The audit now decides early-return based on UI contracts
+  // and screen contracts only.
+  if (uiContractScreens.length === 0 && !contractsContent) return [];
 
   const findings: DesignFinding[] = [];
 
@@ -384,12 +358,6 @@ export async function validateDesignAudit(root: string, config: QfaiConfig): Pro
   } else if (contractsContent) {
     findings.push(
       ...checkContractsHierarchy(contractsContent, auditConfig, "uiux/40_screen_contracts.md"),
-    );
-  }
-  if (selectedDirectionContent) {
-    const selectedDirectionRelativePath = toPosixRelative(root, selectedDirectionPath);
-    findings.push(
-      ...checkSelectedDirection(selectedDirectionContent, selectedDirectionRelativePath),
     );
   }
 

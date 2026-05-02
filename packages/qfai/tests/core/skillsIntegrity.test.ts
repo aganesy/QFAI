@@ -256,7 +256,8 @@ describe("validateSkillsIntegrity", { timeout: 15000 }, () => {
       expect(issues[0]?.code).toBe("QFAI-SKILLS-001");
       expect(issues[0]?.severity).toBe("error");
       expect(issues[0]?.category).toBe("change");
-      expect(issues[0]?.suggested_action).toContain(".qfai/assistant/skills.local");
+      expect(issues[0]?.suggested_action).toContain("qfai init --force");
+      expect(issues[0]?.suggested_action).not.toContain("skills.local");
     } finally {
       await rm(root, { recursive: true, force: true });
     }

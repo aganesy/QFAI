@@ -1,5 +1,5 @@
 /**
- * Completion certificate (v1.8.4 Phase 5).
+ * Completion certificate (spec-0017 v2.0).
  *
  * `.qfai/evidence/prototyping/completion-certificate.json` is the SINGLE
  * authoritative completion artifact for a prototyping run. It carries
@@ -14,9 +14,10 @@
  *
  *   completion = `qfai prototyping certify --check` exit 0
  *
- * RR root cause #1 (completion semantics multi-source): closed by making
- * the certificate the only valid "DONE" claim. AI cannot subjectively
- * declare completion when the artifact is absent or its digests fail.
+ * v2.0 schema (spec-0017 P5):
+ *   - schemaVersion bumped from "1.0" → "2.0"
+ *   - polishCycleCount removed (v1.x funnel/polish concept)
+ *   - iterationCount remains; reflects iterations.length in v2.0
  */
 
 import { createHash } from "node:crypto";
@@ -24,7 +25,7 @@ import { mkdir, readFile, readdir, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 export type CompletionCertificate = {
-  readonly schemaVersion: "1.0";
+  readonly schemaVersion: "2.0";
   readonly runId: string;
   readonly generatedAt: string; // ISO-8601
   readonly generator: { readonly tool: "qfai"; readonly version: string };
@@ -37,7 +38,7 @@ export type CompletionCertificate = {
   readonly validateRun: { readonly errorCount: number; readonly ranAt: string };
   /**
    * verifyRun.status is always "PASS" at write time. Widened type lets the
-   * checker raise QFAI-PROT-336 on tampering.
+   * checker raise tampering errors at check time.
    */
   readonly verifyRun: { readonly status: string; readonly ranAt: string };
   readonly reviewerSignoff: {
@@ -46,7 +47,6 @@ export type CompletionCertificate = {
     readonly timestamp: string;
   };
   readonly iterationCount: number;
-  readonly polishCycleCount: number;
   readonly specsCovered: ReadonlyArray<string>;
 };
 
@@ -65,7 +65,6 @@ export type BuildCertificateInputs = {
   verifyRun: { status: string; ranAt: string };
   reviewerSignoff: { reviewerId: string; approved: boolean; timestamp: string };
   iterationCount: number;
-  polishCycleCount: number;
   specsCovered: readonly string[];
 };
 
@@ -74,7 +73,7 @@ export async function buildCompletionCertificate(
 ): Promise<CompletionCertificate> {
   const evidenceDigests = await scanEvidenceDigests(inputs.evidenceRoot);
   return {
-    schemaVersion: "1.0",
+    schemaVersion: "2.0",
     runId: inputs.runId,
     generatedAt: new Date().toISOString(),
     generator: { tool: "qfai", version: inputs.toolVersion },
@@ -83,7 +82,6 @@ export async function buildCompletionCertificate(
     verifyRun: inputs.verifyRun,
     reviewerSignoff: inputs.reviewerSignoff,
     iterationCount: inputs.iterationCount,
-    polishCycleCount: inputs.polishCycleCount,
     specsCovered: [...inputs.specsCovered],
   };
 }
@@ -112,7 +110,7 @@ export async function loadCompletionCertificate(
 }
 
 type CompletionCertificateRecord = {
-  schemaVersion: "1.0";
+  schemaVersion: "2.0";
   runId: string;
   generatedAt: string;
   generator: { tool: "qfai"; version: string };
@@ -126,7 +124,6 @@ type CompletionCertificateRecord = {
     timestamp: string;
   };
   iterationCount: number;
-  polishCycleCount: number;
   specsCovered: string[];
 };
 
@@ -153,7 +150,7 @@ function isEvidenceDigestArray(
 function isMinimallyValidCertificate(value: unknown): value is CompletionCertificateRecord {
   if (!value || typeof value !== "object" || Array.isArray(value)) return false;
   const v = value as Record<string, unknown>;
-  if (v.schemaVersion !== "1.0") return false;
+  if (v.schemaVersion !== "2.0") return false;
   if (typeof v.runId !== "string") return false;
   if (typeof v.generatedAt !== "string") return false;
   if (!isRecord(v.generator)) return false;
@@ -178,7 +175,6 @@ function isMinimallyValidCertificate(value: unknown): value is CompletionCertifi
   if (typeof reviewerSignoff.approved !== "boolean") return false;
   if (typeof reviewerSignoff.timestamp !== "string") return false;
   if (typeof v.iterationCount !== "number") return false;
-  if (typeof v.polishCycleCount !== "number") return false;
   if (!isStringArray(v.specsCovered)) return false;
   return true;
 }
@@ -196,7 +192,7 @@ function normalizeCompletionCertificate(value: unknown): CompletionCertificate |
       : (reviewerSignoff.reviewer as string);
 
   return {
-    schemaVersion: "1.0",
+    schemaVersion: "2.0",
     runId: record.runId,
     generatedAt: record.generatedAt,
     generator: {
@@ -221,7 +217,6 @@ function normalizeCompletionCertificate(value: unknown): CompletionCertificate |
       timestamp: reviewerSignoff.timestamp,
     },
     iterationCount: record.iterationCount,
-    polishCycleCount: record.polishCycleCount,
     specsCovered: [...record.specsCovered],
   };
 }

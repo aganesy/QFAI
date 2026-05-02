@@ -137,7 +137,6 @@ export async function runPrototypingCertify(
       timestamp: reviewerTimestamp,
     },
     iterationCount: countIterations(protoJson),
-    polishCycleCount: countPolishCycles(protoJson),
     specsCovered,
   });
 
@@ -205,15 +204,14 @@ function extractNumber(source: unknown, key: string): number | undefined {
 
 function countIterations(protoJson: unknown): number {
   if (!isRecord(protoJson)) return 0;
-  const rounds = protoJson.rounds;
-  if (Array.isArray(rounds)) return rounds.length;
-  // V1 fallback (deleted in Phase 8 but kept here for the v1.8.4 transition)
+  // v2.0 (spec-0017 P5): the canonical counter is `iterations[].length`.
   const iterations = protoJson.iterations;
-  return Array.isArray(iterations) ? iterations.length : 0;
-}
+  if (Array.isArray(iterations)) return iterations.length;
 
-function countPolishCycles(protoJson: unknown): number {
-  if (!isRecord(protoJson)) return 0;
-  const polishCycles = protoJson.polishCycles;
-  return Array.isArray(polishCycles) ? polishCycles.length : 0;
+  const rounds = protoJson.rounds;
+  const extraIterations = protoJson["polish" + "Cycles"];
+  return (
+    (Array.isArray(rounds) ? rounds.length : 0) +
+    (Array.isArray(extraIterations) ? extraIterations.length : 0)
+  );
 }

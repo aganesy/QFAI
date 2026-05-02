@@ -60,7 +60,7 @@ Skill-specific examples:
 
 - This skill processes **one test at a time** from `test-list.md`.
 - Each item goes through the full TDD micro-cycle: write a **failing test** first, then make it pass, then refactor.
-- The execution ledger is located at `.qfai/specs/spec-XXXX/tdd/test-list.md`.
+- The execution ledger is located at `.qfai/specs/<spec-id>/tdd/test-list.md`.
 - Items are processed **serially** by default. Parallel processing is allowed only when items target independent SUT slices with no shared state.
 - Status transitions follow a strict forward-only lifecycle: `todo` -> `red` -> `green` -> `refactor` -> `done`.
 - The `exception` status can be reached from any active status when an anomaly is detected.
@@ -76,15 +76,20 @@ Execute the TDD micro-cycle for each pending item in `test-list.md`, transitioni
 
 - Review rendered output, screenshot evidence, or HTML output before closing any UI-affecting item.
 - Read spec + contract inputs first whenever implementation touches UI or critique-driven behavior.
-- Read order: `01_Spec.md` → `03_Acceptance-Criteria.md` → `05_Examples.md` →
+- Read order (v2.0, spec-0017 P11): `01_Spec.md` → `03_Acceptance-Criteria.md` → `05_Examples.md` →
   `.qfai/contracts/design/exploration-brief.yaml` →
   `.qfai/contracts/design/reference-pool.yaml` → `.qfai/contracts/design/brand-design.yaml` →
-  `.qfai/contracts/design/evaluation-rubric.yaml` → `.qfai/contracts/design/evaluator-calibration.yaml` →
-  `.qfai/contracts/design/selected-direction.yaml` → `.qfai/contracts/design/design-system.yaml` →
+  `.qfai/contracts/design/design-system.yaml` (extracted from final iter) →
   `.qfai/contracts/design/prototype-handoff.yaml` → `.qfai/contracts/ui/*.yaml` →
-  canonical prototype screenshots / HTML snapshots → `.qfai/prototypes/winner/index.html`.
+  canonical prototype evidence under `.qfai/evidence/prototyping/iter-NN/<screen>.{png,html}` →
+  `.qfai/prototypes/final/index.html`.
+- The v1.x evaluation-rubric / evaluator-calibration / selected-direction contracts and
+  `prototypes/winner/index.html` were removed in spec-0017 P4/P8.
 - Do not read discussion-pack UI/UX sidecars, fallback mocks, or legacy design aliases.
-- Prototype code is analysis input, not production source. Reimplement with project-native patterns while preserving `prototype-handoff.yaml` `mustPreserve`; adapt `mayAdapt`; do not copy `mustNotCopy`.
+- Prototype HTML is analysis input, not production source. Reimplement with project-native
+  patterns while preserving the visual identity captured in `prototype-handoff.yaml`
+  `implementationNotes` (free-form prose); the v1.x mustPreserve / mayAdapt / mustNotCopy
+  three-category split is removed.
 - UI-affecting items require product-surface-reviewer prototype parity review before `done`.
 - If code intent and rendered output diverge, treat the rendered/HTML result as the blocking review input and reconcile before DONE.
 
@@ -97,7 +102,7 @@ Execute the TDD micro-cycle for each pending item in `test-list.md`, transitioni
 
 ## Execution Ledger: test-list.md
 
-The execution ledger at `.qfai/specs/spec-XXXX/tdd/test-list.md` tracks progress with these required columns:
+The execution ledger at `.qfai/specs/<spec-id>/tdd/test-list.md` tracks progress with these required columns:
 
 | Column    | Description                                              |
 | --------- | -------------------------------------------------------- |
@@ -298,7 +303,7 @@ Completion MUST NOT be declared when any of the following are true:
 
 ## Evidence (MANDATORY)
 
-Create/update: `.qfai/evidence/implement-spec-XXXX.md`
+Create/update: `.qfai/evidence/implement-<spec-id>.md`
 
 Required sections:
 

@@ -6,12 +6,14 @@ import { findLatestDiscussionPackDir } from "../discussionPack.js";
 import type { Issue, IssueSeverity } from "../types.js";
 import { issue, readSafe } from "./utils.js";
 
+// v2.0 (spec-0017 P14): 33_exploration_rubric.md and
+// 34_evaluator_calibration.md were removed alongside their normalized
+// contracts. Axes are global constants in
+// core/prototyping/iteration.ts.
 const REQUIRED_SIDECARS = [
   "uiux/30_exploration_brief.md",
   "uiux/31_reference_pool.md",
   "uiux/32_design_anti_goals.md",
-  "uiux/33_exploration_rubric.md",
-  "uiux/34_evaluator_calibration.md",
   "uiux/40_screen_contracts.md",
   "uiux/50_review_input_bundle.md",
 ] as const;
@@ -79,39 +81,10 @@ export async function validateDiscussionDesignHardening(
     )),
   );
 
-  issues.push(
-    ...(await validateSection(
-      packRoot,
-      "uiux/33_exploration_rubric.md",
-      [
-        "## Design Quality",
-        "## Originality",
-        "## Craft",
-        "## Functionality",
-        "## Brand Memorability",
-        "## Category Distinctiveness",
-        "## Template Dependency Risk",
-        "## Localization Fit",
-      ],
-      "UIX-VAL-EXPLORE-RUBRIC",
-    )),
-  );
-
-  issues.push(
-    ...(await validateSection(
-      packRoot,
-      "uiux/34_evaluator_calibration.md",
-      [
-        "## Good Critique",
-        "## Too Lenient",
-        "## Blandness Fail",
-        "## Originality Fail",
-        "## Template Copy Fail",
-      ],
-      "UIX-VAL-EVAL-CALIBRATION",
-    )),
-  );
-
+  // v2.0 (spec-0017 P14): the v1.x 33_exploration_rubric and
+  // 34_evaluator_calibration section validators were removed. The axes
+  // they enforced are now global constants encoded in
+  // core/prototyping/iteration.ts (OrdinalScore enum + 4 named axes).
   issues.push(...(await validateReferencePool(packRoot)));
 
   const antiGoals = await readSafe(path.join(packRoot, "uiux/32_design_anti_goals.md"));
@@ -127,19 +100,8 @@ export async function validateDiscussionDesignHardening(
     );
   }
 
-  const reviewBundle = await readSafe(path.join(packRoot, "uiux/50_review_input_bundle.md"));
-  if (reviewBundle && !/best-of-history/i.test(reviewBundle)) {
-    issues.push(
-      canonicalIssue(
-        "UIX-VAL-EXPLORE-HISTORY",
-        "50_review_input_bundle.md must describe best-of-history handling for later iterations.",
-        "warning",
-        "uiux/50_review_input_bundle.md",
-        "discussionDesignHardening.bestOfHistory",
-      ),
-    );
-  }
-
+  // v2.0 (spec-0017 P14): the best-of-history requirement was removed
+  // alongside the funnel; the latest iter is always accepted.
   return issues;
 }
 

@@ -13,14 +13,8 @@ export { validateContractReferences } from "./contractReferences.js";
 export { validateAtddCodeTraceability } from "./atddCodeTraceability.js";
 export { validateOrphanProhibition } from "./orphanProhibition.js";
 export { validatePrototypingEvidence } from "./prototypingEvidence.js";
-export { validatePrototypingDesignSystem } from "./prototypingDesignSystem.js";
-export { validateModeInvariant } from "./prototyping/modeInvariant.js";
-export { validateExecutionPlanIssues } from "./prototyping/executionPlan.js";
+export { validatePrototypingEvidenceV3 } from "./prototypingEvidenceV3.js";
 export { validateDelegationMapIssues } from "./prototyping/delegationMap.js";
-export { validateScreenshotDirIssues } from "./prototyping/screenshotDir.js";
-export { validateLighthouseGateIssues } from "./prototyping/lighthouseGate.js";
-export { validateIterationGateIssues } from "./prototyping/iterationGate.js";
-export { validateDesignSystemThresholdIssues } from "./prototyping/designSystemThreshold.js";
 export { validateStateGate } from "./prototyping/stateGate.js";
 export { validateCompletionCertificateIssues } from "./prototyping/completionCertificate.js";
 export { validateConfigReferenceIntegrity } from "./configReferenceIntegrity.js";
@@ -31,7 +25,6 @@ export { validateRepositoryHygiene } from "./repositoryHygiene.js";
 export { validateReviewArtifacts } from "./reviewArtifacts.js";
 export { validateSpecSplitByCapability } from "./specSplitByCapability.js";
 export { validateStatusInSpecs } from "./statusInSpecs.js";
-export { validateBreakthroughEvidence } from "./breakthroughEvidence.js";
 export { validateDesignToken } from "./designToken.js";
 export { validateHtmlMock } from "./htmlMock.js";
 export { validateMermaidScreenFlow } from "./mermaidScreenFlow.js";
@@ -51,8 +44,6 @@ export {
   validatePrototypingDesignContractReadiness,
   validateSddDesignContractReadiness,
 } from "./designContractReadiness.js";
-export { validateEvaluatorReviewHardFloor } from "./evaluatorReviewHardFloor.js";
-export { validatePrototypingCandidateConcept } from "./prototypingCandidateConcept.js";
 export { validateUiEvidenceArtifacts } from "./uiEvidenceArtifacts.js";
 export { isUiBearingSpec } from "./uixDetection.js";
 export {

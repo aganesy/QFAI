@@ -70,14 +70,14 @@ The Phase 1.8.3 retrospective showed six layers all being silent at once
 (build-lint, unit, pipeline-integration, E2E, runtime, audit). The refactor
 ensures each layer has at least one preventive mechanism:
 
-| Layer      | Mechanism (Phase)                                                                         |
-| ---------- | ----------------------------------------------------------------------------------------- |
-| build-lint | `lint:shipping` (P6)                                                                      |
-| unit       | `validators-are-wired.test.ts` (P2)                                                       |
-| pipeline   | wired validators in `runPrototypingValidators` (P2)                                       |
-| E2E        | `prototyping-full-harness.test.ts` + `report-from-filesystem.test.ts` (P3, P8)            |
-| runtime    | `validateExecutionPlanIssues` / `validateDelegationMapIssues` / drift validators (P2, P3) |
-| audit      | `completion-certificate.json` digest verification (P4)                                    |
+| Layer      | Mechanism (Phase)                                                                              |
+| ---------- | ---------------------------------------------------------------------------------------------- |
+| build-lint | `lint:shipping` (P6)                                                                           |
+| unit       | `validators-are-wired.test.ts` (P2)                                                            |
+| pipeline   | wired validators in `runPrototypingValidators` (P2)                                            |
+| E2E        | `prototypingV2E2E.test.ts` (spec-0017 P14)                                                     |
+| runtime    | `validateDelegationMapIssues` / drift validators / `validatePrototypingEvidenceV3` (spec-0017) |
+| audit      | `completion-certificate.json` digest verification (P4)                                         |
 
 When adding new code, the contributor must ask: "if this code is silently
 broken, which layer detects it?" — and at least one layer MUST answer.

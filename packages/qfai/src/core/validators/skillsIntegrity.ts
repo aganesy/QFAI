@@ -28,9 +28,7 @@ export async function validateSkillsIntegrity(root: string, config: QfaiConfig):
       message: `標準資産 '.qfai/assistant/skills/**' が改変されています（${hints || `差分=${total}`}）。${sampleText}`,
       suggested_action: [
         "skills の直編集は非推奨です（アップデート/再 init で上書きされ得ます）。",
-        "次のいずれかを実施してください:",
-        "- 変更したい場合: 同一相対パスで '.qfai/assistant/skills.local/**' に置いて override",
-        "- 標準状態へ戻す場合: 'qfai init --force' を実行（skills のみ上書き、skills.local は保護）",
+        "標準状態へ戻す場合は 'qfai init --force' を実行してください。",
       ].join("\n"),
       rule: "skills.integrity",
     },

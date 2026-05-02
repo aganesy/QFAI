@@ -85,34 +85,34 @@ describe("parseArgs", () => {
     expect(parsed.options.doctorOut).toBe("tmp/out.json");
   });
 
-  it("rejects --out for non-preflight prototyping actions", () => {
+  it("parses a strict integer --cycle for prototyping iterate", () => {
     const cwd = process.cwd();
-    const parsed = parseArgs(
-      [
-        "prototyping",
-        "round-start",
-        "--round",
-        "r5",
-        "--candidates",
-        "c1",
-        "--out",
-        "tmp/out.json",
-      ],
-      cwd,
-    );
-    expect(parsed.invalid).toBe(true);
-    expect(parsed.options.help).toBe(true);
+    const parsed = parseArgs(["prototyping", "iterate", "--cycle", "3"], cwd);
+    expect(parsed.invalid).toBe(false);
+    expect(parsed.options.prototypingAction).toBe("iterate");
+    expect(parsed.options.prototypingCycle).toBe(3);
   });
 
-  it("rejects --format for non-preflight prototyping actions", () => {
+  it("rejects a partial numeric --cycle value for prototyping iterate", () => {
     const cwd = process.cwd();
-    const parsed = parseArgs(
-      ["prototyping", "round-start", "--round", "r5", "--candidates", "c1", "--format", "json"],
-      cwd,
-    );
+    const parsed = parseArgs(["prototyping", "iterate", "--cycle", "3abc"], cwd);
     expect(parsed.invalid).toBe(true);
     expect(parsed.options.help).toBe(true);
+    expect(parsed.options.prototypingCycle).toBeUndefined();
   });
+
+  it("rejects a fractional --cycle value for prototyping iterate", () => {
+    const cwd = process.cwd();
+    const parsed = parseArgs(["prototyping", "iterate", "--cycle", "1.5"], cwd);
+    expect(parsed.invalid).toBe(true);
+    expect(parsed.options.help).toBe(true);
+    expect(parsed.options.prototypingCycle).toBeUndefined();
+  });
+
+  // v2.0 (spec-0017 P3/P14): the v1.x round-* / --candidates / --survivors
+  // arg surface was removed; the iterate command takes only --cycle and
+  // --target-url. No equivalent --out / --format rejection tests are needed
+  // because the new CLI surface does not accept those flags for `iterate`.
 
   it("rejects unsupported --format values for prototyping preflight", () => {
     const cwd = process.cwd();

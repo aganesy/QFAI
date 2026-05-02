@@ -71,6 +71,7 @@ function getChangedFiles(root: string, baseBranch: string): Set<string> {
     const output = execFileSync("git", ["diff", "--name-only", `${baseBranch}..HEAD`], {
       cwd: root,
       encoding: "utf-8",
+      stdio: ["ignore", "pipe", "ignore"],
     });
     return new Set(
       output

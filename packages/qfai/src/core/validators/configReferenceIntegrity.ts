@@ -15,7 +15,7 @@
 import { stat } from "node:fs/promises";
 import path from "node:path";
 
-import type { QfaiConfig, ConfigPathKey } from "../config.js";
+import { defaultConfig, type QfaiConfig, type ConfigPathKey } from "../config.js";
 import type { Issue } from "../types.js";
 import { issue } from "./utils.js";
 
@@ -51,6 +51,16 @@ const VERIFIED_PATH_KEYS: ReadonlyArray<ConfigPathKey> = [
   "testsDir",
 ];
 
+const DEFAULT_SKILL_CREATED_PATH_KEYS = new Set<ConfigPathKey>([
+  "specsDir",
+  "contractsDir",
+  "discussionDir",
+]);
+
+function isDefaultSkillCreatedPath(key: ConfigPathKey, relPath: string): boolean {
+  return DEFAULT_SKILL_CREATED_PATH_KEYS.has(key) && relPath === defaultConfig.paths[key];
+}
+
 export async function validateConfigReferenceIntegrity(
   root: string,
   config: QfaiConfig,
@@ -83,6 +93,9 @@ export async function validateConfigReferenceIntegrity(
     const relPath = config.paths[key];
     const absolutePath = path.resolve(root, relPath);
     if (!(await isDirectory(absolutePath))) {
+      if (isDefaultSkillCreatedPath(key, relPath)) {
+        continue;
+      }
       issues.push(
         issue(
           "QFAI-CFG-LINK-002",
@@ -104,6 +117,10 @@ export async function validateConfigReferenceIntegrity(
   // when neither resolves on disk.
   const packPath = config.prototyping?.calibration?.packPath;
   if (packPath !== undefined) {
+    const defaultPackPath = defaultConfig.prototyping?.calibration?.packPath;
+    if (packPath === defaultPackPath) {
+      return issues;
+    }
     const absolutePackPath = path.resolve(root, packPath);
     const exists = await pathExists(absolutePackPath);
     if (!exists) {

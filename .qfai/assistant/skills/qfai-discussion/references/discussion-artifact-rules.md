@@ -1,0 +1,62 @@
+# Discussion Artifact Rules
+
+Use this file when `/qfai-discussion` creates or reviews `.qfai/discussion/discussion-*` packs.
+
+## Required Pack
+
+Each pack uses immutable timestamp naming: `.qfai/discussion/discussion-YYYYMMDDhhmmssSSS/`.
+
+Required files:
+
+- `01_Context.md`
+- `02_Inception-Deck.md`
+- `03_Story-Workshop.md`
+- `04_Sources.md`
+- `05_Scope.md`
+- `06_REQ.md`
+- `07_NFR.md`
+- `08_Glossary.md`
+- `09_Constraints.md`
+- `10_Policy.md`
+- `11_OQ-Register.md`
+- `12_OQ-Resolution-Log.md`
+- `13_Deferred.md`
+- `14_Review-Request.md`
+- `99_delta.md`
+
+UI-bearing discussion packs may include `prototyping.yaml` as an optional recommendation artifact; non-ui discussion packs typically omit it. For `ui_bearing: false`, typically omit `prototyping.yaml`. Current discussion-pack readiness does not block on missing `prototyping.yaml`.
+
+## Rules
+
+- Run interview and requirement capture until `Disposition: open` is zero in `11_OQ-Register.md`.
+- OQ `Gate` values are `discussion`, `sdd`, `atdd`, `tdd`, or `ops`.
+- `deferred` is allowed only when `13_Deferred.md` has complete metadata.
+- Discussion outputs are rationale and intake logs; do not duplicate `.qfai/specs/**` SSOT.
+- `03_Story-Workshop.md` must include at least one Mermaid diagram.
+- Use Mermaid fences only for diagrams.
+- `14_Review-Request.md` must reference `.qfai/assistant/steering/agent-routing.yml` and `review-profiles.yml`.
+
+## UI/UX Exploration Family
+
+For UI-bearing packs, use:
+
+- `04_Sources.md` for trend translation and competitive reference registry
+- `uiux/30_exploration_brief.md`
+- `uiux/31_reference_pool.md`
+- `uiux/32_design_anti_goals.md`
+- `uiux/40_screen_contracts.md`
+
+Discussion is exploration-first and must not choose a single visual winner or final design system. Those are downstream prototyping outputs.
+
+## `prototyping.yaml`
+
+When `prototyping.yaml` is present, use the v2.0 single-thread schema:
+
+```yaml
+prototyping:
+  surface: web # web | mobile | desktop | mixed
+```
+
+The v1.x `recommended_mode` / `allowed_modes` / `mode_expectations` fields
+were removed in spec-0017 P3 (the single-thread evolution loop fixes
+iteration count globally to 15).

@@ -3,7 +3,7 @@
 ## Purpose
 
 - Describe the high-level business process as policy-layer SSOT.
-- Keep acceptance scenarios in `spec-XXXX/03_Acceptance-Criteria.md`.
+- Keep acceptance scenarios in each target spec's `03_Acceptance-Criteria.md`.
 
 ## Actors / Systems
 

@@ -5,7 +5,7 @@ Use this file for the full quality gate checklist behind `/qfai-sdd`.
 ## Structural Checks
 
 - Required `_policies` files exist.
-- Required `spec-XXXX` files exist.
+- Required target spec files exist.
 - `_policies/11_Slice-Policy.md` matches the current repo slice model.
 - `_policies/04_Business-Flow.md` contains Mermaid `flowchart` or `sequenceDiagram`.
 - `10_Plan.md` exists and remains How-only.

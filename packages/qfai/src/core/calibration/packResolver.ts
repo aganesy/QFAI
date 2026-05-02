@@ -8,8 +8,6 @@ export type ResolvedCalibrationPack = {
   packPath: string;
   thresholds: CalibrationPack["thresholds"];
   maxIterations: number;
-  plateauDelta: number;
-  plateauLookback: number;
 };
 
 export async function resolveCalibrationPack(input: {
@@ -26,7 +24,5 @@ export async function resolveCalibrationPack(input: {
     packPath: input.packPath,
     thresholds: pack.thresholds,
     maxIterations: pack.maxIterations,
-    plateauDelta: pack.plateauDelta,
-    plateauLookback: pack.plateauLookback,
   };
 }

@@ -22,7 +22,9 @@ Use this reference only for UI-bearing discussion packs.
 ## Output Mapping
 
 - Put product intent and brand signals in `30_exploration_brief.md`.
-- Put all reference decisions in `31_reference_pool.md`.
-- Put prohibited visual directions in `32_design_anti_goals.md`.
-- Put brand and template-risk scoring in `33_exploration_rubric.md`.
-- Put examples of good critique and weak critique in `34_evaluator_calibration.md`.
+- Put all reference decisions in `31_reference_pool.md` (deviate-from input, not imitate).
+- Put prohibited visual directions in `32_design_anti_goals.md` (also feeds reviewer anti-slop).
+
+v1.x sidecars `33_exploration_rubric.md` and `34_evaluator_calibration.md`
+are removed in spec-0017 P4. Evaluation axes are now global constants in
+`core/prototyping/iteration.ts#OrdinalScore`.

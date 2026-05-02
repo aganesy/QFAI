@@ -43,8 +43,8 @@ const VALID_SKILL_CONTENT = [
   "| Playwright CLI execution & capture | devops-ci-engineer |",
   "| Evaluation scoring | product-surface-reviewer, product-experience-architect |",
   "",
-  "Screenshot evidence path: .qfai/evidence/prototyping/screenshots/<screen-id>.png",
-  "HTML snapshot path: .qfai/evidence/prototyping/html/<screen-id>.html",
+  "Screenshot evidence path: .qfai/evidence/prototyping/iter-NN/<screen>.png",
+  "HTML snapshot path: .qfai/evidence/prototyping/iter-NN/<screen>.html",
 ].join("\n");
 
 describe("prototyping skill validator", () => {
@@ -110,8 +110,11 @@ describe("prototyping skill validator", () => {
     expect(hasPlaywrightCliFallback(invalid)).toBe(false);
   });
 
-  it("flags banned phrases when low-cost or standard are reintroduced", () => {
-    const invalid = `${VALID_SKILL_CONTENT}\nl1 and l2 must run runtime checks\nrecommended_mode: full-harness`;
+  it("flags banned phrases when v1.x mode wording is reintroduced", () => {
+    // v2.0 (spec-0017): mode (recommended_mode / low-cost / standard) and
+    // L1/L2 reviewer separation are removed. The banned-phrase scanner
+    // still flags re-introductions.
+    const invalid = `${VALID_SKILL_CONTENT}\nl1 and l2 must run runtime checks\nrecommended_mode: standard-tier`;
     expect(scanBannedPhrases(invalid)).toEqual(
       expect.arrayContaining(["must run runtime checks", "recommended_mode", "l1 and l2"]),
     );

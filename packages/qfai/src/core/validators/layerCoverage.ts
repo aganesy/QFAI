@@ -99,7 +99,7 @@ async function validatePlanArtifacts(specsRoot: string, entries: SpecEntry[]): P
         "plan.deprecatedSharedPlan",
         undefined,
         "change",
-        "`.qfai/specs/plan.md` を削除し、各 `spec-XXXX/10_Plan.md` に統一してください。",
+        "`.qfai/specs/plan.md` を削除し、各 spec ディレクトリの `10_Plan.md` に統一してください。",
       ),
     );
   }

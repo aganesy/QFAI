@@ -82,7 +82,7 @@ describe("Render Critique Loop validation", { timeout: 15000 }, () => {
     expect(issues.some((i) => i.code === "QFAI-CRIT-001")).toBe(true);
   });
 
-  it("新しい read order が明示されていれば QFAI-CRIT-002 と QFAI-CRIT-005 を返さない", async () => {
+  it("v2.0 read order (exploration-brief / design-system / prototype-handoff / ui) keeps QFAI-CRIT-002 and 005 silent", async () => {
     await seedContracts();
     await seedSkillPrompt(
       "qfai-prototyping",
@@ -91,7 +91,7 @@ describe("Render Critique Loop validation", { timeout: 15000 }, () => {
         "",
         "Take a screenshot of the rendered page and review it in the browser.",
         "",
-        "Read order: `.qfai/specs/spec-0001/01_Spec.md` → `.qfai/contracts/design/exploration-brief.yaml` → `.qfai/contracts/design/evaluation-rubric.yaml` → `.qfai/contracts/design/evaluator-calibration.yaml` → `.qfai/contracts/design/selected-direction.yaml` → `.qfai/contracts/design/design-system.yaml` → `.qfai/contracts/design/prototype-handoff.yaml` → `.qfai/contracts/ui/*.yaml`.",
+        "Read order: `.qfai/specs/spec-0001/01_Spec.md` -> `.qfai/contracts/design/exploration-brief.yaml` -> `.qfai/contracts/design/design-system.yaml` -> `.qfai/contracts/design/prototype-handoff.yaml` -> `.qfai/contracts/ui/*.yaml`.",
       ].join("\n"),
     );
     const issues = await validateRenderCritique(root, makeConfig());
@@ -99,7 +99,7 @@ describe("Render Critique Loop validation", { timeout: 15000 }, () => {
     expect(issues.some((i) => i.code === "QFAI-CRIT-005")).toBe(false);
   });
 
-  it("selected-direction が欠けていれば QFAI-CRIT-002 と QFAI-CRIT-005 を返す", async () => {
+  it("v2.0 missing design-system in read order raises QFAI-CRIT-002 and QFAI-CRIT-005", async () => {
     await seedContracts();
     await seedSkillPrompt(
       "qfai-prototyping",
@@ -108,7 +108,7 @@ describe("Render Critique Loop validation", { timeout: 15000 }, () => {
         "",
         "Review the rendered HTML and screenshot output in the browser.",
         "",
-        "Read order: `.qfai/specs/spec-0001/01_Spec.md` → `.qfai/contracts/design/exploration-brief.yaml` → `.qfai/contracts/design/evaluation-rubric.yaml` → `.qfai/contracts/design/evaluator-calibration.yaml` → `.qfai/contracts/design/design-system.yaml` → `.qfai/contracts/design/prototype-handoff.yaml` → `.qfai/contracts/ui/*.yaml`.",
+        "Read order: `.qfai/specs/spec-0001/01_Spec.md` -> `.qfai/contracts/design/exploration-brief.yaml` -> `.qfai/contracts/design/prototype-handoff.yaml` -> `.qfai/contracts/ui/*.yaml`.",
       ].join("\n"),
     );
 

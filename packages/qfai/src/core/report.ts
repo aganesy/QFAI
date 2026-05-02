@@ -3,7 +3,6 @@ import path from "node:path";
 import { buildContractIndex } from "./contractIndex.js";
 import { loadConfig, resolvePath, type ConfigLoadResult } from "./config.js";
 import { collectSpecEntries, type SpecEntry } from "./specLayout.js";
-import { EXPLORATION_ROUNDS } from "./prototyping/round.js";
 import { parseFirstMarkdownTable } from "./specPackParsers.js";
 import {
   isCoverageTargetLevel,
@@ -21,13 +20,6 @@ import { collectFiles } from "./fs.js";
 import { ID_PREFIXES, extractAllIds, extractIds, type IdPrefix } from "./ids.js";
 import { normalizeValidationResult } from "./normalize.js";
 import { parseSpec } from "./parse/spec.js";
-import {
-  resolvePrototypingMode,
-  isValidPrototypingMode,
-  isValidPrototypingSurface,
-  derivePrototypingObligations,
-  DEFAULT_PROTOTYPING_MODE,
-} from "./review/prototyping.js";
 import { parseScenarioDocument } from "./scenarioModel.js";
 import { classifyLayer, classifySize } from "./testStrategyTags.js";
 import { toRelativePath } from "./paths.js";
@@ -53,8 +45,7 @@ import {
 import type { Issue, ValidationCounts, ValidationResult, ValidationWaiverEntry } from "./types.js";
 import { validateProject } from "./validate.js";
 import { resolveToolVersion } from "./version.js";
-import { readRenderEvidenceBundle, summarizeRenderEvidence } from "./uiux/renderEvidence.js";
-import { readBrowserQaBundle } from "./browserQa/index.js";
+import { resolvePrimaryPrototypingSpec } from "./prototyping/specResolution.js";
 
 export type ReportSummary = {
   specs: number;
@@ -215,7 +206,10 @@ export type ReportSurfaceClassification = {
 };
 
 export type ReportFullHarnessExecution = {
-  mode: "full-harness";
+  // v2.0 (spec-0017 P14): mode tier removed. The single-thread loop is
+  // the only mode; this literal is retained for transitional report
+  // schema compatibility but the field is no longer populated.
+  mode: "single-thread-loop";
   iterations: number;
   terminationReason: string;
   finalScore: number;
@@ -229,19 +223,13 @@ export type ReportFullHarnessExecution = {
 };
 
 export type ReportRoundLifecycle = {
+  // v2.0 (spec-0017 P14): the v1.x ReportRoundLifecycle was anchored
+  // to the funnel + polish cycle taxonomy that is now removed. The shape
+  // is retained as a placeholder so legacy callers can opt in if they
+  // explicitly populate it, but the canonical /qfai-prototyping summary
+  // no longer emits it.
   schemaVersion: "2.0";
-  rounds: number;
-  roundIds: string[];
-  candidatesObserved: number;
-  perfectRounds: number;
-  harvestArtifacts: number;
-  narrowDecisions: number;
-  absorptionPlans: number;
-  reimplementations: number;
-  polishCycles: number;
-  completedPolishCycles: number;
-  perfectPolishCycles: number;
-  polishKinds: Record<string, number>;
+  iterations: number;
 };
 
 export type ReportPrototypingSummary = {
@@ -489,7 +477,7 @@ export async function createReportData(
     .map((item) => toReportRuleFinding(item));
 
   const tddCoverage = await collectTddCoverage(specEntries);
-  const prototyping = await collectPrototypingSummary(resolvedRoot, config);
+  const prototyping = await collectPrototypingSummary(resolvedRoot, config, specEntries);
 
   const version = await resolveToolVersion();
   const displayRoot = toRelativePath(resolvedRoot, resolvedRoot);
@@ -1254,26 +1242,10 @@ export function formatReportMarkdown(
 
     if (data.prototyping.roundLifecycle) {
       const lifecycle = data.prototyping.roundLifecycle;
-      lines.push("### prototyping.roundLifecycle");
+      lines.push("### prototyping.lifecycle (v2.0)");
       lines.push("");
       lines.push(`- schemaVersion: ${lifecycle.schemaVersion}`);
-      lines.push(`- rounds: ${lifecycle.rounds}`);
-      lines.push(`- round ids: ${lifecycle.roundIds.join(", ") || "(none)"}`);
-      lines.push(`- candidates observed: ${lifecycle.candidatesObserved}`);
-      lines.push(`- harvest artifacts: ${lifecycle.harvestArtifacts}`);
-      lines.push(`- narrow decisions: ${lifecycle.narrowDecisions}`);
-      lines.push(`- absorption plans: ${lifecycle.absorptionPlans}`);
-      lines.push(`- reimplementations: ${lifecycle.reimplementations}`);
-      lines.push(`- perfect rounds: ${lifecycle.perfectRounds}`);
-      lines.push(`- polish cycles: ${lifecycle.polishCycles}`);
-      lines.push(`- completed polish cycles: ${lifecycle.completedPolishCycles}`);
-      lines.push(`- perfect polish cycles: ${lifecycle.perfectPolishCycles}`);
-      if (Object.keys(lifecycle.polishKinds).length > 0) {
-        const kinds = Object.entries(lifecycle.polishKinds)
-          .map(([kind, count]) => `${kind}=${count}`)
-          .join(", ");
-        lines.push(`- polish kinds: ${kinds}`);
-      }
+      lines.push(`- iterations: ${lifecycle.iterations}`);
       lines.push("");
     }
 
@@ -1599,7 +1571,7 @@ export function formatReportMarkdown(
   );
   if (calibrationIssues.length > 0) {
     lines.push(
-      "- calibration 設定が不足しています。full-harness evidence に calibration config と scoring trace を追加してください。",
+      "- legacy v1.x calibration setting incomplete. (v2.0 prototyping removes per-mode calibration; this hint targets historical evidence files only.)",
     );
   }
   const fullHarnessCompletenessIssues = data.issues.filter((item) =>
@@ -1705,325 +1677,51 @@ async function collectChangeTypeSummary(specsRoot: string): Promise<ReportChange
   return summary;
 }
 
-/**
- * Source-of-truth import to avoid drift: previously this was a local literal
- * Set that duplicated `EXPLORATION_ROUNDS` from prototyping/round.ts; if the
- * round taxonomy ever changes, the report-side scan would silently miss
- * new rounds (Copilot flag, PR #201).
- */
-const PROTOTYPING_ROUND_DIR_NAMES: ReadonlySet<string> = new Set<string>(EXPLORATION_ROUNDS);
-
-/**
- * Filesystem-first scan of `.qfai/evidence/prototyping/rounds/` (v1.8.4 Phase 4).
- *
- * Counts artifact files present on disk, regardless of whether
- * `prototyping.json.rounds[]` references them. This eliminates the dual-SoT
- * drift that caused RR §8.2 (`absorption plans: 0` while files actually
- * existed). The curated index continues to be authoritative for
- * candidate-level metadata (allAxesPerfect100, candidate IDs) which is not
- * derivable from filesystem alone.
- */
-async function scanPrototypingRoundsFilesystem(evidenceRoot: string): Promise<{
-  observedRoundIds: string[];
-  harvestArtifacts: number;
-  narrowDecisions: number;
-  absorptionPlans: number;
-  reimplementations: number;
-}> {
-  const result = {
-    observedRoundIds: [] as string[],
-    harvestArtifacts: 0,
-    narrowDecisions: 0,
-    absorptionPlans: 0,
-    reimplementations: 0,
-  };
-  const roundsDir = path.join(evidenceRoot, "prototyping", "rounds");
-  const { readdir } = await import("node:fs/promises");
-  let entries: string[];
-  try {
-    entries = await readdir(roundsDir);
-  } catch {
-    return result;
-  }
-  for (const name of entries.sort()) {
-    if (!PROTOTYPING_ROUND_DIR_NAMES.has(name)) continue;
-    let files: string[];
-    try {
-      files = await readdir(path.join(roundsDir, name));
-    } catch {
-      continue;
-    }
-    result.observedRoundIds.push(name);
-    if (files.includes("harvest.json")) result.harvestArtifacts += 1;
-    if (files.includes("narrow-decision.json")) result.narrowDecisions += 1;
-    if (files.includes("absorption-plan.json")) result.absorptionPlans += 1;
-    if (files.includes("reimplementation.json")) result.reimplementations += 1;
-  }
-  return result;
-}
-
 async function collectPrototypingSummary(
   root: string,
   config: ConfigLoadResult["config"],
+  specEntries: readonly SpecEntry[],
 ): Promise<ReportPrototypingSummary | undefined> {
-  const specsRoot = resolvePath(root, config, "specsDir");
-  const evidenceRoot = path.join(path.dirname(specsRoot), "evidence");
-  const evidencePath = path.join(evidenceRoot, "prototyping.json");
-  let raw: string;
-  try {
-    raw = await readFile(evidencePath, "utf-8");
-  } catch {
-    return undefined;
-  }
-
   let parsed: unknown;
   try {
-    parsed = JSON.parse(raw);
+    parsed = JSON.parse(
+      await readFile(path.join(root, ".qfai/evidence/prototyping/prototyping.json"), "utf-8"),
+    );
   } catch {
     return undefined;
   }
-  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+
+  const doc = asRecord(parsed);
+  if (!doc) {
     return undefined;
   }
 
-  const record = parsed as Record<string, unknown>;
-  const mode = asRecord(record.mode);
-  if (!mode || typeof mode.source !== "string") {
-    return undefined;
-  }
-  const rawEffectiveMode =
-    typeof mode.effective === "string" && mode.effective.trim().length > 0
-      ? mode.effective.trim()
-      : DEFAULT_PROTOTYPING_MODE;
-
-  const resolvedMode = resolvePrototypingMode(
-    isValidPrototypingMode(mode.requested) ? mode.requested : undefined,
-  );
-  const effectiveMode = isValidPrototypingMode(rawEffectiveMode)
-    ? rawEffectiveMode
-    : resolvedMode.effective;
-  const effectiveSurface = isValidPrototypingSurface(record.surface) ? record.surface : "mixed";
-  const warnings: string[] = [];
-
-  // WS-3: Use shared obligation matrix
-  const obligations = derivePrototypingObligations({ surface: effectiveSurface, effectiveMode });
-
-  const fullHarness = asRecord(record.fullHarness);
-  const rounds = Array.isArray(record.rounds) ? record.rounds : [];
-  const polishCycles = Array.isArray(record.polishCycles) ? record.polishCycles : [];
-  const runtimeGate = asRecord(record.runtimeGate);
-  const uiFidelity = asRecord(record.uiFidelity);
-  const renderBundle = await readRenderEvidenceBundle(path.join(evidenceRoot, "render.json"));
-  const browserQaBundle = await readBrowserQaBundle(path.join(evidenceRoot, "browser-qa.json"));
-  const specs = Array.isArray(record.specs) ? record.specs : [];
-
-  // WS-6: Fix spec coverage — compare against project spec list
-  const specEntries = await collectSpecEntries(specsRoot);
-  const expectedSpecIds = specEntries.map((entry) => `spec-${entry.specNumber}`.toLowerCase());
-  const observedSpecIds = specs
-    .filter(
-      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-      (spec: unknown) => asRecord(spec) !== null && typeof asRecord(spec)?.specId === "string",
-    )
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    .map((spec: unknown) => (asRecord(spec)!.specId as string).toLowerCase());
+  const iterations = Array.isArray(doc.iterations) ? doc.iterations : [];
+  const observedSpecIds = readStringArray(doc.specsCovered).map(normalizeSpecNumber).sort();
+  const primaryPrototypingSpec = await resolvePrimaryPrototypingSpec(root, config);
+  const expectedSpecIds = primaryPrototypingSpec
+    ? [primaryPrototypingSpec.specId]
+    : specEntries.map((entry) => entry.specNumber).sort();
   const missingSpecIds = expectedSpecIds.filter((id) => !observedSpecIds.includes(id));
   const unexpectedSpecIds = observedSpecIds.filter((id) => !expectedSpecIds.includes(id));
   const specsCoverageStatus =
     expectedSpecIds.length > 0 && missingSpecIds.length === 0 ? "complete" : "incomplete";
 
-  const renderSummary = summarizeRenderEvidence(renderBundle);
-  const renderCounts = {
-    captured: renderSummary.captured,
-    skipped: renderSummary.skipped,
-    failed: renderSummary.failed,
-  };
-  const inlinePayloadViolation = renderSummary.inlinePayloadViolation;
-
-  const browserQaCounts = { error: 0, warning: 0, info: 0 } as Record<
-    "error" | "warning" | "info",
-    number
-  >;
-  const browserQaCategoryCounts: Record<string, number> = {};
-  let browserQaTotalPassed = 0;
-  let browserQaTotalFailed = 0;
-  if (browserQaBundle?.findings) {
-    for (const finding of browserQaBundle.findings) {
-      const severity = finding.severity === "warn" ? "warning" : finding.severity;
-      browserQaCounts[severity] += 1;
-      const category = finding.category ?? finding.phase;
-      browserQaCategoryCounts[category] = (browserQaCategoryCounts[category] ?? 0) + 1;
-    }
+  const warnings: string[] = [];
+  if (iterations.length === 0) {
+    warnings.push("prototyping.json has no iterations.");
   }
-  if (browserQaBundle?.browserQa.summary) {
-    const summary = browserQaBundle.browserQa.summary;
-    for (const category of ["smoke", "interaction", "visual", "accessibility"] as const) {
-      const bucket = summary[category] as Record<string, unknown> | undefined;
-      if (!bucket || typeof bucket !== "object") continue;
-      const passed = typeof bucket.passed === "number" ? bucket.passed : 0;
-      const failed = typeof bucket.failed === "number" ? bucket.failed : 0;
-      const status = typeof bucket.status === "string" ? bucket.status : "";
-      browserQaTotalPassed += passed || (status === "passed" || status === "executed" ? 1 : 0);
-      browserQaTotalFailed += failed || (status === "failed" ? 1 : 0);
-    }
-  }
-  // WS-8: Calibration summary
-  const calibrationConfig = config.prototyping?.calibration;
-  const scoringTrace =
-    fullHarness && Array.isArray(fullHarness.scoringTrace) ? fullHarness.scoringTrace : undefined;
-  const calibrationSummary =
-    calibrationConfig || scoringTrace
-      ? {
-          configPresent: Boolean(calibrationConfig),
-          scoringTraceAvailable: Boolean(scoringTrace && scoringTrace.length > 0),
-        }
-      : undefined;
-
-  // WS-F: Surface classification summary
-  const { readClassificationBlock, isDiscussionUiBearingSurfaceType } =
-    await import("./detection/surfaceType.js");
-  const classificationBlock = await readClassificationBlock(root);
-  const surfaceClassification: ReportPrototypingSummary["surfaceClassification"] = {
-    primarySurface: effectiveSurface,
-    uiBearing: isDiscussionUiBearingSurfaceType(effectiveSurface),
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-    ...(classificationBlock?.secondary_surfaces?.length
-      ? { secondarySurfaces: classificationBlock.secondary_surfaces }
-      : {}),
-    ...(classificationBlock?.classification_rationale
-      ? { classificationRationale: classificationBlock.classification_rationale }
-      : {}),
-  };
-
-  // v1.8.4 Phase 4: filesystem-first aggregation. Round artifact counts are
-  // sourced from .qfai/evidence/prototyping/rounds/<rN>/*.json, NOT from the
-  // curated `rounds[].xxxRef` strings. This eliminates the RR §8.2 drift
-  // (report shows 0 when files exist on disk).
-  const fsRoundScan = await scanPrototypingRoundsFilesystem(evidenceRoot);
-
-  const roundLifecycle =
-    record.schemaVersion === "2.0" ||
-    rounds.length > 0 ||
-    polishCycles.length > 0 ||
-    fsRoundScan.observedRoundIds.length > 0
-      ? (() => {
-          const polishKinds: Record<string, number> = {};
-          let candidatesObserved = 0;
-          let perfectRounds = 0;
-          let completedPolishCycles = 0;
-          let perfectPolishCycles = 0;
-
-          for (const item of rounds) {
-            const round = asRecord(item);
-            if (!round) {
-              continue;
-            }
-
-            const candidates = Array.isArray(round.candidates) ? round.candidates : [];
-            candidatesObserved += candidates.length;
-
-            if (round.allAxesPerfect100 === true) {
-              perfectRounds += 1;
-            }
-          }
-
-          for (const item of polishCycles) {
-            const cycle = asRecord(item);
-            if (!cycle) {
-              continue;
-            }
-
-            if (typeof cycle.kind === "string" && cycle.kind.length > 0) {
-              polishKinds[cycle.kind] = (polishKinds[cycle.kind] ?? 0) + 1;
-              if (cycle.kind === "completed") {
-                completedPolishCycles += 1;
-              }
-            }
-
-            if (cycle.allAxesPerfect100 === true) {
-              perfectPolishCycles += 1;
-            }
-          }
-
-          // Drift detection (RR §8.2): warn when index references differ
-          // from filesystem reality for the two ref kinds we care about
-          // most (absorptionPlanRef and reimplementationRef — narrowDecision
-          // and harvest are tracked but not drift-checked here yet).
-          // Counts are filesystem-authoritative; warnings surface
-          // user-visible disagreement so operators can clean up the index.
-          const indexAbsorptionRefs = rounds
-            .map((item) => asRecord(item))
-            .filter(
-              (round) =>
-                round &&
-                typeof round.absorptionPlanRef === "string" &&
-                round.absorptionPlanRef.length > 0,
-            ).length;
-          if (indexAbsorptionRefs !== fsRoundScan.absorptionPlans) {
-            warnings.push(
-              `prototyping.json index references ${indexAbsorptionRefs} absorption-plan(s) but filesystem has ${fsRoundScan.absorptionPlans}; counts use filesystem (canonical SoT).`,
-            );
-          }
-          const indexReimplRefs = rounds
-            .map((item) => asRecord(item))
-            .filter(
-              (round) =>
-                round &&
-                typeof round.reimplementationRef === "string" &&
-                round.reimplementationRef.length > 0,
-            ).length;
-          if (indexReimplRefs !== fsRoundScan.reimplementations) {
-            warnings.push(
-              `prototyping.json index references ${indexReimplRefs} reimplementation record(s) but filesystem has ${fsRoundScan.reimplementations}; counts use filesystem (canonical SoT).`,
-            );
-          }
-
-          // Union of round IDs from both sources. Set iteration preserves
-          // insertion order, so index-declared IDs appear first followed by
-          // any filesystem-only IDs. Either source counts as canonical
-          // existence — this is a UNION, not a precedence rule.
-          const indexRoundIds = rounds
-            .map((item) => asRecord(item))
-            .flatMap((round) =>
-              round && typeof round.round === "string" && round.round.length > 0
-                ? [round.round]
-                : [],
-            );
-          const roundIdSet = new Set<string>([...indexRoundIds, ...fsRoundScan.observedRoundIds]);
-
-          return {
-            schemaVersion: "2.0" as const,
-            // Use the union size — Math.max underestimates when index and
-            // filesystem describe disjoint round IDs (Copilot MAJOR review
-            // on PR #201).
-            rounds: roundIdSet.size,
-            roundIds: Array.from(roundIdSet),
-            candidatesObserved,
-            perfectRounds,
-            harvestArtifacts: fsRoundScan.harvestArtifacts,
-            narrowDecisions: fsRoundScan.narrowDecisions,
-            absorptionPlans: fsRoundScan.absorptionPlans,
-            reimplementations: fsRoundScan.reimplementations,
-            polishCycles: polishCycles.length,
-            completedPolishCycles,
-            perfectPolishCycles,
-            polishKinds,
-          };
-        })()
-      : undefined;
 
   return {
-    surfaceClassification,
-    ...(roundLifecycle ? { roundLifecycle } : {}),
+    roundLifecycle: {
+      schemaVersion: "2.0",
+      iterations: iterations.length,
+    },
     mode: {
-      ...(resolvedMode.requested ? { requested: resolvedMode.requested } : {}),
-      effective: effectiveMode,
-      source: typeof mode.source === "string" ? mode.source : resolvedMode.source,
-      rationale:
-        typeof mode.rationale === "string" && mode.rationale.trim().length > 0
-          ? mode.rationale
-          : resolvedMode.rationale,
-      surface: effectiveSurface,
+      effective: "single-thread-loop",
+      source: ".qfai/evidence/prototyping/prototyping.json",
+      rationale: "spec-0017 v2.0 uses a fixed single-thread iteration loop.",
+      surface: config.uiux?.platform ?? "unknown",
     },
     evidence: {
       specsCoverageStatus,
@@ -2033,106 +1731,30 @@ async function collectPrototypingSummary(
         missingSpecIds,
         unexpectedSpecIds,
       },
-      runtimeGate: { present: Boolean(runtimeGate), required: obligations.requireRuntimeGate },
-      uiFidelity: { present: Boolean(uiFidelity), required: obligations.requireUiFidelity },
-      renderBundle: { present: Boolean(renderBundle), required: obligations.requireRenderBundle },
-      browserQaBundle: {
-        present: Boolean(browserQaBundle),
-        required: obligations.requireBrowserQaBundle,
-      },
-      obligationProfile: `${effectiveSurface}/${effectiveMode}`,
+      runtimeGate: { present: false, required: false },
+      uiFidelity: { present: false, required: false },
+      renderBundle: { present: false, required: false },
+      browserQaBundle: { present: false, required: false },
+      obligationProfile: "v2.0-single-thread-loop",
     },
-    ...(fullHarness
-      ? {
-          fullHarness: {
-            enabled: fullHarness.enabled === true,
-            ...(typeof fullHarness.runId === "string" ? { runId: fullHarness.runId } : {}),
-            ...(typeof fullHarness.status === "string" ? { status: fullHarness.status } : {}),
-            ...(typeof fullHarness.iterationCount === "number"
-              ? { iterationCount: fullHarness.iterationCount }
-              : {}),
-            ...(typeof fullHarness.bestIteration === "number"
-              ? { bestIteration: fullHarness.bestIteration }
-              : {}),
-            ...(typeof fullHarness.terminationReason === "string"
-              ? { terminationReason: fullHarness.terminationReason }
-              : {}),
-            ...(() => {
-              const cr = asRecord(fullHarness.calibrationRef);
-              if (!cr) return {};
-              return {
-                calibrationRef: {
-                  configPath: typeof cr.configPath === "string" ? cr.configPath : "",
-                  packPath: typeof cr.packPath === "string" ? cr.packPath : "",
-                  packVersion: typeof cr.packVersion === "string" ? cr.packVersion : "",
-                },
-              };
-            })(),
-            ...(asRecord(fullHarness.reviewerSignoff) &&
-            typeof asRecord(fullHarness.reviewerSignoff)?.reviewerId === "string"
-              ? { reviewerId: String(asRecord(fullHarness.reviewerSignoff)?.reviewerId) }
-              : {}),
-            ...(asRecord(fullHarness.reviewerSignoff)?.status &&
-            typeof asRecord(fullHarness.reviewerSignoff)?.status === "string"
-              ? {
-                  reviewerSignoffStatus: String(asRecord(fullHarness.reviewerSignoff)?.status),
-                }
-              : {}),
-            ...(scoringTrace && scoringTrace.length > 0
-              ? (() => {
-                  const latest = asRecord(scoringTrace[scoringTrace.length - 1]);
-                  return {
-                    scoringTraceCount: scoringTrace.length,
-                    ...(typeof latest?.iteration === "number"
-                      ? { latestScoredIteration: latest.iteration }
-                      : {}),
-                  };
-                })()
-              : {}),
-            ...(Array.isArray(fullHarness.reviewerLogs)
-              ? { reviewerLogsCount: fullHarness.reviewerLogs.length }
-              : {}),
-            ...(Array.isArray(fullHarness.limitations)
-              ? { limitations: fullHarness.limitations as string[] }
-              : {}),
-          },
-        }
-      : {}),
-    render: {
-      ...(renderBundle?.renderEvidence.status
-        ? { status: renderBundle.renderEvidence.status }
-        : {}),
-      ...(renderBundle?.renderEvidence.requested !== undefined
-        ? { requested: renderBundle.renderEvidence.requested }
-        : {}),
-      captured: renderCounts.captured,
-      skipped: renderCounts.skipped,
-      failed: renderCounts.failed,
-      malformed: renderBundle === null && Boolean(record.renderEvidence),
-      inlinePayloadViolation,
-    },
-    browserQa: {
-      ...(browserQaBundle?.browserQa.status ? { status: browserQaBundle.browserQa.status } : {}),
-      ...(browserQaBundle?.browserQa.executed !== undefined
-        ? { executed: browserQaBundle.browserQa.executed }
-        : {}),
-      findingsBySeverity: browserQaCounts,
-      ...(Object.keys(browserQaCategoryCounts).length > 0
-        ? { findingsByCategory: browserQaCategoryCounts }
-        : {}),
-      ...(browserQaBundle?.browserQa.summary
-        ? {
-            summaryAggregates: {
-              totalPassed: browserQaTotalPassed,
-              totalFailed: browserQaTotalFailed,
-            },
-            phaseSummary: browserQaBundle.browserQa.summary,
-          }
-        : {}),
-    },
-    ...(calibrationSummary ? { calibration: calibrationSummary } : {}),
     warnings,
   };
+}
+
+function asRecord(value: unknown): Record<string, unknown> | undefined {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : undefined;
+}
+
+function readStringArray(value: unknown): string[] {
+  return Array.isArray(value)
+    ? value.filter((item): item is string => typeof item === "string")
+    : [];
+}
+
+function normalizeSpecNumber(value: string): string {
+  return value.replace(/^spec-/iu, "");
 }
 
 async function collectSpecContractRefs(
@@ -2251,12 +1873,6 @@ async function evaluateTraceability(
 function buildIdPattern(ids: string[]): RegExp {
   const escaped = ids.map((id) => id.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
   return new RegExp(`\\b(${escaped.join("|")})\\b`);
-}
-
-function asRecord(value: unknown): Record<string, unknown> | undefined {
-  return value && typeof value === "object" && !Array.isArray(value)
-    ? (value as Record<string, unknown>)
-    : undefined;
 }
 
 function formatIdLine(label: string, values: string[]): string {

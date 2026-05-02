@@ -21,7 +21,7 @@ export default defineConfig({
   dts: true,
   sourcemap: true,
   clean: true,
-  target: "node18",
+  target: "node20",
   splitting: false,
   external: ["playwright"],
   outExtension({ format }) {

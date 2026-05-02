@@ -19,7 +19,7 @@
   - CLI layer -> Core layer -> Validators -> Artifacts (one-way dependency)
   - specs/ is definition-only (no operational status)
 - Conventions (naming, file layout):
-  - Layered spec: `_policies/` + `spec-XXXX/` (1 CAP = 1 spec dir)
+  - Layered spec: `_policies/` + `spec-*` directories (1 CAP = 1 spec dir)
   - Contract IDs: CON-DB-XXXX, CON-API-XXXX, CON-UI-XXXX
   - Validator files: packages/qfai/src/core/validators/ (45+ files)
 - Evidence: 02_Inception-Deck.md (Architecture), 09_Constraints.md (TC-09)

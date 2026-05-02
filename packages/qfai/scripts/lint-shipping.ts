@@ -93,12 +93,9 @@ const TARGET_GLOBS: ReadonlyArray<{ rootRel: string; matchExtensions: ReadonlyAr
 
 /**
  * Directories / files excluded entirely from the scan:
- * - The seed spec template (placeholder name, ships verbatim).
  * - Tests and any *.test.ts file.
- * - Init-asset README files that document the spec ID convention itself.
  */
 const EXCLUDED_PATH_PATTERNS: ReadonlyArray<RegExp> = [
-  /[\\/]assets[\\/]init[\\/]\.qfai[\\/]specs[\\/]spec-[0-9A-Z]+([\\/]|$)/i,
   /[\\/](?:tests|__tests__)[\\/]/,
   /\.test\.ts$/,
 ];
@@ -189,6 +186,16 @@ async function lintFile(absolutePath: string, pkgRoot: string): Promise<LintViol
   const lines = body.split(/\r?\n/);
   const relPath = path.relative(pkgRoot, absolutePath).replace(/\\/g, "/");
   const applicableRules = PATTERNS.filter((rule) => rule.appliesTo.includes(targetCategory));
+
+  if (/^assets\/init\/\.qfai\/specs\/spec-XXXX\//.test(relPath)) {
+    violations.push({
+      file: relPath,
+      line: 1,
+      pattern: "spec-path-literal",
+      matched: "assets/init/.qfai/specs/spec-XXXX/",
+      suggestion: "Do not ship seed spec placeholder directories via `qfai init`.",
+    });
+  }
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];

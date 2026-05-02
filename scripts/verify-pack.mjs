@@ -196,6 +196,8 @@ const qfaiDir = path.join(outputDir, ".qfai");
 if (!existsSync(qfaiDir)) {
   throw new Error("init did not generate .qfai directory.");
 }
+mkdirSync(path.join(outputDir, "src"), { recursive: true });
+mkdirSync(path.join(outputDir, "tests"), { recursive: true });
 // Per-directory .gitignore removed; entries now appended to root .gitignore
 const rootGitignore = path.join(outputDir, ".gitignore");
 if (!existsSync(rootGitignore)) {
@@ -205,13 +207,9 @@ const rootGitignoreContent = readFileSync(rootGitignore, "utf-8");
 const requiredGitignorePatterns = [
   "QFAI managed",
   ".qfai/report/*",
-  "!.qfai/report/README.md",
   ".qfai/evidence/*",
-  "!.qfai/evidence/README.md",
   ".qfai/review/*",
-  "!.qfai/review/README.md",
   ".qfai/discussion/*",
-  "!.qfai/discussion/README.md",
 ];
 const missingPatterns = requiredGitignorePatterns.filter(
   (pattern) => !rootGitignoreContent.includes(pattern),
@@ -235,8 +233,8 @@ for (const skillId of requiredSkills) {
 }
 
 const skillsLocalDir = path.join(qfaiDir, "assistant", "skills.local");
-if (!existsSync(skillsLocalDir)) {
-  throw new Error("init did not generate .qfai/assistant/skills.local directory.");
+if (existsSync(skillsLocalDir)) {
+  throw new Error("init generated deprecated .qfai/assistant/skills.local directory.");
 }
 
 const legacyPromptsDir = path.join(qfaiDir, "assistant", "prompts");
@@ -403,6 +401,11 @@ const seededDiscussionPackFiles = {
     "This seeded discussion-pack is for packaging validation only and ensures",
     "the readiness gate has concrete non-placeholder content.",
     "",
+    "```mermaid",
+    "flowchart TD",
+    "  Package[Packed artifact] --> Validate[Smoke validation]",
+    "```",
+    "",
     "Elevator Pitch:",
     "A packaging smoke test that validates the discussion pack gate.",
     "",
@@ -540,27 +543,55 @@ for (const [fileName, lines] of Object.entries(seededDiscussionPackFiles)) {
   writeFileSync(path.join(seededDiscussionPackDir, fileName), lines.join("\n"));
 }
 
-// Regression check: `.qfai/assistant/skills.local/**` must be overlay-only and never overwritten,
-// even when init is re-run with --force.
-const skillsLocalReadmePath = path.join(skillsLocalDir, "README.md");
-const skillsLocalCustomPath = path.join(skillsLocalDir, "custom.md");
-const skillsLocalReadmeContent = "# local overrides\n";
-const skillsLocalCustomContent = "custom\n";
-writeFileSync(skillsLocalReadmePath, skillsLocalReadmeContent);
-writeFileSync(skillsLocalCustomPath, skillsLocalCustomContent);
+const seededReviewPackDir = path.join(outputDir, ".qfai", "review", "review-20260216000000000");
+mkdirSync(seededReviewPackDir, { recursive: true });
+writeFileSync(
+  path.join(seededReviewPackDir, "review_request.md"),
+  [
+    "# Review Request",
+    "",
+    "Target: .qfai/discussion/discussion-20260216000000000",
+    "Purpose: verify-pack smoke validation.",
+    "",
+  ].join("\n"),
+);
+writeFileSync(
+  path.join(seededReviewPackDir, "R01_completion-reviewer.md"),
+  [
+    "# R01 Completion Reviewer",
+    "",
+    "- Status: PASS",
+    "- Feedback count: 0",
+    "- Scope: packaging smoke validation fixture.",
+    "",
+  ].join("\n"),
+);
+writeFileSync(
+  path.join(seededReviewPackDir, "summary.json"),
+  JSON.stringify(
+    {
+      version: "2.0",
+      created_at: "2026-02-16T00:00:00.000Z",
+      target: {
+        kind: "discussion",
+        path: ".qfai/discussion/discussion-20260216000000000",
+      },
+      routing_profile: "completion",
+      reviewers: [{ reviewer: "completion-reviewer", status: "PASS", feedback_count: 0 }],
+      conditional_reviewers: [],
+      overall_status: "PASS",
+    },
+    null,
+    2,
+  ) + "\n",
+);
 
 execFileSync("node", [cliPath, "init", "--dir", outputDir, "--force"], {
   stdio: "inherit",
 });
 
-if (readFileSync(skillsLocalReadmePath, "utf-8") !== skillsLocalReadmeContent) {
-  throw new Error("init overwrote .qfai/assistant/skills.local/README.md (must be protected).");
-}
-if (!existsSync(skillsLocalCustomPath)) {
-  throw new Error("init removed .qfai/assistant/skills.local/custom.md (must be preserved).");
-}
-if (readFileSync(skillsLocalCustomPath, "utf-8") !== skillsLocalCustomContent) {
-  throw new Error("init overwrote .qfai/assistant/skills.local/custom.md (must be protected).");
+if (existsSync(skillsLocalDir)) {
+  throw new Error("init --force generated deprecated .qfai/assistant/skills.local directory.");
 }
 
 execFileSync(

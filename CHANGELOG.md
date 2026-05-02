@@ -4,17 +4,42 @@
 
 ## [Unreleased]
 
+- なし
+
+## [1.8.7] - 2026-05-02
+
 ### Added
 
-- なし
+- `qfai prototyping iterate --cycle <n>` driver for the v2.0 single-thread design evolution loop. Exit codes 0 / 64 / 65 / 2 (continue / convergence / max-iterations / input error).
+- `core/prototyping/iteration.ts` — `Iteration`, `OrdinalScore`, `PivotDirective`, `shouldStop()`, `MAX_ITERATIONS = 15`, path helpers.
+- `core/prototyping/evaluatorReview.ts` — 4-axis ordinal review (200–500 word prose critique, anti-slop cap on `originality`).
+- `core/validators/prototypingEvidenceV3.ts` — v3.0 schema validator with `QFAI-PROT2-NNN` error codes.
+- `qfai-prototyping/references/{iteration-loop,generator-prompt,reviewer-prompt,handoff}.md` (4 v2.0 references).
+- `packages/qfai/scripts/check-no-legacy-concepts.sh` — CI sanity grep for re-introduction of v1.x concepts.
+- `packages/qfai/docs/MIGRATION-2.0.md` — full migration guide.
+- `tests/e2e/prototypingV2E2E.test.ts` — end-to-end iter-00..iter-03 cycle.
 
-### Changed
+### Changed (BREAKING)
 
-- なし
+- `prototyping.json` schema bumped 2.0 → 3.0 (`iterations[]` replaces `rounds[]` / `polishCycles[]` / `bestOfHistory` / `breakthrough` / `mode` / `fullHarness`). Old runs fail to load.
+- `completion-certificate.json` schema bumped 1.0 → 2.0 (`polishCycleCount` removed).
+- `/qfai-prototyping` SKILL.md rewritten as a 130-line v2.0 single-thread loop with global anti-slop pattern list.
+- `/qfai-discussion`, `/qfai-sdd`, `/qfai-implement`, `/qfai-verify` SKILL.md aligned with the v2.0 contract surface.
+- `agent-routing.yml`: prototyping routing rewritten as 3-phase loop (seed / loop / handoff); `review_profile: full-harness` removed.
+- `core/observability/{guidance,types}.ts`: `mode: "full-harness"` literal replaced by `mode: "single-thread-loop"`.
 
-### Removed
+### Removed (BREAKING)
 
-- なし
+- v1.x prototyping mode tier (`low-cost` / `standard` / `full-harness`) and the entire `core/harness/` subsystem.
+- v1.x funnel: `r5/r3/r2/r1` rounds, harvest, absorption, reimplementation, branch planner, plateau detector, candidate concepts, evaluator review v2.
+- v1.x design contracts: `evaluation-rubric.yaml`, `evaluator-calibration.yaml`, `absorption-policy.yaml`, `selected-direction.yaml`.
+- v1.x discussion sidecars: `uiux/33_exploration_rubric.md`, `uiux/34_evaluator_calibration.md`.
+- v1.x CLI: `qfai prototyping round-start` / `round-harvest` / `round-narrow` / `round-absorb` / `round-reimplement-verify`; `--mode`, `--round`, `--candidates`, `--survivors`.
+- v1.x `bestOfHistory` acceptance rule and `100/100 every axis` completion gate.
+- `prototype-handoff.yaml` `mustPreserve` / `mayAdapt` / `mustNotCopy` triple (the artifact itself is the SSOT).
+- `core/evidence/{bundleWriter,specCoverage,uiObservation,fakeUiDetection,actionCoverage,uiFidelityBuilder,runtimeObservation,runtimeGateBuilder,evidenceHandler,fsEvidenceWriter,captureStatus}.ts`.
+- `core/validators/prototyping/{modeInvariant,executionPlan,lighthouseGate,screenshotDir,iterationGate,designSystemThreshold}.ts`.
+- ~3,000+ lines of v1.x code and ~25 v1.x-coupled test files.
 
 ## [1.8.6] - 2026-04-30
 

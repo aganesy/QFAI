@@ -1,7 +1,7 @@
 ---
 name: qfai-sdd
 title: QFAI SDD Unified (Outline/Slice/Plan/Delta)
-description: "Create and update layered SDD artifacts (_policies + spec-XXXX) in one workflow."
+description: "Create and update layered SDD artifacts (_policies + spec-*) in one workflow."
 argument-hint: "[<spec-id-or-name>] [--auto]"
 allowed-tools: [Read, Glob, Write, TodoWrite, Task, Bash]
 roles:
@@ -52,10 +52,10 @@ Skill-specific examples:
 
 - Follow `.qfai/assistant/instructions/shared-skill-operating-baseline.md#format-ssot-mandatory`.
 - Before writing `.qfai/**`, read:
-  - `.qfai/discussion/README.md`
-  - `.qfai/specs/README.md`
-  - `.qfai/contracts/**/README.md`
-  - `.qfai/evidence/README.md`
+  - `.qfai/assistant/skills/qfai-discussion/references/discussion-artifact-rules.md`
+  - `.qfai/assistant/skills/qfai-sdd/references/spec-traceability-rules.md`
+  - `.qfai/assistant/skills/qfai-sdd/references/contract-artifact-rules.md`
+  - `.qfai/assistant/skills/qfai-prototyping/references/evidence-requirements.md`
   - `.qfai/assistant/steering/agent-catalog.yml`
   - `.qfai/assistant/steering/agent-routing.yml`
   - `.qfai/assistant/steering/review-profiles.yml`
@@ -115,7 +115,7 @@ Use the shared schema.
 - Run Contracts-first and Outline once per batch.
 - Delegate Slice in parallel per spec.
 - Validate gate and Review gate run once at batch tail after all target specs are integrated.
-- Evidence is mandatory per spec: `.qfai/evidence/sdd-spec-XXXX.md`.
+- Evidence is mandatory per spec: `.qfai/evidence/sdd-<spec-id>.md`.
 - Every per-spec evidence MUST include `## Work Orders Summary`.
 
 ### Reviewer Gate (MUST)
@@ -203,7 +203,7 @@ Follow `.qfai/assistant/instructions/shared-skill-operating-baseline.md#gate-fai
 - `06_Test-Cases.md` must include `TC-ID`, `EX-Ref`, `AC-Refs`, and `Type`.
 - `06_Test-Cases.md` quality depth must include normal-path plus error or boundary coverage.
 - Do not complete the stage until `qfai validate --profile sdd --fail-on error --format github | tee .qfai/report/validate.log` exits with `error=0`.
-- Reference direction rules from `.qfai/specs/README.md` must be enforced.
+- Reference direction rules from `.qfai/assistant/skills/qfai-sdd/references/spec-traceability-rules.md` must be enforced.
 - Keep `specs/` definition-only and operational status under `.qfai/report/run-*`.
 - Traceability depth and density-smell review rules live in:
   - `.qfai/assistant/skills/qfai-sdd/references/spec-traceability-rules.md`
@@ -222,18 +222,18 @@ Create or update layered SDD artifacts in one run so downstream execution phases
 ## Mandatory Outputs
 
 - Shared `_policies/01..11` layered files
-- Target `spec-XXXX/01..10` layered files
+- Target `spec-*/01..10` layered files
 - Updated contracts under `.qfai/contracts/**`
 - UI-bearing normalized contracts:
   - `.qfai/contracts/design/exploration-brief.yaml`
-  - `.qfai/contracts/design/reference-pool.yaml`
+  - `.qfai/contracts/design/reference-pool.yaml` (deviate-from input for prototyping reviewer)
   - `.qfai/contracts/design/brand-design.yaml`
-  - `.qfai/contracts/design/evaluation-rubric.yaml`
-  - `.qfai/contracts/design/evaluator-calibration.yaml`
-  - `.qfai/contracts/design/absorption-policy.yaml`
   - `.qfai/contracts/ui/*.yaml`
+  - (post-loop, produced by /qfai-prototyping v2.0:
+    `.qfai/contracts/design/design-system.yaml`,
+    `.qfai/contracts/design/prototype-handoff.yaml`)
 - `.qfai/report/preflight_summary.md`
-- Evidence file: `.qfai/evidence/sdd-spec-XXXX.md`
+- Evidence file: `.qfai/evidence/sdd-<spec-id>.md`
 
 The canonical file set is defined by skill templates under `.qfai/assistant/skills/qfai-sdd/templates/`.
 
@@ -266,7 +266,7 @@ Run the quality gate checklist from `.qfai/assistant/skills/qfai-sdd/references/
 
 Minimum checks that must remain visible here:
 
-- Confirm required `_policies` and `spec-XXXX` layered files exist.
+- Confirm required `_policies` and target spec layered files exist.
 - Confirm `_policies/11_Slice-Policy.md` matches the repository's current slice model.
 - Confirm `_policies/04_Business-Flow.md` includes Mermaid.
 - Confirm `01_Spec.md` includes copy-down context and Escalation Hook.
@@ -311,7 +311,7 @@ When declaring DONE, include:
 - [ ] `_policies/05_Contracts.md` Contract Index and `.qfai/contracts/**` declarations are aligned.
 - [ ] Upper-to-lower references were not introduced.
 - [ ] At least one user-story slice passed gate before plan finalization.
-- [ ] Required `_policies` + `spec-XXXX` outputs exist and are internally consistent.
+- [ ] Required `_policies` + target spec outputs exist and are internally consistent.
 - [ ] `_policies/11_Slice-Policy.md` exists and reflects the current slicing model.
 - [ ] `_policies/04_Business-Flow.md` is Markdown + Mermaid.
 - [ ] `10_Plan.md` is finalized as How-only.
@@ -342,4 +342,4 @@ When this skill is complete, provide a final user-facing completion message and 
 - Contracts status:
   Action: confirm contracts were created or updated under `.qfai/contracts/**` and referenced by `_policies/05_Contracts.md`.
 - Spec pack needs correction: rerun `/qfai-sdd`.
-  Action: fix layered `_policies + spec-XXXX` consistency and decision records, then regenerate evidence.
+  Action: fix layered `_policies + target spec` consistency and decision records, then regenerate evidence.

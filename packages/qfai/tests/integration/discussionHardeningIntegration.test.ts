@@ -41,24 +41,22 @@ async function seedDiscussionPack(root: string, uiux: Record<string, string>): P
 }
 
 function validUiux(): Record<string, string> {
+  // v2.0 (spec-0017 P14): 33_exploration_rubric / 34_evaluator_calibration
+  // sidecars removed; the validator no longer checks them.
   return {
     "uiux/30_exploration_brief.md":
       "## Product Intent\nx\n\n## Must-preserve Interactions\n- x\n\n## Brand Signals\n- x\n\n## Differentiation Targets\n- x\n",
     "uiux/31_reference_pool.md":
       "# Reference Pool\n\n| Ref | Kind | Source URL | Adopted points | Rejected points | Local translation | Copy risk | Template usage policy |\n| --- | --- | --- | --- | --- | --- | --- | --- |\n| REF-001 | competitor | https://example.com | x | y | z | medium | reference-only |\n",
     "uiux/32_design_anti_goals.md": "# Design Anti-goals\n\n- x\n",
-    "uiux/33_exploration_rubric.md":
-      "## Design Quality\nx\n\n## Originality\nx\n\n## Craft\nx\n\n## Functionality\nx\n\n## Brand Memorability\nx\n\n## Category Distinctiveness\nx\n\n## Template Dependency Risk\nx\n\n## Localization Fit\nx\n",
-    "uiux/34_evaluator_calibration.md":
-      "## Good Critique\nx\n\n## Too Lenient\nx\n\n## Blandness Fail\nx\n\n## Originality Fail\nx\n\n## Template Copy Fail\nx\n",
     "uiux/40_screen_contracts.md":
       "### Screen: Dashboard\n- screen_id: dashboard\n- route: /dashboard\n- purpose: x\n- actor: user\n- primary_tasks:\n  - x\n- secondary_tasks:\n  - y\n- required_states:\n  - default\n  - loading\n  - empty\n  - error\n- transitions:\n  - open detail\n- observable_outcomes:\n  - x\n- notes_for_verify: x\n- notes_for_reviewer: x\n",
-    "uiux/50_review_input_bundle.md": "# Review Input Bundle\n\n## Best-of-history\nx\n",
+    "uiux/50_review_input_bundle.md": "# Review Input Bundle\n\n## Inputs\nx\n",
   };
 }
 
 describe("discussion hardening integration", () => {
-  it("最新 pack に新しい exploration family が揃っていれば pass する", async () => {
+  it("v2.0 sidecar set (5 files) でも pass する", async () => {
     const root = await newWorkspace();
     await seedDiscussionPack(root, validUiux());
 
@@ -67,16 +65,15 @@ describe("discussion hardening integration", () => {
     expect(issues).toEqual([]);
   });
 
-  it("latest pack に欠落や不完全 heading があれば集約して返す", async () => {
+  it("latest pack に欠落 sidecar があれば UIX-VAL-EXPLORE-SIDECAR-MISSING を返す", async () => {
     const root = await newWorkspace();
     const files = validUiux();
     delete files["uiux/31_reference_pool.md"];
-    files["uiux/34_evaluator_calibration.md"] = "## Good Critique\nx\n";
     await seedDiscussionPack(root, files);
 
     const issues = await validateDiscussionDesignHardening(root, defaultConfig);
 
     expect(issues.some((i) => i.code === "UIX-VAL-EXPLORE-SIDECAR-MISSING")).toBe(true);
-    expect(issues.some((i) => i.code === "UIX-VAL-EVAL-CALIBRATION")).toBe(true);
+    expect(issues.some((i) => i.file === "uiux/31_reference_pool.md")).toBe(true);
   });
 });

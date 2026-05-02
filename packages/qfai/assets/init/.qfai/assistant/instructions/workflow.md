@@ -49,7 +49,7 @@ Do not proceed without a declared Change Type.
 0. Steering refresh (project memory bootstrap)
 1. Discussion (optional): clarify idea → requirement seed
 2. Requirements: discussion pack in `.qfai/discussion/`
-3. Specification (SDD): unified preflight + `_policies` / `spec-XXXX/01..10`
+3. Specification (SDD): unified preflight + `_policies` / `spec-*/01..10`
 4. Prototyping (optional): contract-aligned implementation skeleton
 5. Acceptance tests (ATDD): runnable E2E/API/Integration tests derived from specs/contracts obligations (`US` / `TC` / `CON-API`)
 6. Verify: run quality gates and provide evidence
@@ -59,7 +59,7 @@ Stage 3 (`/qfai-sdd`) target policy:
 - With argument (`/qfai-sdd <spec-id-or-name>`): scope is the matched single spec only.
 - Without argument (`/qfai-sdd`): scope is all capabilities from `.qfai/specs/_policies/03_Capabilities.md` in order.
 - `/qfai-sdd` must create or refresh `.qfai/specs/_policies/11_Slice-Policy.md` before deciding whether a spec change is CREATE / UPDATE / DELETE.
-- For no-argument batch runs, execute Contracts-first and Outline once, then delegate Slice/Plan/Delta in parallel per `spec-XXXX`.
+- For no-argument batch runs, execute Contracts-first and Outline once, then delegate Slice/Plan/Delta in parallel per target spec.
 
 Prototyping stage policy:
 

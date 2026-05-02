@@ -2,6 +2,7 @@ import path from "node:path";
 
 import { resolvePath, type QfaiConfig } from "../config.js";
 import { readUiContractScreenContracts } from "../contracts/screenContracts.js";
+import { collectFiles } from "../fs.js";
 import type { Issue } from "../types.js";
 import { exists, issue } from "./utils.js";
 
@@ -14,6 +15,25 @@ function toPosixRelative(root: string, targetPath: string): string {
 }
 
 const SAFE_SCREEN_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]*$/u;
+const ITERATION_DIR_PATTERN = /^iter-\d{2}$/u;
+
+async function hasEvidenceFile(
+  prototypingRoot: string,
+  canonicalPath: string,
+  screenId: string,
+  extension: ".html" | ".png",
+): Promise<boolean> {
+  if (await exists(canonicalPath)) {
+    return true;
+  }
+  const files = await collectFiles(prototypingRoot, { extensions: [extension] });
+  const expectedFileName = `${screenId}${extension}`;
+  return files.some(
+    (file) =>
+      path.basename(file) === expectedFileName &&
+      ITERATION_DIR_PATTERN.test(path.basename(path.dirname(file))),
+  );
+}
 
 export async function validateUiEvidenceArtifacts(
   root: string,
@@ -27,8 +47,9 @@ export async function validateUiEvidenceArtifacts(
   }
 
   const evidenceRoot = resolveEvidenceRoot(root, config);
-  const screenshotRoot = path.join(evidenceRoot, "prototyping", "screenshots");
-  const htmlRoot = path.join(evidenceRoot, "prototyping", "html");
+  const prototypingRoot = path.join(evidenceRoot, "prototyping");
+  const screenshotRoot = path.join(prototypingRoot, "screenshots");
+  const htmlRoot = path.join(prototypingRoot, "html");
 
   for (const screen of screens) {
     if (!SAFE_SCREEN_ID_PATTERN.test(screen.screenId)) {
@@ -50,7 +71,7 @@ export async function validateUiEvidenceArtifacts(
     const screenshotPath = path.join(screenshotRoot, `${screen.screenId}.png`);
     const htmlPath = path.join(htmlRoot, `${screen.screenId}.html`);
 
-    if (!(await exists(screenshotPath))) {
+    if (!(await hasEvidenceFile(prototypingRoot, screenshotPath, screen.screenId, ".png"))) {
       const screenshotPattern = path.posix.join(
         toPosixRelative(root, screenshotRoot),
         "<screen-id>.png",
@@ -64,12 +85,12 @@ export async function validateUiEvidenceArtifacts(
           "uiEvidenceArtifacts.screenshotRequired",
           [screen.sourceRef],
           "canonical",
-          `Generate \`${screenshotPattern}\` for every declared screen in \`${config.paths.contractsDir}/ui/*.yaml\` before rerunning validate.`,
+          `Generate \`${screenshotPattern}\` or \`${toPosixRelative(root, prototypingRoot)}/iter-NN/<screen-id>.png\` for every declared screen in \`${config.paths.contractsDir}/ui/*.yaml\` before rerunning validate.`,
         ),
       );
     }
 
-    if (!(await exists(htmlPath))) {
+    if (!(await hasEvidenceFile(prototypingRoot, htmlPath, screen.screenId, ".html"))) {
       const htmlPattern = path.posix.join(toPosixRelative(root, htmlRoot), "<screen-id>.html");
       issues.push(
         issue(
@@ -80,7 +101,7 @@ export async function validateUiEvidenceArtifacts(
           "uiEvidenceArtifacts.htmlRequired",
           [screen.sourceRef],
           "canonical",
-          `Generate \`${htmlPattern}\` for every declared screen in \`${config.paths.contractsDir}/ui/*.yaml\` before rerunning validate.`,
+          `Generate \`${htmlPattern}\` or \`${toPosixRelative(root, prototypingRoot)}/iter-NN/<screen-id>.html\` for every declared screen in \`${config.paths.contractsDir}/ui/*.yaml\` before rerunning validate.`,
         ),
       );
     }

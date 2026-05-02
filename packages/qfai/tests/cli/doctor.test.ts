@@ -45,16 +45,14 @@ describe("doctor", { timeout: 60000 }, () => {
     }
   });
 
-  it("reports skills.local as info when it exists", async () => {
+  it("does not report deprecated skills.local override checks", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-doctor-"));
     try {
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
 
       const parsed = await readDoctorData(root);
       const check = findCheck(parsed.checks, "paths.skillsLocalDir");
-      expect(check?.severity).toBe("info");
-      expect(typeof parsed.summary?.info).toBe("number");
-      expect((parsed.summary?.info ?? 0) >= 1).toBe(true);
+      expect(check).toBeUndefined();
     } finally {
       await rm(root, { recursive: true, force: true });
     }
@@ -598,46 +596,8 @@ async function seedPrototypingFixture(root: string, targetUrl: string): Promise<
     ].join("\n"),
     "utf-8",
   );
-  await writeFile(
-    path.join(designDir, "evaluation-rubric.yaml"),
-    [
-      "axes:",
-      "  - id: design-quality",
-      "    weight: 3",
-      "hard_floors:",
-      "  - id: functionality",
-      "    min_score: 80",
-      "weighted_axes:",
-      "  - design-quality",
-      "",
-    ].join("\n"),
-    "utf-8",
-  );
-  await writeFile(
-    path.join(designDir, "evaluator-calibration.yaml"),
-    [
-      "good_critique_examples:",
-      "  - Specific critique tied to user goals",
-      "too_lenient_examples:",
-      "  - Generic praise without evidence",
-      "blandness_fail_examples:",
-      "  - Recycled default admin shell",
-      "originality_fail_examples:",
-      "  - Near-copy of reference product",
-      "",
-    ].join("\n"),
-    "utf-8",
-  );
-  await writeFile(
-    path.join(designDir, "absorption-policy.yaml"),
-    [
-      "minAbsorptionsPerSurvivor: 2",
-      "require_rejected_reason: true",
-      "allow_adapt_required: true",
-      "",
-    ].join("\n"),
-    "utf-8",
-  );
+  // v2.0 (spec-0017 P14): the v1.x evaluation-rubric / evaluator-calibration /
+  // absorption-policy contracts were removed; they are no longer seeded here.
   await writeTestPlaywrightCli(binDir, 0);
 }
 
