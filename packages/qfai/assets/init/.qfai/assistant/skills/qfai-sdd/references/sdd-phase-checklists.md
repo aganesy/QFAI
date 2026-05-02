@@ -2,6 +2,15 @@
 
 Use these checklists as the detailed operational guide for `/qfai-sdd`.
 
+## Stage 1: Triage
+
+- Active spec summaries collected; non-active specs filtered out.
+- Each REQ/NFR has a classified Operation (one of the 8).
+- UPDATE rows declare an explicit Sub-op (APPEND / MODIFY / REMOVE).
+- Approval-required rows (CREATE / DELETE / SPLIT / MERGE / SUPERSEDE / UPDATE:REMOVE) carry a recorded `Approved By`.
+- Triage table written to `<spec>/09_delta.md` (per-spec) and `_policies/10_delta.md` (cross-spec / policy).
+- Stop entry to Phase 0 until the Triage table is complete.
+
 ## Phase 0: Contracts-first
 
 - Confirm impacted contract kinds: API, DB, UI.

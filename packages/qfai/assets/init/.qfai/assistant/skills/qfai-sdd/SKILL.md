@@ -1,7 +1,7 @@
 ---
 name: qfai-sdd
-title: QFAI SDD Unified (Outline/Slice/Plan/Delta)
-description: "Create and update layered SDD artifacts (_policies + spec-*) in one workflow."
+title: QFAI SDD Unified (Triage/Outline/Slice/Plan/Delta)
+description: "Triage incoming requirements against existing specs, then create or update layered SDD artifacts (_policies + spec-*) in one workflow."
 argument-hint: "[<spec-id-or-name>] [--auto]"
 allowed-tools: [Read, Glob, Write, TodoWrite, Task, Bash]
 roles:
@@ -32,50 +32,72 @@ QFAI Skill Body (SSOT)
 
 [DRIFT-PROTOCOL:MANDATORY]
 
+## Stage and Phase Order (Fixed)
+
+```
+Stage 0 Preflight  -> Stage 1 Triage  -> Phase 0 Contracts-first
+                  -> Phase 1 Outline -> Phase 2 Slice (per spec)
+                  -> Phase 3 Plan finalize -> Phase 4 Delta update
+```
+
+- Detailed sequencing: `references/sdd-execution-playbook.md`.
+- Per-stage checklists: `references/sdd-phase-checklists.md`.
+
+## Stage 0: Preflight (Mandatory)
+
+Follow `.qfai/assistant/instructions/shared-skill-operating-baseline.md#stage-0---steering-completion-refresh-mandatory`.
+Stop if the latest discussion-pack is missing, incomplete, or has blocking OQ.
+On validate / doctor / quality-gate failures, follow `.qfai/assistant/instructions/shared-skill-operating-baseline.md#gate-failure-autorepair-protocol`.
+
+## Stage 1: Triage (Mandatory)
+
+Before any spec edit:
+
+1. Enumerate active spec summaries (skip `superseded` / `deprecated` / `removed`).
+2. Classify each REQ/NFR into one of the 8 operations using `_policies/11_Slice-Policy.md`:
+   - **CREATE / DELETE / SPLIT / MERGE / SUPERSEDE** (top-level, approval required)
+   - **UPDATE: APPEND / MODIFY / REMOVE** (UPDATE:REMOVE also requires approval)
+3. Obtain AskUserQuestion approval for every approval-required row.
+4. Persist the Triage table in `<spec>/09_delta.md` (per-spec) or `_policies/10_delta.md` (cross-spec / policy).
+
+Procedure: `references/sdd-triage.md`. Validators: `QFAI-TRIAGE-001..005`.
+
+## Spec Status Field (Mandatory)
+
+Every `01_Spec.md` declares `- Status: active | superseded | deprecated | removed`.
+
+- `superseded` requires `- Superseded-by: spec-NNNN` pointing to an existing spec.
+- `deprecated` / `removed` require `- Deprecated-at: YYYY-MM-DD`.
+- Triage classification ignores non-active specs.
+
+Validators: `QFAI-STATUS-001..006`.
+
 ## User Questions (AskUserQuestion Protocol)
 
 Follow `.qfai/assistant/instructions/shared-skill-operating-baseline.md#user-questions-askuserquestion-protocol`.
-
-Skill-specific examples:
-
-- OQ resolution
-- NFR priority decisions
-
-### Spec Create/Delete Confirmation (Mandatory)
-
-- When creating a new spec: approval via AskUserQuestion is mandatory.
-- When deleting an existing spec: approval via AskUserQuestion is mandatory.
-- When only updating an existing spec: no confirmation is required.
-- If approval is not granted, skip the operation and record the reason in `delta.md`.
+Approval-required ops in Stage 1 above MUST go through AskUserQuestion.
 
 ## FORMAT SSOT (Mandatory)
 
 - Follow `.qfai/assistant/instructions/shared-skill-operating-baseline.md#format-ssot-mandatory`.
-- Before writing `.qfai/**`, read:
+- Read before writing `.qfai/**`:
   - `.qfai/assistant/skills/qfai-discussion/references/discussion-artifact-rules.md`
   - `.qfai/assistant/skills/qfai-sdd/references/spec-traceability-rules.md`
   - `.qfai/assistant/skills/qfai-sdd/references/contract-artifact-rules.md`
+  - `.qfai/assistant/skills/qfai-sdd/references/sdd-triage.md`
   - `.qfai/assistant/skills/qfai-prototyping/references/evidence-requirements.md`
   - `.qfai/assistant/steering/agent-catalog.yml`
   - `.qfai/assistant/steering/agent-routing.yml`
   - `.qfai/assistant/steering/review-profiles.yml`
-  - `.qfai/assistant/skills/qfai-sdd/references/review-cycle-playbook.md`
-- Use skill-local templates as SSOT and keep templates out of this file.
 
-## Inputs Priority (Preflight)
+## Inputs Priority
 
-Determine preflight input in this order:
-
-1. Latest `.qfai/discussion/discussion-*/` pack (lexicographically largest).
-2. Validate that the latest discussion-pack has required files, minimum contents, and no blocking OQ.
-3. If validation fails, stop `/qfai-sdd` and guide to `/qfai-discussion`.
-
-Then read inputs in this order:
-
-- P1: `.qfai/assistant/instructions/*`
-- P2: `.qfai/assistant/steering/*`
-- P3: existing `.qfai/specs/<spec-id>/**` when updating
-- P4: `.qfai/discussion/**`, `.qfai/contracts/**`
+1. Latest `.qfai/discussion/discussion-*/` pack (lexicographically largest), validated by Stage 0.
+2. P1: `.qfai/assistant/instructions/*`
+3. P2: `.qfai/assistant/steering/*`
+4. P3: existing `.qfai/specs/_policies/03_Capabilities.md` + active spec summaries (Stage 1 input)
+5. P4: existing `.qfai/specs/<spec-id>/**` for the targeted specs
+6. P5: `.qfai/discussion/**`, `.qfai/contracts/**`
 
 ## Sub-agent Delegation (MANDATORY)
 
@@ -83,263 +105,133 @@ Follow `.qfai/assistant/instructions/shared-skill-delegation-baseline.md`.
 
 ### Orchestrator Protocol (MUST)
 
-- No additional overrides.
+- No additional overrides beyond the baseline.
 
 ### Capability Probe (MUST)
 
-- No additional overrides.
+- No additional overrides beyond the baseline.
 
 ### Delegation Failure (Hard Stop)
 
-- No additional overrides.
 - Do not simulate roles. If the first required delegation fails, stop the stage and report remediation.
 
-### Work Orders Summary (MANDATORY evidence)
+Stage minimum roles:
 
-Use the shared schema.
+- `requirements-analyst` drafts requirement-aligned spec content.
+- `solution-architect` drafts structural / contract / architecture sections.
+- `test-design-analyst` drafts traceability, examples, and test-design.
+- `product-experience-architect` is added when the target is UI-bearing.
+- `orchestrator` integrates outputs and presents for confirmation; never drafts the primary artifact and never self-approves.
+- `completion-reviewer` is delegated independently. Required field: `Status (PASS/REVISE)`.
 
-### Stage Minimum Roles (MUST)
-
-- Delegate: `requirements-analyst` drafts requirement-aligned spec content and OQ handling.
-- Delegate: `solution-architect` drafts structural, contract, and architecture-sensitive sections.
-- Delegate: `test-design-analyst` drafts traceability, examples, and test-design structure.
-- Delegate: `product-experience-architect` only when the target is UI-bearing.
-- Integrate: `orchestrator` consolidates delegated outputs and presents them to the user for confirmation.
-- Gate: `completion-reviewer` is delegated independently and returns only `PASS` or `REVISE`.
-- Orchestrator must not draft the primary artifact body and must not self-approve.
-
-### No-argument batch delegation (MUST)
-
-- Without argument (`/qfai-sdd`): target all capabilities listed in `_policies/03_Capabilities.md`.
-- Enumerate targets from `.qfai/specs/_policies/03_Capabilities.md` and keep `spec-0001..N` mapping stable by Capability order.
-- Run Contracts-first and Outline once per batch.
-- Delegate Slice in parallel per spec.
-- Validate gate and Review gate run once at batch tail after all target specs are integrated.
-- Evidence is mandatory per spec: `.qfai/evidence/sdd-<spec-id>.md`.
-- Every per-spec evidence MUST include `## Work Orders Summary`.
+Reviewer routing is fixed by `.qfai/assistant/steering/agent-routing.yml` and `.qfai/assistant/steering/review-profiles.yml`.
 
 ### Reviewer Gate (MUST)
 
-- Follow `.qfai/assistant/instructions/shared-skill-delegation-baseline.md#reviewer-gate-baseline`.
-- Reviewers must check Drift Protocol, `.qfai/assistant/steering/test-layers.md`, and validate evidence freshness.
-- `QFAI-COV-207` warnings are density-smell signals, not hard gates.
-- Route specialist reviewers from `.qfai/assistant/steering/agent-routing.yml` and `.qfai/assistant/steering/review-profiles.yml`.
-- Default SDD review set:
-  - `completion-reviewer`
-- Conditional SDD reviewers:
-  - `architecture-reviewer` for structural / contract / CLI changes
-  - `product-surface-reviewer` for UI-bearing specs
-  - `qa-gatekeeper` when validate, coverage, runtime, or prototyping evidence is affected
-- Do not declare DONE or handoff until all routed blocking reviewers return `PASS`.
+- Default: `completion-reviewer`.
+- Conditional: `architecture-reviewer` (structural / contract / CLI), `product-surface-reviewer` (UI-bearing), `qa-gatekeeper` (validate / coverage / runtime / prototyping evidence affected).
+- Do not declare DONE until all routed blocking reviewers return `PASS`.
 
-### Work order template (copy/paste)
+### No-argument batch delegation (MUST)
 
-Use the shared template.
+- Without argument: target all capabilities in `_policies/03_Capabilities.md`.
+- Run Contracts-first and Outline once per batch.
+- Delegate Slice in parallel per spec.
+- Validate gate and Review gate run once at batch tail after all target specs are integrated.
 
-### Reviewer response template
+## Work Orders Summary
 
-Use the shared template.
-
-- Required field: `Status (PASS/REVISE)`.
+Per-spec evidence at `.qfai/evidence/sdd-<spec-id>.md` is mandatory and MUST include `## Work Orders Summary`. Use the shared schema from `shared-skill-delegation-baseline.md`.
 
 ## Review Cycle Protocol (RCP)
 
-- Follow `.qfai/assistant/skills/qfai-sdd/references/review-cycle-playbook.md`.
-- Footer SSOT: `.qfai/assistant/skills/qfai-sdd/references/rcp_footer.md`.
-- Allowed reviewer verdicts in the playbook remain `PASS` and `FAIL`.
+- Follow `references/review-cycle-playbook.md`.
+- Footer SSOT: `references/rcp_footer.md`.
+- Allowed reviewer verdicts: `PASS` and `FAIL`.
 
-## Stage 0 - Steering completion refresh (mandatory)
+## Workflow Convention
 
-Follow `.qfai/assistant/instructions/shared-skill-operating-baseline.md#stage-0---steering-completion-refresh-mandatory`.
+- Phase order is fixed (see top).
+- Reference direction: lower-to-upper only; upper-to-lower references are forbidden.
+- Required edges `US -> AC -> BR -> EX -> TC` must be present.
+- Plan finalize MUST happen after at least one user-story slice is grounded.
+- Unresolved items MUST move to shared or spec open-question files.
 
 ## Delta Rejected Guard (Mandatory)
 
 Follow `.qfai/assistant/instructions/shared-skill-operating-baseline.md#delta-rejected-guard-mandatory`.
-Follow `.qfai/assistant/instructions/shared-skill-operating-baseline.md#gate-failure-autorepair-protocol` for validate, doctor, and quality-gate failures.
 
-## Workflow Convention (Mandatory)
+## Slice Policy Protocol
 
-- Phase order is fixed: Contracts-first -> Outline -> Slice -> Plan finalize -> Delta update.
-- Upper-to-lower references are forbidden. Lower-to-upper references are allowed.
-- Reference direction shorthand: lower-to-upper only.
-- Connections between layers MUST be represented by IDs and required edges (`US->AC->BR->EX->TC`).
-- Plan finalize MUST happen after at least one user-story slice is grounded.
-- Unresolved items MUST move to shared or spec open-question files.
-- Detailed phase checklists live in `.qfai/assistant/skills/qfai-sdd/references/sdd-phase-checklists.md`.
-
-## Slice Policy Protocol (Mandatory)
-
-- Treat `_policies/11_Slice-Policy.md` as the SSOT for spec slicing decisions.
-- If `_policies/11_Slice-Policy.md` is missing or stale, create or refresh it before continuing.
-- Classify each target into a category (structural / CLI / skill / agent).
-- Use `_policies/11_Slice-Policy.md` to decide CREATE, UPDATE, or DELETE.
-- If a new CLI command or skill has no corresponding spec, propose CREATE.
-- If a CLI command or skill has been removed but its spec still exists, propose DELETE.
-- Do not start Phase 2 (Slice) until `_policies/11_Slice-Policy.md` exists and reflects the current slicing model.
+- `_policies/11_Slice-Policy.md` is the SSOT for the 8 ops and ID stability rules.
+- If missing or stale, refresh it before continuing.
+- Do not start Phase 2 (Slice) until Stage 1 Triage is complete.
 
 ## Arguments and Target Selection (Mandatory)
 
 - With argument (`/qfai-sdd <spec-id-or-name> [--auto]`): update only the matched single spec target.
 - Without argument (`/qfai-sdd`): target all capabilities listed in `_policies/03_Capabilities.md`.
-- If `_policies/03_Capabilities.md` or `_policies/11_Slice-Policy.md` does not exist, bootstrap shared templates first.
-- Capability order in `_policies/03_Capabilities.md` is SSOT for `spec-0001..N` assignment and ID stability.
 - Reordering capability-to-spec mapping is a Change Request decision and must not be done implicitly.
 
-## CRITICAL CONSTRAINTS (Read First)
+## Critical Constraints
 
-- This unified entrypoint owns the full SDD flow directly.
-- Use only skill-local templates under `.qfai/assistant/skills/qfai-sdd/templates/`, including `templates/contracts`, `templates/report`, and `templates/specs`.
-- Always write `.qfai/report/preflight_summary.md` before generating shared/spec artifacts.
-- Contracts are contract-first mandatory outputs in this skill.
-- UI-bearing targets must be normalized into downstream-ready contracts under `.qfai/contracts/design/**` and `.qfai/contracts/ui/**`.
-- For UI-bearing targets, normalize discussion UI/UX sidecars by following `references/ui-design-contract-normalization.md`.
-- `_policies/05_Contracts.md` must include a Contract Index.
-- `/qfai-sdd` must stop when discussion-pack is missing, incomplete, or has blocking OQ.
-- Discussion-pack preflight is mandatory, including contract-first checks that UI-bearing targets are normalized into required design/ui contracts before downstream generation.
-- Reviewer routing is fixed by `.qfai/assistant/steering/agent-routing.yml` and `.qfai/assistant/steering/review-profiles.yml`.
-- RCP wording must be sourced from `.qfai/assistant/skills/qfai-sdd/references/rcp_footer.md`.
-- `_policies/04_Business-Flow.md` must be Markdown and include Mermaid `flowchart` or `sequenceDiagram`.
-- `05_Examples.md` must include `EX-ID` and `BR-Ref` mappings.
-- `06_Test-Cases.md` must include `TC-ID`, `EX-Ref`, `AC-Refs`, and `Type`.
-- `06_Test-Cases.md` quality depth must include normal-path plus error or boundary coverage.
-- Do not complete the stage until `qfai validate --profile sdd --fail-on error --format github | tee .qfai/report/validate.log` exits with `error=0`.
-- Reference direction rules from `.qfai/assistant/skills/qfai-sdd/references/spec-traceability-rules.md` must be enforced.
-- Keep `specs/` definition-only and operational status under `.qfai/report/run-*`.
-- Traceability depth and density-smell review rules live in:
-  - `.qfai/assistant/skills/qfai-sdd/references/spec-traceability-rules.md`
-  - `.qfai/assistant/skills/qfai-sdd/references/sdd-quality-gate.md`
+1. Use only skill-local templates under `.qfai/assistant/skills/qfai-sdd/templates/contracts`, `templates/report`, and `templates/specs`.
+2. Always write `.qfai/report/preflight_summary.md` before generating shared/spec artifacts.
+3. Contracts-first is mandatory; UI-bearing targets must be normalized into `.qfai/contracts/design/**` and `.qfai/contracts/ui/**` per `references/ui-design-contract-normalization.md`.
+4. `_policies/05_Contracts.md` must include a Contract Index aligned with `.qfai/contracts/**`.
+5. `_policies/04_Business-Flow.md` must be Markdown with Mermaid `flowchart` or `sequenceDiagram`.
+6. `05_Examples.md` must include `EX-ID` and `BR-Ref` mappings.
+7. `06_Test-Cases.md` must include `TC-ID`, `EX-Ref`, `AC-Refs`, and `Type`, with normal-path plus error/boundary coverage.
+8. Stop only when `qfai validate --profile sdd --fail-on error --format github | tee .qfai/report/validate.log` exits with `error=0`.
 
-## Goal
+## Required Process
 
-Create or update layered SDD artifacts in one run so downstream execution phases can start without command switching.
-
-## Non-goals
-
-- Writing production code or runnable tests
-- Skipping phase order or bypassing slice/plan gates
-- Reintroducing rejected options without explicit re-open approval
+1. Stage 0: Preflight (stop on blockers).
+2. Stage 1: Triage (classify + approve + persist Triage table).
+3. Write `.qfai/report/preflight_summary.md`.
+4. Phase 0: Contracts-first (UI-bearing targets normalize in this phase).
+5. Phase 1: Outline (`_policies/01..11`).
+6. Phase 2: Slice (per spec, gate each).
+7. Phase 3: Plan finalize (after at least one slice gate passes).
+8. Phase 4: Delta update.
+9. Run validate; fix source-layer artifacts and rerun until `error=0`.
+10. Triage density-smell warnings in `.qfai/report/specs-coverage/spec-*.md`.
 
 ## Mandatory Outputs
 
-- Shared `_policies/01..11` layered files
-- Target `spec-*/01..10` layered files
-- Updated contracts under `.qfai/contracts/**`
-- UI-bearing normalized contracts:
-  - `.qfai/contracts/design/exploration-brief.yaml`
-  - `.qfai/contracts/design/reference-pool.yaml` (deviate-from input for prototyping reviewer)
-  - `.qfai/contracts/design/brand-design.yaml`
-  - `.qfai/contracts/ui/*.yaml`
-  - (post-loop, produced by /qfai-prototyping:
-    `.qfai/contracts/design/design-system.yaml`,
-    `.qfai/contracts/design/prototype-handoff.yaml`)
+- Shared `_policies/01..11` files
+- Target `spec-*/01..10` files (with valid `Status:` bullet)
+- Triage section in every changed `09_delta.md` (per-spec) or `_policies/10_delta.md` (cross-spec)
+- Updated contracts under `.qfai/contracts/**`; UI-bearing targets normalize design/ui contracts
 - `.qfai/report/preflight_summary.md`
 - Evidence file: `.qfai/evidence/sdd-<spec-id>.md`
 
 The canonical file set is defined by skill templates under `.qfai/assistant/skills/qfai-sdd/templates/`.
 
-## Required Process
+## Quality Gate
 
-1. Run preflight on the latest discussion-pack and stop if blockers remain.
-2. Analyze repository context, existing artifacts, constraints, and open decisions.
-3. Write `.qfai/report/preflight_summary.md`.
-4. Execute Phase 0 (Contracts-first).
-5. For UI-bearing targets, normalize discussion UIUX artifacts into design/ui contracts for downstream execution.
-6. Execute Phase 1 (Outline).
-7. Ensure `_policies/11_Slice-Policy.md` exists and matches the current slicing model.
-8. Execute Phase 2 (Slice) and pass slice gate for each target spec.
-9. Execute Phase 3 (Plan finalize) after at least one slice gate passes.
-10. Execute Phase 4 (Delta update).
-11. Run `qfai validate --profile sdd --fail-on error --format github | tee .qfai/report/validate.log`.
-12. Review `.qfai/report/specs-coverage/spec-*.md` and triage density-smell warnings.
-13. If validate fails, fix source-layer artifacts and repeat until `error=0`.
+Run the full checklist from `references/sdd-quality-gate.md`. The gate also covers status-field and Triage-section checks.
 
-Use:
+## Evidence
 
-- `.qfai/assistant/skills/qfai-sdd/references/sdd-execution-playbook.md`
-- `.qfai/assistant/skills/qfai-sdd/references/sdd-phase-checklists.md`
+Create `.qfai/evidence/sdd-<spec-id>.md` with: Objective, Inputs reviewed, Preflight summary path, Triage decisions (op + approver per row), Open questions, Decisions made, Work performed, Commands executed, Validate evidence paths, Work Orders Summary, Gaps / Open risks, Final status.
 
-for detailed entry conditions, stop conditions, and artifact-by-artifact execution notes.
-
-## Unified SDD Quality Gate
-
-Run the quality gate checklist from `.qfai/assistant/skills/qfai-sdd/references/sdd-quality-gate.md`.
-
-Minimum checks that must remain visible here:
-
-- Confirm required `_policies` and target spec layered files exist.
-- Confirm `_policies/11_Slice-Policy.md` matches the repository's current slice model.
-- Confirm `_policies/04_Business-Flow.md` includes Mermaid.
-- Confirm `01_Spec.md` includes copy-down context and Escalation Hook.
-- Confirm required edges `US -> AC -> BR -> EX -> TC`.
-- Confirm `10_Plan.md` exists and remains How-only.
-- Confirm `specs/plan.md` does not exist.
-- Confirm validate exits with `error=0`.
-
-## Evidence (MANDATORY)
-
-Create and update: `.qfai/evidence/sdd-<spec-id>.md`
-
-Required sections:
-
-- Objective
-- Inputs reviewed (files/paths)
-- Preflight summary path
-- Open questions summary
-- Decisions made (with rationale)
-- Work performed (what changed, where)
-- Commands executed + key outputs
-- Validate evidence paths
-- Work Orders Summary
-- Gaps / Open risks
-- Final status (PASS/FAIL) + who confirmed
-
-## DONE Declaration (Mandatory Output)
+## Done Declaration
 
 When declaring DONE, include:
 
-- Referenced inputs and spec-id
-- Confirmation of phase order: Contracts-first -> Outline -> Slice -> Plan finalize -> Delta update
-- Decision record IDs touched in `09_delta.md` (or `*_delta.md`)
+- Referenced inputs and spec-id(s)
+- Stage 1 Triage table digest (counts per Operation, approvals)
+- Phase order: Contracts-first -> Outline -> Slice -> Plan finalize -> Delta update
+- Decision record IDs touched in `09_delta.md`
 - Confirmation that no rejected option was reintroduced (or list RE-OPEN IDs)
-- Unified SDD quality gate result
+- Quality gate result and validate log path
 
-## FINAL CHECKLIST (Check Last)
+## Completion Message & Next Actions
 
-- [ ] CRITICAL CONSTRAINTS were followed.
-- [ ] `.qfai/report/preflight_summary.md` was generated before spec authoring.
-- [ ] Contracts-first -> Outline -> Slice -> Plan finalize -> Delta update order was preserved.
-- [ ] `_policies/05_Contracts.md` Contract Index and `.qfai/contracts/**` declarations are aligned.
-- [ ] Upper-to-lower references were not introduced.
-- [ ] At least one user-story slice passed gate before plan finalization.
-- [ ] Required `_policies` + target spec outputs exist and are internally consistent.
-- [ ] `_policies/11_Slice-Policy.md` exists and reflects the current slicing model.
-- [ ] `_policies/04_Business-Flow.md` is Markdown + Mermaid.
-- [ ] `10_Plan.md` is finalized as How-only.
-- [ ] `specs/plan.md` was not created.
-- [ ] `09_delta.md` (or `*_delta.md`) contains adoption/rejection rationale.
-- [ ] `qfai validate --profile sdd --fail-on error --format github` ran and produced `error=0`.
-- [ ] `.qfai/report/specs-coverage/spec-*.md` was reviewed.
-- [ ] Quality gate checks are recorded in evidence.
-- [ ] Evidence file exists and is complete.
-- [ ] Reviewer approval is recorded.
-
-## Completion Checklist (MUST)
-
-- [ ] This skill's Definition of Done is satisfied.
-- [ ] Required artifacts were produced or updated.
-- [ ] Open questions were logged to the proper OQ file.
-- [ ] The completion message was presented to the user.
-- [ ] Next actions were enumerated for all available options.
-
-## Completion Message & Next Actions (MUST)
-
-When this skill is complete, provide a final user-facing completion message and enumerate all actionable next steps.
+When this skill completes, provide a final user-facing message enumerating next steps:
 
 - Proceed (recommended): `/qfai-prototyping`.
-  Action: build contract-aligned skeleton implementation before deeper coding.
 - Test-first path: `/qfai-atdd`.
-  Action: implement acceptance tests from the finalized spec pack.
-- Contracts status:
-  Action: confirm contracts were created or updated under `.qfai/contracts/**` and referenced by `_policies/05_Contracts.md`.
-- Spec pack needs correction: rerun `/qfai-sdd`.
-  Action: fix layered `_policies + target spec` consistency and decision records, then regenerate evidence.
+- Spec pack needs correction: rerun `/qfai-sdd` and regenerate evidence.
+- Confirm contracts referenced by `_policies/05_Contracts.md` exist under `.qfai/contracts/**`.
