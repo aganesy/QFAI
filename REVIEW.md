@@ -23,6 +23,7 @@ Do not suppress any actionable finding.
 - Traceability gaps (ID collisions, unregistered references, spec-to-code drift)
 - Regex or pattern contract mismatches between test and production code
 - Cross-file reference errors (broken paths, wrong anchors)
+- Distributed surface leaks (internal spec IDs, internal version markers, schemaVersion fields appearing under paths listed in `packages/qfai/package.json#files`; see `.claude/rules/distributed-surface.md`)
 
 ## Severity Prefixes
 
