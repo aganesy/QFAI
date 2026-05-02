@@ -25,8 +25,8 @@ jobs:
         run: |
           set -euo pipefail
           if [ -z "${GH_TOKEN:-}" ]; then
-            echo "ERROR: COPILOT_REVIEW_TOKEN is required (fine-grained PAT, Pull requests: write)." >&2
-            exit 1
+            echo "::warning title=COPILOT_REVIEW_TOKEN missing::Set a fine-grained PAT (Pull requests: write) as COPILOT_REVIEW_TOKEN in repo secrets to enable Copilot review."
+            exit 0
           fi
           gh api graphql \
             -f query='mutation($prId: ID!, $botId: ID!) {
