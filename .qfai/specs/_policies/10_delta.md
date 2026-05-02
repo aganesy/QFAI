@@ -563,11 +563,12 @@
 
 ## Triage
 
-> v1.9.0 で Stage 1 Triage 規律を導入。今後、複数 spec をまたぐ
+> Stage 1 Triage 規律を導入。今後、複数 spec をまたぐ
 > SPLIT / MERGE / SUPERSEDE などの triage 行はこのセクションに追記する。
 > 単一 spec のみを触る triage 行は `<spec>/09_delta.md` の `## Triage`
 > セクションに記録する。
 
 | Source       | Subject                                          | Existing Spec | Operation | Sub-op | Approved By | Rationale                                                              |
 |--------------|--------------------------------------------------|---------------|-----------|--------|-------------|------------------------------------------------------------------------|
-| internal/sdd | Stage 1 Triage 規律と spec status field モデル   | (none)        | CREATE    | -      | yusuke      | v1.9.0 SDD 強化: 8 ops + APPEND/MODIFY/REMOVE 細分化 + status lifecycle |
+| internal/sdd | Stage 1 Triage 規律と spec status field モデル   | (none)        | CREATE    | -      | yusuke      | SDD 強化: 8 ops + APPEND/MODIFY/REMOVE 細分化 + status lifecycle      |
+| internal/sdd | append-first 原則 + impact cascade + QFAI-TRIAGE-006 | _policies     | UPDATE    | APPEND | yusuke      | SDD 強化: classifier を append-first に転換し CREATE のスコープ逸脱ゲートを構造強制 |

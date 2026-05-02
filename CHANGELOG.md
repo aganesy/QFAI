@@ -8,7 +8,9 @@ Strengthens `/qfai-sdd` so that, when specs already exist and a new
 requirement arrives, the skill chooses the right granularity
 (create / append / modify / remove / delete / split / merge / supersede)
 through a deliberate Stage 1 Triage step rather than implicit
-subject-existence checks.
+subject-existence checks. The classifier is biased to **append-first**:
+default to UPDATE on an existing active spec; CREATE is reserved for
+genuine scope deviations that introduce a new capability.
 
 ### Added
 
@@ -29,9 +31,17 @@ subject-existence checks.
     `09_delta.md` and `_policies/10_delta.md` (warning when missing,
     errors for missing columns / invalid Operation / invalid Sub-op /
     missing approval).
+  - `QFAI-TRIAGE-006` — every CREATE row must cite a `CAP-NNNN` in the
+    Rationale column AND that capability must already be registered in
+    `_policies/03_Capabilities.md`.
 - Core helpers `src/core/specSummary.ts` (`collectSpecSummaries`) and
   `src/core/sddTriage.ts` (`classifyTriage`, `renderTriageMarkdown`,
-  `requiresApproval`).
+  `requiresApproval`, `bestSubjectMatch`, `tokenize`, `overlapCount`).
+- Append-first principle and impact-cascade pattern documented across
+  `assets/init/.qfai/assistant/skills/qfai-sdd/SKILL.md`,
+  `references/sdd-triage.md`, `references/sdd-execution-playbook.md`,
+  `references/sdd-phase-checklists.md`, and
+  `templates/specs/_policies/11_Slice-Policy.md`.
 - Templates updated:
   `templates/specs/spec/01_Spec.md` declares `Status: active`;
   `templates/specs/spec/09_delta.md` and
@@ -63,10 +73,20 @@ subject-existence checks.
   (`progress`, `risk_state`, `review_gate`, `last_updated_at`,
   `release_candidate`) continue to fire `QFAI-STATUSLEAK-001`.
 - `assets/init/.qfai/assistant/skills/qfai-sdd/SKILL.md` rewritten as
-  a Stage 0 / Stage 1 / Phase 0..4 surface (346 -> 237 lines). Detailed
+  a Stage 0 / Stage 1 / Phase 0..4 surface (346 -> 238 lines). Detailed
   procedure pulled out into `references/sdd-triage.md`,
   `references/sdd-execution-playbook.md`, and
   `references/sdd-phase-checklists.md`.
+- `classifyTriage` is biased to APPEND-first. When a REQ's capability
+  does not match any active spec exactly, the classifier falls back to
+  UPDATE:APPEND on the spec whose title / scope / capability shares the
+  most subject tokens, upgrading to SPLIT if the closest spec exceeds
+  AC/TC thresholds. CREATE is only emitted when there is **zero** token
+  overlap with any active spec.
+- The runtime slice policy (template + operational) leads with a
+  "Principle (read first)" block and the APPEND-vs-CREATE algorithm
+  has an explicit subject-overlap fallback step plus a CREATE step
+  that requires citing a registered `CAP-NNNN`.
 
 ## [1.8.8] - 2026-05-02
 

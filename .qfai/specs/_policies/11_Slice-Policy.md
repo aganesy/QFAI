@@ -3,6 +3,27 @@
 spec ディレクトリのスライスと、Stage 1 Triage における 8 種オペレーションの
 判定基準を定義する。
 
+## 原則 (read first)
+
+既定の操作は **既存 active spec への UPDATE (APPEND / MODIFY / REMOVE)**。
+CREATE は「明らかなスコープ逸脱で、かつ新しい capability を
+`_policies/03_Capabilities.md` に追加する場合」のみ。
+バリデータ `QFAI-TRIAGE-006` がこれを構造的に強制する: CREATE 行は
+Rationale 列に新 `CAP-NNNN` を必ず記載し、その CAP は capability
+カタログに登録済みでなければならない。
+
+classifier (`src/core/sddTriage.ts::classifyTriage`) は append-first
+fallback を実装する: capability が完全一致しない場合でも、subject
+token (title / scope / capability text) に最も多く重なる active spec
+への UPDATE:APPEND を提案する。CREATE は active spec のいずれとも
+**1 つも token が重ならない** ときだけ提案される。
+
+1 つの REQ は複数の spec に影響することが多い。primary spec を決めた
+後、必ず他の active spec を全走査し、関連する AC/BR を持つ spec には
+companion 行 (UPDATE:MODIFY / UPDATE:REMOVE) を Triage table に追加
+する (impact cascade)。同じ `Source` ID が複数行に登場するのは正規
+パターン。
+
 ## スライスカテゴリ
 
 | Category   | Slice Rule                     | ID Range        |
@@ -35,7 +56,7 @@ UPDATE は APPEND / MODIFY / REMOVE に細分化する。SPLIT / MERGE / SUPERSE
 | MERGE       | -       | 複数 spec が同一 capability に収斂                                      | 必須            |
 | SUPERSEDE   | -       | spec の責務が新 spec に置換、履歴は status: superseded で保持           | 必須            |
 
-## APPEND vs CREATE 判定アルゴリズム
+## APPEND vs CREATE 判定アルゴリズム (append-first)
 
 各 REQ/NFR に対して上から順に判定:
 
@@ -43,10 +64,22 @@ UPDATE は APPEND / MODIFY / REMOVE に細分化する。SPLIT / MERGE / SUPERSE
 2. 単一 active spec が capability を保持し、`acCount <= 30 && tcCount <= 50` → **UPDATE:APPEND**
 3. 複数 active spec が capability を共有 → **MERGE**
 4. 単一 active spec が capability を保持するが size 閾値超 → **SPLIT**
-5. capability 自体が新規 → **CREATE**
-6. REQ が既存項目の削除を要求 → **UPDATE:REMOVE**
-7. spec の subject 自体が消失 → **DELETE**
-8. 責務を新 spec に移し旧 ID は履歴として残す → **SUPERSEDE**
+5. capability 不一致だが、いずれかの active spec の title / scope / capability text と subject token が **1 つでも重なる** → 最近接 active spec に対して **UPDATE:APPEND** (subject overlap fallback)。閾値超なら **SPLIT** に格上げ。Rationale に cascade 検証済みである旨を記載する。
+6. active spec のいずれとも **token が 1 つも重ならない** かつ capability 自体も新規 → **CREATE**。新 `CAP-NNNN` を `_policies/03_Capabilities.md` に追記してから Triage 行に記載 (`QFAI-TRIAGE-006` で構造強制)。
+7. REQ が既存項目の削除を要求 → **UPDATE:REMOVE**
+8. spec の subject 自体が消失 → **DELETE**
+9. 責務を新 spec に移し旧 ID は履歴として残す → **SUPERSEDE**
+
+## Impact cascade
+
+primary spec の判定後、他の active spec を全走査し、ノックオン影響を
+持つものに companion 行を追加する:
+
+- 既存 US/AC/BR/EX/TC が変更概念を参照 → **UPDATE:MODIFY**
+- 既存 US/AC/BR/EX/TC が陳腐化 → **UPDATE:REMOVE** (承認必須)
+- glossary / contract への波及 → `_policies/10_delta.md` に記録
+
+同じ `Source` (REQ ID) が複数行に登場するのは正規パターン。
 
 ## Decision procedure
 
