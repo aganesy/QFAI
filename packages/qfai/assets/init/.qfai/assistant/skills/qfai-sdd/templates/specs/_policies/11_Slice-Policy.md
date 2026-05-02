@@ -2,7 +2,9 @@
 
 > **SSOT notice**: The runtime slice policy is `.qfai/specs/_policies/11_Slice-Policy.md`. This template seeds the initial file used by that runtime policy.
 
-Define the slicing model for `.qfai/specs/`. This template is used by `/qfai-sdd` when creating or updating the runtime slice policy file.
+Define the slicing model and triage operations for `.qfai/specs/`. This
+template is consumed by `/qfai-sdd` Stage 1 Triage when classifying each
+incoming requirement against the existing specs.
 
 ## Slice categories
 
@@ -23,21 +25,64 @@ Define the slicing model for `.qfai/specs/`. This template is used by `/qfai-sdd
 - `skill`: skills defined under `packages/qfai/assets/init/.qfai/assistant/skills/`. One skill maps to one spec.
 - `agent`: sub-agents defined under `packages/qfai/assets/init/.qfai/assistant/agents/`. All agents are grouped into one shared spec unless a newer approved slice policy says otherwise.
 
-## Create / Update / Delete decision rules
+## Triage operations (8 first-class)
 
-| Operation | Trigger                                                               | AskUserQuestion |
-| --------- | --------------------------------------------------------------------- | --------------- |
-| CREATE    | New CLI command, skill, or structural pack-type with no matching spec | Required        |
-| UPDATE    | Requirements or implementation scope changed for an existing slice    | Not required    |
-| DELETE    | CLI command, skill, or structural slice was removed from the product  | Required        |
+UPDATE is split into APPEND / MODIFY / REMOVE so that granularity is an
+explicit decision recorded in delta.md, not an implicit one. Structural
+operations (SPLIT / MERGE / SUPERSEDE) are 1st-class and require user
+approval before any spec edits begin.
 
-### Decision procedure
+| Operation        | Sub-op  | Trigger                                                                 | AskUserQuestion |
+| ---------------- | ------- | ----------------------------------------------------------------------- | --------------- |
+| CREATE           | -       | New subject with no matching active spec                                | Required        |
+| UPDATE           | APPEND  | Add new US/AC/BR/EX/TC to an existing active spec                       | Not required    |
+| UPDATE           | MODIFY  | Change the meaning of an existing US/AC/BR/EX/TC                        | Not required    |
+| UPDATE           | REMOVE  | Delete an existing US/AC/BR/EX/TC (cuts downstream refs)                | Required        |
+| DELETE           | -       | The spec's subject was removed from the product                         | Required        |
+| SPLIT            | -       | Existing spec covers >1 capability; responsibilities must be separated  | Required        |
+| MERGE            | -       | Multiple specs converge on one capability; collapse them                | Required        |
+| SUPERSEDE        | -       | A spec's responsibilities move to a new spec; keep history (status flip)| Required        |
 
-1. Discover the current repository subjects for each category.
-2. Match each subject to existing specs and `_policies/03_Capabilities.md`.
-3. Apply CREATE when a subject exists without a corresponding spec.
-4. Apply UPDATE when the subject exists and the spec already owns it.
-5. Apply DELETE when the owned subject no longer exists in the repository.
+## APPEND vs CREATE algorithm
+
+For each incoming REQ/NFR, apply in order:
+
+1. Resolve the REQ's capability from `_policies/03_Capabilities.md`.
+2. If a single active spec already owns that capability and its
+   `acCount <= 30 && tcCount <= 50` → **UPDATE:APPEND**.
+3. If multiple active specs share the capability → **MERGE**.
+4. If a single active spec owns the capability but exceeds the AC/TC
+   thresholds → **SPLIT**.
+5. If no active spec owns the capability and the capability itself is
+   new → **CREATE**.
+6. If the REQ removes existing items from a spec → **UPDATE:REMOVE**.
+7. If the spec's subject is gone from the product → **DELETE**.
+8. If the responsibilities move to a new spec while the old ID must
+   remain in history → **SUPERSEDE**.
+
+## Decision procedure
+
+1. Read `_policies/03_Capabilities.md` and the active spec summaries
+   (status: active only).
+2. Build the Triage table for the entire change request before
+   any spec edits.
+3. Obtain AskUserQuestion approval for every CREATE / DELETE / SPLIT /
+   MERGE / SUPERSEDE / UPDATE:REMOVE row.
+4. Record the Triage table in:
+   - per-spec `09_delta.md` for rows that touch a single spec, and
+   - `_policies/10_delta.md` for cross-spec rows (SPLIT / MERGE /
+     SUPERSEDE) and policy-only changes.
+5. Only then begin Phase 0 (Contracts-first) and the per-spec Phases.
+
+## Status field
+
+Every spec's `01_Spec.md` declares `Status: active | superseded | deprecated | removed`.
+
+- SUPERSEDE switches the source spec to `Status: superseded` and sets
+  `Superseded-by: spec-NNNN`.
+- DELETE removes the spec directory entirely (record reason in delta).
+- Deprecated specs require `Deprecated-at: YYYY-MM-DD`.
+- Triage classification ignores non-active specs.
 
 ## ID stability rules
 

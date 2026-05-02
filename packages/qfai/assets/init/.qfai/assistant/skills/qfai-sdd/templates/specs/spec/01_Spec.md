@@ -2,6 +2,9 @@
 
 - Spec: <spec-id>
 - Parent: CAP-XXXX
+- Status: active
+- Superseded-by: -
+- Deprecated-at: -
 
 ## Consumer View
 

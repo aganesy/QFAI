@@ -8,6 +8,18 @@
 - Tags:
 - Summary: <what changed>
 
+## Triage
+
+> Stage 1 Triage SSOT for this spec. One row per incoming REQ/NFR.
+> See `references/sdd-triage.md` for the operation algorithm.
+> Operation: CREATE | UPDATE | DELETE | SPLIT | MERGE | SUPERSEDE.
+> Sub-op (UPDATE only): APPEND | MODIFY | REMOVE.
+> Approved By: required for CREATE / DELETE / SPLIT / MERGE / SUPERSEDE / UPDATE:REMOVE.
+
+| Source   | Subject       | Existing Spec | Operation | Sub-op | Approved By | Rationale |
+|----------|---------------|---------------|-----------|--------|-------------|-----------|
+| REQ-XXXX | <one-liner>   | <spec-NNNN>   | UPDATE    | APPEND | -           | <why>     |
+
 ## Rationale
 
 - <why this change is needed>
