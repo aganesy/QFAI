@@ -6,6 +6,39 @@
 
 - なし
 
+## [1.8.8] - 2026-05-02
+
+### Removed (BREAKING)
+
+- `prototyping.json` and `completion-certificate.json` no longer carry a
+  `schemaVersion` field; validators no longer read it. Pre-1.8.8 artifacts
+  must be regenerated.
+- Validator error code prefix `QFAI-PROT2-NNN` collapsed to `QFAI-PROT-NNN`
+  with renumbered slots (the schemaVersion gate is removed; remaining six
+  codes are renumbered contiguously).
+- Validator entry point `validatePrototypingEvidenceV3` renamed to
+  `validatePrototypingEvidence`; the prior empty stub of the same name is
+  removed. Test files renamed in lockstep.
+- Internal QFAI spec IDs (spec-0010..) and internal version markers
+  (v1.x, v2.0, v3.0) removed from `README.md`, CLI help, `report.md`
+  output, validator messages, and `qfai init` templates under
+  `assets/init/**`. The npm package version is the only canonical
+  version surface.
+- `packages/qfai/docs/MIGRATION-2.0.md` and `MIGRATION-1.8.4.md` removed.
+- `packages/qfai/scripts/check-no-legacy-concepts.sh` removed.
+
+### Added
+
+- `packages/qfai/scripts/check-no-internal-version-leakage.sh` — CI guard
+  that fails if QFAI-internal spec IDs, version markers, internal trace
+  IDs, or `schemaVersion` fields appear in distributed surfaces (README,
+  assets, dist).
+
+### Changed
+
+- CI workflow runs the new leakage guard in both the lint job (assets +
+  README) and the build job (post-build, including dist).
+
 ## [1.8.7] - 2026-05-02
 
 ### Added
