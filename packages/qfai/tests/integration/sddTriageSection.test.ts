@@ -40,6 +40,7 @@ async function seedLayeredSpec(
     supersededBy?: string;
     deprecatedAt?: string;
     deltaTriage?: string | null;
+    capabilityCatalog?: string[];
   },
 ): Promise<void> {
   const specsDir = path.join(root, ".qfai", "specs");
@@ -50,6 +51,13 @@ async function seedLayeredSpec(
     "# 11 Slice Policy\n",
     "utf-8",
   );
+  if (options.capabilityCatalog) {
+    const lines = ["# 03 Capabilities", ""];
+    for (const cap of options.capabilityCatalog) {
+      lines.push(`- ${cap}`);
+    }
+    await writeFile(path.join(policiesDir, "03_Capabilities.md"), `${lines.join("\n")}\n`, "utf-8");
+  }
 
   const dir = path.join(specsDir, `spec-${specNumber}`);
   await mkdir(dir, { recursive: true });
@@ -168,6 +176,44 @@ describe("validateSpecPacks - status & triage integration", () => {
     });
     const issues = await validateSpecPacks(root, defaultConfig);
     expect(codes(issues)).toContain("QFAI-TRIAGE-001");
+  });
+
+  it("emits QFAI-TRIAGE-006 when CREATE row references a CAP missing from 03_Capabilities", async () => {
+    const root = await newTempRoot();
+    await seedLayeredSpec(root, "0001", {
+      status: "active",
+      capability: "CAP-0001",
+      capabilityCatalog: ["CAP-0001 baseline"],
+      deltaTriage: [
+        "## Triage",
+        "",
+        "| Source | Subject | Existing Spec | Operation | Sub-op | Approved By | Rationale |",
+        "| --- | --- | --- | --- | --- | --- | --- |",
+        "| REQ-0001 | brand new feature | (none) | CREATE | - | user@host | introduces CAP-0099 |",
+        "",
+      ].join("\n"),
+    });
+    const issues = await validateSpecPacks(root, defaultConfig);
+    expect(codes(issues)).toContain("QFAI-TRIAGE-006");
+  });
+
+  it("returns no triage errors when CREATE row references a CAP registered in 03_Capabilities", async () => {
+    const root = await newTempRoot();
+    await seedLayeredSpec(root, "0001", {
+      status: "active",
+      capability: "CAP-0001",
+      capabilityCatalog: ["CAP-0001 baseline", "CAP-0099 brand new feature"],
+      deltaTriage: [
+        "## Triage",
+        "",
+        "| Source | Subject | Existing Spec | Operation | Sub-op | Approved By | Rationale |",
+        "| --- | --- | --- | --- | --- | --- | --- |",
+        "| REQ-0001 | brand new feature | (none) | CREATE | - | user@host | introduces CAP-0099 |",
+        "",
+      ].join("\n"),
+    });
+    const issues = await validateSpecPacks(root, defaultConfig);
+    expect(codes(issues)).toEqual([]);
   });
 
   it("emits QFAI-TRIAGE-005 when CREATE triage row lacks approval", async () => {

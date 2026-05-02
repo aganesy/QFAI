@@ -294,7 +294,100 @@ async function validateTriageSectionForEntry(entry: SpecEntry): Promise<Issue[]>
   } catch {
     return [];
   }
-  return validateTriageSection(text, deltaPath);
+  const issues = validateTriageSection(text, deltaPath);
+  issues.push(...(await validateCreateRowCapabilityRefs(text, deltaPath, entry.capabilityPath)));
+  return issues;
+}
+
+/**
+ * Enforce QFAI-TRIAGE-006: every CREATE row in the Triage table must cite a
+ * `CAP-NNNN` reference in its Rationale column, and that CAP must already
+ * be registered in `_policies/03_Capabilities.md`. This is the structural
+ * gate that prevents drive-by spec creation when an existing scope could
+ * absorb the requirement instead.
+ */
+export async function validateCreateRowCapabilityRefs(
+  text: string,
+  deltaPath: string,
+  capabilitiesPath: string,
+): Promise<Issue[]> {
+  const headings = extractH2Headings(text);
+  if (!headings.has(normalizeHeading("Triage"))) {
+    return [];
+  }
+
+  const section = extractMarkdownSection(text, "Triage");
+  const table = parseFirstMarkdownTable(section);
+  if (!table) {
+    return [];
+  }
+
+  const headerIndex = (label: string): number => {
+    const target = label.trim().toLowerCase();
+    return table.headers.findIndex((h) => h.trim().toLowerCase() === target);
+  };
+
+  const opIdx = headerIndex("operation");
+  const rationaleIdx = headerIndex("rationale");
+  const sourceIdx = headerIndex("source");
+  if (opIdx < 0) {
+    return [];
+  }
+
+  let knownCaps = new Set<string>();
+  try {
+    const capText = await readFile(capabilitiesPath, "utf-8");
+    knownCaps = new Set(parseIdsFromText(capText, "CAP"));
+  } catch {
+    // capabilities file missing — handled by other validators
+  }
+
+  const issues: Issue[] = [];
+  for (const [rowIndex, row] of table.rows.entries()) {
+    const opCell = (row[opIdx] ?? "").trim().toUpperCase();
+    if (opCell !== "CREATE") {
+      continue;
+    }
+
+    const sourceCell = sourceIdx >= 0 ? (row[sourceIdx] ?? "").trim() : "";
+    const rowLabel = sourceCell || `row ${rowIndex + 1}`;
+    const rationaleCell = rationaleIdx >= 0 ? (row[rationaleIdx] ?? "") : "";
+    const referencedCaps = parseIdsFromText(rationaleCell, "CAP");
+
+    if (referencedCaps.length === 0) {
+      issues.push(
+        issue(
+          "QFAI-TRIAGE-006",
+          `CREATE 行の Rationale に新 CAP-NNNN の参照が見つかりません (${rowLabel})。`,
+          "error",
+          deltaPath,
+          "triage.createRequiresCap",
+          [rowLabel],
+          "canonical",
+          "新 CAP を `_policies/03_Capabilities.md` に追加し、Rationale 列にその CAP-NNNN を明記してください。",
+        ),
+      );
+      continue;
+    }
+
+    const missing = referencedCaps.filter((cap) => !knownCaps.has(cap));
+    if (missing.length > 0) {
+      issues.push(
+        issue(
+          "QFAI-TRIAGE-006",
+          `CREATE 行が参照する CAP が _policies/03_Capabilities.md に未登録です: ${missing.join(", ")} (${rowLabel})`,
+          "error",
+          deltaPath,
+          "triage.capExists",
+          missing,
+          "canonical",
+          "_policies/03_Capabilities.md に新 CAP を追加してから CREATE を確定してください。",
+        ),
+      );
+    }
+  }
+
+  return issues;
 }
 
 export function validateTriageSection(text: string, deltaPath: string): Issue[] {
