@@ -38,11 +38,7 @@ async function writeSpec(
 ): Promise<void> {
   const dir = path.join(specsRoot, `spec-${specNumber}`);
   await mkdir(dir, { recursive: true });
-  const lines: string[] = [
-    `# ${options.title ?? "01 Spec"}`,
-    "",
-    `- Spec: spec-${specNumber}`,
-  ];
+  const lines: string[] = [`# ${options.title ?? "01 Spec"}`, "", `- Spec: spec-${specNumber}`];
   if (options.capability) {
     lines.push(`- Parent: ${options.capability}`);
   }

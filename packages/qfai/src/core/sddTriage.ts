@@ -1,12 +1,6 @@
 import type { SpecSummary } from "./specSummary.js";
 
-export const TRIAGE_TOP_LEVEL_OPS = [
-  "CREATE",
-  "DELETE",
-  "SPLIT",
-  "MERGE",
-  "SUPERSEDE",
-] as const;
+export const TRIAGE_TOP_LEVEL_OPS = ["CREATE", "DELETE", "SPLIT", "MERGE", "SUPERSEDE"] as const;
 
 export const TRIAGE_UPDATE_SUBOPS = ["APPEND", "MODIFY", "REMOVE"] as const;
 
@@ -77,7 +71,9 @@ export function isUpdateOp(op: TriageOp): op is { update: TriageUpdateSubOp } {
   return typeof op !== "string";
 }
 
-export function topLevelOp(op: TriageOp): "CREATE" | "UPDATE" | "DELETE" | "SPLIT" | "MERGE" | "SUPERSEDE" {
+export function topLevelOp(
+  op: TriageOp,
+): "CREATE" | "UPDATE" | "DELETE" | "SPLIT" | "MERGE" | "SUPERSEDE" {
   if (typeof op === "string") {
     return op;
   }
@@ -89,9 +85,38 @@ export function subOp(op: TriageOp): TriageUpdateSubOp | null {
 }
 
 const STOP_TOKENS = new Set([
-  "the","a","an","to","of","and","or","for","in","on","with","from",
-  "is","are","be","this","that","new","add","update","change","fix",
-  "remove","delete","support","enable","make","do","into","by","at","as",
+  "the",
+  "a",
+  "an",
+  "to",
+  "of",
+  "and",
+  "or",
+  "for",
+  "in",
+  "on",
+  "with",
+  "from",
+  "is",
+  "are",
+  "be",
+  "this",
+  "that",
+  "new",
+  "add",
+  "update",
+  "change",
+  "fix",
+  "remove",
+  "delete",
+  "support",
+  "enable",
+  "make",
+  "do",
+  "into",
+  "by",
+  "at",
+  "as",
 ]);
 
 function tokenize(text: string): Set<string> {
@@ -133,9 +158,7 @@ export function bestSubjectMatch(
       !best ||
       score > best.score ||
       (score === best.score && s.acCount < best.summary.acCount) ||
-      (score === best.score &&
-        s.acCount === best.summary.acCount &&
-        s.specId < best.summary.specId)
+      (score === best.score && s.acCount === best.summary.acCount && s.specId < best.summary.specId)
     ) {
       best = { score, summary: s };
     }

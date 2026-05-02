@@ -12,7 +12,7 @@
 > belong in `<spec>/09_delta.md`.
 
 | Source   | Subject     | Existing Spec       | Operation | Sub-op | Approved By | Rationale |
-|----------|-------------|---------------------|-----------|--------|-------------|-----------|
+| -------- | ----------- | ------------------- | --------- | ------ | ----------- | --------- |
 | REQ-XXXX | <one-liner> | spec-AAAA+spec-BBBB | MERGE     | -      | -           | <why>     |
 
 ## Empty State

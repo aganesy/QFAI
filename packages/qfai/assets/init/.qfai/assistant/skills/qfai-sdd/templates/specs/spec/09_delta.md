@@ -16,9 +16,9 @@
 > Sub-op (UPDATE only): APPEND | MODIFY | REMOVE.
 > Approved By: required for CREATE / DELETE / SPLIT / MERGE / SUPERSEDE / UPDATE:REMOVE.
 
-| Source   | Subject       | Existing Spec | Operation | Sub-op | Approved By | Rationale |
-|----------|---------------|---------------|-----------|--------|-------------|-----------|
-| REQ-XXXX | <one-liner>   | <spec-NNNN>   | UPDATE    | APPEND | -           | <why>     |
+| Source   | Subject     | Existing Spec | Operation | Sub-op | Approved By | Rationale |
+| -------- | ----------- | ------------- | --------- | ------ | ----------- | --------- |
+| REQ-XXXX | <one-liner> | <spec-NNNN>   | UPDATE    | APPEND | -           | <why>     |
 
 ## Rationale
 

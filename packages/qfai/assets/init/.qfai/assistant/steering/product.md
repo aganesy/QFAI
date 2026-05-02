@@ -39,8 +39,8 @@
 
 ## Milestones
 
-| Milestone | Description |
-| --------- | ----------- |
+| Milestone        | Description    |
+| ---------------- | -------------- |
 | <milestone name> | <what shipped> |
 
 ## Open questions

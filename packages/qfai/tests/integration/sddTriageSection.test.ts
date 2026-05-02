@@ -46,11 +46,7 @@ async function seedLayeredSpec(
   const specsDir = path.join(root, ".qfai", "specs");
   const policiesDir = path.join(specsDir, "_policies");
   await mkdir(policiesDir, { recursive: true });
-  await writeFile(
-    path.join(policiesDir, "11_Slice-Policy.md"),
-    "# 11 Slice Policy\n",
-    "utf-8",
-  );
+  await writeFile(path.join(policiesDir, "11_Slice-Policy.md"), "# 11 Slice Policy\n", "utf-8");
   if (options.capabilityCatalog) {
     const lines = ["# 03 Capabilities", ""];
     for (const cap of options.capabilityCatalog) {
@@ -98,7 +94,9 @@ async function seedLayeredSpec(
 }
 
 function codes(issues: { code: string }[]): string[] {
-  return issues.map((i) => i.code).filter((c) => c.startsWith("QFAI-STATUS-") || c.startsWith("QFAI-TRIAGE-"));
+  return issues
+    .map((i) => i.code)
+    .filter((c) => c.startsWith("QFAI-STATUS-") || c.startsWith("QFAI-TRIAGE-"));
 }
 
 describe("validateSpecPacks - status & triage integration", () => {

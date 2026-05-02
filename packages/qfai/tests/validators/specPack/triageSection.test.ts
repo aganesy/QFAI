@@ -98,7 +98,9 @@ describe("validateTriageSection", () => {
   });
 
   it("returns no issues for a complete UPDATE:APPEND triage", () => {
-    const text = buildDelta([["REQ-1", "extend", "spec-0001", "UPDATE", "APPEND", "-", "rationale"]]);
+    const text = buildDelta([
+      ["REQ-1", "extend", "spec-0001", "UPDATE", "APPEND", "-", "rationale"],
+    ]);
     expect(validateTriageSection(text, DELTA_PATH)).toEqual([]);
   });
 
@@ -125,7 +127,8 @@ describe("validateTriageSection", () => {
 });
 
 function buildDelta(rows: string[][]): string {
-  const header = "| Source | Subject | Existing Spec | Operation | Sub-op | Approved By | Rationale |";
+  const header =
+    "| Source | Subject | Existing Spec | Operation | Sub-op | Approved By | Rationale |";
   const sep = "| --- | --- | --- | --- | --- | --- | --- |";
   return [
     "# 09 Delta",

@@ -22,7 +22,7 @@ most subject tokens. CREATE is only emitted when there is **zero**
 token overlap with any active spec.
 
 A single requirement frequently touches multiple specs. Always walk
-every active spec for the *impact cascade* and emit one Triage row per
+every active spec for the _impact cascade_ and emit one Triage row per
 affected spec (primary owner + companion MODIFY / REMOVE rows on other
 specs whose AC/BR reference the changed concept).
 
@@ -52,16 +52,16 @@ explicit decision recorded in delta.md, not an implicit one. Structural
 operations (SPLIT / MERGE / SUPERSEDE) are 1st-class and require user
 approval before any spec edits begin.
 
-| Operation        | Sub-op  | Trigger                                                                 | AskUserQuestion |
-| ---------------- | ------- | ----------------------------------------------------------------------- | --------------- |
-| CREATE           | -       | New subject with no matching active spec                                | Required        |
-| UPDATE           | APPEND  | Add new US/AC/BR/EX/TC to an existing active spec                       | Not required    |
-| UPDATE           | MODIFY  | Change the meaning of an existing US/AC/BR/EX/TC                        | Not required    |
-| UPDATE           | REMOVE  | Delete an existing US/AC/BR/EX/TC (cuts downstream refs)                | Required        |
-| DELETE           | -       | The spec's subject was removed from the product                         | Required        |
-| SPLIT            | -       | Existing spec covers >1 capability; responsibilities must be separated  | Required        |
-| MERGE            | -       | Multiple specs converge on one capability; collapse them                | Required        |
-| SUPERSEDE        | -       | A spec's responsibilities move to a new spec; keep history (status flip)| Required        |
+| Operation | Sub-op | Trigger                                                                  | AskUserQuestion |
+| --------- | ------ | ------------------------------------------------------------------------ | --------------- |
+| CREATE    | -      | New subject with no matching active spec                                 | Required        |
+| UPDATE    | APPEND | Add new US/AC/BR/EX/TC to an existing active spec                        | Not required    |
+| UPDATE    | MODIFY | Change the meaning of an existing US/AC/BR/EX/TC                         | Not required    |
+| UPDATE    | REMOVE | Delete an existing US/AC/BR/EX/TC (cuts downstream refs)                 | Required        |
+| DELETE    | -      | The spec's subject was removed from the product                          | Required        |
+| SPLIT     | -      | Existing spec covers >1 capability; responsibilities must be separated   | Required        |
+| MERGE     | -      | Multiple specs converge on one capability; collapse them                 | Required        |
+| SUPERSEDE | -      | A spec's responsibilities move to a new spec; keep history (status flip) | Required        |
 
 ## APPEND vs CREATE algorithm
 
@@ -81,7 +81,7 @@ For each incoming REQ/NFR, apply in order (append-first):
    spec needs a MODIFY/REMOVE row before persisting.
 6. Only when **no active spec shares any token** with the REQ AND the
    underlying capability is genuinely new → **CREATE**. Add the new
-   `CAP-NNNN` to `_policies/03_Capabilities.md` *first*, then cite it
+   `CAP-NNNN` to `_policies/03_Capabilities.md` _first_, then cite it
    in the Triage row's Rationale column. `QFAI-TRIAGE-006` will reject
    any CREATE row that omits or references an unregistered CAP.
 7. If the REQ removes existing items from a spec → **UPDATE:REMOVE**.
@@ -91,7 +91,7 @@ For each incoming REQ/NFR, apply in order (append-first):
 
 ## Impact cascade
 
-Step 5 / 6 only decide the *primary* spec. After classifying every
+Step 5 / 6 only decide the _primary_ spec. After classifying every
 REQ, walk the rest of the active specs and add companion Triage rows
 for any spec whose existing US/AC/BR/EX/TC must change as a knock-on
 effect:

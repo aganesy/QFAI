@@ -21,10 +21,7 @@ async function isSymlinkTo(linkPath: string, masterPath: string): Promise<boolea
 
 describe("cross-AI rules surface (.agents/rules/ master)", () => {
   it("master version-discipline.md exists with required content", async () => {
-    const text = await readFile(
-      path.join(ROOT, ".agents/rules/version-discipline.md"),
-      "utf-8",
-    );
+    const text = await readFile(path.join(ROOT, ".agents/rules/version-discipline.md"), "utf-8");
     for (const term of [
       "ブランチ",
       "package\\.json",
@@ -77,10 +74,7 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
   });
 
   it(".github/copilot-instructions.md references .agents/rules/", async () => {
-    const text = await readFile(
-      path.join(ROOT, ".github/copilot-instructions.md"),
-      "utf-8",
-    );
+    const text = await readFile(path.join(ROOT, ".github/copilot-instructions.md"), "utf-8");
     expect(text).toMatch(/\.agents\/rules\//);
     expect(text).toMatch(/version-discipline/);
   });

@@ -81,9 +81,7 @@ describe("classifyTriage", () => {
 
   it("upgrades fallback to SPLIT when the closest spec exceeds AC threshold", () => {
     const rows = classifyTriage({
-      reqs: [
-        { id: "REQ-0001c", subject: "extend packaging command", capability: undefined },
-      ],
+      reqs: [{ id: "REQ-0001c", subject: "extend packaging command", capability: undefined }],
       summaries: [
         makeSummary({
           specId: "spec-0002",
@@ -180,7 +178,9 @@ describe("classifyTriage", () => {
   it("ignores non-active specs when looking up matches", () => {
     const rows = classifyTriage({
       reqs: [{ id: "REQ-0008", subject: "extend", capability: "CAP-0001" }],
-      summaries: [makeSummary({ specId: "spec-0001", capability: "CAP-0001", status: "deprecated" })],
+      summaries: [
+        makeSummary({ specId: "spec-0001", capability: "CAP-0001", status: "deprecated" }),
+      ],
     });
     expect(rows[0]?.op).toBe("CREATE");
     expect(rows[0]?.existingSpec).toBeNull();
@@ -316,11 +316,17 @@ describe("renderTriageMarkdown", () => {
 
     const md = renderTriageMarkdown(rows);
     expect(md).toContain("## Triage");
-    expect(md).toContain("| Source | Subject | Existing Spec | Operation | Sub-op | Approved By | Rationale |");
-    expect(md).toContain("| REQ-0042 | spec layout migration | spec-0008 | UPDATE | APPEND | - | - |");
+    expect(md).toContain(
+      "| Source | Subject | Existing Spec | Operation | Sub-op | Approved By | Rationale |",
+    );
+    expect(md).toContain(
+      "| REQ-0042 | spec layout migration | spec-0008 | UPDATE | APPEND | - | - |",
+    );
     expect(md).toContain(
       "| REQ-0043 | obsolete CLI flag | spec-0005 | UPDATE | REMOVE | user@host | Flag dropped in v1.9 |",
     );
-    expect(md).toContain("| REQ-0044 | new packaging command | (none) | CREATE | - | user@host | - |");
+    expect(md).toContain(
+      "| REQ-0044 | new packaging command | (none) | CREATE | - | user@host | - |",
+    );
   });
 });

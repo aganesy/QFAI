@@ -13,14 +13,14 @@ QFAI npm パッケージとして配布されるファイル群を「配布サ�
 
 ## Forbidden in Distributed Surface
 
-| カテゴリ | パターン | 例 |
-|---|---|---|
-| QFAI 内部 spec ID | `spec-0010` 以降 | `spec-0017`, `spec-0042` |
-| QFAI 内部 capability ID | `CAP-0010` 以降 | `CAP-0013` |
-| QFAI 内部 decision ID | `DEC-NNNN-NNNN` | `DEC-0001-0042` |
-| QFAI 内部 design rationale | `DR-NNNN` | `DR-0007` |
-| QFAI 内部 trace prefix | `QFAI-PROT2-NNN` 等の廃止 prefix | (廃止済み) |
-| 内部バージョンマーカー | `vN.M`, `vN.M.P`, `v1.x` | `v2.0`, `v3.0` |
+| カテゴリ                      | パターン                            | 例                               |
+| ----------------------------- | ----------------------------------- | -------------------------------- |
+| QFAI 内部 spec ID             | `spec-0010` 以降                    | `spec-0017`, `spec-0042`         |
+| QFAI 内部 capability ID       | `CAP-0010` 以降                     | `CAP-0013`                       |
+| QFAI 内部 decision ID         | `DEC-NNNN-NNNN`                     | `DEC-0001-0042`                  |
+| QFAI 内部 design rationale    | `DR-NNNN`                           | `DR-0007`                        |
+| QFAI 内部 trace prefix        | `QFAI-PROT2-NNN` 等の廃止 prefix    | (廃止済み)                       |
+| 内部バージョンマーカー        | `vN.M`, `vN.M.P`, `v1.x`            | `v2.0`, `v3.0`                   |
 | 内部 schemaVersion フィールド | `"schemaVersion"`, `schemaVersion:` | (永続アーティファクトに置かない) |
 
 例外:

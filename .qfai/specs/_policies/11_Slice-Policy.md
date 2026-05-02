@@ -45,16 +45,16 @@ companion 行 (UPDATE:MODIFY / UPDATE:REMOVE) を Triage table に追加
 UPDATE は APPEND / MODIFY / REMOVE に細分化する。SPLIT / MERGE / SUPERSEDE
 は構造変更の 1st-class オペレーション。
 
-| Operation   | Sub-op  | トリガー                                                                | AskUserQuestion |
-| ----------- | ------- | ----------------------------------------------------------------------- | --------------- |
-| CREATE      | -       | 新 subject、active spec が capability を保持していない                  | 必須            |
-| UPDATE      | APPEND  | 既存 active spec に新 US/AC/BR/EX/TC を追加（既存項目の意味変更なし）   | 不要            |
-| UPDATE      | MODIFY  | 既存 US/AC/BR/EX/TC の意味を変更                                        | 不要            |
-| UPDATE      | REMOVE  | 既存 US/AC/BR/EX/TC を削除（downstream 参照を切断）                     | 必須            |
-| DELETE      | -       | spec の subject ごとリポジトリから消失                                  | 必須            |
-| SPLIT       | -       | 1 spec が複数 capability を保持しており責務分離が必要                   | 必須            |
-| MERGE       | -       | 複数 spec が同一 capability に収斂                                      | 必須            |
-| SUPERSEDE   | -       | spec の責務が新 spec に置換、履歴は status: superseded で保持           | 必須            |
+| Operation | Sub-op | トリガー                                                              | AskUserQuestion |
+| --------- | ------ | --------------------------------------------------------------------- | --------------- |
+| CREATE    | -      | 新 subject、active spec が capability を保持していない                | 必須            |
+| UPDATE    | APPEND | 既存 active spec に新 US/AC/BR/EX/TC を追加（既存項目の意味変更なし） | 不要            |
+| UPDATE    | MODIFY | 既存 US/AC/BR/EX/TC の意味を変更                                      | 不要            |
+| UPDATE    | REMOVE | 既存 US/AC/BR/EX/TC を削除（downstream 参照を切断）                   | 必須            |
+| DELETE    | -      | spec の subject ごとリポジトリから消失                                | 必須            |
+| SPLIT     | -      | 1 spec が複数 capability を保持しており責務分離が必要                 | 必須            |
+| MERGE     | -      | 複数 spec が同一 capability に収斂                                    | 必須            |
+| SUPERSEDE | -      | spec の責務が新 spec に置換、履歴は status: superseded で保持         | 必須            |
 
 ## APPEND vs CREATE 判定アルゴリズム (append-first)
 

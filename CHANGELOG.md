@@ -187,23 +187,23 @@ SDD boundaries harder to reason about.
 ### Added
 
 - **Design readiness phase split**: explicit SDD and prototyping design
- contract readiness validators replace the previous stage option API.
+  contract readiness validators replace the previous stage option API.
 - **Skill size guardrail**: `qfai-prototyping/SKILL.md` now has an asset
- test that keeps the orchestration file concise enough for agent use.
+  test that keeps the orchestration file concise enough for agent use.
 
 ### Changed
 
 - **Canonical design workflow only**: downstream design execution now
- relies on normalized contracts and rejects retired selected-direction
- aliases instead of preserving compatibility paths.
+  relies on normalized contracts and rejects retired selected-direction
+  aliases instead of preserving compatibility paths.
 - **Prototyping skill compression**: large workflow details are moved
- into existing references while preserving mandatory execution intent.
+  into existing references while preserving mandatory execution intent.
 
 ### Removed
 
 - **Legacy design contract aliases**: retired design contract references
- and selected-direction alias handling were removed from shipped
- assistant assets and validators.
+  and selected-direction alias handling were removed from shipped
+  assistant assets and validators.
 
 ## [1.8.5] - 2026-04-28
 
@@ -214,28 +214,28 @@ and distributed agent metadata before runtime delegation starts.
 ### Added
 
 - **Prototyping readiness policy + launcher probing**: centralizes the
- required full-harness roles / supported wrapper integrations and adds
- bounded `playwright-cli` launcher resolution across project wrapper,
- `node_modules/.bin`, `PATH`, and `npx --no-install`.
+  required full-harness roles / supported wrapper integrations and adds
+  bounded `playwright-cli` launcher resolution across project wrapper,
+  `node_modules/.bin`, `PATH`, and `npx --no-install`.
 - **Structured Playwright execution metadata**: command plans now carry
- logical `toolId`, `args`, and `stdoutPath` fields alongside the
- rendered command so evaluators can execute capture steps without
- shell-redirection assumptions.
+  logical `toolId`, `args`, and `stdoutPath` fields alongside the
+  rendered command so evaluators can execute capture steps without
+  shell-redirection assumptions.
 
 ### Changed
 
 - **Doctor / preflight / skill alignment**: `qfai doctor --profile
 prototyping`, `qfai prototyping preflight`, validators, and shipped
- `qfai-prototyping` assets now diagnose active wrapper integrations,
- literal required-input paths, launcher readiness, and runtime
- hard-stop expectations from the same policy.
+  `qfai-prototyping` assets now diagnose active wrapper integrations,
+  literal required-input paths, launcher readiness, and runtime
+  hard-stop expectations from the same policy.
 - **Distributed agent asset compatibility**: shipped agent cards drop
- undistributed `.instruction/...` required inputs and align shared
- metadata/frontmatter across Claude Code, GitHub Copilot, and Codex.
+  undistributed `.instruction/...` required inputs and align shared
+  metadata/frontmatter across Claude Code, GitHub Copilot, and Codex.
 - **Full-harness follow-up hardening**: target URL forwarding,
- certificate loading, invalid `--format` rejection, Linux launcher
- cleanup, and integration coverage were tightened around prototyping
- flows.
+  certificate loading, invalid `--format` rejection, Linux launcher
+  cleanup, and integration coverage were tightened around prototyping
+  flows.
 
 ### Removed
 
@@ -252,134 +252,134 @@ preventive mechanisms at every layer of the stack.
 ### Added
 
 - **Single completion artifact**:
- `.qfai/evidence/prototyping/completion-certificate.json`. Carries
- SHA-256 digests of every evidence file, runId, validate/verify run
- refs, reviewer signoff, iteration / polish counts, and resolved spec
- coverage. Generated only when every gate passes; tampering is
- detected by digest comparison. Closes RR §8.4 (completion semantics
- multi-source).
+  `.qfai/evidence/prototyping/completion-certificate.json`. Carries
+  SHA-256 digests of every evidence file, runId, validate/verify run
+  refs, reviewer signoff, iteration / polish counts, and resolved spec
+  coverage. Generated only when every gate passes; tampering is
+  detected by digest comparison. Closes RR §8.4 (completion semantics
+  multi-source).
 - **New CLI subcommands**:
- - `qfai prototyping certify` — generates the certificate after gates
- pass (validate.json error count = 0, verify.json status = PASS,
- reviewer gate result = PASS, fullHarness.runId present).
- - `qfai prototyping certify --check` — recomputes evidence digests
- and verifies them against the certificate; non-zero exit on drift.
- - `qfai prototyping show-spec` — prints the resolved primary
- prototyping spec (config or marker-scan), eliminating the
- SKILL.md hardcode.
+- `qfai prototyping certify` — generates the certificate after gates
+  pass (validate.json error count = 0, verify.json status = PASS,
+  reviewer gate result = PASS, fullHarness.runId present).
+- `qfai prototyping certify --check` — recomputes evidence digests
+  and verifies them against the certificate; non-zero exit on drift.
+- `qfai prototyping show-spec` — prints the resolved primary
+  prototyping spec (config or marker-scan), eliminating the
+  SKILL.md hardcode.
 - **Spec resolution helper** `resolvePrimaryPrototypingSpec`: resolves
- via (1) explicit `qfai.config.yaml: prototyping.primarySpecId`,
- (2) marker scan for `surface_type: ui-bearing`, (3) undefined.
- Closes RR §8.1 (primary-spec hardcode in shipped templates).
+  via (1) explicit `qfai.config.yaml: prototyping.primarySpecId`,
+  (2) marker scan for `surface_type: ui-bearing`, (3) undefined.
+  Closes RR §8.1 (primary-spec hardcode in shipped templates).
 - **Validator wiring registry** + **CI-enforced meta-test**
- (`tests/unit/validators-are-wired.test.ts`): walks the symbol graph
- from `validate.ts` and asserts every public Issue[]-returning
- validator under `validators/prototyping/` is reachable from
- `runPrototypingValidators`. The Phase 2 meta-test surfaced four
- pre-existing dead validators (`validateScreenshotDir`,
- `validateLighthouseGate`, `validateIterationGate`,
- `validateDesignSystemThreshold`); Phase 3 wired them via
- `validateStateGate`. The PENDING_WIRING set is now empty and locked
- by sentinel: NEW dead-code validators cannot enter the codebase
- silently. Closes RR §8.6 (validators implemented but never invoked).
+  (`tests/unit/validators-are-wired.test.ts`): walks the symbol graph
+  from `validate.ts` and asserts every public Issue[]-returning
+  validator under `validators/prototyping/` is reachable from
+  `runPrototypingValidators`. The Phase 2 meta-test surfaced four
+  pre-existing dead validators (`validateScreenshotDir`,
+  `validateLighthouseGate`, `validateIterationGate`,
+  `validateDesignSystemThreshold`); Phase 3 wired them via
+  `validateStateGate`. The PENDING_WIRING set is now empty and locked
+  by sentinel: NEW dead-code validators cannot enter the codebase
+  silently. Closes RR §8.6 (validators implemented but never invoked).
 - **ID linkage integrity validators** (Phase 7):
- - `validateConfigReferenceIntegrity` — qfai.config.yaml values
- resolve to real filesystem entities (primarySpecId, paths.\*,
- calibration.packPath).
- - `validatePrototypingArtifactRefIntegrity` — every xxxRef string in
- prototyping.json / review-bundle.json / breakthrough.json points
- to an existing file.
- - `validateSpecIdLinkage` — spec IDs in prototyping.json.specs[],
- review-bundle.json.spec, candidate dirs, and polish cycle
- iteration dirs reference entities that exist.
+- `validateConfigReferenceIntegrity` — qfai.config.yaml values
+  resolve to real filesystem entities (primarySpecId, paths.\*,
+  calibration.packPath).
+- `validatePrototypingArtifactRefIntegrity` — every xxxRef string in
+  prototyping.json / review-bundle.json / breakthrough.json points
+  to an existing file.
+- `validateSpecIdLinkage` — spec IDs in prototyping.json.specs[],
+  review-bundle.json.spec, candidate dirs, and polish cycle
+  iteration dirs reference entities that exist.
 - **Package self-containment lint** (`npm run lint:shipping`,
- invoked by `npm test`): detects spec-NNNN, AC|TC|REQ-NNNN-NNNN,
- and `.qfai/specs/spec-NNNN/` literals in shipped runtime data
- (yaml / yml / json / ts under assets/init/) and source code.
- Markdown documentation and YAML/TS comments are exempt by design
- because they don't ship as runtime data. Inline pragma
- `qfai-shipping:allow reason="<concrete reason>"` for explicit
- opt-out. Closes RR §8.1 root-cause class structurally.
+  invoked by `npm test`): detects spec-NNNN, AC|TC|REQ-NNNN-NNNN,
+  and `.qfai/specs/spec-NNNN/` literals in shipped runtime data
+  (yaml / yml / json / ts under assets/init/) and source code.
+  Markdown documentation and YAML/TS comments are exempt by design
+  because they don't ship as runtime data. Inline pragma
+  `qfai-shipping:allow reason="<concrete reason>"` for explicit
+  opt-out. Closes RR §8.1 root-cause class structurally.
 - **Filesystem-first report aggregation**: report.md round artifact
- counts (absorptionPlans, reimplementations, harvestArtifacts,
- narrowDecisions) are now sourced from
- `.qfai/evidence/prototyping/rounds/<rN>/*.json` directly. The
- curated index (`prototyping.json.rounds[]`) is no longer
- authoritative for these counts; index/filesystem drift is surfaced
- as a warning. Closes RR §8.2 (`absorption plans: 0` while files
- exist on disk).
+  counts (absorptionPlans, reimplementations, harvestArtifacts,
+  narrowDecisions) are now sourced from
+  `.qfai/evidence/prototyping/rounds/<rN>/*.json` directly. The
+  curated index (`prototyping.json.rounds[]`) is no longer
+  authoritative for these counts; index/filesystem drift is surfaced
+  as a warning. Closes RR §8.2 (`absorption plans: 0` while files
+  exist on disk).
 - **Internal `docs/design-principles.md`** (P1–P6, contributor
- reference, not shipped via init).
+  reference, not shipped via init).
 - **17 new error codes** (each with description, severity, and
- suggested action):
- - `QFAI-PROT-310` — executionPlan absent in full-harness
- - `QFAI-PROT-311` — delegationMap role violation
- - `QFAI-PROT-331` — fullHarness.scoringTrace[].screenshotDir missing
- - `QFAI-PROT-332` — Lighthouse report missing in full-harness + web
- - `QFAI-PROT-333` — iteration 1 cannot be marked converged
- - `QFAI-PROT-334` — designSystemCompliance below 0.75 threshold
- - `QFAI-PROT-335` — completion certificate absent while completion claimed
- - `QFAI-PROT-336` — completion certificate digest mismatch
- - `QFAI-CFG-LINK-001` — primarySpecId points to missing spec dir
- - `QFAI-CFG-LINK-002` — paths.\* points to missing directory (warning)
- - `QFAI-CFG-LINK-003` — calibration.packPath missing
- - `QFAI-PROT-REF-001` — dangling artifact ref in prototyping.json /
- review-bundle.json / breakthrough.json
- - `QFAI-PROT-LINK-001` — prototyping.json.specs[].specId references
- missing spec
- - `QFAI-PROT-LINK-002` — review-bundle.json.spec references
- missing spec
- - `QFAI-PROT-LINK-003` — candidate artifact dir missing
- - `QFAI-PROT-LINK-004` — polish cycle iteration dir missing
+  suggested action):
+- `QFAI-PROT-310` — executionPlan absent in full-harness
+- `QFAI-PROT-311` — delegationMap role violation
+- `QFAI-PROT-331` — fullHarness.scoringTrace[].screenshotDir missing
+- `QFAI-PROT-332` — Lighthouse report missing in full-harness + web
+- `QFAI-PROT-333` — iteration 1 cannot be marked converged
+- `QFAI-PROT-334` — designSystemCompliance below 0.75 threshold
+- `QFAI-PROT-335` — completion certificate absent while completion claimed
+- `QFAI-PROT-336` — completion certificate digest mismatch
+- `QFAI-CFG-LINK-001` — primarySpecId points to missing spec dir
+- `QFAI-CFG-LINK-002` — paths.\* points to missing directory (warning)
+- `QFAI-CFG-LINK-003` — calibration.packPath missing
+- `QFAI-PROT-REF-001` — dangling artifact ref in prototyping.json /
+  review-bundle.json / breakthrough.json
+- `QFAI-PROT-LINK-001` — prototyping.json.specs[].specId references
+  missing spec
+- `QFAI-PROT-LINK-002` — review-bundle.json.spec references
+  missing spec
+- `QFAI-PROT-LINK-003` — candidate artifact dir missing
+- `QFAI-PROT-LINK-004` — polish cycle iteration dir missing
 - **100+ new test cases** across 13 new test files (state gate,
- certificate, ID linkage, lint-shipping, RR-8-2 regression, etc.).
- Final test suite: 203 test files / 1557 cases, all green.
+  certificate, ID linkage, lint-shipping, RR-8-2 regression, etc.).
+  Final test suite: 203 test files / 1557 cases, all green.
 
 ### Changed
 
 - `report.md` aggregator scans the filesystem directly for round
- artifacts; `prototyping.json.rounds[]` is no longer authoritative
- for harvest / narrowDecision / absorptionPlan / reimplementation
- counts.
+  artifacts; `prototyping.json.rounds[]` is no longer authoritative
+  for harvest / narrowDecision / absorptionPlan / reimplementation
+  counts.
 - `executionPlan` and `delegationMap` validators are now wired into
- `runPrototypingValidators` (via `validateStateGate`) and emit
- standard `Issue[]` with codes `QFAI-PROT-310 / 311`.
+  `runPrototypingValidators` (via `validateStateGate`) and emit
+  standard `Issue[]` with codes `QFAI-PROT-310 / 311`.
 - `screenshotDir`, `lighthouseGate`, `iterationGate`, and
- `designSystemThreshold` validators are now wired into
- `runPrototypingValidators` (via `validateStateGate`).
+  `designSystemThreshold` validators are now wired into
+  `runPrototypingValidators` (via `validateStateGate`).
 - `buildReviewBundle` and `buildRoundReviewBundle` require a
- `primarySpecId` parameter; `review-bundle.json.spec` is the
- resolved spec ID, not a hardcoded literal.
+  `primarySpecId` parameter; `review-bundle.json.spec` is the
+  resolved spec ID, not a hardcoded literal.
 - `ReviewBundle.spec` and `RoundReviewBundle.spec` types widened from
- `"0017"` literal to `string`. Reader (`readRoundReviewBundleFile`)
- accepts any non-empty string.
+  `"0017"` literal to `string`. Reader (`readRoundReviewBundleFile`)
+  accepts any non-empty string.
 - SKILL.md and `references/{evidence-requirements,reviewer-gate}.md`
- no longer hardcode a specific spec id. The "primary SSOT" entry now
- instructs the consumer to run `qfai prototyping show-spec` to
- discover the resolved path.
+  no longer hardcode a specific spec id. The "primary SSOT" entry now
+  instructs the consumer to run `qfai prototyping show-spec` to
+  discover the resolved path.
 - `vitest.workspace.ts` adds a `scripts` project for tests/scripts/.
 
 ### Removed (BREAKING)
 
 - **BREAKING**: legacy custom-Issue functions and types removed.
- Callers MUST use the `*Issues` adapters that return standard
- `Issue[]`. Removed:
- - `validateExecutionPlan` / `ExecutionPlanIssue` →
- `validateExecutionPlanIssues`
- - `validateDelegationMap` / `DelegationViolationIssue` →
- `validateDelegationMapIssues`
- - `validateScreenshotDir` / `ScreenshotDirIssue` →
- `validateScreenshotDirIssues`
- - `validateLighthouseGate` / `LighthouseGateIssue` →
- `validateLighthouseGateIssues`
- - `validateIterationGate` / `IterationGateIssue` →
- `validateIterationGateIssues`
- - `validateDesignSystemThreshold` /
- `DesignSystemThresholdIssue` →
- `validateDesignSystemThresholdIssues`
+  Callers MUST use the `*Issues` adapters that return standard
+  `Issue[]`. Removed:
+- `validateExecutionPlan` / `ExecutionPlanIssue` →
+  `validateExecutionPlanIssues`
+- `validateDelegationMap` / `DelegationViolationIssue` →
+  `validateDelegationMapIssues`
+- `validateScreenshotDir` / `ScreenshotDirIssue` →
+  `validateScreenshotDirIssues`
+- `validateLighthouseGate` / `LighthouseGateIssue` →
+  `validateLighthouseGateIssues`
+- `validateIterationGate` / `IterationGateIssue` →
+  `validateIterationGateIssues`
+- `validateDesignSystemThreshold` /
+  `DesignSystemThresholdIssue` →
+  `validateDesignSystemThresholdIssues`
 - Removed `tests/integration/prototypingSkillV1716Integration.test.ts`
- (redundant after absorption — every TC is now unit-tested
- in dedicated `*Issues` adapter test files).
+  (redundant after absorption — every TC is now unit-tested
+  in dedicated `*Issues` adapter test files).
 
 ### Compatibility notes (severity escalation timeline)
 
@@ -387,14 +387,14 @@ The new ID-linkage validators ship at **warning** severity in v1.8.4
 to give existing user repos a one-release transition window:
 
 - `QFAI-PROT-LINK-001..004` (spec ID linkage in prototyping.json
- artifacts): warning. Escalates to error in a future release (TBD).
+  artifacts): warning. Escalates to error in a future release (TBD).
 - `QFAI-PROT-REF-001` (dangling artifact ref): warning. Escalates
- to error in a future release (TBD).
+  to error in a future release (TBD).
 - `QFAI-CFG-LINK-001` / `QFAI-CFG-LINK-003` (config-time
- primarySpecId / calibration packPath dangling): error from v1.8.4
- (config typos benefit from immediate signal).
+  primarySpecId / calibration packPath dangling): error from v1.8.4
+  (config typos benefit from immediate signal).
 - `QFAI-CFG-LINK-002` (paths.\* directory absent): warning (init-time
- lazy creation rationale).
+  lazy creation rationale).
 
 `qfai validate --profile prototyping --fail-on error` therefore PASSes
 on v1.8.3 → v1.8.4 upgrade even when prototyping.json carries
@@ -404,11 +404,11 @@ for the recommended cleanup path.
 ### Deferred to a follow-up release
 
 - Full V1 lifecycle removal (`iterations[]` schema, `cycle*` path
- helpers, V1 `buildReviewBundle` / `writeReviewBundles`,
- `prototyping.json.completionCertificate` block). The structural
- fixes that drove the v1.8.4 PR (RR §8.x) are already closed by the
- Phase 1–9 commits; V1 cleanup is a separate refactor that does not
- block the release.
+  helpers, V1 `buildReviewBundle` / `writeReviewBundles`,
+  `prototyping.json.completionCertificate` block). The structural
+  fixes that drove the v1.8.4 PR (RR §8.x) are already closed by the
+  Phase 1–9 commits; V1 cleanup is a separate refactor that does not
+  block the release.
 
 ## [1.8.3] - 2026-04-26
 
@@ -423,7 +423,7 @@ for the recommended cleanup path.
 
 ### Changed
 
-- absorbs the former (Playwright CLI harness) and (round/candidate/absorption harness) registries (REQ / AC / BR / DEC / TC). The standalone the spec ` and the spec ` directories are deleted.
+- absorbs the former (Playwright CLI harness) and (round/candidate/absorption harness) registries (REQ / AC / BR / DEC / TC). The standalone the spec `and the spec` directories are deleted.
 - prototyping skill / agent terminology unified to `round` / `absorption` (qfai-prototyping, qfai-sdd, qfai-implement, qfai-verify, qfai-discussion, qfai-atdd, qfai-configure).
 - `CandidateId` is now a nominal brand type (was the template-literal `c${number}` which over-accepted `c0` / `c-1` / `c1.5`); both `parseCandidateIds` and `isCandidateId` mint via `CANDIDATE_ID_PATTERN`.
 - V1 `PrototypingEvidenceRecord` field renamed `cycles` → `iterations` to match `validatePrototypingEvidence` and the on-disk `.qfai/evidence/prototyping/iterations/<n>/` URL convention.
@@ -433,7 +433,7 @@ for the recommended cleanup path.
 ### Removed
 
 - **BREAKING**: library exports `createPlaywrightRenderAdapter` and `createPlaywrightBrowserQaProvider` are no longer re-exported from `qfai` (Node Playwright runtime retired in ).
- - migration: use the Playwright CLI path — `qfai prototyping round-start ...` for the supported entry point, or build command plans via `buildPlaywrightCliCommandPlan` (still exported) and run them through your own Playwright CLI invocation.
+- migration: use the Playwright CLI path — `qfai prototyping round-start ...` for the supported entry point, or build command plans via `buildPlaywrightCliCommandPlan` (still exported) and run them through your own Playwright CLI invocation.
 - Active legacy spec directories (since absorbed).
 
 ### Fixed
@@ -449,28 +449,28 @@ for the recommended cleanup path.
 ### Changed
 
 - package root export (`qfai`) で full-harness helper の互換公開を維持
- - restored: `loadHistory`, `appendIteration`, `computeTerminationReason`
- - restored: `validateReviewer`, `resolveCommitSha`, `REVIEWER_PLACEHOLDERS`
- - restored: `FullHarnessHistory`, `MeasurementInput` などの harness type export
+- restored: `loadHistory`, `appendIteration`, `computeTerminationReason`
+- restored: `validateReviewer`, `resolveCommitSha`, `REVIEWER_PLACEHOLDERS`
+- restored: `FullHarnessHistory`, `MeasurementInput` などの harness type export
 
 ### Removed
 
 - **BREAKING**: experimental full-harness runtime entrypoints `runFullHarness`, `computeWeightedTotal`, `determineDecision` are no longer exported from the package root
- - migration: runtime execution is now skill/workflow driven; package consumers should use persisted evidence plus validator/report APIs instead of invoking the removed runtime helpers directly
+- migration: runtime execution is now skill/workflow driven; package consumers should use persisted evidence plus validator/report APIs instead of invoking the removed runtime helpers directly
 
 ## [1.8.0] - 2026-03-29
 
 ### Added
 
-- skills: Web Research Enhancement skill template 
- - 8-stage standard research pipeline (search, rank, fetch, extract, sanitize, cache, verify, cite)
- - MCP integration templates for Brave Search, Firecrawl, Playwright (3 agent formats each)
- - Content sanitization layer (control chars, aria-hidden, display:none removal)
- - Domain/URL allowlist with default-deny enforcement
- - Research session log schema with secret exclusion
- - Cache strategy (hash(URL+etag) key, 24h default TTL)
- - Evaluation metrics (citation precision, coverage, freshness, security hygiene)
- - HITL risk-based review gates
+- skills: Web Research Enhancement skill template
+- 8-stage standard research pipeline (search, rank, fetch, extract, sanitize, cache, verify, cite)
+- MCP integration templates for Brave Search, Firecrawl, Playwright (3 agent formats each)
+- Content sanitization layer (control chars, aria-hidden, display:none removal)
+- Domain/URL allowlist with default-deny enforcement
+- Research session log schema with secret exclusion
+- Cache strategy (hash(URL+etag) key, 24h default TTL)
+- Evaluation metrics (citation precision, coverage, freshness, security hygiene)
+- HITL risk-based review gates
 - specs: SDD artifacts (Web Research Enhancement, CAP-0034)
 - specs: TDD execution ledger (28 items, all done)
 - discussion: v1.8.0 Web Research Enhancement discussion pack (`discussion-20260328212829687`)
@@ -865,7 +865,7 @@ for the recommended cleanup path.
 
 - init: `.github/instructions/` に Copilot レビューインストラクション（code-review, principles）を create-only で配布
 - specs: SDD artifacts (Copilot review instructions distribution)
-- discussion: discussion pack for 
+- discussion: discussion pack for
 
 ### Changed
 
@@ -2485,10 +2485,10 @@ for the recommended cleanup path.
 ### Added
 
 - `qfai sync` を追加（PromptPack の差分検知・同期候補書き出し）
- - `--mode check`: 同梱アセットとの差分を検出（exit 0=差分なし、1=差分あり、2=エラー）
- - `--mode export`: 同期候補を非破壊でエクスポート
- - `--out <path>`: export の出力先
- - `--format <text|json>`: 出力形式
+- `--mode check`: 同梱アセットとの差分を検出（exit 0=差分なし、1=差分あり、2=エラー）
+- `--mode export`: 同期候補を非破壊でエクスポート
+- `--out <path>`: export の出力先
+- `--format <text|json>`: 出力形式
 
 ### Changed
 

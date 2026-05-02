@@ -81,9 +81,7 @@ interface Hit {
 describe("distributed surface leakage smoke", { timeout: 90000 }, () => {
   it("qfai init output contains no internal IDs or version markers", async () => {
     const tmpDir = await newTempDir();
-    await captureStdout(() =>
-      runInit({ dir: tmpDir, force: false, dryRun: false, yes: true }),
-    );
+    await captureStdout(() => runInit({ dir: tmpDir, force: false, dryRun: false, yes: true }));
 
     const hits: Hit[] = [];
     for await (const file of walk(tmpDir)) {
@@ -97,11 +95,7 @@ describe("distributed surface leakage smoke", { timeout: 90000 }, () => {
       for (const { name, re } of PATTERNS) {
         for (let i = 0; i < lines.length; i++) {
           const line = lines[i] ?? "";
-          if (
-            isPackageJson &&
-            name === "internal version marker" &&
-            /"version"\s*:/.test(line)
-          ) {
+          if (isPackageJson && name === "internal version marker" && /"version"\s*:/.test(line)) {
             continue;
           }
           if (isPackageJson && name === "schemaVersion field") {

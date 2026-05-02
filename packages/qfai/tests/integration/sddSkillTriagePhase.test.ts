@@ -31,7 +31,17 @@ const TRIAGE_REF_PATH = path.resolve(
   "sdd-triage.md",
 );
 
-const REQUIRED_OPS = ["CREATE", "UPDATE", "DELETE", "SPLIT", "MERGE", "SUPERSEDE", "APPEND", "MODIFY", "REMOVE"] as const;
+const REQUIRED_OPS = [
+  "CREATE",
+  "UPDATE",
+  "DELETE",
+  "SPLIT",
+  "MERGE",
+  "SUPERSEDE",
+  "APPEND",
+  "MODIFY",
+  "REMOVE",
+] as const;
 
 describe("qfai-sdd SKILL.md surface", () => {
   it("declares Stage 1 Triage in the workflow header", async () => {
@@ -82,7 +92,16 @@ describe("qfai-sdd SKILL.md surface", () => {
 describe("references/sdd-triage.md", () => {
   it("documents the 8 operations and their approval status", async () => {
     const ref = await readFile(TRIAGE_REF_PATH, "utf-8");
-    for (const op of ["CREATE", "DELETE", "SPLIT", "MERGE", "SUPERSEDE", "APPEND", "MODIFY", "REMOVE"]) {
+    for (const op of [
+      "CREATE",
+      "DELETE",
+      "SPLIT",
+      "MERGE",
+      "SUPERSEDE",
+      "APPEND",
+      "MODIFY",
+      "REMOVE",
+    ]) {
       expect(ref, `triage ref missing "${op}"`).toMatch(new RegExp(`\\b${op}\\b`));
     }
     expect(ref).toMatch(/Approved By/);

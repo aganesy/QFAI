@@ -15,14 +15,14 @@ were spun off into stand-alone specs, fragmenting traceability.
 Concretely, before persisting any Triage row:
 
 1. Read every active spec's `01_Spec.md` Scope, `03_Acceptance-Criteria.md`,
-   and `04_Business-Rules.md`. The classifier output is a *proposal*; the
+   and `04_Business-Rules.md`. The classifier output is a _proposal_; the
    final decision must be informed by reading the candidate spec body.
 2. Pick the spec whose scope most closely absorbs the new requirement.
 3. Append a new BR/AC/EX/TC there. If the spec is over the size threshold,
    propose **SPLIT**, never CREATE-as-shortcut.
 4. Only when no active spec's scope can absorb the requirement, AND the
    underlying capability is itself new, propose **CREATE**. Add the new
-   `CAP-NNNN` to `_policies/03_Capabilities.md` *first*, then cite it in
+   `CAP-NNNN` to `_policies/03_Capabilities.md` _first_, then cite it in
    the Triage row's Rationale column. `QFAI-TRIAGE-006` will fail the
    validator otherwise.
 
@@ -34,16 +34,16 @@ shares the most subject tokens. CREATE is emitted only when there is
 
 ## Operation set (8 first-class)
 
-| Operation        | Sub-op | When to choose                                                        | Approval |
-| ---------------- | ------ | --------------------------------------------------------------------- | -------- |
-| CREATE           | -      | New subject; no active spec owns the capability                       | Required |
-| UPDATE           | APPEND | Add new US/AC/BR/EX/TC to an active spec (no semantic change)         | -        |
-| UPDATE           | MODIFY | Change the meaning of an existing US/AC/BR/EX/TC                      | -        |
-| UPDATE           | REMOVE | Delete an existing US/AC/BR/EX/TC (cuts downstream refs)              | Required |
-| DELETE           | -      | Subject was removed from the product; the spec itself goes away       | Required |
-| SPLIT            | -      | One spec carries >1 capability; split into N specs                    | Required |
-| MERGE            | -      | Multiple specs converge on one capability; collapse them              | Required |
-| SUPERSEDE        | -      | Responsibilities move to a new spec; flip status, keep history        | Required |
+| Operation | Sub-op | When to choose                                                  | Approval |
+| --------- | ------ | --------------------------------------------------------------- | -------- |
+| CREATE    | -      | New subject; no active spec owns the capability                 | Required |
+| UPDATE    | APPEND | Add new US/AC/BR/EX/TC to an active spec (no semantic change)   | -        |
+| UPDATE    | MODIFY | Change the meaning of an existing US/AC/BR/EX/TC                | -        |
+| UPDATE    | REMOVE | Delete an existing US/AC/BR/EX/TC (cuts downstream refs)        | Required |
+| DELETE    | -      | Subject was removed from the product; the spec itself goes away | Required |
+| SPLIT     | -      | One spec carries >1 capability; split into N specs              | Required |
+| MERGE     | -      | Multiple specs converge on one capability; collapse them        | Required |
+| SUPERSEDE | -      | Responsibilities move to a new spec; flip status, keep history  | Required |
 
 ## Inputs
 
@@ -59,9 +59,9 @@ shares the most subject tokens. CREATE is emitted only when there is
 2. **List incoming REQs/NFRs.** One row per requirement, capability tag
    if known.
 3. **Run the append-first classifier** (`classifyTriage`) for an initial
-   proposal. Treat the output as a *hypothesis* — every row must be
+   proposal. Treat the output as a _hypothesis_ — every row must be
    re-checked by reading the proposed spec body before persisting.
-4. **Walk the impact cascade.** For every REQ, scan *every* active spec
+4. **Walk the impact cascade.** For every REQ, scan _every_ active spec
    (not just the proposed primary) and record companion edits. See the
    "Impact cascade" section below.
 5. **Approval pass.** For every row whose Operation requires approval
@@ -79,7 +79,7 @@ shares the most subject tokens. CREATE is emitted only when there is
 
 A single requirement frequently affects multiple specs. The agent MUST:
 
-1. Identify the *primary* spec (the one absorbing the new BR/AC).
+1. Identify the _primary_ spec (the one absorbing the new BR/AC).
 2. Walk every other active spec and check whether the change forces a
    companion edit:
    - Existing US/AC/BR/EX/TC that references the changed concept →
@@ -91,20 +91,20 @@ A single requirement frequently affects multiple specs. The agent MUST:
 
 Example cascade for `REQ-0042 (rename token "draft" -> "proposal")`:
 
-| Source   | Subject                       | Existing Spec | Operation | Sub-op | Approved By | Rationale |
-| -------- | ----------------------------- | ------------- | --------- | ------ | ----------- | --------- |
-| REQ-0042 | rename "draft" -> "proposal"  | spec-0003     | UPDATE    | MODIFY | -           | primary owner |
-| REQ-0042 | rename "draft" -> "proposal"  | spec-0007     | UPDATE    | MODIFY | -           | AC-0007-0004 references the term |
-| REQ-0042 | rename "draft" -> "proposal"  | spec-0009     | UPDATE    | REMOVE | user@host   | BR-0009-0002 obsoleted by rename |
+| Source   | Subject                      | Existing Spec | Operation | Sub-op | Approved By | Rationale                        |
+| -------- | ---------------------------- | ------------- | --------- | ------ | ----------- | -------------------------------- |
+| REQ-0042 | rename "draft" -> "proposal" | spec-0003     | UPDATE    | MODIFY | -           | primary owner                    |
+| REQ-0042 | rename "draft" -> "proposal" | spec-0007     | UPDATE    | MODIFY | -           | AC-0007-0004 references the term |
+| REQ-0042 | rename "draft" -> "proposal" | spec-0009     | UPDATE    | REMOVE | user@host   | BR-0009-0002 obsoleted by rename |
 
 ## Triage table format
 
 ```markdown
 ## Triage
 
-| Source   | Subject       | Existing Spec | Operation | Sub-op | Approved By | Rationale |
-|----------|---------------|---------------|-----------|--------|-------------|-----------|
-| REQ-XXXX | <one-liner>   | spec-NNNN     | UPDATE    | APPEND | -           | <why>     |
+| Source   | Subject     | Existing Spec | Operation | Sub-op | Approved By | Rationale |
+| -------- | ----------- | ------------- | --------- | ------ | ----------- | --------- |
+| REQ-XXXX | <one-liner> | spec-NNNN     | UPDATE    | APPEND | -           | <why>     |
 ```
 
 Required columns: `Source`, `Subject`, `Existing Spec`, `Operation`.

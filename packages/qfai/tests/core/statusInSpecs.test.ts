@@ -40,14 +40,9 @@ describe("validateStatusInSpecs", () => {
       await mkdir(specDir, { recursive: true });
       await writeFile(
         path.join(specDir, "01_Spec.md"),
-        [
-          "# 01 Spec",
-          "",
-          "- Spec: spec-0001",
-          "- Parent: CAP-0001",
-          "- Status: active",
-          "",
-        ].join("\n"),
+        ["# 01 Spec", "", "- Spec: spec-0001", "- Parent: CAP-0001", "- Status: active", ""].join(
+          "\n",
+        ),
         "utf-8",
       );
 
@@ -65,12 +60,7 @@ describe("validateStatusInSpecs", () => {
       await mkdir(specDir, { recursive: true });
       await writeFile(
         path.join(specDir, "10_Plan.md"),
-        [
-          "# 10 Plan",
-          "",
-          "- progress: in-progress",
-          "",
-        ].join("\n"),
+        ["# 10 Plan", "", "- progress: in-progress", ""].join("\n"),
         "utf-8",
       );
 

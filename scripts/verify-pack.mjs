@@ -124,9 +124,7 @@ for (const removedDir of [".claude", ".codex"]) {
 // from the packed tarball.
 const rootGithubDir = path.join(rootAssetsDir, ".github");
 if (!existsSync(rootGithubDir)) {
-  throw new Error(
-    "assets/init/root/.github must exist.",
-  );
+  throw new Error("assets/init/root/.github must exist.");
 }
 // Confirm `.github` itself is a directory before iterating; otherwise
 // readdirSync would surface as an ENOTDIR stack trace and obscure the
@@ -140,9 +138,7 @@ const githubEntries = readdirSync(rootGithubDir);
 // silently strip the qfai-validate.yml shipping path
 // on downstream init consumers, so reject it here.
 if (!githubEntries.includes("workflows")) {
-  throw new Error(
-    "assets/init/root/.github must contain workflows/.",
-  );
+  throw new Error("assets/init/root/.github must contain workflows/.");
 }
 for (const entry of githubEntries) {
   if (!allowedRootGithubEntries.has(entry)) {
