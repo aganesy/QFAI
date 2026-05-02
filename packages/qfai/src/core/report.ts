@@ -1564,7 +1564,7 @@ export function formatReportMarkdown(
   );
   if (calibrationIssues.length > 0) {
     lines.push(
-      "- legacy v1.x calibration setting incomplete. (v2.0 prototyping removes per-mode calibration; this hint targets historical evidence files only.)",
+      "- legacy calibration setting incomplete (mode-tier calibration is no longer supported).",
     );
   }
   const fullHarnessCompletenessIssues = data.issues.filter((item) =>

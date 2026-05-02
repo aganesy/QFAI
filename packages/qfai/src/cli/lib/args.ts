@@ -26,9 +26,9 @@ export type ParsedArgs = {
     platform?: string;
     prototypingAction?: "preflight" | "iterate" | "certify" | "show-spec";
     prototypingTargetUrl?: string;
-    /** v2.0: --cycle <n> for `qfai prototyping iterate --cycle <n>` (P5/P6). */
+    /** --cycle <n> for `qfai prototyping iterate --cycle <n>`. */
     prototypingCycle?: number;
-    /** v1.8.4: --check flag for `qfai prototyping certify --check`. */
+    /** --check flag for `qfai prototyping certify --check`. */
     prototypingCheckOnly?: boolean;
     help: boolean;
     invalidExitCode: number;
@@ -83,8 +83,8 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
     }
   }
 
-  // spec-0017 REQ-0007: `qfai prototyping <subcommand>` pulls the
-  // subcommand token before the flag loop.
+  // `qfai prototyping <subcommand>` pulls the subcommand token before the
+  // flag loop.
   if (command === "prototyping") {
     const candidate = args[0];
     if (candidate && !candidate.startsWith("--")) {

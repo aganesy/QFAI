@@ -204,7 +204,7 @@ function extractNumber(source: unknown, key: string): number | undefined {
 
 function countIterations(protoJson: unknown): number {
   if (!isRecord(protoJson)) return 0;
-  // v2.0 (spec-0017 P5): the canonical counter is `iterations[].length`.
+  // The canonical counter is `iterations[].length`.
   const iterations = protoJson.iterations;
   if (Array.isArray(iterations)) return iterations.length;
 

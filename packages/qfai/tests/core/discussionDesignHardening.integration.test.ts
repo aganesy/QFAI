@@ -30,7 +30,6 @@ describe("discussion design hardening integration smoke", { timeout: 30000 }, ()
       );
 
       expect(skill).toMatch(/30_exploration_brief\.md/);
-      expect(skill).toMatch(/34_evaluator_calibration\.md/);
       expect(reviewTemplate).toMatch(
         /30_exploration_brief\.md|best-of-history|Exploration Direction Consistency/i,
       );

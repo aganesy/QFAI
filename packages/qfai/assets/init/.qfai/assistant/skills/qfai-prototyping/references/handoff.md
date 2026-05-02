@@ -34,8 +34,8 @@ implementationNotes: |
   what makes this artifact distinct from generic AI defaults.
 ```
 
-The v1.x preserve / adapt / copy three-category split is removed. The artifact itself is the SSOT.
+The artifact itself is the SSOT (no preserve / adapt / copy split).
 
 ## Cert
 
-Run `qfai prototyping certify` to produce `.qfai/evidence/prototyping/completion-certificate.json` (`schemaVersion: "2.0"`). Use `certify --check` to verify digests.
+Run `qfai prototyping certify` to produce `.qfai/evidence/prototyping/completion-certificate.json`. Use `certify --check` to verify digests.

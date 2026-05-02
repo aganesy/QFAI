@@ -229,7 +229,7 @@ Create or update layered SDD artifacts in one run so downstream execution phases
   - `.qfai/contracts/design/reference-pool.yaml` (deviate-from input for prototyping reviewer)
   - `.qfai/contracts/design/brand-design.yaml`
   - `.qfai/contracts/ui/*.yaml`
-  - (post-loop, produced by /qfai-prototyping v2.0:
+  - (post-loop, produced by /qfai-prototyping:
     `.qfai/contracts/design/design-system.yaml`,
     `.qfai/contracts/design/prototype-handoff.yaml`)
 - `.qfai/report/preflight_summary.md`

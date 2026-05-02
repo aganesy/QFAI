@@ -6,12 +6,15 @@ Define the slicing model for `.qfai/specs/`. This template is used by `/qfai-sdd
 
 ## Slice categories
 
-| Category   | Slice Rule                     | ID Range        |
-| ---------- | ------------------------------ | --------------- |
-| structural | 1 pack-type = 1 spec           | spec-0001..0002 |
-| cli        | 1 command = 1 spec             | spec-0003..0007 |
-| skill      | 1 skill = 1 spec               | spec-0008..0014 |
-| agent      | all agents = 1 collective spec | spec-0015       |
+> Adjust the categories and ID ranges below to match your project. The
+> ranges shown are illustrative only.
+
+| Category   | Slice Rule                     | ID Range Example |
+| ---------- | ------------------------------ | ---------------- |
+| structural | 1 pack-type = 1 spec           | spec-0001..0002  |
+| cli        | 1 command = 1 spec             | spec-0003..0005  |
+| skill      | 1 skill = 1 spec               | spec-0006..0008  |
+| agent      | all agents = 1 collective spec | spec-0009        |
 
 ## Category definitions
 

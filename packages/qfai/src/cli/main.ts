@@ -131,7 +131,7 @@ export async function run(argv: string[], cwd: string): Promise<void> {
           return;
         }
 
-        // iterate (v2.0): single-thread evolution loop driver.
+        // iterate: single-thread evolution loop driver.
         if (options.prototypingCycle === undefined) {
           error("qfai prototyping iterate: --cycle <number> is required.");
           info(usage());
@@ -164,8 +164,8 @@ Commands:
   doctor                       設定/パス/出力前提の診断
   guardrails                   Decision Guardrails の抽出/検査（list|extract|check）
   prototyping preflight        prototyping 実行前提（spec/ui/design contracts/roles/browser/targetUrl）を診断
-  prototyping iterate          single-thread evolution loop の cycle 確定 (spec-0017 v2.0)
-  prototyping certify [--check]         completion-certificate.json を生成 / 検証 (schema v2.0)
+  prototyping iterate          single-thread evolution loop の cycle 確定
+  prototyping certify [--check]         completion-certificate.json を生成 / 検証
   prototyping show-spec                 解決された primary prototyping spec を出力
 
 Options:
@@ -191,7 +191,7 @@ Options:
   --max <number>                guardrails extract: 最大件数
   --keyword <text>              guardrails list/extract: キーワードフィルタ
   --target-url <url>            prototyping preflight/iterate: 評価対象の URL
-  --cycle <number>              prototyping iterate: cycle index (0..14、v2.0)
+  --cycle <number>              prototyping iterate: cycle index (0..14)
   -h, --help      ヘルプ表示
 `;
 }

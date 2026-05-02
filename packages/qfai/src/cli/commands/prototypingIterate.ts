@@ -1,5 +1,5 @@
 /**
- * `qfai prototyping iterate --cycle <n>` CLI command (spec-0017 v2.0).
+ * `qfai prototyping iterate --cycle <n>` CLI command.
  *
  * Single-thread evolution loop driver. The skill (`/qfai-prototyping`)
  * calls this command before each iteration:

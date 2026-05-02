@@ -1,6 +1,6 @@
 # UI Definition Consumption Protocol
 
-spec-0013 (CAP-0013) で定義された、下流 skill が UI 定義を読み取る際の手順。
+QFAI が定義する、下流 skill が UI 定義を読み取る際の手順。
 
 ## Boundary
 

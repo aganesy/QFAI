@@ -572,7 +572,7 @@ function normalizePrototypingExecution(
       issues.push(
         configIssue(
           configPath,
-          `prototyping.execution.${legacyKey} は廃止されました (spec-0012)。` +
+          `prototyping.execution.${legacyKey} は廃止されました。` +
             ` prototyping.execution.browserTool: playwright-cli に置き換えてください。`,
         ),
       );
@@ -586,7 +586,7 @@ function normalizePrototypingExecution(
       issues.push(
         configIssue(
           configPath,
-          `prototyping.execution.browserTool は "playwright-cli" のみ有効です (spec-0012)。` +
+          `prototyping.execution.browserTool は "playwright-cli" のみ有効です。` +
             ` 受け取った値: ${JSON.stringify(browserToolRaw)}`,
         ),
       );

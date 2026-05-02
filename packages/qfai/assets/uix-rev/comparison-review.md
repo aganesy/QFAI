@@ -7,7 +7,7 @@ Review exploration artifacts as comparison inputs, not a fixed option-comparison
 - Exploration must start from multiple divergent directions
 - Comparison criteria must reflect the exploration rubric and evaluator calibration
 - Rejected or superseded directions must have explicit rationale
-- v2.0 (spec-0017): the latest iter is always accepted; earlier "best-of-history" and "winner ownership" rules were removed alongside the funnel.
+- The latest iter is always accepted (no best-of-history; no winner ownership).
 
 ### Trend-derived conversion check
 

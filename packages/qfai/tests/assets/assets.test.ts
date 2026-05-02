@@ -661,9 +661,6 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     const versionPattern = /\b(?:v)?\d+\.\d+\.\d+\b/;
     const approvedVersionedDocs = new Set([
       path.resolve(templateQfaiDir, "assistant", "instructions", "agent-selection.md"),
-      path.resolve(templateQfaiDir, "assistant", "steering", "manifest.md"),
-      path.resolve(templateQfaiDir, "assistant", "steering", "product.md"),
-      path.resolve(templateQfaiDir, "assistant", "steering", "tech.md"),
     ]);
 
     const matches: string[] = [];
@@ -722,7 +719,6 @@ describe("assets guardrails", { timeout: 30000 }, () => {
         "test-case-depth-checklist.md",
       ),
       path.resolve(templateQfaiDir, "assistant", "steering", "cli-ux-guidelines.md"),
-      path.resolve(templateQfaiDir, "assistant", "steering", "product.md"),
       path.resolve(templateQfaiDir, "assistant", "steering", "research-first-protocol.md"),
       path.resolve(templateQfaiDir, "assistant", "steering", "ui-definition-protocol.md"),
     ]);
