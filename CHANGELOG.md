@@ -365,9 +365,9 @@ The new ID-linkage validators ship at **warning** severity in v1.8.4
 to give existing user repos a one-release transition window:
 
 - `QFAI-PROT-LINK-001..004` (spec ID linkage in prototyping.json
- artifacts): warning. Escalates to error in **v1.9.0**.
+ artifacts): warning. Escalates to error in a future release (TBD).
 - `QFAI-PROT-REF-001` (dangling artifact ref): warning. Escalates
- to error in **v1.9.0**.
+ to error in a future release (TBD).
 - `QFAI-CFG-LINK-001` / `QFAI-CFG-LINK-003` (config-time
  primarySpecId / calibration packPath dangling): error from v1.8.4
  (config typos benefit from immediate signal).

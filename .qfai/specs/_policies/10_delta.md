@@ -554,8 +554,8 @@
 - `discussion-20260328212829687` (v1.8.0 — Web Research Enhancement)
 - Classification: non-ui
 - OQ-0001..0008 resolved at policy/spec layer
-- OQ-0009 (Jina AI MCP) deferred to v1.9.0
-- OQ-0010 (OTel integration depth) deferred to v1.9.0
+- OQ-0009 (Jina AI MCP) deferred to a future release (TBD)
+- OQ-0010 (OTel integration depth) deferred to a future release (TBD)
 
 | 2026-04-22 | adopted | 02_Initiative.md / 03_Capabilities.md / 04_Business-Flow.md / 06_Glossary.md / 07_Constraints.md / 08_Decisions.md | prototyping posture shifted to skill-first execution with validate/verify gates and mandatory screenshot/html evidence; old CLI/runtime/mode wording explicitly superseded | current implementation alignment |
 | 2026-04-22 | adopted | 02_Initiative.md / 08_Decisions.md / spec-0002 / spec-0004 / spec-0010 / spec-0012 / spec-0013 | discussion/preflight no longer requires `prototyping.yaml`; full-harness evidence contract is reviewerScores/allReviewerAxesPerfect100 + snapshot scoringTrace + iterationBudget | v1.8.1 prototyping evidence model sync |

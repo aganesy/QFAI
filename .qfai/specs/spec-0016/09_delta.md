@@ -12,7 +12,7 @@
 ### Rationale
 
 discussion-20260328212829687 で Web Research Enhancement のディスカッションパックが完成し、全 13 レビュアーが PASS を返した。
-8 つの OQ が解決され、2 つが v1.9.0 に正当に延期された。SDD フェーズとして spec-0034 を新規作成する。
+8 つの OQ が解決され、2 つが将来リリース (TBD) に正当に延期された。SDD フェーズとして spec-0034 を新規作成する。
 
 ### Candidates Considered
 
@@ -57,8 +57,8 @@ discussion-20260328212829687 で Web Research Enhancement のディスカッシ�
 | --------------------------------------- | ----- | ------ |
 | ATDD テストケース実装 (/qfai-atdd)      | agent | v1.8.0 |
 | プロトタイプ実装 (/qfai-prototyping)    | agent | v1.8.0 |
-| OQ-0009 (Jina AI MCP) 再評価            | agent | v1.9.0 |
-| OQ-0010 (OTel integration depth) 再評価 | agent | v1.9.0 |
+| OQ-0009 (Jina AI MCP) 再評価            | agent | TBD    |
+| OQ-0010 (OTel integration depth) 再評価 | agent | TBD    |
 
 ## Rejected Visual Directions
 
