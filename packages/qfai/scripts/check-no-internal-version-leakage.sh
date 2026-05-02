@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Fail if QFAI internal spec IDs or internal version markers leak into
-# distributed surfaces. The npm package version (packages/qfai/package.json
-# "version") is the only canonical version.
+# distributed surfaces. Distributed surface = paths listed in
+# packages/qfai/package.json "files" field. The npm package version is
+# the only canonical version.
 set -euo pipefail
 
 if [[ -d "packages/qfai" ]]; then
@@ -30,27 +31,44 @@ INTERNAL_ID_RE='\bCAP-0(0[1-9][0-9]|[1-9][0-9]{2,})\b|\bDEC-[0-9]{4}-[0-9]{4}\b|
 # surfaces. Generated artifact schemas no longer carry this field.
 SCHEMA_VERSION_RE='"schemaVersion"|schemaVersion *:'
 
-# Scope: distributed surfaces only.
-SCAN_PATHS=(
-  "$ROOT/README.md"
-  "$ROOT/assets"
-)
-if [[ -d "$ROOT/dist" ]]; then
-  SCAN_PATHS+=("$ROOT/dist")
+# Scope: derived dynamically from package.json "files" field.
+# The "files" field is the SSOT for what npm ships; this guard scans
+# every entry that exists on disk so it stays in sync without manual
+# maintenance.
+mapfile -t FILES_FIELD < <(node -e '
+  const path = require("node:path");
+  const pkg = require(path.resolve(process.argv[1], "package.json"));
+  if (!Array.isArray(pkg.files)) {
+    console.error("package.json missing files[] field");
+    process.exit(1);
+  }
+  for (const f of pkg.files) console.log(f);
+' "$ROOT")
+
+SCAN_PATHS=()
+for entry in "${FILES_FIELD[@]}"; do
+  candidate="$ROOT/$entry"
+  # dist/ may not exist in lint-only CI passes; skip silently.
+  if [[ -e "$candidate" ]]; then
+    SCAN_PATHS+=("$candidate")
+  fi
+done
+
+if [[ "${#SCAN_PATHS[@]}" -eq 0 ]]; then
+  echo "WARN: no distributed surfaces found under $ROOT (build may not have run)." >&2
 fi
 
-for path in "${SCAN_PATHS[@]}"; do
-  [[ -e "$path" ]] || continue
-  hits=$(grep -rnE "$INTERNAL_SPEC_RE|$INTERNAL_VERSION_RE|$INTERNAL_ID_RE" "$path" 2>/dev/null || true)
+for target in "${SCAN_PATHS[@]}"; do
+  hits=$(grep -rnE "$INTERNAL_SPEC_RE|$INTERNAL_VERSION_RE|$INTERNAL_ID_RE" "$target" 2>/dev/null || true)
   if [[ -n "$hits" ]]; then
-    echo "FAIL: internal spec id, version marker, or trace id leaked in $path:" >&2
+    echo "FAIL: internal spec id, version marker, or trace id leaked in $target:" >&2
     echo "$hits" | head -20 >&2
     fail=1
   fi
-  schema_hits=$(grep -rnE "$SCHEMA_VERSION_RE" "$path" 2>/dev/null \
+  schema_hits=$(grep -rnE "$SCHEMA_VERSION_RE" "$target" 2>/dev/null \
     | grep -vE 'package\.json' || true)
   if [[ -n "$schema_hits" ]]; then
-    echo "FAIL: schemaVersion field present in distributed surface $path:" >&2
+    echo "FAIL: schemaVersion field present in distributed surface $target:" >&2
     echo "$schema_hits" | head -20 >&2
     fail=1
   fi
