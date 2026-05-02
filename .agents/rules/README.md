@@ -11,6 +11,9 @@ directory; edit the master here.**
 
 ## Rules
 
+- `version-discipline.md` — branch-name version pin and the prohibition
+  on AI-driven version bumps. Enforced by
+  `packages/qfai/scripts/check-branch-version-pin.sh`.
 - `distributed-surface.md` — npm distributed-surface discipline (no
   internal IDs / version markers leak into shipped files).
 - `root-additions-policy.md` — repository-root file/dir creation

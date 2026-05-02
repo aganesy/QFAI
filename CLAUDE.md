@@ -13,6 +13,7 @@ Quality-First AI (QFAI) — specification-driven development の検証フレー�
 - Do not create new directories or files at the repository root without explicit user approval; editing existing root files is allowed (see `.claude/rules/root-additions-policy.md`).
 - Traceability chain (REQ -> Spec -> Code -> Test) must be maintained; TDD-IDs and TC-Refs must not collide or reference unregistered entries.
 - Distributed surface discipline (no internal IDs / version markers in shipped files): see `.claude/rules/distributed-surface.md`.
+- Version discipline (no unilateral version bumps; branch name pins `packages/qfai/package.json#version`): see `.claude/rules/version-discipline.md` (master: `.agents/rules/version-discipline.md`).
 
 ## Code Review
 

@@ -42,6 +42,17 @@ genuine scope deviations that introduce a new capability.
   `references/sdd-triage.md`, `references/sdd-execution-playbook.md`,
   `references/sdd-phase-checklists.md`, and
   `templates/specs/_policies/11_Slice-Policy.md`.
+- Cross-AI rules master at `.agents/rules/`. Existing rules
+  (`distributed-surface`, `root-additions-policy`, `temporary-files`)
+  are migrated here from `.claude/rules/`; the original paths are kept
+  as symlinks so existing references continue to resolve.
+- New rule `version-discipline.md` (master at `.agents/rules/`):
+  branch-name version pin and the prohibition on AI-driven
+  `package.json#version` bumps / `chore(release):` commits. Surfaced
+  to every AI tool via `AGENTS.md`, `CLAUDE.md`, `.github/copilot-instructions.md`,
+  and `.codex/README.md`.
+- Surface test `tests/integration/agentsRulesSurface.test.ts` verifying
+  the master/symlink layout and entrypoint references.
 - Templates updated:
   `templates/specs/spec/01_Spec.md` declares `Status: active`;
   `templates/specs/spec/09_delta.md` and

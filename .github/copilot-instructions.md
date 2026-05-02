@@ -13,3 +13,4 @@ This repository uses QFAI (Quality-First AI) to improve the quality and consiste
   - These symlinks resolve to `.qfai/assistant/skills/<skill-name>/`.
 - Do not invent repository structure, tools, or frameworks. Inspect the repo first and align with what is already used.
 - Keep changes minimal and targeted. Update tests and docs when behavior changes.
+- Follow cross-AI rules in `.agents/rules/` (master). Notably: `version-discipline.md` (no unilateral version bumps; branch name pins `packages/qfai/package.json#version`), `distributed-surface.md`, `root-additions-policy.md`, `temporary-files.md`. The universal entrypoint is `AGENTS.md` at the repo root.
