@@ -64,6 +64,12 @@ describe("qfai-sdd SKILL.md surface", () => {
     const skill = await readFile(SKILL_PATH, "utf-8");
     expect(skill).toMatch(/QFAI-STATUS-001/);
     expect(skill).toMatch(/QFAI-TRIAGE-001/);
+    expect(skill).toMatch(/QFAI-TRIAGE-006/);
+  });
+
+  it("documents the append-first principle in Stage 1 Triage", async () => {
+    const skill = await readFile(SKILL_PATH, "utf-8");
+    expect(skill).toMatch(/[Aa]ppend-first/);
   });
 
   it("stays under the SKILL.md size budget", async () => {
@@ -81,5 +87,12 @@ describe("references/sdd-triage.md", () => {
     }
     expect(ref).toMatch(/Approved By/);
     expect(ref).toMatch(/QFAI-TRIAGE-005/);
+    expect(ref).toMatch(/QFAI-TRIAGE-006/);
+  });
+
+  it("documents the append-first principle and impact cascade", async () => {
+    const ref = await readFile(TRIAGE_REF_PATH, "utf-8");
+    expect(ref).toMatch(/append-first/i);
+    expect(ref).toMatch(/[Ii]mpact cascade/);
   });
 });

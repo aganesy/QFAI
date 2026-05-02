@@ -6,6 +6,26 @@ Define the slicing model and triage operations for `.qfai/specs/`. This
 template is consumed by `/qfai-sdd` Stage 1 Triage when classifying each
 incoming requirement against the existing specs.
 
+## Principle (read first)
+
+Default = modify an existing active spec (UPDATE: APPEND / MODIFY /
+REMOVE). CREATE is reserved for clear scope deviations introducing a
+new capability that is also being added to
+`_policies/03_Capabilities.md`. Validator `QFAI-TRIAGE-006` enforces
+this: every CREATE row must cite a `CAP-NNNN` in the Rationale column,
+and that CAP must already be present in the capability catalog.
+
+The classifier (`src/core/sddTriage.ts::classifyTriage`) implements an
+append-first fallback: when capability does not match exactly, it still
+proposes APPEND on the spec whose title/scope/capability shares the
+most subject tokens. CREATE is only emitted when there is **zero**
+token overlap with any active spec.
+
+A single requirement frequently touches multiple specs. Always walk
+every active spec for the *impact cascade* and emit one Triage row per
+affected spec (primary owner + companion MODIFY / REMOVE rows on other
+specs whose AC/BR reference the changed concept).
+
 ## Slice categories
 
 > Adjust the categories and ID ranges below to match your project. The
@@ -45,7 +65,7 @@ approval before any spec edits begin.
 
 ## APPEND vs CREATE algorithm
 
-For each incoming REQ/NFR, apply in order:
+For each incoming REQ/NFR, apply in order (append-first):
 
 1. Resolve the REQ's capability from `_policies/03_Capabilities.md`.
 2. If a single active spec already owns that capability and its
@@ -53,12 +73,35 @@ For each incoming REQ/NFR, apply in order:
 3. If multiple active specs share the capability → **MERGE**.
 4. If a single active spec owns the capability but exceeds the AC/TC
    thresholds → **SPLIT**.
-5. If no active spec owns the capability and the capability itself is
-   new → **CREATE**.
-6. If the REQ removes existing items from a spec → **UPDATE:REMOVE**.
-7. If the spec's subject is gone from the product → **DELETE**.
-8. If the responsibilities move to a new spec while the old ID must
+5. If no active spec owns the capability **but at least one active
+   spec's title / scope / capability shares any subject token with the
+   REQ** → **UPDATE:APPEND on the closest spec** (subject-overlap
+   fallback). Upgrade to **SPLIT** if that spec exceeds the AC/TC
+   thresholds. Record the cascade rationale and verify no companion
+   spec needs a MODIFY/REMOVE row before persisting.
+6. Only when **no active spec shares any token** with the REQ AND the
+   underlying capability is genuinely new → **CREATE**. Add the new
+   `CAP-NNNN` to `_policies/03_Capabilities.md` *first*, then cite it
+   in the Triage row's Rationale column. `QFAI-TRIAGE-006` will reject
+   any CREATE row that omits or references an unregistered CAP.
+7. If the REQ removes existing items from a spec → **UPDATE:REMOVE**.
+8. If the spec's subject is gone from the product → **DELETE**.
+9. If the responsibilities move to a new spec while the old ID must
    remain in history → **SUPERSEDE**.
+
+## Impact cascade
+
+Step 5 / 6 only decide the *primary* spec. After classifying every
+REQ, walk the rest of the active specs and add companion Triage rows
+for any spec whose existing US/AC/BR/EX/TC must change as a knock-on
+effect:
+
+- Existing item still applies but wording must change → **UPDATE:MODIFY**.
+- Existing item is now obsolete → **UPDATE:REMOVE** (requires approval).
+- Glossary / contract change → record in `_policies/10_delta.md`.
+
+The same `Source` (REQ ID) may legitimately appear on multiple Triage
+rows — that is the canonical cascade pattern, not a duplicate.
 
 ## Decision procedure
 

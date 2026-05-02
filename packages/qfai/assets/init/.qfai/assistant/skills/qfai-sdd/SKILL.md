@@ -57,10 +57,11 @@ Before any spec edit:
 2. Classify each REQ/NFR into one of the 8 operations using `_policies/11_Slice-Policy.md`:
    - **CREATE / DELETE / SPLIT / MERGE / SUPERSEDE** (top-level, approval required)
    - **UPDATE: APPEND / MODIFY / REMOVE** (UPDATE:REMOVE also requires approval)
-3. Obtain AskUserQuestion approval for every approval-required row.
-4. Persist the Triage table in `<spec>/09_delta.md` (per-spec) or `_policies/10_delta.md` (cross-spec / policy).
+3. **Append-first**: default to UPDATE on an active spec; walk the impact cascade and add MODIFY/REMOVE rows on companion specs. CREATE only when no active spec absorbs the REQ and a new `CAP-NNNN` is added to `_policies/03_Capabilities.md` first (`QFAI-TRIAGE-006`).
+4. Obtain AskUserQuestion approval for every approval-required row.
+5. Persist the Triage table in `<spec>/09_delta.md` (per-spec) or `_policies/10_delta.md` (cross-spec / policy).
 
-Procedure: `references/sdd-triage.md`. Validators: `QFAI-TRIAGE-001..005`.
+Procedure: `references/sdd-triage.md`. Validators: `QFAI-TRIAGE-001..006`.
 
 ## Spec Status Field (Mandatory)
 

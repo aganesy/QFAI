@@ -22,10 +22,19 @@ Use this file for the detailed sequencing rules behind `/qfai-sdd`.
 ## Stage 1: Triage
 
 1. Enumerate active spec summaries (skip `superseded` / `deprecated` / `removed`).
-2. Classify each REQ/NFR using `_policies/11_Slice-Policy.md` (8 ops).
-3. Obtain AskUserQuestion approval for CREATE / DELETE / SPLIT / MERGE / SUPERSEDE / UPDATE:REMOVE rows.
-4. Persist the Triage table in `<spec>/09_delta.md` (per-spec) or `_policies/10_delta.md` (cross-spec / policy).
-5. Stop entry to Phase 0 until every approval-required row has an approver recorded.
+2. Classify each REQ/NFR **append-first** using `_policies/11_Slice-Policy.md`
+   (8 ops). Default to UPDATE on the closest active spec; CREATE only
+   when no active spec shares any subject token AND a new `CAP-NNNN` is
+   added to `_policies/03_Capabilities.md`.
+3. Walk the impact cascade: for every primary classification, scan the
+   remaining active specs and emit companion `UPDATE:MODIFY` /
+   `UPDATE:REMOVE` rows wherever existing AC/BR reference the changed
+   concept. The same `Source` ID may legitimately appear on multiple rows.
+4. Obtain AskUserQuestion approval for CREATE / DELETE / SPLIT / MERGE / SUPERSEDE / UPDATE:REMOVE rows.
+5. Persist the Triage table in `<spec>/09_delta.md` (per-spec) or `_policies/10_delta.md` (cross-spec / policy).
+6. Stop entry to Phase 0 until every approval-required row has an
+   approver recorded and every CREATE row cites a registered CAP
+   (validator `QFAI-TRIAGE-006`).
 
 Detailed procedure: `sdd-triage.md`.
 
