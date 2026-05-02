@@ -28,7 +28,7 @@ export async function validateSpecIdLinkage(root: string, config: QfaiConfig): P
     if (!/^\d{4}$/u.test(specId)) {
       issues.push(
         issue(
-          "QFAI-PROT2-008",
+          "QFAI-PROT-008",
           `prototyping.json specsCovered entry must be a 4-digit spec id (got ${JSON.stringify(value)}).`,
           "error",
           PROTO_JSON_REL,
@@ -40,7 +40,7 @@ export async function validateSpecIdLinkage(root: string, config: QfaiConfig): P
     if (!knownSpecIds.has(specId)) {
       issues.push(
         issue(
-          "QFAI-PROT2-008",
+          "QFAI-PROT-008",
           `prototyping.json specsCovered references missing spec-${specId}.`,
           "error",
           PROTO_JSON_REL,

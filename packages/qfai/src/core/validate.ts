@@ -35,7 +35,6 @@ import {
   validateMermaidEnforcement,
   validateOrphanProhibition,
   validatePrototypingEvidence,
-  validatePrototypingEvidenceV3,
   validateStateGate,
   validateCompletionCertificateIssues,
   validateConfigReferenceIntegrity,
@@ -179,8 +178,7 @@ async function runPrototypingValidators(
 ): Promise<Issue[]> {
   return [
     ...(await runUiuxValidators(root, config, platformOption)),
-    ...validatePrototypingEvidence(root, config),
-    ...(await validatePrototypingEvidenceV3(root, config)),
+    ...(await validatePrototypingEvidence(root, config)),
     ...(await validateUiEvidenceArtifacts(root, config)),
     ...(await validateRenderCritique(root, config)),
     ...(await validateDesignFidelity(root, config)),

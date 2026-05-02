@@ -4,7 +4,7 @@ import path from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import { validatePrototypingEvidenceV3 } from "../../src/core/validators/prototypingEvidenceV3.js";
+import { validatePrototypingEvidence } from "../../src/core/validators/prototypingEvidence.js";
 import type { QfaiConfig } from "../../src/core/config.js";
 
 const tempDirs: string[] = [];
@@ -14,7 +14,7 @@ const VALID_PROSE_CRITIQUE = Array.from(
 ).join(" ");
 
 async function newTempDir(): Promise<string> {
-  const dir = await mkdtemp(path.join(os.tmpdir(), "qfai-protov3-"));
+  const dir = await mkdtemp(path.join(os.tmpdir(), "qfai-prototyping-"));
   tempDirs.push(dir);
   return dir;
 }
@@ -88,16 +88,16 @@ const validIter = (index: number, allExceptional = false, slop: string[] = []) =
   },
 });
 
-describe("validatePrototypingEvidenceV3", () => {
+describe("validatePrototypingEvidence", () => {
   it("emits no issues when prototyping.json is missing (silent)", async () => {
     const root = await newTempDir();
-    const issues = await validatePrototypingEvidenceV3(root, makeConfig());
+    const issues = await validatePrototypingEvidence(root, makeConfig());
     expect(issues).toEqual([]);
   });
 
-  it("emits QFAI-PROT2-001 when prototyping.json is missing for a UI-bearing prototyping spec", async () => {
+  it("emits QFAI-PROT-001 when prototyping.json is missing for a UI-bearing prototyping spec", async () => {
     const root = await newTempDir();
-    const specDir = path.join(root, ".qfai", "specs", "spec-0017");
+    const specDir = path.join(root, ".qfai", "specs", "spec-0001");
     await mkdir(specDir, { recursive: true });
     await writeFile(
       path.join(specDir, "01_Spec.md"),
@@ -105,107 +105,85 @@ describe("validatePrototypingEvidenceV3", () => {
       "utf-8",
     );
 
-    const issues = await validatePrototypingEvidenceV3(root, makeConfig());
-    expect(issues.map((issue) => issue.code)).toEqual(["QFAI-PROT2-001"]);
+    const issues = await validatePrototypingEvidence(root, makeConfig());
+    expect(issues.map((issue) => issue.code)).toEqual(["QFAI-PROT-001"]);
   });
 
-  // QFAI:SPEC-0017:TC-0017-0015
-  it("emits QFAI-PROT2-001 when prototyping.json is unparseable", async () => {
+  it("emits QFAI-PROT-001 when prototyping.json is unparseable", async () => {
     const root = await newTempDir();
     const dir = path.join(root, ".qfai/evidence/prototyping");
     await mkdir(dir, { recursive: true });
     await writeFile(path.join(dir, "prototyping.json"), "{not json", "utf-8");
-    const issues = await validatePrototypingEvidenceV3(root, makeConfig());
-    expect(issues.some((i) => i.code === "QFAI-PROT2-001")).toBe(true);
+    const issues = await validatePrototypingEvidence(root, makeConfig());
+    expect(issues.some((i) => i.code === "QFAI-PROT-001")).toBe(true);
   });
 
-  // QFAI:SPEC-0017:TC-0017-0016
-  it("emits QFAI-PROT2-002 when schemaVersion is not 3.0", async () => {
+  it("emits QFAI-PROT-003 when iterations[] is empty", async () => {
     const root = await newTempDir();
     await seedPrototypingJson(root, {
-      schemaVersion: "2.0",
-      specsCovered: ["0017"],
-      iterations: [validIter(0)],
-      acceptedIterationIndex: 0,
-      stopReason: null,
-    });
-    const issues = await validatePrototypingEvidenceV3(root, makeConfig());
-    expect(issues.some((i) => i.code === "QFAI-PROT2-002")).toBe(true);
-  });
-
-  it("emits QFAI-PROT2-003 when iterations[] is empty", async () => {
-    const root = await newTempDir();
-    await seedPrototypingJson(root, {
-      schemaVersion: "3.0",
-      specsCovered: ["0017"],
+      specsCovered: ["0001"],
       iterations: [],
       acceptedIterationIndex: -1,
       stopReason: null,
     });
-    const issues = await validatePrototypingEvidenceV3(root, makeConfig());
-    expect(issues.some((i) => i.code === "QFAI-PROT2-003")).toBe(true);
+    const issues = await validatePrototypingEvidence(root, makeConfig());
+    expect(issues.some((i) => i.code === "QFAI-PROT-003")).toBe(true);
   });
 
-  // QFAI:SPEC-0017:TC-0017-0017
-  it("emits QFAI-PROT2-004 when iterations[i].index is non-contiguous", async () => {
+  it("emits QFAI-PROT-004 when iterations[i].index is non-contiguous", async () => {
     const root = await newTempDir();
     await seedPrototypingJson(root, {
-      schemaVersion: "3.0",
-      specsCovered: ["0017"],
+      specsCovered: ["0001"],
       iterations: [validIter(0), { ...validIter(1), index: 5 }],
       acceptedIterationIndex: 1,
       stopReason: null,
     });
-    const issues = await validatePrototypingEvidenceV3(root, makeConfig());
-    expect(issues.some((i) => i.code === "QFAI-PROT2-004")).toBe(true);
+    const issues = await validatePrototypingEvidence(root, makeConfig());
+    expect(issues.some((i) => i.code === "QFAI-PROT-004")).toBe(true);
   });
 
-  it("emits QFAI-PROT2-005 when stopReason=max-iterations but last index !== 14", async () => {
+  it("emits QFAI-PROT-005 when stopReason=max-iterations but last index !== 14", async () => {
     const root = await newTempDir();
     await seedPrototypingJson(root, {
-      schemaVersion: "3.0",
-      specsCovered: ["0017"],
+      specsCovered: ["0001"],
       iterations: [validIter(0)],
       acceptedIterationIndex: 0,
       stopReason: "max-iterations",
     });
-    const issues = await validatePrototypingEvidenceV3(root, makeConfig());
-    expect(issues.some((i) => i.code === "QFAI-PROT2-005")).toBe(true);
+    const issues = await validatePrototypingEvidence(root, makeConfig());
+    expect(issues.some((i) => i.code === "QFAI-PROT-005")).toBe(true);
   });
 
-  it("emits QFAI-PROT2-005 when stopReason=axes-exceptional but last iter not all exceptional", async () => {
+  it("emits QFAI-PROT-005 when stopReason=axes-exceptional but last iter not all exceptional", async () => {
     const root = await newTempDir();
     await seedPrototypingJson(root, {
-      schemaVersion: "3.0",
-      specsCovered: ["0017"],
+      specsCovered: ["0001"],
       iterations: [validIter(0, false)],
       acceptedIterationIndex: 0,
       stopReason: "axes-exceptional",
     });
-    const issues = await validatePrototypingEvidenceV3(root, makeConfig());
-    expect(issues.some((i) => i.code === "QFAI-PROT2-005")).toBe(true);
+    const issues = await validatePrototypingEvidence(root, makeConfig());
+    expect(issues.some((i) => i.code === "QFAI-PROT-005")).toBe(true);
   });
 
   it("emits structured issues instead of throwing when stopReason=axes-exceptional and the last iter is malformed", async () => {
     const root = await newTempDir();
     await seedPrototypingJson(root, {
-      schemaVersion: "3.0",
-      specsCovered: ["0017"],
+      specsCovered: ["0001"],
       iterations: [validIter(0), { index: 1, commitSha: "b".repeat(40), scores: null }],
       acceptedIterationIndex: 1,
       stopReason: "axes-exceptional",
     });
-    const issues = await validatePrototypingEvidenceV3(root, makeConfig());
-    expect(issues.some((i) => i.code === "QFAI-PROT2-002")).toBe(true);
-    expect(issues.some((i) => i.code === "QFAI-PROT2-005")).toBe(true);
+    const issues = await validatePrototypingEvidence(root, makeConfig());
+    expect(issues.some((i) => i.code === "QFAI-PROT-002")).toBe(true);
+    expect(issues.some((i) => i.code === "QFAI-PROT-005")).toBe(true);
   });
 
-  it("emits QFAI-PROT2-002 when slop is present but originality exceeds acceptable", async () => {
+  it("emits QFAI-PROT-002 when slop is present but originality exceeds acceptable", async () => {
     const root = await newTempDir();
     const iter = validIter(0, false, ["slop-001-shadcn-zinc"]);
     await seedPrototypingJson(root, {
-      schemaVersion: "3.0",
-      specsCovered: ["0017"],
+      specsCovered: ["0001"],
       iterations: [
         {
           ...iter,
@@ -218,74 +196,70 @@ describe("validatePrototypingEvidenceV3", () => {
       acceptedIterationIndex: 0,
       stopReason: null,
     });
-    const issues = await validatePrototypingEvidenceV3(root, makeConfig());
+    const issues = await validatePrototypingEvidence(root, makeConfig());
     expect(
       issues.some(
         (i) =>
-          i.code === "QFAI-PROT2-002" &&
+          i.code === "QFAI-PROT-002" &&
           i.message.includes("scores.originality") &&
           i.message.includes("slopPatternsDetected"),
       ),
     ).toBe(true);
   });
 
-  it("emits QFAI-PROT2-002 when proseCritique is outside the 200-500 word range", async () => {
+  it("emits QFAI-PROT-002 when proseCritique is outside the 200-500 word range", async () => {
     const root = await newTempDir();
     await seedPrototypingJson(root, {
-      schemaVersion: "3.0",
-      specsCovered: ["0017"],
+      specsCovered: ["0001"],
       iterations: [{ ...validIter(0), proseCritique: "too short" }],
       acceptedIterationIndex: 0,
       stopReason: null,
     });
-    const issues = await validatePrototypingEvidenceV3(root, makeConfig());
+    const issues = await validatePrototypingEvidence(root, makeConfig());
     expect(
       issues.some(
         (i) =>
-          i.code === "QFAI-PROT2-002" &&
+          i.code === "QFAI-PROT-002" &&
           i.message.includes("proseCritique") &&
           i.message.includes("200-500"),
       ),
     ).toBe(true);
   });
 
-  it("emits QFAI-PROT2-006 when iterations.length > 15", async () => {
+  it("emits QFAI-PROT-006 when iterations.length > 15", async () => {
     const root = await newTempDir();
     const iters = Array.from({ length: 16 }, (_, i) => validIter(i));
     await seedPrototypingJson(root, {
-      schemaVersion: "3.0",
-      specsCovered: ["0017"],
+      specsCovered: ["0001"],
       iterations: iters,
       acceptedIterationIndex: 15,
       stopReason: null,
     });
-    const issues = await validatePrototypingEvidenceV3(root, makeConfig());
-    expect(issues.some((i) => i.code === "QFAI-PROT2-006")).toBe(true);
+    const issues = await validatePrototypingEvidence(root, makeConfig());
+    expect(issues.some((i) => i.code === "QFAI-PROT-006")).toBe(true);
   });
 
-  it("emits QFAI-PROT2-007 when acceptedIterationIndex is not iterations.length-1", async () => {
+  it("emits QFAI-PROT-007 when acceptedIterationIndex is not iterations.length-1", async () => {
     const root = await newTempDir();
     await seedPrototypingJson(root, {
-      schemaVersion: "3.0",
-      specsCovered: ["0017"],
+      specsCovered: ["0001"],
       iterations: [validIter(0), validIter(1)],
       acceptedIterationIndex: 0, // should be 1
       stopReason: null,
     });
-    const issues = await validatePrototypingEvidenceV3(root, makeConfig());
-    expect(issues.some((i) => i.code === "QFAI-PROT2-007")).toBe(true);
+    const issues = await validatePrototypingEvidence(root, makeConfig());
+    expect(issues.some((i) => i.code === "QFAI-PROT-007")).toBe(true);
   });
 
-  it("returns no issues for a valid 3.0 record", async () => {
+  it("returns no issues for a valid record", async () => {
     const root = await newTempDir();
     await seedPrototypingJson(root, {
-      schemaVersion: "3.0",
-      specsCovered: ["0017"],
+      specsCovered: ["0001"],
       iterations: [validIter(0), validIter(1, true)],
       acceptedIterationIndex: 1,
       stopReason: "axes-exceptional",
     });
-    const issues = await validatePrototypingEvidenceV3(root, makeConfig());
+    const issues = await validatePrototypingEvidence(root, makeConfig());
     expect(issues).toEqual([]);
   });
 });

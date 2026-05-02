@@ -29,9 +29,8 @@ const baseInput = (
 });
 
 describe("buildEvaluatorReview", () => {
-  it("returns a v3.0 schema review when input is valid", () => {
+  it("returns a review when input is valid", () => {
     const review = buildEvaluatorReview(baseInput());
-    expect(review.schemaVersion).toBe("3.0");
     expect(review.iterIndex).toBe(0);
     expect(review.scores.designQuality).toBe("acceptable");
   });

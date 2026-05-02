@@ -223,12 +223,6 @@ export type ReportFullHarnessExecution = {
 };
 
 export type ReportRoundLifecycle = {
-  // v2.0 (spec-0017 P14): the v1.x ReportRoundLifecycle was anchored
-  // to the funnel + polish cycle taxonomy that is now removed. The shape
-  // is retained as a placeholder so legacy callers can opt in if they
-  // explicitly populate it, but the canonical /qfai-prototyping summary
-  // no longer emits it.
-  schemaVersion: "2.0";
   iterations: number;
 };
 
@@ -1242,9 +1236,8 @@ export function formatReportMarkdown(
 
     if (data.prototyping.roundLifecycle) {
       const lifecycle = data.prototyping.roundLifecycle;
-      lines.push("### prototyping.lifecycle (v2.0)");
+      lines.push("### prototyping.lifecycle");
       lines.push("");
-      lines.push(`- schemaVersion: ${lifecycle.schemaVersion}`);
       lines.push(`- iterations: ${lifecycle.iterations}`);
       lines.push("");
     }
@@ -1714,13 +1707,12 @@ async function collectPrototypingSummary(
 
   return {
     roundLifecycle: {
-      schemaVersion: "2.0",
       iterations: iterations.length,
     },
     mode: {
       effective: "single-thread-loop",
       source: ".qfai/evidence/prototyping/prototyping.json",
-      rationale: "spec-0017 v2.0 uses a fixed single-thread iteration loop.",
+      rationale: "the single-thread iteration loop is fixed.",
       surface: config.uiux?.platform ?? "unknown",
     },
     evidence: {
@@ -1735,7 +1727,7 @@ async function collectPrototypingSummary(
       uiFidelity: { present: false, required: false },
       renderBundle: { present: false, required: false },
       browserQaBundle: { present: false, required: false },
-      obligationProfile: "v2.0-single-thread-loop",
+      obligationProfile: "single-thread-loop",
     },
     warnings,
   };

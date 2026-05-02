@@ -13,7 +13,6 @@ export { validateContractReferences } from "./contractReferences.js";
 export { validateAtddCodeTraceability } from "./atddCodeTraceability.js";
 export { validateOrphanProhibition } from "./orphanProhibition.js";
 export { validatePrototypingEvidence } from "./prototypingEvidence.js";
-export { validatePrototypingEvidenceV3 } from "./prototypingEvidenceV3.js";
 export { validateDelegationMapIssues } from "./prototyping/delegationMap.js";
 export { validateStateGate } from "./prototyping/stateGate.js";
 export { validateCompletionCertificateIssues } from "./prototyping/completionCertificate.js";

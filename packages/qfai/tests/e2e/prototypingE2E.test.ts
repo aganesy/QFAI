@@ -1,13 +1,12 @@
 /**
- * /qfai-prototyping v2.0 single-thread evolution loop — end-to-end test
- * (spec-0017 TC-0017-E2E-0001).
+ * /qfai-prototyping single-thread evolution loop — end-to-end test.
  *
  * Drives the iterate command across a multi-cycle scenario in a tmp
  * workspace and asserts the deterministic stop conditions:
  *   cycle 0 (seed)        -> exit 0, iter-00/iterate-plan.json written
  *   cycle 1..2 (continue) -> exit 0
- *   cycle 3 (convergence) -> exit 64 once a v3.0 prototyping.json with
- *                            a fully-exceptional last iter is in place
+ *   cycle 3 (convergence) -> exit 64 once a prototyping.json with a
+ *                            fully-exceptional last iter is in place
  */
 
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
@@ -21,7 +20,7 @@ import { runPrototypingIterate } from "../../src/cli/commands/prototypingIterate
 const tempDirs: string[] = [];
 
 async function newTempDir(): Promise<string> {
-  const dir = await mkdtemp(path.join(os.tmpdir(), "qfai-proto-v2-e2e-"));
+  const dir = await mkdtemp(path.join(os.tmpdir(), "qfai-proto-e2e-"));
   tempDirs.push(dir);
   return dir;
 }
@@ -64,11 +63,11 @@ async function seedRepo(root: string): Promise<void> {
     ].join("\n"),
     "utf-8",
   );
-  const specDir = path.join(root, ".qfai/specs/spec-0017");
+  const specDir = path.join(root, ".qfai/specs/spec-0001");
   await mkdir(specDir, { recursive: true });
   await writeFile(
     path.join(specDir, "01_Spec.md"),
-    "# 01 Spec — v2 e2e\n\n- Spec: spec-0017\n- Parent: CAP-0017\nsurface_type: ui-bearing\n",
+    "# 01 Spec — e2e\n\n- Spec: spec-0001\n- Parent: CAP-0001\nsurface_type: ui-bearing\n",
     "utf-8",
   );
 }
@@ -86,8 +85,7 @@ async function seedIterations(
   await writeFile(
     path.join(dir, "prototyping.json"),
     JSON.stringify({
-      schemaVersion: "3.0",
-      specsCovered: ["0017"],
+      specsCovered: ["0001"],
       iterations: iters.map((it) => ({
         index: it.index,
         commitSha: "a".repeat(40),
@@ -119,8 +117,7 @@ async function seedIterations(
   );
 }
 
-// QFAI:SPEC-0017:TC-0017-E2E-0001
-describe("/qfai-prototyping v2.0 end-to-end", () => {
+describe("/qfai-prototyping end-to-end", () => {
   it("cycles 0..3 progress through seed -> continue -> continue -> convergence", async () => {
     const root = await newTempDir();
     await seedRepo(root);

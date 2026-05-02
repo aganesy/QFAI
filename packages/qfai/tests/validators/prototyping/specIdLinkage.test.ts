@@ -67,7 +67,7 @@ async function seedPrototypingJson(root: string, specsCovered: unknown[]): Promi
   await mkdir(dir, { recursive: true });
   await writeFile(
     path.join(dir, "prototyping.json"),
-    JSON.stringify({ schemaVersion: "3.0", specsCovered, iterations: [] }),
+    JSON.stringify({ specsCovered, iterations: [] }),
     "utf-8",
   );
 }
@@ -75,7 +75,7 @@ async function seedPrototypingJson(root: string, specsCovered: unknown[]): Promi
 describe("validateSpecIdLinkage", () => {
   it("returns no issues when prototyping.json is missing", async () => {
     const root = await newTempDir();
-    await seedSpec(root, "0017");
+    await seedSpec(root, "0001");
 
     const issues = await validateSpecIdLinkage(root, makeConfig());
     expect(issues).toEqual([]);
@@ -83,31 +83,31 @@ describe("validateSpecIdLinkage", () => {
 
   it("accepts specsCovered entries that reference existing specs", async () => {
     const root = await newTempDir();
-    await seedSpec(root, "0017");
-    await seedPrototypingJson(root, ["0017", "spec-0017"]);
+    await seedSpec(root, "0001");
+    await seedPrototypingJson(root, ["0001", "spec-0001"]);
 
     const issues = await validateSpecIdLinkage(root, makeConfig());
     expect(issues).toEqual([]);
   });
 
-  it("emits QFAI-PROT2-008 when specsCovered references a missing spec", async () => {
+  it("emits QFAI-PROT-008 when specsCovered references a missing spec", async () => {
     const root = await newTempDir();
-    await seedSpec(root, "0017");
+    await seedSpec(root, "0001");
     await seedPrototypingJson(root, ["9999"]);
 
     const issues = await validateSpecIdLinkage(root, makeConfig());
     expect(issues).toHaveLength(1);
-    expect(issues[0]?.code).toBe("QFAI-PROT2-008");
+    expect(issues[0]?.code).toBe("QFAI-PROT-008");
     expect(issues[0]?.message).toContain("spec-9999");
   });
 
-  it("emits QFAI-PROT2-008 when specsCovered has a malformed spec id", async () => {
+  it("emits QFAI-PROT-008 when specsCovered has a malformed spec id", async () => {
     const root = await newTempDir();
-    await seedSpec(root, "0017");
+    await seedSpec(root, "0001");
     await seedPrototypingJson(root, ["abc"]);
 
     const issues = await validateSpecIdLinkage(root, makeConfig());
     expect(issues).toHaveLength(1);
-    expect(issues[0]?.code).toBe("QFAI-PROT2-008");
+    expect(issues[0]?.code).toBe("QFAI-PROT-008");
   });
 });

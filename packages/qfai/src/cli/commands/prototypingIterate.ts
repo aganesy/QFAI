@@ -50,7 +50,6 @@ export type RunPrototypingIterateOptions = {
 };
 
 export type IteratePlan = {
-  schemaVersion: "1.0";
   cycle: number;
   specs: string[];
   paths: {
@@ -120,7 +119,6 @@ export async function runPrototypingIterate(
   await mkdir(dir, { recursive: true });
 
   const plan: IteratePlan = {
-    schemaVersion: "1.0",
     cycle: options.cycle,
     specs,
     paths: {

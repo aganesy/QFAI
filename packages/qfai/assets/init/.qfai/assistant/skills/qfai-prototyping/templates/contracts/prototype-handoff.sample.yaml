@@ -1,8 +1,7 @@
-# prototype-handoff.yaml v2.0 (spec-0017).
+# prototype-handoff.yaml.
 # Produced by /qfai-prototyping post-loop. Consumed by /qfai-implement.
-# v1.x preserve/adapt/copy three-category split is removed: the final
-# artifact itself is the SSOT, not this handoff yaml.
-schemaVersion: "2.0"
+# The final artifact itself is the SSOT; this handoff yaml is a thin
+# pointer plus implementation notes.
 finalIterIndex: 8
 finalArtifact: ".qfai/prototypes/final/index.html"
 extractedDesignSystem: ".qfai/contracts/design/design-system.yaml"
