@@ -206,9 +206,7 @@ export type ReportSurfaceClassification = {
 };
 
 export type ReportFullHarnessExecution = {
-  // v2.0 (spec-0017 P14): mode tier removed. The single-thread loop is
-  // the only mode; this literal is retained for transitional report
-  // schema compatibility but the field is no longer populated.
+  // The only supported mode is the single-thread loop.
   mode: "single-thread-loop";
   iterations: number;
   terminationReason: string;
@@ -1374,7 +1372,7 @@ export function formatReportMarkdown(
     lines.push("");
     lines.push("### prototyping.observability");
     lines.push("");
-    lines.push("- status: foundation-only (not integrated into blocking validation in v1.7.14)");
+    lines.push("- status: foundation-only (not integrated into blocking validation)");
     // Warnings
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
     if (data.prototyping.warnings && data.prototyping.warnings.length > 0) {

@@ -1,5 +1,5 @@
 /**
- * Completion certificate validator (v1.8.4 Phase 5).
+ * Completion certificate validator.
  *
  * - QFAI-PROT-335: prototyping.json claims completion (`completionClaimed=true`
  *   or `phase==="completed"`) but `.qfai/evidence/prototyping/completion-certificate.json`

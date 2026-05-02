@@ -315,7 +315,7 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         break;
       }
       case "--check": {
-        // v1.8.4: only used by `qfai prototyping certify --check`.
+        // only used by `qfai prototyping certify --check`.
         // The flag takes no value; presence flips the boolean.
         options.prototypingCheckOnly = true;
         break;

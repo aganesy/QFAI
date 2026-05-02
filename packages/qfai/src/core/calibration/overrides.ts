@@ -4,10 +4,8 @@
  * producing an effective configuration.
  *
  * When overrides are absent, system defaults are preserved with no error.
- *
- * v2.0 (spec-0017 P14): the per-mode override map was removed alongside
- * the v1.x mode tier; iteration count is global (15) via
- * core/prototyping/iteration.ts#MAX_ITERATIONS.
+ * Iteration count is fixed globally to MAX_ITERATIONS in
+ * core/prototyping/iteration.ts.
  */
 
 import type { CalibrationPack, EffectiveCalibrationConfig } from "./types.js";

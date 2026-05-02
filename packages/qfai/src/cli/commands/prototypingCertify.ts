@@ -1,6 +1,5 @@
 /**
- * `qfai prototyping certify [--check]` and `qfai prototyping show-spec`
- * (v1.8.4 Phase 5).
+ * `qfai prototyping certify [--check]` and `qfai prototyping show-spec`.
  *
  * `certify` is the only writer of `.qfai/evidence/prototyping/completion-certificate.json`.
  * It refuses to write the artifact unless every gate passes:
@@ -14,7 +13,7 @@
  * way to claim a prototyping run is complete.
  *
  * `show-spec` prints the resolved primary prototyping spec (config or
- * marker-scan based) so AI consumers no longer hardcode `spec-0012`.
+ * marker-scan based) so AI consumers do not hardcode a specific spec id.
  */
 
 import { readFile } from "node:fs/promises";

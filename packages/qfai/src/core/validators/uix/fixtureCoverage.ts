@@ -1,9 +1,7 @@
 /**
- * Fixture coverage validator — spec-0037
+ * Fixture coverage validator.
  *
  * Verifies that each new validator has pass/fail/non-UI fixture tests.
- *
- * BR-0037-0015
  */
 export type FixtureCoverageResult = {
   validator: string;

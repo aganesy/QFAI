@@ -6,10 +6,8 @@ import { findLatestDiscussionPackDir } from "../discussionPack.js";
 import type { Issue, IssueSeverity } from "../types.js";
 import { issue, readSafe } from "./utils.js";
 
-// v2.0 (spec-0017 P14): 33_exploration_rubric.md and
-// 34_evaluator_calibration.md were removed alongside their normalized
-// contracts. Axes are global constants in
-// core/prototyping/iteration.ts.
+// Evaluation axes are global constants in core/prototyping/iteration.ts
+// and are not authored as discussion sidecars.
 const REQUIRED_SIDECARS = [
   "uiux/30_exploration_brief.md",
   "uiux/31_reference_pool.md",
@@ -81,10 +79,9 @@ export async function validateDiscussionDesignHardening(
     )),
   );
 
-  // v2.0 (spec-0017 P14): the v1.x 33_exploration_rubric and
-  // 34_evaluator_calibration section validators were removed. The axes
-  // they enforced are now global constants encoded in
-  // core/prototyping/iteration.ts (OrdinalScore enum + 4 named axes).
+  // Axes are global constants encoded in core/prototyping/iteration.ts
+  // (OrdinalScore enum + 4 named axes); they are not authored as
+  // discussion sidecars.
   issues.push(...(await validateReferencePool(packRoot)));
 
   const antiGoals = await readSafe(path.join(packRoot, "uiux/32_design_anti_goals.md"));
@@ -100,8 +97,6 @@ export async function validateDiscussionDesignHardening(
     );
   }
 
-  // v2.0 (spec-0017 P14): the best-of-history requirement was removed
-  // alongside the funnel; the latest iter is always accepted.
   return issues;
 }
 

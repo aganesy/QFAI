@@ -1,5 +1,5 @@
 /**
- * Doc vocabulary scan validator - spec-0037
+ * Doc vocabulary scan validator.
  *
  * Scans documentation files for allowed/prohibited maturity terms
  * and detects contradictions across documents.

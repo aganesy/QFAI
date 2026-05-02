@@ -1,10 +1,8 @@
 /**
- * Delegation map validator — verifies prototyping.json delegationMap entries
- * against the SKILL.md Delegation Scope Table allowed roles per category.
- *
- * v1.8.4 Phase 9 BREAKING: removed the legacy `validateDelegationMap` /
- * `DelegationViolationIssue` exports; callers MUST use
- * `validateDelegationMapIssues` which returns standard `Issue[]`.
+ * Delegation map validator — verifies prototyping.json delegationMap
+ * entries against the SKILL.md Delegation Scope Table allowed roles per
+ * category. Callers use `validateDelegationMapIssues` which returns
+ * standard `Issue[]`.
  */
 
 import type { Issue } from "../../types.js";

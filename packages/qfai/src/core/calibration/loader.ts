@@ -1,9 +1,9 @@
 /**
- * Calibration pack loader (v2.0).
+ * Calibration pack loader.
  *
- * v1.x BreakthroughConfig / plateauDelta / plateauLookback fields removed
- * in P3 (spec-0017). v2.0 fixes iteration count globally to 15 in
- * `core/prototyping/iteration.ts#MAX_ITERATIONS`.
+ * Iteration count is fixed globally via
+ * `core/prototyping/iteration.ts#MAX_ITERATIONS` and is not a calibration
+ * field.
  */
 
 import { readFile, stat } from "node:fs/promises";

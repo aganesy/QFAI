@@ -52,8 +52,8 @@ async function validateSpecTddList(
 
   // Check 1: File existence
   if (!(await exists(filePath))) {
-    // tdd/test-list.md is optional for specs that predate v1.6.0.
-    // Only emit a warning so existing specs are not broken.
+    // tdd/test-list.md is optional for older specs; emit a warning so
+    // existing specs are not broken.
     issues.push(
       issue(
         "TDDLIST_MISSING",

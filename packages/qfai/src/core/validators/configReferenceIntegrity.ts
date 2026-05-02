@@ -1,15 +1,13 @@
 /**
- * Config reference integrity validator (v1.8.4 Phase 7).
+ * Config reference integrity validator.
  *
  * Verifies that values in `qfai.config.yaml` resolve to real filesystem
- * entities. Closes ID-linkage gaps from the Phase 7 audit:
+ * entities:
  *   - QFAI-CFG-LINK-001: prototyping.primarySpecId points to a missing spec dir
  *   - QFAI-CFG-LINK-002: paths.* points to a missing directory (warning)
  *   - QFAI-CFG-LINK-003: prototyping.calibration.packPath points to a missing dir
  *
- * RR root cause class: dangling IDs in config that previously went undetected.
- * `prototyping.primarySpecId="9999"` is a structural twin of the
- * `review-bundle.json.spec="0017"` bug that triggered the v1.8.4 audit.
+ * Catches dangling IDs in config that would otherwise go undetected.
  */
 
 import { stat } from "node:fs/promises";

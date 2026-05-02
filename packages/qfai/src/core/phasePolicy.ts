@@ -8,7 +8,7 @@ export function isCiEnvironment(env: NodeJS.ProcessEnv = process.env): boolean {
 
 // Profiles permitted to run inside CI. `full` and `verify` cover the standard
 // downstream gate; `tdd` is allowed because QFAI's own ci.yml dogfoods the
-// test-todo-stub gate via `qfai validate --profile tdd` (spec-0017 REQ-0009),
+// test-todo-stub gate via `qfai validate --profile tdd`,
 // and `tdd` is a comprehensive (not narrowing) profile from the perspective
 // of test-side gates. Narrow phase profiles (discussion / sdd / prototyping /
 // atdd) remain rejected to prevent CI from accidentally skipping unrelated

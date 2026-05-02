@@ -23,8 +23,6 @@ import { issue, readSafe } from "./utils.js";
 const RENDERED_KEYWORDS_RE = /\b(rendered|screenshot|html\b|preview|visual\s*review)/i;
 const SPEC_RE = /\b(01_spec|03_acceptance-criteria|spec-|\bspec\b)\b/i;
 const EXPLORATION_BRIEF_RE = /\b(exploration-brief|exploration\s*brief|30_exploration_brief)\b/i;
-// v2.0: EVAL_RUBRIC_RE / EVAL_CALIBRATION_RE / SELECTED_DIRECTION_RE
-// were removed in spec-0017 P14 (those contracts no longer exist).
 const DESIGN_SYSTEM_RE = /\b(design-system|design\s*system|designsystemchecklist)\b/i;
 const PROTOTYPE_HANDOFF_RE = /\b(prototype-handoff|prototype\s*handoff)\b/i;
 const UI_CONTRACTS_RE = /\b(contracts\/ui|ui\s*contracts|screen\s*contracts)\b/i;
@@ -75,11 +73,9 @@ export async function validateRenderCritique(root: string, config: QfaiConfig): 
     }
   }
 
-  // --- TDD-0001: Canonical spec/contract reference missing in downstream (QFAI-CRIT-002) ---
-  // v2.0 (spec-0017 P14): only spec inputs, exploration-brief,
-  // design-system, prototype-handoff, and UI contracts are required.
-  // The v1.x rubric / calibration / selected-direction references were
-  // removed alongside their contracts.
+  // --- Canonical spec/contract reference missing in downstream (QFAI-CRIT-002) ---
+  // Only spec inputs, exploration-brief, design-system, prototype-handoff,
+  // and UI contracts are required.
   for (const sf of skillFiles) {
     const content = await readSafe(sf);
     if (
@@ -152,9 +148,7 @@ export async function validateRenderCritique(root: string, config: QfaiConfig): 
   for (const sf of skillFiles) {
     const content = await readSafe(sf);
     if (content.length > 0) {
-      // v2.0 (spec-0017 P14): the v1.x rubric / calibration /
-      // selected-direction read-order tokens are removed. The v2.0 read
-      // order is spec inputs + exploration-brief + design-system +
+      // Read order: spec inputs + exploration-brief + design-system +
       // prototype-handoff + UI contracts.
       const hasSpec = SPEC_RE.test(content);
       const hasExplorationBrief = EXPLORATION_BRIEF_RE.test(content);

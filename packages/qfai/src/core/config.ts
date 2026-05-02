@@ -18,7 +18,7 @@ export type QfaiPaths = {
   outDir: string;
   skillsDir: string;
   /**
-   * @deprecated v1.3.13 以降は paths.skillsDir を使用する。
+   * @deprecated paths.skillsDir を使用する。
    * 互換性のため読み込みのみ継続し、検証の主経路では使用しない。
    */
   promptsDir: string;
@@ -38,7 +38,7 @@ export type QfaiValidationConfig = {
     maxE2eScenarioCount: number | null;
     /**
      * When true (default), `qfai validate` rejects `it.todo` / `test.todo` /
-     * `describe.todo` stubs in test files (spec-0012, QFAI-TEST-001).
+     * `describe.todo` stubs in test files (QFAI-TEST-001).
      * Set to false to opt out while migrating an existing project.
      */
     forbidTestTodoStubs: boolean;
@@ -85,8 +85,8 @@ export type QfaiPrototypingCalibrationConfig = {
 export type QfaiPrototypingExecutionConfig = {
   targetUrl?: string | null;
   /**
-   * Browser tool handed to the AI evaluator sub-agent (spec-0012).
-   * The only accepted value is `"playwright-cli"`.
+   * Browser tool handed to the AI evaluator sub-agent. The only accepted
+   * value is `"playwright-cli"`.
    */
   browserTool: "playwright-cli";
 };
@@ -95,10 +95,10 @@ export type QfaiPrototypingConfig = {
   calibration?: QfaiPrototypingCalibrationConfig;
   execution?: QfaiPrototypingExecutionConfig;
   /**
-   * v1.8.4: explicit primary spec ID for `/qfai-prototyping`. If omitted,
+   * Explicit primary spec ID for `/qfai-prototyping`. If omitted,
    * `resolvePrimaryPrototypingSpec` auto-detects via the prototyping marker
    * (`surface_type: ui-bearing`) in `01_Spec.md`. Format: 4-digit string,
-   * e.g. `"0012"`.
+   * e.g. `"0001"`.
    */
   primarySpecId?: string;
 };
@@ -566,7 +566,7 @@ function normalizePrototypingExecution(
     return base ? { ...base } : undefined;
   }
 
-  // spec-0012: legacy keys are rejected, not silently aliased.
+  // legacy keys are rejected, not silently aliased.
   for (const legacyKey of ["browserProvider", "renderProvider"] as const) {
     if (raw[legacyKey] !== undefined) {
       issues.push(

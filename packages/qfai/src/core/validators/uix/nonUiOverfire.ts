@@ -1,10 +1,8 @@
 /**
- * Non-UI over-fire regression validator — spec-0037
+ * Non-UI over-fire regression validator.
  *
  * Verifies that all UI-bearing validators produce zero fires
  * when run against a non-UI project fixture.
- *
- * BR-0037-0016
  */
 import type { QfaiConfig } from "../../config.js";
 import type { Issue } from "../../types.js";

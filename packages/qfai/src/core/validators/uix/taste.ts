@@ -1,10 +1,8 @@
 /**
- * UIX-VAL taste interview validator - spec-0034
+ * UIX-VAL taste interview validator.
  *
- * Validates that the design taste interview artifact exists
- * and contains all 10 required sections with non-empty content.
- *
- * BR-0034-0001, BR-0034-0002, BR-0034-0003, BR-0034-0004
+ * Validates that the design taste interview artifact exists and contains
+ * all 10 required sections with non-empty content.
  */
 import path from "node:path";
 

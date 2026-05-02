@@ -346,9 +346,8 @@ export async function validateDesignAudit(root: string, config: QfaiConfig): Pro
 
   const contractsPath = packRoot ? path.join(packRoot, "uiux", "40_screen_contracts.md") : null;
   const contractsContent = contractsPath ? await readSafe(contractsPath) : "";
-  // v2.0 (spec-0017 P14): selected-direction.yaml was removed alongside
-  // the funnel. The audit now decides early-return based on UI contracts
-  // and screen contracts only.
+  // The audit decides early-return based on UI contracts and screen
+  // contracts only.
   if (uiContractScreens.length === 0 && !contractsContent) return [];
 
   const findings: DesignFinding[] = [];

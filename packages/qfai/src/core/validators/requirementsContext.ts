@@ -14,7 +14,7 @@ const CONTEXT_FILES = {
 const DISCUSSION_PACK_PATTERN = /^discussion-(\d{17}|\d{4})$/i;
 
 /**
- * requirements context validator (v1.4.2+ package mode).
+ * requirements context validator (package mode).
  *
  * Goals:
  * - Treat REQUIRE-XXXX packages as first-class inputs.
@@ -59,7 +59,7 @@ export async function validateRequirementsContext(
         "change",
         [
           "次のいずれかが必要です:",
-          "- discussion pack（v1.5.0+ 推奨）",
+          "- discussion pack（推奨）",
           "- legacy business-flows.md（Mermaid sequenceDiagram）",
           "テンプレ生成の推奨:",
           "- /qfai-discussion を実行して discussion 配下の成果物を生成",
@@ -97,7 +97,7 @@ export async function validateRequirementsContext(
         isBusinessFlows
           ? [
               "discussion pack が存在しない場合、business-flows.md は必須です（Fail）。",
-              "または discussion pack を配置してください（v1.5.0+ 推奨）。",
+              "または discussion pack を配置してください（推奨）。",
               "テンプレ生成の推奨:",
               "- /qfai-discussion を実行し、discussion 配下の成果物を生成",
             ].join("\n")
@@ -166,7 +166,7 @@ export async function validateRequirementsContext(
             undefined,
             "change",
             [
-              "旧形式の `Steps:` 箇条書きは v1.3.15 から非推奨ではなく禁止です。",
+              "旧形式の `Steps:` 箇条書きは禁止です。",
               "BF step は Mermaid sequenceDiagram のメッセージ行で表現してください。",
             ].join("\n"),
           ),
@@ -216,7 +216,7 @@ export async function validateRequirementsContext(
           undefined,
           "change",
           [
-            "v1.3.1+ の推奨構造:",
+            "推奨構造:",
             "- business-flows.md の BF step を分割単位として spec pack / scenario に落とします。",
             "- require.md に Coverage Map を置き、in-scope BF step が必ず REQ/SPEC に紐づくことを保証します。",
             "対応例:",

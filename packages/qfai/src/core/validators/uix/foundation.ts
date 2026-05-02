@@ -1,5 +1,5 @@
 /**
- * Canonical UIX foundation validator — v1.7.14
+ * Canonical UIX foundation validator.
  *
  * Validates sidecar directory presence for UI-bearing specs.
  */
