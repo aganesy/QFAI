@@ -23,6 +23,9 @@ export type ParsedBrWithInvalidPriority = {
   line: number;
 };
 
+export const SPEC_STATUS_VALUES = ["active", "superseded", "deprecated", "removed"] as const;
+export type SpecStatus = (typeof SPEC_STATUS_VALUES)[number];
+
 export type ParsedSpec = {
   file: string;
   specId?: string;
@@ -31,7 +34,30 @@ export type ParsedSpec = {
   brsWithoutPriority: ParsedBrWithoutPriority[];
   brsWithInvalidPriority: ParsedBrWithInvalidPriority[];
   contractRefs: ParsedContractRefs;
+  status?: SpecStatus;
+  statusRaw?: string;
+  supersededBy?: string;
+  deprecatedAt?: string;
 };
+
+/**
+ * Extract a bullet field value from a markdown spec header block of the form
+ * `- Name: value`. Returns undefined when the bullet is absent or marked as
+ * placeholder ("-").
+ */
+export function extractBulletField(md: string, name: string): string | undefined {
+  const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const re = new RegExp(`^\\s*-\\s*${escaped}\\s*:\\s*(.+?)\\s*$`, "im");
+  const match = re.exec(md);
+  if (!match?.[1]) {
+    return undefined;
+  }
+  const value = match[1].trim();
+  if (value === "-" || value.length === 0) {
+    return undefined;
+  }
+  return value;
+}
 
 const SPEC_ID_RE = /\bSPEC-\d{4}\b/;
 const BR_LINE_RE = /^\s*(?:[-*]\s*)?\[(BR-\d{4}-\d{4})\]\[(P[0-3])\]\s*(.+)$/;
@@ -112,5 +138,22 @@ export function parseSpec(md: string, file: string): ParsedSpec {
   if (specId) {
     parsed.specId = specId;
   }
+
+  const statusRaw = extractBulletField(md, "Status");
+  if (statusRaw !== undefined) {
+    parsed.statusRaw = statusRaw;
+    if ((SPEC_STATUS_VALUES as readonly string[]).includes(statusRaw)) {
+      parsed.status = statusRaw as SpecStatus;
+    }
+  }
+  const supersededBy = extractBulletField(md, "Superseded-by");
+  if (supersededBy !== undefined) {
+    parsed.supersededBy = supersededBy;
+  }
+  const deprecatedAt = extractBulletField(md, "Deprecated-at");
+  if (deprecatedAt !== undefined) {
+    parsed.deprecatedAt = deprecatedAt;
+  }
+
   return parsed;
 }

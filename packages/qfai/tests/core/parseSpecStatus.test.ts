@@ -1,0 +1,66 @@
+import { describe, expect, it } from "vitest";
+
+import { extractBulletField, parseSpec } from "../../src/core/parse/spec.js";
+
+const HEADER = "# 01 Spec\n\n- Spec: spec-0042\n- Parent: CAP-0042\n";
+
+describe("extractBulletField", () => {
+  it("returns the trimmed value for a matching bullet", () => {
+    expect(extractBulletField("- Status: active", "Status")).toBe("active");
+  });
+
+  it("returns undefined when the bullet is missing", () => {
+    expect(extractBulletField("# heading\n", "Status")).toBeUndefined();
+  });
+
+  it("treats placeholder dash as undefined", () => {
+    expect(extractBulletField("- Superseded-by: -", "Superseded-by")).toBeUndefined();
+  });
+
+  it("handles names containing hyphens", () => {
+    expect(extractBulletField("- Deprecated-at: 2026-05-02", "Deprecated-at")).toBe("2026-05-02");
+  });
+
+  it("ignores values inside other lines", () => {
+    expect(extractBulletField("Notes: irrelevant Status: hidden", "Status")).toBeUndefined();
+  });
+});
+
+describe("parseSpec status fields", () => {
+  it("extracts active status with no extra fields", () => {
+    const md = `${HEADER}- Status: active\n`;
+    const parsed = parseSpec(md, "spec-0042/01_Spec.md");
+    expect(parsed.status).toBe("active");
+    expect(parsed.statusRaw).toBe("active");
+    expect(parsed.supersededBy).toBeUndefined();
+    expect(parsed.deprecatedAt).toBeUndefined();
+  });
+
+  it("extracts superseded status with Superseded-by reference", () => {
+    const md = `${HEADER}- Status: superseded\n- Superseded-by: spec-0099\n`;
+    const parsed = parseSpec(md, "spec-0042/01_Spec.md");
+    expect(parsed.status).toBe("superseded");
+    expect(parsed.supersededBy).toBe("spec-0099");
+  });
+
+  it("extracts deprecated status with date", () => {
+    const md = `${HEADER}- Status: deprecated\n- Deprecated-at: 2026-05-02\n`;
+    const parsed = parseSpec(md, "spec-0042/01_Spec.md");
+    expect(parsed.status).toBe("deprecated");
+    expect(parsed.deprecatedAt).toBe("2026-05-02");
+  });
+
+  it("preserves invalid status values in statusRaw but leaves status undefined", () => {
+    const md = `${HEADER}- Status: archived\n`;
+    const parsed = parseSpec(md, "spec-0042/01_Spec.md");
+    expect(parsed.statusRaw).toBe("archived");
+    expect(parsed.status).toBeUndefined();
+  });
+
+  it("treats missing Status bullet as undefined", () => {
+    const md = HEADER;
+    const parsed = parseSpec(md, "spec-0042/01_Spec.md");
+    expect(parsed.statusRaw).toBeUndefined();
+    expect(parsed.status).toBeUndefined();
+  });
+});

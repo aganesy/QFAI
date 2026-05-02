@@ -32,6 +32,7 @@ import {
   parseTestCaseIds,
   resolveAllowedLayerTagsFromPolicy,
 } from "../specPackParsers.js";
+import { parseSpec, SPEC_STATUS_VALUES, type ParsedSpec } from "../parse/spec.js";
 import { LAYER_TAGS } from "../testStrategyTags.js";
 import type { Issue } from "../types.js";
 import { issue } from "./utils.js";
@@ -106,9 +107,12 @@ export async function validateSpecPacks(root: string, config: QfaiConfig): Promi
   const layerPolicy = await loadLayerPolicy(root, config);
   const issues: Issue[] = [...layerPolicy.issues];
 
+  const knownSpecIds = new Set(entries.map((entry) => `spec-${entry.specNumber}`));
+
   for (const entry of entries) {
     if (entry.layout === "layered") {
       issues.push(...(await validateLayeredSpecEntry(entry)));
+      issues.push(...(await validateSpecStatusForEntry(entry, knownSpecIds)));
       continue;
     }
     if (entry.layout !== "spec-pack") {
@@ -116,6 +120,144 @@ export async function validateSpecPacks(root: string, config: QfaiConfig): Promi
     }
     issues.push(...(await validateSpecPackEntry(entry, layerPolicy.tags)));
     issues.push(...(await validateTraceabilityLedger(entry, contractIndex.ids)));
+    issues.push(...(await validateSpecStatusForEntry(entry, knownSpecIds)));
+  }
+
+  return issues;
+}
+
+const STATUS_ENUM_LIST = SPEC_STATUS_VALUES.join(" | ");
+const SUPERSEDED_BY_RE = /^spec-\d{4}$/;
+const DEPRECATED_AT_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+async function validateSpecStatusForEntry(
+  entry: SpecEntry,
+  knownSpecIds: Set<string>,
+): Promise<Issue[]> {
+  const specMdPath = entry.specPath;
+  if (!specMdPath) {
+    return [];
+  }
+  let text: string;
+  try {
+    text = await readFile(specMdPath, "utf-8");
+  } catch {
+    return [];
+  }
+  const parsed = parseSpec(text, specMdPath);
+  return validateSpecStatus(parsed, specMdPath, knownSpecIds);
+}
+
+export function validateSpecStatus(
+  parsed: ParsedSpec,
+  specMdPath: string,
+  knownSpecIds: Set<string>,
+): Issue[] {
+  const issues: Issue[] = [];
+
+  if (parsed.statusRaw === undefined) {
+    issues.push(
+      issue(
+        "QFAI-STATUS-001",
+        `01_Spec.md に Status bullet が見つかりません。許容値: ${STATUS_ENUM_LIST}`,
+        "error",
+        specMdPath,
+        "specStatus.required",
+        undefined,
+        "canonical",
+        "01_Spec.md の冒頭 bullet ブロックに `- Status: active` を追加してください。",
+      ),
+    );
+    return issues;
+  }
+
+  if (parsed.status === undefined) {
+    issues.push(
+      issue(
+        "QFAI-STATUS-002",
+        `Status の値が不正です: ${parsed.statusRaw}。許容値: ${STATUS_ENUM_LIST}`,
+        "error",
+        specMdPath,
+        "specStatus.enum",
+        [parsed.statusRaw],
+        "canonical",
+        `01_Spec.md の \`- Status:\` 行を ${STATUS_ENUM_LIST} のいずれかに修正してください。`,
+      ),
+    );
+    return issues;
+  }
+
+  if (parsed.status === "superseded") {
+    if (!parsed.supersededBy) {
+      issues.push(
+        issue(
+          "QFAI-STATUS-003",
+          "Status: superseded には Superseded-by が必須です。",
+          "error",
+          specMdPath,
+          "specStatus.supersededBy.required",
+          undefined,
+          "canonical",
+          "01_Spec.md に `- Superseded-by: spec-NNNN` を設定してください。",
+        ),
+      );
+    } else if (!SUPERSEDED_BY_RE.test(parsed.supersededBy)) {
+      issues.push(
+        issue(
+          "QFAI-STATUS-003",
+          `Superseded-by の形式が不正です: ${parsed.supersededBy} (期待: spec-NNNN)`,
+          "error",
+          specMdPath,
+          "specStatus.supersededBy.format",
+          [parsed.supersededBy],
+          "canonical",
+          "Superseded-by を `spec-0001` のような 4 桁形式に修正してください。",
+        ),
+      );
+    } else if (!knownSpecIds.has(parsed.supersededBy)) {
+      issues.push(
+        issue(
+          "QFAI-STATUS-004",
+          `Superseded-by が指す spec が存在しません: ${parsed.supersededBy}`,
+          "error",
+          specMdPath,
+          "specStatus.supersededBy.exists",
+          [parsed.supersededBy],
+          "canonical",
+          "置換先 spec を作成するか、Superseded-by を実在する spec ID に修正してください。",
+        ),
+      );
+    }
+  }
+
+  if (parsed.status === "deprecated" || parsed.status === "removed") {
+    if (!parsed.deprecatedAt) {
+      issues.push(
+        issue(
+          "QFAI-STATUS-005",
+          `Status: ${parsed.status} には Deprecated-at が必須です。`,
+          "error",
+          specMdPath,
+          "specStatus.deprecatedAt.required",
+          undefined,
+          "canonical",
+          "01_Spec.md に `- Deprecated-at: YYYY-MM-DD` を設定してください。",
+        ),
+      );
+    } else if (!DEPRECATED_AT_RE.test(parsed.deprecatedAt)) {
+      issues.push(
+        issue(
+          "QFAI-STATUS-006",
+          `Deprecated-at の形式が不正です: ${parsed.deprecatedAt} (期待: YYYY-MM-DD)`,
+          "error",
+          specMdPath,
+          "specStatus.deprecatedAt.format",
+          [parsed.deprecatedAt],
+          "canonical",
+          "Deprecated-at を `YYYY-MM-DD` 形式に修正してください。",
+        ),
+      );
+    }
   }
 
   return issues;
