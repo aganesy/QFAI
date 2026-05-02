@@ -53,6 +53,17 @@ genuine scope deviations that introduce a new capability.
   and `.codex/README.md`.
 - Surface test `tests/integration/agentsRulesSurface.test.ts` verifying
   the master/symlink layout and entrypoint references.
+- Automated guard `packages/qfai/scripts/check-branch-version-pin.sh`
+  enforcing the version-discipline rule: extracts the SemVer from the
+  current branch name and fails if it disagrees with
+  `packages/qfai/package.json#version`. Wired into the CI lint job
+  (alongside the existing distributed-surface leakage guard) and
+  exposed as `pnpm --filter qfai run lint:branch-version` for local
+  use. `VERSION_PIN_SKIP=1` can override for coordinated release PRs.
+- Test coverage `tests/scripts/checkBranchVersionPin.test.ts`
+  (8 cases: matching SemVer, suffix tolerance, mismatch failure,
+  no-SemVer skip on `main`/`chore/*`, override env, PR-context
+  `GITHUB_HEAD_REF` precedence).
 - Templates updated:
   `templates/specs/spec/01_Spec.md` declares `Status: active`;
   `templates/specs/spec/09_delta.md` and

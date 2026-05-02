@@ -36,6 +36,9 @@ jobs:
         run: pnpm ci:lint
       - name: Sanity grep — no internal spec IDs or version markers leak
         run: bash packages/qfai/scripts/check-no-internal-version-leakage.sh
+      - name: Verify branch name version pin matches package.json#version
+        run: bash packages/qfai/scripts/check-branch-version-pin.sh
+        shell: bash
 
   # ── 2. Type checking (current TypeScript) ────────────────────────
   check-types:

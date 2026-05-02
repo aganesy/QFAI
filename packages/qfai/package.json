@@ -36,6 +36,7 @@
     "build": "tsup",
     "prepack": "npm run build",
     "lint": "eslint src",
+    "lint:branch-version": "bash scripts/check-branch-version-pin.sh",
     "lint:shipping": "vitest run tests/scripts/lintShipping.test.ts",
     "check-types": "tsc --noEmit",
     "test": "vitest run",
