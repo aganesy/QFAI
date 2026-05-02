@@ -88,69 +88,148 @@ export function subOp(op: TriageOp): TriageUpdateSubOp | null {
   return isUpdateOp(op) ? op.update : null;
 }
 
+const STOP_TOKENS = new Set([
+  "the","a","an","to","of","and","or","for","in","on","with","from",
+  "is","are","be","this","that","new","add","update","change","fix",
+  "remove","delete","support","enable","make","do","into","by","at","as",
+]);
+
+function tokenize(text: string): Set<string> {
+  return new Set(
+    text
+      .toLowerCase()
+      .split(/[^a-z0-9぀-ヿ㐀-鿿]+/)
+      .filter((t) => t.length >= 2 && !STOP_TOKENS.has(t)),
+  );
+}
+
+function overlapCount(a: Set<string>, b: Set<string>): number {
+  let n = 0;
+  for (const t of a) if (b.has(t)) n += 1;
+  return n;
+}
+
 /**
- * Classify each requirement into an operation against the existing specs.
- * The classifier favours minimal change: APPEND when a capability already
- * owns the requirement, SPLIT when the owning spec is over the size
- * thresholds, and CREATE only when no active spec matches.
+ * Find the active spec whose title/capability/scope shares the most
+ * subject tokens with the requirement. Tie-breaker: smaller acCount,
+ * then lexicographic specId. Returns undefined when no token overlap
+ * exists with any active spec — that is the only condition under which
+ * `classifyTriage` proposes CREATE.
+ */
+export function bestSubjectMatch(
+  subject: string,
+  summaries: SpecSummary[],
+): SpecSummary | undefined {
+  const reqTokens = tokenize(subject);
+  if (reqTokens.size === 0) return undefined;
+
+  let best: { score: number; summary: SpecSummary } | undefined;
+  for (const s of summaries) {
+    if (s.status !== "active") continue;
+    const haystack = [s.title, s.capability ?? "", ...s.scopeIn, ...s.scopeOut].join(" ");
+    const score = overlapCount(reqTokens, tokenize(haystack));
+    if (score === 0) continue;
+    if (
+      !best ||
+      score > best.score ||
+      (score === best.score && s.acCount < best.summary.acCount) ||
+      (score === best.score &&
+        s.acCount === best.summary.acCount &&
+        s.specId < best.summary.specId)
+    ) {
+      best = { score, summary: s };
+    }
+  }
+  return best?.summary;
+}
+
+/**
+ * Append-first triage classifier.
+ *
+ * Decision order per REQ:
+ *
+ * 1. removalHint -> UPDATE:REMOVE on a capability-matched spec, or on the
+ *    closest subject-overlap match. Falls through to DELETE only when no
+ *    active spec can absorb the removal.
+ * 2. capability matches multiple active specs -> MERGE.
+ * 3. capability matches a single active spec -> APPEND, escalating to
+ *    SPLIT when AC/TC thresholds are exceeded.
+ * 4. capability does not match (or is absent) but subject tokens overlap
+ *    an active spec's title/capability/scope -> APPEND on the closest
+ *    spec, with a fallback rationale prompting cascade verification.
+ *    SPLIT applies if the closest spec exceeds size thresholds.
+ * 5. No subject overlap with any active spec -> CREATE candidate. The
+ *    caller MUST add the new CAP to `_policies/03_Capabilities.md` and
+ *    cite it in the Rationale column (validator: QFAI-TRIAGE-006).
+ *
+ * The classifier output is a *proposal*. The agent driving Stage 1 Triage
+ * is expected to read the candidate spec's scope/AC/BR before persisting
+ * the table, and to add cascade rows for any other specs that need
+ * MODIFY/REMOVE in support of the primary change.
  */
 export function classifyTriage(input: TriageInput): TriageRow[] {
   const thresholds = input.thresholds ?? DEFAULT_TRIAGE_THRESHOLDS;
-  const activeSummaries = input.summaries.filter((s) => s.status === "active");
+  const active = input.summaries.filter((s) => s.status === "active");
   const rows: TriageRow[] = [];
 
   for (const req of input.reqs) {
-    const matches = req.capability
-      ? activeSummaries.filter((s) => s.capability === req.capability)
+    const capabilityMatches = req.capability
+      ? active.filter((s) => s.capability === req.capability)
       : [];
 
-    if (matches.length === 0) {
-      rows.push({
-        source: req.id,
-        subject: req.subject,
-        existingSpec: null,
-        op: "CREATE",
-      });
+    if (req.removalHint) {
+      const target = capabilityMatches[0] ?? bestSubjectMatch(req.subject, active);
+      if (target) {
+        rows.push({
+          source: req.id,
+          subject: req.subject,
+          existingSpec: target.specId,
+          op: { update: "REMOVE" },
+        });
+      } else {
+        rows.push({
+          source: req.id,
+          subject: req.subject,
+          existingSpec: null,
+          op: "DELETE",
+        });
+      }
       continue;
     }
 
-    if (matches.length > 1) {
+    if (capabilityMatches.length > 1) {
       rows.push({
         source: req.id,
         subject: req.subject,
-        existingSpec: matches.map((m) => m.specId).join("+"),
+        existingSpec: capabilityMatches.map((m) => m.specId).join("+"),
         op: "MERGE",
       });
       continue;
     }
 
-    const target = matches[0];
-    if (!target) {
-      rows.push({
+    const primary = capabilityMatches[0] ?? bestSubjectMatch(req.subject, active);
+    if (primary) {
+      const tooLarge = primary.acCount > thresholds.ac || primary.tcCount > thresholds.tc;
+      const isFallback = capabilityMatches.length === 0;
+      const row: TriageRow = {
         source: req.id,
         subject: req.subject,
-        existingSpec: null,
-        op: "CREATE",
-      });
+        existingSpec: primary.specId,
+        op: tooLarge ? "SPLIT" : { update: "APPEND" },
+      };
+      if (isFallback) {
+        row.rationale = `subject-overlap fallback to ${primary.specId}; verify impact cascade before persisting`;
+      }
+      rows.push(row);
       continue;
     }
 
-    if (req.removalHint) {
-      rows.push({
-        source: req.id,
-        subject: req.subject,
-        existingSpec: target.specId,
-        op: { update: "REMOVE" },
-      });
-      continue;
-    }
-
-    const tooLarge = target.acCount > thresholds.ac || target.tcCount > thresholds.tc;
     rows.push({
       source: req.id,
       subject: req.subject,
-      existingSpec: target.specId,
-      op: tooLarge ? "SPLIT" : { update: "APPEND" },
+      existingSpec: null,
+      op: "CREATE",
+      rationale: "no active spec scope absorbs this requirement; new CAP required",
     });
   }
 

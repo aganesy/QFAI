@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  bestSubjectMatch,
   classifyTriage,
   DEFAULT_TRIAGE_THRESHOLDS,
   isUpdateOp,
@@ -26,19 +27,75 @@ function makeSummary(spec: Partial<SpecSummary> & { specId: string }): SpecSumma
 }
 
 describe("classifyTriage", () => {
-  it("classifies REQs without a matching capability as CREATE", () => {
+  it("classifies REQs as CREATE only when no active spec scope absorbs the requirement", () => {
     const rows = classifyTriage({
-      reqs: [{ id: "REQ-0001", subject: "new packaging command", capability: "CAP-0099" }],
-      summaries: [makeSummary({ specId: "spec-0001", capability: "CAP-0001" })],
+      reqs: [{ id: "REQ-0001", subject: "alpha", capability: "CAP-0099" }],
+      summaries: [
+        makeSummary({
+          specId: "spec-0001",
+          capability: "CAP-0001",
+          title: "zeta module",
+          scopeIn: ["zeta"],
+        }),
+      ],
     });
-    expect(rows).toEqual([
-      {
-        source: "REQ-0001",
-        subject: "new packaging command",
-        existingSpec: null,
-        op: "CREATE",
-      },
-    ]);
+    expect(rows[0]).toMatchObject({
+      source: "REQ-0001",
+      subject: "alpha",
+      existingSpec: null,
+      op: "CREATE",
+    });
+    expect(rows[0]?.rationale).toMatch(/new CAP required/);
+  });
+
+  it("falls back to UPDATE:APPEND on the closest spec when capability is unknown but tokens overlap", () => {
+    const rows = classifyTriage({
+      reqs: [
+        {
+          id: "REQ-0001b",
+          subject: "extend packaging command behavior",
+          capability: "CAP-9999",
+        },
+      ],
+      summaries: [
+        makeSummary({
+          specId: "spec-0001",
+          capability: "CAP-0001",
+          title: "auth module",
+          scopeIn: ["auth"],
+        }),
+        makeSummary({
+          specId: "spec-0002",
+          capability: "CAP-0002",
+          title: "packaging command",
+          scopeIn: ["packaging"],
+        }),
+      ],
+    });
+    expect(rows[0]).toMatchObject({
+      existingSpec: "spec-0002",
+      op: { update: "APPEND" },
+    });
+    expect(rows[0]?.rationale).toMatch(/subject-overlap fallback/);
+  });
+
+  it("upgrades fallback to SPLIT when the closest spec exceeds AC threshold", () => {
+    const rows = classifyTriage({
+      reqs: [
+        { id: "REQ-0001c", subject: "extend packaging command", capability: undefined },
+      ],
+      summaries: [
+        makeSummary({
+          specId: "spec-0002",
+          capability: "CAP-0002",
+          title: "packaging command",
+          scopeIn: ["packaging"],
+          acCount: DEFAULT_TRIAGE_THRESHOLDS.ac + 1,
+        }),
+      ],
+    });
+    expect(rows[0]?.op).toBe("SPLIT");
+    expect(rows[0]?.existingSpec).toBe("spec-0002");
   });
 
   it("classifies REQs matching a single small spec as UPDATE:APPEND", () => {
@@ -173,6 +230,61 @@ describe("op helpers", () => {
   it("subOp returns null for top-level ops", () => {
     expect(subOp("CREATE")).toBeNull();
     expect(subOp({ update: "REMOVE" })).toBe("REMOVE");
+  });
+});
+
+describe("bestSubjectMatch", () => {
+  it("returns undefined when no active spec shares any token", () => {
+    const result = bestSubjectMatch("alpha bravo", [
+      makeSummary({ specId: "spec-0001", title: "zeta module", scopeIn: ["zeta"] }),
+    ]);
+    expect(result).toBeUndefined();
+  });
+
+  it("picks the spec with the highest token overlap", () => {
+    const result = bestSubjectMatch("packaging command extension", [
+      makeSummary({
+        specId: "spec-0001",
+        title: "auth module",
+        scopeIn: ["auth"],
+      }),
+      makeSummary({
+        specId: "spec-0002",
+        title: "packaging command",
+        scopeIn: ["packaging"],
+      }),
+    ]);
+    expect(result?.specId).toBe("spec-0002");
+  });
+
+  it("breaks ties by smaller acCount, then lexicographic specId", () => {
+    const result = bestSubjectMatch("packaging command", [
+      makeSummary({
+        specId: "spec-0002",
+        title: "packaging command",
+        scopeIn: ["packaging"],
+        acCount: 10,
+      }),
+      makeSummary({
+        specId: "spec-0001",
+        title: "packaging command",
+        scopeIn: ["packaging"],
+        acCount: 10,
+      }),
+    ]);
+    expect(result?.specId).toBe("spec-0001");
+  });
+
+  it("ignores non-active specs", () => {
+    const result = bestSubjectMatch("packaging command", [
+      makeSummary({
+        specId: "spec-0001",
+        title: "packaging command",
+        scopeIn: ["packaging"],
+        status: "deprecated",
+      }),
+    ]);
+    expect(result).toBeUndefined();
   });
 });
 
