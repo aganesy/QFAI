@@ -33,6 +33,13 @@ import {
   resolveAllowedLayerTagsFromPolicy,
 } from "../specPackParsers.js";
 import { parseSpec, SPEC_STATUS_VALUES, type ParsedSpec } from "../parse/spec.js";
+import {
+  TRIAGE_TABLE_HEADER,
+  TRIAGE_TOP_LEVEL_OPS,
+  TRIAGE_UPDATE_SUBOPS,
+  type TriageTopLevelOp,
+  type TriageUpdateSubOp,
+} from "../sddTriage.js";
 import { LAYER_TAGS } from "../testStrategyTags.js";
 import type { Issue } from "../types.js";
 import { issue } from "./utils.js";
@@ -113,6 +120,7 @@ export async function validateSpecPacks(root: string, config: QfaiConfig): Promi
     if (entry.layout === "layered") {
       issues.push(...(await validateLayeredSpecEntry(entry)));
       issues.push(...(await validateSpecStatusForEntry(entry, knownSpecIds)));
+      issues.push(...(await validateTriageSectionForEntry(entry)));
       continue;
     }
     if (entry.layout !== "spec-pack") {
@@ -121,6 +129,7 @@ export async function validateSpecPacks(root: string, config: QfaiConfig): Promi
     issues.push(...(await validateSpecPackEntry(entry, layerPolicy.tags)));
     issues.push(...(await validateTraceabilityLedger(entry, contractIndex.ids)));
     issues.push(...(await validateSpecStatusForEntry(entry, knownSpecIds)));
+    issues.push(...(await validateTriageSectionForEntry(entry)));
   }
 
   return issues;
@@ -255,6 +264,174 @@ export function validateSpecStatus(
           [parsed.deprecatedAt],
           "canonical",
           "Deprecated-at を `YYYY-MM-DD` 形式に修正してください。",
+        ),
+      );
+    }
+  }
+
+  return issues;
+}
+
+const APPROVAL_REQUIRED_OPS = new Set<TriageTopLevelOp>([
+  "CREATE",
+  "DELETE",
+  "SPLIT",
+  "MERGE",
+  "SUPERSEDE",
+]);
+const TRIAGE_REQUIRED_COLUMNS = ["source", "subject", "existing spec", "operation"] as const;
+const TRIAGE_TOP_LEVEL_LABELS = new Set<string>([...TRIAGE_TOP_LEVEL_OPS, "UPDATE"]);
+const TRIAGE_SUB_OPS = new Set<string>(TRIAGE_UPDATE_SUBOPS);
+
+async function validateTriageSectionForEntry(entry: SpecEntry): Promise<Issue[]> {
+  const deltaPath = entry.deltaPath;
+  if (!deltaPath) {
+    return [];
+  }
+  let text: string;
+  try {
+    text = await readFile(deltaPath, "utf-8");
+  } catch {
+    return [];
+  }
+  return validateTriageSection(text, deltaPath);
+}
+
+export function validateTriageSection(text: string, deltaPath: string): Issue[] {
+  const issues: Issue[] = [];
+  const headings = extractH2Headings(text);
+  const hasChangeSummary = headings.has(normalizeHeading("Change Summary"));
+  const hasTriage = headings.has(normalizeHeading("Triage"));
+
+  if (hasChangeSummary && !hasTriage) {
+    issues.push(
+      issue(
+        "QFAI-TRIAGE-001",
+        "delta.md に `## Change Summary` があるが `## Triage` セクションがありません。",
+        "warning",
+        deltaPath,
+        "triage.required",
+        undefined,
+        "canonical",
+        "delta.md の `## Change Summary` 直後に `## Triage` セクションを追加し、Source / Subject / Existing Spec / Operation の表で粒度判定を記録してください。",
+      ),
+    );
+    return issues;
+  }
+
+  if (!hasTriage) {
+    return issues;
+  }
+
+  const section = extractMarkdownSection(text, "Triage");
+  const table = parseFirstMarkdownTable(section);
+  if (!table) {
+    issues.push(
+      issue(
+        "QFAI-TRIAGE-002",
+        "`## Triage` セクションにテーブルが見つかりません。",
+        "error",
+        deltaPath,
+        "triage.table",
+        undefined,
+        "canonical",
+        `Triage セクションに ${TRIAGE_TABLE_HEADER.join(" / ")} 列の markdown table を記述してください。`,
+      ),
+    );
+    return issues;
+  }
+
+  const headerMap = new Map<string, number>();
+  table.headers.forEach((column, index) => {
+    headerMap.set(column.trim().toLowerCase(), index);
+  });
+
+  const missingColumns = TRIAGE_REQUIRED_COLUMNS.filter((column) => !headerMap.has(column));
+  if (missingColumns.length > 0) {
+    issues.push(
+      issue(
+        "QFAI-TRIAGE-002",
+        `Triage table に必須列が不足しています: ${missingColumns.join(", ")}`,
+        "error",
+        deltaPath,
+        "triage.columns",
+        Array.from(missingColumns),
+        "canonical",
+        `Triage table のヘッダに ${TRIAGE_TABLE_HEADER.join(" / ")} を含めてください。`,
+      ),
+    );
+    return issues;
+  }
+
+  for (const [rowIndex, row] of table.rows.entries()) {
+    const opCell = (row[headerMap.get("operation") ?? -1] ?? "").trim();
+    const subCell = (row[headerMap.get("sub-op") ?? -1] ?? "").trim();
+    const approvedCell = (row[headerMap.get("approved by") ?? -1] ?? "").trim();
+    const sourceCell = (row[headerMap.get("source") ?? -1] ?? "").trim();
+    const rowLabel = sourceCell || `row ${rowIndex + 1}`;
+
+    if (!TRIAGE_TOP_LEVEL_LABELS.has(opCell.toUpperCase())) {
+      issues.push(
+        issue(
+          "QFAI-TRIAGE-003",
+          `Triage の Operation が不正です (${rowLabel}): ${opCell || "(empty)"}`,
+          "error",
+          deltaPath,
+          "triage.operation",
+          [opCell],
+          "canonical",
+          `Operation を CREATE / UPDATE / DELETE / SPLIT / MERGE / SUPERSEDE のいずれかに修正してください。`,
+        ),
+      );
+      continue;
+    }
+
+    const opUpper = opCell.toUpperCase() as "UPDATE" | TriageTopLevelOp;
+
+    if (opUpper === "UPDATE") {
+      if (subCell.length === 0 || subCell === "-" || !TRIAGE_SUB_OPS.has(subCell.toUpperCase())) {
+        issues.push(
+          issue(
+            "QFAI-TRIAGE-004",
+            `Triage UPDATE の Sub-op が不正です (${rowLabel}): ${subCell || "(empty)"}`,
+            "error",
+            deltaPath,
+            "triage.subOp",
+            [subCell],
+            "canonical",
+            `Sub-op を APPEND / MODIFY / REMOVE のいずれかに設定してください。`,
+          ),
+        );
+      }
+      const sub = subCell.toUpperCase() as TriageUpdateSubOp;
+      if (sub === "REMOVE" && (approvedCell.length === 0 || approvedCell === "-")) {
+        issues.push(
+          issue(
+            "QFAI-TRIAGE-005",
+            `Triage UPDATE:REMOVE は Approved By 必須です (${rowLabel})。`,
+            "error",
+            deltaPath,
+            "triage.approval",
+            [rowLabel],
+            "canonical",
+            "Approved By 列に承認者を記載してください (AskUserQuestion で取得)。",
+          ),
+        );
+      }
+      continue;
+    }
+
+    if (APPROVAL_REQUIRED_OPS.has(opUpper) && (approvedCell.length === 0 || approvedCell === "-")) {
+      issues.push(
+        issue(
+          "QFAI-TRIAGE-005",
+          `Triage ${opUpper} は Approved By 必須です (${rowLabel})。`,
+          "error",
+          deltaPath,
+          "triage.approval",
+          [rowLabel],
+          "canonical",
+          "Approved By 列に承認者を記載してください (AskUserQuestion で取得)。",
         ),
       );
     }
