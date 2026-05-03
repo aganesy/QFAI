@@ -79,6 +79,34 @@
 - Type: normal
 - Verify that 06_Test-Cases.md template includes a Type column and each AC has at least one non-normal test case type.
 
+## TC-0013-0014: SpecDiffResult Includes All Required Fields
+
+- EX-Ref: EX-0013-0001
+- AC-Refs: AC-0013-0001
+- Type: normal
+- Spec Auto-Discovery (consolidated from spec-0038) — verify that `detectSpecChanges` returns a `SpecDiffResult` with `entries`, `allSpecs`, and `fullScan` fields populated correctly. Implemented in `packages/qfai/tests/integration/specAutoDiscovery.test.ts` under `describe("TC-0013-0014: SpecDiffResult includes all required fields", ...)`.
+
+## TC-0013-0015: Policy Change Detection
+
+- EX-Ref: EX-0013-0001
+- AC-Refs: AC-0013-0001
+- Type: normal
+- Spec Auto-Discovery (consolidated from spec-0038) — verify that `detectPolicyChanges` returns `true` when `_policies/` files are modified between refs and `false` otherwise. Implemented in `packages/qfai/tests/integration/specAutoDiscovery.test.ts` under `describe("TC-0013-0015: policy change detection", ...)`. Also referenced by `packages/qfai/tests/core/specDiffDetector.test.ts:458` as `TDD-0010 (TC-0013-0015)`.
+
+## TC-0013-0016: Config baseBranch Loading
+
+- EX-Ref: EX-0013-0001
+- AC-Refs: AC-0013-0001
+- Type: normal
+- Spec Auto-Discovery (consolidated from spec-0038) — verify that `loadConfig` reads `baseBranch` from `qfai.config.yaml` when present and returns the default sentinel when absent. Implemented in `packages/qfai/tests/integration/specAutoDiscovery.test.ts` under `describe("TC-0013-0016: config baseBranch — loadConfig reads baseBranch from yaml", ...)`.
+
+## TC-0013-0017: Old Evidence Without Diff Context Remains Parseable
+
+- EX-Ref: EX-0013-0001
+- AC-Refs: AC-0013-0001
+- Type: boundary
+- Spec Auto-Discovery (consolidated from spec-0038) — verify that `detectSpecChanges` parses old-style evidence files that predate the Diff Context section without erroring (forward-compatibility boundary). Implemented in `packages/qfai/tests/integration/specAutoDiscovery.test.ts` under `describe("TC-0013-0017: old evidence without Diff Context remains parseable", ...)`.
+
 ## TC-0013-0018: Triage Cell Render-Parse Identity (Edge Cases)
 
 - EX-Ref: EX-0013-0009
@@ -93,9 +121,12 @@
 - Type: normal
 - Verify the round-trip identity property for plain ASCII subjects / rationales that contain none of the escape-relevant characters (no `|`, no `\`, no line breaks). Required by BR-0013-0008 (each AC must have at least one normal-type TC). Implemented as the dedicated "happy path" assertion in the round-trip identity describe block in `packages/qfai/tests/core/sddTriage.test.ts`.
 
-## TC-0013-0020: Test Case Type Column Invalid Value (Coverage Placeholder)
-
-- EX-Ref: EX-0013-0008
-- AC-Refs: AC-0013-0010
-- Type: error
-- Coverage placeholder for AC-0013-0010 non-normal pair: when a `06_Test-Cases.md` row's `Type` column carries a value outside `normal` / `error` / `boundary` / `edge`, future `QFAI-AC-COVERAGE` style validation MUST flag it. This TC documents the gap and pairs with TC-0013-0013 (Type=normal) so AC-0013-0010 satisfies BR-0013-0008's normal+non-normal requirement. Runtime enforcement of the rule is tracked separately as a follow-up; the coverage placeholder pattern matches the existing TC-0013-0010..0012 style in this file.
+<!--
+PR #206 review NxLq / NxQH (architecture-reviewer + implementation-reviewer,
+MAJOR): the placeholder TC introduced at f1064756 was retracted. A
+"coverage placeholder" without an actual test does not legitimately
+satisfy the BR (it would weaken the rule by precedent). The non-normal
+coverage gap on the Type-column-required AC is a pre-existing condition
+that predates this PR. Tracked for separate implementation as OQ-0016
+— see `_policies/09_Open-questions.md`.
+-->

@@ -512,6 +512,11 @@ describe("renderTriageMarkdown", () => {
   // contract; if a future change re-introduces `\` → `\\` here without
   // a matching parser rule, these assertions fire instead of silently
   // mutating REQ subjects (Windows paths, regex literals).
+  //
+  // PR #206 review NxI0: trace markers for the spec entries.
+  // QFAI:SPEC-0013:TC-0013-0018 (Type=edge — backslash-only / a\|b /
+  //   CRLF / CR-only / path\\|file)
+  // QFAI:SPEC-0013:TC-0013-0019 (Type=normal — plain ASCII happy path)
   describe("escapeTableCell ↔ splitMarkdownRow round-trip identity", () => {
     async function roundTripCell(subject: string, rationale: string): Promise<string[]> {
       const { parseAllMarkdownTables } = await import("../../src/core/specPackParsers.js");
