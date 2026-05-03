@@ -60,10 +60,51 @@ describe("check-branch-version-pin.sh", () => {
     expect(r.stdout).toMatch(new RegExp(`pinned to ${v.replace(/\./g, "\\.")}`));
   });
 
-  it("passes for release/X.Y.Z naming style", async () => {
+  it("passes for release/vX.Y.Z naming style (leading v required)", async () => {
     const v = await readCurrentVersion();
-    const r = runGuard({ GITHUB_REF_NAME: `release/${v}` });
+    const r = runGuard({ GITHUB_REF_NAME: `release/v${v}` });
     expect(r.status).toBe(0);
+  });
+
+  it("skips when SemVer-shaped digits lack the required leading 'v' (e.g. dependency upgrade branch)", () => {
+    // After PR #206 review (#1, #28): the regex requires a leading `v`
+    // with word boundary so dependency-version-shaped branches such as
+    // `feature/upgrade-eslint-9.10.0` are NOT mis-pinned to 9.10.0.
+    const r = runGuard({ GITHUB_REF_NAME: "feature/upgrade-eslint-9.10.0" });
+    expect(r.status).toBe(0);
+    expect(r.stdout).toMatch(/no SemVer pin/);
+  });
+
+  it("skips for postgres-style versioned branch without leading v", () => {
+    const r = runGuard({ GITHUB_REF_NAME: "feature/upgrade-postgres-15.4.0" });
+    expect(r.status).toBe(0);
+    expect(r.stdout).toMatch(/no SemVer pin/);
+  });
+
+  it("skips for log4j-style suffix without leading v", () => {
+    const r = runGuard({ GITHUB_REF_NAME: "fix/log4j-2.17.1" });
+    expect(r.status).toBe(0);
+    expect(r.stdout).toMatch(/no SemVer pin/);
+  });
+
+  it("ignores PR-context refs like 206/merge that contain digits but no v-prefixed SemVer", () => {
+    // pull_request_target sets GITHUB_REF_NAME to `<pr-number>/merge`.
+    // We want HEAD_REF (the PR source branch) to win, but if HEAD_REF is
+    // empty for any reason we should NOT mis-pin on `206/merge`.
+    const r = runGuard({ GITHUB_REF_NAME: "206/merge" });
+    expect(r.status).toBe(0);
+    expect(r.stdout).toMatch(/no SemVer pin/);
+  });
+
+  it("emits a GitHub Actions warning when VERSION_PIN_SKIP=1 is used", () => {
+    const r = runGuard({
+      GITHUB_REF_NAME: "feature/v9.99.99",
+      VERSION_PIN_SKIP: "1",
+    });
+    expect(r.status).toBe(0);
+    // GitHub Actions surfaces `::warning::` lines in the run summary so
+    // reviewers cannot miss a skip.
+    expect(r.stdout).toMatch(/::warning title=VERSION_PIN_SKIP=1::/);
   });
 
   it("passes when extra suffix follows the SemVer (first match wins)", async () => {
