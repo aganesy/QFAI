@@ -83,26 +83,42 @@ export function resolveAllowedLayerTagsFromPolicy(policyText: string): Set<strin
 }
 
 export function parseFirstMarkdownTable(text: string): MarkdownTable | null {
+  const tables = parseAllMarkdownTables(text);
+  return tables.length > 0 ? (tables[0] ?? null) : null;
+}
+
+/**
+ * Parse every markdown table in the input. Returned in document order.
+ * Used by Triage validators (PR #206 review LWri) so a multi-table
+ * Triage section does not let later tables silently bypass
+ * QFAI-TRIAGE-002..006.
+ */
+export function parseAllMarkdownTables(text: string): MarkdownTable[] {
   const lines = text.replace(/\r\n/g, "\n").split("\n");
-  for (let index = 0; index < lines.length - 1; index += 1) {
+  const tables: MarkdownTable[] = [];
+  let index = 0;
+  while (index < lines.length - 1) {
     const headerLine = lines[index] ?? "";
     const separatorLine = lines[index + 1] ?? "";
     if (!looksLikeTableRow(headerLine) || !isTableSeparator(separatorLine)) {
+      index += 1;
       continue;
     }
 
     const headers = splitMarkdownRow(headerLine);
     const rows: string[][] = [];
-    for (let cursor = index + 2; cursor < lines.length; cursor += 1) {
+    let cursor = index + 2;
+    for (; cursor < lines.length; cursor += 1) {
       const rowLine = lines[cursor] ?? "";
       if (!looksLikeTableRow(rowLine)) {
         break;
       }
       rows.push(splitMarkdownRow(rowLine));
     }
-    return { headers, rows };
+    tables.push({ headers, rows });
+    index = cursor;
   }
-  return null;
+  return tables;
 }
 
 export function splitMarkdownRow(line: string): string[] {

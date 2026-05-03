@@ -26,6 +26,7 @@ import {
 } from "../specPackIds.js";
 import {
   parseAcceptanceCriteriaIds,
+  parseAllMarkdownTables,
   parseExamplesFeature,
   parseFirstMarkdownTable,
   parseIdsFromText,
@@ -135,6 +136,31 @@ export async function validateSpecPacks(root: string, config: QfaiConfig): Promi
     issues.push(...(await validateTriageSectionForEntry(entry)));
   }
 
+  // Cross-spec / policy-only triage rows live in `_policies/10_delta.md`
+  // (per `_policies/11_Slice-Policy.md` Decision procedure). The
+  // per-entry loop above does not include `_policies/` so the same
+  // Triage validators (QFAI-TRIAGE-001..006) must be invoked separately
+  // (PR #206 review LW-F). Without this branch, CREATE rows in the
+  // policy delta would silently bypass QFAI-TRIAGE-006 and SPLIT/MERGE
+  // rows would skip the approval gate.
+  issues.push(...(await validatePoliciesDeltaTriage(specsRoot)));
+
+  return issues;
+}
+
+async function validatePoliciesDeltaTriage(specsRoot: string): Promise<Issue[]> {
+  const deltaPath = path.join(specsRoot, "_policies", "10_delta.md");
+  let text: string;
+  try {
+    text = await readFile(deltaPath, "utf-8");
+  } catch {
+    // No policy delta — nothing to validate. Other validators surface
+    // missing _policies files separately.
+    return [];
+  }
+  const capabilitiesPath = path.join(specsRoot, "_policies", "03_Capabilities.md");
+  const issues = validateTriageSection(text, deltaPath);
+  issues.push(...(await validateCreateRowCapabilityRefs(text, deltaPath, capabilitiesPath)));
   return issues;
 }
 
@@ -337,20 +363,13 @@ export async function validateCreateRowCapabilityRefs(
   }
 
   const section = extractMarkdownSection(text, "Triage");
-  const table = parseFirstMarkdownTable(section);
-  if (!table) {
-    return [];
-  }
-
-  const headerIndex = (label: string): number => {
-    const target = label.trim().toLowerCase();
-    return table.headers.findIndex((h) => h.trim().toLowerCase() === target);
-  };
-
-  const opIdx = headerIndex("operation");
-  const rationaleIdx = headerIndex("rationale");
-  const sourceIdx = headerIndex("source");
-  if (opIdx < 0) {
+  // Triage section MAY contain multiple tables (e.g. when authors split
+  // a large change into themed sub-tables). Earlier behaviour read only
+  // the first table, letting CREATE rows in subsequent tables bypass
+  // QFAI-TRIAGE-006 entirely (PR #206 review LWri). Walk every table so
+  // the structural CAP-NNNN gate is uniform.
+  const tables = parseAllMarkdownTables(section);
+  if (tables.length === 0) {
     return [];
   }
 
@@ -371,47 +390,62 @@ export async function validateCreateRowCapabilityRefs(
   }
 
   const issues: Issue[] = [];
-  for (const [rowIndex, row] of table.rows.entries()) {
-    const opCell = (row[opIdx] ?? "").trim().toUpperCase();
-    if (opCell !== "CREATE") {
+  for (const [tableIndex, table] of tables.entries()) {
+    const headerIndex = (label: string): number => {
+      const target = label.trim().toLowerCase();
+      return table.headers.findIndex((h) => h.trim().toLowerCase() === target);
+    };
+    const opIdx = headerIndex("operation");
+    const rationaleIdx = headerIndex("rationale");
+    const sourceIdx = headerIndex("source");
+    if (opIdx < 0) {
       continue;
     }
+    const tableLabel = tables.length > 1 ? `table ${tableIndex + 1}` : "";
 
-    const sourceCell = sourceIdx >= 0 ? (row[sourceIdx] ?? "").trim() : "";
-    const rowLabel = sourceCell || `row ${rowIndex + 1}`;
-    const rationaleCell = rationaleIdx >= 0 ? (row[rationaleIdx] ?? "") : "";
-    const referencedCaps = parseIdsFromText(rationaleCell, "CAP");
+    for (const [rowIndex, row] of table.rows.entries()) {
+      const opCell = (row[opIdx] ?? "").trim().toUpperCase();
+      if (opCell !== "CREATE") {
+        continue;
+      }
 
-    if (referencedCaps.length === 0) {
-      issues.push(
-        issue(
-          "QFAI-TRIAGE-006",
-          `CREATE 行の Rationale に新 CAP-NNNN の参照が見つかりません (${rowLabel})。`,
-          "error",
-          deltaPath,
-          "triage.createRequiresCap",
-          [rowLabel],
-          "canonical",
-          "新 CAP を `_policies/03_Capabilities.md` に追加し、Rationale 列にその CAP-NNNN を明記してください。",
-        ),
-      );
-      continue;
-    }
+      const sourceCell = sourceIdx >= 0 ? (row[sourceIdx] ?? "").trim() : "";
+      const baseLabel = sourceCell || `row ${rowIndex + 1}`;
+      const rowLabel = tableLabel ? `${tableLabel} ${baseLabel}` : baseLabel;
+      const rationaleCell = rationaleIdx >= 0 ? (row[rationaleIdx] ?? "") : "";
+      const referencedCaps = parseIdsFromText(rationaleCell, "CAP");
 
-    const missing = referencedCaps.filter((cap) => !knownCaps.has(cap));
-    if (missing.length > 0) {
-      issues.push(
-        issue(
-          "QFAI-TRIAGE-006",
-          `CREATE 行が参照する CAP が _policies/03_Capabilities.md に未登録です: ${missing.join(", ")} (${rowLabel})`,
-          "error",
-          deltaPath,
-          "triage.capExists",
-          missing,
-          "canonical",
-          "_policies/03_Capabilities.md に新 CAP を追加してから CREATE を確定してください。",
-        ),
-      );
+      if (referencedCaps.length === 0) {
+        issues.push(
+          issue(
+            "QFAI-TRIAGE-006",
+            `CREATE 行の Rationale に新 CAP-NNNN の参照が見つかりません (${rowLabel})。`,
+            "error",
+            deltaPath,
+            "triage.createRequiresCap",
+            [rowLabel],
+            "canonical",
+            "新 CAP を `_policies/03_Capabilities.md` に追加し、Rationale 列にその CAP-NNNN を明記してください。",
+          ),
+        );
+        continue;
+      }
+
+      const missing = referencedCaps.filter((cap) => !knownCaps.has(cap));
+      if (missing.length > 0) {
+        issues.push(
+          issue(
+            "QFAI-TRIAGE-006",
+            `CREATE 行が参照する CAP が _policies/03_Capabilities.md に未登録です: ${missing.join(", ")} (${rowLabel})`,
+            "error",
+            deltaPath,
+            "triage.capExists",
+            missing,
+            "canonical",
+            "_policies/03_Capabilities.md に新 CAP を追加してから CREATE を確定してください。",
+          ),
+        );
+      }
     }
   }
 
@@ -461,8 +495,9 @@ export function validateTriageSection(text: string, deltaPath: string): Issue[] 
   }
 
   const section = extractMarkdownSection(text, "Triage");
-  const table = parseFirstMarkdownTable(section);
-  if (!table) {
+  // Validate every Triage table, not just the first (PR #206 review LWri).
+  const tables = parseAllMarkdownTables(section);
+  if (tables.length === 0) {
     issues.push(
       issue(
         "QFAI-TRIAGE-002",
@@ -478,34 +513,50 @@ export function validateTriageSection(text: string, deltaPath: string): Issue[] 
     return issues;
   }
 
-  const headerMap = new Map<string, number>();
-  table.headers.forEach((column, index) => {
-    headerMap.set(column.trim().toLowerCase(), index);
-  });
+  for (const [tableIndex, table] of tables.entries()) {
+    const tableLabel = tables.length > 1 ? `table ${tableIndex + 1} ` : "";
+    const headerMap = new Map<string, number>();
+    table.headers.forEach((column, index) => {
+      headerMap.set(column.trim().toLowerCase(), index);
+    });
 
-  const missingColumns = TRIAGE_REQUIRED_COLUMNS.filter((column) => !headerMap.has(column));
-  if (missingColumns.length > 0) {
-    issues.push(
-      issue(
-        "QFAI-TRIAGE-002",
-        `Triage table に必須列が不足しています: ${missingColumns.join(", ")}`,
-        "error",
-        deltaPath,
-        "triage.columns",
-        Array.from(missingColumns),
-        "canonical",
-        `Triage table のヘッダに ${TRIAGE_TABLE_HEADER.join(" / ")} を含めてください。`,
-      ),
-    );
-    return issues;
+    const missingColumns = TRIAGE_REQUIRED_COLUMNS.filter((column) => !headerMap.has(column));
+    if (missingColumns.length > 0) {
+      issues.push(
+        issue(
+          "QFAI-TRIAGE-002",
+          `${tableLabel}Triage table に必須列が不足しています: ${missingColumns.join(", ")}`.trim(),
+          "error",
+          deltaPath,
+          "triage.columns",
+          Array.from(missingColumns),
+          "canonical",
+          `Triage table のヘッダに ${TRIAGE_TABLE_HEADER.join(" / ")} を含めてください。`,
+        ),
+      );
+      continue;
+    }
+
+    issues.push(...validateTriageRows(table, headerMap, deltaPath, tableLabel));
   }
 
+  return issues;
+}
+
+function validateTriageRows(
+  table: { headers: string[]; rows: string[][] },
+  headerMap: Map<string, number>,
+  deltaPath: string,
+  tableLabel: string,
+): Issue[] {
+  const issues: Issue[] = [];
   for (const [rowIndex, row] of table.rows.entries()) {
     const opCell = (row[headerMap.get("operation") ?? -1] ?? "").trim();
     const subCell = (row[headerMap.get("sub-op") ?? -1] ?? "").trim();
     const approvedCell = (row[headerMap.get("approved by") ?? -1] ?? "").trim();
     const sourceCell = (row[headerMap.get("source") ?? -1] ?? "").trim();
-    const rowLabel = sourceCell || `row ${rowIndex + 1}`;
+    const baseLabel = sourceCell || `row ${rowIndex + 1}`;
+    const rowLabel = tableLabel ? `${tableLabel.trim()} ${baseLabel}` : baseLabel;
 
     const opUpperRaw = opCell.toUpperCase();
     if (!isTriageTopLevelLabel(opUpperRaw)) {
