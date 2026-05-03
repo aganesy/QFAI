@@ -504,4 +504,65 @@ describe("renderTriageMarkdown", () => {
     expect(row[1]).toBe("support a|b switch");
     expect(row[6]).toBe("see line break");
   });
+
+  // PR #206 review NkNm / NkzP / Nk-A / NlLz: escapeTableCell and
+  // splitMarkdownRow must agree on what a cell can contain. The parser
+  // only un-escapes `\|` → `|`, so literal `\` must be persisted as-is
+  // (never doubled). Round-trip identity for these inputs is the
+  // contract; if a future change re-introduces `\` → `\\` here without
+  // a matching parser rule, these assertions fire instead of silently
+  // mutating REQ subjects (Windows paths, regex literals).
+  describe("escapeTableCell ↔ splitMarkdownRow round-trip identity", () => {
+    async function roundTripCell(subject: string, rationale: string): Promise<string[]> {
+      const { parseAllMarkdownTables } = await import("../../src/core/specPackParsers.js");
+      const md = renderTriageMarkdown([
+        {
+          source: "REQ-rt",
+          subject,
+          existingSpec: "spec-0001",
+          op: { update: "APPEND" },
+          rationale,
+        },
+      ]);
+      const tableSection = md.replace(/^## Triage\n\n/, "");
+      const tables = parseAllMarkdownTables(tableSection);
+      const table = tables[0];
+      if (!table) throw new Error("expected one parsed table");
+      const row = table.rows[0];
+      if (!row) throw new Error("expected one parsed row");
+      return row;
+    }
+
+    it("backslash-only subject (Windows path) round-trips unchanged", async () => {
+      const row = await roundTripCell("C:\\Users\\spec.md", "matches \\d+ pattern");
+      expect(row[1]).toBe("C:\\Users\\spec.md");
+      expect(row[6]).toBe("matches \\d+ pattern");
+    });
+
+    it("backslash + pipe combo (a\\|b) round-trips unchanged", async () => {
+      // Literal `\` followed by literal `|` — the asymmetric escape
+      // would have produced extra `\` characters here; symmetric escape
+      // must round-trip the original 4-char string verbatim.
+      const row = await roundTripCell("a\\|b", "regex (?:foo|\\bar)");
+      expect(row[1]).toBe("a\\|b");
+      expect(row[6]).toBe("regex (?:foo|\\bar)");
+    });
+
+    it("CRLF line breaks collapse to single space (Windows clipboard paste)", async () => {
+      const row = await roundTripCell("subject", "line1\r\nline2");
+      expect(row[6]).toBe("line1 line2");
+    });
+
+    it("CR-only line breaks collapse to single space (legacy Mac)", async () => {
+      const row = await roundTripCell("subject", "line1\rline2");
+      expect(row[6]).toBe("line1 line2");
+    });
+
+    it("backslash adjacent to escaped pipe (path\\\\|file) round-trips unchanged", async () => {
+      // Two literal `\` followed by a literal `|`: the escape must not
+      // confuse "literal `\\`" with "escape sequence for `\\|`".
+      const row = await roundTripCell("path\\\\|file", "rationale");
+      expect(row[1]).toBe("path\\\\|file");
+    });
+  });
 });

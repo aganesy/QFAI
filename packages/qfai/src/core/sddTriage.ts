@@ -433,12 +433,18 @@ export const TRIAGE_TABLE_HEADER = [
  * - `|` → `\|` (GFM table escape)
  * - `\r\n` / `\r` / `\n` → ` ` (single space; `<br>` is GFM-only and
  *   not all downstream consumers handle it consistently)
+ *
+ * Symmetry contract with `splitMarkdownRow` (`specPackParsers.ts`):
+ * the parser only un-escapes `\|` → `|`. It does NOT decode `\\` → `\`.
+ * Therefore literal backslashes in the cell are persisted as-is — we
+ * deliberately do not pre-escape `\` here, so cells like Windows paths
+ * (`C:\Users\foo`) or regex literals (`\d+`, `(?<=foo)\bbar`) round-trip
+ * unchanged through render → parse. Adding `\` → `\\` here without a
+ * matching `\\` → `\` in the parser would silently double backslashes
+ * (PR #206 review NkNm / NkzP / Nk-A).
  */
 function escapeTableCell(value: string): string {
-  return value
-    .replace(/\\/g, "\\\\")
-    .replace(/\|/g, "\\|")
-    .replace(/\r\n|\r|\n/g, " ");
+  return value.replace(/\|/g, "\\|").replace(/\r\n|\r|\n/g, " ");
 }
 
 /**
