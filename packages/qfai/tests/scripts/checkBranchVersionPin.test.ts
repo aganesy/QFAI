@@ -151,4 +151,46 @@ describe("check-branch-version-pin.sh", () => {
     });
     expect(r.status).toBe(0);
   });
+
+  // PR #206 review LtQx: explicit coverage of the canonical pre-release /
+  // build-metadata rejection added to the script. Without these tests a
+  // future regression that loosens the regex (e.g. dropping the `-rc` /
+  // `+build` discriminator) could ship green.
+
+  it.each([
+    ["release/v1.9.0-rc.1", "rc"],
+    ["release/v1.0.0-alpha", "alpha"],
+    ["release/v2.3.4-beta.2", "beta"],
+    ["release/v1.0.0-pre", "pre"],
+    ["release/v1.0.0-next.10", "next"],
+  ])("rejects pre-release SemVer branch '%s' (%s)", (branch) => {
+    const r = runGuard({ GITHUB_REF_NAME: branch });
+    expect(r.status).toBe(1);
+    expect(r.stderr).toMatch(/pre-release \/ build/);
+    expect(r.stderr).toMatch(/VERSION_PIN_SKIP=1/);
+  });
+
+  it("rejects build-metadata SemVer branch", () => {
+    const r = runGuard({ GITHUB_REF_NAME: "release/v1.9.0+build.5" });
+    expect(r.status).toBe(1);
+    expect(r.stderr).toMatch(/pre-release \/ build/);
+  });
+
+  it("does NOT reject slug-style suffix (feature/vX.Y.Z-bugfix-x)", async () => {
+    const v = await readCurrentVersion();
+    const r = runGuard({ GITHUB_REF_NAME: `feature/v${v}-bugfix-x` });
+    // Slug suffix is allowed by the master rule's recommended naming
+    // convention `<type>/v<X.Y.Z>[-<slug>]` (.agents/rules/version-discipline.md).
+    expect(r.status).toBe(0);
+  });
+
+  it("VERSION_PIN_SKIP=1 still honoured for legitimate pre-release branches", () => {
+    const r = runGuard({
+      GITHUB_REF_NAME: "release/v1.9.0-rc.1",
+      VERSION_PIN_SKIP: "1",
+    });
+    expect(r.status).toBe(0);
+    expect(r.stdout).toMatch(/skipping/);
+    expect(r.stdout).toMatch(/::warning title=VERSION_PIN_SKIP=1::/);
+  });
 });
