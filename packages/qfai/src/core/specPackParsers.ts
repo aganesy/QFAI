@@ -142,9 +142,9 @@ export function parseAllMarkdownTables(text: string): MarkdownTable[] {
  *   `describe("escapeTableCell ↔ splitMarkdownRow round-trip identity")`)
  *   MUST be extended with the new character class.
  *
- * The contract is also declared at the spec level — see
- * `.qfai/specs/spec-0013/04_Business-Rules.md#br-0013-0009` and
- * AC-0013-0012 (PR #206 review NkNm / NkzP / Nk-A / NlLz / NpkO / NptA).
+ * The contract is also declared at the spec level for the SDD skill
+ * (Stage 1 Triage business rules); see the corresponding spec entries
+ * in the development repository for the formal acceptance criteria.
  */
 export function splitMarkdownRow(line: string): string[] {
   const trimmed = line.trim();

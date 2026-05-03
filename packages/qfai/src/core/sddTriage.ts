@@ -445,9 +445,9 @@ export const TRIAGE_TABLE_HEADER = [
  * matching `\\` → `\` in the parser would silently double backslashes
  * (PR #206 review NkNm / NkzP / Nk-A / NptA).
  *
- * Spec-level contract: `.qfai/specs/spec-0013/04_Business-Rules.md`
- * BR-0013-0009 + AC-0013-0012. Round-trip identity tests live in
- * `tests/core/sddTriage.test.ts` under
+ * The contract is also declared at the spec level for the SDD skill
+ * (Stage 1 Triage business rules) and exercised end-to-end by the
+ * round-trip identity tests in `tests/core/sddTriage.test.ts` under
  * `describe("escapeTableCell ↔ splitMarkdownRow round-trip identity")`
  * — extend them when adding any new escape/un-escape rule.
  */
