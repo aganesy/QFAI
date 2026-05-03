@@ -434,14 +434,22 @@ export const TRIAGE_TABLE_HEADER = [
  * - `\r\n` / `\r` / `\n` → ` ` (single space; `<br>` is GFM-only and
  *   not all downstream consumers handle it consistently)
  *
- * Symmetry contract with `splitMarkdownRow` (`specPackParsers.ts`):
- * the parser only un-escapes `\|` → `|`. It does NOT decode `\\` → `\`.
- * Therefore literal backslashes in the cell are persisted as-is — we
- * deliberately do not pre-escape `\` here, so cells like Windows paths
+ * Symmetric pair: paired with `splitMarkdownRow`
+ * (`packages/qfai/src/core/specPackParsers.ts`). The pair invariant
+ * declared on both sides MUST stay in lock-step — the parser only
+ * un-escapes `\|` → `|` and does NOT decode `\\` → `\`. Therefore
+ * literal backslashes in the cell are persisted as-is — we deliberately
+ * do not pre-escape `\` here, so cells like Windows paths
  * (`C:\Users\foo`) or regex literals (`\d+`, `(?<=foo)\bbar`) round-trip
  * unchanged through render → parse. Adding `\` → `\\` here without a
  * matching `\\` → `\` in the parser would silently double backslashes
- * (PR #206 review NkNm / NkzP / Nk-A).
+ * (PR #206 review NkNm / NkzP / Nk-A / NptA).
+ *
+ * Spec-level contract: `.qfai/specs/spec-0013/04_Business-Rules.md`
+ * BR-0013-0009 + AC-0013-0012. Round-trip identity tests live in
+ * `tests/core/sddTriage.test.ts` under
+ * `describe("escapeTableCell ↔ splitMarkdownRow round-trip identity")`
+ * — extend them when adding any new escape/un-escape rule.
  */
 function escapeTableCell(value: string): string {
   return value.replace(/\|/g, "\\|").replace(/\r\n|\r|\n/g, " ");

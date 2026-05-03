@@ -121,6 +121,31 @@ export function parseAllMarkdownTables(text: string): MarkdownTable[] {
   return tables;
 }
 
+/**
+ * Split a GFM markdown table row into trimmed cell strings.
+ *
+ * Symmetric pair: this function is the un-escape half of a contract
+ * paired with `escapeTableCell` (`packages/qfai/src/core/sddTriage.ts`).
+ * The renderer-side encode rule and the parser-side decode rule below
+ * MUST stay in lock-step. Specifically:
+ *
+ * - The ONLY un-escape rule applied here is `\|` → `|`. Literal `\`
+ *   is passed through unchanged. The renderer therefore MUST NOT
+ *   pre-escape `\` (no `\` → `\\` step), or cells containing literal
+ *   backslashes (Windows paths `C:\Users\...`, regex literals `\d+`)
+ *   will silently double on round-trip while keeping column count
+ *   valid — defeating the QFAI-TRIAGE-* validators.
+ * - Adding any new decode rule here (e.g. `<br>` → `\n`, or `\n` →
+ *   `\n` if multi-line cells become supported) MUST be matched by a
+ *   corresponding encode rule in `escapeTableCell`, AND the round-trip
+ *   identity tests in `tests/core/sddTriage.test.ts` (under
+ *   `describe("escapeTableCell ↔ splitMarkdownRow round-trip identity")`)
+ *   MUST be extended with the new character class.
+ *
+ * The contract is also declared at the spec level — see
+ * `.qfai/specs/spec-0013/04_Business-Rules.md#br-0013-0009` and
+ * AC-0013-0012 (PR #206 review NkNm / NkzP / Nk-A / NlLz / NpkO / NptA).
+ */
 export function splitMarkdownRow(line: string): string[] {
   const trimmed = line.trim();
   const inner = trimEdgePipes(trimmed);
