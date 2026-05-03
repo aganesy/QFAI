@@ -119,6 +119,15 @@ genuine scope deviations that introduce a new capability.
   repo secret to be a fine-grained PAT with `Pull requests: write`;
   the default `GITHUB_TOKEN` is no longer accepted for bot reviewer
   assignment.
+- `bestSubjectMatch` excludes `Scope > Out:` tokens from the overlap
+  haystack. Subjects that a spec explicitly declares as out-of-scope
+  must not bias the closest-match selection (otherwise append-first
+  could route a REQ onto a spec that has already disowned the subject).
+- `classifyTriage` `removalHint` branch now mirrors the additive path
+  and emits `MERGE` (with a removal-intent rationale) when a REQ matches
+  multiple capability-keyed specs, rather than silently collapsing onto
+  `capabilityMatches[0]` and dropping the cascade across the other
+  matched specs.
 
 ## [1.8.8] - 2026-05-02
 

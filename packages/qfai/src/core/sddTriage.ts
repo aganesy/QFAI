@@ -135,11 +135,14 @@ function overlapCount(a: Set<string>, b: Set<string>): number {
 }
 
 /**
- * Find the active spec whose title/capability/scope shares the most
- * subject tokens with the requirement. Tie-breaker: smaller acCount,
- * then lexicographic specId. Returns undefined when no token overlap
- * exists with any active spec — that is the only condition under which
- * `classifyTriage` proposes CREATE.
+ * Find the active spec whose title/capability/scope-in shares the most
+ * subject tokens with the requirement. `scopeOut` is intentionally
+ * excluded from the haystack: tokens a spec explicitly declares as
+ * out-of-scope must not bias the closest-match selection (otherwise
+ * append-first would route a REQ onto a spec that has already disowned
+ * the subject). Tie-breaker: smaller acCount, then lexicographic specId.
+ * Returns undefined when no token overlap exists with any active spec —
+ * that is the only condition under which `classifyTriage` proposes CREATE.
  */
 export function bestSubjectMatch(
   subject: string,
@@ -151,7 +154,7 @@ export function bestSubjectMatch(
   let best: { score: number; summary: SpecSummary } | undefined;
   for (const s of summaries) {
     if (s.status !== "active") continue;
-    const haystack = [s.title, s.capability ?? "", ...s.scopeIn, ...s.scopeOut].join(" ");
+    const haystack = [s.title, s.capability ?? "", ...s.scopeIn].join(" ");
     const score = overlapCount(reqTokens, tokenize(haystack));
     if (score === 0) continue;
     if (
@@ -171,9 +174,14 @@ export function bestSubjectMatch(
  *
  * Decision order per REQ:
  *
- * 1. removalHint -> UPDATE:REMOVE on a capability-matched spec, or on the
- *    closest subject-overlap match. Falls through to DELETE only when no
- *    active spec can absorb the removal.
+ * 1. removalHint:
+ *    - capability matches multiple active specs -> MERGE (with
+ *      removal-intent rationale, mirroring the additive path so the
+ *      cascade across the matched specs is not silently collapsed onto
+ *      `capabilityMatches[0]`).
+ *    - otherwise UPDATE:REMOVE on a capability-matched spec, or on the
+ *      closest subject-overlap match. Falls through to DELETE only when
+ *      no active spec can absorb the removal.
  * 2. capability matches multiple active specs -> MERGE.
  * 3. capability matches a single active spec -> APPEND, escalating to
  *    SPLIT when AC/TC thresholds are exceeded.
@@ -201,6 +209,17 @@ export function classifyTriage(input: TriageInput): TriageRow[] {
       : [];
 
     if (req.removalHint) {
+      if (capabilityMatches.length > 1) {
+        rows.push({
+          source: req.id,
+          subject: req.subject,
+          existingSpec: capabilityMatches.map((m) => m.specId).join("+"),
+          op: "MERGE",
+          rationale:
+            "removal-intent across multiple capability-matched specs; consolidate before REMOVE",
+        });
+        continue;
+      }
       const target = capabilityMatches[0] ?? bestSubjectMatch(req.subject, active);
       if (target) {
         rows.push({

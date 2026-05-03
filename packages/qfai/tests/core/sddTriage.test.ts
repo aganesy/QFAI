@@ -175,6 +175,26 @@ describe("classifyTriage", () => {
     expect(rows[0]?.op).toEqual({ update: "REMOVE" });
   });
 
+  it("classifies removal hint with multiple capability matches as MERGE", () => {
+    const rows = classifyTriage({
+      reqs: [
+        {
+          id: "REQ-0010",
+          subject: "drop obsolete behavior",
+          capability: "CAP-0001",
+          removalHint: true,
+        },
+      ],
+      summaries: [
+        makeSummary({ specId: "spec-0001", capability: "CAP-0001" }),
+        makeSummary({ specId: "spec-0002", capability: "CAP-0001" }),
+      ],
+    });
+    expect(rows[0]?.op).toBe("MERGE");
+    expect(rows[0]?.existingSpec).toBe("spec-0001+spec-0002");
+    expect(rows[0]?.rationale).toMatch(/removal-intent/);
+  });
+
   it("ignores non-active specs when looking up matches", () => {
     const rows = classifyTriage({
       reqs: [{ id: "REQ-0008", subject: "extend", capability: "CAP-0001" }],
@@ -282,6 +302,18 @@ describe("bestSubjectMatch", () => {
         title: "packaging command",
         scopeIn: ["packaging"],
         status: "deprecated",
+      }),
+    ]);
+    expect(result).toBeUndefined();
+  });
+
+  it("ignores tokens that appear only in scopeOut", () => {
+    const result = bestSubjectMatch("packaging command", [
+      makeSummary({
+        specId: "spec-0001",
+        title: "auth module",
+        scopeIn: ["auth"],
+        scopeOut: ["packaging command"],
       }),
     ]);
     expect(result).toBeUndefined();
