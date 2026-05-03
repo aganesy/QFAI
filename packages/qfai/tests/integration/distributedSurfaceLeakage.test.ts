@@ -7,6 +7,17 @@
  *
  * Complements scripts/check-no-internal-version-leakage.sh by checking
  * the *output* of init (post-template-copy), not just the source assets.
+ *
+ * SSOT note (PR #206 review LtfD): the `PATTERNS` array below is
+ * semantically equivalent to the `INTERNAL_SPEC_RE` / `INTERNAL_VERSION_RE`
+ * / `INTERNAL_ID_RE` / `SCHEMA_VERSION_RE` regex set in
+ * `scripts/check-no-internal-version-leakage.sh` (POSIX ERE there,
+ * JS RegExp here). When tightening one, tighten the other — the two
+ * are the same backstop expressed in two languages, and a drift would
+ * let the smoke test silently miss what the script catches (or vice
+ * versa). A single source of truth is YAGNI for now (Rule of Three
+ * not yet hit); revisit if a third consumer appears.
+ * See `.agents/rules/distributed-surface.md`.
  */
 import { mkdtemp, readFile, readdir, rm, stat } from "node:fs/promises";
 import os from "node:os";
