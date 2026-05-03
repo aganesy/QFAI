@@ -19,6 +19,12 @@ concurrency:
 # ── Jobs (parallel) ─────────────────────────────────────────────────
 jobs:
   # ── 1. Lint & format checks ──────────────────────────────────────
+  # TODO(QFAI-PR206-followup): add a windows-latest matrix entry that runs
+  # at minimum the agentsRulesSurface integration test, to catch the
+  # symlink-vs-text-file divergence that affects .claude/rules/*.md on
+  # Windows without core.symlinks=true. Deferred from #33 because the
+  # accompanying test fix (#11) needs to land alongside the matrix
+  # expansion to avoid an instantly-red Windows job.
   lint:
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -34,8 +40,11 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - name: Run lint gate
         run: pnpm ci:lint
-      - name: Sanity grep — no v1.x prototyping legacy concepts (spec-0017)
-        run: bash packages/qfai/scripts/check-no-legacy-concepts.sh
+      - name: Sanity grep — no internal spec IDs or version markers leak
+        run: bash packages/qfai/scripts/check-no-internal-version-leakage.sh
+      - name: Verify branch name version pin matches package.json#version
+        run: bash packages/qfai/scripts/check-branch-version-pin.sh
+        shell: bash
 
   # ── 2. Type checking (current TypeScript) ────────────────────────
   check-types:
@@ -110,7 +119,10 @@ jobs:
       - name: Run build & pack verification
         run: pnpm ci:build-verify
 
-      - name: QFAI self-validate this repo (spec-0017 REQ-0009 dogfooding)
+      - name: Sanity grep — no internal spec IDs or version markers leak (post-build)
+        run: bash packages/qfai/scripts/check-no-internal-version-leakage.sh
+
+      - name: QFAI self-validate this repo (dogfooding — TDD gates)
         shell: bash
         run: |
           set -euo pipefail
@@ -120,6 +132,26 @@ jobs:
           # users that its own repo wouldn't pass.
           node packages/qfai/dist/cli/index.mjs validate \
             --profile tdd \
+            --fail-on error \
+            --format github \
+            --root .
+
+      - name: QFAI self-validate this repo (dogfooding — SDD gates)
+        shell: bash
+        run: |
+          set -euo pipefail
+          # The `sdd` profile runs validateSpecPacks (QFAI-STATUS-001..006,
+          # QFAI-TRIAGE-001..006) and validateStatusInSpecs against the
+          # repo root. This catches drift introduced by the very PR that
+          # adds those validators (PR #206 review LW-G): without this
+          # step, a future regression in sddTriage / specPack validators
+          # would still let CI go green because `tdd` does not exercise
+          # those code paths. `sdd` is on the CI allow-list because it is
+          # paired here with `--profile tdd` above and the broader
+          # default-profile sandbox validate below; broad coverage is
+          # preserved (see packages/qfai/src/core/phasePolicy.ts).
+          node packages/qfai/dist/cli/index.mjs validate \
+            --profile sdd \
             --fail-on error \
             --format github \
             --root .

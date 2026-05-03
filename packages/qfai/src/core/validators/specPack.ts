@@ -26,12 +26,21 @@ import {
 } from "../specPackIds.js";
 import {
   parseAcceptanceCriteriaIds,
+  parseAllMarkdownTables,
   parseExamplesFeature,
   parseFirstMarkdownTable,
   parseIdsFromText,
   parseTestCaseIds,
   resolveAllowedLayerTagsFromPolicy,
 } from "../specPackParsers.js";
+import { parseSpec, SPEC_STATUS_VALUES, type ParsedSpec } from "../parse/spec.js";
+import {
+  TRIAGE_TABLE_HEADER,
+  TRIAGE_TOP_LEVEL_OPS,
+  TRIAGE_UPDATE_SUBOPS,
+  type TriageTopLevelOp,
+  type TriageUpdateSubOp,
+} from "../sddTriage.js";
 import { LAYER_TAGS } from "../testStrategyTags.js";
 import type { Issue } from "../types.js";
 import { issue } from "./utils.js";
@@ -106,16 +115,523 @@ export async function validateSpecPacks(root: string, config: QfaiConfig): Promi
   const layerPolicy = await loadLayerPolicy(root, config);
   const issues: Issue[] = [...layerPolicy.issues];
 
+  const knownSpecIds = new Set(entries.map((entry) => `spec-${entry.specNumber}`));
+
   for (const entry of entries) {
     if (entry.layout === "layered") {
       issues.push(...(await validateLayeredSpecEntry(entry)));
+    } else if (entry.layout === "spec-pack") {
+      issues.push(...(await validateSpecPackEntry(entry, layerPolicy.tags)));
+      issues.push(...(await validateTraceabilityLedger(entry, contractIndex.ids)));
+    } else {
+      // Unknown layout — skip layout-specific AND common checks since we
+      // cannot reason about the entry's structure. Other validators will
+      // surface the layout problem separately.
       continue;
     }
-    if (entry.layout !== "spec-pack") {
+    // Common checks (PR #206 review #42): Status / Triage validation is
+    // layout-independent, so factor it out of the per-branch tail to
+    // avoid two-place drift when a third layout is introduced.
+    issues.push(...(await validateSpecStatusForEntry(entry, knownSpecIds)));
+    issues.push(...(await validateTriageSectionForEntry(entry)));
+  }
+
+  // Cross-spec / policy-only triage rows live in `_policies/10_delta.md`
+  // (per `_policies/11_Slice-Policy.md` Decision procedure). The
+  // per-entry loop above does not include `_policies/` so the same
+  // Triage validators (QFAI-TRIAGE-001..006) must be invoked separately
+  // (PR #206 review LW-F). Without this branch, CREATE rows in the
+  // policy delta would silently bypass QFAI-TRIAGE-006 and SPLIT/MERGE
+  // rows would skip the approval gate.
+  issues.push(...(await validatePoliciesDeltaTriage(specsRoot)));
+
+  return issues;
+}
+
+async function validatePoliciesDeltaTriage(specsRoot: string): Promise<Issue[]> {
+  const deltaPath = path.join(specsRoot, "_policies", "10_delta.md");
+  let text: string;
+  try {
+    text = await readFile(deltaPath, "utf-8");
+  } catch {
+    // No policy delta — nothing to validate. Other validators surface
+    // missing _policies files separately.
+    return [];
+  }
+  const capabilitiesPath = path.join(specsRoot, "_policies", "03_Capabilities.md");
+  const issues = validateTriageSection(text, deltaPath);
+  issues.push(...(await validateCreateRowCapabilityRefs(text, deltaPath, capabilitiesPath)));
+  return issues;
+}
+
+const STATUS_ENUM_LIST = SPEC_STATUS_VALUES.join(" | ");
+const SUPERSEDED_BY_RE = /^spec-\d{4}$/;
+const DEPRECATED_AT_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+async function validateSpecStatusForEntry(
+  entry: SpecEntry,
+  knownSpecIds: Set<string>,
+): Promise<Issue[]> {
+  const specMdPath = entry.specPath;
+  if (!specMdPath) {
+    return [];
+  }
+  let text: string;
+  try {
+    text = await readFile(specMdPath, "utf-8");
+  } catch {
+    return [];
+  }
+  const parsed = parseSpec(text, specMdPath);
+  return validateSpecStatus(parsed, specMdPath, knownSpecIds);
+}
+
+export function validateSpecStatus(
+  parsed: ParsedSpec,
+  specMdPath: string,
+  knownSpecIds: Set<string>,
+): Issue[] {
+  const issues: Issue[] = [];
+
+  if (parsed.statusRaw === undefined) {
+    issues.push(
+      issue(
+        "QFAI-STATUS-001",
+        `01_Spec.md に Status bullet が見つかりません。許容値: ${STATUS_ENUM_LIST}`,
+        "error",
+        specMdPath,
+        "specStatus.required",
+        undefined,
+        "canonical",
+        "01_Spec.md の冒頭 bullet ブロックに `- Status: active` を追加してください。",
+      ),
+    );
+    return issues;
+  }
+
+  if (parsed.status === undefined) {
+    issues.push(
+      issue(
+        "QFAI-STATUS-002",
+        `Status の値が不正です: ${parsed.statusRaw}。許容値: ${STATUS_ENUM_LIST}`,
+        "error",
+        specMdPath,
+        "specStatus.enum",
+        [parsed.statusRaw],
+        "canonical",
+        `01_Spec.md の \`- Status:\` 行を ${STATUS_ENUM_LIST} のいずれかに修正してください。`,
+      ),
+    );
+    return issues;
+  }
+
+  if (parsed.status === "superseded") {
+    if (!parsed.supersededBy) {
+      issues.push(
+        issue(
+          "QFAI-STATUS-003",
+          "Status: superseded には Superseded-by が必須です。",
+          "error",
+          specMdPath,
+          "specStatus.supersededBy.required",
+          undefined,
+          "canonical",
+          "01_Spec.md に `- Superseded-by: spec-NNNN` を設定してください。",
+        ),
+      );
+    } else if (!SUPERSEDED_BY_RE.test(parsed.supersededBy)) {
+      issues.push(
+        issue(
+          "QFAI-STATUS-003",
+          `Superseded-by の形式が不正です: ${parsed.supersededBy} (期待: spec-NNNN)`,
+          "error",
+          specMdPath,
+          "specStatus.supersededBy.format",
+          [parsed.supersededBy],
+          "canonical",
+          "Superseded-by を `spec-0001` のような 4 桁形式に修正してください。",
+        ),
+      );
+    } else if (!knownSpecIds.has(parsed.supersededBy)) {
+      issues.push(
+        issue(
+          "QFAI-STATUS-004",
+          `Superseded-by が指す spec が存在しません: ${parsed.supersededBy}`,
+          "error",
+          specMdPath,
+          "specStatus.supersededBy.exists",
+          [parsed.supersededBy],
+          "canonical",
+          "置換先 spec を作成するか、Superseded-by を実在する spec ID に修正してください。",
+        ),
+      );
+    }
+  }
+
+  if (parsed.status === "deprecated" || parsed.status === "removed") {
+    if (!parsed.deprecatedAt) {
+      issues.push(
+        issue(
+          "QFAI-STATUS-005",
+          `Status: ${parsed.status} には Deprecated-at が必須です。`,
+          "error",
+          specMdPath,
+          "specStatus.deprecatedAt.required",
+          undefined,
+          "canonical",
+          "01_Spec.md に `- Deprecated-at: YYYY-MM-DD` を設定してください。",
+        ),
+      );
+    } else if (!DEPRECATED_AT_RE.test(parsed.deprecatedAt)) {
+      issues.push(
+        issue(
+          "QFAI-STATUS-006",
+          `Deprecated-at の形式が不正です: ${parsed.deprecatedAt} (期待: YYYY-MM-DD)`,
+          "error",
+          specMdPath,
+          "specStatus.deprecatedAt.format",
+          [parsed.deprecatedAt],
+          "canonical",
+          "Deprecated-at を `YYYY-MM-DD` 形式に修正してください。",
+        ),
+      );
+    }
+  }
+
+  return issues;
+}
+
+const APPROVAL_REQUIRED_OPS = new Set<TriageTopLevelOp>([
+  "CREATE",
+  "DELETE",
+  "SPLIT",
+  "MERGE",
+  "SUPERSEDE",
+]);
+const TRIAGE_REQUIRED_COLUMNS = ["source", "subject", "existing spec", "operation"] as const;
+const TRIAGE_TOP_LEVEL_LABELS = new Set<string>([...TRIAGE_TOP_LEVEL_OPS, "UPDATE"]);
+const TRIAGE_SUB_OPS = new Set<string>(TRIAGE_UPDATE_SUBOPS);
+
+/**
+ * Type guard for the canonical triage Operation labels (top-level + UPDATE).
+ * Replaces a bare `as` assertion at the call site (PR #206 review #34).
+ */
+function isTriageTopLevelLabel(value: string): value is "UPDATE" | TriageTopLevelOp {
+  return TRIAGE_TOP_LEVEL_LABELS.has(value);
+}
+
+/**
+ * Type guard for the canonical triage UPDATE Sub-op labels. Replaces a
+ * bare `as TriageUpdateSubOp` assertion at the call site
+ * (PR #206 review #37).
+ */
+function isTriageUpdateSubOp(value: string): value is TriageUpdateSubOp {
+  return TRIAGE_SUB_OPS.has(value);
+}
+
+async function validateTriageSectionForEntry(entry: SpecEntry): Promise<Issue[]> {
+  const deltaPath = entry.deltaPath;
+  if (!deltaPath) {
+    return [];
+  }
+  let text: string;
+  try {
+    text = await readFile(deltaPath, "utf-8");
+  } catch {
+    return [];
+  }
+  const issues = validateTriageSection(text, deltaPath);
+  issues.push(...(await validateCreateRowCapabilityRefs(text, deltaPath, entry.capabilityPath)));
+  return issues;
+}
+
+/**
+ * Enforce QFAI-TRIAGE-006: every CREATE row in the Triage table must cite a
+ * `CAP-NNNN` reference in its Rationale column, and that CAP must already
+ * be registered in `_policies/03_Capabilities.md`. This is the structural
+ * gate that prevents drive-by spec creation when an existing scope could
+ * absorb the requirement instead.
+ */
+export async function validateCreateRowCapabilityRefs(
+  text: string,
+  deltaPath: string,
+  capabilitiesPath: string,
+): Promise<Issue[]> {
+  const headings = extractH2Headings(text);
+  if (!headings.has(normalizeHeading("Triage"))) {
+    return [];
+  }
+
+  const section = extractMarkdownSection(text, "Triage");
+  // Triage section MAY contain multiple tables (e.g. when authors split
+  // a large change into themed sub-tables). Earlier behaviour read only
+  // the first table, letting CREATE rows in subsequent tables bypass
+  // QFAI-TRIAGE-006 entirely (PR #206 review LWri). Walk every table so
+  // the structural CAP-NNNN gate is uniform.
+  const tables = parseAllMarkdownTables(section);
+  if (tables.length === 0) {
+    return [];
+  }
+
+  // Resolve the known CAP set. When the capabilities catalog is missing
+  // or unreadable, intentionally treat the known set as empty (PR #206
+  // review #39). The downstream loop will then surface QFAI-TRIAGE-006
+  // for every CREATE row that references a CAP, which is the desired
+  // structural behaviour: append-first regression should fail loud
+  // rather than silently skip when the SSOT cannot be loaded. A
+  // separate validator surfaces the missing capabilities file itself.
+  let knownCaps = new Set<string>();
+  try {
+    const capText = await readFile(capabilitiesPath, "utf-8");
+    knownCaps = new Set(parseIdsFromText(capText, "CAP"));
+  } catch {
+    // No CAP catalog — leave knownCaps empty so every cited CAP is
+    // reported as unregistered.
+  }
+
+  const issues: Issue[] = [];
+  for (const [tableIndex, table] of tables.entries()) {
+    const headerIndex = (label: string): number => {
+      const target = label.trim().toLowerCase();
+      return table.headers.findIndex((h) => h.trim().toLowerCase() === target);
+    };
+    const opIdx = headerIndex("operation");
+    const rationaleIdx = headerIndex("rationale");
+    const sourceIdx = headerIndex("source");
+    if (opIdx < 0) {
       continue;
     }
-    issues.push(...(await validateSpecPackEntry(entry, layerPolicy.tags)));
-    issues.push(...(await validateTraceabilityLedger(entry, contractIndex.ids)));
+    const tableLabel = tables.length > 1 ? `table ${tableIndex + 1}` : "";
+
+    for (const [rowIndex, row] of table.rows.entries()) {
+      const opCell = (row[opIdx] ?? "").trim().toUpperCase();
+      if (opCell !== "CREATE") {
+        continue;
+      }
+
+      const sourceCell = sourceIdx >= 0 ? (row[sourceIdx] ?? "").trim() : "";
+      const baseLabel = sourceCell || `row ${rowIndex + 1}`;
+      const rowLabel = tableLabel ? `${tableLabel} ${baseLabel}` : baseLabel;
+      const rationaleCell = rationaleIdx >= 0 ? (row[rationaleIdx] ?? "") : "";
+      const referencedCaps = parseIdsFromText(rationaleCell, "CAP");
+
+      if (referencedCaps.length === 0) {
+        issues.push(
+          issue(
+            "QFAI-TRIAGE-006",
+            `CREATE 行の Rationale に新 CAP-NNNN の参照が見つかりません (${rowLabel})。`,
+            "error",
+            deltaPath,
+            "triage.createRequiresCap",
+            [rowLabel],
+            "canonical",
+            "新 CAP を `_policies/03_Capabilities.md` に追加し、Rationale 列にその CAP-NNNN を明記してください。",
+          ),
+        );
+        continue;
+      }
+
+      const missing = referencedCaps.filter((cap) => !knownCaps.has(cap));
+      if (missing.length > 0) {
+        issues.push(
+          issue(
+            "QFAI-TRIAGE-006",
+            `CREATE 行が参照する CAP が _policies/03_Capabilities.md に未登録です: ${missing.join(", ")} (${rowLabel})`,
+            "error",
+            deltaPath,
+            "triage.capExists",
+            missing,
+            "canonical",
+            "_policies/03_Capabilities.md に新 CAP を追加してから CREATE を確定してください。",
+          ),
+        );
+      }
+    }
+  }
+
+  return issues;
+}
+
+export function validateTriageSection(text: string, deltaPath: string): Issue[] {
+  const issues: Issue[] = [];
+  const headings = extractH2Headings(text);
+  const hasChangeSummary = headings.has(normalizeHeading("Change Summary"));
+  const hasTriage = headings.has(normalizeHeading("Triage"));
+
+  if (hasChangeSummary && !hasTriage) {
+    // QFAI-TRIAGE-001 is intentionally a warning rather than an error
+    // for the 1.8.8 release window:
+    //
+    // - Existing operational specs in this repository (and in any
+    //   downstream that ran an earlier QFAI version) ship a delta.md
+    //   without a Triage section. Flipping this to error would block
+    //   `validate --fail-on error` on every such repo until each delta
+    //   is back-filled.
+    // - The structural append-first gate (QFAI-TRIAGE-006) and the
+    //   approval gates (QFAI-TRIAGE-005) remain `error`, so
+    //   triage-skip is still caught the moment someone tries to use
+    //   the Triage table for real work.
+    //
+    // TODO(QFAI-PR206-followup): once the operational backfill PR
+    // ships (PR #206 review #4), promote this to `error` so that
+    // missing Triage sections become structurally impossible.
+    issues.push(
+      issue(
+        "QFAI-TRIAGE-001",
+        "delta.md に `## Change Summary` があるが `## Triage` セクションがありません。",
+        "warning",
+        deltaPath,
+        "triage.required",
+        undefined,
+        "canonical",
+        "delta.md の `## Change Summary` 直後に `## Triage` セクションを追加し、Source / Subject / Existing Spec / Operation の表で粒度判定を記録してください。",
+      ),
+    );
+    return issues;
+  }
+
+  if (!hasTriage) {
+    return issues;
+  }
+
+  const section = extractMarkdownSection(text, "Triage");
+  // Validate every Triage table, not just the first (PR #206 review LWri).
+  const tables = parseAllMarkdownTables(section);
+  if (tables.length === 0) {
+    issues.push(
+      issue(
+        "QFAI-TRIAGE-002",
+        "`## Triage` セクションにテーブルが見つかりません。",
+        "error",
+        deltaPath,
+        "triage.table",
+        undefined,
+        "canonical",
+        `Triage セクションに ${TRIAGE_TABLE_HEADER.join(" / ")} 列の markdown table を記述してください。`,
+      ),
+    );
+    return issues;
+  }
+
+  for (const [tableIndex, table] of tables.entries()) {
+    const tableLabel = tables.length > 1 ? `table ${tableIndex + 1} ` : "";
+    const headerMap = new Map<string, number>();
+    table.headers.forEach((column, index) => {
+      headerMap.set(column.trim().toLowerCase(), index);
+    });
+
+    const missingColumns = TRIAGE_REQUIRED_COLUMNS.filter((column) => !headerMap.has(column));
+    if (missingColumns.length > 0) {
+      issues.push(
+        issue(
+          "QFAI-TRIAGE-002",
+          `${tableLabel}Triage table に必須列が不足しています: ${missingColumns.join(", ")}`.trim(),
+          "error",
+          deltaPath,
+          "triage.columns",
+          Array.from(missingColumns),
+          "canonical",
+          `Triage table のヘッダに ${TRIAGE_TABLE_HEADER.join(" / ")} を含めてください。`,
+        ),
+      );
+      continue;
+    }
+
+    issues.push(...validateTriageRows(table, headerMap, deltaPath, tableLabel));
+  }
+
+  return issues;
+}
+
+function validateTriageRows(
+  table: { headers: string[]; rows: string[][] },
+  headerMap: Map<string, number>,
+  deltaPath: string,
+  tableLabel: string,
+): Issue[] {
+  const issues: Issue[] = [];
+  for (const [rowIndex, row] of table.rows.entries()) {
+    const opCell = (row[headerMap.get("operation") ?? -1] ?? "").trim();
+    const subCell = (row[headerMap.get("sub-op") ?? -1] ?? "").trim();
+    const approvedCell = (row[headerMap.get("approved by") ?? -1] ?? "").trim();
+    const sourceCell = (row[headerMap.get("source") ?? -1] ?? "").trim();
+    const baseLabel = sourceCell || `row ${rowIndex + 1}`;
+    const rowLabel = tableLabel ? `${tableLabel.trim()} ${baseLabel}` : baseLabel;
+
+    const opUpperRaw = opCell.toUpperCase();
+    if (!isTriageTopLevelLabel(opUpperRaw)) {
+      issues.push(
+        issue(
+          "QFAI-TRIAGE-003",
+          `Triage の Operation が不正です (${rowLabel}): ${opCell || "(empty)"}`,
+          "error",
+          deltaPath,
+          "triage.operation",
+          [opCell],
+          "canonical",
+          `Operation を CREATE / UPDATE / DELETE / SPLIT / MERGE / SUPERSEDE のいずれかに修正してください。`,
+        ),
+      );
+      continue;
+    }
+    // `opUpper` is now narrowed to `"UPDATE" | TriageTopLevelOp` without
+    // a bare type assertion (PR #206 review #34).
+    const opUpper = opUpperRaw;
+
+    if (opUpper === "UPDATE") {
+      const subUpper = subCell.toUpperCase();
+      if (subCell.length === 0 || subCell === "-" || !isTriageUpdateSubOp(subUpper)) {
+        issues.push(
+          issue(
+            "QFAI-TRIAGE-004",
+            `Triage UPDATE の Sub-op が不正です (${rowLabel}): ${subCell || "(empty)"}`,
+            "error",
+            deltaPath,
+            "triage.subOp",
+            [subCell],
+            "canonical",
+            `Sub-op を APPEND / MODIFY / REMOVE のいずれかに設定してください。`,
+          ),
+        );
+        // Fail-fast: skip the QFAI-TRIAGE-005 (approval) check for this
+        // row so an invalid Sub-op does not double-report alongside an
+        // approval issue. The next pass with a corrected Sub-op will
+        // re-evaluate approval (PR #206 review #37).
+        continue;
+      }
+      // `subUpper` is now narrowed to `TriageUpdateSubOp` without a
+      // bare type assertion (PR #206 review #37).
+      if (subUpper === "REMOVE" && (approvedCell.length === 0 || approvedCell === "-")) {
+        issues.push(
+          issue(
+            "QFAI-TRIAGE-005",
+            `Triage UPDATE:REMOVE は Approved By 必須です (${rowLabel})。`,
+            "error",
+            deltaPath,
+            "triage.approval",
+            [rowLabel],
+            "canonical",
+            "Approved By 列に承認者を記載してください (AskUserQuestion で取得)。",
+          ),
+        );
+      }
+      continue;
+    }
+
+    if (APPROVAL_REQUIRED_OPS.has(opUpper) && (approvedCell.length === 0 || approvedCell === "-")) {
+      issues.push(
+        issue(
+          "QFAI-TRIAGE-005",
+          `Triage ${opUpper} は Approved By 必須です (${rowLabel})。`,
+          "error",
+          deltaPath,
+          "triage.approval",
+          [rowLabel],
+          "canonical",
+          "Approved By 列に承認者を記載してください (AskUserQuestion で取得)。",
+        ),
+      );
+    }
   }
 
   return issues;

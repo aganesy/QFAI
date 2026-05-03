@@ -1,5 +1,5 @@
 /**
- * Doc convergence validator - spec-0037
+ * Doc convergence validator.
  *
  * Validates that the master convergence document exists
  * with required canonical structure sections.

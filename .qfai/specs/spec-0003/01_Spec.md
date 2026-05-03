@@ -2,6 +2,7 @@
 
 - Spec: spec-0003
 - Parent: CAP-0003
+- Status: active
 - Consolidates: old spec-0001 (init), spec-0017 (Copilot Review Instructions), spec-0018 (Codex Sub-Agent TOML)
 
 ## Consumer View

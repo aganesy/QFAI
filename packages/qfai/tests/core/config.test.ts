@@ -133,7 +133,6 @@ describe("spec-0017 prototyping.execution config", () => {
         issue.message.includes("prototyping.execution.browserProvider"),
       );
       expect(legacy, "expected legacy browserProvider rejection").toBeDefined();
-      expect(legacy?.message).toContain("spec-0012");
       expect(legacy?.message).toContain("playwright-cli");
     } finally {
       await rm(root, { recursive: true, force: true });

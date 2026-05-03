@@ -1,5 +1,5 @@
 /**
- * Canonical UIX OQ closure validator — v1.7.14
+ * Canonical UIX OQ closure validator.
  *
  * Validates that no critical/blocking OQs remain open.
  */

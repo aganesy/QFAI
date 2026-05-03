@@ -25,6 +25,5 @@ Use this reference only for UI-bearing discussion packs.
 - Put all reference decisions in `31_reference_pool.md` (deviate-from input, not imitate).
 - Put prohibited visual directions in `32_design_anti_goals.md` (also feeds reviewer anti-slop).
 
-v1.x sidecars `33_exploration_rubric.md` and `34_evaluator_calibration.md`
-are removed in spec-0017 P4. Evaluation axes are now global constants in
-`core/prototyping/iteration.ts#OrdinalScore`.
+Evaluation axes are global constants (4-step ordinal: weak / acceptable /
+strong / exceptional) and are not authored as discussion sidecars.

@@ -105,7 +105,7 @@ export type SpecEntry = {
   layout: SpecLayoutKind;
   layeredStyle: LayeredStyle | null;
   specNumber: string;
-  // Backwards-compatible field name. v1.5.3+ points to `.qfai/specs/_policies`.
+  // Backwards-compatible field name. Points to `.qfai/specs/_policies`.
   sharedDir: string;
   requiredFiles: Partial<Record<RequiredSpecPackFile, string>>;
   requiredLayeredFiles: Partial<Record<string, string>>;
@@ -113,7 +113,7 @@ export type SpecEntry = {
   requiredSharedFiles: Partial<Record<string, string>>;
   requiredSharedFileNames: readonly string[];
   deltaCandidates: string[];
-  // v1.4.0 互換プロパティ（内部参照用）
+  // 内部参照用の互換プロパティ
   specPath: string;
   scenarioPath: string;
   caseCataloguePath: string;

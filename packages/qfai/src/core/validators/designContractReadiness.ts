@@ -8,23 +8,19 @@ import type { QfaiConfig } from "../config.js";
 import type { Issue } from "../types.js";
 import { issue } from "./utils.js";
 
-// v2.0 (spec-0017): SDD only normalizes the deviate-from / brand contracts.
-// The v1.x rubric / calibration / absorption-policy / selected-direction
-// contracts were removed; axes are global constants in
-// core/prototyping/iteration.ts.
+// SDD only normalizes the deviate-from / brand contracts. Evaluation axes
+// are global constants in core/prototyping/iteration.ts.
 const REQUIRED_SDD_DESIGN_FILES = [
   "exploration-brief.yaml",
   "reference-pool.yaml",
   "brand-design.yaml",
 ] as const;
-// v2.0: prototyping post-loop produces design-system.yaml (extracted from
-// final iter) and prototype-handoff.yaml (simplified schema, no
-// mustPreserve/mayAdapt/mustNotCopy).
+// Prototyping post-loop produces design-system.yaml (extracted from final
+// iter) and prototype-handoff.yaml.
 const REQUIRED_PROTOTYPING_DESIGN_FILES = ["design-system.yaml", "prototype-handoff.yaml"] as const;
 const FORBIDDEN_LEGACY_DESIGN_FILES = [
   "anchor-selection.yaml",
   "evaluation-axes.yaml",
-  // spec-0017 v2.0: removed in P4
   "evaluation-rubric.yaml",
   "evaluator-calibration.yaml",
   "absorption-policy.yaml",
@@ -165,9 +161,9 @@ async function validateDesignContractReadinessForStage(
   issues.push(...(await validateExplorationBrief(root, config)));
   issues.push(...(await validateReferencePool(root, config)));
   issues.push(...(await validateBrandDesign(root, config)));
-  // v2.0 (spec-0017 P4/P14): rubric/calibration/absorption-policy/
-  // selected-direction validators removed — those contracts no longer
-  // exist. Per-axis evaluation is encoded in core/prototyping/iteration.ts.
+  // Per-axis evaluation is encoded in core/prototyping/iteration.ts;
+  // there are no separate rubric / calibration / absorption-policy /
+  // selected-direction contracts.
   if (stage === "prototyping") {
     issues.push(...(await validateDesignSystem(root, config)));
     issues.push(...(await validatePrototypeHandoff(root, config)));
@@ -355,11 +351,6 @@ async function validateBrandDesign(root: string, config: QfaiConfig): Promise<Is
     "designContractReadiness.brandDesignField",
   );
 }
-
-// v2.0: legacy validators (validateEvaluationRubric,
-// validateEvaluatorCalibration, validateSelectedDirection,
-// validateAbsorptionPolicy, absorptionPolicyIssue) removed in
-// spec-0017 P4/P14. Their target contracts no longer exist.
 
 async function validateNoPrematurePrototypingContracts(
   root: string,

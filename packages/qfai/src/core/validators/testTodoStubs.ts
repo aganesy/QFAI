@@ -1,5 +1,5 @@
 /**
- * Test todo stub validator (spec-0017 REQ-0009, QFAI-TEST-001).
+ * Test todo stub validator (QFAI-TEST-001).
  *
  * Detects `it.todo(...)` / `test.todo(...)` / `describe.todo(...)` stubs in
  * test files. These are silent placeholders in vitest/jest: they count as
@@ -84,7 +84,7 @@ export async function validateTestTodoStubs(root: string, config: QfaiConfig): P
           "QFAI-TEST-001",
           `Test todo stub found: ${matchedKind}.todo at ${relFile}:${lineNumber}. ` +
             `Stubs are silent in vitest/jest and rot as missed work. ` +
-            `Implement the body or delete the stub (spec-0017 REQ-0009).`,
+            `Implement the body or delete the stub.`,
           "error",
           relFile,
           "validation.testStrategy.forbidTestTodoStubs",

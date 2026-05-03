@@ -55,3 +55,15 @@ Given a UI-bearing discussion pack with exploration-first UIUX sidecar files, wh
 ## AC-0013-0011: Downstream Design Contracts Exist Before Prototyping
 
 Given a UI-bearing discussion pack, when `/qfai-sdd` completes, then `selected-direction.yaml` と `design-system.yaml` も downstream validate readiness の required design contracts として生成または維持され、prototyping winner selection 後に必要なら更新される。
+
+## AC-0013-0013: Spec Auto-Discovery Returns Diff Result Across Sources
+
+Given a repository with spec / policy / contract / evidence files, when `detectSpecChanges` and `detectPolicyChanges` run against a base ref, then a `SpecDiffResult` is returned whose `entries` / `allSpecs` / `fullScan` fields are populated, `_policies/` modifications are detected separately, the configured `baseBranch` is honored, and old-style evidence files (predating the Diff Context section) parse without error. Consolidated from spec-0038 (Spec Auto-Discovery Protocol — 4-source unified diff detection); see 01_Spec.md In-scope bullet "Spec Auto-Discovery Protocol".
+
+## AC-0013-0012: Triage Table Cell Render-Parse Identity
+
+Given a Stage 1 Triage row whose subject / rationale / spec name contains literal `\` (e.g. Windows path `C:\Users\...`, regex `\d+`), `|`, or embedded `\r` / `\n`, when the row is rendered to delta.md by `escapeTableCell` and re-parsed by `splitMarkdownRow`, then the parsed cell value equals the original input for `\` and `|` (literal `\` is persisted as-is; `|` round-trips through `\|` escape) and `\r\n` / `\r` / `\n` collapse deterministically to a single space.
+
+## AC-0013-0014: Validate Pipeline Validator Registration Integrity
+
+Given a traceability validator declared in `packages/qfai/src/core/validators/`, when the validate pipeline (`packages/qfai/src/core/validate.ts`) is loaded, then the validator's registration MUST hold end-to-end as a single registration-integrity outcome. Partial wiring (one half present, the other missing) is treated as a single failure mode at AC granularity, not as 2 independent facets — internal decomposition of the registration contract (export presence under canonical name, import + invocation in `validate.ts`) is intentionally kept at the lower (rule) layer rather than at AC layer, so the AC stays outside the compound-AC facet-level gap class.

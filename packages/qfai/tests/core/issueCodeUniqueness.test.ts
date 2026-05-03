@@ -110,20 +110,6 @@ describe("issue code uniqueness", () => {
     expect(violations).toEqual([]);
   });
 
-  it("active prototyping evidence codes stay inside the current documented range", async () => {
-    const validatorPath = path.resolve(
-      __dirname,
-      "../../src/core/validators/prototypingEvidence.ts",
-    );
-    const content = await readFile(validatorPath, "utf-8");
-    const codes = [...content.matchAll(/"(QFAI-PROT-\d+)"/g)].map((match) => match[1]);
-    for (const code of codes) {
-      const num = parseInt(code.replace("QFAI-PROT-", ""), 10);
-      expect(num).toBeGreaterThanOrEqual(TAXONOMY_RANGE_MIN);
-      expect(num).toBeLessThanOrEqual(TAXONOMY_RANGE_MAX);
-    }
-  });
-
   it("every QFAI-PROT-2xx code used in validators/uiux/browserQa has a description in validate.ts", async () => {
     const validatePath = path.resolve(__dirname, "../../src/cli/commands/validate.ts");
     const validateContent = await readFile(validatePath, "utf-8");

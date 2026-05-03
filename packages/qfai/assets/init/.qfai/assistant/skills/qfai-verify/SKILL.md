@@ -60,7 +60,7 @@ When unsure, read inputs in this order:
 
 - `/qfai-verify` MUST always run full-scan verification.
 - Do NOT use Preflight Diff (or any diff-only shortcut) in this skill.
-- Preserve the DR-0007/spec-0011 intent: verify is the safety gate and must not be reduced to incremental checks.
+- Preserve the verify-as-safety-gate intent: verify must not be reduced to incremental checks.
 
 ## Sub-agent Delegation (MANDATORY)
 
@@ -96,7 +96,7 @@ Use the shared schema.
 - Reviewer checks:
   - required roles were delegated;
   - validate evidence exists: `qfai validate --profile verify --fail-on error` completed with `error=0`;
-  - v2.0: per-iter evidence (screenshot + HTML + review.json) exists under `.qfai/evidence/prototyping/iter-NN/`, and `.qfai/evidence/prototyping/completion-certificate.json` v2.0 is present and digest-valid (`qfai prototyping certify --check`);
+  - per-iter evidence (screenshot + HTML + review.json) exists under `.qfai/evidence/prototyping/iter-NN/`, and `.qfai/evidence/prototyping/completion-certificate.json` is present and digest-valid (`qfai prototyping certify --check`);
   - Drift Protocol enforced;
   - test-layer policy enforced against `test-layers.md`.
   - gate counts and ratios are signals, not gates.

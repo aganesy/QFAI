@@ -1,7 +1,7 @@
 /**
- * Iteration core types and helpers (spec-0017 v2.0).
+ * Iteration core types and helpers.
  *
- * The /qfai-prototyping skill v2.0 runs one prototype through up to
+ * The /qfai-prototyping skill runs one prototype through up to
  * MAX_ITERATIONS iterations, in a single design lineage. Each iteration
  * captures screenshot+html and produces a reviewer review.json with
  * 4-axis ordinal scores, prose critique, anti-slop pattern detection,

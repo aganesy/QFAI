@@ -1,10 +1,8 @@
 /**
- * UIX-VAL screen contract schema validator — spec-0034
+ * UIX-VAL screen contract schema validator.
  *
  * Validates multi-screen contract array: 10 required fields per screen,
  * unique screen_ids, and mandatory state coverage.
- *
- * BR-0034-0019, BR-0034-0020, BR-0034-0021, BR-0034-0022
  */
 import path from "node:path";
 

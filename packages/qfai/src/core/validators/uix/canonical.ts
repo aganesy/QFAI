@@ -1,5 +1,5 @@
 /**
- * Canonical UIX aggregate validator — v1.7.14
+ * Canonical UIX aggregate validator.
  *
  * This validator now runs only when the validation target is a direct
  * discussion pack root. Repo-root downstream validation is contract-first

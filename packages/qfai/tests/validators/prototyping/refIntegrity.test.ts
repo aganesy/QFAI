@@ -30,8 +30,7 @@ async function seedPrototypingJson(root: string, screenshot: string, html: strin
   await writeFile(
     path.join(dir, "prototyping.json"),
     JSON.stringify({
-      schemaVersion: "3.0",
-      specsCovered: ["0017"],
+      specsCovered: ["0001"],
       iterations: [
         {
           index: 0,
@@ -67,7 +66,7 @@ describe("validatePrototypingArtifactRefIntegrity", () => {
     expect(issues).toEqual([]);
   });
 
-  it("emits QFAI-PROT2-009 when iteration evidenceRefs point to missing files", async () => {
+  it("emits QFAI-PROT-009 when iteration evidenceRefs point to missing files", async () => {
     const root = await newTempDir();
     await seedPrototypingJson(
       root,
@@ -76,15 +75,15 @@ describe("validatePrototypingArtifactRefIntegrity", () => {
     );
 
     const issues = await validatePrototypingArtifactRefIntegrity(root, defaultConfig);
-    expect(issues.map((issue) => issue.code)).toEqual(["QFAI-PROT2-009", "QFAI-PROT2-009"]);
+    expect(issues.map((issue) => issue.code)).toEqual(["QFAI-PROT-009", "QFAI-PROT-009"]);
   });
 
-  it("emits QFAI-PROT2-009 when iteration evidenceRefs are empty", async () => {
+  it("emits QFAI-PROT-009 when iteration evidenceRefs are empty", async () => {
     const root = await newTempDir();
     await seedPrototypingJson(root, "", "   ");
 
     const issues = await validatePrototypingArtifactRefIntegrity(root, defaultConfig);
-    expect(issues.map((issue) => issue.code)).toEqual(["QFAI-PROT2-009", "QFAI-PROT2-009"]);
+    expect(issues.map((issue) => issue.code)).toEqual(["QFAI-PROT-009", "QFAI-PROT-009"]);
     expect(issues.map((issue) => issue.message)).toEqual([
       "iterations[0].evidenceRefs.screenshot must be a non-empty repository-relative artifact path.",
       "iterations[0].evidenceRefs.html must be a non-empty repository-relative artifact path.",
@@ -98,7 +97,6 @@ describe("validatePrototypingArtifactRefIntegrity", () => {
     await writeFile(
       path.join(handoffDir, "prototype-handoff.yaml"),
       [
-        'schemaVersion: "2.0"',
         'finalArtifact: ".qfai/prototypes/final/index.html"',
         'extractedDesignSystem: ".qfai/contracts/design/design-system.yaml"',
       ].join("\n"),
@@ -106,6 +104,6 @@ describe("validatePrototypingArtifactRefIntegrity", () => {
     );
 
     const issues = await validatePrototypingArtifactRefIntegrity(root, defaultConfig);
-    expect(issues.map((issue) => issue.code)).toEqual(["QFAI-PROT2-009", "QFAI-PROT2-009"]);
+    expect(issues.map((issue) => issue.code)).toEqual(["QFAI-PROT-009", "QFAI-PROT-009"]);
   });
 });

@@ -1,5 +1,5 @@
 /**
- * Evaluator review schema for v2.0 single-thread prototyping (spec-0017).
+ * Evaluator review schema for single-thread prototyping.
  *
  * The reviewer (product-surface-reviewer) writes one of these per iteration
  * to `iter-NN/review.json`. The schema enforces:
@@ -11,8 +11,8 @@
  *   - Explicit `pivotDirective: continue | refine | pivot`
  *
  * The cap rule and word-count rule are enforced at construction time so
- * downstream consumers can rely on the type. The validator
- * (`prototypingEvidenceV3.ts`) re-checks the same invariants on disk.
+ * downstream consumers can rely on the type. The on-disk evidence
+ * validator re-checks the same invariants.
  */
 
 import {
@@ -26,7 +26,6 @@ export const PROSE_CRITIQUE_MIN_WORDS = 200;
 export const PROSE_CRITIQUE_MAX_WORDS = 500;
 
 export type EvaluatorReview = {
-  readonly schemaVersion: "3.0";
   readonly iterIndex: number;
   readonly reviewerId: string;
   readonly scores: {
@@ -44,7 +43,7 @@ export type EvaluatorReview = {
   };
 };
 
-export type BuildEvaluatorReviewInput = Omit<EvaluatorReview, "schemaVersion">;
+export type BuildEvaluatorReviewInput = EvaluatorReview;
 
 export function countWords(text: string): number {
   const trimmed = text.trim();
@@ -83,9 +82,9 @@ export function buildEvaluatorReview(input: BuildEvaluatorReviewInput): Evaluato
   }
 
   // Anti-slop cap: originality cannot be strong/exceptional while any slop
-  // pattern is detected. This is a key v2.0 mechanism: the reviewer must
-  // not reward a generic AI-default-looking artifact with a high
-  // originality score, even if it scores well on other axes.
+  // pattern is detected. The reviewer must not reward a generic
+  // AI-default-looking artifact with a high originality score, even if it
+  // scores well on other axes.
   if (input.slopPatternsDetected.length > 0) {
     if (input.scores.originality === "strong" || input.scores.originality === "exceptional") {
       throw new Error(
@@ -107,7 +106,6 @@ export function buildEvaluatorReview(input: BuildEvaluatorReviewInput): Evaluato
   }
 
   return {
-    schemaVersion: "3.0",
     iterIndex: input.iterIndex,
     reviewerId: input.reviewerId,
     scores: { ...input.scores },

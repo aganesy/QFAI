@@ -115,7 +115,6 @@ describe("write / load round-trip", () => {
       "iterationCount",
       "reviewerSignoff",
       "runId",
-      "schemaVersion",
       "specsCovered",
       "validateRun",
       "verifyRun",
@@ -205,14 +204,13 @@ describe("checkCompletionCertificate", () => {
     ).toBeUndefined();
   });
 
-  it("loads legacy reviewer field as canonical reviewerId (v2.0 schema)", async () => {
+  it("loads legacy reviewer field as canonical reviewerId", async () => {
     const root = await newTempDir();
     const certPath = path.join(root, COMPLETION_CERTIFICATE_REL_PATH);
     await mkdir(path.dirname(certPath), { recursive: true });
     await writeFile(
       certPath,
       `${JSON.stringify({
-        schemaVersion: "2.0",
         runId: "legacy-run",
         generatedAt: "2026-04-27T00:00:00Z",
         generator: { tool: "qfai", version: "2.0.0" },
@@ -235,37 +233,6 @@ describe("checkCompletionCertificate", () => {
     expect(loaded?.reviewerSignoff.reviewerId).toBe("legacy-reviewer");
   });
 
-  // QFAI:SPEC-0017:TC-0017-0009
-  it("rejects v1.x cert with polishCycleCount or schemaVersion=1.0", async () => {
-    const root = await newTempDir();
-    const certPath = path.join(root, COMPLETION_CERTIFICATE_REL_PATH);
-    await mkdir(path.dirname(certPath), { recursive: true });
-    await writeFile(
-      certPath,
-      `${JSON.stringify({
-        schemaVersion: "1.0",
-        runId: "v1x-run",
-        generatedAt: "2026-04-27T00:00:00Z",
-        generator: { tool: "qfai", version: "1.8.4" },
-        evidenceDigests: [],
-        validateRun: { errorCount: 0, ranAt: "2026-04-27T00:00:00Z" },
-        verifyRun: { status: "PASS", ranAt: "2026-04-27T00:00:00Z" },
-        reviewerSignoff: {
-          reviewerId: "test",
-          approved: true,
-          timestamp: "2026-04-27T00:00:00Z",
-        },
-        iterationCount: 0,
-        polishCycleCount: 0,
-        specsCovered: [],
-      })}\n`,
-      "utf-8",
-    );
-
-    const loaded = await loadCompletionCertificate(root);
-    expect(loaded).toBeNull();
-  });
-
   it("returns null when required completion-certificate fields are missing", async () => {
     const root = await newTempDir();
     const certPath = path.join(root, COMPLETION_CERTIFICATE_REL_PATH);
@@ -273,7 +240,6 @@ describe("checkCompletionCertificate", () => {
     await writeFile(
       certPath,
       `${JSON.stringify({
-        schemaVersion: "2.0",
         runId: "broken-run",
         evidenceDigests: [],
         validateRun: { errorCount: 0, ranAt: "2026-04-27T00:00:00Z" },

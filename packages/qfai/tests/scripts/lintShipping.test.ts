@@ -157,18 +157,127 @@ describe("lint-shipping fixture — detection rules", () => {
     expect(violations.map((violation) => violation.pattern)).toContain("spec-path-literal");
   });
 
-  it("does NOT flag JSDoc traceability lines in source files", async () => {
+  it("does NOT flag composite trace IDs (BR/AC/TC) in JSDoc — only internal spec-NNNN paths/IDs", async () => {
+    // PR #206 review Ntbp updated this rule. Composite trace IDs
+    // (BR-NNNN-NNNN, AC-NNNN-NNNN, TC-NNNN-NNNN) are NOT in the
+    // forbidden set declared by `.agents/rules/distributed-surface.md`
+    // (only spec-0010+, CAP-0010+, DEC-NNNN-NNNN, DR-NNNN, and the
+    // QFAI-PROT2-NNN trace prefix are forbidden). Composite IDs in
+    // JSDoc remain permitted so existing trace pointers like
+    // "BR-0029-0001" / "AC-0025-0005" do not need to be scrubbed.
     const root = await newTempDir();
     await mkdir(path.join(root, "src/foo"), { recursive: true });
     await writeFile(
       path.join(root, "src/foo/bar.ts"),
       [
         "/**",
-        " * spec-0012 TC-0012-0290 / AC-0012-0175",
+        " * Implements BR-0029-0001 and references AC-0025-0005.",
         " */",
         "export function foo(): void {}",
         "",
       ].join("\n"),
+      "utf-8",
+    );
+
+    const { violations } = await runLintShipping(root);
+    expect(violations).toEqual([]);
+  });
+
+  it("flags internal spec-NNNN ID in src/ JSDoc — leaks via dist/*.d.ts", async () => {
+    // PR #206 review Ntbp: `tsup` strips comments from `dist/*.js` but
+    // RETAINS them in `dist/*.d.ts`, so internal spec IDs (spec-0010+)
+    // in JSDoc DO ship into user repos. The lint-shipping invariant
+    // must catch this at source instead of waiting for the post-build
+    // leakage shell script in CI.
+    const root = await newTempDir();
+    await mkdir(path.join(root, "src/foo"), { recursive: true });
+    await writeFile(
+      path.join(root, "src/foo/bar.ts"),
+      ["/**", " * See spec-0012 for context.", " */", "export function foo(): void {}", ""].join(
+        "\n",
+      ),
+      "utf-8",
+    );
+
+    const { violations } = await runLintShipping(root);
+    expect(violations.map((v) => v.pattern)).toContain("internal-spec-id-jsdoc-leak");
+    expect(violations.map((v) => v.matched)).toContain("spec-0012");
+  });
+
+  it("flags internal spec-path in src/ JSDoc — leaks via dist/*.d.ts", async () => {
+    const root = await newTempDir();
+    await mkdir(path.join(root, "src/foo"), { recursive: true });
+    await writeFile(
+      path.join(root, "src/foo/bar.ts"),
+      [
+        "/**",
+        " * Reference: .qfai/specs/spec-0013/04_Business-Rules.md",
+        " */",
+        "export function foo(): void {}",
+        "",
+      ].join("\n"),
+      "utf-8",
+    );
+
+    const { violations } = await runLintShipping(root);
+    expect(violations.map((v) => v.pattern)).toContain("internal-spec-path-jsdoc-leak");
+  });
+
+  it.each([
+    [
+      "internal-version-marker-jsdoc-leak",
+      "v1.9.0",
+      "/**\n * @deprecated since v1.9.0, use foo() instead.\n */\nexport function bar(): void {}\n",
+    ],
+    [
+      "internal-cap-id-jsdoc-leak",
+      "CAP-0011",
+      "/**\n * Implements CAP-0011 capability mapping.\n */\nexport function bar(): void {}\n",
+    ],
+    [
+      "internal-dec-id-jsdoc-leak",
+      "DEC-0001-0042",
+      "/**\n * Per DEC-0001-0042.\n */\nexport function bar(): void {}\n",
+    ],
+    [
+      "internal-dr-id-jsdoc-leak",
+      "DR-0076",
+      "/**\n * Per DR-0076 this is intentionally NOT AST-based.\n */\nexport function bar(): void {}\n",
+    ],
+    [
+      "internal-prot2-id-jsdoc-leak",
+      "QFAI-PROT2-001",
+      "/**\n * Trace QFAI-PROT2-001.\n */\nexport function bar(): void {}\n",
+    ],
+    [
+      "internal-schema-version-jsdoc-leak",
+      '"schemaVersion"',
+      '/**\n * Documents the "schemaVersion" field.\n */\nexport function bar(): void {}\n',
+    ],
+  ])(
+    "flags %s in src/ JSDoc (PR #206 review NwM- / Nv2- / Nv_Q full SSOT parity)",
+    async (rule, expectedMatch, body) => {
+      const root = await newTempDir();
+      await mkdir(path.join(root, "src/foo"), { recursive: true });
+      await writeFile(path.join(root, "src/foo/bar.ts"), body, "utf-8");
+
+      const { violations } = await runLintShipping(root);
+      expect(violations.map((v) => v.pattern)).toContain(rule);
+      expect(violations.map((v) => v.matched)).toContain(expectedMatch);
+    },
+  );
+
+  it("does NOT flag sample-tier spec-0001..0009 in src/ JSDoc (Category-B / runtime examples)", async () => {
+    // The leakage script tolerates spec-0001..0009 as Category-B /
+    // sample-tier IDs that ship with `qfai init`; the JSDoc lint must
+    // mirror that exception so example references stay legal.
+    const root = await newTempDir();
+    await mkdir(path.join(root, "src/foo"), { recursive: true });
+    await writeFile(
+      path.join(root, "src/foo/bar.ts"),
+      ["/**", " * Example seed spec: spec-0005.", " */", "export function foo(): void {}", ""].join(
+        "\n",
+      ),
       "utf-8",
     );
 

@@ -1,6 +1,6 @@
 # CLI UX Guidelines
 
-spec-0013 (CAP-0013) で定義された、`qfai validate` の UI/UX 関連出力ガイドライン。
+QFAI が定義する、`qfai validate` の UI/UX 関連出力ガイドライン。
 
 ## Output Format
 

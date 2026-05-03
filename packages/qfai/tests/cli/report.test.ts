@@ -139,12 +139,15 @@ describe("report", { timeout: 15000 }, () => {
     try {
       const reportPath = path.join(root, ".qfai", "report", "report.md");
       const validatePath = path.join(root, ".qfai", "report", "validate.json");
+      // `discussion` is a representative narrow profile rejected in CI.
+      // (`sdd` joined the CI allow-list with PR #206 review LW-G; see
+      // packages/qfai/src/core/phasePolicy.ts for the rationale.)
       await runReport({
         root,
         format: "md",
         outPath: reportPath,
         runValidate: true,
-        profile: "sdd",
+        profile: "discussion",
       });
 
       const validationRaw = await readFile(validatePath, "utf-8");
@@ -236,7 +239,6 @@ describe("report", { timeout: 15000 }, () => {
       path.join(evidenceDir, "prototyping.json"),
       `${JSON.stringify(
         {
-          schemaVersion: "3.0",
           specsCovered: ["SPEC-0001"],
           iterations: [
             {
@@ -281,13 +283,13 @@ describe("report", { timeout: 15000 }, () => {
     });
 
     const report = await readFile(reportPath, "utf-8");
-    expect(report).toContain("### prototyping.lifecycle (v2.0)");
+    expect(report).toContain("### prototyping.lifecycle");
     expect(report).toContain("- iterations: 1");
     expect(report).toContain("- effective: single-thread-loop");
-    expect(report).toContain("- obligation profile: v2.0-single-thread-loop");
+    expect(report).toContain("- obligation profile: single-thread-loop");
   });
 
-  it("scopes v2.0 prototyping spec coverage to the primary prototyping spec", async () => {
+  it("scopes prototyping spec coverage to the primary prototyping spec", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-report-"));
     await runInit({ dir: root, force: false, dryRun: false, yes: true });
     const primarySpecDir = path.join(root, ".qfai", "specs", "spec-0001");
@@ -311,7 +313,6 @@ describe("report", { timeout: 15000 }, () => {
       path.join(evidenceDir, "prototyping.json"),
       `${JSON.stringify(
         {
-          schemaVersion: "3.0",
           specsCovered: ["SPEC-0001"],
           iterations: [
             {

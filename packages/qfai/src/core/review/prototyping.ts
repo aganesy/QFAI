@@ -1,12 +1,11 @@
 /**
- * Prototyping surface helpers (v2.0).
+ * Prototyping surface helpers.
  *
- * The v1.x mode tier and obligation derivation were removed in spec-0017
- * P3. v2.0 fixes iteration count globally to MAX_ITERATIONS=15 in
- * `core/prototyping/iteration.ts`.
+ * Iteration count is fixed globally via
+ * `core/prototyping/iteration.ts#MAX_ITERATIONS`.
  *
  * Kept here: surface-type helpers and a `playwright-cli` constant used by
- * v2.0 capture wiring.
+ * the capture wiring.
  */
 
 import {

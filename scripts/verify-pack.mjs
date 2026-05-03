@@ -112,7 +112,7 @@ for (const removedDir of [".claude", ".codex"]) {
   }
 }
 
-// spec-0017 REQ-0009 promises that `qfai init` ships
+// `qfai init` ships
 // `.github/workflows/qfai-validate.yml` to downstream consumers, so the
 // `.github` subtree itself is required (not optional). The previous
 // `if (existsSync(rootGithubDir))` wrapper would have silently allowed
@@ -124,9 +124,7 @@ for (const removedDir of [".claude", ".codex"]) {
 // from the packed tarball.
 const rootGithubDir = path.join(rootAssetsDir, ".github");
 if (!existsSync(rootGithubDir)) {
-  throw new Error(
-    "assets/init/root/.github must exist (spec-0017 REQ-0009 ships .github/workflows/qfai-validate.yml).",
-  );
+  throw new Error("assets/init/root/.github must exist.");
 }
 // Confirm `.github` itself is a directory before iterating; otherwise
 // readdirSync would surface as an ENOTDIR stack trace and obscure the
@@ -137,12 +135,10 @@ if (!lstatSync(rootGithubDir).isDirectory()) {
 const allowedRootGithubEntries = new Set(["workflows"]);
 const githubEntries = readdirSync(rootGithubDir);
 // workflows/ is required, not just allowed. An empty .github/ would
-// silently strip the qfai-validate.yml shipping path (spec-0017 REQ-0009)
+// silently strip the qfai-validate.yml shipping path
 // on downstream init consumers, so reject it here.
 if (!githubEntries.includes("workflows")) {
-  throw new Error(
-    "assets/init/root/.github must contain workflows/ (spec-0017 REQ-0009 qfai-validate.yml).",
-  );
+  throw new Error("assets/init/root/.github must contain workflows/.");
 }
 for (const entry of githubEntries) {
   if (!allowedRootGithubEntries.has(entry)) {
@@ -162,11 +158,11 @@ for (const entry of githubEntries) {
 }
 // Confirm the actual workflow file ships. workflows/ existing without
 // qfai-validate.yml inside it is the same downstream regression as a
-// missing workflows/ — REQ-0009 promises the file, not just the folder.
+// missing workflows/ — the file is the contract, not just the folder.
 const workflowFile = path.join(rootGithubDir, "workflows", "qfai-validate.yml");
 if (!existsSync(workflowFile) || !lstatSync(workflowFile).isFile()) {
   throw new Error(
-    "assets/init/root/.github/workflows/qfai-validate.yml must exist as a regular file (spec-0017 REQ-0009).",
+    "assets/init/root/.github/workflows/qfai-validate.yml must exist as a regular file.",
   );
 }
 

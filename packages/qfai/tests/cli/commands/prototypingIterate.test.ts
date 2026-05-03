@@ -57,12 +57,12 @@ async function seedMinimalProject(
     "utf-8",
   );
 
-  const specDir = path.join(root, ".qfai/specs/spec-0017");
+  const specDir = path.join(root, ".qfai/specs/spec-0001");
   await mkdir(specDir, { recursive: true });
   const marker = uiBearing ? "surface_type: ui-bearing\n" : "";
   await writeFile(
     path.join(specDir, "01_Spec.md"),
-    `# 01 Spec — test\n\n- Spec: spec-0017\n- Parent: CAP-0017\n${marker}`,
+    `# 01 Spec — test\n\n- Spec: spec-0001\n- Parent: CAP-0001\n${marker}`,
     "utf-8",
   );
 }
@@ -85,8 +85,7 @@ async function seedPrototypingJson(
   await writeFile(
     path.join(dir, "prototyping.json"),
     JSON.stringify({
-      schemaVersion: "3.0",
-      specsCovered: ["0017"],
+      specsCovered: ["0001"],
       iterations: iterations.map((it) => ({
         index: it.index,
         commitSha: "a".repeat(40),
@@ -140,7 +139,7 @@ describe("runPrototypingIterate cycle 0", () => {
     expect(plan.targetUrl).toBe("http://localhost:5173");
     expect(plan.paths.iterationDir).toBe(".qfai/evidence/prototyping/iter-00");
     expect(plan.paths.reviewJson).toBe(".qfai/evidence/prototyping/iter-00/review.json");
-    expect(plan.specs).toEqual(["0017"]);
+    expect(plan.specs).toEqual(["0001"]);
     expect(plan.nextActions).toContain("iterate --cycle 1");
   });
 
@@ -287,8 +286,7 @@ describe("runPrototypingIterate continue (exit 0)", () => {
     const root = await newTempDir();
     await seedMinimalProject(root);
     await seedRawPrototypingJson(root, {
-      schemaVersion: "3.0",
-      specsCovered: ["0017"],
+      specsCovered: ["0001"],
       iterations: [{ index: 0, commitSha: "b".repeat(40) }],
       acceptedIterationIndex: 0,
       stopReason: null,

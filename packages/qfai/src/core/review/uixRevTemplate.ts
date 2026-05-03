@@ -1,9 +1,7 @@
 /**
- * UIX review template — spec-0037
+ * UIX review template.
  *
- * Defines the 5 canonical review items for the uix-rev reviewer.
- *
- * BR-0037-0001 through BR-0037-0006
+ * Defines the canonical review items for the uix-rev reviewer.
  */
 
 export type ReviewItemId =
@@ -13,9 +11,6 @@ export type ReviewItemId =
   | "screen-contract-sufficiency"
   | "breakthrough-readiness"
   | "accept-refine-pivot-judgement";
-// v2.0 (spec-0017 P14): rubric-specificity, evaluator-calibration-quality,
-// and selected-direction-adequacy review items removed alongside their
-// underlying contracts.
 
 export type ReviewItem = {
   id: ReviewItemId;
@@ -58,9 +53,6 @@ export const CANONICAL_REVIEW_ITEMS: readonly ReviewItem[] = [
       "Brand signals and differentiation targets are actionable",
     ],
   },
-  // v2.0 (spec-0017 P14): rubric-specificity, evaluator-calibration-quality,
-  // and selected-direction-adequacy review items were removed alongside
-  // their underlying v1.x contracts.
   {
     id: "screen-contract-sufficiency",
     name: "Screen Contract Sufficiency",

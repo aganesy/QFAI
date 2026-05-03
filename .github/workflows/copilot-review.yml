@@ -11,33 +11,51 @@ jobs:
   request-copilot-review:
     runs-on: ubuntu-latest
     steps:
-      - name: Request Copilot reviewer
-        # COPILOT_REVIEW_TOKEN is recommended (PAT with pull_requests: write).
-        # If not set, GH_TOKEN uses secrets.GH_TOKEN (PAT) and falls back to secrets.GITHUB_TOKEN.
+      - name: Request Copilot reviewer (GraphQL)
+        # `secrets.GH_TOKEN` must be a fine-grained PAT with
+        # `Pull requests: write`. The default `GITHUB_TOKEN` and classic
+        # PATs are silently rejected by GitHub for bot reviewer
+        # assignment since the late-April 2026 Copilot platform
+        # tightening, so no fallback is provided.
         env:
-          COPILOT_REVIEW_TOKEN: ${{ secrets.COPILOT_REVIEW_TOKEN }}
-          GH_TOKEN: ${{ secrets.GH_TOKEN || secrets.GITHUB_TOKEN }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
-          REPO: ${{ github.repository }}
-          COPILOT_REVIEWER: copilot-pull-request-reviewer[bot]
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          PR_NODE_ID: ${{ github.event.pull_request.node_id }}
+          # Copilot pull-request-reviewer bot node id (stable, GitHub-assigned).
+          COPILOT_BOT_ID: BOT_kgDOCnlnWA
         run: |
           set -euo pipefail
-          TOKEN="${COPILOT_REVIEW_TOKEN:-${GH_TOKEN:-}}"
-          if [ -z "${TOKEN:-}" ]; then
-            echo "COPILOT_REVIEW_TOKEN (preferred) or GH_TOKEN (legacy) is required (PAT with pull_requests: write). The default GITHUB_TOKEN may be insufficient." >&2
-            exit 1
-          fi
-          export GH_TOKEN="${TOKEN}"
-
-          if ! requested="$(gh api "repos/${REPO}/pulls/${PR_NUMBER}/requested_reviewers" --jq '.users[].login')"; then
-            echo "Failed to fetch existing reviewers for PR #${PR_NUMBER} in ${REPO}." >&2
-            exit 1
-          fi
-          if echo "$requested" | grep -Fxq "$COPILOT_REVIEWER"; then
-            echo "Copilot reviewer already requested."
+          if [ -z "${GH_TOKEN:-}" ]; then
+            echo "::warning title=GH_TOKEN missing::Set a fine-grained PAT (Pull requests: write) as the GH_TOKEN repo secret to enable Copilot review."
             exit 0
           fi
-
-          gh api "repos/${REPO}/pulls/${PR_NUMBER}/requested_reviewers" \
-            -X POST \
-            -f "reviewers[]=${COPILOT_REVIEWER}"
+          gh api graphql \
+            -f query='mutation($prId: ID!, $botId: ID!) {
+              requestReviews(input: { pullRequestId: $prId, botIds: [$botId], union: true }) {
+                pullRequest { id }
+              }
+            }' \
+            -f prId="$PR_NODE_ID" \
+            -f botId="$COPILOT_BOT_ID"
+          # Self-diagnose silent no-op: GitHub may accept the mutation
+          # while server-side disabling Copilot review for the repo or
+          # account (see GitHub Community Discussion #171474). Re-query
+          # reviewRequests and warn if the bot did not actually land.
+          ADDED=$(gh api graphql \
+            -f query='query($prId: ID!) {
+              node(id: $prId) {
+                ... on PullRequest {
+                  reviewRequests(first: 100) {
+                    nodes {
+                      requestedReviewer {
+                        ... on Bot { databaseId }
+                      }
+                    }
+                  }
+                }
+              }
+            }' \
+            -f prId="$PR_NODE_ID" \
+            --jq '[.data.node.reviewRequests.nodes[].requestedReviewer.databaseId] | map(select(. == 175728472)) | length')
+          if [ "${ADDED:-0}" -eq 0 ]; then
+            echo "::warning title=Copilot reviewer assignment silently ignored::GraphQL requestReviews accepted the mutation but the Copilot bot is not in reviewRequests. The repository or account may have Copilot code review disabled (Settings -> Copilot -> Code review) or the account may be over its weekly Copilot usage cap."
+          fi

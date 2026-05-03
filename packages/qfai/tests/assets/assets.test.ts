@@ -354,8 +354,7 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     // handoff.md describes design-system extraction.
     expect(handoffRef).toMatch(/design-system\.yaml/);
 
-    // handoff sample is v2.0 schema (no mustPreserve/mustNotCopy).
-    expect(handoffTemplate).toContain('schemaVersion: "2.0"');
+    // handoff sample carries the canonical fields and no legacy preserve/copy concepts.
     expect(handoffTemplate).toContain("finalIterIndex");
     expect(handoffTemplate).toContain("extractedDesignSystem");
     expect(handoffTemplate).not.toContain("mustPreserve");
@@ -436,8 +435,8 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     expect(true).toBe(true);
   });
 
-  it("placeholder for removed v1.x test (uiFidelity evidence requirements) — v2.0 uses iter-NN evidence schema validated by prototypingEvidenceV3", () => {
-    // v1.x evidence-requirements.md was replaced in spec-0017 P8 by
+  it("placeholder for retired evidence-requirements asset", () => {
+    // The legacy evidence-requirements.md asset has been replaced by
     // qfai-prototyping/references/iteration-loop.md (covered by the
     // dedicated iteration-loop test above).
     expect(true).toBe(true);
@@ -662,9 +661,6 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     const versionPattern = /\b(?:v)?\d+\.\d+\.\d+\b/;
     const approvedVersionedDocs = new Set([
       path.resolve(templateQfaiDir, "assistant", "instructions", "agent-selection.md"),
-      path.resolve(templateQfaiDir, "assistant", "steering", "manifest.md"),
-      path.resolve(templateQfaiDir, "assistant", "steering", "product.md"),
-      path.resolve(templateQfaiDir, "assistant", "steering", "tech.md"),
     ]);
 
     const matches: string[] = [];
@@ -723,7 +719,6 @@ describe("assets guardrails", { timeout: 30000 }, () => {
         "test-case-depth-checklist.md",
       ),
       path.resolve(templateQfaiDir, "assistant", "steering", "cli-ux-guidelines.md"),
-      path.resolve(templateQfaiDir, "assistant", "steering", "product.md"),
       path.resolve(templateQfaiDir, "assistant", "steering", "research-first-protocol.md"),
       path.resolve(templateQfaiDir, "assistant", "steering", "ui-definition-protocol.md"),
     ]);

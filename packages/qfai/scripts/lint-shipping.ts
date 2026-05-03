@@ -1,13 +1,9 @@
 /**
- * Package self-containment lint (v1.8.4 Phase 8).
+ * Package self-containment lint.
  *
- * Detects shipped templates that reference user-side specific spec / AC /
- * TC / REQ / etc. IDs. Such references break when QFAI is installed into a
- * user repo whose specs / contracts have different IDs.
- *
- * RR root cause class: install-site assumption — the package was previously
- * shipping `.qfai/assistant/skills/.../SKILL.md` with `.qfai/specs/spec-0012/`
- * hardcoded, which silently broke for any user repo not using spec-0012.
+ * Detects shipped templates that hardcode internal spec / AC / TC / REQ
+ * IDs. Such references break when QFAI is installed into a user repo
+ * whose specs / contracts have different IDs.
  *
  * Exposed two ways:
  *   1. Programmatic — `runLintShipping(pkgRoot)` returns violations.
@@ -27,7 +23,7 @@ export type LintViolation = {
   suggestion: string;
 };
 
-type Target = "init-runtime" | "init-doc" | "src";
+type Target = "init-runtime" | "init-doc" | "src" | "src-comment";
 
 type PatternRule = {
   name: string;
@@ -44,6 +40,15 @@ type PatternRule = {
    *   - "src": ts under src/, compiled to dist/ without comments. Only
    *     real path-form assumptions are flagged here; informational
    *     metadata in error messages is allowed.
+   *   - "src-comment": JSDoc / `//` comment lines in src/*.ts. tsup
+   *     STRIPS comments from `dist/*.js` but RETAINS them in
+   *     `dist/*.d.ts`, so internal spec-IDs and version markers in
+   *     JSDoc DO ship to user repos as part of the type declarations.
+   *     This category mirrors the regex set in
+   *     `scripts/check-no-internal-version-leakage.sh` so the same
+   *     leakage classes (spec-0010+, internal `vN.M[.P]`, internal
+   *     trace IDs) are caught at lint time on source instead of only
+   *     after a build (PR #206 review Ntbp option B).
    */
   appliesTo: ReadonlyArray<Target>;
 };
@@ -55,9 +60,8 @@ const PATTERNS: ReadonlyArray<PatternRule> = [
     suggestion:
       "Resolve the spec at runtime via `qfai prototyping show-spec` or `resolvePrimaryPrototypingSpec`; do not hardcode spec IDs in runtime data.",
     // Bare spec-NNNN references in markdown docs are typically narrative
-    // citations (e.g. "this rule comes from spec-0012") — they are NOT
-    // install-site path lookups. Only flag in runtime data + src
-    // (still skipped by classifyTarget for src below).
+    // citations — they are NOT install-site path lookups. Only flag in
+    // runtime data + src (still skipped by classifyTarget for src below).
     appliesTo: ["init-runtime"],
   },
   {
@@ -78,6 +82,91 @@ const PATTERNS: ReadonlyArray<PatternRule> = [
     // Same rationale as spec-id-literal: docs use these as references,
     // not assumptions. Only flag in runtime data.
     appliesTo: ["init-runtime"],
+  },
+  // PR #206 review Ntbp / NwM- / Nv2- / Nv_Q: catch internal-ID and
+  // internal-version leakage in src JSDoc BEFORE it ships via
+  // `dist/*.d.ts`. tsup strips comments from `.js` outputs but RETAINS
+  // them in `.d.ts` declarations, so JSDoc is part of the distributed
+  // surface even though it looks like an internal comment.
+  //
+  // SSOT-sync (Nv4N): the regex set below MUST stay in lock-step with
+  // - `scripts/check-no-internal-version-leakage.sh` L21..L45 (POSIX
+  //   ERE, post-build dist/ scan)
+  // - `tests/integration/distributedSurfaceLeakage.test.ts:54` (JS
+  //   RegExp, smoke against `qfai init` output)
+  // The three sites carry the same forbidden classes. Updating one
+  // (e.g. tightening `INTERNAL_VERSION_RE` to a QFAI-context regex)
+  // requires updating all three. Cross-reference comments at the other
+  // two sites point back here.
+  //
+  // Coverage limitation (Nv8u): `TS_COMMENT_LINE_RE` matches lines
+  // whose first non-whitespace character is a comment marker. Trailing
+  // `//` (e.g. `const x = 1; // spec-0042`) and inline block comments
+  // (`const x = 1; /* spec-0042 */`) are NOT detected and would slip
+  // through this lint. They are caught post-build by
+  // `check-no-internal-version-leakage.sh`. Documented as a known
+  // limitation rather than a tokenizer-grade fix; in practice JSDoc
+  // is written in leading-comment-line blocks for declarations.
+  {
+    name: "internal-spec-id-jsdoc-leak",
+    re: /\bspec-0(?:0[1-9][0-9]|[1-9][0-9]{2,})\b/,
+    suggestion:
+      "Internal spec IDs (spec-0010+) MUST NOT appear in src/ comments — tsup keeps JSDoc in dist/*.d.ts. Use a generic descriptor (e.g. 'the SDD skill business rules') and keep ID-level traceability in `.qfai/specs/` or test files.",
+    appliesTo: ["src-comment"],
+  },
+  {
+    // PR #206 review NzSK: scope mirrors `INTERNAL_SPEC_RE` — only
+    // spec-0010+ paths are forbidden; spec-0001..0009 sample-tier
+    // paths in src JSDoc are tolerated (matches the leakage script
+    // and smoke test, which both implicitly cover paths via the
+    // spec-id regex applied to file content).
+    name: "internal-spec-path-jsdoc-leak",
+    re: /\.qfai\/specs\/spec-0(?:0[1-9][0-9]|[1-9][0-9]{2,})\//,
+    suggestion:
+      "Internal spec paths (spec-0010+) MUST NOT appear in src/ JSDoc — they ship via dist/*.d.ts. Reference test files (under tests/, not shipped) or use a generic descriptor.",
+    appliesTo: ["src-comment"],
+  },
+  {
+    name: "internal-version-marker-jsdoc-leak",
+    re: /\bv[0-9]+\.[0-9]+(?:\.[0-9]+)?\b|\bv1\.x\b/,
+    suggestion:
+      "Internal version markers (vN.M / vN.M.P / v1.x) MUST NOT appear in src/ JSDoc — `INTERNAL_VERSION_RE` in the leakage script forbids them in dist/. If you need to cite a third-party library version, use a `qfai-shipping:allow reason=...` pragma on the preceding line.",
+    appliesTo: ["src-comment"],
+  },
+  {
+    name: "internal-cap-id-jsdoc-leak",
+    re: /\bCAP-0(?:0[1-9][0-9]|[1-9][0-9]{2,})\b/,
+    suggestion:
+      "Internal capability IDs (CAP-0010+) MUST NOT appear in src/ JSDoc — tsup keeps JSDoc in dist/*.d.ts.",
+    appliesTo: ["src-comment"],
+  },
+  {
+    name: "internal-dec-id-jsdoc-leak",
+    re: /\bDEC-\d{4}-\d{4}\b/,
+    suggestion:
+      "Internal decision IDs (DEC-NNNN-NNNN) MUST NOT appear in src/ JSDoc — tsup keeps JSDoc in dist/*.d.ts.",
+    appliesTo: ["src-comment"],
+  },
+  {
+    name: "internal-dr-id-jsdoc-leak",
+    re: /\bDR-\d{4}\b/,
+    suggestion:
+      "Internal design-rationale IDs (DR-NNNN) MUST NOT appear in src/ JSDoc — tsup keeps JSDoc in dist/*.d.ts.",
+    appliesTo: ["src-comment"],
+  },
+  {
+    name: "internal-prot2-id-jsdoc-leak",
+    re: /\bQFAI-PROT2-\d+\b/,
+    suggestion:
+      "The retired QFAI-PROT2-NNN trace prefix MUST NOT appear in src/ JSDoc — it is in the leakage script forbidden list.",
+    appliesTo: ["src-comment"],
+  },
+  {
+    name: "internal-schema-version-jsdoc-leak",
+    re: /"schemaVersion"|schemaVersion\s*:/,
+    suggestion:
+      "The `schemaVersion` field is forbidden in distributed surfaces (artifacts use `package.json#version` only). Do not document it in src/ JSDoc.",
+    appliesTo: ["src-comment"],
   },
 ];
 
@@ -186,6 +275,13 @@ async function lintFile(absolutePath: string, pkgRoot: string): Promise<LintViol
   const lines = body.split(/\r?\n/);
   const relPath = path.relative(pkgRoot, absolutePath).replace(/\\/g, "/");
   const applicableRules = PATTERNS.filter((rule) => rule.appliesTo.includes(targetCategory));
+  // src/*.ts files get a SECOND set of rules that run ON comment lines
+  // (the inverse of the comment-skip below). These catch JSDoc leakage
+  // into dist/*.d.ts (PR #206 review Ntbp).
+  const srcCommentRules =
+    targetCategory === "src"
+      ? PATTERNS.filter((rule) => rule.appliesTo.includes("src-comment"))
+      : [];
 
   if (/^assets\/init\/\.qfai\/specs\/spec-XXXX\//.test(relPath)) {
     violations.push({
@@ -203,9 +299,26 @@ async function lintFile(absolutePath: string, pkgRoot: string): Promise<LintViol
     // Pragma escape: this line and the line immediately after are exempt.
     if (PRAGMA_RE.test(line)) continue;
     if (i > 0 && PRAGMA_RE.test(lines[i - 1] ?? "")) continue;
-    // TS source files: comment lines are stripped from dist/ at build time
-    // and therefore do not ship to user repos.
-    if (isTs && TS_COMMENT_LINE_RE.test(line)) continue;
+    // TS source files: `dist/*.js` strips comments at build time, but
+    // `dist/*.d.ts` RETAINS them. Run the dedicated `src-comment`
+    // rules on JSDoc lines so internal-spec-id leakage is caught at
+    // source, not only post-build by the leakage shell script.
+    if (isTs && TS_COMMENT_LINE_RE.test(line)) {
+      for (const rule of srcCommentRules) {
+        const globalRe = new RegExp(rule.re.source, "g");
+        let match: RegExpExecArray | null;
+        while ((match = globalRe.exec(line)) !== null) {
+          violations.push({
+            file: relPath,
+            line: i + 1,
+            pattern: rule.name,
+            matched: match[0],
+            suggestion: rule.suggestion,
+          });
+        }
+      }
+      continue;
+    }
     // YAML files: comment lines are not runtime data; the parser ignores
     // them. References inside `# ...` are authority citation, not
     // install-site assumptions.

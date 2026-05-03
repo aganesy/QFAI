@@ -63,7 +63,7 @@ async function validateArtifactRef(
     if (options.required) {
       issues.push(
         issue(
-          "QFAI-PROT2-009",
+          "QFAI-PROT-009",
           `${field} must be a non-empty repository-relative artifact path.`,
           "error",
           PROTO_JSON_REL,
@@ -77,7 +77,7 @@ async function validateArtifactRef(
   if (!resolved) {
     issues.push(
       issue(
-        "QFAI-PROT2-009",
+        "QFAI-PROT-009",
         `${field} must stay within the repository root (got ${JSON.stringify(value)}).`,
         "error",
         PROTO_JSON_REL,
@@ -89,7 +89,7 @@ async function validateArtifactRef(
   if (!(await exists(resolved))) {
     issues.push(
       issue(
-        "QFAI-PROT2-009",
+        "QFAI-PROT-009",
         `${field} references a missing artifact: ${value}.`,
         "error",
         PROTO_JSON_REL,

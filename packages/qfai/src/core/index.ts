@@ -28,6 +28,5 @@ export {
 // WS-B: Browser QA 4-phase orchestration
 export { runBrowserQaOrchestrated, summarizeBrowserQaResult } from "./browserQa/runner.js";
 export { BROWSER_QA_PHASES } from "./browserQa/types.js";
-// WS-C: Render evidence runner (kept for v2.0 capture infra; harness/full-harness
-// machinery removed in P3, see spec-0017).
+// Render evidence runner (capture infra for the iteration loop).
 export { runRenderCapture } from "./evidence/renderRunner.js";

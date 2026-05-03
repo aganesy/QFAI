@@ -1,10 +1,10 @@
 # Research-First Protocol
 
-spec-0013 (CAP-0013) で定義された、UI/UX 専門家サブエージェントの作業冒頭リサーチプロトコル。
+QFAI が定義する、UI/UX 専門家サブエージェントの作業冒頭リサーチプロトコル。
 
 ## Trigger
 
-`/qfai-discussion` コマンド実行時に自動トリガーされる（DEC-0013-0004）。
+`/qfai-discussion` コマンド実行時に自動トリガーされる。
 
 ## Output Schema
 
@@ -55,4 +55,4 @@ research_summary:
 ## Storage
 
 - `research_summary` はカレントの discussion-pack 内（`## Research Summary` セクション）に記録
-- グローバルには永続保存しない（DEC-0013-0002）
+- グローバルには永続保存しない

@@ -68,12 +68,11 @@ For UI-bearing targets, follow `references/design-dna-intake.md` while authoring
 
 - `30_exploration_brief.md` must define product intent, brand signals, and differentiation targets.
 - `31_reference_pool.md` must define exploration references with adopted points, rejected points, and copy risk — framed as **deviate-from** inputs (not imitate-this) for downstream `/qfai-prototyping` reviewer.
-- `32_design_anti_goals.md` must contain explicit anti-goals; this also feeds the global anti-slop pattern list consulted by the v2.0 reviewer.
+- `32_design_anti_goals.md` must contain explicit anti-goals; this also feeds the global anti-slop pattern list consulted by the prototyping reviewer.
 - `50_review_input_bundle.md` must document review inputs for downstream skills.
 
-v1.x sidecars `33_exploration_rubric.md` and `34_evaluator_calibration.md`
-are removed in spec-0017 P4 (axes are global constants in
-`core/prototyping/iteration.ts#OrdinalScore`, ordinal 4-step scale).
+Evaluation axes are global constants (4-step ordinal: weak / acceptable /
+strong / exceptional) and are not authored as discussion sidecars.
 
 ## Completion Contract (Shared)
 

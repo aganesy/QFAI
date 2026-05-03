@@ -1,7 +1,6 @@
 prototyping:
-  # v2.0 single-thread evolution loop (spec-0017): mode/maxCycles concepts
-  # are removed; iteration count is fixed at 15 globally in
-  # `core/prototyping/iteration.ts#MAX_ITERATIONS`.
+  # Single-thread evolution loop. Iteration count is fixed at 15 globally
+  # (no per-mode override).
   # Replace `web` with one of the prototyping-supported surfaces if needed:
   #   web | mobile | desktop | mixed
   # (discussion classification also allows `cli` and `non-ui`, but those are

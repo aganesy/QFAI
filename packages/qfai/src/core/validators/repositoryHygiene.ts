@@ -55,7 +55,7 @@ export async function validateRepositoryHygiene(
     issues.push(
       issue(
         "QFAI-HYG-002",
-        `specs 配下にテンプレ混入疑いを検出しました（v1.4.36 は warning）: ${suspiciousPaths.join(", ")}`,
+        `specs 配下にテンプレ混入疑いを検出しました（warning）: ${suspiciousPaths.join(", ")}`,
         "warning",
         specsRoot,
         "hygiene.templateContamination",

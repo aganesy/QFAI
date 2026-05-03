@@ -55,3 +55,24 @@
 - Given AC-0013-0010 with both normal and error scenarios
 - When 06_Test-Cases.md is generated
 - Then each AC has at least one test case with Type=normal and one with Type=error
+
+## EX-0013-0010: Spec Auto-Discovery Detects Policy Change
+
+- BR-Ref: BR-0013-0010
+- Given a repository where `_policies/naming.md` is modified between `origin/main` and `HEAD` and the `qfai.config.yaml` declares `baseBranch: origin/develop`
+- When `detectSpecChanges` and `detectPolicyChanges` run
+- Then `SpecDiffResult` carries `entries` / `allSpecs` / `fullScan` populated, `detectPolicyChanges` returns `true`, the configured `baseBranch` (`origin/develop`) is used as the diff base, and old-style evidence files (lacking the Diff Context section) still parse without throwing
+
+## EX-0013-0009: Backslash-Containing Triage Cell Round-Trips Unchanged
+
+- BR-Ref: BR-0013-0009
+- Given a Triage row with `subject = "C:\Users\spec.md"` and `rationale = "matches \d+ pattern"`
+- When the row is rendered via `escapeTableCell` and re-parsed via `splitMarkdownRow`
+- Then the parsed `subject` equals `"C:\Users\spec.md"` (no backslash doubling) and the parsed `rationale` equals `"matches \d+ pattern"` (literal backslash preserved as-is)
+
+## EX-0013-0011: Validator Wiring Verified Against Source
+
+- BR-Ref: BR-0013-0011
+- Given the source files `packages/qfai/src/core/validators/index.ts` and `packages/qfai/src/core/validate.ts`
+- When the wiring contract is checked
+- Then `validateTraceabilityIntegrity` is exported from the barrel (`typeof validateTraceabilityIntegrity === "function"`) AND `validate.ts` source contains an `import` statement for that named export AND the import is referenced inside the validate pipeline body (not dead code)

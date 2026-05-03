@@ -1,5 +1,5 @@
 /**
- * Completion certificate (spec-0017 v2.0).
+ * Completion certificate.
  *
  * `.qfai/evidence/prototyping/completion-certificate.json` is the SINGLE
  * authoritative completion artifact for a prototyping run. It carries
@@ -13,11 +13,6 @@
  * deterministic completion signal:
  *
  *   completion = `qfai prototyping certify --check` exit 0
- *
- * v2.0 schema (spec-0017 P5):
- *   - schemaVersion bumped from "1.0" → "2.0"
- *   - polishCycleCount removed (v1.x funnel/polish concept)
- *   - iterationCount remains; reflects iterations.length in v2.0
  */
 
 import { createHash } from "node:crypto";
@@ -25,7 +20,6 @@ import { mkdir, readFile, readdir, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 export type CompletionCertificate = {
-  readonly schemaVersion: "2.0";
   readonly runId: string;
   readonly generatedAt: string; // ISO-8601
   readonly generator: { readonly tool: "qfai"; readonly version: string };
@@ -73,7 +67,6 @@ export async function buildCompletionCertificate(
 ): Promise<CompletionCertificate> {
   const evidenceDigests = await scanEvidenceDigests(inputs.evidenceRoot);
   return {
-    schemaVersion: "2.0",
     runId: inputs.runId,
     generatedAt: new Date().toISOString(),
     generator: { tool: "qfai", version: inputs.toolVersion },
@@ -110,7 +103,6 @@ export async function loadCompletionCertificate(
 }
 
 type CompletionCertificateRecord = {
-  schemaVersion: "2.0";
   runId: string;
   generatedAt: string;
   generator: { tool: "qfai"; version: string };
@@ -150,7 +142,6 @@ function isEvidenceDigestArray(
 function isMinimallyValidCertificate(value: unknown): value is CompletionCertificateRecord {
   if (!value || typeof value !== "object" || Array.isArray(value)) return false;
   const v = value as Record<string, unknown>;
-  if (v.schemaVersion !== "2.0") return false;
   if (typeof v.runId !== "string") return false;
   if (typeof v.generatedAt !== "string") return false;
   if (!isRecord(v.generator)) return false;
@@ -192,7 +183,6 @@ function normalizeCompletionCertificate(value: unknown): CompletionCertificate |
       : (reviewerSignoff.reviewer as string);
 
   return {
-    schemaVersion: "2.0",
     runId: record.runId,
     generatedAt: record.generatedAt,
     generator: {

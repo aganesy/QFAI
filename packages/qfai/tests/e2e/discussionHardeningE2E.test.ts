@@ -24,8 +24,6 @@ describe("discussion hardening E2E guidance", () => {
     expect(content).toMatch(/30_exploration_brief\.md/);
     expect(content).toMatch(/31_reference_pool\.md/);
     expect(content).toMatch(/32_design_anti_goals\.md/);
-    expect(content).toMatch(/33_exploration_rubric\.md/);
-    expect(content).toMatch(/34_evaluator_calibration\.md/);
     expect(content).toMatch(/40_screen_contracts\.md/);
     expect(content).toMatch(/50_review_input_bundle\.md/);
   });

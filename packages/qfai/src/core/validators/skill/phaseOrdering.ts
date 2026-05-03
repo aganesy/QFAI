@@ -1,5 +1,5 @@
 /**
- * SKILL.md phase-ordering validator (spec-0010 TC-0010-0036).
+ * SKILL.md phase-ordering validator.
  *
  * Checks that Phase A appears before Phase B in the Step 11.3 section.
  * A mutation swapping their order is a dependency violation.

@@ -8,9 +8,9 @@
  *      in the title heading)
  *   3. undefined (caller falls back to generic guidance)
  *
- * v1.8.4: introduced to break the SKILL.md `.qfai/specs/spec-0012/` hardcode
- * (RR §8.1). This module is the single source of truth for "which spec drives
- * the current prototyping run".
+ * This module is the single source of truth for "which spec drives the
+ * current prototyping run", removing any need for the SKILL.md to hardcode
+ * a specific spec id.
  */
 
 import { readFile } from "node:fs/promises";
@@ -20,7 +20,7 @@ import type { QfaiConfig } from "../config.js";
 import { collectSpecEntries } from "../specLayout.js";
 
 export type ResolvedSpec = {
-  /** Four-digit spec ID, e.g. "0012". */
+  /** Four-digit spec ID, e.g. "0001". */
   specId: string;
   /** Absolute path to the spec directory. */
   specDir: string;

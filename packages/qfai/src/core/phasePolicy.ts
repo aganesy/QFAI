@@ -7,13 +7,25 @@ export function isCiEnvironment(env: NodeJS.ProcessEnv = process.env): boolean {
 }
 
 // Profiles permitted to run inside CI. `full` and `verify` cover the standard
-// downstream gate; `tdd` is allowed because QFAI's own ci.yml dogfoods the
-// test-todo-stub gate via `qfai validate --profile tdd` (spec-0017 REQ-0009),
-// and `tdd` is a comprehensive (not narrowing) profile from the perspective
-// of test-side gates. Narrow phase profiles (discussion / sdd / prototyping /
-// atdd) remain rejected to prevent CI from accidentally skipping unrelated
-// gates.
-const CI_ALLOWED_PROFILES = new Set<ValidationProfile>(["full", "verify", "tdd"]);
+// downstream gate; `tdd` and `sdd` are allowed because QFAI's own ci.yml
+// dogfoods them as paired steps:
+//
+//   - `--profile tdd` covers test-side gates (validateTddList,
+//     validateTestTodoStubs, validateTraceability, validateTraceabilityIntegrity).
+//   - `--profile sdd` covers structural / append-first gates introduced in
+//     PR #206 (validateSpecPacks → QFAI-STATUS-001..006, QFAI-TRIAGE-001..006,
+//     plus validateStatusInSpecs). Without an `sdd`-allowed CI profile,
+//     a future regression in sddTriage / specPack validators could ship
+//     green because `tdd` does not exercise those code paths
+//     (PR #206 review LW-G).
+//
+// The narrow-profile guard exists to stop CI from *accidentally* skipping
+// unrelated gates. When two narrow profiles are deliberately paired
+// alongside the existing `full` validate step against the sandbox
+// (`--root tmp/pack/sandbox/out`), broad coverage is preserved.
+//
+// Narrow phase profiles (discussion / prototyping / atdd) remain rejected.
+const CI_ALLOWED_PROFILES = new Set<ValidationProfile>(["full", "verify", "tdd", "sdd"]);
 
 export function buildCiProfileIssue(
   profile: ValidationProfile | undefined,

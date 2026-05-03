@@ -206,9 +206,7 @@ export type ReportSurfaceClassification = {
 };
 
 export type ReportFullHarnessExecution = {
-  // v2.0 (spec-0017 P14): mode tier removed. The single-thread loop is
-  // the only mode; this literal is retained for transitional report
-  // schema compatibility but the field is no longer populated.
+  // The only supported mode is the single-thread loop.
   mode: "single-thread-loop";
   iterations: number;
   terminationReason: string;
@@ -223,12 +221,6 @@ export type ReportFullHarnessExecution = {
 };
 
 export type ReportRoundLifecycle = {
-  // v2.0 (spec-0017 P14): the v1.x ReportRoundLifecycle was anchored
-  // to the funnel + polish cycle taxonomy that is now removed. The shape
-  // is retained as a placeholder so legacy callers can opt in if they
-  // explicitly populate it, but the canonical /qfai-prototyping summary
-  // no longer emits it.
-  schemaVersion: "2.0";
   iterations: number;
 };
 
@@ -1242,9 +1234,8 @@ export function formatReportMarkdown(
 
     if (data.prototyping.roundLifecycle) {
       const lifecycle = data.prototyping.roundLifecycle;
-      lines.push("### prototyping.lifecycle (v2.0)");
+      lines.push("### prototyping.lifecycle");
       lines.push("");
-      lines.push(`- schemaVersion: ${lifecycle.schemaVersion}`);
       lines.push(`- iterations: ${lifecycle.iterations}`);
       lines.push("");
     }
@@ -1381,7 +1372,7 @@ export function formatReportMarkdown(
     lines.push("");
     lines.push("### prototyping.observability");
     lines.push("");
-    lines.push("- status: foundation-only (not integrated into blocking validation in v1.7.14)");
+    lines.push("- status: foundation-only (not integrated into blocking validation)");
     // Warnings
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
     if (data.prototyping.warnings && data.prototyping.warnings.length > 0) {
@@ -1571,7 +1562,7 @@ export function formatReportMarkdown(
   );
   if (calibrationIssues.length > 0) {
     lines.push(
-      "- legacy v1.x calibration setting incomplete. (v2.0 prototyping removes per-mode calibration; this hint targets historical evidence files only.)",
+      "- legacy calibration setting incomplete (mode-tier calibration is no longer supported).",
     );
   }
   const fullHarnessCompletenessIssues = data.issues.filter((item) =>
@@ -1714,13 +1705,12 @@ async function collectPrototypingSummary(
 
   return {
     roundLifecycle: {
-      schemaVersion: "2.0",
       iterations: iterations.length,
     },
     mode: {
       effective: "single-thread-loop",
       source: ".qfai/evidence/prototyping/prototyping.json",
-      rationale: "spec-0017 v2.0 uses a fixed single-thread iteration loop.",
+      rationale: "the single-thread iteration loop is fixed.",
       surface: config.uiux?.platform ?? "unknown",
     },
     evidence: {
@@ -1735,7 +1725,7 @@ async function collectPrototypingSummary(
       uiFidelity: { present: false, required: false },
       renderBundle: { present: false, required: false },
       browserQaBundle: { present: false, required: false },
-      obligationProfile: "v2.0-single-thread-loop",
+      obligationProfile: "single-thread-loop",
     },
     warnings,
   };

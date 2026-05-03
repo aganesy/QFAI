@@ -2,6 +2,22 @@
 
 Use these checklists as the detailed operational guide for `/qfai-sdd`.
 
+## Stage 1: Triage
+
+- Active spec summaries collected; non-active specs filtered out.
+- **Append-first applied**: every REQ/NFR is checked against existing
+  active specs first; CREATE is reserved for zero subject-token overlap.
+- Each REQ/NFR has a classified Operation (one of the 8).
+- UPDATE rows declare an explicit Sub-op (APPEND / MODIFY / REMOVE).
+- **Impact cascade enumerated**: companion specs whose AC/BR reference
+  the changed concept have their own MODIFY/REMOVE rows with the same
+  `Source` ID.
+- CREATE rows cite a `CAP-NNNN` in Rationale and the CAP exists in
+  `_policies/03_Capabilities.md` (`QFAI-TRIAGE-006`).
+- Approval-required rows (CREATE / DELETE / SPLIT / MERGE / SUPERSEDE / UPDATE:REMOVE) carry a recorded `Approved By`.
+- Triage table written to `<spec>/09_delta.md` (per-spec) and `_policies/10_delta.md` (cross-spec / policy).
+- Stop entry to Phase 0 until the Triage table is complete.
+
 ## Phase 0: Contracts-first
 
 - Confirm impacted contract kinds: API, DB, UI.

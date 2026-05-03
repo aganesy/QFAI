@@ -53,3 +53,30 @@
 - `06_Test-Cases.md` MUST include a `Type` column with values: `normal`, `error`, `boundary`, `edge`.
 - Each AC MUST have at minimum one `normal` test case AND one non-normal (`error`/`boundary`/`edge`) test case.
 - Normal-path-only coverage for an AC is considered incomplete.
+
+## BR-0013-0010: Spec Auto-Discovery Diff Result Completeness
+
+- AC-Refs: AC-0013-0013
+
+- The Spec Auto-Discovery contract (`detectSpecChanges` + `detectPolicyChanges` + `loadConfig` + evidence-Diff-Context-forward-compat) MUST return a complete `SpecDiffResult` (with `entries`, `allSpecs`, `fullScan` fields) and MUST detect `_policies/` modifications independently of spec/contract/evidence diffs. Configuration (`baseBranch`) MUST be honored when present and MUST NOT block discovery when absent.
+- Backward compatibility: evidence files that predate the Diff Context section MUST remain parseable.
+- Consolidated from spec-0038 (Spec Auto-Discovery Protocol — 4-source unified diff detection).
+
+## BR-0013-0009: Triage Cell Escape ↔ Parse Symmetry
+
+- AC-Refs: AC-0013-0012
+
+- `escapeTableCell` (`packages/qfai/src/core/sddTriage.ts`) and `splitMarkdownRow` (`packages/qfai/src/core/specPackParsers.ts`) MUST agree on what a Triage table cell can contain.
+- The escape rule is exactly: `|` → `\|`, and `\r\n` / `\r` / `\n` → a single space character. Literal `\` MUST NOT be pre-escaped (no `\` → `\\` step).
+- The parser un-escape rule is exactly: `\|` → `|`. The parser MUST NOT decode `\\` → `\`.
+- Re-introducing `\` doubling on the renderer side without a matching `\\` → `\` rule on the parser side is forbidden — it silently mutates REQ subjects / rationales while keeping column count valid (so `QFAI-TRIAGE-*` validators would pass).
+- Allowed cell character set therefore includes literal `\` (Windows paths, regex literals, escaped CLI examples). The only normalized class is line breaks.
+
+## BR-0013-0011: Validator Registry Wiring
+
+- AC-Refs: AC-0013-0014
+
+- Each registered traceability / spec-integrity validator MUST be exported from the validators barrel (`packages/qfai/src/core/validators/index.ts`) under its canonical name, AND MUST be imported and invoked by the validate pipeline (`packages/qfai/src/core/validate.ts`).
+- A validator that is implemented but not wired (export missing OR import missing) is forbidden — the validate gate would silently skip it and the behavioral AC (validate gate error count == 0) would pass for the wrong reason.
+- Renaming a validator's export name without updating the import in `validate.ts` is treated as breakage of this rule (silent skip).
+- The export half and the import half are stated together at this BR layer because failure of either half collapses to the same observable outcome at AC layer (registration-integrity broken). Keeping the decomposition at BR layer rather than splitting AC-0013-0014 into 2 sub-ACs is a deliberate routing choice to avoid creating a new OQ-0019 known-instance.

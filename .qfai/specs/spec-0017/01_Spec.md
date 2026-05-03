@@ -2,6 +2,7 @@
 
 - Spec: spec-0017
 - Parent: CAP-0017
+- Status: active
 
 ## Consumer View
 

@@ -1,10 +1,10 @@
 /**
  * ModeGuidance — advisory for prototyping runtime-proof recommendations.
  *
- * v2.0 (spec-0017 P14): the v1.x mode tier is removed. The guidance now
- * always recommends the v2.0 single-thread evolution loop (the only mode)
- * but retains the project-characteristic explanation so callers can
- * explain *why* the loop is appropriate for the project shape.
+ * The guidance always recommends the single-thread evolution loop (the
+ * only supported mode) but retains the project-characteristic explanation
+ * so callers can explain *why* the loop is appropriate for the project
+ * shape.
  */
 
 import type { ModeRecommendation, ProjectCharacteristics } from "./types.js";

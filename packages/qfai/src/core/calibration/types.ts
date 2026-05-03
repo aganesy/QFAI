@@ -1,14 +1,13 @@
 /**
- * Calibration pack types (v2.0).
+ * Calibration pack types.
  *
- * v1.x BreakthroughConfig / PlateauConfig / maxIterationsByMode removed in
- * P3 (spec-0017). v2.0 fixes the iteration count globally to 15 in
- * `core/prototyping/iteration.ts#MAX_ITERATIONS` (lands in P5).
+ * Iteration count is fixed globally via
+ * `core/prototyping/iteration.ts#MAX_ITERATIONS` and is not a calibration
+ * field.
  *
  * The remaining types here support the calibration pack file format
- * (alignment examples + thresholds), which is still consumed by the
- * design-system-threshold validator (planned for deletion in P4) and
- * possibly by future v2.0 reviewer calibration helpers.
+ * (alignment examples + thresholds) consumed by the design-system-threshold
+ * validator and reviewer calibration helpers.
  */
 
 export type AlignmentExample = {

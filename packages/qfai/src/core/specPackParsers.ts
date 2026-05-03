@@ -83,28 +83,67 @@ export function resolveAllowedLayerTagsFromPolicy(policyText: string): Set<strin
 }
 
 export function parseFirstMarkdownTable(text: string): MarkdownTable | null {
+  const tables = parseAllMarkdownTables(text);
+  return tables.length > 0 ? (tables[0] ?? null) : null;
+}
+
+/**
+ * Parse every markdown table in the input. Returned in document order.
+ * Used by Triage validators (PR #206 review LWri) so a multi-table
+ * Triage section does not let later tables silently bypass
+ * QFAI-TRIAGE-002..006.
+ */
+export function parseAllMarkdownTables(text: string): MarkdownTable[] {
   const lines = text.replace(/\r\n/g, "\n").split("\n");
-  for (let index = 0; index < lines.length - 1; index += 1) {
+  const tables: MarkdownTable[] = [];
+  let index = 0;
+  while (index < lines.length - 1) {
     const headerLine = lines[index] ?? "";
     const separatorLine = lines[index + 1] ?? "";
     if (!looksLikeTableRow(headerLine) || !isTableSeparator(separatorLine)) {
+      index += 1;
       continue;
     }
 
     const headers = splitMarkdownRow(headerLine);
     const rows: string[][] = [];
-    for (let cursor = index + 2; cursor < lines.length; cursor += 1) {
+    let cursor = index + 2;
+    for (; cursor < lines.length; cursor += 1) {
       const rowLine = lines[cursor] ?? "";
       if (!looksLikeTableRow(rowLine)) {
         break;
       }
       rows.push(splitMarkdownRow(rowLine));
     }
-    return { headers, rows };
+    tables.push({ headers, rows });
+    index = cursor;
   }
-  return null;
+  return tables;
 }
 
+/**
+ * Split a GFM markdown table row into trimmed cell strings.
+ *
+ * Symmetric pair: this function is the un-escape half of a contract
+ * paired with `escapeTableCell` (`packages/qfai/src/core/sddTriage.ts`).
+ * The renderer-side encode rule and the parser-side decode rule below
+ * MUST stay in lock-step. Specifically:
+ *
+ * - The ONLY un-escape rule applied here is `\|` → `|`. Literal `\`
+ *   is passed through unchanged. The renderer therefore MUST NOT
+ *   pre-escape `\` (no `\` → `\\` step), or cells containing literal
+ *   backslashes (Windows paths `C:\Users\...`, regex literals `\d+`)
+ *   will silently double on round-trip while keeping column count
+ *   valid — defeating the QFAI-TRIAGE-* validators.
+ * - Adding any new decode rule here (e.g. `<br>` → `\n`, or `\n` →
+ *   `\n` if multi-line cells become supported) MUST be matched by a
+ *   corresponding encode rule in `escapeTableCell`, AND the round-trip
+ *   identity tests in `tests/core/sddTriage.test.ts` (under
+ *   `describe("escapeTableCell ↔ splitMarkdownRow round-trip identity")`)
+ *   MUST be extended with the new character class. The contract is
+ *   also declared at the spec level for the SDD skill (Stage 1
+ *   Triage business rules).
+ */
 export function splitMarkdownRow(line: string): string[] {
   const trimmed = line.trim();
   const inner = trimEdgePipes(trimmed);

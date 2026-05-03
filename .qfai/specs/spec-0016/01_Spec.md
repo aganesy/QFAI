@@ -2,6 +2,7 @@
 
 - Spec: spec-0016
 - Parent: CAP-0016: Web リサーチ能力強化
+- Status: active
 
 ## Consumer View
 

@@ -1,18 +1,17 @@
 ---
 name: web-research
-title: "Web Research Pipeline (CAP-0034)"
+title: "Web Research Pipeline"
 description: "8-stage web research pipeline with MCP integration, caching, and citation generation."
 argument-hint: "[query] [--max-depth N] [--yolo]"
 allowed-tools: [Read, Glob, Bash, Write, WebSearch, WebFetch]
 roles: [Researcher, Analyst, FactChecker]
 mode: research-pipeline
-spec: spec-0034
 ---
 
 <!--
 QFAI Skill Body (SSOT)
 - Web research skill for specification-driven development.
-- Implements CAP-0027: 8-stage standard research pipeline.
+- Implements an 8-stage standard research pipeline.
 -->
 
 ## /web-research — Web Research Pipeline

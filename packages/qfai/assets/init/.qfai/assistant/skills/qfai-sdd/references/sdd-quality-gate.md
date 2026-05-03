@@ -10,6 +10,17 @@ Use this file for the full quality gate checklist behind `/qfai-sdd`.
 - `_policies/04_Business-Flow.md` contains Mermaid `flowchart` or `sequenceDiagram`.
 - `10_Plan.md` exists and remains How-only.
 - `specs/plan.md` does not exist.
+- Every `01_Spec.md` declares a valid `Status:` (active / superseded / deprecated / removed).
+- `superseded` specs declare `Superseded-by: spec-NNNN` pointing to an existing spec.
+- `deprecated` / `removed` specs declare `Deprecated-at: YYYY-MM-DD`.
+
+## Triage Checks
+
+- Every changed spec's `09_delta.md` includes a `## Triage` section under `## Change Summary`.
+- Triage table headers cover Source / Subject / Existing Spec / Operation.
+- Operation values are limited to CREATE / UPDATE / DELETE / SPLIT / MERGE / SUPERSEDE.
+- UPDATE rows carry a Sub-op of APPEND / MODIFY / REMOVE.
+- CREATE / DELETE / SPLIT / MERGE / SUPERSEDE and UPDATE:REMOVE rows record an `Approved By` value.
 
 ## Traceability Checks
 

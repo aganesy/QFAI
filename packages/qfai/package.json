@@ -1,6 +1,6 @@
 {
   "name": "qfai",
-  "version": "1.8.7",
+  "version": "1.8.8",
   "description": "Quality-first AI-driven development toolkit (SDD × ATDD × TDD).",
   "license": "MIT",
   "repository": {
@@ -36,6 +36,7 @@
     "build": "tsup",
     "prepack": "npm run build",
     "lint": "eslint src",
+    "lint:branch-version": "bash scripts/check-branch-version-pin.sh",
     "lint:shipping": "vitest run tests/scripts/lintShipping.test.ts",
     "check-types": "tsc --noEmit",
     "test": "vitest run",

@@ -1,5 +1,5 @@
 /**
- * SKILL.md sidecar-flow ordering validator (spec-0010 TC-0010-0045).
+ * SKILL.md sidecar-flow ordering validator.
  *
  * Checks that Step 1c (Trend Scan) precedes Step 1d (TRD axis derivation)
  * and that no parallel-execution marker is present between them.

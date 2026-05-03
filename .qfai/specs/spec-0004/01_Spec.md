@@ -2,6 +2,7 @@
 
 - Spec: spec-0004
 - Parent: CAP-0004
+- Status: active
 - Consolidates: old spec-0002
 
 ## Consumer View
