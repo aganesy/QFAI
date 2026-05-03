@@ -41,6 +41,27 @@ if [[ -z "$branch" ]]; then branch="$(git rev-parse --abbrev-ref HEAD)"; fi
 # build metadata are out of scope; use VERSION_PIN_SKIP=1 for the rare
 # coordinated pre-release flow. Mirrors
 # .agents/rules/version-discipline.md.
+# Detect pre-release / build-metadata suffixes adjacent to the SemVer.
+# Master rule (.agents/rules/version-discipline.md) declares pre-release
+# / build metadata out of scope and routes them through VERSION_PIN_SKIP=1.
+# Without this explicit rejection, branches like `release/v1.9.0-rc.1`
+# would silently extract `1.9.0` and pass when package.json#version is
+# `1.9.0` — exactly the failure mode that ships pre-release as stable
+# (PR #206 review LW-L).
+if [[ "$branch" =~ v[0-9]+\.[0-9]+\.[0-9]+[-+] ]]; then
+  cat <<EOF >&2
+ERROR: branch name appears to encode a SemVer with a pre-release / build
+metadata suffix (e.g. v1.9.0-rc.1).
+
+  branch: $branch
+
+This guard supports MAJOR.MINOR.PATCH only. For coordinated pre-release
+flows, set VERSION_PIN_SKIP=1 explicitly (with user approval and a note
+in the PR description). See .agents/rules/version-discipline.md.
+EOF
+  exit 1
+fi
+
 if [[ "$branch" =~ (^|[/_-])v([0-9]+)\.([0-9]+)\.([0-9]+)($|[/_-]) ]]; then
   pinned="${BASH_REMATCH[2]}.${BASH_REMATCH[3]}.${BASH_REMATCH[4]}"
 else
