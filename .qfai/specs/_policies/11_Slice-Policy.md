@@ -126,8 +126,8 @@ ${operation} を実行します。
 
 1. structural specs (0001-0002) は固定。
 2. CLI specs は `03_Capabilities.md` 記載順で spec-0003 から付番。
-3. skill specs はアルファベット順で CLI specs の次から付番。
-4. agent spec は常に最後の spec。
+3. skill specs はアルファベット順で CLI specs の次から付番。late-added skill (spec-0016 / spec-0017 等) はカテゴリ末尾に追加して既存 ID を保つ。
+4. agent collective spec (`spec-0015`) は新規追加時点では skill range の末尾に置かれた歴史的経緯から `0015` を保持する。後続 skill が追加されても renumber しない。
 5. SUPERSEDE / DELETE 後も既存 ID は再利用しない（gap を残す）。
 
 ## ギャップポリシー
