@@ -91,7 +91,7 @@
 - EX-Ref: EX-0013-0010
 - AC-Refs: AC-0013-0013
 - Type: normal
-- Spec Auto-Discovery (consolidated from spec-0038) — verify that `detectPolicyChanges` returns `true` when `_policies/` files are modified between refs and `false` otherwise. Implemented in `packages/qfai/tests/integration/specAutoDiscovery.test.ts` under `describe("TC-0013-0015: policy change detection", ...)`. The unit-test angle of the same scenario lives at `packages/qfai/tests/core/specDiffDetector.test.ts` `describe("TDD-0010: detectPolicyChanges", ...)` (TDD-0010 in `tdd/test-list.md` maps to TC-0013-0010 — the comment block above that describe records the cross-reference).
+- Spec Auto-Discovery (consolidated from spec-0038) — verify that `detectPolicyChanges` returns `true` when `_policies/` files are modified between refs and `false` otherwise. Implemented in `packages/qfai/tests/integration/specAutoDiscovery.test.ts` under `describe("TC-0013-0015: policy change detection", ...)`. A unit-test companion of the same SUT lives at `packages/qfai/tests/core/specDiffDetector.test.ts` `describe("TDD-0010: detectPolicyChanges", ...)`. The canonical TDD ↔ TC mapping is `tdd/test-list.md` (TDD-0010 → TC-0013-0010); this Notes entry deliberately does not mirror that mapping to avoid SSOT drift (cf. OQ-0017 / OQ-0018).
 
 ## TC-0013-0016: Config baseBranch Loading
 
