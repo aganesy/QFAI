@@ -4,16 +4,68 @@
 
 ## [Unreleased]
 
+Post-1.8.8 follow-ups landed after the `chore(release): qfai 1.8.8`
+commit on this branch. The next version bump (`1.8.9` or `1.9.0`) will
+be decided after this PR merges and shipped via a separate `chore(release):`
+PR per `.agents/rules/version-discipline.md`.
+
+### Fixed
+
+- Copilot code review reviewer assignment migrated from REST
+  `requested_reviewers` (silently ignored by GitHub since the
+  late-April 2026 Copilot platform tightening) to GraphQL
+  `requestReviews.botIds`. The workflow now requires the `GH_TOKEN`
+  repo secret to be a fine-grained PAT with `Pull requests: write`;
+  the default `GITHUB_TOKEN` is no longer accepted for bot reviewer
+  assignment.
+- `bestSubjectMatch` excludes `Scope > Out:` tokens from the overlap
+  haystack. Subjects that a spec explicitly declares as out-of-scope
+  must not bias the closest-match selection (otherwise append-first
+  could route a REQ onto a spec that has already disowned the subject).
+- `classifyTriage` `removalHint` branch now mirrors the additive path
+  and emits `MERGE` (with a removal-intent rationale) when a REQ matches
+  multiple capability-keyed specs, rather than silently collapsing onto
+  `capabilityMatches[0]` and dropping the cascade across the other
+  matched specs.
+
+## [1.8.8] - 2026-05-02
+
 Strengthens `/qfai-sdd` so that, when specs already exist and a new
 requirement arrives, the skill chooses the right granularity
 (create / append / modify / remove / delete / split / merge / supersede)
 through a deliberate Stage 1 Triage step rather than implicit
 subject-existence checks. The classifier is biased to **append-first**:
 default to UPDATE on an existing active spec; CREATE is reserved for
-genuine scope deviations that introduce a new capability.
+genuine scope deviations that introduce a new capability. Also
+introduces the cross-AI rules master at `.agents/rules/` and the
+branch-name version-pin guard, plus the distributed-surface
+`schemaVersion` / internal-version-marker scrub.
+
+### Removed (BREAKING)
+
+- `prototyping.json` and `completion-certificate.json` no longer carry a
+  `schemaVersion` field; validators no longer read it. Pre-1.8.8 artifacts
+  must be regenerated.
+- Validator error code prefix `QFAI-PROT2-NNN` collapsed to `QFAI-PROT-NNN`
+  with renumbered slots (the schemaVersion gate is removed; remaining six
+  codes are renumbered contiguously).
+- Validator entry point `validatePrototypingEvidenceV3` renamed to
+  `validatePrototypingEvidence`; the prior empty stub of the same name is
+  removed. Test files renamed in lockstep.
+- Internal QFAI spec IDs (spec-0010..) and internal version markers
+  (v1.x, v2.0, v3.0) removed from `README.md`, CLI help, `report.md`
+  output, validator messages, and `qfai init` templates under
+  `assets/init/**`. The npm package version is the only canonical
+  version surface.
+- `packages/qfai/docs/MIGRATION-2.0.md` and `MIGRATION-1.8.4.md` removed.
+- `packages/qfai/scripts/check-no-legacy-concepts.sh` removed.
 
 ### Added
 
+- `packages/qfai/scripts/check-no-internal-version-leakage.sh` — CI guard
+  that fails if QFAI-internal spec IDs, version markers, internal trace
+  IDs, or `schemaVersion` fields appear in distributed surfaces (README,
+  assets, dist).
 - `/qfai-sdd` Stage 1 Triage: a mandatory step between preflight and
   Phase 0 (Contracts-first). Documented in
   `assets/init/.qfai/assistant/skills/qfai-sdd/references/sdd-triage.md`
@@ -36,7 +88,9 @@ genuine scope deviations that introduce a new capability.
     `_policies/03_Capabilities.md`.
 - Core helpers `src/core/specSummary.ts` (`collectSpecSummaries`) and
   `src/core/sddTriage.ts` (`classifyTriage`, `renderTriageMarkdown`,
-  `requiresApproval`, `bestSubjectMatch`, `tokenize`, `overlapCount`).
+  `requiresApproval`, `bestSubjectMatch`). Internal helpers
+  (`tokenize`, `overlapCount`, `topLevelOp`, `subOp`) are not part of
+  the public API surface.
 - Append-first principle and impact-cascade pattern documented across
   `assets/init/.qfai/assistant/skills/qfai-sdd/SKILL.md`,
   `references/sdd-triage.md`, `references/sdd-execution-playbook.md`,
@@ -78,6 +132,11 @@ genuine scope deviations that introduce a new capability.
   `tests/integration/sddTriageSection.test.ts`,
   `tests/integration/sddSkillTriagePhase.test.ts`.
 
+### Changed
+
+- CI workflow runs the new leakage guard in both the lint job (assets +
+  README) and the build job (post-build, including dist).
+
 ### Changed (BREAKING)
 
 - Every `01_Spec.md` MUST declare a valid `Status:` bullet. Specs
@@ -109,58 +168,6 @@ genuine scope deviations that introduce a new capability.
   "Principle (read first)" block and the APPEND-vs-CREATE algorithm
   has an explicit subject-overlap fallback step plus a CREATE step
   that requires citing a registered `CAP-NNNN`.
-
-### Fixed
-
-- Copilot code review reviewer assignment migrated from REST
-  `requested_reviewers` (silently ignored by GitHub since the
-  late-April 2026 Copilot platform tightening) to GraphQL
-  `requestReviews.botIds`. The workflow now requires the `GH_TOKEN`
-  repo secret to be a fine-grained PAT with `Pull requests: write`;
-  the default `GITHUB_TOKEN` is no longer accepted for bot reviewer
-  assignment.
-- `bestSubjectMatch` excludes `Scope > Out:` tokens from the overlap
-  haystack. Subjects that a spec explicitly declares as out-of-scope
-  must not bias the closest-match selection (otherwise append-first
-  could route a REQ onto a spec that has already disowned the subject).
-- `classifyTriage` `removalHint` branch now mirrors the additive path
-  and emits `MERGE` (with a removal-intent rationale) when a REQ matches
-  multiple capability-keyed specs, rather than silently collapsing onto
-  `capabilityMatches[0]` and dropping the cascade across the other
-  matched specs.
-
-## [1.8.8] - 2026-05-02
-
-### Removed (BREAKING)
-
-- `prototyping.json` and `completion-certificate.json` no longer carry a
-  `schemaVersion` field; validators no longer read it. Pre-1.8.8 artifacts
-  must be regenerated.
-- Validator error code prefix `QFAI-PROT2-NNN` collapsed to `QFAI-PROT-NNN`
-  with renumbered slots (the schemaVersion gate is removed; remaining six
-  codes are renumbered contiguously).
-- Validator entry point `validatePrototypingEvidenceV3` renamed to
-  `validatePrototypingEvidence`; the prior empty stub of the same name is
-  removed. Test files renamed in lockstep.
-- Internal QFAI spec IDs (spec-0010..) and internal version markers
-  (v1.x, v2.0, v3.0) removed from `README.md`, CLI help, `report.md`
-  output, validator messages, and `qfai init` templates under
-  `assets/init/**`. The npm package version is the only canonical
-  version surface.
-- `packages/qfai/docs/MIGRATION-2.0.md` and `MIGRATION-1.8.4.md` removed.
-- `packages/qfai/scripts/check-no-legacy-concepts.sh` removed.
-
-### Added
-
-- `packages/qfai/scripts/check-no-internal-version-leakage.sh` — CI guard
-  that fails if QFAI-internal spec IDs, version markers, internal trace
-  IDs, or `schemaVersion` fields appear in distributed surfaces (README,
-  assets, dist).
-
-### Changed
-
-- CI workflow runs the new leakage guard in both the lint job (assets +
-  README) and the build job (post-build, including dist).
 
 ## [1.8.7] - 2026-05-02
 
@@ -442,7 +449,7 @@ for the recommended cleanup path.
 
 ### Changed
 
-- absorbs the former (Playwright CLI harness) and (round/candidate/absorption harness) registries (REQ / AC / BR / DEC / TC). The standalone the spec `and the spec` directories are deleted.
+- spec-0012 absorbs the former spec-0017 (Playwright CLI harness) and spec-0018 (round/candidate/absorption harness) registries (REQ / AC / BR / DEC / TC). The standalone `spec-0017/` and `spec-0018/` directories are deleted.
 - prototyping skill / agent terminology unified to `round` / `absorption` (qfai-prototyping, qfai-sdd, qfai-implement, qfai-verify, qfai-discussion, qfai-atdd, qfai-configure).
 - `CandidateId` is now a nominal brand type (was the template-literal `c${number}` which over-accepted `c0` / `c-1` / `c1.5`); both `parseCandidateIds` and `isCandidateId` mint via `CANDIDATE_ID_PATTERN`.
 - V1 `PrototypingEvidenceRecord` field renamed `cycles` → `iterations` to match `validatePrototypingEvidence` and the on-disk `.qfai/evidence/prototyping/iterations/<n>/` URL convention.
@@ -451,9 +458,9 @@ for the recommended cleanup path.
 
 ### Removed
 
-- **BREAKING**: library exports `createPlaywrightRenderAdapter` and `createPlaywrightBrowserQaProvider` are no longer re-exported from `qfai` (Node Playwright runtime retired in ).
-- migration: use the Playwright CLI path — `qfai prototyping round-start ...` for the supported entry point, or build command plans via `buildPlaywrightCliCommandPlan` (still exported) and run them through your own Playwright CLI invocation.
-- Active legacy spec directories (since absorbed).
+- **BREAKING**: library exports `createPlaywrightRenderAdapter` and `createPlaywrightBrowserQaProvider` are no longer re-exported from `qfai` (Node Playwright runtime retired in spec-0017).
+  - migration: use the Playwright CLI path — `qfai prototyping round-start ...` for the supported entry point, or build command plans via `buildPlaywrightCliCommandPlan` (still exported) and run them through your own Playwright CLI invocation.
+- Active `spec-0017/` and `spec-0018/` directories (absorbed into `spec-0012`).
 
 ### Fixed
 
