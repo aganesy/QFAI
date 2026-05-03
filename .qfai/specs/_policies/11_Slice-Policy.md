@@ -26,12 +26,12 @@ companion 行 (UPDATE:MODIFY / UPDATE:REMOVE) を Triage table に追加
 
 ## スライスカテゴリ
 
-| Category   | Slice Rule                     | ID Range        |
-| ---------- | ------------------------------ | --------------- |
-| structural | 1 pack-type = 1 spec           | spec-0001..0002 |
-| cli        | 1 command = 1 spec             | spec-0003..0007 |
-| skill      | 1 skill = 1 spec               | spec-0008..0016 |
-| agent      | all agents = 1 collective spec | spec-0017       |
+| Category   | Slice Rule                     | ID Range                              |
+| ---------- | ------------------------------ | ------------------------------------- |
+| structural | 1 pack-type = 1 spec           | spec-0001..0002                       |
+| cli        | 1 command = 1 spec             | spec-0003..0007                       |
+| skill      | 1 skill = 1 spec               | spec-0008..0014, spec-0016, spec-0017 |
+| agent      | all agents = 1 collective spec | spec-0015                             |
 
 ### カテゴリ定義
 
@@ -138,6 +138,7 @@ ${operation} を実行します。
 
 ## Current Slicing Notes
 
-- `spec-0016` は late-added skill spec として active range に含める。
-- `spec-0017` は agent collective spec として維持し、renumber は行わない。
+- `spec-0015` は agent collective spec として維持し、renumber は行わない。
+- `spec-0016` は late-added skill spec として active range に含める (CAP-0016 = Web Research Enhancement)。
+- `spec-0017` は CAP-0017 = Prototyping v2.0 (skill) の spec として skill カテゴリ末尾に追加。renumber は行わない。
 - contract-first downstream への収束は既存 slice model に閉じており、追加の reslicing は不要。
