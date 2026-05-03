@@ -77,6 +77,6 @@
 - AC-Refs: AC-0013-0014
 
 - Each registered traceability / spec-integrity validator MUST be exported from the validators barrel (`packages/qfai/src/core/validators/index.ts`) under its canonical name, AND MUST be imported and invoked by the validate pipeline (`packages/qfai/src/core/validate.ts`).
-- A validator that is implemented but not wired (export missing OR import missing) is forbidden — the validate gate would silently skip it and AC-0013-0007 (error=0) would pass for the wrong reason.
+- A validator that is implemented but not wired (export missing OR import missing) is forbidden — the validate gate would silently skip it and the behavioral AC (validate gate error count == 0) would pass for the wrong reason.
 - Renaming a validator's export name without updating the import in `validate.ts` is treated as breakage of this rule (silent skip).
-- This rule was extracted from AC-0013-0007 in PR #206 review N65f to remove semantic indirection between the wiring assertion and the behavioral AC (error count == 0).
+- The export half and the import half are stated together at this BR layer because failure of either half collapses to the same observable outcome at AC layer (registration-integrity broken). Keeping the decomposition at BR layer rather than splitting AC-0013-0014 into 2 sub-ACs is a deliberate routing choice to avoid creating a new OQ-0019 known-instance.

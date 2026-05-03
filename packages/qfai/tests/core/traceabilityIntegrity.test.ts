@@ -234,8 +234,11 @@ describe("TDD-0014: evidence without Diff Context", () => {
 // wiring between `validate.ts` and `validators/index` for
 // `validateTraceabilityIntegrity` — NOT the SpecDiffResult shape (which
 // is TC-0013-0014, exercised by specAutoDiscovery.test.ts:596). This
-// guards the validate-pipeline plumbing under AC-0013-0007 (Validate
-// Gate error=0). (PR #206 review N32O / N34p / N35m)
+// guards the validator-registration wiring under AC-0013-0014 (Validate
+// Pipeline Validator Registration Integrity) / BR-0013-0011 (Validator
+// Registry Wiring); AC-0013-0007 (Validate Gate error=0) remains the
+// behavioral post-condition whose forward-compat boundary is covered by
+// TC-0013-0021. (PR #206 review N32O / N34p / N35m / N65f / N9dn)
 // QFAI:SPEC-0013:TC-0013-0020
 // ---------------------------------------------------------------------------
 describe("TDD-0015: validate pipeline integration", () => {
