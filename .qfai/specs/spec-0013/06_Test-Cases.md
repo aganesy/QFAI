@@ -81,29 +81,29 @@
 
 ## TC-0013-0014: SpecDiffResult Includes All Required Fields
 
-- EX-Ref: EX-0013-0001
-- AC-Refs: AC-0013-0001
+- EX-Ref: EX-0013-0010
+- AC-Refs: AC-0013-0013
 - Type: normal
 - Spec Auto-Discovery (consolidated from spec-0038) — verify that `detectSpecChanges` returns a `SpecDiffResult` with `entries`, `allSpecs`, and `fullScan` fields populated correctly. Implemented in `packages/qfai/tests/integration/specAutoDiscovery.test.ts` under `describe("TC-0013-0014: SpecDiffResult includes all required fields", ...)`.
 
 ## TC-0013-0015: Policy Change Detection
 
-- EX-Ref: EX-0013-0001
-- AC-Refs: AC-0013-0001
+- EX-Ref: EX-0013-0010
+- AC-Refs: AC-0013-0013
 - Type: normal
-- Spec Auto-Discovery (consolidated from spec-0038) — verify that `detectPolicyChanges` returns `true` when `_policies/` files are modified between refs and `false` otherwise. Implemented in `packages/qfai/tests/integration/specAutoDiscovery.test.ts` under `describe("TC-0013-0015: policy change detection", ...)`. Also referenced by `packages/qfai/tests/core/specDiffDetector.test.ts:458` as `TDD-0010 (TC-0013-0015)`.
+- Spec Auto-Discovery (consolidated from spec-0038) — verify that `detectPolicyChanges` returns `true` when `_policies/` files are modified between refs and `false` otherwise. Implemented in `packages/qfai/tests/integration/specAutoDiscovery.test.ts` under `describe("TC-0013-0015: policy change detection", ...)`. The unit-test angle of the same scenario lives at `packages/qfai/tests/core/specDiffDetector.test.ts` `describe("TDD-0010: detectPolicyChanges", ...)` (TDD-0010 in `tdd/test-list.md` maps to TC-0013-0010 — the comment block above that describe records the cross-reference).
 
 ## TC-0013-0016: Config baseBranch Loading
 
-- EX-Ref: EX-0013-0001
-- AC-Refs: AC-0013-0001
+- EX-Ref: EX-0013-0010
+- AC-Refs: AC-0013-0013
 - Type: normal
 - Spec Auto-Discovery (consolidated from spec-0038) — verify that `loadConfig` reads `baseBranch` from `qfai.config.yaml` when present and returns the default sentinel when absent. Implemented in `packages/qfai/tests/integration/specAutoDiscovery.test.ts` under `describe("TC-0013-0016: config baseBranch — loadConfig reads baseBranch from yaml", ...)`.
 
 ## TC-0013-0017: Old Evidence Without Diff Context Remains Parseable
 
-- EX-Ref: EX-0013-0001
-- AC-Refs: AC-0013-0001
+- EX-Ref: EX-0013-0010
+- AC-Refs: AC-0013-0013
 - Type: boundary
 - Spec Auto-Discovery (consolidated from spec-0038) — verify that `detectSpecChanges` parses old-style evidence files that predate the Diff Context section without erroring (forward-compatibility boundary). Implemented in `packages/qfai/tests/integration/specAutoDiscovery.test.ts` under `describe("TC-0013-0017: old evidence without Diff Context remains parseable", ...)`.
 

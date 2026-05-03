@@ -54,6 +54,14 @@
 - Each AC MUST have at minimum one `normal` test case AND one non-normal (`error`/`boundary`/`edge`) test case.
 - Normal-path-only coverage for an AC is considered incomplete.
 
+## BR-0013-0010: Spec Auto-Discovery Diff Result Completeness
+
+- AC-Refs: AC-0013-0013
+
+- The Spec Auto-Discovery contract (`detectSpecChanges` + `detectPolicyChanges` + `loadConfig` + evidence-Diff-Context-forward-compat) MUST return a complete `SpecDiffResult` (with `entries`, `allSpecs`, `fullScan` fields) and MUST detect `_policies/` modifications independently of spec/contract/evidence diffs. Configuration (`baseBranch`) MUST be honored when present and MUST NOT block discovery when absent.
+- Backward compatibility: evidence files that predate the Diff Context section MUST remain parseable.
+- Consolidated from spec-0038 (Spec Auto-Discovery Protocol — 4-source unified diff detection).
+
 ## BR-0013-0009: Triage Cell Escape ↔ Parse Symmetry
 
 - AC-Refs: AC-0013-0012

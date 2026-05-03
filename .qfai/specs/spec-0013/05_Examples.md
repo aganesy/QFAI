@@ -56,6 +56,13 @@
 - When 06_Test-Cases.md is generated
 - Then each AC has at least one test case with Type=normal and one with Type=error
 
+## EX-0013-0010: Spec Auto-Discovery Detects Policy Change
+
+- BR-Ref: BR-0013-0010
+- Given a repository where `_policies/naming.md` is modified between `origin/main` and `HEAD` and the `qfai.config.yaml` declares `baseBranch: origin/develop`
+- When `detectSpecChanges` and `detectPolicyChanges` run
+- Then `SpecDiffResult` carries `entries` / `allSpecs` / `fullScan` populated, `detectPolicyChanges` returns `true`, the configured `baseBranch` (`origin/develop`) is used as the diff base, and old-style evidence files (lacking the Diff Context section) still parse without throwing
+
 ## EX-0013-0009: Backslash-Containing Triage Cell Round-Trips Unchanged
 
 - BR-Ref: BR-0013-0009
