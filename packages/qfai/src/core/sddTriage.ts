@@ -339,11 +339,23 @@ export function classifyTriage(input: TriageInput): TriageRow[] {
             : {}),
         });
       } else {
+        // No active spec absorbed the removal-shaped REQ. DELETE
+        // ("subject ごとリポジトリから消失") is a stronger statement
+        // than the input justifies — the REQ may simply have a subject
+        // whose tokens were stripped by the STOP_TOKEN filter, not a
+        // genuine product removal. Emit DELETE with a placeholder
+        // rationale that surfaces the burden of proof to the agent
+        // driving Stage 1 Triage, mirroring the CREATE placeholder
+        // pattern (PR #206 review LW-I): the triage row is presented
+        // for manual review + AskUserQuestion approval rather than
+        // as a confident classification.
         rows.push({
           source: req.id,
           subject: req.subject,
           existingSpec: null,
           op: "DELETE",
+          rationale:
+            "no active spec absorbed the removal-shaped REQ; verify the subject is genuinely retired before approving DELETE (otherwise downgrade to UPDATE:REMOVE on the relevant spec)",
         });
       }
       continue;
