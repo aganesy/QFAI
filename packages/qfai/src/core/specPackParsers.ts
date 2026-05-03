@@ -140,13 +140,9 @@ export function parseAllMarkdownTables(text: string): MarkdownTable[] {
  *   corresponding encode rule in `escapeTableCell`, AND the round-trip
  *   identity tests in `tests/core/sddTriage.test.ts` (under
  *   `describe("escapeTableCell ↔ splitMarkdownRow round-trip identity")`)
- *   MUST be extended with the new character class.
- *
- * The contract is also declared at the spec level for the SDD skill
- * (Stage 1 Triage business rules) and exercised end-to-end by the
- * round-trip identity tests in `tests/core/sddTriage.test.ts` under
- * `describe("escapeTableCell ↔ splitMarkdownRow round-trip identity")`
- * — extend them when adding any new escape/un-escape rule.
+ *   MUST be extended with the new character class. The contract is
+ *   also declared at the spec level for the SDD skill (Stage 1
+ *   Triage business rules).
  */
 export function splitMarkdownRow(line: string): string[] {
   const trimmed = line.trim();

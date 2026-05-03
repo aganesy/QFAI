@@ -8,16 +8,20 @@
  * Complements scripts/check-no-internal-version-leakage.sh by checking
  * the *output* of init (post-template-copy), not just the source assets.
  *
- * SSOT note (PR #206 review LtfD): the `PATTERNS` array below is
- * semantically equivalent to the `INTERNAL_SPEC_RE` / `INTERNAL_VERSION_RE`
- * / `INTERNAL_ID_RE` / `SCHEMA_VERSION_RE` regex set in
- * `scripts/check-no-internal-version-leakage.sh` (POSIX ERE there,
- * JS RegExp here). When tightening one, tighten the other — the two
- * are the same backstop expressed in two languages, and a drift would
- * let the smoke test silently miss what the script catches (or vice
- * versa). A single source of truth is YAGNI for now (Rule of Three
- * not yet hit); revisit if a third consumer appears.
- * See `.agents/rules/distributed-surface.md`.
+ * SSOT note (PR #206 review LtfD / Nv4N): the `PATTERNS` array below is
+ * one of THREE semantically-equivalent expressions of the same forbidden
+ * class set:
+ *   1. `packages/qfai/scripts/lint-shipping.ts` `src-comment` rules
+ *      (JS RegExp, pre-build, `src/*.ts` JSDoc scan).
+ *   2. `packages/qfai/scripts/check-no-internal-version-leakage.sh`
+ *      L21..L45 (POSIX ERE, post-build `dist/` scan).
+ *   3. This file (JS RegExp, smoke against `qfai init` output).
+ *
+ * Updating one (e.g. tightening `INTERNAL_VERSION_RE` to a QFAI-context
+ * pattern) requires updating ALL THREE in the same PR — Rule of Three
+ * has been hit and a single source module is now a reasonable next
+ * step, deferred from this PR. See `.agents/rules/distributed-surface.md`
+ * "Defenses (4 layers)" for the layered defense overview.
  */
 import { mkdtemp, readFile, readdir, rm, stat } from "node:fs/promises";
 import os from "node:os";

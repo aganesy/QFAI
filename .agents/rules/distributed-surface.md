@@ -35,15 +35,30 @@ QFAI npm パッケージとして配布されるファイル群を「配布サ�
 独自の `schemaVersion` / 内部 `vN.M` を新設しない。互換破壊は npm 版番の
 minor / major 上げで表現する。
 
-## Defenses (3 layers)
+## Defenses (4 layers)
 
-1. **静的ガード** — `packages/qfai/scripts/check-no-internal-version-leakage.sh`。
+1. **pre-build lint** — `packages/qfai/scripts/lint-shipping.ts`
+   (`src-comment` ターゲット) と CI の `pnpm ci:lint` レーン。
+   `src/*.ts` の JSDoc / コメント行を `INTERNAL_SPEC_RE` 等と同じ
+   regex セットで scan し、tsup が `dist/*.d.ts` に retain する
+   経路を pre-build で塞ぐ。`spec-NNNN` / `.qfai/specs/spec-NNNN/` /
+   `vN.M[.P]` / `CAP-0010+` / `DEC-NNNN-NNNN` / `DR-NNNN` /
+   `QFAI-PROT2-NNN` / `schemaVersion` を全て catch。行頭が
+   comment marker の行のみ検出 — 末尾 `//` や行内 `/* */` は
+   layer 2 (post-build) で catch する known limitation。
+   PR #206 review Ntbp / NwM- で導入。
+2. **post-build 静的ガード** — `packages/qfai/scripts/check-no-internal-version-leakage.sh`。
    `package.json#files` を読んで配布物パスを動的決定し、上の正規表現で grep。
-   CI lint job + build job (post-build) で実行。
-2. **smoke test** — `packages/qfai/tests/integration/distributedSurfaceLeakage.test.ts`。
+   CI lint job + build job (post-build) で実行。layer 1 を補完する
+   最終バックストップ — comment 行検出粒度に依存しない。
+3. **smoke test** — `packages/qfai/tests/integration/distributedSurfaceLeakage.test.ts`。
    `qfai init` を temp dir に走らせ、出力ツリーを同じ正規表現で grep。
    `copyTemplateTree` のロジック / asset 取り込みフィルタの抜けを catch。
-3. **規約文書** — このファイル。寄稿者の認識合わせ用。
+4. **規約文書** — このファイル。寄稿者の認識合わせ用。
+
+**SSOT-sync invariant**: layer 1 / 2 / 3 は同じ forbidden class 集合を
+3 つの言語で書いた等価表現。1 箇所更新時は他 2 箇所も同時更新する。
+規約文書 (layer 4) も追従する。
 
 ## Where Internal IDs Are OK
 

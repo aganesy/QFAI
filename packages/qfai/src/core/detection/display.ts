@@ -2,7 +2,9 @@ import type { DetectionFinding, DetectionLocation } from "./types.js";
 
 /**
  * Heuristic regex patterns for JSX-only (display-only) component detection.
- * Per DR-0076 this is intentionally NOT AST-based.
+ * The detector is intentionally NOT AST-based; the design rationale for
+ * choosing regex over AST is recorded in the development repository
+ * spec for the React component-classification skill.
  */
 
 const STATE_HOOK_RE = /\buseState\b/;

@@ -223,6 +223,50 @@ describe("lint-shipping fixture — detection rules", () => {
     expect(violations.map((v) => v.pattern)).toContain("internal-spec-path-jsdoc-leak");
   });
 
+  it.each([
+    [
+      "internal-version-marker-jsdoc-leak",
+      "v1.9.0",
+      "/**\n * @deprecated since v1.9.0, use foo() instead.\n */\nexport function bar(): void {}\n",
+    ],
+    [
+      "internal-cap-id-jsdoc-leak",
+      "CAP-0011",
+      "/**\n * Implements CAP-0011 capability mapping.\n */\nexport function bar(): void {}\n",
+    ],
+    [
+      "internal-dec-id-jsdoc-leak",
+      "DEC-0001-0042",
+      "/**\n * Per DEC-0001-0042.\n */\nexport function bar(): void {}\n",
+    ],
+    [
+      "internal-dr-id-jsdoc-leak",
+      "DR-0076",
+      "/**\n * Per DR-0076 this is intentionally NOT AST-based.\n */\nexport function bar(): void {}\n",
+    ],
+    [
+      "internal-prot2-id-jsdoc-leak",
+      "QFAI-PROT2-001",
+      "/**\n * Trace QFAI-PROT2-001.\n */\nexport function bar(): void {}\n",
+    ],
+    [
+      "internal-schema-version-jsdoc-leak",
+      '"schemaVersion"',
+      '/**\n * Documents the "schemaVersion" field.\n */\nexport function bar(): void {}\n',
+    ],
+  ])(
+    "flags %s in src/ JSDoc (PR #206 review NwM- / Nv2- / Nv_Q full SSOT parity)",
+    async (rule, expectedMatch, body) => {
+      const root = await newTempDir();
+      await mkdir(path.join(root, "src/foo"), { recursive: true });
+      await writeFile(path.join(root, "src/foo/bar.ts"), body, "utf-8");
+
+      const { violations } = await runLintShipping(root);
+      expect(violations.map((v) => v.pattern)).toContain(rule);
+      expect(violations.map((v) => v.matched)).toContain(expectedMatch);
+    },
+  );
+
   it("does NOT flag sample-tier spec-0001..0009 in src/ JSDoc (Category-B / runtime examples)", async () => {
     // The leakage script tolerates spec-0001..0009 as Category-B /
     // sample-tier IDs that ship with `qfai init`; the JSDoc lint must

@@ -83,13 +83,30 @@ const PATTERNS: ReadonlyArray<PatternRule> = [
     // not assumptions. Only flag in runtime data.
     appliesTo: ["init-runtime"],
   },
-  // PR #206 review Ntbp: catch internal-spec-id leakage in src JSDoc
-  // BEFORE it ships via `dist/*.d.ts`. tsup strips comments from `.js`
-  // outputs but RETAINS them in `.d.ts` declarations, so JSDoc is part
-  // of the distributed surface even though it looks like an internal
-  // comment. Mirrors `INTERNAL_SPEC_RE` in
-  // `scripts/check-no-internal-version-leakage.sh` (spec-0010 and
-  // above; spec-0001..0009 are sample / Category-B and tolerated).
+  // PR #206 review Ntbp / NwM- / Nv2- / Nv_Q: catch internal-ID and
+  // internal-version leakage in src JSDoc BEFORE it ships via
+  // `dist/*.d.ts`. tsup strips comments from `.js` outputs but RETAINS
+  // them in `.d.ts` declarations, so JSDoc is part of the distributed
+  // surface even though it looks like an internal comment.
+  //
+  // SSOT-sync (Nv4N): the regex set below MUST stay in lock-step with
+  // - `scripts/check-no-internal-version-leakage.sh` L21..L45 (POSIX
+  //   ERE, post-build dist/ scan)
+  // - `tests/integration/distributedSurfaceLeakage.test.ts:54` (JS
+  //   RegExp, smoke against `qfai init` output)
+  // The three sites carry the same forbidden classes. Updating one
+  // (e.g. tightening `INTERNAL_VERSION_RE` to a QFAI-context regex)
+  // requires updating all three. Cross-reference comments at the other
+  // two sites point back here.
+  //
+  // Coverage limitation (Nv8u): `TS_COMMENT_LINE_RE` matches lines
+  // whose first non-whitespace character is a comment marker. Trailing
+  // `//` (e.g. `const x = 1; // spec-0042`) and inline block comments
+  // (`const x = 1; /* spec-0042 */`) are NOT detected and would slip
+  // through this lint. They are caught post-build by
+  // `check-no-internal-version-leakage.sh`. Documented as a known
+  // limitation rather than a tokenizer-grade fix; in practice JSDoc
+  // is written in leading-comment-line blocks for declarations.
   {
     name: "internal-spec-id-jsdoc-leak",
     re: /\bspec-0(?:0[1-9][0-9]|[1-9][0-9]{2,})\b/,
@@ -97,13 +114,53 @@ const PATTERNS: ReadonlyArray<PatternRule> = [
       "Internal spec IDs (spec-0010+) MUST NOT appear in src/ comments — tsup keeps JSDoc in dist/*.d.ts. Use a generic descriptor (e.g. 'the SDD skill business rules') and keep ID-level traceability in `.qfai/specs/` or test files.",
     appliesTo: ["src-comment"],
   },
-  // Same gap class for `.qfai/specs/spec-NNNN/` paths in JSDoc — these
-  // ship into `.d.ts` and the leakage script catches them post-build.
   {
     name: "internal-spec-path-jsdoc-leak",
     re: /\.qfai\/specs\/spec-\d{4}\//,
     suggestion:
       "Internal spec paths MUST NOT appear in src/ JSDoc — they ship via dist/*.d.ts. Reference test files (under tests/, not shipped) or use a generic descriptor.",
+    appliesTo: ["src-comment"],
+  },
+  {
+    name: "internal-version-marker-jsdoc-leak",
+    re: /\bv[0-9]+\.[0-9]+(?:\.[0-9]+)?\b|\bv1\.x\b/,
+    suggestion:
+      "Internal version markers (vN.M / vN.M.P / v1.x) MUST NOT appear in src/ JSDoc — `INTERNAL_VERSION_RE` in the leakage script forbids them in dist/. If you need to cite a third-party library version, use a `qfai-shipping:allow reason=...` pragma on the preceding line.",
+    appliesTo: ["src-comment"],
+  },
+  {
+    name: "internal-cap-id-jsdoc-leak",
+    re: /\bCAP-0(?:0[1-9][0-9]|[1-9][0-9]{2,})\b/,
+    suggestion:
+      "Internal capability IDs (CAP-0010+) MUST NOT appear in src/ JSDoc — tsup keeps JSDoc in dist/*.d.ts.",
+    appliesTo: ["src-comment"],
+  },
+  {
+    name: "internal-dec-id-jsdoc-leak",
+    re: /\bDEC-\d{4}-\d{4}\b/,
+    suggestion:
+      "Internal decision IDs (DEC-NNNN-NNNN) MUST NOT appear in src/ JSDoc — tsup keeps JSDoc in dist/*.d.ts.",
+    appliesTo: ["src-comment"],
+  },
+  {
+    name: "internal-dr-id-jsdoc-leak",
+    re: /\bDR-\d{4}\b/,
+    suggestion:
+      "Internal design-rationale IDs (DR-NNNN) MUST NOT appear in src/ JSDoc — tsup keeps JSDoc in dist/*.d.ts.",
+    appliesTo: ["src-comment"],
+  },
+  {
+    name: "internal-prot2-id-jsdoc-leak",
+    re: /\bQFAI-PROT2-\d+\b/,
+    suggestion:
+      "The retired QFAI-PROT2-NNN trace prefix MUST NOT appear in src/ JSDoc — it is in the leakage script forbidden list.",
+    appliesTo: ["src-comment"],
+  },
+  {
+    name: "internal-schema-version-jsdoc-leak",
+    re: /"schemaVersion"|schemaVersion\s*:/,
+    suggestion:
+      "The `schemaVersion` field is forbidden in distributed surfaces (artifacts use `package.json#version` only). Do not document it in src/ JSDoc.",
     appliesTo: ["src-comment"],
   },
 ];

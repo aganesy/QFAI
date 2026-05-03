@@ -15,6 +15,15 @@ fi
 
 fail=0
 
+# SSOT-sync (PR #206 review Nv4N): the regex set below is mirrored in
+#   - packages/qfai/scripts/lint-shipping.ts `src-comment` rules
+#     (pre-build, JSDoc → dist/*.d.ts path)
+#   - packages/qfai/tests/integration/distributedSurfaceLeakage.test.ts
+#     `PATTERNS` array (smoke against `qfai init` output)
+# Updating a regex here (e.g. tightening INTERNAL_VERSION_RE to a
+# QFAI-context pattern) requires updating both other sites in the same
+# PR. See `.agents/rules/distributed-surface.md` "Defenses (4 layers)".
+
 # Internal spec IDs: spec-0010 and above are QFAI-internal specs.
 # spec-0001..0009 are reserved for sample / Category-B template usage and
 # are tolerated.
