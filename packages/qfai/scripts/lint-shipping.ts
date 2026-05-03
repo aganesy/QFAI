@@ -23,7 +23,7 @@ export type LintViolation = {
   suggestion: string;
 };
 
-type Target = "init-runtime" | "init-doc" | "src";
+type Target = "init-runtime" | "init-doc" | "src" | "src-comment";
 
 type PatternRule = {
   name: string;
@@ -40,6 +40,15 @@ type PatternRule = {
    *   - "src": ts under src/, compiled to dist/ without comments. Only
    *     real path-form assumptions are flagged here; informational
    *     metadata in error messages is allowed.
+   *   - "src-comment": JSDoc / `//` comment lines in src/*.ts. tsup
+   *     STRIPS comments from `dist/*.js` but RETAINS them in
+   *     `dist/*.d.ts`, so internal spec-IDs and version markers in
+   *     JSDoc DO ship to user repos as part of the type declarations.
+   *     This category mirrors the regex set in
+   *     `scripts/check-no-internal-version-leakage.sh` so the same
+   *     leakage classes (spec-0010+, internal `vN.M[.P]`, internal
+   *     trace IDs) are caught at lint time on source instead of only
+   *     after a build (PR #206 review Ntbp option B).
    */
   appliesTo: ReadonlyArray<Target>;
 };
@@ -73,6 +82,29 @@ const PATTERNS: ReadonlyArray<PatternRule> = [
     // Same rationale as spec-id-literal: docs use these as references,
     // not assumptions. Only flag in runtime data.
     appliesTo: ["init-runtime"],
+  },
+  // PR #206 review Ntbp: catch internal-spec-id leakage in src JSDoc
+  // BEFORE it ships via `dist/*.d.ts`. tsup strips comments from `.js`
+  // outputs but RETAINS them in `.d.ts` declarations, so JSDoc is part
+  // of the distributed surface even though it looks like an internal
+  // comment. Mirrors `INTERNAL_SPEC_RE` in
+  // `scripts/check-no-internal-version-leakage.sh` (spec-0010 and
+  // above; spec-0001..0009 are sample / Category-B and tolerated).
+  {
+    name: "internal-spec-id-jsdoc-leak",
+    re: /\bspec-0(?:0[1-9][0-9]|[1-9][0-9]{2,})\b/,
+    suggestion:
+      "Internal spec IDs (spec-0010+) MUST NOT appear in src/ comments — tsup keeps JSDoc in dist/*.d.ts. Use a generic descriptor (e.g. 'the SDD skill business rules') and keep ID-level traceability in `.qfai/specs/` or test files.",
+    appliesTo: ["src-comment"],
+  },
+  // Same gap class for `.qfai/specs/spec-NNNN/` paths in JSDoc — these
+  // ship into `.d.ts` and the leakage script catches them post-build.
+  {
+    name: "internal-spec-path-jsdoc-leak",
+    re: /\.qfai\/specs\/spec-\d{4}\//,
+    suggestion:
+      "Internal spec paths MUST NOT appear in src/ JSDoc — they ship via dist/*.d.ts. Reference test files (under tests/, not shipped) or use a generic descriptor.",
+    appliesTo: ["src-comment"],
   },
 ];
 
@@ -181,6 +213,13 @@ async function lintFile(absolutePath: string, pkgRoot: string): Promise<LintViol
   const lines = body.split(/\r?\n/);
   const relPath = path.relative(pkgRoot, absolutePath).replace(/\\/g, "/");
   const applicableRules = PATTERNS.filter((rule) => rule.appliesTo.includes(targetCategory));
+  // src/*.ts files get a SECOND set of rules that run ON comment lines
+  // (the inverse of the comment-skip below). These catch JSDoc leakage
+  // into dist/*.d.ts (PR #206 review Ntbp).
+  const srcCommentRules =
+    targetCategory === "src"
+      ? PATTERNS.filter((rule) => rule.appliesTo.includes("src-comment"))
+      : [];
 
   if (/^assets\/init\/\.qfai\/specs\/spec-XXXX\//.test(relPath)) {
     violations.push({
@@ -198,9 +237,26 @@ async function lintFile(absolutePath: string, pkgRoot: string): Promise<LintViol
     // Pragma escape: this line and the line immediately after are exempt.
     if (PRAGMA_RE.test(line)) continue;
     if (i > 0 && PRAGMA_RE.test(lines[i - 1] ?? "")) continue;
-    // TS source files: comment lines are stripped from dist/ at build time
-    // and therefore do not ship to user repos.
-    if (isTs && TS_COMMENT_LINE_RE.test(line)) continue;
+    // TS source files: `dist/*.js` strips comments at build time, but
+    // `dist/*.d.ts` RETAINS them. Run the dedicated `src-comment`
+    // rules on JSDoc lines so internal-spec-id leakage is caught at
+    // source, not only post-build by the leakage shell script.
+    if (isTs && TS_COMMENT_LINE_RE.test(line)) {
+      for (const rule of srcCommentRules) {
+        const globalRe = new RegExp(rule.re.source, "g");
+        let match: RegExpExecArray | null;
+        while ((match = globalRe.exec(line)) !== null) {
+          violations.push({
+            file: relPath,
+            line: i + 1,
+            pattern: rule.name,
+            matched: match[0],
+            suggestion: rule.suggestion,
+          });
+        }
+      }
+      continue;
+    }
     // YAML files: comment lines are not runtime data; the parser ignores
     // them. References inside `# ...` are authority citation, not
     // install-site assumptions.
