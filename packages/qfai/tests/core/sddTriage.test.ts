@@ -534,7 +534,7 @@ describe("renderTriageMarkdown", () => {
     }
 
     it("plain ASCII subject and rationale (happy path) round-trip unchanged", async () => {
-      // TC-0013-0015 (Type=normal): the AC-0013-0012 round-trip
+      // TC-0013-0019 (Type=normal): the AC-0013-0012 round-trip
       // identity property must hold for the dominant case — clean
       // ASCII text containing none of the escape-relevant characters
       // (no `|`, no `\`, no `\r` / `\n`). Required by BR-0013-0008

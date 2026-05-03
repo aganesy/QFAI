@@ -79,16 +79,23 @@
 - Type: normal
 - Verify that 06_Test-Cases.md template includes a Type column and each AC has at least one non-normal test case type.
 
-## TC-0013-0014: Triage Cell Render-Parse Identity (Edge Cases)
+## TC-0013-0018: Triage Cell Render-Parse Identity (Edge Cases)
 
 - EX-Ref: EX-0013-0009
 - AC-Refs: AC-0013-0012
 - Type: edge
 - Verify `escapeTableCell` ↔ `splitMarkdownRow` round-trip identity for cells containing literal `\` (Windows path, regex literal), `|` (CLI flag `--mode=a|b`), the combo `a\|b`, and the line-break classes `\r\n` / `\r` / `\n`. Backslash-containing cells must round-trip without doubling; pipes round-trip through `\|` escape; line breaks collapse deterministically to a single space. Implemented in `packages/qfai/tests/core/sddTriage.test.ts` under `describe("escapeTableCell ↔ splitMarkdownRow round-trip identity", ...)`.
 
-## TC-0013-0015: Triage Cell Render-Parse Identity (Happy Path)
+## TC-0013-0019: Triage Cell Render-Parse Identity (Happy Path)
 
 - EX-Ref: EX-0013-0009
 - AC-Refs: AC-0013-0012
 - Type: normal
 - Verify the round-trip identity property for plain ASCII subjects / rationales that contain none of the escape-relevant characters (no `|`, no `\`, no line breaks). Required by BR-0013-0008 (each AC must have at least one normal-type TC). Implemented as the dedicated "happy path" assertion in the round-trip identity describe block in `packages/qfai/tests/core/sddTriage.test.ts`.
+
+## TC-0013-0020: Test Case Type Column Invalid Value (Coverage Placeholder)
+
+- EX-Ref: EX-0013-0008
+- AC-Refs: AC-0013-0010
+- Type: error
+- Coverage placeholder for AC-0013-0010 non-normal pair: when a `06_Test-Cases.md` row's `Type` column carries a value outside `normal` / `error` / `boundary` / `edge`, future `QFAI-AC-COVERAGE` style validation MUST flag it. This TC documents the gap and pairs with TC-0013-0013 (Type=normal) so AC-0013-0010 satisfies BR-0013-0008's normal+non-normal requirement. Runtime enforcement of the rule is tracked separately as a follow-up; the coverage placeholder pattern matches the existing TC-0013-0010..0012 style in this file.
