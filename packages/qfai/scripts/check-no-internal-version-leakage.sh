@@ -51,7 +51,12 @@ INTERNAL_ID_RE='\bCAP-0(0[1-9][0-9]|[1-9][0-9]{2,})\b|\bDEC-[0-9]{4}-[0-9]{4}\b|
 
 # Schema version field (any literal "schemaVersion") in distributed
 # surfaces. Generated artifact schemas no longer carry this field.
-SCHEMA_VERSION_RE='"schemaVersion"|schemaVersion *:'
+# PR #206 review NzWr: use POSIX `[[:space:]]` (= `\s` equivalent in
+# JS RegExp) so the whitespace class matches the layer 1 (lint) and
+# layer 3 (smoke) regexes character-for-character. Previous
+# `schemaVersion *:` (literal space) would let `schemaVersion\t:` /
+# `schemaVersion\n:` slip through this final backstop.
+SCHEMA_VERSION_RE='"schemaVersion"|schemaVersion[[:space:]]*:'
 
 # Scope: derived dynamically from package.json "files" field.
 # The "files" field is the SSOT for what npm ships; this guard scans

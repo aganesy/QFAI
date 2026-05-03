@@ -455,7 +455,13 @@ describe("TDD-0009: --full flag", () => {
 });
 
 // ---------------------------------------------------------------------------
-// TDD-0010 (TC-0013-0015): Policy change detection
+// TDD-0010: Policy change detection (unit-test angle).
+// PR #206 review NyT_: the previous header read `(TC-0013-0015)` but TDD-0010
+// in tdd/test-list.md maps to TC-0013-0010 (Coverage Placeholder for
+// EX-0013-0005). The policy-change scenario here is exercised by the
+// integration suite under TC-0013-0015 / TDD-0015 — kept as a separate
+// describe block for the unit-level angle. Do not re-add the TC-0013-0015
+// parenthetical here; it would re-introduce a TDD-IDs/TC-Refs collision.
 // ---------------------------------------------------------------------------
 describe("TDD-0010: detectPolicyChanges", () => {
   beforeEach(() => {

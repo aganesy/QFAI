@@ -115,10 +115,15 @@ const PATTERNS: ReadonlyArray<PatternRule> = [
     appliesTo: ["src-comment"],
   },
   {
+    // PR #206 review NzSK: scope mirrors `INTERNAL_SPEC_RE` — only
+    // spec-0010+ paths are forbidden; spec-0001..0009 sample-tier
+    // paths in src JSDoc are tolerated (matches the leakage script
+    // and smoke test, which both implicitly cover paths via the
+    // spec-id regex applied to file content).
     name: "internal-spec-path-jsdoc-leak",
-    re: /\.qfai\/specs\/spec-\d{4}\//,
+    re: /\.qfai\/specs\/spec-0(?:0[1-9][0-9]|[1-9][0-9]{2,})\//,
     suggestion:
-      "Internal spec paths MUST NOT appear in src/ JSDoc — they ship via dist/*.d.ts. Reference test files (under tests/, not shipped) or use a generic descriptor.",
+      "Internal spec paths (spec-0010+) MUST NOT appear in src/ JSDoc — they ship via dist/*.d.ts. Reference test files (under tests/, not shipped) or use a generic descriptor.",
     appliesTo: ["src-comment"],
   },
   {
