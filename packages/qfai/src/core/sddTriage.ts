@@ -418,6 +418,30 @@ export const TRIAGE_TABLE_HEADER = [
 ] as const;
 
 /**
+ * Escape a single Triage table cell so the resulting markdown row keeps
+ * the column structure intact even when the source REQ subject /
+ * rationale / spec name contains literal `|` (e.g. CLI flags
+ * `--mode=a|b`, regexes `(?:add|remove)`, URL queries `?op=a|b`) or
+ * embedded newlines (e.g. multi-line subjects pasted from a discussion
+ * pack). Without this, the persisted delta.md row would break GFM
+ * table parsing — `parseAllMarkdownTables` would split on the literal
+ * pipe and `validators/specPack.ts` would misalign column → row,
+ * letting QFAI-TRIAGE-* validators silently miss the row
+ * (PR #206 review LMAJOR / Lsbk).
+ *
+ * Escapes:
+ * - `|` → `\|` (GFM table escape)
+ * - `\r\n` / `\r` / `\n` → ` ` (single space; `<br>` is GFM-only and
+ *   not all downstream consumers handle it consistently)
+ */
+function escapeTableCell(value: string): string {
+  return value
+    .replace(/\\/g, "\\\\")
+    .replace(/\|/g, "\\|")
+    .replace(/\r\n|\r|\n/g, " ");
+}
+
+/**
  * Render a triage section as a markdown table block. Designed to be appended
  * directly under the `## Change Summary` section of a delta.md file.
  */
@@ -436,7 +460,7 @@ export function renderTriageMarkdown(rows: TriageRow[]): string {
       sub,
       row.approvedBy ?? "-",
       row.rationale ?? "-",
-    ];
+    ].map(escapeTableCell);
     lines.push(`| ${cells.join(" | ")} |`);
   }
   lines.push("");

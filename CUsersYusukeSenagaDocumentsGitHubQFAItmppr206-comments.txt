@@ -1,0 +1,241 @@
+{"line":50,"path":".agents/rules/version-discipline.md","prefix":"[MAJOR] 禁止アクション 5 種が網羅的でない\n\nIssue: 過去事故 (1.9.0 → 1.9.1 不正リリース) を構造的に防ぐルールとして列挙された 5 種だが、再発パターンの抜け道が残"}
+{"line":null,"path":".agents/rules/version-discipline.md","prefix":"[MAJOR] SemVer 抽出の正規表現が誤検出するリスク\n\nIssue: `v?([0-9]+)\\.([0-9]+)\\.([0-9]+)` は SemVer 以外の任意の `N.M.P` パター"}
+{"line":null,"path":"packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/templates/specs/_policies/11_Slice-Policy.md","prefix":"[MAJOR] 8 種オペレーションに RENAME / RENUMBER が欠落\n\nIssue: 8 ops は CREATE / UPDATE(APPEND/MODIFY/REMOVE) / DE"}
+{"line":362,"path":"packages/qfai/src/core/sddTriage.ts","prefix":"[MAJOR] removalHint 経路で SPLIT 閾値超を考慮していない\n\nIssue: `classifyTriage` の `removalHint` 分岐 (lines 203-221"}
+{"line":484,"path":"packages/qfai/src/core/validators/specPack.ts","prefix":"[MINOR] QFAI-TRIAGE-001 の severity が warning にとどまる根拠が弱い\n\nIssue: 過去事故 (BR 追加で済むはずが新 spec に分裂) を構造的に防ぐ"}
+{"line":null,"path":".qfai/specs/_policies/10_delta.md","prefix":"[MINOR] OQ-0009 / OQ-0010 の defer 先が `v1.9.0` から `TBD` へ後退している\n\nIssue: 本 PR で `OQ-0009 (Jina AI MCP)"}
+{"line":null,"path":"packages/qfai/src/core/sddTriage.ts","prefix":"[MINOR] tie-breaker (smaller acCount) が append-first 原則と衝突する可能性\n\nIssue: `bestSubjectMatch` の tie-bre"}
+{"line":53,"path":"packages/qfai/src/core/parse/spec.ts","prefix":"[MINOR] Status enum で `removed` の意味が Slice-Policy と矛盾する\n\nIssue: `SPEC_STATUS_VALUES = [\"active\", \"su"}
+{"line":null,"path":"packages/qfai/src/core/sddTriage.ts","prefix":"[MAJOR] Issue: bestSubjectMatch が `scopeOut` のトークンも haystack に含めて overlap を計算している。\n\nWhy: scope:Out は"}
+{"line":null,"path":".agents/rules/version-discipline.md","prefix":"[MINOR] ブランチ名にバージョンが含まれない場合のガードが規範と非対称\n\nIssue: ルール 2 「ブランチ名にバージョンが含まれない場合 → \\`package.json#version\\`"}
+{"line":320,"path":"packages/qfai/src/core/sddTriage.ts","prefix":"[MAJOR] Issue: `removalHint=true` のとき capability が複数 spec に一致しても `capabilityMatches[0]` だけを対象にしてしまい、"}
+{"line":null,"path":"CHANGELOG.md","prefix":"[MAJOR] CHANGELOG の構造ドリフトです。本 PR は `3ff5e06b chore(release): qfai 1.8.8` で `[1.8.8] - 2026-05-02` セク"}
+{"line":null,"path":"CHANGELOG.md","prefix":"[BLOCKER] CHANGELOG.md の v1.8.3 entry が distributed-surface scrub の機械置換で英文構造ごと壊れている。例: `absorbs the "}
+{"line":null,"path":"packages/qfai/tests/integration/agentsRulesSurface.test.ts","prefix":"[MAJOR] Windows で `core.symlinks=false` のチェックアウト時、`.claude/rules/\u003cname\u003e.md` の中身は symlink ターゲット文字列 (例"}
+{"line":null,"path":"packages/qfai/src/core/sddTriage.ts","prefix":"[MINOR] Issue: tokenize の正規表現は CJK Unified Ideographs (`㐀-鿿`) と Hiragana/Katakana (`぀-ヿ`) しか保持しない。CJ"}
+{"line":null,"path":"packages/qfai/src/core/sddTriage.ts","prefix":"[FYI] 自動生成 rationale が QFAI-TRIAGE-006 を素通り失格する\n\nIssue: `classifyTriage` が CREATE 行を emit するとき、自動的に "}
+{"line":null,"path":".agents/rules/version-discipline.md","prefix":"[NIT] CHANGELOG 見出しの禁止条件が曖昧\n\nIssue: 「`CHANGELOG.md` への新しい `## [X.Y.Z]` 見出し追加 (`## [Unreleased]` 配下への"}
+{"line":126,"path":"packages/qfai/src/core/sddTriage.ts","prefix":"[MINOR] Issue: STOP_TOKENS に `remove` / `delete` が含まれているため、subject が 'remove obsolete flag' のように削除動詞"}
+{"line":38,"path":"packages/qfai/scripts/check-no-internal-version-leakage.sh","prefix":"[MAJOR] `INTERNAL_VERSION_RE='\\bv[0-9]+\\.[0-9]+(\\.[0-9]+)?\\b'` が広すぎる可能性があります。\n\nWhy: 配布物 (`README.md`"}
+{"line":3,"path":"packages/qfai/package.json","prefix":"[MINOR] PR 本文 サマリ第 3 項 / Compatibility 根拠 / §2 \"非スコープ（明示）\" / §5 リード文に「package.json の version は 1.8.8"}
+{"line":null,"path":"packages/qfai/src/core/sddTriage.ts","prefix":"[NIT] Issue: bestSubjectMatch の比較ロジックが if-chain で OR 条件を 4 個並べており可読性が低い。条件 `!best || score \u003e best.sc"}
+{"line":5,"path":"CHANGELOG.md","prefix":"[MINOR] Open Questions の第 1 項「マージ後にユーザが次のリリース番号 (`1.8.9` か `1.9.0`) を判断し、別 PR で `chore(release):` を打"}
+{"line":null,"path":"packages/qfai/scripts/check-no-internal-version-leakage.sh","prefix":"[MINOR] Issue: `mapfile -t FILES_FIELD \u003c \u003c(node -e ...)` は process substitution を使うため、内部 `node` の no"}
+{"line":null,"path":".agents/rules/root-additions-policy.md","prefix":"[MAJOR] master ルールファイルである `.agents/rules/root-additions-policy.md` が AI 固有のシンボリックリンク `.claude/rules/"}
+{"line":43,"path":".github/workflows/ci.yml","prefix":"[NIT] PR 本文「## レビュー完了基準」の `- [ ] DoD を満たし、追加指摘がすべて解消されている` チェックボックスが未チェックです。本 PR は DoD を満たすと PR 本文 §"}
+{"line":null,"path":"packages/qfai/src/core/sddTriage.ts","prefix":"[MINOR] `tokenize` の Unicode カバレッジに微妙なギャップがあります。\n\nWhy: 区切り文字クラス `[^a-z0-9぀-ヿ㐀-鿿]+` のうち:\n- `぀-ヿ` は `U"}
+{"line":null,"path":"AGENTS.md","prefix":"[MAJOR] AGENTS.md は universal entrypoint (全 AI 共通) と本 PR が位置づけているが、本行の参照先は AI 固有 symlink である `.claud"}
+{"line":73,"path":"packages/qfai/scripts/check-no-internal-version-leakage.sh","prefix":"[MINOR] Issue: `candidate=\"$ROOT/$entry\"` は `package.json#files` のエントリを **そのまま literal path** として連結し"}
+{"line":14,"path":"packages/qfai/scripts/check-branch-version-pin.sh","prefix":"[FYI] 独立監査として実行した検証コマンド結果（HEAD = `c623d364`）:\n\n```\n$ bash packages/qfai/scripts/check-branch-version"}
+{"line":null,"path":"packages/qfai/src/core/sddTriage.ts","prefix":"[MINOR] `bestSubjectMatch` の tie-breaker 判定が決定論的でない可能性があります。\n\nWhy: 現在のロジックは\n```ts\nscore \u003e best.score"}
+{"line":null,"path":"packages/qfai/scripts/check-branch-version-pin.sh","prefix":"[MINOR] Issue: `if [[ \"$branch\" =~ v?([0-9]+)\\.([0-9]+)\\.([0-9]+) ]]` は `v` プレフィックス無しの SemVer も拾うため、"}
+{"line":66,"path":"README.md","prefix":"[MAJOR] root の `README.md` (line 71-74) はまだ廃止された CLI を例として案内している:\n\n```\nUse `npx qfai prototyping rou"}
+{"line":23,"path":"packages/qfai/scripts/check-branch-version-pin.sh","prefix":"[NIT] Issue: VERSION_PIN_SKIP=1 が指定されたとき、guard は標準出力にメッセージを出すだけで CI ログ上の警告として目立たない。本ルールの過去事例 (2026-0"}
+{"line":null,"path":"packages/qfai/src/core/parse/spec.ts","prefix":"[MINOR] bare `as SpecStatus` の type assertion が project rule に違反します。\n\nWhy: CLAUDE.md `Project Rules`"}
+{"line":null,"path":"packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/SKILL.md","prefix":"[MINOR] Triage 8 ops の SKILL.md 表記が、sdd-triage.md / 11_Slice-Policy.md / agentsRulesSurface 系テストと微妙に"}
+{"line":47,"path":".github/workflows/ci.yml","prefix":"[MINOR] CI lint job が `runs-on: ubuntu-latest` のみで Windows 検証経路が存在しません。\n\nWhy: 本 PR では `.claude/rules"}
+{"line":null,"path":"packages/qfai/src/core/validators/specPack.ts","prefix":"[NIT] Issue: `opCell.toUpperCase() as \"UPDATE\" | TriageTopLevelOp` は CLAUDE.md Project Rules の 'avoi"}
+{"line":null,"path":"packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/SKILL.md","prefix":"[MINOR] SKILL.md item 3 の append-first 説明が、`references/sdd-triage.md` / `_policies/11_Slice-Policy.m"}
+{"line":34,"path":"packages/qfai/scripts/check-branch-version-pin.sh","prefix":"[MINOR] branch 解決の 3 段フォールバックは正しく動くが、`pull_request_target` イベントでの挙動を契約として明記すべきです。\n\nWhy: 現在のコメント (L21"}
+{"line":null,"path":"packages/qfai/src/core/validators/specPack.ts","prefix":"[MINOR] Issue: `subCell.toUpperCase() as TriageUpdateSubOp` は前段の guard (`subCell.length === 0 || sub"}
+{"line":null,"path":"packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/templates/specs/spec/01_Spec.md","prefix":"[MINOR] template `01_Spec.md` が seed として `Status: active`, `Superseded-by: -`, `Deprecated-at: -` の "}
+{"line":387,"path":"packages/qfai/src/core/validators/specPack.ts","prefix":"[MINOR] Issue: `validateCreateRowCapabilityRefs` の `try { readFile(capabilitiesPath) } catch { /* ig"}
+{"line":null,"path":".agents/rules/version-discipline.md","prefix":"[MINOR] `version-discipline.md` 禁止アクションリストに `npm version` / `pnpm version` 系コマンドが抜けています。\n\nWhy: 本ファイル"}
+{"line":147,"path":"packages/qfai/src/core/specSummary.ts","prefix":"[MINOR] Issue: `extractScopeBullets` の continuation 集約は最初の non-indented bullet または blank line で打ち切るが"}
+{"line":135,"path":"packages/qfai/src/core/validators/specPack.ts","prefix":"[MINOR] `validateSpecStatusForEntry` と `validateTriageSectionForEntry` が両 branch (layered / spec-pac"}
+{"line":86,"path":"packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/templates/specs/_policies/11_Slice-Policy.md","prefix":"[MINOR] APPEND vs CREATE algorithm の Step 5 の文末で「**Record the cascade rationale and verify no compan"}
+{"line":175,"path":"packages/qfai/src/core/parse/spec.ts","prefix":"[MINOR] Issue: `parseSpec` で `extractBulletField(md, \"Status\")` が **最初に見つかった** Status bullet のみを採用する"}
+{"line":null,"path":"AGENTS.md","prefix":"[NIT] AGENTS.md の path 表記が混在しています。\n\nWhy: L46 で `./.agents/rules/` (leading `./`)、L23 で `.claude/rule"}
+{"line":null,"path":".agents/rules/version-discipline.md","prefix":"[NIT] `version-discipline.md` の正規表現が `v?([0-9]+)\\.([0-9]+)\\.([0-9]+)` だが、PR の例として挙げる `release/1.9.0`"}
+{"line":216,"path":"packages/qfai/tests/validators/specPack/triageSection.test.ts","prefix":"[NIT] Issue: テスト 'ignores the row when capabilities file is missing' は (a) コメント上 '`CAP-0099` is \"mis"}
+{"line":16,"path":"CLAUDE.md","prefix":"[NIT] CLAUDE.md の参照先が「symlink path + (master path) 注釈」と「symlink path のみ」で揺れています。\n\nWhy:\n- L15 (本行): `"}
+{"line":null,"path":"packages/qfai/scripts/check-branch-version-pin.sh","prefix":"[MINOR] error メッセージのユーザ向け文面で、bullet 「- Set VERSION_PIN_SKIP=1 only when intentionally landing a coor"}
+{"line":73,"path":"packages/qfai/scripts/check-no-internal-version-leakage.sh","prefix":"[FYI] WARN message が「lint-only CI passes は dist/ 不在で OK」を黙認していますが、`assets/` / `README.md` / `LICENSE"}
+{"line":null,"path":".qfai/specs/_policies/10_delta.md","prefix":"[NIT] Triage table の `Source` 列、本テンプレートでは `internal/sdd` という origin を使っているが、これは ユーザ事業 spec の例ではなく QF"}
+{"line":null,"path":"AGENTS.md","prefix":"[NIT] AGENTS.md 本セクションでは、claude/codex/copilot で実際にどのファイルをエントリポイントにするかを次のように整理している:\n\n- master: `.agen"}
+{"line":15,"path":"packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/templates/specs/_policies/10_delta.md","prefix":"[NIT] template `_policies/10_delta.md` の Triage 例に MERGE 行が seed として配置されている。\n\n```\n| REQ-XXXX | \u003cone-"}
+{"line":null,"path":"CHANGELOG.md","prefix":"[FYI] CHANGELOG.md `## [Unreleased]` の `### Added` で `core/sddTriage.ts` の export 関数として `tokenize`, "}
+{"line":null,"path":".codex/README.md","prefix":"[NIT] `.codex/README.md` の Cross-AI rules セクションは `version-discipline.md` のみ言及。\n\n`.github/copilot-ins"}
+{"line":null,"path":"packages/qfai/src/core/sddTriage.ts","prefix":"Addressed in commit 0a010fde. `bestSubjectMatch` の haystack を `[s.title, s.capability, ...s.scopeIn]"}
+{"line":320,"path":"packages/qfai/src/core/sddTriage.ts","prefix":"Addressed in commit 0a010fde. `classifyTriage` の `removalHint` 分岐に `capabilityMatches.length \u003e 1 → M"}
+{"line":14,"path":"packages/qfai/scripts/check-branch-version-pin.sh","prefix":"独立検証ありがとうございます。3 つの guard が PASS であり、validator code (QFAI-STATUS-001..006 / QFAI-STATUSLEAK-001 / QF"}
+{"line":50,"path":".agents/rules/version-discipline.md","prefix":"Addressed in `5500163e`. 禁止アクションを上位原則 (release artifact を AI が単独生成しない) に再構成し、`amend` / `force push` "}
+{"line":null,"path":".agents/rules/version-discipline.md","prefix":"Addressed in `5500163e と 4de7febd`. SemVer 抽出正規表現を `(?:^|[/_-])v([0-9]+)\\.([0-9]+)\\.([0-9]+)(?:$|[/_"}
+{"line":null,"path":"packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/templates/specs/_policies/11_Slice-Policy.md","prefix":"Addressed in `a1250ff5`. SUPERSEDE 行に「同一 capability の RENUMBER は SUPERSEDE で扱う」「subject だけ変える RENAME"}
+{"line":362,"path":"packages/qfai/src/core/sddTriage.ts","prefix":"Addressed in `198a3c99`. `removalHint` 経路にも size threshold チェックを入れ、AC/TC 閾値超過時は SPLIT を提案するよう対称化しました"}
+{"line":484,"path":"packages/qfai/src/core/validators/specPack.ts","prefix":"Addressed in `fa6e9cd3`. QFAI-TRIAGE-001 を warning に留める根拠 (既存運用 spec の backfill PR 待ち / TRIAGE-005, "}
+{"line":null,"path":".qfai/specs/_policies/10_delta.md","prefix":"Addressed in `a1250ff5`. OQ-0009 / OQ-0010 の defer 先を `TBD` から具体的な re-evaluation trigger (next resea"}
+{"line":null,"path":"packages/qfai/src/core/sddTriage.ts","prefix":"Addressed in `198a3c99`. smaller-acCount tie-breaker の設計判断 (appendable headroom 優先) と、capability own"}
+{"line":53,"path":"packages/qfai/src/core/parse/spec.ts","prefix":"Addressed in `fa6e9cd3`. `SPEC_STATUS_VALUES` の JSDoc に `removed` vs DELETE の差 (DELETE はディレクトリごと削除 /"}
+{"line":null,"path":".agents/rules/version-discipline.md","prefix":"Addressed in `5500163e`. ルール 2 の規範を「bump に限らず一切の `package.json#version` 編集に user 確認が必要」に書き換え、guard が"}
+{"line":null,"path":"packages/qfai/tests/integration/agentsRulesSurface.test.ts","prefix":"Addressed in `fa6e9cd3`. Windows / `core.symlinks=false` 環境を Suggestion 1 で対応: link 内容が `^\\.\\./.+\\.m"}
+{"line":null,"path":"packages/qfai/src/core/sddTriage.ts","prefix":"Addressed in `198a3c99`. `tokenize` を Unicode property escape `[^\\p{L}\\p{N}]+/u` に置換し、CJK Extensions"}
+{"line":null,"path":"packages/qfai/src/core/sddTriage.ts","prefix":"Addressed in `198a3c99`. 自動生成 CREATE rationale を「`_policies/03_Capabilities.md` に CAP-NNNN を追加してから引用"}
+{"line":null,"path":".agents/rules/version-discipline.md","prefix":"Addressed in `5500163e`. 禁止条件を「`CHANGELOG.md` に SemVer を含む H2 見出し (例: `## [X.Y.Z]`, `## [X.Y.Z] - YY"}
+{"line":126,"path":"packages/qfai/src/core/sddTriage.ts","prefix":"Addressed in `198a3c99`. STOP_TOKENS に `remove`/`delete` を含める意図と、subject が stop-only (例: 'remove the"}
+{"line":38,"path":"packages/qfai/scripts/check-no-internal-version-leakage.sh","prefix":"Addressed in `4de7febd`. 短期対応として、INTERNAL_VERSION_RE が QFAI 内部 / 第三者を区別しない YAGNI-broad design である旨と、"}
+{"line":null,"path":"packages/qfai/src/core/sddTriage.ts","prefix":"Addressed in `198a3c99`. `bestSubjectMatch` の if-chain を named comparator `compareSubjectCandidates`"}
+{"line":null,"path":"packages/qfai/scripts/check-no-internal-version-leakage.sh","prefix":"Addressed in `4de7febd`. `mapfile -t FILES_FIELD \u003c \u003c(node -e ...)` を node 出力一時変数 + here-string に変更し、"}
+{"line":null,"path":".agents/rules/root-additions-policy.md","prefix":"Addressed in `5500163e`. `.agents/rules/root-additions-policy.md` 内の 2 箇所の `.claude/rules/temporary-"}
+{"line":null,"path":"packages/qfai/src/core/sddTriage.ts","prefix":"Addressed in `198a3c99`. `tokenize` を `[^\\p{L}\\p{N}]+/u` に切り替え、半角カナ / 全角英数字 / CJK Ext B 等もカバーされるようにな"}
+{"line":null,"path":"AGENTS.md","prefix":"Addressed in `5500163e`. AGENTS.md の `.claude/rules/root-additions-policy.md` 参照を `.agents/rules/roo"}
+{"line":73,"path":"packages/qfai/scripts/check-no-internal-version-leakage.sh","prefix":"Addressed in `4de7febd`. `package.json#files` のエントリで glob パターン (`*` 含む) を検出した場合、guard を error で停止するチ"}
+{"line":null,"path":"packages/qfai/src/core/sddTriage.ts","prefix":"Addressed in `198a3c99`. `bestSubjectMatch` 内で `[...summaries].sort((a,b) =\u003e a.specId.localeCompare("}
+{"line":null,"path":"packages/qfai/scripts/check-branch-version-pin.sh","prefix":"Addressed in `4de7febd`. `check-branch-version-pin.sh` の正規表現を `(^|[/_-])v([0-9]+)\\.([0-9]+)\\.([0-9]+"}
+{"line":66,"path":"README.md","prefix":"Addressed in `a1250ff5`. root の `README.md` を `qfai prototyping iterate --cycle \u003cn\u003e` の現行 single-thre"}
+{"line":23,"path":"packages/qfai/scripts/check-branch-version-pin.sh","prefix":"Addressed in `4de7febd`. VERSION_PIN_SKIP=1 の skip ログに `::warning title=VERSION_PIN_SKIP=1::...` Git"}
+{"line":null,"path":"packages/qfai/src/core/parse/spec.ts","prefix":"Addressed in `fa6e9cd3`. `isSpecStatus(value: string): value is SpecStatus` 型ガードを抽出し、`parseSpec` 内の "}
+{"line":null,"path":"packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/SKILL.md","prefix":"Addressed in `a1250ff5`. SKILL.md の 8-op 表記を `UPDATE:APPEND / UPDATE:MODIFY / UPDATE:REMOVE` (コロン後空白"}
+{"line":47,"path":".github/workflows/ci.yml","prefix":"Addressed in `5500163e`. `.github/workflows/ci.yml` に `TODO(QFAI-PR206-followup)` コメントを追加し、windows-l"}
+{"line":null,"path":"packages/qfai/src/core/validators/specPack.ts","prefix":"Addressed in `fa6e9cd3`. `isTriageTopLevelLabel(value: string): value is \"UPDATE\" | TriageTopLevelOp"}
+{"line":null,"path":"packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/SKILL.md","prefix":"Addressed in `a1250ff5`. SKILL.md item 3 の CREATE 条件を「`zero subject-token overlap with any active sp"}
+{"line":34,"path":"packages/qfai/scripts/check-branch-version-pin.sh","prefix":"Addressed in `4de7febd`. `check-branch-version-pin.sh` のコメントに branch-resolution chain (GITHUB_HEAD_R"}
+{"line":null,"path":"packages/qfai/src/core/validators/specPack.ts","prefix":"Addressed in `fa6e9cd3`. 不正な subOp を検出した行で `continue;` するように変更し、QFAI-TRIAGE-004 と QFAI-TRIAGE-005 の二"}
+{"line":null,"path":"packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/templates/specs/spec/01_Spec.md","prefix":"Addressed in `a1250ff5`. `templates/specs/spec/01_Spec.md` の常時 `Superseded-by: -` / `Deprecated-at: "}
+{"line":387,"path":"packages/qfai/src/core/validators/specPack.ts","prefix":"Addressed in `fa6e9cd3`. Suggestion 2 を採用: capabilities ファイル不在時にも `knownCaps` を空セットのまま QFAI-TRIAGE-0"}
+{"line":null,"path":".agents/rules/version-discipline.md","prefix":"Addressed in `5500163e`. 禁止アクションリストに `npm version` / `pnpm version` 系コマンドを「`package.json#version` 編集"}
+{"line":147,"path":"packages/qfai/src/core/specSummary.ts","prefix":"Addressed in `198a3c99`. `extractScopeBullets` の continuation join 後と各 split part に `replace(/\\s+/g,"}
+{"line":135,"path":"packages/qfai/src/core/validators/specPack.ts","prefix":"Addressed in `fa6e9cd3`. Suggestion 通り、layered / spec-pack 分岐を `if/else if/else` 構造に再構成し、共通検証 (`vali"}
+{"line":86,"path":"packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/templates/specs/_policies/11_Slice-Policy.md","prefix":"Addressed in `a1250ff5`. Step 5 末尾の cascade rationale 注記を削除し、`## Impact cascade` セクション側に「Step 1〜9 のど"}
+{"line":175,"path":"packages/qfai/src/core/parse/spec.ts","prefix":"Addressed in `fa6e9cd3`. `parseSpec` 内に `TODO(QFAI-PR206-followup)`: `extractBulletField` が複数 Status"}
+{"line":null,"path":"AGENTS.md","prefix":"Addressed in `5500163e`. AGENTS.md の `./.agents/rules/` の leading `./` を削除し、`.agents/rules/` 形式に統一しま"}
+{"line":null,"path":".agents/rules/version-discipline.md","prefix":"Addressed in `5500163e`. version-discipline.md に「MAJOR.MINOR.PATCH のみサポート (pre-release / build metad"}
+{"line":216,"path":"packages/qfai/tests/validators/specPack/triageSection.test.ts","prefix":"Addressed in `fa6e9cd3`. テスト名を 'still emits QFAI-TRIAGE-006 when capabilities file is missing (treat"}
+{"line":16,"path":"CLAUDE.md","prefix":"Addressed in `5500163e`. Suggestion 1 を採用: CLAUDE.md の Project Rules / Code Review セクションの全 bullet で "}
+{"line":null,"path":"packages/qfai/scripts/check-branch-version-pin.sh","prefix":"Addressed in `4de7febd`. error message の VERSION_PIN_SKIP 案内を「`(requires explicit user approval; see"}
+{"line":73,"path":"packages/qfai/scripts/check-no-internal-version-leakage.sh","prefix":"Addressed in `4de7febd`. WARN message を「何が scan されて何が skip されたか」を明示する形式に書き換え、skip された path を tracker"}
+{"line":null,"path":".qfai/specs/_policies/10_delta.md","prefix":"Addressed in `a1250ff5`. `.qfai/specs/_policies/10_delta.md` の Triage 表上部に「`Source` is typically a `"}
+{"line":null,"path":"AGENTS.md","prefix":"Addressed in `5500163e`. AGENTS.md の symlink 説明箇所に「Windows 環境では Git の `core.symlinks=true` 設定 + Deve"}
+{"line":15,"path":"packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/templates/specs/_policies/10_delta.md","prefix":"Addressed in `a1250ff5`. seed MERGE 行の `Approved By` を `-` から `\u003capprover\u003e` placeholder に変更し、cross-sp"}
+{"line":null,"path":".codex/README.md","prefix":"Addressed in `5500163e`. `.codex/README.md` の Cross-AI rules セクションに `version-discipline` / `distribu"}
+{"line":null,"path":"CHANGELOG.md","prefix":"Addressed in `42d338b8`. Section B (Stage 1 Triage / spec status lifecycle) と Section C (cross-AI ru"}
+{"line":null,"path":"CHANGELOG.md","prefix":"Addressed in `42d338b8`. v1.8.3 entry を distributed-surface scrub 前の元の文 (`spec-0012 absorbs the form"}
+{"line":5,"path":"CHANGELOG.md","prefix":"Addressed in `42d338b8`. `[Unreleased]` のリード文を「Post-1.8.8 follow-ups landed after the `chore(release"}
+{"line":null,"path":"CHANGELOG.md","prefix":"Addressed in `42d338b8`. `[1.8.8] - 2026-05-02` の `### Added` で `core/sddTriage.ts` のエントリに「Internal "}
+{"line":3,"path":"packages/qfai/package.json","prefix":"Addressed in `PR body`. PR 本文を実態に揃える形で書き直しました: サマリ第 3 項 / §2 非スコープ / §5 リード文 / §6 Open Questions の 4"}
+{"line":43,"path":".github/workflows/ci.yml","prefix":"Addressed in `PR body`. 「## レビュー完了基準」の `- [ ] DoD を満たし、追加指摘がすべて解消されている` を `[x]` にチェックしました (本 batch で"}
+{"line":null,"path":".qfai/specs/_policies/10_delta.md","prefix":"[MAJOR] Dogfooding 違反: この CREATE 行は本 PR で導入した QFAI-TRIAGE-006 (CREATE 行の Rationale 列に登録済み CAP-NNNN を"}
+{"line":null,"path":".qfai/specs/spec-0001/01_Spec.md","prefix":"[MINOR] Status field のフォーマットが本 PR の template と不一致。template (packages/qfai/assets/init/.qfai/assistan"}
+{"line":null,"path":"README.md","prefix":"[MAJOR] 本 PR で導入した重要な開発者向け規律が README に未反映。具体的に未記載:\n\n1. /qfai-sdd の Stage 1 Triage (preflight と Phase"}
+{"line":1,"path":".agents/rules/version-discipline.md","prefix":"[NIT] H1 タイトル `# Version Discipline (全 AI 共通)` が、他の .agents/rules/*.md (`# Distributed Surface Disci"}
+{"line":14,"path":"packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/templates/specs/_policies/10_delta.md","prefix":"[MINOR] サンプル行の `Approved By` 列が `\u003capprover\u003e` プレースホルダ。バリデータ (QFAI-TRIAGE-005) は空文字 / `-` のみを失敗扱いするため、"}
+{"line":15,"path":"packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/templates/specs/spec/09_delta.md","prefix":"[MINOR] L15 `Operation: CREATE | UPDATE | DELETE | SPLIT | MERGE | SUPERSEDE.` で UPDATE が一件だけ Sub-op"}
+{"line":60,"path":"packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/SKILL.md","prefix":"[MINOR] SKILL.md 圧縮 (346→238 行) で旧 SKILL.md の `### Spec Create/Delete Confirmation (Mandatory)` セクショ"}
+{"line":23,"path":"packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/sdd-quality-gate.md","prefix":"[MINOR] L17-23 の `## Triage Checks` が、本 PR で追加した QFAI-TRIAGE-006 (CREATE 行の CAP-NNNN 参照必須 + 参照先 CAP "}
+{"line":41,"path":"packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/sdd-triage.md","prefix":"[NIT] 8-op 表 (L37-46) の最終列 `Approval` が、UPDATE:APPEND / UPDATE:MODIFY / UPDATE:REMOVE のうち REMOVE だけ "}
+{"line":null,"path":"packages/qfai/src/core/validators/specPack.ts","prefix":"[MINOR] エラーメッセージの actionability。L389 のメッセージ (CREATE 行の Rationale に新 CAP-NNNN の参照が見つかりません) と L395 の s"}
+{"line":null,"path":"packages/qfai/src/core/validators/specPack.ts","prefix":"[MAJOR] validateCreateRowCapabilityRefs は parseFirstMarkdownTable(section) で 最初の 1 つの table だけを評価してい"}
+{"line":null,"path":"packages/qfai/src/core/validators/prototypingEvidence.ts","prefix":"[MAJOR] r.stopReason が 欠損 (undefined) のケースで、`stopReason !== null \u0026\u0026 ...` が真となり QFAI-PROT-005 が emit "}
+{"line":69,"path":"packages/qfai/scripts/check-no-internal-version-leakage.sh","prefix":"[MINOR] `mapfile -t FILES_FIELD \u003c\u003c\u003c \"$files_listing\"` は $files_listing が空文字列のとき長さ 1 の配列 (空文字列 1 個) を"}
+{"line":82,"path":"packages/qfai/src/core/parse/spec.ts","prefix":"[MINOR] extractBulletField の regex に `i` フラグが付いているため、`- status: archived` (小文字始まり) も `extractBulletF"}
+{"line":45,"path":"packages/qfai/scripts/check-no-internal-version-leakage.sh","prefix":"[MINOR] production の `SCHEMA_VERSION_RE='\"schemaVersion\"|schemaVersion *:'` は半角スペースのみ ( *) を許容するが、対応"}
+{"line":168,"path":"packages/qfai/src/core/sddTriage.ts","prefix":"[MINOR] tokenize が `t.length \u003e= 2` で 1 文字 token を全て drop する。JSDoc にも書かれている通り意図的だが、`行` (kanji 1 文字) の"}
+{"line":222,"path":"packages/qfai/src/core/sddTriage.ts","prefix":"[NIT] compareSubjectCandidates が 0 を返すケース (= 同じ specId が summaries に重複して入っている異常入力) で、`!best || compa"}
+{"line":70,"path":"packages/qfai/src/core/validators/prototypingEvidence.ts","prefix":"[NIT] `JSON.parse(await readFile(...))` が throw した直後に line 72 で 同じファイルを再度 readFile している。JSON.parse の"}
+{"line":383,"path":"packages/qfai/src/core/validators/specPack.ts","prefix":"[NIT] `let knownCaps = new Set\u003cstring\u003e();` を try の 外 で空 Set 初期化 -\u003e try 内で reassign。JSDoc の意図 (catch "}
+{"line":408,"path":"packages/qfai/src/core/sddTriage.ts","prefix":"[NIT] classifyTriage が ~98 行 (line 298-396) で CLAUDE.md Project Rules の「~50 行を超えたら抽出」に 正面から抵触。\n\n各 op"}
+{"line":82,"path":"packages/qfai/scripts/check-branch-version-pin.sh","prefix":"[NIT] `current=\"$(node -e ...)\"` で node が PATH に無い環境 (素の sh tool / minimal container) では cryptic な `"}
+{"line":469,"path":"packages/qfai/tests/core/sddTriage.test.ts","prefix":"[FYI] テスト fixture の文字列に `Flag dropped in v1.9` という internal version marker パターンが含まれている。テストファイル自体は配布サ"}
+{"line":89,"path":"packages/qfai/src/core/specSummary.ts","prefix":"[NIT] extractScopeBullets の関数本体が 60 行近く (line 89-147)、CLAUDE.md「~50 行」ガイドの境界。SCOPE_HEADING_RE 抽出 / 継"}
+{"line":312,"path":"packages/qfai/src/core/validators/specPack.ts","prefix":"[NIT] `TRIAGE_TOP_LEVEL_LABELS = new Set\u003cstring\u003e([...TRIAGE_TOP_LEVEL_OPS, 'UPDATE'])` は `'UPDATE'` "}
+{"line":136,"path":"packages/qfai/src/core/validators/specPack.ts","prefix":"[MAJOR] `validateTriageSectionForEntry` が entries 配下の `\u003cspec\u003e/09_delta.md` だけを検証対象にしている。一方 `_policie"}
+{"line":null,"path":".github/workflows/ci.yml","prefix":"[MAJOR] CI dogfooding ステップが `--profile tdd` で `validate ... --root .` を実行している。`runTddValidators` は `"}
+{"line":360,"path":"packages/qfai/src/core/sddTriage.ts","prefix":"[MAJOR] `removalHint=true` で `capabilityMatches[0]` も `bestSubjectMatch` も hit しなかったとき、無条件に op DELET"}
+{"line":77,"path":"packages/qfai/scripts/check-branch-version-pin.sh","prefix":"[MAJOR] `release/v1.9.0-rc.1` のような pre-release ブランチが silent pass する。\n\n本リポジトリの正規表現で実測:\n- `release/v1."}
+{"line":136,"path":"packages/qfai/src/core/sddTriage.ts","prefix":"[MINOR] `STOP_TOKENS` (動詞 add / remove / delete / change / support / enable / make / do 等) と最小 token"}
+{"line":38,"path":"packages/qfai/scripts/check-no-internal-version-leakage.sh","prefix":"[MINOR] `INTERNAL_VERSION_RE` に v1.x sentinel が hardcode されているが、本 PR ではこの sentinel 自体は配布物・コード・ドキュメント"}
+{"line":476,"path":"packages/qfai/src/core/validators/specPack.ts","prefix":"[MINOR] `QFAI-TRIAGE-001` を warning に固定する『1.8.8 リリース窓口の特例』は、コメントで TODO として明記されておりその姿勢は良い。ただし以下の arch"}
+{"line":38,"path":".agents/rules/version-discipline.md","prefix":"[MINOR] 禁止アクション一覧で『`packages/qfai/package.json#version` フィールドの編集』とある一方、後段の『機能完成時の正しいフロー』ユーザ指示後の手順 §1"}
+{"line":91,"path":"packages/qfai/tests/integration/agentsRulesSurface.test.ts","prefix":"[MINOR] Windows 用の symlink fallback 判定 (line 81 の `looksLikeRelativePath`) が `..` 開始のフォワードスラッシュ表記のみを"}
+{"line":222,"path":"packages/qfai/src/core/sddTriage.ts","prefix":"[NIT] `compareSubjectCandidates` の tie-breaker §2 (smaller `acCount` wins) は jsdoc で『append headroom"}
+{"line":408,"path":"packages/qfai/src/core/sddTriage.ts","prefix":"[NIT] `classifyTriage` が 90+ 行 1 関数。append-first 5 段判定 (removalHint / capability multi / capability "}
+{"line":453,"path":"packages/qfai/src/core/validators/specPack.ts","prefix":"[FYI] `validateCreateRowCapabilityRefs` の knownCaps を空 Set にして失敗を膨らませる設計判断 (line 359-371 のコメント) は、PR"}
+{"line":53,"path":"packages/qfai/src/core/parse/spec.ts","prefix":"[FYI] `SPEC_STATUS_VALUES` に `removed` が入っているが、PR #206 review #7 と jsdoc TODO (line 45-51) が認めるとおり、D"}
+{"line":null,"path":".qfai/specs/_policies/10_delta.md","prefix":"[FYI] 上の MAJOR (validateTriageSectionForEntry が `_policies/10_delta.md` を見ない件) と直接対応。本 Triage table "}
+{"line":null,"path":".qfai/specs/_policies/11_Slice-Policy.md","prefix":"[BLOCKER] Slice カテゴリ表で `agent | spec-0017` と記載していますが、`_policies/03_Capabilities.md` では `CAP-0015 = a"}
+{"line":null,"path":".qfai/specs/_policies/11_Slice-Policy.md","prefix":"[BLOCKER] L34 の指摘と一対。`spec-0017` を agent collective spec として残すと記載されていますが、spec-0017 は CAP-0017 (Proto"}
+{"line":67,"path":".qfai/specs/_policies/11_Slice-Policy.md","prefix":"[MAJOR] APPEND vs CREATE 判定アルゴリズム ステップ 5 「token が **1 つでも重なる** → 最近接 active spec に対して **UPDATE:APPEN"}
+{"line":64,"path":".qfai/specs/_policies/11_Slice-Policy.md","prefix":"[MINOR] ステップ 2 の閾値 `acCount \u003c= 30 \u0026\u0026 tcCount \u003c= 50` がポリシー本文中にハードコードされていますが、`sddTriage.ts` の `DEFAULT"}
+{"line":93,"path":".qfai/specs/_policies/11_Slice-Policy.md","prefix":"[MINOR] Decision procedure ステップ 4 で 「複数 spec をまたぐ行 (SPLIT / MERGE / SUPERSEDE) または policy のみの変更 → `_"}
+{"line":null,"path":".qfai/specs/_policies/10_delta.md","prefix":"[MAJOR] `Source: internal/sdd` の CREATE 行で `Existing Spec: (none)` ですが、`Rationale` 列に `CAP-NNNN` の参照"}
+{"line":557,"path":".qfai/specs/_policies/10_delta.md","prefix":"[MAJOR] OQ-0009 / OQ-0010 を「`spec-0016/08_Open-questions.md` で tracked」と書いていますが、`spec-0016/08_Open-q"}
+{"line":569,"path":".qfai/specs/_policies/10_delta.md","prefix":"[MINOR] `## Triage` セクション導入注記 (L571-580) で 「`Source` 列の表記」を解説していますが、本表で実際に登場する `internal/sdd` という値の意"}
+{"line":null,"path":".qfai/specs/spec-0001/01_Spec.md","prefix":"[MINOR] `Status: active` バックフィルで `Superseded-by: -` および `Deprecated-at: -` を seed していますが、`packages/q"}
+{"line":5,"path":".qfai/specs/spec-0017/01_Spec.md","prefix":"[MAJOR] spec-0017 の `Parent: CAP-0017` (= プロトタイピング v2.0 skill) に対し `Status: active` をバックフィルしていますが、`_"}
+{"line":60,"path":"packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/SKILL.md","prefix":"[MINOR] Stage 1 Triage 第 3 項で「CREATE only when there is **zero subject-token overlap with any active"}
+{"line":33,"path":"packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/sdd-triage.md","prefix":"[MINOR] 「CREATE is emitted only when there is **zero** token overlap with any active spec」と書かれていますが、"}
+{"line":116,"path":"packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/sdd-triage.md","prefix":"[MINOR] `QFAI-TRIAGE-001` (warning) の説明で 「delta.md has `## Change Summary` but no `## Triage` sectio"}
+{"line":478,"path":"packages/qfai/src/core/validators/specPack.ts","prefix":"[MAJOR] `QFAI-TRIAGE-001` を warning に固定する justification がコード内 TODO (`QFAI-PR206-followup`) のみで、PR de"}
+{"line":null,"path":"packages/qfai/src/core/validators/specPack.ts","prefix":"[MINOR] `QFAI-TRIAGE-006` 実装で `referencedCaps.length === 0` と「未登録 CAP 参照」を別 issue として 2 段階に出していますが、要"}
+{"line":53,"path":"packages/qfai/src/core/parse/spec.ts","prefix":"[MAJOR] spec status enum `[active, superseded, deprecated, removed]` の lifecycle 定義として、`removed` への "}
+{"line":88,"path":"packages/qfai/src/core/parse/spec.ts","prefix":"[MINOR] `extractBulletField` が値が `-` のときに `undefined` を返すことで、運用 specs (spec-0001..0017) の `Supersede"}
+{"line":403,"path":"packages/qfai/src/core/sddTriage.ts","prefix":"[MINOR] CREATE 行の placeholder Rationale を「no active spec scope absorbs this requirement; add CAP-NNN"}
+{"line":5,"path":"packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/templates/specs/spec/01_Spec.md","prefix":"[MINOR] テンプレートで `- Status: active` を seed し、`Superseded-by` / `Deprecated-at` はコメントブロック (L6-10) でのみ言"}
+{"line":80,"path":"packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/templates/specs/_policies/11_Slice-Policy.md","prefix":"[MINOR] 運用 `_policies/11_Slice-Policy.md` (運用版 L67) では「subject token が **1 つでも重なる**」と明記していますが、テンプレート"}
+{"line":21,"path":"packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/templates/specs/spec/09_delta.md","prefix":"[MINOR] `## Triage` セクションが per-spec 09_delta テンプレートに seed されますが、行コメント (L13-17) で 「Sub-op (UPDATE onl"}
+{"line":56,"path":"packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/SKILL.md","prefix":"[NIT] Stage 1: Triage 第 1 項で 「Enumerate active spec summaries (skip `superseded` / `deprecated` / `r"}
+{"line":27,"path":".agents/rules/version-discipline.md","prefix":"[MINOR] SemVer 抽出 regex の説明で「leading `v` プレフィックスを word boundary 付きで必須」と書きながら、L23-24 の例 `feature/api-"}
+{"line":51,"path":".agents/rules/version-discipline.md","prefix":"[FYI] 「禁止アクション」5 種の網羅性は概ね妥当ですが、要件 reviewer 観点で 1 点だけ抜けがあります: **`packages/qfai/CHANGELOG.md` の `## [U"}
+{"line":null,"path":".qfai/specs/_policies/10_delta.md","prefix":"test reply via GraphQL"}
+{"line":null,"path":".qfai/specs/_policies/10_delta.md","prefix":"Addressed in 24a780b8. `internal/sdd` の CREATE 行を `UPDATE:APPEND on _policies` に変更し、QFAI-TRIAGE-006 "}
+{"line":null,"path":".qfai/specs/spec-0001/01_Spec.md","prefix":"Addressed in 56a49247. `spec-0001..0017/01_Spec.md` から `- Superseded-by: -` / `- Deprecated-at: -` p"}
+{"line":null,"path":"README.md","prefix":"Addressed in a82198ac. README.md / packages/qfai/README.md に Stage 1 Triage 段落 (qfai-sdd skill bulle"}
+{"line":1,"path":".agents/rules/version-discipline.md","prefix":"Acknowledged + deferred. `.agents/rules/version-discipline.md` の H1 だけ日本語修飾 (`(全 AI 共通)`) が混じる点は他 ma"}
+{"line":14,"path":"packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/templates/specs/_policies/10_delta.md","prefix":"Acknowledged. テンプレート `_policies/10_delta.md` の MERGE 行サンプル `Approved By: \u003capprover\u003e` は HTML コメントで「re"}
+{"line":15,"path":"packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/templates/specs/spec/09_delta.md","prefix":"Acknowledged. テンプレート `\u003cspec\u003e/09_delta.md` の Operation 行が `CREATE | UPDATE | DELETE | SPLIT | MERGE |"}
+{"line":60,"path":"packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/SKILL.md","prefix":"Acknowledged. SKILL.md 圧縮 (346→238 行) で旧 `### Spec Create/Delete Confirmation (Mandatory)` セクションが落ち、"}
+{"line":23,"path":"packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/sdd-quality-gate.md","prefix":"Acknowledged. `references/sdd-quality-gate.md` の Triage Checks セクションは `QFAI-TRIAGE-001..005` のみ列挙してお"}
+{"line":41,"path":"packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/sdd-triage.md","prefix":"Acknowledged. `references/sdd-triage.md` の 8-op 表 Approval 列が `UPDATE:REMOVE` だけ Required、他 2 つは `-`"}
+{"line":null,"path":"packages/qfai/src/core/validators/specPack.ts","prefix":"Addressed in 1c4500eb. `validateCreateRowCapabilityRefs` のエラーメッセージ + suggestedAction の actionability"}
+{"line":null,"path":"packages/qfai/src/core/validators/specPack.ts","prefix":"Addressed in 1c4500eb. `parseFirstMarkdownTable` を `parseAllMarkdownTables` (新設) に置き換え、`validateTria"}
+{"line":null,"path":"packages/qfai/src/core/validators/prototypingEvidence.ts","prefix":"Addressed in a42bd5a3. `stopReason` field 不在ケースを `'stopReason' in r` で先に検出し、required-field エラーメッセージ "}
+{"line":69,"path":"packages/qfai/scripts/check-no-internal-version-leakage.sh","prefix":"Acknowledged + 既存挙動を維持。`mapfile -t FILES_FIELD \u003c\u003c\u003c \"$files_listing\"` の here-string が末尾改行を 1 行として取り込む"}
+{"line":82,"path":"packages/qfai/src/core/parse/spec.ts","prefix":"Acknowledged. `extractBulletField` の正規表現は `i` フラグ付きで `- status:` (小文字) も拾い、validator (`validateStatu"}
+{"line":45,"path":"packages/qfai/scripts/check-no-internal-version-leakage.sh","prefix":"Acknowledged. `SCHEMA_VERSION_RE='\"schemaVersion\"|schemaVersion *:'` は半角スペースのみを受けるため、tab / 全角スペースなどの"}
+{"line":168,"path":"packages/qfai/src/core/sddTriage.ts","prefix":"Acknowledged. `tokenize` の `t.length \u003e= 2` フィルタが CJK 単漢字 lemma (`行`, `表`, `列`, `面` 等) を落とすトレードオフは JS"}
+{"line":222,"path":"packages/qfai/src/core/sddTriage.ts","prefix":"Acknowledged. `compareSubjectCandidates` が 0 を返すのは「同一 specId が summaries に重複した異常入力」のみで、`bestSubjectM"}
+{"line":70,"path":"packages/qfai/src/core/validators/prototypingEvidence.ts","prefix":"Acknowledged. `validatePrototypingEvidence` の `JSON.parse(await readFile(...))` 直後の同ファイル再 readFile ("}
+{"line":383,"path":"packages/qfai/src/core/validators/specPack.ts","prefix":"Acknowledged. `let knownCaps = new Set\u003cstring\u003e()` を try/catch 外で初期化 → reassign のパターンを `loadKnownCaps"}
+{"line":408,"path":"packages/qfai/src/core/sddTriage.ts","prefix":"Acknowledged + 1.9.x で抽出予定。`classifyTriage` が ~98 行で CLAUDE.md Project Rules の「~50 行で抽出」に抵触している点、その通"}
+{"line":82,"path":"packages/qfai/scripts/check-branch-version-pin.sh","prefix":"Acknowledged. `current=\"$(node -e ...)\"` で node が PATH に無い環境のエラーは `set -euo pipefail` で abort するものの、"}
+{"line":469,"path":"packages/qfai/tests/core/sddTriage.test.ts","prefix":"Acknowledged. `tests/core/sddTriage.test.ts:469` の test fixture 内に `Flag dropped in v1.9` という intern"}
+{"line":89,"path":"packages/qfai/src/core/specSummary.ts","prefix":"Acknowledged. `extractScopeBullets` が ~60 行で CLAUDE.md「~50 行」境界に達している点、その通りです。`findScopeSection` / `"}
+{"line":312,"path":"packages/qfai/src/core/validators/specPack.ts","prefix":"Acknowledged. `TRIAGE_TOP_LEVEL_LABELS = new Set\u003cstring\u003e([...TRIAGE_TOP_LEVEL_OPS, 'UPDATE'])` で `'U"}
+{"line":136,"path":"packages/qfai/src/core/validators/specPack.ts","prefix":"Addressed in 1c4500eb. `validateSpecPacks` の per-entry loop 直後に `validatePoliciesDeltaTriage(specsRo"}
+{"line":null,"path":".github/workflows/ci.yml","prefix":"Addressed in 2286d853. `.github/workflows/ci.yml` の build job に `--profile sdd --root .` の dogfoodin"}
+{"line":360,"path":"packages/qfai/src/core/sddTriage.ts","prefix":"Addressed in 17e2b467. `removalHint=true` で capability + subject 双方の match が無いときの `op: \"DELETE\"` に r"}
+{"line":77,"path":"packages/qfai/scripts/check-branch-version-pin.sh","prefix":"Addressed in fd69ee0c + 1962cc54. `check-branch-version-pin.sh` 冒頭に canonical SemVer pre-release tok"}
+{"line":136,"path":"packages/qfai/src/core/sddTriage.ts","prefix":"Acknowledged. STOP_TOKENS と最小 token 長 2 が CAP/scope の語学的特性に強く結合している指摘、その通りです。1.9.x で qfai.config.yam"}
+{"line":38,"path":"packages/qfai/scripts/check-no-internal-version-leakage.sh","prefix":"Acknowledged. `INTERNAL_VERSION_RE` の `\\bv1\\.x\\b` sentinel は本 PR でも distributed-surface に登場しないため、コメン"}
+{"line":476,"path":"packages/qfai/src/core/validators/specPack.ts","prefix":"Acknowledged. `QFAI-TRIAGE-001` warning 固定の architectural 懸念 (warning が増える方向に drift しても止まらない) は妥当で、9"}
+{"line":38,"path":".agents/rules/version-discipline.md","prefix":"Acknowledged. ルール本体の禁止アクション §38 と「ユーザがバージョン bump を指示したときの手順」§1 (`packages/qfai/package.json#version`"}
+{"line":91,"path":"packages/qfai/tests/integration/agentsRulesSurface.test.ts","prefix":"Acknowledged. `agentsRulesSurface.test.ts` の Windows fallback (`looksLikeRelativePath = /^\\.\\./.+\\.m"}
+{"line":222,"path":"packages/qfai/src/core/sddTriage.ts","prefix":"Acknowledged. `compareSubjectCandidates` の duplicate-input fail-soft 挙動について JSDoc に 1 行追記する整備は LWry "}
+{"line":408,"path":"packages/qfai/src/core/sddTriage.ts","prefix":"Acknowledged. `classifyTriage` 抽出は LWr4 と同じスコープで 1.9.x follow-up (refactor only) にまとめます。"}
+{"line":453,"path":"packages/qfai/src/core/validators/specPack.ts","prefix":"Acknowledged (FYI)。validateTriageSection の per-row issue dispatch 構造は LWri / LW-F の修正で extracted hel"}
+{"line":53,"path":"packages/qfai/src/core/parse/spec.ts","prefix":"Acknowledged (FYI)。`SPEC_STATUS_VALUES` の lifecycle 設計 (active/superseded/deprecated/removed) について、9"}
+{"line":null,"path":".qfai/specs/_policies/10_delta.md","prefix":"Acknowledged (FYI)。`_policies/10_delta.md` の Triage 表に対する dogfooding 観点コメント、ありがとうございます。24a780b8 で in"}
+{"line":null,"path":".qfai/specs/_policies/11_Slice-Policy.md","prefix":"Addressed in 7aa75ed3 + e504f5ae. `_policies/11_Slice-Policy.md` のスライスカテゴリ表を `agent | spec-0015` (CA"}
+{"line":null,"path":".qfai/specs/_policies/11_Slice-Policy.md","prefix":"Addressed in 7aa75ed3 + e504f5ae. L34 (slice category) と L142 (Current Slicing Notes) の `spec-0017` "}
+{"line":67,"path":".qfai/specs/_policies/11_Slice-Policy.md","prefix":"Addressed in c08a9d38. `_policies/11_Slice-Policy.md` 操作版とテンプレート版の APPEND-vs-CREATE algorithm Step 5"}
+{"line":64,"path":".qfai/specs/_policies/11_Slice-Policy.md","prefix":"Addressed in 7aa75ed3 + e504f5ae. LXNB と同じスコープで、agent slice mapping を `spec-0015` に修正済みです。`Current S"}
+{"line":93,"path":".qfai/specs/_policies/11_Slice-Policy.md","prefix":"Acknowledged。`_policies/11_Slice-Policy.md` の Impact cascade 文言と `references/sdd-triage.md` の同セクションの"}
+{"line":null,"path":".qfai/specs/_policies/10_delta.md","prefix":"Addressed in 24a780b8 + 1c4500eb. operational `.qfai/specs/_policies/10_delta.md` の internal/sdd CRE"}
+{"line":557,"path":".qfai/specs/_policies/10_delta.md","prefix":"Addressed in 92b466d5. `_policies/09_Open-questions.md` に OQ-0009 (Jina AI MCP) / OQ-0010 (OTel inte"}
+{"line":569,"path":".qfai/specs/_policies/10_delta.md","prefix":"Addressed in 92b466d5. `_policies/09_Open-questions.md` に OQ-0009/0010 を含む 7 件の deferred OQ を action"}
+{"line":null,"path":".qfai/specs/spec-0001/01_Spec.md","prefix":"Addressed in 56a49247. operational `spec-0001..0017/01_Spec.md` から placeholder bullet (`- Superseded"}
+{"line":5,"path":".qfai/specs/spec-0017/01_Spec.md","prefix":"Addressed in 92b466d5. `_policies/09_Open-questions.md` に OQ-0015 として「spec-0017 (Prototyping v2.0) a"}
+{"line":60,"path":"packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/SKILL.md","prefix":"Acknowledged。SKILL.md L60 の Stage 1 Triage 段落から `references/sdd-triage.md` / `_policies/11_Slice-Pol"}
+{"line":33,"path":"packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/sdd-triage.md","prefix":"Acknowledged。`references/sdd-triage.md` L33 の bestSubjectMatch 説明から STOP_TOKENS / 最小 token 長 / Unico"}
+{"line":116,"path":"packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/sdd-triage.md","prefix":"Acknowledged。`references/sdd-triage.md` L116 の旧 SKILL.md 由来の文言が現行 SKILL.md (a1250ff5 で 346→238 行に圧縮)"}
+{"line":478,"path":"packages/qfai/src/core/validators/specPack.ts","prefix":"Addressed in 92b466d5. `QFAI-TRIAGE-001` warning 昇格マイルストーンを OQ-0014 として `_policies/09_Open-questions"}
+{"line":null,"path":"packages/qfai/src/core/validators/specPack.ts","prefix":"Acknowledged。`validateCreateRowCapabilityRefs` のエラーメッセージ + suggestedAction の actionability 改善 (LVJQ "}
+{"line":53,"path":"packages/qfai/src/core/parse/spec.ts","prefix":"Addressed in 92b466d5. status enum lifecycle のギャップ 3 件 (`removed` vs DELETE / `Superseded-by` 循環検出 /"}
+{"line":88,"path":"packages/qfai/src/core/parse/spec.ts","prefix":"Acknowledged。`extractBulletField` の `value === \"-\"` を undefined 扱いする挙動について JSDoc を強化する整備、56a49247 で "}
+{"line":403,"path":"packages/qfai/src/core/sddTriage.ts","prefix":"Acknowledged。`classifyTriage` の CREATE rationale placeholder 文言 (`'no active spec scope absorbs this"}
+{"line":5,"path":"packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/templates/specs/spec/01_Spec.md","prefix":"Acknowledged。テンプレート `01_Spec.md` の Status 行直後の HTML コメント (Status 遷移時の追記指示) は a1250ff5 で導入済み。実運用で ope"}
+{"line":80,"path":"packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/templates/specs/_policies/11_Slice-Policy.md","prefix":"Acknowledged。テンプレ版 `_policies/11_Slice-Policy.md` の APPEND-vs-CREATE algorithm Step 5 への tokenize 契約"}
+{"line":21,"path":"packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/templates/specs/spec/09_delta.md","prefix":"Acknowledged。テンプレ版 `\u003cspec\u003e/09_delta.md` の Operation 列形式と Sub-op 列形式の表記揃え (LVJK と同スコープ) は 1.9.x の整備 P"}
+{"line":56,"path":"packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/SKILL.md","prefix":"Acknowledged。SKILL.md L56 の Stage 1 Triage 説明と `references/sdd-triage.md` の同期は 1.9.x follow-up (LVJN"}
+{"line":27,"path":".agents/rules/version-discipline.md","prefix":"Acknowledged。`.agents/rules/version-discipline.md` L27 の pre-release 例外運用注記は本 PR で `MAJOR.MINOR.PATC"}
+{"line":51,"path":".agents/rules/version-discipline.md","prefix":"Acknowledged (FYI)。`.agents/rules/version-discipline.md` 末尾の `## 関連` セクションが distributed-surface.md の"}

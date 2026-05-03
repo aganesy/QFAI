@@ -472,4 +472,36 @@ describe("renderTriageMarkdown", () => {
       "| REQ-0044 | new packaging command | (none) | CREATE | - | user@host | - |",
     );
   });
+
+  it("escapes literal pipes and newlines so the table round-trips through parseAllMarkdownTables", async () => {
+    // PR #206 review Lsbk: render must not let unescaped `|` or
+    // embedded `\n` from REQ subject / rationale break the table.
+    const { parseAllMarkdownTables } = await import("../../src/core/specPackParsers.js");
+    const rows: TriageRow[] = [
+      {
+        source: "REQ-pipe",
+        subject: "support a|b switch",
+        existingSpec: "spec-0001",
+        op: { update: "APPEND" },
+        rationale: "see line\nbreak",
+      },
+    ];
+    const md = renderTriageMarkdown(rows);
+    // The persisted text must keep the escape so downstream parsers
+    // see one logical pipe, not column breaks.
+    expect(md).toContain("support a\\|b switch");
+    expect(md).not.toMatch(/\n.*see line\nbreak/);
+    const tableSection = md.replace(/^## Triage\n\n/, "");
+    const tables = parseAllMarkdownTables(tableSection);
+    expect(tables).toHaveLength(1);
+    const table = tables[0];
+    if (!table) throw new Error("expected one parsed table");
+    expect(table.headers).toHaveLength(7);
+    expect(table.rows).toHaveLength(1);
+    const row = table.rows[0];
+    if (!row) throw new Error("expected one parsed row");
+    expect(row).toHaveLength(7);
+    expect(row[1]).toBe("support a|b switch");
+    expect(row[6]).toBe("see line break");
+  });
 });
