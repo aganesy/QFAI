@@ -139,12 +139,15 @@ describe("report", { timeout: 15000 }, () => {
     try {
       const reportPath = path.join(root, ".qfai", "report", "report.md");
       const validatePath = path.join(root, ".qfai", "report", "validate.json");
+      // `discussion` is a representative narrow profile rejected in CI.
+      // (`sdd` joined the CI allow-list with PR #206 review LW-G; see
+      // packages/qfai/src/core/phasePolicy.ts for the rationale.)
       await runReport({
         root,
         format: "md",
         outPath: reportPath,
         runValidate: true,
-        profile: "sdd",
+        profile: "discussion",
       });
 
       const validationRaw = await readFile(validatePath, "utf-8");

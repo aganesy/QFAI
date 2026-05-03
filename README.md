@@ -125,11 +125,18 @@ QFAI includes a small set of custom skills (stored under `.qfai/assistant/skills
 - **qfai-discussion**: Run a unified structured discussion that produces and maintains the latest discussion pack
   as 15 required markdown files under `.qfai/discussion/discussion-<ts>/`.
   UI-bearing discussion packs may include `prototyping.yaml` as an optional recommendation artifact; non-ui discussion packs typically omit it.
-- **qfai-sdd**: Unified SDD entrypoint with discussion-pack preflight guard (missing/incomplete/blocking OQ causes stop + next action guidance).
-  After preflight, the skill runs a mandatory **Stage 1 Triage** that classifies every incoming requirement into one of 8 first-class operations
-  (CREATE / UPDATE:APPEND / UPDATE:MODIFY / UPDATE:REMOVE / DELETE / SPLIT / MERGE / SUPERSEDE) with an **append-first** bias: existing active specs absorb the change unless there is zero subject-token overlap.
-  CREATE / DELETE / SPLIT / MERGE / SUPERSEDE / UPDATE:REMOVE require explicit `AskUserQuestion` approval, and CREATE rows must register a new `CAP-NNNN` in `.qfai/specs/_policies/03_Capabilities.md` before the row is accepted (`QFAI-TRIAGE-006`).
-  Every `01_Spec.md` declares a lifecycle `Status: active | superseded | deprecated | removed` (`QFAI-STATUS-001..006`).
+- **qfai-sdd**: Unified SDD entrypoint with discussion-pack preflight guard
+  (missing/incomplete/blocking OQ causes stop + next action guidance).
+  After preflight, the skill runs a mandatory **Stage 1 Triage** that classifies
+  every incoming requirement into one of 8 first-class operations
+  (CREATE / UPDATE:APPEND / UPDATE:MODIFY / UPDATE:REMOVE / DELETE / SPLIT /
+  MERGE / SUPERSEDE) with an **append-first** bias: existing active specs
+  absorb the change unless there is zero subject-token overlap.
+  CREATE / DELETE / SPLIT / MERGE / SUPERSEDE / UPDATE:REMOVE require explicit
+  `AskUserQuestion` approval, and CREATE rows must register a new `CAP-NNNN`
+  in `.qfai/specs/_policies/03_Capabilities.md` before the row is accepted
+  (`QFAI-TRIAGE-006`). Every `01_Spec.md` declares a lifecycle
+  `Status: active | superseded | deprecated | removed` (`QFAI-STATUS-001..006`).
 - **qfai-prototyping**: Single-thread design evolution loop. One prototype iterated through up to
   15 cycles of generate -> capture -> review with a 4-axis ordinal rubric, anti-slop detection,
   prose critique, and explicit pivot permission. Stops deterministically when all four axes hit

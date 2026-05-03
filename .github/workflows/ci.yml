@@ -146,7 +146,10 @@ jobs:
           # adds those validators (PR #206 review LW-G): without this
           # step, a future regression in sddTriage / specPack validators
           # would still let CI go green because `tdd` does not exercise
-          # those code paths.
+          # those code paths. `sdd` is on the CI allow-list because it is
+          # paired here with `--profile tdd` above and the broader
+          # default-profile sandbox validate below; broad coverage is
+          # preserved (see packages/qfai/src/core/phasePolicy.ts).
           node packages/qfai/dist/cli/index.mjs validate \
             --profile sdd \
             --fail-on error \
