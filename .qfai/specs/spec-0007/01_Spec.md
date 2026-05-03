@@ -3,8 +3,6 @@
 - Spec: spec-0007
 - Parent: CAP-0007
 - Status: active
-- Superseded-by: -
-- Deprecated-at: -
 - Consolidates: old spec-0005
 
 ## Consumer View

@@ -3,8 +3,6 @@
 - Spec: spec-0009
 - Parent: CAP-0009
 - Status: active
-- Superseded-by: -
-- Deprecated-at: -
 
 ## Consumer View
 
