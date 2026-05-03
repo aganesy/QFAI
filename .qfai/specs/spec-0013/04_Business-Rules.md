@@ -53,3 +53,13 @@
 - `06_Test-Cases.md` MUST include a `Type` column with values: `normal`, `error`, `boundary`, `edge`.
 - Each AC MUST have at minimum one `normal` test case AND one non-normal (`error`/`boundary`/`edge`) test case.
 - Normal-path-only coverage for an AC is considered incomplete.
+
+## BR-0013-0009: Triage Cell Escape ↔ Parse Symmetry
+
+- AC-Refs: AC-0013-0012
+
+- `escapeTableCell` (`packages/qfai/src/core/sddTriage.ts`) and `splitMarkdownRow` (`packages/qfai/src/core/specPackParsers.ts`) MUST agree on what a Triage table cell can contain.
+- The escape rule is exactly: `|` → `\|`, and `\r\n` / `\r` / `\n` → single space (` `). Literal `\` MUST NOT be pre-escaped (no `\` → `\\` step).
+- The parser un-escape rule is exactly: `\|` → `|`. The parser MUST NOT decode `\\` → `\`.
+- Re-introducing `\` doubling on the renderer side without a matching `\\` → `\` rule on the parser side is forbidden — it silently mutates REQ subjects / rationales while keeping column count valid (so `QFAI-TRIAGE-*` validators would pass).
+- Allowed cell character set therefore includes literal `\` (Windows paths, regex literals, escaped CLI examples). The only normalized class is line breaks.

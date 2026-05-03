@@ -12,6 +12,7 @@
 - AD-0013-0002: Spec Auto-Discovery integration -- 4-source diff detection from spec-0038
 - AD-0013-0003: Contract-first phase -- contracts created before spec slices
 - AD-0013-0004: Phase order enforcement -- strict Contracts -> Outline -> Slice -> Plan -> Delta
+- AD-0013-0005: Triage cell escape ↔ parse symmetry -- `escapeTableCell` only escapes `|` → `\|` and normalizes line breaks (no `\` → `\\` step), matching the parser's `\|` → `|` un-escape rule exactly. Literal `\` is part of the allowed cell character set (Windows paths, regex literals) and round-trips as-is.
 
 ## Rejected
 
@@ -38,6 +39,7 @@
 | ---------- | ----------- | ------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 2026-04-01 | adopted     | AC-0013-0010, BR-0013-0008, EX-0013-0008, TC-0013-0013 | 06_Test-Cases テンプレートに Type 列（normal/error/boundary/edge）を追加、各 AC に最低1つの非正常系 TC を義務化                                    |
 | 2026-04-23 | updated     | REQ-0021, AC-0013-0011                                 | `/qfai-sdd` 完了時点で selected-direction/design-system も UI-bearing validate readiness の必須 design contract として扱うよう runtime gate に同期 |
+| 2026-05-04 | adopted     | AC-0013-0012, BR-0013-0009, EX-0013-0009, TC-0013-0014, AD-0013-0005 | PR #206 commit 465b9869 — Triage cell escape ↔ parse symmetry を BR として明文化。`escapeTableCell` から `\` → `\\` 段を削除し、parser 側 (`splitMarkdownRow`) と対称化 (Option 1)。allowed cell character set に literal `\` を含めることを spec レベルで宣言し、trace chain (REQ → Spec → Code → Test) を round-trip identity property test に対して閉じる |
 
 ## v1.7.13 (2026-04-04) — Canonical Sidecar Convergence
 

@@ -55,3 +55,10 @@
 - Given AC-0013-0010 with both normal and error scenarios
 - When 06_Test-Cases.md is generated
 - Then each AC has at least one test case with Type=normal and one with Type=error
+
+## EX-0013-0009: Backslash-Containing Triage Cell Round-Trips Unchanged
+
+- BR-Ref: BR-0013-0009
+- Given a Triage row with `subject = "C:\Users\spec.md"` and `rationale = "matches \d+ pattern"`
+- When the row is rendered via `escapeTableCell` and re-parsed via `splitMarkdownRow`
+- Then the parsed `subject` equals `"C:\Users\spec.md"` (no backslash doubling) and the parsed `rationale` equals `"matches \d+ pattern"` (literal backslash preserved as-is)
