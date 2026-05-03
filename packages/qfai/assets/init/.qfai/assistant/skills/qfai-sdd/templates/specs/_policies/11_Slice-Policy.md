@@ -79,7 +79,10 @@ For each incoming REQ/NFR, apply in order (append-first):
    spec's title / scope / capability shares any subject token with the
    REQ** → **UPDATE:APPEND on the closest spec** (subject-overlap
    fallback). Upgrade to **SPLIT** if that spec exceeds the AC/TC
-   thresholds.
+   thresholds. Subject tokens follow `src/core/sddTriage.ts::tokenize`
+   normalization (STOP_TOKEN drop, length ≥ 2, Unicode `\p{L}\p{N}`),
+   so "the new flag"-style subjects collapse to zero tokens and skip to
+   step 6 — author REQ subjects with meaningful nouns.
 6. Only when **no active spec shares any token** with the REQ AND the
    underlying capability is genuinely new → **CREATE**. Add the new
    `CAP-NNNN` to `_policies/03_Capabilities.md` _first_, then cite it

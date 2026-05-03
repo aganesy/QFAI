@@ -65,6 +65,7 @@ UPDATE は APPEND / MODIFY / REMOVE に細分化する。SPLIT / MERGE / SUPERSE
 3. 複数 active spec が capability を共有 → **MERGE**
 4. 単一 active spec が capability を保持するが size 閾値超 → **SPLIT**
 5. capability 不一致だが、いずれかの active spec の title / scope / capability text と subject token が **1 つでも重なる** → 最近接 active spec に対して **UPDATE:APPEND** (subject overlap fallback)。閾値超なら **SPLIT** に格上げ。Rationale に cascade 検証済みである旨を記載する。
+   - subject token の正規化規則は `src/core/sddTriage.ts::tokenize` 準拠 (`STOP_TOKENS` 除外、2 文字以上、Unicode property `\p{L}\p{N}`)。`the new flag` のように STOP_TOKENS だけで構成される subject はトークン集合が空になり「重なるトークン無し」と評価される。AI driver は subject を意味のある名詞句で記述すること。
 6. active spec のいずれとも **token が 1 つも重ならない** かつ capability 自体も新規 → **CREATE**。新 `CAP-NNNN` を `_policies/03_Capabilities.md` に追記してから Triage 行に記載 (`QFAI-TRIAGE-006` で構造強制)。
 7. REQ が既存項目の削除を要求 → **UPDATE:REMOVE**
 8. spec の subject 自体が消失 → **DELETE**
