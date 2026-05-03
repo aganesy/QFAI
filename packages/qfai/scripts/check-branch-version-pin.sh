@@ -41,14 +41,21 @@ if [[ -z "$branch" ]]; then branch="$(git rev-parse --abbrev-ref HEAD)"; fi
 # build metadata are out of scope; use VERSION_PIN_SKIP=1 for the rare
 # coordinated pre-release flow. Mirrors
 # .agents/rules/version-discipline.md.
-# Detect pre-release / build-metadata suffixes adjacent to the SemVer.
-# Master rule (.agents/rules/version-discipline.md) declares pre-release
-# / build metadata out of scope and routes them through VERSION_PIN_SKIP=1.
-# Without this explicit rejection, branches like `release/v1.9.0-rc.1`
-# would silently extract `1.9.0` and pass when package.json#version is
-# `1.9.0` — exactly the failure mode that ships pre-release as stable
-# (PR #206 review LW-L).
-if [[ "$branch" =~ v[0-9]+\.[0-9]+\.[0-9]+[-+] ]]; then
+# Detect canonical SemVer pre-release / build-metadata suffixes adjacent
+# to the SemVer. Master rule (.agents/rules/version-discipline.md)
+# declares pre-release / build metadata out of scope and routes them
+# through VERSION_PIN_SKIP=1. Without this explicit rejection, branches
+# like `release/v1.9.0-rc.1` would silently extract `1.9.0` and pass
+# when package.json#version is `1.9.0` — exactly the failure mode that
+# ships pre-release as stable (PR #206 review LW-L).
+#
+# Match conservatively: the suffix must look like canonical SemVer
+# pre-release tokens (`rc`, `alpha`, `beta`, `pre`, `next`) with an
+# optional `.N` discriminator, OR build metadata (`+...`). Branch
+# naming convention `<type>/v<X.Y.Z>[-<slug>]` (e.g. `feature/v1.8.8-bugfix-x`)
+# is a slug, NOT a pre-release identifier, and must keep passing.
+if [[ "$branch" =~ v[0-9]+\.[0-9]+\.[0-9]+-(rc|alpha|beta|pre|next)(\.[0-9A-Za-z-]+)? ]] \
+   || [[ "$branch" =~ v[0-9]+\.[0-9]+\.[0-9]+\+ ]]; then
   cat <<EOF >&2
 ERROR: branch name appears to encode a SemVer with a pre-release / build
 metadata suffix (e.g. v1.9.0-rc.1).

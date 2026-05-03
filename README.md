@@ -128,7 +128,7 @@ QFAI includes a small set of custom skills (stored under `.qfai/assistant/skills
 - **qfai-sdd**: Unified SDD entrypoint with discussion-pack preflight guard (missing/incomplete/blocking OQ causes stop + next action guidance).
   After preflight, the skill runs a mandatory **Stage 1 Triage** that classifies every incoming requirement into one of 8 first-class operations
   (CREATE / UPDATE:APPEND / UPDATE:MODIFY / UPDATE:REMOVE / DELETE / SPLIT / MERGE / SUPERSEDE) with an **append-first** bias: existing active specs absorb the change unless there is zero subject-token overlap.
-  CREATE / DELETE / SPLIT / MERGE / SUPERSEDE / UPDATE:REMOVE require explicit `AskUserQuestion` approval, and CREATE rows must register a new `CAP-NNNN` in `_policies/03_Capabilities.md` before the row is accepted (`QFAI-TRIAGE-006`).
+  CREATE / DELETE / SPLIT / MERGE / SUPERSEDE / UPDATE:REMOVE require explicit `AskUserQuestion` approval, and CREATE rows must register a new `CAP-NNNN` in `.qfai/specs/_policies/03_Capabilities.md` before the row is accepted (`QFAI-TRIAGE-006`).
   Every `01_Spec.md` declares a lifecycle `Status: active | superseded | deprecated | removed` (`QFAI-STATUS-001..006`).
 - **qfai-prototyping**: Single-thread design evolution loop. One prototype iterated through up to
   15 cycles of generate -> capture -> review with a 4-axis ordinal rubric, anti-slop detection,
@@ -297,7 +297,7 @@ Release gate behavior:
 - Q: `/qfai-sdd` is asking for `AskUserQuestion` approval that earlier versions never asked for.
   - A: Stage 1 Triage classifies each requirement into one of 8 first-class operations and gates approval-required ops
     (CREATE / DELETE / SPLIT / MERGE / SUPERSEDE / UPDATE:REMOVE) on explicit user confirmation. Append-first means UPDATE:APPEND on an existing active spec is the default;
-    CREATE additionally requires a new `CAP-NNNN` row in `_policies/03_Capabilities.md` before the row is accepted (`QFAI-TRIAGE-006`).
+    CREATE additionally requires a new `CAP-NNNN` row in `.qfai/specs/_policies/03_Capabilities.md` before the row is accepted (`QFAI-TRIAGE-006`).
 - Q: `delta.md` validation reports `QFAI-TRIAGE-001` ("Change Summary はあるが Triage がありません") as a warning.
   - A: 1.8.8 introduced a `## Triage` section requirement. Existing operational deltas without it currently fail soft (warning); future minor versions will promote this to an error after operational backfill.
 
