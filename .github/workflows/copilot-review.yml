@@ -12,20 +12,20 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Request Copilot reviewer (GraphQL)
-        # COPILOT_REVIEW_TOKEN must be a fine-grained PAT with
-        # `Pull requests: write`. GITHUB_TOKEN and classic PATs are
-        # silently rejected by GitHub for bot reviewer assignment
-        # since the late-April 2026 Copilot platform tightening,
-        # so no fallback is provided.
+        # `secrets.GH_TOKEN` must be a fine-grained PAT with
+        # `Pull requests: write`. The default `GITHUB_TOKEN` and classic
+        # PATs are silently rejected by GitHub for bot reviewer
+        # assignment since the late-April 2026 Copilot platform
+        # tightening, so no fallback is provided.
         env:
-          GH_TOKEN: ${{ secrets.COPILOT_REVIEW_TOKEN }}
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
           PR_NODE_ID: ${{ github.event.pull_request.node_id }}
           # Copilot pull-request-reviewer bot node id (stable, GitHub-assigned).
           COPILOT_BOT_ID: BOT_kgDOCnlnWA
         run: |
           set -euo pipefail
           if [ -z "${GH_TOKEN:-}" ]; then
-            echo "::warning title=COPILOT_REVIEW_TOKEN missing::Set a fine-grained PAT (Pull requests: write) as COPILOT_REVIEW_TOKEN in repo secrets to enable Copilot review."
+            echo "::warning title=GH_TOKEN missing::Set a fine-grained PAT (Pull requests: write) as the GH_TOKEN repo secret to enable Copilot review."
             exit 0
           fi
           gh api graphql \

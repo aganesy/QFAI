@@ -115,10 +115,10 @@ genuine scope deviations that introduce a new capability.
 - Copilot code review reviewer assignment migrated from REST
   `requested_reviewers` (silently ignored by GitHub since the
   late-April 2026 Copilot platform tightening) to GraphQL
-  `requestReviews.botIds`. The workflow now requires
-  `COPILOT_REVIEW_TOKEN` (fine-grained PAT with `Pull requests: write`);
-  the `GH_TOKEN` / `GITHUB_TOKEN` fallback is removed since neither is
-  accepted for bot reviewer assignment.
+  `requestReviews.botIds`. The workflow now requires the `GH_TOKEN`
+  repo secret to be a fine-grained PAT with `Pull requests: write`;
+  the default `GITHUB_TOKEN` is no longer accepted for bot reviewer
+  assignment.
 
 ## [1.8.8] - 2026-05-02
 
