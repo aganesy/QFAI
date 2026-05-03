@@ -69,3 +69,10 @@
 - Given a Triage row with `subject = "C:\Users\spec.md"` and `rationale = "matches \d+ pattern"`
 - When the row is rendered via `escapeTableCell` and re-parsed via `splitMarkdownRow`
 - Then the parsed `subject` equals `"C:\Users\spec.md"` (no backslash doubling) and the parsed `rationale` equals `"matches \d+ pattern"` (literal backslash preserved as-is)
+
+## EX-0013-0011: Validator Wiring Verified Against Source
+
+- BR-Ref: BR-0013-0011
+- Given the source files `packages/qfai/src/core/validators/index.ts` and `packages/qfai/src/core/validate.ts`
+- When the wiring contract is checked
+- Then `validateTraceabilityIntegrity` is exported from the barrel (`typeof validateTraceabilityIntegrity === "function"`) AND `validate.ts` source contains an `import` statement for that named export AND the import is referenced inside the validate pipeline body (not dead code)

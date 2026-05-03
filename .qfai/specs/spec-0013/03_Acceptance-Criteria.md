@@ -63,3 +63,7 @@ Given a repository with spec / policy / contract / evidence files, when `detectS
 ## AC-0013-0012: Triage Table Cell Render-Parse Identity
 
 Given a Stage 1 Triage row whose subject / rationale / spec name contains literal `\` (e.g. Windows path `C:\Users\...`, regex `\d+`), `|`, or embedded `\r` / `\n`, when the row is rendered to delta.md by `escapeTableCell` and re-parsed by `splitMarkdownRow`, then the parsed cell value equals the original input for `\` and `|` (literal `\` is persisted as-is; `|` round-trips through `\|` escape) and `\r\n` / `\r` / `\n` collapse deterministically to a single space.
+
+## AC-0013-0014: Validate Pipeline Validator Registration Integrity
+
+Given a traceability validator (`validateTraceabilityIntegrity`) declared in `packages/qfai/src/core/validators/`, when the validate pipeline (`packages/qfai/src/core/validate.ts`) is loaded, then the validator MUST be exported from the validators barrel under its canonical name AND imported / invoked by `validate.ts`. This is the structural-wiring precondition that lets AC-0013-0007 (`qfai validate --fail-on error` produces error=0) actually execute the registered validator rather than silently skip it. Distinct from AC-0013-0007 because AC-0013-0007 is a behavioral outcome (error count == 0) while this AC is the wiring contract that must hold before that outcome is meaningful — re-anchored from AC-0013-0007 in PR #206 review N65f to remove semantic indirection between TC and AC.

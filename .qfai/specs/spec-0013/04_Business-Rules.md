@@ -71,3 +71,12 @@
 - The parser un-escape rule is exactly: `\|` → `|`. The parser MUST NOT decode `\\` → `\`.
 - Re-introducing `\` doubling on the renderer side without a matching `\\` → `\` rule on the parser side is forbidden — it silently mutates REQ subjects / rationales while keeping column count valid (so `QFAI-TRIAGE-*` validators would pass).
 - Allowed cell character set therefore includes literal `\` (Windows paths, regex literals, escaped CLI examples). The only normalized class is line breaks.
+
+## BR-0013-0011: Validator Registry Wiring
+
+- AC-Refs: AC-0013-0014
+
+- Each registered traceability / spec-integrity validator MUST be exported from the validators barrel (`packages/qfai/src/core/validators/index.ts`) under its canonical name, AND MUST be imported and invoked by the validate pipeline (`packages/qfai/src/core/validate.ts`).
+- A validator that is implemented but not wired (export missing OR import missing) is forbidden — the validate gate would silently skip it and AC-0013-0007 (error=0) would pass for the wrong reason.
+- Renaming a validator's export name without updating the import in `validate.ts` is treated as breakage of this rule (silent skip).
+- This rule was extracted from AC-0013-0007 in PR #206 review N65f to remove semantic indirection between the wiring assertion and the behavioral AC (error count == 0).

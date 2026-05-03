@@ -133,10 +133,10 @@ that predates this PR. Tracked for separate implementation as OQ-0016
 
 ## TC-0013-0020: Validate Pipeline Wires Traceability Integrity
 
-- EX-Ref: EX-0013-0001
-- AC-Refs: AC-0013-0007
+- EX-Ref: EX-0013-0011
+- AC-Refs: AC-0013-0014
 - Type: normal
-- Verify that `validateTraceabilityIntegrity` is exported from `packages/qfai/src/core/validators/index.ts` and that `packages/qfai/src/core/validate.ts` imports and calls it during the validate pipeline. This guards the structural wiring that lets `qfai validate --fail-on error` (AC-0013-0007) actually execute the traceability-integrity validator. Implemented in `packages/qfai/tests/core/traceabilityIntegrity.test.ts` under `describe("TDD-0015: validate pipeline integration", ...)`.
+- Verify that `validateTraceabilityIntegrity` is exported from `packages/qfai/src/core/validators/index.ts` and that `packages/qfai/src/core/validate.ts` imports and calls it during the validate pipeline. This is the direct behavioral assertion of the validator-registration wiring contract (AC-0013-0014 / BR-0013-0011). PR #206 review N65f re-anchored this TC from AC-0013-0007 (error=0 outcome) to AC-0013-0014 (wiring contract) because the SUT exercises structural wiring, not the observable error count. Implemented in `packages/qfai/tests/core/traceabilityIntegrity.test.ts` under `describe("TDD-0015: validate pipeline integration", ...)`.
 
 ## TC-0013-0021: Traceability Validator Tolerates Old Evidence (Forward-Compat Boundary)
 
