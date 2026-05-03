@@ -79,9 +79,16 @@
 - Type: normal
 - Verify that 06_Test-Cases.md template includes a Type column and each AC has at least one non-normal test case type.
 
-## TC-0013-0014: Triage Cell Render-Parse Identity
+## TC-0013-0014: Triage Cell Render-Parse Identity (Edge Cases)
 
 - EX-Ref: EX-0013-0009
 - AC-Refs: AC-0013-0012
 - Type: edge
 - Verify `escapeTableCell` ↔ `splitMarkdownRow` round-trip identity for cells containing literal `\` (Windows path, regex literal), `|` (CLI flag `--mode=a|b`), the combo `a\|b`, and the line-break classes `\r\n` / `\r` / `\n`. Backslash-containing cells must round-trip without doubling; pipes round-trip through `\|` escape; line breaks collapse deterministically to a single space. Implemented in `packages/qfai/tests/core/sddTriage.test.ts` under `describe("escapeTableCell ↔ splitMarkdownRow round-trip identity", ...)`.
+
+## TC-0013-0015: Triage Cell Render-Parse Identity (Happy Path)
+
+- EX-Ref: EX-0013-0009
+- AC-Refs: AC-0013-0012
+- Type: normal
+- Verify the round-trip identity property for plain ASCII subjects / rationales that contain none of the escape-relevant characters (no `|`, no `\`, no line breaks). Required by BR-0013-0008 (each AC must have at least one normal-type TC). Implemented as the dedicated "happy path" assertion in the round-trip identity describe block in `packages/qfai/tests/core/sddTriage.test.ts`.

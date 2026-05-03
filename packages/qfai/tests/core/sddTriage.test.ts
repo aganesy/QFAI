@@ -533,6 +533,17 @@ describe("renderTriageMarkdown", () => {
       return row;
     }
 
+    it("plain ASCII subject and rationale (happy path) round-trip unchanged", async () => {
+      // TC-0013-0015 (Type=normal): the AC-0013-0012 round-trip
+      // identity property must hold for the dominant case — clean
+      // ASCII text containing none of the escape-relevant characters
+      // (no `|`, no `\`, no `\r` / `\n`). Required by BR-0013-0008
+      // (every AC needs a Type=normal TC alongside non-normal TCs).
+      const row = await roundTripCell("hello world", "see related discussion");
+      expect(row[1]).toBe("hello world");
+      expect(row[6]).toBe("see related discussion");
+    });
+
     it("backslash-only subject (Windows path) round-trips unchanged", async () => {
       const row = await roundTripCell("C:\\Users\\spec.md", "matches \\d+ pattern");
       expect(row[1]).toBe("C:\\Users\\spec.md");
