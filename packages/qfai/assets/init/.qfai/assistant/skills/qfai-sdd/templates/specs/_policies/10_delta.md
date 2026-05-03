@@ -21,7 +21,6 @@
      CREATE, DELETE, etc. are equally valid Operations for cross-spec or
      policy-only rows. -->
 
-
 ## Empty State
 
 - Add shared-scope decisions only when a cross-spec change requires tracking.

@@ -9,7 +9,6 @@
      - Status: removed     → add `- Deprecated-at: YYYY-MM-DD`
      QFAI-STATUS-003..006 enforce these conditional fields. -->
 
-
 ## Consumer View
 
 - Primary SSOT for execution: `<spec-id>/01_Spec.md`
