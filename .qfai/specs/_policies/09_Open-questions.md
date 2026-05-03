@@ -2,10 +2,12 @@
 
 ## Open Questions
 
-| OQ-ID   | Question         | Owner | Due | Status | Notes                         |
-| ------- | ---------------- | ----- | --- | ------ | ----------------------------- |
-| 0 items | 0 open questions | -     | -   | -      | Add rows only when unresolved |
-
-## Empty State
-
-- 0 open questions in shared scope.
+| OQ-ID   | Question                                                                                                                                                                        | Owner  | Due | Status   | Notes                                                                                                                                                                |
+| ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ | --- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| OQ-0009 | Jina AI MCP を Web Research パイプラインの 4 番目以降の検索バックエンドとして採用するか                                                                                         | yusuke | TBD | deferred | re-evaluation trigger: next research-pack refresh (when an MCP capability lands in QFAI core or a discussion-pack refresh re-opens MCP scope). 来歴: PR #206 status. |
+| OQ-0010 | OTel integration の深さ (logs/metrics/traces 全て or metrics 限定) を Web Research / 全体プロダクトでどこまで実装するか                                                         | yusuke | TBD | deferred | re-evaluation trigger: next observability discussion-pack refresh, or whenever a downstream consumer surfaces a concrete OTel requirement. 来歴: PR #206 status.     |
+| OQ-0011 | Status: removed と DELETE op の使い分け基準 (directory を残す archival 用途を継続するか / DELETE に統合するか)                                                                  | yusuke | TBD | deferred | re-evaluation trigger: 1.9.x 計画の status lifecycle 整理。来歴: PR #206 review LXNW.                                                                                |
+| OQ-0012 | Superseded-by chain の循環検出 validator (`QFAI-STATUS-007` 候補) を導入するか                                                                                                  | yusuke | TBD | deferred | re-evaluation trigger: 1.9.x の SDD validator 拡張。来歴: PR #206 review LXNW.                                                                                       |
+| OQ-0013 | removed / deprecated spec への外部参照 (AC/TC の Refs) を error にするか warning にするか                                                                                       | yusuke | TBD | deferred | re-evaluation trigger: 1.9.x の SDD validator 拡張。来歴: PR #206 review LXNW.                                                                                       |
+| OQ-0014 | `QFAI-TRIAGE-001` warning を error に昇格させるマイルストーン (現状 7 件 → 0 件 → error) を確定するか                                                                           | yusuke | TBD | deferred | re-evaluation trigger: operational 09_delta.md backfill 完了時。来歴: PR #206 review LXNR.                                                                           |
+| OQ-0015 | spec-0017 (Prototyping v2.0) active 化に伴い spec-0012 (Prototyping v1.x 系統) の Status: superseded 移行を本系統内で行うか、それとも v2.0 移行期間中は両方 active を許容するか | yusuke | TBD | deferred | re-evaluation trigger: P4 (DCON-002/003/004 削除) 計画確定時。来歴: PR #206 review LXNM.                                                                             |
