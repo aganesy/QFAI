@@ -121,6 +121,10 @@ QFAI includes a small set of custom skills (stored under `.qfai/assistant/skills
   as 15 required markdown files under `.qfai/discussion/discussion-<ts>/`.
   UI-bearing discussion packs may include `prototyping.yaml` as an optional recommendation artifact; non-ui discussion packs typically omit it.
 - **qfai-sdd**: Unified SDD entrypoint with discussion-pack preflight guard (missing/incomplete/blocking OQ causes stop + next action guidance).
+  After preflight, the skill runs a mandatory **Stage 1 Triage** that classifies every incoming requirement into one of 8 first-class operations
+  (CREATE / UPDATE:APPEND / UPDATE:MODIFY / UPDATE:REMOVE / DELETE / SPLIT / MERGE / SUPERSEDE) with an **append-first** bias: existing active specs absorb the change unless there is zero subject-token overlap.
+  CREATE / DELETE / SPLIT / MERGE / SUPERSEDE / UPDATE:REMOVE require explicit `AskUserQuestion` approval, and CREATE rows must register a new `CAP-NNNN` in `_policies/03_Capabilities.md` before the row is accepted (`QFAI-TRIAGE-006`).
+  Every `01_Spec.md` declares a lifecycle `Status: active | superseded | deprecated | removed` (`QFAI-STATUS-001..006`).
 - **qfai-prototyping**: Single-thread design evolution loop. One prototype iterated through up to
   15 cycles of generate -> capture -> review with a 4-axis ordinal rubric, anti-slop detection,
   prose critique, and explicit pivot permission. Stops deterministically when all four axes hit
@@ -281,6 +285,16 @@ Release gate behavior:
   - A: Include all required sections (`Change Summary`, `Rationale`, `Candidates Considered`, `Adopted`, `Rejected`, `Impact`, `Follow-ups`) and include both `DO NOT` and `Temptation` in `Rejected`.
 - Q: release_candidate validation fails due open questions.
   - A: Keep specs definition-only, use `.qfai/report/run-*` as execution logs, and convert open OQ to `resolved` or `deferred` with evidence.
+- Q: `qfai validate` reports `QFAI-STATUS-001` ("Status bullet が見つかりません") on every spec.
+  - A: Each `01_Spec.md` must declare `- Status: active | superseded | deprecated | removed` (introduced in 1.8.8).
+    Add `Status: active` for currently-authoritative specs; superseded specs need a `- Superseded-by: spec-NNNN` companion bullet,
+    and deprecated/removed specs need `- Deprecated-at: YYYY-MM-DD`. The previous `QFAI-STATUS-001` (status-leak guard) was renamed to `QFAI-STATUSLEAK-001` to free the namespace.
+- Q: `/qfai-sdd` is asking for `AskUserQuestion` approval that earlier versions never asked for.
+  - A: Stage 1 Triage classifies each requirement into one of 8 first-class operations and gates approval-required ops
+    (CREATE / DELETE / SPLIT / MERGE / SUPERSEDE / UPDATE:REMOVE) on explicit user confirmation. Append-first means UPDATE:APPEND on an existing active spec is the default;
+    CREATE additionally requires a new `CAP-NNNN` row in `_policies/03_Capabilities.md` before the row is accepted (`QFAI-TRIAGE-006`).
+- Q: `delta.md` validation reports `QFAI-TRIAGE-001` ("Change Summary はあるが Triage がありません") as a warning.
+  - A: 1.8.8 introduced a `## Triage` section requirement. Existing operational deltas without it currently fail soft (warning); future minor versions will promote this to an error after operational backfill.
 
 ## Continuous integration
 
