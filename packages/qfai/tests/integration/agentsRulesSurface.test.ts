@@ -57,13 +57,37 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
     if (await isSymlinkTo(link, master)) {
       // Symlink path: the resolved master must equal the master file.
       expect(await realpath(link)).toBe(await realpath(master));
-    } else {
-      // Non-symlink fallback (e.g., Windows without core.symlinks): require
-      // the link content to match the master byte-for-byte.
-      const linked = await readMaybeSymlink(link);
-      const masterText = await readFile(master, "utf-8");
-      expect(linked).toBe(masterText);
+      return;
     }
+    // Non-symlink fallback. There are two distinct sub-cases here
+    // (PR #206 review #11):
+    //
+    //   1. The checkout was on a platform / git config that supports
+    //      symlinks but for some reason the file was committed as a
+    //      regular file. Then content equality with the master is the
+    //      right contract.
+    //   2. Windows + Git for Windows without `core.symlinks=true` /
+    //      Developer Mode. The link materialises as a one-line text
+    //      file containing the relative target path (e.g.
+    //      `../../.agents/rules/version-discipline.md`). Content
+    //      equality fails by construction; we should accept this as a
+    //      documented platform limitation rather than a contract
+    //      violation. AGENTS.md's "Cross-AI rules" section instructs
+    //      Windows users to enable `core.symlinks=true`; the
+    //      structural guarantee on Windows is that the link CONTENT is
+    //      the relative target path string.
+    const linked = await readMaybeSymlink(link);
+    const trimmed = linked.trim();
+    const looksLikeRelativePath = /^\.\.\/.+\.md$/.test(trimmed);
+    if (looksLikeRelativePath) {
+      // Validate the path string actually points at the master.
+      const linkDir = path.dirname(link);
+      const resolvedTarget = path.resolve(linkDir, trimmed);
+      expect(path.resolve(master)).toBe(resolvedTarget);
+      return;
+    }
+    const masterText = await readFile(master, "utf-8");
+    expect(linked).toBe(masterText);
   });
 
   it("AGENTS.md references the master rules directory and version-discipline", async () => {

@@ -27,3 +27,22 @@ directory; edit the master here.**
 3. Add `.claude/rules/<name>.md` symlink (`ln -s ../../.agents/rules/<name>.md`).
 4. If the rule must reach Codex / Copilot, add a short reference in
    `.github/copilot-instructions.md` and `.codex/README.md`.
+
+## Windows symlink note
+
+Git for Windows handles `.claude/rules/*.md` symlinks correctly only
+when both of the following are true:
+
+- The repository was cloned with `git config --global core.symlinks true`
+  (or repo-local equivalent).
+- The user has Developer Mode enabled (Settings → System → For developers
+  → Developer Mode: ON), or has the SeCreateSymbolicLinkPrivilege right.
+
+If neither holds, the symlinks materialise as one-line text files whose
+content is the relative target path (e.g.
+`../../.agents/rules/version-discipline.md`). The
+`agentsRulesSurface` integration test accepts this fallback by
+validating that the materialised path resolves back to the master file
+rather than insisting on byte-for-byte content equality. Claude
+sessions on such checkouts should read the master at
+`.agents/rules/<name>.md` directly.

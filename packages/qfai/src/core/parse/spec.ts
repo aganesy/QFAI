@@ -23,8 +23,40 @@ export type ParsedBrWithInvalidPriority = {
   line: number;
 };
 
+/**
+ * Spec lifecycle status values.
+ *
+ * Semantics (per `_policies/11_Slice-Policy.md` triage operations):
+ *
+ * - `active` — spec is current and authoritative.
+ * - `superseded` — spec's responsibilities moved to another spec via
+ *   the SUPERSEDE op; the directory still exists with `Superseded-by:`
+ *   pointing at the new spec for traceability.
+ * - `deprecated` — spec is on its way out, `Deprecated-at` records the
+ *   transition date; downstream callers should migrate.
+ * - `removed` — the spec record has been retired but the directory
+ *   has not been (or cannot be) deleted yet. The `DELETE` triage op
+ *   removes the directory entirely; `Status: removed` is the
+ *   intermediate / archival state for cases where the directory must
+ *   stay around for traceability while no longer applying. Validators
+ *   require `Deprecated-at` so callers can audit when the spec
+ *   stopped applying.
+ *
+ * TODO(QFAI-PR206-followup): the `removed` vs DELETE distinction
+ * (PR #206 review #7) is currently subtle — DELETE removes the
+ * directory while `Status: removed` keeps it. A follow-up may either
+ * (a) drop `removed` and require DELETE for any retirement, or
+ * (b) introduce `Removal-reason` + a dedicated QFAI-STATUS-007
+ * validator that pairs with `Deprecated-at` to make the archival
+ * intent explicit. Captured as an open question, not blocking 1.8.8.
+ */
 export const SPEC_STATUS_VALUES = ["active", "superseded", "deprecated", "removed"] as const;
 export type SpecStatus = (typeof SPEC_STATUS_VALUES)[number];
+
+/** Type guard equivalent of `SPEC_STATUS_VALUES.includes` that narrows to `SpecStatus`. */
+function isSpecStatus(value: string): value is SpecStatus {
+  return (SPEC_STATUS_VALUES as readonly string[]).includes(value);
+}
 
 export type ParsedSpec = {
   file: string;
@@ -142,10 +174,17 @@ export function parseSpec(md: string, file: string): ParsedSpec {
   const statusRaw = extractBulletField(md, "Status");
   if (statusRaw !== undefined) {
     parsed.statusRaw = statusRaw;
-    if ((SPEC_STATUS_VALUES as readonly string[]).includes(statusRaw)) {
-      parsed.status = statusRaw as SpecStatus;
+    if (isSpecStatus(statusRaw)) {
+      parsed.status = statusRaw;
     }
   }
+  // TODO(QFAI-PR206-followup): `extractBulletField` returns the first
+  // matching bullet only. If a spec has multiple `- Status:` lines (e.g.
+  // a merge conflict residue), the validator currently sees only the
+  // first one and may pass a self-contradicting spec. Detecting
+  // duplicates requires either a new helper (`extractBulletFields`)
+  // and a new validator code (QFAI-STATUS-007 "duplicate Status
+  // bullets") — design beyond PR #206 scope (review #44).
   const supersededBy = extractBulletField(md, "Superseded-by");
   if (supersededBy !== undefined) {
     parsed.supersededBy = supersededBy;

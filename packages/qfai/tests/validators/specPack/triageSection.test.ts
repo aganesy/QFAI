@@ -97,6 +97,19 @@ describe("validateTriageSection", () => {
     expect(issues.map((i) => i.code)).toEqual(["QFAI-TRIAGE-005"]);
   });
 
+  it("does not double-fire QFAI-TRIAGE-005 when QFAI-TRIAGE-004 already invalidated the Sub-op", () => {
+    // PR #206 review #37: an UPDATE row with an unknown Sub-op (here
+    // "REMOVE-WRONG") and an empty Approved By column should report
+    // QFAI-TRIAGE-004 only. Previously the validator continued past
+    // the Sub-op check and also emitted QFAI-TRIAGE-005 against the
+    // same row, conflating an enum issue with an approval issue.
+    const text = buildDelta([
+      ["REQ-1", "drop something", "spec-0001", "UPDATE", "REMOVE-WRONG", "-", "-"],
+    ]);
+    const issues = validateTriageSection(text, DELTA_PATH);
+    expect(issues.map((i) => i.code)).toEqual(["QFAI-TRIAGE-004"]);
+  });
+
   it("returns no issues for a complete UPDATE:APPEND triage", () => {
     const text = buildDelta([
       ["REQ-1", "extend", "spec-0001", "UPDATE", "APPEND", "-", "rationale"],
@@ -192,10 +205,14 @@ describe("validateCreateRowCapabilityRefs (QFAI-TRIAGE-006)", () => {
     expect(issues).toEqual([]);
   });
 
-  it("ignores the row when capabilities file is missing", async () => {
-    // No CAP catalog at all (e.g., bootstrap state). The dedicated layered
-    // validator already surfaces the missing file; QFAI-TRIAGE-006 must
-    // not double-report it.
+  it("still emits QFAI-TRIAGE-006 when capabilities file is missing (treats all CAPs as unknown)", async () => {
+    // PR #206 review #39 / #47: when the CAP catalog cannot be read,
+    // `validateCreateRowCapabilityRefs` intentionally treats the known
+    // set as empty so that every cited CAP is reported as unregistered.
+    // The append-first guard should fail loud, not silently skip, when
+    // the SSOT is unavailable — the test name now reflects that
+    // behaviour explicitly so future readers do not mistake "ignores"
+    // for a no-op.
     const text = buildDelta([
       ["REQ-5", "new feature", "(none)", "CREATE", "-", "user@host", "introduces CAP-0099"],
     ]);
@@ -204,8 +221,6 @@ describe("validateCreateRowCapabilityRefs (QFAI-TRIAGE-006)", () => {
       DELTA_PATH,
       "/nonexistent/03_Capabilities.md",
     );
-    // CAP-0099 is "missing" from the empty known set, so issue still raised.
-    // Verify message formatting still works without crash.
     expect(issues.map((i) => i.code)).toEqual(["QFAI-TRIAGE-006"]);
   });
 });

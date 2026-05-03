@@ -119,15 +119,18 @@ export async function validateSpecPacks(root: string, config: QfaiConfig): Promi
   for (const entry of entries) {
     if (entry.layout === "layered") {
       issues.push(...(await validateLayeredSpecEntry(entry)));
-      issues.push(...(await validateSpecStatusForEntry(entry, knownSpecIds)));
-      issues.push(...(await validateTriageSectionForEntry(entry)));
+    } else if (entry.layout === "spec-pack") {
+      issues.push(...(await validateSpecPackEntry(entry, layerPolicy.tags)));
+      issues.push(...(await validateTraceabilityLedger(entry, contractIndex.ids)));
+    } else {
+      // Unknown layout — skip layout-specific AND common checks since we
+      // cannot reason about the entry's structure. Other validators will
+      // surface the layout problem separately.
       continue;
     }
-    if (entry.layout !== "spec-pack") {
-      continue;
-    }
-    issues.push(...(await validateSpecPackEntry(entry, layerPolicy.tags)));
-    issues.push(...(await validateTraceabilityLedger(entry, contractIndex.ids)));
+    // Common checks (PR #206 review #42): Status / Triage validation is
+    // layout-independent, so factor it out of the per-branch tail to
+    // avoid two-place drift when a third layout is introduced.
     issues.push(...(await validateSpecStatusForEntry(entry, knownSpecIds)));
     issues.push(...(await validateTriageSectionForEntry(entry)));
   }
@@ -283,6 +286,23 @@ const TRIAGE_REQUIRED_COLUMNS = ["source", "subject", "existing spec", "operatio
 const TRIAGE_TOP_LEVEL_LABELS = new Set<string>([...TRIAGE_TOP_LEVEL_OPS, "UPDATE"]);
 const TRIAGE_SUB_OPS = new Set<string>(TRIAGE_UPDATE_SUBOPS);
 
+/**
+ * Type guard for the canonical triage Operation labels (top-level + UPDATE).
+ * Replaces a bare `as` assertion at the call site (PR #206 review #34).
+ */
+function isTriageTopLevelLabel(value: string): value is "UPDATE" | TriageTopLevelOp {
+  return TRIAGE_TOP_LEVEL_LABELS.has(value);
+}
+
+/**
+ * Type guard for the canonical triage UPDATE Sub-op labels. Replaces a
+ * bare `as TriageUpdateSubOp` assertion at the call site
+ * (PR #206 review #37).
+ */
+function isTriageUpdateSubOp(value: string): value is TriageUpdateSubOp {
+  return TRIAGE_SUB_OPS.has(value);
+}
+
 async function validateTriageSectionForEntry(entry: SpecEntry): Promise<Issue[]> {
   const deltaPath = entry.deltaPath;
   if (!deltaPath) {
@@ -334,12 +354,20 @@ export async function validateCreateRowCapabilityRefs(
     return [];
   }
 
+  // Resolve the known CAP set. When the capabilities catalog is missing
+  // or unreadable, intentionally treat the known set as empty (PR #206
+  // review #39). The downstream loop will then surface QFAI-TRIAGE-006
+  // for every CREATE row that references a CAP, which is the desired
+  // structural behaviour: append-first regression should fail loud
+  // rather than silently skip when the SSOT cannot be loaded. A
+  // separate validator surfaces the missing capabilities file itself.
   let knownCaps = new Set<string>();
   try {
     const capText = await readFile(capabilitiesPath, "utf-8");
     knownCaps = new Set(parseIdsFromText(capText, "CAP"));
   } catch {
-    // capabilities file missing — handled by other validators
+    // No CAP catalog — leave knownCaps empty so every cited CAP is
+    // reported as unregistered.
   }
 
   const issues: Issue[] = [];
@@ -397,6 +425,22 @@ export function validateTriageSection(text: string, deltaPath: string): Issue[] 
   const hasTriage = headings.has(normalizeHeading("Triage"));
 
   if (hasChangeSummary && !hasTriage) {
+    // QFAI-TRIAGE-001 is intentionally a warning rather than an error
+    // for the 1.8.8 release window:
+    //
+    // - Existing operational specs in this repository (and in any
+    //   downstream that ran an earlier QFAI version) ship a delta.md
+    //   without a Triage section. Flipping this to error would block
+    //   `validate --fail-on error` on every such repo until each delta
+    //   is back-filled.
+    // - The structural append-first gate (QFAI-TRIAGE-006) and the
+    //   approval gates (QFAI-TRIAGE-005) remain `error`, so
+    //   triage-skip is still caught the moment someone tries to use
+    //   the Triage table for real work.
+    //
+    // TODO(QFAI-PR206-followup): once the operational backfill PR
+    // ships (PR #206 review #4), promote this to `error` so that
+    // missing Triage sections become structurally impossible.
     issues.push(
       issue(
         "QFAI-TRIAGE-001",
@@ -463,7 +507,8 @@ export function validateTriageSection(text: string, deltaPath: string): Issue[] 
     const sourceCell = (row[headerMap.get("source") ?? -1] ?? "").trim();
     const rowLabel = sourceCell || `row ${rowIndex + 1}`;
 
-    if (!TRIAGE_TOP_LEVEL_LABELS.has(opCell.toUpperCase())) {
+    const opUpperRaw = opCell.toUpperCase();
+    if (!isTriageTopLevelLabel(opUpperRaw)) {
       issues.push(
         issue(
           "QFAI-TRIAGE-003",
@@ -478,11 +523,13 @@ export function validateTriageSection(text: string, deltaPath: string): Issue[] 
       );
       continue;
     }
-
-    const opUpper = opCell.toUpperCase() as "UPDATE" | TriageTopLevelOp;
+    // `opUpper` is now narrowed to `"UPDATE" | TriageTopLevelOp` without
+    // a bare type assertion (PR #206 review #34).
+    const opUpper = opUpperRaw;
 
     if (opUpper === "UPDATE") {
-      if (subCell.length === 0 || subCell === "-" || !TRIAGE_SUB_OPS.has(subCell.toUpperCase())) {
+      const subUpper = subCell.toUpperCase();
+      if (subCell.length === 0 || subCell === "-" || !isTriageUpdateSubOp(subUpper)) {
         issues.push(
           issue(
             "QFAI-TRIAGE-004",
@@ -495,9 +542,15 @@ export function validateTriageSection(text: string, deltaPath: string): Issue[] 
             `Sub-op を APPEND / MODIFY / REMOVE のいずれかに設定してください。`,
           ),
         );
+        // Fail-fast: skip the QFAI-TRIAGE-005 (approval) check for this
+        // row so an invalid Sub-op does not double-report alongside an
+        // approval issue. The next pass with a corrected Sub-op will
+        // re-evaluate approval (PR #206 review #37).
+        continue;
       }
-      const sub = subCell.toUpperCase() as TriageUpdateSubOp;
-      if (sub === "REMOVE" && (approvedCell.length === 0 || approvedCell === "-")) {
+      // `subUpper` is now narrowed to `TriageUpdateSubOp` without a
+      // bare type assertion (PR #206 review #37).
+      if (subUpper === "REMOVE" && (approvedCell.length === 0 || approvedCell === "-")) {
         issues.push(
           issue(
             "QFAI-TRIAGE-005",
