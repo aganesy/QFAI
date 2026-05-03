@@ -19,6 +19,12 @@ concurrency:
 # ── Jobs (parallel) ─────────────────────────────────────────────────
 jobs:
   # ── 1. Lint & format checks ──────────────────────────────────────
+  # TODO(QFAI-PR206-followup): add a windows-latest matrix entry that runs
+  # at minimum the agentsRulesSurface integration test, to catch the
+  # symlink-vs-text-file divergence that affects .claude/rules/*.md on
+  # Windows without core.symlinks=true. Deferred from #33 because the
+  # accompanying test fix (#11) needs to land alongside the matrix
+  # expansion to avoid an instantly-red Windows job.
   lint:
     runs-on: ubuntu-latest
     timeout-minutes: 10

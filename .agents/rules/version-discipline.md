@@ -7,25 +7,48 @@ Copilot / その他) に適用される。
 ## Master rule: ブランチ名 → version pin
 
 1. **ブランチ名にセマンティックバージョンが含まれる場合**
-   - 例: `feature/v1.8.8`, `release/1.9.0`, `hotfix/1.10.2-foo`
+   - 例: `feature/v1.8.8`, `release/v1.9.0`, `hotfix/v1.10.2-foo`
+   - 推奨命名規則: `<type>/v<X.Y.Z>[-<slug>]` (leading `v` 必須)
    - `packages/qfai/package.json#version` はその値で固定する
    - bump は禁止 (ユーザが明示的に「version を上げて」と指示した場合のみ可)
 2. **ブランチ名にバージョンが含まれない場合**
    - 例: `main`, `chore/update-deps`, `feature/refactor-x`
-   - `package.json#version` を変更する前に **必ずユーザに確認**
-3. **正規表現** (guard と一致): `v?([0-9]+)\.([0-9]+)\.([0-9]+)` で
-   ブランチ名から最初に見つかった SemVer を pin とする
+   - `package.json#version` の **編集 (bump / down / 任意の書換) を行う前に
+     必ずユーザに確認**。ルール 1 と対称で、確認は bump に限らず一切の編集を
+     対象とする
+   - このケースは `check-branch-version-pin.sh` では構造的に検出できないため
+     (SemVer 抽出時に skip)、実質的に人間レビュー依存となる
+3. **SemVer 抽出の正規表現** (guard と一致): `(?:^|[/_-])v([0-9]+)\.([0-9]+)\.([0-9]+)(?:$|[/_-])`
+   - leading `v` プレフィックスを word boundary 付きで必須とする
+   - `feature/api-2024.10.05` / `bugfix/issue-1.2.3-typo` / `fix/log4j-2.17.1`
+     のような SemVer ではない数字列は意図的に捕捉しない
+   - MAJOR.MINOR.PATCH のみサポート (pre-release / build metadata は対象外)。
+     `release/v1.9.0-rc.1` のような pre-release 運用が必要な場合は
+     `VERSION_PIN_SKIP=1` の例外で運用する
 
 ## 禁止アクション (ユーザの明示承認なしに実施しない)
 
-AI は次のいずれも独断で行ってはならない:
+**上位原則**: AI はリリース成果物 (version, tag, CHANGELOG H2 見出し,
+publish, force push, amend, merge) を単独で生成してはならない。CI ガード
+で構造的に防げるのは branch-name と `package.json#version` の pin 一致
+のみなので、以下の具体例は規範として広く読むこと。
+
+具体的には次のいずれも独断で行わない:
 
 - `packages/qfai/package.json#version` フィールドの編集
+- `npm version <patch|minor|major>` / `pnpm version <patch|minor|major>` 系
+  コマンドの実行 (`package.json#version` を副作用で書換 + tag + commit を
+  まとめて実行する)
 - commit message に `chore(release):` プレフィックスを含めること
-- `CHANGELOG.md` への新しい `## [X.Y.Z]` 見出し追加
-  (`## [Unreleased]` 配下への追記は OK)
-- `git tag vX.Y.Z` の実行
+- `git commit --amend` によるリリース commit の事後改竄
+- `git push --force` / `git push --force-with-lease` (リモートのリリース
+  履歴上書き)
+- `CHANGELOG.md` に SemVer を含む H2 見出し (例: `## [X.Y.Z]`,
+  `## [X.Y.Z] - YYYY-MM-DD`) を新規追加すること。`## [Unreleased]` 配下
+  への追記のみが例外
+- `git tag vX.Y.Z` / `git tag qfai@X.Y.Z` 等のリリース系 tag の実行
 - `npm publish` / `pnpm publish` 系の実行
+- `gh pr merge --auto` 等で AI 自身がリリース PR をマージすること
 
 ## 機能完成時の正しいフロー
 

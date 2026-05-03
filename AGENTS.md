@@ -20,7 +20,7 @@
 
 - skill テンプレートやバリデータ等を改善したい場合は、必ず `packages/qfai/` 配下のソースを修正する。
 - `.qfai/` 配下の skill や設定を直接編集しても、パッケージとしてリリースされない。
-- リポジトリのルート直下にディレクトリ・ファイルを新規追加する際は事前にユーザー確認を必須とする（既存ルートファイルの編集は対象外）。詳細: `.claude/rules/root-additions-policy.md`。
+- リポジトリのルート直下にディレクトリ・ファイルを新規追加する際は事前にユーザー確認を必須とする（既存ルートファイルの編集は対象外）。詳細: `.agents/rules/root-additions-policy.md`。
 
 ## バージョン規律 (全 AI 必読)
 
@@ -43,16 +43,20 @@ QFAI パッケージのバージョン番号は AI が独断で進めない。
 ## 全 AI 共通ルール一覧 (`.agents/rules/`)
 
 リポジトリで作業する全 AI が遵守すべきルールは
-`./.agents/rules/` 配下のマスタファイルを SSOT とする:
+`.agents/rules/` 配下のマスタファイルを SSOT とする:
 
 - `version-discipline.md` (本セクションの SSOT)
 - `distributed-surface.md` (npm 配布物の internal id / version leak 禁止)
 - `root-additions-policy.md` (repo root への新規追加は要確認)
 - `temporary-files.md` (一時ファイルは `tmp/` 配下のみ)
 
-`.claude/rules/` はこれらへの symlink。Codex / Copilot は本ファイル
-(`AGENTS.md`) と `.github/copilot-instructions.md` / `.codex/README.md`
-の参照経由でこれらを参照すること。
+`.claude/rules/` はこれらへの symlink (Windows 環境では Git の
+`core.symlinks=true` 設定 + Developer Mode が必要。それ以外の場合は
+`.claude/rules/*.md` がパス文字列を含む通常テキストファイルとして
+展開されるため、Claude セッションは master を直接参照すること)。
+Codex / Copilot は本ファイル (`AGENTS.md`) と
+`.github/copilot-instructions.md` / `.codex/README.md` の参照経由で
+これらを参照すること。
 
 ## コア姿勢
 

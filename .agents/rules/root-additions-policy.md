@@ -6,7 +6,7 @@
 
 1. **Never** create new directories or files in the repository root without explicit user approval. Editing existing root-level files (e.g., `package.json`, `CLAUDE.md`) is permitted.
 2. If a new root-level addition is genuinely required, present the purpose, alternative locations considered, and impact to the user, and proceed only after explicit approval.
-3. `tmp/` is the sole sanctioned scratch area at the root (see Article XI / `.claude/rules/temporary-files.md`).
+3. `tmp/` is the sole sanctioned scratch area at the root (see Article XI / `.agents/rules/temporary-files.md`).
 4. **Do not** use `.gitignore` to allow placement while excluding from version control. The user does not want such files to be placed at all.
 5. If a `report.[0-9]+.[0-9]+.[0-9]+.[0-9]+.[0-9]+.json` file (Node.js diagnostic / crash dump) is found at
    the repository root, it is not a production artifact — investigate the cause, then delete it or move it
@@ -16,5 +16,5 @@
 
 ## Reference
 
-- Related rule: `.claude/rules/temporary-files.md` (Article XI: temporary files MUST use `tmp/`).
+- Related rule: `.agents/rules/temporary-files.md` (Article XI: temporary files MUST use `tmp/`).
 - Project rules: `CLAUDE.md` (Project Rules section).
