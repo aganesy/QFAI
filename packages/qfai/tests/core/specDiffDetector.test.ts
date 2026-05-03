@@ -456,12 +456,12 @@ describe("TDD-0009: --full flag", () => {
 
 // ---------------------------------------------------------------------------
 // TDD-0010: Policy change detection (unit-test angle).
-// PR #206 review NyT_: the previous header read `(TC-0013-0015)` but TDD-0010
-// in tdd/test-list.md maps to TC-0013-0010 (Coverage Placeholder for
-// EX-0013-0005). The policy-change scenario here is exercised by the
-// integration suite under TC-0013-0015 / TDD-0015 — kept as a separate
-// describe block for the unit-level angle. Do not re-add the TC-0013-0015
-// parenthetical here; it would re-introduce a TDD-IDs/TC-Refs collision.
+// PR #206 review N39l: TDD-0015 in tdd/test-list.md maps to TC-0013-0020
+// (validate-pipeline wiring), NOT TC-0013-0015. Don't claim a TDD-NNNN
+// link here — this describe is a unit-level companion to TC-0013-0015
+// (Policy Change Detection) whose canonical integration coverage lives at
+// `packages/qfai/tests/integration/specAutoDiscovery.test.ts` under
+// `describe("TC-0013-0015: policy change detection", ...)`.
 // ---------------------------------------------------------------------------
 describe("TDD-0010: detectPolicyChanges", () => {
   beforeEach(() => {

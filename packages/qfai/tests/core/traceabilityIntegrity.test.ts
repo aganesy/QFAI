@@ -167,7 +167,13 @@ describe("TDD-0013: ledger absent", () => {
 });
 
 // ---------------------------------------------------------------------------
-// TDD-0014 (TC-0013-0017): Backward compat - evidence without Diff Context
+// TDD-0014 → TC-0013-0021 (Type=boundary): the SUT here is
+// `validateTraceabilityIntegrity` (a validator), not `detectSpecChanges`,
+// so the spec-0038 forward-compat TC (TC-0013-0017, auto-discovery) is
+// the WRONG anchor — that lives in specAutoDiscovery.test.ts:699. This
+// describe exercises the traceability validator's forward-compat
+// boundary against old evidence files. (PR #206 review N32O / N34p / N35m)
+// QFAI:SPEC-0013:TC-0013-0021
 // ---------------------------------------------------------------------------
 describe("TDD-0014: evidence without Diff Context", () => {
   let tmpRoot: string;
@@ -224,7 +230,13 @@ describe("TDD-0014: evidence without Diff Context", () => {
 });
 
 // ---------------------------------------------------------------------------
-// TDD-0015 (TC-0013-0014): Validate pipeline integration
+// TDD-0015 → TC-0013-0020 (Type=normal): the SUT here is the structural
+// wiring between `validate.ts` and `validators/index` for
+// `validateTraceabilityIntegrity` — NOT the SpecDiffResult shape (which
+// is TC-0013-0014, exercised by specAutoDiscovery.test.ts:596). This
+// guards the validate-pipeline plumbing under AC-0013-0007 (Validate
+// Gate error=0). (PR #206 review N32O / N34p / N35m)
+// QFAI:SPEC-0013:TC-0013-0020
 // ---------------------------------------------------------------------------
 describe("TDD-0015: validate pipeline integration", () => {
   it("validateTraceabilityIntegrity is exported from validators/index", async () => {

@@ -130,3 +130,17 @@ coverage gap on the Type-column-required AC is a pre-existing condition
 that predates this PR. Tracked for separate implementation as OQ-0016
 — see `_policies/09_Open-questions.md`.
 -->
+
+## TC-0013-0020: Validate Pipeline Wires Traceability Integrity
+
+- EX-Ref: EX-0013-0001
+- AC-Refs: AC-0013-0007
+- Type: normal
+- Verify that `validateTraceabilityIntegrity` is exported from `packages/qfai/src/core/validators/index.ts` and that `packages/qfai/src/core/validate.ts` imports and calls it during the validate pipeline. This guards the structural wiring that lets `qfai validate --fail-on error` (AC-0013-0007) actually execute the traceability-integrity validator. Implemented in `packages/qfai/tests/core/traceabilityIntegrity.test.ts` under `describe("TDD-0015: validate pipeline integration", ...)`.
+
+## TC-0013-0021: Traceability Validator Tolerates Old Evidence (Forward-Compat Boundary)
+
+- EX-Ref: EX-0013-0001
+- AC-Refs: AC-0013-0007
+- Type: boundary
+- Verify that `validateTraceabilityIntegrity` does not raise an error when an evidence file is present but lacks the Diff Context section (an older evidence-format that predates the Diff Context contract). Forward-compatibility boundary for the validate gate (AC-0013-0007). Implemented in `packages/qfai/tests/core/traceabilityIntegrity.test.ts` under `describe("TDD-0014: evidence without Diff Context", ...)`.
