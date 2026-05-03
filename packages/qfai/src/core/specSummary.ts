@@ -99,10 +99,23 @@ export function extractScopeBullets(md: string, label: "In" | "Out"): string[] {
   if (!labelMatch?.[1]) {
     return [];
   }
-  // Bullet may continue on indented continuation lines; capture from match
-  // start until the next non-indented bullet or blank line.
-  const startIndex = labelMatch.index;
-  const sectionAfter = section.slice(startIndex);
+  // Bullet may continue on indented continuation lines; capture from the
+  // line that holds the label down to the next non-indented bullet or
+  // blank line.
+  //
+  // Note (PR #206 review #41): the label regex `^\s*-\s*In\s*:\s*(.*)$`
+  // uses the `m` flag, so `\s*` at the front can absorb leading `\n`
+  // characters left over from preceding blank lines. This means
+  // `labelMatch.index` may point to the run of leading newlines rather
+  // than the bullet itself. To find the actual bullet line we locate
+  // the `-` inside the matched fragment and slice the section from
+  // there. Without this offset the first iteration would push the
+  // captured `(.*)` content but the second iteration would see one of
+  // the leading blank lines and immediately break, dropping every
+  // continuation line.
+  const dashOffset = labelMatch[0].indexOf("-");
+  const bulletStart = labelMatch.index + (dashOffset >= 0 ? dashOffset : 0);
+  const sectionAfter = section.slice(bulletStart);
   const lines = sectionAfter.split(/\r?\n/);
   const collected: string[] = [];
   for (let i = 0; i < lines.length; i++) {
@@ -119,12 +132,16 @@ export function extractScopeBullets(md: string, label: "In" | "Out"): string[] {
     }
     collected.push(line.trim());
   }
-  const joined = collected.join(" ").trim();
+  // Normalise newlines and runs of whitespace before splitting so that
+  // continuation lines collapse to single spaces and downstream
+  // consumers (delta review, summary display) do not see double-space
+  // artefacts inside any single bullet entry.
+  const joined = collected.join(" ").replace(/\s+/g, " ").trim();
   if (!joined) {
     return [];
   }
   return joined
     .split(/[、,;；]/)
-    .map((part) => part.trim())
+    .map((part) => part.replace(/\s+/g, " ").trim())
     .filter((part) => part.length > 0);
 }

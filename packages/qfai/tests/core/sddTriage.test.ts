@@ -45,7 +45,8 @@ describe("classifyTriage", () => {
       existingSpec: null,
       op: "CREATE",
     });
-    expect(rows[0]?.rationale).toMatch(/new CAP required/);
+    expect(rows[0]?.rationale).toMatch(/add CAP-NNNN/);
+    expect(rows[0]?.rationale).toMatch(/QFAI-TRIAGE-006/);
   });
 
   it("falls back to UPDATE:APPEND on the closest spec when capability is unknown but tokens overlap", () => {
@@ -213,6 +214,73 @@ describe("classifyTriage", () => {
     });
     expect(rows[0]?.op).toBe("CREATE");
   });
+
+  it("escalates removal hint to SPLIT when the target spec exceeds AC threshold", () => {
+    // PR #206 review #3: removalHint path should mirror the additive
+    // size-threshold escalation. Without this the additive and removal
+    // branches diverge on size handling.
+    const rows = classifyTriage({
+      reqs: [
+        {
+          id: "REQ-0011",
+          subject: "drop obsolete oversized rule",
+          capability: "CAP-0001",
+          removalHint: true,
+        },
+      ],
+      summaries: [
+        makeSummary({
+          specId: "spec-0001",
+          capability: "CAP-0001",
+          acCount: DEFAULT_TRIAGE_THRESHOLDS.ac + 1,
+        }),
+      ],
+    });
+    expect(rows[0]?.op).toBe("SPLIT");
+    expect(rows[0]?.existingSpec).toBe("spec-0001");
+    expect(rows[0]?.rationale).toMatch(/SPLIT before REMOVE/);
+  });
+
+  it("escalates removal hint to SPLIT when the target spec exceeds TC threshold", () => {
+    const rows = classifyTriage({
+      reqs: [
+        {
+          id: "REQ-0012",
+          subject: "drop obsolete oversized rule",
+          capability: "CAP-0001",
+          removalHint: true,
+        },
+      ],
+      summaries: [
+        makeSummary({
+          specId: "spec-0001",
+          capability: "CAP-0001",
+          tcCount: DEFAULT_TRIAGE_THRESHOLDS.tc + 1,
+        }),
+      ],
+    });
+    expect(rows[0]?.op).toBe("SPLIT");
+    expect(rows[0]?.rationale).toMatch(/SPLIT before REMOVE/);
+  });
+
+  it("keeps removal hint as UPDATE:REMOVE when the target spec is within thresholds", () => {
+    // Sanity check that the size-threshold escalation does not fire for
+    // a small spec — preserves the existing UPDATE:REMOVE behaviour.
+    const rows = classifyTriage({
+      reqs: [
+        {
+          id: "REQ-0013",
+          subject: "drop obsolete flag",
+          capability: "CAP-0001",
+          removalHint: true,
+        },
+      ],
+      summaries: [
+        makeSummary({ specId: "spec-0001", capability: "CAP-0001", acCount: 5, tcCount: 5 }),
+      ],
+    });
+    expect(rows[0]?.op).toEqual({ update: "REMOVE" });
+  });
 });
 
 describe("requiresApproval", () => {
@@ -317,6 +385,49 @@ describe("bestSubjectMatch", () => {
       }),
     ]);
     expect(result).toBeUndefined();
+  });
+
+  it("tokenises across CJK middle-dot separators (Unicode property escape)", () => {
+    // PR #206 review #12 / #23: middle dot `・` must split CJK compounds
+    // so that subjects like `プロトタイプ・契約` token-overlap with a
+    // spec whose scope mentions `契約`.
+    const result = bestSubjectMatch("プロトタイプ・契約 の改修", [
+      makeSummary({
+        specId: "spec-0001",
+        title: "契約 module",
+        scopeIn: ["契約"],
+      }),
+    ]);
+    expect(result?.specId).toBe("spec-0001");
+  });
+
+  it("tokenises full-width alphanumerics", () => {
+    // PR #206 review #12 / #23: full-width `Ａｐｐ` must tokenise as
+    // its own token rather than being lumped together with surrounding
+    // punctuation. The new `\p{L}\p{N}` splitter handles this without
+    // requiring callers to pre-normalise.
+    const result = bestSubjectMatch("Ａｐｐ flow update", [
+      makeSummary({
+        specId: "spec-0001",
+        title: "Ａｐｐ flow",
+        scopeIn: ["Ａｐｐ"],
+      }),
+    ]);
+    expect(result?.specId).toBe("spec-0001");
+  });
+
+  it("tokenises half-width katakana (e.g. ｶﾀｶﾅ)", () => {
+    // Half-width katakana lives in U+FF65..U+FF9F. The previous
+    // `[぀-ヿ㐀-鿿]` character class missed this range; the new
+    // `\p{L}` splitter accepts it.
+    const result = bestSubjectMatch("ｶﾀｶﾅ display behaviour", [
+      makeSummary({
+        specId: "spec-0001",
+        title: "ｶﾀｶﾅ display",
+        scopeIn: ["ｶﾀｶﾅ"],
+      }),
+    ]);
+    expect(result?.specId).toBe("spec-0001");
   });
 });
 

@@ -85,6 +85,19 @@ describe("extractScopeBullets", () => {
   it("returns empty array when the In bullet is missing", () => {
     expect(extractScopeBullets("## Scope\n- Out: only\n", "In")).toEqual([]);
   });
+
+  it("normalises whitespace across continuation lines (PR #206 #41)", () => {
+    // The In bullet wraps onto a continuation line. Each part of the
+    // comma-separated list should be a single word with no double-space
+    // residue from the line break.
+    const md = ["## Scope", "", "- In: alpha,", "    beta,    gamma", "", "## Other"].join("\n");
+    expect(extractScopeBullets(md, "In")).toEqual(["alpha", "beta", "gamma"]);
+  });
+
+  it("collapses internal runs of whitespace within a single entry", () => {
+    const md = "## Scope\n\n- In: alpha   beta, gamma\n";
+    expect(extractScopeBullets(md, "In")).toEqual(["alpha beta", "gamma"]);
+  });
 });
 
 describe("collectSpecSummaries", () => {

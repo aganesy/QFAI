@@ -84,6 +84,22 @@ export function subOp(op: TriageOp): TriageUpdateSubOp | null {
   return isUpdateOp(op) ? op.update : null;
 }
 
+/**
+ * Stop tokens are stripped from `tokenize` output so that subject overlap
+ * scoring is dominated by content nouns rather than connectives.
+ *
+ * Design note (PR #206 review #15): `remove` and `delete` are included on
+ * purpose. The classifier already routes "removal-shaped" REQs through
+ * the `removalHint` branch, so the verbs themselves should not bias
+ * subject-overlap scoring on the additive path. As a side effect, a
+ * subject like `"remove the flag"` (where `the` and `flag` are also
+ * filtered or short) can collapse to zero meaningful tokens. In that
+ * case `bestSubjectMatch` returns `undefined` and `classifyTriage`
+ * proposes CREATE. This is documented behaviour: subjects that
+ * tokenize to nothing meaningful require manual triage by the agent
+ * driving Stage 1 (which is already required for CREATE rows by
+ * QFAI-TRIAGE-006 + AskUserQuestion).
+ */
 const STOP_TOKENS = new Set([
   "the",
   "a",
@@ -119,30 +135,112 @@ const STOP_TOKENS = new Set([
   "as",
 ]);
 
+/**
+ * Tokenize a subject string into a normalized lower-cased token set.
+ *
+ * Splits on any character that is not a Unicode letter or number using
+ * the `\p{L}\p{N}` property escapes (Node 18+, requires the `u` flag).
+ * That covers (PR #206 review #12, #23):
+ *
+ * - ASCII alphanumerics and Latin-1 supplement
+ * - Hiragana, Katakana (full + half-width), CJK Unified Ideographs
+ *   plus CJK Extension A/B and beyond
+ * - Full-width alphanumerics (`Ａ-Ｚ`, `０-９`, etc.)
+ * - Other scripts (Greek, Cyrillic, Thai, Arabic, ...) without
+ *   special-casing
+ *
+ * Punctuation, the prolonged sound mark `ー`, the middle dot `・`, and
+ * other symbols become separators so that `"プロトタイプ・契約"` yields
+ * `["プロトタイプ", "契約"]` rather than a single combined token.
+ *
+ * Tokens shorter than two characters are dropped to avoid noise from
+ * single-character connectives; this is intentional but may strip
+ * single-CJK-character lemmas (e.g., the kanji `行` from `行う`). Subject
+ * authors are expected to use multi-character noun forms; otherwise
+ * tokenization may collapse to an empty set and the classifier proposes
+ * CREATE (see `STOP_TOKENS` jsdoc above).
+ */
 function tokenize(text: string): Set<string> {
   return new Set(
     text
       .toLowerCase()
-      .split(/[^a-z0-9぀-ヿ㐀-鿿]+/)
+      .split(/[^\p{L}\p{N}]+/u)
       .filter((t) => t.length >= 2 && !STOP_TOKENS.has(t)),
   );
 }
 
+/**
+ * Count the number of tokens present in both sets. Symmetric in the
+ * arguments; iteration is over the (typically smaller) `a` set.
+ */
 function overlapCount(a: Set<string>, b: Set<string>): number {
   let n = 0;
   for (const t of a) if (b.has(t)) n += 1;
   return n;
 }
 
+interface SubjectCandidate {
+  score: number;
+  summary: SpecSummary;
+}
+
+/**
+ * Lexicographic comparator for subject-match candidates.
+ *
+ * Order (strongest to weakest):
+ *
+ * 1. Higher `score` wins (more shared subject tokens).
+ * 2. Smaller `acCount` wins. Rationale: a spec with more append headroom
+ *    is preferred so the cascade does not pile onto an already-large
+ *    spec that would soon trip the SPLIT threshold. Trade-off (PR #206
+ *    review #6): when two specs share the subject equally but the
+ *    capability owner is the larger one, this tie-breaker may route
+ *    the REQ onto the smaller peripheral spec. The
+ *    capability-exact-match branch in `classifyTriage` short-circuits
+ *    before this fallback runs whenever the REQ carries a capability,
+ *    so the divergence only appears for capability-less REQs that
+ *    still token-overlap with both specs. The size-threshold escalation
+ *    (`tooLarge` -> SPLIT) absorbs the worst case; the agent driving
+ *    Stage 1 is also expected to verify the proposed primary spec
+ *    against the impact cascade before persisting.
+ * 3. Lexicographically smaller `specId` wins. This keeps the result
+ *    deterministic for any input order, provided the comparator below
+ *    is fed a stable iteration. `bestSubjectMatch` snapshots the input
+ *    via spread + sort to avoid relying on caller iteration order
+ *    (PR #206 review #27).
+ *
+ * Returns a negative number when `a` is preferred over `b`, positive
+ * when `b` is preferred, and zero only when both candidates would tie
+ * across all three keys (which means `a.summary.specId === b.summary.specId`
+ * — a guaranteed-stable input contains no such pair).
+ */
+function compareSubjectCandidates(a: SubjectCandidate, b: SubjectCandidate): number {
+  if (a.score !== b.score) return b.score - a.score;
+  if (a.summary.acCount !== b.summary.acCount) {
+    return a.summary.acCount - b.summary.acCount;
+  }
+  return a.summary.specId.localeCompare(b.summary.specId);
+}
+
 /**
  * Find the active spec whose title/capability/scope-in shares the most
- * subject tokens with the requirement. `scopeOut` is intentionally
- * excluded from the haystack: tokens a spec explicitly declares as
- * out-of-scope must not bias the closest-match selection (otherwise
- * append-first would route a REQ onto a spec that has already disowned
- * the subject). Tie-breaker: smaller acCount, then lexicographic specId.
- * Returns undefined when no token overlap exists with any active spec —
- * that is the only condition under which `classifyTriage` proposes CREATE.
+ * subject tokens with the requirement.
+ *
+ * `scopeOut` is intentionally excluded from the haystack: tokens a spec
+ * explicitly declares as out-of-scope must not bias the closest-match
+ * selection (otherwise append-first would route a REQ onto a spec that
+ * has already disowned the subject).
+ *
+ * Tie-breaking: see `compareSubjectCandidates`. The function snapshots
+ * the input and sorts by `specId` before scoring so that the result is
+ * deterministic regardless of caller iteration order (PR #206 review
+ * #27 — `collectSpecSummaries` already returns a sorted array, but the
+ * type signature does not advertise that, so this guards against
+ * accidental shuffles in fixtures or future callers).
+ *
+ * Returns `undefined` when no token overlap exists with any active spec
+ * — that is the only condition under which `classifyTriage` proposes
+ * CREATE.
  */
 export function bestSubjectMatch(
   subject: string,
@@ -151,19 +249,18 @@ export function bestSubjectMatch(
   const reqTokens = tokenize(subject);
   if (reqTokens.size === 0) return undefined;
 
-  let best: { score: number; summary: SpecSummary } | undefined;
-  for (const s of summaries) {
+  // Snapshot + sort so the score loop is fed a deterministic order.
+  const ordered = [...summaries].sort((a, b) => a.specId.localeCompare(b.specId));
+
+  let best: SubjectCandidate | undefined;
+  for (const s of ordered) {
     if (s.status !== "active") continue;
     const haystack = [s.title, s.capability ?? "", ...s.scopeIn].join(" ");
     const score = overlapCount(reqTokens, tokenize(haystack));
     if (score === 0) continue;
-    if (
-      !best ||
-      score > best.score ||
-      (score === best.score && s.acCount < best.summary.acCount) ||
-      (score === best.score && s.acCount === best.summary.acCount && s.specId < best.summary.specId)
-    ) {
-      best = { score, summary: s };
+    const candidate: SubjectCandidate = { score, summary: s };
+    if (!best || compareSubjectCandidates(candidate, best) < 0) {
+      best = candidate;
     }
   }
   return best?.summary;
@@ -222,11 +319,24 @@ export function classifyTriage(input: TriageInput): TriageRow[] {
       }
       const target = capabilityMatches[0] ?? bestSubjectMatch(req.subject, active);
       if (target) {
+        // Symmetry with the additive path (PR #206 review #3): when the
+        // target spec already exceeds AC/TC thresholds, propose SPLIT
+        // before REMOVE so that traceability is preserved across the
+        // resulting child specs. Without this escalation the additive
+        // and removal branches diverged on size handling, which
+        // contradicts the append-first principle.
+        const tooLarge = target.acCount > thresholds.ac || target.tcCount > thresholds.tc;
         rows.push({
           source: req.id,
           subject: req.subject,
           existingSpec: target.specId,
-          op: { update: "REMOVE" },
+          op: tooLarge ? "SPLIT" : { update: "REMOVE" },
+          ...(tooLarge
+            ? {
+                rationale:
+                  "removal targets a spec exceeding size thresholds; SPLIT before REMOVE to preserve traceability",
+              }
+            : {}),
         });
       } else {
         rows.push({
@@ -266,12 +376,19 @@ export function classifyTriage(input: TriageInput): TriageRow[] {
       continue;
     }
 
+    // CREATE rationale is intentionally a placeholder. The agent driving
+    // Stage 1 Triage MUST replace it with a real `CAP-NNNN` reference
+    // before persisting, otherwise QFAI-TRIAGE-006 will reject the row
+    // (PR #206 review #13). Surfacing the placeholder verbatim makes
+    // the required follow-up explicit instead of letting the row look
+    // ready to ship.
     rows.push({
       source: req.id,
       subject: req.subject,
       existingSpec: null,
       op: "CREATE",
-      rationale: "no active spec scope absorbs this requirement; new CAP required",
+      rationale:
+        "no active spec scope absorbs this requirement; add CAP-NNNN to _policies/03_Capabilities.md and replace this placeholder before persisting (QFAI-TRIAGE-006)",
     });
   }
 
