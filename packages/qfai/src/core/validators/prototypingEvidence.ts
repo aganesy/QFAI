@@ -306,9 +306,29 @@ export async function validatePrototypingEvidence(
     );
   }
 
-  // stopReason consistency
-  const stopReason = r.stopReason;
-  if (stopReason !== null && stopReason !== "axes-exceptional" && stopReason !== "max-iterations") {
+  // stopReason consistency. Distinguish three cases (PR #206 review LWrk):
+  //   1. Missing field entirely → required field error with actionable
+  //      message ("add stopReason: null/...").
+  //   2. Field present but value out of enum → value error with the raw
+  //      JSON-rendered value so the user sees the literal that failed.
+  //   3. Field present with valid value → silent.
+  const stopReasonPresent = "stopReason" in r;
+  const stopReason = stopReasonPresent ? r.stopReason : undefined;
+  if (!stopReasonPresent) {
+    issues.push(
+      issue(
+        "QFAI-PROT-005",
+        'stopReason field is required: set null while running, "axes-exceptional" or "max-iterations" once stopped.',
+        "error",
+        PROTO_JSON_REL,
+        "prototypingEvidence.stopReasonRequired",
+      ),
+    );
+  } else if (
+    stopReason !== null &&
+    stopReason !== "axes-exceptional" &&
+    stopReason !== "max-iterations"
+  ) {
     issues.push(
       issue(
         "QFAI-PROT-005",
