@@ -8,12 +8,14 @@ incoming requirement against the existing specs.
 
 ## Principle (read first)
 
-Default = modify an existing active spec (UPDATE: APPEND / MODIFY /
-REMOVE). CREATE is reserved for clear scope deviations introducing a
-new capability that is also being added to
-`_policies/03_Capabilities.md`. Validator `QFAI-TRIAGE-006` enforces
-this: every CREATE row must cite a `CAP-NNNN` in the Rationale column,
-and that CAP must already be present in the capability catalog.
+Default = modify an existing active spec (UPDATE:APPEND /
+UPDATE:MODIFY / UPDATE:REMOVE — the colon-separated form, no space, is
+the canonical SSOT for validators and `references/sdd-triage.md`).
+CREATE is reserved for clear scope deviations introducing a new
+capability that is also being added to `_policies/03_Capabilities.md`.
+Validator `QFAI-TRIAGE-006` enforces this: every CREATE row must cite
+a `CAP-NNNN` in the Rationale column, and that CAP must already be
+present in the capability catalog.
 
 The classifier (`src/core/sddTriage.ts::classifyTriage`) implements an
 append-first fallback: when capability does not match exactly, it still
@@ -61,7 +63,7 @@ approval before any spec edits begin.
 | DELETE    | -      | The spec's subject was removed from the product                          | Required        |
 | SPLIT     | -      | Existing spec covers >1 capability; responsibilities must be separated   | Required        |
 | MERGE     | -      | Multiple specs converge on one capability; collapse them                 | Required        |
-| SUPERSEDE | -      | A spec's responsibilities move to a new spec; keep history (status flip) | Required        |
+| SUPERSEDE | -      | A spec's responsibilities move to a new spec; keep history (status flip). Also covers single-spec **RENAME** (subject change at the same ID is normally UPDATE:MODIFY; if the spec ID itself must change while the scope stays the same — i.e., **RENUMBER** — emit SUPERSEDE: create the new ID and mark the old as superseded). MERGE handles multi-spec consolidation. | Required        |
 
 ## APPEND vs CREATE algorithm
 
@@ -77,8 +79,7 @@ For each incoming REQ/NFR, apply in order (append-first):
    spec's title / scope / capability shares any subject token with the
    REQ** → **UPDATE:APPEND on the closest spec** (subject-overlap
    fallback). Upgrade to **SPLIT** if that spec exceeds the AC/TC
-   thresholds. Record the cascade rationale and verify no companion
-   spec needs a MODIFY/REMOVE row before persisting.
+   thresholds.
 6. Only when **no active spec shares any token** with the REQ AND the
    underlying capability is genuinely new → **CREATE**. Add the new
    `CAP-NNNN` to `_policies/03_Capabilities.md` _first_, then cite it
@@ -91,10 +92,12 @@ For each incoming REQ/NFR, apply in order (append-first):
 
 ## Impact cascade
 
-Step 5 / 6 only decide the _primary_ spec. After classifying every
-REQ, walk the rest of the active specs and add companion Triage rows
-for any spec whose existing US/AC/BR/EX/TC must change as a knock-on
-effect:
+Steps 1–9 above only decide the _primary_ spec for each REQ. After
+classifying every REQ (regardless of which step matched), walk the
+rest of the active specs and add companion Triage rows for any spec
+whose existing US/AC/BR/EX/TC must change as a knock-on effect.
+Record the cascade rationale on each companion row and verify the
+full set before persisting:
 
 - Existing item still applies but wording must change → **UPDATE:MODIFY**.
 - Existing item is now obsolete → **UPDATE:REMOVE** (requires approval).

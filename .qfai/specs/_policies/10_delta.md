@@ -554,8 +554,13 @@
 - `discussion-20260328212829687` (v1.8.0 — Web Research Enhancement)
 - Classification: non-ui
 - OQ-0001..0008 resolved at policy/spec layer
-- OQ-0009 (Jina AI MCP) deferred to a future release (TBD)
-- OQ-0010 (OTel integration depth) deferred to a future release (TBD)
+- OQ-0009 (Jina AI MCP) deferred; re-evaluation trigger: next research-pack
+  refresh (when an MCP capability lands in QFAI core or a discussion-pack
+  refresh re-opens MCP scope). Tracked in `spec-0016/08_Open-questions.md`.
+- OQ-0010 (OTel integration depth) deferred; re-evaluation trigger: next
+  observability discussion-pack refresh (or whenever a downstream consumer
+  surfaces a concrete OTel requirement). Tracked in
+  `spec-0016/08_Open-questions.md`.
 
 | 2026-04-22 | adopted | 02_Initiative.md / 03_Capabilities.md / 04_Business-Flow.md / 06_Glossary.md / 07_Constraints.md / 08_Decisions.md | prototyping posture shifted to skill-first execution with validate/verify gates and mandatory screenshot/html evidence; old CLI/runtime/mode wording explicitly superseded | current implementation alignment |
 | 2026-04-22 | adopted | 02_Initiative.md / 08_Decisions.md / spec-0002 / spec-0004 / spec-0010 / spec-0012 / spec-0013 | discussion/preflight no longer requires `prototyping.yaml`; full-harness evidence contract is reviewerScores/allReviewerAxesPerfect100 + snapshot scoringTrace + iterationBudget | v1.8.1 prototyping evidence model sync |
@@ -567,6 +572,12 @@
 > SPLIT / MERGE / SUPERSEDE などの triage 行はこのセクションに追記する。
 > 単一 spec のみを触る triage 行は `<spec>/09_delta.md` の `## Triage`
 > セクションに記録する。
+>
+> **`Source` 列の表記**: 一般ユーザ環境では `REQ-NNNN` / `NFR-NNNN`
+> (最新 discussion-pack の `06_REQ.md` / `07_NFR.md` 由来) を入れる。
+> 下表の `internal/sdd` は QFAI リポジトリ自身の内部開発記録としての
+> 用法であり、ユーザ向けテンプレート (`references/sdd-triage.md`) の
+> 標準ではない。
 
 | Source       | Subject                                              | Existing Spec | Operation | Sub-op | Approved By | Rationale                                                                           |
 | ------------ | ---------------------------------------------------- | ------------- | --------- | ------ | ----------- | ----------------------------------------------------------------------------------- |

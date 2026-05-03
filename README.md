@@ -18,9 +18,11 @@ The agent reads the repository, produces the required artifacts, and iterates un
 ## Release status
 
 - Release posture: runtime truthfulness is enforced.
-- Prototyping is UI-only; `full-harness` is measurement-driven iteration accumulation for UI-bearing surfaces only.
+- Prototyping is UI-only and runs a single-thread evolution loop driven by
+  `qfai prototyping iterate --cycle <n>`, with deterministic stop conditions
+  (exit codes 0 continue / 64 convergence / 65 max-iterations / 2 input error).
 - Runtime observation is observed-only (no synthetic 200 / API / DB prototyping coverage).
-- Browser QA is mandatory per screen in full-harness, and `actionsWired` reports action coverage rather than finding count.
+- Per-iter evidence is `screenshot.png` + `index.html` per declared screen plus a single `review.json` (4-axis ordinal, prose critique, anti-slop detection, pivot directive).
 - Calibration SSOT is the calibration pack referenced by `calibrationRef.packPath`.
 - Current repo note: some repo-wide `qfai validate --fail-on error` blockers still come from historical review/evidence/ATDD/TDD artifacts and are being cleaned incrementally.
 
@@ -68,10 +70,10 @@ npx qfai report
     a runnable Playwright CLI launcher (project wrapper / local bin / PATH /
     `npx --no-install`), and still treats the first real delegation failure as a
     runtime hard-stop.
-    Use `npx qfai prototyping round-start --round <r5|r3|r2|r1> --candidates <csv> --target-url <url> --mode <mode>`
-    to generate the round-scoped review bundle and command plans the AI evaluator sub-agent consumes, then use
-    `round-harvest`, `round-narrow`, `round-absorb`, and `round-reimplement-verify` to advance the candidate funnel.
-    `qfai validate` consumes the resulting evidence files, including `mode.effective` and `fullHarness` metadata when present.
+    Use `npx qfai prototyping iterate --cycle <n> --target-url <url>` to drive each cycle of the
+    single-thread evolution loop. Exit codes: 0 (continue), 64 (convergence), 65 (max-iterations),
+    2 (input error). `qfai validate` consumes the resulting evidence files
+    (`.qfai/evidence/prototyping/prototyping.json`).
     Traceability refs inside prototyping evidence must use repo-root-relative concrete artifact refs (for example `.qfai/specs/spec-0001/01_Spec.md#L3` or `.qfai/evidence/render.json#/screens/0`).
     Absolute paths are invalid. The same strict ref grammar is enforced for top-level and leaf evidence-bearing fields, including
     `runtimeGate.evidenceRefs`, `runtimeGate.ui[].declaredRef`, `runtimeGate.ui[].renderEvidenceRefs[]`,

@@ -13,7 +13,14 @@
 
 | Source   | Subject     | Existing Spec       | Operation | Sub-op | Approved By | Rationale |
 | -------- | ----------- | ------------------- | --------- | ------ | ----------- | --------- |
-| REQ-XXXX | <one-liner> | spec-AAAA+spec-BBBB | MERGE     | -      | -           | <why>     |
+| REQ-XXXX | <one-liner> | spec-AAAA+spec-BBBB | MERGE     | -      | <approver>  | <why>     |
+
+<!-- Cross-spec ops (SPLIT / MERGE / SUPERSEDE) are approval-required;
+     `Approved By` MUST be a real approver, not `-`, or QFAI-TRIAGE-005
+     fails. The example above shows MERGE; UPDATE:APPEND, UPDATE:MODIFY,
+     CREATE, DELETE, etc. are equally valid Operations for cross-spec or
+     policy-only rows. -->
+
 
 ## Empty State
 

@@ -43,7 +43,7 @@ shares the most subject tokens. CREATE is emitted only when there is
 | DELETE    | -      | Subject was removed from the product; the spec itself goes away | Required |
 | SPLIT     | -      | One spec carries >1 capability; split into N specs              | Required |
 | MERGE     | -      | Multiple specs converge on one capability; collapse them        | Required |
-| SUPERSEDE | -      | Responsibilities move to a new spec; flip status, keep history  | Required |
+| SUPERSEDE | -      | Responsibilities move to a new spec; flip status, keep history. Also covers single-spec **RENAME** (subject change at the same ID is normally UPDATE:MODIFY; if the spec ID itself must change while scope stays the same — i.e. **RENUMBER** — emit SUPERSEDE: create the new ID, mark the old as superseded). MERGE handles multi-spec consolidation. | Required |
 
 ## Inputs
 
