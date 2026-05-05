@@ -4,8 +4,8 @@
 
 - BR-Ref: BR-0012-0002
 - Given `.qfai/contracts/ui/screens.yaml` declares `orders-dashboard`
-- And `.qfai/evidence/prototyping/screenshots/orders-dashboard.png` exists
-- And `.qfai/evidence/prototyping/html/orders-dashboard.html` exists
+- And `.qfai/evidence/prototyping/iter-NN/orders-dashboard.png` exists
+- And `.qfai/evidence/prototyping/iter-NN/orders-dashboard.html` exists
 - Then validate does not emit `QFAI-UIE-001/002` for that screen
 
 ## EX-0012-0002: Screenshot Missing
@@ -37,79 +37,10 @@
 
 - BR-Ref: BR-0012-0005
 - Given screenshots and HTML snapshots are captured
-- And evaluation rubric is available from `.qfai/contracts/design/evaluation-rubric.yaml`
-- And evaluator calibration is available from `.qfai/contracts/design/evaluator-calibration.yaml`
-- And prior reviewer-score context exists from a previous iteration
-- And `.qfai/contracts/design/design-system.yaml` exists
-- Then the L1/L2 evaluators receive all five input classes before scoring
-
-## EX-0012-0090: Initial Funnel
-
-- BR-Ref: BR-0012-0001
-- Given `/qfai-prototyping` starts from exploration inputs
-- When the first exploration pass runs
-- Then 5 divergent directions are generated
-- And the result converges through `5->3->2->1`
-
-## EX-0012-0091: Legacy Lighthouse Gate
-
-- BR-Ref: BR-0012-0008
-- Given a legacy full-harness-style artifact on `web`
-- And no Lighthouse evidence is attached
-- Then the validator/reference slice may emit a Lighthouse-related issue
-- But this does not reintroduce a public `--mode full-harness` contract
-
-## EX-0012-0092: Breakthrough Trigger
-
-- BR-Ref: BR-0012-0014
-- Given `allReviewerAxesPerfect100` is false
-- And recent `averageScore` deltas are below the configured plateau threshold
-- And code diff lines are below the configured diff threshold
-- Then plateau detector sets `triggerResult=true`
-- And `.qfai/evidence/breakthrough.json` records the trigger reasons
-
-## EX-0012-0094: Reviewer-Score Iteration
-
-- BR-Ref: BR-0012-0012
-- Given `fullHarness.iterations[1]`
-- And it stores two reviewers with per-axis `score`, `rationale`, and `evidenceRefs`
-- And `allReviewerAxesPerfect100` is `true`
-- Then the iteration is compliant with the current evidence schema
-
-## EX-0012-0095: Snapshot-Based Scoring Trace
-
-- BR-Ref: BR-0012-0013
-- Given the latest iteration has two reviewers and six total axis scores
-- When history is recomputed
-- Then `scoringTrace` stores `reviewerCount=2`, `axisCount=6`, `minScore`, `averageScore`, `allReviewerAxesPerfect100`, and `commitSha`
-
-## EX-0012-0096: Iteration Budget Summary
-
-- BR-Ref: BR-0012-0011, BR-0012-0015
-- Given internal mode resolution is `standard`
-- And two iterations have been recorded
-- Then full-harness result output reports `maxIterations=3` and `remainingIterations=1`
-
-## EX-0012-0097: Termination From Threshold Or Budget
-
-- BR-Ref: BR-0012-0014
-- Given the latest iteration has `allReviewerAxesPerfect100=true`
-- Then termination is `converged`
-
-## EX-0012-0103: 95 Points Is Not Completion
-
-- BR-Ref: BR-0012-0012, BR-0012-0014
-- Given every reviewer score is at least 95 but one axis is 99
-- Then `completionEligible` is false
-- And completion claim is rejected
-
-## EX-0012-0104: Perfect 100 Completion
-
-- BR-Ref: BR-0012-0012, BR-0012-0014, BR-0012-0015
-- Given every reviewer sub-agent scores every evaluation axis at 100
-- And post-selection polish, breakthrough check, reviewer gate, and validate pass are recorded
-- Then `completionEligible` may be true
-- And if convergence is not reached by the last allowed iteration, termination becomes `max-iterations`
+- And root `DESIGN.md` is available as brand SSOT
+- And the `lap-001..008` catalog is available
+- And prior reviewer review.json context exists from a previous iter
+- Then the reviewer (product-surface-reviewer) receives all input classes before scoring
 
 ## EX-0012-0098: Delegation Scope And Reviewer Roles
 
@@ -141,25 +72,94 @@
 
 ## EX-0012-0102: Legacy Traceability Space Retained
 
-- BR-Ref: BR-0012-0010
+- BR-Ref: BR-0012-0008, BR-0012-0010
 - Given legacy traceability IDs remain present in historical ledgers
+- And legacy validator slices (executionPlan / Lighthouse / designSystemCompliance / calibration overrides) remain available as validator/reference behavior only
 - Then current documentation keeps the identifier space reserved
 - And it does not restore weighted-total-only runtime narratives
+- And the legacy validation slice is not surfaced as a public mode contract
 
-## EX-0012-0108: Hard-Floor Violation Blocks Round Advance
+## EX-0012-0110: Convergence on iter-08
 
-- BR-Ref: BR-0012-0016
-- Given round `r3` evaluator review for candidate `c2` reports `perAxis: [{axisId: "originality", score: 70, rationale: "...", evidenceRefs: ["..."]}]`
-- And `evaluation-rubric.yaml` declares `hard_floors: [{id: "originality", min_score: 80}]`
-- When `qfai validate --profile prototyping --fail-on error` runs
-- Then validate exits with error `QFAI-PROT-AXIS-FLOOR-001`
-- And the message identifies candidate `c2`, axis `originality`, score `70`, floor `80`
+- BR-Ref: BR-0012-0024
+- Given the run produces 9 iters where iter-08 has all 4 UX axes `exceptional`, `layoutAntiPatternsDetected: []`, and `designMdViolations: []`.
+- When `qfai prototyping iterate --cycle 9` runs.
+- Then it returns exit 64. `prototyping.json#stopReason` is `"axes-exceptional"`. `acceptedIterationIndex === 8`.
 
-## EX-0012-0109: r5 Hard-Floor Exemption
+## EX-0012-0111: Pivot triggered by 3-low-IA + latest lap-*
 
-- BR-Ref: BR-0012-0016
-- Given round `r5` evaluator review for candidate `c1` reports `perAxis: [{axisId: "originality", score: 60, rationale: "...", evidenceRefs: ["..."]}]`
-- And `evaluation-rubric.yaml` declares `hard_floors: [{id: "originality", min_score: 80}]`
-- When `qfai validate --profile prototyping --fail-on error` runs
-- Then no `QFAI-PROT-AXIS-FLOOR-001` error is emitted for round `r5`
-- And the funnel can proceed to `r3` without hard-floor gating at the divergent stage
+- BR-Ref: BR-0012-0021
+- Given iter-05/06/07 each with `informationArchitecture: "acceptable"` and iter-07 with `layoutAntiPatternsDetected: ["lap-002-deadend-flow"]`.
+- When `computePivotDirective(history)` runs.
+- Then it returns `"pivot"`. With latest `layoutAntiPatternsDetected: []`, returns `"refine"`.
+
+## EX-0012-0112: Cycle ≥1 hash mismatch forces re-run
+
+- BR-Ref: BR-0012-0026
+- Given `prototyping.json#designMdSha256 === "abc123..."` and the user edits `DESIGN.md` between cycles to hash `"def456..."`.
+- When `qfai prototyping iterate --cycle 1` runs.
+- Then exit code is `2`, stderr contains `"DESIGN.md hash mismatch — re-run from cycle 0"`.
+
+## EX-0012-0113: convergence blocked by designMdViolations
+
+- BR-Ref: BR-0012-0024
+- Given iter-09 with all 4 UX axes `exceptional` and `layoutAntiPatternsDetected: []` but `designMdViolations: [{category: "shadow", expected: "0 1px 2px rgba(0,0,0,0.06)", found: "0 8px 24px rgba(0,0,0,0.20)", location: "card.tsx:32"}]`.
+- When `qfai prototyping iterate --cycle 10` runs.
+- Then exit code is `0` (continue); convergence is not declared.
+
+## EX-0012-0114: design-system mirrors DESIGN.md post-loop
+
+- BR-Ref: BR-0012-0027
+- Given a fresh run starting cycle 0 with frozen `DESIGN.md`.
+- When the contracts are checked.
+- Then `.qfai/contracts/design/design-system.yaml` does NOT exist pre-loop. Post-handoff, it is generated as a deterministic byte-equivalent mirror of `DESIGN.md` token tables.
+
+## EX-0012-0115: Single lineage at run start
+
+- BR-Ref: BR-0012-0017
+- Given a fresh `/qfai-prototyping` run.
+- When `qfai prototyping iterate --cycle 0` is called.
+- Then exactly one `iter-00/` directory is created, and no parallel `candidates/` directory is produced.
+- And subsequent `iterate --cycle <n>` continue the same lineage as `iter-NN/` siblings under the same run.
+
+## EX-0012-0116: Latest-accepted policy holds across cycles
+
+- BR-Ref: BR-0012-0018
+- Given `prototyping.json#iterations[]` has 7 entries with indices 0..6.
+- When `acceptedIterationIndex` is read.
+- Then it equals `iterations.length - 1` (i.e. 6), regardless of any prior iter having higher ordinal scores; no best-of-history selection is applied.
+
+## EX-0012-0117: review.json schema enforces 4 UX axes ordinal
+
+- BR-Ref: BR-0012-0019
+- Given an `iter-NN/review.json` with `scores` containing only `informationArchitecture: "strong"`, `navigationFlow: "strong"`, `usability: "strong"`, `functionality: "exceptional"`.
+- When validate runs.
+- Then no schema finding is raised. With a missing axis or an extra key, `QFAI-PROT-020` is emitted; with a `critique` of 50 words, `QFAI-PROT-022` is emitted; with `pivotDirective: "stop"`, `QFAI-PROT-023` is emitted.
+
+## EX-0012-0118: lap-* whitelist and IA acceptable cap
+
+- BR-Ref: BR-0012-0020
+- Given `iter-NN/review.json` with `layoutAntiPatternsDetected: ["lap-001-orphan-page"]` and `informationArchitecture: "strong"`.
+- When validate runs.
+- Then `QFAI-PROT-021` is raised because the lap detection caps `informationArchitecture` at `acceptable`. With `informationArchitecture: "acceptable"` the finding is not raised.
+
+## EX-0012-0119: ordinalIndex monotonic mapping
+
+- BR-Ref: BR-0012-0022
+- Given the ordinal scale `weak < acceptable < strong < exceptional`.
+- When `ordinalIndex` is applied.
+- Then `ordinalIndex(weak) === 0`, `ordinalIndex(acceptable) === 1`, `ordinalIndex(strong) === 2`, `ordinalIndex(exceptional) === 3`. Other inputs are rejected by the type guard.
+
+## EX-0012-0120: Generator and evaluator are distinct sub-agents
+
+- BR-Ref: BR-0012-0023
+- Given `/qfai-prototyping` declares the delegation map.
+- When the iteration loop dispatches generation and review.
+- Then `product-experience-architect` performs generation and `product-surface-reviewer` performs evaluation as two distinct sub-agent identities; reusing the same identity for both raises a delegation finding (self-preference bias prevention).
+
+## EX-0012-0121: SKILL.md size budget enforcement
+
+- BR-Ref: BR-0012-0025
+- Given the shipped `qfai-prototyping/SKILL.md` and its 5 reference files.
+- When line counts are measured.
+- Then `SKILL.md` ≤ 130 lines, and `iteration-loop.md` (≤ 80) + `generator-prompt.md` (≤ 60) + `reviewer-prompt.md` (≤ 100) + `handoff.md` (≤ 50) + `design-md-spec.md` (≤ 120) combined ≤ 410 lines.

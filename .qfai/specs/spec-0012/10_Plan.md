@@ -12,7 +12,7 @@
 - Internal mode helpers still provide deterministic iteration budgets.
 - Full-harness history/result artifacts are reviewer-score centered.
 - Round / candidate / absorption artifacts are documented here as the active v2 exploration model.
-- Former `spec-0017` / `spec-0018` identifiers are preserved here as absorbed registries; separate spec directories are no longer maintained.
+- Former spec-0017 (CAP-0017 v2.0 single-thread evolution loop / UX-loop redesign) and spec-0018 are absorbed into spec-0012; the standalone directories no longer exist.
 
 ## Next Maintenance Steps
 

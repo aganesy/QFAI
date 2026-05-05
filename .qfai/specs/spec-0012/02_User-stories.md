@@ -30,35 +30,52 @@ As an evaluator, I want screenshots, HTML snapshots, axis definitions, prior rev
 
 As a design reviewer, I want a fixed structural checklist for color, typography, spacing, border radius, shadow, and do's/don'ts, so that visual quality is reviewed against declared criteria.
 
-### US-0012-0091
+### US-0012-0098
 
-As a web reviewer, I want Lighthouse evidence to remain a documented requirement when the legacy validation slice is used on web surfaces, so that older checks stay actionable without reviving runtime mode contracts.
+As a designer, I want `/qfai-prototyping` to evolve a single prototype across up to 15 cycles so that creative breakthrough emerges from accumulated critique rather than from upfront candidate diversification.
 
-### US-0012-0092
+### US-0012-0099
 
-As a product-surface reviewer, I want design-system compliance to be recorded when `design-system.yaml` exists, so that visual drift is called out explicitly.
+As an AI agent (generator), I receive an explicit `pivotDirective: continue | refine | pivot` from the reviewer each cycle so I can choose to scrap the prior visual language and reimagine the artifact when the structural ceiling is recognized.
 
-### US-0012-0093
+### US-0012-0100
 
-As a project maintainer, I want calibration overrides to remain documented as validator/reference inputs, so that existing validation helpers continue to behave predictably.
+As a maintainer, I want the harness to accept the latest iteration regardless of whether it scores higher than prior iterations, so AI is rewarded — not penalized — for radical reinvention attempts.
 
-### US-0012-0094
+### US-0012-0101
 
-As a maintainer, I want full-harness iterations to store `reviewerScores[]` and `allReviewerAxesPerfect100`, so that evidence history reflects the current reviewer-score model.
+As a reviewer (product-surface-reviewer), I score iters on UX-centered axes — informationArchitecture / navigationFlow / usability / functionality — instead of subjective visual-aesthetic axes.
 
-### US-0012-0095
+### US-0012-0102
 
-As a maintainer, I want `scoringTrace[]` to be derived from reviewer-score snapshots, so that convergence analysis no longer depends on weighted totals.
+As a reviewer, I match the iter against `lap-001..008` covering structural failure modes (orphan pages, broken back affordances, hidden state, missing wayfinding). Detection caps `informationArchitecture` at `acceptable`.
 
-### US-0012-0096
+### US-0012-0103
 
-As a consumer of full-harness results, I want the output to include `iterationBudget`, so that I can see both the configured max and the remaining budget.
+As a maintainer, I want stop conditions evaluated by `qfai prototyping iterate --cycle <n>` exit code (0/64/65/2) so AI cannot subjectively declare DONE before the deterministic gate succeeds.
 
-### US-0012-0097
+### US-0012-0104
 
-As a validator, I want termination to be derived from `allReviewerAxesPerfect100`, so that completion semantics require every reviewer sub-agent to score every evaluation axis at 100.
+As a maintainer, I want per-iter evidence to be `<screen>.png` + `<screen>.html` + `review.json` only, so iter cost stays low and scrap-and-redo is cheap.
+
+### US-0012-0105
+
+As an AI generator, I want `qfai prototyping iterate --cycle 0` to record `sha256(DESIGN.md)` into `prototyping.json#designMdSha256` and verify it matches `.qfai/contracts/design/DESIGN.md.lock.yaml#sha256`.
+
+### US-0012-0106
+
+As an AI generator, I want `qfai prototyping iterate --cycle <n>` (n ≥ 1) to fail with exit 2 when on-disk `DESIGN.md` sha256 does not match `prototyping.json#designMdSha256`, forcing a clean restart from cycle 0.
+
+### US-0012-0107
+
+As a reviewer, I rely on a pure deterministic function `findDesignMdViolations(html, designMd)` that checks color / font / radius / shadow tokens. A non-empty violation list blocks convergence (exit 64).
+
+### US-0012-0108
+
+As a `/qfai-implement` consumer, I receive `design-system.yaml` as a deterministic byte-equivalent mirror of `DESIGN.md` tokens (not extracted from final iter HTML).
 
 ## Legacy Coverage Continuity
 
-- `US-0012-0001..US-0012-0083` are retained as legacy traceability identifiers for existing tests and historical slices.
-- Their pre-v1.8.1 weighted-total narratives are superseded by the current reviewer-score-centered posture in [01_Spec.md](./01_Spec.md).
+- The legacy baseline user-story identifier space is retained as historical traceability for existing tests and historical slices.
+- The mid-range legacy v1.x narratives (mode budgets / fullHarness / scoringTrace / allReviewerAxesPerfect100 / round-based candidate funnel) were purged 2026-05-06 in the v2.0 / UX-loop adoption (see `09_delta.md` CHG-001 OP-PURGE-001..007); they are no longer part of the active spec surface.
+- The pre-v1.8.1 weighted-total narratives are superseded by the current v2.0 / UX-loop posture in [01_Spec.md](./01_Spec.md).
