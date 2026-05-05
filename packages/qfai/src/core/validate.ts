@@ -47,7 +47,6 @@ import {
   validateTddList,
   validateUiDefinitionConsistency,
   validateDesignAudit,
-  validateDesignSlop,
   validateDiscussionDesignHardening,
   validateNavigationFlow,
   validateRenderCritique,
@@ -249,7 +248,6 @@ async function runUiuxValidators(
     () => validateResearchSummary(root, config),
     () => validateAgentDefinition(root, config),
     () => validateDesignAudit(root, config),
-    () => validateDesignSlop(root, config),
     () => runCanonicalUixValidators(root, config),
   ];
   const uiuxIssueGroups = await Promise.all(uiuxValidators.map((validator) => validator()));

@@ -14,16 +14,25 @@ const EXPLORATION_SECTIONS = [
   "anti_goals",
   "anti-goals",
   "axes",
-  "design quality",
-  "originality",
-  "craft",
+  "information architecture",
+  "informationarchitecture",
+  "navigation flow",
+  "navigationflow",
+  "usability",
   "functionality",
   "good critique examples",
   "good critique",
   "best-of-history summary",
 ] as const;
 
-const LEGACY_FOUR_AXIS_SECTIONS = ["usability", "consistency", "accessibility", "delight"];
+const LEGACY_FOUR_AXIS_SECTIONS = [
+  "consistency",
+  "accessibility",
+  "delight",
+  "craft",
+  "originality",
+  "design quality",
+];
 
 const CANONICAL_REQUIRED_SIDECAR_FILES = [
   "00_index.md",

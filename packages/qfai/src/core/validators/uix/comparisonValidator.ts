@@ -74,11 +74,11 @@ export async function validateExplorationArtifacts(
         "33_exploration_rubric.md is required for evaluation-driven prototyping.",
         "error",
         "uiux/33_exploration_rubric.md",
-        "Create uiux/33_exploration_rubric.md with design quality, originality, craft, and functionality axes.",
+        "Create uiux/33_exploration_rubric.md with informationArchitecture, navigationFlow, usability, and functionality axes.",
       ),
     );
   } else {
-    for (const term of ["Design Quality", "Originality", "Craft", "Functionality"]) {
+    for (const term of ["Information Architecture", "Navigation Flow", "Usability", "Functionality"]) {
       if (!new RegExp(term, "i").test(rubricContent)) {
         issues.push(
           canonicalIssue(
@@ -101,11 +101,11 @@ export async function validateExplorationArtifacts(
         "34_evaluator_calibration.md is required to keep the evaluator skeptical and aligned.",
         "error",
         "uiux/34_evaluator_calibration.md",
-        "Create uiux/34_evaluator_calibration.md with good-critique, blandness-fail, and originality-fail examples.",
+        "Create uiux/34_evaluator_calibration.md with good-critique and too-lenient examples.",
       ),
     );
   } else {
-    for (const term of ["Good Critique", "Too Lenient", "Blandness Fail", "Originality Fail"]) {
+    for (const term of ["Good Critique", "Too Lenient"]) {
       if (!new RegExp(term, "i").test(calibrationContent)) {
         issues.push(
           canonicalIssue(

@@ -4,25 +4,30 @@
  * Single-thread evolution loop driver. The skill (`/qfai-prototyping`)
  * calls this command before each iteration:
  *
- *   - At cycle 0: assigns paths for the seed iteration. Requires
- *     `--target-url` so the capture role knows where to load the
- *     prototype HTML from.
- *   - At cycle >= 1: first checks the latest iteration in
- *     `prototyping.json#iterations[]` against the deterministic stop
- *     condition (shouldStop()) and exits 64 (convergence) or 65
- *     (max-iterations) when applicable. Otherwise assigns paths for the
- *     next iteration and exits 0 to signal "continue".
+ *   - At cycle 0: parses + hashes the root DESIGN.md, persists the
+ *     `designMd: { path, sha256 }` record into `prototyping.json`, then
+ *     assigns paths for the seed iteration. Requires `--target-url` so
+ *     the capture role knows where to load the prototype HTML from.
+ *   - At cycle >= 1: re-hashes the root DESIGN.md and compares it to
+ *     `prototyping.json#designMd.sha256`; mismatch => exit 2. Then
+ *     checks the latest iteration in `prototyping.json#iterations[]`
+ *     against the deterministic stop condition (shouldStop()) and exits
+ *     64 (convergence) or 65 (max-iterations) when applicable.
+ *     Otherwise assigns paths for the next iteration and exits 0 to
+ *     signal "continue".
  *
  * Exit codes:
  *   0   continue to this cycle
- *   64  STOP: all 4 axes exceptional + slop=0 in the latest iter
+ *   64  STOP: all 4 axes exceptional + lap=0 + dmv=0 in the latest iter
  *   65  STOP: latest iter index === MAX_ITERATION_INDEX (14)
  *   2   input error (--cycle out of range, missing --target-url at cycle 0,
- *       no UI-bearing specs found, etc.)
+ *       no UI-bearing specs found, DESIGN.md missing/malformed/changed,
+ *       prototyping.json#designMd missing on cycle >= 1, etc.)
  *
  * Per-cycle artifact: writes `iter-NN/iterate-plan.json` so the capture
  * role and the next generator step both have a single document
- * referencing the assigned paths and target URL.
+ * referencing the assigned paths, target URL, and DESIGN.md tokens
+ * (Tailwind config shape).
  */
 
 import { mkdir, readFile, writeFile } from "node:fs/promises";
@@ -30,6 +35,11 @@ import path from "node:path";
 
 import { error, info } from "../lib/logger.js";
 import { loadConfig } from "../../core/config.js";
+import {
+  hashDesignMd,
+  parseDesignMd,
+  type DesignMd,
+} from "../../core/design/designMd.js";
 import { resolvePrimaryPrototypingSpec } from "../../core/prototyping/specResolution.js";
 import {
   MAX_ITERATIONS,
@@ -49,6 +59,13 @@ export type RunPrototypingIterateOptions = {
   targetUrl?: string;
 };
 
+export type DesignTokens = {
+  colors: Record<string, string>;
+  fontFamily: Record<string, string>;
+  borderRadius: Record<string, string>;
+  boxShadow: Record<string, string>;
+};
+
 export type IteratePlan = {
   cycle: number;
   specs: string[];
@@ -64,10 +81,23 @@ export type IteratePlan = {
     screenshotTemplate: string;
   };
   targetUrl: string | null;
+  designTokens: DesignTokens;
   nextActions: string[];
 };
 
 const PROTOTYPING_JSON_REL = ".qfai/evidence/prototyping/prototyping.json";
+const ROOT_DESIGN_MD_REL = "DESIGN.md";
+
+type DesignMdRecord = {
+  path: string;
+  sha256: string;
+};
+
+type PrototypingJsonShape = {
+  iterations?: unknown[];
+  designMd?: DesignMdRecord;
+  [key: string]: unknown;
+};
 
 export async function runPrototypingIterate(
   options: RunPrototypingIterateOptions,
@@ -83,8 +113,19 @@ export async function runPrototypingIterate(
     return 2;
   }
 
-  const configResult = await loadConfig(options.root);
+  // 1) Read + hash root DESIGN.md FIRST (before any per-cycle plumbing).
+  //    A malformed DESIGN.md is a structural project error and must
+  //    fail before --target-url checks or convergence reads.
+  const designMdAbs = path.join(options.root, ROOT_DESIGN_MD_REL);
+  const designMdRead = await readDesignMdFile(designMdAbs);
+  if (!designMdRead.ok) {
+    error(designMdRead.message);
+    return 2;
+  }
+  const currentSha = hashDesignMd(designMdRead.text);
+  const designMd: DesignMd = designMdRead.data;
 
+  const configResult = await loadConfig(options.root);
   const resolved = await resolvePrimaryPrototypingSpec(options.root, configResult.config);
   if (!resolved) {
     error(
@@ -96,17 +137,33 @@ export async function runPrototypingIterate(
   }
   const specs = [resolved.specId];
 
-  // 1) Stop-condition check at cycle >= 1: read the latest iteration and
-  //    short-circuit with exit 64/65 when the deterministic gate fires.
+  const protoJsonAbs = path.join(options.root, PROTOTYPING_JSON_REL);
+
+  // 2) Cycle >=1: enforce hash gate against prior recording.
   if (options.cycle >= 1) {
-    const iterations = await readIterations(path.join(options.root, PROTOTYPING_JSON_REL));
-    const stop = shouldStop(iterations);
+    const protoRecord = await readPrototypingJson(protoJsonAbs);
+    if (!protoRecord || !protoRecord.designMd || typeof protoRecord.designMd.sha256 !== "string") {
+      error(
+        "qfai prototyping iterate: prototyping.json#designMd is missing. " +
+          "Re-run from cycle 0 so the seed cycle records the DESIGN.md sha256.",
+      );
+      return 2;
+    }
+    if (protoRecord.designMd.sha256 !== currentSha) {
+      error(
+        "qfai prototyping iterate: root DESIGN.md sha256 mismatch — frozen=" +
+          `${protoRecord.designMd.sha256} current=${currentSha}. ` +
+          "DESIGN.md was edited mid-loop; re-run prototyping from cycle 0 to refreeze.",
+      );
+      return 2;
+    }
+    const stop = shouldStop(asIterations(protoRecord));
     if (stop !== null) {
       return emitStop(stop);
     }
   }
 
-  // 2) Cycle 0 requires --target-url so the seed generator knows where
+  // 3) Cycle 0 requires --target-url so the seed generator knows where
   //    to write iter-00/index.html and the capture role knows where to
   //    point playwright-cli.
   if (options.cycle === 0 && !options.targetUrl) {
@@ -114,7 +171,16 @@ export async function runPrototypingIterate(
     return 2;
   }
 
-  // 3) Assign paths and write iterate-plan.json.
+  // 4) Persist designMd record to prototyping.json on cycle 0 (and
+  //    ensure subsequent cycles have a stable record to compare).
+  if (options.cycle === 0) {
+    await writeDesignMdRecord(protoJsonAbs, {
+      path: ROOT_DESIGN_MD_REL,
+      sha256: currentSha,
+    });
+  }
+
+  // 5) Assign paths and write iterate-plan.json.
   const dir = path.join(options.root, iterationDir(options.cycle));
   await mkdir(dir, { recursive: true });
 
@@ -128,6 +194,7 @@ export async function runPrototypingIterate(
       screenshotTemplate: iterationScreenshotPath(options.cycle, "{screen}"),
     },
     targetUrl: options.targetUrl ?? null,
+    designTokens: buildDesignTokens(designMd),
     nextActions: nextActionsFor(options.cycle),
   };
 
@@ -144,14 +211,80 @@ export async function runPrototypingIterate(
   return 0;
 }
 
-async function readIterations(prototypingJsonAbs: string): Promise<Iteration[]> {
+type DesignMdReadResult =
+  | { ok: true; text: string; data: DesignMd }
+  | { ok: false; message: string };
+
+async function readDesignMdFile(absPath: string): Promise<DesignMdReadResult> {
+  let text: string;
   try {
-    const raw = await readFile(prototypingJsonAbs, "utf-8");
-    const parsed = JSON.parse(raw) as { iterations?: Iteration[] };
-    return Array.isArray(parsed.iterations) ? parsed.iterations : [];
+    text = await readFile(absPath, "utf-8");
   } catch {
-    return [];
+    return {
+      ok: false,
+      message: `qfai prototyping iterate: root DESIGN.md is missing at ${ROOT_DESIGN_MD_REL}.`,
+    };
   }
+  const parsed = parseDesignMd(text);
+  if ("error" in parsed) {
+    return {
+      ok: false,
+      message:
+        "qfai prototyping iterate: root DESIGN.md failed to parse — " +
+        `${parsed.error.message} (path=${parsed.error.path || "<root>"}).`,
+    };
+  }
+  return { ok: true, text, data: parsed.data };
+}
+
+async function readPrototypingJson(absPath: string): Promise<PrototypingJsonShape | null> {
+  try {
+    const raw = await readFile(absPath, "utf-8");
+    const parsed: unknown = JSON.parse(raw);
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return null;
+    return parsed as PrototypingJsonShape;
+  } catch {
+    return null;
+  }
+}
+
+function asIterations(record: PrototypingJsonShape): Iteration[] {
+  const iterations = record.iterations;
+  if (!Array.isArray(iterations)) return [];
+  return iterations as Iteration[];
+}
+
+async function writeDesignMdRecord(
+  protoJsonAbs: string,
+  record: DesignMdRecord,
+): Promise<void> {
+  let body: PrototypingJsonShape;
+  try {
+    const raw = await readFile(protoJsonAbs, "utf-8");
+    const parsed: unknown = JSON.parse(raw);
+    body =
+      parsed && typeof parsed === "object" && !Array.isArray(parsed)
+        ? (parsed as PrototypingJsonShape)
+        : {};
+  } catch {
+    body = {};
+  }
+  body.designMd = record;
+  await mkdir(path.dirname(protoJsonAbs), { recursive: true });
+  await writeFile(protoJsonAbs, `${JSON.stringify(body, null, 2)}\n`, "utf-8");
+}
+
+function buildDesignTokens(dm: DesignMd): DesignTokens {
+  return {
+    colors: { ...dm.visual.colors },
+    fontFamily: {
+      sans: dm.visual.typography.family_sans,
+      display: dm.visual.typography.family_display,
+      mono: dm.visual.typography.family_mono,
+    },
+    borderRadius: { ...dm.visual.radius },
+    boxShadow: { ...dm.visual.shadow },
+  };
 }
 
 function emitStop(reason: StopReason): number {

@@ -5,19 +5,23 @@ import fg from "fast-glob";
 import { parse as parseYaml } from "yaml";
 
 import type { QfaiConfig } from "../config.js";
+import { hashDesignMd, parseDesignMd } from "../design/designMd.js";
 import type { Issue } from "../types.js";
 import { issue } from "./utils.js";
 
-// SDD only normalizes the deviate-from / brand contracts. Evaluation axes
-// are global constants in core/prototyping/iteration.ts.
-const REQUIRED_SDD_DESIGN_FILES = [
-  "exploration-brief.yaml",
-  "reference-pool.yaml",
-  "brand-design.yaml",
-] as const;
-// Prototyping post-loop produces design-system.yaml (extracted from final
-// iter) and prototype-handoff.yaml.
+// Root DESIGN.md is the brand SSOT for UI-bearing projects. The lock
+// yaml carries its frozen sha256 so prototyping iteration / certify can
+// detect drift between cycles.
+const ROOT_DESIGN_MD_REL = "DESIGN.md";
+const DESIGN_MD_LOCK_REL_BASENAME = "DESIGN.md.lock.yaml";
+
+// Prototyping post-loop produces design-system.yaml (mirror of DESIGN.md
+// tokens) and prototype-handoff.yaml.
 const REQUIRED_PROTOTYPING_DESIGN_FILES = ["design-system.yaml", "prototype-handoff.yaml"] as const;
+
+// Legacy contracts whose presence is now an explicit error; kept here so
+// projects upgrading from earlier QFAI versions get a directive issue
+// rather than a silent drift.
 const FORBIDDEN_LEGACY_DESIGN_FILES = [
   "anchor-selection.yaml",
   "evaluation-axes.yaml",
@@ -25,7 +29,11 @@ const FORBIDDEN_LEGACY_DESIGN_FILES = [
   "evaluator-calibration.yaml",
   "absorption-policy.yaml",
   "selected-direction.yaml",
+  "exploration-brief.yaml",
+  "reference-pool.yaml",
+  "brand-design.yaml",
 ] as const;
+
 const REQUIRED_DESIGN_SYSTEM_CHECKLIST_KEYS = [
   "color",
   "typography",
@@ -35,15 +43,7 @@ const REQUIRED_DESIGN_SYSTEM_CHECKLIST_KEYS = [
   "dos_and_donts",
   "motion_rules",
 ] as const;
-const REFERENCE_KINDS = new Set([
-  "competitor",
-  "adjacent",
-  "aspirational",
-  "template-seed",
-  "anti-pattern",
-]);
-const COPY_RISK_VALUES = new Set(["low", "medium", "high"]);
-const TEMPLATE_USAGE_POLICY_VALUES = new Set(["none", "reference-only", "implementation-seed"]);
+
 const PLACEHOLDER_RE = /^(?:tbd|todo|n\/a|none|placeholder|example|lorem|to be defined)$/i;
 
 type DesignContractReadinessStage = "sdd" | "prototyping";
@@ -93,28 +93,10 @@ async function validateDesignContractReadinessForStage(
   }
 
   const designDir = path.join(root, config.paths.contractsDir, "design");
-  const designDirRelative = toPosixRelative(root, designDir);
   const issues: Issue[] = [];
 
-  for (const fileName of REQUIRED_SDD_DESIGN_FILES) {
-    const filePath = path.join(designDir, fileName);
-    try {
-      await readFile(filePath, "utf-8");
-    } catch {
-      issues.push(
-        issue(
-          "QFAI-DCON-001",
-          `Missing downstream design contract: ${fileName}.`,
-          "error",
-          toPosixRelative(root, filePath),
-          "designContractReadiness.requiredFile",
-          undefined,
-          "canonical",
-          `UI-bearing design workflows require pre-prototyping design contracts: exploration-brief.yaml, reference-pool.yaml, and brand-design.yaml under \`${designDirRelative}/\`.`,
-        ),
-      );
-    }
-  }
+  issues.push(...(await validateRootDesignMdAndLock(root, designDir)));
+
   if (stage === "prototyping") {
     for (const fileName of REQUIRED_PROTOTYPING_DESIGN_FILES) {
       const filePath = path.join(designDir, fileName);
@@ -130,7 +112,7 @@ async function validateDesignContractReadinessForStage(
             "designContractReadiness.requiredFile",
             undefined,
             "canonical",
-            `UI-bearing prototyping completion requires design-system.yaml and prototype-handoff.yaml under \`${designDirRelative}/\` (extracted from the final iter).`,
+            `UI-bearing prototyping completion requires design-system.yaml and prototype-handoff.yaml under \`${toPosixRelative(root, designDir)}/\` (mirror of DESIGN.md tokens / handoff facts).`,
           ),
         );
       }
@@ -150,7 +132,7 @@ async function validateDesignContractReadinessForStage(
           "designContractReadiness.legacyDesignContract",
           undefined,
           "canonical",
-          `Remove ${fileName} and normalize the data into the canonical design contracts.`,
+          `Remove ${fileName}; brand SSOT now lives in root DESIGN.md and is frozen via DESIGN.md.lock.yaml.`,
         ),
       );
     } catch {
@@ -158,12 +140,6 @@ async function validateDesignContractReadinessForStage(
     }
   }
 
-  issues.push(...(await validateExplorationBrief(root, config)));
-  issues.push(...(await validateReferencePool(root, config)));
-  issues.push(...(await validateBrandDesign(root, config)));
-  // Per-axis evaluation is encoded in core/prototyping/iteration.ts;
-  // there are no separate rubric / calibration / absorption-policy /
-  // selected-direction contracts.
   if (stage === "prototyping") {
     issues.push(...(await validateDesignSystem(root, config)));
     issues.push(...(await validatePrototypeHandoff(root, config)));
@@ -173,183 +149,113 @@ async function validateDesignContractReadinessForStage(
   return issues;
 }
 
-async function validateExplorationBrief(root: string, config: QfaiConfig): Promise<Issue[]> {
-  const filePath = path.join(root, config.paths.contractsDir, "design", "exploration-brief.yaml");
-  const parsed = await readYaml(filePath);
-  if (parsed.kind !== "ok") {
-    return parsed.kind === "invalid"
-      ? [
-          issue(
-            "QFAI-DCON-006",
-            "exploration-brief.yaml must parse as an object-shaped YAML document.",
-            "error",
-            toPosixRelative(root, filePath),
-            "designContractReadiness.explorationBriefDocument",
-          ),
-        ]
-      : [];
-  }
-
-  const requiredKeys = [
-    "product_intent",
-    "target_users",
-    "must_preserve_interactions",
-    "brand_signals",
-    "differentiation_targets",
-  ];
-  return validateRequiredStringArrayKeys(
-    filePath,
-    root,
-    parsed.value,
-    requiredKeys,
-    "QFAI-DCON-002",
-    "exploration-brief.yaml is missing required field",
-    "designContractReadiness.explorationBriefField",
-  );
-}
-
-async function validateReferencePool(root: string, config: QfaiConfig): Promise<Issue[]> {
-  const filePath = path.join(root, config.paths.contractsDir, "design", "reference-pool.yaml");
-  const parsed = await readYaml(filePath);
-  if (parsed.kind !== "ok") {
-    return parsed.kind === "invalid"
-      ? [
-          issue(
-            "QFAI-DCON-014",
-            "reference-pool.yaml must parse as an object-shaped YAML document.",
-            "error",
-            toPosixRelative(root, filePath),
-            "designContractReadiness.referencePoolDocument",
-          ),
-        ]
-      : [];
-  }
-
-  const references = parsed.value.references;
-  if (!Array.isArray(references) || references.length === 0) {
-    return [
-      issue(
-        "QFAI-DCON-015",
-        "reference-pool.yaml must define a non-empty references array.",
-        "error",
-        toPosixRelative(root, filePath),
-        "designContractReadiness.referencePoolReferences",
-      ),
-    ];
-  }
-
+async function validateRootDesignMdAndLock(root: string, designDir: string): Promise<Issue[]> {
   const issues: Issue[] = [];
-  const requiredKeys = [
-    "id",
-    "kind",
-    "source",
-    "adopted_points",
-    "rejected_points",
-    "local_translation",
-    "copy_risk",
-    "template_usage_policy",
-  ];
-  for (const [index, entry] of references.entries()) {
-    if (!isRecord(entry)) {
-      issues.push(referencePoolIssue(root, filePath, `references[${index}] must be an object.`));
-      continue;
-    }
-    for (const key of requiredKeys) {
-      if (!hasRequiredReferencePoolField(key, entry[key])) {
+  const designMdPath = path.join(root, ROOT_DESIGN_MD_REL);
+  const lockPath = path.join(designDir, DESIGN_MD_LOCK_REL_BASENAME);
+
+  let designMdText: string | null = null;
+  try {
+    designMdText = await readFile(designMdPath, "utf-8");
+  } catch {
+    issues.push(
+      issue(
+        "QFAI-DCON-030",
+        "Missing root DESIGN.md (brand SSOT).",
+        "error",
+        ROOT_DESIGN_MD_REL,
+        "designContractReadiness.rootDesignMd",
+        undefined,
+        "canonical",
+        "Create root DESIGN.md from the project root with the canonical front-matter (see qfai-discussion / qfai-sdd skills).",
+      ),
+    );
+  }
+
+  let lockText: string | null = null;
+  try {
+    lockText = await readFile(lockPath, "utf-8");
+  } catch {
+    issues.push(
+      issue(
+        "QFAI-DCON-031",
+        `Missing ${DESIGN_MD_LOCK_REL_BASENAME}.`,
+        "error",
+        toPosixRelative(root, lockPath),
+        "designContractReadiness.designMdLock",
+        undefined,
+        "canonical",
+        "Run /qfai-sdd Phase 0 to validate root DESIGN.md and freeze its sha256 into DESIGN.md.lock.yaml.",
+      ),
+    );
+  }
+
+  // Only attempt sha comparison when both files were readable.
+  if (designMdText !== null && lockText !== null) {
+    const lockSha = readLockSha256(lockText);
+    if (lockSha === null) {
+      issues.push(
+        issue(
+          "QFAI-DCON-031",
+          `${DESIGN_MD_LOCK_REL_BASENAME} is missing 'designMdSha256'.`,
+          "error",
+          toPosixRelative(root, lockPath),
+          "designContractReadiness.designMdLock",
+          undefined,
+          "canonical",
+          "Re-run /qfai-sdd Phase 0 to regenerate DESIGN.md.lock.yaml with a current designMdSha256.",
+        ),
+      );
+    } else {
+      const currentSha = hashDesignMd(designMdText);
+      if (currentSha !== lockSha) {
         issues.push(
-          referencePoolIssue(
-            root,
-            filePath,
-            `reference-pool.yaml references[${index}] is missing required field '${key}'.`,
+          issue(
+            "QFAI-DCON-032",
+            "DESIGN.md sha256 does not match DESIGN.md.lock.yaml.",
+            "error",
+            ROOT_DESIGN_MD_REL,
+            "designContractReadiness.designMdSha",
+            undefined,
+            "canonical",
+            "DESIGN.md was edited after the freeze. Re-run /qfai-sdd Phase 0 (or restart prototyping) to refreeze.",
           ),
         );
       }
     }
-    if (typeof entry.kind === "string" && !REFERENCE_KINDS.has(entry.kind)) {
+    // Optional sanity: DESIGN.md must parse (parseDesignMd already
+    // validates archetype, color set, etc. — failures surface as a
+    // DCON-030 with parse-error suffix so consumers can distinguish
+    // missing vs malformed).
+    const parseResult = parseDesignMd(designMdText);
+    if ("error" in parseResult) {
       issues.push(
-        referencePoolIssue(
-          root,
-          filePath,
-          `reference-pool.yaml references[${index}].kind is invalid: ${entry.kind}.`,
-        ),
-      );
-    }
-    if (typeof entry.copy_risk !== "string" || !COPY_RISK_VALUES.has(entry.copy_risk)) {
-      issues.push(
-        referencePoolIssue(
-          root,
-          filePath,
-          `reference-pool.yaml references[${index}].copy_risk must be one of: low, medium, high.`,
-        ),
-      );
-    }
-    if (
-      typeof entry.template_usage_policy !== "string" ||
-      !TEMPLATE_USAGE_POLICY_VALUES.has(entry.template_usage_policy)
-    ) {
-      issues.push(
-        referencePoolIssue(
-          root,
-          filePath,
-          `reference-pool.yaml references[${index}].template_usage_policy must be one of: none, reference-only, implementation-seed.`,
+        issue(
+          "QFAI-DCON-030",
+          `Root DESIGN.md failed to parse: ${parseResult.error.message}`,
+          "error",
+          ROOT_DESIGN_MD_REL,
+          "designContractReadiness.rootDesignMd",
+          undefined,
+          "canonical",
+          "Fix DESIGN.md front-matter so parseDesignMd succeeds (see qfai-prototyping/references/design-md-spec.md).",
         ),
       );
     }
   }
+
   return issues;
 }
 
-function hasRequiredReferencePoolField(key: string, value: unknown): boolean {
-  if (key === "template_usage_policy") {
-    return isNonEmptyStringValue(value);
+function readLockSha256(text: string): string | null {
+  try {
+    const parsed: unknown = parseYaml(text);
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return null;
+    const value = (parsed as Record<string, unknown>)["designMdSha256"];
+    return typeof value === "string" && value.length > 0 ? value : null;
+  } catch {
+    return null;
   }
-  return hasMeaningfulContractContent(value);
-}
-
-function referencePoolIssue(root: string, filePath: string, message: string): Issue {
-  return issue(
-    "QFAI-DCON-015",
-    message,
-    "error",
-    toPosixRelative(root, filePath),
-    "designContractReadiness.referencePoolField",
-  );
-}
-
-async function validateBrandDesign(root: string, config: QfaiConfig): Promise<Issue[]> {
-  const filePath = path.join(root, config.paths.contractsDir, "design", "brand-design.yaml");
-  const parsed = await readYaml(filePath);
-  if (parsed.kind !== "ok") {
-    return parsed.kind === "invalid"
-      ? [
-          issue(
-            "QFAI-DCON-016",
-            "brand-design.yaml must parse as an object-shaped YAML document.",
-            "error",
-            toPosixRelative(root, filePath),
-            "designContractReadiness.brandDesignDocument",
-          ),
-        ]
-      : [];
-  }
-
-  return validateRequiredStringArrayKeys(
-    filePath,
-    root,
-    parsed.value,
-    [
-      "brand_personality",
-      "audience_emotion",
-      "category_conventions",
-      "differentiation_strategy",
-      "visual_language",
-      "content_tone",
-      "do_not_look_like",
-    ],
-    "QFAI-DCON-017",
-    "brand-design.yaml is missing required field",
-    "designContractReadiness.brandDesignField",
-  );
 }
 
 async function validateNoPrematurePrototypingContracts(
@@ -484,10 +390,6 @@ function validateRequiredStringArrayKeys(
     }
   }
   return issues;
-}
-
-function isNonEmptyStringValue(value: unknown): value is string {
-  return typeof value === "string" && value.trim().length > 0;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

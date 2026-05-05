@@ -12,7 +12,66 @@ import {
   runPrototypingCertify,
   runPrototypingShowSpec,
 } from "../../src/cli/commands/prototypingCertify.js";
+import { hashDesignMd } from "../../src/core/design/designMd.js";
 import { COMPLETION_CERTIFICATE_REL_PATH } from "../../src/core/prototyping/certificate.js";
+
+const CERT_DESIGN_MD = [
+  "---",
+  "brand:",
+  '  name: "Acme Ledger"',
+  "  archetype: tech",
+  "visual:",
+  "  colors:",
+  '    primary:        "#1F2937"',
+  '    secondary:      "#6366F1"',
+  '    accent:         "#D97706"',
+  '    surface:        "#FFFFFF"',
+  '    surface_muted:  "#F3F4F6"',
+  '    text:           "#111827"',
+  '    text_muted:     "#6B7280"',
+  '    danger:         "#DC2626"',
+  '    warning:        "#F59E0B"',
+  '    success:        "#10B981"',
+  '    border:         "#E5E7EB"',
+  '    overlay:        "rgba(0,0,0,0.5)"',
+  "  typography:",
+  '    family_sans:    "Inter, system-ui, sans-serif"',
+  '    family_display: "Inter, system-ui, sans-serif"',
+  '    family_mono:    "JetBrains Mono, ui-monospace, monospace"',
+  "  radius:",
+  '    sm:   "0.25rem"',
+  '    md:   "0.5rem"',
+  '    lg:   "0.75rem"',
+  '    full: "9999px"',
+  "  shadow:",
+  '    sm: "0 1px 2px rgba(15,23,42,0.05)"',
+  '    md: "0 4px 6px rgba(15,23,42,0.08)"',
+  '    lg: "0 12px 24px rgba(15,23,42,0.10)"',
+  "---",
+  "",
+  "# Brand Philosophy",
+  "",
+  "Restrained.",
+  "",
+].join("\n");
+
+const CLEAN_FINAL_HTML =
+  '<!doctype html>\n<html><head><style>body { font-family: Inter, system-ui, sans-serif; }</style></head>' +
+  '<body><main><h1>Acme</h1></main></body></html>\n';
+
+async function seedDesignMdAndFinalHtml(
+  root: string,
+  options: { iterIndex?: number; html?: string; designMd?: string } = {},
+): Promise<void> {
+  await writeFile(path.join(root, "DESIGN.md"), options.designMd ?? CERT_DESIGN_MD, "utf-8");
+  const iterIndex = options.iterIndex ?? 1;
+  const iterDir = path.join(
+    root,
+    `.qfai/evidence/prototyping/iter-${String(iterIndex).padStart(2, "0")}`,
+  );
+  await mkdir(iterDir, { recursive: true });
+  await writeFile(path.join(iterDir, "index.html"), options.html ?? CLEAN_FINAL_HTML, "utf-8");
+}
 
 const tempDirs: string[] = [];
 
@@ -62,6 +121,10 @@ async function seedMinimalProject(root: string, opts?: { specMarker?: boolean })
 }
 
 async function seedAllGatesPass(root: string): Promise<void> {
+  // DESIGN.md compliance gate added in Phase 3b — every passing-gates
+  // fixture seeds a parseable DESIGN.md plus a final-iter HTML free of
+  // violations.
+  await seedDesignMdAndFinalHtml(root);
   // v1.8.4 Phase 11.7+: certify now reads validate.json from
   // config.output.validateJsonPath (default: .qfai/report/validate.json),
   // not hardcoded .qfai/output/. Seed both locations so tests work
@@ -260,5 +323,97 @@ describe("qfai prototyping show-spec", () => {
     const root = await newTempDir();
     await seedMinimalProject(root, { specMarker: false });
     expect(await runPrototypingShowSpec({ root })).toBe(2);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────
+// TC-3.6.x — DESIGN.md compliance gate + cert designMd binding
+// ─────────────────────────────────────────────────────────────────────────
+
+describe("qfai prototyping certify (TC-3.6.x DESIGN.md gate)", () => {
+  it("TC-3.6.2: final HTML with one DESIGN.md violation → exit 2", async () => {
+    const root = await newTempDir();
+    await seedMinimalProject(root, { specMarker: true });
+    await seedAllGatesPass(root);
+    // Overwrite the final HTML with a violating color literal.
+    await writeFile(
+      path.join(root, ".qfai/evidence/prototyping/iter-01/index.html"),
+      '<div style="color:#abcdef">x</div>\n',
+      "utf-8",
+    );
+    expect(await runPrototypingCertify({ root, check: false })).toBe(2);
+  });
+
+  it("TC-3.6.3: no final iteration HTML → exit 2", async () => {
+    const root = await newTempDir();
+    await seedMinimalProject(root, { specMarker: true });
+    await seedAllGatesPass(root);
+    // Remove the seeded final HTML directory entirely.
+    await rm(path.join(root, ".qfai/evidence/prototyping/iter-01"), {
+      recursive: true,
+      force: true,
+    });
+    expect(await runPrototypingCertify({ root, check: false })).toBe(2);
+  });
+
+  it("TC-3.6.4: empty violations array (clean HTML) → exit 0", async () => {
+    const root = await newTempDir();
+    await seedMinimalProject(root, { specMarker: true });
+    await seedAllGatesPass(root);
+    expect(await runPrototypingCertify({ root, check: false })).toBe(0);
+  });
+
+  it("TC-3.6.5: only the LAST iter is evaluated (older dirty iters ignored)", async () => {
+    const root = await newTempDir();
+    await seedMinimalProject(root, { specMarker: true });
+    await seedAllGatesPass(root);
+    // Add an older iter-00 with violating HTML; iter-01 (final) is clean.
+    const iter00 = path.join(root, ".qfai/evidence/prototyping/iter-00");
+    await mkdir(iter00, { recursive: true });
+    await writeFile(
+      path.join(iter00, "index.html"),
+      '<span style="color:#abcdef">old</span>\n',
+      "utf-8",
+    );
+    expect(await runPrototypingCertify({ root, check: false })).toBe(0);
+  });
+
+  it("TC-3.6.7: certificate.json includes designMd { path, sha256 }", async () => {
+    const root = await newTempDir();
+    await seedMinimalProject(root, { specMarker: true });
+    await seedAllGatesPass(root);
+    expect(await runPrototypingCertify({ root, check: false })).toBe(0);
+    const certBody = JSON.parse(
+      await (await import("node:fs/promises")).readFile(
+        path.join(root, COMPLETION_CERTIFICATE_REL_PATH),
+        "utf-8",
+      ),
+    ) as { designMd: { path: string; sha256: string } };
+    expect(certBody.designMd.path).toBe("DESIGN.md");
+    expect(certBody.designMd.sha256).toBe(hashDesignMd(CERT_DESIGN_MD));
+  });
+
+  it("TC-3.6.8: designMd.sha256 is 64-char lowercase hex", async () => {
+    const root = await newTempDir();
+    await seedMinimalProject(root, { specMarker: true });
+    await seedAllGatesPass(root);
+    expect(await runPrototypingCertify({ root, check: false })).toBe(0);
+    const certBody = JSON.parse(
+      await (await import("node:fs/promises")).readFile(
+        path.join(root, COMPLETION_CERTIFICATE_REL_PATH),
+        "utf-8",
+      ),
+    ) as { designMd: { sha256: string } };
+    expect(certBody.designMd.sha256).toMatch(/^[0-9a-f]{64}$/);
+  });
+
+  it("TC-3.6.9: --check fails when DESIGN.md mutated after certify", async () => {
+    const root = await newTempDir();
+    await seedMinimalProject(root, { specMarker: true });
+    await seedAllGatesPass(root);
+    expect(await runPrototypingCertify({ root, check: false })).toBe(0);
+    // Mutate DESIGN.md by 1 byte → sha mismatch.
+    await writeFile(path.join(root, "DESIGN.md"), `${CERT_DESIGN_MD}\n`, "utf-8");
+    expect(await runPrototypingCertify({ root, check: true })).toBe(2);
   });
 });

@@ -38,7 +38,8 @@ export { validateRenderCritique } from "./renderCritique.js";
 export { validateDesignFidelity } from "./designFidelity.js";
 export { validateDiscussionDesignHardening } from "./discussionDesignHardening.js";
 export { validateDesignAudit } from "./designAudit.js";
-export { validateDesignSlop } from "./designSlop.js";
+export { loadLayoutAntiPatterns, findLayoutAntiPatterns } from "./layoutAntiPatterns.js";
+export type { LayoutAntiPattern, LayoutAntiPatternScope } from "./layoutAntiPatterns.js";
 export {
   validatePrototypingDesignContractReadiness,
   validateSddDesignContractReadiness,

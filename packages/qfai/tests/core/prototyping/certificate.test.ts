@@ -233,6 +233,57 @@ describe("checkCompletionCertificate", () => {
     expect(loaded?.reviewerSignoff.reviewerId).toBe("legacy-reviewer");
   });
 
+  // ────────────────────────────────────────────────────────────────────
+  // TC-3.6.7..9 — DESIGN.md binding on CompletionCertificate
+  // ────────────────────────────────────────────────────────────────────
+
+  it("TC-3.6.7: buildCompletionCertificate stores designMd { path, sha256 }", async () => {
+    const root = await newTempDir();
+    const evidenceRoot = await seedEvidence(root, { "rounds/r5/harvest.json": "{}\n" });
+    const designMdPath = path.join(root, "DESIGN.md");
+    await writeFile(designMdPath, "---\nbrand: x\n---\n\nbody\n", "utf-8");
+    const cert = await buildCompletionCertificate({
+      ...baseInputs(evidenceRoot),
+      designMd: { path: "DESIGN.md", sha256: "f".repeat(64) },
+    });
+    expect(cert.designMd).toEqual({ path: "DESIGN.md", sha256: "f".repeat(64) });
+  });
+
+  it("TC-3.6.8: write/load round-trip preserves designMd", async () => {
+    const root = await newTempDir();
+    const evidenceRoot = await seedEvidence(root, { "rounds/r5/harvest.json": "{}\n" });
+    const cert = await buildCompletionCertificate({
+      ...baseInputs(evidenceRoot),
+      designMd: { path: "DESIGN.md", sha256: "a".repeat(64) },
+    });
+    await writeCompletionCertificate(root, cert);
+    const loaded = await loadCompletionCertificate(root);
+    expect(loaded?.designMd).toEqual({ path: "DESIGN.md", sha256: "a".repeat(64) });
+  });
+
+  it("TC-3.6.9: checkCompletionCertificate fails when DESIGN.md changes", async () => {
+    const root = await newTempDir();
+    const evidenceRoot = await seedEvidence(root, { "rounds/r5/harvest.json": "{}\n" });
+    const text = "---\nbrand: x\n---\n\nbody\n";
+    await writeFile(path.join(root, "DESIGN.md"), text, "utf-8");
+    // Compute the canonical sha and persist a matching cert.
+    const { hashDesignMd } = await import("../../../src/core/design/designMd.js");
+    const cert = await buildCompletionCertificate({
+      ...baseInputs(evidenceRoot),
+      designMd: { path: "DESIGN.md", sha256: hashDesignMd(text) },
+    });
+    await writeCompletionCertificate(root, cert);
+    expect((await checkCompletionCertificate(root)).ok).toBe(true);
+
+    // Mutate DESIGN.md → check should fail.
+    await writeFile(path.join(root, "DESIGN.md"), `${text}\n`, "utf-8");
+    const result = await checkCompletionCertificate(root);
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.reasons.some((r) => /DESIGN\.md sha256 mismatch/.test(r))).toBe(true);
+    }
+  });
+
   it("returns null when required completion-certificate fields are missing", async () => {
     const root = await newTempDir();
     const certPath = path.join(root, COMPLETION_CERTIFICATE_REL_PATH);

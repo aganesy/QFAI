@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { createServer, type Server } from "node:http";
 import { chmod, mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -450,6 +451,179 @@ describe("doctor", { timeout: 60000 }, () => {
       await rm(root, { recursive: true, force: true });
     }
   });
+
+  // ───────────────────────────────────────────────────────────────────────
+  // TC-3.7.x — root DESIGN.md preflight checks
+  // ───────────────────────────────────────────────────────────────────────
+
+  it("TC-3.7.1: all designMd checks ok when DESIGN.md + lock + sha agree", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-doctor-"));
+    const server = await startTestServer();
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      await seedPrototypingFixture(root, server.url);
+      const parsed = await readDoctorData(root, { profile: "prototyping", targetUrl: server.url });
+      expect(findCheck(parsed.checks, "prototyping.designMdRoot")?.severity).toBe("ok");
+      expect(findCheck(parsed.checks, "prototyping.designMdLock")?.severity).toBe("ok");
+      expect(findCheck(parsed.checks, "prototyping.designMdSha")?.severity).toBe("ok");
+    } finally {
+      await stopTestServer(server.server);
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("TC-3.7.2: missing DESIGN.md → designMdRoot=error", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-doctor-"));
+    const server = await startTestServer();
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      await seedPrototypingFixture(root, server.url);
+      await rm(path.join(root, "DESIGN.md"), { force: true });
+      const parsed = await readDoctorData(root, { profile: "prototyping", targetUrl: server.url });
+      expect(findCheck(parsed.checks, "prototyping.designMdRoot")?.severity).toBe("error");
+    } finally {
+      await stopTestServer(server.server);
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("TC-3.7.3: malformed DESIGN.md → designMdRoot=error", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-doctor-"));
+    const server = await startTestServer();
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      await seedPrototypingFixture(root, server.url);
+      await writeFile(path.join(root, "DESIGN.md"), "not a front matter\n", "utf-8");
+      const parsed = await readDoctorData(root, { profile: "prototyping", targetUrl: server.url });
+      expect(findCheck(parsed.checks, "prototyping.designMdRoot")?.severity).toBe("error");
+    } finally {
+      await stopTestServer(server.server);
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("TC-3.7.4: missing DESIGN.md.lock.yaml → designMdLock=error", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-doctor-"));
+    const server = await startTestServer();
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      await seedPrototypingFixture(root, server.url);
+      await rm(path.join(root, ".qfai", "contracts", "design", "DESIGN.md.lock.yaml"), {
+        force: true,
+      });
+      const parsed = await readDoctorData(root, { profile: "prototyping", targetUrl: server.url });
+      expect(findCheck(parsed.checks, "prototyping.designMdLock")?.severity).toBe("error");
+    } finally {
+      await stopTestServer(server.server);
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("TC-3.7.5: lock sha mismatch → designMdSha=error", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-doctor-"));
+    const server = await startTestServer();
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      await seedPrototypingFixture(root, server.url);
+      // Replace lock with a non-matching sha.
+      await writeFile(
+        path.join(root, ".qfai", "contracts", "design", "DESIGN.md.lock.yaml"),
+        [
+          'designMdPath: "DESIGN.md"',
+          `designMdSha256: "${"0".repeat(64)}"`,
+          'frozenAt: "2026-05-05T00:00:00Z"',
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+      const parsed = await readDoctorData(root, { profile: "prototyping", targetUrl: server.url });
+      expect(findCheck(parsed.checks, "prototyping.designMdSha")?.severity).toBe("error");
+    } finally {
+      await stopTestServer(server.server);
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("TC-3.7.6: malformed lock yaml → designMdLock=error", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-doctor-"));
+    const server = await startTestServer();
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      await seedPrototypingFixture(root, server.url);
+      await writeFile(
+        path.join(root, ".qfai", "contracts", "design", "DESIGN.md.lock.yaml"),
+        ": : :\n",
+        "utf-8",
+      );
+      const parsed = await readDoctorData(root, { profile: "prototyping", targetUrl: server.url });
+      expect(findCheck(parsed.checks, "prototyping.designMdLock")?.severity).toBe("error");
+    } finally {
+      await stopTestServer(server.server);
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("TC-3.7.7: well-formed but stale lock sha → designMdSha=error", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-doctor-"));
+    const server = await startTestServer();
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      await seedPrototypingFixture(root, server.url);
+      // 64-hex but doesn't match — same shape as TC-3.7.5.
+      await writeFile(
+        path.join(root, ".qfai", "contracts", "design", "DESIGN.md.lock.yaml"),
+        [
+          'designMdPath: "DESIGN.md"',
+          `designMdSha256: "${"a".repeat(64)}"`,
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+      const parsed = await readDoctorData(root, { profile: "prototyping", targetUrl: server.url });
+      expect(findCheck(parsed.checks, "prototyping.designMdSha")?.severity).toBe("error");
+    } finally {
+      await stopTestServer(server.server);
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("TC-3.7.8: DESIGN.md AND lock missing → both checks error", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-doctor-"));
+    const server = await startTestServer();
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      await seedPrototypingFixture(root, server.url);
+      await rm(path.join(root, "DESIGN.md"), { force: true });
+      await rm(path.join(root, ".qfai", "contracts", "design", "DESIGN.md.lock.yaml"), {
+        force: true,
+      });
+      const parsed = await readDoctorData(root, { profile: "prototyping", targetUrl: server.url });
+      expect(findCheck(parsed.checks, "prototyping.designMdRoot")?.severity).toBe("error");
+      expect(findCheck(parsed.checks, "prototyping.designMdLock")?.severity).toBe("error");
+    } finally {
+      await stopTestServer(server.server);
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("TC-3.7.9: existing prototyping checks still fire (additive)", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-doctor-"));
+    const server = await startTestServer();
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      await seedPrototypingFixture(root, server.url);
+      const parsed = await readDoctorData(root, { profile: "prototyping", targetUrl: server.url });
+      expect(findCheck(parsed.checks, "prototyping.primarySpec")).toBeDefined();
+      expect(findCheck(parsed.checks, "prototyping.uiContracts")).toBeDefined();
+      expect(findCheck(parsed.checks, "prototyping.designContracts")).toBeDefined();
+      expect(findCheck(parsed.checks, "prototyping.requiredRoles")).toBeDefined();
+      expect(findCheck(parsed.checks, "prototyping.playwrightCli")).toBeDefined();
+      expect(findCheck(parsed.checks, "prototyping.targetUrl")).toBeDefined();
+    } finally {
+      await stopTestServer(server.server);
+      await rm(root, { recursive: true, force: true });
+    }
+  });
 });
 
 type DoctorCheck = {
@@ -538,66 +712,61 @@ async function seedPrototypingFixture(root: string, targetUrl: string): Promise<
     ].join("\n"),
     "utf-8",
   );
+  // Phase 3b: brand SSOT lives in root DESIGN.md plus a sha freeze in
+  // contracts/design/DESIGN.md.lock.yaml. Legacy yamls
+  // (exploration-brief / reference-pool / brand-design) are now
+  // FORBIDDEN_LEGACY and would raise DCON-018.
+  const designMdText = [
+    "---",
+    "brand:",
+    '  name: "Acme Ledger"',
+    "  archetype: tech",
+    "visual:",
+    "  colors:",
+    '    primary:        "#1F2937"',
+    '    secondary:      "#6366F1"',
+    '    accent:         "#D97706"',
+    '    surface:        "#FFFFFF"',
+    '    surface_muted:  "#F3F4F6"',
+    '    text:           "#111827"',
+    '    text_muted:     "#6B7280"',
+    '    danger:         "#DC2626"',
+    '    warning:        "#F59E0B"',
+    '    success:        "#10B981"',
+    '    border:         "#E5E7EB"',
+    '    overlay:        "rgba(0,0,0,0.5)"',
+    "  typography:",
+    '    family_sans:    "Inter, system-ui, sans-serif"',
+    '    family_display: "Inter, system-ui, sans-serif"',
+    '    family_mono:    "JetBrains Mono, ui-monospace, monospace"',
+    "  radius:",
+    '    sm:   "0.25rem"',
+    '    md:   "0.5rem"',
+    '    lg:   "0.75rem"',
+    '    full: "9999px"',
+    "  shadow:",
+    '    sm: "0 1px 2px rgba(15,23,42,0.05)"',
+    '    md: "0 4px 6px rgba(15,23,42,0.08)"',
+    '    lg: "0 12px 24px rgba(15,23,42,0.10)"',
+    "---",
+    "",
+    "# Brand Philosophy",
+    "",
+    "Calm confidence.",
+    "",
+  ].join("\n");
+  await writeFile(path.join(root, "DESIGN.md"), designMdText, "utf-8");
+  const designMdSha = createHash("sha256").update(designMdText, "utf8").digest("hex");
   await writeFile(
-    path.join(designDir, "exploration-brief.yaml"),
+    path.join(designDir, "DESIGN.md.lock.yaml"),
     [
-      "product_intent: Clarify the primary decision in one screen",
-      "target_users:",
-      "  - operations manager",
-      "must_preserve_interactions:",
-      "  - Search remains visible above the fold",
-      "brand_signals:",
-      "  - Calm confidence",
-      "differentiation_targets:",
-      "  - Avoid generic admin-shell defaults",
+      'designMdPath: "DESIGN.md"',
+      `designMdSha256: "${designMdSha}"`,
+      'frozenAt: "2026-05-05T00:00:00Z"',
       "",
     ].join("\n"),
     "utf-8",
   );
-  await writeFile(
-    path.join(designDir, "reference-pool.yaml"),
-    [
-      "references:",
-      "  - id: ref-competitor-01",
-      "    kind: competitor",
-      "    source: Example competitor product surface",
-      "    adopted_points:",
-      "      - Dense comparison layout with clear hierarchy",
-      "    rejected_points:",
-      "      - Generic sidebar shell",
-      "    local_translation:",
-      "      - Translate density into task-first grouping",
-      "    copy_risk: low",
-      "    template_usage_policy: reference-only",
-      "",
-    ].join("\n"),
-    "utf-8",
-  );
-  await writeFile(
-    path.join(designDir, "brand-design.yaml"),
-    [
-      "brand_personality:",
-      "  - precise",
-      "  - quietly confident",
-      "audience_emotion:",
-      "  - feels in control of operational tradeoffs",
-      "category_conventions:",
-      "  - admin surfaces prioritize predictable scanning",
-      "differentiation_strategy:",
-      "  - use compact editorial hierarchy instead of default dashboard cards",
-      "visual_language:",
-      "  - strong typographic contrast",
-      "  - restrained color accents",
-      "content_tone:",
-      "  - direct operational language",
-      "do_not_look_like:",
-      "  - generic shadcn dashboard starter",
-      "",
-    ].join("\n"),
-    "utf-8",
-  );
-  // v2.0 (spec-0017 P14): the v1.x evaluation-rubric / evaluator-calibration /
-  // absorption-policy contracts were removed; they are no longer seeded here.
   await writeTestPlaywrightCli(binDir, 0);
 }
 

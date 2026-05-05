@@ -98,7 +98,7 @@ describe("TC-0004-0019: Old 4-axis format is error", () => {
     const root = await newTempDir();
     await createUiBearingPack(root);
 
-    const legacyContent = ["# Exploration Rubric", "", "## usability", "", "Legacy content."].join(
+    const legacyContent = ["# Exploration Rubric", "", "## craft", "", "Legacy content."].join(
       "\n",
     );
     await writeFile(path.join(root, "uiux", "33_exploration_rubric.md"), legacyContent, "utf-8");
@@ -136,7 +136,7 @@ describe("TC-0014-0004: UIX-VAL determinism", () => {
     const root = await newTempDir();
     await createUiBearingPack(root);
 
-    const legacyContent = ["# Exploration Rubric", "", "## usability", "", "Legacy content."].join(
+    const legacyContent = ["# Exploration Rubric", "", "## craft", "", "Legacy content."].join(
       "\n",
     );
     await writeFile(path.join(root, "uiux", "33_exploration_rubric.md"), legacyContent, "utf-8");

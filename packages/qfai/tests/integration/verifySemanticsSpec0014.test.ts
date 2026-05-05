@@ -140,7 +140,7 @@ describe("TC-0014-0009: stale sidecar migration errors", () => {
       [
         "# Exploration Rubric",
         "",
-        "## usability",
+        "## craft",
         "",
         "- task_completion: legacy axis",
         "",

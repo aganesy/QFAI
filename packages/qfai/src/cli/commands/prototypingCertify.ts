@@ -7,24 +7,33 @@
  *   - .qfai/output/validate.json exists with counts.error === 0
  *   - .qfai/output/verify.json exists with status === "PASS"
  *   - prototyping.json.reviewerGate.result === "PASS"
+ *   - root DESIGN.md parses, and the latest iteration HTML contains zero
+ *     DESIGN.md violations (color / font / radius / shadow drift)
  *
  * `certify --check` re-computes evidence digests against the stored
- * certificate and exits non-zero on drift. This is the only deterministic
- * way to claim a prototyping run is complete.
+ * certificate and exits non-zero on drift. The check ALSO re-hashes the
+ * root DESIGN.md when the certificate carries `designMd`, so editing
+ * the brand SSOT after certification fails the check.
  *
  * `show-spec` prints the resolved primary prototyping spec (config or
  * marker-scan based) so AI consumers do not hardcode a specific spec id.
  */
 
-import { readFile } from "node:fs/promises";
+import { readdir, readFile, stat } from "node:fs/promises";
 import path from "node:path";
 
 import { loadConfig } from "../../core/config.js";
+import { hashDesignMd, parseDesignMd } from "../../core/design/designMd.js";
 import {
   buildCompletionCertificate,
   checkCompletionCertificate,
   writeCompletionCertificate,
+  type CompletionCertificateDesignMd,
 } from "../../core/prototyping/certificate.js";
+import {
+  findDesignMdViolations,
+  type DesignMdViolation,
+} from "../../core/prototyping/designMdViolations.js";
 import { resolvePrimaryPrototypingSpec } from "../../core/prototyping/specResolution.js";
 import { resolveToolVersion } from "../../core/version.js";
 import { error, info } from "../lib/logger.js";
@@ -34,6 +43,9 @@ export type RunPrototypingCertifyOptions = {
   /** When true, do not write; only verify the existing certificate. */
   check: boolean;
 };
+
+const ROOT_DESIGN_MD_REL = "DESIGN.md";
+const PROTOTYPING_EVIDENCE_REL = ".qfai/evidence/prototyping";
 
 export async function runPrototypingCertify(
   options: RunPrototypingCertifyOptions,
@@ -53,7 +65,7 @@ export async function runPrototypingCertify(
 
   // ─── Generate mode ─────────────────────────────────────────────────────────
   const { config } = await loadConfig(options.root);
-  const evidenceRoot = path.join(options.root, ".qfai/evidence/prototyping");
+  const evidenceRoot = path.join(options.root, PROTOTYPING_EVIDENCE_REL);
 
   const protoJson = await loadJson(path.join(options.root, ".qfai/evidence/prototyping.json"));
   if (!protoJson) {
@@ -73,9 +85,6 @@ export async function runPrototypingCertify(
     return 2;
   }
 
-  // Resolve validate.json from the configured output path (Codex P1 review on
-  // PR #201). Hardcoding ".qfai/output/" was wrong for any user with a
-  // customized `output.validateJsonPath`.
   const validateJsonPath = path.resolve(options.root, config.output.validateJsonPath);
   const validateJsonRel = path.relative(options.root, validateJsonPath).replace(/\\/g, "/");
   const validateJson = await loadJson(validateJsonPath);
@@ -112,6 +121,47 @@ export async function runPrototypingCertify(
     return 2;
   }
 
+  // DESIGN.md compliance gate — refuse to seal a certificate when the
+  // final iteration drifts from the frozen brand SSOT.
+  const designMdAbs = path.join(options.root, ROOT_DESIGN_MD_REL);
+  let designMdText: string;
+  try {
+    designMdText = await readFile(designMdAbs, "utf-8");
+  } catch {
+    error(
+      "qfai prototyping certify: root DESIGN.md is missing — the brand SSOT must exist before certification.",
+    );
+    return 2;
+  }
+  const designMdParsed = parseDesignMd(designMdText);
+  if ("error" in designMdParsed) {
+    error(
+      "qfai prototyping certify: root DESIGN.md failed to parse — " +
+        `${designMdParsed.error.message}.`,
+    );
+    return 2;
+  }
+  const finalHtmlPath = await findFinalIterationHtml(evidenceRoot);
+  if (!finalHtmlPath) {
+    error(
+      "qfai prototyping certify: no final iteration HTML found under " +
+        `${PROTOTYPING_EVIDENCE_REL}/iter-*/. Run prototyping iterations first.`,
+    );
+    return 2;
+  }
+  const finalHtml = await readFile(finalHtmlPath, "utf-8");
+  const violations = findDesignMdViolations(finalHtml, designMdParsed.data);
+  if (violations.length > 0) {
+    error(
+      `qfai prototyping certify: ${violations.length} DESIGN.md violation(s) detected in final iteration ` +
+        `(${path.relative(options.root, finalHtmlPath).replace(/\\/g, "/")}):`,
+    );
+    for (const v of violations.slice(0, 20)) {
+      error(`  - kind=${v.kind} found="${v.found}"`);
+    }
+    return 2;
+  }
+
   const reviewerSignoff = extractRecord(reviewerGate, "signoff");
   const reviewerId =
     extractString(reviewerSignoff, "reviewerId") ??
@@ -123,6 +173,10 @@ export async function runPrototypingCertify(
   const specsCovered = resolvedSpec ? [resolvedSpec.specId] : [];
 
   const toolVersion = await resolveToolVersion();
+  const designMdRecord: CompletionCertificateDesignMd = {
+    path: ROOT_DESIGN_MD_REL,
+    sha256: hashDesignMd(designMdText),
+  };
 
   const cert = await buildCompletionCertificate({
     runId,
@@ -137,6 +191,7 @@ export async function runPrototypingCertify(
     },
     iterationCount: countIterations(protoJson),
     specsCovered,
+    designMd: designMdRecord,
   });
 
   const certPath = await writeCompletionCertificate(options.root, cert);
@@ -144,6 +199,7 @@ export async function runPrototypingCertify(
   info(`  runId: ${runId}`);
   info(`  evidenceFiles: ${cert.evidenceDigests.length}`);
   info(`  specsCovered: ${specsCovered.join(", ") || "(none)"}`);
+  info(`  designMd: ${designMdRecord.path} sha256=${designMdRecord.sha256.slice(0, 12)}…`);
   return 0;
 }
 
@@ -166,6 +222,59 @@ export async function runPrototypingShowSpec(options: { root: string }): Promise
   };
   info(JSON.stringify(payload, null, 2));
   return 0;
+}
+
+// ─── final-iter HTML resolution ─────────────────────────────────────────────
+
+/**
+ * Walk `evidenceRoot/iter-NN/` directories in descending index order and
+ * return the first `*.html` file found. Returns `null` when no iter dir
+ * holds an HTML artifact.
+ */
+async function findFinalIterationHtml(evidenceRoot: string): Promise<string | null> {
+  let entries: string[];
+  try {
+    entries = await readdir(evidenceRoot);
+  } catch {
+    return null;
+  }
+  const iterDirs: Array<{ index: number; abs: string }> = [];
+  for (const name of entries) {
+    const match = /^iter-(\d{2,})$/.exec(name);
+    if (!match) continue;
+    const indexStr = match[1];
+    if (indexStr === undefined) continue;
+    const index = Number.parseInt(indexStr, 10);
+    if (Number.isNaN(index)) continue;
+    iterDirs.push({ index, abs: path.join(evidenceRoot, name) });
+  }
+  iterDirs.sort((a, b) => b.index - a.index);
+  for (const dir of iterDirs) {
+    const html = await firstHtmlIn(dir.abs);
+    if (html) return html;
+  }
+  return null;
+}
+
+async function firstHtmlIn(dir: string): Promise<string | null> {
+  let names: string[];
+  try {
+    names = await readdir(dir);
+  } catch {
+    return null;
+  }
+  names.sort();
+  for (const name of names) {
+    if (!name.toLowerCase().endsWith(".html")) continue;
+    const abs = path.join(dir, name);
+    try {
+      const s = await stat(abs);
+      if (s.isFile()) return abs;
+    } catch {
+      continue;
+    }
+  }
+  return null;
 }
 
 // ─── small helpers (kept local to avoid widening prototyping/types.ts) ──────
@@ -203,7 +312,6 @@ function extractNumber(source: unknown, key: string): number | undefined {
 
 function countIterations(protoJson: unknown): number {
   if (!isRecord(protoJson)) return 0;
-  // The canonical counter is `iterations[].length`.
   const iterations = protoJson.iterations;
   if (Array.isArray(iterations)) return iterations.length;
 
@@ -214,3 +322,8 @@ function countIterations(protoJson: unknown): number {
     (Array.isArray(extraIterations) ? extraIterations.length : 0)
   );
 }
+
+// `DesignMdViolation` is only used as part of typing through the
+// findDesignMdViolations import; explicit re-export keeps the tree shake
+// stable but is not strictly required.
+export type { DesignMdViolation };

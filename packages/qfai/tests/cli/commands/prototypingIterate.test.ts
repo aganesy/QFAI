@@ -5,6 +5,57 @@ import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { runPrototypingIterate } from "../../../src/cli/commands/prototypingIterate.js";
+import { hashDesignMd } from "../../../src/core/design/designMd.js";
+
+// Canonical Phase 1 DESIGN.md sample. Used by every test that wants the
+// hash gate to pass; mutate selectively per-test for the negative cases.
+const CANONICAL_DESIGN_MD = [
+  "---",
+  "brand:",
+  '  name: "Acme Ledger"',
+  "  archetype: tech",
+  "audience:",
+  '  emotion: ["confident comparison"]',
+  "visual:",
+  "  colors:",
+  '    primary:        "#1F2937"',
+  '    secondary:      "#6366F1"',
+  '    accent:         "#D97706"',
+  '    surface:        "#FFFFFF"',
+  '    surface_muted:  "#F3F4F6"',
+  '    text:           "#111827"',
+  '    text_muted:     "#6B7280"',
+  '    danger:         "#DC2626"',
+  '    warning:        "#F59E0B"',
+  '    success:        "#10B981"',
+  '    border:         "#E5E7EB"',
+  '    overlay:        "rgba(0,0,0,0.5)"',
+  "  typography:",
+  '    family_sans:    "Inter, system-ui, sans-serif"',
+  '    family_display: "Inter, system-ui, sans-serif"',
+  '    family_mono:    "JetBrains Mono, ui-monospace, monospace"',
+  "  radius:",
+  '    sm:   "0.25rem"',
+  '    md:   "0.5rem"',
+  '    lg:   "0.75rem"',
+  '    full: "9999px"',
+  "  shadow:",
+  '    sm: "0 1px 2px rgba(15,23,42,0.05)"',
+  '    md: "0 4px 6px rgba(15,23,42,0.08)"',
+  '    lg: "0 12px 24px rgba(15,23,42,0.10)"',
+  "---",
+  "",
+  "# Brand Philosophy",
+  "",
+  "Restrained, calm, sober.",
+  "",
+].join("\n");
+
+async function seedDesignMd(root: string, content?: string): Promise<string> {
+  const text = content ?? CANONICAL_DESIGN_MD;
+  await writeFile(path.join(root, "DESIGN.md"), text, "utf-8");
+  return text;
+}
 
 const tempDirs: string[] = [];
 
@@ -25,9 +76,12 @@ afterEach(async () => {
 
 async function seedMinimalProject(
   root: string,
-  options: { uiBearing?: boolean } = {},
+  options: { uiBearing?: boolean; skipDesignMd?: boolean } = {},
 ): Promise<void> {
   const uiBearing = options.uiBearing ?? true;
+  if (!options.skipDesignMd) {
+    await seedDesignMd(root);
+  }
   await writeFile(
     path.join(root, "qfai.config.yaml"),
     [
@@ -80,31 +134,36 @@ async function seedPrototypingJson(
     layoutAntiPatternsDetected?: string[];
     designMdViolations?: Array<{ kind: string; found: string }>;
   }>,
+  options: { designMd?: { path: string; sha256: string } | null } = {},
 ): Promise<void> {
   const dir = path.join(root, ".qfai/evidence/prototyping");
   await mkdir(dir, { recursive: true });
-  await writeFile(
-    path.join(dir, "prototyping.json"),
-    JSON.stringify({
-      specsCovered: ["0001"],
-      iterations: iterations.map((it) => ({
-        index: it.index,
-        commitSha: "a".repeat(40),
-        scores: it.scores,
-        proseCritique: "x".repeat(1500),
-        layoutAntiPatternsDetected: it.layoutAntiPatternsDetected ?? [],
-        designMdViolations: it.designMdViolations ?? [],
-        pivotDirective: "continue",
-        evidenceRefs: {
-          screenshot: `.qfai/evidence/prototyping/iter-${String(it.index).padStart(2, "0")}/home.png`,
-          html: `.qfai/evidence/prototyping/iter-${String(it.index).padStart(2, "0")}/home.html`,
-        },
-      })),
-      acceptedIterationIndex: iterations.length - 1,
-      stopReason: null,
-    }),
-    "utf-8",
-  );
+  const body: Record<string, unknown> = {
+    specsCovered: ["0001"],
+    iterations: iterations.map((it) => ({
+      index: it.index,
+      commitSha: "a".repeat(40),
+      scores: it.scores,
+      proseCritique: "x".repeat(1500),
+      layoutAntiPatternsDetected: it.layoutAntiPatternsDetected ?? [],
+      designMdViolations: it.designMdViolations ?? [],
+      pivotDirective: "continue",
+      evidenceRefs: {
+        screenshot: `.qfai/evidence/prototyping/iter-${String(it.index).padStart(2, "0")}/home.png`,
+        html: `.qfai/evidence/prototyping/iter-${String(it.index).padStart(2, "0")}/home.html`,
+      },
+    })),
+    acceptedIterationIndex: iterations.length - 1,
+    stopReason: null,
+  };
+  // Default: record designMd whose sha matches CANONICAL_DESIGN_MD so
+  // the hash gate is silent unless a test explicitly disables it.
+  if (options.designMd === undefined) {
+    body.designMd = { path: "DESIGN.md", sha256: hashDesignMd(CANONICAL_DESIGN_MD) };
+  } else if (options.designMd !== null) {
+    body.designMd = options.designMd;
+  }
+  await writeFile(path.join(dir, "prototyping.json"), JSON.stringify(body), "utf-8");
 }
 
 async function seedRawPrototypingJson(root: string, body: unknown): Promise<void> {
@@ -294,6 +353,7 @@ describe("runPrototypingIterate continue (exit 0)", () => {
       iterations: [{ index: 0, commitSha: "b".repeat(40) }],
       acceptedIterationIndex: 0,
       stopReason: null,
+      designMd: { path: "DESIGN.md", sha256: hashDesignMd(CANONICAL_DESIGN_MD) },
     });
 
     const exit = await runPrototypingIterate({ root, cycle: 1 });
@@ -334,5 +394,274 @@ describe("runPrototypingIterate continue (exit 0)", () => {
     expect(plan.nextActions).not.toContain("iterate --cycle 15");
     expect(plan.nextActions).toContain("handoff");
     expect(plan.nextActions).toContain("certify");
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────
+// TC-3.5.x — DESIGN.md hash gate + iterate-plan token embedding
+// ─────────────────────────────────────────────────────────────────────────
+
+describe("runPrototypingIterate cycle 0 DESIGN.md ingestion (TC-3.5.x)", () => {
+  it("TC-3.5.1: persists designMd { path, sha256 } into prototyping.json", async () => {
+    const root = await newTempDir();
+    await seedMinimalProject(root);
+    const exit = await runPrototypingIterate({
+      root,
+      cycle: 0,
+      targetUrl: "http://localhost:5173",
+    });
+    expect(exit).toBe(0);
+    const protoBody = JSON.parse(
+      await readFile(path.join(root, ".qfai/evidence/prototyping/prototyping.json"), "utf-8"),
+    ) as { designMd: { path: string; sha256: string } };
+    expect(protoBody.designMd.path).toBe("DESIGN.md");
+    expect(protoBody.designMd.sha256).toBe(hashDesignMd(CANONICAL_DESIGN_MD));
+    expect(protoBody.designMd.sha256).toMatch(/^[0-9a-f]{64}$/);
+  });
+
+  it("TC-3.5.2: missing DESIGN.md → exit 2 with message", async () => {
+    const root = await newTempDir();
+    await seedMinimalProject(root, { skipDesignMd: true });
+    const exit = await runPrototypingIterate({
+      root,
+      cycle: 0,
+      targetUrl: "http://localhost:5173",
+    });
+    expect(exit).toBe(2);
+  });
+
+  it("TC-3.5.3: malformed DESIGN.md (no front matter) → exit 2", async () => {
+    const root = await newTempDir();
+    await seedMinimalProject(root, { skipDesignMd: true });
+    await writeFile(path.join(root, "DESIGN.md"), "no front matter at all\n", "utf-8");
+    const exit = await runPrototypingIterate({
+      root,
+      cycle: 0,
+      targetUrl: "http://localhost:5173",
+    });
+    expect(exit).toBe(2);
+  });
+
+  it("TC-3.5.4: invalid archetype rejected → exit 2", async () => {
+    const root = await newTempDir();
+    await seedMinimalProject(root, { skipDesignMd: true });
+    await seedDesignMd(root, CANONICAL_DESIGN_MD.replace("archetype: tech", "archetype: neon"));
+    const exit = await runPrototypingIterate({
+      root,
+      cycle: 0,
+      targetUrl: "http://localhost:5173",
+    });
+    expect(exit).toBe(2);
+  });
+
+  it("TC-3.5.5: empty body still parses → exit 0", async () => {
+    const root = await newTempDir();
+    await seedMinimalProject(root, { skipDesignMd: true });
+    const fmOnly = CANONICAL_DESIGN_MD.split("---")[1];
+    if (fmOnly === undefined) throw new Error("split produced no FM");
+    await seedDesignMd(root, `---${fmOnly}---\n`);
+    const exit = await runPrototypingIterate({
+      root,
+      cycle: 0,
+      targetUrl: "http://localhost:5173",
+    });
+    expect(exit).toBe(0);
+  });
+
+  it("TC-3.5.7: cycle 0 → cycle 1 reads recorded sha", async () => {
+    const root = await newTempDir();
+    await seedMinimalProject(root);
+    expect(
+      await runPrototypingIterate({ root, cycle: 0, targetUrl: "http://localhost:5173" }),
+    ).toBe(0);
+    expect(await runPrototypingIterate({ root, cycle: 1 })).toBe(0);
+  });
+
+  it("TC-3.5.8: cycle 0 missing --target-url → exit 2", async () => {
+    const root = await newTempDir();
+    await seedMinimalProject(root);
+    expect(await runPrototypingIterate({ root, cycle: 0 })).toBe(2);
+  });
+});
+
+describe("runPrototypingIterate cycle N hash gate (TC-3.5.x)", () => {
+  it("TC-3.5.9: matching sha → continue exit 0", async () => {
+    const root = await newTempDir();
+    await seedMinimalProject(root);
+    await seedPrototypingJson(root, [
+      {
+        index: 0,
+        scores: {
+          informationArchitecture: "acceptable",
+          navigationFlow: "acceptable",
+          usability: "acceptable",
+          functionality: "acceptable",
+        },
+      },
+    ]);
+    expect(await runPrototypingIterate({ root, cycle: 1 })).toBe(0);
+  });
+
+  it("TC-3.5.10: mismatched sha → exit 2 with operator hint", async () => {
+    const root = await newTempDir();
+    await seedMinimalProject(root);
+    await seedPrototypingJson(
+      root,
+      [
+        {
+          index: 0,
+          scores: {
+            informationArchitecture: "acceptable",
+            navigationFlow: "acceptable",
+            usability: "acceptable",
+            functionality: "acceptable",
+          },
+        },
+      ],
+      { designMd: { path: "DESIGN.md", sha256: "0".repeat(64) } },
+    );
+    expect(await runPrototypingIterate({ root, cycle: 1 })).toBe(2);
+  });
+
+  it("TC-3.5.11: missing designMd in prototyping.json → exit 2", async () => {
+    const root = await newTempDir();
+    await seedMinimalProject(root);
+    await seedPrototypingJson(
+      root,
+      [
+        {
+          index: 0,
+          scores: {
+            informationArchitecture: "acceptable",
+            navigationFlow: "acceptable",
+            usability: "acceptable",
+            functionality: "acceptable",
+          },
+        },
+      ],
+      { designMd: null },
+    );
+    expect(await runPrototypingIterate({ root, cycle: 1 })).toBe(2);
+  });
+
+  it("TC-3.5.12: CRLF rewrite of DESIGN.md flips sha → exit 2", async () => {
+    const root = await newTempDir();
+    await seedMinimalProject(root);
+    await seedPrototypingJson(root, [
+      {
+        index: 0,
+        scores: {
+          informationArchitecture: "acceptable",
+          navigationFlow: "acceptable",
+          usability: "acceptable",
+          functionality: "acceptable",
+        },
+      },
+    ]);
+    // Rewrite DESIGN.md with CRLF — same logical content, different bytes.
+    await writeFile(
+      path.join(root, "DESIGN.md"),
+      CANONICAL_DESIGN_MD.replace(/\n/g, "\r\n"),
+      "utf-8",
+    );
+    expect(await runPrototypingIterate({ root, cycle: 1 })).toBe(2);
+  });
+
+  it("TC-3.5.13: cycles 1..2 progressive (gate is per-cycle)", async () => {
+    const root = await newTempDir();
+    await seedMinimalProject(root);
+    expect(
+      await runPrototypingIterate({ root, cycle: 0, targetUrl: "http://localhost:5173" }),
+    ).toBe(0);
+    expect(await runPrototypingIterate({ root, cycle: 1 })).toBe(0);
+    expect(await runPrototypingIterate({ root, cycle: 2 })).toBe(0);
+  });
+});
+
+describe("iterate-plan.json design tokens (TC-3.5.x)", () => {
+  it("TC-3.5.14: contains designTokens with Tailwind config shape", async () => {
+    const root = await newTempDir();
+    await seedMinimalProject(root);
+    expect(
+      await runPrototypingIterate({ root, cycle: 0, targetUrl: "http://localhost:5173" }),
+    ).toBe(0);
+    const plan = JSON.parse(
+      await readFile(
+        path.join(root, ".qfai/evidence/prototyping/iter-00/iterate-plan.json"),
+        "utf-8",
+      ),
+    ) as {
+      designTokens: {
+        colors: Record<string, string>;
+        fontFamily: Record<string, string>;
+        borderRadius: Record<string, string>;
+        boxShadow: Record<string, string>;
+      };
+    };
+    expect(Object.keys(plan.designTokens.colors).sort()).toEqual(
+      [
+        "accent",
+        "border",
+        "danger",
+        "overlay",
+        "primary",
+        "secondary",
+        "success",
+        "surface",
+        "surface_muted",
+        "text",
+        "text_muted",
+        "warning",
+      ].sort(),
+    );
+    expect(Object.keys(plan.designTokens.fontFamily).sort()).toEqual(
+      ["display", "mono", "sans"].sort(),
+    );
+    expect(Object.keys(plan.designTokens.borderRadius).sort()).toEqual(
+      ["full", "lg", "md", "sm"].sort(),
+    );
+    expect(Object.keys(plan.designTokens.boxShadow).sort()).toEqual(["lg", "md", "sm"].sort());
+  });
+
+  it("TC-3.5.15: unparseable DESIGN.md does NOT produce iter-00 dir", async () => {
+    const root = await newTempDir();
+    await seedMinimalProject(root, { skipDesignMd: true });
+    await writeFile(path.join(root, "DESIGN.md"), "no front matter\n", "utf-8");
+    expect(
+      await runPrototypingIterate({ root, cycle: 0, targetUrl: "http://localhost:5173" }),
+    ).toBe(2);
+    const planExists = await readFile(
+      path.join(root, ".qfai/evidence/prototyping/iter-00/iterate-plan.json"),
+      "utf-8",
+    ).then(
+      () => true,
+      () => false,
+    );
+    expect(planExists).toBe(false);
+  });
+
+  it("TC-3.5.16: token shape exactness — counts 12+3+4+3", async () => {
+    const root = await newTempDir();
+    await seedMinimalProject(root);
+    expect(
+      await runPrototypingIterate({ root, cycle: 0, targetUrl: "http://localhost:5173" }),
+    ).toBe(0);
+    const plan = JSON.parse(
+      await readFile(
+        path.join(root, ".qfai/evidence/prototyping/iter-00/iterate-plan.json"),
+        "utf-8",
+      ),
+    ) as {
+      designTokens: {
+        colors: Record<string, string>;
+        fontFamily: Record<string, string>;
+        borderRadius: Record<string, string>;
+        boxShadow: Record<string, string>;
+      };
+    };
+    expect(Object.keys(plan.designTokens.colors)).toHaveLength(12);
+    expect(Object.keys(plan.designTokens.fontFamily)).toHaveLength(3);
+    expect(Object.keys(plan.designTokens.borderRadius)).toHaveLength(4);
+    expect(Object.keys(plan.designTokens.boxShadow)).toHaveLength(3);
   });
 });
