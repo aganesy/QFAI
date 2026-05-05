@@ -52,7 +52,7 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     for (const filePath of files) {
       const content = await readFile(filePath, "utf-8");
       const lower = content.toLowerCase();
-      // v2.0 (spec-0017 P8): "reviewer gate" replaced by deterministic
+      // v2.0 (spec-0012 v2.0 absorbed): "reviewer gate" replaced by deterministic
       // `qfai prototyping iterate` exit codes; SKILL.md no longer needs a
       // dedicated section heading. Required v2.0 sections.
       const required = ["critical constraints", "process", "completion"];
@@ -74,7 +74,7 @@ describe("assets guardrails", { timeout: 30000 }, () => {
 
     expect(canonical.length).toBeGreaterThan(0);
 
-    // v2.0 (spec-0017 P8): qfai-prototyping no longer ships the v1.x
+    // v2.0 (spec-0012 v2.0 absorbed): qfai-prototyping no longer ships the v1.x
     // delegation guardrail block. The shared baseline (referenced by
     // gate-failure-autorepair-protocol assertion below) covers cross-
     // skill delegation contracts. Apply the v1.x guardrail to all
@@ -162,7 +162,7 @@ describe("assets guardrails", { timeout: 30000 }, () => {
   });
 
   it("ensures gate-running QFAI skills reference the autorepair protocol", async () => {
-    // v2.0 (spec-0017 P8): qfai-prototyping replaces the autorepair-protocol
+    // v2.0 (spec-0012 v2.0 absorbed): qfai-prototyping replaces the autorepair-protocol
     // reference with deterministic `qfai prototyping iterate` exit codes
     // (0/64/65/2). Apply the legacy reference to other gate-running skills.
     const skills = [
@@ -387,7 +387,7 @@ describe("assets guardrails", { timeout: 30000 }, () => {
       "references",
       "contract-artifact-rules.md",
     );
-    // v2.0 (spec-0017 P8): the v1.x ui-0001-order-mockable.yaml example
+    // v2.0 (spec-0012 v2.0 absorbed): the v1.x ui-0001-order-mockable.yaml example
     // was removed alongside the funnel; ui-contract guidance is now
     // owned by qfai-sdd's ui-contract.sample.yaml only.
     const uiContractTemplatePath = path.join(
@@ -456,8 +456,8 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     expect(content).toContain("prototyping evidence");
   });
 
-  // TC-0017-0031 (static) — workflow template exists in init tree
-  it("ships the qfai-validate GitHub Actions workflow template (spec-0017 REQ-0009)", async () => {
+  // TC-0003 (static) — workflow template exists in init tree
+  it("ships the qfai-validate GitHub Actions workflow template (spec-0003)", async () => {
     const workflowPath = path.join(templateRootDir, ".github", "workflows", "qfai-validate.yml");
     const content = await readFile(workflowPath, "utf-8");
 
@@ -788,7 +788,7 @@ describe("assets guardrails", { timeout: 30000 }, () => {
       expect(existsSync(path.join(templateRootDir, removedDir))).toBe(false);
     }
     // `.github` in the init template may exist ONLY to ship CI workflows
-    // (spec-0017 REQ-0009: qfai-validate.yml). Wrapper dirs under it
+    // (spec-0003: qfai-validate.yml). Wrapper dirs under it
     // (instructions/, agents/, skills/, commands/, prompts/) must not appear.
     const githubDir = path.join(templateRootDir, ".github");
     if (existsSync(githubDir)) {
@@ -836,7 +836,7 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     const npmReadme = await readFile(npmReadmePath, "utf-8");
 
     const normalizedNpm = normalizeReadme(stripUrls(npmReadme));
-    // v2.0 (spec-0017 P14): replaced v1.x phrasing with single-thread loop language.
+    // v2.0 (spec-0012 v2.0 absorbed): replaced v1.x phrasing with single-thread loop language.
     expect(normalizedNpm).toMatch(/single-thread evolution loop|qfai prototyping iterate/);
     expect(normalizedNpm).toMatch(/per-iter evidence|screenshot.*html.*review\.json/i);
   });
@@ -1475,7 +1475,7 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     );
     const content = await readFile(rulesPath, "utf-8");
 
-    // v2.0 (spec-0017 P3): mode/recommended_mode/allowed_modes removed.
+    // v2.0 (spec-0012 v2.0 absorbed): mode/recommended_mode/allowed_modes removed.
     expect(content).toContain("prototyping:");
     expect(content).toContain("surface:");
   });
@@ -1579,7 +1579,7 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     expect(skill).toMatch(/planner-first|exploration-first/i);
 
     // README owns the canonical schema fields; SKILL owns optional artifact semantics and planner guidance.
-    // v2.0 (spec-0017 P3): recommended_mode field removed.
+    // v2.0 (spec-0012 v2.0 absorbed): recommended_mode field removed.
     expect(readme).toContain("prototyping.yaml");
     expect(skill).toContain("prototyping.yaml");
 

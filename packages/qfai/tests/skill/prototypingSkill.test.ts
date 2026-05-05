@@ -111,7 +111,7 @@ describe("prototyping skill validator", () => {
   });
 
   it("flags banned phrases when v1.x mode wording is reintroduced", () => {
-    // v2.0 (spec-0017): mode (recommended_mode / low-cost / standard) and
+    // v2.0 (spec-0012 absorbed): mode (recommended_mode / low-cost / standard) and
     // L1/L2 reviewer separation are removed. The banned-phrase scanner
     // still flags re-introductions.
     const invalid = `${VALID_SKILL_CONTENT}\nl1 and l2 must run runtime checks\nrecommended_mode: standard-tier`;

@@ -172,7 +172,7 @@ async function seedRawPrototypingJson(root: string, body: unknown): Promise<void
   await writeFile(path.join(dir, "prototyping.json"), JSON.stringify(body), "utf-8");
 }
 
-// QFAI:SPEC-0017:TC-0017-0010
+// QFAI:SPEC-0012:TC-0012-0322
 describe("runPrototypingIterate cycle 0", () => {
   it("returns 0 and creates iter-00/ with iterate-plan.json (target-url provided)", async () => {
     const root = await newTempDir();
@@ -204,7 +204,7 @@ describe("runPrototypingIterate cycle 0", () => {
     expect(plan.nextActions).toContain("iterate --cycle 1");
   });
 
-  // QFAI:SPEC-0017:TC-0017-0011
+  // QFAI:SPEC-0012:TC-0012-0323
   it("returns 2 when --target-url is missing at cycle 0", async () => {
     const root = await newTempDir();
     await seedMinimalProject(root);
@@ -213,7 +213,7 @@ describe("runPrototypingIterate cycle 0", () => {
   });
 });
 
-// QFAI:SPEC-0017:TC-0017-0012
+// QFAI:SPEC-0012:TC-0012-0324
 describe("runPrototypingIterate convergence (exit 64)", () => {
   it("returns 64 when latest iter has all 4 axes exceptional and no anti-patterns", async () => {
     const root = await newTempDir();
@@ -260,7 +260,7 @@ describe("runPrototypingIterate convergence (exit 64)", () => {
   });
 });
 
-// QFAI:SPEC-0017:TC-0017-0013
+// QFAI:SPEC-0012:TC-0012-0325
 describe("runPrototypingIterate max-iterations (exit 65)", () => {
   it("returns 65 when latest iter index === 14", async () => {
     const root = await newTempDir();
@@ -283,7 +283,7 @@ describe("runPrototypingIterate max-iterations (exit 65)", () => {
   });
 });
 
-// QFAI:SPEC-0017:TC-0017-0014
+// QFAI:SPEC-0012:TC-0012-0322 (alias — input validation shares cycle-0 entry path)
 describe("runPrototypingIterate input validation", () => {
   it("returns 2 when --cycle is negative", async () => {
     const root = await newTempDir();

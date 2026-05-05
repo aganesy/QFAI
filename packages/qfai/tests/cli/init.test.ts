@@ -114,8 +114,8 @@ describe("qfai init", { timeout: 60000 }, () => {
     }
   });
 
-  // TC-0017-0031 — qfai init ships GitHub Actions workflow for qfai validate
-  it("ships .github/workflows/qfai-validate.yml on init (spec-0017 REQ-0009)", async () => {
+  // TC-0003-0001 (alias) — qfai init ships GitHub Actions workflow for qfai validate
+  it("ships .github/workflows/qfai-validate.yml on init (spec-0003)", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-workflow-"));
     try {
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
