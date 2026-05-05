@@ -1,8 +1,10 @@
 # 01 Spec — Prototyping v2.0 Single-Thread Design Evolution Loop
 
 - Spec: spec-0017
-- Parent: CAP-0017
-- Status: active
+- Parent: CAP-0012
+- Status: superseded
+- Superseded-by: spec-0012
+- Decomposed-on: 2026-05-06
 
 ## Consumer View
 

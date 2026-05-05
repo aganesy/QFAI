@@ -19,13 +19,13 @@
 | mandatory UI evidence             | `.qfai/evidence/prototyping/screenshots/<screen-id>.png` と `.qfai/evidence/prototyping/html/<screen-id>.html`。declared screen ごとに両方必須。 |
 | contract readiness                | design/ui contracts が downstream execution に必要な最小 schema を満たしている状態。                                                             |
 | historical layer                  | `07_Decisions.md`, `09_delta.md`, `_policies/08_Decisions.md`, `_policies/10_delta.md`。superseded wording を残せる層。                          |
-| DESIGN.md                         | (UX-loop redesign / spec-0017 OP-0013) repo root の `DESIGN.md`。brand vision / visual identity (color / font / radius / shadow tokens) の SSOT。`/qfai-discussion` で著者され、`/qfai-sdd` Phase 0 で sha256 凍結される。 |
-| designMdViolations                | (UX-loop redesign / spec-0017 OP-0013) iter HTML が `DESIGN.md` token から逸脱している箇所のリスト。`{category, expected, found, location}` の配列。`findDesignMdViolations(html, designMd)` (pure function) が出力。非空時は convergence (exit 64) を block する。 |
-| layoutAntiPatterns (lap-*)        | (UX-loop redesign / spec-0017 OP-0013) UI 構造的 anti-pattern の集合 `{lap-001-orphan-page, lap-002-deadend-flow, lap-003-modal-stack-trap, lap-004-hidden-primary-action, lap-005-no-empty-state, lap-006-mystery-meat-icon, lap-007-state-not-represented, lap-008-no-back-affordance}`。検出時に informationArchitecture を `acceptable` 以下に cap する。 |
-| informationArchitecture (axis)    | (UX-loop redesign / spec-0017 OP-0013) UX 評価軸の 1 つ。ordinal `{weak, acceptable, strong, exceptional}`。情報の階層・グルーピング・wayfinding がどれだけ user に明確かを評価する。lap-* 検出時は `acceptable` cap。 |
-| navigationFlow (axis)             | (UX-loop redesign / spec-0017 OP-0013) UX 評価軸の 1 つ。primary task の達成までの経路がどれだけ短く明示的かを評価する。 |
-| usability (axis)                  | (UX-loop redesign / spec-0017 OP-0013) UX 評価軸の 1 つ。tap target / contrast / state visibility / error recovery の総合評価。 |
-| originality (axis) [DEPRECATED]   | (UX-loop redesign / spec-0017 OP-0001) 旧 4 軸の 1 つ。informationArchitecture に置換された。history-only。 |
-| designQuality (axis) [DEPRECATED] | (UX-loop redesign / spec-0017 OP-0001) 旧 4 軸の 1 つ。navigationFlow に置換された。history-only。 |
-| craft (axis) [DEPRECATED]         | (UX-loop redesign / spec-0017 OP-0001) 旧 4 軸の 1 つ。usability に置換された。history-only。 |
-| slopPatternsDetected [DEPRECATED] | (UX-loop redesign / spec-0017 OP-0002c) `iter-NN/review.json` の旧フィールド。`layoutAntiPatternsDetected` に置換された。history-only。 |
+| DESIGN.md                         | (UX-loop redesign / spec-0012) repo root の `DESIGN.md`。brand vision / visual identity (color / font / radius / shadow tokens) の SSOT。`/qfai-discussion` で著者され、`/qfai-sdd` Phase 0 で sha256 凍結される。 |
+| designMdViolations                | (UX-loop redesign / spec-0012) iter HTML が `DESIGN.md` token から逸脱している箇所のリスト。`{category, expected, found, location}` の配列。`findDesignMdViolations(html, designMd)` (pure function) が出力。非空時は convergence (exit 64) を block する。 |
+| layoutAntiPatterns (lap-*)        | (UX-loop redesign / spec-0012) UI 構造的 anti-pattern の集合 `{lap-001-orphan-page, lap-002-deadend-flow, lap-003-modal-stack-trap, lap-004-hidden-primary-action, lap-005-no-empty-state, lap-006-mystery-meat-icon, lap-007-state-not-represented, lap-008-no-back-affordance}`。検出時に informationArchitecture を `acceptable` 以下に cap する。 |
+| informationArchitecture (axis)    | (UX-loop redesign / spec-0012) UX 評価軸の 1 つ。ordinal `{weak, acceptable, strong, exceptional}`。情報の階層・グルーピング・wayfinding がどれだけ user に明確かを評価する。lap-* 検出時は `acceptable` cap。 |
+| navigationFlow (axis)             | (UX-loop redesign / spec-0012) UX 評価軸の 1 つ。primary task の達成までの経路がどれだけ短く明示的かを評価する。 |
+| usability (axis)                  | (UX-loop redesign / spec-0012) UX 評価軸の 1 つ。tap target / contrast / state visibility / error recovery の総合評価。 |
+| originality (axis) [DEPRECATED]   | (UX-loop redesign / spec-0012) 旧 4 軸の 1 つ。informationArchitecture に置換された。history-only。 |
+| designQuality (axis) [DEPRECATED] | (UX-loop redesign / spec-0012) 旧 4 軸の 1 つ。navigationFlow に置換された。history-only。 |
+| craft (axis) [DEPRECATED]         | (UX-loop redesign / spec-0012) 旧 4 軸の 1 つ。usability に置換された。history-only。 |
+| slopPatternsDetected [DEPRECATED] | (UX-loop redesign / spec-0012) `iter-NN/review.json` の旧フィールド。`layoutAntiPatternsDetected` に置換された。history-only。 |
