@@ -6,24 +6,62 @@ Use this reference only for UI-bearing discussion packs.
 
 - Brand personality: list 3-5 traits the product should express.
 - Audience emotion: define what users should feel after the primary task.
-- Category conventions: name the expected layout and interaction patterns for this market.
-- Differentiation targets: state what must feel unlike generic SaaS, generic shadcn, or direct competitors.
-- Anti-template constraints: name default visual patterns that must not survive into prototyping.
-- Reference strategy: collect competitor, adjacent, aspirational, template-seed, and anti-pattern references.
+- Category conventions: name the expected layout and interaction
+  patterns for this market.
+- Differentiation targets: state what must feel unlike generic SaaS or
+  direct competitors.
+- Anti-template constraints: name default visual patterns that must
+  not survive into prototyping.
+- Reference strategy: collect competitor, adjacent, aspirational,
+  template-seed, and anti-pattern references.
 
 ## Reference Rules
 
 - Treat templates as seeds, not winners.
 - Capture both adopted and rejected points for every reference.
-- Translate references into local product rules instead of copying visual surfaces.
+- Translate references into local product rules instead of copying
+  visual surfaces.
 - Record copy risk as `low`, `medium`, or `high`.
-- Record template usage policy as `none`, `reference-only`, or `implementation-seed`.
+- Record template usage policy as `none`, `reference-only`, or
+  `implementation-seed`.
 
-## Output Mapping
+## Output Mapping (new SSOT path)
 
-- Put product intent and brand signals in `30_exploration_brief.md`.
-- Put all reference decisions in `31_reference_pool.md` (deviate-from input, not imitate).
-- Put prohibited visual directions in `32_design_anti_goals.md` (also feeds reviewer anti-slop).
+The interview produces **one root `DESIGN.md`** at
+`<consuming-project-root>/DESIGN.md`. This file is the brand SSOT
+consumed by `/qfai-sdd` (which freezes its sha256) and by
+`/qfai-prototyping` (which iterates under its tokens).
 
-Evaluation axes are global constants (4-step ordinal: weak / acceptable /
-strong / exceptional) and are not authored as discussion sidecars.
+Map the interview answers into `DESIGN.md` as follows:
+
+- Brand personality → `brand.voice` (1..N short trait words) and the
+  `# Brand Philosophy` body.
+- Brand archetype → `brand.archetype`. Allowed values are the
+  8-archetype catalog in `design-md-brand-catalog.md`
+  (`minimal | bold | corporate | playful | organic | tech | elegant |
+  casual`). Use `aesthetic_properties` from the catalog as defaults.
+- Audience emotion → `audience.emotion`.
+- Anti-template constraints + rejected references →
+  `audience.do_not_look_like` and the **Don't** subsection of the
+  `# Brand Philosophy` body.
+- Visual decisions (color, typography, radius, shadow) → the
+  `visual.*` token tree. Schema and validation rules live in
+  `.qfai/assistant/skills/qfai-prototyping/references/design-md-spec.md`.
+- Adopted reference points → the **Do** subsection of
+  `# Brand Philosophy`.
+
+For the schema (12 colors, 3 fonts, 4 radii, 3 shadows, 8 archetypes),
+read `qfai-prototyping/references/design-md-spec.md` and use the
+sample at `qfai-prototyping/templates/DESIGN.md.sample` as a starting
+shape.
+
+## Transitional sidecars
+
+The 30 / 31 / 32 sidecar files (`uiux/30_exploration_brief.md`,
+`uiux/31_reference_pool.md`, `uiux/32_design_anti_goals.md`) continue
+to be written for now so legacy tooling keeps working, but they are no
+longer the SSOT. New prototyping skill reads only root `DESIGN.md` and
+the lock yaml. The sidecars will be removed in a follow-up phase.
+
+Evaluation axes are global constants (4-step ordinal: weak / acceptable
+/ strong / exceptional) and are not authored as discussion sidecars.

@@ -43,11 +43,23 @@ Produce a unified 15-file discussion pack plus exploration-first UI sidecars so 
 
 UI-bearing packs must produce the following sidecars as primary truth:
 
-- `uiux/30_exploration_brief.md`
-- `uiux/31_reference_pool.md`
-- `uiux/32_design_anti_goals.md`
+- `uiux/30_exploration_brief.md` (transitional — to be removed)
+- `uiux/31_reference_pool.md` (transitional — to be removed)
+- `uiux/32_design_anti_goals.md` (transitional — to be removed)
 - `uiux/40_screen_contracts.md`
 - `uiux/50_review_input_bundle.md`
+
+In addition, UI-bearing packs MUST emit a draft brand SSOT at the
+**consuming-project root**:
+
+- `<consuming-project-root>/DESIGN.md`
+
+This is the new brand SSOT consumed by `/qfai-sdd` (which freezes its
+sha256 in `.qfai/contracts/design/DESIGN.md.lock.yaml`) and by
+`/qfai-prototyping` (which iterates against locked tokens). The 30 /
+31 / 32 sidecars are kept temporarily so existing downstream tooling
+keeps working during the transition; new prototyping skill reads only
+root `DESIGN.md` and the lock yaml.
 
 ## Required Process
 
@@ -59,8 +71,12 @@ UI-bearing packs must produce the following sidecars as primary truth:
 6. Run Example Mapping and capture `Example Seeds`.
 7. Update `11_OQ-Register.md`, resolve OQs until open count is zero, and move deferred items to `13_Deferred.md`.
 8. Generate the exploration-first sidecar family for UI-bearing targets.
-9. Generate `prototyping.yaml` only when the latest discussion pack is UI-bearing and an explicit prototyping recommendation is useful.
-10. Request review and record the Reviewer result.
+9. **Emit root `DESIGN.md` draft** for UI-bearing targets — write the
+   brand SSOT to `<consuming-project-root>/DESIGN.md` per
+   `references/design-dna-intake.md`. Required when the pack is
+   UI-bearing; skip when not.
+10. Generate `prototyping.yaml` only when the latest discussion pack is UI-bearing and an explicit prototyping recommendation is useful.
+11. Request review and record the Reviewer result.
 
 For UI-bearing targets, follow `references/design-dna-intake.md` while authoring the UI/UX sidecars. Keep this `SKILL.md` compact; put detailed interview prompts and examples in the reference file.
 
@@ -85,6 +101,8 @@ Before declaring completion, you MUST:
 - ensure every deferred item has full metadata in `13_Deferred.md`;
 - ensure `02_Inception-Deck.md` and `03_Story-Workshop.md` include Mermaid diagrams;
 - ensure the UI-bearing sidecar family is complete;
+- ensure the UI-bearing root `DESIGN.md` draft exists at the
+  consuming-project root and parses as valid front-matter;
 - run `qfai validate --profile discussion --fail-on error` and fix discussion-owned findings;
 - avoid selecting a single visual winner in discussion artifacts.
 
