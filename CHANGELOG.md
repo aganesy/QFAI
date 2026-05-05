@@ -9,6 +9,88 @@ commit on this branch. The next version bump (`1.8.9` or `1.9.0`) will
 be decided after this PR merges and shipped via a separate `chore(release):`
 PR per `.agents/rules/version-discipline.md`.
 
+This release also rewrites `qfai-prototyping` around a single root
+`DESIGN.md` brand source of truth, swaps the evaluator axes for a
+UX-focused set, and removes the visual-aesthetic anti-slop registry
+together with the legacy UI-bearing sidecars and yaml contracts.
+Backward compatibility is intentionally not preserved.
+
+### Breaking changes
+
+- **DESIGN.md is the single source of truth for brand visual identity.**
+  `qfai init` now writes a `DESIGN.md` template at the consuming-project
+  root (front-matter tokens for colors / typography / spacing / radius /
+  shadow plus a `# Brand Philosophy` body). `/qfai-discussion` drafts it
+  and `/qfai-sdd` Phase 0 freezes it into
+  `.qfai/contracts/design/DESIGN.md.lock.yaml` (sha256 + frozen schema
+  tokens). `/qfai-prototyping` and `/qfai-implement` consume the root
+  `DESIGN.md` plus the lock file in place of the previous yaml contracts.
+  Existing `--force` invocations of `qfai init` do not overwrite an
+  existing `DESIGN.md`.
+- **Evaluator axes swapped (UX-focused).** The four ordinal review axes
+  change from `designQuality` / `originality` / `craft` / `functionality`
+  to `informationArchitecture` / `navigationFlow` / `usability` /
+  `functionality`. `designQuality` is replaced by a hard
+  `designMdViolations` gate over the final iteration HTML;
+  `originality` is dropped (branding is frozen up-front);
+  `craft` is absorbed into `usability`. `prototyping.json` reviews,
+  `evaluatorReview` output, and the renamed cap field
+  `layoutAntiPatternsDetected` (was `slopPatternsDetected`) are not
+  backward compatible with prior runs — existing artifacts must be
+  regenerated.
+- **shadcn / visual-aesthetic anti-slop set removed.** `slop-001-shadcn-zinc`,
+  `slop-003-linear-stripe`, `slop-008-glass-card`, `slop-009-mono-emoji`,
+  and `slop-010-rounded-2xl-shadow-lg` are deleted; the entire
+  `designSlop` validator (which scanned discussion-pack markdown) is
+  removed. Their concerns are now enforced by the DESIGN.md compliance
+  gate on iter HTML. A new layout-anti-pattern set `lap-001..lap-008`
+  ships in its place (`packages/qfai/src/core/validators/layoutAntiPatterns.{ts,json}`),
+  scoped to prototyping iter HTML and capping
+  `informationArchitecture` at `acceptable` on detection. The
+  `slop-*` ID namespace is no longer issued.
+- **Legacy UI-bearing sidecars deleted.** The qfai-discussion
+  templates `uiux/30_exploration_brief.md`, `uiux/31_reference_pool.md`,
+  and `uiux/32_design_anti_goals.md` are removed. Their content is
+  now expressed directly in `DESIGN.md` (front-matter tokens plus the
+  `audience.do_not_look_like` field and the `# Brand Philosophy` body).
+  Discussion artifact rules and the UI-bearing playbook no longer list
+  these files as required outputs.
+- **Legacy yaml design contracts deleted.** The qfai-sdd templates
+  `contracts/brand-design.sample.yaml`,
+  `contracts/exploration-brief.sample.yaml`, and
+  `contracts/reference-pool.sample.yaml` are removed.
+  `designContractReadiness` no longer requires these files; the
+  required-files set becomes root `DESIGN.md` plus
+  `.qfai/contracts/design/DESIGN.md.lock.yaml`. The DCON validator
+  IDs tied to the deleted yaml are renumbered (gap-allowed): new
+  `DCON-030` / `DCON-031` / `DCON-032` are added for the DESIGN.md
+  surface, while the prior `DCON-002` / `DCON-003` / `DCON-004` /
+  `DCON-006` / `DCON-007` / `DCON-008` / `DCON-010` / `DCON-011` /
+  `DCON-014` / `DCON-015` / `DCON-016` / `DCON-017` / `DCON-018` /
+  `DCON-020` / `DCON-021` slots are vacated. The `qfai-implement`
+  Read order is rewritten to consume root `DESIGN.md` and
+  `DESIGN.md.lock.yaml` instead of the deleted yaml contracts.
+
+### Added
+
+- `qfai prototyping iterate` records the root `DESIGN.md` sha256 in
+  `prototyping.json` at cycle 0 and exits 2 on any subsequent cycle
+  whose recomputed hash diverges from either the cycle-0 value or the
+  `DESIGN.md.lock.yaml` value (DESIGN.md is frozen for the duration of
+  a loop; edit and rerun from cycle 0 to change brand).
+- `qfai prototyping certify` enforces a DESIGN.md compliance gate by
+  running `findDesignMdViolations` over the final iter HTML; certification
+  fails if any color / font / radius / shadow value falls outside the
+  DESIGN.md token set.
+- `qfai doctor --profile prototyping` adds three preflight checks for
+  the prototyping profile: `designMdRoot` (root `DESIGN.md` exists and
+  parses), `designMdLock` (`.qfai/contracts/design/DESIGN.md.lock.yaml`
+  exists and parses), `designMdSha` (the lock sha matches the live
+  file). `qfai prototyping preflight` aliases this profile.
+- New core module `src/core/design/designMd.ts` (`parseDesignMd`,
+  `validateDesignMd`, `hashDesignMd`) and
+  `src/core/prototyping/designMdViolations.ts` (`findDesignMdViolations`).
+
 ### Fixed
 
 - Copilot code review reviewer assignment migrated from REST
