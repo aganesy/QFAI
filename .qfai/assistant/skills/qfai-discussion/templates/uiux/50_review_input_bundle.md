@@ -8,9 +8,7 @@ Consolidate all sidecar artifacts into a review-ready bundle for design reviewer
 
 | Artifact                   | Path                               | Status                    |
 | -------------------------- | ---------------------------------- | ------------------------- |
-| Exploration brief          | `uiux/30_exploration_brief.md`     | [draft/reviewed/approved] |
-| Reference pool             | `uiux/31_reference_pool.md`        | [draft/reviewed/approved] |
-| Design anti-goals          | `uiux/32_design_anti_goals.md`     | [draft/reviewed/approved] |
+| Brand SSOT (root)          | `DESIGN.md`                        | [draft/reviewed/approved] |
 | Exploration rubric         | `uiux/33_exploration_rubric.md`    | [draft/reviewed/approved] |
 | Evaluator calibration      | `uiux/34_evaluator_calibration.md` | [draft/reviewed/approved] |
 | Screen contracts           | `uiux/40_screen_contracts.md`      | [draft/reviewed/approved] |

@@ -2,12 +2,41 @@
 
 Use this file for the detailed sequencing rules behind `/qfai-sdd`.
 
-## Preflight
+## Stage order
+
+1. **Stage 0 - Preflight** (discussion-pack completeness)
+2. **Stage 1 - Triage** (operation classification, see `sdd-triage.md`)
+3. **Phase 0 - Contracts-first**
+4. **Phase 1 - Outline**
+5. **Phase 2 - Slice** (per spec)
+6. **Phase 3 - Plan finalize** (per spec)
+7. **Phase 4 - Delta update** (per spec)
+
+## Stage 0: Preflight
 
 1. Identify the latest discussion-pack.
 2. Stop if required files are missing.
 3. Stop if blocking OQ remain.
 4. Stop if the latest UI-bearing pack is missing valid `prototyping.yaml`.
+
+## Stage 1: Triage
+
+1. Enumerate active spec summaries (skip `superseded` / `deprecated` / `removed`).
+2. Classify each REQ/NFR **append-first** using `_policies/11_Slice-Policy.md`
+   (8 ops). Default to UPDATE on the closest active spec; CREATE only
+   when no active spec shares any subject token AND a new `CAP-NNNN` is
+   added to `_policies/03_Capabilities.md`.
+3. Walk the impact cascade: for every primary classification, scan the
+   remaining active specs and emit companion `UPDATE:MODIFY` /
+   `UPDATE:REMOVE` rows wherever existing AC/BR reference the changed
+   concept. The same `Source` ID may legitimately appear on multiple rows.
+4. Obtain AskUserQuestion approval for CREATE / DELETE / SPLIT / MERGE / SUPERSEDE / UPDATE:REMOVE rows.
+5. Persist the Triage table in `<spec>/09_delta.md` (per-spec) or `_policies/10_delta.md` (cross-spec / policy).
+6. Stop entry to Phase 0 until every approval-required row has an
+   approver recorded and every CREATE row cites a registered CAP
+   (validator `QFAI-TRIAGE-006`).
+
+Detailed procedure: `sdd-triage.md`.
 
 ## Shared-before-Slice Rule
 
@@ -15,15 +44,10 @@ Use this file for the detailed sequencing rules behind `/qfai-sdd`.
 - Slice, Plan, and Delta are target-spec work.
 - In no-argument mode, shared work runs once and per-spec work fans out after shared outputs stabilize.
 
-## Update Policy
-
-- Update existing artifacts in place when the current target already exists.
-- Create new spec artifacts only after approval.
-- Delete only after approval and after recording the rationale.
-
 ## Stop Conditions
 
 - Missing or stale `_policies/11_Slice-Policy.md`
 - Missing Contract Index alignment
 - Unresolvable preflight blockers
+- Triage rows requiring approval but lacking `Approved By`
 - Validate errors that point to unresolved source-layer gaps

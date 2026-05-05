@@ -76,20 +76,16 @@ Execute the TDD micro-cycle for each pending item in `test-list.md`, transitioni
 
 - Review rendered output, screenshot evidence, or HTML output before closing any UI-affecting item.
 - Read spec + contract inputs first whenever implementation touches UI or critique-driven behavior.
-- Read order (v2.0, spec-0017 P11): `01_Spec.md` → `03_Acceptance-Criteria.md` → `05_Examples.md` →
-  `.qfai/contracts/design/exploration-brief.yaml` →
-  `.qfai/contracts/design/reference-pool.yaml` → `.qfai/contracts/design/brand-design.yaml` →
-  `.qfai/contracts/design/design-system.yaml` (extracted from final iter) →
+- Read order: `01_Spec.md` → `03_Acceptance-Criteria.md` → `05_Examples.md` →
+  root `DESIGN.md` → `.qfai/contracts/design/DESIGN.md.lock.yaml` →
+  `.qfai/contracts/design/design-system.yaml` (post-loop token mirror) →
   `.qfai/contracts/design/prototype-handoff.yaml` → `.qfai/contracts/ui/*.yaml` →
   canonical prototype evidence under `.qfai/evidence/prototyping/iter-NN/<screen>.{png,html}` →
   `.qfai/prototypes/final/index.html`.
-- The v1.x evaluation-rubric / evaluator-calibration / selected-direction contracts and
-  `prototypes/winner/index.html` were removed in spec-0017 P4/P8.
-- Do not read discussion-pack UI/UX sidecars, fallback mocks, or legacy design aliases.
+- Do not read discussion-pack UI/UX sidecars or fallback mocks.
 - Prototype HTML is analysis input, not production source. Reimplement with project-native
   patterns while preserving the visual identity captured in `prototype-handoff.yaml`
-  `implementationNotes` (free-form prose); the v1.x mustPreserve / mayAdapt / mustNotCopy
-  three-category split is removed.
+  `implementationNotes` (free-form prose).
 - UI-affecting items require product-surface-reviewer prototype parity review before `done`.
 - If code intent and rendered output diverge, treat the rendered/HTML result as the blocking review input and reconcile before DONE.
 
@@ -299,7 +295,7 @@ Completion MUST NOT be declared when any of the following are true:
 - Items with `todo`, `red`, `green`, or `refactor` status still exist (for spec-level completion)
 - Parallel slices were used but integration verify has not been run post-merge
 - Checkpoint boundary was reached but verification was not executed
-- `it.todo(...)` / `test.todo(...)` / `describe.todo(...)` stubs remain in any file covered by `validation.traceability.testFileGlobs` (`QFAI-TEST-001`, spec-0012). Implement the body or delete the stub — an opt-out via `validation.testStrategy.forbidTestTodoStubs: false` is permitted only with an accompanying waiver DR-ID.
+- `it.todo(...)` / `test.todo(...)` / `describe.todo(...)` stubs remain in any file covered by `validation.traceability.testFileGlobs` (`QFAI-TEST-001`). Implement the body or delete the stub — an opt-out via `validation.testStrategy.forbidTestTodoStubs: false` is permitted only with an accompanying waiver DR-ID.
 
 ## Evidence (MANDATORY)
 
@@ -347,7 +343,7 @@ Each TDD item MUST have fresh evidence containing at minimum:
 - [ ] No backward transitions occurred.
 - [ ] Exception items have DR-IDs recorded.
 - [ ] All tests pass.
-- [ ] `qfai validate --profile tdd --fail-on error` passes with zero `QFAI-TEST-001` findings (no `it.todo` / `test.todo` / `describe.todo` stubs remain; spec-0012).
+- [ ] `qfai validate --profile tdd --fail-on error` passes with zero `QFAI-TEST-001` findings (no `it.todo` / `test.todo` / `describe.todo` stubs remain).
 
 ## Completion Checklist (MUST)
 

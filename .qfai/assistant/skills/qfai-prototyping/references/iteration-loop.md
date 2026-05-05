@@ -3,8 +3,9 @@
 ## Phases
 
 ```
-[Seed]   cycle 0:    generate one iter-00/index.html
-[Loop]   cycle 1..14: capture -> review -> iterate
+[Freeze] cycle 0:    record sha256(DESIGN.md) into prototyping.json
+[Seed]   cycle 0:    generate one iter-00/index.html under DESIGN.md tokens
+[Loop]   cycle 1..14: capture -> review -> iterate (DESIGN.md hash held)
 [Cert]   final:      handoff yaml + completion-certificate.json
 ```
 
@@ -15,37 +16,56 @@
 .qfai/evidence/prototyping/iter-NN/{<screen>.png, <screen>.html, review.json}
 ```
 
-`progress.md` is one file for the whole run. The generator appends a one-line summary at each iter's end.
+`progress.md` is one file for the whole run. The generator appends a
+one-line summary at each iter's end.
 
 ## Stop conditions (deterministic)
 
 Exit codes for `qfai prototyping iterate --cycle <n+1>`:
 
-- `0` continue
-- `64` convergence: latest iter has all 4 axes `exceptional` AND `slopPatternsDetected` is empty
-- `65` max-iterations: latest iter `index === 14`
-- `2` input error
+- `0` — continue.
+- `64` — convergence: latest iter has all 4 UX axes
+  (`informationArchitecture`, `navigationFlow`, `usability`,
+  `functionality`) at `exceptional` AND `layoutAntiPatternsDetected`
+  is empty AND `designMdViolations` is empty.
+- `65` — max-iterations: latest iter `index === 14`.
+- `2` — input error, including:
+  - root `DESIGN.md` missing or unparseable;
+  - `.qfai/contracts/design/DESIGN.md.lock.yaml` missing;
+  - `sha256(DESIGN.md)` mismatch with the lock.
 
 LLM subjective DONE declarations are forbidden.
 
 ## Best-of-history is gone
 
-The latest iter is always accepted. Temporary regressions are allowed; leap regression is a normal path to creative breakthrough.
+The latest iter is always accepted. Temporary regressions are allowed;
+leap regression is a normal path to creative breakthrough on the IA /
+flow axes.
 
 ## Surface profile
 
-`surface` (web/mobile/desktop/mixed) only affects the capture profile. It is neutral with respect to AI behavior.
+`surface` (web/mobile/desktop/mixed) only affects the capture profile.
+It is neutral with respect to AI behavior.
 
 ## Contracts read
 
 - spec set
 - `.qfai/contracts/ui/*.yaml`
-- `.qfai/contracts/design/exploration-brief.yaml`
-- `.qfai/contracts/design/reference-pool.yaml`
-- `.qfai/contracts/design/brand-design.yaml`
+- root `DESIGN.md`
+- `.qfai/contracts/design/DESIGN.md.lock.yaml`
 
 ## Contracts produced (post-loop)
 
-- `.qfai/contracts/design/design-system.yaml` (output contract; extracted from the final iter)
+- `.qfai/contracts/design/design-system.yaml` — deterministic mirror of
+  DESIGN.md tokens. No HTML extraction. See `handoff.md`.
 - `.qfai/contracts/design/prototype-handoff.yaml`
-- `.qfai/evidence/prototyping/completion-certificate.json`
+- `.qfai/evidence/prototyping/completion-certificate.json` (records
+  `designMdPath` + `designMdSha256`)
+
+## Frozen brand identity
+
+DESIGN.md is read once at cycle 0 and its sha256 is recorded in
+`prototyping.json`. Subsequent cycles re-hash and exit `2` on mismatch.
+To change brand identity mid-project, edit `DESIGN.md`, rerun
+`/qfai-sdd` Phase 0 to refreeze the lock, and start `/qfai-prototyping`
+from cycle 0.
