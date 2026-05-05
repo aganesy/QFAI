@@ -1106,6 +1106,89 @@ describe("qfai init", { timeout: 60000 }, () => {
     }
   });
 
+  // TC-1.4.1 — fresh init creates DESIGN.md at root with template byte content
+  it("ships DESIGN.md at root with template byte content (TC-1.4.1)", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-design-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      const designMdPath = path.join(root, "DESIGN.md");
+      const templatePath = path.join(getInitAssetsDir(), "root", "DESIGN.md");
+
+      const writtenBytes = await readFile(designMdPath);
+      const templateBytes = await readFile(templatePath);
+      expect(writtenBytes.equals(templateBytes)).toBe(true);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  // TC-1.4.2 — re-init without --force preserves user-modified DESIGN.md
+  it("preserves user-modified DESIGN.md across re-init without --force (TC-1.4.2)", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-design-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      const designMdPath = path.join(root, "DESIGN.md");
+      const userContent = "# my brand\n";
+      await writeFile(designMdPath, userContent, "utf-8");
+
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      expect(await readFile(designMdPath, "utf-8")).toBe(userContent);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  // TC-1.4.3 — --force does NOT overwrite a user-modified DESIGN.md
+  it("--force does not overwrite a user-modified DESIGN.md (TC-1.4.3)", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-design-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      const designMdPath = path.join(root, "DESIGN.md");
+      const userContent = "custom design\n";
+      await writeFile(designMdPath, userContent, "utf-8");
+
+      await runInit({ dir: root, force: true, dryRun: false, yes: true });
+
+      expect(await readFile(designMdPath, "utf-8")).toBe(userContent);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  // TC-1.4.4 — dry-run does not write DESIGN.md
+  it("dry-run does not write DESIGN.md (TC-1.4.4)", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-design-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: true, yes: true });
+      await expect(access(path.join(root, "DESIGN.md"))).rejects.toMatchObject({ code: "ENOENT" });
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  // TC-1.4.5 — init reports DESIGN.md as created on first run, skipped on second run
+  it("reports DESIGN.md as created on first run and skipped on second run (TC-1.4.5)", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-design-"));
+    try {
+      const firstRun = await captureStdout(async () => {
+        await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      });
+      expect(firstRun).toMatch(/created:\s*\d+/);
+
+      const secondRun = await captureStdout(async () => {
+        await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      });
+      expect(secondRun).toContain("skipped paths:");
+      expect(secondRun).toContain("DESIGN.md");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("does not track review-*/ subdirectories after init", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
     try {

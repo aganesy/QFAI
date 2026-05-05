@@ -54,6 +54,7 @@ export async function runInit(options: InitOptions): Promise<void> {
     force: false,
     dryRun: options.dryRun,
     conflictPolicy: "skip",
+    protect: ["DESIGN.md"],
   });
   const qfaiResult = await copyTemplateTree(qfaiAssets, destQfai, {
     force: false,
