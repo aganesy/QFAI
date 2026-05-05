@@ -3,11 +3,16 @@
  *
  * The reviewer (product-surface-reviewer) writes one of these per iteration
  * to `iter-NN/review.json`. The schema enforces:
- *   - 4 ordinal axes (weak / acceptable / strong / exceptional)
+ *   - 4 ordinal axes (weak / acceptable / strong / exceptional):
+ *     informationArchitecture, navigationFlow, usability, functionality
  *   - 200..500 word prose critique
- *   - Anti-slop detection cap: if `slopPatternsDetected.length > 0`,
- *     `originality` is bounded above by `acceptable` (cannot be `strong`
- *     or `exceptional`).
+ *   - Layout-anti-pattern detection cap: if
+ *     `layoutAntiPatternsDetected.length > 0`, `informationArchitecture`
+ *     is bounded above by `acceptable` (cannot be `strong` or
+ *     `exceptional`).
+ *   - DESIGN.md compliance: `designMdViolations[]` must be a valid
+ *     array of `{kind, found}` records. The cap rule does NOT apply to
+ *     dmv — dmv enforces a separate certify gate at convergence time.
  *   - Explicit `pivotDirective: continue | refine | pivot`
  *
  * The cap rule and word-count rule are enforced at construction time so
@@ -15,6 +20,7 @@
  * validator re-checks the same invariants.
  */
 
+import type { DesignMdViolation } from "./designMdViolations.js";
 import {
   isOrdinalScore,
   isPivotDirective,
@@ -25,17 +31,24 @@ import {
 export const PROSE_CRITIQUE_MIN_WORDS = 200;
 export const PROSE_CRITIQUE_MAX_WORDS = 500;
 
+export const ORDINAL_AXES = [
+  "informationArchitecture",
+  "navigationFlow",
+  "usability",
+  "functionality",
+] as const;
+
+export type OrdinalAxis = (typeof ORDINAL_AXES)[number];
+
+const VIOLATION_KINDS: ReadonlySet<string> = new Set(["color", "font", "radius", "shadow"]);
+
 export type EvaluatorReview = {
   readonly iterIndex: number;
   readonly reviewerId: string;
-  readonly scores: {
-    readonly designQuality: OrdinalScore;
-    readonly originality: OrdinalScore;
-    readonly craft: OrdinalScore;
-    readonly functionality: OrdinalScore;
-  };
+  readonly scores: Record<OrdinalAxis, OrdinalScore>;
   readonly proseCritique: string;
-  readonly slopPatternsDetected: readonly string[];
+  readonly layoutAntiPatternsDetected: readonly string[];
+  readonly designMdViolations: readonly DesignMdViolation[];
   readonly pivotDirective: PivotDirective;
   readonly evidenceRefs: {
     readonly screenshot: string;
@@ -51,6 +64,68 @@ export function countWords(text: string): number {
   return trimmed.split(/\s+/).length;
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function validateScores(input: BuildEvaluatorReviewInput): void {
+  const scores = input.scores as unknown;
+  if (!isRecord(scores)) {
+    throw new Error("buildEvaluatorReview: scores must be an object");
+  }
+  for (const axis of ORDINAL_AXES) {
+    if (!(axis in scores)) {
+      throw new Error(`buildEvaluatorReview: scores.${axis} is required`);
+    }
+    const score = scores[axis];
+    if (!isOrdinalScore(score)) {
+      throw new Error(
+        `buildEvaluatorReview: scores.${axis} must be one of weak|acceptable|strong|exceptional (got ${String(score)})`,
+      );
+    }
+  }
+}
+
+function validateDesignMdViolations(input: BuildEvaluatorReviewInput): void {
+  const dmv = input.designMdViolations as unknown;
+  if (!Array.isArray(dmv)) {
+    throw new Error("buildEvaluatorReview: designMdViolations must be an array");
+  }
+  for (let i = 0; i < dmv.length; i += 1) {
+    const entry = dmv[i] as unknown;
+    if (!isRecord(entry)) {
+      throw new Error(
+        `buildEvaluatorReview: designMdViolations[${i}] must be an object {kind, found}`,
+      );
+    }
+    if (typeof entry.kind !== "string" || !VIOLATION_KINDS.has(entry.kind)) {
+      throw new Error(
+        `buildEvaluatorReview: designMdViolations[${i}].kind must be one of color|font|radius|shadow (got ${String(entry.kind)})`,
+      );
+    }
+    if (typeof entry.found !== "string") {
+      throw new Error(
+        `buildEvaluatorReview: designMdViolations[${i}].found must be a string`,
+      );
+    }
+  }
+}
+
+function validateAntiPatternCap(input: BuildEvaluatorReviewInput): void {
+  if (!Array.isArray(input.layoutAntiPatternsDetected)) {
+    throw new Error("buildEvaluatorReview: layoutAntiPatternsDetected must be a string array");
+  }
+  if (input.layoutAntiPatternsDetected.length === 0) return;
+  const ia = input.scores.informationArchitecture;
+  if (ia === "strong" || ia === "exceptional") {
+    throw new Error(
+      "buildEvaluatorReview: informationArchitecture must be capped at acceptable when " +
+        `layoutAntiPatternsDetected[] is non-empty (current: ${ia}, ` +
+        `lap: [${input.layoutAntiPatternsDetected.join(", ")}])`,
+    );
+  }
+}
+
 export function buildEvaluatorReview(input: BuildEvaluatorReviewInput): EvaluatorReview {
   if (!Number.isInteger(input.iterIndex) || input.iterIndex < 0) {
     throw new Error("buildEvaluatorReview: iterIndex must be a non-negative integer");
@@ -59,14 +134,7 @@ export function buildEvaluatorReview(input: BuildEvaluatorReviewInput): Evaluato
     throw new Error("buildEvaluatorReview: reviewerId must be a non-empty string");
   }
 
-  for (const axis of ["designQuality", "originality", "craft", "functionality"] as const) {
-    const score = input.scores[axis];
-    if (!isOrdinalScore(score)) {
-      throw new Error(
-        `buildEvaluatorReview: scores.${axis} must be one of weak|acceptable|strong|exceptional (got ${String(score)})`,
-      );
-    }
-  }
+  validateScores(input);
 
   if (!isPivotDirective(input.pivotDirective)) {
     throw new Error(
@@ -81,19 +149,8 @@ export function buildEvaluatorReview(input: BuildEvaluatorReviewInput): Evaluato
     );
   }
 
-  // Anti-slop cap: originality cannot be strong/exceptional while any slop
-  // pattern is detected. The reviewer must not reward a generic
-  // AI-default-looking artifact with a high originality score, even if it
-  // scores well on other axes.
-  if (input.slopPatternsDetected.length > 0) {
-    if (input.scores.originality === "strong" || input.scores.originality === "exceptional") {
-      throw new Error(
-        "buildEvaluatorReview: originality cannot be strong or exceptional while " +
-          `slopPatternsDetected[] is non-empty (current: ${input.scores.originality}, ` +
-          `slop: [${input.slopPatternsDetected.join(", ")}])`,
-      );
-    }
-  }
+  validateDesignMdViolations(input);
+  validateAntiPatternCap(input);
 
   if (
     typeof input.evidenceRefs.screenshot !== "string" ||
@@ -110,7 +167,8 @@ export function buildEvaluatorReview(input: BuildEvaluatorReviewInput): Evaluato
     reviewerId: input.reviewerId,
     scores: { ...input.scores },
     proseCritique: input.proseCritique,
-    slopPatternsDetected: [...input.slopPatternsDetected],
+    layoutAntiPatternsDetected: [...input.layoutAntiPatternsDetected],
+    designMdViolations: input.designMdViolations.map((v) => ({ kind: v.kind, found: v.found })),
     pivotDirective: input.pivotDirective,
     evidenceRefs: {
       screenshot: input.evidenceRefs.screenshot,

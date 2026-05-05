@@ -72,12 +72,13 @@ async function seedPrototypingJson(
   iterations: Array<{
     index: number;
     scores: {
-      designQuality: string;
-      originality: string;
-      craft: string;
+      informationArchitecture: string;
+      navigationFlow: string;
+      usability: string;
       functionality: string;
     };
-    slopPatternsDetected?: string[];
+    layoutAntiPatternsDetected?: string[];
+    designMdViolations?: Array<{ kind: string; found: string }>;
   }>,
 ): Promise<void> {
   const dir = path.join(root, ".qfai/evidence/prototyping");
@@ -91,7 +92,8 @@ async function seedPrototypingJson(
         commitSha: "a".repeat(40),
         scores: it.scores,
         proseCritique: "x".repeat(1500),
-        slopPatternsDetected: it.slopPatternsDetected ?? [],
+        layoutAntiPatternsDetected: it.layoutAntiPatternsDetected ?? [],
+        designMdViolations: it.designMdViolations ?? [],
         pivotDirective: "continue",
         evidenceRefs: {
           screenshot: `.qfai/evidence/prototyping/iter-${String(it.index).padStart(2, "0")}/home.png`,
@@ -154,19 +156,20 @@ describe("runPrototypingIterate cycle 0", () => {
 
 // QFAI:SPEC-0017:TC-0017-0012
 describe("runPrototypingIterate convergence (exit 64)", () => {
-  it("returns 64 when latest iter has all 4 axes exceptional and no slop", async () => {
+  it("returns 64 when latest iter has all 4 axes exceptional and no anti-patterns", async () => {
     const root = await newTempDir();
     await seedMinimalProject(root);
     await seedPrototypingJson(root, [
       {
         index: 0,
         scores: {
-          designQuality: "exceptional",
-          originality: "exceptional",
-          craft: "exceptional",
+          informationArchitecture: "exceptional",
+          navigationFlow: "exceptional",
+          usability: "exceptional",
           functionality: "exceptional",
         },
-        slopPatternsDetected: [],
+        layoutAntiPatternsDetected: [],
+        designMdViolations: [],
       },
     ]);
 
@@ -174,7 +177,7 @@ describe("runPrototypingIterate convergence (exit 64)", () => {
     expect(exit).toBe(64);
   });
 
-  it("does NOT exit 64 when slop is present even with all-exceptional scores", async () => {
+  it("does NOT exit 64 when a layout anti-pattern is present even with all-exceptional scores", async () => {
     const root = await newTempDir();
     await seedMinimalProject(root);
     // Note: invariant-violating fixture intentionally bypasses
@@ -183,12 +186,13 @@ describe("runPrototypingIterate convergence (exit 64)", () => {
       {
         index: 0,
         scores: {
-          designQuality: "exceptional",
-          originality: "exceptional",
-          craft: "exceptional",
+          informationArchitecture: "exceptional",
+          navigationFlow: "exceptional",
+          usability: "exceptional",
           functionality: "exceptional",
         },
-        slopPatternsDetected: ["slop-001-shadcn-zinc"],
+        layoutAntiPatternsDetected: ["lap-001-saas-dashboard"],
+        designMdViolations: [],
       },
     ]);
 
@@ -205,9 +209,9 @@ describe("runPrototypingIterate max-iterations (exit 65)", () => {
     const iterations = Array.from({ length: 15 }, (_, i) => ({
       index: i,
       scores: {
-        designQuality: "acceptable",
-        originality: "acceptable",
-        craft: "acceptable",
+        informationArchitecture: "acceptable",
+        navigationFlow: "acceptable",
+        usability: "acceptable",
         functionality: "acceptable",
       },
     }));
@@ -263,9 +267,9 @@ describe("runPrototypingIterate continue (exit 0)", () => {
       {
         index: 0,
         scores: {
-          designQuality: "acceptable",
-          originality: "acceptable",
-          craft: "acceptable",
+          informationArchitecture: "acceptable",
+          navigationFlow: "acceptable",
+          usability: "acceptable",
           functionality: "acceptable",
         },
       },
@@ -310,9 +314,9 @@ describe("runPrototypingIterate continue (exit 0)", () => {
       {
         index: 13,
         scores: {
-          designQuality: "acceptable",
-          originality: "acceptable",
-          craft: "acceptable",
+          informationArchitecture: "acceptable",
+          navigationFlow: "acceptable",
+          usability: "acceptable",
           functionality: "acceptable",
         },
       },

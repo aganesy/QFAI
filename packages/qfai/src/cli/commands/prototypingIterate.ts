@@ -158,7 +158,8 @@ function emitStop(reason: StopReason): number {
   if (reason === "axes-exceptional") {
     info(
       "qfai prototyping iterate: convergence reached (all 4 axes exceptional, " +
-        "slopPatternsDetected=[]). Run `qfai prototyping certify` to seal the run.",
+        "layoutAntiPatternsDetected=[], designMdViolations=[]). " +
+        "Run `qfai prototyping certify` to seal the run.",
     );
     return 64;
   }
