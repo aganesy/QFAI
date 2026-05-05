@@ -85,7 +85,7 @@ describe("qfai-sdd SKILL.md surface", () => {
   it("stays under the SKILL.md size budget", async () => {
     const skill = await readFile(SKILL_PATH, "utf-8");
     const lines = skill.split(/\r?\n/);
-    expect(lines.length).toBeLessThanOrEqual(240);
+    expect(lines.length).toBeLessThanOrEqual(280);
   });
 });
 

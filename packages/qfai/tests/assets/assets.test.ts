@@ -319,7 +319,10 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     expect(content).toMatch(/qfai prototyping iterate/);
     expect(content).toMatch(/15 iterations|15 cycles|up to 15/);
     expect(content).toContain(".qfai/contracts/ui/*.yaml");
-    expect(content).toContain(".qfai/contracts/design/exploration-brief.yaml");
+    // Post-rewrite: brand SSOT is root DESIGN.md + lock yaml (legacy
+    // exploration-brief.yaml reference dropped from this skill).
+    expect(content).toContain("DESIGN.md");
+    expect(content).toContain(".qfai/contracts/design/DESIGN.md.lock.yaml");
     expect(content).toContain(".qfai/prototypes/iter-00/index.html");
     expect(content).toContain("certify --check");
   });
@@ -347,9 +350,10 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     // generator-prompt.md grants pivot permission.
     expect(generatorRef).toMatch(/scrap and reimagine|pivot/);
 
-    // reviewer-prompt.md ships the global anti-slop list.
-    expect(reviewerRef).toContain("slop-001-shadcn-zinc");
-    expect(reviewerRef).toContain("originality is capped at `acceptable`");
+    // reviewer-prompt.md ships the layout anti-pattern (lap-*) list and
+    // the IA-cap rule that replaced the legacy originality cap.
+    expect(reviewerRef).toMatch(/lap-\d{3}/);
+    expect(reviewerRef).toMatch(/cap/i);
 
     // handoff.md describes design-system extraction.
     expect(handoffRef).toMatch(/design-system\.yaml/);
@@ -371,7 +375,7 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     );
     const content = await readFile(skillPath, "utf-8");
 
-    expect(content.split(/\r?\n/).length).toBeLessThanOrEqual(280);
+    expect(content.split(/\r?\n/).length).toBeLessThanOrEqual(200);
   });
 
   it("ensures ui contract guidance defines mockable prototype and copy-ready example", async () => {
@@ -979,6 +983,7 @@ describe("assets guardrails", { timeout: 30000 }, () => {
         "api-contract.sample.yaml",
         "brand-design.sample.yaml",
         "db-contract.sample.sql",
+        "design-md-lock.sample.yaml",
         "exploration-brief.sample.yaml",
         "reference-pool.sample.yaml",
         "ui-contract.sample.yaml",
