@@ -25,13 +25,13 @@ spec-0013 (CAP-0013) で定義された、下流 skill が UI 定義を読み取
    - states
    - actions
 
-3. **Brand SSOT and Design Contracts** (UX-loop redesign — spec-0017)
+3. **Brand SSOT and Design Contracts** (UX-loop redesign — spec-0012 v2.0 / UX-loop absorbed)
    - `DESIGN.md` (repo root) — brand vision / visual identity SSOT (DCON-030)
    - `.qfai/contracts/design/DESIGN.md.lock.yaml` — sha256 hash freeze written by `/qfai-sdd` Phase 0 (DCON-031)
    - `.qfai/contracts/design/design-system.yaml` — deterministic mirror of DESIGN.md tokens, generated post-prototyping (DCON-005 / DCON-032 mirror validator)
    - `.qfai/contracts/design/prototype-handoff.yaml` — references finalIterIndex / finalArtifact / extractedDesignSystem (= design-system.yaml)
 
-   Removed (UX-loop redesign / spec-0017 OP-0011b — see `_policies/05_Contracts.md`):
+   Removed (UX-loop redesign / spec-0012 09_delta CHG-001 — see `_policies/05_Contracts.md`):
    - `exploration-brief.yaml`, `reference-pool.yaml`, `brand-design.yaml` — brand SSOT consolidated into root `DESIGN.md`
    - `evaluation-rubric.yaml`, `evaluator-calibration.yaml`, `absorption-policy.yaml`, `selected-direction.yaml` — evaluation now via code constants + DESIGN.md compliance gate
 

@@ -152,7 +152,7 @@ If you create this artifact, populate all 4 fields.
 - Current discussion-pack readiness does not block on missing `prototyping.yaml`.
 - When `prototyping.yaml` is present, prefer the canonical namespaced schema under the `prototyping:` key.
 - `recommended_mode` MUST be included in `allowed_modes`.
-- Mode invariant (spec-0017 REQ-0001): the three modes share obligations except for `maxCycles` (1 for `low-cost`, 3 for `standard`, 20 for `full-harness`). Picking a different mode does not relax any other gate.
+- Mode invariant (spec-0012 REQ-0012-0036): the three modes share obligations except for `maxCycles` (1 for `low-cost`, 3 for `standard`, 20 for `full-harness`). Picking a different mode does not relax any other gate.
 
 ## Suggested naming
 
