@@ -25,6 +25,11 @@
   - design contract readiness validator
   - non-UI safe skip behavior
   - waiver handling
+  - design-md / design-md-lock / design-system-mirror validators (DCON-030 / DCON-031 / DCON-032)
+  - prototyping evidence v3 validator (4 UX axes ordinal + layoutAntiPatternsDetected + designMdViolations + pivotDirective schema)
+  - layoutAntiPatternsDetected schema validator (`lap-001..008` whitelist)
+  - designMdViolations schema validator (`{category: color|font|radius|shadow, expected, found, location}` shape)
+  - `findDesignMdViolations(html, designMd)` purity / determinism contract
 - Out:
   - report rendering details
   - prototyping runtime execution
@@ -67,9 +72,20 @@
 - REQ-0022: `runCanonicalUixValidators` is limited to direct discussion-pack validation and is not the repo-root downstream primary path
 - REQ-0023: `validateBreakthroughEvidence` checks `.qfai/evidence/breakthrough.json` and branch execution evidence when trigger=true
 - REQ-0024: downstream skill prompt checks use read order `spec -> exploration-brief -> reference-pool -> evaluation-rubric -> evaluator-calibration -> selected-direction -> design-system -> ui contracts`
+- REQ-0025: `qfai validate --fail-on error` の DCON-030 が root `DESIGN.md` の存在 / 構造 (color / typography / radius / shadow token tables) を検証する
+- REQ-0026: DCON-031 が `.qfai/contracts/design/DESIGN.md.lock.yaml#sha256` と on-disk `DESIGN.md` sha256 の一致を検証する
+- REQ-0027: DCON-032 が `.qfai/contracts/design/design-system.yaml` の token tables が `DESIGN.md` のそれと byte-equivalent であることを検証する
+- REQ-0028: prototypingEvidenceV3 validator が `.qfai/evidence/prototyping/iter-NN/review.json` の 4 UX axes (informationArchitecture / navigationFlow / usability / functionality) ordinal score / 200..500 word prose critique / pivotDirective enum を schema 検証する
+- REQ-0029: `layoutAntiPatternsDetected` 配列が `lap-001-orphan-page` から `lap-008-no-back-affordance` の whitelist 外トークンを含む場合、validator は `QFAI-PROT-002` を error 重大度で報告する
+- REQ-0030: `designMdViolations` 配列が `{category: "color"|"font"|"radius"|"shadow", expected: string, found: string, location: string}` 形状のみを許容する
+- REQ-0031: `findDesignMdViolations(html, designMd)` は I/O / clock 依存を持たず、同一入力に対し同一出力を返す pure function である
 
 ## Entry points
 
 - US range in this spec: US-0004-0001..US-0004-0027
+- AC range: AC-0004-0001..AC-0004-0014
+- BR range: BR-0004-0001..BR-0004-0013
+- EX range: EX-0004-0001..EX-0004-0012
+- TC range: TC-0004-0001..TC-0004-0014
 - Primary actors: QA engineer, AI agent, CI pipeline
 - Notes: validate is the machine gate for current skill-first, contract-first downstream
