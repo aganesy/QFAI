@@ -8,3 +8,5 @@
 | BR-0010-0004 | AC-0010-0004 | Evaluator calibration must include negative examples of lenient critique.                       |
 | BR-0010-0005 | AC-0010-0005 | Review input bundle must state best-of-history handling for downstream critique loops.          |
 | BR-0010-0006 | AC-0010-0006 | Discussion may define inputs for selection, but winner selection itself belongs to prototyping. |
+| BR-0010-0007 | AC-0010-0007 | UI-bearing discussion packs MUST emit a root `DESIGN.md` with color / typography / radius / shadow token tables before downstream consumption. |
+| BR-0010-0008 | AC-0010-0008 | Legacy sidecar emission (`33_exploration_rubric.md`, `34_evaluator_calibration.md`, `30_exploration_brief.md`, `31_reference_pool.md`, `32_design_anti_goals.md`) is forbidden and must trigger a regression-class validator finding. |

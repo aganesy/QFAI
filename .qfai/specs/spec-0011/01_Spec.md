@@ -24,6 +24,8 @@
   - Evidence contract with per-item fresh evidence (RED/GREEN command+result)
   - Parallelization policy (independent SUT slices only, with worktree separation)
   - Visual Review Guard for UI-affecting items
+  - simplified `prototype-handoff.yaml` schema: `{finalIterIndex, finalArtifact, extractedDesignSystem, implementationNotes}` only (mustPreserve / mayAdapt / mustNotCopy triplets removed)
+  - `design-system.yaml` consumed as input (deterministic mirror of DESIGN.md tokens; NOT a per-iter HTML extraction)
 - Out:
   - Spec artifact authoring (belongs to `/qfai-sdd`)
   - Acceptance tests (belongs to `/qfai-atdd`)
@@ -65,7 +67,7 @@
 
 ## Entry points
 
-- US range in this spec: US-0011-0001..US-0011-0006
+- US range in this spec: US-0011-0001..US-0011-0008
 - Primary actors: Developer, AI Agent (frontend-engineer / backend-engineer), CI/CD pipeline
 - Notes: Each item goes through full Red/Green/Refactor cycle before the next item starts
 

@@ -83,3 +83,15 @@
 - EX-Ref: EX-0015-0008
 - AC-Refs: AC-0015-0001
 - Verify that migrated example EX-0015-0008 is covered by at least one test case.
+
+## TC-0015-0015: Prototyping Routing Rebuild
+
+- EX-Ref: EX-0015-0001
+- AC-Refs: AC-0015-0009
+- Verify that `/qfai-prototyping` v2.0 routing in `agent-routing.yml` resolves the orchestrator to product-experience-architect (generator), product-surface-reviewer (evaluator), and devops-ci-engineer (capture); same-Claude generator/reviewer assignment is rejected to avoid self-preference bias.
+
+## TC-0015-0016: Full-Harness Profile Drop From review-profiles.yml
+
+- EX-Ref: EX-0015-0001
+- AC-Refs: AC-0015-0009
+- Verify that `review-profiles.yml` no longer defines the `full-harness` profile and that only the `default` profile is active; references to `full-harness` in routing surfaces must surface a routing-config validator finding.

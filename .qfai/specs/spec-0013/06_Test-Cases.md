@@ -144,3 +144,24 @@ that predates this PR. Tracked for separate implementation as OQ-0016
 - AC-Refs: AC-0013-0007
 - Type: boundary
 - Verify that `validateTraceabilityIntegrity` does not raise an error when an evidence file is present but lacks the Diff Context section (an older evidence-format that predates the Diff Context contract). Forward-compatibility boundary for the validate gate (AC-0013-0007). Implemented in `packages/qfai/tests/core/traceabilityIntegrity.test.ts` under `describe("TDD-0014: evidence without Diff Context", ...)`.
+
+## TC-0013-0022: DESIGN.md sha256 Lock Written at Phase 0
+
+- EX-Ref: EX-0013-0012
+- AC-Refs: AC-0013-0015
+- Type: normal
+- Verify `/qfai-sdd` Phase 0 produces `.qfai/contracts/design/DESIGN.md.lock.yaml` with `sha256` matching `sha256(DESIGN.md bytes)` and a `lockedAt` ISO 8601 timestamp; absence of root `DESIGN.md` halts Phase 0 with an error-severity finding routed through the design contract validator family owned by spec-0004.
+
+## TC-0013-0023: Legacy Design Contracts Absent After SDD
+
+- EX-Ref: EX-0013-0013
+- AC-Refs: AC-0013-0016
+- Type: normal
+- Verify that after `/qfai-sdd` completes, `_policies/05_Contracts.md` Active Contract Sets / Design Contracts contains none of `exploration-brief.yaml`, `evaluation-rubric.yaml`, `evaluator-calibration.yaml`, `selected-direction.yaml`, `reference-pool.yaml`, `brand-design.yaml`. Historical annotations under `09_delta.md` are tolerated.
+
+## TC-0013-0024: Active Design Contract Index Snapshot
+
+- EX-Ref: EX-0013-0014
+- AC-Refs: AC-0013-0017
+- Type: normal
+- Verify the post-decomposition active design-contract entries are exactly `{design-system.yaml, prototype-handoff.yaml, DESIGN.md, DESIGN.md.lock.yaml, design-system mirror validator}` and that any extra active row triggers a contract-index validator finding.

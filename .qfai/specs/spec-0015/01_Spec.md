@@ -20,6 +20,8 @@
   - review profiles and gate rules
   - skill integration
   - prototyping evaluator/reviewer routing
+  - `/qfai-prototyping` v2.0 routing rebuild: orchestrator → product-experience-architect (generator) + product-surface-reviewer (evaluator) + devops-ci-engineer (capture); same-Claude generator/reviewer is forbidden (self-preference bias)
+  - `review-profiles.yml` drops the `full-harness` profile; only the `default` profile remains active
 - Out:
   - runtime execution engines
   - removed prototyping CLI behavior

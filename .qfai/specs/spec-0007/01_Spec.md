@@ -15,6 +15,7 @@
 
 - In: guardrails コマンドの全機能（list, extract, check）
 - Out: validate/init/report/doctor
+- Note: legacy concept reintroduction guard（旧 prototyping 概念 mode/full-harness/round/polish/concept-fit などの sanity grep 系）は将来の guardrail extension で扱う。現時点では既存の `check-no-internal-version-leakage.sh`（distributed-surface 系）以外の guardrail を本 spec の active surface に追加しない。
 
 ## Applicable NFR
 

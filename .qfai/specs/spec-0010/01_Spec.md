@@ -22,6 +22,8 @@
   - `34_evaluator_calibration.md`
   - `40_screen_contracts.md`
   - `50_review_input_bundle.md`
+  - root `DESIGN.md` draft authoring as Phase output (brand vision / visual identity SSOT for downstream)
+  - drop legacy sidecars (`uiux/33_exploration_rubric.md`, `uiux/34_evaluator_calibration.md`, `uiux/30_exploration_brief.md`, `uiux/31_reference_pool.md`, `uiux/32_design_anti_goals.md`) — DESIGN.md replaces them
 - Out:
   - legacy trend-derived scoring sidecar など旧 evaluation sidecar family
   - discussion 時点の brand archetype selection
@@ -52,5 +54,5 @@
 
 ## Entry points
 
-- US range in this spec: US-0010-0001..US-0010-0008
+- US range in this spec: US-0010-0001..US-0010-0010
 - Primary actors: QFAI user, discussion agents, reviewer

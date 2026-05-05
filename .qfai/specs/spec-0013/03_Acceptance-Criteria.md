@@ -67,3 +67,22 @@ Given a Stage 1 Triage row whose subject / rationale / spec name contains litera
 ## AC-0013-0014: Validate Pipeline Validator Registration Integrity
 
 Given a traceability validator declared in `packages/qfai/src/core/validators/`, when the validate pipeline (`packages/qfai/src/core/validate.ts`) is loaded, then the validator's registration MUST hold end-to-end as a single registration-integrity outcome. Partial wiring (one half present, the other missing) is treated as a single failure mode at AC granularity, not as 2 independent facets — internal decomposition of the registration contract (export presence under canonical name, import + invocation in `validate.ts`) is intentionally kept at the lower (rule) layer rather than at AC layer, so the AC stays outside the compound-AC facet-level gap class.
+
+## AC-0013-0015: SDD Phase 0 DESIGN.md sha256 Lock
+
+- Given root `DESIGN.md` exists at `/qfai-sdd` Phase 0 entry,
+- When Phase 0 completes,
+- Then `.qfai/contracts/design/DESIGN.md.lock.yaml` exists with `sha256: <hex>` matching `sha256(DESIGN.md bytes)` and a `lockedAt` ISO 8601 timestamp.
+- Missing root `DESIGN.md` halts Phase 0 and surfaces as an error-severity finding in the design contract validator family owned by spec-0004.
+
+## AC-0013-0016: Legacy Design Contracts Removed
+
+- Given a fresh `/qfai-sdd` run,
+- When `_policies/05_Contracts.md` Active Contract Sets / Design Contracts is read,
+- Then `exploration-brief.yaml`, `evaluation-rubric.yaml`, `evaluator-calibration.yaml`, `selected-direction.yaml`, `reference-pool.yaml`, and `brand-design.yaml` are NOT present in the active rows. History-only annotations remain permitted in `09_delta.md`.
+
+## AC-0013-0017: Active Design Contract Index = {design-system, prototype-handoff, DESIGN.md, DESIGN.md.lock.yaml, mirror validator}
+
+- Given the post-decomposition contract index,
+- When the active design-contract entries are listed,
+- Then the set is exactly `{design-system.yaml, prototype-handoff.yaml, DESIGN.md, DESIGN.md.lock.yaml, design-system mirror validator}`.

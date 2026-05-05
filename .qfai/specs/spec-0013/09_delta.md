@@ -53,3 +53,18 @@
 - updated: REQ-0014~0015 / US-0013-0008 / AC-0013-0008~0010 を current implementation に再同期
 - removed: prototyping.yaml 必須 preflight blocker 前提
 - rationale: `packages/qfai/src/core/discussionPack.ts` が side artifact requiredness を廃止し、`packages/qfai/src/core/preflight/sddPreflight.ts` は markdown readiness を主 blocker として扱うため
+
+## 2026-05-06 — CHG-001 — Absorbed SDD Phase 0 design lock + legacy design contract drop from spec-0017 (decomposition)
+
+| Op ID  | Op Type       | Target                                            | Summary                                                                                |
+| ------ | ------------- | ------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| OP-001 | UPDATE:APPEND | 01_Spec.md (Scope.In, Entry points US range)      | Phase 0 lock + legacy contract drop + active design-contract surface; US range → 0010  |
+| OP-002 | UPDATE:APPEND | 02_User-stories.md (US-0013-0009..0010)           | Phase 0 sha256 lock + active design-contract surface reduction                         |
+| OP-003 | UPDATE:APPEND | 03_Acceptance-Criteria.md (AC-0013-0015..0017)    | DESIGN.md lock + legacy removal + active index closed set                              |
+| OP-004 | UPDATE:APPEND | 04_Business-Rules.md (BR-0013-0012..0014)         | mirror BR layer for OP-003                                                             |
+| OP-005 | UPDATE:APPEND | 05_Examples.md (EX-0013-0012..0014)               | worked examples per AC                                                                 |
+| OP-006 | UPDATE:APPEND | 06_Test-Cases.md (TC-0013-0022..0024)             | test coverage per AC                                                                   |
+| OP-007 | UPDATE:APPEND | tdd/test-list.md (TDD rows for TC-0013-0022..0024)| TDD ledger sync                                                                        |
+
+- Approved By: yusuke_senaga
+- Notes: subjects originated from former spec-0017 (Prototyping v2.0 / UX-loop redesign decomposition). Validator-side enforcement of the lock and mirror invariants is owned by spec-0004; this spec only declares Phase 0 emission semantics.

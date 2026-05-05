@@ -10,9 +10,12 @@
 | TDD-0006 | TC-0010-0006 | integration | packages/qfai/tests/integration/discussionSkillTemplateIntegration.test.ts | uiux template directory が exploration family を持つ | done   | DR-0010-0002 | current integration test pass            |
 | TDD-0007 | TC-0010-0006 | integration | packages/qfai/tests/integration/discussionSkillTemplateIntegration.test.ts | SKILL.md が exploration artifact completion を要求   | done   | DR-0010-0001 | current integration test pass            |
 | TDD-0008 | TC-0010-0006 | integration | packages/qfai/tests/e2e/discussionHardeningE2E.test.ts                     | planner / exploration brief 中心の guidance          | done   | DR-0010-0001 | current e2e guidance test pass           |
-| TDD-0009 | TC-0010-0002 | integration | packages/qfai/tests/core/discussionDesignHardening.test.ts                 | required exploration sidecar completeness            | done   | DR-0010-0002 | current validator unit test pass         |
-| TDD-0010 | TC-0010-0006 | integration | packages/qfai/tests/core/discussionDesignHardening.integration.test.ts     | init 後 skill/template が exploration-first wording  | done   | DR-0010-0001 | current validator integration smoke pass |
+| TDD-0009 | TC-0010-0002 | integration | —                                                                          | required exploration sidecar completeness            | todo   | DR-NOTE-1    | pending — test file to be authored (CHG-001 follow-up) |
+| TDD-0010 | TC-0010-0006 | integration | —                                                                          | init 後 skill/template が exploration-first wording  | todo   | DR-NOTE-1    | pending — test file to be authored (CHG-001 follow-up) |
+| TDD-0011 | TC-0010-0007 | integration | —                                                                          | DESIGN.md draft as discussion phase output           | todo   | DR-NOTE-1    | pending — new TC introduced 2026-05-06 (CHG-001) |
+| TDD-0012 | TC-0010-0008 | integration | —                                                                          | legacy sidecars not emitted (regression guard)       | todo   | DR-NOTE-1    | pending — new TC introduced 2026-05-06 (CHG-001) |
 
 ## Notes
 
 - Legacy rows tied to discussion-time design-system generation and deleted v1.7.16-specific test files were removed because they no longer represent current executable coverage.
+- DR-NOTE-1 (2026-05-06 / CHG-001): TC-0010-0007 / TC-0010-0008 are introduced alongside the spec-0017 decomposition. Test files will be authored in the implementation Phase tracked at the parent plan; until then the rows stay `todo`.

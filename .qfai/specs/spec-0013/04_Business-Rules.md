@@ -80,3 +80,25 @@
 - A validator that is implemented but not wired (export missing OR import missing) is forbidden — the validate gate would silently skip it and the behavioral AC (validate gate error count == 0) would pass for the wrong reason.
 - Renaming a validator's export name without updating the import in `validate.ts` is treated as breakage of this rule (silent skip).
 - The export half and the import half are stated together at this BR layer because failure of either half collapses to the same observable outcome at AC layer (registration-integrity broken). Keeping the decomposition at BR layer rather than splitting AC-0013-0014 into 2 sub-ACs is a deliberate routing choice to avoid creating a new OQ-0019 known-instance.
+
+## BR-0013-0012: DESIGN.md sha256 Lock Authoritative
+
+- AC-Refs: AC-0013-0015
+
+- `/qfai-sdd` Phase 0 MUST hash root `DESIGN.md` with sha256 and write the result plus `lockedAt` (ISO 8601) to `.qfai/contracts/design/DESIGN.md.lock.yaml`.
+- A missing or unreadable `DESIGN.md` MUST halt Phase 0 with an error-severity finding routed through the design contract validator family owned by spec-0004.
+- The lock file is the authoritative source of `DESIGN.md` integrity for downstream skills.
+
+## BR-0013-0013: Legacy Design Contracts Disallowed
+
+- AC-Refs: AC-0013-0016
+
+- The active design-contract surface emitted by `/qfai-sdd` MUST NOT include `exploration-brief.yaml`, `evaluation-rubric.yaml`, `evaluator-calibration.yaml`, `selected-direction.yaml`, `reference-pool.yaml`, or `brand-design.yaml`.
+- Historical annotations of these files in `09_delta.md` are allowed solely as migration record and MUST NOT re-promote them to the active set.
+
+## BR-0013-0014: Active Design Contract Index Closed
+
+- AC-Refs: AC-0013-0017
+
+- The active design-contract entries are exactly `{design-system.yaml, prototype-handoff.yaml, DESIGN.md, DESIGN.md.lock.yaml, design-system mirror validator}`.
+- New design contracts MUST be added through an explicit slice change (CHG entry) and updated in `_policies/05_Contracts.md` simultaneously.

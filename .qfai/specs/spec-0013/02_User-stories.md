@@ -31,3 +31,11 @@ As a QFAI user, I want `09_delta.md` to include adoption/rejection rationale wit
 ## US-0013-0008: Discussion Markdown-Only Preflight
 
 As a QFAI user, I want SDD preflight to block only on discussion-pack markdown readiness, so that optional side artifacts do not prevent spec generation.
+
+## US-0013-0009: DESIGN.md sha256 Lock at Phase 0
+
+As a QFAI user, I want `/qfai-sdd` Phase 0 to freeze the root `DESIGN.md` sha256 into `.qfai/contracts/design/DESIGN.md.lock.yaml`, so that downstream skills can detect drift between the discussion-time design SSOT and any later edits.
+
+## US-0013-0010: Active Design Contract Surface Reduction
+
+As a QFAI maintainer, I want `/qfai-sdd` to stop emitting the legacy design contract family (`exploration-brief.yaml`, `evaluation-rubric.yaml`, `evaluator-calibration.yaml`, `selected-direction.yaml`, `reference-pool.yaml`, `brand-design.yaml`), so that the active design-contract index reduces to `design-system.yaml`, `prototype-handoff.yaml`, `DESIGN.md`, `DESIGN.md.lock.yaml`, and the design-system mirror validator.
