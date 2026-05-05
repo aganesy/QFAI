@@ -77,9 +77,8 @@ Execute the TDD micro-cycle for each pending item in `test-list.md`, transitioni
 - Review rendered output, screenshot evidence, or HTML output before closing any UI-affecting item.
 - Read spec + contract inputs first whenever implementation touches UI or critique-driven behavior.
 - Read order: `01_Spec.md` → `03_Acceptance-Criteria.md` → `05_Examples.md` →
-  `.qfai/contracts/design/exploration-brief.yaml` →
-  `.qfai/contracts/design/reference-pool.yaml` → `.qfai/contracts/design/brand-design.yaml` →
-  `.qfai/contracts/design/design-system.yaml` (extracted from final iter) →
+  root `DESIGN.md` → `.qfai/contracts/design/DESIGN.md.lock.yaml` →
+  `.qfai/contracts/design/design-system.yaml` (post-loop token mirror) →
   `.qfai/contracts/design/prototype-handoff.yaml` → `.qfai/contracts/ui/*.yaml` →
   canonical prototype evidence under `.qfai/evidence/prototyping/iter-NN/<screen>.{png,html}` →
   `.qfai/prototypes/final/index.html`.

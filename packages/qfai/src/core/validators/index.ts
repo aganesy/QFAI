@@ -36,7 +36,6 @@ export { validateTddList } from "./tddList.js";
 export { validateNavigationFlow } from "./navigationFlow.js";
 export { validateRenderCritique } from "./renderCritique.js";
 export { validateDesignFidelity } from "./designFidelity.js";
-export { validateDiscussionDesignHardening } from "./discussionDesignHardening.js";
 export { validateDesignAudit } from "./designAudit.js";
 export { loadLayoutAntiPatterns, findLayoutAntiPatterns } from "./layoutAntiPatterns.js";
 export type { LayoutAntiPattern, LayoutAntiPatternScope } from "./layoutAntiPatterns.js";

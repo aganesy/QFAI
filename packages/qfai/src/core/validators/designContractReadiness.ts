@@ -19,21 +19,6 @@ const DESIGN_MD_LOCK_REL_BASENAME = "DESIGN.md.lock.yaml";
 // tokens) and prototype-handoff.yaml.
 const REQUIRED_PROTOTYPING_DESIGN_FILES = ["design-system.yaml", "prototype-handoff.yaml"] as const;
 
-// Legacy contracts whose presence is now an explicit error; kept here so
-// projects upgrading from earlier QFAI versions get a directive issue
-// rather than a silent drift.
-const FORBIDDEN_LEGACY_DESIGN_FILES = [
-  "anchor-selection.yaml",
-  "evaluation-axes.yaml",
-  "evaluation-rubric.yaml",
-  "evaluator-calibration.yaml",
-  "absorption-policy.yaml",
-  "selected-direction.yaml",
-  "exploration-brief.yaml",
-  "reference-pool.yaml",
-  "brand-design.yaml",
-] as const;
-
 const REQUIRED_DESIGN_SYSTEM_CHECKLIST_KEYS = [
   "color",
   "typography",
@@ -116,27 +101,6 @@ async function validateDesignContractReadinessForStage(
           ),
         );
       }
-    }
-  }
-
-  for (const fileName of FORBIDDEN_LEGACY_DESIGN_FILES) {
-    const filePath = path.join(designDir, fileName);
-    try {
-      await readFile(filePath, "utf-8");
-      issues.push(
-        issue(
-          "QFAI-DCON-018",
-          `Legacy design contract is forbidden: ${fileName}.`,
-          "error",
-          toPosixRelative(root, filePath),
-          "designContractReadiness.legacyDesignContract",
-          undefined,
-          "canonical",
-          `Remove ${fileName}; brand SSOT now lives in root DESIGN.md and is frozen via DESIGN.md.lock.yaml.`,
-        ),
-      );
-    } catch {
-      // missing is expected
     }
   }
 

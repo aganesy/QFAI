@@ -47,19 +47,17 @@
 
 ## Exploration Direction Consistency
 
-<!-- Required for UI-bearing packs. Verifies sidecar-family alignment. -->
+<!-- Required for UI-bearing packs. Verifies brand SSOT and sidecar alignment. -->
 
-- Exploration brief: verify `uiux/30_exploration_brief.md` defines product intent, must-preserve interactions, brand signals, and differentiation targets
+- Brand SSOT: verify root `DESIGN.md` defines `brand`, `audience`, and `visual.*` tokens, and that `# Brand Philosophy` body documents product intent, must-preserve interactions, brand signals, and differentiation targets
 - Evaluation alignment: verify `uiux/33_exploration_rubric.md` and `uiux/34_evaluator_calibration.md` support skeptical evaluation and originality pressure
 - History handling: verify `uiux/50_review_input_bundle.md` documents best-of-history comparison instead of latest-only preference
 
 ## Sidecar Artifact Review Scope
 
-<!-- Required for UI-bearing packs. Reviews uiux/ sidecar artifacts. -->
+<!-- Required for UI-bearing packs. Reviews root DESIGN.md + uiux/ sidecar artifacts. -->
 
-- Verify exploration sidecars are present and complete (`30` to `34`, `40`, `50`)
-- Verify `uiux/30_exploration_brief.md` is specific enough to support divergent exploration
-- Verify `uiux/31_reference_pool.md` documents adopted, rejected, and locally translated references
+- Verify root `DESIGN.md` is specific enough to support divergent exploration (front-matter populated, `# Brand Philosophy` body written, do/don't and reference notes framed as deviate-from inputs)
 - Verify `uiux/33_exploration_rubric.md` weights design quality and originality explicitly
 - Verify `uiux/34_evaluator_calibration.md` contains good-critique / too-lenient / blandness-fail / originality-fail examples
 - Verify `uiux/50_review_input_bundle.md` preserves best-of-history handling

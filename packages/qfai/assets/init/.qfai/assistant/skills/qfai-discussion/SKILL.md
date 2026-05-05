@@ -43,9 +43,6 @@ Produce a unified 15-file discussion pack plus exploration-first UI sidecars so 
 
 UI-bearing packs must produce the following sidecars as primary truth:
 
-- `uiux/30_exploration_brief.md` (transitional — to be removed)
-- `uiux/31_reference_pool.md` (transitional — to be removed)
-- `uiux/32_design_anti_goals.md` (transitional — to be removed)
 - `uiux/40_screen_contracts.md`
 - `uiux/50_review_input_bundle.md`
 
@@ -54,12 +51,13 @@ In addition, UI-bearing packs MUST emit a draft brand SSOT at the
 
 - `<consuming-project-root>/DESIGN.md`
 
-This is the new brand SSOT consumed by `/qfai-sdd` (which freezes its
+This is the brand SSOT consumed by `/qfai-sdd` (which freezes its
 sha256 in `.qfai/contracts/design/DESIGN.md.lock.yaml`) and by
-`/qfai-prototyping` (which iterates against locked tokens). The 30 /
-31 / 32 sidecars are kept temporarily so existing downstream tooling
-keeps working during the transition; new prototyping skill reads only
-root `DESIGN.md` and the lock yaml.
+`/qfai-prototyping` (which iterates against locked tokens). Brand
+intent (product intent, brand signals, anti-goals, reference pool
+framed as deviate-from inputs) lives in `DESIGN.md` front-matter +
+`# Brand Philosophy` body — there is no longer a separate per-aspect
+sidecar.
 
 ## Required Process
 
@@ -82,10 +80,16 @@ For UI-bearing targets, follow `references/design-dna-intake.md` while authoring
 
 ## UI-bearing Authoring Requirements
 
-- `30_exploration_brief.md` must define product intent, brand signals, and differentiation targets.
-- `31_reference_pool.md` must define exploration references with adopted points, rejected points, and copy risk — framed as **deviate-from** inputs (not imitate-this) for downstream `/qfai-prototyping` reviewer.
-- `32_design_anti_goals.md` must contain explicit anti-goals; this also feeds the global anti-slop pattern list consulted by the prototyping reviewer.
-- `50_review_input_bundle.md` must document review inputs for downstream skills.
+- Root `DESIGN.md` front-matter must define `brand` (name, archetype,
+  voice), `audience` (emotion, do_not_look_like), and the full
+  `visual.*` token tree (colors, typography, spacing, radius, shadow).
+- `# Brand Philosophy` body in `DESIGN.md` documents do/don't, brand
+  signals, and exploration references framed as **deviate-from** inputs
+  (not imitate-this) for the downstream `/qfai-prototyping` reviewer.
+- `40_screen_contracts.md` must define each screen contract per the
+  template schema.
+- `50_review_input_bundle.md` must document review inputs for
+  downstream skills.
 
 Evaluation axes are global constants (4-step ordinal: weak / acceptable /
 strong / exceptional) and are not authored as discussion sidecars.

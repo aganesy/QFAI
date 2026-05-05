@@ -140,12 +140,12 @@ describe("qfai init", { timeout: 60000 }, () => {
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
 
       const discussionDir = path.join(root, ".qfai", "discussion");
-      const directUiuxFile = path.join(discussionDir, "uiux", "30_exploration_brief.md");
+      const directUiuxFile = path.join(discussionDir, "uiux", "40_screen_contracts.md");
       const generatedPackFile = path.join(
         discussionDir,
         "discussion-20260423174107000",
         "uiux",
-        "30_exploration_brief.md",
+        "40_screen_contracts.md",
       );
 
       await mkdir(path.dirname(directUiuxFile), { recursive: true });
@@ -173,12 +173,12 @@ describe("qfai init", { timeout: 60000 }, () => {
       };
 
       expect(await checkIgnore(".qfai/discussion/README.md")).toContain(".qfai/discussion/*");
-      expect(await checkIgnore(".qfai/discussion/uiux/30_exploration_brief.md")).toContain(
+      expect(await checkIgnore(".qfai/discussion/uiux/40_screen_contracts.md")).toContain(
         ".qfai/discussion/*",
       );
       expect(
         await checkIgnore(
-          ".qfai/discussion/discussion-20260423174107000/uiux/30_exploration_brief.md",
+          ".qfai/discussion/discussion-20260423174107000/uiux/40_screen_contracts.md",
         ),
       ).toContain(".qfai/discussion/*");
     } finally {

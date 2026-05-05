@@ -319,8 +319,8 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     expect(content).toMatch(/qfai prototyping iterate/);
     expect(content).toMatch(/15 iterations|15 cycles|up to 15/);
     expect(content).toContain(".qfai/contracts/ui/*.yaml");
-    // Post-rewrite: brand SSOT is root DESIGN.md + lock yaml (legacy
-    // exploration-brief.yaml reference dropped from this skill).
+    // Post-rewrite: brand SSOT is root DESIGN.md + lock yaml; legacy
+    // per-aspect brand yaml references are dropped from this skill.
     expect(content).toContain("DESIGN.md");
     expect(content).toContain(".qfai/contracts/design/DESIGN.md.lock.yaml");
     expect(content).toContain(".qfai/prototypes/iter-00/index.html");
@@ -976,16 +976,13 @@ describe("assets guardrails", { timeout: 30000 }, () => {
       absolute: false,
     });
 
-    // v2.0 (spec-0017 P4): the v1.x rubric/calibration/absorption-policy/
-    // selected-direction templates were removed.
+    // Per-aspect brand yaml contracts were removed; root DESIGN.md +
+    // DESIGN.md.lock.yaml are the brand SSOT.
     expect(templates.sort()).toEqual(
       [
         "api-contract.sample.yaml",
-        "brand-design.sample.yaml",
         "db-contract.sample.sql",
         "design-md-lock.sample.yaml",
-        "exploration-brief.sample.yaml",
-        "reference-pool.sample.yaml",
         "ui-contract.sample.yaml",
       ].sort(),
     );

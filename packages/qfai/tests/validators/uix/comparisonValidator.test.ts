@@ -39,25 +39,6 @@ describe("comparisonValidator", () => {
     const root = await newTempDir();
     await createUiBearingPack(root);
     await writeFile(
-      path.join(root, "uiux", "30_exploration_brief.md"),
-      [
-        "# Exploration Brief",
-        "",
-        "## Product Intent",
-        "Clarify the most important decision on the dashboard.",
-        "",
-        "## Must-preserve Interactions",
-        "- Filters stay visible.",
-        "",
-        "## Brand Signals",
-        "- Calm confidence",
-        "",
-        "## Differentiation Targets",
-        "- Avoid default SaaS admin-shell patterns",
-      ].join("\n"),
-      "utf-8",
-    );
-    await writeFile(
       path.join(root, "uiux", "33_exploration_rubric.md"),
       [
         "# Exploration Rubric",
@@ -100,32 +81,9 @@ describe("comparisonValidator", () => {
     expect(issues).toHaveLength(0);
   });
 
-  it("fail: exploration brief missing", async () => {
-    const root = await newTempDir();
-    await createUiBearingPack(root);
-
-    const issues = await validateOptionComparison(root, defaultConfig);
-
-    expect(issues.some((i) => i.code === "UIX-VAL-DIRECTION-BRIEF-MISSING")).toBe(true);
-  });
-
   it("fail: rubric incomplete", async () => {
     const root = await newTempDir();
     await createUiBearingPack(root);
-    await writeFile(
-      path.join(root, "uiux", "30_exploration_brief.md"),
-      [
-        "## Product Intent",
-        "x",
-        "## Must-preserve Interactions",
-        "x",
-        "## Brand Signals",
-        "x",
-        "## Differentiation Targets",
-        "x",
-      ].join("\n"),
-      "utf-8",
-    );
     await writeFile(
       path.join(root, "uiux", "33_exploration_rubric.md"),
       "# Exploration Rubric\n\n## Design Quality\nx\n",

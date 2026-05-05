@@ -22,7 +22,7 @@ import { issue, readSafe } from "./utils.js";
 
 const RENDERED_KEYWORDS_RE = /\b(rendered|screenshot|html\b|preview|visual\s*review)/i;
 const SPEC_RE = /\b(01_spec|03_acceptance-criteria|spec-|\bspec\b)\b/i;
-const EXPLORATION_BRIEF_RE = /\b(exploration-brief|exploration\s*brief|30_exploration_brief)\b/i;
+const EXPLORATION_BRIEF_RE = /\b(exploration-brief|exploration\s*brief)\b/i;
 const DESIGN_SYSTEM_RE = /\b(design-system|design\s*system|designsystemchecklist)\b/i;
 const PROTOTYPE_HANDOFF_RE = /\b(prototype-handoff|prototype\s*handoff)\b/i;
 const UI_CONTRACTS_RE = /\b(contracts\/ui|ui\s*contracts|screen\s*contracts)\b/i;

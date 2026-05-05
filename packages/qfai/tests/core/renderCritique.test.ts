@@ -42,26 +42,6 @@ describe("Render Critique Loop validation", { timeout: 15000 }, () => {
     await mkdir(designDir, { recursive: true });
     await mkdir(uiDir, { recursive: true });
     await writeFile(
-      path.join(designDir, "exploration-brief.yaml"),
-      "product_intent: Clarify the main path\nmust_preserve_interactions: [search]\nbrand_signals: [calm confidence]\ndifferentiation_targets: [avoid default shell]\n",
-      "utf-8",
-    );
-    await writeFile(
-      path.join(designDir, "evaluation-rubric.yaml"),
-      "weighted_axes: [design_quality, originality]\nhard_floor_axes: [functionality, accessibility]\n",
-      "utf-8",
-    );
-    await writeFile(
-      path.join(designDir, "evaluator-calibration.yaml"),
-      "good_critique_examples: [specific]\ntoo_lenient_examples: [generic praise]\nblandness_fail_examples: [template copy]\noriginality_fail_examples: [near copy]\n",
-      "utf-8",
-    );
-    await writeFile(
-      path.join(designDir, "selected-direction.yaml"),
-      "chosen_direction_id: direction-02\nwinning_rationale: strong hierarchy\ncarry_forward_rules: [keep headline scale]\n",
-      "utf-8",
-    );
-    await writeFile(
       path.join(designDir, "design-system.yaml"),
       "checklist:\n  color: []\n  typography: []\n  spacing: []\n  border_radius: []\n  shadow: []\n  dos_and_donts: []\n  component_tone: []\n  motion_rules: []\n",
       "utf-8",
@@ -91,7 +71,7 @@ describe("Render Critique Loop validation", { timeout: 15000 }, () => {
         "",
         "Take a screenshot of the rendered page and review it in the browser.",
         "",
-        "Read order: `.qfai/specs/spec-0001/01_Spec.md` -> `.qfai/contracts/design/exploration-brief.yaml` -> `.qfai/contracts/design/design-system.yaml` -> `.qfai/contracts/design/prototype-handoff.yaml` -> `.qfai/contracts/ui/*.yaml`.",
+        "Read order: `.qfai/specs/spec-0001/01_Spec.md` -> exploration-brief content from DESIGN.md -> `.qfai/contracts/design/design-system.yaml` -> `.qfai/contracts/design/prototype-handoff.yaml` -> `.qfai/contracts/ui/*.yaml`.",
       ].join("\n"),
     );
     const issues = await validateRenderCritique(root, makeConfig());
@@ -108,7 +88,7 @@ describe("Render Critique Loop validation", { timeout: 15000 }, () => {
         "",
         "Review the rendered HTML and screenshot output in the browser.",
         "",
-        "Read order: `.qfai/specs/spec-0001/01_Spec.md` -> `.qfai/contracts/design/exploration-brief.yaml` -> `.qfai/contracts/design/prototype-handoff.yaml` -> `.qfai/contracts/ui/*.yaml`.",
+        "Read order: `.qfai/specs/spec-0001/01_Spec.md` -> exploration-brief content from DESIGN.md -> `.qfai/contracts/design/prototype-handoff.yaml` -> `.qfai/contracts/ui/*.yaml`.",
       ].join("\n"),
     );
 

@@ -128,19 +128,14 @@ describe("reviewer rejection/re-approval cycle", () => {
 
 // QFAI:SPEC-0003:TC-0003-0052
 describe("TC-0003-0052: canonical template generation", () => {
-  it("verifies exploration-first UIX templates exist after init (v2.0)", async () => {
+  it("verifies UI-bearing UIX templates exist after init", async () => {
     const files = await readdir(uiuxTemplateDir);
+    // Brand-level inputs moved to root DESIGN.md; only screen-level
+    // sidecars remain.
     const canonicalTemplates = files.filter((f) =>
-      [
-        "30_exploration_brief.md",
-        "31_reference_pool.md",
-        "32_design_anti_goals.md",
-        "40_screen_contracts.md",
-        "50_review_input_bundle.md",
-      ].includes(f),
+      ["40_screen_contracts.md", "50_review_input_bundle.md"].includes(f),
     );
-    // v2.0 (spec-0017 P4): 33_exploration_rubric.md and 34_evaluator_calibration.md removed.
-    expect(canonicalTemplates.length).toBeGreaterThanOrEqual(5);
+    expect(canonicalTemplates.length).toBeGreaterThanOrEqual(2);
     for (const tpl of canonicalTemplates) {
       await expect(access(path.join(uiuxTemplateDir, tpl))).resolves.toBeUndefined();
     }

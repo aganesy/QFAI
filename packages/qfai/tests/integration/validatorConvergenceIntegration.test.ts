@@ -75,16 +75,19 @@ describe("TC-0004-0017: Canonical UIX aggregator path verification", () => {
 // TC-0004-0018: exploration-first family filename expectations
 // ---------------------------------------------------------------------------
 
-describe("TC-0004-0018: exploration-first family filename expectations", () => {
-  it("threeLayer validator recognizes the exploration-first sidecar family", async () => {
+describe("TC-0004-0018: canonical sidecar family filename expectations", () => {
+  it("threeLayer validator recognizes the canonical screen-level sidecar family", async () => {
     const validatorSrc = await readFile(
       path.join(repoRoot, "packages", "qfai", "src", "core", "validators", "uix", "threeLayer.ts"),
       "utf-8",
     );
-    expect(validatorSrc).toContain("30_exploration_brief.md");
-    expect(validatorSrc).toContain("31_reference_pool.md");
+    // Brand-level inputs (product intent / brand signals / anti-goals
+    // / reference pool) live in root DESIGN.md; threeLayer asserts only
+    // screen-level sidecars + the legacy-format guards.
     expect(validatorSrc).toContain("33_exploration_rubric.md");
     expect(validatorSrc).toContain("34_evaluator_calibration.md");
+    expect(validatorSrc).toContain("40_screen_contracts.md");
+    expect(validatorSrc).toContain("50_review_input_bundle.md");
   });
 });
 

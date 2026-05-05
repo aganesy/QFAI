@@ -41,12 +41,10 @@ UI-bearing discussion packs may include `prototyping.yaml` as an optional recomm
 For UI-bearing packs, use:
 
 - `04_Sources.md` for trend translation and competitive reference registry
-- `uiux/30_exploration_brief.md`
-- `uiux/31_reference_pool.md`
-- `uiux/32_design_anti_goals.md`
+- `DESIGN.md` (root) — brand SSOT draft (front-matter + `# Brand Philosophy` body); `/qfai-sdd` Phase 0 freezes it into `.qfai/contracts/design/DESIGN.md.lock.yaml`
 - `uiux/40_screen_contracts.md`
 
-Discussion is exploration-first and must not choose a single visual winner or final design system. Those are downstream prototyping outputs.
+Discussion is exploration-first and must not choose a single visual winner or final design system. The brand decision is captured once in root `DESIGN.md`; downstream prototyping consumes the frozen tokens.
 
 ## `prototyping.yaml`
 

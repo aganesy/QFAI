@@ -34,11 +34,11 @@ const LEGACY_FOUR_AXIS_SECTIONS = [
   "design quality",
 ];
 
+// Brand-level inputs (product intent / brand signals / anti-goals / reference
+// pool) now live in root DESIGN.md and are validated separately via
+// designContractReadiness. Only screen-level UX sidecars remain here.
 const CANONICAL_REQUIRED_SIDECAR_FILES = [
   "00_index.md",
-  "30_exploration_brief.md",
-  "31_reference_pool.md",
-  "32_design_anti_goals.md",
   "33_exploration_rubric.md",
   "34_evaluator_calibration.md",
   "40_screen_contracts.md",

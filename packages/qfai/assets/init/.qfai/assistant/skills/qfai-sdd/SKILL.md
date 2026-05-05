@@ -229,10 +229,8 @@ When the target spec is UI-bearing, Phase 0 MUST freeze the brand SSOT:
    - `schemaTokens.colors`, `fontFamilies`, `radii`, `shadows`
      enumerated per the sample.
 5. Record the freeze in `_policies/05_Contracts.md` under the Contract
-   Index. The lock yaml plus root `DESIGN.md` together replace the
-   legacy yaml contracts (`brand-design.yaml`,
-   `exploration-brief.yaml`, `reference-pool.yaml`), which are
-   deprecated and slated for removal.
+   Index. The lock yaml plus root `DESIGN.md` are the only brand
+   contract; per-aspect brand yaml contracts have been removed.
 
 `/qfai-prototyping` re-checks the lock sha256 against the live
 `DESIGN.md` on every cycle and exits 2 on mismatch.

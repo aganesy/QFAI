@@ -58,6 +58,7 @@ describe("validate.ts QFAI-DCON-* known codes (TC-3.9.x)", () => {
       "QFAI-DCON-015",
       "QFAI-DCON-016",
       "QFAI-DCON-017",
+      "QFAI-DCON-018",
       "QFAI-DCON-020",
       "QFAI-DCON-021",
     ]) {
@@ -65,7 +66,7 @@ describe("validate.ts QFAI-DCON-* known codes (TC-3.9.x)", () => {
     }
   });
 
-  it("TC-3.9.3: gap-allowed numbering preserved (005/009/012/013/018/019/030/031/032 present)", async () => {
+  it("TC-3.9.3: gap-allowed numbering preserved (005/009/012/013/019/030/031/032 present)", async () => {
     const src = await readSrc("validate.ts");
     for (const preserved of [
       "QFAI-DCON-001",
@@ -73,7 +74,6 @@ describe("validate.ts QFAI-DCON-* known codes (TC-3.9.x)", () => {
       "QFAI-DCON-009",
       "QFAI-DCON-012",
       "QFAI-DCON-013",
-      "QFAI-DCON-018",
       "QFAI-DCON-019",
       "QFAI-DCON-030",
       "QFAI-DCON-031",

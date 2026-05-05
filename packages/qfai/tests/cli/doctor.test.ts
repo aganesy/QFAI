@@ -433,16 +433,10 @@ describe("doctor", { timeout: 60000 }, () => {
     try {
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
       await seedPrototypingFixture(root, server.url);
-      await writeFile(
-        path.join(root, ".qfai", "contracts", "design", "selected-direction.yaml"),
-        [
-          "chosen_direction_id: direction-02",
-          "winning_rationale: This must be produced after prototyping, not before it.",
-          "carry_forward_rules:",
-          "  - Keep the asymmetrical hero and condensed headline pairing",
-        ].join("\n"),
-        "utf-8",
-      );
+      // Remove the brand SSOT to trigger DCON-030; this is the canonical
+      // pre-prototyping blocker now that legacy yaml enforcement (DCON-018)
+      // is dropped.
+      await rm(path.join(root, "DESIGN.md"), { force: true });
 
       const parsed = await readDoctorData(root, { profile: "prototyping", targetUrl: server.url });
       expect(findCheck(parsed.checks, "prototyping.designContracts")?.severity).toBe("error");
@@ -713,9 +707,7 @@ async function seedPrototypingFixture(root: string, targetUrl: string): Promise<
     "utf-8",
   );
   // Phase 3b: brand SSOT lives in root DESIGN.md plus a sha freeze in
-  // contracts/design/DESIGN.md.lock.yaml. Legacy yamls
-  // (exploration-brief / reference-pool / brand-design) are now
-  // FORBIDDEN_LEGACY and would raise DCON-018.
+  // contracts/design/DESIGN.md.lock.yaml.
   const designMdText = [
     "---",
     "brand:",

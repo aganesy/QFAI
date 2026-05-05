@@ -30,23 +30,20 @@ Freeze procedure:
 DESIGN.md tokens) and `.qfai/contracts/design/prototype-handoff.yaml`.
 SDD does not author these.
 
-## Deprecated yaml contracts (transitional)
+## Removed yaml contracts (permanent)
 
-The following yaml contracts are **deprecated** and will be removed in
-a follow-up phase. Do not author them for new specs. They remain
-referenced only by historical specs:
+The legacy per-aspect brand yaml contracts have been **removed**. The
+brand SSOT is now root `DESIGN.md` only, frozen via the procedure
+above. Do not regenerate or reintroduce these files. Their content is
+subsumed by `DESIGN.md`:
 
-- `.qfai/contracts/design/exploration-brief.yaml`
-- `.qfai/contracts/design/reference-pool.yaml`
-- `.qfai/contracts/design/brand-design.yaml`
-
-Their concepts are subsumed by `DESIGN.md`:
-
-- `exploration-brief.yaml` → `DESIGN.md` `brand` + `audience` +
+- brand archetype / voice / audience → `DESIGN.md` `brand` + `audience` +
   `# Brand Philosophy` body.
-- `reference-pool.yaml` → `audience.do_not_look_like` and the **Don't**
-  subsection of `# Brand Philosophy`.
-- `brand-design.yaml` → `visual.*` token tree.
+- negative references / things-to-avoid →
+  `audience.do_not_look_like` and the **Don't** subsection of
+  `# Brand Philosophy`.
+- color / typography / spacing / radius / shadow tokens →
+  `DESIGN.md` `visual.*` token tree.
 
 The following contracts MUST NOT be generated (the corresponding
 concepts do not exist in the current prototyping skill):
@@ -60,20 +57,15 @@ concepts do not exist in the current prototyping skill):
 - `selected-direction.yaml` — winner selection is not used; the latest
   accepted iteration is always the artifact.
 
-## Legacy mapping (transitional, to be removed)
+## Sidecar mapping
 
-For specs still consuming the deprecated yaml contracts:
+The remaining UI-bearing sidecar maps to its contract as follows:
 
-- `30_exploration_brief.md` → `exploration-brief.yaml`
-- `31_reference_pool.md` → `reference-pool.yaml`
-- `30_exploration_brief.md` + `32_design_anti_goals.md` →
-  `brand-design.yaml`
 - `40_screen_contracts.md` → `.qfai/contracts/ui/*.yaml`
 
 `33_exploration_rubric.md` and `34_evaluator_calibration.md` are not
 produced by `/qfai-discussion`. Project-specific anti-pattern notes
-live in `audience.do_not_look_like` of `DESIGN.md` (and, transitionally,
-`32_design_anti_goals.md`).
+live in `audience.do_not_look_like` of `DESIGN.md`.
 
 ## Normalization Rules
 

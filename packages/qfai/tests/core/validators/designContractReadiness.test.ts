@@ -7,7 +7,6 @@
  *
  * Plus preserved checks:
  *   - REQUIRED_PROTOTYPING_DESIGN_FILES (design-system.yaml, prototype-handoff.yaml)
- *   - DCON-018 forbidden legacy yaml
  *   - DCON-019 premature prototyping contract (sdd stage)
  */
 
@@ -158,19 +157,6 @@ describe("validateSddDesignContractReadiness (TC-3.8.x)", () => {
     expect(issues.map((i) => i.code)).toContain("QFAI-DCON-031");
   });
 
-  it("TC-3.8.4: legacy yaml present → DCON-018 still raised", async () => {
-    const root = await newTempDir();
-    await seedUiBearingProject(root);
-    await seedDesignMdAndLock(root);
-    await writeFile(
-      path.join(root, ".qfai/contracts/design/brand-design.yaml"),
-      "brand_personality: [precise]\n",
-      "utf-8",
-    );
-    const issues = await validateSddDesignContractReadiness(root, defaultConfig);
-    expect(issues.map((i) => i.code)).toContain("QFAI-DCON-018");
-  });
-
   it("TC-3.8.5: REQUIRED_PROTOTYPING_DESIGN_FILES preserved (prototyping stage)", async () => {
     const root = await newTempDir();
     await seedUiBearingProject(root);
@@ -201,17 +187,11 @@ describe("validateSddDesignContractReadiness (TC-3.8.x)", () => {
   it("TC-3.8.7: multi-issue aggregation (no short-circuit)", async () => {
     const root = await newTempDir();
     await seedUiBearingProject(root);
-    // Forbidden legacy yaml + missing DESIGN.md + missing lock + missing prototyping yamls
-    await writeFile(
-      path.join(root, ".qfai/contracts/design/brand-design.yaml"),
-      "brand_personality: [x]\n",
-      "utf-8",
-    );
+    // Missing DESIGN.md + missing lock + missing prototyping yamls
     const issues = await validatePrototypingDesignContractReadiness(root, defaultConfig);
     const codes = new Set(issues.map((i) => i.code));
     expect(codes.has("QFAI-DCON-030")).toBe(true);
     expect(codes.has("QFAI-DCON-031")).toBe(true);
-    expect(codes.has("QFAI-DCON-018")).toBe(true);
     expect(codes.has("QFAI-DCON-001")).toBe(true);
   });
 

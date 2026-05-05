@@ -29,42 +29,9 @@ export async function validateExplorationArtifacts(
   if (!(await isUiBearingSpec(root))) return [];
 
   const issues: Issue[] = [];
-  const briefPath = path.join(root, "uiux", "30_exploration_brief.md");
   const rubricPath = path.join(root, "uiux", "33_exploration_rubric.md");
   const calibrationPath = path.join(root, "uiux", "34_evaluator_calibration.md");
   const reviewBundlePath = path.join(root, "uiux", "50_review_input_bundle.md");
-
-  const briefContent = await readSafe(briefPath);
-  if (!briefContent) {
-    issues.push(
-      canonicalIssue(
-        "UIX-VAL-DIRECTION-BRIEF-MISSING",
-        "30_exploration_brief.md is required for exploration-first prototyping.",
-        "error",
-        "uiux/30_exploration_brief.md",
-        "Create uiux/30_exploration_brief.md with product intent, brand signals, and differentiation targets.",
-      ),
-    );
-  } else {
-    for (const heading of [
-      "## Product Intent",
-      "## Must-preserve Interactions",
-      "## Brand Signals",
-      "## Differentiation Targets",
-    ]) {
-      if (!briefContent.includes(heading)) {
-        issues.push(
-          canonicalIssue(
-            "UIX-VAL-DIRECTION-BRIEF-INCOMPLETE",
-            `30_exploration_brief.md is missing required section '${heading}'.`,
-            "error",
-            "uiux/30_exploration_brief.md",
-            `Add ${heading} to uiux/30_exploration_brief.md.`,
-          ),
-        );
-      }
-    }
-  }
 
   const rubricContent = await readSafe(rubricPath);
   if (!rubricContent) {

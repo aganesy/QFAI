@@ -47,7 +47,6 @@ import {
   validateTddList,
   validateUiDefinitionConsistency,
   validateDesignAudit,
-  validateDiscussionDesignHardening,
   validateNavigationFlow,
   validateRenderCritique,
   validateDesignFidelity,
@@ -138,7 +137,6 @@ async function runDiscussionValidators(
     ...(await validateDiscussionMermaid(root)),
     ...(await validateDiscussionPackReadiness(root, config)),
     ...(await validateDiscussionVisuals(root)),
-    ...(await validateDiscussionDesignHardening(root, config)),
     ...(await validateResearchSummary(root, config)),
     ...(await runCanonicalUixValidators(root, config)),
   ];

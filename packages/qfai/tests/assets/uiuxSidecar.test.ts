@@ -29,23 +29,14 @@ describe("uiux sidecar templates", { timeout: 15000 }, () => {
     return readFile(path.join(templateDir, filename), "utf-8");
   }
 
-  it("exploration-first sidecar family を配布する (v2.0: 33/34 削除)", async () => {
+  it("UI-bearing sidecar family を配布する (brand SSOT は root DESIGN.md)", async () => {
     const files = await fg(["*.md"], { cwd: uiuxDir, absolute: false });
-    expect(files).toContain("30_exploration_brief.md");
-    expect(files).toContain("31_reference_pool.md");
-    expect(files).toContain("32_design_anti_goals.md");
+    // Brand-level inputs moved to root DESIGN.md; only screen-level
+    // sidecars remain.
     expect(files).toContain("40_screen_contracts.md");
     expect(files).toContain("50_review_input_bundle.md");
-    // v2.0 (spec-0017 P4): 33_exploration_rubric / 34_evaluator_calibration are removed.
     expect(files).not.toContain("33_exploration_rubric.md");
     expect(files).not.toContain("34_evaluator_calibration.md");
-  });
-
-  it("30_exploration_brief.md が探索条件を定義している", async () => {
-    const content = await readTemplate("30_exploration_brief.md");
-    expect(content).toContain("## Product Intent");
-    expect(content).toContain("## Brand Signals");
-    expect(content).toContain("## Differentiation Targets");
   });
 
   it("40_screen_contracts.md は screen contract 強スキーマを維持する", async () => {
@@ -64,9 +55,10 @@ describe("uiux sidecar templates", { timeout: 15000 }, () => {
     expect(content).toMatch(/best-of-history/i);
   });
 
-  it("SKILL.md が exploration-first completion condition を説明している", async () => {
+  it("SKILL.md が UI-bearing completion condition を説明している", async () => {
     const content = await readFile(skillMdPath, "utf-8");
-    expect(content).toMatch(/30_exploration_brief\.md/);
+    // Brand SSOT is root DESIGN.md, frozen by /qfai-sdd Phase 0.
+    expect(content).toMatch(/DESIGN\.md/);
     expect(content).toMatch(/non-ui|skip/i);
   });
 

@@ -471,8 +471,6 @@ const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-DCON-012": "prototype-handoff.yaml must parse as an object-shaped YAML document.",
   "QFAI-DCON-013":
     "prototype-handoff.yaml must contain source prototypes, surface profiles, screens, visual DNA, and implementation handoff guidance.",
-  "QFAI-DCON-018":
-    "Legacy design contracts are forbidden; brand SSOT lives in root DESIGN.md frozen by DESIGN.md.lock.yaml.",
   "QFAI-DCON-019":
     "design-system.yaml and prototype-handoff.yaml are produced by /qfai-prototyping, not /qfai-sdd.",
   "QFAI-DCON-030":

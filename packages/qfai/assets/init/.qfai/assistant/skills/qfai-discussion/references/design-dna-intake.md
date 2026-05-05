@@ -55,13 +55,5 @@ read `qfai-prototyping/references/design-md-spec.md` and use the
 sample at `qfai-prototyping/templates/DESIGN.md.sample` as a starting
 shape.
 
-## Transitional sidecars
-
-The 30 / 31 / 32 sidecar files (`uiux/30_exploration_brief.md`,
-`uiux/31_reference_pool.md`, `uiux/32_design_anti_goals.md`) continue
-to be written for now so legacy tooling keeps working, but they are no
-longer the SSOT. New prototyping skill reads only root `DESIGN.md` and
-the lock yaml. The sidecars will be removed in a follow-up phase.
-
 Evaluation axes are global constants (4-step ordinal: weak / acceptable
 / strong / exceptional) and are not authored as discussion sidecars.
