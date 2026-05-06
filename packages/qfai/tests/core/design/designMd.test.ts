@@ -356,6 +356,41 @@ describe("parseDesignMd (TC-1.1.x)", () => {
     expect(result.error.path).toBe("visual.typography.weight");
   });
 
+  it("accessibility as a scalar is rejected at parse-time (codex AHHiE)", () => {
+    // Pre-fix `if (isRecord(raw.accessibility))` silently skipped a
+    // present-but-non-record value, so `accessibility: false` hashed
+    // into DESIGN.md.lock while downstream consumers got
+    // `accessibility: undefined` and lost the contrast/motion gates.
+    const lastShadowLine = '    lg: "0 12px 24px rgba(15,23,42,0.10)"';
+    const text = VALID_FRONT_MATTER.replace(
+      lastShadowLine,
+      `${lastShadowLine}\naccessibility: false`,
+    );
+    const result = parseDesignMd(text);
+    expect("error" in result).toBe(true);
+    if (!("error" in result)) return;
+    expect(result.error.code).toBe("invalid-type");
+    expect(result.error.path).toBe("accessibility");
+  });
+
+  it("visual.spacing as a scalar is rejected at parse-time (codex AHHiH)", () => {
+    // Pre-fix `if (isRecord(raw.spacing))` silently skipped a
+    // present-but-non-record value, so `spacing: "0.25rem"` hashed
+    // into DESIGN.md.lock while downstream consumers got no spacing
+    // tokens and the mirror cross-check would accept a handoff that
+    // omitted spacing entirely.
+    const lastShadowLine = '    lg: "0 12px 24px rgba(15,23,42,0.10)"';
+    const text = VALID_FRONT_MATTER.replace(
+      lastShadowLine,
+      `${lastShadowLine}\n  spacing: "0.25rem"`,
+    );
+    const result = parseDesignMd(text);
+    expect("error" in result).toBe(true);
+    if (!("error" in result)) return;
+    expect(result.error.code).toBe("invalid-type");
+    expect(result.error.path).toBe("visual.spacing");
+  });
+
   it("accessibility.contrast_ratio_min as a string literal is rejected at parse-time (codex 9KB8)", () => {
     // Pre-fix the type-mismatch branch silently dropped the authored
     // value, so `contrast_ratio_min: "4.5"` hashed into the lock while

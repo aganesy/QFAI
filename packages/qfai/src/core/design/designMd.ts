@@ -386,6 +386,21 @@ function buildDesignMd(raw: unknown): BuildResult {
     }
     data.audience = aud;
   }
+  // codex AHHiE: reject present-but-non-record `accessibility`. Pre-fix
+  // `if (isRecord(raw.accessibility))` silently skipped a scalar/array
+  // (`accessibility: false`, `accessibility: "wcag-aa"`), letting the
+  // invalid value hash into the lock while downstream iterate / certify
+  // saw `accessibility: undefined` — the same SSOT-divergence pattern
+  // the typography token-block fix (AG08u) closed.
+  if ("accessibility" in raw && raw.accessibility !== undefined && !isRecord(raw.accessibility)) {
+    return {
+      error: {
+        path: "accessibility",
+        code: "invalid-type",
+        message: `'accessibility' must be a mapping (got ${describeValueShape(raw.accessibility)}).`,
+      },
+    };
+  }
   if (isRecord(raw.accessibility)) {
     // Reject unknown keys under `accessibility` for the same reason as
     // every other section: silently dropping authoring directives lets
@@ -679,6 +694,23 @@ function readVisual(raw: unknown): { value: DesignMd["visual"] } | { error: Pars
     radius: radius as DesignMdRadius,
     shadow: shadow as DesignMdShadow,
   };
+  // codex AHHiH: reject present-but-non-record `visual.spacing`. Pre-fix
+  // `if (isRecord(raw.spacing))` silently skipped a scalar/array
+  // (`spacing: "0.25rem"`, `spacing: [0,4,8]`), letting the invalid
+  // value hash into the lock while the parsed DesignMd had no spacing
+  // tokens — the mirror cross-check would then accept a handoff that
+  // omitted spacing entirely. Same SSOT-divergence pattern the
+  // typography token-block fix (AG08u) and accessibility section fix
+  // (AHHiE) close.
+  if ("spacing" in raw && raw.spacing !== undefined && !isRecord(raw.spacing)) {
+    return {
+      error: {
+        path: "visual.spacing",
+        code: "invalid-type",
+        message: `'visual.spacing' must be a mapping (got ${describeValueShape(raw.spacing)}).`,
+      },
+    };
+  }
   if (isRecord(raw.spacing)) {
     const SPACING_ALLOWED_KEYS = new Set(["base", "scale"]);
     const spacingError = rejectUnknownKeys(raw.spacing, SPACING_ALLOWED_KEYS, {
