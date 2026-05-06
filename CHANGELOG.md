@@ -172,7 +172,19 @@
   DESIGN.md) as a DCON-005 with the rationale "the mirror must be
   a verbatim copy of DESIGN.md (no fabricated keys)". The contract
   is now structurally enforced: the mirror's per-section key set
-  must be set-equal to DESIGN.md's.
+  must be set-equal to DESIGN.md's. The reverse loop accepts an
+  `optionalKeys` whitelist so legitimate nested optional sub-keys
+  (`typography.scale`, `typography.weight`) handled by dedicated
+  helpers do not surface as fabricated false-positives.
+- **designContractReadiness: handoff cross-check skips placeholders**:
+  The `designMdPath` / `designMdSha256` cross-check skip predicate
+  now also excludes `PLACEHOLDER_RE` matches (`tbd`, `todo`, `n/a`,
+  etc.). Pre-fix, an operator who left `designMdPath: TBD` saw two
+  DCON-013 entries for the same authoring fix — once from the
+  upstream string-field gate (which already rejects placeholders),
+  once from the cross-check ("TBD is not DESIGN.md"). Post-fix,
+  the cross-check defers to the upstream gate; only one DCON-013
+  fires per placeholder field.
 - **designContractReadiness: parse DESIGN.md even without lock**:
   `parseDesignMd` is no longer gated on `lockText !== null`. A
   UI-bearing project in the common initial state (DESIGN.md

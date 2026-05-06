@@ -539,6 +539,103 @@ describe("validateSddDesignContractReadiness (TC-3.8.x)", () => {
     expect(dcon005[0]?.message).toContain("#1F2937");
   });
 
+  it("legitimate full mirror with typography.scale + weight passes (no false-positive 'fabricated key' DCON-005)", async () => {
+    // Aganesy 7FTv: pre-fix, the bidir mirror cross-check fired
+    // DCON-005 on `typography.scale` / `typography.weight` keys
+    // because they weren't in the `compare()` expected set, even
+    // though they are legitimate optional mirror sub-keys per
+    // qfai-prototyping/references/handoff.md. Post-fix, the bidir
+    // reverse loop accepts an `optionalKeys` whitelist that
+    // includes scale/weight. A legitimate full mirror that copies
+    // both must pass without any DCON-005 fabricated-key noise.
+    const root = await newTempDir();
+    await seedUiBearingProject(root);
+    const designMdWithFull = VALID_DESIGN_MD.replace(
+      '    family_mono:    "JetBrains Mono, ui-monospace, monospace"',
+      '    family_mono:    "JetBrains Mono, ui-monospace, monospace"\n    scale:\n      base: "1rem"\n      lg: "1.25rem"\n    weight:\n      regular: 400\n      bold: 700',
+    );
+    await writeFile(path.join(root, "DESIGN.md"), designMdWithFull, "utf-8");
+    const designDir = path.join(root, ".qfai/contracts/design");
+    await mkdir(designDir, { recursive: true });
+    await writeFile(
+      path.join(designDir, "DESIGN.md.lock.yaml"),
+      [
+        'designMdPath: "DESIGN.md"',
+        `designMdSha256: "${hashDesignMd(designMdWithFull)}"`,
+        'frozenAt: "2026-05-05T00:00:00Z"',
+        "",
+      ].join("\n"),
+      "utf-8",
+    );
+    // Legitimate mirror that copies scale + weight verbatim.
+    await writeFile(
+      path.join(designDir, "design-system.yaml"),
+      VALID_MIRROR_YAML.replace(
+        '    family_mono: "JetBrains Mono, ui-monospace, monospace"',
+        '    family_mono: "JetBrains Mono, ui-monospace, monospace"\n    scale:\n      base: "1rem"\n      lg: "1.25rem"\n    weight:\n      regular: 400\n      bold: 700',
+      ),
+      "utf-8",
+    );
+    await writeFile(
+      path.join(designDir, "prototype-handoff.yaml"),
+      [
+        "finalIterIndex: 1",
+        'finalArtifact: ".qfai/prototypes/final/index.html"',
+        'designMdPath: "DESIGN.md"',
+        `designMdSha256: "${hashDesignMd(designMdWithFull)}"`,
+        'designSystemMirror: ".qfai/contracts/design/design-system.yaml"',
+        'implementationNotes: "test"',
+        "",
+      ].join("\n"),
+      "utf-8",
+    );
+    const issues = await validatePrototypingDesignContractReadiness(root, defaultConfig);
+    const dcon005 = issues.filter((i) => i.code === "QFAI-DCON-005");
+    expect(dcon005).toEqual([]);
+  });
+
+  it("placeholder designMdPath ('TBD') triggers single DCON-013 from string-field gate, not double-fire", async () => {
+    // Aganesy 6ll3: pre-fix, the cross-check would fire a SECOND
+    // DCON-013 on a placeholder value ("TBD is not DESIGN.md")
+    // even though the upstream string-field loop already DCON-013s
+    // it for being a placeholder. Post-fix, the cross-check skip
+    // predicate also excludes PLACEHOLDER_RE matches.
+    const root = await newTempDir();
+    await seedUiBearingProject(root);
+    await seedDesignMdAndLock(root);
+    await seedPrototypingDesignYamls(root);
+    await writeFile(
+      path.join(root, ".qfai/contracts/design/prototype-handoff.yaml"),
+      [
+        "finalIterIndex: 1",
+        'finalArtifact: ".qfai/prototypes/final/index.html"',
+        'designMdPath: "TBD"',
+        'designMdSha256: "TODO"',
+        'designSystemMirror: ".qfai/contracts/design/design-system.yaml"',
+        'implementationNotes: "test"',
+        "",
+      ].join("\n"),
+      "utf-8",
+    );
+    const issues = await validatePrototypingDesignContractReadiness(root, defaultConfig);
+    const dcon013Path = issues.filter(
+      (i) => i.code === "QFAI-DCON-013" && i.message.includes("designMdPath"),
+    );
+    const dcon013Sha = issues.filter(
+      (i) => i.code === "QFAI-DCON-013" && i.message.includes("designMdSha256"),
+    );
+    // Exactly ONE DCON-013 per placeholder field (from the upstream
+    // string-field gate); the cross-check must NOT add a second.
+    expect(dcon013Path.length).toBe(1);
+    expect(dcon013Sha.length).toBe(1);
+    // The single DCON-013 should be the "non-empty string" message
+    // from the string-field gate, not the cross-check's wording.
+    expect(dcon013Path[0]?.message).toContain("must be a non-empty string");
+    expect(dcon013Path[0]?.message).not.toContain("must be 'DESIGN.md'");
+    expect(dcon013Sha[0]?.message).toContain("must be a non-empty string");
+    expect(dcon013Sha[0]?.message).not.toContain("64-char");
+  });
+
   it("optional visual.spacing in DESIGN.md must be mirrored verbatim → DCON-005 on divergence", async () => {
     // Codex 696D: optional DESIGN.md tokens are also part of the
     // verbatim-mirror contract when DESIGN.md authors them. A

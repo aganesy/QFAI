@@ -508,9 +508,22 @@ async function validatePrototypeHandoff(
   // while silently binding downstream `/qfai-implement` to a DESIGN.md
   // identity that diverges from the frozen root lock. Skip when the
   // upstream string-field gate already reported a problem (avoid
-  // double-flagging a missing/non-string field).
+  // double-flagging the same root cause):
+  //   - missing / non-string values are caught by the string-field
+  //     loop above;
+  //   - `tbd` / `todo` / `n/a` / `none` / `placeholder` / `example` /
+  //     `lorem` / `to be defined` placeholder values are also caught
+  //     by the string-field loop's `PLACEHOLDER_RE` check, so the
+  //     skip predicate explicitly excludes them here too. Without
+  //     the placeholder skip, an operator who left
+  //     `designMdPath: TBD` would see two DCON-013 entries for the
+  //     same fix (replace TBD with the real path).
   const designMdPath = parsed.value.designMdPath;
-  if (typeof designMdPath === "string" && designMdPath.trim().length > 0) {
+  if (
+    typeof designMdPath === "string" &&
+    designMdPath.trim().length > 0 &&
+    !PLACEHOLDER_RE.test(designMdPath.trim())
+  ) {
     // The handoff contract pins the brand SSOT to the repo root
     // DESIGN.md. Accept either the bare basename or `./DESIGN.md`,
     // normalize separators so Windows-authored handoffs are not
@@ -532,7 +545,11 @@ async function validatePrototypeHandoff(
     }
   }
   const designMdSha = parsed.value.designMdSha256;
-  if (typeof designMdSha === "string" && designMdSha.trim().length > 0) {
+  if (
+    typeof designMdSha === "string" &&
+    designMdSha.trim().length > 0 &&
+    !PLACEHOLDER_RE.test(designMdSha.trim())
+  ) {
     const lower = designMdSha.trim().toLowerCase();
     if (!DESIGN_MD_SHA_HEX_RE.test(lower)) {
       issues.push(
@@ -594,6 +611,12 @@ function crossCheckMirrorValues(
   const compare = (
     section: "colors" | "typography" | "radius" | "shadow",
     expected: Record<string, string>,
+    // Keys handled by dedicated helpers (e.g. typography.scale /
+    // typography.weight live one level deeper and have non-string
+    // values; they are cross-checked by `crossCheckTypographyScale`
+    // / `crossCheckTypographyWeight` separately). The reverse loop
+    // skips them so they are not flagged as "fabricated keys" here.
+    optionalKeys: ReadonlySet<string> = new Set(),
   ): void => {
     const mirror = visual[section];
     if (!isRecord(mirror)) return;
@@ -635,8 +658,13 @@ function crossCheckMirrorValues(
     // pass certify and travel to `/qfai-implement` as validated
     // content. The handoff contract is "verbatim mirror" -> the key
     // sets must match in both directions.
+    //
+    // `optionalKeys` lists keys handled by a separate helper (e.g.
+    // typography.scale / typography.weight) — they are legitimate
+    // mirror sub-keys per `qfai-prototyping/references/handoff.md`
+    // and must NOT surface as fabricated here.
     for (const key of Object.keys(mirror)) {
-      if (!(key in expected)) {
+      if (!(key in expected) && !optionalKeys.has(key)) {
         issues.push(
           issue(
             "QFAI-DCON-005",
@@ -653,11 +681,20 @@ function crossCheckMirrorValues(
     }
   };
   compare("colors", rootDesignMd.visual.colors);
-  compare("typography", {
-    family_sans: rootDesignMd.visual.typography.family_sans,
-    family_display: rootDesignMd.visual.typography.family_display,
-    family_mono: rootDesignMd.visual.typography.family_mono,
-  });
+  compare(
+    "typography",
+    {
+      family_sans: rootDesignMd.visual.typography.family_sans,
+      family_display: rootDesignMd.visual.typography.family_display,
+      family_mono: rootDesignMd.visual.typography.family_mono,
+    },
+    // typography.scale / typography.weight are nested optional
+    // tokens with non-string values, handled by dedicated helpers
+    // below. Whitelist them in the bidir-loop's reverse direction
+    // so a legitimate mirror that includes them does not surface
+    // as "fabricated keys".
+    new Set(["scale", "weight"]),
+  );
   compare("radius", rootDesignMd.visual.radius);
   compare("shadow", rootDesignMd.visual.shadow);
 

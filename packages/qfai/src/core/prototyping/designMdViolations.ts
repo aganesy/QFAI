@@ -36,14 +36,21 @@ const CSS_URL_RE = /\burl\s*\([^)]*\)/gi;
 // covered by the literal scanner; this regex catches the
 // keyword-as-value path so `color: red` cannot slip past certify just
 // because the literal isn't hex/rgb/hsl. The list includes both the
-// dedicated *-color longhands AND the common shorthands (`background`,
-// `border`, `border-{top,right,bottom,left}`, `outline`) — the
-// shorthand grammar lets a named color sit anywhere in the value
-// (e.g. `border: 1px solid red`, `background: red url(...) repeat`),
+// dedicated *-color longhands AND the common shorthands
+// (`background`, `border`, `border-{top,right,bottom,left}`,
+// `outline`, `text-decoration`, `column-rule`) — the shorthand
+// grammar lets a named color sit anywhere in the value (e.g.
+// `border: 1px solid red`, `background: red url(...) repeat`,
+// `text-decoration: underline red`, `column-rule: 1px solid red`),
 // and the per-token loop in scanColors splits the captured value on
 // whitespace to find the color token among non-color shorthand
-// tokens (`1px`, `solid`, `repeat`, etc., which are silently ignored
-// because they aren't in CSS_NAMED_COLORS).
+// tokens (`1px`, `solid`, `repeat`, `underline`, etc., which are
+// silently ignored because they aren't in CSS_NAMED_COLORS).
+//
+// `border-image` is intentionally NOT included — its color slot is
+// rare in real prototypes and the value grammar is more complex
+// (4-slice numeric tokens). Can revisit if real authoring patterns
+// require it.
 const COLOR_PROP_RE =
   /\b(?:color|background|background-color|border|border-top|border-right|border-bottom|border-left|border-color|border-top-color|border-right-color|border-bottom-color|border-left-color|outline|outline-color|fill|stroke|caret-color|text-decoration|text-decoration-color|column-rule|column-rule-color)\s*:\s*([^;}<>"']+)/gi;
 // Property-value regexes capture up to the next `;`, `}`, `<`, `>`, or
