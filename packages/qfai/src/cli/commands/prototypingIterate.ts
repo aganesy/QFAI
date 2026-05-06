@@ -216,11 +216,10 @@ export async function runPrototypingIterate(
     // the next-cycle index and the validator's per-index check would
     // reject the next iter with a delayed error. Catch the corrupt
     // history at the command boundary instead.
-    const gapIndex = recordedIterations.findIndex(
-      (it, i) =>
-        !(it !== null && typeof it === "object" && !Array.isArray(it)) ||
-        (it as { index?: unknown }).index !== i,
-    );
+    const gapIndex = recordedIterations.findIndex((it, i) => {
+      if (!isRecord(it)) return true;
+      return it.index !== i;
+    });
     if (gapIndex !== -1) {
       error(
         `qfai prototyping iterate: prototyping.json#iterations[${gapIndex}].index ` +
@@ -255,10 +254,13 @@ export async function runPrototypingIterate(
     // FROZEN one — meaning iterations can exercise spec B while the
     // certificate still claims spec A. Fail fast at the boundary.
     const frozenSpecs = readFrozenSpecsCovered(protoRecord);
-    if (
-      frozenSpecs !== null &&
-      (frozenSpecs.length !== specs.length || frozenSpecs[0] !== specs[0])
-    ) {
+    // Compare element-wise. Today `specs` is always a single-element
+    // array (resolved primary spec id), but `specsCovered` is a
+    // multi-element array per the prototyping.json schema, and the
+    // contract is "every covered spec must match across cycles". A
+    // first-element-only check (`frozenSpecs[0] !== specs[0]`) would
+    // silently let a future multi-spec loop drift on non-zero indices.
+    if (frozenSpecs !== null && !arraysShallowEqual(frozenSpecs, specs)) {
       error(
         "qfai prototyping iterate: prototyping.json#specsCovered (" +
           `${JSON.stringify(frozenSpecs)}) differs from the currently-resolved ` +
@@ -435,6 +437,24 @@ function asIterations(record: PrototypingJsonShape): readonly unknown[] {
   // a shape this loader does not actually verify.
   const iterations = record.iterations;
   return Array.isArray(iterations) ? iterations : [];
+}
+
+// User-defined type predicate so the gap-check above can read `.index`
+// without a bare `as` cast (CLAUDE.md project rule: "avoid bare `as`
+// type assertions; prefer type narrowing"). Equivalent to the
+// `isRecord` helpers scattered across the codebase; left local here
+// rather than re-exported from a SSOT module to keep the iterate
+// command boundary self-contained.
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function arraysShallowEqual(a: readonly string[], b: readonly string[]): boolean {
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i += 1) {
+    if (a[i] !== b[i]) return false;
+  }
+  return true;
 }
 
 type SeedMetadata = {

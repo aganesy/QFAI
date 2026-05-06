@@ -647,6 +647,47 @@ describe("runPrototypingIterate cycle N hash gate (TC-3.5.x)", () => {
     expect(await runPrototypingIterate({ root, cycle: 3 })).toBe(2);
   });
 
+  it("rejects iterations entry that is null (corrupt non-object shape) with exit 2", async () => {
+    // Pin the gap-check predicate's `it === null` branch. A corrupt
+    // history with a `null` entry must surface at iterate (not slip
+    // through to the validator one cycle later).
+    const root = await newTempDir();
+    await seedMinimalProject(root);
+    await seedRawPrototypingJson(root, {
+      specsCovered: ["0001"],
+      designMd: { path: "DESIGN.md", sha256: hashDesignMd(CANONICAL_DESIGN_MD) },
+      iterations: [{ index: 0 }, null],
+    });
+    expect(await runPrototypingIterate({ root, cycle: 2 })).toBe(2);
+  });
+
+  it("rejects iterations entry that is an array (corrupt non-record shape) with exit 2", async () => {
+    // Pin the `Array.isArray(it)` branch — a YAML directive that
+    // accidentally produces an array element here is rejected at
+    // command boundary.
+    const root = await newTempDir();
+    await seedMinimalProject(root);
+    await seedRawPrototypingJson(root, {
+      specsCovered: ["0001"],
+      designMd: { path: "DESIGN.md", sha256: hashDesignMd(CANONICAL_DESIGN_MD) },
+      iterations: [{ index: 0 }, []],
+    });
+    expect(await runPrototypingIterate({ root, cycle: 2 })).toBe(2);
+  });
+
+  it("rejects iterations entry that is a scalar (corrupt non-object shape) with exit 2", async () => {
+    // Pin the `typeof it !== "object"` branch — a stray string /
+    // number entry in iterations[] is rejected at command boundary.
+    const root = await newTempDir();
+    await seedMinimalProject(root);
+    await seedRawPrototypingJson(root, {
+      specsCovered: ["0001"],
+      designMd: { path: "DESIGN.md", sha256: hashDesignMd(CANONICAL_DESIGN_MD) },
+      iterations: [{ index: 0 }, "broken"],
+    });
+    expect(await runPrototypingIterate({ root, cycle: 2 })).toBe(2);
+  });
+
   it("rejects mid-loop primary-spec change (cycle 1 with frozen specsCovered != resolved spec) with exit 2", async () => {
     const root = await newTempDir();
     await seedMinimalProject(root);

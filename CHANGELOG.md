@@ -80,6 +80,32 @@
   or a stale arbitrary sha could pass `qfai validate` while binding
   downstream `/qfai-implement` to a DESIGN.md identity that diverges
   from the frozen root lock.
+- **DESIGN.md `visual.spacing` strict-parse**: `parseDesignMd` now
+  rejects `visual.spacing.base` values with leading / trailing
+  whitespace (e.g. `" 0.25rem "`) at parse time, and requires
+  `visual.spacing.scale` to be a finite-number array per the
+  canonical `design-md-spec.md` (`scale: number[]`). Mixed
+  number/string entries (`[0, "wide"]`) and non-array values are
+  rejected with `invalid-type` / `invalid-format` errors. Without
+  this, malformed spacing tokens could freeze into the DESIGN.md
+  lock and the design-system.yaml mirror, then surface as render-
+  time CSS rejections at the `/qfai-implement` step. The
+  `DesignMd["visual"]["spacing"]["scale"]` type tightens from
+  `Array<number | string>` to `number[]`.
+- **iterate gap-check uses typed isRecord predicate**:
+  `prototypingIterate.ts` corrupt-history check no longer carries a
+  bare `as { index?: unknown }` assertion. A local `isRecord` user-
+  defined type predicate guards `it.index` access through control-
+  flow narrowing, satisfying the project rule "avoid bare `as` type
+  assertions; prefer type narrowing".
+- **iterate frozen-specs check compares element-wise**:
+  `prototypingIterate.ts` cycle >= 1 spec-frozen check now uses
+  `arraysShallowEqual` instead of comparing only the first element.
+  Today `specs` is single-element, but `specsCovered` is a
+  multi-element array per the prototyping.json schema, and the
+  contract is "every covered spec must match across cycles" — a
+  first-element-only check would silently drift on non-zero indices
+  if the loop ever extends to multi-spec coverage.
 - **DESIGN.md typography scale/weight allowlist**: `parseDesignMd()`
   now rejects unknown nested keys under `visual.typography.scale`
   (allowed: `xs sm base lg xl 2xl 3xl`) and

@@ -75,7 +75,9 @@ export type DesignMd = {
     };
     spacing?: {
       base?: string;
-      scale?: Array<number | string>;
+      // Per the canonical design-md-spec.md, `scale` is `number[]`.
+      // Mixed-type arrays are rejected at parse-time.
+      scale?: number[];
     };
     radius: DesignMdRadius;
     shadow: DesignMdShadow;
@@ -553,15 +555,81 @@ function readVisual(raw: unknown): { value: DesignMd["visual"] } | { error: Pars
     });
     if (spacingError) return { error: spacingError };
     const sp: NonNullable<DesignMd["visual"]["spacing"]> = {};
-    if (typeof raw.spacing.base === "string") sp.base = raw.spacing.base;
-    if (Array.isArray(raw.spacing.scale)) {
-      sp.scale = raw.spacing.scale.filter(
-        (v): v is number | string => typeof v === "number" || typeof v === "string",
-      );
+    // `visual.spacing.base` is a CSS length token. Strict parse: must
+    // be a non-empty string with no leading / trailing whitespace,
+    // and not a placeholder. The downstream design-system.yaml mirror
+    // is a verbatim copy, so accepting `" 0.25rem "` here would
+    // freeze padded tokens into the lock and surface as render-time
+    // surprises (`padding: " 0.25rem ";` is rejected by every CSS
+    // engine). Keep value-shape (rem / px / etc.) loose so authors
+    // can use any CSS length unit.
+    if ("base" in raw.spacing && raw.spacing.base !== undefined) {
+      const baseValue = raw.spacing.base;
+      if (typeof baseValue !== "string") {
+        return {
+          error: {
+            path: "visual.spacing.base",
+            code: "invalid-type",
+            message: "'visual.spacing.base' must be a string.",
+          },
+        };
+      }
+      if (baseValue.length === 0 || baseValue.trim() !== baseValue) {
+        return {
+          error: {
+            path: "visual.spacing.base",
+            code: "invalid-format",
+            message:
+              "'visual.spacing.base' must be a non-empty string with no leading / trailing whitespace.",
+          },
+        };
+      }
+      sp.base = baseValue;
+    }
+    // Per `qfai-prototyping/references/design-md-spec.md`,
+    // `visual.spacing.scale` is `number[]`. Mixed-type arrays
+    // (`[0, "wide"]`, `["4", 8]`) are rejected at parse so an
+    // invalid mirror cannot silently freeze into the lock and
+    // travel to `/qfai-implement` as validated content.
+    if ("scale" in raw.spacing && raw.spacing.scale !== undefined) {
+      const scaleValue: unknown = raw.spacing.scale;
+      if (!Array.isArray(scaleValue)) {
+        return {
+          error: {
+            path: "visual.spacing.scale",
+            code: "invalid-type",
+            message: "'visual.spacing.scale' must be an array of numbers.",
+          },
+        };
+      }
+      const scaleArray: readonly unknown[] = scaleValue;
+      const validated: number[] = [];
+      for (let i = 0; i < scaleArray.length; i += 1) {
+        const entry = scaleArray[i];
+        if (typeof entry !== "number" || !Number.isFinite(entry)) {
+          return {
+            error: {
+              path: `visual.spacing.scale[${i}]`,
+              code: "invalid-type",
+              message: `'visual.spacing.scale[${i}]' must be a finite number (got ${describeScaleEntry(entry)}).`,
+            },
+          };
+        }
+        validated.push(entry);
+      }
+      sp.scale = validated;
     }
     value.spacing = sp;
   }
   return { value };
+}
+
+function describeScaleEntry(value: unknown): string {
+  if (value === null) return "null";
+  if (typeof value === "string") return `string ${JSON.stringify(value)}`;
+  if (Array.isArray(value)) return "<array>";
+  if (typeof value === "object") return "<object>";
+  return `<${typeof value}>`;
 }
 
 function readStringRecord(raw: unknown): Record<string, string> {

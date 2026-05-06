@@ -384,6 +384,79 @@ describe("parseDesignMd (TC-1.1.x)", () => {
     expect(result.error.path).toBe("visual.shadow.gradients");
   });
 
+  it("visual.spacing.base with leading whitespace is rejected at parse-time", () => {
+    // Codex 6Iri: `" 0.25rem "` is structurally a CSS-invalid token
+    // (every CSS engine rejects `padding: " 0.25rem ";`). Catching
+    // the padding here prevents an invalid value from freezing into
+    // DESIGN.md.lock and design-system.yaml mirror.
+    const lastShadowLine = '    lg: "0 12px 24px rgba(15,23,42,0.10)"';
+    const text = VALID_FRONT_MATTER.replace(
+      lastShadowLine,
+      `${lastShadowLine}\n  spacing:\n    base: " 0.25rem "`,
+    );
+    const result = parseDesignMd(text);
+    expect("error" in result).toBe(true);
+    if (!("error" in result)) return;
+    expect(result.error.code).toBe("invalid-format");
+    expect(result.error.path).toBe("visual.spacing.base");
+  });
+
+  it("visual.spacing.base as non-string is rejected with invalid-type", () => {
+    const lastShadowLine = '    lg: "0 12px 24px rgba(15,23,42,0.10)"';
+    const text = VALID_FRONT_MATTER.replace(
+      lastShadowLine,
+      `${lastShadowLine}\n  spacing:\n    base: 8`,
+    );
+    const result = parseDesignMd(text);
+    expect("error" in result).toBe(true);
+    if (!("error" in result)) return;
+    expect(result.error.code).toBe("invalid-type");
+    expect(result.error.path).toBe("visual.spacing.base");
+  });
+
+  it("visual.spacing.scale with mixed number/string entries is rejected", () => {
+    // Codex 6Iri: design-md-spec.md declares `spacing.scale: number[]`.
+    // Mixed-type arrays (`[0, "wide"]`) cannot freeze through to the
+    // mirror as validated content.
+    const lastShadowLine = '    lg: "0 12px 24px rgba(15,23,42,0.10)"';
+    const text = VALID_FRONT_MATTER.replace(
+      lastShadowLine,
+      `${lastShadowLine}\n  spacing:\n    scale:\n      - 0\n      - "wide"`,
+    );
+    const result = parseDesignMd(text);
+    expect("error" in result).toBe(true);
+    if (!("error" in result)) return;
+    expect(result.error.code).toBe("invalid-type");
+    expect(result.error.path).toBe("visual.spacing.scale[1]");
+    expect(result.error.message).toContain("string");
+  });
+
+  it("visual.spacing.scale that is not an array is rejected with invalid-type", () => {
+    const lastShadowLine = '    lg: "0 12px 24px rgba(15,23,42,0.10)"';
+    const text = VALID_FRONT_MATTER.replace(
+      lastShadowLine,
+      `${lastShadowLine}\n  spacing:\n    scale: "0,4,8"`,
+    );
+    const result = parseDesignMd(text);
+    expect("error" in result).toBe(true);
+    if (!("error" in result)) return;
+    expect(result.error.code).toBe("invalid-type");
+    expect(result.error.path).toBe("visual.spacing.scale");
+  });
+
+  it("visual.spacing.scale with all-numeric entries is accepted", () => {
+    const lastShadowLine = '    lg: "0 12px 24px rgba(15,23,42,0.10)"';
+    const text = VALID_FRONT_MATTER.replace(
+      lastShadowLine,
+      `${lastShadowLine}\n  spacing:\n    base: "8px"\n    scale:\n      - 0\n      - 4\n      - 8\n      - 16`,
+    );
+    const result = parseDesignMd(text);
+    expect("error" in result).toBe(false);
+    if ("error" in result) return;
+    expect(result.data.visual.spacing?.scale).toEqual([0, 4, 8, 16]);
+    expect(result.data.visual.spacing?.base).toBe("8px");
+  });
+
   it("TC-1.1.25: unknown visual.typography.scale key (hero) rejected with unknown-key", () => {
     const text = VALID_FRONT_MATTER.replace(
       '    family_mono:    "JetBrains Mono, ui-monospace, monospace"',
