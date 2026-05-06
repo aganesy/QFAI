@@ -352,6 +352,23 @@ function readVisual(raw: unknown): { value: DesignMd["visual"] } | { error: Pars
       error: { path: "visual", code: "missing-required", message: "'visual' section missing." },
     };
   }
+  // Reject unknown top-level keys under `visual` so authors who add
+  // freelance directives (e.g. `visual.gradients`, `visual.motion`) get
+  // a parse error instead of a silent drop. Allowed keys are listed in
+  // the distributed DESIGN.md spec; the value is still hashed in the
+  // lock so prototyping would freeze a directive that the parser
+  // discards.
+  const VISUAL_ALLOWED_KEYS = new Set(["colors", "typography", "radius", "shadow", "spacing"]);
+  const visualUnknown = Object.keys(raw).filter((k) => !VISUAL_ALLOWED_KEYS.has(k));
+  if (visualUnknown.length > 0) {
+    return {
+      error: {
+        path: `visual.${visualUnknown[0] ?? ""}`,
+        code: "unknown-key",
+        message: `Unknown 'visual' key '${visualUnknown[0] ?? ""}'. Allowed: ${[...VISUAL_ALLOWED_KEYS].join(", ")}.`,
+      },
+    };
+  }
   const colors = readStringRecord(raw.colors);
   const typographyRaw = isRecord(raw.typography) ? raw.typography : {};
   const radius = readStringRecord(raw.radius);
