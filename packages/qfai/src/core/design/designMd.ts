@@ -49,7 +49,15 @@ export type DesignMdShadow = Record<ShadowKey, string>;
 export type DesignMd = {
   brand: {
     name: string;
-    archetype: Archetype;
+    /**
+     * Optional at the type layer because parseDesignMd intentionally
+     * preserves the raw (possibly undefined / invalid) archetype value
+     * so validateDesignMd can emit a precise `missing-required` /
+     * `invalid-enum` issue. Downstream consumers MUST treat
+     * `archetype: undefined` as a parse-defect surface (not a valid
+     * brand) and rely on validateDesignMd to gate.
+     */
+    archetype?: Archetype;
     voice?: string[];
   };
   audience?: {
@@ -313,14 +321,16 @@ function readBrand(raw: unknown): { value: DesignMd["brand"] } | { error: ParseE
   // archetype may be missing/invalid — we keep raw value through to validator
   // by storing a placeholder string when not a string.
   const archetypeRaw = raw.archetype;
-  const archetype =
-    typeof archetypeRaw === "string"
-      ? (archetypeRaw as Archetype)
-      : (undefined as unknown as Archetype);
+  // Keep the raw archetype value through to validateDesignMd. The
+  // Archetype literal cast still applies on the string branch, but the
+  // non-string branch is now an honest `undefined` (matched by the
+  // Optional shape on DesignMd['brand']) instead of a double cast.
+  const archetype: Archetype | undefined =
+    typeof archetypeRaw === "string" ? (archetypeRaw as Archetype) : undefined;
   const voice = Array.isArray(raw.voice)
     ? raw.voice.filter((v): v is string => typeof v === "string")
     : undefined;
-  const value: DesignMd["brand"] = { name, archetype };
+  const value: DesignMd["brand"] = archetype !== undefined ? { name, archetype } : { name };
   if (voice !== undefined) value.voice = voice;
   // unknown extra keys
   const extras = Object.keys(raw).filter((k) => k !== "name" && k !== "archetype" && k !== "voice");
