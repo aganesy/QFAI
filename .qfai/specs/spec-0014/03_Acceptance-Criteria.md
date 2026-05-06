@@ -24,8 +24,8 @@
 - When prototyping evidence is inspected,
 - Then the active layout is `.qfai/evidence/prototyping/iter-NN/{<screen>.png, <screen>.html, review.json}` per iter; the legacy `screenshots/` / `html/` directory layout is no longer accepted as the active SSOT.
 
-## AC-0014-0006: Full-Harness Profile Drop
+## AC-0014-0006: Full-Harness Block Drop on Cycle 0
 
-- Given the verify gate documentation and `review-profiles.yml`,
-- When inspected,
-- Then no "full-harness profile", "perfect-100 completion gate", or "weighted-total scoring" wording appears in the active surface; only the default profile remains active in `review-profiles.yml`.
+- Given a `prototyping.json` that carries a legacy `fullHarness` block from a prior pre-1.8.9 run,
+- When `prototyping iterate` runs cycle 0,
+- Then the cycle-0 hard reset removes the `fullHarness` block from the live `prototyping.json` so the post-1.8.9 evolution loop never re-reads stale `full-harness` / `perfect-100` / `weighted-total` runtime state.

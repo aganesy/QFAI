@@ -151,6 +151,16 @@ export async function runPrototypingIterate(
     );
     return 2;
   }
+  if (lockResult.kind === "unreadable") {
+    const cause =
+      lockResult.cause instanceof Error ? lockResult.cause.message : String(lockResult.cause);
+    error(
+      "qfai prototyping iterate: DESIGN.md.lock.yaml exists but could not be read " +
+        `(${cause}). The freeze invariant cannot be enforced when the lock is ` +
+        "unreadable; fix file permissions / EIO and rerun.",
+    );
+    return 2;
+  }
   const lockSha = lockResult.kind === "ok" ? lockResult.sha256 : null;
   if (lockSha !== null && lockSha !== currentSha) {
     error(
@@ -368,21 +378,29 @@ type DesignMdReadResult =
   | { ok: true; text: string; data: DesignMd }
   | { ok: false; message: string };
 
-type LockGateResult = { kind: "ok"; sha256: string } | { kind: "missing" } | { kind: "malformed" };
+type LockGateResult =
+  | { kind: "ok"; sha256: string }
+  | { kind: "missing" }
+  | { kind: "malformed" }
+  | { kind: "unreadable"; cause: unknown };
 
 /**
  * Read the SDD-frozen sha256 from
  * `<contractsDir>/design/DESIGN.md.lock.yaml`.
  *
- * Distinguishes three outcomes so iterate can apply LSP-style
- * fail-fast on the malformed case while still allowing fresh
- * projects (lock genuinely absent) to proceed:
+ * Distinguishes four outcomes so iterate can apply LSP-style
+ * fail-fast on malformed / unreadable cases while still allowing
+ * fresh projects (lock genuinely absent) to proceed:
  *
- *   - `ok`        — lock present and `designMdSha256` is valid
- *                   64-character hex
- *   - `missing`   — lock file does not exist on disk
- *   - `malformed` — lock file exists but does not parse as YAML, or
- *                   `designMdSha256` is missing / not 64 hex
+ *   - `ok`         — lock present and `designMdSha256` is valid
+ *                    64-character hex
+ *   - `missing`    — lock file does not exist on disk (ENOENT)
+ *   - `malformed`  — lock file exists but does not parse as YAML, or
+ *                    `designMdSha256` is missing / not 64 hex
+ *   - `unreadable` — lock file exists but the read failed for a
+ *                    non-ENOENT reason (e.g. EACCES / EPERM / EIO).
+ *                    Fail-closed so the freeze invariant cannot be
+ *                    silently bypassed by a permission flip.
  *
  * `qfai validate` and `qfai doctor` surface the SDD-precondition
  * issue (missing lock) via DCON-031.
@@ -392,8 +410,9 @@ async function readDesignMdLockGate(root: string, contractsDir: string): Promise
   let lockText: string;
   try {
     lockText = await readFile(lockAbs, "utf-8");
-  } catch {
-    return { kind: "missing" };
+  } catch (err) {
+    if (isEnoent(err)) return { kind: "missing" };
+    return { kind: "unreadable", cause: err };
   }
   const sha = readDesignMdLockSha(lockText);
   return sha !== null ? { kind: "ok", sha256: sha } : { kind: "malformed" };

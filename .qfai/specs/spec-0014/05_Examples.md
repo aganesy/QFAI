@@ -29,6 +29,6 @@
 ## EX-0014-0027
 
 - BR-Ref: BR-0014-0006
-- Given the verify gate documentation and `review-profiles.yml`
-- When inspected
-- Then no "full-harness profile", "perfect-100 completion gate", or "weighted-total scoring" wording appears; only the default profile remains active
+- Given a `prototyping.json` that carries a legacy `fullHarness: { ... }` block from a pre-1.8.9 run
+- When `prototyping iterate` runs cycle 0 (the hard-reset cycle)
+- Then the live `prototyping.json` no longer contains the `fullHarness` key after the cycle, so the post-1.8.9 evolution loop never re-reads stale runtime state

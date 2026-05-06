@@ -69,7 +69,7 @@
 - REQ-0013: discussion sidecar は upstream authoring artifact であり downstream execution truth ではない
 
 > v1.8.9: REQ-0006..0011 (the legacy exploration-first sidecar
-> requirements that drove `discussionDesignHardening` and AC-0002-0003..0007)
+> requirements that drove `discussionDesignHardening` and AC-0002-0002..0007)
 > were retired together with the validator. Their downstream
 > behaviors are owned by the post-1.8.9 prototyping spec, which
 > anchors brand SSOT in root `DESIGN.md` and the

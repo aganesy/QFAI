@@ -552,11 +552,17 @@ describe("qfai prototyping certify (TC-3.6.x DESIGN.md gate)", () => {
     expect(await runPrototypingCertify({ root, check: false })).toBe(0);
   });
 
-  it("anchors final HTML scan to prototyping.json#iterations[] (stale higher iter-NN ignored)", async () => {
+  it("fails fast (exit 2) when a stale higher iter-NN dir would be sealed into evidenceDigests", async () => {
     // Simulates a `qfai prototyping iterate --cycle 0` restart that left
-    // a stale iter-14 directory on disk from a prior loop. Without
-    // anchoring, certify would scan that stale dir and digest evidence
-    // the current reviewer gate did not approve.
+    // a stale iter-14 directory on disk from a prior loop. The HTML scan
+    // is correctly anchored to iter-01, but `buildCompletionCertificate`
+    // would still digest every file under `evidenceRoot`, sealing the
+    // stale iter-14 contents into the certificate. A later
+    // `certify --check` would then fail when the operator cleans up the
+    // stale dir even though the accepted iteration is unchanged. So
+    // certify fails fast here and forces the operator to rerun cycle 0
+    // (which deletes stale iter-NN dirs as part of the hard reset) or
+    // remove them manually before sealing.
     const root = await newTempDir();
     await seedMinimalProject(root, { specMarker: true });
     await seedAllGatesPass(root);
@@ -569,7 +575,27 @@ describe("qfai prototyping certify (TC-3.6.x DESIGN.md gate)", () => {
       '<span style="color:#abcdef">stale</span>\n',
       "utf-8",
     );
-    // The accepted iter-01 is clean → certify must succeed.
+    const logger = await import("../../src/cli/lib/logger.js");
+    const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
+    try {
+      expect(await runPrototypingCertify({ root, check: false })).toBe(2);
+      const messages = errorSpy.mock.calls.map((c) => String(c[0]));
+      expect(messages.some((m) => m.includes("stale iteration directories found"))).toBe(true);
+      expect(messages.some((m) => m.includes("iter-14"))).toBe(true);
+    } finally {
+      errorSpy.mockRestore();
+    }
+  });
+
+  it("anchors final HTML scan to prototyping.json#iterations[] (no stale dirs)", async () => {
+    // Confirm the round-4 anchoring still works when no stale higher
+    // iter dirs are present: certify uses iter-01 (the recorded final)
+    // and ignores iter-00.
+    const root = await newTempDir();
+    await seedMinimalProject(root, { specMarker: true });
+    await seedAllGatesPass(root);
+    // No stale dirs planted; iter-00 and iter-01 are both seeded clean
+    // by seedAllGatesPass.
     expect(await runPrototypingCertify({ root, check: false })).toBe(0);
   });
 

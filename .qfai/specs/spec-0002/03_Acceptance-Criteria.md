@@ -45,7 +45,7 @@ Scenario: UI-bearing discussion packs require prototyping.yaml
 | ------------ | ---------------------------------- | -------- | -------- |
 | AC-0002-0001 | 15 必須ファイル                    | REQ-0001 | P1       |
 | AC-0002-0008 | planner-first / no winner          | REQ-0012 | P1       |
-| AC-0002-0009 | non-UI safe skip                   | REQ-0006 | P1       |
+| AC-0002-0009 | non-UI safe skip                   | REQ-0005 | P1       |
 | AC-0002-0010 | prototyping.yaml requiredness text | REQ-0005 | P1       |
 
 > v1.8.9: AC-0002-0002..0007 (the legacy exploration-sidecar / OQ-blocker

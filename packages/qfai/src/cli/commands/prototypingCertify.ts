@@ -26,6 +26,7 @@ import { loadConfig } from "../../core/config.js";
 import { readUiContractScreenContracts } from "../../core/contracts/screenContracts.js";
 import { hashDesignMd, parseDesignMd } from "../../core/design/designMd.js";
 import { readDesignMdLockSha } from "../../core/design/designMdLock.js";
+import { isEnoent } from "../../core/fs/errno.js";
 import { PROTOTYPING_EVIDENCE_REL, PROTOTYPING_JSON_REL } from "../../core/prototyping/paths.js";
 import {
   buildCompletionCertificate,
@@ -297,6 +298,16 @@ export async function runPrototypingCertify(
     );
     return 2;
   }
+  if (lockResult.kind === "unreadable") {
+    const cause =
+      lockResult.cause instanceof Error ? lockResult.cause.message : String(lockResult.cause);
+    error(
+      "qfai prototyping certify: DESIGN.md.lock.yaml exists but could not be read " +
+        `(${cause}). The freeze invariant cannot be enforced when the lock is ` +
+        "unreadable; fix file permissions / EIO and rerun.",
+    );
+    return 2;
+  }
   const lockSha = lockResult.kind === "ok" ? lockResult.sha256 : null;
   if (lockSha !== null && lockSha !== frozenSha) {
     error(
@@ -306,6 +317,28 @@ export async function runPrototypingCertify(
     );
     return 2;
   }
+  // The completion certificate digests every file under `evidenceRoot`,
+  // so a stale `iter-NN` dir from a prior loop (NN >= recorded
+  // iterationCount) would otherwise be sealed into `evidenceDigests`
+  // and would cause `certify --check` to fail later if the operator
+  // cleans up the stale dir even though the accepted iteration is
+  // unchanged. Fail-fast and force the operator to rerun cycle 0
+  // (which the round-5 hard-reset removes the stale dirs) or delete
+  // them manually before sealing.
+  const staleIterDirs = await findStaleIterDirs(evidenceRoot, iterationCount);
+  if (staleIterDirs.length > 0) {
+    error(
+      "qfai prototyping certify: stale iteration directories found under " +
+        `${PROTOTYPING_EVIDENCE_REL} (recorded iterationCount=${iterationCount}, ` +
+        `but found: ${staleIterDirs.join(", ")}). These would be sealed into ` +
+        "the certificate's evidenceDigests and break --check after cleanup. " +
+        "Re-run `qfai prototyping iterate --cycle 0` (which deletes stale " +
+        "iter-NN dirs as part of the hard reset) or remove them manually, " +
+        "then rerun certify.",
+    );
+    return 2;
+  }
+
   const toolVersion = await resolveToolVersion();
   const designMdRecord: CompletionCertificateDesignMd = {
     path: ROOT_DESIGN_MD_REL,
@@ -323,7 +356,7 @@ export async function runPrototypingCertify(
       approved: true,
       timestamp: reviewerTimestamp,
     },
-    iterationCount: countIterations(protoJson),
+    iterationCount,
     specsCovered,
     designMd: designMdRecord,
   });
@@ -337,15 +370,20 @@ export async function runPrototypingCertify(
   return 0;
 }
 
-type LockGateResult = { kind: "ok"; sha256: string } | { kind: "missing" } | { kind: "malformed" };
+type LockGateResult =
+  | { kind: "ok"; sha256: string }
+  | { kind: "missing" }
+  | { kind: "malformed" }
+  | { kind: "unreadable"; cause: unknown };
 
 async function loadLockGate(root: string, contractsDir: string): Promise<LockGateResult> {
   const lockAbs = path.join(root, contractsDir, "design", "DESIGN.md.lock.yaml");
   let text: string;
   try {
     text = await readFile(lockAbs, "utf-8");
-  } catch {
-    return { kind: "missing" };
+  } catch (err) {
+    if (isEnoent(err)) return { kind: "missing" };
+    return { kind: "unreadable", cause: err };
   }
   const sha = readDesignMdLockSha(text);
   return sha !== null ? { kind: "ok", sha256: sha } : { kind: "malformed" };
@@ -391,6 +429,47 @@ async function findIterationHtmlFiles(
 ): Promise<string[]> {
   const iterDirAbs = path.join(evidenceRoot, `iter-${String(iterationIndex).padStart(2, "0")}`);
   return allHtmlIn(iterDirAbs);
+}
+
+/**
+ * Return iter-NN directory names whose index is >= `iterationCount`
+ * (i.e. higher than any iteration recorded in `prototyping.json`).
+ *
+ * Used by `runPrototypingCertify` to fail fast when stale iter dirs
+ * from a prior loop survived on disk: `buildCompletionCertificate`
+ * digests every file under `evidenceRoot`, so a stale higher iter
+ * dir would otherwise be sealed into the certificate and would
+ * cause a later `certify --check` to fail when the operator cleans
+ * up the stale dir even though the accepted iteration is unchanged.
+ *
+ * Returned names are POSIX, sorted, and exclude any non-iter
+ * directories (so untracked top-level files / dirs under
+ * `evidenceRoot` are not flagged here — those are caught separately
+ * by the digest layer if relevant).
+ */
+async function findStaleIterDirs(evidenceRoot: string, iterationCount: number): Promise<string[]> {
+  let names: string[];
+  try {
+    names = await readdir(evidenceRoot);
+  } catch {
+    return [];
+  }
+  const stale: string[] = [];
+  for (const name of names) {
+    const match = name.match(/^iter-(\d{2,})$/);
+    if (!match || match[1] === undefined) continue;
+    const index = Number.parseInt(match[1], 10);
+    if (!Number.isFinite(index) || index < iterationCount) continue;
+    const abs = path.join(evidenceRoot, name);
+    try {
+      const s = await stat(abs);
+      if (s.isDirectory()) stale.push(name);
+    } catch {
+      continue;
+    }
+  }
+  stale.sort();
+  return stale;
 }
 
 async function allHtmlIn(dir: string): Promise<string[]> {

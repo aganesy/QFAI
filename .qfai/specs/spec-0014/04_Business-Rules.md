@@ -29,4 +29,4 @@
 ## BR-0014-0006
 
 - AC-Refs: AC-0014-0006
-- Verify-side documentation, gate vocabulary, and `review-profiles.yml` MUST NOT reference "full-harness profile", "perfect-100 completion gate", or "weighted-total scoring" as active surface; only the default profile remains active.
+- `prototyping iterate` cycle 0 MUST delete any legacy `fullHarness` block from the live `prototyping.json` as part of the hard reset, so the post-1.8.9 evolution loop never re-reads stale `full-harness` / `perfect-100` / `weighted-total` runtime state from a prior pre-1.8.9 session.
