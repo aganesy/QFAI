@@ -78,6 +78,55 @@ const SAFE_LITERALS: ReadonlySet<string> = new Set([
   "none",
 ]);
 
+// Single-shot test variants of HEX / RGB / HSL regexes — `g`-flagged
+// regexes are stateful when reused with `.test()`, so dedicated
+// test-only copies avoid that footgun. Co-located with HEX_RE / RGB_RE
+// / HSL_RE rather than scattered after the scan helpers, so a future
+// reader sees all color-literal regexes at the top of the file.
+const HEX_RE_TEST = /#(?:[0-9A-Fa-f]{8}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{3})\b/;
+const RGB_RE_TEST = /rgba?\([^)]*\)/i;
+const HSL_RE_TEST = /hsla?\([^)]*\)/i;
+
+// CSS named-color keywords (CSS Color Module Level 4 + legacy). The set
+// is closed: any keyword not here is either a non-color identifier
+// (e.g. `inherit`, `var(...)`) or a typo. SAFE_LITERALS (`transparent`,
+// `currentcolor`, etc.) is intentionally NOT a subset — those are
+// system / inheritance keywords, not color literals, and have a
+// dedicated allow path in scanColors.
+const CSS_NAMED_COLORS: ReadonlySet<string> = new Set([
+  "aliceblue", "antiquewhite", "aqua", "aquamarine", "azure",
+  "beige", "bisque", "black", "blanchedalmond", "blue", "blueviolet",
+  "brown", "burlywood", "cadetblue", "chartreuse", "chocolate",
+  "coral", "cornflowerblue", "cornsilk", "crimson", "cyan",
+  "darkblue", "darkcyan", "darkgoldenrod", "darkgray", "darkgreen",
+  "darkgrey", "darkkhaki", "darkmagenta", "darkolivegreen",
+  "darkorange", "darkorchid", "darkred", "darksalmon", "darkseagreen",
+  "darkslateblue", "darkslategray", "darkslategrey", "darkturquoise",
+  "darkviolet", "deeppink", "deepskyblue", "dimgray", "dimgrey",
+  "dodgerblue", "firebrick", "floralwhite", "forestgreen", "fuchsia",
+  "gainsboro", "ghostwhite", "gold", "goldenrod", "gray", "green",
+  "greenyellow", "grey", "honeydew", "hotpink", "indianred", "indigo",
+  "ivory", "khaki", "lavender", "lavenderblush", "lawngreen",
+  "lemonchiffon", "lightblue", "lightcoral", "lightcyan",
+  "lightgoldenrodyellow", "lightgray", "lightgreen", "lightgrey",
+  "lightpink", "lightsalmon", "lightseagreen", "lightskyblue",
+  "lightslategray", "lightslategrey", "lightsteelblue", "lightyellow",
+  "lime", "limegreen", "linen", "magenta", "maroon",
+  "mediumaquamarine", "mediumblue", "mediumorchid", "mediumpurple",
+  "mediumseagreen", "mediumslateblue", "mediumspringgreen",
+  "mediumturquoise", "mediumvioletred", "midnightblue", "mintcream",
+  "mistyrose", "moccasin", "navajowhite", "navy", "oldlace", "olive",
+  "olivedrab", "orange", "orangered", "orchid", "palegoldenrod",
+  "palegreen", "paleturquoise", "palevioletred", "papayawhip",
+  "peachpuff", "peru", "pink", "plum", "powderblue", "purple",
+  "rebeccapurple", "red", "rosybrown", "royalblue", "saddlebrown",
+  "salmon", "sandybrown", "seagreen", "seashell", "sienna", "silver",
+  "skyblue", "slateblue", "slategray", "slategrey", "snow",
+  "springgreen", "steelblue", "tan", "teal", "thistle", "tomato",
+  "turquoise", "violet", "wheat", "white", "whitesmoke", "yellow",
+  "yellowgreen",
+]);
+
 function lowercaseValues(values: ReadonlyArray<string>): Set<string> {
   const out = new Set<string>();
   for (const value of values) {
@@ -223,64 +272,27 @@ function scanColors(html: string, dm: DesignMd, out: DesignMdViolation[]): void 
     // `primary: red`), `allowed` already contains the lowercase
     // keyword and the value is compliant.
     if (allowed.has(value)) continue;
-    // CSS named colors keyword set. The value must be a single
-    // identifier token; multi-token values (e.g. background shorthand
-    // like `red url(...) repeat`) only land here when shorthand
-    // parsing produced a non-color side; guard with a single-token
-    // check so we surface only clean named-color violations.
-    if (!/^[a-z]+$/.test(value)) continue;
-    if (CSS_NAMED_COLORS.has(value)) {
-      out.push({ kind: "color", found: value });
+    // Per-token named-color check. CSS allows shorthand multi-color
+    // values on the longhand-set properties caught by COLOR_PROP_RE:
+    //   `border-color: red blue green red`  (4-side)
+    //   `border-color: red blue`            (2-side)
+    // Splitting on whitespace and checking each token catches every
+    // off-spec named color in the shorthand. A single-token value
+    // (`color: red`) is just the 1-token case of the same loop.
+    // Tokens that aren't pure `[a-z]+` identifiers (e.g. `1px` from
+    // a `background: red 1px ...` shorthand mis-parse) are skipped
+    // so we surface only clean named-color drift.
+    for (const token of value.split(/\s+/)) {
+      if (token.length === 0) continue;
+      if (SAFE_LITERALS.has(token)) continue;
+      if (allowed.has(token)) continue;
+      if (!/^[a-z]+$/.test(token)) continue;
+      if (CSS_NAMED_COLORS.has(token)) {
+        out.push({ kind: "color", found: token });
+      }
     }
   }
 }
-
-// Single-shot test variants of HEX/RGB/HSL regexes — `g`-flagged
-// regexes are stateful when reused with `.test()`, so dedicated
-// test-only copies avoid that footgun.
-const HEX_RE_TEST = /#(?:[0-9A-Fa-f]{8}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{3})\b/;
-const RGB_RE_TEST = /rgba?\([^)]*\)/i;
-const HSL_RE_TEST = /hsla?\([^)]*\)/i;
-
-// CSS named-color keywords (CSS Color Module Level 4 + legacy). The set
-// is closed: any keyword not here is either a non-color identifier
-// (e.g. `inherit`, `var(...)`) or a typo. SAFE_LITERALS (`transparent`,
-// `currentcolor`, etc.) is intentionally NOT a subset — those are
-// system / inheritance keywords, not color literals, and have a
-// dedicated allow path above.
-const CSS_NAMED_COLORS: ReadonlySet<string> = new Set([
-  "aliceblue", "antiquewhite", "aqua", "aquamarine", "azure",
-  "beige", "bisque", "black", "blanchedalmond", "blue", "blueviolet",
-  "brown", "burlywood", "cadetblue", "chartreuse", "chocolate",
-  "coral", "cornflowerblue", "cornsilk", "crimson", "cyan",
-  "darkblue", "darkcyan", "darkgoldenrod", "darkgray", "darkgreen",
-  "darkgrey", "darkkhaki", "darkmagenta", "darkolivegreen",
-  "darkorange", "darkorchid", "darkred", "darksalmon", "darkseagreen",
-  "darkslateblue", "darkslategray", "darkslategrey", "darkturquoise",
-  "darkviolet", "deeppink", "deepskyblue", "dimgray", "dimgrey",
-  "dodgerblue", "firebrick", "floralwhite", "forestgreen", "fuchsia",
-  "gainsboro", "ghostwhite", "gold", "goldenrod", "gray", "green",
-  "greenyellow", "grey", "honeydew", "hotpink", "indianred", "indigo",
-  "ivory", "khaki", "lavender", "lavenderblush", "lawngreen",
-  "lemonchiffon", "lightblue", "lightcoral", "lightcyan",
-  "lightgoldenrodyellow", "lightgray", "lightgreen", "lightgrey",
-  "lightpink", "lightsalmon", "lightseagreen", "lightskyblue",
-  "lightslategray", "lightslategrey", "lightsteelblue", "lightyellow",
-  "lime", "limegreen", "linen", "magenta", "maroon",
-  "mediumaquamarine", "mediumblue", "mediumorchid", "mediumpurple",
-  "mediumseagreen", "mediumslateblue", "mediumspringgreen",
-  "mediumturquoise", "mediumvioletred", "midnightblue", "mintcream",
-  "mistyrose", "moccasin", "navajowhite", "navy", "oldlace", "olive",
-  "olivedrab", "orange", "orangered", "orchid", "palegoldenrod",
-  "palegreen", "paleturquoise", "palevioletred", "papayawhip",
-  "peachpuff", "peru", "pink", "plum", "powderblue", "purple",
-  "rebeccapurple", "red", "rosybrown", "royalblue", "saddlebrown",
-  "salmon", "sandybrown", "seagreen", "seashell", "sienna", "silver",
-  "skyblue", "slateblue", "slategray", "slategrey", "snow",
-  "springgreen", "steelblue", "tan", "teal", "thistle", "tomato",
-  "turquoise", "violet", "wheat", "white", "whitesmoke", "yellow",
-  "yellowgreen",
-]);
 
 function scanRadius(html: string, dm: DesignMd, out: DesignMdViolation[]): void {
   const allowed = new Set<string>(Object.values(dm.visual.radius));

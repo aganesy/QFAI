@@ -60,7 +60,10 @@
   though red is not in DESIGN.md. The check skips `transparent` /
   `currentcolor` / `inherit` / `var(...)` references; if the
   DESIGN.md authored a named color as a token (`primary: red`) the
-  match is allowed.
+  match is allowed. Multi-token shorthand values
+  (e.g. `border-color: red blue green red` for top/right/bottom/left)
+  are now split on whitespace and each token is checked
+  independently, so 4-side longhand drift is no longer silent.
 - **design-system.yaml mirror values cross-checked against DESIGN.md**:
   `validateDesignSystem` now compares the mirror's
   `visual.colors.{12 keys}`, `visual.typography.{family_*3}`,

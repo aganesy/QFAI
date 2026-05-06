@@ -149,12 +149,53 @@ describe("findDesignMdViolations — color (TC-3.2.1..9)", () => {
     expect(out.some((v) => v.kind === "color" && v.found === "white")).toBe(true);
   });
 
-  it("named CSS color authored as a DESIGN.md token is NOT flagged", () => {
+  it("named CSS color authored as a DESIGN.md token is NOT flagged (defensive: scanner respects allow-set even if parser rejects authoring)", () => {
+    // Defensive coverage: the scanner's contract is "respect the
+    // DESIGN.md allow-set as authored". This test mutates the
+    // DesignMd object directly to set `primary = "red"` so the
+    // allow-set contains the keyword `red`, then asserts the named-
+    // color scan honors that. The actual `parseDesignMd` parser
+    // rejects `red` (and any non-hex value) for non-overlay color
+    // keys via `HEX_COLOR_RE = /^#[0-9A-Fa-f]{6}([0-9A-Fa-f]{2})?$/`
+    // (designMd.ts), so this code path is unreachable through
+    // production authoring. We pin it anyway because: (a) a future
+    // schema relaxation that allowed named colors should keep the
+    // scanner honoring the allow-set, and (b) the scanner is reused
+    // outside `parseDesignMd` (programmatic DesignMd construction in
+    // tests / tooling), where this boundary is reachable.
     const dm = sampleDesignMd();
     dm.visual.colors.primary = "red";
     const html = '<div style="color: red"></div>';
     const out = findDesignMdViolations(html, dm);
     expect(out.filter((v) => v.kind === "color")).toEqual([]);
+  });
+
+  it("border-color 4-side shorthand with all named colors flags every token", () => {
+    // `border-color: red blue green red` is valid CSS shorthand for
+    // top/right/bottom/left. Pre-fix, `^[a-z]+$` skipped multi-token
+    // values entirely; named-color drift was silent on the longhand
+    // shorthand. Post-fix, each whitespace-separated token is
+    // checked against CSS_NAMED_COLORS independently.
+    const html = '<div style="border-color: red blue green red"></div>';
+    const out = findDesignMdViolations(html, sampleDesignMd());
+    const colorHits = out.filter((v) => v.kind === "color");
+    expect(colorHits.map((v) => v.found)).toEqual(["red", "blue", "green", "red"]);
+  });
+
+  it("border-color 2-side shorthand flags both tokens", () => {
+    const html = '<div style="border-color: red blue"></div>';
+    const out = findDesignMdViolations(html, sampleDesignMd());
+    const colorHits = out.filter((v) => v.kind === "color");
+    expect(colorHits.map((v) => v.found)).toEqual(["red", "blue"]);
+  });
+
+  it("multi-token shorthand with one allowed and one drift token flags only the drift token", () => {
+    const dm = sampleDesignMd();
+    dm.visual.colors.primary = "red";
+    const html = '<div style="border-color: red blue"></div>';
+    const out = findDesignMdViolations(html, dm);
+    const colorHits = out.filter((v) => v.kind === "color");
+    expect(colorHits.map((v) => v.found)).toEqual(["blue"]);
   });
 
   it("transparent / currentcolor / inherit are NOT flagged as named-color violations", () => {
