@@ -126,7 +126,10 @@ export function normalizeConcreteArtifactRef(ref: string): string {
   if (!ALLOWED_ARTIFACT_EXTENSIONS.has(extension)) {
     throw new Error(`Artifact ref extension is not allowed: ${trimmed}`);
   }
-  if (normalizedPath === ".qfai/evidence/prototyping.json") {
+  if (
+    normalizedPath === ".qfai/evidence/prototyping.json" ||
+    normalizedPath === ".qfai/evidence/prototyping/prototyping.json"
+  ) {
     throw new Error(`Self-ref is not allowed: ${trimmed}`);
   }
 

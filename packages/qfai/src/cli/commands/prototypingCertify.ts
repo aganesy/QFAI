@@ -47,6 +47,7 @@ export type RunPrototypingCertifyOptions = {
 
 const ROOT_DESIGN_MD_REL = "DESIGN.md";
 const PROTOTYPING_EVIDENCE_REL = ".qfai/evidence/prototyping";
+const PROTOTYPING_JSON_REL = ".qfai/evidence/prototyping/prototyping.json";
 
 export async function runPrototypingCertify(
   options: RunPrototypingCertifyOptions,
@@ -68,10 +69,10 @@ export async function runPrototypingCertify(
   const { config } = await loadConfig(options.root);
   const evidenceRoot = path.join(options.root, PROTOTYPING_EVIDENCE_REL);
 
-  const protoJson = await loadJson(path.join(options.root, ".qfai/evidence/prototyping.json"));
+  const protoJson = await loadJson(path.join(options.root, PROTOTYPING_JSON_REL));
   if (!protoJson) {
     error(
-      "qfai prototyping certify: .qfai/evidence/prototyping.json is missing or unparseable. " +
+      `qfai prototyping certify: ${PROTOTYPING_JSON_REL} is missing or unparseable. ` +
         "Run prototyping rounds first.",
     );
     return 2;
@@ -224,7 +225,16 @@ export async function runPrototypingCertify(
     );
     return 2;
   }
-  const lockSha = await loadLockSha(options.root, config.paths.contractsDir);
+  const lockResult = await loadLockGate(options.root, config.paths.contractsDir);
+  if (lockResult.kind === "malformed") {
+    error(
+      "qfai prototyping certify: DESIGN.md.lock.yaml exists but " +
+        "designMdSha256 is missing or not a 64-character hex string. " +
+        "Re-run /qfai-sdd Phase 0 to regenerate the lock before sealing.",
+    );
+    return 2;
+  }
+  const lockSha = lockResult.kind === "ok" ? lockResult.sha256 : null;
   if (lockSha !== null && lockSha !== frozenSha) {
     error(
       "qfai prototyping certify: DESIGN.md.lock.yaml sha256 (" +
@@ -264,14 +274,18 @@ export async function runPrototypingCertify(
   return 0;
 }
 
-async function loadLockSha(root: string, contractsDir: string): Promise<string | null> {
+type LockGateResult = { kind: "ok"; sha256: string } | { kind: "missing" } | { kind: "malformed" };
+
+async function loadLockGate(root: string, contractsDir: string): Promise<LockGateResult> {
   const lockAbs = path.join(root, contractsDir, "design", "DESIGN.md.lock.yaml");
+  let text: string;
   try {
-    const text = await readFile(lockAbs, "utf-8");
-    return readDesignMdLockSha(text);
+    text = await readFile(lockAbs, "utf-8");
   } catch {
-    return null;
+    return { kind: "missing" };
   }
+  const sha = readDesignMdLockSha(text);
+  return sha !== null ? { kind: "ok", sha256: sha } : { kind: "malformed" };
 }
 
 export async function runPrototypingShowSpec(options: { root: string }): Promise<number> {

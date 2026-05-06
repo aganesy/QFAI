@@ -128,7 +128,22 @@ export async function runPrototypingIterate(
   // source of truth for the frozen brand SSOT. Iterate consults it on
   // EVERY cycle — not just cycle 0 — so that prototyping.json acts as a
   // cache of the lock value, never as an independent SHA store.
-  const lockSha = await readDesignMdLockGate(options.root, configResult.config.paths.contractsDir);
+  // A missing lock file is allowed (fresh project that has not yet run
+  // /qfai-sdd Phase 0); a present-but-malformed lock is a fail-fast
+  // condition because the SDD precondition is broken.
+  const lockResult = await readDesignMdLockGate(
+    options.root,
+    configResult.config.paths.contractsDir,
+  );
+  if (lockResult.kind === "malformed") {
+    error(
+      "qfai prototyping iterate: DESIGN.md.lock.yaml exists but " +
+        "designMdSha256 is missing or not a 64-character hex string. " +
+        "Re-run /qfai-sdd Phase 0 to regenerate the lock.",
+    );
+    return 2;
+  }
+  const lockSha = lockResult.kind === "ok" ? lockResult.sha256 : null;
   if (lockSha !== null && lockSha !== currentSha) {
     error(
       "qfai prototyping iterate: root DESIGN.md sha256 differs from " +
@@ -242,24 +257,35 @@ type DesignMdReadResult =
   | { ok: true; text: string; data: DesignMd }
   | { ok: false; message: string };
 
+type LockGateResult = { kind: "ok"; sha256: string } | { kind: "missing" } | { kind: "malformed" };
+
 /**
  * Read the SDD-frozen sha256 from
- * `<contractsDir>/design/DESIGN.md.lock.yaml`. Returns `null` when the
- * lock file is missing or unparseable; otherwise returns the lock sha.
+ * `<contractsDir>/design/DESIGN.md.lock.yaml`.
  *
- * Iterating without a lock is allowed for fresh projects that have not
- * yet completed /qfai-sdd Phase 0; `qfai validate` and `qfai doctor`
- * surface the SDD-precondition issue separately.
+ * Distinguishes three outcomes so iterate can apply LSP-style
+ * fail-fast on the malformed case while still allowing fresh
+ * projects (lock genuinely absent) to proceed:
+ *
+ *   - `ok`        — lock present and `designMdSha256` is valid
+ *                   64-character hex
+ *   - `missing`   — lock file does not exist on disk
+ *   - `malformed` — lock file exists but does not parse as YAML, or
+ *                   `designMdSha256` is missing / not 64 hex
+ *
+ * `qfai validate` and `qfai doctor` surface the SDD-precondition
+ * issue (missing lock) via DCON-031.
  */
-async function readDesignMdLockGate(root: string, contractsDir: string): Promise<string | null> {
+async function readDesignMdLockGate(root: string, contractsDir: string): Promise<LockGateResult> {
   const lockAbs = path.join(root, contractsDir, "design", "DESIGN.md.lock.yaml");
   let lockText: string;
   try {
     lockText = await readFile(lockAbs, "utf-8");
   } catch {
-    return null;
+    return { kind: "missing" };
   }
-  return readDesignMdLockSha(lockText);
+  const sha = readDesignMdLockSha(lockText);
+  return sha !== null ? { kind: "ok", sha256: sha } : { kind: "malformed" };
 }
 
 async function readDesignMdFile(absPath: string): Promise<DesignMdReadResult> {

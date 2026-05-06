@@ -141,7 +141,7 @@ async function seedAllGatesPass(root: string): Promise<void> {
   );
   await mkdir(path.join(root, ".qfai/evidence/prototyping"), { recursive: true });
   await writeFile(
-    path.join(root, ".qfai/evidence/prototyping.json"),
+    path.join(root, ".qfai/evidence/prototyping/prototyping.json"),
     JSON.stringify({
       mode: { effective: "standard", source: "explicit-request", rationale: "test" },
       surface: "web",
@@ -196,9 +196,9 @@ describe("qfai prototyping certify (generate)", () => {
   it("exits 2 when runId is missing", async () => {
     const root = await newTempDir();
     await seedMinimalProject(root);
-    await mkdir(path.join(root, ".qfai/evidence"), { recursive: true });
+    await mkdir(path.join(root, ".qfai/evidence/prototyping"), { recursive: true });
     await writeFile(
-      path.join(root, ".qfai/evidence/prototyping.json"),
+      path.join(root, ".qfai/evidence/prototyping/prototyping.json"),
       JSON.stringify({ mode: { effective: "standard", source: "test", rationale: "x" } }),
       "utf-8",
     );
@@ -240,7 +240,7 @@ describe("qfai prototyping certify (generate)", () => {
     await seedAllGatesPass(root);
     // Re-seed prototyping.json without reviewerGate.result === PASS
     await writeFile(
-      path.join(root, ".qfai/evidence/prototyping.json"),
+      path.join(root, ".qfai/evidence/prototyping/prototyping.json"),
       JSON.stringify({
         mode: { effective: "standard", source: "test", rationale: "x" },
         runId: "run-x",
@@ -258,7 +258,7 @@ describe("qfai prototyping certify (generate)", () => {
     await seedMinimalProject(root, { specMarker: true });
     await seedAllGatesPass(root);
     await writeFile(
-      path.join(root, ".qfai/evidence/prototyping.json"),
+      path.join(root, ".qfai/evidence/prototyping/prototyping.json"),
       JSON.stringify({
         mode: { effective: "standard", source: "test", rationale: "x" },
         surface: "web",
