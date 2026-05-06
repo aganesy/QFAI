@@ -12,4 +12,4 @@
 ## Notes
 
 - Deleted legacy tests and optional side-artifact blockers are removed from the active ledger because current readiness is markdown-first and exploration-first.
-- v1.8.9 (spec-0017 → spec-0012 absorb): the legacy `discussionDesignHardening` validator and its proving tests were retired together with the exploration-sidecar family. The corresponding TDD-0002..0007 rows referenced deleted test files and are removed from this active ledger; their TC-0002-0002..0007 spec entries are now superseded by DESIGN.md-driven equivalents in spec-0012.
+- v1.8.9: the legacy `discussionDesignHardening` validator and its proving tests were retired together with the exploration-sidecar family. The corresponding TDD-0002..0007 rows referenced deleted test files and are removed from this active ledger; their TC-0002-0002..0007 spec entries are now superseded by DESIGN.md-driven equivalents in the post-1.8.9 prototyping spec.

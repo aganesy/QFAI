@@ -28,7 +28,9 @@ tools: [Read, Write, Edit, Glob, Grep, Bash]
 - .qfai/specs/spec-\*/09_delta.md
 - .qfai/specs/spec-\*/01_Spec.md
 - .github/instructions/principles.instructions.md
-- Root `DESIGN.md` (brand SSOT: front-matter tokens + `# Brand Philosophy` body), reference pool framed as deviate-from inputs, screen contracts (`uiux/40_screen_contracts.md`), optional tokens, optional fallback HTML/CSS mock, and Mermaid flows. Evaluator axes are fixed in `core/prototyping/evaluatorReview.ts#ORDINAL_AXES` (information architecture / navigation flow / usability / functionality) and no longer authored as sidecar files.
+- Root `DESIGN.md` (brand SSOT: front-matter tokens plus `# Brand Philosophy` body)
+- Reference pool framed as deviate-from inputs, screen contracts (`uiux/40_screen_contracts.md`), optional tokens, optional fallback HTML/CSS mock, and Mermaid flows
+- Evaluator axes are fixed in `core/prototyping/evaluatorReview.ts#ORDINAL_AXES` (information architecture / navigation flow / usability / functionality) and no longer authored as sidecar files
 - Runtime screenshots or rendered evidence when available
 
 ## Deliverables

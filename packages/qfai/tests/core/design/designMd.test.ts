@@ -249,7 +249,7 @@ describe("parseDesignMd (TC-1.1.x)", () => {
     // would otherwise dominate. Then re-inject `motion`. The unknown-
     // key check MUST fire first, returning a parse-level ParseError
     // (visual.motion / unknown-key), not a colors-related issue.
-    const text = VALID_FRONT_MATTER.replace(/  colors:\n(?:    [^\n]+\n)+/, "").replace(
+    const text = VALID_FRONT_MATTER.replace(/ {2}colors:\n(?: {4}[^\n]+\n)+/, "").replace(
       "  typography:",
       "  motion:\n    duration: 300ms\n  typography:",
     );
