@@ -352,7 +352,7 @@ describe("validateSddDesignContractReadiness (TC-3.8.x)", () => {
     );
     expect(dcon013.length).toBeGreaterThan(0);
     expect(dcon013[0]?.message).toContain("(got <object>)");
-    expect(dcon013[0]?.message).not.toContain("{\"foo\":1}");
+    expect(dcon013[0]?.message).not.toContain('{"foo":1}');
   });
 
   it("missing finalIterIndex is rejected with DCON-013 (and uses the missing-field phrasing)", async () => {
@@ -467,10 +467,7 @@ describe("validateSddDesignContractReadiness (TC-3.8.x)", () => {
     );
     await writeFile(
       path.join(designDir, "design-system.yaml"),
-      VALID_MIRROR_YAML.replace(
-        "  radius:",
-        '  spacing:\n    base: "8px"\n  radius:',
-      ),
+      VALID_MIRROR_YAML.replace("  radius:", '  spacing:\n    base: "8px"\n  radius:'),
       "utf-8",
     );
     await writeFile(
@@ -503,10 +500,7 @@ describe("validateSddDesignContractReadiness (TC-3.8.x)", () => {
     const designDir = path.join(root, ".qfai/contracts/design");
     await writeFile(
       path.join(designDir, "design-system.yaml"),
-      VALID_MIRROR_YAML.replace(
-        "  radius:",
-        '  spacing:\n    base: "8px"\n  radius:',
-      ),
+      VALID_MIRROR_YAML.replace("  radius:", '  spacing:\n    base: "8px"\n  radius:'),
       "utf-8",
     );
     await writeFile(
@@ -526,8 +520,7 @@ describe("validateSddDesignContractReadiness (TC-3.8.x)", () => {
     const dcon005 = issues.filter((i) => i.code === "QFAI-DCON-005");
     expect(
       dcon005.some(
-        (i) =>
-          i.message.includes("visual.spacing") && i.message.includes("DESIGN.md does not"),
+        (i) => i.message.includes("visual.spacing") && i.message.includes("DESIGN.md does not"),
       ),
     ).toBe(true);
   });
@@ -563,8 +556,7 @@ describe("validateSddDesignContractReadiness (TC-3.8.x)", () => {
     expect(
       dcon005.some(
         (i) =>
-          i.message.includes("visual.typography.scale") &&
-          i.message.includes("DESIGN.md does not"),
+          i.message.includes("visual.typography.scale") && i.message.includes("DESIGN.md does not"),
       ),
     ).toBe(true);
   });
@@ -863,9 +855,7 @@ describe("validateSddDesignContractReadiness (TC-3.8.x)", () => {
     );
     const issues = await validatePrototypingDesignContractReadiness(root, defaultConfig);
     const dcon005 = issues.filter((i) => i.code === "QFAI-DCON-005");
-    expect(
-      dcon005.some((i) => i.message.includes("visual.typography.scale")),
-    ).toBe(true);
+    expect(dcon005.some((i) => i.message.includes("visual.typography.scale"))).toBe(true);
   });
 
   it("optional visual.typography.weight numeric values cross-checked → DCON-005 on divergence", async () => {

@@ -126,7 +126,7 @@ describe("findDesignMdViolations — color (TC-3.2.1..9)", () => {
   });
 
   it("<style> block url(#hash) reference is NOT flagged as a color violation", () => {
-    const html = '<style>.icon{ fill: url(#defaced); }</style>';
+    const html = "<style>.icon{ fill: url(#defaced); }</style>";
     const out = findDesignMdViolations(html, sampleDesignMd());
     expect(out.filter((v) => v.kind === "color")).toEqual([]);
   });
@@ -144,7 +144,7 @@ describe("findDesignMdViolations — color (TC-3.2.1..9)", () => {
   });
 
   it("named CSS color (background-color: white) IS flagged when not in DESIGN.md", () => {
-    const html = '<style>p{ background-color: white; }</style>';
+    const html = "<style>p{ background-color: white; }</style>";
     const out = findDesignMdViolations(html, sampleDesignMd());
     expect(out.some((v) => v.kind === "color" && v.found === "white")).toBe(true);
   });
@@ -175,13 +175,13 @@ describe("findDesignMdViolations — color (TC-3.2.1..9)", () => {
     // CSS_URL_RE strips `url("hero.png")` from the cssText BEFORE
     // COLOR_PROP_RE matches, so the post-strip value is
     // ` no-repeat red`, and the per-token loop flags `red`.
-    const html = "<style>.hero { background: url(\"hero.png\") no-repeat red; }</style>";
+    const html = '<style>.hero { background: url("hero.png") no-repeat red; }</style>';
     const out = findDesignMdViolations(html, sampleDesignMd());
     expect(out.some((v) => v.kind === "color" && v.found === "red")).toBe(true);
   });
 
   it("background shorthand with single-quoted url + named color flags the named color", () => {
-    const html = '<div style="background: url(\'hero.png\') no-repeat red"></div>';
+    const html = "<div style=\"background: url('hero.png') no-repeat red\"></div>";
     const out = findDesignMdViolations(html, sampleDesignMd());
     expect(out.some((v) => v.kind === "color" && v.found === "red")).toBe(true);
   });
@@ -286,9 +286,7 @@ describe("findDesignMdViolations — color (TC-3.2.1..9)", () => {
     // the literal scanner ignores box-shadow value content.
     const html = '<div style="background-color: rgba(15,23,42,0.05)"></div>';
     const out = findDesignMdViolations(html, sampleDesignMd());
-    expect(
-      out.some((v) => v.kind === "color" && v.found === "rgba(15,23,42,0.05)"),
-    ).toBe(true);
+    expect(out.some((v) => v.kind === "color" && v.found === "rgba(15,23,42,0.05)")).toBe(true);
   });
 
   it("registered box-shadow with embedded rgba is still allowed (no false positive on the shadow itself)", () => {

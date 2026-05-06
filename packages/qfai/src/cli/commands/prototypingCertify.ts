@@ -454,7 +454,6 @@ function countIterations(protoJson: unknown): number {
   return Array.isArray(iterations) ? iterations.length : 0;
 }
 
-
 // `DesignMdViolation` is only used as part of typing through the
 // findDesignMdViolations import; explicit re-export keeps the tree shake
 // stable but is not strictly required.
