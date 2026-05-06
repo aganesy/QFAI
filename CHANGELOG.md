@@ -9,7 +9,7 @@
 ### Changed (BREAKING)
 
 - **spec layout**: spec-0017 (CAP-0017 v2.0 single-thread evolution loop / UX-loop redesign) decomposed into spec-0012 (primary) + spec-0004 (validators) + spec-0010 (discussion) + spec-0011 (implement) + spec-0013 (sdd) + spec-0014 (verify) + spec-0015 (agent routing) + spec-0007 (guardrails). CAP-0017 absorbed into CAP-0012. `.qfai/specs/spec-0017/` and `CAP-0017` permanently retired (gap reserved per slice-policy §ID 安定性ルール 5). Backward compatibility intentionally NOT preserved.
-- **spec-0012 v1.x purge**: legacy AC-0012-0011..0019, BR-0012-0011..0016, EX-0012-0090..0102/0108..0109, TC-0012-0287..0288/0297..0309/0314..0318, DR-0012-0004/0006/0007/0008/0009/0011 removed. mode budgets / `fullHarness.iterations[]` / `scoringTrace[]` / `allReviewerAxesPerfect100` / weighted-total scoring / r5/r3/r2/r1 round funnel / hard-floor evaluation-rubric enforcement are no longer in the active spec surface.
+- **spec-0012 v1.x purge**: legacy AC-0012-0011..0019, BR-0012-0011..0016, EX-0012-0090..0097/0108..0109, TC-0012-0287..0288/0297..0309/0314..0318, DR-0012-0004/0006/0007/0008/0009/0011 removed. EX-0012-0098..0102 (Delegation Scope, Validate/Verify Gates, Non-UI Exclusion, Legacy Traceability Space) remain active. mode budgets / `fullHarness.iterations[]` / `scoringTrace[]` / `allReviewerAxesPerfect100` / weighted-total scoring / r5/r3/r2/r1 round funnel / hard-floor evaluation-rubric enforcement are no longer in the active spec surface.
 
 This release also rewrites `qfai-prototyping` around a single root
 `DESIGN.md` brand source of truth, swaps the evaluator axes for a
