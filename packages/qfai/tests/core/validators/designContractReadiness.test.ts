@@ -276,6 +276,110 @@ describe("validateSddDesignContractReadiness (TC-3.8.x)", () => {
     );
   });
 
+  it("non-string handoff field (finalArtifact as object) is rejected with DCON-013", async () => {
+    const root = await newTempDir();
+    await seedUiBearingProject(root);
+    await seedDesignMdAndLock(root);
+    await seedPrototypingDesignYamls(root);
+    await writeFile(
+      path.join(root, ".qfai/contracts/design/prototype-handoff.yaml"),
+      [
+        "finalIterIndex: 1",
+        "finalArtifact:", // mapping-shaped value
+        '  uri: ".qfai/prototypes/final/index.html"',
+        'designMdPath: "DESIGN.md"',
+        `designMdSha256: "${hashDesignMd(VALID_DESIGN_MD)}"`,
+        'designSystemMirror: ".qfai/contracts/design/design-system.yaml"',
+        'implementationNotes: "test"',
+        "",
+      ].join("\n"),
+      "utf-8",
+    );
+    const issues = await validatePrototypingDesignContractReadiness(root, defaultConfig);
+    const dcon013 = issues.filter((i) => i.code === "QFAI-DCON-013");
+    expect(
+      dcon013.some(
+        (i) =>
+          i.message.includes("finalArtifact") && i.message.includes("must be a non-empty string"),
+      ),
+    ).toBe(true);
+  });
+
+  it("non-string handoff field (designSystemMirror as array) is rejected with DCON-013", async () => {
+    const root = await newTempDir();
+    await seedUiBearingProject(root);
+    await seedDesignMdAndLock(root);
+    await seedPrototypingDesignYamls(root);
+    await writeFile(
+      path.join(root, ".qfai/contracts/design/prototype-handoff.yaml"),
+      [
+        "finalIterIndex: 1",
+        'finalArtifact: ".qfai/prototypes/final/index.html"',
+        'designMdPath: "DESIGN.md"',
+        `designMdSha256: "${hashDesignMd(VALID_DESIGN_MD)}"`,
+        "designSystemMirror:",
+        '  - ".qfai/contracts/design/design-system.yaml"',
+        '  - ".qfai/contracts/design/another.yaml"',
+        'implementationNotes: "test"',
+        "",
+      ].join("\n"),
+      "utf-8",
+    );
+    const issues = await validatePrototypingDesignContractReadiness(root, defaultConfig);
+    const dcon013 = issues.filter((i) => i.code === "QFAI-DCON-013");
+    expect(
+      dcon013.some(
+        (i) =>
+          i.message.includes("designSystemMirror") &&
+          i.message.includes("must be a non-empty string"),
+      ),
+    ).toBe(true);
+  });
+
+  it("design-system.yaml as DESIGN.md mirror passes validation (post-1.8.9 contract)", async () => {
+    const root = await newTempDir();
+    await seedUiBearingProject(root);
+    await seedDesignMdAndLock(root);
+    // Replace the legacy checklist-shaped design-system.yaml with the
+    // post-1.8.9 mirror shape (visual.colors / visual.typography / ...).
+    const designDir = path.join(root, ".qfai/contracts/design");
+    await writeFile(
+      path.join(designDir, "design-system.yaml"),
+      [
+        "visual:",
+        "  colors:",
+        '    primary: "#1F2937"',
+        "  typography:",
+        '    family_sans: "Inter, system-ui, sans-serif"',
+        "  radius:",
+        '    sm: "0.25rem"',
+        "  shadow:",
+        '    sm: "0 1px 2px rgba(15,23,42,0.05)"',
+        "",
+      ].join("\n"),
+      "utf-8",
+    );
+    // Also seed the prototype-handoff so the suite passes end-to-end.
+    await writeFile(
+      path.join(designDir, "prototype-handoff.yaml"),
+      [
+        "finalIterIndex: 1",
+        'finalArtifact: ".qfai/prototypes/final/index.html"',
+        'designMdPath: "DESIGN.md"',
+        `designMdSha256: "${hashDesignMd(VALID_DESIGN_MD)}"`,
+        'designSystemMirror: ".qfai/contracts/design/design-system.yaml"',
+        'implementationNotes: "test"',
+        "",
+      ].join("\n"),
+      "utf-8",
+    );
+    const issues = await validatePrototypingDesignContractReadiness(root, defaultConfig);
+    const dcon005 = issues.filter((i) => i.code === "QFAI-DCON-005");
+    // Mirror shape requires visual.colors / typography / radius / shadow
+    // — all present here, so no DCON-005 should fire.
+    expect(dcon005).toEqual([]);
+  });
+
   it("negative finalIterIndex is rejected with DCON-013", async () => {
     const root = await newTempDir();
     await seedUiBearingProject(root);

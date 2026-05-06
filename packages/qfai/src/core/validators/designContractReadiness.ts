@@ -255,9 +255,41 @@ async function validateDesignSystem(root: string, config: QfaiConfig): Promise<I
       : [];
   }
 
-  const checklist = parsed.value.checklist;
   const issues: Issue[] = [];
+  const filePathRel = toPosixRelative(root, filePath);
 
+  // Post-1.8.9 design-system.yaml is a deterministic mirror of the
+  // root DESIGN.md tokens (see
+  // `qfai-prototyping/references/handoff.md#outputs`):
+  //   visual.colors / visual.typography / visual.radius / visual.shadow
+  //   (visual.spacing optional). Accept either the new mirror shape OR
+  //   the legacy `checklist.{color,typography,...}` shape so projects
+  //   that have not yet regenerated their design-system.yaml still
+  //   pass. The mirror form takes precedence — its presence is enough.
+  const visual = parsed.value.visual;
+  const isMirrorShape = isRecord(visual) && isRecord(visual.colors) && isRecord(visual.typography);
+  if (isMirrorShape) {
+    const REQUIRED_MIRROR_KEYS = ["colors", "typography", "radius", "shadow"] as const;
+    for (const key of REQUIRED_MIRROR_KEYS) {
+      const value = visual[key];
+      if (!isRecord(value) || Object.keys(value).length === 0) {
+        issues.push(
+          issue(
+            "QFAI-DCON-005",
+            `design-system.yaml mirror is missing or empty 'visual.${key}'.`,
+            "error",
+            filePathRel,
+            "designContractReadiness.designSystemMirror",
+          ),
+        );
+      }
+    }
+    return issues;
+  }
+
+  // Legacy checklist shape — kept so existing projects keep validating
+  // until they regenerate their design-system.yaml from the new mirror.
+  const checklist = parsed.value.checklist;
   for (const key of REQUIRED_DESIGN_SYSTEM_CHECKLIST_KEYS) {
     if (
       !(checklist && typeof checklist === "object" && key in (checklist as Record<string, unknown>))
@@ -265,9 +297,9 @@ async function validateDesignSystem(root: string, config: QfaiConfig): Promise<I
       issues.push(
         issue(
           "QFAI-DCON-005",
-          `design-system.yaml is missing checklist key '${key}'.`,
+          `design-system.yaml is missing checklist key '${key}' (or rewrite as a DESIGN.md token mirror with visual.colors / visual.typography / visual.radius / visual.shadow).`,
           "error",
-          toPosixRelative(root, filePath),
+          filePathRel,
           "designContractReadiness.designSystemChecklist",
         ),
       );
@@ -286,9 +318,9 @@ async function validateDesignSystem(root: string, config: QfaiConfig): Promise<I
     issues.push(
       issue(
         "QFAI-DCON-005",
-        "design-system.yaml is missing component guidance (expected checklist.component_tone or a richer component_tone/component_semantics/content_tone block).",
+        "design-system.yaml is missing component guidance (expected checklist.component_tone, component_tone/component_semantics/content_tone, or rewrite as a DESIGN.md token mirror).",
         "error",
-        toPosixRelative(root, filePath),
+        filePathRel,
         "designContractReadiness.designSystemChecklist",
       ),
     );
@@ -356,41 +388,55 @@ async function validatePrototypeHandoff(root: string, config: QfaiConfig): Promi
       ),
     );
   }
-  issues.push(
-    ...validateRequiredStringArrayKeys(
-      filePath,
-      root,
-      parsed.value,
-      [
-        "finalArtifact",
-        "designMdPath",
-        "designMdSha256",
-        "designSystemMirror",
-        "implementationNotes",
-      ],
-      "QFAI-DCON-013",
-      "prototype-handoff.yaml is missing required field",
-      "designContractReadiness.prototypeHandoffField",
-    ),
-  );
-  return issues;
-}
-
-function validateRequiredStringArrayKeys(
-  filePath: string,
-  root: string,
-  record: Record<string, unknown>,
-  requiredKeys: string[],
-  code: string,
-  messagePrefix: string,
-  rule: string,
-): Issue[] {
-  const issues: Issue[] = [];
-  for (const key of requiredKeys) {
-    const value = record[key];
-    if (!hasMeaningfulContractContent(value)) {
+  // Require each remaining field to be a non-empty string. The earlier
+  // helper `validateRequiredStringArrayKeys` accepted arrays / records
+  // as "meaningful content", so a handoff that authored
+  // `finalArtifact: { uri: "..." }` or
+  // `designSystemMirror: ["a.yaml", "b.yaml"]` would silently pass —
+  // but downstream consumers (`/qfai-implement`, certify, ref-integrity)
+  // require scalar string paths. Enforce the scalar contract here.
+  for (const key of [
+    "finalArtifact",
+    "designMdPath",
+    "designMdSha256",
+    "designSystemMirror",
+    "implementationNotes",
+  ] as const) {
+    const value = parsed.value[key];
+    if (!(key in parsed.value)) {
       issues.push(
-        issue(code, `${messagePrefix} '${key}'.`, "error", toPosixRelative(root, filePath), rule),
+        issue(
+          "QFAI-DCON-013",
+          `prototype-handoff.yaml is missing required field '${key}'.`,
+          "error",
+          filePathRel,
+          "designContractReadiness.prototypeHandoffField",
+        ),
+      );
+      continue;
+    }
+    if (typeof value !== "string") {
+      issues.push(
+        issue(
+          "QFAI-DCON-013",
+          `prototype-handoff.yaml field '${key}' must be a non-empty string (got ${typeof value}).`,
+          "error",
+          filePathRel,
+          "designContractReadiness.prototypeHandoffField",
+        ),
+      );
+      continue;
+    }
+    const normalized = value.trim();
+    if (normalized.length === 0 || PLACEHOLDER_RE.test(normalized)) {
+      issues.push(
+        issue(
+          "QFAI-DCON-013",
+          `prototype-handoff.yaml field '${key}' must be a non-empty string.`,
+          "error",
+          filePathRel,
+          "designContractReadiness.prototypeHandoffField",
+        ),
       );
     }
   }

@@ -41,12 +41,14 @@ export async function validatePrototypingArtifactRefIntegrity(
       handoff.finalArtifact,
       "prototype-handoff.finalArtifact",
       issues,
+      { required: true },
     );
     await validateArtifactRef(
       root,
       handoff.designSystemMirror,
       "prototype-handoff.designSystemMirror",
       issues,
+      { required: true },
     );
   }
 

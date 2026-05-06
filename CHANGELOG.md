@@ -6,6 +6,32 @@
 
 ### Fixed (Breaking — pre-1.8.9 internal pipelines only)
 
+- **design-system.yaml accepts the post-1.8.9 DESIGN.md token mirror**:
+  `validateDesignSystem` now accepts the new mirror shape
+  (`visual.colors`, `visual.typography`, `visual.radius`,
+  `visual.shadow`) documented in
+  `qfai-prototyping/references/handoff.md`. The legacy
+  `checklist.{color,typography,...}` shape is still accepted as a
+  fallback so existing projects keep validating until they regenerate
+  their design-system.yaml. Without this, a freshly generated mirror
+  would fail QFAI-DCON-005 before certification, blocking the
+  validate → verify → certify sequence.
+- **prototype-handoff.yaml string fields require non-empty scalars**:
+  Each string field (`finalArtifact`, `designMdPath`, `designMdSha256`,
+  `designSystemMirror`, `implementationNotes`) is now validated as a
+  non-empty string. Previously the helper passed arrays / mappings as
+  "meaningful content", so a handoff like `finalArtifact: { uri: "..." }`
+  or `designSystemMirror: ["a.yaml", "b.yaml"]` slipped past
+  QFAI-DCON-013 even though downstream consumers (`/qfai-implement`,
+  certify, ref-integrity) require scalar paths. The
+  `validateRequiredStringArrayKeys` helper is now removed (it was
+  the source of the type-laxity).
+- **prototyping ref-integrity rejects non-string handoff paths**:
+  `validatePrototypingArtifactRefIntegrity` now treats
+  `prototype-handoff.finalArtifact` and
+  `prototype-handoff.designSystemMirror` as required, so a
+  non-string or empty value produces QFAI-PROT-009 instead of
+  silently passing the ref-integrity gate.
 - **DESIGN.md color scanner restricted to CSS contexts**:
   `findDesignMdViolations` color scan now reads only inline `style="..."`
   values and `<style>...</style>` block content, not arbitrary HTML
