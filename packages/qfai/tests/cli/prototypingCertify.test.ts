@@ -17,7 +17,10 @@ import { COMPLETION_CERTIFICATE_REL_PATH } from "../../src/core/prototyping/cert
 
 function isCertificateWithSpecsCovered(raw: unknown): raw is { specsCovered: string[] } {
   if (raw === null || typeof raw !== "object" || !("specsCovered" in raw)) return false;
-  const value = (raw as Record<string, unknown>).specsCovered;
+  // TS narrows `raw` to `object & Record<"specsCovered", unknown>` after
+  // the `"specsCovered" in raw` guard, so direct property access is
+  // type-safe — no `as` cast needed.
+  const value = raw.specsCovered;
   return Array.isArray(value) && value.every((v): v is string => typeof v === "string");
 }
 
