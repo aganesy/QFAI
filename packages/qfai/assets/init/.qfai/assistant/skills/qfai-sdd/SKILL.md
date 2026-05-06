@@ -221,9 +221,10 @@ When the target spec is UI-bearing, Phase 0 MUST freeze the brand SSOT:
    stop and report `path` / `code` / `message` for the parse error.
    Otherwise the result is `{ data: DesignMd; body: string }`; pass
    `data` to `validateDesignMd(data)`. If that issue list is
-   non-empty, stop and report each issue. Both functions are exported
-   from `packages/qfai/src/core/design/designMd.ts` (or the public
-   `qfai/dist/...` entry — the runtime API surface is the same).
+   non-empty, stop and report each issue. Both functions, together with
+   `hashDesignMd` and the `DesignMd` / `ParseError` / `ParseResult` /
+   `ValidationIssue` types, are re-exported from the public `qfai`
+   package entry (`import { parseDesignMd, validateDesignMd, hashDesignMd } from "qfai"`).
 3. Call `hashDesignMd(text)` to compute sha256 over the raw bytes.
 4. Write `.qfai/contracts/design/DESIGN.md.lock.yaml` from the
    template at

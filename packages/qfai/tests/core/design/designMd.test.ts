@@ -426,6 +426,37 @@ describe("parseDesignMd (TC-1.1.x)", () => {
     expect(result.error.path).toBe("audience.do_not_look_like[1]");
   });
 
+  // Pre-fix `Array.isArray` only gate dropped `emotion: null` silently;
+  // post-fix the `'emotion' in raw.audience && raw.audience.emotion !==
+  // undefined` gate forwards `null` into parseAudienceStringArray, which
+  // rejects it. These two tests are the regression sentinels for that
+  // null-literal branch — without them, a future revert to an
+  // Array-isArray-only check would re-introduce the silent-skip drift
+  // and only the scalar/non-string-entry cases above would catch it.
+  it("audience.emotion as null literal is rejected at parse-time", () => {
+    const text = VALID_FRONT_MATTER.replace(
+      '  emotion: ["confident comparison"]',
+      "  emotion: null",
+    );
+    const result = parseDesignMd(text);
+    expect("error" in result).toBe(true);
+    if (!("error" in result)) return;
+    expect(result.error.code).toBe("invalid-type");
+    expect(result.error.path).toBe("audience.emotion");
+  });
+
+  it("audience.do_not_look_like as null literal is rejected at parse-time", () => {
+    const text = VALID_FRONT_MATTER.replace(
+      '  do_not_look_like: ["generic SaaS dashboard"]',
+      "  do_not_look_like: null",
+    );
+    const result = parseDesignMd(text);
+    expect("error" in result).toBe(true);
+    if (!("error" in result)) return;
+    expect(result.error.code).toBe("invalid-type");
+    expect(result.error.path).toBe("audience.do_not_look_like");
+  });
+
   it("audience.emotion as a string array is accepted (positive)", () => {
     // The existing VALID_FRONT_MATTER already authors a 1-element
     // string array; this test asserts the positive parse path is

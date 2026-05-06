@@ -5,10 +5,10 @@
  *
  * v1.8.9: TC-0002-0002..0005 annotations were removed because those TCs
  * were retired together with the legacy `discussionDesignHardening`
- * validator (spec-0017 → post-1.8.9 prototyping spec absorb). The taste
- * validator's own behavior is anchored by spec-0034's TDD-0001..0005;
- * spec-0002 traceability is reduced to TC-0002-0001 (the surviving
- * 15-file structural TC).
+ * validator (legacy exploration-sidecar family absorbed into the
+ * post-1.8.9 prototyping spec). The taste validator's own behavior is
+ * anchored by spec-0034's TDD-0001..0005; spec-0002 traceability is
+ * reduced to TC-0002-0001 (the surviving 15-file structural TC).
  */
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";

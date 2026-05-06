@@ -27,6 +27,9 @@ Freeze procedure:
    `{ designMdPath, designMdSha256, frozenAt, schemaTokens }`.
 5. Add the lock yaml to `_policies/05_Contracts.md` Contract Index.
 
+`parseDesignMd`, `validateDesignMd`, and `hashDesignMd` are re-exported
+from the public `qfai` package entry (`import { parseDesignMd, validateDesignMd, hashDesignMd } from "qfai"`).
+
 `/qfai-prototyping` post-loop produces
 `.qfai/contracts/design/design-system.yaml` (a deterministic mirror of
 DESIGN.md tokens) and `.qfai/contracts/design/prototype-handoff.yaml`.
