@@ -170,6 +170,61 @@ describe("findDesignMdViolations — color (TC-3.2.1..9)", () => {
     expect(out.filter((v) => v.kind === "color")).toEqual([]);
   });
 
+  it("background shorthand with named color (background: red) IS flagged", () => {
+    // Codex 6r-a: `background: red` is the most common shorthand
+    // path that bypassed the pre-fix scanner because background
+    // wasn't in COLOR_PROP_RE. Now caught.
+    const html = '<div style="background: red"></div>';
+    const out = findDesignMdViolations(html, sampleDesignMd());
+    expect(out.filter((v) => v.kind === "color")).toEqual([{ kind: "color", found: "red" }]);
+  });
+
+  it("border shorthand with named color (border: 1px solid red) IS flagged", () => {
+    // Codex 6r-a: `border: 1px solid red` shorthand. The per-token
+    // loop walks `1px solid red`; `1px` skipped (numeric), `solid`
+    // skipped (not in CSS_NAMED_COLORS), `red` flagged.
+    const html = '<div style="border: 1px solid red"></div>';
+    const out = findDesignMdViolations(html, sampleDesignMd());
+    expect(out.filter((v) => v.kind === "color")).toEqual([{ kind: "color", found: "red" }]);
+  });
+
+  it("outline shorthand with named color (outline: 2px dashed blue) IS flagged", () => {
+    const html = '<div style="outline: 2px dashed blue"></div>';
+    const out = findDesignMdViolations(html, sampleDesignMd());
+    expect(out.filter((v) => v.kind === "color")).toEqual([{ kind: "color", found: "blue" }]);
+  });
+
+  it("border-top shorthand with named color IS flagged", () => {
+    const html = '<div style="border-top: 1px solid green"></div>';
+    const out = findDesignMdViolations(html, sampleDesignMd());
+    expect(out.filter((v) => v.kind === "color")).toEqual([{ kind: "color", found: "green" }]);
+  });
+
+  it("mixed shorthand (border-color: red #ff0000 blue #00ff00) flags BOTH named tokens AND BOTH hex tokens", () => {
+    // Aganesy 6zZu: pre-fix, the outer hex/rgb/hsl skip caused the
+    // entire value to be skipped when ANY hex literal was present,
+    // hiding the named-color drift entirely. Per-token skip now lets
+    // each token be evaluated independently. Hex tokens are caught
+    // by the literal scanner above; named tokens are caught here.
+    const html = '<div style="border-color: red #ff0000 blue #00ff00"></div>';
+    const out = findDesignMdViolations(html, sampleDesignMd());
+    const colorHits = out.filter((v) => v.kind === "color").map((v) => v.found);
+    // The order: literal scanner runs first, so hex literals come
+    // first; then named tokens from COLOR_PROP_RE pass.
+    expect(colorHits).toEqual(["#ff0000", "#00ff00", "red", "blue"]);
+  });
+
+  it("mixed shorthand (border-color: red rgba(99,99,99,0.5)) flags BOTH the rgba AND the named token", () => {
+    // Aganesy 6zZu rgba arm: same structure as the hex mix above.
+    // Use an rgba value that is NOT in `dm.visual.colors.overlay`
+    // so the literal scan flags it.
+    const html = '<div style="border-color: red rgba(99,99,99,0.5)"></div>';
+    const out = findDesignMdViolations(html, sampleDesignMd());
+    const colorHits = out.filter((v) => v.kind === "color").map((v) => v.found);
+    expect(colorHits).toContain("red");
+    expect(colorHits).toContain("rgba(99,99,99,0.5)");
+  });
+
   it("border-color 4-side shorthand with all named colors flags every token", () => {
     // `border-color: red blue green red` is valid CSS shorthand for
     // top/right/bottom/left. Pre-fix, `^[a-z]+$` skipped multi-token

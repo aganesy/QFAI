@@ -35,12 +35,17 @@ const CSS_URL_RE = /\burl\s*\([^)]*\)/gi;
 // system-color keyword `transparent` are valid here. Hex/rgb/hsl are
 // covered by the literal scanner; this regex catches the
 // keyword-as-value path so `color: red` cannot slip past certify just
-// because the literal isn't hex/rgb/hsl. Properties listed are the ones
-// that take a single <color> as their primary value or accept named
-// colors in shorthand position. Background / border shorthands route to
-// the dedicated *-color longhand below for value extraction.
+// because the literal isn't hex/rgb/hsl. The list includes both the
+// dedicated *-color longhands AND the common shorthands (`background`,
+// `border`, `border-{top,right,bottom,left}`, `outline`) — the
+// shorthand grammar lets a named color sit anywhere in the value
+// (e.g. `border: 1px solid red`, `background: red url(...) repeat`),
+// and the per-token loop in scanColors splits the captured value on
+// whitespace to find the color token among non-color shorthand
+// tokens (`1px`, `solid`, `repeat`, etc., which are silently ignored
+// because they aren't in CSS_NAMED_COLORS).
 const COLOR_PROP_RE =
-  /\b(?:color|background-color|border-color|border-top-color|border-right-color|border-bottom-color|border-left-color|outline-color|fill|stroke|caret-color|text-decoration-color|column-rule-color)\s*:\s*([^;}<>"']+)/gi;
+  /\b(?:color|background|background-color|border|border-top|border-right|border-bottom|border-left|border-color|border-top-color|border-right-color|border-bottom-color|border-left-color|outline|outline-color|fill|stroke|caret-color|text-decoration-color|column-rule-color)\s*:\s*([^;}<>"']+)/gi;
 // Property-value regexes capture up to the next `;`, `}`, `<`, `>`, or
 // containing-attr quote boundary. Inline `style="..."` boundaries are
 // handled by stopping at the outer attribute quote, so the value class
@@ -275,36 +280,45 @@ function scanColors(html: string, dm: DesignMd, out: DesignMdViolation[]): void 
     const captured = match[1] ?? "";
     const value = captured.trim().toLowerCase();
     if (value.length === 0) continue;
-    // Skip values that contain a hex / rgb / hsl literal — those are
-    // already handled by the literal scanners above; surfacing them
-    // here would double-count.
-    if (HEX_RE_TEST.test(value) || RGB_RE_TEST.test(value) || HSL_RE_TEST.test(value)) {
-      continue;
-    }
-    // Skip CSS variable references and `inherit` / `currentcolor` /
-    // `transparent` etc. — they are not literal colors and are
-    // resolved at render time. DESIGN.md drift via these channels is
-    // out of scope for this regex-based scanner.
+    // Skip CSS variable references at the value level. They resolve
+    // at render time and are out of scope for the regex-based scanner.
     if (value.startsWith("var(")) continue;
-    if (SAFE_LITERALS.has(value)) continue;
-    // If DESIGN.md authored a named color as one of its tokens (e.g.
-    // `primary: red`), `allowed` already contains the lowercase
-    // keyword and the value is compliant.
-    if (allowed.has(value)) continue;
-    // Per-token named-color check. CSS allows shorthand multi-color
-    // values on the longhand-set properties caught by COLOR_PROP_RE:
-    //   `border-color: red blue green red`  (4-side)
-    //   `border-color: red blue`            (2-side)
+    // Per-token named-color check. CSS allows multi-token color
+    // shorthand values on most COLOR_PROP_RE-captured properties:
+    //   `border-color: red blue green red`  (4-side longhand)
+    //   `border: 1px solid red`             (border shorthand)
+    //   `background: red url(...) repeat`   (background shorthand)
     // Splitting on whitespace and checking each token catches every
     // off-spec named color in the shorthand. A single-token value
     // (`color: red`) is just the 1-token case of the same loop.
-    // Tokens that aren't pure `[a-z]+` identifiers (e.g. `1px` from
-    // a `background: red 1px ...` shorthand mis-parse) are skipped
-    // so we surface only clean named-color drift.
+    //
+    // Hex / rgb / hsl tokens are skipped INSIDE the per-token loop
+    // (not at the value level) so a mixed shorthand like
+    // `border-color: red #ff0000 blue #00ff00` still surfaces the
+    // named drift on `red` / `blue` even when literal tokens are
+    // present (the literal scanner above handles `#ff0000` /
+    // `#00ff00` separately, so no double-count).
+    //
+    // Non-color shorthand tokens (`1px`, `solid`, `dashed`, `repeat`,
+    // `no-repeat`, etc. — anything NOT in `CSS_NAMED_COLORS`) are
+    // silently ignored by the final `CSS_NAMED_COLORS.has(token)`
+    // gate. Tokens that aren't pure `[a-z]+` identifiers (e.g.
+    // `1px`, `0.5em`, `50%`) are filtered out earlier so the
+    // CSS_NAMED_COLORS lookup is only reached by clean keyword
+    // candidates — guarding against future authoring mistakes (e.g.
+    // a project that adds a numeric value where a color is expected).
     for (const token of value.split(/\s+/)) {
       if (token.length === 0) continue;
       if (SAFE_LITERALS.has(token)) continue;
       if (allowed.has(token)) continue;
+      // Skip hex / rgb / hsl tokens — already counted by the literal
+      // scanner above. Doing this per-token (rather than at the
+      // value level) keeps named-color drift visible in mixed
+      // shorthands.
+      if (HEX_RE_TEST.test(token) || RGB_RE_TEST.test(token) || HSL_RE_TEST.test(token)) {
+        continue;
+      }
+      if (token.startsWith("var(")) continue;
       if (!/^[a-z]+$/.test(token)) continue;
       if (CSS_NAMED_COLORS.has(token)) {
         out.push({ kind: "color", found: token });

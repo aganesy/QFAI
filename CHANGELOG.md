@@ -63,7 +63,16 @@
   match is allowed. Multi-token shorthand values
   (e.g. `border-color: red blue green red` for top/right/bottom/left)
   are now split on whitespace and each token is checked
-  independently, so 4-side longhand drift is no longer silent.
+  independently, so 4-side longhand drift is no longer silent. The
+  property allow-list now also includes the common shorthands
+  (`background`, `border`, `border-{top,right,bottom,left}`,
+  `outline`) so named colors authored as `background: red` /
+  `border: 1px solid red` / `outline: 2px dashed blue` are also
+  caught. Hex / rgb / hsl tokens are skipped per-token (rather than
+  at the value level), so a mixed shorthand like
+  `border-color: red #ff0000 blue #00ff00` surfaces every token —
+  the literal scanner catches the hex tokens, and the named-color
+  pass catches the keyword tokens.
 - **design-system.yaml mirror values cross-checked against DESIGN.md**:
   `validateDesignSystem` now compares the mirror's
   `visual.colors.{12 keys}`, `visual.typography.{family_*3}`,
