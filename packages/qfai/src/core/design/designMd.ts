@@ -342,6 +342,23 @@ function buildDesignMd(raw: unknown): BuildResult {
     data.audience = aud;
   }
   if (isRecord(raw.accessibility)) {
+    // Reject unknown keys under `accessibility` for the same reason as
+    // every other section: silently dropping authoring directives lets
+    // them freeze into the lock hash while never reaching the parsed
+    // tokens consumed by iteration / certify.
+    const ACCESSIBILITY_ALLOWED_KEYS = new Set(["contrast_ratio_min", "motion"]);
+    const accessibilityUnknown = Object.keys(raw.accessibility).filter(
+      (k) => !ACCESSIBILITY_ALLOWED_KEYS.has(k),
+    );
+    if (accessibilityUnknown.length > 0) {
+      return {
+        error: {
+          path: `accessibility.${accessibilityUnknown[0] ?? ""}`,
+          code: "unknown-key",
+          message: `Unknown 'accessibility' key '${accessibilityUnknown[0] ?? ""}'. Allowed: ${[...ACCESSIBILITY_ALLOWED_KEYS].join(", ")}.`,
+        },
+      };
+    }
     const acc: NonNullable<DesignMd["accessibility"]> = {};
     if (typeof raw.accessibility.contrast_ratio_min === "number") {
       acc.contrast_ratio_min = raw.accessibility.contrast_ratio_min;

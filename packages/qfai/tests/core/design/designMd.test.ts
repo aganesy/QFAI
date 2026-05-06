@@ -290,6 +290,21 @@ describe("parseDesignMd (TC-1.1.x)", () => {
     expect(result.error.path).toBe("references");
   });
 
+  it("TC-1.1.20: unknown accessibility key (focus_ring) rejected with unknown-key", () => {
+    // Inject the accessibility block before the closing front-matter
+    // delimiter (the last line of VALID_FRONT_MATTER is `---`).
+    const lastShadowLine = '    lg: "0 12px 24px rgba(15,23,42,0.10)"';
+    const text = VALID_FRONT_MATTER.replace(
+      lastShadowLine,
+      `${lastShadowLine}\naccessibility:\n  contrast_ratio_min: 4.5\n  focus_ring: "2px"`,
+    );
+    const result = parseDesignMd(text);
+    expect("error" in result).toBe(true);
+    if (!("error" in result)) return;
+    expect(result.error.code).toBe("unknown-key");
+    expect(result.error.path).toBe("accessibility.focus_ring");
+  });
+
   it("TC-1.1.17: unknown audience key (references) rejected with unknown-key", () => {
     const text = VALID_FRONT_MATTER.replace(
       '  do_not_look_like: ["generic SaaS dashboard"]',
@@ -443,6 +458,15 @@ describe("validateDesignMd colors (TC-1.2.6..1.2.13)", () => {
     ).toBe(true);
   });
 
+  it("TC-1.2.11f: rgba(...) values out of 0..255 range on overlay are rejected", () => {
+    const d = buildValidDesignMd();
+    d.visual.colors.overlay = "rgba(256,0,0,0.5)";
+    const issues = validateDesignMd(d);
+    expect(
+      issues.some((i) => i.path === "visual.colors.overlay" && i.code === "invalid-color-format"),
+    ).toBe(true);
+  });
+
   it("TC-1.2.11g: rgba(...) alpha=1.0 / 1.00 on overlay is accepted (CSS-equivalent to 1)", () => {
     const d1 = buildValidDesignMd();
     d1.visual.colors.overlay = "rgba(0,0,0,1.0)";
@@ -456,15 +480,6 @@ describe("validateDesignMd colors (TC-1.2.6..1.2.13)", () => {
     const d = buildValidDesignMd();
     d.visual.colors.overlay = "rgba(0,0,0,.5)";
     expect(validateDesignMd(d)).toEqual([]);
-  });
-
-  it("TC-1.2.11f: rgba(...) values out of 0..255 range on overlay are rejected", () => {
-    const d = buildValidDesignMd();
-    d.visual.colors.overlay = "rgba(256,0,0,0.5)";
-    const issues = validateDesignMd(d);
-    expect(
-      issues.some((i) => i.path === "visual.colors.overlay" && i.code === "invalid-color-format"),
-    ).toBe(true);
   });
 
   it("TC-1.2.12: leading/trailing whitespace in color value is rejected", () => {

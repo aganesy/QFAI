@@ -6,6 +6,14 @@
 
 ### Fixed (Breaking — pre-1.8.9 internal pipelines only)
 
+- **DESIGN.md `accessibility` unknown-key reject**: `parseDesignMd()`
+  now rejects unknown keys under `accessibility` (e.g. `focus_ring`,
+  `reduced_motion_details`) with the same `unknown-key` ParseError
+  shape as the other sections. Allowlist: `contrast_ratio_min`,
+  `motion`. Closes the final remaining gap in the "Unknown keys at
+  any level are rejected" contract — every section (`brand`, `visual`,
+  `visual.typography`, `audience`, `accessibility`) and the root now
+  enforce it.
 - **DESIGN.md root unknown-key reject**: `parseDesignMd()` now rejects
   unknown root-level keys (e.g. `platform:`, `references:`) with the
   same `unknown-key` ParseError shape as `visual` / `visual.typography`
