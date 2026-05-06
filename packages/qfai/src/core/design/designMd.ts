@@ -103,11 +103,14 @@ export type ParseResult = { data: DesignMd; body: string } | { error: ParseError
 const HEX_COLOR_RE = /^#[0-9A-Fa-f]{6}([0-9A-Fa-f]{2})?$/;
 // Strict rgba(R,G,B,A) literal for `visual.colors.overlay`. Alpha is
 // REQUIRED (no rgb(...) fallback) so authors cannot freeze a non-
-// transparent overlay token. R/G/B accept 0..255; alpha accepts
-// 0, 1, or 0.<digits>/.<digits>. Whitespace inside the parens is
-// tolerated; whitespace around the literal is rejected upstream.
+// transparent overlay token. R/G/B accept 0..255; alpha accepts:
+//   - the integer `0` or `1`
+//   - `1.0`, `1.00`, ... (CSS-equivalent to `1`)
+//   - `0?.<digits>` (so both `0.5` and `.5` match the same branch).
+// Whitespace inside the parens is tolerated; whitespace around the
+// literal is rejected upstream.
 const RGBA_OVERLAY_RE =
-  /^rgba\(\s*(?:25[0-5]|2[0-4]\d|1\d\d|\d{1,2})\s*,\s*(?:25[0-5]|2[0-4]\d|1\d\d|\d{1,2})\s*,\s*(?:25[0-5]|2[0-4]\d|1\d\d|\d{1,2})\s*,\s*(?:0|1|0?\.\d+|\.\d+)\s*\)$/;
+  /^rgba\(\s*(?:25[0-5]|2[0-4]\d|1\d\d|\d{1,2})\s*,\s*(?:25[0-5]|2[0-4]\d|1\d\d|\d{1,2})\s*,\s*(?:25[0-5]|2[0-4]\d|1\d\d|\d{1,2})\s*,\s*(?:0|1(?:\.0+)?|0?\.\d+)\s*\)$/;
 const RADIUS_VALUE_RE = /^(?:0|\d+(?:\.\d+)?(?:px|rem|em|%)|9999px)$/;
 
 // ---------------------------------------------------------------------------

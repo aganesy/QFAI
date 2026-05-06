@@ -6,6 +6,42 @@
 
 ### Fixed (Breaking — pre-1.8.9 internal pipelines only)
 
+- **certify reads frozen `specsCovered` from cycle 0**:
+  `qfai prototyping certify` no longer re-resolves the primary spec
+  via `resolvePrimaryPrototypingSpec`. It now reads
+  `prototyping.json#specsCovered` (seeded by `iterate --cycle 0`)
+  and fails fast when the slot is missing, malformed, or empty.
+  A config edit (`prototyping.primarySpecId`) or a new
+  `surface_type: ui-bearing` marker landing between cycle 0 and
+  certify can no longer silently re-baseline the certificate to a
+  spec the loop never exercised. The cycle 0 seed is the SSOT for
+  what was actually reviewed.
+- **DESIGN.md font violation regex respects style attribute boundary**:
+  `findDesignMdViolations` font scan no longer captures past the
+  enclosing inline-style quote. Previously
+  `<div style="font-family: Inter" class="card">` resolved to
+  `Inter" class="card"` (because `[^;}<>]+` allowed the trailing
+  attribute quote inside the value), which made `fontMatches` reject
+  an otherwise-allowed family and could fail compliant generated HTML
+  during `qfai prototyping certify`. The regex now models CSS
+  font-family as a comma-separated list of either fully-quoted
+  strings or unquoted tokens, so `"Comic Sans"` inside a `<style>`
+  block still resolves correctly.
+- **DESIGN.md overlay alpha accepts `1.0` / `1.00` (CSS-equivalent to `1`)**:
+  The strict overlay regex introduced earlier accepted only the
+  integer `1`, surprising authors writing the CSS-equivalent
+  `rgba(0,0,0,1.0)` and rejecting templates that already used the
+  decimal form. Alpha branch is now `0|1(?:\.0+)?|0?\.\d+`, which
+  also collapses the dead `\.\d+` alternation that was a subset of
+  the existing `0?\.\d+` branch.
+- **prototyping handoff order documented end-to-end**: Cross-doc drift
+  in the `qfai-prototyping/references/handoff.md` "Cert" section and
+  `qfai-verify/SKILL.md` reviewer-gate checklist is fixed: the
+  handoff reference now spells out the validate → /qfai-verify →
+  certify order with the explicit precondition that certify requires
+  both gate files in place; the verify reviewer-gate no longer asks
+  the reviewer to confirm the completion-certificate (which only
+  exists AFTER verify in the new order).
 - **threeLayer canonical sidecar family pruned**: `validateThreeLayerModel`
   / `validateThreeLayerFamilyCompleteness` no longer require
   `33_exploration_rubric.md` and `34_evaluator_calibration.md`. These

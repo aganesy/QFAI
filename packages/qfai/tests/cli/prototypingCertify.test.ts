@@ -147,6 +147,7 @@ async function seedAllGatesPass(root: string): Promise<void> {
       surface: "web",
       runId: "run-test-2026",
       designMd: { path: "DESIGN.md", sha256: hashDesignMd(CERT_DESIGN_MD) },
+      specsCovered: ["0012"],
       reviewerGate: {
         result: "PASS",
         signoff: { reviewerId: "test-reviewer", timestamp: "2026-04-27T00:00:00Z" },
@@ -247,6 +248,7 @@ describe("qfai prototyping certify (generate)", () => {
         surface: "web",
         runId: "run-test-2026",
         designMd: { path: "DESIGN.md", sha256: hashDesignMd(CERT_DESIGN_MD) },
+        specsCovered: ["0012"],
         reviewerGate: {
           result: "PASS",
           signoff: { reviewerId: "test-reviewer", timestamp: "2026-04-27T00:00:00Z" },
@@ -277,6 +279,83 @@ describe("qfai prototyping certify (generate)", () => {
     expect(exit).toBe(2);
   });
 
+  it("uses prototyping.json#specsCovered (frozen at cycle 0) — does NOT re-resolve at certify", async () => {
+    // Plant a marker on a different spec id (`spec-0007`) AFTER cycle 0
+    // would have run, while the frozen seed records `["0012"]`. The
+    // certificate must reflect the frozen seed, not a re-resolution.
+    const root = await newTempDir();
+    await seedMinimalProject(root, { specMarker: true });
+    await seedAllGatesPass(root);
+    // Add a marker-bearing spec that did NOT exist at cycle 0.
+    await mkdir(path.join(root, ".qfai/specs/spec-0007"), { recursive: true });
+    await writeFile(
+      path.join(root, ".qfai/specs/spec-0007/01_Spec.md"),
+      "---\nsurface_type: ui-bearing\n---\n\n# spec-0007\n",
+      "utf-8",
+    );
+    await writeFile(
+      path.join(root, ".qfai/specs/spec-0007/02_User-stories.md"),
+      "# stories\n",
+      "utf-8",
+    );
+
+    const exit = await runPrototypingCertify({ root, check: false });
+    expect(exit).toBe(0);
+
+    const certPath = path.join(root, COMPLETION_CERTIFICATE_REL_PATH);
+    const body = JSON.parse(
+      await (await import("node:fs/promises")).readFile(certPath, "utf-8"),
+    ) as { specsCovered: string[] };
+    // Frozen seed wins — even though spec-0007 might now be resolvable.
+    expect(body.specsCovered).toEqual(["0012"]);
+  });
+
+  it("exits 2 when prototyping.json#specsCovered is missing", async () => {
+    const root = await newTempDir();
+    await seedMinimalProject(root, { specMarker: true });
+    await seedAllGatesPass(root);
+    // Re-write prototyping.json without the specsCovered slot.
+    await writeFile(
+      path.join(root, ".qfai/evidence/prototyping/prototyping.json"),
+      JSON.stringify({
+        mode: { effective: "standard", source: "test", rationale: "x" },
+        surface: "web",
+        runId: "run-test-2026",
+        designMd: { path: "DESIGN.md", sha256: hashDesignMd(CERT_DESIGN_MD) },
+        reviewerGate: {
+          result: "PASS",
+          signoff: { reviewerId: "test-reviewer", timestamp: "2026-04-27T00:00:00Z" },
+        },
+        iterations: [{ index: 0 }, { index: 1 }],
+      }),
+      "utf-8",
+    );
+    expect(await runPrototypingCertify({ root, check: false })).toBe(2);
+  });
+
+  it("exits 2 when prototyping.json#specsCovered is malformed (empty array)", async () => {
+    const root = await newTempDir();
+    await seedMinimalProject(root, { specMarker: true });
+    await seedAllGatesPass(root);
+    await writeFile(
+      path.join(root, ".qfai/evidence/prototyping/prototyping.json"),
+      JSON.stringify({
+        mode: { effective: "standard", source: "test", rationale: "x" },
+        surface: "web",
+        runId: "run-test-2026",
+        designMd: { path: "DESIGN.md", sha256: hashDesignMd(CERT_DESIGN_MD) },
+        specsCovered: [],
+        reviewerGate: {
+          result: "PASS",
+          signoff: { reviewerId: "test-reviewer", timestamp: "2026-04-27T00:00:00Z" },
+        },
+        iterations: [{ index: 0 }, { index: 1 }],
+      }),
+      "utf-8",
+    );
+    expect(await runPrototypingCertify({ root, check: false })).toBe(2);
+  });
+
   it("accepts legacy reviewer signoff fields when issuing the certificate", async () => {
     const root = await newTempDir();
     await seedMinimalProject(root, { specMarker: true });
@@ -288,6 +367,7 @@ describe("qfai prototyping certify (generate)", () => {
         surface: "web",
         runId: "run-x",
         designMd: { path: "DESIGN.md", sha256: hashDesignMd(CERT_DESIGN_MD) },
+        specsCovered: ["0012"],
         reviewerGate: {
           result: "PASS",
           signoff: { reviewer: "legacy-reviewer", timestamp: "2026-04-27T00:00:00Z" },

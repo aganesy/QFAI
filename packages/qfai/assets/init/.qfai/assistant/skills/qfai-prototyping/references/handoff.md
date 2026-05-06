@@ -55,7 +55,21 @@ the SSOT for brand identity. There is no preserve / adapt / copy split.
 
 ## Cert
 
-Run `qfai prototyping certify` to produce
-`.qfai/evidence/prototyping/completion-certificate.json`. The
-certificate includes `designMdPath` + `designMdSha256` for the locked
-brand identity. Use `certify --check` to verify digests.
+Order is load-bearing: `qfai prototyping certify` requires
+`.qfai/output/validate.json` (with `counts.error === 0`) and
+`.qfai/output/verify.json` (with `status === "PASS"`) to be present
+on disk before it will seal the certificate. Run the gates in this
+order, every time:
+
+1. `qfai validate --profile prototyping --fail-on error` — writes
+   `.qfai/output/validate.json`.
+2. `/qfai-verify` — writes `.qfai/output/verify.json`.
+3. `qfai prototyping certify` — produces
+   `.qfai/evidence/prototyping/completion-certificate.json`. The
+   certificate includes `designMdPath` + `designMdSha256` for the
+   locked brand identity. Use `certify --check` to verify digests
+   against later edits.
+
+Reversing this order makes step 3 fail with "validate.json missing"
+or "verify.json status not PASS" — those are the certify
+preconditions, not assertions about a separate state.

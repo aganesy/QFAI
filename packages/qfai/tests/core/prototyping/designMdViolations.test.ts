@@ -144,6 +144,28 @@ describe("findDesignMdViolations — font (TC-3.2.10..15)", () => {
     expect(findDesignMdViolations(html, sampleDesignMd())).toEqual([]);
   });
 
+  it("inline style with no trailing semicolon stops at the outer attribute quote (no false-positive)", () => {
+    // Without the boundary fix, the FONT_RE captured through the next
+    // attribute as `Inter" class="card"`, and fontMatches rejected it
+    // because the first family token ended up as `Inter" class="card"`
+    // — making compliant generated HTML fail certify.
+    const html = '<div style="font-family: Inter" class="card">x</div>';
+    const out = findDesignMdViolations(html, sampleDesignMd());
+    expect(out.filter((v) => v.kind === "font")).toEqual([]);
+  });
+
+  it("inline style with quoted family name + class attr after style closes", () => {
+    const html = '<div style="font-family: \'Inter\'" class="hero">x</div>';
+    const out = findDesignMdViolations(html, sampleDesignMd());
+    expect(out.filter((v) => v.kind === "font")).toEqual([]);
+  });
+
+  it("inline style with comma-separated stack containing a quoted family name", () => {
+    const html = '<style>body { font-family: "Inter", system-ui, sans-serif; }</style>';
+    const out = findDesignMdViolations(html, sampleDesignMd());
+    expect(out.filter((v) => v.kind === "font")).toEqual([]);
+  });
+
   // TC-3.2.15
   it("multiple font-family declarations: only invalid one returns a violation", () => {
     const html = `

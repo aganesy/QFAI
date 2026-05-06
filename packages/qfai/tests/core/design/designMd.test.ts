@@ -413,6 +413,21 @@ describe("validateDesignMd colors (TC-1.2.6..1.2.13)", () => {
     ).toBe(true);
   });
 
+  it("TC-1.2.11g: rgba(...) alpha=1.0 / 1.00 on overlay is accepted (CSS-equivalent to 1)", () => {
+    const d1 = buildValidDesignMd();
+    d1.visual.colors.overlay = "rgba(0,0,0,1.0)";
+    expect(validateDesignMd(d1)).toEqual([]);
+    const d2 = buildValidDesignMd();
+    d2.visual.colors.overlay = "rgba(0,0,0,1.00)";
+    expect(validateDesignMd(d2)).toEqual([]);
+  });
+
+  it("TC-1.2.11h: rgba(...) alpha=.5 (no leading zero) on overlay is accepted", () => {
+    const d = buildValidDesignMd();
+    d.visual.colors.overlay = "rgba(0,0,0,.5)";
+    expect(validateDesignMd(d)).toEqual([]);
+  });
+
   it("TC-1.2.11f: rgba(...) values out of 0..255 range on overlay are rejected", () => {
     const d = buildValidDesignMd();
     d.visual.colors.overlay = "rgba(256,0,0,0.5)";

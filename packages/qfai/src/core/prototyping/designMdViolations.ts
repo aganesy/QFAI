@@ -31,7 +31,20 @@ const HSL_RE = /hsla?\([^)]*\)/gi;
 // the font regex tolerates quotes within the value.
 const RADIUS_RE = /border-radius\s*:\s*([^;}<>"']+)/g;
 const SHADOW_RE = /box-shadow\s*:\s*([^;}<>"']+)/g;
-const FONT_RE = /font-family\s*:\s*([^;}<>]+)/g;
+// font-family supports quoted family names (`"Comic Sans MS"`) but the
+// value still must stop at the enclosing inline-style quote. CSS
+// font-family is a comma-separated list where each entry is either a
+// fully-quoted string or an unquoted token. The regex models that
+// shape, so a stray `"` (the inline-style attribute boundary) cannot
+// drag the next attribute into the captured value:
+//   `<div style="font-family: Inter" class="card">` → captures `Inter`
+//   `<style>p{ font-family: "Comic Sans", Inter; }` → captures
+//     `"Comic Sans", Inter`.
+const FONT_FAMILY_TOKEN = `(?:"[^"]*"|'[^']*'|[^;}<>"',]+)`;
+const FONT_RE = new RegExp(
+  `font-family\\s*:\\s*(${FONT_FAMILY_TOKEN}(?:\\s*,\\s*${FONT_FAMILY_TOKEN})*)`,
+  "g",
+);
 
 const SAFE_LITERALS: ReadonlySet<string> = new Set([
   "transparent",

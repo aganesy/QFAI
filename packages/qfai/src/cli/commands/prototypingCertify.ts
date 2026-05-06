@@ -216,8 +216,20 @@ export async function runPrototypingCertify(
     "unknown";
   const reviewerTimestamp = extractString(reviewerSignoff, "timestamp") ?? new Date().toISOString();
 
-  const resolvedSpec = await resolvePrimaryPrototypingSpec(options.root, config);
-  const specsCovered = resolvedSpec ? [resolvedSpec.specId] : [];
+  // Read the frozen `specsCovered` recorded by `iterate --cycle 0`.
+  // Re-resolving the primary spec here would let a config edit
+  // (`prototyping.primarySpecId`) or a marker change between cycle 0
+  // and certify silently re-baseline the certificate to a spec the
+  // loop never exercised. The loop seed is the SSOT for what was
+  // actually reviewed.
+  const specsCovered = readFrozenSpecsCovered(protoJson);
+  if (specsCovered === null) {
+    error(
+      "qfai prototyping certify: prototyping.json#specsCovered is missing or malformed — " +
+        "re-run prototyping from cycle 0 so the seed cycle records the spec(s) under review.",
+    );
+    return 2;
+  }
 
   // Frozen-loop hash invariant: the certificate must record the sha256
   // that was frozen at cycle 0 in prototyping.json (and, when the SDD
@@ -406,6 +418,25 @@ function countIterations(protoJson: unknown): number {
   if (!isRecord(protoJson)) return 0;
   const iterations = protoJson.iterations;
   return Array.isArray(iterations) ? iterations.length : 0;
+}
+
+/**
+ * Read the frozen `specsCovered` array seeded by
+ * `qfai prototyping iterate --cycle 0`. Returns `null` for
+ * missing-or-malformed (the SDD precondition is broken; certify
+ * must fail fast). An empty array is malformed: the loop without
+ * an associated spec has nothing to certify against.
+ */
+function readFrozenSpecsCovered(protoJson: unknown): string[] | null {
+  if (!isRecord(protoJson)) return null;
+  const raw = protoJson.specsCovered;
+  if (!Array.isArray(raw) || raw.length === 0) return null;
+  const out: string[] = [];
+  for (const value of raw) {
+    if (typeof value !== "string" || value.length === 0) return null;
+    out.push(value);
+  }
+  return out;
 }
 
 // `DesignMdViolation` is only used as part of typing through the
