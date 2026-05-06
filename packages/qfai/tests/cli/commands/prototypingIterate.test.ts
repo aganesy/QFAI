@@ -370,17 +370,19 @@ describe("runPrototypingIterate continue (exit 0)", () => {
   it("does not emit an unreachable iterate --cycle 15 action at cycle 14", async () => {
     const root = await newTempDir();
     await seedMinimalProject(root);
-    await seedPrototypingJson(root, [
-      {
-        index: 13,
-        scores: {
-          informationArchitecture: "acceptable",
-          navigationFlow: "acceptable",
-          usability: "acceptable",
-          functionality: "acceptable",
-        },
+    // Seed iterations[0..13] so the cycle-14 call is on the realistic
+    // `iterations.length === cycle` invariant (each prior cycle's
+    // capture/review is recorded in iterations[]).
+    const seededIterations = Array.from({ length: 14 }, (_, i) => ({
+      index: i,
+      scores: {
+        informationArchitecture: "acceptable",
+        navigationFlow: "acceptable",
+        usability: "acceptable",
+        functionality: "acceptable",
       },
-    ]);
+    }));
+    await seedPrototypingJson(root, seededIterations);
 
     const exit = await runPrototypingIterate({ root, cycle: 14 });
     expect(exit).toBe(0);
@@ -474,6 +476,20 @@ describe("runPrototypingIterate cycle 0 DESIGN.md ingestion (TC-3.5.x)", () => {
     expect(
       await runPrototypingIterate({ root, cycle: 0, targetUrl: "http://localhost:5173" }),
     ).toBe(0);
+    // The orchestrator pushes iterations[0] between cycles in the
+    // realistic flow; simulate that here so cycle-0 → cycle-1 is on
+    // the realistic `iterations.length === cycle` invariant.
+    await seedPrototypingJson(root, [
+      {
+        index: 0,
+        scores: {
+          informationArchitecture: "acceptable",
+          navigationFlow: "acceptable",
+          usability: "acceptable",
+          functionality: "acceptable",
+        },
+      },
+    ]);
     expect(await runPrototypingIterate({ root, cycle: 1 })).toBe(0);
   });
 
@@ -573,8 +589,63 @@ describe("runPrototypingIterate cycle N hash gate (TC-3.5.x)", () => {
     expect(
       await runPrototypingIterate({ root, cycle: 0, targetUrl: "http://localhost:5173" }),
     ).toBe(0);
+    // The orchestrator pushes an iterations[N] entry between cycles
+    // (capture + review step in the real flow). Simulate that here so
+    // the cycle-N → cycle-N+1 transition is on the realistic
+    // `iterations.length === N+1` invariant.
+    await seedPrototypingJson(root, [
+      {
+        index: 0,
+        scores: {
+          informationArchitecture: "acceptable",
+          navigationFlow: "acceptable",
+          usability: "acceptable",
+          functionality: "acceptable",
+        },
+      },
+    ]);
     expect(await runPrototypingIterate({ root, cycle: 1 })).toBe(0);
+    await seedPrototypingJson(root, [
+      {
+        index: 0,
+        scores: {
+          informationArchitecture: "acceptable",
+          navigationFlow: "acceptable",
+          usability: "acceptable",
+          functionality: "acceptable",
+        },
+      },
+      {
+        index: 1,
+        scores: {
+          informationArchitecture: "strong",
+          navigationFlow: "strong",
+          usability: "strong",
+          functionality: "strong",
+        },
+      },
+    ]);
     expect(await runPrototypingIterate({ root, cycle: 2 })).toBe(0);
+  });
+
+  it("rejects out-of-sequence cycle requests (cycle 3 when iterations.length=1) with exit 2", async () => {
+    const root = await newTempDir();
+    await seedMinimalProject(root);
+    await seedPrototypingJson(root, [
+      {
+        index: 0,
+        scores: {
+          informationArchitecture: "acceptable",
+          navigationFlow: "acceptable",
+          usability: "acceptable",
+          functionality: "acceptable",
+        },
+      },
+    ]);
+    // iterations.length === 1, expected next cycle === 1, but call cycle 3.
+    // Validator later requires `iterations[i].index === i`, so creating
+    // iter-03 here would make a gap that blocks validation/certification.
+    expect(await runPrototypingIterate({ root, cycle: 3 })).toBe(2);
   });
 });
 

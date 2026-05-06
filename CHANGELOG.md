@@ -6,6 +6,30 @@
 
 ### Fixed (Breaking — pre-1.8.9 internal pipelines only)
 
+- **`prototyping iterate` rejects out-of-sequence cycles**: Calling
+  `qfai prototyping iterate --cycle N` when `iterations.length !== N`
+  now exits 2 with a message naming the expected cycle. Previously a
+  call like `--cycle 3` after only `iter-00` was recorded would
+  silently create an `iter-03/iterate-plan.json` that the validator
+  later rejected (`iterations[i].index === i` invariant), blocking
+  validation/certification with a delayed cryptic error. The check
+  runs AFTER `shouldStop`, so converged or max-budget loops still
+  return their 64/65 stop reason cleanly.
+- **DESIGN.md nested unknown-key reject (colors/radius/shadow)**:
+  `parseDesignMd()` now rejects unknown keys nested under
+  `visual.colors`, `visual.radius`, and `visual.shadow` at parse
+  time (not just at validate time). Previously
+  `readStringRecord` silently dropped non-scalar values
+  (`visual.colors.gradients: [...]`, `visual.radius.breakpoints: {...}`)
+  before the validator could see them, so the offending directive
+  would freeze into the lock without surfacing a parse error. New
+  TC-1.1.22..24 anchor the contract.
+- **`RejectScope` discriminated union**: The `rejectUnknownKeys`
+  helper's scope parameter is now a discriminated union of
+  `{ kind: "root" }` and `{ kind: "section"; name; path }`. The
+  prior shape carried a dead `name: ""` placeholder for the root
+  invocation; the union form makes that unrepresentable, and TS
+  exhaustiveness checks every callsite.
 - **`finalIterIndex` numeric handling in prototype-handoff validator**:
   `validatePrototypeHandoff` now treats `finalIterIndex` as a
   numeric field (`Number.isInteger && >= 0`) rather than forwarding

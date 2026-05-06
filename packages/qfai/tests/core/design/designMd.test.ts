@@ -314,6 +314,48 @@ describe("parseDesignMd (TC-1.1.x)", () => {
     expect(result.error.path).toBe("references");
   });
 
+  it("TC-1.1.22: unknown visual.colors key (gradients) at parse time rejected with unknown-key", () => {
+    // Inject an array-shaped unknown directive under visual.colors —
+    // readStringRecord would silently drop arrays before validateColors
+    // ever sees them, so we need a parse-time reject.
+    const lastColorLine = '    overlay:        "rgba(0,0,0,0.5)"';
+    const text = VALID_FRONT_MATTER.replace(
+      lastColorLine,
+      `${lastColorLine}\n    gradients:\n      - "linear-gradient(...)"`,
+    );
+    const result = parseDesignMd(text);
+    expect("error" in result).toBe(true);
+    if (!("error" in result)) return;
+    expect(result.error.code).toBe("unknown-key");
+    expect(result.error.path).toBe("visual.colors.gradients");
+  });
+
+  it("TC-1.1.23: unknown visual.radius key (breakpoints) at parse time rejected with unknown-key", () => {
+    const lastRadiusLine = '    full: "9999px"';
+    const text = VALID_FRONT_MATTER.replace(
+      lastRadiusLine,
+      `${lastRadiusLine}\n    breakpoints:\n      sm: "0.5rem"`,
+    );
+    const result = parseDesignMd(text);
+    expect("error" in result).toBe(true);
+    if (!("error" in result)) return;
+    expect(result.error.code).toBe("unknown-key");
+    expect(result.error.path).toBe("visual.radius.breakpoints");
+  });
+
+  it("TC-1.1.24: unknown visual.shadow key (gradients) at parse time rejected with unknown-key", () => {
+    const lastShadowLine = '    lg: "0 12px 24px rgba(15,23,42,0.10)"';
+    const text = VALID_FRONT_MATTER.replace(
+      lastShadowLine,
+      `${lastShadowLine}\n    gradients:\n      - "linear-gradient(...)"`,
+    );
+    const result = parseDesignMd(text);
+    expect("error" in result).toBe(true);
+    if (!("error" in result)) return;
+    expect(result.error.code).toBe("unknown-key");
+    expect(result.error.path).toBe("visual.shadow.gradients");
+  });
+
   it("TC-1.1.21: unknown visual.spacing key (gutter) rejected with unknown-key", () => {
     const lastShadowLine = '    lg: "0 12px 24px rgba(15,23,42,0.10)"';
     const text = VALID_FRONT_MATTER.replace(

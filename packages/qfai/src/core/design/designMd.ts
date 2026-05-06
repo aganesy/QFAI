@@ -276,26 +276,21 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 /**
- * Scope descriptor for `rejectUnknownKeys`. Decoupling the scope's
- * `name` (e.g. `"audience"`) from its `path` (e.g. `"audience"`)
- * lets the helper decide how to format the error label and ParseError
- * path consistently — callers no longer pre-quote the scope name.
- *
- * `path === ""` denotes the front-matter root, which uses the
- * `root DESIGN.md` label form instead of the `'<name>'` form.
+ * Scope descriptor for `rejectUnknownKeys`. The discriminated union
+ * forces callers to declare front-matter ROOT vs nested SECTION
+ * scopes at the type level, so the dead `name: ""` placeholder that
+ * older shapes carried for the root call is structurally impossible.
  */
-type RejectScope = {
-  /** Section name (e.g. `"audience"`, `"visual.typography"`). */
-  readonly name: string;
-  /** Error path prefix (`""` for root, `"audience"` etc. for sections). */
-  readonly path: string;
-};
+type RejectScope =
+  | { readonly kind: "root" }
+  | { readonly kind: "section"; readonly name: string; readonly path: string };
 
 /**
  * Single shape for unknown-key reject across every front-matter level
- * (root, `brand`, `visual`, `visual.typography`, `visual.spacing`,
- * `audience`, `accessibility`). Returns null when every key is
- * allowed; otherwise returns a ParseError naming the FIRST unknown key.
+ * (root, `brand`, `visual`, `visual.colors`, `visual.typography`,
+ * `visual.radius`, `visual.shadow`, `visual.spacing`, `audience`,
+ * `accessibility`). Returns null when every key is allowed; otherwise
+ * returns a ParseError naming the FIRST unknown key.
  *
  * @param record  The record being scanned.
  * @param allowed The allowlist of keys for this scope.
@@ -308,11 +303,17 @@ function rejectUnknownKeys(
 ): ParseError | null {
   const [first] = Object.keys(record).filter((k) => !allowed.has(k));
   if (first === undefined) return null;
-  const label = scope.path === "" ? "root DESIGN.md" : `'${scope.name}'`;
+  if (scope.kind === "root") {
+    return {
+      path: first,
+      code: "unknown-key",
+      message: `Unknown root DESIGN.md key '${first}'. Allowed: ${[...allowed].join(", ")}.`,
+    };
+  }
   return {
-    path: scope.path === "" ? first : `${scope.path}.${first}`,
+    path: `${scope.path}.${first}`,
     code: "unknown-key",
-    message: `Unknown ${label} key '${first}'. Allowed: ${[...allowed].join(", ")}.`,
+    message: `Unknown '${scope.name}' key '${first}'. Allowed: ${[...allowed].join(", ")}.`,
   };
 }
 
@@ -334,7 +335,7 @@ function buildDesignMd(raw: unknown): BuildResult {
   // tokens. Allowlist must be kept in sync with the optional sections
   // copied below (`audience`, `accessibility`).
   const ROOT_ALLOWED_KEYS = new Set(["brand", "visual", "audience", "accessibility"]);
-  const rootError = rejectUnknownKeys(raw, ROOT_ALLOWED_KEYS, { name: "", path: "" });
+  const rootError = rejectUnknownKeys(raw, ROOT_ALLOWED_KEYS, { kind: "root" });
   if (rootError) return { error: rootError };
 
   const brand = readBrand(raw.brand);
@@ -354,6 +355,7 @@ function buildDesignMd(raw: unknown): BuildResult {
     // hash into the lock while never reaching the parsed tokens.
     const AUDIENCE_ALLOWED_KEYS = new Set(["emotion", "do_not_look_like"]);
     const audienceError = rejectUnknownKeys(raw.audience, AUDIENCE_ALLOWED_KEYS, {
+      kind: "section",
       name: "audience",
       path: "audience",
     });
@@ -376,6 +378,7 @@ function buildDesignMd(raw: unknown): BuildResult {
     // tokens consumed by iteration / certify.
     const ACCESSIBILITY_ALLOWED_KEYS = new Set(["contrast_ratio_min", "motion"]);
     const accessibilityError = rejectUnknownKeys(raw.accessibility, ACCESSIBILITY_ALLOWED_KEYS, {
+      kind: "section",
       name: "accessibility",
       path: "accessibility",
     });
@@ -416,6 +419,7 @@ function readBrand(raw: unknown): { value: DesignMd["brand"] } | { error: ParseE
   // unknown extra keys
   const BRAND_ALLOWED_KEYS = new Set(["name", "archetype", "voice"]);
   const brandError = rejectUnknownKeys(raw, BRAND_ALLOWED_KEYS, {
+    kind: "section",
     name: "brand",
     path: "brand",
   });
@@ -437,10 +441,45 @@ function readVisual(raw: unknown): { value: DesignMd["visual"] } | { error: Pars
   // discards.
   const VISUAL_ALLOWED_KEYS = new Set(["colors", "typography", "radius", "shadow", "spacing"]);
   const visualError = rejectUnknownKeys(raw, VISUAL_ALLOWED_KEYS, {
+    kind: "section",
     name: "visual",
     path: "visual",
   });
   if (visualError) return { error: visualError };
+  // Nested unknown-key reject for the scalar token sections
+  // (`visual.colors`, `visual.radius`, `visual.shadow`). `readStringRecord`
+  // only carries strings/numbers forward; without a parse-time reject
+  // an authored array/object directive (e.g. `visual.colors.gradients:
+  // [...]`, `visual.radius.breakpoints: {...}`) would be dropped before
+  // `validate*` ever sees it, even though the spec rejects unknown keys
+  // at any level.
+  if (isRecord(raw.colors)) {
+    const colorsKeys = new Set<string>(COLOR_KEYS);
+    const colorsError = rejectUnknownKeys(raw.colors, colorsKeys, {
+      kind: "section",
+      name: "visual.colors",
+      path: "visual.colors",
+    });
+    if (colorsError) return { error: colorsError };
+  }
+  if (isRecord(raw.radius)) {
+    const radiusKeys = new Set<string>(RADIUS_KEYS);
+    const radiusError = rejectUnknownKeys(raw.radius, radiusKeys, {
+      kind: "section",
+      name: "visual.radius",
+      path: "visual.radius",
+    });
+    if (radiusError) return { error: radiusError };
+  }
+  if (isRecord(raw.shadow)) {
+    const shadowKeys = new Set<string>(SHADOW_KEYS);
+    const shadowError = rejectUnknownKeys(raw.shadow, shadowKeys, {
+      kind: "section",
+      name: "visual.shadow",
+      path: "visual.shadow",
+    });
+    if (shadowError) return { error: shadowError };
+  }
   const colors = readStringRecord(raw.colors);
   const typographyRaw = isRecord(raw.typography) ? raw.typography : {};
   // Reject unknown keys under `visual.typography` for the same reason
@@ -456,6 +495,7 @@ function readVisual(raw: unknown): { value: DesignMd["visual"] } | { error: Pars
     "weight",
   ]);
   const typographyError = rejectUnknownKeys(typographyRaw, TYPOGRAPHY_ALLOWED_KEYS, {
+    kind: "section",
     name: "visual.typography",
     path: "visual.typography",
   });
@@ -489,6 +529,7 @@ function readVisual(raw: unknown): { value: DesignMd["visual"] } | { error: Pars
   if (isRecord(raw.spacing)) {
     const SPACING_ALLOWED_KEYS = new Set(["base", "scale"]);
     const spacingError = rejectUnknownKeys(raw.spacing, SPACING_ALLOWED_KEYS, {
+      kind: "section",
       name: "visual.spacing",
       path: "visual.spacing",
     });

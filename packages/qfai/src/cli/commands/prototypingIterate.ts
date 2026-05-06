@@ -203,9 +203,28 @@ export async function runPrototypingIterate(
       );
       return 2;
     }
-    const stop = shouldStop(asIterations(protoRecord));
+    const recordedIterations = asIterations(protoRecord);
+    const stop = shouldStop(recordedIterations);
     if (stop !== null) {
       return emitStop(stop);
+    }
+    // Reject out-of-sequence cycle requests. `iterations[i].index === i`
+    // is enforced by the validator (QFAI-PROT-* index-monotonicity), so
+    // jumping straight to `--cycle 3` after only `iter-00` was recorded
+    // would create an `iter-03/iterate-plan.json` that the validator
+    // later rejects, blocking validation/certification with a
+    // not-easy-to-read error. Fail up front instead. The check runs
+    // AFTER `shouldStop` so a converged or max-budget loop returns its
+    // stop reason cleanly even when the seed lineage is sparse.
+    const expectedNextCycle = recordedIterations.length;
+    if (options.cycle !== expectedNextCycle) {
+      error(
+        "qfai prototyping iterate: --cycle must be " +
+          `${expectedNextCycle} (next sequential index after iterations.length=${recordedIterations.length}); ` +
+          `got --cycle ${options.cycle}. ` +
+          "Re-run with the expected cycle, or restart the loop with --cycle 0.",
+      );
+      return 2;
     }
   }
 
