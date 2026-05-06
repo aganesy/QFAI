@@ -144,11 +144,14 @@ function scanColors(html: string, dm: DesignMd, out: DesignMdViolation[]): void 
   //
   // Note the asymmetry with `scanFonts` / `scanRadius` / `scanShadow`:
   // those three regexes are anchored on a CSS property prefix
-  // (`font-family:`, `border-radius:`, `box-shadow:`), so they
-  // self-restrict to declarations no matter where they appear.
-  // Hex / rgb / hsl literals don't have such an anchor — they look
-  // like color declarations only when they sit inside a CSS context,
-  // hence the explicit `extractCssRegions` step here.
+  // (`font-family:`, `border-radius:`, `box-shadow:`), which is a
+  // strong CSS-context signal — false-positive risk in non-CSS prose
+  // is very low (a markdown tutorial that writes
+  // `<code>border-radius: 12px</code>` inline can still match, but
+  // that is the rare edge case, not the common case). Hex / rgb /
+  // hsl literals don't have such an anchor — they look like color
+  // declarations only when they sit inside a CSS context, hence the
+  // explicit `extractCssRegions` step here.
   const cssText = extractCssRegions(html);
   for (const match of cssText.matchAll(HEX_RE)) {
     const literal = match[0].toLowerCase();
