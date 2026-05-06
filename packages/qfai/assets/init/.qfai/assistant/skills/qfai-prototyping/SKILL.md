@@ -32,7 +32,8 @@ One final prototype satisfying the spec under a locked brand identity, with all 
 - `references/generator-prompt.md` — generator system prompt + Tailwind
   CDN + DESIGN.md token injection rules
 - `references/reviewer-prompt.md` — reviewer schema, 4 UX axes,
-  layout anti-patterns (`lap-001..008`), `designMdViolations`, pivot rules
+  layout anti-patterns (`lap-001..006` static regex + `lap-007..008` semantic),
+  `designMdViolations`, pivot rules
 - `references/handoff.md` — post-loop `design-system.yaml` (DESIGN.md
   token mirror) and `prototype-handoff.yaml`
 - `references/design-md-spec.md` — DESIGN.md front-matter schema and
@@ -79,8 +80,8 @@ current `DESIGN.md` hash does not match the lock.
 **Exit codes**: `0` continue (read `pivotDirective`); `64` convergence (4
 axes `exceptional` AND `layoutAntiPatternsDetected` empty AND
 `designMdViolations` empty); `65` 15 cycles reached; `2` input error
-(incl. DESIGN.md hash mismatch — restore DESIGN.md or rerun `/qfai-sdd`
-to refreeze).
+(incl. DESIGN.md hash mismatch — re-run prototyping from cycle 0 after
+editing `DESIGN.md` and refreezing the lock via `/qfai-sdd` Phase 0).
 
 ## Evaluator Inputs (Mandatory)
 

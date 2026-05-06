@@ -22,7 +22,7 @@ visual:
     overlay: "rgba(0,0,0,0.5)"
   typography:
     family_sans: "Inter, system-ui, sans-serif"
-    family_display: "Inter, system-ui, sans-serif"
+    family_display: "Inter Tight, Inter, system-ui, sans-serif"
     family_mono: "JetBrains Mono, ui-monospace, monospace"
     scale:
       {
