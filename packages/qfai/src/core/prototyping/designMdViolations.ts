@@ -501,6 +501,155 @@ function scanFonts(html: string, dm: DesignMd, out: DesignMdViolation[]): void {
   }
 }
 
+// Tailwind arbitrary-value class extractor. Tailwind utilities of the
+// form `<prefix>-[<value>]` (e.g. `bg-[#ff0000]`, `rounded-[13px]`,
+// `shadow-[0_4px_6px_rgba(0,0,0,0.1)]`) embed arbitrary CSS values
+// directly in the `class="..."` attribute. The CSS-region pass below
+// only sees `<style>` blocks and inline `style="..."` declarations,
+// so without a class-attribute pass these arbitrary values would
+// slip past the certify gate even though they drift from DESIGN.md.
+//
+// The shipped generator prompt mandates Tailwind utilities and
+// forbids raw `#hex` outside DESIGN.md; this scanner is the runtime
+// guard that enforces that contract on the rendered HTML.
+//
+// Tailwind encodes whitespace in arbitrary values as `_` (e.g.
+// `shadow-[0_4px_6px_rgba(0,0,0,0.1)]`), so the scanner decodes
+// underscores back to spaces before token lookup.
+const CLASS_ATTR_RE = /\sclass\s*=\s*(?:"([^"]*)"|'([^']*)')/gi;
+const TAILWIND_ARBITRARY_RE = /\b([a-z][a-z-]*)-\[([^\]]+)\]/gi;
+
+const TAILWIND_COLOR_PREFIXES: ReadonlySet<string> = new Set([
+  "bg",
+  "text",
+  "border",
+  "border-t",
+  "border-r",
+  "border-b",
+  "border-l",
+  "border-x",
+  "border-y",
+  "border-s",
+  "border-e",
+  "from",
+  "to",
+  "via",
+  "outline",
+  "ring",
+  "ring-offset",
+  "divide",
+  "divide-x",
+  "divide-y",
+  "placeholder",
+  "accent",
+  "caret",
+  "decoration",
+  "fill",
+  "stroke",
+]);
+
+const TAILWIND_RADIUS_PREFIXES: ReadonlySet<string> = new Set([
+  "rounded",
+  "rounded-t",
+  "rounded-r",
+  "rounded-b",
+  "rounded-l",
+  "rounded-tl",
+  "rounded-tr",
+  "rounded-bl",
+  "rounded-br",
+  "rounded-s",
+  "rounded-e",
+  "rounded-ss",
+  "rounded-se",
+  "rounded-es",
+  "rounded-ee",
+]);
+
+const TAILWIND_SHADOW_PREFIXES: ReadonlySet<string> = new Set(["shadow", "drop-shadow"]);
+
+function pushIfColorDrift(
+  token: string,
+  allowed: ReadonlySet<string>,
+  out: DesignMdViolation[],
+): boolean {
+  const lower = token.toLowerCase();
+  if (SAFE_LITERALS.has(lower)) return false;
+  if (allowed.has(lower)) return false;
+  if (HEX_RE_TEST.test(token) || RGB_RE_TEST.test(token) || HSL_RE_TEST.test(token)) {
+    out.push({ kind: "color", found: lower });
+    return true;
+  }
+  if (/^[a-z]+$/.test(lower) && CSS_NAMED_COLORS.has(lower)) {
+    out.push({ kind: "color", found: lower });
+    return true;
+  }
+  return false;
+}
+
+function scanTailwindArbitraryColor(
+  value: string,
+  allowed: ReadonlySet<string>,
+  out: DesignMdViolation[],
+): void {
+  // For `text-` the bracket content can be either a color (`text-[#ff0000]`)
+  // or a non-color size (`text-[14px]`); the per-token regex test below
+  // only fires on tokens shaped like a color literal, so a pure
+  // dimension value is silently skipped (correct for our scope).
+  // For `bg-` / `border-` etc., multi-token shorthand values like
+  // `border-[2px_solid_#ff0000]` are split on whitespace and only the
+  // color-shaped tokens are checked.
+  for (const token of value.split(/\s+/)) {
+    if (token.length === 0) continue;
+    pushIfColorDrift(token, allowed, out);
+  }
+}
+
+function scanTailwindArbitrary(html: string, dm: DesignMd, out: DesignMdViolation[]): void {
+  const allowedColors = collectAllowedColors(dm);
+  const allowedRadii = new Set<string>(Object.values(dm.visual.radius));
+  const allowedShadows = new Set<string>(Object.values(dm.visual.shadow));
+
+  for (const classMatch of html.matchAll(CLASS_ATTR_RE)) {
+    const classes = classMatch[1] ?? classMatch[2] ?? "";
+    if (classes.length === 0) continue;
+    for (const tokenMatch of classes.matchAll(TAILWIND_ARBITRARY_RE)) {
+      const prefix = (tokenMatch[1] ?? "").toLowerCase();
+      const rawValue = tokenMatch[2] ?? "";
+      // Decode the underscore-as-space convention. Tailwind authors
+      // `shadow-[0_4px_6px_rgba(0,0,0,0.1)]`; the rendered shadow value
+      // is `0 4px 6px rgba(0,0,0,0.1)`, which is what DESIGN.md tokens
+      // are compared against.
+      const value = rawValue.replace(/_/g, " ").trim();
+      if (value.length === 0) continue;
+
+      if (TAILWIND_COLOR_PREFIXES.has(prefix)) {
+        scanTailwindArbitraryColor(value, allowedColors, out);
+        continue;
+      }
+      if (TAILWIND_RADIUS_PREFIXES.has(prefix)) {
+        if (SAFE_LITERALS.has(value.toLowerCase())) continue;
+        if (allowedRadii.has(value)) continue;
+        out.push({ kind: "radius", found: value });
+        continue;
+      }
+      if (TAILWIND_SHADOW_PREFIXES.has(prefix)) {
+        if (SAFE_LITERALS.has(value.toLowerCase())) continue;
+        if (allowedShadows.has(value)) continue;
+        out.push({ kind: "shadow", found: value });
+        continue;
+      }
+      // `font-[X]` is intentionally NOT scanned here: Tailwind
+      // overloads the `font-` prefix for both font-family
+      // (`font-[Inter]`) and font-weight (`font-[600]`). Without a
+      // weight-vs-family disambiguation pass, every numeric weight
+      // would surface as a font-family violation. font-family drift
+      // through `<style>` blocks / `style="..."` attrs is still
+      // caught by `scanFonts` independently.
+    }
+  }
+}
+
 /**
  * Scan `html` for DESIGN.md token violations. Returns a flat array of
  * violations, one per occurrence, preserving source order within each
@@ -513,5 +662,10 @@ export function findDesignMdViolations(html: string, dm: DesignMd): DesignMdViol
   scanFonts(html, dm, out);
   scanRadius(html, dm, out);
   scanShadow(html, dm, out);
+  // Tailwind arbitrary-value classes appear in `class="..."` attrs,
+  // outside the CSS regions covered by the four scanners above. The
+  // certify gate must catch drift authored as e.g. `bg-[#ff0000]` or
+  // `rounded-[13px]` even when `<style>` / `style="..."` is empty.
+  scanTailwindArbitrary(html, dm, out);
   return out;
 }

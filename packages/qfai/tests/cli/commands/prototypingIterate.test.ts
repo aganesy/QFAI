@@ -236,6 +236,44 @@ describe("runPrototypingIterate convergence (exit 64)", () => {
     expect(exit).toBe(64);
   });
 
+  it("does NOT exit 64 when accepted iter HTML still has DESIGN.md drift, even with all-exceptional scores + dmv:[] (codex 8thM)", async () => {
+    // The shipped reviewer prompt instructs reviewers to leave
+    // designMdViolations empty unless a runtime gate injects findings,
+    // and the runtime scanner historically lived in certify only. Pre-
+    // fix, a prototype with DESIGN.md drift could converge here ('all 4
+    // axes exceptional + dmv:[]'), exit 64, and only fail later at
+    // certification. Post-fix, iterate re-runs findDesignMdViolations
+    // against the accepted iter HTML before honoring 'axes-exceptional'
+    // and falls through to the next-cycle plan when drift is found.
+    const root = await newTempDir();
+    await seedMinimalProject(root);
+    await seedPrototypingJson(root, [
+      {
+        index: 0,
+        scores: {
+          informationArchitecture: "exceptional",
+          navigationFlow: "exceptional",
+          usability: "exceptional",
+          functionality: "exceptional",
+        },
+        layoutAntiPatternsDetected: [],
+        designMdViolations: [],
+      },
+    ]);
+    // Plant an iter-00 HTML with off-spec hex drift. CANONICAL_DESIGN_MD
+    // primary is `#1F2937`; `#abcdef` is intentionally non-token.
+    const iter00 = path.join(root, ".qfai/evidence/prototyping/iter-00");
+    await mkdir(iter00, { recursive: true });
+    await writeFile(
+      path.join(iter00, "home.html"),
+      '<div class="bg-[#abcdef]">drift</div>',
+      "utf-8",
+    );
+    const exit = await runPrototypingIterate({ root, cycle: 1 });
+    // Falls through to next-cycle plan instead of exit 64.
+    expect(exit).toBe(0);
+  });
+
   it("does NOT exit 64 when a layout anti-pattern is present even with all-exceptional scores", async () => {
     const root = await newTempDir();
     await seedMinimalProject(root);

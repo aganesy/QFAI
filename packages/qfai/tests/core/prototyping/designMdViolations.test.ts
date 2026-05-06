@@ -341,15 +341,19 @@ describe("findDesignMdViolations — color (TC-3.2.1..9)", () => {
     expect(out.filter((v) => v.kind === "color")).toEqual([]);
   });
 
-  it("Tailwind arbitrary-value class with a hex literal is NOT flagged (not a CSS declaration)", () => {
-    // `class="bg-[#abcdef]"` is a Tailwind arbitrary value — it is
-    // structurally a class name, not a CSS declaration. Whether the
-    // hex is allowed or not is moot at this scan layer; the runtime
-    // CSS Tailwind generates can still be scanned via inline style or
-    // <style> blocks.
+  it("Tailwind arbitrary-value class with a non-token hex IS flagged (codex 8thE)", () => {
+    // Pre-fix this test asserted the opposite — the class-attribute
+    // pass was missing, so `bg-[#abcdef]` slipped past the certify
+    // gate even though the rendered Tailwind utility produces
+    // `background-color: #abcdef`. The gap let prototypes that
+    // authored arbitrary-value drift converge here and only fail
+    // later at certify (or worse, at production). The new
+    // `scanTailwindArbitrary` pass closes the gap by extracting
+    // `class="..."` attrs and classifying each `<prefix>-[<value>]`
+    // utility against the DESIGN.md token set.
     const html = '<div class="bg-[#abcdef]"></div>';
     const out = findDesignMdViolations(html, sampleDesignMd());
-    expect(out.filter((v) => v.kind === "color")).toEqual([]);
+    expect(out.some((v) => v.kind === "color" && v.found === "#abcdef")).toBe(true);
   });
 
   it("color literal inside an inline style attribute IS flagged when not in DESIGN.md", () => {
@@ -567,5 +571,108 @@ describe("findDesignMdViolations — aggregation (TC-3.2.25..28)", () => {
     const out = findDesignMdViolations(html, sampleDesignMd());
     expect(out.length).toBeGreaterThanOrEqual(4);
     expect(new Set(out.map((v) => v.kind))).toEqual(new Set(["color", "font", "radius", "shadow"]));
+  });
+});
+
+describe("findDesignMdViolations — Tailwind arbitrary-value classes (codex 8thE)", () => {
+  // The shipped generator prompt mandates Tailwind utilities and forbids
+  // raw `#hex` outside DESIGN.md. Drift authored as `bg-[#ff0000]` /
+  // `rounded-[13px]` / `shadow-[...]` lives in `class="..."` attrs and
+  // bypasses `<style>` / inline `style="..."` extraction. These tests
+  // pin the class-attribute pass that closes that gap.
+
+  it("bg-[#ff0000] (non-token hex in class attr) is flagged as a color violation", () => {
+    const html = '<div class="bg-[#ff0000] rounded-md">x</div>';
+    const out = findDesignMdViolations(html, sampleDesignMd());
+    const colorHits = out.filter((v) => v.kind === "color");
+    expect(colorHits.some((v) => v.found === "#ff0000")).toBe(true);
+  });
+
+  it("bg-[#1F2937] (DESIGN.md token in class attr) does NOT produce a color violation", () => {
+    const html = '<div class="bg-[#1F2937]">x</div>';
+    const colorHits = findDesignMdViolations(html, sampleDesignMd()).filter(
+      (v) => v.kind === "color",
+    );
+    expect(colorHits).toEqual([]);
+  });
+
+  it("rounded-[13px] (non-token radius in class attr) is flagged", () => {
+    const html = '<div class="rounded-[13px]">x</div>';
+    const out = findDesignMdViolations(html, sampleDesignMd());
+    expect(out.some((v) => v.kind === "radius" && v.found === "13px")).toBe(true);
+  });
+
+  it("rounded-[0.5rem] (DESIGN.md radius token) does NOT produce a violation", () => {
+    const html = '<div class="rounded-[0.5rem]">x</div>';
+    const out = findDesignMdViolations(html, sampleDesignMd());
+    expect(out.filter((v) => v.kind === "radius")).toEqual([]);
+  });
+
+  it("rounded-tl-[13px] (sided-radius prefix) is flagged", () => {
+    const html = '<div class="rounded-tl-[13px]">x</div>';
+    const out = findDesignMdViolations(html, sampleDesignMd());
+    expect(out.some((v) => v.kind === "radius" && v.found === "13px")).toBe(true);
+  });
+
+  it("shadow-[0_4px_6px_rgba(0,0,0,0.1)] (underscore-encoded space) is flagged when not a token", () => {
+    const html = '<div class="shadow-[0_4px_6px_rgba(0,0,0,0.1)]">x</div>';
+    const out = findDesignMdViolations(html, sampleDesignMd());
+    // The underscore-decoded value should appear in the violation:
+    // `0 4px 6px rgba(0,0,0,0.1)` — not a registered shadow token.
+    expect(out.some((v) => v.kind === "shadow" && v.found === "0 4px 6px rgba(0,0,0,0.1)")).toBe(
+      true,
+    );
+  });
+
+  it("shadow-[0_1px_2px_rgba(15,23,42,0.05)] (DESIGN.md shadow token shape) does NOT produce a violation", () => {
+    const html = '<div class="shadow-[0_1px_2px_rgba(15,23,42,0.05)]">x</div>';
+    const out = findDesignMdViolations(html, sampleDesignMd());
+    expect(out.filter((v) => v.kind === "shadow")).toEqual([]);
+  });
+
+  it("text-[14px] (font-size, not a color) does NOT produce a color violation", () => {
+    // `text-` is overloaded for color / size in Tailwind; the bracket
+    // content shape disambiguates. A pure dimension is silently
+    // skipped in the color path.
+    const html = '<div class="text-[14px]">x</div>';
+    const out = findDesignMdViolations(html, sampleDesignMd());
+    expect(out.filter((v) => v.kind === "color")).toEqual([]);
+  });
+
+  it("text-[#ff00ff] (text color) is flagged", () => {
+    const html = '<div class="text-[#ff00ff]">x</div>';
+    const out = findDesignMdViolations(html, sampleDesignMd());
+    expect(out.some((v) => v.kind === "color" && v.found === "#ff00ff")).toBe(true);
+  });
+
+  it("border-[2px_solid_#ff0000] (multi-token shorthand) flags only the color drift", () => {
+    const html = '<div class="border-[2px_solid_#ff0000]">x</div>';
+    const colorHits = findDesignMdViolations(html, sampleDesignMd()).filter(
+      (v) => v.kind === "color",
+    );
+    expect(colorHits.some((v) => v.found === "#ff0000")).toBe(true);
+    // `2px` and `solid` are not color tokens, must not be flagged.
+    expect(colorHits.some((v) => v.found === "2px")).toBe(false);
+    expect(colorHits.some((v) => v.found === "solid")).toBe(false);
+  });
+
+  it("bg-[red] (named color in class attr) is flagged", () => {
+    const html = '<div class="bg-[red]">x</div>';
+    const out = findDesignMdViolations(html, sampleDesignMd());
+    expect(out.some((v) => v.kind === "color" && v.found === "red")).toBe(true);
+  });
+
+  it("class attr with single quotes is also scanned", () => {
+    const html = "<div class='bg-[#ff0000]'>x</div>";
+    const out = findDesignMdViolations(html, sampleDesignMd());
+    expect(out.some((v) => v.kind === "color" && v.found === "#ff0000")).toBe(true);
+  });
+
+  it("multiple arbitrary classes in one attr are all scanned", () => {
+    const html = '<div class="bg-[#ff0000] rounded-[13px] shadow-[0_0_99px_red]">x</div>';
+    const out = findDesignMdViolations(html, sampleDesignMd());
+    expect(out.some((v) => v.kind === "color" && v.found === "#ff0000")).toBe(true);
+    expect(out.some((v) => v.kind === "radius" && v.found === "13px")).toBe(true);
+    expect(out.some((v) => v.kind === "shadow" && v.found === "0 0 99px red")).toBe(true);
   });
 });

@@ -39,6 +39,10 @@ import { hashDesignMd, parseDesignMd, type DesignMd } from "../../core/design/de
 import { readDesignMdLockSha } from "../../core/design/designMdLock.js";
 import { isEnoent } from "../../core/fs/errno.js";
 import { COMPLETION_CERTIFICATE_REL_PATH } from "../../core/prototyping/certificate.js";
+import {
+  findDesignMdViolations,
+  type DesignMdViolation,
+} from "../../core/prototyping/designMdViolations.js";
 import { PROTOTYPING_EVIDENCE_REL, PROTOTYPING_JSON_REL } from "../../core/prototyping/paths.js";
 import { resolvePrimaryPrototypingSpec } from "../../core/prototyping/specResolution.js";
 import { readFrozenSpecsCovered } from "../../core/prototyping/specsCovered.js";
@@ -217,7 +221,37 @@ export async function runPrototypingIterate(
     const recordedIterations = asIterations(protoRecord);
     const stop = shouldStop(recordedIterations);
     if (stop !== null) {
-      return emitStop(stop);
+      // codex 8thM: shouldStop accepts the reviewer-recorded
+      // `designMdViolations: []` at face value, but the shipped reviewer
+      // prompt instructs reviewers to leave that field empty unless a
+      // runtime gate injects findings — and the only runtime scanner
+      // historically lived in `certify`. So a prototype with DESIGN.md
+      // drift could converge here ("axes-exceptional") and only fail
+      // later at certification. Re-run the runtime scanner against the
+      // accepted iteration's HTML before honoring the stop, so iterate
+      // continues another iteration to fix the drift instead of
+      // pretending the loop converged.
+      if (stop === "axes-exceptional") {
+        const recomputed = await recomputeFinalIterDesignMdViolations(
+          options.root,
+          recordedIterations.length - 1,
+          designMd,
+        );
+        const first = recomputed[0];
+        if (first !== undefined) {
+          info(
+            "qfai prototyping iterate: review reported convergence but the " +
+              `accepted iter HTML still contains ${recomputed.length} DESIGN.md violation(s); ` +
+              "continuing another iteration to fix drift. " +
+              `First violation: ${first.kind}=${first.found}.`,
+          );
+          // Fall through to the next-cycle plan below (no early return).
+        } else {
+          return emitStop(stop);
+        }
+      } else {
+        return emitStop(stop);
+      }
     }
     // Defense-in-depth: confirm the recorded loop history is itself
     // monotonic before deriving the expected next cycle from its
@@ -596,6 +630,60 @@ async function deleteStaleCompletionCertificate(certAbs: string): Promise<void> 
 
 function buildRunId(designMdSha: string): string {
   return `loop-${designMdSha.slice(0, 12)}-${Date.now().toString(36)}`;
+}
+
+/**
+ * Re-run the runtime DESIGN.md drift scanner against every `*.html`
+ * file in the accepted iteration's evidence dir.
+ *
+ * codex 8thM: shouldStop honors the reviewer-recorded
+ * `designMdViolations: []` at face value, but the shipped reviewer
+ * prompt instructs reviewers NOT to author that field directly — only
+ * runtime gates inject findings. Without this re-scan, a prototype with
+ * Tailwind arbitrary-value drift (or any other CSS drift the reviewer
+ * cannot detect from prose) converges here, and only fails later at
+ * certify. Re-scanning at the iterate-stop boundary lets the loop
+ * continue another iteration to fix drift instead of pretending it
+ * converged.
+ */
+async function recomputeFinalIterDesignMdViolations(
+  root: string,
+  iterationIndex: number,
+  designMd: DesignMd,
+): Promise<DesignMdViolation[]> {
+  if (iterationIndex < 0) return [];
+  const iterDirAbs = path.join(
+    root,
+    PROTOTYPING_EVIDENCE_REL,
+    `iter-${String(iterationIndex).padStart(2, "0")}`,
+  );
+  let names: string[];
+  try {
+    names = await readdir(iterDirAbs);
+  } catch (err) {
+    if (isEnoent(err)) return [];
+    throw err;
+  }
+  const out: DesignMdViolation[] = [];
+  for (const name of names.sort()) {
+    if (!name.toLowerCase().endsWith(".html")) continue;
+    const abs = path.join(iterDirAbs, name);
+    let s: Awaited<ReturnType<typeof stat>>;
+    try {
+      s = await stat(abs);
+    } catch {
+      continue;
+    }
+    if (!s.isFile()) continue;
+    let html: string;
+    try {
+      html = await readFile(abs, "utf-8");
+    } catch {
+      continue;
+    }
+    out.push(...findDesignMdViolations(html, designMd));
+  }
+  return out;
 }
 
 function buildDesignTokens(dm: DesignMd): DesignTokens {
