@@ -275,6 +275,35 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+/**
+ * Single shape for unknown-key reject across every front-matter level
+ * (root, `brand`, `visual`, `visual.typography`, `audience`,
+ * `accessibility`). Returns null when every key is allowed; otherwise
+ * returns a ParseError naming the FIRST unknown key.
+ *
+ * @param record       The record being scanned.
+ * @param allowed      The allowlist of keys for this scope.
+ * @param pathPrefix   Path prefix for the error (e.g. `visual.typography`),
+ *                    or empty string for the front-matter root.
+ * @param sectionLabel Human-readable label for the error message
+ *                    (e.g. `"'audience'"`, `"root DESIGN.md"`).
+ */
+function rejectUnknownKeys(
+  record: Record<string, unknown>,
+  allowed: ReadonlySet<string>,
+  pathPrefix: string,
+  sectionLabel: string,
+): ParseError | null {
+  const unknown = Object.keys(record).filter((k) => !allowed.has(k));
+  if (unknown.length === 0) return null;
+  const first = unknown[0] ?? "";
+  return {
+    path: pathPrefix ? `${pathPrefix}.${first}` : first,
+    code: "unknown-key",
+    message: `Unknown ${sectionLabel} key '${first}'. Allowed: ${[...allowed].join(", ")}.`,
+  };
+}
+
 function buildDesignMd(raw: unknown): BuildResult {
   if (!isRecord(raw)) {
     return {
@@ -293,16 +322,8 @@ function buildDesignMd(raw: unknown): BuildResult {
   // tokens. Allowlist must be kept in sync with the optional sections
   // copied below (`audience`, `accessibility`).
   const ROOT_ALLOWED_KEYS = new Set(["brand", "visual", "audience", "accessibility"]);
-  const rootUnknown = Object.keys(raw).filter((k) => !ROOT_ALLOWED_KEYS.has(k));
-  if (rootUnknown.length > 0) {
-    return {
-      error: {
-        path: rootUnknown[0] ?? "",
-        code: "unknown-key",
-        message: `Unknown root DESIGN.md key '${rootUnknown[0] ?? ""}'. Allowed: ${[...ROOT_ALLOWED_KEYS].join(", ")}.`,
-      },
-    };
-  }
+  const rootError = rejectUnknownKeys(raw, ROOT_ALLOWED_KEYS, "", "root DESIGN.md");
+  if (rootError) return { error: rootError };
 
   const brand = readBrand(raw.brand);
   if ("error" in brand) return { error: brand.error };
@@ -320,16 +341,13 @@ function buildDesignMd(raw: unknown): BuildResult {
     // an authored directive (e.g. `audience.references`) lets it
     // hash into the lock while never reaching the parsed tokens.
     const AUDIENCE_ALLOWED_KEYS = new Set(["emotion", "do_not_look_like"]);
-    const audienceUnknown = Object.keys(raw.audience).filter((k) => !AUDIENCE_ALLOWED_KEYS.has(k));
-    if (audienceUnknown.length > 0) {
-      return {
-        error: {
-          path: `audience.${audienceUnknown[0] ?? ""}`,
-          code: "unknown-key",
-          message: `Unknown 'audience' key '${audienceUnknown[0] ?? ""}'. Allowed: ${[...AUDIENCE_ALLOWED_KEYS].join(", ")}.`,
-        },
-      };
-    }
+    const audienceError = rejectUnknownKeys(
+      raw.audience,
+      AUDIENCE_ALLOWED_KEYS,
+      "audience",
+      "'audience'",
+    );
+    if (audienceError) return { error: audienceError };
     const aud: DesignMd["audience"] = {};
     if (Array.isArray(raw.audience.emotion)) {
       aud.emotion = raw.audience.emotion.filter((v): v is string => typeof v === "string");
@@ -347,18 +365,13 @@ function buildDesignMd(raw: unknown): BuildResult {
     // them freeze into the lock hash while never reaching the parsed
     // tokens consumed by iteration / certify.
     const ACCESSIBILITY_ALLOWED_KEYS = new Set(["contrast_ratio_min", "motion"]);
-    const accessibilityUnknown = Object.keys(raw.accessibility).filter(
-      (k) => !ACCESSIBILITY_ALLOWED_KEYS.has(k),
+    const accessibilityError = rejectUnknownKeys(
+      raw.accessibility,
+      ACCESSIBILITY_ALLOWED_KEYS,
+      "accessibility",
+      "'accessibility'",
     );
-    if (accessibilityUnknown.length > 0) {
-      return {
-        error: {
-          path: `accessibility.${accessibilityUnknown[0] ?? ""}`,
-          code: "unknown-key",
-          message: `Unknown 'accessibility' key '${accessibilityUnknown[0] ?? ""}'. Allowed: ${[...ACCESSIBILITY_ALLOWED_KEYS].join(", ")}.`,
-        },
-      };
-    }
+    if (accessibilityError) return { error: accessibilityError };
     const acc: NonNullable<DesignMd["accessibility"]> = {};
     if (typeof raw.accessibility.contrast_ratio_min === "number") {
       acc.contrast_ratio_min = raw.accessibility.contrast_ratio_min;
@@ -393,16 +406,9 @@ function readBrand(raw: unknown): { value: DesignMd["brand"] } | { error: ParseE
   const value: DesignMd["brand"] = archetype !== undefined ? { name, archetype } : { name };
   if (voice !== undefined) value.voice = voice;
   // unknown extra keys
-  const extras = Object.keys(raw).filter((k) => k !== "name" && k !== "archetype" && k !== "voice");
-  if (extras.length > 0) {
-    return {
-      error: {
-        path: `brand.${extras[0] ?? ""}`,
-        code: "unknown-key",
-        message: `Unknown key 'brand.${extras[0] ?? ""}' in front-matter.`,
-      },
-    };
-  }
+  const BRAND_ALLOWED_KEYS = new Set(["name", "archetype", "voice"]);
+  const brandError = rejectUnknownKeys(raw, BRAND_ALLOWED_KEYS, "brand", "'brand'");
+  if (brandError) return { error: brandError };
   return { value };
 }
 
@@ -419,16 +425,8 @@ function readVisual(raw: unknown): { value: DesignMd["visual"] } | { error: Pars
   // lock so prototyping would freeze a directive that the parser
   // discards.
   const VISUAL_ALLOWED_KEYS = new Set(["colors", "typography", "radius", "shadow", "spacing"]);
-  const visualUnknown = Object.keys(raw).filter((k) => !VISUAL_ALLOWED_KEYS.has(k));
-  if (visualUnknown.length > 0) {
-    return {
-      error: {
-        path: `visual.${visualUnknown[0] ?? ""}`,
-        code: "unknown-key",
-        message: `Unknown 'visual' key '${visualUnknown[0] ?? ""}'. Allowed: ${[...VISUAL_ALLOWED_KEYS].join(", ")}.`,
-      },
-    };
-  }
+  const visualError = rejectUnknownKeys(raw, VISUAL_ALLOWED_KEYS, "visual", "'visual'");
+  if (visualError) return { error: visualError };
   const colors = readStringRecord(raw.colors);
   const typographyRaw = isRecord(raw.typography) ? raw.typography : {};
   // Reject unknown keys under `visual.typography` for the same reason
@@ -443,18 +441,13 @@ function readVisual(raw: unknown): { value: DesignMd["visual"] } | { error: Pars
     "scale",
     "weight",
   ]);
-  const typographyUnknown = Object.keys(typographyRaw).filter(
-    (k) => !TYPOGRAPHY_ALLOWED_KEYS.has(k),
+  const typographyError = rejectUnknownKeys(
+    typographyRaw,
+    TYPOGRAPHY_ALLOWED_KEYS,
+    "visual.typography",
+    "'visual.typography'",
   );
-  if (typographyUnknown.length > 0) {
-    return {
-      error: {
-        path: `visual.typography.${typographyUnknown[0] ?? ""}`,
-        code: "unknown-key",
-        message: `Unknown 'visual.typography' key '${typographyUnknown[0] ?? ""}'. Allowed: ${[...TYPOGRAPHY_ALLOWED_KEYS].join(", ")}.`,
-      },
-    };
-  }
+  if (typographyError) return { error: typographyError };
   const radius = readStringRecord(raw.radius);
   const shadow = readStringRecord(raw.shadow);
 

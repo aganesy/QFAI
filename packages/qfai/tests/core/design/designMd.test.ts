@@ -272,6 +272,30 @@ describe("parseDesignMd (TC-1.1.x)", () => {
     expect(result.error.path).toBe("visual.typography.font_pairing");
   });
 
+  it("TC-1.1.16: unknown typography key (fallback_policy) rejected with unknown-key", () => {
+    const text = VALID_FRONT_MATTER.replace(
+      '    family_mono:    "JetBrains Mono, ui-monospace, monospace"',
+      '    family_mono:    "JetBrains Mono, ui-monospace, monospace"\n    fallback_policy: "system"',
+    );
+    const result = parseDesignMd(text);
+    expect("error" in result).toBe(true);
+    if (!("error" in result)) return;
+    expect(result.error.code).toBe("unknown-key");
+    expect(result.error.path).toBe("visual.typography.fallback_policy");
+  });
+
+  it("TC-1.1.17: unknown audience key (references) rejected with unknown-key", () => {
+    const text = VALID_FRONT_MATTER.replace(
+      '  do_not_look_like: ["generic SaaS dashboard"]',
+      '  do_not_look_like: ["generic SaaS dashboard"]\n  references: ["acme.com"]',
+    );
+    const result = parseDesignMd(text);
+    expect("error" in result).toBe(true);
+    if (!("error" in result)) return;
+    expect(result.error.code).toBe("unknown-key");
+    expect(result.error.path).toBe("audience.references");
+  });
+
   it("TC-1.1.18: unknown root key (platform) rejected with unknown-key", () => {
     const text = VALID_FRONT_MATTER.replace("brand:", "platform: ios\nbrand:");
     const result = parseDesignMd(text);
@@ -303,30 +327,6 @@ describe("parseDesignMd (TC-1.1.x)", () => {
     if (!("error" in result)) return;
     expect(result.error.code).toBe("unknown-key");
     expect(result.error.path).toBe("accessibility.focus_ring");
-  });
-
-  it("TC-1.1.17: unknown audience key (references) rejected with unknown-key", () => {
-    const text = VALID_FRONT_MATTER.replace(
-      '  do_not_look_like: ["generic SaaS dashboard"]',
-      '  do_not_look_like: ["generic SaaS dashboard"]\n  references: ["acme.com"]',
-    );
-    const result = parseDesignMd(text);
-    expect("error" in result).toBe(true);
-    if (!("error" in result)) return;
-    expect(result.error.code).toBe("unknown-key");
-    expect(result.error.path).toBe("audience.references");
-  });
-
-  it("TC-1.1.16: unknown typography key (fallback_policy) rejected with unknown-key", () => {
-    const text = VALID_FRONT_MATTER.replace(
-      '    family_mono:    "JetBrains Mono, ui-monospace, monospace"',
-      '    family_mono:    "JetBrains Mono, ui-monospace, monospace"\n    fallback_policy: "system"',
-    );
-    const result = parseDesignMd(text);
-    expect("error" in result).toBe(true);
-    if (!("error" in result)) return;
-    expect(result.error.code).toBe("unknown-key");
-    expect(result.error.path).toBe("visual.typography.fallback_policy");
   });
 });
 

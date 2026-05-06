@@ -6,6 +6,15 @@
 
 ### Fixed (Breaking — pre-1.8.9 internal pipelines only)
 
+- **DESIGN.md `rejectUnknownKeys` SSOT**: New
+  `rejectUnknownKeys(record, allowed, pathPrefix, sectionLabel)`
+  helper in `core/design/designMd.ts` replaces 6 inline copies of
+  the unknown-key reject pattern (root, `brand`, `visual`,
+  `visual.typography`, `audience`, `accessibility`). Each call site
+  is now `const err = rejectUnknownKeys(...); if (err) return { error: err };`.
+  Future spec sections that grow a new key add their allowlist + a
+  single `rejectUnknownKeys` call rather than copy-pasting the
+  filter / first-match / ParseError shape.
 - **DESIGN.md `accessibility` unknown-key reject**: `parseDesignMd()`
   now rejects unknown keys under `accessibility` (e.g. `focus_ring`,
   `reduced_motion_details`) with the same `unknown-key` ParseError

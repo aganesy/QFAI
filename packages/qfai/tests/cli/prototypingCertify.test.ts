@@ -15,6 +15,12 @@ import {
 import { hashDesignMd } from "../../src/core/design/designMd.js";
 import { COMPLETION_CERTIFICATE_REL_PATH } from "../../src/core/prototyping/certificate.js";
 
+function isCertificateWithSpecsCovered(raw: unknown): raw is { specsCovered: string[] } {
+  if (raw === null || typeof raw !== "object" || !("specsCovered" in raw)) return false;
+  const value = (raw as Record<string, unknown>).specsCovered;
+  return Array.isArray(value) && value.every((v): v is string => typeof v === "string");
+}
+
 const CERT_DESIGN_MD = [
   "---",
   "brand:",
@@ -315,16 +321,11 @@ describe("qfai prototyping certify (generate)", () => {
 
     const certPath = path.join(root, COMPLETION_CERTIFICATE_REL_PATH);
     const raw: unknown = JSON.parse(await readFile(certPath, "utf-8"));
-    if (
-      raw === null ||
-      typeof raw !== "object" ||
-      !("specsCovered" in raw) ||
-      !Array.isArray((raw as { specsCovered?: unknown }).specsCovered)
-    ) {
-      throw new Error("certificate JSON is missing the specsCovered array");
+    if (!isCertificateWithSpecsCovered(raw)) {
+      throw new Error("certificate JSON is missing the specsCovered string array");
     }
     // Frozen seed wins — even though spec-0007 might now be resolvable.
-    expect((raw as { specsCovered: string[] }).specsCovered).toEqual(["0012"]);
+    expect(raw.specsCovered).toEqual(["0012"]);
   });
 
   it("exits 2 when prototyping.json#specsCovered is missing", async () => {
