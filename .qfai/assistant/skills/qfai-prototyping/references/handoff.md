@@ -25,12 +25,14 @@ removed because it allowed drift from the SSOT.
 
 The mirror copies these keys verbatim from `DESIGN.md`:
 
-- `visual.colors` (all 12 keys)
-- `visual.typography.family_sans` / `family_display` / `family_mono`
-- `visual.typography.scale` and `weight`
-- `visual.spacing`
-- `visual.radius` (all 4 keys)
-- `visual.shadow` (all 3 keys)
+- `visual.colors` (all 12 keys, required)
+- `visual.typography.family_sans` / `family_display` / `family_mono` (required)
+- `visual.typography.scale` and `weight` (optional in `DESIGN.md`,
+  copied verbatim when present)
+- `visual.spacing` (optional in `DESIGN.md`, copied verbatim when
+  present)
+- `visual.radius` (all 4 keys, required)
+- `visual.shadow` (all 3 keys, required)
 
 The mirror also records `source: DESIGN.md` and the
 `DESIGN.md.lock.yaml` sha256 so downstream tooling can detect drift.
@@ -55,7 +57,21 @@ the SSOT for brand identity. There is no preserve / adapt / copy split.
 
 ## Cert
 
-Run `qfai prototyping certify` to produce
-`.qfai/evidence/prototyping/completion-certificate.json`. The
-certificate includes `designMdPath` + `designMdSha256` for the locked
-brand identity. Use `certify --check` to verify digests.
+Order is load-bearing: `qfai prototyping certify` requires
+`.qfai/output/validate.json` (with `counts.error === 0`) and
+`.qfai/output/verify.json` (with `status === "PASS"`) to be present
+on disk before it will seal the certificate. Run the gates in this
+order, every time:
+
+1. `qfai validate --profile prototyping --fail-on error` — writes
+   `.qfai/output/validate.json`.
+2. `/qfai-verify` — writes `.qfai/output/verify.json`.
+3. `qfai prototyping certify` — produces
+   `.qfai/evidence/prototyping/completion-certificate.json`. The
+   certificate includes `designMdPath` + `designMdSha256` for the
+   locked brand identity. Use `certify --check` to verify digests
+   against later edits.
+
+Reversing this order makes step 3 fail with "validate.json missing"
+or "verify.json status not PASS" — those are the certify
+preconditions, not assertions about a separate state.
