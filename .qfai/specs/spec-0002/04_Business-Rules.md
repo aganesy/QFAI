@@ -16,9 +16,9 @@
 
 > v1.8.9: BR-0002-0002..0007 (the legacy exploration-sidecar / OQ-blocker rules
 > proven by the now-retired `discussionDesignHardening` validator) were
-> superseded by DESIGN.md-driven equivalents now owned by spec-0012, and have
-> been removed from this active rule table together with the corresponding
-> AC / EX / TC / TDD ledger rows.
+> superseded by DESIGN.md-driven equivalents now owned by the post-1.8.9
+> prototyping spec, and have been removed from this active rule table
+> together with the corresponding AC / EX / TC / TDD ledger rows.
 
 ## Notes
 
