@@ -409,6 +409,69 @@ describe("qfai prototyping certify (generate)", () => {
   });
 });
 
+describe("qfai prototyping certify (multi-screen accepted-iter HTML check)", () => {
+  it("exits 2 when accepted iter is missing HTML for a declared screen contract", async () => {
+    const root = await newTempDir();
+    await seedMinimalProject(root, { specMarker: true });
+    await seedAllGatesPass(root);
+    // Plant a UI contract declaring two screens; the seeded
+    // accepted-iter (iter-01) has only `index.html`, not
+    // `home.html` / `settings.html`.
+    await mkdir(path.join(root, ".qfai/contracts/ui"), { recursive: true });
+    await writeFile(
+      path.join(root, ".qfai/contracts/ui/main.yaml"),
+      [
+        "screens:",
+        "  - id: home",
+        '    route: "/home"',
+        "  - id: settings",
+        '    route: "/settings"',
+        "",
+      ].join("\n"),
+      "utf-8",
+    );
+    expect(await runPrototypingCertify({ root, check: false })).toBe(2);
+  });
+
+  it("exits 2 when accepted iter has only an older screen file's name (anchored to accepted iter)", async () => {
+    const root = await newTempDir();
+    await seedMinimalProject(root, { specMarker: true });
+    await seedAllGatesPass(root);
+    // UI contracts declare home + settings.
+    await mkdir(path.join(root, ".qfai/contracts/ui"), { recursive: true });
+    await writeFile(
+      path.join(root, ".qfai/contracts/ui/main.yaml"),
+      'screens:\n  - id: home\n    route: "/home"\n  - id: settings\n    route: "/settings"\n',
+      "utf-8",
+    );
+    // Plant settings.html in an OLDER iter dir; certify must not
+    // accept it as evidence for the accepted iter.
+    const iter00 = path.join(root, ".qfai/evidence/prototyping/iter-00");
+    await mkdir(iter00, { recursive: true });
+    await writeFile(path.join(iter00, "settings.html"), CLEAN_FINAL_HTML, "utf-8");
+    // Accepted iter (iter-01) only has index.html (seeded by
+    // seedAllGatesPass), not home.html or settings.html.
+    expect(await runPrototypingCertify({ root, check: false })).toBe(2);
+  });
+
+  it("succeeds when accepted iter has HTML for every declared screen", async () => {
+    const root = await newTempDir();
+    await seedMinimalProject(root, { specMarker: true });
+    await seedAllGatesPass(root);
+    await mkdir(path.join(root, ".qfai/contracts/ui"), { recursive: true });
+    await writeFile(
+      path.join(root, ".qfai/contracts/ui/main.yaml"),
+      'screens:\n  - id: home\n    route: "/home"\n  - id: settings\n    route: "/settings"\n',
+      "utf-8",
+    );
+    // Add the two screen HTML files into the accepted iter dir.
+    const acceptedDir = path.join(root, ".qfai/evidence/prototyping/iter-01");
+    await writeFile(path.join(acceptedDir, "home.html"), CLEAN_FINAL_HTML, "utf-8");
+    await writeFile(path.join(acceptedDir, "settings.html"), CLEAN_FINAL_HTML, "utf-8");
+    expect(await runPrototypingCertify({ root, check: false })).toBe(0);
+  });
+});
+
 describe("qfai prototyping certify --check", () => {
   it("exits 0 when certificate matches current evidence", async () => {
     const root = await newTempDir();

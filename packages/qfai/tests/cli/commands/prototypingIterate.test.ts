@@ -628,6 +628,38 @@ describe("runPrototypingIterate cycle N hash gate (TC-3.5.x)", () => {
     expect(await runPrototypingIterate({ root, cycle: 2 })).toBe(0);
   });
 
+  it("rejects corrupt iterations history (iterations[i].index !== i) with exit 2", async () => {
+    const root = await newTempDir();
+    await seedMinimalProject(root);
+    // Plant a corrupt history: iterations.length === 3 but
+    // iterations[2].index === 5 (gap). The validator's per-index
+    // monotonicity check would reject the next iter later;
+    // iterate now catches it at the command boundary.
+    await seedRawPrototypingJson(root, {
+      specsCovered: ["0001"],
+      designMd: { path: "DESIGN.md", sha256: hashDesignMd(CANONICAL_DESIGN_MD) },
+      iterations: [
+        { index: 0 },
+        { index: 1 },
+        { index: 5 }, // gap
+      ],
+    });
+    expect(await runPrototypingIterate({ root, cycle: 3 })).toBe(2);
+  });
+
+  it("rejects mid-loop primary-spec change (cycle 1 with frozen specsCovered != resolved spec) with exit 2", async () => {
+    const root = await newTempDir();
+    await seedMinimalProject(root);
+    // Frozen seed claims spec-0099, but the resolved primary spec
+    // (from disk markers) is spec-0001.
+    await seedRawPrototypingJson(root, {
+      specsCovered: ["0099"],
+      designMd: { path: "DESIGN.md", sha256: hashDesignMd(CANONICAL_DESIGN_MD) },
+      iterations: [{ index: 0 }],
+    });
+    expect(await runPrototypingIterate({ root, cycle: 1 })).toBe(2);
+  });
+
   it("rejects out-of-sequence cycle requests (cycle 3 when iterations.length=1) with exit 2", async () => {
     const root = await newTempDir();
     await seedMinimalProject(root);

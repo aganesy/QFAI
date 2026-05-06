@@ -269,6 +269,16 @@ async function validateDesignSystem(root: string, config: QfaiConfig): Promise<I
   const visual = parsed.value.visual;
   const isMirrorShape = isRecord(visual) && isRecord(visual.colors) && isRecord(visual.typography);
   if (isMirrorShape) {
+    // Shape-only check by design. The mirror is byte-deterministic
+    // (`qfai-prototyping/references/handoff.md` describes it as a
+    // verbatim DESIGN.md token copy), and sub-key fidelity (12
+    // colors / 4 radii / 3 shadows / typography family triple) is
+    // already anchored by `designMdSha256` in the handoff yaml +
+    // the `DESIGN.md.lock.yaml` sha contract. Adding sub-key
+    // requirements here would duplicate that contract and produce
+    // confusing double-failures (DCON-005 + DCON-032) for the same
+    // root cause. visual.spacing remains optional in DESIGN.md and
+    // is excluded from the required list deliberately.
     const REQUIRED_MIRROR_KEYS = ["colors", "typography", "radius", "shadow"] as const;
     for (const key of REQUIRED_MIRROR_KEYS) {
       const value = visual[key];
@@ -402,7 +412,6 @@ async function validatePrototypeHandoff(root: string, config: QfaiConfig): Promi
     "designSystemMirror",
     "implementationNotes",
   ] as const) {
-    const value = parsed.value[key];
     if (!(key in parsed.value)) {
       issues.push(
         issue(
@@ -415,6 +424,7 @@ async function validatePrototypeHandoff(root: string, config: QfaiConfig): Promi
       );
       continue;
     }
+    const value = parsed.value[key];
     if (typeof value !== "string") {
       issues.push(
         issue(

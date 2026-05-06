@@ -52,6 +52,39 @@
   wrong type/range no longer see "missing required field"
   (Principle of Least Astonishment); they see "must be a non-negative
   integer (got X)".
+- **certify enforces per-screen HTML in the accepted iter (multi-screen)**:
+  `qfai prototyping certify` now reads UI contracts via
+  `readUiContractScreenContracts` and rejects with exit 2 when any
+  declared screen lacks a matching `<screenId>.html` in the
+  accepted iter dir. Previously a stale older
+  `iter-NN/<missing-screen>.html` could let `validate` stay green
+  (validateUiEvidenceArtifacts accepts a screen file from any iter
+  directory), and certify would seal the run as long as the
+  accepted iter had at least one HTML — closing that gap.
+- **iterate rejects mid-loop primary-spec change**:
+  `qfai prototyping iterate --cycle N` (N >= 1) now compares the
+  resolved primary spec against the frozen
+  `prototyping.json#specsCovered`. A mismatch (e.g.
+  `prototyping.primarySpecId` was edited or a new `surface_type:
+ui-bearing` marker landed mid-loop) exits 2 — preventing the
+  scenario where iterations write the new spec into
+  `iterate-plan.json` while certify keeps reporting the frozen one.
+- **iterate detects corrupt iterations history**:
+  Before deriving the expected next cycle from `iterations.length`,
+  `runPrototypingIterate` now confirms `iterations[i].index === i`
+  for every entry. A hand-edited or partially-corrupted
+  `prototyping.json` (e.g. `iterations.length === 3` but
+  `iterations[2].index === 5`) exits 2 at the command boundary,
+  rather than letting the validator's per-index check produce a
+  delayed cryptic error one cycle later.
+- **iterate diagnostic message tightened**: The out-of-sequence
+  error message no longer repeats the same number twice
+  ("must be 5 (next sequential index after iterations.length=5)").
+  New form: "expected --cycle N (iterations.length=N); got --cycle X.
+  Re-run with the expected cycle, or restart the loop with
+  `--cycle 0 --target-url <url>`." The hint now includes the
+  `--target-url` requirement so the operator does not fall into a
+  second exit-2 on the restart path.
 - **`prototyping iterate` rejects out-of-sequence cycles**: Calling
   `qfai prototyping iterate --cycle N` when `iterations.length !== N`
   now exits 2 with a message naming the expected cycle. Previously a

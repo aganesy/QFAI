@@ -208,6 +208,27 @@ export async function runPrototypingIterate(
     if (stop !== null) {
       return emitStop(stop);
     }
+    // Defense-in-depth: confirm the recorded loop history is itself
+    // monotonic before deriving the expected next cycle from its
+    // length. A hand-edited or partially-corrupted `prototyping.json`
+    // could carry e.g. `iterations.length === 3` but
+    // `iterations[2].index === 5`; in that case `length` is no longer
+    // the next-cycle index and the validator's per-index check would
+    // reject the next iter with a delayed error. Catch the corrupt
+    // history at the command boundary instead.
+    const gapIndex = recordedIterations.findIndex(
+      (it, i) =>
+        !(it !== null && typeof it === "object" && !Array.isArray(it)) ||
+        (it as { index?: unknown }).index !== i,
+    );
+    if (gapIndex !== -1) {
+      error(
+        `qfai prototyping iterate: prototyping.json#iterations[${gapIndex}].index ` +
+          `is not ${gapIndex}; the loop history is corrupted. ` +
+          "Re-run with `--cycle 0 --target-url <url>` to refreeze the loop.",
+      );
+      return 2;
+    }
     // Reject out-of-sequence cycle requests. `iterations[i].index === i`
     // is enforced by the validator (QFAI-PROT-* index-monotonicity), so
     // jumping straight to `--cycle 3` after only `iter-00` was recorded
@@ -219,10 +240,30 @@ export async function runPrototypingIterate(
     const expectedNextCycle = recordedIterations.length;
     if (options.cycle !== expectedNextCycle) {
       error(
-        "qfai prototyping iterate: --cycle must be " +
-          `${expectedNextCycle} (next sequential index after iterations.length=${recordedIterations.length}); ` +
-          `got --cycle ${options.cycle}. ` +
-          "Re-run with the expected cycle, or restart the loop with --cycle 0.",
+        `qfai prototyping iterate: expected --cycle ${expectedNextCycle} ` +
+          `(iterations.length=${recordedIterations.length}); got --cycle ${options.cycle}. ` +
+          "Re-run with the expected cycle, or restart the loop with " +
+          "`--cycle 0 --target-url <url>`.",
+      );
+      return 2;
+    }
+    // Cycles >= 1 must reuse the frozen `specsCovered` from cycle 0.
+    // If `prototyping.primarySpecId` or a UI-bearing marker has shifted
+    // mid-loop, the resolved primary spec here would differ from the
+    // recorded one, and iter-plan would write the NEW spec into
+    // `iterate-plan.json#specs` while certify keeps reporting the
+    // FROZEN one — meaning iterations can exercise spec B while the
+    // certificate still claims spec A. Fail fast at the boundary.
+    const frozenSpecs = readFrozenSpecsCovered(protoRecord);
+    if (
+      frozenSpecs !== null &&
+      (frozenSpecs.length !== specs.length || frozenSpecs[0] !== specs[0])
+    ) {
+      error(
+        "qfai prototyping iterate: prototyping.json#specsCovered (" +
+          `${JSON.stringify(frozenSpecs)}) differs from the currently-resolved ` +
+          `primary spec (${JSON.stringify(specs)}). ` +
+          "The primary spec changed mid-loop; re-run with `--cycle 0 --target-url <url>` to refreeze.",
       );
       return 2;
     }
@@ -368,6 +409,24 @@ async function readPrototypingJson(absPath: string): Promise<PrototypingJsonShap
   } catch {
     return null;
   }
+}
+
+/**
+ * Read the frozen `specsCovered` array seeded by `iterate --cycle 0`.
+ * Returns `null` for missing-or-malformed (treated as "no frozen seed
+ * to compare against"). Same shape as the helper in
+ * prototypingCertify so the fail-fast comparison is identical at both
+ * boundaries.
+ */
+function readFrozenSpecsCovered(record: PrototypingJsonShape): string[] | null {
+  const raw = record.specsCovered;
+  if (!Array.isArray(raw) || raw.length === 0) return null;
+  const out: string[] = [];
+  for (const value of raw) {
+    if (typeof value !== "string" || value.length === 0) return null;
+    out.push(value);
+  }
+  return out;
 }
 
 function asIterations(record: PrototypingJsonShape): readonly unknown[] {

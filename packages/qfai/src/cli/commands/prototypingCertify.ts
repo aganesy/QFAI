@@ -23,6 +23,7 @@ import { readdir, readFile, stat } from "node:fs/promises";
 import path from "node:path";
 
 import { loadConfig } from "../../core/config.js";
+import { readUiContractScreenContracts } from "../../core/contracts/screenContracts.js";
 import { hashDesignMd, parseDesignMd } from "../../core/design/designMd.js";
 import { readDesignMdLockSha } from "../../core/design/designMdLock.js";
 import { PROTOTYPING_EVIDENCE_REL, PROTOTYPING_JSON_REL } from "../../core/prototyping/paths.js";
@@ -172,6 +173,38 @@ export async function runPrototypingCertify(
         "Run the capture step for the accepted iteration before certification.",
     );
     return 2;
+  }
+  // For multi-screen specs, the accepted iteration MUST contain HTML
+  // for every screen declared in the UI contracts. Otherwise, the
+  // current pipeline can seal a certificate while a stale older
+  // `iter-NN/<missing-screen>.html` is what `validate` matched
+  // against (validateUiEvidenceArtifacts accepts a screen file from
+  // ANY iteration directory). Anchor the per-screen check to the
+  // ACCEPTED iter only.
+  const screenContracts = await readUiContractScreenContracts(
+    options.root,
+    config.paths.contractsDir,
+  );
+  if (screenContracts.length > 0) {
+    const presentScreenIds = new Set<string>();
+    for (const htmlPath of finalHtmlPaths) {
+      const base = path.basename(htmlPath);
+      const stem = base.replace(/\.html$/i, "");
+      presentScreenIds.add(stem);
+    }
+    const missing = screenContracts.filter((s) => !presentScreenIds.has(s.screenId));
+    if (missing.length > 0) {
+      error(
+        "qfai prototyping certify: accepted iteration " +
+          `${acceptedIterDir} is missing HTML for ${missing.length} declared screen(s):`,
+      );
+      for (const m of missing.slice(0, 10)) {
+        error(
+          `  - ${m.screenId} (expected ${PROTOTYPING_EVIDENCE_REL}/${acceptedIterDir}/${m.screenId}.html)`,
+        );
+      }
+      return 2;
+    }
   }
   // Multi-screen specs emit one HTML artifact per screen under the
   // same iter-NN directory. Every file must pass the DESIGN.md gate;
