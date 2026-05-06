@@ -39,7 +39,7 @@ Map the interview answers into `DESIGN.md` as follows:
 - Brand archetype → `brand.archetype`. Allowed values are the
   8-archetype catalog in `design-md-brand-catalog.md`
   (`minimal | bold | corporate | playful | organic | tech | elegant |
-  casual`). Use `aesthetic_properties` from the catalog as defaults.
+casual`). Use `aesthetic_properties` from the catalog as defaults.
 - Audience emotion → `audience.emotion`.
 - Anti-template constraints + rejected references →
   `audience.do_not_look_like` and the **Don't** subsection of the

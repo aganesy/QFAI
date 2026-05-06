@@ -347,7 +347,11 @@ async function walk(
     return;
   }
   for (const name of entries) {
-    if (name === "completion-certificate.json") continue;
+    // The cert file lives at evidenceRoot/completion-certificate.json
+    // by contract. Restrict the skip to the top level so a stray copy
+    // in a sub-directory is still digested (defense against accidental
+    // shadowing of the digest tree).
+    if (dir === rootDir && name === "completion-certificate.json") continue;
     const full = path.join(dir, name);
     let s: Awaited<ReturnType<typeof stat>>;
     try {

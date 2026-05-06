@@ -24,13 +24,14 @@ type Review = {
   reviewerId: "product-surface-reviewer";
   scores: {
     informationArchitecture: "weak" | "acceptable" | "strong" | "exceptional";
-    navigationFlow:          "weak" | "acceptable" | "strong" | "exceptional";
-    usability:               "weak" | "acceptable" | "strong" | "exceptional";
-    functionality:           "weak" | "acceptable" | "strong" | "exceptional";
+    navigationFlow: "weak" | "acceptable" | "strong" | "exceptional";
+    usability: "weak" | "acceptable" | "strong" | "exceptional";
+    functionality: "weak" | "acceptable" | "strong" | "exceptional";
   };
-  proseCritique: string;                  // 200..500 words
-  layoutAntiPatternsDetected: string[];   // lap-* IDs
-  designMdViolations: {                   // populated by static gate, not by you
+  proseCritique: string; // 200..500 words
+  layoutAntiPatternsDetected: string[]; // lap-* IDs
+  designMdViolations: {
+    // populated by static gate, not by you
     kind: "color" | "font" | "radius" | "shadow";
     found: string;
   }[];
@@ -70,16 +71,16 @@ The static loader runs `lap-001..006` regex against iter HTML and
 fills `layoutAntiPatternsDetected[]`. You **must** evaluate `lap-007`
 and `lap-008` semantically and append their IDs when matched.
 
-| ID                              | Scope    | Detection                                                |
-| ------------------------------- | -------- | -------------------------------------------------------- |
-| `lap-001-saas-dashboard`        | layout   | static regex (sidebar + main + KPI/metric)               |
-| `lap-002-card-grid-sidebar`     | layout   | static regex (grid + aside)                              |
-| `lap-003-saas-table-tabs`       | layout   | static regex (role="tab" + table)                        |
-| `lap-004-bento-grid`            | layout   | static regex (grid-cols-12 + grid-rows-)                 |
-| `lap-005-centered-hero`         | layout   | static regex (text-center + h1)                          |
-| `lap-006-overcrowded-sidebar`   | layout   | static regex (aside with 10+ links)                      |
-| `lap-007-state-not-represented` | semantic | reviewer judgement (criterion below)                     |
-| `lap-008-no-back-affordance`    | semantic | reviewer judgement (criterion below)                     |
+| ID                              | Scope    | Detection                                  |
+| ------------------------------- | -------- | ------------------------------------------ |
+| `lap-001-saas-dashboard`        | layout   | static regex (sidebar + main + KPI/metric) |
+| `lap-002-card-grid-sidebar`     | layout   | static regex (grid + aside)                |
+| `lap-003-saas-table-tabs`       | layout   | static regex (role="tab" + table)          |
+| `lap-004-bento-grid`            | layout   | static regex (grid-cols-12 + grid-rows-)   |
+| `lap-005-centered-hero`         | layout   | static regex (text-center + h1)            |
+| `lap-006-overcrowded-sidebar`   | layout   | static regex (aside with 10+ links)        |
+| `lap-007-state-not-represented` | semantic | reviewer judgement (criterion below)       |
+| `lap-008-no-back-affordance`    | semantic | reviewer judgement (criterion below)       |
 
 ### `lap-007-state-not-represented`
 

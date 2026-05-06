@@ -74,7 +74,7 @@
 - REQ-0012-0031: 4 UX 軸 ordinal score と 200–500 語の散文 critique を reviewer が出力する
 - REQ-0012-0032: 完了は (4 軸全 exceptional かつ lap = 0 かつ designMdViolations = 0) または (iter index === 14) の決定論判定
 - REQ-0012-0033: best-of-history を持たず最新 iter が常に accepted
-- REQ-0012-0034: lap-* 検出時 informationArchitecture は acceptable cap
+- REQ-0012-0034: lap-\* 検出時 informationArchitecture は acceptable cap
 - REQ-0012-0035: per-iter evidence は `<screen>.png` + `<screen>.html` + `review.json` のみ
 - REQ-0012-0036: 旧 mode/funnel/polish-branch/concept-anchor/100-perfect の概念が QFAI 全 codebase から物理削除されている
 - REQ-0012-0037: SKILL.md ≤ 130 行、references 5 ファイル合計 ≤ 410 行

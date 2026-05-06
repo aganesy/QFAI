@@ -8,31 +8,40 @@ audience:
   do_not_look_like: ["generic SaaS dashboard"]
 visual:
   colors:
-    primary:        "#1F2937"
-    secondary:      "#6366F1"
-    accent:         "#D97706"
-    surface:        "#FFFFFF"
-    surface_muted:  "#F3F4F6"
-    text:           "#111827"
-    text_muted:     "#6B7280"
-    danger:         "#DC2626"
-    warning:        "#F59E0B"
-    success:        "#10B981"
-    border:         "#E5E7EB"
-    overlay:        "rgba(0,0,0,0.5)"
+    primary: "#1F2937"
+    secondary: "#6366F1"
+    accent: "#D97706"
+    surface: "#FFFFFF"
+    surface_muted: "#F3F4F6"
+    text: "#111827"
+    text_muted: "#6B7280"
+    danger: "#DC2626"
+    warning: "#F59E0B"
+    success: "#10B981"
+    border: "#E5E7EB"
+    overlay: "rgba(0,0,0,0.5)"
   typography:
-    family_sans:    "Inter, system-ui, sans-serif"
+    family_sans: "Inter, system-ui, sans-serif"
     family_display: "Inter, system-ui, sans-serif"
-    family_mono:    "JetBrains Mono, ui-monospace, monospace"
-    scale:  { xs: "0.75rem", sm: "0.875rem", base: "1rem", lg: "1.125rem", xl: "1.25rem", "2xl": "1.5rem", "3xl": "1.875rem" }
+    family_mono: "JetBrains Mono, ui-monospace, monospace"
+    scale:
+      {
+        xs: "0.75rem",
+        sm: "0.875rem",
+        base: "1rem",
+        lg: "1.125rem",
+        xl: "1.25rem",
+        "2xl": "1.5rem",
+        "3xl": "1.875rem",
+      }
     weight: { regular: 400, medium: 500, bold: 700 }
   spacing:
     base: "0.25rem"
     scale: [0, 1, 2, 3, 4, 6, 8, 12, 16, 24]
   radius:
-    sm:   "0.25rem"
-    md:   "0.5rem"
-    lg:   "0.75rem"
+    sm: "0.25rem"
+    md: "0.5rem"
+    lg: "0.75rem"
     full: "9999px"
   shadow:
     sm: "0 1px 2px rgba(15,23,42,0.05)"

@@ -26,12 +26,12 @@ companion 行 (UPDATE:MODIFY / UPDATE:REMOVE) を Triage table に追加
 
 ## スライスカテゴリ
 
-| Category   | Slice Rule                     | ID Range                              |
-| ---------- | ------------------------------ | ------------------------------------- |
-| structural | 1 pack-type = 1 spec           | spec-0001..0002                       |
-| cli        | 1 command = 1 spec             | spec-0003..0007                       |
-| skill      | 1 skill = 1 spec               | spec-0008..0014, spec-0016            |
-| agent      | all agents = 1 collective spec | spec-0015                             |
+| Category   | Slice Rule                     | ID Range                   |
+| ---------- | ------------------------------ | -------------------------- |
+| structural | 1 pack-type = 1 spec           | spec-0001..0002            |
+| cli        | 1 command = 1 spec             | spec-0003..0007            |
+| skill      | 1 skill = 1 spec               | spec-0008..0014, spec-0016 |
+| agent      | all agents = 1 collective spec | spec-0015                  |
 
 ### カテゴリ定義
 

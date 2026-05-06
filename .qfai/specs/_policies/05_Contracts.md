@@ -10,19 +10,19 @@
 
 ### Design Contracts
 
-| Short ID | Entity                | Declared ID           | File                                                | Purpose                                                                                                                                     |
-| -------- | --------------------- | --------------------- | --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| DCON-001 | Exploration Brief     | exploration-brief     | `.qfai/contracts/design/exploration-brief.yaml`     | (REMOVED — UX-loop redesign absorbed into spec-0012 / 09_delta CHG-001: brand SSOT moved to root `DESIGN.md`. History-only.)                                      |
-| DCON-002 | Evaluation Rubric     | evaluation-rubric     | `.qfai/contracts/design/evaluation-rubric.yaml`     | (DEPRECATED v2.0: 軸は code constants に移行、本 contract は P4 で削除予定 — spec-0012)                                                     |
-| DCON-003 | Evaluator Calibration | evaluator-calibration | `.qfai/contracts/design/evaluator-calibration.yaml` | (DEPRECATED v2.0: ordinal scale + 散文 critique で代替、P4 で削除予定 — spec-0012)                                                          |
-| DCON-004 | Selected Direction    | selected-direction    | `.qfai/contracts/design/selected-direction.yaml`    | (DEPRECATED v2.0: winner 選定なし、P4 で削除予定 — spec-0012)                                                                               |
-| DCON-005 | Design System         | design-system         | `.qfai/contracts/design/design-system.yaml`         | (UX-loop redesign / spec-0012 09_delta CHG-001: 最終 iter HTML からの抽出ではなく `DESIGN.md` token の deterministic mirror。validator は DCON-032。) |
-| DCON-006 | Reference Pool        | reference-pool        | `.qfai/contracts/design/reference-pool.yaml`        | (REMOVED — UX-loop redesign absorbed into spec-0012 / 09_delta CHG-001: deviate-from framing 廃止、DESIGN.md compliance gate に統合。History-only.)               |
-| DCON-007 | Brand Design          | brand-design          | `.qfai/contracts/design/brand-design.yaml`          | (REMOVED — UX-loop redesign absorbed into spec-0012 / 09_delta CHG-001: brand SSOT は root `DESIGN.md` に統合。History-only.)                                     |
-| DCON-008 | Prototype Handoff     | prototype-handoff     | `.qfai/contracts/design/prototype-handoff.yaml`     | v2.0+UX-loop: finalIterIndex / finalArtifact / extractedDesignSystem (= DESIGN.md mirror) / implementationNotes                            |
-| DCON-030 | DESIGN.md             | design-md             | `DESIGN.md` (repo root)                             | (UX-loop redesign / spec-0012 09_delta CHG-001) brand vision / visual identity (color / font / radius / shadow tokens) の SSOT。markdown 直接編集。 |
-| DCON-031 | DESIGN.md Lock        | design-md-lock        | `.qfai/contracts/design/DESIGN.md.lock.yaml`        | (UX-loop redesign / spec-0012 09_delta CHG-001) `DESIGN.md` の sha256 hash を `/qfai-sdd` Phase 0 で凍結。cycle ≥1 hash mismatch を fail-closed で検出。 |
-| DCON-032 | Design System Mirror  | design-system-mirror  | (validator on `.qfai/contracts/design/design-system.yaml` ↔ DESIGN.md) | (UX-loop redesign / spec-0012 09_delta CHG-001) `design-system.yaml` が `DESIGN.md` token と byte-equivalent mirror であることを検証。            |
+| Short ID | Entity                | Declared ID           | File                                                                   | Purpose                                                                                                                                                  |
+| -------- | --------------------- | --------------------- | ---------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| DCON-001 | Exploration Brief     | exploration-brief     | `.qfai/contracts/design/exploration-brief.yaml`                        | (REMOVED — UX-loop redesign absorbed into spec-0012 / 09_delta CHG-001: brand SSOT moved to root `DESIGN.md`. History-only.)                             |
+| DCON-002 | Evaluation Rubric     | evaluation-rubric     | `.qfai/contracts/design/evaluation-rubric.yaml`                        | (DEPRECATED v2.0: 軸は code constants に移行、本 contract は P4 で削除予定 — spec-0012)                                                                  |
+| DCON-003 | Evaluator Calibration | evaluator-calibration | `.qfai/contracts/design/evaluator-calibration.yaml`                    | (DEPRECATED v2.0: ordinal scale + 散文 critique で代替、P4 で削除予定 — spec-0012)                                                                       |
+| DCON-004 | Selected Direction    | selected-direction    | `.qfai/contracts/design/selected-direction.yaml`                       | (DEPRECATED v2.0: winner 選定なし、P4 で削除予定 — spec-0012)                                                                                            |
+| DCON-005 | Design System         | design-system         | `.qfai/contracts/design/design-system.yaml`                            | (UX-loop redesign / spec-0012 09_delta CHG-001: 最終 iter HTML からの抽出ではなく `DESIGN.md` token の deterministic mirror。validator は DCON-032。)    |
+| DCON-006 | Reference Pool        | reference-pool        | `.qfai/contracts/design/reference-pool.yaml`                           | (REMOVED — UX-loop redesign absorbed into spec-0012 / 09_delta CHG-001: deviate-from framing 廃止、DESIGN.md compliance gate に統合。History-only.)      |
+| DCON-007 | Brand Design          | brand-design          | `.qfai/contracts/design/brand-design.yaml`                             | (REMOVED — UX-loop redesign absorbed into spec-0012 / 09_delta CHG-001: brand SSOT は root `DESIGN.md` に統合。History-only.)                            |
+| DCON-008 | Prototype Handoff     | prototype-handoff     | `.qfai/contracts/design/prototype-handoff.yaml`                        | v2.0+UX-loop: finalIterIndex / finalArtifact / extractedDesignSystem (= DESIGN.md mirror) / implementationNotes                                          |
+| DCON-030 | DESIGN.md             | design-md             | `DESIGN.md` (repo root)                                                | (UX-loop redesign / spec-0012 09_delta CHG-001) brand vision / visual identity (color / font / radius / shadow tokens) の SSOT。markdown 直接編集。      |
+| DCON-031 | DESIGN.md Lock        | design-md-lock        | `.qfai/contracts/design/DESIGN.md.lock.yaml`                           | (UX-loop redesign / spec-0012 09_delta CHG-001) `DESIGN.md` の sha256 hash を `/qfai-sdd` Phase 0 で凍結。cycle ≥1 hash mismatch を fail-closed で検出。 |
+| DCON-032 | Design System Mirror  | design-system-mirror  | (validator on `.qfai/contracts/design/design-system.yaml` ↔ DESIGN.md) | (UX-loop redesign / spec-0012 09_delta CHG-001) `design-system.yaml` が `DESIGN.md` token と byte-equivalent mirror であることを検証。                   |
 
 ### UI Contracts
 
@@ -75,5 +75,5 @@ QFAI 自体は外部公開 API を持たない。
 - (UX-loop redesign / spec-0012 09_delta CHG-001) 削除対象 contracts: `DCON-001`, `DCON-006`, `DCON-007`
 - 簡素化 contracts (P1+P10): `DCON-008` (mustPreserve/mayAdapt/mustNotCopy 廃止)
 - 評価軸は code constants `packages/qfai/src/core/prototyping/iteration.ts#OrdinalScore` に固定 (UX-loop redesign 後: informationArchitecture / navigationFlow / usability / functionality)。
-- (UX-loop redesign) layout-anti-pattern (lap-001..008) は `qfai-prototyping/references/reviewer-prompt.md` に常駐（contract 化しない）。旧 anti-slop tokens (slop-*) は廃止。
+- (UX-loop redesign) layout-anti-pattern (lap-001..008) は `qfai-prototyping/references/reviewer-prompt.md` に常駐（contract 化しない）。旧 anti-slop tokens (slop-\*) は廃止。
 - (UX-loop redesign) `DCON-030` (`DESIGN.md`), `DCON-031` (`DESIGN.md.lock.yaml`), `DCON-032` (mirror validator) を新設。

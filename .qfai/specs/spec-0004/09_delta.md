@@ -15,23 +15,23 @@
 
 ### Triage
 
-| Source                       | Subject                                                          | Existing Spec | Operation     | Approved By   | Rationale                                  |
-| ---------------------------- | ---------------------------------------------------------------- | ------------- | ------------- | ------------- | ------------------------------------------ |
-| spec-0017 REQ-0017-0015      | DCON-030 / 031 / 032 validators                                  | spec-0004     | UPDATE:APPEND | yusuke_senaga | DESIGN.md / lock / mirror gate is validate |
-| spec-0017 TC-0017-0015..0017 | prototypingEvidenceV3 schema validator                           | spec-0004     | UPDATE:APPEND | yusuke_senaga | review.json schema gate is validate        |
-| spec-0017 AC-0017-0018       | layoutAntiPatternsDetected schema validator                      | spec-0004     | UPDATE:APPEND | yusuke_senaga | lap-* whitelist enforcement is validate    |
-| spec-0017 AC-0017-0019       | designMdViolations schema validator                              | spec-0004     | UPDATE:APPEND | yusuke_senaga | violation shape gate is validate           |
-| spec-0017 AC-0017-0020       | `findDesignMdViolations` purity contract                         | spec-0004     | UPDATE:APPEND | yusuke_senaga | pure-fn determinism is validate            |
+| Source                       | Subject                                     | Existing Spec | Operation     | Approved By   | Rationale                                  |
+| ---------------------------- | ------------------------------------------- | ------------- | ------------- | ------------- | ------------------------------------------ |
+| spec-0017 REQ-0017-0015      | DCON-030 / 031 / 032 validators             | spec-0004     | UPDATE:APPEND | yusuke_senaga | DESIGN.md / lock / mirror gate is validate |
+| spec-0017 TC-0017-0015..0017 | prototypingEvidenceV3 schema validator      | spec-0004     | UPDATE:APPEND | yusuke_senaga | review.json schema gate is validate        |
+| spec-0017 AC-0017-0018       | layoutAntiPatternsDetected schema validator | spec-0004     | UPDATE:APPEND | yusuke_senaga | lap-\* whitelist enforcement is validate   |
+| spec-0017 AC-0017-0019       | designMdViolations schema validator         | spec-0004     | UPDATE:APPEND | yusuke_senaga | violation shape gate is validate           |
+| spec-0017 AC-0017-0020       | `findDesignMdViolations` purity contract    | spec-0004     | UPDATE:APPEND | yusuke_senaga | pure-fn determinism is validate            |
 
 ### Operations
 
-| Op ID  | Op Type        | Target                                                | Summary                                                                            |
-| ------ | -------------- | ----------------------------------------------------- | ---------------------------------------------------------------------------------- |
-| OP-001 | UPDATE:APPEND  | 01_Spec.md (Scope.In + REQ-0025..0031 + Entry points) | DCON-030/031/032, prototypingEvidenceV3, lap whitelist, designMdViolations shape, findDesignMdViolations purity を Scope に追加 |
-| OP-002 | UPDATE:APPEND  | 03_Acceptance-Criteria.md (AC-0004-0008..0014)        | DCON-030/031/032, prototypingEvidenceV3, lap whitelist, designMdViolations shape, findDesignMdViolations purity の AC layer |
-| OP-003 | UPDATE:APPEND  | 04_Business-Rules.md (BR-0004-0008..0013)             | mirror BR layer for OP-002                                                          |
-| OP-004 | UPDATE:APPEND  | 05_Examples.md (EX-0004-0007..0012)                   | worked examples per AC-0004-0008..0014                                              |
-| OP-005 | UPDATE:APPEND  | 06_Test-Cases.md (TC-0004-0008..0014)                 | test coverage per AC; routes to existing tests under `packages/qfai/tests/core/validators/` |
+| Op ID  | Op Type       | Target                                                | Summary                                                                                                                         |
+| ------ | ------------- | ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| OP-001 | UPDATE:APPEND | 01_Spec.md (Scope.In + REQ-0025..0031 + Entry points) | DCON-030/031/032, prototypingEvidenceV3, lap whitelist, designMdViolations shape, findDesignMdViolations purity を Scope に追加 |
+| OP-002 | UPDATE:APPEND | 03_Acceptance-Criteria.md (AC-0004-0008..0014)        | DCON-030/031/032, prototypingEvidenceV3, lap whitelist, designMdViolations shape, findDesignMdViolations purity の AC layer     |
+| OP-003 | UPDATE:APPEND | 04_Business-Rules.md (BR-0004-0008..0013)             | mirror BR layer for OP-002                                                                                                      |
+| OP-004 | UPDATE:APPEND | 05_Examples.md (EX-0004-0007..0012)                   | worked examples per AC-0004-0008..0014                                                                                          |
+| OP-005 | UPDATE:APPEND | 06_Test-Cases.md (TC-0004-0008..0014)                 | test coverage per AC; routes to existing tests under `packages/qfai/tests/core/validators/`                                     |
 
 ### Notes
 

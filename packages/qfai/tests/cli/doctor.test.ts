@@ -566,11 +566,7 @@ describe("doctor", { timeout: 60000 }, () => {
       // 64-hex but doesn't match — same shape as TC-3.7.5.
       await writeFile(
         path.join(root, ".qfai", "contracts", "design", "DESIGN.md.lock.yaml"),
-        [
-          'designMdPath: "DESIGN.md"',
-          `designMdSha256: "${"a".repeat(64)}"`,
-          "",
-        ].join("\n"),
+        ['designMdPath: "DESIGN.md"', `designMdSha256: "${"a".repeat(64)}"`, ""].join("\n"),
         "utf-8",
       );
       const parsed = await readDoctorData(root, { profile: "prototyping", targetUrl: server.url });

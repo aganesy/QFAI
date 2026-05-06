@@ -212,7 +212,7 @@
 - EX-Ref: EX-0012-0089
 - AC-Refs: AC-0012-0021
 - Test file: `packages/qfai/tests/skill/prototypingSkill.test.ts`
-- Verify the reviewer prompt frames root `DESIGN.md` as the brand SSOT and references the lap-* catalog.
+- Verify the reviewer prompt frames root `DESIGN.md` as the brand SSOT and references the lap-\* catalog.
 
 ## TC-0012-0337
 

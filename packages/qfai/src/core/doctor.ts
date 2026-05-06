@@ -12,6 +12,7 @@ import {
 } from "./config.js";
 import { readUiContractScreenContracts } from "./contracts/screenContracts.js";
 import { hashDesignMd, parseDesignMd } from "./design/designMd.js";
+import { readDesignMdLockSha } from "./design/designMdLock.js";
 import { collectScenarioFiles } from "./discovery.js";
 import { collectFilesByGlobs, DEFAULT_GLOB_FILE_LIMIT } from "./fs.js";
 import { toRelativePath } from "./paths.js";
@@ -616,7 +617,7 @@ async function buildPrototypingDesignMdChecks(
       details: { path: toRelativePath(root, lockAbs) },
     });
   } else {
-    lockSha = readLockSha(lockText);
+    lockSha = readDesignMdLockSha(lockText);
     if (lockSha === null) {
       checks.push({
         id: "prototyping.designMdLock",
@@ -657,13 +658,6 @@ async function buildPrototypingDesignMdChecks(
     }
   }
   return checks;
-}
-
-function readLockSha(text: string): string | null {
-  // Lightweight scan: avoid pulling another YAML import here; the
-  // designMdSha256 line is a flat top-level scalar by spec.
-  const match = /^\s*designMdSha256\s*:\s*"?([0-9a-fA-F]{64})"?\s*$/m.exec(text);
-  return match && typeof match[1] === "string" ? match[1].toLowerCase() : null;
 }
 
 async function buildPrototypingPrimarySpecCheck(

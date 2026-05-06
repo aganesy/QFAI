@@ -141,23 +141,46 @@ export async function runPrototypingCertify(
     );
     return 2;
   }
-  const finalHtmlPath = await findFinalIterationHtml(evidenceRoot);
-  if (!finalHtmlPath) {
+  const finalHtmlPaths = await findFinalIterationHtmlFiles(evidenceRoot);
+  if (finalHtmlPaths.length === 0) {
     error(
       "qfai prototyping certify: no final iteration HTML found under " +
         `${PROTOTYPING_EVIDENCE_REL}/iter-*/. Run prototyping iterations first.`,
     );
     return 2;
   }
-  const finalHtml = await readFile(finalHtmlPath, "utf-8");
-  const violations = findDesignMdViolations(finalHtml, designMdParsed.data);
-  if (violations.length > 0) {
-    error(
-      `qfai prototyping certify: ${violations.length} DESIGN.md violation(s) detected in final iteration ` +
-        `(${path.relative(options.root, finalHtmlPath).replace(/\\/g, "/")}):`,
+  // Multi-screen specs emit one HTML artifact per screen under the
+  // same iter-NN directory. Every file must pass the DESIGN.md gate;
+  // a clean home.html does not absolve a drifting settings.html.
+  const violationsByPath: Array<{ path: string; violations: DesignMdViolation[] }> = [];
+  for (const htmlPath of finalHtmlPaths) {
+    const html = await readFile(htmlPath, "utf-8");
+    const fileViolations = findDesignMdViolations(html, designMdParsed.data);
+    if (fileViolations.length > 0) {
+      violationsByPath.push({
+        path: path.relative(options.root, htmlPath).replace(/\\/g, "/"),
+        violations: fileViolations,
+      });
+    }
+  }
+  if (violationsByPath.length > 0) {
+    const totalViolations = violationsByPath.reduce(
+      (sum, entry) => sum + entry.violations.length,
+      0,
     );
-    for (const v of violations.slice(0, 20)) {
-      error(`  - kind=${v.kind} found="${v.found}"`);
+    error(
+      `qfai prototyping certify: ${totalViolations} DESIGN.md violation(s) detected across ` +
+        `${violationsByPath.length} final iteration HTML file(s):`,
+    );
+    let logged = 0;
+    for (const entry of violationsByPath) {
+      error(`  ${entry.path}:`);
+      for (const v of entry.violations) {
+        if (logged >= 20) break;
+        error(`    - kind=${v.kind} found="${v.found}"`);
+        logged += 1;
+      }
+      if (logged >= 20) break;
     }
     return 2;
   }
@@ -228,15 +251,15 @@ export async function runPrototypingShowSpec(options: { root: string }): Promise
 
 /**
  * Walk `evidenceRoot/iter-NN/` directories in descending index order and
- * return the first `*.html` file found. Returns `null` when no iter dir
- * holds an HTML artifact.
+ * return every `*.html` file in the highest-indexed dir that has one.
+ * Returns an empty array when no iter dir holds an HTML artifact.
  */
-async function findFinalIterationHtml(evidenceRoot: string): Promise<string | null> {
+async function findFinalIterationHtmlFiles(evidenceRoot: string): Promise<string[]> {
   let entries: string[];
   try {
     entries = await readdir(evidenceRoot);
   } catch {
-    return null;
+    return [];
   }
   const iterDirs: Array<{ index: number; abs: string }> = [];
   for (const name of entries) {
@@ -250,31 +273,32 @@ async function findFinalIterationHtml(evidenceRoot: string): Promise<string | nu
   }
   iterDirs.sort((a, b) => b.index - a.index);
   for (const dir of iterDirs) {
-    const html = await firstHtmlIn(dir.abs);
-    if (html) return html;
+    const htmls = await allHtmlIn(dir.abs);
+    if (htmls.length > 0) return htmls;
   }
-  return null;
+  return [];
 }
 
-async function firstHtmlIn(dir: string): Promise<string | null> {
+async function allHtmlIn(dir: string): Promise<string[]> {
   let names: string[];
   try {
     names = await readdir(dir);
   } catch {
-    return null;
+    return [];
   }
   names.sort();
+  const out: string[] = [];
   for (const name of names) {
     if (!name.toLowerCase().endsWith(".html")) continue;
     const abs = path.join(dir, name);
     try {
       const s = await stat(abs);
-      if (s.isFile()) return abs;
+      if (s.isFile()) out.push(abs);
     } catch {
       continue;
     }
   }
-  return null;
+  return out;
 }
 
 // ─── small helpers (kept local to avoid widening prototyping/types.ts) ──────
@@ -313,14 +337,7 @@ function extractNumber(source: unknown, key: string): number | undefined {
 function countIterations(protoJson: unknown): number {
   if (!isRecord(protoJson)) return 0;
   const iterations = protoJson.iterations;
-  if (Array.isArray(iterations)) return iterations.length;
-
-  const rounds = protoJson.rounds;
-  const extraIterations = protoJson["polish" + "Cycles"];
-  return (
-    (Array.isArray(rounds) ? rounds.length : 0) +
-    (Array.isArray(extraIterations) ? extraIterations.length : 0)
-  );
+  return Array.isArray(iterations) ? iterations.length : 0;
 }
 
 // `DesignMdViolation` is only used as part of typing through the

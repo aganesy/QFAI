@@ -11,13 +11,13 @@ reference pool framed as deviate-from inputs) lives in root
 `DESIGN.md` (front-matter + `# Brand Philosophy` body), not in this
 sidecar family.
 
-| File                        | Purpose                                      | Required |
-| --------------------------- | -------------------------------------------- | -------- |
-| 00_index.md                 | This manifest                                | Yes      |
-| 33_exploration_rubric.md    | Evaluator rubric                             | Yes      |
-| 34_evaluator_calibration.md | Evaluator calibration examples               | Yes      |
-| 40_screen_contracts.md      | Screen interaction contracts (11 fields)     | Yes      |
-| 50_review_input_bundle.md   | Review input bundle                          | Yes      |
+| File                        | Purpose                                  | Required |
+| --------------------------- | ---------------------------------------- | -------- |
+| 00_index.md                 | This manifest                            | Yes      |
+| 33_exploration_rubric.md    | Evaluator rubric                         | Yes      |
+| 34_evaluator_calibration.md | Evaluator calibration examples           | Yes      |
+| 40_screen_contracts.md      | Screen interaction contracts (11 fields) | Yes      |
+| 50_review_input_bundle.md   | Review input bundle                      | Yes      |
 
 ## Completeness Rule
 

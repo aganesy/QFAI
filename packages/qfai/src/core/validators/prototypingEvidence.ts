@@ -52,9 +52,7 @@ const DESIGN_MD_VIOLATION_KINDS: ReadonlySet<string> = new Set([
   "shadow",
 ]);
 
-function isViolationArray(
-  value: unknown,
-): value is ReadonlyArray<{ kind: string; found: string }> {
+function isViolationArray(value: unknown): value is ReadonlyArray<{ kind: string; found: string }> {
   if (!Array.isArray(value)) return false;
   for (const entry of value) {
     if (!isRecord(entry)) return false;

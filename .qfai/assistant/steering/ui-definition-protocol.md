@@ -1,6 +1,6 @@
 # UI Definition Consumption Protocol
 
-spec-0013 (CAP-0013) で定義された、下流 skill が UI 定義を読み取る際の手順。
+QFAI が定義する、下流 skill が UI 定義を読み取る際の手順。
 
 ## Boundary
 
@@ -25,15 +25,11 @@ spec-0013 (CAP-0013) で定義された、下流 skill が UI 定義を読み取
    - states
    - actions
 
-3. **Brand SSOT and Design Contracts** (UX-loop redesign — spec-0012 v2.0 / UX-loop absorbed)
-   - `DESIGN.md` (repo root) — brand vision / visual identity SSOT (DCON-030)
-   - `.qfai/contracts/design/DESIGN.md.lock.yaml` — sha256 hash freeze written by `/qfai-sdd` Phase 0 (DCON-031)
-   - `.qfai/contracts/design/design-system.yaml` — deterministic mirror of DESIGN.md tokens, generated post-prototyping (DCON-005 / DCON-032 mirror validator)
-   - `.qfai/contracts/design/prototype-handoff.yaml` — references finalIterIndex / finalArtifact / extractedDesignSystem (= design-system.yaml)
-
-   Removed (UX-loop redesign / spec-0012 09_delta CHG-001 — see `_policies/05_Contracts.md`):
-   - `exploration-brief.yaml`, `reference-pool.yaml`, `brand-design.yaml` — brand SSOT consolidated into root `DESIGN.md`
-   - `evaluation-rubric.yaml`, `evaluator-calibration.yaml`, `absorption-policy.yaml`, `selected-direction.yaml` — evaluation now via code constants + DESIGN.md compliance gate
+3. **Brand SSOT**
+   - root `DESIGN.md` (front-matter + `# Brand Philosophy` body)
+   - `.qfai/contracts/design/DESIGN.md.lock.yaml` (frozen sha256 + token schema)
+   - `.qfai/contracts/design/design-system.yaml` (post-loop token mirror)
+   - `.qfai/contracts/design/prototype-handoff.yaml` (post-loop handoff facts)
 
 4. **Evidence** (`.qfai/evidence/**`)
    - prototyping screenshots / HTML / snapshots / command logs
@@ -42,13 +38,12 @@ spec-0013 (CAP-0013) で定義された、下流 skill が UI 定義を読み取
 
 ## Failure Rules
 
-| Missing Definition                  | Behavior                                                                                      |
-| ----------------------------------- | --------------------------------------------------------------------------------------------- |
-| UI contract                         | Stop UI-bearing downstream execution                                                          |
-| Root `DESIGN.md`                    | Return to `/qfai-discussion` to author it, then `/qfai-sdd` Phase 0 to lock it (DCON-030/031) |
-| `DESIGN.md.lock.yaml` hash mismatch | Halt with exit 2 at cycle ≥1; user must re-run `/qfai-prototyping` from cycle 0               |
-| Post-prototyping design-system      | Return to `/qfai-prototyping` to mirror DESIGN.md into design-system.yaml (DCON-032)          |
-| Discussion sidecar in downstream    | Do not read it; normalize through `/qfai-sdd`                                                 |
+| Missing Definition               | Behavior                                                   |
+| -------------------------------- | ---------------------------------------------------------- |
+| UI contract                      | Stop UI-bearing downstream execution                       |
+| Pre-prototyping design contract  | Return to `/qfai-sdd` and normalize contracts              |
+| Post-prototyping design contract | Return to `/qfai-prototyping` and extract winner artifacts |
+| Discussion sidecar in downstream | Do not read it; normalize through `/qfai-sdd`              |
 
 ## Forbidden Fallbacks
 

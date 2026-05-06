@@ -28,7 +28,7 @@
 ## BR-0012-0005: Evaluator Inputs
 
 - AC-Refs: AC-0012-0005
-- Reviewer evaluation uses screenshots, HTML snapshots, root `DESIGN.md`, prior reviewer review.json context, and the lap-* catalog.
+- Reviewer evaluation uses screenshots, HTML snapshots, root `DESIGN.md`, prior reviewer review.json context, and the lap-\* catalog.
 - Reviewer findings must explicitly name missing mandatory inputs.
 
 ## BR-0012-0006: Validate Gate

@@ -86,7 +86,7 @@
 - When `qfai prototyping iterate --cycle 9` runs.
 - Then it returns exit 64. `prototyping.json#stopReason` is `"axes-exceptional"`. `acceptedIterationIndex === 8`.
 
-## EX-0012-0111: Pivot triggered by 3-low-IA + latest lap-*
+## EX-0012-0111: Pivot triggered by 3-low-IA + latest lap-\*
 
 - BR-Ref: BR-0012-0021
 - Given iter-05/06/07 each with `informationArchitecture: "acceptable"` and iter-07 with `layoutAntiPatternsDetected: ["lap-002-deadend-flow"]`.
@@ -136,7 +136,7 @@
 - When validate runs.
 - Then no schema finding is raised. With a missing axis or an extra key, `QFAI-PROT-020` is emitted; with a `critique` of 50 words, `QFAI-PROT-022` is emitted; with `pivotDirective: "stop"`, `QFAI-PROT-023` is emitted.
 
-## EX-0012-0118: lap-* whitelist and IA acceptable cap
+## EX-0012-0118: lap-\* whitelist and IA acceptable cap
 
 - BR-Ref: BR-0012-0020
 - Given `iter-NN/review.json` with `layoutAntiPatternsDetected: ["lap-001-orphan-page"]` and `informationArchitecture: "strong"`.

@@ -22,24 +22,26 @@ Every `iter-NN/index.html` must start with the head below; replace
 
 ```html
 <!doctype html>
-<html lang="en"><head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<script src="https://cdn.tailwindcss.com"></script>
-<script src="https://unpkg.com/lucide@latest"></script>
-<script>
-  tailwind.config = { theme: { extend: {
-    colors: {{visual.colors}},
-    fontFamily: {
-      sans:    [{{visual.typography.family_sans}}],
-      display: [{{visual.typography.family_display}}],
-      mono:    [{{visual.typography.family_mono}}]
-    },
-    borderRadius: {{visual.radius}},
-    boxShadow:    {{visual.shadow}}
-  } } };
-</script>
-</head>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+      tailwind.config = { theme: { extend: {
+        colors: {{visual.colors}},
+        fontFamily: {
+          sans:    [{{visual.typography.family_sans}}],
+          display: [{{visual.typography.family_display}}],
+          mono:    [{{visual.typography.family_mono}}]
+        },
+        borderRadius: {{visual.radius}},
+        boxShadow:    {{visual.shadow}}
+      } } };
+    </script>
+  </head>
+</html>
 ```
 
 Body markup uses Tailwind utilities that resolve through the injected
@@ -83,9 +85,9 @@ Write to `.qfai/prototypes/iter-(NN+1)/index.html`.
 
 ## Pivot guidance (what changes vs what does not)
 
-| Locked (do not change)            | Mutable (iterate freely)                 |
-| --------------------------------- | ---------------------------------------- |
-| Color tokens (12 keys)            | Component selection and grouping         |
-| Font families (sans/display/mono) | Screen layout and density                |
-| Radii (4 keys), shadows (3 keys)  | Navigation pattern and back affordances  |
-| Voice, do/don't from DESIGN.md    | State coverage (loading/empty/error/ok)  |
+| Locked (do not change)            | Mutable (iterate freely)                |
+| --------------------------------- | --------------------------------------- |
+| Color tokens (12 keys)            | Component selection and grouping        |
+| Font families (sans/display/mono) | Screen layout and density               |
+| Radii (4 keys), shadows (3 keys)  | Navigation pattern and back affordances |
+| Voice, do/don't from DESIGN.md    | State coverage (loading/empty/error/ok) |

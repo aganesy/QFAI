@@ -35,11 +35,8 @@ import path from "node:path";
 
 import { error, info } from "../lib/logger.js";
 import { loadConfig } from "../../core/config.js";
-import {
-  hashDesignMd,
-  parseDesignMd,
-  type DesignMd,
-} from "../../core/design/designMd.js";
+import { hashDesignMd, parseDesignMd, type DesignMd } from "../../core/design/designMd.js";
+import { readDesignMdLockSha } from "../../core/design/designMdLock.js";
 import { resolvePrimaryPrototypingSpec } from "../../core/prototyping/specResolution.js";
 import {
   MAX_ITERATIONS,
@@ -126,6 +123,23 @@ export async function runPrototypingIterate(
   const designMd: DesignMd = designMdRead.data;
 
   const configResult = await loadConfig(options.root);
+
+  // Cycle 0 must consult the SDD freeze (DESIGN.md.lock.yaml). Without
+  // this, an edit to DESIGN.md after the lock was written would be
+  // silently re-baselined into prototyping.json and every subsequent
+  // cycle would compare against the unfrozen value.
+  if (options.cycle === 0) {
+    const lockGate = await checkDesignMdLockGate(
+      options.root,
+      configResult.config.paths.contractsDir,
+      currentSha,
+    );
+    if (lockGate !== null) {
+      error(lockGate);
+      return 2;
+    }
+  }
+
   const resolved = await resolvePrimaryPrototypingSpec(options.root, configResult.config);
   if (!resolved) {
     error(
@@ -215,6 +229,46 @@ type DesignMdReadResult =
   | { ok: true; text: string; data: DesignMd }
   | { ok: false; message: string };
 
+/**
+ * Compare the live DESIGN.md sha256 against the SDD-frozen value in
+ * `<contractsDir>/design/DESIGN.md.lock.yaml`. Returns `null` when the
+ * gate passes (lock missing OR lock sha matches). Returns an error
+ * message when a lock is present but its sha differs from the live
+ * file — that means DESIGN.md was edited after the freeze and cycle 0
+ * would otherwise re-baseline against the drift.
+ */
+async function checkDesignMdLockGate(
+  root: string,
+  contractsDir: string,
+  currentSha: string,
+): Promise<string | null> {
+  const lockAbs = path.join(root, contractsDir, "design", "DESIGN.md.lock.yaml");
+  let lockText: string;
+  try {
+    lockText = await readFile(lockAbs, "utf-8");
+  } catch {
+    // No lock file — defer to /qfai-validate / qfai doctor (which surface
+    // the SDD-precondition error). Iterating without a lock is allowed
+    // for fresh projects that have not yet completed /qfai-sdd Phase 0.
+    return null;
+  }
+  const lockSha = readDesignMdLockSha(lockText);
+  if (lockSha === null) {
+    return (
+      "qfai prototyping iterate: DESIGN.md.lock.yaml is missing 'designMdSha256' or " +
+      "is malformed. Re-run /qfai-sdd Phase 0 to regenerate the lock."
+    );
+  }
+  if (lockSha !== currentSha) {
+    return (
+      "qfai prototyping iterate: root DESIGN.md sha256 differs from " +
+      `DESIGN.md.lock.yaml — lock=${lockSha} current=${currentSha}. ` +
+      "DESIGN.md was edited after the SDD freeze; re-run /qfai-sdd Phase 0 to refreeze."
+    );
+  }
+  return null;
+}
+
 async function readDesignMdFile(absPath: string): Promise<DesignMdReadResult> {
   let text: string;
   try {
@@ -254,10 +308,7 @@ function asIterations(record: PrototypingJsonShape): Iteration[] {
   return iterations as Iteration[];
 }
 
-async function writeDesignMdRecord(
-  protoJsonAbs: string,
-  record: DesignMdRecord,
-): Promise<void> {
+async function writeDesignMdRecord(protoJsonAbs: string, record: DesignMdRecord): Promise<void> {
   let body: PrototypingJsonShape;
   try {
     const raw = await readFile(protoJsonAbs, "utf-8");

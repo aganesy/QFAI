@@ -6,6 +6,7 @@ import { parse as parseYaml } from "yaml";
 
 import type { QfaiConfig } from "../config.js";
 import { hashDesignMd, parseDesignMd } from "../design/designMd.js";
+import { readDesignMdLockSha } from "../design/designMdLock.js";
 import type { Issue } from "../types.js";
 import { issue } from "./utils.js";
 
@@ -156,7 +157,7 @@ async function validateRootDesignMdAndLock(root: string, designDir: string): Pro
 
   // Only attempt sha comparison when both files were readable.
   if (designMdText !== null && lockText !== null) {
-    const lockSha = readLockSha256(lockText);
+    const lockSha = readDesignMdLockSha(lockText);
     if (lockSha === null) {
       issues.push(
         issue(
@@ -209,17 +210,6 @@ async function validateRootDesignMdAndLock(root: string, designDir: string): Pro
   }
 
   return issues;
-}
-
-function readLockSha256(text: string): string | null {
-  try {
-    const parsed: unknown = parseYaml(text);
-    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return null;
-    const value = (parsed as Record<string, unknown>)["designMdSha256"];
-    return typeof value === "string" && value.length > 0 ? value : null;
-  } catch {
-    return null;
-  }
 }
 
 async function validateNoPrematurePrototypingContracts(

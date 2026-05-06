@@ -45,7 +45,12 @@ export async function validateExplorationArtifacts(
       ),
     );
   } else {
-    for (const term of ["Information Architecture", "Navigation Flow", "Usability", "Functionality"]) {
+    for (const term of [
+      "Information Architecture",
+      "Navigation Flow",
+      "Usability",
+      "Functionality",
+    ]) {
       if (!new RegExp(term, "i").test(rubricContent)) {
         issues.push(
           canonicalIssue(

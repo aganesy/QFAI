@@ -65,7 +65,7 @@
 - Decision: root `DESIGN.md` を brand vision / visual identity の SSOT とし、SDD Phase 0 で sha256 を `.qfai/contracts/design/DESIGN.md.lock.yaml` に凍結する。
 - Rationale: 旧 brand-design.yaml / exploration-brief.yaml の散在を解消し、AI が読む参照源を 1 箇所に集約する。
 
-## DR-0012-0021: Layout-Anti-Pattern (lap-*) を採用
+## DR-0012-0021: Layout-Anti-Pattern (lap-\*) を採用
 
 - Decision: visual slop pattern (slop-001..010) の代わりに layout anti-pattern (`lap-001..008`) を catalog として採用する。
 - Rationale: visual aesthetic は主観的すぎる。layout structure 失敗 (orphan page / dead-end / broken back) は客観評価可能。

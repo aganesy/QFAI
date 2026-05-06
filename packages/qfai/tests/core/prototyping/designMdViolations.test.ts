@@ -140,7 +140,7 @@ describe("findDesignMdViolations — font (TC-3.2.10..15)", () => {
 
   // TC-3.2.14
   it("font-family with double-quotes stripped", () => {
-    const html = '<p style=\'font-family: "Inter"\'></p>';
+    const html = "<p style='font-family: \"Inter\"'></p>";
     expect(findDesignMdViolations(html, sampleDesignMd())).toEqual([]);
   });
 
@@ -258,8 +258,6 @@ describe("findDesignMdViolations — aggregation (TC-3.2.25..28)", () => {
     `;
     const out = findDesignMdViolations(html, sampleDesignMd());
     expect(out.length).toBeGreaterThanOrEqual(4);
-    expect(new Set(out.map((v) => v.kind))).toEqual(
-      new Set(["color", "font", "radius", "shadow"]),
-    );
+    expect(new Set(out.map((v) => v.kind))).toEqual(new Set(["color", "font", "radius", "shadow"]));
   });
 });

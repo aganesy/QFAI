@@ -69,7 +69,11 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 function validateScores(input: BuildEvaluatorReviewInput): void {
-  const scores = input.scores as unknown;
+  // The static type promises a Record<OrdinalAxis, OrdinalScore>, but
+  // this validator also runs against on-disk evidence reloaded as JSON
+  // (where the type is gone). Read through `unknown` to keep the
+  // runtime checks honest without a bare `as` cast.
+  const scores: unknown = input.scores;
   if (!isRecord(scores)) {
     throw new Error("buildEvaluatorReview: scores must be an object");
   }
@@ -87,12 +91,12 @@ function validateScores(input: BuildEvaluatorReviewInput): void {
 }
 
 function validateDesignMdViolations(input: BuildEvaluatorReviewInput): void {
-  const dmv = input.designMdViolations as unknown;
+  const dmv: unknown = input.designMdViolations;
   if (!Array.isArray(dmv)) {
     throw new Error("buildEvaluatorReview: designMdViolations must be an array");
   }
   for (let i = 0; i < dmv.length; i += 1) {
-    const entry = dmv[i] as unknown;
+    const entry: unknown = dmv[i];
     if (!isRecord(entry)) {
       throw new Error(
         `buildEvaluatorReview: designMdViolations[${i}] must be an object {kind, found}`,
@@ -104,9 +108,7 @@ function validateDesignMdViolations(input: BuildEvaluatorReviewInput): void {
       );
     }
     if (typeof entry.found !== "string") {
-      throw new Error(
-        `buildEvaluatorReview: designMdViolations[${i}].found must be a string`,
-      );
+      throw new Error(`buildEvaluatorReview: designMdViolations[${i}].found must be a string`);
     }
   }
 }

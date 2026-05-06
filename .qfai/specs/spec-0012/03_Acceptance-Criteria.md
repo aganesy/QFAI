@@ -80,7 +80,7 @@
 - When validated,
 - Then `scores.informationArchitecture` is in `{weak, acceptable}`. `strong` or `exceptional` raises `QFAI-PROT-021`.
 
-## AC-0012-0025: lap-* Whitelist
+## AC-0012-0025: lap-\* Whitelist
 
 - Given any `iter-NN/review.json`,
 - When validated,

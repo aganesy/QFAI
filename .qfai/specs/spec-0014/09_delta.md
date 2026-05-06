@@ -184,12 +184,12 @@ The v1.7.16 slice recorded a historical validator contract that made the legacy 
 
 ## 2026-05-06 — CHG-001 — Absorbed verify evidence path + full-harness drop from spec-0017 (decomposition)
 
-| Op ID  | Op Type       | Target                                            | Summary                                                                                |
-| ------ | ------------- | ------------------------------------------------- | -------------------------------------------------------------------------------------- |
-| OP-001 | UPDATE:APPEND | 01_Spec.md (Scope.In)                             | prototyping evidence iter-NN layout + full-harness profile drop                        |
-| OP-002 | UPDATE:APPEND | 03_Acceptance-Criteria.md (AC-0014-0005..0006)    | active evidence path layout + full-harness vocabulary purge                            |
-| OP-003 | UPDATE:APPEND | 04_Business-Rules.md (BR-0014-0005..0006)         | mirror BR layer for OP-002                                                             |
-| OP-004 | UPDATE:APPEND | 05_Examples.md (EX-0014-0026..0027)               | worked examples per AC                                                                 |
+| Op ID  | Op Type       | Target                                         | Summary                                                         |
+| ------ | ------------- | ---------------------------------------------- | --------------------------------------------------------------- |
+| OP-001 | UPDATE:APPEND | 01_Spec.md (Scope.In)                          | prototyping evidence iter-NN layout + full-harness profile drop |
+| OP-002 | UPDATE:APPEND | 03_Acceptance-Criteria.md (AC-0014-0005..0006) | active evidence path layout + full-harness vocabulary purge     |
+| OP-003 | UPDATE:APPEND | 04_Business-Rules.md (BR-0014-0005..0006)      | mirror BR layer for OP-002                                      |
+| OP-004 | UPDATE:APPEND | 05_Examples.md (EX-0014-0026..0027)            | worked examples per AC                                          |
 
 - Approved By: yusuke_senaga
 - Notes: subjects originated from former spec-0017 (Prototyping v2.0 / UX-loop redesign decomposition). No new Test-Cases are added in this CHG per the parent plan; AC-level coverage will be paired with implementation-side test work in a downstream Phase. The validator-side enforcement of the new evidence layout is owned by spec-0004's evidence-schema validators.

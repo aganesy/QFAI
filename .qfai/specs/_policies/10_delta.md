@@ -591,4 +591,4 @@
 - CAP affected: CAP-0017 deleted; CAP-0012 statement absorbs CAP-0017 statement
 - Rationale: spec-0017 violates 1-skill-1-spec / 1-spec-1-CAP slice rule. Subject decomposed into spec-0012 (primary) + spec-0004 / 0010 / 0011 / 0013 / 0014 / 0015 / 0007 (cascade).
 - Reservation: `spec-0017` ID and `CAP-0017` ID are permanent gaps per slice-policy §ID 安定性ルール 5; they MUST NOT be reused.
-- Phases: Phase 1 (spec-0004 absorb), Phase 2 (cross-skill specs absorb), Phase 3 (spec-0012 v1.x purge + v2.0 adopt), Phase 4 (_policies rewrite — this entry), Phase 6 (physical directory deletion deferred).
+- Phases: Phase 1 (spec-0004 absorb), Phase 2 (cross-skill specs absorb), Phase 3 (spec-0012 v1.x purge + v2.0 adopt), Phase 4 (\_policies rewrite — this entry), Phase 6 (physical directory deletion deferred).

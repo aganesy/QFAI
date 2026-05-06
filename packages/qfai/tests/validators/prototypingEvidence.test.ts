@@ -223,9 +223,7 @@ describe("validatePrototypingEvidence", () => {
     });
     const issues = await validatePrototypingEvidence(root, makeConfig());
     expect(
-      issues.some(
-        (i) => i.code === "QFAI-PROT-002" && i.message.includes("designMdViolations"),
-      ),
+      issues.some((i) => i.code === "QFAI-PROT-002" && i.message.includes("designMdViolations")),
     ).toBe(true);
   });
 

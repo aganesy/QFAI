@@ -32,9 +32,9 @@
 
 ## 2026-05-06 — CHG-001 — Scope-deferred legacy concept reintroduction guard (decomposition note)
 
-| Op ID  | Op Type       | Target                | Summary                                                                                                            |
-| ------ | ------------- | --------------------- | ------------------------------------------------------------------------------------------------------------------ |
-| OP-001 | UPDATE:APPEND | 01_Spec.md (Scope)    | Scope-deferral note: legacy concept reintroduction guard (旧 prototyping 概念 sanity grep) は future guardrail extension へ defer |
+| Op ID  | Op Type       | Target             | Summary                                                                                                                           |
+| ------ | ------------- | ------------------ | --------------------------------------------------------------------------------------------------------------------------------- |
+| OP-001 | UPDATE:APPEND | 01_Spec.md (Scope) | Scope-deferral note: legacy concept reintroduction guard (旧 prototyping 概念 sanity grep) は future guardrail extension へ defer |
 
 - Approved By: yusuke_senaga
 - Notes: subjects originated from former spec-0017 (Prototyping v2.0 / UX-loop redesign decomposition). The sanity grep guard for v1.x prototyping concepts (`mode` / `full-harness` / `round` / `polish` / `concept-fit`) is recorded as scope-deferred at this spec; existing distributed-surface guard (`check-no-internal-version-leakage.sh`) is unchanged. No AC/BR/EX/TC ID is allocated in this CHG.

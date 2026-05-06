@@ -56,8 +56,8 @@ const CERT_DESIGN_MD = [
 ].join("\n");
 
 const CLEAN_FINAL_HTML =
-  '<!doctype html>\n<html><head><style>body { font-family: Inter, system-ui, sans-serif; }</style></head>' +
-  '<body><main><h1>Acme</h1></main></body></html>\n';
+  "<!doctype html>\n<html><head><style>body { font-family: Inter, system-ui, sans-serif; }</style></head>" +
+  "<body><main><h1>Acme</h1></main></body></html>\n";
 
 async function seedDesignMdAndFinalHtml(
   root: string,
@@ -150,8 +150,7 @@ async function seedAllGatesPass(root: string): Promise<void> {
         result: "PASS",
         signoff: { reviewerId: "test-reviewer", timestamp: "2026-04-27T00:00:00Z" },
       },
-      rounds: [{ round: "r5" }, { round: "r3" }],
-      polishCycles: [{ cycle: 1, kind: "polish" }],
+      iterations: [{ index: 0 }, { index: 1 }, { index: 2 }],
     }),
     "utf-8",
   );
@@ -266,8 +265,7 @@ describe("qfai prototyping certify (generate)", () => {
           result: "PASS",
           signoff: { reviewer: "legacy-reviewer", timestamp: "2026-04-27T00:00:00Z" },
         },
-        rounds: [{ round: "r5" }],
-        polishCycles: [{ cycle: 1, kind: "polish" }],
+        iterations: [{ index: 0 }, { index: 1 }],
       }),
       "utf-8",
     );
@@ -384,10 +382,9 @@ describe("qfai prototyping certify (TC-3.6.x DESIGN.md gate)", () => {
     await seedAllGatesPass(root);
     expect(await runPrototypingCertify({ root, check: false })).toBe(0);
     const certBody = JSON.parse(
-      await (await import("node:fs/promises")).readFile(
-        path.join(root, COMPLETION_CERTIFICATE_REL_PATH),
-        "utf-8",
-      ),
+      await (
+        await import("node:fs/promises")
+      ).readFile(path.join(root, COMPLETION_CERTIFICATE_REL_PATH), "utf-8"),
     ) as { designMd: { path: string; sha256: string } };
     expect(certBody.designMd.path).toBe("DESIGN.md");
     expect(certBody.designMd.sha256).toBe(hashDesignMd(CERT_DESIGN_MD));
@@ -399,10 +396,9 @@ describe("qfai prototyping certify (TC-3.6.x DESIGN.md gate)", () => {
     await seedAllGatesPass(root);
     expect(await runPrototypingCertify({ root, check: false })).toBe(0);
     const certBody = JSON.parse(
-      await (await import("node:fs/promises")).readFile(
-        path.join(root, COMPLETION_CERTIFICATE_REL_PATH),
-        "utf-8",
-      ),
+      await (
+        await import("node:fs/promises")
+      ).readFile(path.join(root, COMPLETION_CERTIFICATE_REL_PATH), "utf-8"),
     ) as { designMd: { sha256: string } };
     expect(certBody.designMd.sha256).toMatch(/^[0-9a-f]{64}$/);
   });

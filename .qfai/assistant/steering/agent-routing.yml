@@ -106,10 +106,9 @@ routing:
     review_profile: runtime-heavy
 
   - skill: qfai-prototyping
-    # v2.0 single-thread evolution loop (spec-0012): one prototype, 15 iter,
-    # 4 ordinal axes, prose critique, pivot directive. The v1.x 4-phase
-    # routing and `review_profile: full-harness` are removed; the v2.0
-    # routing is just the 3 active roles plus completion-reviewer at handoff.
+    # Single-thread evolution loop: one prototype, 15 iter, 4 ordinal axes,
+    # prose critique, pivot directive. Routing is the 3 active roles plus
+    # completion-reviewer at handoff.
     phases:
       - id: seed
         mandatory_agents: [product-experience-architect]

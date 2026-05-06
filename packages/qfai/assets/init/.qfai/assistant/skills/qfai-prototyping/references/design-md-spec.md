@@ -28,44 +28,44 @@ A reference copy is shipped in this skill at
 
 ```yaml
 brand:
-  name: string                  # display name
-  archetype: enum               # see below
-  voice: string[]               # 1..N short trait words
+  name: string # display name
+  archetype: enum # see below
+  voice: string[] # 1..N short trait words
 audience:
-  emotion: string[]             # what users should feel
-  do_not_look_like: string[]    # negative references
+  emotion: string[] # what users should feel
+  do_not_look_like: string[] # negative references
 visual:
   colors:
-    primary:        string      # 6/8-digit hex
-    secondary:      string      # 6/8-digit hex
-    accent:         string      # 6/8-digit hex
-    surface:        string      # 6/8-digit hex
-    surface_muted:  string      # 6/8-digit hex
-    text:           string      # 6/8-digit hex
-    text_muted:     string      # 6/8-digit hex
-    danger:         string      # 6/8-digit hex
-    warning:        string      # 6/8-digit hex
-    success:        string      # 6/8-digit hex
-    border:         string      # 6/8-digit hex
-    overlay:        string      # rgba(...) only
+    primary: string # 6/8-digit hex
+    secondary: string # 6/8-digit hex
+    accent: string # 6/8-digit hex
+    surface: string # 6/8-digit hex
+    surface_muted: string # 6/8-digit hex
+    text: string # 6/8-digit hex
+    text_muted: string # 6/8-digit hex
+    danger: string # 6/8-digit hex
+    warning: string # 6/8-digit hex
+    success: string # 6/8-digit hex
+    border: string # 6/8-digit hex
+    overlay: string # rgba(...) only
   typography:
-    family_sans:    string      # CSS font stack
-    family_display: string      # CSS font stack
-    family_mono:    string      # CSS font stack
-    scale:          map         # xs..3xl
-    weight:         map         # regular/medium/bold
+    family_sans: string # CSS font stack
+    family_display: string # CSS font stack
+    family_mono: string # CSS font stack
+    scale: map # xs..3xl
+    weight: map # regular/medium/bold
   spacing:
-    base:           string      # rem
-    scale:          number[]
+    base: string # rem
+    scale: number[]
   radius:
-    sm:             string
-    md:             string
-    lg:             string
-    full:           string
+    sm: string
+    md: string
+    lg: string
+    full: string
   shadow:
-    sm:             string
-    md:             string
-    lg:             string
+    sm: string
+    md: string
+    lg: string
 accessibility:
   contrast_ratio_min: number
   motion: string
@@ -96,9 +96,9 @@ here.
 
 ```ts
 type DesignMdIssue = {
-  path: string;     // dotted path, e.g. "visual.colors.primary"
-  code: string;     // stable machine-readable code
-  message: string;  // human-readable explanation
+  path: string; // dotted path, e.g. "visual.colors.primary"
+  code: string; // stable machine-readable code
+  message: string; // human-readable explanation
 };
 ```
 

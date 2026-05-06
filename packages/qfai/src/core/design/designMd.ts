@@ -100,9 +100,7 @@ const RADIUS_VALUE_RE = /^(?:0|\d+(?:\.\d+)?(?:px|rem|em|%)|9999px)$/;
 // Front-matter extraction
 // ---------------------------------------------------------------------------
 
-type FrontMatterSplit =
-  | { ok: true; yaml: string; body: string }
-  | { ok: false; error: ParseError };
+type FrontMatterSplit = { ok: true; yaml: string; body: string } | { ok: false; error: ParseError };
 
 function stripBom(text: string): string {
   return text.charCodeAt(0) === 0xfeff ? text.slice(1) : text;
@@ -316,7 +314,9 @@ function readBrand(raw: unknown): { value: DesignMd["brand"] } | { error: ParseE
   // by storing a placeholder string when not a string.
   const archetypeRaw = raw.archetype;
   const archetype =
-    typeof archetypeRaw === "string" ? (archetypeRaw as Archetype) : (undefined as unknown as Archetype);
+    typeof archetypeRaw === "string"
+      ? (archetypeRaw as Archetype)
+      : (undefined as unknown as Archetype);
   const voice = Array.isArray(raw.voice)
     ? raw.voice.filter((v): v is string => typeof v === "string")
     : undefined;
@@ -408,7 +408,12 @@ export function validateDesignMd(d: DesignMd): ValidationIssue[] {
 }
 
 function validateBrand(d: DesignMd, issues: ValidationIssue[]): void {
-  const archetype = d.brand?.archetype;
+  // Read through `unknown` so the runtime checks below still catch
+  // malformed inputs that bypassed parseDesignMd (the static type
+  // promises an Archetype literal, but validateDesignMd is also called
+  // defensively against reloaded JSON).
+  /* eslint-disable-next-line @typescript-eslint/no-unnecessary-condition */
+  const archetype: unknown = d.brand?.archetype;
   if (archetype === undefined || archetype === null || archetype === "") {
     issues.push({
       path: "brand.archetype",
@@ -435,7 +440,13 @@ function validateBrand(d: DesignMd, issues: ValidationIssue[]): void {
 }
 
 function validateColors(d: DesignMd, issues: ValidationIssue[]): void {
+  // Defensive: validateDesignMd may receive runtime-malformed shapes
+  // (reloaded JSON, test fixtures with deleted keys). Static types
+  // promise non-nullable structure, so the next two lines look like
+  // dead code per the type system; both are intentional.
+  /* eslint-disable-next-line @typescript-eslint/no-unnecessary-condition */
   const colors = d.visual?.colors;
+  /* eslint-disable-next-line @typescript-eslint/no-unnecessary-condition */
   if (!colors || typeof colors !== "object") {
     issues.push({
       path: "visual.colors",
@@ -504,7 +515,9 @@ function validateColorValue(key: string, value: string, issues: ValidationIssue[
 }
 
 function validateFonts(d: DesignMd, issues: ValidationIssue[]): void {
+  /* eslint-disable-next-line @typescript-eslint/no-unnecessary-condition */
   const typography = d.visual?.typography;
+  /* eslint-disable-next-line @typescript-eslint/no-unnecessary-condition */
   if (!typography || typeof typography !== "object") {
     issues.push({
       path: "visual.typography",
@@ -534,7 +547,9 @@ function validateFonts(d: DesignMd, issues: ValidationIssue[]): void {
 }
 
 function validateRadius(d: DesignMd, issues: ValidationIssue[]): void {
+  /* eslint-disable-next-line @typescript-eslint/no-unnecessary-condition */
   const radius = d.visual?.radius;
+  /* eslint-disable-next-line @typescript-eslint/no-unnecessary-condition */
   if (!radius || typeof radius !== "object") {
     issues.push({
       path: "visual.radius",
@@ -601,7 +616,9 @@ function validateRadiusValue(key: string, value: string, issues: ValidationIssue
 }
 
 function validateShadow(d: DesignMd, issues: ValidationIssue[]): void {
+  /* eslint-disable-next-line @typescript-eslint/no-unnecessary-condition */
   const shadow = d.visual?.shadow;
+  /* eslint-disable-next-line @typescript-eslint/no-unnecessary-condition */
   if (!shadow || typeof shadow !== "object") {
     issues.push({
       path: "visual.shadow",

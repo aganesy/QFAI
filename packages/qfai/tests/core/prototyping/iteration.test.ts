@@ -52,15 +52,13 @@ describe("shouldStop — convergence (TC-3.4.x)", () => {
   });
 
   // TC-3.4.2
-  it.each([
-    "informationArchitecture",
-    "navigationFlow",
-    "usability",
-    "functionality",
-  ] as const)("returns null when axis '%s' is below exceptional", (axis) => {
-    const iter = baseIter({ scores: { ...allExceptional, [axis]: "strong" } });
-    expect(shouldStop([iter])).toBeNull();
-  });
+  it.each(["informationArchitecture", "navigationFlow", "usability", "functionality"] as const)(
+    "returns null when axis '%s' is below exceptional",
+    (axis) => {
+      const iter = baseIter({ scores: { ...allExceptional, [axis]: "strong" } });
+      expect(shouldStop([iter])).toBeNull();
+    },
+  );
 
   // TC-3.4.3
   it("returns null when layoutAntiPatternsDetected is non-empty (other conditions met)", () => {

@@ -69,15 +69,15 @@ function buildValidDesignMd(): DesignMd {
 
 const VALID_FRONT_MATTER = [
   "---",
-  'brand:',
+  "brand:",
   '  name: "Acme Ledger"',
-  '  archetype: tech',
+  "  archetype: tech",
   '  voice: ["calm", "sharp"]',
-  'audience:',
+  "audience:",
   '  emotion: ["confident comparison"]',
   '  do_not_look_like: ["generic SaaS dashboard"]',
-  'visual:',
-  '  colors:',
+  "visual:",
+  "  colors:",
   '    primary:        "#1F2937"',
   '    secondary:      "#6366F1"',
   '    accent:         "#D97706"',
@@ -90,16 +90,16 @@ const VALID_FRONT_MATTER = [
   '    success:        "#10B981"',
   '    border:         "#E5E7EB"',
   '    overlay:        "rgba(0,0,0,0.5)"',
-  '  typography:',
+  "  typography:",
   '    family_sans:    "Inter, system-ui, sans-serif"',
   '    family_display: "Inter, system-ui, sans-serif"',
   '    family_mono:    "JetBrains Mono, ui-monospace, monospace"',
-  '  radius:',
+  "  radius:",
   '    sm:   "0.25rem"',
   '    md:   "0.5rem"',
   '    lg:   "0.75rem"',
   '    full: "9999px"',
-  '  shadow:',
+  "  shadow:",
   '    sm: "0 1px 2px rgba(15,23,42,0.05)"',
   '    md: "0 4px 6px rgba(15,23,42,0.08)"',
   '    lg: "0 12px 24px rgba(15,23,42,0.10)"',
@@ -112,10 +112,7 @@ const VALID_SAMPLE = `${VALID_FRONT_MATTER}\n${VALID_BODY}`;
 
 // Helper: build a sample whose front-matter is mutated in a single field.
 function sampleWithColor(key: string, value: string): string {
-  return VALID_SAMPLE.replace(
-    new RegExp(`(${key}:\\s*)"[^"]*"`),
-    `$1"${value}"`,
-  );
+  return VALID_SAMPLE.replace(new RegExp(`(${key}:\\s*)"[^"]*"`), `$1"${value}"`);
 }
 
 function sampleWithoutLine(needle: string): string {
@@ -241,21 +238,20 @@ describe("parseDesignMd (TC-1.1.x)", () => {
 // ---------------------------------------------------------------------------
 
 describe("validateDesignMd archetype (TC-1.2.1..1.2.5)", () => {
-  it.each(ARCHETYPES.map((a) => [a]))(
-    "TC-1.2.1: archetype '%s' is accepted",
-    (archetype) => {
-      const d = buildValidDesignMd();
-      d.brand.archetype = archetype;
-      expect(validateDesignMd(d)).toEqual([]);
-    },
-  );
+  it.each(ARCHETYPES.map((a) => [a]))("TC-1.2.1: archetype '%s' is accepted", (archetype) => {
+    const d = buildValidDesignMd();
+    d.brand.archetype = archetype;
+    expect(validateDesignMd(d)).toEqual([]);
+  });
 
   it("TC-1.2.2: unknown archetype rejected", () => {
     const d = buildValidDesignMd();
     // Bypass type-narrowing by widening; intentional invalid value.
     (d.brand as { archetype: unknown }).archetype = "neon";
     const issues = validateDesignMd(d);
-    expect(issues.some((i) => i.path === "brand.archetype" && i.code === "invalid-enum")).toBe(true);
+    expect(issues.some((i) => i.path === "brand.archetype" && i.code === "invalid-enum")).toBe(
+      true,
+    );
   });
 
   it("TC-1.2.3: missing archetype rejected", () => {
@@ -271,7 +267,9 @@ describe("validateDesignMd archetype (TC-1.2.1..1.2.5)", () => {
     const d = buildValidDesignMd();
     (d.brand as { archetype: unknown }).archetype = "Tech";
     const issues = validateDesignMd(d);
-    expect(issues.some((i) => i.path === "brand.archetype" && i.code === "invalid-enum")).toBe(true);
+    expect(issues.some((i) => i.path === "brand.archetype" && i.code === "invalid-enum")).toBe(
+      true,
+    );
   });
 
   it("TC-1.2.5: archetype + arbitrary voice combo accepted", () => {
@@ -287,29 +285,22 @@ describe("validateDesignMd colors (TC-1.2.6..1.2.13)", () => {
     expect(validateDesignMd(buildValidDesignMd())).toEqual([]);
   });
 
-  it.each(COLOR_KEYS.map((k) => [k]))(
-    "TC-1.2.7: missing color key '%s' is rejected",
-    (key) => {
-      const d = buildValidDesignMd();
-      delete (d.visual.colors as Record<string, string>)[key];
-      const issues = validateDesignMd(d);
-      expect(
-        issues.some(
-          (i) => i.path === `visual.colors.${key}` && i.code === "missing-required",
-        ),
-      ).toBe(true);
-    },
-  );
+  it.each(COLOR_KEYS.map((k) => [k]))("TC-1.2.7: missing color key '%s' is rejected", (key) => {
+    const d = buildValidDesignMd();
+    Reflect.deleteProperty(d.visual.colors, key);
+    const issues = validateDesignMd(d);
+    expect(
+      issues.some((i) => i.path === `visual.colors.${key}` && i.code === "missing-required"),
+    ).toBe(true);
+  });
 
   it("TC-1.2.8: unknown extra color key 'foo' is rejected with unknown-key", () => {
     const d = buildValidDesignMd();
     (d.visual.colors as Record<string, string>).foo = "#FFFFFF";
     const issues = validateDesignMd(d);
-    expect(
-      issues.some(
-        (i) => i.path === "visual.colors.foo" && i.code === "unknown-key",
-      ),
-    ).toBe(true);
+    expect(issues.some((i) => i.path === "visual.colors.foo" && i.code === "unknown-key")).toBe(
+      true,
+    );
   });
 
   it("TC-1.2.9: 3-letter hex on a non-overlay color rejected", () => {
@@ -317,9 +308,7 @@ describe("validateDesignMd colors (TC-1.2.6..1.2.13)", () => {
     d.visual.colors.primary = "#FFF";
     const issues = validateDesignMd(d);
     expect(
-      issues.some(
-        (i) => i.path === "visual.colors.primary" && i.code === "invalid-color-format",
-      ),
+      issues.some((i) => i.path === "visual.colors.primary" && i.code === "invalid-color-format"),
     ).toBe(true);
   });
 
@@ -341,9 +330,7 @@ describe("validateDesignMd colors (TC-1.2.6..1.2.13)", () => {
     d.visual.colors.primary = "rgba(0,0,0,0.5)";
     const issues = validateDesignMd(d);
     expect(
-      issues.some(
-        (i) => i.path === "visual.colors.primary" && i.code === "invalid-color-format",
-      ),
+      issues.some((i) => i.path === "visual.colors.primary" && i.code === "invalid-color-format"),
     ).toBe(true);
   });
 
@@ -352,17 +339,15 @@ describe("validateDesignMd colors (TC-1.2.6..1.2.13)", () => {
     d.visual.colors.primary = "  #1F2937  ";
     const issues = validateDesignMd(d);
     expect(
-      issues.some(
-        (i) => i.path === "visual.colors.primary" && i.code === "invalid-color-format",
-      ),
+      issues.some((i) => i.path === "visual.colors.primary" && i.code === "invalid-color-format"),
     ).toBe(true);
   });
 
   it("TC-1.2.13: multi-issue aggregation (no short-circuit)", () => {
     const d = buildValidDesignMd();
     (d.brand as { archetype: unknown }).archetype = "neon";
-    delete (d.visual.colors as Record<string, string>).primary;
-    delete (d.visual.radius as Record<string, string>).full;
+    Reflect.deleteProperty(d.visual.colors, "primary");
+    Reflect.deleteProperty(d.visual.radius, "full");
     const issues = validateDesignMd(d);
     const paths = issues.map((i) => i.path);
     expect(paths).toContain("brand.archetype");
@@ -376,19 +361,14 @@ describe("validateDesignMd fonts (TC-1.2.14..1.2.16)", () => {
     expect(validateDesignMd(buildValidDesignMd())).toEqual([]);
   });
 
-  it.each(FONT_KEYS.map((k) => [k]))(
-    "TC-1.2.15: missing font family '%s' is rejected",
-    (key) => {
-      const d = buildValidDesignMd();
-      (d.visual.typography as Record<string, unknown>)[key] = "";
-      const issues = validateDesignMd(d);
-      expect(
-        issues.some(
-          (i) => i.path === `visual.typography.${key}` && i.code === "missing-required",
-        ),
-      ).toBe(true);
-    },
-  );
+  it.each(FONT_KEYS.map((k) => [k]))("TC-1.2.15: missing font family '%s' is rejected", (key) => {
+    const d = buildValidDesignMd();
+    (d.visual.typography as Record<string, unknown>)[key] = "";
+    const issues = validateDesignMd(d);
+    expect(
+      issues.some((i) => i.path === `visual.typography.${key}` && i.code === "missing-required"),
+    ).toBe(true);
+  });
 
   it("TC-1.2.16: font family value can be single token or comma-separated stack", () => {
     const d1 = buildValidDesignMd();
@@ -406,19 +386,14 @@ describe("validateDesignMd radius (TC-1.2.17..1.2.19)", () => {
     expect(validateDesignMd(buildValidDesignMd())).toEqual([]);
   });
 
-  it.each(RADIUS_KEYS.map((k) => [k]))(
-    "TC-1.2.18: missing radius key '%s' is rejected",
-    (key) => {
-      const d = buildValidDesignMd();
-      delete (d.visual.radius as Record<string, string>)[key];
-      const issues = validateDesignMd(d);
-      expect(
-        issues.some(
-          (i) => i.path === `visual.radius.${key}` && i.code === "missing-required",
-        ),
-      ).toBe(true);
-    },
-  );
+  it.each(RADIUS_KEYS.map((k) => [k]))("TC-1.2.18: missing radius key '%s' is rejected", (key) => {
+    const d = buildValidDesignMd();
+    Reflect.deleteProperty(d.visual.radius, key);
+    const issues = validateDesignMd(d);
+    expect(
+      issues.some((i) => i.path === `visual.radius.${key}` && i.code === "missing-required"),
+    ).toBe(true);
+  });
 
   it("TC-1.2.19: radius value boundary — 0, 9999px, 100% accepted; -1px rejected", () => {
     const ok = ["0", "9999px", "100%"];
@@ -431,9 +406,7 @@ describe("validateDesignMd radius (TC-1.2.17..1.2.19)", () => {
     d.visual.radius.sm = "-1px";
     const issues = validateDesignMd(d);
     expect(
-      issues.some(
-        (i) => i.path === "visual.radius.sm" && i.code === "invalid-radius-format",
-      ),
+      issues.some((i) => i.path === "visual.radius.sm" && i.code === "invalid-radius-format"),
     ).toBe(true);
   });
 });
@@ -443,27 +416,22 @@ describe("validateDesignMd shadow (TC-1.2.20..1.2.22)", () => {
     expect(validateDesignMd(buildValidDesignMd())).toEqual([]);
   });
 
-  it.each(SHADOW_KEYS.map((k) => [k]))(
-    "TC-1.2.21: missing shadow key '%s' is rejected",
-    (key) => {
-      const d = buildValidDesignMd();
-      delete (d.visual.shadow as Record<string, string>)[key];
-      const issues = validateDesignMd(d);
-      expect(
-        issues.some(
-          (i) => i.path === `visual.shadow.${key}` && i.code === "missing-required",
-        ),
-      ).toBe(true);
-    },
-  );
+  it.each(SHADOW_KEYS.map((k) => [k]))("TC-1.2.21: missing shadow key '%s' is rejected", (key) => {
+    const d = buildValidDesignMd();
+    Reflect.deleteProperty(d.visual.shadow, key);
+    const issues = validateDesignMd(d);
+    expect(
+      issues.some((i) => i.path === `visual.shadow.${key}` && i.code === "missing-required"),
+    ).toBe(true);
+  });
 
   it("TC-1.2.22: empty-string shadow rejected", () => {
     const d = buildValidDesignMd();
     d.visual.shadow.sm = "";
     const issues = validateDesignMd(d);
-    expect(
-      issues.some((i) => i.path === "visual.shadow.sm" && i.code === "missing-required"),
-    ).toBe(true);
+    expect(issues.some((i) => i.path === "visual.shadow.sm" && i.code === "missing-required")).toBe(
+      true,
+    );
   });
 });
 

@@ -22,9 +22,11 @@ import { issue, readSafe } from "./utils.js";
 
 const RENDERED_KEYWORDS_RE = /\b(rendered|screenshot|html\b|preview|visual\s*review)/i;
 const SPEC_RE = /\b(01_spec|03_acceptance-criteria|spec-|\bspec\b)\b/i;
-const EXPLORATION_BRIEF_RE = /\b(exploration-brief|exploration\s*brief)\b/i;
-const DESIGN_SYSTEM_RE = /\b(design-system|design\s*system|designsystemchecklist)\b/i;
-const PROTOTYPE_HANDOFF_RE = /\b(prototype-handoff|prototype\s*handoff)\b/i;
+// DESIGN.md is the brand SSOT (replaces the legacy exploration-brief /
+// brand-design / reference-pool sidecars); design-system.yaml and
+// prototype-handoff.yaml are produced AFTER prototyping completes, so
+// they are not required references in the upstream skill prompts.
+const DESIGN_MD_RE = /\bDESIGN\.md\b/;
 const UI_CONTRACTS_RE = /\b(contracts\/ui|ui\s*contracts|screen\s*contracts)\b/i;
 
 const DESKTOP_RE = /\b(desktop|1024\s*px|1280\s*px|1440\s*px|viewport\s*[≥>=]+\s*1024)\b/i;
@@ -74,16 +76,13 @@ export async function validateRenderCritique(root: string, config: QfaiConfig): 
   }
 
   // --- Canonical spec/contract reference missing in downstream (QFAI-CRIT-002) ---
-  // Only spec inputs, exploration-brief, design-system, prototype-handoff,
-  // and UI contracts are required.
+  // Required: spec inputs + root DESIGN.md (brand SSOT) + UI contracts.
   for (const sf of skillFiles) {
     const content = await readSafe(sf);
     if (
       content.length > 0 &&
       (!SPEC_RE.test(content) ||
-        !EXPLORATION_BRIEF_RE.test(content) ||
-        !DESIGN_SYSTEM_RE.test(content) ||
-        !PROTOTYPE_HANDOFF_RE.test(content) ||
+        !DESIGN_MD_RE.test(content) ||
         !UI_CONTRACTS_RE.test(content))
     ) {
       issues.push(
@@ -95,7 +94,7 @@ export async function validateRenderCritique(root: string, config: QfaiConfig): 
           "renderCritique.contractMissing",
           undefined,
           "change",
-          "Reference spec inputs, exploration brief, design-system, prototype-handoff, and UI contracts in the downstream skill prompt.",
+          "Reference spec inputs, root DESIGN.md, and UI contracts in the downstream skill prompt.",
         ),
       );
     }
@@ -143,30 +142,18 @@ export async function validateRenderCritique(root: string, config: QfaiConfig): 
   }
 
   // --- TDD-0003: Read order (QFAI-CRIT-005) ---
-  // Contract-first model: require semantic tokens for spec inputs, design contracts,
-  // and UI contracts instead of discussion sidecar wording.
+  // Contract-first model: require semantic tokens for spec inputs, the
+  // root DESIGN.md brand SSOT, and UI contracts.
   for (const sf of skillFiles) {
     const content = await readSafe(sf);
     if (content.length > 0) {
-      // Read order: spec inputs + exploration-brief + design-system +
-      // prototype-handoff + UI contracts.
       const hasSpec = SPEC_RE.test(content);
-      const hasExplorationBrief = EXPLORATION_BRIEF_RE.test(content);
-      const hasDesignSystem = DESIGN_SYSTEM_RE.test(content);
-      const hasPrototypeHandoff = PROTOTYPE_HANDOFF_RE.test(content);
+      const hasDesignMd = DESIGN_MD_RE.test(content);
       const hasUiContracts = UI_CONTRACTS_RE.test(content);
-      if (
-        !hasSpec ||
-        !hasExplorationBrief ||
-        !hasDesignSystem ||
-        !hasPrototypeHandoff ||
-        !hasUiContracts
-      ) {
+      if (!hasSpec || !hasDesignMd || !hasUiContracts) {
         const missing: string[] = [];
         if (!hasSpec) missing.push("spec inputs");
-        if (!hasExplorationBrief) missing.push("exploration-brief");
-        if (!hasDesignSystem) missing.push("design-system");
-        if (!hasPrototypeHandoff) missing.push("prototype-handoff");
+        if (!hasDesignMd) missing.push("DESIGN.md");
         if (!hasUiContracts) missing.push("ui contracts");
         issues.push(
           issue(
@@ -177,7 +164,7 @@ export async function validateRenderCritique(root: string, config: QfaiConfig): 
             "renderCritique.readOrder",
             undefined,
             "change",
-            "Specify read order with spec inputs, exploration-brief, design-system, prototype-handoff, and UI contracts.",
+            "Specify read order with spec inputs, root DESIGN.md, and UI contracts.",
           ),
         );
       }

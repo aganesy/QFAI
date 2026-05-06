@@ -107,31 +107,27 @@ describe("buildEvaluatorReview — 4 new axes (TC-3.1.1..7)", () => {
   );
 
   // TC-3.1.4
-  it.each([
-    ["medium"],
-    ["great"],
-    [""],
-    [null],
-    [undefined],
-    [5],
-  ])("rejects invalid score value %p on each axis", (invalid) => {
-    for (const axis of ORDINAL_AXES) {
-      const scores: Record<OrdinalAxis, OrdinalScore> = {
-        informationArchitecture: "acceptable",
-        navigationFlow: "acceptable",
-        usability: "acceptable",
-        functionality: "acceptable",
-      };
-      (scores as Record<string, unknown>)[axis] = invalid;
-      expect(() =>
-        buildEvaluatorReview(
-          baseInput({
-            scores: scores as unknown as BuildEvaluatorReviewInput["scores"],
-          }),
-        ),
-      ).toThrow(new RegExp(`scores\\.${axis}`));
-    }
-  });
+  it.each([["medium"], ["great"], [""], [null], [undefined], [5]])(
+    "rejects invalid score value %p on each axis",
+    (invalid) => {
+      for (const axis of ORDINAL_AXES) {
+        const scores: Record<OrdinalAxis, OrdinalScore> = {
+          informationArchitecture: "acceptable",
+          navigationFlow: "acceptable",
+          usability: "acceptable",
+          functionality: "acceptable",
+        };
+        (scores as Record<string, unknown>)[axis] = invalid;
+        expect(() =>
+          buildEvaluatorReview(
+            baseInput({
+              scores: scores as unknown as BuildEvaluatorReviewInput["scores"],
+            }),
+          ),
+        ).toThrow(new RegExp(`scores\\.${axis}`));
+      }
+    },
+  );
 
   // TC-3.1.5
   it("accepts each ordinal score on each of the 4 axes (cartesian)", () => {
@@ -144,35 +140,31 @@ describe("buildEvaluatorReview — 4 new axes (TC-3.1.1..7)", () => {
           functionality: "acceptable",
         };
         scores[axis] = score;
-        expect(() =>
-          buildEvaluatorReview(baseInput({ scores })),
-        ).not.toThrow();
+        expect(() => buildEvaluatorReview(baseInput({ scores }))).not.toThrow();
       }
     }
   });
 
   // TC-3.1.6
-  it.each([
-    "informationArchitecture",
-    "navigationFlow",
-    "usability",
-    "functionality",
-  ])("rejects when axis '%s' key is missing", (axis) => {
-    const scores: Record<string, OrdinalScore> = {
-      informationArchitecture: "acceptable",
-      navigationFlow: "acceptable",
-      usability: "acceptable",
-      functionality: "acceptable",
-    };
-    delete scores[axis];
-    expect(() =>
-      buildEvaluatorReview(
-        baseInput({
-          scores: scores as unknown as BuildEvaluatorReviewInput["scores"],
-        }),
-      ),
-    ).toThrow(new RegExp(`scores\\.${axis}`));
-  });
+  it.each(["informationArchitecture", "navigationFlow", "usability", "functionality"])(
+    "rejects when axis '%s' key is missing",
+    (axis) => {
+      const scores: Record<string, OrdinalScore> = {
+        informationArchitecture: "acceptable",
+        navigationFlow: "acceptable",
+        usability: "acceptable",
+        functionality: "acceptable",
+      };
+      Reflect.deleteProperty(scores, axis);
+      expect(() =>
+        buildEvaluatorReview(
+          baseInput({
+            scores: scores as unknown as BuildEvaluatorReviewInput["scores"],
+          }),
+        ),
+      ).toThrow(new RegExp(`scores\\.${axis}`));
+    },
+  );
 
   // TC-3.1.7
   it("accepts mixed cross-axis scores", () => {
@@ -322,7 +314,9 @@ describe("buildEvaluatorReview — IA cap on layoutAntiPatternsDetected (TC-3.1.
           layoutAntiPatternsDetected: ["lap-001-saas-dashboard", "lap-004-bento-grid"],
         }),
       ),
-    ).toThrow(/lap-001-saas-dashboard.*lap-004-bento-grid|lap-004-bento-grid.*lap-001-saas-dashboard/);
+    ).toThrow(
+      /lap-001-saas-dashboard.*lap-004-bento-grid|lap-004-bento-grid.*lap-001-saas-dashboard/,
+    );
   });
 });
 

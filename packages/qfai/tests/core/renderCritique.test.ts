@@ -62,7 +62,7 @@ describe("Render Critique Loop validation", { timeout: 15000 }, () => {
     expect(issues.some((i) => i.code === "QFAI-CRIT-001")).toBe(true);
   });
 
-  it("v2.0 read order (exploration-brief / design-system / prototype-handoff / ui) keeps QFAI-CRIT-002 and 005 silent", async () => {
+  it("read order with spec / DESIGN.md / ui contracts keeps QFAI-CRIT-002 and 005 silent", async () => {
     await seedContracts();
     await seedSkillPrompt(
       "qfai-prototyping",
@@ -71,7 +71,7 @@ describe("Render Critique Loop validation", { timeout: 15000 }, () => {
         "",
         "Take a screenshot of the rendered page and review it in the browser.",
         "",
-        "Read order: `.qfai/specs/spec-0001/01_Spec.md` -> exploration-brief content from DESIGN.md -> `.qfai/contracts/design/design-system.yaml` -> `.qfai/contracts/design/prototype-handoff.yaml` -> `.qfai/contracts/ui/*.yaml`.",
+        "Read order: `.qfai/specs/spec-0001/01_Spec.md` -> `DESIGN.md` -> `.qfai/contracts/ui/*.yaml`.",
       ].join("\n"),
     );
     const issues = await validateRenderCritique(root, makeConfig());
@@ -79,7 +79,7 @@ describe("Render Critique Loop validation", { timeout: 15000 }, () => {
     expect(issues.some((i) => i.code === "QFAI-CRIT-005")).toBe(false);
   });
 
-  it("v2.0 missing design-system in read order raises QFAI-CRIT-002 and QFAI-CRIT-005", async () => {
+  it("missing DESIGN.md in read order raises QFAI-CRIT-002 and QFAI-CRIT-005", async () => {
     await seedContracts();
     await seedSkillPrompt(
       "qfai-prototyping",
@@ -88,7 +88,7 @@ describe("Render Critique Loop validation", { timeout: 15000 }, () => {
         "",
         "Review the rendered HTML and screenshot output in the browser.",
         "",
-        "Read order: `.qfai/specs/spec-0001/01_Spec.md` -> exploration-brief content from DESIGN.md -> `.qfai/contracts/design/prototype-handoff.yaml` -> `.qfai/contracts/ui/*.yaml`.",
+        "Read order: `.qfai/specs/spec-0001/01_Spec.md` -> `.qfai/contracts/ui/*.yaml`.",
       ].join("\n"),
     );
 
