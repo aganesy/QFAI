@@ -534,11 +534,16 @@ function validateColorValue(key: string, value: string, issues: ValidationIssue[
     return;
   }
   if (key === "overlay") {
-    if (HEX_COLOR_RE.test(value) || RGBA_COLOR_RE.test(value)) return;
+    // Per the distributed DESIGN.md spec / sample, `overlay` is reserved
+    // for `rgba(...)` form only — it is the only color slot that
+    // expresses transparency by design. Hex (even 8-digit) is rejected
+    // here so that authoring noise (e.g. `#1F2937FF`) does not leak
+    // into the lock as a non-conforming overlay value.
+    if (RGBA_COLOR_RE.test(value)) return;
     issues.push({
       path: `visual.colors.${key}`,
       code: "invalid-color-format",
-      message: `Color 'overlay' must be a 6 or 8-digit hex (e.g. #1F2937 / #1F2937FF) or rgba(...).`,
+      message: `Color 'overlay' must be an rgba(...) value (e.g. rgba(0,0,0,0.5)). Hex values are not allowed for overlay.`,
     });
     return;
   }
