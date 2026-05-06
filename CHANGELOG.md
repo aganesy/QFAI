@@ -92,6 +92,15 @@
   or a stale arbitrary sha could pass `qfai validate` while binding
   downstream `/qfai-implement` to a DESIGN.md identity that diverges
   from the frozen root lock.
+- **DESIGN.md `visual.typography.weight` numeric strict-parse**:
+  `parseDesignMd` now rejects non-number values for typography
+  weight tokens (`regular` / `medium` / `bold`). Pre-fix, an
+  authored `regular: "400"` (quoted string) silently dropped from
+  the resulting weight record, leaving the mirror cross-check with
+  an empty / partial expected and accepting a handoff that lost
+  authored weight tokens. Now rejected with `invalid-type` at the
+  brand SSOT so the contract is enforced before downstream
+  consumers see the data.
 - **DESIGN.md `visual.spacing` strict-parse**: `parseDesignMd` now
   rejects `visual.spacing.base` values with leading / trailing
   whitespace (e.g. `" 0.25rem "`) at parse time, and requires

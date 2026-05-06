@@ -384,6 +384,37 @@ describe("parseDesignMd (TC-1.1.x)", () => {
     expect(result.error.path).toBe("visual.shadow.gradients");
   });
 
+  it("visual.typography.weight with non-number value (string '400') is rejected at parse-time", () => {
+    // Codex 7TIV: pre-fix, `parseDesignMd` silently dropped
+    // non-number weight entries, leaving the resulting weight
+    // record empty/partial. The mirror cross-check would then
+    // accept a handoff that lost authored weight tokens (because
+    // expected would also be empty). Now rejected with
+    // invalid-type so the brand SSOT enforces the numeric
+    // contract.
+    const text = VALID_FRONT_MATTER.replace(
+      '    family_mono:    "JetBrains Mono, ui-monospace, monospace"',
+      '    family_mono:    "JetBrains Mono, ui-monospace, monospace"\n    weight:\n      regular: "400"\n      bold: 700',
+    );
+    const result = parseDesignMd(text);
+    expect("error" in result).toBe(true);
+    if (!("error" in result)) return;
+    expect(result.error.code).toBe("invalid-type");
+    expect(result.error.path).toBe("visual.typography.weight.regular");
+    expect(result.error.message).toContain("string");
+  });
+
+  it("visual.typography.weight with all-numeric values is accepted", () => {
+    const text = VALID_FRONT_MATTER.replace(
+      '    family_mono:    "JetBrains Mono, ui-monospace, monospace"',
+      '    family_mono:    "JetBrains Mono, ui-monospace, monospace"\n    weight:\n      regular: 400\n      bold: 700',
+    );
+    const result = parseDesignMd(text);
+    expect("error" in result).toBe(false);
+    if ("error" in result) return;
+    expect(result.data.visual.typography.weight).toEqual({ regular: 400, bold: 700 });
+  });
+
   it("visual.spacing.base with leading whitespace is rejected at parse-time", () => {
     // Codex 6Iri: `" 0.25rem "` is structurally a CSS-invalid token
     // (every CSS engine rejects `padding: " 0.25rem ";`). Catching

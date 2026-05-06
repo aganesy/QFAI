@@ -534,8 +534,26 @@ function readVisual(raw: unknown): { value: DesignMd["visual"] } | { error: Pars
     });
     if (weightError) return { error: weightError };
     const weights: Record<string, number> = {};
+    // The distributed DESIGN.md spec fixes typography.weight values
+    // as numeric tokens (`regular: 400`, `medium: 500`, `bold: 700`).
+    // A non-number value (e.g. `regular: "400"` quoted as a string)
+    // would silently drop here pre-1.8.9, leaving the resulting
+    // weight record empty or partial — and the mirror cross-check
+    // would then accept a handoff that lost authored weight tokens
+    // (because `expected` would also be empty/partial). Reject
+    // non-number values at parse-time so the contract is enforced
+    // at the brand SSOT.
     for (const [k, v] of Object.entries(typographyRaw.weight)) {
-      if (typeof v === "number") weights[k] = v;
+      if (typeof v !== "number" || !Number.isFinite(v)) {
+        return {
+          error: {
+            path: `visual.typography.weight.${k}`,
+            code: "invalid-type",
+            message: `'visual.typography.weight.${k}' must be a finite number (got ${describeWeightEntry(v)}).`,
+          },
+        };
+      }
+      weights[k] = v;
     }
     typography.weight = weights;
   }
@@ -622,6 +640,14 @@ function readVisual(raw: unknown): { value: DesignMd["visual"] } | { error: Pars
     value.spacing = sp;
   }
   return { value };
+}
+
+function describeWeightEntry(value: unknown): string {
+  if (value === null) return "null";
+  if (typeof value === "string") return `string ${JSON.stringify(value)}`;
+  if (Array.isArray(value)) return "<array>";
+  if (typeof value === "object") return "<object>";
+  return `<${typeof value}>`;
 }
 
 function describeScaleEntry(value: unknown): string {
