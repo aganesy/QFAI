@@ -3,8 +3,9 @@ import path from "node:path";
 
 import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
+import { isEnoent } from "../fs/errno.js";
 import type { Issue } from "../types.js";
-import { isMissingFileError, issue } from "./utils.js";
+import { issue } from "./utils.js";
 
 const CONTEXT_FILES = {
   glossary: "glossary.md",
@@ -123,7 +124,7 @@ export async function validateRequirementsContext(
     try {
       businessFlowsText = await readFile(businessFlowsPath, "utf-8");
     } catch (error) {
-      if (isMissingFileError(error)) {
+      if (isEnoent(error)) {
         businessFlowsText = undefined;
       } else {
         throw error;
@@ -200,7 +201,7 @@ export async function validateRequirementsContext(
     try {
       text = await readFile(requireMdPath, "utf-8");
     } catch (error) {
-      if (isMissingFileError(error)) {
+      if (isEnoent(error)) {
         return issues;
       }
       throw error;

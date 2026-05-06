@@ -1,6 +1,8 @@
 import { access, readFile, readdir } from "node:fs/promises";
 import path from "node:path";
 
+import { isEnoent } from "./fs/errno.js";
+
 const SPEC_DIR_RE = /^spec-\d{4}$/i;
 const SPEC_REQUIRED_FILES_MANIFEST_PATH = path.join(
   "assistant",
@@ -296,18 +298,11 @@ async function listSpecDirs(specsRoot: string): Promise<string[]> {
       .filter((name) => SPEC_DIR_RE.test(name.toLowerCase()))
       .map((name) => path.join(specsRoot, name));
   } catch (error) {
-    if (isMissingFileError(error)) {
+    if (isEnoent(error)) {
       return [];
     }
     throw error;
   }
-}
-
-function isMissingFileError(error: unknown): boolean {
-  if (!error || typeof error !== "object") {
-    return false;
-  }
-  return (error as { code?: string }).code === "ENOENT";
 }
 
 function mapRequiredFiles(dir: string): Record<RequiredSpecPackFile, string> {

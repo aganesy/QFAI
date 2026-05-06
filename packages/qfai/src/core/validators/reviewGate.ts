@@ -7,6 +7,7 @@ import { parse as parseYaml } from "yaml";
 import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
 import { collectSpecEntries, type SpecEntry } from "../specLayout.js";
+import { isEnoent } from "../fs/errno.js";
 import type { Issue } from "../types.js";
 import { issue } from "./utils.js";
 
@@ -900,7 +901,7 @@ async function loadRules(rulesPath: string): Promise<{ rules: Rules | null; issu
     issues.push(
       issue(
         "QFAI-RGATE-001",
-        isMissingFileError(error)
+        isEnoent(error)
           ? "review gate rules が見つかりません。"
           : `review gate rules の読み込みに失敗しました: ${formatError(error)}`,
         "error",
@@ -1151,13 +1152,6 @@ async function exists(target: string): Promise<boolean> {
   } catch {
     return false;
   }
-}
-
-function isMissingFileError(error: unknown): boolean {
-  if (!error || typeof error !== "object") {
-    return false;
-  }
-  return (error as { code?: string }).code === "ENOENT";
 }
 
 function formatError(error: unknown): string {

@@ -46,11 +46,27 @@
   pinned to the four canonical UX axes fixed in
   `core/prototyping/evaluatorReview.ts#ORDINAL_AXES`.
 - **shared `isEnoent` errno helper**: New `src/core/fs/errno.ts`
-  exports `isEnoent(err: unknown): boolean`, replacing the three
-  duplicate inline checks in `init.ts`, `core/config.ts`, and
-  `cli/commands/prototypingIterate.ts`. Future errno codes
-  (`EACCES`, `EBUSY`, `EPERM`, ...) extend this module rather than
-  sprouting new inline checks.
+  exports `isEnoent(err: unknown): boolean` and is now the SSOT for
+  all 11 ENOENT narrowing call sites in the package: `init.ts`,
+  `core/config.ts`, `core/specLayout.ts`, `cli/commands/report.ts`,
+  `cli/commands/prototypingIterate.ts`, `core/calibration/loader.ts`,
+  `core/validators/atddLedger.ts`,
+  `core/validators/requirementsContext.ts`,
+  `core/validators/reviewArtifacts.ts`,
+  `core/validators/reviewGate.ts`,
+  `core/validators/uix/designSystemPresence.ts`,
+  `core/validators/uix/foundation.ts`. The legacy
+  `isMissingFileError` alias in `core/validators/utils.ts` is removed.
+  Future errno codes (`EACCES`, `EBUSY`, `EPERM`, ...) extend
+  `errno.ts` rather than sprouting new inline checks.
+- **forbidden legacy file patterns extended**: `threeLayer.ts#FORBIDDEN_LEGACY_PATTERNS`
+  now matches `^3[34]_.*\.md$` (covers `33_exploration_rubric.md`
+  and `34_evaluator_calibration.md`). Operators following stale docs
+  who recreate either file now hit `UIX-VAL-3LAYER-FORBIDDEN-FILE`
+  at validate time instead of being silently ignored. The init
+  template surfaces (`uiux/00_index.md` Forbidden Legacy Files,
+  `uiux/50_review_input_bundle.md` Trend-derived focus + Review
+  Checklist) updated to match.
 - **certify reads frozen `specsCovered` from cycle 0**:
   `qfai prototyping certify` no longer re-resolves the primary spec
   via `resolvePrimaryPrototypingSpec`. It now reads

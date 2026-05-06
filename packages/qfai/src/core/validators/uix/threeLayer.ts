@@ -51,6 +51,12 @@ const CANONICAL_REQUIRED_SIDECAR_FILES = [
 const FORBIDDEN_LEGACY_PATTERNS = [
   /^30_.*comparison.*\.md$/i,
   /^31_.*anchor.*\.md$/i,
+  // 33_exploration_rubric.md / 34_evaluator_calibration.md were retired
+  // when DESIGN.md became the brand SSOT and the evaluator axes were
+  // fixed in `core/prototyping/evaluatorReview.ts#ORDINAL_AXES`. They
+  // are no longer in the canonical family AND must not be created by
+  // operators following stale docs.
+  /^3[34]_.*\.md$/i,
   /^1[0-2]_.*(?:strategy|taste|system).*\.md$/i,
   /^2[0-4]_.*(?:eval|axis|aggregate|override).*\.md$/i,
   /^40_contracts\.md$/i,

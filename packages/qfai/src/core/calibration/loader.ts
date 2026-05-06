@@ -8,6 +8,7 @@
 
 import { readFile, stat } from "node:fs/promises";
 import { parse as parseYaml } from "yaml";
+import { isEnoent } from "../fs/errno.js";
 import { type AlignmentExample, type CalibrationPack, type ThresholdConfig } from "./types.js";
 
 function validateExample(entry: unknown, index: number): AlignmentExample {
@@ -71,11 +72,7 @@ export class CalibrationLoader {
     try {
       content = await readFile(this.packPath, "utf-8");
     } catch (error) {
-      if (
-        error instanceof Error &&
-        "code" in error &&
-        (error as NodeJS.ErrnoException).code === "ENOENT"
-      ) {
+      if (isEnoent(error)) {
         throw new Error(
           `Calibration pack not found at ${this.packPath}. ` +
             `A valid calibration pack file is required.`,

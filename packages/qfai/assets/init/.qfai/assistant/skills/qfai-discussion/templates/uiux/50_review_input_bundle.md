@@ -16,13 +16,13 @@ Consolidate all sidecar artifacts into a review-ready bundle for design reviewer
 
 - Required references are all present and complete.
 - Stale / overused AI slop patterns are explicitly avoided.
-- Reference research is translated into exploration and evaluator calibration inputs.
+- Reference research is translated into local design decisions on root `DESIGN.md` and screen contracts.
 - Later iterations are not automatically preferred over stronger middle iterations.
 
 ## Review Checklist
 
-- [ ] Exploration brief aligns with surface type and project constraints
+- [ ] Root `DESIGN.md` aligns with surface type and project constraints
 - [ ] Reference pool is complete and translated into local design decisions
-- [ ] Evaluator calibration includes skeptical critique examples
+- [ ] Evaluator scoring covers all four canonical UX axes (information architecture / navigation flow / usability / functionality) — fixed in `core/prototyping/evaluatorReview.ts#ORDINAL_AXES`
 - [ ] Best-of-history handling is explicit
 - [ ] Screen contracts cover all required states

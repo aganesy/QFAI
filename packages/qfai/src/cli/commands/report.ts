@@ -2,6 +2,7 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import { loadConfig, resolvePath } from "../../core/config.js";
+import { isEnoent } from "../../core/fs/errno.js";
 import { normalizeValidationResult } from "../../core/normalize.js";
 import { buildCiProfileIssue, createProfileGuardResult } from "../../core/phasePolicy.js";
 import { createReportData, formatReportJson, formatReportMarkdown } from "../../core/report.js";
@@ -48,7 +49,7 @@ export async function runReport(options: ReportOptions): Promise<void> {
     try {
       validation = await readValidationResult(inputPath);
     } catch (err) {
-      if (isMissingFileError(err)) {
+      if (isEnoent(err)) {
         error(
           [
             `qfai report: 入力ファイルが見つかりません: ${inputPath}`,
@@ -176,14 +177,6 @@ function isValidationResult(value: unknown): value is ValidationResult {
   }
 
   return true;
-}
-
-function isMissingFileError(error: unknown): boolean {
-  if (!error || typeof error !== "object") {
-    return false;
-  }
-  const record = error as { code?: string };
-  return record.code === "ENOENT";
 }
 
 async function writeValidationResult(

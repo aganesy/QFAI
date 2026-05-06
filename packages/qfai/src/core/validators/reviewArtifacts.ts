@@ -1,6 +1,7 @@
 import { readFile, readdir, stat } from "node:fs/promises";
 import path from "node:path";
 
+import { isEnoent } from "../fs/errno.js";
 import type { Issue } from "../types.js";
 import { issue } from "./utils.js";
 import { QFAI_GITIGNORE_MARKER, QFAI_GITIGNORE_REQUIRED_ENTRIES } from "../gitignore.js";
@@ -11,15 +12,6 @@ const ALLOWED_TARGET_KINDS = new Set(["spec", "discussion"]);
 const ALLOWED_VERSIONS = new Set(["1.0", "2.0"]);
 const ALLOWED_ROSTER_STATUS = new Set(["PASS", "FAIL", "NA"]);
 const ALLOWED_OVERALL_STATUS = new Set(["PASS", "FAIL"]);
-
-function isEnoent(err: unknown): boolean {
-  return (
-    typeof err === "object" &&
-    err !== null &&
-    "code" in err &&
-    (err as { code?: string }).code === "ENOENT"
-  );
-}
 
 export async function validateReviewArtifacts(root: string): Promise<Issue[]> {
   const reviewRoot = path.join(root, ".qfai", "review");
