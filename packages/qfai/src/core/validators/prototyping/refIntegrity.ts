@@ -44,8 +44,8 @@ export async function validatePrototypingArtifactRefIntegrity(
     );
     await validateArtifactRef(
       root,
-      handoff.extractedDesignSystem,
-      "prototype-handoff.extractedDesignSystem",
+      handoff.designSystemMirror,
+      "prototype-handoff.designSystemMirror",
       issues,
     );
   }

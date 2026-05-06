@@ -316,28 +316,49 @@ async function validatePrototypeHandoff(root: string, config: QfaiConfig): Promi
 
   // Required fields match the rewritten handoff contract documented in
   // `.qfai/assistant/skills/qfai-prototyping/references/handoff.md`:
-  // `finalIterIndex`, `finalArtifact`, `designMdPath`, `designMdSha256`,
+  // `finalIterIndex` (number ≥ 0), plus the string fields
+  // `finalArtifact`, `designMdPath`, `designMdSha256`,
   // `designSystemMirror`, `implementationNotes`. The legacy fields
   // (`sourcePrototypeRefs`, `surfaceProfiles`, `screens`, `visualDna`,
   // `implementationHandoff`) were retired together with the multi-
   // option exploration → preserve/adapt/copy split when DESIGN.md
   // became the brand SSOT and the loop became single-thread.
-  return validateRequiredStringArrayKeys(
-    filePath,
-    root,
-    parsed.value,
-    [
-      "finalIterIndex",
-      "finalArtifact",
-      "designMdPath",
-      "designMdSha256",
-      "designSystemMirror",
-      "implementationNotes",
-    ],
-    "QFAI-DCON-013",
-    "prototype-handoff.yaml is missing required field",
-    "designContractReadiness.prototypeHandoffField",
+  const issues: Issue[] = [];
+  const filePathRel = toPosixRelative(root, filePath);
+  const finalIterIndex = parsed.value.finalIterIndex;
+  if (
+    typeof finalIterIndex !== "number" ||
+    !Number.isInteger(finalIterIndex) ||
+    finalIterIndex < 0
+  ) {
+    issues.push(
+      issue(
+        "QFAI-DCON-013",
+        "prototype-handoff.yaml is missing required field 'finalIterIndex' (expected a non-negative integer).",
+        "error",
+        filePathRel,
+        "designContractReadiness.prototypeHandoffField",
+      ),
+    );
+  }
+  issues.push(
+    ...validateRequiredStringArrayKeys(
+      filePath,
+      root,
+      parsed.value,
+      [
+        "finalArtifact",
+        "designMdPath",
+        "designMdSha256",
+        "designSystemMirror",
+        "implementationNotes",
+      ],
+      "QFAI-DCON-013",
+      "prototype-handoff.yaml is missing required field",
+      "designContractReadiness.prototypeHandoffField",
+    ),
   );
+  return issues;
 }
 
 function validateRequiredStringArrayKeys(

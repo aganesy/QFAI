@@ -6,6 +6,28 @@
 
 ### Fixed (Breaking — pre-1.8.9 internal pipelines only)
 
+- **`finalIterIndex` numeric handling in prototype-handoff validator**:
+  `validatePrototypeHandoff` now treats `finalIterIndex` as a
+  numeric field (`Number.isInteger && >= 0`) rather than forwarding
+  it through `hasMeaningfulContractContent`, which only accepts
+  strings/arrays/records. Without this, every spec-conformant
+  `prototype-handoff.yaml` (where `finalIterIndex` is a YAML number)
+  would fail QFAI-DCON-013 and block the validate → verify → certify
+  sequence. New positive test asserts well-formed handoff produces
+  zero DCON-013 issues; new negative tests assert non-integer and
+  negative values are still rejected. The handoff sample
+  (`assets/init/.../prototype-handoff.sample.yaml`) is updated to the
+  new field set so `qfai init` ships a passing example.
+- **`designSystemMirror` ref-integrity check (was extractedDesignSystem)**:
+  `validatePrototypingArtifactRefIntegrity` now checks
+  `prototype-handoff.yaml#designSystemMirror`, matching the renamed
+  field. The previous code checked the legacy `extractedDesignSystem`
+  name, so a handoff that pointed `designSystemMirror` at a missing
+  artifact was silently passed by ref-integrity (only DCON-013 from
+  the readiness validator caught the missing field, and the missing-
+  TARGET case slipped through entirely). New positive test seeds a
+  handoff with a missing `designSystemMirror` target and asserts
+  PROT-009 surfaces the field name + path.
 - **prototype-handoff.yaml validator aligned with new contract**:
   `validatePrototypeHandoff` now requires `finalIterIndex`,
   `finalArtifact`, `designMdPath`, `designMdSha256`,

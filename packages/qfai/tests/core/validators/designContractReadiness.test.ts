@@ -206,4 +206,67 @@ describe("validateSddDesignContractReadiness (TC-3.8.x)", () => {
     const issues = await validatePrototypingDesignContractReadiness(root, defaultConfig);
     expect(issues.map((i) => i.code)).toContain("QFAI-DCON-032");
   });
+
+  it("well-formed prototype-handoff.yaml does NOT emit DCON-013 (numeric finalIterIndex accepted)", async () => {
+    // Regression: `finalIterIndex` is a YAML number, but earlier code
+    // forwarded it through `hasMeaningfulContractContent`, which only
+    // accepted strings/arrays/records — so a spec-conformant handoff
+    // (with `finalIterIndex: 1`) was always rejected. The fix path-
+    // splits the numeric field from the string fields.
+    const root = await newTempDir();
+    await seedUiBearingProject(root);
+    await seedDesignMdAndLock(root);
+    await seedPrototypingDesignYamls(root);
+    const issues = await validatePrototypingDesignContractReadiness(root, defaultConfig);
+    const dcon013 = issues.filter((i) => i.code === "QFAI-DCON-013");
+    expect(dcon013).toEqual([]);
+  });
+
+  it("non-integer finalIterIndex is rejected with DCON-013", async () => {
+    const root = await newTempDir();
+    await seedUiBearingProject(root);
+    await seedDesignMdAndLock(root);
+    await seedPrototypingDesignYamls(root);
+    // Override with a non-integer value.
+    await writeFile(
+      path.join(root, ".qfai/contracts/design/prototype-handoff.yaml"),
+      [
+        'finalIterIndex: "not-a-number"',
+        'finalArtifact: ".qfai/prototypes/final/index.html"',
+        'designMdPath: "DESIGN.md"',
+        `designMdSha256: "${hashDesignMd(VALID_DESIGN_MD)}"`,
+        'designSystemMirror: ".qfai/contracts/design/design-system.yaml"',
+        'implementationNotes: "test"',
+        "",
+      ].join("\n"),
+      "utf-8",
+    );
+    const issues = await validatePrototypingDesignContractReadiness(root, defaultConfig);
+    const dcon013 = issues.filter((i) => i.code === "QFAI-DCON-013");
+    expect(dcon013.length).toBeGreaterThan(0);
+    expect(dcon013[0]?.message).toContain("finalIterIndex");
+  });
+
+  it("negative finalIterIndex is rejected with DCON-013", async () => {
+    const root = await newTempDir();
+    await seedUiBearingProject(root);
+    await seedDesignMdAndLock(root);
+    await seedPrototypingDesignYamls(root);
+    await writeFile(
+      path.join(root, ".qfai/contracts/design/prototype-handoff.yaml"),
+      [
+        "finalIterIndex: -1",
+        'finalArtifact: ".qfai/prototypes/final/index.html"',
+        'designMdPath: "DESIGN.md"',
+        `designMdSha256: "${hashDesignMd(VALID_DESIGN_MD)}"`,
+        'designSystemMirror: ".qfai/contracts/design/design-system.yaml"',
+        'implementationNotes: "test"',
+        "",
+      ].join("\n"),
+      "utf-8",
+    );
+    const issues = await validatePrototypingDesignContractReadiness(root, defaultConfig);
+    const dcon013 = issues.filter((i) => i.code === "QFAI-DCON-013");
+    expect(dcon013.length).toBeGreaterThan(0);
+  });
 });

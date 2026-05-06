@@ -360,7 +360,8 @@ describe("assets guardrails", { timeout: 30000 }, () => {
 
     // handoff sample carries the canonical fields and no legacy preserve/copy concepts.
     expect(handoffTemplate).toContain("finalIterIndex");
-    expect(handoffTemplate).toContain("extractedDesignSystem");
+    expect(handoffTemplate).toContain("designSystemMirror");
+    expect(handoffTemplate).not.toContain("extractedDesignSystem");
     expect(handoffTemplate).not.toContain("mustPreserve");
     expect(handoffTemplate).not.toContain("mustNotCopy");
   });

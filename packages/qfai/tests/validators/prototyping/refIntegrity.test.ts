@@ -98,12 +98,36 @@ describe("validatePrototypingArtifactRefIntegrity", () => {
       path.join(handoffDir, "prototype-handoff.yaml"),
       [
         'finalArtifact: ".qfai/prototypes/final/index.html"',
-        'extractedDesignSystem: ".qfai/contracts/design/design-system.yaml"',
+        'designSystemMirror: ".qfai/contracts/design/design-system.yaml"',
       ].join("\n"),
       "utf-8",
     );
 
     const issues = await validatePrototypingArtifactRefIntegrity(root, defaultConfig);
     expect(issues.map((issue) => issue.code)).toEqual(["QFAI-PROT-009", "QFAI-PROT-009"]);
+  });
+
+  it("validates designSystemMirror specifically — a missing target surfaces PROT-009", async () => {
+    const root = await newTempDir();
+    const handoffDir = path.join(root, ".qfai", "contracts", "design");
+    await mkdir(handoffDir, { recursive: true });
+    await writeFile(
+      path.join(handoffDir, "prototype-handoff.yaml"),
+      [
+        'finalArtifact: ".qfai/prototypes/final/index.html"',
+        'designSystemMirror: ".qfai/contracts/design/missing-design-system.yaml"',
+      ].join("\n"),
+      "utf-8",
+    );
+
+    const issues = await validatePrototypingArtifactRefIntegrity(root, defaultConfig);
+    const messages = issues.map((i) => i.message);
+    expect(
+      messages.some(
+        (m) =>
+          m.includes("prototype-handoff.designSystemMirror") &&
+          m.includes("missing-design-system.yaml"),
+      ),
+    ).toBe(true);
   });
 });
