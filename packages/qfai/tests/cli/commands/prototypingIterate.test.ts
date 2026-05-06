@@ -578,6 +578,117 @@ describe("runPrototypingIterate cycle N hash gate (TC-3.5.x)", () => {
   });
 });
 
+describe("runPrototypingIterate cycle 0 hard reset", () => {
+  // Reuse the top-level seedRawPrototypingJson helper.
+  async function readProtoJson(root: string): Promise<Record<string, unknown>> {
+    const raw = await readFile(
+      path.join(root, ".qfai/evidence/prototyping/prototyping.json"),
+      "utf-8",
+    );
+    return JSON.parse(raw) as Record<string, unknown>;
+  }
+
+  it("zeroes pre-existing iterations[] on cycle 0", async () => {
+    const root = await newTempDir();
+    await seedMinimalProject(root);
+    await seedRawPrototypingJson(root, {
+      iterations: [
+        { index: 0, scores: { informationArchitecture: "exceptional" } },
+        { index: 1, scores: { informationArchitecture: "strong" } },
+      ],
+      runId: "stale-prior-run",
+      designMd: { path: "DESIGN.md", sha256: hashDesignMd(CANONICAL_DESIGN_MD) },
+    });
+
+    expect(
+      await runPrototypingIterate({ root, cycle: 0, targetUrl: "http://localhost:5173" }),
+    ).toBe(0);
+
+    const body = await readProtoJson(root);
+    expect(body.iterations).toEqual([]);
+  });
+
+  it("deletes reviewerGate / acceptedIterationIndex / stopReason / fullHarness on cycle 0", async () => {
+    const root = await newTempDir();
+    await seedMinimalProject(root);
+    await seedRawPrototypingJson(root, {
+      iterations: [{ index: 0 }],
+      reviewerGate: { result: "PASS", signoff: { reviewerId: "stale" } },
+      acceptedIterationIndex: 0,
+      stopReason: "axes-exceptional",
+      fullHarness: {
+        runId: "legacy-prior-run",
+        status: "complete",
+        scoringTrace: [{ axis: "ux", score: 5 }],
+      },
+    });
+
+    expect(
+      await runPrototypingIterate({ root, cycle: 0, targetUrl: "http://localhost:5173" }),
+    ).toBe(0);
+
+    const body = await readProtoJson(root);
+    expect("reviewerGate" in body).toBe(false);
+    expect("acceptedIterationIndex" in body).toBe(false);
+    expect("stopReason" in body).toBe(false);
+    expect("fullHarness" in body).toBe(false);
+  });
+
+  it("regenerates runId even when a prior runId exists", async () => {
+    const root = await newTempDir();
+    await seedMinimalProject(root);
+    await seedRawPrototypingJson(root, {
+      runId: "loop-stale-prior-1234567890",
+      iterations: [],
+    });
+
+    expect(
+      await runPrototypingIterate({ root, cycle: 0, targetUrl: "http://localhost:5173" }),
+    ).toBe(0);
+
+    const body = await readProtoJson(root);
+    expect(typeof body.runId).toBe("string");
+    expect(body.runId).not.toBe("loop-stale-prior-1234567890");
+    expect(body.runId as string).toMatch(/^loop-[0-9a-f]{12}-[0-9a-z]+$/);
+  });
+
+  it("seeds prototyping.json#specsCovered from the resolved primary spec", async () => {
+    const root = await newTempDir();
+    await seedMinimalProject(root);
+
+    expect(
+      await runPrototypingIterate({ root, cycle: 0, targetUrl: "http://localhost:5173" }),
+    ).toBe(0);
+
+    const body = await readProtoJson(root);
+    // seedMinimalProject creates spec-0001 with `surface_type: ui-bearing`,
+    // so the resolved primary spec id is "0001".
+    expect(body.specsCovered).toEqual(["0001"]);
+  });
+
+  it("preserves operator-defined keys (mode, surface) across cycle 0 reset", async () => {
+    const root = await newTempDir();
+    await seedMinimalProject(root);
+    await seedRawPrototypingJson(root, {
+      mode: { effective: "standard", source: "explicit-request", rationale: "pre-existing" },
+      surface: "web",
+      iterations: [{ index: 0 }],
+    });
+
+    expect(
+      await runPrototypingIterate({ root, cycle: 0, targetUrl: "http://localhost:5173" }),
+    ).toBe(0);
+
+    const body = await readProtoJson(root);
+    expect(body.mode).toEqual({
+      effective: "standard",
+      source: "explicit-request",
+      rationale: "pre-existing",
+    });
+    expect(body.surface).toBe("web");
+  });
+});
+
 describe("runPrototypingIterate cycle 0 stale-dir cleanup", () => {
   it("deletes stale iter-NN/ dirs on cycle 0 reset", async () => {
     const root = await newTempDir();
@@ -613,10 +724,7 @@ describe("runPrototypingIterate cycle 0 stale-dir cleanup", () => {
     );
     expect(iter14Exists).toBe(false);
     // Fresh cycle 0 must produce its own iter-00.
-    const newPlan = await readFile(
-      path.join(evidenceRoot, "iter-00/iterate-plan.json"),
-      "utf-8",
-    );
+    const newPlan = await readFile(path.join(evidenceRoot, "iter-00/iterate-plan.json"), "utf-8");
     expect(newPlan.length).toBeGreaterThan(0);
   });
 

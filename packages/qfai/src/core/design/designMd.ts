@@ -101,7 +101,13 @@ export type ValidationIssue = {
 export type ParseResult = { data: DesignMd; body: string } | { error: ParseError };
 
 const HEX_COLOR_RE = /^#[0-9A-Fa-f]{6}([0-9A-Fa-f]{2})?$/;
-const RGBA_COLOR_RE = /^rgba?\([^)]*\)$/;
+// Strict rgba(R,G,B,A) literal for `visual.colors.overlay`. Alpha is
+// REQUIRED (no rgb(...) fallback) so authors cannot freeze a non-
+// transparent overlay token. R/G/B accept 0..255; alpha accepts
+// 0, 1, or 0.<digits>/.<digits>. Whitespace inside the parens is
+// tolerated; whitespace around the literal is rejected upstream.
+const RGBA_OVERLAY_RE =
+  /^rgba\(\s*(?:25[0-5]|2[0-4]\d|1\d\d|\d{1,2})\s*,\s*(?:25[0-5]|2[0-4]\d|1\d\d|\d{1,2})\s*,\s*(?:25[0-5]|2[0-4]\d|1\d\d|\d{1,2})\s*,\s*(?:0|1|0?\.\d+|\.\d+)\s*\)$/;
 const RADIUS_VALUE_RE = /^(?:0|\d+(?:\.\d+)?(?:px|rem|em|%)|9999px)$/;
 
 // ---------------------------------------------------------------------------
@@ -371,6 +377,30 @@ function readVisual(raw: unknown): { value: DesignMd["visual"] } | { error: Pars
   }
   const colors = readStringRecord(raw.colors);
   const typographyRaw = isRecord(raw.typography) ? raw.typography : {};
+  // Reject unknown keys under `visual.typography` for the same reason
+  // as the visual top level: silently dropping authoring directives
+  // (e.g. `font_pairing`, `fallback_policy`) lets them freeze into the
+  // lock while never reaching the parsed tokens consumed by iteration
+  // / certification.
+  const TYPOGRAPHY_ALLOWED_KEYS = new Set([
+    "family_sans",
+    "family_display",
+    "family_mono",
+    "scale",
+    "weight",
+  ]);
+  const typographyUnknown = Object.keys(typographyRaw).filter(
+    (k) => !TYPOGRAPHY_ALLOWED_KEYS.has(k),
+  );
+  if (typographyUnknown.length > 0) {
+    return {
+      error: {
+        path: `visual.typography.${typographyUnknown[0] ?? ""}`,
+        code: "unknown-key",
+        message: `Unknown 'visual.typography' key '${typographyUnknown[0] ?? ""}'. Allowed: ${[...TYPOGRAPHY_ALLOWED_KEYS].join(", ")}.`,
+      },
+    };
+  }
   const radius = readStringRecord(raw.radius);
   const shadow = readStringRecord(raw.shadow);
 
@@ -539,7 +569,7 @@ function validateColorValue(key: string, value: string, issues: ValidationIssue[
     // expresses transparency by design. Hex (even 8-digit) is rejected
     // here so that authoring noise (e.g. `#1F2937FF`) does not leak
     // into the lock as a non-conforming overlay value.
-    if (RGBA_COLOR_RE.test(value)) return;
+    if (RGBA_OVERLAY_RE.test(value)) return;
     issues.push({
       path: `visual.colors.${key}`,
       code: "invalid-color-format",

@@ -343,10 +343,7 @@ async function findIterationHtmlFiles(
   evidenceRoot: string,
   iterationIndex: number,
 ): Promise<string[]> {
-  const iterDirAbs = path.join(
-    evidenceRoot,
-    `iter-${String(iterationIndex).padStart(2, "0")}`,
-  );
+  const iterDirAbs = path.join(evidenceRoot, `iter-${String(iterationIndex).padStart(2, "0")}`);
   return allHtmlIn(iterDirAbs);
 }
 

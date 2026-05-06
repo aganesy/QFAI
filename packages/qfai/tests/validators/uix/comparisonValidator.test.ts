@@ -53,28 +53,28 @@ describe("comparisonValidator", () => {
     expect(issues).toHaveLength(0);
   });
 
-  it("fail: review bundle missing best-of-history wording emits warning when present", async () => {
-    // The validator only checks 50_review_input_bundle.md content when
-    // the file exists; absent file triggers no issue (deferred to a
-    // separate pack-shape validator). This test exercises the
-    // present-but-incomplete path on a UI-bearing pack.
+  it("fail: UI-bearing pack with bundle missing best-of-history wording emits exactly the history-missing issue", async () => {
+    // Same fixture as the `pass:` test above, which already establishes
+    // that the spec is detected as UI-bearing. The bundle is present
+    // but lacks the best-of-history wording → the validator MUST emit
+    // exactly the UIX-VAL-DIRECTION-HISTORY-MISSING issue. An
+    // unconditional assertion is required here because a vacuous
+    // green-pass (silent return → 0 issues) is the regression class
+    // this test exists to catch (the deleted Direction-Rubric /
+    // Evaluator-Calibration codes used to provide the only fail-path
+    // coverage; this is now the sole fail-path for the validator).
     const root = await newTempDir();
     await createUiBearingPack(root);
     await writeFile(
       path.join(root, "uiux", "50_review_input_bundle.md"),
-      "# Review Input Bundle\n\nNo best-of-history language here.\n",
+      "# Review Input Bundle\n\nThis bundle omits the required wording.\n",
       "utf-8",
     );
 
     const issues = await validateOptionComparison(root, defaultConfig);
 
-    // When isUiBearingSpec returns false (test fixture surface
-    // detection edge cases), the validator skips. We assert the
-    // weaker invariant: when issues are emitted, the only kind that
-    // can come from this validator is the history-missing code.
-    if (issues.length > 0) {
-      expect(issues.every((i) => i.code === "UIX-VAL-DIRECTION-HISTORY-MISSING")).toBe(true);
-    }
+    expect(issues.length).toBeGreaterThan(0);
+    expect(issues.every((i) => i.code === "UIX-VAL-DIRECTION-HISTORY-MISSING")).toBe(true);
   });
 
   it("non-ui: returns empty array for non-ui specs", async () => {

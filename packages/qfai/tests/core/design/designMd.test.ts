@@ -231,6 +231,58 @@ describe("parseDesignMd (TC-1.1.x)", () => {
     if ("error" in result) return;
     expect(result.body).toContain("No heading here");
   });
+
+  it("TC-1.1.13: unknown top-level visual key (gradients) rejected with unknown-key", () => {
+    const text = VALID_FRONT_MATTER.replace(
+      'overlay:        "rgba(0,0,0,0.5)"',
+      'overlay:        "rgba(0,0,0,0.5)"\n  gradients:\n    primary: "linear-gradient(...)"',
+    );
+    const result = parseDesignMd(text);
+    expect("error" in result).toBe(true);
+    if (!("error" in result)) return;
+    expect(result.error.code).toBe("unknown-key");
+    expect(result.error.path).toBe("visual.gradients");
+  });
+
+  it("TC-1.1.14: unknown top-level visual key (motion) rejected before downstream validation", () => {
+    // Strip `colors` entirely so a downstream colors-missing error
+    // would otherwise dominate. Then re-inject `motion`. The unknown-
+    // key check MUST fire first, returning a parse-level ParseError
+    // (visual.motion / unknown-key), not a colors-related issue.
+    const text = VALID_FRONT_MATTER.replace(/  colors:\n(?:    [^\n]+\n)+/, "").replace(
+      "  typography:",
+      "  motion:\n    duration: 300ms\n  typography:",
+    );
+    const result = parseDesignMd(text);
+    expect("error" in result).toBe(true);
+    if (!("error" in result)) return;
+    expect(result.error.code).toBe("unknown-key");
+    expect(result.error.path).toBe("visual.motion");
+  });
+
+  it("TC-1.1.15: unknown typography key (font_pairing) rejected with unknown-key", () => {
+    const text = VALID_FRONT_MATTER.replace(
+      '    family_mono:    "JetBrains Mono, ui-monospace, monospace"',
+      '    family_mono:    "JetBrains Mono, ui-monospace, monospace"\n    font_pairing:   "harmonic"',
+    );
+    const result = parseDesignMd(text);
+    expect("error" in result).toBe(true);
+    if (!("error" in result)) return;
+    expect(result.error.code).toBe("unknown-key");
+    expect(result.error.path).toBe("visual.typography.font_pairing");
+  });
+
+  it("TC-1.1.16: unknown typography key (fallback_policy) rejected with unknown-key", () => {
+    const text = VALID_FRONT_MATTER.replace(
+      '    family_mono:    "JetBrains Mono, ui-monospace, monospace"',
+      '    family_mono:    "JetBrains Mono, ui-monospace, monospace"\n    fallback_policy: "system"',
+    );
+    const result = parseDesignMd(text);
+    expect("error" in result).toBe(true);
+    if (!("error" in result)) return;
+    expect(result.error.code).toBe("unknown-key");
+    expect(result.error.path).toBe("visual.typography.fallback_policy");
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -331,6 +383,42 @@ describe("validateDesignMd colors (TC-1.2.6..1.2.13)", () => {
     const issues = validateDesignMd(d);
     expect(
       issues.some((i) => i.path === "visual.colors.primary" && i.code === "invalid-color-format"),
+    ).toBe(true);
+  });
+
+  it("TC-1.2.11c: rgb(...) on overlay is rejected (alpha required)", () => {
+    const d = buildValidDesignMd();
+    d.visual.colors.overlay = "rgb(0,0,0)";
+    const issues = validateDesignMd(d);
+    expect(
+      issues.some((i) => i.path === "visual.colors.overlay" && i.code === "invalid-color-format"),
+    ).toBe(true);
+  });
+
+  it("TC-1.2.11d: 8-digit hex on overlay is rejected (rgba-only)", () => {
+    const d = buildValidDesignMd();
+    d.visual.colors.overlay = "#1F2937FF";
+    const issues = validateDesignMd(d);
+    expect(
+      issues.some((i) => i.path === "visual.colors.overlay" && i.code === "invalid-color-format"),
+    ).toBe(true);
+  });
+
+  it("TC-1.2.11e: 6-digit hex on overlay is rejected (rgba-only)", () => {
+    const d = buildValidDesignMd();
+    d.visual.colors.overlay = "#000000";
+    const issues = validateDesignMd(d);
+    expect(
+      issues.some((i) => i.path === "visual.colors.overlay" && i.code === "invalid-color-format"),
+    ).toBe(true);
+  });
+
+  it("TC-1.2.11f: rgba(...) values out of 0..255 range on overlay are rejected", () => {
+    const d = buildValidDesignMd();
+    d.visual.colors.overlay = "rgba(256,0,0,0.5)";
+    const issues = validateDesignMd(d);
+    expect(
+      issues.some((i) => i.path === "visual.colors.overlay" && i.code === "invalid-color-format"),
     ).toBe(true);
   });
 
