@@ -115,6 +115,67 @@ describe("findDesignMdViolations — color (TC-3.2.1..9)", () => {
     expect(out.filter((v) => v.kind === "color")).toEqual([]);
   });
 
+  it("inline style filter:url(#abc) is NOT flagged as a color violation", () => {
+    // SVG/filter id refs inside CSS regions historically slipped past
+    // the CSS-context restriction because url(#abc) is itself a CSS
+    // declaration. The url(...) strip-pass before HEX_RE prevents the
+    // fragment id from surfacing as DESIGN.md drift.
+    const html = '<div style="filter:url(#abc); background:#1F2937"></div>';
+    const out = findDesignMdViolations(html, sampleDesignMd());
+    expect(out.filter((v) => v.kind === "color")).toEqual([]);
+  });
+
+  it("<style> block url(#hash) reference is NOT flagged as a color violation", () => {
+    const html = '<style>.icon{ fill: url(#defaced); }</style>';
+    const out = findDesignMdViolations(html, sampleDesignMd());
+    expect(out.filter((v) => v.kind === "color")).toEqual([]);
+  });
+
+  it("url() with quoted/whitespace fragment is also stripped", () => {
+    const html = '<style>.a{ mask: url( "#abc" ); }</style>';
+    const out = findDesignMdViolations(html, sampleDesignMd());
+    expect(out.filter((v) => v.kind === "color")).toEqual([]);
+  });
+
+  it("named CSS color (color: red) IS flagged when not in DESIGN.md", () => {
+    const html = '<div style="color: red"></div>';
+    const out = findDesignMdViolations(html, sampleDesignMd());
+    expect(out.filter((v) => v.kind === "color")).toEqual([{ kind: "color", found: "red" }]);
+  });
+
+  it("named CSS color (background-color: white) IS flagged when not in DESIGN.md", () => {
+    const html = '<style>p{ background-color: white; }</style>';
+    const out = findDesignMdViolations(html, sampleDesignMd());
+    expect(out.some((v) => v.kind === "color" && v.found === "white")).toBe(true);
+  });
+
+  it("named CSS color authored as a DESIGN.md token is NOT flagged", () => {
+    const dm = sampleDesignMd();
+    dm.visual.colors.primary = "red";
+    const html = '<div style="color: red"></div>';
+    const out = findDesignMdViolations(html, dm);
+    expect(out.filter((v) => v.kind === "color")).toEqual([]);
+  });
+
+  it("transparent / currentcolor / inherit are NOT flagged as named-color violations", () => {
+    const html = `
+      <div style="color: transparent"></div>
+      <div style="background-color: currentcolor"></div>
+      <div style="border-color: inherit"></div>
+    `;
+    const out = findDesignMdViolations(html, sampleDesignMd());
+    expect(out.filter((v) => v.kind === "color")).toEqual([]);
+  });
+
+  it("var(--token) reference is NOT flagged as a named-color violation", () => {
+    // Custom-property references resolve at render time and are out of
+    // scope for the regex scanner; surfacing them as drift would noise
+    // every Tailwind/shadcn-style prototype.
+    const html = '<div style="color: var(--accent)"></div>';
+    const out = findDesignMdViolations(html, sampleDesignMd());
+    expect(out.filter((v) => v.kind === "color")).toEqual([]);
+  });
+
   it("Tailwind arbitrary-value class with a hex literal is NOT flagged (not a CSS declaration)", () => {
     // `class="bg-[#abcdef]"` is a Tailwind arbitrary value — it is
     // structurally a class name, not a CSS declaration. Whether the
@@ -249,6 +310,21 @@ describe("findDesignMdViolations — radius (TC-3.2.16..20)", () => {
     const html = '<div style="border-radius: 9999px"></div>';
     expect(findDesignMdViolations(html, sampleDesignMd())).toEqual([]);
   });
+
+  it("Border-Radius (mixed-case property) is detected as a violation", () => {
+    // CSS property names are case-insensitive per spec; the regex must
+    // honor that or off-spec authored prototypes can leak DESIGN.md
+    // drift through the certify gate.
+    const html = '<div style="Border-Radius: 1.5rem"></div>';
+    const out = findDesignMdViolations(html, sampleDesignMd());
+    expect(out).toEqual([{ kind: "radius", found: "1.5rem" }]);
+  });
+
+  it("BORDER-RADIUS (uppercase) is also detected", () => {
+    const html = "<style>p{ BORDER-RADIUS: 1.5rem; }</style>";
+    const out = findDesignMdViolations(html, sampleDesignMd());
+    expect(out).toEqual([{ kind: "radius", found: "1.5rem" }]);
+  });
 });
 
 describe("findDesignMdViolations — shadow (TC-3.2.21..24)", () => {
@@ -275,6 +351,12 @@ describe("findDesignMdViolations — shadow (TC-3.2.21..24)", () => {
   it("multi-token shadow exact-string match → no violation", () => {
     const html = '<div style="box-shadow: 0 4px 6px rgba(15,23,42,0.08)"></div>';
     expect(findDesignMdViolations(html, sampleDesignMd())).toEqual([]);
+  });
+
+  it("BOX-SHADOW (uppercase property) is detected as a violation", () => {
+    const html = '<div style="BOX-SHADOW: 0 0 99px red"></div>';
+    const out = findDesignMdViolations(html, sampleDesignMd());
+    expect(out.some((v) => v.kind === "shadow" && v.found === "0 0 99px red")).toBe(true);
   });
 });
 

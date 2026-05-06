@@ -38,6 +38,41 @@ async function newTempDir(): Promise<string> {
   return dir;
 }
 
+// Verbatim mirror of VALID_DESIGN_MD's visual.* tokens, in YAML form
+// suitable for `.qfai/contracts/design/design-system.yaml`. Tests that
+// want the full mirror (post-1.8.9 contract) seed this; tests that
+// want a partial mirror to exercise DCON-005 hand-construct their own.
+const VALID_MIRROR_YAML = [
+  "visual:",
+  "  colors:",
+  '    primary: "#1F2937"',
+  '    secondary: "#6366F1"',
+  '    accent: "#D97706"',
+  '    surface: "#FFFFFF"',
+  '    surface_muted: "#F3F4F6"',
+  '    text: "#111827"',
+  '    text_muted: "#6B7280"',
+  '    danger: "#DC2626"',
+  '    warning: "#F59E0B"',
+  '    success: "#10B981"',
+  '    border: "#E5E7EB"',
+  '    overlay: "rgba(0,0,0,0.5)"',
+  "  typography:",
+  '    family_sans: "Inter, system-ui, sans-serif"',
+  '    family_display: "Inter, system-ui, sans-serif"',
+  '    family_mono: "JetBrains Mono, ui-monospace, monospace"',
+  "  radius:",
+  '    sm: "0.25rem"',
+  '    md: "0.5rem"',
+  '    lg: "0.75rem"',
+  '    full: "9999px"',
+  "  shadow:",
+  '    sm: "0 1px 2px rgba(15,23,42,0.05)"',
+  '    md: "0 4px 6px rgba(15,23,42,0.08)"',
+  '    lg: "0 12px 24px rgba(15,23,42,0.10)"',
+  "",
+].join("\n");
+
 const VALID_DESIGN_MD = [
   "---",
   "brand:",
@@ -251,6 +286,75 @@ describe("validateSddDesignContractReadiness (TC-3.8.x)", () => {
     expect(dcon013[0]?.message).not.toContain("is missing required field");
   });
 
+  it("array-shaped finalIterIndex surfaces as '(got <array>)' (not opaque JSON)", async () => {
+    // Aganesy 5zGh: pin describeValueForDiagnostic's array branch
+    // (designContractReadiness.ts L472) so a future refactor that
+    // collapses the helper back to a JSON.stringify cannot regress
+    // the operator-facing diagnostic to `(got [1,2])`.
+    const root = await newTempDir();
+    await seedUiBearingProject(root);
+    await seedDesignMdAndLock(root);
+    await seedPrototypingDesignYamls(root);
+    await writeFile(
+      path.join(root, ".qfai/contracts/design/prototype-handoff.yaml"),
+      [
+        "finalIterIndex:",
+        "  - 1",
+        "  - 2",
+        'finalArtifact: ".qfai/prototypes/final/index.html"',
+        'designMdPath: "DESIGN.md"',
+        `designMdSha256: "${hashDesignMd(VALID_DESIGN_MD)}"`,
+        'designSystemMirror: ".qfai/contracts/design/design-system.yaml"',
+        'implementationNotes: "test"',
+        "",
+      ].join("\n"),
+      "utf-8",
+    );
+    const issues = await validatePrototypingDesignContractReadiness(root, defaultConfig);
+    const dcon013 = issues.filter(
+      (i) =>
+        i.code === "QFAI-DCON-013" &&
+        i.message.includes("finalIterIndex") &&
+        i.message.includes("non-negative integer"),
+    );
+    expect(dcon013.length).toBeGreaterThan(0);
+    expect(dcon013[0]?.message).toContain("(got <array>)");
+    expect(dcon013[0]?.message).not.toContain("[1,2]");
+  });
+
+  it("object-shaped finalIterIndex surfaces as '(got <object>)' (not opaque JSON)", async () => {
+    // Aganesy 5zGh: pin describeValueForDiagnostic's `<typeof>`
+    // branch for non-array non-primitive values (objects).
+    const root = await newTempDir();
+    await seedUiBearingProject(root);
+    await seedDesignMdAndLock(root);
+    await seedPrototypingDesignYamls(root);
+    await writeFile(
+      path.join(root, ".qfai/contracts/design/prototype-handoff.yaml"),
+      [
+        "finalIterIndex:",
+        "  foo: 1",
+        'finalArtifact: ".qfai/prototypes/final/index.html"',
+        'designMdPath: "DESIGN.md"',
+        `designMdSha256: "${hashDesignMd(VALID_DESIGN_MD)}"`,
+        'designSystemMirror: ".qfai/contracts/design/design-system.yaml"',
+        'implementationNotes: "test"',
+        "",
+      ].join("\n"),
+      "utf-8",
+    );
+    const issues = await validatePrototypingDesignContractReadiness(root, defaultConfig);
+    const dcon013 = issues.filter(
+      (i) =>
+        i.code === "QFAI-DCON-013" &&
+        i.message.includes("finalIterIndex") &&
+        i.message.includes("non-negative integer"),
+    );
+    expect(dcon013.length).toBeGreaterThan(0);
+    expect(dcon013[0]?.message).toContain("(got <object>)");
+    expect(dcon013[0]?.message).not.toContain("{\"foo\":1}");
+  });
+
   it("missing finalIterIndex is rejected with DCON-013 (and uses the missing-field phrasing)", async () => {
     const root = await newTempDir();
     await seedUiBearingProject(root);
@@ -341,22 +445,15 @@ describe("validateSddDesignContractReadiness (TC-3.8.x)", () => {
     await seedUiBearingProject(root);
     await seedDesignMdAndLock(root);
     const designDir = path.join(root, ".qfai/contracts/design");
+    // Full mirror (so the value cross-check passes) plus a non-empty
+    // visual.spacing block to assert spacing remains optional /
+    // non-blocking after the cross-check landed.
     await writeFile(
       path.join(designDir, "design-system.yaml"),
-      [
-        "visual:",
-        "  colors:",
-        '    primary: "#1F2937"',
-        "  typography:",
-        '    family_sans: "Inter, system-ui, sans-serif"',
-        "  spacing:",
-        '    base: "8px"',
+      VALID_MIRROR_YAML.replace(
         "  radius:",
-        '    sm: "0.25rem"',
-        "  shadow:",
-        '    sm: "0 1px 2px rgba(15,23,42,0.05)"',
-        "",
-      ].join("\n"),
+        '  spacing:\n    base: "8px"\n  radius:',
+      ),
       "utf-8",
     );
     await writeFile(
@@ -382,24 +479,10 @@ describe("validateSddDesignContractReadiness (TC-3.8.x)", () => {
     await seedUiBearingProject(root);
     await seedDesignMdAndLock(root);
     // Replace the legacy checklist-shaped design-system.yaml with the
-    // post-1.8.9 mirror shape (visual.colors / visual.typography / ...).
+    // post-1.8.9 mirror shape — full verbatim copy of DESIGN.md tokens
+    // so both the shape gate and the value cross-check pass.
     const designDir = path.join(root, ".qfai/contracts/design");
-    await writeFile(
-      path.join(designDir, "design-system.yaml"),
-      [
-        "visual:",
-        "  colors:",
-        '    primary: "#1F2937"',
-        "  typography:",
-        '    family_sans: "Inter, system-ui, sans-serif"',
-        "  radius:",
-        '    sm: "0.25rem"',
-        "  shadow:",
-        '    sm: "0 1px 2px rgba(15,23,42,0.05)"',
-        "",
-      ].join("\n"),
-      "utf-8",
-    );
+    await writeFile(path.join(designDir, "design-system.yaml"), VALID_MIRROR_YAML, "utf-8");
     // Also seed the prototype-handoff so the suite passes end-to-end.
     await writeFile(
       path.join(designDir, "prototype-handoff.yaml"),
@@ -419,6 +502,194 @@ describe("validateSddDesignContractReadiness (TC-3.8.x)", () => {
     // Mirror shape requires visual.colors / typography / radius / shadow
     // — all present here, so no DCON-005 should fire.
     expect(dcon005).toEqual([]);
+  });
+
+  it("design-system.yaml mirror with diverging color value → DCON-005 with diff diagnostic", async () => {
+    // Codex 5zDx: the mirror is contractually a verbatim DESIGN.md
+    // copy. A hand-authored mirror that disagrees with DESIGN.md must
+    // be rejected so downstream `/qfai-implement` cannot bind to a
+    // tampered identity.
+    const root = await newTempDir();
+    await seedUiBearingProject(root);
+    await seedDesignMdAndLock(root);
+    const designDir = path.join(root, ".qfai/contracts/design");
+    await writeFile(
+      path.join(designDir, "design-system.yaml"),
+      VALID_MIRROR_YAML.replace('primary: "#1F2937"', 'primary: "#FF0000"'),
+      "utf-8",
+    );
+    await writeFile(
+      path.join(designDir, "prototype-handoff.yaml"),
+      [
+        "finalIterIndex: 1",
+        'finalArtifact: ".qfai/prototypes/final/index.html"',
+        'designMdPath: "DESIGN.md"',
+        `designMdSha256: "${hashDesignMd(VALID_DESIGN_MD)}"`,
+        'designSystemMirror: ".qfai/contracts/design/design-system.yaml"',
+        'implementationNotes: "test"',
+        "",
+      ].join("\n"),
+      "utf-8",
+    );
+    const issues = await validatePrototypingDesignContractReadiness(root, defaultConfig);
+    const dcon005 = issues.filter((i) => i.code === "QFAI-DCON-005");
+    expect(dcon005.length).toBeGreaterThanOrEqual(1);
+    expect(dcon005[0]?.message).toContain("visual.colors.primary");
+    expect(dcon005[0]?.message).toContain("#FF0000");
+    expect(dcon005[0]?.message).toContain("#1F2937");
+  });
+
+  it("design-system.yaml mirror missing one DESIGN.md sub-key → DCON-005 missing-key diagnostic", async () => {
+    const root = await newTempDir();
+    await seedUiBearingProject(root);
+    await seedDesignMdAndLock(root);
+    const designDir = path.join(root, ".qfai/contracts/design");
+    // Drop visual.radius.full from the mirror — DESIGN.md still has
+    // it, so the cross-check must surface it as missing.
+    await writeFile(
+      path.join(designDir, "design-system.yaml"),
+      VALID_MIRROR_YAML.replace('    full: "9999px"\n', ""),
+      "utf-8",
+    );
+    await writeFile(
+      path.join(designDir, "prototype-handoff.yaml"),
+      [
+        "finalIterIndex: 1",
+        'finalArtifact: ".qfai/prototypes/final/index.html"',
+        'designMdPath: "DESIGN.md"',
+        `designMdSha256: "${hashDesignMd(VALID_DESIGN_MD)}"`,
+        'designSystemMirror: ".qfai/contracts/design/design-system.yaml"',
+        'implementationNotes: "test"',
+        "",
+      ].join("\n"),
+      "utf-8",
+    );
+    const issues = await validatePrototypingDesignContractReadiness(root, defaultConfig);
+    const dcon005 = issues.filter((i) => i.code === "QFAI-DCON-005");
+    expect(
+      dcon005.some(
+        (i) => i.message.includes("visual.radius.full") && i.message.includes("missing"),
+      ),
+    ).toBe(true);
+  });
+
+  it("prototype-handoff.yaml designMdPath !== root DESIGN.md → DCON-013", async () => {
+    // Codex 55GV: a handoff that points at an alternate file must be
+    // rejected so downstream `/qfai-implement` cannot bind to a
+    // non-SSOT design identity.
+    const root = await newTempDir();
+    await seedUiBearingProject(root);
+    await seedDesignMdAndLock(root);
+    await seedPrototypingDesignYamls(root);
+    await writeFile(
+      path.join(root, ".qfai/contracts/design/prototype-handoff.yaml"),
+      [
+        "finalIterIndex: 1",
+        'finalArtifact: ".qfai/prototypes/final/index.html"',
+        'designMdPath: "docs/alternate-DESIGN.md"',
+        `designMdSha256: "${hashDesignMd(VALID_DESIGN_MD)}"`,
+        'designSystemMirror: ".qfai/contracts/design/design-system.yaml"',
+        'implementationNotes: "test"',
+        "",
+      ].join("\n"),
+      "utf-8",
+    );
+    const issues = await validatePrototypingDesignContractReadiness(root, defaultConfig);
+    const dcon013 = issues.filter((i) => i.code === "QFAI-DCON-013");
+    expect(
+      dcon013.some(
+        (i) =>
+          i.message.includes("designMdPath") &&
+          i.message.includes("DESIGN.md") &&
+          i.message.includes("docs/alternate-DESIGN.md"),
+      ),
+    ).toBe(true);
+  });
+
+  it("prototype-handoff.yaml designMdPath './DESIGN.md' is accepted (normalized)", async () => {
+    const root = await newTempDir();
+    await seedUiBearingProject(root);
+    await seedDesignMdAndLock(root);
+    await seedPrototypingDesignYamls(root);
+    await writeFile(
+      path.join(root, ".qfai/contracts/design/prototype-handoff.yaml"),
+      [
+        "finalIterIndex: 1",
+        'finalArtifact: ".qfai/prototypes/final/index.html"',
+        'designMdPath: "./DESIGN.md"',
+        `designMdSha256: "${hashDesignMd(VALID_DESIGN_MD)}"`,
+        'designSystemMirror: ".qfai/contracts/design/design-system.yaml"',
+        'implementationNotes: "test"',
+        "",
+      ].join("\n"),
+      "utf-8",
+    );
+    const issues = await validatePrototypingDesignContractReadiness(root, defaultConfig);
+    const dcon013Path = issues.filter(
+      (i) => i.code === "QFAI-DCON-013" && i.message.includes("designMdPath"),
+    );
+    expect(dcon013Path).toEqual([]);
+  });
+
+  it("prototype-handoff.yaml designMdSha256 not 64-hex → DCON-013", async () => {
+    const root = await newTempDir();
+    await seedUiBearingProject(root);
+    await seedDesignMdAndLock(root);
+    await seedPrototypingDesignYamls(root);
+    await writeFile(
+      path.join(root, ".qfai/contracts/design/prototype-handoff.yaml"),
+      [
+        "finalIterIndex: 1",
+        'finalArtifact: ".qfai/prototypes/final/index.html"',
+        'designMdPath: "DESIGN.md"',
+        'designMdSha256: "not-a-real-sha"',
+        'designSystemMirror: ".qfai/contracts/design/design-system.yaml"',
+        'implementationNotes: "test"',
+        "",
+      ].join("\n"),
+      "utf-8",
+    );
+    const issues = await validatePrototypingDesignContractReadiness(root, defaultConfig);
+    const dcon013Sha = issues.filter(
+      (i) =>
+        i.code === "QFAI-DCON-013" &&
+        i.message.includes("designMdSha256") &&
+        i.message.includes("64-char"),
+    );
+    expect(dcon013Sha.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("prototype-handoff.yaml designMdSha256 stale (valid hex but != lock) → DCON-013", async () => {
+    // Codex 55GV second arm: a syntactically-valid-but-wrong sha must
+    // be cross-checked against DESIGN.md.lock.yaml#designMdSha256.
+    const root = await newTempDir();
+    await seedUiBearingProject(root);
+    await seedDesignMdAndLock(root);
+    await seedPrototypingDesignYamls(root);
+    const stale = "0".repeat(64);
+    await writeFile(
+      path.join(root, ".qfai/contracts/design/prototype-handoff.yaml"),
+      [
+        "finalIterIndex: 1",
+        'finalArtifact: ".qfai/prototypes/final/index.html"',
+        'designMdPath: "DESIGN.md"',
+        `designMdSha256: "${stale}"`,
+        'designSystemMirror: ".qfai/contracts/design/design-system.yaml"',
+        'implementationNotes: "test"',
+        "",
+      ].join("\n"),
+      "utf-8",
+    );
+    const issues = await validatePrototypingDesignContractReadiness(root, defaultConfig);
+    const dcon013Sha = issues.filter(
+      (i) =>
+        i.code === "QFAI-DCON-013" &&
+        i.message.includes("designMdSha256") &&
+        i.message.includes("does not match"),
+    );
+    expect(dcon013Sha.length).toBeGreaterThanOrEqual(1);
+    expect(dcon013Sha[0]?.message).toContain(stale);
+    expect(dcon013Sha[0]?.message).toContain(hashDesignMd(VALID_DESIGN_MD));
   });
 
   it("negative finalIterIndex is rejected with DCON-013", async () => {

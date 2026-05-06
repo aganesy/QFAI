@@ -23,14 +23,36 @@ export type DesignMdViolation = {
 const HEX_RE = /#(?:[0-9A-Fa-f]{8}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{3})\b/g;
 const RGB_RE = /rgba?\([^)]*\)/gi;
 const HSL_RE = /hsla?\([^)]*\)/gi;
+// `url(...)` in CSS carries SVG/filter/mask references whose `#fragment`
+// is an element-id selector, not a color literal. The arg can be quoted
+// (`url("#abc")` / `url('#abc')`) or unquoted (`url(#abc)`), and CSS
+// allows whitespace inside the parens. Strip the entire `url(...)`
+// invocation before HEX_RE / RGB_RE / HSL_RE run so e.g.
+// `filter:url(#abc)` does not surface `#abc` as a DESIGN.md drift.
+const CSS_URL_RE = /\burl\s*\([^)]*\)/gi;
+// Color-bearing CSS property declarations whose value is interpreted as
+// a <color>. Named-color keywords (`red`, `white`, …) and the
+// system-color keyword `transparent` are valid here. Hex/rgb/hsl are
+// covered by the literal scanner; this regex catches the
+// keyword-as-value path so `color: red` cannot slip past certify just
+// because the literal isn't hex/rgb/hsl. Properties listed are the ones
+// that take a single <color> as their primary value or accept named
+// colors in shorthand position. Background / border shorthands route to
+// the dedicated *-color longhand below for value extraction.
+const COLOR_PROP_RE =
+  /\b(?:color|background-color|border-color|border-top-color|border-right-color|border-bottom-color|border-left-color|outline-color|fill|stroke|caret-color|text-decoration-color|column-rule-color)\s*:\s*([^;}<>"']+)/gi;
 // Property-value regexes capture up to the next `;`, `}`, `<`, `>`, or
 // containing-attr quote boundary. Inline `style="..."` boundaries are
 // handled by stopping at the outer attribute quote, so the value class
 // excludes `"` and `'` for shadow/radius (which never need quotes), but
 // font-family CAN have quoted family names (e.g., `"Comic Sans"`), so
 // the font regex tolerates quotes within the value.
-const RADIUS_RE = /border-radius\s*:\s*([^;}<>"']+)/g;
-const SHADOW_RE = /box-shadow\s*:\s*([^;}<>"']+)/g;
+// `i` flag: CSS property names are case-insensitive per CSS spec
+// (`Border-Radius: 12px` and `BOX-SHADOW: 0 0 8px red` are valid),
+// so the matcher must accept any casing or off-spec authored prototypes
+// can leak DESIGN.md drift through the gate.
+const RADIUS_RE = /border-radius\s*:\s*([^;}<>"']+)/gi;
+const SHADOW_RE = /box-shadow\s*:\s*([^;}<>"']+)/gi;
 // font-family supports quoted family names (`"Comic Sans MS"`) but the
 // value still must stop at the enclosing inline-style quote. CSS
 // font-family is a comma-separated list where each entry is either a
@@ -43,7 +65,7 @@ const SHADOW_RE = /box-shadow\s*:\s*([^;}<>"']+)/g;
 const FONT_FAMILY_TOKEN = `(?:"[^"]*"|'[^']*'|[^;}<>"',]+)`;
 const FONT_RE = new RegExp(
   `font-family\\s*:\\s*(${FONT_FAMILY_TOKEN}(?:\\s*,\\s*${FONT_FAMILY_TOKEN})*)`,
-  "g",
+  "gi",
 );
 
 const SAFE_LITERALS: ReadonlySet<string> = new Set([
@@ -152,7 +174,12 @@ function scanColors(html: string, dm: DesignMd, out: DesignMdViolation[]): void 
   // hsl literals don't have such an anchor — they look like color
   // declarations only when they sit inside a CSS context, hence the
   // explicit `extractCssRegions` step here.
-  const cssText = extractCssRegions(html);
+  //
+  // Within CSS regions, strip `url(...)` invocations before literal
+  // scanning so `filter:url(#abc)` / `mask:url("#defaced")` do not
+  // surface their fragment-id as a color violation. The named-color
+  // pass below uses a property-anchored regex and is unaffected.
+  const cssText = extractCssRegions(html).replace(CSS_URL_RE, "");
   for (const match of cssText.matchAll(HEX_RE)) {
     const literal = match[0].toLowerCase();
     if (!allowed.has(literal)) {
@@ -171,7 +198,89 @@ function scanColors(html: string, dm: DesignMd, out: DesignMdViolation[]): void 
       out.push({ kind: "color", found: literal });
     }
   }
+  // Named-color keyword pass. CSS allows `color: red` as a valid color
+  // value, but hex/rgb/hsl literal regexes never match it. Without this
+  // pass, a prototype that authored `color: red` (or `background: white`
+  // via a *-color longhand) would slip past certify even though the
+  // rendered token is not in DESIGN.md.
+  for (const match of cssText.matchAll(COLOR_PROP_RE)) {
+    const captured = match[1] ?? "";
+    const value = captured.trim().toLowerCase();
+    if (value.length === 0) continue;
+    // Skip values that contain a hex / rgb / hsl literal — those are
+    // already handled by the literal scanners above; surfacing them
+    // here would double-count.
+    if (HEX_RE_TEST.test(value) || RGB_RE_TEST.test(value) || HSL_RE_TEST.test(value)) {
+      continue;
+    }
+    // Skip CSS variable references and `inherit` / `currentcolor` /
+    // `transparent` etc. — they are not literal colors and are
+    // resolved at render time. DESIGN.md drift via these channels is
+    // out of scope for this regex-based scanner.
+    if (value.startsWith("var(")) continue;
+    if (SAFE_LITERALS.has(value)) continue;
+    // If DESIGN.md authored a named color as one of its tokens (e.g.
+    // `primary: red`), `allowed` already contains the lowercase
+    // keyword and the value is compliant.
+    if (allowed.has(value)) continue;
+    // CSS named colors keyword set. The value must be a single
+    // identifier token; multi-token values (e.g. background shorthand
+    // like `red url(...) repeat`) only land here when shorthand
+    // parsing produced a non-color side; guard with a single-token
+    // check so we surface only clean named-color violations.
+    if (!/^[a-z]+$/.test(value)) continue;
+    if (CSS_NAMED_COLORS.has(value)) {
+      out.push({ kind: "color", found: value });
+    }
+  }
 }
+
+// Single-shot test variants of HEX/RGB/HSL regexes — `g`-flagged
+// regexes are stateful when reused with `.test()`, so dedicated
+// test-only copies avoid that footgun.
+const HEX_RE_TEST = /#(?:[0-9A-Fa-f]{8}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{3})\b/;
+const RGB_RE_TEST = /rgba?\([^)]*\)/i;
+const HSL_RE_TEST = /hsla?\([^)]*\)/i;
+
+// CSS named-color keywords (CSS Color Module Level 4 + legacy). The set
+// is closed: any keyword not here is either a non-color identifier
+// (e.g. `inherit`, `var(...)`) or a typo. SAFE_LITERALS (`transparent`,
+// `currentcolor`, etc.) is intentionally NOT a subset — those are
+// system / inheritance keywords, not color literals, and have a
+// dedicated allow path above.
+const CSS_NAMED_COLORS: ReadonlySet<string> = new Set([
+  "aliceblue", "antiquewhite", "aqua", "aquamarine", "azure",
+  "beige", "bisque", "black", "blanchedalmond", "blue", "blueviolet",
+  "brown", "burlywood", "cadetblue", "chartreuse", "chocolate",
+  "coral", "cornflowerblue", "cornsilk", "crimson", "cyan",
+  "darkblue", "darkcyan", "darkgoldenrod", "darkgray", "darkgreen",
+  "darkgrey", "darkkhaki", "darkmagenta", "darkolivegreen",
+  "darkorange", "darkorchid", "darkred", "darksalmon", "darkseagreen",
+  "darkslateblue", "darkslategray", "darkslategrey", "darkturquoise",
+  "darkviolet", "deeppink", "deepskyblue", "dimgray", "dimgrey",
+  "dodgerblue", "firebrick", "floralwhite", "forestgreen", "fuchsia",
+  "gainsboro", "ghostwhite", "gold", "goldenrod", "gray", "green",
+  "greenyellow", "grey", "honeydew", "hotpink", "indianred", "indigo",
+  "ivory", "khaki", "lavender", "lavenderblush", "lawngreen",
+  "lemonchiffon", "lightblue", "lightcoral", "lightcyan",
+  "lightgoldenrodyellow", "lightgray", "lightgreen", "lightgrey",
+  "lightpink", "lightsalmon", "lightseagreen", "lightskyblue",
+  "lightslategray", "lightslategrey", "lightsteelblue", "lightyellow",
+  "lime", "limegreen", "linen", "magenta", "maroon",
+  "mediumaquamarine", "mediumblue", "mediumorchid", "mediumpurple",
+  "mediumseagreen", "mediumslateblue", "mediumspringgreen",
+  "mediumturquoise", "mediumvioletred", "midnightblue", "mintcream",
+  "mistyrose", "moccasin", "navajowhite", "navy", "oldlace", "olive",
+  "olivedrab", "orange", "orangered", "orchid", "palegoldenrod",
+  "palegreen", "paleturquoise", "palevioletred", "papayawhip",
+  "peachpuff", "peru", "pink", "plum", "powderblue", "purple",
+  "rebeccapurple", "red", "rosybrown", "royalblue", "saddlebrown",
+  "salmon", "sandybrown", "seagreen", "seashell", "sienna", "silver",
+  "skyblue", "slateblue", "slategray", "slategrey", "snow",
+  "springgreen", "steelblue", "tan", "teal", "thistle", "tomato",
+  "turquoise", "violet", "wheat", "white", "whitesmoke", "yellow",
+  "yellowgreen",
+]);
 
 function scanRadius(html: string, dm: DesignMd, out: DesignMdViolation[]): void {
   const allowed = new Set<string>(Object.values(dm.visual.radius));

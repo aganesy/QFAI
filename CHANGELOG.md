@@ -39,6 +39,47 @@
   SVG `url(#abc)` references, Tailwind `class="bg-[#...]"` arbitrary
   values, commit-hash prose) were flagged as DESIGN.md drift, making
   `qfai prototyping certify` reject otherwise-compliant prototypes.
+- **DESIGN.md scanner strips `url(...)` fragments before color scan**:
+  CSS `url(...)` invocations (SVG / filter / mask references such as
+  `filter:url(#abc)` or `mask:url("#defaced")`) no longer surface their
+  fragment-id as a DESIGN.md color violation. The strip-pass runs
+  inside `extractCssRegions`'s output before HEX_RE / RGB_RE / HSL_RE
+  match, complementing the prior CSS-context restriction.
+- **DESIGN.md scanner detects mixed-case CSS property names**:
+  `RADIUS_RE`, `SHADOW_RE`, and `FONT_RE` now use the `i` flag so
+  `Border-Radius: 1.5rem`, `BOX-SHADOW: 0 0 8px red`, and
+  `Font-Family: "Comic Sans"` are caught. CSS property names are
+  case-insensitive per spec; without the flag, off-spec authored
+  prototypes could leak DESIGN.md drift through the certify gate.
+- **DESIGN.md scanner rejects CSS named-color keywords**:
+  A new property-anchored regex (`color`, `background-color`,
+  `border-color`, `outline-color`, `fill`, `stroke`, etc.) catches
+  values like `color: red` / `background-color: white` / `fill: blue`.
+  Previously the scanner only matched hex / rgb / hsl literals, so a
+  prototype that authored `color: red` could slip past certify even
+  though red is not in DESIGN.md. The check skips `transparent` /
+  `currentcolor` / `inherit` / `var(...)` references; if the
+  DESIGN.md authored a named color as a token (`primary: red`) the
+  match is allowed.
+- **design-system.yaml mirror values cross-checked against DESIGN.md**:
+  `validateDesignSystem` now compares the mirror's
+  `visual.colors.{12 keys}`, `visual.typography.{family_*3}`,
+  `visual.radius.{4 keys}`, `visual.shadow.{3 keys}` against the
+  parsed root DESIGN.md tokens. Each mismatch surfaces a DCON-005
+  with the diverging value diff (e.g. "mirror=#FF0000, DESIGN.md=
+  '#1F2937'"). Previously the mirror was shape-only (top-level
+  records non-empty), so a hand-authored mirror that disagreed with
+  DESIGN.md could pass `qfai validate --profile prototyping` and
+  bind downstream `/qfai-implement` to a tampered identity.
+- **prototype-handoff.yaml designMdPath / designMdSha256 cross-check
+  against DESIGN.md.lock**: `validatePrototypeHandoff` now requires
+  `designMdPath` to resolve to the repo-root DESIGN.md (accepting
+  `DESIGN.md` and `./DESIGN.md`) and requires `designMdSha256` to
+  be a 64-hex value equal to `DESIGN.md.lock.yaml#designMdSha256`.
+  Without this, a handoff with a path pointing at an alternate file
+  or a stale arbitrary sha could pass `qfai validate` while binding
+  downstream `/qfai-implement` to a DESIGN.md identity that diverges
+  from the frozen root lock.
 - **DESIGN.md typography scale/weight allowlist**: `parseDesignMd()`
   now rejects unknown nested keys under `visual.typography.scale`
   (allowed: `xs sm base lg xl 2xl 3xl`) and

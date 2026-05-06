@@ -6,7 +6,8 @@ import { parse as parseYaml } from "yaml";
 
 import type { QfaiConfig } from "../config.js";
 import { hashDesignMd, parseDesignMd } from "../design/designMd.js";
-import { readDesignMdLockSha } from "../design/designMdLock.js";
+import type { DesignMd } from "../design/designMd.js";
+import { DESIGN_MD_SHA_HEX_RE, readDesignMdLockSha } from "../design/designMdLock.js";
 import type { Issue } from "../types.js";
 import { issue } from "./utils.js";
 
@@ -81,7 +82,8 @@ async function validateDesignContractReadinessForStage(
   const designDir = path.join(root, config.paths.contractsDir, "design");
   const issues: Issue[] = [];
 
-  issues.push(...(await validateRootDesignMdAndLock(root, designDir)));
+  const rootResult = await validateRootDesignMdAndLock(root, designDir);
+  issues.push(...rootResult.issues);
 
   if (stage === "prototyping") {
     for (const fileName of REQUIRED_PROTOTYPING_DESIGN_FILES) {
@@ -106,15 +108,29 @@ async function validateDesignContractReadinessForStage(
   }
 
   if (stage === "prototyping") {
-    issues.push(...(await validateDesignSystem(root, config)));
-    issues.push(...(await validatePrototypeHandoff(root, config)));
+    issues.push(...(await validateDesignSystem(root, config, rootResult.designMd)));
+    issues.push(...(await validatePrototypeHandoff(root, config, rootResult.lockSha)));
   } else if (options.enforceNoPrematurePrototypingContracts ?? true) {
     issues.push(...(await validateNoPrematurePrototypingContracts(root, config)));
   }
   return issues;
 }
 
-async function validateRootDesignMdAndLock(root: string, designDir: string): Promise<Issue[]> {
+type RootDesignMdResult = {
+  issues: Issue[];
+  // Parsed root DESIGN.md, when present and well-formed. Downstream
+  // validators (validateDesignSystem mirror cross-check) need this.
+  designMd: DesignMd | null;
+  // Frozen sha256 from DESIGN.md.lock.yaml, when present and well-
+  // formed. Downstream validators (validatePrototypeHandoff cross-
+  // check) need this.
+  lockSha: string | null;
+};
+
+async function validateRootDesignMdAndLock(
+  root: string,
+  designDir: string,
+): Promise<RootDesignMdResult> {
   const issues: Issue[] = [];
   const designMdPath = path.join(root, ROOT_DESIGN_MD_REL);
   const lockPath = path.join(designDir, DESIGN_MD_LOCK_REL_BASENAME);
@@ -155,9 +171,11 @@ async function validateRootDesignMdAndLock(root: string, designDir: string): Pro
     );
   }
 
+  let lockSha: string | null = null;
+  let designMd: DesignMd | null = null;
   // Only attempt sha comparison when both files were readable.
   if (designMdText !== null && lockText !== null) {
-    const lockSha = readDesignMdLockSha(lockText);
+    lockSha = readDesignMdLockSha(lockText);
     if (lockSha === null) {
       issues.push(
         issue(
@@ -206,10 +224,12 @@ async function validateRootDesignMdAndLock(root: string, designDir: string): Pro
           "Fix DESIGN.md front-matter so parseDesignMd succeeds (see qfai-prototyping/references/design-md-spec.md). Do NOT regenerate the template — that would discard user content.",
         ),
       );
+    } else {
+      designMd = parseResult.data;
     }
   }
 
-  return issues;
+  return { issues, designMd, lockSha };
 }
 
 async function validateNoPrematurePrototypingContracts(
@@ -238,7 +258,11 @@ async function validateNoPrematurePrototypingContracts(
   return issues;
 }
 
-async function validateDesignSystem(root: string, config: QfaiConfig): Promise<Issue[]> {
+async function validateDesignSystem(
+  root: string,
+  config: QfaiConfig,
+  rootDesignMd: DesignMd | null,
+): Promise<Issue[]> {
   const filePath = path.join(root, config.paths.contractsDir, "design", "design-system.yaml");
   const parsed = await readYaml(filePath);
   if (parsed.kind !== "ok") {
@@ -269,17 +293,11 @@ async function validateDesignSystem(root: string, config: QfaiConfig): Promise<I
   const visual = parsed.value.visual;
   const isMirrorShape = isRecord(visual) && isRecord(visual.colors) && isRecord(visual.typography);
   if (isMirrorShape) {
-    // Shape-only check by design. The mirror is byte-deterministic
-    // (`qfai-prototyping/references/handoff.md` describes it as a
-    // verbatim DESIGN.md token copy), and sub-key fidelity (12
-    // colors / 4 radii / 3 shadows / typography family triple) is
-    // already anchored by `designMdSha256` in the handoff yaml +
-    // the `DESIGN.md.lock.yaml` sha contract. Adding sub-key
-    // requirements here would duplicate that contract and produce
-    // confusing double-failures (DCON-005 + DCON-032) for the same
-    // root cause. visual.spacing remains optional in DESIGN.md and
-    // is excluded from the required list deliberately.
+    // Shape gate: top-level mirror keys must be non-empty records.
+    // visual.spacing is optional in DESIGN.md and is excluded from the
+    // required list deliberately.
     const REQUIRED_MIRROR_KEYS = ["colors", "typography", "radius", "shadow"] as const;
+    let shapeOk = true;
     for (const key of REQUIRED_MIRROR_KEYS) {
       const value = visual[key];
       if (!isRecord(value) || Object.keys(value).length === 0) {
@@ -292,7 +310,21 @@ async function validateDesignSystem(root: string, config: QfaiConfig): Promise<I
             "designContractReadiness.designSystemMirror",
           ),
         );
+        shapeOk = false;
       }
+    }
+    // Value gate: mirror sub-key values must equal the corresponding
+    // DESIGN.md tokens. The handoff contract describes this file as a
+    // "verbatim mirror" — without a value cross-check, an operator
+    // could hand-author a mirror with stale or fabricated tokens that
+    // disagrees with DESIGN.md, and downstream `/qfai-implement` would
+    // be bound to the wrong identity. The DESIGN.md.lock sha chain
+    // anchors DESIGN.md content but does not verify this mirror file
+    // against it. Skip when the parsed root DesignMd is unavailable
+    // (DCON-030/033 already raised) or shape failed (no point
+    // surfacing a value diff on top of a shape error).
+    if (shapeOk && rootDesignMd !== null) {
+      issues.push(...crossCheckMirrorValues(visual, rootDesignMd, filePathRel));
     }
     return issues;
   }
@@ -339,7 +371,11 @@ async function validateDesignSystem(root: string, config: QfaiConfig): Promise<I
   return issues;
 }
 
-async function validatePrototypeHandoff(root: string, config: QfaiConfig): Promise<Issue[]> {
+async function validatePrototypeHandoff(
+  root: string,
+  config: QfaiConfig,
+  lockSha: string | null,
+): Promise<Issue[]> {
   const filePath = path.join(root, config.paths.contractsDir, "design", "prototype-handoff.yaml");
   const parsed = await readYaml(filePath);
   if (parsed.kind !== "ok") {
@@ -450,6 +486,140 @@ async function validatePrototypeHandoff(root: string, config: QfaiConfig): Promi
       );
     }
   }
+
+  // Cross-check designMdPath / designMdSha256 against the root
+  // DESIGN.md identity. Without this, a handoff yaml that points at an
+  // alternate file or freezes a stale sha can pass `qfai validate`
+  // while silently binding downstream `/qfai-implement` to a DESIGN.md
+  // identity that diverges from the frozen root lock. Skip when the
+  // upstream string-field gate already reported a problem (avoid
+  // double-flagging a missing/non-string field).
+  const designMdPath = parsed.value.designMdPath;
+  if (typeof designMdPath === "string" && designMdPath.trim().length > 0) {
+    // The handoff contract pins the brand SSOT to the repo root
+    // DESIGN.md. Accept either the bare basename or `./DESIGN.md`,
+    // normalize separators so Windows-authored handoffs are not
+    // rejected, and anchor on the basename equality.
+    const normalized = designMdPath.trim().replace(/\\/g, "/").replace(/^\.\//, "");
+    if (normalized !== ROOT_DESIGN_MD_REL) {
+      issues.push(
+        issue(
+          "QFAI-DCON-013",
+          `prototype-handoff.yaml field 'designMdPath' must be '${ROOT_DESIGN_MD_REL}' (the brand SSOT at repo root); got '${designMdPath}'.`,
+          "error",
+          filePathRel,
+          "designContractReadiness.prototypeHandoffField",
+          undefined,
+          "canonical",
+          "Set `designMdPath: DESIGN.md` so downstream `/qfai-implement` binds to the repo-root brand SSOT.",
+        ),
+      );
+    }
+  }
+  const designMdSha = parsed.value.designMdSha256;
+  if (typeof designMdSha === "string" && designMdSha.trim().length > 0) {
+    const lower = designMdSha.trim().toLowerCase();
+    if (!DESIGN_MD_SHA_HEX_RE.test(lower)) {
+      issues.push(
+        issue(
+          "QFAI-DCON-013",
+          `prototype-handoff.yaml field 'designMdSha256' must be a 64-char lowercase hex sha256; got '${designMdSha}'.`,
+          "error",
+          filePathRel,
+          "designContractReadiness.prototypeHandoffField",
+          undefined,
+          "canonical",
+          "Copy the `designMdSha256` value from `.qfai/contracts/design/DESIGN.md.lock.yaml`.",
+        ),
+      );
+    } else if (lockSha !== null && lower !== lockSha) {
+      issues.push(
+        issue(
+          "QFAI-DCON-013",
+          `prototype-handoff.yaml field 'designMdSha256' (${lower}) does not match DESIGN.md.lock.yaml#designMdSha256 (${lockSha}).`,
+          "error",
+          filePathRel,
+          "designContractReadiness.prototypeHandoffField",
+          undefined,
+          "canonical",
+          "Re-run `qfai prototyping certify` (or refreeze the DESIGN.md lock) so the handoff sha matches the frozen root lock.",
+        ),
+      );
+    }
+  }
+
+  return issues;
+}
+
+/**
+ * Cross-check `design-system.yaml` mirror values against the parsed
+ * root DESIGN.md tokens. Returns one DCON-005 per diverging key. The
+ * mirror is contractually a verbatim copy, so any token mismatch means
+ * downstream `/qfai-implement` would be bound to the wrong design
+ * identity even if the lock-sha chain is internally consistent.
+ *
+ * Sub-keys checked:
+ *   - visual.colors.{12 keys}
+ *   - visual.typography.{family_sans, family_display, family_mono}
+ *   - visual.radius.{sm, md, lg, full}
+ *   - visual.shadow.{sm, md, lg}
+ *
+ * `visual.spacing` and the optional typography sub-keys (scale,
+ * weight) are deliberately not cross-checked because they are
+ * optional in DESIGN.md. Adding them here would require carrying
+ * the raw DESIGN.md object; the canonical DesignMd type already
+ * loses the raw spacing scale shape.
+ */
+function crossCheckMirrorValues(
+  visual: Record<string, unknown>,
+  rootDesignMd: DesignMd,
+  filePathRel: string,
+): Issue[] {
+  const issues: Issue[] = [];
+  const compare = (
+    section: "colors" | "typography" | "radius" | "shadow",
+    expected: Record<string, string>,
+  ): void => {
+    const mirror = visual[section];
+    if (!isRecord(mirror)) return;
+    for (const [key, expectedValue] of Object.entries(expected)) {
+      if (!(key in mirror)) {
+        issues.push(
+          issue(
+            "QFAI-DCON-005",
+            `design-system.yaml mirror is missing 'visual.${section}.${key}' (DESIGN.md token: '${expectedValue}').`,
+            "error",
+            filePathRel,
+            "designContractReadiness.designSystemMirror",
+          ),
+        );
+        continue;
+      }
+      const actual = mirror[key];
+      if (typeof actual !== "string" || actual !== expectedValue) {
+        issues.push(
+          issue(
+            "QFAI-DCON-005",
+            `design-system.yaml mirror 'visual.${section}.${key}' diverges from DESIGN.md (mirror=${JSON.stringify(actual)}, DESIGN.md='${expectedValue}').`,
+            "error",
+            filePathRel,
+            "designContractReadiness.designSystemMirror",
+            undefined,
+            "canonical",
+            "The mirror is contractually a verbatim copy of DESIGN.md tokens; re-run `qfai prototyping certify` (or regenerate design-system.yaml) so values match.",
+          ),
+        );
+      }
+    }
+  };
+  compare("colors", rootDesignMd.visual.colors);
+  compare("typography", {
+    family_sans: rootDesignMd.visual.typography.family_sans,
+    family_display: rootDesignMd.visual.typography.family_display,
+    family_mono: rootDesignMd.visual.typography.family_mono,
+  });
+  compare("radius", rootDesignMd.visual.radius);
+  compare("shadow", rootDesignMd.visual.shadow);
   return issues;
 }
 
