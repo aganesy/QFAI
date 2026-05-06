@@ -2,7 +2,7 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { runPrototypingIterate } from "../../../src/cli/commands/prototypingIterate.js";
 import { hashDesignMd } from "../../../src/core/design/designMd.js";
@@ -468,6 +468,41 @@ describe("runPrototypingIterate cycle 0 DESIGN.md ingestion (TC-3.5.x)", () => {
       targetUrl: "http://localhost:5173",
     });
     expect(exit).toBe(2);
+  });
+
+  it("returns 2 with 'could not be read' error when DESIGN.md.lock.yaml is unreadable (codex 8zqe)", async () => {
+    // Pin the new `unreadable` LockGateResult branch added to readDesignMdLockGate
+    // for the lock fail-closed posture (codex 8cTg). Without this test, a
+    // future revert of `if (isEnoent(err)) return { kind: "missing" }; return
+    // { kind: "unreadable", cause: err };` to a bare `return { kind: "missing" };`
+    // would silently re-introduce the freeze-bypass vector.
+    //
+    // Trigger the unreadable branch portably (no chmod / no fs spy) by
+    // creating the lock path as a *directory* instead of a file. Node
+    // raises EISDIR on `readFile`, which is non-ENOENT and routes
+    // through the new `unreadable` kind exactly as a real EACCES /
+    // EPERM / EIO would. Cross-platform — works on Linux/macOS/Windows
+    // CI alike.
+    const root = await newTempDir();
+    await seedMinimalProject(root);
+    await mkdir(path.join(root, ".qfai/contracts/design/DESIGN.md.lock.yaml"), {
+      recursive: true,
+    });
+
+    const logger = await import("../../../src/cli/lib/logger.js");
+    const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
+    try {
+      const exit = await runPrototypingIterate({
+        root,
+        cycle: 0,
+        targetUrl: "http://localhost:5173",
+      });
+      expect(exit).toBe(2);
+      const messages = errorSpy.mock.calls.map((c) => String(c[0]));
+      expect(messages.some((m) => m.includes("could not be read"))).toBe(true);
+    } finally {
+      errorSpy.mockRestore();
+    }
   });
 
   it("TC-3.5.3: malformed DESIGN.md (no front matter) → exit 2", async () => {

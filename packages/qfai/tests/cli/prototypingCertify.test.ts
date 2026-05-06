@@ -587,6 +587,31 @@ describe("qfai prototyping certify (TC-3.6.x DESIGN.md gate)", () => {
     }
   });
 
+  it("returns 2 with 'could not be read' error when DESIGN.md.lock.yaml is unreadable (codex 8zqe)", async () => {
+    // Pin the new `unreadable` LockGateResult branch added to loadLockGate
+    // for the lock fail-closed posture (codex 8cTg). Symmetric with the
+    // iterate test of the same name. Trigger the unreadable branch
+    // portably by creating the lock path as a *directory* — Node raises
+    // EISDIR on `readFile`, which routes through the new `unreadable`
+    // kind exactly as EACCES / EPERM / EIO would. Works cross-platform.
+    const root = await newTempDir();
+    await seedMinimalProject(root, { specMarker: true });
+    await seedAllGatesPass(root);
+    await mkdir(path.join(root, ".qfai/contracts/design/DESIGN.md.lock.yaml"), {
+      recursive: true,
+    });
+
+    const logger = await import("../../src/cli/lib/logger.js");
+    const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
+    try {
+      expect(await runPrototypingCertify({ root, check: false })).toBe(2);
+      const messages = errorSpy.mock.calls.map((c) => String(c[0]));
+      expect(messages.some((m) => m.includes("could not be read"))).toBe(true);
+    } finally {
+      errorSpy.mockRestore();
+    }
+  });
+
   it("anchors final HTML scan to prototyping.json#iterations[] (no stale dirs)", async () => {
     // Confirm the round-4 anchoring still works when no stale higher
     // iter dirs are present: certify uses iter-01 (the recorded final)

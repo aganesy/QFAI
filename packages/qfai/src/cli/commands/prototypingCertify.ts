@@ -325,7 +325,23 @@ export async function runPrototypingCertify(
   // unchanged. Fail-fast and force the operator to rerun cycle 0
   // (which the round-5 hard-reset removes the stale dirs) or delete
   // them manually before sealing.
-  const staleIterDirs = await findStaleIterDirs(evidenceRoot, iterationCount);
+  let staleIterDirs: string[];
+  try {
+    staleIterDirs = await findStaleIterDirs(evidenceRoot, iterationCount);
+  } catch (err) {
+    // codex 8zqb: findStaleIterDirs propagates non-ENOENT fs errors
+    // (EACCES / EPERM / EIO) so a permission flip cannot silently
+    // bypass the stale-iter guard — symmetric with the lock
+    // `unreadable` path. Surface a clear operator-facing message
+    // instead of letting the raw error stack escape.
+    const cause = err instanceof Error ? err.message : String(err);
+    error(
+      `qfai prototyping certify: failed to scan ${PROTOTYPING_EVIDENCE_REL} for stale ` +
+        `iteration directories (${cause}). The freeze invariant cannot be enforced when ` +
+        "the evidence dir is unreadable; fix file permissions / EIO and rerun.",
+    );
+    return 2;
+  }
   if (staleIterDirs.length > 0) {
     error(
       "qfai prototyping certify: stale iteration directories found under " +
@@ -451,8 +467,22 @@ async function findStaleIterDirs(evidenceRoot: string, iterationCount: number): 
   let names: string[];
   try {
     names = await readdir(evidenceRoot);
-  } catch {
-    return [];
+  } catch (err) {
+    // ENOENT: evidenceRoot legitimately absent on a fresh project that
+    // has not yet captured an iteration. The certify caller already
+    // requires `iterationCount > 0` and a non-empty accepted-iter HTML
+    // set upstream, so reaching this path with ENOENT means the
+    // operator deleted the dir mid-flight — there's nothing stale to
+    // flag in either case.
+    //
+    // EACCES / EPERM / EIO: the same fail-closed posture as the
+    // `unreadable` LockGateResult branch above (codex 8cTg). Returning
+    // [] here would let a permission flip silently bypass the
+    // stale-iter guard, which is the same vector the lock fix closed.
+    // Symmetric: propagate so certify's caller surfaces a hard error
+    // rather than seal a possibly-stale digest set.
+    if (isEnoent(err)) return [];
+    throw err;
   }
   const stale: string[] = [];
   for (const name of names) {
@@ -464,8 +494,13 @@ async function findStaleIterDirs(evidenceRoot: string, iterationCount: number): 
     try {
       const s = await stat(abs);
       if (s.isDirectory()) stale.push(name);
-    } catch {
-      continue;
+    } catch (err) {
+      // Same asymmetry rule as readdir above. ENOENT here is a tight
+      // race (a sibling process removed the entry between readdir and
+      // stat) and is safe to skip — the next certify run will see the
+      // updated tree. Other fs errors are propagated.
+      if (isEnoent(err)) continue;
+      throw err;
     }
   }
   stale.sort();
