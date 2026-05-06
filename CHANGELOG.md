@@ -6,6 +6,18 @@
 
 ### Fixed (Breaking — pre-1.8.9 internal pipelines only)
 
+- **DESIGN.md root unknown-key reject**: `parseDesignMd()` now rejects
+  unknown root-level keys (e.g. `platform:`, `references:`) with the
+  same `unknown-key` ParseError shape as `visual` / `visual.typography`
+  / `audience`. Allowlist: `brand`, `visual`, `audience`, `accessibility`.
+  Closes the last gap in the "Unknown keys at any level are rejected"
+  contract.
+- **DESIGN.md shadow whitespace reject**: `validateDesignMd` now
+  rejects leading/trailing whitespace in `visual.shadow.{sm,md,lg}`
+  (new `invalid-shadow-format` code), matching the existing color /
+  font / radius byte-anchored validation. Otherwise certify's
+  exact-string box-shadow comparison can flag compliant CSS as drift
+  because the token froze a stray-whitespace variant.
 - **DESIGN.md `audience` unknown-key reject**: `parseDesignMd()` now
   rejects unknown keys under `audience` (e.g. `audience.references`)
   with the same `unknown-key` ParseError as `visual` and

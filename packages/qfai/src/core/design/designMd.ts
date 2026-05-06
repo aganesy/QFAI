@@ -286,6 +286,24 @@ function buildDesignMd(raw: unknown): BuildResult {
     };
   }
 
+  // Reject unknown root-level keys. The distributed DESIGN.md spec
+  // forbids unknown keys at any level, and silently dropping an
+  // authored top-level directive (e.g. `platform:`, `references:`)
+  // lets it hash into the lock while never reaching the parsed
+  // tokens. Allowlist must be kept in sync with the optional sections
+  // copied below (`audience`, `accessibility`).
+  const ROOT_ALLOWED_KEYS = new Set(["brand", "visual", "audience", "accessibility"]);
+  const rootUnknown = Object.keys(raw).filter((k) => !ROOT_ALLOWED_KEYS.has(k));
+  if (rootUnknown.length > 0) {
+    return {
+      error: {
+        path: rootUnknown[0] ?? "",
+        code: "unknown-key",
+        message: `Unknown root DESIGN.md key '${rootUnknown[0] ?? ""}'. Allowed: ${[...ROOT_ALLOWED_KEYS].join(", ")}.`,
+      },
+    };
+  }
+
   const brand = readBrand(raw.brand);
   if ("error" in brand) return { error: brand.error };
   const visual = readVisual(raw.visual);
@@ -732,6 +750,17 @@ function validateShadow(d: DesignMd, issues: ValidationIssue[]): void {
         path: `visual.shadow.${key}`,
         code: "invalid-type",
         message: `Shadow '${key}' must be a string.`,
+      });
+      continue;
+    }
+    // Reject leading/trailing whitespace — token values are byte-anchored.
+    // Otherwise certify's box-shadow comparison can flag compliant CSS as
+    // drift because the token froze a stray-whitespace variant.
+    if (value !== value.trim()) {
+      issues.push({
+        path: `visual.shadow.${key}`,
+        code: "invalid-shadow-format",
+        message: `Shadow '${key}' has leading or trailing whitespace; values are byte-anchored.`,
       });
     }
   }

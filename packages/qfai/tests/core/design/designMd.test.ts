@@ -272,6 +272,24 @@ describe("parseDesignMd (TC-1.1.x)", () => {
     expect(result.error.path).toBe("visual.typography.font_pairing");
   });
 
+  it("TC-1.1.18: unknown root key (platform) rejected with unknown-key", () => {
+    const text = VALID_FRONT_MATTER.replace("brand:", "platform: ios\nbrand:");
+    const result = parseDesignMd(text);
+    expect("error" in result).toBe(true);
+    if (!("error" in result)) return;
+    expect(result.error.code).toBe("unknown-key");
+    expect(result.error.path).toBe("platform");
+  });
+
+  it("TC-1.1.19: unknown root key (references) rejected with unknown-key", () => {
+    const text = VALID_FRONT_MATTER.replace("brand:", 'references:\n  - "acme.com"\nbrand:');
+    const result = parseDesignMd(text);
+    expect("error" in result).toBe(true);
+    if (!("error" in result)) return;
+    expect(result.error.code).toBe("unknown-key");
+    expect(result.error.path).toBe("references");
+  });
+
   it("TC-1.1.17: unknown audience key (references) rejected with unknown-key", () => {
     const text = VALID_FRONT_MATTER.replace(
       '  do_not_look_like: ["generic SaaS dashboard"]',
@@ -547,6 +565,24 @@ describe("validateDesignMd shadow (TC-1.2.20..1.2.22)", () => {
     expect(issues.some((i) => i.path === "visual.shadow.sm" && i.code === "missing-required")).toBe(
       true,
     );
+  });
+
+  it("TC-1.2.23: leading whitespace in shadow value is rejected (byte-anchored)", () => {
+    const d = buildValidDesignMd();
+    d.visual.shadow.sm = " 0 1px 2px rgba(15,23,42,0.05)";
+    const issues = validateDesignMd(d);
+    expect(
+      issues.some((i) => i.path === "visual.shadow.sm" && i.code === "invalid-shadow-format"),
+    ).toBe(true);
+  });
+
+  it("TC-1.2.24: trailing whitespace in shadow value is rejected", () => {
+    const d = buildValidDesignMd();
+    d.visual.shadow.md = "0 4px 6px rgba(15,23,42,0.08)\t";
+    const issues = validateDesignMd(d);
+    expect(
+      issues.some((i) => i.path === "visual.shadow.md" && i.code === "invalid-shadow-format"),
+    ).toBe(true);
   });
 });
 
