@@ -728,6 +728,59 @@ describe("runPrototypingIterate cycle 0 stale-dir cleanup", () => {
     expect(newPlan.length).toBeGreaterThan(0);
   });
 
+  it("does NOT delete a non-directory entry that happens to match iter-NN regex", async () => {
+    // The cleanup name says `deleteStaleIterDirs` — restrict it to
+    // actual directories. A stray file named `iter-99` (operator
+    // artifact without an extension) MUST survive the reset.
+    const root = await newTempDir();
+    await seedMinimalProject(root);
+    const evidenceRoot = path.join(root, ".qfai/evidence/prototyping");
+    await mkdir(evidenceRoot, { recursive: true });
+    await writeFile(path.join(evidenceRoot, "iter-99"), "stray-file-not-a-dir", "utf-8");
+
+    expect(
+      await runPrototypingIterate({ root, cycle: 0, targetUrl: "http://localhost:5173" }),
+    ).toBe(0);
+
+    const stray = await readFile(path.join(evidenceRoot, "iter-99"), "utf-8");
+    expect(stray).toBe("stray-file-not-a-dir");
+  });
+
+  it("deletes a stale completion-certificate.json on cycle 0 reset", async () => {
+    const root = await newTempDir();
+    await seedMinimalProject(root);
+    const evidenceRoot = path.join(root, ".qfai/evidence/prototyping");
+    await mkdir(evidenceRoot, { recursive: true });
+    await writeFile(
+      path.join(evidenceRoot, "completion-certificate.json"),
+      JSON.stringify({ runId: "stale-prior-run", reviewerSignoff: { approved: true } }),
+      "utf-8",
+    );
+
+    expect(
+      await runPrototypingIterate({ root, cycle: 0, targetUrl: "http://localhost:5173" }),
+    ).toBe(0);
+
+    const stillThere = await readFile(
+      path.join(evidenceRoot, "completion-certificate.json"),
+      "utf-8",
+    ).then(
+      () => true,
+      () => false,
+    );
+    expect(stillThere).toBe(false);
+  });
+
+  it("succeeds at cycle 0 when no completion-certificate.json exists (ENOENT is silent)", async () => {
+    const root = await newTempDir();
+    await seedMinimalProject(root);
+    // No completion-certificate.json on disk; cycle 0 must not log
+    // an error or return non-zero.
+    expect(
+      await runPrototypingIterate({ root, cycle: 0, targetUrl: "http://localhost:5173" }),
+    ).toBe(0);
+  });
+
   it("preserves non-iter sibling files in evidence dir", async () => {
     const root = await newTempDir();
     await seedMinimalProject(root);

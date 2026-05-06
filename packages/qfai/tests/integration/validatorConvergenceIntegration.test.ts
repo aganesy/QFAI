@@ -84,10 +84,21 @@ describe("TC-0004-0018: canonical sidecar family filename expectations", () => {
     // Brand-level inputs (product intent / brand signals / anti-goals
     // / reference pool) live in root DESIGN.md; threeLayer asserts only
     // screen-level sidecars + the legacy-format guards.
-    expect(validatorSrc).toContain("33_exploration_rubric.md");
-    expect(validatorSrc).toContain("34_evaluator_calibration.md");
+    // The legacy 33_exploration_rubric.md / 34_evaluator_calibration.md
+    // sidecars were retired when DESIGN.md became the brand SSOT and the
+    // evaluator axes were fixed (`ORDINAL_AXES`); they are no longer in
+    // the canonical family. The shipped init assets do not generate them.
+    expect(validatorSrc).toContain("00_index.md");
     expect(validatorSrc).toContain("40_screen_contracts.md");
     expect(validatorSrc).toContain("50_review_input_bundle.md");
+    // The sidecars are mentioned only in the historical comment; the
+    // canonical list itself must not list them.
+    const canonicalListBlock = validatorSrc.split(
+      "const CANONICAL_REQUIRED_SIDECAR_FILES",
+    )[1] as string;
+    const canonicalListBody = canonicalListBlock.split("] as const")[0] as string;
+    expect(canonicalListBody).not.toContain("33_exploration_rubric.md");
+    expect(canonicalListBody).not.toContain("34_evaluator_calibration.md");
   });
 });
 
@@ -104,7 +115,11 @@ describe("TC-0004-0019: Old 4-axis format is error", () => {
     const legacyContent = ["# Exploration Rubric", "", "## craft", "", "Legacy content."].join(
       "\n",
     );
-    await writeFile(path.join(root, "uiux", "33_exploration_rubric.md"), legacyContent, "utf-8");
+    // 33_exploration_rubric.md is no longer in the canonical family;
+    // run the legacy-format check against 40_screen_contracts.md, which
+    // is. The validator iterates the canonical list, so any required
+    // sidecar with legacy 4-axis headings will produce the error.
+    await writeFile(path.join(root, "uiux", "40_screen_contracts.md"), legacyContent, "utf-8");
 
     const issues = await validateThreeLayerModel(root, defaultConfig);
     const legacyIssue = issues.find((i) => i.code === "UIX-VAL-3LAYER-LEGACY-FORMAT");
@@ -142,7 +157,11 @@ describe("TC-0014-0004: UIX-VAL determinism", () => {
     const legacyContent = ["# Exploration Rubric", "", "## craft", "", "Legacy content."].join(
       "\n",
     );
-    await writeFile(path.join(root, "uiux", "33_exploration_rubric.md"), legacyContent, "utf-8");
+    // 33_exploration_rubric.md is no longer in the canonical family;
+    // run the legacy-format check against 40_screen_contracts.md, which
+    // is. The validator iterates the canonical list, so any required
+    // sidecar with legacy 4-axis headings will produce the error.
+    await writeFile(path.join(root, "uiux", "40_screen_contracts.md"), legacyContent, "utf-8");
 
     const first = await validateThreeLayerModel(root, defaultConfig);
     const second = await validateThreeLayerModel(root, defaultConfig);

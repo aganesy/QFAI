@@ -136,7 +136,11 @@ describe("TC-0014-0009: stale sidecar migration errors", () => {
     const root = await newTempDir();
     await createUiBearingPack(root);
     await writeFile(
-      path.join(root, "uiux", "33_exploration_rubric.md"),
+      // 33_exploration_rubric.md was retired from the canonical family
+      // when DESIGN.md became the brand SSOT; the legacy-format guard
+      // now applies to any required sidecar (40_screen_contracts.md
+      // is the load-bearing one for screen-level contracts).
+      path.join(root, "uiux", "40_screen_contracts.md"),
       [
         "# Exploration Rubric",
         "",

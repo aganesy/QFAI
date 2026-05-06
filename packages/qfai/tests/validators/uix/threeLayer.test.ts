@@ -58,7 +58,7 @@ describe("3-layer validator", () => {
       "",
       "- task_clarity: primary action remains obvious",
     ].join("\n");
-    await writeFile(path.join(root, "uiux", "33_exploration_rubric.md"), content, "utf-8");
+    await writeFile(path.join(root, "uiux", "40_screen_contracts.md"), content, "utf-8");
 
     const issues = await validateThreeLayerModel(root, defaultConfig);
 
@@ -87,7 +87,7 @@ describe("3-layer validator", () => {
       "",
       "- satisfaction: User satisfaction score",
     ].join("\n");
-    await writeFile(path.join(root, "uiux", "33_exploration_rubric.md"), content, "utf-8");
+    await writeFile(path.join(root, "uiux", "40_screen_contracts.md"), content, "utf-8");
 
     const issues = await validateThreeLayerModel(root, defaultConfig);
 
@@ -110,7 +110,7 @@ describe("3-layer validator", () => {
       "",
       "- satisfaction: Old 4-axis format mixed in",
     ].join("\n");
-    await writeFile(path.join(root, "uiux", "33_exploration_rubric.md"), content, "utf-8");
+    await writeFile(path.join(root, "uiux", "40_screen_contracts.md"), content, "utf-8");
 
     const issues = await validateThreeLayerModel(root, defaultConfig);
 
@@ -142,7 +142,7 @@ describe("3-layer validator", () => {
       "",
       "- brand: Unique to product",
     ].join("\n");
-    await writeFile(path.join(root, "uiux", "33_exploration_rubric.md"), content, "utf-8");
+    await writeFile(path.join(root, "uiux", "40_screen_contracts.md"), content, "utf-8");
 
     const issues = await validateThreeLayerModel(root, defaultConfig);
 

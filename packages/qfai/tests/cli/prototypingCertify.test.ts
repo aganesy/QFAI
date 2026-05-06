@@ -234,6 +234,30 @@ describe("qfai prototyping certify (generate)", () => {
     expect(exit).toBe(2);
   });
 
+  it("exits 2 when prototyping.json#iterations[] is empty", async () => {
+    const root = await newTempDir();
+    await seedMinimalProject(root, { specMarker: true });
+    await seedAllGatesPass(root);
+    // Override prototyping.json to have an empty iterations[] while
+    // every other gate stays passing.
+    await writeFile(
+      path.join(root, ".qfai/evidence/prototyping/prototyping.json"),
+      JSON.stringify({
+        mode: { effective: "standard", source: "explicit-request", rationale: "test" },
+        surface: "web",
+        runId: "run-test-2026",
+        designMd: { path: "DESIGN.md", sha256: hashDesignMd(CERT_DESIGN_MD) },
+        reviewerGate: {
+          result: "PASS",
+          signoff: { reviewerId: "test-reviewer", timestamp: "2026-04-27T00:00:00Z" },
+        },
+        iterations: [],
+      }),
+      "utf-8",
+    );
+    expect(await runPrototypingCertify({ root, check: false })).toBe(2);
+  });
+
   it("exits 2 when reviewerGate is not PASS", async () => {
     const root = await newTempDir();
     await seedMinimalProject(root);

@@ -36,11 +36,14 @@ const LEGACY_FOUR_AXIS_SECTIONS = [
 
 // Brand-level inputs (product intent / brand signals / anti-goals / reference
 // pool) now live in root DESIGN.md and are validated separately via
-// designContractReadiness. Only screen-level UX sidecars remain here.
+// designContractReadiness. The legacy `33_exploration_rubric.md` and
+// `34_evaluator_calibration.md` sidecars were removed when DESIGN.md
+// became the brand SSOT and the evaluator axes were fixed in
+// `core/prototyping/evaluatorReview.ts` (`ORDINAL_AXES`); they are no
+// longer shipped by `qfai init`. Only screen-level UX sidecars remain
+// in the required family.
 const CANONICAL_REQUIRED_SIDECAR_FILES = [
   "00_index.md",
-  "33_exploration_rubric.md",
-  "34_evaluator_calibration.md",
   "40_screen_contracts.md",
   "50_review_input_bundle.md",
 ] as const;

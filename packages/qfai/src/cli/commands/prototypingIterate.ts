@@ -30,13 +30,14 @@
  * (Tailwind config shape).
  */
 
-import { mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, readdir, readFile, rm, stat, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import { error, info } from "../lib/logger.js";
 import { loadConfig } from "../../core/config.js";
 import { hashDesignMd, parseDesignMd, type DesignMd } from "../../core/design/designMd.js";
 import { readDesignMdLockSha } from "../../core/design/designMdLock.js";
+import { COMPLETION_CERTIFICATE_REL_PATH } from "../../core/prototyping/certificate.js";
 import { PROTOTYPING_EVIDENCE_REL, PROTOTYPING_JSON_REL } from "../../core/prototyping/paths.js";
 import { resolvePrimaryPrototypingSpec } from "../../core/prototyping/specResolution.js";
 import {
@@ -238,6 +239,16 @@ export async function runPrototypingIterate(
     // but deleting the on-disk dirs guarantees no resolver can stumble
     // into them.
     await deleteStaleIterDirs(path.join(options.root, PROTOTYPING_EVIDENCE_REL));
+    // Stale `completion-certificate.json` from a prior loop will be
+    // overwritten on the next `qfai prototyping certify` run (the new
+    // runId / digests will not match the old cert), but until then a
+    // validator or AI consumer that reads the cert observes an
+    // inconsistent state ("completion claimed" while iterations[] is
+    // empty). Deleting the cert at cycle 0 keeps QFAI-PROT-335 / 336
+    // (completion-claim integrity) honest across the reset window.
+    await deleteStaleCompletionCertificate(
+      path.join(options.root, COMPLETION_CERTIFICATE_REL_PATH),
+    );
   }
 
   // 5) Assign paths and write iterate-plan.json.
@@ -407,11 +418,56 @@ async function deleteStaleIterDirs(evidenceRootAbs: string): Promise<void> {
   }
   for (const name of entries) {
     if (!/^iter-\d{2,}$/.test(name)) continue;
+    const abs = path.join(evidenceRootAbs, name);
+    // Restrict the cleanup to actual directories: a stray `iter-NN`
+    // file (e.g. an operator artifact saved without an extension)
+    // would otherwise be deleted by `rm({recursive,force})` despite
+    // the function name promising dir-only. Skipping non-dirs is
+    // safe; the resolver does not look at non-dir entries either.
+    let isDir: boolean;
     try {
-      await rm(path.join(evidenceRootAbs, name), { recursive: true, force: true });
+      const s = await stat(abs);
+      isDir = s.isDirectory();
     } catch {
-      // best-effort cleanup; leave for the operator to inspect
+      continue;
     }
+    if (!isDir) continue;
+    try {
+      await rm(abs, { recursive: true, force: true });
+    } catch (err) {
+      // Best-effort cleanup. Common Windows cause: a subfile holds an
+      // OS lock (anti-virus, editor, capture tooling). Surface a hint
+      // so the operator can notice the stale dir; certify is anchored
+      // to prototyping.json#iterations[] so this is non-blocking, but
+      // silent failure leaves stale evidence on disk.
+      const reason = err instanceof Error ? err.message : String(err);
+      info(
+        `qfai prototyping iterate: could not remove stale iter dir ${abs} (${reason}). ` +
+          "certify is anchored to prototyping.json#iterations[], so this is non-blocking; " +
+          "remove the dir manually if it survives.",
+      );
+    }
+  }
+}
+
+async function deleteStaleCompletionCertificate(certAbs: string): Promise<void> {
+  try {
+    await unlink(certAbs);
+  } catch (err) {
+    if (
+      err !== null &&
+      typeof err === "object" &&
+      "code" in err &&
+      (err as { code?: unknown }).code === "ENOENT"
+    ) {
+      return; // not present; nothing to clear
+    }
+    const reason = err instanceof Error ? err.message : String(err);
+    info(
+      `qfai prototyping iterate: could not remove stale completion-certificate.json (${reason}). ` +
+        "the next `qfai prototyping certify` run will overwrite it; consumers reading the cert " +
+        "during the reset window may observe the prior loop's signoff.",
+    );
   }
 }
 
