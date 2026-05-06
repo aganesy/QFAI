@@ -111,6 +111,15 @@ function collectAllowedColors(dm: DesignMd): Set<string> {
 // Two contexts cover authored CSS:
 //   1. `<style>...</style>` blocks
 //   2. inline `style="..."` / `style='...'` attribute values
+//
+// Known limitations of the regex approach (deliberate KISS choice;
+// real prototype HTML rarely hits these and the cost is a precise
+// false-positive only, not a missed violation):
+//   * Literal `<style>` text inside HTML comments or
+//     `<script>` / `<pre><code>` content is treated as a real
+//     `<style>` block. A tutorial doc with `<!-- <style>...</style> -->`
+//     surfaces those colors. If this becomes load-bearing, swap in
+//     a parse5-class HTML parser.
 const STYLE_BLOCK_RE = /<style\b[^>]*>([\s\S]*?)<\/style\s*>/gi;
 const INLINE_STYLE_RE = /\sstyle\s*=\s*(?:"([^"]*)"|'([^']*)')/gi;
 
@@ -132,6 +141,14 @@ function scanColors(html: string, dm: DesignMd, out: DesignMdViolation[]): void 
   // `<a href="#deadbeef">` and SVG `url(#abc)` references are
   // structurally not color declarations and must not surface as
   // DESIGN.md violations.
+  //
+  // Note the asymmetry with `scanFonts` / `scanRadius` / `scanShadow`:
+  // those three regexes are anchored on a CSS property prefix
+  // (`font-family:`, `border-radius:`, `box-shadow:`), so they
+  // self-restrict to declarations no matter where they appear.
+  // Hex / rgb / hsl literals don't have such an anchor — they look
+  // like color declarations only when they sit inside a CSS context,
+  // hence the explicit `extractCssRegions` step here.
   const cssText = extractCssRegions(html);
   for (const match of cssText.matchAll(HEX_RE)) {
     const literal = match[0].toLowerCase();

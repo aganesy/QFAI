@@ -381,7 +381,7 @@ async function validatePrototypeHandoff(root: string, config: QfaiConfig): Promi
     issues.push(
       issue(
         "QFAI-DCON-013",
-        `prototype-handoff.yaml field 'finalIterIndex' must be a non-negative integer (got ${JSON.stringify(finalIterIndex)}).`,
+        `prototype-handoff.yaml field 'finalIterIndex' must be a non-negative integer (got ${describeValueForDiagnostic(finalIterIndex)}).`,
         "error",
         filePathRel,
         "designContractReadiness.prototypeHandoffField",
@@ -441,6 +441,26 @@ async function validatePrototypeHandoff(root: string, config: QfaiConfig): Promi
     }
   }
   return issues;
+}
+
+/**
+ * Format a value for inclusion in a diagnostic message. Primitives
+ * (`null`, `number`, `string`, `boolean`) are JSON-serialized for
+ * literal preservation; non-primitives (arrays / objects) collapse to
+ * `<typeof>` so a misnested YAML directive like `{ foo: 1 }` does not
+ * spew an opaque JSON blob into the operator-facing error.
+ */
+function describeValueForDiagnostic(value: unknown): string {
+  if (
+    value === null ||
+    typeof value === "number" ||
+    typeof value === "string" ||
+    typeof value === "boolean"
+  ) {
+    return JSON.stringify(value);
+  }
+  if (Array.isArray(value)) return "<array>";
+  return `<${typeof value}>`;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
