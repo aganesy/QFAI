@@ -463,7 +463,15 @@ async function findIterationHtmlFiles(
  * `evidenceRoot` are not flagged here — those are caught separately
  * by the digest layer if relevant).
  */
-async function findStaleIterDirs(evidenceRoot: string, iterationCount: number): Promise<string[]> {
+/**
+ * @internal Exported for direct unit-testing of the symmetric
+ * fail-closed posture (codex 8zqb regression sentinel) — not part
+ * of the package's public surface.
+ */
+export async function findStaleIterDirs(
+  evidenceRoot: string,
+  iterationCount: number,
+): Promise<string[]> {
   let names: string[];
   try {
     names = await readdir(evidenceRoot);

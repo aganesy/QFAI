@@ -675,4 +675,67 @@ describe("findDesignMdViolations — Tailwind arbitrary-value classes (codex 8th
     expect(out.some((v) => v.kind === "radius" && v.found === "13px")).toBe(true);
     expect(out.some((v) => v.kind === "shadow" && v.found === "0 0 99px red")).toBe(true);
   });
+
+  // codex 9Ifs: CSS Color Module L4 space-separated function syntax
+  it("bg-[rgb(255_0_0)] (space-separated rgb after underscore decode) is flagged", () => {
+    // Pre-fix the per-token whitespace split shredded `rgb(255 0 0)` into
+    // `["rgb(255", "0", "0)"]`, none of which match the rgba?\(...\)
+    // regex (no closing paren in token 0, no opening paren in token 2).
+    // Post-fix the per-token loop runs first; if it pushes nothing, a
+    // whole-value fallback runs and catches the spaced-function syntax.
+    const html = '<div class="bg-[rgb(255_0_0)]">x</div>';
+    const out = findDesignMdViolations(html, sampleDesignMd());
+    expect(out.some((v) => v.kind === "color" && v.found === "rgb(255 0 0)")).toBe(true);
+  });
+
+  it("bg-[hsl(0_100%_50%)] (space-separated hsl after underscore decode) is flagged", () => {
+    const html = '<div class="bg-[hsl(0_100%_50%)]">x</div>';
+    const out = findDesignMdViolations(html, sampleDesignMd());
+    expect(out.some((v) => v.kind === "color" && v.found === "hsl(0 100% 50%)")).toBe(true);
+  });
+
+  it("border-[2px_solid_#ff0000] still flags only the color token (not the whole shorthand)", () => {
+    // Sentinel: per-token first means the violation `found` field
+    // carries `#ff0000` exactly, not the whole `2px solid #ff0000`
+    // shorthand. A future revert to whole-value-first would push the
+    // shorthand string as the violation token and fail this assertion.
+    const html = '<div class="border-[2px_solid_#ff0000]">x</div>';
+    const out = findDesignMdViolations(html, sampleDesignMd());
+    const colorHits = out.filter((v) => v.kind === "color");
+    expect(colorHits.some((v) => v.found === "#ff0000")).toBe(true);
+    expect(colorHits.some((v) => v.found === "2px solid #ff0000")).toBe(false);
+  });
+});
+
+// codex 9Ify: Tailwind `font-[X]` overload disambiguation
+describe("findDesignMdViolations — Tailwind font-[X] disambiguation (codex 9Ify)", () => {
+  it("font-[600] (numeric weight) is silently skipped (NOT a font-family violation)", () => {
+    const html = '<div class="font-[600]">x</div>';
+    const out = findDesignMdViolations(html, sampleDesignMd());
+    expect(out.filter((v) => v.kind === "font")).toEqual([]);
+  });
+
+  it("font-[bold] (named-weight keyword) is silently skipped", () => {
+    const html = '<div class="font-[bold]">x</div>';
+    const out = findDesignMdViolations(html, sampleDesignMd());
+    expect(out.filter((v) => v.kind === "font")).toEqual([]);
+  });
+
+  it("font-[Comic_Sans_MS] (off-token font-family after underscore decode) is flagged", () => {
+    const html = `<div class="font-['Comic_Sans_MS']">x</div>`;
+    const out = findDesignMdViolations(html, sampleDesignMd());
+    expect(out.some((v) => v.kind === "font" && v.found === "Comic Sans MS")).toBe(true);
+  });
+
+  it("font-[Inter] (DESIGN.md-token font-family) does NOT produce a violation", () => {
+    const html = '<div class="font-[Inter]">x</div>';
+    const out = findDesignMdViolations(html, sampleDesignMd());
+    expect(out.filter((v) => v.kind === "font")).toEqual([]);
+  });
+
+  it("font-[Cursive] (off-token, non-weight) is flagged", () => {
+    const html = '<div class="font-[Cursive]">x</div>';
+    const out = findDesignMdViolations(html, sampleDesignMd());
+    expect(out.some((v) => v.kind === "font" && v.found === "Cursive")).toBe(true);
+  });
 });

@@ -568,6 +568,30 @@ const TAILWIND_RADIUS_PREFIXES: ReadonlySet<string> = new Set([
 
 const TAILWIND_SHADOW_PREFIXES: ReadonlySet<string> = new Set(["shadow", "drop-shadow"]);
 
+const TAILWIND_FONT_PREFIXES: ReadonlySet<string> = new Set(["font"]);
+
+// Tailwind `font-[N]` is overloaded for font-family vs font-weight.
+// Numeric (100..900 in Tailwind's stepped form) and the named-weight
+// keywords below are weight tokens — NOT font-family drift. Anything
+// else routed through `font-[X]` is treated as a font-family
+// candidate and compared against DESIGN.md's family stacks. codex 9Ify.
+const TAILWIND_FONT_WEIGHT_KEYWORDS: ReadonlySet<string> = new Set([
+  "thin",
+  "extralight",
+  "light",
+  "normal",
+  "medium",
+  "semibold",
+  "bold",
+  "extrabold",
+  "black",
+]);
+
+function isFontWeightArbitrary(value: string): boolean {
+  if (/^\d+$/.test(value)) return true;
+  return TAILWIND_FONT_WEIGHT_KEYWORDS.has(value.toLowerCase());
+}
+
 function pushIfColorDrift(
   token: string,
   allowed: ReadonlySet<string>,
@@ -592,23 +616,56 @@ function scanTailwindArbitraryColor(
   allowed: ReadonlySet<string>,
   out: DesignMdViolation[],
 ): void {
-  // For `text-` the bracket content can be either a color (`text-[#ff0000]`)
-  // or a non-color size (`text-[14px]`); the per-token regex test below
-  // only fires on tokens shaped like a color literal, so a pure
-  // dimension value is silently skipped (correct for our scope).
-  // For `bg-` / `border-` etc., multi-token shorthand values like
-  // `border-[2px_solid_#ff0000]` are split on whitespace and only the
-  // color-shaped tokens are checked.
+  // Per-token first: multi-token shorthand values like
+  // `border-[2px_solid_#ff0000]` decode to `border-[2px solid #ff0000]`;
+  // split on whitespace and check each token individually so the
+  // color drift on `#ff0000` surfaces *as `#ff0000`* (not as the
+  // whole-string concatenation, which would happen if HEX_RE_TEST ran
+  // against the unsplit value and pushed the entire `2px solid
+  // #ff0000` as the violation token). For `text-`, the bracket
+  // content can be either a color (`text-[#ff0000]`) or a non-color
+  // size (`text-[14px]`); the per-token regex test only fires on
+  // tokens shaped like a color literal, so a pure dimension value
+  // is silently skipped (correct for our scope).
+  let perTokenMatched = false;
   for (const token of value.split(/\s+/)) {
     if (token.length === 0) continue;
-    pushIfColorDrift(token, allowed, out);
+    if (pushIfColorDrift(token, allowed, out)) {
+      perTokenMatched = true;
+    }
   }
+  if (perTokenMatched) return;
+  // Whole-value fallback: catches CSS Color Module L4 space-separated
+  // function syntax — `rgb(255 0 0)` / `hsl(0 100% 50%)`, authored
+  // by Tailwind as `bg-[rgb(255_0_0)]` / `bg-[hsl(0_100%_50%)]` and
+  // decoded to space-separated form before this scanner runs. The
+  // whitespace-split above shreds those into half-paren tokens
+  // (`rgb(255`, `0`, `0)`) that no color regex matches, so without
+  // this fallback the drift would slip through. Per-token first +
+  // whole-value fallback also avoids double-counting: the fallback
+  // only runs when per-token produced zero matches. codex 9Ifs.
+  pushIfColorDrift(value, allowed, out);
 }
 
+// Known limitation (deliberate KISS choice; matches the pre-existing
+// posture of STYLE_BLOCK_RE in `extractCssRegions`): `<pre>` /
+// `<code>` blocks in tutorial / docs prototypes that author literal
+// HTML samples (e.g. `<div class="bg-[#abcdef]">`) surface their
+// classes here as real class attrs and produce DESIGN.md-drift
+// findings. The cost is a precise false positive only, never a
+// missed violation — and the runtime certify gate's contract is
+// "tokens that the rendered DOM uses must come from DESIGN.md", so
+// the tutorial-content edge case is rare in practice. Swap in a
+// parse5-class HTML parser if it becomes load-bearing. codex 9If2.
 function scanTailwindArbitrary(html: string, dm: DesignMd, out: DesignMdViolation[]): void {
   const allowedColors = collectAllowedColors(dm);
   const allowedRadii = new Set<string>(Object.values(dm.visual.radius));
   const allowedShadows = new Set<string>(Object.values(dm.visual.shadow));
+  const fontStacks: string[] = [
+    dm.visual.typography.family_sans,
+    dm.visual.typography.family_display,
+    dm.visual.typography.family_mono,
+  ];
 
   for (const classMatch of html.matchAll(CLASS_ATTR_RE)) {
     const classes = classMatch[1] ?? classMatch[2] ?? "";
@@ -639,13 +696,23 @@ function scanTailwindArbitrary(html: string, dm: DesignMd, out: DesignMdViolatio
         out.push({ kind: "shadow", found: value });
         continue;
       }
-      // `font-[X]` is intentionally NOT scanned here: Tailwind
-      // overloads the `font-` prefix for both font-family
-      // (`font-[Inter]`) and font-weight (`font-[600]`). Without a
-      // weight-vs-family disambiguation pass, every numeric weight
-      // would surface as a font-family violation. font-family drift
-      // through `<style>` blocks / `style="..."` attrs is still
-      // caught by `scanFonts` independently.
+      if (TAILWIND_FONT_PREFIXES.has(prefix)) {
+        // Tailwind overloads `font-[X]` for both font-family
+        // (`font-[Inter]`) and font-weight (`font-[600]`).
+        // Disambiguate by value shape: numeric (100..900 stepped) or
+        // a known font-weight keyword → weight (silently skipped — out
+        // of scope); anything else is treated as a font-family
+        // candidate and compared against DESIGN.md's family stacks.
+        // codex 9Ify.
+        if (isFontWeightArbitrary(value)) continue;
+        if (SAFE_LITERALS.has(value.toLowerCase())) continue;
+        const stripped = stripQuotes(value).trim();
+        if (stripped.length === 0) continue;
+        if (!fontMatches(stripped, fontStacks)) {
+          out.push({ kind: "font", found: stripped });
+        }
+        continue;
+      }
     }
   }
 }

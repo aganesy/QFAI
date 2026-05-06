@@ -399,11 +399,43 @@ function buildDesignMd(raw: unknown): BuildResult {
     });
     if (accessibilityError) return { error: accessibilityError };
     const acc: NonNullable<DesignMd["accessibility"]> = {};
-    if (typeof raw.accessibility.contrast_ratio_min === "number") {
-      acc.contrast_ratio_min = raw.accessibility.contrast_ratio_min;
+    // Strict-parse: reject present-but-wrong-type values the same way
+    // audience arrays / typography scale+weight / spacing scale are
+    // rejected. Pre-fix the type-mismatch branches silently dropped
+    // the authored value, so e.g. `contrast_ratio_min: "4.5"` (string
+    // instead of number) or `motion: false` (boolean instead of
+    // string) hashed into DESIGN.md.lock while iterate / certify saw
+    // a clean DesignMd with the accessibility constraint missing.
+    // codex 9KB8.
+    if ("contrast_ratio_min" in raw.accessibility) {
+      const v = raw.accessibility.contrast_ratio_min;
+      if (v !== undefined) {
+        if (typeof v !== "number" || !Number.isFinite(v)) {
+          return {
+            error: {
+              path: "accessibility.contrast_ratio_min",
+              code: "invalid-type",
+              message: `'accessibility.contrast_ratio_min' must be a finite number (got ${describeValueShape(v)}).`,
+            },
+          };
+        }
+        acc.contrast_ratio_min = v;
+      }
     }
-    if (typeof raw.accessibility.motion === "string") {
-      acc.motion = raw.accessibility.motion;
+    if ("motion" in raw.accessibility) {
+      const v = raw.accessibility.motion;
+      if (v !== undefined) {
+        if (typeof v !== "string") {
+          return {
+            error: {
+              path: "accessibility.motion",
+              code: "invalid-type",
+              message: `'accessibility.motion' must be a string (got ${describeValueShape(v)}).`,
+            },
+          };
+        }
+        acc.motion = v;
+      }
     }
     data.accessibility = acc;
   }

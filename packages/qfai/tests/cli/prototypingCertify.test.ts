@@ -9,6 +9,7 @@ import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
+  findStaleIterDirs,
   runPrototypingCertify,
   runPrototypingShowSpec,
 } from "../../src/cli/commands/prototypingCertify.js";
@@ -610,6 +611,31 @@ describe("qfai prototyping certify (TC-3.6.x DESIGN.md gate)", () => {
     } finally {
       errorSpy.mockRestore();
     }
+  });
+
+  it("findStaleIterDirs propagates non-ENOENT readdir errors (codex 9KyS regression sentinel)", async () => {
+    // Symmetric pin with the lock-unreadable test: verify the
+    // fail-closed posture in findStaleIterDirs's readdir catch
+    // (`if (isEnoent(err)) return []; throw err;`). A future revert
+    // to a bare `catch { return []; }` would let a permission flip
+    // silently bypass the stale-iter guard — the same vector the
+    // round-9 lock fix closed. Trigger a non-ENOENT readdir error
+    // portably by passing a path that is a file, not a directory:
+    // Node raises ENOTDIR which is non-ENOENT and must propagate.
+    const root = await newTempDir();
+    const filePath = path.join(root, "not-a-dir");
+    await writeFile(filePath, "x", "utf-8");
+    await expect(findStaleIterDirs(filePath, 0)).rejects.toThrow();
+  });
+
+  it("findStaleIterDirs returns [] on ENOENT (legitimate fresh-project case)", async () => {
+    // Companion test: confirm the ENOENT branch still returns []
+    // (legitimate absence on a fresh project that has not yet
+    // captured an iteration). Without this, a future tightening
+    // could over-rotate to a hard error on every fs miss.
+    const root = await newTempDir();
+    const missing = path.join(root, "does-not-exist");
+    await expect(findStaleIterDirs(missing, 0)).resolves.toEqual([]);
   });
 
   it("anchors final HTML scan to prototyping.json#iterations[] (no stale dirs)", async () => {

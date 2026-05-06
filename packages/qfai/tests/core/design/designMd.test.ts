@@ -329,6 +329,49 @@ describe("parseDesignMd (TC-1.1.x)", () => {
     expect(result.error.path).toBe("accessibility.focus_ring");
   });
 
+  it("accessibility.contrast_ratio_min as a string literal is rejected at parse-time (codex 9KB8)", () => {
+    // Pre-fix the type-mismatch branch silently dropped the authored
+    // value, so `contrast_ratio_min: "4.5"` hashed into the lock while
+    // iterate / certify saw a clean DesignMd with the constraint
+    // missing. Post-fix surface as invalid-type.
+    const lastShadowLine = '    lg: "0 12px 24px rgba(15,23,42,0.10)"';
+    const text = VALID_FRONT_MATTER.replace(
+      lastShadowLine,
+      `${lastShadowLine}\naccessibility:\n  contrast_ratio_min: "4.5"`,
+    );
+    const result = parseDesignMd(text);
+    expect("error" in result).toBe(true);
+    if (!("error" in result)) return;
+    expect(result.error.code).toBe("invalid-type");
+    expect(result.error.path).toBe("accessibility.contrast_ratio_min");
+  });
+
+  it("accessibility.motion as a boolean literal is rejected at parse-time (codex 9KB8)", () => {
+    const lastShadowLine = '    lg: "0 12px 24px rgba(15,23,42,0.10)"';
+    const text = VALID_FRONT_MATTER.replace(
+      lastShadowLine,
+      `${lastShadowLine}\naccessibility:\n  motion: false`,
+    );
+    const result = parseDesignMd(text);
+    expect("error" in result).toBe(true);
+    if (!("error" in result)) return;
+    expect(result.error.code).toBe("invalid-type");
+    expect(result.error.path).toBe("accessibility.motion");
+  });
+
+  it("accessibility with valid types is accepted (positive)", () => {
+    const lastShadowLine = '    lg: "0 12px 24px rgba(15,23,42,0.10)"';
+    const text = VALID_FRONT_MATTER.replace(
+      lastShadowLine,
+      `${lastShadowLine}\naccessibility:\n  contrast_ratio_min: 4.5\n  motion: "reduce"`,
+    );
+    const result = parseDesignMd(text);
+    expect("error" in result).toBe(false);
+    if ("error" in result) return;
+    expect(result.data.accessibility?.contrast_ratio_min).toBe(4.5);
+    expect(result.data.accessibility?.motion).toBe("reduce");
+  });
+
   it("TC-1.1.21: unknown visual.spacing key (gutter) rejected with unknown-key", () => {
     const lastShadowLine = '    lg: "0 12px 24px rgba(15,23,42,0.10)"';
     const text = VALID_FRONT_MATTER.replace(
