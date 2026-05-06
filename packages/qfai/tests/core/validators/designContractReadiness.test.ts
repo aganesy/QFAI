@@ -336,6 +336,47 @@ describe("validateSddDesignContractReadiness (TC-3.8.x)", () => {
     ).toBe(true);
   });
 
+  it("design-system.yaml mirror with optional visual.spacing also passes (spacing not required)", async () => {
+    const root = await newTempDir();
+    await seedUiBearingProject(root);
+    await seedDesignMdAndLock(root);
+    const designDir = path.join(root, ".qfai/contracts/design");
+    await writeFile(
+      path.join(designDir, "design-system.yaml"),
+      [
+        "visual:",
+        "  colors:",
+        '    primary: "#1F2937"',
+        "  typography:",
+        '    family_sans: "Inter, system-ui, sans-serif"',
+        "  spacing:",
+        '    base: "8px"',
+        "  radius:",
+        '    sm: "0.25rem"',
+        "  shadow:",
+        '    sm: "0 1px 2px rgba(15,23,42,0.05)"',
+        "",
+      ].join("\n"),
+      "utf-8",
+    );
+    await writeFile(
+      path.join(designDir, "prototype-handoff.yaml"),
+      [
+        "finalIterIndex: 1",
+        'finalArtifact: ".qfai/prototypes/final/index.html"',
+        'designMdPath: "DESIGN.md"',
+        `designMdSha256: "${hashDesignMd(VALID_DESIGN_MD)}"`,
+        'designSystemMirror: ".qfai/contracts/design/design-system.yaml"',
+        'implementationNotes: "test"',
+        "",
+      ].join("\n"),
+      "utf-8",
+    );
+    const issues = await validatePrototypingDesignContractReadiness(root, defaultConfig);
+    const dcon005 = issues.filter((i) => i.code === "QFAI-DCON-005");
+    expect(dcon005).toEqual([]);
+  });
+
   it("design-system.yaml as DESIGN.md mirror passes validation (post-1.8.9 contract)", async () => {
     const root = await newTempDir();
     await seedUiBearingProject(root);

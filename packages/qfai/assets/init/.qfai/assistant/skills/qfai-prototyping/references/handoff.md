@@ -25,12 +25,14 @@ removed because it allowed drift from the SSOT.
 
 The mirror copies these keys verbatim from `DESIGN.md`:
 
-- `visual.colors` (all 12 keys)
-- `visual.typography.family_sans` / `family_display` / `family_mono`
-- `visual.typography.scale` and `weight`
-- `visual.spacing`
-- `visual.radius` (all 4 keys)
-- `visual.shadow` (all 3 keys)
+- `visual.colors` (all 12 keys, required)
+- `visual.typography.family_sans` / `family_display` / `family_mono` (required)
+- `visual.typography.scale` and `weight` (optional in `DESIGN.md`,
+  copied verbatim when present)
+- `visual.spacing` (optional in `DESIGN.md`, copied verbatim when
+  present)
+- `visual.radius` (all 4 keys, required)
+- `visual.shadow` (all 3 keys, required)
 
 The mirror also records `source: DESIGN.md` and the
 `DESIGN.md.lock.yaml` sha256 so downstream tooling can detect drift.
