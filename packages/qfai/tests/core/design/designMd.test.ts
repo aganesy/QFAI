@@ -356,6 +356,66 @@ describe("parseDesignMd (TC-1.1.x)", () => {
     expect(result.error.path).toBe("visual.shadow.gradients");
   });
 
+  it("TC-1.1.25: unknown visual.typography.scale key (hero) rejected with unknown-key", () => {
+    const text = VALID_FRONT_MATTER.replace(
+      '    family_mono:    "JetBrains Mono, ui-monospace, monospace"',
+      '    family_mono:    "JetBrains Mono, ui-monospace, monospace"\n    scale:\n      base: "1rem"\n      hero: "4rem"',
+    );
+    const result = parseDesignMd(text);
+    expect("error" in result).toBe(true);
+    if (!("error" in result)) return;
+    expect(result.error.code).toBe("unknown-key");
+    expect(result.error.path).toBe("visual.typography.scale.hero");
+  });
+
+  it("TC-1.1.26: unknown visual.typography.weight key (black) rejected with unknown-key", () => {
+    const text = VALID_FRONT_MATTER.replace(
+      '    family_mono:    "JetBrains Mono, ui-monospace, monospace"',
+      '    family_mono:    "JetBrains Mono, ui-monospace, monospace"\n    weight:\n      regular: 400\n      black: 900',
+    );
+    const result = parseDesignMd(text);
+    expect("error" in result).toBe(true);
+    if (!("error" in result)) return;
+    expect(result.error.code).toBe("unknown-key");
+    expect(result.error.path).toBe("visual.typography.weight.black");
+  });
+
+  it("TC-1.1.27: canonical visual.typography.scale keys (xs..3xl) are accepted", () => {
+    const text = VALID_FRONT_MATTER.replace(
+      '    family_mono:    "JetBrains Mono, ui-monospace, monospace"',
+      `    family_mono:    "JetBrains Mono, ui-monospace, monospace"
+    scale:
+      xs: "0.75rem"
+      sm: "0.875rem"
+      base: "1rem"
+      lg: "1.125rem"
+      xl: "1.25rem"
+      2xl: "1.5rem"
+      3xl: "1.875rem"
+    weight:
+      regular: 400
+      medium: 500
+      bold: 700`,
+    );
+    const result = parseDesignMd(text);
+    expect("error" in result).toBe(false);
+    if ("error" in result) return;
+    expect(result.data.visual.typography.scale).toEqual({
+      xs: "0.75rem",
+      sm: "0.875rem",
+      base: "1rem",
+      lg: "1.125rem",
+      xl: "1.25rem",
+      "2xl": "1.5rem",
+      "3xl": "1.875rem",
+    });
+    expect(result.data.visual.typography.weight).toEqual({
+      regular: 400,
+      medium: 500,
+      bold: 700,
+    });
+  });
+
   it("TC-1.1.21: unknown visual.spacing key (gutter) rejected with unknown-key", () => {
     const lastShadowLine = '    lg: "0 12px 24px rgba(15,23,42,0.10)"';
     const text = VALID_FRONT_MATTER.replace(

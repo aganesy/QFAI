@@ -105,21 +105,47 @@ function collectAllowedColors(dm: DesignMd): Set<string> {
   return allowed;
 }
 
+// Capture CSS-context regions so the color scanner does not flag
+// non-CSS hex / rgb / hsl substrings (e.g. `<a href="#deadbeef">`,
+// `url(#abc)` SVG references, commit-hash prose) as DESIGN.md drift.
+// Two contexts cover authored CSS:
+//   1. `<style>...</style>` blocks
+//   2. inline `style="..."` / `style='...'` attribute values
+const STYLE_BLOCK_RE = /<style\b[^>]*>([\s\S]*?)<\/style\s*>/gi;
+const INLINE_STYLE_RE = /\sstyle\s*=\s*(?:"([^"]*)"|'([^']*)')/gi;
+
+function extractCssRegions(html: string): string {
+  const parts: string[] = [];
+  for (const match of html.matchAll(STYLE_BLOCK_RE)) {
+    if (match[1]) parts.push(match[1]);
+  }
+  for (const match of html.matchAll(INLINE_STYLE_RE)) {
+    const value = match[1] ?? match[2];
+    if (value) parts.push(value);
+  }
+  return parts.join("\n");
+}
+
 function scanColors(html: string, dm: DesignMd, out: DesignMdViolation[]): void {
   const allowed = collectAllowedColors(dm);
-  for (const match of html.matchAll(HEX_RE)) {
+  // Restrict color literal scanning to CSS-context regions only.
+  // `<a href="#deadbeef">` and SVG `url(#abc)` references are
+  // structurally not color declarations and must not surface as
+  // DESIGN.md violations.
+  const cssText = extractCssRegions(html);
+  for (const match of cssText.matchAll(HEX_RE)) {
     const literal = match[0].toLowerCase();
     if (!allowed.has(literal)) {
       out.push({ kind: "color", found: literal });
     }
   }
-  for (const match of html.matchAll(RGB_RE)) {
+  for (const match of cssText.matchAll(RGB_RE)) {
     const literal = match[0].toLowerCase();
     if (!allowed.has(literal)) {
       out.push({ kind: "color", found: literal });
     }
   }
-  for (const match of html.matchAll(HSL_RE)) {
+  for (const match of cssText.matchAll(HSL_RE)) {
     const literal = match[0].toLowerCase();
     if (!allowed.has(literal)) {
       out.push({ kind: "color", found: literal });

@@ -325,8 +325,23 @@ async function validatePrototypeHandoff(root: string, config: QfaiConfig): Promi
   // became the brand SSOT and the loop became single-thread.
   const issues: Issue[] = [];
   const filePathRel = toPosixRelative(root, filePath);
+  // Distinguish missing vs invalid-type/value so the operator gets a
+  // diagnostic that points at the actual problem. `Principle of Least
+  // Astonishment`: an operator who DID write the field should not be
+  // told it is "missing".
+  const hasFinalIterIndex = "finalIterIndex" in parsed.value;
   const finalIterIndex = parsed.value.finalIterIndex;
-  if (
+  if (!hasFinalIterIndex) {
+    issues.push(
+      issue(
+        "QFAI-DCON-013",
+        "prototype-handoff.yaml is missing required field 'finalIterIndex' (expected a non-negative integer).",
+        "error",
+        filePathRel,
+        "designContractReadiness.prototypeHandoffField",
+      ),
+    );
+  } else if (
     typeof finalIterIndex !== "number" ||
     !Number.isInteger(finalIterIndex) ||
     finalIterIndex < 0
@@ -334,7 +349,7 @@ async function validatePrototypeHandoff(root: string, config: QfaiConfig): Promi
     issues.push(
       issue(
         "QFAI-DCON-013",
-        "prototype-handoff.yaml is missing required field 'finalIterIndex' (expected a non-negative integer).",
+        `prototype-handoff.yaml field 'finalIterIndex' must be a non-negative integer (got ${JSON.stringify(finalIterIndex)}).`,
         "error",
         filePathRel,
         "designContractReadiness.prototypeHandoffField",

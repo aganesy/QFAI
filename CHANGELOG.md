@@ -6,6 +6,26 @@
 
 ### Fixed (Breaking — pre-1.8.9 internal pipelines only)
 
+- **DESIGN.md color scanner restricted to CSS contexts**:
+  `findDesignMdViolations` color scan now reads only inline `style="..."`
+  values and `<style>...</style>` block content, not arbitrary HTML
+  text. Previously hex literals in non-CSS contexts (`<a href="#deadbeef">`,
+  SVG `url(#abc)` references, Tailwind `class="bg-[#...]"` arbitrary
+  values, commit-hash prose) were flagged as DESIGN.md drift, making
+  `qfai prototyping certify` reject otherwise-compliant prototypes.
+- **DESIGN.md typography scale/weight allowlist**: `parseDesignMd()`
+  now rejects unknown nested keys under `visual.typography.scale`
+  (allowed: `xs sm base lg xl 2xl 3xl`) and
+  `visual.typography.weight` (allowed: `regular medium bold`),
+  matching the canonical spec. Authored extras (`scale.hero`,
+  `weight.black`) no longer freeze into the lock while iteration /
+  certification ignore them.
+- **prototype-handoff.yaml `finalIterIndex` error message accuracy**:
+  The DCON-013 message now distinguishes missing-field vs invalid-
+  type/value cases. Operators who DID write the field but with the
+  wrong type/range no longer see "missing required field"
+  (Principle of Least Astonishment); they see "must be a non-negative
+  integer (got X)".
 - **`prototyping iterate` rejects out-of-sequence cycles**: Calling
   `qfai prototyping iterate --cycle N` when `iterations.length !== N`
   now exits 2 with a message naming the expected cycle. Previously a

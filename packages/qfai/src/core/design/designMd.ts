@@ -509,10 +509,28 @@ function readVisual(raw: unknown): { value: DesignMd["visual"] } | { error: Pars
       typeof typographyRaw.family_display === "string" ? typographyRaw.family_display : "",
     family_mono: typeof typographyRaw.family_mono === "string" ? typographyRaw.family_mono : "",
   };
+  // The distributed DESIGN.md spec fixes the type-scale and weight
+  // tokens. Allow the canonical names only — anything else is rejected
+  // at parse time so an authored extra (`scale.hero`, `weight.black`)
+  // does not freeze into the lock while iteration / certify ignore it.
+  const TYPOGRAPHY_SCALE_ALLOWED_KEYS = new Set(["xs", "sm", "base", "lg", "xl", "2xl", "3xl"]);
+  const TYPOGRAPHY_WEIGHT_ALLOWED_KEYS = new Set(["regular", "medium", "bold"]);
   if (isRecord(typographyRaw.scale)) {
+    const scaleError = rejectUnknownKeys(typographyRaw.scale, TYPOGRAPHY_SCALE_ALLOWED_KEYS, {
+      kind: "section",
+      name: "visual.typography.scale",
+      path: "visual.typography.scale",
+    });
+    if (scaleError) return { error: scaleError };
     typography.scale = readStringRecord(typographyRaw.scale);
   }
   if (isRecord(typographyRaw.weight)) {
+    const weightError = rejectUnknownKeys(typographyRaw.weight, TYPOGRAPHY_WEIGHT_ALLOWED_KEYS, {
+      kind: "section",
+      name: "visual.typography.weight",
+      path: "visual.typography.weight",
+    });
+    if (weightError) return { error: weightError };
     const weights: Record<string, number> = {};
     for (const [k, v] of Object.entries(typographyRaw.weight)) {
       if (typeof v === "number") weights[k] = v;

@@ -99,6 +99,45 @@ describe("findDesignMdViolations — color (TC-3.2.1..9)", () => {
     expect(findDesignMdViolations(html, sampleDesignMd())).toEqual([]);
   });
 
+  it("href fragment that looks like a hex color (e.g. #deadbeef) is NOT flagged as a color violation", () => {
+    // Anchor links / SVG fragment refs are structurally not color
+    // declarations. Without the CSS-context restriction, the scanner
+    // would have surfaced `#deadbeef` as drift even though it is an
+    // anchor target.
+    const html = '<a href="#deadbeef">link</a><svg><use href="#abcdef"/></svg>';
+    const out = findDesignMdViolations(html, sampleDesignMd());
+    expect(out.filter((v) => v.kind === "color")).toEqual([]);
+  });
+
+  it("SVG url(#id) reference is NOT flagged as a color violation", () => {
+    const html = '<svg><circle fill="url(#myGradient)"/></svg>';
+    const out = findDesignMdViolations(html, sampleDesignMd());
+    expect(out.filter((v) => v.kind === "color")).toEqual([]);
+  });
+
+  it("Tailwind arbitrary-value class with a hex literal is NOT flagged (not a CSS declaration)", () => {
+    // `class="bg-[#abcdef]"` is a Tailwind arbitrary value — it is
+    // structurally a class name, not a CSS declaration. Whether the
+    // hex is allowed or not is moot at this scan layer; the runtime
+    // CSS Tailwind generates can still be scanned via inline style or
+    // <style> blocks.
+    const html = '<div class="bg-[#abcdef]"></div>';
+    const out = findDesignMdViolations(html, sampleDesignMd());
+    expect(out.filter((v) => v.kind === "color")).toEqual([]);
+  });
+
+  it("color literal inside an inline style attribute IS flagged when not in DESIGN.md", () => {
+    const html = '<div style="color:#abcdef"></div>';
+    const out = findDesignMdViolations(html, sampleDesignMd());
+    expect(out).toEqual([{ kind: "color", found: "#abcdef" }]);
+  });
+
+  it("color literal inside a <style> block IS flagged when not in DESIGN.md", () => {
+    const html = "<style>p { color: #abcdef; }</style>";
+    const out = findDesignMdViolations(html, sampleDesignMd());
+    expect(out).toEqual([{ kind: "color", found: "#abcdef" }]);
+  });
+
   // TC-3.2.9
   it("multiple unknown colors all returned (no short-circuit)", () => {
     const html = `

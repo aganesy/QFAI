@@ -245,6 +245,35 @@ describe("validateSddDesignContractReadiness (TC-3.8.x)", () => {
     const dcon013 = issues.filter((i) => i.code === "QFAI-DCON-013");
     expect(dcon013.length).toBeGreaterThan(0);
     expect(dcon013[0]?.message).toContain("finalIterIndex");
+    // Distinct phrasing: present-but-invalid is "must be ... (got ...)",
+    // not "missing required field" — Principle of Least Astonishment.
+    expect(dcon013[0]?.message).toContain("must be a non-negative integer");
+    expect(dcon013[0]?.message).not.toContain("is missing required field");
+  });
+
+  it("missing finalIterIndex is rejected with DCON-013 (and uses the missing-field phrasing)", async () => {
+    const root = await newTempDir();
+    await seedUiBearingProject(root);
+    await seedDesignMdAndLock(root);
+    await seedPrototypingDesignYamls(root);
+    // Override with the field absent.
+    await writeFile(
+      path.join(root, ".qfai/contracts/design/prototype-handoff.yaml"),
+      [
+        'finalArtifact: ".qfai/prototypes/final/index.html"',
+        'designMdPath: "DESIGN.md"',
+        `designMdSha256: "${hashDesignMd(VALID_DESIGN_MD)}"`,
+        'designSystemMirror: ".qfai/contracts/design/design-system.yaml"',
+        'implementationNotes: "test"',
+        "",
+      ].join("\n"),
+      "utf-8",
+    );
+    const issues = await validatePrototypingDesignContractReadiness(root, defaultConfig);
+    const dcon013 = issues.filter((i) => i.code === "QFAI-DCON-013");
+    expect(dcon013.some((i) => i.message.includes("missing required field 'finalIterIndex'"))).toBe(
+      true,
+    );
   });
 
   it("negative finalIterIndex is rejected with DCON-013", async () => {
