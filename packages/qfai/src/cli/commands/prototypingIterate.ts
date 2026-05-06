@@ -37,6 +37,7 @@ import { error, info } from "../lib/logger.js";
 import { loadConfig } from "../../core/config.js";
 import { hashDesignMd, parseDesignMd, type DesignMd } from "../../core/design/designMd.js";
 import { readDesignMdLockSha } from "../../core/design/designMdLock.js";
+import { PROTOTYPING_JSON_REL } from "../../core/prototyping/paths.js";
 import { resolvePrimaryPrototypingSpec } from "../../core/prototyping/specResolution.js";
 import {
   MAX_ITERATIONS,
@@ -81,7 +82,6 @@ export type IteratePlan = {
   nextActions: string[];
 };
 
-const PROTOTYPING_JSON_REL = ".qfai/evidence/prototyping/prototyping.json";
 const ROOT_DESIGN_MD_REL = "DESIGN.md";
 
 type DesignMdRecord = {

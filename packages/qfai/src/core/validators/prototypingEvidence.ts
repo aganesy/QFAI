@@ -33,7 +33,9 @@ import {
   isPivotDirective,
 } from "../prototyping/iteration.js";
 
-const PROTO_JSON_REL = ".qfai/evidence/prototyping/prototyping.json";
+import { PROTOTYPING_JSON_REL } from "../prototyping/paths.js";
+
+const PROTO_JSON_REL = PROTOTYPING_JSON_REL;
 const MIN_PROSE_CRITIQUE_WORDS = 200;
 const MAX_PROSE_CRITIQUE_WORDS = 500;
 

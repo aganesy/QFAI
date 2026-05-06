@@ -10,7 +10,7 @@ import { describe, expect, it } from "vitest";
 import { validateDelegationMapIssues } from "../../../src/core/validators/prototyping/delegationMap.js";
 
 describe("validateDelegationMapIssues (v1.8.4 standard adapter)", () => {
-  const path = ".qfai/evidence/prototyping.json";
+  const path = ".qfai/evidence/prototyping/prototyping.json";
 
   it("returns empty when delegationMap is undefined", () => {
     expect(validateDelegationMapIssues(undefined, path)).toEqual([]);

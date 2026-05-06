@@ -71,9 +71,13 @@ function makeConfig(): QfaiConfig {
 }
 
 async function seedPrototypingJson(root: string, body: unknown): Promise<void> {
-  await mkdir(path.join(root, ".qfai/evidence"), { recursive: true });
+  // Seed at the canonical path that iterate / certify use; the
+  // legacy '.qfai/evidence/prototyping.json' was a stale fixture path
+  // that happened to match the validator's broken read in pre-PR
+  // code. The validator now reads PROTOTYPING_JSON_REL.
+  await mkdir(path.join(root, ".qfai/evidence/prototyping"), { recursive: true });
   await writeFile(
-    path.join(root, ".qfai/evidence/prototyping.json"),
+    path.join(root, ".qfai/evidence/prototyping/prototyping.json"),
     JSON.stringify(body, null, 2),
     "utf-8",
   );

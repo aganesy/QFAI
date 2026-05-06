@@ -3,10 +3,11 @@ import path from "node:path";
 import { parse as parseYaml } from "yaml";
 
 import type { QfaiConfig } from "../../config.js";
+import { PROTOTYPING_JSON_REL } from "../../prototyping/paths.js";
 import type { Issue } from "../../types.js";
 import { exists, issue } from "../utils.js";
 
-const PROTO_JSON_REL = ".qfai/evidence/prototyping/prototyping.json";
+const PROTO_JSON_REL = PROTOTYPING_JSON_REL;
 const HANDOFF_REL = ".qfai/contracts/design/prototype-handoff.yaml";
 
 export async function validatePrototypingArtifactRefIntegrity(

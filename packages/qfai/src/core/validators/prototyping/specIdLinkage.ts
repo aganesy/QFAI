@@ -2,11 +2,12 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 
 import { resolvePath, type QfaiConfig } from "../../config.js";
+import { PROTOTYPING_JSON_REL } from "../../prototyping/paths.js";
 import { collectSpecEntries } from "../../specLayout.js";
 import type { Issue } from "../../types.js";
 import { issue } from "../utils.js";
 
-const PROTO_JSON_REL = ".qfai/evidence/prototyping/prototyping.json";
+const PROTO_JSON_REL = PROTOTYPING_JSON_REL;
 
 export async function validateSpecIdLinkage(root: string, config: QfaiConfig): Promise<Issue[]> {
   const doc = await readPrototypingJson(root);

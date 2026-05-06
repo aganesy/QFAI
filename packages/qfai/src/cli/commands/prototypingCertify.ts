@@ -25,6 +25,7 @@ import path from "node:path";
 import { loadConfig } from "../../core/config.js";
 import { hashDesignMd, parseDesignMd } from "../../core/design/designMd.js";
 import { readDesignMdLockSha } from "../../core/design/designMdLock.js";
+import { PROTOTYPING_EVIDENCE_REL, PROTOTYPING_JSON_REL } from "../../core/prototyping/paths.js";
 import {
   buildCompletionCertificate,
   checkCompletionCertificate,
@@ -46,8 +47,6 @@ export type RunPrototypingCertifyOptions = {
 };
 
 const ROOT_DESIGN_MD_REL = "DESIGN.md";
-const PROTOTYPING_EVIDENCE_REL = ".qfai/evidence/prototyping";
-const PROTOTYPING_JSON_REL = ".qfai/evidence/prototyping/prototyping.json";
 
 export async function runPrototypingCertify(
   options: RunPrototypingCertifyOptions,

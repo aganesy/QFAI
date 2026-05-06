@@ -21,6 +21,7 @@ import {
   checkCompletionCertificate,
   loadCompletionCertificate,
 } from "../../prototyping/certificate.js";
+import { PROTOTYPING_JSON_REL } from "../../prototyping/paths.js";
 import type { Issue } from "../../types.js";
 import { issue } from "../utils.js";
 
@@ -30,14 +31,16 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-async function isCompletionClaimed(root: string, config: QfaiConfig): Promise<boolean> {
-  const evidenceRoot = path.join(
-    path.dirname(path.resolve(root, config.paths.specsDir)),
-    "evidence",
-  );
+async function isCompletionClaimed(root: string, _config: QfaiConfig): Promise<boolean> {
+  // Use the canonical prototyping.json path SSOT. Previously this
+  // derived an evidence directory from `config.paths.specsDir`'s parent
+  // and read `.qfai/evidence/prototyping.json` (legacy), which silently
+  // diverged from the iterate / certify path
+  // `.qfai/evidence/prototyping/prototyping.json` and made
+  // QFAI-PROT-335 / 336 dead code in the new UX-loop pipeline.
   let raw: string;
   try {
-    raw = await readFile(path.join(evidenceRoot, "prototyping.json"), "utf-8");
+    raw = await readFile(path.join(root, PROTOTYPING_JSON_REL), "utf-8");
   } catch {
     return false;
   }
