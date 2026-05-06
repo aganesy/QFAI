@@ -1044,6 +1044,48 @@ describe("runPrototypingIterate cycle 0 stale-dir cleanup", () => {
     expect(stillThere).toBe(false);
   });
 
+  it("clears the completion-claim trio (completionClaimed/phase/completionCertificate) on cycle 0 reset (codex AGjFy)", async () => {
+    // Pre-fix writeSeedMetadata deleted the completion-certificate.json
+    // file from disk on cycle 0 but preserved the in-memory completion-
+    // claim fields on prototyping.json. The next validate run would
+    // then read those stale claim fields and surface QFAI-PROT-335
+    // ("certificate missing") on the very first cycle of the fresh
+    // loop until the operator hand-edited the state file.
+    const root = await newTempDir();
+    await seedMinimalProject(root);
+    const evidenceRoot = path.join(root, ".qfai/evidence/prototyping");
+    await mkdir(evidenceRoot, { recursive: true });
+    // Plant a completed-loop snapshot of prototyping.json with the
+    // claim trio set.
+    await writeFile(
+      path.join(evidenceRoot, "prototyping.json"),
+      JSON.stringify({
+        runId: "stale-prior-run",
+        completionClaimed: true,
+        phase: "completed",
+        completionCertificate: {
+          runId: "stale-prior-run",
+          reviewerSignoff: { approved: true },
+        },
+        designMd: { path: "DESIGN.md", sha256: hashDesignMd(CANONICAL_DESIGN_MD) },
+        specsCovered: ["0001"],
+        iterations: [],
+      }),
+      "utf-8",
+    );
+
+    expect(
+      await runPrototypingIterate({ root, cycle: 0, targetUrl: "http://localhost:5173" }),
+    ).toBe(0);
+
+    const after = JSON.parse(
+      await readFile(path.join(evidenceRoot, "prototyping.json"), "utf-8"),
+    ) as Record<string, unknown>;
+    expect("completionClaimed" in after).toBe(false);
+    expect("phase" in after).toBe(false);
+    expect("completionCertificate" in after).toBe(false);
+  });
+
   it("succeeds at cycle 0 when no completion-certificate.json exists (ENOENT is silent)", async () => {
     const root = await newTempDir();
     await seedMinimalProject(root);
