@@ -6,6 +6,27 @@
 
 ### Fixed (Breaking — pre-1.8.9 internal pipelines only)
 
+- **DESIGN.md overlay regex tightened**: `visual.colors.overlay` now
+  validates against an `rgba(R,G,B,A)`-only pattern with R/G/B in
+  0..255 and alpha in `{0, 1, 0.x, .x}`. The previous shared regex
+  `^rgba?\(...\)$` accepted the alpha-less `rgb(...)` form even though
+  the distributed DESIGN.md spec and the validator's own error message
+  both reserved overlay for `rgba(...)`. Hex (6 or 8-digit) is also
+  rejected for overlay; only the explicit-alpha rgba literal is valid.
+- **DESIGN.md typography unknown-key reject**: `parseDesignMd()` now
+  rejects unknown keys under `visual.typography` (e.g. `font_pairing`,
+  `fallback_policy`) with the same `unknown-key` ParseError as the
+  visual top level. Previously such keys were silently dropped from
+  the parsed tokens consumed by iteration and certification while
+  still being hashed into `DESIGN.md.lock.yaml`.
+- **prototyping cycle 0 hard-reset includes legacy `fullHarness`**:
+  `qfai prototyping iterate --cycle 0` now also deletes a stale
+  `fullHarness` block (legacy pre-UX-loop schema) alongside the
+  existing `iterations` / `reviewerGate` / `acceptedIterationIndex`
+  / `stopReason` reset. Pre-1.8.9 projects that retained
+  `fullHarness.{runId,status,scoringTrace,...}` could otherwise show
+  prior-loop completion data in `validate` / `report` surfaces
+  (PROT-329 etc.) alongside the freshly-frozen loop.
 - **prototyping certify ↔ iter binding**: `prototypingCertify` now anchors
   the final-iteration HTML scan to
   `prototyping.json#iterations[iterations.length - 1]` instead of the
