@@ -4,10 +4,7 @@
 
 ## [Unreleased]
 
-Post-1.8.8 follow-ups landed after the `chore(release): qfai 1.8.8`
-commit on this branch. The next version bump (`1.8.9` or `1.9.0`) will
-be decided after this PR merges and shipped via a separate `chore(release):`
-PR per `.agents/rules/version-discipline.md`.
+## [1.8.9] - 2026-05-06
 
 ### Changed (BREAKING)
 
