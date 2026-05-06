@@ -764,6 +764,30 @@ describe("findDesignMdViolations — named colors in punctuation context (codex 
     expect(out.some((v) => v.kind === "color" && v.found === "red")).toBe(true);
   });
 
+  it("border-[#ff0000_rgb(0_0_0)] (mixed hex + L4 spaced rgb in same shorthand) flags BOTH (codex 9vcu)", async () => {
+    // Pre-fix the per-token loop pushed `#ff0000` then `if
+    // (perTokenMatched) return;` skipped the whole-value fallback,
+    // so the L4 spaced `rgb(0 0 0)` was lost in mixed-syntax
+    // shorthands. Post-fix the matchAll fallback runs unconditionally
+    // (with dedupe scoped to this single arbitrary class) so both
+    // tokens surface.
+    const html = '<div class="border-[#ff0000_rgb(0_0_0)]">x</div>';
+    const out = findDesignMdViolations(html, sampleDesignMd());
+    const colors = out.filter((v) => v.kind === "color").map((v) => v.found);
+    expect(colors).toContain("#ff0000");
+    expect(colors).toContain("rgb(0 0 0)");
+  });
+
+  it("border-[2px_solid_rgb(0,0,0)] (per-token rgb match + matchAll match) is not double-counted", async () => {
+    // Sentinel: comma-separated `rgb(0,0,0)` is a single per-token
+    // match AND also catches via matchAll. Dedupe scope keeps the
+    // out array clean.
+    const html = '<div class="border-[2px_solid_rgb(0,0,0)]">x</div>';
+    const out = findDesignMdViolations(html, sampleDesignMd());
+    const rgbHits = out.filter((v) => v.kind === "color" && v.found.startsWith("rgb"));
+    expect(rgbHits.length).toBe(1);
+  });
+
   it("named color tightly embedded with comma+space is still flagged", () => {
     // Defensive: `red,blue` (no space after comma) was fully missed
     // pre-fix because whitespace was the only split delimiter.

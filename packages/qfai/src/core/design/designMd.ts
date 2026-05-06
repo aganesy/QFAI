@@ -372,12 +372,12 @@ function buildDesignMd(raw: unknown): BuildResult {
     // and non-string entries with explicit invalid-type errors so the
     // brand SSOT enforces the contract upstream of the lock.
     if ("emotion" in raw.audience && raw.audience.emotion !== undefined) {
-      const emotionError = parseAudienceStringArray(raw.audience.emotion, "audience.emotion");
+      const emotionError = parseDesignMdStringArrayField(raw.audience.emotion, "audience.emotion");
       if ("error" in emotionError) return emotionError;
       aud.emotion = emotionError.value;
     }
     if ("do_not_look_like" in raw.audience && raw.audience.do_not_look_like !== undefined) {
-      const dnllError = parseAudienceStringArray(
+      const dnllError = parseDesignMdStringArrayField(
         raw.audience.do_not_look_like,
         "audience.do_not_look_like",
       );
@@ -462,11 +462,11 @@ function readBrand(raw: unknown): { value: DesignMd["brand"] } | { error: ParseE
   // non-string entries and accepted scalars / dropped non-arrays,
   // letting malformed authoring hash into the DESIGN.md lock while
   // downstream consumers saw a different brand context. Symmetric
-  // with `parseAudienceStringArray` (codex 8A6f) and the typography
+  // with `parseDesignMdStringArrayField` (codex 8A6f) and the typography
   // / spacing strict-parse paths. codex 9R4e.
   let voice: string[] | undefined;
   if ("voice" in raw && raw.voice !== undefined) {
-    const voiceParsed = parseAudienceStringArray(raw.voice, "brand.voice");
+    const voiceParsed = parseDesignMdStringArrayField(raw.voice, "brand.voice");
     if ("error" in voiceParsed) return { error: voiceParsed.error };
     voice = voiceParsed.value;
   }
@@ -736,14 +736,22 @@ function readVisual(raw: unknown): { value: DesignMd["visual"] } | { error: Pars
  * the other.
  */
 /**
- * Strict-parse a DESIGN.md `audience.<key>` field as `string[]`. Returns
- * `{ value }` on success or `{ error }` when the input is not an array
- * or contains a non-string entry. Previously the parser silently
- * filtered non-strings and accepted scalars, which let malformed
- * authoring hash into the DESIGN.md lock while downstream consumers
- * saw a different brand context.
+ * Strict-parse a DESIGN.md `string[]` field. Returns `{ value }` on
+ * success or `{ error }` when the input is not an array or contains
+ * a non-string entry. Previously the parser silently filtered
+ * non-strings and accepted scalars, which let malformed authoring
+ * hash into the DESIGN.md lock while downstream consumers saw a
+ * different brand context.
+ *
+ * Used by:
+ *   - `audience.emotion` / `audience.do_not_look_like` (codex 8A6f)
+ *   - `brand.voice` (codex 9R4e)
+ *
+ * The helper deliberately ignores the field's semantic role; any
+ * future `string[]` field on DesignMd can call this directly.
+ * codex 9vcp.
  */
-function parseAudienceStringArray(
+function parseDesignMdStringArrayField(
   raw: unknown,
   fieldPath: string,
 ): { value: string[] } | { error: ParseError } {

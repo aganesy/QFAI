@@ -633,35 +633,62 @@ function scanTailwindArbitraryColor(
   allowed: ReadonlySet<string>,
   out: DesignMdViolation[],
 ): void {
-  // Per-token first: multi-token shorthand values like
+  const before = out.length;
+  // Per-token pass: multi-token shorthand values like
   // `border-[2px_solid_#ff0000]` decode to `border-[2px solid #ff0000]`;
   // split on whitespace and check each token individually so the
-  // color drift on `#ff0000` surfaces *as `#ff0000`* (not as the
-  // whole-string concatenation, which would happen if HEX_RE_TEST ran
-  // against the unsplit value and pushed the entire `2px solid
-  // #ff0000` as the violation token). For `text-`, the bracket
-  // content can be either a color (`text-[#ff0000]`) or a non-color
-  // size (`text-[14px]`); the per-token regex test only fires on
-  // tokens shaped like a color literal, so a pure dimension value
-  // is silently skipped (correct for our scope).
-  let perTokenMatched = false;
+  // color drift on `#ff0000` surfaces *as `#ff0000`*. For `text-`,
+  // the bracket content can be either a color (`text-[#ff0000]`) or
+  // a non-color size (`text-[14px]`); the per-token regex test only
+  // fires on tokens shaped like a color literal, so a pure dimension
+  // value is silently skipped (correct for our scope).
   for (const token of value.split(/\s+/)) {
     if (token.length === 0) continue;
-    if (pushIfColorDrift(token, allowed, out)) {
-      perTokenMatched = true;
-    }
+    pushIfColorDrift(token, allowed, out);
   }
-  if (perTokenMatched) return;
-  // Whole-value fallback: catches CSS Color Module L4 space-separated
-  // function syntax — `rgb(255 0 0)` / `hsl(0 100% 50%)`, authored
-  // by Tailwind as `bg-[rgb(255_0_0)]` / `bg-[hsl(0_100%_50%)]` and
-  // decoded to space-separated form before this scanner runs. The
+  // Whole-value rgb()/hsl() matchAll fallback: catches CSS Color
+  // Module L4 space-separated function syntax —
+  // `rgb(255 0 0)` / `hsl(0 100% 50%)`, authored by Tailwind as
+  // `bg-[rgb(255_0_0)]` / `bg-[hsl(0_100%_50%)]` and decoded to
+  // space-separated form before this scanner runs. The
   // whitespace-split above shreds those into half-paren tokens
-  // (`rgb(255`, `0`, `0)`) that no color regex matches, so without
-  // this fallback the drift would slip through. Per-token first +
-  // whole-value fallback also avoids double-counting: the fallback
-  // only runs when per-token produced zero matches. codex 9Ifs.
-  pushIfColorDrift(value, allowed, out);
+  // (`rgb(255`, `0`, `0)`) that no color regex matches.
+  //
+  // Run unconditionally (not as a "no per-token match" fallback)
+  // so mixed-syntax shorthands like `border-[#ff0000_rgb(0_0_0)]`
+  // (decoded: `#ff0000 rgb(0 0 0)`) flag BOTH `#ff0000` (per-token)
+  // AND `rgb(0 0 0)` (matchAll) instead of dropping the L4 syntax
+  // when per-token already pushed something. codex 9vcu.
+  //
+  // RGB_RE / HSL_RE are global-flagged by design (used by the CSS
+  // region scanner). Reusing them here keeps the L4 detection
+  // pattern in one place; resetting `lastIndex` is unnecessary
+  // because `String.matchAll` ignores it.
+  for (const match of value.matchAll(RGB_RE)) {
+    pushIfColorDrift(match[0], allowed, out);
+  }
+  for (const match of value.matchAll(HSL_RE)) {
+    pushIfColorDrift(match[0], allowed, out);
+  }
+  // Dedupe contributions within this single arbitrary-class scope
+  // so a `rgb(...)` token that the per-token loop matched on a
+  // comma-separated literal (e.g. `border-[2px_solid_rgb(0,0,0)]`)
+  // doesn't surface twice when the matchAll pass also catches it.
+  // Scope is local — `out` entries pushed by earlier scanners /
+  // earlier classes in this HTML are preserved untouched.
+  if (out.length > before + 1) {
+    const seen = new Set<string>();
+    let writeIdx = before;
+    for (let i = before; i < out.length; i++) {
+      const v = out[i];
+      if (v === undefined) continue;
+      const key = `${v.kind}:${v.found}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      out[writeIdx++] = v;
+    }
+    out.length = writeIdx;
+  }
 }
 
 // Known limitation (deliberate KISS choice; matches the pre-existing
