@@ -386,7 +386,25 @@ export async function runPrototypingIterate(
     // its scan to prototyping.json#iterations[] (which we just reset),
     // but deleting the on-disk dirs guarantees no resolver can stumble
     // into them.
-    await deleteStaleIterDirs(path.join(options.root, PROTOTYPING_EVIDENCE_REL));
+    //
+    // codex AHzR5: fail closed when rm fails. Pre-fix this swallowed
+    // the error and continued; the new loop reuses iter-NN/ and any
+    // surviving subfile (Windows file lock / EACCES / EBUSY) gets
+    // sealed into the next certificate's evidenceDigests. Surfacing
+    // the failed dir + cause lets the operator clear the lock before
+    // iterate writes the new plan.
+    const rmResult = await deleteStaleIterDirs(path.join(options.root, PROTOTYPING_EVIDENCE_REL));
+    if (!rmResult.ok) {
+      const reason =
+        rmResult.cause instanceof Error ? rmResult.cause.message : String(rmResult.cause);
+      error(
+        `qfai prototyping iterate --cycle 0: could not remove stale evidence at ${rmResult.failedDir} (${reason}). ` +
+          "Clear the lock (Windows file lock / EACCES / EBUSY are common causes) and rerun. " +
+          "certify is anchored to prototyping.json#iterations[]; if surviving files were sealed into a prior " +
+          "completion-certificate.json the new runId will replace it on the next certify pass.",
+      );
+      return 2;
+    }
     // Stale `completion-certificate.json` from a prior loop will be
     // overwritten on the next `qfai prototyping certify` run (the new
     // runId / digests will not match the old cert), but until then a
@@ -597,12 +615,15 @@ async function writeSeedMetadata(protoJsonAbs: string, seed: SeedMetadata): Prom
   await writeFile(protoJsonAbs, `${JSON.stringify(body, null, 2)}\n`, "utf-8");
 }
 
-async function deleteStaleIterDirs(evidenceRootAbs: string): Promise<void> {
+type DeleteStaleIterDirsResult = { ok: true } | { ok: false; failedDir: string; cause: unknown };
+
+async function deleteStaleIterDirs(evidenceRootAbs: string): Promise<DeleteStaleIterDirsResult> {
   let entries: string[];
   try {
     entries = await readdir(evidenceRootAbs);
-  } catch {
-    return;
+  } catch (err) {
+    if (isEnoent(err)) return { ok: true };
+    return { ok: false, failedDir: evidenceRootAbs, cause: err };
   }
   for (const name of entries) {
     if (!/^iter-\d{2,}$/.test(name)) continue;
@@ -616,26 +637,29 @@ async function deleteStaleIterDirs(evidenceRootAbs: string): Promise<void> {
     try {
       const s = await stat(abs);
       isDir = s.isDirectory();
-    } catch {
-      continue;
+    } catch (err) {
+      if (isEnoent(err)) continue;
+      return { ok: false, failedDir: abs, cause: err };
     }
     if (!isDir) continue;
     try {
       await rm(abs, { recursive: true, force: true });
     } catch (err) {
-      // Best-effort cleanup. Common Windows cause: a subfile holds an
-      // OS lock (anti-virus, editor, capture tooling). Surface a hint
-      // so the operator can notice the stale dir; certify is anchored
-      // to prototyping.json#iterations[] so this is non-blocking, but
-      // silent failure leaves stale evidence on disk.
-      const reason = err instanceof Error ? err.message : String(err);
-      info(
-        `qfai prototyping iterate: could not remove stale iter dir ${abs} (${reason}). ` +
-          "certify is anchored to prototyping.json#iterations[], so this is non-blocking; " +
-          "remove the dir manually if it survives.",
-      );
+      // codex AHzR5: pre-fix this only logged and continued, but the
+      // new loop reuses the same iter-NN/ dir. `certify` only treats
+      // dirs whose index is >= iterations.length as stale; files that
+      // survive INSIDE a reused iter-00/ (because capture writes only
+      // the screens it knows about and any extra files persist) get
+      // sealed into the new certificate's evidenceDigests. The fix is
+      // to fail closed: surface the rm failure as a hard error so the
+      // operator clears the lock (Windows file lock / EACCES / EBUSY)
+      // before iterate writes the new plan. The hint at the call site
+      // names the offending dir + cause so the operator can act
+      // immediately.
+      return { ok: false, failedDir: abs, cause: err };
     }
   }
+  return { ok: true };
 }
 
 async function deleteStaleCompletionCertificate(certAbs: string): Promise<void> {

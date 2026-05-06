@@ -609,6 +609,83 @@ function isFontWeightArbitrary(value: string): boolean {
   return TAILWIND_FONT_WEIGHT_KEYWORDS.has(value.toLowerCase());
 }
 
+// Tailwind palette names from the default theme. Any class shaped
+// `<prefix>-<palette>-<scale>` (e.g. `bg-blue-500`, `text-slate-900`)
+// resolves to a Tailwind built-in color, NOT a DESIGN.md token. Since
+// the shipped prototype generator uses the Tailwind CDN (no theme
+// override possible), every palette+scale class on the rendered DOM
+// is by definition drift from DESIGN.md. codex AHzR7.
+const TAILWIND_PALETTE_NAMES: ReadonlySet<string> = new Set([
+  "slate",
+  "gray",
+  "zinc",
+  "neutral",
+  "stone",
+  "red",
+  "orange",
+  "amber",
+  "yellow",
+  "lime",
+  "green",
+  "emerald",
+  "teal",
+  "cyan",
+  "sky",
+  "blue",
+  "indigo",
+  "violet",
+  "purple",
+  "fuchsia",
+  "pink",
+  "rose",
+]);
+
+const TAILWIND_PALETTE_SCALES: ReadonlySet<string> = new Set([
+  "50",
+  "100",
+  "200",
+  "300",
+  "400",
+  "500",
+  "600",
+  "700",
+  "800",
+  "900",
+  "950",
+]);
+
+// Tailwind built-in scale aliases for radius / shadow utilities. These
+// resolve to Tailwind's own scale (e.g. `rounded-md` → `0.375rem`,
+// `shadow-lg` → a fixed multi-stop drop shadow), not DESIGN.md tokens.
+// Bare `rounded` / `shadow` (no suffix) are also Tailwind defaults and
+// matched separately below. codex AHzR7.
+const TAILWIND_RADIUS_SCALE_ALIASES: ReadonlySet<string> = new Set([
+  "none",
+  "sm",
+  "md",
+  "lg",
+  "xl",
+  "2xl",
+  "3xl",
+  "full",
+]);
+
+const TAILWIND_SHADOW_SCALE_ALIASES: ReadonlySet<string> = new Set([
+  "none",
+  "sm",
+  "md",
+  "lg",
+  "xl",
+  "2xl",
+  "inner",
+]);
+
+// Strip Tailwind state / responsive / dark-mode prefixes (e.g.
+// `hover:`, `md:`, `dark:`, `group-hover:`) before matching the
+// underlying utility. Tailwind allows multiple stacked prefixes
+// (`md:hover:bg-blue-500`); the `+` quantifier strips them all.
+const TAILWIND_STATE_PREFIX_RE = /^(?:[a-z0-9-]+:)+/;
+
 function pushIfColorDrift(
   token: string,
   allowed: ReadonlySet<string>,
@@ -761,6 +838,104 @@ function scanTailwindArbitrary(html: string, dm: DesignMd, out: DesignMdViolatio
   }
 }
 
+// Tailwind built-in palette/scale utility classes (`bg-blue-500`,
+// `text-slate-900`, `rounded-xl`, `shadow-lg`, bare `rounded`, bare
+// `shadow`) carry no CSS literal in the rendered HTML, so the four
+// CSS-region scanners and the arbitrary-value scanner all miss them.
+// They resolve to Tailwind's default theme, NOT to DESIGN.md tokens —
+// the shipped prototype generator uses the CDN with no theme
+// override, so every such class is by definition drift from
+// DESIGN.md. This scanner closes that gap. codex AHzR7.
+//
+// Scope is intentionally narrow:
+//   - color palette+scale: `<prefix>-<palette>-<scale>` (e.g.
+//     `bg-blue-500`) where prefix is in TAILWIND_COLOR_PREFIXES,
+//     palette is in TAILWIND_PALETTE_NAMES, scale is in
+//     TAILWIND_PALETTE_SCALES. Catches the explicit Tailwind palette;
+//     NOT meant to catch every theme-default keyword class
+//     (`bg-white`, `bg-current`) — those are covered indirectly by
+//     the named-color scanner once they hit the rendered CSS.
+//   - radius / shadow scale alias: `<prefix>-<alias>` (e.g.
+//     `rounded-xl`, `shadow-lg`) where prefix is in
+//     TAILWIND_RADIUS_PREFIXES / TAILWIND_SHADOW_PREFIXES and the
+//     alias is in TAILWIND_RADIUS_SCALE_ALIASES /
+//     TAILWIND_SHADOW_SCALE_ALIASES.
+//   - bare `rounded` / `shadow` (no suffix): Tailwind defaults the
+//     value, so the rendered DOM diverges from DESIGN.md too.
+//
+// Arbitrary-value classes (`bg-[#ff0000]`, `rounded-[13px]`) keep
+// going through scanTailwindArbitrary — they DO contain a literal
+// and the existing scanner already validates them against
+// DESIGN.md. Skipping `[`-bearing tokens here avoids double-flagging.
+//
+// State / responsive prefixes (`hover:`, `md:`, `dark:`,
+// `group-hover:`) are stripped before the utility lookup so
+// `hover:bg-blue-500` is detected.
+function scanTailwindUtility(html: string, dm: DesignMd, out: DesignMdViolation[]): void {
+  // Pre-collect rendered token sets so the rare case of a DESIGN.md
+  // token whose VALUE happens to coincide with a Tailwind default is
+  // still flagged: Tailwind's CDN cannot read DESIGN.md, so the
+  // *class* identifier never references a DESIGN.md token. The
+  // contract is name-anchored, not value-anchored. We therefore do
+  // NOT cross-check against DESIGN.md values here — drift is the
+  // class shape itself.
+  void dm;
+
+  for (const classMatch of html.matchAll(CLASS_ATTR_RE)) {
+    const classes = classMatch[1] ?? classMatch[2] ?? "";
+    if (classes.length === 0) continue;
+    for (const rawToken of classes.split(/\s+/)) {
+      if (rawToken.length === 0) continue;
+      // Arbitrary-value classes have a literal payload and are the
+      // domain of scanTailwindArbitrary; skip them here.
+      if (rawToken.includes("[")) continue;
+      const cls = rawToken.replace(TAILWIND_STATE_PREFIX_RE, "");
+      if (cls.length === 0) continue;
+
+      // Bare `rounded` / `shadow` (no suffix) → Tailwind defaults.
+      if (TAILWIND_RADIUS_PREFIXES.has(cls)) {
+        out.push({ kind: "radius", found: cls });
+        continue;
+      }
+      if (TAILWIND_SHADOW_PREFIXES.has(cls)) {
+        out.push({ kind: "shadow", found: cls });
+        continue;
+      }
+
+      // Color palette+scale: `<prefix>-<palette>-<scale>`.
+      const palette = /^([a-z][a-z-]*)-([a-z]+)-(\d{2,3})$/.exec(cls);
+      if (palette) {
+        const prefix = palette[1] ?? "";
+        const name = palette[2] ?? "";
+        const scale = palette[3] ?? "";
+        if (
+          TAILWIND_COLOR_PREFIXES.has(prefix) &&
+          TAILWIND_PALETTE_NAMES.has(name) &&
+          TAILWIND_PALETTE_SCALES.has(scale)
+        ) {
+          out.push({ kind: "color", found: cls });
+          continue;
+        }
+      }
+
+      // Radius / shadow scale alias: `<prefix>-<alias>`.
+      const aliasMatch = /^([a-z][a-z-]*)-([a-z0-9]+)$/.exec(cls);
+      if (aliasMatch) {
+        const prefix = aliasMatch[1] ?? "";
+        const suffix = aliasMatch[2] ?? "";
+        if (TAILWIND_RADIUS_PREFIXES.has(prefix) && TAILWIND_RADIUS_SCALE_ALIASES.has(suffix)) {
+          out.push({ kind: "radius", found: cls });
+          continue;
+        }
+        if (TAILWIND_SHADOW_PREFIXES.has(prefix) && TAILWIND_SHADOW_SCALE_ALIASES.has(suffix)) {
+          out.push({ kind: "shadow", found: cls });
+          continue;
+        }
+      }
+    }
+  }
+}
+
 /**
  * Scan `html` for DESIGN.md token violations. Returns a flat array of
  * violations, one per occurrence, preserving source order within each
@@ -778,5 +953,9 @@ export function findDesignMdViolations(html: string, dm: DesignMd): DesignMdViol
   // certify gate must catch drift authored as e.g. `bg-[#ff0000]` or
   // `rounded-[13px]` even when `<style>` / `style="..."` is empty.
   scanTailwindArbitrary(html, dm, out);
+  // Tailwind built-in palette/scale classes (`bg-blue-500`,
+  // `rounded-xl`, etc.) carry no CSS literal in the rendered HTML
+  // and would otherwise slip past every other scanner above.
+  scanTailwindUtility(html, dm, out);
   return out;
 }

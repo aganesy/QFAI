@@ -798,3 +798,144 @@ describe("findDesignMdViolations — named colors in punctuation context (codex 
     expect(names).toContain("blue");
   });
 });
+
+// codex AHzR7: standard Tailwind palette/scale utility classes carry
+// no CSS literal in the rendered HTML and bypass every other scanner.
+// They resolve to Tailwind defaults (CDN-served), NOT to DESIGN.md
+// tokens, so a final prototype can drift while findDesignMdViolations
+// returns zero. This block pins scanTailwindUtility.
+describe("findDesignMdViolations — Tailwind palette/scale utility classes (codex AHzR7)", () => {
+  it("bg-blue-500 (palette+scale color) is flagged as drift", () => {
+    const html = '<div class="bg-blue-500">x</div>';
+    const out = findDesignMdViolations(html, sampleDesignMd());
+    expect(out.some((v) => v.kind === "color" && v.found === "bg-blue-500")).toBe(true);
+  });
+
+  it("text-slate-900 (palette+scale color) is flagged as drift", () => {
+    const html = '<div class="text-slate-900">x</div>';
+    const out = findDesignMdViolations(html, sampleDesignMd());
+    expect(out.some((v) => v.kind === "color" && v.found === "text-slate-900")).toBe(true);
+  });
+
+  it("border-rose-50 / border-rose-950 (palette boundary scales) are flagged", () => {
+    const html = '<div class="border-rose-50 border-rose-950">x</div>';
+    const out = findDesignMdViolations(html, sampleDesignMd());
+    const founds = out.filter((v) => v.kind === "color").map((v) => v.found);
+    expect(founds).toContain("border-rose-50");
+    expect(founds).toContain("border-rose-950");
+  });
+
+  it("rounded-xl (radius scale alias) is flagged", () => {
+    const html = '<div class="rounded-xl">x</div>';
+    const out = findDesignMdViolations(html, sampleDesignMd());
+    expect(out.some((v) => v.kind === "radius" && v.found === "rounded-xl")).toBe(true);
+  });
+
+  it("rounded-2xl / rounded-3xl / rounded-full (multi-char aliases) are flagged", () => {
+    const html = '<div class="rounded-2xl rounded-3xl rounded-full">x</div>';
+    const out = findDesignMdViolations(html, sampleDesignMd());
+    const founds = out.filter((v) => v.kind === "radius").map((v) => v.found);
+    expect(founds).toContain("rounded-2xl");
+    expect(founds).toContain("rounded-3xl");
+    expect(founds).toContain("rounded-full");
+  });
+
+  it("shadow-lg / shadow-2xl / shadow-inner (shadow scale aliases) are flagged", () => {
+    const html = '<div class="shadow-lg shadow-2xl shadow-inner">x</div>';
+    const out = findDesignMdViolations(html, sampleDesignMd());
+    const founds = out.filter((v) => v.kind === "shadow").map((v) => v.found);
+    expect(founds).toContain("shadow-lg");
+    expect(founds).toContain("shadow-2xl");
+    expect(founds).toContain("shadow-inner");
+  });
+
+  it("bare `rounded` (no suffix) is flagged as a Tailwind default", () => {
+    const html = '<div class="rounded">x</div>';
+    const out = findDesignMdViolations(html, sampleDesignMd());
+    expect(out.some((v) => v.kind === "radius" && v.found === "rounded")).toBe(true);
+  });
+
+  it("bare `shadow` (no suffix) is flagged as a Tailwind default", () => {
+    const html = '<div class="shadow">x</div>';
+    const out = findDesignMdViolations(html, sampleDesignMd());
+    expect(out.some((v) => v.kind === "shadow" && v.found === "shadow")).toBe(true);
+  });
+
+  it("hover:bg-blue-500 (state prefix) is flagged as drift on the underlying utility", () => {
+    const html = '<div class="hover:bg-blue-500">x</div>';
+    const out = findDesignMdViolations(html, sampleDesignMd());
+    expect(out.some((v) => v.kind === "color" && v.found === "bg-blue-500")).toBe(true);
+  });
+
+  it("md:hover:rounded-xl (stacked responsive + state prefix) is flagged", () => {
+    const html = '<div class="md:hover:rounded-xl">x</div>';
+    const out = findDesignMdViolations(html, sampleDesignMd());
+    expect(out.some((v) => v.kind === "radius" && v.found === "rounded-xl")).toBe(true);
+  });
+
+  it("dark:shadow-lg (dark-mode prefix) is flagged", () => {
+    const html = '<div class="dark:shadow-lg">x</div>';
+    const out = findDesignMdViolations(html, sampleDesignMd());
+    expect(out.some((v) => v.kind === "shadow" && v.found === "shadow-lg")).toBe(true);
+  });
+
+  it("text-sm / text-center / text-base (non-color text utilities) are NOT flagged", () => {
+    // `sm` / `center` / `base` are not palette names; the
+    // palette+scale regex must not over-fire on these legitimate
+    // Tailwind text-size / alignment utilities.
+    const html = '<div class="text-sm text-center text-base">x</div>';
+    const out = findDesignMdViolations(html, sampleDesignMd());
+    expect(out).toEqual([]);
+  });
+
+  it("flex / grid / p-4 / mx-auto (layout / spacing utilities) are NOT flagged", () => {
+    const html = '<div class="flex grid p-4 mx-auto items-center">x</div>';
+    const out = findDesignMdViolations(html, sampleDesignMd());
+    expect(out).toEqual([]);
+  });
+
+  it("arbitrary-value classes (`bg-[#ff0000]`) still go through scanTailwindArbitrary, not the utility scanner", () => {
+    // `bg-[#ff0000]` has `[` so scanTailwindUtility skips it. The
+    // hex `#ff0000` is reported (by scanTailwindArbitrary) but the
+    // class string `bg-[#ff0000]` itself must NOT appear as a
+    // separate violation `found`.
+    const html = '<div class="bg-[#ff0000]">x</div>';
+    const out = findDesignMdViolations(html, sampleDesignMd());
+    expect(out.some((v) => v.found === "bg-[#ff0000]")).toBe(false);
+    expect(out.some((v) => v.kind === "color" && v.found === "#ff0000")).toBe(true);
+  });
+
+  it("multiple palette+scale + scale-alias classes in one element are all flagged", () => {
+    const html = '<div class="bg-blue-500 text-slate-900 rounded-xl shadow-lg">x</div>';
+    const out = findDesignMdViolations(html, sampleDesignMd());
+    expect(out.some((v) => v.kind === "color" && v.found === "bg-blue-500")).toBe(true);
+    expect(out.some((v) => v.kind === "color" && v.found === "text-slate-900")).toBe(true);
+    expect(out.some((v) => v.kind === "radius" && v.found === "rounded-xl")).toBe(true);
+    expect(out.some((v) => v.kind === "shadow" && v.found === "shadow-lg")).toBe(true);
+  });
+
+  it("border-t-blue-500 / border-x-emerald-700 (sided color prefix + palette+scale) are flagged", () => {
+    const html = '<div class="border-t-blue-500 border-x-emerald-700">x</div>';
+    const out = findDesignMdViolations(html, sampleDesignMd());
+    const founds = out.filter((v) => v.kind === "color").map((v) => v.found);
+    expect(founds).toContain("border-t-blue-500");
+    expect(founds).toContain("border-x-emerald-700");
+  });
+
+  it("non-palette suffix (`bg-foo-500`, `bg-blue-1234`) is NOT flagged", () => {
+    // Defensive: the palette+scale regex requires palette name in
+    // TAILWIND_PALETTE_NAMES and scale in TAILWIND_PALETTE_SCALES. A
+    // typo / custom token that fails either check is silently
+    // skipped (could be a project-specific class name).
+    const html = '<div class="bg-foo-500 bg-blue-1234">x</div>';
+    const out = findDesignMdViolations(html, sampleDesignMd());
+    expect(out.filter((v) => v.kind === "color")).toEqual([]);
+  });
+
+  it("class attr with single quotes is also scanned for palette/scale drift", () => {
+    const html = "<div class='bg-blue-500 rounded-xl'>x</div>";
+    const out = findDesignMdViolations(html, sampleDesignMd());
+    expect(out.some((v) => v.kind === "color" && v.found === "bg-blue-500")).toBe(true);
+    expect(out.some((v) => v.kind === "radius" && v.found === "rounded-xl")).toBe(true);
+  });
+});
