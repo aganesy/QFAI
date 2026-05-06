@@ -458,9 +458,18 @@ function readBrand(raw: unknown): { value: DesignMd["brand"] } | { error: ParseE
   // Optional shape on DesignMd['brand']) instead of a double cast.
   const archetype: Archetype | undefined =
     typeof archetypeRaw === "string" ? (archetypeRaw as Archetype) : undefined;
-  const voice = Array.isArray(raw.voice)
-    ? raw.voice.filter((v): v is string => typeof v === "string")
-    : undefined;
+  // Strict-parse `brand.voice`. Pre-fix the parser silently filtered
+  // non-string entries and accepted scalars / dropped non-arrays,
+  // letting malformed authoring hash into the DESIGN.md lock while
+  // downstream consumers saw a different brand context. Symmetric
+  // with `parseAudienceStringArray` (codex 8A6f) and the typography
+  // / spacing strict-parse paths. codex 9R4e.
+  let voice: string[] | undefined;
+  if ("voice" in raw && raw.voice !== undefined) {
+    const voiceParsed = parseAudienceStringArray(raw.voice, "brand.voice");
+    if ("error" in voiceParsed) return { error: voiceParsed.error };
+    voice = voiceParsed.value;
+  }
   const value: DesignMd["brand"] = archetype !== undefined ? { name, archetype } : { name };
   if (voice !== undefined) value.voice = voice;
   // unknown extra keys

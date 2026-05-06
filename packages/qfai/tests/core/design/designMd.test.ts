@@ -488,6 +488,37 @@ describe("parseDesignMd (TC-1.1.x)", () => {
     expect(result.error.path).toBe("audience.emotion");
   });
 
+  it("brand.voice as a scalar string is rejected at parse-time (codex 9R4e)", () => {
+    // Pre-fix the parser silently dropped non-arrays / filtered non-string
+    // entries. A scalar `voice: "calm"` slipped through and the lock
+    // hash baked in raw bytes that downstream consumers never saw.
+    // Symmetric with audience strict-parse.
+    const text = VALID_FRONT_MATTER.replace('  voice: ["calm", "sharp"]', '  voice: "calm"');
+    const result = parseDesignMd(text);
+    expect("error" in result).toBe(true);
+    if (!("error" in result)) return;
+    expect(result.error.code).toBe("invalid-type");
+    expect(result.error.path).toBe("brand.voice");
+  });
+
+  it("brand.voice array with non-string entry is rejected at parse-time (codex 9R4e)", () => {
+    const text = VALID_FRONT_MATTER.replace('  voice: ["calm", "sharp"]', '  voice: ["calm", 1]');
+    const result = parseDesignMd(text);
+    expect("error" in result).toBe(true);
+    if (!("error" in result)) return;
+    expect(result.error.code).toBe("invalid-type");
+    expect(result.error.path).toBe("brand.voice[1]");
+  });
+
+  it("brand.voice as null literal is rejected at parse-time", () => {
+    const text = VALID_FRONT_MATTER.replace('  voice: ["calm", "sharp"]', "  voice: null");
+    const result = parseDesignMd(text);
+    expect("error" in result).toBe(true);
+    if (!("error" in result)) return;
+    expect(result.error.code).toBe("invalid-type");
+    expect(result.error.path).toBe("brand.voice");
+  });
+
   it("audience.do_not_look_like as null literal is rejected at parse-time", () => {
     const text = VALID_FRONT_MATTER.replace(
       '  do_not_look_like: ["generic SaaS dashboard"]',

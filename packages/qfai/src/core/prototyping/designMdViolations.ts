@@ -440,7 +440,17 @@ function scanColors(html: string, dm: DesignMd, out: DesignMdViolation[]): void 
     // CSS_NAMED_COLORS lookup is only reached by clean keyword
     // candidates — guarding against future authoring mistakes (e.g.
     // a project that adds a numeric value where a color is expected).
-    for (const token of value.split(/\s+/)) {
+    //
+    // Tokenize on CSS-meaningful delimiters, not whitespace alone.
+    // Pre-fix only `\s+` was used, so `linear-gradient(red, blue)`
+    // tokenized as `["linear-gradient(red,", "blue)"]` and
+    // `color:red!important` as `["color:red!important"]`. Neither
+    // pure-letter token survives `^[a-z]+$`, so the named drift
+    // slipped past the scanner. Splitting on the broader
+    // CSS-grammar set `[\s,()!;]+` extracts each identifier even
+    // inside CSS functions / `!important` markers / nested commas.
+    // codex 9R4j.
+    for (const token of value.split(/[\s,()!;]+/)) {
       if (token.length === 0) continue;
       if (SAFE_LITERALS.has(token)) continue;
       if (allowed.has(token)) continue;
@@ -452,6 +462,13 @@ function scanColors(html: string, dm: DesignMd, out: DesignMdViolation[]): void 
         continue;
       }
       if (token.startsWith("var(")) continue;
+      // The `linear-gradient` / `radial-gradient` / `conic-gradient`
+      // function names are themselves CSS keywords (post-tokenization
+      // they appear as e.g. `linear-gradient`); pure-letter check
+      // (`/^[a-z]+$/`) already filters them because they contain
+      // `-`. Defensive: a future schema relaxation that admitted
+      // hyphens here would still be guarded by the closed
+      // CSS_NAMED_COLORS lookup.
       if (!/^[a-z]+$/.test(token)) continue;
       if (CSS_NAMED_COLORS.has(token)) {
         out.push({ kind: "color", found: token });

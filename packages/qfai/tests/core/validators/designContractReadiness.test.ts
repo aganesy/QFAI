@@ -878,6 +878,66 @@ describe("validateSddDesignContractReadiness (TC-3.8.x)", () => {
     ).toBe(true);
   });
 
+  it("symmetric: mirror authors visual.spacing.base that DESIGN.md never authored → DCON-005 (codex 9Vbc)", async () => {
+    // Reverse direction of the codex 89xl test: DESIGN.md authors only
+    // `spacing.scale` (no `base`), mirror fabricates `base`. The fix's
+    // reverse loop iterates mirror keys, so the `base` branch and the
+    // `scale` branch share the same code path; without this symmetric
+    // pin, a future special-case for `expected.scale !== undefined`
+    // (typography helpers split by sub-key, so it's plausible) could
+    // silently regress one direction while the 89xl test stays green.
+    const root = await newTempDir();
+    await seedUiBearingProject(root);
+    const designMdSpacingScaleOnly = VALID_DESIGN_MD.replace(
+      '    family_mono:    "JetBrains Mono, ui-monospace, monospace"',
+      '    family_mono:    "JetBrains Mono, ui-monospace, monospace"\n  spacing:\n    scale: [0, 4, 8, 16]',
+    );
+    await writeFile(path.join(root, "DESIGN.md"), designMdSpacingScaleOnly, "utf-8");
+    const designDir = path.join(root, ".qfai/contracts/design");
+    await mkdir(designDir, { recursive: true });
+    await writeFile(
+      path.join(designDir, "DESIGN.md.lock.yaml"),
+      [
+        'designMdPath: "DESIGN.md"',
+        `designMdSha256: "${hashDesignMd(designMdSpacingScaleOnly)}"`,
+        'frozenAt: "2026-05-05T00:00:00Z"',
+        "",
+      ].join("\n"),
+      "utf-8",
+    );
+    // Mirror fabricates `spacing.base` even though DESIGN.md only
+    // authored `spacing.scale`. Post-fix this surfaces as DCON-005.
+    await writeFile(
+      path.join(designDir, "design-system.yaml"),
+      VALID_MIRROR_YAML.replace(
+        "  radius:",
+        '  spacing:\n    base: "0.25rem"\n    scale: [0, 4, 8, 16]\n  radius:',
+      ),
+      "utf-8",
+    );
+    await writeFile(
+      path.join(designDir, "prototype-handoff.yaml"),
+      [
+        "finalIterIndex: 1",
+        'finalArtifact: ".qfai/prototypes/final/index.html"',
+        'designMdPath: "DESIGN.md"',
+        `designMdSha256: "${hashDesignMd(designMdSpacingScaleOnly)}"`,
+        'designSystemMirror: ".qfai/contracts/design/design-system.yaml"',
+        'implementationNotes: "test"',
+        "",
+      ].join("\n"),
+      "utf-8",
+    );
+    const issues = await validatePrototypingDesignContractReadiness(root, defaultConfig);
+    const dcon005 = issues.filter((i) => i.code === "QFAI-DCON-005");
+    expect(
+      dcon005.some(
+        (i) =>
+          i.message.includes("visual.spacing.base") && i.message.includes("DESIGN.md does not"),
+      ),
+    ).toBe(true);
+  });
+
   it("optional visual.typography.scale in DESIGN.md must be mirrored verbatim → DCON-005 on missing key", async () => {
     const root = await newTempDir();
     await seedUiBearingProject(root);

@@ -739,3 +739,38 @@ describe("findDesignMdViolations — Tailwind font-[X] disambiguation (codex 9If
     expect(out.some((v) => v.kind === "font" && v.found === "Cursive")).toBe(true);
   });
 });
+
+// codex 9R4j: named colors in CSS punctuation / function context
+describe("findDesignMdViolations — named colors in punctuation context (codex 9R4j)", () => {
+  it("named color in linear-gradient() arguments is flagged", () => {
+    // Pre-fix `linear-gradient(red, blue)` tokenized as
+    // `["linear-gradient(red,", "blue)"]` after whitespace-only split,
+    // so neither pure-letter token survived `^[a-z]+$`. Splitting on
+    // CSS-meaningful delimiters `[\s,()!;]+` extracts `red` / `blue`
+    // individually for the named-color check.
+    const html = '<div style="background: linear-gradient(red, blue)"></div>';
+    const out = findDesignMdViolations(html, sampleDesignMd());
+    const names = out.filter((v) => v.kind === "color").map((v) => v.found);
+    expect(names).toContain("red");
+    expect(names).toContain("blue");
+  });
+
+  it("named color with !important suffix is flagged", () => {
+    // Pre-fix `red!important` was a single token failing the pure-
+    // letter check, so the drift slipped through. Tokenizing on `!`
+    // / `;` extracts `red` for the named-color check.
+    const html = "<style>p{ color: red!important; }</style>";
+    const out = findDesignMdViolations(html, sampleDesignMd());
+    expect(out.some((v) => v.kind === "color" && v.found === "red")).toBe(true);
+  });
+
+  it("named color tightly embedded with comma+space is still flagged", () => {
+    // Defensive: `red,blue` (no space after comma) was fully missed
+    // pre-fix because whitespace was the only split delimiter.
+    const html = "<style>p{ background: linear-gradient(red,blue); }</style>";
+    const out = findDesignMdViolations(html, sampleDesignMd());
+    const names = out.filter((v) => v.kind === "color").map((v) => v.found);
+    expect(names).toContain("red");
+    expect(names).toContain("blue");
+  });
+});
