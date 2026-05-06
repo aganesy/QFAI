@@ -145,7 +145,8 @@ async function seedAllGatesPass(root: string): Promise<void> {
     JSON.stringify({
       mode: { effective: "standard", source: "explicit-request", rationale: "test" },
       surface: "web",
-      fullHarness: { runId: "run-test-2026" },
+      runId: "run-test-2026",
+      designMd: { path: "DESIGN.md", sha256: hashDesignMd(CERT_DESIGN_MD) },
       reviewerGate: {
         result: "PASS",
         signoff: { reviewerId: "test-reviewer", timestamp: "2026-04-27T00:00:00Z" },
@@ -192,7 +193,7 @@ describe("qfai prototyping certify (generate)", () => {
     expect(exit).toBe(2);
   });
 
-  it("exits 2 when fullHarness.runId is missing", async () => {
+  it("exits 2 when runId is missing", async () => {
     const root = await newTempDir();
     await seedMinimalProject(root);
     await mkdir(path.join(root, ".qfai/evidence"), { recursive: true });
@@ -242,7 +243,8 @@ describe("qfai prototyping certify (generate)", () => {
       path.join(root, ".qfai/evidence/prototyping.json"),
       JSON.stringify({
         mode: { effective: "standard", source: "test", rationale: "x" },
-        fullHarness: { runId: "run-x" },
+        runId: "run-x",
+        designMd: { path: "DESIGN.md", sha256: hashDesignMd(CERT_DESIGN_MD) },
         reviewerGate: { result: "REVISE" },
       }),
       "utf-8",
@@ -260,7 +262,8 @@ describe("qfai prototyping certify (generate)", () => {
       JSON.stringify({
         mode: { effective: "standard", source: "test", rationale: "x" },
         surface: "web",
-        fullHarness: { runId: "run-x" },
+        runId: "run-x",
+        designMd: { path: "DESIGN.md", sha256: hashDesignMd(CERT_DESIGN_MD) },
         reviewerGate: {
           result: "PASS",
           signoff: { reviewer: "legacy-reviewer", timestamp: "2026-04-27T00:00:00Z" },

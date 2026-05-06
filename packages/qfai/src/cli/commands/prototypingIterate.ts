@@ -46,7 +46,6 @@ import {
   iterationHtmlPath,
   iterationScreenshotPath,
   shouldStop,
-  type Iteration,
   type StopReason,
 } from "../../core/prototyping/iteration.js";
 
@@ -93,6 +92,7 @@ type DesignMdRecord = {
 type PrototypingJsonShape = {
   iterations?: unknown[];
   designMd?: DesignMdRecord;
+  runId?: string;
   [key: string]: unknown;
 };
 
@@ -124,20 +124,18 @@ export async function runPrototypingIterate(
 
   const configResult = await loadConfig(options.root);
 
-  // Cycle 0 must consult the SDD freeze (DESIGN.md.lock.yaml). Without
-  // this, an edit to DESIGN.md after the lock was written would be
-  // silently re-baselined into prototyping.json and every subsequent
-  // cycle would compare against the unfrozen value.
-  if (options.cycle === 0) {
-    const lockGate = await checkDesignMdLockGate(
-      options.root,
-      configResult.config.paths.contractsDir,
-      currentSha,
+  // The SDD lock (`DESIGN.md.lock.yaml#designMdSha256`) is the single
+  // source of truth for the frozen brand SSOT. Iterate consults it on
+  // EVERY cycle — not just cycle 0 — so that prototyping.json acts as a
+  // cache of the lock value, never as an independent SHA store.
+  const lockSha = await readDesignMdLockGate(options.root, configResult.config.paths.contractsDir);
+  if (lockSha !== null && lockSha !== currentSha) {
+    error(
+      "qfai prototyping iterate: root DESIGN.md sha256 differs from " +
+        `DESIGN.md.lock.yaml — lock=${lockSha} current=${currentSha}. ` +
+        "DESIGN.md was edited after the SDD freeze; re-run /qfai-sdd Phase 0 to refreeze.",
     );
-    if (lockGate !== null) {
-      error(lockGate);
-      return 2;
-    }
+    return 2;
   }
 
   const resolved = await resolvePrimaryPrototypingSpec(options.root, configResult.config);
@@ -153,7 +151,11 @@ export async function runPrototypingIterate(
 
   const protoJsonAbs = path.join(options.root, PROTOTYPING_JSON_REL);
 
-  // 2) Cycle >=1: enforce hash gate against prior recording.
+  // 2) Cycle >=1: enforce hash gate against the lock-anchored cache in
+  //    prototyping.json. The lock equality (above) plus the cache
+  //    equality (here) jointly enforce a 3-way invariant
+  //    (live === lock === cache) without the cache becoming a third
+  //    independent SHA SSOT.
   if (options.cycle >= 1) {
     const protoRecord = await readPrototypingJson(protoJsonAbs);
     if (!protoRecord || !protoRecord.designMd || typeof protoRecord.designMd.sha256 !== "string") {
@@ -171,6 +173,14 @@ export async function runPrototypingIterate(
       );
       return 2;
     }
+    if (lockSha !== null && protoRecord.designMd.sha256 !== lockSha) {
+      error(
+        "qfai prototyping iterate: prototyping.json#designMd.sha256 (" +
+          `${protoRecord.designMd.sha256}) differs from DESIGN.md.lock.yaml ` +
+          `(${lockSha}). The lock was refrozen mid-loop; re-run prototyping from cycle 0.`,
+      );
+      return 2;
+    }
     const stop = shouldStop(asIterations(protoRecord));
     if (stop !== null) {
       return emitStop(stop);
@@ -185,12 +195,15 @@ export async function runPrototypingIterate(
     return 2;
   }
 
-  // 4) Persist designMd record to prototyping.json on cycle 0 (and
-  //    ensure subsequent cycles have a stable record to compare).
+  // 4) Persist seed metadata to prototyping.json on cycle 0:
+  //    - designMd { path, sha256 }: the lock-anchored cache used by
+  //      cycle >= 1 hash gates and by `certify` (frozen-loop hash).
+  //    - runId: the canonical loop identifier consumed by `certify`.
+  //      The legacy `fullHarness.runId` shape is no longer written.
   if (options.cycle === 0) {
-    await writeDesignMdRecord(protoJsonAbs, {
-      path: ROOT_DESIGN_MD_REL,
-      sha256: currentSha,
+    await writeSeedMetadata(protoJsonAbs, {
+      designMd: { path: ROOT_DESIGN_MD_REL, sha256: currentSha },
+      runId: buildRunId(currentSha),
     });
   }
 
@@ -230,43 +243,23 @@ type DesignMdReadResult =
   | { ok: false; message: string };
 
 /**
- * Compare the live DESIGN.md sha256 against the SDD-frozen value in
+ * Read the SDD-frozen sha256 from
  * `<contractsDir>/design/DESIGN.md.lock.yaml`. Returns `null` when the
- * gate passes (lock missing OR lock sha matches). Returns an error
- * message when a lock is present but its sha differs from the live
- * file — that means DESIGN.md was edited after the freeze and cycle 0
- * would otherwise re-baseline against the drift.
+ * lock file is missing or unparseable; otherwise returns the lock sha.
+ *
+ * Iterating without a lock is allowed for fresh projects that have not
+ * yet completed /qfai-sdd Phase 0; `qfai validate` and `qfai doctor`
+ * surface the SDD-precondition issue separately.
  */
-async function checkDesignMdLockGate(
-  root: string,
-  contractsDir: string,
-  currentSha: string,
-): Promise<string | null> {
+async function readDesignMdLockGate(root: string, contractsDir: string): Promise<string | null> {
   const lockAbs = path.join(root, contractsDir, "design", "DESIGN.md.lock.yaml");
   let lockText: string;
   try {
     lockText = await readFile(lockAbs, "utf-8");
   } catch {
-    // No lock file — defer to /qfai-validate / qfai doctor (which surface
-    // the SDD-precondition error). Iterating without a lock is allowed
-    // for fresh projects that have not yet completed /qfai-sdd Phase 0.
     return null;
   }
-  const lockSha = readDesignMdLockSha(lockText);
-  if (lockSha === null) {
-    return (
-      "qfai prototyping iterate: DESIGN.md.lock.yaml is missing 'designMdSha256' or " +
-      "is malformed. Re-run /qfai-sdd Phase 0 to regenerate the lock."
-    );
-  }
-  if (lockSha !== currentSha) {
-    return (
-      "qfai prototyping iterate: root DESIGN.md sha256 differs from " +
-      `DESIGN.md.lock.yaml — lock=${lockSha} current=${currentSha}. ` +
-      "DESIGN.md was edited after the SDD freeze; re-run /qfai-sdd Phase 0 to refreeze."
-    );
-  }
-  return null;
+  return readDesignMdLockSha(lockText);
 }
 
 async function readDesignMdFile(absPath: string): Promise<DesignMdReadResult> {
@@ -302,13 +295,20 @@ async function readPrototypingJson(absPath: string): Promise<PrototypingJsonShap
   }
 }
 
-function asIterations(record: PrototypingJsonShape): Iteration[] {
+function asIterations(record: PrototypingJsonShape): readonly unknown[] {
+  // Return loose `unknown[]` and let `shouldStop()` perform per-element
+  // narrowing. Avoid an array-level `as Iteration[]` cast that promises
+  // a shape this loader does not actually verify.
   const iterations = record.iterations;
-  if (!Array.isArray(iterations)) return [];
-  return iterations as Iteration[];
+  return Array.isArray(iterations) ? iterations : [];
 }
 
-async function writeDesignMdRecord(protoJsonAbs: string, record: DesignMdRecord): Promise<void> {
+type SeedMetadata = {
+  designMd: DesignMdRecord;
+  runId: string;
+};
+
+async function writeSeedMetadata(protoJsonAbs: string, seed: SeedMetadata): Promise<void> {
   let body: PrototypingJsonShape;
   try {
     const raw = await readFile(protoJsonAbs, "utf-8");
@@ -320,9 +320,18 @@ async function writeDesignMdRecord(protoJsonAbs: string, record: DesignMdRecord)
   } catch {
     body = {};
   }
-  body.designMd = record;
+  body.designMd = seed.designMd;
+  // Preserve any caller-supplied runId across re-runs from cycle 0; only
+  // generate a fresh one when the slot is empty.
+  if (typeof body.runId !== "string" || body.runId.trim().length === 0) {
+    body.runId = seed.runId;
+  }
   await mkdir(path.dirname(protoJsonAbs), { recursive: true });
   await writeFile(protoJsonAbs, `${JSON.stringify(body, null, 2)}\n`, "utf-8");
+}
+
+function buildRunId(designMdSha: string): string {
+  return `loop-${designMdSha.slice(0, 12)}-${Date.now().toString(36)}`;
 }
 
 function buildDesignTokens(dm: DesignMd): DesignTokens {

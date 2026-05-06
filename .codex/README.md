@@ -22,10 +22,17 @@ Repository-wide AI rules live under `.agents/rules/` (master). Read
 them — and the universal entrypoint `AGENTS.md` at the repo root —
 before making non-trivial changes. The four master rules are:
 
-- `.agents/rules/version-discipline.md` — do not bump
-  `packages/qfai/package.json#version` or write `chore(release):`
-  commits unless the user has explicitly authorized a release. This
-  is the most consequential rule for Codex sessions.
+- `.agents/rules/version-discipline.md` — the user authorizes a
+  release version by either (a) pinning `vX.Y.Z` in the branch name
+  (e.g. `feature/v1.8.8`) or (b) instructing it explicitly. On a
+  pinned branch you MUST sync `packages/qfai/package.json#version`,
+  rename `## [Unreleased]` to `## [X.Y.Z] - YYYY-MM-DD`, re-insert an
+  empty `## [Unreleased]`, and commit `chore(release): qfai X.Y.Z`
+  before the PR merges; selecting any version other than the pin is
+  forbidden. On an unpinned branch, none of those edits may be made
+  without explicit instruction. Tag / publish / force-push / amend /
+  AI-merge always require explicit instruction. This rule is the most
+  consequential for Codex sessions.
 - `.agents/rules/distributed-surface.md` — do not leak QFAI-internal
   spec IDs / version markers / `schemaVersion` into shipped files
   (`dist/`, `assets/`, `README.md`, `LICENSE`).

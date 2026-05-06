@@ -81,9 +81,7 @@ export async function validateRenderCritique(root: string, config: QfaiConfig): 
     const content = await readSafe(sf);
     if (
       content.length > 0 &&
-      (!SPEC_RE.test(content) ||
-        !DESIGN_MD_RE.test(content) ||
-        !UI_CONTRACTS_RE.test(content))
+      (!SPEC_RE.test(content) || !DESIGN_MD_RE.test(content) || !UI_CONTRACTS_RE.test(content))
     ) {
       issues.push(
         issue(

@@ -24,6 +24,7 @@ import path from "node:path";
 
 import { loadConfig } from "../../core/config.js";
 import { hashDesignMd, parseDesignMd } from "../../core/design/designMd.js";
+import { readDesignMdLockSha } from "../../core/design/designMdLock.js";
 import {
   buildCompletionCertificate,
   checkCompletionCertificate,
@@ -76,11 +77,16 @@ export async function runPrototypingCertify(
     return 2;
   }
 
-  const runId = extractString(extractRecord(protoJson, "fullHarness"), "runId");
+  // Accept the new top-level `runId` (written by `iterate` at cycle 0)
+  // and fall back to the legacy `fullHarness.runId` shape for projects
+  // whose prototyping.json predates the UX-loop schema rewrite.
+  const runId =
+    extractString(protoJson, "runId") ??
+    extractString(extractRecord(protoJson, "fullHarness"), "runId");
   if (!runId) {
     error(
-      "qfai prototyping certify: prototyping.json.fullHarness.runId is required " +
-        "before a completion certificate can be issued.",
+      "qfai prototyping certify: prototyping.json#runId is required " +
+        "before a completion certificate can be issued (set by `qfai prototyping iterate --cycle 0`).",
     );
     return 2;
   }
@@ -195,10 +201,42 @@ export async function runPrototypingCertify(
   const resolvedSpec = await resolvePrimaryPrototypingSpec(options.root, config);
   const specsCovered = resolvedSpec ? [resolvedSpec.specId] : [];
 
+  // Frozen-loop hash invariant: the certificate must record the sha256
+  // that was frozen at cycle 0 in prototyping.json (and, when the SDD
+  // lock is present, the lock value too). Recording the live re-hash
+  // would let a brand-body edit between the final iter and certify
+  // silently re-baseline the cert against an SSOT that was not used
+  // during the loop.
+  const currentSha = hashDesignMd(designMdText);
+  const frozenSha = extractString(extractRecord(protoJson, "designMd"), "sha256");
+  if (!frozenSha) {
+    error(
+      "qfai prototyping certify: prototyping.json#designMd.sha256 is missing — re-run " +
+        "prototyping from cycle 0 to record the frozen DESIGN.md sha256.",
+    );
+    return 2;
+  }
+  if (frozenSha !== currentSha) {
+    error(
+      "qfai prototyping certify: root DESIGN.md sha256 (" +
+        `${currentSha}) differs from the frozen value in prototyping.json (${frozenSha}). ` +
+        "DESIGN.md was edited after the loop completed; re-run prototyping from cycle 0.",
+    );
+    return 2;
+  }
+  const lockSha = await loadLockSha(options.root, config.paths.contractsDir);
+  if (lockSha !== null && lockSha !== frozenSha) {
+    error(
+      "qfai prototyping certify: DESIGN.md.lock.yaml sha256 (" +
+        `${lockSha}) differs from the loop-frozen value (${frozenSha}). ` +
+        "Refreeze and re-run prototyping from cycle 0.",
+    );
+    return 2;
+  }
   const toolVersion = await resolveToolVersion();
   const designMdRecord: CompletionCertificateDesignMd = {
     path: ROOT_DESIGN_MD_REL,
-    sha256: hashDesignMd(designMdText),
+    sha256: frozenSha,
   };
 
   const cert = await buildCompletionCertificate({
@@ -222,8 +260,18 @@ export async function runPrototypingCertify(
   info(`  runId: ${runId}`);
   info(`  evidenceFiles: ${cert.evidenceDigests.length}`);
   info(`  specsCovered: ${specsCovered.join(", ") || "(none)"}`);
-  info(`  designMd: ${designMdRecord.path} sha256=${designMdRecord.sha256.slice(0, 12)}…`);
+  info(`  designMd: ${designMdRecord.path} sha256=${designMdRecord.sha256.slice(0, 12)}...`);
   return 0;
+}
+
+async function loadLockSha(root: string, contractsDir: string): Promise<string | null> {
+  const lockAbs = path.join(root, contractsDir, "design", "DESIGN.md.lock.yaml");
+  try {
+    const text = await readFile(lockAbs, "utf-8");
+    return readDesignMdLockSha(text);
+  } catch {
+    return null;
+  }
 }
 
 export async function runPrototypingShowSpec(options: { root: string }): Promise<number> {

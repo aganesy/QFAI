@@ -15,7 +15,12 @@ export type DesignMdViolation = {
   readonly found: string;
 };
 
-const HEX_RE = /#[0-9A-Fa-f]{3,8}\b/g;
+// CSS hex colors are 3 / 4 / 6 / 8 nibbles only — never 5 or 7. The
+// regex enumerates the valid lengths longest-first so the engine
+// prefers the longer match (e.g. `#1F2937FF` over `#1F2937`). Matching
+// `{3,8}` would accept 5/7-digit substrings of unrelated hashes (e.g.
+// `#abcde` from a commit-hash prefix) as colors.
+const HEX_RE = /#(?:[0-9A-Fa-f]{8}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{3})\b/g;
 const RGB_RE = /rgba?\([^)]*\)/gi;
 const HSL_RE = /hsla?\([^)]*\)/gi;
 // Property-value regexes capture up to the next `;`, `}`, `<`, `>`, or
@@ -50,11 +55,24 @@ function stripQuotes(input: string): string {
   return input.replace(/^["']|["']$/g, "");
 }
 
+function firstFamilyToken(stack: string): string {
+  return stripQuotes(stack.split(",")[0]?.trim() ?? "")
+    .trim()
+    .toLowerCase();
+}
+
 function fontMatches(value: string, allowedStacks: ReadonlyArray<string>): boolean {
+  const normalizedValue = value.trim().toLowerCase();
+  const valueFirstFamily = firstFamilyToken(value);
   for (const stack of allowedStacks) {
-    if (value === stack) return true;
-    const firstFamily = stack.split(",")[0]?.trim() ?? "";
-    if (firstFamily.length > 0 && value.startsWith(firstFamily)) return true;
+    if (normalizedValue === stack.trim().toLowerCase()) return true;
+    const allowedFirstFamily = firstFamilyToken(stack);
+    // Compare the first family as an exact token. `startsWith` would
+    // misclassify e.g. "Interstate" as compliant when only "Inter, ..."
+    // is allowed.
+    if (allowedFirstFamily.length > 0 && allowedFirstFamily === valueFirstFamily) {
+      return true;
+    }
   }
   return false;
 }

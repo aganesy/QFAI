@@ -3,7 +3,7 @@
 ## Phases
 
 ```
-[Freeze] cycle 0:    record sha256(DESIGN.md) into prototyping.json
+[Freeze] cycle 0:    cache the lock-anchored sha256(DESIGN.md) into prototyping.json
 [Seed]   cycle 0:    generate one iter-00/index.html under DESIGN.md tokens
 [Loop]   cycle 1..14: capture -> review -> iterate (DESIGN.md hash held)
 [Cert]   final:      handoff yaml + completion-certificate.json
@@ -64,8 +64,12 @@ It is neutral with respect to AI behavior.
 
 ## Frozen brand identity
 
-DESIGN.md is read once at cycle 0 and its sha256 is recorded in
-`prototyping.json`. Subsequent cycles re-hash and exit `2` on mismatch.
-To change brand identity mid-project, edit `DESIGN.md`, rerun
-`/qfai-sdd` Phase 0 to refreeze the lock, and start `/qfai-prototyping`
-from cycle 0.
+The single source of truth for the frozen DESIGN.md sha256 is
+`.qfai/contracts/design/DESIGN.md.lock.yaml#designMdSha256`. At cycle 0
+the loop reads the lock, hashes the live `DESIGN.md`, and refuses to
+proceed unless the two match; the lock value is then cached into
+`prototyping.json` so subsequent cycles can re-verify the
+`live === lock === cache` invariant cheaply. Any of the three
+diverging exits with `2`. To change brand identity mid-project, edit
+`DESIGN.md`, rerun `/qfai-sdd` Phase 0 to refreeze the lock, and
+start `/qfai-prototyping` from cycle 0.

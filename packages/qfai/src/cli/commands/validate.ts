@@ -350,7 +350,6 @@ const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "browser QA completed status without usable evidence (no summary and no findings).",
   "QFAI-PROT-263":
     "browser QA bundle exists but executed=false for full-harness ui-bearing project.",
-  "QFAI-PROT-264": "fullHarness reviewer signoff is incomplete (missing reviewer or timestamp).",
   "QFAI-PROT-265": "full-harness calibration pack could not be resolved from packPath.",
   "QFAI-PROT-266": "full-harness evidence exists but iteration reviewer scores are empty.",
   "QFAI-PROT-273": "browser QA bundle schema is invalid (missing or malformed browserQa block).",
@@ -362,57 +361,20 @@ const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-PROT-271": "uiFidelity.mode='skeleton' is not allowed in full-harness UI prototyping.",
   "QFAI-PROT-272":
     "uiFidelity screen is missing required fields (uiContractId, route, expected, observed).",
-  "QFAI-PROT-281": "mode.effective is full-harness but fullHarness block is missing.",
-  "QFAI-PROT-282":
-    "fullHarness.terminationReason is invalid; must be converged|max-iterations|plateau|manual-stop.",
-  "QFAI-PROT-283": "fullHarness.scoringTrace must contain at least one entry.",
   "QFAI-PROT-284": "emoji characters (U+1F000–U+1FAFF) are forbidden in full-harness output.",
   "QFAI-PROT-285": "prototyping phase state machine is invalid for completion.",
   "QFAI-PROT-286": "post-selection polish iteration evidence is missing for completion.",
   "QFAI-PROT-287": "completion requires every reviewer axis score to be 100.",
   "QFAI-PROT-288": "legacy 95-point completion marker is not a valid completion border.",
   "QFAI-PROT-289": "completionCertificate is required when completion is claimed.",
-  "QFAI-PROT-290":
-    "fullHarness.iterationCount is 1 with converged; single-iteration convergence is suspicious.",
-  "QFAI-PROT-291": "fullHarness.scoringTrace entry count does not match iterationCount.",
   "QFAI-PROT-292":
     "terminationReason is max-iterations but iterationCount is below configured maxIterations.",
-  "QFAI-PROT-293": "fullHarness.iterationCount exceeds configured maxIterations.",
-  "QFAI-PROT-294": "fullHarness.scoringTrace shows no improvement across iterations.",
-  "QFAI-PROT-295": "fullHarness reviewer is a placeholder value.",
-  "QFAI-PROT-296":
-    "fullHarness legacy weighted score fields are deprecated and should not be used for completion decisions.",
-  "QFAI-PROT-297": "fullHarness iteration commitSha is required.",
-  "QFAI-PROT-298": "fullHarness.limitations is required.",
-  "QFAI-PROT-299": "fullHarness.status is completed but terminationReason is missing.",
-  "QFAI-PROT-300": "terminationReason is plateau but iterationCount is less than plateauLookback.",
-  "QFAI-PROT-301": "fullHarness.calibrationRef is missing or has empty configPath/packPath.",
-  "QFAI-PROT-302": "All fullHarness iterations have the same commitSha.",
-  "QFAI-PROT-303": "fullHarness reviewerLog summary is too short.",
-  "QFAI-PROT-304": "fullHarness reviewerLogs count does not match iterationCount.",
-  "QFAI-PROT-305":
-    "fullHarness specCoverage is zero-seeded (all declared/checked counts are zero).",
-  "QFAI-PROT-306":
-    "fullHarness uiFidelity mockPaths must be fail|finding only and must not contain synthetic pass entries.",
-  "QFAI-PROT-308": "fullHarness status is converged but iterationCount < 2.",
-  "QFAI-PROT-309": "fullHarness iteration reviewer is a placeholder value.",
   "QFAI-PROT-310":
     "executionPlan in prototyping.json must be present and well-formed in full-harness mode: the block itself must be an object, and each of targetIterations (number), evaluationAxesSource (non-empty string), delegationMap (object), plannedAt (non-empty string) must be present with the correct shape.",
   "QFAI-PROT-311":
     "delegationMap entry assigns a category to a role outside the SKILL.md Delegation Scope Table.",
-  "QFAI-PROT-316": "reviewerSignoff.status does not match fullHarness.finalDecision.",
-  "QFAI-PROT-317": "final reviewerLogs verdict does not match fullHarness termination semantics.",
   "QFAI-PROT-318":
     "runtimeGate/specCoverage evidenceRefs contain a non-concrete artifact reference.",
-  "QFAI-PROT-319": "fullHarness.calibrationRef.packPath does not match the resolved pack path.",
-  "QFAI-PROT-320":
-    "fullHarness.calibrationRef.packVersion does not match the resolved calibration pack version.",
-  "QFAI-PROT-321":
-    "fullHarness.calibrationRef.configPath does not match the active qfai.config.yaml path.",
-  "QFAI-PROT-322": "fullHarness.status is in-progress but finalDecision is not pending.",
-  "QFAI-PROT-323": "fullHarness.status is in-progress but reviewerSignoff.status is not pending.",
-  "QFAI-PROT-324": "fullHarness.status is in-progress but terminationReason is still present.",
-  "QFAI-PROT-325": "fullHarness.status is completed but reviewerSignoff.status is still pending.",
   "QFAI-PROT-326": "runtimeGate.ui[].declaredRef must use the canonical screen contract sourceRef.",
   "QFAI-PROT-327":
     "fullHarness.iterations[].evidenceRefs.screenContract must use canonical screen contract refs.",
@@ -474,11 +436,13 @@ const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-DCON-019":
     "design-system.yaml and prototype-handoff.yaml are produced by /qfai-prototyping, not /qfai-sdd.",
   "QFAI-DCON-030":
-    "Root DESIGN.md is required as the brand SSOT for UI-bearing projects (parseable per design-md-spec).",
+    "Root DESIGN.md is required as the brand SSOT for UI-bearing projects (file missing).",
   "QFAI-DCON-031":
     "DESIGN.md.lock.yaml must exist under contracts/design/ and contain a designMdSha256 string.",
   "QFAI-DCON-032":
     "Root DESIGN.md sha256 must match DESIGN.md.lock.yaml#designMdSha256 (re-freeze after intentional edits).",
+  "QFAI-DCON-033":
+    "Root DESIGN.md exists but failed to parse per design-md-spec (front-matter is malformed).",
   "QFAI-BREAK-001": "breakthrough.json is required for exploration-first UI prototyping evidence.",
   "QFAI-BREAK-002": "breakthrough.json must be a valid JSON object.",
   "QFAI-BREAK-003": "breakthrough.json.latestIteration must be a positive integer.",

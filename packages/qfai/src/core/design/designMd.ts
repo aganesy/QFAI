@@ -413,6 +413,15 @@ function validateBrand(d: DesignMd, issues: ValidationIssue[]): void {
   // promises an Archetype literal, but validateDesignMd is also called
   // defensively against reloaded JSON).
   /* eslint-disable-next-line @typescript-eslint/no-unnecessary-condition */
+  const name: unknown = d.brand?.name;
+  if (typeof name !== "string" || name.trim().length === 0) {
+    issues.push({
+      path: "brand.name",
+      code: "missing-required",
+      message: "'brand.name' is required (non-empty string).",
+    });
+  }
+  /* eslint-disable-next-line @typescript-eslint/no-unnecessary-condition */
   const archetype: unknown = d.brand?.archetype;
   if (archetype === undefined || archetype === null || archetype === "") {
     issues.push({

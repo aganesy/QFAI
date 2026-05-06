@@ -24,17 +24,26 @@
 
 ## バージョン規律 (全 AI 必読)
 
-QFAI パッケージのバージョン番号は AI が独断で進めない。
+QFAI パッケージの版番号 (`X.Y.Z`) を AI が独断で選んではいけない。
+版番号の選択はユーザが事前に与える: (1) ブランチ名に `vX.Y.Z` を pin
+する、または (2) 対話で明示指示する。pinned branch では pin 自体が
+ユーザ承認に当たる。詳細とガード仕様は
+`.agents/rules/version-discipline.md` (SSOT) を参照。
 
-- 作業中ブランチ名にセマンティックバージョンが含まれる場合
-  (例: `feature/v1.8.8`)、`packages/qfai/package.json#version` は
-  その値で固定する。bump は禁止。
-- 上記に該当しない (例: `main`) 場合、バージョンに関わる変更を
-  実施する前に必ずユーザに確認する。
-- `chore(release): qfai X.Y.Z` のリリースコミットは AI 判断で打たない。
-- 機能完成時は `feat(...)` などの機能 commit を打ち、
-  `CHANGELOG.md` の `## [Unreleased]` に追記。リリース commit は
-  ユーザの明示指示を待つ。
+- **pinned branch** (例: `feature/v1.8.8`): pin = ユーザ承認。
+  AI は次を独断で実行してよい (PR を merge 可能状態に整える段階で
+  実行する義務がある):
+  - `packages/qfai/package.json#version` を pin 値に同期
+  - `CHANGELOG.md` の `## [Unreleased]` を `## [X.Y.Z] - YYYY-MM-DD`
+    に rename し、空の `## [Unreleased]` を再挿入
+  - `chore(release): qfai X.Y.Z` で commit
+  - pin と異なる版番号への変更は禁止 (要ユーザ確認)
+- **unpinned branch** (例: `main`, `chore/...`): `package.json#version`
+  / CHANGELOG H2 / `chore(release):` commit のいずれもユーザ明示指示
+  なしには実行しない。
+- pinned / unpinned いずれでも、tag 付与 (`git tag vX.Y.Z`) /
+  `npm publish` / `git push --force` / amend / `gh pr merge` は
+  ユーザの明示指示を要する。
 
 詳細とガード仕様: `.agents/rules/version-discipline.md`。
 自動ガード: `packages/qfai/scripts/check-branch-version-pin.sh`

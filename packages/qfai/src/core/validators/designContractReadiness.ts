@@ -188,22 +188,22 @@ async function validateRootDesignMdAndLock(root: string, designDir: string): Pro
         );
       }
     }
-    // Optional sanity: DESIGN.md must parse (parseDesignMd already
-    // validates archetype, color set, etc. — failures surface as a
-    // DCON-030 with parse-error suffix so consumers can distinguish
-    // missing vs malformed).
+    // DCON-030 covers missing-file; parse failures get their own
+    // distinct code (DCON-033) so automated remediation can route the
+    // two failure modes correctly: missing -> regenerate template,
+    // parse failure -> repair existing file without losing user edits.
     const parseResult = parseDesignMd(designMdText);
     if ("error" in parseResult) {
       issues.push(
         issue(
-          "QFAI-DCON-030",
+          "QFAI-DCON-033",
           `Root DESIGN.md failed to parse: ${parseResult.error.message}`,
           "error",
           ROOT_DESIGN_MD_REL,
-          "designContractReadiness.rootDesignMd",
+          "designContractReadiness.rootDesignMdParse",
           undefined,
           "canonical",
-          "Fix DESIGN.md front-matter so parseDesignMd succeeds (see qfai-prototyping/references/design-md-spec.md).",
+          "Fix DESIGN.md front-matter so parseDesignMd succeeds (see qfai-prototyping/references/design-md-spec.md). Do NOT regenerate the template — that would discard user content.",
         ),
       );
     }
