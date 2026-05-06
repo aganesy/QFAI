@@ -4,6 +4,21 @@
 
 ## [Unreleased]
 
+### Fixed (Breaking — pre-1.8.9 internal pipelines only)
+
+- **prototyping path SSOT**:
+  `validators/prototyping/completionCertificate.ts#isCompletionClaimed`
+  was reading the legacy `.qfai/evidence/prototyping.json`, silently
+  bypassing QFAI-PROT-335 / QFAI-PROT-336 in the new UX-loop
+  pipeline. The validator now reads the canonical
+  `.qfai/evidence/prototyping/prototyping.json` (matching the
+  `iterate` / `certify` writers), and a new
+  `src/core/prototyping/paths.ts` exports `PROTOTYPING_JSON_REL`
+  consumed by all 6 prior literal sites. Pipelines that previously
+  passed `validate` while claiming completion without a certificate
+  will now correctly emit QFAI-PROT-335 — re-run
+  `qfai prototyping certify` to seal a valid certificate.
+
 ## [1.8.9] - 2026-05-06
 
 ### Changed (BREAKING)
