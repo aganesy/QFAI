@@ -12,11 +12,13 @@
 
 > v1.8.9: US-0002-0004 / 0006 / 0007 (the legacy exploration-first
 > sidecar / evaluator-calibration / best-of-history bundle stories)
-> were retired together with REQ-0006..0011 / AC-0002-0002..0007 /
-> the `discussionDesignHardening` validator. Their downstream
+> were retired together with REQ-0006..0011 and the
+> `discussionDesignHardening` validator. Their downstream
 > behaviors are owned by the post-1.8.9 prototyping spec, which
 > anchors brand SSOT in root `DESIGN.md` and the
-> `validateDesignContractReadiness` family.
+> `validateDesignContractReadiness` family. The corresponding AC /
+> BR / EX / TC / TDD ledger rows are retired in their own files
+> (see retirement notes there).
 
 ## US-0002-0001: 15-file discussion-pack structure
 
