@@ -384,6 +384,59 @@ describe("parseDesignMd (TC-1.1.x)", () => {
     expect(result.error.path).toBe("visual.shadow.gradients");
   });
 
+  it("audience.emotion as a non-array (scalar string) is rejected at parse-time", () => {
+    // Codex 8A6f: pre-fix, only `Array.isArray` gated assignment, so
+    // a scalar value silently dropped. Post-fix this returns
+    // invalid-type so the brand SSOT enforces the contract upstream
+    // of DESIGN.md.lock hashing.
+    const text = VALID_FRONT_MATTER.replace(
+      '  emotion: ["confident comparison"]',
+      '  emotion: "confident comparison"',
+    );
+    const result = parseDesignMd(text);
+    expect("error" in result).toBe(true);
+    if (!("error" in result)) return;
+    expect(result.error.code).toBe("invalid-type");
+    expect(result.error.path).toBe("audience.emotion");
+  });
+
+  it("audience.emotion array with non-string entry is rejected at parse-time", () => {
+    const text = VALID_FRONT_MATTER.replace(
+      '  emotion: ["confident comparison"]',
+      '  emotion: ["confident comparison", 42]',
+    );
+    const result = parseDesignMd(text);
+    expect("error" in result).toBe(true);
+    if (!("error" in result)) return;
+    expect(result.error.code).toBe("invalid-type");
+    expect(result.error.path).toBe("audience.emotion[1]");
+  });
+
+  it("audience.do_not_look_like with mixed types is rejected at parse-time", () => {
+    const text = VALID_FRONT_MATTER.replace(
+      '  do_not_look_like: ["generic SaaS dashboard"]',
+      '  do_not_look_like: ["generic SaaS dashboard", null]',
+    );
+    const result = parseDesignMd(text);
+    expect("error" in result).toBe(true);
+    if (!("error" in result)) return;
+    // `null` (yaml literal) parses as JS null, which fails the string
+    // type check in parseAudienceStringArray.
+    expect(result.error.code).toBe("invalid-type");
+    expect(result.error.path).toBe("audience.do_not_look_like[1]");
+  });
+
+  it("audience.emotion as a string array is accepted (positive)", () => {
+    // The existing VALID_FRONT_MATTER already authors a 1-element
+    // string array; this test asserts the positive parse path is
+    // unchanged after the strict-parse refactor.
+    const result = parseDesignMd(VALID_FRONT_MATTER + "\n");
+    expect("error" in result).toBe(false);
+    if ("error" in result) return;
+    expect(result.data.audience?.emotion).toEqual(["confident comparison"]);
+    expect(result.data.audience?.do_not_look_like).toEqual(["generic SaaS dashboard"]);
+  });
+
   it("visual.typography.scale with non-string value (number 1) is rejected at parse-time", () => {
     // Codex 7TIR: pre-fix, readStringRecord silently coerced numbers
     // to strings; post-fix this rejects with invalid-type.

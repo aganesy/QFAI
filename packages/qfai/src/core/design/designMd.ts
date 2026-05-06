@@ -363,13 +363,26 @@ function buildDesignMd(raw: unknown): BuildResult {
     });
     if (audienceError) return { error: audienceError };
     const aud: DesignMd["audience"] = {};
-    if (Array.isArray(raw.audience.emotion)) {
-      aud.emotion = raw.audience.emotion.filter((v): v is string => typeof v === "string");
+    // The distributed DESIGN.md spec defines `audience.emotion` and
+    // `audience.do_not_look_like` as `string[]`. Pre-fix, both fields
+    // were silently filtered (`.filter(typeof v === "string")` /
+    // `Array.isArray` check), which let scalar / mixed-type authoring
+    // hash into the DESIGN.md.lock raw bytes while the parsed brand
+    // context dropped the offending entries. Reject non-array values
+    // and non-string entries with explicit invalid-type errors so the
+    // brand SSOT enforces the contract upstream of the lock.
+    if ("emotion" in raw.audience && raw.audience.emotion !== undefined) {
+      const emotionError = parseAudienceStringArray(raw.audience.emotion, "audience.emotion");
+      if ("error" in emotionError) return emotionError;
+      aud.emotion = emotionError.value;
     }
-    if (Array.isArray(raw.audience.do_not_look_like)) {
-      aud.do_not_look_like = raw.audience.do_not_look_like.filter(
-        (v): v is string => typeof v === "string",
+    if ("do_not_look_like" in raw.audience && raw.audience.do_not_look_like !== undefined) {
+      const dnllError = parseAudienceStringArray(
+        raw.audience.do_not_look_like,
+        "audience.do_not_look_like",
       );
+      if ("error" in dnllError) return dnllError;
+      aud.do_not_look_like = dnllError.value;
     }
     data.audience = aud;
   }
@@ -681,6 +694,44 @@ function readVisual(raw: unknown): { value: DesignMd["visual"] } | { error: Pars
  * footgun where a future tweak to one would silently diverge from
  * the other.
  */
+/**
+ * Strict-parse a DESIGN.md `audience.<key>` field as `string[]`. Returns
+ * `{ value }` on success or `{ error }` when the input is not an array
+ * or contains a non-string entry. Pre-1.8.9 the parser silently
+ * filtered non-strings and accepted scalars, which let malformed
+ * authoring hash into the DESIGN.md lock while downstream consumers
+ * saw a different brand context.
+ */
+function parseAudienceStringArray(
+  raw: unknown,
+  fieldPath: string,
+): { value: string[] } | { error: ParseError } {
+  if (!Array.isArray(raw)) {
+    return {
+      error: {
+        path: fieldPath,
+        code: "invalid-type",
+        message: `'${fieldPath}' must be a string array (got ${describeValueShape(raw)}).`,
+      },
+    };
+  }
+  const out: string[] = [];
+  for (let i = 0; i < raw.length; i += 1) {
+    const entry: unknown = raw[i];
+    if (typeof entry !== "string") {
+      return {
+        error: {
+          path: `${fieldPath}[${i}]`,
+          code: "invalid-type",
+          message: `'${fieldPath}[${i}]' must be a string (got ${describeValueShape(entry)}).`,
+        },
+      };
+    }
+    out.push(entry);
+  }
+  return { value: out };
+}
+
 function describeValueShape(value: unknown): string {
   if (value === null) return "null";
   if (typeof value === "string") return `string ${JSON.stringify(value)}`;

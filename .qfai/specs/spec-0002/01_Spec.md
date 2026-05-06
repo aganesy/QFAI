@@ -44,8 +44,14 @@
 ## Evidence Summary
 
 - Evidence: `packages/qfai/assets/init/.qfai/assistant/skills/qfai-discussion/**`
-- Evidence: `packages/qfai/src/core/validators/discussionDesignHardening.ts`
 - Evidence: `packages/qfai/src/core/validators/uix/threeLayer.ts`
+
+> v1.8.9: the `discussionDesignHardening` validator was retired together
+> with the exploration-sidecar family; the corresponding evidence row was
+> removed. The DESIGN.md-driven equivalent is owned by the post-1.8.9
+> prototyping spec and is anchored by `parseDesignMd` /
+> `validateDesignMd` plus the `validateDesignContractReadiness` family in
+> `packages/qfai/src/core/validators/designContractReadiness.ts`.
 
 ## Relevant Requirements
 

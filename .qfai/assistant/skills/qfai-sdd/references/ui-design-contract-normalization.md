@@ -19,7 +19,9 @@ Required UI-bearing outputs in the new SSOT model:
 Freeze procedure:
 
 1. Read `DESIGN.md`.
-2. Call `validateDesignMd(text)`; halt on any issue.
+2. Call `parseDesignMd(text)`; halt on `{ error: ... }`. On success, pass
+   the parsed `DesignMd` from `result.data` to `validateDesignMd`; halt
+   on any issue.
 3. Compute `hashDesignMd(text)` (sha256).
 4. Emit `.qfai/contracts/design/DESIGN.md.lock.yaml` with
    `{ designMdPath, designMdSha256, frozenAt, schemaTokens }`.

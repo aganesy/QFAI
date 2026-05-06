@@ -2,10 +2,13 @@
  * Taste validator tests — spec-0034 TDD-0001..TDD-0005
  *
  * QFAI:SPEC-0002:TC-0002-0001
- * QFAI:SPEC-0002:TC-0002-0002
- * QFAI:SPEC-0002:TC-0002-0003
- * QFAI:SPEC-0002:TC-0002-0004
- * QFAI:SPEC-0002:TC-0002-0005
+ *
+ * v1.8.9: TC-0002-0002..0005 annotations were removed because those TCs
+ * were retired together with the legacy `discussionDesignHardening`
+ * validator (spec-0017 → post-1.8.9 prototyping spec absorb). The taste
+ * validator's own behavior is anchored by spec-0034's TDD-0001..0005;
+ * spec-0002 traceability is reduced to TC-0002-0001 (the surviving
+ * 15-file structural TC).
  */
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";

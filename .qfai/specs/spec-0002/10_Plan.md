@@ -11,13 +11,18 @@ CAP-0002 の多くは既に実装済みである。本 spec は設計意図と�
 
 ### 主要成果物
 
-| 成果物                   | パス                                                         | 操作 | 説明                                     |
-| ------------------------ | ------------------------------------------------------------ | ---- | ---------------------------------------- |
-| discussion-pack 構造定義 | `.qfai/specs/spec-0002/01_Spec.md` ~ `09_delta.md`           | 新規 | 統合された discussion-pack 構造仕様      |
-| 実装コード（既存）       | `packages/qfai/src/core/discussionPack.ts`                   | 参照 | discussion-pack 検査・readiness チェック |
-| 実装コード（既存）       | `packages/qfai/src/core/validators/discussionPack.ts`        | 参照 | QFAI-DPACK-001~008 バリデータ            |
-| 実装コード（既存）       | `packages/qfai/src/core/discussionDesignHardening.ts`        | 参照 | QFAI-DDP-019~025 DDS バリデータ          |
-| テスト（既存）           | `packages/qfai/tests/core/discussionDesignHardening.test.ts` | 参照 | DDS バリデータユニットテスト             |
+| 成果物                   | パス                                                  | 操作 | 説明                                     |
+| ------------------------ | ----------------------------------------------------- | ---- | ---------------------------------------- |
+| discussion-pack 構造定義 | `.qfai/specs/spec-0002/01_Spec.md` ~ `09_delta.md`    | 新規 | 統合された discussion-pack 構造仕様      |
+| 実装コード（既存）       | `packages/qfai/src/core/discussionPack.ts`            | 参照 | discussion-pack 検査・readiness チェック |
+| 実装コード（既存）       | `packages/qfai/src/core/validators/discussionPack.ts` | 参照 | QFAI-DPACK-001~008 バリデータ            |
+
+> v1.8.9: `discussionDesignHardening.ts` and its proving tests were retired
+> together with the legacy exploration-sidecar family; the corresponding rows
+> were removed from this active deliverables table. The DESIGN.md-driven
+> equivalent is owned by the post-1.8.9 prototyping spec and anchored by
+> `validateDesignContractReadiness` in
+> `packages/qfai/src/core/validators/designContractReadiness.ts`.
 
 ### 検証戦略
 
@@ -49,7 +54,7 @@ CAP-0002 の多くは既に実装済みである。本 spec は設計意図と�
 
 ### Integration / E2E
 
-- 旧 spec-0023 の integration テスト（TDD-0025~0041）は `packages/qfai/tests/core/discussionDesignHardening.integration.test.ts` に実装済み
+- 旧 spec-0023 の integration テスト（TDD-0025~0041）は v1.7.13 で `packages/qfai/tests/core/discussionDesignHardening.integration.test.ts` に実装され、v1.8.9 で同 validator の retire とともに削除済み
 - 旧 spec-0026/0034 のバリデータテストは各テストファイルに実装済み
 
 ## 依存関係
@@ -87,6 +92,9 @@ CAP-0002 の多くは既に実装済みである。本 spec は設計意図と�
 ## v1.8.1 Implementation Notes
 
 - markdown-only readiness: `packages/qfai/src/core/discussionPack.ts` — `REQUIRED_DISCUSSION_PACK_SIDE_ARTIFACTS = []`, `missingSideArtifacts` is retained only as a compatibility-shaped empty array
-- Discussion design hardening sidecar-first rewrite: `packages/qfai/src/core/validators/discussionDesignHardening.ts` — all 7 validators rewritten for uiux/ sidecar primary truth
+- Discussion design hardening sidecar-first rewrite (v1.8.1, retired in v1.8.9): the
+  former `packages/qfai/src/core/validators/discussionDesignHardening.ts` had all 7
+  validators rewritten for uiux/ sidecar primary truth; the file was removed in v1.8.9
+  together with the legacy exploration-sidecar family
 - Issue code migration: QFAI-DDP-019~025 → UIX-VAL-DDH-\* canonical codes
 - Implemented in v1.7.13-18..22.

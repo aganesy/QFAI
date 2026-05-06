@@ -217,8 +217,13 @@ When the target spec is UI-bearing, Phase 0 MUST freeze the brand SSOT:
    missing, stop and ask the user to run `/qfai-discussion` (which
    emits the draft) or to author it manually using the sample at
    `.qfai/assistant/skills/qfai-prototyping/templates/DESIGN.md.sample`.
-2. Call `validateDesignMd(text)`. If the issue list is non-empty,
-   stop and report `path` / `code` / `message` for each issue.
+2. Call `parseDesignMd(text)`. If the result is `{ error: ParseError }`,
+   stop and report `path` / `code` / `message` for the parse error.
+   Otherwise the result is `{ data: DesignMd; body: string }`; pass
+   `data` to `validateDesignMd(data)`. If that issue list is
+   non-empty, stop and report each issue. Both functions are exported
+   from `packages/qfai/src/core/design/designMd.ts` (or the public
+   `qfai/dist/...` entry — the runtime API surface is the same).
 3. Call `hashDesignMd(text)` to compute sha256 over the raw bytes.
 4. Write `.qfai/contracts/design/DESIGN.md.lock.yaml` from the
    template at
