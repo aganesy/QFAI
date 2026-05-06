@@ -3,10 +3,11 @@ import path from "node:path";
 import { parse as parseYaml } from "yaml";
 
 import type { QfaiConfig } from "../../config.js";
+import { PROTOTYPING_JSON_REL } from "../../prototyping/paths.js";
 import type { Issue } from "../../types.js";
 import { exists, issue } from "../utils.js";
 
-const PROTO_JSON_REL = ".qfai/evidence/prototyping/prototyping.json";
+const PROTO_JSON_REL = PROTOTYPING_JSON_REL;
 const HANDOFF_REL = ".qfai/contracts/design/prototype-handoff.yaml";
 
 export async function validatePrototypingArtifactRefIntegrity(
@@ -40,12 +41,14 @@ export async function validatePrototypingArtifactRefIntegrity(
       handoff.finalArtifact,
       "prototype-handoff.finalArtifact",
       issues,
+      { required: true, sourcePath: HANDOFF_REL },
     );
     await validateArtifactRef(
       root,
-      handoff.extractedDesignSystem,
-      "prototype-handoff.extractedDesignSystem",
+      handoff.designSystemMirror,
+      "prototype-handoff.designSystemMirror",
       issues,
+      { required: true, sourcePath: HANDOFF_REL },
     );
   }
 
@@ -57,8 +60,12 @@ async function validateArtifactRef(
   value: unknown,
   field: string,
   issues: Issue[],
-  options: { required?: boolean } = {},
+  options: { required?: boolean; sourcePath?: string } = {},
 ): Promise<void> {
+  // The Issue#path tells the operator WHICH file to edit. Default to
+  // prototyping.json for fields that live there, but let
+  // prototype-handoff.yaml callers point at the actual handoff file.
+  const issuePath = options.sourcePath ?? PROTO_JSON_REL;
   if (typeof value !== "string" || value.trim().length === 0) {
     if (options.required) {
       issues.push(
@@ -66,7 +73,7 @@ async function validateArtifactRef(
           "QFAI-PROT-009",
           `${field} must be a non-empty repository-relative artifact path.`,
           "error",
-          PROTO_JSON_REL,
+          issuePath,
           "prototyping.refIntegrity.emptyArtifactRef",
         ),
       );
@@ -80,7 +87,7 @@ async function validateArtifactRef(
         "QFAI-PROT-009",
         `${field} must stay within the repository root (got ${JSON.stringify(value)}).`,
         "error",
-        PROTO_JSON_REL,
+        issuePath,
         "prototyping.refIntegrity.outsideRoot",
       ),
     );
@@ -92,7 +99,7 @@ async function validateArtifactRef(
         "QFAI-PROT-009",
         `${field} references a missing artifact: ${value}.`,
         "error",
-        PROTO_JSON_REL,
+        issuePath,
         "prototyping.refIntegrity.missingArtifact",
         [value],
       ),

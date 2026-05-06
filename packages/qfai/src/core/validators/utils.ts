@@ -51,13 +51,6 @@ export function issue(
   return issue;
 }
 
-export function isMissingFileError(error: unknown): boolean {
-  if (!error || typeof error !== "object") {
-    return false;
-  }
-  return (error as { code?: string }).code === "ENOENT";
-}
-
 export async function exists(filePath: string): Promise<boolean> {
   try {
     await access(filePath);

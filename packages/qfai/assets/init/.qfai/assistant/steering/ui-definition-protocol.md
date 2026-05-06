@@ -25,16 +25,11 @@ QFAI が定義する、下流 skill が UI 定義を読み取る際の手順。
    - states
    - actions
 
-3. **Design Contracts** (`.qfai/contracts/design/*.yaml`)
-   - `exploration-brief.yaml`
-   - `reference-pool.yaml`
-   - `brand-design.yaml`
-   - `evaluation-rubric.yaml`
-   - `evaluator-calibration.yaml`
-   - `absorption-policy.yaml`
-   - `selected-direction.yaml` (after prototyping winner selection)
-   - `design-system.yaml` (after prototyping convergence)
-   - `prototype-handoff.yaml` (after prototyping convergence)
+3. **Brand SSOT**
+   - root `DESIGN.md` (front-matter + `# Brand Philosophy` body)
+   - `.qfai/contracts/design/DESIGN.md.lock.yaml` (frozen sha256 + token schema)
+   - `.qfai/contracts/design/design-system.yaml` (post-loop token mirror)
+   - `.qfai/contracts/design/prototype-handoff.yaml` (post-loop handoff facts)
 
 4. **Evidence** (`.qfai/evidence/**`)
    - prototyping screenshots / HTML / snapshots / command logs

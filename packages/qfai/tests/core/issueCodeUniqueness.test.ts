@@ -148,6 +148,5 @@ describe("issue code uniqueness", () => {
     const validatePath = path.resolve(__dirname, "../../src/cli/commands/validate.ts");
     const validateContent = await readFile(validatePath, "utf-8");
     expect(validateContent).toContain("QFAI-PROT-150");
-    expect(validateContent).toContain("QFAI-PROT-299");
   });
 });

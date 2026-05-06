@@ -13,7 +13,10 @@ import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { defaultConfig } from "../../../src/core/config.js";
-import { validateThreeLayerModel } from "../../../src/core/validators/uix/threeLayer.js";
+import {
+  validateForbiddenLegacyFiles,
+  validateThreeLayerModel,
+} from "../../../src/core/validators/uix/threeLayer.js";
 
 const tempDirs: string[] = [];
 
@@ -40,17 +43,17 @@ describe("3-layer validator", () => {
     const root = await newTempDir();
     await createUiBearingPack(root);
     const content = [
-      "# Exploration Rubric",
+      "# Screen Contracts",
       "",
-      "## Design Quality",
+      "## Information Architecture",
       "",
-      "- hierarchy: Universal access compliance",
+      "- hierarchy: priority and grouping are clear",
       "",
-      "## Originality",
+      "## Navigation Flow",
       "",
-      "- differentiation: Adopted from current product context",
+      "- back path: every screen names the way out",
       "",
-      "## Craft",
+      "## Usability",
       "",
       "- spacing: precise alignment and rhythm",
       "",
@@ -58,7 +61,7 @@ describe("3-layer validator", () => {
       "",
       "- task_clarity: primary action remains obvious",
     ].join("\n");
-    await writeFile(path.join(root, "uiux", "33_exploration_rubric.md"), content, "utf-8");
+    await writeFile(path.join(root, "uiux", "40_screen_contracts.md"), content, "utf-8");
 
     const issues = await validateThreeLayerModel(root, defaultConfig);
 
@@ -69,9 +72,9 @@ describe("3-layer validator", () => {
     const root = await newTempDir();
     await createUiBearingPack(root);
     const content = [
-      "# Exploration Rubric",
+      "# Screen Contracts",
       "",
-      "## usability",
+      "## craft",
       "",
       "- task_completion: Can users finish core tasks?",
       "",
@@ -87,7 +90,7 @@ describe("3-layer validator", () => {
       "",
       "- satisfaction: User satisfaction score",
     ].join("\n");
-    await writeFile(path.join(root, "uiux", "33_exploration_rubric.md"), content, "utf-8");
+    await writeFile(path.join(root, "uiux", "40_screen_contracts.md"), content, "utf-8");
 
     const issues = await validateThreeLayerModel(root, defaultConfig);
 
@@ -100,23 +103,37 @@ describe("3-layer validator", () => {
     const root = await newTempDir();
     await createUiBearingPack(root);
     const content = [
-      "# Exploration Rubric",
+      "# Screen Contracts",
       "",
-      "## Design Quality",
+      "## Information Architecture",
       "",
-      "- accessibility: Universal",
+      "- hierarchy: priority is clear",
       "",
       "## delight",
       "",
       "- satisfaction: Old 4-axis format mixed in",
     ].join("\n");
-    await writeFile(path.join(root, "uiux", "33_exploration_rubric.md"), content, "utf-8");
+    await writeFile(path.join(root, "uiux", "40_screen_contracts.md"), content, "utf-8");
 
     const issues = await validateThreeLayerModel(root, defaultConfig);
 
     expect(issues.length).toBeGreaterThan(0);
     expect(issues[0]?.code).toBe("UIX-VAL-3LAYER-MIXED-FORMAT");
     expect(issues[0]?.severity).toBe("error");
+  });
+
+  it("retired sidecars 33_exploration_rubric.md / 34_evaluator_calibration.md are forbidden", async () => {
+    const root = await newTempDir();
+    await createUiBearingPack(root);
+    await writeFile(path.join(root, "uiux", "33_exploration_rubric.md"), "# stale\n", "utf-8");
+    await writeFile(path.join(root, "uiux", "34_evaluator_calibration.md"), "# stale\n", "utf-8");
+
+    const issues = await validateForbiddenLegacyFiles(root, defaultConfig);
+    const codes = issues.map((i) => i.code);
+    expect(codes).toContain("UIX-VAL-3LAYER-FORBIDDEN-FILE");
+    const files = issues.map((i) => i.file);
+    expect(files).toContain("uiux/33_exploration_rubric.md");
+    expect(files).toContain("uiux/34_evaluator_calibration.md");
   });
 
   it("non-UI skip", async () => {
@@ -132,17 +149,17 @@ describe("3-layer validator", () => {
     const root = await newTempDir();
     await createUiBearingPack(root);
     const content = [
-      "# Exploration Rubric",
+      "# Screen Contracts",
       "",
-      "## Design Quality",
+      "## Information Architecture",
       "",
-      "- accessibility: Universal",
+      "- hierarchy: clear priority",
       "",
       "## Functionality",
       "",
       "- brand: Unique to product",
     ].join("\n");
-    await writeFile(path.join(root, "uiux", "33_exploration_rubric.md"), content, "utf-8");
+    await writeFile(path.join(root, "uiux", "40_screen_contracts.md"), content, "utf-8");
 
     const issues = await validateThreeLayerModel(root, defaultConfig);
 

@@ -7,6 +7,7 @@ import { readdir } from "node:fs/promises";
 import path from "node:path";
 
 import type { QfaiConfig } from "../../config.js";
+import { isEnoent } from "../../fs/errno.js";
 import type { Issue, IssueSeverity } from "../../types.js";
 import { isUiBearingSpec } from "../uixDetection.js";
 
@@ -42,12 +43,7 @@ export async function validateSidecarMissing(root: string, _config: QfaiConfig):
     await readdir(path.join(root, "uiux"));
     return [];
   } catch (err: unknown) {
-    if (
-      typeof err === "object" &&
-      err !== null &&
-      "code" in err &&
-      (err as NodeJS.ErrnoException).code === "ENOENT"
-    ) {
+    if (isEnoent(err)) {
       return [
         canonicalIssue(
           "UIX-VAL-SIDECAR-MISSING",

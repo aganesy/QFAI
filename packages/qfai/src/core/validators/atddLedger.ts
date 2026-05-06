@@ -3,9 +3,10 @@ import path from "node:path";
 
 import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
+import { isEnoent } from "../fs/errno.js";
 import { collectSpecEntries } from "../specLayout.js";
 import type { Issue } from "../types.js";
-import { isMissingFileError, issue } from "./utils.js";
+import { issue } from "./utils.js";
 
 export async function validateAtddCoverageLedgers(
   root: string,
@@ -23,7 +24,7 @@ export async function validateAtddCoverageLedgers(
     try {
       await access(ledgerPath);
     } catch (error) {
-      if (isMissingFileError(error)) {
+      if (isEnoent(error)) {
         issues.push(
           issue(
             "QFAI-ATDD-001",

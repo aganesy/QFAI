@@ -47,8 +47,6 @@ import {
   validateTddList,
   validateUiDefinitionConsistency,
   validateDesignAudit,
-  validateDesignSlop,
-  validateDiscussionDesignHardening,
   validateNavigationFlow,
   validateRenderCritique,
   validateDesignFidelity,
@@ -139,7 +137,6 @@ async function runDiscussionValidators(
     ...(await validateDiscussionMermaid(root)),
     ...(await validateDiscussionPackReadiness(root, config)),
     ...(await validateDiscussionVisuals(root)),
-    ...(await validateDiscussionDesignHardening(root, config)),
     ...(await validateResearchSummary(root, config)),
     ...(await runCanonicalUixValidators(root, config)),
   ];
@@ -249,7 +246,6 @@ async function runUiuxValidators(
     () => validateResearchSummary(root, config),
     () => validateAgentDefinition(root, config),
     () => validateDesignAudit(root, config),
-    () => validateDesignSlop(root, config),
     () => runCanonicalUixValidators(root, config),
   ];
   const uiuxIssueGroups = await Promise.all(uiuxValidators.map((validator) => validator()));

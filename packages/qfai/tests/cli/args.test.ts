@@ -109,7 +109,7 @@ describe("parseArgs", () => {
     expect(parsed.options.prototypingCycle).toBeUndefined();
   });
 
-  // v2.0 (spec-0017 P3/P14): the v1.x round-* / --candidates / --survivors
+  // v2.0 (spec-0012 absorbed): the v1.x round-* / --candidates / --survivors
   // arg surface was removed; the iterate command takes only --cycle and
   // --target-url. No equivalent --out / --format rejection tests are needed
   // because the new CLI surface does not accept those flags for `iterate`.

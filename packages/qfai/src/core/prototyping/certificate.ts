@@ -19,6 +19,13 @@ import { createHash } from "node:crypto";
 import { mkdir, readFile, readdir, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 
+import { hashDesignMd } from "../design/designMd.js";
+
+export type CompletionCertificateDesignMd = {
+  readonly path: string;
+  readonly sha256: string;
+};
+
 export type CompletionCertificate = {
   readonly runId: string;
   readonly generatedAt: string; // ISO-8601
@@ -42,6 +49,13 @@ export type CompletionCertificate = {
   };
   readonly iterationCount: number;
   readonly specsCovered: ReadonlyArray<string>;
+  /**
+   * Frozen DESIGN.md reference. `path` is the project-root relative path
+   * (POSIX) and `sha256` is the hex digest of the file contents at the
+   * time `qfai prototyping certify` ran. Optional only for legacy
+   * certificates written before the field existed.
+   */
+  readonly designMd?: CompletionCertificateDesignMd;
 };
 
 /** Path (POSIX) under repo root. */
@@ -60,13 +74,19 @@ export type BuildCertificateInputs = {
   reviewerSignoff: { reviewerId: string; approved: boolean; timestamp: string };
   iterationCount: number;
   specsCovered: readonly string[];
+  /**
+   * Optional DESIGN.md binding. When supplied, the certificate carries
+   * the path + sha256 so `--check` can detect post-certify edits to the
+   * brand SSOT.
+   */
+  designMd?: CompletionCertificateDesignMd;
 };
 
 export async function buildCompletionCertificate(
   inputs: BuildCertificateInputs,
 ): Promise<CompletionCertificate> {
   const evidenceDigests = await scanEvidenceDigests(inputs.evidenceRoot);
-  return {
+  const cert: CompletionCertificate = {
     runId: inputs.runId,
     generatedAt: new Date().toISOString(),
     generator: { tool: "qfai", version: inputs.toolVersion },
@@ -76,7 +96,9 @@ export async function buildCompletionCertificate(
     reviewerSignoff: inputs.reviewerSignoff,
     iterationCount: inputs.iterationCount,
     specsCovered: [...inputs.specsCovered],
+    ...(inputs.designMd ? { designMd: { ...inputs.designMd } } : {}),
   };
+  return cert;
 }
 
 export async function writeCompletionCertificate(
@@ -117,6 +139,7 @@ type CompletionCertificateRecord = {
   };
   iterationCount: number;
   specsCovered: string[];
+  designMd?: { path: string; sha256: string };
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -167,6 +190,12 @@ function isMinimallyValidCertificate(value: unknown): value is CompletionCertifi
   if (typeof reviewerSignoff.timestamp !== "string") return false;
   if (typeof v.iterationCount !== "number") return false;
   if (!isStringArray(v.specsCovered)) return false;
+  if (v.designMd !== undefined) {
+    if (!isRecord(v.designMd)) return false;
+    if (typeof v.designMd.path !== "string" || typeof v.designMd.sha256 !== "string") {
+      return false;
+    }
+  }
   return true;
 }
 
@@ -182,7 +211,7 @@ function normalizeCompletionCertificate(value: unknown): CompletionCertificate |
       ? reviewerSignoff.reviewerId
       : (reviewerSignoff.reviewer as string);
 
-  return {
+  const out: CompletionCertificate = {
     runId: record.runId,
     generatedAt: record.generatedAt,
     generator: {
@@ -208,7 +237,11 @@ function normalizeCompletionCertificate(value: unknown): CompletionCertificate |
     },
     iterationCount: record.iterationCount,
     specsCovered: [...record.specsCovered],
+    ...(record.designMd
+      ? { designMd: { path: record.designMd.path, sha256: record.designMd.sha256 } }
+      : {}),
   };
+  return out;
 }
 
 export type CertifyCheckResult =
@@ -267,6 +300,22 @@ export async function checkCompletionCertificate(root: string): Promise<CertifyC
     reasons.push("reviewerSignoff.approved must be true");
   }
 
+  if (cert.designMd) {
+    const designMdAbs = path.join(root, cert.designMd.path);
+    let currentSha: string | null = null;
+    try {
+      const text = await readFile(designMdAbs, "utf-8");
+      currentSha = hashDesignMd(text);
+    } catch {
+      reasons.push(`DESIGN.md missing at ${cert.designMd.path} (referenced by certificate).`);
+    }
+    if (currentSha !== null && currentSha !== cert.designMd.sha256) {
+      reasons.push(
+        `DESIGN.md sha256 mismatch: certificate=${cert.designMd.sha256}, current=${currentSha}.`,
+      );
+    }
+  }
+
   return reasons.length === 0 ? { ok: true } : { ok: false, reasons };
 }
 
@@ -298,7 +347,11 @@ async function walk(
     return;
   }
   for (const name of entries) {
-    if (name === "completion-certificate.json") continue;
+    // The cert file lives at evidenceRoot/completion-certificate.json
+    // by contract. Restrict the skip to the top level so a stray copy
+    // in a sub-directory is still digested (defense against accidental
+    // shadowing of the digest tree).
+    if (dir === rootDir && name === "completion-certificate.json") continue;
     const full = path.join(dir, name);
     let s: Awaited<ReturnType<typeof stat>>;
     try {

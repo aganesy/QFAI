@@ -7,25 +7,39 @@
  *   - .qfai/output/validate.json exists with counts.error === 0
  *   - .qfai/output/verify.json exists with status === "PASS"
  *   - prototyping.json.reviewerGate.result === "PASS"
+ *   - root DESIGN.md parses, and the latest iteration HTML contains zero
+ *     DESIGN.md violations (color / font / radius / shadow drift)
  *
  * `certify --check` re-computes evidence digests against the stored
- * certificate and exits non-zero on drift. This is the only deterministic
- * way to claim a prototyping run is complete.
+ * certificate and exits non-zero on drift. The check ALSO re-hashes the
+ * root DESIGN.md when the certificate carries `designMd`, so editing
+ * the brand SSOT after certification fails the check.
  *
  * `show-spec` prints the resolved primary prototyping spec (config or
  * marker-scan based) so AI consumers do not hardcode a specific spec id.
  */
 
-import { readFile } from "node:fs/promises";
+import { readdir, readFile, stat } from "node:fs/promises";
 import path from "node:path";
 
 import { loadConfig } from "../../core/config.js";
+import { readUiContractScreenContracts } from "../../core/contracts/screenContracts.js";
+import { hashDesignMd, parseDesignMd } from "../../core/design/designMd.js";
+import { readDesignMdLockSha } from "../../core/design/designMdLock.js";
+import { isEnoent } from "../../core/fs/errno.js";
+import { PROTOTYPING_EVIDENCE_REL, PROTOTYPING_JSON_REL } from "../../core/prototyping/paths.js";
 import {
   buildCompletionCertificate,
   checkCompletionCertificate,
   writeCompletionCertificate,
+  type CompletionCertificateDesignMd,
 } from "../../core/prototyping/certificate.js";
+import {
+  findDesignMdViolations,
+  type DesignMdViolation,
+} from "../../core/prototyping/designMdViolations.js";
 import { resolvePrimaryPrototypingSpec } from "../../core/prototyping/specResolution.js";
+import { readFrozenSpecsCovered } from "../../core/prototyping/specsCovered.js";
 import { resolveToolVersion } from "../../core/version.js";
 import { error, info } from "../lib/logger.js";
 
@@ -34,6 +48,8 @@ export type RunPrototypingCertifyOptions = {
   /** When true, do not write; only verify the existing certificate. */
   check: boolean;
 };
+
+const ROOT_DESIGN_MD_REL = "DESIGN.md";
 
 export async function runPrototypingCertify(
   options: RunPrototypingCertifyOptions,
@@ -53,29 +69,31 @@ export async function runPrototypingCertify(
 
   // ─── Generate mode ─────────────────────────────────────────────────────────
   const { config } = await loadConfig(options.root);
-  const evidenceRoot = path.join(options.root, ".qfai/evidence/prototyping");
+  const evidenceRoot = path.join(options.root, PROTOTYPING_EVIDENCE_REL);
 
-  const protoJson = await loadJson(path.join(options.root, ".qfai/evidence/prototyping.json"));
+  const protoJson = await loadJson(path.join(options.root, PROTOTYPING_JSON_REL));
   if (!protoJson) {
     error(
-      "qfai prototyping certify: .qfai/evidence/prototyping.json is missing or unparseable. " +
+      `qfai prototyping certify: ${PROTOTYPING_JSON_REL} is missing or unparseable. ` +
         "Run prototyping rounds first.",
     );
     return 2;
   }
 
-  const runId = extractString(extractRecord(protoJson, "fullHarness"), "runId");
+  // Accept the new top-level `runId` (written by `iterate` at cycle 0)
+  // and fall back to the legacy `fullHarness.runId` shape for projects
+  // whose prototyping.json predates the UX-loop schema rewrite.
+  const runId =
+    extractString(protoJson, "runId") ??
+    extractString(extractRecord(protoJson, "fullHarness"), "runId");
   if (!runId) {
     error(
-      "qfai prototyping certify: prototyping.json.fullHarness.runId is required " +
-        "before a completion certificate can be issued.",
+      "qfai prototyping certify: prototyping.json#runId is required " +
+        "before a completion certificate can be issued (set by `qfai prototyping iterate --cycle 0`).",
     );
     return 2;
   }
 
-  // Resolve validate.json from the configured output path (Codex P1 review on
-  // PR #201). Hardcoding ".qfai/output/" was wrong for any user with a
-  // customized `output.validateJsonPath`.
   const validateJsonPath = path.resolve(options.root, config.output.validateJsonPath);
   const validateJsonRel = path.relative(options.root, validateJsonPath).replace(/\\/g, "/");
   const validateJson = await loadJson(validateJsonPath);
@@ -112,6 +130,120 @@ export async function runPrototypingCertify(
     return 2;
   }
 
+  // DESIGN.md compliance gate — refuse to seal a certificate when the
+  // final iteration drifts from the frozen brand SSOT.
+  const designMdAbs = path.join(options.root, ROOT_DESIGN_MD_REL);
+  let designMdText: string;
+  try {
+    designMdText = await readFile(designMdAbs, "utf-8");
+  } catch {
+    error(
+      "qfai prototyping certify: root DESIGN.md is missing — the brand SSOT must exist before certification.",
+    );
+    return 2;
+  }
+  const designMdParsed = parseDesignMd(designMdText);
+  if ("error" in designMdParsed) {
+    error(
+      "qfai prototyping certify: root DESIGN.md failed to parse — " +
+        `${designMdParsed.error.message}.`,
+    );
+    return 2;
+  }
+  // Anchor the final-iter HTML scan to the iteration count actually
+  // recorded in prototyping.json — NOT the highest iter-NN dir on disk.
+  // After a `qfai prototyping iterate --cycle 0` reset, stale `iter-NN/`
+  // directories from the prior run can survive on disk; selecting by
+  // filesystem max would let certify digest evidence the current
+  // reviewer gate did not approve.
+  const iterationCount = countIterations(protoJson);
+  if (iterationCount === 0) {
+    error(
+      "qfai prototyping certify: prototyping.json#iterations is empty — " +
+        "complete at least one iteration before certification.",
+    );
+    return 2;
+  }
+  const acceptedIterationIndex = iterationCount - 1;
+  const acceptedIterDir = `iter-${String(acceptedIterationIndex).padStart(2, "0")}`;
+  const finalHtmlPaths = await findIterationHtmlFiles(evidenceRoot, acceptedIterationIndex);
+  if (finalHtmlPaths.length === 0) {
+    error(
+      "qfai prototyping certify: no HTML found under " +
+        `${PROTOTYPING_EVIDENCE_REL}/${acceptedIterDir}/ ` +
+        "(the iteration recorded in prototyping.json#iterations[]). " +
+        "Run the capture step for the accepted iteration before certification.",
+    );
+    return 2;
+  }
+  // For multi-screen specs, the accepted iteration MUST contain HTML
+  // for every screen declared in the UI contracts. Otherwise, the
+  // current pipeline can seal a certificate while a stale older
+  // `iter-NN/<missing-screen>.html` is what `validate` matched
+  // against (validateUiEvidenceArtifacts accepts a screen file from
+  // ANY iteration directory). Anchor the per-screen check to the
+  // ACCEPTED iter only.
+  const screenContracts = await readUiContractScreenContracts(
+    options.root,
+    config.paths.contractsDir,
+  );
+  if (screenContracts.length > 0) {
+    const presentScreenIds = new Set<string>();
+    for (const htmlPath of finalHtmlPaths) {
+      const base = path.basename(htmlPath);
+      const stem = base.replace(/\.html$/i, "");
+      presentScreenIds.add(stem);
+    }
+    const missing = screenContracts.filter((s) => !presentScreenIds.has(s.screenId));
+    if (missing.length > 0) {
+      error(
+        "qfai prototyping certify: accepted iteration " +
+          `${acceptedIterDir} is missing HTML for ${missing.length} declared screen(s):`,
+      );
+      for (const m of missing.slice(0, 10)) {
+        error(
+          `  - ${m.screenId} (expected ${PROTOTYPING_EVIDENCE_REL}/${acceptedIterDir}/${m.screenId}.html)`,
+        );
+      }
+      return 2;
+    }
+  }
+  // Multi-screen specs emit one HTML artifact per screen under the
+  // same iter-NN directory. Every file must pass the DESIGN.md gate;
+  // a clean home.html does not absolve a drifting settings.html.
+  const violationsByPath: Array<{ path: string; violations: DesignMdViolation[] }> = [];
+  for (const htmlPath of finalHtmlPaths) {
+    const html = await readFile(htmlPath, "utf-8");
+    const fileViolations = findDesignMdViolations(html, designMdParsed.data);
+    if (fileViolations.length > 0) {
+      violationsByPath.push({
+        path: path.relative(options.root, htmlPath).replace(/\\/g, "/"),
+        violations: fileViolations,
+      });
+    }
+  }
+  if (violationsByPath.length > 0) {
+    const totalViolations = violationsByPath.reduce(
+      (sum, entry) => sum + entry.violations.length,
+      0,
+    );
+    error(
+      `qfai prototyping certify: ${totalViolations} DESIGN.md violation(s) detected across ` +
+        `${violationsByPath.length} final iteration HTML file(s):`,
+    );
+    let logged = 0;
+    for (const entry of violationsByPath) {
+      error(`  ${entry.path}:`);
+      for (const v of entry.violations) {
+        if (logged >= 20) break;
+        error(`    - kind=${v.kind} found="${v.found}"`);
+        logged += 1;
+      }
+      if (logged >= 20) break;
+    }
+    return 2;
+  }
+
   const reviewerSignoff = extractRecord(reviewerGate, "signoff");
   const reviewerId =
     extractString(reviewerSignoff, "reviewerId") ??
@@ -119,10 +251,115 @@ export async function runPrototypingCertify(
     "unknown";
   const reviewerTimestamp = extractString(reviewerSignoff, "timestamp") ?? new Date().toISOString();
 
-  const resolvedSpec = await resolvePrimaryPrototypingSpec(options.root, config);
-  const specsCovered = resolvedSpec ? [resolvedSpec.specId] : [];
+  // Read the frozen `specsCovered` recorded by `iterate --cycle 0`.
+  // Re-resolving the primary spec here would let a config edit
+  // (`prototyping.primarySpecId`) or a marker change between cycle 0
+  // and certify silently re-baseline the certificate to a spec the
+  // loop never exercised. The loop seed is the SSOT for what was
+  // actually reviewed.
+  const specsCovered = readFrozenSpecsCovered(protoJson);
+  if (specsCovered === null) {
+    error(
+      "qfai prototyping certify: prototyping.json#specsCovered is missing or malformed — " +
+        "re-run prototyping from cycle 0 so the seed cycle records the spec(s) under review.",
+    );
+    return 2;
+  }
+
+  // Frozen-loop hash invariant: the certificate must record the sha256
+  // that was frozen at cycle 0 in prototyping.json (and, when the SDD
+  // lock is present, the lock value too). Recording the live re-hash
+  // would let a brand-body edit between the final iter and certify
+  // silently re-baseline the cert against an SSOT that was not used
+  // during the loop.
+  const currentSha = hashDesignMd(designMdText);
+  const frozenSha = extractString(extractRecord(protoJson, "designMd"), "sha256");
+  if (!frozenSha) {
+    error(
+      "qfai prototyping certify: prototyping.json#designMd.sha256 is missing — re-run " +
+        "prototyping from cycle 0 to record the frozen DESIGN.md sha256.",
+    );
+    return 2;
+  }
+  if (frozenSha !== currentSha) {
+    error(
+      "qfai prototyping certify: root DESIGN.md sha256 (" +
+        `${currentSha}) differs from the frozen value in prototyping.json (${frozenSha}). ` +
+        "DESIGN.md was edited after the loop completed; re-run prototyping from cycle 0.",
+    );
+    return 2;
+  }
+  const lockResult = await loadLockGate(options.root, config.paths.contractsDir);
+  if (lockResult.kind === "malformed") {
+    error(
+      "qfai prototyping certify: DESIGN.md.lock.yaml exists but " +
+        "designMdSha256 is missing or not a 64-character hex string. " +
+        "Re-run /qfai-sdd Phase 0 to regenerate the lock before sealing.",
+    );
+    return 2;
+  }
+  if (lockResult.kind === "unreadable") {
+    const cause =
+      lockResult.cause instanceof Error ? lockResult.cause.message : String(lockResult.cause);
+    error(
+      "qfai prototyping certify: DESIGN.md.lock.yaml exists but could not be read " +
+        `(${cause}). The freeze invariant cannot be enforced when the lock is ` +
+        "unreadable; fix file permissions / EIO and rerun.",
+    );
+    return 2;
+  }
+  const lockSha = lockResult.kind === "ok" ? lockResult.sha256 : null;
+  if (lockSha !== null && lockSha !== frozenSha) {
+    error(
+      "qfai prototyping certify: DESIGN.md.lock.yaml sha256 (" +
+        `${lockSha}) differs from the loop-frozen value (${frozenSha}). ` +
+        "Refreeze and re-run prototyping from cycle 0.",
+    );
+    return 2;
+  }
+  // The completion certificate digests every file under `evidenceRoot`,
+  // so a stale `iter-NN` dir from a prior loop (NN >= recorded
+  // iterationCount) would otherwise be sealed into `evidenceDigests`
+  // and would cause `certify --check` to fail later if the operator
+  // cleans up the stale dir even though the accepted iteration is
+  // unchanged. Fail-fast and force the operator to rerun cycle 0
+  // (which the round-5 hard-reset removes the stale dirs) or delete
+  // them manually before sealing.
+  let staleIterDirs: string[];
+  try {
+    staleIterDirs = await findStaleIterDirs(evidenceRoot, iterationCount);
+  } catch (err) {
+    // codex 8zqb: findStaleIterDirs propagates non-ENOENT fs errors
+    // (EACCES / EPERM / EIO) so a permission flip cannot silently
+    // bypass the stale-iter guard — symmetric with the lock
+    // `unreadable` path. Surface a clear operator-facing message
+    // instead of letting the raw error stack escape.
+    const cause = err instanceof Error ? err.message : String(err);
+    error(
+      `qfai prototyping certify: failed to scan ${PROTOTYPING_EVIDENCE_REL} for stale ` +
+        `iteration directories (${cause}). The freeze invariant cannot be enforced when ` +
+        "the evidence dir is unreadable; fix file permissions / EIO and rerun.",
+    );
+    return 2;
+  }
+  if (staleIterDirs.length > 0) {
+    error(
+      "qfai prototyping certify: stale iteration directories found under " +
+        `${PROTOTYPING_EVIDENCE_REL} (recorded iterationCount=${iterationCount}, ` +
+        `but found: ${staleIterDirs.join(", ")}). These would be sealed into ` +
+        "the certificate's evidenceDigests and break --check after cleanup. " +
+        "Re-run `qfai prototyping iterate --cycle 0` (which deletes stale " +
+        "iter-NN dirs as part of the hard reset) or remove them manually, " +
+        "then rerun certify.",
+    );
+    return 2;
+  }
 
   const toolVersion = await resolveToolVersion();
+  const designMdRecord: CompletionCertificateDesignMd = {
+    path: ROOT_DESIGN_MD_REL,
+    sha256: frozenSha,
+  };
 
   const cert = await buildCompletionCertificate({
     runId,
@@ -135,8 +372,9 @@ export async function runPrototypingCertify(
       approved: true,
       timestamp: reviewerTimestamp,
     },
-    iterationCount: countIterations(protoJson),
+    iterationCount,
     specsCovered,
+    designMd: designMdRecord,
   });
 
   const certPath = await writeCompletionCertificate(options.root, cert);
@@ -144,7 +382,27 @@ export async function runPrototypingCertify(
   info(`  runId: ${runId}`);
   info(`  evidenceFiles: ${cert.evidenceDigests.length}`);
   info(`  specsCovered: ${specsCovered.join(", ") || "(none)"}`);
+  info(`  designMd: ${designMdRecord.path} sha256=${designMdRecord.sha256.slice(0, 12)}...`);
   return 0;
+}
+
+type LockGateResult =
+  | { kind: "ok"; sha256: string }
+  | { kind: "missing" }
+  | { kind: "malformed" }
+  | { kind: "unreadable"; cause: unknown };
+
+async function loadLockGate(root: string, contractsDir: string): Promise<LockGateResult> {
+  const lockAbs = path.join(root, contractsDir, "design", "DESIGN.md.lock.yaml");
+  let text: string;
+  try {
+    text = await readFile(lockAbs, "utf-8");
+  } catch (err) {
+    if (isEnoent(err)) return { kind: "missing" };
+    return { kind: "unreadable", cause: err };
+  }
+  const sha = readDesignMdLockSha(text);
+  return sha !== null ? { kind: "ok", sha256: sha } : { kind: "malformed" };
 }
 
 export async function runPrototypingShowSpec(options: { root: string }): Promise<number> {
@@ -166,6 +424,117 @@ export async function runPrototypingShowSpec(options: { root: string }): Promise
   };
   info(JSON.stringify(payload, null, 2));
   return 0;
+}
+
+// ─── final-iter HTML resolution ─────────────────────────────────────────────
+
+/**
+ * Return every `*.html` file in the iteration directory whose index
+ * matches the accepted iteration recorded in `prototyping.json#iterations[]`
+ * (i.e. `iterations.length - 1`).
+ *
+ * Anchored — not selected — by the recorded iteration index. Stale
+ * `iter-NN/` directories from a prior loop (kept on disk after a
+ * `qfai prototyping iterate --cycle 0` reset) MUST NOT be eligible
+ * for certification. Returns an empty array when the recorded iter
+ * dir has no HTML artifacts.
+ */
+async function findIterationHtmlFiles(
+  evidenceRoot: string,
+  iterationIndex: number,
+): Promise<string[]> {
+  const iterDirAbs = path.join(evidenceRoot, `iter-${String(iterationIndex).padStart(2, "0")}`);
+  return allHtmlIn(iterDirAbs);
+}
+
+/**
+ * Return iter-NN directory names whose index is >= `iterationCount`
+ * (i.e. higher than any iteration recorded in `prototyping.json`).
+ *
+ * Used by `runPrototypingCertify` to fail fast when stale iter dirs
+ * from a prior loop survived on disk: `buildCompletionCertificate`
+ * digests every file under `evidenceRoot`, so a stale higher iter
+ * dir would otherwise be sealed into the certificate and would
+ * cause a later `certify --check` to fail when the operator cleans
+ * up the stale dir even though the accepted iteration is unchanged.
+ *
+ * Returned names are POSIX, sorted, and exclude any non-iter
+ * directories (so untracked top-level files / dirs under
+ * `evidenceRoot` are not flagged here — those are caught separately
+ * by the digest layer if relevant).
+ */
+/**
+ * @internal Exported for direct unit-testing of the symmetric
+ * fail-closed posture (codex 8zqb regression sentinel) — not part
+ * of the package's public surface.
+ */
+export async function findStaleIterDirs(
+  evidenceRoot: string,
+  iterationCount: number,
+): Promise<string[]> {
+  let names: string[];
+  try {
+    names = await readdir(evidenceRoot);
+  } catch (err) {
+    // ENOENT: evidenceRoot legitimately absent on a fresh project that
+    // has not yet captured an iteration. The certify caller already
+    // requires `iterationCount > 0` and a non-empty accepted-iter HTML
+    // set upstream, so reaching this path with ENOENT means the
+    // operator deleted the dir mid-flight — there's nothing stale to
+    // flag in either case.
+    //
+    // EACCES / EPERM / EIO: the same fail-closed posture as the
+    // `unreadable` LockGateResult branch above (codex 8cTg). Returning
+    // [] here would let a permission flip silently bypass the
+    // stale-iter guard, which is the same vector the lock fix closed.
+    // Symmetric: propagate so certify's caller surfaces a hard error
+    // rather than seal a possibly-stale digest set.
+    if (isEnoent(err)) return [];
+    throw err;
+  }
+  const stale: string[] = [];
+  for (const name of names) {
+    const match = name.match(/^iter-(\d{2,})$/);
+    if (!match || match[1] === undefined) continue;
+    const index = Number.parseInt(match[1], 10);
+    if (!Number.isFinite(index) || index < iterationCount) continue;
+    const abs = path.join(evidenceRoot, name);
+    try {
+      const s = await stat(abs);
+      if (s.isDirectory()) stale.push(name);
+    } catch (err) {
+      // Same asymmetry rule as readdir above. ENOENT here is a tight
+      // race (a sibling process removed the entry between readdir and
+      // stat) and is safe to skip — the next certify run will see the
+      // updated tree. Other fs errors are propagated.
+      if (isEnoent(err)) continue;
+      throw err;
+    }
+  }
+  stale.sort();
+  return stale;
+}
+
+async function allHtmlIn(dir: string): Promise<string[]> {
+  let names: string[];
+  try {
+    names = await readdir(dir);
+  } catch {
+    return [];
+  }
+  names.sort();
+  const out: string[] = [];
+  for (const name of names) {
+    if (!name.toLowerCase().endsWith(".html")) continue;
+    const abs = path.join(dir, name);
+    try {
+      const s = await stat(abs);
+      if (s.isFile()) out.push(abs);
+    } catch {
+      continue;
+    }
+  }
+  return out;
 }
 
 // ─── small helpers (kept local to avoid widening prototyping/types.ts) ──────
@@ -203,14 +572,11 @@ function extractNumber(source: unknown, key: string): number | undefined {
 
 function countIterations(protoJson: unknown): number {
   if (!isRecord(protoJson)) return 0;
-  // The canonical counter is `iterations[].length`.
   const iterations = protoJson.iterations;
-  if (Array.isArray(iterations)) return iterations.length;
-
-  const rounds = protoJson.rounds;
-  const extraIterations = protoJson["polish" + "Cycles"];
-  return (
-    (Array.isArray(rounds) ? rounds.length : 0) +
-    (Array.isArray(extraIterations) ? extraIterations.length : 0)
-  );
+  return Array.isArray(iterations) ? iterations.length : 0;
 }
+
+// `DesignMdViolation` is only used as part of typing through the
+// findDesignMdViolations import; explicit re-export keeps the tree shake
+// stable but is not strictly required.
+export type { DesignMdViolation };

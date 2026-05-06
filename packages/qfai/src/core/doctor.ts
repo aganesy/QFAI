@@ -11,6 +11,8 @@ import {
   type ConfigPathKey,
 } from "./config.js";
 import { readUiContractScreenContracts } from "./contracts/screenContracts.js";
+import { hashDesignMd, parseDesignMd } from "./design/designMd.js";
+import { readDesignMdLockSha } from "./design/designMdLock.js";
 import { collectScenarioFiles } from "./discovery.js";
 import { collectFilesByGlobs, DEFAULT_GLOB_FILE_LIMIT } from "./fs.js";
 import { toRelativePath } from "./paths.js";
@@ -541,7 +543,7 @@ async function buildPrototypingDoctorChecks(
   targetUrlOverride?: string,
 ): Promise<DoctorCheck[]> {
   const targetUrl = targetUrlOverride ?? config.prototyping?.execution?.targetUrl ?? undefined;
-  return Promise.all([
+  const baseChecks = await Promise.all([
     buildPrototypingPrimarySpecCheck(root, config),
     buildPrototypingUiContractsCheck(root, config),
     buildPrototypingDesignContractsCheck(root, config),
@@ -549,6 +551,113 @@ async function buildPrototypingDoctorChecks(
     buildPlaywrightCliCheck(root),
     buildTargetUrlCheck(root, targetUrl, targetUrlOverride ? "cli" : "config"),
   ]);
+  const designMdChecks = await buildPrototypingDesignMdChecks(root, config);
+  return [...baseChecks, ...designMdChecks];
+}
+
+async function buildPrototypingDesignMdChecks(
+  root: string,
+  config: Awaited<ReturnType<typeof loadConfig>>["config"],
+): Promise<DoctorCheck[]> {
+  const designMdRel = "DESIGN.md";
+  const lockRel = path.join(config.paths.contractsDir, "design", "DESIGN.md.lock.yaml");
+  const designMdAbs = path.join(root, designMdRel);
+  const lockAbs = path.join(root, lockRel);
+
+  const checks: DoctorCheck[] = [];
+  let designMdText: string | null = null;
+  try {
+    designMdText = await readFile(designMdAbs, "utf-8");
+  } catch {
+    designMdText = null;
+  }
+
+  if (designMdText === null) {
+    checks.push({
+      id: "prototyping.designMdRoot",
+      severity: "error",
+      title: "Root DESIGN.md",
+      message: `root DESIGN.md is missing at ${designMdRel}`,
+      details: { path: designMdRel },
+    });
+  } else {
+    const parsed = parseDesignMd(designMdText);
+    if ("error" in parsed) {
+      checks.push({
+        id: "prototyping.designMdRoot",
+        severity: "error",
+        title: "Root DESIGN.md",
+        message: `root DESIGN.md failed to parse: ${parsed.error.message}`,
+        details: { path: designMdRel, code: parsed.error.code },
+      });
+    } else {
+      checks.push({
+        id: "prototyping.designMdRoot",
+        severity: "ok",
+        title: "Root DESIGN.md",
+        message: "root DESIGN.md parses",
+        details: { path: designMdRel },
+      });
+    }
+  }
+
+  let lockText: string | null = null;
+  try {
+    lockText = await readFile(lockAbs, "utf-8");
+  } catch {
+    lockText = null;
+  }
+  let lockSha: string | null = null;
+  if (lockText === null) {
+    checks.push({
+      id: "prototyping.designMdLock",
+      severity: "error",
+      title: "DESIGN.md.lock.yaml",
+      message: `DESIGN.md.lock.yaml is missing at ${toRelativePath(root, lockAbs)}`,
+      details: { path: toRelativePath(root, lockAbs) },
+    });
+  } else {
+    lockSha = readDesignMdLockSha(lockText);
+    if (lockSha === null) {
+      checks.push({
+        id: "prototyping.designMdLock",
+        severity: "error",
+        title: "DESIGN.md.lock.yaml",
+        message: "DESIGN.md.lock.yaml is missing 'designMdSha256' or is malformed YAML",
+        details: { path: toRelativePath(root, lockAbs) },
+      });
+    } else {
+      checks.push({
+        id: "prototyping.designMdLock",
+        severity: "ok",
+        title: "DESIGN.md.lock.yaml",
+        message: "DESIGN.md.lock.yaml carries designMdSha256",
+        details: { path: toRelativePath(root, lockAbs) },
+      });
+    }
+  }
+
+  if (designMdText !== null && lockSha !== null) {
+    const currentSha = hashDesignMd(designMdText);
+    if (currentSha === lockSha) {
+      checks.push({
+        id: "prototyping.designMdSha",
+        severity: "ok",
+        title: "DESIGN.md sha256 freeze",
+        message: "DESIGN.md sha256 matches DESIGN.md.lock.yaml",
+        details: { sha256: currentSha },
+      });
+    } else {
+      checks.push({
+        id: "prototyping.designMdSha",
+        severity: "error",
+        title: "DESIGN.md sha256 freeze",
+        message: `DESIGN.md sha256 mismatch: lock=${lockSha} current=${currentSha}`,
+        details: { lock: lockSha, current: currentSha },
+      });
+    }
+  }
+  return checks;
 }
 
 async function buildPrototypingPrimarySpecCheck(

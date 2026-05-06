@@ -35,66 +35,13 @@ describe("comparisonValidator", () => {
     expect(validateExplorationArtifacts).toBe(validateOptionComparison);
   });
 
-  it("pass: exploration-first shape", async () => {
+  it("pass: review bundle with best-of-history shape", async () => {
     const root = await newTempDir();
     await createUiBearingPack(root);
-    await writeFile(
-      path.join(root, "uiux", "30_exploration_brief.md"),
-      [
-        "# Exploration Brief",
-        "",
-        "## Product Intent",
-        "Clarify the most important decision on the dashboard.",
-        "",
-        "## Must-preserve Interactions",
-        "- Filters stay visible.",
-        "",
-        "## Brand Signals",
-        "- Calm confidence",
-        "",
-        "## Differentiation Targets",
-        "- Avoid default SaaS admin-shell patterns",
-      ].join("\n"),
-      "utf-8",
-    );
-    await writeFile(
-      path.join(root, "uiux", "33_exploration_rubric.md"),
-      [
-        "# Exploration Rubric",
-        "",
-        "## Design Quality",
-        "Weighted heavily.",
-        "",
-        "## Originality",
-        "Weighted heavily.",
-        "",
-        "## Craft",
-        "Hard floor.",
-        "",
-        "## Functionality",
-        "Hard floor.",
-      ].join("\n"),
-      "utf-8",
-    );
-    await writeFile(
-      path.join(root, "uiux", "34_evaluator_calibration.md"),
-      [
-        "# Evaluator Calibration",
-        "",
-        "## Good Critique",
-        "Specific and skeptical.",
-        "",
-        "## Too Lenient",
-        "Avoid generic praise.",
-        "",
-        "## Blandness Fail",
-        "Reject safe defaults.",
-        "",
-        "## Originality Fail",
-        "Reject near-template copies.",
-      ].join("\n"),
-      "utf-8",
-    );
+    // The legacy 33_exploration_rubric.md / 34_evaluator_calibration.md
+    // sidecars are no longer required (DESIGN.md is the brand SSOT and
+    // ORDINAL_AXES is the evaluator-axes constant). Only the review
+    // bundle's best-of-history wording is validated here.
     await writeFile(
       path.join(root, "uiux", "50_review_input_bundle.md"),
       "# Review Input Bundle\n\n## Best-of-history\nRetain stronger earlier directions when later loops regress.\n",
@@ -106,41 +53,28 @@ describe("comparisonValidator", () => {
     expect(issues).toHaveLength(0);
   });
 
-  it("fail: exploration brief missing", async () => {
-    const root = await newTempDir();
-    await createUiBearingPack(root);
-
-    const issues = await validateOptionComparison(root, defaultConfig);
-
-    expect(issues.some((i) => i.code === "UIX-VAL-DIRECTION-BRIEF-MISSING")).toBe(true);
-  });
-
-  it("fail: rubric incomplete", async () => {
+  it("fail: UI-bearing pack with bundle missing best-of-history wording emits exactly the history-missing issue", async () => {
+    // Same fixture as the `pass:` test above, which already establishes
+    // that the spec is detected as UI-bearing. The bundle is present
+    // but lacks the best-of-history wording → the validator MUST emit
+    // exactly the UIX-VAL-DIRECTION-HISTORY-MISSING issue. An
+    // unconditional assertion is required here because a vacuous
+    // green-pass (silent return → 0 issues) is the regression class
+    // this test exists to catch (the deleted Direction-Rubric /
+    // Evaluator-Calibration codes used to provide the only fail-path
+    // coverage; this is now the sole fail-path for the validator).
     const root = await newTempDir();
     await createUiBearingPack(root);
     await writeFile(
-      path.join(root, "uiux", "30_exploration_brief.md"),
-      [
-        "## Product Intent",
-        "x",
-        "## Must-preserve Interactions",
-        "x",
-        "## Brand Signals",
-        "x",
-        "## Differentiation Targets",
-        "x",
-      ].join("\n"),
-      "utf-8",
-    );
-    await writeFile(
-      path.join(root, "uiux", "33_exploration_rubric.md"),
-      "# Exploration Rubric\n\n## Design Quality\nx\n",
+      path.join(root, "uiux", "50_review_input_bundle.md"),
+      "# Review Input Bundle\n\nThis bundle omits the required wording.\n",
       "utf-8",
     );
 
     const issues = await validateOptionComparison(root, defaultConfig);
 
-    expect(issues.some((i) => i.code === "UIX-VAL-DIRECTION-RUBRIC-INCOMPLETE")).toBe(true);
+    expect(issues.length).toBeGreaterThan(0);
+    expect(issues.every((i) => i.code === "UIX-VAL-DIRECTION-HISTORY-MISSING")).toBe(true);
   });
 
   it("non-ui: returns empty array for non-ui specs", async () => {

@@ -23,6 +23,7 @@ import { parseSpec } from "./parse/spec.js";
 import { parseScenarioDocument } from "./scenarioModel.js";
 import { classifyLayer, classifySize } from "./testStrategyTags.js";
 import { toRelativePath } from "./paths.js";
+import { PROTOTYPING_JSON_REL } from "./prototyping/paths.js";
 import {
   normalizeCompat,
   normalizePrimary,
@@ -1565,24 +1566,9 @@ export function formatReportMarkdown(
       "- legacy calibration setting incomplete (mode-tier calibration is no longer supported).",
     );
   }
-  const fullHarnessCompletenessIssues = data.issues.filter((item) =>
-    [
-      "QFAI-PROT-264",
-      "QFAI-PROT-281",
-      "QFAI-PROT-282",
-      "QFAI-PROT-283",
-      "QFAI-PROT-295",
-      "QFAI-PROT-296",
-      "QFAI-PROT-297",
-      "QFAI-PROT-298",
-      "QFAI-PROT-299",
-    ].includes(item.code),
-  );
-  if (fullHarnessCompletenessIssues.length > 0) {
-    lines.push(
-      "- fullHarness evidence が不完全です。reviewer / commitSha / terminationReason / reviewerScores を確認してください。",
-    );
-  }
+  // The legacy fullHarness incompleteness banner (PROT-264/281/282/283/
+  // 295..299) was retired with the UX-loop schema rewrite; no validator
+  // emits those codes any more.
   lines.push("- 変更内容・受入観点は `.qfai/specs/*/18_delta.md` に記録します。");
   lines.push("- 参照ルールの正本: `.qfai/assistant/instructions/constitution.md`");
 
@@ -1675,9 +1661,7 @@ async function collectPrototypingSummary(
 ): Promise<ReportPrototypingSummary | undefined> {
   let parsed: unknown;
   try {
-    parsed = JSON.parse(
-      await readFile(path.join(root, ".qfai/evidence/prototyping/prototyping.json"), "utf-8"),
-    );
+    parsed = JSON.parse(await readFile(path.join(root, PROTOTYPING_JSON_REL), "utf-8"));
   } catch {
     return undefined;
   }
@@ -1709,7 +1693,7 @@ async function collectPrototypingSummary(
     },
     mode: {
       effective: "single-thread-loop",
-      source: ".qfai/evidence/prototyping/prototyping.json",
+      source: PROTOTYPING_JSON_REL,
       rationale: "the single-thread iteration loop is fixed.",
       surface: config.uiux?.platform ?? "unknown",
     },

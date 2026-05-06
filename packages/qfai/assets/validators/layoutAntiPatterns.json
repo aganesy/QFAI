@@ -1,0 +1,42 @@
+[
+  {
+    "id": "lap-001-saas-dashboard",
+    "regex": "<aside[\\s\\S]*?<main[\\s\\S]*?(KPI|metric)",
+    "scope": "layout"
+  },
+  {
+    "id": "lap-002-card-grid-sidebar",
+    "regex": "grid[\\s\\S]*?<aside",
+    "scope": "layout"
+  },
+  {
+    "id": "lap-003-saas-table-tabs",
+    "regex": "role=\"tab\"[\\s\\S]*?<table",
+    "scope": "layout"
+  },
+  {
+    "id": "lap-004-bento-grid",
+    "regex": "grid-cols-12[\\s\\S]{0,400}grid-rows-",
+    "scope": "layout"
+  },
+  {
+    "id": "lap-005-centered-hero",
+    "regex": "text-center[\\s\\S]{0,300}<h1",
+    "scope": "layout"
+  },
+  {
+    "id": "lap-006-overcrowded-sidebar",
+    "regex": "<aside[\\s\\S]{0,1500}(<a[\\s\\S]*?){10,}",
+    "scope": "layout"
+  },
+  {
+    "id": "lap-007-state-not-represented",
+    "regex": "(?!).*",
+    "scope": "semantic"
+  },
+  {
+    "id": "lap-008-no-back-affordance",
+    "regex": "(?!).*",
+    "scope": "semantic"
+  }
+]

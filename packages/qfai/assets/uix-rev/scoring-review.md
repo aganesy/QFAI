@@ -1,22 +1,24 @@
 # UIX-REV: Scoring Review
 
-Review exploration rubric and evaluator calibration for canonical completeness.
+Review evaluator scoring quality against the four canonical UX axes
+fixed in `core/prototyping/evaluatorReview.ts#ORDINAL_AXES`.
 
-## Required Rubric Dimensions
+## Required Evaluation Axes
 
-The rubric must include:
+The reviewer scores each iteration against these four axes (no
+operator-authored rubric file is required or accepted):
 
-1. `Design Quality`
-2. `Originality`
-3. `Craft`
-4. `Functionality`
+1. `informationArchitecture`
+2. `navigationFlow`
+3. `usability`
+4. `functionality`
 
 ## Evaluation Axes Quality
 
-- The rubric must be gradable and skeptical, not generic praise
-- Design Quality and Originality must create positive pressure against bland outputs
-- Craft and Functionality must operate as floors, not style-dominant constraints
-- Evaluator calibration must include good critique, too-lenient critique, blandness fail, and originality fail examples
+- Reviews must be gradable and skeptical, not generic praise
+- `informationArchitecture` and `usability` must create positive pressure against bland outputs
+- `navigationFlow` and `functionality` must operate as floors, not style-dominant constraints
+- Reviewer prose must include good critique, too-lenient critique, blandness fail, and originality fail examples — calibration is enforced by reviewer-prompt content, not by a sidecar file
 
 ## Aggregate Scoring Rules
 
@@ -28,5 +30,5 @@ The rubric must include:
 
 ## Aggregate Review Focus
 
-- Review rubric pressure, floor conditions, and calibration quality as a single system
-- Remove old evaluation-axis vocabulary and keep wording aligned with `33_exploration_rubric.md` and `34_evaluator_calibration.md`
+- Review axis pressure, floor conditions, and reviewer-prompt calibration quality as a single system
+- Remove old evaluation-axis vocabulary; only the four canonical UX axes (information architecture / navigation flow / usability / functionality) fixed in `core/prototyping/evaluatorReview.ts#ORDINAL_AXES` are valid

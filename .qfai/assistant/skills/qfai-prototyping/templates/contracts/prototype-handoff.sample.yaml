@@ -1,11 +1,13 @@
-# prototype-handoff.yaml v2.0 (spec-0017).
+# prototype-handoff.yaml.
 # Produced by /qfai-prototyping post-loop. Consumed by /qfai-implement.
-# v1.x preserve/adapt/copy three-category split is removed: the final
-# artifact itself is the SSOT, not this handoff yaml.
-schemaVersion: "2.0"
+# The final artifact itself is the SSOT; this handoff yaml is a thin
+# pointer plus implementation notes. DESIGN.md (root) remains the
+# brand SSOT through handoff.
 finalIterIndex: 8
 finalArtifact: ".qfai/prototypes/final/index.html"
-extractedDesignSystem: ".qfai/contracts/design/design-system.yaml"
+designMdPath: "DESIGN.md"
+designMdSha256: "<hex from .qfai/contracts/design/DESIGN.md.lock.yaml>"
+designSystemMirror: ".qfai/contracts/design/design-system.yaml"
 implementationNotes: |
   The final prototype invented a spatial gallery metaphor distinct from
   the AI-default dashboard / card-grid pattern that earlier iterations

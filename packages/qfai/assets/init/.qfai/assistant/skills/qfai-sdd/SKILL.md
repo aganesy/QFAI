@@ -178,7 +178,7 @@ Follow `.qfai/assistant/instructions/shared-skill-operating-baseline.md#delta-re
 
 1. Use only skill-local templates under `.qfai/assistant/skills/qfai-sdd/templates/contracts`, `templates/report`, and `templates/specs`.
 2. Always write `.qfai/report/preflight_summary.md` before generating shared/spec artifacts.
-3. Contracts-first is mandatory; UI-bearing targets must be normalized into `.qfai/contracts/design/**` and `.qfai/contracts/ui/**` per `references/ui-design-contract-normalization.md`.
+3. Contracts-first is mandatory; UI-bearing targets must be normalized into `.qfai/contracts/design/**` and `.qfai/contracts/ui/**` per `references/ui-design-contract-normalization.md`. UI-bearing targets MUST also validate the consuming-project root `DESIGN.md` and freeze its sha256 into `.qfai/contracts/design/DESIGN.md.lock.yaml` (see Phase 0 DESIGN.md Freeze below).
 4. `_policies/05_Contracts.md` must include a Contract Index aligned with `.qfai/contracts/**`.
 5. `_policies/04_Business-Flow.md` must be Markdown with Mermaid `flowchart` or `sequenceDiagram`.
 6. `05_Examples.md` must include `EX-ID` and `BR-Ref` mappings.
@@ -190,7 +190,7 @@ Follow `.qfai/assistant/instructions/shared-skill-operating-baseline.md#delta-re
 1. Stage 0: Preflight (stop on blockers).
 2. Stage 1: Triage (classify + approve + persist Triage table).
 3. Write `.qfai/report/preflight_summary.md`.
-4. Phase 0: Contracts-first (UI-bearing targets normalize in this phase).
+4. Phase 0: Contracts-first (UI-bearing targets normalize in this phase, and freeze root `DESIGN.md` per the Phase 0 DESIGN.md Freeze step below).
 5. Phase 1: Outline (`_policies/01..11`).
 6. Phase 2: Slice (per spec, gate each).
 7. Phase 3: Plan finalize (after at least one slice gate passes).
@@ -208,6 +208,38 @@ Follow `.qfai/assistant/instructions/shared-skill-operating-baseline.md#delta-re
 - Evidence file: `.qfai/evidence/sdd-<spec-id>.md`
 
 The canonical file set is defined by skill templates under `.qfai/assistant/skills/qfai-sdd/templates/`.
+
+## Phase 0 DESIGN.md Freeze (UI-bearing only)
+
+When the target spec is UI-bearing, Phase 0 MUST freeze the brand SSOT:
+
+1. Read root `DESIGN.md` at `<consuming-project-root>/DESIGN.md`. If
+   missing, stop and ask the user to run `/qfai-discussion` (which
+   emits the draft) or to author it manually using the sample at
+   `.qfai/assistant/skills/qfai-prototyping/templates/DESIGN.md.sample`.
+2. Call `parseDesignMd(text)`. If the result is `{ error: ParseError }`,
+   stop and report `path` / `code` / `message` for the parse error.
+   Otherwise the result is `{ data: DesignMd; body: string }`; pass
+   `data` to `validateDesignMd(data)`. If that issue list is
+   non-empty, stop and report each issue. Both functions, together with
+   `hashDesignMd` and the `DesignMd` / `ParseError` / `ParseResult` /
+   `ValidationIssue` types, are re-exported from the public `qfai`
+   package entry (`import { parseDesignMd, validateDesignMd, hashDesignMd } from "qfai"`).
+3. Call `hashDesignMd(text)` to compute sha256 over the raw bytes.
+4. Write `.qfai/contracts/design/DESIGN.md.lock.yaml` from the
+   template at
+   `templates/contracts/design-md-lock.sample.yaml` with these fields:
+   - `designMdPath: "DESIGN.md"`
+   - `designMdSha256: <hex>`
+   - `frozenAt: <UTC ISO-8601>`
+   - `schemaTokens.colors`, `fontFamilies`, `radii`, `shadows`
+     enumerated per the sample.
+5. Record the freeze in `_policies/05_Contracts.md` under the Contract
+   Index. The lock yaml plus root `DESIGN.md` are the only brand
+   contract; per-aspect brand yaml contracts have been removed.
+
+`/qfai-prototyping` re-checks the lock sha256 against the live
+`DESIGN.md` on every cycle and exits 2 on mismatch.
 
 ## Quality Gate
 

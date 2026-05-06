@@ -35,10 +35,10 @@
   - Acceptance criteria are consistent with flows/state transitions
   - Security/operations risks are reflected in diagrams where relevant
 - Mermaid diagrams use ` ```mermaid ` fences only
-- Exploration brief completeness and differentiation clarity (when UI-bearing)
-- Reference pool freshness and translation quality (when UI-bearing)
-- Exploration rubric quality and evaluation traceability (when UI-bearing)
-- Evaluator calibration skepticism and blandness rejection quality (when UI-bearing)
+- Root `DESIGN.md` completeness and differentiation clarity (when UI-bearing)
+- Reference pool freshness and translation quality into `DESIGN.md` (when UI-bearing)
+- Evaluator scoring covers all four canonical UX axes — information architecture / navigation flow / usability / functionality, fixed in `core/prototyping/evaluatorReview.ts#ORDINAL_AXES` (when UI-bearing)
+- Evaluator critique skepticism and blandness rejection quality applied against the four axes (when UI-bearing)
 - Best-of-history handling and winner selection consistency (when UI-bearing)
 - Screen contract sufficiency and strong schema completeness (when UI-bearing)
 - Generic fallback risk — ensure no unreviewed generic/placeholder UI remains (when UI-bearing)
@@ -47,21 +47,17 @@
 
 ## Exploration Direction Consistency
 
-<!-- Required for UI-bearing packs. Verifies sidecar-family alignment. -->
+<!-- Required for UI-bearing packs. Verifies brand SSOT and sidecar alignment. -->
 
-- Exploration brief: verify `uiux/30_exploration_brief.md` defines product intent, must-preserve interactions, brand signals, and differentiation targets
-- Evaluation alignment: verify `uiux/33_exploration_rubric.md` and `uiux/34_evaluator_calibration.md` support skeptical evaluation and originality pressure
+- Brand SSOT: verify root `DESIGN.md` defines `brand`, `audience`, and `visual.*` tokens, and that `# Brand Philosophy` body documents product intent, must-preserve interactions, brand signals, and differentiation targets
+- Evaluator axes: confirm reviewers will score against the four canonical UX axes (information architecture / navigation flow / usability / functionality) — these are fixed in `core/prototyping/evaluatorReview.ts#ORDINAL_AXES` and no longer authored as sidecar files
 - History handling: verify `uiux/50_review_input_bundle.md` documents best-of-history comparison instead of latest-only preference
 
 ## Sidecar Artifact Review Scope
 
-<!-- Required for UI-bearing packs. Reviews uiux/ sidecar artifacts. -->
+<!-- Required for UI-bearing packs. Reviews root DESIGN.md + uiux/ sidecar artifacts. -->
 
-- Verify exploration sidecars are present and complete (`30` to `34`, `40`, `50`)
-- Verify `uiux/30_exploration_brief.md` is specific enough to support divergent exploration
-- Verify `uiux/31_reference_pool.md` documents adopted, rejected, and locally translated references
-- Verify `uiux/33_exploration_rubric.md` weights design quality and originality explicitly
-- Verify `uiux/34_evaluator_calibration.md` contains good-critique / too-lenient / blandness-fail / originality-fail examples
+- Verify root `DESIGN.md` is specific enough to support divergent exploration (front-matter populated, `# Brand Philosophy` body written, do/don't and reference notes framed as deviate-from inputs)
 - Verify `uiux/50_review_input_bundle.md` preserves best-of-history handling
 - Verify screen contracts use nested strong schema with all 4 required states (default/loading/empty/error) and treat `uiux/40_screen_contracts.md` as the state SSOT
 

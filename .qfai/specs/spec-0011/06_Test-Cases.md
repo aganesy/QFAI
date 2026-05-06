@@ -59,3 +59,15 @@
 - EX-Ref: EX-0011-0007
 - AC-Refs: AC-0011-0001
 - Verify that migrated example EX-0011-0007 is covered by at least one test case.
+
+## TC-0011-0011: Simplified Handoff Schema Parse
+
+- EX-Ref: EX-0011-0008
+- AC-Refs: AC-0011-0009
+- Verify `/qfai-implement` parses a simplified-only `prototype-handoff.yaml` without errors and that adding a legacy field (`mustPreserve`) emits a schema warning and is otherwise ignored.
+
+## TC-0011-0012: Design System Mirror Byte-Equivalence
+
+- EX-Ref: EX-0011-0009
+- AC-Refs: AC-0011-0010
+- Verify `/qfai-implement` reads `design-system.yaml` token tables that are byte-equivalent to root `DESIGN.md` token tables after parse normalization, and surfaces drift through the design contract validators.

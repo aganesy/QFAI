@@ -117,8 +117,8 @@ describe("prototyping calibration config", () => {
   });
 });
 
-describe("spec-0017 prototyping.execution config", () => {
-  // TC-0017-0002 — legacy browserProvider key rejected
+describe("spec-0012 prototyping.execution config", () => {
+  // spec-0012 — legacy browserProvider key rejected
   it("reports issue when legacy browserProvider key is present (REQ-0008)", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-config-browser-"));
     try {
@@ -139,7 +139,7 @@ describe("spec-0017 prototyping.execution config", () => {
     }
   });
 
-  // TC-0017-0003 — legacy renderProvider key rejected
+  // spec-0012 — legacy renderProvider key rejected
   it("reports issue when legacy renderProvider key is present (REQ-0008)", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-config-render-"));
     try {
@@ -160,7 +160,7 @@ describe("spec-0017 prototyping.execution config", () => {
     }
   });
 
-  // TC-0017-0004 — browserTool: playwright-cli accepted
+  // spec-0012 — browserTool: playwright-cli accepted
   it("accepts browserTool: playwright-cli without issues (REQ-0002)", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-config-browsertool-"));
     try {
@@ -217,8 +217,8 @@ describe("spec-0017 prototyping.execution config", () => {
   });
 });
 
-describe("spec-0017 testStrategy.forbidTestTodoStubs", () => {
-  // TC-0017-0030 — default forbidTestTodoStubs is true
+describe("spec-0004 testStrategy.forbidTestTodoStubs", () => {
+  // spec-0004 — default forbidTestTodoStubs is true
   it("defaults to true when not specified (REQ-0009)", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-config-todo-default-"));
     try {

@@ -23,3 +23,11 @@ As a developer, I want parallel execution authorized only for independent SUT sl
 ## US-0011-0006: Item Completion Gate
 
 As a QA engineer, I want a 10-point completion gate for each TDD item, so that no item is marked `done` without full TDD cycle evidence and reviewer approval.
+
+## US-0011-0007: Simplified Handoff Schema
+
+As an implementation worker, I want `prototype-handoff.yaml` to expose only the simplified field set `{finalIterIndex, finalArtifact, extractedDesignSystem, implementationNotes}`, so that legacy `mustPreserve`/`mayAdapt`/`mustNotCopy` triplets stop leaking into the implement skill's input contract.
+
+## US-0011-0008: Design System As Input
+
+As an implementation worker, I want `design-system.yaml` consumed as a deterministic input mirror of DESIGN.md tokens (not a per-iteration HTML extraction), so that downstream UI work always reads a single, validated token surface.

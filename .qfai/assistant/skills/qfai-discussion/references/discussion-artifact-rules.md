@@ -41,22 +41,20 @@ UI-bearing discussion packs may include `prototyping.yaml` as an optional recomm
 For UI-bearing packs, use:
 
 - `04_Sources.md` for trend translation and competitive reference registry
-- `uiux/30_exploration_brief.md`
-- `uiux/31_reference_pool.md`
-- `uiux/32_design_anti_goals.md`
+- `DESIGN.md` (root) — brand SSOT draft (front-matter + `# Brand Philosophy` body); `/qfai-sdd` Phase 0 freezes it into `.qfai/contracts/design/DESIGN.md.lock.yaml`
 - `uiux/40_screen_contracts.md`
 
-Discussion is exploration-first and must not choose a single visual winner or final design system. Those are downstream prototyping outputs.
+Discussion is exploration-first and must not choose a single visual winner or final design system. The brand decision is captured once in root `DESIGN.md`; downstream prototyping consumes the frozen tokens.
 
 ## `prototyping.yaml`
 
-When `prototyping.yaml` is present, use the v2.0 single-thread schema:
+When `prototyping.yaml` is present, use the single-thread schema:
 
 ```yaml
 prototyping:
   surface: web # web | mobile | desktop | mixed
 ```
 
-The v1.x `recommended_mode` / `allowed_modes` / `mode_expectations` fields
-were removed in spec-0017 P3 (the single-thread evolution loop fixes
-iteration count globally to 15).
+Mode-tier fields (`recommended_mode` / `allowed_modes` / `mode_expectations`)
+are not supported. The single-thread evolution loop fixes iteration count
+globally to 15.

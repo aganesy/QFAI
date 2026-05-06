@@ -48,3 +48,17 @@
 - Given the consolidated rule BR-0011-0006
 - When layer coverage is evaluated
 - Then at least one example exists for BR-0011-0006
+
+## EX-0011-0008: Simplified Handoff Parse
+
+- BR-Ref: BR-0011-0007
+- Given a `prototype-handoff.yaml` containing only `finalIterIndex`, `finalArtifact`, `extractedDesignSystem`, and `implementationNotes`
+- When `/qfai-implement` parses the handoff
+- Then no errors occur and no legacy field reads are attempted; if a legacy `mustPreserve` field is present, a schema warning is emitted and the field is ignored
+
+## EX-0011-0009: Design System Mirror Read
+
+- BR-Ref: BR-0011-0008
+- Given `extractedDesignSystem` points to `.qfai/contracts/design/design-system.yaml` whose tables match root `DESIGN.md` byte-for-byte after parse normalization
+- When `/qfai-implement` consumes the token tables
+- Then the consumed tables equal the parsed root `DESIGN.md` tables; any drift is surfaced through the design contract validators

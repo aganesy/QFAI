@@ -2,6 +2,7 @@ import { stat, readFile } from "node:fs/promises";
 import path from "node:path";
 
 import type { QfaiConfig } from "../../config.js";
+import { isEnoent } from "../../fs/errno.js";
 import type { Issue } from "../../types.js";
 import { isUiBearingSpec } from "../uixDetection.js";
 
@@ -82,11 +83,11 @@ export async function validateDesignSystemPresence(
   try {
     await stat(filePath);
   } catch (err: unknown) {
+    if (isEnoent(err)) return [ds01()];
     const code =
       typeof err === "object" && err !== null && "code" in err
         ? (err as NodeJS.ErrnoException).code
         : undefined;
-    if (code === "ENOENT") return [ds01()];
     return [readError(code ?? "READ-ERROR")];
   }
 

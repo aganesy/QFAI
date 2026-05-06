@@ -31,3 +31,11 @@ As a prototyping reviewer, I want `50_review_input_bundle.md` to mention best-of
 ## US-0010-0008: No Early Winner
 
 As a QFAI user, I want discussion to stop short of selecting the winning visual direction, so that breakthrough can still happen inside prototyping.
+
+## US-0010-0009: DESIGN.md Draft Authoring
+
+As a designer, I want `/qfai-discussion` to author root `DESIGN.md` so brand vision / visual identity become the single source of truth for downstream skills.
+
+## US-0010-0010: Legacy Sidecar Drop
+
+As a QFAI maintainer, I want `/qfai-discussion` to no longer emit legacy sidecars (`33_exploration_rubric.md`, `34_evaluator_calibration.md`, `30_exploration_brief.md`, `31_reference_pool.md`, `32_design_anti_goals.md`) so v2.0 / UX-loop runs cannot inherit deprecated framing.

@@ -2,6 +2,12 @@
 
 - Spec: <spec-id>
 - Parent: CAP-XXXX
+- Status: active
+<!-- When Status changes, add the matching companion bullet on a new line:
+     - Status: superseded  → add `- Superseded-by: spec-NNNN`
+     - Status: deprecated  → add `- Deprecated-at: YYYY-MM-DD`
+     - Status: removed     → add `- Deprecated-at: YYYY-MM-DD`
+     QFAI-STATUS-003..006 enforce these conditional fields. -->
 
 ## Consumer View
 

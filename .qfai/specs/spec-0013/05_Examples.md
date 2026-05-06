@@ -76,3 +76,24 @@
 - Given the source files `packages/qfai/src/core/validators/index.ts` and `packages/qfai/src/core/validate.ts`
 - When the wiring contract is checked
 - Then `validateTraceabilityIntegrity` is exported from the barrel (`typeof validateTraceabilityIntegrity === "function"`) AND `validate.ts` source contains an `import` statement for that named export AND the import is referenced inside the validate pipeline body (not dead code)
+
+## EX-0013-0012: DESIGN.md Lock Written at Phase 0
+
+- BR-Ref: BR-0013-0012
+- Given root `DESIGN.md` exists and its sha256 is `abc123...`
+- When `/qfai-sdd` Phase 0 completes
+- Then `.qfai/contracts/design/DESIGN.md.lock.yaml` exists with `sha256: abc123...` and a `lockedAt` ISO 8601 timestamp; absence of `DESIGN.md` triggers an error-severity finding from the design contract validator family
+
+## EX-0013-0013: Legacy Design Contract Removed From Active Set
+
+- BR-Ref: BR-0013-0013
+- Given a fresh `/qfai-sdd` run on a UI-bearing pack
+- When `_policies/05_Contracts.md` is inspected
+- Then none of `exploration-brief.yaml`, `evaluation-rubric.yaml`, `evaluator-calibration.yaml`, `selected-direction.yaml`, `reference-pool.yaml`, `brand-design.yaml` appear as active rows; `09_delta.md` may retain history annotations
+
+## EX-0013-0014: Active Design Contract Index Snapshot
+
+- BR-Ref: BR-0013-0014
+- Given the post-decomposition contract index
+- When the active design-contract entries are listed
+- Then the set is exactly `{design-system.yaml, prototype-handoff.yaml, DESIGN.md, DESIGN.md.lock.yaml, design-system mirror validator}`

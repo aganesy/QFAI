@@ -19,6 +19,8 @@
   - contract-first design/UI validators
   - prototyping design-system and evidence-related validators that still exist in code
   - direct discussion-pack validation path の coexistence
+  - prototyping evidence path is `.qfai/evidence/prototyping/iter-NN/{<screen>.png, <screen>.html, review.json}` per iter; legacy `screenshots/` / `html/` directory layout is no longer the active SSOT
+  - `/qfai-verify` no longer references "full-harness profile" / "perfect-100 completion gate" / "weighted-total scoring"; review-profiles.yml drops the full-harness profile entirely
 - Out:
   - diff-only verification
   - resurrecting a removed prototyping runtime

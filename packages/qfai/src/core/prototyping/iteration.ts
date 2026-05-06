@@ -1,13 +1,17 @@
 /**
  * Iteration core types and helpers.
  *
- * The /qfai-prototyping skill runs one prototype through up to
- * MAX_ITERATIONS iterations, in a single design lineage. Each iteration
- * captures screenshot+html and produces a reviewer review.json with
- * 4-axis ordinal scores, prose critique, anti-slop pattern detection,
- * and a pivot directive. Stop is deterministic: either all 4 axes hit
- * `exceptional` with no slop, or the iteration index reaches the budget.
+ * The prototyping skill runs one prototype through up to MAX_ITERATIONS
+ * iterations, in a single design lineage. Each iteration captures
+ * screenshot+html and produces a reviewer review.json with 4-axis
+ * ordinal scores, prose critique, layout-anti-pattern detection,
+ * DESIGN.md compliance violations, and a pivot directive. Stop is
+ * deterministic: either all 4 axes hit `exceptional` with no
+ * layout-anti-patterns and no DESIGN.md violations, or the iteration
+ * index reaches the budget.
  */
+
+import type { DesignMdViolation } from "./designMdViolations.js";
 
 export const MAX_ITERATIONS = 15;
 export const MAX_ITERATION_INDEX = MAX_ITERATIONS - 1;
@@ -29,13 +33,14 @@ export type Iteration = {
   readonly index: number;
   readonly commitSha: string;
   readonly scores: {
-    readonly designQuality: OrdinalScore;
-    readonly originality: OrdinalScore;
-    readonly craft: OrdinalScore;
+    readonly informationArchitecture: OrdinalScore;
+    readonly navigationFlow: OrdinalScore;
+    readonly usability: OrdinalScore;
     readonly functionality: OrdinalScore;
   };
   readonly proseCritique: string;
-  readonly slopPatternsDetected: readonly string[];
+  readonly layoutAntiPatternsDetected: readonly string[];
+  readonly designMdViolations: readonly DesignMdViolation[];
   readonly pivotDirective: PivotDirective;
   readonly evidenceRefs: {
     readonly screenshot: string;
@@ -58,15 +63,16 @@ export function shouldStop(iterations: readonly unknown[]): StopReason | null {
 }
 
 export function allFourAxesExceptional(iter: unknown): boolean {
-  if (!isRecord(iter) || !isRecord(iter.scores) || !Array.isArray(iter.slopPatternsDetected)) {
-    return false;
-  }
+  if (!isRecord(iter) || !isRecord(iter.scores)) return false;
+  if (!Array.isArray(iter.layoutAntiPatternsDetected)) return false;
+  if (!Array.isArray(iter.designMdViolations)) return false;
   return (
-    iter.scores.designQuality === "exceptional" &&
-    iter.scores.originality === "exceptional" &&
-    iter.scores.craft === "exceptional" &&
+    iter.scores.informationArchitecture === "exceptional" &&
+    iter.scores.navigationFlow === "exceptional" &&
+    iter.scores.usability === "exceptional" &&
     iter.scores.functionality === "exceptional" &&
-    iter.slopPatternsDetected.length === 0
+    iter.layoutAntiPatternsDetected.length === 0 &&
+    iter.designMdViolations.length === 0
   );
 }
 

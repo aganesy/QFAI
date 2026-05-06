@@ -30,6 +30,9 @@
   - Validate gate (`qfai validate --fail-on error`)
   - discussion-pack markdown readiness gate
   - optional side artifacts are ignored by preflight
+  - Phase 0 freeze of root `DESIGN.md` sha256 into `.qfai/contracts/design/DESIGN.md.lock.yaml`
+  - drop legacy design contracts (`exploration-brief.yaml`, `evaluation-rubric.yaml`, `evaluator-calibration.yaml`, `selected-direction.yaml`, `reference-pool.yaml`, `brand-design.yaml`)
+  - emit only `design-system.yaml`, `prototype-handoff.yaml`, `DESIGN.md`, `DESIGN.md.lock.yaml`, and the design-system mirror validator as the active design-contract surface
 - Out:
   - Writing production code or runnable tests
   - Skipping phase order or bypassing gates
@@ -81,7 +84,7 @@
 
 ## Entry points
 
-- US range in this spec: US-0013-0001..US-0013-0008
+- US range in this spec: US-0013-0001..US-0013-0010
 - Primary actors: QFAI user (developer), AI Agent (requirements-analyst, solution-architect, test-design-analyst)
 - Notes: Receives discussion-pack as input; produces spec artifacts and downstream-ready contracts for later execution skills
 

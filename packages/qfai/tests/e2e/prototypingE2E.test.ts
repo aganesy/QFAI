@@ -16,6 +16,47 @@ import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { runPrototypingIterate } from "../../src/cli/commands/prototypingIterate.js";
+import { hashDesignMd } from "../../src/core/design/designMd.js";
+
+const E2E_DESIGN_MD = [
+  "---",
+  "brand:",
+  '  name: "Acme Ledger"',
+  "  archetype: tech",
+  "visual:",
+  "  colors:",
+  '    primary:        "#1F2937"',
+  '    secondary:      "#6366F1"',
+  '    accent:         "#D97706"',
+  '    surface:        "#FFFFFF"',
+  '    surface_muted:  "#F3F4F6"',
+  '    text:           "#111827"',
+  '    text_muted:     "#6B7280"',
+  '    danger:         "#DC2626"',
+  '    warning:        "#F59E0B"',
+  '    success:        "#10B981"',
+  '    border:         "#E5E7EB"',
+  '    overlay:        "rgba(0,0,0,0.5)"',
+  "  typography:",
+  '    family_sans:    "Inter, system-ui, sans-serif"',
+  '    family_display: "Inter, system-ui, sans-serif"',
+  '    family_mono:    "JetBrains Mono, ui-monospace, monospace"',
+  "  radius:",
+  '    sm:   "0.25rem"',
+  '    md:   "0.5rem"',
+  '    lg:   "0.75rem"',
+  '    full: "9999px"',
+  "  shadow:",
+  '    sm: "0 1px 2px rgba(15,23,42,0.05)"',
+  '    md: "0 4px 6px rgba(15,23,42,0.08)"',
+  '    lg: "0 12px 24px rgba(15,23,42,0.10)"',
+  "---",
+  "",
+  "# Brand Philosophy",
+  "",
+  "Calm, restrained.",
+  "",
+].join("\n");
 
 const tempDirs: string[] = [];
 
@@ -70,6 +111,7 @@ async function seedRepo(root: string): Promise<void> {
     "# 01 Spec — e2e\n\n- Spec: spec-0001\n- Parent: CAP-0001\nsurface_type: ui-bearing\n",
     "utf-8",
   );
+  await writeFile(path.join(root, "DESIGN.md"), E2E_DESIGN_MD, "utf-8");
 }
 
 async function seedIterations(
@@ -77,7 +119,7 @@ async function seedIterations(
   iters: ReadonlyArray<{
     index: number;
     allEx?: boolean;
-    slop?: string[];
+    lap?: string[];
   }>,
 ): Promise<void> {
   const dir = path.join(root, ".qfai/evidence/prototyping");
@@ -91,19 +133,20 @@ async function seedIterations(
         commitSha: "a".repeat(40),
         scores: it.allEx
           ? {
-              designQuality: "exceptional",
-              originality: "exceptional",
-              craft: "exceptional",
+              informationArchitecture: "exceptional",
+              navigationFlow: "exceptional",
+              usability: "exceptional",
               functionality: "exceptional",
             }
           : {
-              designQuality: "acceptable",
-              originality: "acceptable",
-              craft: "acceptable",
+              informationArchitecture: "acceptable",
+              navigationFlow: "acceptable",
+              usability: "acceptable",
               functionality: "acceptable",
             },
         proseCritique: "x".repeat(1500),
-        slopPatternsDetected: it.slop ?? [],
+        layoutAntiPatternsDetected: it.lap ?? [],
+        designMdViolations: [],
         pivotDirective: "continue",
         evidenceRefs: {
           screenshot: `.qfai/evidence/prototyping/iter-${String(it.index).padStart(2, "0")}/home.png`,
@@ -112,6 +155,7 @@ async function seedIterations(
       })),
       acceptedIterationIndex: iters.length - 1,
       stopReason: null,
+      designMd: { path: "DESIGN.md", sha256: hashDesignMd(E2E_DESIGN_MD) },
     }),
     "utf-8",
   );
@@ -165,19 +209,19 @@ describe("/qfai-prototyping end-to-end", () => {
     expect(code).toBe(65);
   });
 
-  it("convergence is suppressed when slopPatternsDetected is non-empty even if all 4 axes are exceptional", async () => {
+  it("convergence is suppressed when layoutAntiPatternsDetected is non-empty even if all 4 axes are exceptional", async () => {
     const root = await newTempDir();
     await seedRepo(root);
     await seedIterations(root, [
       {
         index: 0,
         allEx: true,
-        slop: ["slop-001-shadcn-zinc"],
+        lap: ["lap-001-saas-dashboard"],
       },
     ]);
 
-    // Latest iter is "all exceptional but with slop" — anti-slop cap denies
-    // convergence; iterate continues.
+    // Latest iter is "all exceptional but with a layout anti-pattern" —
+    // the IA cap denies convergence; iterate continues.
     const code = await runPrototypingIterate({ root, cycle: 1 });
     expect(code).toBe(0);
   });

@@ -5,3 +5,18 @@
 - Clarified: discussion-generated prototyping hints are downstream references only.
 - Superseded: discussion-side wording that implied a current public `full-harness` mode engine.
 - Retained: 3-layer evaluation family, design-system generation, trend-derived axis generation.
+
+## 2026-05-06 — CHG-001 — Absorbed DESIGN.md authoring + legacy sidecar drop from spec-0017 (decomposition)
+
+| Op ID  | Op Type       | Target                                             | Summary                                                                          |
+| ------ | ------------- | -------------------------------------------------- | -------------------------------------------------------------------------------- |
+| OP-001 | UPDATE:APPEND | 01_Spec.md (Scope.In, Entry points US range)       | DESIGN.md draft authoring + legacy sidecar drop bullets; US range → US-0010-0010 |
+| OP-002 | UPDATE:APPEND | 02_User-stories.md (US-0010-0009..0010)            | DESIGN.md draft authoring + legacy sidecar drop                                  |
+| OP-003 | UPDATE:APPEND | 03_Acceptance-Criteria.md (AC-0010-0007..0008)     | DESIGN.md draft as discussion phase output + legacy sidecar non-emission         |
+| OP-004 | UPDATE:APPEND | 04_Business-Rules.md (BR-0010-0007..0008)          | mirror BR layer for OP-003                                                       |
+| OP-005 | UPDATE:APPEND | 05_Examples.md (EX-0010-0007..0008)                | worked examples per AC                                                           |
+| OP-006 | UPDATE:APPEND | 06_Test-Cases.md (TC-0010-0007..0008)              | test coverage per AC                                                             |
+| OP-007 | UPDATE:APPEND | tdd/test-list.md (TDD rows for TC-0010-0007..0008) | TDD ledger sync                                                                  |
+
+- Approved By: yusuke_senaga
+- Notes: subjects originated from former spec-0017 (Prototyping v2.0 / UX-loop redesign decomposition). Cross-spec downstream consumers (e.g. `/qfai-sdd` Phase 0 lock, `/qfai-implement` design-system input) are recorded in the receiving specs (spec-0013 / spec-0011) without back-references here, per editorial convention §15.

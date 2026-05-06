@@ -44,3 +44,17 @@
 
 - Implementation workers cannot serve as their own reviewers.
 - Both completion-reviewer and implementation-reviewer must return PASS before `done`.
+
+## BR-0011-0007: Handoff Schema Closed Field Set
+
+- AC-Refs: AC-0011-0009
+
+- `prototype-handoff.yaml` MUST expose exactly `finalIterIndex`, `finalArtifact`, `extractedDesignSystem`, and `implementationNotes`.
+- Legacy fields `mustPreserve` / `mayAdapt` / `mustNotCopy` MUST NOT be relied on by `/qfai-implement` and MUST surface as schema warnings if encountered.
+
+## BR-0011-0008: Design System Input Determinism
+
+- AC-Refs: AC-0011-0010
+
+- `design-system.yaml` is the deterministic mirror of root `DESIGN.md` token tables (color / typography / radius / shadow).
+- `/qfai-implement` MUST treat it as input only — it does not regenerate token tables from per-iter HTML.

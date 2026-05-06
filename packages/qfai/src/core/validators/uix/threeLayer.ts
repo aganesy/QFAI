@@ -14,24 +14,36 @@ const EXPLORATION_SECTIONS = [
   "anti_goals",
   "anti-goals",
   "axes",
-  "design quality",
-  "originality",
-  "craft",
+  "information architecture",
+  "informationarchitecture",
+  "navigation flow",
+  "navigationflow",
+  "usability",
   "functionality",
   "good critique examples",
   "good critique",
   "best-of-history summary",
 ] as const;
 
-const LEGACY_FOUR_AXIS_SECTIONS = ["usability", "consistency", "accessibility", "delight"];
+const LEGACY_FOUR_AXIS_SECTIONS = [
+  "consistency",
+  "accessibility",
+  "delight",
+  "craft",
+  "originality",
+  "design quality",
+];
 
+// Brand-level inputs (product intent / brand signals / anti-goals / reference
+// pool) now live in root DESIGN.md and are validated separately via
+// designContractReadiness. The legacy `33_exploration_rubric.md` and
+// `34_evaluator_calibration.md` sidecars were removed when DESIGN.md
+// became the brand SSOT and the evaluator axes were fixed in
+// `core/prototyping/evaluatorReview.ts` (`ORDINAL_AXES`); they are no
+// longer shipped by `qfai init`. Only screen-level UX sidecars remain
+// in the required family.
 const CANONICAL_REQUIRED_SIDECAR_FILES = [
   "00_index.md",
-  "30_exploration_brief.md",
-  "31_reference_pool.md",
-  "32_design_anti_goals.md",
-  "33_exploration_rubric.md",
-  "34_evaluator_calibration.md",
   "40_screen_contracts.md",
   "50_review_input_bundle.md",
 ] as const;
@@ -39,6 +51,12 @@ const CANONICAL_REQUIRED_SIDECAR_FILES = [
 const FORBIDDEN_LEGACY_PATTERNS = [
   /^30_.*comparison.*\.md$/i,
   /^31_.*anchor.*\.md$/i,
+  // 33_exploration_rubric.md / 34_evaluator_calibration.md were retired
+  // when DESIGN.md became the brand SSOT and the evaluator axes were
+  // fixed in `core/prototyping/evaluatorReview.ts#ORDINAL_AXES`. They
+  // are no longer in the canonical family AND must not be created by
+  // operators following stale docs.
+  /^3[34]_.*\.md$/i,
   /^1[0-2]_.*(?:strategy|taste|system).*\.md$/i,
   /^2[0-4]_.*(?:eval|axis|aggregate|override).*\.md$/i,
   /^40_contracts\.md$/i,

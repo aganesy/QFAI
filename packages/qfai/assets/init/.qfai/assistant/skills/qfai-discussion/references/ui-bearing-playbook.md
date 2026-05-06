@@ -26,17 +26,12 @@ Use this file when `/qfai-discussion` needs the full UI-bearing decision logic.
 
 ## Sidecar Family SSOT
 
+For UI-bearing packs the brand SSOT is root `DESIGN.md` (drafted by
+`/qfai-discussion` and frozen by `/qfai-sdd` Phase 0 into
+`.qfai/contracts/design/DESIGN.md.lock.yaml`). The remaining sidecars are
+the screen-level UX inputs:
+
 - `uiux/00_index.md`
-- `uiux/10_implementation_strategy.md`
-- `uiux/11_design_taste_interview.md`
-- `uiux/12_design_system.md`
-- `uiux/20_design_eval_invariant.md`
-- `uiux/21_design_eval_trend_derived.md`
-- `uiux/22_design_eval_product_specific.md`
-- `uiux/23_design_eval_aggregate.md`
-- `uiux/24_design_eval_dynamic_overrides.md`
-- `uiux/30_option_comparison.md`
-- `uiux/31_selected_anchor_screen.md`
 - `uiux/40_screen_contracts.md`
 - `uiux/50_review_input_bundle.md`
 

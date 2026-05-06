@@ -1,8 +1,8 @@
 /**
- * Tests for the spec-0017 test-todo stub validator.
+ * Tests for the spec-0004 test-todo stub validator.
  *
- * QFAI:SPEC-0017:TC-0017-0028 — it.todo / test.todo / describe.todo detected
- * QFAI:SPEC-0017:TC-0017-0029 — opt-out via config flag works
+ * QFAI:SPEC-0004:TC-0004-0006 — it.todo / test.todo / describe.todo detected
+ * QFAI:SPEC-0004:TC-0004-0006 — opt-out via config flag works
  */
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -63,8 +63,8 @@ async function writeTestFile(root: string, relativePath: string, content: string
   await writeFile(fullPath, content, "utf-8");
 }
 
-describe("spec-0017 validateTestTodoStubs", () => {
-  // TC-0017-0028 — it.todo / test.todo / describe.todo detected
+describe("spec-0004 validateTestTodoStubs", () => {
+  // TC-0004-0006 — it.todo / test.todo / describe.todo detected
   it("emits QFAI-TEST-001 for it" + TODO + " stubs", async () => {
     const root = await newTempDir();
     await writeTestFile(
@@ -166,7 +166,7 @@ describe("spec-0017 validateTestTodoStubs", () => {
     expect(issues).toEqual([]);
   });
 
-  // TC-0017-0029 — opt-out via config flag works
+  // TC-0004-0006 — opt-out via config flag works
   it("returns no issues when forbidTestTodoStubs is false", async () => {
     const root = await newTempDir();
     await writeTestFile(

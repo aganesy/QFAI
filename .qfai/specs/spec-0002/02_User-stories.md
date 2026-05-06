@@ -5,13 +5,20 @@
 - US-0002-0001: 15-file discussion-pack structure
 - US-0002-0002: OQ-driven completion
 - US-0002-0003: UI-bearing detection
-- US-0002-0004: exploration-first sidecar generation
 - US-0002-0005: planner-first design authoring
-- US-0002-0006: evaluator calibration authoring
-- US-0002-0007: review bundle with best-of-history
 - US-0002-0008: discussion-to-SDD handoff
 - US-0002-0009: non-UI safe skip
 - US-0002-0010: direct-pack validator alignment
+
+> v1.8.9: US-0002-0004 / 0006 / 0007 (the legacy exploration-first
+> sidecar / evaluator-calibration / best-of-history bundle stories)
+> were retired together with REQ-0006..0011 and the
+> `discussionDesignHardening` validator. Their downstream
+> behaviors are owned by the post-1.8.9 prototyping spec, which
+> anchors brand SSOT in root `DESIGN.md` and the
+> `validateDesignContractReadiness` family. The corresponding AC /
+> BR / EX / TC / TDD ledger rows are retired in their own files
+> (see retirement notes there).
 
 ## US-0002-0001: 15-file discussion-pack structure
 
@@ -25,21 +32,9 @@ As a project lead, I want discussion to stop until `Disposition: open` is zero, 
 
 As a maintainer, I want UI-bearing detection to control whether exploration-first sidecars are required, so that non-UI packs do not over-fire UI validators.
 
-## US-0002-0004: exploration-first sidecar generation
-
-As a QFAI user, I want UI-bearing discussion packs to generate the exploration-first sidecar family only, so that downstream prototyping can explore without inheriting legacy templates.
-
 ## US-0002-0005: planner-first design authoring
 
 As a discussion facilitator, I want discussion to define exploration conditions and anti-goals without selecting a visual winner, so that prototyping remains the place where design direction is chosen.
-
-## US-0002-0006: evaluator calibration authoring
-
-As a reviewer, I want the discussion pack to include evaluator calibration examples, so that later critique is not overly lenient or generic.
-
-## US-0002-0007: review bundle with best-of-history
-
-As a prototyping reviewer, I want the review input bundle to document best-of-history handling, so that later iterations are not automatically treated as better.
 
 ## US-0002-0008: discussion-to-SDD handoff
 

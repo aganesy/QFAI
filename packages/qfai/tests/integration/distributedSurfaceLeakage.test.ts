@@ -31,6 +31,7 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import { runInit } from "../../src/cli/commands/init.js";
 import { captureStdout } from "../helpers/stdout.js";
+import { getInitAssetsDir } from "../../src/shared/assets.js";
 
 const tempDirs: string[] = [];
 
@@ -99,7 +100,9 @@ describe("distributed surface leakage smoke", { timeout: 90000 }, () => {
     await captureStdout(() => runInit({ dir: tmpDir, force: false, dryRun: false, yes: true }));
 
     const hits: Hit[] = [];
+    const visitedRelative: string[] = [];
     for await (const file of walk(tmpDir)) {
+      visitedRelative.push(path.relative(tmpDir, file));
       const ext = path.extname(file);
       if (!TEXT_EXTENSIONS.has(ext)) continue;
       const stats = await stat(file);
@@ -138,6 +141,37 @@ describe("distributed surface leakage smoke", { timeout: 90000 }, () => {
       throw new Error(
         `Distributed surface leakage detected in qfai init output (${hits.length} hits):\n${report}\n\n` +
           "Fix: remove the internal identifier from the originating asset under packages/qfai/assets/init/.",
+      );
+    }
+    expect(hits).toEqual([]);
+
+    // TC-1.5.1: DESIGN.md must be in the walked file list (guard against
+    // accidental rename / exclusion of the root brand SSOT).
+    expect(visitedRelative).toContain("DESIGN.md");
+  });
+
+  // TC-1.5.2: standalone DESIGN.md template scan against all 4 PATTERNS.
+  it("DESIGN.md template alone has zero matches across all 4 forbidden patterns", async () => {
+    const designMdPath = path.join(getInitAssetsDir(), "root", "DESIGN.md");
+    const content = await readFile(designMdPath, "utf-8");
+    const lines = content.split("\n");
+    const hits: Array<{ pattern: string; line: number; match: string }> = [];
+    for (const { name, re } of PATTERNS) {
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i] ?? "";
+        re.lastIndex = 0;
+        const m = re.exec(line);
+        if (m) {
+          hits.push({ pattern: name, line: i + 1, match: m[0] });
+        }
+      }
+    }
+    if (hits.length > 0) {
+      const report = hits
+        .map((h) => `  [${h.pattern}] DESIGN.md:${h.line} -> ${h.match}`)
+        .join("\n");
+      throw new Error(
+        `DESIGN.md template contains forbidden tokens (${hits.length} hits):\n${report}`,
       );
     }
     expect(hits).toEqual([]);

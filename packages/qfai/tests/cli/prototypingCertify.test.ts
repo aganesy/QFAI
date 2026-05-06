@@ -2,17 +2,86 @@
  * Tests for `qfai prototyping certify` and `qfai prototyping show-spec`
  * (v1.8.4 Phase 5).
  */
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
+  findStaleIterDirs,
   runPrototypingCertify,
   runPrototypingShowSpec,
 } from "../../src/cli/commands/prototypingCertify.js";
+import { hashDesignMd } from "../../src/core/design/designMd.js";
 import { COMPLETION_CERTIFICATE_REL_PATH } from "../../src/core/prototyping/certificate.js";
+
+function isCertificateWithSpecsCovered(raw: unknown): raw is { specsCovered: string[] } {
+  if (raw === null || typeof raw !== "object" || !("specsCovered" in raw)) return false;
+  // TS narrows `raw` to `object & Record<"specsCovered", unknown>` after
+  // the `"specsCovered" in raw` guard, so direct property access is
+  // type-safe — no `as` cast needed.
+  const value = raw.specsCovered;
+  return Array.isArray(value) && value.every((v): v is string => typeof v === "string");
+}
+
+const CERT_DESIGN_MD = [
+  "---",
+  "brand:",
+  '  name: "Acme Ledger"',
+  "  archetype: tech",
+  "visual:",
+  "  colors:",
+  '    primary:        "#1F2937"',
+  '    secondary:      "#6366F1"',
+  '    accent:         "#D97706"',
+  '    surface:        "#FFFFFF"',
+  '    surface_muted:  "#F3F4F6"',
+  '    text:           "#111827"',
+  '    text_muted:     "#6B7280"',
+  '    danger:         "#DC2626"',
+  '    warning:        "#F59E0B"',
+  '    success:        "#10B981"',
+  '    border:         "#E5E7EB"',
+  '    overlay:        "rgba(0,0,0,0.5)"',
+  "  typography:",
+  '    family_sans:    "Inter, system-ui, sans-serif"',
+  '    family_display: "Inter, system-ui, sans-serif"',
+  '    family_mono:    "JetBrains Mono, ui-monospace, monospace"',
+  "  radius:",
+  '    sm:   "0.25rem"',
+  '    md:   "0.5rem"',
+  '    lg:   "0.75rem"',
+  '    full: "9999px"',
+  "  shadow:",
+  '    sm: "0 1px 2px rgba(15,23,42,0.05)"',
+  '    md: "0 4px 6px rgba(15,23,42,0.08)"',
+  '    lg: "0 12px 24px rgba(15,23,42,0.10)"',
+  "---",
+  "",
+  "# Brand Philosophy",
+  "",
+  "Restrained.",
+  "",
+].join("\n");
+
+const CLEAN_FINAL_HTML =
+  "<!doctype html>\n<html><head><style>body { font-family: Inter, system-ui, sans-serif; }</style></head>" +
+  "<body><main><h1>Acme</h1></main></body></html>\n";
+
+async function seedDesignMdAndFinalHtml(
+  root: string,
+  options: { iterIndex?: number; html?: string; designMd?: string } = {},
+): Promise<void> {
+  await writeFile(path.join(root, "DESIGN.md"), options.designMd ?? CERT_DESIGN_MD, "utf-8");
+  const iterIndex = options.iterIndex ?? 1;
+  const iterDir = path.join(
+    root,
+    `.qfai/evidence/prototyping/iter-${String(iterIndex).padStart(2, "0")}`,
+  );
+  await mkdir(iterDir, { recursive: true });
+  await writeFile(path.join(iterDir, "index.html"), options.html ?? CLEAN_FINAL_HTML, "utf-8");
+}
 
 const tempDirs: string[] = [];
 
@@ -62,6 +131,10 @@ async function seedMinimalProject(root: string, opts?: { specMarker?: boolean })
 }
 
 async function seedAllGatesPass(root: string): Promise<void> {
+  // DESIGN.md compliance gate added in Phase 3b — every passing-gates
+  // fixture seeds a parseable DESIGN.md plus a final-iter HTML free of
+  // violations.
+  await seedDesignMdAndFinalHtml(root);
   // v1.8.4 Phase 11.7+: certify now reads validate.json from
   // config.output.validateJsonPath (default: .qfai/report/validate.json),
   // not hardcoded .qfai/output/. Seed both locations so tests work
@@ -78,17 +151,18 @@ async function seedAllGatesPass(root: string): Promise<void> {
   );
   await mkdir(path.join(root, ".qfai/evidence/prototyping"), { recursive: true });
   await writeFile(
-    path.join(root, ".qfai/evidence/prototyping.json"),
+    path.join(root, ".qfai/evidence/prototyping/prototyping.json"),
     JSON.stringify({
       mode: { effective: "standard", source: "explicit-request", rationale: "test" },
       surface: "web",
-      fullHarness: { runId: "run-test-2026" },
+      runId: "run-test-2026",
+      designMd: { path: "DESIGN.md", sha256: hashDesignMd(CERT_DESIGN_MD) },
+      specsCovered: ["0012"],
       reviewerGate: {
         result: "PASS",
         signoff: { reviewerId: "test-reviewer", timestamp: "2026-04-27T00:00:00Z" },
       },
-      rounds: [{ round: "r5" }, { round: "r3" }],
-      polishCycles: [{ cycle: 1, kind: "polish" }],
+      iterations: [{ index: 0 }, { index: 1 }],
     }),
     "utf-8",
   );
@@ -120,7 +194,7 @@ describe("qfai prototyping certify (generate)", () => {
     expect(body.runId).toBe("run-test-2026");
     expect(body.specsCovered).toEqual(["0012"]);
     expect(body.reviewerSignoff.reviewerId).toBe("test-reviewer");
-    expect(body.iterationCount).toBe(3);
+    expect(body.iterationCount).toBe(2);
   });
 
   it("exits 2 when prototyping.json is missing", async () => {
@@ -130,12 +204,12 @@ describe("qfai prototyping certify (generate)", () => {
     expect(exit).toBe(2);
   });
 
-  it("exits 2 when fullHarness.runId is missing", async () => {
+  it("exits 2 when runId is missing", async () => {
     const root = await newTempDir();
     await seedMinimalProject(root);
-    await mkdir(path.join(root, ".qfai/evidence"), { recursive: true });
+    await mkdir(path.join(root, ".qfai/evidence/prototyping"), { recursive: true });
     await writeFile(
-      path.join(root, ".qfai/evidence/prototyping.json"),
+      path.join(root, ".qfai/evidence/prototyping/prototyping.json"),
       JSON.stringify({ mode: { effective: "standard", source: "test", rationale: "x" } }),
       "utf-8",
     );
@@ -171,16 +245,53 @@ describe("qfai prototyping certify (generate)", () => {
     expect(exit).toBe(2);
   });
 
+  it("exits 2 when prototyping.json#iterations[] is empty (and identifies the empty-iterations branch in the error log)", async () => {
+    const root = await newTempDir();
+    await seedMinimalProject(root, { specMarker: true });
+    await seedAllGatesPass(root);
+    // Override prototyping.json to have an empty iterations[] while
+    // every other gate stays passing. This locks the SPECIFIC
+    // exit-2 branch — without the log assertion, a refactor of
+    // validator order could let the test stay green by failing on a
+    // different precondition.
+    await writeFile(
+      path.join(root, ".qfai/evidence/prototyping/prototyping.json"),
+      JSON.stringify({
+        mode: { effective: "standard", source: "explicit-request", rationale: "test" },
+        surface: "web",
+        runId: "run-test-2026",
+        designMd: { path: "DESIGN.md", sha256: hashDesignMd(CERT_DESIGN_MD) },
+        specsCovered: ["0012"],
+        reviewerGate: {
+          result: "PASS",
+          signoff: { reviewerId: "test-reviewer", timestamp: "2026-04-27T00:00:00Z" },
+        },
+        iterations: [],
+      }),
+      "utf-8",
+    );
+    const logger = await import("../../src/cli/lib/logger.js");
+    const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
+    try {
+      expect(await runPrototypingCertify({ root, check: false })).toBe(2);
+      const messages = errorSpy.mock.calls.map((c) => String(c[0]));
+      expect(messages.some((m) => m.includes("prototyping.json#iterations is empty"))).toBe(true);
+    } finally {
+      errorSpy.mockRestore();
+    }
+  });
+
   it("exits 2 when reviewerGate is not PASS", async () => {
     const root = await newTempDir();
     await seedMinimalProject(root);
     await seedAllGatesPass(root);
     // Re-seed prototyping.json without reviewerGate.result === PASS
     await writeFile(
-      path.join(root, ".qfai/evidence/prototyping.json"),
+      path.join(root, ".qfai/evidence/prototyping/prototyping.json"),
       JSON.stringify({
         mode: { effective: "standard", source: "test", rationale: "x" },
-        fullHarness: { runId: "run-x" },
+        runId: "run-x",
+        designMd: { path: "DESIGN.md", sha256: hashDesignMd(CERT_DESIGN_MD) },
         reviewerGate: { result: "REVISE" },
       }),
       "utf-8",
@@ -189,22 +300,101 @@ describe("qfai prototyping certify (generate)", () => {
     expect(exit).toBe(2);
   });
 
+  it("uses prototyping.json#specsCovered (frozen at cycle 0) — does NOT re-resolve at certify", async () => {
+    // Plant a marker on a different spec id (`spec-0007`) AFTER cycle 0
+    // would have run, while the frozen seed records `["0012"]`. The
+    // certificate must reflect the frozen seed, not a re-resolution.
+    const root = await newTempDir();
+    await seedMinimalProject(root, { specMarker: true });
+    await seedAllGatesPass(root);
+    // Add a marker-bearing spec that did NOT exist at cycle 0.
+    await mkdir(path.join(root, ".qfai/specs/spec-0007"), { recursive: true });
+    await writeFile(
+      path.join(root, ".qfai/specs/spec-0007/01_Spec.md"),
+      "---\nsurface_type: ui-bearing\n---\n\n# spec-0007\n",
+      "utf-8",
+    );
+    await writeFile(
+      path.join(root, ".qfai/specs/spec-0007/02_User-stories.md"),
+      "# stories\n",
+      "utf-8",
+    );
+
+    const exit = await runPrototypingCertify({ root, check: false });
+    expect(exit).toBe(0);
+
+    const certPath = path.join(root, COMPLETION_CERTIFICATE_REL_PATH);
+    const raw: unknown = JSON.parse(await readFile(certPath, "utf-8"));
+    if (!isCertificateWithSpecsCovered(raw)) {
+      throw new Error("certificate JSON is missing the specsCovered string array");
+    }
+    // Frozen seed wins — even though spec-0007 might now be resolvable.
+    expect(raw.specsCovered).toEqual(["0012"]);
+  });
+
+  it("exits 2 when prototyping.json#specsCovered is missing", async () => {
+    const root = await newTempDir();
+    await seedMinimalProject(root, { specMarker: true });
+    await seedAllGatesPass(root);
+    // Re-write prototyping.json without the specsCovered slot.
+    await writeFile(
+      path.join(root, ".qfai/evidence/prototyping/prototyping.json"),
+      JSON.stringify({
+        mode: { effective: "standard", source: "test", rationale: "x" },
+        surface: "web",
+        runId: "run-test-2026",
+        designMd: { path: "DESIGN.md", sha256: hashDesignMd(CERT_DESIGN_MD) },
+        reviewerGate: {
+          result: "PASS",
+          signoff: { reviewerId: "test-reviewer", timestamp: "2026-04-27T00:00:00Z" },
+        },
+        iterations: [{ index: 0 }, { index: 1 }],
+      }),
+      "utf-8",
+    );
+    expect(await runPrototypingCertify({ root, check: false })).toBe(2);
+  });
+
+  it("exits 2 when prototyping.json#specsCovered is malformed (empty array)", async () => {
+    const root = await newTempDir();
+    await seedMinimalProject(root, { specMarker: true });
+    await seedAllGatesPass(root);
+    await writeFile(
+      path.join(root, ".qfai/evidence/prototyping/prototyping.json"),
+      JSON.stringify({
+        mode: { effective: "standard", source: "test", rationale: "x" },
+        surface: "web",
+        runId: "run-test-2026",
+        designMd: { path: "DESIGN.md", sha256: hashDesignMd(CERT_DESIGN_MD) },
+        specsCovered: [],
+        reviewerGate: {
+          result: "PASS",
+          signoff: { reviewerId: "test-reviewer", timestamp: "2026-04-27T00:00:00Z" },
+        },
+        iterations: [{ index: 0 }, { index: 1 }],
+      }),
+      "utf-8",
+    );
+    expect(await runPrototypingCertify({ root, check: false })).toBe(2);
+  });
+
   it("accepts legacy reviewer signoff fields when issuing the certificate", async () => {
     const root = await newTempDir();
     await seedMinimalProject(root, { specMarker: true });
     await seedAllGatesPass(root);
     await writeFile(
-      path.join(root, ".qfai/evidence/prototyping.json"),
+      path.join(root, ".qfai/evidence/prototyping/prototyping.json"),
       JSON.stringify({
         mode: { effective: "standard", source: "test", rationale: "x" },
         surface: "web",
-        fullHarness: { runId: "run-x" },
+        runId: "run-x",
+        designMd: { path: "DESIGN.md", sha256: hashDesignMd(CERT_DESIGN_MD) },
+        specsCovered: ["0012"],
         reviewerGate: {
           result: "PASS",
           signoff: { reviewer: "legacy-reviewer", timestamp: "2026-04-27T00:00:00Z" },
         },
-        rounds: [{ round: "r5" }],
-        polishCycles: [{ cycle: 1, kind: "polish" }],
+        iterations: [{ index: 0 }, { index: 1 }],
       }),
       "utf-8",
     );
@@ -217,6 +407,69 @@ describe("qfai prototyping certify (generate)", () => {
       await (await import("node:fs/promises")).readFile(certPath, "utf-8"),
     ) as { reviewerSignoff: { reviewerId: string } };
     expect(body.reviewerSignoff.reviewerId).toBe("legacy-reviewer");
+  });
+});
+
+describe("qfai prototyping certify (multi-screen accepted-iter HTML check)", () => {
+  it("exits 2 when accepted iter is missing HTML for a declared screen contract", async () => {
+    const root = await newTempDir();
+    await seedMinimalProject(root, { specMarker: true });
+    await seedAllGatesPass(root);
+    // Plant a UI contract declaring two screens; the seeded
+    // accepted-iter (iter-01) has only `index.html`, not
+    // `home.html` / `settings.html`.
+    await mkdir(path.join(root, ".qfai/contracts/ui"), { recursive: true });
+    await writeFile(
+      path.join(root, ".qfai/contracts/ui/main.yaml"),
+      [
+        "screens:",
+        "  - id: home",
+        '    route: "/home"',
+        "  - id: settings",
+        '    route: "/settings"',
+        "",
+      ].join("\n"),
+      "utf-8",
+    );
+    expect(await runPrototypingCertify({ root, check: false })).toBe(2);
+  });
+
+  it("exits 2 when accepted iter has only an older screen file's name (anchored to accepted iter)", async () => {
+    const root = await newTempDir();
+    await seedMinimalProject(root, { specMarker: true });
+    await seedAllGatesPass(root);
+    // UI contracts declare home + settings.
+    await mkdir(path.join(root, ".qfai/contracts/ui"), { recursive: true });
+    await writeFile(
+      path.join(root, ".qfai/contracts/ui/main.yaml"),
+      'screens:\n  - id: home\n    route: "/home"\n  - id: settings\n    route: "/settings"\n',
+      "utf-8",
+    );
+    // Plant settings.html in an OLDER iter dir; certify must not
+    // accept it as evidence for the accepted iter.
+    const iter00 = path.join(root, ".qfai/evidence/prototyping/iter-00");
+    await mkdir(iter00, { recursive: true });
+    await writeFile(path.join(iter00, "settings.html"), CLEAN_FINAL_HTML, "utf-8");
+    // Accepted iter (iter-01) only has index.html (seeded by
+    // seedAllGatesPass), not home.html or settings.html.
+    expect(await runPrototypingCertify({ root, check: false })).toBe(2);
+  });
+
+  it("succeeds when accepted iter has HTML for every declared screen", async () => {
+    const root = await newTempDir();
+    await seedMinimalProject(root, { specMarker: true });
+    await seedAllGatesPass(root);
+    await mkdir(path.join(root, ".qfai/contracts/ui"), { recursive: true });
+    await writeFile(
+      path.join(root, ".qfai/contracts/ui/main.yaml"),
+      'screens:\n  - id: home\n    route: "/home"\n  - id: settings\n    route: "/settings"\n',
+      "utf-8",
+    );
+    // Add the two screen HTML files into the accepted iter dir.
+    const acceptedDir = path.join(root, ".qfai/evidence/prototyping/iter-01");
+    await writeFile(path.join(acceptedDir, "home.html"), CLEAN_FINAL_HTML, "utf-8");
+    await writeFile(path.join(acceptedDir, "settings.html"), CLEAN_FINAL_HTML, "utf-8");
+    expect(await runPrototypingCertify({ root, check: false })).toBe(0);
   });
 });
 
@@ -260,5 +513,209 @@ describe("qfai prototyping show-spec", () => {
     const root = await newTempDir();
     await seedMinimalProject(root, { specMarker: false });
     expect(await runPrototypingShowSpec({ root })).toBe(2);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────
+// TC-3.6.x — DESIGN.md compliance gate + cert designMd binding
+// ─────────────────────────────────────────────────────────────────────────
+
+describe("qfai prototyping certify (TC-3.6.x DESIGN.md gate)", () => {
+  it("TC-3.6.2: final HTML with one DESIGN.md violation → exit 2", async () => {
+    const root = await newTempDir();
+    await seedMinimalProject(root, { specMarker: true });
+    await seedAllGatesPass(root);
+    // Overwrite the final HTML with a violating color literal.
+    await writeFile(
+      path.join(root, ".qfai/evidence/prototyping/iter-01/index.html"),
+      '<div style="color:#abcdef">x</div>\n',
+      "utf-8",
+    );
+    expect(await runPrototypingCertify({ root, check: false })).toBe(2);
+  });
+
+  it("TC-3.6.3: no final iteration HTML → exit 2", async () => {
+    const root = await newTempDir();
+    await seedMinimalProject(root, { specMarker: true });
+    await seedAllGatesPass(root);
+    // Remove the seeded final HTML directory entirely.
+    await rm(path.join(root, ".qfai/evidence/prototyping/iter-01"), {
+      recursive: true,
+      force: true,
+    });
+    expect(await runPrototypingCertify({ root, check: false })).toBe(2);
+  });
+
+  it("TC-3.6.4: empty violations array (clean HTML) → exit 0", async () => {
+    const root = await newTempDir();
+    await seedMinimalProject(root, { specMarker: true });
+    await seedAllGatesPass(root);
+    expect(await runPrototypingCertify({ root, check: false })).toBe(0);
+  });
+
+  it("fails fast (exit 2) when a stale higher iter-NN dir would be sealed into evidenceDigests", async () => {
+    // Simulates a `qfai prototyping iterate --cycle 0` restart that left
+    // a stale iter-14 directory on disk from a prior loop. The HTML scan
+    // is correctly anchored to iter-01, but `buildCompletionCertificate`
+    // would still digest every file under `evidenceRoot`, sealing the
+    // stale iter-14 contents into the certificate. A later
+    // `certify --check` would then fail when the operator cleans up the
+    // stale dir even though the accepted iteration is unchanged. So
+    // certify fails fast here and forces the operator to rerun cycle 0
+    // (which deletes stale iter-NN dirs as part of the hard reset) or
+    // remove them manually before sealing.
+    const root = await newTempDir();
+    await seedMinimalProject(root, { specMarker: true });
+    await seedAllGatesPass(root);
+    // The fresh loop has 2 recorded iterations → accepted index = 1.
+    // Plant a stale iter-14 with violating HTML.
+    const staleDir = path.join(root, ".qfai/evidence/prototyping/iter-14");
+    await mkdir(staleDir, { recursive: true });
+    await writeFile(
+      path.join(staleDir, "index.html"),
+      '<span style="color:#abcdef">stale</span>\n',
+      "utf-8",
+    );
+    const logger = await import("../../src/cli/lib/logger.js");
+    const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
+    try {
+      expect(await runPrototypingCertify({ root, check: false })).toBe(2);
+      const messages = errorSpy.mock.calls.map((c) => String(c[0]));
+      expect(messages.some((m) => m.includes("stale iteration directories found"))).toBe(true);
+      expect(messages.some((m) => m.includes("iter-14"))).toBe(true);
+    } finally {
+      errorSpy.mockRestore();
+    }
+  });
+
+  it("returns 2 with 'could not be read' error when DESIGN.md.lock.yaml is unreadable (codex 8zqe)", async () => {
+    // Pin the new `unreadable` LockGateResult branch added to loadLockGate
+    // for the lock fail-closed posture (codex 8cTg). Symmetric with the
+    // iterate test of the same name. Trigger the unreadable branch
+    // portably by creating the lock path as a *directory* — Node raises
+    // EISDIR on `readFile`, which routes through the new `unreadable`
+    // kind exactly as EACCES / EPERM / EIO would. Works cross-platform.
+    const root = await newTempDir();
+    await seedMinimalProject(root, { specMarker: true });
+    await seedAllGatesPass(root);
+    await mkdir(path.join(root, ".qfai/contracts/design/DESIGN.md.lock.yaml"), {
+      recursive: true,
+    });
+
+    const logger = await import("../../src/cli/lib/logger.js");
+    const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
+    try {
+      expect(await runPrototypingCertify({ root, check: false })).toBe(2);
+      const messages = errorSpy.mock.calls.map((c) => String(c[0]));
+      expect(messages.some((m) => m.includes("could not be read"))).toBe(true);
+    } finally {
+      errorSpy.mockRestore();
+    }
+  });
+
+  it("findStaleIterDirs propagates non-ENOENT readdir errors (codex 9KyS regression sentinel)", async () => {
+    // Symmetric pin with the lock-unreadable test: verify the
+    // fail-closed posture in findStaleIterDirs's readdir catch
+    // (`if (isEnoent(err)) return []; throw err;`). A future revert
+    // to a bare `catch { return []; }` would let a permission flip
+    // silently bypass the stale-iter guard — the same vector the
+    // round-9 lock fix closed. Trigger a non-ENOENT readdir error
+    // portably by passing a path that is a file, not a directory:
+    // Node raises ENOTDIR which is non-ENOENT and must propagate.
+    const root = await newTempDir();
+    const filePath = path.join(root, "not-a-dir");
+    await writeFile(filePath, "x", "utf-8");
+    await expect(findStaleIterDirs(filePath, 0)).rejects.toThrow();
+  });
+
+  it("findStaleIterDirs returns [] on ENOENT (legitimate fresh-project case)", async () => {
+    // Companion test: confirm the ENOENT branch still returns []
+    // (legitimate absence on a fresh project that has not yet
+    // captured an iteration). Without this, a future tightening
+    // could over-rotate to a hard error on every fs miss.
+    const root = await newTempDir();
+    const missing = path.join(root, "does-not-exist");
+    await expect(findStaleIterDirs(missing, 0)).resolves.toEqual([]);
+  });
+
+  it("anchors final HTML scan to prototyping.json#iterations[] (no stale dirs)", async () => {
+    // Confirm the round-4 anchoring still works when no stale higher
+    // iter dirs are present: certify uses iter-01 (the recorded final)
+    // and ignores iter-00.
+    const root = await newTempDir();
+    await seedMinimalProject(root, { specMarker: true });
+    await seedAllGatesPass(root);
+    // No stale dirs planted; iter-00 and iter-01 are both seeded clean
+    // by seedAllGatesPass.
+    expect(await runPrototypingCertify({ root, check: false })).toBe(0);
+  });
+
+  it("exits 2 when the recorded final iter dir has no HTML (despite older iters with HTML)", async () => {
+    const root = await newTempDir();
+    await seedMinimalProject(root, { specMarker: true });
+    await seedAllGatesPass(root);
+    // Wipe the recorded final iter (iter-01) but leave iter-00 with HTML.
+    await rm(path.join(root, ".qfai/evidence/prototyping/iter-01"), {
+      recursive: true,
+      force: true,
+    });
+    const iter00 = path.join(root, ".qfai/evidence/prototyping/iter-00");
+    await mkdir(iter00, { recursive: true });
+    await writeFile(path.join(iter00, "index.html"), CLEAN_FINAL_HTML, "utf-8");
+    // Certify must NOT fall back to iter-00 — that iter is not the
+    // accepted iteration in prototyping.json.
+    expect(await runPrototypingCertify({ root, check: false })).toBe(2);
+  });
+
+  it("TC-3.6.5: only the LAST iter is evaluated (older dirty iters ignored)", async () => {
+    const root = await newTempDir();
+    await seedMinimalProject(root, { specMarker: true });
+    await seedAllGatesPass(root);
+    // Add an older iter-00 with violating HTML; iter-01 (final) is clean.
+    const iter00 = path.join(root, ".qfai/evidence/prototyping/iter-00");
+    await mkdir(iter00, { recursive: true });
+    await writeFile(
+      path.join(iter00, "index.html"),
+      '<span style="color:#abcdef">old</span>\n',
+      "utf-8",
+    );
+    expect(await runPrototypingCertify({ root, check: false })).toBe(0);
+  });
+
+  it("TC-3.6.7: certificate.json includes designMd { path, sha256 }", async () => {
+    const root = await newTempDir();
+    await seedMinimalProject(root, { specMarker: true });
+    await seedAllGatesPass(root);
+    expect(await runPrototypingCertify({ root, check: false })).toBe(0);
+    const certBody = JSON.parse(
+      await (
+        await import("node:fs/promises")
+      ).readFile(path.join(root, COMPLETION_CERTIFICATE_REL_PATH), "utf-8"),
+    ) as { designMd: { path: string; sha256: string } };
+    expect(certBody.designMd.path).toBe("DESIGN.md");
+    expect(certBody.designMd.sha256).toBe(hashDesignMd(CERT_DESIGN_MD));
+  });
+
+  it("TC-3.6.8: designMd.sha256 is 64-char lowercase hex", async () => {
+    const root = await newTempDir();
+    await seedMinimalProject(root, { specMarker: true });
+    await seedAllGatesPass(root);
+    expect(await runPrototypingCertify({ root, check: false })).toBe(0);
+    const certBody = JSON.parse(
+      await (
+        await import("node:fs/promises")
+      ).readFile(path.join(root, COMPLETION_CERTIFICATE_REL_PATH), "utf-8"),
+    ) as { designMd: { sha256: string } };
+    expect(certBody.designMd.sha256).toMatch(/^[0-9a-f]{64}$/);
+  });
+
+  it("TC-3.6.9: --check fails when DESIGN.md mutated after certify", async () => {
+    const root = await newTempDir();
+    await seedMinimalProject(root, { specMarker: true });
+    await seedAllGatesPass(root);
+    expect(await runPrototypingCertify({ root, check: false })).toBe(0);
+    // Mutate DESIGN.md by 1 byte → sha mismatch.
+    await writeFile(path.join(root, "DESIGN.md"), `${CERT_DESIGN_MD}\n`, "utf-8");
+    expect(await runPrototypingCertify({ root, check: true })).toBe(2);
   });
 });

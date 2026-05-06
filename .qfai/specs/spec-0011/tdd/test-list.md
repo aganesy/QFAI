@@ -12,3 +12,9 @@
 | TDD-0008 | TC-0011-0008 | integration | packages/qfai/tests/integration/implementSkillSpec0011.test.ts | TC-0011-0008: All Done Reports Nothing To Do        | exception | DR-0011-0001 | one-shot GREEN 2026-04-14 + existing completionContract/uixDetection              |
 | TDD-0009 | TC-0011-0009 | integration | packages/qfai/tests/integration/completionContract.test.ts     | TC-0011-0009: Coverage Placeholder for EX-0011-0006 | exception | DR-0011-0002 | exception:DR-0011-0002 backfill — impl-first v1.7.15 rev3, vitest PASS 2026-04-14 |
 | TDD-0010 | TC-0011-0010 | integration | packages/qfai/tests/integration/completionContract.test.ts     | TC-0011-0010: Coverage Placeholder for EX-0011-0007 | exception | DR-0011-0002 | exception:DR-0011-0002 backfill — impl-first v1.7.15 rev3, vitest PASS 2026-04-14 |
+| TDD-0011 | TC-0011-0011 | integration | —                                                              | TC-0011-0011: Simplified Handoff Schema Parse       | todo      | DR-NOTE-2    | pending — new TC introduced 2026-05-06 (CHG-001)                                  |
+| TDD-0012 | TC-0011-0012 | integration | —                                                              | TC-0011-0012: Design System Mirror Byte-Equivalence | todo      | DR-NOTE-2    | pending — new TC introduced 2026-05-06 (CHG-001)                                  |
+
+## Notes
+
+- DR-NOTE-2 (2026-05-06 / CHG-001): TC-0011-0011 / TC-0011-0012 are introduced alongside the spec-0017 decomposition (simplified handoff schema + design-system input). Test files will be authored in the implementation Phase tracked at the parent plan; until then the rows stay `todo`.

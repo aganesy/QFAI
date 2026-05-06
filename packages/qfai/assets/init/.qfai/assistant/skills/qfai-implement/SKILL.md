@@ -33,19 +33,13 @@ QFAI Skill Body (SSOT)
 
 ## Spec Auto-Discovery Protocol
 
-When no explicit argument is given, detect the candidate spec and constrain execution to one spec only.
-
-### One-Spec-at-a-Time Guarantee
-
-- Auto-discovery selects at most one spec for this run.
-- This protocol does NOT enable multi-spec parallel execution.
-- If multiple candidate specs are detected, do not start implementation until the user selects exactly one spec.
+When no explicit argument is given, detect the candidate spec and constrain execution to one spec only. Auto-discovery selects at most one spec; this protocol does NOT enable multi-spec parallel execution.
 
 ### User Selection Flow
 
-- Single spec detected: announce the detected spec and ask for confirmation when scope is ambiguous.
-- Multiple specs detected: display the candidates and require the user to choose one spec.
-- Zero specs detected: stop and ask the user to provide the target spec explicitly.
+- Single spec: announce the detected spec; ask for confirmation when scope is ambiguous.
+- Multiple specs: display the candidates and require the user to choose one spec.
+- Zero specs: stop and ask the user to provide the target spec explicitly.
 
 ## User Questions (AskUserQuestion Protocol)
 
@@ -75,20 +69,10 @@ Execute the TDD micro-cycle for each pending item in `test-list.md`, transitioni
 ## Visual Review Guard
 
 - Review rendered output, screenshot evidence, or HTML output before closing any UI-affecting item.
-- Read spec + contract inputs first whenever implementation touches UI or critique-driven behavior.
-- Read order: `01_Spec.md` → `03_Acceptance-Criteria.md` → `05_Examples.md` →
-  `.qfai/contracts/design/exploration-brief.yaml` →
-  `.qfai/contracts/design/reference-pool.yaml` → `.qfai/contracts/design/brand-design.yaml` →
-  `.qfai/contracts/design/design-system.yaml` (extracted from final iter) →
-  `.qfai/contracts/design/prototype-handoff.yaml` → `.qfai/contracts/ui/*.yaml` →
-  canonical prototype evidence under `.qfai/evidence/prototyping/iter-NN/<screen>.{png,html}` →
-  `.qfai/prototypes/final/index.html`.
+- Read spec + contract inputs first whenever implementation touches UI or critique-driven behavior. Read order: `01_Spec.md` → `03_Acceptance-Criteria.md` → `05_Examples.md` → root `DESIGN.md` → `.qfai/contracts/design/DESIGN.md.lock.yaml` → `.qfai/contracts/design/design-system.yaml` (post-loop token mirror) → `.qfai/contracts/design/prototype-handoff.yaml` → `.qfai/contracts/ui/*.yaml` → `.qfai/evidence/prototyping/iter-NN/<screen>.{png,html}` → `.qfai/prototypes/final/index.html`.
 - Do not read discussion-pack UI/UX sidecars or fallback mocks.
-- Prototype HTML is analysis input, not production source. Reimplement with project-native
-  patterns while preserving the visual identity captured in `prototype-handoff.yaml`
-  `implementationNotes` (free-form prose).
-- UI-affecting items require product-surface-reviewer prototype parity review before `done`.
-- If code intent and rendered output diverge, treat the rendered/HTML result as the blocking review input and reconcile before DONE.
+- Prototype HTML is analysis input, not production source. Reimplement with project-native patterns while preserving the visual identity captured in `prototype-handoff.yaml` `implementationNotes` (free-form prose).
+- UI-affecting items require product-surface-reviewer prototype parity review before `done`. If code intent and rendered output diverge, treat the rendered/HTML result as the blocking review input and reconcile before DONE.
 
 ## Non-goals
 

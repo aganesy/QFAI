@@ -1,5 +1,4 @@
-// QFAI:SPEC-0017:TC-0017 (mode guidance v2.0)
-// v2.0 (spec-0017 P14): mode tier removed; the recommendation always
+// v2.0 (spec-0012 absorbed): mode tier removed; the recommendation always
 // returns "single-thread-loop" but reasoning still surfaces project
 // characteristic hints.
 import { describe, expect, it } from "vitest";

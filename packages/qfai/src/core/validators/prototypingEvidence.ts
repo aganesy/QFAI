@@ -12,7 +12,9 @@
  *   QFAI-PROT-005  stopReason consistency:
  *                    stopReason="max-iterations" requires last iter.index===14
  *                    stopReason="axes-exceptional" requires latest iter to
- *                      have all 4 axes exceptional and slopPatternsDetected=[]
+ *                      have all 4 axes exceptional,
+ *                      layoutAntiPatternsDetected=[] AND
+ *                      designMdViolations=[]
  *   QFAI-PROT-006  iterations.length exceeds MAX_ITERATIONS (15)
  *   QFAI-PROT-007  acceptedIterationIndex must equal iterations.length - 1
  */
@@ -31,7 +33,9 @@ import {
   isPivotDirective,
 } from "../prototyping/iteration.js";
 
-const PROTO_JSON_REL = ".qfai/evidence/prototyping/prototyping.json";
+import { PROTOTYPING_JSON_REL } from "../prototyping/paths.js";
+
+const PROTO_JSON_REL = PROTOTYPING_JSON_REL;
 const MIN_PROSE_CRITIQUE_WORDS = 200;
 const MAX_PROSE_CRITIQUE_WORDS = 500;
 
@@ -43,16 +47,36 @@ function isStringArray(value: unknown): value is string[] {
   return Array.isArray(value) && value.every((v) => typeof v === "string");
 }
 
-function hasExceptionalStopShape(value: unknown): boolean {
-  if (!isRecord(value) || !isRecord(value.scores) || !isStringArray(value.slopPatternsDetected)) {
-    return false;
+const DESIGN_MD_VIOLATION_KINDS: ReadonlySet<string> = new Set([
+  "color",
+  "font",
+  "radius",
+  "shadow",
+]);
+
+function isViolationArray(value: unknown): value is ReadonlyArray<{ kind: string; found: string }> {
+  if (!Array.isArray(value)) return false;
+  for (const entry of value) {
+    if (!isRecord(entry)) return false;
+    if (typeof entry.kind !== "string" || !DESIGN_MD_VIOLATION_KINDS.has(entry.kind)) {
+      return false;
+    }
+    if (typeof entry.found !== "string") return false;
   }
+  return true;
+}
+
+function hasExceptionalStopShape(value: unknown): boolean {
+  if (!isRecord(value) || !isRecord(value.scores)) return false;
+  if (!isStringArray(value.layoutAntiPatternsDetected)) return false;
+  if (!Array.isArray(value.designMdViolations)) return false;
   return (
-    value.scores.designQuality === "exceptional" &&
-    value.scores.originality === "exceptional" &&
-    value.scores.craft === "exceptional" &&
+    value.scores.informationArchitecture === "exceptional" &&
+    value.scores.navigationFlow === "exceptional" &&
+    value.scores.usability === "exceptional" &&
     value.scores.functionality === "exceptional" &&
-    value.slopPatternsDetected.length === 0
+    value.layoutAntiPatternsDetected.length === 0 &&
+    value.designMdViolations.length === 0
   );
 }
 
@@ -233,7 +257,12 @@ export async function validatePrototypingEvidence(
       );
       continue;
     }
-    for (const axis of ["designQuality", "originality", "craft", "functionality"] as const) {
+    for (const axis of [
+      "informationArchitecture",
+      "navigationFlow",
+      "usability",
+      "functionality",
+    ] as const) {
       if (!isOrdinalScore(it.scores[axis])) {
         issues.push(
           issue(
@@ -257,27 +286,39 @@ export async function validatePrototypingEvidence(
         ),
       );
     }
-    if (!isStringArray(it.slopPatternsDetected)) {
+    if (!isStringArray(it.layoutAntiPatternsDetected)) {
       issues.push(
         issue(
           "QFAI-PROT-002",
-          `iterations[${i}].slopPatternsDetected must be a string array.`,
+          `iterations[${i}].layoutAntiPatternsDetected must be a string array.`,
           "error",
           PROTO_JSON_REL,
-          "prototypingEvidence.slopPatternsDetected",
+          "prototypingEvidence.layoutAntiPatternsDetected",
         ),
       );
     } else if (
-      it.slopPatternsDetected.length > 0 &&
-      (it.scores.originality === "strong" || it.scores.originality === "exceptional")
+      it.layoutAntiPatternsDetected.length > 0 &&
+      (it.scores.informationArchitecture === "strong" ||
+        it.scores.informationArchitecture === "exceptional")
     ) {
       issues.push(
         issue(
           "QFAI-PROT-002",
-          `iterations[${i}].scores.originality must be weak|acceptable when slopPatternsDetected[] is non-empty.`,
+          `iterations[${i}].scores.informationArchitecture must be weak|acceptable when layoutAntiPatternsDetected[] is non-empty.`,
           "error",
           PROTO_JSON_REL,
-          "prototypingEvidence.scores.originality.slopCap",
+          "prototypingEvidence.scores.informationArchitecture.layoutAntiPatternCap",
+        ),
+      );
+    }
+    if (!isViolationArray(it.designMdViolations)) {
+      issues.push(
+        issue(
+          "QFAI-PROT-002",
+          `iterations[${i}].designMdViolations must be an array of {kind, found} records with kind in color|font|radius|shadow.`,
+          "error",
+          PROTO_JSON_REL,
+          "prototypingEvidence.designMdViolations",
         ),
       );
     }
@@ -358,7 +399,7 @@ export async function validatePrototypingEvidence(
       issues.push(
         issue(
           "QFAI-PROT-005",
-          `stopReason="axes-exceptional" requires the latest iter to have all 4 axes exceptional and slopPatternsDetected=[].`,
+          `stopReason="axes-exceptional" requires the latest iter to have all 4 axes exceptional, layoutAntiPatternsDetected=[] AND designMdViolations=[].`,
           "error",
           PROTO_JSON_REL,
           "prototypingEvidence.stopReasonConsistency",

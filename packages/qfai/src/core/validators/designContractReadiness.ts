@@ -5,27 +5,22 @@ import fg from "fast-glob";
 import { parse as parseYaml } from "yaml";
 
 import type { QfaiConfig } from "../config.js";
+import { hashDesignMd, parseDesignMd } from "../design/designMd.js";
+import type { DesignMd } from "../design/designMd.js";
+import { DESIGN_MD_SHA_HEX_RE, readDesignMdLockSha } from "../design/designMdLock.js";
 import type { Issue } from "../types.js";
 import { issue } from "./utils.js";
 
-// SDD only normalizes the deviate-from / brand contracts. Evaluation axes
-// are global constants in core/prototyping/iteration.ts.
-const REQUIRED_SDD_DESIGN_FILES = [
-  "exploration-brief.yaml",
-  "reference-pool.yaml",
-  "brand-design.yaml",
-] as const;
-// Prototyping post-loop produces design-system.yaml (extracted from final
-// iter) and prototype-handoff.yaml.
+// Root DESIGN.md is the brand SSOT for UI-bearing projects. The lock
+// yaml carries its frozen sha256 so prototyping iteration / certify can
+// detect drift between cycles.
+const ROOT_DESIGN_MD_REL = "DESIGN.md";
+const DESIGN_MD_LOCK_REL_BASENAME = "DESIGN.md.lock.yaml";
+
+// Prototyping post-loop produces design-system.yaml (mirror of DESIGN.md
+// tokens) and prototype-handoff.yaml.
 const REQUIRED_PROTOTYPING_DESIGN_FILES = ["design-system.yaml", "prototype-handoff.yaml"] as const;
-const FORBIDDEN_LEGACY_DESIGN_FILES = [
-  "anchor-selection.yaml",
-  "evaluation-axes.yaml",
-  "evaluation-rubric.yaml",
-  "evaluator-calibration.yaml",
-  "absorption-policy.yaml",
-  "selected-direction.yaml",
-] as const;
+
 const REQUIRED_DESIGN_SYSTEM_CHECKLIST_KEYS = [
   "color",
   "typography",
@@ -35,15 +30,7 @@ const REQUIRED_DESIGN_SYSTEM_CHECKLIST_KEYS = [
   "dos_and_donts",
   "motion_rules",
 ] as const;
-const REFERENCE_KINDS = new Set([
-  "competitor",
-  "adjacent",
-  "aspirational",
-  "template-seed",
-  "anti-pattern",
-]);
-const COPY_RISK_VALUES = new Set(["low", "medium", "high"]);
-const TEMPLATE_USAGE_POLICY_VALUES = new Set(["none", "reference-only", "implementation-seed"]);
+
 const PLACEHOLDER_RE = /^(?:tbd|todo|n\/a|none|placeholder|example|lorem|to be defined)$/i;
 
 type DesignContractReadinessStage = "sdd" | "prototyping";
@@ -93,28 +80,11 @@ async function validateDesignContractReadinessForStage(
   }
 
   const designDir = path.join(root, config.paths.contractsDir, "design");
-  const designDirRelative = toPosixRelative(root, designDir);
   const issues: Issue[] = [];
 
-  for (const fileName of REQUIRED_SDD_DESIGN_FILES) {
-    const filePath = path.join(designDir, fileName);
-    try {
-      await readFile(filePath, "utf-8");
-    } catch {
-      issues.push(
-        issue(
-          "QFAI-DCON-001",
-          `Missing downstream design contract: ${fileName}.`,
-          "error",
-          toPosixRelative(root, filePath),
-          "designContractReadiness.requiredFile",
-          undefined,
-          "canonical",
-          `UI-bearing design workflows require pre-prototyping design contracts: exploration-brief.yaml, reference-pool.yaml, and brand-design.yaml under \`${designDirRelative}/\`.`,
-        ),
-      );
-    }
-  }
+  const rootResult = await validateRootDesignMdAndLock(root, designDir);
+  issues.push(...rootResult.issues);
+
   if (stage === "prototyping") {
     for (const fileName of REQUIRED_PROTOTYPING_DESIGN_FILES) {
       const filePath = path.join(designDir, fileName);
@@ -130,226 +100,151 @@ async function validateDesignContractReadinessForStage(
             "designContractReadiness.requiredFile",
             undefined,
             "canonical",
-            `UI-bearing prototyping completion requires design-system.yaml and prototype-handoff.yaml under \`${designDirRelative}/\` (extracted from the final iter).`,
+            `UI-bearing prototyping completion requires design-system.yaml and prototype-handoff.yaml under \`${toPosixRelative(root, designDir)}/\` (mirror of DESIGN.md tokens / handoff facts).`,
           ),
         );
       }
     }
   }
 
-  for (const fileName of FORBIDDEN_LEGACY_DESIGN_FILES) {
-    const filePath = path.join(designDir, fileName);
-    try {
-      await readFile(filePath, "utf-8");
-      issues.push(
-        issue(
-          "QFAI-DCON-018",
-          `Legacy design contract is forbidden: ${fileName}.`,
-          "error",
-          toPosixRelative(root, filePath),
-          "designContractReadiness.legacyDesignContract",
-          undefined,
-          "canonical",
-          `Remove ${fileName} and normalize the data into the canonical design contracts.`,
-        ),
-      );
-    } catch {
-      // missing is expected
-    }
-  }
-
-  issues.push(...(await validateExplorationBrief(root, config)));
-  issues.push(...(await validateReferencePool(root, config)));
-  issues.push(...(await validateBrandDesign(root, config)));
-  // Per-axis evaluation is encoded in core/prototyping/iteration.ts;
-  // there are no separate rubric / calibration / absorption-policy /
-  // selected-direction contracts.
   if (stage === "prototyping") {
-    issues.push(...(await validateDesignSystem(root, config)));
-    issues.push(...(await validatePrototypeHandoff(root, config)));
+    issues.push(...(await validateDesignSystem(root, config, rootResult.designMd)));
+    issues.push(...(await validatePrototypeHandoff(root, config, rootResult.lockSha)));
   } else if (options.enforceNoPrematurePrototypingContracts ?? true) {
     issues.push(...(await validateNoPrematurePrototypingContracts(root, config)));
   }
   return issues;
 }
 
-async function validateExplorationBrief(root: string, config: QfaiConfig): Promise<Issue[]> {
-  const filePath = path.join(root, config.paths.contractsDir, "design", "exploration-brief.yaml");
-  const parsed = await readYaml(filePath);
-  if (parsed.kind !== "ok") {
-    return parsed.kind === "invalid"
-      ? [
-          issue(
-            "QFAI-DCON-006",
-            "exploration-brief.yaml must parse as an object-shaped YAML document.",
-            "error",
-            toPosixRelative(root, filePath),
-            "designContractReadiness.explorationBriefDocument",
-          ),
-        ]
-      : [];
-  }
+type RootDesignMdResult = {
+  issues: Issue[];
+  // Parsed root DESIGN.md, when present and well-formed. Downstream
+  // validators (validateDesignSystem mirror cross-check) need this.
+  designMd: DesignMd | null;
+  // Frozen sha256 from DESIGN.md.lock.yaml, when present and well-
+  // formed. Downstream validators (validatePrototypeHandoff cross-
+  // check) need this.
+  lockSha: string | null;
+};
 
-  const requiredKeys = [
-    "product_intent",
-    "target_users",
-    "must_preserve_interactions",
-    "brand_signals",
-    "differentiation_targets",
-  ];
-  return validateRequiredStringArrayKeys(
-    filePath,
-    root,
-    parsed.value,
-    requiredKeys,
-    "QFAI-DCON-002",
-    "exploration-brief.yaml is missing required field",
-    "designContractReadiness.explorationBriefField",
-  );
-}
-
-async function validateReferencePool(root: string, config: QfaiConfig): Promise<Issue[]> {
-  const filePath = path.join(root, config.paths.contractsDir, "design", "reference-pool.yaml");
-  const parsed = await readYaml(filePath);
-  if (parsed.kind !== "ok") {
-    return parsed.kind === "invalid"
-      ? [
-          issue(
-            "QFAI-DCON-014",
-            "reference-pool.yaml must parse as an object-shaped YAML document.",
-            "error",
-            toPosixRelative(root, filePath),
-            "designContractReadiness.referencePoolDocument",
-          ),
-        ]
-      : [];
-  }
-
-  const references = parsed.value.references;
-  if (!Array.isArray(references) || references.length === 0) {
-    return [
-      issue(
-        "QFAI-DCON-015",
-        "reference-pool.yaml must define a non-empty references array.",
-        "error",
-        toPosixRelative(root, filePath),
-        "designContractReadiness.referencePoolReferences",
-      ),
-    ];
-  }
-
+async function validateRootDesignMdAndLock(
+  root: string,
+  designDir: string,
+): Promise<RootDesignMdResult> {
   const issues: Issue[] = [];
-  const requiredKeys = [
-    "id",
-    "kind",
-    "source",
-    "adopted_points",
-    "rejected_points",
-    "local_translation",
-    "copy_risk",
-    "template_usage_policy",
-  ];
-  for (const [index, entry] of references.entries()) {
-    if (!isRecord(entry)) {
-      issues.push(referencePoolIssue(root, filePath, `references[${index}] must be an object.`));
-      continue;
+  const designMdPath = path.join(root, ROOT_DESIGN_MD_REL);
+  const lockPath = path.join(designDir, DESIGN_MD_LOCK_REL_BASENAME);
+
+  let designMdText: string | null = null;
+  try {
+    designMdText = await readFile(designMdPath, "utf-8");
+  } catch {
+    issues.push(
+      issue(
+        "QFAI-DCON-030",
+        "Missing root DESIGN.md (brand SSOT).",
+        "error",
+        ROOT_DESIGN_MD_REL,
+        "designContractReadiness.rootDesignMd",
+        undefined,
+        "canonical",
+        "Create root DESIGN.md from the project root with the canonical front-matter (see qfai-discussion / qfai-sdd skills).",
+      ),
+    );
+  }
+
+  let lockText: string | null = null;
+  try {
+    lockText = await readFile(lockPath, "utf-8");
+  } catch {
+    issues.push(
+      issue(
+        "QFAI-DCON-031",
+        `Missing ${DESIGN_MD_LOCK_REL_BASENAME}.`,
+        "error",
+        toPosixRelative(root, lockPath),
+        "designContractReadiness.designMdLock",
+        undefined,
+        "canonical",
+        "Run /qfai-sdd Phase 0 to validate root DESIGN.md and freeze its sha256 into DESIGN.md.lock.yaml.",
+      ),
+    );
+  }
+
+  let lockSha: string | null = null;
+  let designMd: DesignMd | null = null;
+
+  // Parse DESIGN.md whenever it was readable, BEFORE the lock-gated
+  // sha-comparison block. Pre-fix the parse was nested under
+  // `designMdText !== null && lockText !== null`, so a UI-bearing
+  // project in the common initial state (DESIGN.md authored but
+  // malformed, lock not yet generated) saw only DCON-031 and missed
+  // the DCON-033 parse error pointing at the file that needs
+  // repair. DCON-030 covers missing-file; DCON-033 is the parse-
+  // failure code so automated remediation can route the two failure
+  // modes correctly: missing -> regenerate template, parse failure
+  // -> repair existing file without losing user edits.
+  if (designMdText !== null) {
+    const parseResult = parseDesignMd(designMdText);
+    if ("error" in parseResult) {
+      issues.push(
+        issue(
+          "QFAI-DCON-033",
+          `Root DESIGN.md failed to parse: ${parseResult.error.message}`,
+          "error",
+          ROOT_DESIGN_MD_REL,
+          "designContractReadiness.rootDesignMdParse",
+          undefined,
+          "canonical",
+          "Fix DESIGN.md front-matter so parseDesignMd succeeds (see qfai-prototyping/references/design-md-spec.md). Do NOT regenerate the template — that would discard user content.",
+        ),
+      );
+    } else {
+      designMd = parseResult.data;
     }
-    for (const key of requiredKeys) {
-      if (!hasRequiredReferencePoolField(key, entry[key])) {
+  }
+
+  // Only attempt sha comparison when both files were readable. The
+  // lock-extraction (`readDesignMdLockSha`) and the equality check
+  // both require lockText, while the equality also requires
+  // designMdText to compute a current sha. The DCON-031 "missing
+  // designMdSha256" is a property of the lock file and is
+  // independent of whether DESIGN.md parsed.
+  if (lockText !== null) {
+    lockSha = readDesignMdLockSha(lockText);
+    if (lockSha === null) {
+      issues.push(
+        issue(
+          "QFAI-DCON-031",
+          `${DESIGN_MD_LOCK_REL_BASENAME} is missing 'designMdSha256'.`,
+          "error",
+          toPosixRelative(root, lockPath),
+          "designContractReadiness.designMdLock",
+          undefined,
+          "canonical",
+          "Re-run /qfai-sdd Phase 0 to regenerate DESIGN.md.lock.yaml with a current designMdSha256.",
+        ),
+      );
+    } else if (designMdText !== null) {
+      const currentSha = hashDesignMd(designMdText);
+      if (currentSha !== lockSha) {
         issues.push(
-          referencePoolIssue(
-            root,
-            filePath,
-            `reference-pool.yaml references[${index}] is missing required field '${key}'.`,
+          issue(
+            "QFAI-DCON-032",
+            "DESIGN.md sha256 does not match DESIGN.md.lock.yaml.",
+            "error",
+            ROOT_DESIGN_MD_REL,
+            "designContractReadiness.designMdSha",
+            undefined,
+            "canonical",
+            "DESIGN.md was edited after the freeze. Re-run /qfai-sdd Phase 0 (or restart prototyping) to refreeze.",
           ),
         );
       }
     }
-    if (typeof entry.kind === "string" && !REFERENCE_KINDS.has(entry.kind)) {
-      issues.push(
-        referencePoolIssue(
-          root,
-          filePath,
-          `reference-pool.yaml references[${index}].kind is invalid: ${entry.kind}.`,
-        ),
-      );
-    }
-    if (typeof entry.copy_risk !== "string" || !COPY_RISK_VALUES.has(entry.copy_risk)) {
-      issues.push(
-        referencePoolIssue(
-          root,
-          filePath,
-          `reference-pool.yaml references[${index}].copy_risk must be one of: low, medium, high.`,
-        ),
-      );
-    }
-    if (
-      typeof entry.template_usage_policy !== "string" ||
-      !TEMPLATE_USAGE_POLICY_VALUES.has(entry.template_usage_policy)
-    ) {
-      issues.push(
-        referencePoolIssue(
-          root,
-          filePath,
-          `reference-pool.yaml references[${index}].template_usage_policy must be one of: none, reference-only, implementation-seed.`,
-        ),
-      );
-    }
-  }
-  return issues;
-}
-
-function hasRequiredReferencePoolField(key: string, value: unknown): boolean {
-  if (key === "template_usage_policy") {
-    return isNonEmptyStringValue(value);
-  }
-  return hasMeaningfulContractContent(value);
-}
-
-function referencePoolIssue(root: string, filePath: string, message: string): Issue {
-  return issue(
-    "QFAI-DCON-015",
-    message,
-    "error",
-    toPosixRelative(root, filePath),
-    "designContractReadiness.referencePoolField",
-  );
-}
-
-async function validateBrandDesign(root: string, config: QfaiConfig): Promise<Issue[]> {
-  const filePath = path.join(root, config.paths.contractsDir, "design", "brand-design.yaml");
-  const parsed = await readYaml(filePath);
-  if (parsed.kind !== "ok") {
-    return parsed.kind === "invalid"
-      ? [
-          issue(
-            "QFAI-DCON-016",
-            "brand-design.yaml must parse as an object-shaped YAML document.",
-            "error",
-            toPosixRelative(root, filePath),
-            "designContractReadiness.brandDesignDocument",
-          ),
-        ]
-      : [];
   }
 
-  return validateRequiredStringArrayKeys(
-    filePath,
-    root,
-    parsed.value,
-    [
-      "brand_personality",
-      "audience_emotion",
-      "category_conventions",
-      "differentiation_strategy",
-      "visual_language",
-      "content_tone",
-      "do_not_look_like",
-    ],
-    "QFAI-DCON-017",
-    "brand-design.yaml is missing required field",
-    "designContractReadiness.brandDesignField",
-  );
+  return { issues, designMd, lockSha };
 }
 
 async function validateNoPrematurePrototypingContracts(
@@ -378,7 +273,11 @@ async function validateNoPrematurePrototypingContracts(
   return issues;
 }
 
-async function validateDesignSystem(root: string, config: QfaiConfig): Promise<Issue[]> {
+async function validateDesignSystem(
+  root: string,
+  config: QfaiConfig,
+  rootDesignMd: DesignMd | null,
+): Promise<Issue[]> {
   const filePath = path.join(root, config.paths.contractsDir, "design", "design-system.yaml");
   const parsed = await readYaml(filePath);
   if (parsed.kind !== "ok") {
@@ -395,9 +294,59 @@ async function validateDesignSystem(root: string, config: QfaiConfig): Promise<I
       : [];
   }
 
-  const checklist = parsed.value.checklist;
   const issues: Issue[] = [];
+  const filePathRel = toPosixRelative(root, filePath);
 
+  // Post-1.8.9 design-system.yaml is a deterministic mirror of the
+  // root DESIGN.md tokens (see
+  // `qfai-prototyping/references/handoff.md#outputs`):
+  //   visual.colors / visual.typography / visual.radius / visual.shadow
+  //   (visual.spacing optional). Accept either the new mirror shape OR
+  //   the legacy `checklist.{color,typography,...}` shape so projects
+  //   that have not yet regenerated their design-system.yaml still
+  //   pass. The mirror form takes precedence — its presence is enough.
+  const visual = parsed.value.visual;
+  const isMirrorShape = isRecord(visual) && isRecord(visual.colors) && isRecord(visual.typography);
+  if (isMirrorShape) {
+    // Shape gate: top-level mirror keys must be non-empty records.
+    // visual.spacing is optional in DESIGN.md and is excluded from the
+    // required list deliberately.
+    const REQUIRED_MIRROR_KEYS = ["colors", "typography", "radius", "shadow"] as const;
+    let shapeOk = true;
+    for (const key of REQUIRED_MIRROR_KEYS) {
+      const value = visual[key];
+      if (!isRecord(value) || Object.keys(value).length === 0) {
+        issues.push(
+          issue(
+            "QFAI-DCON-005",
+            `design-system.yaml mirror is missing or empty 'visual.${key}'.`,
+            "error",
+            filePathRel,
+            "designContractReadiness.designSystemMirror",
+          ),
+        );
+        shapeOk = false;
+      }
+    }
+    // Value gate: mirror sub-key values must equal the corresponding
+    // DESIGN.md tokens. The handoff contract describes this file as a
+    // "verbatim mirror" — without a value cross-check, an operator
+    // could hand-author a mirror with stale or fabricated tokens that
+    // disagrees with DESIGN.md, and downstream `/qfai-implement` would
+    // be bound to the wrong identity. The DESIGN.md.lock sha chain
+    // anchors DESIGN.md content but does not verify this mirror file
+    // against it. Skip when the parsed root DesignMd is unavailable
+    // (DCON-030/033 already raised) or shape failed (no point
+    // surfacing a value diff on top of a shape error).
+    if (shapeOk && rootDesignMd !== null) {
+      issues.push(...crossCheckMirrorValues(visual, rootDesignMd, filePathRel));
+    }
+    return issues;
+  }
+
+  // Legacy checklist shape — kept so existing projects keep validating
+  // until they regenerate their design-system.yaml from the new mirror.
+  const checklist = parsed.value.checklist;
   for (const key of REQUIRED_DESIGN_SYSTEM_CHECKLIST_KEYS) {
     if (
       !(checklist && typeof checklist === "object" && key in (checklist as Record<string, unknown>))
@@ -405,9 +354,9 @@ async function validateDesignSystem(root: string, config: QfaiConfig): Promise<I
       issues.push(
         issue(
           "QFAI-DCON-005",
-          `design-system.yaml is missing checklist key '${key}'.`,
+          `design-system.yaml is missing checklist key '${key}' (or rewrite as a DESIGN.md token mirror with visual.colors / visual.typography / visual.radius / visual.shadow).`,
           "error",
-          toPosixRelative(root, filePath),
+          filePathRel,
           "designContractReadiness.designSystemChecklist",
         ),
       );
@@ -426,9 +375,9 @@ async function validateDesignSystem(root: string, config: QfaiConfig): Promise<I
     issues.push(
       issue(
         "QFAI-DCON-005",
-        "design-system.yaml is missing component guidance (expected checklist.component_tone or a richer component_tone/component_semantics/content_tone block).",
+        "design-system.yaml is missing component guidance (expected checklist.component_tone, component_tone/component_semantics/content_tone, or rewrite as a DESIGN.md token mirror).",
         "error",
-        toPosixRelative(root, filePath),
+        filePathRel,
         "designContractReadiness.designSystemChecklist",
       ),
     );
@@ -437,7 +386,11 @@ async function validateDesignSystem(root: string, config: QfaiConfig): Promise<I
   return issues;
 }
 
-async function validatePrototypeHandoff(root: string, config: QfaiConfig): Promise<Issue[]> {
+async function validatePrototypeHandoff(
+  root: string,
+  config: QfaiConfig,
+  lockSha: string | null,
+): Promise<Issue[]> {
   const filePath = path.join(root, config.paths.contractsDir, "design", "prototype-handoff.yaml");
   const parsed = await readYaml(filePath);
   if (parsed.kind !== "ok") {
@@ -454,40 +407,651 @@ async function validatePrototypeHandoff(root: string, config: QfaiConfig): Promi
       : [];
   }
 
-  return validateRequiredStringArrayKeys(
-    filePath,
-    root,
-    parsed.value,
-    ["sourcePrototypeRefs", "surfaceProfiles", "screens", "visualDna", "implementationHandoff"],
-    "QFAI-DCON-013",
-    "prototype-handoff.yaml is missing required field",
-    "designContractReadiness.prototypeHandoffField",
-  );
-}
-
-function validateRequiredStringArrayKeys(
-  filePath: string,
-  root: string,
-  record: Record<string, unknown>,
-  requiredKeys: string[],
-  code: string,
-  messagePrefix: string,
-  rule: string,
-): Issue[] {
+  // Required fields match the rewritten handoff contract documented in
+  // `.qfai/assistant/skills/qfai-prototyping/references/handoff.md`:
+  // `finalIterIndex` (number ≥ 0), plus the string fields
+  // `finalArtifact`, `designMdPath`, `designMdSha256`,
+  // `designSystemMirror`, `implementationNotes`. The legacy fields
+  // (`sourcePrototypeRefs`, `surfaceProfiles`, `screens`, `visualDna`,
+  // `implementationHandoff`) were retired together with the multi-
+  // option exploration → preserve/adapt/copy split when DESIGN.md
+  // became the brand SSOT and the loop became single-thread.
   const issues: Issue[] = [];
-  for (const key of requiredKeys) {
-    const value = record[key];
-    if (!hasMeaningfulContractContent(value)) {
+  const filePathRel = toPosixRelative(root, filePath);
+  // Distinguish missing vs invalid-type/value so the operator gets a
+  // diagnostic that points at the actual problem. `Principle of Least
+  // Astonishment`: an operator who DID write the field should not be
+  // told it is "missing".
+  const hasFinalIterIndex = "finalIterIndex" in parsed.value;
+  const finalIterIndex = parsed.value.finalIterIndex;
+  if (!hasFinalIterIndex) {
+    issues.push(
+      issue(
+        "QFAI-DCON-013",
+        "prototype-handoff.yaml is missing required field 'finalIterIndex' (expected a non-negative integer).",
+        "error",
+        filePathRel,
+        "designContractReadiness.prototypeHandoffField",
+      ),
+    );
+  } else if (
+    typeof finalIterIndex !== "number" ||
+    !Number.isInteger(finalIterIndex) ||
+    finalIterIndex < 0
+  ) {
+    issues.push(
+      issue(
+        "QFAI-DCON-013",
+        `prototype-handoff.yaml field 'finalIterIndex' must be a non-negative integer (got ${describeValueForDiagnostic(finalIterIndex)}).`,
+        "error",
+        filePathRel,
+        "designContractReadiness.prototypeHandoffField",
+      ),
+    );
+  }
+  // Require each remaining field to be a non-empty string. The earlier
+  // helper `validateRequiredStringArrayKeys` accepted arrays / records
+  // as "meaningful content", so a handoff that authored
+  // `finalArtifact: { uri: "..." }` or
+  // `designSystemMirror: ["a.yaml", "b.yaml"]` would silently pass —
+  // but downstream consumers (`/qfai-implement`, certify, ref-integrity)
+  // require scalar string paths. Enforce the scalar contract here.
+  for (const key of [
+    "finalArtifact",
+    "designMdPath",
+    "designMdSha256",
+    "designSystemMirror",
+    "implementationNotes",
+  ] as const) {
+    if (!(key in parsed.value)) {
       issues.push(
-        issue(code, `${messagePrefix} '${key}'.`, "error", toPosixRelative(root, filePath), rule),
+        issue(
+          "QFAI-DCON-013",
+          `prototype-handoff.yaml is missing required field '${key}'.`,
+          "error",
+          filePathRel,
+          "designContractReadiness.prototypeHandoffField",
+        ),
+      );
+      continue;
+    }
+    const value = parsed.value[key];
+    if (typeof value !== "string") {
+      issues.push(
+        issue(
+          "QFAI-DCON-013",
+          `prototype-handoff.yaml field '${key}' must be a non-empty string (got ${typeof value}).`,
+          "error",
+          filePathRel,
+          "designContractReadiness.prototypeHandoffField",
+        ),
+      );
+      continue;
+    }
+    const normalized = value.trim();
+    if (normalized.length === 0 || PLACEHOLDER_RE.test(normalized)) {
+      issues.push(
+        issue(
+          "QFAI-DCON-013",
+          `prototype-handoff.yaml field '${key}' must be a non-empty string.`,
+          "error",
+          filePathRel,
+          "designContractReadiness.prototypeHandoffField",
+        ),
       );
     }
+  }
+
+  // Cross-check designMdPath / designMdSha256 against the root
+  // DESIGN.md identity. Without this, a handoff yaml that points at an
+  // alternate file or freezes a stale sha can pass `qfai validate`
+  // while silently binding downstream `/qfai-implement` to a DESIGN.md
+  // identity that diverges from the frozen root lock. Skip when the
+  // upstream string-field gate already reported a problem (avoid
+  // double-flagging the same root cause):
+  //   - missing / non-string values are caught by the string-field
+  //     loop above;
+  //   - `tbd` / `todo` / `n/a` / `none` / `placeholder` / `example` /
+  //     `lorem` / `to be defined` placeholder values are also caught
+  //     by the string-field loop's `PLACEHOLDER_RE` check, so the
+  //     skip predicate explicitly excludes them here too. Without
+  //     the placeholder skip, an operator who left
+  //     `designMdPath: TBD` would see two DCON-013 entries for the
+  //     same fix (replace TBD with the real path).
+  const designMdPath = parsed.value.designMdPath;
+  if (
+    typeof designMdPath === "string" &&
+    designMdPath.trim().length > 0 &&
+    !PLACEHOLDER_RE.test(designMdPath.trim())
+  ) {
+    // The handoff contract pins the brand SSOT to the repo root
+    // DESIGN.md. Accept either the bare basename or `./DESIGN.md`,
+    // normalize separators so Windows-authored handoffs are not
+    // rejected, and anchor on the basename equality.
+    const normalized = designMdPath.trim().replace(/\\/g, "/").replace(/^\.\//, "");
+    if (normalized !== ROOT_DESIGN_MD_REL) {
+      issues.push(
+        issue(
+          "QFAI-DCON-013",
+          `prototype-handoff.yaml field 'designMdPath' must be '${ROOT_DESIGN_MD_REL}' (the brand SSOT at repo root); got '${designMdPath}'.`,
+          "error",
+          filePathRel,
+          "designContractReadiness.prototypeHandoffField",
+          undefined,
+          "canonical",
+          "Set `designMdPath: DESIGN.md` so downstream `/qfai-implement` binds to the repo-root brand SSOT.",
+        ),
+      );
+    }
+  }
+  const designMdSha = parsed.value.designMdSha256;
+  if (
+    typeof designMdSha === "string" &&
+    designMdSha.trim().length > 0 &&
+    !PLACEHOLDER_RE.test(designMdSha.trim())
+  ) {
+    const lower = designMdSha.trim().toLowerCase();
+    if (!DESIGN_MD_SHA_HEX_RE.test(lower)) {
+      issues.push(
+        issue(
+          "QFAI-DCON-013",
+          `prototype-handoff.yaml field 'designMdSha256' must be a 64-char lowercase hex sha256; got '${designMdSha}'.`,
+          "error",
+          filePathRel,
+          "designContractReadiness.prototypeHandoffField",
+          undefined,
+          "canonical",
+          "Copy the `designMdSha256` value from `.qfai/contracts/design/DESIGN.md.lock.yaml`.",
+        ),
+      );
+    } else if (lockSha !== null && lower !== lockSha) {
+      issues.push(
+        issue(
+          "QFAI-DCON-013",
+          `prototype-handoff.yaml field 'designMdSha256' (${lower}) does not match DESIGN.md.lock.yaml#designMdSha256 (${lockSha}).`,
+          "error",
+          filePathRel,
+          "designContractReadiness.prototypeHandoffField",
+          undefined,
+          "canonical",
+          "Re-run `qfai prototyping certify` (or refreeze the DESIGN.md lock) so the handoff sha matches the frozen root lock.",
+        ),
+      );
+    }
+  }
+
+  return issues;
+}
+
+/**
+ * Cross-check `design-system.yaml` mirror values against the parsed
+ * root DESIGN.md tokens. Returns one DCON-005 per diverging key. The
+ * mirror is contractually a verbatim copy, so any token mismatch means
+ * downstream `/qfai-implement` would be bound to the wrong design
+ * identity even if the lock-sha chain is internally consistent.
+ *
+ * Sub-keys checked:
+ *   - visual.colors.{12 keys}
+ *   - visual.typography.{family_sans, family_display, family_mono}
+ *   - visual.radius.{sm, md, lg, full}
+ *   - visual.shadow.{sm, md, lg}
+ *
+ * `visual.spacing` and the optional typography sub-keys (scale,
+ * weight) are deliberately not cross-checked because they are
+ * optional in DESIGN.md. Adding them here would require carrying
+ * the raw DESIGN.md object; the canonical DesignMd type already
+ * loses the raw spacing scale shape.
+ */
+function crossCheckMirrorValues(
+  visual: Record<string, unknown>,
+  rootDesignMd: DesignMd,
+  filePathRel: string,
+): Issue[] {
+  const issues: Issue[] = [];
+  const compare = (
+    section: "colors" | "typography" | "radius" | "shadow",
+    expected: Record<string, string>,
+    // Keys handled by dedicated helpers (e.g. typography.scale /
+    // typography.weight live one level deeper and have non-string
+    // values; they are cross-checked by `crossCheckTypographyScale`
+    // / `crossCheckTypographyWeight` separately). The reverse loop
+    // skips them so they are not flagged as "fabricated keys" here.
+    optionalKeys: ReadonlySet<string> = new Set(),
+  ): void => {
+    const mirror = visual[section];
+    if (!isRecord(mirror)) return;
+    // DESIGN.md -> mirror direction: every DESIGN.md token must be
+    // present in the mirror with the matching value.
+    for (const [key, expectedValue] of Object.entries(expected)) {
+      if (!(key in mirror)) {
+        issues.push(
+          issue(
+            "QFAI-DCON-005",
+            `design-system.yaml mirror is missing 'visual.${section}.${key}' (DESIGN.md token: '${expectedValue}').`,
+            "error",
+            filePathRel,
+            "designContractReadiness.designSystemMirror",
+          ),
+        );
+        continue;
+      }
+      const actual = mirror[key];
+      if (typeof actual !== "string" || actual !== expectedValue) {
+        issues.push(
+          issue(
+            "QFAI-DCON-005",
+            `design-system.yaml mirror 'visual.${section}.${key}' diverges from DESIGN.md (mirror=${JSON.stringify(actual)}, DESIGN.md='${expectedValue}').`,
+            "error",
+            filePathRel,
+            "designContractReadiness.designSystemMirror",
+            undefined,
+            "canonical",
+            "The mirror is contractually a verbatim copy of DESIGN.md tokens; re-run `qfai prototyping certify` (or regenerate design-system.yaml) so values match.",
+          ),
+        );
+      }
+    }
+    // mirror -> DESIGN.md direction: extra keys not in DESIGN.md are
+    // also a contract violation (the mirror is a verbatim copy, so
+    // the key sets must be set-equal). Without this, a hand-authored
+    // mirror with `visual.colors.fabricated_token: "#FF00FF"` would
+    // pass certify and travel to `/qfai-implement` as validated
+    // content. The handoff contract is "verbatim mirror" -> the key
+    // sets must match in both directions.
+    //
+    // `optionalKeys` lists keys handled by a separate helper (e.g.
+    // typography.scale / typography.weight) — they are legitimate
+    // mirror sub-keys per `qfai-prototyping/references/handoff.md`
+    // and must NOT surface as fabricated here.
+    for (const key of Object.keys(mirror)) {
+      if (!(key in expected) && !optionalKeys.has(key)) {
+        issues.push(
+          issue(
+            "QFAI-DCON-005",
+            `design-system.yaml mirror 'visual.${section}.${key}' is not a DESIGN.md token; the mirror must be a verbatim copy of DESIGN.md (no fabricated keys).`,
+            "error",
+            filePathRel,
+            "designContractReadiness.designSystemMirror",
+            undefined,
+            "canonical",
+            "Remove the fabricated key, or add it to root DESIGN.md and refreeze the lock.",
+          ),
+        );
+      }
+    }
+  };
+  compare("colors", rootDesignMd.visual.colors);
+  compare(
+    "typography",
+    {
+      family_sans: rootDesignMd.visual.typography.family_sans,
+      family_display: rootDesignMd.visual.typography.family_display,
+      family_mono: rootDesignMd.visual.typography.family_mono,
+    },
+    // typography.scale / typography.weight are nested optional
+    // tokens with non-string values, handled by dedicated helpers
+    // below. Whitelist them in the bidir-loop's reverse direction
+    // so a legitimate mirror that includes them does not surface
+    // as "fabricated keys".
+    new Set(["scale", "weight"]),
+  );
+  compare("radius", rootDesignMd.visual.radius);
+  compare("shadow", rootDesignMd.visual.shadow);
+
+  // Optional DESIGN.md tokens. Per `qfai-prototyping/references/handoff.md`,
+  // the mirror copies these verbatim WHEN PRESENT in DESIGN.md, and
+  // omits them otherwise. The contract is two-state: "absent in
+  // mirror" or "verbatim copy". A third state — "authored only in
+  // mirror" — is a contract violation (it would let
+  // `/qfai-implement` bind to validated mirror content that has no
+  // anchor in the brand SSOT).
+  //
+  // For each optional section we therefore branch:
+  //   - DESIGN.md authored it -> cross-check values + key-set
+  //   - DESIGN.md did NOT author it -> mirror MUST also omit it,
+  //     else surface DCON-005 ("not a DESIGN.md token")
+  const dmTypography = rootDesignMd.visual.typography;
+  if (dmTypography.scale !== undefined) {
+    crossCheckTypographyScale(visual, dmTypography.scale, filePathRel, issues);
+  } else {
+    rejectMirrorOnlyTypographySubKey(visual, "scale", filePathRel, issues);
+  }
+  if (dmTypography.weight !== undefined) {
+    crossCheckTypographyWeight(visual, dmTypography.weight, filePathRel, issues);
+  } else {
+    rejectMirrorOnlyTypographySubKey(visual, "weight", filePathRel, issues);
+  }
+  const dmSpacing = rootDesignMd.visual.spacing;
+  if (dmSpacing !== undefined) {
+    crossCheckSpacing(visual, dmSpacing, filePathRel, issues);
+  } else {
+    rejectMirrorOnlySpacing(visual, filePathRel, issues);
   }
   return issues;
 }
 
-function isNonEmptyStringValue(value: unknown): value is string {
-  return typeof value === "string" && value.trim().length > 0;
+/**
+ * When DESIGN.md does NOT author `typography.scale` / `typography.weight`,
+ * the mirror MUST also omit it. This helper enforces that
+ * "DESIGN.md absent + mirror present" is rejected as DCON-005, so a
+ * hand-authored mirror cannot fabricate optional sections.
+ */
+function rejectMirrorOnlyTypographySubKey(
+  visual: Record<string, unknown>,
+  subKey: "scale" | "weight",
+  filePathRel: string,
+  issues: Issue[],
+): void {
+  const typo = visual.typography;
+  if (!isRecord(typo)) return;
+  if (subKey in typo) {
+    issues.push(
+      issue(
+        "QFAI-DCON-005",
+        `design-system.yaml mirror authors 'visual.typography.${subKey}' but DESIGN.md does not. The mirror is contractually a verbatim copy of DESIGN.md (no fabricated sections).`,
+        "error",
+        filePathRel,
+        "designContractReadiness.designSystemMirror",
+        undefined,
+        "canonical",
+        `Remove 'visual.typography.${subKey}' from design-system.yaml, or author it in root DESIGN.md and refreeze the lock.`,
+      ),
+    );
+  }
+}
+
+/**
+ * When DESIGN.md does NOT author `visual.spacing`, the mirror MUST
+ * also omit the entire spacing block. Symmetric counterpart of
+ * `crossCheckSpacing`.
+ */
+function rejectMirrorOnlySpacing(
+  visual: Record<string, unknown>,
+  filePathRel: string,
+  issues: Issue[],
+): void {
+  if ("spacing" in visual) {
+    issues.push(
+      issue(
+        "QFAI-DCON-005",
+        "design-system.yaml mirror authors 'visual.spacing' but DESIGN.md does not. The mirror is contractually a verbatim copy of DESIGN.md (no fabricated sections).",
+        "error",
+        filePathRel,
+        "designContractReadiness.designSystemMirror",
+        undefined,
+        "canonical",
+        "Remove 'visual.spacing' from design-system.yaml, or author it in root DESIGN.md and refreeze the lock.",
+      ),
+    );
+  }
+}
+
+// `compare` above walks top-level `visual[<section>]` records and
+// applies a string-equality contract. Nested optional tokens
+// (`visual.typography.scale`, `visual.typography.weight`,
+// `visual.spacing`) need dedicated helpers because they live one
+// level deeper and `weight`/`spacing.scale` carry non-string values.
+
+function crossCheckTypographyScale(
+  visual: Record<string, unknown>,
+  expected: Record<string, string>,
+  filePathRel: string,
+  issues: Issue[],
+): void {
+  const typo = visual.typography;
+  if (!isRecord(typo)) return;
+  const mirror = typo.scale;
+  if (!isRecord(mirror)) {
+    issues.push(
+      issue(
+        "QFAI-DCON-005",
+        `design-system.yaml mirror is missing 'visual.typography.scale' (DESIGN.md authored ${Object.keys(expected).length} scale tokens).`,
+        "error",
+        filePathRel,
+        "designContractReadiness.designSystemMirror",
+      ),
+    );
+    return;
+  }
+  for (const [key, expectedValue] of Object.entries(expected)) {
+    if (!(key in mirror)) {
+      issues.push(
+        issue(
+          "QFAI-DCON-005",
+          `design-system.yaml mirror is missing 'visual.typography.scale.${key}' (DESIGN.md token: '${expectedValue}').`,
+          "error",
+          filePathRel,
+          "designContractReadiness.designSystemMirror",
+        ),
+      );
+      continue;
+    }
+    const actual = mirror[key];
+    if (typeof actual !== "string" || actual !== expectedValue) {
+      issues.push(
+        issue(
+          "QFAI-DCON-005",
+          `design-system.yaml mirror 'visual.typography.scale.${key}' diverges from DESIGN.md (mirror=${JSON.stringify(actual)}, DESIGN.md='${expectedValue}').`,
+          "error",
+          filePathRel,
+          "designContractReadiness.designSystemMirror",
+        ),
+      );
+    }
+  }
+  for (const key of Object.keys(mirror)) {
+    if (!(key in expected)) {
+      issues.push(
+        issue(
+          "QFAI-DCON-005",
+          `design-system.yaml mirror 'visual.typography.scale.${key}' is not a DESIGN.md token; the mirror must be a verbatim copy.`,
+          "error",
+          filePathRel,
+          "designContractReadiness.designSystemMirror",
+        ),
+      );
+    }
+  }
+}
+
+function crossCheckTypographyWeight(
+  visual: Record<string, unknown>,
+  expected: Record<string, number>,
+  filePathRel: string,
+  issues: Issue[],
+): void {
+  // typography.weight is Record<string, number>. The dedicated helper
+  // is needed because `compare` above is typed for string values.
+  const typo = visual.typography;
+  if (!isRecord(typo)) return;
+  const mirror = typo.weight;
+  if (!isRecord(mirror)) {
+    issues.push(
+      issue(
+        "QFAI-DCON-005",
+        `design-system.yaml mirror is missing 'visual.typography.weight' (DESIGN.md authored ${Object.keys(expected).length} weight tokens).`,
+        "error",
+        filePathRel,
+        "designContractReadiness.designSystemMirror",
+      ),
+    );
+    return;
+  }
+  for (const [key, expectedValue] of Object.entries(expected)) {
+    if (!(key in mirror)) {
+      issues.push(
+        issue(
+          "QFAI-DCON-005",
+          `design-system.yaml mirror is missing 'visual.typography.weight.${key}' (DESIGN.md token: ${expectedValue}).`,
+          "error",
+          filePathRel,
+          "designContractReadiness.designSystemMirror",
+        ),
+      );
+      continue;
+    }
+    const actual = mirror[key];
+    if (typeof actual !== "number" || actual !== expectedValue) {
+      issues.push(
+        issue(
+          "QFAI-DCON-005",
+          `design-system.yaml mirror 'visual.typography.weight.${key}' diverges from DESIGN.md (mirror=${JSON.stringify(actual)}, DESIGN.md=${expectedValue}).`,
+          "error",
+          filePathRel,
+          "designContractReadiness.designSystemMirror",
+        ),
+      );
+    }
+  }
+  for (const key of Object.keys(mirror)) {
+    if (!(key in expected)) {
+      issues.push(
+        issue(
+          "QFAI-DCON-005",
+          `design-system.yaml mirror 'visual.typography.weight.${key}' is not a DESIGN.md token; the mirror must be a verbatim copy.`,
+          "error",
+          filePathRel,
+          "designContractReadiness.designSystemMirror",
+        ),
+      );
+    }
+  }
+}
+
+function crossCheckSpacing(
+  visual: Record<string, unknown>,
+  expected: NonNullable<DesignMd["visual"]["spacing"]>,
+  filePathRel: string,
+  issues: Issue[],
+): void {
+  // spacing has heterogeneous types: `base` is string, `scale` is
+  // number[]. Walk each sub-key independently rather than re-using
+  // `compare` (which assumes a Record-of-strings shape).
+  const mirror = visual.spacing;
+  if (!isRecord(mirror)) {
+    // DESIGN.md authored spacing tokens but the mirror omitted the
+    // entire spacing block — surface as a single missing-section
+    // message rather than per-key noise.
+    issues.push(
+      issue(
+        "QFAI-DCON-005",
+        "design-system.yaml mirror is missing 'visual.spacing' (DESIGN.md authored spacing tokens that must be copied verbatim).",
+        "error",
+        filePathRel,
+        "designContractReadiness.designSystemMirror",
+      ),
+    );
+    return;
+  }
+  if (expected.base !== undefined) {
+    if (!("base" in mirror)) {
+      issues.push(
+        issue(
+          "QFAI-DCON-005",
+          `design-system.yaml mirror is missing 'visual.spacing.base' (DESIGN.md token: '${expected.base}').`,
+          "error",
+          filePathRel,
+          "designContractReadiness.designSystemMirror",
+        ),
+      );
+    } else if (mirror.base !== expected.base) {
+      issues.push(
+        issue(
+          "QFAI-DCON-005",
+          `design-system.yaml mirror 'visual.spacing.base' diverges from DESIGN.md (mirror=${JSON.stringify(mirror.base)}, DESIGN.md='${expected.base}').`,
+          "error",
+          filePathRel,
+          "designContractReadiness.designSystemMirror",
+        ),
+      );
+    }
+  }
+  if (expected.scale !== undefined) {
+    if (!("scale" in mirror)) {
+      issues.push(
+        issue(
+          "QFAI-DCON-005",
+          `design-system.yaml mirror is missing 'visual.spacing.scale' (DESIGN.md token: ${JSON.stringify(expected.scale)}).`,
+          "error",
+          filePathRel,
+          "designContractReadiness.designSystemMirror",
+        ),
+      );
+    } else {
+      const mirrorScale = mirror.scale;
+      const expectedScale = expected.scale;
+      if (
+        !Array.isArray(mirrorScale) ||
+        mirrorScale.length !== expectedScale.length ||
+        !expectedScale.every((v, i) => mirrorScale[i] === v)
+      ) {
+        issues.push(
+          issue(
+            "QFAI-DCON-005",
+            `design-system.yaml mirror 'visual.spacing.scale' diverges from DESIGN.md (mirror=${JSON.stringify(mirrorScale)}, DESIGN.md=${JSON.stringify(expectedScale)}).`,
+            "error",
+            filePathRel,
+            "designContractReadiness.designSystemMirror",
+          ),
+        );
+      }
+    }
+  }
+  // Reverse direction: extra mirror keys. Reject both (a) keys outside
+  // the schema-defined `{base, scale}` set AND (b) schema-allowed keys
+  // that DESIGN.md did not author. Without (b), an author can extend
+  // `visual.spacing` in design-system.yaml with `scale` even when
+  // DESIGN.md only authored `base` — a verbatim-copy violation that
+  // pre-fix slipped through because the previous check only enforced
+  // (a). See codex 89xl.
+  const SCHEMA_SPACING_KEYS = new Set(["base", "scale"]);
+  for (const key of Object.keys(mirror)) {
+    if (!SCHEMA_SPACING_KEYS.has(key)) {
+      issues.push(
+        issue(
+          "QFAI-DCON-005",
+          `design-system.yaml mirror 'visual.spacing.${key}' is not a DESIGN.md token; the mirror must be a verbatim copy.`,
+          "error",
+          filePathRel,
+          "designContractReadiness.designSystemMirror",
+        ),
+      );
+      continue;
+    }
+    // Schema-allowed key: still must have been authored in DESIGN.md.
+    const expectedValue = (expected as Record<string, unknown>)[key];
+    if (expectedValue === undefined) {
+      issues.push(
+        issue(
+          "QFAI-DCON-005",
+          `design-system.yaml mirror authors 'visual.spacing.${key}' but DESIGN.md does not. The mirror is contractually a verbatim copy of DESIGN.md (no fabricated sub-keys).`,
+          "error",
+          filePathRel,
+          "designContractReadiness.designSystemMirror",
+        ),
+      );
+    }
+  }
+}
+
+/**
+ * Format a value for inclusion in a diagnostic message. Primitives
+ * (`null`, `number`, `string`, `boolean`) are JSON-serialized for
+ * literal preservation; non-primitives (arrays / objects) collapse to
+ * `<typeof>` so a misnested YAML directive like `{ foo: 1 }` does not
+ * spew an opaque JSON blob into the operator-facing error.
+ */
+function describeValueForDiagnostic(value: unknown): string {
+  if (
+    value === null ||
+    typeof value === "number" ||
+    typeof value === "string" ||
+    typeof value === "boolean"
+  ) {
+    return JSON.stringify(value);
+  }
+  if (Array.isArray(value)) return "<array>";
+  return `<${typeof value}>`;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

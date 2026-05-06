@@ -1,7 +1,7 @@
 ---
 name: qfai-prototyping
-title: QFAI Prototyping (Single-Thread Design Evolution Loop)
-description: "Iterate one prototype through up to 15 cycles of generate-capture-review with explicit pivot permission, until 4 axes reach exceptional or the budget is exhausted."
+title: QFAI Prototyping (DESIGN.md-driven UX Loop)
+description: "Iterate one prototype through up to 15 cycles of generate-capture-review against a frozen DESIGN.md, focusing on information architecture, navigation flow, usability, and functionality."
 argument-hint: ""
 allowed-tools: [Read, Glob, Write, TodoWrite, Task, Bash]
 roles: [orchestrator, product-experience-architect, product-surface-reviewer, devops-ci-engineer]
@@ -13,79 +13,95 @@ mode: execution-focused
 
 [DRIFT-PROTOCOL:MANDATORY]
 
-This skill runs one prototype through up to 15 iterations. There is no funnel, no parallel candidates, no mode. Iteration count is fixed at 15.
-
-The workflow is static-first and file-based by default. Supported UI prototyping surfaces are: web, mobile, desktop, mixed. `cli` is not a prototyping execution target and is rejected. `ui_bearing: false` specs are excluded from prototyping execution.
+This skill is static-first and file-based by default: it runs one prototype
+through up to 15 iterations against a frozen brand SSOT (`DESIGN.md`), with
+no parallel candidates, no mode, and a fixed 15-cycle budget. Visual identity
+is fixed for the whole run; every cycle improves information architecture,
+navigation flow, usability, and functionality. Supported UI prototyping
+surfaces are: web, mobile, desktop, mixed. cli is not a prototyping
+execution target and is rejected. ui_bearing: false specs are not prototyping
+execution targets and are excluded.
 
 ## Goal
 
-Produce an artifact in which a creative breakthrough has emerged through serial iteration — the kind of self-driven "scrap and reimagine" that arises when the model accumulates enough critique signal that staying on the current path is worse than rebuilding (Anthropic Dutch art museum pattern).
+One final prototype satisfying the spec under a locked brand identity, with all four UX axes `exceptional`, no layout anti-patterns, and no DESIGN.md violations.
 
 ## Required References
 
-- `references/iteration-loop.md` — flow + evidence paths
-- `references/generator-prompt.md` — generator system prompt + pivot permission
-- `references/reviewer-prompt.md` — reviewer output schema + global anti-slop list
-- `references/handoff.md` — design-system extraction + handoff yaml
+- `references/iteration-loop.md` — flow, exit codes, evidence paths
+- `references/generator-prompt.md` — generator system prompt + Tailwind
+  CDN + DESIGN.md token injection rules
+- `references/reviewer-prompt.md` — reviewer schema, 4 UX axes,
+  layout anti-patterns (`lap-001..006` static regex + `lap-007..008` semantic),
+  `designMdViolations`, pivot rules
+- `references/handoff.md` — post-loop `design-system.yaml` (DESIGN.md
+  token mirror) and `prototype-handoff.yaml`
+- `references/design-md-spec.md` — DESIGN.md front-matter schema and
+  validation rules
+- `templates/DESIGN.md.sample` — reference content shipped at the
+  consuming-project root by `qfai init`
 
 ## Required Contracts
 
 - `.qfai/specs/spec-*/{01_Spec.md, 03_Acceptance-Criteria.md}`
 - `.qfai/contracts/ui/*.yaml`
-- `.qfai/contracts/design/exploration-brief.yaml`
-- `.qfai/contracts/design/reference-pool.yaml`
-- `.qfai/contracts/design/brand-design.yaml`
+- root `DESIGN.md`
+- `.qfai/contracts/design/DESIGN.md.lock.yaml`
 
-`reference-pool.yaml` is read as **deviate-from**, not imitate-this.
+The brand identity is governed by root `DESIGN.md`. The lock yaml records
+its sha256 at `/qfai-sdd` Phase 0 freeze. The loop refuses to run if the
+current `DESIGN.md` hash does not match the lock.
 
 ## Required Process
 
 ### Step 2-A — Verify Contract Preconditions
 
-- Confirm the selected spec is UI-bearing and has a supported `surface` value.
-- Confirm `.qfai/contracts/ui/*.yaml` and design contracts exist before generation.
-- Run `qfai prototyping preflight --target-url <url>` or `qfai doctor --profile prototyping`.
+- Confirm the selected spec is UI-bearing and has a supported `surface`.
+- Confirm root `DESIGN.md` and `.qfai/contracts/design/DESIGN.md.lock.yaml`
+  both exist; confirm `.qfai/contracts/ui/*.yaml` exists.
+- Run `qfai prototyping preflight --target-url <url>` (alias for
+  `qfai doctor --profile prototyping`) — verifies DESIGN.md parses and
+  matches the lock sha256.
 
 ### Step 2-B — Verify Environment Preconditions
 
 - Confirm a capture route exists for each declared screen.
-- Use `npx --no-install playwright-cli` or `node_modules/.bin/playwright-cli` when PATH reachability is uncertain.
+- Use `npx --no-install playwright-cli` or
+  `node_modules/.bin/playwright-cli` when PATH reachability is uncertain.
 
-1. **Seed (cycle 0)**
-   - Run `qfai prototyping iterate --cycle 0 --target-url <url>`.
-   - Generator (product-experience-architect) reads contracts + `references/generator-prompt.md`.
-   - Generator writes `.qfai/prototypes/iter-00/index.html` (one self-contained file).
-   - Capture + review (steps 2-a / 2-b).
-   - Append entry to `prototyping.json#iterations[]`. Commit `prototyping: iter-00`.
+### Step 2-C — Run the Loop
 
-2. **Loop (cycle 1..14)**
-   - **(a) Capture** (devops-ci-engineer): playwright-cli writes `iter-NN/<screen>.{png,html}`.
-   - **(b) Review** (product-surface-reviewer): per `references/reviewer-prompt.md`, write `iter-NN/review.json` with 4-axis ordinal scores, 200–500 word prose critique, `slopPatternsDetected[]`, and `pivotDirective`.
-   - **(c) Update** `prototyping.json#iterations[]` and `progress.md`. Commit `prototyping: iter-NN`.
-   - **(d) Iterate**: run `qfai prototyping iterate --cycle <n+1>`.
-     - exit `0` → continue. Generator reads `pivotDirective` and produces iter-(n+1).
-     - exit `64` → all axes exceptional, go to step 3.
-     - exit `65` → 15 cycles reached, go to step 3.
+| Step   | Actor                                                     | Action                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        | Output                                   |
+| ------ | --------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------- |
+| C0     | product-experience-architect                              | `qfai prototyping iterate --cycle 0 --target-url <url>`. CLI computes `sha256(DESIGN.md)`; lock match enforced. Generator reads contracts + `references/generator-prompt.md` + DESIGN.md tokens and writes `.qfai/prototypes/iter-00/index.html`. Capture + review → `iter-00/review.json`. Append entry; commit `prototyping: iter-00`.                                                                                                                                                                                      | iter-00, prototyping.json#designMdSha256 |
+| C1..14 | (a) devops, (b) reviewer, (c) orchestrator, (d) generator | (a) playwright-cli writes `iter-NN/<screen>.{png,html}`; (b) reviewer writes `iter-NN/review.json` per `references/reviewer-prompt.md` (4 UX axes ordinal, 200..500 word critique, `layoutAntiPatternsDetected[]`, `designMdViolations[]`, `pivotDirective`); (c) update `prototyping.json#iterations[]` + `progress.md`, commit `prototyping: iter-NN`; (d) `qfai prototyping iterate --cycle <n+1>` decides exit.                                                                                                           | iter-NN, exit ∈ {0, 64, 65, 2}           |
+| H      | orchestrator                                              | Mirror latest to `.qfai/prototypes/final/index.html`. Per `references/handoff.md`: write `design-system.yaml` (deterministic DESIGN.md token mirror, no HTML extraction) + `prototype-handoff.yaml`. Run `qfai validate --profile prototyping --fail-on error` (produces `validate.json` with `counts.error === 0`), then `/qfai-verify` (produces `verify.json` with `status === "PASS"`), then `qfai prototyping certify` — certify requires both gate files to be present and passing before it will seal the certificate. | DONE                                     |
 
-3. **Handoff**
-   - Mirror latest iter to `.qfai/prototypes/final/index.html`.
-   - Per `references/handoff.md`: extract `design-system.yaml`, write `prototype-handoff.yaml`.
-   - Run `qfai prototyping certify`.
-   - Run `qfai validate --profile prototyping --fail-on error` and `/qfai-verify`.
+**Exit codes**: `0` continue (read `pivotDirective`); `64` convergence (4
+axes `exceptional` AND `layoutAntiPatternsDetected` empty AND
+`designMdViolations` empty); `65` 15 cycles reached; `2` input error
+(incl. DESIGN.md hash mismatch — re-run prototyping from cycle 0 after
+editing `DESIGN.md` and refreezing the lock via `/qfai-sdd` Phase 0).
 
 ## Evaluator Inputs (Mandatory)
 
 - Screenshot evidence path: `.qfai/evidence/prototyping/iter-NN/<screen>.png`
 - HTML snapshot path: `.qfai/evidence/prototyping/iter-NN/<screen>.html`
-- Review inputs: latest screenshot, latest HTML snapshot, prior `review.json` files, `progress.md`, and `reference-pool.yaml` as deviate-from input.
+- Review inputs: latest screenshot, latest HTML snapshot, prior
+  `review.json` files, `progress.md`, root `DESIGN.md` (read-only),
+  `axisDefs`, `previousScore`, `designSystemChecklist`.
 
 ## Critical Constraints
 
-- DO NOT generate parallel candidates. One lineage only.
-- DO NOT preserve elements out of caution; the latest iter is always accepted.
-- DO NOT declare DONE before `qfai prototyping certify --check` returns 0.
-- DO NOT add `mode/round/polish/branch/concept-fit/design-system-compliance` artifacts.
-- DO NOT score similarity to `reference-pool` positively; it is deviate-from input.
+- One lineage only — no parallel candidates, no best-of-history; the
+  latest iter is always accepted.
+- `DESIGN.md` is frozen for the run; to change it, edit + rerun
+  `/qfai-sdd` to refreeze + start cycle 0.
+- Token-only colors / fonts / radii / shadows — non-DESIGN.md hex / rgb /
+  rgba / hsl / font / radius / shadow values are recorded in
+  `designMdViolations[]` and block exit 64.
+- DONE only when `qfai prototyping certify --check` returns 0.
+- No `mode / round / polish / branch / concept-fit` artifacts.
 
 ## Delegation Scope Table
 
@@ -99,11 +115,16 @@ Produce an artifact in which a creative breakthrough has emerged through serial 
 
 - Check Drift Protocol compliance before DONE.
 - Check `.qfai/assistant/steering/test-layers.md` alignment.
-- Treat reviewer findings as signals, not gates, unless certify/validate/verify fails.
+- Treat reviewer findings as signals, not gates, unless
+  certify/validate/verify fails.
 
 ## Completion
 
-DONE = `completion-certificate.json` exists AND `qfai prototyping certify --check` returns 0 AND `/qfai-verify` returns PASS.
+DONE = `completion-certificate.json` exists AND
+`qfai prototyping certify --check` returns 0 AND `/qfai-verify` returns
+PASS.
+
+Follow `.qfai/assistant/instructions/shared-skill-operating-baseline.md#gate-failure-autorepair-protocol` for validate, doctor, and quality-gate failures.
 
 ## Next
 

@@ -4,10 +4,615 @@
 
 ## [Unreleased]
 
-Post-1.8.8 follow-ups landed after the `chore(release): qfai 1.8.8`
-commit on this branch. The next version bump (`1.8.9` or `1.9.0`) will
-be decided after this PR merges and shipped via a separate `chore(release):`
-PR per `.agents/rules/version-discipline.md`.
+## [1.8.9] - 2026-05-07
+
+### Fixed (Breaking — pre-1.8.9 internal pipelines only)
+
+- **design-system.yaml accepts the post-1.8.9 DESIGN.md token mirror**:
+  `validateDesignSystem` now accepts the new mirror shape
+  (`visual.colors`, `visual.typography`, `visual.radius`,
+  `visual.shadow`) documented in
+  `qfai-prototyping/references/handoff.md`. The legacy
+  `checklist.{color,typography,...}` shape is still accepted as a
+  fallback so existing projects keep validating until they regenerate
+  their design-system.yaml. Without this, a freshly generated mirror
+  would fail QFAI-DCON-005 before certification, blocking the
+  validate → verify → certify sequence.
+- **prototype-handoff.yaml string fields require non-empty scalars**:
+  Each string field (`finalArtifact`, `designMdPath`, `designMdSha256`,
+  `designSystemMirror`, `implementationNotes`) is now validated as a
+  non-empty string. Previously the helper passed arrays / mappings as
+  "meaningful content", so a handoff like `finalArtifact: { uri: "..." }`
+  or `designSystemMirror: ["a.yaml", "b.yaml"]` slipped past
+  QFAI-DCON-013 even though downstream consumers (`/qfai-implement`,
+  certify, ref-integrity) require scalar paths. The
+  `validateRequiredStringArrayKeys` helper is now removed (it was
+  the source of the type-laxity).
+- **prototyping ref-integrity rejects non-string handoff paths**:
+  `validatePrototypingArtifactRefIntegrity` now treats
+  `prototype-handoff.finalArtifact` and
+  `prototype-handoff.designSystemMirror` as required, so a
+  non-string or empty value produces QFAI-PROT-009 instead of
+  silently passing the ref-integrity gate.
+- **DESIGN.md color scanner restricted to CSS contexts**:
+  `findDesignMdViolations` color scan now reads only inline `style="..."`
+  values and `<style>...</style>` block content, not arbitrary HTML
+  text. Previously hex literals in non-CSS contexts (`<a href="#deadbeef">`,
+  SVG `url(#abc)` references, Tailwind `class="bg-[#...]"` arbitrary
+  values, commit-hash prose) were flagged as DESIGN.md drift, making
+  `qfai prototyping certify` reject otherwise-compliant prototypes.
+- **DESIGN.md scanner strips `url(...)` fragments before color scan**:
+  CSS `url(...)` invocations (SVG / filter / mask references such as
+  `filter:url(#abc)` or `mask:url("#defaced")`) no longer surface their
+  fragment-id as a DESIGN.md color violation. The strip-pass runs
+  inside `extractCssRegions`'s output before HEX_RE / RGB_RE / HSL_RE
+  match, complementing the prior CSS-context restriction.
+- **DESIGN.md scanner detects mixed-case CSS property names**:
+  `RADIUS_RE`, `SHADOW_RE`, and `FONT_RE` now use the `i` flag so
+  `Border-Radius: 1.5rem`, `BOX-SHADOW: 0 0 8px red`, and
+  `Font-Family: "Comic Sans"` are caught. CSS property names are
+  case-insensitive per spec; without the flag, off-spec authored
+  prototypes could leak DESIGN.md drift through the certify gate.
+- **DESIGN.md scanner rejects CSS named-color keywords**:
+  A new property-anchored regex (`color`, `background-color`,
+  `border-color`, `outline-color`, `fill`, `stroke`, etc.) catches
+  values like `color: red` / `background-color: white` / `fill: blue`.
+  Previously the scanner only matched hex / rgb / hsl literals, so a
+  prototype that authored `color: red` could slip past certify even
+  though red is not in DESIGN.md. The check skips `transparent` /
+  `currentcolor` / `inherit` / `var(...)` references; if the
+  DESIGN.md authored a named color as a token (`primary: red`) the
+  match is allowed. Multi-token shorthand values
+  (e.g. `border-color: red blue green red` for top/right/bottom/left)
+  are now split on whitespace and each token is checked
+  independently, so 4-side longhand drift is no longer silent. The
+  property allow-list now also includes the common shorthands
+  (`background`, `border`, `border-{top,right,bottom,left}`,
+  `outline`) so named colors authored as `background: red` /
+  `border: 1px solid red` / `outline: 2px dashed blue` are also
+  caught. Hex / rgb / hsl tokens are skipped per-token (rather than
+  at the value level), so a mixed shorthand like
+  `border-color: red #ff0000 blue #00ff00` surfaces every token —
+  the literal scanner catches the hex tokens, and the named-color
+  pass catches the keyword tokens.
+- **design-system.yaml mirror values cross-checked against DESIGN.md**:
+  `validateDesignSystem` now compares the mirror's
+  `visual.colors.{12 keys}`, `visual.typography.{family_*3}`,
+  `visual.radius.{4 keys}`, `visual.shadow.{3 keys}` against the
+  parsed root DESIGN.md tokens. Each mismatch surfaces a DCON-005
+  with the diverging value diff (e.g. "mirror=#FF0000, DESIGN.md=
+  '#1F2937'"). Previously the mirror was shape-only (top-level
+  records non-empty), so a hand-authored mirror that disagreed with
+  DESIGN.md could pass `qfai validate --profile prototyping` and
+  bind downstream `/qfai-implement` to a tampered identity.
+- **prototype-handoff.yaml designMdPath / designMdSha256 cross-check
+  against DESIGN.md.lock**: `validatePrototypeHandoff` now requires
+  `designMdPath` to resolve to the repo-root DESIGN.md (accepting
+  `DESIGN.md` and `./DESIGN.md`) and requires `designMdSha256` to
+  be a 64-hex value equal to `DESIGN.md.lock.yaml#designMdSha256`.
+  Without this, a handoff with a path pointing at an alternate file
+  or a stale arbitrary sha could pass `qfai validate` while binding
+  downstream `/qfai-implement` to a DESIGN.md identity that diverges
+  from the frozen root lock.
+- **DESIGN.md `visual.typography.scale` strict-parse**:
+  `parseDesignMd` now rejects non-string and padded /
+  whitespace-only typography scale values (`base: 1`,
+  `base: " 1rem "`). Pre-fix, `readStringRecord` coerced numbers to
+  strings and accepted padded values, so malformed type-scale
+  tokens leaked into the lock and the design-system.yaml mirror
+  as "validated" tokens that downstream CSS engines reject. Now
+  rejected with `invalid-type` / `invalid-format` at the brand
+  SSOT.
+- **DESIGN.md `visual.typography.weight` numeric strict-parse**:
+  `parseDesignMd` now rejects non-number values for typography
+  weight tokens (`regular` / `medium` / `bold`). Pre-fix, an
+  authored `regular: "400"` (quoted string) silently dropped from
+  the resulting weight record, leaving the mirror cross-check with
+  an empty / partial expected and accepting a handoff that lost
+  authored weight tokens. Now rejected with `invalid-type` at the
+  brand SSOT so the contract is enforced before downstream
+  consumers see the data.
+- **DESIGN.md `visual.spacing` strict-parse**: `parseDesignMd` now
+  rejects `visual.spacing.base` values with leading / trailing
+  whitespace (e.g. `" 0.25rem "`) at parse time, and requires
+  `visual.spacing.scale` to be a finite-number array per the
+  canonical `design-md-spec.md` (`scale: number[]`). Mixed
+  number/string entries (`[0, "wide"]`) and non-array values are
+  rejected with `invalid-type` / `invalid-format` errors. Without
+  this, malformed spacing tokens could freeze into the DESIGN.md
+  lock and the design-system.yaml mirror, then surface as render-
+  time CSS rejections at the `/qfai-implement` step. The
+  `DesignMd["visual"]["spacing"]["scale"]` type tightens from
+  `Array<number | string>` to `number[]`.
+- **iterate gap-check uses typed isRecord predicate**:
+  `prototypingIterate.ts` corrupt-history check no longer carries a
+  bare `as { index?: unknown }` assertion. A local `isRecord` user-
+  defined type predicate guards `it.index` access through control-
+  flow narrowing, satisfying the project rule "avoid bare `as` type
+  assertions; prefer type narrowing".
+- **iterate frozen-specs check compares element-wise**:
+  `prototypingIterate.ts` cycle >= 1 spec-frozen check now uses
+  `arraysShallowEqual` instead of comparing only the first element.
+  Today `specs` is single-element, but `specsCovered` is a
+  multi-element array per the prototyping.json schema, and the
+  contract is "every covered spec must match across cycles" — a
+  first-element-only check would silently drift on non-zero indices
+  if the loop ever extends to multi-spec coverage.
+- **iterate fail-fast when frozen specsCovered seed is missing**:
+  Cycle >= 1 now exits 2 when `prototyping.json#specsCovered` is
+  absent, empty, or contains non-string entries (i.e.
+  `readFrozenSpecsCovered` returns null). Previously the null path
+  was a silent skip that allowed iterate to write a fresh resolved
+  spec into `iterate-plan.json` while certify later blocked on the
+  same gap. Single, clear error pointing at
+  `--cycle 0 --target-url <url>` to refreeze.
+- **DESIGN.md scanner: shadow-embedded colors are scoped to box-shadow**:
+  `collectAllowedColors` no longer widens the global color allow-set
+  with literals embedded in registered box-shadow tokens. Instead,
+  `scanColors` strips `box-shadow:` declarations from the cssText
+  before the literal scan via a new `SHADOW_DECL_STRIP_RE`. Pre-fix,
+  an unrelated `background-color: rgba(15,23,42,0.05)` would
+  silently pass when the same rgba happened to appear inside a
+  registered shadow value (it had been added to the global allow-
+  set). The scoped fix preserves the original "shadow value with
+  embedded rgba is legitimate" exemption while closing the
+  cross-property leak. `scanShadow` continues to validate the full
+  shadow string against `dm.visual.shadow` independently. The strip
+  is intentionally box-shadow-only — `text-shadow` has no
+  independent validator, so its `text-shadow:` declarations remain
+  in the literal-scan input and hex / rgb / hsl drift inside a
+  text-shadow value still surfaces (named-color drift in
+  text-shadow is uncovered until a future spec adds a
+  `dm.visual.textShadow` token contract).
+- **DESIGN.md scanner: text-decoration / column-rule shorthands**:
+  COLOR_PROP_RE now also captures `text-decoration` and
+  `column-rule` shorthands. `text-decoration: underline red`
+  (named color in the second slot) and
+  `column-rule: 1px solid red` (named color in the third slot) now
+  surface as DESIGN.md drift. Pre-fix only the dedicated
+  `text-decoration-color` / `column-rule-color` longhands were
+  caught.
+- **design-system.yaml mirror: optional tokens cross-checked**:
+  When DESIGN.md authors `visual.spacing`, `visual.typography.scale`,
+  or `visual.typography.weight`, the mirror is now required to copy
+  them verbatim — divergent values, missing keys, and fabricated
+  extra keys all surface as DCON-005. Pre-1.8.9 only the required
+  tokens (colors, family triple, radius, shadow) were cross-checked,
+  leaving the optional sections as a silent gap. New helpers
+  `crossCheckTypographyScale` / `crossCheckTypographyWeight` /
+  `crossCheckSpacing` handle the heterogeneous shapes (string vs
+  number values, scalar vs array). When DESIGN.md does NOT author
+  these optional tokens, the mirror is also required to omit them
+  — the verbatim-mirror contract is set-equal in both directions.
+  A "third state" where the mirror authors a section that DESIGN.md
+  does not is now rejected via dedicated
+  `rejectMirrorOnlyTypographySubKey` / `rejectMirrorOnlySpacing`
+  helpers.
+- **designContractReadiness: bidirectional mirror cross-check**:
+  `crossCheckMirrorValues` now runs in both directions. The
+  DESIGN.md → mirror direction was already added; the new mirror →
+  DESIGN.md direction surfaces fabricated extra keys (e.g. a
+  hand-authored `visual.colors.fabricated_token: "#FF00FF"` not in
+  DESIGN.md) as a DCON-005 with the rationale "the mirror must be
+  a verbatim copy of DESIGN.md (no fabricated keys)". The contract
+  is now structurally enforced: the mirror's per-section key set
+  must be set-equal to DESIGN.md's. The reverse loop accepts an
+  `optionalKeys` whitelist so legitimate nested optional sub-keys
+  (`typography.scale`, `typography.weight`) handled by dedicated
+  helpers do not surface as fabricated false-positives.
+- **designContractReadiness: handoff cross-check skips placeholders**:
+  The `designMdPath` / `designMdSha256` cross-check skip predicate
+  now also excludes `PLACEHOLDER_RE` matches (`tbd`, `todo`, `n/a`,
+  etc.). Pre-fix, an operator who left `designMdPath: TBD` saw two
+  DCON-013 entries for the same authoring fix — once from the
+  upstream string-field gate (which already rejects placeholders),
+  once from the cross-check ("TBD is not DESIGN.md"). Post-fix,
+  the cross-check defers to the upstream gate; only one DCON-013
+  fires per placeholder field.
+- **designContractReadiness: parse DESIGN.md even without lock**:
+  `parseDesignMd` is no longer gated on `lockText !== null`. A
+  UI-bearing project in the common initial state (DESIGN.md
+  authored but malformed, lock not yet generated) now surfaces both
+  DCON-031 (missing lock) AND DCON-033 (parse failure), pointing
+  the operator at the file that actually needs repair. Pre-fix,
+  only DCON-031 fired and `/qfai-sdd Phase 0` would keep failing
+  on the invalid front-matter without the validator naming it.
+- **specsCovered SSOT module**: `readFrozenSpecsCovered` is now a
+  single shared helper at
+  `core/prototyping/specsCovered.ts`. Both `prototypingIterate`
+  (cycle >= 1 hash gate) and `prototypingCertify` (final-spec
+  resolution) import it. Pre-1.8.9 each command had its own copy
+  of the predicate, with the comment "same shape as the helper in
+  prototypingCertify" — the SSOT consolidation removes the manual
+  shape-mirror obligation and adds dedicated unit tests for the 4
+  null trigger paths.
+- **renderCritique reads the canonical prototyping.json path**:
+  `collectRenderEvidenceViewports` now imports
+  `PROTOTYPING_JSON_REL` (`.qfai/evidence/prototyping/prototyping.json`)
+  instead of the pre-1.8.9 hard-coded
+  `.qfai/evidence/prototyping.json`. Without this, viewport
+  metadata written by iterate / validate at the canonical path was
+  invisible to render-critique and surfaced as spurious
+  QFAI-CRIT-003/004 even when the iter HTML had the right viewport
+  entries.
+- **DESIGN.md typography scale/weight allowlist**: `parseDesignMd()`
+  now rejects unknown nested keys under `visual.typography.scale`
+  (allowed: `xs sm base lg xl 2xl 3xl`) and
+  `visual.typography.weight` (allowed: `regular medium bold`),
+  matching the canonical spec. Authored extras (`scale.hero`,
+  `weight.black`) no longer freeze into the lock while iteration /
+  certification ignore them.
+- **prototype-handoff.yaml `finalIterIndex` error message accuracy**:
+  The DCON-013 message now distinguishes missing-field vs invalid-
+  type/value cases. Operators who DID write the field but with the
+  wrong type/range no longer see "missing required field"
+  (Principle of Least Astonishment); they see "must be a non-negative
+  integer (got X)".
+- **certify enforces per-screen HTML in the accepted iter (multi-screen)**:
+  `qfai prototyping certify` now reads UI contracts via
+  `readUiContractScreenContracts` and rejects with exit 2 when any
+  declared screen lacks a matching `<screenId>.html` in the
+  accepted iter dir. Previously a stale older
+  `iter-NN/<missing-screen>.html` could let `validate` stay green
+  (validateUiEvidenceArtifacts accepts a screen file from any iter
+  directory), and certify would seal the run as long as the
+  accepted iter had at least one HTML — closing that gap.
+- **iterate rejects mid-loop primary-spec change**:
+  `qfai prototyping iterate --cycle N` (N >= 1) now compares the
+  resolved primary spec against the frozen
+  `prototyping.json#specsCovered`. A mismatch (e.g.
+  `prototyping.primarySpecId` was edited or a new `surface_type:
+ui-bearing` marker landed mid-loop) exits 2 — preventing the
+  scenario where iterations write the new spec into
+  `iterate-plan.json` while certify keeps reporting the frozen one.
+- **iterate detects corrupt iterations history**:
+  Before deriving the expected next cycle from `iterations.length`,
+  `runPrototypingIterate` now confirms `iterations[i].index === i`
+  for every entry. A hand-edited or partially-corrupted
+  `prototyping.json` (e.g. `iterations.length === 3` but
+  `iterations[2].index === 5`) exits 2 at the command boundary,
+  rather than letting the validator's per-index check produce a
+  delayed cryptic error one cycle later.
+- **iterate diagnostic message tightened**: The out-of-sequence
+  error message no longer repeats the same number twice
+  ("must be 5 (next sequential index after iterations.length=5)").
+  New form: "expected --cycle N (iterations.length=N); got --cycle X.
+  Re-run with the expected cycle, or restart the loop with
+  `--cycle 0 --target-url <url>`." The hint now includes the
+  `--target-url` requirement so the operator does not fall into a
+  second exit-2 on the restart path.
+- **`prototyping iterate` rejects out-of-sequence cycles**: Calling
+  `qfai prototyping iterate --cycle N` when `iterations.length !== N`
+  now exits 2 with a message naming the expected cycle. Previously a
+  call like `--cycle 3` after only `iter-00` was recorded would
+  silently create an `iter-03/iterate-plan.json` that the validator
+  later rejected (`iterations[i].index === i` invariant), blocking
+  validation/certification with a delayed cryptic error. The check
+  runs AFTER `shouldStop`, so converged or max-budget loops still
+  return their 64/65 stop reason cleanly.
+- **DESIGN.md nested unknown-key reject (colors/radius/shadow)**:
+  `parseDesignMd()` now rejects unknown keys nested under
+  `visual.colors`, `visual.radius`, and `visual.shadow` at parse
+  time (not just at validate time). Previously
+  `readStringRecord` silently dropped non-scalar values
+  (`visual.colors.gradients: [...]`, `visual.radius.breakpoints: {...}`)
+  before the validator could see them, so the offending directive
+  would freeze into the lock without surfacing a parse error. New
+  TC-1.1.22..24 anchor the contract.
+- **`RejectScope` discriminated union**: The `rejectUnknownKeys`
+  helper's scope parameter is now a discriminated union of
+  `{ kind: "root" }` and `{ kind: "section"; name; path }`. The
+  prior shape carried a dead `name: ""` placeholder for the root
+  invocation; the union form makes that unrepresentable, and TS
+  exhaustiveness checks every callsite.
+- **`finalIterIndex` numeric handling in prototype-handoff validator**:
+  `validatePrototypeHandoff` now treats `finalIterIndex` as a
+  numeric field (`Number.isInteger && >= 0`) rather than forwarding
+  it through `hasMeaningfulContractContent`, which only accepts
+  strings/arrays/records. Without this, every spec-conformant
+  `prototype-handoff.yaml` (where `finalIterIndex` is a YAML number)
+  would fail QFAI-DCON-013 and block the validate → verify → certify
+  sequence. New positive test asserts well-formed handoff produces
+  zero DCON-013 issues; new negative tests assert non-integer and
+  negative values are still rejected. The handoff sample
+  (`assets/init/.../prototype-handoff.sample.yaml`) is updated to the
+  new field set so `qfai init` ships a passing example.
+- **`designSystemMirror` ref-integrity check (was extractedDesignSystem)**:
+  `validatePrototypingArtifactRefIntegrity` now checks
+  `prototype-handoff.yaml#designSystemMirror`, matching the renamed
+  field. The previous code checked the legacy `extractedDesignSystem`
+  name, so a handoff that pointed `designSystemMirror` at a missing
+  artifact was silently passed by ref-integrity (only DCON-013 from
+  the readiness validator caught the missing field, and the missing-
+  TARGET case slipped through entirely). New positive test seeds a
+  handoff with a missing `designSystemMirror` target and asserts
+  PROT-009 surfaces the field name + path.
+- **prototype-handoff.yaml validator aligned with new contract**:
+  `validatePrototypeHandoff` now requires `finalIterIndex`,
+  `finalArtifact`, `designMdPath`, `designMdSha256`,
+  `designSystemMirror`, `implementationNotes` — the fields documented
+  in `qfai-prototyping/references/handoff.md`. The legacy
+  multi-option fields (`sourcePrototypeRefs`, `surfaceProfiles`,
+  `screens`, `visualDna`, `implementationHandoff`) are retired
+  together with the preserve/adapt/copy split, since the loop became
+  single-thread when DESIGN.md became the brand SSOT. Pre-1.8.9
+  pipelines that wrote a handoff with the legacy field names will
+  now fail QFAI-DCON-013 and must be re-run from the new handoff
+  authoring step in `/qfai-prototyping`.
+- **DESIGN.md `visual.spacing` unknown-key reject**:
+  `parseDesignMd()` now rejects unknown keys under `visual.spacing`
+  (e.g. `gutter`, `density`) with the same `unknown-key` ParseError
+  shape as the other sections. Allowlist: `base`, `scale`. New
+  TC-1.1.21 anchors the contract.
+- **assets/ retired-sidecar reference sweep + guard**: Migrated 6
+  more `assets/` doc files (14_Review-Request.md L38/L40/L41,
+  product-experience-architect.md L31, contract-artifact-rules.md L12,
+  comparison-review.md L8, contracts-review.md L25, scoring-review.md
+  rewritten) so distributed surfaces stop pointing operators at the
+  retired `33_exploration_rubric.md` / `34_evaluator_calibration.md`
+  sidecars. Added a guard test in `uiuxSidecar.test.ts` that
+  greps every `assets/**/*.md` for the forbidden phrases
+  (`exploration brief|rubric` / `evaluator calibration` /
+  `33_exploration_rubric` / `34_evaluator_calibration`) and only
+  whitelists the two warning lines in `00_index.md` Forbidden
+  Legacy Files. Future partial fixes will fail this test in CI.
+- **DESIGN.md `rejectUnknownKeys` SSOT**: New
+  `rejectUnknownKeys(record, allowed, pathPrefix, sectionLabel)`
+  helper in `core/design/designMd.ts` replaces 6 inline copies of
+  the unknown-key reject pattern (root, `brand`, `visual`,
+  `visual.typography`, `audience`, `accessibility`). Each call site
+  is now `const err = rejectUnknownKeys(...); if (err) return { error: err };`.
+  Future spec sections that grow a new key add their allowlist + a
+  single `rejectUnknownKeys` call rather than copy-pasting the
+  filter / first-match / ParseError shape.
+- **DESIGN.md `accessibility` unknown-key reject**: `parseDesignMd()`
+  now rejects unknown keys under `accessibility` (e.g. `focus_ring`,
+  `reduced_motion_details`) with the same `unknown-key` ParseError
+  shape as the other sections. Allowlist: `contrast_ratio_min`,
+  `motion`. Closes the final remaining gap in the "Unknown keys at
+  any level are rejected" contract — every section (`brand`, `visual`,
+  `visual.typography`, `audience`, `accessibility`) and the root now
+  enforce it.
+- **DESIGN.md root unknown-key reject**: `parseDesignMd()` now rejects
+  unknown root-level keys (e.g. `platform:`, `references:`) with the
+  same `unknown-key` ParseError shape as `visual` / `visual.typography`
+  / `audience`. Allowlist: `brand`, `visual`, `audience`, `accessibility`.
+  Closes the last gap in the "Unknown keys at any level are rejected"
+  contract.
+- **DESIGN.md shadow whitespace reject**: `validateDesignMd` now
+  rejects leading/trailing whitespace in `visual.shadow.{sm,md,lg}`
+  (new `invalid-shadow-format` code), matching the existing color /
+  font / radius byte-anchored validation. Otherwise certify's
+  exact-string box-shadow comparison can flag compliant CSS as drift
+  because the token froze a stray-whitespace variant.
+- **DESIGN.md `audience` unknown-key reject**: `parseDesignMd()` now
+  rejects unknown keys under `audience` (e.g. `audience.references`)
+  with the same `unknown-key` ParseError as `visual` and
+  `visual.typography`. Previously such keys were silently dropped
+  from the parsed tokens consumed by iteration / certify while still
+  being hashed into `DESIGN.md.lock.yaml`, letting authors freeze
+  directives that the parser ignored.
+- **canonical sidecar pruning end-to-end**: The init template
+  surfaces (`uiux/00_index.md` File Inventory,
+  `uiux/50_review_input_bundle.md` Bundle Contents,
+  `14_Review-Request.md` reviewer checklist,
+  `qfai-sdd/references/ui-design-contract-normalization.md`,
+  `assets/uix-rev/scoring-review.md`) no longer reference the
+  retired `33_exploration_rubric.md` / `34_evaluator_calibration.md`
+  sidecars. The previous validator-only fix left a documented
+  expectation that operators create the deleted sidecars, which then
+  fell into the legacy-format guard. Reviewer alignment is now
+  pinned to the four canonical UX axes fixed in
+  `core/prototyping/evaluatorReview.ts#ORDINAL_AXES`.
+- **shared `isEnoent` errno helper**: New `src/core/fs/errno.ts`
+  exports `isEnoent(err: unknown): boolean` and is now the SSOT for
+  all 11 ENOENT narrowing call sites in the package: `init.ts`,
+  `core/config.ts`, `core/specLayout.ts`, `cli/commands/report.ts`,
+  `cli/commands/prototypingIterate.ts`, `core/calibration/loader.ts`,
+  `core/validators/atddLedger.ts`,
+  `core/validators/requirementsContext.ts`,
+  `core/validators/reviewArtifacts.ts`,
+  `core/validators/reviewGate.ts`,
+  `core/validators/uix/designSystemPresence.ts`,
+  `core/validators/uix/foundation.ts`. The legacy
+  `isMissingFileError` alias in `core/validators/utils.ts` is removed.
+  Future errno codes (`EACCES`, `EBUSY`, `EPERM`, ...) extend
+  `errno.ts` rather than sprouting new inline checks.
+- **forbidden legacy file patterns extended**: `threeLayer.ts#FORBIDDEN_LEGACY_PATTERNS`
+  now matches `^3[34]_.*\.md$` (covers `33_exploration_rubric.md`
+  and `34_evaluator_calibration.md`). Operators following stale docs
+  who recreate either file now hit `UIX-VAL-3LAYER-FORBIDDEN-FILE`
+  at validate time instead of being silently ignored. The init
+  template surfaces (`uiux/00_index.md` Forbidden Legacy Files,
+  `uiux/50_review_input_bundle.md` Trend-derived focus + Review
+  Checklist) updated to match.
+- **certify reads frozen `specsCovered` from cycle 0**:
+  `qfai prototyping certify` no longer re-resolves the primary spec
+  via `resolvePrimaryPrototypingSpec`. It now reads
+  `prototyping.json#specsCovered` (seeded by `iterate --cycle 0`)
+  and fails fast when the slot is missing, malformed, or empty.
+  A config edit (`prototyping.primarySpecId`) or a new
+  `surface_type: ui-bearing` marker landing between cycle 0 and
+  certify can no longer silently re-baseline the certificate to a
+  spec the loop never exercised. The cycle 0 seed is the SSOT for
+  what was actually reviewed.
+- **DESIGN.md font violation regex respects style attribute boundary**:
+  `findDesignMdViolations` font scan no longer captures past the
+  enclosing inline-style quote. Previously
+  `<div style="font-family: Inter" class="card">` resolved to
+  `Inter" class="card"` (because `[^;}<>]+` allowed the trailing
+  attribute quote inside the value), which made `fontMatches` reject
+  an otherwise-allowed family and could fail compliant generated HTML
+  during `qfai prototyping certify`. The regex now models CSS
+  font-family as a comma-separated list of either fully-quoted
+  strings or unquoted tokens, so `"Comic Sans"` inside a `<style>`
+  block still resolves correctly.
+- **DESIGN.md overlay alpha accepts `1.0` / `1.00` (CSS-equivalent to `1`)**:
+  The strict overlay regex introduced earlier accepted only the
+  integer `1`, surprising authors writing the CSS-equivalent
+  `rgba(0,0,0,1.0)` and rejecting templates that already used the
+  decimal form. Alpha branch is now `0|1(?:\.0+)?|0?\.\d+`, which
+  also collapses the dead `\.\d+` alternation that was a subset of
+  the existing `0?\.\d+` branch.
+- **prototyping handoff order documented end-to-end**: Cross-doc drift
+  in the `qfai-prototyping/references/handoff.md` "Cert" section and
+  `qfai-verify/SKILL.md` reviewer-gate checklist is fixed: the
+  handoff reference now spells out the validate → /qfai-verify →
+  certify order with the explicit precondition that certify requires
+  both gate files in place; the verify reviewer-gate no longer asks
+  the reviewer to confirm the completion-certificate (which only
+  exists AFTER verify in the new order).
+- **threeLayer canonical sidecar family pruned**: `validateThreeLayerModel`
+  / `validateThreeLayerFamilyCompleteness` no longer require
+  `33_exploration_rubric.md` and `34_evaluator_calibration.md`. These
+  sidecars were retired when DESIGN.md became the brand SSOT and the
+  evaluator axes were fixed (`ORDINAL_AXES`); they are no longer
+  generated by `qfai init`. Discussion packs created from current init
+  assets used to fail `qfai validate --profile discussion` because the
+  validator demanded the deleted files. Canonical family is now
+  `00_index.md`, `40_screen_contracts.md`, `50_review_input_bundle.md`.
+- **prototyping cycle 0 stale-state cleanup hardened**:
+  `qfai prototyping iterate --cycle 0` now also unlinks any stale
+  `.qfai/evidence/prototyping/completion-certificate.json` (so
+  consumers reading the cert during the reset window do not observe
+  the prior loop's signoff). The iter-NN cleanup is now restricted
+  to actual directories (a stray non-dir entry matching the regex is
+  preserved) and surfaces an `info()` hint when a removal fails (e.g.
+  Windows file lock) so the operator notices the leftover instead of
+  silent rot. The cert cleanup treats ENOENT as silent.
+- **DESIGN.md overlay regex tightened**: `visual.colors.overlay` now
+  validates against an `rgba(R,G,B,A)`-only pattern with R/G/B in
+  0..255 and alpha in `{0, 1, 0.x, .x}`. The previous shared regex
+  `^rgba?\(...\)$` accepted the alpha-less `rgb(...)` form even though
+  the distributed DESIGN.md spec and the validator's own error message
+  both reserved overlay for `rgba(...)`. Hex (6 or 8-digit) is also
+  rejected for overlay; only the explicit-alpha rgba literal is valid.
+- **DESIGN.md typography unknown-key reject**: `parseDesignMd()` now
+  rejects unknown keys under `visual.typography` (e.g. `font_pairing`,
+  `fallback_policy`) with the same `unknown-key` ParseError as the
+  visual top level. Previously such keys were silently dropped from
+  the parsed tokens consumed by iteration and certification while
+  still being hashed into `DESIGN.md.lock.yaml`.
+- **prototyping cycle 0 hard-reset includes legacy `fullHarness`**:
+  `qfai prototyping iterate --cycle 0` now also deletes a stale
+  `fullHarness` block (legacy pre-UX-loop schema) alongside the
+  existing `iterations` / `reviewerGate` / `acceptedIterationIndex`
+  / `stopReason` reset. Pre-1.8.9 projects that retained
+  `fullHarness.{runId,status,scoringTrace,...}` could otherwise show
+  prior-loop completion data in `validate` / `report` surfaces
+  (PROT-329 etc.) alongside the freshly-frozen loop.
+- **prototyping certify ↔ iter binding**: `prototypingCertify` now anchors
+  the final-iteration HTML scan to
+  `prototyping.json#iterations[iterations.length - 1]` instead of the
+  highest-indexed `iter-NN/` directory found on disk. After a
+  `qfai prototyping iterate --cycle 0` reset, stale `iter-NN/` directories
+  from a prior loop could otherwise survive on disk; the previous
+  filesystem-max resolver would scan and digest those stale artifacts as
+  the "final" iteration, binding the completion certificate to evidence
+  the current reviewer gate did not approve. As defense-in-depth,
+  `prototypingIterate --cycle 0` also deletes any pre-existing
+  `iter-NN/` directories under `.qfai/evidence/prototyping/` during its
+  hard-reset; non-iter siblings (e.g. operator notes) are preserved.
+- **prototyping path SSOT**:
+  `validators/prototyping/completionCertificate.ts#isCompletionClaimed`
+  was reading the legacy `.qfai/evidence/prototyping.json`, silently
+  bypassing QFAI-PROT-335 / QFAI-PROT-336 in the new UX-loop
+  pipeline. The validator now reads the canonical
+  `.qfai/evidence/prototyping/prototyping.json` (matching the
+  `iterate` / `certify` writers), and a new
+  `src/core/prototyping/paths.ts` exports `PROTOTYPING_JSON_REL`
+  consumed by all 6 prior literal sites. Pipelines that previously
+  passed `validate` while claiming completion without a certificate
+  will now correctly emit QFAI-PROT-335 — re-run
+  `qfai prototyping certify` to seal a valid certificate.
+
+### Changed (BREAKING)
+
+- **spec layout**: spec-0017 (CAP-0017 v2.0 single-thread evolution loop / UX-loop redesign) decomposed into spec-0012 (primary) + spec-0004 (validators) + spec-0010 (discussion) + spec-0011 (implement) + spec-0013 (sdd) + spec-0014 (verify) + spec-0015 (agent routing) + spec-0007 (guardrails). CAP-0017 absorbed into CAP-0012. `.qfai/specs/spec-0017/` and `CAP-0017` permanently retired (gap reserved per slice-policy §ID 安定性ルール 5). Backward compatibility intentionally NOT preserved.
+- **spec-0012 v1.x purge**: legacy AC-0012-0011..0019, BR-0012-0011..0016, EX-0012-0090..0097/0108..0109, TC-0012-0287..0288/0297..0309/0314..0318, DR-0012-0004/0006/0007/0008/0009/0011 removed. EX-0012-0098..0102 (Delegation Scope, Validate/Verify Gates, Non-UI Exclusion, Legacy Traceability Space) remain active. mode budgets / `fullHarness.iterations[]` / `scoringTrace[]` / `allReviewerAxesPerfect100` / weighted-total scoring / r5/r3/r2/r1 round funnel / hard-floor evaluation-rubric enforcement are no longer in the active spec surface.
+- **`designContractReadiness` / `doctor` lock-sha contract tightened**: `DESIGN.md.lock.yaml#designMdSha256` is now required to be a 64-character hex string (case-insensitive, normalized to lower-case). Previously the validator path accepted any non-empty string and silently disagreed with the doctor path (regex-anchored 64 hex). Existing locks generated by `/qfai-sdd` Phase 0 are 64-hex by construction; manually-edited locks with placeholder or shortened sha values now surface as DCON-031 instead of slipping through validate. The new `src/core/design/designMdLock.ts#readDesignMdLockSha` is the single SSOT extractor and is consumed by `doctor.ts`, `validators/designContractReadiness.ts`, `cli/commands/prototypingIterate.ts`, and `cli/commands/prototypingCertify.ts`.
+
+This release also rewrites `qfai-prototyping` around a single root
+`DESIGN.md` brand source of truth, swaps the evaluator axes for a
+UX-focused set, and removes the visual-aesthetic anti-slop registry
+together with the legacy UI-bearing sidecars and yaml contracts.
+Backward compatibility is intentionally not preserved.
+
+### Breaking changes
+
+- **DESIGN.md is the single source of truth for brand visual identity.**
+  `qfai init` now writes a `DESIGN.md` template at the consuming-project
+  root (front-matter tokens for colors / typography / spacing / radius /
+  shadow plus a `# Brand Philosophy` body). `/qfai-discussion` drafts it
+  and `/qfai-sdd` Phase 0 freezes it into
+  `.qfai/contracts/design/DESIGN.md.lock.yaml` (sha256 + frozen schema
+  tokens). `/qfai-prototyping` and `/qfai-implement` consume the root
+  `DESIGN.md` plus the lock file in place of the previous yaml contracts.
+  Existing `--force` invocations of `qfai init` do not overwrite an
+  existing `DESIGN.md`.
+- **Evaluator axes swapped (UX-focused).** The four ordinal review axes
+  change from `designQuality` / `originality` / `craft` / `functionality`
+  to `informationArchitecture` / `navigationFlow` / `usability` /
+  `functionality`. `designQuality` is replaced by a hard
+  `designMdViolations` gate over the final iteration HTML;
+  `originality` is dropped (branding is frozen up-front);
+  `craft` is absorbed into `usability`. `prototyping.json` reviews,
+  `evaluatorReview` output, and the renamed cap field
+  `layoutAntiPatternsDetected` (was `slopPatternsDetected`) are not
+  backward compatible with prior runs — existing artifacts must be
+  regenerated.
+- **shadcn / visual-aesthetic anti-slop set removed.** `slop-001-shadcn-zinc`,
+  `slop-003-linear-stripe`, `slop-008-glass-card`, `slop-009-mono-emoji`,
+  and `slop-010-rounded-2xl-shadow-lg` are deleted; the entire
+  `designSlop` validator (which scanned discussion-pack markdown) is
+  removed. Their concerns are now enforced by the DESIGN.md compliance
+  gate on iter HTML. A new layout-anti-pattern set `lap-001..lap-008`
+  ships in its place (`packages/qfai/src/core/validators/layoutAntiPatterns.{ts,json}`),
+  scoped to prototyping iter HTML and capping
+  `informationArchitecture` at `acceptable` on detection. The
+  `slop-*` ID namespace is no longer issued.
+- **Legacy UI-bearing sidecars deleted.** The qfai-discussion
+  templates `uiux/30_exploration_brief.md`, `uiux/31_reference_pool.md`,
+  and `uiux/32_design_anti_goals.md` are removed. Their content is
+  now expressed directly in `DESIGN.md` (front-matter tokens plus the
+  `audience.do_not_look_like` field and the `# Brand Philosophy` body).
+  Discussion artifact rules and the UI-bearing playbook no longer list
+  these files as required outputs.
+- **Legacy yaml design contracts deleted.** The qfai-sdd templates
+  `contracts/brand-design.sample.yaml`,
+  `contracts/exploration-brief.sample.yaml`, and
+  `contracts/reference-pool.sample.yaml` are removed.
+  `designContractReadiness` no longer requires these files; the
+  required-files set becomes root `DESIGN.md` plus
+  `.qfai/contracts/design/DESIGN.md.lock.yaml`. The DCON validator
+  IDs tied to the deleted yaml are renumbered (gap-allowed): new
+  `DCON-030` / `DCON-031` / `DCON-032` are added for the DESIGN.md
+  surface, while the prior `DCON-002` / `DCON-003` / `DCON-004` /
+  `DCON-006` / `DCON-007` / `DCON-008` / `DCON-010` / `DCON-011` /
+  `DCON-014` / `DCON-015` / `DCON-016` / `DCON-017` / `DCON-018` /
+  `DCON-020` / `DCON-021` slots are vacated. The `qfai-implement`
+  Read order is rewritten to consume root `DESIGN.md` and
+  `DESIGN.md.lock.yaml` instead of the deleted yaml contracts.
+
+### Added
+
+- `qfai prototyping iterate` records the root `DESIGN.md` sha256 in
+  `prototyping.json` at cycle 0 and exits 2 on any subsequent cycle
+  whose recomputed hash diverges from either the cycle-0 value or the
+  `DESIGN.md.lock.yaml` value (DESIGN.md is frozen for the duration of
+  a loop; edit and rerun from cycle 0 to change brand).
+- `qfai prototyping certify` enforces a DESIGN.md compliance gate by
+  running `findDesignMdViolations` over the final iter HTML; certification
+  fails if any color / font / radius / shadow value falls outside the
+  DESIGN.md token set.
+- `qfai doctor --profile prototyping` adds three preflight checks for
+  the prototyping profile: `designMdRoot` (root `DESIGN.md` exists and
+  parses), `designMdLock` (`.qfai/contracts/design/DESIGN.md.lock.yaml`
+  exists and parses), `designMdSha` (the lock sha matches the live
+  file). `qfai prototyping preflight` aliases this profile.
+- New core module `src/core/design/designMd.ts` (`parseDesignMd`,
+  `validateDesignMd`, `hashDesignMd`) and
+  `src/core/prototyping/designMdViolations.ts` (`findDesignMdViolations`).
 
 ### Fixed
 

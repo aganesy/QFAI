@@ -31,3 +31,11 @@ Given a TDD item, when evidence is checked, then both RED and GREEN evidence inc
 ## AC-0011-0008: Completed Items Skipped
 
 Given a test-list.md with all items `done`, when `/qfai-implement` runs, then it reports "nothing to do" and exits.
+
+## AC-0011-0009: Simplified Handoff Schema
+
+Given a finalized `prototype-handoff.yaml`, when `/qfai-implement` parses it, then only `finalIterIndex` (number), `finalArtifact` (path), `extractedDesignSystem` (path), and `implementationNotes` (string) fields are read. Legacy fields `mustPreserve`, `mayAdapt`, `mustNotCopy` are absent; their presence triggers a schema warning and is ignored.
+
+## AC-0011-0010: Design System As Deterministic DESIGN.md Mirror
+
+Given `extractedDesignSystem` resolves to `.qfai/contracts/design/design-system.yaml`, when `/qfai-implement` reads token tables, then those tables are byte-equivalent to the parsed token tables of root `DESIGN.md` (color / typography / radius / shadow). The mirror invariant is enforced at validate time by the design contract validators owned by spec-0004.

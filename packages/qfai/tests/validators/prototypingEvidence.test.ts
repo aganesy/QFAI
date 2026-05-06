@@ -63,24 +63,25 @@ async function seedPrototypingJson(root: string, body: unknown): Promise<void> {
   await writeFile(path.join(dir, "prototyping.json"), JSON.stringify(body), "utf-8");
 }
 
-const validIter = (index: number, allExceptional = false, slop: string[] = []) => ({
+const validIter = (index: number, allExceptional = false, lap: string[] = []) => ({
   index,
   commitSha: "a".repeat(40),
   scores: allExceptional
     ? {
-        designQuality: "exceptional" as const,
-        originality: "exceptional" as const,
-        craft: "exceptional" as const,
+        informationArchitecture: "exceptional" as const,
+        navigationFlow: "exceptional" as const,
+        usability: "exceptional" as const,
         functionality: "exceptional" as const,
       }
     : {
-        designQuality: "acceptable" as const,
-        originality: "acceptable" as const,
-        craft: "acceptable" as const,
+        informationArchitecture: "acceptable" as const,
+        navigationFlow: "acceptable" as const,
+        usability: "acceptable" as const,
         functionality: "acceptable" as const,
       },
   proseCritique: VALID_PROSE_CRITIQUE,
-  slopPatternsDetected: slop,
+  layoutAntiPatternsDetected: lap,
+  designMdViolations: [],
   pivotDirective: "continue" as const,
   evidenceRefs: {
     screenshot: `.qfai/evidence/prototyping/iter-${String(index).padStart(2, "0")}/home.png`,
@@ -179,9 +180,9 @@ describe("validatePrototypingEvidence", () => {
     expect(issues.some((i) => i.code === "QFAI-PROT-005")).toBe(true);
   });
 
-  it("emits QFAI-PROT-002 when slop is present but originality exceeds acceptable", async () => {
+  it("emits QFAI-PROT-002 when a layout anti-pattern is present but informationArchitecture exceeds acceptable", async () => {
     const root = await newTempDir();
-    const iter = validIter(0, false, ["slop-001-shadcn-zinc"]);
+    const iter = validIter(0, false, ["lap-001-saas-dashboard"]);
     await seedPrototypingJson(root, {
       specsCovered: ["0001"],
       iterations: [
@@ -189,7 +190,7 @@ describe("validatePrototypingEvidence", () => {
           ...iter,
           scores: {
             ...iter.scores,
-            originality: "strong",
+            informationArchitecture: "strong",
           },
         },
       ],
@@ -201,9 +202,28 @@ describe("validatePrototypingEvidence", () => {
       issues.some(
         (i) =>
           i.code === "QFAI-PROT-002" &&
-          i.message.includes("scores.originality") &&
-          i.message.includes("slopPatternsDetected"),
+          i.message.includes("scores.informationArchitecture") &&
+          i.message.includes("layoutAntiPatternsDetected"),
       ),
+    ).toBe(true);
+  });
+
+  it("emits QFAI-PROT-002 when designMdViolations contains a malformed entry", async () => {
+    const root = await newTempDir();
+    await seedPrototypingJson(root, {
+      specsCovered: ["0001"],
+      iterations: [
+        {
+          ...validIter(0),
+          designMdViolations: [{ kind: "not-a-real-kind", found: "#abc" }],
+        },
+      ],
+      acceptedIterationIndex: 0,
+      stopReason: null,
+    });
+    const issues = await validatePrototypingEvidence(root, makeConfig());
+    expect(
+      issues.some((i) => i.code === "QFAI-PROT-002" && i.message.includes("designMdViolations")),
     ).toBe(true);
   });
 

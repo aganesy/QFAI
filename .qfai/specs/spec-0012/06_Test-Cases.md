@@ -1,6 +1,6 @@
 # 06 Test Cases
 
-## Active v1.8.2 Cases
+## Retained Baseline Cases
 
 ## TC-0012-0285
 
@@ -13,18 +13,6 @@
 - EX-Ref: EX-0012-0098
 - AC-Refs: AC-0012-0001, AC-0012-0004
 - Invalid delegation role is surfaced as a violation.
-
-## TC-0012-0287
-
-- EX-Ref: EX-0012-0091
-- AC-Refs: AC-0012-0008
-- `executionPlan` validator requires the documented fields when the legacy slice is exercised.
-
-## TC-0012-0288
-
-- EX-Ref: EX-0012-0091
-- AC-Refs: AC-0012-0008
-- Missing `executionPlan` in the legacy validation slice produces an error.
 
 ## TC-0012-0289
 
@@ -46,7 +34,7 @@
 
 ## TC-0012-0292
 
-- EX-Ref: EX-0012-0086, EX-0012-0090
+- EX-Ref: EX-0012-0086
 - AC-Refs: AC-0012-0001
 - Skill documents the iteration cycle.
 
@@ -74,102 +62,6 @@
 - AC-Refs: AC-0012-0005
 - Visual quality checklist enumerates structural categories.
 
-## TC-0012-0297
-
-- EX-Ref: EX-0012-0091
-- AC-Refs: AC-0012-0008
-- Legacy Lighthouse gate passes when web evidence is present.
-
-## TC-0012-0298
-
-- EX-Ref: EX-0012-0091
-- AC-Refs: AC-0012-0008
-- Legacy Lighthouse gate errors when required web evidence is absent.
-
-## TC-0012-0299
-
-- EX-Ref: EX-0012-0089
-- AC-Refs: AC-0012-0008
-- designSystemCompliance above threshold passes when `design-system.yaml` exists.
-
-## TC-0012-0300
-
-- EX-Ref: EX-0012-0089
-- AC-Refs: AC-0012-0008
-- designSystemCompliance below threshold surfaces a finding when `design-system.yaml` exists.
-
-## TC-0012-0301
-
-- EX-Ref: EX-0012-0091
-- AC-Refs: AC-0012-0008
-- designSystemCompliance is skipped when `design-system.yaml` is absent.
-
-## TC-0012-0302
-
-- EX-Ref: EX-0012-0091
-- AC-Refs: AC-0012-0008
-- Calibration overrides apply when provided.
-
-## TC-0012-0303
-
-- EX-Ref: EX-0012-0091
-- AC-Refs: AC-0012-0008
-- Defaults are preserved when calibration overrides are absent.
-
-## TC-0012-0304
-
-- EX-Ref: EX-0012-0094
-- AC-Refs: AC-0012-0012
-- `reviewerScores[]` and `allReviewerAxesPerfect100` are written into full-harness iterations.
-
-## TC-0012-0305
-
-- EX-Ref: EX-0012-0095
-- AC-Refs: AC-0012-0013
-- `scoringTrace[]` is recomputed as reviewer-score snapshots with min/average score fields.
-
-## TC-0012-0306
-
-- EX-Ref: EX-0012-0095
-- AC-Refs: AC-0012-0013
-- History consistency validation rejects mismatched iteration / scoringTrace / reviewer log counts.
-
-## TC-0012-0307
-
-- EX-Ref: EX-0012-0096
-- AC-Refs: AC-0012-0015
-- Full-harness result output exposes `iterationBudget.maxIterations` and `remainingIterations`.
-
-## TC-0012-0308
-
-- EX-Ref: EX-0012-0096
-- AC-Refs: AC-0012-0011
-- Internal mode helper resolves max iteration budgets to 1 / 3 / 20.
-
-## TC-0012-0309
-
-- EX-Ref: EX-0012-0092, EX-0012-0097
-- AC-Refs: AC-0012-0014
-- Termination reason is `converged` on `allReviewerAxesPerfect100=true`; budget exhaustion without 100 remains rework/revise.
-
-## TC-0012-0314
-
-- EX-Ref: EX-0012-0103
-- AC-Refs: AC-0012-0017
-- Completion claim with any reviewer axis below 100 produces an error.
-
-## TC-0012-0315
-
-- EX-Ref: EX-0012-0104
-- AC-Refs: AC-0012-0017
-- Completion claim with all reviewer axes at 100 satisfies the perfect-score gate.
-
-## TC-0012-0316
-
-- EX-Ref: EX-0012-0104
-- AC-Refs: AC-0012-0016, AC-0012-0018
-- Completion claim requires post-selection polish checks and completion certificate.
-
 ## TC-0012-0310
 
 - EX-Ref: EX-0012-0099
@@ -191,22 +83,258 @@
 ## TC-0012-0313
 
 - EX-Ref: EX-0012-0102
-- AC-Refs: AC-0012-0010
-- legacy identifier space is retained without reviving weighted-total narratives.
+- AC-Refs: AC-0012-0008, AC-0012-0010
+- legacy identifier space is retained without reviving weighted-total narratives, and the legacy validation slice (executionPlan / Lighthouse / designSystemCompliance / calibration overrides) remains validator/reference behavior only.
 
-## TC-0012-0317
+## v2.0 / UX-Loop Active Cases
 
-- EX-Ref: EX-0012-0108
-- AC-Refs: AC-0012-0019
-- Round `r3` で `originality` の per-axis スコアが `evaluation-rubric.yaml` の `hard_floors[].min_score` を下回る candidate が存在するとき、`validateEvaluatorReviewHardFloor` は `QFAI-PROT-AXIS-FLOOR-001` を error severity で emit する。
+## TC-0012-0319
 
-## TC-0012-0318
+- EX-Ref: EX-0012-0110
+- AC-Refs: AC-0012-0028
+- Test file: `packages/qfai/tests/core/prototyping/iteration.test.ts`
+- Verify `shouldStop([iter])` returns `"axes-exceptional"` when the latest iter has all 4 UX axes `exceptional`, `layoutAntiPatternsDetected.length === 0`, and `designMdViolations.length === 0`.
 
-- EX-Ref: EX-0012-0109
-- AC-Refs: AC-0012-0019
-- Round `r5` で同様に hard_floor 未満の per-axis スコアがあっても、`validateEvaluatorReviewHardFloor` は `QFAI-PROT-AXIS-FLOOR-001` を emit しない（exemption の確認）。
+## TC-0012-0320
+
+- EX-Ref: EX-0012-0111
+- AC-Refs: AC-0012-0024
+- Test file: `packages/qfai/tests/core/prototyping/iteration.test.ts`
+- Verify `shouldStop([iter])` returns `null` when all 4 UX axes are `exceptional` but `layoutAntiPatternsDetected: ["lap-001-orphan-page"]` is non-empty.
+
+## TC-0012-0321
+
+- EX-Ref: EX-0012-0110
+- AC-Refs: AC-0012-0029
+- Test file: `packages/qfai/tests/core/prototyping/iteration.test.ts`
+- Verify `shouldStop([iter])` returns `"max-iterations"` when the latest iter has `index === 14`.
+
+## TC-0012-0322
+
+- EX-Ref: EX-0012-0110
+- AC-Refs: AC-0012-0032
+- Test file: `packages/qfai/tests/cli/commands/prototypingIterate.test.ts`
+- Verify `runPrototypingIterate({cycle: 0, targetUrl: "http://localhost:5000"})` returns 0 and creates `iter-00/`.
+
+## TC-0012-0323
+
+- EX-Ref: EX-0012-0110
+- AC-Refs: AC-0012-0032
+- Test file: `packages/qfai/tests/cli/commands/prototypingIterate.test.ts`
+- Verify `runPrototypingIterate({cycle: 0})` (without `--target-url`) exits 2 with input-validation error.
+
+## TC-0012-0324
+
+- EX-Ref: EX-0012-0110
+- AC-Refs: AC-0012-0028, AC-0012-0032
+- Test file: `packages/qfai/tests/cli/commands/prototypingIterate.test.ts`
+- Verify `runPrototypingIterate` exits 64 when convergence (4 axes exceptional + lap=0 + designMdViolations=0) is detected.
+
+## TC-0012-0325
+
+- EX-Ref: EX-0012-0110
+- AC-Refs: AC-0012-0029, AC-0012-0032
+- Test file: `packages/qfai/tests/cli/commands/prototypingIterate.test.ts`
+- Verify `runPrototypingIterate` exits 65 when the latest iter index reaches 14.
+
+## TC-0012-0326
+
+- EX-Ref: EX-0012-0112
+- AC-Refs: AC-0012-0034
+- Test file: `packages/qfai/tests/cli/commands/prototypingIterate.test.ts`
+- Verify cycle 0 records `prototyping.json#designMdSha256` matching `sha256(DESIGN.md)` and `.qfai/contracts/design/DESIGN.md.lock.yaml#sha256`.
+
+## TC-0012-0327
+
+- EX-Ref: EX-0012-0112
+- AC-Refs: AC-0012-0035
+- Test file: `packages/qfai/tests/cli/commands/prototypingIterate.test.ts`
+- Verify cycle ≥1 exits 2 with stderr `"DESIGN.md hash mismatch"` when on-disk sha256 has drifted from the recorded value.
+
+## TC-0012-0328
+
+- EX-Ref: EX-0012-0113
+- AC-Refs: AC-0012-0028
+- Test file: `packages/qfai/tests/core/prototyping/designMdViolations.test.ts`
+- Verify `findDesignMdViolations(html, designMd)` is pure (no I/O, no clock) and deterministic — same input yields same output across repeated invocations.
+
+## TC-0012-0329
+
+- EX-Ref: EX-0012-0113
+- AC-Refs: AC-0012-0028
+- Test file: `packages/qfai/tests/core/prototyping/iteration.test.ts`
+- Verify convergence is blocked when `designMdViolations.length > 0` even if all 4 axes are `exceptional` and `layoutAntiPatternsDetected: []`.
+
+## TC-0012-0330
+
+- EX-Ref: EX-0012-0110, EX-0012-0117
+- AC-Refs: AC-0012-0021
+- Test file: `packages/qfai/tests/core/prototyping/evaluatorReview.test.ts`
+- Verify review.json schema enforces exactly the 4 UX axis keys (informationArchitecture / navigationFlow / usability / functionality) with ordinal values.
+
+## TC-0012-0331
+
+- EX-Ref: EX-0012-0111
+- AC-Refs: AC-0012-0025
+- Test file: `packages/qfai/tests/core/validators/layoutAntiPatterns.test.ts`
+- Verify `layoutAntiPatternsDetected[]` schema enforces the `lap-001..008` whitelist; unknown tokens raise `QFAI-PROT-025`.
+
+## TC-0012-0332
+
+- EX-Ref: EX-0012-0111
+- AC-Refs: AC-0012-0026
+- Test file: `packages/qfai/tests/core/prototyping/evaluatorReview.test.ts`
+- Verify `computePivotDirective(history)` returns `"pivot"` when the latest 3 iters have low IA AND the latest iter has non-empty `layoutAntiPatternsDetected`.
+
+## TC-0012-0333
+
+- EX-Ref: EX-0012-0111, EX-0012-0119
+- AC-Refs: AC-0012-0027
+- Test file: `packages/qfai/tests/core/prototyping/evaluatorReview.test.ts`
+- Verify `computePivotDirective(history)` returns `"continue"` when ≥ 2 of the 4 UX axes strictly improve by `ordinalIndex` (weak=0, acceptable=1, strong=2, exceptional=3) versus the prior iter; otherwise returns `"refine"` (when not `pivot`).
+
+## TC-0012-0334
+
+- EX-Ref: EX-0012-0110
+- AC-Refs: AC-0012-0033
+- Test file: `packages/qfai/tests/core/prototyping/certificate.test.ts`
+- Verify completion certificate v2.0 round-trip: parse → serialize yields byte-equivalent output for the v2.0 schema.
+
+## TC-0012-0335
+
+- EX-Ref: EX-0012-0114
+- AC-Refs: AC-0012-0036
+- Test file: `packages/qfai/tests/core/prototyping/certificate.test.ts`
+- Verify `design-system.yaml` post-handoff content is byte-equivalent to root `DESIGN.md` token tables (color / typography / radius / shadow).
+
+## TC-0012-0336
+
+- EX-Ref: EX-0012-0089
+- AC-Refs: AC-0012-0021
+- Test file: `packages/qfai/tests/skill/prototypingSkill.test.ts`
+- Verify the reviewer prompt frames root `DESIGN.md` as the brand SSOT and references the lap-\* catalog.
+
+## TC-0012-0337
+
+- EX-Ref: EX-0012-0098, EX-0012-0121
+- AC-Refs: AC-0012-0031
+- Test file: `packages/qfai/tests/skill/prototypingSkill.test.ts`
+- Verify SKILL.md ≤ 130 lines and the 5 reference files combined ≤ 410 lines.
+
+## TC-0012-0338
+
+- EX-Ref: EX-0012-0110
+- AC-Refs: AC-0012-0020
+- Test file: `packages/qfai/tests/core/prototyping/iteration.test.ts`
+- Verify `MAX_ITERATIONS === 15` and `MAX_ITERATION_INDEX === 14` are exported code constants.
+
+## TC-0012-0339
+
+- EX-Ref: EX-0012-0110, EX-0012-0116
+- AC-Refs: AC-0012-0020
+- Test file: `packages/qfai/tests/core/prototyping/iteration.test.ts`
+- Verify `acceptedIterationIndex === iterations.length - 1` always holds (no best-of-history selection).
+
+## TC-0012-0340
+
+- EX-Ref: EX-0012-0110
+- AC-Refs: AC-0012-0021
+- Test file: `packages/qfai/tests/core/prototyping/iteration.test.ts`
+- Verify `isOrdinalScore` accepts only `{weak, acceptable, strong, exceptional}` and rejects other values.
+
+## TC-0012-0341
+
+- EX-Ref: EX-0012-0111
+- AC-Refs: AC-0012-0023
+- Test file: `packages/qfai/tests/core/prototyping/iteration.test.ts`
+- Verify `isPivotDirective` accepts only `{continue, refine, pivot}` and rejects other values.
+
+## TC-0012-0342
+
+- EX-Ref: EX-0012-0001
+- AC-Refs: AC-0012-0030
+- Test file: `packages/qfai/tests/core/prototyping/iteration.test.ts`
+- Verify per-iter evidence path composition: `iter-NN/<screen>.png` / `iter-NN/<screen>.html` / `iter-NN/review.json` (zero-padded index).
+
+## TC-0012-0343
+
+- EX-Ref: EX-0012-0089
+- AC-Refs: AC-0012-0022
+- Test file: `packages/qfai/tests/core/prototyping/evaluatorReview.test.ts`
+- Verify review.json `critique` field is rejected when length is < 200 words or > 500 words.
+
+## TC-0012-0344
+
+- EX-Ref: EX-0012-0098, EX-0012-0115
+- AC-Refs: AC-0012-0020
+- Test file: `packages/qfai/tests/cli/commands/prototypingIterate.test.ts`
+- Verify single-thread serial iteration: `prototyping.json#iterations[]` has at most 15 entries with monotonic `index` values 0..14, and only one lineage exists (no parallel `candidates/` directory).
+
+## TC-0012-0345
+
+- EX-Ref: EX-0012-0110
+- AC-Refs: AC-0012-0033
+- Test file: `packages/qfai/tests/core/prototyping/certificate.test.ts`
+- Verify `qfai prototyping certify --check` exit code 0 when convergence artifact exists; non-zero otherwise.
+
+## TC-0012-0346
+
+- EX-Ref: EX-0012-0114
+- AC-Refs: AC-0012-0036
+- Test file: `packages/qfai/tests/core/validators/designContractReadiness.test.ts`
+- Verify DESIGN.md token mirror integrity: drift between `design-system.yaml` and root `DESIGN.md` raises a design-contract validator finding.
+
+## TC-0012-0347
+
+- EX-Ref: EX-0012-0112
+- AC-Refs: AC-0012-0034
+- Test file: `packages/qfai/tests/cli/commands/prototypingIterate.test.ts`
+- Verify cycle 0 fails with exit 2 when `.qfai/contracts/design/DESIGN.md.lock.yaml` is absent.
+
+## TC-0012-0348
+
+- EX-Ref: EX-0012-0112
+- AC-Refs: AC-0012-0034
+- Test file: `packages/qfai/tests/cli/commands/prototypingIterate.test.ts`
+- Verify cycle 0 fails with exit 2 when `sha256(DESIGN.md)` does not match the lock file value.
+
+## TC-0012-0349
+
+- EX-Ref: EX-0012-0111, EX-0012-0118
+- AC-Refs: AC-0012-0024
+- Test file: `packages/qfai/tests/core/validators/layoutAntiPatterns.test.ts`
+- Verify validator emits `QFAI-PROT-021` when `layoutAntiPatternsDetected` is non-empty AND `informationArchitecture` is `strong` or `exceptional`.
+
+## TC-0012-0350
+
+- EX-Ref: EX-0012-0110
+- AC-Refs: AC-0012-0028
+- Test file: `packages/qfai/tests/core/prototyping/iteration.test.ts`
+- Verify `allFourAxesExceptional` returns `true` only for the canonical new-shape converged iteration and `false` for old-shape iteration objects.
+
+## TC-0012-0351
+
+- EX-Ref: EX-0012-0098, EX-0012-0120
+- AC-Refs: AC-0012-0020
+- Test file: `packages/qfai/tests/skill/prototypingSkill.test.ts`
+- Verify the qfai-prototyping skill asset declares product-experience-architect (generator) and product-surface-reviewer (evaluator) as separate sub-agent identities.
+
+## TC-0012-0352
+
+- EX-Ref: EX-0012-0110
+- AC-Refs: AC-0012-0032
+- Test file: `packages/qfai/tests/cli/commands/prototypingIterate.test.ts`
+- Verify `runPrototypingIterate` exit code 0 (continue) is emitted when neither convergence nor max-iterations is reached and no input error occurred.
+
+## TC-0012-0353
+
+- EX-Ref: EX-0012-0114
+- AC-Refs: AC-0012-0036
+- Test file: `packages/qfai/tests/core/prototyping/certificate.test.ts`
+- Verify `prototype-handoff.yaml` post-loop schema contains exactly `{finalIterIndex, finalArtifact, extractedDesignSystem, implementationNotes}` keys; legacy `mustPreserve` / `mayAdapt` / `mustNotCopy` fields are absent.
 
 ## Legacy Coverage Continuity
 
-- `TC-0012-0001..TC-0012-0284` remain reserved traceability IDs for existing implementation/test slices.
-- Their pre-v1.8.1 weighted-total narratives are superseded by the current reviewer-score-centered execution model.
+- The legacy baseline test-case identifier space remains reserved for existing implementation/test slices.
+- The legacy v1.x test cases (executionPlan / Lighthouse / designSystemCompliance / calibration overrides / fullHarness / scoringTrace / iterationBudget / perfect-100 / hard-floor) were purged 2026-05-06 in the v2.0 / UX-loop adoption (see `09_delta.md` CHG-001 OP-PURGE-040..042); their pre-v2.0 narratives are no longer part of the active spec surface.
+- Pre-v1.8.1 weighted-total narratives are superseded by the current v2.0 / UX-loop execution model.

@@ -96,7 +96,7 @@ Use the shared schema.
 - Reviewer checks:
   - required roles were delegated;
   - validate evidence exists: `qfai validate --profile verify --fail-on error` completed with `error=0`;
-  - per-iter evidence (screenshot + HTML + review.json) exists under `.qfai/evidence/prototyping/iter-NN/`, and `.qfai/evidence/prototyping/completion-certificate.json` is present and digest-valid (`qfai prototyping certify --check`);
+  - per-iter evidence (screenshot + HTML + review.json) exists under `.qfai/evidence/prototyping/iter-NN/`, and the recorded final iteration in `.qfai/evidence/prototyping/prototyping.json#iterations[]` has both screenshot and HTML on disk. The completion-certificate is NOT a verify-gate input — `qfai prototyping certify` runs AFTER `/qfai-verify` (it requires a passing `verify.json`). Cert digest validation belongs to `certify --check`, run during the prototyping handoff or after edits to brand assets, not here;
   - Drift Protocol enforced;
   - test-layer policy enforced against `test-layers.md`.
   - gate counts and ratios are signals, not gates.
@@ -281,13 +281,7 @@ Do not use discussion-pack artifacts as verification inputs. Verify reads normal
 
 ## Step 0 — Project Analysis (mandatory)
 
-Before producing any deliverable, **thoroughly analyze the current project** so your outputs fit the repo’s:
-
-- background and goals
-- directory structure and conventions
-- chosen technologies and versions (runtime, package manager, test runner)
-- architecture boundaries (packages, CLI, core modules)
-- existing patterns for tests, docs, and CI
+Before producing any deliverable, thoroughly analyze the current project (background/goals, directory structure, runtime/tooling versions, architecture boundaries, existing test/doc/CI patterns) so your outputs fit the repo.
 
 ### Minimum analysis checklist
 
@@ -295,10 +289,9 @@ Before producing any deliverable, **thoroughly analyze the current project** so 
 - [ ] Inspect `.qfai/` layout and existing SDD/ATDD/TDD artifacts (if present)
 - [ ] Inspect `packages/qfai` structure (CLI entrypoints, core modules, validators, assets/init)
 - [ ] Identify standard gate commands (format/lint/type/test/verify-pack) and where they are defined
-- [ ] Search for existing examples/patterns of similar changes in tests (if available)
 - [ ] Note constraints: Node versions, CI matrix, packaging rules, verify-pack expectations
 
-If analysis cannot be performed (missing access), clearly state what could not be verified and proceed with minimal-risk assumptions.
+If analysis cannot be performed, clearly state what could not be verified and proceed with minimal-risk assumptions.
 
 ## Step 0.5 — Steering Bootstrap / Refresh (mandatory when incomplete)
 

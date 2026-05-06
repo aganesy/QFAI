@@ -4,6 +4,7 @@ import path from "node:path";
 import { parse as parseYaml } from "yaml";
 
 import type { Issue } from "./types.js";
+import { isEnoent } from "./fs/errno.js";
 import { normalizeRenderViewports, type RenderEvidenceConfig } from "./uiux/renderEvidenceTypes.js";
 
 export type FailOn = "never" | "warning" | "error";
@@ -209,7 +210,7 @@ export async function loadConfig(root: string): Promise<ConfigLoadResult> {
     const raw = await readFile(configPath, "utf-8");
     parsed = parseYaml(raw);
   } catch (error) {
-    if (isMissingFile(error)) {
+    if (isEnoent(error)) {
       return { config: defaultConfig, issues, configPath };
     }
     issues.push(configIssue(configPath, formatError(error)));
@@ -1055,13 +1056,6 @@ function configIssue(file: string, message: string): Issue {
     file,
     rule: "config.invalid",
   };
-}
-
-function isMissingFile(error: unknown): boolean {
-  if (error && typeof error === "object" && "code" in error) {
-    return (error as { code?: string }).code === "ENOENT";
-  }
-  return false;
 }
 
 async function exists(target: string): Promise<boolean> {
