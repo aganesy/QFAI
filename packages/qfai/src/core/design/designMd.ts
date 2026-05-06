@@ -538,7 +538,7 @@ function readVisual(raw: unknown): { value: DesignMd["visual"] } | { error: Pars
           error: {
             path: `visual.typography.scale.${k}`,
             code: "invalid-type",
-            message: `'visual.typography.scale.${k}' must be a string (got ${describeWeightEntry(v)}).`,
+            message: `'visual.typography.scale.${k}' must be a string (got ${describeValueShape(v)}).`,
           },
         };
       }
@@ -578,7 +578,7 @@ function readVisual(raw: unknown): { value: DesignMd["visual"] } | { error: Pars
           error: {
             path: `visual.typography.weight.${k}`,
             code: "invalid-type",
-            message: `'visual.typography.weight.${k}' must be a finite number (got ${describeWeightEntry(v)}).`,
+            message: `'visual.typography.weight.${k}' must be a finite number (got ${describeValueShape(v)}).`,
           },
         };
       }
@@ -658,7 +658,7 @@ function readVisual(raw: unknown): { value: DesignMd["visual"] } | { error: Pars
             error: {
               path: `visual.spacing.scale[${i}]`,
               code: "invalid-type",
-              message: `'visual.spacing.scale[${i}]' must be a finite number (got ${describeScaleEntry(entry)}).`,
+              message: `'visual.spacing.scale[${i}]' must be a finite number (got ${describeValueShape(entry)}).`,
             },
           };
         }
@@ -671,15 +671,17 @@ function readVisual(raw: unknown): { value: DesignMd["visual"] } | { error: Pars
   return { value };
 }
 
-function describeWeightEntry(value: unknown): string {
-  if (value === null) return "null";
-  if (typeof value === "string") return `string ${JSON.stringify(value)}`;
-  if (Array.isArray(value)) return "<array>";
-  if (typeof value === "object") return "<object>";
-  return `<${typeof value}>`;
-}
-
-function describeScaleEntry(value: unknown): string {
+/**
+ * Diagnostic-only helper for parse-time `invalid-type` messages.
+ * Used by the strict-parse paths for `visual.typography.scale` /
+ * `visual.typography.weight` / `visual.spacing.scale`. Each call site
+ * carries the same intent ("describe what we got, in operator-
+ * readable form, when the expected primitive type was wrong"), so
+ * one shared helper avoids the byte-identical duplicate-function
+ * footgun where a future tweak to one would silently diverge from
+ * the other.
+ */
+function describeValueShape(value: unknown): string {
   if (value === null) return "null";
   if (typeof value === "string") return `string ${JSON.stringify(value)}`;
   if (Array.isArray(value)) return "<array>";
