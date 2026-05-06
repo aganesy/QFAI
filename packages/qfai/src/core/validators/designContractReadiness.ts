@@ -997,14 +997,34 @@ function crossCheckSpacing(
       }
     }
   }
-  // Reverse direction: extra mirror keys.
-  const ALLOWED_SPACING_KEYS = new Set(["base", "scale"]);
+  // Reverse direction: extra mirror keys. Reject both (a) keys outside
+  // the schema-defined `{base, scale}` set AND (b) schema-allowed keys
+  // that DESIGN.md did not author. Without (b), an author can extend
+  // `visual.spacing` in design-system.yaml with `scale` even when
+  // DESIGN.md only authored `base` — a verbatim-copy violation that
+  // pre-fix slipped through because the previous check only enforced
+  // (a). See codex 89xl.
+  const SCHEMA_SPACING_KEYS = new Set(["base", "scale"]);
   for (const key of Object.keys(mirror)) {
-    if (!ALLOWED_SPACING_KEYS.has(key)) {
+    if (!SCHEMA_SPACING_KEYS.has(key)) {
       issues.push(
         issue(
           "QFAI-DCON-005",
           `design-system.yaml mirror 'visual.spacing.${key}' is not a DESIGN.md token; the mirror must be a verbatim copy.`,
+          "error",
+          filePathRel,
+          "designContractReadiness.designSystemMirror",
+        ),
+      );
+      continue;
+    }
+    // Schema-allowed key: still must have been authored in DESIGN.md.
+    const expectedValue = (expected as Record<string, unknown>)[key];
+    if (expectedValue === undefined) {
+      issues.push(
+        issue(
+          "QFAI-DCON-005",
+          `design-system.yaml mirror authors 'visual.spacing.${key}' but DESIGN.md does not. The mirror is contractually a verbatim copy of DESIGN.md (no fabricated sub-keys).`,
           "error",
           filePathRel,
           "designContractReadiness.designSystemMirror",
