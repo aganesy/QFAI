@@ -4,6 +4,8 @@
 
 ## [Unreleased]
 
+## [1.8.9] - 2026-05-07
+
 ### Fixed (Breaking — pre-1.8.9 internal pipelines only)
 
 - **design-system.yaml accepts the post-1.8.9 DESIGN.md token mirror**:
@@ -523,8 +525,6 @@ ui-bearing` marker landed mid-loop) exits 2 — preventing the
   passed `validate` while claiming completion without a certificate
   will now correctly emit QFAI-PROT-335 — re-run
   `qfai prototyping certify` to seal a valid certificate.
-
-## [1.8.9] - 2026-05-06
 
 ### Changed (BREAKING)
 
