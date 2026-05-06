@@ -23,6 +23,7 @@ import { parseSpec } from "./parse/spec.js";
 import { parseScenarioDocument } from "./scenarioModel.js";
 import { classifyLayer, classifySize } from "./testStrategyTags.js";
 import { toRelativePath } from "./paths.js";
+import { PROTOTYPING_JSON_REL } from "./prototyping/paths.js";
 import {
   normalizeCompat,
   normalizePrimary,
@@ -1660,9 +1661,7 @@ async function collectPrototypingSummary(
 ): Promise<ReportPrototypingSummary | undefined> {
   let parsed: unknown;
   try {
-    parsed = JSON.parse(
-      await readFile(path.join(root, ".qfai/evidence/prototyping/prototyping.json"), "utf-8"),
-    );
+    parsed = JSON.parse(await readFile(path.join(root, PROTOTYPING_JSON_REL), "utf-8"));
   } catch {
     return undefined;
   }
@@ -1694,7 +1693,7 @@ async function collectPrototypingSummary(
     },
     mode: {
       effective: "single-thread-loop",
-      source: ".qfai/evidence/prototyping/prototyping.json",
+      source: PROTOTYPING_JSON_REL,
       rationale: "the single-thread iteration loop is fixed.",
       surface: config.uiux?.platform ?? "unknown",
     },
