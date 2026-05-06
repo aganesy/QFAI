@@ -688,6 +688,35 @@ describe("runPrototypingIterate cycle N hash gate (TC-3.5.x)", () => {
     expect(await runPrototypingIterate({ root, cycle: 2 })).toBe(2);
   });
 
+  it("rejects cycle >= 1 with missing prototyping.json#specsCovered (no frozen seed) with exit 2", async () => {
+    // Codex 6c6n: a hand-edited or partially-corrupted prototyping.json
+    // that never wrote `specsCovered` (or has it as `[]` or `[""]`)
+    // must fail-fast at iterate. Previously the readFrozenSpecsCovered
+    // null path was a silent skip, which would allow iterate to write
+    // a fresh spec into iterate-plan.json that certify later blocks on.
+    const root = await newTempDir();
+    await seedMinimalProject(root);
+    await seedRawPrototypingJson(root, {
+      // No specsCovered field. designMd seed is well-formed so the
+      // earlier hash gate passes; the new specsCovered fail-fast is
+      // the only error path that should fire here.
+      designMd: { path: "DESIGN.md", sha256: hashDesignMd(CANONICAL_DESIGN_MD) },
+      iterations: [{ index: 0 }],
+    });
+    expect(await runPrototypingIterate({ root, cycle: 1 })).toBe(2);
+  });
+
+  it("rejects cycle >= 1 with empty prototyping.json#specsCovered with exit 2", async () => {
+    const root = await newTempDir();
+    await seedMinimalProject(root);
+    await seedRawPrototypingJson(root, {
+      specsCovered: [],
+      designMd: { path: "DESIGN.md", sha256: hashDesignMd(CANONICAL_DESIGN_MD) },
+      iterations: [{ index: 0 }],
+    });
+    expect(await runPrototypingIterate({ root, cycle: 1 })).toBe(2);
+  });
+
   it("rejects mid-loop primary-spec change (cycle 1 with frozen specsCovered != resolved spec) with exit 2", async () => {
     const root = await newTempDir();
     await seedMinimalProject(root);

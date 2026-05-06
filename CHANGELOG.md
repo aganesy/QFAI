@@ -106,6 +106,23 @@
   contract is "every covered spec must match across cycles" — a
   first-element-only check would silently drift on non-zero indices
   if the loop ever extends to multi-spec coverage.
+- **iterate fail-fast when frozen specsCovered seed is missing**:
+  Cycle >= 1 now exits 2 when `prototyping.json#specsCovered` is
+  absent, empty, or contains non-string entries (i.e.
+  `readFrozenSpecsCovered` returns null). Previously the null path
+  was a silent skip that allowed iterate to write a fresh resolved
+  spec into `iterate-plan.json` while certify later blocked on the
+  same gap. Single, clear error pointing at
+  `--cycle 0 --target-url <url>` to refreeze.
+- **renderCritique reads the canonical prototyping.json path**:
+  `collectRenderEvidenceViewports` now imports
+  `PROTOTYPING_JSON_REL` (`.qfai/evidence/prototyping/prototyping.json`)
+  instead of the pre-1.8.9 hard-coded
+  `.qfai/evidence/prototyping.json`. Without this, viewport
+  metadata written by iterate / validate at the canonical path was
+  invisible to render-critique and surfaced as spurious
+  QFAI-CRIT-003/004 even when the iter HTML had the right viewport
+  entries.
 - **DESIGN.md typography scale/weight allowlist**: `parseDesignMd()`
   now rejects unknown nested keys under `visual.typography.scale`
   (allowed: `xs sm base lg xl 2xl 3xl`) and

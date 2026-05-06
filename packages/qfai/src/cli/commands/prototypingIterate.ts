@@ -254,13 +254,31 @@ export async function runPrototypingIterate(
     // FROZEN one — meaning iterations can exercise spec B while the
     // certificate still claims spec A. Fail fast at the boundary.
     const frozenSpecs = readFrozenSpecsCovered(protoRecord);
+    // `null` means the frozen seed is missing or malformed (absent
+    // `specsCovered`, empty array, or non-string entries). Cycle 0
+    // is responsible for writing the seed; if a cycle >= 1 invocation
+    // arrives without one, the file was hand-edited or partially
+    // corrupted between cycles. Proceeding silently would let
+    // iterate write a spec id into `iterate-plan.json` that is never
+    // anchored against the cycle-0 seed — and certify (which reads
+    // `specsCovered` for the certificate body) would later block on
+    // the same gap. Fail fast here so the operator hits a single,
+    // clear error pointing at the right remediation.
+    if (frozenSpecs === null) {
+      error(
+        "qfai prototyping iterate: prototyping.json#specsCovered is missing or " +
+          "malformed (must be a non-empty array of non-empty strings, seeded by " +
+          "cycle 0). Re-run with `--cycle 0 --target-url <url>` to refreeze the loop.",
+      );
+      return 2;
+    }
     // Compare element-wise. Today `specs` is always a single-element
     // array (resolved primary spec id), but `specsCovered` is a
     // multi-element array per the prototyping.json schema, and the
     // contract is "every covered spec must match across cycles". A
     // first-element-only check (`frozenSpecs[0] !== specs[0]`) would
     // silently let a future multi-spec loop drift on non-zero indices.
-    if (frozenSpecs !== null && !arraysShallowEqual(frozenSpecs, specs)) {
+    if (!arraysShallowEqual(frozenSpecs, specs)) {
       error(
         "qfai prototyping iterate: prototyping.json#specsCovered (" +
           `${JSON.stringify(frozenSpecs)}) differs from the currently-resolved ` +

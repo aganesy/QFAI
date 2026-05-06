@@ -4,6 +4,7 @@ import { readFile } from "node:fs/promises";
 import fg from "fast-glob";
 
 import type { QfaiConfig } from "../config.js";
+import { PROTOTYPING_JSON_REL } from "../prototyping/paths.js";
 import type { Issue } from "../types.js";
 import { issue, readSafe } from "./utils.js";
 
@@ -321,7 +322,15 @@ async function collectContent(files: string[]): Promise<string> {
 }
 
 async function collectRenderEvidenceViewports(root: string): Promise<Set<string>> {
-  const prototypingJsonPath = path.join(root, ".qfai", "evidence", "prototyping.json");
+  // SSOT: read the canonical prototyping.json path. Until 1.8.9 this
+  // helper hard-coded `.qfai/evidence/prototyping.json`, but the
+  // canonical path moved under `.qfai/evidence/prototyping/` together
+  // with the rest of the loop evidence. A stale literal here meant
+  // viewport metadata written by iterate / validate (under the new
+  // path) was not visible to render-critique, surfacing as spurious
+  // QFAI-CRIT-003/004 even though the iter HTML had the right viewport
+  // entries.
+  const prototypingJsonPath = path.join(root, PROTOTYPING_JSON_REL);
   try {
     const raw = await readFile(prototypingJsonPath, "utf-8");
     const parsed: unknown = JSON.parse(raw);

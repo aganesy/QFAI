@@ -129,4 +129,49 @@ describe("Render Critique Loop validation", { timeout: 15000 }, () => {
     expect(issues.some((i) => i.code === "QFAI-CRIT-009")).toBe(false);
     expect(issues.some((i) => i.code === "QFAI-CRIT-010")).toBe(false);
   });
+
+  it("reads viewports from canonical PROTOTYPING_JSON_REL path (.qfai/evidence/prototyping/prototyping.json)", async () => {
+    // Codex 6c6l: pre-1.8.9 the path was `.qfai/evidence/prototyping.json`.
+    // After the SSOT move, viewport metadata written by iterate /
+    // validate at the canonical path was invisible to render-critique
+    // and surfaced as spurious QFAI-CRIT-003/004. This test pins that
+    // viewports recorded under the canonical path satisfy the
+    // viewport-coverage gates without any markdown-section evidence.
+    await seedSkillPrompt(
+      "qfai-prototyping",
+      [
+        "# Prototyping Skill",
+        "",
+        "Take a screenshot of the rendered page and review it in the browser.",
+      ].join("\n"),
+    );
+    // Seed the canonical path (NOT the legacy one).
+    const canonicalDir = path.join(root, ".qfai", "evidence", "prototyping");
+    await mkdir(canonicalDir, { recursive: true });
+    await writeFile(
+      path.join(canonicalDir, "prototyping.json"),
+      JSON.stringify({
+        uiFidelity: {
+          screens: [
+            {
+              renders: [{ viewport: "desktop" }, { viewport: "mobile" }],
+            },
+          ],
+        },
+      }),
+      "utf-8",
+    );
+    // ALSO seed an empty legacy file to prove renderCritique does not
+    // fall back to it. If the helper still read the legacy path, it
+    // would see no viewports and fire CRIT-003/004.
+    await writeFile(
+      path.join(root, ".qfai", "evidence", "prototyping.json"),
+      JSON.stringify({ uiFidelity: { screens: [] } }),
+      "utf-8",
+    );
+    const issues = await validateRenderCritique(root, makeConfig());
+    // Both viewports present at the canonical path -> CRIT-003/004 silent.
+    expect(issues.some((i) => i.code === "QFAI-CRIT-003")).toBe(false);
+    expect(issues.some((i) => i.code === "QFAI-CRIT-004")).toBe(false);
+  });
 });
