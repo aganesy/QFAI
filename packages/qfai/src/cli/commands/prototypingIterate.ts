@@ -239,6 +239,28 @@ export async function runPrototypingIterate(
         );
         const first = recomputed[0];
         if (first !== undefined) {
+          // codex AG08r: max-budget drift edge case. If the last iter is
+          // already at MAX_ITERATION_INDEX (cycle 14), there is no valid
+          // next cycle (--cycle is capped at 14). Falling through to the
+          // expectedNextCycle gate would then exit 2 with a cycle-mismatch
+          // error, blocking the operator from completing a run that
+          // exhausted the iteration budget with drift still present. In
+          // that case emit the max-iterations stop instead — the loop
+          // truly is over (drift or not), and the recovery is `--cycle 0`
+          // restart, not another within-budget cycle.
+          const lastIter = recordedIterations[recordedIterations.length - 1];
+          const lastIndex =
+            isRecord(lastIter) && typeof lastIter.index === "number" ? lastIter.index : -1;
+          if (lastIndex >= MAX_ITERATION_INDEX) {
+            info(
+              "qfai prototyping iterate: review reported convergence but the " +
+                `accepted iter HTML still contains ${recomputed.length} DESIGN.md violation(s) ` +
+                `AND the iteration budget is exhausted (index=${lastIndex}). ` +
+                `First violation: ${first.kind}=${first.found}. ` +
+                "Run `qfai prototyping iterate --cycle 0 --target-url <url>` to restart the loop.",
+            );
+            return emitStop("max-iterations");
+          }
           info(
             "qfai prototyping iterate: review reported convergence but the " +
               `accepted iter HTML still contains ${recomputed.length} DESIGN.md violation(s); ` +

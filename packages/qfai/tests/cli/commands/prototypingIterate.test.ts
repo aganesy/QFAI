@@ -236,6 +236,47 @@ describe("runPrototypingIterate convergence (exit 64)", () => {
     expect(exit).toBe(64);
   });
 
+  it("returns 65 (max-iterations) when last iter is at index 14 AND has DESIGN.md drift (codex AG08r)", async () => {
+    // Pre-fix the round-9 8thM recompute fall-through tried to continue
+    // the loop after detecting drift, but `--cycle` is capped at 14;
+    // expectedNextCycle would become 15 and exit 2 with a cycle-mismatch
+    // error, blocking completion of a budget-exhausted run with drift
+    // still present. Post-fix: when the last iter is at MAX_ITERATION_INDEX,
+    // emit max-iterations stop instead of falling through.
+    const root = await newTempDir();
+    await seedMinimalProject(root);
+    const allExceptional = {
+      informationArchitecture: "exceptional",
+      navigationFlow: "exceptional",
+      usability: "exceptional",
+      functionality: "exceptional",
+    };
+    // 15 iterations (index 0..14) all reporting axes-exceptional with
+    // empty dmv. Last one at index 14 is the budget-exhausted candidate.
+    const iters = Array.from({ length: 15 }, (_, i) => ({
+      index: i,
+      scores: allExceptional,
+      layoutAntiPatternsDetected: [],
+      designMdViolations: [],
+    }));
+    await seedPrototypingJson(root, iters);
+    // Plant drift HTML in iter-14 so the recompute finds violations.
+    const iter14 = path.join(root, ".qfai/evidence/prototyping/iter-14");
+    await mkdir(iter14, { recursive: true });
+    await writeFile(
+      path.join(iter14, "home.html"),
+      '<div class="bg-[#abcdef]">drift</div>',
+      "utf-8",
+    );
+    // Even though shouldStop says axes-exceptional, the recompute finds
+    // drift; with index 14 we cannot continue, so we return 65 (max-iter).
+    // (cycle 15 would fail the cycle-input gate; 14 is the highest
+    // valid input and shouldStop short-circuits before the cycle-gap
+    // check would otherwise reject `cycle != expectedNextCycle=15`.)
+    const exit = await runPrototypingIterate({ root, cycle: 14 });
+    expect(exit).toBe(65);
+  });
+
   it("does NOT exit 64 when accepted iter HTML still has DESIGN.md drift, even with all-exceptional scores + dmv:[] (codex 8thM)", async () => {
     // The shipped reviewer prompt instructs reviewers to leave
     // designMdViolations empty unless a runtime gate injects findings,

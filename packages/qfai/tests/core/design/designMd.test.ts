@@ -329,6 +329,33 @@ describe("parseDesignMd (TC-1.1.x)", () => {
     expect(result.error.path).toBe("accessibility.focus_ring");
   });
 
+  it("visual.typography.scale as a scalar string is rejected at parse-time (codex AG08u)", () => {
+    // Pre-fix `if (isRecord(scale))` silently skipped a non-mapping
+    // value, so `scale: "1rem"` hashed into DESIGN.md.lock while
+    // designTokens.typography.scale stayed missing for downstream
+    // consumers.
+    const familyMonoLine = '    family_mono:    "JetBrains Mono, ui-monospace, monospace"';
+    const text = VALID_FRONT_MATTER.replace(familyMonoLine, `${familyMonoLine}\n    scale: "1rem"`);
+    const result = parseDesignMd(text);
+    expect("error" in result).toBe(true);
+    if (!("error" in result)) return;
+    expect(result.error.code).toBe("invalid-type");
+    expect(result.error.path).toBe("visual.typography.scale");
+  });
+
+  it("visual.typography.weight as an array is rejected at parse-time (codex AG08u)", () => {
+    const familyMonoLine = '    family_mono:    "JetBrains Mono, ui-monospace, monospace"';
+    const text = VALID_FRONT_MATTER.replace(
+      familyMonoLine,
+      `${familyMonoLine}\n    weight: [400, 700]`,
+    );
+    const result = parseDesignMd(text);
+    expect("error" in result).toBe(true);
+    if (!("error" in result)) return;
+    expect(result.error.code).toBe("invalid-type");
+    expect(result.error.path).toBe("visual.typography.weight");
+  });
+
   it("accessibility.contrast_ratio_min as a string literal is rejected at parse-time (codex 9KB8)", () => {
     // Pre-fix the type-mismatch branch silently dropped the authored
     // value, so `contrast_ratio_min: "4.5"` hashed into the lock while

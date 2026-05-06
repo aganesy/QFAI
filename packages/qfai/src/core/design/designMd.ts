@@ -571,6 +571,25 @@ function readVisual(raw: unknown): { value: DesignMd["visual"] } | { error: Pars
   // does not freeze into the lock while iteration / certify ignore it.
   const TYPOGRAPHY_SCALE_ALLOWED_KEYS = new Set(["xs", "sm", "base", "lg", "xl", "2xl", "3xl"]);
   const TYPOGRAPHY_WEIGHT_ALLOWED_KEYS = new Set(["regular", "medium", "bold"]);
+  // codex AG08u: reject present-but-non-record `scale` / `weight` blocks.
+  // Pre-fix `if (isRecord(typographyRaw.scale))` silently skipped a
+  // string / array authored under `scale:` (`scale: "1rem"` or
+  // `scale: [1, 2]`), so an invalid DESIGN.md hashed into the lock
+  // while `designTokens.typography.scale` was missing for downstream
+  // consumers. Same fix below for `weight`.
+  if (
+    "scale" in typographyRaw &&
+    typographyRaw.scale !== undefined &&
+    !isRecord(typographyRaw.scale)
+  ) {
+    return {
+      error: {
+        path: "visual.typography.scale",
+        code: "invalid-type",
+        message: `'visual.typography.scale' must be a mapping of token keys to length values (got ${describeValueShape(typographyRaw.scale)}).`,
+      },
+    };
+  }
   if (isRecord(typographyRaw.scale)) {
     const scaleError = rejectUnknownKeys(typographyRaw.scale, TYPOGRAPHY_SCALE_ALLOWED_KEYS, {
       kind: "section",
@@ -608,6 +627,19 @@ function readVisual(raw: unknown): { value: DesignMd["visual"] } | { error: Pars
       scaleValues[k] = v;
     }
     typography.scale = scaleValues;
+  }
+  if (
+    "weight" in typographyRaw &&
+    typographyRaw.weight !== undefined &&
+    !isRecord(typographyRaw.weight)
+  ) {
+    return {
+      error: {
+        path: "visual.typography.weight",
+        code: "invalid-type",
+        message: `'visual.typography.weight' must be a mapping of token keys to numeric weights (got ${describeValueShape(typographyRaw.weight)}).`,
+      },
+    };
   }
   if (isRecord(typographyRaw.weight)) {
     const weightError = rejectUnknownKeys(typographyRaw.weight, TYPOGRAPHY_WEIGHT_ALLOWED_KEYS, {
