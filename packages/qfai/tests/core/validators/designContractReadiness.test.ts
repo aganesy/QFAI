@@ -539,6 +539,160 @@ describe("validateSddDesignContractReadiness (TC-3.8.x)", () => {
     expect(dcon005[0]?.message).toContain("#1F2937");
   });
 
+  it("optional visual.spacing in DESIGN.md must be mirrored verbatim → DCON-005 on divergence", async () => {
+    // Codex 696D: optional DESIGN.md tokens are also part of the
+    // verbatim-mirror contract when DESIGN.md authors them. A
+    // mirror that diverges on `visual.spacing.base` must surface
+    // as DCON-005.
+    const root = await newTempDir();
+    await seedUiBearingProject(root);
+    const designMdWithSpacing = VALID_DESIGN_MD.replace(
+      '    family_mono:    "JetBrains Mono, ui-monospace, monospace"',
+      '    family_mono:    "JetBrains Mono, ui-monospace, monospace"\n  spacing:\n    base: "0.25rem"\n    scale: [0, 4, 8, 16]',
+    );
+    await writeFile(path.join(root, "DESIGN.md"), designMdWithSpacing, "utf-8");
+    const designDir = path.join(root, ".qfai/contracts/design");
+    await mkdir(designDir, { recursive: true });
+    await writeFile(
+      path.join(designDir, "DESIGN.md.lock.yaml"),
+      [
+        'designMdPath: "DESIGN.md"',
+        `designMdSha256: "${hashDesignMd(designMdWithSpacing)}"`,
+        'frozenAt: "2026-05-05T00:00:00Z"',
+        "",
+      ].join("\n"),
+      "utf-8",
+    );
+    // Mirror with WRONG spacing.base value (0.5rem instead of 0.25rem).
+    await writeFile(
+      path.join(designDir, "design-system.yaml"),
+      VALID_MIRROR_YAML.replace(
+        "  radius:",
+        '  spacing:\n    base: "0.5rem"\n    scale: [0, 4, 8, 16]\n  radius:',
+      ),
+      "utf-8",
+    );
+    await writeFile(
+      path.join(designDir, "prototype-handoff.yaml"),
+      [
+        "finalIterIndex: 1",
+        'finalArtifact: ".qfai/prototypes/final/index.html"',
+        'designMdPath: "DESIGN.md"',
+        `designMdSha256: "${hashDesignMd(designMdWithSpacing)}"`,
+        'designSystemMirror: ".qfai/contracts/design/design-system.yaml"',
+        'implementationNotes: "test"',
+        "",
+      ].join("\n"),
+      "utf-8",
+    );
+    const issues = await validatePrototypingDesignContractReadiness(root, defaultConfig);
+    const dcon005 = issues.filter((i) => i.code === "QFAI-DCON-005");
+    expect(
+      dcon005.some(
+        (i) =>
+          i.message.includes("visual.spacing.base") &&
+          i.message.includes("0.5rem") &&
+          i.message.includes("0.25rem"),
+      ),
+    ).toBe(true);
+  });
+
+  it("optional visual.typography.scale in DESIGN.md must be mirrored verbatim → DCON-005 on missing key", async () => {
+    const root = await newTempDir();
+    await seedUiBearingProject(root);
+    const designMdWithScale = VALID_DESIGN_MD.replace(
+      '    family_mono:    "JetBrains Mono, ui-monospace, monospace"',
+      '    family_mono:    "JetBrains Mono, ui-monospace, monospace"\n    scale:\n      base: "1rem"\n      lg: "1.25rem"',
+    );
+    await writeFile(path.join(root, "DESIGN.md"), designMdWithScale, "utf-8");
+    const designDir = path.join(root, ".qfai/contracts/design");
+    await mkdir(designDir, { recursive: true });
+    await writeFile(
+      path.join(designDir, "DESIGN.md.lock.yaml"),
+      [
+        'designMdPath: "DESIGN.md"',
+        `designMdSha256: "${hashDesignMd(designMdWithScale)}"`,
+        'frozenAt: "2026-05-05T00:00:00Z"',
+        "",
+      ].join("\n"),
+      "utf-8",
+    );
+    // Mirror omits typography.scale entirely.
+    await writeFile(path.join(designDir, "design-system.yaml"), VALID_MIRROR_YAML, "utf-8");
+    await writeFile(
+      path.join(designDir, "prototype-handoff.yaml"),
+      [
+        "finalIterIndex: 1",
+        'finalArtifact: ".qfai/prototypes/final/index.html"',
+        'designMdPath: "DESIGN.md"',
+        `designMdSha256: "${hashDesignMd(designMdWithScale)}"`,
+        'designSystemMirror: ".qfai/contracts/design/design-system.yaml"',
+        'implementationNotes: "test"',
+        "",
+      ].join("\n"),
+      "utf-8",
+    );
+    const issues = await validatePrototypingDesignContractReadiness(root, defaultConfig);
+    const dcon005 = issues.filter((i) => i.code === "QFAI-DCON-005");
+    expect(
+      dcon005.some((i) => i.message.includes("visual.typography.scale")),
+    ).toBe(true);
+  });
+
+  it("optional visual.typography.weight numeric values cross-checked → DCON-005 on divergence", async () => {
+    const root = await newTempDir();
+    await seedUiBearingProject(root);
+    const designMdWithWeight = VALID_DESIGN_MD.replace(
+      '    family_mono:    "JetBrains Mono, ui-monospace, monospace"',
+      '    family_mono:    "JetBrains Mono, ui-monospace, monospace"\n    weight:\n      regular: 400\n      bold: 700',
+    );
+    await writeFile(path.join(root, "DESIGN.md"), designMdWithWeight, "utf-8");
+    const designDir = path.join(root, ".qfai/contracts/design");
+    await mkdir(designDir, { recursive: true });
+    await writeFile(
+      path.join(designDir, "DESIGN.md.lock.yaml"),
+      [
+        'designMdPath: "DESIGN.md"',
+        `designMdSha256: "${hashDesignMd(designMdWithWeight)}"`,
+        'frozenAt: "2026-05-05T00:00:00Z"',
+        "",
+      ].join("\n"),
+      "utf-8",
+    );
+    // Mirror with WRONG weight.bold value (800 instead of 700).
+    await writeFile(
+      path.join(designDir, "design-system.yaml"),
+      VALID_MIRROR_YAML.replace(
+        '    family_mono: "JetBrains Mono, ui-monospace, monospace"',
+        '    family_mono: "JetBrains Mono, ui-monospace, monospace"\n    weight:\n      regular: 400\n      bold: 800',
+      ),
+      "utf-8",
+    );
+    await writeFile(
+      path.join(designDir, "prototype-handoff.yaml"),
+      [
+        "finalIterIndex: 1",
+        'finalArtifact: ".qfai/prototypes/final/index.html"',
+        'designMdPath: "DESIGN.md"',
+        `designMdSha256: "${hashDesignMd(designMdWithWeight)}"`,
+        'designSystemMirror: ".qfai/contracts/design/design-system.yaml"',
+        'implementationNotes: "test"',
+        "",
+      ].join("\n"),
+      "utf-8",
+    );
+    const issues = await validatePrototypingDesignContractReadiness(root, defaultConfig);
+    const dcon005 = issues.filter((i) => i.code === "QFAI-DCON-005");
+    expect(
+      dcon005.some(
+        (i) =>
+          i.message.includes("visual.typography.weight.bold") &&
+          i.message.includes("800") &&
+          i.message.includes("700"),
+      ),
+    ).toBe(true);
+  });
+
   it("design-system.yaml mirror with extra fabricated key → DCON-005 (mirror must be verbatim)", async () => {
     // Aganesy 6ll8: bidirectional cross-check. A hand-authored
     // mirror with `visual.colors.fabricated_token: "#FF00FF"` must

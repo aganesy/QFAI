@@ -45,7 +45,7 @@ const CSS_URL_RE = /\burl\s*\([^)]*\)/gi;
 // tokens (`1px`, `solid`, `repeat`, etc., which are silently ignored
 // because they aren't in CSS_NAMED_COLORS).
 const COLOR_PROP_RE =
-  /\b(?:color|background|background-color|border|border-top|border-right|border-bottom|border-left|border-color|border-top-color|border-right-color|border-bottom-color|border-left-color|outline|outline-color|fill|stroke|caret-color|text-decoration-color|column-rule-color)\s*:\s*([^;}<>"']+)/gi;
+  /\b(?:color|background|background-color|border|border-top|border-right|border-bottom|border-left|border-color|border-top-color|border-right-color|border-bottom-color|border-left-color|outline|outline-color|fill|stroke|caret-color|text-decoration|text-decoration-color|column-rule|column-rule-color)\s*:\s*([^;}<>"']+)/gi;
 // Property-value regexes capture up to the next `;`, `}`, `<`, `>`, or
 // containing-attr quote boundary. Inline `style="..."` boundaries are
 // handled by stopping at the outer attribute quote, so the value class

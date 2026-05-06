@@ -170,6 +170,22 @@ describe("findDesignMdViolations — color (TC-3.2.1..9)", () => {
     expect(out.filter((v) => v.kind === "color")).toEqual([]);
   });
 
+  it("background shorthand with quoted url + named color flags the named color", () => {
+    // Codex 696E: `background: url("hero.png") no-repeat red` —
+    // CSS_URL_RE strips `url("hero.png")` from the cssText BEFORE
+    // COLOR_PROP_RE matches, so the post-strip value is
+    // ` no-repeat red`, and the per-token loop flags `red`.
+    const html = "<style>.hero { background: url(\"hero.png\") no-repeat red; }</style>";
+    const out = findDesignMdViolations(html, sampleDesignMd());
+    expect(out.some((v) => v.kind === "color" && v.found === "red")).toBe(true);
+  });
+
+  it("background shorthand with single-quoted url + named color flags the named color", () => {
+    const html = '<div style="background: url(\'hero.png\') no-repeat red"></div>';
+    const out = findDesignMdViolations(html, sampleDesignMd());
+    expect(out.some((v) => v.kind === "color" && v.found === "red")).toBe(true);
+  });
+
   it("background shorthand with named color (background: red) IS flagged", () => {
     // Codex 6r-a: `background: red` is the most common shorthand
     // path that bypassed the pre-fix scanner because background
@@ -192,6 +208,22 @@ describe("findDesignMdViolations — color (TC-3.2.1..9)", () => {
     const html = '<div style="outline: 2px dashed blue"></div>';
     const out = findDesignMdViolations(html, sampleDesignMd());
     expect(out.filter((v) => v.kind === "color")).toEqual([{ kind: "color", found: "blue" }]);
+  });
+
+  it("text-decoration shorthand with named color (text-decoration: underline red) IS flagged", () => {
+    // Aganesy 6_DT: text-decoration shorthand routes color through
+    // the same per-token loop as border / outline. `underline` is
+    // not a CSS_NAMED_COLORS keyword so it's silently skipped;
+    // `red` is flagged.
+    const html = '<div style="text-decoration: underline red"></div>';
+    const out = findDesignMdViolations(html, sampleDesignMd());
+    expect(out.filter((v) => v.kind === "color")).toEqual([{ kind: "color", found: "red" }]);
+  });
+
+  it("column-rule shorthand with named color (column-rule: 1px solid red) IS flagged", () => {
+    const html = '<div style="column-rule: 1px solid red"></div>';
+    const out = findDesignMdViolations(html, sampleDesignMd());
+    expect(out.filter((v) => v.kind === "color")).toEqual([{ kind: "color", found: "red" }]);
   });
 
   it("border-top shorthand with named color IS flagged", () => {

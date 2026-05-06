@@ -144,6 +144,26 @@
   text-shadow value still surfaces (named-color drift in
   text-shadow is uncovered until a future spec adds a
   `dm.visual.textShadow` token contract).
+- **DESIGN.md scanner: text-decoration / column-rule shorthands**:
+  COLOR_PROP_RE now also captures `text-decoration` and
+  `column-rule` shorthands. `text-decoration: underline red`
+  (named color in the second slot) and
+  `column-rule: 1px solid red` (named color in the third slot) now
+  surface as DESIGN.md drift. Pre-fix only the dedicated
+  `text-decoration-color` / `column-rule-color` longhands were
+  caught.
+- **design-system.yaml mirror: optional tokens cross-checked**:
+  When DESIGN.md authors `visual.spacing`, `visual.typography.scale`,
+  or `visual.typography.weight`, the mirror is now required to copy
+  them verbatim — divergent values, missing keys, and fabricated
+  extra keys all surface as DCON-005. Pre-1.8.9 only the required
+  tokens (colors, family triple, radius, shadow) were cross-checked,
+  leaving the optional sections as a silent gap. New helpers
+  `crossCheckTypographyScale` / `crossCheckTypographyWeight` /
+  `crossCheckSpacing` handle the heterogeneous shapes (string vs
+  number values, scalar vs array). When DESIGN.md does NOT author
+  these optional tokens, the mirror is free to omit them — the
+  optionality contract is preserved.
 - **designContractReadiness: bidirectional mirror cross-check**:
   `crossCheckMirrorValues` now runs in both directions. The
   DESIGN.md → mirror direction was already added; the new mirror →

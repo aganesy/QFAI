@@ -660,7 +660,252 @@ function crossCheckMirrorValues(
   });
   compare("radius", rootDesignMd.visual.radius);
   compare("shadow", rootDesignMd.visual.shadow);
+
+  // Optional DESIGN.md tokens. Per `qfai-prototyping/references/handoff.md`,
+  // the mirror copies these verbatim WHEN PRESENT in DESIGN.md.
+  // If DESIGN.md doesn't author them, the mirror is free to omit
+  // them (they remain optional). When DESIGN.md DOES author them,
+  // any divergence in the mirror is a contract violation.
+  const dmTypography = rootDesignMd.visual.typography;
+  if (dmTypography.scale !== undefined) {
+    crossCheckTypographyScale(visual, dmTypography.scale, filePathRel, issues);
+  }
+  if (dmTypography.weight !== undefined) {
+    crossCheckTypographyWeight(visual, dmTypography.weight, filePathRel, issues);
+  }
+  const dmSpacing = rootDesignMd.visual.spacing;
+  if (dmSpacing !== undefined) {
+    crossCheckSpacing(visual, dmSpacing, filePathRel, issues);
+  }
   return issues;
+}
+
+// `compare` above walks top-level `visual[<section>]` records and
+// applies a string-equality contract. Nested optional tokens
+// (`visual.typography.scale`, `visual.typography.weight`,
+// `visual.spacing`) need dedicated helpers because they live one
+// level deeper and `weight`/`spacing.scale` carry non-string values.
+
+function crossCheckTypographyScale(
+  visual: Record<string, unknown>,
+  expected: Record<string, string>,
+  filePathRel: string,
+  issues: Issue[],
+): void {
+  const typo = visual.typography;
+  if (!isRecord(typo)) return;
+  const mirror = typo.scale;
+  if (!isRecord(mirror)) {
+    issues.push(
+      issue(
+        "QFAI-DCON-005",
+        `design-system.yaml mirror is missing 'visual.typography.scale' (DESIGN.md authored ${Object.keys(expected).length} scale tokens).`,
+        "error",
+        filePathRel,
+        "designContractReadiness.designSystemMirror",
+      ),
+    );
+    return;
+  }
+  for (const [key, expectedValue] of Object.entries(expected)) {
+    if (!(key in mirror)) {
+      issues.push(
+        issue(
+          "QFAI-DCON-005",
+          `design-system.yaml mirror is missing 'visual.typography.scale.${key}' (DESIGN.md token: '${expectedValue}').`,
+          "error",
+          filePathRel,
+          "designContractReadiness.designSystemMirror",
+        ),
+      );
+      continue;
+    }
+    const actual = mirror[key];
+    if (typeof actual !== "string" || actual !== expectedValue) {
+      issues.push(
+        issue(
+          "QFAI-DCON-005",
+          `design-system.yaml mirror 'visual.typography.scale.${key}' diverges from DESIGN.md (mirror=${JSON.stringify(actual)}, DESIGN.md='${expectedValue}').`,
+          "error",
+          filePathRel,
+          "designContractReadiness.designSystemMirror",
+        ),
+      );
+    }
+  }
+  for (const key of Object.keys(mirror)) {
+    if (!(key in expected)) {
+      issues.push(
+        issue(
+          "QFAI-DCON-005",
+          `design-system.yaml mirror 'visual.typography.scale.${key}' is not a DESIGN.md token; the mirror must be a verbatim copy.`,
+          "error",
+          filePathRel,
+          "designContractReadiness.designSystemMirror",
+        ),
+      );
+    }
+  }
+}
+
+function crossCheckTypographyWeight(
+  visual: Record<string, unknown>,
+  expected: Record<string, number>,
+  filePathRel: string,
+  issues: Issue[],
+): void {
+  // typography.weight is Record<string, number>. The dedicated helper
+  // is needed because `compare` above is typed for string values.
+  const typo = visual.typography;
+  if (!isRecord(typo)) return;
+  const mirror = typo.weight;
+  if (!isRecord(mirror)) {
+    issues.push(
+      issue(
+        "QFAI-DCON-005",
+        `design-system.yaml mirror is missing 'visual.typography.weight' (DESIGN.md authored ${Object.keys(expected).length} weight tokens).`,
+        "error",
+        filePathRel,
+        "designContractReadiness.designSystemMirror",
+      ),
+    );
+    return;
+  }
+  for (const [key, expectedValue] of Object.entries(expected)) {
+    if (!(key in mirror)) {
+      issues.push(
+        issue(
+          "QFAI-DCON-005",
+          `design-system.yaml mirror is missing 'visual.typography.weight.${key}' (DESIGN.md token: ${expectedValue}).`,
+          "error",
+          filePathRel,
+          "designContractReadiness.designSystemMirror",
+        ),
+      );
+      continue;
+    }
+    const actual = mirror[key];
+    if (typeof actual !== "number" || actual !== expectedValue) {
+      issues.push(
+        issue(
+          "QFAI-DCON-005",
+          `design-system.yaml mirror 'visual.typography.weight.${key}' diverges from DESIGN.md (mirror=${JSON.stringify(actual)}, DESIGN.md=${expectedValue}).`,
+          "error",
+          filePathRel,
+          "designContractReadiness.designSystemMirror",
+        ),
+      );
+    }
+  }
+  for (const key of Object.keys(mirror)) {
+    if (!(key in expected)) {
+      issues.push(
+        issue(
+          "QFAI-DCON-005",
+          `design-system.yaml mirror 'visual.typography.weight.${key}' is not a DESIGN.md token; the mirror must be a verbatim copy.`,
+          "error",
+          filePathRel,
+          "designContractReadiness.designSystemMirror",
+        ),
+      );
+    }
+  }
+}
+
+function crossCheckSpacing(
+  visual: Record<string, unknown>,
+  expected: NonNullable<DesignMd["visual"]["spacing"]>,
+  filePathRel: string,
+  issues: Issue[],
+): void {
+  // spacing has heterogeneous types: `base` is string, `scale` is
+  // number[]. Walk each sub-key independently rather than re-using
+  // `compare` (which assumes a Record-of-strings shape).
+  const mirror = visual.spacing;
+  if (!isRecord(mirror)) {
+    // DESIGN.md authored spacing tokens but the mirror omitted the
+    // entire spacing block — surface as a single missing-section
+    // message rather than per-key noise.
+    issues.push(
+      issue(
+        "QFAI-DCON-005",
+        "design-system.yaml mirror is missing 'visual.spacing' (DESIGN.md authored spacing tokens that must be copied verbatim).",
+        "error",
+        filePathRel,
+        "designContractReadiness.designSystemMirror",
+      ),
+    );
+    return;
+  }
+  if (expected.base !== undefined) {
+    if (!("base" in mirror)) {
+      issues.push(
+        issue(
+          "QFAI-DCON-005",
+          `design-system.yaml mirror is missing 'visual.spacing.base' (DESIGN.md token: '${expected.base}').`,
+          "error",
+          filePathRel,
+          "designContractReadiness.designSystemMirror",
+        ),
+      );
+    } else if (mirror.base !== expected.base) {
+      issues.push(
+        issue(
+          "QFAI-DCON-005",
+          `design-system.yaml mirror 'visual.spacing.base' diverges from DESIGN.md (mirror=${JSON.stringify(mirror.base)}, DESIGN.md='${expected.base}').`,
+          "error",
+          filePathRel,
+          "designContractReadiness.designSystemMirror",
+        ),
+      );
+    }
+  }
+  if (expected.scale !== undefined) {
+    if (!("scale" in mirror)) {
+      issues.push(
+        issue(
+          "QFAI-DCON-005",
+          `design-system.yaml mirror is missing 'visual.spacing.scale' (DESIGN.md token: ${JSON.stringify(expected.scale)}).`,
+          "error",
+          filePathRel,
+          "designContractReadiness.designSystemMirror",
+        ),
+      );
+    } else {
+      const mirrorScale = mirror.scale;
+      const expectedScale = expected.scale;
+      if (
+        !Array.isArray(mirrorScale) ||
+        mirrorScale.length !== expectedScale.length ||
+        !expectedScale.every((v, i) => mirrorScale[i] === v)
+      ) {
+        issues.push(
+          issue(
+            "QFAI-DCON-005",
+            `design-system.yaml mirror 'visual.spacing.scale' diverges from DESIGN.md (mirror=${JSON.stringify(mirrorScale)}, DESIGN.md=${JSON.stringify(expectedScale)}).`,
+            "error",
+            filePathRel,
+            "designContractReadiness.designSystemMirror",
+          ),
+        );
+      }
+    }
+  }
+  // Reverse direction: extra mirror keys.
+  const ALLOWED_SPACING_KEYS = new Set(["base", "scale"]);
+  for (const key of Object.keys(mirror)) {
+    if (!ALLOWED_SPACING_KEYS.has(key)) {
+      issues.push(
+        issue(
+          "QFAI-DCON-005",
+          `design-system.yaml mirror 'visual.spacing.${key}' is not a DESIGN.md token; the mirror must be a verbatim copy.`,
+          "error",
+          filePathRel,
+          "designContractReadiness.designSystemMirror",
+        ),
+      );
+    }
+  }
 }
 
 /**
