@@ -464,14 +464,14 @@ describe("parseDesignMd (TC-1.1.x)", () => {
     expect("error" in result).toBe(true);
     if (!("error" in result)) return;
     // `null` (yaml literal) parses as JS null, which fails the string
-    // type check in parseAudienceStringArray.
+    // type check in parseDesignMdStringArrayField.
     expect(result.error.code).toBe("invalid-type");
     expect(result.error.path).toBe("audience.do_not_look_like[1]");
   });
 
   // Pre-fix `Array.isArray` only gate dropped `emotion: null` silently;
   // post-fix the `'emotion' in raw.audience && raw.audience.emotion !==
-  // undefined` gate forwards `null` into parseAudienceStringArray, which
+  // undefined` gate forwards `null` into parseDesignMdStringArrayField, which
   // rejects it. These two tests are the regression sentinels for that
   // null-literal branch — without them, a future revert to an
   // Array-isArray-only check would re-introduce the silent-skip drift
