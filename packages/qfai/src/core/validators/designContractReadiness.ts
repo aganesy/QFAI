@@ -699,22 +699,91 @@ function crossCheckMirrorValues(
   compare("shadow", rootDesignMd.visual.shadow);
 
   // Optional DESIGN.md tokens. Per `qfai-prototyping/references/handoff.md`,
-  // the mirror copies these verbatim WHEN PRESENT in DESIGN.md.
-  // If DESIGN.md doesn't author them, the mirror is free to omit
-  // them (they remain optional). When DESIGN.md DOES author them,
-  // any divergence in the mirror is a contract violation.
+  // the mirror copies these verbatim WHEN PRESENT in DESIGN.md, and
+  // omits them otherwise. The contract is two-state: "absent in
+  // mirror" or "verbatim copy". A third state — "authored only in
+  // mirror" — is a contract violation (it would let
+  // `/qfai-implement` bind to validated mirror content that has no
+  // anchor in the brand SSOT).
+  //
+  // For each optional section we therefore branch:
+  //   - DESIGN.md authored it -> cross-check values + key-set
+  //   - DESIGN.md did NOT author it -> mirror MUST also omit it,
+  //     else surface DCON-005 ("not a DESIGN.md token")
   const dmTypography = rootDesignMd.visual.typography;
   if (dmTypography.scale !== undefined) {
     crossCheckTypographyScale(visual, dmTypography.scale, filePathRel, issues);
+  } else {
+    rejectMirrorOnlyTypographySubKey(visual, "scale", filePathRel, issues);
   }
   if (dmTypography.weight !== undefined) {
     crossCheckTypographyWeight(visual, dmTypography.weight, filePathRel, issues);
+  } else {
+    rejectMirrorOnlyTypographySubKey(visual, "weight", filePathRel, issues);
   }
   const dmSpacing = rootDesignMd.visual.spacing;
   if (dmSpacing !== undefined) {
     crossCheckSpacing(visual, dmSpacing, filePathRel, issues);
+  } else {
+    rejectMirrorOnlySpacing(visual, filePathRel, issues);
   }
   return issues;
+}
+
+/**
+ * When DESIGN.md does NOT author `typography.scale` / `typography.weight`,
+ * the mirror MUST also omit it. This helper enforces that
+ * "DESIGN.md absent + mirror present" is rejected as DCON-005, so a
+ * hand-authored mirror cannot fabricate optional sections.
+ */
+function rejectMirrorOnlyTypographySubKey(
+  visual: Record<string, unknown>,
+  subKey: "scale" | "weight",
+  filePathRel: string,
+  issues: Issue[],
+): void {
+  const typo = visual.typography;
+  if (!isRecord(typo)) return;
+  if (subKey in typo) {
+    issues.push(
+      issue(
+        "QFAI-DCON-005",
+        `design-system.yaml mirror authors 'visual.typography.${subKey}' but DESIGN.md does not. The mirror is contractually a verbatim copy of DESIGN.md (no fabricated sections).`,
+        "error",
+        filePathRel,
+        "designContractReadiness.designSystemMirror",
+        undefined,
+        "canonical",
+        `Remove 'visual.typography.${subKey}' from design-system.yaml, or author it in root DESIGN.md and refreeze the lock.`,
+      ),
+    );
+  }
+}
+
+/**
+ * When DESIGN.md does NOT author `visual.spacing`, the mirror MUST
+ * also omit the entire spacing block. Symmetric counterpart of
+ * `crossCheckSpacing`.
+ */
+function rejectMirrorOnlySpacing(
+  visual: Record<string, unknown>,
+  filePathRel: string,
+  issues: Issue[],
+): void {
+  if ("spacing" in visual) {
+    issues.push(
+      issue(
+        "QFAI-DCON-005",
+        "design-system.yaml mirror authors 'visual.spacing' but DESIGN.md does not. The mirror is contractually a verbatim copy of DESIGN.md (no fabricated sections).",
+        "error",
+        filePathRel,
+        "designContractReadiness.designSystemMirror",
+        undefined,
+        "canonical",
+        "Remove 'visual.spacing' from design-system.yaml, or author it in root DESIGN.md and refreeze the lock.",
+      ),
+    );
+  }
 }
 
 // `compare` above walks top-level `visual[<section>]` records and

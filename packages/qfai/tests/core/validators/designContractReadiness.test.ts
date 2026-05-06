@@ -440,14 +440,67 @@ describe("validateSddDesignContractReadiness (TC-3.8.x)", () => {
     ).toBe(true);
   });
 
-  it("design-system.yaml mirror with optional visual.spacing also passes (spacing not required)", async () => {
+  it("design-system.yaml mirror with visual.spacing matching DESIGN.md passes (verbatim copy)", async () => {
+    // Post-7QGd: optional sections are still optional in DESIGN.md,
+    // but the mirror's spacing block must match DESIGN.md's exactly
+    // (verbatim copy contract). DESIGN.md without spacing means the
+    // mirror must also omit it. This test pins the symmetric
+    // happy-path: BOTH author spacing with the same value -> pass.
+    const root = await newTempDir();
+    await seedUiBearingProject(root);
+    const designMdWithSpacing = VALID_DESIGN_MD.replace(
+      '    family_mono:    "JetBrains Mono, ui-monospace, monospace"',
+      '    family_mono:    "JetBrains Mono, ui-monospace, monospace"\n  spacing:\n    base: "8px"',
+    );
+    await writeFile(path.join(root, "DESIGN.md"), designMdWithSpacing, "utf-8");
+    const designDir = path.join(root, ".qfai/contracts/design");
+    await mkdir(designDir, { recursive: true });
+    await writeFile(
+      path.join(designDir, "DESIGN.md.lock.yaml"),
+      [
+        'designMdPath: "DESIGN.md"',
+        `designMdSha256: "${hashDesignMd(designMdWithSpacing)}"`,
+        'frozenAt: "2026-05-05T00:00:00Z"',
+        "",
+      ].join("\n"),
+      "utf-8",
+    );
+    await writeFile(
+      path.join(designDir, "design-system.yaml"),
+      VALID_MIRROR_YAML.replace(
+        "  radius:",
+        '  spacing:\n    base: "8px"\n  radius:',
+      ),
+      "utf-8",
+    );
+    await writeFile(
+      path.join(designDir, "prototype-handoff.yaml"),
+      [
+        "finalIterIndex: 1",
+        'finalArtifact: ".qfai/prototypes/final/index.html"',
+        'designMdPath: "DESIGN.md"',
+        `designMdSha256: "${hashDesignMd(designMdWithSpacing)}"`,
+        'designSystemMirror: ".qfai/contracts/design/design-system.yaml"',
+        'implementationNotes: "test"',
+        "",
+      ].join("\n"),
+      "utf-8",
+    );
+    const issues = await validatePrototypingDesignContractReadiness(root, defaultConfig);
+    const dcon005 = issues.filter((i) => i.code === "QFAI-DCON-005");
+    expect(dcon005).toEqual([]);
+  });
+
+  it("design-system.yaml mirror authors visual.spacing but DESIGN.md does not → DCON-005 (fabrication)", async () => {
+    // Aganesy 7QGd: third-state contract violation. DESIGN.md
+    // doesn't author spacing; mirror authors `visual.spacing:
+    // { base: "8px" }`. Pre-7QGd this passed silently because the
+    // optional helper was guarded on `dmSpacing !== undefined`.
+    // Post-7QGd, the mirror-only fabrication is rejected.
     const root = await newTempDir();
     await seedUiBearingProject(root);
     await seedDesignMdAndLock(root);
     const designDir = path.join(root, ".qfai/contracts/design");
-    // Full mirror (so the value cross-check passes) plus a non-empty
-    // visual.spacing block to assert spacing remains optional /
-    // non-blocking after the cross-check landed.
     await writeFile(
       path.join(designDir, "design-system.yaml"),
       VALID_MIRROR_YAML.replace(
@@ -471,7 +524,86 @@ describe("validateSddDesignContractReadiness (TC-3.8.x)", () => {
     );
     const issues = await validatePrototypingDesignContractReadiness(root, defaultConfig);
     const dcon005 = issues.filter((i) => i.code === "QFAI-DCON-005");
-    expect(dcon005).toEqual([]);
+    expect(
+      dcon005.some(
+        (i) =>
+          i.message.includes("visual.spacing") && i.message.includes("DESIGN.md does not"),
+      ),
+    ).toBe(true);
+  });
+
+  it("mirror authors typography.scale but DESIGN.md does not → DCON-005 (fabrication)", async () => {
+    const root = await newTempDir();
+    await seedUiBearingProject(root);
+    await seedDesignMdAndLock(root);
+    const designDir = path.join(root, ".qfai/contracts/design");
+    await writeFile(
+      path.join(designDir, "design-system.yaml"),
+      VALID_MIRROR_YAML.replace(
+        '    family_mono: "JetBrains Mono, ui-monospace, monospace"',
+        '    family_mono: "JetBrains Mono, ui-monospace, monospace"\n    scale:\n      base: "1rem"',
+      ),
+      "utf-8",
+    );
+    await writeFile(
+      path.join(designDir, "prototype-handoff.yaml"),
+      [
+        "finalIterIndex: 1",
+        'finalArtifact: ".qfai/prototypes/final/index.html"',
+        'designMdPath: "DESIGN.md"',
+        `designMdSha256: "${hashDesignMd(VALID_DESIGN_MD)}"`,
+        'designSystemMirror: ".qfai/contracts/design/design-system.yaml"',
+        'implementationNotes: "test"',
+        "",
+      ].join("\n"),
+      "utf-8",
+    );
+    const issues = await validatePrototypingDesignContractReadiness(root, defaultConfig);
+    const dcon005 = issues.filter((i) => i.code === "QFAI-DCON-005");
+    expect(
+      dcon005.some(
+        (i) =>
+          i.message.includes("visual.typography.scale") &&
+          i.message.includes("DESIGN.md does not"),
+      ),
+    ).toBe(true);
+  });
+
+  it("mirror authors typography.weight but DESIGN.md does not → DCON-005 (fabrication)", async () => {
+    const root = await newTempDir();
+    await seedUiBearingProject(root);
+    await seedDesignMdAndLock(root);
+    const designDir = path.join(root, ".qfai/contracts/design");
+    await writeFile(
+      path.join(designDir, "design-system.yaml"),
+      VALID_MIRROR_YAML.replace(
+        '    family_mono: "JetBrains Mono, ui-monospace, monospace"',
+        '    family_mono: "JetBrains Mono, ui-monospace, monospace"\n    weight:\n      regular: 400',
+      ),
+      "utf-8",
+    );
+    await writeFile(
+      path.join(designDir, "prototype-handoff.yaml"),
+      [
+        "finalIterIndex: 1",
+        'finalArtifact: ".qfai/prototypes/final/index.html"',
+        'designMdPath: "DESIGN.md"',
+        `designMdSha256: "${hashDesignMd(VALID_DESIGN_MD)}"`,
+        'designSystemMirror: ".qfai/contracts/design/design-system.yaml"',
+        'implementationNotes: "test"',
+        "",
+      ].join("\n"),
+      "utf-8",
+    );
+    const issues = await validatePrototypingDesignContractReadiness(root, defaultConfig);
+    const dcon005 = issues.filter((i) => i.code === "QFAI-DCON-005");
+    expect(
+      dcon005.some(
+        (i) =>
+          i.message.includes("visual.typography.weight") &&
+          i.message.includes("DESIGN.md does not"),
+      ),
+    ).toBe(true);
   });
 
   it("design-system.yaml as DESIGN.md mirror passes validation (post-1.8.9 contract)", async () => {

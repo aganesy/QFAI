@@ -162,8 +162,12 @@
   `crossCheckTypographyScale` / `crossCheckTypographyWeight` /
   `crossCheckSpacing` handle the heterogeneous shapes (string vs
   number values, scalar vs array). When DESIGN.md does NOT author
-  these optional tokens, the mirror is free to omit them — the
-  optionality contract is preserved.
+  these optional tokens, the mirror is also required to omit them
+  — the verbatim-mirror contract is set-equal in both directions.
+  A "third state" where the mirror authors a section that DESIGN.md
+  does not is now rejected via dedicated
+  `rejectMirrorOnlyTypographySubKey` / `rejectMirrorOnlySpacing`
+  helpers.
 - **designContractReadiness: bidirectional mirror cross-check**:
   `crossCheckMirrorValues` now runs in both directions. The
   DESIGN.md → mirror direction was already added; the new mirror →
