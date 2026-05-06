@@ -384,6 +384,32 @@ describe("parseDesignMd (TC-1.1.x)", () => {
     expect(result.error.path).toBe("visual.shadow.gradients");
   });
 
+  it("visual.typography.scale with non-string value (number 1) is rejected at parse-time", () => {
+    // Codex 7TIR: pre-fix, readStringRecord silently coerced numbers
+    // to strings; post-fix this rejects with invalid-type.
+    const text = VALID_FRONT_MATTER.replace(
+      '    family_mono:    "JetBrains Mono, ui-monospace, monospace"',
+      '    family_mono:    "JetBrains Mono, ui-monospace, monospace"\n    scale:\n      base: 1\n      lg: "1.25rem"',
+    );
+    const result = parseDesignMd(text);
+    expect("error" in result).toBe(true);
+    if (!("error" in result)) return;
+    expect(result.error.code).toBe("invalid-type");
+    expect(result.error.path).toBe("visual.typography.scale.base");
+  });
+
+  it("visual.typography.scale with padded value (' 1rem ') is rejected at parse-time", () => {
+    const text = VALID_FRONT_MATTER.replace(
+      '    family_mono:    "JetBrains Mono, ui-monospace, monospace"',
+      '    family_mono:    "JetBrains Mono, ui-monospace, monospace"\n    scale:\n      base: " 1rem "\n      lg: "1.25rem"',
+    );
+    const result = parseDesignMd(text);
+    expect("error" in result).toBe(true);
+    if (!("error" in result)) return;
+    expect(result.error.code).toBe("invalid-format");
+    expect(result.error.path).toBe("visual.typography.scale.base");
+  });
+
   it("visual.typography.weight with non-number value (string '400') is rejected at parse-time", () => {
     // Codex 7TIV: pre-fix, `parseDesignMd` silently dropped
     // non-number weight entries, leaving the resulting weight

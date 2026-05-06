@@ -92,6 +92,15 @@
   or a stale arbitrary sha could pass `qfai validate` while binding
   downstream `/qfai-implement` to a DESIGN.md identity that diverges
   from the frozen root lock.
+- **DESIGN.md `visual.typography.scale` strict-parse**:
+  `parseDesignMd` now rejects non-string and padded /
+  whitespace-only typography scale values (`base: 1`,
+  `base: " 1rem "`). Pre-fix, `readStringRecord` coerced numbers to
+  strings and accepted padded values, so malformed type-scale
+  tokens leaked into the lock and the design-system.yaml mirror
+  as "validated" tokens that downstream CSS engines reject. Now
+  rejected with `invalid-type` / `invalid-format` at the brand
+  SSOT.
 - **DESIGN.md `visual.typography.weight` numeric strict-parse**:
   `parseDesignMd` now rejects non-number values for typography
   weight tokens (`regular` / `medium` / `bold`). Pre-fix, an

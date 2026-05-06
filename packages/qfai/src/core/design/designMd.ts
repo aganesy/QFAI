@@ -524,7 +524,36 @@ function readVisual(raw: unknown): { value: DesignMd["visual"] } | { error: Pars
       path: "visual.typography.scale",
     });
     if (scaleError) return { error: scaleError };
-    typography.scale = readStringRecord(typographyRaw.scale);
+    // Strict-parse each scale value. The distributed DESIGN.md spec
+    // requires CSS length tokens (e.g. `base: "1rem"`); pre-fix
+    // `readStringRecord` (a) coerced numbers to strings (`1` -> `"1"`)
+    // and (b) accepted padded values (`" 1rem "`). Both leak into
+    // the lock and the design-system.yaml mirror as "validated"
+    // tokens that downstream CSS engines reject. Reject non-string
+    // and padded / empty values at the brand SSOT.
+    const scaleValues: Record<string, string> = {};
+    for (const [k, v] of Object.entries(typographyRaw.scale)) {
+      if (typeof v !== "string") {
+        return {
+          error: {
+            path: `visual.typography.scale.${k}`,
+            code: "invalid-type",
+            message: `'visual.typography.scale.${k}' must be a string (got ${describeWeightEntry(v)}).`,
+          },
+        };
+      }
+      if (v.length === 0 || v.trim() !== v) {
+        return {
+          error: {
+            path: `visual.typography.scale.${k}`,
+            code: "invalid-format",
+            message: `'visual.typography.scale.${k}' must be a non-empty string with no leading / trailing whitespace.`,
+          },
+        };
+      }
+      scaleValues[k] = v;
+    }
+    typography.scale = scaleValues;
   }
   if (isRecord(typographyRaw.weight)) {
     const weightError = rejectUnknownKeys(typographyRaw.weight, TYPOGRAPHY_WEIGHT_ALLOWED_KEYS, {
