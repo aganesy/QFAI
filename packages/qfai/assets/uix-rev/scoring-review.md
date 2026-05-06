@@ -29,4 +29,4 @@ The rubric must include:
 ## Aggregate Review Focus
 
 - Review rubric pressure, floor conditions, and calibration quality as a single system
-- Remove old evaluation-axis vocabulary and keep wording aligned with `33_exploration_rubric.md` and `34_evaluator_calibration.md`
+- Remove old evaluation-axis vocabulary and keep wording aligned with the four canonical UX axes (information architecture / navigation flow / usability / functionality) fixed in `core/prototyping/evaluatorReview.ts#ORDINAL_AXES`

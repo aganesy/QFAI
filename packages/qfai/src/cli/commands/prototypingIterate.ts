@@ -37,6 +37,7 @@ import { error, info } from "../lib/logger.js";
 import { loadConfig } from "../../core/config.js";
 import { hashDesignMd, parseDesignMd, type DesignMd } from "../../core/design/designMd.js";
 import { readDesignMdLockSha } from "../../core/design/designMdLock.js";
+import { isEnoent } from "../../core/fs/errno.js";
 import { COMPLETION_CERTIFICATE_REL_PATH } from "../../core/prototyping/certificate.js";
 import { PROTOTYPING_EVIDENCE_REL, PROTOTYPING_JSON_REL } from "../../core/prototyping/paths.js";
 import { resolvePrimaryPrototypingSpec } from "../../core/prototyping/specResolution.js";
@@ -454,14 +455,18 @@ async function deleteStaleCompletionCertificate(certAbs: string): Promise<void> 
   try {
     await unlink(certAbs);
   } catch (err) {
-    if (
-      err !== null &&
-      typeof err === "object" &&
-      "code" in err &&
-      (err as { code?: unknown }).code === "ENOENT"
-    ) {
-      return; // not present; nothing to clear
-    }
+    if (isEnoent(err)) return; // not present; nothing to clear
+    // Best-effort cleanup with eventually-consistent backstop: the next
+    // `qfai prototyping certify` run rewrites the cert atomically and
+    // its `--check` mode re-validates digests against the evidence
+    // root, so a surviving stale cert cannot pass certify with the
+    // new loop's digests. The risk window we mitigate here is an AI
+    // / validator that reads the cert BETWEEN cycle 0 and the next
+    // certify run and reads prior-loop signoff. `info()` (not
+    // `error()`) is intentional — promoting to `error()` + `return 2`
+    // would block iterate on what is operationally a transient OS
+    // condition (Windows file lock, EACCES, EBUSY). Operators see
+    // the hint and can act before consumers read the stale cert.
     const reason = err instanceof Error ? err.message : String(err);
     info(
       `qfai prototyping iterate: could not remove stale completion-certificate.json (${reason}). ` +

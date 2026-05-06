@@ -6,7 +6,7 @@ import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   runPrototypingCertify,
@@ -235,12 +235,15 @@ describe("qfai prototyping certify (generate)", () => {
     expect(exit).toBe(2);
   });
 
-  it("exits 2 when prototyping.json#iterations[] is empty", async () => {
+  it("exits 2 when prototyping.json#iterations[] is empty (and identifies the empty-iterations branch in the error log)", async () => {
     const root = await newTempDir();
     await seedMinimalProject(root, { specMarker: true });
     await seedAllGatesPass(root);
     // Override prototyping.json to have an empty iterations[] while
-    // every other gate stays passing.
+    // every other gate stays passing. This locks the SPECIFIC
+    // exit-2 branch — without the log assertion, a refactor of
+    // validator order could let the test stay green by failing on a
+    // different precondition.
     await writeFile(
       path.join(root, ".qfai/evidence/prototyping/prototyping.json"),
       JSON.stringify({
@@ -257,7 +260,15 @@ describe("qfai prototyping certify (generate)", () => {
       }),
       "utf-8",
     );
-    expect(await runPrototypingCertify({ root, check: false })).toBe(2);
+    const logger = await import("../../src/cli/lib/logger.js");
+    const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
+    try {
+      expect(await runPrototypingCertify({ root, check: false })).toBe(2);
+      const messages = errorSpy.mock.calls.map((c) => String(c[0]));
+      expect(messages.some((m) => m.includes("prototyping.json#iterations is empty"))).toBe(true);
+    } finally {
+      errorSpy.mockRestore();
+    }
   });
 
   it("exits 2 when reviewerGate is not PASS", async () => {

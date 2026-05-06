@@ -296,6 +296,22 @@ function buildDesignMd(raw: unknown): BuildResult {
     visual: visual.value,
   };
   if (isRecord(raw.audience)) {
+    // Reject unknown keys under `audience` for the same reason as
+    // `visual` and `visual.typography`: the distributed DESIGN.md
+    // spec forbids unknown keys at any level, and silently dropping
+    // an authored directive (e.g. `audience.references`) lets it
+    // hash into the lock while never reaching the parsed tokens.
+    const AUDIENCE_ALLOWED_KEYS = new Set(["emotion", "do_not_look_like"]);
+    const audienceUnknown = Object.keys(raw.audience).filter((k) => !AUDIENCE_ALLOWED_KEYS.has(k));
+    if (audienceUnknown.length > 0) {
+      return {
+        error: {
+          path: `audience.${audienceUnknown[0] ?? ""}`,
+          code: "unknown-key",
+          message: `Unknown 'audience' key '${audienceUnknown[0] ?? ""}'. Allowed: ${[...AUDIENCE_ALLOWED_KEYS].join(", ")}.`,
+        },
+      };
+    }
     const aud: DesignMd["audience"] = {};
     if (Array.isArray(raw.audience.emotion)) {
       aud.emotion = raw.audience.emotion.filter((v): v is string => typeof v === "string");

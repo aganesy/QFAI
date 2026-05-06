@@ -63,9 +63,10 @@ The remaining UI-bearing sidecar maps to its contract as follows:
 
 - `40_screen_contracts.md` → `.qfai/contracts/ui/*.yaml`
 
-`33_exploration_rubric.md` and `34_evaluator_calibration.md` are not
-produced by `/qfai-discussion`. Project-specific anti-pattern notes
-live in `audience.do_not_look_like` of `DESIGN.md`.
+Project-specific anti-pattern notes live in `audience.do_not_look_like`
+of `DESIGN.md`. Evaluator axes are fixed in
+`core/prototyping/evaluatorReview.ts#ORDINAL_AXES` and are no longer
+authored as sidecar files.
 
 ## Normalization Rules
 

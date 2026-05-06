@@ -40,7 +40,7 @@ describe("3-layer validator", () => {
     const root = await newTempDir();
     await createUiBearingPack(root);
     const content = [
-      "# Exploration Rubric",
+      "# Screen Contracts",
       "",
       "## Information Architecture",
       "",
@@ -69,7 +69,7 @@ describe("3-layer validator", () => {
     const root = await newTempDir();
     await createUiBearingPack(root);
     const content = [
-      "# Exploration Rubric",
+      "# Screen Contracts",
       "",
       "## craft",
       "",
@@ -100,7 +100,7 @@ describe("3-layer validator", () => {
     const root = await newTempDir();
     await createUiBearingPack(root);
     const content = [
-      "# Exploration Rubric",
+      "# Screen Contracts",
       "",
       "## Information Architecture",
       "",
@@ -132,7 +132,7 @@ describe("3-layer validator", () => {
     const root = await newTempDir();
     await createUiBearingPack(root);
     const content = [
-      "# Exploration Rubric",
+      "# Screen Contracts",
       "",
       "## Information Architecture",
       "",

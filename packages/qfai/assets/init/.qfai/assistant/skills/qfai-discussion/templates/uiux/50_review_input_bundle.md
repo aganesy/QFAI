@@ -6,13 +6,11 @@ Consolidate all sidecar artifacts into a review-ready bundle for design reviewer
 
 ## Bundle Contents
 
-| Artifact                   | Path                               | Status                    |
-| -------------------------- | ---------------------------------- | ------------------------- |
-| Brand SSOT (root)          | `DESIGN.md`                        | [draft/reviewed/approved] |
-| Exploration rubric         | `uiux/33_exploration_rubric.md`    | [draft/reviewed/approved] |
-| Evaluator calibration      | `uiux/34_evaluator_calibration.md` | [draft/reviewed/approved] |
-| Screen contracts           | `uiux/40_screen_contracts.md`      | [draft/reviewed/approved] |
-| Prototyping recommendation | `../prototyping.yaml`              | [draft/reviewed/approved] |
+| Artifact                   | Path                          | Status                    |
+| -------------------------- | ----------------------------- | ------------------------- |
+| Brand SSOT (root)          | `DESIGN.md`                   | [draft/reviewed/approved] |
+| Screen contracts           | `uiux/40_screen_contracts.md` | [draft/reviewed/approved] |
+| Prototyping recommendation | `../prototyping.yaml`         | [draft/reviewed/approved] |
 
 ## Trend-derived review focus
 

@@ -17,6 +17,7 @@ import { promisify } from "node:util";
 import { copyTemplatePaths, copyTemplateTree } from "../lib/fs.js";
 import { getInitAssetsDir } from "../lib/assets.js";
 import { info } from "../lib/logger.js";
+import { isEnoent } from "../../core/fs/errno.js";
 import {
   QFAI_GITIGNORE_MARKER,
   QFAI_GITIGNORE_BLOCK,
@@ -281,10 +282,6 @@ async function exists(target: string): Promise<boolean> {
   } catch {
     return false;
   }
-}
-
-function isEnoent(err: unknown): boolean {
-  return typeof err === "object" && err !== null && (err as { code?: string }).code === "ENOENT";
 }
 
 /** Detects any path entry including broken symlinks (lstat-based). */

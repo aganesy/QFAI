@@ -6,6 +6,31 @@
 
 ### Fixed (Breaking — pre-1.8.9 internal pipelines only)
 
+- **DESIGN.md `audience` unknown-key reject**: `parseDesignMd()` now
+  rejects unknown keys under `audience` (e.g. `audience.references`)
+  with the same `unknown-key` ParseError as `visual` and
+  `visual.typography`. Previously such keys were silently dropped
+  from the parsed tokens consumed by iteration / certify while still
+  being hashed into `DESIGN.md.lock.yaml`, letting authors freeze
+  directives that the parser ignored.
+- **canonical sidecar pruning end-to-end**: The init template
+  surfaces (`uiux/00_index.md` File Inventory,
+  `uiux/50_review_input_bundle.md` Bundle Contents,
+  `14_Review-Request.md` reviewer checklist,
+  `qfai-sdd/references/ui-design-contract-normalization.md`,
+  `assets/uix-rev/scoring-review.md`) no longer reference the
+  retired `33_exploration_rubric.md` / `34_evaluator_calibration.md`
+  sidecars. The previous validator-only fix left a documented
+  expectation that operators create the deleted sidecars, which then
+  fell into the legacy-format guard. Reviewer alignment is now
+  pinned to the four canonical UX axes fixed in
+  `core/prototyping/evaluatorReview.ts#ORDINAL_AXES`.
+- **shared `isEnoent` errno helper**: New `src/core/fs/errno.ts`
+  exports `isEnoent(err: unknown): boolean`, replacing the three
+  duplicate inline checks in `init.ts`, `core/config.ts`, and
+  `cli/commands/prototypingIterate.ts`. Future errno codes
+  (`EACCES`, `EBUSY`, `EPERM`, ...) extend this module rather than
+  sprouting new inline checks.
 - **certify reads frozen `specsCovered` from cycle 0**:
   `qfai prototyping certify` no longer re-resolves the primary spec
   via `resolvePrimaryPrototypingSpec`. It now reads
