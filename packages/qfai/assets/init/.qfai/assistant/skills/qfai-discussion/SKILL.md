@@ -32,47 +32,30 @@ Produce a unified 15-file discussion pack plus exploration-first UI sidecars so 
 ## CRITICAL CONSTRAINTS (Read First)
 
 - Output path is fixed: `.qfai/discussion/discussion-YYYYMMDDhhmmssSSS/`.
-- Required fixed files (all 15 are mandatory) remain unchanged.
+- All 15 mandatory fixed files remain unchanged.
 - UI-bearing discussion packs may include `prototyping.yaml` as an optional recommendation artifact; non-ui discussion packs typically omit it.
-- Discussion completion requires `Disposition: open` count to be zero in `11_OQ-Register.md`.
+- Completion requires `Disposition: open` count to be zero in `11_OQ-Register.md`.
 - If UI requirements exist, behavior obligations are primary and HTML+CSS mock is optional fallback only.
 - Discussion is planner-first: do not select a single visual winner and do not finalize the design system here.
 - Use artifact files, not conversational summaries, as the downstream handoff.
 
 ## UI-bearing Canonical Sidecar Family
 
-UI-bearing packs must produce the following sidecars as primary truth:
+UI-bearing packs must produce, as primary truth: `uiux/40_screen_contracts.md`, `uiux/50_review_input_bundle.md`. They MUST also emit a draft brand SSOT at the **consuming-project root**:
 
-- `uiux/40_screen_contracts.md`
-- `uiux/50_review_input_bundle.md`
-
-In addition, UI-bearing packs MUST emit a draft brand SSOT at the
-**consuming-project root**:
-
-- `<consuming-project-root>/DESIGN.md`
-
-This is the brand SSOT consumed by `/qfai-sdd` (which freezes its
-sha256 in `.qfai/contracts/design/DESIGN.md.lock.yaml`) and by
-`/qfai-prototyping` (which iterates against locked tokens). Brand
-intent (product intent, brand signals, anti-goals, reference pool
-framed as deviate-from inputs) lives in `DESIGN.md` front-matter +
-`# Brand Philosophy` body — there is no longer a separate per-aspect
-sidecar.
+- `<consuming-project-root>/DESIGN.md` — brand SSOT consumed by `/qfai-sdd` (freezes its sha256 in `.qfai/contracts/design/DESIGN.md.lock.yaml`) and by `/qfai-prototyping` (iterates against locked tokens). Brand intent (product intent, brand signals, anti-goals, reference pool framed as deviate-from inputs) lives in front-matter + `# Brand Philosophy` body — no separate per-aspect sidecar.
 
 ## Required Process
 
 1. Run the core interview for concept, scope, stakeholders, and constraints.
 2. Run Inception Deck and include at least one Mermaid diagram.
-3. Run Story Workshop, capture user stories and user flows, and keep HTML+CSS mock as optional fallback only.
+3. Run Story Workshop, capture user stories and user flows; HTML+CSS mock is optional fallback only.
 4. Register source traceability and reference research in `04_Sources.md`.
 5. Capture scope, REQ, NFR, glossary, constraints, and policies.
 6. Run Example Mapping and capture `Example Seeds`.
 7. Update `11_OQ-Register.md`, resolve OQs until open count is zero, and move deferred items to `13_Deferred.md`.
 8. Generate the exploration-first sidecar family for UI-bearing targets.
-9. **Emit root `DESIGN.md` draft** for UI-bearing targets — write the
-   brand SSOT to `<consuming-project-root>/DESIGN.md` per
-   `references/design-dna-intake.md`. Required when the pack is
-   UI-bearing; skip when not.
+9. **Emit root `DESIGN.md` draft** for UI-bearing targets per `references/design-dna-intake.md`. Required when UI-bearing; skip otherwise.
 10. Generate `prototyping.yaml` only when the latest discussion pack is UI-bearing and an explicit prototyping recommendation is useful.
 11. Request review and record the Reviewer result.
 
@@ -80,19 +63,10 @@ For UI-bearing targets, follow `references/design-dna-intake.md` while authoring
 
 ## UI-bearing Authoring Requirements
 
-- Root `DESIGN.md` front-matter must define `brand` (name, archetype,
-  voice), `audience` (emotion, do_not_look_like), and the full
-  `visual.*` token tree (colors, typography, spacing, radius, shadow).
-- `# Brand Philosophy` body in `DESIGN.md` documents do/don't, brand
-  signals, and exploration references framed as **deviate-from** inputs
-  (not imitate-this) for the downstream `/qfai-prototyping` reviewer.
-- `40_screen_contracts.md` must define each screen contract per the
-  template schema.
-- `50_review_input_bundle.md` must document review inputs for
-  downstream skills.
-
-Evaluation axes are global constants (4-step ordinal: weak / acceptable /
-strong / exceptional) and are not authored as discussion sidecars.
+- Root `DESIGN.md` front-matter must define `brand` (name, archetype, voice), `audience` (emotion, do_not_look_like), and the full `visual.*` token tree (colors, typography, spacing, radius, shadow).
+- `# Brand Philosophy` body documents do/don't, brand signals, and exploration references framed as **deviate-from** inputs (not imitate-this) for the downstream `/qfai-prototyping` reviewer.
+- `40_screen_contracts.md` defines each screen contract per the template schema; `50_review_input_bundle.md` documents review inputs for downstream skills.
+- Evaluation axes are global constants (4-step ordinal: weak / acceptable / strong / exceptional) and are not authored as discussion sidecars.
 
 ## Completion Contract (Shared)
 
@@ -104,9 +78,7 @@ Before declaring completion, you MUST:
 - ensure `Disposition: open` count is zero in `11_OQ-Register.md`;
 - ensure every deferred item has full metadata in `13_Deferred.md`;
 - ensure `02_Inception-Deck.md` and `03_Story-Workshop.md` include Mermaid diagrams;
-- ensure the UI-bearing sidecar family is complete;
-- ensure the UI-bearing root `DESIGN.md` draft exists at the
-  consuming-project root and parses as valid front-matter;
+- ensure the UI-bearing sidecar family is complete and the root `DESIGN.md` draft exists at the consuming-project root and parses as valid front-matter;
 - run `qfai validate --profile discussion --fail-on error` and fix discussion-owned findings;
 - avoid selecting a single visual winner in discussion artifacts.
 
@@ -114,15 +86,12 @@ Before declaring completion, you MUST:
 
 Reviewer checks must confirm:
 
-- the 15-file discussion pack is complete
-- `Disposition: open` count is zero in `11_OQ-Register.md`
-- the UI-bearing sidecar family is complete when the pack is UI-bearing
-- discussion stayed planner-first and did not choose a single visual winner
-- Drift Protocol is enforced
-- review policy is checked against `.qfai/assistant/steering/test-layers.md`
-- planning and coverage heuristics are signals, not gates
-- review findings end with `Status (PASS/REVISE)`
-- Reviewer result is explicit as `PASS` or `REVISE`
+- the 15-file discussion pack is complete; `Disposition: open` count is zero in `11_OQ-Register.md`;
+- the UI-bearing sidecar family is complete when the pack is UI-bearing;
+- discussion stayed planner-first and did not choose a single visual winner;
+- Drift Protocol is enforced; review policy is checked against `.qfai/assistant/steering/test-layers.md`;
+- planning and coverage heuristics are signals, not gates;
+- review findings end with `Status (PASS/REVISE)` and Reviewer result is explicit as `PASS` or `REVISE`.
 
 ## Sub-agent Delegation (MANDATORY)
 
@@ -130,9 +99,7 @@ Follow `.qfai/assistant/instructions/shared-skill-delegation-baseline.md`.
 
 ### Orchestrator Protocol (MUST)
 
-- do not self-approve
-- use artifact files as the handoff surface
-- integrate delegated outputs only after checking pack completeness
+- do not self-approve; use artifact files as the handoff surface; integrate delegated outputs only after checking pack completeness.
 
 ### Capability Probe (MUST)
 
