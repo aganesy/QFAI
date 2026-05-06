@@ -356,6 +356,42 @@ describe("parseDesignMd (TC-1.1.x)", () => {
     expect(result.error.path).toBe("visual.typography.weight");
   });
 
+  it("audience as a scalar is rejected at parse-time (codex AHcvl)", () => {
+    // Pre-fix `if (isRecord(raw.audience))` silently skipped a
+    // present-but-non-record value. Same SSOT-divergence pattern as
+    // accessibility / spacing.
+    const text = VALID_FRONT_MATTER.replace(
+      'audience:\n  emotion: ["confident comparison"]\n  do_not_look_like: ["generic SaaS dashboard"]',
+      'audience: "ops"',
+    );
+    const result = parseDesignMd(text);
+    expect("error" in result).toBe(true);
+    if (!("error" in result)) return;
+    expect(result.error.code).toBe("invalid-type");
+    expect(result.error.path).toBe("audience");
+  });
+
+  it("visual.shadow.sm as a numeric literal is rejected at parse-time (codex AHcvm)", () => {
+    // Pre-fix readStringRecord coerced `0` → `"0"`. Now reject so the
+    // parsed token can never disagree with the raw DESIGN.md bytes
+    // frozen in the lock.
+    const text = VALID_FRONT_MATTER.replace('    sm: "0 1px 2px rgba(15,23,42,0.05)"', "    sm: 0");
+    const result = parseDesignMd(text);
+    expect("error" in result).toBe(true);
+    if (!("error" in result)) return;
+    expect(result.error.code).toBe("invalid-type");
+    expect(result.error.path).toBe("visual.shadow.sm");
+  });
+
+  it("visual.radius.sm as a numeric literal is rejected at parse-time (codex AHcvm)", () => {
+    const text = VALID_FRONT_MATTER.replace('    sm:   "0.25rem"', "    sm: 0");
+    const result = parseDesignMd(text);
+    expect("error" in result).toBe(true);
+    if (!("error" in result)) return;
+    expect(result.error.code).toBe("invalid-type");
+    expect(result.error.path).toBe("visual.radius.sm");
+  });
+
   it("accessibility as a scalar is rejected at parse-time (codex AHHiE)", () => {
     // Pre-fix `if (isRecord(raw.accessibility))` silently skipped a
     // present-but-non-record value, so `accessibility: false` hashed

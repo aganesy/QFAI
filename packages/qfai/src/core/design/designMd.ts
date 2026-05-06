@@ -349,6 +349,22 @@ function buildDesignMd(raw: unknown): BuildResult {
     brand: brand.value,
     visual: visual.value,
   };
+  // codex AHcvl: reject present-but-non-record `audience`. Same
+  // SSOT-divergence pattern as accessibility (AHHiE) / visual.spacing
+  // (AHHiH) / typography token blocks (AG08u): pre-fix
+  // `if (isRecord(raw.audience))` silently skipped scalars / arrays
+  // (`audience: "..."`, `audience: ["foo"]`), letting the invalid
+  // value hash into the lock while downstream iterate / certify
+  // saw `audience: undefined` and lost the brand-context tokens.
+  if ("audience" in raw && raw.audience !== undefined && !isRecord(raw.audience)) {
+    return {
+      error: {
+        path: "audience",
+        code: "invalid-type",
+        message: `'audience' must be a mapping (got ${describeValueShape(raw.audience)}).`,
+      },
+    };
+  }
   if (isRecord(raw.audience)) {
     // Reject unknown keys under `audience` for the same reason as
     // `visual` and `visual.typography`: the distributed DESIGN.md
@@ -551,7 +567,9 @@ function readVisual(raw: unknown): { value: DesignMd["visual"] } | { error: Pars
     });
     if (shadowError) return { error: shadowError };
   }
-  const colors = readStringRecord(raw.colors);
+  const colorsResult = readStringRecordStrict(raw.colors, "visual.colors");
+  if ("error" in colorsResult) return colorsResult;
+  const colors = colorsResult.value;
   const typographyRaw = isRecord(raw.typography) ? raw.typography : {};
   // Reject unknown keys under `visual.typography` for the same reason
   // as the visual top level: silently dropping authoring directives
@@ -571,8 +589,12 @@ function readVisual(raw: unknown): { value: DesignMd["visual"] } | { error: Pars
     path: "visual.typography",
   });
   if (typographyError) return { error: typographyError };
-  const radius = readStringRecord(raw.radius);
-  const shadow = readStringRecord(raw.shadow);
+  const radiusResult = readStringRecordStrict(raw.radius, "visual.radius");
+  if ("error" in radiusResult) return radiusResult;
+  const radius = radiusResult.value;
+  const shadowResult = readStringRecordStrict(raw.shadow, "visual.shadow");
+  if ("error" in shadowResult) return shadowResult;
+  const shadow = shadowResult.value;
 
   const typography: DesignMd["visual"]["typography"] = {
     family_sans: typeof typographyRaw.family_sans === "string" ? typographyRaw.family_sans : "",
@@ -853,14 +875,35 @@ function describeValueShape(value: unknown): string {
   return `<${typeof value}>`;
 }
 
-function readStringRecord(raw: unknown): Record<string, string> {
-  if (!isRecord(raw)) return {};
+/**
+ * Strict reader for token value sections (`visual.colors`,
+ * `visual.radius`, `visual.shadow`). The distributed DESIGN.md spec
+ * defines these values as strings; pre-fix the historical
+ * `readStringRecord` coerced numbers (`shadow.sm: 0` became `"0"`),
+ * letting validate pass on a parsed token that differed from the raw
+ * DESIGN.md bytes frozen in the lock. This rejects non-strings with
+ * `invalid-type` at parse-time so the brand SSOT enforces the
+ * contract upstream of the lock. codex AHcvm.
+ */
+function readStringRecordStrict(
+  raw: unknown,
+  sectionPath: string,
+): { value: Record<string, string> } | { error: ParseError } {
+  if (!isRecord(raw)) return { value: {} };
   const out: Record<string, string> = {};
   for (const [k, v] of Object.entries(raw)) {
-    if (typeof v === "string") out[k] = v;
-    else if (typeof v === "number") out[k] = String(v);
+    if (typeof v !== "string") {
+      return {
+        error: {
+          path: `${sectionPath}.${k}`,
+          code: "invalid-type",
+          message: `'${sectionPath}.${k}' must be a string (got ${describeValueShape(v)}).`,
+        },
+      };
+    }
+    out[k] = v;
   }
-  return out;
+  return { value: out };
 }
 
 // ---------------------------------------------------------------------------
