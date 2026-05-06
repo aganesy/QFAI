@@ -717,6 +717,33 @@ describe("runPrototypingIterate cycle N hash gate (TC-3.5.x)", () => {
     expect(await runPrototypingIterate({ root, cycle: 1 })).toBe(2);
   });
 
+  it.each([
+    { label: "non-array string", value: "0001" },
+    { label: "non-array record", value: { primary: "0001" } },
+    { label: "empty-string entry", value: [""] },
+    { label: "non-string entry (number)", value: [42] },
+    { label: "non-string entry (null)", value: [null] },
+    { label: "mixed valid + empty entry", value: ["0001", ""] },
+  ])(
+    "rejects cycle >= 1 with malformed prototyping.json#specsCovered ($label) with exit 2",
+    async ({ value }) => {
+      // Aganesy 6ueE: pin every null-trigger of `readFrozenSpecsCovered`.
+      // The fail-fast contract states "must be a non-empty array of
+      // non-empty strings"; this it.each table covers the predicate's
+      // 4 reject paths (non-array, non-array record, empty-string,
+      // non-string) so a future refactor that re-orders the early
+      // returns or relaxes a check cannot silently regress.
+      const root = await newTempDir();
+      await seedMinimalProject(root);
+      await seedRawPrototypingJson(root, {
+        specsCovered: value,
+        designMd: { path: "DESIGN.md", sha256: hashDesignMd(CANONICAL_DESIGN_MD) },
+        iterations: [{ index: 0 }],
+      });
+      expect(await runPrototypingIterate({ root, cycle: 1 })).toBe(2);
+    },
+  );
+
   it("rejects mid-loop primary-spec change (cycle 1 with frozen specsCovered != resolved spec) with exit 2", async () => {
     const root = await newTempDir();
     await seedMinimalProject(root);

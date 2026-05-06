@@ -38,6 +38,7 @@ import {
   type DesignMdViolation,
 } from "../../core/prototyping/designMdViolations.js";
 import { resolvePrimaryPrototypingSpec } from "../../core/prototyping/specResolution.js";
+import { readFrozenSpecsCovered } from "../../core/prototyping/specsCovered.js";
 import { resolveToolVersion } from "../../core/version.js";
 import { error, info } from "../lib/logger.js";
 
@@ -453,24 +454,6 @@ function countIterations(protoJson: unknown): number {
   return Array.isArray(iterations) ? iterations.length : 0;
 }
 
-/**
- * Read the frozen `specsCovered` array seeded by
- * `qfai prototyping iterate --cycle 0`. Returns `null` for
- * missing-or-malformed (the SDD precondition is broken; certify
- * must fail fast). An empty array is malformed: the loop without
- * an associated spec has nothing to certify against.
- */
-function readFrozenSpecsCovered(protoJson: unknown): string[] | null {
-  if (!isRecord(protoJson)) return null;
-  const raw = protoJson.specsCovered;
-  if (!Array.isArray(raw) || raw.length === 0) return null;
-  const out: string[] = [];
-  for (const value of raw) {
-    if (typeof value !== "string" || value.length === 0) return null;
-    out.push(value);
-  }
-  return out;
-}
 
 // `DesignMdViolation` is only used as part of typing through the
 // findDesignMdViolations import; explicit re-export keeps the tree shake

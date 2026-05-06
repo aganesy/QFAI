@@ -189,6 +189,43 @@ describe("findDesignMdViolations — color (TC-3.2.1..9)", () => {
     expect(colorHits.map((v) => v.found)).toEqual(["red", "blue"]);
   });
 
+  it("rgba embedded in a registered box-shadow does NOT silently allow it on background-color", () => {
+    // Codex 6r-e: pre-fix, `collectAllowedColors` widened the global
+    // color allow-set with literals embedded in registered shadows,
+    // so an unrelated `background-color: rgba(15,23,42,0.05)`
+    // (which is the rgba inside `dm.visual.shadow.sm`) slipped past
+    // the gate. Post-fix, the shadow-embedded literals are scoped
+    // to box-shadow declarations only via SHADOW_DECL_STRIP_RE, and
+    // the literal scanner ignores box-shadow value content.
+    const html = '<div style="background-color: rgba(15,23,42,0.05)"></div>';
+    const out = findDesignMdViolations(html, sampleDesignMd());
+    expect(
+      out.some((v) => v.kind === "color" && v.found === "rgba(15,23,42,0.05)"),
+    ).toBe(true);
+  });
+
+  it("registered box-shadow with embedded rgba is still allowed (no false positive on the shadow itself)", () => {
+    // Counterpart to the test above: stripping shadow declarations
+    // from the literal-scan input must not regress the original
+    // exemption. A box-shadow value listed verbatim in
+    // `dm.visual.shadow.*` continues to pass.
+    const html = '<div style="box-shadow: 0 1px 2px rgba(15,23,42,0.05)"></div>';
+    expect(findDesignMdViolations(html, sampleDesignMd())).toEqual([]);
+  });
+
+  it("text-shadow declarations are also stripped from the literal-color scan", () => {
+    // text-shadow follows the same value grammar as box-shadow and
+    // is also stripped before the literal scan. The text-shadow
+    // value here is NOT in `dm.visual.shadow`, so scanShadow does
+    // not catch it (scanShadow is anchored on `box-shadow` only),
+    // but the literal rgba inside it must not surface as a color
+    // violation either — matching the pre-fix behavior for
+    // box-shadow.
+    const html = '<div style="text-shadow: 0 1px 2px rgba(15,23,42,0.05)"></div>';
+    const out = findDesignMdViolations(html, sampleDesignMd());
+    expect(out.filter((v) => v.kind === "color")).toEqual([]);
+  });
+
   it("multi-token shorthand with one allowed and one drift token flags only the drift token", () => {
     const dm = sampleDesignMd();
     dm.visual.colors.primary = "red";

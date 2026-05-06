@@ -41,6 +41,7 @@ import { isEnoent } from "../../core/fs/errno.js";
 import { COMPLETION_CERTIFICATE_REL_PATH } from "../../core/prototyping/certificate.js";
 import { PROTOTYPING_EVIDENCE_REL, PROTOTYPING_JSON_REL } from "../../core/prototyping/paths.js";
 import { resolvePrimaryPrototypingSpec } from "../../core/prototyping/specResolution.js";
+import { readFrozenSpecsCovered } from "../../core/prototyping/specsCovered.js";
 import {
   MAX_ITERATIONS,
   MAX_ITERATION_INDEX,
@@ -429,24 +430,6 @@ async function readPrototypingJson(absPath: string): Promise<PrototypingJsonShap
   } catch {
     return null;
   }
-}
-
-/**
- * Read the frozen `specsCovered` array seeded by `iterate --cycle 0`.
- * Returns `null` for missing-or-malformed (treated as "no frozen seed
- * to compare against"). Same shape as the helper in
- * prototypingCertify so the fail-fast comparison is identical at both
- * boundaries.
- */
-function readFrozenSpecsCovered(record: PrototypingJsonShape): string[] | null {
-  const raw = record.specsCovered;
-  if (!Array.isArray(raw) || raw.length === 0) return null;
-  const out: string[] = [];
-  for (const value of raw) {
-    if (typeof value !== "string" || value.length === 0) return null;
-    out.push(value);
-  }
-  return out;
 }
 
 function asIterations(record: PrototypingJsonShape): readonly unknown[] {

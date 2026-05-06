@@ -162,19 +162,32 @@ function fontMatches(value: string, allowedStacks: ReadonlyArray<string>): boole
 }
 
 function collectAllowedColors(dm: DesignMd): Set<string> {
-  // Allowed color literals are the explicit `visual.colors.*` values plus
-  // any color literals embedded in registered shadow values (so that a
-  // valid `box-shadow: 0 1px 2px rgba(15,23,42,0.05)` does not produce a
-  // spurious color violation for the inner rgba). Radius values are
-  // dimensionless and contribute no color literals.
-  const allowed = lowercaseValues(Object.values(dm.visual.colors));
-  for (const value of Object.values(dm.visual.shadow)) {
-    for (const match of value.matchAll(HEX_RE)) allowed.add(match[0].toLowerCase());
-    for (const match of value.matchAll(RGB_RE)) allowed.add(match[0].toLowerCase());
-    for (const match of value.matchAll(HSL_RE)) allowed.add(match[0].toLowerCase());
-  }
-  return allowed;
+  // Allowed color literals are the explicit `visual.colors.*` values
+  // only. Pre-1.8.9 this set was widened to include color literals
+  // embedded in registered shadow values (so a valid
+  // `box-shadow: 0 1px 2px rgba(15,23,42,0.05)` would not produce a
+  // spurious violation for the inner rgba), but that allowance leaked:
+  // an unrelated `background-color: rgba(15,23,42,0.05)` would also
+  // pass even though that rgba was never declared as a color token.
+  // The fix is to scope the shadow-embedded literals to box-shadow /
+  // text-shadow declarations only. `scanColors` strips those
+  // declarations from the cssText before the literal scan, so this
+  // function no longer needs the shadow-embedded fallback. Radius
+  // values are dimensionless and contribute no color literals.
+  return lowercaseValues(Object.values(dm.visual.colors));
 }
+
+// Strip `box-shadow: ...;` / `text-shadow: ...;` declarations from a
+// CSS region before literal color scanning. Without this, color
+// literals inside a *shadow value* would either (a) be flagged
+// spuriously when scanColors recognized the rgba/hex inside the
+// shadow but not the property anchor, or (b) require a global
+// shadow-color allow that bleeds into unrelated declarations (the
+// pre-1.8.9 behavior caught by codex 6r-e). scanShadow continues to
+// validate the full shadow value against `dm.visual.shadow` tokens
+// independently, so legitimate shadows still pass; this strip pass
+// only affects the literal color scanner.
+const SHADOW_DECL_STRIP_RE = /\b(?:box-shadow|text-shadow)\s*:[^;}<>"']+/gi;
 
 // Capture CSS-context regions so the color scanner does not flag
 // non-CSS hex / rgb / hsl substrings (e.g. `<a href="#deadbeef">`,
@@ -224,11 +237,17 @@ function scanColors(html: string, dm: DesignMd, out: DesignMdViolation[]): void 
   // declarations only when they sit inside a CSS context, hence the
   // explicit `extractCssRegions` step here.
   //
-  // Within CSS regions, strip `url(...)` invocations before literal
-  // scanning so `filter:url(#abc)` / `mask:url("#defaced")` do not
-  // surface their fragment-id as a color violation. The named-color
-  // pass below uses a property-anchored regex and is unaffected.
-  const cssText = extractCssRegions(html).replace(CSS_URL_RE, "");
+  // Within CSS regions, strip `url(...)` invocations and shadow
+  // declarations before literal scanning. `filter:url(#abc)` /
+  // `mask:url("#defaced")` must not surface their fragment-id as a
+  // color violation, and color literals embedded in registered
+  // box-shadow values must not be flagged by the literal scanner
+  // (scanShadow validates the shadow string independently). The
+  // named-color pass below uses a property-anchored regex and is
+  // unaffected by either strip pass.
+  const cssText = extractCssRegions(html)
+    .replace(CSS_URL_RE, "")
+    .replace(SHADOW_DECL_STRIP_RE, "");
   for (const match of cssText.matchAll(HEX_RE)) {
     const literal = match[0].toLowerCase();
     if (!allowed.has(literal)) {

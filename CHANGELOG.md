@@ -117,6 +117,28 @@
   spec into `iterate-plan.json` while certify later blocked on the
   same gap. Single, clear error pointing at
   `--cycle 0 --target-url <url>` to refreeze.
+- **DESIGN.md scanner: shadow-embedded colors are scoped to box-shadow**:
+  `collectAllowedColors` no longer widens the global color allow-set
+  with literals embedded in registered box-shadow tokens. Instead,
+  `scanColors` strips `box-shadow:` and `text-shadow:` declarations
+  from the cssText before the literal scan via a new
+  `SHADOW_DECL_STRIP_RE`. Pre-fix, an unrelated
+  `background-color: rgba(15,23,42,0.05)` would silently pass when
+  the same rgba happened to appear inside a registered shadow value
+  (it had been added to the global allow-set). The scoped fix
+  preserves the original "shadow value with embedded rgba is
+  legitimate" exemption while closing the cross-property leak.
+  `scanShadow` continues to validate the full shadow string against
+  `dm.visual.shadow` independently.
+- **specsCovered SSOT module**: `readFrozenSpecsCovered` is now a
+  single shared helper at
+  `core/prototyping/specsCovered.ts`. Both `prototypingIterate`
+  (cycle >= 1 hash gate) and `prototypingCertify` (final-spec
+  resolution) import it. Pre-1.8.9 each command had its own copy
+  of the predicate, with the comment "same shape as the helper in
+  prototypingCertify" — the SSOT consolidation removes the manual
+  shape-mirror obligation and adds dedicated unit tests for the 4
+  null trigger paths.
 - **renderCritique reads the canonical prototyping.json path**:
   `collectRenderEvidenceViewports` now imports
   `PROTOTYPING_JSON_REL` (`.qfai/evidence/prototyping/prototyping.json`)
