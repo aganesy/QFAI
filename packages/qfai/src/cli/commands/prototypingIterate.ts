@@ -30,14 +30,14 @@
  * (Tailwind config shape).
  */
 
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import { error, info } from "../lib/logger.js";
 import { loadConfig } from "../../core/config.js";
 import { hashDesignMd, parseDesignMd, type DesignMd } from "../../core/design/designMd.js";
 import { readDesignMdLockSha } from "../../core/design/designMdLock.js";
-import { PROTOTYPING_JSON_REL } from "../../core/prototyping/paths.js";
+import { PROTOTYPING_EVIDENCE_REL, PROTOTYPING_JSON_REL } from "../../core/prototyping/paths.js";
 import { resolvePrimaryPrototypingSpec } from "../../core/prototyping/specResolution.js";
 import {
   MAX_ITERATIONS,
@@ -230,6 +230,13 @@ export async function runPrototypingIterate(
       runId: buildRunId(currentSha),
       specsCovered: specs,
     });
+    // Defense-in-depth: stale `iter-NN/` directories from a prior loop
+    // could otherwise survive on disk and bind certify to evidence the
+    // current reviewer gate has not approved. Certify already anchors
+    // its scan to prototyping.json#iterations[] (which we just reset),
+    // but deleting the on-disk dirs guarantees no resolver can stumble
+    // into them.
+    await deleteStaleIterDirs(path.join(options.root, PROTOTYPING_EVIDENCE_REL));
   }
 
   // 5) Assign paths and write iterate-plan.json.
@@ -377,6 +384,23 @@ async function writeSeedMetadata(protoJsonAbs: string, seed: SeedMetadata): Prom
   body.specsCovered = [...seed.specsCovered];
   await mkdir(path.dirname(protoJsonAbs), { recursive: true });
   await writeFile(protoJsonAbs, `${JSON.stringify(body, null, 2)}\n`, "utf-8");
+}
+
+async function deleteStaleIterDirs(evidenceRootAbs: string): Promise<void> {
+  let entries: string[];
+  try {
+    entries = await readdir(evidenceRootAbs);
+  } catch {
+    return;
+  }
+  for (const name of entries) {
+    if (!/^iter-\d{2,}$/.test(name)) continue;
+    try {
+      await rm(path.join(evidenceRootAbs, name), { recursive: true, force: true });
+    } catch {
+      // best-effort cleanup; leave for the operator to inspect
+    }
+  }
 }
 
 function buildRunId(designMdSha: string): string {

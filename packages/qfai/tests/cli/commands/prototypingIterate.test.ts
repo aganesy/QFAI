@@ -578,6 +578,65 @@ describe("runPrototypingIterate cycle N hash gate (TC-3.5.x)", () => {
   });
 });
 
+describe("runPrototypingIterate cycle 0 stale-dir cleanup", () => {
+  it("deletes stale iter-NN/ dirs on cycle 0 reset", async () => {
+    const root = await newTempDir();
+    await seedMinimalProject(root);
+    // Plant stale iter dirs from a fictitious prior loop.
+    const evidenceRoot = path.join(root, ".qfai/evidence/prototyping");
+    await mkdir(path.join(evidenceRoot, "iter-07"), { recursive: true });
+    await writeFile(path.join(evidenceRoot, "iter-07/index.html"), "<old/>", "utf-8");
+    await mkdir(path.join(evidenceRoot, "iter-14"), { recursive: true });
+    await writeFile(path.join(evidenceRoot, "iter-14/index.html"), "<old/>", "utf-8");
+
+    const exit = await runPrototypingIterate({
+      root,
+      cycle: 0,
+      targetUrl: "http://localhost:5173",
+    });
+    expect(exit).toBe(0);
+
+    const iter07Exists = await readFile(
+      path.join(evidenceRoot, "iter-07/index.html"),
+      "utf-8",
+    ).then(
+      () => true,
+      () => false,
+    );
+    expect(iter07Exists).toBe(false);
+    const iter14Exists = await readFile(
+      path.join(evidenceRoot, "iter-14/index.html"),
+      "utf-8",
+    ).then(
+      () => true,
+      () => false,
+    );
+    expect(iter14Exists).toBe(false);
+    // Fresh cycle 0 must produce its own iter-00.
+    const newPlan = await readFile(
+      path.join(evidenceRoot, "iter-00/iterate-plan.json"),
+      "utf-8",
+    );
+    expect(newPlan.length).toBeGreaterThan(0);
+  });
+
+  it("preserves non-iter sibling files in evidence dir", async () => {
+    const root = await newTempDir();
+    await seedMinimalProject(root);
+    const evidenceRoot = path.join(root, ".qfai/evidence/prototyping");
+    await mkdir(evidenceRoot, { recursive: true });
+    // Sibling that is NOT an iter-NN dir — must survive the reset.
+    await writeFile(path.join(evidenceRoot, "notes.md"), "keep me", "utf-8");
+
+    expect(
+      await runPrototypingIterate({ root, cycle: 0, targetUrl: "http://localhost:5173" }),
+    ).toBe(0);
+
+    const survived = await readFile(path.join(evidenceRoot, "notes.md"), "utf-8");
+    expect(survived).toBe("keep me");
+  });
+});
+
 describe("iterate-plan.json design tokens (TC-3.5.x)", () => {
   it("TC-3.5.14: contains designTokens with Tailwind config shape", async () => {
     const root = await newTempDir();

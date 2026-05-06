@@ -6,6 +6,18 @@
 
 ### Fixed (Breaking — pre-1.8.9 internal pipelines only)
 
+- **prototyping certify ↔ iter binding**: `prototypingCertify` now anchors
+  the final-iteration HTML scan to
+  `prototyping.json#iterations[iterations.length - 1]` instead of the
+  highest-indexed `iter-NN/` directory found on disk. After a
+  `qfai prototyping iterate --cycle 0` reset, stale `iter-NN/` directories
+  from a prior loop could otherwise survive on disk; the previous
+  filesystem-max resolver would scan and digest those stale artifacts as
+  the "final" iteration, binding the completion certificate to evidence
+  the current reviewer gate did not approve. As defense-in-depth,
+  `prototypingIterate --cycle 0` also deletes any pre-existing
+  `iter-NN/` directories under `.qfai/evidence/prototyping/` during its
+  hard-reset; non-iter siblings (e.g. operator notes) are preserved.
 - **prototyping path SSOT**:
   `validators/prototyping/completionCertificate.ts#isCompletionClaimed`
   was reading the legacy `.qfai/evidence/prototyping.json`, silently

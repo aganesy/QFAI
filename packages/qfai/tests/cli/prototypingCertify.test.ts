@@ -151,7 +151,7 @@ async function seedAllGatesPass(root: string): Promise<void> {
         result: "PASS",
         signoff: { reviewerId: "test-reviewer", timestamp: "2026-04-27T00:00:00Z" },
       },
-      iterations: [{ index: 0 }, { index: 1 }, { index: 2 }],
+      iterations: [{ index: 0 }, { index: 1 }],
     }),
     "utf-8",
   );
@@ -183,7 +183,7 @@ describe("qfai prototyping certify (generate)", () => {
     expect(body.runId).toBe("run-test-2026");
     expect(body.specsCovered).toEqual(["0012"]);
     expect(body.reviewerSignoff.reviewerId).toBe("test-reviewer");
-    expect(body.iterationCount).toBe(3);
+    expect(body.iterationCount).toBe(2);
   });
 
   it("exits 2 when prototyping.json is missing", async () => {
@@ -362,6 +362,44 @@ describe("qfai prototyping certify (TC-3.6.x DESIGN.md gate)", () => {
     await seedMinimalProject(root, { specMarker: true });
     await seedAllGatesPass(root);
     expect(await runPrototypingCertify({ root, check: false })).toBe(0);
+  });
+
+  it("anchors final HTML scan to prototyping.json#iterations[] (stale higher iter-NN ignored)", async () => {
+    // Simulates a `qfai prototyping iterate --cycle 0` restart that left
+    // a stale iter-14 directory on disk from a prior loop. Without
+    // anchoring, certify would scan that stale dir and digest evidence
+    // the current reviewer gate did not approve.
+    const root = await newTempDir();
+    await seedMinimalProject(root, { specMarker: true });
+    await seedAllGatesPass(root);
+    // The fresh loop has 2 recorded iterations → accepted index = 1.
+    // Plant a stale iter-14 with violating HTML.
+    const staleDir = path.join(root, ".qfai/evidence/prototyping/iter-14");
+    await mkdir(staleDir, { recursive: true });
+    await writeFile(
+      path.join(staleDir, "index.html"),
+      '<span style="color:#abcdef">stale</span>\n',
+      "utf-8",
+    );
+    // The accepted iter-01 is clean → certify must succeed.
+    expect(await runPrototypingCertify({ root, check: false })).toBe(0);
+  });
+
+  it("exits 2 when the recorded final iter dir has no HTML (despite older iters with HTML)", async () => {
+    const root = await newTempDir();
+    await seedMinimalProject(root, { specMarker: true });
+    await seedAllGatesPass(root);
+    // Wipe the recorded final iter (iter-01) but leave iter-00 with HTML.
+    await rm(path.join(root, ".qfai/evidence/prototyping/iter-01"), {
+      recursive: true,
+      force: true,
+    });
+    const iter00 = path.join(root, ".qfai/evidence/prototyping/iter-00");
+    await mkdir(iter00, { recursive: true });
+    await writeFile(path.join(iter00, "index.html"), CLEAN_FINAL_HTML, "utf-8");
+    // Certify must NOT fall back to iter-00 — that iter is not the
+    // accepted iteration in prototyping.json.
+    expect(await runPrototypingCertify({ root, check: false })).toBe(2);
   });
 
   it("TC-3.6.5: only the LAST iter is evaluated (older dirty iters ignored)", async () => {

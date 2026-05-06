@@ -147,11 +147,29 @@ export async function runPrototypingCertify(
     );
     return 2;
   }
-  const finalHtmlPaths = await findFinalIterationHtmlFiles(evidenceRoot);
+  // Anchor the final-iter HTML scan to the iteration count actually
+  // recorded in prototyping.json — NOT the highest iter-NN dir on disk.
+  // After a `qfai prototyping iterate --cycle 0` reset, stale `iter-NN/`
+  // directories from the prior run can survive on disk; selecting by
+  // filesystem max would let certify digest evidence the current
+  // reviewer gate did not approve.
+  const iterationCount = countIterations(protoJson);
+  if (iterationCount === 0) {
+    error(
+      "qfai prototyping certify: prototyping.json#iterations is empty — " +
+        "complete at least one iteration before certification.",
+    );
+    return 2;
+  }
+  const acceptedIterationIndex = iterationCount - 1;
+  const acceptedIterDir = `iter-${String(acceptedIterationIndex).padStart(2, "0")}`;
+  const finalHtmlPaths = await findIterationHtmlFiles(evidenceRoot, acceptedIterationIndex);
   if (finalHtmlPaths.length === 0) {
     error(
-      "qfai prototyping certify: no final iteration HTML found under " +
-        `${PROTOTYPING_EVIDENCE_REL}/iter-*/. Run prototyping iterations first.`,
+      "qfai prototyping certify: no HTML found under " +
+        `${PROTOTYPING_EVIDENCE_REL}/${acceptedIterDir}/ ` +
+        "(the iteration recorded in prototyping.json#iterations[]). " +
+        "Run the capture step for the accepted iteration before certification.",
     );
     return 2;
   }
@@ -311,33 +329,25 @@ export async function runPrototypingShowSpec(options: { root: string }): Promise
 // ─── final-iter HTML resolution ─────────────────────────────────────────────
 
 /**
- * Walk `evidenceRoot/iter-NN/` directories in descending index order and
- * return every `*.html` file in the highest-indexed dir that has one.
- * Returns an empty array when no iter dir holds an HTML artifact.
+ * Return every `*.html` file in the iteration directory whose index
+ * matches the accepted iteration recorded in `prototyping.json#iterations[]`
+ * (i.e. `iterations.length - 1`).
+ *
+ * Anchored — not selected — by the recorded iteration index. Stale
+ * `iter-NN/` directories from a prior loop (kept on disk after a
+ * `qfai prototyping iterate --cycle 0` reset) MUST NOT be eligible
+ * for certification. Returns an empty array when the recorded iter
+ * dir has no HTML artifacts.
  */
-async function findFinalIterationHtmlFiles(evidenceRoot: string): Promise<string[]> {
-  let entries: string[];
-  try {
-    entries = await readdir(evidenceRoot);
-  } catch {
-    return [];
-  }
-  const iterDirs: Array<{ index: number; abs: string }> = [];
-  for (const name of entries) {
-    const match = /^iter-(\d{2,})$/.exec(name);
-    if (!match) continue;
-    const indexStr = match[1];
-    if (indexStr === undefined) continue;
-    const index = Number.parseInt(indexStr, 10);
-    if (Number.isNaN(index)) continue;
-    iterDirs.push({ index, abs: path.join(evidenceRoot, name) });
-  }
-  iterDirs.sort((a, b) => b.index - a.index);
-  for (const dir of iterDirs) {
-    const htmls = await allHtmlIn(dir.abs);
-    if (htmls.length > 0) return htmls;
-  }
-  return [];
+async function findIterationHtmlFiles(
+  evidenceRoot: string,
+  iterationIndex: number,
+): Promise<string[]> {
+  const iterDirAbs = path.join(
+    evidenceRoot,
+    `iter-${String(iterationIndex).padStart(2, "0")}`,
+  );
+  return allHtmlIn(iterDirAbs);
 }
 
 async function allHtmlIn(dir: string): Promise<string[]> {
