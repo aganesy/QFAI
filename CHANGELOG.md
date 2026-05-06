@@ -129,16 +129,38 @@
 - **DESIGN.md scanner: shadow-embedded colors are scoped to box-shadow**:
   `collectAllowedColors` no longer widens the global color allow-set
   with literals embedded in registered box-shadow tokens. Instead,
-  `scanColors` strips `box-shadow:` and `text-shadow:` declarations
-  from the cssText before the literal scan via a new
-  `SHADOW_DECL_STRIP_RE`. Pre-fix, an unrelated
-  `background-color: rgba(15,23,42,0.05)` would silently pass when
-  the same rgba happened to appear inside a registered shadow value
-  (it had been added to the global allow-set). The scoped fix
-  preserves the original "shadow value with embedded rgba is
-  legitimate" exemption while closing the cross-property leak.
-  `scanShadow` continues to validate the full shadow string against
-  `dm.visual.shadow` independently.
+  `scanColors` strips `box-shadow:` declarations from the cssText
+  before the literal scan via a new `SHADOW_DECL_STRIP_RE`. Pre-fix,
+  an unrelated `background-color: rgba(15,23,42,0.05)` would
+  silently pass when the same rgba happened to appear inside a
+  registered shadow value (it had been added to the global allow-
+  set). The scoped fix preserves the original "shadow value with
+  embedded rgba is legitimate" exemption while closing the
+  cross-property leak. `scanShadow` continues to validate the full
+  shadow string against `dm.visual.shadow` independently. The strip
+  is intentionally box-shadow-only — `text-shadow` has no
+  independent validator, so its `text-shadow:` declarations remain
+  in the literal-scan input and hex / rgb / hsl drift inside a
+  text-shadow value still surfaces (named-color drift in
+  text-shadow is uncovered until a future spec adds a
+  `dm.visual.textShadow` token contract).
+- **designContractReadiness: bidirectional mirror cross-check**:
+  `crossCheckMirrorValues` now runs in both directions. The
+  DESIGN.md → mirror direction was already added; the new mirror →
+  DESIGN.md direction surfaces fabricated extra keys (e.g. a
+  hand-authored `visual.colors.fabricated_token: "#FF00FF"` not in
+  DESIGN.md) as a DCON-005 with the rationale "the mirror must be
+  a verbatim copy of DESIGN.md (no fabricated keys)". The contract
+  is now structurally enforced: the mirror's per-section key set
+  must be set-equal to DESIGN.md's.
+- **designContractReadiness: parse DESIGN.md even without lock**:
+  `parseDesignMd` is no longer gated on `lockText !== null`. A
+  UI-bearing project in the common initial state (DESIGN.md
+  authored but malformed, lock not yet generated) now surfaces both
+  DCON-031 (missing lock) AND DCON-033 (parse failure), pointing
+  the operator at the file that actually needs repair. Pre-fix,
+  only DCON-031 fired and `/qfai-sdd Phase 0` would keep failing
+  on the invalid front-matter without the validator naming it.
 - **specsCovered SSOT module**: `readFrozenSpecsCovered` is now a
   single shared helper at
   `core/prototyping/specsCovered.ts`. Both `prototypingIterate`

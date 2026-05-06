@@ -268,17 +268,19 @@ describe("findDesignMdViolations — color (TC-3.2.1..9)", () => {
     expect(findDesignMdViolations(html, sampleDesignMd())).toEqual([]);
   });
 
-  it("text-shadow declarations are also stripped from the literal-color scan", () => {
-    // text-shadow follows the same value grammar as box-shadow and
-    // is also stripped before the literal scan. The text-shadow
-    // value here is NOT in `dm.visual.shadow`, so scanShadow does
-    // not catch it (scanShadow is anchored on `box-shadow` only),
-    // but the literal rgba inside it must not surface as a color
-    // violation either — matching the pre-fix behavior for
-    // box-shadow.
-    const html = '<div style="text-shadow: 0 1px 2px rgba(15,23,42,0.05)"></div>';
+  it("text-shadow drift hex/rgb/hsl IS still flagged by the literal-color scan", () => {
+    // Aganesy 67J9: text-shadow has no independent validator
+    // (scanShadow is anchored on `box-shadow:`). Stripping
+    // text-shadow declarations would leave its drift entirely
+    // unmonitored. The strip is intentionally scoped to box-shadow
+    // only, so hex / rgb / hsl literals inside a text-shadow value
+    // still surface as DESIGN.md drift here. Named-color drift in
+    // text-shadow is not caught (text-shadow is not in
+    // COLOR_PROP_RE) — this matches the pre-fix posture; weak
+    // literal-only protection is strictly more than no protection.
+    const html = '<div style="text-shadow: 0 1px 2px #abcdef"></div>';
     const out = findDesignMdViolations(html, sampleDesignMd());
-    expect(out.filter((v) => v.kind === "color")).toEqual([]);
+    expect(out.some((v) => v.kind === "color" && v.found === "#abcdef")).toBe(true);
   });
 
   it("multi-token shorthand with one allowed and one drift token flags only the drift token", () => {

@@ -182,17 +182,28 @@ function collectAllowedColors(dm: DesignMd): Set<string> {
   return lowercaseValues(Object.values(dm.visual.colors));
 }
 
-// Strip `box-shadow: ...;` / `text-shadow: ...;` declarations from a
-// CSS region before literal color scanning. Without this, color
-// literals inside a *shadow value* would either (a) be flagged
-// spuriously when scanColors recognized the rgba/hex inside the
-// shadow but not the property anchor, or (b) require a global
+// Strip `box-shadow: ...;` declarations from a CSS region before
+// literal color scanning. Without this, color literals inside a
+// registered shadow value would either (a) be flagged spuriously
+// when scanColors recognized the rgba/hex inside the shadow value
+// but not the box-shadow property anchor, or (b) require a global
 // shadow-color allow that bleeds into unrelated declarations (the
 // pre-1.8.9 behavior caught by codex 6r-e). scanShadow continues to
 // validate the full shadow value against `dm.visual.shadow` tokens
-// independently, so legitimate shadows still pass; this strip pass
-// only affects the literal color scanner.
-const SHADOW_DECL_STRIP_RE = /\b(?:box-shadow|text-shadow)\s*:[^;}<>"']+/gi;
+// independently, so legitimate registered shadows still pass.
+//
+// Scope is intentionally box-shadow only — `text-shadow` is NOT
+// stripped. There is no independent text-shadow validator
+// (scanShadow is anchored on `box-shadow:`), so stripping
+// text-shadow would leave its drift entirely unmonitored. By
+// keeping text-shadow in the literal-color input, hex / rgb / hsl
+// literals inside a `text-shadow` value still surface as DESIGN.md
+// drift through scanColors. (Named-color drift in text-shadow is
+// not caught — text-shadow is not in COLOR_PROP_RE — but this
+// matches the pre-fix posture: weak literal-only protection is
+// strictly more than no protection.) If a future spec adds a
+// `dm.visual.textShadow` token contract, this scope can widen.
+const SHADOW_DECL_STRIP_RE = /\bbox-shadow\s*:[^;}<>"']+/gi;
 
 // Capture CSS-context regions so the color scanner does not flag
 // non-CSS hex / rgb / hsl substrings (e.g. `<a href="#deadbeef">`,

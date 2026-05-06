@@ -539,6 +539,66 @@ describe("validateSddDesignContractReadiness (TC-3.8.x)", () => {
     expect(dcon005[0]?.message).toContain("#1F2937");
   });
 
+  it("design-system.yaml mirror with extra fabricated key → DCON-005 (mirror must be verbatim)", async () => {
+    // Aganesy 6ll8: bidirectional cross-check. A hand-authored
+    // mirror with `visual.colors.fabricated_token: "#FF00FF"` must
+    // be rejected even when every DESIGN.md token is faithfully
+    // copied — the mirror is contractually a verbatim copy, so
+    // extra keys break the set-equal invariant.
+    const root = await newTempDir();
+    await seedUiBearingProject(root);
+    await seedDesignMdAndLock(root);
+    const designDir = path.join(root, ".qfai/contracts/design");
+    await writeFile(
+      path.join(designDir, "design-system.yaml"),
+      VALID_MIRROR_YAML.replace(
+        '    overlay: "rgba(0,0,0,0.5)"',
+        '    overlay: "rgba(0,0,0,0.5)"\n    fabricated_token: "#FF00FF"',
+      ),
+      "utf-8",
+    );
+    await writeFile(
+      path.join(designDir, "prototype-handoff.yaml"),
+      [
+        "finalIterIndex: 1",
+        'finalArtifact: ".qfai/prototypes/final/index.html"',
+        'designMdPath: "DESIGN.md"',
+        `designMdSha256: "${hashDesignMd(VALID_DESIGN_MD)}"`,
+        'designSystemMirror: ".qfai/contracts/design/design-system.yaml"',
+        'implementationNotes: "test"',
+        "",
+      ].join("\n"),
+      "utf-8",
+    );
+    const issues = await validatePrototypingDesignContractReadiness(root, defaultConfig);
+    const dcon005 = issues.filter((i) => i.code === "QFAI-DCON-005");
+    expect(
+      dcon005.some(
+        (i) =>
+          i.message.includes("visual.colors.fabricated_token") &&
+          i.message.includes("not a DESIGN.md token"),
+      ),
+    ).toBe(true);
+  });
+
+  it("malformed root DESIGN.md WITHOUT lock yaml still surfaces DCON-033 (parse error)", async () => {
+    // Codex 668Z: pre-fix, parseDesignMd was nested under
+    // `designMdText !== null && lockText !== null`, so a project
+    // with a malformed DESIGN.md and no lock yet (the common
+    // initial state) saw only DCON-031 and missed the parse error.
+    // Post-fix, parseDesignMd runs whenever DESIGN.md is readable,
+    // so DCON-033 fires regardless of lock state.
+    const root = await newTempDir();
+    await seedUiBearingProject(root);
+    // Author a malformed DESIGN.md (missing front-matter delimiter).
+    await writeFile(path.join(root, "DESIGN.md"), "no front matter here\n", "utf-8");
+    // Do NOT seed the lock — common pre-Phase-0 state.
+    const issues = await validateSddDesignContractReadiness(root, defaultConfig);
+    const codes = issues.map((i) => i.code);
+    expect(codes).toContain("QFAI-DCON-031"); // missing lock
+    expect(codes).toContain("QFAI-DCON-033"); // parse failure now also surfaced
+  });
+
   it("design-system.yaml mirror missing one DESIGN.md sub-key → DCON-005 missing-key diagnostic", async () => {
     const root = await newTempDir();
     await seedUiBearingProject(root);

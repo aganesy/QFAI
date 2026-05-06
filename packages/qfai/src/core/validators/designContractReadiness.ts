@@ -173,43 +173,18 @@ async function validateRootDesignMdAndLock(
 
   let lockSha: string | null = null;
   let designMd: DesignMd | null = null;
-  // Only attempt sha comparison when both files were readable.
-  if (designMdText !== null && lockText !== null) {
-    lockSha = readDesignMdLockSha(lockText);
-    if (lockSha === null) {
-      issues.push(
-        issue(
-          "QFAI-DCON-031",
-          `${DESIGN_MD_LOCK_REL_BASENAME} is missing 'designMdSha256'.`,
-          "error",
-          toPosixRelative(root, lockPath),
-          "designContractReadiness.designMdLock",
-          undefined,
-          "canonical",
-          "Re-run /qfai-sdd Phase 0 to regenerate DESIGN.md.lock.yaml with a current designMdSha256.",
-        ),
-      );
-    } else {
-      const currentSha = hashDesignMd(designMdText);
-      if (currentSha !== lockSha) {
-        issues.push(
-          issue(
-            "QFAI-DCON-032",
-            "DESIGN.md sha256 does not match DESIGN.md.lock.yaml.",
-            "error",
-            ROOT_DESIGN_MD_REL,
-            "designContractReadiness.designMdSha",
-            undefined,
-            "canonical",
-            "DESIGN.md was edited after the freeze. Re-run /qfai-sdd Phase 0 (or restart prototyping) to refreeze.",
-          ),
-        );
-      }
-    }
-    // DCON-030 covers missing-file; parse failures get their own
-    // distinct code (DCON-033) so automated remediation can route the
-    // two failure modes correctly: missing -> regenerate template,
-    // parse failure -> repair existing file without losing user edits.
+
+  // Parse DESIGN.md whenever it was readable, BEFORE the lock-gated
+  // sha-comparison block. Pre-fix the parse was nested under
+  // `designMdText !== null && lockText !== null`, so a UI-bearing
+  // project in the common initial state (DESIGN.md authored but
+  // malformed, lock not yet generated) saw only DCON-031 and missed
+  // the DCON-033 parse error pointing at the file that needs
+  // repair. DCON-030 covers missing-file; DCON-033 is the parse-
+  // failure code so automated remediation can route the two failure
+  // modes correctly: missing -> regenerate template, parse failure
+  // -> repair existing file without losing user edits.
+  if (designMdText !== null) {
     const parseResult = parseDesignMd(designMdText);
     if ("error" in parseResult) {
       issues.push(
@@ -226,6 +201,46 @@ async function validateRootDesignMdAndLock(
       );
     } else {
       designMd = parseResult.data;
+    }
+  }
+
+  // Only attempt sha comparison when both files were readable. The
+  // lock-extraction (`readDesignMdLockSha`) and the equality check
+  // both require lockText, while the equality also requires
+  // designMdText to compute a current sha. The DCON-031 "missing
+  // designMdSha256" is a property of the lock file and is
+  // independent of whether DESIGN.md parsed.
+  if (lockText !== null) {
+    lockSha = readDesignMdLockSha(lockText);
+    if (lockSha === null) {
+      issues.push(
+        issue(
+          "QFAI-DCON-031",
+          `${DESIGN_MD_LOCK_REL_BASENAME} is missing 'designMdSha256'.`,
+          "error",
+          toPosixRelative(root, lockPath),
+          "designContractReadiness.designMdLock",
+          undefined,
+          "canonical",
+          "Re-run /qfai-sdd Phase 0 to regenerate DESIGN.md.lock.yaml with a current designMdSha256.",
+        ),
+      );
+    } else if (designMdText !== null) {
+      const currentSha = hashDesignMd(designMdText);
+      if (currentSha !== lockSha) {
+        issues.push(
+          issue(
+            "QFAI-DCON-032",
+            "DESIGN.md sha256 does not match DESIGN.md.lock.yaml.",
+            "error",
+            ROOT_DESIGN_MD_REL,
+            "designContractReadiness.designMdSha",
+            undefined,
+            "canonical",
+            "DESIGN.md was edited after the freeze. Re-run /qfai-sdd Phase 0 (or restart prototyping) to refreeze.",
+          ),
+        );
+      }
     }
   }
 
@@ -582,6 +597,8 @@ function crossCheckMirrorValues(
   ): void => {
     const mirror = visual[section];
     if (!isRecord(mirror)) return;
+    // DESIGN.md -> mirror direction: every DESIGN.md token must be
+    // present in the mirror with the matching value.
     for (const [key, expectedValue] of Object.entries(expected)) {
       if (!(key in mirror)) {
         issues.push(
@@ -607,6 +624,29 @@ function crossCheckMirrorValues(
             undefined,
             "canonical",
             "The mirror is contractually a verbatim copy of DESIGN.md tokens; re-run `qfai prototyping certify` (or regenerate design-system.yaml) so values match.",
+          ),
+        );
+      }
+    }
+    // mirror -> DESIGN.md direction: extra keys not in DESIGN.md are
+    // also a contract violation (the mirror is a verbatim copy, so
+    // the key sets must be set-equal). Without this, a hand-authored
+    // mirror with `visual.colors.fabricated_token: "#FF00FF"` would
+    // pass certify and travel to `/qfai-implement` as validated
+    // content. The handoff contract is "verbatim mirror" -> the key
+    // sets must match in both directions.
+    for (const key of Object.keys(mirror)) {
+      if (!(key in expected)) {
+        issues.push(
+          issue(
+            "QFAI-DCON-005",
+            `design-system.yaml mirror 'visual.${section}.${key}' is not a DESIGN.md token; the mirror must be a verbatim copy of DESIGN.md (no fabricated keys).`,
+            "error",
+            filePathRel,
+            "designContractReadiness.designSystemMirror",
+            undefined,
+            "canonical",
+            "Remove the fabricated key, or add it to root DESIGN.md and refreeze the lock.",
           ),
         );
       }
