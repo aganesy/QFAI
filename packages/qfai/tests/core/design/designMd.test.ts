@@ -314,6 +314,19 @@ describe("parseDesignMd (TC-1.1.x)", () => {
     expect(result.error.path).toBe("references");
   });
 
+  it("TC-1.1.21: unknown visual.spacing key (gutter) rejected with unknown-key", () => {
+    const lastShadowLine = '    lg: "0 12px 24px rgba(15,23,42,0.10)"';
+    const text = VALID_FRONT_MATTER.replace(
+      lastShadowLine,
+      `${lastShadowLine}\n  spacing:\n    base: "8px"\n    gutter: "16px"`,
+    );
+    const result = parseDesignMd(text);
+    expect("error" in result).toBe(true);
+    if (!("error" in result)) return;
+    expect(result.error.code).toBe("unknown-key");
+    expect(result.error.path).toBe("visual.spacing.gutter");
+  });
+
   it("TC-1.1.20: unknown accessibility key (focus_ring) rejected with unknown-key", () => {
     // Inject the accessibility block before the closing front-matter
     // delimiter (the last line of VALID_FRONT_MATTER is `---`).

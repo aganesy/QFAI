@@ -314,11 +314,26 @@ async function validatePrototypeHandoff(root: string, config: QfaiConfig): Promi
       : [];
   }
 
+  // Required fields match the rewritten handoff contract documented in
+  // `.qfai/assistant/skills/qfai-prototyping/references/handoff.md`:
+  // `finalIterIndex`, `finalArtifact`, `designMdPath`, `designMdSha256`,
+  // `designSystemMirror`, `implementationNotes`. The legacy fields
+  // (`sourcePrototypeRefs`, `surfaceProfiles`, `screens`, `visualDna`,
+  // `implementationHandoff`) were retired together with the multi-
+  // option exploration → preserve/adapt/copy split when DESIGN.md
+  // became the brand SSOT and the loop became single-thread.
   return validateRequiredStringArrayKeys(
     filePath,
     root,
     parsed.value,
-    ["sourcePrototypeRefs", "surfaceProfiles", "screens", "visualDna", "implementationHandoff"],
+    [
+      "finalIterIndex",
+      "finalArtifact",
+      "designMdPath",
+      "designMdSha256",
+      "designSystemMirror",
+      "implementationNotes",
+    ],
     "QFAI-DCON-013",
     "prototype-handoff.yaml is missing required field",
     "designContractReadiness.prototypeHandoffField",

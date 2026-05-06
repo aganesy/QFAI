@@ -110,16 +110,17 @@ async function seedPrototypingDesignYamls(root: string): Promise<void> {
   await writeFile(
     path.join(dir, "prototype-handoff.yaml"),
     [
-      "sourcePrototypeRefs:",
-      "  - .qfai/prototypes/final/index.html",
-      "surfaceProfiles:",
-      "  - desktop",
-      "screens:",
-      "  - home",
-      "visualDna:",
-      "  - calm",
-      "implementationHandoff:",
-      "  - tailwind",
+      // New post-1.8.9 single-thread loop handoff contract. Legacy
+      // multi-option fields (sourcePrototypeRefs / surfaceProfiles /
+      // screens / visualDna / implementationHandoff) are retired.
+      "finalIterIndex: 1",
+      'finalArtifact: ".qfai/prototypes/final/index.html"',
+      'designMdPath: "DESIGN.md"',
+      `designMdSha256: "${hashDesignMd(VALID_DESIGN_MD)}"`,
+      'designSystemMirror: ".qfai/contracts/design/design-system.yaml"',
+      "implementationNotes: |",
+      "  Reviewed final iter has clear navigation, four-state coverage, and",
+      "  compliant DESIGN.md token use; no further hand-tweaks required.",
       "",
     ].join("\n"),
     "utf-8",

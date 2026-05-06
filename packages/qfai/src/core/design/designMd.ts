@@ -475,6 +475,14 @@ function readVisual(raw: unknown): { value: DesignMd["visual"] } | { error: Pars
     shadow: shadow as DesignMdShadow,
   };
   if (isRecord(raw.spacing)) {
+    const SPACING_ALLOWED_KEYS = new Set(["base", "scale"]);
+    const spacingError = rejectUnknownKeys(
+      raw.spacing,
+      SPACING_ALLOWED_KEYS,
+      "visual.spacing",
+      "'visual.spacing'",
+    );
+    if (spacingError) return { error: spacingError };
     const sp: NonNullable<DesignMd["visual"]["spacing"]> = {};
     if (typeof raw.spacing.base === "string") sp.base = raw.spacing.base;
     if (Array.isArray(raw.spacing.scale)) {

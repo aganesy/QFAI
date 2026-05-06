@@ -6,6 +6,35 @@
 
 ### Fixed (Breaking — pre-1.8.9 internal pipelines only)
 
+- **prototype-handoff.yaml validator aligned with new contract**:
+  `validatePrototypeHandoff` now requires `finalIterIndex`,
+  `finalArtifact`, `designMdPath`, `designMdSha256`,
+  `designSystemMirror`, `implementationNotes` — the fields documented
+  in `qfai-prototyping/references/handoff.md`. The legacy
+  multi-option fields (`sourcePrototypeRefs`, `surfaceProfiles`,
+  `screens`, `visualDna`, `implementationHandoff`) are retired
+  together with the preserve/adapt/copy split, since the loop became
+  single-thread when DESIGN.md became the brand SSOT. Pre-1.8.9
+  pipelines that wrote a handoff with the legacy field names will
+  now fail QFAI-DCON-013 and must be re-run from the new handoff
+  authoring step in `/qfai-prototyping`.
+- **DESIGN.md `visual.spacing` unknown-key reject**:
+  `parseDesignMd()` now rejects unknown keys under `visual.spacing`
+  (e.g. `gutter`, `density`) with the same `unknown-key` ParseError
+  shape as the other sections. Allowlist: `base`, `scale`. New
+  TC-1.1.21 anchors the contract.
+- **assets/ retired-sidecar reference sweep + guard**: Migrated 6
+  more `assets/` doc files (14_Review-Request.md L38/L40/L41,
+  product-experience-architect.md L31, contract-artifact-rules.md L12,
+  comparison-review.md L8, contracts-review.md L25, scoring-review.md
+  rewritten) so distributed surfaces stop pointing operators at the
+  retired `33_exploration_rubric.md` / `34_evaluator_calibration.md`
+  sidecars. Added a guard test in `uiuxSidecar.test.ts` that
+  greps every `assets/**/*.md` for the forbidden phrases
+  (`exploration brief|rubric` / `evaluator calibration` /
+  `33_exploration_rubric` / `34_evaluator_calibration`) and only
+  whitelists the two warning lines in `00_index.md` Forbidden
+  Legacy Files. Future partial fixes will fail this test in CI.
 - **DESIGN.md `rejectUnknownKeys` SSOT**: New
   `rejectUnknownKeys(record, allowed, pathPrefix, sectionLabel)`
   helper in `core/design/designMd.ts` replaces 6 inline copies of
