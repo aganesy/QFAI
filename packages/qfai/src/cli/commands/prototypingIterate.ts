@@ -93,6 +93,7 @@ type PrototypingJsonShape = {
   iterations?: unknown[];
   designMd?: DesignMdRecord;
   runId?: string;
+  specsCovered?: unknown;
   reviewerGate?: unknown;
   acceptedIterationIndex?: unknown;
   stopReason?: unknown;
@@ -218,10 +219,16 @@ export async function runPrototypingIterate(
   //      cycle >= 1 hash gates and by `certify` (frozen-loop hash).
   //    - runId: the canonical loop identifier consumed by `certify`.
   //      The legacy `fullHarness.runId` shape is no longer written.
+  //    - specsCovered: the spec IDs the loop will exercise, seeded
+  //      from the resolved primary prototyping spec so that
+  //      `validatePrototypingEvidence` (QFAI-PROT-002) does not
+  //      emit a phantom missing-specsCovered error before the loop
+  //      completes.
   if (options.cycle === 0) {
     await writeSeedMetadata(protoJsonAbs, {
       designMd: { path: ROOT_DESIGN_MD_REL, sha256: currentSha },
       runId: buildRunId(currentSha),
+      specsCovered: specs,
     });
   }
 
@@ -335,6 +342,7 @@ function asIterations(record: PrototypingJsonShape): readonly unknown[] {
 type SeedMetadata = {
   designMd: DesignMdRecord;
   runId: string;
+  specsCovered: readonly string[];
 };
 
 async function writeSeedMetadata(protoJsonAbs: string, seed: SeedMetadata): Promise<void> {
@@ -366,6 +374,7 @@ async function writeSeedMetadata(protoJsonAbs: string, seed: SeedMetadata): Prom
   // identity to a stale prior run.
   body.designMd = seed.designMd;
   body.runId = seed.runId;
+  body.specsCovered = [...seed.specsCovered];
   await mkdir(path.dirname(protoJsonAbs), { recursive: true });
   await writeFile(protoJsonAbs, `${JSON.stringify(body, null, 2)}\n`, "utf-8");
 }
