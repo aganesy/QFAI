@@ -4,6 +4,31 @@
 
 ## [Unreleased]
 
+### Changed (spec / contract only — implementation lands separately)
+
+- **`/qfai-prototyping` redefinition (CHG-002, spec-0012)**: spec pack rewritten
+  per discussion-20260516144141078 (REQ-0001..0013). The new model is
+  multi-spec per invocation (`resolveAllUiBearingSpecs()` replaces the
+  per-invocation primary-spec selection prompt), 10-cycle budget
+  (`MAX_ITERATIONS = 10`, `MAX_ITERATION_INDEX = 9`), reviewer-driven
+  Playwright per spec × screen (no scripted interaction transcript, no
+  PNG / HTML / `interaction.json` capture), qualitative-only convergence
+  (AND across every spec × screen pair of the 4 ordinal UX axes at
+  `exceptional` AND `layoutAntiPatternsDetected[]` empty AND
+  `designMdViolations[]` empty — no quantitative AC-pass% /
+  transition-pass% thresholds), autonomous cycle 0..9 with four
+  deterministic hard-stop classes (lock drift exit 2 / Reviewer
+  Playwright failure exit 64 + `sessionStatus` discriminator /
+  license-verify failure exit 66 / mid-run spec-set change exit 2),
+  per-spec iter-dir layout
+  `iter-NN/spec-NNNN/<screen>.review.json`, cycle-0 freeze of the
+  resolved spec set AND the stock-photo license-class catalog, and
+  per-image license recording in
+  `prototype-handoff.yaml#imageSources[]`. Phase 0 contract authored at
+  `.qfai/contracts/cli/qfai-prototyping.md`. Five integration follow-ups
+  captured as OQ-0012-0001..0005 in `spec-0012/08_Open-questions.md` to
+  resolve before code lands.
+
 ## [1.8.9] - 2026-05-07
 
 ### Fixed (Breaking — pre-1.8.9 internal pipelines only)

@@ -58,3 +58,70 @@ otherwise enforced.
 - Former `spec-0017` (CAP-0017 v2.0 single-thread evolution loop /
   UX-loop redesign) and `spec-0018` are absorbed into `spec-0012`; the
   standalone directories no longer exist.
+
+## v2.1 / Multi-Spec Reviewer-Driven Loop TDD Ledger (REQ-0001..0013)
+
+> Owner column is the implementing team / role identifier. Status
+> begins as `planned` until the corresponding test is authored and
+> linked in `tdd/test-list.md`. New rows above the `TDD-0370` ceiling.
+
+| TDD-ID   | TC-Ref       | Status  | Owner                 | Notes                                                                                       |
+| -------- | ------------ | ------- | --------------------- | ------------------------------------------------------------------------------------------- |
+| TDD-0371 | TC-0012-0354 | planned | prototyping-core      | resolveAllUiBearingSpecs returns multi-spec set in one call (REQ-0001)                      |
+| TDD-0372 | TC-0012-0355 | planned | prototyping-cli       | zero UI-bearing specs → exit 0 deterministic no-op (REQ-0001)                               |
+| TDD-0373 | TC-0012-0356 | planned | skill-asset           | per-invocation primary-spec selection prompt removed from SKILL.md (REQ-0001)               |
+| TDD-0374 | TC-0012-0357 | planned | prototyping-core      | shouldStop returns "max-iterations" at index === 9 (REQ-0002)                               |
+| TDD-0375 | TC-0012-0358 | planned | prototyping-cli       | runPrototypingIterate exit 65 at index 9 under 10-cycle budget (REQ-0002)                   |
+| TDD-0376 | TC-0012-0359 | planned | prototyping-core      | MAX_ITERATIONS === 10 / MAX_ITERATION_INDEX === 9 SSOT (REQ-0002)                           |
+| TDD-0377 | TC-0012-0360 | planned | prototyping-cli       | iterations[] ≤ 10 entries, monotonic 0..9, single lineage (REQ-0002)                        |
+| TDD-0378 | TC-0012-0361 | planned | validators            | QFAI-PROT-005 / QFAI-PROT-006 reference index === 9 (REQ-0002)                              |
+| TDD-0379 | TC-0012-0362 | planned | reviewer-dispatch     | Reviewer sub-agent IS the Playwright caller (no orchestrator capture step) (REQ-0003)       |
+| TDD-0380 | TC-0012-0363 | planned | reviewer-dispatch     | no .png / .html / interaction.json written by new loop (REQ-0003)                           |
+| TDD-0381 | TC-0012-0364 | planned | prototyping-core      | review.json schema validates 6 *Feel fields + 4 ordinal axes (REQ-0004)                     |
+| TDD-0382 | TC-0012-0365 | planned | prototyping-core      | review.json schema rejects missing *Feel / extra-key (REQ-0004)                             |
+| TDD-0383 | TC-0012-0366 | planned | prototyping-core      | each *Feel field ≤ 200 words enforced (REQ-0004)                                            |
+| TDD-0384 | TC-0012-0367 | planned | prototyping-core      | convergence AND across every spec × screen pair (REQ-0005)                                  |
+| TDD-0385 | TC-0012-0368 | planned | prototyping-core      | laggingSpecs[] populated in aggregated cycle record (REQ-0005)                              |
+| TDD-0386 | TC-0012-0369 | planned | prototyping-core      | quantitative AC-pass% / transition-pass% thresholds removed (REQ-0005)                      |
+| TDD-0387 | TC-0012-0370 | planned | prototyping-core      | licenseVerify accepts unsplash + pexels allowlisted entries (REQ-0006)                      |
+| TDD-0388 | TC-0012-0371 | planned | prototyping-cli       | licenseVerify failure hard-stops with exit 66 (REQ-0006)                                    |
+| TDD-0389 | TC-0012-0372 | planned | prototyping-core      | imageSources[] schema {url, license, attribution, source} (REQ-0006)                        |
+| TDD-0390 | TC-0012-0373 | planned | prototyping-cli       | lock drift mid-loop → exit 2 with DESIGN.md hash mismatch (REQ-0007)                        |
+| TDD-0391 | TC-0012-0374 | planned | reviewer-dispatch     | Reviewer Playwright session failure hard-stop names (spec, screen) (REQ-0007)               |
+| TDD-0392 | TC-0012-0375 | planned | prototyping-cli       | autonomous run produces zero per-cycle interactive prompts (REQ-0007)                       |
+| TDD-0393 | TC-0012-0376 | planned | prototyping-core      | iterationReviewPath returns iter-NN/spec-NNNN/<screen>.review.json (REQ-0008)               |
+| TDD-0394 | TC-0012-0377 | planned | prototyping-cli       | iter-dir tree contains only spec-NNNN/<screen>.review.json (REQ-0008)                       |
+| TDD-0395 | TC-0012-0378 | planned | prototyping-core      | iterationDir descends into spec-NNNN; path helpers compose (REQ-0008)                       |
+| TDD-0396 | TC-0012-0379 | planned | prototyping-core      | findIterationReviewFiles globs spec-NNNN subdirs (REQ-0008)                                 |
+| TDD-0397 | TC-0012-0380 | planned | prototyping-core      | findStaleIterDirs / deleteStaleIterDirs preserve /^iter-\d{2,}$/ (REQ-0008)                 |
+| TDD-0398 | TC-0012-0381 | planned | prototyping-cli       | certify rejects when any frozen-set spec lacks <screen>.review.json (REQ-0009)              |
+| TDD-0399 | TC-0012-0382 | planned | prototyping-core      | readFrozenSpecsCovered drives certify per-spec loop (REQ-0009)                              |
+| TDD-0400 | TC-0012-0383 | planned | reviewer-dispatch     | Reviewer exercises every primary menu entry in Playwright session (REQ-0010)                |
+| TDD-0401 | TC-0012-0384 | planned | prototyping-core      | menuReachabilityFeel unreachable findings are qualitative, not hard-fail (REQ-0010)         |
+| TDD-0402 | TC-0012-0385 | planned | prototyping-cli       | mid-run spec-set change → exit non-zero, defer to next invocation (REQ-0011)                |
+| TDD-0403 | TC-0012-0386 | planned | prototyping-core      | specsCovered drift check reads cycle-0 frozen set, not live filesystem (REQ-0011)           |
+| TDD-0404 | TC-0012-0387 | planned | prototyping-core      | per-spec 5-min cap appends soft warning; no hard-fail (REQ-0012)                            |
+| TDD-0405 | TC-0012-0388 | planned | prototyping-cli       | cycle 0 records frozenSpecsCovered in cycle-0 evidence (REQ-0013)                           |
+| TDD-0406 | TC-0012-0389 | planned | prototyping-cli       | cycle 0 records frozenLicenseCatalog in cycle-0 evidence (REQ-0013)                         |
+| TDD-0407 | TC-0012-0390 | planned | prototyping-core      | cycle-0 frozen set + license catalog are SSOT for subsequent cycles (REQ-0013)              |
+| TDD-0408 | TC-0012-0391 | planned | prototyping-core      | property: resolveAllUiBearingSpecs ≡ filter(ui_bearing===true) (REQ-0001)                   |
+| TDD-0409 | TC-0012-0392 | planned | prototyping-core      | property: iterationReviewPath round-trips with parseIterationReviewPath (REQ-0008)          |
+| TDD-0410 | TC-0012-0393 | planned | prototyping-e2e       | e2e: full 10-cycle no-convergence run hard-stops at end of cycle 9 (REQ-0002)               |
+| TDD-0411 | TC-0012-0394 | planned | prototyping-e2e       | e2e: Reviewer-driven Playwright session writes per-spec review.json (REQ-0003)              |
+| TDD-0412 | TC-0012-0395 | planned | prototyping-core      | contract: licenseVerify rejects non-allowlisted source with structured error (REQ-0006)     |
+
+## Notes (v2.1 ledger)
+
+- TDD rows here use a 5-column form (`TDD-ID | TC-Ref | Status | Owner |
+  Notes`) per the spec-0012 redefinition charter; the legacy
+  `tdd/test-list.md` 8-column form (`TDD-ID | TC-Refs | Layer | Test
+  file | Selector | Status | DR-ID | Evidence`) MUST be updated in a
+  follow-up commit to register TDD-0371..0412 there as well, sharing
+  the same TDD-IDs.
+- All AC-Refs in the corresponding new TC block (`TC-0012-0354..0395`)
+  are recorded as `<pending>` and MUST be stitched once
+  requirements-analyst publishes the new `AC-0012-0037..` block in
+  `03_Acceptance-Criteria.md`. BR-Refs in `05_Examples.md` for the new
+  `EX-0012-0122..0144` block are similarly predicted at
+  `BR-0012-0028..0040` and require the same stitch on
+  `04_Business-Rules.md` publication.

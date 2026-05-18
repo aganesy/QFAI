@@ -35,7 +35,7 @@
 | Short ID   | Entity                | File                               | Purpose                                                                                                 |
 | ---------- | --------------------- | ---------------------------------- | ------------------------------------------------------------------------------------------------------- |
 | EVID-DCON1 | Breakthrough Evidence | `.qfai/evidence/breakthrough.json` | (DEPRECATED v2.0: plateau detector / branchPlanner 廃止に伴い P4 で削除予定 — spec-0012)                |
-| EVID-PROT2 | Prototyping Evidence  | `.qfai/evidence/prototyping/`      | v2.0: `iter-NN/{screen.png, screen.html, review.json}` + prototyping.json + completion-certificate.json |
+| EVID-PROT2 | Prototyping Evidence  | `.qfai/evidence/prototyping/`      | CHG-002 (2026-05-18): `iter-NN/spec-NNNN/<screen>.review.json` (per-spec; review.json only — no `.png`, no `.html`, no `interaction.json`) + cycle-0 frozen `specsCovered[]` + cycle-0 frozen license catalog + `prototype-handoff.yaml#imageSources[]` + `completion-certificate.json`. Supersedes the v2.0 `iter-NN/{screen.png, screen.html, review.json}` layout. |
 
 ### DB Contracts
 
@@ -48,6 +48,12 @@ QFAI 自体はデータベースを使用しない。
 0 items
 
 QFAI 自体は外部公開 API を持たない。
+
+### CLI Contracts
+
+| Short ID | Entity                 | File                                | Purpose                                                                                                                                                       |
+| -------- | ---------------------- | ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| CLI-PROT | qfai prototyping (CLI) | `.qfai/contracts/cli/qfai-prototyping.md` | spec-0012 の CLI surface (`iterate` / `certify` / `show-spec`) — cycle-0 freeze, license-verify exit 66, multi-spec resolveAll、Reviewer-driven Playwright を記述 |
 
 ## Mapping Rules
 
