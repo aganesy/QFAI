@@ -408,6 +408,15 @@ export function parseEvaluatorReview(input: unknown): ParseReviewerPayloadResult
   const lap = pushLapErrors(input, errors);
   const dmv = pushDmvErrors(input, errors);
 
+  // Note: missing-field and unknown-field diagnostics are surfaced
+  // independently and can co-occur on the same input. When the unknown
+  // key is a typo of a missing expected key (e.g. `usabiity` for
+  // `usability`), the caller sees BOTH `missing field: scores.usability`
+  // AND `unknown field: usabiity` in the same `errors[]`. This is
+  // intentional: the reviewer prompt fixes more than one issue per
+  // retry, so aggregating every violation is more useful than
+  // short-circuiting on the first one. Reordering the unknown-key check
+  // to run first would mask the missing-field signal entirely.
   for (const key of Object.keys(input)) {
     if (!REVIEWER_PAYLOAD_KNOWN_KEYS.has(key)) {
       errors.push(`unknown field: ${key}`);

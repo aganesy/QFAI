@@ -80,6 +80,9 @@ const NO_RUNNER_MESSAGE =
   "reviewerDispatch: no playwright runner injected; the Reviewer sub-agent " +
   "cannot drive Playwright. Production callers must inject options.playwrightRunner.";
 
+const SILENT_FAIL_MESSAGE =
+  "reviewerDispatch: playwright attempt failed without error message";
+
 /**
  * Dispatch the Reviewer sub-agent against a single `(specId, screen)`
  * pair, retrying up to `options.attemptLimit` times.
@@ -153,7 +156,7 @@ export async function dispatchReviewerToPair(
     attempts.push({
       ok: false,
       attemptIndex: i,
-      errorMessage: result.error ?? "reviewerDispatch: playwright attempt failed without error message",
+      errorMessage: result.error ?? SILENT_FAIL_MESSAGE,
     });
   }
 

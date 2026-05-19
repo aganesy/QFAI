@@ -8,12 +8,12 @@ import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import {
-  deleteStaleIterDirs,
   findIterationReviewFiles,
   findStaleIterDirs,
   iterationDir,
   iterationReviewPath,
   parseIterationReviewPath,
+  purgeStaleIterDirs,
 } from "../../../src/core/prototyping/iterationPaths.js";
 
 const tempDirs: string[] = [];
@@ -134,7 +134,7 @@ describe("findIterationReviewFiles", () => {
   });
 });
 
-describe("findStaleIterDirs / deleteStaleIterDirs", () => {
+describe("findStaleIterDirs / purgeStaleIterDirs", () => {
   // QFAI:SPEC-0012:TC-0012-0380
   it("matches only /^iter-\\d{2,}$/ directories and leaves unrelated siblings intact", async () => {
     const root = await newTempDir();
@@ -162,7 +162,7 @@ describe("findStaleIterDirs / deleteStaleIterDirs", () => {
     expect(matched).not.toContain(unrelated);
     expect(matched).not.toContain(certificateFile);
 
-    const { deleted } = await deleteStaleIterDirs(root);
+    const { deleted } = await purgeStaleIterDirs(root);
     expect(deleted.sort()).toEqual(expected);
 
     // Unrelated siblings preserved.
@@ -179,7 +179,7 @@ describe("findStaleIterDirs / deleteStaleIterDirs", () => {
     const root = await newTempDir();
     const matched = await findStaleIterDirs(root);
     expect(matched).toEqual([]);
-    const { deleted } = await deleteStaleIterDirs(root);
+    const { deleted } = await purgeStaleIterDirs(root);
     expect(deleted).toEqual([]);
   });
 });

@@ -50,6 +50,53 @@
 - Recommendation: Retain the role in the catalog for non-prototyping use; remove only the prototyping-specific routing entry. Update via spec-0015 / `_policies/02_routing.md` in a follow-up.
 - Resolves: blocks agent-catalog / agent-routing cleanup.
 
+## OQ-0012-0006: Per-spec iter-dir migration wiring in `prototypingIterate.ts`
+
+- Gate: implement
+- Disposition: open
+- Owner: backend-engineer
+- Due: 2026-06-30
+- Severity: low
+- Source: CHG-002 PR #208 review (FYI thread r3264491197, raised 2026-05-19).
+- Question: `iterationPaths.ts` ships the per-spec helpers (`iterationDir(idx, specId)`, `iterationReviewPath(idx, specId, screen)`, `findIterationReviewFiles`, `purgeStaleIterDirs`, `parseIterationReviewPath`) with full unit coverage, but `prototypingIterate.ts` still composes the legacy flat `iter-NN/index.html` layout via `core/prototyping/iteration.ts#iterationDir(cycle)`. Production wire-in must switch the iterate command from the single-lineage helpers to the per-`(idx, spec, screen)` helpers so the on-disk evidence layout matches the multi-spec contract before convergence/certify reads it.
+- Recommendation: Land alongside the next wave that resolves OQ-0012-0002 (prototyping.json#iterations[] shape) — the iter-dir migration and the JSON-shape migration share the same per-spec namespace and must ship atomically to keep `certify` parsing consistent.
+- Resolves: blocks legacy-to-per-spec layout cutover in `prototypingIterate.ts`. Couples with TDD-0384 deferral noted in the PR #208 description.
+
+## OQ-0012-0007: Reviewer dispatch wiring in `prototypingIterate.ts`
+
+- Gate: implement
+- Disposition: open
+- Owner: backend-engineer
+- Due: 2026-06-30
+- Severity: low
+- Source: CHG-002 PR #208 review (FYI thread r3264491197, raised 2026-05-19).
+- Question: `core/prototyping/reviewerDispatch.ts#dispatchReviewerToPair(specId, screen, options)` is the interface boundary for invoking the Reviewer sub-agent (Playwright runner is injected) but no production caller currently invokes it. The iterate command writes `iterate-plan.json` and hands control to the skill, which today still relies on out-of-process Reviewer invocation. Production wire-in must call `dispatchReviewerToPair` per per-`(spec, screen)` cycle with an injected runner and persist the resulting `<screen>.review.json` payload.
+- Recommendation: Wire after OQ-0012-0006 (per-spec layout) lands so the dispatch result has a stable iter-dir target. Couples with TDD-0401 / TDD-0402 (live Playwright runner) — until the runner is shipped, the dispatch wire-in remains a no-op gated on `options.playwrightRunner`.
+- Resolves: blocks Reviewer-orchestration cutover from skill-driven to command-driven dispatch in `prototypingIterate.ts`.
+
+## OQ-0012-0008: `parseEvaluatorReview` runtime wire-in for per-cycle review.json validation
+
+- Gate: implement
+- Disposition: open
+- Owner: backend-engineer
+- Due: 2026-06-30
+- Severity: low
+- Source: CHG-002 PR #208 review (FYI thread r3264491197, raised 2026-05-19).
+- Question: `core/prototyping/evaluatorReview.ts#parseEvaluatorReview` validates the v2.0 `*Feel`-schema reviewer payload (six bounded `*Feel` fields, four ordinal axes, closed-schema unknown-key rejection) with full unit coverage, but no per-cycle review-loader currently invokes it. The candidate read path lives in `core/prototyping/iteration.ts` (single-lineage loader) or `cli/commands/prototypingCertify.ts` (multi-spec aggregator). Wire-in must identify the read path and route every loaded `<screen>.review.json` through `parseEvaluatorReview` so schema drift fails fast at iterate/certify rather than at downstream consumers.
+- Recommendation: Land in the same wave as OQ-0012-0006 / 0007 (per-spec layout + dispatch) so the validator sees the v2.0 file layout it was designed for. Resolves: blocks v2.0 `*Feel` schema runtime enforcement.
+
+## OQ-0012-0009: `validateImageSources` runtime wire-in at certify gate
+
+- Gate: implement
+- Disposition: open
+- Owner: backend-engineer
+- Due: 2026-06-30
+- Severity: low
+- Source: CHG-002 PR #208 review (FYI thread r3264491197, raised 2026-05-19).
+- Question: The handoff schema validator (`core/prototyping/handoff/validateImageSources.ts`) checks `prototype-handoff.yaml#imageSources[]` shape with full unit coverage, but `cli/commands/prototypingCertify.ts` does not yet gate on the handoff yaml read path. Today `licenseVerify` consumes `prototyping.json#imageSources` directly; the handoff-yaml population path is left to a later batch (see iterate.ts 4b inline note). Wire-in must either add the certify-gate read of `prototype-handoff.yaml` and route entries through `validateImageSources` before `licenseVerify`, or document the deferral if the handoff.yaml population path is not ready.
+- Recommendation: Defer until the handoff-yaml population path (DESIGN.md pool + handoff extraction) lands; until then `validateImageSources` is correctly tested-only. Track the population deferral as a coupled item under the same wave.
+- Resolves: blocks `prototype-handoff.yaml#imageSources[]` schema gate at certify.
+
 ## OQ-0012-0001: Airgapped run support (stock-photo fetch over restricted network)
 
 - Gate: ops

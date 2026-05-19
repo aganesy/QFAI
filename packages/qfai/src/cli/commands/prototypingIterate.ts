@@ -152,57 +152,14 @@ export async function runPrototypingIterate(
     return 2;
   }
 
-  // 0) Zero UI-bearing → deterministic no-op (exit 0).
-  //
-  //    When no spec in the project carries `surface_type: ui-bearing`
-  //    (and no matching UI contract exists), the prototyping loop has
-  //    nothing to drive, so `iterate` must be a deterministic no-op —
-  //    emit a stderr explainer and return 0 without creating any
-  //    iter-NN/ directory or touching DESIGN.md / lock state. This
-  //    precedes the DESIGN.md gate intentionally: a project with no
-  //    UI surface should not be blocked on a missing or unfrozen
-  //    DESIGN.md.
-  //
-  //    Implementation note: this uses `resolveAllUiBearingSpecs` (the
-  //    multi-spec resolver) for the no-op check, but the per-cycle
-  //    primary-spec lineage below still goes through
-  //    `resolvePrimaryPrototypingSpec`. This batch only landed
-  //    the no-op gate + frozen-state writes; full per-spec iter layout
-  //    migration is deferred to a later batch.
-  const earlyConfig = await loadConfig(options.root);
-  const earlyUiBearing = await resolveAllUiBearingSpecs(
-    options.root,
-    earlyConfig.config,
-  );
-  if (earlyUiBearing.length === 0) {
-    // Before declaring "no UI-bearing specs", honour the documented
-    // escape hatch: `qfai.config.yaml#prototyping.primarySpecId`. The
-    // multi-spec resolver (`resolveAllUiBearingSpecs`) only recognises
-    // specs that carry a `surface_type: ui-bearing` marker OR ship a
-    // matching `<contractsDir>/ui/*.yaml`; projects that configure the
-    // primary spec explicitly without either signal would otherwise be
-    // silently treated as no-op runs even though the legacy
-    // single-spec resolver (`resolvePrimaryPrototypingSpec`) below
-    // honours the config. Skip the no-op and fall through to the
-    // primary-spec path when the configured spec exists on disk.
-    const configuredPrimarySpecId = earlyConfig.config.prototyping?.primarySpecId;
-    const configuredSpecOnDisk =
-      configuredPrimarySpecId !== undefined
-        ? await specDirExists(
-            options.root,
-            earlyConfig.config.paths.specsDir,
-            configuredPrimarySpecId,
-          )
-        : false;
-    if (!configuredSpecOnDisk) {
-      info(
-        "qfai prototyping iterate: no UI-bearing specs resolved — deterministic no-op " +
-          "(no spec carries `surface_type: ui-bearing` and no matching `.qfai/contracts/ui/*.yaml`). " +
-          "Add the marker or contract to enable the prototyping loop.",
-      );
-      return 0;
-    }
+  // 0) Zero UI-bearing pre-check → deterministic no-op (exit 0) when
+  //    no spec has a UI surface to drive. See `evaluateZeroUiBearingPrecheck`
+  //    for the full contract.
+  const precheck = await evaluateZeroUiBearingPrecheck(options.root);
+  if (precheck.shortCircuit) {
+    return precheck.exitCode;
   }
+  const { earlyConfig, earlyUiBearing } = precheck;
 
   // 1) Read + hash root DESIGN.md FIRST (before any per-cycle plumbing).
   //    A malformed DESIGN.md is a structural project error and must
@@ -274,212 +231,25 @@ export async function runPrototypingIterate(
   const protoJsonAbs = path.join(options.root, PROTOTYPING_JSON_REL);
 
   // 2) Cycle >=1: enforce hash gate against the lock-anchored cache in
-  //    prototyping.json. The lock equality (above) plus the cache
-  //    equality (here) jointly enforce a 3-way invariant
+  //    prototyping.json + convergence/budget stop + monotonicity +
+  //    spec-set drift. See `evaluateCycleGteOneGate` for the full
+  //    contract. The lock equality (above) plus the cache equality
+  //    (in the helper) jointly enforce a 3-way invariant
   //    (live === lock === cache) without the cache becoming a third
   //    independent SHA SSOT.
   if (options.cycle >= 1) {
-    const protoRecord = await readPrototypingJson(protoJsonAbs);
-    if (!protoRecord || !protoRecord.designMd || typeof protoRecord.designMd.sha256 !== "string") {
-      error(
-        "qfai prototyping iterate: prototyping.json#designMd is missing. " +
-          "Re-run from cycle 0 so the seed cycle records the DESIGN.md sha256.",
-      );
-      return 2;
-    }
-    if (protoRecord.designMd.sha256 !== currentSha) {
-      // codex AHM3: phrase the error so both the legacy "sha256 mismatch"
-      // text AND the canonical mid-loop-drift regex
-      // /DESIGN\.md hash mismatch.*re-run from cycle 0/ match.
-      // Reviewers (and the prototyping orchestrator) parse stderr for
-      // the canonical phrase "DESIGN.md hash mismatch" plus
-      // "re-run from cycle 0"; legacy tests still grep for
-      // "sha256 mismatch" / "edited mid-loop", so both phrases coexist
-      // in the same message.
-      error(
-        "qfai prototyping iterate: DESIGN.md hash mismatch — root DESIGN.md sha256 differs from " +
-          `the cycle-0 frozen value (frozen=${protoRecord.designMd.sha256} current=${currentSha}). ` +
-          "DESIGN.md was edited mid-loop; re-run from cycle 0 to refreeze.",
-      );
-      return 2;
-    }
-    if (lockSha !== null && protoRecord.designMd.sha256 !== lockSha) {
-      error(
-        "qfai prototyping iterate: prototyping.json#designMd.sha256 (" +
-          `${protoRecord.designMd.sha256}) differs from DESIGN.md.lock.yaml ` +
-          `(${lockSha}). The lock was refrozen mid-loop; re-run prototyping from cycle 0.`,
-      );
-      return 2;
-    }
-    const recordedIterations = asIterations(protoRecord);
-    const stop = shouldStop(recordedIterations);
-    if (stop !== null) {
-      // codex 8thM: shouldStop accepts the reviewer-recorded
-      // `designMdViolations: []` at face value, but the shipped reviewer
-      // prompt instructs reviewers to leave that field empty unless a
-      // runtime gate injects findings — and the only runtime scanner
-      // historically lived in `certify`. So a prototype with DESIGN.md
-      // drift could converge here ("axes-exceptional") and only fail
-      // later at certification. Re-run the runtime scanner against the
-      // accepted iteration's HTML before honoring the stop, so iterate
-      // continues another iteration to fix the drift instead of
-      // pretending the loop converged.
-      if (stop === "axes-exceptional") {
-        const recomputed = await recomputeFinalIterDesignMdViolations(
-          options.root,
-          recordedIterations.length - 1,
-          designMd,
-        );
-        const first = recomputed[0];
-        if (first !== undefined) {
-          // codex AG08r: max-budget drift edge case. If the last iter is
-          // already at MAX_ITERATION_INDEX (cycle 9), there is no valid
-          // next cycle (--cycle is capped at 9). Falling through to the
-          // expectedNextCycle gate would then exit 2 with a cycle-mismatch
-          // error, blocking the operator from completing a run that
-          // exhausted the iteration budget with drift still present. In
-          // that case emit the max-iterations stop instead — the loop
-          // truly is over (drift or not), and the recovery is `--cycle 0`
-          // restart, not another within-budget cycle.
-          const lastIter = recordedIterations[recordedIterations.length - 1];
-          const lastIndex =
-            isRecord(lastIter) && typeof lastIter.index === "number" ? lastIter.index : -1;
-          if (lastIndex >= MAX_ITERATION_INDEX) {
-            info(
-              "qfai prototyping iterate: review reported convergence but the " +
-                `accepted iter HTML still contains ${recomputed.length} DESIGN.md violation(s) ` +
-                `AND the iteration budget is exhausted (index=${lastIndex}). ` +
-                `First violation: ${first.kind}=${first.found}. ` +
-                "Run `qfai prototyping iterate --cycle 0 --target-url <url>` to restart the loop.",
-            );
-            return emitStop("max-iterations");
-          }
-          info(
-            "qfai prototyping iterate: review reported convergence but the " +
-              `accepted iter HTML still contains ${recomputed.length} DESIGN.md violation(s); ` +
-              "continuing another iteration to fix drift. " +
-              `First violation: ${first.kind}=${first.found}.`,
-          );
-          // Fall through to the next-cycle plan below (no early return).
-        } else {
-          return emitStop(stop);
-        }
-      } else {
-        return emitStop(stop);
-      }
-    }
-    // Defense-in-depth: confirm the recorded loop history is itself
-    // monotonic before deriving the expected next cycle from its
-    // length. A hand-edited or partially-corrupted `prototyping.json`
-    // could carry e.g. `iterations.length === 3` but
-    // `iterations[2].index === 5`; in that case `length` is no longer
-    // the next-cycle index and the validator's per-index check would
-    // reject the next iter with a delayed error. Catch the corrupt
-    // history at the command boundary instead.
-    const gapIndex = recordedIterations.findIndex((it, i) => {
-      if (!isRecord(it)) return true;
-      return it.index !== i;
+    const gate = await evaluateCycleGteOneGate({
+      root: options.root,
+      cycle: options.cycle,
+      protoJsonAbs,
+      currentSha,
+      lockSha,
+      designMd,
+      specs,
+      earlyUiBearing,
     });
-    if (gapIndex !== -1) {
-      error(
-        `qfai prototyping iterate: prototyping.json#iterations[${gapIndex}].index ` +
-          `is not ${gapIndex}; the loop history is corrupted. ` +
-          "Re-run with `--cycle 0 --target-url <url>` to refreeze the loop.",
-      );
-      return 2;
-    }
-    // Reject out-of-sequence cycle requests. `iterations[i].index === i`
-    // is enforced by the validator (QFAI-PROT-* index-monotonicity), so
-    // jumping straight to `--cycle 3` after only `iter-00` was recorded
-    // would create an `iter-03/iterate-plan.json` that the validator
-    // later rejects, blocking validation/certification with a
-    // not-easy-to-read error. Fail up front instead. The check runs
-    // AFTER `shouldStop` so a converged or max-budget loop returns its
-    // stop reason cleanly even when the seed lineage is sparse.
-    const expectedNextCycle = recordedIterations.length;
-    if (options.cycle !== expectedNextCycle) {
-      error(
-        `qfai prototyping iterate: expected --cycle ${expectedNextCycle} ` +
-          `(iterations.length=${recordedIterations.length}); got --cycle ${options.cycle}. ` +
-          "Re-run with the expected cycle, or restart the loop with " +
-          "`--cycle 0 --target-url <url>`.",
-      );
-      return 2;
-    }
-    // Cycles >= 1 must reuse the frozen `specsCovered` from cycle 0.
-    // If `prototyping.primarySpecId` or a UI-bearing marker has shifted
-    // mid-loop, the resolved primary spec here would differ from the
-    // recorded one, and iter-plan would write the NEW spec into
-    // `iterate-plan.json#specs` while certify keeps reporting the
-    // FROZEN one — meaning iterations can exercise spec B while the
-    // certificate still claims spec A. Fail fast at the boundary.
-    const frozenSpecs = readFrozenSpecsCovered(protoRecord);
-    // `null` means the frozen seed is missing or malformed (absent
-    // `specsCovered`, empty array, or non-string entries). Cycle 0
-    // is responsible for writing the seed; if a cycle >= 1 invocation
-    // arrives without one, the file was hand-edited or partially
-    // corrupted between cycles. Proceeding silently would let
-    // iterate write a spec id into `iterate-plan.json` that is never
-    // anchored against the cycle-0 seed — and certify (which reads
-    // `specsCovered` for the certificate body) would later block on
-    // the same gap. Fail fast here so the operator hits a single,
-    // clear error pointing at the right remediation.
-    if (frozenSpecs === null) {
-      error(
-        "qfai prototyping iterate: prototyping.json#specsCovered is missing or " +
-          "malformed (must be a non-empty array of non-empty strings, seeded by " +
-          "cycle 0). Re-run with `--cycle 0 --target-url <url>` to refreeze the loop.",
-      );
-      return 2;
-    }
-    // Compare element-wise. Today `specs` is always a single-element
-    // array (resolved primary spec id), but `specsCovered` is a
-    // multi-element array per the prototyping.json schema, and the
-    // contract is "every covered spec must match across cycles". A
-    // first-element-only check (`frozenSpecs[0] !== specs[0]`) would
-    // silently let a future multi-spec loop drift on non-zero indices.
-    if (!arraysShallowEqual(frozenSpecs, specs)) {
-      error(
-        "qfai prototyping iterate: prototyping.json#specsCovered (" +
-          `${JSON.stringify(frozenSpecs)}) differs from the currently-resolved ` +
-          `primary spec (${JSON.stringify(specs)}). ` +
-          "The primary spec changed mid-loop; re-run with `--cycle 0 --target-url <url>` to refreeze.",
-      );
-      return 2;
-    }
-
-    // Mid-run spec-set drift check.
-    //
-    // The cycle-0 frozen `frozenSpecsCovered` set is the SSOT for what
-    // the loop is reviewing. If a UI-bearing spec appears or disappears
-    // on disk between cycles, we MUST detect the drift and stop the
-    // current run rather than silently re-baselining mid-loop. The
-    // new/removed specs are deferred to the NEXT invocation (which
-    // restarts from cycle 0), so we never restart here — we just
-    // fail-fast with stderr that names every drifted spec id.
-    //
-    // The frozenSpecsCovered field is the SSOT; specsCovered (above)
-    // is the legacy single-spec field that is also frozen for backward
-    // compatibility. Both must be honoured.
-    const frozenSet = readFrozenSpecsCoveredField(protoRecord) ?? frozenSpecs;
-    const liveUiBearing = earlyUiBearing;
-    const drift = checkSpecsCoveredDrift(frozenSet, liveUiBearing);
-    if (drift.drifted) {
-      const parts: string[] = [];
-      if (drift.added.length > 0) {
-        parts.push(`new=[${drift.added.join(", ")}]`);
-      }
-      if (drift.removed.length > 0) {
-        parts.push(`removed=[${drift.removed.join(", ")}]`);
-      }
-      error(
-        "qfai prototyping iterate: spec-set drift detected mid-loop — " +
-          `${parts.join(" ")}. The cycle-0 frozen set is ${JSON.stringify(frozenSet)}; ` +
-          "the drifted spec(s) are deferred to the next `--cycle 0` invocation. " +
-          "Continue this loop with the frozen spec set, or restart with " +
-          "`--cycle 0 --target-url <url>` to pick up the new spec set.",
-      );
-      return 2;
+    if (gate.shortCircuit) {
+      return gate.exitCode;
     }
   }
 
@@ -1068,4 +838,304 @@ function nextActionsFor(cycle: number): string[] {
     return ["generator-iterate", "capture", "review", "handoff", "certify"];
   }
   return ["generator-iterate", "capture", "review", `iterate --cycle ${cycle + 1}`];
+}
+
+type ConfigLoadResult = Awaited<ReturnType<typeof loadConfig>>;
+
+type ZeroUiBearingPrecheckResult =
+  | { shortCircuit: true; exitCode: number }
+  | {
+      shortCircuit: false;
+      earlyConfig: ConfigLoadResult;
+      earlyUiBearing: string[];
+    };
+
+/**
+ * Section 0 of `runPrototypingIterate`: zero UI-bearing spec → no-op.
+ *
+ * Loads config + resolves the UI-bearing spec set once and decides
+ * whether the iterate command should short-circuit with exit 0 (no
+ * UI surface to drive) or fall through to the DESIGN.md / cycle
+ * pipeline. The pre-check intentionally runs BEFORE the DESIGN.md
+ * gate so a project with no UI surface is never blocked on a missing
+ * or unfrozen DESIGN.md.
+ *
+ * The `prototyping.primarySpecId` config escape hatch is honoured:
+ * if the multi-spec resolver returns zero specs (because none carry
+ * `surface_type: ui-bearing` and none ship a matching UI contract)
+ * but the operator has pinned a primary spec that exists on disk,
+ * the no-op short-circuit is skipped and the legacy
+ * `resolvePrimaryPrototypingSpec` lineage drives the loop.
+ *
+ * On the continue path, the loaded config snapshot is returned so the
+ * caller can reuse it without re-IO'ing the YAML file.
+ */
+async function evaluateZeroUiBearingPrecheck(
+  root: string,
+): Promise<ZeroUiBearingPrecheckResult> {
+  const earlyConfig = await loadConfig(root);
+  const earlyUiBearing = await resolveAllUiBearingSpecs(root, earlyConfig.config);
+  if (earlyUiBearing.length === 0) {
+    const configuredPrimarySpecId = earlyConfig.config.prototyping?.primarySpecId;
+    const configuredSpecOnDisk =
+      configuredPrimarySpecId !== undefined
+        ? await specDirExists(
+            root,
+            earlyConfig.config.paths.specsDir,
+            configuredPrimarySpecId,
+          )
+        : false;
+    if (!configuredSpecOnDisk) {
+      info(
+        "qfai prototyping iterate: no UI-bearing specs resolved — deterministic no-op " +
+          "(no spec carries `surface_type: ui-bearing` and no matching `.qfai/contracts/ui/*.yaml`). " +
+          "Add the marker or contract to enable the prototyping loop.",
+      );
+      return { shortCircuit: true, exitCode: 0 };
+    }
+  }
+  return { shortCircuit: false, earlyConfig, earlyUiBearing };
+}
+
+type CycleGteOneGateInput = {
+  root: string;
+  cycle: number;
+  protoJsonAbs: string;
+  currentSha: string;
+  lockSha: string | null;
+  designMd: DesignMd;
+  specs: readonly string[];
+  earlyUiBearing: readonly string[];
+};
+
+type CycleGteOneGateResult =
+  | { shortCircuit: true; exitCode: number }
+  | { shortCircuit: false };
+
+/**
+ * Section 2 of `runPrototypingIterate`: cycle >= 1 gates.
+ *
+ * Composes (in order) the hash-gate against the lock-anchored cache
+ * in prototyping.json, the convergence/max-budget stop, the
+ * history-monotonicity check, the expected-next-cycle check, the
+ * frozen `specsCovered` equality check, and the mid-run spec-set
+ * drift check. Each sub-gate either returns `{shortCircuit: true,
+ * exitCode}` to abort iterate immediately or falls through.
+ *
+ * Falling all the way through returns `{shortCircuit: false}` and the
+ * caller proceeds to cycle-0 `--target-url` validation +
+ * iterate-plan.json generation.
+ *
+ * The lock equality enforced by the caller (DESIGN.md.lock.yaml ===
+ * live DESIGN.md sha256) plus the cache equality enforced here
+ * (prototyping.json#designMd.sha256 === live === lock) jointly form a
+ * 3-way invariant; the cache is intentionally a cache of the lock,
+ * never a third independent SHA SSOT.
+ */
+async function evaluateCycleGteOneGate(
+  input: CycleGteOneGateInput,
+): Promise<CycleGteOneGateResult> {
+  const protoRecord = await readPrototypingJson(input.protoJsonAbs);
+  if (!protoRecord || !protoRecord.designMd || typeof protoRecord.designMd.sha256 !== "string") {
+    error(
+      "qfai prototyping iterate: prototyping.json#designMd is missing. " +
+        "Re-run from cycle 0 so the seed cycle records the DESIGN.md sha256.",
+    );
+    return { shortCircuit: true, exitCode: 2 };
+  }
+  if (protoRecord.designMd.sha256 !== input.currentSha) {
+    // codex AHM3: phrase the error so both the legacy "sha256 mismatch"
+    // text AND the canonical mid-loop-drift regex
+    // /DESIGN\.md hash mismatch.*re-run from cycle 0/ match.
+    // Reviewers (and the prototyping orchestrator) parse stderr for
+    // the canonical phrase "DESIGN.md hash mismatch" plus
+    // "re-run from cycle 0"; legacy tests still grep for
+    // "sha256 mismatch" / "edited mid-loop", so both phrases coexist
+    // in the same message.
+    error(
+      "qfai prototyping iterate: DESIGN.md hash mismatch — root DESIGN.md sha256 differs from " +
+        `the cycle-0 frozen value (frozen=${protoRecord.designMd.sha256} current=${input.currentSha}). ` +
+        "DESIGN.md was edited mid-loop; re-run from cycle 0 to refreeze.",
+    );
+    return { shortCircuit: true, exitCode: 2 };
+  }
+  if (input.lockSha !== null && protoRecord.designMd.sha256 !== input.lockSha) {
+    error(
+      "qfai prototyping iterate: prototyping.json#designMd.sha256 (" +
+        `${protoRecord.designMd.sha256}) differs from DESIGN.md.lock.yaml ` +
+        `(${input.lockSha}). The lock was refrozen mid-loop; re-run prototyping from cycle 0.`,
+    );
+    return { shortCircuit: true, exitCode: 2 };
+  }
+  const recordedIterations = asIterations(protoRecord);
+  const stop = shouldStop(recordedIterations);
+  if (stop !== null) {
+    // codex 8thM: shouldStop accepts the reviewer-recorded
+    // `designMdViolations: []` at face value, but the shipped reviewer
+    // prompt instructs reviewers to leave that field empty unless a
+    // runtime gate injects findings — and the only runtime scanner
+    // historically lived in `certify`. So a prototype with DESIGN.md
+    // drift could converge here ("axes-exceptional") and only fail
+    // later at certification. Re-run the runtime scanner against the
+    // accepted iteration's HTML before honoring the stop, so iterate
+    // continues another iteration to fix the drift instead of
+    // pretending the loop converged.
+    if (stop === "axes-exceptional") {
+      const recomputed = await recomputeFinalIterDesignMdViolations(
+        input.root,
+        recordedIterations.length - 1,
+        input.designMd,
+      );
+      const first = recomputed[0];
+      if (first !== undefined) {
+        // codex AG08r: max-budget drift edge case. If the last iter is
+        // already at MAX_ITERATION_INDEX (cycle 9), there is no valid
+        // next cycle (--cycle is capped at 9). Falling through to the
+        // expectedNextCycle gate would then exit 2 with a cycle-mismatch
+        // error, blocking the operator from completing a run that
+        // exhausted the iteration budget with drift still present. In
+        // that case emit the max-iterations stop instead — the loop
+        // truly is over (drift or not), and the recovery is `--cycle 0`
+        // restart, not another within-budget cycle.
+        const lastIter = recordedIterations[recordedIterations.length - 1];
+        const lastIndex =
+          isRecord(lastIter) && typeof lastIter.index === "number" ? lastIter.index : -1;
+        if (lastIndex >= MAX_ITERATION_INDEX) {
+          info(
+            "qfai prototyping iterate: review reported convergence but the " +
+              `accepted iter HTML still contains ${recomputed.length} DESIGN.md violation(s) ` +
+              `AND the iteration budget is exhausted (index=${lastIndex}). ` +
+              `First violation: ${first.kind}=${first.found}. ` +
+              "Run `qfai prototyping iterate --cycle 0 --target-url <url>` to restart the loop.",
+          );
+          return { shortCircuit: true, exitCode: emitStop("max-iterations") };
+        }
+        info(
+          "qfai prototyping iterate: review reported convergence but the " +
+            `accepted iter HTML still contains ${recomputed.length} DESIGN.md violation(s); ` +
+            "continuing another iteration to fix drift. " +
+            `First violation: ${first.kind}=${first.found}.`,
+        );
+        // Fall through to the next-cycle plan below (no early return).
+      } else {
+        return { shortCircuit: true, exitCode: emitStop(stop) };
+      }
+    } else {
+      return { shortCircuit: true, exitCode: emitStop(stop) };
+    }
+  }
+  // Defense-in-depth: confirm the recorded loop history is itself
+  // monotonic before deriving the expected next cycle from its
+  // length. A hand-edited or partially-corrupted `prototyping.json`
+  // could carry e.g. `iterations.length === 3` but
+  // `iterations[2].index === 5`; in that case `length` is no longer
+  // the next-cycle index and the validator's per-index check would
+  // reject the next iter with a delayed error. Catch the corrupt
+  // history at the command boundary instead.
+  const gapIndex = recordedIterations.findIndex((it, i) => {
+    if (!isRecord(it)) return true;
+    return it.index !== i;
+  });
+  if (gapIndex !== -1) {
+    error(
+      `qfai prototyping iterate: prototyping.json#iterations[${gapIndex}].index ` +
+        `is not ${gapIndex}; the loop history is corrupted. ` +
+        "Re-run with `--cycle 0 --target-url <url>` to refreeze the loop.",
+    );
+    return { shortCircuit: true, exitCode: 2 };
+  }
+  // Reject out-of-sequence cycle requests. `iterations[i].index === i`
+  // is enforced by the validator (QFAI-PROT-* index-monotonicity), so
+  // jumping straight to `--cycle 3` after only `iter-00` was recorded
+  // would create an `iter-03/iterate-plan.json` that the validator
+  // later rejects, blocking validation/certification with a
+  // not-easy-to-read error. Fail up front instead. The check runs
+  // AFTER `shouldStop` so a converged or max-budget loop returns its
+  // stop reason cleanly even when the seed lineage is sparse.
+  const expectedNextCycle = recordedIterations.length;
+  if (input.cycle !== expectedNextCycle) {
+    error(
+      `qfai prototyping iterate: expected --cycle ${expectedNextCycle} ` +
+        `(iterations.length=${recordedIterations.length}); got --cycle ${input.cycle}. ` +
+        "Re-run with the expected cycle, or restart the loop with " +
+        "`--cycle 0 --target-url <url>`.",
+    );
+    return { shortCircuit: true, exitCode: 2 };
+  }
+  // Cycles >= 1 must reuse the frozen `specsCovered` from cycle 0.
+  // If `prototyping.primarySpecId` or a UI-bearing marker has shifted
+  // mid-loop, the resolved primary spec here would differ from the
+  // recorded one, and iter-plan would write the NEW spec into
+  // `iterate-plan.json#specs` while certify keeps reporting the
+  // FROZEN one — meaning iterations can exercise spec B while the
+  // certificate still claims spec A. Fail fast at the boundary.
+  const frozenSpecs = readFrozenSpecsCovered(protoRecord);
+  // `null` means the frozen seed is missing or malformed (absent
+  // `specsCovered`, empty array, or non-string entries). Cycle 0
+  // is responsible for writing the seed; if a cycle >= 1 invocation
+  // arrives without one, the file was hand-edited or partially
+  // corrupted between cycles. Proceeding silently would let
+  // iterate write a spec id into `iterate-plan.json` that is never
+  // anchored against the cycle-0 seed — and certify (which reads
+  // `specsCovered` for the certificate body) would later block on
+  // the same gap. Fail fast here so the operator hits a single,
+  // clear error pointing at the right remediation.
+  if (frozenSpecs === null) {
+    error(
+      "qfai prototyping iterate: prototyping.json#specsCovered is missing or " +
+        "malformed (must be a non-empty array of non-empty strings, seeded by " +
+        "cycle 0). Re-run with `--cycle 0 --target-url <url>` to refreeze the loop.",
+    );
+    return { shortCircuit: true, exitCode: 2 };
+  }
+  // Compare element-wise. Today `specs` is always a single-element
+  // array (resolved primary spec id), but `specsCovered` is a
+  // multi-element array per the prototyping.json schema, and the
+  // contract is "every covered spec must match across cycles". A
+  // first-element-only check (`frozenSpecs[0] !== specs[0]`) would
+  // silently let a future multi-spec loop drift on non-zero indices.
+  if (!arraysShallowEqual(frozenSpecs, input.specs)) {
+    error(
+      "qfai prototyping iterate: prototyping.json#specsCovered (" +
+        `${JSON.stringify(frozenSpecs)}) differs from the currently-resolved ` +
+        `primary spec (${JSON.stringify(input.specs)}). ` +
+        "The primary spec changed mid-loop; re-run with `--cycle 0 --target-url <url>` to refreeze.",
+    );
+    return { shortCircuit: true, exitCode: 2 };
+  }
+
+  // Mid-run spec-set drift check.
+  //
+  // The cycle-0 frozen `frozenSpecsCovered` set is the SSOT for what
+  // the loop is reviewing. If a UI-bearing spec appears or disappears
+  // on disk between cycles, we MUST detect the drift and stop the
+  // current run rather than silently re-baselining mid-loop. The
+  // new/removed specs are deferred to the NEXT invocation (which
+  // restarts from cycle 0), so we never restart here — we just
+  // fail-fast with stderr that names every drifted spec id.
+  //
+  // The frozenSpecsCovered field is the SSOT; specsCovered (above)
+  // is the legacy single-spec field that is also frozen for backward
+  // compatibility. Both must be honoured.
+  const frozenSet = readFrozenSpecsCoveredField(protoRecord) ?? frozenSpecs;
+  const liveUiBearing = [...input.earlyUiBearing];
+  const drift = checkSpecsCoveredDrift(frozenSet, liveUiBearing);
+  if (drift.drifted) {
+    const parts: string[] = [];
+    if (drift.added.length > 0) {
+      parts.push(`new=[${drift.added.join(", ")}]`);
+    }
+    if (drift.removed.length > 0) {
+      parts.push(`removed=[${drift.removed.join(", ")}]`);
+    }
+    error(
+      "qfai prototyping iterate: spec-set drift detected mid-loop — " +
+        `${parts.join(" ")}. The cycle-0 frozen set is ${JSON.stringify(frozenSet)}; ` +
+        "the drifted spec(s) are deferred to the next `--cycle 0` invocation. " +
+        "Continue this loop with the frozen spec set, or restart with " +
+        "`--cycle 0 --target-url <url>` to pick up the new spec set.",
+    );
+    return { shortCircuit: true, exitCode: 2 };
+  }
+  return { shortCircuit: false };
 }

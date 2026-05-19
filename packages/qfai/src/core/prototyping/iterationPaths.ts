@@ -124,8 +124,19 @@ export async function findStaleIterDirs(root: string): Promise<string[]> {
  * recursive `rm -rf`. Names that fail the strict regex are preserved.
  * The returned `deleted` list reports the absolute paths that were
  * actually removed.
+ *
+ * NOTE — this is the new per-spec migration variant. It takes a project
+ * root and returns a flat `{deleted: string[]}` summary, throwing on
+ * the first OS-level rm failure. It is intentionally distinct from the
+ * local `deleteStaleIterDirs` helper inside
+ * `cli/commands/prototypingIterate.ts`, which takes a pre-joined
+ * `<root>/.qfai/evidence/prototyping` path and returns a structured
+ * `{ok: true} | {ok: false; failedDir; cause}` result so the cycle-0
+ * reset can fail-closed without exception unwinding. The two contracts
+ * are deliberately not unified yet; converging them is part of the
+ * per-spec iter-dir migration tracked by OQ-0012-0006.
  */
-export async function deleteStaleIterDirs(root: string): Promise<{ deleted: string[] }> {
+export async function purgeStaleIterDirs(root: string): Promise<{ deleted: string[] }> {
   const targets = await findStaleIterDirs(root);
   const deleted: string[] = [];
   for (const dir of targets) {
@@ -134,7 +145,7 @@ export async function deleteStaleIterDirs(root: string): Promise<{ deleted: stri
       deleted.push(dir);
     } catch (err) {
       throw new Error(
-        `deleteStaleIterDirs: failed to remove ${dir}: ${(err as Error).message}`,
+        `purgeStaleIterDirs: failed to remove ${dir}: ${(err as Error).message}`,
       );
     }
   }
