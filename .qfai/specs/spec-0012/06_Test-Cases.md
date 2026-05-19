@@ -684,6 +684,53 @@
 - Test file: `packages/qfai/tests/core/prototyping/licenseVerify.test.ts`
 - Verify `licenseVerify` contract rejects every source NOT in the cycle-0 frozen allowlist with a structured error `{code: "license-not-allowlisted", source, url}`; exit code mapping to 66 is the caller's responsibility.
 
+## CHG-002 Cascade — Cycle-0 Bypass Regression + Traceability Stitch
+
+> Authored 2026-05-19 to register the late-review fixes on PR #208
+> (codex r3264500818 / r3264507311 / r3264508578 + architecture-reviewer
+> r3264511589 + completion-reviewer r3264512364). See `09_delta.md`
+> CHG-002 cascade for the delta note.
+
+## TC-0012-0396
+
+- EX-Ref: EX-0012-0123
+- AC-Refs: AC-0012-0037
+- Type: integration
+- Test file: `packages/qfai/tests/cli/commands/prototypingIterate.test.ts`
+- Verify the cycle-0 no-op gate is bypassed when `qfai.config.yaml#prototyping.primarySpecId` is configured AND the spec dir exists on disk, even if the spec carries no `surface_type: ui-bearing` marker and no UI contract.
+
+## TC-0012-0397
+
+- EX-Ref: EX-0012-0140, EX-0012-0143
+- AC-Refs: AC-0012-0049, AC-0012-0051
+- Type: integration
+- Test file: `packages/qfai/tests/cli/commands/prototypingIterate.test.ts`
+- Verify primarySpecId-only config — cycle 1 does NOT trip the spec-set drift check (cycle 0 must seed `frozenSpecsCovered: [primary]` rather than `[]`, so cycle ≥1 live comparison does not surface a `removed: [primary]` drift).
+
+## TC-0012-0398
+
+- EX-Ref: EX-0012-0123
+- AC-Refs: AC-0012-0037
+- Type: integration
+- Test file: `packages/qfai/tests/cli/commands/prototypingIterate.test.ts`
+- Verify the cycle-0 no-op gate is bypassed when `01_Spec.md` carries the legacy `# … Prototyping …` title marker, even with no `surface_type: ui-bearing` frontmatter, no UI contract, and no primarySpecId pin.
+
+## TC-0012-0399
+
+- EX-Ref: EX-0012-0138
+- AC-Refs: AC-0012-0047
+- Type: integration
+- Test file: `packages/qfai/tests/cli/commands/prototypingCertify.test.ts`
+- Verify certify iterates the cycle-0-frozen `frozenSpecsCovered` set (multi-spec) when both `frozenSpecsCovered` and the legacy single-spec `specsCovered` are present on prototyping.json; the per-(spec × screen) presence gate must catch a frozen-set secondary spec with no review.json files.
+
+## TC-0012-0400
+
+- EX-Ref: EX-0012-0138
+- AC-Refs: AC-0012-0047
+- Type: integration
+- Test file: `packages/qfai/tests/cli/commands/prototypingCertify.test.ts`
+- Verify certify falls back to legacy `specsCovered` for pre-Wave-3 evidence that lacks `frozenSpecsCovered`; the per-(spec × screen) presence gate must still flag every missing pair.
+
 ## Legacy Coverage Continuity
 
 - The legacy baseline test-case identifier space remains reserved for existing implementation/test slices.

@@ -283,6 +283,14 @@ describe("qfai prototyping certify (TC-0012-0381: per-(spec × screen) review.js
     }
   });
 
+  // Moved out into a separate describe block below per the
+  // traceability review (TC-0012-0381 owns only the per-(spec × screen)
+  // presence axis; the frozenSpecsCovered preference / fallback axes
+  // live under their own TCs).
+});
+
+describe("qfai prototyping certify (TC-0012-0399: frozenSpecsCovered preferred over legacy specsCovered)", () => {
+  // QFAI:SPEC-0012:TC-0012-0399
   it("iterates the cycle-0-frozen multi-spec set (frozenSpecsCovered) — not the legacy single-spec specsCovered — when both fields are present", async () => {
     // Regression for the Wave-3 multi-spec write: `iterate --cycle 0`
     // persists the FULL UI-bearing set under `frozenSpecsCovered` and
@@ -339,6 +347,10 @@ describe("qfai prototyping certify (TC-0012-0381: per-(spec × screen) review.js
     }
   });
 
+});
+
+describe("qfai prototyping certify (TC-0012-0400: legacy specsCovered fallback when frozenSpecsCovered absent)", () => {
+  // QFAI:SPEC-0012:TC-0012-0400
   it("falls back to specsCovered for pre-Wave-3 evidence that lacks frozenSpecsCovered", async () => {
     // Backward-compat sentinel: when `frozenSpecsCovered` is entirely
     // absent (pre-Wave-3 prototyping.json), the gate continues to

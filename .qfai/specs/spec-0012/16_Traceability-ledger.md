@@ -110,6 +110,22 @@ otherwise enforced.
 | TDD-0411 | TC-0012-0394 | planned | prototyping-e2e       | e2e: Reviewer-driven Playwright session writes per-spec review.json (REQ-0003)              |
 | TDD-0412 | TC-0012-0395 | planned | prototyping-core      | contract: licenseVerify rejects non-allowlisted source with structured error (REQ-0006)     |
 
+## CHG-002 Cascade — Cycle-0 Bypass Regression + Traceability Stitch (2026-05-19)
+
+> Late-review fixes on PR #208 (codex r3264500818 / r3264507311 /
+> r3264508578 + architecture-reviewer r3264511589 + completion-reviewer
+> r3264512364). New TDD IDs registered above the `TDD-0408` ceiling
+> and mirrored in `tdd/test-list.md`.
+
+| TDD-ID   | TC-Ref       | Status | Owner            | Notes                                                                                                                                                                          |
+| -------- | ------------ | ------ | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| TDD-0409 | TC-0012-0396 | done   | prototyping-cli  | primarySpecId-bypass: section 0 does not no-op when primary spec dir exists (TC annotation restore for pre-existing test)                                                      |
+| TDD-0410 | TC-0012-0397 | done   | prototyping-cli  | MAJOR fix: primarySpecId-only config — cycle 1 does not trip spec-set drift (cycle 0 bypass now seeds `frozenSpecsCovered: [primary]` instead of `[]`)                         |
+| TDD-0411 | TC-0012-0398 | done   | prototyping-cli  | title-marker fallback: section 0 honours the legacy `# … Prototyping …` heading the same way `resolvePrimaryPrototypingSpec` does                                              |
+| TDD-0412 | TC-0012-0399 | done   | prototyping-cli  | certify reads `frozenSpecsCovered` first when both fields present (moved into its own describe to disentangle from TC-0012-0381)                                               |
+| TDD-0413 | TC-0012-0400 | done   | prototyping-cli  | certify legacy `specsCovered` fallback when `frozenSpecsCovered` absent (moved into its own describe to disentangle from TC-0012-0381)                                         |
+| TDD-0414 | n/a (source) | done   | prototyping-cli  | MINOR: `specDirExists` bare-catch hardened to ENOENT-discriminated catch + re-throw so EACCES / EIO / ENOTDIR propagate instead of being silently classified as "doesn't exist" |
+
 ## Notes (v2.1 ledger)
 
 - TDD rows here use a 5-column form (`TDD-ID | TC-Ref | Status | Owner |

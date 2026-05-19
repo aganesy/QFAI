@@ -173,3 +173,12 @@
 - Discussion-pack OQ-0003 is mirrored into 08_Open-questions.md as OQ-0012-0001 (airgapped run support, deferred to ops gate).
 - Exit codes: Reviewer Playwright-session failure (hard-stop class b) reuses exit `64` with a `sessionStatus` discriminator on `<screen>.review.json`; mid-run spec-set change (hard-stop class d) reuses exit `2` (same class as DESIGN.md lock drift per OC-4 / AC-0012-0035). License-verify failure (hard-stop class c) uses new exit `66`. Confirmed by user@2026-05-18.
 - Internal IDs (`spec-0012`, `DR-0012-NNNN`, etc.) are used here because `.qfai/specs/**` is the authoring zone and not part of the distributed surface (`packages/qfai/dist/`, `packages/qfai/assets/`). See `.agents/rules/distributed-surface.md`.
+
+### CHG-002 Cascade — Cycle-0 Bypass Regression + Traceability Stitch (2026-05-19)
+
+Late-review fixes on PR #208:
+
+- **codex r3264500818 (P2)** — section-0 no-op gate now honours the legacy `# … Prototyping …` title marker (helper `findTitleMarkerSpecs` composed into `evaluateZeroUiBearingPrecheck`). Prevents title-marker-only projects from silently no-opping. Test: TC-0012-0398 (TDD-0411).
+- **codex r3264507311 (MAJOR)** — primarySpecId-bypass at cycle 0 now expands `earlyUiBearing` to `[configuredPrimarySpecId]`, so the cycle-0 frozen write seeds `frozenSpecsCovered: [primary]` (was `[]`). Without this, cycle ≥1 `checkSpecsCoveredDrift` reliably tripped with `removed: [primary]` → exit 2. Test: TC-0012-0397 (TDD-0410).
+- **codex r3264508578 (MINOR)** — `specDirExists` bare `catch {}` replaced with ENOENT discrimination; EACCES / EIO / ENOTDIR propagate. Source TDD-0414.
+- **architecture-reviewer r3264511589 + completion-reviewer r3264512364 (HIGH / major)** — the three `it` blocks added in commit `6291b432` are registered as TC-0012-0396 / 0399 / 0400 with matching TDD-0409 / 0412 / 0413 entries; the two certify-side tests previously lodged under the TC-0012-0381 describe are moved into their own TC describes to disentangle the acceptance axes.

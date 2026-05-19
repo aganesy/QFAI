@@ -38,6 +38,7 @@ import { loadConfig } from "../../core/config.js";
 import { hashDesignMd, parseDesignMd, type DesignMd } from "../../core/design/designMd.js";
 import { readDesignMdLockSha } from "../../core/design/designMdLock.js";
 import { isEnoent } from "../../core/fs/errno.js";
+import { collectSpecEntries } from "../../core/specLayout.js";
 import { COMPLETION_CERTIFICATE_REL_PATH } from "../../core/prototyping/certificate.js";
 import {
   findDesignMdViolations,
@@ -738,8 +739,15 @@ async function specDirExists(
   try {
     const s = await stat(abs);
     return s.isDirectory();
-  } catch {
-    return false;
+  } catch (err) {
+    // codex review r3264508578: bare `catch {}` previously swallowed
+    // EACCES / EIO / ENOTDIR alike as "doesn't exist", letting a
+    // permission-denied spec dir silently no-op the run. Discriminate
+    // ENOENT (genuine absence) from every other errno and propagate
+    // the rest so the project-rule "every async path must have
+    // explicit error handling" is honoured.
+    if (isEnoent(err)) return false;
+    throw err;
   }
 }
 
@@ -876,6 +884,17 @@ async function evaluateZeroUiBearingPrecheck(
   const earlyConfig = await loadConfig(root);
   const earlyUiBearing = await resolveAllUiBearingSpecs(root, earlyConfig.config);
   if (earlyUiBearing.length === 0) {
+    // codex review r3264500818: `resolveAllUiBearingSpecs` only honours
+    // the `surface_type: ui-bearing` frontmatter marker or a matching
+    // `.qfai/contracts/ui/*.yaml`, but `resolvePrimaryPrototypingSpec`
+    // ALSO recognises a title-line marker (`# … Prototyping …`) inside
+    // `01_Spec.md`. Without this probe a project that relies solely on
+    // the title marker silently no-ops at section 0 and never reaches
+    // the legacy primary resolver.
+    const titleMarkerSpecs = await findTitleMarkerSpecs(
+      root,
+      earlyConfig.config.paths.specsDir,
+    );
     const configuredPrimarySpecId = earlyConfig.config.prototyping?.primarySpecId;
     const configuredSpecOnDisk =
       configuredPrimarySpecId !== undefined
@@ -885,7 +904,7 @@ async function evaluateZeroUiBearingPrecheck(
             configuredPrimarySpecId,
           )
         : false;
-    if (!configuredSpecOnDisk) {
+    if (!configuredSpecOnDisk && titleMarkerSpecs.length === 0) {
       info(
         "qfai prototyping iterate: no UI-bearing specs resolved — deterministic no-op " +
           "(no spec carries `surface_type: ui-bearing` and no matching `.qfai/contracts/ui/*.yaml`). " +
@@ -893,8 +912,64 @@ async function evaluateZeroUiBearingPrecheck(
       );
       return { shortCircuit: true, exitCode: 0 };
     }
+    // codex review r3264507311 (MAJOR): when the bypass triggers,
+    // expand `earlyUiBearing` to include the resolved spec id(s) so:
+    //   - cycle 0 writes `frozenSpecsCovered: [primary]` (not `[]`),
+    //   - cycle ≥1 live comparison sees the same value and does not
+    //     trip `checkSpecsCoveredDrift` with `removed: [primary]`.
+    // Pre-fix the bypass worked for cycle 0 but reliably failed at
+    // cycle ≥1 because the frozen set was empty and the live set is
+    // still empty under `resolveAllUiBearingSpecs`.
+    const bypassSpecs = new Set<string>();
+    if (configuredSpecOnDisk && configuredPrimarySpecId !== undefined) {
+      bypassSpecs.add(configuredPrimarySpecId);
+    }
+    for (const id of titleMarkerSpecs) bypassSpecs.add(id);
+    return {
+      shortCircuit: false,
+      earlyConfig,
+      earlyUiBearing: [...bypassSpecs].sort((a, b) => a.localeCompare(b)),
+    };
   }
   return { shortCircuit: false, earlyConfig, earlyUiBearing };
+}
+
+/**
+ * Cheap title-marker probe. Returns spec IDs (four-digit form) whose
+ * `01_Spec.md` carries a `# … Prototyping …` heading. Mirrors the
+ * legacy `PROTOTYPING_MARKER_RE` title arm in
+ * `resolvePrimaryPrototypingSpec` so the section-0 no-op gate honours
+ * the same surface the legacy resolver does.
+ *
+ * Read failures other than ENOENT propagate so a permission-denied
+ * scan does not silently no-op the run.
+ */
+const TITLE_MARKER_RE = /^#\s+.*prototyping/im;
+
+async function findTitleMarkerSpecs(root: string, specsDir: string): Promise<string[]> {
+  const specsRoot = path.resolve(root, specsDir);
+  let entries: Awaited<ReturnType<typeof collectSpecEntries>>;
+  try {
+    entries = await collectSpecEntries(specsRoot);
+  } catch (err) {
+    if (isEnoent(err)) return [];
+    throw err;
+  }
+  const out: string[] = [];
+  for (const entry of entries) {
+    const specMdPath = path.join(entry.dir, "01_Spec.md");
+    let body: string;
+    try {
+      body = await readFile(specMdPath, "utf-8");
+    } catch (err) {
+      if (isEnoent(err)) continue;
+      throw err;
+    }
+    if (TITLE_MARKER_RE.test(body)) {
+      out.push(entry.specNumber);
+    }
+  }
+  return out.sort((a, b) => a.localeCompare(b));
 }
 
 type CycleGteOneGateInput = {

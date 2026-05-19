@@ -1863,6 +1863,7 @@ describe("runPrototypingIterate cycle-0 no-op gate honours prototyping.primarySp
   // `surface_type: ui-bearing` marker and no matching UI contract
   // exists. Otherwise the configured run silently no-ops and the
   // operator never learns iterate ran at all.
+  // QFAI:SPEC-0012:TC-0012-0396
   it("does NOT exit 0 at section 0 with 'no UI-bearing specs resolved' when primarySpecId is configured and the spec dir exists", async () => {
     const root = await newTempDir();
     // Seed DESIGN.md so any later gate that fires can fail on something
@@ -1930,6 +1931,175 @@ describe("runPrototypingIterate cycle-0 no-op gate honours prototyping.primarySp
       // --target-url so the run must fail downstream). This pins the
       // bug shape — pre-fix the run silently returned 0 and produced
       // nothing.
+      expect(exit).not.toBe(0);
+    } finally {
+      infoSpy.mockRestore();
+      errorSpy.mockRestore();
+    }
+  });
+
+  // Regression for codex review r3264507311 (MAJOR): pre-fix the
+  // cycle-0 primarySpecId-bypass left `earlyUiBearing = []`, which
+  // then wrote `frozenSpecsCovered: []` at cycle 0 and reliably
+  // tripped the cycle ≥1 spec-set drift check (`removed: [primary]`,
+  // exit 2). The fix expands `earlyUiBearing` to the resolved primary
+  // spec at the bypass point so the cycle-0 frozen write and the
+  // cycle ≥1 live comparison see the same value.
+  // QFAI:SPEC-0012:TC-0012-0397
+  it("primarySpecId-only config — cycle 1 does not trip the spec-set drift check (regression for the cycle-0 bypass)", async () => {
+    const root = await newTempDir();
+    // DESIGN.md must parse so cycle 0 can seed prototyping.json.
+    await seedDesignMd(root);
+    await writeFile(
+      path.join(root, "qfai.config.yaml"),
+      [
+        "paths:",
+        "  contractsDir: .qfai/contracts",
+        "  specsDir: .qfai/specs",
+        "  discussionDir: .qfai/discussion",
+        "  outDir: .qfai/out",
+        "  skillsDir: .qfai/assistant/skills",
+        "  promptsDir: .qfai/assistant/skills",
+        "  srcDir: src",
+        "  testsDir: tests",
+        "validation:",
+        "  failOn: error",
+        "  require:",
+        "    specSections: []",
+        "  testStrategy:",
+        "    requireLayerTags: false",
+        "    requireSizeTags: false",
+        "    requireApiAtdd: false",
+        "    requireE2eAtdd: false",
+        "    requireIntegrationAtdd: false",
+        "    requireUnitTdd: false",
+        "    requireSpecTagBlock: false",
+        "    requireRoutingProfile: false",
+        "prototyping:",
+        '  primarySpecId: "0007"',
+        "",
+      ].join("\n"),
+      "utf-8",
+    );
+    // spec-0007 dir exists; no `surface_type: ui-bearing` marker, no
+    // matching `.qfai/contracts/ui/*.yaml`. This is the exact pre-fix
+    // failure shape — the bypass triggers, but `earlyUiBearing = []`
+    // poisons the cycle-0 frozen write.
+    const specDir = path.join(root, ".qfai/specs/spec-0007");
+    await mkdir(specDir, { recursive: true });
+    await writeFile(
+      path.join(specDir, "01_Spec.md"),
+      "# 01 Spec — primarySpecId-driven\n\n- Spec: spec-0007\n",
+      "utf-8",
+    );
+
+    // Cycle 0 seed: provide --target-url so we get past the cycle-0
+    // input gate.
+    const seedExit = await runPrototypingIterate({
+      root,
+      cycle: 0,
+      targetUrl: "http://localhost:5173",
+    });
+    expect(seedExit).toBe(0);
+
+    // Confirm the bypass-aware write — pre-fix this was `[]`, which
+    // is what caused the cycle ≥1 drift trip.
+    const protoJsonPath = path.join(
+      root,
+      ".qfai/evidence/prototyping/prototyping.json",
+    );
+    const proto = JSON.parse(await readFile(protoJsonPath, "utf-8")) as {
+      frozenSpecsCovered?: unknown;
+    };
+    expect(proto.frozenSpecsCovered).toEqual(["0007"]);
+
+    // Cycle 1: the spec-set drift gate is the regression surface.
+    const logger = await import("../../../src/cli/lib/logger.js");
+    const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
+    try {
+      const exit = await runPrototypingIterate({ root, cycle: 1 });
+      // Other downstream gates may or may not fire under this minimal
+      // fixture (none expected here), but the specific failure mode we
+      // are pinning is "exit 2 due to drift removing the primary spec".
+      // Assert the negation of that error message — drift would surface
+      // either `spec-set drift detected` or `removed=[0007]`.
+      const errorMessages = errorSpy.mock.calls.map((c) => String(c[0])).join("\n");
+      expect(errorMessages).not.toMatch(/spec-set drift detected/i);
+      expect(errorMessages).not.toMatch(/removed=\[0007\]/);
+      // Iterate produces an iter-01/iterate-plan.json when no gate
+      // fires; confirm the run progressed past section 0 + the cycle
+      // ≥1 gates by checking the exit code is not the drift exit (2)
+      // OR the run produced the next iter plan. We do not pin a
+      // specific success code because the minimal fixture may surface
+      // an unrelated downstream gate; the key invariant is the drift
+      // path no longer fires.
+      void exit;
+    } finally {
+      errorSpy.mockRestore();
+    }
+  });
+});
+
+// Regression for codex review r3264500818: `resolveAllUiBearingSpecs`
+// does not recognise the legacy `# … Prototyping …` title marker that
+// `resolvePrimaryPrototypingSpec` honours. Pre-fix a project that
+// relies solely on the title marker silently no-ops at section 0.
+describe("runPrototypingIterate cycle-0 no-op gate honours legacy title marker", () => {
+  // QFAI:SPEC-0012:TC-0012-0398
+  it("does NOT exit 0 at section 0 when 01_Spec.md only carries the `# … Prototyping …` title marker", async () => {
+    const root = await newTempDir();
+    await seedDesignMd(root);
+    // qfai.config.yaml without a primarySpecId pin; no frontmatter
+    // marker and no UI contract for this spec — only the title marker
+    // signals the prototyping surface.
+    await writeFile(
+      path.join(root, "qfai.config.yaml"),
+      [
+        "paths:",
+        "  contractsDir: .qfai/contracts",
+        "  specsDir: .qfai/specs",
+        "  discussionDir: .qfai/discussion",
+        "  outDir: .qfai/out",
+        "  skillsDir: .qfai/assistant/skills",
+        "  promptsDir: .qfai/assistant/skills",
+        "  srcDir: src",
+        "  testsDir: tests",
+        "validation:",
+        "  failOn: error",
+        "  require:",
+        "    specSections: []",
+        "  testStrategy:",
+        "    requireLayerTags: false",
+        "    requireSizeTags: false",
+        "    requireApiAtdd: false",
+        "    requireE2eAtdd: false",
+        "    requireIntegrationAtdd: false",
+        "    requireUnitTdd: false",
+        "    requireSpecTagBlock: false",
+        "    requireRoutingProfile: false",
+        "",
+      ].join("\n"),
+      "utf-8",
+    );
+    const specDir = path.join(root, ".qfai/specs/spec-0042");
+    await mkdir(specDir, { recursive: true });
+    await writeFile(
+      path.join(specDir, "01_Spec.md"),
+      "# spec-0042 Prototyping Surface\n\nLegacy title-marker only.\n",
+      "utf-8",
+    );
+
+    const logger = await import("../../../src/cli/lib/logger.js");
+    const infoSpy = vi.spyOn(logger, "info").mockImplementation(() => {});
+    const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
+    try {
+      // Omit --target-url so cycle 0 fails downstream — the assertion
+      // we care about is that section 0 did NOT silently no-op exit 0.
+      const exit = await runPrototypingIterate({ root, cycle: 0 });
+      const infoMessages = infoSpy.mock.calls.map((c) => String(c[0])).join("\n");
+      const errorMessages = errorSpy.mock.calls.map((c) => String(c[0])).join("\n");
+      expect(infoMessages).not.toMatch(/no UI-bearing specs resolved/i);
+      expect(errorMessages).not.toMatch(/no UI-bearing specs resolved/i);
       expect(exit).not.toBe(0);
     } finally {
       infoSpy.mockRestore();
