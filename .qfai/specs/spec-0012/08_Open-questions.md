@@ -58,7 +58,7 @@
 - Due: 2026-06-30
 - Severity: low
 - Source: CHG-002 PR #208 review (FYI thread r3264491197, raised 2026-05-19).
-- Question: `iterationPaths.ts` ships the per-spec helpers (`iterationDir(idx, specId)`, `iterationReviewPath(idx, specId, screen)`, `findIterationReviewFiles`, `purgeStaleIterDirs`, `parseIterationReviewPath`) with full unit coverage, but `prototypingIterate.ts` still composes the legacy flat `iter-NN/index.html` layout via `core/prototyping/iteration.ts#iterationDir(cycle)`. Production wire-in must switch the iterate command from the single-lineage helpers to the per-`(idx, spec, screen)` helpers so the on-disk evidence layout matches the multi-spec contract before convergence/certify reads it.
+- Question: `iterationPaths.ts` ships the per-spec helpers (`iterationDirPerSpec(idx, specId)`, `iterationReviewPathPerSpec(idx, specId, screen)`, `findIterationReviewFiles`, `deleteStaleIterDirs`, `parseIterationReviewPath`) with full unit coverage, but `prototypingIterate.ts` still composes the legacy flat `iter-NN/index.html` layout via `core/prototyping/iteration.ts#iterationDir(cycle)`. Production wire-in must switch the iterate command from the single-lineage helpers to the per-`(idx, spec, screen)` helpers so the on-disk evidence layout matches the multi-spec contract before convergence/certify reads it.
 - Recommendation: Land alongside the next wave that resolves OQ-0012-0002 (prototyping.json#iterations[] shape) — the iter-dir migration and the JSON-shape migration share the same per-spec namespace and must ship atomically to keep `certify` parsing consistent.
 - Resolves: blocks legacy-to-per-spec layout cutover in `prototypingIterate.ts`. Couples with TDD-0384 deferral noted in the PR #208 description.
 

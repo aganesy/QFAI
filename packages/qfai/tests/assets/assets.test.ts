@@ -317,7 +317,7 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     const content = await readFile(skillPath, "utf-8");
 
     expect(content).toMatch(/qfai prototyping iterate/);
-    expect(content).toMatch(/15 iterations|15 cycles|up to 15/);
+    expect(content).toMatch(/10 iterations|10 cycles|up to 10/);
     expect(content).toContain(".qfai/contracts/ui/*.yaml");
     // Post-rewrite: brand SSOT is root DESIGN.md + lock yaml; legacy
     // per-aspect brand yaml references are dropped from this skill.

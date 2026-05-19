@@ -37,7 +37,7 @@ Required inputs (read; never written by this sub-command unless noted):
   - `specsCovered[]` (cycle-0 frozen UI-bearing spec set; shallow-equal
     compared to the live `resolveAllUiBearingSpecs()` result; mismatch
     → exit 2),
-  - `licenseClassCatalog` (cycle-0 frozen stock-photo allowlist; mismatch
+  - `frozenLicenseCatalog` (cycle-0 frozen stock-photo allowlist; mismatch
     → exit 2).
 
 Cycle-0 freeze (written by `iterate --cycle 0`):
@@ -47,7 +47,7 @@ Cycle-0 freeze (written by `iterate --cycle 0`):
   spec set is frozen here; mid-run additions of new UI-bearing specs do
   NOT trigger a cycle-0 restart and are deferred to the next
   `/qfai-prototyping` invocation.
-- `prototyping.json.licenseClassCatalog = { allowedSources, licenseTiers }`
+- `prototyping.json.frozenLicenseCatalog = { allowedSources, licenseTiers }`
   sourced from the discussion / skill stock-photo configuration; this is
   the SSOT for all subsequent license-verify calls in the run.
 
@@ -63,10 +63,23 @@ Per-cycle outputs (written for every cycle, including cycle 0):
 
 Per-spec evidence root: `.qfai/evidence/prototyping/iter-NN/spec-NNNN/`.
 No artifact may be written above this root for a given spec. Path helpers
-`iterationDir(iter)`, `iterationReviewPath(iter, specId, screen)`,
+`iterationDirPerSpec(iter, specId)`,
+`iterationReviewPathPerSpec(iter, specId, screen)`,
 `findIterationReviewFiles(...)`, `findStaleIterDirs(...)`,
 `deleteStaleIterDirs(...)` all descend into `spec-NNNN` and preserve
-the `/^iter-\d{2,}$/` cleanup regex semantics.
+the `/^iter-\d{2,}$/` cleanup regex semantics. These helpers live in
+`core/prototyping/iterationPaths.ts`; the legacy single-spec helpers
+`iterationDir(iter)` / `iterationReviewPath(iter)` in
+`core/prototyping/iteration.ts` remain in place until TDD-0384 (the
+per-spec iter-dir migration in `prototypingIterate.ts`) lands.
+
+> **Implementation status (v1.8.10):** the iterate driver still writes
+> flat `iter-NN/<screen>.html` + `iter-NN/iterate-plan.json`. The
+> certify driver gates on the per-spec layout when present and falls
+> back to the flat layout otherwise. The per-spec migration is deferred
+> to a dedicated wave (see `_policies/10_delta.md` Deferred + spec-0012
+> `10_Plan.md#Deferred follow-ups`). Until that wave lands, downstream
+> consumers SHOULD treat both layouts as valid.
 
 Convergence (evaluated at cycle ≥1 after Reviewer payloads land):
 the AND across every spec × screen pair of
@@ -78,7 +91,7 @@ Exit codes:
 | Code | Meaning                                                                                                                                       |
 | ---- | --------------------------------------------------------------------------------------------------------------------------------------------- |
 | 0    | Continue: cycle accepted, paths assigned, loop should advance to next cycle.                                                                  |
-| 2    | Input / lock-drift error. Covers: `--cycle` out of range; missing `--target-url` at cycle 0; `resolveAllUiBearingSpecs()` returned zero (treated as deterministic no-op only at cycle 0 — see note); `DESIGN.md` missing / malformed / hash drift vs `DESIGN.md.lock.yaml`; `prototyping.json#designMd` missing on cycle ≥1; `prototyping.json#specsCovered` drift vs frozen set (mid-run spec-set change); `prototyping.json#licenseClassCatalog` drift vs frozen catalog (license-catalog lock drift). |
+| 2    | Input / lock-drift error. Covers: `--cycle` out of range; missing `--target-url` at cycle 0; `resolveAllUiBearingSpecs()` returned zero (treated as deterministic no-op only at cycle 0 — see note); `DESIGN.md` missing / malformed / hash drift vs `DESIGN.md.lock.yaml`; `prototyping.json#designMd` missing on cycle ≥1; `prototyping.json#specsCovered` drift vs frozen set (mid-run spec-set change); `prototyping.json#frozenLicenseCatalog` drift vs frozen catalog (license-catalog lock drift). |
 | 64   | STOP: converged. All spec × screen pairs reached the AND-convergence condition. This is also the exit code raised when Reviewer Playwright sessions fail across all reviewers for a given spec × screen (Reviewer-driven Playwright hard-stop class). The skill distinguishes the two by reading `iter-NN/spec-NNNN/<screen>.review.json#sessionStatus`. |
 | 65   | STOP: budget exhausted. Latest iter index === `MAX_ITERATION_INDEX` (= 9) without convergence. Lagging specs are named in the aggregated record. |
 | 66   | STOP: license-verify failure. An `imageSources[]` slot resolved to a non-allowlisted source, unknown license tier, or HTTP (non-HTTPS) URL; license catalog SSOT was frozen at cycle 0. Non-recoverable within the run. |
@@ -103,7 +116,7 @@ Inputs:
   iterations.length - 1`).
 - `prototype-handoff.yaml#imageSources[]` — every row must have non-empty
   `{url(https), license, attribution, source}`; license value must be
-  drawn from the frozen `licenseClassCatalog`.
+  drawn from the frozen `frozenLicenseCatalog`.
 
 Outputs:
 
@@ -129,7 +142,7 @@ Exit codes:
 | 0    | Certify passed. (Required for `/qfai-prototyping` DONE.)                                                                                 |
 | 2    | Input error. Missing / unreadable `prototyping.json`, missing `specsCovered[]`, accepted iter dir absent, certificate schema malformed. |
 | 64   | Coverage rejection: at least one spec lacks a `<screen>.review.json` for a declared screen at the accepted iter.                         |
-| 66   | License-verify rejection: `imageSources[]` violates the frozen `licenseClassCatalog` (non-allowlisted source, unknown license, non-https url, missing attribution). |
+| 66   | License-verify rejection: `imageSources[]` violates the frozen `frozenLicenseCatalog` (non-allowlisted source, unknown license, non-https url, missing attribution). |
 
 ### `qfai prototyping show-spec`
 
@@ -179,7 +192,7 @@ mid-run stdin prompts. Hard-stops are deterministic and explicitly
 enumerated:
 
 1. **Lock drift** — `DESIGN.md` sha256 mismatch vs `DESIGN.md.lock.yaml`,
-   OR `licenseClassCatalog` drift vs cycle-0 frozen catalog. Exit 2.
+   OR `frozenLicenseCatalog` drift vs cycle-0 frozen catalog. Exit 2.
 2. **Reviewer Playwright failure** — Reviewer-launched Playwright fails to
    complete its session for a given spec × screen after the bounded retry
    budget (N = 3, exponential backoff) for every reviewer attempted on

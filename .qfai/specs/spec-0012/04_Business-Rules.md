@@ -146,6 +146,7 @@ No other path triggers stop. LLM subjective DONE is forbidden.
 
 - AC-Refs: AC-0012-0037
 - One `/qfai-prototyping` invocation MUST resolve every UI-bearing spec in the consumer project via `resolveAllUiBearingSpecs()` in `core/prototyping/specResolution.ts`.
+- A spec is UI-bearing iff (a) its `01_Spec.md` carries `surface_type: ui-bearing` frontmatter OR (b) a matching `.qfai/contracts/ui/<spec-id>.yaml` contract exists. The legacy `01_Context.md ui_bearing: true` signal is superseded by these per CHG-002.
 - The previous per-invocation primary-spec selection prompt (`resolvePrimaryPrototypingSpec`) MUST be removed; zero UI-bearing specs is a deterministic no-op exit 0.
 
 ## BR-0012-0029: 10-cycle SSOT and terminator
@@ -188,9 +189,9 @@ No other path triggers stop. LLM subjective DONE is forbidden.
 - The run MUST be fully autonomous from cycle 0 through cycle 9 with no per-cycle user prompts (NFR-0005).
 - Hard-stop classes (deterministic non-zero exits, no prompts):
   - (a) lock drift (exit 2; BR-0012-0026 governs `DESIGN.md` hash mismatch case)
-  - (b) Reviewer Playwright-session failure across all reviewers for a spec × screen (non-zero exit, diagnostic names the `(spec, screen)`)
+  - (b) Reviewer Playwright-session failure across all reviewers for a spec × screen (exit 64 with `sessionStatus ∈ {retryExhausted, launchFailed}` recorded on the per-`(spec, screen)` review payload so the orchestrator can disambiguate from converged-exit-64; diagnostic names the `(spec, screen)`)
   - (c) license-verify failure (exit 66)
-  - (d) mid-run spec-set change detection (non-zero exit, diagnostic names the new spec; deferred to next invocation per BR-0012-0038)
+  - (d) mid-run spec-set change detection (exit 2; same class as lock drift — diagnostic names the new spec; deferred to next invocation per BR-0012-0038)
 
 ## BR-0012-0035: Per-spec iter-dir namespacing — review.json only
 

@@ -21,7 +21,7 @@
   - layout-anti-pattern catalog (`lap-001-orphan-page`..`lap-008-no-back-affordance`); detection caps `informationArchitecture` at `acceptable`
   - global convergence judged **per cycle by AND across all spec × screen pairs**: all 4 axes `exceptional` AND `layoutAntiPatternsDetected` empty AND `designMdViolations` empty; quantitative AC-pass% / transition-pass% thresholds are not used
   - root `DESIGN.md` as brand SSOT, sha256 frozen at the SDD Phase 0 step in `.qfai/contracts/design/DESIGN.md.lock.yaml`
-  - cycle 0 records `prototyping.json#designMdSha256` AND freezes (a) resolved `specsCovered[]` and (b) stock-photo `licenseClassCatalog` (allowed sources + license tiers); cycle ≥1 fail-closed on hash drift (exit 2)
+  - cycle 0 records `prototyping.json#designMdSha256` AND freezes (a) resolved `specsCovered[]` and (b) stock-photo `frozenLicenseCatalog` (allowed sources + license tiers); cycle ≥1 fail-closed on hash drift (exit 2)
   - `findDesignMdViolations(html, designMd)` pure deterministic function for color / font / radius / shadow token compliance; non-empty list blocks convergence
   - `pivotDirective: continue | refine | pivot` rules unchanged (`pivot` ⇔ 3 consecutive low-IA + latest has `lap-*`; `continue` ⇔ ≥2 of 4 axes strictly improved by `ordinalIndex`; `refine` otherwise)
   - latest iter always accepted (`acceptedIterationIndex === iterations.length - 1`); no best-of-history

@@ -242,8 +242,23 @@ async function hasMatchingUiContract(
   // Also accept `spec-NNNN.yaml` / `ui-NNNN-*.yaml` shapes — consumer
   // projects sometimes prefix with `spec-` or follow the
   // `ui-XXXX-<slug>.yaml` convention documented in
-  // `.qfai/contracts/ui/README.md`. We accept any basename that contains
-  // the four-digit spec id token surrounded by non-digit boundaries.
+  // `.qfai/contracts/ui/README.md`.
+  //
+  // Codex r3264487007: tightened from the prior `(?:^|[^0-9])${specId}
+  // (?:[^0-9]|$)` token-anywhere regex which over-matched unrelated
+  // basenames whose names happened to contain the four-digit spec id
+  // (e.g. `unrelated-text-0001.yaml` would be treated as a UI contract
+  // for spec 0001). The accepted shapes are now anchored explicitly:
+  //
+  //   - `<specId>.yaml`                  (bare 4-digit id; legacy)
+  //   - `spec-<specId>.yaml`             (spec-prefixed; legacy)
+  //   - `ui-<specId>.yaml`               (ui-prefixed, no slug)
+  //   - `ui-<specId>-<anything>.yaml`    (ui-prefixed with slug, per
+  //                                       the documented convention)
+  //
+  // Any other basename — including ones that merely *contain* the id
+  // token — is rejected. The fallback is intentionally narrower than
+  // the contract's "direct match" arm to avoid silent false-positives.
   let names: string[];
   try {
     names = await readdir(uiDir);
@@ -253,6 +268,6 @@ async function hasMatchingUiContract(
     }
     throw error;
   }
-  const tokenRe = new RegExp(`(?:^|[^0-9])${specId}(?:[^0-9]|$)`);
-  return names.some((name) => name.endsWith(".yaml") && tokenRe.test(name));
+  const anchoredRe = new RegExp(`^(?:spec-|ui-)?${specId}(?:-[^.]*)?\\.yaml$`);
+  return names.some((name) => anchoredRe.test(name));
 }

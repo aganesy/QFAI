@@ -28,17 +28,45 @@ export type LicenseCatalog = {
 
 export type LicenseVerifyError =
   | { code: "license-not-allowlisted"; source: string; url: string }
-  | { code: "license-tier-unknown"; source: string; license: string; url: string };
+  | { code: "license-tier-unknown"; source: string; license: string; url: string }
+  | { code: "license-non-https-url"; source: string; url: string };
 
 export type LicenseVerifyResult =
   | { ok: true }
   | { ok: false; errors: readonly LicenseVerifyError[] };
 
 /**
+ * Returns `true` when the URL parses as an HTTPS URL.
+ *
+ * Per the prototyping CLI contract, image sources MUST be HTTPS so the
+ * frozen license catalog can be re-fetched deterministically without
+ * network MITM risk. `http://`, malformed URLs, or non-string inputs
+ * are all rejected as `non-https`.
+ */
+function isHttpsUrl(url: string): boolean {
+  try {
+    return new URL(url).protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Verifies every entry in `imageSources` against `catalog`. Returns
  * `{ok: true}` when all entries pass; otherwise `{ok: false, errors}`
  * with one structured error per offending entry (no early return so
  * callers see the full failure surface).
+ *
+ * Per the prototyping CLI contract (`.qfai/contracts/cli/qfai-prototyping.md`
+ * hard-stop class 3), three failure modes raise exit 66:
+ *   - non-allowlisted source host
+ *   - unknown license tier for an allowlisted source
+ *   - non-HTTPS URL (e.g. plain `http://`, malformed URL string)
+ *
+ * The non-HTTPS guard runs first per entry so an `http://` URL hitting
+ * an allowlisted source is still classified as `license-non-https-url`
+ * (the most actionable diagnostic) rather than passing through scheme
+ * verification entirely.
  */
 export function licenseVerify(
   imageSources: readonly ImageSource[],
@@ -49,6 +77,10 @@ export function licenseVerify(
 
   for (const entry of imageSources) {
     const { source, license, url } = entry;
+    if (!isHttpsUrl(url)) {
+      errors.push({ code: "license-non-https-url", source, url });
+      continue;
+    }
     if (!allowed.has(source)) {
       errors.push({ code: "license-not-allowlisted", source, url });
       continue;

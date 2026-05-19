@@ -32,11 +32,35 @@ export type ReviewerAttemptResult = {
   readonly errorMessage?: string;
 };
 
+/**
+ * Discriminator for the Reviewer dispatch outcome.
+ *
+ * Mirrors the per-`<screen>.review.json#sessionStatus` enum in the
+ * prototyping CLI contract (`.qfai/contracts/cli/qfai-prototyping.md`
+ * §Review payload):
+ *
+ *   - `ok`             — Reviewer Playwright session completed.
+ *   - `retryExhausted` — every attempt in the bounded retry budget
+ *                        returned `{ok: false}` (typically transient
+ *                        Reviewer-side failures: timeouts, evaluation
+ *                        errors, etc).
+ *   - `launchFailed`   — the dispatcher could not even start the
+ *                        Reviewer (no runner injected). Distinct from
+ *                        `retryExhausted` so the orchestrator can
+ *                        distinguish "we never tried" from "we tried N
+ *                        times and gave up".
+ *
+ * Used together with the contract hard-stop class (2) discriminator so
+ * exit 64 can be disambiguated from convergence-exit-64 by reading the
+ * persisted `sessionStatus` on the review payload.
+ */
+export type ReviewerSessionStatus = "ok" | "retryExhausted" | "launchFailed";
+
 export type ReviewerOutcome = {
   readonly specId: string;
   readonly screen: string;
   readonly attempts: readonly ReviewerAttemptResult[];
-  readonly finalStatus: "ok" | "failed";
+  readonly finalStatus: ReviewerSessionStatus;
   readonly reviewJsonPath?: string;
 };
 
@@ -60,20 +84,71 @@ export type ReviewerPlaywrightRunner = (
   screen: string,
 ) => Promise<ReviewerPlaywrightAttempt>;
 
+/**
+ * Backoff function: receives the zero-based attempt index that just
+ * failed and returns the number of milliseconds to wait before the
+ * next attempt. Returning a non-positive number skips the wait.
+ *
+ * The contract retry policy (`.qfai/contracts/cli/qfai-prototyping.md`
+ * §Hard-stop classes: Reviewer Playwright failure) is `N = 3` with
+ * exponential backoff. The default backoff
+ * ({@link defaultExponentialBackoff}) realises that policy as `base *
+ * 2^attemptIndex` ms with `base = 250`.
+ */
+export type ReviewerBackoffStrategy = (attemptIndex: number) => number;
+
+/**
+ * Default contract retry budget: N = 3 attempts per `(specId, screen)`
+ * pair. Callers can override via {@link ReviewerDispatchOptions.attemptLimit}.
+ */
+export const DEFAULT_REVIEWER_ATTEMPT_LIMIT = 3;
+
+/**
+ * Default exponential backoff function: 250 ms * 2^attemptIndex.
+ *
+ * Attempt 0 failure → wait 250 ms
+ * Attempt 1 failure → wait 500 ms
+ * Attempt 2 failure → wait 1000 ms (terminal under N = 3, so unused)
+ *
+ * Pure function exposed for tests so the dispatcher's wait schedule is
+ * verifiable without a real clock. Production callers pass a real
+ * sleeper into {@link ReviewerDispatchOptions.sleep} if they want to
+ * actually wait; the dispatcher never reaches for `setTimeout` itself.
+ */
+export const defaultExponentialBackoff: ReviewerBackoffStrategy = (attemptIndex) =>
+  250 * Math.pow(2, attemptIndex);
+
 export type ReviewerDispatchOptions = {
   /**
    * Maximum number of Playwright attempts per `(specId, screen)` pair.
    * The dispatcher returns on the first successful attempt; if every
-   * attempt fails, the outcome is `failed` and the caller is expected
-   * to treat the pair as a hard-stop (do not declare convergence).
+   * attempt fails, the outcome is `retryExhausted` and the caller is
+   * expected to treat the pair as a hard-stop (do not declare
+   * convergence). Defaults to {@link DEFAULT_REVIEWER_ATTEMPT_LIMIT}
+   * (= N from the prototyping CLI contract) when omitted.
    */
-  readonly attemptLimit: number;
+  readonly attemptLimit?: number;
   /**
    * Injectable Playwright runner. Production passes the real launcher
    * (which spawns Playwright inside the Reviewer sub-agent boundary);
    * tests pass a deterministic stub. Required — see file header.
    */
   readonly playwrightRunner?: ReviewerPlaywrightRunner;
+  /**
+   * Backoff strategy between failed attempts. Defaults to
+   * {@link defaultExponentialBackoff} (contract: exponential backoff).
+   * Pass a custom strategy (or `() => 0`) to override; the dispatcher
+   * itself does no clock IO — the wait actually happens via {@link sleep}.
+   */
+  readonly backoff?: ReviewerBackoffStrategy;
+  /**
+   * Sleep function used to honour the backoff schedule. Defaults to a
+   * `setTimeout`-based promise. Tests inject a no-op sleeper so the
+   * dispatcher resolves immediately while still recording attempt
+   * order. Returning a settled promise from the sleeper is sufficient
+   * — the dispatcher never inspects the return value.
+   */
+  readonly sleep?: (ms: number) => Promise<void>;
 };
 
 const NO_RUNNER_MESSAGE =
@@ -83,22 +158,35 @@ const NO_RUNNER_MESSAGE =
 const SILENT_FAIL_MESSAGE =
   "reviewerDispatch: playwright attempt failed without error message";
 
+function defaultSleep(ms: number): Promise<void> {
+  if (ms <= 0) return Promise.resolve();
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 /**
  * Dispatch the Reviewer sub-agent against a single `(specId, screen)`
- * pair, retrying up to `options.attemptLimit` times.
+ * pair, retrying up to `options.attemptLimit` times with the configured
+ * backoff between attempts.
  *
  * Contract:
- *   - `attemptLimit` is clamped to a positive integer; non-positive
- *     values produce a `failed` outcome with zero attempts so the
- *     caller never has to second-guess the loop bound.
+ *   - `attemptLimit` defaults to {@link DEFAULT_REVIEWER_ATTEMPT_LIMIT}
+ *     (N = 3 per the prototyping CLI contract) when omitted; explicit
+ *     non-positive values produce a `retryExhausted` outcome with zero
+ *     attempts so the caller never has to second-guess the loop bound.
  *   - The runner is awaited sequentially (no parallel attempts) so the
  *     attempt index in the outcome reflects causal order.
  *   - On the first `ok` runner result, dispatch returns immediately
  *     with `finalStatus: "ok"`; remaining attempts are not consumed.
- *   - After `attemptLimit` failed attempts (or an absent runner), the
- *     outcome is `finalStatus: "failed"` and `attempts[]` carries one
- *     entry per attempted call (or a single synthetic entry when the
- *     runner was missing) so callers can name the pair in stderr.
+ *   - Between failed attempts the dispatcher awaits
+ *     `sleep(backoff(attemptIndex))` so retries honour the contract
+ *     exponential-backoff policy without coupling the dispatcher to a
+ *     real clock. The wait is skipped after the final attempt (no
+ *     point sleeping when the outcome is sealed).
+ *   - After `attemptLimit` failed attempts the outcome is
+ *     `finalStatus: "retryExhausted"`; an absent runner short-circuits
+ *     to `"launchFailed"`. `attempts[]` carries one entry per
+ *     attempted call (or a single synthetic entry when the runner was
+ *     missing) so callers can name the pair in stderr.
  */
 export async function dispatchReviewerToPair(
   specId: string,
@@ -117,22 +205,24 @@ export async function dispatchReviewerToPair(
           errorMessage: NO_RUNNER_MESSAGE,
         },
       ],
-      finalStatus: "failed",
+      finalStatus: "launchFailed",
     };
   }
 
+  const rawLimit = options.attemptLimit ?? DEFAULT_REVIEWER_ATTEMPT_LIMIT;
   const limit =
-    Number.isInteger(options.attemptLimit) && options.attemptLimit > 0
-      ? options.attemptLimit
-      : 0;
+    Number.isInteger(rawLimit) && rawLimit > 0 ? rawLimit : 0;
   if (limit === 0) {
     return {
       specId,
       screen,
       attempts: [],
-      finalStatus: "failed",
+      finalStatus: "retryExhausted",
     };
   }
+
+  const backoff = options.backoff ?? defaultExponentialBackoff;
+  const sleep = options.sleep ?? defaultSleep;
 
   const attempts: ReviewerAttemptResult[] = [];
   for (let i = 0; i < limit; i += 1) {
@@ -142,6 +232,22 @@ export async function dispatchReviewerToPair(
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       attempts.push({ ok: false, attemptIndex: i, errorMessage: message });
+      if (i < limit - 1) {
+        try {
+          await sleep(backoff(i));
+        } catch (sleepErr) {
+          // A misbehaving sleeper must not corrupt the outcome — record
+          // it as another failed attempt and treat the schedule as
+          // exhausted. The caller already gates on `finalStatus`.
+          const sleepMsg = sleepErr instanceof Error ? sleepErr.message : String(sleepErr);
+          attempts.push({
+            ok: false,
+            attemptIndex: i,
+            errorMessage: `reviewerDispatch: backoff sleep failed: ${sleepMsg}`,
+          });
+          break;
+        }
+      }
       continue;
     }
     if (result.ok) {
@@ -158,12 +264,25 @@ export async function dispatchReviewerToPair(
       attemptIndex: i,
       errorMessage: result.error ?? SILENT_FAIL_MESSAGE,
     });
+    if (i < limit - 1) {
+      try {
+        await sleep(backoff(i));
+      } catch (sleepErr) {
+        const sleepMsg = sleepErr instanceof Error ? sleepErr.message : String(sleepErr);
+        attempts.push({
+          ok: false,
+          attemptIndex: i,
+          errorMessage: `reviewerDispatch: backoff sleep failed: ${sleepMsg}`,
+        });
+        break;
+      }
+    }
   }
 
   return {
     specId,
     screen,
     attempts,
-    finalStatus: "failed",
+    finalStatus: "retryExhausted",
   };
 }

@@ -10,8 +10,8 @@ import { afterEach, describe, expect, it } from "vitest";
 import {
   findIterationReviewFiles,
   findStaleIterDirs,
-  iterationDir,
-  iterationReviewPath,
+  iterationDirPerSpec,
+  iterationReviewPathPerSpec,
   parseIterationReviewPath,
   deleteStaleIterDirs,
 } from "../../../src/core/prototyping/iterationPaths.js";
@@ -46,26 +46,26 @@ afterEach(async () => {
   }
 });
 
-describe("iterationDir / iterationReviewPath path composition", () => {
+describe("iterationDirPerSpec / iterationReviewPathPerSpec path composition", () => {
   // QFAI:SPEC-0012:TC-0012-0378
   it("composes zero-padded iter dir + screen review path for a (idx, spec, screen) triple", () => {
-    expect(iterationDir(2, "spec-0007")).toBe(
+    expect(iterationDirPerSpec(2, "spec-0007")).toBe(
       ".qfai/evidence/prototyping/iter-02/spec-0007",
     );
-    expect(iterationReviewPath(2, "spec-0007", "orders-dashboard")).toBe(
+    expect(iterationReviewPathPerSpec(2, "spec-0007", "orders-dashboard")).toBe(
       ".qfai/evidence/prototyping/iter-02/spec-0007/orders-dashboard.review.json",
     );
   });
 
   // QFAI:SPEC-0012:TC-0012-0378
   it("zero-pads single-digit indices and respects two-digit indices", () => {
-    expect(iterationDir(0, "spec-0001")).toBe(
+    expect(iterationDirPerSpec(0, "spec-0001")).toBe(
       ".qfai/evidence/prototyping/iter-00/spec-0001",
     );
-    expect(iterationDir(9, "spec-0009")).toBe(
+    expect(iterationDirPerSpec(9, "spec-0009")).toBe(
       ".qfai/evidence/prototyping/iter-09/spec-0009",
     );
-    expect(iterationDir(14, "spec-0014")).toBe(
+    expect(iterationDirPerSpec(14, "spec-0014")).toBe(
       ".qfai/evidence/prototyping/iter-14/spec-0014",
     );
   });
@@ -186,7 +186,7 @@ describe("findStaleIterDirs / deleteStaleIterDirs", () => {
 
 describe("parseIterationReviewPath round-trip", () => {
   // QFAI:SPEC-0012:TC-0012-0392
-  it("is a left-inverse of iterationReviewPath across representative (idx, spec, screen) triples", () => {
+  it("is a left-inverse of iterationReviewPathPerSpec across representative (idx, spec, screen) triples", () => {
     const indices = [0, 1, 9, 10, 99];
     const specs = ["spec-0007", "spec-0012"];
     const screens = ["dashboard", "list", "settings"];
@@ -194,7 +194,7 @@ describe("parseIterationReviewPath round-trip", () => {
     for (const idx of indices) {
       for (const spec of specs) {
         for (const screen of screens) {
-          const built = iterationReviewPath(idx, spec, screen);
+          const built = iterationReviewPathPerSpec(idx, spec, screen);
           const parsed = parseIterationReviewPath(built);
           expect(parsed).toEqual({ idx, spec, screen });
         }

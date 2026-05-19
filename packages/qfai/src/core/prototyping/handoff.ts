@@ -62,6 +62,23 @@ function isCompleteImageSource(
 }
 
 /**
+ * Returns `true` when the URL parses as an HTTPS URL.
+ *
+ * Mirrors the same predicate in `licenseVerify.ts` — handoff schema
+ * validation rejects non-https `url` fields up-front so the certify
+ * gate does not have to re-run scheme verification on already-validated
+ * handoff entries. Per the prototyping CLI contract, every
+ * `imageSources[]` row must reference an HTTPS resource.
+ */
+function isHttpsUrl(url: string): boolean {
+  try {
+    return new URL(url).protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Validates `imageSources[]` against the closed schema. Returns
  * `{ok: true, entries}` when every entry passes; otherwise
  * `{ok: false, errors}` with one error per offending field (no
@@ -96,6 +113,15 @@ export function validateImageSources(input: unknown): ValidateImageSourcesResult
       const value = entry[field];
       if (typeof value !== "string") {
         errors.push(`imageSources[${i}].${field} must be a string`);
+        continue;
+      }
+      if (field === "url" && !isHttpsUrl(value)) {
+        // Codex r3264477851: enforce the contract's `url(https)` rule
+        // at schema-validation time so the certify gate does not also
+        // have to re-check scheme. The most-actionable diagnostic is
+        // recorded; `accepted.url` stays unset so the entry never
+        // promotes to the typed output.
+        errors.push(`imageSources[${i}].url must be an https URL (got ${value})`);
         continue;
       }
       accepted[field] = value;

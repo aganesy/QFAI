@@ -94,4 +94,25 @@ describe("validateImageSources — closed schema (TC-0012-0372)", () => {
     if (!result.ok) return;
     expect(result.entries).toEqual([]);
   });
+
+  // Codex r3264477851: closed-schema validation now also enforces the
+  // contract's `url(https)` rule so plain `http://` URLs are rejected
+  // at the handoff layer (mirroring licenseVerify's non-https guard).
+  it("rejects http:// URLs with a named-field error (https required)", () => {
+    const result = validateImageSources([fullEntry({ url: "http://insecure.example/x" })]);
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(
+      result.errors.some((e) => /imageSources\[0\]\.url must be an https URL/.test(e)),
+    ).toBe(true);
+  });
+
+  it("rejects malformed URL strings with a named-field error (https required)", () => {
+    const result = validateImageSources([fullEntry({ url: "not-a-url" })]);
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(
+      result.errors.some((e) => /imageSources\[0\]\.url must be an https URL/.test(e)),
+    ).toBe(true);
+  });
 });

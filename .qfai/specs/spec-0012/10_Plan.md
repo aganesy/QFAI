@@ -9,7 +9,7 @@
 - `/qfai-prototyping` resolves every UI-bearing spec in one invocation via `resolveAllUiBearingSpecs()` in `core/prototyping/specResolution.ts`; per-invocation primary-spec selection is removed.
 - Iteration budget is 10 cycles (cycle 0 + cycles 1..9). `MAX_ITERATIONS = 10` and `MAX_ITERATION_INDEX = 9` are the sole SSOT in `core/prototyping/iteration.ts`.
 - Reviewer sub-agent itself drives Playwright per `(spec, screen)` pair; no scripted interaction transcript, no AC selector/assertion, no PNG capture, no HTML snapshot.
-- Per `(spec, screen, cycle)` evidence is a single qualitative payload at `.qfai/evidence/prototyping/iter-NN/spec-NNNN/<screen>.review.json` containing the 4 ordinal UX axes (`informationArchitecture`, `navigationFlow`, `usability`, `functionality`) AND six qualitative `*Feel` prose fields (`operability`, `transitionFeel`, `crossScreenContinuity`, `userStoryFeel`, `acceptanceCriteriaFeel`, `menuReachabilityFeel`, each ≤ 200 words) AND `layoutAntiPatternsDetected[]` AND `designMdViolations[]`.
+- Per `(spec, screen, cycle)` evidence is a single qualitative payload at `.qfai/evidence/prototyping/iter-NN/spec-NNNN/<screen>.review.json` containing the 4 ordinal UX axes (`informationArchitecture`, `navigationFlow`, `usability`, `functionality`) AND six qualitative `*Feel` prose fields (`operability`, `transitionFeel`, `crossScreenContinuity`, `userStoryFeel`, `acceptanceCriteriaFeel`, `menuReachabilityFeel`, each ≤ 200 words) AND `layoutAntiPatternsDetected[]` AND `designMdViolations[]`. (Target layout — TDD-0384 per-spec iter-dir migration deferred; current implementation is mixed: `prototypingCertify.ts` reads `iter-NN/spec-NNNN/` when present, `prototypingIterate.ts` still writes flat `iter-NN/` only.)
 - Convergence is the AND across every `(spec, screen)` pair of `(all 4 axes == exceptional) AND lap[] empty AND designMdViolations[] empty`. No quantitative AC-pass / transition-pass thresholds are consulted.
 - Autonomous from cycle 0..9 with no per-cycle prompts. Hard-stop classes: (a) lock drift exit 2, (b) Reviewer Playwright-session failure (exit 64 reused with `sessionStatus` discriminator on the review payload), (c) license-verify failure exit 66, (d) mid-run spec-set change exit 2 (same class as lock drift).
 - Stock-photo fill is drawn from the cycle-0 frozen license-class catalog (allowlist: Unsplash, Pexels per OQ-0002). Every fill is recorded as `{url, license, attribution, source}` in `prototype-handoff.yaml#imageSources[]`. Unknown license / non-allowlisted source hard-stops with exit 66.
@@ -35,5 +35,24 @@
 2. Wire `.qfai/contracts/cli/qfai-prototyping.md` (Phase 0 contract authored under CHG-002) into the implementation review checklist.
 3. Keep `16_Traceability-ledger.md` and `tdd/test-list.md` aligned with real remaining tests. The new TDD-0371..0412 rows added in `16_Traceability-ledger.md` need their 8-column form mirrored into `tdd/test-list.md` once the actual test files (`tests/core/prototyping/*.test.ts`, `tests/cli/commands/prototyping*.test.ts`, `tests/e2e/prototypingFullLoop.test.ts`) land.
 4. When the iterate / certify schema changes, update `prototypingIterate.ts`, `prototypingCertify.ts`, `iteration.ts`, `evaluatorReview.ts`, `licenseVerify.ts`, and this spec together.
-5. Resolve `08_Open-questions.md` OQ-0012-0002..0005 (prototyping.json shape under per-spec namespace; pivotDirective retention vs supersede; critique-vs-`*Feel` schema cleanup; capture role removal in steering / agent-routing) before implementation lands.
+5. Resolve `08_Open-questions.md` OQ-0012-0002..0005 (prototyping.json shape under per-spec namespace; pivotDirective retention vs supersede; critique-vs-`*Feel` schema cleanup; capture role removal in steering / agent-routing). v1.8.10 shipped with implementation that pre-empts the recommended dispositions — OQ-0012-0002 adopts (A) flat + spec discriminator as an interim until per-spec migration (TDD-0384), OQ-0012-0003 retains `pivotDirective` per recommendation (A), OQ-0012-0004 drops `critique` per recommendation (A) and the `*Feel` schema is in `evaluatorReview.ts`. Final OQ closure is the follow-up gate; the "before implementation lands" wording is superseded by "before next major release".
 6. Do not recreate standalone prototyping spec packs unless the product surface genuinely splits again; extend `spec-0012` instead.
+
+## Deferred follow-ups
+
+Items deferred from this PR (CHG-002 / v1.8.10) — each pairs a planned TDD
+with the status / target / owner in `tdd/test-list.md`. Reviewers and
+completion gates SHOULD treat the absence of a row here as "closed".
+
+| TDD-ID   | TC-Ref       | Status | Owner           | Notes                                                                                         |
+| -------- | ------------ | ------ | --------------- | --------------------------------------------------------------------------------------------- |
+| TDD-0384 | TC-0012-0377 | todo   | prototyping-cli | Per-spec iter-dir layout migration (iterate-side; certify-side already gates on per-spec).    |
+| TDD-0401 | TC-0012-0374 | todo   | prototyping-cli | Reviewer Playwright session failure hard-stop end-to-end (requires live Playwright wiring).   |
+| TDD-0402 | TC-0012-0383 | todo   | prototyping-cli | Reviewer-driven menu-entry navigation count (requires live Playwright wiring).                |
+
+Coupled production wire-ins (no production caller yet; tests-only):
+
+- `iterationPaths.ts` per-spec helpers — wire in alongside TDD-0384.
+- `reviewerDispatch.ts` — wire in alongside TDD-0401 (production runner injection).
+- `evaluatorReview.ts#parseEvaluatorReview` — wire in the same wave as TDD-0384 so per-`(spec, screen)` review.json schema fails fast at iterate/certify.
+- `handoff.ts#validateImageSources` — wire in once the prototype-handoff.yaml population path lands; until then `licenseVerify` consumes `prototyping.json#imageSources` directly.

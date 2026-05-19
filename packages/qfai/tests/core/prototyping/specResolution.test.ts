@@ -229,6 +229,44 @@ describe("resolveAllUiBearingSpecs", () => {
     expect(result).toEqual(["0042"]);
   });
 
+  // Codex r3264487007: regression — unrelated yaml basenames that
+  // merely contain the four-digit spec id token must NOT be treated as
+  // UI contracts. The fallback is anchored to bare `<id>.yaml`,
+  // `spec-<id>.yaml`, `ui-<id>.yaml`, or `ui-<id>-<slug>.yaml`.
+  it("contract fallback rejects yaml basenames that merely contain the spec id token", async () => {
+    const root = await newTempDir();
+    await seedSpec(root, "0001", "# spec-0001\n\nNo marker.\n");
+    // Distractor: a yaml whose name contains "0001" but does NOT match
+    // any of the accepted anchored shapes.
+    const uiDir = path.join(root, ".qfai/contracts/ui");
+    await mkdir(uiDir, { recursive: true });
+    await writeFile(
+      path.join(uiDir, "unrelated-text-0001.yaml"),
+      "screens: []\n",
+      "utf-8",
+    );
+    const result = await resolveAllUiBearingSpecs(root, makeConfig());
+    expect(result).toEqual([]);
+  });
+
+  it("contract fallback accepts the documented anchored shapes", async () => {
+    // Each shape lives in its own fixture so we can pin behaviour
+    // individually rather than relying on lex-sort to identify hits.
+    const shapes: Array<{ specId: string; filename: string }> = [
+      { specId: "0001", filename: "0001.yaml" },
+      { specId: "0002", filename: "spec-0002.yaml" },
+      { specId: "0003", filename: "ui-0003.yaml" },
+      { specId: "0004", filename: "ui-0004-checkout.yaml" },
+    ];
+    for (const { specId, filename } of shapes) {
+      const root = await newTempDir();
+      await seedSpec(root, specId, `# spec-${specId}\n\nNo marker.\n`);
+      await seedUiContract(root, specId, filename);
+      const result = await resolveAllUiBearingSpecs(root, makeConfig());
+      expect(result).toEqual([specId]);
+    }
+  });
+
   it("sorts the returned spec IDs lexicographically", async () => {
     const root = await newTempDir();
     await seedSpec(

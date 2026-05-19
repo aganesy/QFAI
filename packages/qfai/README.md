@@ -133,7 +133,7 @@ QFAI includes a small set of custom skills (stored under `.qfai/assistant/skills
   (`QFAI-TRIAGE-006`). Every `01_Spec.md` declares a lifecycle
   `Status: active | superseded | deprecated | removed` (`QFAI-STATUS-001..006`).
 - **qfai-prototyping**: Single-thread design evolution loop. One prototype iterated through up to
-  15 cycles of generate -> capture -> review with a 4-axis ordinal rubric, anti-slop detection,
+  10 cycles of generate -> capture -> review with a 4-axis ordinal rubric, anti-slop detection,
   prose critique, and explicit pivot permission. Stops deterministically when all four axes hit
   `exceptional` (exit 64) or the iteration budget is exhausted (exit 65).
 - **qfai-atdd**: Implement acceptance tests driven by specs/scenarios.

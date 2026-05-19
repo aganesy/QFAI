@@ -31,17 +31,38 @@ function padIndex(index: number): string {
  * Returns the project-root relative directory that holds a single
  * (iteration, spec) pair's evidence, e.g.
  * `.qfai/evidence/prototyping/iter-02/spec-0007`.
+ *
+ * Codex r3264484517 / r3264489484: physically renamed (was
+ * `iterationDir`) to avoid an oratory name collision with the
+ * legacy single-spec helper of the same name in `./iteration.ts`.
+ * The two helpers cannot coexist in a barrel re-export and even at
+ * the import-site level, IDE autoimports were prone to silently
+ * picking the wrong one (which then failed at runtime with
+ * `undefined` interpolated into the path). The `PerSpec` suffix
+ * makes the (idx, specId) arity explicit. The legacy
+ * `iteration.ts#iterationDir(idx)` remains in place until TDD-0384
+ * (per-spec iter-dir migration) lands and removes the flat layout
+ * altogether.
  */
-export function iterationDir(index: number, specId: string): string {
+export function iterationDirPerSpec(index: number, specId: string): string {
   return `${PROTOTYPING_EVIDENCE_REL}/iter-${padIndex(index)}/${specId}`;
 }
 
 /**
  * Returns the project-root relative path to a per-screen review file
  * under a (iteration, spec) directory.
+ *
+ * Codex r3264484517 / r3264489484: physically renamed (was
+ * `iterationReviewPath`) to disambiguate from the legacy single-spec
+ * helper of the same name in `./iteration.ts`. See
+ * {@link iterationDirPerSpec} for the full rationale.
  */
-export function iterationReviewPath(index: number, specId: string, screenId: string): string {
-  return `${iterationDir(index, specId)}/${screenId}.review.json`;
+export function iterationReviewPathPerSpec(
+  index: number,
+  specId: string,
+  screenId: string,
+): string {
+  return `${iterationDirPerSpec(index, specId)}/${screenId}.review.json`;
 }
 
 /**
@@ -153,7 +174,7 @@ export async function deleteStaleIterDirs(root: string): Promise<{ deleted: stri
 }
 
 /**
- * Inverse of {@link iterationReviewPath}: parses a project-root
+ * Inverse of {@link iterationReviewPathPerSpec}: parses a project-root
  * relative review path back into its `(idx, spec, screen)` components.
  * Returns `null` when the input does not match the expected shape so
  * callers can fail-closed on malformed paths.

@@ -106,7 +106,7 @@ routing:
     review_profile: runtime-heavy
 
   - skill: qfai-prototyping
-    # Single-thread evolution loop: one prototype, 15 iter, 4 ordinal axes,
+    # Single-thread evolution loop: one prototype, 10 iter, 4 ordinal axes,
     # prose critique, pivot directive. Routing is the 3 active roles plus
     # completion-reviewer at handoff.
     phases:

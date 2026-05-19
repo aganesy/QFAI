@@ -162,12 +162,13 @@
 ## AC-0012-0037: Multi-spec resolver covers every UI-bearing spec per invocation
 
 - US-Refs: US-0012-0109
-- Given a consumer project with N UI-bearing specs (N ≥ 1; each spec's `01_Context.md` declares `ui_bearing: true`),
+- Given a consumer project with N UI-bearing specs (N ≥ 1; each spec EITHER (a) carries `surface_type: ui-bearing` in its `01_Spec.md` frontmatter OR (b) ships a matching `.qfai/contracts/ui/<spec-id>.yaml` contract — the two signals are OR-ed; legacy `01_Context.md ui_bearing: true` is superseded by these per CHG-002),
 - When `/qfai-prototyping` is invoked exactly once,
 - Then `resolveAllUiBearingSpecs()` returns every UI-bearing spec ID, the previous primary-spec selection prompt is not emitted, and cycle-0 evidence records the resolved spec set verbatim.
 - Given a consumer project with zero UI-bearing specs,
 - When `/qfai-prototyping` is invoked,
 - Then the run exits 0 deterministically as a no-op (not an error).
+- And the legacy `01_Context.md ui_bearing: false` exclusion guidance (AC-0012-0009 / BR-0012-0009) is retained as a non-detection-source convenience marker; the new detection signal set above is the SSOT.
 
 ## AC-0012-0038: 10-cycle iteration budget — terminator index === 9
 
@@ -225,7 +226,12 @@
 - US-Refs: US-0012-0113
 - Given the hard-stop catalog is fixed at (a) lock drift, (b) Reviewer Playwright-session failure across all reviewers for a spec × screen, (c) license-verify failure, (d) mid-run spec-set change detection,
 - When any class triggers,
-- Then the run exits non-zero deterministically with the documented exit code per class (lock drift exit 2 per existing AC-0012-0035; license-verify exit 66; (b) and (d) exit non-zero with diagnostic naming the spec × screen or the new spec ID respectively), AND no user prompt is emitted.
+- Then the run exits non-zero deterministically with the documented exit code per class:
+  - (a) lock drift → exit `2` (per AC-0012-0035; same class as DESIGN.md hash mismatch and any cache-vs-lock drift),
+  - (b) Reviewer Playwright-session failure → exit `64` with `sessionStatus ∈ {retryExhausted, launchFailed}` recorded on the per-`(spec, screen)` review payload so the orchestrator can disambiguate from converged-exit-64,
+  - (c) license-verify failure → exit `66`,
+  - (d) mid-run spec-set change detection → exit `2` (same class as lock drift; new spec deferred to next invocation per BR-0012-0038),
+  AND no user prompt is emitted.
 
 ## AC-0012-0046: Per-spec iter-dir namespacing — review.json only
 

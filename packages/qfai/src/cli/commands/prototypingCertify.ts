@@ -186,6 +186,19 @@ export async function runPrototypingCertify(
   // against (validateUiEvidenceArtifacts accepts a screen file from
   // ANY iteration directory). Anchor the per-screen check to the
   // ACCEPTED iter only.
+  //
+  // Codex review: the prototyping CLI contract specifies that only
+  // `<screen>.review.json` is a per-cycle Reviewer artifact (no
+  // `.html`, no `.png`, no `.interaction.json`). This flat-iter
+  // `.html` gate predates that contract and remains in force for
+  // backward compatibility with the pre-CHG-002 layout and the
+  // current iterate driver, which still emits flat
+  // `iter-NN/<screen>.html`. The cleanup is coupled to the per-spec
+  // iter-dir migration in `prototypingIterate.ts`; once iterate
+  // writes per-spec `iter-NN/spec-NNNN/<screen>.review.json`
+  // exclusively, this gate is replaced by the per-(spec x screen)
+  // review.json gate below. See the deferred follow-ups note in the
+  // governing spec's Plan document.
   const screenContracts = await readUiContractScreenContracts(
     options.root,
     config.paths.contractsDir,
@@ -337,13 +350,27 @@ export async function runPrototypingCertify(
     "unknown";
   const reviewerTimestamp = extractString(reviewerSignoff, "timestamp") ?? new Date().toISOString();
 
-  // Read the frozen `specsCovered` recorded by `iterate --cycle 0`.
+  // Read the frozen spec set recorded by `iterate --cycle 0`.
+  //
+  // Codex P1 (r3264670163): under multi-spec runs the legacy
+  // `specsCovered` field holds only the resolved primary spec, while
+  // `frozenSpecsCovered` is the cycle-0-frozen FULL UI-bearing set.
+  // Building the completion certificate from the legacy field would
+  // ship a cert that claims only the primary spec even when per-spec
+  // review.json files exist for the secondary specs — corrupting the
+  // audited scope of a completed multi-spec run. Mirror the per-(spec
+  // x screen) review.json gate above: prefer the multi-spec field;
+  // fall back to the legacy single-spec field for pre-Wave-3 evidence
+  // that predates the `frozenSpecsCovered` write so older runs still
+  // certify cleanly.
+  //
   // Re-resolving the primary spec here would let a config edit
   // (`prototyping.primarySpecId`) or a marker change between cycle 0
   // and certify silently re-baseline the certificate to a spec the
   // loop never exercised. The loop seed is the SSOT for what was
   // actually reviewed.
-  const specsCovered = readFrozenSpecsCovered(protoJson);
+  const specsCovered =
+    readFrozenSpecsCoveredMultiSpec(protoJson) ?? readFrozenSpecsCovered(protoJson);
   if (specsCovered === null) {
     error(
       "qfai prototyping certify: prototyping.json#specsCovered is missing or malformed — " +

@@ -64,6 +64,14 @@ otherwise enforced.
 > Owner column is the implementing team / role identifier. Status
 > begins as `planned` until the corresponding test is authored and
 > linked in `tdd/test-list.md`. New rows above the `TDD-0370` ceiling.
+>
+> **SSOT note (codex r3264473897)** — the `TC-Ref` column below records
+> the originally-planned 1:1 mapping at spec authoring time. The actual
+> landed TC IDs may differ — `tdd/test-list.md` is the authoritative
+> source for the production TDD → TC binding (e.g. TDD-0376 lands at
+> TC-0012-0359, not TC-0012-0357 as planned here). Reviewers and
+> traceability gates MUST defer to `tdd/test-list.md` when the two
+> diverge.
 
 | TDD-ID   | TC-Ref       | Status  | Owner                 | Notes                                                                                       |
 | -------- | ------------ | ------- | --------------------- | ------------------------------------------------------------------------------------------- |
@@ -137,10 +145,7 @@ otherwise enforced.
   file | Selector | Status | DR-ID | Evidence`) MUST be updated in a
   follow-up commit to register TDD-0371..0412 there as well, sharing
   the same TDD-IDs.
-- All AC-Refs in the corresponding new TC block (`TC-0012-0354..0395`)
-  are recorded as `<pending>` and MUST be stitched once
-  requirements-analyst publishes the new `AC-0012-0037..` block in
-  `03_Acceptance-Criteria.md`. BR-Refs in `05_Examples.md` for the new
-  `EX-0012-0122..0144` block are similarly predicted at
-  `BR-0012-0028..0040` and require the same stitch on
-  `04_Business-Rules.md` publication.
+- AC-Refs in the corresponding TC block (`TC-0012-0354..0395`) and
+  BR-Refs in `05_Examples.md` (`EX-0012-0122..0144`) are stitched:
+  `AC-0012-0037..0051` and `BR-0012-0028..0040` are published with this
+  PR. The predicted-vs-actual stitch follow-up tracked here is closed.

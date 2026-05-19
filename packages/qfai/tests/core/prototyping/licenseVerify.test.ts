@@ -147,3 +147,78 @@ describe("licenseVerify — rejects non-allow-listed sources and unknown tiers",
     ]);
   });
 });
+
+describe("licenseVerify — non-https URL guard", () => {
+  // Contract: hard-stop class (3) license-verify failure includes
+  // non-HTTPS URLs. Plain `http://` URLs must be rejected even when
+  // the host is on the allowlist and the license is registered.
+  it("emits license-non-https-url for plain http URLs even on allowlisted sources", () => {
+    const sources: ImageSource[] = [
+      {
+        url: "http://unsplash.com/photo/insecure",
+        source: "unsplash",
+        license: "free",
+      },
+    ];
+
+    const result = licenseVerify(sources, catalog);
+    expect(result.ok).toBe(false);
+    if (result.ok) {
+      throw new Error("expected non-ok result");
+    }
+    expect(result.errors).toEqual([
+      {
+        code: "license-non-https-url",
+        source: "unsplash",
+        url: "http://unsplash.com/photo/insecure",
+      },
+    ]);
+  });
+
+  it("emits license-non-https-url for malformed URL strings", () => {
+    const sources: ImageSource[] = [
+      {
+        url: "not-a-url",
+        source: "unsplash",
+        license: "free",
+      },
+    ];
+
+    const result = licenseVerify(sources, catalog);
+    expect(result.ok).toBe(false);
+    if (result.ok) {
+      throw new Error("expected non-ok result");
+    }
+    expect(result.errors).toEqual([
+      {
+        code: "license-non-https-url",
+        source: "unsplash",
+        url: "not-a-url",
+      },
+    ]);
+  });
+
+  it("non-https guard runs BEFORE source allowlist (most actionable diagnostic first)", () => {
+    const sources: ImageSource[] = [
+      {
+        url: "http://pinterest.com/pin/insecure",
+        source: "pinterest",
+        license: "whatever",
+      },
+    ];
+
+    const result = licenseVerify(sources, catalog);
+    expect(result.ok).toBe(false);
+    if (result.ok) {
+      throw new Error("expected non-ok result");
+    }
+    // Single non-https error — not a non-allowlisted error too.
+    expect(result.errors).toEqual([
+      {
+        code: "license-non-https-url",
+        source: "pinterest",
+        url: "http://pinterest.com/pin/insecure",
+      },
+    ]);
+  });
+});

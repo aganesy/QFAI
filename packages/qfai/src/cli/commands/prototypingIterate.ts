@@ -128,8 +128,18 @@ type PrototypingJsonShape = {
  *
  * The cycle-0 frozen catalog is the single source the run uses to
  * verify every `imageSources[]` entry. Hard-coded here as the initial
- * baseline; future user-config surface
- * (qfai.config.yaml#prototyping.licenseCatalog) can override.
+ * baseline.
+ *
+ * TODO (codex review — tracked as a follow-up, not blocking
+ * this release): expose `qfai.config.yaml#prototyping.licenseCatalog`
+ * so consumer projects can register additional allowlisted sources
+ * (e.g. `pixabay`) without forking QFAI. Today consumers are bound to
+ * the `unsplash` + `pexels` baseline. The wire-in path is (1) extend
+ * `QfaiConfig` with an optional `prototyping.licenseCatalog?: { ... }`
+ * field, (2) honour it in `writeSeedMetadata` (the cycle-0 frozen
+ * value) and in the cycle ≥1 read path, (3) preserve the in-memory
+ * default as the fallback when neither config nor on-disk frozen
+ * value is present.
  */
 const DEFAULT_LICENSE_CATALOG: LicenseCatalog = {
   allowedSources: ["unsplash", "pexels"],
@@ -457,12 +467,29 @@ async function readDesignMdFile(absPath: string): Promise<DesignMdReadResult> {
   return { ok: true, text, data: parsed.data };
 }
 
+/**
+ * Structural type-predicate for the loose `PrototypingJsonShape`
+ * record. The shape is intentionally permissive — every field is
+ * `unknown` and individually narrowed by the field-specific readers
+ * (`readFrozenSpecsCoveredField`, `readFrozenLicenseCatalog`,
+ * `collectImageSources`). Accepting any non-array object suffices for
+ * the wrapper; bare `as PrototypingJsonShape` casts on a verified
+ * `Record<string, unknown>` would otherwise promise the per-field
+ * shape this loader does not actually verify (CLAUDE.md "avoid bare
+ * `as` type assertions; prefer type narrowing"). The asymmetry with
+ * `asIterations` (which leaves `iterations[]` typed as `unknown[]`)
+ * is preserved: per-iteration narrowing still lives in `shouldStop`.
+ */
+function isPrototypingJsonShape(value: unknown): value is PrototypingJsonShape {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
 async function readPrototypingJson(absPath: string): Promise<PrototypingJsonShape | null> {
   try {
     const raw = await readFile(absPath, "utf-8");
     const parsed: unknown = JSON.parse(raw);
-    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return null;
-    return parsed as PrototypingJsonShape;
+    if (!isPrototypingJsonShape(parsed)) return null;
+    return parsed;
   } catch {
     return null;
   }
@@ -587,10 +614,7 @@ async function writeSeedMetadata(protoJsonAbs: string, seed: SeedMetadata): Prom
   try {
     const raw = await readFile(protoJsonAbs, "utf-8");
     const parsed: unknown = JSON.parse(raw);
-    body =
-      parsed && typeof parsed === "object" && !Array.isArray(parsed)
-        ? (parsed as PrototypingJsonShape)
-        : {};
+    body = isPrototypingJsonShape(parsed) ? parsed : {};
   } catch {
     body = {};
   }

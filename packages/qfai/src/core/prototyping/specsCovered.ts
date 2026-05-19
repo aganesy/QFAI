@@ -24,7 +24,19 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 /**
- * Read `prototyping.json#specsCovered` from a parsed record.
+ * Read the LEGACY single-spec field `prototyping.json#specsCovered`.
+ *
+ * Despite the "Frozen" prefix in the function name (kept for historical
+ * compatibility), this helper does NOT read `frozenSpecsCovered`. It
+ * reads the pre-multi-spec `specsCovered` field that cycle 0 still
+ * writes as backward-compatible single-spec (resolved primary spec ID).
+ * For the multi-spec cycle-0 frozen full UI-bearing set, use
+ * {@link readFrozenSpecsCoveredMultiSpec}.
+ *
+ * Disambiguation cheat-sheet for call sites (codex r3264482141):
+ *   - `readFrozenSpecsCovered(record)`          → record.specsCovered          (legacy single-spec field)
+ *   - `readFrozenSpecsCoveredMultiSpec(record)` → record.frozenSpecsCovered    (CHG-002 multi-spec field; SSOT)
+ *   - `readFrozenSpecsCoveredField(record)`     → record.frozenSpecsCovered    (iterate-local copy)
  *
  * Accepts an arbitrary `unknown` so the `iterate` call site (which
  * already narrowed to a `PrototypingJsonShape` record) and the

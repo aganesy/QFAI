@@ -100,7 +100,7 @@ describe("dispatchReviewerToPair (interface stub)", () => {
     expect(outcome.attempts[0]).toMatchObject({ ok: true, attemptIndex: 0 });
   });
 
-  it("retries up to attemptLimit and returns 'failed' when every attempt fails", async () => {
+  it("retries up to attemptLimit and returns 'retryExhausted' when every attempt fails", async () => {
     let calls = 0;
     const outcome = await dispatchReviewerToPair("0012", "dashboard", {
       attemptLimit: 3,
@@ -108,9 +108,11 @@ describe("dispatchReviewerToPair (interface stub)", () => {
         calls += 1;
         return { ok: false, error: `attempt-${calls}` };
       },
+      // Inject a no-op sleeper so the backoff schedule does not slow the test.
+      sleep: async () => undefined,
     });
     expect(calls).toBe(3);
-    expect(outcome.finalStatus).toBe("failed");
+    expect(outcome.finalStatus).toBe("retryExhausted");
     expect(outcome.attempts).toHaveLength(3);
     expect(outcome.attempts.map((a) => a.errorMessage)).toEqual([
       "attempt-1",
@@ -125,8 +127,9 @@ describe("dispatchReviewerToPair (interface stub)", () => {
       playwrightRunner: async (): Promise<ReviewerPlaywrightAttempt> => {
         throw new Error("boom");
       },
+      sleep: async () => undefined,
     });
-    expect(outcome.finalStatus).toBe("failed");
+    expect(outcome.finalStatus).toBe("retryExhausted");
     expect(outcome.attempts).toHaveLength(2);
     for (const attempt of outcome.attempts) {
       expect(attempt.ok).toBe(false);
@@ -134,13 +137,60 @@ describe("dispatchReviewerToPair (interface stub)", () => {
     }
   });
 
-  it("returns 'failed' immediately when no runner is injected", async () => {
+  it("returns 'launchFailed' immediately when no runner is injected", async () => {
     const outcome = await dispatchReviewerToPair("0012", "dashboard", {
       attemptLimit: 3,
     });
-    expect(outcome.finalStatus).toBe("failed");
+    expect(outcome.finalStatus).toBe("launchFailed");
     expect(outcome.attempts).toHaveLength(1);
     expect(outcome.attempts[0]?.errorMessage).toMatch(/no playwright runner injected/i);
+  });
+
+  it("defaults attemptLimit to DEFAULT_REVIEWER_ATTEMPT_LIMIT (= 3) when omitted", async () => {
+    let calls = 0;
+    const outcome = await dispatchReviewerToPair("0012", "dashboard", {
+      playwrightRunner: async (): Promise<ReviewerPlaywrightAttempt> => {
+        calls += 1;
+        return { ok: false, error: "fail" };
+      },
+      sleep: async () => undefined,
+    });
+    expect(calls).toBe(3);
+    expect(outcome.finalStatus).toBe("retryExhausted");
+  });
+
+  it("invokes the backoff strategy between failed attempts (skips after last)", async () => {
+    const waited: number[] = [];
+    let calls = 0;
+    const outcome = await dispatchReviewerToPair("0012", "dashboard", {
+      attemptLimit: 3,
+      playwrightRunner: async (): Promise<ReviewerPlaywrightAttempt> => {
+        calls += 1;
+        return { ok: false, error: `try-${calls}` };
+      },
+      backoff: (attemptIndex) => 100 * Math.pow(2, attemptIndex),
+      sleep: async (ms) => {
+        waited.push(ms);
+      },
+    });
+    expect(outcome.finalStatus).toBe("retryExhausted");
+    // 3 attempts → 2 backoff waits (no wait after the last attempt).
+    expect(waited).toEqual([100, 200]);
+  });
+
+  it("does not sleep after a successful attempt", async () => {
+    const waited: number[] = [];
+    const outcome = await dispatchReviewerToPair("0012", "dashboard", {
+      attemptLimit: 3,
+      playwrightRunner: async (): Promise<ReviewerPlaywrightAttempt> => ({
+        ok: true,
+      }),
+      sleep: async (ms) => {
+        waited.push(ms);
+      },
+    });
+    expect(outcome.finalStatus).toBe("ok");
+    expect(waited).toEqual([]);
   });
 });
 
