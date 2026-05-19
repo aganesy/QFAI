@@ -10,6 +10,7 @@ import {
   iterationReviewPath,
   iterationScreenshotPath,
   shouldStop,
+  shouldStopAcrossSpecs,
   type Iteration,
 } from "../../../src/core/prototyping/iteration.js";
 
@@ -168,6 +169,103 @@ describe("shouldStop — convergence (TC-3.4.x)", () => {
   it("shouldStop boundary at index === 9 (TC-0012-0357, TDD-0372)", () => {
     expect(shouldStop([baseIter({ index: 9 })])).toBe("max-iterations");
     expect(shouldStop([baseIter({ index: 8 })])).toBeNull();
+  });
+
+  // QFAI:SPEC-0012:TC-0012-0369
+  it("shouldStop ignores any quantitative pass-rate fields (TC-0012-0369, TDD-0375)", () => {
+    // Negative assertion: convergence logic must depend ONLY on the
+    // ordinal axes + lap empty + designMdViolations empty. Synthesize an
+    // iteration record with fabricated `acPassPercent` /
+    // `transitionPassPercent` quantitative fields and confirm the
+    // decision is unchanged. Concretely:
+    //   1. With all 4 axes exceptional + lap=[] + dmv=[], shouldStop
+    //      returns "axes-exceptional" regardless of the extra numeric
+    //      fields (even when set to values that, under a hypothetical
+    //      pass-rate gate, would block convergence).
+    //   2. With weak/partial axes (other conditions met), shouldStop
+    //      returns null regardless of the extra numeric fields (even
+    //      when set to values that would pass a hypothetical gate).
+    // Mutating these fields across runs must not flip the decision.
+    const exceptionalIter = baseIter({ scores: allExceptional });
+    const exceptionalLowPassRate: Iteration & {
+      acPassPercent: number;
+      transitionPassPercent: number;
+    } = {
+      ...exceptionalIter,
+      acPassPercent: 0.0,
+      transitionPassPercent: 0.0,
+    };
+    const exceptionalHighPassRate: Iteration & {
+      acPassPercent: number;
+      transitionPassPercent: number;
+    } = {
+      ...exceptionalIter,
+      acPassPercent: 1.0,
+      transitionPassPercent: 1.0,
+    };
+    expect(shouldStop([exceptionalLowPassRate])).toBe("axes-exceptional");
+    expect(shouldStop([exceptionalHighPassRate])).toBe("axes-exceptional");
+
+    const weakIter = baseIter({
+      scores: { ...allExceptional, usability: "weak" },
+    });
+    const weakHighPassRate: Iteration & {
+      acPassPercent: number;
+      transitionPassPercent: number;
+    } = {
+      ...weakIter,
+      acPassPercent: 1.0,
+      transitionPassPercent: 1.0,
+    };
+    const weakLowPassRate: Iteration & {
+      acPassPercent: number;
+      transitionPassPercent: number;
+    } = {
+      ...weakIter,
+      acPassPercent: 0.0,
+      transitionPassPercent: 0.0,
+    };
+    expect(shouldStop([weakHighPassRate])).toBeNull();
+    expect(shouldStop([weakLowPassRate])).toBeNull();
+  });
+});
+
+describe("shouldStopAcrossSpecs — multi-spec AND convergence", () => {
+  const exceptionalIter = baseIter({ scores: allExceptional });
+  const laggingIter = baseIter({
+    scores: { ...allExceptional, functionality: "strong" },
+  });
+
+  // QFAI:SPEC-0012:TC-0012-0367
+  it("returns null when 2/3 pairs are all-exceptional and the 3rd is below on one axis (TC-0012-0367, TDD-0376)", () => {
+    const result = shouldStopAcrossSpecs([
+      { specId: "spec-0007", screen: "dashboard", latestIteration: exceptionalIter },
+      { specId: "spec-0007", screen: "detail", latestIteration: exceptionalIter },
+      { specId: "spec-0011", screen: "list", latestIteration: laggingIter },
+    ]);
+    expect(result.stopReason).toBeNull();
+  });
+
+  // QFAI:SPEC-0012:TC-0012-0367
+  it("returns axes-exceptional when all 3 pairs are all-exceptional (TC-0012-0367, TDD-0376)", () => {
+    const result = shouldStopAcrossSpecs([
+      { specId: "spec-0007", screen: "dashboard", latestIteration: exceptionalIter },
+      { specId: "spec-0007", screen: "detail", latestIteration: exceptionalIter },
+      { specId: "spec-0011", screen: "list", latestIteration: exceptionalIter },
+    ]);
+    expect(result.stopReason).toBe("axes-exceptional");
+    expect(result.laggingSpecs).toEqual([]);
+  });
+
+  // QFAI:SPEC-0012:TC-0012-0368
+  it("names every lagging spec in laggingSpecs[] when convergence not achieved (TC-0012-0368, TDD-0377)", () => {
+    const result = shouldStopAcrossSpecs([
+      { specId: "spec-0007", screen: "dashboard", latestIteration: exceptionalIter },
+      { specId: "spec-0011", screen: "list", latestIteration: laggingIter },
+      { specId: "spec-0013", screen: "page", latestIteration: laggingIter },
+    ]);
+    expect(result.stopReason).toBeNull();
+    expect(result.laggingSpecs).toEqual(["spec-0011", "spec-0013"]);
   });
 });
 

@@ -208,6 +208,60 @@ export async function runPrototypingCertify(
       return 2;
     }
   }
+
+  // ─── Per-(spec × screen) review.json presence (AC-0012-0047) ───────────
+  //
+  // Under the CHG-002 schema, every spec in the cycle-0 frozen set must
+  // have a `<screen>.review.json` for every declared screen at the
+  // accepted iter, namespaced as
+  //   `iter-NN/spec-NNNN/<screen>.review.json`.
+  //
+  // Pre-read the frozen set (it is also read further down to populate
+  // `specsCovered` on the certificate body — single source) and pre-read
+  // the UI contract screens. Only enforce when both inputs are non-empty:
+  //   - empty frozen set → certify already rejects below ("specsCovered
+  //     is missing or malformed"); the per-pair check has nothing to do.
+  //   - empty screen contracts → no per-screen artifacts are declared
+  //     for the project; the legacy flat-iter `index.html` shape stays
+  //     valid and the per-pair gate skips, preserving the long-standing
+  //     single-page test fixtures.
+  //
+  // Per-spec screen contracts are deferred to reviewerDispatch (Wave 1).
+  // Today, UI contracts under `.qfai/contracts/ui/` are project-wide,
+  // so the same screen list applies to every spec in the frozen set.
+  const frozenSpecsPreview = readFrozenSpecsCovered(protoJson);
+  if (frozenSpecsPreview !== null && screenContracts.length > 0) {
+    const missingPairs: Array<{ spec: string; screen: string; expectedPath: string }> = [];
+    for (const rawSpec of frozenSpecsPreview) {
+      const specDirName = normalizeSpecDirName(rawSpec);
+      for (const screen of screenContracts) {
+        const rel = `${PROTOTYPING_EVIDENCE_REL}/${acceptedIterDir}/${specDirName}/${screen.screenId}.review.json`;
+        const abs = path.join(options.root, rel);
+        const exists = await fileExists(abs);
+        if (!exists) {
+          missingPairs.push({
+            spec: specDirName,
+            screen: screen.screenId,
+            expectedPath: rel,
+          });
+        }
+      }
+    }
+    if (missingPairs.length > 0) {
+      error(
+        "qfai prototyping certify: accepted iteration " +
+          `${acceptedIterDir} is missing review.json for ${missingPairs.length} ` +
+          "(spec, screen) pair(s):",
+      );
+      // Cap the per-pair log output to keep operator-facing stderr
+      // bounded on large frozen sets — same pattern as the missing-HTML
+      // branch above (`missing.slice(0, 10)`).
+      for (const m of missingPairs.slice(0, 20)) {
+        error(`  - ${m.spec} / ${m.screen} (expected ${m.expectedPath})`);
+      }
+      return 2;
+    }
+  }
   // Multi-screen specs emit one HTML artifact per screen under the
   // same iter-NN directory. Every file must pass the DESIGN.md gate;
   // a clean home.html does not absolve a drifting settings.html.
@@ -546,6 +600,43 @@ async function loadJson(filePath: string): Promise<unknown> {
   } catch {
     return null;
   }
+}
+
+/**
+ * Cheap existence probe for the per-(spec × screen) review.json gate.
+ * Uses `stat` (not `access`) so symlinks resolve consistently with the
+ * rest of the evidence walker, and isolates the swallow-all-errors
+ * scope to a single helper instead of inlining a try/catch at the call
+ * site.
+ *
+ * Returns `false` for ANY fs error (including permission flips) — the
+ * caller treats "not visible to the certify process" as missing. This
+ * is symmetric with `validateUiEvidenceArtifacts`-style presence
+ * checks elsewhere; certify's strict gates upstream (lock-unreadable,
+ * stale-iter-readdir) catch the broader permission-flip vector.
+ */
+async function fileExists(absPath: string): Promise<boolean> {
+  try {
+    const s = await stat(absPath);
+    return s.isFile();
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Normalize a `specsCovered[]` entry to its `spec-NNNN` directory name.
+ *
+ * `prototyping.json#specsCovered` entries are persisted by `iterate
+ * --cycle 0` as bare 4-digit numeric strings; some authoring paths may
+ * also write the fully-qualified `spec-NNNN` form. Both shapes must
+ * resolve to the same on-disk directory under `iter-NN/`. The strip +
+ * re-prefix is byte-stable and idempotent (already-prefixed input
+ * round-trips unchanged).
+ */
+function normalizeSpecDirName(raw: string): string {
+  const stripped = raw.replace(/^spec-/iu, "");
+  return `spec-${stripped}`;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

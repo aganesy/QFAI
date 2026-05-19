@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -359,6 +359,96 @@ describe("runPrototypingIterate max-iterations (exit 65)", () => {
     // at the start of any cycle >= 1 by reading the latest iter index.
     const exit = await runPrototypingIterate({ root, cycle: 9 });
     expect(exit).toBe(65);
+  });
+
+  // QFAI:SPEC-0012:TC-0012-0358
+  it("TC-0012-0358 (TDD-0373): exit 65 when latest iter index === 9; exit 0 when index <= 8 without convergence", async () => {
+    // Synthesizes both halves of TC-0012-0358 in one block. The "exit 65
+    // at index 9" half overlaps with the TC-0325 test above; the "exit 0
+    // at index <= 8" half overlaps with the cycle-9-with-9-prior-iters
+    // test below in the "continue (exit 0)" describe block. This test
+    // explicitly pins BOTH halves under the TC-0012-0358 annotation so a
+    // future regression in either direction is captured by spec lineage.
+    const acceptable = {
+      informationArchitecture: "acceptable",
+      navigationFlow: "acceptable",
+      usability: "acceptable",
+      functionality: "acceptable",
+    };
+    // Half 1: latest iter index === 9 (10 entries, indices 0..9) → exit 65.
+    {
+      const root = await newTempDir();
+      await seedMinimalProject(root);
+      const iterations = Array.from({ length: 10 }, (_, i) => ({
+        index: i,
+        scores: acceptable,
+      }));
+      await seedPrototypingJson(root, iterations);
+      const exit = await runPrototypingIterate({ root, cycle: 9 });
+      expect(exit).toBe(65);
+    }
+    // Half 2: latest iter index === 8 (9 entries, indices 0..8), no
+    // convergence (acceptable scores), cycle 9 → exit 0 (continue).
+    {
+      const root = await newTempDir();
+      await seedMinimalProject(root);
+      const iterations = Array.from({ length: 9 }, (_, i) => ({
+        index: i,
+        scores: acceptable,
+      }));
+      await seedPrototypingJson(root, iterations);
+      const exit = await runPrototypingIterate({ root, cycle: 9 });
+      expect(exit).toBe(0);
+    }
+  });
+
+  // QFAI:SPEC-0012:TC-0012-0360
+  it("TC-0012-0360 (TDD-0374): single-thread serial iteration — iterations[] at most 10 entries, monotonic 0..9, no candidates/ directory", async () => {
+    // Structural assertion. A full 10-cycle drive through
+    // runPrototypingIterate would require simulating the per-cycle
+    // capture + reviewer + persist pipeline, which lives outside this
+    // command. Instead we seed a maxed-out budget (iterations 0..9),
+    // invoke the command to trigger the stop-at-9 path, then assert
+    // (a) the persisted iterations[] array conforms to the
+    // length<=MAX_ITERATIONS + monotonic-0..9 + single-thread invariants,
+    // and (b) no parallel `candidates/` directory was created under the
+    // prototyping evidence root. (Parallel candidate generation would
+    // manifest as `candidates/<n>/...` siblings to `iter-NN/`.)
+    const root = await newTempDir();
+    await seedMinimalProject(root);
+    const acceptable = {
+      informationArchitecture: "acceptable",
+      navigationFlow: "acceptable",
+      usability: "acceptable",
+      functionality: "acceptable",
+    };
+    const iterations = Array.from({ length: 10 }, (_, i) => ({
+      index: i,
+      scores: acceptable,
+    }));
+    await seedPrototypingJson(root, iterations);
+    const exit = await runPrototypingIterate({ root, cycle: 9 });
+    expect(exit).toBe(65);
+
+    // (a) persisted iterations[] shape
+    const protoRaw = await readFile(
+      path.join(root, ".qfai/evidence/prototyping/prototyping.json"),
+      "utf-8",
+    );
+    const proto = JSON.parse(protoRaw) as { iterations: Array<{ index: number }> };
+    expect(proto.iterations.length).toBeLessThanOrEqual(10);
+    expect(proto.iterations.length).toBe(10);
+    proto.iterations.forEach((it, i) => {
+      expect(it.index).toBe(i);
+    });
+    expect(proto.iterations.map((it) => it.index)).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
+
+    // (b) no parallel `candidates/` directory under prototyping evidence
+    const evidenceRoot = path.join(root, ".qfai/evidence/prototyping");
+    const entries = await readdir(evidenceRoot);
+    expect(entries).not.toContain("candidates");
+    // Defense-in-depth: nothing matching candidates* either.
+    expect(entries.some((e) => e.toLowerCase().startsWith("candidate"))).toBe(false);
   });
 });
 
@@ -1239,5 +1329,211 @@ describe("iterate-plan.json design tokens (TC-3.5.x)", () => {
     expect(Object.keys(plan.designTokens.fontFamily)).toHaveLength(3);
     expect(Object.keys(plan.designTokens.borderRadius)).toHaveLength(4);
     expect(Object.keys(plan.designTokens.boxShadow)).toHaveLength(3);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────
+// TC-0012-0373 — lock drift mid-loop: exit 2 with canonical stderr regex
+// (spec-0012 ledger TDD entry; user batch label TDD-0380)
+// ─────────────────────────────────────────────────────────────────────────
+
+describe("runPrototypingIterate cycle >= 1 lock drift stderr (TC-0012-0373)", () => {
+  it("exits 2 with stderr matching /DESIGN\\.md hash mismatch.*re-run from cycle 0/ and writes no review payload for the failed cycle", async () => {
+    // TC-0012-0373 pins the canonical operator-facing stderr phrase
+    // "DESIGN.md hash mismatch" plus "re-run from cycle 0" so the
+    // prototyping orchestrator (and humans) can parse the hard-stop
+    // class deterministically. Also asserts that no iter-NN/ review
+    // payload is written for the failed cycle — drift detection is a
+    // pre-condition gate that runs BEFORE the path-assignment +
+    // iterate-plan.json write block, so a successful drift fail leaves
+    // the new iter-NN/ entirely absent on disk.
+    const root = await newTempDir();
+    await seedMinimalProject(root);
+    await seedPrototypingJson(
+      root,
+      [
+        {
+          index: 0,
+          scores: {
+            informationArchitecture: "acceptable",
+            navigationFlow: "acceptable",
+            usability: "acceptable",
+            functionality: "acceptable",
+          },
+        },
+      ],
+      // Cycle-0-recorded sha256 set to a value that cannot match the
+      // canonical DESIGN.md (all zeros). The live DESIGN.md hash will
+      // differ — triggering the drift gate at cycle 1.
+      { designMd: { path: "DESIGN.md", sha256: "0".repeat(64) } },
+    );
+
+    const logger = await import("../../../src/cli/lib/logger.js");
+    const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
+    try {
+      const exit = await runPrototypingIterate({ root, cycle: 1 });
+      // (a) exit code 2
+      expect(exit).toBe(2);
+      // (b) stderr regex match — canonical orchestrator-parseable phrase
+      const stderr = errorSpy.mock.calls.map((c) => String(c[0])).join("\n");
+      expect(stderr).toMatch(/DESIGN\.md hash mismatch.*re-run from cycle 0/);
+    } finally {
+      errorSpy.mockRestore();
+    }
+
+    // (c) no iter-01/ review payload is written for the failed cycle.
+    // The drift gate runs in section 2 (cycle >= 1 hash gate), which
+    // returns 2 before section 5 (path assignment + iterate-plan.json
+    // write). Assert both the iter-01/ dir absence AND the review.json
+    // absence so a future refactor that creates the dir before drift
+    // checks cannot regress silently.
+    const iter01Dir = path.join(root, ".qfai/evidence/prototyping/iter-01");
+    const iter01DirExists = await readFile(path.join(iter01Dir, "iterate-plan.json"), "utf-8").then(
+      () => true,
+      () => false,
+    );
+    expect(iter01DirExists).toBe(false);
+    const reviewExists = await readFile(path.join(iter01Dir, "review.json"), "utf-8").then(
+      () => true,
+      () => false,
+    );
+    expect(reviewExists).toBe(false);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────
+// TC-0012-0375 — autonomous run: zero per-cycle interactive prompts
+// (spec-0012 ledger TDD entry; user batch label TDD-0378)
+// ─────────────────────────────────────────────────────────────────────────
+
+describe("runPrototypingIterate autonomous run (TC-0012-0375)", () => {
+  it("does not import or call any interactive prompt API in the iterate code path (source-grep + runtime stdin-closed drive)", async () => {
+    // Two-pronged assertion:
+    //
+    //   1. Structural: the iterate command source must not reference any
+    //      prompt API (readline / inquirer / prompts / process.stdin /
+    //      stdin readers). The spec demands the iterate path is fully
+    //      autonomous through all 10 cycles + every hard-stop class, so
+    //      the negative-existence guarantee is encoded as a meta-style
+    //      grep over the production source string. A future refactor
+    //      that adds a "confirm reset?" prompt or a stdin-driven branch
+    //      will fail this assertion before any runtime read can hang
+    //      the autonomous loop.
+    //
+    //   2. Runtime: drive runPrototypingIterate end-to-end across cycle
+    //      0..N representative hard-stop classes (cycle 0 normal,
+    //      cycle 1 continue, max-iterations stop) with process.stdin
+    //      destroyed. If the command secretly added a readline call,
+    //      stdin would be unreadable and either hang (test timeout) or
+    //      throw — the deterministic exit-code assertions below pin
+    //      that no such hidden read exists.
+
+    // (1) Source-grep assertion against the production source string.
+    const iterateSrcPath = path.resolve(
+      __dirname,
+      "../../../src/cli/commands/prototypingIterate.ts",
+    );
+    const src = await readFile(iterateSrcPath, "utf-8");
+    // Strip JSDoc + inline comments so legitimate documentation that
+    // mentions the word "prompt" (e.g. the reviewer-prompt explainer
+    // around codex 8thM) does not false-positive. Anything left is
+    // an actual code-path reference.
+    const stripped = src
+      .replace(/\/\*[\s\S]*?\*\//g, "") // block comments incl. JSDoc
+      .replace(/(^|[^:\\])\/\/[^\n]*/g, "$1"); // line comments (preserve URL ://)
+    const forbiddenPatterns: Array<{ name: string; re: RegExp }> = [
+      { name: "node:readline import", re: /from\s+["']node:readline["']/ },
+      { name: "readline import", re: /from\s+["']readline["']/ },
+      { name: "inquirer import", re: /from\s+["']inquirer["']/ },
+      { name: "prompts package import", re: /from\s+["']prompts["']/ },
+      { name: "process.stdin read", re: /process\.stdin/ },
+      // Bare `stdin` reference in code (not comments / strings) — match
+      // identifier boundaries to avoid e.g. "destdin" false positives.
+      { name: "bare stdin identifier", re: /\bstdin\b/ },
+      // Generic prompt API surface (inquirer.prompt / prompts() etc.)
+      { name: "inquirer.prompt() call", re: /\binquirer\.prompt\s*\(/ },
+      { name: "prompts() call", re: /\bprompts\s*\(/ },
+    ];
+    for (const { name, re } of forbiddenPatterns) {
+      expect(
+        re.test(stripped),
+        `runPrototypingIterate source must not reference ${name} (autonomous run invariant TC-0012-0375)`,
+      ).toBe(false);
+    }
+
+    // (2) Runtime drive with stdin destroyed. We exercise three
+    //     representative hard-stop classes that the autonomous loop must
+    //     traverse without prompting: cycle-0 seed, cycle-1 continue,
+    //     and max-iterations (exit 65) terminator. Each call must
+    //     resolve deterministically with no hang.
+    //
+    //     Destroying process.stdin causes any accidental `.on('data')`
+    //     handler to fire EOF immediately; any accidental readline call
+    //     would throw on a destroyed stdin. The test timeout
+    //     (vitest default) provides the final hang detector.
+    const savedStdin = process.stdin;
+    try {
+      // Use Object.defineProperty so a setter-less getter on process
+      // (some Node versions) does not throw. We restore via the same
+      // path in the finally block.
+      Object.defineProperty(process, "stdin", {
+        configurable: true,
+        get: () => {
+          throw new Error("process.stdin must not be read by autonomous iterate");
+        },
+      });
+
+      // Cycle 0 — seed.
+      const root0 = await newTempDir();
+      await seedMinimalProject(root0);
+      const exit0 = await runPrototypingIterate({
+        root: root0,
+        cycle: 0,
+        targetUrl: "http://localhost:5173",
+      });
+      expect(exit0).toBe(0);
+
+      // Cycle 1 — continue (no convergence, not at max).
+      const root1 = await newTempDir();
+      await seedMinimalProject(root1);
+      await seedPrototypingJson(root1, [
+        {
+          index: 0,
+          scores: {
+            informationArchitecture: "acceptable",
+            navigationFlow: "acceptable",
+            usability: "acceptable",
+            functionality: "acceptable",
+          },
+        },
+      ]);
+      const exit1 = await runPrototypingIterate({ root: root1, cycle: 1 });
+      expect(exit1).toBe(0);
+
+      // Cycle 9 with 10 prior iters — max-iterations terminator (65).
+      const root9 = await newTempDir();
+      await seedMinimalProject(root9);
+      const acceptable = {
+        informationArchitecture: "acceptable",
+        navigationFlow: "acceptable",
+        usability: "acceptable",
+        functionality: "acceptable",
+      };
+      const iters = Array.from({ length: 10 }, (_, i) => ({
+        index: i,
+        scores: acceptable,
+      }));
+      await seedPrototypingJson(root9, iters);
+      const exit9 = await runPrototypingIterate({ root: root9, cycle: 9 });
+      expect(exit9).toBe(65);
+    } finally {
+      // Restore the original stdin descriptor so subsequent tests are
+      // not affected.
+      Object.defineProperty(process, "stdin", {
+        configurable: true,
+        value: savedStdin,
+        writable: true,
+      });
+    }
   });
 });

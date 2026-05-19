@@ -17,6 +17,29 @@
   `"max-iterations"`, `index===8` → `null`. No production change required —
   the symbolic `MAX_ITERATION_INDEX` consumption already honors the new
   boundary; the test pins the contract. spec-0012 TDD-0372 (TC-0012-0357).
+- Add `shouldStopAcrossSpecs(pairs)` to `core/prototyping/iteration.ts` with
+  `PerSpecScreenIter` and `MultiSpecStopResult` types. Pure function: returns
+  `{ stopReason: "axes-exceptional", laggingSpecs: [] }` only when every
+  `(spec, screen)` pair passes `allFourAxesExceptional`; otherwise returns
+  `{ stopReason: null, laggingSpecs: [...sortedUnique specIds...] }`.
+  Existing single-spec `shouldStop(iterations)` unmodified. spec-0012
+  TDD-0376/0377 (TC-0012-0367/0368).
+- Add per-(spec × screen) `<screen>.review.json` presence check to
+  `qfai prototyping certify`. When the cycle-0 frozen spec set AND screen
+  contracts are both non-empty, certify exits non-zero and names every
+  missing `spec-NNNN / <screen>` pair in stderr (capped 20 lines). New
+  helpers `fileExists` / `normalizeSpecDirName` (canonicalizes bare `"0012"`
+  ↔ `"spec-0012"`). Legacy single-page fixtures untouched. spec-0012
+  TDD-0387 (TC-0012-0381).
+- Rephrase cycle-≥1 DESIGN.md hash-mismatch stderr to include the canonical
+  phrase "DESIGN.md hash mismatch — ... re-run from cycle 0" while
+  preserving the legacy "sha256 mismatch" / "edited mid-loop" tokens for
+  backward-compat. spec-0012 TDD-0380 (TC-0012-0373).
+- Add integration coverage: `runPrototypingIterate` autonomous-mode test
+  (no `process.stdin` reads via source-grep + runtime throwing-getter probe
+  across cycle 0 / cycle 1 / cycle 9), boundary exit-65/exit-0 synthesis,
+  serial-budget structural shape, and `shouldStop` quantitative-gate
+  absence assertions. spec-0012 TDD-0373/0374/0375/0378.
 
 ### Changed (spec / contract only — implementation lands separately)
 

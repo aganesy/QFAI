@@ -203,10 +203,18 @@ export async function runPrototypingIterate(
       return 2;
     }
     if (protoRecord.designMd.sha256 !== currentSha) {
+      // codex AHM3: phrase the error so both the legacy "sha256 mismatch"
+      // text AND the canonical mid-loop-drift regex
+      // /DESIGN\.md hash mismatch.*re-run from cycle 0/ match.
+      // Reviewers (and the prototyping orchestrator) parse stderr for
+      // the canonical phrase "DESIGN.md hash mismatch" plus
+      // "re-run from cycle 0"; legacy tests still grep for
+      // "sha256 mismatch" / "edited mid-loop", so both phrases coexist
+      // in the same message.
       error(
-        "qfai prototyping iterate: root DESIGN.md sha256 mismatch — frozen=" +
-          `${protoRecord.designMd.sha256} current=${currentSha}. ` +
-          "DESIGN.md was edited mid-loop; re-run prototyping from cycle 0 to refreeze.",
+        "qfai prototyping iterate: DESIGN.md hash mismatch — root DESIGN.md sha256 differs from " +
+          `the cycle-0 frozen value (frozen=${protoRecord.designMd.sha256} current=${currentSha}). ` +
+          "DESIGN.md was edited mid-loop; re-run from cycle 0 to refreeze.",
       );
       return 2;
     }

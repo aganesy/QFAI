@@ -469,6 +469,15 @@ describe("qfai prototyping certify (multi-screen accepted-iter HTML check)", () 
     const acceptedDir = path.join(root, ".qfai/evidence/prototyping/iter-01");
     await writeFile(path.join(acceptedDir, "home.html"), CLEAN_FINAL_HTML, "utf-8");
     await writeFile(path.join(acceptedDir, "settings.html"), CLEAN_FINAL_HTML, "utf-8");
+    // CHG-002 AC-0012-0047: certify also requires
+    // `iter-NN/spec-NNNN/<screen>.review.json` for every frozen spec ×
+    // declared screen pair. The fixture's frozen spec set is
+    // `["0012"]` (seeded by seedAllGatesPass), and the UI contracts
+    // above declare home + settings, so seed both review.jsons.
+    const specDir = path.join(acceptedDir, "spec-0012");
+    await mkdir(specDir, { recursive: true });
+    await writeFile(path.join(specDir, "home.review.json"), '{"ok":true}\n', "utf-8");
+    await writeFile(path.join(specDir, "settings.review.json"), '{"ok":true}\n', "utf-8");
     expect(await runPrototypingCertify({ root, check: false })).toBe(0);
   });
 });
