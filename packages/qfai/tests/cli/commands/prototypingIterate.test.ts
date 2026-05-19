@@ -475,15 +475,45 @@ describe("runPrototypingIterate input validation", () => {
     expect(exit).toBe(2);
   });
 
-  it("returns 2 when no UI-bearing spec is found", async () => {
+  // QFAI:SPEC-0012:TC-0012-0355 (was: "returns 2 when no UI-bearing spec is found")
+  it("TC-0012-0355 (TDD-0379): zero UI-bearing specs → exit 0 deterministic no-op", async () => {
+    // Per spec-0012 TDD-0379 / TC-0012-0355: the new contract makes
+    // zero-UI-bearing a deterministic no-op (exit 0) rather than the
+    // legacy `exit 2 — no primary spec found`. The skill never invokes
+    // iterate on a non-UI project, but if it does the command must
+    // emit a stderr explainer and return 0 without creating any
+    // iter-NN/ directory. This test supersedes the pre-Wave-3
+    // "returns 2 when no UI-bearing spec is found" assertion.
     const root = await newTempDir();
     await seedMinimalProject(root, { uiBearing: false });
-    const exit = await runPrototypingIterate({
-      root,
-      cycle: 0,
-      targetUrl: "http://localhost:5173",
-    });
-    expect(exit).toBe(2);
+
+    const logger = await import("../../../src/cli/lib/logger.js");
+    const infoSpy = vi.spyOn(logger, "info").mockImplementation(() => {});
+    try {
+      const exit = await runPrototypingIterate({
+        root,
+        cycle: 0,
+        targetUrl: "http://localhost:5173",
+      });
+      // Exit 0 — deterministic no-op.
+      expect(exit).toBe(0);
+      // Stderr/log mentions the no-op classification.
+      const messages = infoSpy.mock.calls.map((c) => String(c[0])).join("\n");
+      expect(messages).toMatch(/no UI-bearing specs resolved/i);
+    } finally {
+      infoSpy.mockRestore();
+    }
+
+    // No iter-00/ directory was created — verifies the no-op skipped
+    // the path-assignment block entirely.
+    const iter00Plan = await readFile(
+      path.join(root, ".qfai/evidence/prototyping/iter-00/iterate-plan.json"),
+      "utf-8",
+    ).then(
+      () => true,
+      () => false,
+    );
+    expect(iter00Plan).toBe(false);
   });
 });
 
@@ -1535,5 +1565,291 @@ describe("runPrototypingIterate autonomous run (TC-0012-0375)", () => {
         writable: true,
       });
     }
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────
+// TC-0012-0388 / TC-0012-0389 — cycle 0 writes frozen SSOT fields
+// (Wave 3 TDD-0381 / TDD-0382)
+// ─────────────────────────────────────────────────────────────────────────
+
+describe("runPrototypingIterate cycle 0 frozen SSOT writes", () => {
+  // QFAI:SPEC-0012:TC-0012-0388
+  it("TC-0012-0388 (TDD-0381): cycle 0 writes frozenSpecsCovered into prototyping.json", async () => {
+    const root = await newTempDir();
+    await seedMinimalProject(root);
+    // Add a second UI-bearing spec so the frozen set is multi-element
+    // (validates the resolver is honoured, not a single-spec shortcut).
+    const spec0002Dir = path.join(root, ".qfai/specs/spec-0002");
+    await mkdir(spec0002Dir, { recursive: true });
+    await writeFile(
+      path.join(spec0002Dir, "01_Spec.md"),
+      "# 01 Spec — second\n\n- Spec: spec-0002\nsurface_type: ui-bearing\n",
+      "utf-8",
+    );
+
+    expect(
+      await runPrototypingIterate({ root, cycle: 0, targetUrl: "http://localhost:5173" }),
+    ).toBe(0);
+
+    const body = JSON.parse(
+      await readFile(
+        path.join(root, ".qfai/evidence/prototyping/prototyping.json"),
+        "utf-8",
+      ),
+    ) as { frozenSpecsCovered: string[] };
+    // resolveAllUiBearingSpecs returns spec ids sorted lexicographically.
+    expect(body.frozenSpecsCovered).toEqual(["0001", "0002"]);
+  });
+
+  // QFAI:SPEC-0012:TC-0012-0389
+  it("TC-0012-0389 (TDD-0382): cycle 0 writes frozenLicenseCatalog into prototyping.json", async () => {
+    const root = await newTempDir();
+    await seedMinimalProject(root);
+
+    expect(
+      await runPrototypingIterate({ root, cycle: 0, targetUrl: "http://localhost:5173" }),
+    ).toBe(0);
+
+    const body = JSON.parse(
+      await readFile(
+        path.join(root, ".qfai/evidence/prototyping/prototyping.json"),
+        "utf-8",
+      ),
+    ) as {
+      frozenLicenseCatalog: {
+        allowedSources: string[];
+        licenseTiers: Record<string, string[]>;
+      };
+    };
+    // Hard-coded SSOT catalog (DEFAULT_LICENSE_CATALOG in the production
+    // code). If this changes the test must change with it — fail-fast
+    // signal so a silent catalog drift cannot ship.
+    expect(body.frozenLicenseCatalog.allowedSources.sort()).toEqual(["pexels", "unsplash"]);
+    expect(body.frozenLicenseCatalog.licenseTiers.unsplash).toEqual([
+      "unsplash-license",
+      "free",
+    ]);
+    expect(body.frozenLicenseCatalog.licenseTiers.pexels).toEqual(["pexels-free"]);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────
+// TC-0012-0371 — license hard-stop exit 66
+// (Wave 3 TDD-0383)
+// ─────────────────────────────────────────────────────────────────────────
+
+describe("runPrototypingIterate license verify hard-stop (TC-0012-0371)", () => {
+  // QFAI:SPEC-0012:TC-0012-0371
+  it("TC-0012-0371 (TDD-0383): exits 66 with stderr naming the offending URL when imageSources[] has a non-allowlisted source", async () => {
+    const root = await newTempDir();
+    await seedMinimalProject(root);
+    // Cycle 0 establishes the frozen catalog. Cycle 1 is where the
+    // license-verify gate runs against `imageSources[]` recorded on
+    // prototyping.json (the Wave 3 wiring reads from the proto json
+    // directly; future waves replace this with the prototype-handoff
+    // extraction path).
+    await seedPrototypingJson(root, [
+      {
+        index: 0,
+        scores: {
+          informationArchitecture: "acceptable",
+          navigationFlow: "acceptable",
+          usability: "acceptable",
+          functionality: "acceptable",
+        },
+      },
+    ]);
+    // Inject a non-allowlisted image source ("pinterest") into the
+    // existing prototyping.json so the cycle-1 license gate fails.
+    const protoJsonPath = path.join(
+      root,
+      ".qfai/evidence/prototyping/prototyping.json",
+    );
+    const proto = JSON.parse(await readFile(protoJsonPath, "utf-8")) as Record<string, unknown>;
+    proto.frozenLicenseCatalog = {
+      allowedSources: ["unsplash", "pexels"],
+      licenseTiers: {
+        unsplash: ["unsplash-license", "free"],
+        pexels: ["pexels-free"],
+      },
+    };
+    proto.imageSources = [
+      {
+        url: "https://pinterest.com/pin/12345.jpg",
+        source: "pinterest",
+        license: "unknown",
+        attribution: "anon",
+      },
+    ];
+    await writeFile(protoJsonPath, JSON.stringify(proto), "utf-8");
+
+    const logger = await import("../../../src/cli/lib/logger.js");
+    const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
+    try {
+      const exit = await runPrototypingIterate({ root, cycle: 1 });
+      expect(exit).toBe(66);
+      const stderr = errorSpy.mock.calls.map((c) => String(c[0])).join("\n");
+      // Stderr names the offending URL so operators can locate the
+      // entry without re-reading the JSON.
+      expect(stderr).toContain("https://pinterest.com/pin/12345.jpg");
+      expect(stderr).toMatch(/license verify failed/i);
+    } finally {
+      errorSpy.mockRestore();
+    }
+  });
+
+  it("TC-0012-0371 (TDD-0383): exits 66 when license string is unknown for an allowlisted source", async () => {
+    // Second branch of the same TC: allowlisted source but unknown
+    // license string (e.g. "unknown" tier).
+    const root = await newTempDir();
+    await seedMinimalProject(root);
+    await seedPrototypingJson(root, [
+      {
+        index: 0,
+        scores: {
+          informationArchitecture: "acceptable",
+          navigationFlow: "acceptable",
+          usability: "acceptable",
+          functionality: "acceptable",
+        },
+      },
+    ]);
+    const protoJsonPath = path.join(
+      root,
+      ".qfai/evidence/prototyping/prototyping.json",
+    );
+    const proto = JSON.parse(await readFile(protoJsonPath, "utf-8")) as Record<string, unknown>;
+    proto.frozenLicenseCatalog = {
+      allowedSources: ["unsplash", "pexels"],
+      licenseTiers: {
+        unsplash: ["unsplash-license", "free"],
+        pexels: ["pexels-free"],
+      },
+    };
+    proto.imageSources = [
+      {
+        url: "https://unsplash.com/photos/abc",
+        source: "unsplash",
+        license: "unknown",
+        attribution: "anon",
+      },
+    ];
+    await writeFile(protoJsonPath, JSON.stringify(proto), "utf-8");
+
+    const logger = await import("../../../src/cli/lib/logger.js");
+    const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
+    try {
+      const exit = await runPrototypingIterate({ root, cycle: 1 });
+      expect(exit).toBe(66);
+      const stderr = errorSpy.mock.calls.map((c) => String(c[0])).join("\n");
+      expect(stderr).toContain("https://unsplash.com/photos/abc");
+    } finally {
+      errorSpy.mockRestore();
+    }
+  });
+
+  it("TC-0012-0371 (TDD-0383): passes silently (exit 0) when all imageSources[] entries match the frozen catalog", async () => {
+    // Positive case: an allowlisted source with a known license tier
+    // must NOT trip the gate (no exit 66; no error log).
+    const root = await newTempDir();
+    await seedMinimalProject(root);
+    await seedPrototypingJson(root, [
+      {
+        index: 0,
+        scores: {
+          informationArchitecture: "acceptable",
+          navigationFlow: "acceptable",
+          usability: "acceptable",
+          functionality: "acceptable",
+        },
+      },
+    ]);
+    const protoJsonPath = path.join(
+      root,
+      ".qfai/evidence/prototyping/prototyping.json",
+    );
+    const proto = JSON.parse(await readFile(protoJsonPath, "utf-8")) as Record<string, unknown>;
+    proto.frozenLicenseCatalog = {
+      allowedSources: ["unsplash", "pexels"],
+      licenseTiers: {
+        unsplash: ["unsplash-license", "free"],
+        pexels: ["pexels-free"],
+      },
+    };
+    proto.imageSources = [
+      {
+        url: "https://unsplash.com/photos/ok",
+        source: "unsplash",
+        license: "unsplash-license",
+        attribution: "anon",
+      },
+    ];
+    await writeFile(protoJsonPath, JSON.stringify(proto), "utf-8");
+
+    expect(await runPrototypingIterate({ root, cycle: 1 })).toBe(0);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────
+// TC-0012-0385 — mid-run spec-set drift detection
+// (Wave 3 TDD-0385)
+// ─────────────────────────────────────────────────────────────────────────
+
+describe("runPrototypingIterate cycle >= 1 spec-set drift (TC-0012-0385)", () => {
+  // QFAI:SPEC-0012:TC-0012-0385
+  it("TC-0012-0385 (TDD-0385): exits non-zero and names the drifted spec in stderr when a new UI-bearing spec appears mid-loop", async () => {
+    const root = await newTempDir();
+    await seedMinimalProject(root);
+    // Cycle 0 baseline: only spec-0001 is UI-bearing. Seed a
+    // prototyping.json that carries that frozen snapshot.
+    await seedPrototypingJson(root, [
+      {
+        index: 0,
+        scores: {
+          informationArchitecture: "acceptable",
+          navigationFlow: "acceptable",
+          usability: "acceptable",
+          functionality: "acceptable",
+        },
+      },
+    ]);
+    const protoJsonPath = path.join(
+      root,
+      ".qfai/evidence/prototyping/prototyping.json",
+    );
+    const proto = JSON.parse(await readFile(protoJsonPath, "utf-8")) as Record<string, unknown>;
+    proto.frozenSpecsCovered = ["0001"];
+    await writeFile(protoJsonPath, JSON.stringify(proto), "utf-8");
+
+    // Plant a NEW UI-bearing spec on disk between cycle 0 and cycle 1.
+    const spec0007Dir = path.join(root, ".qfai/specs/spec-0007");
+    await mkdir(spec0007Dir, { recursive: true });
+    await writeFile(
+      path.join(spec0007Dir, "01_Spec.md"),
+      "# 01 Spec — new\n\nsurface_type: ui-bearing\n",
+      "utf-8",
+    );
+
+    const logger = await import("../../../src/cli/lib/logger.js");
+    const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
+    try {
+      const exit = await runPrototypingIterate({ root, cycle: 1 });
+      // Non-zero exit (production uses 2).
+      expect(exit).not.toBe(0);
+      const stderr = errorSpy.mock.calls.map((c) => String(c[0])).join("\n");
+      expect(stderr).toMatch(/spec-set drift detected/i);
+      expect(stderr).toContain("0007");
+    } finally {
+      errorSpy.mockRestore();
+    }
+
+    // The run did NOT restart at cycle 0 — the new spec is deferred
+    // to the next invocation (no iter-NN/ regenerated for the new
+    // spec, and no rewrite of frozenSpecsCovered to include it).
+    const after = JSON.parse(
+      await readFile(protoJsonPath, "utf-8"),
+    ) as { frozenSpecsCovered?: unknown };
+    expect(after.frozenSpecsCovered).toEqual(["0001"]);
   });
 });

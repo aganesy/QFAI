@@ -80,6 +80,44 @@
   multi-spec wording that references `resolveAllUiBearingSpecs()` and
   states the zero-specs no-op exit. spec-0012 TDD-0396 (TC-0012-0356).
 
+### Changed (Wave 3 blocked-resolved after Wave 1)
+
+- `runPrototypingIterate` zero-UI-bearing behavior flipped from exit 2 to
+  exit 0 with stderr "no UI-bearing specs resolved" and no iter-NN/
+  directory creation (section 0 pre-check using `resolveAllUiBearingSpecs`).
+  Existing test inverse-updated in-place. spec-0012 TDD-0379 (TC-0012-0355).
+- `runPrototypingIterate` cycle 0 now writes `frozenSpecsCovered: [...]`
+  and `frozenLicenseCatalog: { allowedSources, licenseTiers }` into
+  `prototyping.json` via extended `writeSeedMetadata`. New
+  `DEFAULT_LICENSE_CATALOG` constant (allowedSources `["unsplash","pexels"]`).
+  spec-0012 TDD-0381/0382 (TC-0012-0388/0389).
+- `runPrototypingIterate` hard-stops with exit 66 when any
+  `imageSources[]` entry has a non-allowlisted source or unknown license
+  tier; stderr names the offending URL. Reads `imageSources[]` from
+  `prototyping.json` directly (handoff-yaml extraction deferred). spec-0012
+  TDD-0383 (TC-0012-0371).
+- `runPrototypingIterate` cycle ≥1 spec-set drift detection via
+  `checkSpecsCoveredDrift`. Drift → exit 2 with stderr listing added /
+  removed specs; no auto-restart at cycle 0. spec-0012 TDD-0385
+  (TC-0012-0385).
+- Pin `readFrozenSpecsCovered` input-order preservation and
+  `buildCompletionCertificate` order propagation. spec-0012 TDD-0386
+  (TC-0012-0382).
+- Pin frozen SSOT immutability across cycles: mutating in-memory live
+  arrays does not back-write to the persisted record; consumer
+  defensive-copy contract enforced. spec-0012 TDD-0388 (TC-0012-0390).
+
+### Deferred (tracked for follow-up)
+
+- TDD-0384 (TC-0012-0377): per-spec `iter-NN/spec-NNNN/<screen>.review.json`
+  layout migration. Requires coordinated change to `iteration.ts` SSOT
+  helpers, validator path predicates, certify scan logic, and the
+  iterate-plan template paths. Surgical scope exceeded; would cascade
+  through 8+ existing tests. Defer to a dedicated migration wave.
+- TDD-0401/0402 (TC-0012-0374/0383): Reviewer Playwright-session failure
+  hard-stop + menu-entry navigation count. Requires real Playwright
+  wiring; deferred to a subsequent integration cycle.
+
 ### Changed (spec / contract only — implementation lands separately)
 
 - **`/qfai-prototyping` redefinition (CHG-002, spec-0012)**: spec pack rewritten

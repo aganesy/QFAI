@@ -44,8 +44,19 @@ import {
   type DesignMdViolation,
 } from "../../core/prototyping/designMdViolations.js";
 import { PROTOTYPING_EVIDENCE_REL, PROTOTYPING_JSON_REL } from "../../core/prototyping/paths.js";
-import { resolvePrimaryPrototypingSpec } from "../../core/prototyping/specResolution.js";
-import { readFrozenSpecsCovered } from "../../core/prototyping/specsCovered.js";
+import {
+  resolveAllUiBearingSpecs,
+  resolvePrimaryPrototypingSpec,
+} from "../../core/prototyping/specResolution.js";
+import {
+  checkSpecsCoveredDrift,
+  readFrozenSpecsCovered,
+} from "../../core/prototyping/specsCovered.js";
+import {
+  licenseVerify,
+  type ImageSource,
+  type LicenseCatalog,
+} from "../../core/prototyping/licenseVerify.js";
 import {
   MAX_ITERATIONS,
   MAX_ITERATION_INDEX,
@@ -105,7 +116,26 @@ type PrototypingJsonShape = {
   acceptedIterationIndex?: unknown;
   stopReason?: unknown;
   fullHarness?: unknown;
+  frozenSpecsCovered?: unknown;
+  frozenLicenseCatalog?: unknown;
+  imageSources?: unknown;
   [key: string]: unknown;
+};
+
+/**
+ * SSOT default license catalog frozen at cycle 0 of every loop.
+ *
+ * The cycle-0 frozen catalog is the single source the run uses to
+ * verify every `imageSources[]` entry. Hard-coded here as the initial
+ * baseline; future user-config surface
+ * (qfai.config.yaml#prototyping.licenseCatalog) can override.
+ */
+const DEFAULT_LICENSE_CATALOG: LicenseCatalog = {
+  allowedSources: ["unsplash", "pexels"],
+  licenseTiers: {
+    unsplash: ["unsplash-license", "free"],
+    pexels: ["pexels-free"],
+  },
 };
 
 export async function runPrototypingIterate(
@@ -122,6 +152,37 @@ export async function runPrototypingIterate(
     return 2;
   }
 
+  // 0) Zero UI-bearing → deterministic no-op (exit 0).
+  //
+  //    When no spec in the project carries `surface_type: ui-bearing`
+  //    (and no matching UI contract exists), the prototyping loop has
+  //    nothing to drive, so `iterate` must be a deterministic no-op —
+  //    emit a stderr explainer and return 0 without creating any
+  //    iter-NN/ directory or touching DESIGN.md / lock state. This
+  //    precedes the DESIGN.md gate intentionally: a project with no
+  //    UI surface should not be blocked on a missing or unfrozen
+  //    DESIGN.md.
+  //
+  //    Implementation note: this uses `resolveAllUiBearingSpecs` (the
+  //    multi-spec resolver) for the no-op check, but the per-cycle
+  //    primary-spec lineage below still goes through
+  //    `resolvePrimaryPrototypingSpec`. This batch only landed
+  //    the no-op gate + frozen-state writes; full per-spec iter layout
+  //    migration is deferred to a later batch.
+  const earlyConfig = await loadConfig(options.root);
+  const earlyUiBearing = await resolveAllUiBearingSpecs(
+    options.root,
+    earlyConfig.config,
+  );
+  if (earlyUiBearing.length === 0) {
+    info(
+      "qfai prototyping iterate: no UI-bearing specs resolved — deterministic no-op " +
+        "(no spec carries `surface_type: ui-bearing` and no matching `.qfai/contracts/ui/*.yaml`). " +
+        "Add the marker or contract to enable the prototyping loop.",
+    );
+    return 0;
+  }
+
   // 1) Read + hash root DESIGN.md FIRST (before any per-cycle plumbing).
   //    A malformed DESIGN.md is a structural project error and must
   //    fail before --target-url checks or convergence reads.
@@ -134,7 +195,10 @@ export async function runPrototypingIterate(
   const currentSha = hashDesignMd(designMdRead.text);
   const designMd: DesignMd = designMdRead.data;
 
-  const configResult = await loadConfig(options.root);
+  // Reuse the config snapshot read for the zero-UI-bearing pre-check
+  // above so we do not double-IO on the YAML file path. The values
+  // are immutable for the duration of one invocation.
+  const configResult = earlyConfig;
 
   // The SDD lock (`DESIGN.md.lock.yaml#designMdSha256`) is the single
   // source of truth for the frozen brand SSOT. Iterate consults it on
@@ -362,6 +426,40 @@ export async function runPrototypingIterate(
       );
       return 2;
     }
+
+    // Mid-run spec-set drift check.
+    //
+    // The cycle-0 frozen `frozenSpecsCovered` set is the SSOT for what
+    // the loop is reviewing. If a UI-bearing spec appears or disappears
+    // on disk between cycles, we MUST detect the drift and stop the
+    // current run rather than silently re-baselining mid-loop. The
+    // new/removed specs are deferred to the NEXT invocation (which
+    // restarts from cycle 0), so we never restart here — we just
+    // fail-fast with stderr that names every drifted spec id.
+    //
+    // The frozenSpecsCovered field is the SSOT; specsCovered (above)
+    // is the legacy single-spec field that is also frozen for backward
+    // compatibility. Both must be honoured.
+    const frozenSet = readFrozenSpecsCoveredField(protoRecord) ?? frozenSpecs;
+    const liveUiBearing = earlyUiBearing;
+    const drift = checkSpecsCoveredDrift(frozenSet, liveUiBearing);
+    if (drift.drifted) {
+      const parts: string[] = [];
+      if (drift.added.length > 0) {
+        parts.push(`new=[${drift.added.join(", ")}]`);
+      }
+      if (drift.removed.length > 0) {
+        parts.push(`removed=[${drift.removed.join(", ")}]`);
+      }
+      error(
+        "qfai prototyping iterate: spec-set drift detected mid-loop — " +
+          `${parts.join(" ")}. The cycle-0 frozen set is ${JSON.stringify(frozenSet)}; ` +
+          "the drifted spec(s) are deferred to the next `--cycle 0` invocation. " +
+          "Continue this loop with the frozen spec set, or restart with " +
+          "`--cycle 0 --target-url <url>` to pick up the new spec set.",
+      );
+      return 2;
+    }
   }
 
   // 3) Cycle 0 requires --target-url so the seed generator knows where
@@ -387,6 +485,16 @@ export async function runPrototypingIterate(
       designMd: { path: ROOT_DESIGN_MD_REL, sha256: currentSha },
       runId: buildRunId(currentSha),
       specsCovered: specs,
+      // cycle-0 SSOT for the full UI-bearing spec set under review.
+      // Distinct from `specsCovered` (single primary spec) so the
+      // multi-spec aggregation in certify can honour the frozen list
+      // as the upper bound on what was reviewed.
+      frozenSpecsCovered: earlyUiBearing,
+      // cycle-0 SSOT for the license-class catalog. Recording it here
+      // means cycle >= 1 license-verify reads the FROZEN catalog
+      // (immutable through the loop), not a mutable in-memory default
+      // that could re-baseline mid-run.
+      frozenLicenseCatalog: DEFAULT_LICENSE_CATALOG,
     });
     // Defense-in-depth: stale `iter-NN/` directories from a prior loop
     // could otherwise survive on disk and bind certify to evidence the
@@ -423,6 +531,41 @@ export async function runPrototypingIterate(
     await deleteStaleCompletionCertificate(
       path.join(options.root, COMPLETION_CERTIFICATE_REL_PATH),
     );
+  }
+
+  // 4b) License verify for stock-photo image sources. The cycle-0
+  //     frozen license catalog is the SSOT; every cycle that has
+  //     `imageSources[]` recorded on prototyping.json must pass the
+  //     verify or the run hard-stops with exit 66. The catalog is
+  //     sourced from the cycle-0 frozen value when present
+  //     (cycle >= 1), falling back to the in-memory default on
+  //     cycle 0 (the freshly-written catalog from writeSeedMetadata
+  //     above is functionally identical).
+  //
+  //     Pragmatic data flow: `imageSources[]` is read from
+  //     `prototyping.json#imageSources` (or skipped silently when
+  //     absent). The current batch lands the verify gate; the
+  //     population path (handoff yaml extraction, DESIGN.md pool) is
+  //     left to a later batch. Tests that exercise this branch seed
+  //     the field directly.
+  const protoRecordForLicense = options.cycle === 0 ? null : await readPrototypingJson(protoJsonAbs);
+  const imageSources = collectImageSources(protoRecordForLicense);
+  if (imageSources !== null && imageSources.length > 0) {
+    const catalog =
+      readFrozenLicenseCatalog(protoRecordForLicense) ?? DEFAULT_LICENSE_CATALOG;
+    const verifyResult = licenseVerify(imageSources, catalog);
+    if (!verifyResult.ok) {
+      const offending = verifyResult.errors
+        .map((e) => `${e.code} (source=${e.source}, url=${e.url})`)
+        .join("; ");
+      error(
+        "qfai prototyping iterate: license verify failed — " +
+          `${verifyResult.errors.length} offending entry/entries: ${offending}. ` +
+          "Replace with allowlisted free stock-photo sources (see cycle-0 frozenLicenseCatalog) " +
+          "or remove the entry.",
+      );
+      return 66;
+    }
   }
 
   // 5) Assign paths and write iterate-plan.json.
@@ -551,6 +694,79 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+/**
+ * Read `frozenSpecsCovered` from prototyping.json. Returns `null` when
+ * the field is missing or malformed (caller falls back to
+ * `specsCovered` for backward compatibility with pre-Wave-3 records).
+ */
+function readFrozenSpecsCoveredField(record: PrototypingJsonShape): string[] | null {
+  const raw = record.frozenSpecsCovered;
+  if (!Array.isArray(raw) || raw.length === 0) return null;
+  const out: string[] = [];
+  for (const value of raw) {
+    if (typeof value !== "string" || value.length === 0) return null;
+    out.push(value);
+  }
+  return out;
+}
+
+/**
+ * Read `frozenLicenseCatalog` from prototyping.json. Returns `null`
+ * when the field is missing or malformed so callers can fall back to
+ * the in-memory default.
+ */
+function readFrozenLicenseCatalog(record: PrototypingJsonShape | null): LicenseCatalog | null {
+  if (!record) return null;
+  const raw = record.frozenLicenseCatalog;
+  if (!isRecord(raw)) return null;
+  const allowed = raw.allowedSources;
+  const tiers = raw.licenseTiers;
+  if (!Array.isArray(allowed) || !isRecord(tiers)) return null;
+  const allowedSources: string[] = [];
+  for (const value of allowed) {
+    if (typeof value !== "string" || value.length === 0) return null;
+    allowedSources.push(value);
+  }
+  const licenseTiers: Record<string, string[]> = {};
+  for (const [k, v] of Object.entries(tiers)) {
+    if (!Array.isArray(v)) return null;
+    const list: string[] = [];
+    for (const entry of v) {
+      if (typeof entry !== "string") return null;
+      list.push(entry);
+    }
+    licenseTiers[k] = list;
+  }
+  return { allowedSources, licenseTiers };
+}
+
+/**
+ * Read `imageSources` from prototyping.json and narrow each entry
+ * to the strict `{url, license, attribution, source}` shape. Returns
+ * `null` when the field is absent (caller skips license-verify);
+ * returns an empty array when the field is present but empty (caller
+ * also skips); returns a non-empty array otherwise. Malformed entries
+ * are also skipped silently — a strict schema validator owns the
+ * "imageSources[] is malformed" diagnostic.
+ */
+function collectImageSources(record: PrototypingJsonShape | null): ImageSource[] | null {
+  if (!record) return null;
+  const raw = record.imageSources;
+  if (!Array.isArray(raw)) return null;
+  const out: ImageSource[] = [];
+  for (const entry of raw) {
+    if (!isRecord(entry)) continue;
+    const url = entry.url;
+    const source = entry.source;
+    const license = entry.license;
+    if (typeof url !== "string" || typeof source !== "string" || typeof license !== "string") {
+      continue;
+    }
+    out.push({ url, source, license });
+  }
+  return out;
+}
+
 function arraysShallowEqual(a: readonly string[], b: readonly string[]): boolean {
   if (a.length !== b.length) return false;
   for (let i = 0; i < a.length; i += 1) {
@@ -563,6 +779,8 @@ type SeedMetadata = {
   designMd: DesignMdRecord;
   runId: string;
   specsCovered: readonly string[];
+  frozenSpecsCovered: readonly string[];
+  frozenLicenseCatalog: LicenseCatalog;
 };
 
 async function writeSeedMetadata(protoJsonAbs: string, seed: SeedMetadata): Promise<void> {
@@ -613,12 +831,28 @@ async function writeSeedMetadata(protoJsonAbs: string, seed: SeedMetadata): Prom
   delete body.completionClaimed;
   delete body.phase;
   delete body.completionCertificate;
+  // `imageSources` is per-loop content (image fills recorded as the
+  // prototype gains them). Cycle 0 is a hard reset, so the prior
+  // loop's image fills must not leak into the new run's license
+  // verify. The frozen catalog is re-seeded below.
+  delete body.imageSources;
   // Cycle 0 always re-anchors designMd, runId, and specsCovered.
   // specsCovered is sourced from resolvePrimaryPrototypingSpec on every
   // cycle 0 — it is a per-loop slot, not an operator-defined one.
   body.designMd = seed.designMd;
   body.runId = seed.runId;
   body.specsCovered = [...seed.specsCovered];
+  // Persist the cycle-0 SSOT fields. frozenSpecsCovered is the full
+  // UI-bearing spec set (multi-spec); frozenLicenseCatalog is the
+  // stock-photo allowlist used by licenseVerify in every subsequent
+  // cycle.
+  body.frozenSpecsCovered = [...seed.frozenSpecsCovered];
+  body.frozenLicenseCatalog = {
+    allowedSources: [...seed.frozenLicenseCatalog.allowedSources],
+    licenseTiers: Object.fromEntries(
+      Object.entries(seed.frozenLicenseCatalog.licenseTiers).map(([k, v]) => [k, [...v]]),
+    ),
+  };
   await mkdir(path.dirname(protoJsonAbs), { recursive: true });
   await writeFile(protoJsonAbs, `${JSON.stringify(body, null, 2)}\n`, "utf-8");
 }
