@@ -42,3 +42,49 @@ export function readFrozenSpecsCovered(record: unknown): string[] | null {
   }
   return out;
 }
+
+export type SpecsCoveredDriftResult = {
+  drifted: boolean;
+  added: string[];
+  removed: string[];
+};
+
+/**
+ * Compare the cycle-0 frozen `specsCovered` set against a caller-provided
+ * snapshot of the currently UI-bearing spec set.
+ *
+ * Pure function: the comparison is performed against the FROZEN value as
+ * the baseline (per AC-0012-0049 — mid-run spec-set changes are deferred
+ * to the next invocation, never re-derived from the live filesystem at
+ * comparison time). The caller is responsible for capturing
+ * `currentLive` once (typically via `resolveAllUiBearingSpecs`); this
+ * helper does no I/O so the relationship between "what was frozen" and
+ * "what is observed" is auditable.
+ *
+ * Returned shape:
+ *   - `added[]`   — IDs present in `currentLive` but missing from
+ *                    `frozenSpecsCovered`
+ *   - `removed[]` — IDs present in `frozenSpecsCovered` but missing from
+ *                    `currentLive`
+ *   - `drifted`   — true when either array is non-empty
+ *
+ * Both output arrays are sorted lexicographically and deduplicated.
+ */
+export function checkSpecsCoveredDrift(
+  frozenSpecsCovered: readonly string[],
+  currentLive: readonly string[],
+): SpecsCoveredDriftResult {
+  const frozenSet = new Set(frozenSpecsCovered);
+  const liveSet = new Set(currentLive);
+  const added = [...liveSet]
+    .filter((id) => !frozenSet.has(id))
+    .sort((a, b) => a.localeCompare(b));
+  const removed = [...frozenSet]
+    .filter((id) => !liveSet.has(id))
+    .sort((a, b) => a.localeCompare(b));
+  return {
+    drifted: added.length > 0 || removed.length > 0,
+    added,
+    removed,
+  };
+}

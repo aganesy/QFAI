@@ -1,10 +1,21 @@
 /**
- * Tests for resolvePrimaryPrototypingSpec (v1.8.4).
+ * Tests for resolvePrimaryPrototypingSpec (v1.8.4) and
+ * resolveAllUiBearingSpecs / checkSpecsCoveredDrift (spec-0012 CHG-002).
  *
- * Resolution order:
+ * Single-spec (legacy):
  *   1. config.prototyping.primarySpecId
  *   2. Marker scan (surface_type: ui-bearing or "prototyping" in title)
  *   3. undefined
+ *
+ * Multi-spec (current):
+ *   - `resolveAllUiBearingSpecs` returns every UI-bearing spec via a
+ *     `surface_type: ui-bearing` marker in `01_Spec.md` OR a matching
+ *     `.qfai/contracts/ui/<spec-id>*.yaml` contract.
+ *
+ * Drift check:
+ *   - `checkSpecsCoveredDrift` compares a caller-provided frozen
+ *     snapshot against a caller-provided live snapshot; the FROZEN value
+ *     is the baseline (mid-run filesystem mutation is ignored).
  */
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -13,7 +24,11 @@ import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import type { QfaiConfig } from "../../../src/core/config.js";
-import { resolvePrimaryPrototypingSpec } from "../../../src/core/prototyping/specResolution.js";
+import {
+  resolveAllUiBearingSpecs,
+  resolvePrimaryPrototypingSpec,
+} from "../../../src/core/prototyping/specResolution.js";
+import { checkSpecsCoveredDrift } from "../../../src/core/prototyping/specsCovered.js";
 
 const tempDirs: string[] = [];
 
@@ -146,5 +161,230 @@ describe("resolvePrimaryPrototypingSpec", () => {
     await seedSpec(root, "0002", "# spec-0002\n\nAlso no marker.\n");
     const result = await resolvePrimaryPrototypingSpec(root, makeConfig());
     expect(result).toBeUndefined();
+  });
+});
+
+// -- resolveAllUiBearingSpecs ---------------------------------------------
+
+async function seedUiContract(
+  root: string,
+  specNumber: string,
+  filename?: string,
+): Promise<void> {
+  const uiDir = path.join(root, ".qfai/contracts/ui");
+  await mkdir(uiDir, { recursive: true });
+  const name = filename ?? `${specNumber}.yaml`;
+  await writeFile(
+    path.join(uiDir, name),
+    `# QFAI-CONTRACT-ID: CON-UI-${specNumber}\nscreens: []\n`,
+    "utf-8",
+  );
+}
+
+describe("resolveAllUiBearingSpecs", () => {
+  // TC-0012-0354 — basic: 3 UI-bearing + 2 non-UI fixture → 3 specs
+  it("returns every UI-bearing spec in the consumer project in one call", async () => {
+    const root = await newTempDir();
+    // 3 UI-bearing: 0001 via marker, 0007 via contract fallback, 0012 via marker
+    await seedSpec(
+      root,
+      "0001",
+      "---\nsurface_type: ui-bearing\n---\n\n# spec-0001\n",
+    );
+    await seedSpec(root, "0007", "# spec-0007\n\nNon-marker body.\n");
+    await seedUiContract(root, "0007", "ui-0007-checkout.yaml");
+    await seedSpec(
+      root,
+      "0012",
+      "---\nsurface_type: ui-bearing\n---\n\n# spec-0012\n",
+    );
+    // 2 non-UI: 0003 (no marker, no contract), 0009 (no marker, no contract)
+    await seedSpec(root, "0003", "# spec-0003\n\nBackend-only spec.\n");
+    await seedSpec(root, "0009", "# spec-0009\n\nAnother non-UI.\n");
+
+    const result = await resolveAllUiBearingSpecs(root, makeConfig());
+    expect(result).toEqual(["0001", "0007", "0012"]);
+  });
+
+  it("returns empty array when no UI-bearing specs exist", async () => {
+    const root = await newTempDir();
+    await seedSpec(root, "0001", "# spec-0001\n\nBackend.\n");
+    await seedSpec(root, "0002", "# spec-0002\n\nAlso backend.\n");
+    const result = await resolveAllUiBearingSpecs(root, makeConfig());
+    expect(result).toEqual([]);
+  });
+
+  it("returns empty array when no specs directory exists", async () => {
+    const root = await newTempDir();
+    await mkdir(path.join(root, ".qfai/specs"), { recursive: true });
+    const result = await resolveAllUiBearingSpecs(root, makeConfig());
+    expect(result).toEqual([]);
+  });
+
+  it("accepts the contract fallback even when 01_Spec.md has no marker", async () => {
+    const root = await newTempDir();
+    await seedSpec(root, "0042", "# spec-0042\n\nNo marker.\n");
+    await seedUiContract(root, "0042");
+    const result = await resolveAllUiBearingSpecs(root, makeConfig());
+    expect(result).toEqual(["0042"]);
+  });
+
+  it("sorts the returned spec IDs lexicographically", async () => {
+    const root = await newTempDir();
+    await seedSpec(
+      root,
+      "0099",
+      "---\nsurface_type: ui-bearing\n---\n\n# spec-0099\n",
+    );
+    await seedSpec(
+      root,
+      "0007",
+      "---\nsurface_type: ui-bearing\n---\n\n# spec-0007\n",
+    );
+    await seedSpec(
+      root,
+      "0011",
+      "---\nsurface_type: ui-bearing\n---\n\n# spec-0011\n",
+    );
+    const result = await resolveAllUiBearingSpecs(root, makeConfig());
+    expect(result).toEqual(["0007", "0011", "0099"]);
+  });
+
+  it("deduplicates when both the marker and the contract are present", async () => {
+    const root = await newTempDir();
+    await seedSpec(
+      root,
+      "0005",
+      "---\nsurface_type: ui-bearing\n---\n\n# spec-0005\n",
+    );
+    await seedUiContract(root, "0005");
+    const result = await resolveAllUiBearingSpecs(root, makeConfig());
+    expect(result).toEqual(["0005"]);
+  });
+
+  // TC-0012-0391 — property: set equality over arbitrary fixtures
+  it("property: for every fixture, result ≡ project.specs.filter(s => s.ui_bearing === true)", async () => {
+    type FixtureSpec = { specNumber: string; ui_bearing: boolean; via: "marker" | "contract" };
+    const fixtures: FixtureSpec[][] = [
+      [
+        { specNumber: "0001", ui_bearing: true, via: "marker" },
+        { specNumber: "0002", ui_bearing: false, via: "marker" },
+        { specNumber: "0003", ui_bearing: true, via: "contract" },
+      ],
+      [
+        { specNumber: "0010", ui_bearing: false, via: "marker" },
+        { specNumber: "0011", ui_bearing: false, via: "marker" },
+      ],
+      [
+        { specNumber: "0050", ui_bearing: true, via: "marker" },
+        { specNumber: "0060", ui_bearing: true, via: "contract" },
+        { specNumber: "0070", ui_bearing: true, via: "marker" },
+        { specNumber: "0080", ui_bearing: false, via: "marker" },
+      ],
+      [],
+    ];
+
+    for (const fixture of fixtures) {
+      const root = await newTempDir();
+      await mkdir(path.join(root, ".qfai/specs"), { recursive: true });
+      for (const spec of fixture) {
+        if (spec.ui_bearing && spec.via === "marker") {
+          await seedSpec(
+            root,
+            spec.specNumber,
+            `---\nsurface_type: ui-bearing\n---\n\n# spec-${spec.specNumber}\n`,
+          );
+        } else {
+          await seedSpec(
+            root,
+            spec.specNumber,
+            `# spec-${spec.specNumber}\n\nBody.\n`,
+          );
+        }
+        if (spec.ui_bearing && spec.via === "contract") {
+          await seedUiContract(root, spec.specNumber);
+        }
+      }
+
+      const expected = fixture
+        .filter((s) => s.ui_bearing === true)
+        .map((s) => s.specNumber)
+        .sort((a, b) => a.localeCompare(b));
+      const actual = await resolveAllUiBearingSpecs(root, makeConfig());
+
+      // Order-insensitive set equality (helper already sorts, but the
+      // property is stated in set terms).
+      expect([...actual].sort((a, b) => a.localeCompare(b))).toEqual(expected);
+      expect(new Set(actual)).toEqual(new Set(expected));
+    }
+  });
+});
+
+// -- checkSpecsCoveredDrift ------------------------------------------------
+
+describe("checkSpecsCoveredDrift", () => {
+  it("returns drifted=false when frozen and live sets match", () => {
+    const result = checkSpecsCoveredDrift(["0001", "0007"], ["0007", "0001"]);
+    expect(result).toEqual({ drifted: false, added: [], removed: [] });
+  });
+
+  it("flags additions present in live but missing from frozen", () => {
+    const result = checkSpecsCoveredDrift(["0001"], ["0001", "0007", "0012"]);
+    expect(result).toEqual({ drifted: true, added: ["0007", "0012"], removed: [] });
+  });
+
+  it("flags removals present in frozen but missing from live", () => {
+    const result = checkSpecsCoveredDrift(["0001", "0007", "0012"], ["0007"]);
+    expect(result).toEqual({ drifted: true, added: [], removed: ["0001", "0012"] });
+  });
+
+  it("flags both additions and removals", () => {
+    const result = checkSpecsCoveredDrift(["0001", "0007"], ["0007", "0042"]);
+    expect(result).toEqual({ drifted: true, added: ["0042"], removed: ["0001"] });
+  });
+
+  // TC-0012-0386 — drift check reads frozen set, not live filesystem.
+  // The fixture mutates the live filesystem mid-test; the drift comparison
+  // must still reflect only the values passed in at call time.
+  it("reads the cycle-0 frozen set even when the live filesystem mutates mid-test", async () => {
+    const root = await newTempDir();
+    // Seed two UI-bearing specs and freeze their IDs.
+    await seedSpec(
+      root,
+      "0001",
+      "---\nsurface_type: ui-bearing\n---\n\n# spec-0001\n",
+    );
+    await seedSpec(
+      root,
+      "0007",
+      "---\nsurface_type: ui-bearing\n---\n\n# spec-0007\n",
+    );
+    const frozen = await resolveAllUiBearingSpecs(root, makeConfig());
+    expect(frozen).toEqual(["0001", "0007"]);
+
+    // Mid-test mutation: add a third UI-bearing spec to the live tree.
+    await seedSpec(
+      root,
+      "0042",
+      "---\nsurface_type: ui-bearing\n---\n\n# spec-0042\n",
+    );
+    // A subsequent live read sees the mutation.
+    const live = await resolveAllUiBearingSpecs(root, makeConfig());
+    expect(live).toEqual(["0001", "0007", "0042"]);
+
+    // The drift check compares against the FROZEN value (captured before
+    // the mutation), proving the helper does not re-derive a baseline
+    // from disk.
+    const driftAgainstFrozen = checkSpecsCoveredDrift(frozen, live);
+    expect(driftAgainstFrozen).toEqual({
+      drifted: true,
+      added: ["0042"],
+      removed: [],
+    });
+
+    // Sanity: if the caller mistakenly passed `live` as both sides,
+    // the drift would vanish — proving frozen is the load-bearing input.
+    const driftAgainstLive = checkSpecsCoveredDrift(live, live);
+    expect(driftAgainstLive.drifted).toBe(false);
   });
 });

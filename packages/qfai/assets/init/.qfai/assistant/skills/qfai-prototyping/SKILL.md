@@ -56,7 +56,11 @@ current `DESIGN.md` hash does not match the lock.
 
 ### Step 2-A — Verify Contract Preconditions
 
-- Confirm the selected spec is UI-bearing and has a supported `surface`.
+- The skill resolves **every UI-bearing spec in the consumer project in
+  one invocation** via `resolveAllUiBearingSpecs()`
+  (`core/prototyping/specResolution.ts`). The operator is never prompted
+  to pick a single spec; zero UI-bearing specs is a deterministic no-op
+  exit `0`. Confirm each resolved spec has a supported `surface`.
 - Confirm root `DESIGN.md` and `.qfai/contracts/design/DESIGN.md.lock.yaml`
   both exist; confirm `.qfai/contracts/ui/*.yaml` exists.
 - Run `qfai prototyping preflight --target-url <url>` (alias for

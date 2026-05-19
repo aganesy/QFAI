@@ -41,6 +41,45 @@
   serial-budget structural shape, and `shouldStop` quantitative-gate
   absence assertions. spec-0012 TDD-0373/0374/0375/0378.
 
+### Added (Wave 1 — new core modules)
+
+- New module `core/prototyping/iterationPaths.ts`: per-spec iter-NN helpers
+  (`iterationDir(idx, specId)` → `.qfai/evidence/prototyping/iter-NN/spec-NNNN`,
+  `iterationReviewPath(idx, specId, screen)`, `findIterationReviewFiles(root, idx)`,
+  `findStaleIterDirs(root)` + `deleteStaleIterDirs(root)` matching only
+  `/^iter-\d{2,}$/`, `parseIterationReviewPath(rel)` round-trip). spec-0012
+  TDD-0389/0390/0391/0392 (TC-0012-0378/0379/0380/0392).
+- New module `core/prototyping/licenseVerify.ts`: pure
+  `licenseVerify(imageSources, catalog)` returning `{ok:true}` when every
+  source is allowlisted and license is in the catalog tier, otherwise
+  `{ok:false, errors:[…]}` with structured `{code:"license-not-allowlisted"|"license-tier-unknown", …}`
+  entries. Exit-code mapping (66) is caller responsibility. spec-0012
+  TDD-0393/0394 (TC-0012-0370/0395).
+- New module `core/prototyping/reviewerDispatch.ts`: interface stub
+  `dispatchReviewerToPair(specId, screen, options)` with injectable
+  `playwrightRunner`, attempt-limit retry, structured `ReviewerOutcome`.
+  Real Playwright wiring deferred. spec-0012 TDD-0399/0400
+  (TC-0012-0362/0363); TDD-0401/0402 (TC-0012-0374/0383) deferred to a
+  subsequent integration cycle.
+
+### Changed (Wave 1 — specResolution + skill asset)
+
+- Extend `core/prototyping/specResolution.ts` with
+  `resolveAllUiBearingSpecs(root, config)`. Detection: `surface_type: ui-bearing`
+  marker in `01_Spec.md`; fallback to matching `.qfai/contracts/ui/<spec-id>.yaml`.
+  Returns deduped lex-sorted spec IDs. Existing single-spec
+  `resolvePrimaryPrototypingSpec` preserved (deprecated; removal in next
+  cycle when callers migrate). spec-0012 TDD-0395/0398
+  (TC-0012-0354/0391).
+- Extend `core/prototyping/specsCovered.ts` with
+  `checkSpecsCoveredDrift(frozenSpecsCovered, currentLive)`. Pure; uses the
+  frozen value as baseline. spec-0012 TDD-0397 (TC-0012-0386).
+- Rewrite the `qfai-prototyping` SKILL.md Step 2-A bullet (asset under
+  `assets/init/.qfai/assistant/skills/qfai-prototyping/SKILL.md`): remove
+  "confirm the selected spec is UI-bearing" prompt language; replace with
+  multi-spec wording that references `resolveAllUiBearingSpecs()` and
+  states the zero-specs no-op exit. spec-0012 TDD-0396 (TC-0012-0356).
+
 ### Changed (spec / contract only — implementation lands separately)
 
 - **`/qfai-prototyping` redefinition (CHG-002, spec-0012)**: spec pack rewritten
