@@ -787,6 +787,54 @@
 - Test file: `packages/qfai/tests/cli/commands/prototypingCertify.test.ts`
 - Verify per-spec UI contract scoping at the per-(spec × screen) presence gate: seed a multi-spec frozen set `["0001","0002"]` with per-spec contracts (`.qfai/contracts/ui/spec-0001.yaml` declares ONLY `home`; `.qfai/contracts/ui/spec-0002.yaml` declares ONLY `settings`); seed only the per-spec-scoped review.json files (`spec-0001/home.review.json` + `spec-0002/settings.review.json`); assert certify exits 0 — the legacy cross-product would have demanded `spec-0001/settings.review.json` + `spec-0002/home.review.json` that should never exist per the per-spec contract. Companion negative `it` confirms presence is still enforced WITHIN each spec's declared set (spec-0001 declares two screens; missing one still fails). Pre-fix `prototypingCertify.ts` always iterated the project-wide `screenContracts` for every frozen spec, producing spurious cross-product rejections for projects with non-uniform per-spec screen sets.
 
+## TC-0012-0408
+
+- EX-Ref: EX-0012-0138
+- AC-Refs: AC-0012-0037
+- Type: integration
+- Test file: `packages/qfai/tests/cli/commands/prototypingIterate.test.ts`
+- Verify `resolvePrimaryPrototypingSpec` returns the UI-contract-only spec when neither the strict `surface_type: ui-bearing` marker, the legacy `# … Prototyping …` title heading, nor `qfai.config.yaml#prototyping.primarySpecId` is set — the spec is located by a matching `.qfai/contracts/ui/<spec-id>*.yaml`. Pre-fix the primary resolver returned `undefined` for contract-only projects, so iterate exited 2 with "no primary UI-bearing prototyping spec found" right after the multi-spec precheck cleared. 8th-wave Fix 1 added the contract fallback; this TC pins the spec → test traceability for the previously-unannotated describe block (10th-wave Fix E + Fix I labels the source to `"contract-fallback"`).
+
+## TC-0012-0409
+
+- EX-Ref: EX-0012-0123, EX-0012-0140
+- AC-Refs: AC-0012-0037
+- Type: unit
+- Test file: `packages/qfai/tests/cli/commands/prototypingIterate.test.ts`
+- Verify the `resolveSurfaceUnion` helper (extracted from `evaluateZeroUiBearingPrecheck` in 8th-wave Fix 7) composes the deterministic UNION of every UI-bearing surface signal (strict `surface_type: ui-bearing` frontmatter / UI-contract-only fallback / legacy title-marker / configured-`primarySpecId`-on-disk) and returns it sorted lexicographically + deduplicated. Five `it` blocks cover: (a) empty result when no signal exists; (b) UNION composition across strict + title-marker + primarySpecId-on-disk; (c) UI-contract-only surface recognised via `resolveAllUiBearingSpecs`; (d) deduplication when the same spec id appears via multiple signals; (e) primarySpecId pin ignored when the spec dir is absent. This TC pins the spec → test traceability for the previously-unannotated describe block (10th-wave Fix E).
+
+## TC-0012-0410
+
+- EX-Ref: EX-0012-0123, EX-0012-0140
+- AC-Refs: AC-0012-0049
+- Type: integration
+- Test file: `packages/qfai/tests/cli/commands/prototypingIterate.test.ts`
+- Verify the cycle ≥1 mid-loop spec-set drift detector observes the live multi-spec UNION (via `resolveSurfaceUnion`) and not just the resolved primary, so a new strict-marker spec planted mid-loop with a LARGER id than the frozen primary (which keeps the primary resolver's pick stable) is still caught as drift with `new=[<new-id>]`. Pre-fix (10th-wave dead-branch flagged by architecture-reviewer r3265257258 / r3265251225 / r3265260466) the drift detector compared frozen=[primary] vs live=[primary] (same single-spec input passed twice) and missed the addition silently. Frozen set is preserved (no rewrite); drift is deferred to the next `--cycle 0` invocation.
+
+## TC-0012-0411
+
+- EX-Ref: EX-0012-0138
+- AC-Refs: AC-0012-0043
+- Type: unit
+- Test file: `packages/qfai/tests/core/prototyping/licenseVerify.test.ts`
+- Verify per-source URL host binding: when the catalog declares `sourceHosts[source]`, an `imageSources[]` entry whose URL host (`new URL(url).hostname`) is not in the per-source allowlist is rejected with `{code: "license-host-mismatch", source, expectedHosts, url}`. Three `it` blocks cover: (a) rejection of an unapproved host even when the source label is allowlisted (e.g. `source: "unsplash"` + `url: "https://unapproved.example/img.jpg"`); (b) acceptance of a URL whose host is in the per-source allowlist; (c) case-insensitive host comparison. Closes the source-label-only-bypass flagged by codex r3265260657 (P1).
+
+## TC-0012-0412
+
+- EX-Ref: EX-0012-0138
+- AC-Refs: AC-0012-0043
+- Type: unit
+- Test file: `packages/qfai/tests/core/prototyping/licenseVerify.test.ts`
+- Verify backward compatibility of the host-binding feature: catalogs that do not declare `sourceHosts` (pre-host-pinning shape) continue to validate every `imageSources[]` entry on the existing source-allowlist + tier-membership rules alone, regardless of host. Pins the migration contract so an older `frozenLicenseCatalog` round-trips cleanly through cycle ≥1 license verify.
+
+## TC-0012-0413
+
+- EX-Ref: EX-0012-0138
+- AC-Refs: AC-0012-0043
+- Type: integration
+- Test file: `packages/qfai/tests/cli/commands/prototypingIterate.test.ts`
+- Verify the iterate command hard-stops with exit 2 when `prototyping.json#imageSources[]` contains a malformed entry (missing or non-string `url` / `source` / `license`). Pre-fix the malformed entries were silently dropped by `collectImageSources`, and when every entry was malformed the array reduced to `[]`, skipping the exit-66 license gate entirely. Two `it` blocks cover: (a) entry missing `license`; (b) entry whose `url` is a number. Each must surface stderr naming the offending index (`imageSources[0]`) and the offending field. Closes codex r3265260665 (P2).
+
 ## Legacy Coverage Continuity
 
 - The legacy baseline test-case identifier space remains reserved for existing implementation/test slices.

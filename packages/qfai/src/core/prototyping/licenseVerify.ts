@@ -24,12 +24,30 @@ export type ImageSource = {
 export type LicenseCatalog = {
   readonly allowedSources: readonly string[];
   readonly licenseTiers: { readonly [source: string]: readonly string[] };
+  /**
+   * Optional per-source URL host allowlist. When present, every
+   * `imageSources[]` entry's URL host (`new URL(url).hostname`) MUST be
+   * one of the strings in `sourceHosts[entry.source]`; otherwise the
+   * verifier emits `license-host-mismatch`. Closes the
+   * source-label-only-bypass flagged by codex r3265260657 (P1): a
+   * caller could claim `source: "unsplash"` while pointing at an
+   * arbitrary host. Backward-compat: if `sourceHosts` is undefined or
+   * the per-source list is undefined, the host check is skipped (old
+   * behaviour).
+   */
+  readonly sourceHosts?: { readonly [source: string]: readonly string[] };
 };
 
 export type LicenseVerifyError =
   | { code: "license-not-allowlisted"; source: string; url: string }
   | { code: "license-tier-unknown"; source: string; license: string; url: string }
-  | { code: "license-non-https-url"; source: string; url: string };
+  | { code: "license-non-https-url"; source: string; url: string }
+  | {
+      code: "license-host-mismatch";
+      source: string;
+      expectedHosts: readonly string[];
+      url: string;
+    };
 
 export type LicenseVerifyResult =
   | { ok: true }
@@ -48,6 +66,19 @@ function isHttpsUrl(url: string): boolean {
     return new URL(url).protocol === "https:";
   } catch {
     return false;
+  }
+}
+
+/**
+ * Returns the lowercased hostname of `url` when parseable, else `null`.
+ * Lowercased so host comparison is case-insensitive (RFC 3986: host is
+ * case-insensitive).
+ */
+function urlHost(url: string): string | null {
+  try {
+    return new URL(url).hostname.toLowerCase();
+  } catch {
+    return null;
   }
 }
 
@@ -84,6 +115,21 @@ export function licenseVerify(
     if (!allowed.has(source)) {
       errors.push({ code: "license-not-allowlisted", source, url });
       continue;
+    }
+    // 10th-wave Fix G (codex r3265260657, P1): if the catalog declares
+    // `sourceHosts[source]`, bind the claimed source to acceptable URL
+    // hosts so a caller cannot claim `source: "unsplash"` with a URL
+    // pointing at `https://unapproved.example/img.jpg`. When the
+    // `sourceHosts` block (or the per-source entry) is absent the
+    // check is skipped — backward-compat with catalogs that pre-date
+    // host pinning.
+    const expectedHosts = catalog.sourceHosts?.[source];
+    if (expectedHosts && expectedHosts.length > 0) {
+      const host = urlHost(url);
+      if (host === null || !expectedHosts.includes(host)) {
+        errors.push({ code: "license-host-mismatch", source, expectedHosts, url });
+        continue;
+      }
     }
     const tiers = catalog.licenseTiers[source];
     if (!tiers || !tiers.includes(license)) {

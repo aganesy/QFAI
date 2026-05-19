@@ -49,6 +49,7 @@ completion gates SHOULD treat the absence of a row here as "closed".
 | TDD-0384 | TC-0012-0377 | todo   | prototyping-cli | Per-spec iter-dir layout migration (iterate-side; certify-side already gates on per-spec).    |
 | TDD-0401 | TC-0012-0374 | todo   | prototyping-cli | Reviewer Playwright session failure hard-stop end-to-end (requires live Playwright wiring).   |
 | TDD-0402 | TC-0012-0383 | todo   | prototyping-cli | Reviewer-driven menu-entry navigation count (requires live Playwright wiring).                |
+| (none)   | (none)       | todo   | prototyping-cli | Cycle 9 idempotency: when `--cycle 9` is called on a non-converged loop whose `iterations.length === 10`, the CLI returns exit 65 only via the cycle-mismatch path (expectedNextCycle becomes 10, capped at 9). Operator-facing surface should emit exit 65 directly from a single `--cycle 9` invocation regardless of stateful continuation (10th-wave Fix J follow-up; SKILL.md was updated to drop the stateful re-run workaround). |
 
 Coupled production wire-ins (no production caller yet; tests-only):
 

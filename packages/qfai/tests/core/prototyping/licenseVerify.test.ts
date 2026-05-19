@@ -222,3 +222,87 @@ describe("licenseVerify — non-https URL guard", () => {
     ]);
   });
 });
+
+// 10th-wave Fix G (codex r3265260657, P1): when the catalog declares
+// `sourceHosts`, the URL host must match the per-source allowlist.
+// QFAI:SPEC-0012:TC-0012-0411
+describe("licenseVerify — per-source URL host binding (TC-0012-0411)", () => {
+  const hostBoundCatalog: LicenseCatalog = {
+    allowedSources: ["unsplash", "pexels"],
+    licenseTiers: {
+      unsplash: ["unsplash-license", "free"],
+      pexels: ["pexels-free"],
+    },
+    sourceHosts: {
+      unsplash: ["images.unsplash.com"],
+      pexels: ["images.pexels.com"],
+    },
+  };
+
+  it("rejects an unapproved host even when source label is allowlisted", () => {
+    const sources: ImageSource[] = [
+      {
+        url: "https://unapproved.example/img.jpg",
+        source: "unsplash",
+        license: "free",
+      },
+    ];
+
+    const result = licenseVerify(sources, hostBoundCatalog);
+    expect(result.ok).toBe(false);
+    if (result.ok) {
+      throw new Error("expected non-ok result");
+    }
+    expect(result.errors).toEqual([
+      {
+        code: "license-host-mismatch",
+        source: "unsplash",
+        expectedHosts: ["images.unsplash.com"],
+        url: "https://unapproved.example/img.jpg",
+      },
+    ]);
+  });
+
+  it("accepts a URL whose host is in the per-source allowlist", () => {
+    const sources: ImageSource[] = [
+      {
+        url: "https://images.unsplash.com/photo/abc",
+        source: "unsplash",
+        license: "free",
+      },
+    ];
+
+    expect(licenseVerify(sources, hostBoundCatalog)).toEqual({ ok: true });
+  });
+
+  it("host comparison is case-insensitive", () => {
+    const sources: ImageSource[] = [
+      {
+        url: "https://IMAGES.UNSPLASH.COM/photo/abc",
+        source: "unsplash",
+        license: "free",
+      },
+    ];
+
+    expect(licenseVerify(sources, hostBoundCatalog)).toEqual({ ok: true });
+  });
+});
+
+// 10th-wave Fix G backward-compat: catalogs that pre-date the
+// `sourceHosts` field continue to work — the host check is skipped.
+// QFAI:SPEC-0012:TC-0012-0412
+describe("licenseVerify — backward compat: catalog without sourceHosts (TC-0012-0412)", () => {
+  it("does not run the host check when sourceHosts is undefined", () => {
+    // No `sourceHosts` key — every URL on an allowlisted source +
+    // known tier should pass, regardless of host.
+    const sources: ImageSource[] = [
+      {
+        url: "https://arbitrary.example/img.jpg",
+        source: "unsplash",
+        license: "free",
+      },
+    ];
+
+    expect(licenseVerify(sources, catalog)).toEqual({ ok: true });
+  });
+});

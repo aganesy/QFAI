@@ -78,7 +78,7 @@ current `DESIGN.md` hash does not match the lock.
 | Step   | Actor                                                     | Action                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        | Output                                   |
 | ------ | --------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------- |
 | C0     | product-experience-architect                              | `qfai prototyping iterate --cycle 0 --target-url <url>`. CLI computes `sha256(DESIGN.md)`; lock match enforced. Generator reads contracts + `references/generator-prompt.md` + DESIGN.md tokens and writes `.qfai/prototypes/iter-00/index.html`. Capture + review → `iter-00/review.json`. Append entry; commit `prototyping: iter-00`.                                                                                                                                                                                      | iter-00, prototyping.json#designMdSha256 |
-| C1..9  | (a) devops, (b) reviewer, (c) orchestrator, (d) generator | (a) playwright-cli writes `iter-NN/<screen>.{png,html}`; (b) reviewer writes `iter-NN/review.json` per `references/reviewer-prompt.md` (4 UX axes ordinal, 200..500 word critique, `layoutAntiPatternsDetected[]`, `designMdViolations[]`, `pivotDirective`); (c) update `prototyping.json#iterations[]` + `progress.md`, commit `prototyping: iter-NN`; (d) `qfai prototyping iterate --cycle <n+1>` decides exit. After C9 do NOT call `--cycle 10` (the CLI rejects out-of-range cycles); if convergence has not been reached by then, re-run `qfai prototyping iterate --cycle 9` to observe the max-iterations stop (exit 65) or proceed to the H handoff step with iter-09 as the final iteration.                                                                                                           | iter-NN, exit ∈ {0, 64, 65, 2}           |
+| C1..9  | (a) devops, (b) reviewer, (c) orchestrator, (d) generator | (a) playwright-cli writes `iter-NN/<screen>.{png,html}`; (b) reviewer writes `iter-NN/review.json` per `references/reviewer-prompt.md` (4 UX axes ordinal, 200..500 word critique, `layoutAntiPatternsDetected[]`, `designMdViolations[]`, `pivotDirective`); (c) update `prototyping.json#iterations[]` + `progress.md`, commit `prototyping: iter-NN`; (d) `qfai prototyping iterate --cycle <n+1>` decides exit. After C9 do NOT call `--cycle 10` — the CLI rejects out-of-range cycles. See the "Cycle 9 budget exhaustion" subsection below for recovery. | iter-NN, exit ∈ {0, 64, 65, 2}           |
 | H      | orchestrator                                              | Mirror latest to `.qfai/prototypes/final/index.html`. Per `references/handoff.md`: write `design-system.yaml` (deterministic DESIGN.md token mirror, no HTML extraction) + `prototype-handoff.yaml`. Run `qfai validate --profile prototyping --fail-on error` (produces `validate.json` with `counts.error === 0`), then `/qfai-verify` (produces `verify.json` with `status === "PASS"`), then `qfai prototyping certify` — certify requires both gate files to be present and passing before it will seal the certificate. | DONE                                     |
 
 **Exit codes**: `0` continue (read `pivotDirective`); `64` convergence (4
@@ -86,6 +86,17 @@ axes `exceptional` AND `layoutAntiPatternsDetected` empty AND
 `designMdViolations` empty); `65` 10 cycles reached; `2` input error
 (incl. DESIGN.md hash mismatch — re-run prototyping from cycle 0 after
 editing `DESIGN.md` and refreezing the lock via `/qfai-sdd` Phase 0).
+
+### Cycle 9 budget exhaustion
+
+If convergence is not reached at iter-09, the H handoff is not
+available — the certify gate (`qfai prototyping certify --check`)
+requires convergence and will reject a non-converged final iter. The
+recovery path is to restart from cycle 0: review `DESIGN.md`, the
+pivot strategy in `references/reviewer-prompt.md`, and the latest
+`review.json` findings, then re-run `qfai prototyping iterate
+--cycle 0 --target-url <url>` to refreeze the loop. Do not attempt
+H handoff with an unconverged iter-09.
 
 ## Evaluator Inputs (Mandatory)
 

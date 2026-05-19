@@ -44,8 +44,19 @@ export type ResolvedSpec = {
   specDir: string;
   /** Absolute path to 01_Spec.md inside the spec directory. */
   specMdPath: string;
-  /** How the spec was located. */
-  source: "config" | "marker-scan";
+  /**
+   * How the spec was located.
+   *
+   * - `"config"`            — explicit `qfai.config.yaml#prototyping.primarySpecId` pin.
+   * - `"marker-scan"`       — `surface_type: ui-bearing` frontmatter OR legacy
+   *                           `# … prototyping …` title heading hit in `01_Spec.md`.
+   * - `"contract-fallback"` — neither config nor marker matched; the spec was
+   *                           located via a matching `.qfai/contracts/ui/<spec-id>*.yaml`
+   *                           contract file (extends the multi-spec
+   *                           `resolveAllUiBearingSpecs` fallback to the single-spec
+   *                           primary resolver). 10th-wave Fix I.
+   */
+  source: "config" | "marker-scan" | "contract-fallback";
 };
 
 /**
@@ -128,7 +139,10 @@ export async function resolvePrimaryPrototypingSpec(
         specId: entry.specNumber,
         specDir: entry.dir,
         specMdPath: path.join(entry.dir, "01_Spec.md"),
-        source: "marker-scan",
+        // 10th-wave Fix I: this branch locates the spec via UI contract
+        // scan, not via spec-side marker scan; relabel to keep the
+        // discriminant honest (architecture-reviewer r3265261917).
+        source: "contract-fallback",
       };
     }
   }

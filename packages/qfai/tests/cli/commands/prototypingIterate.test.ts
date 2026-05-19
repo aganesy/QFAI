@@ -2359,6 +2359,7 @@ describe("runPrototypingIterate cycle-0 frozen set (single-spec, primary resolve
 // resolver mirrors the contract fallback and contract-only projects
 // drive cycle 0 cleanly.
 describe("runPrototypingIterate cycle-0 — contract-only project resolves primary via UI contract fallback", () => {
+  // QFAI:SPEC-0012:TC-0012-0408
   it("does not exit 2 with `no primary UI-bearing` when only a `.qfai/contracts/ui/<spec-id>.yaml` declares the surface", async () => {
     const root = await newTempDir();
     await seedDesignMd(root);
@@ -2436,6 +2437,7 @@ describe("runPrototypingIterate cycle-0 — contract-only project resolves prima
 // `prototyping.primarySpecId` config pin). The extraction keeps the
 // precheck focused on its short-circuit + config-snapshot
 // responsibility; this test pins the composition rule independently.
+// QFAI:SPEC-0012:TC-0012-0409
 describe("resolveSurfaceUnion (direct unit test for the union composition rule)", () => {
   async function seedSimpleConfig(root: string, extra: string[] = []): Promise<void> {
     await writeFile(
@@ -2579,5 +2581,187 @@ describe("resolveSurfaceUnion (direct unit test for the union composition rule)"
 
     const { config } = await loadConfig(root);
     expect(await resolveSurfaceUnion(root, config)).toEqual(["0007"]);
+  });
+});
+
+// 10th-wave Fix B (architecture-reviewer r3265257258 + r3265260466,
+// MAJOR): mid-loop drift detection scope. The 8th-wave single-spec
+// freeze narrowed `frozenSpecsCovered` to the resolved primary, but
+// it ALSO dead-branched the cycle ≥1 drift detector by feeding it the
+// same single-spec live snapshot. This restores the multi-spec drift
+// gate by resolving the live UI-bearing UNION (via `resolveSurfaceUnion`)
+// at cycle ≥1 and comparing against the cycle-0 frozen primary set.
+// When a new UI-bearing spec is planted mid-loop with a LARGER id than
+// the frozen primary (so the primary resolver still returns the frozen
+// id and the primary-mismatch arm at L1196 stays silent), the drift
+// detector still fires with `new=[<new-id>]`.
+// QFAI:SPEC-0012:TC-0012-0410
+describe("runPrototypingIterate cycle >= 1 spec-set drift — new larger-id secondary spec mid-loop (TC-0012-0410)", () => {
+  it("exits 2 with 'spec-set drift detected' naming the new larger-id spec when the primary does not shift", async () => {
+    const root = await newTempDir();
+    await seedMinimalProject(root);
+    // Baseline: spec-0001 is the only UI-bearing spec (default
+    // `seedMinimalProject` writes the strict marker on spec-0001).
+    // Frozen primary = spec-0001.
+    await seedPrototypingJson(root, [
+      {
+        index: 0,
+        scores: {
+          informationArchitecture: "acceptable",
+          navigationFlow: "acceptable",
+          usability: "acceptable",
+          functionality: "acceptable",
+        },
+      },
+    ]);
+    const protoJsonPath = path.join(
+      root,
+      ".qfai/evidence/prototyping/prototyping.json",
+    );
+    const proto = JSON.parse(await readFile(protoJsonPath, "utf-8")) as Record<string, unknown>;
+    proto.specsCovered = ["0001"];
+    proto.frozenSpecsCovered = ["0001"];
+    await writeFile(protoJsonPath, JSON.stringify(proto), "utf-8");
+
+    // Plant spec-0009 with the strict UI-bearing frontmatter — LARGER
+    // id than the frozen primary 0001, so the primary resolver still
+    // returns 0001 (smallest-id strict marker wins) and the
+    // primary-mismatch arm at L1196 stays silent. Pre-fix the drift
+    // detector compared frozen=[0001] vs live=[0001] (input.specs)
+    // and missed the addition entirely; post-fix it compares
+    // frozen=[0001] vs live UNION=[0001, 0009] and fires.
+    const spec0009Dir = path.join(root, ".qfai/specs/spec-0009");
+    await mkdir(spec0009Dir, { recursive: true });
+    await writeFile(
+      path.join(spec0009Dir, "01_Spec.md"),
+      "---\nsurface_type: ui-bearing\n---\n\n# spec-0009 — new secondary\n",
+      "utf-8",
+    );
+    await writeFile(
+      path.join(spec0009Dir, "02_User-stories.md"),
+      "# stories\n",
+      "utf-8",
+    );
+
+    const logger = await import("../../../src/cli/lib/logger.js");
+    const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
+    try {
+      const exit = await runPrototypingIterate({ root, cycle: 1 });
+      expect(exit).toBe(2);
+      const stderr = errorSpy.mock.calls.map((c) => String(c[0])).join("\n");
+      expect(stderr).toMatch(/spec-set drift detected/i);
+      expect(stderr).toContain("new=[0009]");
+      // Frozen set is preserved (no rewrite); deferred to next --cycle 0.
+      const after = JSON.parse(await readFile(protoJsonPath, "utf-8")) as {
+        frozenSpecsCovered?: unknown;
+      };
+      expect(after.frozenSpecsCovered).toEqual(["0001"]);
+    } finally {
+      errorSpy.mockRestore();
+    }
+  });
+});
+
+// 10th-wave Fix H (codex r3265260665, P2): malformed `imageSources[]`
+// entries are no longer silently dropped. Pre-fix a typo such as
+// `licence:` (British spelling) reduced the array to `[]`, skipping
+// the exit-66 license gate entirely. Post-fix the iterate command
+// returns exit 2 with stderr naming the offending index + field.
+// QFAI:SPEC-0012:TC-0012-0413
+describe("runPrototypingIterate cycle >= 1 — malformed imageSources hard-stop (TC-0012-0413)", () => {
+  it("exits 2 and names the offending index/field when an imageSources entry is missing 'license'", async () => {
+    const root = await newTempDir();
+    await seedMinimalProject(root);
+    await seedPrototypingJson(root, [
+      {
+        index: 0,
+        scores: {
+          informationArchitecture: "acceptable",
+          navigationFlow: "acceptable",
+          usability: "acceptable",
+          functionality: "acceptable",
+        },
+      },
+    ]);
+    const protoJsonPath = path.join(
+      root,
+      ".qfai/evidence/prototyping/prototyping.json",
+    );
+    const proto = JSON.parse(await readFile(protoJsonPath, "utf-8")) as Record<string, unknown>;
+    proto.frozenLicenseCatalog = {
+      allowedSources: ["unsplash", "pexels"],
+      licenseTiers: {
+        unsplash: ["unsplash-license", "free"],
+        pexels: ["pexels-free"],
+      },
+    };
+    // Single malformed entry — pre-fix this dropped to `[]` and the
+    // exit-66 gate was skipped.
+    proto.imageSources = [
+      {
+        url: "https://unsplash.com/photos/abc",
+        source: "unsplash",
+        // license intentionally missing
+        attribution: "anon",
+      },
+    ];
+    await writeFile(protoJsonPath, JSON.stringify(proto), "utf-8");
+
+    const logger = await import("../../../src/cli/lib/logger.js");
+    const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
+    try {
+      const exit = await runPrototypingIterate({ root, cycle: 1 });
+      expect(exit).toBe(2);
+      const stderr = errorSpy.mock.calls.map((c) => String(c[0])).join("\n");
+      expect(stderr).toMatch(/imageSources\[0\]/);
+      expect(stderr).toMatch(/license/);
+    } finally {
+      errorSpy.mockRestore();
+    }
+  });
+
+  it("exits 2 when imageSources[N].url is a number (not a string)", async () => {
+    const root = await newTempDir();
+    await seedMinimalProject(root);
+    await seedPrototypingJson(root, [
+      {
+        index: 0,
+        scores: {
+          informationArchitecture: "acceptable",
+          navigationFlow: "acceptable",
+          usability: "acceptable",
+          functionality: "acceptable",
+        },
+      },
+    ]);
+    const protoJsonPath = path.join(
+      root,
+      ".qfai/evidence/prototyping/prototyping.json",
+    );
+    const proto = JSON.parse(await readFile(protoJsonPath, "utf-8")) as Record<string, unknown>;
+    proto.frozenLicenseCatalog = {
+      allowedSources: ["unsplash"],
+      licenseTiers: { unsplash: ["free"] },
+    };
+    proto.imageSources = [
+      {
+        url: 42,
+        source: "unsplash",
+        license: "free",
+      },
+    ];
+    await writeFile(protoJsonPath, JSON.stringify(proto), "utf-8");
+
+    const logger = await import("../../../src/cli/lib/logger.js");
+    const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
+    try {
+      const exit = await runPrototypingIterate({ root, cycle: 1 });
+      expect(exit).toBe(2);
+      const stderr = errorSpy.mock.calls.map((c) => String(c[0])).join("\n");
+      expect(stderr).toMatch(/imageSources\[0\]/);
+      expect(stderr).toMatch(/url/);
+    } finally {
+      errorSpy.mockRestore();
+    }
   });
 });

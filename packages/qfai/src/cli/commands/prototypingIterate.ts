@@ -148,6 +148,18 @@ const DEFAULT_LICENSE_CATALOG: LicenseCatalog = {
     unsplash: ["unsplash-license", "free"],
     pexels: ["pexels-free"],
   },
+  // 10th-wave Fix G (codex r3265260657, P1): bind each allowlisted
+  // source to acceptable URL hosts so an `imageSources[]` entry that
+  // claims `source: "unsplash"` while pointing at an unapproved host
+  // is rejected with `license-host-mismatch` instead of being silently
+  // accepted on the source-label alone. Hosts list both the canonical
+  // CDN subdomain (e.g. `images.unsplash.com`) and the bare apex
+  // domain (e.g. `unsplash.com`) — both are first-party origins for
+  // the respective provider.
+  sourceHosts: {
+    unsplash: ["images.unsplash.com", "unsplash.com"],
+    pexels: ["images.pexels.com", "pexels.com"],
+  },
 };
 
 export async function runPrototypingIterate(
@@ -171,13 +183,14 @@ export async function runPrototypingIterate(
   if (precheck.shortCircuit) {
     return precheck.exitCode;
   }
-  // `earlyUiBearing` (the multi-spec UNION) is intentionally not
-  // destructured here today: cycle 0 freezes the SINGLE primary spec
-  // into both `specsCovered` and `frozenSpecsCovered`, and the cycle
-  // >= 1 drift check compares against the live primary-only snapshot.
-  // The union still lives on the precheck result so callers /
-  // diagnostics that need the bypass-detection signal can read it
-  // without re-IO; we just do not consume it on the seed-write path.
+  // The precheck returns only `earlyConfig` today — cycle 0 freezes the
+  // SINGLE primary spec into both `specsCovered` and `frozenSpecsCovered`
+  // (CHG-002), so the union the precheck computed internally is consumed
+  // there and not re-exported. The cycle >= 1 drift check re-resolves
+  // the live UI-bearing union via `resolveSurfaceUnion` directly so the
+  // drift comparison "frozen single primary vs live union" stays
+  // executable even though the freeze itself is single-spec (10th
+  // late-review wave Fix A + Fix B).
   const { earlyConfig } = precheck;
 
   // 1) Read + hash root DESIGN.md FIRST (before any per-cycle plumbing).
@@ -265,6 +278,7 @@ export async function runPrototypingIterate(
       lockSha,
       designMd,
       specs,
+      config: configResult.config,
     });
     if (gate.shortCircuit) {
       return gate.exitCode;
@@ -363,7 +377,24 @@ export async function runPrototypingIterate(
   //     left to a later batch. Tests that exercise this branch seed
   //     the field directly.
   const protoRecordForLicense = options.cycle === 0 ? null : await readPrototypingJson(protoJsonAbs);
-  const imageSources = collectImageSources(protoRecordForLicense);
+  const collected = collectImageSources(protoRecordForLicense);
+  if (!collected.ok) {
+    // 10th-wave Fix H (codex r3265260665, P2): hard-stop on malformed
+    // `imageSources[]`. Pre-fix the malformed entries were silently
+    // dropped and an all-malformed array reduced to `[]`, which then
+    // skipped the exit-66 license gate entirely. Surface each
+    // offending index + field so the operator can fix the typo
+    // (typically a misspelled `license` / `licence` swap) before the
+    // cycle proceeds.
+    error(
+      "qfai prototyping iterate: prototyping.json#imageSources is malformed — " +
+        `${collected.errors.length} error(s): ${collected.errors.join("; ")}. ` +
+        "Each entry must be a JSON object with non-empty string fields " +
+        "{url, source, license} (attribution recorded separately at certify).",
+    );
+    return 2;
+  }
+  const imageSources = collected.sources;
   if (imageSources !== null && imageSources.length > 0) {
     const catalog =
       readFrozenLicenseCatalog(protoRecordForLicense) ?? DEFAULT_LICENSE_CATALOG;
@@ -568,34 +599,95 @@ function readFrozenLicenseCatalog(record: PrototypingJsonShape | null): LicenseC
     }
     licenseTiers[k] = list;
   }
-  return { allowedSources, licenseTiers };
+  // 10th-wave Fix G: parse the optional `sourceHosts` block. Treat a
+  // missing / malformed block as "host check disabled" (backward-compat
+  // with pre-host-pinning catalogs). A malformed entry whose value is
+  // not a string[] returns `null` from the whole reader so the caller
+  // falls back to DEFAULT_LICENSE_CATALOG rather than silently
+  // shipping a half-valid frozen catalog.
+  let sourceHosts: Record<string, string[]> | undefined;
+  const rawHosts = raw.sourceHosts;
+  if (rawHosts !== undefined) {
+    if (!isRecord(rawHosts)) return null;
+    const parsedHosts: Record<string, string[]> = {};
+    for (const [k, v] of Object.entries(rawHosts)) {
+      if (!Array.isArray(v)) return null;
+      const list: string[] = [];
+      for (const entry of v) {
+        if (typeof entry !== "string" || entry.length === 0) return null;
+        list.push(entry);
+      }
+      parsedHosts[k] = list;
+    }
+    sourceHosts = parsedHosts;
+  }
+  const out: LicenseCatalog = { allowedSources, licenseTiers };
+  if (sourceHosts !== undefined) {
+    return { ...out, sourceHosts };
+  }
+  return out;
 }
+
+type CollectImageSourcesResult =
+  | { ok: true; sources: ImageSource[] | null }
+  | { ok: false; errors: string[] };
 
 /**
  * Read `imageSources` from prototyping.json and narrow each entry
  * to the strict `{url, license, attribution, source}` shape. Returns
- * `null` when the field is absent (caller skips license-verify);
- * returns an empty array when the field is present but empty (caller
- * also skips); returns a non-empty array otherwise. Malformed entries
- * are also skipped silently — a strict schema validator owns the
- * "imageSources[] is malformed" diagnostic.
+ * `{ok: true, sources: null}` when the field is absent (caller skips
+ * license-verify); `{ok: true, sources: []}` when the field is present
+ * but empty (caller also skips); `{ok: true, sources: <non-empty>}`
+ * when every entry validates.
+ *
+ * 10th-wave Fix H (codex r3265260665, P2): malformed entries are no
+ * longer silently dropped. Pre-fix, an `imageSources[]` whose entries
+ * all carried e.g. a misspelled `licence:` field reduced to an empty
+ * narrowed array, and the caller skipped the exit-66 license gate
+ * entirely. Now any non-record entry, missing field, or non-string
+ * field returns `{ok: false, errors}` listing the offending index +
+ * field; the caller surfaces a hard error and exits non-zero so the
+ * operator fixes the typo before the cycle proceeds.
  */
-function collectImageSources(record: PrototypingJsonShape | null): ImageSource[] | null {
-  if (!record) return null;
+function collectImageSources(record: PrototypingJsonShape | null): CollectImageSourcesResult {
+  if (!record) return { ok: true, sources: null };
   const raw = record.imageSources;
-  if (!Array.isArray(raw)) return null;
+  if (raw === undefined) return { ok: true, sources: null };
+  if (!Array.isArray(raw)) {
+    return {
+      ok: false,
+      errors: ["imageSources must be an array (got non-array value)"],
+    };
+  }
   const out: ImageSource[] = [];
-  for (const entry of raw) {
-    if (!isRecord(entry)) continue;
+  const errors: string[] = [];
+  raw.forEach((entry, index) => {
+    if (!isRecord(entry)) {
+      errors.push(`imageSources[${index}]: entry is not a JSON object`);
+      return;
+    }
     const url = entry.url;
     const source = entry.source;
     const license = entry.license;
-    if (typeof url !== "string" || typeof source !== "string" || typeof license !== "string") {
-      continue;
+    const missing: string[] = [];
+    const urlOk = typeof url === "string" && url.length > 0;
+    const sourceOk = typeof source === "string" && source.length > 0;
+    const licenseOk = typeof license === "string" && license.length > 0;
+    if (!urlOk) missing.push("url");
+    if (!sourceOk) missing.push("source");
+    if (!licenseOk) missing.push("license");
+    if (!urlOk || !sourceOk || !licenseOk) {
+      errors.push(
+        `imageSources[${index}]: missing or non-string required field(s): ${missing.join(", ")}`,
+      );
+      return;
     }
     out.push({ url, source, license });
+  });
+  if (errors.length > 0) {
+    return { ok: false, errors };
   }
-  return out;
+  return { ok: true, sources: out };
 }
 
 function arraysShallowEqual(a: readonly string[], b: readonly string[]): boolean {
@@ -680,6 +772,17 @@ async function writeSeedMetadata(protoJsonAbs: string, seed: SeedMetadata): Prom
     licenseTiers: Object.fromEntries(
       Object.entries(seed.frozenLicenseCatalog.licenseTiers).map(([k, v]) => [k, [...v]]),
     ),
+    // 10th-wave Fix G: persist the per-source host allowlist when
+    // present so cycle ≥1 license-verify reads the FROZEN host
+    // binding (immutable through the loop). Older catalogs without
+    // sourceHosts round-trip cleanly (the field is omitted).
+    ...(seed.frozenLicenseCatalog.sourceHosts !== undefined
+      ? {
+          sourceHosts: Object.fromEntries(
+            Object.entries(seed.frozenLicenseCatalog.sourceHosts).map(([k, v]) => [k, [...v]]),
+          ),
+        }
+      : {}),
   };
   await mkdir(path.dirname(protoJsonAbs), { recursive: true });
   await writeFile(protoJsonAbs, `${JSON.stringify(body, null, 2)}\n`, "utf-8");
@@ -903,7 +1006,6 @@ type ZeroUiBearingPrecheckResult =
   | {
       shortCircuit: false;
       earlyConfig: ConfigLoadResult;
-      earlyUiBearing: string[];
     };
 
 /**
@@ -942,7 +1044,6 @@ async function evaluateZeroUiBearingPrecheck(
   return {
     shortCircuit: false,
     earlyConfig,
-    earlyUiBearing: unionSpecs,
   };
 }
 
@@ -966,10 +1067,11 @@ async function evaluateZeroUiBearingPrecheck(
  * Extracted from `evaluateZeroUiBearingPrecheck` so the union
  * composition rule is independently unit-testable and the precheck
  * stays focused on its short-circuit / config-snapshot responsibility.
- */
-/**
+ *
  * @internal Exported for direct unit-testing of the union composition
- * rule (8th-wave Fix 7). Not part of the package's public surface.
+ * rule (8th-wave Fix 7) and so the cycle ≥1 drift gate can re-resolve
+ * the live multi-spec union (10th-wave Fix B). Not part of the
+ * package's public surface.
  */
 export async function resolveSurfaceUnion(
   root: string,
@@ -1005,6 +1107,7 @@ type CycleGteOneGateInput = {
   lockSha: string | null;
   designMd: DesignMd;
   specs: readonly string[];
+  config: ConfigLoadResult["config"];
 };
 
 type CycleGteOneGateResult =
@@ -1206,23 +1309,24 @@ async function evaluateCycleGteOneGate(
   // Mid-run spec-set drift check.
   //
   // The cycle-0 frozen `frozenSpecsCovered` set is the SSOT for what
-  // the loop is reviewing. If the primary spec the resolver picks today
-  // is no longer present in the frozen set (or vice versa), we MUST
-  // detect the drift and stop the current run rather than silently
-  // re-baselining mid-loop. The new/removed specs are deferred to the
-  // NEXT invocation (which restarts from cycle 0), so we never restart
-  // here — we just fail-fast with stderr that names every drifted spec
-  // id.
-  //
-  // The frozenSpecsCovered field is the SSOT; specsCovered (above) is
-  // the legacy single-spec field that is also frozen for backward
-  // compatibility. Both must be honoured. With CHG-002 single-spec
-  // freeze the two fields agree (both record the single primary spec);
-  // the multi-spec union still feeds the precheck for bypass detection
-  // but is NOT a frozen baseline today — compare against the live
-  // primary-only snapshot so the drift check stays apples-to-apples.
+  // the loop is reviewing. With CHG-002 the freeze itself is
+  // single-spec (the resolved primary), but mid-loop additions of new
+  // UI-bearing specs MUST still be observable: an operator who adds a
+  // new strict marker (or pins a new primarySpecId / lands a new title
+  // marker / drops a new UI contract) between cycle 0 and cycle N
+  // needs to be told the live surface has expanded so they can restart
+  // with `--cycle 0` and pick up the broader scope. Resolve the live
+  // multi-spec UNION via `resolveSurfaceUnion` (the same composition
+  // rule the precheck uses) and compare it against the frozen
+  // single-spec set. The new/removed specs are deferred to the NEXT
+  // invocation (which restarts from cycle 0), so we never restart
+  // here — we just fail-fast with stderr that names every drifted
+  // spec id. This restores the operator-facing guarantee that was
+  // narrowed in 8th-wave Fix 2 (single-spec freeze) and was flagged
+  // dead-branched in 10th-wave architecture-reviewer r3265257258 /
+  // r3265251225 / r3265260466.
   const frozenSet = readFrozenSpecsCoveredField(protoRecord) ?? frozenSpecs;
-  const liveUiBearing = input.specs;
+  const liveUiBearing = await resolveSurfaceUnion(input.root, input.config);
   const drift = checkSpecsCoveredDrift(frozenSet, liveUiBearing);
   if (drift.drifted) {
     const parts: string[] = [];
@@ -1235,7 +1339,8 @@ async function evaluateCycleGteOneGate(
     error(
       "qfai prototyping iterate: spec-set drift detected mid-loop — " +
         `${parts.join(" ")}. The cycle-0 frozen set is ${JSON.stringify(frozenSet)}; ` +
-        "the drifted spec(s) are deferred to the next `--cycle 0` invocation. " +
+        `the live UI-bearing union is ${JSON.stringify(liveUiBearing)}. ` +
+        "The drifted spec(s) are deferred to the next `--cycle 0` invocation. " +
         "Continue this loop with the frozen spec set, or restart with " +
         "`--cycle 0 --target-url <url>` to pick up the new spec set.",
     );
