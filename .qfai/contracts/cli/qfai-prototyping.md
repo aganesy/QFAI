@@ -217,9 +217,19 @@ schema:
     # UNION snapshot, or null on
     # legacy pre-12th-wave records
   liveUiBearing:
-    SpecRef[] # live `resolveAllUiBearingSpecs()`
-    # result (each: { specId, specMdPath,
-    # source })
+    string[] # live `resolveSurfaceUnion()` result —
+    # spec IDs (the same resolver iterate's
+    # cycle ≥ 1 drift gate uses; covers strict
+    # `surface_type: ui-bearing` + title-marker
+    # + `primarySpecId` config pin + UI contract
+    # signals). Bare IDs (not SpecRef objects)
+    # because the non-strict resolution paths
+    # (title-marker / primarySpecId) do not
+    # carry per-spec metadata; per-spec
+    # `specMdPath` / `source` for the resolved
+    # primary is available in the optional
+    # `primary` block below (15th-wave / 16th-wave
+    # Fix, codex r3269453293 P2 + codex r3269597174 P2).
   primary?: # present iff a primary spec resolves
     specId: string
     specMdPath: string # repo-root-relative POSIX path

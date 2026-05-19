@@ -62,6 +62,20 @@
   - Pinned-branch authorization is preserved: this lands in 1.8.10
     because `feature/v1.8.10` is the release pin.
 
+### Fixed (PR #208 16th late-review wave)
+
+- `.qfai/contracts/cli/qfai-prototyping.md`: align the documented
+  `liveUiBearing` shape in the `qfai prototyping show-spec` JSON schema
+  with the actual emitted type (`string[]`) after the 15th-wave switch
+  to `resolveSurfaceUnion`. Pre-fix the contract still claimed
+  `SpecRef[]` (objects with `specId` / `specMdPath` / `source`), which
+  matched the older `resolveAllUiBearingSpecs` path; the new resolver
+  also covers the non-strict title-marker / `primarySpecId` paths that
+  have no per-spec metadata, so the union has to be a bare ID list.
+  Per-spec metadata for the resolved primary is still available via the
+  optional `primary` block. Resolves codex P2 r3269597174
+  (chatgpt-codex-connector).
+
 ### Fixed (PR #208 15th late-review wave)
 
 - `prototypingIterate.ts`: the cycle-0 zero-UI-bearing precheck no
