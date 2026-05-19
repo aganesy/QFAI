@@ -74,9 +74,7 @@ export function iterationReviewPathPerSpec(
  */
 export async function findIterationReviewFiles(root: string, index: number): Promise<string[]> {
   const padded = padIndex(index);
-  const baseDir = path
-    .join(root, PROTOTYPING_EVIDENCE_REL, `iter-${padded}`)
-    .replace(/\\/g, "/");
+  const baseDir = path.join(root, PROTOTYPING_EVIDENCE_REL, `iter-${padded}`).replace(/\\/g, "/");
   const pattern = `${baseDir}/spec-*/*.review.json`;
 
   let matches: string[];
@@ -113,9 +111,7 @@ export async function findStaleIterDirs(root: string): Promise<string[]> {
     if (code === "ENOENT") {
       return [];
     }
-    throw new Error(
-      `findStaleIterDirs: readdir failed for ${baseDir}: ${(err as Error).message}`,
-    );
+    throw new Error(`findStaleIterDirs: readdir failed for ${baseDir}: ${(err as Error).message}`);
   }
 
   const matches: string[] = [];
@@ -165,9 +161,7 @@ export async function deleteStaleIterDirs(root: string): Promise<{ deleted: stri
       await rm(dir, { recursive: true, force: true });
       deleted.push(dir);
     } catch (err) {
-      throw new Error(
-        `deleteStaleIterDirs: failed to remove ${dir}: ${(err as Error).message}`,
-      );
+      throw new Error(`deleteStaleIterDirs: failed to remove ${dir}: ${(err as Error).message}`);
     }
   }
   return { deleted };

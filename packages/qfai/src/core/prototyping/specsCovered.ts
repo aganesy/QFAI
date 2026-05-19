@@ -116,9 +116,7 @@ export function checkSpecsCoveredDrift(
 ): SpecsCoveredDriftResult {
   const frozenSet = new Set(frozenSpecsCovered);
   const liveSet = new Set(currentLive);
-  const added = [...liveSet]
-    .filter((id) => !frozenSet.has(id))
-    .sort((a, b) => a.localeCompare(b));
+  const added = [...liveSet].filter((id) => !frozenSet.has(id)).sort((a, b) => a.localeCompare(b));
   const removed = [...frozenSet]
     .filter((id) => !liveSet.has(id))
     .sort((a, b) => a.localeCompare(b));

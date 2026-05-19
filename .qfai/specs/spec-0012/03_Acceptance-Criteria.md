@@ -231,7 +231,7 @@
   - (b) Reviewer Playwright-session failure → exit `64` with `sessionStatus ∈ {retryExhausted, launchFailed}` recorded on the per-`(spec, screen)` review payload so the orchestrator can disambiguate from converged-exit-64,
   - (c) license-verify failure → exit `66`,
   - (d) mid-run spec-set change detection → exit `2` (same class as lock drift; new spec deferred to next invocation per BR-0012-0038),
-  AND no user prompt is emitted.
+    AND no user prompt is emitted.
 
 ## AC-0012-0046: Per-spec iter-dir namespacing — review.json only
 

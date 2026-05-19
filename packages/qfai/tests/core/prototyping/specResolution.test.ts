@@ -166,11 +166,7 @@ describe("resolvePrimaryPrototypingSpec", () => {
 
 // -- resolveAllUiBearingSpecs ---------------------------------------------
 
-async function seedUiContract(
-  root: string,
-  specNumber: string,
-  filename?: string,
-): Promise<void> {
+async function seedUiContract(root: string, specNumber: string, filename?: string): Promise<void> {
   const uiDir = path.join(root, ".qfai/contracts/ui");
   await mkdir(uiDir, { recursive: true });
   const name = filename ?? `${specNumber}.yaml`;
@@ -186,18 +182,10 @@ describe("resolveAllUiBearingSpecs", () => {
   it("returns every UI-bearing spec in the consumer project in one call", async () => {
     const root = await newTempDir();
     // 3 UI-bearing: 0001 via marker, 0007 via contract fallback, 0012 via marker
-    await seedSpec(
-      root,
-      "0001",
-      "---\nsurface_type: ui-bearing\n---\n\n# spec-0001\n",
-    );
+    await seedSpec(root, "0001", "---\nsurface_type: ui-bearing\n---\n\n# spec-0001\n");
     await seedSpec(root, "0007", "# spec-0007\n\nNon-marker body.\n");
     await seedUiContract(root, "0007", "ui-0007-checkout.yaml");
-    await seedSpec(
-      root,
-      "0012",
-      "---\nsurface_type: ui-bearing\n---\n\n# spec-0012\n",
-    );
+    await seedSpec(root, "0012", "---\nsurface_type: ui-bearing\n---\n\n# spec-0012\n");
     // 2 non-UI: 0003 (no marker, no contract), 0009 (no marker, no contract)
     await seedSpec(root, "0003", "# spec-0003\n\nBackend-only spec.\n");
     await seedSpec(root, "0009", "# spec-0009\n\nAnother non-UI.\n");
@@ -246,11 +234,7 @@ describe("resolveAllUiBearingSpecs", () => {
     // any of the accepted anchored shapes.
     const uiDir = path.join(root, ".qfai/contracts/ui");
     await mkdir(uiDir, { recursive: true });
-    await writeFile(
-      path.join(uiDir, "unrelated-text-0001.yaml"),
-      "screens: []\n",
-      "utf-8",
-    );
+    await writeFile(path.join(uiDir, "unrelated-text-0001.yaml"), "screens: []\n", "utf-8");
     const result = await resolveAllUiBearingSpecs(root, makeConfig());
     expect(result).toEqual([]);
   });
@@ -296,32 +280,16 @@ describe("resolveAllUiBearingSpecs", () => {
 
   it("sorts the returned spec IDs lexicographically", async () => {
     const root = await newTempDir();
-    await seedSpec(
-      root,
-      "0099",
-      "---\nsurface_type: ui-bearing\n---\n\n# spec-0099\n",
-    );
-    await seedSpec(
-      root,
-      "0007",
-      "---\nsurface_type: ui-bearing\n---\n\n# spec-0007\n",
-    );
-    await seedSpec(
-      root,
-      "0011",
-      "---\nsurface_type: ui-bearing\n---\n\n# spec-0011\n",
-    );
+    await seedSpec(root, "0099", "---\nsurface_type: ui-bearing\n---\n\n# spec-0099\n");
+    await seedSpec(root, "0007", "---\nsurface_type: ui-bearing\n---\n\n# spec-0007\n");
+    await seedSpec(root, "0011", "---\nsurface_type: ui-bearing\n---\n\n# spec-0011\n");
     const result = await resolveAllUiBearingSpecs(root, makeConfig());
     expect(result).toEqual(["0007", "0011", "0099"]);
   });
 
   it("deduplicates when both the marker and the contract are present", async () => {
     const root = await newTempDir();
-    await seedSpec(
-      root,
-      "0005",
-      "---\nsurface_type: ui-bearing\n---\n\n# spec-0005\n",
-    );
+    await seedSpec(root, "0005", "---\nsurface_type: ui-bearing\n---\n\n# spec-0005\n");
     await seedUiContract(root, "0005");
     const result = await resolveAllUiBearingSpecs(root, makeConfig());
     expect(result).toEqual(["0005"]);
@@ -360,11 +328,7 @@ describe("resolveAllUiBearingSpecs", () => {
             `---\nsurface_type: ui-bearing\n---\n\n# spec-${spec.specNumber}\n`,
           );
         } else {
-          await seedSpec(
-            root,
-            spec.specNumber,
-            `# spec-${spec.specNumber}\n\nBody.\n`,
-          );
+          await seedSpec(root, spec.specNumber, `# spec-${spec.specNumber}\n\nBody.\n`);
         }
         if (spec.ui_bearing && spec.via === "contract") {
           await seedUiContract(root, spec.specNumber);
@@ -414,25 +378,13 @@ describe("checkSpecsCoveredDrift", () => {
   it("reads the cycle-0 frozen set even when the live filesystem mutates mid-test", async () => {
     const root = await newTempDir();
     // Seed two UI-bearing specs and freeze their IDs.
-    await seedSpec(
-      root,
-      "0001",
-      "---\nsurface_type: ui-bearing\n---\n\n# spec-0001\n",
-    );
-    await seedSpec(
-      root,
-      "0007",
-      "---\nsurface_type: ui-bearing\n---\n\n# spec-0007\n",
-    );
+    await seedSpec(root, "0001", "---\nsurface_type: ui-bearing\n---\n\n# spec-0001\n");
+    await seedSpec(root, "0007", "---\nsurface_type: ui-bearing\n---\n\n# spec-0007\n");
     const frozen = await resolveAllUiBearingSpecs(root, makeConfig());
     expect(frozen).toEqual(["0001", "0007"]);
 
     // Mid-test mutation: add a third UI-bearing spec to the live tree.
-    await seedSpec(
-      root,
-      "0042",
-      "---\nsurface_type: ui-bearing\n---\n\n# spec-0042\n",
-    );
+    await seedSpec(root, "0042", "---\nsurface_type: ui-bearing\n---\n\n# spec-0042\n");
     // A subsequent live read sees the mutation.
     const live = await resolveAllUiBearingSpecs(root, makeConfig());
     expect(live).toEqual(["0001", "0007", "0042"]);

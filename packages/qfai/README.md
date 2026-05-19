@@ -18,11 +18,19 @@ The agent reads the repository, produces the required artifacts, and iterates un
 ## Release status
 
 - Release posture: runtime truthfulness is enforced.
-- Prototyping is UI-only and runs a single-thread evolution loop driven by
-  `qfai prototyping iterate --cycle <n>`, with deterministic stop conditions
-  (exit codes 0 continue / 64 convergence / 65 max-iterations / 2 input error).
+- Prototyping is UI-only and runs a multi-spec evolution loop driven by
+  `qfai prototyping iterate --cycle <n>`. The skill resolves every
+  UI-bearing spec in one invocation, freezes that set at cycle 0, and
+  iterates `cycle 0..9` (max 10 cycles) with deterministic stop conditions
+  (exit codes 0 continue / 64 convergence / 65 max-iterations /
+  66 license-verify failure / 2 input or lock drift).
 - Runtime observation is observed-only (no synthetic 200 / API / DB prototyping coverage).
-- Per-iter evidence is `screenshot.png` + `index.html` per declared screen plus a single `review.json` (4-axis ordinal, prose critique, anti-slop detection, pivot directive).
+- Per-iter evidence is a single `<screen>.review.json` per declared spec ×
+  screen pair (4-axis ordinal verdicts, 6 `*Feel` short-prose impressions
+  bounded to 200 words each, `layoutAntiPatternsDetected[]`,
+  `designMdViolations[]`, and `pivotDirective`). Reviewer-emitted
+  `<screen>.review.json` is the only per-cycle artifact — no `screenshot.png`,
+  `index.html`, or `interaction.json`.
 - Calibration SSOT is the calibration pack referenced by `calibrationRef.packPath`.
 
 ## Quick start
@@ -66,8 +74,8 @@ npx qfai report
     Use `npx qfai prototyping preflight --target-url <url>` for a focused
     prototyping preflight before the skill starts; it surfaces blocking
     `QFAI-DCON-*` design-contract issues alongside runtime assumptions and resolves a runnable Playwright CLI launcher.
-    Use `npx qfai prototyping iterate --cycle <n> --target-url <url>` to drive each cycle of the single-thread
-    evolution loop. Exit codes: 0 (continue), 64 (convergence), 65 (max-iterations), 2 (input error).
+    Use `npx qfai prototyping iterate --cycle <n> --target-url <url>` to drive each cycle of the multi-spec
+    evolution loop. Exit codes: 0 (continue), 64 (convergence), 65 (max-iterations), 66 (license-verify failure), 2 (input or lock drift).
     Traceability refs inside prototyping evidence must use repo-root-relative concrete artifact refs
     (for example `.qfai/specs/spec-0001/01_Spec.md#L3` or `.qfai/evidence/prototyping/iter-03/home.png`).
     Absolute paths are invalid. The same strict ref grammar is enforced for top-level and leaf evidence-bearing fields, including
@@ -132,10 +140,19 @@ QFAI includes a small set of custom skills (stored under `.qfai/assistant/skills
   in `.qfai/specs/_policies/03_Capabilities.md` before the row is accepted
   (`QFAI-TRIAGE-006`). Every `01_Spec.md` declares a lifecycle
   `Status: active | superseded | deprecated | removed` (`QFAI-STATUS-001..006`).
-- **qfai-prototyping**: Single-thread design evolution loop. One prototype iterated through up to
-  10 cycles of generate -> capture -> review with a 4-axis ordinal rubric, anti-slop detection,
-  prose critique, and explicit pivot permission. Stops deterministically when all four axes hit
-  `exceptional` (exit 64) or the iteration budget is exhausted (exit 65).
+- **qfai-prototyping**: Multi-spec parallel design evolution loop. Resolves
+  every UI-bearing spec in one invocation, freezes that set at cycle 0,
+  and iterates each `spec × screen` pair through up to 10 cycles
+  (`cycle 0..9`) of generate → capture → review with a 4-axis ordinal
+  rubric, 6 `*Feel` short-prose impressions (200-word bounded), explicit
+  layout anti-pattern detection (`lap-001..lap-008`), DESIGN.md token
+  violation detection, and explicit pivot permission. Stops
+  deterministically when every `spec × screen` pair satisfies the AND
+  convergence condition (all four ordinal axes `exceptional` AND
+  `layoutAntiPatternsDetected` empty AND `designMdViolations` empty)
+  (exit 64), when the 10-cycle budget is exhausted (exit 65), or when a
+  stock-photo source violates the cycle-0 frozen license catalog
+  (exit 66). Lock drift / input errors exit 2.
 - **qfai-atdd**: Implement acceptance tests driven by specs/scenarios.
 - **qfai-implement**: Unified TDD micro-cycle (Red/Green/Refactor) one test at a time using `test-list.md` as the execution ledger, including ledger status updates and exception closure.
 - **qfai-verify**: Run full-scan local quality gates (`validate --fail-on error`, `report`, repo gates) and produce reviewer-approved evidence under `.qfai/evidence/`.

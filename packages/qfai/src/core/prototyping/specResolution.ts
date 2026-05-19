@@ -230,10 +230,7 @@ export async function resolveAllUiBearingSpecs(
  *   `.qfai/specs`). Pass `config.paths.specsDir` for parity with
  *   `resolveAllUiBearingSpecs`.
  */
-export async function resolveTitleMarkerSpecs(
-  root: string,
-  specsDir: string,
-): Promise<string[]> {
+export async function resolveTitleMarkerSpecs(root: string, specsDir: string): Promise<string[]> {
   const specsRoot = path.resolve(root, specsDir);
   let entries: Awaited<ReturnType<typeof collectSpecEntries>>;
   try {
@@ -259,10 +256,7 @@ export async function resolveTitleMarkerSpecs(
   return out.sort((a, b) => a.localeCompare(b));
 }
 
-async function hasMatchingUiContract(
-  contractsRoot: string,
-  specId: string,
-): Promise<boolean> {
+async function hasMatchingUiContract(contractsRoot: string, specId: string): Promise<boolean> {
   const uiDir = path.join(contractsRoot, "ui");
   const direct = path.join(uiDir, `${specId}.yaml`);
   try {
@@ -313,8 +307,6 @@ async function hasMatchingUiContract(
     }
     throw error;
   }
-  const anchoredRe = new RegExp(
-    `^(?:${specId}|spec-${specId}|ui-${specId}(?:-[^.]+)?)\\.yaml$`,
-  );
+  const anchoredRe = new RegExp(`^(?:${specId}|spec-${specId}|ui-${specId}(?:-[^.]+)?)\\.yaml$`);
   return names.some((name) => anchoredRe.test(name));
 }

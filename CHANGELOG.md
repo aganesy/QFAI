@@ -6,6 +6,33 @@
 
 ## [1.8.10] - 2026-05-19
 
+### BREAKING CHANGES (PR #208 — `qfai prototyping show-spec` JSON schema reshape)
+
+- **`qfai prototyping show-spec` JSON payload was reshaped** in the
+  12th late-review wave (codex r3265482150). The pre-wave payload
+  emitted three top-level keys (`specId`, `specMdPath`, `source`)
+  resolved from the live primary spec; the new payload emits
+  `{ frozenSpecsCovered, frozenSurfaceUnion, liveUiBearing, primary? }`
+  where the pre-wave triple has been demoted to the optional `primary`
+  block and `frozenSpecsCovered` / `frozenSurfaceUnion` / `liveUiBearing`
+  are new top-level fields surfaced for drift visibility. Pinned-branch
+  authorization ships this under v1.8.10 (codex r3265949051 /
+  r3265954849 13th-wave Fix promoted the schema reshape from a buried
+  `### Fixed` bullet to its own BREAKING block).
+  - Migration (operator tooling): replace `show-spec | jq '.specId'`
+    with `show-spec | jq '.primary.specId'`; the same one-liner applies
+    to `.specMdPath` → `.primary.specMdPath` and `.source` → `.primary.source`.
+    The `primary` block is itself optional (absent when no primary spec
+    resolves), so robust callers should guard with `// empty` or `?`.
+    The new top-level keys are SSOT-pinned in
+    `.qfai/contracts/cli/qfai-prototyping.md#qfai prototyping show-spec`.
+  - Precondition change: `show-spec` now hard-requires a seeded
+    `prototyping.json` and exits 2 when the file is missing or
+    malformed. Operators who previously ran `show-spec` _before_
+    `iterate --cycle 0` to plan the run must now seed via cycle 0
+    first; this is the contracted precondition for reading the
+    cycle-0 frozen `frozenSpecsCovered[]`.
+
 ### BREAKING CHANGES (PR #208 — ImageSource attribution required)
 
 - **`ImageSource.attribution` is now read at the runtime license gate.**
@@ -34,6 +61,143 @@
     structured error per affected URL.
   - Pinned-branch authorization is preserved: this lands in 1.8.10
     because `feature/v1.8.10` is the release pin.
+
+### Fixed (PR #208 13th late-review wave)
+
+- `packages/qfai/README.md`: rewrite the prototyping description (Release
+  status `## Release status` block + CLI command summary + skill listing)
+  to match CHG-002 — multi-spec parallel evolution, frozen UI-bearing
+  spec set at cycle 0, `cycle 0..9`, `review.json`-only per-iter evidence
+  (no `screenshot.png` / `index.html` / `interaction.json`), AND
+  convergence (`4 axes exceptional AND layoutAntiPatternsDetected empty
+AND designMdViolations empty`), and exit codes (0 / 64 / 65 / 66 / 2).
+  Pre-fix the README still described the v1.8.9 single-thread /
+  one-prototype / anti-slop model, drift that bled into operator
+  expectations. Resolves codex MAJOR r3265800332 / r3265808732 /
+  r3265811785.
+- `packages/qfai/assets/init/.qfai/assistant/skills/qfai-prototyping/SKILL.md`:
+  rewrite the intro paragraph (multi-spec evolution / one lineage per
+  `spec × screen` pair / frozen spec set) and the "Cycle 9 budget
+  exhaustion" subsection (handoff artifacts CAN be written for
+  inspection; only `qfai prototyping certify --check` rejects DONE).
+  Resolves codex MAJOR r3265801777 and codex MINOR r3265802899.
+- `packages/qfai/assets/init/.qfai/assistant/steering/agent-routing.yml`:
+  rewrite the `qfai-prototyping` routing comment to "Multi-spec
+  evolution loop" with the full surface (4 axes + 6 \*Feel + anti-pattern
+  - DESIGN.md gates) instead of the v1.8.9 single-thread label.
+    Resolves codex MINOR r3265803600.
+- `CHANGELOG.md`: remove the contradictory `optional
+timeBudgetSoftWarning?: string` claim from the Wave 2 schema
+  description; the BREAKING CHANGES (ReviewerPayload schema) block is
+  the authoritative diff and the closed-schema parser now rejects the
+  legacy key. Resolves codex MAJOR r3265805771.
+- `CHANGELOG.md`: promote the `qfai prototyping show-spec` JSON schema
+  reshape from a `### Fixed` bullet to a dedicated `### BREAKING
+CHANGES` block (see above) so the operator-facing migration is
+  surfaced alongside the existing `ImageSource.attribution` BREAKING.
+  Resolves codex MAJOR r3265949051 and codex MEDIUM r3265954849.
+- `.qfai/contracts/cli/qfai-prototyping.md`: enumerate the new
+  cycle-0-freeze field `frozenSurfaceUnion[]` (the SSOT the cycle ≥ 1
+  drift gate compares against), document the license-catalog drift
+  exit-2 semantics, and pin the JSON schema for the `qfai prototyping
+show-spec` payload. Resolves codex MAJOR r3265951894 and codex
+  MEDIUM r3265954849.
+- `prototypingIterate.ts`: drop the legacy `frozenSurfaceUnion ??
+frozenSpecsCovered ?? frozenSpecs` fallback chain at the cycle ≥ 1
+  drift gate. The fallback silently restored the MAJOR/P1 pre-11th-wave
+  baseline for legacy `prototyping.json` records (the very bug
+  TC-0012-0415 / codex r3265480688 closed), so v1.8.10 binaries running
+  against v1.8.9-seeded records re-enabled the false-positive. The
+  drift gate now hard-fails with exit 2 + an explicit "legacy record;
+  re-run `--cycle 0`" message when `frozenSurfaceUnion` is missing or
+  malformed. Resolves codex MAJOR/P1 r3265953324.
+- `prototypingIterate.ts`: detect cycle ≥ 1 drift of
+  `frozenLicenseCatalog` against the in-memory SSOT
+  (`DEFAULT_LICENSE_CATALOG`) and exit 2 instead of silently honouring
+  the edited catalog as the verifier authority. Mid-loop additions to
+  `allowedSources` / `licenseTiers` / `sourceHosts` no longer let
+  otherwise-unallowed `imageSources[]` entries pass with exit 0. The
+  in-memory constant is now the verifier authority (cycle 0 mirrors it
+  into prototyping.json). Resolves codex P2 r3265947252.
+- `prototypingCertify.ts`: re-parse each spec's winning UI contract
+  file(s) via `parseUiScreenFile` inside `indexPerSpecScreens` instead
+  of reusing the project-wide-deduplicated `screenContracts` collection.
+  Pre-fix two specs declaring the same `screenId` (e.g. `home`) hit the
+  project-wide `findIndex` dedup, which kept only one entry; the index
+  then false-negative-passed the `<spec>/<screen>.review.json` gate
+  for the spec whose entry was dropped. The per-spec re-parse isolates
+  the dedup scope. Resolves codex MAJOR r3265806993.
+- `prototypingCertify.ts`: return the full multi-file union from
+  `chooseWinningFiles` (renamed from `chooseWinningFile`) for the
+  subdir (#5) and glob (#4) layouts instead of returning `null` and
+  forcing the call site to re-probe via `readPerSpecScreens`. The
+  pre-indexed multi-file path discovery now flows into the same
+  per-spec re-parse, restoring the N+1 optimization for subdir / glob
+  layouts. Resolves codex MAJOR r3265809880.
+- `prototypingCertify.ts#parseUiScreenFile`: replace bare `catch {}` on
+  the readFile / parseYaml branches with per-file `warn` lines that
+  name the offending path and narrow the error class (read vs parse).
+  Pre-fix a half-failure (some matched files parsed, one silently
+  failed) was invisible because the call site's aggregate warn only
+  fired on the all-empty case. The function still returns `[]` on
+  failure so callers keep their contracts; CLAUDE.md "every async path
+  must have explicit error handling" is now satisfied via the named
+  warn line. Resolves codex MINOR r3265813656.
+- `core/prototyping/evaluatorReview.ts`: tighten the closed-schema
+  `cycle` validation to reject `cycle > MAX_ITERATION_INDEX` (currently
+  `> 9`). Pre-fix the parser accepted `cycle: 99` because the
+  upper-bound check was absent — asymmetric with the closed-schema
+  `unknown field` and per-field word-count rejections. Adds a boundary
+  regression test (`rejects when cycle exceeds MAX_ITERATION_INDEX`)
+  covering `10 / 99 / 100`. Resolves codex MAJOR r3265809796 and codex
+  MINOR r3265811203 / NIT r3265814987.
+- `.qfai/specs/_policies/03_Capabilities.md`: extend CAP-0012
+  success-metrics with the `6 *Feel fields (200-word bounded)` reviewer
+  payload extension so the capability success-metric carries the same
+  shape as the spec-0012 contract surface. Resolves codex MINOR
+  r3265808939.
+- `.qfai/specs/_policies/05_Contracts.md`: extend the DCON-008
+  (prototype-handoff) Purpose cell with `imageSources[] (closed schema,
+CHG-002 — validated by core/prototyping/handoff.ts)` so the contract
+  index reflects the closed-schema `imageSources` field that already
+  lives in `prototype-handoff.yaml`. Resolves codex MINOR r3265811914.
+- `.qfai/contracts/ui/README.md`: restructure the candidate-precedence
+  table so the `Order` column is split into `Tier` (single-file vs
+  multi-file) and `Precedence within tier`, and extend the
+  Recommendations to enumerate the mixed-layout cases (`spec-0007.yaml`
+  - `ui-0007-home.yaml`; `spec-0007.yaml` + `spec-0007/home.yaml`) so
+    authoring choices match the resolver's TRUE first-hit-wins +
+    multi-file aggregation semantics. Resolves codex MINOR r3265814788 /
+    r3265815283.
+- `.qfai/specs/spec-0012/16_Traceability-ledger.md`: register
+  TDD-0336..TDD-0369 (34 entries) as a v2.0-baseline ledger block so
+  the CLAUDE.md project rule "TDD-IDs and TC-Refs must not reference
+  unregistered entries" is satisfied for every TDD landed in
+  `tdd/test-list.md`. Resolves codex HIGH r3265822700.
+- `.qfai/specs/spec-0012/tdd/test-list.md`: TDD-0353 Notes — replace
+  "single-thread serial iteration with at most 15 iters" with the
+  CHG-002 value `at most 10 iters (CHG-002, MAX_ITERATIONS=10)` so the
+  ledger row matches the post-CHG-002 sweep that already updated
+  TDD-0347. Resolves codex MEDIUM r3265823332.
+- `packages/qfai/tests/core/prototyping/evaluatorReview.test.ts` +
+  `packages/qfai/tests/cli/commands/prototypingCertify.test.ts`:
+  annotate the 11th-wave-added describe blocks (`parseEvaluatorReview
+— new required fields (cycle / retryCount / wallTimeSec)` and the
+  four `respects the * canonical layout` / `uses candidate #1 only`
+  cases) with concrete `QFAI:SPEC-0012:TC-...` IDs and register the
+  matching rows in `06_Test-Cases.md` / `tdd/test-list.md` /
+  `16_Traceability-ledger.md`. The 09_delta entry for the 11th-wave
+  cluster names the AC-Refs (`AC-0012-0041` / `AC-0012-0046`).
+  Resolves codex MAJOR r3265811711.
+- `prototypingIterate.ts` / `prototypingCertify.ts` / `licenseVerify.ts`:
+  rename inline JSDoc / comment labels from `11th-wave Fix (codex r...)`
+  to `12th-wave Fix (codex r...)` so the wave label matches the
+  commit subject and CHANGELOG H3 (`### Fixed (PR #208 12th
+late-review wave)`). Pre-fix the same codex review IDs were tagged
+  as "11th-wave" inline and "12th-wave" in CHANGELOG / commit subject;
+  `git blame` / `grep "12th-wave Fix"` therefore could not locate the
+  inline comments. Documentation-only; no behaviour change. Resolves
+  codex MEDIUM r3265950622 and codex P3 r3265953161.
 
 ### Fixed (PR #208 12th late-review wave)
 
@@ -117,7 +281,7 @@
     provided — consumers must regenerate `review.json` files via the
     product-surface-reviewer sub-agent. The legacy
     `timeBudgetSoftWarning` key now surfaces as `unknown field:
-    timeBudgetSoftWarning` so authoring drift is caught fail-closed
+timeBudgetSoftWarning` so authoring drift is caught fail-closed
     instead of silently dropped.
 
 ### Fixed (PR #208 11th late-review wave)
@@ -132,14 +296,14 @@
   `parseUiScreenFile` helper. Removes the duplicated YAML / shape
   extraction logic that had drifted between the project-wide and
   per-spec readers. Resolves codex MAJOR r3265374692 + P2 r3265379531
-  + P2 r3265382282 (dup).
+  - P2 r3265382282 (dup).
 - `prototypingCertify.ts#readPerSpecScreens`: implement TRUE
   first-hit-wins for canonical single-file candidates (`spec-NNNN.yaml`
   > `<bare>.yaml` > `ui-<bare>.yaml`). Pre-fix the loop pushed every
-  matching file into a single `matched[]` and unioned screens across
-  authoring forks (e.g. both `spec-0007.yaml` and `ui-0007.yaml` on
-  disk produced surprising cross-file behaviour). JSDoc precedence
-  table updated to reflect the impl. Resolves codex MAJOR r3265378130.
+  > matching file into a single `matched[]` and unioned screens across
+  > authoring forks (e.g. both `spec-0007.yaml` and `ui-0007.yaml` on
+  > disk produced surprising cross-file behaviour). JSDoc precedence
+  > table updated to reflect the impl. Resolves codex MAJOR r3265378130.
 - `prototypingCertify.ts#readPerSpecScreens`: add the recursive
   per-spec subdirectory layout (`<contractsDir>/ui/<spec-id>/<sub>.yaml`)
   as candidate #5. Pre-fix the per-spec reader was flat-only, so a
@@ -323,7 +487,13 @@
   / `functionality`), 6 `*Feel` fields (`operability` / `transitionFeel`
   / `crossScreenContinuity` / `userStoryFeel` / `acceptanceCriteriaFeel`
   / `menuReachabilityFeel`), `layoutAntiPatternsDetected[]`,
-  `designMdViolations[]`, optional `timeBudgetSoftWarning?: string`.
+  `designMdViolations[]`, and the closed nested record
+  `softWarnings: { timeBudget: boolean }` (required). The flat
+  `timeBudgetSoftWarning?: string` key that earlier Wave 2 drafts
+  carried is no longer part of the schema and is rejected by the
+  closed-schema gate — see the "BREAKING CHANGES (PR #208 —
+  ReviewerPayload schema)" entry above for the authoritative
+  removed/added diff.
   New constants `FEEL_FIELDS`, `FEEL_FIELD_MAX_WORDS = 200`. Named-path
   validation errors: `missing field: <name>` / `missing field: scores.<axis>`
   / `unknown field: <name>` / per-field word-count rejection. Legacy

@@ -142,8 +142,26 @@ async function seedPrototypingJson(
 ): Promise<void> {
   const dir = path.join(root, ".qfai/evidence/prototyping");
   await mkdir(dir, { recursive: true });
+  // Seed the cycle-0 freeze fields so the cycle ≥ 1 drift gate + the
+  // license-catalog drift gate (13th-wave Fix, codex r3265953324 /
+  // r3265947252) treat the fixture as a valid post-cycle-0 record.
+  // Tests that exercise legacy / missing-field paths override with
+  // `seedRawPrototypingJson`.
   const body: Record<string, unknown> = {
     specsCovered: ["0001"],
+    frozenSpecsCovered: ["0001"],
+    frozenSurfaceUnion: ["0001"],
+    frozenLicenseCatalog: {
+      allowedSources: ["unsplash", "pexels"],
+      licenseTiers: {
+        unsplash: ["unsplash-license", "free"],
+        pexels: ["pexels-free"],
+      },
+      sourceHosts: {
+        unsplash: ["images.unsplash.com", "unsplash.com"],
+        pexels: ["images.pexels.com", "pexels.com"],
+      },
+    },
     iterations: iterations.map((it) => ({
       index: it.index,
       commitSha: "a".repeat(40),
@@ -553,6 +571,19 @@ describe("runPrototypingIterate continue (exit 0)", () => {
     await seedMinimalProject(root);
     await seedRawPrototypingJson(root, {
       specsCovered: ["0001"],
+      frozenSpecsCovered: ["0001"],
+      frozenSurfaceUnion: ["0001"],
+      frozenLicenseCatalog: {
+        allowedSources: ["unsplash", "pexels"],
+        licenseTiers: {
+          unsplash: ["unsplash-license", "free"],
+          pexels: ["pexels-free"],
+        },
+        sourceHosts: {
+          unsplash: ["images.unsplash.com", "unsplash.com"],
+          pexels: ["images.pexels.com", "pexels.com"],
+        },
+      },
       iterations: [{ index: 0, commitSha: "b".repeat(40) }],
       acceptedIterationIndex: 0,
       stopReason: null,
@@ -1597,10 +1628,7 @@ describe("runPrototypingIterate cycle 0 frozen SSOT writes", () => {
     ).toBe(0);
 
     const body = JSON.parse(
-      await readFile(
-        path.join(root, ".qfai/evidence/prototyping/prototyping.json"),
-        "utf-8",
-      ),
+      await readFile(path.join(root, ".qfai/evidence/prototyping/prototyping.json"), "utf-8"),
     ) as { frozenSpecsCovered: string[] };
     // 8th-wave Fix 2: single-spec freeze. The legacy `specsCovered`
     // and the cycle-0 `frozenSpecsCovered` both record the single
@@ -1622,10 +1650,7 @@ describe("runPrototypingIterate cycle 0 frozen SSOT writes", () => {
     ).toBe(0);
 
     const body = JSON.parse(
-      await readFile(
-        path.join(root, ".qfai/evidence/prototyping/prototyping.json"),
-        "utf-8",
-      ),
+      await readFile(path.join(root, ".qfai/evidence/prototyping/prototyping.json"), "utf-8"),
     ) as {
       frozenLicenseCatalog: {
         allowedSources: string[];
@@ -1636,10 +1661,7 @@ describe("runPrototypingIterate cycle 0 frozen SSOT writes", () => {
     // code). If this changes the test must change with it — fail-fast
     // signal so a silent catalog drift cannot ship.
     expect(body.frozenLicenseCatalog.allowedSources.sort()).toEqual(["pexels", "unsplash"]);
-    expect(body.frozenLicenseCatalog.licenseTiers.unsplash).toEqual([
-      "unsplash-license",
-      "free",
-    ]);
+    expect(body.frozenLicenseCatalog.licenseTiers.unsplash).toEqual(["unsplash-license", "free"]);
     expect(body.frozenLicenseCatalog.licenseTiers.pexels).toEqual(["pexels-free"]);
   });
 });
@@ -1672,16 +1694,21 @@ describe("runPrototypingIterate license verify hard-stop (TC-0012-0371)", () => 
     ]);
     // Inject a non-allowlisted image source ("pinterest") into the
     // existing prototyping.json so the cycle-1 license gate fails.
-    const protoJsonPath = path.join(
-      root,
-      ".qfai/evidence/prototyping/prototyping.json",
-    );
+    const protoJsonPath = path.join(root, ".qfai/evidence/prototyping/prototyping.json");
     const proto = JSON.parse(await readFile(protoJsonPath, "utf-8")) as Record<string, unknown>;
     proto.frozenLicenseCatalog = {
       allowedSources: ["unsplash", "pexels"],
+
       licenseTiers: {
         unsplash: ["unsplash-license", "free"],
+
         pexels: ["pexels-free"],
+      },
+
+      sourceHosts: {
+        unsplash: ["images.unsplash.com", "unsplash.com"],
+
+        pexels: ["images.pexels.com", "pexels.com"],
       },
     };
     proto.imageSources = [
@@ -1725,16 +1752,21 @@ describe("runPrototypingIterate license verify hard-stop (TC-0012-0371)", () => 
         },
       },
     ]);
-    const protoJsonPath = path.join(
-      root,
-      ".qfai/evidence/prototyping/prototyping.json",
-    );
+    const protoJsonPath = path.join(root, ".qfai/evidence/prototyping/prototyping.json");
     const proto = JSON.parse(await readFile(protoJsonPath, "utf-8")) as Record<string, unknown>;
     proto.frozenLicenseCatalog = {
       allowedSources: ["unsplash", "pexels"],
+
       licenseTiers: {
         unsplash: ["unsplash-license", "free"],
+
         pexels: ["pexels-free"],
+      },
+
+      sourceHosts: {
+        unsplash: ["images.unsplash.com", "unsplash.com"],
+
+        pexels: ["images.pexels.com", "pexels.com"],
       },
     };
     proto.imageSources = [
@@ -1775,16 +1807,21 @@ describe("runPrototypingIterate license verify hard-stop (TC-0012-0371)", () => 
         },
       },
     ]);
-    const protoJsonPath = path.join(
-      root,
-      ".qfai/evidence/prototyping/prototyping.json",
-    );
+    const protoJsonPath = path.join(root, ".qfai/evidence/prototyping/prototyping.json");
     const proto = JSON.parse(await readFile(protoJsonPath, "utf-8")) as Record<string, unknown>;
     proto.frozenLicenseCatalog = {
       allowedSources: ["unsplash", "pexels"],
+
       licenseTiers: {
         unsplash: ["unsplash-license", "free"],
+
         pexels: ["pexels-free"],
+      },
+
+      sourceHosts: {
+        unsplash: ["images.unsplash.com", "unsplash.com"],
+
+        pexels: ["images.pexels.com", "pexels.com"],
       },
     };
     proto.imageSources = [
@@ -1835,11 +1872,7 @@ describe("runPrototypingIterate cycle >= 1 spec-set drift (TC-0012-0385)", () =>
       "---\nsurface_type: ui-bearing\n---\n\n# spec-0005\n",
       "utf-8",
     );
-    await writeFile(
-      path.join(spec0005Dir, "02_User-stories.md"),
-      "# stories\n",
-      "utf-8",
-    );
+    await writeFile(path.join(spec0005Dir, "02_User-stories.md"), "# stories\n", "utf-8");
     // Strip the marker from the default spec-0001 so it is non-UI for
     // baseline. seedMinimalProject seeded spec-0001 with the marker;
     // overwrite it to remove the marker.
@@ -1857,10 +1890,7 @@ describe("runPrototypingIterate cycle >= 1 spec-set drift (TC-0012-0385)", () =>
         },
       },
     ]);
-    const protoJsonPath = path.join(
-      root,
-      ".qfai/evidence/prototyping/prototyping.json",
-    );
+    const protoJsonPath = path.join(root, ".qfai/evidence/prototyping/prototyping.json");
     const proto = JSON.parse(await readFile(protoJsonPath, "utf-8")) as Record<string, unknown>;
     // Override the seed's specsCovered/frozenSpecsCovered to the
     // baseline primary so the cycle-1 gate compares apples-to-apples.
@@ -1878,11 +1908,7 @@ describe("runPrototypingIterate cycle >= 1 spec-set drift (TC-0012-0385)", () =>
       "---\nsurface_type: ui-bearing\n---\n\n# spec-0002 — new smaller-id primary\n",
       "utf-8",
     );
-    await writeFile(
-      path.join(spec0002Dir, "02_User-stories.md"),
-      "# stories\n",
-      "utf-8",
-    );
+    await writeFile(path.join(spec0002Dir, "02_User-stories.md"), "# stories\n", "utf-8");
 
     const logger = await import("../../../src/cli/lib/logger.js");
     const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
@@ -1903,9 +1929,9 @@ describe("runPrototypingIterate cycle >= 1 spec-set drift (TC-0012-0385)", () =>
 
     // The run did NOT restart at cycle 0 — the new spec is deferred
     // to the next invocation (no rewrite of frozenSpecsCovered).
-    const after = JSON.parse(
-      await readFile(protoJsonPath, "utf-8"),
-    ) as { frozenSpecsCovered?: unknown };
+    const after = JSON.parse(await readFile(protoJsonPath, "utf-8")) as {
+      frozenSpecsCovered?: unknown;
+    };
     expect(after.frozenSpecsCovered).toEqual(["0005"]);
   });
 });
@@ -2060,10 +2086,7 @@ describe("runPrototypingIterate cycle-0 no-op gate honours prototyping.primarySp
 
     // Confirm the bypass-aware write — pre-fix this was `[]`, which
     // is what caused the cycle ≥1 drift trip.
-    const protoJsonPath = path.join(
-      root,
-      ".qfai/evidence/prototyping/prototyping.json",
-    );
+    const protoJsonPath = path.join(root, ".qfai/evidence/prototyping/prototyping.json");
     const proto = JSON.parse(await readFile(protoJsonPath, "utf-8")) as {
       frozenSpecsCovered?: unknown;
     };
@@ -2227,10 +2250,7 @@ describe("runPrototypingIterate cycle-0 no-op gate honours legacy title marker",
     });
     expect(seedExit).toBe(0);
 
-    const protoJsonPath = path.join(
-      root,
-      ".qfai/evidence/prototyping/prototyping.json",
-    );
+    const protoJsonPath = path.join(root, ".qfai/evidence/prototyping/prototyping.json");
     const proto = JSON.parse(await readFile(protoJsonPath, "utf-8")) as {
       frozenSpecsCovered?: unknown;
     };
@@ -2321,11 +2341,7 @@ describe("runPrototypingIterate cycle-0 frozen set (single-spec, primary resolve
     // the primarySpecId pin signals it.
     const spec2Dir = path.join(root, ".qfai/specs/spec-0002");
     await mkdir(spec2Dir, { recursive: true });
-    await writeFile(
-      path.join(spec2Dir, "01_Spec.md"),
-      "# 01 Spec — primarySpecId-only\n",
-      "utf-8",
-    );
+    await writeFile(path.join(spec2Dir, "01_Spec.md"), "# 01 Spec — primarySpecId-only\n", "utf-8");
 
     const seedExit = await runPrototypingIterate({
       root,
@@ -2334,10 +2350,7 @@ describe("runPrototypingIterate cycle-0 frozen set (single-spec, primary resolve
     });
     expect(seedExit).toBe(0);
 
-    const protoJsonPath = path.join(
-      root,
-      ".qfai/evidence/prototyping/prototyping.json",
-    );
+    const protoJsonPath = path.join(root, ".qfai/evidence/prototyping/prototyping.json");
     const proto = JSON.parse(await readFile(protoJsonPath, "utf-8")) as {
       frozenSpecsCovered?: unknown;
     };
@@ -2401,11 +2414,7 @@ describe("runPrototypingIterate cycle-0 — contract-only project resolves prima
       "# 01 Spec — contract-only surface\n\nNo marker.\n",
       "utf-8",
     );
-    await writeFile(
-      path.join(specDir, "02_User-stories.md"),
-      "# stories\n",
-      "utf-8",
-    );
+    await writeFile(path.join(specDir, "02_User-stories.md"), "# stories\n", "utf-8");
     const uiDir = path.join(root, ".qfai/contracts/ui");
     await mkdir(uiDir, { recursive: true });
     await writeFile(path.join(uiDir, "0042.yaml"), "screens: []\n", "utf-8");
@@ -2503,11 +2512,7 @@ describe("resolveSurfaceUnion (direct unit test for the union composition rule)"
     // spec-0042: primarySpecId-on-disk pin only.
     const spec42 = path.join(root, ".qfai/specs/spec-0042");
     await mkdir(spec42, { recursive: true });
-    await writeFile(
-      path.join(spec42, "01_Spec.md"),
-      "# 01 Spec — primarySpecId-only\n",
-      "utf-8",
-    );
+    await writeFile(path.join(spec42, "01_Spec.md"), "# 01 Spec — primarySpecId-only\n", "utf-8");
     await writeFile(path.join(spec42, "02_User-stories.md"), "# stories\n", "utf-8");
     // spec-0099: legacy title marker only.
     const spec99 = path.join(root, ".qfai/specs/spec-0099");
@@ -2614,10 +2619,7 @@ describe("runPrototypingIterate cycle >= 1 spec-set drift — new larger-id seco
         },
       },
     ]);
-    const protoJsonPath = path.join(
-      root,
-      ".qfai/evidence/prototyping/prototyping.json",
-    );
+    const protoJsonPath = path.join(root, ".qfai/evidence/prototyping/prototyping.json");
     const proto = JSON.parse(await readFile(protoJsonPath, "utf-8")) as Record<string, unknown>;
     proto.specsCovered = ["0001"];
     proto.frozenSpecsCovered = ["0001"];
@@ -2637,11 +2639,7 @@ describe("runPrototypingIterate cycle >= 1 spec-set drift — new larger-id seco
       "---\nsurface_type: ui-bearing\n---\n\n# spec-0009 — new secondary\n",
       "utf-8",
     );
-    await writeFile(
-      path.join(spec0009Dir, "02_User-stories.md"),
-      "# stories\n",
-      "utf-8",
-    );
+    await writeFile(path.join(spec0009Dir, "02_User-stories.md"), "# stories\n", "utf-8");
 
     const logger = await import("../../../src/cli/lib/logger.js");
     const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
@@ -2683,11 +2681,7 @@ describe("runPrototypingIterate cycle >= 1 spec-set drift — multi-UI-bearing b
       "---\nsurface_type: ui-bearing\n---\n\n# spec-0002 — secondary UI-bearing\n",
       "utf-8",
     );
-    await writeFile(
-      path.join(spec0002Dir, "02_User-stories.md"),
-      "# stories\n",
-      "utf-8",
-    );
+    await writeFile(path.join(spec0002Dir, "02_User-stories.md"), "# stories\n", "utf-8");
 
     await seedPrototypingJson(root, [
       {
@@ -2700,10 +2694,7 @@ describe("runPrototypingIterate cycle >= 1 spec-set drift — multi-UI-bearing b
         },
       },
     ]);
-    const protoJsonPath = path.join(
-      root,
-      ".qfai/evidence/prototyping/prototyping.json",
-    );
+    const protoJsonPath = path.join(root, ".qfai/evidence/prototyping/prototyping.json");
     const proto = JSON.parse(await readFile(protoJsonPath, "utf-8")) as Record<string, unknown>;
     // Cycle 0 (simulated): the primary resolver picked spec-0001 (the
     // smallest-id UI-bearing spec), so `frozenSpecsCovered` is single-
@@ -2760,16 +2751,21 @@ describe("runPrototypingIterate cycle >= 1 — malformed imageSources hard-stop 
         },
       },
     ]);
-    const protoJsonPath = path.join(
-      root,
-      ".qfai/evidence/prototyping/prototyping.json",
-    );
+    const protoJsonPath = path.join(root, ".qfai/evidence/prototyping/prototyping.json");
     const proto = JSON.parse(await readFile(protoJsonPath, "utf-8")) as Record<string, unknown>;
     proto.frozenLicenseCatalog = {
       allowedSources: ["unsplash", "pexels"],
+
       licenseTiers: {
         unsplash: ["unsplash-license", "free"],
+
         pexels: ["pexels-free"],
+      },
+
+      sourceHosts: {
+        unsplash: ["images.unsplash.com", "unsplash.com"],
+
+        pexels: ["images.pexels.com", "pexels.com"],
       },
     };
     // Single malformed entry — pre-fix this dropped to `[]` and the
@@ -2811,10 +2807,7 @@ describe("runPrototypingIterate cycle >= 1 — malformed imageSources hard-stop 
         },
       },
     ]);
-    const protoJsonPath = path.join(
-      root,
-      ".qfai/evidence/prototyping/prototyping.json",
-    );
+    const protoJsonPath = path.join(root, ".qfai/evidence/prototyping/prototyping.json");
     const proto = JSON.parse(await readFile(protoJsonPath, "utf-8")) as Record<string, unknown>;
     proto.frozenLicenseCatalog = {
       allowedSources: ["unsplash"],

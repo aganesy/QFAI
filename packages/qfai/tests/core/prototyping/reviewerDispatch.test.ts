@@ -296,9 +296,7 @@ describe("dispatchReviewerToPair (interface stub)", () => {
     expect(writtenSpec).toBe("0012");
     expect(writtenScreen).toBe("dashboard");
     expect(writtenPayload).toEqual(payload);
-    expect(outcome.reviewJsonPath).toBe(
-      "/abs/path/iter-00/spec-0012/dashboard.review.json",
-    );
+    expect(outcome.reviewJsonPath).toBe("/abs/path/iter-00/spec-0012/dashboard.review.json");
     expect(outcome.reviewJson).toEqual(payload);
   });
 
@@ -321,9 +319,7 @@ describe("dispatchReviewerToPair (interface stub)", () => {
     expect(outcome.attempts).toHaveLength(2);
     expect(outcome.attempts[0]?.ok).toBe(true);
     expect(outcome.attempts[1]?.ok).toBe(false);
-    expect(outcome.attempts[1]?.errorMessage).toMatch(
-      /persistReviewJson failed: disk full/,
-    );
+    expect(outcome.attempts[1]?.errorMessage).toMatch(/persistReviewJson failed: disk full/);
     expect(outcome.reviewJsonPath).toBeUndefined();
   });
 });
@@ -389,9 +385,7 @@ describe("reviewer cycle leaves zero heavy artifacts under iter-NN/", () => {
     const files = await listFilesRecursive(path.join(tmpDir, "iter-00"));
     const png = files.filter((f) => f.toLowerCase().endsWith(".png"));
     const html = files.filter((f) => f.toLowerCase().endsWith(".html"));
-    const interaction = files.filter((f) =>
-      f.toLowerCase().endsWith("interaction.json"),
-    );
+    const interaction = files.filter((f) => f.toLowerCase().endsWith("interaction.json"));
     expect(png).toEqual([]);
     expect(html).toEqual([]);
     expect(interaction).toEqual([]);

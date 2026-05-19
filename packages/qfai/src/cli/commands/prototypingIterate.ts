@@ -329,7 +329,7 @@ export async function runPrototypingIterate(
       // (apples-to-apples). Without this field the drift gate would
       // compare the single-spec frozen scope against the live UNION
       // and false-positive any project whose baseline already carries
-      // ≥ 2 UI-bearing specs. See 11th-wave Fix (codex r3265480688,
+      // ≥ 2 UI-bearing specs. See 12th-wave Fix (codex r3265480688,
       // MAJOR/P1).
       frozenSurfaceUnion: [...cycleZeroUnion],
       // cycle-0 SSOT for the license-class catalog. Recording it here
@@ -390,7 +390,8 @@ export async function runPrototypingIterate(
   //     population path (handoff yaml extraction, DESIGN.md pool) is
   //     left to a later batch. Tests that exercise this branch seed
   //     the field directly.
-  const protoRecordForLicense = options.cycle === 0 ? null : await readPrototypingJson(protoJsonAbs);
+  const protoRecordForLicense =
+    options.cycle === 0 ? null : await readPrototypingJson(protoJsonAbs);
   const collected = collectImageSources(protoRecordForLicense);
   if (!collected.ok) {
     // 10th-wave Fix H (codex r3265260665, P2): hard-stop on malformed
@@ -410,10 +411,35 @@ export async function runPrototypingIterate(
     );
     return 2;
   }
+  // 13th-wave Fix (codex r3265947252, P2): detect cycle ≥ 1 drift of the
+  // cycle-0 frozen license catalog against the in-memory SSOT
+  // (`DEFAULT_LICENSE_CATALOG`). Pre-fix the verifier used the on-disk
+  // `frozenLicenseCatalog` directly (or silently fell back to
+  // `DEFAULT_LICENSE_CATALOG` when the field was malformed), which let
+  // an operator who added e.g. `pinterest` to `allowedSources` pass an
+  // otherwise-unallowed `imageSources[]` entry with exit 0. The CLI
+  // contract pins `frozenLicenseCatalog` drift to exit 2 (lock drift);
+  // surface that here before invoking the runtime license gate so the
+  // operator hits the precise diagnostic.
+  if (protoRecordForLicense !== null && options.cycle >= 1) {
+    const onDisk = readFrozenLicenseCatalog(protoRecordForLicense);
+    if (onDisk === null || !licenseCatalogsEqual(onDisk, DEFAULT_LICENSE_CATALOG)) {
+      error(
+        "qfai prototyping iterate: prototyping.json#frozenLicenseCatalog drifted " +
+          "from the cycle-0 frozen license catalog (the in-memory " +
+          "DEFAULT_LICENSE_CATALOG is the SSOT; mid-loop edits — including " +
+          "additions to `allowedSources` / `licenseTiers` / `sourceHosts`, " +
+          "or a malformed shape — are treated as lock drift). Restore the " +
+          "frozen catalog or re-run `--cycle 0 --target-url <url>` to refreeze.",
+      );
+      return 2;
+    }
+  }
   const imageSources = collected.sources;
   if (imageSources !== null && imageSources.length > 0) {
-    const catalog =
-      readFrozenLicenseCatalog(protoRecordForLicense) ?? DEFAULT_LICENSE_CATALOG;
+    // Catalog drift is rejected above; the verifier authority is the
+    // in-memory SSOT (mirrored at cycle 0 into prototyping.json).
+    const catalog = DEFAULT_LICENSE_CATALOG;
     const verifyResult = licenseVerify(imageSources, catalog);
     if (!verifyResult.ok) {
       const offending = verifyResult.errors
@@ -530,7 +556,7 @@ async function readDesignMdFile(absPath: string): Promise<DesignMdReadResult> {
  * Structural type-predicate for the loose `PrototypingJsonShape`
  * record. The shape is intentionally permissive — every field is
  * `unknown` and individually narrowed by the field-specific readers
- * (`readFrozenSpecsCoveredField`, `readFrozenLicenseCatalog`,
+ * (`readFrozenSurfaceUnionField`, `readFrozenLicenseCatalog`,
  * `collectImageSources`). Accepting any non-array object suffices for
  * the wrapper; bare `as PrototypingJsonShape` casts on a verified
  * `Record<string, unknown>` would otherwise promise the per-field
@@ -573,27 +599,18 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 /**
- * Read `frozenSpecsCovered` from prototyping.json. Returns `null` when
- * the field is missing or malformed (caller falls back to
- * `specsCovered` for backward compatibility with pre-Wave-3 records).
- */
-function readFrozenSpecsCoveredField(record: PrototypingJsonShape): string[] | null {
-  const raw = record.frozenSpecsCovered;
-  if (!Array.isArray(raw) || raw.length === 0) return null;
-  const out: string[] = [];
-  for (const value of raw) {
-    if (typeof value !== "string" || value.length === 0) return null;
-    out.push(value);
-  }
-  return out;
-}
-
-/**
  * Read `frozenSurfaceUnion` from prototyping.json. Returns `null` when
- * the field is missing or malformed so the cycle ≥ 1 drift gate can
- * fall back to `frozenSpecsCovered` for pre-11th-wave records that
- * pre-date the dedicated UNION snapshot field. See 11th-wave Fix
- * (codex r3265480688, MAJOR/P1) for the rationale.
+ * the field is missing or malformed.
+ *
+ * 13th-wave Fix (codex r3265953324, MAJOR/P1): the cycle ≥ 1 drift gate
+ * no longer falls back to `frozenSpecsCovered` when this field is
+ * absent — pre-12th-wave records had a single-spec `frozenSpecsCovered`
+ * that, compared against the live multi-spec UNION, produced the
+ * original MAJOR/P1 false-positive (TC-0012-0415 / codex r3265480688).
+ * The fallback documented "the prior — buggy — baseline" silently
+ * restored the bug. Callers must now hard-fail at cycle ≥ 1 when
+ * `null` is returned and instruct the operator to re-seed via
+ * `--cycle 0` so a fresh UNION snapshot is written.
  */
 function readFrozenSurfaceUnionField(record: PrototypingJsonShape): string[] | null {
   const raw = record.frozenSurfaceUnion;
@@ -611,6 +628,55 @@ function readFrozenSurfaceUnionField(record: PrototypingJsonShape): string[] | n
  * when the field is missing or malformed so callers can fall back to
  * the in-memory default.
  */
+/**
+ * Deep-equal check for two {@link LicenseCatalog} records. Used at
+ * cycle ≥ 1 to detect drift of the on-disk `frozenLicenseCatalog`
+ * field against the in-memory SSOT (`DEFAULT_LICENSE_CATALOG`).
+ *
+ * 13th-wave Fix (codex r3265947252, P2): order-insensitive within each
+ * string[] (allowedSources, licenseTiers[*], sourceHosts[*]) so a
+ * legitimate cycle-0 snapshot whose JSON serialization reordered the
+ * entries deterministically still compares equal.
+ */
+function licenseCatalogsEqual(a: LicenseCatalog, b: LicenseCatalog): boolean {
+  if (!stringArraysSetEqual(a.allowedSources, b.allowedSources)) return false;
+  if (!recordOfStringArraysEqual(a.licenseTiers, b.licenseTiers)) return false;
+  const aHosts = a.sourceHosts;
+  const bHosts = b.sourceHosts;
+  if (aHosts === undefined && bHosts === undefined) return true;
+  if (aHosts === undefined || bHosts === undefined) return false;
+  return recordOfStringArraysEqual(aHosts, bHosts);
+}
+
+function recordOfStringArraysEqual(
+  a: Record<string, readonly string[]>,
+  b: Record<string, readonly string[]>,
+): boolean {
+  const aKeys = Object.keys(a).sort();
+  const bKeys = Object.keys(b).sort();
+  if (aKeys.length !== bKeys.length) return false;
+  for (let i = 0; i < aKeys.length; i += 1) {
+    const ak = aKeys[i];
+    const bk = bKeys[i];
+    if (ak === undefined || bk === undefined || ak !== bk) return false;
+    const av = a[ak];
+    const bv = b[bk];
+    if (av === undefined || bv === undefined) return false;
+    if (!stringArraysSetEqual(av, bv)) return false;
+  }
+  return true;
+}
+
+function stringArraysSetEqual(a: readonly string[], b: readonly string[]): boolean {
+  if (a.length !== b.length) return false;
+  const sortedA = [...a].sort();
+  const sortedB = [...b].sort();
+  for (let i = 0; i < sortedA.length; i += 1) {
+    if (sortedA[i] !== sortedB[i]) return false;
+  }
+  return true;
+}
+
 function readFrozenLicenseCatalog(record: PrototypingJsonShape | null): LicenseCatalog | null {
   if (!record) return null;
   const raw = record.frozenLicenseCatalog;
@@ -716,7 +782,7 @@ function collectImageSources(record: PrototypingJsonShape | null): CollectImageS
       );
       return;
     }
-    // 11th-wave Fix (codex r3265482144, P2): promote `attribution`
+    // 12th-wave Fix (codex r3265482144, P2): promote `attribution`
     // into the runtime ImageSource. Missing / non-string attribution
     // is intentionally NOT treated as an input-shape (exit 2) error
     // — the CLI contract puts "missing attribution" under exit 66
@@ -751,7 +817,7 @@ type SeedMetadata = {
    * Cycle-0 UI-bearing UNION snapshot. Persisted in prototyping.json
    * as `frozenSurfaceUnion` and consumed by the cycle ≥ 1 drift gate
    * as the apples-to-apples baseline for the live UNION comparison.
-   * See 11th-wave Fix (codex r3265480688, MAJOR/P1).
+   * See 12th-wave Fix (codex r3265480688, MAJOR/P1).
    */
   frozenSurfaceUnion: readonly string[];
   frozenLicenseCatalog: LicenseCatalog;
@@ -856,7 +922,9 @@ type ClearEvidenceIterDirsResult = { ok: true } | { ok: false; failedDir: string
  * summary for the multi-spec migration helpers. The two contracts are
  * not unified yet.
  */
-async function clearEvidenceIterDirs(evidenceRootAbs: string): Promise<ClearEvidenceIterDirsResult> {
+async function clearEvidenceIterDirs(
+  evidenceRootAbs: string,
+): Promise<ClearEvidenceIterDirsResult> {
   let entries: string[];
   try {
     entries = await readdir(evidenceRootAbs);
@@ -934,11 +1002,7 @@ async function deleteStaleCompletionCertificate(certAbs: string): Promise<void> 
  * exists on disk, the no-op short-circuit is skipped so the legacy
  * `resolvePrimaryPrototypingSpec` path can drive the loop.
  */
-async function specDirExists(
-  root: string,
-  specsDir: string,
-  specId: string,
-): Promise<boolean> {
+async function specDirExists(root: string, specsDir: string, specId: string): Promise<boolean> {
   const dirName = `spec-${specId}`;
   const abs = path.join(root, specsDir, dirName);
   try {
@@ -1093,9 +1157,7 @@ type ZeroUiBearingPrecheckResult =
  * On the continue path, the loaded config snapshot is returned so the
  * caller can reuse it without re-IO'ing the YAML file.
  */
-async function evaluateZeroUiBearingPrecheck(
-  root: string,
-): Promise<ZeroUiBearingPrecheckResult> {
+async function evaluateZeroUiBearingPrecheck(root: string): Promise<ZeroUiBearingPrecheckResult> {
   const earlyConfig = await loadConfig(root);
   const unionSpecs = await resolveSurfaceUnion(root, earlyConfig.config);
   if (unionSpecs.length === 0) {
@@ -1144,18 +1206,11 @@ export async function resolveSurfaceUnion(
   config: ConfigLoadResult["config"],
 ): Promise<string[]> {
   const strictUiBearing = await resolveAllUiBearingSpecs(root, config);
-  const titleMarkerSpecs = await resolveTitleMarkerSpecs(
-    root,
-    config.paths.specsDir,
-  );
+  const titleMarkerSpecs = await resolveTitleMarkerSpecs(root, config.paths.specsDir);
   const configuredPrimarySpecId = config.prototyping?.primarySpecId;
   const configuredSpecOnDisk =
     configuredPrimarySpecId !== undefined
-      ? await specDirExists(
-          root,
-          config.paths.specsDir,
-          configuredPrimarySpecId,
-        )
+      ? await specDirExists(root, config.paths.specsDir, configuredPrimarySpecId)
       : false;
   const union = new Set<string>(strictUiBearing);
   if (configuredSpecOnDisk && configuredPrimarySpecId !== undefined) {
@@ -1176,9 +1231,7 @@ type CycleGteOneGateInput = {
   config: ConfigLoadResult["config"];
 };
 
-type CycleGteOneGateResult =
-  | { shortCircuit: true; exitCode: number }
-  | { shortCircuit: false };
+type CycleGteOneGateResult = { shortCircuit: true; exitCode: number } | { shortCircuit: false };
 
 /**
  * Section 2 of `runPrototypingIterate`: cycle >= 1 gates.
@@ -1385,19 +1438,33 @@ async function evaluateCycleGteOneGate(
   // already carried ≥ 2 UI-bearing specs, making convergence
   // unreachable.
   //
-  // Backward-compat: pre-11th-wave prototyping.json records have no
-  // `frozenSurfaceUnion` field. Fall back to `frozenSpecsCovered` (the
-  // prior — buggy — baseline) so the gate still runs on legacy
-  // records; new records written by `writeSeedMetadata` always carry
-  // the field. See 11th-wave Fix (codex r3265480688, MAJOR/P1).
+  // 13th-wave Fix (codex r3265953324, MAJOR/P1): legacy records that
+  // pre-date the `frozenSurfaceUnion` snapshot field MUST NOT silently
+  // fall back to `frozenSpecsCovered` — that fallback re-enabled the
+  // very MAJOR/P1 bug the 11th-wave fix was supposed to close
+  // (TC-0012-0415 / codex r3265480688). Hard-fail with exit 2 and
+  // instruct the operator to re-seed via `--cycle 0`; this matches the
+  // "drifted spec(s) are deferred to the next `--cycle 0` invocation"
+  // semantics already used by every other lock-drift class on this
+  // code path.
   //
   // Restart semantics unchanged: drift fails-fast with stderr that
   // names every drifted spec id and exits 2; the operator is
   // expected to restart with `--cycle 0` to pick up the broader scope.
-  const frozenUnion =
-    readFrozenSurfaceUnionField(protoRecord) ??
-    readFrozenSpecsCoveredField(protoRecord) ??
-    frozenSpecs;
+  const frozenUnion = readFrozenSurfaceUnionField(protoRecord);
+  if (frozenUnion === null) {
+    error(
+      "qfai prototyping iterate: prototyping.json#frozenSurfaceUnion is missing or " +
+        "malformed (legacy pre-12th-wave record). The cycle ≥ 1 drift gate " +
+        "requires a cycle-0-frozen multi-spec UI-bearing UNION snapshot; " +
+        "silently falling back to the single-spec `frozenSpecsCovered` " +
+        "would re-enable the MAJOR/P1 false-positive that 11th-wave Fix " +
+        "(codex r3265480688) closed for any project with ≥ 2 UI-bearing " +
+        "specs. Re-run with `--cycle 0 --target-url <url>` to refreeze " +
+        "the loop with a current UNION snapshot.",
+    );
+    return { shortCircuit: true, exitCode: 2 };
+  }
   const liveUiBearing = await resolveSurfaceUnion(input.root, input.config);
   const drift = checkSpecsCoveredDrift(frozenUnion, liveUiBearing);
   if (drift.drifted) {

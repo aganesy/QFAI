@@ -859,6 +859,22 @@
 - Test file: `packages/qfai/tests/cli/commands/prototypingIterate.test.ts` (planned)
 - TODO (deferred follow-up; see `10_Plan.md#Deferred follow-ups` row TDD-0436). Verify that a single `--cycle 9` invocation on a non-converged loop whose `iterations.length === 10` emits exit 65 directly rather than via the cycle-mismatch path (where `expectedNextCycle` becomes 10 and is capped at 9). SKILL.md already drops the stateful re-run workaround. Implementation lands in a follow-up PR; this row exists so the deferred-followup table row in `10_Plan.md` has a stable TDD/TC handle. Closes codex r3265481161 (LOW).
 
+## TC-0012-0417
+
+- EX-Ref: EX-0012-0146
+- AC-Refs: AC-0012-0041
+- Type: unit
+- Test file: `packages/qfai/tests/core/prototyping/evaluatorReview.test.ts`
+- Verify the wave-11 `parseEvaluatorReview — new required fields (cycle / retryCount / wallTimeSec)` describe block. Closed-schema validation covers the 4 missing-field rejections (`cycle` / `retryCount` / `wallTimeSec` / `softWarnings`), the integer / range / non-finite / string-type rejections, the wave-13 boundary regression (`rejects when cycle exceeds MAX_ITERATION_INDEX` — exercises `cycle: 10 / 99 / 100`, closing the closed-schema upper-bound gap that pre-fix let `cycle: 99` pass), and the SSOT-compliant positive case (`accepts a full SSOT-compliant payload with all 11 required fields`). Closes codex r3265811711 (wave-11 traceability stitch, MAJOR) and codex r3265809796 / r3265811203 / r3265814987 (cycle upper-bound MAJOR / MINOR / NIT, wave-13).
+
+## TC-0012-0418
+
+- EX-Ref: EX-0012-0147
+- AC-Refs: AC-0012-0046
+- Type: integration
+- Test file: `packages/qfai/tests/cli/commands/prototypingCertify.test.ts`
+- Verify the wave-11 four-`it` cluster on the per-spec UI contract resolver `readPerSpecScreens`: `respects the bare-numeric canonical layout (candidate #2: <bare>.yaml)`, `respects the ui-prefixed canonical layout (candidate #3: ui-<bare>.yaml)`, `respects the recursive subdir layout (candidate #5: <spec-id>/<sub>.yaml)`, and `uses candidate #1 only when both #1 and #3 exist on disk (true first-hit-wins)`. Pairs with the wave-13 `indexPerSpecScreens` per-spec re-parse fix (`parseUiScreenFile` per-spec winning file) and the multi-file aggregation extension (`chooseWinningFiles`) — those wave-13 fixes preserve the TC-0012-0418 assertions while closing the cross-spec dedup false-negative (codex r3265806993) and the multi-file null-return waste (codex r3265809880). Closes codex r3265811711 (wave-11 traceability stitch, MAJOR).
+
 ## Legacy Coverage Continuity
 
 - The legacy baseline test-case identifier space remains reserved for existing implementation/test slices.

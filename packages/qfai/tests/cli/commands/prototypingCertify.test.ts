@@ -278,9 +278,7 @@ describe("qfai prototyping certify (TC-0012-0381: per-(spec × screen) review.js
       expect(exit).not.toBe(0);
       const messages = errorSpy.mock.calls.map((c) => String(c[0]));
       const namesHome = messages.some((m) => m.includes("spec-0007") && m.includes("home"));
-      const namesSettings = messages.some(
-        (m) => m.includes("spec-0007") && m.includes("settings"),
-      );
+      const namesSettings = messages.some((m) => m.includes("spec-0007") && m.includes("settings"));
       expect(namesHome).toBe(true);
       expect(namesSettings).toBe(true);
     } finally {
@@ -342,16 +340,13 @@ describe("qfai prototyping certify (TC-0012-0399: frozenSpecsCovered preferred o
       // these messages were absent because the gate iterated only
       // specsCovered=["0001"].
       const namesHome = messages.some((m) => m.includes("spec-0007") && m.includes("home"));
-      const namesSettings = messages.some(
-        (m) => m.includes("spec-0007") && m.includes("settings"),
-      );
+      const namesSettings = messages.some((m) => m.includes("spec-0007") && m.includes("settings"));
       expect(namesHome).toBe(true);
       expect(namesSettings).toBe(true);
     } finally {
       errorSpy.mockRestore();
     }
   });
-
 });
 
 // Regression for codex review r3264630513 (P1): the per-(spec × screen)
@@ -579,9 +574,7 @@ describe("qfai prototyping certify (TC-0012-0400: legacy specsCovered fallback w
       expect(exit).not.toBe(0);
       const messages = errorSpy.mock.calls.map((c) => String(c[0]));
       const namesHome = messages.some((m) => m.includes("spec-0007") && m.includes("home"));
-      const namesSettings = messages.some(
-        (m) => m.includes("spec-0007") && m.includes("settings"),
-      );
+      const namesSettings = messages.some((m) => m.includes("spec-0007") && m.includes("settings"));
       expect(namesHome).toBe(true);
       expect(namesSettings).toBe(true);
     } finally {
@@ -655,6 +648,10 @@ describe("qfai prototyping certify (TC-0012-0407: per-spec UI contracts scope th
   // by tests. Add explicit coverage for #2 (`<bare>.yaml`) and #3
   // (`ui-<bare>.yaml`) so the alternate canonical layouts have
   // present-path assertions matching the README documentation.
+  // QFAI:SPEC-0012:TC-0012-0418 — wave-11 traceability stitch for the
+  // four canonical-layout `it` blocks below (#2 bare-numeric / #3
+  // ui-prefixed / #5 recursive subdir / #1 first-hit-wins). Closes
+  // the missing TC annotation flagged by codex r3265811711 (MAJOR).
   it("respects the bare-numeric canonical layout (candidate #2: <bare>.yaml)", async () => {
     const root = await newTempDir();
     await seedMinimalProject(root);
@@ -864,9 +861,7 @@ describe("qfai prototyping certify (TC-0012-0407: per-spec UI contracts scope th
       const exit = await runPrototypingCertify({ root, check: false });
       expect(exit).not.toBe(0);
       const messages = errorSpy.mock.calls.map((c) => String(c[0]));
-      const namesMissing = messages.some(
-        (m) => m.includes("spec-0001") && m.includes("settings"),
-      );
+      const namesMissing = messages.some((m) => m.includes("spec-0001") && m.includes("settings"));
       expect(namesMissing).toBe(true);
     } finally {
       errorSpy.mockRestore();

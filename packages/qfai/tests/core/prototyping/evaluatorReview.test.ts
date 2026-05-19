@@ -516,9 +516,7 @@ const BASE_IMPRESSIONS: Record<FeelField, string> = {
   menuReachabilityFeel: "All primary menu entries are reachable from the topbar.",
 };
 
-const baseReviewerPayload = (
-  overrides: Record<string, unknown> = {},
-): Record<string, unknown> => ({
+const baseReviewerPayload = (overrides: Record<string, unknown> = {}): Record<string, unknown> => ({
   specId: "spec-0012",
   screenId: "home",
   cycle: 0,
@@ -573,7 +571,7 @@ describe("parseEvaluatorReview — rejection with named field path (TC-0012-0365
     "rejects when impressions.'%s' is missing",
     (field) => {
       const impressions: Partial<Record<FeelField, string>> = { ...BASE_IMPRESSIONS };
-      delete impressions[field];
+      Reflect.deleteProperty(impressions, field);
       const payload = baseReviewerPayload({ impressions });
       const result = parseEvaluatorReview(payload);
       expect(result.ok).toBe(false);
@@ -591,7 +589,7 @@ describe("parseEvaluatorReview — rejection with named field path (TC-0012-0365
         usability: "acceptable",
         functionality: "acceptable",
       };
-      delete axes[axis];
+      Reflect.deleteProperty(axes, axis);
       const payload = baseReviewerPayload({ ordinalAxes: axes });
       const result = parseEvaluatorReview(payload);
       expect(result.ok).toBe(false);
@@ -615,9 +613,9 @@ describe("parseEvaluatorReview — rejection with named field path (TC-0012-0365
     );
     expect(result.ok).toBe(false);
     if (result.ok) return;
-    expect(
-      result.errors.some((e) => /unknown field: impressions\.extraImpression/.test(e)),
-    ).toBe(true);
+    expect(result.errors.some((e) => /unknown field: impressions\.extraImpression/.test(e))).toBe(
+      true,
+    );
   });
 
   it("rejects when an unknown nested key under ordinalAxes is present", () => {
@@ -850,6 +848,11 @@ describe("parseEvaluatorReview — softWarnings.timeBudget (TC-0012-0387)", () =
 
 // 11th late-review wave: the CLI contract §Review payload SSOT requires
 // 11 top-level fields. Verify the new required fields are validated.
+// QFAI:SPEC-0012:TC-0012-0417 — closed-schema validation of the new
+// required fields surfaced by CHG-002 (cycle / retryCount / wallTimeSec
+// / softWarnings). Wave-13 added the upper-bound regression
+// (`cycle > MAX_ITERATION_INDEX`) to close the closed-schema gap noted
+// by codex r3265809796 / r3265811203 / r3265814987.
 describe("parseEvaluatorReview — new required fields (cycle / retryCount / wallTimeSec)", () => {
   it("rejects when cycle is missing", () => {
     const payload = baseReviewerPayload();
@@ -872,6 +875,20 @@ describe("parseEvaluatorReview — new required fields (cycle / retryCount / wal
     expect(fractional.ok).toBe(false);
     const stringy = parseEvaluatorReview(baseReviewerPayload({ cycle: "0" }));
     expect(stringy.ok).toBe(false);
+  });
+
+  // 13th late-review wave: codex r3265814987 / r3265811203 — the CLI contract
+  // pins `cycle: 0..MAX_ITERATION_INDEX` (currently 0..9); the parser must
+  // reject `cycle > 9` so reviewer-emitted payloads cannot bypass the
+  // closed-schema contract via the upper-bound gap.
+  it("rejects when cycle exceeds MAX_ITERATION_INDEX (10 / 99 / 100)", () => {
+    for (const bad of [10, 99, 100]) {
+      const result = parseEvaluatorReview(baseReviewerPayload({ cycle: bad }));
+      expect(result.ok).toBe(false);
+      if (!result.ok) {
+        expect(result.errors.some((e) => /cycle must be <= 9/.test(e))).toBe(true);
+      }
+    }
   });
 
   it("rejects when retryCount is missing", () => {

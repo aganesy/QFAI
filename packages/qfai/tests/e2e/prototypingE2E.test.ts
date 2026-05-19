@@ -128,6 +128,19 @@ async function seedIterations(
     path.join(dir, "prototyping.json"),
     JSON.stringify({
       specsCovered: ["0001"],
+      frozenSpecsCovered: ["0001"],
+      frozenSurfaceUnion: ["0001"],
+      frozenLicenseCatalog: {
+        allowedSources: ["unsplash", "pexels"],
+        licenseTiers: {
+          unsplash: ["unsplash-license", "free"],
+          pexels: ["pexels-free"],
+        },
+        sourceHosts: {
+          unsplash: ["images.unsplash.com", "unsplash.com"],
+          pexels: ["images.pexels.com", "pexels.com"],
+        },
+      },
       iterations: iters.map((it) => ({
         index: it.index,
         commitSha: "a".repeat(40),

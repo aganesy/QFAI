@@ -321,7 +321,11 @@ export async function runPrototypingCertify(
       // glob, but the Map keys collapse only well-formed per-spec
       // single-file paths to avoid cross-talk with project-wide files
       // that have no per-spec scope).
-      const perSpecIndex = indexPerSpecScreens(screenContracts, config.paths.contractsDir);
+      const perSpecIndex = await indexPerSpecScreens(
+        options.root,
+        screenContracts,
+        config.paths.contractsDir,
+      );
       for (const rawSpec of frozenSpecsPreview) {
         const specDirName = normalizeSpecDirName(rawSpec);
         // codex r3265157640 (P1): when a per-spec UI contract exists at
@@ -337,11 +341,7 @@ export async function runPrototypingCertify(
         const perSpecScreens =
           indexedScreens !== undefined && indexedScreens.length > 0
             ? indexedScreens
-            : await readPerSpecScreens(
-                options.root,
-                config.paths.contractsDir,
-                specDirName,
-              );
+            : await readPerSpecScreens(options.root, config.paths.contractsDir, specDirName);
         const scopedScreens = perSpecScreens ?? screenContracts;
         for (const screen of scopedScreens) {
           const rel = `${PROTOTYPING_EVIDENCE_REL}/${acceptedIterDir}/${specDirName}/${screen.screenId}.review.json`;
@@ -368,7 +368,7 @@ export async function runPrototypingCertify(
         for (const m of missingPairs.slice(0, 20)) {
           error(`  - ${m.spec} / ${m.screen} (expected ${m.expectedPath})`);
         }
-        // 11th-wave Fix (codex r3265482136, P2): missing review.json
+        // 12th-wave Fix (codex r3265482136, P2): missing review.json
         // coverage at the per-spec layout is the same rejection class
         // as the flat-iter multi-spec coverage gap above (exit 64),
         // not an input error. The CLI contract's exit-code table
@@ -596,7 +596,7 @@ async function loadLockGate(root: string, contractsDir: string): Promise<LockGat
  * operator can see which specs the current `/qfai-prototyping` run
  * iterates over.
  *
- * 11th-wave Fix (codex r3265482150, P2): pre-fix this command resolved
+ * 12th-wave Fix (codex r3265482150, P2): pre-fix this command resolved
  * the LIVE primary spec from the config / spec markers and never read
  * `prototyping.json`. After cycle 0 the frozen scope can diverge from
  * the live config (a primary spec id renamed, markers moved between
@@ -870,26 +870,49 @@ async function hasPerSpecSubdir(iterDirAbs: string): Promise<boolean> {
  * declaration in `core/contracts/screenContracts.ts`.
  *
  * Returns an empty array on read / parse failure or on a missing
- * `screens:` array — callers aggregate these into a `matched.length > 0
- * but screens.length === 0` diagnostic to surface authoring typos.
+ * `screens:` array.
+ *
+ * 13th-wave Fix (codex r3265813656, MINOR): pre-fix the read / parse
+ * failure path silently swallowed the error and returned `[]`, which
+ * the aggregate-warn at the call site only surfaced when the entire
+ * matched set produced zero screens. In a half-failure (e.g. three
+ * matched files, one with a YAML parse error, two with valid
+ * `screens:`), the call site's aggregate warn never fired because the
+ * other files filled the array — and the operator never saw the parse
+ * error. This per-file `warn` line names the offending file and
+ * narrows the error class (read vs parse) so authoring typos surface
+ * at the certify gate. The function still returns `[]` on failure so
+ * existing callers keep their contracts; CLAUDE.md "every async path
+ * must have explicit error handling" is satisfied via the
+ * named-error warn.
  */
 async function parseUiScreenFile(
   root: string,
   absPath: string,
 ): Promise<CanonicalScreenContract[]> {
+  const relRef = path.relative(root, absPath).replace(/\\/g, "/");
   let raw: string;
   try {
     raw = await readFile(absPath, "utf-8");
-  } catch {
+  } catch (err) {
+    const reason = err instanceof Error ? err.message : String(err);
+    warn(
+      `qfai prototyping certify: UI contract file ${relRef} could not be read ` +
+        `(${reason}); treating as zero screens.`,
+    );
     return [];
   }
   let parsed: unknown;
   try {
     parsed = parseYaml(raw);
-  } catch {
+  } catch (err) {
+    const reason = err instanceof Error ? err.message : String(err);
+    warn(
+      `qfai prototyping certify: UI contract file ${relRef} could not be parsed ` +
+        `as YAML (${reason}); treating as zero screens.`,
+    );
     return [];
   }
-  const relRef = path.relative(root, absPath).replace(/\\/g, "/");
   return extractUiScreens(parsed).map((screen) => ({
     ...screen,
     sourceRef: `${relRef}#${screen.screenId}`,
@@ -997,9 +1020,7 @@ export async function readPerSpecScreens(
     // the caller silently falls back to the project-wide list (the
     // 9th-wave cross-product behaviour). Operator gets a named path
     // instead of a confusing "missing pair" error at the gate below.
-    const relPaths = matched
-      .map((m) => path.relative(root, m).replace(/\\/g, "/"))
-      .join(", ");
+    const relPaths = matched.map((m) => path.relative(root, m).replace(/\\/g, "/")).join(", ");
     warn(
       `qfai prototyping certify: per-spec UI contract file(s) for ${specDirName} ` +
         `(${relPaths}) parsed but declared no valid screens; falling back to the ` +
@@ -1011,16 +1032,14 @@ export async function readPerSpecScreens(
   // First-write-wins dedup across multi-file matches (glob + subdir
   // layout can both surface duplicate `screenId`s). Matches the
   // `readUiContractScreenContracts` semantics.
-  return screens.filter(
-    (s, idx, all) => all.findIndex((c) => c.screenId === s.screenId) === idx,
-  );
+  return screens.filter((s, idx, all) => all.findIndex((c) => c.screenId === s.screenId) === idx);
 }
 
 /**
  * Build a `Map<specDirName, CanonicalScreenContract[]>` from the
- * already-parsed project-wide `screenContracts` so the per-(spec x screen)
- * gate avoids N+1 fs probes (`readPerSpecScreens` runs up to 5 fs ops per
- * spec; this Map collapses N calls to one pass over already-loaded data).
+ * project-wide `screenContracts` so the per-(spec x screen) gate avoids
+ * N+1 fs probes (`readPerSpecScreens` runs up to 5 fs ops per spec; this
+ * Map collapses N calls to one pass over already-discovered file paths).
  *
  * The Map is keyed by the `<spec-id>` segment extracted from the
  * canonical `sourceRef` shape (`<contractsDir>/ui/<spec-id>.yaml#<id>`
@@ -1033,22 +1052,35 @@ export async function readPerSpecScreens(
  * codex r3265376125 (MINOR): pre-fix the per-spec gate called
  * `readPerSpecScreens` for every frozen spec, repeating the same fs
  * probes for shapes that were already loaded once at the call site.
- * This Map collapses the common single-file canonical layouts; the
- * subdir / multi-file layouts still fall through to `readPerSpecScreens`
- * because their fs surface is not pre-loaded by
- * `readUiContractScreenContracts` in a per-spec-keyed form.
+ *
+ * 13th-wave Fix (codex r3265806993 / r3265809880, MAJOR): pre-fix the
+ * Map seeded each spec entry from the project-wide `screenContracts`
+ * collection — which has already been deduplicated by `screenId` across
+ * every parsed file in `<contractsDir>/ui/**`. When two specs declare
+ * the same `screenId` (e.g. `home`), the project-wide dedup keeps the
+ * first file's entry and drops the second; the index then looked
+ * non-empty for the losing spec but was silently missing one screen,
+ * which silently false-negative-passed the `<spec>/<screen>.review.json`
+ * gate. The fix re-parses each spec's winning file via
+ * `parseUiScreenFile` to recover the unfiltered per-spec screen list
+ * (the per-spec re-parse scope is isolated from cross-spec dedup).
+ * For multi-file shapes (glob #4 / subdir #5) the winner set is the
+ * union of all matched files (first-write-wins dedup within the
+ * spec's own scope) so subdir / glob layouts still benefit from the
+ * pre-indexed path discovery instead of falling through to the fs
+ * probe.
  */
-function indexPerSpecScreens(
+async function indexPerSpecScreens(
+  root: string,
   screenContracts: ReadonlyArray<CanonicalScreenContract>,
   contractsDirRelative: string,
-): Map<string, CanonicalScreenContract[]> {
+): Promise<Map<string, CanonicalScreenContract[]>> {
   const uiPrefix = `${contractsDirRelative.replace(/\\/g, "/")}/ui/`;
-  // Bucket screens by (spec, source-file relative path) so the
-  // candidate-precedence step can choose the winning file deterministically
-  // without losing the per-file grouping `readPerSpecScreens` would have
-  // computed had we not pre-indexed.
-  type FileEntry = { rel: string; screens: CanonicalScreenContract[] };
-  const perSpecFiles = new Map<string, Map<string, FileEntry>>();
+  // Bucket file relative paths by spec so the candidate-precedence step
+  // can choose the winning file(s) deterministically. We retain the
+  // per-file path set (NOT the per-file already-dedupped screens) so
+  // the per-spec re-parse below operates on the raw on-disk source.
+  const perSpecFiles = new Map<string, Set<string>>();
   for (const screen of screenContracts) {
     const ref = screen.sourceRef;
     const hashIdx = ref.indexOf("#");
@@ -1059,53 +1091,68 @@ function indexPerSpecScreens(
     if (specDirName === null) continue;
     let filesForSpec = perSpecFiles.get(specDirName);
     if (!filesForSpec) {
-      filesForSpec = new Map<string, FileEntry>();
+      filesForSpec = new Set<string>();
       perSpecFiles.set(specDirName, filesForSpec);
     }
-    let fileEntry = filesForSpec.get(rel);
-    if (!fileEntry) {
-      fileEntry = { rel, screens: [] };
-      filesForSpec.set(rel, fileEntry);
-    }
-    fileEntry.screens.push(screen);
+    filesForSpec.add(rel);
   }
-  // Apply readPerSpecScreens's TRUE first-hit-wins precedence so the
-  // Map result is byte-equivalent to the fallback's output (multi-spec
-  // authoring forks must not silently union here either).
+  // Apply readPerSpecScreens's TRUE first-hit-wins precedence for
+  // single-file canonical shapes; aggregate for multi-file shapes. Then
+  // re-parse the chosen file(s) so the per-spec re-parse scope is
+  // isolated from project-wide cross-spec dedup.
   const out = new Map<string, CanonicalScreenContract[]>();
-  for (const [specDirName, fileMap] of perSpecFiles.entries()) {
-    const winner = chooseWinningFile(specDirName, [...fileMap.values()].map((f) => f.rel));
-    if (winner === null) continue;
-    const entry = fileMap.get(winner);
-    if (entry) out.set(specDirName, [...entry.screens]);
+  for (const [specDirName, fileSet] of perSpecFiles.entries()) {
+    const winners = chooseWinningFiles(specDirName, [...fileSet]);
+    if (winners.length === 0) continue;
+    const uiDir = path.join(root, contractsDirRelative, "ui");
+    const reparsed: CanonicalScreenContract[] = [];
+    for (const rel of winners) {
+      const abs = path.join(uiDir, rel);
+      const fileScreens = await parseUiScreenFile(root, abs);
+      reparsed.push(...fileScreens);
+    }
+    // First-write-wins per-spec dedup (multi-file shapes may still
+    // declare duplicate `screenId`s within the spec's own scope).
+    const dedupped = reparsed.filter(
+      (s, idx, all) => all.findIndex((c) => c.screenId === s.screenId) === idx,
+    );
+    if (dedupped.length > 0) out.set(specDirName, dedupped);
   }
   return out;
 }
 
 /**
  * Apply the same candidate precedence as {@link readPerSpecScreens}
- * (1: `<spec-id>.yaml`, 2: `<bare>.yaml`, 3: `ui-<bare>.yaml`, and the
- * multi-file shapes 4 + 5 grouped after) over a set of already-discovered
- * per-spec file relative paths. Returns the relative path of the winning
- * file (single canonical) or `null` when the winner is ambiguous across
- * multi-file shapes (caller defers to the fallback `readPerSpecScreens`
- * which aggregates all multi-file matches with first-write dedup).
+ * (1: `<spec-id>.yaml`, 2: `<bare>.yaml`, 3: `ui-<bare>.yaml`, then
+ * multi-file shapes 4 + 5 aggregated) over a set of already-discovered
+ * per-spec file relative paths.
+ *
+ * 13th-wave Fix (codex r3265809880, MAJOR): pre-fix multi-file shapes
+ * (#4 glob / #5 subdir) returned `null` so the call site fell through
+ * to `readPerSpecScreens` and ran the same fs probes again — defeating
+ * the N+1 optimization for subdir / multi-file layouts. The fix
+ * returns every multi-file match so the caller's re-parse covers the
+ * full per-spec union, and the precedence semantics (single-file #1..3
+ * beat multi-file #4..5) are preserved by checking the canonical
+ * candidates first.
  */
-function chooseWinningFile(specDirName: string, relPaths: string[]): string | null {
+function chooseWinningFiles(specDirName: string, relPaths: string[]): string[] {
   const bareNumeric = specDirName.replace(/^spec-/iu, "");
-  const ordered = [
-    `${specDirName}.yaml`,
-    `${bareNumeric}.yaml`,
-    `ui-${bareNumeric}.yaml`,
-  ];
+  const ordered = [`${specDirName}.yaml`, `${bareNumeric}.yaml`, `ui-${bareNumeric}.yaml`];
   for (const candidate of ordered) {
-    if (relPaths.includes(candidate)) return candidate;
+    if (relPaths.includes(candidate)) return [candidate];
   }
-  // Multi-file shapes (glob #4 / subdir #5): the Map cannot represent
-  // first-write aggregation safely (its keys are per-file, not per
-  // screen). Defer to readPerSpecScreens by returning null; the caller
-  // sees `undefined` from the Map and falls back to the fs probe.
-  return null;
+  // Multi-file shapes (glob #4 / subdir #5): aggregate every matched
+  // path so the caller's per-spec re-parse builds the full union (with
+  // first-write-wins dedup within the spec's own scope). Matches
+  // `readPerSpecScreens`'s behaviour for the same layouts.
+  const multiFile = relPaths.filter((rel) => {
+    return (
+      new RegExp(`^ui-${bareNumeric}-[^/]+\\.yaml$`, "iu").test(rel) ||
+      rel.startsWith(`${specDirName}/`)
+    );
+  });
+  return multiFile;
 }
 
 /**

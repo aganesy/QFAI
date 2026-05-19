@@ -21,7 +21,7 @@
  * license, attribution}` — so the runtime gate refuses any entry the
  * handoff stage would also reject.
  *
- * 11th-wave Fix (codex r3265482144, P2): `attribution` was previously
+ * 12th-wave Fix (codex r3265482144, P2): `attribution` was previously
  * deferred to the handoff stage with an inline comment ("recorded
  * separately at certify"), which let unattributed stock photos pass
  * the cycle ≥ 1 license-verify gate even though the contract's exit-66
@@ -144,15 +144,14 @@ export function licenseVerify(
     const expectedHosts = catalog.sourceHosts?.[source];
     if (expectedHosts && expectedHosts.length > 0) {
       const host = urlHost(url);
-      // 11th-wave Fix (codex r3265474144, P2): compare both sides
+      // 12th-wave Fix (codex r3265474144, P2): compare both sides
       // case-insensitively. `urlHost()` already lowercases the URL
       // side, but the catalog side was taken verbatim, so a user
       // catalog with `"Images.Unsplash.com"` would false-positive
       // reject a valid URL. RFC 3986 §3.2.2 declares host
       // case-insensitive, so the comparison must mirror that on
       // both operands.
-      const hostMatches =
-        host !== null && expectedHosts.some((h) => h.toLowerCase() === host);
+      const hostMatches = host !== null && expectedHosts.some((h) => h.toLowerCase() === host);
       if (!hostMatches) {
         errors.push({ code: "license-host-mismatch", source, expectedHosts, url });
         continue;
@@ -163,7 +162,7 @@ export function licenseVerify(
       errors.push({ code: "license-tier-unknown", source, license, url });
       continue;
     }
-    // 11th-wave Fix (codex r3265482144, P2): require non-empty
+    // 12th-wave Fix (codex r3265482144, P2): require non-empty
     // attribution at the runtime license gate. The CLI contract's
     // exit-66 class explicitly enumerates "missing attribution", and
     // the handoff schema requires `{url, license, attribution,

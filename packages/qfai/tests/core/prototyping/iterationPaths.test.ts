@@ -94,16 +94,8 @@ describe("findIterationReviewFiles", () => {
     );
 
     // Distractor files in the same dirs — must be ignored.
-    await seedFile(
-      root,
-      ".qfai/evidence/prototyping/iter-02/spec-0007/dashboard.png",
-      "PNGDATA",
-    );
-    await seedFile(
-      root,
-      ".qfai/evidence/prototyping/iter-02/spec-0007/dashboard.html",
-      "<html/>",
-    );
+    await seedFile(root, ".qfai/evidence/prototyping/iter-02/spec-0007/dashboard.png", "PNGDATA");
+    await seedFile(root, ".qfai/evidence/prototyping/iter-02/spec-0007/dashboard.html", "<html/>");
     await seedFile(
       root,
       ".qfai/evidence/prototyping/iter-02/spec-0011/notes.json",
@@ -169,9 +161,7 @@ describe("findStaleIterDirs / deleteStaleIterDirs", () => {
     const remaining = await import("node:fs/promises").then((fs) =>
       fs.readdir(path.join(root, ".qfai/evidence/prototyping")),
     );
-    expect(remaining.sort()).toEqual(
-      ["iter-1", "iter-bad", "prototyping.json", "sandbox"].sort(),
-    );
+    expect(remaining.sort()).toEqual(["iter-1", "iter-bad", "prototyping.json", "sandbox"].sort());
   });
 
   // QFAI:SPEC-0012:TC-0012-0380

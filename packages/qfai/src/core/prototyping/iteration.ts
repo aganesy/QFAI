@@ -85,9 +85,7 @@ export type MultiSpecStopResult = {
  * runs are handled at the caller level (each pair owns its own index
  * sequence); this function only decides convergence.
  */
-export function shouldStopAcrossSpecs(
-  pairs: readonly PerSpecScreenIter[],
-): MultiSpecStopResult {
+export function shouldStopAcrossSpecs(pairs: readonly PerSpecScreenIter[]): MultiSpecStopResult {
   if (pairs.length === 0) {
     return { stopReason: null, laggingSpecs: [] };
   }

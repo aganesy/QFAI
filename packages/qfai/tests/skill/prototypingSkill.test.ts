@@ -169,10 +169,9 @@ describe("prototyping skill asset — multi-spec wiring (spec-0012 CHG-002)", ()
     ];
     const lower = skillContent.toLowerCase();
     for (const phrase of forbiddenPhrases) {
-      expect(
-        lower.includes(phrase.toLowerCase()),
-        `SKILL.md should not contain '${phrase}'`,
-      ).toBe(false);
+      expect(lower.includes(phrase.toLowerCase()), `SKILL.md should not contain '${phrase}'`).toBe(
+        false,
+      );
     }
   });
 
@@ -182,8 +181,6 @@ describe("prototyping skill asset — multi-spec wiring (spec-0012 CHG-002)", ()
     // The wording must be unambiguous about "one invocation / multi-spec"
     // semantics so downstream operators do not re-introduce a per-spec
     // selection step.
-    expect(skillContent.toLowerCase()).toMatch(
-      /every ui-bearing spec[\s\S]{0,80}one invocation/i,
-    );
+    expect(skillContent.toLowerCase()).toMatch(/every ui-bearing spec[\s\S]{0,80}one invocation/i);
   });
 });

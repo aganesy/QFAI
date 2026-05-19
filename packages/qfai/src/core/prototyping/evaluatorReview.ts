@@ -24,6 +24,7 @@ import type { DesignMdViolation } from "./designMdViolations.js";
 import {
   isOrdinalScore,
   isPivotDirective,
+  MAX_ITERATION_INDEX,
   type OrdinalScore,
   type PivotDirective,
 } from "./iteration.js";
@@ -290,8 +291,7 @@ const SOFT_WARNINGS_KNOWN_KEYS: ReadonlySet<string> = new Set<string>(["timeBudg
 
 function isReviewerSessionStatus(value: unknown): value is ReviewerSessionStatus {
   return (
-    typeof value === "string" &&
-    (REVIEWER_SESSION_STATUSES as readonly string[]).includes(value)
+    typeof value === "string" && (REVIEWER_SESSION_STATUSES as readonly string[]).includes(value)
   );
 }
 
@@ -315,9 +315,7 @@ function collectImpressions(
     }
     const wordCount = countWords(value);
     if (wordCount > FEEL_FIELD_MAX_WORDS) {
-      errors.push(
-        `impressions.${field} exceeds ${FEEL_FIELD_MAX_WORDS} words (got ${wordCount})`,
-      );
+      errors.push(`impressions.${field} exceeds ${FEEL_FIELD_MAX_WORDS} words (got ${wordCount})`);
       complete = false;
       continue;
     }
@@ -413,8 +411,9 @@ function pushDmvErrors(
     return null;
   }
   const out: DesignMdViolation[] = [];
-  for (let i = 0; i < value.length; i += 1) {
-    const entry = value[i];
+  const entries: readonly unknown[] = value;
+  for (let i = 0; i < entries.length; i += 1) {
+    const entry: unknown = entries[i];
     if (!isRecord(entry)) {
       errors.push(`designMdViolations[${i}] must be an object {kind, found}`);
       continue;
@@ -446,7 +445,9 @@ function pushDmvErrors(
  *
  * Validation rules (closed schema, 11 required top-level fields):
  *   - `specId` / `screenId` required as non-empty strings
- *   - `cycle` required as a non-negative integer (0..9)
+ *   - `cycle` required as an integer in `0..MAX_ITERATION_INDEX`
+ *     (currently `0..9`); upper-bound violations are rejected to keep
+ *     the closed-schema contract symmetric with the CLI `--cycle` range
  *   - `sessionStatus` required, one of `ok | retryExhausted | launchFailed`
  *     (mirrors {@link ReviewerSessionStatus} in `reviewerDispatch.ts`)
  *   - `retryCount` required as a non-negative integer
@@ -495,12 +496,18 @@ export function parseEvaluatorReview(input: unknown): ParseReviewerPayloadResult
   let cycle: number | null = null;
   if (!("cycle" in input)) {
     errors.push("missing field: cycle");
-  } else if (
-    typeof input.cycle !== "number" ||
-    !Number.isInteger(input.cycle) ||
-    input.cycle < 0
-  ) {
+  } else if (typeof input.cycle !== "number" || !Number.isInteger(input.cycle) || input.cycle < 0) {
     errors.push(`cycle must be a non-negative integer (got ${String(input.cycle)})`);
+  } else if (input.cycle > MAX_ITERATION_INDEX) {
+    // 13th-wave Fix (codex r3265809796 / r3265811203, MAJOR/MINOR): the CLI
+    // contract pins `cycle: 0..MAX_ITERATION_INDEX` (currently 0..9) as the
+    // SSOT; the parser must reject upper-bound violations to keep the
+    // closed-schema contract symmetric with the enum/range surface. A
+    // reviewer sub-agent emitting `cycle: 99` would otherwise propagate
+    // through certify with a silently-out-of-range value.
+    errors.push(
+      `cycle must be <= ${MAX_ITERATION_INDEX} (MAX_ITERATION_INDEX; got ${String(input.cycle)})`,
+    );
   } else {
     cycle = input.cycle;
   }
@@ -641,9 +648,7 @@ function collectSoftWarnings(
     errors.push("missing field: softWarnings.timeBudget");
     complete = false;
   } else if (typeof source.timeBudget !== "boolean") {
-    errors.push(
-      `softWarnings.timeBudget must be a boolean (got ${String(source.timeBudget)})`,
-    );
+    errors.push(`softWarnings.timeBudget must be a boolean (got ${String(source.timeBudget)})`);
     complete = false;
   } else {
     timeBudget = source.timeBudget;

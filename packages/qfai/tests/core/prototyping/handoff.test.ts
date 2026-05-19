@@ -33,7 +33,7 @@ describe("validateImageSources — closed schema (TC-0012-0372)", () => {
     "rejects when '%s' is missing with a named-field error",
     (field) => {
       const entry = fullEntry();
-      delete entry[field];
+      Reflect.deleteProperty(entry, field);
       const result = validateImageSources([entry]);
       expect(result.ok).toBe(false);
       if (result.ok) return;
@@ -69,9 +69,9 @@ describe("validateImageSources — closed schema (TC-0012-0372)", () => {
     const result = validateImageSources([fullEntry({ extraneous: "x" })]);
     expect(result.ok).toBe(false);
     if (result.ok) return;
-    expect(result.errors.some((e) => /imageSources\[0\] has unknown field: extraneous/.test(e))).toBe(
-      true,
-    );
+    expect(
+      result.errors.some((e) => /imageSources\[0\] has unknown field: extraneous/.test(e)),
+    ).toBe(true);
   });
 
   it("rejects when input is not an array", () => {
@@ -102,17 +102,17 @@ describe("validateImageSources — closed schema (TC-0012-0372)", () => {
     const result = validateImageSources([fullEntry({ url: "http://insecure.example/x" })]);
     expect(result.ok).toBe(false);
     if (result.ok) return;
-    expect(
-      result.errors.some((e) => /imageSources\[0\]\.url must be an https URL/.test(e)),
-    ).toBe(true);
+    expect(result.errors.some((e) => /imageSources\[0\]\.url must be an https URL/.test(e))).toBe(
+      true,
+    );
   });
 
   it("rejects malformed URL strings with a named-field error (https required)", () => {
     const result = validateImageSources([fullEntry({ url: "not-a-url" })]);
     expect(result.ok).toBe(false);
     if (result.ok) return;
-    expect(
-      result.errors.some((e) => /imageSources\[0\]\.url must be an https URL/.test(e)),
-    ).toBe(true);
+    expect(result.errors.some((e) => /imageSources\[0\]\.url must be an https URL/.test(e))).toBe(
+      true,
+    );
   });
 });

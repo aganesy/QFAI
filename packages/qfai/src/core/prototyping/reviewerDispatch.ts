@@ -187,8 +187,7 @@ const NO_RUNNER_MESSAGE =
   "reviewerDispatch: no playwright runner injected; the Reviewer sub-agent " +
   "cannot drive Playwright. Production callers must inject options.playwrightRunner.";
 
-const SILENT_FAIL_MESSAGE =
-  "reviewerDispatch: playwright attempt failed without error message";
+const SILENT_FAIL_MESSAGE = "reviewerDispatch: playwright attempt failed without error message";
 
 function defaultSleep(ms: number): Promise<void> {
   if (ms <= 0) return Promise.resolve();
@@ -242,8 +241,7 @@ export async function dispatchReviewerToPair(
   }
 
   const rawLimit = options.attemptLimit ?? DEFAULT_REVIEWER_ATTEMPT_LIMIT;
-  const limit =
-    Number.isInteger(rawLimit) && rawLimit > 0 ? rawLimit : 0;
+  const limit = Number.isInteger(rawLimit) && rawLimit > 0 ? rawLimit : 0;
   if (limit === 0) {
     return {
       specId,
@@ -297,8 +295,7 @@ export async function dispatchReviewerToPair(
         attempts.push({
           ok: false,
           attemptIndex: i,
-          errorMessage:
-            "reviewerDispatch: runner returned ok without reviewJson payload",
+          errorMessage: "reviewerDispatch: runner returned ok without reviewJson payload",
         });
         break;
       }
@@ -314,11 +311,7 @@ export async function dispatchReviewerToPair(
       const successPayload = result.reviewJson;
       if (options.persistReviewJson !== undefined) {
         try {
-          const writtenPath = await options.persistReviewJson(
-            specId,
-            screen,
-            successPayload,
-          );
+          const writtenPath = await options.persistReviewJson(specId, screen, successPayload);
           return {
             specId,
             screen,
@@ -328,8 +321,7 @@ export async function dispatchReviewerToPair(
             reviewJson: successPayload,
           };
         } catch (persistErr) {
-          const persistMsg =
-            persistErr instanceof Error ? persistErr.message : String(persistErr);
+          const persistMsg = persistErr instanceof Error ? persistErr.message : String(persistErr);
           attempts.push({
             ok: false,
             attemptIndex: i,

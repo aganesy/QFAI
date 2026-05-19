@@ -18,17 +18,23 @@ The contract must describe screen structure, action coverage targets, and stable
 ### Per-spec UI contract resolution (`qfai prototyping certify`)
 
 `qfai prototyping certify` resolves per-spec UI contracts under
-`.qfai/contracts/ui/` with the following precedence. The first matching
-canonical single-file candidate wins; otherwise the multi-file shapes
-are aggregated.
+`.qfai/contracts/ui/` with a **two-tier** precedence:
 
-| Order | Candidate                                         | Layout                                                         |
-| ----- | ------------------------------------------------- | -------------------------------------------------------------- |
-| 1     | `<spec-id>.yaml` (e.g. `spec-0007.yaml`)          | Recommended canonical per-spec single-file layout              |
-| 2     | `<bare-numeric>.yaml` (e.g. `0007.yaml`)          | Bare-numeric alias                                             |
-| 3     | `ui-<bare-numeric>.yaml` (e.g. `ui-0007.yaml`)    | `ui-` prefixed canonical                                       |
-| 4     | `ui-<bare-numeric>-<slug>.yaml` (glob)            | Legacy split-file convention (e.g. `ui-0007-home.yaml`)        |
-| 5     | `<spec-id>/<subpath>.yaml`                        | Recursive per-spec subdirectory layout                         |
+1. **Single-file canonical tier** — TRUE first-hit-wins across
+   candidates #1..#3. The first candidate that exists on disk wins
+   alone; the remaining single-file candidates and the multi-file
+   tier are ignored for that spec.
+2. **Multi-file aggregation tier** — used **only when every single-file
+   candidate is absent**. Candidates #4 and #5 are aggregated together
+   with first-write-wins deduplication for duplicate `screenId`s.
+
+| Tier        | Precedence within tier | Candidate                                      | Layout                                                  |
+| ----------- | ---------------------- | ---------------------------------------------- | ------------------------------------------------------- |
+| Single-file | 1                      | `<spec-id>.yaml` (e.g. `spec-0007.yaml`)       | Recommended canonical per-spec single-file layout       |
+| Single-file | 2                      | `<bare-numeric>.yaml` (e.g. `0007.yaml`)       | Bare-numeric alias                                      |
+| Single-file | 3                      | `ui-<bare-numeric>.yaml` (e.g. `ui-0007.yaml`) | `ui-` prefixed canonical                                |
+| Multi-file  | 4 (aggregated with 5)  | `ui-<bare-numeric>-<slug>.yaml` (glob)         | Legacy split-file convention (e.g. `ui-0007-home.yaml`) |
+| Multi-file  | 5 (aggregated with 4)  | `<spec-id>/<subpath>.yaml`                     | Recursive per-spec subdirectory layout                  |
 
 Recommendations:
 
@@ -42,6 +48,12 @@ Recommendations:
 - Do not author multiple canonical single-file candidates (#1 + #3) for
   the same spec — the resolver picks #1 deterministically and operators
   reading #3 will be confused about which file is authoritative.
+- Do not author mixed-tier layouts (e.g. `spec-0007.yaml` (#1) +
+  `ui-0007-home.yaml` (#4); or `spec-0007.yaml` (#1) +
+  `spec-0007/home.yaml` (#5)) — when any single-file candidate (#1..#3)
+  exists for a spec, the multi-file tier is ignored entirely for that
+  spec, and screens that live only in #4 / #5 will silently fail the
+  per-(spec × screen) review.json gate. Pick one tier per spec.
 
 When the per-spec gate matches at least one file but extracts zero
 valid screens (e.g. a YAML parse error or a `screens:` typo),

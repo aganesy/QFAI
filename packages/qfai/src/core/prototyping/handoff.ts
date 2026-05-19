@@ -34,12 +34,7 @@ export type ImageSourceEntry = {
  * The four required keys for an `imageSources[]` entry. Order is the
  * canonical field-listing order used in error messages.
  */
-export const IMAGE_SOURCE_REQUIRED_FIELDS = [
-  "url",
-  "license",
-  "attribution",
-  "source",
-] as const;
+export const IMAGE_SOURCE_REQUIRED_FIELDS = ["url", "license", "attribution", "source"] as const;
 
 export type ImageSourceField = (typeof IMAGE_SOURCE_REQUIRED_FIELDS)[number];
 
@@ -98,8 +93,9 @@ export function validateImageSources(input: unknown): ValidateImageSourcesResult
   }
 
   const entries: ImageSourceEntry[] = [];
-  for (let i = 0; i < input.length; i += 1) {
-    const entry = input[i];
+  const inputEntries: readonly unknown[] = input;
+  for (let i = 0; i < inputEntries.length; i += 1) {
+    const entry: unknown = inputEntries[i];
     if (!isRecord(entry)) {
       errors.push(`imageSources[${i}] must be an object`);
       continue;

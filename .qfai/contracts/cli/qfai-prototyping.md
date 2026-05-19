@@ -38,13 +38,29 @@ Required inputs (read; never written by this sub-command unless noted):
     compared to `[resolvePrimaryPrototypingSpec(root)]`; mismatch
     → exit 2),
   - `frozenSpecsCovered[]` (cycle-0 frozen primary spec — single-spec
-    in v1.8.10; mid-run drift comparison is against the live
-    `resolveSurfaceUnion(root)` UNION so that mid-loop additions of
+    in v1.8.10; shallow-equal compared to the currently-resolved
+    primary; mismatch → exit 2),
+  - `frozenSurfaceUnion[]` (cycle-0 frozen multi-spec UI-bearing UNION
+    snapshot — the SSOT the cycle ≥ 1 drift gate compares the live
+    `resolveSurfaceUnion(root)` result against. Added since the
+    11th-wave fix (codex r3265480688); detects mid-loop additions of
     new UI-bearing specs (strict marker / title marker /
-    `primarySpecId` pin / UI contract) are detected and deferred to
-    the next `--cycle 0`; mismatch → exit 2),
-  - `frozenLicenseCatalog` (cycle-0 frozen stock-photo allowlist; mismatch
-    → exit 2).
+    `primarySpecId` pin / UI contract) and deferrals; mismatch
+    → exit 2. A missing or malformed `frozenSurfaceUnion` field at
+    cycle ≥ 1 is itself exit 2: legacy pre-12th-wave records without
+    the field must re-seed via `--cycle 0`. The drift gate does NOT
+    silently fall back to the single-spec `frozenSpecsCovered`
+    baseline — that fallback re-enabled the MAJOR/P1 false-positive
+    closed by the 11th-wave fix (codex r3265953324 13th-wave Fix)),
+  - `frozenLicenseCatalog` (cycle-0 frozen stock-photo allowlist. The
+    SSOT is the in-memory `DEFAULT_LICENSE_CATALOG` constant in
+    `cli/commands/prototypingIterate.ts`; cycle 0 mirrors that constant
+    into prototyping.json. Mid-loop edits to `allowedSources` /
+    `licenseTiers` / `sourceHosts`, or a malformed shape on disk at
+    cycle ≥ 1, are treated as lock drift → exit 2 — the verifier does
+    not silently fall back to the in-memory default; it instructs the
+    operator to refreeze via `--cycle 0` (codex r3265947252 13th-wave
+    Fix, P2)).
 
 Cycle-0 freeze (written by `iterate --cycle 0`):
 
@@ -61,9 +77,18 @@ Cycle-0 freeze (written by `iterate --cycle 0`):
   `prototyping.json.frozenSpecsCovered` above).
 - `prototyping.json.frozenSpecsCovered = [resolvePrimaryPrototypingSpec(root)]`
   — mirrors `specsCovered` until the per-spec layout migration lands.
-- `prototyping.json.frozenLicenseCatalog = { allowedSources, licenseTiers }`
-  sourced from the discussion / skill stock-photo configuration; this is
-  the SSOT for all subsequent license-verify calls in the run.
+- `prototyping.json.frozenSurfaceUnion = resolveSurfaceUnion(root, config)`
+  — the cycle-0 snapshot of the multi-spec UI-bearing UNION (strict
+  `surface_type: ui-bearing`, legacy `# … prototyping …` title marker,
+  `prototyping.primarySpecId` config pin, and
+  `.qfai/contracts/ui/<spec-id>*.yaml` contract signals). This is the
+  SSOT the cycle ≥ 1 drift gate compares against.
+- `prototyping.json.frozenLicenseCatalog = { allowedSources, licenseTiers, sourceHosts? }`
+  — the cycle-0 mirror of the in-memory `DEFAULT_LICENSE_CATALOG`
+  constant (`cli/commands/prototypingIterate.ts`). v1.8.10 sources this
+  from the constant; future revisions may source from discussion / skill
+  stock-photo configuration without changing this contract's drift
+  semantics.
 
 Per-cycle outputs (written for every cycle, including cycle 0):
 
@@ -102,13 +127,13 @@ Quantitative AC-pass% and transition-pass% thresholds are NOT used.
 
 Exit codes:
 
-| Code | Meaning                                                                                                                                       |
-| ---- | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| 0    | Continue: cycle accepted, paths assigned, loop should advance to next cycle.                                                                  |
+| Code | Meaning                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| ---- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0    | Continue: cycle accepted, paths assigned, loop should advance to next cycle.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
 | 2    | Input / lock-drift error. Covers: `--cycle` out of range; missing `--target-url` at cycle 0; `resolveAllUiBearingSpecs()` returned zero (treated as deterministic no-op only at cycle 0 — see note); `DESIGN.md` missing / malformed / hash drift vs `DESIGN.md.lock.yaml`; `prototyping.json#designMd` missing on cycle ≥1; `prototyping.json#specsCovered` drift vs cycle-0 frozen primary spec; mid-run spec-set drift (cycle ≥1 `resolveSurfaceUnion()` live UNION differs from cycle-0 `frozenSpecsCovered` — deferred to next `--cycle 0`); `prototyping.json#frozenLicenseCatalog` drift vs frozen catalog (license-catalog lock drift). |
-| 64   | STOP: converged. All spec × screen pairs reached the AND-convergence condition. This is also the exit code raised when Reviewer Playwright sessions fail across all reviewers for a given spec × screen (Reviewer-driven Playwright hard-stop class). The skill distinguishes the two by reading `iter-NN/spec-NNNN/<screen>.review.json#sessionStatus`. |
-| 65   | STOP: budget exhausted. Latest iter index === `MAX_ITERATION_INDEX` (= 9) without convergence. Lagging specs are named in the aggregated record. |
-| 66   | STOP: license-verify failure. An `imageSources[]` slot resolved to a non-allowlisted source, unknown license tier, or HTTP (non-HTTPS) URL; license catalog SSOT was frozen at cycle 0. Non-recoverable within the run. |
+| 64   | STOP: converged. All spec × screen pairs reached the AND-convergence condition. This is also the exit code raised when Reviewer Playwright sessions fail across all reviewers for a given spec × screen (Reviewer-driven Playwright hard-stop class). The skill distinguishes the two by reading `iter-NN/spec-NNNN/<screen>.review.json#sessionStatus`.                                                                                                                                                                                                                                                                                        |
+| 65   | STOP: budget exhausted. Latest iter index === `MAX_ITERATION_INDEX` (= 9) without convergence. Lagging specs are named in the aggregated record.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| 66   | STOP: license-verify failure. An `imageSources[]` slot resolved to a non-allowlisted source, unknown license tier, or HTTP (non-HTTPS) URL; license catalog SSOT was frozen at cycle 0. Non-recoverable within the run.                                                                                                                                                                                                                                                                                                                                                                                                                         |
 
 Note on zero UI-bearing specs: `resolveAllUiBearingSpecs()` returning an
 empty list at cycle 0 is a deterministic no-op (the skill exits 0 without
@@ -127,7 +152,7 @@ Inputs:
 - `.qfai/evidence/prototyping/iter-NN/spec-NNNN/<screen>.review.json` for
   every spec ∈ `specsCovered` and every screen declared in that spec's
   UI contracts at the accepted iter (`acceptedIterationIndex ===
-  iterations.length - 1`).
+iterations.length - 1`).
 - `prototype-handoff.yaml#imageSources[]` — every row must have non-empty
   `{url(https), license, attribution, source}`; license value must be
   drawn from the frozen `frozenLicenseCatalog`.
@@ -138,8 +163,8 @@ Outputs:
   per spec; lists `specsCovered`, `convergedSpecs[]`, `laggingSpecs[]`,
   `cyclesUsed`, `imageSourcesCount`, `acceptedIterationIndex`.
 - `prototype-handoff.yaml` — `{ finalIterIndex, finalArtifact,
-  extractedDesignSystem (= DESIGN.md deterministic mirror),
-  implementationNotes, imageSources[] }`.
+extractedDesignSystem (= DESIGN.md deterministic mirror),
+implementationNotes, imageSources[] }`.
 
 Modes:
 
@@ -151,20 +176,50 @@ Modes:
 
 Exit codes:
 
-| Code | Meaning                                                                                                                                  |
-| ---- | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| 0    | Certify passed. (Required for `/qfai-prototyping` DONE.)                                                                                 |
-| 2    | Input error. Missing / unreadable `prototyping.json`, missing `specsCovered[]`, accepted iter dir absent, certificate schema malformed. |
+| Code | Meaning                                                                                                                                                                                                                                                                                                                          |
+| ---- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0    | Certify passed. (Required for `/qfai-prototyping` DONE.)                                                                                                                                                                                                                                                                         |
+| 2    | Input error. Missing / unreadable `prototyping.json`, missing `specsCovered[]`, accepted iter dir absent, certificate schema malformed.                                                                                                                                                                                          |
 | 64   | Coverage rejection: at least one spec lacks a `<screen>.review.json` for a declared screen at the accepted iter, OR the multi-spec frozen set (`frozenSpecsCovered.length > 1`) is incompatible with the flat-iter layout still emitted by `prototyping iterate` (per-spec layout migration deferred — TDD-0384 / OQ-0012-0006). |
-| 66   | License-verify rejection: `imageSources[]` violates the frozen `frozenLicenseCatalog` (non-allowlisted source, unknown license, non-https url, missing attribution). |
+| 66   | License-verify rejection: `imageSources[]` violates the frozen `frozenLicenseCatalog` (non-allowlisted source, unknown license, non-https url, missing attribution).                                                                                                                                                             |
 
 ### `qfai prototyping show-spec`
 
-Read-only: prints the cycle-0 frozen `specsCovered[]` (and, if present,
-the live `resolveAllUiBearingSpecs()` result for comparison) so the
-operator can see which specs the current `/qfai-prototyping` run will
-iterate over. Exit 0 on success; exit 2 if `prototyping.json` is missing
-or malformed. Not part of the convergence path; cannot mutate state.
+Read-only: prints a JSON payload describing the cycle-0 frozen spec set
+and the live UI-bearing UNION so the operator can see which specs the
+current `/qfai-prototyping` run will iterate over and spot any drift
+before re-seeding. Exit 0 on success; exit 2 if `prototyping.json` is
+missing or malformed (the command hard-requires a seeded
+`prototyping.json` — operators who previously ran `show-spec` _before_
+cycle 0 must now run `iterate --cycle 0` first; see CHANGELOG `[1.8.10]`
+BREAKING). Not part of the convergence path; cannot mutate state.
+
+Output JSON schema (SSOT):
+
+```yaml
+schema:
+  frozenSpecsCovered:
+    string[] # cycle-0 frozen primary spec ids
+    # (single-element in v1.8.10)
+  frozenSurfaceUnion:
+    string[] | null
+    # cycle-0 frozen multi-spec UI-bearing
+    # UNION snapshot, or null on
+    # legacy pre-12th-wave records
+  liveUiBearing:
+    SpecRef[] # live `resolveAllUiBearingSpecs()`
+    # result (each: { specId, specMdPath,
+    # source })
+  primary?: # present iff a primary spec resolves
+    specId: string
+    specMdPath: string # repo-root-relative POSIX path
+    source: string # resolution-source tag
+```
+
+The pre-12th-wave top-level keys `specId` / `specMdPath` / `source` have
+been demoted to the optional `primary` block (BREAKING in `[1.8.10]`).
+Operator tooling that grepped `show-spec | jq '.specId'` MUST migrate to
+`primary.specId`; the migration is one-line per call site.
 
 ## Review payload (`<screen>.review.json`) shape
 
@@ -174,29 +229,29 @@ prose.
 
 ```yaml
 schema:
-  specId: string            # e.g. "spec-0012"
-  screenId: string          # declared screen id from the spec's UI contract
-  cycle: integer            # 0..9
-  sessionStatus:            # Reviewer Playwright session outcome
+  specId: string # e.g. "spec-0012"
+  screenId: string # declared screen id from the spec's UI contract
+  cycle: integer # 0..9
+  sessionStatus: # Reviewer Playwright session outcome
     enum: [ok, retryExhausted, launchFailed]
-  retryCount: integer       # bounded retries actually consumed (NFR target N=3)
-  ordinalAxes:              # the canonical 4 UX axes
+  retryCount: integer # bounded retries actually consumed (NFR target N=3)
+  ordinalAxes: # the canonical 4 UX axes
     informationArchitecture: enum [weak, acceptable, strong, exceptional]
-    navigationFlow:          enum [weak, acceptable, strong, exceptional]
-    usability:               enum [weak, acceptable, strong, exceptional]
-    functionality:           enum [weak, acceptable, strong, exceptional]
-  layoutAntiPatternsDetected: string[]   # lap-001..lap-008 ids; empty list required for convergence
-  designMdViolations: object[]           # output of findDesignMdViolations(); empty required for convergence
-  impressions:              # short-prose fields, each ≤ 200 words; NOT asserted for exact equality
+    navigationFlow: enum [weak, acceptable, strong, exceptional]
+    usability: enum [weak, acceptable, strong, exceptional]
+    functionality: enum [weak, acceptable, strong, exceptional]
+  layoutAntiPatternsDetected: string[] # lap-001..lap-008 ids; empty list required for convergence
+  designMdViolations: object[] # output of findDesignMdViolations(); empty required for convergence
+  impressions: # short-prose fields, each ≤ 200 words; NOT asserted for exact equality
     operability: string
     transitionFeel: string
     crossScreenContinuity: string
     userStoryFeel: string
     acceptanceCriteriaFeel: string
     menuReachabilityFeel: string
-  wallTimeSec: number       # Reviewer-recorded per-session wall-time
+  wallTimeSec: number # Reviewer-recorded per-session wall-time
   softWarnings:
-    timeBudget: bool        # true ⇔ wallTimeSec exceeded per-spec cap (NFR target 5 min/spec)
+    timeBudget: bool # true ⇔ wallTimeSec exceeded per-spec cap (NFR target 5 min/spec)
 ```
 
 ## Hard-stop classes (autonomous run)
@@ -217,7 +272,7 @@ enumerated:
    `licenseVerify()` cannot reach the source on cycle 0. Exit 66.
 4. **Mid-run spec-set change** — live `resolveSurfaceUnion(root)` (the
    UNION of strict `surface_type: ui-bearing`, legacy `# … prototyping
-   …` title-marker, `prototyping.primarySpecId` config pin, and
+…` title-marker, `prototyping.primarySpecId` config pin, and
    `.qfai/contracts/ui/<spec-id>*.yaml` contract signals) differs from
    the cycle-0 `prototyping.json#frozenSpecsCovered` snapshot. Exit 2.
    New UI-bearing specs are not added to the in-flight run; they are
