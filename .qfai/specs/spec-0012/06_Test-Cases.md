@@ -889,23 +889,23 @@
 - AC-Refs: AC-0012-0045
 - Type: integration
 - Test file: `packages/qfai/tests/cli/commands/prototypingIterate.test.ts`
-- Verify the 13th-wave legacy-record hard-fail (codex r3265953324 MAJOR/P1). Fixture: `prototyping.json` with `frozenSpecsCovered: ["0001"]` but NO `frozenSurfaceUnion` field (pre-12th-wave shape). Expectation: `runPrototypingIterate({cycle: 1})` returns 2; stderr names the missing `frozenSurfaceUnion` field, identifies the record as `legacy pre-12th-wave`, and gives a `--cycle 0` re-seed instruction. CRITICAL: the stderr MUST NOT mention `spec-set drift detected` (the silent fallback to `frozenSpecsCovered` was the very bug closed in the 13th-wave fix). Closes codex MAJOR r3270058882.
+- Verify the 13th-wave legacy-record hard-fail (codex r3265953324 MAJOR/P1) — AC-0012-0045 hard-stop class (e). Fixture: `prototyping.json` with `frozenSpecsCovered: ["0001"]` but NO `frozenSurfaceUnion` field. Expectation: `runPrototypingIterate({cycle: 1})` returns 2; stderr names the missing `frozenSurfaceUnion` field and gives a `--cycle 0` re-seed instruction. CRITICAL: the stderr MUST NOT mention `spec-set drift detected` (the silent fallback to `frozenSpecsCovered` was the very bug closed in the 13th-wave fix). Closes codex MAJOR r3270058882; AC-Ref binding extended to AC-0012-0045 class (e) per codex r3270143584 MINOR (20th-wave AC catalog amendment).
 
 ## TC-0012-0421
 
 - EX-Ref: EX-0012-0150
-- AC-Refs: AC-0012-0043
+- AC-Refs: AC-0012-0045
 - Type: integration
 - Test file: `packages/qfai/tests/cli/commands/prototypingIterate.test.ts`
-- Verify the 13th-wave `frozenLicenseCatalog` drift gate (codex r3265947252 P2). Three `it` blocks: (a) tampered `allowedSources` (`pinterest` added) → exit 2 + stderr `drifted from the cycle-0 frozen license catalog`; (b) `sourceHosts` removed entirely (malformed shape) → exit 2; (c) order-permuted catalog (`allowedSources` reversed, tier values reordered) → exit 0 (set-equality semantic via `licenseCatalogsEqual` / `recordOfStringArraysEqual` / `stringArraysSetEqual`). Pins the in-memory `DEFAULT_LICENSE_CATALOG` SSOT contract: byte-different but semantically equal catalogs MUST NOT trip the gate; any semantic difference MUST. Closes codex MAJOR r3270057892.
+- Verify the 13th-wave `frozenLicenseCatalog` drift gate (codex r3265947252 P2) — AC-0012-0045 hard-stop class (f). Three `it` blocks: (a) tampered `allowedSources` (`pinterest` added) → exit 2 + stderr `drifted from the cycle-0 frozen license catalog`; (b) `sourceHosts` removed entirely (malformed shape) → exit 2; (c) order-permuted catalog → set-equality semantic via `licenseCatalogsEqual` / `recordOfStringArraysEqual` / `stringArraysSetEqual` MUST NOT trip the gate (assertion is the negative — `stderr` does NOT match the drift diagnostic). Pins the in-memory `DEFAULT_LICENSE_CATALOG` SSOT contract: byte-different but semantically equal catalogs MUST NOT trip the gate; any semantic difference MUST. AC-Ref binding corrected from AC-0012-0043 (exit-66 license-verify, wrong axis) to AC-0012-0045 class (f) per codex r3270141326 MAJOR (20th-wave). Closes codex MAJOR r3270057892.
 
 ## TC-0012-0422
 
 - EX-Ref: EX-0012-0151
-- AC-Refs: AC-0012-0044
+- AC-Refs: AC-0012-0052
 - Type: integration
 - Test file: `packages/qfai/tests/cli/prototypingCertify.test.ts`
-- Verify the wave-14 + wave-15 + wave-16 cumulative semantic changes on the `show-spec` JSON payload. Three `it` blocks: (a) legacy record without `frozenSpecsCovered` (only `specsCovered`) emits `frozenSpecsCoveredSource: "specsCovered"`; (b) record with `frozenSpecsCovered` emits `frozenSpecsCoveredSource: "frozenSpecsCovered"`; (c) `liveUiBearing` is a `string[]` (wave-16 contract alignment after the wave-15 resolver swap to `resolveSurfaceUnion`). Closes codex MINOR r3270061025.
+- Verify the wave-14 + wave-15 + wave-16 cumulative semantic changes on the `show-spec` JSON payload — AC-0012-0052 `show-spec` JSON contract. Three `it` blocks: (a) legacy record without `frozenSpecsCovered` (only `specsCovered`) emits `frozenSpecsCoveredSource: "specsCovered"`; (b) record with `frozenSpecsCovered` emits `frozenSpecsCoveredSource: "frozenSpecsCovered"`; (c) `liveUiBearing` is a `string[]` (wave-16 contract alignment after the wave-15 resolver swap to `resolveSurfaceUnion`). AC-Ref binding corrected from AC-0012-0044 (autonomous-run, wrong axis) to the new AC-0012-0052 (`show-spec` JSON contract) per codex r3270138113 MAJOR (20th-wave). Closes codex MINOR r3270061025.
 
 ## Legacy Coverage Continuity
 

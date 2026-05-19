@@ -58,20 +58,21 @@ current `DESIGN.md` hash does not match the lock.
 
 ### Step 2-A — Verify Contract Preconditions
 
-- The skill resolves **the full UI-bearing union** (strict
-  `surface_type: ui-bearing` frontmatter + legacy `# … prototyping …`
-  title marker + `prototyping.primarySpecId` config pin + matching
-  `.qfai/contracts/ui/<spec-id>*.yaml` contract signals) in one
-  invocation via `resolveSurfaceUnion()`
-  (`cli/commands/prototypingIterate.ts`, also consumed by `show-spec`
-  to keep the live scope apples-to-apples with the cycle ≥ 1 drift
-  gate). The narrower `resolveAllUiBearingSpecs()`
-  (`core/prototyping/specResolution.ts`) covers only the strict
-  frontmatter signal and is an input to the union, not the resolver
-  exposed at the skill boundary. The operator is never prompted to
-  pick a single spec; zero UI-bearing specs at cycle 0 is a
-  deterministic no-op exit `0`. Confirm each resolved spec has a
-  supported `surface`.
+- The skill resolves **every UI-bearing spec in the consumer project in
+  one invocation** via `resolveAllUiBearingSpecs()`
+  (`core/prototyping/specResolution.ts`), which covers the strict
+  `surface_type: ui-bearing` frontmatter signal and the matching
+  `.qfai/contracts/ui/<spec-id>*.yaml` contract fallback. The cycle ≥ 1
+  drift gate (and `show-spec`'s live scope) consume a slightly broader
+  composition via `resolveSurfaceUnion()` (`core/prototyping/specResolution.ts`)
+  that also folds in the legacy `# … prototyping …` title-marker
+  fallback and the operator-pinned spec id from the
+  `qfai.config.yaml` prototyping section. The two resolvers share the same boundary —
+  `resolveAllUiBearingSpecs` is an input to the union — so operators
+  authoring CHG-002-shaped projects can rely on the strict frontmatter
+  alone. The operator is never prompted to pick a single spec; zero
+  UI-bearing specs at cycle 0 is a deterministic no-op exit `0`.
+  Confirm each resolved spec has a supported `surface`.
 - Confirm root `DESIGN.md` and `.qfai/contracts/design/DESIGN.md.lock.yaml`
   both exist; confirm `.qfai/contracts/ui/*.yaml` exists.
 - Run `qfai prototyping preflight --target-url <url>` (alias for

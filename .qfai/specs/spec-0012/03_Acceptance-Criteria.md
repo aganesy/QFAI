@@ -226,14 +226,15 @@
 ## AC-0012-0045: Deterministic hard-stop classes
 
 - US-Refs: US-0012-0113
-- Given the hard-stop catalog is fixed at (a) lock drift, (b) Reviewer Playwright-session failure across all reviewers for a spec × screen, (c) license-verify failure, (d) mid-run spec-set change detection (any added / removed UI-bearing spec, including the special case of every UI marker / contract being removed mid-loop so the live UI-bearing union shrinks to `[]`), (e) cycle ≥ 1 invocation without a recorded cycle-0 `frozenSurfaceUnion` seed (fresh project ran `--cycle 1` before `--cycle 0`, OR a pre-12th-wave legacy `prototyping.json` lacks the field),
+- Given the hard-stop catalog is fixed at (a) lock drift, (b) Reviewer Playwright-session failure across all reviewers for a spec × screen, (c) license-verify failure, (d) mid-run spec-set change detection (any added / removed UI-bearing spec, including the special case of every UI marker / contract being removed mid-loop so the live UI-bearing union shrinks to `[]`), (e) cycle ≥ 1 invocation without a recorded cycle-0 `frozenSurfaceUnion` seed (fresh project ran `--cycle 1` before `--cycle 0`, OR a legacy `prototyping.json` lacks the field), (f) cycle ≥ 1 detection of `prototyping.json#frozenLicenseCatalog` drift against the in-memory `DEFAULT_LICENSE_CATALOG` SSOT (set-equality semantic via `licenseCatalogsEqual` — byte permutations OK, semantic differences hard-fail),
 - When any class triggers,
 - Then the run exits non-zero deterministically with the documented exit code per class:
   - (a) lock drift → exit `2` (per AC-0012-0035; same class as DESIGN.md hash mismatch and any cache-vs-lock drift),
   - (b) Reviewer Playwright-session failure → exit `64` with `sessionStatus ∈ {retryExhausted, launchFailed}` recorded on the per-`(spec, screen)` review payload so the orchestrator can disambiguate from converged-exit-64,
   - (c) license-verify failure → exit `66`,
   - (d) mid-run spec-set change detection → exit `2` (same class as lock drift; new / removed spec deferred to next invocation per the business-rule layer),
-  - (e) cycle ≥ 1 without a cycle-0 seed → exit `2` with the operator instructed to run `--cycle 0 --target-url <url>` first (19th-wave addition per codex r3270094588 MINOR + codex r3270091255 MINOR — formalises the 15th + 17th-wave behavioural change for the "Seed the loop first" branch of the zero-UI precheck),
+  - (e) cycle ≥ 1 without a cycle-0 seed → exit `2` with the operator instructed to run `--cycle 0 --target-url <url>` first (19th-wave addition per codex r3270094588 MINOR + codex r3270091255 MINOR — formalises the 15th + 17th-wave behavioural change for the "Seed the loop first" branch of the zero-UI precheck; also covers the legacy-shape variant where `prototyping.json` exists but the `frozenSurfaceUnion` field is missing, per 20th-wave codex r3270143584 MINOR),
+  - (f) `frozenLicenseCatalog` drift → exit `2` with a re-seed instruction (20th-wave addition per codex r3270141326 MAJOR — set-equality semantic: order-permuted catalogs MUST NOT trip the gate, semantic differences MUST; SSOT is the in-memory `DEFAULT_LICENSE_CATALOG` constant, which cycle 0 mirrors into `prototyping.json#frozenLicenseCatalog`),
     AND no user prompt is emitted.
 
 ## AC-0012-0046: Per-spec iter-dir namespacing — review.json only
@@ -279,6 +280,14 @@
 - When it completes,
 - Then cycle-0 evidence persists (a) the resolved spec set (frozen ID list) AND (b) the stock-photo license-class catalog (allowed sources + license tiers + attribution format) drawn from `OQ-0002` Option A.
 - And every subsequent cycle reads both as SSOT for resolver / aggregator / license-verify.
+
+## AC-0012-0052: `show-spec` JSON payload contract (operator drift-analysis surface)
+
+- US-Refs: US-0012-0116
+- Given any seeded `prototyping.json` record,
+- When `qfai prototyping show-spec` runs,
+- Then it emits a JSON payload that carries (a) `frozenSpecsCovered: string[]` (cycle-0 frozen primary spec ids), (b) `frozenSpecsCoveredSource: "frozenSpecsCovered" | "specsCovered"` discriminant so operators can detect pre-Wave-3 legacy seed records without re-reading the file, (c) `frozenSurfaceUnion: string[] | null` (cycle-0 multi-spec UI-bearing UNION snapshot or `null` on legacy records), (d) `liveUiBearing: string[]` of bare spec IDs resolved by the same `resolveSurfaceUnion()` the cycle ≥ 1 drift gate consumes so the live scope is apples-to-apples with iterate's enforcement, and (e) an optional `primary?: {specId, specMdPath, source}` block present iff a primary spec resolves.
+- And operator tooling that grepped the pre-Wave-15 top-level keys (`.specId` / `.specMdPath` / `.source`) MUST migrate to the `primary` block (or to `liveUiBearing[]` for the bare ID list); the BREAKING migration is documented in the v1.8.10 CHANGELOG.
 
 ## Completion Gate
 

@@ -1455,13 +1455,13 @@ async function evaluateCycleGteOneGate(
   if (frozenUnion === null) {
     error(
       "qfai prototyping iterate: prototyping.json#frozenSurfaceUnion is missing or " +
-        "malformed (legacy pre-12th-wave record). The cycle ≥ 1 drift gate " +
-        "requires a cycle-0-frozen multi-spec UI-bearing UNION snapshot; " +
-        "silently falling back to the single-spec `frozenSpecsCovered` " +
-        "would re-enable the MAJOR/P1 false-positive that 11th-wave Fix " +
-        "(codex r3265480688) closed for any project with ≥ 2 UI-bearing " +
-        "specs. Re-run with `--cycle 0 --target-url <url>` to refreeze " +
-        "the loop with a current UNION snapshot.",
+        "malformed. The cycle ≥ 1 drift gate requires a cycle-0-frozen " +
+        "multi-spec UI-bearing UNION snapshot; the gate does not fall " +
+        "back to the single-spec `frozenSpecsCovered` (that fallback " +
+        "would compare a single-spec frozen scope against the live " +
+        "multi-spec union and false-positive-fire for any project with " +
+        "≥ 2 UI-bearing specs). Re-run with `--cycle 0 --target-url <url>` " +
+        "to refreeze the loop with a current UNION snapshot.",
     );
     return { shortCircuit: true, exitCode: 2 };
   }

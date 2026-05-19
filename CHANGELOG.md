@@ -76,6 +76,67 @@
   - Pinned-branch authorization is preserved: this lands in 1.8.10
     because `feature/v1.8.10` is the release pin.
 
+### Fixed (PR #208 20th late-review wave)
+
+- **CI integration BLOCKER (codex r3270133293 + r3270145337, BLOCKER):**
+  revert the 18th-wave `SKILL.md` Step 2-A edit to satisfy
+  `tests/skill/prototypingSkill.test.ts#TC-0012-0356` — restore "every
+  UI-bearing spec ... in one invocation via
+  `resolveAllUiBearingSpecs()`" wording and remove the `primarySpecId`
+  literal that the forbidden-phrase guard blocks. The `resolveSurfaceUnion`
+  documentation is preserved alongside but kept clear of the
+  forbidden-phrase / required-regex contracts so the multi-spec wiring
+  invariant remains pinned.
+- **Traceability — unregistered EX-Refs (codex r3270134830, MAJOR):**
+  register `EX-0012-0145..EX-0012-0151` in `05_Examples.md`
+  (cycle-9 idempotency, reviewer payload schema, per-spec UI contract
+  precedence, zero-UI cycle-0-only semantic, legacy-record hard-fail,
+  license-catalog set-equality drift, show-spec JSON payload
+  discriminant) so the 14th + 17th + 18th-wave TC additions have
+  registered EX entries. Closes the CLAUDE.md
+  "TDD-IDs / TC-Refs must not reference unregistered entries" gap.
+- **AC layer — hard-stop catalogue (codex r3270141326 MAJOR + codex
+  r3270143584 MINOR):** extend `AC-0012-0045` hard-stop catalogue
+  with class **(f) `frozenLicenseCatalog` drift** (set-equality
+  semantic: byte permutations OK, semantic differences exit 2) and
+  broaden class (e) to cover the legacy-shape variant (record exists
+  but the `frozenSurfaceUnion` field is missing). Rebind
+  `TC-0012-0421` from `AC-0012-0043` (license-verify exit 66, wrong
+  axis) to `AC-0012-0045` class (f); `TC-0012-0420` remains on
+  `AC-0012-0045` class (e). Ledger updated to match.
+- **AC layer — show-spec contract (codex r3270138113 MAJOR):** add
+  new `AC-0012-0052` (`show-spec` JSON payload contract) covering
+  `frozenSpecsCovered` / `frozenSpecsCoveredSource` discriminant /
+  `frozenSurfaceUnion` / `liveUiBearing: string[]` / optional `primary`
+  block. Rebind `TC-0012-0422` from `AC-0012-0044` (autonomous-run,
+  wrong axis) to the new `AC-0012-0052`. Ledger updated.
+- **Operator-facing surface (codex r3270142020, MAJOR — product-surface):**
+  scrub the cycle ≥ 1 drift gate stderr of internal labels
+  (`legacy pre-12th-wave record`, `11th-wave Fix (codex r3265480688)`,
+  `MAJOR/P1`). Replace with the observable contract statement: "the
+  gate does not fall back to the single-spec `frozenSpecsCovered`".
+  `TC-0012-0420` assertion narrowed to match the new wording so the
+  test pins the contract (no silent fallback) rather than the wave
+  label.
+- **Test specificity (codex r3270136775, MINOR):** narrow
+  `TC-0012-0421(c)` from `expect(exit).toBe(0)` (over-coupled to
+  unrelated future gates) to `expect(stderr).not.toMatch(/drifted .../)`
+  - `expect(exit).not.toBe(2)` — the contract this case pins is
+    catalog-gate non-firing under set-equality, scoped to the gate
+    rather than the whole pipeline.
+- **CLI contract (codex r3270152438, P2 — chatgpt-codex-connector):**
+  the exit-code table in `.qfai/contracts/cli/qfai-prototyping.md`
+  now names the actual drift baseline field
+  (`prototyping.json#frozenSurfaceUnion`) and the missing /
+  malformed-field hard-fail. Pre-fix the table named
+  `frozenSpecsCovered` (the original pre-11th-wave baseline);
+  operators inspecting the wrong field during recovery would have
+  hit repeated exit-2 failures.
+- **specs-coverage report (codex r3270147998, MAJOR — outdated but
+  applied):** bump `AC-0012-0037` / `AC-0012-0045` / `AC-0012-0049`
+  counts and register the new `AC-0012-0052` entry to reflect the
+  wave-18 + wave-20 TC additions and the AC-Ref rebinding above.
+
 ### Fixed (PR #208 19th late-review wave)
 
 - **Architecture (codex r3270055214, MAJOR — architecture-reviewer):**

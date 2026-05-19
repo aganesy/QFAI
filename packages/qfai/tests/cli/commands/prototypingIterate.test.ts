@@ -2781,7 +2781,15 @@ describe("runPrototypingIterate cycle >= 1 — legacy record without frozenSurfa
       expect(exit).toBe(2);
       const stderr = errorSpy.mock.calls.map((c) => String(c[0])).join("\n");
       expect(stderr).toMatch(/frozenSurfaceUnion is missing or malformed/);
-      expect(stderr).toMatch(/legacy pre-12th-wave record/);
+      // 20th-wave (codex r3270142020 MAJOR): assertion previously pinned
+      // the internal wave label `legacy pre-12th-wave record` directly.
+      // The operator-facing diagnostic was scrubbed of internal labels
+      // and now reads "the gate does not fall back to the single-spec
+      // `frozenSpecsCovered`". The contract this TC actually pins is
+      // the bug-mode prevention (no silent fallback), so we now assert
+      // on the observable behavioural statement instead of the wave
+      // label.
+      expect(stderr).toMatch(/does not fall back to the single-spec/);
       expect(stderr).toMatch(/`--cycle 0/);
       // CRITICAL: the diagnostic MUST NOT mention falling back to
       // `frozenSpecsCovered` or actually doing so silently — the
@@ -2869,7 +2877,7 @@ describe("runPrototypingIterate cycle >= 1 — frozenLicenseCatalog drift hard-f
     }
   });
 
-  it("does NOT exit 2 when allowedSources order is permuted (set-equality semantic)", async () => {
+  it("does NOT fire the catalog drift gate when allowedSources order is permuted (set-equality semantic)", async () => {
     const root = await newTempDir();
     await seedWithCatalog(root, {
       ...baseFrozenCatalog,
@@ -2884,13 +2892,15 @@ describe("runPrototypingIterate cycle >= 1 — frozenLicenseCatalog drift hard-f
     const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
     try {
       const exit = await runPrototypingIterate({ root, cycle: 1 });
-      // Order-permuted catalog is byte-different but semantically
-      // equal; `licenseCatalogsEqual` uses set-equality so the gate
-      // does NOT fire. (Exit 0 means the rest of the pipeline ran
-      // through without other gates tripping.)
-      expect(exit).toBe(0);
       const stderr = errorSpy.mock.calls.map((c) => String(c[0])).join("\n");
+      // 20th-wave (codex r3270136775 MINOR): the contract this case
+      // pins is that `licenseCatalogsEqual` treats byte-permutation as
+      // set-equality and the gate does NOT fire. Asserting on the
+      // negative diagnostic + the non-2 exit code scopes us to the
+      // catalog drift gate without false-positive-failing when an
+      // unrelated future gate happens to short-circuit this fixture.
       expect(stderr).not.toMatch(/drifted from the cycle-0 frozen license catalog/);
+      expect(exit).not.toBe(2);
     } finally {
       errorSpy.mockRestore();
     }

@@ -334,3 +334,52 @@
 - Given a fresh `/qfai-prototyping` invocation.
 - When cycle 0 completes.
 - Then cycle-0 evidence records the stock-photo license-class catalog (allowed sources `[unsplash, pexels]` and their license tiers); this catalog is the SSOT used by `licenseVerify` for all subsequent cycles.
+
+## EX-0012-0145: Cycle-9 Idempotency on Non-Converged Loop
+
+- BR-Ref: BR-0012-0034
+- Given a 10-iteration loop that did not converge (`iterations.length === 10` recorded with the terminator at `index === 9`).
+- When the operator runs `qfai prototyping iterate --cycle 9` a second time against the recorded state.
+- Then the CLI returns exit 65 (max-iterations terminator) directly without routing through the `expectedNextCycle === 10` cycle-mismatch path.
+
+## EX-0012-0146: Reviewer-Driven `<screen>.review.json` Schema (4 Ordinal Axes + 6 \*Feel)
+
+- BR-Ref: BR-0012-0030
+- Given a Reviewer sub-agent finishes a per-`(spec, screen)` Playwright session.
+- When it emits `.qfai/evidence/prototyping/iter-NN/spec-NNNN/<screen>.review.json`.
+- Then the payload carries the 4 ordinal UX axes plus the 6 `*Feel` prose fields (each ≤ 200 words), `layoutAntiPatternsDetected[]`, `designMdViolations[]`, and the closed-schema cycle / retryCount / wallTimeSec / softWarnings fields; closed-schema parsing rejects any out-of-range cycle (`> MAX_ITERATION_INDEX`) and any unknown nested key.
+
+## EX-0012-0147: Per-Spec UI Contract Resolver Precedence (5 Candidates)
+
+- BR-Ref: BR-0012-0030
+- Given `.qfai/contracts/ui/` carries any of the documented 5 candidate layouts for a spec.
+- When `qfai prototyping certify` runs.
+- Then the resolver applies TRUE first-hit-wins across the single-file canonical candidates (#1 `<spec-id>.yaml`, #2 `<bare>.yaml`, #3 `ui-<bare>.yaml`); when none match, it aggregates the multi-file candidates (#4 `ui-<bare>-<slug>.yaml` glob and #5 `<spec-id>/<sub>.yaml` recursive subdir) with first-write dedup within the spec's own scope.
+
+## EX-0012-0148: Zero-UI Live Result Is Cycle-0 Only
+
+- BR-Ref: BR-0012-0034
+- Given a project whose UI markers / contracts have all been removed mid-loop while `prototyping.json#frozenSurfaceUnion` still records a cycle-0 frozen union.
+- When `qfai prototyping iterate --cycle 1` (or later) runs.
+- Then the CLI exits 2 with a "removed mid-loop / frozen scope no longer reachable" diagnostic naming the frozen union — the no-op-exit-0 semantic is intentionally scoped to cycle 0 only.
+
+## EX-0012-0149: Legacy `prototyping.json` Hard-Fail (No `frozenSurfaceUnion`)
+
+- BR-Ref: BR-0012-0034
+- Given a pre-12th-wave `prototyping.json` record with `frozenSpecsCovered` but no `frozenSurfaceUnion` field.
+- When `qfai prototyping iterate --cycle 1` (or later) runs against that record.
+- Then the CLI exits 2 with a re-seed instruction (`--cycle 0 --target-url <url>`); the cycle ≥ 1 drift gate does NOT silently fall back to `frozenSpecsCovered` (which would re-enable the original MAJOR/P1 false-positive that the 11th-wave fix closed).
+
+## EX-0012-0150: License Catalog Set-Equality Drift Detection
+
+- BR-Ref: BR-0012-0033
+- Given a cycle ≥ 1 invocation against a `prototyping.json#frozenLicenseCatalog` that differs from the in-memory `DEFAULT_LICENSE_CATALOG` SSOT.
+- When the catalog drift gate runs.
+- Then byte-permutation differences (reordered `allowedSources`, reordered tier entries) MUST NOT trip the gate (set-equality semantic via `licenseCatalogsEqual`), but any semantic difference (added source, removed `sourceHosts`, malformed shape) MUST exit 2 with a re-seed instruction.
+
+## EX-0012-0151: `show-spec` JSON Payload Discriminant
+
+- BR-Ref: BR-0012-0030
+- Given any seeded `prototyping.json` record.
+- When `qfai prototyping show-spec` emits its JSON payload.
+- Then the payload carries `frozenSpecsCoveredSource: "frozenSpecsCovered" | "specsCovered"` so operators can detect pre-Wave-3 legacy seed records, and `liveUiBearing` is a `string[]` of spec IDs from the same `resolveSurfaceUnion()` that iterate's cycle ≥ 1 drift gate consumes.
