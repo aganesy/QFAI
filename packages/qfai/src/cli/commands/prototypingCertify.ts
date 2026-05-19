@@ -45,12 +45,17 @@ import {
   findDesignMdViolations,
   type DesignMdViolation,
 } from "../../core/prototyping/designMdViolations.js";
-import { resolvePrimaryPrototypingSpec } from "../../core/prototyping/specResolution.js";
+import {
+  resolvePrimaryPrototypingSpec,
+  resolveSurfaceUnion,
+} from "../../core/prototyping/specResolution.js";
 // 15th-wave Fix (codex r3269453293, P2): show-spec's `liveUiBearing`
-// now uses the same resolver as iterate's drift gate
-// (`resolveSurfaceUnion`) so the live scope reported here is
-// apples-to-apples with what iterate enforces.
-import { resolveSurfaceUnion } from "./prototypingIterate.js";
+// uses the same resolver as iterate's drift gate (`resolveSurfaceUnion`)
+// so the live scope reported here is apples-to-apples with what iterate
+// enforces. 19th-wave Fix (codex r3270055214, MAJOR): the resolver was
+// moved to `core/prototyping/specResolution.ts` so this import lands
+// in the core layer instead of taking the sideways CLI → CLI hop on
+// `prototypingIterate.ts` that wave-15 left behind.
 import {
   readFrozenSpecsCovered,
   readFrozenSpecsCoveredMultiSpec,
@@ -611,12 +616,26 @@ async function loadLockGate(root: string, contractsDir: string): Promise<LockGat
  * Output payload (JSON):
  *   - `frozenSpecsCovered`: single-spec scope under review (cycle-0
  *      frozen primary).
+ *   - `frozenSpecsCoveredSource`: discriminant indicating which
+ *      `prototyping.json` field the spec list was read from
+ *      (`"frozenSpecsCovered"` on current records, `"specsCovered"`
+ *      on pre-Wave-3 legacy records). Added in the 14th-wave fix
+ *      (codex r3269198684) so operators can detect legacy seed
+ *      records without re-reading the file.
  *   - `frozenSurfaceUnion`: multi-spec UI-bearing UNION snapshot at
  *      cycle 0 (drift baseline). May be absent on pre-11th-wave
  *      records — surfaced as `null` so the consumer can distinguish
  *      "field absent" from "field present but empty".
- *   - `liveUiBearing`: current `resolveAllUiBearingSpecs()` result so
- *      the operator can spot drift without running iterate.
+ *   - `liveUiBearing`: current `resolveSurfaceUnion()` result (the
+ *      same resolver iterate's cycle ≥ 1 drift gate uses — strict
+ *      frontmatter + title-marker + `primarySpecId` config pin + UI
+ *      contract signals) so the live scope reported here is
+ *      apples-to-apples with what iterate enforces. Emitted as
+ *      `string[]` of bare spec IDs (15th + 16th-wave alignment;
+ *      pre-fix the field was `SpecRef[]` from
+ *      `resolveAllUiBearingSpecs`).
+ *   - `primary?`: present iff a primary spec resolves; carries
+ *      `{specId, specMdPath, source}`.
  */
 export async function runPrototypingShowSpec(options: { root: string }): Promise<number> {
   const { config } = await loadConfig(options.root);
@@ -1060,10 +1079,10 @@ export async function readPerSpecScreens(
 }
 
 /**
- * Build a `Map<specDirName, CanonicalScreenContract[]>` from the
- * project-wide `screenContracts` so the per-(spec x screen) gate avoids
- * N+1 fs probes (`readPerSpecScreens` runs up to 5 fs ops per spec; this
- * Map collapses N calls to one pass over already-discovered file paths).
+ * Build a `Map<specDirName, CanonicalScreenContract[]>` for the
+ * per-(spec × screen) gate by harvesting per-spec file paths from the
+ * project-wide `screenContracts.sourceRef` index and then re-parsing
+ * each spec's winning file(s) in isolation.
  *
  * The Map is keyed by the `<spec-id>` segment extracted from the
  * canonical `sourceRef` shape (`<contractsDir>/ui/<spec-id>.yaml#<id>`
@@ -1073,26 +1092,33 @@ export async function readPerSpecScreens(
  * does not apply, and `readPerSpecScreens` will return `null` for those
  * specs, falling back to the project-wide list as before.
  *
- * codex r3265376125 (MINOR): pre-fix the per-spec gate called
- * `readPerSpecScreens` for every frozen spec, repeating the same fs
- * probes for shapes that were already loaded once at the call site.
+ * codex r3265376125 (MINOR): the original optimisation collapsed
+ * the `readPerSpecScreens` glob discovery into a single pass over
+ * already-discovered file paths.
  *
- * 13th-wave Fix (codex r3265806993 / r3265809880, MAJOR): pre-fix the
- * Map seeded each spec entry from the project-wide `screenContracts`
- * collection — which has already been deduplicated by `screenId` across
- * every parsed file in `<contractsDir>/ui/**`. When two specs declare
- * the same `screenId` (e.g. `home`), the project-wide dedup keeps the
- * first file's entry and drops the second; the index then looked
- * non-empty for the losing spec but was silently missing one screen,
- * which silently false-negative-passed the `<spec>/<screen>.review.json`
- * gate. The fix re-parses each spec's winning file via
- * `parseUiScreenFile` to recover the unfiltered per-spec screen list
- * (the per-spec re-parse scope is isolated from cross-spec dedup).
- * For multi-file shapes (glob #4 / subdir #5) the winner set is the
- * union of all matched files (first-write-wins dedup within the
- * spec's own scope) so subdir / glob layouts still benefit from the
- * pre-indexed path discovery instead of falling through to the fs
- * probe.
+ * 13th-wave Fix (codex r3265806993 / r3265809880, MAJOR): the original
+ * optimisation also tried to reuse the project-wide-deduplicated
+ * screens collection — which silently dropped duplicate `screenId`s
+ * across specs and false-negative-passed the per-(spec × screen) gate
+ * for the losing spec. The fix re-parses each spec's winning file via
+ * `parseUiScreenFile` so the per-spec re-parse scope is isolated from
+ * cross-spec dedup. The remaining benefit over `readPerSpecScreens` is
+ * narrow — we skip the glob+stat candidate-discovery step because the
+ * project-wide reader already enumerated every `<contractsDir>/ui/**`
+ * path, and we re-use those paths instead of re-discovering them. For
+ * multi-file shapes (glob #4 / subdir #5) the winner set is the union
+ * of all matched files (first-write-wins dedup within the spec's own
+ * scope); single-file canonical shapes (#1..#3) take TRUE first-hit
+ * via {@link chooseWinningFiles}. The per-file `readFile` + YAML
+ * parse runs once per winning file here AND once again inside the
+ * project-wide reader pass — the optimisation is path discovery, not
+ * file I/O. A future refactor of `readUiContractScreenContracts` to
+ * return a per-file map could collapse the second parse; out of
+ * scope for the current wave (codex r3270051957 MINOR).
+ *
+ * codex r3270055214 (19th-wave MAJOR): unrelated to this function;
+ * the architectural cleanup that moved `resolveSurfaceUnion` to the
+ * core layer is tracked there.
  */
 async function indexPerSpecScreens(
   root: string,

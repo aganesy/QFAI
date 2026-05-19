@@ -165,10 +165,11 @@
 - Given a consumer project with N UI-bearing specs (N ≥ 1; each spec EITHER (a) carries `surface_type: ui-bearing` in its `01_Spec.md` frontmatter OR (b) ships a matching `.qfai/contracts/ui/<spec-id>.yaml` contract — the two signals are OR-ed; legacy `01_Context.md ui_bearing: true` is superseded by these per CHG-002),
 - When `/qfai-prototyping` is invoked exactly once,
 - Then `resolveAllUiBearingSpecs()` returns every UI-bearing spec ID, the previous primary-spec selection prompt is not emitted, and cycle-0 evidence records the resolved spec set verbatim.
-- Given a consumer project with zero UI-bearing specs,
-- When `/qfai-prototyping` is invoked,
+- Given a consumer project with zero UI-bearing specs **at cycle 0** (no in-progress `prototyping.json#frozenSurfaceUnion` recorded yet),
+- When `/qfai-prototyping` is invoked at cycle 0,
 - Then the run exits 0 deterministically as a no-op (not an error).
 - And the legacy `01_Context.md ui_bearing: false` exclusion guidance (AC-0012-0009) is retained as a non-detection-source convenience marker; the new detection signal set above is the SSOT.
+- And at cycle ≥ 1 the zero-UI-bearing live result is a hard-stop drift class (see AC-0012-0045 class (d) for the "UI markers removed mid-loop" path and class (e) for the "missing cycle-0 seed" path), NOT a no-op. The no-op semantic is intentionally scoped to cycle 0 only (19th-wave clarification per codex r3270053231 / r3270091255 MINOR).
 
 ## AC-0012-0038: 10-cycle iteration budget — terminator index === 9
 
@@ -176,6 +177,7 @@
 - Given `MAX_ITERATIONS = 10` and `MAX_ITERATION_INDEX = 9` in `core/prototyping/iteration.ts`,
 - When the iteration loop runs,
 - Then the run executes cycle 0 plus cycles 1..9 (max 10 iterations) on a single per-spec lineage and writes the terminator at `index === 9` when convergence is not reached earlier.
+- AND a single `--cycle 9` invocation on a non-converged loop whose `iterations.length === 10` MUST surface exit 65 directly (max-iterations terminator) without routing through the `expectedNextCycle === 10` cycle-mismatch path (19th-wave clarification per codex r3270052195 MINOR — moved here from AC-0012-0044 because cycle-9 idempotency is a terminator-routing concern, not an autonomous-run / no-prompts concern).
 
 ## AC-0012-0039: Validators reject out-of-range cycle index
 
@@ -219,18 +221,19 @@
 - US-Refs: US-0012-0113
 - Given `/qfai-prototyping` is invoked,
 - When the run executes cycle 0 through cycle 9,
-- Then no per-cycle stdin read or interactive prompt occurs between cycle 0 start and exit, AND the CI fixture asserting `stdin closed → exit 0/non-zero` succeeds without `ENOENT` / `EBADF` / `EINTR` on stdin, AND a single `--cycle 9` invocation on a non-converged loop whose `iterations.length === 10` MUST surface exit 65 directly (max-iterations terminator) without routing through the `expectedNextCycle === 10` cycle-mismatch path (14th-wave amendment per codex r3269195807 MAJOR).
+- Then no per-cycle stdin read or interactive prompt occurs between cycle 0 start and exit, AND the CI fixture asserting `stdin closed → exit 0/non-zero` succeeds without `ENOENT` / `EBADF` / `EINTR` on stdin. (The cycle-9 idempotency clause that briefly lived here in the 14th-wave amendment has been moved to AC-0012-0038 per codex r3270052195 MINOR — terminator routing is an iteration-budget concern, not an autonomous-run concern.)
 
 ## AC-0012-0045: Deterministic hard-stop classes
 
 - US-Refs: US-0012-0113
-- Given the hard-stop catalog is fixed at (a) lock drift, (b) Reviewer Playwright-session failure across all reviewers for a spec × screen, (c) license-verify failure, (d) mid-run spec-set change detection,
+- Given the hard-stop catalog is fixed at (a) lock drift, (b) Reviewer Playwright-session failure across all reviewers for a spec × screen, (c) license-verify failure, (d) mid-run spec-set change detection (any added / removed UI-bearing spec, including the special case of every UI marker / contract being removed mid-loop so the live UI-bearing union shrinks to `[]`), (e) cycle ≥ 1 invocation without a recorded cycle-0 `frozenSurfaceUnion` seed (fresh project ran `--cycle 1` before `--cycle 0`, OR a pre-12th-wave legacy `prototyping.json` lacks the field),
 - When any class triggers,
 - Then the run exits non-zero deterministically with the documented exit code per class:
   - (a) lock drift → exit `2` (per AC-0012-0035; same class as DESIGN.md hash mismatch and any cache-vs-lock drift),
   - (b) Reviewer Playwright-session failure → exit `64` with `sessionStatus ∈ {retryExhausted, launchFailed}` recorded on the per-`(spec, screen)` review payload so the orchestrator can disambiguate from converged-exit-64,
   - (c) license-verify failure → exit `66`,
-  - (d) mid-run spec-set change detection → exit `2` (same class as lock drift; new spec deferred to next invocation per the business-rule layer),
+  - (d) mid-run spec-set change detection → exit `2` (same class as lock drift; new / removed spec deferred to next invocation per the business-rule layer),
+  - (e) cycle ≥ 1 without a cycle-0 seed → exit `2` with the operator instructed to run `--cycle 0 --target-url <url>` first (19th-wave addition per codex r3270094588 MINOR + codex r3270091255 MINOR — formalises the 15th + 17th-wave behavioural change for the "Seed the loop first" branch of the zero-UI precheck),
     AND no user prompt is emitted.
 
 ## AC-0012-0046: Per-spec iter-dir namespacing — review.json only

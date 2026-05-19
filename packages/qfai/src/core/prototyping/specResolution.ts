@@ -16,7 +16,7 @@
  * performs interactive selection.
  */
 
-import { access, readFile, readdir } from "node:fs/promises";
+import { access, readFile, readdir, stat } from "node:fs/promises";
 import path from "node:path";
 
 import type { QfaiConfig } from "../config.js";
@@ -309,4 +309,89 @@ async function hasMatchingUiContract(contractsRoot: string, specId: string): Pro
   }
   const anchoredRe = new RegExp(`^(?:${specId}|spec-${specId}|ui-${specId}(?:-[^.]+)?)\\.yaml$`);
   return names.some((name) => anchoredRe.test(name));
+}
+
+/**
+ * Cheap existence probe for `<specsDir>/spec-NNNN`. Used by
+ * {@link resolveSurfaceUnion} to honour the
+ * `prototyping.primarySpecId` config escape hatch: if the marker /
+ * contract scan returns zero UI-bearing specs but the operator has
+ * explicitly pinned a primary spec that exists on disk, the no-op
+ * short-circuit is skipped so the legacy `resolvePrimaryPrototypingSpec`
+ * path can drive the loop.
+ *
+ * codex review r3264508578: bare `catch {}` previously swallowed
+ * EACCES / EIO / ENOTDIR alike as "doesn't exist", letting a
+ * permission-denied spec dir silently no-op the run. The discriminated
+ * ENOENT branch preserves the genuine-absence semantic and propagates
+ * every other errno.
+ *
+ * 19th-wave Fix (codex r3270055214, MAJOR — architecture-reviewer):
+ * moved here from `cli/commands/prototypingIterate.ts` together with
+ * {@link resolveSurfaceUnion} so the CLI → CLI sideways import (which
+ * `prototypingCertify.ts` had to take to align with iterate's drift
+ * gate) is replaced by both CLI commands importing the union resolver
+ * from a single core module. The dependency DAG (CLI → core) is
+ * restored.
+ */
+async function specDirExists(root: string, specsDir: string, specId: string): Promise<boolean> {
+  const dirName = `spec-${specId}`;
+  const abs = path.join(root, specsDir, dirName);
+  try {
+    const s = await stat(abs);
+    return s.isDirectory();
+  } catch (err) {
+    if (isEnoent(err)) return false;
+    throw err;
+  }
+}
+
+/**
+ * Compose the deterministic UNION of every UI-bearing surface signal
+ * the project carries:
+ *
+ *   1. strict frontmatter marker `surface_type: ui-bearing` in
+ *      `01_Spec.md` (the canonical CHG-002 signal) OR a matching
+ *      `.qfai/contracts/ui/<spec-id>*.yaml` contract — both via
+ *      {@link resolveAllUiBearingSpecs}.
+ *   2. legacy `# … prototyping …` heading in `01_Spec.md` — via
+ *      {@link resolveTitleMarkerSpecs}.
+ *   3. operator escape hatch `qfai.config.yaml#prototyping.primarySpecId`
+ *      when the pinned spec id resolves to a directory on disk.
+ *
+ * Returns the union sorted lexicographically and deduplicated. Empty
+ * result signals "no UI surface declared anywhere" — the caller
+ * decides whether to short-circuit (the no-op gate uses this signal).
+ *
+ * SSOT for the live UI-bearing scope: `prototypingIterate.ts` uses
+ * this resolver for the cycle ≥ 1 drift gate, and
+ * `prototypingCertify.ts#runPrototypingShowSpec` uses it for
+ * `liveUiBearing` so the live scope reported by show-spec is
+ * apples-to-apples with what iterate actually enforces.
+ *
+ * 19th-wave Fix (codex r3270055214, MAJOR — architecture-reviewer):
+ * moved here from `cli/commands/prototypingIterate.ts` so both CLI
+ * commands import this resolver from the core layer instead of
+ * `prototypingCertify.ts` taking a sideways import on
+ * `prototypingIterate.ts`. The original location was a leftover from
+ * the 8th-wave extraction; this wave finishes the layer cleanup.
+ *
+ * @internal Exported for direct unit-testing of the union composition
+ * rule and so consumers across the CLI layer can re-resolve the live
+ * multi-spec union. Not part of the package's public surface.
+ */
+export async function resolveSurfaceUnion(root: string, config: QfaiConfig): Promise<string[]> {
+  const strictUiBearing = await resolveAllUiBearingSpecs(root, config);
+  const titleMarkerSpecs = await resolveTitleMarkerSpecs(root, config.paths.specsDir);
+  const configuredPrimarySpecId = config.prototyping?.primarySpecId;
+  const configuredSpecOnDisk =
+    configuredPrimarySpecId !== undefined
+      ? await specDirExists(root, config.paths.specsDir, configuredPrimarySpecId)
+      : false;
+  const union = new Set<string>(strictUiBearing);
+  if (configuredSpecOnDisk && configuredPrimarySpecId !== undefined) {
+    union.add(configuredPrimarySpecId);
+  }
+  for (const id of titleMarkerSpecs) union.add(id);
+  return [...union].sort((a, b) => a.localeCompare(b));
 }

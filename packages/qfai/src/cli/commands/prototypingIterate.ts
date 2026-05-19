@@ -45,9 +45,8 @@ import {
 } from "../../core/prototyping/designMdViolations.js";
 import { PROTOTYPING_EVIDENCE_REL, PROTOTYPING_JSON_REL } from "../../core/prototyping/paths.js";
 import {
-  resolveAllUiBearingSpecs,
   resolvePrimaryPrototypingSpec,
-  resolveTitleMarkerSpecs,
+  resolveSurfaceUnion,
 } from "../../core/prototyping/specResolution.js";
 import {
   checkSpecsCoveredDrift,
@@ -182,41 +181,37 @@ export async function runPrototypingIterate(
   //    for the full contract.
   //
   // 15th-wave Fix (codex r3269453276, P1) + 17th-wave refinement
-  // (codex r3270050451, MINOR): the precheck short-circuit MUST NOT
-  // bypass the cycle ≥ 1 drift gate, BUT it also MUST NOT claim that
-  // a cycle-0 frozen scope exists on records where it does not (fresh
-  // project, missing prototyping.json, or pre-12th-wave records with
-  // no `frozenSurfaceUnion` field). The verified pre-condition for
-  // the "removed mid-loop" hard-stop class is: cycle ≥ 1 AND
-  // prototyping.json on disk carries a non-empty `frozenSurfaceUnion`
-  // snapshot. When that holds and the live union is empty, the run
-  // entered a degraded state mid-loop and we surface a clear
-  // hard-stop. Otherwise we fall through to the normal cycle gates
-  // — `evaluateCycleGteOneGate` already handles "missing
-  // prototyping.json" / "missing frozenSurfaceUnion" with their own
-  // diagnostics (13th-wave hard-fail), so layering another short-cut
-  // here would only produce misleading messages on fresh-project
-  // `--cycle 1` invocations.
+  // (codex r3270050451, MINOR) + 19th-wave polish (codex r3270092241
+  // / r3270093043 / r3270095015, MINOR + NIT): the precheck
+  // short-circuit MUST NOT bypass the cycle ≥ 1 drift gate. The
+  // cycle ≥ 1 branch always returns `exit 2`; it never falls through
+  // to `evaluateCycleGteOneGate`. Two diagnostics are surfaced based
+  // on observable facts (NOT internal wave labels):
+  //
+  //   (a) `frozenSurfaceUnion` is non-null on disk → genuine "UI
+  //       markers removed mid-loop" hard-stop. The diagnostic names
+  //       the frozen union so the operator can see what scope is no
+  //       longer reachable.
+  //   (b) `frozenSurfaceUnion` is null / missing — either the file
+  //       does not exist yet (fresh project ran `--cycle 1` first) or
+  //       it is a legacy record without the field. Both share the
+  //       same operator action (re-seed via `--cycle 0`), so a single
+  //       diagnostic suffices.
+  //
+  // `readFrozenSurfaceUnionField` returns `null` whenever the field
+  // is missing, malformed, or empty (see post-condition on the helper
+  // at L674), so the precheck only needs `!== null` to discriminate
+  // the two branches.
   const precheck = await evaluateZeroUiBearingPrecheck(options.root);
   if (precheck.shortCircuit) {
     if (options.cycle >= 1) {
-      // Distinguish two failure modes so the error message is accurate:
-      //   (a) prototyping.json carries a non-empty cycle-0 `frozenSurfaceUnion`
-      //       snapshot → genuine "UI markers removed mid-loop" hard-stop;
-      //   (b) prototyping.json is missing or has no `frozenSurfaceUnion`
-      //       (fresh project ran `--cycle 1` before `--cycle 0`, or a
-      //       pre-12th-wave legacy record) → tell the operator to seed
-      //       first via `--cycle 0`. The pre-17th-wave message wrongly
-      //       claimed "frozen scope no longer reachable" on (b), which
-      //       violated the principle of least astonishment on a fresh
-      //       project (codex r3270050451 MINOR).
       const protoJsonAbsForPrecheck = path.join(options.root, PROTOTYPING_JSON_REL);
       const protoRecordForPrecheck = await readPrototypingJson(protoJsonAbsForPrecheck);
       const frozenUnionForPrecheck =
         protoRecordForPrecheck === null
           ? null
           : readFrozenSurfaceUnionField(protoRecordForPrecheck);
-      if (frozenUnionForPrecheck !== null && frozenUnionForPrecheck.length > 0) {
+      if (frozenUnionForPrecheck !== null) {
         error(
           "qfai prototyping iterate: zero UI-bearing specs resolved on cycle " +
             `${options.cycle}, but the cycle-0 frozen union recorded in ` +
@@ -232,9 +227,9 @@ export async function runPrototypingIterate(
           "qfai prototyping iterate: zero UI-bearing specs resolved on cycle " +
             `${options.cycle}, and prototyping.json has no cycle-0 ` +
             "`frozenSurfaceUnion` snapshot to drift against (either the file " +
-            "is missing / unreadable or it pre-dates the 12th-wave schema). " +
-            "Seed the loop first with `--cycle 0 --target-url <url>` and then " +
-            "re-invoke for cycle ≥ 1.",
+            "does not exist yet or it is a legacy record without the " +
+            "`frozenSurfaceUnion` field). Seed the loop first with " +
+            "`--cycle 0 --target-url <url>` and then re-invoke for cycle ≥ 1.",
         );
       }
       return 2;
@@ -657,7 +652,11 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 /**
  * Read `frozenSurfaceUnion` from prototyping.json. Returns `null` when
- * the field is missing or malformed.
+ * the field is missing, malformed, **or empty** (zero-length array).
+ * Post-condition: a non-null return value is always a `string[]` of
+ * length ≥ 1 with non-empty string entries — callers can branch on
+ * `!== null` alone without re-checking `length > 0` (codex r3270095015
+ * NIT, 19th-wave).
  *
  * 13th-wave Fix (codex r3265953324, MAJOR/P1): the cycle ≥ 1 drift gate
  * no longer falls back to `frozenSpecsCovered` when this field is
@@ -1051,31 +1050,12 @@ async function deleteStaleCompletionCertificate(certAbs: string): Promise<void> 
   }
 }
 
-/**
- * Cheap existence probe for `<specsDir>/spec-NNNN`. Used by the
- * cycle-0 no-op gate to honour the `prototyping.primarySpecId` config
- * escape hatch: if the marker/contract scan returns zero UI-bearing
- * specs but the operator has explicitly pinned a primary spec that
- * exists on disk, the no-op short-circuit is skipped so the legacy
- * `resolvePrimaryPrototypingSpec` path can drive the loop.
- */
-async function specDirExists(root: string, specsDir: string, specId: string): Promise<boolean> {
-  const dirName = `spec-${specId}`;
-  const abs = path.join(root, specsDir, dirName);
-  try {
-    const s = await stat(abs);
-    return s.isDirectory();
-  } catch (err) {
-    // codex review r3264508578: bare `catch {}` previously swallowed
-    // EACCES / EIO / ENOTDIR alike as "doesn't exist", letting a
-    // permission-denied spec dir silently no-op the run. Discriminate
-    // ENOENT (genuine absence) from every other errno and propagate
-    // the rest so the project-rule "every async path must have
-    // explicit error handling" is honoured.
-    if (isEnoent(err)) return false;
-    throw err;
-  }
-}
+// 19th-wave Fix (codex r3270055214, MAJOR): `specDirExists` and
+// `resolveSurfaceUnion` (below) were moved to
+// `core/prototyping/specResolution.ts` so the CLI → CLI sideways
+// import that `prototypingCertify.ts` had to take (to align with
+// iterate's drift gate) is replaced by both CLI commands importing
+// the union resolver from a single core module.
 
 function buildRunId(designMdSha: string): string {
   return `loop-${designMdSha.slice(0, 12)}-${Date.now().toString(36)}`;
@@ -1232,50 +1212,13 @@ async function evaluateZeroUiBearingPrecheck(root: string): Promise<ZeroUiBearin
   };
 }
 
-/**
- * Compose the deterministic UNION of every UI-bearing surface signal
- * the project carries:
- *
- *   1. strict frontmatter marker `surface_type: ui-bearing` in
- *      `01_Spec.md` (the canonical CHG-002 signal) OR a matching
- *      `.qfai/contracts/ui/<spec-id>*.yaml` contract — both via
- *      `resolveAllUiBearingSpecs`.
- *   2. legacy `# … prototyping …` heading in `01_Spec.md` — via
- *      `resolveTitleMarkerSpecs`.
- *   3. operator escape hatch `qfai.config.yaml#prototyping.primarySpecId`
- *      when the pinned spec id resolves to a directory on disk.
- *
- * Returns the union sorted lexicographically and deduplicated. Empty
- * result signals "no UI surface declared anywhere" — the caller
- * decides whether to short-circuit (the no-op gate uses this signal).
- *
- * Extracted from `evaluateZeroUiBearingPrecheck` so the union
- * composition rule is independently unit-testable and the precheck
- * stays focused on its short-circuit / config-snapshot responsibility.
- *
- * @internal Exported for direct unit-testing of the union composition
- * rule (8th-wave Fix 7) and so the cycle ≥1 drift gate can re-resolve
- * the live multi-spec union (10th-wave Fix B). Not part of the
- * package's public surface.
- */
-export async function resolveSurfaceUnion(
-  root: string,
-  config: ConfigLoadResult["config"],
-): Promise<string[]> {
-  const strictUiBearing = await resolveAllUiBearingSpecs(root, config);
-  const titleMarkerSpecs = await resolveTitleMarkerSpecs(root, config.paths.specsDir);
-  const configuredPrimarySpecId = config.prototyping?.primarySpecId;
-  const configuredSpecOnDisk =
-    configuredPrimarySpecId !== undefined
-      ? await specDirExists(root, config.paths.specsDir, configuredPrimarySpecId)
-      : false;
-  const union = new Set<string>(strictUiBearing);
-  if (configuredSpecOnDisk && configuredPrimarySpecId !== undefined) {
-    union.add(configuredPrimarySpecId);
-  }
-  for (const id of titleMarkerSpecs) union.add(id);
-  return [...union].sort((a, b) => a.localeCompare(b));
-}
+// 19th-wave Fix (codex r3270055214, MAJOR — architecture-reviewer):
+// `resolveSurfaceUnion` lives in `core/prototyping/specResolution.ts`
+// (moved out of this module) and is re-exported here for back-compat
+// with existing call sites in the wave-8/10/13 unit tests that import
+// from the CLI module. `prototypingCertify.ts` imports from the core
+// module directly, restoring the CLI → core dependency DAG.
+export { resolveSurfaceUnion };
 
 type CycleGteOneGateInput = {
   root: string;

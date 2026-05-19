@@ -878,10 +878,10 @@
 ## TC-0012-0419
 
 - EX-Ref: EX-0012-0148
-- AC-Refs: AC-0012-0044, AC-0012-0045
+- AC-Refs: AC-0012-0037, AC-0012-0045, AC-0012-0049
 - Type: integration
 - Test file: `packages/qfai/tests/cli/commands/prototypingIterate.test.ts`
-- Verify the zero-UI precheck short-circuit branches added by the 15th + 17th late-review waves. Four `it` blocks: (1) `cycle 0 + zero UI-bearing live + no frozen union still exits 0 (no-op semantic preserved)`, (2) `cycle ≥ 1 + zero UI-bearing live + non-empty frozenSurfaceUnion exits 2 with 'no longer reachable'` (genuine UI-removed-mid-loop hard-stop, names the frozen union), (3) `cycle ≥ 1 + zero UI-bearing live + missing prototyping.json exits 2 with 'Seed the loop first'` (fresh-project diagnostic — must NOT claim "no longer reachable"), (4) `cycle ≥ 1 + zero UI-bearing live + prototyping.json missing frozenSurfaceUnion exits 2 with 'Seed the loop first'` (pre-12th-wave legacy record path). Pairs with AC-0012-0045 (deterministic hard-stop classes) and AC-0012-0044 (autonomous-run bound, since the diagnostic is visible to operators). Closes codex MAJOR r3270050284 (regression coverage) and codex MINOR r3270050451 (diagnostic discrimination).
+- Verify the zero-UI precheck short-circuit branches added by the 15th + 17th late-review waves. Four `it` blocks: (1) `cycle 0 + zero UI-bearing live + no frozen union still exits 0 (no-op semantic preserved)` — pins the AC-0012-0037 19th-wave clarification that the no-op is cycle-0 only; (2) `cycle ≥ 1 + zero UI-bearing live + non-empty frozenSurfaceUnion exits 2 with 'no longer reachable'` (genuine UI-removed-mid-loop hard-stop — AC-0012-0045 class (d) and AC-0012-0049 mid-run spec-set freeze); (3) `cycle ≥ 1 + zero UI-bearing live + missing prototyping.json exits 2 with 'Seed the loop first'` (fresh-project diagnostic — AC-0012-0045 class (e) 19th-wave addition); (4) `cycle ≥ 1 + zero UI-bearing live + prototyping.json missing frozenSurfaceUnion exits 2 with 'Seed the loop first'` (pre-12th-wave legacy record path — AC-0012-0045 class (e)). AC-Refs binding corrected from `AC-0012-0044` (autonomous-run / no-prompts — wrong axis) to `AC-0012-0037` + `AC-0012-0045` + `AC-0012-0049` per codex r3270093532 MINOR. Closes codex MAJOR r3270050284 (regression coverage) and codex MINOR r3270050451 (diagnostic discrimination).
 
 ## TC-0012-0420
 

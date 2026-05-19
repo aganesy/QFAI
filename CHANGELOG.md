@@ -76,6 +76,76 @@
   - Pinned-branch authorization is preserved: this lands in 1.8.10
     because `feature/v1.8.10` is the release pin.
 
+### Fixed (PR #208 19th late-review wave)
+
+- **Architecture (codex r3270055214, MAJOR — architecture-reviewer):**
+  move `resolveSurfaceUnion` (and its private helper `specDirExists`)
+  from `cli/commands/prototypingIterate.ts` to
+  `core/prototyping/specResolution.ts`. The CLI → CLI sideways import
+  `prototypingCertify` had to take to align with iterate's drift gate
+  (wave-15) is replaced by both CLI commands importing the resolver
+  from the core layer. `prototypingIterate` re-exports the symbol for
+  back-compat with the wave-8/10/13 unit tests.
+- **AC layer (codex r3270053231 / r3270091255 MINOR):** narrow
+  AC-0012-0037 to "zero UI-bearing specs **at cycle 0**" and add an
+  explicit clause that cycle ≥ 1 zero-UI is a hard-stop drift class.
+  The pre-19th-wave AC text was unconditionally "exit 0 deterministic
+  no-op", which contradicted the 15th + 17th-wave behavioural change
+  to exit 2 at cycle ≥ 1.
+- **AC layer (codex r3270094588 MINOR + r3270091255 MINOR):** extend
+  AC-0012-0045 hard-stop catalogue with new class (e) — "cycle ≥ 1
+  invocation without a recorded cycle-0 `frozenSurfaceUnion` seed →
+  exit 2 with re-seed instruction". Formalises the wave-15 / wave-17
+  Seed-the-loop-first diagnostic that TC-0012-0419 already pins.
+  Class (d) is broadened to cover removed-mid-loop in addition to
+  added-mid-loop.
+- **AC layer (codex r3270052195 MINOR):** move the cycle-9 idempotency
+  Then-clause that briefly lived on AC-0012-0044 to AC-0012-0038
+  (10-cycle iteration budget) — terminator routing is an
+  iteration-budget concern, not an autonomous-run / no-prompts
+  concern.
+- **TC binding (codex r3270093532 MINOR — architecture-reviewer):**
+  TC-0012-0419 AC-Refs corrected from `AC-0012-0044` (autonomous-run
+  / no-prompts — wrong axis) to `AC-0012-0037` + `AC-0012-0045` +
+  `AC-0012-0049` so the test's four `it` blocks land on the AC clauses
+  they actually exercise. Traceability ledger TDD-0439 updated to
+  match.
+- **Code (codex r3270092241 MINOR):** rewrite the precheck JSDoc to
+  match the implementation — the cycle ≥ 1 branch always returns
+  exit 2; it never falls through to `evaluateCycleGteOneGate`. The
+  pre-19th-wave comment claimed the empty-frozen branch fell through,
+  which was incorrect after the wave-17 refactor.
+- **Code (codex r3270093043 MINOR — product-surface):** scrub the
+  internal wave label "12th-wave schema" from the operator-facing
+  stderr string and replace with observable facts ("either the file
+  does not exist yet or it is a legacy record without the
+  `frozenSurfaceUnion` field"). The wave label was meaningless to
+  end users.
+- **Code (codex r3270095015 NIT + r3270092346 NIT):** drop the
+  redundant `&& frozenUnionForPrecheck.length > 0` guard in the
+  precheck branch — `readFrozenSurfaceUnionField` returns `null`
+  whenever the field is empty / malformed, so a `!== null` check is
+  sufficient. The helper's JSDoc was tightened to declare the
+  empty-→-null post-condition explicitly so two-place semantic
+  duplication does not silently drift.
+- **Docs (codex r3270056361 MINOR + r3270051957 MINOR):** refresh the
+  `runPrototypingShowSpec` JSDoc to describe the current resolver
+  (`resolveSurfaceUnion`), document the `frozenSpecsCoveredSource`
+  discriminant field, and adjust the `indexPerSpecScreens` JSDoc tone
+  so it accurately reflects the post-13th-wave reality (the
+  optimisation is path discovery, not file I/O — the project-wide
+  reader still parses every file, and the per-spec re-parse runs
+  again on the winning file).
+- **CHANGELOG (codex r3270093210 MINOR):** repair the soft-wrap
+  indentation drift on L138-140 of the 17th-wave entry (was
+  zero-indent continuation, now matches the surrounding two-space
+  bullet style).
+- **09_delta.md (codex r3270050901 MINOR — requirements-reviewer):**
+  register `OP-APPEND-080` for `OQ-0012-0011` (Cycle-9 idempotency
+  follow-up) so the OQ ↔ OP pairing that OQ-0012-0006..0010 already
+  follow is consistent for OQ-0012-0011. Closes the wave-14 Fix-6
+  self-consistency gap.
+
 ### Fixed (PR #208 18th late-review wave)
 
 - `packages/qfai/assets/init/.qfai/assistant/skills/qfai-prototyping/SKILL.md`:
@@ -136,8 +206,8 @@ show-spec JSON schema reshape)` block with a sub-bullet covering
 - `tests/cli/commands/prototypingIterate.test.ts`: add a new
   describe block (TC-0012-0419, TDD-0439) with 4 `it` blocks pinning
   the wave-15 / wave-17 zero-UI precheck branches — cycle 0 no-op
-  preserved; cycle ≥ 1 + non-empty frozen union → exit 2 with `no
-longer reachable`; cycle ≥ 1 + missing prototyping.json → exit 2
+  preserved; cycle ≥ 1 + non-empty frozen union → exit 2 with
+  `no longer reachable`; cycle ≥ 1 + missing prototyping.json → exit 2
   with `Seed the loop first`; cycle ≥ 1 + legacy record without
   `frozenSurfaceUnion` → same `Seed the loop first` path.
   06_Test-Cases.md / tdd/test-list.md / 16_Traceability-ledger.md
