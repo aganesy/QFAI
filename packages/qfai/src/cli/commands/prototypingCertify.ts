@@ -692,8 +692,12 @@ export async function runPrototypingShowSpec(options: { root: string }): Promise
   // only the strict signals; on projects relying on non-strict markers
   // operators saw a narrower live set than iterate actually enforces,
   // producing false "drift" diagnostics that did not match the iterate
-  // gate. `resolveSurfaceUnion` is exported from `prototypingIterate.ts`
-  // for exactly this kind of SSOT alignment.
+  // gate. 19th-wave Fix (codex r3270055214, MAJOR): `resolveSurfaceUnion`
+  // now lives at `core/prototyping/specResolution.ts` (the canonical
+  // core-layer location); `prototypingIterate.ts` only re-exports it
+  // for back-compat with the wave-8/10/13 unit tests. Both CLI
+  // commands import from the core module directly (codex r3270215029
+  // / r3270209821 21st-wave comment refresh).
   const liveUiBearing = await resolveSurfaceUnion(options.root, config);
   const primary = await resolvePrimaryPrototypingSpec(options.root, config);
   const payload: Record<string, unknown> = {

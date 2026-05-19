@@ -76,6 +76,36 @@
   - Pinned-branch authorization is preserved: this lands in 1.8.10
     because `feature/v1.8.10` is the release pin.
 
+### Fixed (PR #208 21st late-review wave)
+
+- **AC-Ref consistency (codex r3270214641, MAJOR — requirements-reviewer):**
+  TC-0012-0416 / OQ-0012-0011 references rebound from `AC-0012-0044`
+  to `AC-0012-0038`. The cycle-9 idempotency Then-clause moved from
+  AC-0044 to AC-0038 in the 19th-wave (per codex r3270052195), but
+  the TC-0012-0416 row and the OQ-0012-0011 `Couples:` / Question
+  prose were not migrated alongside TDD-0439 / TC-0012-0419.
+- **JSDoc consistency (codex r3270215029 / r3270209821, NIT/MINOR):**
+  `prototypingCertify.ts` L695-696 comment now names
+  `core/prototyping/specResolution.ts` as the canonical location of
+  `resolveSurfaceUnion` (matched to the 19th-wave move) and notes the
+  CLI-layer re-export as back-compat-only.
+- **API surface annotation (codex r3270215675 / r3270214114, MINOR):**
+  the back-compat re-export of `resolveSurfaceUnion` from
+  `prototypingIterate.ts` is now wrapped in an `@internal` JSDoc that
+  explicitly directs new call sites to import from
+  `core/prototyping/specResolution.ts` and notes that the re-export
+  exists only so the wave-8/10/13 unit tests keep resolving until
+  their import paths migrate.
+- **Outdated review threads (already addressed by wave-20 commit
+  `6fe7a45d`):** SKILL.md regression / forbidden-phrase contract
+  (codex BLOCKER r3270212184 / r3270213902 / r3270216674); TC AC-Ref
+  binding for TC-0012-0420 / 0421 / 0422 (codex MAJOR r3270212594 /
+  r3270216588); ledger TDD-0441 / 0442 AC-Ref drift (codex MAJOR
+  r3270213639 / r3270217340); TC-0012-0420 stderr assertion pin
+  (codex MAJOR r3270215064); cycle ≥ 1 drift gate stderr internal
+  labels (codex MAJOR r3270212694); AC-0012-0045 class (e)
+  "pre-12th-wave" marker (codex MINOR r3270218216).
+
 ### Fixed (PR #208 20th late-review wave)
 
 - **CI integration BLOCKER (codex r3270133293 + r3270145337, BLOCKER):**

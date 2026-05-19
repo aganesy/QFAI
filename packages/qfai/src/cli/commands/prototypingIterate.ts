@@ -1212,12 +1212,19 @@ async function evaluateZeroUiBearingPrecheck(root: string): Promise<ZeroUiBearin
   };
 }
 
-// 19th-wave Fix (codex r3270055214, MAJOR — architecture-reviewer):
-// `resolveSurfaceUnion` lives in `core/prototyping/specResolution.ts`
-// (moved out of this module) and is re-exported here for back-compat
-// with existing call sites in the wave-8/10/13 unit tests that import
-// from the CLI module. `prototypingCertify.ts` imports from the core
-// module directly, restoring the CLI → core dependency DAG.
+/**
+ * @internal Back-compat re-export only. The canonical export lives at
+ * `core/prototyping/specResolution.ts` (moved there in the 19th-wave
+ * architecture cleanup, codex r3270055214). New call sites MUST import
+ * from the core module directly; this re-export only exists so the
+ * wave-8/10/13 unit tests in `tests/cli/commands/prototypingIterate.test.ts`
+ * keep resolving against the previous CLI-layer path while we let the
+ * test-side import migration land in a focused follow-up wave (tracked
+ * implicitly by removing this re-export once those tests update).
+ * `prototypingCertify.ts` already imports from the core module
+ * directly, restoring the CLI → core dependency DAG. (21st-wave
+ * @internal annotation per codex r3270215675 / r3270214114 MINOR.)
+ */
 export { resolveSurfaceUnion };
 
 type CycleGteOneGateInput = {
