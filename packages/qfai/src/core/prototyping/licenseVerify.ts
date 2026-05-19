@@ -15,10 +15,27 @@
  * is the caller's responsibility.
  */
 
+/**
+ * Runtime shape of one `imageSources[]` entry. Mirrors the CLI contract
+ * `prototype-handoff.yaml#imageSources[]` row schema — `{url, source,
+ * license, attribution}` — so the runtime gate refuses any entry the
+ * handoff stage would also reject.
+ *
+ * 11th-wave Fix (codex r3265482144, P2): `attribution` was previously
+ * deferred to the handoff stage with an inline comment ("recorded
+ * separately at certify"), which let unattributed stock photos pass
+ * the cycle ≥ 1 license-verify gate even though the contract's exit-66
+ * class explicitly includes "missing attribution". The field is now
+ * carried on the runtime type (optional at the type level so older
+ * fixtures still compile) and the gate emits
+ * `license-missing-attribution` whenever the value is undefined or an
+ * empty string.
+ */
 export type ImageSource = {
   readonly url: string;
   readonly source: string;
   readonly license: string;
+  readonly attribution?: string;
 };
 
 export type LicenseCatalog = {
@@ -47,7 +64,8 @@ export type LicenseVerifyError =
       source: string;
       expectedHosts: readonly string[];
       url: string;
-    };
+    }
+  | { code: "license-missing-attribution"; source: string; url: string };
 
 export type LicenseVerifyResult =
   | { ok: true }
@@ -126,7 +144,16 @@ export function licenseVerify(
     const expectedHosts = catalog.sourceHosts?.[source];
     if (expectedHosts && expectedHosts.length > 0) {
       const host = urlHost(url);
-      if (host === null || !expectedHosts.includes(host)) {
+      // 11th-wave Fix (codex r3265474144, P2): compare both sides
+      // case-insensitively. `urlHost()` already lowercases the URL
+      // side, but the catalog side was taken verbatim, so a user
+      // catalog with `"Images.Unsplash.com"` would false-positive
+      // reject a valid URL. RFC 3986 §3.2.2 declares host
+      // case-insensitive, so the comparison must mirror that on
+      // both operands.
+      const hostMatches =
+        host !== null && expectedHosts.some((h) => h.toLowerCase() === host);
+      if (!hostMatches) {
         errors.push({ code: "license-host-mismatch", source, expectedHosts, url });
         continue;
       }
@@ -134,6 +161,19 @@ export function licenseVerify(
     const tiers = catalog.licenseTiers[source];
     if (!tiers || !tiers.includes(license)) {
       errors.push({ code: "license-tier-unknown", source, license, url });
+      continue;
+    }
+    // 11th-wave Fix (codex r3265482144, P2): require non-empty
+    // attribution at the runtime license gate. The CLI contract's
+    // exit-66 class explicitly enumerates "missing attribution", and
+    // the handoff schema requires `{url, license, attribution,
+    // source}`. Pre-fix the runtime type lacked the field entirely,
+    // so unattributed stock photos passed iterate and only surfaced
+    // at certify (handoff) time. Undefined and empty-string are both
+    // treated as "missing" here so the gate works for callers that
+    // pass through the optional field as either form.
+    if (entry.attribution === undefined || entry.attribution.length === 0) {
+      errors.push({ code: "license-missing-attribution", source, url });
     }
   }
 

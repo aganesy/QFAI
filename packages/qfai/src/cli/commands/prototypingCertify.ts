@@ -45,7 +45,10 @@ import {
   findDesignMdViolations,
   type DesignMdViolation,
 } from "../../core/prototyping/designMdViolations.js";
-import { resolvePrimaryPrototypingSpec } from "../../core/prototyping/specResolution.js";
+import {
+  resolveAllUiBearingSpecs,
+  resolvePrimaryPrototypingSpec,
+} from "../../core/prototyping/specResolution.js";
 import {
   readFrozenSpecsCovered,
   readFrozenSpecsCoveredMultiSpec,
@@ -365,7 +368,15 @@ export async function runPrototypingCertify(
         for (const m of missingPairs.slice(0, 20)) {
           error(`  - ${m.spec} / ${m.screen} (expected ${m.expectedPath})`);
         }
-        return 2;
+        // 11th-wave Fix (codex r3265482136, P2): missing review.json
+        // coverage at the per-spec layout is the same rejection class
+        // as the flat-iter multi-spec coverage gap above (exit 64),
+        // not an input error. The CLI contract's exit-code table
+        // declares "at least one spec lacks a review.json for a
+        // declared screen" → exit 64; returning 2 (input error) here
+        // would split the same coverage rejection across two exit
+        // codes and break operator workflows that key on 64.
+        return 64;
       }
     }
   }
@@ -580,25 +591,98 @@ async function loadLockGate(root: string, contractsDir: string): Promise<LockGat
   return sha !== null ? { kind: "ok", sha256: sha } : { kind: "malformed" };
 }
 
+/**
+ * Print the cycle-0 frozen specsCovered[] from prototyping.json so the
+ * operator can see which specs the current `/qfai-prototyping` run
+ * iterates over.
+ *
+ * 11th-wave Fix (codex r3265482150, P2): pre-fix this command resolved
+ * the LIVE primary spec from the config / spec markers and never read
+ * `prototyping.json`. After cycle 0 the frozen scope can diverge from
+ * the live config (a primary spec id renamed, markers moved between
+ * specs, etc.), so the pre-fix output misled agents about which spec
+ * iterate/certify were actually operating on. Now reads the frozen
+ * `specsCovered[]` (and, when present, `frozenSpecsCovered[]`) and
+ * exits 2 if `prototyping.json` is missing or malformed — matching the
+ * CLI contract §`qfai prototyping show-spec`.
+ *
+ * Output payload (JSON):
+ *   - `frozenSpecsCovered`: single-spec scope under review (cycle-0
+ *      frozen primary).
+ *   - `frozenSurfaceUnion`: multi-spec UI-bearing UNION snapshot at
+ *      cycle 0 (drift baseline). May be absent on pre-11th-wave
+ *      records — surfaced as `null` so the consumer can distinguish
+ *      "field absent" from "field present but empty".
+ *   - `liveUiBearing`: current `resolveAllUiBearingSpecs()` result so
+ *      the operator can spot drift without running iterate.
+ */
 export async function runPrototypingShowSpec(options: { root: string }): Promise<number> {
   const { config } = await loadConfig(options.root);
-  const resolved = await resolvePrimaryPrototypingSpec(options.root, config);
-  if (!resolved) {
+
+  const protoJsonAbs = path.join(options.root, PROTOTYPING_JSON_REL);
+  const protoRaw = await loadJson(protoJsonAbs);
+  if (protoRaw === null) {
     error(
-      "qfai prototyping show-spec: no primary prototyping spec found. " +
-        "Set qfai.config.yaml: prototyping.primarySpecId, " +
-        "or add `surface_type: ui-bearing` (or 'prototyping' in the title) " +
-        "to one of your specs' 01_Spec.md.",
+      `qfai prototyping show-spec: ${PROTOTYPING_JSON_REL} is missing or unparseable. ` +
+        "show-spec reads the cycle-0 frozen specsCovered[] — run " +
+        "`qfai prototyping iterate --cycle 0 --target-url <url>` to seed " +
+        "prototyping.json, or check the file is valid JSON.",
     );
     return 2;
   }
-  const payload = {
-    specId: resolved.specId,
-    specMdPath: path.relative(options.root, resolved.specMdPath).replace(/\\/g, "/"),
-    source: resolved.source,
+  if (typeof protoRaw !== "object" || Array.isArray(protoRaw)) {
+    error(
+      `qfai prototyping show-spec: ${PROTOTYPING_JSON_REL} is not a JSON object — ` +
+        "show-spec cannot read the frozen specsCovered[] from a non-object root.",
+    );
+    return 2;
+  }
+  const protoRecord = protoRaw as Record<string, unknown>;
+  const frozenSpecsCovered = readStringArrayField(protoRecord.frozenSpecsCovered);
+  const specsCovered = frozenSpecsCovered ?? readStringArrayField(protoRecord.specsCovered);
+  if (specsCovered === null || specsCovered.length === 0) {
+    error(
+      `qfai prototyping show-spec: ${PROTOTYPING_JSON_REL} is missing a valid ` +
+        "`frozenSpecsCovered[]` (or legacy `specsCovered[]`) — re-run " +
+        "`qfai prototyping iterate --cycle 0 --target-url <url>` to seed it.",
+    );
+    return 2;
+  }
+  const frozenSurfaceUnion = readStringArrayField(protoRecord.frozenSurfaceUnion);
+  // Compute the live UI-bearing union so the operator can spot drift.
+  // The legacy primary-resolver path is preserved as a fallback `specMdPath`
+  // so existing operator tooling that reads the per-spec path keeps working.
+  const liveUiBearing = await resolveAllUiBearingSpecs(options.root, config);
+  const primary = await resolvePrimaryPrototypingSpec(options.root, config);
+  const payload: Record<string, unknown> = {
+    frozenSpecsCovered: specsCovered,
+    frozenSurfaceUnion: frozenSurfaceUnion,
+    liveUiBearing,
   };
+  if (primary !== undefined) {
+    payload.primary = {
+      specId: primary.specId,
+      specMdPath: path.relative(options.root, primary.specMdPath).replace(/\\/g, "/"),
+      source: primary.source,
+    };
+  }
   info(JSON.stringify(payload, null, 2));
   return 0;
+}
+
+/**
+ * Narrow an unknown value to `string[]` of non-empty strings, or
+ * `null` when the value is missing / malformed. Shared by show-spec
+ * to read both `frozenSpecsCovered` and `frozenSurfaceUnion`.
+ */
+function readStringArrayField(raw: unknown): string[] | null {
+  if (!Array.isArray(raw)) return null;
+  const out: string[] = [];
+  for (const value of raw) {
+    if (typeof value !== "string" || value.length === 0) return null;
+    out.push(value);
+  }
+  return out;
 }
 
 // ─── final-iter HTML resolution ─────────────────────────────────────────────

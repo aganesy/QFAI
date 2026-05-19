@@ -118,6 +118,7 @@ type PrototypingJsonShape = {
   stopReason?: unknown;
   fullHarness?: unknown;
   frozenSpecsCovered?: unknown;
+  frozenSurfaceUnion?: unknown;
   frozenLicenseCatalog?: unknown;
   imageSources?: unknown;
   [key: string]: unknown;
@@ -183,15 +184,17 @@ export async function runPrototypingIterate(
   if (precheck.shortCircuit) {
     return precheck.exitCode;
   }
-  // The precheck returns only `earlyConfig` today — cycle 0 freezes the
-  // SINGLE primary spec into both `specsCovered` and `frozenSpecsCovered`
-  // (CHG-002), so the union the precheck computed internally is consumed
-  // there and not re-exported. The cycle >= 1 drift check re-resolves
-  // the live UI-bearing union via `resolveSurfaceUnion` directly so the
-  // drift comparison "frozen single primary vs live union" stays
-  // executable even though the freeze itself is single-spec (10th
-  // late-review wave Fix A + Fix B).
-  const { earlyConfig } = precheck;
+  // The precheck returns both `earlyConfig` and `unionSpecs` on the
+  // continue path. `unionSpecs` is the cycle-0 UI-bearing UNION —
+  // cycle 0 persists it as `frozenSurfaceUnion` in prototyping.json and
+  // the cycle ≥ 1 drift gate compares the live UNION against THAT
+  // frozen UNION (apples-to-apples) instead of against the single-spec
+  // `frozenSpecsCovered`. Pre-fix (10th wave) the drift gate compared a
+  // single-spec frozen set with the multi-spec live union, which
+  // false-positive-fired `added=[secondaries...]` for any project
+  // whose baseline already carried ≥ 2 UI-bearing specs. See 11th-wave
+  // Fix (codex r3265480688, MAJOR/P1).
+  const { earlyConfig, unionSpecs: cycleZeroUnion } = precheck;
 
   // 1) Read + hash root DESIGN.md FIRST (before any per-cycle plumbing).
   //    A malformed DESIGN.md is a structural project error and must
@@ -314,10 +317,21 @@ export async function runPrototypingIterate(
       // certify already hard-fails any multi-spec frozen set on the
       // flat-iter layout, so persisting the full UI-bearing union here
       // would render every normal multi-spec run uncertifiable. The
-      // `earlyUiBearing` union is still computed for the bypass /
-      // drift-check signals; we just do not freeze it as the multi-spec
-      // scope yet.
+      // multi-spec UNION is still computed in
+      // `evaluateZeroUiBearingPrecheck` for the no-op short-circuit
+      // signal, and at the cycle ≥ 1 drift gate via `resolveSurfaceUnion`
+      // re-resolution against `frozenSurfaceUnion`; we just do not
+      // freeze it as the multi-spec scope here (per Fix B + 11th-wave
+      // Fix below).
       frozenSpecsCovered: specs,
+      // cycle-0 SSOT for the multi-spec UI-bearing UNION. The drift
+      // gate at cycle ≥ 1 compares the live UNION against THIS field
+      // (apples-to-apples). Without this field the drift gate would
+      // compare the single-spec frozen scope against the live UNION
+      // and false-positive any project whose baseline already carries
+      // ≥ 2 UI-bearing specs. See 11th-wave Fix (codex r3265480688,
+      // MAJOR/P1).
+      frozenSurfaceUnion: [...cycleZeroUnion],
       // cycle-0 SSOT for the license-class catalog. Recording it here
       // means cycle >= 1 license-verify reads the FROZEN catalog
       // (immutable through the loop), not a mutable in-memory default
@@ -390,7 +404,9 @@ export async function runPrototypingIterate(
       "qfai prototyping iterate: prototyping.json#imageSources is malformed — " +
         `${collected.errors.length} error(s): ${collected.errors.join("; ")}. ` +
         "Each entry must be a JSON object with non-empty string fields " +
-        "{url, source, license} (attribution recorded separately at certify).",
+        "{url, source, license}; `attribution` is also required and a " +
+        "missing/empty value is rejected by the runtime license gate " +
+        "(exit 66) rather than as an input-shape error.",
     );
     return 2;
   }
@@ -573,6 +589,24 @@ function readFrozenSpecsCoveredField(record: PrototypingJsonShape): string[] | n
 }
 
 /**
+ * Read `frozenSurfaceUnion` from prototyping.json. Returns `null` when
+ * the field is missing or malformed so the cycle ≥ 1 drift gate can
+ * fall back to `frozenSpecsCovered` for pre-11th-wave records that
+ * pre-date the dedicated UNION snapshot field. See 11th-wave Fix
+ * (codex r3265480688, MAJOR/P1) for the rationale.
+ */
+function readFrozenSurfaceUnionField(record: PrototypingJsonShape): string[] | null {
+  const raw = record.frozenSurfaceUnion;
+  if (!Array.isArray(raw) || raw.length === 0) return null;
+  const out: string[] = [];
+  for (const value of raw) {
+    if (typeof value !== "string" || value.length === 0) return null;
+    out.push(value);
+  }
+  return out;
+}
+
+/**
  * Read `frozenLicenseCatalog` from prototyping.json. Returns `null`
  * when the field is missing or malformed so callers can fall back to
  * the in-memory default.
@@ -682,7 +716,17 @@ function collectImageSources(record: PrototypingJsonShape | null): CollectImageS
       );
       return;
     }
-    out.push({ url, source, license });
+    // 11th-wave Fix (codex r3265482144, P2): promote `attribution`
+    // into the runtime ImageSource. Missing / non-string attribution
+    // is intentionally NOT treated as an input-shape (exit 2) error
+    // — the CLI contract puts "missing attribution" under exit 66
+    // (license-verify rejection), so we default to "" here and let
+    // `licenseVerify` emit the structured `license-missing-attribution`
+    // diagnostic. This keeps the runtime gate's exit code aligned
+    // with the contract surface.
+    const rawAttribution = entry.attribution;
+    const attribution = typeof rawAttribution === "string" ? rawAttribution : "";
+    out.push({ url, source, license, attribution });
   });
   if (errors.length > 0) {
     return { ok: false, errors };
@@ -703,6 +747,13 @@ type SeedMetadata = {
   runId: string;
   specsCovered: readonly string[];
   frozenSpecsCovered: readonly string[];
+  /**
+   * Cycle-0 UI-bearing UNION snapshot. Persisted in prototyping.json
+   * as `frozenSurfaceUnion` and consumed by the cycle ≥ 1 drift gate
+   * as the apples-to-apples baseline for the live UNION comparison.
+   * See 11th-wave Fix (codex r3265480688, MAJOR/P1).
+   */
+  frozenSurfaceUnion: readonly string[];
   frozenLicenseCatalog: LicenseCatalog;
 };
 
@@ -762,11 +813,14 @@ async function writeSeedMetadata(protoJsonAbs: string, seed: SeedMetadata): Prom
   body.designMd = seed.designMd;
   body.runId = seed.runId;
   body.specsCovered = [...seed.specsCovered];
-  // Persist the cycle-0 SSOT fields. frozenSpecsCovered is the full
-  // UI-bearing spec set (multi-spec); frozenLicenseCatalog is the
-  // stock-photo allowlist used by licenseVerify in every subsequent
-  // cycle.
+  // Persist the cycle-0 SSOT fields. `frozenSpecsCovered` is the
+  // single-spec scope under review (mirrors `specsCovered`);
+  // `frozenSurfaceUnion` is the multi-spec UI-bearing UNION that the
+  // cycle ≥ 1 drift gate compares the live UNION against;
+  // `frozenLicenseCatalog` is the stock-photo allowlist used by
+  // `licenseVerify` in every subsequent cycle.
   body.frozenSpecsCovered = [...seed.frozenSpecsCovered];
+  body.frozenSurfaceUnion = [...seed.frozenSurfaceUnion];
   body.frozenLicenseCatalog = {
     allowedSources: [...seed.frozenLicenseCatalog.allowedSources],
     licenseTiers: Object.fromEntries(
@@ -1006,6 +1060,17 @@ type ZeroUiBearingPrecheckResult =
   | {
       shortCircuit: false;
       earlyConfig: ConfigLoadResult;
+      /**
+       * The cycle-0 UI-bearing UNION (all specs the project carries
+       * with `surface_type: ui-bearing` / matching UI contract / title
+       * marker / pinned primarySpecId). Exposed on the continue path
+       * so the caller can persist it as `frozenSurfaceUnion` in
+       * prototyping.json — the cycle ≥ 1 drift gate then compares the
+       * live UNION against this frozen UNION (apples-to-apples) instead
+       * of against the single-spec `frozenSpecsCovered`. See 11th-wave
+       * Fix (codex r3265480688, MAJOR/P1).
+       */
+      unionSpecs: readonly string[];
     };
 
 /**
@@ -1044,6 +1109,7 @@ async function evaluateZeroUiBearingPrecheck(
   return {
     shortCircuit: false,
     earlyConfig,
+    unionSpecs,
   };
 }
 
@@ -1308,26 +1374,32 @@ async function evaluateCycleGteOneGate(
 
   // Mid-run spec-set drift check.
   //
-  // The cycle-0 frozen `frozenSpecsCovered` set is the SSOT for what
-  // the loop is reviewing. With CHG-002 the freeze itself is
-  // single-spec (the resolved primary), but mid-loop additions of new
-  // UI-bearing specs MUST still be observable: an operator who adds a
-  // new strict marker (or pins a new primarySpecId / lands a new title
-  // marker / drops a new UI contract) between cycle 0 and cycle N
-  // needs to be told the live surface has expanded so they can restart
-  // with `--cycle 0` and pick up the broader scope. Resolve the live
-  // multi-spec UNION via `resolveSurfaceUnion` (the same composition
-  // rule the precheck uses) and compare it against the frozen
-  // single-spec set. The new/removed specs are deferred to the NEXT
-  // invocation (which restarts from cycle 0), so we never restart
-  // here — we just fail-fast with stderr that names every drifted
-  // spec id. This restores the operator-facing guarantee that was
-  // narrowed in 8th-wave Fix 2 (single-spec freeze) and was flagged
-  // dead-branched in 10th-wave architecture-reviewer r3265257258 /
-  // r3265251225 / r3265260466.
-  const frozenSet = readFrozenSpecsCoveredField(protoRecord) ?? frozenSpecs;
+  // The cycle-0 frozen `frozenSurfaceUnion` set is the SSOT for the
+  // UI-bearing surface the loop is observing. With CHG-002 the
+  // single-spec scope under review (`frozenSpecsCovered`) is the
+  // primary spec only, but the multi-spec UNION captured at cycle 0 is
+  // what the drift gate compares against — apples-to-apples vs the
+  // live UNION. Pre-fix (10th wave) the gate compared the single-spec
+  // frozen scope with the multi-spec live union; that false-positive
+  // fired `added=[secondaries...]` for any project whose baseline
+  // already carried ≥ 2 UI-bearing specs, making convergence
+  // unreachable.
+  //
+  // Backward-compat: pre-11th-wave prototyping.json records have no
+  // `frozenSurfaceUnion` field. Fall back to `frozenSpecsCovered` (the
+  // prior — buggy — baseline) so the gate still runs on legacy
+  // records; new records written by `writeSeedMetadata` always carry
+  // the field. See 11th-wave Fix (codex r3265480688, MAJOR/P1).
+  //
+  // Restart semantics unchanged: drift fails-fast with stderr that
+  // names every drifted spec id and exits 2; the operator is
+  // expected to restart with `--cycle 0` to pick up the broader scope.
+  const frozenUnion =
+    readFrozenSurfaceUnionField(protoRecord) ??
+    readFrozenSpecsCoveredField(protoRecord) ??
+    frozenSpecs;
   const liveUiBearing = await resolveSurfaceUnion(input.root, input.config);
-  const drift = checkSpecsCoveredDrift(frozenSet, liveUiBearing);
+  const drift = checkSpecsCoveredDrift(frozenUnion, liveUiBearing);
   if (drift.drifted) {
     const parts: string[] = [];
     if (drift.added.length > 0) {
@@ -1338,7 +1410,7 @@ async function evaluateCycleGteOneGate(
     }
     error(
       "qfai prototyping iterate: spec-set drift detected mid-loop — " +
-        `${parts.join(" ")}. The cycle-0 frozen set is ${JSON.stringify(frozenSet)}; ` +
+        `${parts.join(" ")}. The cycle-0 frozen UI-bearing union is ${JSON.stringify(frozenUnion)}; ` +
         `the live UI-bearing union is ${JSON.stringify(liveUiBearing)}. ` +
         "The drifted spec(s) are deferred to the next `--cycle 0` invocation. " +
         "Continue this loop with the frozen spec set, or restart with " +

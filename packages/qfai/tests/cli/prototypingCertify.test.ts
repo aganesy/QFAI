@@ -512,15 +512,47 @@ describe("qfai prototyping certify --check", () => {
 });
 
 describe("qfai prototyping show-spec", () => {
-  it("returns 0 when a marker-bearing spec exists", async () => {
+  // 11th-wave Fix (codex r3265482150, P2): show-spec reads the cycle-0
+  // frozen `specsCovered[]` from prototyping.json. Tests must seed the
+  // file or expect exit 2.
+  it("returns 0 with the frozen specsCovered when prototyping.json is seeded", async () => {
     const root = await newTempDir();
     await seedMinimalProject(root, { specMarker: true });
+    // Seed a minimal prototyping.json with frozenSpecsCovered so
+    // show-spec has a frozen scope to print.
+    await mkdir(path.join(root, ".qfai/evidence/prototyping"), { recursive: true });
+    await writeFile(
+      path.join(root, ".qfai/evidence/prototyping/prototyping.json"),
+      JSON.stringify(
+        {
+          runId: "test-run-id",
+          specsCovered: ["0012"],
+          frozenSpecsCovered: ["0012"],
+          frozenSurfaceUnion: ["0012"],
+        },
+        null,
+        2,
+      ),
+      "utf-8",
+    );
     expect(await runPrototypingShowSpec({ root })).toBe(0);
   });
 
-  it("returns 2 when no spec has the prototyping marker", async () => {
+  it("returns 2 when prototyping.json is missing (not yet seeded by cycle 0)", async () => {
     const root = await newTempDir();
     await seedMinimalProject(root, { specMarker: false });
+    expect(await runPrototypingShowSpec({ root })).toBe(2);
+  });
+
+  it("returns 2 when prototyping.json lacks a valid frozenSpecsCovered", async () => {
+    const root = await newTempDir();
+    await seedMinimalProject(root, { specMarker: true });
+    await mkdir(path.join(root, ".qfai/evidence/prototyping"), { recursive: true });
+    await writeFile(
+      path.join(root, ".qfai/evidence/prototyping/prototyping.json"),
+      JSON.stringify({ runId: "test-run-id" }, null, 2),
+      "utf-8",
+    );
     expect(await runPrototypingShowSpec({ root })).toBe(2);
   });
 });

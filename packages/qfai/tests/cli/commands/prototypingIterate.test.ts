@@ -2662,6 +2662,83 @@ describe("runPrototypingIterate cycle >= 1 spec-set drift — new larger-id seco
   });
 });
 
+// 11th-wave Fix (codex r3265480688, MAJOR/P1): the cycle ≥ 1 drift gate
+// must compare the live UNION against the cycle-0 UNION (apples-to-apples),
+// not against the single-spec `frozenSpecsCovered`. Without this fix, any
+// project whose baseline already carries ≥ 2 UI-bearing specs would
+// false-positive fire `added=[secondaries...]` at cycle 1 and exit 2, so
+// convergence would be unreachable.
+// QFAI:SPEC-0012:TC-0012-0415
+describe("runPrototypingIterate cycle >= 1 spec-set drift — multi-UI-bearing baseline does not false-positive (TC-0012-0415)", () => {
+  it("exits 0 at cycle 1 when baseline carries 2 UI-bearing specs and the live UNION is unchanged", async () => {
+    const root = await newTempDir();
+    // Plant two UI-bearing specs at the baseline. `seedMinimalProject`
+    // writes spec-0001 with the strict marker; add spec-0002 with the
+    // same marker so the cycle-0 UNION is `["0001", "0002"]`.
+    await seedMinimalProject(root);
+    const spec0002Dir = path.join(root, ".qfai/specs/spec-0002");
+    await mkdir(spec0002Dir, { recursive: true });
+    await writeFile(
+      path.join(spec0002Dir, "01_Spec.md"),
+      "---\nsurface_type: ui-bearing\n---\n\n# spec-0002 — secondary UI-bearing\n",
+      "utf-8",
+    );
+    await writeFile(
+      path.join(spec0002Dir, "02_User-stories.md"),
+      "# stories\n",
+      "utf-8",
+    );
+
+    await seedPrototypingJson(root, [
+      {
+        index: 0,
+        scores: {
+          informationArchitecture: "acceptable",
+          navigationFlow: "acceptable",
+          usability: "acceptable",
+          functionality: "acceptable",
+        },
+      },
+    ]);
+    const protoJsonPath = path.join(
+      root,
+      ".qfai/evidence/prototyping/prototyping.json",
+    );
+    const proto = JSON.parse(await readFile(protoJsonPath, "utf-8")) as Record<string, unknown>;
+    // Cycle 0 (simulated): the primary resolver picked spec-0001 (the
+    // smallest-id UI-bearing spec), so `frozenSpecsCovered` is single-
+    // spec. The cycle-0 UNION (both UI-bearing specs) is persisted as
+    // `frozenSurfaceUnion`, which the drift gate now uses as its
+    // apples-to-apples baseline.
+    proto.specsCovered = ["0001"];
+    proto.frozenSpecsCovered = ["0001"];
+    proto.frozenSurfaceUnion = ["0001", "0002"];
+    await writeFile(protoJsonPath, JSON.stringify(proto), "utf-8");
+
+    const logger = await import("../../../src/cli/lib/logger.js");
+    const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
+    try {
+      const exit = await runPrototypingIterate({ root, cycle: 1 });
+      // The drift gate must not fire — the live UNION
+      // (["0001","0002"]) equals the frozen UNION. Cycle 1 should
+      // proceed to write iter-01/iterate-plan.json (exit 0) since no
+      // other gates trip on this seeded record.
+      expect(exit).toBe(0);
+      const errorMessages = errorSpy.mock.calls.map((c) => String(c[0])).join("\n");
+      expect(errorMessages).not.toMatch(/spec-set drift detected/i);
+      // Frozen fields are preserved (no rewrite on the cycle ≥ 1 path).
+      const after = JSON.parse(await readFile(protoJsonPath, "utf-8")) as {
+        frozenSpecsCovered?: unknown;
+        frozenSurfaceUnion?: unknown;
+      };
+      expect(after.frozenSpecsCovered).toEqual(["0001"]);
+      expect(after.frozenSurfaceUnion).toEqual(["0001", "0002"]);
+    } finally {
+      errorSpy.mockRestore();
+    }
+  });
+});
+
 // 10th-wave Fix H (codex r3265260665, P2): malformed `imageSources[]`
 // entries are no longer silently dropped. Pre-fix a typo such as
 // `licence:` (British spelling) reduced the array to `[]`, skipping

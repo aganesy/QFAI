@@ -6,6 +6,90 @@
 
 ## [1.8.10] - 2026-05-19
 
+### BREAKING CHANGES (PR #208 — ImageSource attribution required)
+
+- **`ImageSource.attribution` is now read at the runtime license gate.**
+  Prior to the 12th late-review wave, `licenseVerify` did not validate
+  attribution at all; the field was deferred to the handoff stage. The
+  CLI contract's exit-66 class always listed "missing attribution"
+  among the rejection conditions, so unattributed stock photos that
+  satisfied the source/license/host gates passed iterate silently and
+  only surfaced at certify time. The runtime now emits
+  `{code: "license-missing-attribution", source, url}` whenever
+  `attribution` is undefined or an empty string, exiting 66 alongside
+  the other license-class rejections.
+  - The `ImageSource` type carries `attribution?: string` (optional at
+    the type level so existing fixtures continue to compile). The
+    runtime gate enforces non-empty.
+  - `collectImageSources` promotes a missing / non-string attribution
+    to `""` (rather than treating it as an input-shape error → exit 2)
+    so the rejection lands in the license-class (exit 66) per the
+    contract.
+  - Migration: any consumer constructing `ImageSource` values directly
+    must now populate `attribution`; otherwise `licenseVerify` returns
+    a `license-missing-attribution` error. The behavior is intentional
+    — entries that previously slipped through the iterate gate
+    unattributed will now be caught at iterate time rather than at
+    certify time. No auto-migration shim; offending entries surface a
+    structured error per affected URL.
+  - Pinned-branch authorization is preserved: this lands in 1.8.10
+    because `feature/v1.8.10` is the release pin.
+
+### Fixed (PR #208 12th late-review wave)
+
+- `licenseVerify.ts`: compare URL host and per-source allowlist host
+  case-insensitively on BOTH sides (was already case-insensitive on
+  the URL side via `urlHost()`'s `.toLowerCase()`, but the catalog
+  side passed entries verbatim, so a user catalog with
+  `"Images.Unsplash.com"` could false-positive reject a valid URL).
+  RFC 3986 §3.2.2: host is case-insensitive. New `it()` block under
+  the existing TC-0012-0411 describe. Resolves codex P2 r3265474144.
+- `licenseVerify.ts` + `prototypingIterate.ts`: enforce non-empty
+  attribution at the runtime license gate (see BREAKING CHANGES above
+  for the schema diff). New error code `license-missing-attribution`
+  on `LicenseVerifyError` and new TC-0012-0414 (2 `it` blocks).
+  Resolves codex P2 r3265482144.
+- `prototypingIterate.ts`: persist the cycle-0 UI-bearing UNION as
+  `frozenSurfaceUnion` in prototyping.json and use it as the
+  apples-to-apples baseline at the cycle ≥ 1 drift gate. Pre-fix the
+  gate compared the single-spec frozen scope (`frozenSpecsCovered`)
+  against the live multi-spec UNION; any baseline already carrying
+  ≥ 2 UI-bearing specs false-positive-fired `added=[secondaries...]`
+  at cycle 1 → exit 2, making convergence unreachable. Backward-compat:
+  pre-12th-wave records (no `frozenSurfaceUnion` field) fall back to
+  `frozenSpecsCovered`. New TC-0012-0415 regression test. Resolves
+  codex MAJOR/P1 r3265480688.
+- `prototypingCertify.ts`: missing per-spec `<screen>.review.json`
+  coverage now returns exit 64 (coverage-rejection class) instead of
+  exit 2 (input-error class) to match the CLI contract §Exit codes
+  table and the adjacent multi-spec flat-iter coverage branch. The
+  existing TC-0012-0381 test was tightened from `not.toBe(0)` to
+  `toBe(64)`, and a new dedicated per-spec layout assertion was added.
+  Resolves codex P2 r3265482136.
+- `prototypingCertify.ts#runPrototypingShowSpec`: read the cycle-0
+  frozen `specsCovered[]` from prototyping.json (with
+  `frozenSurfaceUnion` and the live UI-bearing union surfaced for
+  drift visibility) instead of resolving the live primary from config
+  / spec markers. Exit 2 when prototyping.json is missing or malformed,
+  per the CLI contract §`qfai prototyping show-spec`. Resolves codex
+  P2 r3265482150.
+- `prototypingIterate.ts`: rewrite the stale fence comment that
+  claimed `earlyUiBearing` is still computed for bypass / drift
+  signals; the variable / type field was removed in Fix A and the
+  drift gate now re-resolves the live UNION via `resolveSurfaceUnion`.
+  Resolves codex MINOR r3265482249.
+- `.qfai/specs/spec-0012/03_Acceptance-Criteria.md`: extend
+  AC-0012-0043 Then clause to enumerate the malformed-imageSources
+  exit-2 class alongside the license-verify exit-66 class so the AC
+  surface matches the implemented + tested behavior of TC-0012-0413.
+  Resolves codex MEDIUM r3265479524.
+- `.qfai/specs/spec-0012/10_Plan.md` + `tdd/test-list.md` +
+  `16_Traceability-ledger.md` + `06_Test-Cases.md`: reserve TDD-0436
+  / TC-0012-0416 for the cycle-9 idempotency follow-up so the
+  deferred-followup row carries a stable TDD/TC handle (pre-fix the
+  row was `(none) | (none)` and could not be mirrored into the
+  test-list ledger). Resolves codex LOW r3265481161.
+
 ### BREAKING CHANGES (PR #208 — ReviewerPayload schema)
 
 - **ReviewerPayload shape is now SSOT-compliant with the CLI contract**

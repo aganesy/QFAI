@@ -833,7 +833,31 @@
 - AC-Refs: AC-0012-0043
 - Type: integration
 - Test file: `packages/qfai/tests/cli/commands/prototypingIterate.test.ts`
-- Verify the iterate command hard-stops with exit 2 when `prototyping.json#imageSources[]` contains a malformed entry (missing or non-string `url` / `source` / `license`). Pre-fix the malformed entries were silently dropped by `collectImageSources`, and when every entry was malformed the array reduced to `[]`, skipping the exit-66 license gate entirely. Two `it` blocks cover: (a) entry missing `license`; (b) entry whose `url` is a number. Each must surface stderr naming the offending index (`imageSources[0]`) and the offending field. Closes codex r3265260665 (P2).
+- Verify the iterate command hard-stops with exit 2 when `prototyping.json#imageSources[]` contains a malformed entry (missing or non-string `url` / `source` / `license`). Pre-fix the malformed entries were silently dropped by `collectImageSources`, and when every entry was malformed the array reduced to `[]`, skipping the exit-66 license gate entirely. Two `it` blocks cover: (a) entry missing `license`; (b) entry whose `url` is a number. Each must surface stderr naming the offending index (`imageSources[0]`) and the offending field. Closes codex r3265260665 (P2). AC-0012-0043 was extended in the 11th late-review wave to enumerate the malformed-imageSources exit-2 class alongside the license-verify exit-66 class so the AC surface matches the implemented + tested behavior (codex r3265479524).
+
+## TC-0012-0414
+
+- EX-Ref: EX-0012-0138
+- AC-Refs: AC-0012-0043
+- Type: unit
+- Test file: `packages/qfai/tests/core/prototyping/licenseVerify.test.ts`
+- Verify attribution is required at the runtime license gate. `licenseVerify` emits `{code: "license-missing-attribution", source, url}` when an `imageSources[]` entry's `attribution` field is undefined or an empty string. The new error code maps to exit 66 alongside the existing license-class rejections. `ImageSource.attribution?: string` is optional at the type level so older fixtures continue to compile; the runtime gate enforces non-empty. Two `it` blocks cover: (a) undefined attribution; (b) empty-string attribution. Closes codex r3265482144 (P2).
+
+## TC-0012-0415
+
+- EX-Ref: EX-0012-0145
+- AC-Refs: AC-0012-0045
+- Type: integration
+- Test file: `packages/qfai/tests/cli/commands/prototypingIterate.test.ts`
+- Verify the cycle ≥ 1 spec-set drift gate compares the live UI-bearing UNION against the cycle-0 frozen UNION (`frozenSurfaceUnion`) — apples-to-apples — instead of the single-spec `frozenSpecsCovered`. A baseline with two strict-marker UI-bearing specs (spec-0001 + spec-0002) seeded with `frozenSpecsCovered=["0001"]` + `frozenSurfaceUnion=["0001","0002"]` must NOT trip the drift gate at cycle 1; the run proceeds with exit 0 and `frozenSurfaceUnion` is preserved unchanged. Pre-fix (10th-wave) the gate compared `frozenSet=["0001"]` against `live=["0001","0002"]` and false-positive-fired `added=[0002]` → exit 2, making convergence unreachable for any multi-UI-bearing baseline. Closes codex r3265480688 (MAJOR/P1).
+
+## TC-0012-0416
+
+- EX-Ref: EX-0012-0145
+- AC-Refs: AC-0012-0045
+- Type: integration
+- Test file: `packages/qfai/tests/cli/commands/prototypingIterate.test.ts` (planned)
+- TODO (deferred follow-up; see `10_Plan.md#Deferred follow-ups` row TDD-0436). Verify that a single `--cycle 9` invocation on a non-converged loop whose `iterations.length === 10` emits exit 65 directly rather than via the cycle-mismatch path (where `expectedNextCycle` becomes 10 and is capped at 9). SKILL.md already drops the stateful re-run workaround. Implementation lands in a follow-up PR; this row exists so the deferred-followup table row in `10_Plan.md` has a stable TDD/TC handle. Closes codex r3265481161 (LOW).
 
 ## Legacy Coverage Continuity
 

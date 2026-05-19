@@ -200,7 +200,7 @@ async function seedReviewJson(
 }
 
 describe("qfai prototyping certify (TC-0012-0381: per-(spec × screen) review.json presence)", () => {
-  it("exits non-zero and names the missing (spec, screen) pair in stderr when a frozen-set spec lacks a declared screen's review.json", async () => {
+  it("exits 64 (coverage rejection class) and names the missing (spec, screen) pair in stderr when a frozen-set spec lacks a declared screen's review.json", async () => {
     const root = await newTempDir();
     await seedMinimalProject(root);
     await seedAllGatesPass(root, { specsCovered: ["0012"] });
@@ -213,7 +213,12 @@ describe("qfai prototyping certify (TC-0012-0381: per-(spec × screen) review.js
     const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
     try {
       const exit = await runPrototypingCertify({ root, check: false });
-      expect(exit).not.toBe(0);
+      // 11th-wave Fix (codex r3265482136, P2): the per-spec layout
+      // coverage gap returns exit 64 — same class as the flat-iter
+      // multi-spec coverage rejection — not exit 2 (input error).
+      // Lock the exit code so a future regression to exit 2 fails
+      // here.
+      expect(exit).toBe(64);
       const messages = errorSpy.mock.calls.map((c) => String(c[0]));
       // Stderr must explicitly name the (spec, screen) pair that is
       // missing. Match on both tokens jointly to lock the diagnostic
@@ -789,6 +794,44 @@ describe("qfai prototyping certify (TC-0012-0407: per-spec UI contracts scope th
   // Negative companion: per-spec scope still enforces presence WITHIN
   // each spec's declared set. spec-0001 declares two screens; missing
   // one of them must still fail.
+  // 11th-wave Fix (codex r3265482136, P2): per-spec layout missing-
+  // review returns exit 64 (coverage class), not exit 2 (input error).
+  it("returns exit 64 (coverage rejection) when per-spec layout is missing a declared review.json", async () => {
+    const root = await newTempDir();
+    await seedMinimalProject(root);
+    await mkdir(path.join(root, ".qfai/specs/spec-0001"), { recursive: true });
+    await writeFile(
+      path.join(root, ".qfai/specs/spec-0001/01_Spec.md"),
+      "---\nsurface_type: ui-bearing\n---\n\n# spec-0001\n",
+      "utf-8",
+    );
+    await seedAllGatesPass(root, {
+      specsCovered: ["0001"],
+      frozenSpecsCovered: ["0001"],
+    });
+    await mkdir(path.join(root, ".qfai/contracts/ui"), { recursive: true });
+    await writeFile(
+      path.join(root, ".qfai/contracts/ui/spec-0001.yaml"),
+      'screens:\n  - id: home\n    route: "/home"\n  - id: settings\n    route: "/settings"\n',
+      "utf-8",
+    );
+    const iter01 = path.join(root, ".qfai/evidence/prototyping/iter-01");
+    await writeFile(path.join(iter01, "home.html"), CLEAN_FINAL_HTML, "utf-8");
+    await writeFile(path.join(iter01, "settings.html"), CLEAN_FINAL_HTML, "utf-8");
+    // Seed only home.review.json under the per-spec subdir; settings is
+    // missing → drives the per-spec coverage gap branch.
+    await seedReviewJson(root, "spec-0001", "home");
+
+    const logger = await import("../../../src/cli/lib/logger.js");
+    const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
+    try {
+      const exit = await runPrototypingCertify({ root, check: false });
+      expect(exit).toBe(64);
+    } finally {
+      errorSpy.mockRestore();
+    }
+  });
+
   it("still enforces presence within a per-spec contract's declared screens", async () => {
     const root = await newTempDir();
     await seedMinimalProject(root);

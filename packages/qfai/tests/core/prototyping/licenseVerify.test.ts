@@ -25,16 +25,19 @@ describe("licenseVerify — allow-listed sources + tier match", () => {
         url: "https://unsplash.com/photo/abc",
         source: "unsplash",
         license: "unsplash-license",
+        attribution: "Photo by Alice on Unsplash",
       },
       {
         url: "https://unsplash.com/photo/def",
         source: "unsplash",
         license: "free",
+        attribution: "Photo by Bob on Unsplash",
       },
       {
         url: "https://pexels.com/photo/ghi",
         source: "pexels",
         license: "pexels-free",
+        attribution: "Photo by Carol on Pexels",
       },
     ];
 
@@ -104,6 +107,9 @@ describe("licenseVerify — rejects non-allow-listed sources and unknown tiers",
         url: "https://unsplash.com/photo/ok",
         source: "unsplash",
         license: "free",
+        // Attribution provided so this entry is OK and aggregation
+        // only surfaces the three intentionally bad entries below.
+        attribution: "Photo by Alice on Unsplash",
       },
       {
         url: "https://pinterest.com/pin/1",
@@ -269,6 +275,7 @@ describe("licenseVerify — per-source URL host binding (TC-0012-0411)", () => {
         url: "https://images.unsplash.com/photo/abc",
         source: "unsplash",
         license: "free",
+        attribution: "Photo by Alice on Unsplash",
       },
     ];
 
@@ -281,10 +288,35 @@ describe("licenseVerify — per-source URL host binding (TC-0012-0411)", () => {
         url: "https://IMAGES.UNSPLASH.COM/photo/abc",
         source: "unsplash",
         license: "free",
+        attribution: "Photo by Alice on Unsplash",
       },
     ];
 
     expect(licenseVerify(sources, hostBoundCatalog)).toEqual({ ok: true });
+  });
+
+  // 11th-wave Fix (codex r3265474144, P2): the catalog side is also
+  // compared case-insensitively so a user catalog with a capitalized
+  // host (e.g. `"Images.Unsplash.com"`) does not false-positive reject
+  // a valid URL. RFC 3986 §3.2.2: host is case-insensitive.
+  it("host comparison case-insensitive on the catalog side too", () => {
+    const mixedCaseHostCatalog: LicenseCatalog = {
+      allowedSources: ["unsplash"],
+      licenseTiers: { unsplash: ["free"] },
+      sourceHosts: {
+        unsplash: ["Images.Unsplash.com"],
+      },
+    };
+    const sources: ImageSource[] = [
+      {
+        url: "https://images.unsplash.com/photo/abc",
+        source: "unsplash",
+        license: "free",
+        attribution: "Photo by Alice on Unsplash",
+      },
+    ];
+
+    expect(licenseVerify(sources, mixedCaseHostCatalog)).toEqual({ ok: true });
   });
 });
 
@@ -300,9 +332,65 @@ describe("licenseVerify — backward compat: catalog without sourceHosts (TC-001
         url: "https://arbitrary.example/img.jpg",
         source: "unsplash",
         license: "free",
+        attribution: "Photo by Alice on Unsplash",
       },
     ];
 
     expect(licenseVerify(sources, catalog)).toEqual({ ok: true });
+  });
+});
+
+// 11th-wave Fix (codex r3265482144, P2): attribution is required at the
+// runtime license gate. Undefined and empty-string both surface as the
+// new `license-missing-attribution` error → exit 66 per the CLI
+// contract's exit-code class table.
+// QFAI:SPEC-0012:TC-0012-0414
+describe("licenseVerify — attribution is required (TC-0012-0414)", () => {
+  it("emits license-missing-attribution when attribution is undefined", () => {
+    const sources: ImageSource[] = [
+      {
+        url: "https://unsplash.com/photo/abc",
+        source: "unsplash",
+        license: "free",
+        // attribution intentionally omitted
+      },
+    ];
+
+    const result = licenseVerify(sources, catalog);
+    expect(result.ok).toBe(false);
+    if (result.ok) {
+      throw new Error("expected non-ok result");
+    }
+    expect(result.errors).toEqual([
+      {
+        code: "license-missing-attribution",
+        source: "unsplash",
+        url: "https://unsplash.com/photo/abc",
+      },
+    ]);
+  });
+
+  it("emits license-missing-attribution when attribution is empty string", () => {
+    const sources: ImageSource[] = [
+      {
+        url: "https://unsplash.com/photo/abc",
+        source: "unsplash",
+        license: "free",
+        attribution: "",
+      },
+    ];
+
+    const result = licenseVerify(sources, catalog);
+    expect(result.ok).toBe(false);
+    if (result.ok) {
+      throw new Error("expected non-ok result");
+    }
+    expect(result.errors).toEqual([
+      {
+        code: "license-missing-attribution",
+        source: "unsplash",
+        url: "https://unsplash.com/photo/abc",
+      },
+    ]);
   });
 });
