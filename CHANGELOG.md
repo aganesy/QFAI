@@ -6,6 +6,96 @@
 
 ## [1.8.10] - 2026-05-19
 
+### BREAKING CHANGES (PR #208 — ReviewerPayload schema)
+
+- **ReviewerPayload shape is now SSOT-compliant with the CLI contract**
+  (`.qfai/contracts/cli/qfai-prototyping.md` §Review payload, L161-200).
+  This is a breaking change relative to the v1.8.9 shape that the
+  9th-wave / 11th-wave reviews exposed. Per the project's pinned-branch
+  version-discipline rule, the breaking change ships in 1.8.10 because
+  the branch pin `feature/v1.8.10` is the user's release authorization;
+  in normal SemVer terms this would typically warrant a minor bump.
+  Pinned-branch authorization is preserved here.
+  - Removed: top-level `timeBudgetSoftWarning?: string` (flat string,
+    optional).
+  - Added (required): `cycle: number` (0..9), `retryCount: number`,
+    `wallTimeSec: number`, and `softWarnings: { timeBudget: boolean }`
+    nested record. `softWarnings` is closed-schema (the single key
+    `timeBudget` is required; unknown nested keys are rejected).
+  - Pre-fix: 7 top-level fields, with optional `timeBudgetSoftWarning`.
+    Post-fix: 11 top-level fields, all required, matching the CLI
+    contract §Review payload §schema declaration.
+  - Migration: existing flat `iter-NN/spec-NNNN/<screen>.review.json`
+    files written under the v1.8.9 shape will be rejected by
+    `parseEvaluatorReview` with `missing field: cycle` /
+    `missing field: retryCount` / `missing field: wallTimeSec` /
+    `missing field: softWarnings` errors. No auto-migration shim is
+    provided — consumers must regenerate `review.json` files via the
+    product-surface-reviewer sub-agent. The legacy
+    `timeBudgetSoftWarning` key now surfaces as `unknown field:
+    timeBudgetSoftWarning` so authoring drift is caught fail-closed
+    instead of silently dropped.
+
+### Fixed (PR #208 11th late-review wave)
+
+- `evaluatorReview.ts`: align `ReviewerPayload` schema with the CLI
+  contract §Review payload SSOT (11 required top-level fields).
+  Documented as a BREAKING CHANGE above. Resolves codex P2
+  r3265368922 + P1 r3265379781 (dup).
+- `screenContracts.ts` + `prototypingCertify.ts`: export
+  `extractUiScreens` from the core module and rewrite
+  `readPerSpecScreens` to reuse the shared parser via a new
+  `parseUiScreenFile` helper. Removes the duplicated YAML / shape
+  extraction logic that had drifted between the project-wide and
+  per-spec readers. Resolves codex MAJOR r3265374692 + P2 r3265379531
+  + P2 r3265382282 (dup).
+- `prototypingCertify.ts#readPerSpecScreens`: implement TRUE
+  first-hit-wins for canonical single-file candidates (`spec-NNNN.yaml`
+  > `<bare>.yaml` > `ui-<bare>.yaml`). Pre-fix the loop pushed every
+  matching file into a single `matched[]` and unioned screens across
+  authoring forks (e.g. both `spec-0007.yaml` and `ui-0007.yaml` on
+  disk produced surprising cross-file behaviour). JSDoc precedence
+  table updated to reflect the impl. Resolves codex MAJOR r3265378130.
+- `prototypingCertify.ts#readPerSpecScreens`: add the recursive
+  per-spec subdirectory layout (`<contractsDir>/ui/<spec-id>/<sub>.yaml`)
+  as candidate #5. Pre-fix the per-spec reader was flat-only, so a
+  project organising contracts as `.qfai/contracts/ui/spec-0007/home.yaml`
+  fell through to the project-wide list and re-opened the 9th-wave
+  cross-product false-positive. Resolves codex P2 r3265377858.
+- `prototypingCertify.ts`: collapse the N+1 fs probe in the per-(spec
+  x screen) gate by pre-indexing the project-wide `screenContracts`
+  into a per-spec Map via the new `indexPerSpecScreens` /
+  `extractSpecDirFromUiRel` / `chooseWinningFile` helpers. Map honors
+  the same first-hit-wins precedence as `readPerSpecScreens`; multi-file
+  layouts fall through to the fs-probe fallback. Resolves codex MINOR
+  r3265376125.
+- `.qfai/contracts/ui/README.md`: document all 5 per-spec UI contract
+  resolution candidates with a precedence table + authoring
+  recommendations (canonical single-file `<spec-id>.yaml` is preferred;
+  multi-file shapes #4 / #5 are supported with first-write-wins
+  deduplication). Pre-fix only the legacy `ui-XXXX-<slug>.yaml`
+  convention was documented and only candidate #1 was test-covered.
+  Added tests for candidates #2 (`<bare>.yaml`), #3 (`ui-<bare>.yaml`),
+  #5 (subdir), and the true-first-hit-wins regression. Resolves codex
+  P2 r3265376163.
+- `prototypingCertify.ts#readPerSpecScreens`: dedup JSDoc / impl
+  mismatch — change the "last-write wins" line to "first-write wins
+  (matches readUiContractScreenContracts dedup semantics)". The impl
+  has always used `findIndex` which is first-write. Resolves codex
+  MAJOR r3265372889.
+- `prototypingCertify.ts#readPerSpecScreens`: emit a `warn` line when
+  per-spec UI contract files matched but extracted zero valid screens
+  (YAML parse error, `screens:` typo, non-array `screens`). Pre-fix
+  the silent skip cascaded through a null return and a project-wide
+  fallback, which re-opened the cross-product false-positive without
+  any diagnostic surface. Resolves codex LOW r3265378799.
+- `lint-shipping.ts` + `check-no-internal-version-leakage.sh` +
+  `distributedSurfaceLeakage.test.ts` + `.agents/rules/distributed-surface.md`:
+  add `OQ-NNNN-NNNN` to the forbidden-class set across all 4 SSOT-sync
+  layers (per the distributed-surface-discipline 4-layer rule). The
+  pattern catches internal open-question IDs that the spec authoring
+  workflow uses. Resolves codex LOW r3265386185.
+
 ### Fixed (PR #208 4th late-review wave)
 
 - Renumber CHG-002 cascade TDD IDs from TDD-0409..0414 to TDD-0415..0420 to

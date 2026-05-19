@@ -19,6 +19,7 @@ QFAI npm パッケージとして配布されるファイル群を「配布サ�
 | QFAI 内部 capability ID       | `CAP-0010` 以降                     | `CAP-0013`                       |
 | QFAI 内部 decision ID         | `DEC-NNNN-NNNN`                     | `DEC-0001-0042`                  |
 | QFAI 内部 design rationale    | `DR-NNNN`                           | `DR-0007`                        |
+| QFAI 内部 open-question ID    | `OQ-NNNN-NNNN`                      | `OQ-0012-0006`                   |
 | QFAI 内部 trace prefix        | `QFAI-PROT2-NNN` 等の廃止 prefix    | (廃止済み)                       |
 | 内部バージョンマーカー        | `vN.M`, `vN.M.P`, `v1.x`            | `v2.0`, `v3.0`                   |
 | 内部 schemaVersion フィールド | `"schemaVersion"`, `schemaVersion:` | (永続アーティファクトに置かない) |
@@ -43,7 +44,7 @@ minor / major 上げで表現する。
    regex セットで scan し、tsup が `dist/*.d.ts` に retain する
    経路を pre-build で塞ぐ。`spec-NNNN` / `.qfai/specs/spec-NNNN/` /
    `vN.M[.P]` / `CAP-0010+` / `DEC-NNNN-NNNN` / `DR-NNNN` /
-   `QFAI-PROT2-NNN` / `schemaVersion` を全て catch。行頭が
+   `OQ-NNNN-NNNN` / `QFAI-PROT2-NNN` / `schemaVersion` を全て catch。行頭が
    comment marker の行のみ検出 — 末尾 `//` や行内 `/* */` は
    layer 2 (post-build) で catch する known limitation。
    PR #206 review Ntbp / NwM- で導入。

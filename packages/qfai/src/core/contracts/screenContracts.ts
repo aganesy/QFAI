@@ -187,7 +187,21 @@ function slugifyScreenId(value: string): string {
     .replace(/^-+|-+$/g, "");
 }
 
-function extractUiScreens(parsed: unknown): CanonicalScreenContract[] {
+/**
+ * Extract the canonical screen records from a parsed UI contract YAML
+ * value. Returns each record with `sourceRef` left as an empty string;
+ * callers are responsible for attaching a real `sourceRef` (typically
+ * `<rel-path>#<screenId>`).
+ *
+ * Exported so per-spec readers in CLI command layers (e.g. the per-(spec
+ * x screen) certify gate in `prototypingCertify.ts`) reuse the same
+ * shape parser as the project-wide `readUiContractScreenContracts`
+ * function. Pre-export the same id/route/title/primary_tasks extraction
+ * logic was duplicated at two call sites; any future schema additions
+ * (e.g. a new `elements:` block surfacing to the canonical contract)
+ * would not have propagated to the CLI reader. Single SSOT now.
+ */
+export function extractUiScreens(parsed: unknown): CanonicalScreenContract[] {
   if (!parsed || typeof parsed !== "object") {
     return [];
   }

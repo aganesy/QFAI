@@ -213,22 +213,34 @@ export function buildEvaluatorReview(input: BuildEvaluatorReviewInput): Evaluato
  * SSOT for this schema is the prototyping CLI contract at
  * `.qfai/contracts/cli/qfai-prototyping.md` (§Review payload).
  *
- * Shape:
- *   - top-level discriminators (`specId`, `screenId`, `sessionStatus`)
- *     identify the (spec, screen) pair and the Reviewer Playwright
- *     session outcome (the `sessionStatus` enum mirrors
- *     {@link ReviewerSessionStatus} in `reviewerDispatch.ts`).
+ * Shape (11 required top-level fields, per CLI contract):
+ *   - top-level discriminators (`specId`, `screenId`, `cycle`,
+ *     `sessionStatus`, `retryCount`) identify the (spec, screen, cycle)
+ *     triple and the Reviewer Playwright session outcome (the
+ *     `sessionStatus` enum mirrors {@link ReviewerSessionStatus} in
+ *     `reviewerDispatch.ts`).
  *   - `ordinalAxes` nests the 4 canonical ordinal verdicts.
  *   - `impressions` nests the 6 bounded qualitative prose fields
  *     (each ≤ {@link FEEL_FIELD_MAX_WORDS} words).
  *   - `layoutAntiPatternsDetected` / `designMdViolations` carry the
  *     structural defect arrays that drive convergence and certify.
- *   - `timeBudgetSoftWarning` is optional and only present when the
- *     per-spec time budget overruns — its presence never hard-fails
- *     the cycle; only the global iteration budget can stop the run.
+ *   - `wallTimeSec` records the Reviewer-measured per-session wall
+ *     time (number, no upper bound; informational).
+ *   - `softWarnings.timeBudget` is a boolean and is true iff
+ *     `wallTimeSec` exceeded the per-spec NFR cap. The whole
+ *     `softWarnings` object is required and closed (single key today;
+ *     additional soft-warning channels would extend the nested object,
+ *     not flatten new top-level keys).
  *
  * Closed schema: any extra top-level / nested key is rejected so a
  * Reviewer-side typo cannot silently drop a real field.
+ *
+ * Breaking change vs the prior shape: the legacy flat
+ * `timeBudgetSoftWarning?: string` field is removed in favor of the
+ * SSOT-compliant `softWarnings.timeBudget: boolean` nested form, and
+ * the new required `cycle`, `retryCount`, `wallTimeSec` fields are
+ * introduced. Consumers writing review.json files must regenerate;
+ * see the project's CHANGELOG entry for migration notes.
  */
 export const REVIEWER_SESSION_STATUSES = ["ok", "retryExhausted", "launchFailed"] as const;
 
@@ -238,15 +250,22 @@ export type ReviewerOrdinalAxes = Record<OrdinalAxis, OrdinalScore>;
 
 export type ReviewerImpressions = Record<FeelField, string>;
 
+export type ReviewerSoftWarnings = {
+  readonly timeBudget: boolean;
+};
+
 export type ReviewerPayload = {
   readonly specId: string;
   readonly screenId: string;
+  readonly cycle: number;
   readonly sessionStatus: ReviewerSessionStatus;
+  readonly retryCount: number;
   readonly ordinalAxes: ReviewerOrdinalAxes;
   readonly impressions: ReviewerImpressions;
   readonly layoutAntiPatternsDetected: readonly string[];
   readonly designMdViolations: readonly DesignMdViolation[];
-  readonly timeBudgetSoftWarning?: string;
+  readonly wallTimeSec: number;
+  readonly softWarnings: ReviewerSoftWarnings;
 };
 
 export type ParseReviewerPayloadResult =
@@ -256,13 +275,18 @@ export type ParseReviewerPayloadResult =
 const REVIEWER_PAYLOAD_KNOWN_KEYS: ReadonlySet<string> = new Set<string>([
   "specId",
   "screenId",
+  "cycle",
   "sessionStatus",
+  "retryCount",
   "ordinalAxes",
   "impressions",
   "layoutAntiPatternsDetected",
   "designMdViolations",
-  "timeBudgetSoftWarning",
+  "wallTimeSec",
+  "softWarnings",
 ]);
+
+const SOFT_WARNINGS_KNOWN_KEYS: ReadonlySet<string> = new Set<string>(["timeBudget"]);
 
 function isReviewerSessionStatus(value: unknown): value is ReviewerSessionStatus {
   return (
@@ -420,20 +444,25 @@ function pushDmvErrors(
  * so callers can render the full diagnostic surface in one pass — the
  * reviewer prompt typically fixes more than one problem per retry.
  *
- * Validation rules (closed schema):
+ * Validation rules (closed schema, 11 required top-level fields):
  *   - `specId` / `screenId` required as non-empty strings
+ *   - `cycle` required as a non-negative integer (0..9)
  *   - `sessionStatus` required, one of `ok | retryExhausted | launchFailed`
  *     (mirrors {@link ReviewerSessionStatus} in `reviewerDispatch.ts`)
+ *   - `retryCount` required as a non-negative integer
  *   - `ordinalAxes` required as a nested record with all 4 axes
  *     (must satisfy {@link isOrdinalScore})
  *   - `impressions` required as a nested record with all 6 `*Feel`
  *     fields (each string, ≤ {@link FEEL_FIELD_MAX_WORDS} words)
  *   - `layoutAntiPatternsDetected` required as string[]
  *   - `designMdViolations` required as array of `{kind, found}`
- *   - `timeBudgetSoftWarning` is optional; presence is soft-only and
- *     never blocks the cycle
+ *   - `wallTimeSec` required as a non-negative finite number
+ *   - `softWarnings` required as a closed nested object with the
+ *     single boolean key `timeBudget`
  *   - any extra top-level / nested key is rejected (closed schema;
- *     protects against typos and schema drift)
+ *     protects against typos and schema drift). The legacy flat
+ *     `timeBudgetSoftWarning?: string` key is no longer accepted —
+ *     callers must use `softWarnings.timeBudget: boolean`.
  *
  * `menuReachabilityFeel` describing unreachable menu entries is
  * accepted — it is a qualitative critique field, not a hard-fail
@@ -463,6 +492,19 @@ export function parseEvaluatorReview(input: unknown): ParseReviewerPayloadResult
     screenId = input.screenId;
   }
 
+  let cycle: number | null = null;
+  if (!("cycle" in input)) {
+    errors.push("missing field: cycle");
+  } else if (
+    typeof input.cycle !== "number" ||
+    !Number.isInteger(input.cycle) ||
+    input.cycle < 0
+  ) {
+    errors.push(`cycle must be a non-negative integer (got ${String(input.cycle)})`);
+  } else {
+    cycle = input.cycle;
+  }
+
   let sessionStatus: ReviewerSessionStatus | null = null;
   if (!("sessionStatus" in input)) {
     errors.push("missing field: sessionStatus");
@@ -472,6 +514,19 @@ export function parseEvaluatorReview(input: unknown): ParseReviewerPayloadResult
     );
   } else {
     sessionStatus = input.sessionStatus;
+  }
+
+  let retryCount: number | null = null;
+  if (!("retryCount" in input)) {
+    errors.push("missing field: retryCount");
+  } else if (
+    typeof input.retryCount !== "number" ||
+    !Number.isInteger(input.retryCount) ||
+    input.retryCount < 0
+  ) {
+    errors.push(`retryCount must be a non-negative integer (got ${String(input.retryCount)})`);
+  } else {
+    retryCount = input.retryCount;
   }
 
   let axes: ReviewerOrdinalAxes | null = null;
@@ -495,6 +550,30 @@ export function parseEvaluatorReview(input: unknown): ParseReviewerPayloadResult
   const lap = pushLapErrors(input, errors);
   const dmv = pushDmvErrors(input, errors);
 
+  let wallTimeSec: number | null = null;
+  if (!("wallTimeSec" in input)) {
+    errors.push("missing field: wallTimeSec");
+  } else if (
+    typeof input.wallTimeSec !== "number" ||
+    !Number.isFinite(input.wallTimeSec) ||
+    input.wallTimeSec < 0
+  ) {
+    errors.push(
+      `wallTimeSec must be a non-negative finite number (got ${String(input.wallTimeSec)})`,
+    );
+  } else {
+    wallTimeSec = input.wallTimeSec;
+  }
+
+  let softWarnings: ReviewerSoftWarnings | null = null;
+  if (!("softWarnings" in input)) {
+    errors.push("missing field: softWarnings");
+  } else if (!isRecord(input.softWarnings)) {
+    errors.push("softWarnings must be an object");
+  } else {
+    softWarnings = collectSoftWarnings(input.softWarnings, errors);
+  }
+
   // Note: missing-field and unknown-field diagnostics are surfaced
   // independently and can co-occur on the same input. When the unknown
   // key is a typo of a missing expected key, the caller sees both
@@ -507,25 +586,19 @@ export function parseEvaluatorReview(input: unknown): ParseReviewerPayloadResult
     }
   }
 
-  let timeBudgetSoftWarning: string | undefined;
-  if ("timeBudgetSoftWarning" in input) {
-    const value = input.timeBudgetSoftWarning;
-    if (typeof value !== "string") {
-      errors.push("timeBudgetSoftWarning must be a string when present");
-    } else {
-      timeBudgetSoftWarning = value;
-    }
-  }
-
   if (
     errors.length > 0 ||
     specId === null ||
     screenId === null ||
+    cycle === null ||
     sessionStatus === null ||
+    retryCount === null ||
     axes === null ||
     impressions === null ||
     lap === null ||
-    dmv === null
+    dmv === null ||
+    wallTimeSec === null ||
+    softWarnings === null
   ) {
     return { ok: false, errors };
   }
@@ -533,7 +606,9 @@ export function parseEvaluatorReview(input: unknown): ParseReviewerPayloadResult
   const review: ReviewerPayload = {
     specId,
     screenId,
+    cycle,
     sessionStatus,
+    retryCount,
     ordinalAxes: {
       informationArchitecture: axes.informationArchitecture,
       navigationFlow: axes.navigationFlow,
@@ -550,7 +625,35 @@ export function parseEvaluatorReview(input: unknown): ParseReviewerPayloadResult
     },
     layoutAntiPatternsDetected: [...lap],
     designMdViolations: dmv.map((v) => ({ kind: v.kind, found: v.found })),
-    ...(timeBudgetSoftWarning !== undefined ? { timeBudgetSoftWarning } : {}),
+    wallTimeSec,
+    softWarnings: { timeBudget: softWarnings.timeBudget },
   };
   return { ok: true, review };
+}
+
+function collectSoftWarnings(
+  source: Record<string, unknown>,
+  errors: string[],
+): ReviewerSoftWarnings | null {
+  let complete = true;
+  let timeBudget: boolean | null = null;
+  if (!("timeBudget" in source)) {
+    errors.push("missing field: softWarnings.timeBudget");
+    complete = false;
+  } else if (typeof source.timeBudget !== "boolean") {
+    errors.push(
+      `softWarnings.timeBudget must be a boolean (got ${String(source.timeBudget)})`,
+    );
+    complete = false;
+  } else {
+    timeBudget = source.timeBudget;
+  }
+  for (const key of Object.keys(source)) {
+    if (!SOFT_WARNINGS_KNOWN_KEYS.has(key)) {
+      errors.push(`unknown field: softWarnings.${key}`);
+      complete = false;
+    }
+  }
+  if (!complete || timeBudget === null) return null;
+  return { timeBudget };
 }

@@ -162,6 +162,19 @@ const PATTERNS: ReadonlyArray<PatternRule> = [
     appliesTo: ["src-comment"],
   },
   {
+    // PR #208 11th late-review wave (codex r3265386185, LOW): catch
+    // internal open-question IDs (OQ-NNNN-NNNN) at the same pre-build
+    // layer that already catches DEC / DR / CAP / spec internal IDs.
+    // OQ entries live in `.qfai/specs/spec-NNNN/08_Open-questions.md`
+    // and are part of the authoring traceability surface — they must
+    // not appear in shipped JSDoc / dist/*.d.ts.
+    name: "internal-oq-id-jsdoc-leak",
+    re: /\bOQ-\d{4}-\d{4}\b/,
+    suggestion:
+      "Internal open-question IDs (OQ-NNNN-NNNN) MUST NOT appear in src/ JSDoc — tsup keeps JSDoc in dist/*.d.ts.",
+    appliesTo: ["src-comment"],
+  },
+  {
     name: "internal-schema-version-jsdoc-leak",
     re: /"schemaVersion"|schemaVersion\s*:/,
     suggestion:

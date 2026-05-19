@@ -521,7 +521,9 @@ const baseReviewerPayload = (
 ): Record<string, unknown> => ({
   specId: "spec-0012",
   screenId: "home",
+  cycle: 0,
   sessionStatus: "ok",
+  retryCount: 0,
   ordinalAxes: {
     informationArchitecture: "acceptable",
     navigationFlow: "acceptable",
@@ -531,6 +533,8 @@ const baseReviewerPayload = (
   impressions: { ...BASE_IMPRESSIONS },
   layoutAntiPatternsDetected: [],
   designMdViolations: [],
+  wallTimeSec: 12.5,
+  softWarnings: { timeBudget: false },
   ...overrides,
 });
 
@@ -767,30 +771,159 @@ describe("parseEvaluatorReview — menuReachabilityFeel non-failure (TC-0012-038
   });
 });
 
-// QFAI:SPEC-0012:TC-0012-0387
-describe("parseEvaluatorReview — timeBudgetSoftWarning (TC-0012-0387)", () => {
-  it("accepts an optional timeBudgetSoftWarning field and surfaces it on the parsed payload", () => {
+// QFAI:SPEC-0012:TC-0012-0387 — replaced in 11th late-review wave to align with
+// the CLI contract §Review payload SSOT (`.qfai/contracts/cli/qfai-prototyping.md`
+// L161-200). The legacy flat `timeBudgetSoftWarning?: string` field has been
+// removed in favor of the SSOT-compliant required `softWarnings.timeBudget: boolean`
+// nested form.
+describe("parseEvaluatorReview — softWarnings.timeBudget (TC-0012-0387)", () => {
+  it("accepts softWarnings.timeBudget = true and surfaces it on the parsed payload", () => {
+    const result = parseEvaluatorReview(
+      baseReviewerPayload({ softWarnings: { timeBudget: true } }),
+    );
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.review.softWarnings.timeBudget).toBe(true);
+  });
+
+  it("accepts softWarnings.timeBudget = false and surfaces it on the parsed payload", () => {
+    const result = parseEvaluatorReview(baseReviewerPayload());
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.review.softWarnings.timeBudget).toBe(false);
+  });
+
+  it("rejects when softWarnings is missing", () => {
+    const payload = baseReviewerPayload();
+    delete payload.softWarnings;
+    const result = parseEvaluatorReview(payload);
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.errors).toContain("missing field: softWarnings");
+  });
+
+  it("rejects when softWarnings is not an object", () => {
+    const result = parseEvaluatorReview(baseReviewerPayload({ softWarnings: "nope" }));
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.errors).toContain("softWarnings must be an object");
+  });
+
+  it("rejects when softWarnings.timeBudget is missing", () => {
+    const result = parseEvaluatorReview(baseReviewerPayload({ softWarnings: {} }));
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.errors).toContain("missing field: softWarnings.timeBudget");
+  });
+
+  it("rejects when softWarnings.timeBudget is not a boolean", () => {
+    const result = parseEvaluatorReview(
+      baseReviewerPayload({ softWarnings: { timeBudget: "true" } }),
+    );
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.errors.some((e) => /softWarnings\.timeBudget must be a boolean/.test(e))).toBe(
+      true,
+    );
+  });
+
+  it("rejects unknown nested keys under softWarnings", () => {
+    const result = parseEvaluatorReview(
+      baseReviewerPayload({ softWarnings: { timeBudget: false, extraWarn: true } }),
+    );
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.errors.some((e) => /unknown field: softWarnings\.extraWarn/.test(e))).toBe(true);
+  });
+
+  it("rejects the legacy flat timeBudgetSoftWarning key (closed-schema regression)", () => {
     const result = parseEvaluatorReview(
       baseReviewerPayload({
-        timeBudgetSoftWarning: "per-spec time budget exceeded by 12s (soft warning only)",
+        timeBudgetSoftWarning: "legacy flat string",
+      }),
+    );
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.errors.some((e) => /unknown field: timeBudgetSoftWarning/.test(e))).toBe(true);
+  });
+});
+
+// 11th late-review wave: the CLI contract §Review payload SSOT requires
+// 11 top-level fields. Verify the new required fields are validated.
+describe("parseEvaluatorReview — new required fields (cycle / retryCount / wallTimeSec)", () => {
+  it("rejects when cycle is missing", () => {
+    const payload = baseReviewerPayload();
+    delete payload.cycle;
+    const result = parseEvaluatorReview(payload);
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.errors).toContain("missing field: cycle");
+  });
+
+  it("rejects when cycle is not a non-negative integer", () => {
+    const negative = parseEvaluatorReview(baseReviewerPayload({ cycle: -1 }));
+    expect(negative.ok).toBe(false);
+    if (!negative.ok) {
+      expect(negative.errors.some((e) => /cycle must be a non-negative integer/.test(e))).toBe(
+        true,
+      );
+    }
+    const fractional = parseEvaluatorReview(baseReviewerPayload({ cycle: 1.5 }));
+    expect(fractional.ok).toBe(false);
+    const stringy = parseEvaluatorReview(baseReviewerPayload({ cycle: "0" }));
+    expect(stringy.ok).toBe(false);
+  });
+
+  it("rejects when retryCount is missing", () => {
+    const payload = baseReviewerPayload();
+    delete payload.retryCount;
+    const result = parseEvaluatorReview(payload);
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.errors).toContain("missing field: retryCount");
+  });
+
+  it("rejects when retryCount is not a non-negative integer", () => {
+    const result = parseEvaluatorReview(baseReviewerPayload({ retryCount: -2 }));
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.errors.some((e) => /retryCount must be a non-negative integer/.test(e))).toBe(
+      true,
+    );
+  });
+
+  it("rejects when wallTimeSec is missing", () => {
+    const payload = baseReviewerPayload();
+    delete payload.wallTimeSec;
+    const result = parseEvaluatorReview(payload);
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.errors).toContain("missing field: wallTimeSec");
+  });
+
+  it("rejects when wallTimeSec is negative / non-finite / non-numeric", () => {
+    const negative = parseEvaluatorReview(baseReviewerPayload({ wallTimeSec: -0.1 }));
+    expect(negative.ok).toBe(false);
+    const infinite = parseEvaluatorReview(baseReviewerPayload({ wallTimeSec: Infinity }));
+    expect(infinite.ok).toBe(false);
+    const stringy = parseEvaluatorReview(baseReviewerPayload({ wallTimeSec: "12" }));
+    expect(stringy.ok).toBe(false);
+  });
+
+  it("accepts a full SSOT-compliant payload with all 11 required fields", () => {
+    const result = parseEvaluatorReview(
+      baseReviewerPayload({
+        cycle: 3,
+        retryCount: 1,
+        wallTimeSec: 42.7,
+        softWarnings: { timeBudget: true },
       }),
     );
     expect(result.ok).toBe(true);
     if (!result.ok) return;
-    expect(result.review.timeBudgetSoftWarning).toMatch(/soft warning/);
-  });
-
-  it("omits timeBudgetSoftWarning when absent from input", () => {
-    const result = parseEvaluatorReview(baseReviewerPayload());
-    expect(result.ok).toBe(true);
-    if (!result.ok) return;
-    expect(result.review.timeBudgetSoftWarning).toBeUndefined();
-  });
-
-  it("rejects timeBudgetSoftWarning when present but non-string", () => {
-    const result = parseEvaluatorReview(baseReviewerPayload({ timeBudgetSoftWarning: 42 }));
-    expect(result.ok).toBe(false);
-    if (result.ok) return;
-    expect(result.errors.some((e) => /timeBudgetSoftWarning/.test(e))).toBe(true);
+    expect(result.review.cycle).toBe(3);
+    expect(result.review.retryCount).toBe(1);
+    expect(result.review.wallTimeSec).toBe(42.7);
+    expect(result.review.softWarnings.timeBudget).toBe(true);
   });
 });

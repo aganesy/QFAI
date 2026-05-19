@@ -11,9 +11,44 @@ The contract must describe screen structure, action coverage targets, and stable
 
 ## File rules
 
-- File name: `ui-XXXX-<slug>.yaml`
+- File name (legacy multi-file convention): `ui-XXXX-<slug>.yaml`
 - Header: `# QFAI-CONTRACT-ID: CON-UI-XXXX`
 - Keep contracts focused on user-observable behavior and stable identifiers.
+
+### Per-spec UI contract resolution (`qfai prototyping certify`)
+
+`qfai prototyping certify` resolves per-spec UI contracts under
+`.qfai/contracts/ui/` with the following precedence. The first matching
+canonical single-file candidate wins; otherwise the multi-file shapes
+are aggregated.
+
+| Order | Candidate                                         | Layout                                                         |
+| ----- | ------------------------------------------------- | -------------------------------------------------------------- |
+| 1     | `<spec-id>.yaml` (e.g. `spec-0007.yaml`)          | Recommended canonical per-spec single-file layout              |
+| 2     | `<bare-numeric>.yaml` (e.g. `0007.yaml`)          | Bare-numeric alias                                             |
+| 3     | `ui-<bare-numeric>.yaml` (e.g. `ui-0007.yaml`)    | `ui-` prefixed canonical                                       |
+| 4     | `ui-<bare-numeric>-<slug>.yaml` (glob)            | Legacy split-file convention (e.g. `ui-0007-home.yaml`)        |
+| 5     | `<spec-id>/<subpath>.yaml`                        | Recursive per-spec subdirectory layout                         |
+
+Recommendations:
+
+- **Single-file per spec** — author `<spec-id>.yaml` (candidate #1). This
+  is the canonical layout and exercises the most-tested code path.
+- **Multi-file per spec** — either use the `ui-<bare>-<slug>.yaml` split
+  convention (candidate #4) or group screens under a per-spec
+  subdirectory (`<spec-id>/<screen>.yaml`, candidate #5). Both shapes
+  aggregate every matched file with first-write-wins deduplication for
+  duplicate `screenId`s.
+- Do not author multiple canonical single-file candidates (#1 + #3) for
+  the same spec — the resolver picks #1 deterministically and operators
+  reading #3 will be confused about which file is authoritative.
+
+When the per-spec gate matches at least one file but extracts zero
+valid screens (e.g. a YAML parse error or a `screens:` typo),
+`qfai prototyping certify` emits a stderr warning naming the offending
+file path and falls back to the project-wide screen list — so the
+authoring issue is visible at certify time rather than silently
+re-enabling the cross-product check.
 
 ### `elements[].id` naming policy (stable IDs)
 

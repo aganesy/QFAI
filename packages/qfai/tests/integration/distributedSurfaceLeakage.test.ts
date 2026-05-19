@@ -52,8 +52,8 @@ const PATTERNS: ReadonlyArray<{ name: string; re: RegExp }> = [
   { name: "internal spec id (spec-0010+)", re: /spec-0(0[1-9][0-9]|[1-9][0-9]{2,})/g },
   { name: "internal version marker", re: /\bv[0-9]+\.[0-9]+(?:\.[0-9]+)?\b|\bv1\.x\b/g },
   {
-    name: "internal trace id (CAP-0010+/DEC/DR/PROT2)",
-    re: /\bCAP-0(0[1-9][0-9]|[1-9][0-9]{2,})\b|\bDEC-[0-9]{4}-[0-9]{4}\b|\bDR-[0-9]{4}\b|\bQFAI-PROT2-[0-9]+\b/g,
+    name: "internal trace id (CAP-0010+/DEC/DR/PROT2/OQ)",
+    re: /\bCAP-0(0[1-9][0-9]|[1-9][0-9]{2,})\b|\bDEC-[0-9]{4}-[0-9]{4}\b|\bDR-[0-9]{4}\b|\bQFAI-PROT2-[0-9]+\b|\bOQ-[0-9]{4}-[0-9]{4}\b/g,
   },
   { name: "schemaVersion field", re: /"schemaVersion"|schemaVersion\s*:/g },
 ];

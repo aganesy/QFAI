@@ -644,6 +644,148 @@ describe("qfai prototyping certify (TC-0012-0407: per-spec UI contracts scope th
     expect(exit).toBe(0);
   });
 
+  // 11th late-review wave (codex r3265376163, P2): the per-spec
+  // UI contract resolver `readPerSpecScreens` supports 5 file-naming
+  // candidates but only candidate #1 (`spec-NNNN.yaml`) was exercised
+  // by tests. Add explicit coverage for #2 (`<bare>.yaml`) and #3
+  // (`ui-<bare>.yaml`) so the alternate canonical layouts have
+  // present-path assertions matching the README documentation.
+  it("respects the bare-numeric canonical layout (candidate #2: <bare>.yaml)", async () => {
+    const root = await newTempDir();
+    await seedMinimalProject(root);
+    await mkdir(path.join(root, ".qfai/specs/spec-0001"), { recursive: true });
+    await writeFile(
+      path.join(root, ".qfai/specs/spec-0001/01_Spec.md"),
+      "---\nsurface_type: ui-bearing\n---\n\n# spec-0001\n",
+      "utf-8",
+    );
+    await seedAllGatesPass(root, {
+      specsCovered: ["0001"],
+      frozenSpecsCovered: ["0001"],
+    });
+    await mkdir(path.join(root, ".qfai/contracts/ui"), { recursive: true });
+    // Candidate #2: bare-numeric per-spec contract file.
+    await writeFile(
+      path.join(root, ".qfai/contracts/ui/0001.yaml"),
+      'screens:\n  - id: home\n    route: "/home"\n',
+      "utf-8",
+    );
+    const iter01 = path.join(root, ".qfai/evidence/prototyping/iter-01");
+    await writeFile(path.join(iter01, "home.html"), CLEAN_FINAL_HTML, "utf-8");
+    await seedReviewJson(root, "spec-0001", "home");
+
+    const exit = await runPrototypingCertify({ root, check: false });
+    expect(exit).toBe(0);
+  });
+
+  it("respects the ui-prefixed canonical layout (candidate #3: ui-<bare>.yaml)", async () => {
+    const root = await newTempDir();
+    await seedMinimalProject(root);
+    await mkdir(path.join(root, ".qfai/specs/spec-0001"), { recursive: true });
+    await writeFile(
+      path.join(root, ".qfai/specs/spec-0001/01_Spec.md"),
+      "---\nsurface_type: ui-bearing\n---\n\n# spec-0001\n",
+      "utf-8",
+    );
+    await seedAllGatesPass(root, {
+      specsCovered: ["0001"],
+      frozenSpecsCovered: ["0001"],
+    });
+    await mkdir(path.join(root, ".qfai/contracts/ui"), { recursive: true });
+    // Candidate #3: ui-prefixed bare-numeric per-spec contract file.
+    await writeFile(
+      path.join(root, ".qfai/contracts/ui/ui-0001.yaml"),
+      'screens:\n  - id: home\n    route: "/home"\n',
+      "utf-8",
+    );
+    const iter01 = path.join(root, ".qfai/evidence/prototyping/iter-01");
+    await writeFile(path.join(iter01, "home.html"), CLEAN_FINAL_HTML, "utf-8");
+    await seedReviewJson(root, "spec-0001", "home");
+
+    const exit = await runPrototypingCertify({ root, check: false });
+    expect(exit).toBe(0);
+  });
+
+  // Fix D regression: recursive subdir layout
+  // `<contractsDir>/ui/<spec-id>/<sub>.yaml` is now a supported per-spec
+  // layout (candidate #5). Pre-fix the per-spec reader missed this
+  // shape, fell through to the project-wide list, and re-opened the
+  // 9th-wave cross-product false-positive.
+  it("respects the recursive subdir layout (candidate #5: <spec-id>/<sub>.yaml)", async () => {
+    const root = await newTempDir();
+    await seedMinimalProject(root);
+    await mkdir(path.join(root, ".qfai/specs/spec-0001"), { recursive: true });
+    await writeFile(
+      path.join(root, ".qfai/specs/spec-0001/01_Spec.md"),
+      "---\nsurface_type: ui-bearing\n---\n\n# spec-0001\n",
+      "utf-8",
+    );
+    await seedAllGatesPass(root, {
+      specsCovered: ["0001"],
+      frozenSpecsCovered: ["0001"],
+    });
+    // Per-spec subdir layout: each screen in its own file under
+    // `.qfai/contracts/ui/spec-0001/`.
+    await mkdir(path.join(root, ".qfai/contracts/ui/spec-0001"), { recursive: true });
+    await writeFile(
+      path.join(root, ".qfai/contracts/ui/spec-0001/home.yaml"),
+      'screens:\n  - id: home\n    route: "/home"\n',
+      "utf-8",
+    );
+    const iter01 = path.join(root, ".qfai/evidence/prototyping/iter-01");
+    await writeFile(path.join(iter01, "home.html"), CLEAN_FINAL_HTML, "utf-8");
+    await seedReviewJson(root, "spec-0001", "home");
+
+    const exit = await runPrototypingCertify({ root, check: false });
+    expect(exit).toBe(0);
+  });
+
+  // Fix C regression: true first-hit-wins precedence. When both
+  // candidate #1 (`spec-NNNN.yaml`) and candidate #3 (`ui-NNNN.yaml`)
+  // exist on disk, only #1 is used. Pre-fix the reader unioned both
+  // files which produced surprising cross-file behaviour on authoring
+  // forks.
+  it("uses candidate #1 only when both #1 and #3 exist on disk (true first-hit-wins)", async () => {
+    const root = await newTempDir();
+    await seedMinimalProject(root);
+    await mkdir(path.join(root, ".qfai/specs/spec-0001"), { recursive: true });
+    await writeFile(
+      path.join(root, ".qfai/specs/spec-0001/01_Spec.md"),
+      "---\nsurface_type: ui-bearing\n---\n\n# spec-0001\n",
+      "utf-8",
+    );
+    await seedAllGatesPass(root, {
+      specsCovered: ["0001"],
+      frozenSpecsCovered: ["0001"],
+    });
+    await mkdir(path.join(root, ".qfai/contracts/ui"), { recursive: true });
+    // Candidate #1: declares only `home`.
+    await writeFile(
+      path.join(root, ".qfai/contracts/ui/spec-0001.yaml"),
+      'screens:\n  - id: home\n    route: "/home"\n',
+      "utf-8",
+    );
+    // Candidate #3 also on disk: declares `settings`. With true first-hit
+    // wins, this file MUST be ignored — only `home` should be required.
+    await writeFile(
+      path.join(root, ".qfai/contracts/ui/ui-0001.yaml"),
+      'screens:\n  - id: settings\n    route: "/settings"\n',
+      "utf-8",
+    );
+    const iter01 = path.join(root, ".qfai/evidence/prototyping/iter-01");
+    // Seed HTML for both screens because the project-wide `readUiContractScreenContracts`
+    // still pools both files (the HTML gate is project-wide). The per-spec
+    // gate scopes to `spec-0001.yaml` only.
+    await writeFile(path.join(iter01, "home.html"), CLEAN_FINAL_HTML, "utf-8");
+    await writeFile(path.join(iter01, "settings.html"), CLEAN_FINAL_HTML, "utf-8");
+    // Only seed home.review.json — if true first-hit-wins is honored,
+    // settings.review.json should not be required for spec-0001.
+    await seedReviewJson(root, "spec-0001", "home");
+
+    const exit = await runPrototypingCertify({ root, check: false });
+    expect(exit).toBe(0);
+  });
+
   // Negative companion: per-spec scope still enforces presence WITHIN
   // each spec's declared set. spec-0001 declares two screens; missing
   // one of them must still fail.
