@@ -107,6 +107,27 @@
   arrays does not back-write to the persisted record; consumer
   defensive-copy contract enforced. spec-0012 TDD-0388 (TC-0012-0390).
 
+### Added (Wave 2 — schema extensions)
+
+- New `parseEvaluatorReview(input)` parser in
+  `core/prototyping/evaluatorReview.ts` validating the v2.0 review payload:
+  4 ordinal axes (`informationArchitecture` / `navigationFlow` / `usability`
+  / `functionality`), 6 `*Feel` fields (`operability` / `transitionFeel`
+  / `crossScreenContinuity` / `userStoryFeel` / `acceptanceCriteriaFeel`
+  / `menuReachabilityFeel`), `layoutAntiPatternsDetected[]`,
+  `designMdViolations[]`, optional `timeBudgetSoftWarning?: string`.
+  New constants `FEEL_FIELDS`, `FEEL_FIELD_MAX_WORDS = 200`. Named-path
+  validation errors: `missing field: <name>` / `missing field: scores.<axis>`
+  / `unknown field: <name>` / per-field word-count rejection. Legacy
+  `buildEvaluatorReview` path untouched. spec-0012 TDD-0403/0404/0405/0406/0407
+  (TC-0012-0364/0365/0366/0384/0387).
+- New module `core/prototyping/handoff.ts` with `validateImageSources(input)`.
+  Closed schema: each entry exactly `{url, license, attribution, source}`
+  (all strings); missing/non-string fields emit
+  `imageSources[N].FIELD is required` named-field errors; unknown keys
+  rejected; multi-entry error aggregation. spec-0012 TDD-0408
+  (TC-0012-0372).
+
 ### Deferred (tracked for follow-up)
 
 - TDD-0384 (TC-0012-0377): per-spec `iter-NN/spec-NNNN/<screen>.review.json`

@@ -1,11 +1,15 @@
 import { describe, expect, it } from "vitest";
 import {
+  FEEL_FIELDS,
+  FEEL_FIELD_MAX_WORDS,
   ORDINAL_AXES,
   PROSE_CRITIQUE_MAX_WORDS,
   PROSE_CRITIQUE_MIN_WORDS,
   buildEvaluatorReview,
   countWords,
+  parseEvaluatorReview,
   type BuildEvaluatorReviewInput,
+  type FeelField,
   type OrdinalAxis,
 } from "../../../src/core/prototyping/evaluatorReview.js";
 import type { OrdinalScore } from "../../../src/core/prototyping/iteration.js";
@@ -483,5 +487,183 @@ describe("constants", () => {
   });
   it("PROSE_CRITIQUE_MAX_WORDS is 500", () => {
     expect(PROSE_CRITIQUE_MAX_WORDS).toBe(500);
+  });
+  it("FEEL_FIELD_MAX_WORDS is 200", () => {
+    expect(FEEL_FIELD_MAX_WORDS).toBe(200);
+  });
+  it("FEEL_FIELDS lists the 6 *Feel keys in fixed order", () => {
+    expect([...FEEL_FIELDS]).toEqual([
+      "operability",
+      "transitionFeel",
+      "crossScreenContinuity",
+      "userStoryFeel",
+      "acceptanceCriteriaFeel",
+      "menuReachabilityFeel",
+    ]);
+  });
+});
+
+// -------------------------------------------------------------------------
+// Reviewer-driven per-spec / per-screen payload schema
+// -------------------------------------------------------------------------
+
+const baseReviewerPayload = (
+  overrides: Record<string, unknown> = {},
+): Record<string, unknown> => ({
+  informationArchitecture: "acceptable",
+  navigationFlow: "acceptable",
+  usability: "acceptable",
+  functionality: "acceptable",
+  operability: "Buttons and inputs respond predictably across the primary flows.",
+  transitionFeel: "Screen transitions stay smooth without visible jank.",
+  crossScreenContinuity: "Navigation preserves selected state when moving across screens.",
+  userStoryFeel: "Each user story is reachable from the home screen in two taps.",
+  acceptanceCriteriaFeel: "Acceptance criteria map cleanly to visible UI affordances.",
+  menuReachabilityFeel: "All primary menu entries are reachable from the topbar.",
+  layoutAntiPatternsDetected: [],
+  designMdViolations: [],
+  ...overrides,
+});
+
+// QFAI:SPEC-0012:TC-0012-0364
+describe("parseEvaluatorReview — full payload acceptance (TC-0012-0364)", () => {
+  it("accepts a payload with all 6 *Feel fields, 4 ordinal axes, lap[], dmv[]", () => {
+    const result = parseEvaluatorReview(
+      baseReviewerPayload({
+        layoutAntiPatternsDetected: ["lap-001-saas-dashboard"],
+        designMdViolations: [{ kind: "color", found: "#FF00FF" }],
+      }),
+    );
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.review.informationArchitecture).toBe("acceptable");
+    expect(result.review.navigationFlow).toBe("acceptable");
+    expect(result.review.usability).toBe("acceptable");
+    expect(result.review.functionality).toBe("acceptable");
+    expect(result.review.operability.length).toBeGreaterThan(0);
+    expect(result.review.transitionFeel.length).toBeGreaterThan(0);
+    expect(result.review.crossScreenContinuity.length).toBeGreaterThan(0);
+    expect(result.review.userStoryFeel.length).toBeGreaterThan(0);
+    expect(result.review.acceptanceCriteriaFeel.length).toBeGreaterThan(0);
+    expect(result.review.menuReachabilityFeel.length).toBeGreaterThan(0);
+    expect(result.review.layoutAntiPatternsDetected).toEqual(["lap-001-saas-dashboard"]);
+    expect(result.review.designMdViolations).toEqual([{ kind: "color", found: "#FF00FF" }]);
+  });
+});
+
+// QFAI:SPEC-0012:TC-0012-0365
+describe("parseEvaluatorReview — rejection with named field path (TC-0012-0365)", () => {
+  it.each(FEEL_FIELDS as readonly FeelField[])(
+    "rejects when *Feel field '%s' is missing",
+    (field) => {
+      const payload = baseReviewerPayload();
+      delete payload[field];
+      const result = parseEvaluatorReview(payload);
+      expect(result.ok).toBe(false);
+      if (result.ok) return;
+      expect(result.errors).toContain(`missing field: ${field}`);
+    },
+  );
+
+  it.each(ORDINAL_AXES as readonly OrdinalAxis[])(
+    "rejects when ordinal axis '%s' is missing",
+    (axis) => {
+      const payload = baseReviewerPayload();
+      delete payload[axis];
+      const result = parseEvaluatorReview(payload);
+      expect(result.ok).toBe(false);
+      if (result.ok) return;
+      expect(result.errors).toContain(`missing field: scores.${axis}`);
+    },
+  );
+
+  it("rejects when an unknown top-level key is present", () => {
+    const result = parseEvaluatorReview(baseReviewerPayload({ extraneousKey: "nope" }));
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.errors.some((e) => /unknown field: extraneousKey/.test(e))).toBe(true);
+  });
+
+  it("rejects when input is not a JSON object", () => {
+    expect(parseEvaluatorReview(null).ok).toBe(false);
+    expect(parseEvaluatorReview("string").ok).toBe(false);
+    expect(parseEvaluatorReview([]).ok).toBe(false);
+  });
+});
+
+// QFAI:SPEC-0012:TC-0012-0366
+describe("parseEvaluatorReview — *Feel word-count bounds (TC-0012-0366)", () => {
+  it.each(FEEL_FIELDS as readonly FeelField[])(
+    "rejects '%s' at 201 words (boundary +1)",
+    (field) => {
+      const overflow = Array(201).fill("word").join(" ");
+      const result = parseEvaluatorReview(baseReviewerPayload({ [field]: overflow }));
+      expect(result.ok).toBe(false);
+      if (result.ok) return;
+      expect(
+        result.errors.some((e) => e.includes(field) && /exceeds 200 words \(got 201\)/.test(e)),
+      ).toBe(true);
+    },
+  );
+
+  it.each(FEEL_FIELDS as readonly FeelField[])(
+    "accepts '%s' at exactly 200 words (boundary)",
+    (field) => {
+      const exact = Array(200).fill("word").join(" ");
+      const result = parseEvaluatorReview(baseReviewerPayload({ [field]: exact }));
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+      expect(countWords(result.review[field])).toBe(200);
+    },
+  );
+
+  it.each(FEEL_FIELDS as readonly FeelField[])("accepts '%s' at 1 word", (field) => {
+    const result = parseEvaluatorReview(baseReviewerPayload({ [field]: "ok" }));
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(countWords(result.review[field])).toBe(1);
+  });
+});
+
+// QFAI:SPEC-0012:TC-0012-0384
+describe("parseEvaluatorReview — menuReachabilityFeel non-failure (TC-0012-0384)", () => {
+  it("accepts a payload describing unreachable entries (no hard-fail)", () => {
+    const result = parseEvaluatorReview(
+      baseReviewerPayload({
+        menuReachabilityFeel:
+          "Settings entry is unreachable from the topbar; account dropdown collapses too early.",
+      }),
+    );
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.review.menuReachabilityFeel).toMatch(/unreachable/);
+  });
+});
+
+// QFAI:SPEC-0012:TC-0012-0387
+describe("parseEvaluatorReview — timeBudgetSoftWarning (TC-0012-0387)", () => {
+  it("accepts an optional timeBudgetSoftWarning field and surfaces it on the parsed payload", () => {
+    const result = parseEvaluatorReview(
+      baseReviewerPayload({
+        timeBudgetSoftWarning: "per-spec time budget exceeded by 12s (soft warning only)",
+      }),
+    );
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.review.timeBudgetSoftWarning).toMatch(/soft warning/);
+  });
+
+  it("omits timeBudgetSoftWarning when absent from input", () => {
+    const result = parseEvaluatorReview(baseReviewerPayload());
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.review.timeBudgetSoftWarning).toBeUndefined();
+  });
+
+  it("rejects timeBudgetSoftWarning when present but non-string", () => {
+    const result = parseEvaluatorReview(baseReviewerPayload({ timeBudgetSoftWarning: 42 }));
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.errors.some((e) => /timeBudgetSoftWarning/.test(e))).toBe(true);
   });
 });
