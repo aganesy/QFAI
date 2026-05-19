@@ -283,6 +283,25 @@ export async function dispatchReviewerToPair(
       continue;
     }
     if (result.ok) {
+      // codex review r3265074289 (P3): a runner returning
+      // `{ok: true}` without a `reviewJson` payload is a schema-invalid
+      // success — there is nothing for the persister to write, and
+      // letting it flow through silently would seal a downstream
+      // certificate with no review artifact. Symmetric with the
+      // runner-throw / sleeper-throw / persister-throw paths: record
+      // the synthetic failed attempt, break, and fall through to
+      // `retryExhausted` so the caller treats the pair as
+      // uncompleted. The error message names the missing payload so
+      // operators can diagnose the runner contract violation.
+      if (result.reviewJson === undefined) {
+        attempts.push({
+          ok: false,
+          attemptIndex: i,
+          errorMessage:
+            "reviewerDispatch: runner returned ok without reviewJson payload",
+        });
+        break;
+      }
       attempts.push({ ok: true, attemptIndex: i });
       // codex review r3264765754 (P2): propagate the in-memory
       // `reviewJson` payload to the outcome and (optionally) call the

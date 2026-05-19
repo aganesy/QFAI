@@ -184,6 +184,7 @@ describe("dispatchReviewerToPair (interface stub)", () => {
       attemptLimit: 3,
       playwrightRunner: async (): Promise<ReviewerPlaywrightAttempt> => ({
         ok: true,
+        reviewJson: { axes: {} },
       }),
       sleep: async (ms) => {
         waited.push(ms);
@@ -191,6 +192,30 @@ describe("dispatchReviewerToPair (interface stub)", () => {
     });
     expect(outcome.finalStatus).toBe("ok");
     expect(waited).toEqual([]);
+  });
+
+  // codex review r3265074289 (P3): a runner returning `{ok: true}`
+  // without a `reviewJson` payload is a schema-invalid success — the
+  // dispatcher must NOT silently flow it through to the persister /
+  // downstream certify (which would seal a cert with zero review
+  // artifact). Symmetric with the runner-throw / sleeper-throw /
+  // persister-throw paths: record a synthetic failed attempt that
+  // names the missing payload and fall through to retryExhausted.
+  it("records `ok: true` without reviewJson as retryExhausted and names the missing payload", async () => {
+    const outcome = await dispatchReviewerToPair("0012", "dashboard", {
+      attemptLimit: 1,
+      playwrightRunner: async (): Promise<ReviewerPlaywrightAttempt> => ({
+        ok: true,
+      }),
+    });
+    expect(outcome.finalStatus).toBe("retryExhausted");
+    expect(outcome.attempts).toHaveLength(1);
+    expect(outcome.attempts[0]?.ok).toBe(false);
+    expect(outcome.attempts[0]?.errorMessage).toMatch(
+      /runner returned ok without reviewJson payload/i,
+    );
+    expect(outcome.reviewJson).toBeUndefined();
+    expect(outcome.reviewJsonPath).toBeUndefined();
   });
 
   // codex review r3264765754 (P2): on success the dispatcher must

@@ -4,7 +4,11 @@ import path from "node:path";
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { runPrototypingIterate } from "../../../src/cli/commands/prototypingIterate.js";
+import {
+  resolveSurfaceUnion,
+  runPrototypingIterate,
+} from "../../../src/cli/commands/prototypingIterate.js";
+import { loadConfig } from "../../../src/core/config.js";
 import { hashDesignMd } from "../../../src/core/design/designMd.js";
 
 // Canonical Phase 1 DESIGN.md sample. Used by every test that wants the
@@ -1598,8 +1602,14 @@ describe("runPrototypingIterate cycle 0 frozen SSOT writes", () => {
         "utf-8",
       ),
     ) as { frozenSpecsCovered: string[] };
-    // resolveAllUiBearingSpecs returns spec ids sorted lexicographically.
-    expect(body.frozenSpecsCovered).toEqual(["0001", "0002"]);
+    // 8th-wave Fix 2: single-spec freeze. The legacy `specsCovered`
+    // and the cycle-0 `frozenSpecsCovered` both record the single
+    // primary spec (smallest-id UI-bearing match — here spec-0001)
+    // until the per-spec iter-NN/spec-NNNN/<screen>.review.json layout
+    // migration lands. Freezing the full multi-spec union here would
+    // render every multi-spec run uncertifiable because certify
+    // hard-fails any multi-spec frozen set on the flat-iter layout.
+    expect(body.frozenSpecsCovered).toEqual(["0001"]);
   });
 
   // QFAI:SPEC-0012:TC-0012-0389
@@ -1798,11 +1808,44 @@ describe("runPrototypingIterate license verify hard-stop (TC-0012-0371)", () => 
 
 describe("runPrototypingIterate cycle >= 1 spec-set drift (TC-0012-0385)", () => {
   // QFAI:SPEC-0012:TC-0012-0385
-  it("TC-0012-0385 (TDD-0385): exits non-zero and names the drifted spec in stderr when a new UI-bearing spec appears mid-loop", async () => {
+  //
+  // 8th-wave Fix 2: with single-spec freeze, the cycle-≥1 drift check
+  // compares the frozen primary against the LIVE primary (smallest-id
+  // UI-bearing spec the resolver picks today). A newly-planted
+  // secondary spec with a LARGER id does NOT shift the primary, so
+  // drift is intentionally not detected for that case (the per-spec
+  // layout migration is deferred and certify is already structurally
+  // single-spec). The drift check still fires when the PRIMARY
+  // changes — e.g. a NEW UI-bearing spec with a SMALLER id is planted
+  // mid-loop, shifting the resolver's primary pick. Pin that case
+  // here so the operator-facing guarantee (mid-loop primary drift is
+  // a hard stop) does not silently regress.
+  it("TC-0012-0385 (TDD-0385): exits non-zero and names the drifted spec when a smaller-id UI-bearing spec is planted mid-loop and shifts the primary", async () => {
     const root = await newTempDir();
     await seedMinimalProject(root);
-    // Cycle 0 baseline: only spec-0001 is UI-bearing. Seed a
-    // prototyping.json that carries that frozen snapshot.
+    // Cycle 0 baseline: only spec-0005 is UI-bearing — primary picks
+    // it (smallest-id UI-bearing match). Seed prototyping.json with
+    // that frozen snapshot.
+    // Remove the default seedMinimalProject spec-0001 marker so we
+    // start with a known single primary at spec-0005.
+    const spec0005Dir = path.join(root, ".qfai/specs/spec-0005");
+    await mkdir(spec0005Dir, { recursive: true });
+    await writeFile(
+      path.join(spec0005Dir, "01_Spec.md"),
+      "---\nsurface_type: ui-bearing\n---\n\n# spec-0005\n",
+      "utf-8",
+    );
+    await writeFile(
+      path.join(spec0005Dir, "02_User-stories.md"),
+      "# stories\n",
+      "utf-8",
+    );
+    // Strip the marker from the default spec-0001 so it is non-UI for
+    // baseline. seedMinimalProject seeded spec-0001 with the marker;
+    // overwrite it to remove the marker.
+    const spec0001Md = path.join(root, ".qfai/specs/spec-0001/01_Spec.md");
+    await writeFile(spec0001Md, "# spec-0001\n\nNon-UI baseline.\n", "utf-8");
+
     await seedPrototypingJson(root, [
       {
         index: 0,
@@ -1819,15 +1862,25 @@ describe("runPrototypingIterate cycle >= 1 spec-set drift (TC-0012-0385)", () =>
       ".qfai/evidence/prototyping/prototyping.json",
     );
     const proto = JSON.parse(await readFile(protoJsonPath, "utf-8")) as Record<string, unknown>;
-    proto.frozenSpecsCovered = ["0001"];
+    // Override the seed's specsCovered/frozenSpecsCovered to the
+    // baseline primary so the cycle-1 gate compares apples-to-apples.
+    proto.specsCovered = ["0005"];
+    proto.frozenSpecsCovered = ["0005"];
     await writeFile(protoJsonPath, JSON.stringify(proto), "utf-8");
 
-    // Plant a NEW UI-bearing spec on disk between cycle 0 and cycle 1.
-    const spec0007Dir = path.join(root, ".qfai/specs/spec-0007");
-    await mkdir(spec0007Dir, { recursive: true });
+    // Plant a NEW UI-bearing spec with a SMALLER id between cycle 0
+    // and cycle 1 — the primary resolver will now pick spec-0002,
+    // shifting the primary mid-loop.
+    const spec0002Dir = path.join(root, ".qfai/specs/spec-0002");
+    await mkdir(spec0002Dir, { recursive: true });
     await writeFile(
-      path.join(spec0007Dir, "01_Spec.md"),
-      "# 01 Spec — new\n\nsurface_type: ui-bearing\n",
+      path.join(spec0002Dir, "01_Spec.md"),
+      "---\nsurface_type: ui-bearing\n---\n\n# spec-0002 — new smaller-id primary\n",
+      "utf-8",
+    );
+    await writeFile(
+      path.join(spec0002Dir, "02_User-stories.md"),
+      "# stories\n",
       "utf-8",
     );
 
@@ -1835,22 +1888,25 @@ describe("runPrototypingIterate cycle >= 1 spec-set drift (TC-0012-0385)", () =>
     const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
     try {
       const exit = await runPrototypingIterate({ root, cycle: 1 });
-      // Non-zero exit (production uses 2).
+      // Non-zero exit (production uses 2 for input-error class).
       expect(exit).not.toBe(0);
       const stderr = errorSpy.mock.calls.map((c) => String(c[0])).join("\n");
-      expect(stderr).toMatch(/spec-set drift detected/i);
-      expect(stderr).toContain("0007");
+      // The primary-mismatch arm is tripped first ("primary spec
+      // changed mid-loop") since the resolver now returns 0002 while
+      // the frozen specsCovered is ["0005"]; either that diagnostic
+      // OR the spec-set-drift diagnostic is acceptable — both name
+      // the new spec.
+      expect(stderr).toContain("0002");
     } finally {
       errorSpy.mockRestore();
     }
 
     // The run did NOT restart at cycle 0 — the new spec is deferred
-    // to the next invocation (no iter-NN/ regenerated for the new
-    // spec, and no rewrite of frozenSpecsCovered to include it).
+    // to the next invocation (no rewrite of frozenSpecsCovered).
     const after = JSON.parse(
       await readFile(protoJsonPath, "utf-8"),
     ) as { frozenSpecsCovered?: unknown };
-    expect(after.frozenSpecsCovered).toEqual(["0001"]);
+    expect(after.frozenSpecsCovered).toEqual(["0005"]);
   });
 });
 
@@ -2200,19 +2256,21 @@ describe("runPrototypingIterate cycle-0 no-op gate honours legacy title marker",
   });
 });
 
-// Regression for codex review r3264765749 (P2): pre-fix the
-// title-marker + primarySpecId bypass branch in
+// Regression for codex review r3264765749 (P2) + 8th-wave Fix 2:
+// pre-fix the title-marker + primarySpecId bypass branch in
 // `evaluateZeroUiBearingPrecheck` was reached ONLY when the strict scan
-// returned `[]`. In a MIXED project where the strict scan finds spec A
-// (frontmatter marker) BUT primarySpecId pins spec B (no strict
-// signal), cycle 0 froze `frozenSpecsCovered = [A]` (strict only),
-// while `resolvePrimaryPrototypingSpec` could drive B — letting certify
-// validate the wrong scope. Post-fix the precheck always returns the
-// UNION of strict + title-marker + configured-primarySpecId-on-disk,
-// short-circuiting only when the union is empty.
-describe("runPrototypingIterate cycle-0 union (strict + title-marker + primarySpecId)", () => {
+// returned `[]`. The 6th wave widened it to always compose the union
+// so the cycle-0 frozen set captured every UI-bearing surface. The
+// 8th wave then narrowed the FROZEN write back to single-spec because
+// the certify per-(spec × screen) gate now hard-fails any multi-spec
+// frozen set on the flat-iter layout (the per-spec layout migration
+// is still deferred), so freezing a multi-spec union rendered every
+// normal multi-spec run uncertifiable. The union is still computed for
+// the bypass / drift-check signals; we just persist the single primary
+// spec into `frozenSpecsCovered`.
+describe("runPrototypingIterate cycle-0 frozen set (single-spec, primary resolver)", () => {
   // QFAI:SPEC-0012:TC-0012-0404
-  it("returns the union of strict + primarySpecId when strict is non-empty (frozenSpecsCovered === union sorted)", async () => {
+  it("freezes the single primary spec into frozenSpecsCovered (single-spec freeze; multi-spec union is bypass-only)", async () => {
     const root = await newTempDir();
     await seedDesignMd(root);
     // qfai.config.yaml pins primarySpecId=0002. Spec-0003 carries the
@@ -2283,7 +2341,243 @@ describe("runPrototypingIterate cycle-0 union (strict + title-marker + primarySp
     const proto = JSON.parse(await readFile(protoJsonPath, "utf-8")) as {
       frozenSpecsCovered?: unknown;
     };
-    // Sorted lex: ["0002", "0003"]. Pre-fix this was ["0003"].
-    expect(proto.frozenSpecsCovered).toEqual(["0002", "0003"]);
+    // 8th-wave Fix 2: single-spec freeze. The primary resolver honours
+    // the `prototyping.primarySpecId` config pin, so frozen is
+    // ["0002"] (not the multi-spec union ["0002","0003"]).
+    expect(proto.frozenSpecsCovered).toEqual(["0002"]);
+  });
+});
+
+// Regression for codex review r3265060281 (P2): a project that declares
+// its UI surface ONLY via `.qfai/contracts/ui/<spec-id>.yaml` (no
+// `surface_type: ui-bearing` frontmatter, no `# … Prototyping …` title
+// marker, no `prototyping.primarySpecId` config pin) clears the cycle-0
+// no-op precheck (because `resolveAllUiBearingSpecs` honours the
+// contract fallback) but pre-fix `resolvePrimaryPrototypingSpec` did
+// NOT — so iterate exited 2 with "no primary UI-bearing prototyping
+// spec found" right after the precheck passed. Post-fix the primary
+// resolver mirrors the contract fallback and contract-only projects
+// drive cycle 0 cleanly.
+describe("runPrototypingIterate cycle-0 — contract-only project resolves primary via UI contract fallback", () => {
+  it("does not exit 2 with `no primary UI-bearing` when only a `.qfai/contracts/ui/<spec-id>.yaml` declares the surface", async () => {
+    const root = await newTempDir();
+    await seedDesignMd(root);
+    await writeFile(
+      path.join(root, "qfai.config.yaml"),
+      [
+        "paths:",
+        "  contractsDir: .qfai/contracts",
+        "  specsDir: .qfai/specs",
+        "  discussionDir: .qfai/discussion",
+        "  outDir: .qfai/out",
+        "  skillsDir: .qfai/assistant/skills",
+        "  promptsDir: .qfai/assistant/skills",
+        "  srcDir: src",
+        "  testsDir: tests",
+        "validation:",
+        "  failOn: error",
+        "  require:",
+        "    specSections: []",
+        "  testStrategy:",
+        "    requireLayerTags: false",
+        "    requireSizeTags: false",
+        "    requireApiAtdd: false",
+        "    requireE2eAtdd: false",
+        "    requireIntegrationAtdd: false",
+        "    requireUnitTdd: false",
+        "    requireSpecTagBlock: false",
+        "    requireRoutingProfile: false",
+        "",
+      ].join("\n"),
+      "utf-8",
+    );
+    // Spec body has no marker (frontmatter or title); UI surface is
+    // declared purely via the matching `.qfai/contracts/ui/<id>.yaml`.
+    const specDir = path.join(root, ".qfai/specs/spec-0042");
+    await mkdir(specDir, { recursive: true });
+    await writeFile(
+      path.join(specDir, "01_Spec.md"),
+      "# 01 Spec — contract-only surface\n\nNo marker.\n",
+      "utf-8",
+    );
+    await writeFile(
+      path.join(specDir, "02_User-stories.md"),
+      "# stories\n",
+      "utf-8",
+    );
+    const uiDir = path.join(root, ".qfai/contracts/ui");
+    await mkdir(uiDir, { recursive: true });
+    await writeFile(path.join(uiDir, "0042.yaml"), "screens: []\n", "utf-8");
+
+    const logger = await import("../../../src/cli/lib/logger.js");
+    const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
+    try {
+      const exit = await runPrototypingIterate({
+        root,
+        cycle: 0,
+        targetUrl: "http://localhost:5173",
+      });
+      const errorMessages = errorSpy.mock.calls.map((c) => String(c[0])).join("\n");
+      // The pre-fix failure path emitted exit 2 with
+      // "no primary UI-bearing prototyping spec found"; assert that
+      // exact diagnostic is absent.
+      expect(errorMessages).not.toMatch(/no primary UI-bearing/i);
+      expect(exit).not.toBe(2);
+    } finally {
+      errorSpy.mockRestore();
+    }
+  });
+});
+
+// 8th-wave Fix 7: direct unit test for `resolveSurfaceUnion` — the
+// helper extracted from `evaluateZeroUiBearingPrecheck` that composes
+// the deterministic UNION of every UI-bearing surface signal (strict
+// frontmatter / contract fallback / legacy title marker /
+// `prototyping.primarySpecId` config pin). The extraction keeps the
+// precheck focused on its short-circuit + config-snapshot
+// responsibility; this test pins the composition rule independently.
+describe("resolveSurfaceUnion (direct unit test for the union composition rule)", () => {
+  async function seedSimpleConfig(root: string, extra: string[] = []): Promise<void> {
+    await writeFile(
+      path.join(root, "qfai.config.yaml"),
+      [
+        "paths:",
+        "  contractsDir: .qfai/contracts",
+        "  specsDir: .qfai/specs",
+        "  discussionDir: .qfai/discussion",
+        "  outDir: .qfai/out",
+        "  skillsDir: .qfai/assistant/skills",
+        "  promptsDir: .qfai/assistant/skills",
+        "  srcDir: src",
+        "  testsDir: tests",
+        "validation:",
+        "  failOn: error",
+        "  require:",
+        "    specSections: []",
+        "  testStrategy:",
+        "    requireLayerTags: false",
+        "    requireSizeTags: false",
+        "    requireApiAtdd: false",
+        "    requireE2eAtdd: false",
+        "    requireIntegrationAtdd: false",
+        "    requireUnitTdd: false",
+        "    requireSpecTagBlock: false",
+        "    requireRoutingProfile: false",
+        ...extra,
+        "",
+      ].join("\n"),
+      "utf-8",
+    );
+  }
+
+  it("returns empty array when no surface signal is present anywhere", async () => {
+    const root = await newTempDir();
+    await seedSimpleConfig(root);
+    // One spec, no frontmatter marker, no title marker, no UI contract.
+    const specDir = path.join(root, ".qfai/specs/spec-0001");
+    await mkdir(specDir, { recursive: true });
+    await writeFile(
+      path.join(specDir, "01_Spec.md"),
+      "# spec-0001 — non-UI\n\nNo marker.\n",
+      "utf-8",
+    );
+    await writeFile(path.join(specDir, "02_User-stories.md"), "# stories\n", "utf-8");
+    const { config } = await loadConfig(root);
+    expect(await resolveSurfaceUnion(root, config)).toEqual([]);
+  });
+
+  it("composes the UNION of strict frontmatter + title marker + primarySpecId-on-disk, sorted lex", async () => {
+    const root = await newTempDir();
+    await seedSimpleConfig(root, ["prototyping:", '  primarySpecId: "0042"']);
+    // spec-0007: strict frontmatter marker.
+    const spec7 = path.join(root, ".qfai/specs/spec-0007");
+    await mkdir(spec7, { recursive: true });
+    await writeFile(
+      path.join(spec7, "01_Spec.md"),
+      "---\nsurface_type: ui-bearing\n---\n\n# spec-0007\n",
+      "utf-8",
+    );
+    await writeFile(path.join(spec7, "02_User-stories.md"), "# stories\n", "utf-8");
+    // spec-0042: primarySpecId-on-disk pin only.
+    const spec42 = path.join(root, ".qfai/specs/spec-0042");
+    await mkdir(spec42, { recursive: true });
+    await writeFile(
+      path.join(spec42, "01_Spec.md"),
+      "# 01 Spec — primarySpecId-only\n",
+      "utf-8",
+    );
+    await writeFile(path.join(spec42, "02_User-stories.md"), "# stories\n", "utf-8");
+    // spec-0099: legacy title marker only.
+    const spec99 = path.join(root, ".qfai/specs/spec-0099");
+    await mkdir(spec99, { recursive: true });
+    await writeFile(
+      path.join(spec99, "01_Spec.md"),
+      "# spec-0099 Prototyping Surface\n\nLegacy title-marker only.\n",
+      "utf-8",
+    );
+    await writeFile(path.join(spec99, "02_User-stories.md"), "# stories\n", "utf-8");
+
+    const { config } = await loadConfig(root);
+    expect(await resolveSurfaceUnion(root, config)).toEqual(["0007", "0042", "0099"]);
+  });
+
+  it("recognises UI-contract-only surfaces via `resolveAllUiBearingSpecs` and includes them in the union", async () => {
+    const root = await newTempDir();
+    await seedSimpleConfig(root);
+    // spec-0050: no marker; surface declared purely via UI contract.
+    const spec50 = path.join(root, ".qfai/specs/spec-0050");
+    await mkdir(spec50, { recursive: true });
+    await writeFile(
+      path.join(spec50, "01_Spec.md"),
+      "# 01 Spec — contract-only surface\n",
+      "utf-8",
+    );
+    await writeFile(path.join(spec50, "02_User-stories.md"), "# stories\n", "utf-8");
+    const uiDir = path.join(root, ".qfai/contracts/ui");
+    await mkdir(uiDir, { recursive: true });
+    await writeFile(path.join(uiDir, "0050.yaml"), "screens: []\n", "utf-8");
+
+    const { config } = await loadConfig(root);
+    expect(await resolveSurfaceUnion(root, config)).toEqual(["0050"]);
+  });
+
+  it("deduplicates a spec id that shows up via multiple signals", async () => {
+    const root = await newTempDir();
+    await seedSimpleConfig(root, ["prototyping:", '  primarySpecId: "0007"']);
+    // spec-0007: strict frontmatter marker AND pinned via primarySpecId
+    // AND has a matching UI contract. All three signals point at the
+    // same spec — union must collapse to a single entry.
+    const spec7 = path.join(root, ".qfai/specs/spec-0007");
+    await mkdir(spec7, { recursive: true });
+    await writeFile(
+      path.join(spec7, "01_Spec.md"),
+      "---\nsurface_type: ui-bearing\n---\n\n# spec-0007 Prototyping Surface\n",
+      "utf-8",
+    );
+    await writeFile(path.join(spec7, "02_User-stories.md"), "# stories\n", "utf-8");
+    const uiDir = path.join(root, ".qfai/contracts/ui");
+    await mkdir(uiDir, { recursive: true });
+    await writeFile(path.join(uiDir, "0007.yaml"), "screens: []\n", "utf-8");
+
+    const { config } = await loadConfig(root);
+    expect(await resolveSurfaceUnion(root, config)).toEqual(["0007"]);
+  });
+
+  it("ignores a primarySpecId pin whose spec dir does not exist on disk", async () => {
+    const root = await newTempDir();
+    await seedSimpleConfig(root, ["prototyping:", '  primarySpecId: "9999"']);
+    // spec-9999 is NOT on disk. Only spec-0007 (strict) signals a
+    // surface — the pin must not inject the missing id into the union.
+    const spec7 = path.join(root, ".qfai/specs/spec-0007");
+    await mkdir(spec7, { recursive: true });
+    await writeFile(
+      path.join(spec7, "01_Spec.md"),
+      "---\nsurface_type: ui-bearing\n---\n\n# spec-0007\n",
+      "utf-8",
+    );
+    await writeFile(path.join(spec7, "02_User-stories.md"), "# stories\n", "utf-8");
+
+    const { config } = await loadConfig(root);
+    expect(await resolveSurfaceUnion(root, config)).toEqual(["0007"]);
   });
 });

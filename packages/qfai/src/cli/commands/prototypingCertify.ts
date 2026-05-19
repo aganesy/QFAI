@@ -285,11 +285,15 @@ export async function runPrototypingCertify(
             `multi-spec frozen set (frozenSpecsCovered=${JSON.stringify(frozenSpecsPreview)}) ` +
             "but no per-spec iter-NN/spec-NNNN/<screen>.review.json layout is present. " +
             "Multi-spec frozen set requires per-spec iter-NN/spec-NNNN/<screen>.review.json layout; " +
-            "flat-iter migration deferred under TDD-0384/OQ-0012-0006 is incompatible with " +
-            "multi-spec runs. Re-run prototyping with the per-spec layout or restrict the " +
-            "frozen set to a single spec.",
+            "the flat-iter layout migration is deferred and is incompatible with multi-spec runs. " +
+            "Re-run prototyping with the per-spec layout or restrict the frozen set to a single spec.",
         );
-        return 2;
+        // Exit 64 matches the prototyping CLI contract's coverage class
+        // ("at least one spec lacks a review.json for a declared
+        // screen"). Returning 2 (input error) here would split the same
+        // coverage rejection across two exit codes and break operator
+        // workflows that key on 64 for missing review.json gaps.
+        return 64;
       }
       info(
         `qfai prototyping certify: per-spec ${acceptedIterDir}/spec-NNNN layout not detected — ` +

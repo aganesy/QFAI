@@ -171,7 +171,14 @@ export async function runPrototypingIterate(
   if (precheck.shortCircuit) {
     return precheck.exitCode;
   }
-  const { earlyConfig, earlyUiBearing } = precheck;
+  // `earlyUiBearing` (the multi-spec UNION) is intentionally not
+  // destructured here today: cycle 0 freezes the SINGLE primary spec
+  // into both `specsCovered` and `frozenSpecsCovered`, and the cycle
+  // >= 1 drift check compares against the live primary-only snapshot.
+  // The union still lives on the precheck result so callers /
+  // diagnostics that need the bypass-detection signal can read it
+  // without re-IO; we just do not consume it on the seed-write path.
+  const { earlyConfig } = precheck;
 
   // 1) Read + hash root DESIGN.md FIRST (before any per-cycle plumbing).
   //    A malformed DESIGN.md is a structural project error and must
@@ -258,7 +265,6 @@ export async function runPrototypingIterate(
       lockSha,
       designMd,
       specs,
-      earlyUiBearing,
     });
     if (gate.shortCircuit) {
       return gate.exitCode;
@@ -288,11 +294,16 @@ export async function runPrototypingIterate(
       designMd: { path: ROOT_DESIGN_MD_REL, sha256: currentSha },
       runId: buildRunId(currentSha),
       specsCovered: specs,
-      // cycle-0 SSOT for the full UI-bearing spec set under review.
-      // Distinct from `specsCovered` (single primary spec) so the
-      // multi-spec aggregation in certify can honour the frozen list
-      // as the upper bound on what was reviewed.
-      frozenSpecsCovered: earlyUiBearing,
+      // cycle-0 SSOT for the spec set under review. Kept single-spec
+      // (mirrors the legacy `specsCovered` field) until the per-spec
+      // iter-NN/spec-NNNN/<screen>.review.json layout migration lands;
+      // certify already hard-fails any multi-spec frozen set on the
+      // flat-iter layout, so persisting the full UI-bearing union here
+      // would render every normal multi-spec run uncertifiable. The
+      // `earlyUiBearing` union is still computed for the bypass /
+      // drift-check signals; we just do not freeze it as the multi-spec
+      // scope yet.
+      frozenSpecsCovered: specs,
       // cycle-0 SSOT for the license-class catalog. Recording it here
       // means cycle >= 1 license-verify reads the FROZEN catalog
       // (immutable through the loop), not a mutable in-memory default
@@ -919,42 +930,8 @@ async function evaluateZeroUiBearingPrecheck(
   root: string,
 ): Promise<ZeroUiBearingPrecheckResult> {
   const earlyConfig = await loadConfig(root);
-  const strictUiBearing = await resolveAllUiBearingSpecs(root, earlyConfig.config);
-  // codex review r3264765749 (P2): always compute the union of the
-  // strict scan + title-marker scan + configured primarySpecId-on-disk
-  // probe, regardless of whether the strict scan returned non-empty.
-  //
-  // Pre-fix the title-marker + primarySpecId bypass branch was reached
-  // ONLY when the strict scan returned `[]`; in a mixed project where
-  // spec A has `surface_type: ui-bearing` (strict) AND spec B is
-  // surfaced via the title marker (or pinned via primarySpecId), cycle 0
-  // froze `frozenSpecsCovered = [A]` (strict only) while
-  // `resolvePrimaryPrototypingSpec` could resolve to B — letting the
-  // certify gate validate the wrong scope.
-  //
-  // The composition rule is: the cycle-0 frozen set is the UNION of
-  // every surface that any downstream resolver recognises. If the union
-  // is empty the no-op short-circuit fires (preserving the deterministic
-  // no-op for projects that have no UI surface declared).
-  const titleMarkerSpecs = await resolveTitleMarkerSpecs(
-    root,
-    earlyConfig.config.paths.specsDir,
-  );
-  const configuredPrimarySpecId = earlyConfig.config.prototyping?.primarySpecId;
-  const configuredSpecOnDisk =
-    configuredPrimarySpecId !== undefined
-      ? await specDirExists(
-          root,
-          earlyConfig.config.paths.specsDir,
-          configuredPrimarySpecId,
-        )
-      : false;
-  const unionSpecs = new Set<string>(strictUiBearing);
-  if (configuredSpecOnDisk && configuredPrimarySpecId !== undefined) {
-    unionSpecs.add(configuredPrimarySpecId);
-  }
-  for (const id of titleMarkerSpecs) unionSpecs.add(id);
-  if (unionSpecs.size === 0) {
+  const unionSpecs = await resolveSurfaceUnion(root, earlyConfig.config);
+  if (unionSpecs.length === 0) {
     info(
       "qfai prototyping iterate: no UI-bearing specs resolved — deterministic no-op " +
         "(no spec carries `surface_type: ui-bearing` and no matching `.qfai/contracts/ui/*.yaml`). " +
@@ -965,8 +942,59 @@ async function evaluateZeroUiBearingPrecheck(
   return {
     shortCircuit: false,
     earlyConfig,
-    earlyUiBearing: [...unionSpecs].sort((a, b) => a.localeCompare(b)),
+    earlyUiBearing: unionSpecs,
   };
+}
+
+/**
+ * Compose the deterministic UNION of every UI-bearing surface signal
+ * the project carries:
+ *
+ *   1. strict frontmatter marker `surface_type: ui-bearing` in
+ *      `01_Spec.md` (the canonical CHG-002 signal) OR a matching
+ *      `.qfai/contracts/ui/<spec-id>*.yaml` contract — both via
+ *      `resolveAllUiBearingSpecs`.
+ *   2. legacy `# … prototyping …` heading in `01_Spec.md` — via
+ *      `resolveTitleMarkerSpecs`.
+ *   3. operator escape hatch `qfai.config.yaml#prototyping.primarySpecId`
+ *      when the pinned spec id resolves to a directory on disk.
+ *
+ * Returns the union sorted lexicographically and deduplicated. Empty
+ * result signals "no UI surface declared anywhere" — the caller
+ * decides whether to short-circuit (the no-op gate uses this signal).
+ *
+ * Extracted from `evaluateZeroUiBearingPrecheck` so the union
+ * composition rule is independently unit-testable and the precheck
+ * stays focused on its short-circuit / config-snapshot responsibility.
+ */
+/**
+ * @internal Exported for direct unit-testing of the union composition
+ * rule (8th-wave Fix 7). Not part of the package's public surface.
+ */
+export async function resolveSurfaceUnion(
+  root: string,
+  config: ConfigLoadResult["config"],
+): Promise<string[]> {
+  const strictUiBearing = await resolveAllUiBearingSpecs(root, config);
+  const titleMarkerSpecs = await resolveTitleMarkerSpecs(
+    root,
+    config.paths.specsDir,
+  );
+  const configuredPrimarySpecId = config.prototyping?.primarySpecId;
+  const configuredSpecOnDisk =
+    configuredPrimarySpecId !== undefined
+      ? await specDirExists(
+          root,
+          config.paths.specsDir,
+          configuredPrimarySpecId,
+        )
+      : false;
+  const union = new Set<string>(strictUiBearing);
+  if (configuredSpecOnDisk && configuredPrimarySpecId !== undefined) {
+    union.add(configuredPrimarySpecId);
+  }
+  for (const id of titleMarkerSpecs) union.add(id);
+  return [...union].sort((a, b) => a.localeCompare(b));
 }
 
 type CycleGteOneGateInput = {
@@ -977,7 +1005,6 @@ type CycleGteOneGateInput = {
   lockSha: string | null;
   designMd: DesignMd;
   specs: readonly string[];
-  earlyUiBearing: readonly string[];
 };
 
 type CycleGteOneGateResult =
@@ -1179,18 +1206,23 @@ async function evaluateCycleGteOneGate(
   // Mid-run spec-set drift check.
   //
   // The cycle-0 frozen `frozenSpecsCovered` set is the SSOT for what
-  // the loop is reviewing. If a UI-bearing spec appears or disappears
-  // on disk between cycles, we MUST detect the drift and stop the
-  // current run rather than silently re-baselining mid-loop. The
-  // new/removed specs are deferred to the NEXT invocation (which
-  // restarts from cycle 0), so we never restart here — we just
-  // fail-fast with stderr that names every drifted spec id.
+  // the loop is reviewing. If the primary spec the resolver picks today
+  // is no longer present in the frozen set (or vice versa), we MUST
+  // detect the drift and stop the current run rather than silently
+  // re-baselining mid-loop. The new/removed specs are deferred to the
+  // NEXT invocation (which restarts from cycle 0), so we never restart
+  // here — we just fail-fast with stderr that names every drifted spec
+  // id.
   //
-  // The frozenSpecsCovered field is the SSOT; specsCovered (above)
-  // is the legacy single-spec field that is also frozen for backward
-  // compatibility. Both must be honoured.
+  // The frozenSpecsCovered field is the SSOT; specsCovered (above) is
+  // the legacy single-spec field that is also frozen for backward
+  // compatibility. Both must be honoured. With CHG-002 single-spec
+  // freeze the two fields agree (both record the single primary spec);
+  // the multi-spec union still feeds the precheck for bypass detection
+  // but is NOT a frozen baseline today — compare against the live
+  // primary-only snapshot so the drift check stays apples-to-apples.
   const frozenSet = readFrozenSpecsCoveredField(protoRecord) ?? frozenSpecs;
-  const liveUiBearing = input.earlyUiBearing;
+  const liveUiBearing = input.specs;
   const drift = checkSpecsCoveredDrift(frozenSet, liveUiBearing);
   if (drift.drifted) {
     const parts: string[] = [];

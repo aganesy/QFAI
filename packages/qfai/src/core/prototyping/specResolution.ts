@@ -112,7 +112,28 @@ export async function resolvePrimaryPrototypingSpec(
     }
   }
 
-  // 3. Fallback: caller decides what to do
+  // 3. UI-contract fallback: a project may declare its UI surface
+  //    purely via `.qfai/contracts/ui/<spec-id>.yaml` without any
+  //    spec-side marker and without `prototyping.primarySpecId`. Mirror
+  //    the same fallback `resolveAllUiBearingSpecs` honours so the
+  //    iterate command can drive a contract-only project; the cycle-0
+  //    no-op precheck already short-circuits when no surface exists at
+  //    all, so reaching here with a contract-only surface should not be
+  //    re-rejected by the primary resolver. Pick the lexicographically
+  //    smallest spec id that has a matching contract for determinism.
+  const contractsRoot = path.resolve(root, config.paths.contractsDir);
+  for (const entry of sorted) {
+    if (await hasMatchingUiContract(contractsRoot, entry.specNumber)) {
+      return {
+        specId: entry.specNumber,
+        specDir: entry.dir,
+        specMdPath: path.join(entry.dir, "01_Spec.md"),
+        source: "marker-scan",
+      };
+    }
+  }
+
+  // 4. Fallback: caller decides what to do
   return undefined;
 }
 

@@ -433,17 +433,24 @@ describe("qfai prototyping certify (codex r3264630513: flat-iter layout skips th
     const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
     try {
       const exit = await runPrototypingCertify({ root, check: false });
-      expect(exit).not.toBe(0);
+      // Exit 64 = coverage rejection (at least one spec lacks a
+      // review.json for a declared screen) per the prototyping CLI
+      // contract. The multi-spec flat-iter incompatibility falls into
+      // that same class — splitting it across 2 (input error) and 64
+      // would break operator workflows that key on 64 for missing
+      // review.json gaps.
+      expect(exit).toBe(64);
       // The error message must name the multi-spec incompatibility
       // (so the operator knows the run is structurally blocked) and
       // the deferred-migration hint (so the operator knows the path
-      // forward).
+      // forward). Internal IDs (TDD-/OQ-) are intentionally not in the
+      // runtime string; they stay in 09_delta.md only.
       const errorMessages = errorSpy.mock.calls.map((c) => String(c[0]));
       const namesMultiSpec = errorMessages.some((m) =>
         /multi-spec frozen set requires per-spec/i.test(m),
       );
       const namesMigration = errorMessages.some((m) =>
-        /flat-iter migration deferred/i.test(m),
+        /flat-iter layout migration is deferred/i.test(m),
       );
       expect(namesMultiSpec).toBe(true);
       expect(namesMigration).toBe(true);
