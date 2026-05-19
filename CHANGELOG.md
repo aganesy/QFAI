@@ -4,6 +4,8 @@
 
 ## [Unreleased]
 
+## [1.8.10] - 2026-05-19
+
 ### Changed (implementation)
 
 - Reduce prototyping cycle budget from 15 to 10 iterations

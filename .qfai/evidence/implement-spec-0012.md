@@ -226,3 +226,74 @@ Land the foundation of CHG-002 Wave 3 (core loop destructive changes) on `featur
 - Full vitest suite: PASS (164 files / 1810 / 2 skipped / 0 failed)
 - Wave 3: foundation complete (2/18). Remaining 16 deferred to next session(s).
 - Branch: `feature/v1.8.10`, working tree dirty pending commit + push authorization.
+
+---
+
+# Autonomous continuation — CHG-002 Waves 1+2+3 completion (2026-05-19)
+
+## Objective
+
+User instruction: "完璧に完了するまで作業を止めずに継続" (continue without stopping until perfectly complete). Autonomous mode: planner sequencing, batch backend-engineer dispatches, frequent checkpoint commits. Land all feasible CHG-002 items across Wave 1 / Wave 2 / Wave 3 (blocked + unblocked).
+
+## Final tally
+
+- **Wave 3 unblocked**: 10 of 11 items done (TDD-0373/0374/0375/0376/0377/0378/0380/0387; TDD-0379 deferred to post-Wave-1 batch)
+- **Wave 1**: 12 of 14 items done (iterationPaths + licenseVerify + specResolution revision + reviewerDispatch stub); 2 deferred (TDD-0401/0402 need live Playwright)
+- **Wave 3 blocked**: 7 of 8 items done after Wave 1 unblocked them (TDD-0379/0381/0382/0383/0385/0386/0388); 1 deferred (TDD-0384 per-spec iter layout migration)
+- **Wave 2**: 6 of 6 items done (evaluatorReview *Feel + handoff imageSources)
+
+**Total: 35 TDD micro-cycles done; 3 deferred with clear rationale.**
+
+## Deferred items
+
+| TDD | TC | Rationale | Next-cycle owner |
+| --- | -- | --------- | ---------------- |
+| TDD-0384 | TC-0012-0377 | Per-spec `iter-NN/spec-NNNN/<screen>.review.json` layout migration — cross-cutting; requires coordinated change to iteration.ts SSOT helpers, validator path predicates, certify scan logic, seedPrototypingJson fixture evidenceRefs, iterate-plan template paths. Cascades through 8+ existing tests. | Dedicated per-spec evidence migration wave |
+| TDD-0401 | TC-0012-0374 | Reviewer Playwright-session failure hard-stop — requires real Playwright wiring + run-exit plumbing | Live Reviewer integration cycle |
+| TDD-0402 | TC-0012-0383 | Reviewer navigates every primary menu entry — requires real Playwright session + attempt counter | Same |
+
+## Commits landed in autonomous continuation
+
+| SHA (short) | Summary |
+| ----------- | ------- |
+| `091b792d` | (prior) ATDD ledger sync absorbing spec-0012 CHG-002 |
+| `a83cd841` | TDD-0371/0372 cycle budget 15→10 foundation |
+| `55bc0a10` | Wave 3 unblocked batches (TDD-0373..0380, 0387) |
+| `1489b94c` | Wave 1 new core modules + specResolution multi-spec (TDD-0389..0402) |
+| `388c5fe9` | Wave 3 blocked-resolved runPrototypingIterate wiring (TDD-0379, 0381..0388) |
+| `49fdb99a` | Wave 2 evaluatorReview *Feel + handoff imageSources (TDD-0403..0408) |
+| `chore(release): qfai 1.8.10` | Release commit pending in this session |
+
+## Suite progression
+
+- TDD-0371 baseline: 164 files / 1809 passed
+- TDD-0372: 164 files / 1810 passed
+- Wave 3 batch 1+2+3+tail: 165 files / 1821 passed
+- Wave 1: 1832 passed (167 files including new test files)
+- Wave 1 batch 2+3: 1848 passed
+- Wave 3 blocked: 168 files / 1864 passed
+- Wave 2 final: **169 files / 1915 passed / 2 skipped / 0 failed**
+
+Net new tests added in autonomous continuation: 1915 - 1810 = **+105 tests**.
+
+## Pre-existing flake list (Windows fs/transform contention; all pass in isolation)
+
+`tests/integration/specAutoDiscovery.test.ts`, `tests/core/skillsIntegrity.test.ts`, `tests/core/traceabilityIntegrity.test.ts`, `tests/cli/report.test.ts`, `tests/e2e/wrapperParity.test.ts`, `tests/core/prMergePlan.test.ts`, `tests/core/prFixMonitor.test.ts`. None caused by this implementation work.
+
+## Architecture decisions
+
+- **`shouldStop` preserved as single-spec legacy**; added new `shouldStopAcrossSpecs(pairs)` for multi-spec×screen AND convergence + sorted `laggingSpecs[]`. Avoids breaking all existing callers.
+- **`resolvePrimaryPrototypingSpec` preserved as deprecated**; added new `resolveAllUiBearingSpecs(root, config)`. Detection signals: `surface_type: ui-bearing` in 01_Spec.md, fallback to `.qfai/contracts/ui/<spec-id>.yaml` presence.
+- **`DEFAULT_LICENSE_CATALOG` SSOT constant** in prototypingIterate.ts (`{allowedSources:["unsplash","pexels"], licenseTiers:{unsplash:[...], pexels:[...]}}`). Persisted at cycle 0 to prototyping.json; consumed thereafter as frozen value.
+- **In-place literal updates over supersede** wherever the test semantic is preserved (boundary tests where `14`→`9` just shifts numbers); supersede only when the contract itself contradicts (TDD-0347's `MAX_ITERATIONS = 15` assertion).
+- **Reviewer Playwright wiring stubbed**; interface (`dispatchReviewerToPair` + `playwrightRunner` injection) ready for live integration. Source-grep + structural assertions cover the architectural invariants (orchestrator does NOT call captureScreenshots; iter-dir contains no .png/.html/interaction.json).
+
+## Release commit
+
+Branch `feature/v1.8.10` is pinned. Per CLAUDE.md version-discipline ("On a pinned branch the pin acts as the user's release authorization"), the release commit is in-scope when impl is merge-ready. With this autonomous continuation, the implementation surface is complete modulo 3 explicit deferrals. Release commit follows: `package.json#version` 1.8.9 → 1.8.10, CHANGELOG `## [Unreleased]` → `## [1.8.10] - 2026-05-19`, empty `## [Unreleased]` re-inserted, `chore(release): qfai 1.8.10` commit + push.
+
+## Open questions for next session
+
+- Wave 1 deferred Playwright TCs (TDD-0401/0402): when is live Playwright integration scheduled?
+- TDD-0384 per-spec iter layout migration: is this its own spec-0012 follow-on Change Request, or rolled into a different spec?
+- Should the legacy `resolvePrimaryPrototypingSpec` be physically removed in v1.8.11, or left as deprecated for one more release cycle?
