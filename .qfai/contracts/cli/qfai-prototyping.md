@@ -201,6 +201,16 @@ schema:
   frozenSpecsCovered:
     string[] # cycle-0 frozen primary spec ids
     # (single-element in v1.8.10)
+  frozenSpecsCoveredSource:
+    enum: [frozenSpecsCovered, specsCovered]
+    # which prototyping.json field the
+    # `frozenSpecsCovered` array was read from.
+    # post-Wave-3 records carry the dedicated
+    # `frozenSpecsCovered` field; pre-Wave-3
+    # records carry only `specsCovered`. This
+    # tag lets operators detect legacy-seeded
+    # records without re-reading the file
+    # (14th-wave Fix, codex r3269198684 MINOR).
   frozenSurfaceUnion:
     string[] | null
     # cycle-0 frozen multi-spec UI-bearing

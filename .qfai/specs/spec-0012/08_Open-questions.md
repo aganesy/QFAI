@@ -109,6 +109,20 @@
 - Recommendation: Land in a dedicated wave after CHG-002 stabilises — the wire-in is mechanical but touches the cycle-0 freeze path that `licenseVerify` reads. Until then, the in-memory baseline is the documented contract and consumers needing additional sources fork the constant.
 - Resolves: blocks consumer-facing license-catalog extensibility without a fork; closes the untracked TODO at `prototypingIterate.ts#DEFAULT_LICENSE_CATALOG`.
 
+## OQ-0012-0011: Cycle-9 idempotency — single `--cycle 9` invocation on a non-converged 10-iter loop
+
+- Gate: implement
+- Disposition: open
+- Owner: prototyping-cli
+- Couples: TDD-0436 / TC-0012-0416 / AC-0012-0044 (cycle-9 idempotency Then clause added in 14th-wave)
+- Due: 2026-06-30
+- Severity: low
+- Source: CHG-002 PR #208 10th late-review wave Fix J (codex r3265262715, MINOR — original deferred follow-up) + 14th-wave traceability stitch (codex r3269198118, MINOR).
+- Question: When `qfai prototyping iterate --cycle 9` is invoked on a non-converged loop whose `prototyping.json#iterations.length === 10` (i.e. iter-09 already recorded), the current code routes the exit through the cycle-mismatch path — `expectedNextCycle` becomes 10 and is then capped at 9, eventually surfacing exit 65 but only after the mismatch diagnostic. The operator-facing contract (AC-0012-0044 14th-wave amendment) requires exit 65 to be surfaced directly on a single `--cycle 9` invocation regardless of stateful continuation. SKILL.md was already updated in the 10th-wave Fix J to drop the stateful re-run workaround; the CLI side change is mechanical (detect `iter index === MAX_ITERATION_INDEX AND not converged` before the cycle-mismatch branch).
+- Recommendation: Land in a dedicated follow-up PR after CHG-002 stabilises. The change touches a deterministic exit-code branch and is straightforward to test in isolation; deferring it to a focused PR keeps the CHG-002 cluster minimal.
+- Mitigation while deferred: operators who hit this path see the cycle-mismatch diagnostic first followed by exit 65 — the eventual exit code is correct, only the early diagnostic is misleading. SKILL.md Cycle 9 budget exhaustion subsection points operators at the restart-from-cycle-0 recovery path, so the workaround is documented.
+- Resolves: closes the OP-APPEND-079 pattern asymmetry flagged by codex r3269198118 (deferred-followup OQ + tdd/test-list / 16_Traceability-ledger / 06_Test-Cases triad now mirrored in 08_Open-questions). The 09_delta.md OP-APPEND register entry is added under the 14th-wave cluster in `09_delta.md`.
+
 ## OQ-0012-0001: Airgapped run support (stock-photo fetch over restricted network)
 
 - Gate: ops

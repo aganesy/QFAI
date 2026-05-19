@@ -854,10 +854,10 @@
 ## TC-0012-0416
 
 - EX-Ref: EX-0012-0145
-- AC-Refs: AC-0012-0045
+- AC-Refs: AC-0012-0044
 - Type: integration
 - Test file: `packages/qfai/tests/cli/commands/prototypingIterate.test.ts` (planned)
-- TODO (deferred follow-up; see `10_Plan.md#Deferred follow-ups` row TDD-0436). Verify that a single `--cycle 9` invocation on a non-converged loop whose `iterations.length === 10` emits exit 65 directly rather than via the cycle-mismatch path (where `expectedNextCycle` becomes 10 and is capped at 9). SKILL.md already drops the stateful re-run workaround. Implementation lands in a follow-up PR; this row exists so the deferred-followup table row in `10_Plan.md` has a stable TDD/TC handle. Closes codex r3265481161 (LOW).
+- TODO (deferred follow-up; see `10_Plan.md#Deferred follow-ups` row TDD-0436). Verify that a single `--cycle 9` invocation on a non-converged loop whose `iterations.length === 10` emits exit 65 directly rather than via the cycle-mismatch path (where `expectedNextCycle` becomes 10 and is capped at 9). SKILL.md already drops the stateful re-run workaround. Implementation lands in a follow-up PR; this row exists so the deferred-followup table row in `10_Plan.md` has a stable TDD/TC handle. AC-Refs binding corrected from AC-0012-0045 (hard-stop classes) to AC-0012-0044 (autonomous-run bound, which now carries the cycle-9 idempotency Then clause) per codex r3269195807 (MAJOR, 14th-wave). Closes codex r3265481161 (LOW) and codex r3269195807 (MAJOR).
 
 ## TC-0012-0417
 

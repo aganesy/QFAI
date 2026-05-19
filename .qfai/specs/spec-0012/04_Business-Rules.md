@@ -182,6 +182,7 @@ No other path triggers stop. LLM subjective DONE is forbidden.
 - Every image slot MUST be filled from the cycle-0 frozen license catalog (allowlist: Unsplash, Pexels per OQ-0002 / SRC-0005 / SRC-0006).
 - Every fill MUST record `{url, license, attribution, source}` in `prototype-handoff.yaml#imageSources[]`.
 - License-verify failure (unknown license / non-allowlisted source / missing field) MUST hard-stop the run with exit 66 (OQ-0008).
+- The runtime cycle ≥ 1 license-verify gate MUST reject any `imageSources[]` entry whose `attribution` is undefined, empty string, or whitespace-only with error code `license-missing-attribution` → exit 66. This is the runtime-side counterpart of the write-side recording rule above; the gate does not silently tolerate "field present but blank" (14th-wave Fix, codex r3269193861 MAJOR + codex r3269193005 MINOR).
 
 ## BR-0012-0034: Autonomy and deterministic hard-stop catalog
 

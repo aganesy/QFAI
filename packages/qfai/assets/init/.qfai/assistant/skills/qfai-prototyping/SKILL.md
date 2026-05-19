@@ -80,14 +80,48 @@ current `DESIGN.md` hash does not match the lock.
 | Step  | Actor                                                     | Action                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          | Output                                   |
 | ----- | --------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------- |
 | C0    | product-experience-architect                              | `qfai prototyping iterate --cycle 0 --target-url <url>`. CLI computes `sha256(DESIGN.md)`; lock match enforced. Generator reads contracts + `references/generator-prompt.md` + DESIGN.md tokens and writes `.qfai/prototypes/iter-00/index.html`. Capture + review → `iter-00/review.json`. Append entry; commit `prototyping: iter-00`.                                                                                                                                                                                                                        | iter-00, prototyping.json#designMdSha256 |
-| C1..9 | (a) devops, (b) reviewer, (c) orchestrator, (d) generator | (a) playwright-cli writes `iter-NN/<screen>.{png,html}`; (b) reviewer writes `iter-NN/review.json` per `references/reviewer-prompt.md` (4 UX axes ordinal, 200..500 word critique, `layoutAntiPatternsDetected[]`, `designMdViolations[]`, `pivotDirective`); (c) update `prototyping.json#iterations[]` + `progress.md`, commit `prototyping: iter-NN`; (d) `qfai prototyping iterate --cycle <n+1>` decides exit. After C9 do NOT call `--cycle 10` — the CLI rejects out-of-range cycles. See the "Cycle 9 budget exhaustion" subsection below for recovery. | iter-NN, exit ∈ {0, 64, 65, 2}           |
+| C1..9 | (a) devops, (b) reviewer, (c) orchestrator, (d) generator | (a) playwright-cli writes `iter-NN/<screen>.{png,html}`; (b) reviewer writes `iter-NN/review.json` per `references/reviewer-prompt.md` (4 UX axes ordinal, 200..500 word critique, `layoutAntiPatternsDetected[]`, `designMdViolations[]`, `pivotDirective`); (c) update `prototyping.json#iterations[]` + `progress.md`, commit `prototyping: iter-NN`; (d) `qfai prototyping iterate --cycle <n+1>` decides exit. After C9 do NOT call `--cycle 10` — the CLI rejects out-of-range cycles. See the "Cycle 9 budget exhaustion" subsection below for recovery. | iter-NN, exit ∈ {0, 64, 65, 66, 2}       |
 | H     | orchestrator                                              | Mirror latest to `.qfai/prototypes/final/index.html`. Per `references/handoff.md`: write `design-system.yaml` (deterministic DESIGN.md token mirror, no HTML extraction) + `prototype-handoff.yaml`. Run `qfai validate --profile prototyping --fail-on error` (produces `validate.json` with `counts.error === 0`), then `/qfai-verify` (produces `verify.json` with `status === "PASS"`), then `qfai prototyping certify` — certify requires both gate files to be present and passing before it will seal the certificate.                                   | DONE                                     |
 
 **Exit codes**: `0` continue (read `pivotDirective`); `64` convergence (4
 axes `exceptional` AND `layoutAntiPatternsDetected` empty AND
-`designMdViolations` empty); `65` 10 cycles reached; `2` input error
+`designMdViolations` empty); `65` 10 cycles reached; `66` license-verify
+failure (`imageSources[]` resolved to a non-allowlisted source, unknown
+license tier, non-HTTPS URL, host mismatch vs the cycle-0 frozen
+`sourceHosts`, or missing / empty `attribution` — see "License-verify
+hard-stop (exit 66)" below for recovery); `2` input error or lock drift
 (incl. DESIGN.md hash mismatch — re-run prototyping from cycle 0 after
-editing `DESIGN.md` and refreezing the lock via `/qfai-sdd` Phase 0).
+editing `DESIGN.md` and refreezing the lock via `/qfai-sdd` Phase 0; also
+covers `frozenSurfaceUnion` / `frozenLicenseCatalog` drift on cycle ≥ 1).
+
+### License-verify hard-stop (exit 66)
+
+`qfai prototyping iterate` exits `66` when an `imageSources[]` entry on
+`prototyping.json` violates the cycle-0 frozen license catalog. The
+verifier rejects five distinct error codes:
+
+- `license-not-allowlisted` — `source` is not in
+  `frozenLicenseCatalog.allowedSources`
+- `license-tier-unknown` — `license` is not in
+  `frozenLicenseCatalog.licenseTiers[source]`
+- `license-non-https-url` — `url` is not HTTPS
+- `license-host-mismatch` — the URL host is not in
+  `frozenLicenseCatalog.sourceHosts[source]`
+- `license-missing-attribution` — `attribution` is undefined / empty /
+  whitespace-only
+
+Recovery path (no in-loop retry — the verifier is fail-closed):
+
+1. Inspect `prototyping.json#frozenLicenseCatalog` to see the frozen
+   `allowedSources` / `licenseTiers` / `sourceHosts`.
+2. Edit the offending `imageSources[]` entry to use an allowlisted
+   source / known license tier / HTTPS URL / matching host / non-empty
+   attribution. **Do not** edit `frozenLicenseCatalog` mid-loop — that
+   triggers a separate exit-2 lock-drift class.
+3. If the legitimate fix requires a different allowlist (e.g. adding a
+   new source), the only path is to refreeze the catalog by restarting
+   from cycle 0 (`qfai prototyping iterate --cycle 0 --target-url <url>`)
+   with the updated stock-photo configuration.
 
 ### Cycle 9 budget exhaustion
 

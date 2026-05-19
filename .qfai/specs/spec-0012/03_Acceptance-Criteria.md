@@ -219,7 +219,7 @@
 - US-Refs: US-0012-0113
 - Given `/qfai-prototyping` is invoked,
 - When the run executes cycle 0 through cycle 9,
-- Then no per-cycle stdin read or interactive prompt occurs between cycle 0 start and exit, AND the CI fixture asserting `stdin closed → exit 0/non-zero` succeeds without `ENOENT` / `EBADF` / `EINTR` on stdin.
+- Then no per-cycle stdin read or interactive prompt occurs between cycle 0 start and exit, AND the CI fixture asserting `stdin closed → exit 0/non-zero` succeeds without `ENOENT` / `EBADF` / `EINTR` on stdin, AND a single `--cycle 9` invocation on a non-converged loop whose `iterations.length === 10` MUST surface exit 65 directly (max-iterations terminator) without routing through the `expectedNextCycle === 10` cycle-mismatch path (14th-wave Fix, codex r3269195807 MAJOR — TC-0012-0416 binding correction).
 
 ## AC-0012-0045: Deterministic hard-stop classes
 

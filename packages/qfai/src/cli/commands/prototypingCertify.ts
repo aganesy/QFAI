@@ -648,6 +648,15 @@ export async function runPrototypingShowSpec(options: { root: string }): Promise
     );
     return 2;
   }
+  // 14th-wave Fix (codex r3269198684, MINOR): surface which prototyping.json
+  // field the spec list was actually read from so operators doing drift
+  // analysis can tell post-Wave-3 records (frozen field present) apart from
+  // legacy Wave-2 records (only `specsCovered` on disk). Pre-fix the payload
+  // emitted the value under the key `frozenSpecsCovered` regardless of
+  // source, which masked the signal that cycle 0 was seeded with the
+  // pre-CHG-002 schema.
+  const frozenSpecsCoveredSource: "frozenSpecsCovered" | "specsCovered" =
+    frozenSpecsCovered !== null ? "frozenSpecsCovered" : "specsCovered";
   const frozenSurfaceUnion = readStringArrayField(protoRecord.frozenSurfaceUnion);
   // Compute the live UI-bearing union so the operator can spot drift.
   // The legacy primary-resolver path is preserved as a fallback `specMdPath`
@@ -656,6 +665,7 @@ export async function runPrototypingShowSpec(options: { root: string }): Promise
   const primary = await resolvePrimaryPrototypingSpec(options.root, config);
   const payload: Record<string, unknown> = {
     frozenSpecsCovered: specsCovered,
+    frozenSpecsCoveredSource,
     frozenSurfaceUnion: frozenSurfaceUnion,
     liveUiBearing,
   };

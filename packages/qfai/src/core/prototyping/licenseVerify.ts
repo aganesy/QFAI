@@ -171,7 +171,14 @@ export function licenseVerify(
     // at certify (handoff) time. Undefined and empty-string are both
     // treated as "missing" here so the gate works for callers that
     // pass through the optional field as either form.
-    if (entry.attribution === undefined || entry.attribution.length === 0) {
+    //
+    // 14th-wave Fix (codex r3269193005, MINOR): a whitespace-only
+    // attribution (`"   "`, `"\t\n"`, ideographic space) is
+    // semantically equivalent to missing — operators copy/pasting from
+    // a stock-photo listing occasionally trim the credit to a blank
+    // line. Use `.trim()` to catch every flavour of "blank" so the
+    // gate is consistent with what the contract documents.
+    if (entry.attribution === undefined || entry.attribution.trim().length === 0) {
       errors.push({ code: "license-missing-attribution", source, url });
     }
   }

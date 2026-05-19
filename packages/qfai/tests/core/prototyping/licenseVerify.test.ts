@@ -393,4 +393,40 @@ describe("licenseVerify — attribution is required (TC-0012-0414)", () => {
       },
     ]);
   });
+
+  // 14th-wave Fix (codex r3269193005, MINOR): whitespace-only attribution
+  // (spaces / tabs / newlines / ideographic-space) is semantically the
+  // same class as "missing"; pre-fix the gate only rejected `undefined`
+  // / empty-string and let `"   "` slip through.
+  it.each([
+    ["spaces", "   "],
+    ["tab + newline", "\t\n"],
+    ["mixed whitespace", " \t \n "],
+    ["ideographic space (U+3000)", "　"],
+  ])(
+    "emits license-missing-attribution when attribution is whitespace-only (%s)",
+    (_label, attribution) => {
+      const sources: ImageSource[] = [
+        {
+          url: "https://unsplash.com/photo/abc",
+          source: "unsplash",
+          license: "free",
+          attribution,
+        },
+      ];
+
+      const result = licenseVerify(sources, catalog);
+      expect(result.ok).toBe(false);
+      if (result.ok) {
+        throw new Error("expected non-ok result");
+      }
+      expect(result.errors).toEqual([
+        {
+          code: "license-missing-attribution",
+          source: "unsplash",
+          url: "https://unsplash.com/photo/abc",
+        },
+      ]);
+    },
+  );
 });

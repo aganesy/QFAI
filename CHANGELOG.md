@@ -62,6 +62,57 @@
   - Pinned-branch authorization is preserved: this lands in 1.8.10
     because `feature/v1.8.10` is the release pin.
 
+### Fixed (PR #208 14th late-review wave)
+
+- `.qfai/specs/spec-0012/tdd/test-list.md`: TDD-0347 Status column reverted
+  from the invalid `superseded` token to `exception` (which is in the
+  `tddList.ts#VALID_STATUSES` enum). The supersede semantic is carried by
+  the Notes column ("superseded by TDD-0371"). Pre-fix `qfai validate`
+  reported `TDDLIST_INVALID_STATUS` and failed the CI build job. Resolves
+  codex BLOCKER r3269192039 / r3269196044 / r3269196302 / r3269200030
+  (qa-gatekeeper + completion-reviewer).
+- `packages/qfai/assets/init/.qfai/assistant/skills/qfai-prototyping/SKILL.md`:
+  add exit 66 to the C1..9 exit-code summary and to the "Exit codes" prose
+  block; add a new "License-verify hard-stop (exit 66)" subsection that
+  enumerates the five `licenseVerify` error codes and the recovery path
+  (inspect `frozenLicenseCatalog`, edit `imageSources[]`, re-seed via
+  cycle 0). Resolves codex MAJOR r3269196571 (product-surface-reviewer).
+- `packages/qfai/src/core/prototyping/licenseVerify.ts`: tighten
+  `license-missing-attribution` to reject whitespace-only attribution
+  (`"   "`, `"\t\n"`, ideographic space, mixed) via `.trim()`; add
+  parameterized boundary regression tests (4 `it.each` cases). Resolves
+  codex MINOR r3269193005.
+- `.qfai/specs/spec-0012/04_Business-Rules.md`: extend BR-0012-0033 with
+  a runtime-gate clause that mirrors the AC-0012-0043 14th-wave amendment
+  — license-verify rejects undefined / empty / whitespace-only
+  attribution with `license-missing-attribution` → exit 66. Closes the
+  AC-without-BR pairing asymmetry. Resolves codex MAJOR r3269193861
+  (requirements-reviewer).
+- `.qfai/specs/spec-0012/06_Test-Cases.md` + `03_Acceptance-Criteria.md`:
+  TC-0012-0416 AC-Refs binding corrected from `AC-0012-0045` (hard-stop
+  classes catalogue) to `AC-0012-0044` (autonomous-run bound); the
+  AC-0012-0044 Then clause is extended with the cycle-9 idempotency
+  requirement (single `--cycle 9` invocation must surface exit 65
+  directly). Resolves codex MAJOR r3269195807 (requirements-reviewer).
+- `.qfai/specs/spec-0012/08_Open-questions.md`: register `OQ-0012-0011`
+  (Cycle-9 idempotency — single `--cycle 9` invocation on non-converged
+  10-iter loop) coupled to TDD-0436 / TC-0012-0416 / AC-0012-0044 so the
+  deferred-followup follows the OQ ↔ TDD pairing pattern established
+  in the 10th-wave (OQ-0012-0006..0010). Resolves codex MINOR
+  r3269198118 (requirements-reviewer).
+- `packages/qfai/src/cli/commands/prototypingCertify.ts#runPrototypingShowSpec`:
+  add `frozenSpecsCoveredSource: "frozenSpecsCovered" | "specsCovered"`
+  to the JSON payload so operators doing drift analysis can detect
+  legacy pre-Wave-3 seed records (which only carry the legacy
+  `specsCovered` field on disk) without re-reading
+  `prototyping.json`. Contract amended in lockstep. Resolves codex
+  MINOR r3269198684 (product-surface-reviewer).
+- Outdated review threads (already addressed by the 13th-wave commit
+  `d7f3cdaf` but re-raised against `c51df21f` before the push landed):
+  prettier format / build-job formatting failure (codex BLOCKER
+  r3269199076 / r3269199764 / r3269204297), and the
+  `frozenSurfaceUnion` contract drift (codex BLOCKER r3269201316).
+
 ### Fixed (PR #208 13th late-review wave)
 
 - `packages/qfai/README.md`: rewrite the prototyping description (Release
