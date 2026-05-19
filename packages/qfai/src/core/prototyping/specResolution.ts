@@ -23,6 +23,20 @@ import type { QfaiConfig } from "../config.js";
 import { isEnoent } from "../fs/errno.js";
 import { collectSpecEntries } from "../specLayout.js";
 
+/**
+ * Title-marker regex: matches `# … prototyping …` headings (anywhere)
+ * inside an `01_Spec.md`. Shared SSOT between the legacy composite
+ * `PROTOTYPING_MARKER_RE` (which OR's frontmatter + title) and the
+ * multi-spec `resolveTitleMarkerSpecs` helper that the iterate
+ * command's section-0 no-op gate consults.
+ *
+ * Exported so callers re-use the same source — DO NOT inline-redefine
+ * this elsewhere; the two arms of `PROTOTYPING_MARKER_RE` are built
+ * from `UI_BEARING_MARKER_RE.source` and `TITLE_MARKER_RE.source` so a
+ * single edit propagates everywhere.
+ */
+export const TITLE_MARKER_RE = /^#\s+.*prototyping/im;
+
 export type ResolvedSpec = {
   /** Four-digit spec ID, e.g. "0001". */
   specId: string;
@@ -34,8 +48,26 @@ export type ResolvedSpec = {
   source: "config" | "marker-scan";
 };
 
-const PROTOTYPING_MARKER_RE = /surface_type:\s*ui-bearing|^#\s+.*prototyping/im;
+/**
+ * Multi-spec strict UI-bearing marker: matches ONLY the canonical
+ * frontmatter signal `surface_type: ui-bearing`. Intentionally more
+ * restrictive than `PROTOTYPING_MARKER_RE`, which OR's in the legacy
+ * `# … prototyping …` heading arm via `TITLE_MARKER_RE`.
+ *
+ * Why the asymmetry: title-marker scans must occur explicitly (via
+ * the exported `resolveTitleMarkerSpecs` helper) so the
+ * spec-set-membership semantics are visible at the call site. Folding
+ * the title arm into `UI_BEARING_MARKER_RE` would silently widen the
+ * frozen multi-spec set with heading-only matches, masking the
+ * configuration shape from operators.
+ */
 const UI_BEARING_MARKER_RE = /surface_type:\s*ui-bearing/im;
+// Legacy composite: frontmatter marker OR legacy title heading. Built
+// from the two single-purpose sources so the title arm cannot drift.
+const PROTOTYPING_MARKER_RE = new RegExp(
+  `${UI_BEARING_MARKER_RE.source}|${TITLE_MARKER_RE.source}`,
+  "im",
+);
 
 export async function resolvePrimaryPrototypingSpec(
   root: string,
@@ -145,6 +177,51 @@ export async function resolveAllUiBearingSpecs(
   }
 
   return [...uiBearing].sort((a, b) => a.localeCompare(b));
+}
+
+/**
+ * Cheap title-marker probe. Returns spec IDs (four-digit form) whose
+ * `01_Spec.md` carries a `# … prototyping …` heading. Mirrors the
+ * legacy `PROTOTYPING_MARKER_RE` title arm in
+ * `resolvePrimaryPrototypingSpec` so the section-0 no-op gate honours
+ * the same surface the legacy resolver does.
+ *
+ * Lex-sorted; deduped by spec id. Read failures other than ENOENT
+ * propagate so a permission-denied scan does not silently no-op the
+ * run.
+ *
+ * @param root absolute path to the consumer project root
+ * @param specsDir relative path to the specs directory (e.g.
+ *   `.qfai/specs`). Pass `config.paths.specsDir` for parity with
+ *   `resolveAllUiBearingSpecs`.
+ */
+export async function resolveTitleMarkerSpecs(
+  root: string,
+  specsDir: string,
+): Promise<string[]> {
+  const specsRoot = path.resolve(root, specsDir);
+  let entries: Awaited<ReturnType<typeof collectSpecEntries>>;
+  try {
+    entries = await collectSpecEntries(specsRoot);
+  } catch (err) {
+    if (isEnoent(err)) return [];
+    throw err;
+  }
+  const out: string[] = [];
+  for (const entry of entries) {
+    const specMdPath = path.join(entry.dir, "01_Spec.md");
+    let body: string;
+    try {
+      body = await readFile(specMdPath, "utf-8");
+    } catch (err) {
+      if (isEnoent(err)) continue;
+      throw err;
+    }
+    if (TITLE_MARKER_RE.test(body)) {
+      out.push(entry.specNumber);
+    }
+  }
+  return out.sort((a, b) => a.localeCompare(b));
 }
 
 async function hasMatchingUiContract(

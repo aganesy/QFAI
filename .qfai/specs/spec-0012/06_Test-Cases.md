@@ -731,6 +731,14 @@
 - Test file: `packages/qfai/tests/cli/commands/prototypingCertify.test.ts`
 - Verify certify falls back to legacy `specsCovered` for pre-Wave-3 evidence that lacks `frozenSpecsCovered`; the per-(spec × screen) presence gate must still flag every missing pair.
 
+## TC-0012-0401
+
+- EX-Ref: EX-0012-0123
+- AC-Refs: AC-0012-0037, AC-0012-0049
+- Type: integration
+- Test file: `packages/qfai/tests/cli/commands/prototypingIterate.test.ts`
+- Verify the title-marker bypass (TC-0012-0398) is symmetric with the primarySpecId bypass at cycle ≥1: seed a spec whose only UI-bearing signal is the legacy `# … Prototyping …` title marker, run cycle 0 (which must seed `frozenSpecsCovered` with the title-marker spec id, not `[]`), then run cycle 1 and assert stderr does NOT contain `spec-set drift detected` / `removed=[NNNN]`. Pre-fix the title-marker bypass would have suffered the same cycle-1 drift trip as the primarySpecId bypass did before TC-0012-0397; this case pins the symmetric coverage.
+
 ## Legacy Coverage Continuity
 
 - The legacy baseline test-case identifier space remains reserved for existing implementation/test slices.

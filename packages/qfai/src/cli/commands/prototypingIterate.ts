@@ -38,7 +38,6 @@ import { loadConfig } from "../../core/config.js";
 import { hashDesignMd, parseDesignMd, type DesignMd } from "../../core/design/designMd.js";
 import { readDesignMdLockSha } from "../../core/design/designMdLock.js";
 import { isEnoent } from "../../core/fs/errno.js";
-import { collectSpecEntries } from "../../core/specLayout.js";
 import { COMPLETION_CERTIFICATE_REL_PATH } from "../../core/prototyping/certificate.js";
 import {
   findDesignMdViolations,
@@ -48,6 +47,7 @@ import { PROTOTYPING_EVIDENCE_REL, PROTOTYPING_JSON_REL } from "../../core/proto
 import {
   resolveAllUiBearingSpecs,
   resolvePrimaryPrototypingSpec,
+  resolveTitleMarkerSpecs,
 } from "../../core/prototyping/specResolution.js";
 import {
   checkSpecsCoveredDrift,
@@ -903,7 +903,7 @@ async function evaluateZeroUiBearingPrecheck(
     // `01_Spec.md`. Without this probe a project that relies solely on
     // the title marker silently no-ops at section 0 and never reaches
     // the legacy primary resolver.
-    const titleMarkerSpecs = await findTitleMarkerSpecs(
+    const titleMarkerSpecs = await resolveTitleMarkerSpecs(
       root,
       earlyConfig.config.paths.specsDir,
     );
@@ -944,44 +944,6 @@ async function evaluateZeroUiBearingPrecheck(
     };
   }
   return { shortCircuit: false, earlyConfig, earlyUiBearing };
-}
-
-/**
- * Cheap title-marker probe. Returns spec IDs (four-digit form) whose
- * `01_Spec.md` carries a `# … Prototyping …` heading. Mirrors the
- * legacy `PROTOTYPING_MARKER_RE` title arm in
- * `resolvePrimaryPrototypingSpec` so the section-0 no-op gate honours
- * the same surface the legacy resolver does.
- *
- * Read failures other than ENOENT propagate so a permission-denied
- * scan does not silently no-op the run.
- */
-const TITLE_MARKER_RE = /^#\s+.*prototyping/im;
-
-async function findTitleMarkerSpecs(root: string, specsDir: string): Promise<string[]> {
-  const specsRoot = path.resolve(root, specsDir);
-  let entries: Awaited<ReturnType<typeof collectSpecEntries>>;
-  try {
-    entries = await collectSpecEntries(specsRoot);
-  } catch (err) {
-    if (isEnoent(err)) return [];
-    throw err;
-  }
-  const out: string[] = [];
-  for (const entry of entries) {
-    const specMdPath = path.join(entry.dir, "01_Spec.md");
-    let body: string;
-    try {
-      body = await readFile(specMdPath, "utf-8");
-    } catch (err) {
-      if (isEnoent(err)) continue;
-      throw err;
-    }
-    if (TITLE_MARKER_RE.test(body)) {
-      out.push(entry.specNumber);
-    }
-  }
-  return out.sort((a, b) => a.localeCompare(b));
 }
 
 type CycleGteOneGateInput = {

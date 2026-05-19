@@ -6,6 +6,38 @@
 
 ## [1.8.10] - 2026-05-19
 
+### Fixed (PR #208 4th late-review wave)
+
+- Renumber CHG-002 cascade TDD IDs from TDD-0409..0414 to TDD-0415..0420 to
+  remove the collision with the v2.1 planned `TDD-0409 | TC-0012-0392`..
+  `TDD-0412 | TC-0012-0395` rows previously registered in the
+  `16_Traceability-ledger.md` v2.1 block. Mirrored across
+  `09_delta.md`, `tdd/test-list.md`. Added TDD-0421 / TC-0012-0401 for the
+  symmetric cycle-1 drift regression test on the title-marker bypass code
+  path (the primarySpecId bypass had a cycle-1 test via TC-0012-0397; the
+  title-marker bypass via TC-0012-0398 only covered cycle 0). Resolves
+  CRITICAL r3264654080.
+- `prototypingCertify`: make the per-(spec x screen) review.json presence
+  gate opt-in based on actual per-spec subdir presence at the accepted
+  iter. Flat-iter projects (the legacy `iter-NN/index.html` shape that
+  `prototypingIterate` and the shipped SKILL.md still emit) skip the gate
+  with a one-line stderr info note. Pre-fix the gate ran unconditionally
+  and would fail every (spec, screen) pair on a normal run that followed
+  the documented plan. New helper `hasPerSpecSubdir`; new integration test
+  pinning the flat-iter skip behaviour. Resolves P1 r3264630513.
+- `specResolution.ts`: extract `TITLE_MARKER_RE` as an exported SSOT and
+  rebuild the legacy composite `PROTOTYPING_MARKER_RE` from
+  `UI_BEARING_MARKER_RE.source + "|" + TITLE_MARKER_RE.source`. Move the
+  `findTitleMarkerSpecs` helper out of `cli/commands/prototypingIterate.ts`
+  into `core/prototyping/specResolution.ts` (re-exported as
+  `resolveTitleMarkerSpecs`). Eliminates the string-duplicate regex /
+  function pair flagged by review and adds a JSDoc note above
+  `UI_BEARING_MARKER_RE` documenting the intentional asymmetry vs the
+  legacy composite. Resolves MAJOR r3264651323 + MINOR r3264490653.
+- spec-0012 `09_delta.md`: add OP-APPEND-075..078 entries mirroring
+  OQ-0012-0006..0009 in `08_Open-questions.md`, matching the OP-APPEND-074
+  pattern established for OQ-0012-0001. Resolves required r3264563268.
+
 ### Changed (implementation)
 
 - Reduce prototyping cycle budget from 15 to 10 iterations

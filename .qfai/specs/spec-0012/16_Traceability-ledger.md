@@ -114,17 +114,20 @@ otherwise enforced.
 
 > Late-review fixes on PR #208 (codex r3264500818 / r3264507311 /
 > r3264508578 + architecture-reviewer r3264511589 + completion-reviewer
-> r3264512364). New TDD IDs registered above the `TDD-0408` ceiling
-> and mirrored in `tdd/test-list.md`.
+> r3264512364). New TDD IDs registered above the `TDD-0414` ceiling
+> (TDD-0409..0414 are reserved in the v2.1 planned block above; the
+> cascade IDs were renumbered to TDD-0415..0420 during the 4th late-
+> review wave to remove the collision). Mirrored in `tdd/test-list.md`.
 
 | TDD-ID   | TC-Ref       | Status | Owner            | Notes                                                                                                                                                                          |
 | -------- | ------------ | ------ | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| TDD-0409 | TC-0012-0396 | done   | prototyping-cli  | primarySpecId-bypass: section 0 does not no-op when primary spec dir exists (TC annotation restore for pre-existing test)                                                      |
-| TDD-0410 | TC-0012-0397 | done   | prototyping-cli  | MAJOR fix: primarySpecId-only config — cycle 1 does not trip spec-set drift (cycle 0 bypass now seeds `frozenSpecsCovered: [primary]` instead of `[]`)                         |
-| TDD-0411 | TC-0012-0398 | done   | prototyping-cli  | title-marker fallback: section 0 honours the legacy `# … Prototyping …` heading the same way `resolvePrimaryPrototypingSpec` does                                              |
-| TDD-0412 | TC-0012-0399 | done   | prototyping-cli  | certify reads `frozenSpecsCovered` first when both fields present (moved into its own describe to disentangle from TC-0012-0381)                                               |
-| TDD-0413 | TC-0012-0400 | done   | prototyping-cli  | certify legacy `specsCovered` fallback when `frozenSpecsCovered` absent (moved into its own describe to disentangle from TC-0012-0381)                                         |
-| TDD-0414 | n/a (source) | done   | prototyping-cli  | MINOR: `specDirExists` bare-catch hardened to ENOENT-discriminated catch + re-throw so EACCES / EIO / ENOTDIR propagate instead of being silently classified as "doesn't exist" |
+| TDD-0415 | TC-0012-0396 | done   | prototyping-cli  | primarySpecId-bypass: section 0 does not no-op when primary spec dir exists (TC annotation restore for pre-existing test)                                                      |
+| TDD-0416 | TC-0012-0397 | done   | prototyping-cli  | MAJOR fix: primarySpecId-only config — cycle 1 does not trip spec-set drift (cycle 0 bypass now seeds `frozenSpecsCovered: [primary]` instead of `[]`)                         |
+| TDD-0417 | TC-0012-0398 | done   | prototyping-cli  | title-marker fallback: section 0 honours the legacy `# … Prototyping …` heading the same way `resolvePrimaryPrototypingSpec` does                                              |
+| TDD-0418 | TC-0012-0399 | done   | prototyping-cli  | certify reads `frozenSpecsCovered` first when both fields present (moved into its own describe to disentangle from TC-0012-0381)                                               |
+| TDD-0419 | TC-0012-0400 | done   | prototyping-cli  | certify legacy `specsCovered` fallback when `frozenSpecsCovered` absent (moved into its own describe to disentangle from TC-0012-0381)                                         |
+| TDD-0420 | n/a (source) | done   | prototyping-cli  | MINOR: `specDirExists` bare-catch hardened to ENOENT-discriminated catch + re-throw so EACCES / EIO / ENOTDIR propagate instead of being silently classified as "doesn't exist" |
+| TDD-0421 | TC-0012-0401 | done   | prototyping-cli  | title-marker bypass: cycle 1 does not trip spec-set drift (symmetric to TDD-0416 for the title-marker code path)                                                               |
 
 ## Notes (v2.1 ledger)
 

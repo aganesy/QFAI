@@ -349,6 +349,57 @@ describe("qfai prototyping certify (TC-0012-0399: frozenSpecsCovered preferred o
 
 });
 
+// Regression for codex review r3264630513 (P1): the per-(spec × screen)
+// review.json presence gate is opt-in based on actual per-spec layout
+// presence at the accepted iter. Flat-iter projects (the legacy
+// `iter-NN/index.html` shape that prototypingIterate + SKILL.md still
+// emit) must NOT have the gate enforced; pre-fix the gate ran
+// unconditionally and would fail every (spec, screen) pair on a normal
+// run that followed the shipped plan. The per-spec layout migration is
+// tracked under OQ-0012-0006 / TDD-0384.
+describe("qfai prototyping certify (codex r3264630513: flat-iter layout skips the per-(spec × screen) gate)", () => {
+  it("exits 0 on a flat-iter project even when frozenSpecsCovered carries multiple specs (no per-spec subdirs at the accepted iter)", async () => {
+    const root = await newTempDir();
+    await seedMinimalProject(root);
+    // Frozen set carries two specs but the accepted iter is flat —
+    // only `iter-01/index.html` exists, no `iter-01/spec-*/` subdirs.
+    // The gate must skip with an info note and let the run succeed.
+    await seedAllGatesPass(root, {
+      specsCovered: ["0012"],
+      frozenSpecsCovered: ["0012", "0007"],
+    });
+    await mkdir(path.join(root, ".qfai/specs/spec-0007"), { recursive: true });
+    await writeFile(
+      path.join(root, ".qfai/specs/spec-0007/01_Spec.md"),
+      "---\nsurface_type: ui-bearing\n---\n\n# spec-0007\n",
+      "utf-8",
+    );
+    // Seed a single UI screen contract so the gate would otherwise
+    // trigger (`screenContracts.length > 0`).
+    await seedUiScreens(root, ["home"]);
+    // Crucially: NO `seedReviewJson` calls. The flat iter has just
+    // `index.html` (seeded by seedAllGatesPass) + `home.html` (seeded
+    // by seedUiScreens). No per-spec subdir exists, so the gate skips.
+
+    const logger = await import("../../../src/cli/lib/logger.js");
+    const infoSpy = vi.spyOn(logger, "info").mockImplementation(() => {});
+    try {
+      const exit = await runPrototypingCertify({ root, check: false });
+      expect(exit).toBe(0);
+      // The skip path must surface an operator-facing info note so the
+      // deferred migration stays visible. Match on the canonical tokens
+      // (`per-spec`, `layout not detected`, `skipping`).
+      const infoMessages = infoSpy.mock.calls.map((c) => String(c[0]));
+      const noteEmitted = infoMessages.some(
+        (m) => /per-spec/i.test(m) && /not detected/i.test(m) && /skipping/i.test(m),
+      );
+      expect(noteEmitted).toBe(true);
+    } finally {
+      infoSpy.mockRestore();
+    }
+  });
+});
+
 describe("qfai prototyping certify (TC-0012-0400: legacy specsCovered fallback when frozenSpecsCovered absent)", () => {
   // QFAI:SPEC-0012:TC-0012-0400
   it("falls back to specsCovered for pre-Wave-3 evidence that lacks frozenSpecsCovered", async () => {

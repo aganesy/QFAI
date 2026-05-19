@@ -2106,4 +2106,96 @@ describe("runPrototypingIterate cycle-0 no-op gate honours legacy title marker",
       errorSpy.mockRestore();
     }
   });
+
+  // Regression for 4th-late-review-wave r3264653396 (MAJOR): symmetric
+  // cycle-1 drift gap for the title-marker bypass. TC-0012-0397
+  // (primarySpecId) pins the cycle-1 path for the primarySpecId
+  // bypass — TC-0012-0398 above only covers cycle 0 for the
+  // title-marker bypass, leaving a symmetric gap. Without this guard,
+  // a future refactor that collapses the bypass-expansion logic in
+  // `evaluateZeroUiBearingPrecheck` could re-introduce the cycle-≥1
+  // drift trip on the title-marker code path while TC-0012-0397
+  // (primarySpecId) stays green.
+  // QFAI:SPEC-0012:TC-0012-0401
+  it("title-marker-only config — cycle 1 does not trip the spec-set drift check (symmetric regression for TC-0012-0398)", async () => {
+    const root = await newTempDir();
+    await seedDesignMd(root);
+    // qfai.config.yaml without a primarySpecId pin (mirrors
+    // TC-0012-0398 fixture).
+    await writeFile(
+      path.join(root, "qfai.config.yaml"),
+      [
+        "paths:",
+        "  contractsDir: .qfai/contracts",
+        "  specsDir: .qfai/specs",
+        "  discussionDir: .qfai/discussion",
+        "  outDir: .qfai/out",
+        "  skillsDir: .qfai/assistant/skills",
+        "  promptsDir: .qfai/assistant/skills",
+        "  srcDir: src",
+        "  testsDir: tests",
+        "validation:",
+        "  failOn: error",
+        "  require:",
+        "    specSections: []",
+        "  testStrategy:",
+        "    requireLayerTags: false",
+        "    requireSizeTags: false",
+        "    requireApiAtdd: false",
+        "    requireE2eAtdd: false",
+        "    requireIntegrationAtdd: false",
+        "    requireUnitTdd: false",
+        "    requireSpecTagBlock: false",
+        "    requireRoutingProfile: false",
+        "",
+      ].join("\n"),
+      "utf-8",
+    );
+    // Only the legacy `# … Prototyping …` title marker signals the
+    // prototyping surface — no frontmatter, no UI contract.
+    const specDir = path.join(root, ".qfai/specs/spec-0042");
+    await mkdir(specDir, { recursive: true });
+    await writeFile(
+      path.join(specDir, "01_Spec.md"),
+      "# spec-0042 Prototyping Surface\n\nLegacy title-marker only.\n",
+      "utf-8",
+    );
+
+    // Cycle 0 seed: provide --target-url so we get past the cycle-0
+    // input gate. The bypass-aware expansion must seed
+    // `frozenSpecsCovered: ["0042"]`, not `[]`.
+    const seedExit = await runPrototypingIterate({
+      root,
+      cycle: 0,
+      targetUrl: "http://localhost:5173",
+    });
+    expect(seedExit).toBe(0);
+
+    const protoJsonPath = path.join(
+      root,
+      ".qfai/evidence/prototyping/prototyping.json",
+    );
+    const proto = JSON.parse(await readFile(protoJsonPath, "utf-8")) as {
+      frozenSpecsCovered?: unknown;
+    };
+    expect(proto.frozenSpecsCovered).toEqual(["0042"]);
+
+    // Cycle 1: the spec-set drift gate is the regression surface. If
+    // the bypass-expansion regresses, the cycle-0 frozen set would be
+    // `[]` and cycle 1 would surface `spec-set drift detected` /
+    // `removed=[]` (or similar). Assert the negation of those tokens.
+    const logger = await import("../../../src/cli/lib/logger.js");
+    const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
+    try {
+      const exit = await runPrototypingIterate({ root, cycle: 1 });
+      const errorMessages = errorSpy.mock.calls.map((c) => String(c[0])).join("\n");
+      expect(errorMessages).not.toMatch(/spec-set drift detected/i);
+      expect(errorMessages).not.toMatch(/removed=\[0042\]/);
+      // The minimal fixture may surface an unrelated downstream gate;
+      // the key invariant is the drift path no longer fires.
+      void exit;
+    } finally {
+      errorSpy.mockRestore();
+    }
+  });
 });

@@ -244,35 +244,54 @@ export async function runPrototypingCertify(
   const frozenSpecsPreview =
     readFrozenSpecsCoveredMultiSpec(protoJson) ?? readFrozenSpecsCovered(protoJson);
   if (frozenSpecsPreview !== null && screenContracts.length > 0) {
-    const missingPairs: Array<{ spec: string; screen: string; expectedPath: string }> = [];
-    for (const rawSpec of frozenSpecsPreview) {
-      const specDirName = normalizeSpecDirName(rawSpec);
-      for (const screen of screenContracts) {
-        const rel = `${PROTOTYPING_EVIDENCE_REL}/${acceptedIterDir}/${specDirName}/${screen.screenId}.review.json`;
-        const abs = path.join(options.root, rel);
-        const exists = await fileExists(abs);
-        if (!exists) {
-          missingPairs.push({
-            spec: specDirName,
-            screen: screen.screenId,
-            expectedPath: rel,
-          });
+    // The per-(spec × screen) gate ONLY runs when the accepted iter
+    // actually contains per-spec subdirs (`iter-NN/spec-*/`). The
+    // shipped iterate driver + SKILL.md still emit the legacy flat
+    // layout (`iter-NN/index.html` / `iter-NN/review.json`), so
+    // without this guard the gate would fail every (spec, screen)
+    // pair on a normal run that follows the documented plan. The
+    // flat-iter migration to per-spec layout is deferred; until then,
+    // flat-iter projects skip the gate with a one-line stderr info
+    // note so the deferred migration stays visible to operators.
+    const acceptedIterAbs = path.join(options.root, PROTOTYPING_EVIDENCE_REL, acceptedIterDir);
+    const hasPerSpecLayout = await hasPerSpecSubdir(acceptedIterAbs);
+    if (!hasPerSpecLayout) {
+      info(
+        `qfai prototyping certify: per-spec ${acceptedIterDir}/spec-NNNN layout not detected — ` +
+          "skipping per-(spec x screen) review.json presence gate; running with legacy flat layout " +
+          "(per-spec layout migration pending).",
+      );
+    } else {
+      const missingPairs: Array<{ spec: string; screen: string; expectedPath: string }> = [];
+      for (const rawSpec of frozenSpecsPreview) {
+        const specDirName = normalizeSpecDirName(rawSpec);
+        for (const screen of screenContracts) {
+          const rel = `${PROTOTYPING_EVIDENCE_REL}/${acceptedIterDir}/${specDirName}/${screen.screenId}.review.json`;
+          const abs = path.join(options.root, rel);
+          const exists = await fileExists(abs);
+          if (!exists) {
+            missingPairs.push({
+              spec: specDirName,
+              screen: screen.screenId,
+              expectedPath: rel,
+            });
+          }
         }
       }
-    }
-    if (missingPairs.length > 0) {
-      error(
-        "qfai prototyping certify: accepted iteration " +
-          `${acceptedIterDir} is missing review.json for ${missingPairs.length} ` +
-          "(spec, screen) pair(s):",
-      );
-      // Cap the per-pair log output to keep operator-facing stderr
-      // bounded on large frozen sets — same pattern as the missing-HTML
-      // branch above (`missing.slice(0, 10)`).
-      for (const m of missingPairs.slice(0, 20)) {
-        error(`  - ${m.spec} / ${m.screen} (expected ${m.expectedPath})`);
+      if (missingPairs.length > 0) {
+        error(
+          "qfai prototyping certify: accepted iteration " +
+            `${acceptedIterDir} is missing review.json for ${missingPairs.length} ` +
+            "(spec, screen) pair(s):",
+        );
+        // Cap the per-pair log output to keep operator-facing stderr
+        // bounded on large frozen sets — same pattern as the
+        // missing-HTML branch above (`missing.slice(0, 10)`).
+        for (const m of missingPairs.slice(0, 20)) {
+          error(`  - ${m.spec} / ${m.screen} (expected ${m.expectedPath})`);
+        }
+        return 2;
       }
-      return 2;
     }
   }
   // Multi-screen specs emit one HTML artifact per screen under the
@@ -635,6 +654,38 @@ async function fileExists(absPath: string): Promise<boolean> {
   } catch {
     return false;
   }
+}
+
+/**
+ * Returns `true` when the accepted iter directory contains at least
+ * one `spec-*` subdirectory (per-spec layout). Used by the per-(spec
+ * x screen) review.json gate to skip enforcement on legacy flat-iter
+ * projects, which the shipped iterate driver + SKILL.md still emit
+ * until the per-spec layout migration lands.
+ *
+ * ENOENT / non-readable iter dir -> `false` (gate stays off): the
+ * accepted iter HTML gate above already required the dir to exist
+ * and contain HTML, so reaching here with a missing dir is the
+ * legitimate "no per-spec layout" answer rather than a hidden error.
+ */
+async function hasPerSpecSubdir(iterDirAbs: string): Promise<boolean> {
+  let names: string[];
+  try {
+    names = await readdir(iterDirAbs);
+  } catch {
+    return false;
+  }
+  for (const name of names) {
+    if (!name.startsWith("spec-")) continue;
+    const abs = path.join(iterDirAbs, name);
+    try {
+      const s = await stat(abs);
+      if (s.isDirectory()) return true;
+    } catch {
+      continue;
+    }
+  }
+  return false;
 }
 
 /**
