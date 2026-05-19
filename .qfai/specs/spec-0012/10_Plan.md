@@ -24,7 +24,7 @@
 1. Land code changes alongside `spec-0012`:
    - `core/prototyping/specResolution.ts` — replace `resolvePrimaryPrototypingSpec` with `resolveAllUiBearingSpecs`.
    - `core/prototyping/iteration.ts` — change `MAX_ITERATIONS` from 15 to 10 (single edit, SSOT); update `MAX_ITERATION_INDEX` to 9; remove any 15-magic from validators and fixtures atomically.
-   - `core/prototyping/iterationPaths.ts` (or wherever the helpers live) — `iterationDir`, `iterationReviewPath`, `findIterationReviewFiles`, `findStaleIterDirs`, `deleteStaleIterDirs` descend into `spec-NNNN` while preserving `/^iter-\d{2,}$/` cleanup semantics.
+   - `core/prototyping/iterationPaths.ts` (or wherever the helpers live) — `iterationDirPerSpec`, `iterationReviewPathPerSpec`, `findIterationReviewFiles`, `findStaleIterDirs`, `deleteStaleIterDirs` descend into `spec-NNNN` while preserving `/^iter-\d{2,}$/` cleanup semantics.
    - `core/prototyping/licenseVerify.ts` — new module; `licenseVerify(imageSources, frozenCatalog)` returns success when every entry's `source` is in the allowlist and `license` is in the catalog tiers; non-allowlisted entries map to caller-side exit 66.
    - `core/prototyping/certificate.ts` — `readFrozenSpecsCovered()` reads cycle-0 frozen set; `prototypingCertify` aggregates per-spec.
    - `core/prototyping/reviewerDispatch.ts` — Reviewer sub-agent launches Playwright in-process; remove orchestrator-side capture step.

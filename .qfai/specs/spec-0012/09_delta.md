@@ -166,6 +166,7 @@
 | OP-APPEND-076 | UPDATE:APPEND | 08_Open-questions.md OQ-0012-0007                 | Reviewer dispatch wiring in `prototypingIterate.ts` (`dispatchReviewerToPair` interface stub awaiting Playwright runner) |
 | OP-APPEND-077 | UPDATE:APPEND | 08_Open-questions.md OQ-0012-0008                 | `parseEvaluatorReview` runtime wire-in at per-cycle review.json loader (parser shipped without an invoker)             |
 | OP-APPEND-078 | UPDATE:APPEND | 08_Open-questions.md OQ-0012-0009                 | `validateImageSources` runtime wire-in at certify gate (handoff-yaml population path deferred)                          |
+| OP-APPEND-079 | UPDATE:APPEND | 08_Open-questions.md OQ-0012-0010                 | `DEFAULT_LICENSE_CATALOG` configurability — wire-in via `QfaiConfig.prototyping.licenseCatalog` (7th late-review wave codex r3264977114 P3; closes the untracked TODO at `prototypingIterate.ts#DEFAULT_LICENSE_CATALOG`) |
 
 ### Notes
 

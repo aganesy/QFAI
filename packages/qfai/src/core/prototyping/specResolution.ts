@@ -253,12 +253,22 @@ async function hasMatchingUiContract(
   //   - `<specId>.yaml`                  (bare 4-digit id; legacy)
   //   - `spec-<specId>.yaml`             (spec-prefixed; legacy)
   //   - `ui-<specId>.yaml`               (ui-prefixed, no slug)
-  //   - `ui-<specId>-<anything>.yaml`    (ui-prefixed with slug, per
-  //                                       the documented convention)
+  //   - `ui-<specId>-<slug>.yaml`        (ui-prefixed with non-empty
+  //                                       slug, per the documented
+  //                                       convention)
   //
   // Any other basename — including ones that merely *contain* the id
   // token — is rejected. The fallback is intentionally narrower than
   // the contract's "direct match" arm to avoid silent false-positives.
+  //
+  // 7th late-review wave (codex r3264965744 / r3264968391, LOW/MINOR):
+  // tightened further to match the doc exactly. The prior
+  // `^(?:spec-|ui-)?${specId}(?:-[^.]*)?\\.yaml$` regex over-accepted
+  // (a) bare-slug shapes `<id>-<slug>.yaml` / `spec-<id>-<slug>.yaml`
+  // that are NOT in the documented set, and (b) empty-slug
+  // `ui-<id>-.yaml` (the `[^.]*` allowed zero chars between the
+  // hyphen and the extension). The slug arm now requires `[^.]+`
+  // (one or more) and only attaches to the `ui-` prefix.
   let names: string[];
   try {
     names = await readdir(uiDir);
@@ -268,6 +278,8 @@ async function hasMatchingUiContract(
     }
     throw error;
   }
-  const anchoredRe = new RegExp(`^(?:spec-|ui-)?${specId}(?:-[^.]*)?\\.yaml$`);
+  const anchoredRe = new RegExp(
+    `^(?:${specId}|spec-${specId}|ui-${specId}(?:-[^.]+)?)\\.yaml$`,
+  );
   return names.some((name) => anchoredRe.test(name));
 }

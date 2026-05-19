@@ -530,7 +530,7 @@
 - AC-Refs: AC-0012-0046
 - Type: unit
 - Test file: `packages/qfai/tests/core/prototyping/iteration.test.ts`
-- Verify per-iter / per-spec evidence path composition: `iterationReviewPath(2, "spec-0007", "orders-dashboard")` equals `.qfai/evidence/prototyping/iter-02/spec-0007/orders-dashboard.review.json` (zero-padded index, `spec-NNNN` namespace).
+- Verify per-iter / per-spec evidence path composition: `iterationReviewPathPerSpec(2, "spec-0007", "orders-dashboard")` equals `.qfai/evidence/prototyping/iter-02/spec-0007/orders-dashboard.review.json` (zero-padded index, `spec-NNNN` namespace).
 
 ## TC-0012-0377
 
@@ -546,7 +546,7 @@
 - AC-Refs: AC-0012-0046
 - Type: unit
 - Test file: `packages/qfai/tests/core/prototyping/iterationPaths.test.ts`
-- Verify `iterationDir(2, "spec-0007")` returns `.qfai/evidence/prototyping/iter-02/spec-0007` and `iterationReviewPath(2, "spec-0007", "orders-dashboard")` builds on top of it.
+- Verify `iterationDirPerSpec(2, "spec-0007")` returns `.qfai/evidence/prototyping/iter-02/spec-0007` and `iterationReviewPathPerSpec(2, "spec-0007", "orders-dashboard")` builds on top of it.
 
 ## TC-0012-0379
 
@@ -658,7 +658,7 @@
 - AC-Refs: AC-0012-0046
 - Type: property
 - Test file: `packages/qfai/tests/core/prototyping/iterationPaths.test.ts`
-- Verify property: for every `(idx ∈ 0..99, spec ∈ specIdStrings, screen ∈ screenNames)`, `parseIterationReviewPath(iterationReviewPath(idx, spec, screen)) === {idx, spec, screen}` (round-trip identity).
+- Verify property: for every `(idx ∈ 0..99, spec ∈ specIdStrings, screen ∈ screenNames)`, `parseIterationReviewPath(iterationReviewPathPerSpec(idx, spec, screen)) === {idx, spec, screen}` (round-trip identity).
 
 ## TC-0012-0393
 
@@ -762,6 +762,22 @@
 - Type: integration
 - Test file: `packages/qfai/tests/cli/commands/prototypingIterate.test.ts`
 - Verify the cycle-0 frozen spec set is the UNION of (strict frontmatter scan) + (legacy title-marker scan) + (configured `prototyping.primarySpecId` on disk), independent of which sub-scan finds anything: seed spec-0003 with `surface_type: ui-bearing` (strict), pin `primarySpecId: "0002"` (no strict signal on spec-0002), run cycle 0 with `--target-url`, and assert `prototyping.json#frozenSpecsCovered === ["0002","0003"]`. Pre-fix the strict-non-empty branch returned strict-only `["0003"]` (the primarySpecId bypass branch was reached only when strict was empty), letting certify validate the wrong scope for the loop driver's primary spec.
+
+## TC-0012-0405
+
+- EX-Ref: EX-0012-0138
+- AC-Refs: AC-0012-0047
+- Type: integration
+- Test file: `packages/qfai/tests/cli/commands/prototypingCertify.test.ts`
+- Verify the POSITIVE side of the `readFrozenSpecsCoveredMultiSpec ?? readFrozenSpecsCovered` precedence at the certify call-site: when `prototyping.json` carries BOTH `specsCovered: ["0007"]` (legacy single-spec primary) AND `frozenSpecsCovered: ["0007","0012"]` (multi-spec frozen set) and every (spec, screen) pair has its review.json under the accepted iter, certify exits 0 AND the sealed `completion-certificate.json#specsCovered` records the multi-spec scope `["0007","0012"]` (the frozen field wins). Pre-existing TC-0012-0399 covers the NEGATIVE side (reject when secondary missing); this case pins the happy-path sealed-cert shape at the call-site.
+
+## TC-0012-0406
+
+- EX-Ref: EX-0012-0138
+- AC-Refs: AC-0012-0047
+- Type: integration
+- Test file: `packages/qfai/tests/cli/commands/prototypingCertify.test.ts`
+- Verify the POSITIVE side of the fallback arm: when `prototyping.json` carries ONLY legacy `specsCovered: ["0007"]` (no `frozenSpecsCovered` field, pre-Wave-3 evidence) and the single (spec, screen) pair has its review.json, certify exits 0 AND `completion-certificate.json#specsCovered` records `["0007"]`. Pre-existing TC-0012-0400 covers the NEGATIVE side (reject on missing review.json under the fallback scope); this case pins the happy-path sealed-cert shape so a future refactor that hard-removes the legacy read is caught by a green-path regression in addition to the red-path one.
 
 ## Legacy Coverage Continuity
 

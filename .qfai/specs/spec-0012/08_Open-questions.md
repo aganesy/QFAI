@@ -97,6 +97,18 @@
 - Recommendation: Defer until the handoff-yaml population path (DESIGN.md pool + handoff extraction) lands; until then `validateImageSources` is correctly tested-only. Track the population deferral as a coupled item under the same wave.
 - Resolves: blocks `prototype-handoff.yaml#imageSources[]` schema gate at certify.
 
+## OQ-0012-0010: `DEFAULT_LICENSE_CATALOG` configurability — wire-in via `QfaiConfig.prototyping.licenseCatalog`
+
+- Gate: implement
+- Disposition: open
+- Owner: backend-engineer
+- Due: 2026-06-30
+- Severity: low
+- Source: CHG-002 PR #208 7th late-review wave (codex r3264977114, P3 nit, raised 2026-05-19).
+- Question: `cli/commands/prototypingIterate.ts#DEFAULT_LICENSE_CATALOG` is the SSOT in-memory default frozen at cycle 0 of every loop (`allowedSources: ["unsplash", "pexels"]` + license tiers). Today consumers are bound to the baseline — registering an additional allowlisted source (e.g. `pixabay`) requires forking QFAI. The TODO comment above the constant captures the intended path but lacks a tracking ID, so the release-after orphan risk has accumulated. Production wire-in must (1) extend `QfaiConfig` with an optional `prototyping.licenseCatalog?: { allowedSources: string[]; licenseTiers: Record<string, string[]> }` field, (2) honour it in `writeSeedMetadata` (the cycle-0 frozen value) and in the cycle ≥1 read path, (3) preserve the in-memory default as the fallback when neither config nor on-disk frozen value is present.
+- Recommendation: Land in a dedicated wave after CHG-002 stabilises — the wire-in is mechanical but touches the cycle-0 freeze path that `licenseVerify` reads. Until then, the in-memory baseline is the documented contract and consumers needing additional sources fork the constant.
+- Resolves: blocks consumer-facing license-catalog extensibility without a fork; closes the untracked TODO at `prototypingIterate.ts#DEFAULT_LICENSE_CATALOG`.
+
 ## OQ-0012-0001: Airgapped run support (stock-photo fetch over restricted network)
 
 - Gate: ops

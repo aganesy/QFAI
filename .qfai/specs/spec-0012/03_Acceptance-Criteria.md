@@ -239,7 +239,7 @@
 - Given `.qfai/evidence/prototyping/iter-NN/spec-NNNN/`,
 - When listed,
 - Then it contains exactly files matching `<screen>.review.json` (one per declared screen). No `.png`, no `.html`, no `.interaction.json`, no other sidecar.
-- And path helpers (`iterationDir`, `iterationReviewPath`, `findIterationReviewFiles`, `findStaleIterDirs`, `deleteStaleIterDirs`) descend into `spec-NNNN` while preserving `/^iter-\d{2,}$/` cleanup semantics.
+- And path helpers (`iterationDirPerSpec`, `iterationReviewPathPerSpec`, `findIterationReviewFiles`, `findStaleIterDirs`, `deleteStaleIterDirs`) descend into `spec-NNNN` while preserving `/^iter-\d{2,}$/` cleanup semantics.
 
 ## AC-0012-0047: Certify aggregates per-spec presence
 

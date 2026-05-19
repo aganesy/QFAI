@@ -197,7 +197,7 @@ No other path triggers stop. LLM subjective DONE is forbidden.
 
 - AC-Refs: AC-0012-0046
 - Iter-dir layout MUST be `iter-NN/spec-NNNN/<screen>.review.json` only. No `.png`, no `.html`, no `.interaction.json`, no other sidecar.
-- Path helpers (`iterationDir`, `iterationReviewPath`, `findIterationReviewFiles`, `findStaleIterDirs`, `deleteStaleIterDirs`) MUST descend into `spec-NNNN` while preserving `/^iter-\d{2,}$/` cleanup semantics.
+- Path helpers (`iterationDirPerSpec`, `iterationReviewPathPerSpec`, `findIterationReviewFiles`, `findStaleIterDirs`, `deleteStaleIterDirs`) MUST descend into `spec-NNNN` while preserving `/^iter-\d{2,}$/` cleanup semantics.
 
 ## BR-0012-0036: Certify aggregates per-spec coverage
 

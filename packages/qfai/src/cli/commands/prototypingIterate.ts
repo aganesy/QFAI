@@ -131,10 +131,11 @@ type PrototypingJsonShape = {
  * baseline.
  *
  * TODO (codex review — tracked as a follow-up, not blocking
- * this release): expose `qfai.config.yaml#prototyping.licenseCatalog`
- * so consumer projects can register additional allowlisted sources
- * (e.g. `pixabay`) without forking QFAI. Today consumers are bound to
- * the `unsplash` + `pexels` baseline. The wire-in path is (1) extend
+ * this release; see OQ-0012-0010): expose
+ * `qfai.config.yaml#prototyping.licenseCatalog` so consumer projects
+ * can register additional allowlisted sources (e.g. `pixabay`)
+ * without forking QFAI. Today consumers are bound to the
+ * `unsplash` + `pexels` baseline. The wire-in path is (1) extend
  * `QfaiConfig` with an optional `prototyping.licenseCatalog?: { ... }`
  * field, (2) honour it in `writeSeedMetadata` (the cycle-0 frozen
  * value) and in the cycle ≥1 read path, (3) preserve the in-memory

@@ -233,6 +233,12 @@ describe("resolveAllUiBearingSpecs", () => {
   // merely contain the four-digit spec id token must NOT be treated as
   // UI contracts. The fallback is anchored to bare `<id>.yaml`,
   // `spec-<id>.yaml`, `ui-<id>.yaml`, or `ui-<id>-<slug>.yaml`.
+  //
+  // 7th late-review wave (codex r3264965744 / r3264968391, LOW/MINOR):
+  // extended to reject (a) bare-slug `<id>-<slug>.yaml` /
+  // `spec-<id>-<slug>.yaml` shapes (NOT in the documented set) and
+  // (b) empty-slug `ui-<id>-.yaml` (slug must be non-empty per the
+  // tightened `(?:-[^.]+)?` slug arm).
   it("contract fallback rejects yaml basenames that merely contain the spec id token", async () => {
     const root = await newTempDir();
     await seedSpec(root, "0001", "# spec-0001\n\nNo marker.\n");
@@ -247,6 +253,27 @@ describe("resolveAllUiBearingSpecs", () => {
     );
     const result = await resolveAllUiBearingSpecs(root, makeConfig());
     expect(result).toEqual([]);
+  });
+
+  it("contract fallback rejects bare-slug and empty-slug shapes that drift from the documented 4 forms", async () => {
+    // 7th late-review wave: each rejected shape lives in its own
+    // fixture so a regression that re-widens any single arm is
+    // distinguishable in the failure output.
+    const rejectedShapes: Array<{ specId: string; filename: string }> = [
+      // (a) Bare-slug (no `ui-` / `spec-` prefix) — not documented.
+      { specId: "0007", filename: "0007-cart.yaml" },
+      // (b) `spec-<id>-<slug>.yaml` — not documented (only `spec-<id>.yaml`).
+      { specId: "0007", filename: "spec-0007-cart.yaml" },
+      // (c) `ui-<id>-.yaml` — empty slug; `ui-<id>-<slug>` requires non-empty.
+      { specId: "0004", filename: "ui-0004-.yaml" },
+    ];
+    for (const { specId, filename } of rejectedShapes) {
+      const root = await newTempDir();
+      await seedSpec(root, specId, `# spec-${specId}\n\nNo marker.\n`);
+      await seedUiContract(root, specId, filename);
+      const result = await resolveAllUiBearingSpecs(root, makeConfig());
+      expect(result).toEqual([]);
+    }
   });
 
   it("contract fallback accepts the documented anchored shapes", async () => {

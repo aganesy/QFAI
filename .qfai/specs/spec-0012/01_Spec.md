@@ -25,7 +25,7 @@
   - `findDesignMdViolations(html, designMd)` pure deterministic function for color / font / radius / shadow token compliance; non-empty list blocks convergence
   - `pivotDirective: continue | refine | pivot` rules unchanged (`pivot` ⇔ 3 consecutive low-IA + latest has `lap-*`; `continue` ⇔ ≥2 of 4 axes strictly improved by `ordinalIndex`; `refine` otherwise)
   - latest iter always accepted (`acceptedIterationIndex === iterations.length - 1`); no best-of-history
-  - per-iter evidence layout is **per-spec namespaced**: `iter-NN/spec-NNNN/<screen>.review.json` only (no `.png`, no `.html`, no `.interaction.json`); path helpers `iterationDir`, `iterationReviewPath`, `findIterationReviewFiles`, `findStaleIterDirs`, `deleteStaleIterDirs` descend into `spec-NNNN` while preserving `/^iter-\d{2,}$/` cleanup semantics
+  - per-iter evidence layout is **per-spec namespaced**: `iter-NN/spec-NNNN/<screen>.review.json` only (no `.png`, no `.html`, no `.interaction.json`); path helpers `iterationDirPerSpec`, `iterationReviewPathPerSpec`, `findIterationReviewFiles`, `findStaleIterDirs`, `deleteStaleIterDirs` descend into `spec-NNNN` while preserving `/^iter-\d{2,}$/` cleanup semantics
   - stock-photo fill from allowlisted free sources (Unsplash, Pexels, CC0); every filled slot recorded in `prototype-handoff.yaml#imageSources[]` as `{url, license, attribution, source}`; license-verify failure (unknown license / non-allowlisted) hard-stops with exit 66
   - `qfai prototyping certify` aggregates review-payload presence **per spec** by walking the cycle-0 frozen `specsCovered[]` (`readFrozenSpecsCovered()`); any spec lacking any declared screen's `<screen>.review.json` at the accepted iter is rejected
   - deterministic hard-stop classes (no interactive recovery): (a) DESIGN.md / license-catalog lock drift → exit 2, (b) Reviewer Playwright-session failure across all reviewers for a spec × screen → exit 64, (c) license-verify failure → exit 66, (d) mid-run spec-set change → exit 2 (`specsCovered` shallow-equal check reads the frozen set; new UI-bearing specs deferred to next invocation)
@@ -88,7 +88,7 @@
 ## Evidence Summary
 
 - Code: `packages/qfai/src/core/prototyping/{iteration, evaluatorReview, certificate, designMdViolations, specResolution, specsCovered, licenseVerify}.ts`, `packages/qfai/src/cli/commands/prototypingIterate.ts`, `packages/qfai/src/cli/commands/prototypingCertify.ts`
-- New / renamed entry points: `resolveAllUiBearingSpecs()` (replaces `resolvePrimaryPrototypingSpec()`); `licenseVerify()` (new, exit-66 gate); path helpers `iterationDir` / `iterationReviewPath` / `findIterationReviewFiles` / `findStaleIterDirs` / `deleteStaleIterDirs` descend into `spec-NNNN`
+- New / renamed entry points: `resolveAllUiBearingSpecs()` (replaces `resolvePrimaryPrototypingSpec()`); `licenseVerify()` (new, exit-66 gate); path helpers `iterationDirPerSpec` / `iterationReviewPathPerSpec` / `findIterationReviewFiles` / `findStaleIterDirs` / `deleteStaleIterDirs` descend into `spec-NNNN`
 - Validators: `packages/qfai/src/core/validators/{prototypingEvidence, designContractReadiness}.ts`, `packages/qfai/src/core/validators/prototyping/{refIntegrity, specIdLinkage, stateGate, completionCertificate, licenseSources}.ts`; `QFAI-PROT-005` / `QFAI-PROT-006` updated to 10-cycle / `index === 9`
 - Skill: `packages/qfai/assets/init/.qfai/assistant/skills/qfai-prototyping/{SKILL.md, references/{iteration-loop, generator-prompt, reviewer-prompt, handoff, design-md-spec}.md, templates/{DESIGN.md.sample, prototype-handoff.sample.yaml, design-md-lock.sample.yaml, license-catalog.sample.yaml}}`
 - Contracts: `.qfai/contracts/cli/qfai-prototyping.md` (new CLI contract for `iterate` / `certify` / `show-spec`)
@@ -117,7 +117,7 @@
 - REQ-0012-0046: 収束判定は 全 spec × screen ペアの (4 軸 = exceptional AND lap = 0 AND designMdViolations = 0) の AND（quantitative AC-pass% / transition-pass% は不使用）
 - REQ-0012-0047: 画像スロットは allowlist された無料 stock-photo から充填し、`prototype-handoff.yaml#imageSources[]` に `{url, license, attribution, source}` を記録する。license-verify 失敗は exit 66 hard-stop
 - REQ-0012-0048: cycle 0..9 を fully autonomous で実行し、hard-stop class を (a) lock drift / (b) Reviewer Playwright failure / (c) license-verify failure / (d) mid-run spec-set change の 4 種に固定する
-- REQ-0012-0049: iter-dir layout を `iter-NN/spec-NNNN/<screen>.review.json` のみとし、path helpers (`iterationDir` / `iterationReviewPath` / `findIterationReviewFiles` / `findStaleIterDirs` / `deleteStaleIterDirs`) を `spec-NNNN` まで descend させる
+- REQ-0012-0049: iter-dir layout を `iter-NN/spec-NNNN/<screen>.review.json` のみとし、path helpers (`iterationDirPerSpec` / `iterationReviewPathPerSpec` / `findIterationReviewFiles` / `findStaleIterDirs` / `deleteStaleIterDirs`) を `spec-NNNN` まで descend させる
 - REQ-0012-0050: `qfai prototyping certify` は frozen `specsCovered[]` を読み、各 spec の宣言 screen に対する `<screen>.review.json` 存在をループ検証する（欠落で reject）
 - REQ-0012-0051: Reviewer は run 内で各 primary menu entry point を 1 度以上操作し、結果を `menuReachabilityFeel` に反映する（到達不能は qualitative critique として表面化し hard-fail しない）
 - REQ-0012-0052: cycle 0 で (a) resolved spec set と (b) stock-photo license-class catalog の両方を凍結し、cycle ≥1 はこれを SSOT として参照する。mid-run の新 UI-bearing spec 追加は次 invocation に deferred

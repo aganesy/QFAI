@@ -176,138 +176,161 @@
 
 ## EX-0012-0122: Multi-Spec Resolution At Cycle 0
 
-- BR-Ref: BR-0012-0028- Given the consumer project contains 3 UI-bearing specs (`SPEC-0007`, `SPEC-0011`, `SPEC-0019`) and 2 non-UI specs.
+- BR-Ref: BR-0012-0028
+- Given the consumer project contains 3 UI-bearing specs (`SPEC-0007`, `SPEC-0011`, `SPEC-0019`) and 2 non-UI specs.
 - When `/qfai-prototyping` is invoked once and `resolveAllUiBearingSpecs()` runs at cycle 0.
 - Then exactly the 3 UI-bearing specs enter the loop together; the 2 non-UI specs are excluded; no per-invocation primary-spec selection prompt is shown.
 
 ## EX-0012-0123: Zero UI-Bearing Specs Is Deterministic No-Op
 
-- BR-Ref: BR-0012-0028- Given the consumer project contains zero UI-bearing specs.
+- BR-Ref: BR-0012-0028
+- Given the consumer project contains zero UI-bearing specs.
 - When `/qfai-prototyping` is invoked.
 - Then the run exits 0 with no error, no iter-dir is created, and the user-facing log states "no UI-bearing specs resolved; no-op".
 
 ## EX-0012-0124: 10-Cycle Terminator At `index === 9`
 
-- BR-Ref: BR-0012-0029- Given the run has produced iters with indices 0..8 without converging.
+- BR-Ref: BR-0012-0029
+- Given the run has produced iters with indices 0..8 without converging.
 - When the loop dispatches cycle 9 and the terminator check runs.
 - Then `MAX_ITERATIONS === 10` and `MAX_ITERATION_INDEX === 9` are the sole SSOT, `shouldStop([…, iter9])` returns `"max-iterations"`, and the run hard-stops at the end of cycle 9.
 
 ## EX-0012-0125: 10-Cycle Constants Are Sole SSOT
 
-- BR-Ref: BR-0012-0029- Given the codebase post-redesign.
+- BR-Ref: BR-0012-0029
+- Given the codebase post-redesign.
 - When `MAX_ITERATIONS` and `MAX_ITERATION_INDEX` are searched.
 - Then both are exported from `core/prototyping/iteration.ts` (values `10` and `9` respectively); no parallel literal `15` / `14` referring to iteration budget remains in `src/`, `assets/`, or validator wiring; validators `QFAI-PROT-005` / `QFAI-PROT-006` reference `index === 9`.
 
 ## EX-0012-0126: Reviewer Sub-Agent Launches Playwright
 
-- BR-Ref: BR-0012-0030- Given the loop reaches the evaluation step for `(SPEC-0007, screen=orders-dashboard)` at cycle 3.
+- BR-Ref: BR-0012-0030
+- Given the loop reaches the evaluation step for `(SPEC-0007, screen=orders-dashboard)` at cycle 3.
 - When the Reviewer sub-agent (`product-surface-reviewer`) is dispatched.
 - Then the Reviewer itself opens Playwright against the live prototype URL, performs human-like operation (click / type / navigate / scroll), and the orchestrator does NOT pre-script the session, does NOT call a separate capture step, and does NOT pass an `interaction.json` transcript to the Reviewer.
 
 ## EX-0012-0127: No Scripted Interaction Transcript
 
-- BR-Ref: BR-0012-0030- Given a completed cycle for any spec × screen.
+- BR-Ref: BR-0012-0030
+- Given a completed cycle for any spec × screen.
 - When the iter-dir contents are listed.
 - Then no `interaction.json`, no `.png`, and no `.html` exist; the only Reviewer-emitted artifact is `iter-NN/spec-NNNN/<screen>.review.json`.
 
 ## EX-0012-0128: Qualitative Review Payload Schema
 
-- BR-Ref: BR-0012-0031- Given the Reviewer completes its Playwright session for `(SPEC-0007, orders-dashboard)`.
+- BR-Ref: BR-0012-0031
+- Given the Reviewer completes its Playwright session for `(SPEC-0007, orders-dashboard)`.
 - When it writes `iter-03/SPEC-0007/orders-dashboard.review.json`.
 - Then the payload validates against the new schema: 6 short-prose `*Feel` fields (`operability`, `transitionFeel`, `crossScreenContinuity`, `userStoryFeel`, `acceptanceCriteriaFeel`, `menuReachabilityFeel`) and 4 ordinal axes (`informationArchitecture`, `navigationFlow`, `usability`, `functionality`), plus `layoutAntiPatternsDetected[]` and `designMdViolations[]`.
 
 ## EX-0012-0129: ≤ 200 Words Per Feel Field
 
-- BR-Ref: BR-0012-0031- Given a review payload with `operability` containing 250 words.
+- BR-Ref: BR-0012-0031
+- Given a review payload with `operability` containing 250 words.
 - When schema validation runs.
 - Then the validator emits a length-bound finding and the payload is rejected; ≤ 200 words per `*Feel` field is enforced.
 
 ## EX-0012-0130: Qualitative Convergence AND Across Spec × Screen
 
-- BR-Ref: BR-0012-0032- Given at cycle 7 every `(spec, screen)` pair has all 4 ordinal axes `exceptional`, `layoutAntiPatternsDetected: []`, and `designMdViolations: []`.
+- BR-Ref: BR-0012-0032
+- Given at cycle 7 every `(spec, screen)` pair has all 4 ordinal axes `exceptional`, `layoutAntiPatternsDetected: []`, and `designMdViolations: []`.
 - When the global convergence check runs.
 - Then the run converges, exits 64 with `stopReason: "axes-exceptional"`, and `acceptedIterationIndex === 7`.
 
 ## EX-0012-0131: Convergence Blocked By One Lagging Spec
 
-- BR-Ref: BR-0012-0032- Given at cycle 5 all pairs are `exceptional` except `(SPEC-0011, settings)` which has `navigationFlow: "strong"`.
+- BR-Ref: BR-0012-0032
+- Given at cycle 5 all pairs are `exceptional` except `(SPEC-0011, settings)` which has `navigationFlow: "strong"`.
 - When the convergence check runs.
 - Then convergence is NOT declared; the aggregated cycle record names `SPEC-0011` as a lagging spec; the loop continues to cycle 6.
 
 ## EX-0012-0132: License-Verify Success Path
 
-- BR-Ref: BR-0012-0033- Given every image slot is filled from Unsplash or Pexels and `prototype-handoff.yaml#imageSources[]` records `{url, license, attribution, source}` for each.
+- BR-Ref: BR-0012-0033
+- Given every image slot is filled from Unsplash or Pexels and `prototype-handoff.yaml#imageSources[]` records `{url, license, attribution, source}` for each.
 - When `licenseVerify` runs at end-of-cycle.
 - Then it returns success; no hard-stop is triggered; the cycle proceeds normally.
 
 ## EX-0012-0133: License-Verify Failure Hard-Stop Exit 66
 
-- BR-Ref: BR-0012-0033- Given one image slot is filled from a non-allowlisted source (`pinterest.com`) or has `license: "unknown"`.
+- BR-Ref: BR-0012-0033
+- Given one image slot is filled from a non-allowlisted source (`pinterest.com`) or has `license: "unknown"`.
 - When `licenseVerify` runs.
 - Then the run hard-stops with exit code 66, stderr names the offending image URL, and no further cycles are dispatched.
 
 ## EX-0012-0134: Lock Drift Hard-Stop Exit 2
 
-- BR-Ref: BR-0012-0034- Given cycle 0 recorded `prototyping.json#designMdSha256 === "abc123…"` and at cycle 4 the on-disk `DESIGN.md` has hash `"def456…"`.
+- BR-Ref: BR-0012-0034
+- Given cycle 0 recorded `prototyping.json#designMdSha256 === "abc123…"` and at cycle 4 the on-disk `DESIGN.md` has hash `"def456…"`.
 - When the cycle-4 lock-vs-live SHA gate runs.
 - Then the run exits 2 with stderr `"DESIGN.md hash mismatch — re-run from cycle 0"`; no review payloads are written for cycle 4.
 
 ## EX-0012-0135: Reviewer Playwright Session Failure Hard-Stop
 
-- BR-Ref: BR-0012-0034- Given all Reviewer sub-agent attempts for `(SPEC-0007, orders-dashboard)` at cycle 2 fail (Playwright cannot reach target URL after all retries).
+- BR-Ref: BR-0012-0034
+- Given all Reviewer sub-agent attempts for `(SPEC-0007, orders-dashboard)` at cycle 2 fail (Playwright cannot reach target URL after all retries).
 - When the orchestrator observes the per-pair Reviewer Playwright failure across all reviewers.
 - Then the run hard-stops with a non-zero exit code, the pair is named in stderr, and no convergence is declared.
 
 ## EX-0012-0136: Per-Spec Iter-Dir Layout
 
-- BR-Ref: BR-0012-0035- Given cycle 2 of a run covering `SPEC-0007` (screen `orders-dashboard`) and `SPEC-0011` (screen `settings`).
+- BR-Ref: BR-0012-0035
+- Given cycle 2 of a run covering `SPEC-0007` (screen `orders-dashboard`) and `SPEC-0011` (screen `settings`).
 - When the iter-dir is enumerated after the cycle completes.
 - Then exactly these files exist: `iter-02/SPEC-0007/orders-dashboard.review.json` and `iter-02/SPEC-0011/settings.review.json`; no other files (no `.png`, no `.html`, no `interaction.json`, no flat-root `review.json`).
 
 ## EX-0012-0137: Path Helpers Descend Into spec-NNNN
 
-- BR-Ref: BR-0012-0035- Given the iter-dir layout from EX-0012-0136.
-- When `iterationDir`, `iterationReviewPath`, `findIterationReviewFiles`, `findStaleIterDirs`, `deleteStaleIterDirs` are called.
-- Then `iterationReviewPath(2, "SPEC-0007", "orders-dashboard")` returns `…/iter-02/SPEC-0007/orders-dashboard.review.json`; `findIterationReviewFiles` globs across spec-NNNN subdirs; stale cleanup honors `/^iter-\d{2,}$/` semantics and does not delete unrelated dirs.
+- BR-Ref: BR-0012-0035
+- Given the iter-dir layout from EX-0012-0136.
+- When `iterationDirPerSpec`, `iterationReviewPathPerSpec`, `findIterationReviewFiles`, `findStaleIterDirs`, `deleteStaleIterDirs` are called.
+- Then `iterationReviewPathPerSpec(2, "SPEC-0007", "orders-dashboard")` returns `…/iter-02/SPEC-0007/orders-dashboard.review.json`; `findIterationReviewFiles` globs across spec-NNNN subdirs; stale cleanup honors `/^iter-\d{2,}$/` semantics and does not delete unrelated dirs.
 
 ## EX-0012-0138: Certify Aggregates Per-Spec Presence
 
-- BR-Ref: BR-0012-0036- Given the accepted iter is `iter-07` and the cycle-0 frozen spec set lists `SPEC-0007` and `SPEC-0011`.
+- BR-Ref: BR-0012-0036
+- Given the accepted iter is `iter-07` and the cycle-0 frozen spec set lists `SPEC-0007` and `SPEC-0011`.
 - When `qfai prototyping certify` runs and `SPEC-0011/settings.review.json` is missing under `iter-07/`.
 - Then certify rejects (non-zero exit) and stderr names `SPEC-0011` as the missing aggregate; `readFrozenSpecsCovered()` drove the per-spec loop.
 
 ## EX-0012-0139: Menu Reachability Exercised In Playwright Session
 
-- BR-Ref: BR-0012-0037- Given the prototype exposes a sidebar with 6 entries and a topbar with 2 entries.
+- BR-Ref: BR-0012-0037
+- Given the prototype exposes a sidebar with 6 entries and a topbar with 2 entries.
 - When the Reviewer runs its Playwright session.
 - Then it attempts to navigate every primary menu entry, and `menuReachabilityFeel` in the review payload describes which entries reached intended targets and which did not (e.g. "sidebar/Reports leads to 404"); unreachable entries surface as qualitative critique and do NOT hard-fail the cycle.
 
 ## EX-0012-0140: Mid-Run Spec-Set Change Detection
 
-- BR-Ref: BR-0012-0038- Given cycle 0 froze the spec set to `[SPEC-0007, SPEC-0011]` and at cycle 3 a new UI-bearing spec `SPEC-0019` appears on disk.
+- BR-Ref: BR-0012-0038
+- Given cycle 0 froze the spec set to `[SPEC-0007, SPEC-0011]` and at cycle 3 a new UI-bearing spec `SPEC-0019` appears on disk.
 - When the `specsCovered` shallow-equal drift check runs.
 - Then the run exits non-zero (deferred-additions hard-stop), the new spec is named, and the run does NOT restart cycle 0; `SPEC-0019` is deferred to the next `/qfai-prototyping` invocation.
 
 ## EX-0012-0141: Drift Check Reads Frozen Set
 
-- BR-Ref: BR-0012-0038- Given cycle 0 wrote the frozen spec set to cycle-0 evidence.
+- BR-Ref: BR-0012-0038
+- Given cycle 0 wrote the frozen spec set to cycle-0 evidence.
 - When `specsCovered` drift check is invoked at cycle ≥1.
 - Then it reads the cycle-0 frozen set (not the live filesystem) as the comparison baseline; mid-run filesystem mutations are visible only via the diff result, not by silently re-resolving.
 
 ## EX-0012-0142: Per-Spec Time-Budget Soft Warning
 
-- BR-Ref: BR-0012-0039- Given the per-spec time-budget cap is 5 minutes and `SPEC-0007` cycle 4 takes 7 minutes.
+- BR-Ref: BR-0012-0039
+- Given the per-spec time-budget cap is 5 minutes and `SPEC-0007` cycle 4 takes 7 minutes.
 - When the cycle completes.
 - Then a soft warning is appended to `SPEC-0007/orders-dashboard.review.json` (e.g. `"timeBudgetSoftWarning": "per-spec 5m cap exceeded: 7m"`); the run does NOT hard-fail; only the global 10-cycle budget can hard-fail.
 
 ## EX-0012-0143: Cycle 0 Freezes Spec Set
 
-- BR-Ref: BR-0012-0040- Given a fresh `/qfai-prototyping` invocation.
+- BR-Ref: BR-0012-0040
+- Given a fresh `/qfai-prototyping` invocation.
 - When cycle 0 completes.
 - Then cycle-0 evidence records the frozen spec set (e.g. `frozenSpecsCovered: ["SPEC-0007","SPEC-0011"]`); this set is the SSOT for all subsequent cycles' per-spec loops and drift checks.
 
 ## EX-0012-0144: Cycle 0 Freezes License-Class Catalog
 
-- BR-Ref: BR-0012-0040- Given a fresh `/qfai-prototyping` invocation.
+- BR-Ref: BR-0012-0040
+- Given a fresh `/qfai-prototyping` invocation.
 - When cycle 0 completes.
 - Then cycle-0 evidence records the stock-photo license-class catalog (allowed sources `[unsplash, pexels]` and their license tiers); this catalog is the SSOT used by `licenseVerify` for all subsequent cycles.

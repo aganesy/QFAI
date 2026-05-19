@@ -453,6 +453,92 @@ describe("qfai prototyping certify (codex r3264630513: flat-iter layout skips th
   });
 });
 
+describe("qfai prototyping certify (TC-0012-0405: frozenSpecsCovered drives sealed cert.specsCovered when both fields are populated)", () => {
+  // QFAI:SPEC-0012:TC-0012-0405
+  it("seals the completion certificate with the multi-spec frozen set (frozen wins over legacy specsCovered) when both fields are populated and every (spec, screen) pair has its review.json", async () => {
+    // 7th late-review wave (codex r3264968439, LOW): TC-0012-0399 (the
+    // existing precedence test) is a NEGATIVE assertion — it confirms
+    // the multi-spec read by observing certify reject when the
+    // secondary spec's review.json is missing. This complementary
+    // POSITIVE assertion confirms the *sealed certificate* records the
+    // full frozen set (not just the legacy primary spec) when every
+    // pair is present. Pre-fix this happy-path was uncovered at the
+    // certify call-site; only the unit-level `specsCovered.ts` tests
+    // exercised the precedence directly.
+    const root = await newTempDir();
+    await seedMinimalProject(root);
+    await mkdir(path.join(root, ".qfai/specs/spec-0007"), { recursive: true });
+    await writeFile(
+      path.join(root, ".qfai/specs/spec-0007/01_Spec.md"),
+      "---\nsurface_type: ui-bearing\n---\n\n# spec-0007\n",
+      "utf-8",
+    );
+    // Legacy single-spec field carries only the primary; frozen field
+    // carries the multi-spec set. Production write shape circa Wave-3.
+    await seedAllGatesPass(root, {
+      specsCovered: ["0007"],
+      frozenSpecsCovered: ["0007", "0012"],
+    });
+    await seedUiScreens(root, ["home"]);
+    // Every (spec, screen) pair seeded so the gate exits clean.
+    await seedReviewJson(root, "spec-0007", "home");
+    await seedReviewJson(root, "spec-0012", "home");
+
+    const exit = await runPrototypingCertify({ root, check: false });
+    expect(exit).toBe(0);
+
+    // Read the sealed cert and assert the recorded scope reflects the
+    // multi-spec frozen set, not the legacy single-spec primary.
+    const certRaw = await import("node:fs/promises").then((fs) =>
+      fs.readFile(
+        path.join(root, ".qfai/evidence/prototyping/completion-certificate.json"),
+        "utf-8",
+      ),
+    );
+    const cert = JSON.parse(certRaw) as { specsCovered: string[] };
+    expect(cert.specsCovered).toEqual(["0007", "0012"]);
+  });
+});
+
+describe("qfai prototyping certify (TC-0012-0406: legacy-only specsCovered fallback seals cleanly when frozenSpecsCovered absent)", () => {
+  // QFAI:SPEC-0012:TC-0012-0406
+  it("seals the completion certificate with the legacy specsCovered single-spec scope when frozenSpecsCovered is entirely absent (pre-Wave-3 evidence)", async () => {
+    // 7th late-review wave (codex r3264968439, LOW): companion to
+    // TC-0012-0405. TC-0012-0400 (the existing fallback test) is a
+    // NEGATIVE assertion (certify rejects when a fallback-scoped spec
+    // is missing review.json). This POSITIVE assertion confirms the
+    // sealed certificate records the legacy single-spec scope when the
+    // multi-spec field is entirely absent. Pre-Wave-3 evidence must
+    // still round-trip cleanly without spurious zero-spec certificates.
+    const root = await newTempDir();
+    await seedMinimalProject(root);
+    // No frozenSpecsCovered field at all — pre-Wave-3 prototyping.json
+    // shape. Legacy specsCovered carries the single resolved primary.
+    await seedAllGatesPass(root, { specsCovered: ["0007"] });
+    await mkdir(path.join(root, ".qfai/specs/spec-0007"), { recursive: true });
+    await writeFile(
+      path.join(root, ".qfai/specs/spec-0007/01_Spec.md"),
+      "---\nsurface_type: ui-bearing\n---\n\n# spec-0007\n",
+      "utf-8",
+    );
+    await seedUiScreens(root, ["home"]);
+    // Single (spec, screen) pair seeded — gate exits clean via fallback.
+    await seedReviewJson(root, "spec-0007", "home");
+
+    const exit = await runPrototypingCertify({ root, check: false });
+    expect(exit).toBe(0);
+
+    const certRaw = await import("node:fs/promises").then((fs) =>
+      fs.readFile(
+        path.join(root, ".qfai/evidence/prototyping/completion-certificate.json"),
+        "utf-8",
+      ),
+    );
+    const cert = JSON.parse(certRaw) as { specsCovered: string[] };
+    expect(cert.specsCovered).toEqual(["0007"]);
+  });
+});
+
 describe("qfai prototyping certify (TC-0012-0400: legacy specsCovered fallback when frozenSpecsCovered absent)", () => {
   // QFAI:SPEC-0012:TC-0012-0400
   it("falls back to specsCovered for pre-Wave-3 evidence that lacks frozenSpecsCovered", async () => {

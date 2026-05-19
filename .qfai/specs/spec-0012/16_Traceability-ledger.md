@@ -97,9 +97,9 @@ otherwise enforced.
 | TDD-0390 | TC-0012-0373 | planned | prototyping-cli       | lock drift mid-loop → exit 2 with DESIGN.md hash mismatch (REQ-0007)                        |
 | TDD-0391 | TC-0012-0374 | planned | reviewer-dispatch     | Reviewer Playwright session failure hard-stop names (spec, screen) (REQ-0007)               |
 | TDD-0392 | TC-0012-0375 | planned | prototyping-cli       | autonomous run produces zero per-cycle interactive prompts (REQ-0007)                       |
-| TDD-0393 | TC-0012-0376 | planned | prototyping-core      | iterationReviewPath returns iter-NN/spec-NNNN/<screen>.review.json (REQ-0008)               |
+| TDD-0393 | TC-0012-0376 | planned | prototyping-core      | iterationReviewPathPerSpec returns iter-NN/spec-NNNN/<screen>.review.json (REQ-0008)        |
 | TDD-0394 | TC-0012-0377 | planned | prototyping-cli       | iter-dir tree contains only spec-NNNN/<screen>.review.json (REQ-0008)                       |
-| TDD-0395 | TC-0012-0378 | planned | prototyping-core      | iterationDir descends into spec-NNNN; path helpers compose (REQ-0008)                       |
+| TDD-0395 | TC-0012-0378 | planned | prototyping-core      | iterationDirPerSpec descends into spec-NNNN; path helpers compose (REQ-0008)                |
 | TDD-0396 | TC-0012-0379 | planned | prototyping-core      | findIterationReviewFiles globs spec-NNNN subdirs (REQ-0008)                                 |
 | TDD-0397 | TC-0012-0380 | planned | prototyping-core      | findStaleIterDirs / deleteStaleIterDirs preserve /^iter-\d{2,}$/ (REQ-0008)                 |
 | TDD-0398 | TC-0012-0381 | planned | prototyping-cli       | certify rejects when any frozen-set spec lacks <screen>.review.json (REQ-0009)              |
@@ -113,7 +113,7 @@ otherwise enforced.
 | TDD-0406 | TC-0012-0389 | planned | prototyping-cli       | cycle 0 records frozenLicenseCatalog in cycle-0 evidence (REQ-0013)                         |
 | TDD-0407 | TC-0012-0390 | planned | prototyping-core      | cycle-0 frozen set + license catalog are SSOT for subsequent cycles (REQ-0013)              |
 | TDD-0408 | TC-0012-0391 | planned | prototyping-core      | property: resolveAllUiBearingSpecs ≡ filter(ui_bearing===true) (REQ-0001)                   |
-| TDD-0409 | TC-0012-0392 | planned | prototyping-core      | property: iterationReviewPath round-trips with parseIterationReviewPath (REQ-0008)          |
+| TDD-0409 | TC-0012-0392 | planned | prototyping-core      | property: iterationReviewPathPerSpec round-trips with parseIterationReviewPath (REQ-0008)   |
 | TDD-0410 | TC-0012-0393 | planned | prototyping-e2e       | e2e: full 10-cycle no-convergence run hard-stops at end of cycle 9 (REQ-0002)               |
 | TDD-0411 | TC-0012-0394 | planned | prototyping-e2e       | e2e: Reviewer-driven Playwright session writes per-spec review.json (REQ-0003)              |
 | TDD-0412 | TC-0012-0395 | planned | prototyping-core      | contract: licenseVerify rejects non-allowlisted source with structured error (REQ-0006)     |
@@ -139,6 +139,8 @@ otherwise enforced.
 | TDD-0422 | TC-0012-0402 | done   | prototyping-cli  | flat-iter info-skip (single-spec): traceability stitch for the existing flat-iter test (annotated with `// QFAI:SPEC-0012:TC-0012-0402`; frozen set narrowed to single spec)   |
 | TDD-0423 | TC-0012-0403 | done   | prototyping-cli  | P1 fix: multi-spec flat-iter hard error — closes the TDD-0387 vulnerability re-opened by the unconditional flat-iter skip                                                      |
 | TDD-0424 | TC-0012-0404 | done   | prototyping-cli  | P2 fix: cycle-0 frozen set is the UNION of strict + title-marker + primarySpecId, independent of which sub-scan returned first (was strict-only when strict was non-empty)     |
+| TDD-0425 | TC-0012-0405 | done   | prototyping-cli  | 7th late-review wave (codex r3264968439, LOW). POSITIVE precedence regression at the certify call-site: with both `specsCovered: ["0007"]` and `frozenSpecsCovered: ["0007","0012"]` populated, sealed `completion-certificate.json#specsCovered === ["0007","0012"]` (frozen wins) |
+| TDD-0426 | TC-0012-0406 | done   | prototyping-cli  | 7th late-review wave (codex r3264968439, LOW). POSITIVE fallback regression at the certify call-site: with only legacy `specsCovered: ["0007"]` (no `frozenSpecsCovered`), sealed `completion-certificate.json#specsCovered === ["0007"]` so pre-Wave-3 evidence round-trips cleanly |
 
 ## Notes (v2.1 ledger)
 
