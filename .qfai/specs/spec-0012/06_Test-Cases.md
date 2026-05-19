@@ -883,6 +883,30 @@
 - Test file: `packages/qfai/tests/cli/commands/prototypingIterate.test.ts`
 - Verify the zero-UI precheck short-circuit branches added by the 15th + 17th late-review waves. Four `it` blocks: (1) `cycle 0 + zero UI-bearing live + no frozen union still exits 0 (no-op semantic preserved)`, (2) `cycle ≥ 1 + zero UI-bearing live + non-empty frozenSurfaceUnion exits 2 with 'no longer reachable'` (genuine UI-removed-mid-loop hard-stop, names the frozen union), (3) `cycle ≥ 1 + zero UI-bearing live + missing prototyping.json exits 2 with 'Seed the loop first'` (fresh-project diagnostic — must NOT claim "no longer reachable"), (4) `cycle ≥ 1 + zero UI-bearing live + prototyping.json missing frozenSurfaceUnion exits 2 with 'Seed the loop first'` (pre-12th-wave legacy record path). Pairs with AC-0012-0045 (deterministic hard-stop classes) and AC-0012-0044 (autonomous-run bound, since the diagnostic is visible to operators). Closes codex MAJOR r3270050284 (regression coverage) and codex MINOR r3270050451 (diagnostic discrimination).
 
+## TC-0012-0420
+
+- EX-Ref: EX-0012-0149
+- AC-Refs: AC-0012-0045
+- Type: integration
+- Test file: `packages/qfai/tests/cli/commands/prototypingIterate.test.ts`
+- Verify the 13th-wave legacy-record hard-fail (codex r3265953324 MAJOR/P1). Fixture: `prototyping.json` with `frozenSpecsCovered: ["0001"]` but NO `frozenSurfaceUnion` field (pre-12th-wave shape). Expectation: `runPrototypingIterate({cycle: 1})` returns 2; stderr names the missing `frozenSurfaceUnion` field, identifies the record as `legacy pre-12th-wave`, and gives a `--cycle 0` re-seed instruction. CRITICAL: the stderr MUST NOT mention `spec-set drift detected` (the silent fallback to `frozenSpecsCovered` was the very bug closed in the 13th-wave fix). Closes codex MAJOR r3270058882.
+
+## TC-0012-0421
+
+- EX-Ref: EX-0012-0150
+- AC-Refs: AC-0012-0043
+- Type: integration
+- Test file: `packages/qfai/tests/cli/commands/prototypingIterate.test.ts`
+- Verify the 13th-wave `frozenLicenseCatalog` drift gate (codex r3265947252 P2). Three `it` blocks: (a) tampered `allowedSources` (`pinterest` added) → exit 2 + stderr `drifted from the cycle-0 frozen license catalog`; (b) `sourceHosts` removed entirely (malformed shape) → exit 2; (c) order-permuted catalog (`allowedSources` reversed, tier values reordered) → exit 0 (set-equality semantic via `licenseCatalogsEqual` / `recordOfStringArraysEqual` / `stringArraysSetEqual`). Pins the in-memory `DEFAULT_LICENSE_CATALOG` SSOT contract: byte-different but semantically equal catalogs MUST NOT trip the gate; any semantic difference MUST. Closes codex MAJOR r3270057892.
+
+## TC-0012-0422
+
+- EX-Ref: EX-0012-0151
+- AC-Refs: AC-0012-0044
+- Type: integration
+- Test file: `packages/qfai/tests/cli/prototypingCertify.test.ts`
+- Verify the wave-14 + wave-15 + wave-16 cumulative semantic changes on the `show-spec` JSON payload. Three `it` blocks: (a) legacy record without `frozenSpecsCovered` (only `specsCovered`) emits `frozenSpecsCoveredSource: "specsCovered"`; (b) record with `frozenSpecsCovered` emits `frozenSpecsCoveredSource: "frozenSpecsCovered"`; (c) `liveUiBearing` is a `string[]` (wave-16 contract alignment after the wave-15 resolver swap to `resolveSurfaceUnion`). Closes codex MINOR r3270061025.
+
 ## Legacy Coverage Continuity
 
 - The legacy baseline test-case identifier space remains reserved for existing implementation/test slices.

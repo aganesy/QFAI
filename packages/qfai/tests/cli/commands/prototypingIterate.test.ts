@@ -2730,6 +2730,173 @@ describe("runPrototypingIterate cycle >= 1 spec-set drift — multi-UI-bearing b
   });
 });
 
+// 18th late-review wave (codex r3270058882, MAJOR — qa-gatekeeper).
+// Regression coverage for the 13th-wave legacy-record hard-fail
+// (codex r3265953324, MAJOR/P1): when `prototyping.json` lacks the
+// `frozenSurfaceUnion` field (pre-12th-wave records), the cycle ≥ 1
+// drift gate now hard-fails with exit 2 + a re-seed instruction
+// rather than silently falling back to `frozenSpecsCovered` (which
+// would re-enable the pre-11th-wave MAJOR/P1 false-positive).
+// QFAI:SPEC-0012:TC-0012-0420 — AC-Ref: AC-0012-0045.
+describe("runPrototypingIterate cycle >= 1 — legacy record without frozenSurfaceUnion hard-fails (TC-0012-0420)", () => {
+  it("exits 2 with re-seed instruction and does NOT silent-fall-back to frozenSpecsCovered", async () => {
+    const root = await newTempDir();
+    await seedMinimalProject(root);
+    // Plant a legacy pre-12th-wave prototyping.json: it has
+    // `frozenSpecsCovered` (single-spec primary) but NO
+    // `frozenSurfaceUnion` field. The pre-13th-wave drift gate would
+    // have fallen back to `frozenSpecsCovered` here, comparing it
+    // against the live multi-spec UNION and false-positive firing —
+    // exactly the MAJOR/P1 bug TC-0012-0415 closes.
+    await mkdir(path.join(root, ".qfai/evidence/prototyping"), { recursive: true });
+    await writeFile(
+      path.join(root, ".qfai/evidence/prototyping/prototyping.json"),
+      JSON.stringify({
+        specsCovered: ["0001"],
+        frozenSpecsCovered: ["0001"],
+        // Note: NO `frozenSurfaceUnion` — legacy record.
+        frozenLicenseCatalog: {
+          allowedSources: ["unsplash", "pexels"],
+          licenseTiers: {
+            unsplash: ["unsplash-license", "free"],
+            pexels: ["pexels-free"],
+          },
+          sourceHosts: {
+            unsplash: ["images.unsplash.com", "unsplash.com"],
+            pexels: ["images.pexels.com", "pexels.com"],
+          },
+        },
+        iterations: [{ index: 0, commitSha: "a".repeat(40) }],
+        acceptedIterationIndex: 0,
+        stopReason: null,
+        designMd: { path: "DESIGN.md", sha256: hashDesignMd(CANONICAL_DESIGN_MD) },
+      }),
+      "utf-8",
+    );
+
+    const logger = await import("../../../src/cli/lib/logger.js");
+    const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
+    try {
+      const exit = await runPrototypingIterate({ root, cycle: 1 });
+      expect(exit).toBe(2);
+      const stderr = errorSpy.mock.calls.map((c) => String(c[0])).join("\n");
+      expect(stderr).toMatch(/frozenSurfaceUnion is missing or malformed/);
+      expect(stderr).toMatch(/legacy pre-12th-wave record/);
+      expect(stderr).toMatch(/`--cycle 0/);
+      // CRITICAL: the diagnostic MUST NOT mention falling back to
+      // `frozenSpecsCovered` or actually doing so silently — the
+      // legacy-fallback was the very bug closed by 13th-wave Fix.
+      expect(stderr).not.toMatch(/spec-set drift detected/);
+    } finally {
+      errorSpy.mockRestore();
+    }
+  });
+});
+
+// 18th late-review wave (codex r3270057892, MAJOR — qa-gatekeeper).
+// Regression coverage for the 13th-wave license-catalog drift gate
+// (codex r3265947252, P2): when `prototyping.json#frozenLicenseCatalog`
+// drifts from the in-memory SSOT `DEFAULT_LICENSE_CATALOG` at cycle ≥ 1,
+// iterate exits 2 with a re-seed instruction rather than silently
+// using the edited catalog as the verifier authority.
+// QFAI:SPEC-0012:TC-0012-0421 — AC-Ref: AC-0012-0043.
+describe("runPrototypingIterate cycle >= 1 — frozenLicenseCatalog drift hard-fails (TC-0012-0421)", () => {
+  const baseFrozenCatalog = {
+    allowedSources: ["unsplash", "pexels"],
+    licenseTiers: {
+      unsplash: ["unsplash-license", "free"],
+      pexels: ["pexels-free"],
+    },
+    sourceHosts: {
+      unsplash: ["images.unsplash.com", "unsplash.com"],
+      pexels: ["images.pexels.com", "pexels.com"],
+    },
+  };
+
+  async function seedWithCatalog(root: string, catalog: unknown): Promise<void> {
+    await seedMinimalProject(root);
+    await mkdir(path.join(root, ".qfai/evidence/prototyping"), { recursive: true });
+    await writeFile(
+      path.join(root, ".qfai/evidence/prototyping/prototyping.json"),
+      JSON.stringify({
+        specsCovered: ["0001"],
+        frozenSpecsCovered: ["0001"],
+        frozenSurfaceUnion: ["0001"],
+        frozenLicenseCatalog: catalog,
+        iterations: [{ index: 0, commitSha: "a".repeat(40) }],
+        acceptedIterationIndex: 0,
+        stopReason: null,
+        designMd: { path: "DESIGN.md", sha256: hashDesignMd(CANONICAL_DESIGN_MD) },
+      }),
+      "utf-8",
+    );
+  }
+
+  it("exits 2 when allowedSources is tampered (e.g. `pinterest` added)", async () => {
+    const root = await newTempDir();
+    await seedWithCatalog(root, {
+      ...baseFrozenCatalog,
+      allowedSources: [...baseFrozenCatalog.allowedSources, "pinterest"],
+    });
+
+    const logger = await import("../../../src/cli/lib/logger.js");
+    const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
+    try {
+      const exit = await runPrototypingIterate({ root, cycle: 1 });
+      expect(exit).toBe(2);
+      const stderr = errorSpy.mock.calls.map((c) => String(c[0])).join("\n");
+      expect(stderr).toMatch(/drifted from the cycle-0 frozen license catalog/);
+      expect(stderr).toMatch(/`--cycle 0/);
+    } finally {
+      errorSpy.mockRestore();
+    }
+  });
+
+  it("exits 2 when sourceHosts is removed (malformed shape)", async () => {
+    const root = await newTempDir();
+    const { sourceHosts: _omit, ...catalogWithoutHosts } = baseFrozenCatalog;
+    await seedWithCatalog(root, catalogWithoutHosts);
+
+    const logger = await import("../../../src/cli/lib/logger.js");
+    const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
+    try {
+      const exit = await runPrototypingIterate({ root, cycle: 1 });
+      expect(exit).toBe(2);
+      const stderr = errorSpy.mock.calls.map((c) => String(c[0])).join("\n");
+      expect(stderr).toMatch(/drifted from the cycle-0 frozen license catalog/);
+    } finally {
+      errorSpy.mockRestore();
+    }
+  });
+
+  it("does NOT exit 2 when allowedSources order is permuted (set-equality semantic)", async () => {
+    const root = await newTempDir();
+    await seedWithCatalog(root, {
+      ...baseFrozenCatalog,
+      allowedSources: ["pexels", "unsplash"], // reversed
+      licenseTiers: {
+        pexels: ["pexels-free"],
+        unsplash: ["free", "unsplash-license"], // reordered within tier
+      },
+    });
+
+    const logger = await import("../../../src/cli/lib/logger.js");
+    const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
+    try {
+      const exit = await runPrototypingIterate({ root, cycle: 1 });
+      // Order-permuted catalog is byte-different but semantically
+      // equal; `licenseCatalogsEqual` uses set-equality so the gate
+      // does NOT fire. (Exit 0 means the rest of the pipeline ran
+      // through without other gates tripping.)
+      expect(exit).toBe(0);
+      const stderr = errorSpy.mock.calls.map((c) => String(c[0])).join("\n");
+      expect(stderr).not.toMatch(/drifted from the cycle-0 frozen license catalog/);
+    } finally {
+      errorSpy.mockRestore();
+    }
+  });
+});
+
 // 10th-wave Fix H (codex r3265260665, P2): malformed `imageSources[]`
 // entries are no longer silently dropped. Pre-fix a typo such as
 // `licence:` (British spelling) reduced the array to `[]`, skipping

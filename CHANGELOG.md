@@ -26,6 +26,20 @@
     resolves), so robust callers should guard with `// empty` or `?`.
     The new top-level keys are SSOT-pinned in
     `.qfai/contracts/cli/qfai-prototyping.md#qfai prototyping show-spec`.
+  - Intra-PR migration follow-up (waves 15 + 16, within v1.8.10): the
+    `liveUiBearing` field also evolved within this PR — wave-15
+    switched the resolver to `resolveSurfaceUnion` (the same resolver
+    iterate's drift gate uses, so live scope is apples-to-apples with
+    enforcement) and wave-16 aligned the documented schema with the
+    actual emitted type (`string[]` of bare spec IDs, not `SpecRef[]`).
+    Per-spec metadata is now solely available via the optional
+    `primary` block. Operator tooling that grepped `show-spec | jq
+'.liveUiBearing[].specId'` MUST migrate to `show-spec | jq
+'.liveUiBearing[]'` (or `show-spec | jq '.primary.specId'` when
+    only the primary spec is needed). See the
+    `### Fixed (PR #208 16th late-review wave)` entry below for the
+    underlying alignment commit; this sub-bullet exists to keep the
+    BREAKING block self-contained.
   - Precondition change: `show-spec` now hard-requires a seeded
     `prototyping.json` and exits 2 when the file is missing or
     malformed. Operators who previously ran `show-spec` _before_
@@ -61,6 +75,48 @@
     structured error per affected URL.
   - Pinned-branch authorization is preserved: this lands in 1.8.10
     because `feature/v1.8.10` is the release pin.
+
+### Fixed (PR #208 18th late-review wave)
+
+- `packages/qfai/assets/init/.qfai/assistant/skills/qfai-prototyping/SKILL.md`:
+  Step 2-A resolver SSOT alignment — the skill now correctly documents
+  `resolveSurfaceUnion()` (the full UI-bearing union the cycle ≥ 1
+  drift gate enforces) as the resolver the skill invokes, with
+  `resolveAllUiBearingSpecs()` (strict signals only) called out as an
+  input subset. Pre-fix the skill claimed the narrower strict-only
+  resolver, leaving operators with title-marker / `primarySpecId` /
+  UI-contract-only projects expecting "not resolved" behaviour that
+  would not match the iterate gate. Resolves codex MAJOR r3270057960
+  (distributed-surface drift).
+- `tests/cli/commands/prototypingIterate.test.ts`: add regression
+  coverage for the 13th-wave legacy-record hard-fail (TC-0012-0420,
+  TDD-0440) — `prototyping.json` without `frozenSurfaceUnion` exits 2
+  with a re-seed instruction and explicitly does NOT silent-fall-back
+  to `frozenSpecsCovered` (which would re-enable the pre-11th-wave
+  MAJOR/P1 false-positive). Resolves codex MAJOR r3270058882.
+- `tests/cli/commands/prototypingIterate.test.ts`: add regression
+  coverage for the 13th-wave license-catalog drift gate (TC-0012-0421,
+  TDD-0441) — three `it` blocks: (a) tampered `allowedSources`
+  (`pinterest` added) → exit 2 with `drifted from the cycle-0 frozen
+license catalog`; (b) `sourceHosts` removed (malformed) → exit 2;
+  (c) order-permuted catalog still passes (`licenseCatalogsEqual`
+  set-equality semantic). Resolves codex MAJOR r3270057892.
+- `tests/cli/prototypingCertify.test.ts`: add regression coverage
+  for the 14th-wave + 15th/16th-wave show-spec payload semantic
+  changes (TC-0012-0422, TDD-0442) — three `it` blocks pinning the
+  new `frozenSpecsCoveredSource` discriminant (`"frozenSpecsCovered"`
+  vs `"specsCovered"`) and the post-wave-16 `liveUiBearing: string[]`
+  shape. Resolves codex MINOR r3270061025.
+- `CHANGELOG.md`: extend the `### BREAKING CHANGES (PR #208 —
+show-spec JSON schema reshape)` block with a sub-bullet covering
+  the intra-PR `liveUiBearing` migration (wave-15 / wave-16 resolver
+  - schema alignment) so operators reading the BREAKING block see
+    the full migration surface in one place. Resolves codex MINOR
+    r3270061586.
+- _FYI only (codex r3270059627, no behavioural change):_ noted the
+  `validateLayeredTraceability` strictness around informational AC →
+  BR back-references as a future SDD profile design seed; no
+  in-PR action required.
 
 ### Fixed (PR #208 17th late-review wave)
 

@@ -555,6 +555,111 @@ describe("qfai prototyping show-spec", () => {
     );
     expect(await runPrototypingShowSpec({ root })).toBe(2);
   });
+
+  // 18th late-review wave (codex r3270061025, MINOR — qa-gatekeeper).
+  // Direct regression coverage for the 14th-wave + 15th/16th-wave
+  // show-spec JSON payload semantic changes: payload now carries
+  // `frozenSpecsCoveredSource` discriminant (14th-wave codex
+  // r3269198684), `liveUiBearing` uses `resolveSurfaceUnion` and is
+  // emitted as `string[]` (15th + 16th-wave). Pre-fix the existing
+  // tests only smoke-checked the exit code.
+  // QFAI:SPEC-0012:TC-0012-0422 — pairs with AC-0012-0044 (show-spec
+  // operator-facing surface).
+  it("TC-0012-0422 (a): legacy record without frozenSpecsCovered emits frozenSpecsCoveredSource=specsCovered", async () => {
+    const root = await newTempDir();
+    await seedMinimalProject(root, { specMarker: true });
+    await mkdir(path.join(root, ".qfai/evidence/prototyping"), { recursive: true });
+    await writeFile(
+      path.join(root, ".qfai/evidence/prototyping/prototyping.json"),
+      JSON.stringify(
+        {
+          runId: "test-run-id",
+          // Legacy: only `specsCovered`, no `frozenSpecsCovered`.
+          specsCovered: ["0012"],
+        },
+        null,
+        2,
+      ),
+      "utf-8",
+    );
+
+    const logger = await import("../../src/cli/lib/logger.js");
+    const infoSpy = vi.spyOn(logger, "info").mockImplementation(() => {});
+    try {
+      expect(await runPrototypingShowSpec({ root })).toBe(0);
+      const payloadText = infoSpy.mock.calls.map((c) => String(c[0])).join("\n");
+      const payload = JSON.parse(payloadText) as Record<string, unknown>;
+      expect(payload.frozenSpecsCovered).toEqual(["0012"]);
+      expect(payload.frozenSpecsCoveredSource).toBe("specsCovered");
+    } finally {
+      infoSpy.mockRestore();
+    }
+  });
+
+  it("TC-0012-0422 (b): record with frozenSpecsCovered emits frozenSpecsCoveredSource=frozenSpecsCovered", async () => {
+    const root = await newTempDir();
+    await seedMinimalProject(root, { specMarker: true });
+    await mkdir(path.join(root, ".qfai/evidence/prototyping"), { recursive: true });
+    await writeFile(
+      path.join(root, ".qfai/evidence/prototyping/prototyping.json"),
+      JSON.stringify(
+        {
+          runId: "test-run-id",
+          specsCovered: ["0012"],
+          frozenSpecsCovered: ["0012"],
+          frozenSurfaceUnion: ["0012"],
+        },
+        null,
+        2,
+      ),
+      "utf-8",
+    );
+
+    const logger = await import("../../src/cli/lib/logger.js");
+    const infoSpy = vi.spyOn(logger, "info").mockImplementation(() => {});
+    try {
+      expect(await runPrototypingShowSpec({ root })).toBe(0);
+      const payloadText = infoSpy.mock.calls.map((c) => String(c[0])).join("\n");
+      const payload = JSON.parse(payloadText) as Record<string, unknown>;
+      expect(payload.frozenSpecsCoveredSource).toBe("frozenSpecsCovered");
+    } finally {
+      infoSpy.mockRestore();
+    }
+  });
+
+  it("TC-0012-0422 (c): liveUiBearing is a string[] (contract-aligned post-wave-16)", async () => {
+    const root = await newTempDir();
+    await seedMinimalProject(root, { specMarker: true });
+    await mkdir(path.join(root, ".qfai/evidence/prototyping"), { recursive: true });
+    await writeFile(
+      path.join(root, ".qfai/evidence/prototyping/prototyping.json"),
+      JSON.stringify(
+        {
+          runId: "test-run-id",
+          specsCovered: ["0012"],
+          frozenSpecsCovered: ["0012"],
+          frozenSurfaceUnion: ["0012"],
+        },
+        null,
+        2,
+      ),
+      "utf-8",
+    );
+
+    const logger = await import("../../src/cli/lib/logger.js");
+    const infoSpy = vi.spyOn(logger, "info").mockImplementation(() => {});
+    try {
+      expect(await runPrototypingShowSpec({ root })).toBe(0);
+      const payloadText = infoSpy.mock.calls.map((c) => String(c[0])).join("\n");
+      const payload = JSON.parse(payloadText) as { liveUiBearing: unknown };
+      expect(Array.isArray(payload.liveUiBearing)).toBe(true);
+      for (const item of payload.liveUiBearing as unknown[]) {
+        expect(typeof item).toBe("string");
+      }
+    } finally {
+      infoSpy.mockRestore();
+    }
+  });
 });
 
 // ─────────────────────────────────────────────────────────────────────────
