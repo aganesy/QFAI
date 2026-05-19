@@ -196,16 +196,16 @@ describe("/qfai-prototyping end-to-end", () => {
     expect(c3).toBe(64);
   });
 
-  it("exit 65 fires when last iter index === 14 even with weak scores", async () => {
+  it("exit 65 fires when last iter index === 9 even with weak scores", async () => {
     const root = await newTempDir();
     await seedRepo(root);
 
-    const fifteen = Array.from({ length: 15 }, (_, i) => ({ index: i }));
+    const fifteen = Array.from({ length: 10 }, (_, i) => ({ index: i }));
     await seedIterations(root, fifteen);
 
-    // Asking iterate for cycle 14 (already at MAX_ITERATION_INDEX) must
+    // Asking iterate for cycle 9 (already at MAX_ITERATION_INDEX) must
     // short-circuit with max-iterations.
-    const code = await runPrototypingIterate({ root, cycle: 14 });
+    const code = await runPrototypingIterate({ root, cycle: 9 });
     expect(code).toBe(65);
   });
 

@@ -163,6 +163,12 @@ describe("shouldStop — convergence (TC-3.4.x)", () => {
   it("returns null instead of throwing when the latest iter is malformed", () => {
     expect(shouldStop([{ index: 1, commitSha: "b".repeat(40) }])).toBeNull();
   });
+
+  // QFAI:SPEC-0012:TC-0012-0357
+  it("shouldStop boundary at index === 9 (TC-0012-0357, TDD-0372)", () => {
+    expect(shouldStop([baseIter({ index: 9 })])).toBe("max-iterations");
+    expect(shouldStop([baseIter({ index: 8 })])).toBeNull();
+  });
 });
 
 describe("allFourAxesExceptional", () => {
@@ -264,11 +270,9 @@ describe("type guards", () => {
 });
 
 describe("constants", () => {
-  it("MAX_ITERATIONS is 15", () => {
-    expect(MAX_ITERATIONS).toBe(15);
-  });
-
-  it("MAX_ITERATION_INDEX is 14", () => {
-    expect(MAX_ITERATION_INDEX).toBe(14);
+  // QFAI:SPEC-0012:TC-0012-0359
+  it("MAX_ITERATIONS === 10 and MAX_ITERATION_INDEX === 9 (TC-0012-0359, TDD-0371)", () => {
+    expect(MAX_ITERATIONS).toBe(10);
+    expect(MAX_ITERATION_INDEX).toBe(9);
   });
 });

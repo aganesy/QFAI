@@ -19,7 +19,7 @@
  * Exit codes:
  *   0   continue to this cycle
  *   64  STOP: all 4 axes exceptional + lap=0 + dmv=0 in the latest iter
- *   65  STOP: latest iter index === MAX_ITERATION_INDEX (14)
+ *   65  STOP: latest iter index === MAX_ITERATION_INDEX (9)
  *   2   input error (--cycle out of range, missing --target-url at cycle 0,
  *       no UI-bearing specs found, DESIGN.md missing/malformed/changed,
  *       prototyping.json#designMd missing on cycle >= 1, etc.)
@@ -240,8 +240,8 @@ export async function runPrototypingIterate(
         const first = recomputed[0];
         if (first !== undefined) {
           // codex AG08r: max-budget drift edge case. If the last iter is
-          // already at MAX_ITERATION_INDEX (cycle 14), there is no valid
-          // next cycle (--cycle is capped at 14). Falling through to the
+          // already at MAX_ITERATION_INDEX (cycle 9), there is no valid
+          // next cycle (--cycle is capped at 9). Falling through to the
           // expectedNextCycle gate would then exit 2 with a cycle-mismatch
           // error, blocking the operator from completing a run that
           // exhausted the iteration budget with drift still present. In

@@ -13,7 +13,7 @@
 
 import type { DesignMdViolation } from "./designMdViolations.js";
 
-export const MAX_ITERATIONS = 15;
+export const MAX_ITERATIONS = 10;
 export const MAX_ITERATION_INDEX = MAX_ITERATIONS - 1;
 
 export type OrdinalScore = "weak" | "acceptable" | "strong" | "exceptional";

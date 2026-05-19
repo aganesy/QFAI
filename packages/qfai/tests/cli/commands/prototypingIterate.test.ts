@@ -236,10 +236,10 @@ describe("runPrototypingIterate convergence (exit 64)", () => {
     expect(exit).toBe(64);
   });
 
-  it("returns 65 (max-iterations) when last iter is at index 14 AND has DESIGN.md drift (codex AG08r)", async () => {
+  it("returns 65 (max-iterations) when last iter is at index 9 AND has DESIGN.md drift (codex AG08r)", async () => {
     // Pre-fix the round-9 8thM recompute fall-through tried to continue
-    // the loop after detecting drift, but `--cycle` is capped at 14;
-    // expectedNextCycle would become 15 and exit 2 with a cycle-mismatch
+    // the loop after detecting drift, but `--cycle` is capped at 9;
+    // expectedNextCycle would become 10 and exit 2 with a cycle-mismatch
     // error, blocking completion of a budget-exhausted run with drift
     // still present. Post-fix: when the last iter is at MAX_ITERATION_INDEX,
     // emit max-iterations stop instead of falling through.
@@ -251,17 +251,17 @@ describe("runPrototypingIterate convergence (exit 64)", () => {
       usability: "exceptional",
       functionality: "exceptional",
     };
-    // 15 iterations (index 0..14) all reporting axes-exceptional with
-    // empty dmv. Last one at index 14 is the budget-exhausted candidate.
-    const iters = Array.from({ length: 15 }, (_, i) => ({
+    // 10 iterations (index 0..9) all reporting axes-exceptional with
+    // empty dmv. Last one at index 9 is the budget-exhausted candidate.
+    const iters = Array.from({ length: 10 }, (_, i) => ({
       index: i,
       scores: allExceptional,
       layoutAntiPatternsDetected: [],
       designMdViolations: [],
     }));
     await seedPrototypingJson(root, iters);
-    // Plant drift HTML in iter-14 so the recompute finds violations.
-    const iter14 = path.join(root, ".qfai/evidence/prototyping/iter-14");
+    // Plant drift HTML in iter-09 so the recompute finds violations.
+    const iter14 = path.join(root, ".qfai/evidence/prototyping/iter-09");
     await mkdir(iter14, { recursive: true });
     await writeFile(
       path.join(iter14, "home.html"),
@@ -269,11 +269,11 @@ describe("runPrototypingIterate convergence (exit 64)", () => {
       "utf-8",
     );
     // Even though shouldStop says axes-exceptional, the recompute finds
-    // drift; with index 14 we cannot continue, so we return 65 (max-iter).
-    // (cycle 15 would fail the cycle-input gate; 14 is the highest
+    // drift; with index 9 we cannot continue, so we return 65 (max-iter).
+    // (cycle 10 would fail the cycle-input gate; 9 is the highest
     // valid input and shouldStop short-circuits before the cycle-gap
-    // check would otherwise reject `cycle != expectedNextCycle=15`.)
-    const exit = await runPrototypingIterate({ root, cycle: 14 });
+    // check would otherwise reject `cycle != expectedNextCycle=10`.)
+    const exit = await runPrototypingIterate({ root, cycle: 9 });
     expect(exit).toBe(65);
   });
 
@@ -341,10 +341,10 @@ describe("runPrototypingIterate convergence (exit 64)", () => {
 
 // QFAI:SPEC-0012:TC-0012-0325
 describe("runPrototypingIterate max-iterations (exit 65)", () => {
-  it("returns 65 when latest iter index === 14", async () => {
+  it("returns 65 when latest iter index === 9", async () => {
     const root = await newTempDir();
     await seedMinimalProject(root);
-    const iterations = Array.from({ length: 15 }, (_, i) => ({
+    const iterations = Array.from({ length: 10 }, (_, i) => ({
       index: i,
       scores: {
         informationArchitecture: "acceptable",
@@ -355,9 +355,9 @@ describe("runPrototypingIterate max-iterations (exit 65)", () => {
     }));
     await seedPrototypingJson(root, iterations);
 
-    // We can't pass cycle 15 (out of range), but the stop check fires
+    // We can't pass cycle 10 (out of range), but the stop check fires
     // at the start of any cycle >= 1 by reading the latest iter index.
-    const exit = await runPrototypingIterate({ root, cycle: 14 });
+    const exit = await runPrototypingIterate({ root, cycle: 9 });
     expect(exit).toBe(65);
   });
 });
@@ -371,10 +371,10 @@ describe("runPrototypingIterate input validation", () => {
     expect(exit).toBe(2);
   });
 
-  it("returns 2 when --cycle is > 14", async () => {
+  it("returns 2 when --cycle is > 9", async () => {
     const root = await newTempDir();
     await seedMinimalProject(root);
-    const exit = await runPrototypingIterate({ root, cycle: 15 });
+    const exit = await runPrototypingIterate({ root, cycle: 10 });
     expect(exit).toBe(2);
   });
 
@@ -446,13 +446,13 @@ describe("runPrototypingIterate continue (exit 0)", () => {
     expect(plan.cycle).toBe(1);
   });
 
-  it("does not emit an unreachable iterate --cycle 15 action at cycle 14", async () => {
+  it("does not emit an unreachable iterate --cycle 10 action at cycle 9", async () => {
     const root = await newTempDir();
     await seedMinimalProject(root);
-    // Seed iterations[0..13] so the cycle-14 call is on the realistic
+    // Seed iterations[0..8] so the cycle-9 call is on the realistic
     // `iterations.length === cycle` invariant (each prior cycle's
     // capture/review is recorded in iterations[]).
-    const seededIterations = Array.from({ length: 14 }, (_, i) => ({
+    const seededIterations = Array.from({ length: 9 }, (_, i) => ({
       index: i,
       scores: {
         informationArchitecture: "acceptable",
@@ -463,16 +463,16 @@ describe("runPrototypingIterate continue (exit 0)", () => {
     }));
     await seedPrototypingJson(root, seededIterations);
 
-    const exit = await runPrototypingIterate({ root, cycle: 14 });
+    const exit = await runPrototypingIterate({ root, cycle: 9 });
     expect(exit).toBe(0);
 
     const planRaw = await readFile(
-      path.join(root, ".qfai/evidence/prototyping/iter-14/iterate-plan.json"),
+      path.join(root, ".qfai/evidence/prototyping/iter-09/iterate-plan.json"),
       "utf-8",
     );
     const plan = JSON.parse(planRaw) as { cycle: number; nextActions: string[] };
-    expect(plan.cycle).toBe(14);
-    expect(plan.nextActions).not.toContain("iterate --cycle 15");
+    expect(plan.cycle).toBe(9);
+    expect(plan.nextActions).not.toContain("iterate --cycle 10");
     expect(plan.nextActions).toContain("handoff");
     expect(plan.nextActions).toContain("certify");
   });

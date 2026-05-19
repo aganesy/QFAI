@@ -4,6 +4,20 @@
 
 ## [Unreleased]
 
+### Changed (implementation)
+
+- Reduce prototyping cycle budget from 15 to 10 iterations
+  (`MAX_ITERATIONS = 10`, derived `MAX_ITERATION_INDEX = 9`). Cascade refresh
+  of boundary test literals in `prototypingE2E.test.ts` and
+  `prototypingIterate.test.ts`, JSDoc / inline comments in
+  `prototypingIterate.ts` and `prototypingEvidence.ts`, and the user-facing
+  strings in `cli/main.ts` (`--cycle (0..9)`) and `observability/guidance.ts`
+  ("10 cycles"). CHG-002 Wave 3 foundation; spec-0012 TDD-0371 (TC-0012-0359).
+- Add `shouldStop` boundary regression guard for `index===9` →
+  `"max-iterations"`, `index===8` → `null`. No production change required —
+  the symbolic `MAX_ITERATION_INDEX` consumption already honors the new
+  boundary; the test pins the contract. spec-0012 TDD-0372 (TC-0012-0357).
+
 ### Changed (spec / contract only — implementation lands separately)
 
 - **`/qfai-prototyping` redefinition (CHG-002, spec-0012)**: spec pack rewritten
