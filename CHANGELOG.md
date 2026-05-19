@@ -76,6 +76,47 @@
   - Pinned-branch authorization is preserved: this lands in 1.8.10
     because `feature/v1.8.10` is the release pin.
 
+### Fixed (PR #208 22nd late-review wave)
+
+- **SKILL.md operator narrative ↔ implementation (codex r3270253034,
+  MAJOR — architecture-reviewer):** Step 2-A now correctly says the
+  skill resolves the UI-bearing union via `resolveSurfaceUnion()` (the
+  resolver the precheck / cycle ≥ 1 drift gate / show-spec actually
+  invoke), with `resolveAllUiBearingSpecs()` documented as the strict
+  frontmatter sub-component the union composes internally. Pre-fix
+  the narrative claimed `resolveAllUiBearingSpecs()` was the resolver
+  the skill calls — true for the test guard but false against the
+  implementation. SKILL.md also gains a pointer (`see
+.qfai/contracts/config/qfai-config.yaml or qfai doctor --explain
+prototyping for the exact key name`) for the config-pinned spec id
+  so operators can still discover the config key without the
+  forbidden literal token (codex r3270259409 MINOR — discoverability
+  partial restore).
+- **AC ↔ BR pairing (codex r3270250830, MINOR — requirements-reviewer):**
+  `BR-0012-0034` AC-Refs extended to include `AC-0012-0052`
+  (`show-spec` JSON payload contract) so the REQ → BR → AC chain is
+  not broken at the operator drift-analysis surface.
+- **REQ ledger (codex r3270252059, MINOR — requirements-reviewer):**
+  `REQ-0011` Refers-To extended with `AC-0012-0052`; `Date Updated`
+  bumped to `2026-05-20` to reflect the wave-20 amendment.
+- **09_delta narrative AC-Ref history (codex r3270253036, MINOR —
+  requirements-reviewer):** 13th-wave Fix 3 narrative annotated with
+  the AC-Ref binding history (`AC-0012-0044` → `AC-0012-0045 class
+(f)` per the 20th-wave rebinding). Mirrors the wave-19 narrative
+  annotation pattern.
+- **CLI contract exit-2 cell (codex r3270257688, MINOR —
+  product-surface):** the exit-2 row in
+  `.qfai/contracts/cli/qfai-prototyping.md` now points operators at
+  an enumerated bullet list immediately below the table; the inline
+  cell was ~870 chars / 1000+ char rendered which was unreadable in
+  GitHub / VSCode preview. Common recovery (`--cycle 0` re-seed) is
+  named in a separate paragraph.
+- **Stderr layout (codex r3270255983, NIT — product-surface):** the
+  cycle ≥ 1 legacy-record diagnostic in `prototypingIterate.ts`
+  splits into a short primary CTA (`Re-run with --cycle 0
+--target-url <url> …`) + a separate `why:` line so the
+  recovery action is the headline and the rationale follows.
+
 ### Fixed (PR #208 21st late-review wave)
 
 - **AC-Ref consistency (codex r3270214641, MAJOR — requirements-reviewer):**

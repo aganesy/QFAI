@@ -186,7 +186,7 @@ No other path triggers stop. LLM subjective DONE is forbidden.
 
 ## BR-0012-0034: Autonomy and deterministic hard-stop catalog
 
-- AC-Refs: AC-0012-0044, AC-0012-0045
+- AC-Refs: AC-0012-0044, AC-0012-0045, AC-0012-0052
 - The run MUST be fully autonomous from cycle 0 through cycle 9 with no per-cycle user prompts (NFR-0005).
 - Hard-stop classes (deterministic non-zero exits, no prompts):
   - (a) lock drift (exit 2; BR-0012-0026 governs `DESIGN.md` hash mismatch case)

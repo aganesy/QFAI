@@ -1460,15 +1460,20 @@ async function evaluateCycleGteOneGate(
   // expected to restart with `--cycle 0` to pick up the broader scope.
   const frozenUnion = readFrozenSurfaceUnionField(protoRecord);
   if (frozenUnion === null) {
+    // 22nd-wave (codex r3270255983 NIT — product-surface): split the
+    // diagnostic into primary CTA + justification so the recovery
+    // action is the headline and the rationale follows underneath.
     error(
       "qfai prototyping iterate: prototyping.json#frozenSurfaceUnion is missing or " +
-        "malformed. The cycle ≥ 1 drift gate requires a cycle-0-frozen " +
-        "multi-spec UI-bearing UNION snapshot; the gate does not fall " +
-        "back to the single-spec `frozenSpecsCovered` (that fallback " +
-        "would compare a single-spec frozen scope against the live " +
-        "multi-spec union and false-positive-fire for any project with " +
-        "≥ 2 UI-bearing specs). Re-run with `--cycle 0 --target-url <url>` " +
-        "to refreeze the loop with a current UNION snapshot.",
+        "malformed. Re-run with `--cycle 0 --target-url <url>` to refreeze " +
+        "the loop with a current UNION snapshot.",
+    );
+    error(
+      "  why: the cycle ≥ 1 drift gate requires a cycle-0-frozen multi-spec " +
+        "UI-bearing UNION snapshot; the gate does not fall back to the " +
+        "single-spec `frozenSpecsCovered` because that fallback would compare " +
+        "a single-spec frozen scope against the live multi-spec union and " +
+        "false-positive-fire for any project with ≥ 2 UI-bearing specs.",
     );
     return { shortCircuit: true, exitCode: 2 };
   }
