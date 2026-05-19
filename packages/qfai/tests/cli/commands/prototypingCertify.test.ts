@@ -126,7 +126,7 @@ async function seedMinimalProject(root: string): Promise<void> {
 
 async function seedAllGatesPass(
   root: string,
-  options: { specsCovered?: string[] } = {},
+  options: { specsCovered?: string[]; frozenSpecsCovered?: string[] } = {},
 ): Promise<void> {
   await writeFile(path.join(root, "DESIGN.md"), CERT_DESIGN_MD, "utf-8");
   // Accepted iter index = 1 (iterations: [{0}, {1}]). seedAllGatesPass
@@ -149,20 +149,24 @@ async function seedAllGatesPass(
     JSON.stringify({ status: "PASS" }),
     "utf-8",
   );
+  const protoBody: Record<string, unknown> = {
+    mode: { effective: "standard", source: "explicit-request", rationale: "test" },
+    surface: "web",
+    runId: "run-cert-test",
+    designMd: { path: "DESIGN.md", sha256: hashDesignMd(CERT_DESIGN_MD) },
+    specsCovered: options.specsCovered ?? ["0012"],
+    reviewerGate: {
+      result: "PASS",
+      signoff: { reviewerId: "test-reviewer", timestamp: "2026-04-27T00:00:00Z" },
+    },
+    iterations: [{ index: 0 }, { index: 1 }],
+  };
+  if (options.frozenSpecsCovered !== undefined) {
+    protoBody.frozenSpecsCovered = options.frozenSpecsCovered;
+  }
   await writeFile(
     path.join(root, ".qfai/evidence/prototyping/prototyping.json"),
-    JSON.stringify({
-      mode: { effective: "standard", source: "explicit-request", rationale: "test" },
-      surface: "web",
-      runId: "run-cert-test",
-      designMd: { path: "DESIGN.md", sha256: hashDesignMd(CERT_DESIGN_MD) },
-      specsCovered: options.specsCovered ?? ["0012"],
-      reviewerGate: {
-        result: "PASS",
-        signoff: { reviewerId: "test-reviewer", timestamp: "2026-04-27T00:00:00Z" },
-      },
-      iterations: [{ index: 0 }, { index: 1 }],
-    }),
+    JSON.stringify(protoBody),
     "utf-8",
   );
 }
@@ -261,6 +265,102 @@ describe("qfai prototyping certify (TC-0012-0381: per-(spec × screen) review.js
     await seedReviewJson(root, "spec-0012", "settings");
     // spec-0007: nothing seeded → both (spec-0007, home) and
     // (spec-0007, settings) are missing.
+
+    const logger = await import("../../../src/cli/lib/logger.js");
+    const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
+    try {
+      const exit = await runPrototypingCertify({ root, check: false });
+      expect(exit).not.toBe(0);
+      const messages = errorSpy.mock.calls.map((c) => String(c[0]));
+      const namesHome = messages.some((m) => m.includes("spec-0007") && m.includes("home"));
+      const namesSettings = messages.some(
+        (m) => m.includes("spec-0007") && m.includes("settings"),
+      );
+      expect(namesHome).toBe(true);
+      expect(namesSettings).toBe(true);
+    } finally {
+      errorSpy.mockRestore();
+    }
+  });
+
+  it("iterates the cycle-0-frozen multi-spec set (frozenSpecsCovered) — not the legacy single-spec specsCovered — when both fields are present", async () => {
+    // Regression for the Wave-3 multi-spec write: `iterate --cycle 0`
+    // persists the FULL UI-bearing set under `frozenSpecsCovered` and
+    // leaves `specsCovered` populated with only the resolved primary
+    // spec. Pre-fix, the certify per-(spec × screen) gate read
+    // `specsCovered` and therefore only enforced presence for the
+    // primary spec; a frozen-set secondary spec could be entirely
+    // missing review.json files and certify still sealed the
+    // certificate. Post-fix, certify reads `frozenSpecsCovered` first
+    // (falling back to `specsCovered` only when the multi-spec field
+    // is absent).
+    const root = await newTempDir();
+    await seedMinimalProject(root);
+    // Seed spec-0007 on disk for parity with the multi-spec fixture in
+    // the previous test (`validateSpecIdLinkage`-style preconditions
+    // are project-wide, not certify-direct).
+    await mkdir(path.join(root, ".qfai/specs/spec-0007"), { recursive: true });
+    await writeFile(
+      path.join(root, ".qfai/specs/spec-0007/01_Spec.md"),
+      "---\nsurface_type: ui-bearing\n---\n\n# spec-0007\n",
+      "utf-8",
+    );
+    // Mimic the Wave-3 production shape: specsCovered = [primary],
+    // frozenSpecsCovered = [primary, secondary]. Pre-fix the certify
+    // gate iterated only specsCovered = ["0001"] and silently passed
+    // even though spec-0007 has zero review.json files.
+    await seedAllGatesPass(root, {
+      specsCovered: ["0001"],
+      frozenSpecsCovered: ["0001", "0007"],
+    });
+    await seedUiScreens(root, ["home", "settings"]);
+    // Seed review.json for the primary spec only; the secondary
+    // (spec-0007) is the silent gap pre-fix.
+    await seedReviewJson(root, "spec-0001", "home");
+    await seedReviewJson(root, "spec-0001", "settings");
+
+    const logger = await import("../../../src/cli/lib/logger.js");
+    const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
+    try {
+      const exit = await runPrototypingCertify({ root, check: false });
+      expect(exit).not.toBe(0);
+      const messages = errorSpy.mock.calls.map((c) => String(c[0]));
+      // Stderr MUST name the missing (spec-0007, *) pairs — pre-fix
+      // these messages were absent because the gate iterated only
+      // specsCovered=["0001"].
+      const namesHome = messages.some((m) => m.includes("spec-0007") && m.includes("home"));
+      const namesSettings = messages.some(
+        (m) => m.includes("spec-0007") && m.includes("settings"),
+      );
+      expect(namesHome).toBe(true);
+      expect(namesSettings).toBe(true);
+    } finally {
+      errorSpy.mockRestore();
+    }
+  });
+
+  it("falls back to specsCovered for pre-Wave-3 evidence that lacks frozenSpecsCovered", async () => {
+    // Backward-compat sentinel: when `frozenSpecsCovered` is entirely
+    // absent (pre-Wave-3 prototyping.json), the gate continues to
+    // iterate `specsCovered`. Pin this so the fallback path is not
+    // accidentally regressed by a future refactor that hard-removes
+    // the legacy read.
+    const root = await newTempDir();
+    await seedMinimalProject(root);
+    // No frozenSpecsCovered key at all; specsCovered carries the
+    // multi-spec set in this pre-Wave-3 shape.
+    await seedAllGatesPass(root, { specsCovered: ["0012", "0007"] });
+    await mkdir(path.join(root, ".qfai/specs/spec-0007"), { recursive: true });
+    await writeFile(
+      path.join(root, ".qfai/specs/spec-0007/01_Spec.md"),
+      "---\nsurface_type: ui-bearing\n---\n\n# spec-0007\n",
+      "utf-8",
+    );
+    await seedUiScreens(root, ["home", "settings"]);
+    // spec-0012 fully covered; spec-0007 has nothing → both
+    // (spec-0007, *) pairs missing.
+    await seedReviewJson(root, "spec-0012", "home");
+    await seedReviewJson(root, "spec-0012", "settings");
 
     const logger = await import("../../../src/cli/lib/logger.js");
     const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});

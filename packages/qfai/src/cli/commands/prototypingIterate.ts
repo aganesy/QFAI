@@ -175,12 +175,33 @@ export async function runPrototypingIterate(
     earlyConfig.config,
   );
   if (earlyUiBearing.length === 0) {
-    info(
-      "qfai prototyping iterate: no UI-bearing specs resolved — deterministic no-op " +
-        "(no spec carries `surface_type: ui-bearing` and no matching `.qfai/contracts/ui/*.yaml`). " +
-        "Add the marker or contract to enable the prototyping loop.",
-    );
-    return 0;
+    // Before declaring "no UI-bearing specs", honour the documented
+    // escape hatch: `qfai.config.yaml#prototyping.primarySpecId`. The
+    // multi-spec resolver (`resolveAllUiBearingSpecs`) only recognises
+    // specs that carry a `surface_type: ui-bearing` marker OR ship a
+    // matching `<contractsDir>/ui/*.yaml`; projects that configure the
+    // primary spec explicitly without either signal would otherwise be
+    // silently treated as no-op runs even though the legacy
+    // single-spec resolver (`resolvePrimaryPrototypingSpec`) below
+    // honours the config. Skip the no-op and fall through to the
+    // primary-spec path when the configured spec exists on disk.
+    const configuredPrimarySpecId = earlyConfig.config.prototyping?.primarySpecId;
+    const configuredSpecOnDisk =
+      configuredPrimarySpecId !== undefined
+        ? await specDirExists(
+            options.root,
+            earlyConfig.config.paths.specsDir,
+            configuredPrimarySpecId,
+          )
+        : false;
+    if (!configuredSpecOnDisk) {
+      info(
+        "qfai prototyping iterate: no UI-bearing specs resolved — deterministic no-op " +
+          "(no spec carries `surface_type: ui-bearing` and no matching `.qfai/contracts/ui/*.yaml`). " +
+          "Add the marker or contract to enable the prototyping loop.",
+      );
+      return 0;
+    }
   }
 
   // 1) Read + hash root DESIGN.md FIRST (before any per-cycle plumbing).
@@ -926,6 +947,29 @@ async function deleteStaleCompletionCertificate(certAbs: string): Promise<void> 
         "the next `qfai prototyping certify` run will overwrite it; consumers reading the cert " +
         "during the reset window may observe the prior loop's signoff.",
     );
+  }
+}
+
+/**
+ * Cheap existence probe for `<specsDir>/spec-NNNN`. Used by the
+ * cycle-0 no-op gate to honour the `prototyping.primarySpecId` config
+ * escape hatch: if the marker/contract scan returns zero UI-bearing
+ * specs but the operator has explicitly pinned a primary spec that
+ * exists on disk, the no-op short-circuit is skipped so the legacy
+ * `resolvePrimaryPrototypingSpec` path can drive the loop.
+ */
+async function specDirExists(
+  root: string,
+  specsDir: string,
+  specId: string,
+): Promise<boolean> {
+  const dirName = `spec-${specId}`;
+  const abs = path.join(root, specsDir, dirName);
+  try {
+    const s = await stat(abs);
+    return s.isDirectory();
+  } catch {
+    return false;
   }
 }
 

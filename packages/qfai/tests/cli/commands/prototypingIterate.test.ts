@@ -1853,3 +1853,87 @@ describe("runPrototypingIterate cycle >= 1 spec-set drift (TC-0012-0385)", () =>
     expect(after.frozenSpecsCovered).toEqual(["0001"]);
   });
 });
+
+describe("runPrototypingIterate cycle-0 no-op gate honours prototyping.primarySpecId", () => {
+  // Regression for the Wave-3 section-0 pre-check: the new
+  // `resolveAllUiBearingSpecs`-driven no-op gate must not short-circuit
+  // a run when the operator has explicitly pinned a primary spec via
+  // `qfai.config.yaml#prototyping.primarySpecId` and that spec exists
+  // on disk — even when the spec's 01_Spec.md lacks the
+  // `surface_type: ui-bearing` marker and no matching UI contract
+  // exists. Otherwise the configured run silently no-ops and the
+  // operator never learns iterate ran at all.
+  it("does NOT exit 0 at section 0 with 'no UI-bearing specs resolved' when primarySpecId is configured and the spec dir exists", async () => {
+    const root = await newTempDir();
+    // Seed DESIGN.md so any later gate that fires can fail on something
+    // other than missing DESIGN.md — the assertion below isolates the
+    // section-0 short-circuit specifically.
+    await seedDesignMd(root);
+    // qfai.config.yaml: pin a primary spec via the documented config
+    // escape hatch. No `surface_type: ui-bearing` marker on the spec,
+    // no UI contract under `.qfai/contracts/ui/`.
+    await writeFile(
+      path.join(root, "qfai.config.yaml"),
+      [
+        "paths:",
+        "  contractsDir: .qfai/contracts",
+        "  specsDir: .qfai/specs",
+        "  discussionDir: .qfai/discussion",
+        "  outDir: .qfai/out",
+        "  skillsDir: .qfai/assistant/skills",
+        "  promptsDir: .qfai/assistant/skills",
+        "  srcDir: src",
+        "  testsDir: tests",
+        "validation:",
+        "  failOn: error",
+        "  require:",
+        "    specSections: []",
+        "  testStrategy:",
+        "    requireLayerTags: false",
+        "    requireSizeTags: false",
+        "    requireApiAtdd: false",
+        "    requireE2eAtdd: false",
+        "    requireIntegrationAtdd: false",
+        "    requireUnitTdd: false",
+        "    requireSpecTagBlock: false",
+        "    requireRoutingProfile: false",
+        "prototyping:",
+        '  primarySpecId: "0007"',
+        "",
+      ].join("\n"),
+      "utf-8",
+    );
+    const specDir = path.join(root, ".qfai/specs/spec-0007");
+    await mkdir(specDir, { recursive: true });
+    await writeFile(
+      path.join(specDir, "01_Spec.md"),
+      "# 01 Spec — primarySpecId-driven\n\n- Spec: spec-0007\n",
+      "utf-8",
+    );
+
+    const logger = await import("../../../src/cli/lib/logger.js");
+    const infoSpy = vi.spyOn(logger, "info").mockImplementation(() => {});
+    const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
+    try {
+      const exit = await runPrototypingIterate({ root, cycle: 0 });
+      // The exact exit code beyond section 0 depends on which downstream
+      // gate fires (here: cycle-0 requires `--target-url`, which we
+      // intentionally omit so we end up at exit 2 with a different
+      // error). The key assertion is that section 0 did NOT short-circuit
+      // with exit 0 + "no UI-bearing specs resolved".
+      const infoMessages = infoSpy.mock.calls.map((c) => String(c[0])).join("\n");
+      const errorMessages = errorSpy.mock.calls.map((c) => String(c[0])).join("\n");
+      expect(infoMessages).not.toMatch(/no UI-bearing specs resolved/i);
+      expect(errorMessages).not.toMatch(/no UI-bearing specs resolved/i);
+      // Defense-in-depth: when the no-op gate is correctly bypassed,
+      // the run cannot have produced an iter-00 plan (we omitted
+      // --target-url so the run must fail downstream). This pins the
+      // bug shape — pre-fix the run silently returned 0 and produced
+      // nothing.
+      expect(exit).not.toBe(0);
+    } finally {
+      infoSpy.mockRestore();
+      errorSpy.mockRestore();
+    }
+  });
+});

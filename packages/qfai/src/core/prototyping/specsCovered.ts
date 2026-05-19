@@ -43,6 +43,34 @@ export function readFrozenSpecsCovered(record: unknown): string[] | null {
   return out;
 }
 
+/**
+ * Read `prototyping.json#frozenSpecsCovered` from a parsed record.
+ *
+ * `frozenSpecsCovered` is the cycle-0-frozen FULL UI-bearing spec set
+ * (multi-spec). It is distinct from `specsCovered`, which records only
+ * the single resolved primary spec for backward compatibility with
+ * pre-multi-spec consumers. Per-(spec × screen) gates (e.g. certify's
+ * review.json presence check) MUST iterate the multi-spec field so
+ * that secondary specs in the frozen set are not silently skipped.
+ *
+ * Same validation contract as `readFrozenSpecsCovered`: returns `null`
+ * when the field is missing, empty, non-array, or carries non-string /
+ * empty-string entries. Callers fall back to `readFrozenSpecsCovered`
+ * (legacy single-spec field) when this returns `null` so pre-Wave-3
+ * evidence still loads.
+ */
+export function readFrozenSpecsCoveredMultiSpec(record: unknown): string[] | null {
+  if (!isRecord(record)) return null;
+  const raw = record.frozenSpecsCovered;
+  if (!Array.isArray(raw) || raw.length === 0) return null;
+  const out: string[] = [];
+  for (const value of raw) {
+    if (typeof value !== "string" || value.length === 0) return null;
+    out.push(value);
+  }
+  return out;
+}
+
 export type SpecsCoveredDriftResult = {
   drifted: boolean;
   added: string[];

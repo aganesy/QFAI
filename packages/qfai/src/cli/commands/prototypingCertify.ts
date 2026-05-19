@@ -39,7 +39,10 @@ import {
   type DesignMdViolation,
 } from "../../core/prototyping/designMdViolations.js";
 import { resolvePrimaryPrototypingSpec } from "../../core/prototyping/specResolution.js";
-import { readFrozenSpecsCovered } from "../../core/prototyping/specsCovered.js";
+import {
+  readFrozenSpecsCovered,
+  readFrozenSpecsCoveredMultiSpec,
+} from "../../core/prototyping/specsCovered.js";
 import { resolveToolVersion } from "../../core/version.js";
 import { error, info } from "../lib/logger.js";
 
@@ -229,7 +232,17 @@ export async function runPrototypingCertify(
   // Per-spec screen contracts are deferred to reviewerDispatch (Wave 1).
   // Today, UI contracts under `.qfai/contracts/ui/` are project-wide,
   // so the same screen list applies to every spec in the frozen set.
-  const frozenSpecsPreview = readFrozenSpecsCovered(protoJson);
+  //
+  // Use the cycle-0-frozen MULTI-spec field (`frozenSpecsCovered`)
+  // first; iterate writes the full UI-bearing set there and only the
+  // resolved primary spec into `specsCovered`. Reading the legacy
+  // single-spec field would silently iterate ONLY the primary spec
+  // and let a frozen-set secondary spec ship a sealed certificate
+  // with completely-missing review.json files. Fall back to the
+  // legacy field for pre-Wave-3 evidence that predates the
+  // `frozenSpecsCovered` write.
+  const frozenSpecsPreview =
+    readFrozenSpecsCoveredMultiSpec(protoJson) ?? readFrozenSpecsCovered(protoJson);
   if (frozenSpecsPreview !== null && screenContracts.length > 0) {
     const missingPairs: Array<{ spec: string; screen: string; expectedPath: string }> = [];
     for (const rawSpec of frozenSpecsPreview) {
