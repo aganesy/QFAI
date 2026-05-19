@@ -141,6 +141,7 @@ otherwise enforced.
 | TDD-0424 | TC-0012-0404 | done   | prototyping-cli  | P2 fix: cycle-0 frozen set is the UNION of strict + title-marker + primarySpecId, independent of which sub-scan returned first (was strict-only when strict was non-empty)     |
 | TDD-0425 | TC-0012-0405 | done   | prototyping-cli  | 7th late-review wave (codex r3264968439, LOW). POSITIVE precedence regression at the certify call-site: with both `specsCovered: ["0007"]` and `frozenSpecsCovered: ["0007","0012"]` populated, sealed `completion-certificate.json#specsCovered === ["0007","0012"]` (frozen wins) |
 | TDD-0426 | TC-0012-0406 | done   | prototyping-cli  | 7th late-review wave (codex r3264968439, LOW). POSITIVE fallback regression at the certify call-site: with only legacy `specsCovered: ["0007"]` (no `frozenSpecsCovered`), sealed `completion-certificate.json#specsCovered === ["0007"]` so pre-Wave-3 evidence round-trips cleanly |
+| TDD-0427 | TC-0012-0407 | done   | prototyping-cli  | 9th late-review wave (codex r3265157640, P1). Per-spec UI contracts scope the per-(spec × screen) presence gate: new helper `readPerSpecScreens(root, contractsDir, specDirName)` probes `<contractsDir>/ui/<spec-NNNN>.yaml` (with bare-numeric / `ui-NNNN` / `ui-NNNN-*` alternates) and the gate uses the per-spec result when non-null, else falls back to the project-wide list (single-spec backward compat). Closes the multi-spec cross-product false-positive |
 
 ## Notes (v2.1 ledger)
 

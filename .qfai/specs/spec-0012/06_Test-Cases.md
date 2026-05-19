@@ -779,6 +779,14 @@
 - Test file: `packages/qfai/tests/cli/commands/prototypingCertify.test.ts`
 - Verify the POSITIVE side of the fallback arm: when `prototyping.json` carries ONLY legacy `specsCovered: ["0007"]` (no `frozenSpecsCovered` field, pre-Wave-3 evidence) and the single (spec, screen) pair has its review.json, certify exits 0 AND `completion-certificate.json#specsCovered` records `["0007"]`. Pre-existing TC-0012-0400 covers the NEGATIVE side (reject on missing review.json under the fallback scope); this case pins the happy-path sealed-cert shape so a future refactor that hard-removes the legacy read is caught by a green-path regression in addition to the red-path one.
 
+## TC-0012-0407
+
+- EX-Ref: EX-0012-0138
+- AC-Refs: AC-0012-0047
+- Type: integration
+- Test file: `packages/qfai/tests/cli/commands/prototypingCertify.test.ts`
+- Verify per-spec UI contract scoping at the per-(spec × screen) presence gate: seed a multi-spec frozen set `["0001","0002"]` with per-spec contracts (`.qfai/contracts/ui/spec-0001.yaml` declares ONLY `home`; `.qfai/contracts/ui/spec-0002.yaml` declares ONLY `settings`); seed only the per-spec-scoped review.json files (`spec-0001/home.review.json` + `spec-0002/settings.review.json`); assert certify exits 0 — the legacy cross-product would have demanded `spec-0001/settings.review.json` + `spec-0002/home.review.json` that should never exist per the per-spec contract. Companion negative `it` confirms presence is still enforced WITHIN each spec's declared set (spec-0001 declares two screens; missing one still fails). Pre-fix `prototypingCertify.ts` always iterated the project-wide `screenContracts` for every frozen spec, producing spurious cross-product rejections for projects with non-uniform per-spec screen sets.
+
 ## Legacy Coverage Continuity
 
 - The legacy baseline test-case identifier space remains reserved for existing implementation/test slices.

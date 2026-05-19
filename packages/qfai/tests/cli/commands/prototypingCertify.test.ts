@@ -17,7 +17,7 @@
  * set. Per-spec screen contracts (a per-(spec × screen) declaration
  * surface) are deferred to Wave 1's reviewerDispatch work.
  */
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -496,11 +496,9 @@ describe("qfai prototyping certify (TC-0012-0405: frozenSpecsCovered drives seal
 
     // Read the sealed cert and assert the recorded scope reflects the
     // multi-spec frozen set, not the legacy single-spec primary.
-    const certRaw = await import("node:fs/promises").then((fs) =>
-      fs.readFile(
-        path.join(root, ".qfai/evidence/prototyping/completion-certificate.json"),
-        "utf-8",
-      ),
+    const certRaw = await readFile(
+      path.join(root, ".qfai/evidence/prototyping/completion-certificate.json"),
+      "utf-8",
     );
     const cert = JSON.parse(certRaw) as { specsCovered: string[] };
     expect(cert.specsCovered).toEqual(["0007", "0012"]);
@@ -535,11 +533,9 @@ describe("qfai prototyping certify (TC-0012-0406: legacy-only specsCovered fallb
     const exit = await runPrototypingCertify({ root, check: false });
     expect(exit).toBe(0);
 
-    const certRaw = await import("node:fs/promises").then((fs) =>
-      fs.readFile(
-        path.join(root, ".qfai/evidence/prototyping/completion-certificate.json"),
-        "utf-8",
-      ),
+    const certRaw = await readFile(
+      path.join(root, ".qfai/evidence/prototyping/completion-certificate.json"),
+      "utf-8",
     );
     const cert = JSON.parse(certRaw) as { specsCovered: string[] };
     expect(cert.specsCovered).toEqual(["0007"]);
@@ -583,6 +579,110 @@ describe("qfai prototyping certify (TC-0012-0400: legacy specsCovered fallback w
       );
       expect(namesHome).toBe(true);
       expect(namesSettings).toBe(true);
+    } finally {
+      errorSpy.mockRestore();
+    }
+  });
+});
+
+describe("qfai prototyping certify (TC-0012-0407: per-spec UI contracts scope the (spec × screen) gate)", () => {
+  // QFAI:SPEC-0012:TC-0012-0407
+  // 9th late-review wave (codex r3265157640, P1): when per-spec UI
+  // contracts declare a non-uniform screen set (spec-0001 → home only;
+  // spec-0002 → settings only), the per-(spec × screen) gate must use
+  // each spec's OWN contract — not the cross-product of every spec
+  // against the union project-wide screen list. Pre-fix the cross-product
+  // demanded `spec-0001/settings.review.json` + `spec-0002/home.review.json`
+  // that should never exist per the per-spec contract.
+  it("uses each spec's per-spec UI contract instead of demanding the project-wide cross-product", async () => {
+    const root = await newTempDir();
+    await seedMinimalProject(root);
+    await mkdir(path.join(root, ".qfai/specs/spec-0001"), { recursive: true });
+    await writeFile(
+      path.join(root, ".qfai/specs/spec-0001/01_Spec.md"),
+      "---\nsurface_type: ui-bearing\n---\n\n# spec-0001\n",
+      "utf-8",
+    );
+    await mkdir(path.join(root, ".qfai/specs/spec-0002"), { recursive: true });
+    await writeFile(
+      path.join(root, ".qfai/specs/spec-0002/01_Spec.md"),
+      "---\nsurface_type: ui-bearing\n---\n\n# spec-0002\n",
+      "utf-8",
+    );
+    await seedAllGatesPass(root, {
+      specsCovered: ["0001"],
+      frozenSpecsCovered: ["0001", "0002"],
+    });
+
+    // Per-spec UI contracts: spec-0001 declares ONLY "home"; spec-0002
+    // declares ONLY "settings". The legacy project-wide cross-product
+    // would have demanded `spec-0001/settings.review.json` +
+    // `spec-0002/home.review.json` — neither should be required.
+    await mkdir(path.join(root, ".qfai/contracts/ui"), { recursive: true });
+    await writeFile(
+      path.join(root, ".qfai/contracts/ui/spec-0001.yaml"),
+      'screens:\n  - id: home\n    route: "/home"\n',
+      "utf-8",
+    );
+    await writeFile(
+      path.join(root, ".qfai/contracts/ui/spec-0002.yaml"),
+      'screens:\n  - id: settings\n    route: "/settings"\n',
+      "utf-8",
+    );
+    // Also seed HTML for the accepted iter (declared-screen HTML gate
+    // requires one html per UNION declared screen; the project-wide
+    // discovery still pools `home` + `settings`).
+    const iter01 = path.join(root, ".qfai/evidence/prototyping/iter-01");
+    await writeFile(path.join(iter01, "home.html"), CLEAN_FINAL_HTML, "utf-8");
+    await writeFile(path.join(iter01, "settings.html"), CLEAN_FINAL_HTML, "utf-8");
+    // Per-spec review.json — only the screens scoped by each spec's
+    // own contract:
+    await seedReviewJson(root, "spec-0001", "home");
+    await seedReviewJson(root, "spec-0002", "settings");
+
+    const exit = await runPrototypingCertify({ root, check: false });
+    expect(exit).toBe(0);
+  });
+
+  // Negative companion: per-spec scope still enforces presence WITHIN
+  // each spec's declared set. spec-0001 declares two screens; missing
+  // one of them must still fail.
+  it("still enforces presence within a per-spec contract's declared screens", async () => {
+    const root = await newTempDir();
+    await seedMinimalProject(root);
+    await mkdir(path.join(root, ".qfai/specs/spec-0001"), { recursive: true });
+    await writeFile(
+      path.join(root, ".qfai/specs/spec-0001/01_Spec.md"),
+      "---\nsurface_type: ui-bearing\n---\n\n# spec-0001\n",
+      "utf-8",
+    );
+    await seedAllGatesPass(root, {
+      specsCovered: ["0001"],
+      frozenSpecsCovered: ["0001"],
+    });
+    await mkdir(path.join(root, ".qfai/contracts/ui"), { recursive: true });
+    await writeFile(
+      path.join(root, ".qfai/contracts/ui/spec-0001.yaml"),
+      'screens:\n  - id: home\n    route: "/home"\n  - id: settings\n    route: "/settings"\n',
+      "utf-8",
+    );
+    const iter01 = path.join(root, ".qfai/evidence/prototyping/iter-01");
+    await writeFile(path.join(iter01, "home.html"), CLEAN_FINAL_HTML, "utf-8");
+    await writeFile(path.join(iter01, "settings.html"), CLEAN_FINAL_HTML, "utf-8");
+    // Seed only `home.review.json`; `settings.review.json` is missing
+    // WITHIN this spec's declared set — must still fail.
+    await seedReviewJson(root, "spec-0001", "home");
+
+    const logger = await import("../../../src/cli/lib/logger.js");
+    const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
+    try {
+      const exit = await runPrototypingCertify({ root, check: false });
+      expect(exit).not.toBe(0);
+      const messages = errorSpy.mock.calls.map((c) => String(c[0]));
+      const namesMissing = messages.some(
+        (m) => m.includes("spec-0001") && m.includes("settings"),
+      );
+      expect(namesMissing).toBe(true);
     } finally {
       errorSpy.mockRestore();
     }

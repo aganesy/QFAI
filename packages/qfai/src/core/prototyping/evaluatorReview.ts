@@ -209,26 +209,41 @@ export function buildEvaluatorReview(input: BuildEvaluatorReviewInput): Evaluato
  *
  * This is the schema written to
  * `iter-NN/spec-NNNN/<screen>.review.json` by the product-surface
- * reviewer sub-agent. It replaces the legacy single `proseCritique`
- * field with six bounded qualitative `*Feel` fields and pairs them
- * with the four ordinal axes plus the layout-anti-pattern and
- * DESIGN.md violation arrays.
+ * reviewer sub-agent and consumed by the prototyping CLI loop. The
+ * SSOT for this schema is the prototyping CLI contract at
+ * `.qfai/contracts/cli/qfai-prototyping.md` (§Review payload).
  *
- * `timeBudgetSoftWarning` is optional and only present when the
- * per-spec time budget overruns — its presence never hard-fails the
- * cycle; only the global iteration budget can stop the run.
+ * Shape:
+ *   - top-level discriminators (`specId`, `screenId`, `sessionStatus`)
+ *     identify the (spec, screen) pair and the Reviewer Playwright
+ *     session outcome (the `sessionStatus` enum mirrors
+ *     {@link ReviewerSessionStatus} in `reviewerDispatch.ts`).
+ *   - `ordinalAxes` nests the 4 canonical ordinal verdicts.
+ *   - `impressions` nests the 6 bounded qualitative prose fields
+ *     (each ≤ {@link FEEL_FIELD_MAX_WORDS} words).
+ *   - `layoutAntiPatternsDetected` / `designMdViolations` carry the
+ *     structural defect arrays that drive convergence and certify.
+ *   - `timeBudgetSoftWarning` is optional and only present when the
+ *     per-spec time budget overruns — its presence never hard-fails
+ *     the cycle; only the global iteration budget can stop the run.
+ *
+ * Closed schema: any extra top-level / nested key is rejected so a
+ * Reviewer-side typo cannot silently drop a real field.
  */
+export const REVIEWER_SESSION_STATUSES = ["ok", "retryExhausted", "launchFailed"] as const;
+
+export type ReviewerSessionStatus = (typeof REVIEWER_SESSION_STATUSES)[number];
+
+export type ReviewerOrdinalAxes = Record<OrdinalAxis, OrdinalScore>;
+
+export type ReviewerImpressions = Record<FeelField, string>;
+
 export type ReviewerPayload = {
-  readonly informationArchitecture: OrdinalScore;
-  readonly navigationFlow: OrdinalScore;
-  readonly usability: OrdinalScore;
-  readonly functionality: OrdinalScore;
-  readonly operability: string;
-  readonly transitionFeel: string;
-  readonly crossScreenContinuity: string;
-  readonly userStoryFeel: string;
-  readonly acceptanceCriteriaFeel: string;
-  readonly menuReachabilityFeel: string;
+  readonly specId: string;
+  readonly screenId: string;
+  readonly sessionStatus: ReviewerSessionStatus;
+  readonly ordinalAxes: ReviewerOrdinalAxes;
+  readonly impressions: ReviewerImpressions;
   readonly layoutAntiPatternsDetected: readonly string[];
   readonly designMdViolations: readonly DesignMdViolation[];
   readonly timeBudgetSoftWarning?: string;
@@ -239,44 +254,58 @@ export type ParseReviewerPayloadResult =
   | { readonly ok: false; readonly errors: readonly string[] };
 
 const REVIEWER_PAYLOAD_KNOWN_KEYS: ReadonlySet<string> = new Set<string>([
-  ...ORDINAL_AXES,
-  ...FEEL_FIELDS,
+  "specId",
+  "screenId",
+  "sessionStatus",
+  "ordinalAxes",
+  "impressions",
   "layoutAntiPatternsDetected",
   "designMdViolations",
   "timeBudgetSoftWarning",
 ]);
 
-function collectFeels(
-  record: Record<string, unknown>,
+function isReviewerSessionStatus(value: unknown): value is ReviewerSessionStatus {
+  return (
+    typeof value === "string" &&
+    (REVIEWER_SESSION_STATUSES as readonly string[]).includes(value)
+  );
+}
+
+function collectImpressions(
+  source: Record<string, unknown>,
   errors: string[],
-): Record<FeelField, string> | null {
+): ReviewerImpressions | null {
   const accepted: Partial<Record<FeelField, string>> = {};
   let complete = true;
   for (const field of FEEL_FIELDS) {
-    if (!(field in record)) {
-      errors.push(`missing field: ${field}`);
+    if (!(field in source)) {
+      errors.push(`missing field: impressions.${field}`);
       complete = false;
       continue;
     }
-    const value = record[field];
+    const value = source[field];
     if (typeof value !== "string") {
-      errors.push(`${field} must be a string`);
+      errors.push(`impressions.${field} must be a string`);
       complete = false;
       continue;
     }
     const wordCount = countWords(value);
     if (wordCount > FEEL_FIELD_MAX_WORDS) {
       errors.push(
-        `${field} exceeds ${FEEL_FIELD_MAX_WORDS} words (got ${wordCount})`,
+        `impressions.${field} exceeds ${FEEL_FIELD_MAX_WORDS} words (got ${wordCount})`,
       );
       complete = false;
       continue;
     }
     accepted[field] = value;
   }
+  for (const key of Object.keys(source)) {
+    if (!(FEEL_FIELDS as readonly string[]).includes(key)) {
+      errors.push(`unknown field: impressions.${key}`);
+      complete = false;
+    }
+  }
   if (!complete) return null;
-  // Every field assigned a string above; the predicate below narrows
-  // the partial map to a complete record without a bare cast.
   if (!isCompleteFeelRecord(accepted)) return null;
   return accepted;
 }
@@ -287,27 +316,33 @@ function isCompleteFeelRecord(
   return FEEL_FIELDS.every((field) => typeof value[field] === "string");
 }
 
-function collectAxes(
-  record: Record<string, unknown>,
+function collectOrdinalAxes(
+  source: Record<string, unknown>,
   errors: string[],
-): Record<OrdinalAxis, OrdinalScore> | null {
+): ReviewerOrdinalAxes | null {
   const accepted: Partial<Record<OrdinalAxis, OrdinalScore>> = {};
   let complete = true;
   for (const axis of ORDINAL_AXES) {
-    if (!(axis in record)) {
-      errors.push(`missing field: scores.${axis}`);
+    if (!(axis in source)) {
+      errors.push(`missing field: ordinalAxes.${axis}`);
       complete = false;
       continue;
     }
-    const value = record[axis];
+    const value = source[axis];
     if (!isOrdinalScore(value)) {
       errors.push(
-        `scores.${axis} must be one of weak|acceptable|strong|exceptional (got ${String(value)})`,
+        `ordinalAxes.${axis} must be one of weak|acceptable|strong|exceptional (got ${String(value)})`,
       );
       complete = false;
       continue;
     }
     accepted[axis] = value;
+  }
+  for (const key of Object.keys(source)) {
+    if (!(ORDINAL_AXES as readonly string[]).includes(key)) {
+      errors.push(`unknown field: ordinalAxes.${key}`);
+      complete = false;
+    }
   }
   if (!complete) return null;
   if (!isCompleteAxisRecord(accepted)) return null;
@@ -378,20 +413,27 @@ function pushDmvErrors(
 
 /**
  * Parse and validate a reviewer-driven per-spec / per-screen review
- * payload. Fail-fast on shape errors but aggregate every named-field
- * violation so callers can render the full diagnostic surface in one
- * pass — the reviewer prompt typically fixes more than one problem
- * per retry.
+ * payload against the prototyping CLI contract
+ * (`.qfai/contracts/cli/qfai-prototyping.md` §Review payload).
  *
- * Validation rules:
- *   - all 6 `*Feel` fields required (string, ≤ {@link FEEL_FIELD_MAX_WORDS} words each)
- *   - all 4 ordinal axes required (must satisfy {@link isOrdinalScore})
+ * Fail-fast on shape errors but aggregate every named-field violation
+ * so callers can render the full diagnostic surface in one pass — the
+ * reviewer prompt typically fixes more than one problem per retry.
+ *
+ * Validation rules (closed schema):
+ *   - `specId` / `screenId` required as non-empty strings
+ *   - `sessionStatus` required, one of `ok | retryExhausted | launchFailed`
+ *     (mirrors {@link ReviewerSessionStatus} in `reviewerDispatch.ts`)
+ *   - `ordinalAxes` required as a nested record with all 4 axes
+ *     (must satisfy {@link isOrdinalScore})
+ *   - `impressions` required as a nested record with all 6 `*Feel`
+ *     fields (each string, ≤ {@link FEEL_FIELD_MAX_WORDS} words)
  *   - `layoutAntiPatternsDetected` required as string[]
  *   - `designMdViolations` required as array of `{kind, found}`
  *   - `timeBudgetSoftWarning` is optional; presence is soft-only and
  *     never blocks the cycle
- *   - any extra top-level key is rejected (closed schema; protects
- *     against typos and schema drift)
+ *   - any extra top-level / nested key is rejected (closed schema;
+ *     protects against typos and schema drift)
  *
  * `menuReachabilityFeel` describing unreachable menu entries is
  * accepted — it is a qualitative critique field, not a hard-fail
@@ -403,20 +445,62 @@ export function parseEvaluatorReview(input: unknown): ParseReviewerPayloadResult
     return { ok: false, errors: ["review payload must be a JSON object"] };
   }
 
-  const axes = collectAxes(input, errors);
-  const feels = collectFeels(input, errors);
+  let specId: string | null = null;
+  if (!("specId" in input)) {
+    errors.push("missing field: specId");
+  } else if (typeof input.specId !== "string" || input.specId.trim().length === 0) {
+    errors.push("specId must be a non-empty string");
+  } else {
+    specId = input.specId;
+  }
+
+  let screenId: string | null = null;
+  if (!("screenId" in input)) {
+    errors.push("missing field: screenId");
+  } else if (typeof input.screenId !== "string" || input.screenId.trim().length === 0) {
+    errors.push("screenId must be a non-empty string");
+  } else {
+    screenId = input.screenId;
+  }
+
+  let sessionStatus: ReviewerSessionStatus | null = null;
+  if (!("sessionStatus" in input)) {
+    errors.push("missing field: sessionStatus");
+  } else if (!isReviewerSessionStatus(input.sessionStatus)) {
+    errors.push(
+      `sessionStatus must be one of ok|retryExhausted|launchFailed (got ${String(input.sessionStatus)})`,
+    );
+  } else {
+    sessionStatus = input.sessionStatus;
+  }
+
+  let axes: ReviewerOrdinalAxes | null = null;
+  if (!("ordinalAxes" in input)) {
+    errors.push("missing field: ordinalAxes");
+  } else if (!isRecord(input.ordinalAxes)) {
+    errors.push("ordinalAxes must be an object");
+  } else {
+    axes = collectOrdinalAxes(input.ordinalAxes, errors);
+  }
+
+  let impressions: ReviewerImpressions | null = null;
+  if (!("impressions" in input)) {
+    errors.push("missing field: impressions");
+  } else if (!isRecord(input.impressions)) {
+    errors.push("impressions must be an object");
+  } else {
+    impressions = collectImpressions(input.impressions, errors);
+  }
+
   const lap = pushLapErrors(input, errors);
   const dmv = pushDmvErrors(input, errors);
 
   // Note: missing-field and unknown-field diagnostics are surfaced
   // independently and can co-occur on the same input. When the unknown
-  // key is a typo of a missing expected key (e.g. `usabiity` for
-  // `usability`), the caller sees BOTH `missing field: scores.usability`
-  // AND `unknown field: usabiity` in the same `errors[]`. This is
-  // intentional: the reviewer prompt fixes more than one issue per
-  // retry, so aggregating every violation is more useful than
-  // short-circuiting on the first one. Reordering the unknown-key check
-  // to run first would mask the missing-field signal entirely.
+  // key is a typo of a missing expected key, the caller sees both
+  // `missing field: <expected>` and `unknown field: <typo>` in the
+  // same `errors[]`. Intentional: aggregate every violation so the
+  // reviewer prompt can fix more than one issue per retry.
   for (const key of Object.keys(input)) {
     if (!REVIEWER_PAYLOAD_KNOWN_KEYS.has(key)) {
       errors.push(`unknown field: ${key}`);
@@ -433,21 +517,37 @@ export function parseEvaluatorReview(input: unknown): ParseReviewerPayloadResult
     }
   }
 
-  if (errors.length > 0 || axes === null || feels === null || lap === null || dmv === null) {
+  if (
+    errors.length > 0 ||
+    specId === null ||
+    screenId === null ||
+    sessionStatus === null ||
+    axes === null ||
+    impressions === null ||
+    lap === null ||
+    dmv === null
+  ) {
     return { ok: false, errors };
   }
 
   const review: ReviewerPayload = {
-    informationArchitecture: axes.informationArchitecture,
-    navigationFlow: axes.navigationFlow,
-    usability: axes.usability,
-    functionality: axes.functionality,
-    operability: feels.operability,
-    transitionFeel: feels.transitionFeel,
-    crossScreenContinuity: feels.crossScreenContinuity,
-    userStoryFeel: feels.userStoryFeel,
-    acceptanceCriteriaFeel: feels.acceptanceCriteriaFeel,
-    menuReachabilityFeel: feels.menuReachabilityFeel,
+    specId,
+    screenId,
+    sessionStatus,
+    ordinalAxes: {
+      informationArchitecture: axes.informationArchitecture,
+      navigationFlow: axes.navigationFlow,
+      usability: axes.usability,
+      functionality: axes.functionality,
+    },
+    impressions: {
+      operability: impressions.operability,
+      transitionFeel: impressions.transitionFeel,
+      crossScreenContinuity: impressions.crossScreenContinuity,
+      userStoryFeel: impressions.userStoryFeel,
+      acceptanceCriteriaFeel: impressions.acceptanceCriteriaFeel,
+      menuReachabilityFeel: impressions.menuReachabilityFeel,
+    },
     layoutAntiPatternsDetected: [...lap],
     designMdViolations: dmv.map((v) => ({ kind: v.kind, found: v.found })),
     ...(timeBudgetSoftWarning !== undefined ? { timeBudgetSoftWarning } : {}),

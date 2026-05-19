@@ -22,8 +22,14 @@
 import { readdir, readFile, stat } from "node:fs/promises";
 import path from "node:path";
 
+import fg from "fast-glob";
+import { parse as parseYaml } from "yaml";
+
 import { loadConfig } from "../../core/config.js";
-import { readUiContractScreenContracts } from "../../core/contracts/screenContracts.js";
+import {
+  readUiContractScreenContracts,
+  type CanonicalScreenContract,
+} from "../../core/contracts/screenContracts.js";
 import { hashDesignMd, parseDesignMd } from "../../core/design/designMd.js";
 import { readDesignMdLockSha } from "../../core/design/designMdLock.js";
 import { isEnoent } from "../../core/fs/errno.js";
@@ -304,7 +310,22 @@ export async function runPrototypingCertify(
       const missingPairs: Array<{ spec: string; screen: string; expectedPath: string }> = [];
       for (const rawSpec of frozenSpecsPreview) {
         const specDirName = normalizeSpecDirName(rawSpec);
-        for (const screen of screenContracts) {
+        // codex r3265157640 (P1): when a per-spec UI contract exists at
+        // `.qfai/contracts/ui/<spec-id>.yaml`, it scopes which screens
+        // are declared for THIS spec — not the project-wide screen set.
+        // Pre-fix the gate required the cross-product (every spec × every
+        // project-wide screen), which produced spurious "missing
+        // (spec-0001, settings)" rejections when the spec's own contract
+        // only declared `home`. Fall back to the project-wide list for
+        // backward-compatibility with single-spec projects that have a
+        // single shared contract.
+        const perSpecScreens = await readPerSpecScreens(
+          options.root,
+          config.paths.contractsDir,
+          specDirName,
+        );
+        const scopedScreens = perSpecScreens ?? screenContracts;
+        for (const screen of scopedScreens) {
           const rel = `${PROTOTYPING_EVIDENCE_REL}/${acceptedIterDir}/${specDirName}/${screen.screenId}.review.json`;
           const abs = path.join(options.root, rel);
           const exists = await fileExists(abs);
@@ -739,6 +760,112 @@ async function hasPerSpecSubdir(iterDirAbs: string): Promise<boolean> {
     }
   }
   return false;
+}
+
+/**
+ * Read the per-spec UI contract for `<specDirName>` (e.g. `spec-0007`) if
+ * one exists under `<contractsDir>/ui/`. Returns the screens declared by
+ * that contract, or `null` when no per-spec contract file matches.
+ *
+ * codex r3265157640 (P1): UI contracts can be authored either project-wide
+ * (one `screens:` list under `.qfai/contracts/ui/`, applies to every
+ * spec in the frozen set) or per-spec (one contract file per spec, scopes
+ * screen declarations to THAT spec). The per-(spec × screen) certify gate
+ * must respect the per-spec scope when available — pre-fix it always used
+ * the project-wide list and produced spurious cross-product rejections.
+ *
+ * Resolution order (first hit wins):
+ *   1. `<contractsDir>/ui/<specDirName>.yaml`              (e.g. `spec-0007.yaml`)
+ *   2. `<contractsDir>/ui/<bareNumeric>.yaml`              (e.g. `0007.yaml`)
+ *   3. `<contractsDir>/ui/ui-<bareNumeric>.yaml`           (e.g. `ui-0007.yaml`)
+ *   4. `<contractsDir>/ui/ui-<bareNumeric>-*.yaml` (glob)  (e.g. `ui-0007-home.yaml`)
+ *
+ * Each candidate is probed only if previous candidates missed; the glob
+ * (4) is evaluated last so a single canonical file (1-3) takes precedence
+ * over a multi-file split. Returns `null` when none of the candidates
+ * exists OR when the matched file parses but declares no `screens:`. The
+ * caller falls back to the project-wide list in either case so a malformed
+ * per-spec contract does not silently zero-out the gate.
+ *
+ * Returns the deduplicated `CanonicalScreenContract[]` list (last-write
+ * wins for duplicate `screenId`s across multiple matched files); matches
+ * `readUiContractScreenContracts`'s dedup semantics.
+ *
+ * @internal Exported for direct unit-testing — not part of the package's
+ * public surface.
+ */
+export async function readPerSpecScreens(
+  root: string,
+  contractsDirRelative: string,
+  specDirName: string,
+): Promise<CanonicalScreenContract[] | null> {
+  const uiDir = path.join(root, contractsDirRelative, "ui");
+  const bareNumeric = specDirName.replace(/^spec-/iu, "");
+  const candidates = [
+    path.join(uiDir, `${specDirName}.yaml`),
+    path.join(uiDir, `${bareNumeric}.yaml`),
+    path.join(uiDir, `ui-${bareNumeric}.yaml`),
+  ];
+  const matched: string[] = [];
+  for (const abs of candidates) {
+    if (await fileExists(abs)) {
+      matched.push(abs);
+    }
+  }
+  if (matched.length === 0) {
+    const globPattern = path.posix.join(
+      uiDir.replace(/\\/g, "/"),
+      `ui-${bareNumeric}-*.yaml`,
+    );
+    const globMatches = await fg(globPattern, { absolute: true });
+    matched.push(...globMatches);
+  }
+  if (matched.length === 0) return null;
+
+  const screens: CanonicalScreenContract[] = [];
+  for (const abs of matched) {
+    let raw: string;
+    try {
+      raw = await readFile(abs, "utf-8");
+    } catch {
+      continue;
+    }
+    let parsed: unknown;
+    try {
+      parsed = parseYaml(raw);
+    } catch {
+      continue;
+    }
+    if (!isRecord(parsed)) continue;
+    const rawScreens = parsed.screens;
+    if (!Array.isArray(rawScreens)) continue;
+    for (const entry of rawScreens) {
+      if (!isRecord(entry)) continue;
+      const id = typeof entry.id === "string" ? entry.id.trim() : "";
+      const route = typeof entry.route === "string" ? entry.route.trim() : "";
+      if (!id || !route) continue;
+      const title =
+        typeof entry.title === "string" && entry.title.trim().length > 0
+          ? entry.title.trim()
+          : id;
+      const primaryTasks = Array.isArray(entry.primary_tasks)
+        ? entry.primary_tasks
+            .filter((t): t is string => typeof t === "string" && t.trim().length > 0)
+            .map((t) => t.trim())
+        : [];
+      screens.push({
+        name: title,
+        screenId: id,
+        route,
+        primaryTasks,
+        sourceRef: `${path.relative(root, abs).replace(/\\/g, "/")}#${id}`,
+      });
+    }
+  }
+  if (screens.length === 0) return null;
+  return screens.filter(
+    (s, idx, all) => all.findIndex((c) => c.screenId === s.screenId) === idx,
+  );
 }
 
 /**

@@ -131,7 +131,7 @@ type PrototypingJsonShape = {
  * baseline.
  *
  * TODO (codex review — tracked as a follow-up, not blocking
- * this release; see OQ-0012-0010): expose
+ * this release; see the spec's open-questions log): expose
  * `qfai.config.yaml#prototyping.licenseCatalog` so consumer projects
  * can register additional allowlisted sources (e.g. `pixabay`)
  * without forking QFAI. Today consumers are bound to the

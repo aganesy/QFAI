@@ -507,19 +507,28 @@ describe("constants", () => {
 // Reviewer-driven per-spec / per-screen payload schema
 // -------------------------------------------------------------------------
 
-const baseReviewerPayload = (
-  overrides: Record<string, unknown> = {},
-): Record<string, unknown> => ({
-  informationArchitecture: "acceptable",
-  navigationFlow: "acceptable",
-  usability: "acceptable",
-  functionality: "acceptable",
+const BASE_IMPRESSIONS: Record<FeelField, string> = {
   operability: "Buttons and inputs respond predictably across the primary flows.",
   transitionFeel: "Screen transitions stay smooth without visible jank.",
   crossScreenContinuity: "Navigation preserves selected state when moving across screens.",
   userStoryFeel: "Each user story is reachable from the home screen in two taps.",
   acceptanceCriteriaFeel: "Acceptance criteria map cleanly to visible UI affordances.",
   menuReachabilityFeel: "All primary menu entries are reachable from the topbar.",
+};
+
+const baseReviewerPayload = (
+  overrides: Record<string, unknown> = {},
+): Record<string, unknown> => ({
+  specId: "spec-0012",
+  screenId: "home",
+  sessionStatus: "ok",
+  ordinalAxes: {
+    informationArchitecture: "acceptable",
+    navigationFlow: "acceptable",
+    usability: "acceptable",
+    functionality: "acceptable",
+  },
+  impressions: { ...BASE_IMPRESSIONS },
   layoutAntiPatternsDetected: [],
   designMdViolations: [],
   ...overrides,
@@ -527,7 +536,7 @@ const baseReviewerPayload = (
 
 // QFAI:SPEC-0012:TC-0012-0364
 describe("parseEvaluatorReview — full payload acceptance (TC-0012-0364)", () => {
-  it("accepts a payload with all 6 *Feel fields, 4 ordinal axes, lap[], dmv[]", () => {
+  it("accepts a payload with nested ordinalAxes + impressions and the top-level discriminators", () => {
     const result = parseEvaluatorReview(
       baseReviewerPayload({
         layoutAntiPatternsDetected: ["lap-001-saas-dashboard"],
@@ -536,16 +545,19 @@ describe("parseEvaluatorReview — full payload acceptance (TC-0012-0364)", () =
     );
     expect(result.ok).toBe(true);
     if (!result.ok) return;
-    expect(result.review.informationArchitecture).toBe("acceptable");
-    expect(result.review.navigationFlow).toBe("acceptable");
-    expect(result.review.usability).toBe("acceptable");
-    expect(result.review.functionality).toBe("acceptable");
-    expect(result.review.operability.length).toBeGreaterThan(0);
-    expect(result.review.transitionFeel.length).toBeGreaterThan(0);
-    expect(result.review.crossScreenContinuity.length).toBeGreaterThan(0);
-    expect(result.review.userStoryFeel.length).toBeGreaterThan(0);
-    expect(result.review.acceptanceCriteriaFeel.length).toBeGreaterThan(0);
-    expect(result.review.menuReachabilityFeel.length).toBeGreaterThan(0);
+    expect(result.review.specId).toBe("spec-0012");
+    expect(result.review.screenId).toBe("home");
+    expect(result.review.sessionStatus).toBe("ok");
+    expect(result.review.ordinalAxes.informationArchitecture).toBe("acceptable");
+    expect(result.review.ordinalAxes.navigationFlow).toBe("acceptable");
+    expect(result.review.ordinalAxes.usability).toBe("acceptable");
+    expect(result.review.ordinalAxes.functionality).toBe("acceptable");
+    expect(result.review.impressions.operability.length).toBeGreaterThan(0);
+    expect(result.review.impressions.transitionFeel.length).toBeGreaterThan(0);
+    expect(result.review.impressions.crossScreenContinuity.length).toBeGreaterThan(0);
+    expect(result.review.impressions.userStoryFeel.length).toBeGreaterThan(0);
+    expect(result.review.impressions.acceptanceCriteriaFeel.length).toBeGreaterThan(0);
+    expect(result.review.impressions.menuReachabilityFeel.length).toBeGreaterThan(0);
     expect(result.review.layoutAntiPatternsDetected).toEqual(["lap-001-saas-dashboard"]);
     expect(result.review.designMdViolations).toEqual([{ kind: "color", found: "#FF00FF" }]);
   });
@@ -554,26 +566,33 @@ describe("parseEvaluatorReview — full payload acceptance (TC-0012-0364)", () =
 // QFAI:SPEC-0012:TC-0012-0365
 describe("parseEvaluatorReview — rejection with named field path (TC-0012-0365)", () => {
   it.each(FEEL_FIELDS as readonly FeelField[])(
-    "rejects when *Feel field '%s' is missing",
+    "rejects when impressions.'%s' is missing",
     (field) => {
-      const payload = baseReviewerPayload();
-      delete payload[field];
+      const impressions: Partial<Record<FeelField, string>> = { ...BASE_IMPRESSIONS };
+      delete impressions[field];
+      const payload = baseReviewerPayload({ impressions });
       const result = parseEvaluatorReview(payload);
       expect(result.ok).toBe(false);
       if (result.ok) return;
-      expect(result.errors).toContain(`missing field: ${field}`);
+      expect(result.errors).toContain(`missing field: impressions.${field}`);
     },
   );
 
   it.each(ORDINAL_AXES as readonly OrdinalAxis[])(
-    "rejects when ordinal axis '%s' is missing",
+    "rejects when ordinalAxes.'%s' is missing",
     (axis) => {
-      const payload = baseReviewerPayload();
-      delete payload[axis];
+      const axes: Partial<Record<OrdinalAxis, "acceptable">> = {
+        informationArchitecture: "acceptable",
+        navigationFlow: "acceptable",
+        usability: "acceptable",
+        functionality: "acceptable",
+      };
+      delete axes[axis];
+      const payload = baseReviewerPayload({ ordinalAxes: axes });
       const result = parseEvaluatorReview(payload);
       expect(result.ok).toBe(false);
       if (result.ok) return;
-      expect(result.errors).toContain(`missing field: scores.${axis}`);
+      expect(result.errors).toContain(`missing field: ordinalAxes.${axis}`);
     },
   );
 
@@ -584,59 +603,167 @@ describe("parseEvaluatorReview — rejection with named field path (TC-0012-0365
     expect(result.errors.some((e) => /unknown field: extraneousKey/.test(e))).toBe(true);
   });
 
+  it("rejects when an unknown nested key under impressions is present", () => {
+    const result = parseEvaluatorReview(
+      baseReviewerPayload({
+        impressions: { ...BASE_IMPRESSIONS, extraImpression: "nope" },
+      }),
+    );
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(
+      result.errors.some((e) => /unknown field: impressions\.extraImpression/.test(e)),
+    ).toBe(true);
+  });
+
+  it("rejects when an unknown nested key under ordinalAxes is present", () => {
+    const result = parseEvaluatorReview(
+      baseReviewerPayload({
+        ordinalAxes: {
+          informationArchitecture: "acceptable",
+          navigationFlow: "acceptable",
+          usability: "acceptable",
+          functionality: "acceptable",
+          extraAxis: "strong",
+        },
+      }),
+    );
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.errors.some((e) => /unknown field: ordinalAxes\.extraAxis/.test(e))).toBe(true);
+  });
+
   it("rejects when input is not a JSON object", () => {
     expect(parseEvaluatorReview(null).ok).toBe(false);
     expect(parseEvaluatorReview("string").ok).toBe(false);
     expect(parseEvaluatorReview([]).ok).toBe(false);
   });
+
+  it("rejects when specId is missing or empty", () => {
+    const payload = baseReviewerPayload();
+    delete payload.specId;
+    const missing = parseEvaluatorReview(payload);
+    expect(missing.ok).toBe(false);
+    if (!missing.ok) {
+      expect(missing.errors).toContain("missing field: specId");
+    }
+    const empty = parseEvaluatorReview(baseReviewerPayload({ specId: "" }));
+    expect(empty.ok).toBe(false);
+    if (!empty.ok) {
+      expect(empty.errors.some((e) => /specId must be a non-empty string/.test(e))).toBe(true);
+    }
+  });
+
+  it("rejects when screenId is missing or empty", () => {
+    const payload = baseReviewerPayload();
+    delete payload.screenId;
+    const missing = parseEvaluatorReview(payload);
+    expect(missing.ok).toBe(false);
+    if (!missing.ok) {
+      expect(missing.errors).toContain("missing field: screenId");
+    }
+    const empty = parseEvaluatorReview(baseReviewerPayload({ screenId: "" }));
+    expect(empty.ok).toBe(false);
+    if (!empty.ok) {
+      expect(empty.errors.some((e) => /screenId must be a non-empty string/.test(e))).toBe(true);
+    }
+  });
+
+  it.each(["ok", "retryExhausted", "launchFailed"] as const)(
+    "accepts sessionStatus '%s'",
+    (status) => {
+      const result = parseEvaluatorReview(baseReviewerPayload({ sessionStatus: status }));
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+      expect(result.review.sessionStatus).toBe(status);
+    },
+  );
+
+  it("rejects when sessionStatus is missing or not in the enum", () => {
+    const payload = baseReviewerPayload();
+    delete payload.sessionStatus;
+    const missing = parseEvaluatorReview(payload);
+    expect(missing.ok).toBe(false);
+    if (!missing.ok) {
+      expect(missing.errors).toContain("missing field: sessionStatus");
+    }
+    const bad = parseEvaluatorReview(baseReviewerPayload({ sessionStatus: "pending" }));
+    expect(bad.ok).toBe(false);
+    if (!bad.ok) {
+      expect(
+        bad.errors.some((e) =>
+          /sessionStatus must be one of ok\|retryExhausted\|launchFailed/.test(e),
+        ),
+      ).toBe(true);
+    }
+  });
+
+  it("rejects when ordinalAxes is not a record", () => {
+    const result = parseEvaluatorReview(baseReviewerPayload({ ordinalAxes: "nope" }));
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.errors).toContain("ordinalAxes must be an object");
+  });
+
+  it("rejects when impressions is not a record", () => {
+    const result = parseEvaluatorReview(baseReviewerPayload({ impressions: [] }));
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.errors).toContain("impressions must be an object");
+  });
 });
 
 // QFAI:SPEC-0012:TC-0012-0366
-describe("parseEvaluatorReview — *Feel word-count bounds (TC-0012-0366)", () => {
+describe("parseEvaluatorReview — impressions.*Feel word-count bounds (TC-0012-0366)", () => {
   it.each(FEEL_FIELDS as readonly FeelField[])(
-    "rejects '%s' at 201 words (boundary +1)",
+    "rejects impressions.'%s' at 201 words (boundary +1)",
     (field) => {
       const overflow = Array(201).fill("word").join(" ");
-      const result = parseEvaluatorReview(baseReviewerPayload({ [field]: overflow }));
+      const impressions = { ...BASE_IMPRESSIONS, [field]: overflow };
+      const result = parseEvaluatorReview(baseReviewerPayload({ impressions }));
       expect(result.ok).toBe(false);
       if (result.ok) return;
       expect(
-        result.errors.some((e) => e.includes(field) && /exceeds 200 words \(got 201\)/.test(e)),
+        result.errors.some(
+          (e) => e.includes(`impressions.${field}`) && /exceeds 200 words \(got 201\)/.test(e),
+        ),
       ).toBe(true);
     },
   );
 
   it.each(FEEL_FIELDS as readonly FeelField[])(
-    "accepts '%s' at exactly 200 words (boundary)",
+    "accepts impressions.'%s' at exactly 200 words (boundary)",
     (field) => {
       const exact = Array(200).fill("word").join(" ");
-      const result = parseEvaluatorReview(baseReviewerPayload({ [field]: exact }));
+      const impressions = { ...BASE_IMPRESSIONS, [field]: exact };
+      const result = parseEvaluatorReview(baseReviewerPayload({ impressions }));
       expect(result.ok).toBe(true);
       if (!result.ok) return;
-      expect(countWords(result.review[field])).toBe(200);
+      expect(countWords(result.review.impressions[field])).toBe(200);
     },
   );
 
-  it.each(FEEL_FIELDS as readonly FeelField[])("accepts '%s' at 1 word", (field) => {
-    const result = parseEvaluatorReview(baseReviewerPayload({ [field]: "ok" }));
+  it.each(FEEL_FIELDS as readonly FeelField[])("accepts impressions.'%s' at 1 word", (field) => {
+    const impressions = { ...BASE_IMPRESSIONS, [field]: "ok" };
+    const result = parseEvaluatorReview(baseReviewerPayload({ impressions }));
     expect(result.ok).toBe(true);
     if (!result.ok) return;
-    expect(countWords(result.review[field])).toBe(1);
+    expect(countWords(result.review.impressions[field])).toBe(1);
   });
 });
 
 // QFAI:SPEC-0012:TC-0012-0384
 describe("parseEvaluatorReview — menuReachabilityFeel non-failure (TC-0012-0384)", () => {
   it("accepts a payload describing unreachable entries (no hard-fail)", () => {
-    const result = parseEvaluatorReview(
-      baseReviewerPayload({
-        menuReachabilityFeel:
-          "Settings entry is unreachable from the topbar; account dropdown collapses too early.",
-      }),
-    );
+    const impressions = {
+      ...BASE_IMPRESSIONS,
+      menuReachabilityFeel:
+        "Settings entry is unreachable from the topbar; account dropdown collapses too early.",
+    };
+    const result = parseEvaluatorReview(baseReviewerPayload({ impressions }));
     expect(result.ok).toBe(true);
     if (!result.ok) return;
-    expect(result.review.menuReachabilityFeel).toMatch(/unreachable/);
+    expect(result.review.impressions.menuReachabilityFeel).toMatch(/unreachable/);
   });
 });
 
