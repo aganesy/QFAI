@@ -168,7 +168,7 @@
 - Given a consumer project with zero UI-bearing specs,
 - When `/qfai-prototyping` is invoked,
 - Then the run exits 0 deterministically as a no-op (not an error).
-- And the legacy `01_Context.md ui_bearing: false` exclusion guidance (AC-0012-0009 / BR-0012-0009) is retained as a non-detection-source convenience marker; the new detection signal set above is the SSOT.
+- And the legacy `01_Context.md ui_bearing: false` exclusion guidance (AC-0012-0009) is retained as a non-detection-source convenience marker; the new detection signal set above is the SSOT.
 
 ## AC-0012-0038: 10-cycle iteration budget — terminator index === 9
 
@@ -219,7 +219,7 @@
 - US-Refs: US-0012-0113
 - Given `/qfai-prototyping` is invoked,
 - When the run executes cycle 0 through cycle 9,
-- Then no per-cycle stdin read or interactive prompt occurs between cycle 0 start and exit, AND the CI fixture asserting `stdin closed → exit 0/non-zero` succeeds without `ENOENT` / `EBADF` / `EINTR` on stdin, AND a single `--cycle 9` invocation on a non-converged loop whose `iterations.length === 10` MUST surface exit 65 directly (max-iterations terminator) without routing through the `expectedNextCycle === 10` cycle-mismatch path (14th-wave Fix, codex r3269195807 MAJOR — TC-0012-0416 binding correction).
+- Then no per-cycle stdin read or interactive prompt occurs between cycle 0 start and exit, AND the CI fixture asserting `stdin closed → exit 0/non-zero` succeeds without `ENOENT` / `EBADF` / `EINTR` on stdin, AND a single `--cycle 9` invocation on a non-converged loop whose `iterations.length === 10` MUST surface exit 65 directly (max-iterations terminator) without routing through the `expectedNextCycle === 10` cycle-mismatch path (14th-wave amendment per codex r3269195807 MAJOR).
 
 ## AC-0012-0045: Deterministic hard-stop classes
 
@@ -230,7 +230,7 @@
   - (a) lock drift → exit `2` (per AC-0012-0035; same class as DESIGN.md hash mismatch and any cache-vs-lock drift),
   - (b) Reviewer Playwright-session failure → exit `64` with `sessionStatus ∈ {retryExhausted, launchFailed}` recorded on the per-`(spec, screen)` review payload so the orchestrator can disambiguate from converged-exit-64,
   - (c) license-verify failure → exit `66`,
-  - (d) mid-run spec-set change detection → exit `2` (same class as lock drift; new spec deferred to next invocation per BR-0012-0038),
+  - (d) mid-run spec-set change detection → exit `2` (same class as lock drift; new spec deferred to next invocation per the business-rule layer),
     AND no user prompt is emitted.
 
 ## AC-0012-0046: Per-spec iter-dir namespacing — review.json only
