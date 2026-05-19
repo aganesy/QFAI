@@ -2835,3 +2835,127 @@ describe("runPrototypingIterate cycle >= 1 — malformed imageSources hard-stop 
     }
   });
 });
+
+// 17th late-review wave (codex r3270050284, MAJOR — regression coverage for
+// the 15th-wave + 17th-wave hard-stop class) + (codex r3270050451, MINOR —
+// fresh-project diagnostic discrimination). The cycle-0 zero-UI-bearing
+// precheck short-circuit is no longer reachable at cycle ≥ 1; the wrapper
+// distinguishes (a) genuine "UI markers removed mid-loop" against a
+// non-empty cycle-0 frozen union → exit 2 with `frozen scope is no longer
+// reachable`, vs (b) fresh project / missing frozenSurfaceUnion → exit 2
+// with `Seed the loop first` (NOT the misleading "frozen scope" message).
+// QFAI:SPEC-0012:TC-0012-0419 — pairs with AC-0012-0045 (deterministic
+// hard-stop classes) and AC-0012-0044 (autonomous-run bound).
+describe("runPrototypingIterate zero-UI precheck — cycle ≥ 1 hard-stop discrimination (TC-0012-0419)", () => {
+  it("cycle 0 + zero UI-bearing live + no frozen union still exits 0 (no-op semantic preserved)", async () => {
+    const root = await newTempDir();
+    await seedMinimalProject(root, { uiBearing: false });
+
+    const logger = await import("../../../src/cli/lib/logger.js");
+    const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
+    try {
+      const exit = await runPrototypingIterate({
+        root,
+        cycle: 0,
+        targetUrl: "http://localhost:5173",
+      });
+      expect(exit).toBe(0);
+    } finally {
+      errorSpy.mockRestore();
+    }
+  });
+
+  it("cycle ≥ 1 + zero UI-bearing live + non-empty frozenSurfaceUnion exits 2 with 'no longer reachable'", async () => {
+    const root = await newTempDir();
+    await seedMinimalProject(root, { uiBearing: false });
+    // Seed prototyping.json that records a non-empty cycle-0 frozen
+    // surface union — cycle 0 ran with UI-bearing spec(s); UI signals
+    // have since been removed.
+    await mkdir(path.join(root, ".qfai/evidence/prototyping"), { recursive: true });
+    await writeFile(
+      path.join(root, ".qfai/evidence/prototyping/prototyping.json"),
+      JSON.stringify({
+        specsCovered: ["0001"],
+        frozenSpecsCovered: ["0001"],
+        frozenSurfaceUnion: ["0001", "0002"],
+        frozenLicenseCatalog: {
+          allowedSources: ["unsplash", "pexels"],
+          licenseTiers: {
+            unsplash: ["unsplash-license", "free"],
+            pexels: ["pexels-free"],
+          },
+          sourceHosts: {
+            unsplash: ["images.unsplash.com", "unsplash.com"],
+            pexels: ["images.pexels.com", "pexels.com"],
+          },
+        },
+        iterations: [{ index: 0, commitSha: "a".repeat(40) }],
+        acceptedIterationIndex: 0,
+        stopReason: null,
+        designMd: { path: "DESIGN.md", sha256: hashDesignMd(CANONICAL_DESIGN_MD) },
+      }),
+      "utf-8",
+    );
+
+    const logger = await import("../../../src/cli/lib/logger.js");
+    const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
+    try {
+      const exit = await runPrototypingIterate({ root, cycle: 1 });
+      expect(exit).toBe(2);
+      const stderr = errorSpy.mock.calls.map((c) => String(c[0])).join("\n");
+      expect(stderr).toMatch(/no longer reachable/);
+      expect(stderr).toMatch(/`--cycle 0/);
+      expect(stderr).toMatch(/\["0001","0002"\]/);
+    } finally {
+      errorSpy.mockRestore();
+    }
+  });
+
+  it("cycle ≥ 1 + zero UI-bearing live + missing prototyping.json exits 2 with 'Seed the loop first'", async () => {
+    const root = await newTempDir();
+    await seedMinimalProject(root, { uiBearing: false });
+    // prototyping.json absent — fresh project ran `--cycle 1` first.
+
+    const logger = await import("../../../src/cli/lib/logger.js");
+    const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
+    try {
+      const exit = await runPrototypingIterate({ root, cycle: 1 });
+      expect(exit).toBe(2);
+      const stderr = errorSpy.mock.calls.map((c) => String(c[0])).join("\n");
+      expect(stderr).toMatch(/Seed the loop first/);
+      expect(stderr).not.toMatch(/no longer reachable/);
+    } finally {
+      errorSpy.mockRestore();
+    }
+  });
+
+  it("cycle ≥ 1 + zero UI-bearing live + prototyping.json missing frozenSurfaceUnion exits 2 with 'Seed the loop first'", async () => {
+    const root = await newTempDir();
+    await seedMinimalProject(root, { uiBearing: false });
+    // Legacy pre-12th-wave record without `frozenSurfaceUnion`.
+    await mkdir(path.join(root, ".qfai/evidence/prototyping"), { recursive: true });
+    await writeFile(
+      path.join(root, ".qfai/evidence/prototyping/prototyping.json"),
+      JSON.stringify({
+        specsCovered: ["0001"],
+        frozenSpecsCovered: ["0001"],
+        iterations: [{ index: 0, commitSha: "a".repeat(40) }],
+        acceptedIterationIndex: 0,
+        stopReason: null,
+      }),
+      "utf-8",
+    );
+
+    const logger = await import("../../../src/cli/lib/logger.js");
+    const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
+    try {
+      const exit = await runPrototypingIterate({ root, cycle: 1 });
+      expect(exit).toBe(2);
+      const stderr = errorSpy.mock.calls.map((c) => String(c[0])).join("\n");
+      expect(stderr).toMatch(/Seed the loop first/);
+      expect(stderr).not.toMatch(/no longer reachable/);
+    } finally {
+      errorSpy.mockRestore();
+    }
+  });
+});

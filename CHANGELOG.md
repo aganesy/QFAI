@@ -62,6 +62,33 @@
   - Pinned-branch authorization is preserved: this lands in 1.8.10
     because `feature/v1.8.10` is the release pin.
 
+### Fixed (PR #208 17th late-review wave)
+
+- `prototypingIterate.ts`: refine the 15th-wave zero-UI precheck
+  short-circuit at cycle ≥ 1 so the error message accurately reflects
+  the underlying state. The pre-17th-wave message always claimed
+  "the cycle-0 frozen scope is no longer reachable" on any zero-UI
+  cycle ≥ 1 invocation, including fresh projects that ran `--cycle 1`
+  before `--cycle 0` (no prototyping.json on disk yet) — violating the
+  principle of least astonishment. The fix reads `prototyping.json`
+  before short-circuiting and discriminates two diagnostics: (a)
+  non-empty cycle-0 `frozenSurfaceUnion` → "UI markers removed
+  mid-loop" hard-stop (names the frozen union for clarity); (b)
+  missing / malformed `frozenSurfaceUnion` (fresh project or
+  pre-12th-wave record) → "Seed the loop first with `--cycle 0`".
+  Resolves codex MINOR r3270050451.
+- `tests/cli/commands/prototypingIterate.test.ts`: add a new
+  describe block (TC-0012-0419, TDD-0439) with 4 `it` blocks pinning
+  the wave-15 / wave-17 zero-UI precheck branches — cycle 0 no-op
+  preserved; cycle ≥ 1 + non-empty frozen union → exit 2 with `no
+longer reachable`; cycle ≥ 1 + missing prototyping.json → exit 2
+  with `Seed the loop first`; cycle ≥ 1 + legacy record without
+  `frozenSurfaceUnion` → same `Seed the loop first` path.
+  06_Test-Cases.md / tdd/test-list.md / 16_Traceability-ledger.md
+  registered. Resolves codex MAJOR r3270050284 (regression coverage)
+  per CLAUDE.md "All source changes must have corresponding test
+  coverage".
+
 ### Fixed (PR #208 16th late-review wave)
 
 - `.qfai/contracts/cli/qfai-prototyping.md`: align the documented

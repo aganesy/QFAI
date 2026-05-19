@@ -875,6 +875,14 @@
 - Test file: `packages/qfai/tests/cli/commands/prototypingCertify.test.ts`
 - Verify the wave-11 four-`it` cluster on the per-spec UI contract resolver `readPerSpecScreens`: `respects the bare-numeric canonical layout (candidate #2: <bare>.yaml)`, `respects the ui-prefixed canonical layout (candidate #3: ui-<bare>.yaml)`, `respects the recursive subdir layout (candidate #5: <spec-id>/<sub>.yaml)`, and `uses candidate #1 only when both #1 and #3 exist on disk (true first-hit-wins)`. Pairs with the wave-13 `indexPerSpecScreens` per-spec re-parse fix (`parseUiScreenFile` per-spec winning file) and the multi-file aggregation extension (`chooseWinningFiles`) — those wave-13 fixes preserve the TC-0012-0418 assertions while closing the cross-spec dedup false-negative (codex r3265806993) and the multi-file null-return waste (codex r3265809880). Closes codex r3265811711 (wave-11 traceability stitch, MAJOR).
 
+## TC-0012-0419
+
+- EX-Ref: EX-0012-0148
+- AC-Refs: AC-0012-0044, AC-0012-0045
+- Type: integration
+- Test file: `packages/qfai/tests/cli/commands/prototypingIterate.test.ts`
+- Verify the zero-UI precheck short-circuit branches added by the 15th + 17th late-review waves. Four `it` blocks: (1) `cycle 0 + zero UI-bearing live + no frozen union still exits 0 (no-op semantic preserved)`, (2) `cycle ≥ 1 + zero UI-bearing live + non-empty frozenSurfaceUnion exits 2 with 'no longer reachable'` (genuine UI-removed-mid-loop hard-stop, names the frozen union), (3) `cycle ≥ 1 + zero UI-bearing live + missing prototyping.json exits 2 with 'Seed the loop first'` (fresh-project diagnostic — must NOT claim "no longer reachable"), (4) `cycle ≥ 1 + zero UI-bearing live + prototyping.json missing frozenSurfaceUnion exits 2 with 'Seed the loop first'` (pre-12th-wave legacy record path). Pairs with AC-0012-0045 (deterministic hard-stop classes) and AC-0012-0044 (autonomous-run bound, since the diagnostic is visible to operators). Closes codex MAJOR r3270050284 (regression coverage) and codex MINOR r3270050451 (diagnostic discrimination).
+
 ## Legacy Coverage Continuity
 
 - The legacy baseline test-case identifier space remains reserved for existing implementation/test slices.

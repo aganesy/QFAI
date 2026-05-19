@@ -181,27 +181,62 @@ export async function runPrototypingIterate(
   //    no spec has a UI surface to drive. See `evaluateZeroUiBearingPrecheck`
   //    for the full contract.
   //
-  // 15th-wave Fix (codex r3269453276, P1): the precheck short-circuit
-  // MUST NOT bypass the cycle ≥ 1 drift gate. Pre-fix, an in-progress
-  // frozen run whose UI markers / contracts were removed mid-loop would
-  // silently exit 0 here — `evaluateCycleGteOneGate` (which fires the
-  // `removed=[...]` drift detection against the cycle-0
-  // `frozenSurfaceUnion`) never ran. The zero-UI no-op is a cycle-0
-  // semantic (no specs to seed); at cycle ≥ 1 the cycle-0 frozen union
-  // is the SSOT and a live-union of `[]` is a genuine drift event that
-  // must surface as exit 2 with a re-seed instruction.
+  // 15th-wave Fix (codex r3269453276, P1) + 17th-wave refinement
+  // (codex r3270050451, MINOR): the precheck short-circuit MUST NOT
+  // bypass the cycle ≥ 1 drift gate, BUT it also MUST NOT claim that
+  // a cycle-0 frozen scope exists on records where it does not (fresh
+  // project, missing prototyping.json, or pre-12th-wave records with
+  // no `frozenSurfaceUnion` field). The verified pre-condition for
+  // the "removed mid-loop" hard-stop class is: cycle ≥ 1 AND
+  // prototyping.json on disk carries a non-empty `frozenSurfaceUnion`
+  // snapshot. When that holds and the live union is empty, the run
+  // entered a degraded state mid-loop and we surface a clear
+  // hard-stop. Otherwise we fall through to the normal cycle gates
+  // — `evaluateCycleGteOneGate` already handles "missing
+  // prototyping.json" / "missing frozenSurfaceUnion" with their own
+  // diagnostics (13th-wave hard-fail), so layering another short-cut
+  // here would only produce misleading messages on fresh-project
+  // `--cycle 1` invocations.
   const precheck = await evaluateZeroUiBearingPrecheck(options.root);
   if (precheck.shortCircuit) {
     if (options.cycle >= 1) {
-      error(
-        "qfai prototyping iterate: zero UI-bearing specs resolved on cycle " +
-          `${options.cycle}, but a cycle-0 frozen union is recorded in ` +
-          "prototyping.json. All UI markers / contracts appear to have been " +
-          "removed mid-loop, which is a hard-stop drift class — the cycle-0 " +
-          "frozen scope is no longer reachable. Re-run with " +
-          "`--cycle 0 --target-url <url>` to refreeze the loop or restore the " +
-          "removed UI signals before continuing.",
-      );
+      // Distinguish two failure modes so the error message is accurate:
+      //   (a) prototyping.json carries a non-empty cycle-0 `frozenSurfaceUnion`
+      //       snapshot → genuine "UI markers removed mid-loop" hard-stop;
+      //   (b) prototyping.json is missing or has no `frozenSurfaceUnion`
+      //       (fresh project ran `--cycle 1` before `--cycle 0`, or a
+      //       pre-12th-wave legacy record) → tell the operator to seed
+      //       first via `--cycle 0`. The pre-17th-wave message wrongly
+      //       claimed "frozen scope no longer reachable" on (b), which
+      //       violated the principle of least astonishment on a fresh
+      //       project (codex r3270050451 MINOR).
+      const protoJsonAbsForPrecheck = path.join(options.root, PROTOTYPING_JSON_REL);
+      const protoRecordForPrecheck = await readPrototypingJson(protoJsonAbsForPrecheck);
+      const frozenUnionForPrecheck =
+        protoRecordForPrecheck === null
+          ? null
+          : readFrozenSurfaceUnionField(protoRecordForPrecheck);
+      if (frozenUnionForPrecheck !== null && frozenUnionForPrecheck.length > 0) {
+        error(
+          "qfai prototyping iterate: zero UI-bearing specs resolved on cycle " +
+            `${options.cycle}, but the cycle-0 frozen union recorded in ` +
+            `prototyping.json#frozenSurfaceUnion (${JSON.stringify(frozenUnionForPrecheck)}) ` +
+            "is non-empty. All UI markers / contracts appear to have been " +
+            "removed mid-loop, which is a hard-stop drift class — the cycle-0 " +
+            "frozen scope is no longer reachable. Re-run with " +
+            "`--cycle 0 --target-url <url>` to refreeze the loop or restore the " +
+            "removed UI signals before continuing.",
+        );
+      } else {
+        error(
+          "qfai prototyping iterate: zero UI-bearing specs resolved on cycle " +
+            `${options.cycle}, and prototyping.json has no cycle-0 ` +
+            "`frozenSurfaceUnion` snapshot to drift against (either the file " +
+            "is missing / unreadable or it pre-dates the 12th-wave schema). " +
+            "Seed the loop first with `--cycle 0 --target-url <url>` and then " +
+            "re-invoke for cycle ≥ 1.",
+        );
+      }
       return 2;
     }
     return precheck.exitCode;
