@@ -62,6 +62,28 @@
   - Pinned-branch authorization is preserved: this lands in 1.8.10
     because `feature/v1.8.10` is the release pin.
 
+### Fixed (PR #208 15th late-review wave)
+
+- `prototypingIterate.ts`: the cycle-0 zero-UI-bearing precheck no
+  longer silently exits 0 at cycle ≥ 1. Pre-fix, an in-progress frozen
+  run whose UI markers / contracts were removed mid-loop would
+  short-circuit through the precheck before `evaluateCycleGteOneGate`
+  ran, masking the `removed=[...]` drift event. The fix preserves the
+  zero-UI no-op semantic only at cycle 0 (no specs to seed); at
+  cycle ≥ 1 a zero-UI live result against a non-empty cycle-0 frozen
+  union is treated as hard-stop drift → exit 2 with a re-seed
+  instruction. Resolves codex P1 r3269453276
+  (chatgpt-codex-connector).
+- `prototypingCertify.ts#runPrototypingShowSpec`: `liveUiBearing` now
+  uses `resolveSurfaceUnion` — the same resolver iterate's drift gate
+  uses — so the live scope reported by show-spec is apples-to-apples
+  with what iterate actually enforces. Pre-fix show-spec called the
+  narrower `resolveAllUiBearingSpecs` (strict signals only) and
+  projects relying on non-strict markers (title marker /
+  `primarySpecId` config pin / UI contract signals) saw false drift
+  diagnostics that did not match the iterate gate. Resolves codex P2
+  r3269453293 (chatgpt-codex-connector).
+
 ### Fixed (PR #208 14th late-review wave)
 
 - `.qfai/specs/spec-0012/tdd/test-list.md`: TDD-0347 Status column reverted

@@ -45,10 +45,12 @@ import {
   findDesignMdViolations,
   type DesignMdViolation,
 } from "../../core/prototyping/designMdViolations.js";
-import {
-  resolveAllUiBearingSpecs,
-  resolvePrimaryPrototypingSpec,
-} from "../../core/prototyping/specResolution.js";
+import { resolvePrimaryPrototypingSpec } from "../../core/prototyping/specResolution.js";
+// 15th-wave Fix (codex r3269453293, P2): show-spec's `liveUiBearing`
+// now uses the same resolver as iterate's drift gate
+// (`resolveSurfaceUnion`) so the live scope reported here is
+// apples-to-apples with what iterate enforces.
+import { resolveSurfaceUnion } from "./prototypingIterate.js";
 import {
   readFrozenSpecsCovered,
   readFrozenSpecsCoveredMultiSpec,
@@ -661,7 +663,19 @@ export async function runPrototypingShowSpec(options: { root: string }): Promise
   // Compute the live UI-bearing union so the operator can spot drift.
   // The legacy primary-resolver path is preserved as a fallback `specMdPath`
   // so existing operator tooling that reads the per-spec path keeps working.
-  const liveUiBearing = await resolveAllUiBearingSpecs(options.root, config);
+  //
+  // 15th-wave Fix (codex r3269453293, P2): use `resolveSurfaceUnion` here
+  // — the SAME resolver the cycle ≥ 1 drift gate uses — so show-spec's
+  // `liveUiBearing` covers the full union (strict `surface_type:
+  // ui-bearing` + legacy `# … prototyping …` title-marker +
+  // `prototyping.primarySpecId` config pin + UI contract signals).
+  // Pre-fix show-spec called `resolveAllUiBearingSpecs`, which returns
+  // only the strict signals; on projects relying on non-strict markers
+  // operators saw a narrower live set than iterate actually enforces,
+  // producing false "drift" diagnostics that did not match the iterate
+  // gate. `resolveSurfaceUnion` is exported from `prototypingIterate.ts`
+  // for exactly this kind of SSOT alignment.
+  const liveUiBearing = await resolveSurfaceUnion(options.root, config);
   const primary = await resolvePrimaryPrototypingSpec(options.root, config);
   const payload: Record<string, unknown> = {
     frozenSpecsCovered: specsCovered,

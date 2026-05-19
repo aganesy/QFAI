@@ -180,8 +180,30 @@ export async function runPrototypingIterate(
   // 0) Zero UI-bearing pre-check → deterministic no-op (exit 0) when
   //    no spec has a UI surface to drive. See `evaluateZeroUiBearingPrecheck`
   //    for the full contract.
+  //
+  // 15th-wave Fix (codex r3269453276, P1): the precheck short-circuit
+  // MUST NOT bypass the cycle ≥ 1 drift gate. Pre-fix, an in-progress
+  // frozen run whose UI markers / contracts were removed mid-loop would
+  // silently exit 0 here — `evaluateCycleGteOneGate` (which fires the
+  // `removed=[...]` drift detection against the cycle-0
+  // `frozenSurfaceUnion`) never ran. The zero-UI no-op is a cycle-0
+  // semantic (no specs to seed); at cycle ≥ 1 the cycle-0 frozen union
+  // is the SSOT and a live-union of `[]` is a genuine drift event that
+  // must surface as exit 2 with a re-seed instruction.
   const precheck = await evaluateZeroUiBearingPrecheck(options.root);
   if (precheck.shortCircuit) {
+    if (options.cycle >= 1) {
+      error(
+        "qfai prototyping iterate: zero UI-bearing specs resolved on cycle " +
+          `${options.cycle}, but a cycle-0 frozen union is recorded in ` +
+          "prototyping.json. All UI markers / contracts appear to have been " +
+          "removed mid-loop, which is a hard-stop drift class — the cycle-0 " +
+          "frozen scope is no longer reachable. Re-run with " +
+          "`--cycle 0 --target-url <url>` to refreeze the loop or restore the " +
+          "removed UI signals before continuing.",
+      );
+      return 2;
+    }
     return precheck.exitCode;
   }
   // The precheck returns both `earlyConfig` and `unionSpecs` on the
