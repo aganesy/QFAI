@@ -62,6 +62,20 @@ export type ReviewerOutcome = {
   readonly attempts: readonly ReviewerAttemptResult[];
   readonly finalStatus: ReviewerSessionStatus;
   readonly reviewJsonPath?: string;
+  /**
+   * In-memory review payload returned by the successful Reviewer
+   * Playwright attempt. Surfaced on `finalStatus: "ok"` outcomes so the
+   * loop driver can persist it (the file header contract states that
+   * the runner returns the review JSON in-memory and the driver writes
+   * `<screen>.review.json`). Omitted on `retryExhausted` /
+   * `launchFailed` outcomes because no attempt produced a payload.
+   *
+   * codex review r3264765754 (P2): pre-fix the dispatcher dropped the
+   * runner's `reviewJson` on the floor and never set `reviewJsonPath`
+   * either, so production callers got `finalStatus: "ok"` with neither
+   * payload nor path — making the success state operationally useless.
+   */
+  readonly reviewJson?: unknown;
 };
 
 /**
@@ -149,6 +163,24 @@ export type ReviewerDispatchOptions = {
    * — the dispatcher never inspects the return value.
    */
   readonly sleep?: (ms: number) => Promise<void>;
+  /**
+   * Optional persistence callback invoked exactly once on a successful
+   * Reviewer attempt with the in-memory `reviewJson` payload returned
+   * by the runner. Must return the absolute on-disk path of the written
+   * `<screen>.review.json` file; the dispatcher records the returned
+   * path on the outcome's `reviewJsonPath`.
+   *
+   * codex review r3264765754 (P2): kept optional so existing test stubs
+   * (which only need to assert payload propagation) do not have to
+   * wire a writer. Production callers inject a real writer; persistence
+   * failures propagate as thrown errors and the dispatcher records the
+   * failure as another attempt (consistent with the runner-throw path).
+   */
+  readonly persistReviewJson?: (
+    specId: string,
+    screen: string,
+    payload: unknown,
+  ) => Promise<string>;
 };
 
 const NO_RUNNER_MESSAGE =
@@ -252,11 +284,50 @@ export async function dispatchReviewerToPair(
     }
     if (result.ok) {
       attempts.push({ ok: true, attemptIndex: i });
+      // codex review r3264765754 (P2): propagate the in-memory
+      // `reviewJson` payload to the outcome and (optionally) call the
+      // injected persister to write the `<screen>.review.json` file.
+      // The persister is invoked exactly once on the FIRST successful
+      // attempt; persistence failures are recorded as a synthetic
+      // failed attempt (symmetric with the runner-throw + sleeper-throw
+      // paths above) so the outcome's `finalStatus` remains the source
+      // of truth for the operator-facing gate.
+      const successPayload = result.reviewJson;
+      if (options.persistReviewJson !== undefined) {
+        try {
+          const writtenPath = await options.persistReviewJson(
+            specId,
+            screen,
+            successPayload,
+          );
+          return {
+            specId,
+            screen,
+            attempts,
+            finalStatus: "ok",
+            reviewJsonPath: writtenPath,
+            reviewJson: successPayload,
+          };
+        } catch (persistErr) {
+          const persistMsg =
+            persistErr instanceof Error ? persistErr.message : String(persistErr);
+          attempts.push({
+            ok: false,
+            attemptIndex: i,
+            errorMessage: `reviewerDispatch: persistReviewJson failed: ${persistMsg}`,
+          });
+          // Persistence failure is treated as an exhausted schedule:
+          // the runner succeeded but the driver could not record the
+          // payload, so the caller cannot treat the pair as completed.
+          break;
+        }
+      }
       return {
         specId,
         screen,
         attempts,
         finalStatus: "ok",
+        reviewJson: successPayload,
       };
     }
     attempts.push({

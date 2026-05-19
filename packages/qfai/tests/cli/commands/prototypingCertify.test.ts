@@ -353,27 +353,30 @@ describe("qfai prototyping certify (TC-0012-0399: frozenSpecsCovered preferred o
 // review.json presence gate is opt-in based on actual per-spec layout
 // presence at the accepted iter. Flat-iter projects (the legacy
 // `iter-NN/index.html` shape that prototypingIterate + SKILL.md still
-// emit) must NOT have the gate enforced; pre-fix the gate ran
-// unconditionally and would fail every (spec, screen) pair on a normal
-// run that followed the shipped plan. The per-spec layout migration is
-// tracked under OQ-0012-0006 / TDD-0384.
+// emit) must NOT have the gate enforced for SINGLE-spec frozen sets;
+// pre-fix the gate ran unconditionally and would fail every (spec,
+// screen) pair on a normal run that followed the shipped plan. The
+// per-spec layout migration is tracked under OQ-0012-0006 / TDD-0384.
+//
+// Tightened in the 6th late-review wave (codex r3264798065, P1): the
+// flat-iter skip is now CONDITIONAL on `frozenSpecsCovered.length <= 1`.
+// Multi-spec frozen sets on a flat iter ERROR (see TC-0012-0403 below) —
+// the legacy flat layout structurally cannot host per-spec review.json
+// files for secondary specs and the skip would re-open the TDD-0387
+// vulnerability.
 describe("qfai prototyping certify (codex r3264630513: flat-iter layout skips the per-(spec × screen) gate)", () => {
-  it("exits 0 on a flat-iter project even when frozenSpecsCovered carries multiple specs (no per-spec subdirs at the accepted iter)", async () => {
+  // QFAI:SPEC-0012:TC-0012-0402
+  it("exits 0 on a single-spec flat-iter project (no per-spec subdirs at the accepted iter)", async () => {
     const root = await newTempDir();
     await seedMinimalProject(root);
-    // Frozen set carries two specs but the accepted iter is flat —
-    // only `iter-01/index.html` exists, no `iter-01/spec-*/` subdirs.
-    // The gate must skip with an info note and let the run succeed.
+    // Single-spec frozen set on a flat iter — only `iter-01/index.html`
+    // exists, no `iter-01/spec-*/` subdirs. The gate must skip with an
+    // info note and let the run succeed. Multi-spec flat-iter is
+    // covered separately by TC-0012-0403.
     await seedAllGatesPass(root, {
       specsCovered: ["0012"],
-      frozenSpecsCovered: ["0012", "0007"],
+      frozenSpecsCovered: ["0012"],
     });
-    await mkdir(path.join(root, ".qfai/specs/spec-0007"), { recursive: true });
-    await writeFile(
-      path.join(root, ".qfai/specs/spec-0007/01_Spec.md"),
-      "---\nsurface_type: ui-bearing\n---\n\n# spec-0007\n",
-      "utf-8",
-    );
     // Seed a single UI screen contract so the gate would otherwise
     // trigger (`screenContracts.length > 0`).
     await seedUiScreens(root, ["home"]);
@@ -396,6 +399,56 @@ describe("qfai prototyping certify (codex r3264630513: flat-iter layout skips th
       expect(noteEmitted).toBe(true);
     } finally {
       infoSpy.mockRestore();
+    }
+  });
+
+  // QFAI:SPEC-0012:TC-0012-0403
+  // codex review r3264798065 (P1): tighten the flat-iter skip. Pre-fix
+  // the skip was unconditional, so a multi-spec frozen set on a flat
+  // iter (no per-spec subdir) silently passed certify — re-opening
+  // TDD-0387's vulnerability (a frozen secondary spec ships a sealed
+  // cert with zero review.json evidence). Post-fix certify ERRORs
+  // non-zero with a message naming the incompatibility and pointing at
+  // the deferred migration.
+  it("exits non-zero on a multi-spec flat-iter project (no per-spec subdirs at the accepted iter)", async () => {
+    const root = await newTempDir();
+    await seedMinimalProject(root);
+    // Multi-spec frozen set on a flat iter — pre-fix this short-circuited
+    // the per-(spec × screen) gate via the unconditional info-skip and
+    // sealed a cert with zero review.json for spec-0007.
+    await seedAllGatesPass(root, {
+      specsCovered: ["0012"],
+      frozenSpecsCovered: ["0012", "0007"],
+    });
+    await mkdir(path.join(root, ".qfai/specs/spec-0007"), { recursive: true });
+    await writeFile(
+      path.join(root, ".qfai/specs/spec-0007/01_Spec.md"),
+      "---\nsurface_type: ui-bearing\n---\n\n# spec-0007\n",
+      "utf-8",
+    );
+    await seedUiScreens(root, ["home"]);
+    // Crucially: NO `seedReviewJson` calls and NO per-spec subdir.
+
+    const logger = await import("../../../src/cli/lib/logger.js");
+    const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
+    try {
+      const exit = await runPrototypingCertify({ root, check: false });
+      expect(exit).not.toBe(0);
+      // The error message must name the multi-spec incompatibility
+      // (so the operator knows the run is structurally blocked) and
+      // the deferred-migration hint (so the operator knows the path
+      // forward).
+      const errorMessages = errorSpy.mock.calls.map((c) => String(c[0]));
+      const namesMultiSpec = errorMessages.some((m) =>
+        /multi-spec frozen set requires per-spec/i.test(m),
+      );
+      const namesMigration = errorMessages.some((m) =>
+        /flat-iter migration deferred/i.test(m),
+      );
+      expect(namesMultiSpec).toBe(true);
+      expect(namesMigration).toBe(true);
+    } finally {
+      errorSpy.mockRestore();
     }
   });
 });

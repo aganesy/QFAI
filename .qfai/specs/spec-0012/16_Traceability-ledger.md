@@ -136,6 +136,9 @@ otherwise enforced.
 | TDD-0419 | TC-0012-0400 | done   | prototyping-cli  | certify legacy `specsCovered` fallback when `frozenSpecsCovered` absent (moved into its own describe to disentangle from TC-0012-0381)                                         |
 | TDD-0420 | n/a (source) | done   | prototyping-cli  | MINOR: `specDirExists` bare-catch hardened to ENOENT-discriminated catch + re-throw so EACCES / EIO / ENOTDIR propagate instead of being silently classified as "doesn't exist" |
 | TDD-0421 | TC-0012-0401 | done   | prototyping-cli  | title-marker bypass: cycle 1 does not trip spec-set drift (symmetric to TDD-0416 for the title-marker code path)                                                               |
+| TDD-0422 | TC-0012-0402 | done   | prototyping-cli  | flat-iter info-skip (single-spec): traceability stitch for the existing flat-iter test (annotated with `// QFAI:SPEC-0012:TC-0012-0402`; frozen set narrowed to single spec)   |
+| TDD-0423 | TC-0012-0403 | done   | prototyping-cli  | P1 fix: multi-spec flat-iter hard error — closes the TDD-0387 vulnerability re-opened by the unconditional flat-iter skip                                                      |
+| TDD-0424 | TC-0012-0404 | done   | prototyping-cli  | P2 fix: cycle-0 frozen set is the UNION of strict + title-marker + primarySpecId, independent of which sub-scan returned first (was strict-only when strict was non-empty)     |
 
 ## Notes (v2.1 ledger)
 

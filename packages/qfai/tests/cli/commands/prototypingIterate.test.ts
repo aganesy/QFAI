@@ -2199,3 +2199,91 @@ describe("runPrototypingIterate cycle-0 no-op gate honours legacy title marker",
     }
   });
 });
+
+// Regression for codex review r3264765749 (P2): pre-fix the
+// title-marker + primarySpecId bypass branch in
+// `evaluateZeroUiBearingPrecheck` was reached ONLY when the strict scan
+// returned `[]`. In a MIXED project where the strict scan finds spec A
+// (frontmatter marker) BUT primarySpecId pins spec B (no strict
+// signal), cycle 0 froze `frozenSpecsCovered = [A]` (strict only),
+// while `resolvePrimaryPrototypingSpec` could drive B — letting certify
+// validate the wrong scope. Post-fix the precheck always returns the
+// UNION of strict + title-marker + configured-primarySpecId-on-disk,
+// short-circuiting only when the union is empty.
+describe("runPrototypingIterate cycle-0 union (strict + title-marker + primarySpecId)", () => {
+  // QFAI:SPEC-0012:TC-0012-0404
+  it("returns the union of strict + primarySpecId when strict is non-empty (frozenSpecsCovered === union sorted)", async () => {
+    const root = await newTempDir();
+    await seedDesignMd(root);
+    // qfai.config.yaml pins primarySpecId=0002. Spec-0003 carries the
+    // strict frontmatter marker; spec-0002 carries no strict signal
+    // (only the primarySpecId pin). Pre-fix the strict-non-empty branch
+    // short-circuited before checking primarySpecId, so cycle 0 froze
+    // `frozenSpecsCovered = ["0003"]` (missing 0002).
+    await writeFile(
+      path.join(root, "qfai.config.yaml"),
+      [
+        "paths:",
+        "  contractsDir: .qfai/contracts",
+        "  specsDir: .qfai/specs",
+        "  discussionDir: .qfai/discussion",
+        "  outDir: .qfai/out",
+        "  skillsDir: .qfai/assistant/skills",
+        "  promptsDir: .qfai/assistant/skills",
+        "  srcDir: src",
+        "  testsDir: tests",
+        "validation:",
+        "  failOn: error",
+        "  require:",
+        "    specSections: []",
+        "  testStrategy:",
+        "    requireLayerTags: false",
+        "    requireSizeTags: false",
+        "    requireApiAtdd: false",
+        "    requireE2eAtdd: false",
+        "    requireIntegrationAtdd: false",
+        "    requireUnitTdd: false",
+        "    requireSpecTagBlock: false",
+        "    requireRoutingProfile: false",
+        "prototyping:",
+        '  primarySpecId: "0002"',
+        "",
+      ].join("\n"),
+      "utf-8",
+    );
+    // spec-0003: strict ui-bearing frontmatter (strict scan finds it).
+    const spec3Dir = path.join(root, ".qfai/specs/spec-0003");
+    await mkdir(spec3Dir, { recursive: true });
+    await writeFile(
+      path.join(spec3Dir, "01_Spec.md"),
+      "---\nsurface_type: ui-bearing\n---\n\n# spec-0003 strict\n",
+      "utf-8",
+    );
+    // spec-0002: no strict marker, no title marker, no UI contract — only
+    // the primarySpecId pin signals it.
+    const spec2Dir = path.join(root, ".qfai/specs/spec-0002");
+    await mkdir(spec2Dir, { recursive: true });
+    await writeFile(
+      path.join(spec2Dir, "01_Spec.md"),
+      "# 01 Spec — primarySpecId-only\n",
+      "utf-8",
+    );
+
+    const seedExit = await runPrototypingIterate({
+      root,
+      cycle: 0,
+      targetUrl: "http://localhost:5173",
+    });
+    expect(seedExit).toBe(0);
+
+    const protoJsonPath = path.join(
+      root,
+      ".qfai/evidence/prototyping/prototyping.json",
+    );
+    const proto = JSON.parse(await readFile(protoJsonPath, "utf-8")) as {
+      frozenSpecsCovered?: unknown;
+    };
+    // Sorted lex: ["0002", "0003"]. Pre-fix this was ["0003"].
+    expect(proto.frozenSpecsCovered).toEqual(["0002", "0003"]);
+  });
+});

@@ -739,6 +739,30 @@
 - Test file: `packages/qfai/tests/cli/commands/prototypingIterate.test.ts`
 - Verify the title-marker bypass (TC-0012-0398) is symmetric with the primarySpecId bypass at cycle ≥1: seed a spec whose only UI-bearing signal is the legacy `# … Prototyping …` title marker, run cycle 0 (which must seed `frozenSpecsCovered` with the title-marker spec id, not `[]`), then run cycle 1 and assert stderr does NOT contain `spec-set drift detected` / `removed=[NNNN]`. Pre-fix the title-marker bypass would have suffered the same cycle-1 drift trip as the primarySpecId bypass did before TC-0012-0397; this case pins the symmetric coverage.
 
+## TC-0012-0402
+
+- EX-Ref: EX-0012-0138
+- AC-Refs: AC-0012-0047
+- Type: integration
+- Test file: `packages/qfai/tests/cli/commands/prototypingCertify.test.ts`
+- Verify the single-spec flat-iter info-skip: certify with `frozenSpecsCovered: ["0012"]` (single spec) and no per-spec subdirs at the accepted iter must exit 0 and surface an info note containing `per-spec`, `layout not detected`, `skipping`. Codifies the legacy backward-compatibility path while the per-spec layout migration (TDD-0384 / OQ-0012-0006) is pending.
+
+## TC-0012-0403
+
+- EX-Ref: EX-0012-0138
+- AC-Refs: AC-0012-0047
+- Type: integration
+- Test file: `packages/qfai/tests/cli/commands/prototypingCertify.test.ts`
+- Verify the multi-spec flat-iter hard error: certify with `frozenSpecsCovered: ["0012","0007"]` (multi-spec) and no per-spec subdirs at the accepted iter must exit non-zero with an error message naming the multi-spec/per-spec incompatibility (`multi-spec frozen set requires per-spec`) AND the deferred-migration hint (`flat-iter migration deferred`). Closes the TDD-0387 vulnerability re-opened by the unconditional flat-iter skip — pre-fix a frozen secondary spec could ship a sealed cert with zero review.json files.
+
+## TC-0012-0404
+
+- EX-Ref: EX-0012-0123, EX-0012-0140
+- AC-Refs: AC-0012-0037, AC-0012-0049
+- Type: integration
+- Test file: `packages/qfai/tests/cli/commands/prototypingIterate.test.ts`
+- Verify the cycle-0 frozen spec set is the UNION of (strict frontmatter scan) + (legacy title-marker scan) + (configured `prototyping.primarySpecId` on disk), independent of which sub-scan finds anything: seed spec-0003 with `surface_type: ui-bearing` (strict), pin `primarySpecId: "0002"` (no strict signal on spec-0002), run cycle 0 with `--target-url`, and assert `prototyping.json#frozenSpecsCovered === ["0002","0003"]`. Pre-fix the strict-non-empty branch returned strict-only `["0003"]` (the primarySpecId bypass branch was reached only when strict was empty), letting certify validate the wrong scope for the loop driver's primary spec.
+
 ## Legacy Coverage Continuity
 
 - The legacy baseline test-case identifier space remains reserved for existing implementation/test slices.

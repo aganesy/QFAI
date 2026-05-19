@@ -269,10 +269,32 @@ export async function runPrototypingCertify(
     const acceptedIterAbs = path.join(options.root, PROTOTYPING_EVIDENCE_REL, acceptedIterDir);
     const hasPerSpecLayout = await hasPerSpecSubdir(acceptedIterAbs);
     if (!hasPerSpecLayout) {
+      // codex review r3264798065 (P1): the flat-iter skip is only valid
+      // for SINGLE-spec frozen sets. When the frozen set carries
+      // multiple specs but the accepted iter has no per-spec subdir,
+      // the legacy flat layout is structurally incompatible — there is
+      // no place to host the per-spec `<screen>.review.json` files for
+      // the secondary spec(s), and silently skipping the gate would
+      // re-open the TDD-0387 vulnerability (a frozen secondary spec
+      // ships a sealed certificate with zero review.json evidence).
+      // Fail-fast with a hard error in the multi-spec case; preserve
+      // the info-skip for the single-spec legacy path.
+      if (frozenSpecsPreview.length > 1) {
+        error(
+          `qfai prototyping certify: accepted iteration ${acceptedIterDir} carries a ` +
+            `multi-spec frozen set (frozenSpecsCovered=${JSON.stringify(frozenSpecsPreview)}) ` +
+            "but no per-spec iter-NN/spec-NNNN/<screen>.review.json layout is present. " +
+            "Multi-spec frozen set requires per-spec iter-NN/spec-NNNN/<screen>.review.json layout; " +
+            "flat-iter migration deferred under TDD-0384/OQ-0012-0006 is incompatible with " +
+            "multi-spec runs. Re-run prototyping with the per-spec layout or restrict the " +
+            "frozen set to a single spec.",
+        );
+        return 2;
+      }
       info(
         `qfai prototyping certify: per-spec ${acceptedIterDir}/spec-NNNN layout not detected — ` +
           "skipping per-(spec x screen) review.json presence gate; running with legacy flat layout " +
-          "(per-spec layout migration pending).",
+          "(per-spec layout migration pending, single-spec frozen set).",
       );
     } else {
       const missingPairs: Array<{ spec: string; screen: string; expectedPath: string }> = [];

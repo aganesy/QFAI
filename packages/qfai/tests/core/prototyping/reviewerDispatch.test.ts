@@ -192,6 +192,115 @@ describe("dispatchReviewerToPair (interface stub)", () => {
     expect(outcome.finalStatus).toBe("ok");
     expect(waited).toEqual([]);
   });
+
+  // codex review r3264765754 (P2): on success the dispatcher must
+  // surface the runner's in-memory `reviewJson` payload on the
+  // outcome so the loop driver can persist `<screen>.review.json`.
+  // Pre-fix the payload was dropped on the floor and `reviewJsonPath`
+  // was never set either — production callers got `finalStatus: "ok"`
+  // with neither payload nor path.
+  it("propagates the runner's reviewJson payload on a first-attempt success", async () => {
+    const payload = { specId: "0012", screen: "dashboard", axes: { aesthetics: 5 } };
+    const outcome = await dispatchReviewerToPair("0012", "dashboard", {
+      attemptLimit: 3,
+      playwrightRunner: async (): Promise<ReviewerPlaywrightAttempt> => ({
+        ok: true,
+        reviewJson: payload,
+      }),
+    });
+    expect(outcome.finalStatus).toBe("ok");
+    expect(outcome.reviewJson).toEqual(payload);
+    // No persister injected → reviewJsonPath stays undefined.
+    expect(outcome.reviewJsonPath).toBeUndefined();
+  });
+
+  it("propagates the runner's reviewJson payload after a retry-then-ok", async () => {
+    let calls = 0;
+    const payload = { specId: "0012", screen: "dashboard", note: "second-try" };
+    const outcome = await dispatchReviewerToPair("0012", "dashboard", {
+      attemptLimit: 3,
+      playwrightRunner: async (): Promise<ReviewerPlaywrightAttempt> => {
+        calls += 1;
+        if (calls < 2) return { ok: false, error: "transient" };
+        return { ok: true, reviewJson: payload };
+      },
+      sleep: async () => undefined,
+    });
+    expect(calls).toBe(2);
+    expect(outcome.finalStatus).toBe("ok");
+    expect(outcome.reviewJson).toEqual(payload);
+    // attempts[] records both the failed and the successful attempt.
+    expect(outcome.attempts).toHaveLength(2);
+    expect(outcome.attempts[0]?.ok).toBe(false);
+    expect(outcome.attempts[1]?.ok).toBe(true);
+  });
+
+  it("omits reviewJson when every attempt fails (retryExhausted)", async () => {
+    const outcome = await dispatchReviewerToPair("0012", "dashboard", {
+      attemptLimit: 2,
+      playwrightRunner: async (): Promise<ReviewerPlaywrightAttempt> => ({
+        ok: false,
+        error: "fail",
+      }),
+      sleep: async () => undefined,
+    });
+    expect(outcome.finalStatus).toBe("retryExhausted");
+    expect(outcome.reviewJson).toBeUndefined();
+    expect(outcome.reviewJsonPath).toBeUndefined();
+  });
+
+  it("invokes the persistReviewJson callback on success and records the returned path", async () => {
+    let writtenSpec = "";
+    let writtenScreen = "";
+    let writtenPayload: unknown = null;
+    const payload = { specId: "0012", screen: "dashboard", axes: {} };
+    const outcome = await dispatchReviewerToPair("0012", "dashboard", {
+      attemptLimit: 1,
+      playwrightRunner: async (): Promise<ReviewerPlaywrightAttempt> => ({
+        ok: true,
+        reviewJson: payload,
+      }),
+      persistReviewJson: async (specId, screen, body): Promise<string> => {
+        writtenSpec = specId;
+        writtenScreen = screen;
+        writtenPayload = body;
+        return "/abs/path/iter-00/spec-0012/dashboard.review.json";
+      },
+    });
+    expect(outcome.finalStatus).toBe("ok");
+    expect(writtenSpec).toBe("0012");
+    expect(writtenScreen).toBe("dashboard");
+    expect(writtenPayload).toEqual(payload);
+    expect(outcome.reviewJsonPath).toBe(
+      "/abs/path/iter-00/spec-0012/dashboard.review.json",
+    );
+    expect(outcome.reviewJson).toEqual(payload);
+  });
+
+  it("records persister failure as a synthetic attempt and falls out of the success path", async () => {
+    const payload = { specId: "0012", screen: "dashboard" };
+    const outcome = await dispatchReviewerToPair("0012", "dashboard", {
+      attemptLimit: 1,
+      playwrightRunner: async (): Promise<ReviewerPlaywrightAttempt> => ({
+        ok: true,
+        reviewJson: payload,
+      }),
+      persistReviewJson: async (): Promise<string> => {
+        throw new Error("disk full");
+      },
+    });
+    // Persister failure on the only attempt → exhausted.
+    expect(outcome.finalStatus).toBe("retryExhausted");
+    // Two attempts recorded: the successful runner attempt + the
+    // synthetic persister-failure attempt.
+    expect(outcome.attempts).toHaveLength(2);
+    expect(outcome.attempts[0]?.ok).toBe(true);
+    expect(outcome.attempts[1]?.ok).toBe(false);
+    expect(outcome.attempts[1]?.errorMessage).toMatch(
+      /persistReviewJson failed: disk full/,
+    );
+    expect(outcome.reviewJsonPath).toBeUndefined();
+  });
 });
 
 describe("reviewer dispatch source-grep", () => {

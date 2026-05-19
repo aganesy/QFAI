@@ -918,56 +918,54 @@ async function evaluateZeroUiBearingPrecheck(
   root: string,
 ): Promise<ZeroUiBearingPrecheckResult> {
   const earlyConfig = await loadConfig(root);
-  const earlyUiBearing = await resolveAllUiBearingSpecs(root, earlyConfig.config);
-  if (earlyUiBearing.length === 0) {
-    // codex review r3264500818: `resolveAllUiBearingSpecs` only honours
-    // the `surface_type: ui-bearing` frontmatter marker or a matching
-    // `.qfai/contracts/ui/*.yaml`, but `resolvePrimaryPrototypingSpec`
-    // ALSO recognises a title-line marker (`# … Prototyping …`) inside
-    // `01_Spec.md`. Without this probe a project that relies solely on
-    // the title marker silently no-ops at section 0 and never reaches
-    // the legacy primary resolver.
-    const titleMarkerSpecs = await resolveTitleMarkerSpecs(
-      root,
-      earlyConfig.config.paths.specsDir,
-    );
-    const configuredPrimarySpecId = earlyConfig.config.prototyping?.primarySpecId;
-    const configuredSpecOnDisk =
-      configuredPrimarySpecId !== undefined
-        ? await specDirExists(
-            root,
-            earlyConfig.config.paths.specsDir,
-            configuredPrimarySpecId,
-          )
-        : false;
-    if (!configuredSpecOnDisk && titleMarkerSpecs.length === 0) {
-      info(
-        "qfai prototyping iterate: no UI-bearing specs resolved — deterministic no-op " +
-          "(no spec carries `surface_type: ui-bearing` and no matching `.qfai/contracts/ui/*.yaml`). " +
-          "Add the marker or contract to enable the prototyping loop.",
-      );
-      return { shortCircuit: true, exitCode: 0 };
-    }
-    // codex review r3264507311 (MAJOR): when the bypass triggers,
-    // expand `earlyUiBearing` to include the resolved spec id(s) so:
-    //   - cycle 0 writes `frozenSpecsCovered: [primary]` (not `[]`),
-    //   - cycle ≥1 live comparison sees the same value and does not
-    //     trip `checkSpecsCoveredDrift` with `removed: [primary]`.
-    // Pre-fix the bypass worked for cycle 0 but reliably failed at
-    // cycle ≥1 because the frozen set was empty and the live set is
-    // still empty under `resolveAllUiBearingSpecs`.
-    const bypassSpecs = new Set<string>();
-    if (configuredSpecOnDisk && configuredPrimarySpecId !== undefined) {
-      bypassSpecs.add(configuredPrimarySpecId);
-    }
-    for (const id of titleMarkerSpecs) bypassSpecs.add(id);
-    return {
-      shortCircuit: false,
-      earlyConfig,
-      earlyUiBearing: [...bypassSpecs].sort((a, b) => a.localeCompare(b)),
-    };
+  const strictUiBearing = await resolveAllUiBearingSpecs(root, earlyConfig.config);
+  // codex review r3264765749 (P2): always compute the union of the
+  // strict scan + title-marker scan + configured primarySpecId-on-disk
+  // probe, regardless of whether the strict scan returned non-empty.
+  //
+  // Pre-fix the title-marker + primarySpecId bypass branch was reached
+  // ONLY when the strict scan returned `[]`; in a mixed project where
+  // spec A has `surface_type: ui-bearing` (strict) AND spec B is
+  // surfaced via the title marker (or pinned via primarySpecId), cycle 0
+  // froze `frozenSpecsCovered = [A]` (strict only) while
+  // `resolvePrimaryPrototypingSpec` could resolve to B — letting the
+  // certify gate validate the wrong scope.
+  //
+  // The composition rule is: the cycle-0 frozen set is the UNION of
+  // every surface that any downstream resolver recognises. If the union
+  // is empty the no-op short-circuit fires (preserving the deterministic
+  // no-op for projects that have no UI surface declared).
+  const titleMarkerSpecs = await resolveTitleMarkerSpecs(
+    root,
+    earlyConfig.config.paths.specsDir,
+  );
+  const configuredPrimarySpecId = earlyConfig.config.prototyping?.primarySpecId;
+  const configuredSpecOnDisk =
+    configuredPrimarySpecId !== undefined
+      ? await specDirExists(
+          root,
+          earlyConfig.config.paths.specsDir,
+          configuredPrimarySpecId,
+        )
+      : false;
+  const unionSpecs = new Set<string>(strictUiBearing);
+  if (configuredSpecOnDisk && configuredPrimarySpecId !== undefined) {
+    unionSpecs.add(configuredPrimarySpecId);
   }
-  return { shortCircuit: false, earlyConfig, earlyUiBearing };
+  for (const id of titleMarkerSpecs) unionSpecs.add(id);
+  if (unionSpecs.size === 0) {
+    info(
+      "qfai prototyping iterate: no UI-bearing specs resolved — deterministic no-op " +
+        "(no spec carries `surface_type: ui-bearing` and no matching `.qfai/contracts/ui/*.yaml`). " +
+        "Add the marker or contract to enable the prototyping loop.",
+    );
+    return { shortCircuit: true, exitCode: 0 };
+  }
+  return {
+    shortCircuit: false,
+    earlyConfig,
+    earlyUiBearing: [...unionSpecs].sort((a, b) => a.localeCompare(b)),
+  };
 }
 
 type CycleGteOneGateInput = {
