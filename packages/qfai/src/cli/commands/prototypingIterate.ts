@@ -301,7 +301,7 @@ export async function runPrototypingIterate(
     // sealed into the next certificate's evidenceDigests. Surfacing
     // the failed dir + cause lets the operator clear the lock before
     // iterate writes the new plan.
-    const rmResult = await deleteStaleIterDirs(path.join(options.root, PROTOTYPING_EVIDENCE_REL));
+    const rmResult = await clearEvidenceIterDirs(path.join(options.root, PROTOTYPING_EVIDENCE_REL));
     if (!rmResult.ok) {
       const reason =
         rmResult.cause instanceof Error ? rmResult.cause.message : String(rmResult.cause);
@@ -649,9 +649,21 @@ async function writeSeedMetadata(protoJsonAbs: string, seed: SeedMetadata): Prom
   await writeFile(protoJsonAbs, `${JSON.stringify(body, null, 2)}\n`, "utf-8");
 }
 
-type DeleteStaleIterDirsResult = { ok: true } | { ok: false; failedDir: string; cause: unknown };
+type ClearEvidenceIterDirsResult = { ok: true } | { ok: false; failedDir: string; cause: unknown };
 
-async function deleteStaleIterDirs(evidenceRootAbs: string): Promise<DeleteStaleIterDirsResult> {
+/**
+ * Cycle-0 reset helper: removes every `iter-NN/` directory under the
+ * pre-joined `<root>/.qfai/evidence/prototyping` evidence root and
+ * returns a structured `{ok, failedDir, cause}` result so the caller
+ * can fail-closed without exception unwinding.
+ *
+ * Intentionally distinct from `core/prototyping/iterationPaths.ts`'s
+ * `deleteStaleIterDirs(root)`, which takes a project root, throws on
+ * the first rm failure, and returns a flat `{deleted: string[]}`
+ * summary for the multi-spec migration helpers. The two contracts are
+ * not unified yet.
+ */
+async function clearEvidenceIterDirs(evidenceRootAbs: string): Promise<ClearEvidenceIterDirsResult> {
   let entries: string[];
   try {
     entries = await readdir(evidenceRootAbs);
@@ -1193,7 +1205,7 @@ async function evaluateCycleGteOneGate(
   // is the legacy single-spec field that is also frozen for backward
   // compatibility. Both must be honoured.
   const frozenSet = readFrozenSpecsCoveredField(protoRecord) ?? frozenSpecs;
-  const liveUiBearing = [...input.earlyUiBearing];
+  const liveUiBearing = input.earlyUiBearing;
   const drift = checkSpecsCoveredDrift(frozenSet, liveUiBearing);
   if (drift.drifted) {
     const parts: string[] = [];

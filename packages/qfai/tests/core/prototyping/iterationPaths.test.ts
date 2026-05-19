@@ -13,7 +13,7 @@ import {
   iterationDir,
   iterationReviewPath,
   parseIterationReviewPath,
-  purgeStaleIterDirs,
+  deleteStaleIterDirs,
 } from "../../../src/core/prototyping/iterationPaths.js";
 
 const tempDirs: string[] = [];
@@ -134,7 +134,7 @@ describe("findIterationReviewFiles", () => {
   });
 });
 
-describe("findStaleIterDirs / purgeStaleIterDirs", () => {
+describe("findStaleIterDirs / deleteStaleIterDirs", () => {
   // QFAI:SPEC-0012:TC-0012-0380
   it("matches only /^iter-\\d{2,}$/ directories and leaves unrelated siblings intact", async () => {
     const root = await newTempDir();
@@ -162,7 +162,7 @@ describe("findStaleIterDirs / purgeStaleIterDirs", () => {
     expect(matched).not.toContain(unrelated);
     expect(matched).not.toContain(certificateFile);
 
-    const { deleted } = await purgeStaleIterDirs(root);
+    const { deleted } = await deleteStaleIterDirs(root);
     expect(deleted.sort()).toEqual(expected);
 
     // Unrelated siblings preserved.
@@ -179,7 +179,7 @@ describe("findStaleIterDirs / purgeStaleIterDirs", () => {
     const root = await newTempDir();
     const matched = await findStaleIterDirs(root);
     expect(matched).toEqual([]);
-    const { deleted } = await purgeStaleIterDirs(root);
+    const { deleted } = await deleteStaleIterDirs(root);
     expect(deleted).toEqual([]);
   });
 });

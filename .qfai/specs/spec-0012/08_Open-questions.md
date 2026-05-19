@@ -93,7 +93,7 @@
 - Due: 2026-06-30
 - Severity: low
 - Source: CHG-002 PR #208 review (FYI thread r3264491197, raised 2026-05-19).
-- Question: The handoff schema validator (`core/prototyping/handoff/validateImageSources.ts`) checks `prototype-handoff.yaml#imageSources[]` shape with full unit coverage, but `cli/commands/prototypingCertify.ts` does not yet gate on the handoff yaml read path. Today `licenseVerify` consumes `prototyping.json#imageSources` directly; the handoff-yaml population path is left to a later batch (see iterate.ts 4b inline note). Wire-in must either add the certify-gate read of `prototype-handoff.yaml` and route entries through `validateImageSources` before `licenseVerify`, or document the deferral if the handoff.yaml population path is not ready.
+- Question: The handoff schema validator (`core/prototyping/handoff.ts#validateImageSources`) checks `prototype-handoff.yaml#imageSources[]` shape with full unit coverage, but `cli/commands/prototypingCertify.ts` does not yet gate on the handoff yaml read path. Today `licenseVerify` consumes `prototyping.json#imageSources` directly; the handoff-yaml population path is left to a later batch (see iterate.ts 4b inline note). Wire-in must either add the certify-gate read of `prototype-handoff.yaml` and route entries through `validateImageSources` before `licenseVerify`, or document the deferral if the handoff.yaml population path is not ready.
 - Recommendation: Defer until the handoff-yaml population path (DESIGN.md pool + handoff extraction) lands; until then `validateImageSources` is correctly tested-only. Track the population deferral as a coupled item under the same wave.
 - Resolves: blocks `prototype-handoff.yaml#imageSources[]` schema gate at certify.
 
