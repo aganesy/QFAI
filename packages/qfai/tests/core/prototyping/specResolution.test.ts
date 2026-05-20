@@ -245,13 +245,34 @@ describe("resolveAllUiBearingSpecs", () => {
     expect(result).toEqual(["0007"]);
   });
 
-  it("recursively accepts a per-spec subdirectory contract nested in a child folder", async () => {
+  it("recursively accepts a per-spec subdirectory contract nested in a child folder (1 level deep)", async () => {
     const root = await newTempDir();
     await seedSpec(root, "0007", "# spec-0007\n\nNo marker.\n");
     const nested = path.join(root, ".qfai/contracts/ui/spec-0007/screens");
     await mkdir(nested, { recursive: true });
     await writeFile(
       path.join(nested, "home.yaml"),
+      "# QFAI-CONTRACT-ID: CON-UI-0007\nscreens: []\n",
+      "utf-8",
+    );
+    const result = await resolveAllUiBearingSpecs(root, makeConfig());
+    expect(result).toEqual(["0007"]);
+  });
+
+  // 27th-wave coverage gap fix (codex r3270624828 MINOR —
+  // architecture-reviewer): the wave-23 helper is documented as
+  // "recursively walks the spec subdirectory" (DFS, unbounded depth)
+  // because the README candidate #5 layout (`<spec-id>/<subpath>.yaml`)
+  // allows `<subpath>` to be a multi-component path. Pin the
+  // unbounded-DFS contract with a 2-level-deep fixture so a future
+  // "optimisation" to a single-level scan cannot land green.
+  it("recursively accepts a per-spec subdirectory contract nested two levels deep", async () => {
+    const root = await newTempDir();
+    await seedSpec(root, "0007", "# spec-0007\n\nNo marker.\n");
+    const nested = path.join(root, ".qfai/contracts/ui/spec-0007/screens/auth");
+    await mkdir(nested, { recursive: true });
+    await writeFile(
+      path.join(nested, "login.yaml"),
       "# QFAI-CONTRACT-ID: CON-UI-0007\nscreens: []\n",
       "utf-8",
     );

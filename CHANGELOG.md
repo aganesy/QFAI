@@ -76,6 +76,22 @@
   - Pinned-branch authorization is preserved: this lands in 1.8.10
     because `feature/v1.8.10` is the release pin.
 
+### Fixed (PR #208 28th late-review wave)
+
+- **Recursive-DFS contract pin (codex r3270624828, MINOR —
+  architecture-reviewer):** the wave-26 rename to
+  "recursively accepts ... nested in a child folder" left the test
+  body only exercising a single nested level, while
+  `hasMatchingUiContract`'s implementation is an unbounded DFS and
+  the TC narrative claims recursive walk. Add a 2-level-deep
+  fixture (`spec-0007/screens/auth/login.yaml`) so the unbounded-DFS
+  contract is pinned and a future single-level "optimisation"
+  cannot regress green. Test names, TC-0012-0423 narrative, and
+  TDD-0443 ledger row aligned to "recursively walks (≥ 1 level)"
+  wording (5 `it` blocks total: (a) basic match / (b) 1-level /
+  (c) 2-level / (d) empty subdir non-match / (e) `.yml`
+  non-match).
+
 ### Fixed (PR #208 27th late-review wave)
 
 - **Hard-stop class 4 baseline-field correction (codex r3270572395, P2
