@@ -1295,7 +1295,61 @@ async function evaluateCycleGteOneGate(
     );
     return { shortCircuit: true, exitCode: 2 };
   }
+  // 29th-wave Fix (codex r3270687650, P1 — chatgpt-codex-connector):
+  // run the cycle ≥ 1 lock-drift gates BEFORE `shouldStop()` so a
+  // converged / max-budget loop cannot mask a `frozenSurfaceUnion`
+  // missing-or-malformed record or a live-vs-frozen spec-set drift.
+  // Pre-fix the drift checks lived AFTER `shouldStop`, which meant a
+  // run that satisfied `shouldStop` (axes-exceptional or
+  // max-iterations) exited 64/65 immediately and the drift gate
+  // never fired — a mid-loop UI-marker removal or contract edit was
+  // silently accepted as a successful convergence / exhaustion. The
+  // ordering now mirrors the DESIGN.md hash check above: lock-drift
+  // classes (designMd, frozenSurfaceUnion presence + drift) gate the
+  // run first; convergence / budget signals come after.
   const recordedIterations = asIterations(protoRecord);
+  const frozenUnion = readFrozenSurfaceUnionField(protoRecord);
+  if (frozenUnion === null) {
+    // Split the diagnostic into primary CTA + justification so the
+    // recovery action is the headline and the rationale follows on a
+    // visually-separated indented line. 24th-wave refinement: insert a
+    // blank `error("")` between the two so narrow-terminal wrap does
+    // not visually fuse the CTA's last line with the `Reason:` line.
+    error(
+      "qfai prototyping iterate: prototyping.json#frozenSurfaceUnion is missing or " +
+        "malformed. Re-run with `--cycle 0 --target-url <url>` to refreeze " +
+        "the loop with a current UNION snapshot.",
+    );
+    error("");
+    error(
+      "  Reason: the cycle ≥ 1 drift gate requires a cycle-0-frozen multi-spec " +
+        "UI-bearing UNION snapshot; the gate does not fall back to the " +
+        "single-spec `frozenSpecsCovered` because that fallback would compare " +
+        "a single-spec frozen scope against the live multi-spec union and " +
+        "false-positive-fire for any project with ≥ 2 UI-bearing specs.",
+    );
+    return { shortCircuit: true, exitCode: 2 };
+  }
+  const liveUiBearing = await resolveSurfaceUnion(input.root, input.config);
+  const drift = checkSpecsCoveredDrift(frozenUnion, liveUiBearing);
+  if (drift.drifted) {
+    const parts: string[] = [];
+    if (drift.added.length > 0) {
+      parts.push(`new=[${drift.added.join(", ")}]`);
+    }
+    if (drift.removed.length > 0) {
+      parts.push(`removed=[${drift.removed.join(", ")}]`);
+    }
+    error(
+      "qfai prototyping iterate: spec-set drift detected mid-loop — " +
+        `${parts.join(" ")}. The cycle-0 frozen UI-bearing union is ${JSON.stringify(frozenUnion)}; ` +
+        `the live UI-bearing union is ${JSON.stringify(liveUiBearing)}. ` +
+        "The drifted spec(s) are deferred to the next `--cycle 0` invocation. " +
+        "Continue this loop with the frozen spec set, or restart with " +
+        "`--cycle 0 --target-url <url>` to pick up the new spec set.",
+    );
+    return { shortCircuit: true, exitCode: 2 };
+  }
   const stop = shouldStop(recordedIterations);
   if (stop !== null) {
     // codex 8thM: shouldStop accepts the reviewer-recorded
@@ -1432,73 +1486,5 @@ async function evaluateCycleGteOneGate(
     return { shortCircuit: true, exitCode: 2 };
   }
 
-  // Mid-run spec-set drift check.
-  //
-  // The cycle-0 frozen `frozenSurfaceUnion` set is the SSOT for the
-  // UI-bearing surface the loop is observing. With CHG-002 the
-  // single-spec scope under review (`frozenSpecsCovered`) is the
-  // primary spec only, but the multi-spec UNION captured at cycle 0 is
-  // what the drift gate compares against — apples-to-apples vs the
-  // live UNION. Pre-fix (10th wave) the gate compared the single-spec
-  // frozen scope with the multi-spec live union; that false-positive
-  // fired `added=[secondaries...]` for any project whose baseline
-  // already carried ≥ 2 UI-bearing specs, making convergence
-  // unreachable.
-  //
-  // 13th-wave Fix (codex r3265953324, MAJOR/P1): legacy records that
-  // pre-date the `frozenSurfaceUnion` snapshot field MUST NOT silently
-  // fall back to `frozenSpecsCovered` — that fallback re-enabled the
-  // very MAJOR/P1 bug the 11th-wave fix was supposed to close
-  // (TC-0012-0415 / codex r3265480688). Hard-fail with exit 2 and
-  // instruct the operator to re-seed via `--cycle 0`; this matches the
-  // "drifted spec(s) are deferred to the next `--cycle 0` invocation"
-  // semantics already used by every other lock-drift class on this
-  // code path.
-  //
-  // Restart semantics unchanged: drift fails-fast with stderr that
-  // names every drifted spec id and exits 2; the operator is
-  // expected to restart with `--cycle 0` to pick up the broader scope.
-  const frozenUnion = readFrozenSurfaceUnionField(protoRecord);
-  if (frozenUnion === null) {
-    // Split the diagnostic into primary CTA + justification so the
-    // recovery action is the headline and the rationale follows on a
-    // visually-separated indented line. 24th-wave refinement: insert a
-    // blank `error("")` between the two so narrow-terminal wrap does
-    // not visually fuse the CTA's last line with the `Reason:` line.
-    error(
-      "qfai prototyping iterate: prototyping.json#frozenSurfaceUnion is missing or " +
-        "malformed. Re-run with `--cycle 0 --target-url <url>` to refreeze " +
-        "the loop with a current UNION snapshot.",
-    );
-    error("");
-    error(
-      "  Reason: the cycle ≥ 1 drift gate requires a cycle-0-frozen multi-spec " +
-        "UI-bearing UNION snapshot; the gate does not fall back to the " +
-        "single-spec `frozenSpecsCovered` because that fallback would compare " +
-        "a single-spec frozen scope against the live multi-spec union and " +
-        "false-positive-fire for any project with ≥ 2 UI-bearing specs.",
-    );
-    return { shortCircuit: true, exitCode: 2 };
-  }
-  const liveUiBearing = await resolveSurfaceUnion(input.root, input.config);
-  const drift = checkSpecsCoveredDrift(frozenUnion, liveUiBearing);
-  if (drift.drifted) {
-    const parts: string[] = [];
-    if (drift.added.length > 0) {
-      parts.push(`new=[${drift.added.join(", ")}]`);
-    }
-    if (drift.removed.length > 0) {
-      parts.push(`removed=[${drift.removed.join(", ")}]`);
-    }
-    error(
-      "qfai prototyping iterate: spec-set drift detected mid-loop — " +
-        `${parts.join(" ")}. The cycle-0 frozen UI-bearing union is ${JSON.stringify(frozenUnion)}; ` +
-        `the live UI-bearing union is ${JSON.stringify(liveUiBearing)}. ` +
-        "The drifted spec(s) are deferred to the next `--cycle 0` invocation. " +
-        "Continue this loop with the frozen spec set, or restart with " +
-        "`--cycle 0 --target-url <url>` to pick up the new spec set.",
-    );
-    return { shortCircuit: true, exitCode: 2 };
-  }
   return { shortCircuit: false };
 }

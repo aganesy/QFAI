@@ -915,6 +915,14 @@
 - Test file: `packages/qfai/tests/core/prototyping/specResolution.test.ts`
 - Verify the 23rd-wave `hasMatchingUiContract` per-spec subdirectory fallback (codex r3270307469 P1). Five `it` blocks: (a) `accepts the per-spec subdirectory contract fallback (spec-<id>/<sub>.yaml)` — pre-fix would have returned empty / no-op; (b) `recursively accepts a per-spec subdirectory contract nested in a child folder (1 level deep)`; (c) `recursively accepts a per-spec subdirectory contract nested two levels deep` — pins the unbounded-DFS contract so a future single-level scan cannot regress green (27th-wave per codex r3270624828 MINOR); (d) `does NOT match a per-spec subdirectory that contains no .yaml files`; (e) `does NOT match a per-spec subdirectory whose only file is *.yml (single-l)` — confirms the policy that the subdir branch accepts arbitrary `*.yaml` basenames but `.yml` (single-l) is excluded for parity with the top-level anchored regex. Closes codex P1 r3270307469 (subdir fallback bug), codex MAJOR r3270527912 (traceability stitch), codex MINOR r3270529771 (coverage edge cases), and codex MINOR r3270624828 (unbounded-DFS contract pin).
 
+## TC-0012-0424
+
+- EX-Ref: EX-0012-0153
+- AC-Refs: AC-0012-0045, AC-0012-0049
+- Type: integration
+- Test file: `packages/qfai/tests/cli/commands/prototypingIterate.test.ts`
+- Verify the 29th-wave drift-gate ordering fix (codex r3270687650 P1). Fixture: multi-UI project where `frozenSurfaceUnion = ["0001", "0002"]` records the cycle-0 set but spec-0002's UI marker was removed mid-loop (live `resolveSurfaceUnion` returns `["0001"]`). The recorded iter is fully converged (4 axes exceptional + empty lap + empty dmv) so the pre-29th ordering would have returned exit 64 from `shouldStop` BEFORE the drift gate ran. Post-29th the drift gate fires first → exit 2 with `spec-set drift detected mid-loop` + `removed=[0002]` diagnostic. Pins the ordering contract: lock-drift classes (designMd hash, frozen union presence + spec-set drift) MUST always win over convergence / budget-exhaustion signals. Closes codex P1 r3270687650.
+
 ## Legacy Coverage Continuity
 
 - The legacy baseline test-case identifier space remains reserved for existing implementation/test slices.

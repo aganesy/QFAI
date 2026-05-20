@@ -76,6 +76,25 @@
   - Pinned-branch authorization is preserved: this lands in 1.8.10
     because `feature/v1.8.10` is the release pin.
 
+### Fixed (PR #208 30th late-review wave)
+
+- **Drift gate ordering (codex r3270687650, P1 —
+  chatgpt-codex-connector):** the cycle ≥ 1 lock-drift gates
+  (`frozenSurfaceUnion` missing / malformed + live-vs-frozen
+  spec-set drift) now run BEFORE `shouldStop()` so a converged or
+  max-budget loop cannot mask a mid-loop drift. Pre-fix the order
+  was `designMd hash → shouldStop → drift`; a loop that satisfied
+  `shouldStop` (axes-exceptional or max-iterations) returned exit
+  64/65 immediately and the drift gate never fired — a mid-loop UI
+  marker removal or contract edit was silently accepted as a
+  successful convergence / exhaustion instead of the documented
+  exit-2 lock-drift. Order is now `designMd hash → frozenSurfaceUnion
+presence → spec-set drift → shouldStop`. New regression test
+  `TC-0012-0424 / TDD-0444`: a multi-UI project with iter-0
+  fully-converged + spec-0002 marker removed mid-loop returns
+  exit 2 (`spec-set drift detected mid-loop` + `removed=[0002]`),
+  NOT exit 64.
+
 ### Fixed (PR #208 29th late-review wave)
 
 - **CLI contract internal-label residuals (codex r3270625675 NIT +

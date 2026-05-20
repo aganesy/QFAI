@@ -3136,3 +3136,93 @@ describe("runPrototypingIterate zero-UI precheck — cycle ≥ 1 hard-stop discr
     }
   });
 });
+
+// 29th-wave Fix (codex r3270687650, P1 — chatgpt-codex-connector).
+// Regression: a converged / max-budget loop must NOT bypass the
+// cycle ≥ 1 lock-drift gates. Pre-fix `shouldStop()` ran first and a
+// converged loop with mid-loop UI marker removal silently returned
+// exit 64 instead of the documented exit-2 lock-drift. The drift
+// gates now run BEFORE `shouldStop`, so drift always wins over a
+// stop signal.
+describe("runPrototypingIterate cycle >= 1 — drift gates run before shouldStop (TC-0012-0424)", () => {
+  it("returns exit 2 (spec-set drift) on a converged loop where one UI marker was removed mid-loop", async () => {
+    const root = await newTempDir();
+    // Seed a multi-UI project: spec-0001 stays UI-bearing (so the
+    // zero-UI precheck does NOT short-circuit), spec-0002 had its
+    // marker removed mid-loop. `frozenSurfaceUnion` records both
+    // ["0001", "0002"]; live `resolveSurfaceUnion` returns ["0001"]
+    // only. The recorded iter is fully converged (axes exceptional +
+    // no lap + no dmv) so `shouldStop` would return
+    // "axes-exceptional" if the drift gate ran AFTER it (the pre-29th
+    // ordering). Post-29th the drift gate runs first → exit 2.
+    await seedMinimalProject(root);
+    // spec-0001 stays UI-bearing (from seedMinimalProject). spec-0002
+    // dir exists but has no marker (mid-loop removal simulated).
+    const spec0002Dir = path.join(root, ".qfai/specs/spec-0002");
+    await mkdir(spec0002Dir, { recursive: true });
+    await writeFile(
+      path.join(spec0002Dir, "01_Spec.md"),
+      "# spec-0002 — UI marker removed mid-loop\n\nBody.\n",
+      "utf-8",
+    );
+    await writeFile(path.join(spec0002Dir, "02_User-stories.md"), "# stories\n", "utf-8");
+
+    await mkdir(path.join(root, ".qfai/evidence/prototyping"), { recursive: true });
+    await writeFile(
+      path.join(root, ".qfai/evidence/prototyping/prototyping.json"),
+      JSON.stringify({
+        specsCovered: ["0001"],
+        frozenSpecsCovered: ["0001"],
+        frozenSurfaceUnion: ["0001", "0002"],
+        frozenLicenseCatalog: {
+          allowedSources: ["unsplash", "pexels"],
+          licenseTiers: {
+            unsplash: ["unsplash-license", "free"],
+            pexels: ["pexels-free"],
+          },
+          sourceHosts: {
+            unsplash: ["images.unsplash.com", "unsplash.com"],
+            pexels: ["images.pexels.com", "pexels.com"],
+          },
+        },
+        iterations: [
+          {
+            index: 0,
+            commitSha: "a".repeat(40),
+            scores: {
+              informationArchitecture: "exceptional",
+              navigationFlow: "exceptional",
+              usability: "exceptional",
+              functionality: "exceptional",
+            },
+            proseCritique: "x".repeat(1500),
+            layoutAntiPatternsDetected: [],
+            designMdViolations: [],
+            pivotDirective: "continue",
+            evidenceRefs: {
+              screenshot: ".qfai/evidence/prototyping/iter-00/home.png",
+              html: ".qfai/evidence/prototyping/iter-00/home.html",
+            },
+          },
+        ],
+        acceptedIterationIndex: 0,
+        stopReason: null,
+        designMd: { path: "DESIGN.md", sha256: hashDesignMd(CANONICAL_DESIGN_MD) },
+      }),
+      "utf-8",
+    );
+
+    const logger = await import("../../../src/cli/lib/logger.js");
+    const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
+    try {
+      const exit = await runPrototypingIterate({ root, cycle: 1 });
+      // Drift wins over a converged stop signal: exit 2, not 64.
+      expect(exit).toBe(2);
+      const stderr = errorSpy.mock.calls.map((c) => String(c[0])).join("\n");
+      expect(stderr).toMatch(/spec-set drift detected mid-loop/);
+      expect(stderr).toMatch(/removed=\[0002\]/);
+    } finally {
+      errorSpy.mockRestore();
+    }
+  });
+});
