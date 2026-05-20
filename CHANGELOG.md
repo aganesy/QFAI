@@ -76,6 +76,36 @@
   - Pinned-branch authorization is preserved: this lands in 1.8.10
     because `feature/v1.8.10` is the release pin.
 
+### Fixed (PR #208 48th late-review wave)
+
+- **`readUiContractScreenContracts` absolute-path fix (codex
+  r3271787723, P1 — architecture-reviewer):** partner to wave-47's
+  `readPerSpecScreens` fix. The project-wide screen reader in
+  `core/contracts/screenContracts.ts` used the same
+  `path.join(root, contractsDirRelative, "ui")` pattern, so an
+  absolute `paths.contractsDir` override would have made the
+  project-wide pass produce different discovery results than the
+  per-spec pass after wave-47 — a least-astonishment / SoC
+  violation between two helpers with the same responsibility.
+  Switched to `path.resolve()`.
+- **Systematic audit deferred follow-up (codex r3271787723, P1
+  architectural concern — deferred):** the same review thread
+  flagged ~11 other `path.join(root, config.paths.*, ...)` call
+  sites with the same bug class (lockAbs in iterate / certify,
+  `doctor.ts`, `validators/bpApDb.ts`,
+  `validators/designAudit.ts`,
+  `validators/designContractReadiness.ts`,
+  `validators/designToken.ts`,
+  `validators/uiDefinitionConsistency.ts`). Several run only
+  during validate-time gates, not the prototyping loop. Deferred
+  to a focused follow-up PR per the reviewer's "scope-out +
+  explicit follow-up record" option. New OQ-0012-0012
+  registered with the full call-site list, due 2026-06-30,
+  recommending helper consolidation
+  (`resolveContractsDir(root, config)` / `resolveSpecsDir(root, config)`)
+  - a lint rule (`no-restricted-syntax` on the offending
+    pattern) so the regression cannot reappear.
+
 ### Fixed (PR #208 47th late-review wave)
 
 - **`readPerSpecScreens` absolute-path fix (codex r3271715563, P1 —

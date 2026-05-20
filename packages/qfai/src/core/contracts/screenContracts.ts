@@ -58,7 +58,23 @@ export async function readUiContractScreenContracts(
   root: string,
   contractsDirRelative = ".qfai/contracts",
 ): Promise<CanonicalScreenContract[]> {
-  const uiDir = path.join(root, contractsDirRelative, "ui");
+  // codex r3271787723 (P1, architecture-reviewer, 48th-wave): consistency
+  // companion to the wave-45 / wave-47 `path.join → path.resolve` fixes
+  // in `specDirExists` (specsDir) and `readPerSpecScreens` (per-spec
+  // contractsDir). This project-wide screen reader runs in parallel
+  // with the per-spec reader; keeping `path.join` here would have the
+  // two paths produce different discovery results when
+  // `qfai.config.yaml` carries an absolute `paths.contractsDir`
+  // override — a least-astonishment violation that would silently
+  // break certify's per-(spec × screen) gate even after wave-47.
+  // The other call sites flagged in the same review thread (lockAbs,
+  // designContractReadiness, designToken, uiDefinitionConsistency,
+  // bpApDb, designAudit, doctor) are tracked as a deferred follow-up
+  // — see CHANGELOG / 09_delta wave-48 narrative for the deferral
+  // record. This site is fixed in-PR because it directly partners
+  // with `readPerSpecScreens` and would otherwise produce divergent
+  // contract-discovery behaviour between CLI paths.
+  const uiDir = path.resolve(root, contractsDirRelative, "ui");
   const pattern = path.posix.join(uiDir.replace(/\\/g, "/"), "**/*.yaml");
   const files = await fg(pattern, { absolute: true });
   const screens: CanonicalScreenContract[] = [];

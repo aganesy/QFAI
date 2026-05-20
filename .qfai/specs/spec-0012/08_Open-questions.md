@@ -123,6 +123,20 @@
 - Mitigation while deferred: operators who hit this path see the cycle-mismatch diagnostic first followed by exit 65 — the eventual exit code is correct, only the early diagnostic is misleading. SKILL.md Cycle 9 budget exhaustion subsection points operators at the restart-from-cycle-0 recovery path, so the workaround is documented.
 - Resolves: closes the OP-APPEND-079 pattern asymmetry flagged by codex r3269198118 (deferred-followup OQ + tdd/test-list / 16_Traceability-ledger / 06_Test-Cases triad now mirrored in 08_Open-questions). The 09_delta.md OP-APPEND register entry is added under the 14th-wave cluster in `09_delta.md`.
 
+## OQ-0012-0012: Systematic audit + helper consolidation of `path.join(root, config.paths.*, ...)` call sites
+
+- Gate: implement
+- Disposition: open
+- Owner: prototyping-core
+- Couples: AC-0012-0037 / AC-0012-0047 / BR-0012-0030 (paths-related contracts); wave-45 / 47 / 48 fixes (`specDirExists` / `readPerSpecScreens` / `readUiContractScreenContracts`)
+- Due: 2026-06-30
+- Severity: low (architectural / consistency)
+- Source: PR #208 47th-wave thread codex r3271787723 (P1 architecture-reviewer — `path.join` vs `path.resolve` bug class) — accepted with deferral; the wave-48 fix targets the two same-responsibility helpers (`readPerSpecScreens` and `readUiContractScreenContracts`) that directly partner with each other on the certify path, but ~11 other call sites carry the same pattern.
+- Question: Should the project consolidate path resolution onto a `resolveContractsDir(root, config)` / `resolveSpecsDir(root, config)` helper family so call sites cannot independently choose `path.join` vs `path.resolve`? Deferred call sites flagged in r3271787723: `prototypingCertify.ts:670` (lockAbs), `prototypingIterate.ts:573` (lockAbs), `doctor.ts:563`, `validators/bpApDb.ts:48`, `validators/designAudit.ts:247/258`, `validators/designContractReadiness.ts:74/82/254/281/394`, `validators/designToken.ts:35`, `validators/uiDefinitionConsistency.ts:24/45`. Several of these run during validate-time gates, not during the prototyping loop, so the failure mode is narrower; but the underlying bug class is identical and consumers using absolute `paths.contractsDir` would observe silently incorrect behaviour across multiple commands.
+- Recommendation: Land in a dedicated follow-up PR after CHG-002 stabilises. The mechanical fix is small (`path.join` → `path.resolve`) but the helper-consolidation refactor touches many files and benefits from a focused review window. Pair with a lint rule (`no-restricted-syntax` on `path.join(root, config.paths.*, ...)`) so the regression cannot reappear.
+- Mitigation while deferred: workflows using absolute `paths.contractsDir` or `paths.specsDir` overrides observe correct behaviour on the prototyping loop (certify per-(spec × screen) gate + iterate primarySpecId pin, both fixed). Validate-time gates may emit misleading errors but do not corrupt artifacts.
+- Resolves: the bug-class architectural concern; a future regression of the same pattern would have a single SSOT helper to anchor against.
+
 ## OQ-0012-0001: Airgapped run support (stock-photo fetch over restricted network)
 
 - Gate: ops
