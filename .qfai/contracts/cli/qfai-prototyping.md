@@ -8,7 +8,7 @@
   - `packages/qfai/src/cli/commands/prototypingCertify.ts`
   - `packages/qfai/src/core/prototyping/iteration.ts` (cycle SSOT)
   - `packages/qfai/src/core/prototyping/specResolution.ts` (`resolveAllUiBearingSpecs()`)
-  - `packages/qfai/src/core/prototyping/specsCovered.ts` (`readFrozenSpecsCovered()`)
+  - `packages/qfai/src/core/prototyping/specsCovered.ts` (`readFrozenSpecsCovered()`, `readFrozenSpecsCoveredMultiSpec()`)
   - `packages/qfai/src/core/prototyping/licenseVerify.ts` (license-class gate)
 
 ## Public sub-commands
@@ -161,15 +161,25 @@ emits / verifies the completion certificate.
 
 Inputs:
 
-- `.qfai/evidence/prototyping/prototyping.json#specsCovered` — read via
-  `readFrozenSpecsCovered()`; drives the per-spec loop.
+- `.qfai/evidence/prototyping/prototyping.json` — the certify driver
+  reads the cycle-0 frozen spec set with a `readFrozenSpecsCoveredMultiSpec(...)
+?? readFrozenSpecsCovered(...)` precedence: the multi-spec
+  `frozenSpecsCovered[]` field is the first source, falling back to
+  the legacy single-spec `specsCovered[]` only when the multi-spec
+  field is absent. The resolved set drives the per-spec loop.
 - `.qfai/evidence/prototyping/iter-NN/spec-NNNN/<screen>.review.json` for
-  every spec ∈ `specsCovered` and every screen declared in that spec's
-  UI contracts at the accepted iter (`acceptedIterationIndex ===
-iterations.length - 1`).
-- `prototype-handoff.yaml#imageSources[]` — every row must have non-empty
-  `{url(https), license, attribution, source}`; license value must be
-  drawn from the frozen `frozenLicenseCatalog`.
+  every spec ∈ resolved frozen spec set and every screen declared in
+  that spec's UI contracts at the accepted iter
+  (`acceptedIterationIndex === iterations.length - 1`).
+
+License-class enforcement (`imageSources[]` and the
+`frozenLicenseCatalog` allowlist) is NOT a certify-side input. The
+license gate is enforced exclusively by `qfai prototyping iterate`
+(exit 66 — see the iterate exit codes above). `certify` does not
+read `imageSources[]` or invoke `licenseVerify()`. The
+`prototype-handoff.yaml#imageSources[]` payload is produced by the
+post-loop handoff stage and consumed by audit / hand-off tooling,
+not by certify.
 
 Outputs:
 

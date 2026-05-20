@@ -76,6 +76,31 @@
   - Pinned-branch authorization is preserved: this lands in 1.8.10
     because `feature/v1.8.10` is the release pin.
 
+### Fixed (PR #208 31st late-review wave)
+
+- **Certify spec-set source contract (codex r3270736005, P2 —
+  chatgpt-codex-connector):** the `qfai prototyping certify` Inputs
+  section previously claimed it reads `prototyping.json#specsCovered`
+  via `readFrozenSpecsCovered()`. The implementation actually
+  resolves the spec set with `readFrozenSpecsCoveredMultiSpec(...) ??
+readFrozenSpecsCovered(...)` — the multi-spec `frozenSpecsCovered[]`
+  field is the first source, legacy `specsCovered[]` is the
+  fallback. The contract now names that precedence so operators /
+  automation diagnosing certify exit-64 coverage rejections don't
+  mistake `specsCovered` for the SSOT field. SSOT module list also
+  updated to mention `readFrozenSpecsCoveredMultiSpec()`.
+- **Certify imageSources / licenseVerify (codex r3270736007, P2 —
+  chatgpt-codex-connector):** the certify Inputs list previously
+  required `prototype-handoff.yaml#imageSources[]` and license
+  verification — contradicting the same contract's later (wave-26)
+  statement that license-verify is iterate-only and certify does
+  NOT read `imageSources[]`. The Inputs section now explicitly
+  states license-class enforcement is iterate-side only (exit 66),
+  certify does not invoke `licenseVerify()`, and the
+  `prototype-handoff.yaml#imageSources[]` payload is a post-loop
+  handoff artifact consumed by audit / hand-off tooling — not by
+  certify.
+
 ### Fixed (PR #208 30th late-review wave)
 
 - **Drift gate ordering (codex r3270687650, P1 —
