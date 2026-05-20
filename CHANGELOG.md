@@ -76,6 +76,43 @@
   - Pinned-branch authorization is preserved: this lands in 1.8.10
     because `feature/v1.8.10` is the release pin.
 
+### Fixed (PR #208 34th late-review wave)
+
+- **CLI contract certify exit-2 row enumeration (codex r3270886845,
+  MINOR — product-surface-reviewer):** `.qfai/contracts/cli/qfai-prototyping.md`
+  certify exit-2 row now enumerates the two `frozenSpecsCovered`
+  classes added in waves 32 / 33 — non-canonical entries (any value
+  not matching bare 4-digit `NNNN` or fully-qualified `spec-NNNN`)
+  and present-but-malformed field (key on record but value
+  non-array / empty / non-string / empty-string). Pre-fix the row
+  only listed "Missing / unreadable `prototyping.json`, missing
+  `specsCovered[]`, accepted iter dir absent, certificate schema
+  malformed" so operators looking at the contract after a
+  hand-edited / corrupt `prototyping.json` exit-2 could not predict
+  the cause from contract alone (stderr → contract traceability
+  broken). Recovery path (`iterate --cycle 0`) also named in the row.
+- \*\*09_delta narrative backfill — waves 26-31 (codex r3270888066 MINOR
+  - r3270889565 MAJOR — requirements-reviewer + completion-reviewer):\*\*
+    `.qfai/specs/spec-0012/09_delta.md` previously jumped wave-25 →
+    wave-32 with six waves of narrative missing, breaking spec ↔
+    commit-history correspondence. Backfilled R26 / R27 / R28 / R29 /
+    R30 / R31 entries (each with thread IDs + AC-Refs / TC-Refs +
+    impact scope) so the spec-side SSOT is reconstructable without
+    `git log` excavation.
+- **AC-0012-0045 ordering invariant (codex r3270889168 MINOR —
+  requirements-reviewer):** the wave-30 drift-gate-before-`shouldStop`
+  ordering invariant was previously pinned only by EX-0012-0153 and
+  TC-0012-0424 / TDD-0444; AC-0012-0045's hard-stop catalog
+  enumerated classes (a)-(h) but did not normatively require
+  hard-stop classes to be evaluated BEFORE convergence / budget
+  signals. AC-0012-0045 Then clause now carries the ordering invariant:
+  "Hard-stop classes (a)-(h) MUST be evaluated BEFORE convergence /
+  budget-exhaustion signals; when both fire in the same invocation,
+  the hard-stop class wins and convergence is suppressed." This
+  gives the wave-30 behaviour a normative AC anchor so a future
+  `shouldStop`-first regression has a requirements-layer violation
+  to cite, not just an example / test contradiction.
+
 ### Fixed (PR #208 33rd late-review wave)
 
 - **Certify-side absent-vs-malformed `frozenSpecsCovered`
