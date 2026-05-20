@@ -76,6 +76,23 @@
   - Pinned-branch authorization is preserved: this lands in 1.8.10
     because `feature/v1.8.10` is the release pin.
 
+### Fixed (PR #208 42nd late-review wave)
+
+- **AC-0012-0052 wording correction — surface-scope alignment
+  (codex r3271136886, MINOR — architecture-reviewer):** the
+  wave-40 AC-0012-0052 sub-clause carried the same "iterate and
+  certify both treat the same input as a hard error" over-claim
+  that wave-41 already corrected in EX-0012-0157 and the
+  `prototypingCertify.ts` show-spec JSDoc. AC and JSDoc are now
+  consistent: certify treats the same input as a hard error per
+  class (h); iterate-side handles present-but-malformed
+  `frozenSpecsCovered` via the legacy `specsCovered` reader +
+  `frozenSurfaceUnion` drift gate (a different mechanism), so the
+  cross-surface symmetry the absent-vs-malformed contract
+  enforces is certify ↔ show-spec, not all three commands.
+  AC-0012-0052 sub-clause also condensed to fit the markdownlint
+  MD013 line-length budget.
+
 ### Fixed (PR #208 41st late-review wave)
 
 - **EX-0012-0157 surface-scope narrowing (codex r3271095022, MINOR —
