@@ -76,6 +76,33 @@
   - Pinned-branch authorization is preserved: this lands in 1.8.10
     because `feature/v1.8.10` is the release pin.
 
+### Fixed (PR #208 27th late-review wave)
+
+- **Hard-stop class 4 baseline-field correction (codex r3270572395, P2
+  — chatgpt-codex-connector):** the contract's hard-stop class 4
+  (Mid-run spec-set change) now names `prototyping.json#frozenSurfaceUnion`
+  as the comparison baseline — the actual SSOT field that
+  `evaluateCycleGteOneGate` reads. Pre-fix the prose said
+  `frozenSpecsCovered`, which would send operators to inspect / edit
+  the wrong field during recovery and yield repeated exit-2 failures
+  after they thought drift was resolved. Class 4 also now explicitly
+  enumerates the missing-or-malformed-snapshot hard-fail.
+- **Certify exit-66 row scrub (codex r3270572400, P2 —
+  chatgpt-codex-connector):** the `qfai prototyping certify` exit-code
+  table no longer lists exit 66. `prototypingCertify.ts` does not
+  read `imageSources[]` or call `licenseVerify()` — the license-class
+  hard-stop is enforced on the `iterate` side only. The table now
+  carries an explicit prose note redirecting operators / CI scripts
+  to the iterate exit-code table for the license-class hard-stop.
+  Pre-fix wording promised a code 66 certify return that the
+  implementation cannot produce, which would break orchestrator
+  branches that wait on 66-specific remediation.
+- **Outdated (codex r3270572406, P2 — chatgpt-codex-connector):**
+  duplicate of the wave-26 fix (codex r3270555207). The remaining
+  `cannot reach the source on cycle 0` claim was already removed
+  from hard-stop class 3 in `8a86b3ee` and replaced with the
+  explicit 5-rejection enumeration plus a "no network egress" note.
+
 ### Fixed (PR #208 26th late-review wave)
 
 - **Code cleanup (codex r3270526761 + r3270527599, MINOR):** dropped

@@ -195,7 +195,14 @@ Exit codes:
 | 0    | Certify passed. (Required for `/qfai-prototyping` DONE.)                                                                                                                                                                                                                                                                         |
 | 2    | Input error. Missing / unreadable `prototyping.json`, missing `specsCovered[]`, accepted iter dir absent, certificate schema malformed.                                                                                                                                                                                          |
 | 64   | Coverage rejection: at least one spec lacks a `<screen>.review.json` for a declared screen at the accepted iter, OR the multi-spec frozen set (`frozenSpecsCovered.length > 1`) is incompatible with the flat-iter layout still emitted by `prototyping iterate` (per-spec layout migration deferred — TDD-0384 / OQ-0012-0006). |
-| 66   | License-verify rejection: `imageSources[]` violates the frozen `frozenLicenseCatalog` (non-allowlisted source, unknown license, non-https url, missing attribution).                                                                                                                                                             |
+
+License-verify (exit 66) is enforced by `qfai prototyping iterate`, NOT
+by `certify`. The certify driver does not read `imageSources[]` and
+does not call `licenseVerify()` — operators MUST observe the
+license-class hard-stop on the iterate side (see the `iterate` exit
+codes above). Pre-fix this table previously listed exit 66 as a
+certify exit class; that wording overstated certify's enforcement
+surface and is corrected here.
 
 ### `qfai prototyping show-spec`
 
@@ -313,13 +320,16 @@ enumerated:
    UNION of strict `surface_type: ui-bearing`, legacy `# … prototyping
 …` title-marker, `prototyping.primarySpecId` config pin, and
    `.qfai/contracts/ui/<spec-id>*.yaml` contract signals) differs from
-   the cycle-0 `prototyping.json#frozenSpecsCovered` snapshot. Exit 2.
-   New UI-bearing specs are not added to the in-flight run; they are
-   deferred to the next `/qfai-prototyping` invocation. (v1.8.10
-   `frozenSpecsCovered` is itself single-spec — see Cycle-0 freeze
-   note above — so this drift gate is the load-bearing detector for
-   mid-loop multi-spec scope changes until the per-spec layout
-   migration lands.)
+   the cycle-0 `prototyping.json#frozenSurfaceUnion` snapshot — that
+   is the actual baseline field the cycle ≥ 1 drift gate
+   (`evaluateCycleGteOneGate` in
+   `cli/commands/prototypingIterate.ts`) compares against, NOT the
+   single-spec `frozenSpecsCovered`. Exit 2. New / removed UI-bearing
+   specs are not added to the in-flight run; they are deferred to
+   the next `/qfai-prototyping` invocation. A missing or malformed
+   `frozenSurfaceUnion` field on cycle ≥ 1 is also exit 2 (legacy /
+   unseeded record — see the exit-code table above and the
+   `frozenSurfaceUnion[]` clause in the cycle-0 freeze section).
 
 No prompt, recovery path, or partial-success continuation exists for any
 of the above. CI fixtures close stdin and assert the run completes
