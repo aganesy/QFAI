@@ -76,6 +76,33 @@
   - Pinned-branch authorization is preserved: this lands in 1.8.10
     because `feature/v1.8.10` is the release pin.
 
+### Fixed (PR #208 37th late-review wave)
+
+- **Wave-36 enumeration backfill (codex r3271006127, MINOR —
+  chatgpt-codex-connector):** wave-34 introduced operator-facing
+  enumerations of the present-but-malformed sub-classes in both the
+  CLI contract certify exit-2 row and AC-0012-0045 class (h)
+  (`non-array, empty array, non-string entry, empty-string entry`).
+  Wave-36 extended the classifier to also classify explicit `null` /
+  `undefined` on a present key as `malformed`, but did not update
+  those enumerations. An operator hand-editing
+  `"frozenSpecsCovered": null` would see a
+  `present but malformed (value is null)` diagnostic that did not
+  match any class enumerated in the SSOT. Both the contract row and
+  AC class (h) now list `null` / `undefined` alongside the four
+  existing sub-classes.
+- **AC-0012-0045 ordering invariant restructured (codex r3271006396,
+  MINOR — requirements-reviewer):** the 34th-wave ordering invariant
+  was added as a continuation of class (h)'s Then block via
+  `AND no user prompt is emitted, AND **(ordering invariant ...)**`,
+  which could be misread as a class-(h)-specific postcondition. The
+  clause is actually a cross-class scheduling rule applying to the
+  full hard-stop catalog (a)-(h). Lifted to its own bullet at the AC
+  catalog level (sibling of When / Then) with an explicit "applies
+  cross-class to (a)-(h); not a postcondition of any single class"
+  note so a future `shouldStop`-first regression can cite a single
+  AC bullet rather than chase the clause inside a class continuation.
+
 ### Fixed (PR #208 36th late-review wave)
 
 - **Classifier explicit-null tightening (codex r3270923641, P1 —
