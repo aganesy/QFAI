@@ -76,6 +76,36 @@
   - Pinned-branch authorization is preserved: this lands in 1.8.10
     because `feature/v1.8.10` is the release pin.
 
+### Fixed (PR #208 47th late-review wave)
+
+- **`readPerSpecScreens` absolute-path fix (codex r3271715563, P1 —
+  chatgpt-codex-connector):** the helper built
+  `uiDir = path.join(root, contractsDirRelative, "ui")`. When
+  `qfai.config.yaml` carries an absolute `paths.contractsDir`
+  override (e.g. `/abs/contracts`), `path.join` concatenates root +
+  absolute rather than resetting, so the probe at
+  `<root>/abs/contracts/ui` misses every per-spec contract file at
+  the real `/abs/contracts/ui/spec-NNNN.yaml`. The helper returned
+  `null` and certify's per-(spec × screen) gate silently fell back
+  to the project-wide screen list, enforcing the wrong
+  `(spec, screen)` coverage for explicit-contracts-dir workflows.
+  Switched to `path.resolve()` which correctly resets to the
+  latter absolute segment when one is supplied. Same pattern as
+  the wave-45 `specDirExists` fix for `paths.specsDir`. New
+  TC-0012-0430 + TDD-0450 + EX-0012-0159 — fixture writes the
+  per-spec UI contract at an absolute `contractsDir` pointing
+  OUTSIDE root and asserts `readPerSpecScreens()` returns the
+  declared screens rather than `null`.
+- **Cross-platform absolute-path narrative (codex r3271709884,
+  MINOR — requirements-reviewer):** the wave-45 EX-0012-0158 /
+  TC-0012-0429 narratives said only "ABSOLUTE path" without
+  explicitly noting cross-platform coverage. Both now explicitly
+  note the contract holds for POSIX (`/abs/...`), Windows
+  drive-letter (`C:\...`), and UNC (`\\host\share\...`) absolute
+  paths; the OS-native `mkdtemp` fixture exercises whichever
+  absolute shape the CI matrix lane's OS produces (Node's
+  `path.resolve` is platform-aware and treats either as absolute).
+
 ### Fixed (PR #208 46th late-review wave)
 
 - **TC-0012-0429 fixture dead-key cleanup (codex r3271708081, MINOR

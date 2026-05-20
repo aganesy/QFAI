@@ -1163,7 +1163,17 @@ export async function readPerSpecScreens(
   contractsDirRelative: string,
   specDirName: string,
 ): Promise<CanonicalScreenContract[] | null> {
-  const uiDir = path.join(root, contractsDirRelative, "ui");
+  // codex r3271715563 (P1, chatgpt-codex-connector, 47th-wave): use
+  // `path.resolve` instead of `path.join` so an absolute `paths.contractsDir`
+  // override in `qfai.config.yaml` (e.g. `/tmp/contracts`) resolves to
+  // the absolute path directly. Pre-fix `path.join(root, "/tmp/contracts",
+  // "ui")` produced `<root>/tmp/contracts/ui` (string concatenation, no
+  // absolute-segment reset), so per-spec contract discovery missed every
+  // file under the absolute contractsDir. Certify then fell back to the
+  // project-wide screen list and enforced wrong (spec, screen) coverage
+  // for explicit-contracts-dir workflows. Mirrors the wave-45 fix for
+  // `specDirExists` against `paths.specsDir`.
+  const uiDir = path.resolve(root, contractsDirRelative, "ui");
   const bareNumeric = specDirName.replace(/^spec-/iu, "");
   const singleFileCandidates = [
     path.join(uiDir, `${specDirName}.yaml`),

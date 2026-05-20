@@ -23,7 +23,10 @@ import path from "node:path";
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { runPrototypingCertify } from "../../../src/cli/commands/prototypingCertify.js";
+import {
+  readPerSpecScreens,
+  runPrototypingCertify,
+} from "../../../src/cli/commands/prototypingCertify.js";
 import { hashDesignMd } from "../../../src/core/design/designMd.js";
 
 // Canonical DESIGN.md that satisfies the brand-SSOT parse + final-iter
@@ -1129,5 +1132,44 @@ describe("qfai prototyping certify (TC-0012-0427: shared-screenId multi-file sub
     } finally {
       errorSpy.mockRestore();
     }
+  });
+});
+
+describe("readPerSpecScreens (TC-0012-0430: absolute paths.contractsDir override)", () => {
+  // codex r3271715563 (P1, chatgpt-codex-connector, 47th-wave): pin the
+  // `path.resolve` switch in `readPerSpecScreens`. Pre-fix the helper
+  // built `uiDir = path.join(root, contractsDirRelative, "ui")`. When
+  // `qfai.config.yaml` carries an absolute `paths.contractsDir`
+  // override (e.g. an external location outside the repository root),
+  // `path.join` concatenates root + absolute rather than resetting to
+  // the absolute path. The probe at `<root>/abs/contracts/ui` then
+  // missed every per-spec contract file at the real
+  // `/abs/contracts/ui/spec-NNNN.yaml`, and certify silently fell
+  // back to the project-wide screen list — enforcing the wrong
+  // `(spec, screen)` coverage for explicit-contracts-dir workflows.
+  // Mirrors the wave-45 `specDirExists` fix for `paths.specsDir`.
+  // Cross-platform: this regression holds for POSIX `/abs/...` and
+  // Windows drive-letter `C:\...` / UNC `\\host\share\...` absolutes;
+  // the OS-native `mkdtemp` fixture exercises whichever applies on
+  // the current CI matrix lane.
+  it("resolves per-spec contracts when paths.contractsDir is an absolute path OUTSIDE root", async () => {
+    const root = await newTempDir();
+    const externalContractsDir = await newTempDir();
+    const uiDir = path.join(externalContractsDir, "ui");
+    await mkdir(uiDir, { recursive: true });
+    await writeFile(
+      path.join(uiDir, "spec-0007.yaml"),
+      `screens:\n  - id: home\n    route: "/home"\n`,
+      "utf-8",
+    );
+
+    // Pass the absolute contractsDir directly to readPerSpecScreens.
+    // Pre-fix `path.join(root, absoluteContractsDir, "ui")` would
+    // probe `<root>/<absoluteContractsDir>/ui/spec-0007.yaml` (not
+    // on disk) and return null; post-fix `path.resolve()` resets to
+    // the absolute path and discovers the file.
+    const screens = await readPerSpecScreens(root, externalContractsDir, "spec-0007");
+    expect(screens).not.toBeNull();
+    expect(screens?.map((s) => s.screenId)).toEqual(["home"]);
   });
 });
