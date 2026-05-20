@@ -931,6 +931,14 @@
 - Test file: `packages/qfai/tests/cli/commands/prototypingCertify.test.ts`
 - Verify the 32nd-wave certify-side canonical-id validation gate (codex r3270776268 P2 — chatgpt-codex-connector). Fixture: `prototyping.json#frozenSpecsCovered[]` carries a non-canonical id (path-traversal `../../../etc/passwd`, slash-injected `spec-0001/../../escape`, whitespace (`"0001 "` with trailing space), non-numeric `spec-abcd`, or wrong-digit-count `spec-001`); pre-fix `normalizeSpecDirName` only prepended `spec-` and the raw string flowed into `path.join(root, "iter-NN", id, "<screen>.review.json")`, allowing the per-(spec × screen) gate to probe outside the intended `iter-NN/spec-NNNN/` subtree. Post-fix certify exits 2 with the malformed id echoed verbatim and the canonical shape (`spec-NNNN` / 4-digit) named in stderr — refusing to construct any review path from unvalidated input. Companion happy-path it block verifies that canonical bare `0012` and fully-qualified `spec-0007` ids coexist in the same frozen set without false rejection. Closes codex P2 r3270776268.
 
+## TC-0012-0426
+
+- EX-Ref: EX-0012-0155
+- AC-Refs: AC-0012-0045
+- Type: integration
+- Test file: `packages/qfai/tests/cli/commands/prototypingCertify.test.ts`
+- Verify the 33rd-wave certify-side absent-vs-malformed `frozenSpecsCovered` discrimination (codex r3270861808 P1 — chatgpt-codex-connector). Pre-fix the certify call sites collapsed "missing" and "present-but-malformed" into a single `null` branch via `readFrozenSpecsCoveredMultiSpec(...) ?? readFrozenSpecsCovered(...)`, which on a partially-corrupt multi-spec record would silently fall back to legacy single-spec `specsCovered` — downgrading the per-(spec × screen) gate AND cert-sealing scope to the primary spec only. Post-fix a new SSOT classifier `classifyFrozenSpecsCoveredMultiSpec()` returns `{kind: "absent" / "malformed" / "ok"}`; certify exits 2 on `malformed` with a "present but malformed" diagnostic, while `absent` still falls back. Five parametrized `it` blocks cover non-array (object / string), empty array, non-string entry, empty-string entry. Absent-fallback companion `it` verifies the legacy path still certifies. Companion unit suite `specsCovered.test.ts` covers the classifier with 8 `it` blocks (3 absent + 4 malformed + 1 ok). Closes codex P1 r3270861808.
+
 ## Legacy Coverage Continuity
 
 - The legacy baseline test-case identifier space remains reserved for existing implementation/test slices.

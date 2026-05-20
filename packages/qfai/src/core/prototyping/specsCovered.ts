@@ -83,6 +83,75 @@ export function readFrozenSpecsCoveredMultiSpec(record: unknown): string[] | nul
   return out;
 }
 
+/**
+ * Result type for {@link classifyFrozenSpecsCoveredMultiSpec}. Discriminates
+ * between three states the certify call site must distinguish:
+ *
+ *   - `absent` — the `frozenSpecsCovered` key is missing on the record
+ *     (or the record itself is invalid). Caller MAY fall back to the
+ *     legacy `specsCovered` field for pre-Wave-3 evidence compatibility.
+ *   - `malformed` — the key IS present on the record but the value
+ *     fails the validation contract (not an array, empty array, contains
+ *     a non-string or empty-string entry). Caller MUST fail closed
+ *     (exit 2) rather than fall back, because a partially-corrupt frozen
+ *     scope could silently downgrade multi-spec certification to the
+ *     primary-spec-only legacy field and let missing secondary-spec
+ *     review evidence pass unnoticed.
+ *   - `ok` — the field is present AND valid; caller uses `value`.
+ */
+export type FrozenSpecsCoveredClassification =
+  | { kind: "absent" }
+  | { kind: "malformed"; reason: string }
+  | { kind: "ok"; value: string[] };
+
+/**
+ * Classifying counterpart to {@link readFrozenSpecsCoveredMultiSpec}.
+ *
+ * `readFrozenSpecsCoveredMultiSpec` collapses "field missing" and "field
+ * present but invalid" into a single `null` return value, which lets
+ * call sites that do `readFrozenSpecsCoveredMultiSpec(...) ??
+ * readFrozenSpecsCovered(...)` silently downgrade a corrupt multi-spec
+ * frozen set to the legacy single-spec `specsCovered` field. In
+ * multi-spec runs that downgrade certificates to the primary-spec scope
+ * and lets missing secondary-spec review evidence ship a sealed
+ * certificate (codex r3270861808 P1 — chatgpt-codex-connector).
+ *
+ * This classifier preserves the validation contract of the reader but
+ * exposes the absent/malformed distinction so the certify call sites
+ * can fail closed when the field is present-but-invalid.
+ */
+export function classifyFrozenSpecsCoveredMultiSpec(
+  record: unknown,
+): FrozenSpecsCoveredClassification {
+  if (!isRecord(record)) {
+    return { kind: "absent" };
+  }
+  if (!Object.prototype.hasOwnProperty.call(record, "frozenSpecsCovered")) {
+    return { kind: "absent" };
+  }
+  const raw = record.frozenSpecsCovered;
+  if (raw === undefined || raw === null) {
+    return { kind: "absent" };
+  }
+  if (!Array.isArray(raw)) {
+    return { kind: "malformed", reason: "field is not an array" };
+  }
+  if (raw.length === 0) {
+    return { kind: "malformed", reason: "array is empty" };
+  }
+  const out: string[] = [];
+  for (const value of raw) {
+    if (typeof value !== "string") {
+      return { kind: "malformed", reason: "array contains a non-string entry" };
+    }
+    if (value.length === 0) {
+      return { kind: "malformed", reason: "array contains an empty-string entry" };
+    }
+    out.push(value);
+  }
+  return { kind: "ok", value: out };
+}
+
 export type SpecsCoveredDriftResult = {
   drifted: boolean;
   added: string[];

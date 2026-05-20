@@ -57,8 +57,8 @@ import {
 // in the core layer instead of taking the sideways CLI → CLI hop on
 // `prototypingIterate.ts` that wave-15 left behind.
 import {
+  classifyFrozenSpecsCoveredMultiSpec,
   readFrozenSpecsCovered,
-  readFrozenSpecsCoveredMultiSpec,
 } from "../../core/prototyping/specsCovered.js";
 import { resolveToolVersion } from "../../core/version.js";
 import { error, info, warn } from "../lib/logger.js";
@@ -271,8 +271,32 @@ export async function runPrototypingCertify(
   // with completely-missing review.json files. Fall back to the
   // legacy field for pre-Wave-3 evidence that predates the
   // `frozenSpecsCovered` write.
+  // codex r3270861808 (P1, chatgpt-codex-connector): classify the
+  // multi-spec field so a PRESENT-but-malformed `frozenSpecsCovered`
+  // (key on the record but value is a non-array / empty / non-string
+  // / empty-string entry) fails closed with exit 2 instead of silently
+  // falling back to the legacy `specsCovered` field. Pre-fix the
+  // `?? readFrozenSpecsCovered(...)` null-coalesce collapsed the
+  // "missing" and "malformed" cases into one branch, which on a
+  // partially-corrupt multi-spec record would downgrade certification
+  // scope to the resolved primary spec only — letting missing
+  // secondary-spec review evidence ship a sealed certificate. The
+  // legacy fallback is now ONLY taken when the field is absent.
+  const frozenMultiSpec = classifyFrozenSpecsCoveredMultiSpec(protoJson);
+  if (frozenMultiSpec.kind === "malformed") {
+    error(
+      "qfai prototyping certify: `prototyping.json#frozenSpecsCovered` is present " +
+        `but malformed (${frozenMultiSpec.reason}). Failing closed instead of ` +
+        "silently downgrading certification scope to the legacy single-spec " +
+        "`specsCovered` field — a partial / corrupt edit of the multi-spec frozen " +
+        "set must not allow missing secondary-spec review evidence to ship a sealed " +
+        "certificate. Re-run `qfai prototyping iterate --cycle 0` to regenerate " +
+        "`prototyping.json` with the cycle-0-frozen UI-bearing set.",
+    );
+    return 2;
+  }
   const frozenSpecsPreview =
-    readFrozenSpecsCoveredMultiSpec(protoJson) ?? readFrozenSpecsCovered(protoJson);
+    frozenMultiSpec.kind === "ok" ? frozenMultiSpec.value : readFrozenSpecsCovered(protoJson);
   if (frozenSpecsPreview !== null && screenContracts.length > 0) {
     // codex r3270776268 (P2): validate canonical spec-id shape BEFORE any
     // path construction. `normalizeSpecDirName` only strips/re-adds the
@@ -470,8 +494,27 @@ export async function runPrototypingCertify(
   // and certify silently re-baseline the certificate to a spec the
   // loop never exercised. The loop seed is the SSOT for what was
   // actually reviewed.
+  // codex r3270861808 (P1, chatgpt-codex-connector): mirror the per-
+  // (spec × screen) gate's fail-closed classification at the cert-
+  // sealing call site too. A PRESENT-but-malformed `frozenSpecsCovered`
+  // here would downgrade the sealed certificate's `specsCovered` body
+  // field to the legacy single-spec scope and let a multi-spec frozen
+  // set ship a certificate that records only the primary spec.
+  const certFrozenMultiSpec = classifyFrozenSpecsCoveredMultiSpec(protoJson);
+  if (certFrozenMultiSpec.kind === "malformed") {
+    error(
+      "qfai prototyping certify: `prototyping.json#frozenSpecsCovered` is present " +
+        `but malformed (${certFrozenMultiSpec.reason}) at cert-sealing time. Failing ` +
+        "closed instead of silently sealing the certificate against the legacy " +
+        "single-spec `specsCovered` field. Re-run `qfai prototyping iterate --cycle 0` " +
+        "to regenerate the multi-spec frozen set.",
+    );
+    return 2;
+  }
   const specsCovered =
-    readFrozenSpecsCoveredMultiSpec(protoJson) ?? readFrozenSpecsCovered(protoJson);
+    certFrozenMultiSpec.kind === "ok"
+      ? certFrozenMultiSpec.value
+      : readFrozenSpecsCovered(protoJson);
   if (specsCovered === null) {
     error(
       "qfai prototyping certify: prototyping.json#specsCovered is missing or malformed — " +

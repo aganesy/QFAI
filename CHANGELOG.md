@@ -76,6 +76,34 @@
   - Pinned-branch authorization is preserved: this lands in 1.8.10
     because `feature/v1.8.10` is the release pin.
 
+### Fixed (PR #208 33rd late-review wave)
+
+- **Certify-side absent-vs-malformed `frozenSpecsCovered`
+  discrimination (codex r3270861808, P1 —
+  chatgpt-codex-connector):** new SSOT classifier
+  `classifyFrozenSpecsCoveredMultiSpec()` in
+  `core/prototyping/specsCovered.ts` returns
+  `{kind: "absent" | "malformed" | "ok"}`. Pre-fix the certify
+  per-(spec × screen) gate AND the cert-sealing call site used
+  `readFrozenSpecsCoveredMultiSpec(...) ?? readFrozenSpecsCovered(...)`,
+  which collapsed "missing" and "present-but-invalid" into one
+  branch. A partial / corrupt edit of `frozenSpecsCovered` (key on
+  the record but value non-array / empty / non-string entry /
+  empty-string entry) would silently fall back to legacy
+  single-spec `specsCovered`, downgrading multi-spec certification
+  scope to the resolved primary spec only and letting missing
+  secondary-spec review evidence ship a sealed completion
+  certificate. Post-fix both call sites consume the classifier
+  directly: `malformed` exits 2 with a "present but malformed"
+  diagnostic naming the rejection reason (e.g. `not an array`,
+  `empty`, `non-string`, `empty-string`); `absent` (key omitted)
+  still legitimately falls back to legacy `specsCovered` for
+  pre-Wave-3 evidence compatibility. AC-0012-0045 hard-stop catalog
+  extended with class (h). New TC-0012-0426 + TDD-0446 +
+  EX-0012-0155 (5 parametrized integration `it` blocks + 1
+  absent-fallback companion + 8 unit `it` blocks for the
+  classifier in `specsCovered.test.ts`).
+
 ### Fixed (PR #208 32nd late-review wave)
 
 - **Certify-side canonical-spec-id validation gate (codex r3270776268,

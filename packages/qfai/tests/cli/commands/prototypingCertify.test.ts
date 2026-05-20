@@ -936,3 +936,103 @@ describe("qfai prototyping certify (TC-0012-0425: frozenSpecsCovered canonical i
     expect(exit).toBe(0);
   });
 });
+
+describe("qfai prototyping certify (TC-0012-0426: frozenSpecsCovered present-but-malformed fails closed)", () => {
+  // codex r3270861808 (P1, chatgpt-codex-connector): when
+  // `prototyping.json` carries a present-but-malformed
+  // `frozenSpecsCovered` (key on the record but value fails the
+  // string-array contract), certify must exit 2 instead of silently
+  // falling back to the legacy `specsCovered` field. Pre-fix the
+  // `readFrozenSpecsCoveredMultiSpec(...) ?? readFrozenSpecsCovered(...)`
+  // null-coalesce collapsed "absent" and "malformed" into one branch —
+  // on a multi-spec run, the silent downgrade would have sealed the
+  // certificate against the resolved primary spec only, hiding missing
+  // secondary-spec review evidence.
+  async function writeProtoWithRawFrozen(root: string, rawFrozen: unknown): Promise<void> {
+    await writeFile(path.join(root, "DESIGN.md"), CERT_DESIGN_MD, "utf-8");
+    const iter00 = path.join(root, ".qfai/evidence/prototyping/iter-00");
+    const iter01 = path.join(root, ".qfai/evidence/prototyping/iter-01");
+    await mkdir(iter00, { recursive: true });
+    await mkdir(iter01, { recursive: true });
+    await writeFile(path.join(iter01, "index.html"), CLEAN_FINAL_HTML, "utf-8");
+    await mkdir(path.join(root, ".qfai/report"), { recursive: true });
+    await mkdir(path.join(root, ".qfai/output"), { recursive: true });
+    const validateJson = JSON.stringify({ counts: { error: 0, warning: 0, info: 0 } });
+    await writeFile(path.join(root, ".qfai/report/validate.json"), validateJson, "utf-8");
+    await writeFile(path.join(root, ".qfai/output/validate.json"), validateJson, "utf-8");
+    await writeFile(
+      path.join(root, ".qfai/output/verify.json"),
+      JSON.stringify({ status: "PASS" }),
+      "utf-8",
+    );
+    const protoBody: Record<string, unknown> = {
+      mode: { effective: "standard", source: "explicit-request", rationale: "test" },
+      surface: "web",
+      runId: "run-cert-test",
+      designMd: { path: "DESIGN.md", sha256: hashDesignMd(CERT_DESIGN_MD) },
+      specsCovered: ["0012"],
+      frozenSpecsCovered: rawFrozen,
+      reviewerGate: {
+        result: "PASS",
+        signoff: { reviewerId: "test-reviewer", timestamp: "2026-04-27T00:00:00Z" },
+      },
+      iterations: [{ index: 0 }, { index: 1 }],
+    };
+    await writeFile(
+      path.join(root, ".qfai/evidence/prototyping/prototyping.json"),
+      JSON.stringify(protoBody),
+      "utf-8",
+    );
+  }
+
+  it.each<[string, unknown, string]>([
+    ["non-array (object)", { 0: "0012" }, "not an array"],
+    ["non-array (string)", "0012", "not an array"],
+    ["empty array", [], "empty"],
+    ["array with non-string entry (number)", [42], "non-string"],
+    ["array with empty-string entry", ["0012", ""], "empty-string"],
+  ])(
+    "exits 2 with a 'present-but-malformed' diagnostic when frozenSpecsCovered is %s",
+    async (_label, rawFrozen, reasonFragment) => {
+      const root = await newTempDir();
+      await seedMinimalProject(root);
+      await writeProtoWithRawFrozen(root, rawFrozen);
+      await seedUiScreens(root, ["home"]);
+
+      const logger = await import("../../../src/cli/lib/logger.js");
+      const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
+      try {
+        const exit = await runPrototypingCertify({ root, check: false });
+        expect(exit).toBe(2);
+        const messages = errorSpy.mock.calls.map((c) => String(c[0]));
+        // Diagnostic must explicitly say "present but malformed" so
+        // operators distinguish from the absent-field case (which
+        // falls back to legacy specsCovered).
+        const namesPresentButMalformed = messages.some(
+          (m) => m.includes("present") && m.includes("malformed"),
+        );
+        expect(namesPresentButMalformed).toBe(true);
+        // The classifier's reason fragment must surface so operators
+        // know which validation rule rejected the field.
+        const namesReason = messages.some((m) => m.includes(reasonFragment));
+        expect(namesReason).toBe(true);
+      } finally {
+        errorSpy.mockRestore();
+      }
+    },
+  );
+
+  it("falls back to legacy specsCovered when frozenSpecsCovered key is absent (regression: absent != malformed)", async () => {
+    const root = await newTempDir();
+    await seedMinimalProject(root);
+    // seedAllGatesPass without frozenSpecsCovered option = key omitted
+    await seedAllGatesPass(root, { specsCovered: ["0012"] });
+    await seedUiScreens(root, ["home"]);
+    await seedReviewJson(root, "spec-0012", "home");
+
+    // Absent field MUST still take the legacy-fallback path and
+    // certify with exit 0; only PRESENT-but-malformed should fail.
+    const exit = await runPrototypingCertify({ root, check: false });
+    expect(exit).toBe(0);
+  });
+});
