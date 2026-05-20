@@ -76,6 +76,46 @@
   - Pinned-branch authorization is preserved: this lands in 1.8.10
     because `feature/v1.8.10` is the release pin.
 
+### Fixed (PR #208 24th late-review wave)
+
+- **specs-coverage report regen (codex r3270453832, MAJOR —
+  qa-gatekeeper):** `.qfai/report/specs-coverage/spec-0012.md` rebuilt
+  via `qfai validate` so AC counts reflect the wave-22 TC-0012-0416
+  AC-Ref migration (AC-0012-0044 → AC-0012-0038) and the wave-20 +
+  wave-22 AC additions (`AC-0012-0052` show-spec contract).
+- **Operator-facing contract scrub (codex r3270457491 MINOR —
+  product-surface-reviewer):** `.qfai/contracts/cli/qfai-prototyping.md`
+  no longer references internal codex review IDs / wave labels /
+  internal severity tokens (`codex r3265480688`, `11th-wave fix`,
+  `MAJOR/P1`, `22nd-wave operator-facing layout per codex r3270257688
+MINOR`, etc.). Operator-readable language only — internal-trace
+  metadata stays in `09_delta.md` / `CHANGELOG.md`.
+- **Stderr two-line layout polish (codex r3270459355, NIT —
+  product-surface-reviewer):** the `frozenSurfaceUnion missing`
+  diagnostic now inserts a blank `error("")` line between the primary
+  CTA and the indented `Reason:` block so narrow-terminal wrap does
+  not visually fuse the two. The `why:` prefix is also re-cased to
+  `Reason:` per the suggestion.
+- **Outdated threads (already addressed by wave-23 commit
+  `1edd8051`):** wave-22 CI BLOCKERs on `promptRefs.test.ts` because
+  of the `.qfai/contracts/config/qfai-config.yaml` literal path
+  (codex BLOCKER r3270452746 / r3270453722 + clarification
+  r3270455565); the SKILL.md markdown bullet continuation indent on
+  the same hunk (codex MINOR r3270455737); the
+  `.qfai/contracts/config/qfai-config.yaml` / `qfai doctor --explain`
+  dangling references (codex MAJOR r3270454138).
+- **Deferred (codex r3270455347 MINOR + r3270456831 NIT):** stderr
+  two-line layout convention across the other cycle ≥ 1 drift
+  classes, and an explicit OQ for removing the
+  `prototypingIterate.ts` `resolveSurfaceUnion` re-export once
+  wave-8/10/13 unit tests migrate their imports — both noted here as
+  follow-up surface for a focused subsequent wave.
+- **FYI (codex r3270455436):** wave-21 commit message used "test
+  annotations updated" while no `tests/` diff was emitted; clarified
+  that TC-0012-0416 is a deferred follow-up (`status: todo`, test
+  file: planned) and the "annotations" refer to the spec markdown
+  AC-Ref tags. No code change needed.
+
 ### Fixed (PR #208 23rd late-review wave)
 
 - **`hasMatchingUiContract` per-spec subdirectory fallback (codex

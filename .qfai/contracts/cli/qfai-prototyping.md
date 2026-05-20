@@ -42,16 +42,16 @@ Required inputs (read; never written by this sub-command unless noted):
     primary; mismatch → exit 2),
   - `frozenSurfaceUnion[]` (cycle-0 frozen multi-spec UI-bearing UNION
     snapshot — the SSOT the cycle ≥ 1 drift gate compares the live
-    `resolveSurfaceUnion(root)` result against. Added since the
-    11th-wave fix (codex r3265480688); detects mid-loop additions of
-    new UI-bearing specs (strict marker / title marker /
+    `resolveSurfaceUnion(root)` result against. Detects mid-loop
+    additions of new UI-bearing specs (strict marker / title marker /
     `primarySpecId` pin / UI contract) and deferrals; mismatch
     → exit 2. A missing or malformed `frozenSurfaceUnion` field at
-    cycle ≥ 1 is itself exit 2: legacy pre-12th-wave records without
-    the field must re-seed via `--cycle 0`. The drift gate does NOT
-    silently fall back to the single-spec `frozenSpecsCovered`
-    baseline — that fallback re-enabled the MAJOR/P1 false-positive
-    closed by the 11th-wave fix (codex r3265953324 13th-wave Fix)),
+    cycle ≥ 1 is itself exit 2: legacy records without the field must
+    re-seed via `--cycle 0`. The drift gate does NOT silently fall
+    back to the single-spec `frozenSpecsCovered` baseline — that
+    fallback would compare a single-spec frozen scope against the
+    live multi-spec union and false-positive-fire for any project
+    with ≥ 2 UI-bearing specs.),
   - `frozenLicenseCatalog` (cycle-0 frozen stock-photo allowlist. The
     SSOT is the in-memory `DEFAULT_LICENSE_CATALOG` constant in
     `cli/commands/prototypingIterate.ts`; cycle 0 mirrors that constant
@@ -59,8 +59,7 @@ Required inputs (read; never written by this sub-command unless noted):
     `licenseTiers` / `sourceHosts`, or a malformed shape on disk at
     cycle ≥ 1, are treated as lock drift → exit 2 — the verifier does
     not silently fall back to the in-memory default; it instructs the
-    operator to refreeze via `--cycle 0` (codex r3265947252 13th-wave
-    Fix, P2)).
+    operator to refreeze via `--cycle 0`.).
 
 Cycle-0 freeze (written by `iterate --cycle 0`):
 
@@ -135,9 +134,7 @@ Exit codes:
 | 65   | STOP: budget exhausted. Latest iter index === `MAX_ITERATION_INDEX` (= 9) without convergence. Lagging specs are named in the aggregated record.                                                                                                                                                                                                         |
 | 66   | STOP: license-verify failure. An `imageSources[]` slot resolved to a non-allowlisted source, unknown license tier, or HTTP (non-HTTPS) URL; license catalog SSOT was frozen at cycle 0. Non-recoverable within the run.                                                                                                                                  |
 
-Exit-2 drift classes (enumerated for the `2` row above so the table
-cell stays readable — 22nd-wave operator-facing layout per codex
-r3270257688 MINOR):
+Exit-2 drift classes (the `2` row above expands to):
 
 - **Input shape** — `--cycle <n>` out of range (must be `0..MAX_ITERATION_INDEX`); missing `--target-url` at cycle 0.
 - **Zero UI-bearing specs mid-run** — `resolveAllUiBearingSpecs()` returns an empty list. Treated as a deterministic no-op only at cycle 0 (see note below); at cycle ≥ 1 against a non-empty cycle-0 frozen union it is exit 2.
@@ -226,13 +223,12 @@ schema:
     # `frozenSpecsCovered` field; pre-Wave-3
     # records carry only `specsCovered`. This
     # tag lets operators detect legacy-seeded
-    # records without re-reading the file
-    # (14th-wave Fix, codex r3269198684 MINOR).
+    # records without re-reading the file.
   frozenSurfaceUnion:
     string[] | null
     # cycle-0 frozen multi-spec UI-bearing
-    # UNION snapshot, or null on
-    # legacy pre-12th-wave records
+    # UNION snapshot, or null on legacy
+    # records that pre-date the field.
   liveUiBearing:
     string[] # live `resolveSurfaceUnion()` result —
     # spec IDs (the same resolver iterate's
@@ -245,18 +241,18 @@ schema:
     # carry per-spec metadata; per-spec
     # `specMdPath` / `source` for the resolved
     # primary is available in the optional
-    # `primary` block below (15th-wave / 16th-wave
-    # Fix, codex r3269453293 P2 + codex r3269597174 P2).
+    # `primary` block below.
   primary?: # present iff a primary spec resolves
     specId: string
     specMdPath: string # repo-root-relative POSIX path
     source: string # resolution-source tag
 ```
 
-The pre-12th-wave top-level keys `specId` / `specMdPath` / `source` have
-been demoted to the optional `primary` block (BREAKING in `[1.8.10]`).
-Operator tooling that grepped `show-spec | jq '.specId'` MUST migrate to
-`primary.specId`; the migration is one-line per call site.
+The earlier top-level keys `specId` / `specMdPath` / `source` (used by
+pre-`[1.8.10]` releases) have been demoted to the optional `primary`
+block (BREAKING in `[1.8.10]`). Operator tooling that grepped
+`show-spec | jq '.specId'` MUST migrate to `primary.specId`; the
+migration is one-line per call site.
 
 ## Review payload (`<screen>.review.json`) shape
 
