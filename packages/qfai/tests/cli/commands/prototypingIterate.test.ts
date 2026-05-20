@@ -2603,17 +2603,16 @@ describe("resolveSurfaceUnion (direct unit test for the union composition rule)"
     // Stage an absolute specsDir OUTSIDE root so any pre-fix join
     // (root + absolute) would visibly miss the on-disk spec.
     const externalSpecsDir = await newTempDir();
-    await seedSimpleConfig(root, [
-      "prototyping:",
-      '  primarySpecId: "0042"',
-      // Overwrite the relative specsDir from seedSimpleConfig with an
-      // absolute path. Config YAML allows arbitrary path strings; the
-      // probe must honour absoluteness via `path.resolve`.
-      `  specsDirOverride: "${externalSpecsDir.replace(/\\/g, "/")}"`,
-    ]);
-    // Patch the config file's specsDir to the absolute path directly
-    // — seedSimpleConfig wrote `specsDir: .qfai/specs`; rewrite to
-    // the absolute path.
+    await seedSimpleConfig(root, ["prototyping:", '  primarySpecId: "0042"']);
+    // codex r3271708081 (MINOR, requirements-reviewer, 46th-wave): the
+    // `specsDir` override is performed via the string-replace below —
+    // the canonical key is `paths.specsDir`, and there is no
+    // `specsDirOverride` field in the qfai.config schema. The earlier
+    // version of this fixture passed a dead `specsDirOverride: ...`
+    // line to `seedSimpleConfig.extra[]`, which inserted an unknown
+    // YAML key that `loadConfig` ignored — actively misleading future
+    // readers about how the override flows. Override now expressed
+    // only through the canonical `paths.specsDir` patch below.
     const configPath = path.join(root, "qfai.config.yaml");
     const configRaw = await readFile(configPath, "utf-8");
     const patched = configRaw.replace(

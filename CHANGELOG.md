@@ -76,6 +76,21 @@
   - Pinned-branch authorization is preserved: this lands in 1.8.10
     because `feature/v1.8.10` is the release pin.
 
+### Fixed (PR #208 46th late-review wave)
+
+- **TC-0012-0429 fixture dead-key cleanup (codex r3271708081, MINOR
+  — requirements-reviewer + r3271706477 / r3271707791 NIT — same
+  finding):** the wave-45 fixture passed `specsDirOverride: "<abs>"`
+  to `seedSimpleConfig.extra[]`, which inserted an unknown YAML key
+  into the test `qfai.config.yaml`. The qfai.config schema has no
+  `specsDirOverride` field (the canonical key is `paths.specsDir`);
+  `loadConfig` ignored it, and the actual override flowed through a
+  subsequent string-replace step. The dead key risked misleading
+  future readers and could trip a future strict-unknown schema
+  validator. Removed the line and added a comment documenting that
+  the override is performed via the canonical `paths.specsDir`
+  patch only.
+
 ### Fixed (PR #208 45th late-review wave)
 
 - **`specDirExists` absolute-path fix (codex r3271656121, P1 —
