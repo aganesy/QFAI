@@ -76,6 +76,22 @@
   - Pinned-branch authorization is preserved: this lands in 1.8.10
     because `feature/v1.8.10` is the release pin.
 
+### Fixed (PR #208 43rd late-review wave)
+
+- **show-spec runtime stderr surface-scope narrowing (codex
+  r3271608582, MINOR — requirements-reviewer):** the wave-38
+  `error(...)` runtime string emitted by `runPrototypingShowSpec`
+  on the malformed branch still carried the "iterate / certify
+  both treat a malformed multi-spec frozen scope as a hard error"
+  over-claim, even though wave-41 / 42 corrected the same wording
+  in AC-0012-0052 / EX-0012-0157 / show-spec JSDoc. Operator-visible
+  stderr is the most-exposed SSOT surface — re-narrowed to
+  acknowledge that iterate-side handles present-but-malformed
+  `frozenSpecsCovered` via a different mechanism (legacy
+  `specsCovered` reader + `frozenSurfaceUnion` drift gate),
+  matching the rhetorical anchor of the spec-side / JSDoc fixes.
+  No code-path / behavior change; runtime-string only.
+
 ### Fixed (PR #208 42nd late-review wave)
 
 - **AC-0012-0052 wording correction — surface-scope alignment

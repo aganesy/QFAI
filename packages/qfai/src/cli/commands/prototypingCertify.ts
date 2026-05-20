@@ -764,8 +764,11 @@ export async function runPrototypingShowSpec(options: { root: string }): Promise
       "qfai prototyping show-spec: `prototyping.json#frozenSpecsCovered` is present " +
         `but malformed (${showSpecFrozenMultiSpec.reason}). Refusing to report a ` +
         "downgraded single-spec scope from the legacy `specsCovered` field — that " +
-        "would mislead recovery decisions because iterate / certify both treat a " +
-        "malformed multi-spec frozen scope as a hard error. Re-run " +
+        "would mislead recovery decisions because certify treats the same input " +
+        "as a hard error and refuses to seal a certificate from a partially-corrupt " +
+        "multi-spec scope. (iterate-side handles present-but-malformed " +
+        "`frozenSpecsCovered` separately via the legacy `specsCovered` reader and " +
+        "the `frozenSurfaceUnion` drift gate.) Re-run " +
         "`qfai prototyping iterate --cycle 0` to regenerate the record.",
     );
     return 2;
