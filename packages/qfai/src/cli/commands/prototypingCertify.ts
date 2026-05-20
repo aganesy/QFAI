@@ -745,11 +745,19 @@ export async function runPrototypingShowSpec(options: { root: string }): Promise
   // "field absent" and "field present-but-invalid" into a single `null`
   // return value. That let `?? readStringArrayField(protoRecord.specsCovered)`
   // silently downgrade to legacy single-spec scope even when the operator
-  // intended a multi-spec frozen scope but corrupted the JSON. iterate /
-  // certify treat present-but-malformed `frozenSpecsCovered` as a hard
-  // error; show-spec must mirror that semantic so operators / automation
-  // making recovery decisions from the scope output cannot be misled. Use
-  // the same SSOT classifier the certify call sites already consume.
+  // intended a multi-spec frozen scope but corrupted the JSON. certify
+  // already treats a present-but-malformed `frozenSpecsCovered` as a hard
+  // error (AC-0012-0045 class (h)); show-spec must mirror that contract on
+  // its own surface so operators / automation making recovery decisions
+  // from the scope output cannot be misled. (iterate-side present-but-
+  // malformed `frozenSpecsCovered` is handled separately: iterate consumes
+  // the legacy `specsCovered` reader for the cycle ≥ 1 shallow-equal
+  // primary-spec check, and reads the multi-spec drift baseline from
+  // `frozenSurfaceUnion`, not `frozenSpecsCovered`.) Use the same SSOT
+  // classifier the certify call sites already consume so the three
+  // surfaces — certify per-(spec × screen) gate, certify cert-sealing,
+  // and show-spec — share one absent-vs-malformed decision rule (codex
+  // r3271093206 FYI scope-narrowing note).
   const showSpecFrozenMultiSpec = classifyFrozenSpecsCoveredMultiSpec(protoRecord);
   if (showSpecFrozenMultiSpec.kind === "malformed") {
     error(
@@ -981,18 +989,6 @@ async function fileExists(absPath: string): Promise<boolean> {
 }
 
 /**
- * Returns `true` when the accepted iter directory contains at least
- * one `spec-*` subdirectory (per-spec layout). Used by the per-(spec
- * x screen) review.json gate to skip enforcement on legacy flat-iter
- * projects, which the shipped iterate driver + SKILL.md still emit
- * until the per-spec layout migration lands.
- *
- * ENOENT / non-readable iter dir -> `false` (gate stays off): the
- * accepted iter HTML gate above already required the dir to exist
- * and contain HTML, so reaching here with a missing dir is the
- * legitimate "no per-spec layout" answer rather than a hidden error.
- */
-/**
  * Canonical per-spec evidence directory shape: `spec-NNNN` where NNNN
  * is exactly 4 digits. Used by {@link hasPerSpecSubdir} to gate
  * activation of the per-(spec × screen) review.json presence check on
@@ -1006,6 +1002,18 @@ async function fileExists(absPath: string): Promise<boolean> {
  */
 const CANONICAL_SPEC_DIR = /^spec-\d{4}$/u;
 
+/**
+ * Returns `true` when the accepted iter directory contains at least
+ * one canonical `spec-NNNN` subdirectory (per-spec layout). Used by
+ * the per-(spec × screen) review.json gate to skip enforcement on
+ * legacy flat-iter projects, which the shipped iterate driver +
+ * SKILL.md still emit until the per-spec layout migration lands.
+ *
+ * ENOENT / non-readable iter dir → `false` (gate stays off): the
+ * accepted iter HTML gate above already required the dir to exist
+ * and contain HTML, so reaching here with a missing dir is the
+ * legitimate "no per-spec layout" answer rather than a hidden error.
+ */
 async function hasPerSpecSubdir(iterDirAbs: string): Promise<boolean> {
   let names: string[];
   try {

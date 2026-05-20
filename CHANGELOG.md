@@ -76,6 +76,42 @@
   - Pinned-branch authorization is preserved: this lands in 1.8.10
     because `feature/v1.8.10` is the release pin.
 
+### Fixed (PR #208 40th late-review wave)
+
+- **JSDoc orphan re-fix (codex r3271087212, NIT —
+  architecture-reviewer):** the wave-38 `CANONICAL_SPEC_DIR`
+  insertion orphaned the existing `hasPerSpecSubdir` JSDoc (TSDoc
+  binds only the last JSDoc to the next declaration — the same
+  hazard waves 32 / 35 already fixed on `normalizeSpecDirName`).
+  Reordered so `CANONICAL_SPEC_DIR` const + JSDoc precede
+  `hasPerSpecSubdir` and the function's own JSDoc sits adjacent.
+- **TC-0012-0427 AC-Ref rebind (codex r3271092532, MINOR —
+  requirements-reviewer):** the regression test pins certify-side
+  per-spec presence aggregation, not iter-dir layout regulation.
+  AC-Ref rebound from AC-0012-0046 (per-spec iter-dir namespacing)
+  to AC-0012-0047 (certify aggregates per-spec presence) across
+  06_Test-Cases.md / 16_Traceability-ledger.md / tdd/test-list.md.
+- **AC-0012-0052 sub-clause + TC-0012-0428 AC-Ref rebind (codex
+  r3271093350, MINOR — requirements-reviewer):** AC-0012-0052
+  (show-spec JSON payload contract) now carries a sub-clause
+  mirroring AC-0012-0045 class (h) onto the show-spec surface, so
+  the absent-vs-malformed discrimination contract holds across all
+  three CLI surfaces. TC-0012-0428 AC-Ref rebound from
+  AC-0012-0045 to AC-0012-0052.
+- **show-spec scope-narrowing JSDoc rewording (codex r3271093206,
+  FYI — architecture-reviewer):** the wave-38 motivation rhetoric
+  ("iterate / certify both treat the same input as a hard error")
+  overstated iterate's semantic. iterate handles present-but-
+  malformed `frozenSpecsCovered` via the legacy `specsCovered`
+  reader + `frozenSurfaceUnion` drift gate, not the SSOT
+  classifier. JSDoc reworded to acknowledge the surface split.
+- **r3271007632 closure attribution moved to wave-37 (codex
+  r3271094169, MINOR — requirements-reviewer):** the
+  `null`/`undefined` enumeration backfill landed in wave-37
+  (`ef013528`), not wave-38. 09_delta closure attribution moved
+  to the correct entry; wave-38 header recount adjusted to 5
+  threads.
+
 ### Fixed (PR #208 39th late-review wave)
 
 - **EX-0012-0154 / EX-0012-0155 BDD structure (codex r3271039452,
