@@ -76,6 +76,23 @@
   - Pinned-branch authorization is preserved: this lands in 1.8.10
     because `feature/v1.8.10` is the release pin.
 
+### Fixed (PR #208 41st late-review wave)
+
+- **EX-0012-0157 surface-scope narrowing (codex r3271095022, MINOR —
+  requirements-reviewer):** the wave-38 EX-0012-0157 Then clause
+  claimed "iterate / certify both treat a present-but-malformed
+  `frozenSpecsCovered` as a hard error", but iterate-side
+  present-but-malformed is handled via the legacy `specsCovered`
+  reader + `frozenSurfaceUnion` drift gate — NOT the SSOT
+  classifier path that certify / show-spec share. The wave-40
+  JSDoc rewording acknowledged this surface split but EX-0012-0157
+  still carried the overstated cross-command claim, creating an
+  Example ⇄ AC drift (no iterate-side AC anchor exists). Rewrote
+  the Then clause to cite AC-0012-0045 class (h) (certify) and
+  AC-0012-0052 (show-spec) directly and note that iterate-side
+  handles the same input via a different mechanism. No code or
+  test change.
+
 ### Fixed (PR #208 40th late-review wave)
 
 - **JSDoc orphan re-fix (codex r3271087212, NIT —
