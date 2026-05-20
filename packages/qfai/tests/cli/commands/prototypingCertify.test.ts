@@ -27,6 +27,7 @@ import {
   readPerSpecScreens,
   runPrototypingCertify,
 } from "../../../src/cli/commands/prototypingCertify.js";
+import { readUiContractScreenContracts } from "../../../src/core/contracts/screenContracts.js";
 import { hashDesignMd } from "../../../src/core/design/designMd.js";
 
 // Canonical DESIGN.md that satisfies the brand-SSOT parse + final-iter
@@ -1171,5 +1172,44 @@ describe("readPerSpecScreens (TC-0012-0430: absolute paths.contractsDir override
     const screens = await readPerSpecScreens(root, externalContractsDir, "spec-0007");
     expect(screens).not.toBeNull();
     expect(screens?.map((s) => s.screenId)).toEqual(["home"]);
+  });
+});
+
+describe("readUiContractScreenContracts (TC-0012-0431: absolute paths.contractsDir override — partner-helper consistency)", () => {
+  // codex r3271867391 P1 (implementation-reviewer) + r3271867923 MAJOR
+  // (qa-gatekeeper, 49th-wave): wave-48 fixed
+  // `readUiContractScreenContracts` (`path.join` → `path.resolve`) for
+  // partner-helper consistency with the wave-47 `readPerSpecScreens`
+  // fix, but did not add a regression test. The two helpers have the
+  // SAME responsibility — `readUiContractScreenContracts` is the
+  // project-wide screen reader, `readPerSpecScreens` is the per-spec
+  // reader — and both must respect absolute `paths.contractsDir`
+  // overrides identically. Without a test, a future `path.join`
+  // regression here would silently break certify on
+  // explicit-contracts-dir workflows (project-wide pass returns
+  // empty while per-spec returns full set → asymmetric screen
+  // discovery between the two passes). This test pins the partner-
+  // helper symmetry directly via the exported function so the
+  // wave-47 / wave-48 coverage parity is structural.
+  it("discovers project-wide UI screens when contractsDir is an absolute path OUTSIDE root", async () => {
+    const root = await newTempDir();
+    const externalContractsDir = await newTempDir();
+    // Author a project-wide UI contract file at the ABSOLUTE
+    // contractsDir (not under root). With the pre-wave-48
+    // `path.join(root, absoluteContractsDir, "ui")`, the reader
+    // would scan `<root>/<absoluteContractsDir>/ui/**/*.yaml`
+    // (empty) and return an empty list. Post-wave-48
+    // `path.resolve()` resets to the absolute path and discovers
+    // the file.
+    const uiDir = path.join(externalContractsDir, "ui");
+    await mkdir(uiDir, { recursive: true });
+    await writeFile(
+      path.join(uiDir, "screens.yaml"),
+      `screens:\n  - id: home\n    route: "/home"\n  - id: settings\n    route: "/settings"\n`,
+      "utf-8",
+    );
+
+    const screens = await readUiContractScreenContracts(root, externalContractsDir);
+    expect(screens.map((s) => s.screenId).sort()).toEqual(["home", "settings"]);
   });
 });

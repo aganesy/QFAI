@@ -971,6 +971,14 @@
 - Test file: `packages/qfai/tests/cli/commands/prototypingCertify.test.ts`
 - Verify the 47th-wave `readPerSpecScreens` absolute-path fix (codex r3271715563 P1 — chatgpt-codex-connector). Pre-fix `readPerSpecScreens()` built the per-spec UI contract probe path with `path.join(root, contractsDirRelative, "ui")`. When `qfai.config.yaml` carries an absolute `paths.contractsDir` override, `path.join` concatenated root + absolute rather than resetting, so per-spec contract files at `<absoluteContractsDir>/ui/spec-NNNN.yaml` were never discovered. The helper returned `null` and certify's per-(spec × screen) gate silently fell back to the project-wide screen list, enforcing the wrong `(spec, screen)` coverage. Post-fix `path.resolve()` resets to the absolute segment when one is supplied, mirroring the wave-45 `specDirExists` fix. Fixture: writes the per-spec contract at an absolute `contractsDir` pointing OUTSIDE `root`; assertion is that `readPerSpecScreens()` returns the declared `home` screen rather than `null`. Cross-platform coverage same as TC-0012-0429 (POSIX / drive-letter via OS-native tmp dir). AC anchor: AC-0012-0047 (certify per-spec presence aggregation).
 
+## TC-0012-0431
+
+- EX-Ref: EX-0012-0160
+- AC-Refs: AC-0012-0047
+- Type: unit
+- Test file: `packages/qfai/tests/cli/commands/prototypingCertify.test.ts`
+- Verify the 49th-wave partner-helper symmetry regression for `readUiContractScreenContracts` (codex r3271867391 P1 — implementation-reviewer + codex r3271867923 MAJOR — qa-gatekeeper). Wave-48 fixed the `path.join` → `path.resolve` switch in `readUiContractScreenContracts` for partner-helper consistency with the wave-47 `readPerSpecScreens` fix, but without a regression test the two helpers' absolute-path symmetry was structurally unpinned — a future `path.join` regression in the project-wide reader would silently break certify on explicit-contracts-dir workflows (project-wide pass returns empty while per-spec pass returns full set → asymmetric screen discovery between the two passes). Fixture: project-wide UI contract file `screens.yaml` written at an absolute `contractsDir` pointing OUTSIDE `root`, with two screens (`home`, `settings`). Assertion: `readUiContractScreenContracts(root, externalContractsDir)` returns both screens (sorted-equal). AC anchor: AC-0012-0047 (certify per-spec presence aggregation — same anchor as TC-0012-0430 to pin the partner-helper symmetry).
+
 ## Legacy Coverage Continuity
 
 - The legacy baseline test-case identifier space remains reserved for existing implementation/test slices.

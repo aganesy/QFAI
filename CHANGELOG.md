@@ -76,6 +76,28 @@
   - Pinned-branch authorization is preserved: this lands in 1.8.10
     because `feature/v1.8.10` is the release pin.
 
+### Fixed (PR #208 49th late-review wave)
+
+- **Partner-helper regression test (codex r3271867391, P1 —
+  implementation-reviewer + codex r3271867923 MAJOR — qa-gatekeeper,
+  same finding):** wave-48 fixed `readUiContractScreenContracts`
+  (`path.join` → `path.resolve`) for partner-helper consistency
+  with the wave-47 `readPerSpecScreens` fix, but did not add a
+  regression test. The two helpers have the SAME responsibility on
+  the certify path, so without a structural symmetry test a future
+  `path.join` regression in the project-wide reader would silently
+  break certify on explicit-contracts-dir workflows (project-wide
+  pass returns empty while per-spec returns full set → asymmetric
+  screen discovery). New TC-0012-0431 + TDD-0451 + EX-0012-0160
+  pin the symmetry directly via the exported
+  `readUiContractScreenContracts` API — fixture writes a
+  project-wide `screens.yaml` at an absolute `contractsDir`
+  outside `root` and asserts the reader returns both declared
+  screens. AC anchor: AC-0012-0047 (same as TC-0012-0430 so the
+  partner-helper pair shares the AC binding). r3271868724 PASS
+  NIT (requirements-reviewer OQ-0012-0012 well-formedness audit)
+  closed without action.
+
 ### Fixed (PR #208 48th late-review wave)
 
 - **`readUiContractScreenContracts` absolute-path fix (codex
