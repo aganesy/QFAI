@@ -76,6 +76,23 @@
   - Pinned-branch authorization is preserved: this lands in 1.8.10
     because `feature/v1.8.10` is the release pin.
 
+### Fixed (PR #208 44th late-review wave)
+
+- **show-spec stderr 2-block layout (codex r3271639132, NIT —
+  product-surface-reviewer):** the wave-43 stderr re-narrowing
+  produced a 3-segment single sentence that buried the operator-
+  actionable CTA inside a long claim → narrowing → recovery chain on
+  narrow terminals. Restructured to the 2-block layout the
+  iterate-side `frozenSurfaceUnion missing` diagnostic uses
+  (introduced wave-24 for the same scan-readability parity): CTA
+  headline + blank separator + indented `Reason:` block. CTA
+  `Re-run qfai prototyping iterate --cycle 0` now leads; the
+  rationale (certify hard-error symmetry + iterate-side
+  separate-mechanism note) follows on the `Reason:` line. No
+  behaviour change; runtime-string layout only. Existing
+  TC-0012-0428 substring assertion still passes (loose `"present"`
+  - `"malformed"` match).
+
 ### Fixed (PR #208 43rd late-review wave)
 
 - **show-spec runtime stderr surface-scope narrowing (codex

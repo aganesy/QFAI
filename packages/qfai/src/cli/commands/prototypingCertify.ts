@@ -760,16 +760,27 @@ export async function runPrototypingShowSpec(options: { root: string }): Promise
   // r3271093206 FYI scope-narrowing note).
   const showSpecFrozenMultiSpec = classifyFrozenSpecsCoveredMultiSpec(protoRecord);
   if (showSpecFrozenMultiSpec.kind === "malformed") {
+    // codex r3271639132 (NIT, product-surface-reviewer, 44th-wave):
+    // 2-block CTA + `Reason:` layout matches the iterate-side
+    // `frozenSurfaceUnion missing` diagnostic (introduced 24th-wave per
+    // codex r3270459355). The recovery action stays the headline; the
+    // rationale (cross-surface symmetry, iterate-side handled
+    // separately) follows on an indented line after a blank separator
+    // so narrow-terminal wrap cannot visually fuse the CTA with the
+    // rationale.
     error(
       "qfai prototyping show-spec: `prototyping.json#frozenSpecsCovered` is present " +
-        `but malformed (${showSpecFrozenMultiSpec.reason}). Refusing to report a ` +
-        "downgraded single-spec scope from the legacy `specsCovered` field — that " +
-        "would mislead recovery decisions because certify treats the same input " +
-        "as a hard error and refuses to seal a certificate from a partially-corrupt " +
-        "multi-spec scope. (iterate-side handles present-but-malformed " +
-        "`frozenSpecsCovered` separately via the legacy `specsCovered` reader and " +
-        "the `frozenSurfaceUnion` drift gate.) Re-run " +
+        `but malformed (${showSpecFrozenMultiSpec.reason}). Re-run ` +
         "`qfai prototyping iterate --cycle 0` to regenerate the record.",
+    );
+    error("");
+    error(
+      "  Reason: refusing to report a downgraded single-spec scope from the legacy " +
+        "`specsCovered` field — certify treats the same input as a hard error and " +
+        "refuses to seal a certificate from a partially-corrupt multi-spec scope, " +
+        "so a downgraded show-spec output would mislead recovery decisions. " +
+        "(iterate-side handles present-but-malformed `frozenSpecsCovered` separately " +
+        "via the legacy `specsCovered` reader and the `frozenSurfaceUnion` drift gate.)",
     );
     return 2;
   }
