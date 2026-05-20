@@ -1,13 +1,14 @@
-[warning] QFAI-SKILLS-012 Reviewer Gate に Drift/test-layer 観点が不足しています（不足: Drift Protocol, test-layers.md, not gates/signals）。 (.qfai/assistant/skills/qfai-atdd/SKILL.md)
-[warning] QFAI-SKILLS-012 Reviewer Gate に Drift/test-layer 観点が不足しています（不足: test-layers.md, not gates/signals）。 (.qfai/assistant/skills/qfai-configure/SKILL.md)
-[warning] QFAI-SKILLS-012 Reviewer Gate に Drift/test-layer 観点が不足しています（不足: not gates/signals）。 (.qfai/assistant/skills/qfai-verify/SKILL.md)
-[info] QFAI-CONTRACT-000 UI 契約ファイルが見つかりません。 (.qfai/contracts/ui)
-[info] QFAI-CONTRACT-000 API 契約ファイルが見つかりません。 (.qfai/contracts/api)
-[info] QFAI-CONTRACT-000 DB 契約ファイルが見つかりません。 (.qfai/contracts/db)
-[warning] TDDLIST_UNKNOWN_REF Unknown TC reference "TC-0004-0063" in tdd/test-list.md for spec-0004 (row 57) (.qfai/specs/spec-0004/tdd/test-list.md)
-[warning] TDDLIST_UNKNOWN_REF Unknown TC reference "TC-0004-0064" in tdd/test-list.md for spec-0004 (row 58) (.qfai/specs/spec-0004/tdd/test-list.md)
-[warning] TDDLIST_UNKNOWN_REF Unknown TC reference "TC-0004-0065" in tdd/test-list.md for spec-0004 (row 59) (.qfai/specs/spec-0004/tdd/test-list.md)
-[warning] TDDLIST_UNKNOWN_REF Unknown TC reference "TC-0004-0066" in tdd/test-list.md for spec-0004 (row 60) (.qfai/specs/spec-0004/tdd/test-list.md)
-[warning] QFAI-TRACE-002 Traceability ledger not found for spec-0010. Skipping integrity check. (.qfai/specs/spec-0010/16_Traceability-ledger.md)
-counts: info=3 warning=8 error=0
-run-log: .qfai/report/run-20260419135004834
+qfai validate summary: error=0 warning=7 info=3 annotations=10/10 failOn=error result=PASS
+qfai validate note: 詳細は .qfai/report/validate.json または --format text を参照してください。
+qfai validate note: run-log は .qfai/report/run-20260518180053085 を参照してください。
+qfai validate note: 次は qfai report で report.md を生成できます（例: qfai report）。
+::warning file=.qfai/specs/spec-0001/09_delta.md::QFAI-TRIAGE-001: delta.md に `## Change Summary` があるが `## Triage` セクションがありません。
+::warning file=.qfai/specs/spec-0002/09_delta.md::QFAI-TRIAGE-001: delta.md に `## Change Summary` があるが `## Triage` セクションがありません。
+::warning file=.qfai/specs/spec-0003/09_delta.md::QFAI-TRIAGE-001: delta.md に `## Change Summary` があるが `## Triage` セクションがありません。
+::warning file=.qfai/specs/spec-0005/09_delta.md::QFAI-TRIAGE-001: delta.md に `## Change Summary` があるが `## Triage` セクションがありません。
+::warning file=.qfai/specs/spec-0006/09_delta.md::QFAI-TRIAGE-001: delta.md に `## Change Summary` があるが `## Triage` セクションがありません。
+::warning file=.qfai/specs/spec-0007/09_delta.md::QFAI-TRIAGE-001: delta.md に `## Change Summary` があるが `## Triage` セクションがありません。
+::warning file=.qfai/specs/spec-0016/09_delta.md::QFAI-TRIAGE-001: delta.md に `## Change Summary` があるが `## Triage` セクションがありません。
+::notice file=.qfai/contracts/ui::QFAI-CONTRACT-000: UI 契約ファイルが見つかりません。
+::notice file=.qfai/contracts/api::QFAI-CONTRACT-000: API 契約ファイルが見つかりません。
+::notice file=.qfai/contracts/db::QFAI-CONTRACT-000: DB 契約ファイルが見つかりません。

@@ -191,7 +191,7 @@ Options:
   --max <number>                guardrails extract: 最大件数
   --keyword <text>              guardrails list/extract: キーワードフィルタ
   --target-url <url>            prototyping preflight/iterate: 評価対象の URL
-  --cycle <number>              prototyping iterate: cycle index (0..14)
+  --cycle <number>              prototyping iterate: cycle index (0..9)
   -h, --help      ヘルプ表示
 `;
 }

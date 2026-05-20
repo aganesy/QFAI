@@ -19,7 +19,7 @@
  * Exit codes:
  *   0   continue to this cycle
  *   64  STOP: all 4 axes exceptional + lap=0 + dmv=0 in the latest iter
- *   65  STOP: latest iter index === MAX_ITERATION_INDEX (14)
+ *   65  STOP: latest iter index === MAX_ITERATION_INDEX (9)
  *   2   input error (--cycle out of range, missing --target-url at cycle 0,
  *       no UI-bearing specs found, DESIGN.md missing/malformed/changed,
  *       prototyping.json#designMd missing on cycle >= 1, etc.)
@@ -44,8 +44,19 @@ import {
   type DesignMdViolation,
 } from "../../core/prototyping/designMdViolations.js";
 import { PROTOTYPING_EVIDENCE_REL, PROTOTYPING_JSON_REL } from "../../core/prototyping/paths.js";
-import { resolvePrimaryPrototypingSpec } from "../../core/prototyping/specResolution.js";
-import { readFrozenSpecsCovered } from "../../core/prototyping/specsCovered.js";
+import {
+  resolvePrimaryPrototypingSpec,
+  resolveSurfaceUnion,
+} from "../../core/prototyping/specResolution.js";
+import {
+  checkSpecsCoveredDrift,
+  readFrozenSpecsCovered,
+} from "../../core/prototyping/specsCovered.js";
+import {
+  licenseVerify,
+  type ImageSource,
+  type LicenseCatalog,
+} from "../../core/prototyping/licenseVerify.js";
 import {
   MAX_ITERATIONS,
   MAX_ITERATION_INDEX,
@@ -105,7 +116,50 @@ type PrototypingJsonShape = {
   acceptedIterationIndex?: unknown;
   stopReason?: unknown;
   fullHarness?: unknown;
+  frozenSpecsCovered?: unknown;
+  frozenSurfaceUnion?: unknown;
+  frozenLicenseCatalog?: unknown;
+  imageSources?: unknown;
   [key: string]: unknown;
+};
+
+/**
+ * SSOT default license catalog frozen at cycle 0 of every loop.
+ *
+ * The cycle-0 frozen catalog is the single source the run uses to
+ * verify every `imageSources[]` entry. Hard-coded here as the initial
+ * baseline.
+ *
+ * TODO (codex review — tracked as a follow-up, not blocking
+ * this release; see the spec's open-questions log): expose
+ * `qfai.config.yaml#prototyping.licenseCatalog` so consumer projects
+ * can register additional allowlisted sources (e.g. `pixabay`)
+ * without forking QFAI. Today consumers are bound to the
+ * `unsplash` + `pexels` baseline. The wire-in path is (1) extend
+ * `QfaiConfig` with an optional `prototyping.licenseCatalog?: { ... }`
+ * field, (2) honour it in `writeSeedMetadata` (the cycle-0 frozen
+ * value) and in the cycle ≥1 read path, (3) preserve the in-memory
+ * default as the fallback when neither config nor on-disk frozen
+ * value is present.
+ */
+const DEFAULT_LICENSE_CATALOG: LicenseCatalog = {
+  allowedSources: ["unsplash", "pexels"],
+  licenseTiers: {
+    unsplash: ["unsplash-license", "free"],
+    pexels: ["pexels-free"],
+  },
+  // 10th-wave Fix G (codex r3265260657, P1): bind each allowlisted
+  // source to acceptable URL hosts so an `imageSources[]` entry that
+  // claims `source: "unsplash"` while pointing at an unapproved host
+  // is rejected with `license-host-mismatch` instead of being silently
+  // accepted on the source-label alone. Hosts list both the canonical
+  // CDN subdomain (e.g. `images.unsplash.com`) and the bare apex
+  // domain (e.g. `unsplash.com`) — both are first-party origins for
+  // the respective provider.
+  sourceHosts: {
+    unsplash: ["images.unsplash.com", "unsplash.com"],
+    pexels: ["images.pexels.com", "pexels.com"],
+  },
 };
 
 export async function runPrototypingIterate(
@@ -122,6 +176,78 @@ export async function runPrototypingIterate(
     return 2;
   }
 
+  // 0) Zero UI-bearing pre-check → deterministic no-op (exit 0) when
+  //    no spec has a UI surface to drive. See `evaluateZeroUiBearingPrecheck`
+  //    for the full contract.
+  //
+  // 15th-wave Fix (codex r3269453276, P1) + 17th-wave refinement
+  // (codex r3270050451, MINOR) + 19th-wave polish (codex r3270092241
+  // / r3270093043 / r3270095015, MINOR + NIT): the precheck
+  // short-circuit MUST NOT bypass the cycle ≥ 1 drift gate. The
+  // cycle ≥ 1 branch always returns `exit 2`; it never falls through
+  // to `evaluateCycleGteOneGate`. Two diagnostics are surfaced based
+  // on observable facts (NOT internal wave labels):
+  //
+  //   (a) `frozenSurfaceUnion` is non-null on disk → genuine "UI
+  //       markers removed mid-loop" hard-stop. The diagnostic names
+  //       the frozen union so the operator can see what scope is no
+  //       longer reachable.
+  //   (b) `frozenSurfaceUnion` is null / missing — either the file
+  //       does not exist yet (fresh project ran `--cycle 1` first) or
+  //       it is a legacy record without the field. Both share the
+  //       same operator action (re-seed via `--cycle 0`), so a single
+  //       diagnostic suffices.
+  //
+  // `readFrozenSurfaceUnionField` returns `null` whenever the field
+  // is missing, malformed, or empty (see post-condition on the helper
+  // at L674), so the precheck only needs `!== null` to discriminate
+  // the two branches.
+  const precheck = await evaluateZeroUiBearingPrecheck(options.root);
+  if (precheck.shortCircuit) {
+    if (options.cycle >= 1) {
+      const protoJsonAbsForPrecheck = path.join(options.root, PROTOTYPING_JSON_REL);
+      const protoRecordForPrecheck = await readPrototypingJson(protoJsonAbsForPrecheck);
+      const frozenUnionForPrecheck =
+        protoRecordForPrecheck === null
+          ? null
+          : readFrozenSurfaceUnionField(protoRecordForPrecheck);
+      if (frozenUnionForPrecheck !== null) {
+        error(
+          "qfai prototyping iterate: zero UI-bearing specs resolved on cycle " +
+            `${options.cycle}, but the cycle-0 frozen union recorded in ` +
+            `prototyping.json#frozenSurfaceUnion (${JSON.stringify(frozenUnionForPrecheck)}) ` +
+            "is non-empty. All UI markers / contracts appear to have been " +
+            "removed mid-loop, which is a hard-stop drift class — the cycle-0 " +
+            "frozen scope is no longer reachable. Re-run with " +
+            "`--cycle 0 --target-url <url>` to refreeze the loop or restore the " +
+            "removed UI signals before continuing.",
+        );
+      } else {
+        error(
+          "qfai prototyping iterate: zero UI-bearing specs resolved on cycle " +
+            `${options.cycle}, and prototyping.json has no cycle-0 ` +
+            "`frozenSurfaceUnion` snapshot to drift against (either the file " +
+            "does not exist yet or it is a legacy record without the " +
+            "`frozenSurfaceUnion` field). Seed the loop first with " +
+            "`--cycle 0 --target-url <url>` and then re-invoke for cycle ≥ 1.",
+        );
+      }
+      return 2;
+    }
+    return precheck.exitCode;
+  }
+  // The precheck returns both `earlyConfig` and `unionSpecs` on the
+  // continue path. `unionSpecs` is the cycle-0 UI-bearing UNION —
+  // cycle 0 persists it as `frozenSurfaceUnion` in prototyping.json and
+  // the cycle ≥ 1 drift gate compares the live UNION against THAT
+  // frozen UNION (apples-to-apples) instead of against the single-spec
+  // `frozenSpecsCovered`. Pre-fix (10th wave) the drift gate compared a
+  // single-spec frozen set with the multi-spec live union, which
+  // false-positive-fired `added=[secondaries...]` for any project
+  // whose baseline already carried ≥ 2 UI-bearing specs. See 11th-wave
+  // Fix (codex r3265480688, MAJOR/P1).
+  const { earlyConfig, unionSpecs: cycleZeroUnion } = precheck;
+
   // 1) Read + hash root DESIGN.md FIRST (before any per-cycle plumbing).
   //    A malformed DESIGN.md is a structural project error and must
   //    fail before --target-url checks or convergence reads.
@@ -134,7 +260,10 @@ export async function runPrototypingIterate(
   const currentSha = hashDesignMd(designMdRead.text);
   const designMd: DesignMd = designMdRead.data;
 
-  const configResult = await loadConfig(options.root);
+  // Reuse the config snapshot read for the zero-UI-bearing pre-check
+  // above so we do not double-IO on the YAML file path. The values
+  // are immutable for the duration of one invocation.
+  const configResult = earlyConfig;
 
   // The SDD lock (`DESIGN.md.lock.yaml#designMdSha256`) is the single
   // source of truth for the frozen brand SSOT. Iterate consults it on
@@ -189,170 +318,25 @@ export async function runPrototypingIterate(
   const protoJsonAbs = path.join(options.root, PROTOTYPING_JSON_REL);
 
   // 2) Cycle >=1: enforce hash gate against the lock-anchored cache in
-  //    prototyping.json. The lock equality (above) plus the cache
-  //    equality (here) jointly enforce a 3-way invariant
+  //    prototyping.json + convergence/budget stop + monotonicity +
+  //    spec-set drift. See `evaluateCycleGteOneGate` for the full
+  //    contract. The lock equality (above) plus the cache equality
+  //    (in the helper) jointly enforce a 3-way invariant
   //    (live === lock === cache) without the cache becoming a third
   //    independent SHA SSOT.
   if (options.cycle >= 1) {
-    const protoRecord = await readPrototypingJson(protoJsonAbs);
-    if (!protoRecord || !protoRecord.designMd || typeof protoRecord.designMd.sha256 !== "string") {
-      error(
-        "qfai prototyping iterate: prototyping.json#designMd is missing. " +
-          "Re-run from cycle 0 so the seed cycle records the DESIGN.md sha256.",
-      );
-      return 2;
-    }
-    if (protoRecord.designMd.sha256 !== currentSha) {
-      error(
-        "qfai prototyping iterate: root DESIGN.md sha256 mismatch — frozen=" +
-          `${protoRecord.designMd.sha256} current=${currentSha}. ` +
-          "DESIGN.md was edited mid-loop; re-run prototyping from cycle 0 to refreeze.",
-      );
-      return 2;
-    }
-    if (lockSha !== null && protoRecord.designMd.sha256 !== lockSha) {
-      error(
-        "qfai prototyping iterate: prototyping.json#designMd.sha256 (" +
-          `${protoRecord.designMd.sha256}) differs from DESIGN.md.lock.yaml ` +
-          `(${lockSha}). The lock was refrozen mid-loop; re-run prototyping from cycle 0.`,
-      );
-      return 2;
-    }
-    const recordedIterations = asIterations(protoRecord);
-    const stop = shouldStop(recordedIterations);
-    if (stop !== null) {
-      // codex 8thM: shouldStop accepts the reviewer-recorded
-      // `designMdViolations: []` at face value, but the shipped reviewer
-      // prompt instructs reviewers to leave that field empty unless a
-      // runtime gate injects findings — and the only runtime scanner
-      // historically lived in `certify`. So a prototype with DESIGN.md
-      // drift could converge here ("axes-exceptional") and only fail
-      // later at certification. Re-run the runtime scanner against the
-      // accepted iteration's HTML before honoring the stop, so iterate
-      // continues another iteration to fix the drift instead of
-      // pretending the loop converged.
-      if (stop === "axes-exceptional") {
-        const recomputed = await recomputeFinalIterDesignMdViolations(
-          options.root,
-          recordedIterations.length - 1,
-          designMd,
-        );
-        const first = recomputed[0];
-        if (first !== undefined) {
-          // codex AG08r: max-budget drift edge case. If the last iter is
-          // already at MAX_ITERATION_INDEX (cycle 14), there is no valid
-          // next cycle (--cycle is capped at 14). Falling through to the
-          // expectedNextCycle gate would then exit 2 with a cycle-mismatch
-          // error, blocking the operator from completing a run that
-          // exhausted the iteration budget with drift still present. In
-          // that case emit the max-iterations stop instead — the loop
-          // truly is over (drift or not), and the recovery is `--cycle 0`
-          // restart, not another within-budget cycle.
-          const lastIter = recordedIterations[recordedIterations.length - 1];
-          const lastIndex =
-            isRecord(lastIter) && typeof lastIter.index === "number" ? lastIter.index : -1;
-          if (lastIndex >= MAX_ITERATION_INDEX) {
-            info(
-              "qfai prototyping iterate: review reported convergence but the " +
-                `accepted iter HTML still contains ${recomputed.length} DESIGN.md violation(s) ` +
-                `AND the iteration budget is exhausted (index=${lastIndex}). ` +
-                `First violation: ${first.kind}=${first.found}. ` +
-                "Run `qfai prototyping iterate --cycle 0 --target-url <url>` to restart the loop.",
-            );
-            return emitStop("max-iterations");
-          }
-          info(
-            "qfai prototyping iterate: review reported convergence but the " +
-              `accepted iter HTML still contains ${recomputed.length} DESIGN.md violation(s); ` +
-              "continuing another iteration to fix drift. " +
-              `First violation: ${first.kind}=${first.found}.`,
-          );
-          // Fall through to the next-cycle plan below (no early return).
-        } else {
-          return emitStop(stop);
-        }
-      } else {
-        return emitStop(stop);
-      }
-    }
-    // Defense-in-depth: confirm the recorded loop history is itself
-    // monotonic before deriving the expected next cycle from its
-    // length. A hand-edited or partially-corrupted `prototyping.json`
-    // could carry e.g. `iterations.length === 3` but
-    // `iterations[2].index === 5`; in that case `length` is no longer
-    // the next-cycle index and the validator's per-index check would
-    // reject the next iter with a delayed error. Catch the corrupt
-    // history at the command boundary instead.
-    const gapIndex = recordedIterations.findIndex((it, i) => {
-      if (!isRecord(it)) return true;
-      return it.index !== i;
+    const gate = await evaluateCycleGteOneGate({
+      root: options.root,
+      cycle: options.cycle,
+      protoJsonAbs,
+      currentSha,
+      lockSha,
+      designMd,
+      specs,
+      config: configResult.config,
     });
-    if (gapIndex !== -1) {
-      error(
-        `qfai prototyping iterate: prototyping.json#iterations[${gapIndex}].index ` +
-          `is not ${gapIndex}; the loop history is corrupted. ` +
-          "Re-run with `--cycle 0 --target-url <url>` to refreeze the loop.",
-      );
-      return 2;
-    }
-    // Reject out-of-sequence cycle requests. `iterations[i].index === i`
-    // is enforced by the validator (QFAI-PROT-* index-monotonicity), so
-    // jumping straight to `--cycle 3` after only `iter-00` was recorded
-    // would create an `iter-03/iterate-plan.json` that the validator
-    // later rejects, blocking validation/certification with a
-    // not-easy-to-read error. Fail up front instead. The check runs
-    // AFTER `shouldStop` so a converged or max-budget loop returns its
-    // stop reason cleanly even when the seed lineage is sparse.
-    const expectedNextCycle = recordedIterations.length;
-    if (options.cycle !== expectedNextCycle) {
-      error(
-        `qfai prototyping iterate: expected --cycle ${expectedNextCycle} ` +
-          `(iterations.length=${recordedIterations.length}); got --cycle ${options.cycle}. ` +
-          "Re-run with the expected cycle, or restart the loop with " +
-          "`--cycle 0 --target-url <url>`.",
-      );
-      return 2;
-    }
-    // Cycles >= 1 must reuse the frozen `specsCovered` from cycle 0.
-    // If `prototyping.primarySpecId` or a UI-bearing marker has shifted
-    // mid-loop, the resolved primary spec here would differ from the
-    // recorded one, and iter-plan would write the NEW spec into
-    // `iterate-plan.json#specs` while certify keeps reporting the
-    // FROZEN one — meaning iterations can exercise spec B while the
-    // certificate still claims spec A. Fail fast at the boundary.
-    const frozenSpecs = readFrozenSpecsCovered(protoRecord);
-    // `null` means the frozen seed is missing or malformed (absent
-    // `specsCovered`, empty array, or non-string entries). Cycle 0
-    // is responsible for writing the seed; if a cycle >= 1 invocation
-    // arrives without one, the file was hand-edited or partially
-    // corrupted between cycles. Proceeding silently would let
-    // iterate write a spec id into `iterate-plan.json` that is never
-    // anchored against the cycle-0 seed — and certify (which reads
-    // `specsCovered` for the certificate body) would later block on
-    // the same gap. Fail fast here so the operator hits a single,
-    // clear error pointing at the right remediation.
-    if (frozenSpecs === null) {
-      error(
-        "qfai prototyping iterate: prototyping.json#specsCovered is missing or " +
-          "malformed (must be a non-empty array of non-empty strings, seeded by " +
-          "cycle 0). Re-run with `--cycle 0 --target-url <url>` to refreeze the loop.",
-      );
-      return 2;
-    }
-    // Compare element-wise. Today `specs` is always a single-element
-    // array (resolved primary spec id), but `specsCovered` is a
-    // multi-element array per the prototyping.json schema, and the
-    // contract is "every covered spec must match across cycles". A
-    // first-element-only check (`frozenSpecs[0] !== specs[0]`) would
-    // silently let a future multi-spec loop drift on non-zero indices.
-    if (!arraysShallowEqual(frozenSpecs, specs)) {
-      error(
-        "qfai prototyping iterate: prototyping.json#specsCovered (" +
-          `${JSON.stringify(frozenSpecs)}) differs from the currently-resolved ` +
-          `primary spec (${JSON.stringify(specs)}). ` +
-          "The primary spec changed mid-loop; re-run with `--cycle 0 --target-url <url>` to refreeze.",
-      );
-      return 2;
+    if (gate.shortCircuit) {
+      return gate.exitCode;
     }
   }
 
@@ -379,6 +363,32 @@ export async function runPrototypingIterate(
       designMd: { path: ROOT_DESIGN_MD_REL, sha256: currentSha },
       runId: buildRunId(currentSha),
       specsCovered: specs,
+      // cycle-0 SSOT for the spec set under review. Kept single-spec
+      // (mirrors the legacy `specsCovered` field) until the per-spec
+      // iter-NN/spec-NNNN/<screen>.review.json layout migration lands;
+      // certify already hard-fails any multi-spec frozen set on the
+      // flat-iter layout, so persisting the full UI-bearing union here
+      // would render every normal multi-spec run uncertifiable. The
+      // multi-spec UNION is still computed in
+      // `evaluateZeroUiBearingPrecheck` for the no-op short-circuit
+      // signal, and at the cycle ≥ 1 drift gate via `resolveSurfaceUnion`
+      // re-resolution against `frozenSurfaceUnion`; we just do not
+      // freeze it as the multi-spec scope here (per Fix B + 11th-wave
+      // Fix below).
+      frozenSpecsCovered: specs,
+      // cycle-0 SSOT for the multi-spec UI-bearing UNION. The drift
+      // gate at cycle ≥ 1 compares the live UNION against THIS field
+      // (apples-to-apples). Without this field the drift gate would
+      // compare the single-spec frozen scope against the live UNION
+      // and false-positive any project whose baseline already carries
+      // ≥ 2 UI-bearing specs. See 12th-wave Fix (codex r3265480688,
+      // MAJOR/P1).
+      frozenSurfaceUnion: [...cycleZeroUnion],
+      // cycle-0 SSOT for the license-class catalog. Recording it here
+      // means cycle >= 1 license-verify reads the FROZEN catalog
+      // (immutable through the loop), not a mutable in-memory default
+      // that could re-baseline mid-run.
+      frozenLicenseCatalog: DEFAULT_LICENSE_CATALOG,
     });
     // Defense-in-depth: stale `iter-NN/` directories from a prior loop
     // could otherwise survive on disk and bind certify to evidence the
@@ -393,7 +403,7 @@ export async function runPrototypingIterate(
     // sealed into the next certificate's evidenceDigests. Surfacing
     // the failed dir + cause lets the operator clear the lock before
     // iterate writes the new plan.
-    const rmResult = await deleteStaleIterDirs(path.join(options.root, PROTOTYPING_EVIDENCE_REL));
+    const rmResult = await clearEvidenceIterDirs(path.join(options.root, PROTOTYPING_EVIDENCE_REL));
     if (!rmResult.ok) {
       const reason =
         rmResult.cause instanceof Error ? rmResult.cause.message : String(rmResult.cause);
@@ -415,6 +425,86 @@ export async function runPrototypingIterate(
     await deleteStaleCompletionCertificate(
       path.join(options.root, COMPLETION_CERTIFICATE_REL_PATH),
     );
+  }
+
+  // 4b) License verify for stock-photo image sources. The cycle-0
+  //     frozen license catalog is the SSOT; every cycle that has
+  //     `imageSources[]` recorded on prototyping.json must pass the
+  //     verify or the run hard-stops with exit 66. The catalog is
+  //     sourced from the cycle-0 frozen value when present
+  //     (cycle >= 1), falling back to the in-memory default on
+  //     cycle 0 (the freshly-written catalog from writeSeedMetadata
+  //     above is functionally identical).
+  //
+  //     Pragmatic data flow: `imageSources[]` is read from
+  //     `prototyping.json#imageSources` (or skipped silently when
+  //     absent). The current batch lands the verify gate; the
+  //     population path (handoff yaml extraction, DESIGN.md pool) is
+  //     left to a later batch. Tests that exercise this branch seed
+  //     the field directly.
+  const protoRecordForLicense =
+    options.cycle === 0 ? null : await readPrototypingJson(protoJsonAbs);
+  const collected = collectImageSources(protoRecordForLicense);
+  if (!collected.ok) {
+    // 10th-wave Fix H (codex r3265260665, P2): hard-stop on malformed
+    // `imageSources[]`. Pre-fix the malformed entries were silently
+    // dropped and an all-malformed array reduced to `[]`, which then
+    // skipped the exit-66 license gate entirely. Surface each
+    // offending index + field so the operator can fix the typo
+    // (typically a misspelled `license` / `licence` swap) before the
+    // cycle proceeds.
+    error(
+      "qfai prototyping iterate: prototyping.json#imageSources is malformed — " +
+        `${collected.errors.length} error(s): ${collected.errors.join("; ")}. ` +
+        "Each entry must be a JSON object with non-empty string fields " +
+        "{url, source, license}; `attribution` is also required and a " +
+        "missing/empty value is rejected by the runtime license gate " +
+        "(exit 66) rather than as an input-shape error.",
+    );
+    return 2;
+  }
+  // 13th-wave Fix (codex r3265947252, P2): detect cycle ≥ 1 drift of the
+  // cycle-0 frozen license catalog against the in-memory SSOT
+  // (`DEFAULT_LICENSE_CATALOG`). Pre-fix the verifier used the on-disk
+  // `frozenLicenseCatalog` directly (or silently fell back to
+  // `DEFAULT_LICENSE_CATALOG` when the field was malformed), which let
+  // an operator who added e.g. `pinterest` to `allowedSources` pass an
+  // otherwise-unallowed `imageSources[]` entry with exit 0. The CLI
+  // contract pins `frozenLicenseCatalog` drift to exit 2 (lock drift);
+  // surface that here before invoking the runtime license gate so the
+  // operator hits the precise diagnostic.
+  if (protoRecordForLicense !== null && options.cycle >= 1) {
+    const onDisk = readFrozenLicenseCatalog(protoRecordForLicense);
+    if (onDisk === null || !licenseCatalogsEqual(onDisk, DEFAULT_LICENSE_CATALOG)) {
+      error(
+        "qfai prototyping iterate: prototyping.json#frozenLicenseCatalog drifted " +
+          "from the cycle-0 frozen license catalog (the in-memory " +
+          "DEFAULT_LICENSE_CATALOG is the SSOT; mid-loop edits — including " +
+          "additions to `allowedSources` / `licenseTiers` / `sourceHosts`, " +
+          "or a malformed shape — are treated as lock drift). Restore the " +
+          "frozen catalog or re-run `--cycle 0 --target-url <url>` to refreeze.",
+      );
+      return 2;
+    }
+  }
+  const imageSources = collected.sources;
+  if (imageSources !== null && imageSources.length > 0) {
+    // Catalog drift is rejected above; the verifier authority is the
+    // in-memory SSOT (mirrored at cycle 0 into prototyping.json).
+    const catalog = DEFAULT_LICENSE_CATALOG;
+    const verifyResult = licenseVerify(imageSources, catalog);
+    if (!verifyResult.ok) {
+      const offending = verifyResult.errors
+        .map((e) => `${e.code} (source=${e.source}, url=${e.url})`)
+        .join("; ");
+      error(
+        "qfai prototyping iterate: license verify failed — " +
+          `${verifyResult.errors.length} offending entry/entries: ${offending}. ` +
+          "Replace with allowlisted free stock-photo sources (see cycle-0 frozenLicenseCatalog) " +
+          "or remove the entry.",
+      );
+      return 66;
+    }
   }
 
   // 5) Assign paths and write iterate-plan.json.
@@ -514,12 +604,29 @@ async function readDesignMdFile(absPath: string): Promise<DesignMdReadResult> {
   return { ok: true, text, data: parsed.data };
 }
 
+/**
+ * Structural type-predicate for the loose `PrototypingJsonShape`
+ * record. The shape is intentionally permissive — every field is
+ * `unknown` and individually narrowed by the field-specific readers
+ * (`readFrozenSurfaceUnionField`, `readFrozenLicenseCatalog`,
+ * `collectImageSources`). Accepting any non-array object suffices for
+ * the wrapper; bare `as PrototypingJsonShape` casts on a verified
+ * `Record<string, unknown>` would otherwise promise the per-field
+ * shape this loader does not actually verify (CLAUDE.md "avoid bare
+ * `as` type assertions; prefer type narrowing"). The asymmetry with
+ * `asIterations` (which leaves `iterations[]` typed as `unknown[]`)
+ * is preserved: per-iteration narrowing still lives in `shouldStop`.
+ */
+function isPrototypingJsonShape(value: unknown): value is PrototypingJsonShape {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
 async function readPrototypingJson(absPath: string): Promise<PrototypingJsonShape | null> {
   try {
     const raw = await readFile(absPath, "utf-8");
     const parsed: unknown = JSON.parse(raw);
-    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return null;
-    return parsed as PrototypingJsonShape;
+    if (!isPrototypingJsonShape(parsed)) return null;
+    return parsed;
   } catch {
     return null;
   }
@@ -543,6 +650,212 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+/**
+ * Read `frozenSurfaceUnion` from prototyping.json. Returns `null` when
+ * the field is missing, malformed, **or empty** (zero-length array).
+ * Post-condition: a non-null return value is always a `string[]` of
+ * length ≥ 1 with non-empty string entries — callers can branch on
+ * `!== null` alone without re-checking `length > 0` (codex r3270095015
+ * NIT, 19th-wave).
+ *
+ * 13th-wave Fix (codex r3265953324, MAJOR/P1): the cycle ≥ 1 drift gate
+ * no longer falls back to `frozenSpecsCovered` when this field is
+ * absent — pre-12th-wave records had a single-spec `frozenSpecsCovered`
+ * that, compared against the live multi-spec UNION, produced the
+ * original MAJOR/P1 false-positive (TC-0012-0415 / codex r3265480688).
+ * The fallback documented "the prior — buggy — baseline" silently
+ * restored the bug. Callers must now hard-fail at cycle ≥ 1 when
+ * `null` is returned and instruct the operator to re-seed via
+ * `--cycle 0` so a fresh UNION snapshot is written.
+ */
+function readFrozenSurfaceUnionField(record: PrototypingJsonShape): string[] | null {
+  const raw = record.frozenSurfaceUnion;
+  if (!Array.isArray(raw) || raw.length === 0) return null;
+  const out: string[] = [];
+  for (const value of raw) {
+    if (typeof value !== "string" || value.length === 0) return null;
+    out.push(value);
+  }
+  return out;
+}
+
+/**
+ * Read `frozenLicenseCatalog` from prototyping.json. Returns `null`
+ * when the field is missing or malformed so callers can fall back to
+ * the in-memory default.
+ */
+/**
+ * Deep-equal check for two {@link LicenseCatalog} records. Used at
+ * cycle ≥ 1 to detect drift of the on-disk `frozenLicenseCatalog`
+ * field against the in-memory SSOT (`DEFAULT_LICENSE_CATALOG`).
+ *
+ * 13th-wave Fix (codex r3265947252, P2): order-insensitive within each
+ * string[] (allowedSources, licenseTiers[*], sourceHosts[*]) so a
+ * legitimate cycle-0 snapshot whose JSON serialization reordered the
+ * entries deterministically still compares equal.
+ */
+function licenseCatalogsEqual(a: LicenseCatalog, b: LicenseCatalog): boolean {
+  if (!stringArraysSetEqual(a.allowedSources, b.allowedSources)) return false;
+  if (!recordOfStringArraysEqual(a.licenseTiers, b.licenseTiers)) return false;
+  const aHosts = a.sourceHosts;
+  const bHosts = b.sourceHosts;
+  if (aHosts === undefined && bHosts === undefined) return true;
+  if (aHosts === undefined || bHosts === undefined) return false;
+  return recordOfStringArraysEqual(aHosts, bHosts);
+}
+
+function recordOfStringArraysEqual(
+  a: Record<string, readonly string[]>,
+  b: Record<string, readonly string[]>,
+): boolean {
+  const aKeys = Object.keys(a).sort();
+  const bKeys = Object.keys(b).sort();
+  if (aKeys.length !== bKeys.length) return false;
+  for (let i = 0; i < aKeys.length; i += 1) {
+    const ak = aKeys[i];
+    const bk = bKeys[i];
+    if (ak === undefined || bk === undefined || ak !== bk) return false;
+    const av = a[ak];
+    const bv = b[bk];
+    if (av === undefined || bv === undefined) return false;
+    if (!stringArraysSetEqual(av, bv)) return false;
+  }
+  return true;
+}
+
+function stringArraysSetEqual(a: readonly string[], b: readonly string[]): boolean {
+  if (a.length !== b.length) return false;
+  const sortedA = [...a].sort();
+  const sortedB = [...b].sort();
+  for (let i = 0; i < sortedA.length; i += 1) {
+    if (sortedA[i] !== sortedB[i]) return false;
+  }
+  return true;
+}
+
+function readFrozenLicenseCatalog(record: PrototypingJsonShape | null): LicenseCatalog | null {
+  if (!record) return null;
+  const raw = record.frozenLicenseCatalog;
+  if (!isRecord(raw)) return null;
+  const allowed = raw.allowedSources;
+  const tiers = raw.licenseTiers;
+  if (!Array.isArray(allowed) || !isRecord(tiers)) return null;
+  const allowedSources: string[] = [];
+  for (const value of allowed) {
+    if (typeof value !== "string" || value.length === 0) return null;
+    allowedSources.push(value);
+  }
+  const licenseTiers: Record<string, string[]> = {};
+  for (const [k, v] of Object.entries(tiers)) {
+    if (!Array.isArray(v)) return null;
+    const list: string[] = [];
+    for (const entry of v) {
+      if (typeof entry !== "string") return null;
+      list.push(entry);
+    }
+    licenseTiers[k] = list;
+  }
+  // 10th-wave Fix G: parse the optional `sourceHosts` block. Treat a
+  // missing / malformed block as "host check disabled" (backward-compat
+  // with pre-host-pinning catalogs). A malformed entry whose value is
+  // not a string[] returns `null` from the whole reader so the caller
+  // falls back to DEFAULT_LICENSE_CATALOG rather than silently
+  // shipping a half-valid frozen catalog.
+  let sourceHosts: Record<string, string[]> | undefined;
+  const rawHosts = raw.sourceHosts;
+  if (rawHosts !== undefined) {
+    if (!isRecord(rawHosts)) return null;
+    const parsedHosts: Record<string, string[]> = {};
+    for (const [k, v] of Object.entries(rawHosts)) {
+      if (!Array.isArray(v)) return null;
+      const list: string[] = [];
+      for (const entry of v) {
+        if (typeof entry !== "string" || entry.length === 0) return null;
+        list.push(entry);
+      }
+      parsedHosts[k] = list;
+    }
+    sourceHosts = parsedHosts;
+  }
+  const out: LicenseCatalog = { allowedSources, licenseTiers };
+  if (sourceHosts !== undefined) {
+    return { ...out, sourceHosts };
+  }
+  return out;
+}
+
+type CollectImageSourcesResult =
+  | { ok: true; sources: ImageSource[] | null }
+  | { ok: false; errors: string[] };
+
+/**
+ * Read `imageSources` from prototyping.json and narrow each entry
+ * to the strict `{url, license, attribution, source}` shape. Returns
+ * `{ok: true, sources: null}` when the field is absent (caller skips
+ * license-verify); `{ok: true, sources: []}` when the field is present
+ * but empty (caller also skips); `{ok: true, sources: <non-empty>}`
+ * when every entry validates.
+ *
+ * 10th-wave Fix H (codex r3265260665, P2): malformed entries are no
+ * longer silently dropped. Pre-fix, an `imageSources[]` whose entries
+ * all carried e.g. a misspelled `licence:` field reduced to an empty
+ * narrowed array, and the caller skipped the exit-66 license gate
+ * entirely. Now any non-record entry, missing field, or non-string
+ * field returns `{ok: false, errors}` listing the offending index +
+ * field; the caller surfaces a hard error and exits non-zero so the
+ * operator fixes the typo before the cycle proceeds.
+ */
+function collectImageSources(record: PrototypingJsonShape | null): CollectImageSourcesResult {
+  if (!record) return { ok: true, sources: null };
+  const raw = record.imageSources;
+  if (raw === undefined) return { ok: true, sources: null };
+  if (!Array.isArray(raw)) {
+    return {
+      ok: false,
+      errors: ["imageSources must be an array (got non-array value)"],
+    };
+  }
+  const out: ImageSource[] = [];
+  const errors: string[] = [];
+  raw.forEach((entry, index) => {
+    if (!isRecord(entry)) {
+      errors.push(`imageSources[${index}]: entry is not a JSON object`);
+      return;
+    }
+    const url = entry.url;
+    const source = entry.source;
+    const license = entry.license;
+    const missing: string[] = [];
+    const urlOk = typeof url === "string" && url.length > 0;
+    const sourceOk = typeof source === "string" && source.length > 0;
+    const licenseOk = typeof license === "string" && license.length > 0;
+    if (!urlOk) missing.push("url");
+    if (!sourceOk) missing.push("source");
+    if (!licenseOk) missing.push("license");
+    if (!urlOk || !sourceOk || !licenseOk) {
+      errors.push(
+        `imageSources[${index}]: missing or non-string required field(s): ${missing.join(", ")}`,
+      );
+      return;
+    }
+    // 12th-wave Fix (codex r3265482144, P2): promote `attribution`
+    // into the runtime ImageSource. Missing / non-string attribution
+    // is intentionally NOT treated as an input-shape (exit 2) error
+    // — the CLI contract puts "missing attribution" under exit 66
+    // (license-verify rejection), so we default to "" here and let
+    // `licenseVerify` emit the structured `license-missing-attribution`
+    // diagnostic. This keeps the runtime gate's exit code aligned
+    // with the contract surface.
+    const rawAttribution = entry.attribution;
+    const attribution = typeof rawAttribution === "string" ? rawAttribution : "";
+    out.push({ url, source, license, attribution });
+  });
+  if (errors.length > 0) {
+    return { ok: false, errors };
+  }
+  return { ok: true, sources: out };
+}
+
 function arraysShallowEqual(a: readonly string[], b: readonly string[]): boolean {
   if (a.length !== b.length) return false;
   for (let i = 0; i < a.length; i += 1) {
@@ -555,6 +868,15 @@ type SeedMetadata = {
   designMd: DesignMdRecord;
   runId: string;
   specsCovered: readonly string[];
+  frozenSpecsCovered: readonly string[];
+  /**
+   * Cycle-0 UI-bearing UNION snapshot. Persisted in prototyping.json
+   * as `frozenSurfaceUnion` and consumed by the cycle ≥ 1 drift gate
+   * as the apples-to-apples baseline for the live UNION comparison.
+   * See 12th-wave Fix (codex r3265480688, MAJOR/P1).
+   */
+  frozenSurfaceUnion: readonly string[];
+  frozenLicenseCatalog: LicenseCatalog;
 };
 
 async function writeSeedMetadata(protoJsonAbs: string, seed: SeedMetadata): Promise<void> {
@@ -569,10 +891,7 @@ async function writeSeedMetadata(protoJsonAbs: string, seed: SeedMetadata): Prom
   try {
     const raw = await readFile(protoJsonAbs, "utf-8");
     const parsed: unknown = JSON.parse(raw);
-    body =
-      parsed && typeof parsed === "object" && !Array.isArray(parsed)
-        ? (parsed as PrototypingJsonShape)
-        : {};
+    body = isPrototypingJsonShape(parsed) ? parsed : {};
   } catch {
     body = {};
   }
@@ -605,19 +924,63 @@ async function writeSeedMetadata(protoJsonAbs: string, seed: SeedMetadata): Prom
   delete body.completionClaimed;
   delete body.phase;
   delete body.completionCertificate;
+  // `imageSources` is per-loop content (image fills recorded as the
+  // prototype gains them). Cycle 0 is a hard reset, so the prior
+  // loop's image fills must not leak into the new run's license
+  // verify. The frozen catalog is re-seeded below.
+  delete body.imageSources;
   // Cycle 0 always re-anchors designMd, runId, and specsCovered.
   // specsCovered is sourced from resolvePrimaryPrototypingSpec on every
   // cycle 0 — it is a per-loop slot, not an operator-defined one.
   body.designMd = seed.designMd;
   body.runId = seed.runId;
   body.specsCovered = [...seed.specsCovered];
+  // Persist the cycle-0 SSOT fields. `frozenSpecsCovered` is the
+  // single-spec scope under review (mirrors `specsCovered`);
+  // `frozenSurfaceUnion` is the multi-spec UI-bearing UNION that the
+  // cycle ≥ 1 drift gate compares the live UNION against;
+  // `frozenLicenseCatalog` is the stock-photo allowlist used by
+  // `licenseVerify` in every subsequent cycle.
+  body.frozenSpecsCovered = [...seed.frozenSpecsCovered];
+  body.frozenSurfaceUnion = [...seed.frozenSurfaceUnion];
+  body.frozenLicenseCatalog = {
+    allowedSources: [...seed.frozenLicenseCatalog.allowedSources],
+    licenseTiers: Object.fromEntries(
+      Object.entries(seed.frozenLicenseCatalog.licenseTiers).map(([k, v]) => [k, [...v]]),
+    ),
+    // 10th-wave Fix G: persist the per-source host allowlist when
+    // present so cycle ≥1 license-verify reads the FROZEN host
+    // binding (immutable through the loop). Older catalogs without
+    // sourceHosts round-trip cleanly (the field is omitted).
+    ...(seed.frozenLicenseCatalog.sourceHosts !== undefined
+      ? {
+          sourceHosts: Object.fromEntries(
+            Object.entries(seed.frozenLicenseCatalog.sourceHosts).map(([k, v]) => [k, [...v]]),
+          ),
+        }
+      : {}),
+  };
   await mkdir(path.dirname(protoJsonAbs), { recursive: true });
   await writeFile(protoJsonAbs, `${JSON.stringify(body, null, 2)}\n`, "utf-8");
 }
 
-type DeleteStaleIterDirsResult = { ok: true } | { ok: false; failedDir: string; cause: unknown };
+type ClearEvidenceIterDirsResult = { ok: true } | { ok: false; failedDir: string; cause: unknown };
 
-async function deleteStaleIterDirs(evidenceRootAbs: string): Promise<DeleteStaleIterDirsResult> {
+/**
+ * Cycle-0 reset helper: removes every `iter-NN/` directory under the
+ * pre-joined `<root>/.qfai/evidence/prototyping` evidence root and
+ * returns a structured `{ok, failedDir, cause}` result so the caller
+ * can fail-closed without exception unwinding.
+ *
+ * Intentionally distinct from `core/prototyping/iterationPaths.ts`'s
+ * `deleteStaleIterDirs(root)`, which takes a project root, throws on
+ * the first rm failure, and returns a flat `{deleted: string[]}`
+ * summary for the multi-spec migration helpers. The two contracts are
+ * not unified yet.
+ */
+async function clearEvidenceIterDirs(
+  evidenceRootAbs: string,
+): Promise<ClearEvidenceIterDirsResult> {
   let entries: string[];
   try {
     entries = await readdir(evidenceRootAbs);
@@ -686,6 +1049,13 @@ async function deleteStaleCompletionCertificate(certAbs: string): Promise<void> 
     );
   }
 }
+
+// 19th-wave Fix (codex r3270055214, MAJOR): `specDirExists` and
+// `resolveSurfaceUnion` (below) were moved to
+// `core/prototyping/specResolution.ts` so the CLI → CLI sideways
+// import that `prototypingCertify.ts` had to take (to align with
+// iterate's drift gate) is replaced by both CLI commands importing
+// the union resolver from a single core module.
 
 function buildRunId(designMdSha: string): string {
   return `loop-${designMdSha.slice(0, 12)}-${Date.now().toString(36)}`;
@@ -782,4 +1152,339 @@ function nextActionsFor(cycle: number): string[] {
     return ["generator-iterate", "capture", "review", "handoff", "certify"];
   }
   return ["generator-iterate", "capture", "review", `iterate --cycle ${cycle + 1}`];
+}
+
+type ConfigLoadResult = Awaited<ReturnType<typeof loadConfig>>;
+
+type ZeroUiBearingPrecheckResult =
+  | { shortCircuit: true; exitCode: number }
+  | {
+      shortCircuit: false;
+      earlyConfig: ConfigLoadResult;
+      /**
+       * The cycle-0 UI-bearing UNION (all specs the project carries
+       * with `surface_type: ui-bearing` / matching UI contract / title
+       * marker / pinned primarySpecId). Exposed on the continue path
+       * so the caller can persist it as `frozenSurfaceUnion` in
+       * prototyping.json — the cycle ≥ 1 drift gate then compares the
+       * live UNION against this frozen UNION (apples-to-apples) instead
+       * of against the single-spec `frozenSpecsCovered`. See 11th-wave
+       * Fix (codex r3265480688, MAJOR/P1).
+       */
+      unionSpecs: readonly string[];
+    };
+
+/**
+ * Section 0 of `runPrototypingIterate`: zero UI-bearing spec → no-op.
+ *
+ * Loads config + resolves the UI-bearing spec set once and decides
+ * whether the iterate command should short-circuit with exit 0 (no
+ * UI surface to drive) or fall through to the DESIGN.md / cycle
+ * pipeline. The pre-check intentionally runs BEFORE the DESIGN.md
+ * gate so a project with no UI surface is never blocked on a missing
+ * or unfrozen DESIGN.md.
+ *
+ * The `prototyping.primarySpecId` config escape hatch is honoured:
+ * if the multi-spec resolver returns zero specs (because none carry
+ * `surface_type: ui-bearing` and none ship a matching UI contract)
+ * but the operator has pinned a primary spec that exists on disk,
+ * the no-op short-circuit is skipped and the legacy
+ * `resolvePrimaryPrototypingSpec` lineage drives the loop.
+ *
+ * On the continue path, the loaded config snapshot is returned so the
+ * caller can reuse it without re-IO'ing the YAML file.
+ */
+async function evaluateZeroUiBearingPrecheck(root: string): Promise<ZeroUiBearingPrecheckResult> {
+  const earlyConfig = await loadConfig(root);
+  const unionSpecs = await resolveSurfaceUnion(root, earlyConfig.config);
+  if (unionSpecs.length === 0) {
+    info(
+      "qfai prototyping iterate: no UI-bearing specs resolved — deterministic no-op " +
+        "(no spec carries `surface_type: ui-bearing` and no matching `.qfai/contracts/ui/*.yaml`). " +
+        "Add the marker or contract to enable the prototyping loop.",
+    );
+    return { shortCircuit: true, exitCode: 0 };
+  }
+  return {
+    shortCircuit: false,
+    earlyConfig,
+    unionSpecs,
+  };
+}
+
+/**
+ * @internal Back-compat re-export only. The canonical export lives at
+ * `core/prototyping/specResolution.ts` (moved there in the 19th-wave
+ * architecture cleanup, codex r3270055214). New call sites MUST import
+ * from the core module directly; this re-export only exists so the
+ * wave-8/10/13 unit tests in `tests/cli/commands/prototypingIterate.test.ts`
+ * keep resolving against the previous CLI-layer path while we let the
+ * test-side import migration land in a focused follow-up wave (tracked
+ * implicitly by removing this re-export once those tests update).
+ * `prototypingCertify.ts` already imports from the core module
+ * directly, restoring the CLI → core dependency DAG. (21st-wave
+ * @internal annotation per codex r3270215675 / r3270214114 MINOR.)
+ */
+export { resolveSurfaceUnion };
+
+type CycleGteOneGateInput = {
+  root: string;
+  cycle: number;
+  protoJsonAbs: string;
+  currentSha: string;
+  lockSha: string | null;
+  designMd: DesignMd;
+  specs: readonly string[];
+  config: ConfigLoadResult["config"];
+};
+
+type CycleGteOneGateResult = { shortCircuit: true; exitCode: number } | { shortCircuit: false };
+
+/**
+ * Section 2 of `runPrototypingIterate`: cycle >= 1 gates.
+ *
+ * Composes (in order) the hash-gate against the lock-anchored cache
+ * in prototyping.json, the convergence/max-budget stop, the
+ * history-monotonicity check, the expected-next-cycle check, the
+ * frozen `specsCovered` equality check, and the mid-run spec-set
+ * drift check. Each sub-gate either returns `{shortCircuit: true,
+ * exitCode}` to abort iterate immediately or falls through.
+ *
+ * Falling all the way through returns `{shortCircuit: false}` and the
+ * caller proceeds to cycle-0 `--target-url` validation +
+ * iterate-plan.json generation.
+ *
+ * The lock equality enforced by the caller (DESIGN.md.lock.yaml ===
+ * live DESIGN.md sha256) plus the cache equality enforced here
+ * (prototyping.json#designMd.sha256 === live === lock) jointly form a
+ * 3-way invariant; the cache is intentionally a cache of the lock,
+ * never a third independent SHA SSOT.
+ */
+async function evaluateCycleGteOneGate(
+  input: CycleGteOneGateInput,
+): Promise<CycleGteOneGateResult> {
+  const protoRecord = await readPrototypingJson(input.protoJsonAbs);
+  if (!protoRecord || !protoRecord.designMd || typeof protoRecord.designMd.sha256 !== "string") {
+    error(
+      "qfai prototyping iterate: prototyping.json#designMd is missing. " +
+        "Re-run from cycle 0 so the seed cycle records the DESIGN.md sha256.",
+    );
+    return { shortCircuit: true, exitCode: 2 };
+  }
+  if (protoRecord.designMd.sha256 !== input.currentSha) {
+    // codex AHM3: phrase the error so both the legacy "sha256 mismatch"
+    // text AND the canonical mid-loop-drift regex
+    // /DESIGN\.md hash mismatch.*re-run from cycle 0/ match.
+    // Reviewers (and the prototyping orchestrator) parse stderr for
+    // the canonical phrase "DESIGN.md hash mismatch" plus
+    // "re-run from cycle 0"; legacy tests still grep for
+    // "sha256 mismatch" / "edited mid-loop", so both phrases coexist
+    // in the same message.
+    error(
+      "qfai prototyping iterate: DESIGN.md hash mismatch — root DESIGN.md sha256 differs from " +
+        `the cycle-0 frozen value (frozen=${protoRecord.designMd.sha256} current=${input.currentSha}). ` +
+        "DESIGN.md was edited mid-loop; re-run from cycle 0 to refreeze.",
+    );
+    return { shortCircuit: true, exitCode: 2 };
+  }
+  if (input.lockSha !== null && protoRecord.designMd.sha256 !== input.lockSha) {
+    error(
+      "qfai prototyping iterate: prototyping.json#designMd.sha256 (" +
+        `${protoRecord.designMd.sha256}) differs from DESIGN.md.lock.yaml ` +
+        `(${input.lockSha}). The lock was refrozen mid-loop; re-run prototyping from cycle 0.`,
+    );
+    return { shortCircuit: true, exitCode: 2 };
+  }
+  // 30th-wave Fix (codex r3270687650, P1 — chatgpt-codex-connector):
+  // run the cycle ≥ 1 lock-drift gates BEFORE `shouldStop()` so a
+  // converged / max-budget loop cannot mask a `frozenSurfaceUnion`
+  // missing-or-malformed record or a live-vs-frozen spec-set drift.
+  // Pre-fix the drift checks lived AFTER `shouldStop`, which meant a
+  // run that satisfied `shouldStop` (axes-exceptional or
+  // max-iterations) exited 64/65 immediately and the drift gate
+  // never fired — a mid-loop UI-marker removal or contract edit was
+  // silently accepted as a successful convergence / exhaustion. The
+  // ordering now mirrors the DESIGN.md hash check above: lock-drift
+  // classes (designMd, frozenSurfaceUnion presence + drift) gate the
+  // run first; convergence / budget signals come after.
+  const recordedIterations = asIterations(protoRecord);
+  const frozenUnion = readFrozenSurfaceUnionField(protoRecord);
+  if (frozenUnion === null) {
+    // Split the diagnostic into primary CTA + justification so the
+    // recovery action is the headline and the rationale follows on a
+    // visually-separated indented line. 24th-wave refinement: insert a
+    // blank `error("")` between the two so narrow-terminal wrap does
+    // not visually fuse the CTA's last line with the `Reason:` line.
+    error(
+      "qfai prototyping iterate: prototyping.json#frozenSurfaceUnion is missing or " +
+        "malformed. Re-run with `--cycle 0 --target-url <url>` to refreeze " +
+        "the loop with a current UNION snapshot.",
+    );
+    error("");
+    error(
+      "  Reason: the cycle ≥ 1 drift gate requires a cycle-0-frozen multi-spec " +
+        "UI-bearing UNION snapshot; the gate does not fall back to the " +
+        "single-spec `frozenSpecsCovered` because that fallback would compare " +
+        "a single-spec frozen scope against the live multi-spec union and " +
+        "false-positive-fire for any project with ≥ 2 UI-bearing specs.",
+    );
+    return { shortCircuit: true, exitCode: 2 };
+  }
+  const liveUiBearing = await resolveSurfaceUnion(input.root, input.config);
+  const drift = checkSpecsCoveredDrift(frozenUnion, liveUiBearing);
+  if (drift.drifted) {
+    const parts: string[] = [];
+    if (drift.added.length > 0) {
+      parts.push(`new=[${drift.added.join(", ")}]`);
+    }
+    if (drift.removed.length > 0) {
+      parts.push(`removed=[${drift.removed.join(", ")}]`);
+    }
+    error(
+      "qfai prototyping iterate: spec-set drift detected mid-loop — " +
+        `${parts.join(" ")}. The cycle-0 frozen UI-bearing union is ${JSON.stringify(frozenUnion)}; ` +
+        `the live UI-bearing union is ${JSON.stringify(liveUiBearing)}. ` +
+        "The drifted spec(s) are deferred to the next `--cycle 0` invocation. " +
+        "Continue this loop with the frozen spec set, or restart with " +
+        "`--cycle 0 --target-url <url>` to pick up the new spec set.",
+    );
+    return { shortCircuit: true, exitCode: 2 };
+  }
+  const stop = shouldStop(recordedIterations);
+  if (stop !== null) {
+    // codex 8thM: shouldStop accepts the reviewer-recorded
+    // `designMdViolations: []` at face value, but the shipped reviewer
+    // prompt instructs reviewers to leave that field empty unless a
+    // runtime gate injects findings — and the only runtime scanner
+    // historically lived in `certify`. So a prototype with DESIGN.md
+    // drift could converge here ("axes-exceptional") and only fail
+    // later at certification. Re-run the runtime scanner against the
+    // accepted iteration's HTML before honoring the stop, so iterate
+    // continues another iteration to fix the drift instead of
+    // pretending the loop converged.
+    if (stop === "axes-exceptional") {
+      const recomputed = await recomputeFinalIterDesignMdViolations(
+        input.root,
+        recordedIterations.length - 1,
+        input.designMd,
+      );
+      const first = recomputed[0];
+      if (first !== undefined) {
+        // codex AG08r: max-budget drift edge case. If the last iter is
+        // already at MAX_ITERATION_INDEX (cycle 9), there is no valid
+        // next cycle (--cycle is capped at 9). Falling through to the
+        // expectedNextCycle gate would then exit 2 with a cycle-mismatch
+        // error, blocking the operator from completing a run that
+        // exhausted the iteration budget with drift still present. In
+        // that case emit the max-iterations stop instead — the loop
+        // truly is over (drift or not), and the recovery is `--cycle 0`
+        // restart, not another within-budget cycle.
+        const lastIter = recordedIterations[recordedIterations.length - 1];
+        const lastIndex =
+          isRecord(lastIter) && typeof lastIter.index === "number" ? lastIter.index : -1;
+        if (lastIndex >= MAX_ITERATION_INDEX) {
+          info(
+            "qfai prototyping iterate: review reported convergence but the " +
+              `accepted iter HTML still contains ${recomputed.length} DESIGN.md violation(s) ` +
+              `AND the iteration budget is exhausted (index=${lastIndex}). ` +
+              `First violation: ${first.kind}=${first.found}. ` +
+              "Run `qfai prototyping iterate --cycle 0 --target-url <url>` to restart the loop.",
+          );
+          return { shortCircuit: true, exitCode: emitStop("max-iterations") };
+        }
+        info(
+          "qfai prototyping iterate: review reported convergence but the " +
+            `accepted iter HTML still contains ${recomputed.length} DESIGN.md violation(s); ` +
+            "continuing another iteration to fix drift. " +
+            `First violation: ${first.kind}=${first.found}.`,
+        );
+        // Fall through to the next-cycle plan below (no early return).
+      } else {
+        return { shortCircuit: true, exitCode: emitStop(stop) };
+      }
+    } else {
+      return { shortCircuit: true, exitCode: emitStop(stop) };
+    }
+  }
+  // Defense-in-depth: confirm the recorded loop history is itself
+  // monotonic before deriving the expected next cycle from its
+  // length. A hand-edited or partially-corrupted `prototyping.json`
+  // could carry e.g. `iterations.length === 3` but
+  // `iterations[2].index === 5`; in that case `length` is no longer
+  // the next-cycle index and the validator's per-index check would
+  // reject the next iter with a delayed error. Catch the corrupt
+  // history at the command boundary instead.
+  const gapIndex = recordedIterations.findIndex((it, i) => {
+    if (!isRecord(it)) return true;
+    return it.index !== i;
+  });
+  if (gapIndex !== -1) {
+    error(
+      `qfai prototyping iterate: prototyping.json#iterations[${gapIndex}].index ` +
+        `is not ${gapIndex}; the loop history is corrupted. ` +
+        "Re-run with `--cycle 0 --target-url <url>` to refreeze the loop.",
+    );
+    return { shortCircuit: true, exitCode: 2 };
+  }
+  // Reject out-of-sequence cycle requests. `iterations[i].index === i`
+  // is enforced by the validator (QFAI-PROT-* index-monotonicity), so
+  // jumping straight to `--cycle 3` after only `iter-00` was recorded
+  // would create an `iter-03/iterate-plan.json` that the validator
+  // later rejects, blocking validation/certification with a
+  // not-easy-to-read error. Fail up front instead. The check runs
+  // AFTER `shouldStop` so a converged or max-budget loop returns its
+  // stop reason cleanly even when the seed lineage is sparse.
+  const expectedNextCycle = recordedIterations.length;
+  if (input.cycle !== expectedNextCycle) {
+    error(
+      `qfai prototyping iterate: expected --cycle ${expectedNextCycle} ` +
+        `(iterations.length=${recordedIterations.length}); got --cycle ${input.cycle}. ` +
+        "Re-run with the expected cycle, or restart the loop with " +
+        "`--cycle 0 --target-url <url>`.",
+    );
+    return { shortCircuit: true, exitCode: 2 };
+  }
+  // Cycles >= 1 must reuse the frozen `specsCovered` from cycle 0.
+  // If `prototyping.primarySpecId` or a UI-bearing marker has shifted
+  // mid-loop, the resolved primary spec here would differ from the
+  // recorded one, and iter-plan would write the NEW spec into
+  // `iterate-plan.json#specs` while certify keeps reporting the
+  // FROZEN one — meaning iterations can exercise spec B while the
+  // certificate still claims spec A. Fail fast at the boundary.
+  const frozenSpecs = readFrozenSpecsCovered(protoRecord);
+  // `null` means the frozen seed is missing or malformed (absent
+  // `specsCovered`, empty array, or non-string entries). Cycle 0
+  // is responsible for writing the seed; if a cycle >= 1 invocation
+  // arrives without one, the file was hand-edited or partially
+  // corrupted between cycles. Proceeding silently would let
+  // iterate write a spec id into `iterate-plan.json` that is never
+  // anchored against the cycle-0 seed — and certify (which reads
+  // `specsCovered` for the certificate body) would later block on
+  // the same gap. Fail fast here so the operator hits a single,
+  // clear error pointing at the right remediation.
+  if (frozenSpecs === null) {
+    error(
+      "qfai prototyping iterate: prototyping.json#specsCovered is missing or " +
+        "malformed (must be a non-empty array of non-empty strings, seeded by " +
+        "cycle 0). Re-run with `--cycle 0 --target-url <url>` to refreeze the loop.",
+    );
+    return { shortCircuit: true, exitCode: 2 };
+  }
+  // Compare element-wise. Today `specs` is always a single-element
+  // array (resolved primary spec id), but `specsCovered` is a
+  // multi-element array per the prototyping.json schema, and the
+  // contract is "every covered spec must match across cycles". A
+  // first-element-only check (`frozenSpecs[0] !== specs[0]`) would
+  // silently let a future multi-spec loop drift on non-zero indices.
+  if (!arraysShallowEqual(frozenSpecs, input.specs)) {
+    error(
+      "qfai prototyping iterate: prototyping.json#specsCovered (" +
+        `${JSON.stringify(frozenSpecs)}) differs from the currently-resolved ` +
+        `primary spec (${JSON.stringify(input.specs)}). ` +
+        "The primary spec changed mid-loop; re-run with `--cycle 0 --target-url <url>` to refreeze.",
+    );
+    return { shortCircuit: true, exitCode: 2 };
+  }
+
+  return { shortCircuit: false };
 }

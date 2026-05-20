@@ -1,4 +1,156 @@
 # 08 Open Questions
 
-- None blocking for the current skill-first posture.
 - Historical runtime/mode questions are superseded by [07_Decisions.md](./07_Decisions.md).
+
+## OQ-0012-0002: `prototyping.json#iterations[]` shape under per-spec namespacing
+
+- Gate: implement
+- Disposition: open
+- Owner: solution-architect
+- Due: 2026-06-15
+- Severity: medium
+- Source: CHG-002 integration follow-up (requirements-analyst flagged 2026-05-18).
+- Question: When iter-dir layout becomes `iter-NN/spec-NNNN/<screen>.review.json`, the top-level `prototyping.json#iterations[]` array recorded per absorbed spec-0017 / DR-0012-0024 needs to be re-modeled. Options: (A) keep flat `iterations[]` with `spec` discriminator on each entry; (B) nest as `iterationsBySpec[specId][]`; (C) split into per-spec `prototyping-<specId>.json`.
+- Recommendation: (B) for read locality with `readFrozenSpecsCovered()` / certify aggregation.
+- Resolves: blocks final code landing in `iteration.ts` / `prototypingIterate.ts`.
+
+## OQ-0012-0003: `pivotDirective` retention vs supersede
+
+- Gate: implement
+- Disposition: open
+- Owner: solution-architect
+- Due: 2026-06-15
+- Severity: medium
+- Source: CHG-002 integration follow-up (requirements-analyst flagged 2026-05-18).
+- Question: BR-0012-0021 / AC-0012-0023 / AC-0012-0026 / AC-0012-0027 define `computePivotDirective(history)` as a per-iter `continue | refine | pivot` hint to the generator. The new qualitative-only convergence (BR-0012-0032 / AC-0012-0042) does not consume it. Options: (A) retain as per-`(spec, cycle)` generator hint (no functional change); (B) supersede entirely (clean removal).
+- Recommendation: (A) — directional hint to the generator is independent of the convergence gate.
+- Resolves: blocks reviewer-prompt / generator-prompt reference cleanup.
+
+## OQ-0012-0004: `critique` field cleanup under `*Feel` schema
+
+- Gate: implement
+- Disposition: open
+- Owner: solution-architect
+- Due: 2026-06-15
+- Severity: low
+- Source: CHG-002 integration follow-up (requirements-analyst flagged 2026-05-18).
+- Question: AC-0012-0022 was superseded by AC-0012-0041. Does `<screen>.review.json` schema also drop the `critique: string` field entirely, or keep it as an optional global summary alongside the six `*Feel` fields? Options: (A) drop entirely (six `*Feel` fields cover all prose); (B) keep optional `summary` field (e.g. ≤ 100 words) for cycle-level synthesis.
+- Recommendation: (A) — six `*Feel` fields already provide structured prose coverage.
+- Resolves: blocks `evaluatorReview.ts` schema implementation.
+
+## OQ-0012-0005: Capture role removal in steering / agent-routing
+
+- Gate: implement
+- Disposition: open
+- Owner: solution-architect
+- Due: 2026-06-15
+- Severity: low
+- Source: CHG-002 integration follow-up (requirements-analyst flagged 2026-05-18).
+- Question: BR-0012-0004 / BR-0012-0023 / DR-0012-0017 reference a separate `devops-ci-engineer` capture role. CHG-002 removes capture entirely. Does `agent-routing.yml` / `agent-catalog.yml` also need a follow-up edit to remove the capture entry from prototyping routing, or is the role retained for other (non-prototyping) use?
+- Recommendation: Retain the role in the catalog for non-prototyping use; remove only the prototyping-specific routing entry. Update via spec-0015 / `_policies/02_routing.md` in a follow-up.
+- Resolves: blocks agent-catalog / agent-routing cleanup.
+
+## OQ-0012-0006: Per-spec iter-dir migration wiring in `prototypingIterate.ts`
+
+- Gate: implement
+- Disposition: open
+- Owner: backend-engineer
+- Due: 2026-06-30
+- Severity: low
+- Source: CHG-002 PR #208 review (FYI thread r3264491197, raised 2026-05-19).
+- Question: `iterationPaths.ts` ships the per-spec helpers (`iterationDirPerSpec(idx, specId)`, `iterationReviewPathPerSpec(idx, specId, screen)`, `findIterationReviewFiles`, `deleteStaleIterDirs`, `parseIterationReviewPath`) with full unit coverage, but `prototypingIterate.ts` still composes the legacy flat `iter-NN/index.html` layout via `core/prototyping/iteration.ts#iterationDir(cycle)`. Production wire-in must switch the iterate command from the single-lineage helpers to the per-`(idx, spec, screen)` helpers so the on-disk evidence layout matches the multi-spec contract before convergence/certify reads it.
+- Recommendation: Land alongside the next wave that resolves OQ-0012-0002 (prototyping.json#iterations[] shape) — the iter-dir migration and the JSON-shape migration share the same per-spec namespace and must ship atomically to keep `certify` parsing consistent.
+- Resolves: blocks legacy-to-per-spec layout cutover in `prototypingIterate.ts`. Couples with TDD-0384 deferral noted in the PR #208 description.
+
+## OQ-0012-0007: Reviewer dispatch wiring in `prototypingIterate.ts`
+
+- Gate: implement
+- Disposition: open
+- Owner: backend-engineer
+- Due: 2026-06-30
+- Severity: low
+- Source: CHG-002 PR #208 review (FYI thread r3264491197, raised 2026-05-19).
+- Question: `core/prototyping/reviewerDispatch.ts#dispatchReviewerToPair(specId, screen, options)` is the interface boundary for invoking the Reviewer sub-agent (Playwright runner is injected) but no production caller currently invokes it. The iterate command writes `iterate-plan.json` and hands control to the skill, which today still relies on out-of-process Reviewer invocation. Production wire-in must call `dispatchReviewerToPair` per per-`(spec, screen)` cycle with an injected runner and persist the resulting `<screen>.review.json` payload.
+- Recommendation: Wire after OQ-0012-0006 (per-spec layout) lands so the dispatch result has a stable iter-dir target. Couples with TDD-0401 / TDD-0402 (live Playwright runner) — until the runner is shipped, the dispatch wire-in remains a no-op gated on `options.playwrightRunner`.
+- Resolves: blocks Reviewer-orchestration cutover from skill-driven to command-driven dispatch in `prototypingIterate.ts`.
+
+## OQ-0012-0008: `parseEvaluatorReview` runtime wire-in for per-cycle review.json validation
+
+- Gate: implement
+- Disposition: open
+- Owner: backend-engineer
+- Due: 2026-06-30
+- Severity: low
+- Source: CHG-002 PR #208 review (FYI thread r3264491197, raised 2026-05-19).
+- Question: `core/prototyping/evaluatorReview.ts#parseEvaluatorReview` validates the v2.0 `*Feel`-schema reviewer payload (six bounded `*Feel` fields, four ordinal axes, closed-schema unknown-key rejection) with full unit coverage, but no per-cycle review-loader currently invokes it. The candidate read path lives in `core/prototyping/iteration.ts` (single-lineage loader) or `cli/commands/prototypingCertify.ts` (multi-spec aggregator). Wire-in must identify the read path and route every loaded `<screen>.review.json` through `parseEvaluatorReview` so schema drift fails fast at iterate/certify rather than at downstream consumers.
+- Recommendation: Land in the same wave as OQ-0012-0006 / 0007 (per-spec layout + dispatch) so the validator sees the v2.0 file layout it was designed for. Resolves: blocks v2.0 `*Feel` schema runtime enforcement.
+
+## OQ-0012-0009: `validateImageSources` runtime wire-in at certify gate
+
+- Gate: implement
+- Disposition: open
+- Owner: backend-engineer
+- Due: 2026-06-30
+- Severity: low
+- Source: CHG-002 PR #208 review (FYI thread r3264491197, raised 2026-05-19).
+- Question: The handoff schema validator (`core/prototyping/handoff.ts#validateImageSources`) checks `prototype-handoff.yaml#imageSources[]` shape with full unit coverage, but `cli/commands/prototypingCertify.ts` does not yet gate on the handoff yaml read path. Today `licenseVerify` consumes `prototyping.json#imageSources` directly; the handoff-yaml population path is left to a later batch (see iterate.ts 4b inline note). Wire-in must either add the certify-gate read of `prototype-handoff.yaml` and route entries through `validateImageSources` before `licenseVerify`, or document the deferral if the handoff.yaml population path is not ready.
+- Recommendation: Defer until the handoff-yaml population path (DESIGN.md pool + handoff extraction) lands; until then `validateImageSources` is correctly tested-only. Track the population deferral as a coupled item under the same wave.
+- Resolves: blocks `prototype-handoff.yaml#imageSources[]` schema gate at certify.
+
+## OQ-0012-0010: `DEFAULT_LICENSE_CATALOG` configurability — wire-in via `QfaiConfig.prototyping.licenseCatalog`
+
+- Gate: implement
+- Disposition: open
+- Owner: backend-engineer
+- Due: 2026-06-30
+- Severity: low
+- Source: CHG-002 PR #208 7th late-review wave (codex r3264977114, P3 nit, raised 2026-05-19).
+- Question: `cli/commands/prototypingIterate.ts#DEFAULT_LICENSE_CATALOG` is the SSOT in-memory default frozen at cycle 0 of every loop (`allowedSources: ["unsplash", "pexels"]` + license tiers). Today consumers are bound to the baseline — registering an additional allowlisted source (e.g. `pixabay`) requires forking QFAI. The TODO comment above the constant captures the intended path but lacks a tracking ID, so the release-after orphan risk has accumulated. Production wire-in must (1) extend `QfaiConfig` with an optional `prototyping.licenseCatalog?: { allowedSources: string[]; licenseTiers: Record<string, string[]> }` field, (2) honour it in `writeSeedMetadata` (the cycle-0 frozen value) and in the cycle ≥1 read path, (3) preserve the in-memory default as the fallback when neither config nor on-disk frozen value is present.
+- Recommendation: Land in a dedicated wave after CHG-002 stabilises — the wire-in is mechanical but touches the cycle-0 freeze path that `licenseVerify` reads. Until then, the in-memory baseline is the documented contract and consumers needing additional sources fork the constant.
+- Resolves: blocks consumer-facing license-catalog extensibility without a fork; closes the untracked TODO at `prototypingIterate.ts#DEFAULT_LICENSE_CATALOG`.
+
+## OQ-0012-0011: Cycle-9 idempotency — single `--cycle 9` invocation on a non-converged 10-iter loop
+
+- Gate: implement
+- Disposition: open
+- Owner: prototyping-cli
+- Couples: TDD-0436 / TC-0012-0416 / AC-0012-0038 (cycle-9 idempotency Then clause; landed on AC-0012-0044 in 14th-wave and moved to AC-0012-0038 in 19th-wave because terminator routing is a 10-cycle iteration-budget concern, not an autonomous-run concern)
+- Due: 2026-06-30
+- Severity: low
+- Source: CHG-002 PR #208 10th late-review wave Fix J (codex r3265262715, MINOR — original deferred follow-up) + 14th-wave traceability stitch (codex r3269198118, MINOR).
+- Question: When `qfai prototyping iterate --cycle 9` is invoked on a non-converged loop whose `prototyping.json#iterations.length === 10` (i.e. iter-09 already recorded), the current code routes the exit through the cycle-mismatch path — `expectedNextCycle` becomes 10 and is then capped at 9, eventually surfacing exit 65 but only after the mismatch diagnostic. The operator-facing contract (AC-0012-0038 — 10-cycle iteration budget; the cycle-9 idempotency Then-clause landed on AC-0012-0044 in 14th-wave and was moved to AC-0012-0038 in 19th-wave) requires exit 65 to be surfaced directly on a single `--cycle 9` invocation regardless of stateful continuation. SKILL.md was already updated in the 10th-wave Fix J to drop the stateful re-run workaround; the CLI side change is mechanical (detect `iter index === MAX_ITERATION_INDEX AND not converged` before the cycle-mismatch branch).
+- Recommendation: Land in a dedicated follow-up PR after CHG-002 stabilises. The change touches a deterministic exit-code branch and is straightforward to test in isolation; deferring it to a focused PR keeps the CHG-002 cluster minimal.
+- Mitigation while deferred: operators who hit this path see the cycle-mismatch diagnostic first followed by exit 65 — the eventual exit code is correct, only the early diagnostic is misleading. SKILL.md Cycle 9 budget exhaustion subsection points operators at the restart-from-cycle-0 recovery path, so the workaround is documented.
+- Resolves: closes the OP-APPEND-079 pattern asymmetry flagged by codex r3269198118 (deferred-followup OQ + tdd/test-list / 16_Traceability-ledger / 06_Test-Cases triad now mirrored in 08_Open-questions). The 09_delta.md OP-APPEND register entry is added under the 14th-wave cluster in `09_delta.md`.
+
+## OQ-0012-0012: Systematic audit + helper consolidation of `path.join(root, config.paths.*, ...)` call sites
+
+- Gate: implement
+- Disposition: open
+- Owner: prototyping-core
+- Couples: AC-0012-0037 / AC-0012-0047 / BR-0012-0030 (paths-related contracts); wave-45 / 47 / 48 fixes (`specDirExists` / `readPerSpecScreens` / `readUiContractScreenContracts`)
+- Due: 2026-06-30
+- Severity: low (architectural / consistency)
+- Source: PR #208 47th-wave thread codex r3271787723 (P1 architecture-reviewer — `path.join` vs `path.resolve` bug class) — accepted with deferral; the wave-48 fix targets the two same-responsibility helpers (`readPerSpecScreens` and `readUiContractScreenContracts`) that directly partner with each other on the certify path, but ~11 other call sites carry the same pattern.
+- Question: Should the project consolidate path resolution onto a `resolveContractsDir(root, config)` / `resolveSpecsDir(root, config)` helper family so call sites cannot independently choose `path.join` vs `path.resolve`? Deferred call sites flagged in r3271787723: `prototypingCertify.ts:670` (lockAbs), `prototypingIterate.ts:573` (lockAbs), `doctor.ts:563`, `validators/bpApDb.ts:48`, `validators/designAudit.ts:247/258`, `validators/designContractReadiness.ts:74/82/254/281/394`, `validators/designToken.ts:35`, `validators/uiDefinitionConsistency.ts:24/45`. Several of these run during validate-time gates, not during the prototyping loop, so the failure mode is narrower; but the underlying bug class is identical and consumers using absolute `paths.contractsDir` would observe silently incorrect behaviour across multiple commands.
+- Recommendation: Land in a dedicated follow-up PR after CHG-002 stabilises. The mechanical fix is small (`path.join` → `path.resolve`) but the helper-consolidation refactor touches many files and benefits from a focused review window. Pair with a lint rule (`no-restricted-syntax` on `path.join(root, config.paths.*, ...)`) so the regression cannot reappear.
+- Mitigation while deferred: workflows using absolute `paths.contractsDir` or `paths.specsDir` overrides observe correct behaviour on the prototyping loop (certify per-(spec × screen) gate + iterate primarySpecId pin, both fixed). Validate-time gates may emit misleading errors but do not corrupt artifacts.
+- Resolves: the bug-class architectural concern; a future regression of the same pattern would have a single SSOT helper to anchor against.
+
+## OQ-0012-0001: Airgapped run support (stock-photo fetch over restricted network)
+
+- Gate: ops
+- Disposition: deferred (post-v1; trigger = consumer project files a blocker citing airgapped / network-restricted environment)
+- Owner: ops
+- Due: 2026-08-31
+- Severity: medium
+- Source: discussion-20260516144141078 OQ-0003 (mirrored here per `_policies` requirement that spec-level OQs deferred from the discussion pack are tracked on the spec).
+- Rationale for deferral: v1 ships multi-spec / autonomous / Playwright-operate / qualitative-only / license recording (CHG-002). Airgapped infra (pre-baked stock-photo bundle, license-class cache, version-tracking) adds scope that risks delaying the primary delivery. v1 fails fast on network unavailability via deterministic exit 66 (license-verify failure cascading from fetch failure) with a clear error message naming the network egress requirement.
+- Options:
+  - A) Require HTTPS network egress to allowlisted sources for v1 (current decision; recommended).
+  - B) Ship pre-baked CC0 / Unsplash / Pexels bundle with QFAI package; license-class cache built at install time.
+  - C) Hybrid (network-first with bundle fallback when egress fails).
+- Recommendation: Option A for v1; revisit on first airgapped consumer blocker.
+- Mitigation while deferred: deterministic exit 66 + error message naming "network egress to {unsplash.com, pexels.com} required for stock-photo fill"; ops gate tracks consumer-project demand and v2 roadmap.
+- Next decision point: Ops gate post-v1 dogfooding.
+- Evidence: discussion-20260516144141078 `11_OQ-Register.md` (OQ-0003 row) and `13_Deferred.md` (OQ-0003 row).

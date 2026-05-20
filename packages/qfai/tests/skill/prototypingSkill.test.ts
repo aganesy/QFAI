@@ -1,3 +1,7 @@
+import { readFile } from "node:fs/promises";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
 import { describe, expect, it } from "vitest";
 
 import {
@@ -13,6 +17,17 @@ import {
   hasPreflightGuidance,
   hasPlaywrightCliFallback,
 } from "../../src/core/validators/skill/prototypingSkill.js";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const PROTOTYPING_SKILL_ASSET_DIR = path.resolve(
+  __dirname,
+  "../..",
+  "assets/init/.qfai/assistant/skills/qfai-prototyping",
+);
+
+async function readPrototypingAsset(relativePath: string): Promise<string> {
+  return readFile(path.join(PROTOTYPING_SKILL_ASSET_DIR, relativePath), "utf-8");
+}
 
 const VALID_SKILL_CONTENT = [
   "# Prototyping Skill",
@@ -126,5 +141,46 @@ describe("prototyping skill validator", () => {
       "Supported UI prototyping surfaces are: web, mobile, desktop.",
     );
     expect(hasCanonicalSurfaceDocumentation(invalid)).toBe(false);
+  });
+});
+
+describe("prototyping skill asset — multi-spec wiring (spec-0012 CHG-002)", () => {
+  // TC-0012-0356: SKILL.md and the iteration-loop reference must no
+  // longer prompt for a per-invocation primary spec; instead they must
+  // reference the multi-spec resolver `resolveAllUiBearingSpecs`.
+  it("SKILL.md does not contain a per-invocation primary-spec selection prompt", async () => {
+    const skillContent = await readPrototypingAsset("SKILL.md");
+
+    // Literal absence checks for prior single-spec selection phrasing.
+    // These were the exact prompts the v2.0 / UX-loop SKILL.md used to
+    // ask the operator to pick one spec per invocation; under the
+    // multi-spec rewrite there must be no such prompt anywhere in the
+    // asset.
+    const forbiddenPhrases = [
+      "selected spec is UI-bearing",
+      "select a primary spec",
+      "select the primary spec",
+      "select primary spec",
+      "primary spec id",
+      "primary_spec_id",
+      "primarySpecId",
+      "プライマリ spec",
+      "プライマリスペック",
+    ];
+    const lower = skillContent.toLowerCase();
+    for (const phrase of forbiddenPhrases) {
+      expect(lower.includes(phrase.toLowerCase()), `SKILL.md should not contain '${phrase}'`).toBe(
+        false,
+      );
+    }
+  });
+
+  it("SKILL.md references the multi-spec resolver resolveAllUiBearingSpecs", async () => {
+    const skillContent = await readPrototypingAsset("SKILL.md");
+    expect(skillContent).toContain("resolveAllUiBearingSpecs");
+    // The wording must be unambiguous about "one invocation / multi-spec"
+    // semantics so downstream operators do not re-introduce a per-spec
+    // selection step.
+    expect(skillContent.toLowerCase()).toMatch(/every ui-bearing spec[\s\S]{0,80}one invocation/i);
   });
 });

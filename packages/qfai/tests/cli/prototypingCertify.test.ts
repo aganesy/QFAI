@@ -469,6 +469,15 @@ describe("qfai prototyping certify (multi-screen accepted-iter HTML check)", () 
     const acceptedDir = path.join(root, ".qfai/evidence/prototyping/iter-01");
     await writeFile(path.join(acceptedDir, "home.html"), CLEAN_FINAL_HTML, "utf-8");
     await writeFile(path.join(acceptedDir, "settings.html"), CLEAN_FINAL_HTML, "utf-8");
+    // CHG-002 AC-0012-0047: certify also requires
+    // `iter-NN/spec-NNNN/<screen>.review.json` for every frozen spec ×
+    // declared screen pair. The fixture's frozen spec set is
+    // `["0012"]` (seeded by seedAllGatesPass), and the UI contracts
+    // above declare home + settings, so seed both review.jsons.
+    const specDir = path.join(acceptedDir, "spec-0012");
+    await mkdir(specDir, { recursive: true });
+    await writeFile(path.join(specDir, "home.review.json"), '{"ok":true}\n', "utf-8");
+    await writeFile(path.join(specDir, "settings.review.json"), '{"ok":true}\n', "utf-8");
     expect(await runPrototypingCertify({ root, check: false })).toBe(0);
   });
 });
@@ -503,16 +512,200 @@ describe("qfai prototyping certify --check", () => {
 });
 
 describe("qfai prototyping show-spec", () => {
-  it("returns 0 when a marker-bearing spec exists", async () => {
+  // 11th-wave Fix (codex r3265482150, P2): show-spec reads the cycle-0
+  // frozen `specsCovered[]` from prototyping.json. Tests must seed the
+  // file or expect exit 2.
+  it("returns 0 with the frozen specsCovered when prototyping.json is seeded", async () => {
     const root = await newTempDir();
     await seedMinimalProject(root, { specMarker: true });
+    // Seed a minimal prototyping.json with frozenSpecsCovered so
+    // show-spec has a frozen scope to print.
+    await mkdir(path.join(root, ".qfai/evidence/prototyping"), { recursive: true });
+    await writeFile(
+      path.join(root, ".qfai/evidence/prototyping/prototyping.json"),
+      JSON.stringify(
+        {
+          runId: "test-run-id",
+          specsCovered: ["0012"],
+          frozenSpecsCovered: ["0012"],
+          frozenSurfaceUnion: ["0012"],
+        },
+        null,
+        2,
+      ),
+      "utf-8",
+    );
     expect(await runPrototypingShowSpec({ root })).toBe(0);
   });
 
-  it("returns 2 when no spec has the prototyping marker", async () => {
+  it("returns 2 when prototyping.json is missing (not yet seeded by cycle 0)", async () => {
     const root = await newTempDir();
     await seedMinimalProject(root, { specMarker: false });
     expect(await runPrototypingShowSpec({ root })).toBe(2);
+  });
+
+  it("returns 2 when prototyping.json lacks a valid frozenSpecsCovered", async () => {
+    const root = await newTempDir();
+    await seedMinimalProject(root, { specMarker: true });
+    await mkdir(path.join(root, ".qfai/evidence/prototyping"), { recursive: true });
+    await writeFile(
+      path.join(root, ".qfai/evidence/prototyping/prototyping.json"),
+      JSON.stringify({ runId: "test-run-id" }, null, 2),
+      "utf-8",
+    );
+    expect(await runPrototypingShowSpec({ root })).toBe(2);
+  });
+
+  // 18th late-review wave (codex r3270061025, MINOR — qa-gatekeeper).
+  // Direct regression coverage for the 14th-wave + 15th/16th-wave
+  // show-spec JSON payload semantic changes: payload now carries
+  // `frozenSpecsCoveredSource` discriminant (14th-wave codex
+  // r3269198684), `liveUiBearing` uses `resolveSurfaceUnion` and is
+  // emitted as `string[]` (15th + 16th-wave). Pre-fix the existing
+  // tests only smoke-checked the exit code.
+  // QFAI:SPEC-0012:TC-0012-0422 — pairs with AC-0012-0044 (show-spec
+  // operator-facing surface).
+  it("TC-0012-0422 (a): legacy record without frozenSpecsCovered emits frozenSpecsCoveredSource=specsCovered", async () => {
+    const root = await newTempDir();
+    await seedMinimalProject(root, { specMarker: true });
+    await mkdir(path.join(root, ".qfai/evidence/prototyping"), { recursive: true });
+    await writeFile(
+      path.join(root, ".qfai/evidence/prototyping/prototyping.json"),
+      JSON.stringify(
+        {
+          runId: "test-run-id",
+          // Legacy: only `specsCovered`, no `frozenSpecsCovered`.
+          specsCovered: ["0012"],
+        },
+        null,
+        2,
+      ),
+      "utf-8",
+    );
+
+    const logger = await import("../../src/cli/lib/logger.js");
+    const infoSpy = vi.spyOn(logger, "info").mockImplementation(() => {});
+    try {
+      expect(await runPrototypingShowSpec({ root })).toBe(0);
+      const payloadText = infoSpy.mock.calls.map((c) => String(c[0])).join("\n");
+      const payload = JSON.parse(payloadText) as Record<string, unknown>;
+      expect(payload.frozenSpecsCovered).toEqual(["0012"]);
+      expect(payload.frozenSpecsCoveredSource).toBe("specsCovered");
+    } finally {
+      infoSpy.mockRestore();
+    }
+  });
+
+  it("TC-0012-0422 (b): record with frozenSpecsCovered emits frozenSpecsCoveredSource=frozenSpecsCovered", async () => {
+    const root = await newTempDir();
+    await seedMinimalProject(root, { specMarker: true });
+    await mkdir(path.join(root, ".qfai/evidence/prototyping"), { recursive: true });
+    await writeFile(
+      path.join(root, ".qfai/evidence/prototyping/prototyping.json"),
+      JSON.stringify(
+        {
+          runId: "test-run-id",
+          specsCovered: ["0012"],
+          frozenSpecsCovered: ["0012"],
+          frozenSurfaceUnion: ["0012"],
+        },
+        null,
+        2,
+      ),
+      "utf-8",
+    );
+
+    const logger = await import("../../src/cli/lib/logger.js");
+    const infoSpy = vi.spyOn(logger, "info").mockImplementation(() => {});
+    try {
+      expect(await runPrototypingShowSpec({ root })).toBe(0);
+      const payloadText = infoSpy.mock.calls.map((c) => String(c[0])).join("\n");
+      const payload = JSON.parse(payloadText) as Record<string, unknown>;
+      expect(payload.frozenSpecsCoveredSource).toBe("frozenSpecsCovered");
+    } finally {
+      infoSpy.mockRestore();
+    }
+  });
+
+  it("TC-0012-0422 (c): liveUiBearing is a string[] (contract-aligned post-wave-16)", async () => {
+    const root = await newTempDir();
+    await seedMinimalProject(root, { specMarker: true });
+    await mkdir(path.join(root, ".qfai/evidence/prototyping"), { recursive: true });
+    await writeFile(
+      path.join(root, ".qfai/evidence/prototyping/prototyping.json"),
+      JSON.stringify(
+        {
+          runId: "test-run-id",
+          specsCovered: ["0012"],
+          frozenSpecsCovered: ["0012"],
+          frozenSurfaceUnion: ["0012"],
+        },
+        null,
+        2,
+      ),
+      "utf-8",
+    );
+
+    const logger = await import("../../src/cli/lib/logger.js");
+    const infoSpy = vi.spyOn(logger, "info").mockImplementation(() => {});
+    try {
+      expect(await runPrototypingShowSpec({ root })).toBe(0);
+      const payloadText = infoSpy.mock.calls.map((c) => String(c[0])).join("\n");
+      const payload = JSON.parse(payloadText) as { liveUiBearing: unknown };
+      expect(Array.isArray(payload.liveUiBearing)).toBe(true);
+      for (const item of payload.liveUiBearing as unknown[]) {
+        expect(typeof item).toBe("string");
+      }
+    } finally {
+      infoSpy.mockRestore();
+    }
+  });
+
+  // codex r3271018000 (P2, chatgpt-codex-connector, 38th-wave):
+  // show-spec previously read `frozenSpecsCovered` via the same
+  // `readStringArrayField(...) ?? readStringArrayField(specsCovered)`
+  // pattern that wave-33 fixed on the certify side. That let a
+  // hand-edited / partially-corrupt multi-spec record silently
+  // downgrade the reported scope to the legacy `specsCovered` field
+  // even though iterate / certify both treat the same malformed
+  // `frozenSpecsCovered` as a hard error — operators and automation
+  // making recovery decisions from show-spec output were misled.
+  // show-spec now consumes the SSOT classifier and fails closed on
+  // `malformed`.
+  it("TC-0012-0428: exits 2 with a 'present but malformed' diagnostic when frozenSpecsCovered is present but invalid (does NOT fall back to legacy specsCovered)", async () => {
+    const root = await newTempDir();
+    await seedMinimalProject(root, { specMarker: true });
+    await mkdir(path.join(root, ".qfai/evidence/prototyping"), { recursive: true });
+    await writeFile(
+      path.join(root, ".qfai/evidence/prototyping/prototyping.json"),
+      JSON.stringify(
+        {
+          runId: "test-run-id",
+          // Legacy single-spec scope is present and VALID — pre-fix
+          // this would have been used as the silent fallback. Post-fix
+          // the malformed frozenSpecsCovered must hard-error.
+          specsCovered: ["0012"],
+          frozenSpecsCovered: null,
+        },
+        null,
+        2,
+      ),
+      "utf-8",
+    );
+
+    const logger = await import("../../src/cli/lib/logger.js");
+    const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
+    try {
+      const exit = await runPrototypingShowSpec({ root });
+      expect(exit).toBe(2);
+      const messages = errorSpy.mock.calls.map((c) => String(c[0]));
+      const namesPresentButMalformed = messages.some(
+        (m) => m.includes("present") && m.includes("malformed"),
+      );
+      expect(namesPresentButMalformed).toBe(true);
+    } finally {
+      errorSpy.mockRestore();
+    }
   });
 });
 

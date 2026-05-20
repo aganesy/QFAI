@@ -22,8 +22,15 @@
 import { readdir, readFile, stat } from "node:fs/promises";
 import path from "node:path";
 
+import fg from "fast-glob";
+import { parse as parseYaml } from "yaml";
+
 import { loadConfig } from "../../core/config.js";
-import { readUiContractScreenContracts } from "../../core/contracts/screenContracts.js";
+import {
+  extractUiScreens,
+  readUiContractScreenContracts,
+  type CanonicalScreenContract,
+} from "../../core/contracts/screenContracts.js";
 import { hashDesignMd, parseDesignMd } from "../../core/design/designMd.js";
 import { readDesignMdLockSha } from "../../core/design/designMdLock.js";
 import { isEnoent } from "../../core/fs/errno.js";
@@ -38,10 +45,23 @@ import {
   findDesignMdViolations,
   type DesignMdViolation,
 } from "../../core/prototyping/designMdViolations.js";
-import { resolvePrimaryPrototypingSpec } from "../../core/prototyping/specResolution.js";
-import { readFrozenSpecsCovered } from "../../core/prototyping/specsCovered.js";
+import {
+  resolvePrimaryPrototypingSpec,
+  resolveSurfaceUnion,
+} from "../../core/prototyping/specResolution.js";
+// 15th-wave Fix (codex r3269453293, P2): show-spec's `liveUiBearing`
+// uses the same resolver as iterate's drift gate (`resolveSurfaceUnion`)
+// so the live scope reported here is apples-to-apples with what iterate
+// enforces. 19th-wave Fix (codex r3270055214, MAJOR): the resolver was
+// moved to `core/prototyping/specResolution.ts` so this import lands
+// in the core layer instead of taking the sideways CLI → CLI hop on
+// `prototypingIterate.ts` that wave-15 left behind.
+import {
+  classifyFrozenSpecsCoveredMultiSpec,
+  readFrozenSpecsCovered,
+} from "../../core/prototyping/specsCovered.js";
 import { resolveToolVersion } from "../../core/version.js";
-import { error, info } from "../lib/logger.js";
+import { error, info, warn } from "../lib/logger.js";
 
 export type RunPrototypingCertifyOptions = {
   root: string;
@@ -50,6 +70,21 @@ export type RunPrototypingCertifyOptions = {
 };
 
 const ROOT_DESIGN_MD_REL = "DESIGN.md";
+
+/**
+ * Canonical `frozenSpecsCovered[]` entry shape: either a bare 4-digit
+ * id or the fully-qualified directory name (`spec-` prefix + 4 digits).
+ * The certify-side per-(spec × screen) gate constructs `iter-NN/<id>/
+ * <screen>.review.json` paths from these strings, so values containing
+ * `/`, `..`, whitespace (leading or trailing), or any other character
+ * would let `path.join` escape the intended subtree. Validated at the
+ * certify entry point before `normalizeSpecDirName` is ever called.
+ *
+ * The anchored regex (`^...$`) plus `\d{4}` rejects every variant
+ * including leading / trailing / tab whitespace, embedded path
+ * separators, non-numeric tails, and wrong-digit-count strings.
+ */
+const CANONICAL_SPEC_ID = /^(?:spec-)?\d{4}$/u;
 
 export async function runPrototypingCertify(
   options: RunPrototypingCertifyOptions,
@@ -183,6 +218,19 @@ export async function runPrototypingCertify(
   // against (validateUiEvidenceArtifacts accepts a screen file from
   // ANY iteration directory). Anchor the per-screen check to the
   // ACCEPTED iter only.
+  //
+  // Codex review: the prototyping CLI contract specifies that only
+  // `<screen>.review.json` is a per-cycle Reviewer artifact (no
+  // `.html`, no `.png`, no `.interaction.json`). This flat-iter
+  // `.html` gate predates that contract and remains in force for
+  // backward compatibility with the pre-CHG-002 layout and the
+  // current iterate driver, which still emits flat
+  // `iter-NN/<screen>.html`. The cleanup is coupled to the per-spec
+  // iter-dir migration in `prototypingIterate.ts`; once iterate
+  // writes per-spec `iter-NN/spec-NNNN/<screen>.review.json`
+  // exclusively, this gate is replaced by the per-(spec x screen)
+  // review.json gate below. See the deferred follow-ups note in the
+  // governing spec's Plan document.
   const screenContracts = await readUiContractScreenContracts(
     options.root,
     config.paths.contractsDir,
@@ -206,6 +254,199 @@ export async function runPrototypingCertify(
         );
       }
       return 2;
+    }
+  }
+
+  // ─── Per-(spec × screen) review.json presence (AC-0012-0047) ───────────
+  //
+  // Under the CHG-002 schema, every spec in the cycle-0 frozen set must
+  // have a `<screen>.review.json` for every declared screen at the
+  // accepted iter, namespaced as
+  //   `iter-NN/spec-NNNN/<screen>.review.json`.
+  //
+  // Pre-read the frozen set (it is also read further down to populate
+  // `specsCovered` on the certificate body — single source) and pre-read
+  // the UI contract screens. Only enforce when both inputs are non-empty:
+  //   - empty frozen set → certify already rejects below ("specsCovered
+  //     is missing or malformed"); the per-pair check has nothing to do.
+  //   - empty screen contracts → no per-screen artifacts are declared
+  //     for the project; the legacy flat-iter `index.html` shape stays
+  //     valid and the per-pair gate skips, preserving the long-standing
+  //     single-page test fixtures.
+  //
+  // Per-spec screen contracts are deferred to reviewerDispatch (Wave 1).
+  // Today, UI contracts under `.qfai/contracts/ui/` are project-wide,
+  // so the same screen list applies to every spec in the frozen set.
+  //
+  // Use the cycle-0-frozen MULTI-spec field (`frozenSpecsCovered`)
+  // first; iterate writes the full UI-bearing set there and only the
+  // resolved primary spec into `specsCovered`. Reading the legacy
+  // single-spec field would silently iterate ONLY the primary spec
+  // and let a frozen-set secondary spec ship a sealed certificate
+  // with completely-missing review.json files. Fall back to the
+  // legacy field for pre-Wave-3 evidence that predates the
+  // `frozenSpecsCovered` write.
+  // codex r3270861808 (P1, chatgpt-codex-connector): classify the
+  // multi-spec field so a PRESENT-but-malformed `frozenSpecsCovered`
+  // (key on the record but value is a non-array / empty / non-string
+  // / empty-string entry) fails closed with exit 2 instead of silently
+  // falling back to the legacy `specsCovered` field. Pre-fix the
+  // `?? readFrozenSpecsCovered(...)` null-coalesce collapsed the
+  // "missing" and "malformed" cases into one branch, which on a
+  // partially-corrupt multi-spec record would downgrade certification
+  // scope to the resolved primary spec only — letting missing
+  // secondary-spec review evidence ship a sealed certificate. The
+  // legacy fallback is now ONLY taken when the field is absent.
+  const frozenMultiSpec = classifyFrozenSpecsCoveredMultiSpec(protoJson);
+  if (frozenMultiSpec.kind === "malformed") {
+    error(
+      "qfai prototyping certify: `prototyping.json#frozenSpecsCovered` is present " +
+        `but malformed (${frozenMultiSpec.reason}). Failing closed instead of ` +
+        "silently downgrading certification scope to the legacy single-spec " +
+        "`specsCovered` field — a partial / corrupt edit of the multi-spec frozen " +
+        "set must not allow missing secondary-spec review evidence to ship a sealed " +
+        "certificate. Re-run `qfai prototyping iterate --cycle 0` to regenerate " +
+        "`prototyping.json` with the cycle-0-frozen UI-bearing set.",
+    );
+    return 2;
+  }
+  const frozenSpecsPreview =
+    frozenMultiSpec.kind === "ok" ? frozenMultiSpec.value : readFrozenSpecsCovered(protoJson);
+  if (frozenSpecsPreview !== null && screenContracts.length > 0) {
+    // codex r3270776268 (P2): validate canonical spec-id shape BEFORE any
+    // path construction. `normalizeSpecDirName` only strips/re-adds the
+    // `spec-` prefix, so a hand-edited `prototyping.json` carrying `/`,
+    // `..`, or other non-canonical characters in `frozenSpecsCovered[]`
+    // would otherwise reach `path.join(options.root, rel)` unmodified and
+    // let the per-(spec × screen) gate probe files outside the intended
+    // `iter-NN/spec-NNNN/` subtree (potentially "satisfying" missing-
+    // review checks with unrelated files). Reject anything that is not
+    // either bare `NNNN` or fully-qualified `spec-NNNN` and treat it as
+    // structural malformation of the iterate-produced record (exit 2).
+    const malformedSpecs = frozenSpecsPreview.filter((id) => !CANONICAL_SPEC_ID.test(id));
+    if (malformedSpecs.length > 0) {
+      error(
+        "qfai prototyping certify: `frozenSpecsCovered[]` contains non-canonical " +
+          `spec id(s) ${JSON.stringify(malformedSpecs)} — values must match ` +
+          "`spec-NNNN` or bare 4-digit `NNNN`. Refusing to construct review paths " +
+          "from unvalidated input; re-run `qfai prototyping iterate --cycle 0` to " +
+          "regenerate `prototyping.json` with canonical ids.",
+      );
+      return 2;
+    }
+    // The per-(spec × screen) gate ONLY runs when the accepted iter
+    // actually contains per-spec subdirs (`iter-NN/spec-*/`). The
+    // shipped iterate driver + SKILL.md still emit the legacy flat
+    // layout (`iter-NN/index.html` / `iter-NN/review.json`), so
+    // without this guard the gate would fail every (spec, screen)
+    // pair on a normal run that follows the documented plan. The
+    // flat-iter migration to per-spec layout is deferred; until then,
+    // flat-iter projects skip the gate with a one-line stderr info
+    // note so the deferred migration stays visible to operators.
+    const acceptedIterAbs = path.join(options.root, PROTOTYPING_EVIDENCE_REL, acceptedIterDir);
+    const hasPerSpecLayout = await hasPerSpecSubdir(acceptedIterAbs);
+    if (!hasPerSpecLayout) {
+      // codex review r3264798065 (P1): the flat-iter skip is only valid
+      // for SINGLE-spec frozen sets. When the frozen set carries
+      // multiple specs but the accepted iter has no per-spec subdir,
+      // the legacy flat layout is structurally incompatible — there is
+      // no place to host the per-spec `<screen>.review.json` files for
+      // the secondary spec(s), and silently skipping the gate would
+      // re-open the TDD-0387 vulnerability (a frozen secondary spec
+      // ships a sealed certificate with zero review.json evidence).
+      // Fail-fast with a hard error in the multi-spec case; preserve
+      // the info-skip for the single-spec legacy path.
+      if (frozenSpecsPreview.length > 1) {
+        error(
+          `qfai prototyping certify: accepted iteration ${acceptedIterDir} carries a ` +
+            `multi-spec frozen set (frozenSpecsCovered=${JSON.stringify(frozenSpecsPreview)}) ` +
+            "but no per-spec iter-NN/spec-NNNN/<screen>.review.json layout is present. " +
+            "Multi-spec frozen set requires per-spec iter-NN/spec-NNNN/<screen>.review.json layout; " +
+            "the flat-iter layout migration is deferred and is incompatible with multi-spec runs. " +
+            "Re-run prototyping with the per-spec layout or restrict the frozen set to a single spec.",
+        );
+        // Exit 64 matches the prototyping CLI contract's coverage class
+        // ("at least one spec lacks a review.json for a declared
+        // screen"). Returning 2 (input error) here would split the same
+        // coverage rejection across two exit codes and break operator
+        // workflows that key on 64 for missing review.json gaps.
+        return 64;
+      }
+      info(
+        `qfai prototyping certify: per-spec ${acceptedIterDir}/spec-NNNN layout not detected — ` +
+          "skipping per-(spec x screen) review.json presence gate; running with legacy flat layout " +
+          "(per-spec layout migration pending, single-spec frozen set).",
+      );
+    } else {
+      const missingPairs: Array<{ spec: string; screen: string; expectedPath: string }> = [];
+      // codex r3270911400 (P1, chatgpt-codex-connector): the previous
+      // optimisation pre-built a per-spec map from `screenContracts.sourceRef`
+      // and used it whenever the indexed entry was non-empty, only
+      // falling back to `readPerSpecScreens` when the entry was
+      // missing/empty. That was unsafe for multi-file subdir layouts: a
+      // spec whose `home` was project-wide-dedupped to another spec but
+      // whose `settings` survived would end up with `perSpecFiles[spec]
+      // = {spec/settings.yaml}` only — the indexed re-parse missed
+      // `spec/home.yaml` entirely and the gate happily passed without
+      // requiring `<spec>/home.review.json`. We now call
+      // `readPerSpecScreens` unconditionally for every spec in the
+      // frozen set; that helper does its own authoritative fs discovery
+      // (`fg(... spec-NNNN/**\/*.yaml)` for subdir layouts), so the
+      // per-spec scope is always complete. The optimisation saved one
+      // glob per spec; for the typical N ≤ 10 specs case the wall-clock
+      // cost is negligible compared to the safety gain.
+      for (const rawSpec of frozenSpecsPreview) {
+        const specDirName = normalizeSpecDirName(rawSpec);
+        // codex r3265157640 (P1): when a per-spec UI contract exists at
+        // `.qfai/contracts/ui/<spec-id>.yaml`, it scopes which screens
+        // are declared for THIS spec — not the project-wide screen set.
+        // Pre-fix the gate required the cross-product (every spec × every
+        // project-wide screen), which produced spurious "missing
+        // (spec-0001, settings)" rejections when the spec's own contract
+        // only declared `home`. Fall back to the project-wide list for
+        // backward-compatibility with single-spec projects that have a
+        // single shared contract.
+        const perSpecScreens = await readPerSpecScreens(
+          options.root,
+          config.paths.contractsDir,
+          specDirName,
+        );
+        const scopedScreens = perSpecScreens ?? screenContracts;
+        for (const screen of scopedScreens) {
+          const rel = `${PROTOTYPING_EVIDENCE_REL}/${acceptedIterDir}/${specDirName}/${screen.screenId}.review.json`;
+          const abs = path.join(options.root, rel);
+          const exists = await fileExists(abs);
+          if (!exists) {
+            missingPairs.push({
+              spec: specDirName,
+              screen: screen.screenId,
+              expectedPath: rel,
+            });
+          }
+        }
+      }
+      if (missingPairs.length > 0) {
+        error(
+          "qfai prototyping certify: accepted iteration " +
+            `${acceptedIterDir} is missing review.json for ${missingPairs.length} ` +
+            "(spec, screen) pair(s):",
+        );
+        // Cap the per-pair log output to keep operator-facing stderr
+        // bounded on large frozen sets — same pattern as the
+        // missing-HTML branch above (`missing.slice(0, 10)`).
+        for (const m of missingPairs.slice(0, 20)) {
+          error(`  - ${m.spec} / ${m.screen} (expected ${m.expectedPath})`);
+        }
+        // 12th-wave Fix (codex r3265482136, P2): missing review.json
+        // coverage at the per-spec layout is the same rejection class
+        // as the flat-iter multi-spec coverage gap above (exit 64),
+        // not an input error. The CLI contract's exit-code table
+        // declares "at least one spec lacks a review.json for a
+        // declared screen" → exit 64; returning 2 (input error) here
+        // would split the same coverage rejection across two exit
+        // codes and break operator workflows that key on 64.
+        return 64;
+      }
     }
   }
   // Multi-screen specs emit one HTML artifact per screen under the
@@ -251,13 +492,46 @@ export async function runPrototypingCertify(
     "unknown";
   const reviewerTimestamp = extractString(reviewerSignoff, "timestamp") ?? new Date().toISOString();
 
-  // Read the frozen `specsCovered` recorded by `iterate --cycle 0`.
+  // Read the frozen spec set recorded by `iterate --cycle 0`.
+  //
+  // Codex P1 (r3264670163): under multi-spec runs the legacy
+  // `specsCovered` field holds only the resolved primary spec, while
+  // `frozenSpecsCovered` is the cycle-0-frozen FULL UI-bearing set.
+  // Building the completion certificate from the legacy field would
+  // ship a cert that claims only the primary spec even when per-spec
+  // review.json files exist for the secondary specs — corrupting the
+  // audited scope of a completed multi-spec run. Mirror the per-(spec
+  // x screen) review.json gate above: prefer the multi-spec field;
+  // fall back to the legacy single-spec field for pre-Wave-3 evidence
+  // that predates the `frozenSpecsCovered` write so older runs still
+  // certify cleanly.
+  //
   // Re-resolving the primary spec here would let a config edit
   // (`prototyping.primarySpecId`) or a marker change between cycle 0
   // and certify silently re-baseline the certificate to a spec the
   // loop never exercised. The loop seed is the SSOT for what was
   // actually reviewed.
-  const specsCovered = readFrozenSpecsCovered(protoJson);
+  // codex r3270861808 (P1, chatgpt-codex-connector): mirror the per-
+  // (spec × screen) gate's fail-closed classification at the cert-
+  // sealing call site too. A PRESENT-but-malformed `frozenSpecsCovered`
+  // here would downgrade the sealed certificate's `specsCovered` body
+  // field to the legacy single-spec scope and let a multi-spec frozen
+  // set ship a certificate that records only the primary spec.
+  const certFrozenMultiSpec = classifyFrozenSpecsCoveredMultiSpec(protoJson);
+  if (certFrozenMultiSpec.kind === "malformed") {
+    error(
+      "qfai prototyping certify: `prototyping.json#frozenSpecsCovered` is present " +
+        `but malformed (${certFrozenMultiSpec.reason}) at cert-sealing time. Failing ` +
+        "closed instead of silently sealing the certificate against the legacy " +
+        "single-spec `specsCovered` field. Re-run `qfai prototyping iterate --cycle 0` " +
+        "to regenerate the multi-spec frozen set.",
+    );
+    return 2;
+  }
+  const specsCovered =
+    certFrozenMultiSpec.kind === "ok"
+      ? certFrozenMultiSpec.value
+      : readFrozenSpecsCovered(protoJson);
   if (specsCovered === null) {
     error(
       "qfai prototyping certify: prototyping.json#specsCovered is missing or malformed — " +
@@ -405,25 +679,183 @@ async function loadLockGate(root: string, contractsDir: string): Promise<LockGat
   return sha !== null ? { kind: "ok", sha256: sha } : { kind: "malformed" };
 }
 
+/**
+ * Print the cycle-0 frozen specsCovered[] from prototyping.json so the
+ * operator can see which specs the current `/qfai-prototyping` run
+ * iterates over.
+ *
+ * 12th-wave Fix (codex r3265482150, P2): pre-fix this command resolved
+ * the LIVE primary spec from the config / spec markers and never read
+ * `prototyping.json`. After cycle 0 the frozen scope can diverge from
+ * the live config (a primary spec id renamed, markers moved between
+ * specs, etc.), so the pre-fix output misled agents about which spec
+ * iterate/certify were actually operating on. Now reads the frozen
+ * `specsCovered[]` (and, when present, `frozenSpecsCovered[]`) and
+ * exits 2 if `prototyping.json` is missing or malformed — matching the
+ * CLI contract §`qfai prototyping show-spec`.
+ *
+ * Output payload (JSON):
+ *   - `frozenSpecsCovered`: single-spec scope under review (cycle-0
+ *      frozen primary).
+ *   - `frozenSpecsCoveredSource`: discriminant indicating which
+ *      `prototyping.json` field the spec list was read from
+ *      (`"frozenSpecsCovered"` on current records, `"specsCovered"`
+ *      on pre-Wave-3 legacy records). Added in the 14th-wave fix
+ *      (codex r3269198684) so operators can detect legacy seed
+ *      records without re-reading the file.
+ *   - `frozenSurfaceUnion`: multi-spec UI-bearing UNION snapshot at
+ *      cycle 0 (drift baseline). May be absent on pre-11th-wave
+ *      records — surfaced as `null` so the consumer can distinguish
+ *      "field absent" from "field present but empty".
+ *   - `liveUiBearing`: current `resolveSurfaceUnion()` result (the
+ *      same resolver iterate's cycle ≥ 1 drift gate uses — strict
+ *      frontmatter + title-marker + `primarySpecId` config pin + UI
+ *      contract signals) so the live scope reported here is
+ *      apples-to-apples with what iterate enforces. Emitted as
+ *      `string[]` of bare spec IDs (15th + 16th-wave alignment;
+ *      pre-fix the field was `SpecRef[]` from
+ *      `resolveAllUiBearingSpecs`).
+ *   - `primary?`: present iff a primary spec resolves; carries
+ *      `{specId, specMdPath, source}`.
+ */
 export async function runPrototypingShowSpec(options: { root: string }): Promise<number> {
   const { config } = await loadConfig(options.root);
-  const resolved = await resolvePrimaryPrototypingSpec(options.root, config);
-  if (!resolved) {
+
+  const protoJsonAbs = path.join(options.root, PROTOTYPING_JSON_REL);
+  const protoRaw = await loadJson(protoJsonAbs);
+  if (protoRaw === null) {
     error(
-      "qfai prototyping show-spec: no primary prototyping spec found. " +
-        "Set qfai.config.yaml: prototyping.primarySpecId, " +
-        "or add `surface_type: ui-bearing` (or 'prototyping' in the title) " +
-        "to one of your specs' 01_Spec.md.",
+      `qfai prototyping show-spec: ${PROTOTYPING_JSON_REL} is missing or unparseable. ` +
+        "show-spec reads the cycle-0 frozen specsCovered[] — run " +
+        "`qfai prototyping iterate --cycle 0 --target-url <url>` to seed " +
+        "prototyping.json, or check the file is valid JSON.",
     );
     return 2;
   }
-  const payload = {
-    specId: resolved.specId,
-    specMdPath: path.relative(options.root, resolved.specMdPath).replace(/\\/g, "/"),
-    source: resolved.source,
+  if (typeof protoRaw !== "object" || Array.isArray(protoRaw)) {
+    error(
+      `qfai prototyping show-spec: ${PROTOTYPING_JSON_REL} is not a JSON object — ` +
+        "show-spec cannot read the frozen specsCovered[] from a non-object root.",
+    );
+    return 2;
+  }
+  const protoRecord = protoRaw as Record<string, unknown>;
+  // codex r3271018000 (P2, chatgpt-codex-connector): show-spec previously
+  // read `frozenSpecsCovered` via `readStringArrayField`, which collapses
+  // "field absent" and "field present-but-invalid" into a single `null`
+  // return value. That let `?? readStringArrayField(protoRecord.specsCovered)`
+  // silently downgrade to legacy single-spec scope even when the operator
+  // intended a multi-spec frozen scope but corrupted the JSON. certify
+  // already treats a present-but-malformed `frozenSpecsCovered` as a hard
+  // error (AC-0012-0045 class (h)); show-spec must mirror that contract on
+  // its own surface so operators / automation making recovery decisions
+  // from the scope output cannot be misled. (iterate-side present-but-
+  // malformed `frozenSpecsCovered` is handled separately: iterate consumes
+  // the legacy `specsCovered` reader for the cycle ≥ 1 shallow-equal
+  // primary-spec check, and reads the multi-spec drift baseline from
+  // `frozenSurfaceUnion`, not `frozenSpecsCovered`.) Use the same SSOT
+  // classifier the certify call sites already consume so the three
+  // surfaces — certify per-(spec × screen) gate, certify cert-sealing,
+  // and show-spec — share one absent-vs-malformed decision rule (codex
+  // r3271093206 FYI scope-narrowing note).
+  const showSpecFrozenMultiSpec = classifyFrozenSpecsCoveredMultiSpec(protoRecord);
+  if (showSpecFrozenMultiSpec.kind === "malformed") {
+    // codex r3271639132 (NIT, product-surface-reviewer, 44th-wave):
+    // 2-block CTA + `Reason:` layout matches the iterate-side
+    // `frozenSurfaceUnion missing` diagnostic (introduced 24th-wave per
+    // codex r3270459355). The recovery action stays the headline; the
+    // rationale (cross-surface symmetry, iterate-side handled
+    // separately) follows on an indented line after a blank separator
+    // so narrow-terminal wrap cannot visually fuse the CTA with the
+    // rationale.
+    error(
+      "qfai prototyping show-spec: `prototyping.json#frozenSpecsCovered` is present " +
+        `but malformed (${showSpecFrozenMultiSpec.reason}). Re-run ` +
+        "`qfai prototyping iterate --cycle 0` to regenerate the record.",
+    );
+    error("");
+    error(
+      "  Reason: refusing to report a downgraded single-spec scope from the legacy " +
+        "`specsCovered` field — certify treats the same input as a hard error and " +
+        "refuses to seal a certificate from a partially-corrupt multi-spec scope, " +
+        "so a downgraded show-spec output would mislead recovery decisions. " +
+        "(iterate-side handles present-but-malformed `frozenSpecsCovered` separately " +
+        "via the legacy `specsCovered` reader and the `frozenSurfaceUnion` drift gate.)",
+    );
+    return 2;
+  }
+  const frozenSpecsCovered =
+    showSpecFrozenMultiSpec.kind === "ok" ? showSpecFrozenMultiSpec.value : null;
+  const specsCovered = frozenSpecsCovered ?? readStringArrayField(protoRecord.specsCovered);
+  if (specsCovered === null || specsCovered.length === 0) {
+    error(
+      `qfai prototyping show-spec: ${PROTOTYPING_JSON_REL} is missing a valid ` +
+        "`frozenSpecsCovered[]` (or legacy `specsCovered[]`) — re-run " +
+        "`qfai prototyping iterate --cycle 0 --target-url <url>` to seed it.",
+    );
+    return 2;
+  }
+  // 14th-wave Fix (codex r3269198684, MINOR): surface which prototyping.json
+  // field the spec list was actually read from so operators doing drift
+  // analysis can tell post-Wave-3 records (frozen field present) apart from
+  // legacy Wave-2 records (only `specsCovered` on disk). Pre-fix the payload
+  // emitted the value under the key `frozenSpecsCovered` regardless of
+  // source, which masked the signal that cycle 0 was seeded with the
+  // pre-CHG-002 schema.
+  const frozenSpecsCoveredSource: "frozenSpecsCovered" | "specsCovered" =
+    frozenSpecsCovered !== null ? "frozenSpecsCovered" : "specsCovered";
+  const frozenSurfaceUnion = readStringArrayField(protoRecord.frozenSurfaceUnion);
+  // Compute the live UI-bearing union so the operator can spot drift.
+  // The legacy primary-resolver path is preserved as a fallback `specMdPath`
+  // so existing operator tooling that reads the per-spec path keeps working.
+  //
+  // 15th-wave Fix (codex r3269453293, P2): use `resolveSurfaceUnion` here
+  // — the SAME resolver the cycle ≥ 1 drift gate uses — so show-spec's
+  // `liveUiBearing` covers the full union (strict `surface_type:
+  // ui-bearing` + legacy `# … prototyping …` title-marker +
+  // `prototyping.primarySpecId` config pin + UI contract signals).
+  // Pre-fix show-spec called `resolveAllUiBearingSpecs`, which returns
+  // only the strict signals; on projects relying on non-strict markers
+  // operators saw a narrower live set than iterate actually enforces,
+  // producing false "drift" diagnostics that did not match the iterate
+  // gate. 19th-wave Fix (codex r3270055214, MAJOR): `resolveSurfaceUnion`
+  // now lives at `core/prototyping/specResolution.ts` (the canonical
+  // core-layer location); `prototypingIterate.ts` only re-exports it
+  // for back-compat with the wave-8/10/13 unit tests. Both CLI
+  // commands import from the core module directly (codex r3270215029
+  // / r3270209821 21st-wave comment refresh).
+  const liveUiBearing = await resolveSurfaceUnion(options.root, config);
+  const primary = await resolvePrimaryPrototypingSpec(options.root, config);
+  const payload: Record<string, unknown> = {
+    frozenSpecsCovered: specsCovered,
+    frozenSpecsCoveredSource,
+    frozenSurfaceUnion: frozenSurfaceUnion,
+    liveUiBearing,
   };
+  if (primary !== undefined) {
+    payload.primary = {
+      specId: primary.specId,
+      specMdPath: path.relative(options.root, primary.specMdPath).replace(/\\/g, "/"),
+      source: primary.source,
+    };
+  }
   info(JSON.stringify(payload, null, 2));
   return 0;
+}
+
+/**
+ * Narrow an unknown value to `string[]` of non-empty strings, or
+ * `null` when the value is missing / malformed. Shared by show-spec
+ * to read both `frozenSpecsCovered` and `frozenSurfaceUnion`.
+ */
+function readStringArrayField(raw: unknown): string[] | null {
+  if (!Array.isArray(raw)) return null;
+  const out: string[] = [];
+  for (const value of raw) {
+    if (typeof value !== "string" || value.length === 0) return null;
+    out.push(value);
+  }
+  return out;
 }
 
 // ─── final-iter HTML resolution ─────────────────────────────────────────────
@@ -546,6 +978,273 @@ async function loadJson(filePath: string): Promise<unknown> {
   } catch {
     return null;
   }
+}
+
+/**
+ * Cheap existence probe for the per-(spec × screen) review.json gate.
+ * Uses `stat` (not `access`) so symlinks resolve consistently with the
+ * rest of the evidence walker, and isolates the swallow-all-errors
+ * scope to a single helper instead of inlining a try/catch at the call
+ * site.
+ *
+ * Returns `false` for ANY fs error (including permission flips) — the
+ * caller treats "not visible to the certify process" as missing. This
+ * is symmetric with `validateUiEvidenceArtifacts`-style presence
+ * checks elsewhere; certify's strict gates upstream (lock-unreadable,
+ * stale-iter-readdir) catch the broader permission-flip vector.
+ */
+async function fileExists(absPath: string): Promise<boolean> {
+  try {
+    const s = await stat(absPath);
+    return s.isFile();
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Canonical per-spec evidence directory shape: `spec-NNNN` where NNNN
+ * is exactly 4 digits. Used by {@link hasPerSpecSubdir} to gate
+ * activation of the per-(spec × screen) review.json presence check on
+ * the actual evidence layout — unrelated names like `spec-assets` /
+ * `spec-temp` / `spec-archive` MUST NOT enable the gate (codex
+ * r3271018003 P2 — chatgpt-codex-connector: pre-fix any `spec-*`
+ * directory triggered the gate, so a legacy flat-iter project with an
+ * incidental `spec-assets/` sibling would have the gate spuriously
+ * activated and fail with missing review.json coverage that the run
+ * never intended to produce).
+ */
+const CANONICAL_SPEC_DIR = /^spec-\d{4}$/u;
+
+/**
+ * Returns `true` when the accepted iter directory contains at least
+ * one canonical `spec-NNNN` subdirectory (per-spec layout). Used by
+ * the per-(spec × screen) review.json gate to skip enforcement on
+ * legacy flat-iter projects, which the shipped iterate driver +
+ * SKILL.md still emit until the per-spec layout migration lands.
+ *
+ * ENOENT / non-readable iter dir → `false` (gate stays off): the
+ * accepted iter HTML gate above already required the dir to exist
+ * and contain HTML, so reaching here with a missing dir is the
+ * legitimate "no per-spec layout" answer rather than a hidden error.
+ */
+async function hasPerSpecSubdir(iterDirAbs: string): Promise<boolean> {
+  let names: string[];
+  try {
+    names = await readdir(iterDirAbs);
+  } catch {
+    return false;
+  }
+  for (const name of names) {
+    if (!CANONICAL_SPEC_DIR.test(name)) continue;
+    const abs = path.join(iterDirAbs, name);
+    try {
+      const s = await stat(abs);
+      if (s.isDirectory()) return true;
+    } catch {
+      continue;
+    }
+  }
+  return false;
+}
+
+/**
+ * Parse a single UI contract YAML file and return its
+ * `CanonicalScreenContract[]` records with `sourceRef` set to
+ * `<rel-path>#<screenId>`. Shared by `readPerSpecScreens` so the
+ * id/route/title/primary_tasks extraction logic lives in exactly one
+ * place (`extractUiScreens`); see SOLID/DRY rationale on the export
+ * declaration in `core/contracts/screenContracts.ts`.
+ *
+ * Returns an empty array on read / parse failure or on a missing
+ * `screens:` array.
+ *
+ * 13th-wave Fix (codex r3265813656, MINOR): pre-fix the read / parse
+ * failure path silently swallowed the error and returned `[]`, which
+ * the aggregate-warn at the call site only surfaced when the entire
+ * matched set produced zero screens. In a half-failure (e.g. three
+ * matched files, one with a YAML parse error, two with valid
+ * `screens:`), the call site's aggregate warn never fired because the
+ * other files filled the array — and the operator never saw the parse
+ * error. This per-file `warn` line names the offending file and
+ * narrows the error class (read vs parse) so authoring typos surface
+ * at the certify gate. The function still returns `[]` on failure so
+ * existing callers keep their contracts; CLAUDE.md "every async path
+ * must have explicit error handling" is satisfied via the
+ * named-error warn.
+ */
+async function parseUiScreenFile(
+  root: string,
+  absPath: string,
+): Promise<CanonicalScreenContract[]> {
+  const relRef = path.relative(root, absPath).replace(/\\/g, "/");
+  let raw: string;
+  try {
+    raw = await readFile(absPath, "utf-8");
+  } catch (err) {
+    const reason = err instanceof Error ? err.message : String(err);
+    warn(
+      `qfai prototyping certify: UI contract file ${relRef} could not be read ` +
+        `(${reason}); treating as zero screens.`,
+    );
+    return [];
+  }
+  let parsed: unknown;
+  try {
+    parsed = parseYaml(raw);
+  } catch (err) {
+    const reason = err instanceof Error ? err.message : String(err);
+    warn(
+      `qfai prototyping certify: UI contract file ${relRef} could not be parsed ` +
+        `as YAML (${reason}); treating as zero screens.`,
+    );
+    return [];
+  }
+  return extractUiScreens(parsed).map((screen) => ({
+    ...screen,
+    sourceRef: `${relRef}#${screen.screenId}`,
+  }));
+}
+
+/**
+ * Read the per-spec UI contract for `<specDirName>` (e.g. `spec-0007`) if
+ * one exists under `<contractsDir>/ui/`. Returns the screens declared by
+ * that contract, or `null` when no per-spec contract file matches.
+ *
+ * codex r3265157640 (P1): UI contracts can be authored either project-wide
+ * (one `screens:` list under `.qfai/contracts/ui/`, applies to every
+ * spec in the frozen set) or per-spec (one contract file per spec, scopes
+ * screen declarations to THAT spec). The per-(spec × screen) certify gate
+ * must respect the per-spec scope when available — pre-fix it always used
+ * the project-wide list and produced spurious cross-product rejections.
+ *
+ * Resolution order (TRUE first-hit-wins for canonical single-file
+ * candidates; multi-file shapes are only considered when no canonical
+ * single file matches):
+ *   1. `<contractsDir>/ui/<specDirName>.yaml`            (e.g. `spec-0007.yaml`)
+ *   2. `<contractsDir>/ui/<bareNumeric>.yaml`            (e.g. `0007.yaml`)
+ *   3. `<contractsDir>/ui/ui-<bareNumeric>.yaml`         (e.g. `ui-0007.yaml`)
+ *
+ *   If none of 1-3 matches, the function falls back to multi-file shapes
+ *   (every match contributes screens):
+ *   4. `<contractsDir>/ui/ui-<bareNumeric>-<slug>.yaml` (glob; e.g. `ui-0007-home.yaml`)
+ *   5. `<contractsDir>/ui/<specDirName>/<subpath>.yaml` (recursive subdir layout)
+ *
+ * Behaviour for 1-3 is TRUE first-hit: the loop breaks on the first match
+ * so an authoring fork that left both `spec-0007.yaml` and `ui-0007.yaml`
+ * on disk uses `spec-0007.yaml` only — the prior implementation read
+ * BOTH and unioned screens, producing surprising cross-file behaviour.
+ * Candidates 4 (glob) and 5 (subdir) are aggregated together because
+ * their entire purpose is multi-file authoring; deduplication is
+ * first-write-wins (matches `readUiContractScreenContracts`).
+ *
+ * Returns `null` when none of the candidates exists OR when matched
+ * files parse but declare no `screens:`. The caller falls back to the
+ * project-wide list in either case so a malformed per-spec contract
+ * does not silently zero-out the gate.
+ *
+ * Returns the deduplicated `CanonicalScreenContract[]` list
+ * (first-write wins for duplicate `screenId`s across multiple matched
+ * files; matches `readUiContractScreenContracts`'s `findIndex`
+ * dedup semantics — pre-fix the JSDoc claimed "last-write wins"
+ * which contradicted the impl).
+ *
+ * Diagnostic logging: when at least one file matched but no screens
+ * were extracted (e.g. YAML parse error, `screens:` typo, non-array
+ * `screens`), emits a `warn` line naming the file path(s) so operators
+ * see authoring issues at certify time instead of silently falling
+ * back to the project-wide list.
+ *
+ * @internal Exported for direct unit-testing — not part of the package's
+ * public surface.
+ */
+export async function readPerSpecScreens(
+  root: string,
+  contractsDirRelative: string,
+  specDirName: string,
+): Promise<CanonicalScreenContract[] | null> {
+  // codex r3271715563 (P1, chatgpt-codex-connector, 47th-wave): use
+  // `path.resolve` instead of `path.join` so an absolute `paths.contractsDir`
+  // override in `qfai.config.yaml` (e.g. `/tmp/contracts`) resolves to
+  // the absolute path directly. Pre-fix `path.join(root, "/tmp/contracts",
+  // "ui")` produced `<root>/tmp/contracts/ui` (string concatenation, no
+  // absolute-segment reset), so per-spec contract discovery missed every
+  // file under the absolute contractsDir. Certify then fell back to the
+  // project-wide screen list and enforced wrong (spec, screen) coverage
+  // for explicit-contracts-dir workflows. Mirrors the wave-45 fix for
+  // `specDirExists` against `paths.specsDir`.
+  const uiDir = path.resolve(root, contractsDirRelative, "ui");
+  const bareNumeric = specDirName.replace(/^spec-/iu, "");
+  const singleFileCandidates = [
+    path.join(uiDir, `${specDirName}.yaml`),
+    path.join(uiDir, `${bareNumeric}.yaml`),
+    path.join(uiDir, `ui-${bareNumeric}.yaml`),
+  ];
+  const matched: string[] = [];
+  // True first-hit-wins: stop on first existing canonical candidate so
+  // authoring forks (e.g. both spec-0007.yaml AND ui-0007.yaml on disk)
+  // produce deterministic per-spec scope.
+  for (const abs of singleFileCandidates) {
+    if (await fileExists(abs)) {
+      matched.push(abs);
+      break;
+    }
+  }
+  if (matched.length === 0) {
+    // Multi-file shapes (glob + subdir layout). The glob targets the
+    // `ui-NNNN-<slug>.yaml` split-naming convention; the subdir targets
+    // `<spec-id>/**\/*.yaml` for projects that group per-spec contracts
+    // in a directory.
+    const uiDirPosix = uiDir.replace(/\\/g, "/");
+    const globPattern = path.posix.join(uiDirPosix, `ui-${bareNumeric}-*.yaml`);
+    const subdirPattern = path.posix.join(uiDirPosix, specDirName, "**", "*.yaml");
+    const [globMatches, subdirMatches] = await Promise.all([
+      fg(globPattern, { absolute: true }),
+      fg(subdirPattern, { absolute: true }),
+    ]);
+    matched.push(...globMatches, ...subdirMatches);
+  }
+  if (matched.length === 0) return null;
+
+  const screens: CanonicalScreenContract[] = [];
+  for (const abs of matched) {
+    const fileScreens = await parseUiScreenFile(root, abs);
+    screens.push(...fileScreens);
+  }
+  if (screens.length === 0) {
+    // Surface the authoring issue: per-spec UI contract files exist
+    // for this spec but produced zero valid screens. Without this warn
+    // the caller silently falls back to the project-wide list (the
+    // 9th-wave cross-product behaviour). Operator gets a named path
+    // instead of a confusing "missing pair" error at the gate below.
+    const relPaths = matched.map((m) => path.relative(root, m).replace(/\\/g, "/")).join(", ");
+    warn(
+      `qfai prototyping certify: per-spec UI contract file(s) for ${specDirName} ` +
+        `(${relPaths}) parsed but declared no valid screens; falling back to the ` +
+        "project-wide screen list. Check the YAML for parse errors, a `screens:` " +
+        "typo, or missing `id`/`route` on each entry.",
+    );
+    return null;
+  }
+  // First-write-wins dedup across multi-file matches (glob + subdir
+  // layout can both surface duplicate `screenId`s). Matches the
+  // `readUiContractScreenContracts` semantics.
+  return screens.filter((s, idx, all) => all.findIndex((c) => c.screenId === s.screenId) === idx);
+}
+
+/**
+ * Normalize a `specsCovered[]` entry to its `spec-NNNN` directory name.
+ *
+ * `prototyping.json#specsCovered` entries are persisted by `iterate
+ * --cycle 0` as bare 4-digit numeric strings; some authoring paths may
+ * also write the fully-qualified `spec-NNNN` form. Both shapes must
+ * resolve to the same on-disk directory under `iter-NN/`. The strip +
+ * re-prefix is byte-stable and idempotent (already-prefixed input
+ * round-trips unchanged).
+ */
+function normalizeSpecDirName(raw: string): string {
+  const stripped = raw.replace(/^spec-/iu, "");
+  return `spec-${stripped}`;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

@@ -32,6 +32,7 @@
 
 ## DR-0012-0014: MAX_ITERATIONS = 15
 
+- Status: superseded by DR-0012-0028 (MAX_ITERATIONS = 10). See `09_delta.md` CHG-002 OP-PURGE-081.
 - Decision: `MAX_ITERATIONS = 15` を code constant として `iteration.ts` で固定する。設定可能にしない。
 - Rationale: 仕様の決定論性を担保し、ユーザ環境差で stop 条件が揺れるのを防ぐ。
 
@@ -52,6 +53,7 @@
 
 ## DR-0012-0018: Per-Iter Evidence は最小構成
 
+- Status: superseded by DR-0012-0029 (`iter-NN/spec-NNNN/<screen>.review.json` only; PNG / HTML / interaction.json は廃止). See `09_delta.md` CHG-002 OP-PURGE-082.
 - Decision: per-iter evidence は `<screen>.png` + `<screen>.html` + `review.json` の 3 種のみ。`screenshots/` / `html/` 等の subdir / `breakthrough.json` / `concept.json` 等の sidecar は禁止。
 - Rationale: iter cost を低く保ち、scrap-and-redo が安価になる。
 
@@ -89,3 +91,53 @@
 
 - Decision: 旧 v1.x (mode / fullHarness / scoringTrace / round funnel / allReviewerAxesPerfect100) との後方互換 layer は構築しない。
 - Rationale: 破壊的変更前提で進める方が AI 実装にも人間理解にも明確。互換 layer は隠れた技術的負債を生む。
+
+## DR-0012-0026: Multi-spec per invocation (resolveAllUiBearingSpecs)
+
+- Decision: `/qfai-prototyping` の 1 回の実行で、consumer project の全 UI-bearing spec を `resolveAllUiBearingSpecs()` で resolve し、一括で prototyping 駆動する。旧 `resolvePrimaryPrototypingSpec` (per-invocation primary-spec selection prompt) は廃止。
+- Rationale: User direction 2026-05-18 / SRC-0001. Discussion-pack OQ-0009 Option A (mid-run additions deferred) と整合。ユーザ要望「全 UI 仕様を一度で試したい」を満たす。
+- Options considered:
+  - A) Multi-spec resolver per invocation (selected).
+  - B) Keep primary-spec selection per invocation (rejected — fails the directive).
+  - C) Multi-tenant (multiple consumer projects per invocation; rejected — out of scope, discussion-pack 05_Scope.md item 5).
+- References: REQ-0001, US-0012-0109, AC-0012-0037, BR-0012-0028, discussion-pack OQ-0001 / OQ-0009 resolutions.
+
+## DR-0012-0027: Reviewer-driven Playwright session (no scripted interaction)
+
+- Decision: Reviewer sub-agent は評価時に自分で Playwright (or equivalent harness) を起動し、人間的な操作 (click / type / navigate / scroll) を行ったうえで qualitative impression を `<screen>.review.json` に記す。事前生成された scripted interaction transcript も AC selector / assertion も生成しない。
+- Rationale: User direction 2026-05-16 follow-up / SRC-0007. 目的は「reviewer が実際に操作した感覚」を取り込むこと。reproducibility は qualitative-only 評価の対価として deprioritize する (Constraints TC-6)。
+- Options considered:
+  - A) Reviewer-driven Playwright session (selected).
+  - B) Scripted interaction generator + capture + post-hoc reviewer score (rejected — user requested live operation feel).
+  - C) Capture-only with no Playwright operate (rejected — fails REQ-0003 operability sensing).
+- References: REQ-0003, REQ-0004, US-0012-0110, US-0012-0111, AC-0012-0040, BR-0012-0030, discussion-pack OQ-0005 resolution.
+
+## DR-0012-0028: MAX_ITERATIONS = 10 (cycles 0..9)
+
+- Decision: 反復 budget は 10 サイクル (cycle 0 + cycles 1..9)。`MAX_ITERATIONS = 10` / `MAX_ITERATION_INDEX = 9` を `core/prototyping/iteration.ts` の sole SSOT とし、validators `QFAI-PROT-005` / `QFAI-PROT-006` および fixtures / tests / skill docs を atomic に追従させる。DR-0012-0014 (15-cycle) は supersede。
+- Rationale: User direction 2026-05-16 / SRC-0001 「10 サイクル」明示指示。multi-spec 化により総 reviewer LLM cost が増えるため、上限を縮める方向で整合。
+- Options considered:
+  - A) 10 cycles (selected).
+  - B) 15 cycles (rejected — user direction).
+  - C) Per-spec extension on lag (rejected — discussion-pack OQ-0001 Option A: hard-fail with lagging spec named).
+- References: REQ-0002, US-0012-0118, AC-0012-0038, AC-0012-0039, BR-0012-0029, discussion-pack OQ-0001 resolution.
+
+## DR-0012-0029: No PNG / HTML / interaction.json capture (review.json only)
+
+- Decision: per-iter evidence は `iter-NN/spec-NNNN/<screen>.review.json` のみ。`.png` / `.html` / `.interaction.json` は書かない。Path helpers と stale cleanup は per-spec 階層に追従する。DR-0012-0018 (PNG + HTML + review.json) は supersede。
+- Rationale: Reviewer-driven Playwright (DR-0012-0027) のもとでは「動作中の感覚」を reviewer が直接 review.json に書き取るため、reproducibility 目的の still capture は不要。iter cost / FS noise / stale cleanup 複雑度を同時に下げる。OQ-0006 Option A の path 設計を採用。
+- Options considered:
+  - A) `iter-NN/spec-NNNN/<screen>.review.json` only (selected).
+  - B) Flat `iter-NN/<spec-NNNN>-<screen>.review.json` (rejected — path parsing が複雑化).
+  - C) Per-spec subtree with cycle counter per spec (rejected — cycle-counter invariant が破れる).
+- References: REQ-0008, US-0012-0114, AC-0012-0046, BR-0012-0030, BR-0012-0035, discussion-pack OQ-0006 resolution.
+
+## DR-0012-0030: 量的 AC-pass / transition-pass 閾値は廃止 (qualitative-only)
+
+- Decision: convergence 判定から quantitative AC-pass% / transition-pass% 閾値を完全に除去し、4 ordinal UX axes (all exceptional) AND `layoutAntiPatternsDetected[]` empty AND `designMdViolations[]` empty を、全 `(spec, screen)` ペアに対し AND 集約する qualitative-only 判定に統一する。lagging spec は cycle 9 hard-fail 時に aggregator record に必ず列挙される。
+- Rationale: User direction 2026-05-18 / SRC-0007 「design や操作感は数値で追わない」明示指示。OQ-0005 Option A (prose AC のみで reviewer に十分; selector / assertion 拡張は不要)、OQ-0006 (Reviewer の qualitative impression が判断面) と整合。Constraints TC-6 (determinism は意図的に追わない) で対価が明示済み。
+- Options considered:
+  - A) Qualitative-only AND aggregator (selected).
+  - B) Keep quantitative AC-pass threshold per spec (rejected — user direction).
+  - C) Hybrid (qualitative gating + numeric tie-breaker; rejected — false precision を持ち込む).
+- References: REQ-0005, AC-0012-0042, BR-0012-0032, Constraints TC-6, discussion-pack OQ-0005 / OQ-0006 resolutions.

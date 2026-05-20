@@ -74,6 +74,46 @@ As a reviewer, I rely on a pure deterministic function `findDesignMdViolations(h
 
 As a `/qfai-implement` consumer, I receive `design-system.yaml` as a deterministic byte-equivalent mirror of `DESIGN.md` tokens (not extracted from final iter HTML).
 
+### US-0012-0109
+
+As an AI 開発者 (skill operator), I want one `/qfai-prototyping` invocation to resolve every UI-bearing spec in the consumer project so that the project-wide prototype set evolves in a single run without per-invocation primary-spec selection. (REQ-0001, CHG-002)
+
+### US-0012-0110
+
+As a reviewer (product-surface-reviewer), I want to launch Playwright myself and operate the prototype (click / type / navigate / scroll) per spec × screen so that my qualitative impressions reflect actual operability instead of a pre-generated script transcript. (REQ-0003, CHG-002)
+
+### US-0012-0111
+
+As a reviewer, I want to write short-prose impressions of `operability`, `transitionFeel`, `crossScreenContinuity`, `userStoryFeel`, `acceptanceCriteriaFeel`, and `menuReachabilityFeel` per spec × screen so that design and operability evaluation is qualitative-only (not reduced to AC-pass / transition-pass percentages). (REQ-0004, REQ-0005, CHG-002)
+
+### US-0012-0112
+
+As a downstream `/qfai-implement` consumer, I want every image slot to be filled from an allowlisted free stock-photo source and recorded with `{url, license, attribution, source}` in `prototype-handoff.yaml#imageSources[]` so that legal/compliance review can verify provenance without re-reading prototype HTML. (REQ-0006, CHG-002)
+
+### US-0012-0113
+
+As a CI operator, I want `/qfai-prototyping` to run autonomously from cycle 0 through cycle 9 with no per-cycle user prompts and to exit non-zero with a deterministic code on lock drift / Reviewer Playwright-session failure / license-verify failure (exit 66) / mid-run spec-set change so that pipelines never block on stdin. (REQ-0007, CHG-002)
+
+### US-0012-0114
+
+As a maintainer, I want per-cycle evidence laid out under `iter-NN/spec-NNNN/<screen>.review.json` only (no `.png`, no `.html`, no `.interaction.json`) so that stale-dir cleanup, certify presence checks, and reviewer payload writes share one namespace and iter cost stays low. (REQ-0008, CHG-002)
+
+### US-0012-0115
+
+As a maintainer, I want `qfai prototyping certify` to aggregate per-spec review-payload presence across the cycle-0 frozen spec set so that a missing `<screen>.review.json` for any spec at the accepted iter rejects certify. (REQ-0009, CHG-002)
+
+### US-0012-0116
+
+As a maintainer, I want the resolved spec set frozen at cycle 0 and recorded in cycle-0 evidence so that mid-run additions of new UI-bearing specs do not restart cycle 0 — they are deferred to the next invocation. (REQ-0011, CHG-002)
+
+### US-0012-0117
+
+As a legal/compliance reviewer, I want the stock-photo license catalog (allowed sources + license tiers + attribution format) frozen at cycle 0 and used as the SSOT for every `imageSources[]` row in the run so that license-verify is reproducible. (REQ-0013, CHG-002)
+
+### US-0012-0118
+
+As a CI operator, I want the run hard-capped at 10 cycles (cycle 0 plus cycles 1..9, terminator `index === 9`) so that runaway loops are deterministic and validators reject any evidence pack with cycle index > 9. (REQ-0002, CHG-002)
+
 ## Legacy Coverage Continuity
 
 - The legacy baseline user-story identifier space is retained as historical traceability for existing tests and historical slices.

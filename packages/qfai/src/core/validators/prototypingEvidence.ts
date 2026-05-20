@@ -10,12 +10,12 @@
  *   QFAI-PROT-003  iterations[] must contain at least iter-00
  *   QFAI-PROT-004  iterations[i].index must equal i (contiguous from 0)
  *   QFAI-PROT-005  stopReason consistency:
- *                    stopReason="max-iterations" requires last iter.index===14
+ *                    stopReason="max-iterations" requires last iter.index===9
  *                    stopReason="axes-exceptional" requires latest iter to
  *                      have all 4 axes exceptional,
  *                      layoutAntiPatternsDetected=[] AND
  *                      designMdViolations=[]
- *   QFAI-PROT-006  iterations.length exceeds MAX_ITERATIONS (15)
+ *   QFAI-PROT-006  iterations.length exceeds MAX_ITERATIONS (10)
  *   QFAI-PROT-007  acceptedIterationIndex must equal iterations.length - 1
  */
 

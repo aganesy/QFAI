@@ -8,6 +8,7 @@
 
 ## BR-0012-0002: Mandatory UI Evidence
 
+- Status: superseded by BR-0012-0030 (reviewer-driven Playwright; no capture artifacts) and BR-0012-0035 (per-spec iter-dir namespacing; review.json only). See `09_delta.md` CHG-002 OP-PURGE-077.
 - AC-Refs: AC-0012-0002
 - Every declared screen in `.qfai/contracts/ui/*.yaml` must have, per iter:
   - `.qfai/evidence/prototyping/iter-NN/<screen>.png`
@@ -67,6 +68,7 @@
 
 ## BR-0012-0017: Single Lineage
 
+- Status: superseded by BR-0012-0029 (cycles 0..9, per-spec single lineage under multi-spec). See `09_delta.md` CHG-002 OP-PURGE-078.
 - AC-Refs: AC-0012-0020
 - Exactly one prototype lineage per `/qfai-prototyping` invocation. No parallel candidate funnel.
 - Cycles 0..14 (max 15) form a single serial chain `iter-00 → iter-01 → ... → iter-14` in `prototyping.json#iterations[]`.
@@ -79,6 +81,7 @@
 
 ## BR-0012-0019: 4 UX Axes Ordinal Schema
 
+- Status: superseded by BR-0012-0031 (per spec × screen `<screen>.review.json` with 4 ordinal axes + six `*Feel` prose fields, ≤ 200 words each; no global `critique` length rule). See `09_delta.md` CHG-002 OP-PURGE-079.
 - AC-Refs: AC-0012-0021, AC-0012-0022, AC-0012-0023
 - Each `iter-NN/review.json` MUST contain `scores: {informationArchitecture, navigationFlow, usability, functionality}` with ordinal values in `{weak, acceptable, strong, exceptional}`.
 - `critique` is a single 200..500 word string. `pivotDirective` is one of `"continue" | "refine" | "pivot"`.
@@ -110,6 +113,7 @@
 
 ## BR-0012-0024: Stop Condition
 
+- Status: superseded by BR-0012-0032 (qualitative AND-aggregator across all spec × screen pairs) + BR-0012-0029 (10-cycle terminator at `index === 9`) + BR-0012-0034 (hard-stop class catalog). DESIGN.md sha256 mismatch on cycle ≥ 1 (exit 2) remains active via BR-0012-0026. See `09_delta.md` CHG-002 OP-PURGE-080.
 - AC-Refs: AC-0012-0028, AC-0012-0029, AC-0012-0035
 
 `/qfai-prototyping` stops when one of:
@@ -137,3 +141,92 @@ No other path triggers stop. LLM subjective DONE is forbidden.
 - AC-Refs: AC-0012-0036
 - `.qfai/contracts/design/design-system.yaml` is generated post-loop as a deterministic byte-equivalent mirror of root `DESIGN.md` token tables (color / typography / radius / shadow). It is NOT extracted from the final iter HTML.
 - Drift between mirror and DESIGN.md raises `QFAI-DCON-032` (validator owned by the qfai-validate spec).
+
+## BR-0012-0028: Multi-spec resolver per invocation
+
+- AC-Refs: AC-0012-0037
+- One `/qfai-prototyping` invocation MUST resolve every UI-bearing spec in the consumer project via `resolveAllUiBearingSpecs()` in `core/prototyping/specResolution.ts`.
+- A spec is UI-bearing iff (a) its `01_Spec.md` carries `surface_type: ui-bearing` frontmatter OR (b) a matching `.qfai/contracts/ui/<spec-id>.yaml` contract exists. The legacy `01_Context.md ui_bearing: true` signal is superseded by these per CHG-002.
+- The previous per-invocation primary-spec selection prompt (`resolvePrimaryPrototypingSpec`) MUST be removed; zero UI-bearing specs is a deterministic no-op exit 0.
+
+## BR-0012-0029: 10-cycle SSOT and terminator
+
+- AC-Refs: AC-0012-0038, AC-0012-0039
+- `MAX_ITERATIONS = 10` and `MAX_ITERATION_INDEX = 9` MUST be the sole SSOT in `core/prototyping/iteration.ts`. No literal `10` or `15` cycle constants outside the SSOT module (NFR-0004).
+- Validators `QFAI-PROT-005` / `QFAI-PROT-006` MUST raise on cycle index > 9 or cycle count ≠ recorded `MAX_ITERATIONS`.
+- Per-spec lineage rule from BR-0012-0017 is preserved at `cycles 0..9` granularity under multi-spec.
+
+## BR-0012-0030: Reviewer-driven Playwright session
+
+- AC-Refs: AC-0012-0040
+- The Reviewer sub-agent MUST itself launch Playwright (or equivalent harness) per spec × screen per cycle and perform human-like operation (click / type / navigate / scroll) on the live prototype.
+- No scripted interaction transcript file is produced; no AC selector / assertion is required.
+- The capture-pipeline (per-iter PNG + HTML capture by a separate `devops-ci-engineer` role) is forbidden under the new model.
+
+## BR-0012-0031: Qualitative review payload schema
+
+- AC-Refs: AC-0012-0041
+- Each `<screen>.review.json` MUST contain the 4 ordinal UX axes (informationArchitecture / navigationFlow / usability / functionality, each in `{weak, acceptable, strong, exceptional}`) AND six `*Feel` short-prose fields (`operability`, `transitionFeel`, `crossScreenContinuity`, `userStoryFeel`, `acceptanceCriteriaFeel`, `menuReachabilityFeel`), each ≤ 200 words.
+- `layoutAntiPatternsDetected[]` (lap-001..008) and `designMdViolations[]` remain present and govern convergence; quantitative AC-pass / transition-pass thresholds are NOT recorded.
+
+## BR-0012-0032: Convergence is AND across spec × screen
+
+- AC-Refs: AC-0012-0042
+- Global convergence is the AND, across every `(spec, screen)` pair in the cycle-0 frozen spec set, of: `all 4 axes === exceptional AND layoutAntiPatternsDetected[] empty AND designMdViolations[] empty`.
+- Quantitative AC-pass% / transition-pass% thresholds are explicitly NOT consulted (user direction 2026-05-18: design and operability are qualitative-only).
+- On hard-fail at cycle 9, the aggregator record MUST name every lagging spec ID.
+
+## BR-0012-0033: Stock-photo license catalog and per-image recording
+
+- AC-Refs: AC-0012-0043
+- Every image slot MUST be filled from the cycle-0 frozen license catalog (allowlist: Unsplash, Pexels per OQ-0002 / SRC-0005 / SRC-0006).
+- Every fill MUST record `{url, license, attribution, source}` in `prototype-handoff.yaml#imageSources[]`.
+- License-verify failure (unknown license / non-allowlisted source / missing field) MUST hard-stop the run with exit 66 (OQ-0008).
+- The runtime cycle ≥ 1 license-verify gate MUST reject any `imageSources[]` entry whose `attribution` is undefined, empty string, or whitespace-only with error code `license-missing-attribution` → exit 66. This is the runtime-side counterpart of the write-side recording rule above; the gate does not silently tolerate "field present but blank" (14th-wave Fix, codex r3269193861 MAJOR + codex r3269193005 MINOR).
+
+## BR-0012-0034: Autonomy and deterministic hard-stop catalog
+
+- AC-Refs: AC-0012-0044, AC-0012-0045, AC-0012-0052
+- The run MUST be fully autonomous from cycle 0 through cycle 9 with no per-cycle user prompts (NFR-0005).
+- Hard-stop classes (deterministic non-zero exits, no prompts):
+  - (a) lock drift (exit 2; BR-0012-0026 governs `DESIGN.md` hash mismatch case)
+  - (b) Reviewer Playwright-session failure across all reviewers for a spec × screen (exit 64 with `sessionStatus ∈ {retryExhausted, launchFailed}` recorded on the per-`(spec, screen)` review payload so the orchestrator can disambiguate from converged-exit-64; diagnostic names the `(spec, screen)`)
+  - (c) license-verify failure (exit 66)
+  - (d) mid-run spec-set change detection (exit 2; same class as lock drift — diagnostic names the new spec; deferred to next invocation per BR-0012-0038)
+
+## BR-0012-0035: Per-spec iter-dir namespacing — review.json only
+
+- AC-Refs: AC-0012-0046
+- Iter-dir layout MUST be `iter-NN/spec-NNNN/<screen>.review.json` only. No `.png`, no `.html`, no `.interaction.json`, no other sidecar.
+- Path helpers (`iterationDirPerSpec`, `iterationReviewPathPerSpec`, `findIterationReviewFiles`, `findStaleIterDirs`, `deleteStaleIterDirs`) MUST descend into `spec-NNNN` while preserving `/^iter-\d{2,}$/` cleanup semantics.
+
+## BR-0012-0036: Certify aggregates per-spec coverage
+
+- AC-Refs: AC-0012-0047
+- `qfai prototyping certify` MUST read the cycle-0 frozen spec set via `readFrozenSpecsCovered()`, iterate per spec, and reject if any spec lacks any declared screen's `<screen>.review.json` at the accepted iter.
+- The diagnostic MUST name the missing `(spec, screen)` pair.
+
+## BR-0012-0037: Menu reachability is qualitative (not hard-fail)
+
+- AC-Refs: AC-0012-0048
+- The Reviewer SHOULD exercise every primary menu entry point declared by the spec at least once during its Playwright session.
+- Findings surface in `menuReachabilityFeel`; unreachable entries are qualitative critique only and do NOT hard-fail the cycle. Menu reachability is a sub-criterion of `navigationFlow` (OQ-0007 Option A), not a 5th axis.
+
+## BR-0012-0038: Spec set frozen at cycle 0; mid-run additions deferred
+
+- AC-Refs: AC-0012-0049
+- The resolved spec set MUST be frozen at cycle 0 and persisted in cycle-0 evidence.
+- The cycle ≥ 1 mid-run spec-set drift gate MUST compare the live `resolveSurfaceUnion(root, config)` result set-equal against the cycle-0 frozen `prototyping.json#frozenSurfaceUnion` snapshot (not against the legacy single-spec `frozenSpecsCovered` / `specsCovered` fields, which carry only the primary-spec scope under review and are NOT the multi-spec drift baseline). A missing or malformed `frozenSurfaceUnion` snapshot on cycle ≥ 1 is a hard-stop and instructs the operator to re-seed via `--cycle 0`.
+- Mid-run additions of new UI-bearing specs MUST NOT trigger cycle-0 restart; they are deferred to the next `/qfai-prototyping` invocation (OQ-0009 Option A).
+
+## BR-0012-0039: Per-spec time-budget soft warning
+
+- AC-Refs: AC-0012-0050
+- Per-spec time-budget cap is 5 min/spec per cycle (OQ-0004 / NFR-0001). Overruns SHOULD be recorded in `softWarnings.timeBudget` inside the per-spec review payload.
+- The convergence aggregator MUST NOT gate on per-spec budget overrun; only the global 10-cycle budget hard-fails the run.
+
+## BR-0012-0040: Cycle-0 freezes spec set AND license catalog
+
+- AC-Refs: AC-0012-0051
+- Cycle 0 MUST freeze and persist (a) the resolved UI-bearing spec set AND (b) the stock-photo license-class catalog (allowed sources + license tiers + attribution format) in cycle-0 evidence.
+- Both serve as the SSOT for every subsequent cycle's resolver, aggregator, and license-verify pass.

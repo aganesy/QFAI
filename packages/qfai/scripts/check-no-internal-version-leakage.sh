@@ -46,8 +46,11 @@ INTERNAL_SPEC_RE='spec-0(0[1-9][0-9]|[1-9][0-9]{2,})'
 # third-party context. See .agents/rules/distributed-surface.md.
 INTERNAL_VERSION_RE='\bv[0-9]+\.[0-9]+(\.[0-9]+)?\b|\bv1\.x\b'
 
-# QFAI internal trace IDs that should not leak (CAP-0010+, DEC, DR, BR-XXXX-XXXX, etc.)
-INTERNAL_ID_RE='\bCAP-0(0[1-9][0-9]|[1-9][0-9]{2,})\b|\bDEC-[0-9]{4}-[0-9]{4}\b|\bDR-[0-9]{4}\b|\bQFAI-PROT2-[0-9]+\b'
+# QFAI internal trace IDs that should not leak (CAP-0010+, DEC, DR,
+# OQ-NNNN-NNNN, QFAI-PROT2-NNN). OQ-NNNN-NNNN was added in PR #208 11th
+# late-review wave (codex r3265386185, LOW) to keep `08_Open-questions.md`
+# internal references out of distributed surfaces.
+INTERNAL_ID_RE='\bCAP-0(0[1-9][0-9]|[1-9][0-9]{2,})\b|\bDEC-[0-9]{4}-[0-9]{4}\b|\bDR-[0-9]{4}\b|\bQFAI-PROT2-[0-9]+\b|\bOQ-[0-9]{4}-[0-9]{4}\b'
 
 # Schema version field (any literal "schemaVersion") in distributed
 # surfaces. Generated artifact schemas no longer carry this field.

@@ -592,3 +592,19 @@
 - Rationale: spec-0017 violates 1-skill-1-spec / 1-spec-1-CAP slice rule. Subject decomposed into spec-0012 (primary) + spec-0004 / 0010 / 0011 / 0013 / 0014 / 0015 / 0007 (cascade).
 - Reservation: `spec-0017` ID and `CAP-0017` ID are permanent gaps per slice-policy §ID 安定性ルール 5; they MUST NOT be reused.
 - Phases: Phase 1 (spec-0004 absorb), Phase 2 (cross-skill specs absorb), Phase 3 (spec-0012 v1.x purge + v2.0 adopt), Phase 4 (\_policies rewrite — this entry), Phase 6 (physical directory deletion deferred).
+
+## 2026-05-18 — CHG-002 — UPDATE:MODIFY CAP-0012 success-metrics (qfai-prototyping multi-spec / 10-cycle / reviewer-driven Playwright redefinition)
+
+- ApprovedBy: user@2026-05-18
+- Operation: UPDATE:MODIFY
+- Subject: `_policies/03_Capabilities.md` CAP-0012 row — "Success metrics" cell
+- Discussion pack: `.qfai/discussion/discussion-20260516144141078/` (REQ-0001..0013, NFR-0001..0007, TC-1..6, OC-1..4, LC-1..2)
+- Change: rewrite CAP-0012 success-metrics from the legacy "1 prototype × 最大 15 cycle × …" description to the new model "全 UI-bearing spec を 1 invocation で multi-spec 並走、cycle 0..9 (max 10) autonomous、reviewer-driven Playwright × 4 axes ordinal exceptional + lap=0 + designMdViolations=0 で AND convergence、stock-photo license 凍結 (exit 66)、`iter-NN/spec-NNNN/<screen>.review.json` 構成、DESIGN.md ブランド SSOT (sha256 凍結)"
+- Cascade:
+  - `spec-0012/01_Spec.md`: Scope `In:` / `Out:` 全面書換、`Applicable NFR` / `Applicable Policy` 拡張、`Evidence Summary` を新 code path（`resolveAllUiBearingSpecs` / `licenseVerify` / 新 path helpers）に同期、`Relevant Requirements` に REQ-0012-0042..0054 を追記、`Entry points` から旧 capture role を削除
+  - `_policies/05_Contracts.md`: 新 "CLI Contracts" セクション + `CLI-PROT` 行を追加（`.qfai/contracts/cli/qfai-prototyping.md`）
+  - `.qfai/contracts/cli/qfai-prototyping.md`: CLI contract 新規作成（iterate / certify / show-spec、exit codes 0/2/64/65/66、cycle-0 freeze、Reviewer-driven Playwright、license-verify、frozen `specsCovered[]` + `licenseClassCatalog`、per-spec iter-dir）
+- Purged surface (informative; spec-level OP-PURGE は `spec-0012/09_delta.md` が記録):
+  - 15-cycle 予算 / 単一 prototype 選定 / `mode` 概念 / capture pipeline / PNG・HTML evidence / scripted interaction transcript / AC selector synthesis / quantitative AC-pass% / per-cycle stdin prompts
+- ID 安定性: 既存 CAP / DEC / DR / REQ / AC / BR / EX / TC / TDD ID は renumber しない。新 REQ は spec-0012 内の append-only 連番（REQ-0012-0042..0054）。
+- 配布物影響: なし。`.qfai/contracts/cli/qfai-prototyping.md` は authoring zone であり配布物には含まれない (`packages/qfai/package.json#files` 外)。

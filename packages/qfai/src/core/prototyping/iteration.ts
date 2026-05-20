@@ -13,7 +13,7 @@
 
 import type { DesignMdViolation } from "./designMdViolations.js";
 
-export const MAX_ITERATIONS = 15;
+export const MAX_ITERATIONS = 10;
 export const MAX_ITERATION_INDEX = MAX_ITERATIONS - 1;
 
 export type OrdinalScore = "weak" | "acceptable" | "strong" | "exceptional";
@@ -60,6 +60,46 @@ export function shouldStop(iterations: readonly unknown[]): StopReason | null {
     return "max-iterations";
   }
   return null;
+}
+
+export type PerSpecScreenIter = {
+  readonly specId: string;
+  readonly screen: string;
+  readonly latestIteration: Iteration;
+};
+
+export type MultiSpecStopResult = {
+  readonly stopReason: StopReason | null;
+  readonly laggingSpecs: readonly string[];
+};
+
+/**
+ * Decide global prototyping convergence across multiple (spec × screen)
+ * pairs. Convergence is an AND across every pair: a single pair below
+ * `allFourAxesExceptional` blocks the global stop. When convergence is
+ * not achieved, `laggingSpecs` lists every spec ID (unique, sorted) that
+ * has at least one non-converged pair, so the orchestrator can route the
+ * next iteration at spec granularity.
+ *
+ * Pure function. No I/O. Max-iterations stop semantics for multi-spec
+ * runs are handled at the caller level (each pair owns its own index
+ * sequence); this function only decides convergence.
+ */
+export function shouldStopAcrossSpecs(pairs: readonly PerSpecScreenIter[]): MultiSpecStopResult {
+  if (pairs.length === 0) {
+    return { stopReason: null, laggingSpecs: [] };
+  }
+  const laggingSet = new Set<string>();
+  for (const pair of pairs) {
+    if (!allFourAxesExceptional(pair.latestIteration)) {
+      laggingSet.add(pair.specId);
+    }
+  }
+  if (laggingSet.size === 0) {
+    return { stopReason: "axes-exceptional", laggingSpecs: [] };
+  }
+  const laggingSpecs = Array.from(laggingSet).sort();
+  return { stopReason: null, laggingSpecs };
 }
 
 export function allFourAxesExceptional(iter: unknown): boolean {
