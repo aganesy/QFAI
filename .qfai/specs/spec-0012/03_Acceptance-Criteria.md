@@ -264,7 +264,7 @@
 - US-Refs: US-0012-0116
 - Given the cycle-0 frozen spec set is persisted in cycle-0 evidence,
 - When a new UI-bearing spec is added to disk after cycle 0 starts,
-- Then `/qfai-prototyping` MUST detect the change, MUST NOT restart cycle 0, MUST defer the new spec to the next invocation, AND the `specsCovered` shallow-equal drift check reads the frozen set (not live FS).
+- Then `/qfai-prototyping` MUST detect the change, MUST NOT restart cycle 0, MUST defer the new spec to the next invocation, AND the cycle ≥ 1 drift gate reads the cycle-0 frozen UI-bearing UNION snapshot — `prototyping.json#frozenSurfaceUnion` — as its baseline and compares it set-equal against the live `resolveSurfaceUnion(root, config)` result (not live FS). The legacy single-spec `specsCovered` / `frozenSpecsCovered` fields are NOT the drift baseline; they remain as the primary-spec scope under review and shallow-equal compared to the currently-resolved primary, but are unrelated to multi-spec drift detection. A missing or malformed `frozenSurfaceUnion` snapshot on cycle ≥ 1 is itself a hard-stop and instructs the operator to re-seed via `--cycle 0`.
 
 ## AC-0012-0050: Per-spec time-budget soft warning
 

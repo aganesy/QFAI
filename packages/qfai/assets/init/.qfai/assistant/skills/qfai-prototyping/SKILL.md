@@ -70,8 +70,9 @@ current `DESIGN.md` hash does not match the lock.
   title-marker fallback and the operator-pinned spec id from the
   `qfai.config.yaml` `prototyping` section (run
   `qfai doctor --profile prototyping` to surface the resolved value).
-  Operators authoring CHG-002-shaped projects can rely on the strict frontmatter alone;
-  the broader composition covers legacy / config-pinned consumers.
+  Operators authoring CHG-002-shaped projects can rely on the strict
+  frontmatter alone; the broader composition covers legacy /
+  config-pinned consumers.
   The operator is never prompted to pick a single spec; zero
   UI-bearing specs at cycle 0 is a deterministic no-op exit `0`.
   Confirm each resolved spec has a supported `surface`.

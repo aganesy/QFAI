@@ -142,7 +142,7 @@ Exit-2 drift classes (the `2` row above expands to):
 - **`prototyping.json#designMd`** missing on cycle ≥ 1.
 - **`prototyping.json#specsCovered`** drift vs cycle-0 frozen primary spec.
 - **Mid-run spec-set drift** — cycle ≥ 1 `resolveSurfaceUnion()` live UNION differs from the cycle-0 `prototyping.json#frozenSurfaceUnion` snapshot. Drifted spec(s) are deferred to the next `--cycle 0`.
-- **`prototyping.json#frozenSurfaceUnion` missing or malformed on cycle ≥ 1** — legacy / unseeded record. The gate hard-fails rather than silently falling back to `frozenSpecsCovered` (the silent fallback was the very MAJOR/P1 bug closed by the 11th-wave fix).
+- **`prototyping.json#frozenSurfaceUnion` missing or malformed on cycle ≥ 1** — legacy / unseeded record. The gate hard-fails rather than silently falling back to `frozenSpecsCovered` (the silent fallback would compare a single-spec frozen scope against a multi-spec live union and false-positive-fire on any project with ≥ 2 UI-bearing specs — that is the failure mode this hard-fail prevents).
 - **`prototyping.json#frozenLicenseCatalog` drift** vs the in-memory `DEFAULT_LICENSE_CATALOG` SSOT — set-equality semantic (byte permutations OK; semantic differences exit 2).
 
 Recovery for every exit-2 drift class is the same: restart from cycle 0
@@ -196,13 +196,10 @@ Exit codes:
 | 2    | Input error. Missing / unreadable `prototyping.json`, missing `specsCovered[]`, accepted iter dir absent, certificate schema malformed.                                                                                                                                                                                          |
 | 64   | Coverage rejection: at least one spec lacks a `<screen>.review.json` for a declared screen at the accepted iter, OR the multi-spec frozen set (`frozenSpecsCovered.length > 1`) is incompatible with the flat-iter layout still emitted by `prototyping iterate` (per-spec layout migration deferred — TDD-0384 / OQ-0012-0006). |
 
-License-verify (exit 66) is enforced by `qfai prototyping iterate`, NOT
-by `certify`. The certify driver does not read `imageSources[]` and
-does not call `licenseVerify()` — operators MUST observe the
-license-class hard-stop on the iterate side (see the `iterate` exit
-codes above). Pre-fix this table previously listed exit 66 as a
-certify exit class; that wording overstated certify's enforcement
-surface and is corrected here.
+License-verify (exit 66) is enforced only by `qfai prototyping iterate`.
+The certify driver does not read `imageSources[]` and does not call
+`licenseVerify()` — operators MUST observe the license-class
+hard-stop on the iterate side (see the `iterate` exit codes above).
 
 ### `qfai prototyping show-spec`
 
@@ -226,11 +223,10 @@ schema:
     enum: [frozenSpecsCovered, specsCovered]
     # which prototyping.json field the
     # `frozenSpecsCovered` array was read from.
-    # post-Wave-3 records carry the dedicated
-    # `frozenSpecsCovered` field; pre-Wave-3
-    # records carry only `specsCovered`. This
-    # tag lets operators detect legacy-seeded
-    # records without re-reading the file.
+    # Records written before `frozenSpecsCovered`
+    # existed carry only `specsCovered`; this tag
+    # lets operators detect legacy-seeded records
+    # without re-reading the file.
   frozenSurfaceUnion:
     string[] | null
     # cycle-0 frozen multi-spec UI-bearing

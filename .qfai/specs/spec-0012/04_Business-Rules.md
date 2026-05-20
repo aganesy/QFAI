@@ -216,7 +216,7 @@ No other path triggers stop. LLM subjective DONE is forbidden.
 
 - AC-Refs: AC-0012-0049
 - The resolved spec set MUST be frozen at cycle 0 and persisted in cycle-0 evidence.
-- The `specsCovered` shallow-equal drift check MUST read the frozen set (not live FS).
+- The cycle ≥ 1 mid-run spec-set drift gate MUST compare the live `resolveSurfaceUnion(root, config)` result set-equal against the cycle-0 frozen `prototyping.json#frozenSurfaceUnion` snapshot (not against the legacy single-spec `frozenSpecsCovered` / `specsCovered` fields, which carry only the primary-spec scope under review and are NOT the multi-spec drift baseline). A missing or malformed `frozenSurfaceUnion` snapshot on cycle ≥ 1 is a hard-stop and instructs the operator to re-seed via `--cycle 0`.
 - Mid-run additions of new UI-bearing specs MUST NOT trigger cycle-0 restart; they are deferred to the next `/qfai-prototyping` invocation (OQ-0009 Option A).
 
 ## BR-0012-0039: Per-spec time-budget soft warning

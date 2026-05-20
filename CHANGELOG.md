@@ -76,6 +76,34 @@
   - Pinned-branch authorization is preserved: this lands in 1.8.10
     because `feature/v1.8.10` is the release pin.
 
+### Fixed (PR #208 29th late-review wave)
+
+- **CLI contract internal-label residuals (codex r3270625675 NIT +
+  r3270626085 / r3270626517 / r3270627244 MINOR —
+  product-surface-reviewer):** the 24th-wave internal-label scrub
+  left three residuals in `.qfai/contracts/cli/qfai-prototyping.md`
+  — `MAJOR/P1 bug closed by the 11th-wave fix` (now: a behavioural
+  "what fallback would do" sentence); `post-Wave-3` / `pre-Wave-3`
+  schema-comment leakage (now: "records written before
+  `frozenSpecsCovered` existed"); and the wave-27 certify exit-66
+  meta-commentary ("Pre-fix this table previously listed exit 66 …
+  is corrected here") removed entirely. Verified with
+  `grep -nE 'MAJOR/P[0-9]|[0-9]+(st|nd|rd|th)-wave|Wave-[0-9]|codex r[0-9]|Pre-fix'` →
+  zero hits.
+- **AC ↔ contract baseline-field cascade (codex r3270628554, MINOR
+  — requirements-reviewer):** the wave-27 contract correction
+  (cycle ≥ 1 drift gate baseline is `frozenSurfaceUnion`, not
+  `specsCovered` / `frozenSpecsCovered`) is now cascaded into
+  AC-0012-0049 and BR-0012-0038 Then clauses. Both now explicitly
+  name `frozenSurfaceUnion` as the SSOT baseline, note that the
+  legacy fields carry only the primary-spec scope under review (not
+  the multi-spec drift baseline), and call out the missing-snapshot
+  hard-fail. Closes the AC ↔ contract drift the reviewer flagged.
+- **SKILL.md L73 wrap polish (codex r3270627813, NIT —
+  product-surface-reviewer):** the wave-25 wrap fix left L73 at
+  ~96 chars, breaking the bullet-block rhythm. Re-wrapped to
+  match the surrounding ~75-char wrap width.
+
 ### Fixed (PR #208 28th late-review wave)
 
 - **Recursive-DFS contract pin (codex r3270624828, MINOR —
