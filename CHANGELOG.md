@@ -76,6 +76,28 @@
   - Pinned-branch authorization is preserved: this lands in 1.8.10
     because `feature/v1.8.10` is the release pin.
 
+### Fixed (PR #208 45th late-review wave)
+
+- **`specDirExists` absolute-path fix (codex r3271656121, P1 —
+  chatgpt-codex-connector):** `specDirExists()` in
+  `core/prototyping/specResolution.ts` built the probe path with
+  `path.join(root, specsDir, dirName)`. When `qfai.config.yaml`
+  carries an absolute `paths.specsDir` override (e.g. `/tmp/specs`),
+  `path.join` silently concatenates root + absolute rather than
+  resetting to the absolute, so the probe at
+  `<root>/tmp/specs/spec-NNNN` misses the real on-disk spec dir at
+  `/tmp/specs/spec-NNNN`. `resolveSurfaceUnion()` then drops the
+  `prototyping.primarySpecId` pin and `prototyping iterate
+--cycle 0` hits the zero-UI short-circuit (exit 0) for
+  explicit-primary workflows using absolute path overrides.
+  Switched to `path.resolve()` which correctly resets to the
+  latter absolute segment when one is supplied (relative
+  `specsDir` still composes against `root` the same way
+  `path.join` did). New TC-0012-0429 + TDD-0449 + EX-0012-0158 —
+  fixture writes an absolute `specsDir` pointing OUTSIDE root,
+  seeds the primary spec there, and asserts
+  `resolveSurfaceUnion(root, config)` returns the pinned id.
+
 ### Fixed (PR #208 44th late-review wave)
 
 - **show-spec stderr 2-block layout (codex r3271639132, NIT —

@@ -955,6 +955,14 @@
 - Test file: `packages/qfai/tests/cli/prototypingCertify.test.ts`
 - Verify the 38th-wave show-spec absent-vs-malformed fix (codex r3271018000 P2). 40th-wave AC-Ref rebind from AC-0012-0045 to AC-0012-0052 (show-spec JSON contract) per codex r3271093350 MINOR — AC-0012-0052 now carries a sub-clause mirroring AC-0012-0045 class (h) onto the show-spec surface so the absent-vs-malformed contract holds across all three CLI surfaces. Pre-fix `runPrototypingShowSpec` used `readStringArrayField(...) ?? readStringArrayField(specsCovered)`, collapsing "absent" and "present-but-invalid" into one null fallback that let a hand-edited multi-spec record silently downgrade to legacy `specsCovered`. Post-fix show-spec consumes the SSOT classifier and exits 2 with a "present but malformed" diagnostic. Fixture: `specsCovered: ["0012"]` + `frozenSpecsCovered: null`. Assertion: show-spec exits 2 and does NOT fall back.
 
+## TC-0012-0429
+
+- EX-Ref: EX-0012-0158
+- AC-Refs: AC-0012-0037
+- Type: unit
+- Test file: `packages/qfai/tests/cli/commands/prototypingIterate.test.ts`
+- Verify the 45th-wave `specDirExists` absolute-path fix (codex r3271656121 P1 — chatgpt-codex-connector). Pre-fix `specDirExists()` built the probe path with `path.join(root, specsDir, dirName)`, which silently concatenates an absolute `specsDir` onto root rather than resolving to the absolute path directly. For consumer projects whose `qfai.config.yaml` carries an absolute `paths.specsDir` override and a `prototyping.primarySpecId` pin, the probe missed the on-disk spec dir entirely — `resolveSurfaceUnion()` then dropped the pin and `prototyping iterate --cycle 0` hit the zero-UI short-circuit (exit 0) instead of running the loop. Post-fix `path.resolve()` correctly resets to the latter absolute segment when one is supplied, so the probe finds the spec dir regardless of whether `specsDir` is relative or absolute. Fixture: `qfai.config.yaml` writes an absolute `specsDir` pointing OUTSIDE `root`, primary spec is seeded at that absolute path, and the union assertion is `["0042"]`. AC anchor: AC-0012-0037 (cycle-0 zero-UI precheck input candidates).
+
 ## Legacy Coverage Continuity
 
 - The legacy baseline test-case identifier space remains reserved for existing implementation/test slices.

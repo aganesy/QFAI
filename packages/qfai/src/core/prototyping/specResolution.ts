@@ -396,7 +396,20 @@ async function hasMatchingUiContract(contractsRoot: string, specId: string): Pro
  */
 async function specDirExists(root: string, specsDir: string, specId: string): Promise<boolean> {
   const dirName = `spec-${specId}`;
-  const abs = path.join(root, specsDir, dirName);
+  // codex r3271656121 (P1, chatgpt-codex-connector): use `path.resolve`
+  // instead of `path.join` so an absolute `paths.specsDir` override in
+  // `qfai.config.yaml` (e.g. `/tmp/specs`) resolves to the absolute
+  // path directly. Pre-fix `path.join(root, "/tmp/specs", "spec-0001")`
+  // produced `<root>/tmp/specs/spec-0001` (string concatenation, no
+  // absolute-segment reset), so the probe missed the real spec dir
+  // and `resolveSurfaceUnion` failed to include a valid
+  // `prototyping.primarySpecId` pin — `prototyping iterate --cycle 0`
+  // then hit the zero-UI short-circuit (exit 0) for explicit-primary
+  // workflows relying on absolute path overrides. `path.resolve`
+  // correctly resets to the latter absolute segment when one is
+  // supplied (relative `specsDir` still composes against `root` the
+  // same way `path.join` did).
+  const abs = path.resolve(root, specsDir, dirName);
   try {
     const s = await stat(abs);
     return s.isDirectory();

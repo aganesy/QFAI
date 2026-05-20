@@ -2587,6 +2587,56 @@ describe("resolveSurfaceUnion (direct unit test for the union composition rule)"
     const { config } = await loadConfig(root);
     expect(await resolveSurfaceUnion(root, config)).toEqual(["0007"]);
   });
+
+  // codex r3271656121 (P1, chatgpt-codex-connector): pin the
+  // `specDirExists` absolute-path fix — when `qfai.config.yaml` carries
+  // an absolute `paths.specsDir` override, the primarySpecId-on-disk
+  // probe must resolve to that absolute path (not concatenate root +
+  // absolute, which `path.join` does). Pre-fix the probe missed the
+  // real spec dir for explicit-primary workflows using absolute
+  // overrides — `resolveSurfaceUnion` then failed to include the pin,
+  // and `prototyping iterate --cycle 0` hit the zero-UI short-circuit.
+  // Fixture seeds `specsDir` outside `root` and asserts the union
+  // includes the pinned spec.
+  it("resolves primarySpecId via absolute `paths.specsDir` override (codex r3271656121)", async () => {
+    const root = await newTempDir();
+    // Stage an absolute specsDir OUTSIDE root so any pre-fix join
+    // (root + absolute) would visibly miss the on-disk spec.
+    const externalSpecsDir = await newTempDir();
+    await seedSimpleConfig(root, [
+      "prototyping:",
+      '  primarySpecId: "0042"',
+      // Overwrite the relative specsDir from seedSimpleConfig with an
+      // absolute path. Config YAML allows arbitrary path strings; the
+      // probe must honour absoluteness via `path.resolve`.
+      `  specsDirOverride: "${externalSpecsDir.replace(/\\/g, "/")}"`,
+    ]);
+    // Patch the config file's specsDir to the absolute path directly
+    // — seedSimpleConfig wrote `specsDir: .qfai/specs`; rewrite to
+    // the absolute path.
+    const configPath = path.join(root, "qfai.config.yaml");
+    const configRaw = await readFile(configPath, "utf-8");
+    const patched = configRaw.replace(
+      "specsDir: .qfai/specs",
+      `specsDir: "${externalSpecsDir.replace(/\\/g, "/")}"`,
+    );
+    await writeFile(configPath, patched, "utf-8");
+
+    // Seed spec-0042 at the ABSOLUTE specsDir (not under root). With
+    // the pre-fix `path.join(root, absoluteSpecsDir, "spec-0042")`,
+    // the probe would look at `<root>/<absoluteSpecsDir>/spec-0042`,
+    // which does not exist on disk — the pin would be dropped.
+    const spec42 = path.join(externalSpecsDir, "spec-0042");
+    await mkdir(spec42, { recursive: true });
+    await writeFile(path.join(spec42, "01_Spec.md"), "# primarySpecId-only\n", "utf-8");
+    await writeFile(path.join(spec42, "02_User-stories.md"), "# stories\n", "utf-8");
+
+    const { config } = await loadConfig(root);
+    // Post-fix: `path.resolve(root, absoluteSpecsDir, ...)` resets to
+    // the absolute path, so `specDirExists` finds spec-0042 and the
+    // union includes the pinned id.
+    expect(await resolveSurfaceUnion(root, config)).toEqual(["0042"]);
+  });
 });
 
 // 10th-wave Fix B (architecture-reviewer r3265257258 + r3265260466,
