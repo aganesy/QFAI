@@ -394,13 +394,13 @@
 ## EX-0012-0153: Drift Gate Wins Over Convergence Ordering
 
 - BR-Ref: BR-0012-0038
-- Given a recorded multi-UI project where cycle-0 captured `frozenSurfaceUnion = ["0001", "0002"]` and the most recent iteration is fully converged (all 4 UX axes scored `exceptional`, empty `layoutAntiPatternsDetected`, empty `designMdViolations`) — but spec-0002's `surface_type: ui-bearing` marker was removed mid-loop so live `resolveSurfaceUnion()` now returns `["0001"]`.
+- Given a recorded multi-UI project where cycle-0 captured `frozenSurfaceUnion = ["0001", "0002"]` and the most recent iteration is fully converged (all 4 UX axes scored `exceptional`, empty `layoutAntiPatternsDetected`, empty `designMdViolations`) — but the secondary spec's `surface_type: ui-bearing` marker was removed mid-loop so live `resolveSurfaceUnion()` now returns `["0001"]`.
 - When `qfai prototyping iterate --cycle <N≥1>` runs.
 - Then the cycle ≥ 1 lock-drift gates fire BEFORE `shouldStop()`: certify exits 2 (lock-drift class) with `spec-set drift detected mid-loop` and `removed=[0002]` echoed in stderr, rather than letting the convergence check return exit 64 first and mask the freeze violation.
 
 ## EX-0012-0154: Certify Rejects Non-Canonical `frozenSpecsCovered[]` Entries
 
 - BR-Ref: BR-0012-0030
-- Given a hand-edited `prototyping.json` whose `frozenSpecsCovered[]` contains a non-canonical entry — e.g. `"../../../etc/passwd"`, `"spec-0001/../../escape"`, `"0001 "` (trailing whitespace), `"spec-abcd"` (non-numeric), or `"spec-001"` (wrong digit count).
+- Given a hand-edited `prototyping.json` whose `frozenSpecsCovered[]` contains a non-canonical entry — e.g. a path-traversal value (`"../../../etc/passwd"`), a slash-injected value (a canonical-looking prefix concatenated with `/../../escape`), a trailing-whitespace value (`"0001 "`), a non-numeric value (`"spec-abcd"`), or a value with the wrong digit count (`"spec-"` + 3 digits).
 - When `qfai prototyping certify` runs the per-(spec × screen) review.json presence gate.
 - Then certify exits 2 with the malformed id echoed verbatim (`JSON.stringify` form) and the canonical shape (`spec-NNNN` / 4-digit `NNNN`) named in stderr — refusing to construct any review path from unvalidated input so `path.join(root, "iter-NN", id, "<screen>.review.json")` cannot escape the intended subtree.
