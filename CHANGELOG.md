@@ -76,6 +76,32 @@
   - Pinned-branch authorization is preserved: this lands in 1.8.10
     because `feature/v1.8.10` is the release pin.
 
+### Fixed (PR #208 32nd late-review wave)
+
+- **Certify-side canonical-spec-id validation gate (codex r3270776268,
+  P2 — chatgpt-codex-connector):** `prototypingCertify.ts#runPrototypingCertify`
+  now validates every `prototyping.json#frozenSpecsCovered[]` entry
+  against `CANONICAL_SPEC_ID` (`/^(?:spec-)?\d{4}$/u`) BEFORE the
+  per-(spec × screen) review.json presence gate calls
+  `normalizeSpecDirName` / `path.join`. Pre-fix `normalizeSpecDirName`
+  only stripped/re-added the `spec-` prefix, so a hand-edited
+  `prototyping.json` carrying values like `"../../../etc/passwd"`,
+  `"spec-0001/../../escape"`, `"0001 "` (whitespace), `"spec-abcd"`,
+  or `"spec-001"` (wrong digit count) would have flowed straight
+  into `path.join(root, "iter-NN", id, "<screen>.review.json")` and
+  let the gate probe outside the intended `iter-NN/spec-NNNN/`
+  subtree — potentially "satisfying" missing-review checks with
+  unrelated files. Post-fix certify exits 2 with the malformed id
+  echoed verbatim (`JSON.stringify` form) and the canonical shape
+  (`spec-NNNN` / 4-digit `NNNN`) named in stderr; operator is
+  directed to re-run `qfai prototyping iterate --cycle 0` to
+  regenerate the record. AC-0012-0045 hard-stop catalog extended
+  with class (g); new TC-0012-0425 + TDD-0445 + EX-0012-0154 (six
+  `it` blocks: path-traversal / slash-injected / whitespace /
+  non-numeric / wrong-digit-count malformed variants + one
+  canonical-coexistence happy path proving bare `0012` and
+  fully-qualified `spec-0007` ids still pass).
+
 ### Fixed (PR #208 31st late-review wave)
 
 - **Certify spec-set source contract (codex r3270736005, P2 —

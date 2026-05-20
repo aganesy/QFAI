@@ -274,6 +274,27 @@ export async function runPrototypingCertify(
   const frozenSpecsPreview =
     readFrozenSpecsCoveredMultiSpec(protoJson) ?? readFrozenSpecsCovered(protoJson);
   if (frozenSpecsPreview !== null && screenContracts.length > 0) {
+    // codex r3270776268 (P2): validate canonical spec-id shape BEFORE any
+    // path construction. `normalizeSpecDirName` only strips/re-adds the
+    // `spec-` prefix, so a hand-edited `prototyping.json` carrying `/`,
+    // `..`, or other non-canonical characters in `frozenSpecsCovered[]`
+    // would otherwise reach `path.join(options.root, rel)` unmodified and
+    // let the per-(spec × screen) gate probe files outside the intended
+    // `iter-NN/spec-NNNN/` subtree (potentially "satisfying" missing-
+    // review checks with unrelated files). Reject anything that is not
+    // either bare `NNNN` or fully-qualified `spec-NNNN` and treat it as
+    // structural malformation of the iterate-produced record (exit 2).
+    const malformedSpecs = frozenSpecsPreview.filter((id) => !CANONICAL_SPEC_ID.test(id));
+    if (malformedSpecs.length > 0) {
+      error(
+        "qfai prototyping certify: `frozenSpecsCovered[]` contains non-canonical " +
+          `spec id(s) ${JSON.stringify(malformedSpecs)} — values must match ` +
+          "`spec-NNNN` or bare 4-digit `NNNN`. Refusing to construct review paths " +
+          "from unvalidated input; re-run `qfai prototyping iterate --cycle 0` to " +
+          "regenerate `prototyping.json` with canonical ids.",
+      );
+      return 2;
+    }
     // The per-(spec × screen) gate ONLY runs when the accepted iter
     // actually contains per-spec subdirs (`iter-NN/spec-*/`). The
     // shipped iterate driver + SKILL.md still emit the legacy flat
@@ -1244,6 +1265,17 @@ function extractSpecDirFromUiRel(rel: string): string | null {
  * re-prefix is byte-stable and idempotent (already-prefixed input
  * round-trips unchanged).
  */
+/**
+ * Canonical `frozenSpecsCovered[]` entry shape: either a bare 4-digit
+ * id or the fully-qualified directory name (`spec-` prefix + 4 digits).
+ * The certify-side per-(spec × screen) gate constructs `iter-NN/<id>/
+ * <screen>.review.json` paths from these strings, so values containing
+ * `/`, `..`, whitespace, or any other character would let `path.join`
+ * escape the intended subtree. Validated at the certify entry point
+ * before `normalizeSpecDirName` is ever called.
+ */
+const CANONICAL_SPEC_ID = /^(?:spec-)?\d{4}$/u;
+
 function normalizeSpecDirName(raw: string): string {
   const stripped = raw.replace(/^spec-/iu, "");
   return `spec-${stripped}`;

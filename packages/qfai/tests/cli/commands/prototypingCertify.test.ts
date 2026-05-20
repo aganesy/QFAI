@@ -868,3 +868,71 @@ describe("qfai prototyping certify (TC-0012-0407: per-spec UI contracts scope th
     }
   });
 });
+
+describe("qfai prototyping certify (TC-0012-0425: frozenSpecsCovered canonical id validation)", () => {
+  // codex r3270776268 (P2, chatgpt-codex-connector): when a hand-edited
+  // `prototyping.json` carries non-canonical spec ids in
+  // `frozenSpecsCovered[]` (`/`, `..`, whitespace, etc.), certify must
+  // reject the record up-front rather than feed the string to
+  // `path.join(root, "iter-NN", <id>, "<screen>.review.json")`. Without
+  // this gate, the per-(spec × screen) gate could probe files outside
+  // the intended `iter-NN/spec-NNNN/` subtree and falsely "satisfy"
+  // missing-review checks with unrelated files.
+  it.each<[string, string]>([
+    ["path-traversal", "../../../etc/passwd"],
+    ["slash-injected", "spec-0001/../../escape"],
+    ["whitespace", "0001 "],
+    ["non-numeric", "spec-abcd"],
+    ["wrong-digit-count", "spec-001"],
+  ])(
+    "exits 2 and names the malformed id (%s) without constructing any review path",
+    async (_label, malformed) => {
+      const root = await newTempDir();
+      await seedMinimalProject(root);
+      await seedAllGatesPass(root, {
+        specsCovered: ["0012"],
+        frozenSpecsCovered: [malformed],
+      });
+      await seedUiScreens(root, ["home"]);
+
+      const logger = await import("../../../src/cli/lib/logger.js");
+      const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
+      try {
+        const exit = await runPrototypingCertify({ root, check: false });
+        expect(exit).toBe(2);
+        const messages = errorSpy.mock.calls.map((c) => String(c[0]));
+        // The malformed id must be echoed verbatim in the diagnostic
+        // so operators can find the offending record line.
+        const echoesMalformed = messages.some((m) => m.includes(JSON.stringify(malformed)));
+        expect(echoesMalformed).toBe(true);
+        // And the diagnostic must point operators at the canonical
+        // shape — not just say "invalid".
+        const namesShape = messages.some((m) => m.includes("spec-NNNN") || m.includes("4-digit"));
+        expect(namesShape).toBe(true);
+      } finally {
+        errorSpy.mockRestore();
+      }
+    },
+  );
+
+  it("accepts canonical bare 4-digit and fully-qualified spec-NNNN ids in the same frozen set", async () => {
+    const root = await newTempDir();
+    await seedMinimalProject(root);
+    await seedAllGatesPass(root, {
+      specsCovered: ["0012"],
+      frozenSpecsCovered: ["0012", "spec-0007"],
+    });
+    await mkdir(path.join(root, ".qfai/specs/spec-0007"), { recursive: true });
+    await writeFile(
+      path.join(root, ".qfai/specs/spec-0007/01_Spec.md"),
+      "---\nsurface_type: ui-bearing\n---\n\n# spec-0007\n",
+      "utf-8",
+    );
+    await seedUiScreens(root, ["home"]);
+    await seedReviewJson(root, "spec-0012", "home");
+    await seedReviewJson(root, "spec-0007", "home");
+
+    const exit = await runPrototypingCertify({ root, check: false });
+    expect(exit).toBe(0);
+  });
+});

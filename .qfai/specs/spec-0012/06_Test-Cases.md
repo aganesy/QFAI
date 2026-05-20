@@ -923,6 +923,14 @@
 - Test file: `packages/qfai/tests/cli/commands/prototypingIterate.test.ts`
 - Verify the 29th-wave drift-gate ordering fix (codex r3270687650 P1). Fixture: multi-UI project where `frozenSurfaceUnion = ["0001", "0002"]` records the cycle-0 set but spec-0002's UI marker was removed mid-loop (live `resolveSurfaceUnion` returns `["0001"]`). The recorded iter is fully converged (4 axes exceptional + empty lap + empty dmv) so the pre-29th ordering would have returned exit 64 from `shouldStop` BEFORE the drift gate ran. Post-29th the drift gate fires first → exit 2 with `spec-set drift detected mid-loop` + `removed=[0002]` diagnostic. Pins the ordering contract: lock-drift classes (designMd hash, frozen union presence + spec-set drift) MUST always win over convergence / budget-exhaustion signals. Closes codex P1 r3270687650.
 
+## TC-0012-0425
+
+- EX-Ref: EX-0012-0154
+- AC-Refs: AC-0012-0045
+- Type: integration
+- Test file: `packages/qfai/tests/cli/commands/prototypingCertify.test.ts`
+- Verify the 32nd-wave certify-side canonical-id validation gate (codex r3270776268 P2 — chatgpt-codex-connector). Fixture: `prototyping.json#frozenSpecsCovered[]` carries a non-canonical id (path-traversal `../../../etc/passwd`, slash-injected `spec-0001/../../escape`, whitespace (`"0001 "` with trailing space), non-numeric `spec-abcd`, or wrong-digit-count `spec-001`); pre-fix `normalizeSpecDirName` only prepended `spec-` and the raw string flowed into `path.join(root, "iter-NN", id, "<screen>.review.json")`, allowing the per-(spec × screen) gate to probe outside the intended `iter-NN/spec-NNNN/` subtree. Post-fix certify exits 2 with the malformed id echoed verbatim and the canonical shape (`spec-NNNN` / 4-digit) named in stderr — refusing to construct any review path from unvalidated input. Companion happy-path it block verifies that canonical bare `0012` and fully-qualified `spec-0007` ids coexist in the same frozen set without false rejection. Closes codex P2 r3270776268.
+
 ## Legacy Coverage Continuity
 
 - The legacy baseline test-case identifier space remains reserved for existing implementation/test slices.
