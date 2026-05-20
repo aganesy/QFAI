@@ -993,6 +993,9 @@ describe("qfai prototyping certify (TC-0012-0426: frozenSpecsCovered present-but
     ["empty array", [], "empty"],
     ["array with non-string entry (number)", [42], "non-string"],
     ["array with empty-string entry", ["0012", ""], "empty-string"],
+    // codex r3270923641 (P1): explicit `null` on a present key must
+    // fail closed (NOT silently fall back to legacy specsCovered).
+    ["explicit null", null, "null"],
   ])(
     "exits 2 with a 'present-but-malformed' diagnostic when frozenSpecsCovered is %s",
     async (_label, rawFrozen, reasonFragment) => {

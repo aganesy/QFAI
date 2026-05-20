@@ -69,13 +69,22 @@ describe("classifyFrozenSpecsCoveredMultiSpec (codex r3270861808 P1 — absent v
     });
   });
 
-  it("returns `absent` when the key is present but value is null/undefined (parser leniency)", () => {
-    expect(classifyFrozenSpecsCoveredMultiSpec({ frozenSpecsCovered: null })).toEqual({
-      kind: "absent",
-    });
-    expect(classifyFrozenSpecsCoveredMultiSpec({ frozenSpecsCovered: undefined })).toEqual({
-      kind: "absent",
-    });
+  it("returns `malformed` when the key is present but value is explicitly null", () => {
+    // codex r3270923641 (P1, chatgpt-codex-connector): a hand-edited
+    // `"frozenSpecsCovered": null` is corrupt edit, NOT a "field
+    // omitted" record — falling back to legacy `specsCovered` here
+    // would silently downgrade multi-spec certification scope. The
+    // classifier must distinguish "key absent on record" from "key
+    // present with invalid value" and fail closed for the latter.
+    const r = classifyFrozenSpecsCoveredMultiSpec({ frozenSpecsCovered: null });
+    expect(r.kind).toBe("malformed");
+    if (r.kind === "malformed") expect(r.reason).toContain("null");
+  });
+
+  it("returns `malformed` when the key is present but value is explicitly undefined", () => {
+    const r = classifyFrozenSpecsCoveredMultiSpec({ frozenSpecsCovered: undefined });
+    expect(r.kind).toBe("malformed");
+    if (r.kind === "malformed") expect(r.reason).toContain("undefined");
   });
 
   it("returns `malformed` when the value is not an array", () => {

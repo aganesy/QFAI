@@ -76,6 +76,24 @@
   - Pinned-branch authorization is preserved: this lands in 1.8.10
     because `feature/v1.8.10` is the release pin.
 
+### Fixed (PR #208 36th late-review wave)
+
+- **Classifier explicit-null tightening (codex r3270923641, P1 —
+  chatgpt-codex-connector):** wave-33's
+  `classifyFrozenSpecsCoveredMultiSpec()` returned
+  `kind: "absent"` when `prototyping.json#frozenSpecsCovered` was
+  explicitly `null` (or `undefined`) on a present key, which on the
+  certify side triggered the legacy fallback to single-spec
+  `specsCovered` — re-opening the same evidence-gap vector wave-33
+  had closed. A hand-edited `"frozenSpecsCovered": null` is a
+  corrupt edit, not a "field omitted" record. The classifier now
+  returns `kind: "malformed"` with reason `"value is null"` (or
+  `"value is undefined"`) so certify fails closed instead of
+  silently downgrading to primary-spec scope. New `it.each`
+  integration row for explicit-null at the certify call site;
+  unit suite extended with 2 new malformed-branch `it` blocks
+  (removed the previous "absent when null/undefined" branch).
+
 ### Fixed (PR #208 35th late-review wave)
 
 - **Per-spec screens partial-set bug (codex r3270911400, P1 —

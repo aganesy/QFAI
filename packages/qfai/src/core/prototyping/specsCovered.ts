@@ -129,9 +129,22 @@ export function classifyFrozenSpecsCoveredMultiSpec(
   if (!Object.prototype.hasOwnProperty.call(record, "frozenSpecsCovered")) {
     return { kind: "absent" };
   }
+  // codex r3270923641 (P1, chatgpt-codex-connector): an explicit `null`
+  // (or `undefined`) value on a present `frozenSpecsCovered` key is NOT
+  // the same as the key being absent. A hand-edited
+  // `"frozenSpecsCovered": null` is a corrupt edit that means "the
+  // operator wrote the field but it carries no valid scope" — falling
+  // back to legacy `specsCovered` here would silently downgrade
+  // certification scope and re-open the same multi-spec evidence-gap
+  // vector the wave-33 absent-vs-malformed discrimination was meant to
+  // close. Treat both `null` and `undefined` on a present key as
+  // malformed so certify fails closed.
   const raw = record.frozenSpecsCovered;
-  if (raw === undefined || raw === null) {
-    return { kind: "absent" };
+  if (raw === null) {
+    return { kind: "malformed", reason: "value is null" };
+  }
+  if (raw === undefined) {
+    return { kind: "malformed", reason: "value is undefined" };
   }
   if (!Array.isArray(raw)) {
     return { kind: "malformed", reason: "field is not an array" };
