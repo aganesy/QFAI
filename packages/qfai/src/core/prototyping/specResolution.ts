@@ -17,7 +17,7 @@
  */
 
 import type { Dirent } from "node:fs";
-import { access, readFile, readdir, stat } from "node:fs/promises";
+import { readFile, readdir, stat } from "node:fs/promises";
 import path from "node:path";
 
 import type { QfaiConfig } from "../config.js";
@@ -260,9 +260,19 @@ export async function resolveTitleMarkerSpecs(root: string, specsDir: string): P
 async function hasMatchingUiContract(contractsRoot: string, specId: string): Promise<boolean> {
   const uiDir = path.join(contractsRoot, "ui");
   const direct = path.join(uiDir, `${specId}.yaml`);
+  // codex r3271969283 (P2, 50th-wave): use `stat().isFile()` instead of
+  // `access()` so a directory (or symlink to non-file) named like
+  // `<specId>.yaml` does NOT falsely classify the spec as UI-bearing.
+  // Pre-fix `access()` only checked existence; a misauthored project
+  // with `<contractsDir>/ui/0007.yaml/` (directory) would have made
+  // `resolveSurfaceUnion` / `resolvePrimaryPrototypingSpec` report a
+  // phantom UI surface and drive `prototyping iterate` / drift gates
+  // against it instead of the expected no-op path. The downstream
+  // entries-walk branch already filters with `entry.isFile()`; this
+  // check brings the direct-match arm to the same discipline.
   try {
-    await access(direct);
-    return true;
+    const s = await stat(direct);
+    if (s.isFile()) return true;
   } catch (error) {
     if (!isEnoent(error)) {
       throw error;

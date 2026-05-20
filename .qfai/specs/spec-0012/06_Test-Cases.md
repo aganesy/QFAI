@@ -979,6 +979,14 @@
 - Test file: `packages/qfai/tests/cli/commands/prototypingCertify.test.ts`
 - Verify the 49th-wave partner-helper symmetry regression for `readUiContractScreenContracts` (codex r3271867391 P1 — implementation-reviewer + codex r3271867923 MAJOR — qa-gatekeeper). Wave-48 fixed the `path.join` → `path.resolve` switch in `readUiContractScreenContracts` for partner-helper consistency with the wave-47 `readPerSpecScreens` fix, but without a regression test the two helpers' absolute-path symmetry was structurally unpinned — a future `path.join` regression in the project-wide reader would silently break certify on explicit-contracts-dir workflows (project-wide pass returns empty while per-spec pass returns full set → asymmetric screen discovery between the two passes). Fixture: project-wide UI contract file `screens.yaml` written at an absolute `contractsDir` pointing OUTSIDE `root`, with two screens (`home`, `settings`). Assertion: `readUiContractScreenContracts(root, externalContractsDir)` returns both screens (sorted-equal). AC anchor: AC-0012-0047 (certify per-spec presence aggregation — same anchor as TC-0012-0430 to pin the partner-helper symmetry).
 
+## TC-0012-0432
+
+- EX-Ref: EX-0012-0161
+- AC-Refs: AC-0012-0037
+- Type: unit
+- Test file: `packages/qfai/tests/core/prototyping/specResolution.test.ts`
+- Verify the 50th-wave `hasMatchingUiContract` file-vs-directory discrimination fix (codex r3271969283 P2 — chatgpt-codex-connector). Pre-fix the direct-match arm used `access(<uiDir>/<specId>.yaml)` to confirm existence, but `access` does NOT distinguish file from directory. A misauthored project that created `<contractsDir>/ui/0007.yaml/` (a DIRECTORY) would have falsely classified spec-0007 as UI-bearing, driving `resolveSurfaceUnion()` / `resolvePrimaryPrototypingSpec()` to report a phantom UI surface and the iterate / drift gates to run against it instead of taking the documented no-op path. Post-fix the direct-match arm uses `stat().isFile()`, consistent with the entries-walk branch's `entry.isFile()` filter for the spec-prefixed / ui-prefixed candidates. Fixture: UI-only spec (no surface marker, no title marker, no primarySpecId pin) + a directory named `0007.yaml` at the canonical UI-contract path. Assertion: `resolveAllUiBearingSpecs()` returns `[]`. AC anchor: AC-0012-0037 (cycle-0 zero-UI precheck input candidates).
+
 ## Legacy Coverage Continuity
 
 - The legacy baseline test-case identifier space remains reserved for existing implementation/test slices.

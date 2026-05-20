@@ -76,6 +76,27 @@
   - Pinned-branch authorization is preserved: this lands in 1.8.10
     because `feature/v1.8.10` is the release pin.
 
+### Fixed (PR #208 50th late-review wave)
+
+- **`hasMatchingUiContract` file-vs-directory discrimination (codex
+  r3271969283, P2 — chatgpt-codex-connector):** the direct-match
+  arm in `core/prototyping/specResolution.ts` used
+  `access(<uiDir>/<specId>.yaml)` to confirm existence, but
+  `access` does NOT distinguish a file from a directory. A
+  misauthored project with `<contractsDir>/ui/0007.yaml/` as a
+  directory would have made `hasMatchingUiContract()` return
+  `true`, falsely classifying spec-0007 as UI-bearing and driving
+  `resolveSurfaceUnion()` / `resolvePrimaryPrototypingSpec()` to
+  report a phantom UI surface — `prototyping iterate` / drift
+  gates would then run against that phantom instead of taking the
+  documented no-op path. Switched to `stat().isFile()`, consistent
+  with the entries-walk branch's `entry.isFile()` filter for the
+  spec-prefixed / ui-prefixed candidates. Removed the now-unused
+  `access` import. New TC-0012-0432 + TDD-0452 + EX-0012-0161 —
+  fixture creates a directory named like a UI-contract file at
+  the canonical path and asserts `resolveAllUiBearingSpecs()`
+  returns `[]`.
+
 ### Fixed (PR #208 49th late-review wave)
 
 - **Partner-helper regression test (codex r3271867391, P1 —

@@ -436,6 +436,43 @@ describe("resolveAllUiBearingSpecs", () => {
       expect(new Set(actual)).toEqual(new Set(expected));
     }
   });
+
+  // codex r3271969283 (P2, 50th-wave): `hasMatchingUiContract` (via
+  // `resolveAllUiBearingSpecs`) previously used `access(direct)` to
+  // confirm the bare `<specId>.yaml` direct-match candidate. `access`
+  // does NOT distinguish file from directory — a misauthored project
+  // that created `<contractsDir>/ui/0007.yaml/` (a directory) would
+  // have falsely classified spec-0007 as UI-bearing, driving the
+  // iterate / drift gates against a phantom UI surface instead of
+  // taking the documented no-op path. Post-fix the direct-match arm
+  // uses `stat().isFile()`, consistent with the entries-walk
+  // branch's `entry.isFile()` filter for the spec-prefixed /
+  // ui-prefixed candidates. This regression pins the discipline so
+  // a future `access`-style shortcut cannot regress green.
+  it("does NOT classify a spec as UI-bearing when the direct-match candidate `<id>.yaml` exists but is a directory (codex r3271969283)", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-uicontract-dir-"));
+    try {
+      // Author a UI-only spec (no surface_type marker, no title
+      // marker, no primarySpecId pin) — its only possible UI-bearing
+      // signal is `hasMatchingUiContract`.
+      await mkdir(path.join(root, ".qfai/specs/spec-0007"), { recursive: true });
+      await writeFile(
+        path.join(root, ".qfai/specs/spec-0007/01_Spec.md"),
+        "# spec-0007 — no surface marker\n",
+        "utf-8",
+      );
+      // Create a DIRECTORY named like a UI contract file. Pre-fix
+      // `access()` would have returned true and the spec would
+      // appear in the union.
+      await mkdir(path.join(root, ".qfai/contracts/ui/0007.yaml"), { recursive: true });
+
+      const config = makeConfig();
+      const result = await resolveAllUiBearingSpecs(root, config);
+      expect(result).toEqual([]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
 });
 
 // -- checkSpecsCoveredDrift ------------------------------------------------
