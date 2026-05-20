@@ -335,36 +335,38 @@ async function hasMatchingUiContract(contractsRoot: string, specId: string): Pro
   // silently exited without producing iter dirs. Probing for the
   // `spec-<specId>/` subdir + at least one `.yaml` underneath
   // recovers the documented fallback.
+  // The subdir walk recursively descends into nested directories under
+  // `<contractsDir>/ui/spec-<specId>/` because the README candidate #5
+  // shape (`<spec-id>/<subpath>.yaml`) explicitly allows `<subpath>` to
+  // be a multi-component path (e.g. `screens/home.yaml`). 26th-wave
+  // refinement per codex r3270526761 + r3270527599 MINOR: dropped the
+  // dead outer try/catch (the only throw path inside the loop is the
+  // inner `readdir` — already discriminated as ENOENT / propagate) and
+  // updated comments / test name to say `recursively walks the spec
+  // subdirectory` instead of the misleading "one level deep" wording.
   const subdir = entries.find((entry) => entry.isDirectory() && entry.name === `spec-${specId}`);
   if (subdir) {
     const subdirAbs = path.join(uiDir, subdir.name);
-    let hasYaml = false;
-    try {
-      const stack: string[] = [subdirAbs];
-      while (stack.length > 0 && !hasYaml) {
-        const current = stack.pop();
-        if (current === undefined) break;
-        let subEntries: Dirent[];
-        try {
-          subEntries = await readdir(current, { withFileTypes: true });
-        } catch (subErr) {
-          if (isEnoent(subErr)) continue;
-          throw subErr;
+    const stack: string[] = [subdirAbs];
+    while (stack.length > 0) {
+      const current = stack.pop();
+      if (current === undefined) break;
+      let subEntries: Dirent[];
+      try {
+        subEntries = await readdir(current, { withFileTypes: true });
+      } catch (subErr) {
+        if (isEnoent(subErr)) continue;
+        throw subErr;
+      }
+      for (const sub of subEntries) {
+        if (sub.isFile() && sub.name.endsWith(".yaml")) {
+          return true;
         }
-        for (const sub of subEntries) {
-          if (sub.isFile() && sub.name.endsWith(".yaml")) {
-            hasYaml = true;
-            break;
-          }
-          if (sub.isDirectory()) {
-            stack.push(path.join(current, sub.name));
-          }
+        if (sub.isDirectory()) {
+          stack.push(path.join(current, sub.name));
         }
       }
-    } catch (subErr) {
-      if (!isEnoent(subErr)) throw subErr;
     }
-    if (hasYaml) return true;
   }
   return false;
 }

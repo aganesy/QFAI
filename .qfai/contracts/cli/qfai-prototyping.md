@@ -301,8 +301,14 @@ enumerated:
    that pair. Exit 64 (with `sessionStatus = retryExhausted | launchFailed`
    recorded in the payload to distinguish from converged-exit-64).
 3. **License-verify failure** — `imageSources[]` resolves to a
-   non-allowlisted source / unknown license tier / non-https URL, or
-   `licenseVerify()` cannot reach the source on cycle 0. Exit 66.
+   non-allowlisted source, unknown license tier, non-HTTPS URL,
+   per-source host mismatch vs the cycle-0 frozen
+   `frozenLicenseCatalog.sourceHosts`, or missing / empty / whitespace-only
+   `attribution`. Exit 66. `licenseVerify()` is a pure static validator
+   over the `imageSources[]` shape; it does NOT probe network
+   reachability. Dead or unreachable URLs that satisfy the static
+   validation rules above are accepted at this gate (network egress
+   is not part of the contract).
 4. **Mid-run spec-set change** — live `resolveSurfaceUnion(root)` (the
    UNION of strict `surface_type: ui-bearing`, legacy `# … prototyping
 …` title-marker, `prototyping.primarySpecId` config pin, and

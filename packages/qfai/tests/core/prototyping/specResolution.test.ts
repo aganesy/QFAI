@@ -245,7 +245,7 @@ describe("resolveAllUiBearingSpecs", () => {
     expect(result).toEqual(["0007"]);
   });
 
-  it("accepts a per-spec subdirectory contract nested one level deep", async () => {
+  it("recursively accepts a per-spec subdirectory contract nested in a child folder", async () => {
     const root = await newTempDir();
     await seedSpec(root, "0007", "# spec-0007\n\nNo marker.\n");
     const nested = path.join(root, ".qfai/contracts/ui/spec-0007/screens");

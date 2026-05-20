@@ -76,6 +76,35 @@
   - Pinned-branch authorization is preserved: this lands in 1.8.10
     because `feature/v1.8.10` is the release pin.
 
+### Fixed (PR #208 26th late-review wave)
+
+- **Code cleanup (codex r3270526761 + r3270527599, MINOR):** dropped
+  the unreachable outer `try { ... } catch (subErr) { if
+(!isEnoent(subErr)) throw subErr; }` around the subdir DFS in
+  `hasMatchingUiContract` — the only throw path inside the loop is
+  the inner `readdir`, which is already discriminated as
+  ENOENT-continue / propagate. Renamed the wave-25 nested-subdir
+  test from `nested one level deep` to
+  `recursively accepts a per-spec subdirectory contract nested in a
+child folder` (and updated the code comment) so the wording
+  matches the unbounded-DFS semantic the README candidate #5 layout
+  documents (multi-component `<subpath>`).
+- **CLI contract reachability scrub (codex r3270555207, P2 —
+  chatgpt-codex-connector):** removed the false "`licenseVerify()`
+  cannot reach the source on cycle 0" reachability claim from
+  hard-stop class 3. `licenseVerify` is a pure static validator over
+  the `imageSources[]` shape; it does NOT probe network egress. The
+  contract now explicitly enumerates the five static rejection
+  classes (`license-not-allowlisted`, `license-tier-unknown`,
+  `license-non-https-url`, `license-host-mismatch`,
+  `license-missing-attribution`) and calls out that dead /
+  unreachable URLs that pass the static rules are accepted at this
+  gate. Operators and automation that grepped the contract for
+  network reachability semantics will now see the accurate scope.
+- **Resolved as FYI (codex r3270527316 + r3270527439):** wave-23
+  qa-gatekeeper PASS verdict and architecture-reviewer observations
+  on the subdir fallback — no code change needed.
+
 ### Fixed (PR #208 25th late-review wave)
 
 - **Traceability stitch — TC-0012-0423 registration (codex r3270527912,
