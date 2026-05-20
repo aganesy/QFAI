@@ -740,7 +740,30 @@ export async function runPrototypingShowSpec(options: { root: string }): Promise
     return 2;
   }
   const protoRecord = protoRaw as Record<string, unknown>;
-  const frozenSpecsCovered = readStringArrayField(protoRecord.frozenSpecsCovered);
+  // codex r3271018000 (P2, chatgpt-codex-connector): show-spec previously
+  // read `frozenSpecsCovered` via `readStringArrayField`, which collapses
+  // "field absent" and "field present-but-invalid" into a single `null`
+  // return value. That let `?? readStringArrayField(protoRecord.specsCovered)`
+  // silently downgrade to legacy single-spec scope even when the operator
+  // intended a multi-spec frozen scope but corrupted the JSON. iterate /
+  // certify treat present-but-malformed `frozenSpecsCovered` as a hard
+  // error; show-spec must mirror that semantic so operators / automation
+  // making recovery decisions from the scope output cannot be misled. Use
+  // the same SSOT classifier the certify call sites already consume.
+  const showSpecFrozenMultiSpec = classifyFrozenSpecsCoveredMultiSpec(protoRecord);
+  if (showSpecFrozenMultiSpec.kind === "malformed") {
+    error(
+      "qfai prototyping show-spec: `prototyping.json#frozenSpecsCovered` is present " +
+        `but malformed (${showSpecFrozenMultiSpec.reason}). Refusing to report a ` +
+        "downgraded single-spec scope from the legacy `specsCovered` field — that " +
+        "would mislead recovery decisions because iterate / certify both treat a " +
+        "malformed multi-spec frozen scope as a hard error. Re-run " +
+        "`qfai prototyping iterate --cycle 0` to regenerate the record.",
+    );
+    return 2;
+  }
+  const frozenSpecsCovered =
+    showSpecFrozenMultiSpec.kind === "ok" ? showSpecFrozenMultiSpec.value : null;
   const specsCovered = frozenSpecsCovered ?? readStringArrayField(protoRecord.specsCovered);
   if (specsCovered === null || specsCovered.length === 0) {
     error(
@@ -969,6 +992,20 @@ async function fileExists(absPath: string): Promise<boolean> {
  * and contain HTML, so reaching here with a missing dir is the
  * legitimate "no per-spec layout" answer rather than a hidden error.
  */
+/**
+ * Canonical per-spec evidence directory shape: `spec-NNNN` where NNNN
+ * is exactly 4 digits. Used by {@link hasPerSpecSubdir} to gate
+ * activation of the per-(spec × screen) review.json presence check on
+ * the actual evidence layout — unrelated names like `spec-assets` /
+ * `spec-temp` / `spec-archive` MUST NOT enable the gate (codex
+ * r3271018003 P2 — chatgpt-codex-connector: pre-fix any `spec-*`
+ * directory triggered the gate, so a legacy flat-iter project with an
+ * incidental `spec-assets/` sibling would have the gate spuriously
+ * activated and fail with missing review.json coverage that the run
+ * never intended to produce).
+ */
+const CANONICAL_SPEC_DIR = /^spec-\d{4}$/u;
+
 async function hasPerSpecSubdir(iterDirAbs: string): Promise<boolean> {
   let names: string[];
   try {
@@ -977,7 +1014,7 @@ async function hasPerSpecSubdir(iterDirAbs: string): Promise<boolean> {
     return false;
   }
   for (const name of names) {
-    if (!name.startsWith("spec-")) continue;
+    if (!CANONICAL_SPEC_DIR.test(name)) continue;
     const abs = path.join(iterDirAbs, name);
     try {
       const s = await stat(abs);

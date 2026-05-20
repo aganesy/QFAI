@@ -939,6 +939,22 @@
 - Test file: `packages/qfai/tests/cli/commands/prototypingCertify.test.ts`
 - Verify the 33rd-wave certify-side absent-vs-malformed `frozenSpecsCovered` discrimination (codex r3270861808 P1). Pre-fix the certify call sites collapsed "missing" and "present-but-malformed" into a single null branch via `readFrozenSpecsCoveredMultiSpec(...) ?? readFrozenSpecsCovered(...)`, which on a partially-corrupt record would silently fall back to legacy `specsCovered` — downgrading the per-(spec × screen) gate AND cert-sealing scope to the primary spec only. Post-fix a new SSOT classifier `classifyFrozenSpecsCoveredMultiSpec()` returns `{kind: "absent" / "malformed" / "ok"}`; certify exits 2 on `malformed`. **36th-wave extension (codex r3270923641 P1):** explicit `null` / `undefined` on a present key are now classified as `malformed`, not `absent` — falling back here would re-open the same evidence-gap. Six parametrized `it` blocks (non-array object / non-array string / empty array / non-string entry / empty-string entry / explicit null) + absent-fallback companion. Companion unit suite covers the classifier with 9 `it` blocks. Closes codex P1 r3270861808 + codex P1 r3270923641.
 
+## TC-0012-0427
+
+- EX-Ref: EX-0012-0156
+- AC-Refs: AC-0012-0046
+- Type: integration
+- Test file: `packages/qfai/tests/cli/commands/prototypingCertify.test.ts`
+- Verify the 35th-wave per-spec screens partial-set bug fix (codex r3270911400 P1) and 38th-wave traceability stitch (codex r3271008259 MINOR + r3271011545 MAJOR). Fixture: multi-file subdir layout where two specs declare the SAME `screenId` (spec-0001/home.yaml + spec-0002/home.yaml both declaring `home`) plus a unique screen on the second spec (spec-0002/settings.yaml declaring `settings`). Pre-fix `indexPerSpecScreens()` pre-built a per-spec map from project-wide `screenContracts.sourceRef`; cross-spec dedup kept only ONE sourceRef path for `home`, so the indexed re-parse missed spec-0002/home.yaml — the gate happily passed without requiring spec-0002/home.review.json. Post-fix certify calls `readPerSpecScreens()` unconditionally; the helper's authoritative `fg()` discovery returns both files for spec-0002, so omitting spec-0002/home.review.json is correctly rejected. AC anchor: AC-0012-0046 pins that the per-(spec × screen) gate enumerates the FULL per-spec screen union, not the project-wide-deduped subset.
+
+## TC-0012-0428
+
+- EX-Ref: EX-0012-0157
+- AC-Refs: AC-0012-0045
+- Type: integration
+- Test file: `packages/qfai/tests/cli/prototypingCertify.test.ts`
+- Verify the 38th-wave show-spec absent-vs-malformed fix (codex r3271018000 P2 — chatgpt-codex-connector). Pre-fix `runPrototypingShowSpec` used `readStringArrayField(...) ?? readStringArrayField(specsCovered)`, which collapsed "field absent" and "field present-but-invalid" into one null fallback and let a hand-edited multi-spec record silently downgrade the reported scope to the legacy `specsCovered` field — even though iterate / certify both treat the same malformed `frozenSpecsCovered` as a hard error. Operators / automation making recovery decisions from show-spec output were thereby misled. Post-fix show-spec consumes the SSOT classifier and exits 2 with a "present but malformed" diagnostic when `frozenSpecsCovered` is present-but-invalid (e.g. explicit `null`). Fixture: prototyping.json with `specsCovered: ["0012"]` (valid legacy fallback) + `frozenSpecsCovered: null` (corrupt multi-spec scope). Assertion: show-spec exits 2 and does NOT fall back to the legacy scope. AC-Ref: AC-0012-0045 class (h) (the same present-but-malformed contract that wave-33 introduced on certify).
+
 ## Legacy Coverage Continuity
 
 - The legacy baseline test-case identifier space remains reserved for existing implementation/test slices.

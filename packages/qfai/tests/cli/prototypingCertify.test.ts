@@ -660,6 +660,53 @@ describe("qfai prototyping show-spec", () => {
       infoSpy.mockRestore();
     }
   });
+
+  // codex r3271018000 (P2, chatgpt-codex-connector, 38th-wave):
+  // show-spec previously read `frozenSpecsCovered` via the same
+  // `readStringArrayField(...) ?? readStringArrayField(specsCovered)`
+  // pattern that wave-33 fixed on the certify side. That let a
+  // hand-edited / partially-corrupt multi-spec record silently
+  // downgrade the reported scope to the legacy `specsCovered` field
+  // even though iterate / certify both treat the same malformed
+  // `frozenSpecsCovered` as a hard error — operators and automation
+  // making recovery decisions from show-spec output were misled.
+  // show-spec now consumes the SSOT classifier and fails closed on
+  // `malformed`.
+  it("TC-0012-0428: exits 2 with a 'present but malformed' diagnostic when frozenSpecsCovered is present but invalid (does NOT fall back to legacy specsCovered)", async () => {
+    const root = await newTempDir();
+    await seedMinimalProject(root, { specMarker: true });
+    await mkdir(path.join(root, ".qfai/evidence/prototyping"), { recursive: true });
+    await writeFile(
+      path.join(root, ".qfai/evidence/prototyping/prototyping.json"),
+      JSON.stringify(
+        {
+          runId: "test-run-id",
+          // Legacy single-spec scope is present and VALID — pre-fix
+          // this would have been used as the silent fallback. Post-fix
+          // the malformed frozenSpecsCovered must hard-error.
+          specsCovered: ["0012"],
+          frozenSpecsCovered: null,
+        },
+        null,
+        2,
+      ),
+      "utf-8",
+    );
+
+    const logger = await import("../../src/cli/lib/logger.js");
+    const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
+    try {
+      const exit = await runPrototypingShowSpec({ root });
+      expect(exit).toBe(2);
+      const messages = errorSpy.mock.calls.map((c) => String(c[0]));
+      const namesPresentButMalformed = messages.some(
+        (m) => m.includes("present") && m.includes("malformed"),
+      );
+      expect(namesPresentButMalformed).toBe(true);
+    } finally {
+      errorSpy.mockRestore();
+    }
+  });
 });
 
 // ─────────────────────────────────────────────────────────────────────────

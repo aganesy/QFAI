@@ -1041,3 +1041,93 @@ describe("qfai prototyping certify (TC-0012-0426: frozenSpecsCovered present-but
     expect(exit).toBe(0);
   });
 });
+
+describe("qfai prototyping certify (TC-0012-0427: shared-screenId multi-file subdir requires full per-spec re-parse)", () => {
+  // codex r3270911400 (P1, chatgpt-codex-connector) + codex r3271008259
+  // / r3271011545 (qa-gatekeeper + requirements-reviewer 37th-wave
+  // traceability stitch): pin the wave-35 partial-set bug fix at the
+  // requirement / test layer. Pre-fix the `indexPerSpecScreens()`
+  // optimisation pre-built a per-spec map from project-wide
+  // `screenContracts.sourceRef`. For multi-file subdir layouts where
+  // two specs declared the SAME `screenId` (e.g. both spec-0001 and
+  // spec-0002 have a `home` screen, each in its own subdir file),
+  // project-wide dedup kept only ONE sourceRef path in the bucket —
+  // the indexed re-parse missed the other spec's `home.yaml`
+  // entirely, and the gate happily passed without requiring the
+  // shared-screenId review.json for that spec. Post-fix certify calls
+  // `readPerSpecScreens()` unconditionally so each spec's authoritative
+  // `fg(... spec-NNNN/**\/*.yaml)` discovery returns the full set.
+  it("rejects when spec-0001/home.yaml + spec-0002/home.yaml share the `home` screenId and spec-0002's home.review.json is missing", async () => {
+    const root = await newTempDir();
+    await seedMinimalProject(root);
+    await seedAllGatesPass(root, {
+      specsCovered: ["0001"],
+      frozenSpecsCovered: ["0001", "0002"],
+    });
+    // Author spec-0001 (already created by seedMinimalProject) +
+    // spec-0002 as a sibling UI-bearing spec.
+    await mkdir(path.join(root, ".qfai/specs/spec-0001"), { recursive: true });
+    await writeFile(
+      path.join(root, ".qfai/specs/spec-0001/01_Spec.md"),
+      "---\nsurface_type: ui-bearing\n---\n\n# spec-0001\n",
+      "utf-8",
+    );
+    await mkdir(path.join(root, ".qfai/specs/spec-0002"), { recursive: true });
+    await writeFile(
+      path.join(root, ".qfai/specs/spec-0002/01_Spec.md"),
+      "---\nsurface_type: ui-bearing\n---\n\n# spec-0002\n",
+      "utf-8",
+    );
+    // Multi-file subdir layout: each spec gets a subdir with its own
+    // `home.yaml` that declares the shared `home` screenId. spec-0002
+    // also gets a unique `settings` screen so the indexed
+    // optimisation's "non-empty map entry → skip fs probe" path WOULD
+    // have been taken pre-fix (only the unique screen's sourceRef
+    // survives project-wide dedup, the shared `home` is dropped).
+    await mkdir(path.join(root, ".qfai/contracts/ui/spec-0001"), { recursive: true });
+    await writeFile(
+      path.join(root, ".qfai/contracts/ui/spec-0001/home.yaml"),
+      `screens:\n  - id: home\n    route: "/spec-0001/home"\n`,
+      "utf-8",
+    );
+    await mkdir(path.join(root, ".qfai/contracts/ui/spec-0002"), { recursive: true });
+    await writeFile(
+      path.join(root, ".qfai/contracts/ui/spec-0002/home.yaml"),
+      `screens:\n  - id: home\n    route: "/spec-0002/home"\n`,
+      "utf-8",
+    );
+    await writeFile(
+      path.join(root, ".qfai/contracts/ui/spec-0002/settings.yaml"),
+      `screens:\n  - id: settings\n    route: "/spec-0002/settings"\n`,
+      "utf-8",
+    );
+    // Seed the accepted iter with per-spec subdirs; iter-01/index.html
+    // is already there from seedAllGatesPass. Add per-screen html for
+    // both shared and unique screens so the html-gate passes.
+    const iter01 = path.join(root, ".qfai/evidence/prototyping/iter-01");
+    await writeFile(path.join(iter01, "home.html"), CLEAN_FINAL_HTML, "utf-8");
+    await writeFile(path.join(iter01, "settings.html"), CLEAN_FINAL_HTML, "utf-8");
+    // Seed review.json for spec-0001/home (the spec that "survived
+    // dedup") and spec-0002/settings (the unique screen). DELIBERATELY
+    // omit spec-0002/home.review.json — this is the file the pre-fix
+    // indexed gate would have failed to require.
+    await seedReviewJson(root, "spec-0001", "home");
+    await seedReviewJson(root, "spec-0002", "settings");
+
+    const logger = await import("../../../src/cli/lib/logger.js");
+    const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
+    try {
+      const exit = await runPrototypingCertify({ root, check: false });
+      // Post-fix the gate runs `readPerSpecScreens()` for each spec
+      // and discovers `spec-0002/home.yaml` via the fs walk, so the
+      // (spec-0002, home) pair becomes required. Pre-fix the indexed
+      // map only had `spec-0002/settings.yaml` and the gate passed.
+      expect(exit).not.toBe(0);
+      const messages = errorSpy.mock.calls.map((c) => String(c[0]));
+      const namesMissing = messages.some((m) => m.includes("spec-0002") && m.includes("home"));
+      expect(namesMissing).toBe(true);
+    } finally {
+      errorSpy.mockRestore();
+    }
+  });
+});

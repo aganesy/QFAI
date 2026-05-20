@@ -76,6 +76,54 @@
   - Pinned-branch authorization is preserved: this lands in 1.8.10
     because `feature/v1.8.10` is the release pin.
 
+### Fixed (PR #208 38th late-review wave)
+
+- **show-spec fail-closed on malformed `frozenSpecsCovered` (codex
+  r3271018000, P2 — chatgpt-codex-connector):** `runPrototypingShowSpec`
+  previously read `frozenSpecsCovered` via
+  `readStringArrayField(...) ?? readStringArrayField(specsCovered)`,
+  collapsing "field absent" and "field present-but-invalid" into one
+  null fallback. A hand-edited multi-spec record with a malformed
+  `frozenSpecsCovered` would silently downgrade the reported scope
+  to the legacy `specsCovered` field, misleading operators /
+  automation making recovery decisions because iterate / certify
+  both treat the same input as a hard error. show-spec now consumes
+  the SSOT classifier `classifyFrozenSpecsCoveredMultiSpec()` and
+  exits 2 with a "present but malformed" diagnostic on the
+  malformed branch — only `absent` (key omitted) still legitimately
+  falls back to legacy `specsCovered`.
+- **`hasPerSpecSubdir` restricted to canonical `spec-\d{4}` dirs
+  (codex r3271018003, P2 — chatgpt-codex-connector):** the per-spec
+  layout probe activated the per-(spec × screen) gate on any
+  iteration directory whose name started with `spec-`. An incidental
+  sibling like `spec-assets/`, `spec-temp/`, or `spec-archive/` in a
+  legacy flat-iter project would spuriously activate the gate and
+  fail with missing review-json coverage the run never intended to
+  produce. The probe now requires an anchored
+  `^spec-\d{4}$` match so gate activation only fires on canonical
+  per-spec evidence directories.
+- **Wave-35 P1 traceability stitch (codex r3271008259 MINOR —
+  qa-gatekeeper + codex r3271011545 MAJOR — requirements-reviewer):**
+  the wave-35 `indexPerSpecScreens()` removal closed the partial-set
+  bug but shipped without a registered TC / TDD / EX anchor. Added
+  `TC-0012-0427` + `TDD-0447` + `EX-0012-0156` with a regression
+  test pinning the contract: multi-file subdir layout where two
+  specs share a `screenId` and one spec carries a unique screen
+  forces certify to enumerate the FULL per-spec union via
+  `readPerSpecScreens()` (the partial indexed re-parse would let
+  a missing shared-screenId review.json pass silently). AC anchor:
+  AC-0012-0046 (per-spec iter-dir namespacing).
+- **TDD-0444 wave-label cascade (codex r3271013103 MINOR —
+  requirements-reviewer):** the wave-35 `29th-wave Fix` →
+  `30th-wave Fix` comment correction in
+  `prototypingIterate.ts:1298` was not cascaded into the
+  `tdd/test-list.md` and `16_Traceability-ledger.md` TDD-0444
+  narratives, which still read "29th late-review wave" /
+  "29th-wave". Both narratives now read "30th late-review wave" /
+  "30th-wave" so all four artifacts pinning codex r3270687650 P1
+  (iterate src comment, TC narrative, test-list, ledger) carry a
+  consistent wave label.
+
 ### Fixed (PR #208 37th late-review wave)
 
 - **Wave-36 enumeration backfill (codex r3271006127, MINOR —

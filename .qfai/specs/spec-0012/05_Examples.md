@@ -411,3 +411,17 @@
 - Then certify exits 2 with a "present but malformed" diagnostic that names the rejection reason (e.g. `not an array`, `empty`, `non-string`, `empty-string`), instead of silently falling back to the legacy single-spec `specsCovered` field. The absent-key case (record has no `frozenSpecsCovered` key at all) still legitimately falls back to `specsCovered` for pre-Wave-3 evidence compatibility — the contract distinguishes "operator omitted the field" from "operator partially-corrupted the field" so a partial / corrupt edit cannot downgrade certification scope and let missing secondary-spec review evidence ship a sealed certificate.
 - When `qfai prototyping certify` runs the per-(spec × screen) review.json presence gate.
 - Then certify exits 2 with the malformed id echoed verbatim (`JSON.stringify` form) and the canonical shape (`spec-NNNN` / 4-digit `NNNN`) named in stderr — refusing to construct any review path from unvalidated input so `path.join(root, "iter-NN", id, "<screen>.review.json")` cannot escape the intended subtree.
+
+## EX-0012-0156: Shared-`screenId` Multi-File Subdir Requires Full Per-Spec Re-Parse
+
+- BR-Ref: BR-0012-0030
+- Given a multi-file subdir UI contract layout where two UI-bearing specs declare the SAME `screenId` from per-spec subdir files (each subdir's own `home.yaml` declaring `home`) and the second spec additionally has a unique screen in its subdir (its own `settings.yaml` declaring `settings`).
+- When `qfai prototyping certify` runs the per-(spec × screen) review.json presence gate.
+- Then certify enumerates the FULL per-spec screen set via `readPerSpecScreens()` (which uses an authoritative `fg()` walk of the per-spec subdir), so both the shared `home` and the unique `settings` are required for the second spec — omitting that spec's `home.review.json` is correctly rejected. Pre-fix the legacy `indexPerSpecScreens()` optimisation built a per-spec map from the project-wide deduplicated `screenContracts.sourceRef` list, which dropped one spec's `home` sourceRef and let the indexed re-parse return a partial set for that spec — the gate happily passed without requiring the shared-screenId review.json.
+
+## EX-0012-0157: `show-spec` Fails Closed on Malformed `frozenSpecsCovered`
+
+- BR-Ref: BR-0012-0030
+- Given a `prototyping.json` carrying a valid legacy `specsCovered: ["0012"]` AND a corrupt multi-spec scope (`frozenSpecsCovered: null` from a hand-edit).
+- When `qfai prototyping show-spec` reads the record.
+- Then show-spec exits 2 with a "present but malformed" diagnostic naming the rejection reason (e.g. `value is null`) instead of silently downgrading the reported scope to the legacy `specsCovered` field. The semantic mirrors the certify-side wave-33 contract: iterate / certify both treat a present-but-malformed `frozenSpecsCovered` as a hard error, so show-spec must not present a misleading legacy fallback to operators / automation making recovery decisions.
