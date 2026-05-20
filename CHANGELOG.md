@@ -76,6 +76,38 @@
   - Pinned-branch authorization is preserved: this lands in 1.8.10
     because `feature/v1.8.10` is the release pin.
 
+### Fixed (PR #208 39th late-review wave)
+
+- **EX-0012-0154 / EX-0012-0155 BDD structure (codex r3271039452,
+  MAJOR — requirements-reviewer):** the 32nd-wave EX-0012-0154 was
+  missing the When / Then clauses, and the 33rd-wave EX-0012-0155
+  had two duplicated When / Then pairs that mixed in EX-0012-0154's
+  responsibility (path-traversal defence). Restructured both to
+  canonical Given / When / Then format: EX-0012-0154 now carries
+  the path-traversal When/Then (`reads the record and validates
+each entry against CANONICAL_SPEC_ID`, `exits 2 with the
+malformed id echoed verbatim`); EX-0012-0155 carries only the
+  absent-vs-malformed discrimination When/Then.
+- **EX-0012-0155 enumeration drift (codex r3271037888, MINOR —
+  requirements-reviewer):** the wave-37 enumeration backfill
+  extended the AC + CLI contract classes (h) with `explicit null /
+undefined` but did not cascade into EX-0012-0155's Given clause.
+  Example layer was still showing the wave-33 4-classes shape, so
+  TC-0012-0426 (which now covers 5 classes via the `explicit null`
+  it.each row) was no longer SSOT-aligned with its EX-Ref. Extended
+  EX-0012-0155 Given with the 5th class and the Then clause with
+  the corresponding `value is null` / `value is undefined`
+  rejection reasons.
+- **"no user prompt is emitted" scope restoration (codex
+  r3271039011, MINOR — requirements-reviewer):** the wave-37
+  AC-0012-0045 restructure lifted the ordering invariant out of
+  class (h) but left `AND no user prompt is emitted.` as an
+  indented continuation of class (h)'s Then block. Original
+  CHG-002 intent was a cross-class postcondition binding all of
+  (a)-(h). Lifted to its own catalog-level bullet with explicit
+  "applies cross-class to (a)-(h)" wording so a grep of
+  AC-0012-0045 cannot misread it as class-(h)-specific.
+
 ### Fixed (PR #208 38th late-review wave)
 
 - **show-spec fail-closed on malformed `frozenSpecsCovered` (codex

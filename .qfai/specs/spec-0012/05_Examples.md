@@ -402,15 +402,15 @@
 
 - BR-Ref: BR-0012-0030
 - Given a hand-edited `prototyping.json` whose `frozenSpecsCovered[]` contains a non-canonical entry — e.g. a path-traversal value (`"../../../etc/passwd"`), a slash-injected value (a canonical-looking prefix concatenated with `/../../escape`), a trailing-whitespace value (`"0001 "`), a non-numeric value (`"spec-abcd"`), or a value with the wrong digit count (`"spec-"` + 3 digits).
+- When `qfai prototyping certify` reads the record and validates each `frozenSpecsCovered[]` entry against `CANONICAL_SPEC_ID` before any review-path construction.
+- Then certify exits 2 with the malformed id echoed verbatim (`JSON.stringify` form) and the canonical shape (`spec-NNNN` / 4-digit `NNNN`) named in stderr — refusing to construct any review path from unvalidated input so `path.join(root, "iter-NN", id, "<screen>.review.json")` cannot escape the intended subtree.
 
 ## EX-0012-0155: Certify Distinguishes Absent vs Malformed `frozenSpecsCovered`
 
 - BR-Ref: BR-0012-0030
-- Given a `prototyping.json` where the `frozenSpecsCovered` key IS present on the record but the value fails the validation contract — e.g. a non-array (`{ "frozenSpecsCovered": "0001" }`), an empty array (`[]`), an array with a non-string entry (`[42]`), or an array with an empty-string entry (`["0012", ""]`).
+- Given a `prototyping.json` where the `frozenSpecsCovered` key IS present on the record but the value fails the validation contract — e.g. a non-array (`{ "frozenSpecsCovered": "0001" }`), an empty array (`[]`), an array with a non-string entry (`[42]`), an array with an empty-string entry (`["0012", ""]`), or an explicit `null` / `undefined` on a present key (`{ "frozenSpecsCovered": null }`).
 - When `qfai prototyping certify` reads the record at either the per-(spec × screen) gate or the cert-sealing call site.
-- Then certify exits 2 with a "present but malformed" diagnostic that names the rejection reason (e.g. `not an array`, `empty`, `non-string`, `empty-string`), instead of silently falling back to the legacy single-spec `specsCovered` field. The absent-key case (record has no `frozenSpecsCovered` key at all) still legitimately falls back to `specsCovered` for pre-Wave-3 evidence compatibility — the contract distinguishes "operator omitted the field" from "operator partially-corrupted the field" so a partial / corrupt edit cannot downgrade certification scope and let missing secondary-spec review evidence ship a sealed certificate.
-- When `qfai prototyping certify` runs the per-(spec × screen) review.json presence gate.
-- Then certify exits 2 with the malformed id echoed verbatim (`JSON.stringify` form) and the canonical shape (`spec-NNNN` / 4-digit `NNNN`) named in stderr — refusing to construct any review path from unvalidated input so `path.join(root, "iter-NN", id, "<screen>.review.json")` cannot escape the intended subtree.
+- Then certify exits 2 with a "present but malformed" diagnostic that names the rejection reason (e.g. `not an array`, `empty`, `non-string`, `empty-string`, `value is null`, `value is undefined`), instead of silently falling back to the legacy single-spec `specsCovered` field. The absent-key case (record has no `frozenSpecsCovered` key at all) still legitimately falls back to `specsCovered` for pre-Wave-3 evidence compatibility — the contract distinguishes "operator omitted the field" from "operator partially-corrupted the field" so a partial / corrupt edit cannot downgrade certification scope and let missing secondary-spec review evidence ship a sealed certificate.
 
 ## EX-0012-0156: Shared-`screenId` Multi-File Subdir Requires Full Per-Spec Re-Parse
 
