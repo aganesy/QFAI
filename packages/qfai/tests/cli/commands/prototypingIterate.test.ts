@@ -3225,4 +3225,77 @@ describe("runPrototypingIterate cycle >= 1 — drift gates run before shouldStop
       errorSpy.mockRestore();
     }
   });
+
+  it("returns exit 2 (frozenSurfaceUnion missing) on a converged loop with the union field absent — drift-class (e) also wins over shouldStop", async () => {
+    // codex r3270897052 (MINOR, qa-gatekeeper, 34th-wave companion):
+    // the wave-30 reorder moved TWO drift classes before `shouldStop`:
+    // (1) `frozenUnion === null` (frozenSurfaceUnion missing/malformed)
+    //     and (2) `drift.drifted` (live UNION ≠ frozen UNION). The
+    // first `it` block above pins (2). Without this second `it` a
+    // future refactor that re-orders only (1) back behind `shouldStop`
+    // would silently regress: a converged loop with a missing
+    // `frozenSurfaceUnion` would then return exit 64 (axes-exceptional)
+    // instead of the documented exit 2 lock-drift. Fixture mirrors the
+    // first test but OMITS `frozenSurfaceUnion` from prototyping.json.
+    const root = await newTempDir();
+    await seedMinimalProject(root);
+    await mkdir(path.join(root, ".qfai/evidence/prototyping"), { recursive: true });
+    await writeFile(
+      path.join(root, ".qfai/evidence/prototyping/prototyping.json"),
+      JSON.stringify({
+        specsCovered: ["0001"],
+        frozenSpecsCovered: ["0001"],
+        // frozenSurfaceUnion: intentionally omitted — pins the
+        // hard-stop class (e) ordering invariant.
+        frozenLicenseCatalog: {
+          allowedSources: ["unsplash", "pexels"],
+          licenseTiers: {
+            unsplash: ["unsplash-license", "free"],
+            pexels: ["pexels-free"],
+          },
+          sourceHosts: {
+            unsplash: ["images.unsplash.com", "unsplash.com"],
+            pexels: ["images.pexels.com", "pexels.com"],
+          },
+        },
+        iterations: [
+          {
+            index: 0,
+            commitSha: "a".repeat(40),
+            scores: {
+              informationArchitecture: "exceptional",
+              navigationFlow: "exceptional",
+              usability: "exceptional",
+              functionality: "exceptional",
+            },
+            proseCritique: "x".repeat(1500),
+            layoutAntiPatternsDetected: [],
+            designMdViolations: [],
+            pivotDirective: "continue",
+            evidenceRefs: {
+              screenshot: ".qfai/evidence/prototyping/iter-00/home.png",
+              html: ".qfai/evidence/prototyping/iter-00/home.html",
+            },
+          },
+        ],
+        acceptedIterationIndex: 0,
+        stopReason: null,
+        designMd: { path: "DESIGN.md", sha256: hashDesignMd(CANONICAL_DESIGN_MD) },
+      }),
+      "utf-8",
+    );
+
+    const logger = await import("../../../src/cli/lib/logger.js");
+    const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
+    try {
+      const exit = await runPrototypingIterate({ root, cycle: 1 });
+      // Missing-union hard-stop wins over a converged stop signal:
+      // exit 2, not 64.
+      expect(exit).toBe(2);
+      const stderr = errorSpy.mock.calls.map((c) => String(c[0])).join("\n");
+      expect(stderr).toMatch(/frozenSurfaceUnion is missing or malformed/);
+    } finally {
+      errorSpy.mockRestore();
+    }
+  });
 });

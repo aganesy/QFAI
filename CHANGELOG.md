@@ -76,6 +76,52 @@
   - Pinned-branch authorization is preserved: this lands in 1.8.10
     because `feature/v1.8.10` is the release pin.
 
+### Fixed (PR #208 35th late-review wave)
+
+- **Per-spec screens partial-set bug (codex r3270911400, P1 —
+  chatgpt-codex-connector):** the wave-9 `indexPerSpecScreens()`
+  optimisation pre-built a per-spec map from project-wide
+  `screenContracts.sourceRef` and used it whenever the indexed entry
+  was non-empty, only falling back to `readPerSpecScreens()` on
+  missing/empty. For multi-file subdir layouts (`spec-NNNN/<sub>.yaml`)
+  where some screens shared `screenId` with another spec, project-wide
+  dedup left only the surviving sourceRef paths in the bucket —
+  partial files in the indexed re-parse, and the per-(spec × screen)
+  gate falsely passed without requiring `<spec>/<shared-screen>.review.json`.
+  Removed the index optimisation entirely; certify now calls
+  `readPerSpecScreens()` unconditionally for every spec in the
+  frozen set (the helper does its own authoritative `fg()` discovery).
+  `indexPerSpecScreens` / `chooseWinningFiles` /
+  `extractSpecDirFromUiRel` helpers removed (only the indexing
+  pathway used them).
+- **JSDoc orphan on `normalizeSpecDirName` (codex r3270895911, MINOR —
+  architecture-reviewer):** wave-32 inserted a JSDoc block for
+  `CANONICAL_SPEC_ID` directly above `normalizeSpecDirName`,
+  orphaning the latter's docs (TypeDoc / IDE bind only the LAST
+  JSDoc to the next declaration). Relocated `CANONICAL_SPEC_ID`
+  (with its JSDoc) to the top-of-file module-constants section,
+  restoring `normalizeSpecDirName`'s JSDoc adjacency.
+- **Wave-number comment correction (codex r3270896487, NIT —
+  completion-reviewer):** `prototypingIterate.ts` L1298 comment
+  `29th-wave Fix` corrected to `30th-wave Fix` (commit `d9fed238`
+  was the 30th late-review wave; archaeology / regression
+  triangulation needs the wave label to match the commit history).
+- **TC-0012-0424 branch-coverage gap (codex r3270897052, MINOR —
+  qa-gatekeeper):** the wave-30 reorder moved TWO drift classes
+  before `shouldStop()` (`frozenUnion === null` + `drift.drifted`).
+  TC-0012-0424 only pinned the second branch. Added a second `it`
+  block covering the first: converged loop with `frozenSurfaceUnion`
+  field omitted from `prototyping.json` exits 2
+  (`frozenSurfaceUnion is missing or malformed`) instead of
+  returning the convergence exit 64.
+- **TC-0012-0425 leading-whitespace coverage (codex r3270897573, NIT —
+  qa-gatekeeper):** the canonical-id validation gate's `it.each`
+  table only covered trailing whitespace. Added 2 rows
+  (`" 0001"` leading whitespace + `"\t0001"` tab whitespace) so a
+  future "strip leading whitespace before validation" defensive
+  transform cannot slip a `" /../foo"`-style path-traversal vector
+  past the canonical-id gate.
+
 ### Fixed (PR #208 34th late-review wave)
 
 - **CLI contract certify exit-2 row enumeration (codex r3270886845,

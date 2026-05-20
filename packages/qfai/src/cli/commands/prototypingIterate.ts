@@ -1295,7 +1295,7 @@ async function evaluateCycleGteOneGate(
     );
     return { shortCircuit: true, exitCode: 2 };
   }
-  // 29th-wave Fix (codex r3270687650, P1 — chatgpt-codex-connector):
+  // 30th-wave Fix (codex r3270687650, P1 — chatgpt-codex-connector):
   // run the cycle ≥ 1 lock-drift gates BEFORE `shouldStop()` so a
   // converged / max-budget loop cannot mask a `frozenSurfaceUnion`
   // missing-or-malformed record or a live-vs-frozen spec-set drift.

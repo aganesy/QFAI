@@ -881,7 +881,9 @@ describe("qfai prototyping certify (TC-0012-0425: frozenSpecsCovered canonical i
   it.each<[string, string]>([
     ["path-traversal", "../../../etc/passwd"],
     ["slash-injected", "spec-0001/../../escape"],
-    ["whitespace", "0001 "],
+    ["trailing-whitespace", "0001 "],
+    ["leading-whitespace", " 0001"],
+    ["tab-whitespace", "\t0001"],
     ["non-numeric", "spec-abcd"],
     ["wrong-digit-count", "spec-001"],
   ])(
