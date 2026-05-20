@@ -68,9 +68,8 @@ current `DESIGN.md` hash does not match the lock.
   frontmatter signal + the matching `.qfai/contracts/ui/<spec-id>*.yaml`
   contract fallback) and folds in the legacy `# … prototyping …`
   title-marker fallback and the operator-pinned spec id from the
-  `qfai.config.yaml` prototyping section (see
-  `.qfai/contracts/config/qfai-config.yaml` or `qfai doctor --explain
-prototyping` for the exact key name). Operators authoring
+  `qfai.config.yaml` `prototyping` section (run
+  `qfai doctor --profile prototyping` to surface the resolved value). Operators authoring
   CHG-002-shaped projects can rely on the strict frontmatter alone;
   the broader composition covers legacy / config-pinned consumers.
   The operator is never prompted to pick a single spec; zero

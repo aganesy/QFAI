@@ -76,6 +76,24 @@
   - Pinned-branch authorization is preserved: this lands in 1.8.10
     because `feature/v1.8.10` is the release pin.
 
+### Fixed (PR #208 23rd late-review wave)
+
+- **`hasMatchingUiContract` per-spec subdirectory fallback (codex
+  r3270307469, P1 — chatgpt-codex-connector):** the helper now detects
+  the documented per-spec subdirectory layout
+  (`.qfai/contracts/ui/spec-<specId>/<sub>.yaml`, candidate #5 in
+  `.qfai/contracts/ui/README.md`). Pre-fix the helper only listed
+  top-level basenames; a project that authored UI contracts as
+  `.qfai/contracts/ui/spec-0007/home.yaml` (without
+  `surface_type: ui-bearing` on the spec) was silently treated as
+  non-UI-bearing — `resolveAllUiBearingSpecs` returned empty, the
+  cycle-0 precheck no-op'd, and the iterate command exited 0 without
+  producing iter dirs. The fix walks the spec subdir (one level deep)
+  looking for at least one `.yaml` file. Tests added:
+  `accepts the per-spec subdirectory contract fallback`,
+  `accepts a per-spec subdirectory contract nested one level deep`,
+  `does NOT match a per-spec subdirectory that contains no .yaml files`.
+
 ### Fixed (PR #208 22nd late-review wave)
 
 - **SKILL.md operator narrative ↔ implementation (codex r3270253034,

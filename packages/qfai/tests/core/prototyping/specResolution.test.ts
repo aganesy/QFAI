@@ -217,6 +217,53 @@ describe("resolveAllUiBearingSpecs", () => {
     expect(result).toEqual(["0042"]);
   });
 
+  // 23rd-wave Fix (codex r3270307469, P1 — chatgpt-codex-connector):
+  // `hasMatchingUiContract` must detect the documented per-spec
+  // subdirectory layout `.qfai/contracts/ui/spec-<specId>/<sub>.yaml`
+  // (candidate #5 in `.qfai/contracts/ui/README.md`). Pre-fix the
+  // helper only listed top-level basenames; a project that authored
+  // its UI contracts as `.qfai/contracts/ui/spec-0007/home.yaml`
+  // (without `surface_type: ui-bearing` on the spec) was silently
+  // treated as non-UI-bearing and the iterate command no-op'd.
+  it("accepts the per-spec subdirectory contract fallback (spec-<id>/<sub>.yaml)", async () => {
+    const root = await newTempDir();
+    await seedSpec(root, "0007", "# spec-0007\n\nNo marker.\n");
+    const subdir = path.join(root, ".qfai/contracts/ui/spec-0007");
+    await mkdir(subdir, { recursive: true });
+    await writeFile(
+      path.join(subdir, "home.yaml"),
+      "# QFAI-CONTRACT-ID: CON-UI-0007\nscreens: []\n",
+      "utf-8",
+    );
+    const result = await resolveAllUiBearingSpecs(root, makeConfig());
+    expect(result).toEqual(["0007"]);
+  });
+
+  it("accepts a per-spec subdirectory contract nested one level deep", async () => {
+    const root = await newTempDir();
+    await seedSpec(root, "0007", "# spec-0007\n\nNo marker.\n");
+    const nested = path.join(root, ".qfai/contracts/ui/spec-0007/screens");
+    await mkdir(nested, { recursive: true });
+    await writeFile(
+      path.join(nested, "home.yaml"),
+      "# QFAI-CONTRACT-ID: CON-UI-0007\nscreens: []\n",
+      "utf-8",
+    );
+    const result = await resolveAllUiBearingSpecs(root, makeConfig());
+    expect(result).toEqual(["0007"]);
+  });
+
+  it("does NOT match a per-spec subdirectory that contains no .yaml files", async () => {
+    const root = await newTempDir();
+    await seedSpec(root, "0007", "# spec-0007\n\nNo marker.\n");
+    const subdir = path.join(root, ".qfai/contracts/ui/spec-0007");
+    await mkdir(subdir, { recursive: true });
+    // Place a non-yaml file — must not count as a UI contract.
+    await writeFile(path.join(subdir, "README.md"), "# placeholder\n", "utf-8");
+    const result = await resolveAllUiBearingSpecs(root, makeConfig());
+    expect(result).toEqual([]);
+  });
+
   // Codex r3264487007: regression — unrelated yaml basenames that
   // merely contain the four-digit spec id token must NOT be treated as
   // UI contracts. The fallback is anchored to bare `<id>.yaml`,

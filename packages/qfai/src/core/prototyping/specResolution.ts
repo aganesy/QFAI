@@ -16,6 +16,7 @@
  * performs interactive selection.
  */
 
+import type { Dirent } from "node:fs";
 import { access, readFile, readdir, stat } from "node:fs/promises";
 import path from "node:path";
 
@@ -298,9 +299,9 @@ async function hasMatchingUiContract(contractsRoot: string, specId: string): Pro
   // `ui-<id>-.yaml` (the `[^.]*` allowed zero chars between the
   // hyphen and the extension). The slug arm now requires `[^.]+`
   // (one or more) and only attaches to the `ui-` prefix.
-  let names: string[];
+  let entries: Dirent[];
   try {
-    names = await readdir(uiDir);
+    entries = await readdir(uiDir, { withFileTypes: true });
   } catch (error) {
     if (isEnoent(error)) {
       return false;
@@ -308,7 +309,54 @@ async function hasMatchingUiContract(contractsRoot: string, specId: string): Pro
     throw error;
   }
   const anchoredRe = new RegExp(`^(?:${specId}|spec-${specId}|ui-${specId}(?:-[^.]+)?)\\.yaml$`);
-  return names.some((name) => anchoredRe.test(name));
+  if (entries.some((entry) => entry.isFile() && anchoredRe.test(entry.name))) {
+    return true;
+  }
+  // 23rd-wave Fix (codex r3270307469, P1 — chatgpt-codex-connector):
+  // detect the documented per-spec subdirectory layout
+  // `<contractsDir>/ui/spec-<specId>/<sub>.yaml` (candidate #5 in
+  // `.qfai/contracts/ui/README.md` precedence table). Pre-fix
+  // `hasMatchingUiContract` only checked top-level basenames, so a
+  // project that authored its UI contracts as
+  // `.qfai/contracts/ui/spec-0007/home.yaml` (without a
+  // `surface_type: ui-bearing` marker on the spec) would be silently
+  // treated as non-UI-bearing — `resolveAllUiBearingSpecs` returned
+  // empty, the cycle 0 precheck no-op'd, and the iterate command
+  // silently exited without producing iter dirs. Probing for the
+  // `spec-<specId>/` subdir + at least one `.yaml` underneath
+  // recovers the documented fallback.
+  const subdir = entries.find((entry) => entry.isDirectory() && entry.name === `spec-${specId}`);
+  if (subdir) {
+    const subdirAbs = path.join(uiDir, subdir.name);
+    let hasYaml = false;
+    try {
+      const stack: string[] = [subdirAbs];
+      while (stack.length > 0 && !hasYaml) {
+        const current = stack.pop();
+        if (current === undefined) break;
+        let subEntries: Dirent[];
+        try {
+          subEntries = await readdir(current, { withFileTypes: true });
+        } catch (subErr) {
+          if (isEnoent(subErr)) continue;
+          throw subErr;
+        }
+        for (const sub of subEntries) {
+          if (sub.isFile() && sub.name.endsWith(".yaml")) {
+            hasYaml = true;
+            break;
+          }
+          if (sub.isDirectory()) {
+            stack.push(path.join(current, sub.name));
+          }
+        }
+      }
+    } catch (subErr) {
+      if (!isEnoent(subErr)) throw subErr;
+    }
+    if (hasYaml) return true;
+  }
+  return false;
 }
 
 /**
