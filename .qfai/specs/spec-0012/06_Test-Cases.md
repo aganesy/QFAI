@@ -907,6 +907,14 @@
 - Test file: `packages/qfai/tests/cli/prototypingCertify.test.ts`
 - Verify the wave-14 + wave-15 + wave-16 cumulative semantic changes on the `show-spec` JSON payload — AC-0012-0052 `show-spec` JSON contract. Three `it` blocks: (a) legacy record without `frozenSpecsCovered` (only `specsCovered`) emits `frozenSpecsCoveredSource: "specsCovered"`; (b) record with `frozenSpecsCovered` emits `frozenSpecsCoveredSource: "frozenSpecsCovered"`; (c) `liveUiBearing` is a `string[]` (wave-16 contract alignment after the wave-15 resolver swap to `resolveSurfaceUnion`). AC-Ref binding corrected from AC-0012-0044 (autonomous-run, wrong axis) to the new AC-0012-0052 (`show-spec` JSON contract) per codex r3270138113 MAJOR (20th-wave). Closes codex MINOR r3270061025.
 
+## TC-0012-0423
+
+- EX-Ref: EX-0012-0152
+- AC-Refs: AC-0012-0037, AC-0012-0049
+- Type: unit
+- Test file: `packages/qfai/tests/core/prototyping/specResolution.test.ts`
+- Verify the 23rd-wave `hasMatchingUiContract` per-spec subdirectory fallback (codex r3270307469 P1). Four `it` blocks: (a) `accepts the per-spec subdirectory contract fallback (spec-<id>/<sub>.yaml)` — pre-fix would have returned empty / no-op; (b) `accepts a per-spec subdirectory contract nested one level deep` — recursive subdir walk; (c) `does NOT match a per-spec subdirectory that contains no .yaml files` — non-yaml-only subdir is not a UI-bearing signal; (d) `does NOT match a per-spec subdirectory whose only file is *.yml (single-l) or has an empty basename` — confirms the policy that the subdir branch accepts arbitrary `*.yaml` basenames but `.yml` (single-l) is excluded everywhere consistent with the top-level anchored regex (24th-wave coverage gap fix per codex r3270529771 MINOR). Closes codex P1 r3270307469 (subdir fallback bug) and codex MAJOR r3270527912 (traceability stitch) and codex MINOR r3270529771 (coverage edge cases).
+
 ## Legacy Coverage Continuity
 
 - The legacy baseline test-case identifier space remains reserved for existing implementation/test slices.

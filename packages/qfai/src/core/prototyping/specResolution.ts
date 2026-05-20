@@ -315,7 +315,17 @@ async function hasMatchingUiContract(contractsRoot: string, specId: string): Pro
   // 23rd-wave Fix (codex r3270307469, P1 — chatgpt-codex-connector):
   // detect the documented per-spec subdirectory layout
   // `<contractsDir>/ui/spec-<specId>/<sub>.yaml` (candidate #5 in
-  // `.qfai/contracts/ui/README.md` precedence table). Pre-fix
+  // `.qfai/contracts/ui/README.md` precedence table).
+  //
+  // Extension policy (25th-wave clarification per codex r3270529771
+  // MINOR): the subdir walk accepts arbitrary `*.yaml` basenames
+  // (since the per-spec subdir IS the spec-scope signal — the
+  // basename does not need to encode the spec id again), but `*.yml`
+  // (single-l) is rejected for parity with the top-level anchored
+  // regex which only accepts `*.yaml`. This intentional asymmetry
+  // (subdir = any `.yaml`; top-level = anchored `<spec-id>.yaml`)
+  // matches the README precedence table semantics. TC-0012-0423
+  // pins both branches plus the empty-subdir non-match case. Pre-fix
   // `hasMatchingUiContract` only checked top-level basenames, so a
   // project that authored its UI contracts as
   // `.qfai/contracts/ui/spec-0007/home.yaml` (without a

@@ -162,7 +162,7 @@
 ## AC-0012-0037: Multi-spec resolver covers every UI-bearing spec per invocation
 
 - US-Refs: US-0012-0109
-- Given a consumer project with N UI-bearing specs (N ≥ 1; each spec EITHER (a) carries `surface_type: ui-bearing` in its `01_Spec.md` frontmatter OR (b) ships a matching `.qfai/contracts/ui/<spec-id>.yaml` contract — the two signals are OR-ed; legacy `01_Context.md ui_bearing: true` is superseded by these per CHG-002),
+- Given a consumer project with N UI-bearing specs (N ≥ 1; each spec EITHER (a) carries `surface_type: ui-bearing` in its `01_Spec.md` frontmatter OR (b) ships a matching `.qfai/contracts/ui/<spec-id>.yaml` contract (also accepted: any of the documented 5 candidate layouts in `.qfai/contracts/ui/README.md` — including the per-spec subdirectory layout `<contractsDir>/ui/spec-<id>/<sub>.yaml`, candidate #5, treated as UI-bearing when the subdir contains at least one `*.yaml` file; `*.yml` single-l is excluded for parity with the top-level convention — 25th-wave clarification per codex r3270527912 MAJOR + r3270529771 MINOR) — the two signals are OR-ed; legacy `01_Context.md ui_bearing: true` is superseded by these per CHG-002),
 - When `/qfai-prototyping` is invoked exactly once,
 - Then `resolveAllUiBearingSpecs()` returns every UI-bearing spec ID, the previous primary-spec selection prompt is not emitted, and cycle-0 evidence records the resolved spec set verbatim.
 - Given a consumer project with zero UI-bearing specs **at cycle 0** (no in-progress `prototyping.json#frozenSurfaceUnion` recorded yet),

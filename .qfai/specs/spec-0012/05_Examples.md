@@ -383,3 +383,10 @@
 - Given any seeded `prototyping.json` record.
 - When `qfai prototyping show-spec` emits its JSON payload.
 - Then the payload carries `frozenSpecsCoveredSource: "frozenSpecsCovered" | "specsCovered"` so operators can detect pre-Wave-3 legacy seed records, and `liveUiBearing` is a `string[]` of spec IDs from the same `resolveSurfaceUnion()` that iterate's cycle ≥ 1 drift gate consumes.
+
+## EX-0012-0152: Per-Spec Subdirectory UI Contract Fallback
+
+- BR-Ref: BR-0012-0030
+- Given a consumer project whose `01_Spec.md` has no `surface_type: ui-bearing` frontmatter but whose `.qfai/contracts/ui/spec-<id>/` subdirectory holds at least one `.yaml` file (e.g. `home.yaml` or `screens/main.yaml`).
+- When `resolveAllUiBearingSpecs` / `hasMatchingUiContract` runs.
+- Then the spec is treated as UI-bearing (the documented candidate #5 layout from `.qfai/contracts/ui/README.md` is recognised by the resolver); an empty subdir (no `.yaml` inside) does NOT match, and a subdir whose only file is `*.yml` (single-l) is also rejected for parity with the top-level `*.yaml`-only convention.

@@ -225,6 +225,12 @@ describe("resolveAllUiBearingSpecs", () => {
   // its UI contracts as `.qfai/contracts/ui/spec-0007/home.yaml`
   // (without `surface_type: ui-bearing` on the spec) was silently
   // treated as non-UI-bearing and the iterate command no-op'd.
+  //
+  // QFAI:SPEC-0012:TC-0012-0423 — 25th-wave traceability stitch
+  // (codex r3270527912 MAJOR) plus edge-case coverage from codex
+  // r3270529771 MINOR (`.yml` single-l rejection). AC-Refs:
+  // AC-0012-0037 (cycle-0 precheck input candidates) /
+  // AC-0012-0049 (mid-run spec-set freeze).
   it("accepts the per-spec subdirectory contract fallback (spec-<id>/<sub>.yaml)", async () => {
     const root = await newTempDir();
     await seedSpec(root, "0007", "# spec-0007\n\nNo marker.\n");
@@ -260,6 +266,21 @@ describe("resolveAllUiBearingSpecs", () => {
     await mkdir(subdir, { recursive: true });
     // Place a non-yaml file — must not count as a UI contract.
     await writeFile(path.join(subdir, "README.md"), "# placeholder\n", "utf-8");
+    const result = await resolveAllUiBearingSpecs(root, makeConfig());
+    expect(result).toEqual([]);
+  });
+
+  // 25th-wave coverage gap fix (codex r3270529771 MINOR): the subdir
+  // branch's `.endsWith(".yaml")` check intentionally rejects `.yml`
+  // (single-l) for parity with the top-level anchored regex which
+  // only accepts `*.yaml`. Pin the boundary so a future refactor that
+  // broadens the predicate to `.yml` is caught by CI.
+  it("does NOT match a per-spec subdirectory whose only file uses the .yml (single-l) extension", async () => {
+    const root = await newTempDir();
+    await seedSpec(root, "0007", "# spec-0007\n\nNo marker.\n");
+    const subdir = path.join(root, ".qfai/contracts/ui/spec-0007");
+    await mkdir(subdir, { recursive: true });
+    await writeFile(path.join(subdir, "home.yml"), "# CON-UI-0007\nscreens: []\n", "utf-8");
     const result = await resolveAllUiBearingSpecs(root, makeConfig());
     expect(result).toEqual([]);
   });

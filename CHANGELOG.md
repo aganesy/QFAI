@@ -76,6 +76,36 @@
   - Pinned-branch authorization is preserved: this lands in 1.8.10
     because `feature/v1.8.10` is the release pin.
 
+### Fixed (PR #208 25th late-review wave)
+
+- **Traceability stitch — TC-0012-0423 registration (codex r3270527912,
+  MAJOR — requirements-reviewer):** the 23rd-wave `hasMatchingUiContract`
+  per-spec subdirectory fallback gains a registered TC entry:
+  `TC-0012-0423` in `06_Test-Cases.md`, `TDD-0443` in
+  `tdd/test-list.md` and `16_Traceability-ledger.md`, new
+  `EX-0012-0152` in `05_Examples.md`, and the three new `it` blocks
+  in `tests/core/prototyping/specResolution.test.ts` are annotated
+  `// QFAI:SPEC-0012:TC-0012-0423`. AC-Refs: `AC-0012-0037` (cycle-0
+  precheck UI-bearing input candidates) + `AC-0012-0049` (mid-run
+  spec-set freeze). AC-0012-0037 Given clause extended with the
+  subdir-layout signal alongside the existing strict marker / single-
+  file fallbacks.
+- **Edge-case test coverage (codex r3270529771, MINOR):** add an
+  explicit `it` block asserting the subdir branch rejects a `.yml`
+  (single-l) file as the sole content — pins the deliberate
+  asymmetry between the subdir branch (`.endsWith(".yaml")`) and the
+  top-level anchored regex (`^...\.yaml$`). Policy comment added to
+  `specResolution.ts` explaining the asymmetry.
+- **09_delta narrative backfill (codex r3270529342, MINOR —
+  requirements-reviewer):** five narrative entries added for waves
+  21 / 22 / 23 / 24 / 25 so the rolling delta-document SSOT matches
+  the CHANGELOG.
+- **SKILL.md wrap repair (codex r3270528363 / r3270528371, NIT —
+  product-surface-reviewer):** L72 re-wrapped so the wave-23
+  `qfai-config.yaml` slash-command-parse fix does not leave the
+  `Operators authoring` continuation visually dangling past the
+  bullet's wrap rhythm.
+
 ### Fixed (PR #208 24th late-review wave)
 
 - **specs-coverage report regen (codex r3270453832, MAJOR —
