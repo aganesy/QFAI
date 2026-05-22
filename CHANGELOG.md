@@ -4,6 +4,57 @@
 
 ## [Unreleased]
 
+## [1.9.0] - 2026-05-23
+
+### Added (assistant-layer recut + steering work-log surface — CHG-003)
+
+- 4-layer assistant-tree: `.qfai/assistant/{constitution,manifest,catalog,process}/`
+  replaces the legacy single-layer `.qfai/assistant/steering/`. `qfai init`
+  seeds the new layout; `qfai init --upgrade-assistant-tree` migrates
+  existing projects (REQ-0018..0022 in spec-0003).
+- Project-root `.qfai/steering/` repurposed as the AI work-log surface
+  (entries with `kind: decision | risk | blocker | scope-down | …`).
+  Skill bodies are the writers; `qfai validate` enforces frontmatter
+  schema (`W-WORKLOG-SCHEMA`), link integrity (`W-WORKLOG-BROKEN-LINK`),
+  staleness (`W-WORKLOG-STALE` at 90 days), and decision-promotion gate
+  (`W-PENDING-PROMOTION`).
+- Reviewer-Gate drift findings: `R-WORKLOG-DRIFT`, `R-REJECTED-READOPT`,
+  `R-HANDOFF-INCOMPLETE` (REQ-0025, REQ-0031 in spec-0004 / REQ-0006,
+  REQ-0017 in spec-0015). Reviewer reports MUST carry non-empty
+  `justification:` on these findings; empty values are rejected
+  (advisory-failing).
+- `assistantPaths.ts` SSOT module produces every distributed
+  assistant-tree path string (REQ-0022 in spec-0003); hard-coded
+  literals are lint-rejected.
+- Migration memo authored at
+  `.qfai/assistant/process/migrations/v1.9.0-assistant-layer-recut.md`
+  by the upgrade helper; commit-immutable per OC-53.
+- New CLI contracts: `.qfai/contracts/cli/qfai-init.md`,
+  `.qfai/contracts/cli/qfai-validate.md`,
+  `.qfai/contracts/cli/worklog-entry.schema.md`.
+- `W-USER-EDIT-PRESERVED` informational pass-through emitted by the
+  migration helper and recognized by `qfai validate` as info-only.
+- ATDD coverage closure for spec-0012 TC-0012-0396..0432 (PR #208
+  late-review waves 11..50) appended to
+  `tests/integration/qfai-traceability.md`.
+- TC-0012-0416 / TDD-0436 cycle-9 idempotency regression test landed in
+  `packages/qfai/tests/cli/commands/prototypingIterate.test.ts`.
+
+### Changed
+
+- `.codex/README.md` and `.github/copilot-instructions.md` now reference
+  the cross-AI rules under `.agents/rules/` (closing pre-existing
+  drift caught by `agentsRulesSurface.test.ts`).
+- spec-0003 / spec-0004 per-spec SDD pass: REQ-0018..0023 (spec-0003)
+  and REQ-0023..0033 (spec-0004) fanned out into US/AC/BR/EX/TC.
+
+### Deprecated
+
+- Legacy `.qfai/assistant/steering/` layout is read-compatible for the
+  v1.9.x minor window only. `qfai validate` emits `D-DEPRECATED-PATH`
+  with body literally containing `sunset: v1.10.0`. The same condition
+  escalates to error in v1.10.0+.
+
 ## [1.8.10] - 2026-05-19
 
 ### BREAKING CHANGES (PR #208 — `qfai prototyping show-spec` JSON schema reshape)
