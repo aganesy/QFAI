@@ -55,10 +55,16 @@
 - REQ-0015: Windows symlink fallback - EPERM 時に Developer Mode 有効化の案内を含むエラーメッセージを表示する
 - REQ-0016: ルート `.gitignore` 管理ブロック追記 (v1.7.18) - `qfai init` は導入プロジェクトのルート `.gitignore` に QFAI 管理ブロック（marker 行 + `.qfai/report/*` + `.qfai/evidence/*` + `.qfai/review/*` + `.qfai/discussion/discussion-*/` + README negation）を冪等に追記する。既存ユーザー記述は保護する
 - REQ-0017: レガシー管理ブロック移行 (v1.7.18) - 旧バージョンで追記されたレガシー行（`!.qfai/review/review-*/`, `!.qfai/review/review-*/**`）を再実行時に自動除去し、新ブロックで置換する
+- REQ-0018: 4-layer asset-tree seeding (v1.9.0) - `qfai init` は `.qfai/assistant/{constitution,manifest,catalog,process}/` の 4 層を seed する（旧 `steering/` 単層から再構成）。layer 名以外は reject される
+- REQ-0019: project-root `.qfai/steering/` seeding (v1.9.0) - `qfai init` はプロジェクトルートに `.qfai/steering/` を seed (`README.md` + `.gitkeep` + `_templates/entry.md`)。reinit 時はユーザー編集を preserve
+- REQ-0020: `qfai init --upgrade-assistant-tree` one-shot migration (v1.9.0) - 旧 `.qfai/assistant/steering/` レイアウトから 4-layer へ一括移行する flag。ユーザー編集は `W-USER-EDIT-PRESERVED` informational note 付きで保全
+- REQ-0021: migration memo authoring (v1.9.0) - `qfai init --upgrade-assistant-tree` 実行時、`.qfai/assistant/process/migrations/v<X.Y.Z>-assistant-layer-recut.md` を生成。commit 後は immutable (OC-53 準拠)
+- REQ-0022: `assistantPaths.ts` SSOT module (v1.9.0) - 配布される assistant-tree のパス文字列は `packages/qfai/src/core/paths/assistantPaths.ts` が唯一の producer。hard-coded literal は lint で reject (NFR-0001 系)
+- REQ-0023: 旧 layout backwards-compatibility window (v1.9.0) - 旧 `.qfai/assistant/steering/` は exactly one minor release window 読み取り可能 (NFR-0002)。sunset version は `D-DEPRECATED-PATH` warning 文中に明示する
 
 ## Entry points
 
-- US range in this spec: US-0003-0001..US-0003-0015
+- US range in this spec: US-0003-0001..US-0003-0020
 - Primary actors: AI エージェント統合開発者
 - Notes: `npx qfai init` でプロジェクトに QFAI ワークスペースを導入する
 

@@ -124,3 +124,90 @@ Verify:
 - `.qfai/review/*` が含まれる
 - `!.qfai/review/review-*/` が含まれない
 - `!.qfai/review/review-*/**` が含まれない
+
+## TC-0003-0021: 4-layer asset-tree seed
+
+**Level:** integration
+**EX Refs:** EX-0003-0018
+**AC Refs:** AC-0003-0017
+
+Setup: empty temp dir.
+Action: `runInit({ root })`.
+Verify:
+
+- `.qfai/assistant/constitution/.gitkeep` が存在する
+- `.qfai/assistant/manifest/.gitkeep` が存在する
+- `.qfai/assistant/catalog/.gitkeep` が存在する
+- `.qfai/assistant/process/.gitkeep` が存在する
+- `.qfai/assistant/steering/` ディレクトリは存在しない
+
+## TC-0003-0022: project-root steering seed
+
+**Level:** integration
+**EX Refs:** EX-0003-0019
+**AC Refs:** AC-0003-0018
+
+Setup: empty temp dir.
+Action: `runInit({ root })`、その後ユーザー編集をシミュレートして `.qfai/steering/_templates/entry.md` に追記 → `runInit({ root })` を再実行。
+Verify:
+
+- 初回実行で `.qfai/steering/README.md`, `.qfai/steering/.gitkeep`, `.qfai/steering/_templates/entry.md` が seed される
+- 2 回目実行後もユーザー追記内容が `_templates/entry.md` に残っている
+
+## TC-0003-0023: --upgrade-assistant-tree migration
+
+**Level:** integration
+**EX Refs:** EX-0003-0020
+**AC Refs:** AC-0003-0019, AC-0003-0020
+
+Setup: 旧 `.qfai/assistant/steering/manifest.md` 等のレイアウトを seed した temp dir。
+Action: `runInit({ root, upgradeAssistantTree: true })`.
+Verify:
+
+- exit code 0
+- `.qfai/assistant/{constitution,manifest,catalog,process}/` の 4 層が作成される
+- stdout に `W-USER-EDIT-PRESERVED` を含む note が少なくとも 1 件出力される
+- ユーザー編集ファイル内容が新 layer 側に到達している
+
+## TC-0003-0024: migration memo authoring
+
+**Level:** integration
+**EX Refs:** EX-0003-0021
+**AC Refs:** AC-0003-0021
+
+Setup: 旧 `.qfai/assistant/steering/` を持つ temp dir + `packages/qfai/package.json#version` のテスト用 mock。
+Action: `runInit({ root, upgradeAssistantTree: true })`.
+Verify:
+
+- `.qfai/assistant/process/migrations/v<X.Y.Z>-assistant-layer-recut.md` が生成される
+- 本文に「移行前 layout」「移行後 layout」「影響ファイル一覧」「sunset 予定 minor version」の 4 セクションが含まれる
+- 2 回目に `runInit({ ..., upgradeAssistantTree: true })` を実行しても memo の内容が touch されない (BR-0003-0018)
+
+## TC-0003-0025: assistantPaths.ts SSOT lint
+
+**Level:** unit
+**EX Refs:** EX-0003-0022
+**AC Refs:** AC-0003-0022
+
+Setup: `packages/qfai/src/cli/commands/init.ts` ソースを read。
+Action: `grep -E '"\.qfai/assistant/(constitution|manifest|catalog|process|steering)'` 相当の regex で string literal を検出。
+Verify:
+
+- マッチが 0 件 (assistantPaths.ts の import 経由でのみパスが構築されている)
+- `assistantPaths.ts` の export (`CONSTITUTION_DIR_REL`, `MANIFEST_DIR_REL`, `CATALOG_DIR_REL`, `PROCESS_DIR_REL`) が init.ts から import されている
+
+## TC-0003-0026: 旧 layout backward compat + sunset warning
+
+**Level:** integration
+**EX Refs:** EX-0003-0023
+**AC Refs:** AC-0003-0023, AC-0003-0024
+
+Setup: v1.8.x の `.qfai/assistant/steering/` レイアウトを持つ temp dir。
+Action: v1.9.0 の `runInit({ root })` (no flag) を実行。
+Verify:
+
+- exit code 0
+- 旧 `.qfai/assistant/steering/` は削除されていない (ファイル内容も unchanged)
+- stdout に `D-DEPRECATED-PATH` warning が出力される
+- warning 本文に `v1.10.0` という具体的な sunset minor version が文字列として含まれる
+- 「次の release」「将来」などの曖昧表現は warning 本文に含まれない
