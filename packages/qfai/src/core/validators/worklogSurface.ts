@@ -63,11 +63,16 @@ export async function validateWorklogSurface(
   const entries = await collectEntries(dir);
   const issues: Issue[] = [];
 
-  // Pre-build a Set of registered spec ids and discussion timestamps for
-  // link-integrity checks.
+  // Pre-build a Set of registered spec ids, discussion timestamps, and
+  // worklog entry ids for link-integrity checks.
   const specIds = await collectSpecIds(root);
   const discussionIds = await collectDiscussionIds(root);
   const decisionRows = await readDecisionRows(root);
+  const entryIds = new Set<string>();
+  for (const e of entries) {
+    const fmId = e.frontmatter && typeof e.frontmatter.id === "string" ? e.frontmatter.id : "";
+    if (fmId.length > 0) entryIds.add(fmId);
+  }
 
   const promotionTargets: Array<{ entry: ParsedEntry; target: string }> = [];
 
@@ -157,6 +162,18 @@ export async function validateWorklogSurface(
               ),
             );
           }
+        } else if (link.startsWith("entry-")) {
+          if (!entryIds.has(link)) {
+            issues.push(
+              issue(
+                "W-WORKLOG-BROKEN-LINK",
+                `${entry.relativePath}: link "${link}" points to a non-existent worklog entry.`,
+                "warning",
+                entry.relativePath,
+                "worklogSurface.links.unresolved",
+              ),
+            );
+          }
         }
       }
     }
@@ -207,7 +224,7 @@ export async function validateWorklogSurface(
   for (const promo of promotionTargets) {
     const entryId =
       typeof promo.entry.frontmatter?.id === "string" ? promo.entry.frontmatter.id : "";
-    const referenced = entryId.length > 0 && decisionRows.some((row) => row.includes(entryId));
+    const referenced = entryId.length > 0 && rowsReferenceEntryId(decisionRows, entryId);
     if (!referenced) {
       issues.push(
         issue(
@@ -222,6 +239,18 @@ export async function validateWorklogSurface(
   }
 
   return issues;
+}
+
+/**
+ * Tests whether any decision row references `entryId` as a whole token
+ * (rather than as a substring). Without this, `entry-01` would falsely
+ * match a row that only contains `entry-010`, silently suppressing
+ * W-PENDING-PROMOTION for the unrelated parent entry.
+ */
+function rowsReferenceEntryId(rows: string[], entryId: string): boolean {
+  const escaped = entryId.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const pattern = new RegExp(`(^|[^A-Za-z0-9_-])${escaped}(?![A-Za-z0-9_-])`);
+  return rows.some((row) => pattern.test(row));
 }
 
 async function collectEntries(dir: string): Promise<ParsedEntry[]> {

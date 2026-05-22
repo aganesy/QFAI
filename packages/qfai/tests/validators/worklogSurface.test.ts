@@ -159,6 +159,130 @@ describe("worklogSurface validator", () => {
     }
   });
 
+  // TC-0004-0017 (entry-* link): inter-entry broken-link integrity
+  it("TC-0004-0017 (entry-*): emits W-WORKLOG-BROKEN-LINK for entry-* link pointing at non-existent entry", async () => {
+    const root = await newRoot("worklog-entry-link");
+    try {
+      await seedWorklog(
+        root,
+        "entry-100.md",
+        [
+          "---",
+          "id: entry-100",
+          "kind: decision",
+          "status: active",
+          "links:",
+          "  - entry-999",
+          "---",
+          "",
+        ].join("\n"),
+      );
+      const issues = await validateWorklogSurface(root, await getConfig(root));
+      const broken = issues.filter((i) => i.code === "W-WORKLOG-BROKEN-LINK");
+      expect(broken.length).toBe(1);
+      expect(broken[0]?.message).toContain("entry-999");
+      expect(broken[0]?.message).toContain("worklog entry");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("TC-0004-0017 (entry-*): does NOT fire when entry-* link resolves to an existing entry", async () => {
+    const root = await newRoot("worklog-entry-link-ok");
+    try {
+      await seedWorklog(
+        root,
+        "entry-200.md",
+        ["---", "id: entry-200", "kind: decision", "status: active", "---", ""].join("\n"),
+      );
+      await seedWorklog(
+        root,
+        "entry-201.md",
+        [
+          "---",
+          "id: entry-201",
+          "kind: decision",
+          "status: active",
+          "links:",
+          "  - entry-200",
+          "---",
+          "",
+        ].join("\n"),
+      );
+      const issues = await validateWorklogSurface(root, await getConfig(root));
+      const broken = issues.filter((i) => i.code === "W-WORKLOG-BROKEN-LINK");
+      expect(broken.length).toBe(0);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  // TC-0004-0020 (exact-match): promotion satisfied only by an exact entry-id reference
+  it("TC-0004-0020 (exact-match): row containing entry-010 does NOT satisfy promotion for entry-01", async () => {
+    const root = await newRoot("worklog-promo-exact");
+    try {
+      // Pre-seed a Decisions row that mentions entry-010 (the longer id).
+      const specDir = path.join(root, ".qfai", "specs", "spec-0099");
+      await mkdir(specDir, { recursive: true });
+      await writeFile(
+        path.join(specDir, "07_Decisions.md"),
+        "| DR-1 | Decision A | linked via entry-010 |\n",
+        "utf-8",
+      );
+      // Entry-01 (shorter id) has promote-to: but no decisions row mentions it.
+      await seedWorklog(
+        root,
+        "entry-01.md",
+        [
+          "---",
+          "id: entry-01",
+          "kind: decision",
+          "status: active",
+          "promote-to: 07_Decisions.md",
+          "---",
+          "",
+        ].join("\n"),
+      );
+      const issues = await validateWorklogSurface(root, await getConfig(root));
+      const promo = issues.filter((i) => i.code === "W-PENDING-PROMOTION");
+      expect(promo.length).toBe(1);
+      expect(promo[0]?.message).toContain("entry-01");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("TC-0004-0020 (exact-match): row containing exact entry-002 DOES satisfy promotion", async () => {
+    const root = await newRoot("worklog-promo-ok");
+    try {
+      const specDir = path.join(root, ".qfai", "specs", "spec-0099");
+      await mkdir(specDir, { recursive: true });
+      await writeFile(
+        path.join(specDir, "07_Decisions.md"),
+        "| DR-2 | Decision B | from entry-002 |\n",
+        "utf-8",
+      );
+      await seedWorklog(
+        root,
+        "entry-002.md",
+        [
+          "---",
+          "id: entry-002",
+          "kind: decision",
+          "status: active",
+          "promote-to: 07_Decisions.md",
+          "---",
+          "",
+        ].join("\n"),
+      );
+      const issues = await validateWorklogSurface(root, await getConfig(root));
+      const promo = issues.filter((i) => i.code === "W-PENDING-PROMOTION");
+      expect(promo.length).toBe(0);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   // TC-0004-0021: W-WORKLOG-STALE
   it("TC-0004-0021: emits W-WORKLOG-STALE when status=active and updated > 90d ago", async () => {
     const root = await newRoot("worklog-stale");
