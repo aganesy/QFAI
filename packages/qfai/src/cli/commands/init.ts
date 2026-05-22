@@ -380,12 +380,15 @@ async function runUpgradeAssistantTree(destRoot: string, dryRun: boolean): Promi
 
 function classifyLegacySteeringEntry(relPath: string): { layer: AssistantLayer; subpath: string } {
   const normalized = relPath.replace(/\\/g, "/").toLowerCase();
-  if (normalized.includes("test-layers")) return { layer: "catalog", subpath: relPath };
+  // review-gate is a reference rules catalog (not a routing manifest) — keep
+  // it in catalog/ so loaders that expect catalog placement find it.
+  if (normalized.includes("test-layers") || normalized.includes("review-gate")) {
+    return { layer: "catalog", subpath: relPath };
+  }
   if (
     normalized.includes("agent-catalog") ||
     normalized.includes("agent-routing") ||
-    normalized.includes("review-profiles") ||
-    normalized.includes("review-gate")
+    normalized.includes("review-profiles")
   ) {
     return { layer: "manifest", subpath: relPath };
   }

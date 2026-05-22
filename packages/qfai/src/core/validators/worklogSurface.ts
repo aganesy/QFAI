@@ -290,7 +290,11 @@ async function collectEntries(dir: string): Promise<ParsedEntry[]> {
 }
 
 function parseEntry(text: string): { frontmatter: Frontmatter | null; body: string } {
-  const match = /^---\n([\s\S]*?)\n---\n?([\s\S]*)$/.exec(text);
+  // Tolerate CRLF line endings (Windows-authored entries) by accepting
+  // \r?\n at every delimiter position. Without this, frontmatter saved
+  // with CRLF would be silently misparsed and reported as
+  // W-WORKLOG-SCHEMA even when valid (P2 from PR #209 review).
+  const match = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?([\s\S]*)$/.exec(text);
   if (!match) {
     return { frontmatter: null, body: text };
   }

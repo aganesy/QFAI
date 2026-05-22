@@ -1293,6 +1293,44 @@ describe("qfai init", { timeout: 60000 }, () => {
     }
   });
 
+  // QFAI:SPEC-0003:TC-0003-0023 (TDD-0023): review-gate.rules.yml maps to catalog layer (not manifest)
+  it("TC-0003-0023 (TDD-0023): --upgrade-assistant-tree routes review-gate.rules.yml to catalog/ (not manifest/)", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-tdd0023-rg-"));
+    try {
+      const legacy = path.join(root, ".qfai", "assistant", "steering");
+      await mkdir(legacy, { recursive: true });
+      await writeFile(path.join(legacy, "review-gate.rules.yml"), "rules: []\n", "utf-8");
+
+      await runInit({
+        dir: root,
+        force: false,
+        dryRun: false,
+        yes: true,
+        upgradeAssistantTree: true,
+      });
+
+      // catalog/ MUST contain it (review-gate is a reference rules catalog,
+      // not a routing manifest).
+      const catalogCopy = await readFile(
+        path.join(root, ".qfai", "assistant", "catalog", "review-gate.rules.yml"),
+        "utf-8",
+      );
+      expect(catalogCopy).toContain("rules: []");
+
+      // manifest/ MUST NOT contain it.
+      let manifestExists = false;
+      try {
+        await access(path.join(root, ".qfai", "assistant", "manifest", "review-gate.rules.yml"));
+        manifestExists = true;
+      } catch {
+        manifestExists = false;
+      }
+      expect(manifestExists).toBe(false);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   // QFAI:SPEC-0003:TC-0003-0023 (TDD-0023): upgrade on already-upgraded project is a no-op note
   it("TC-0003-0023 (TDD-0023): --upgrade-assistant-tree on an already-upgraded project emits W-USER-EDIT-PRESERVED only", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-tdd0023b-"));

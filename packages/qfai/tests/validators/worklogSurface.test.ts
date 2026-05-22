@@ -283,6 +283,33 @@ describe("worklogSurface validator", () => {
     }
   });
 
+  // TC-0004-0016 (CRLF): parses Windows-CRLF frontmatter without false W-WORKLOG-SCHEMA
+  it("TC-0004-0016 (CRLF): parses CRLF-terminated frontmatter without firing schema-parse warning", async () => {
+    const root = await newRoot("worklog-crlf");
+    try {
+      const crlfBody = [
+        "---",
+        "id: entry-300",
+        "kind: decision",
+        "status: active",
+        "---",
+        "",
+        "# CRLF body",
+        "",
+      ].join("\r\n");
+      await seedWorklog(root, "entry-300.md", crlfBody);
+      const issues = await validateWorklogSurface(root, await getConfig(root));
+      const parseIssues = issues.filter((i) => i.rule === "worklogSurface.schema.parse");
+      expect(parseIssues.length).toBe(0);
+      // And the entry's frontmatter MUST have parsed correctly — so the
+      // kind/status/id schema checks also do not fire.
+      const schemaIssues = issues.filter((i) => i.code === "W-WORKLOG-SCHEMA");
+      expect(schemaIssues.length).toBe(0);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   // TC-0004-0021: W-WORKLOG-STALE
   it("TC-0004-0021: emits W-WORKLOG-STALE when status=active and updated > 90d ago", async () => {
     const root = await newRoot("worklog-stale");
