@@ -1,1 +1,0 @@
-../../.qfai/assistant/agents/acceptance-test-engineer.md

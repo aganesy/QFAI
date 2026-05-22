@@ -1,5 +1,0 @@
-# .qfai/assistant/manifest/
-
-Declarative manifests (agent-catalog.yml, agent-routing.yml, review-profiles.yml, spec_required_files.json).
-
-Seeded by qfai init (4-layer assistant-tree recut, CHG-003).
