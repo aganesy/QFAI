@@ -17,6 +17,8 @@ export const LEGACY_ASSISTANT_STEERING_DIR = ".qfai/assistant/steering" as const
 
 export const PROJECT_STEERING_DIR = ".qfai/steering" as const;
 
+export const PROJECT_STEERING_TEMPLATES_SUBDIR = "_templates" as const;
+
 export const MIGRATIONS_SUBDIR = "migrations" as const;
 
 /**

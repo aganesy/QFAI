@@ -68,7 +68,7 @@
 - US-Refs: US-0004-0028
 - Given a project with a directory at `.qfai/assistant/steering/` (or any other non-canonical layer name)
 - When `qfai validate` runs
-- Then a finding is emitted naming the offending directory; the canonical layer enum (`constitution`, `manifest`, `catalog`, `process`) is enumerated in the finding text; severity is at least warning during the deprecation window (D-DEPRECATED-PATH co-fires per REQ-0029)
+- Then a finding is emitted naming the offending directory; the canonical layer enum (`constitution`, `manifest`, `catalog`, `process`) is enumerated in the finding text; severity is at least warning during the deprecation window (D-DEPRECATED-PATH co-fires per REQ-0040)
 
 ## AC-0004-0016
 

@@ -87,9 +87,12 @@ export async function validateSkillDocReferences(
     if (PROJECT_MEMORY_REQUIRED_SKILLS.has(skillId)) {
       const trailing = body.slice(-2_000);
       if (!/^\s*project_memory\s*:/m.test(trailing)) {
+        // Distinct code — `W-WORKLOG-SCHEMA` is reserved by contract
+        // for worklog-entry frontmatter shape problems. The
+        // SKILL.md project_memory enforcement is a separate concern.
         issues.push(
           issue(
-            "W-WORKLOG-SCHEMA",
+            "W-SKILL-PROJECT-MEMORY",
             `${skillId}/SKILL.md is missing a trailing project_memory: block. Skills that participate in the work-log surface MUST declare project_memory to enumerate their remembered context.`,
             "warning",
             `.qfai/assistant/skills/${skillId}/SKILL.md`,

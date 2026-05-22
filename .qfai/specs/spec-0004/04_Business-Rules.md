@@ -81,7 +81,13 @@
 ## BR-0004-0015: work-log frontmatter schema is closed
 
 - AC-Refs: AC-0004-0016
-- 必須フィールド: `id`, `status`, `kind`, `created`, `updated`, `scope`。enum: `status ∈ {active, archived}` / `kind ∈ {decision, risk, blocker, scope-down, scope-up, handoff, milestone, consultation, unexpected, out-of-scope, debug-difficulty}` / `scope ∈ {project, spec-NNNN, skill-<name>}`。違反は `W-WORKLOG-SCHEMA` (warning)。
+- 必須フィールド: `id`, `status`, `kind`, `created`, `updated`, `scope`, `blocking`, `promote-to`, `links`。enum (canonical contract: `.qfai/contracts/cli/worklog-entry.schema.md`):
+  - `status ∈ {active, handoff, archived}`
+  - `kind ∈ {milestone, decision, risk, consultation-needed, unexpected, unscoped-discovery, handoff, blocker, scope-up, scope-down, spike}`
+  - `scope ∈ {global, spec-NNNN}`
+  - `blocking: boolean`
+  - `promote-to: null | "spec-NNNN/07_Decisions.md"`
+- 違反は `W-WORKLOG-SCHEMA` (warning, non-blocking)。
 
 ## BR-0004-0016: link-integrity resolution
 
@@ -96,7 +102,7 @@
 ## BR-0004-0018: handoff entry 5-section schema
 
 - AC-Refs: AC-0004-0019
-- `kind: handoff` の本文は 5 必須セクション (`## State`, `## Next action`, `## Constraints`, `## OQs`, `## References`) を順序通り含む。1 セクションでも欠落 → `R-HANDOFF-INCOMPLETE` (error)。順序の入れ替わりは warning ではなく検査対象外 (将来検討)。
+- `kind: handoff` の本文は 5 必須セクション (`## State of the task`, `## Next single action`, `## Constraints to preserve`, `## Open questions`, `## References to consult first`) を順序通り含む (canonical contract: `.qfai/contracts/cli/worklog-entry.schema.md`)。1 セクションでも欠落 → `R-HANDOFF-INCOMPLETE` (error, advisory-failing)。順序の入れ替わりは warning ではなく検査対象外 (将来検討)。
 
 ## BR-0004-0019: promotion gate triplet
 

@@ -83,7 +83,7 @@ export async function validateAgentDefinition(root: string, _config: QfaiConfig)
     return issues;
   }
 
-  const catalog = await readCatalog(catalogPath, issues);
+  const catalog = await readCatalog(catalogPath, issues, root);
   if (catalog.length === 0) {
     return issues;
   }
@@ -149,13 +149,22 @@ export async function validateAgentDefinition(root: string, _config: QfaiConfig)
     }
   }
 
-  await validateRouting(routingPath, catalogIds, issues);
-  await validateProfiles(profilesPath, reviewerIds, issues);
+  await validateRouting(routingPath, catalogIds, issues, root);
+  await validateProfiles(profilesPath, reviewerIds, issues, root);
 
   return issues;
 }
 
-async function readCatalog(catalogPath: string, issues: Issue[]): Promise<CatalogAgent[]> {
+async function readCatalog(
+  catalogPath: string,
+  issues: Issue[],
+  root: string,
+): Promise<CatalogAgent[]> {
+  // Use the actual resolved catalogPath in finding `file:` arguments so
+  // errors point at the location that was actually read (canonical
+  // manifest/ first, legacy steering/ as fallback) — not a hard-coded
+  // legacy literal.
+  const rel = manifestRelativePath(catalogPath, root);
   try {
     const parsed: unknown = parseYaml(await readFile(catalogPath, "utf-8"));
     if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
@@ -164,21 +173,21 @@ async function readCatalog(catalogPath: string, issues: Issue[]): Promise<Catalo
           "QFAI-AGENT-006",
           "agent-catalog.yml must parse to an object",
           "error",
-          ".qfai/assistant/steering/agent-catalog.yml",
+          rel,
           "agentDefinition.invalidCatalogShape",
         ),
       );
       return [];
     }
 
-    const root = parsed as Record<string, unknown>;
-    if (!Array.isArray(root.agents)) {
+    const catalogRoot = parsed as Record<string, unknown>;
+    if (!Array.isArray(catalogRoot.agents)) {
       issues.push(
         issue(
           "QFAI-AGENT-006",
           "agent-catalog.yml must contain agents array",
           "error",
-          ".qfai/assistant/steering/agent-catalog.yml",
+          rel,
           "agentDefinition.invalidCatalogShape",
         ),
       );
@@ -186,14 +195,14 @@ async function readCatalog(catalogPath: string, issues: Issue[]): Promise<Catalo
     }
 
     const agents: CatalogAgent[] = [];
-    for (const [index, entry] of root.agents.entries()) {
+    for (const [index, entry] of catalogRoot.agents.entries()) {
       if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
         issues.push(
           issue(
             "QFAI-AGENT-006",
             `agent-catalog.yml agents[${index}] must be an object`,
             "error",
-            ".qfai/assistant/steering/agent-catalog.yml",
+            rel,
             "agentDefinition.invalidCatalogEntry",
           ),
         );
@@ -207,7 +216,7 @@ async function readCatalog(catalogPath: string, issues: Issue[]): Promise<Catalo
             "QFAI-AGENT-006",
             `agent-catalog.yml agents[${index}] must include string id and kind worker|reviewer`,
             "error",
-            ".qfai/assistant/steering/agent-catalog.yml",
+            rel,
             "agentDefinition.invalidCatalogEntry",
           ),
         );
@@ -226,7 +235,7 @@ async function readCatalog(catalogPath: string, issues: Issue[]): Promise<Catalo
         "QFAI-AGENT-006",
         "agent-catalog.yml could not be parsed",
         "error",
-        ".qfai/assistant/steering/agent-catalog.yml",
+        rel,
         "agentDefinition.catalogParse",
       ),
     );
@@ -238,7 +247,9 @@ async function validateRouting(
   routingPath: string,
   catalogIds: Set<string>,
   issues: Issue[],
+  root: string,
 ): Promise<void> {
+  const rel = manifestRelativePath(routingPath, root);
   try {
     const parsed: unknown = parseYaml(await readFile(routingPath, "utf-8"));
     if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
@@ -247,27 +258,27 @@ async function validateRouting(
           "QFAI-AGENT-007",
           "agent-routing.yml must parse to an object",
           "error",
-          ".qfai/assistant/steering/agent-routing.yml",
+          rel,
           "agentDefinition.invalidRoutingShape",
         ),
       );
       return;
     }
-    const root = parsed as Record<string, unknown>;
-    if (!Array.isArray(root.routing)) {
+    const routingRoot = parsed as Record<string, unknown>;
+    if (!Array.isArray(routingRoot.routing)) {
       issues.push(
         issue(
           "QFAI-AGENT-007",
           "agent-routing.yml must contain routing array",
           "error",
-          ".qfai/assistant/steering/agent-routing.yml",
+          rel,
           "agentDefinition.invalidRoutingShape",
         ),
       );
       return;
     }
 
-    for (const [routeIndex, route] of root.routing.entries()) {
+    for (const [routeIndex, route] of routingRoot.routing.entries()) {
       if (!route || typeof route !== "object" || Array.isArray(route)) {
         continue;
       }
@@ -328,7 +339,7 @@ async function validateRouting(
         "QFAI-AGENT-007",
         "agent-routing.yml could not be parsed",
         "error",
-        ".qfai/assistant/steering/agent-routing.yml",
+        rel,
         "agentDefinition.routingParse",
       ),
     );
@@ -357,7 +368,10 @@ function validateAgentRefs(
           "QFAI-AGENT-008",
           `agent-routing.yml references unknown agent "${entry}" in ${skill} phase ${phaseIndex} field ${field}`,
           "error",
-          ".qfai/assistant/steering/agent-routing.yml",
+          // routing rel is computed in validateRouting scope; for the
+          // sub-helpers we report a generic manifest path label since
+          // validateAgentRefs is called from multiple agent files.
+          ".qfai/assistant/manifest/agent-routing.yml",
           "agentDefinition.unknownRoutingAgent",
         ),
       );
@@ -369,7 +383,9 @@ async function validateProfiles(
   profilesPath: string,
   reviewerIds: Set<string>,
   issues: Issue[],
+  root: string,
 ): Promise<void> {
+  const rel = manifestRelativePath(profilesPath, root);
   try {
     const parsed: unknown = parseYaml(await readFile(profilesPath, "utf-8"));
     if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
@@ -378,38 +394,50 @@ async function validateProfiles(
           "QFAI-AGENT-009",
           "review-profiles.yml must parse to an object",
           "error",
-          ".qfai/assistant/steering/review-profiles.yml",
+          rel,
           "agentDefinition.invalidProfilesShape",
         ),
       );
       return;
     }
-    const root = parsed as Record<string, unknown>;
-    if (!root.profiles || typeof root.profiles !== "object" || Array.isArray(root.profiles)) {
+    const profilesRoot = parsed as Record<string, unknown>;
+    if (
+      !profilesRoot.profiles ||
+      typeof profilesRoot.profiles !== "object" ||
+      Array.isArray(profilesRoot.profiles)
+    ) {
       issues.push(
         issue(
           "QFAI-AGENT-009",
           "review-profiles.yml must contain profiles object",
           "error",
-          ".qfai/assistant/steering/review-profiles.yml",
+          rel,
           "agentDefinition.invalidProfilesShape",
         ),
       );
       return;
     }
-    const profiles = root.profiles as Record<string, unknown>;
+    const profiles = profilesRoot.profiles as Record<string, unknown>;
     for (const [profileName, profile] of Object.entries(profiles)) {
       if (!profile || typeof profile !== "object" || Array.isArray(profile)) {
         continue;
       }
       const profileObj = profile as Record<string, unknown>;
-      validateReviewerRefs(profileObj.always_required, reviewerIds, issues, profileName, "always");
+      validateReviewerRefs(
+        profileObj.always_required,
+        reviewerIds,
+        issues,
+        profileName,
+        "always",
+        rel,
+      );
       validateReviewerRefs(
         profileObj.conditional_required,
         reviewerIds,
         issues,
         profileName,
         "conditional",
+        rel,
       );
     }
   } catch {
@@ -418,7 +446,7 @@ async function validateProfiles(
         "QFAI-AGENT-009",
         "review-profiles.yml could not be parsed",
         "error",
-        ".qfai/assistant/steering/review-profiles.yml",
+        rel,
         "agentDefinition.profilesParse",
       ),
     );
@@ -435,6 +463,7 @@ function validateReviewerRefs(
   issues: Issue[],
   profileName: string,
   field: string,
+  profilesPathRel: string,
 ): void {
   if (!Array.isArray(value)) {
     return;
@@ -449,7 +478,7 @@ function validateReviewerRefs(
           "QFAI-AGENT-010",
           `review-profiles.yml profile "${profileName}" references non-reviewer agent "${entry}" in ${field}_required`,
           "error",
-          ".qfai/assistant/steering/review-profiles.yml",
+          profilesPathRel,
           "agentDefinition.nonReviewerInProfile",
         ),
       );

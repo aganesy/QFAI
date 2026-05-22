@@ -28,9 +28,9 @@ optional:
     - Delta
 
 agent_routing:
-  catalog_ssot: .qfai/assistant/steering/agent-catalog.yml
-  routing_ssot: .qfai/assistant/steering/agent-routing.yml
-  review_profiles_ssot: .qfai/assistant/steering/review-profiles.yml
+  catalog_ssot: .qfai/assistant/manifest/agent-catalog.yml
+  routing_ssot: .qfai/assistant/manifest/agent-routing.yml
+  review_profiles_ssot: .qfai/assistant/manifest/review-profiles.yml
 
 reviewers:
   minimum: 1
@@ -60,7 +60,7 @@ quality_gates:
       role: Implementation Reviewer
 
 optional_review_modes:
-  review_profiles_ssot: .qfai/assistant/steering/review-profiles.yml
+  review_profiles_ssot: .qfai/assistant/manifest/review-profiles.yml
   supported:
     - devils-advocate
     - pattern-doubler

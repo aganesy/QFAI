@@ -71,9 +71,13 @@ export async function validateAssistantTreeMigration(
       if (PRE_RECUT_DIRS.has(entry.name)) continue;
       // steering/ is the explicit legacy layer that gets its own D-DEPRECATED-PATH below.
       if (entry.name === "steering") continue;
+      // Distinct finding code — `W-WORKLOG-SCHEMA` is reserved by
+      // contract for worklog-entry frontmatter shape problems. The
+      // 4-layer enum guard is a separate concern and uses its own
+      // dedicated code to avoid code-class overload.
       issues.push(
         issue(
-          "W-WORKLOG-SCHEMA",
+          "W-ASSISTANT-LAYOUT",
           `.qfai/assistant/${entry.name}/ is not in the canonical 4-layer enum (${ASSISTANT_LAYERS.join(", ")}).`,
           "warning",
           `.qfai/assistant/${entry.name}/`,
@@ -113,9 +117,12 @@ export async function validateAssistantTreeMigration(
   for (const layer of ASSISTANT_LAYERS) {
     const layerDir = joinAssistantLayer(root, layer);
     if (!(await exists(layerDir))) {
+      // Distinct info-only code so it doesn't overlap with the
+      // upgrade-collision semantics of W-USER-EDIT-PRESERVED in the
+      // contract. This is purely a layer-not-yet-seeded notification.
       issues.push(
         issue(
-          "W-USER-EDIT-PRESERVED",
+          "I-ASSISTANT-LAYER-UNSEEDED",
           `.qfai/assistant/${layer}/ is not seeded yet. Run \`qfai init\` to seed the 4-layer tree.`,
           "info",
           `.qfai/assistant/${layer}/`,

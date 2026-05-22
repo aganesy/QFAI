@@ -31,9 +31,9 @@
 - Review / approval: <who approves what, gating policy>
 - Evidence requirements: <what artifacts are required for closure>
 - Update cadence: <how often this manifest is revisited>
-- Evidence: `.qfai/assistant/steering/agent-catalog.yml`,
-  `.qfai/assistant/steering/agent-routing.yml`,
-  `.qfai/assistant/steering/review-profiles.yml`
+- Evidence: `.qfai/assistant/manifest/agent-catalog.yml`,
+  `.qfai/assistant/manifest/agent-routing.yml`,
+  `.qfai/assistant/manifest/review-profiles.yml`
 
 ## Evidence
 

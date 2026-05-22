@@ -6,34 +6,34 @@
 
 ## Test Case Table (required)
 
-| TC-ID        | Level       | AC-Refs      | EX-Ref       | Title                                        |
-| ------------ | ----------- | ------------ | ------------ | -------------------------------------------- |
-| TC-0003-0001 | integration | AC-0003-0001 | EX-0003-0001 | 空ディレクトリでの初期化                     |
-| TC-0003-0002 | integration | AC-0003-0002 | EX-0003-0002 | 冪等な初期化 - 既存スキップ                  |
-| TC-0003-0003 | integration | AC-0003-0003 | EX-0003-0003 | --force スキル上書き + skills.local 保護     |
-| TC-0003-0004 | integration | AC-0003-0004 | EX-0003-0004 | --dry-run プレビュー                         |
-| TC-0003-0005 | integration | AC-0003-0005 | EX-0003-0005 | skill directory symlink 生成                 |
-| TC-0003-0006 | integration | AC-0003-0006 | EX-0003-0006 | agent file symlink 生成                      |
-| TC-0003-0007 | integration | AC-0003-0007 | EX-0003-0007 | レガシー 10_workflow.md 削除                 |
-| TC-0003-0008 | integration | AC-0003-0008 | EX-0003-0007 | 旧 commands/prompts prune                    |
-| TC-0003-0009 | integration | AC-0003-0009 |              | git config core.symlinks 自動設定            |
-| TC-0003-0010 | unit        | AC-0003-0010 | EX-0003-0008 | Windows EPERM エラーメッセージ               |
-| TC-0003-0011 | integration | AC-0003-0011 | EX-0003-0009 | instructions 新規配置                        |
-| TC-0003-0012 | integration | AC-0003-0012 | EX-0003-0010 | instructions 既存ファイル skip               |
-| TC-0003-0013 | integration | AC-0003-0013 | EX-0003-0011 | --force でも instructions 保護               |
-| TC-0003-0014 | integration | AC-0003-0014 | EX-0003-0012 | instructions アクティベーション案内表示      |
-| TC-0003-0015 | integration | AC-0003-0002 | EX-0003-0013 | symlink idempotency (3 consecutive runs)     |
-| TC-0003-0016 | integration | AC-0003-0001 | EX-0003-0014 | migrated example EX-0003-0014 coverage       |
-| TC-0003-0017 | integration | AC-0003-0001 | EX-0003-0015 | migrated example EX-0003-0015 coverage       |
-| TC-0003-0018 | integration | AC-0003-0015 | EX-0003-0016 | gitignore 管理ブロック追記（新規）           |
-| TC-0003-0019 | integration | AC-0003-0016 | EX-0003-0017 | レガシー行除去と管理ブロック置換             |
-| TC-0003-0020 | integration | AC-0003-0015 | EX-0003-0016 | review-\*/ サブディレクトリが gitignore 対象 |
-| TC-0003-0021 | integration | AC-0003-0017 | EX-0003-0018 | 4-layer asset-tree seed                      |
-| TC-0003-0022 | integration | AC-0003-0018 | EX-0003-0019 | project-root steering seed                   |
-| TC-0003-0023 | integration | AC-0003-0019 | EX-0003-0020 | --upgrade-assistant-tree migration           |
-| TC-0003-0024 | integration | AC-0003-0020 | EX-0003-0021 | migration memo authoring                     |
-| TC-0003-0025 | unit        | AC-0003-0021 | EX-0003-0022 | assistantPaths.ts SSOT lint                  |
-| TC-0003-0026 | integration | AC-0003-0022 | EX-0003-0023 | 旧 layout backward compat + sunset warning   |
+| TC-ID        | Level       | AC-Refs                    | EX-Ref       | Title                                        |
+| ------------ | ----------- | -------------------------- | ------------ | -------------------------------------------- |
+| TC-0003-0001 | integration | AC-0003-0001               | EX-0003-0001 | 空ディレクトリでの初期化                     |
+| TC-0003-0002 | integration | AC-0003-0002               | EX-0003-0002 | 冪等な初期化 - 既存スキップ                  |
+| TC-0003-0003 | integration | AC-0003-0003               | EX-0003-0003 | --force スキル上書き + skills.local 保護     |
+| TC-0003-0004 | integration | AC-0003-0004               | EX-0003-0004 | --dry-run プレビュー                         |
+| TC-0003-0005 | integration | AC-0003-0005               | EX-0003-0005 | skill directory symlink 生成                 |
+| TC-0003-0006 | integration | AC-0003-0006               | EX-0003-0006 | agent file symlink 生成                      |
+| TC-0003-0007 | integration | AC-0003-0007               | EX-0003-0007 | レガシー 10_workflow.md 削除                 |
+| TC-0003-0008 | integration | AC-0003-0008               | EX-0003-0007 | 旧 commands/prompts prune                    |
+| TC-0003-0009 | integration | AC-0003-0009               |              | git config core.symlinks 自動設定            |
+| TC-0003-0010 | unit        | AC-0003-0010               | EX-0003-0008 | Windows EPERM エラーメッセージ               |
+| TC-0003-0011 | integration | AC-0003-0011               | EX-0003-0009 | instructions 新規配置                        |
+| TC-0003-0012 | integration | AC-0003-0012               | EX-0003-0010 | instructions 既存ファイル skip               |
+| TC-0003-0013 | integration | AC-0003-0013               | EX-0003-0011 | --force でも instructions 保護               |
+| TC-0003-0014 | integration | AC-0003-0014               | EX-0003-0012 | instructions アクティベーション案内表示      |
+| TC-0003-0015 | integration | AC-0003-0002               | EX-0003-0013 | symlink idempotency (3 consecutive runs)     |
+| TC-0003-0016 | integration | AC-0003-0001               | EX-0003-0014 | migrated example EX-0003-0014 coverage       |
+| TC-0003-0017 | integration | AC-0003-0001               | EX-0003-0015 | migrated example EX-0003-0015 coverage       |
+| TC-0003-0018 | integration | AC-0003-0015               | EX-0003-0016 | gitignore 管理ブロック追記（新規）           |
+| TC-0003-0019 | integration | AC-0003-0016               | EX-0003-0017 | レガシー行除去と管理ブロック置換             |
+| TC-0003-0020 | integration | AC-0003-0015               | EX-0003-0016 | review-\*/ サブディレクトリが gitignore 対象 |
+| TC-0003-0021 | integration | AC-0003-0017               | EX-0003-0018 | 4-layer asset-tree seed                      |
+| TC-0003-0022 | integration | AC-0003-0018               | EX-0003-0019 | project-root steering seed                   |
+| TC-0003-0023 | integration | AC-0003-0019               | EX-0003-0020 | --upgrade-assistant-tree migration           |
+| TC-0003-0024 | integration | AC-0003-0021               | EX-0003-0021 | migration memo authoring                     |
+| TC-0003-0025 | unit        | AC-0003-0022               | EX-0003-0022 | assistantPaths.ts SSOT lint                  |
+| TC-0003-0026 | integration | AC-0003-0023, AC-0003-0024 | EX-0003-0023 | 旧 layout backward compat + sunset warning   |
 
 ## TC-0003-0001: 空ディレクトリでの初期化
 

@@ -37,7 +37,7 @@ describe("assistantTreeMigration validator", () => {
     const root = await newRoot("treemig-absent");
     try {
       const issues = await validateAssistantTreeMigration(root, await getConfig(root));
-      expect(issues.filter((i) => i.code !== "W-USER-EDIT-PRESERVED").length).toBe(0);
+      expect(issues.filter((i) => i.code !== "I-ASSISTANT-LAYER-UNSEEDED").length).toBe(0);
     } finally {
       await rm(root, { recursive: true, force: true });
     }
@@ -53,7 +53,7 @@ describe("assistantTreeMigration validator", () => {
       await writeFile(path.join(off, ".gitkeep"), "", "utf-8");
       const issues = await validateAssistantTreeMigration(root, await getConfig(root));
       const enumIssues = issues.filter(
-        (i) => i.code === "W-WORKLOG-SCHEMA" && i.rule === "assistantTreeMigration.enumGuard",
+        (i) => i.code === "W-ASSISTANT-LAYOUT" && i.rule === "assistantTreeMigration.enumGuard",
       );
       expect(enumIssues.length).toBe(1);
       expect(enumIssues[0]?.message).toContain("extras");
@@ -126,7 +126,7 @@ describe("assistantTreeMigration validator", () => {
         await writeFile(path.join(dir, ".gitkeep"), "", "utf-8");
       }
       const issues = await validateAssistantTreeMigration(root, await getConfig(root));
-      const infoIssues = issues.filter((i) => i.code === "W-USER-EDIT-PRESERVED");
+      const infoIssues = issues.filter((i) => i.code === "I-ASSISTANT-LAYER-UNSEEDED");
       expect(infoIssues.length).toBeGreaterThanOrEqual(1);
       // process/ should be the named offender.
       expect(infoIssues.some((i) => i.message.includes("process"))).toBe(true);

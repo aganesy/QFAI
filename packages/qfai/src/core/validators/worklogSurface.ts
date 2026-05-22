@@ -6,11 +6,12 @@ import { parse as parseYaml } from "yaml";
 
 import type { QfaiConfig } from "../config.js";
 import { isEnoent } from "../fs/errno.js";
+import {
+  PROJECT_STEERING_DIR,
+  PROJECT_STEERING_TEMPLATES_SUBDIR,
+} from "../paths/assistantPaths.js";
 import type { Issue } from "../types.js";
 import { exists, issue } from "./utils.js";
-
-const PROJECT_STEERING_DIR = ".qfai/steering";
-const PROJECT_STEERING_TEMPLATES_DIR = "_templates";
 
 // MUST match `worklog-entry.schema.md#kind enum` exactly (REQ-0004).
 // Contract is the SSOT; do not localize names here.
@@ -189,11 +190,17 @@ export async function validateWorklogSurface(
     if (kind === "handoff") {
       const missing = REQUIRED_HANDOFF_SECTIONS.filter((header) => !entry.body.includes(header));
       if (missing.length > 0) {
+        // Per qfai-validate.md contract, R-HANDOFF-INCOMPLETE is
+        // advisory-failing (error severity). reviewerJustification.ts
+        // already escalates the code when reviewer reports carry it
+        // with an empty justification; the worklog-side detection must
+        // also fire at error so handoff body drift is caught by
+        // `--fail-on error` in CI.
         issues.push(
           issue(
             "R-HANDOFF-INCOMPLETE",
             `${entry.relativePath}: handoff entry is missing required sections: ${missing.join(", ")}.`,
-            "warning",
+            "error",
             entry.relativePath,
             "worklogSurface.handoff.sections",
           ),
@@ -276,7 +283,7 @@ async function collectEntries(dir: string, baseRoot: string): Promise<ParsedEntr
 
   for (const dirEntry of dirEntries) {
     if (dirEntry.isDirectory()) {
-      if (dirEntry.name === PROJECT_STEERING_TEMPLATES_DIR) continue;
+      if (dirEntry.name === PROJECT_STEERING_TEMPLATES_SUBDIR) continue;
       const sub = path.join(dir, dirEntry.name);
       const subEntries = await collectEntries(sub, baseRoot);
       entries.push(...subEntries);

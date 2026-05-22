@@ -15,7 +15,16 @@ export async function validateAssistantAssets(root: string, config: QfaiConfig):
   const skillsDir = resolvePath(root, config, "skillsDir");
   const assistantDir = path.dirname(skillsDir);
 
-  const driftProtocolPath = path.join(assistantDir, "instructions", "drift-protocol.md");
+  // Post-recut: drift-protocol.md is canonically located at
+  // .qfai/assistant/constitution/drift-protocol.md. Fall back to the
+  // legacy instructions/ path during the compatibility window so
+  // projects that have not yet run `qfai init --upgrade-assistant-tree`
+  // pass for now.
+  const canonicalDriftProtocolPath = path.join(assistantDir, "constitution", "drift-protocol.md");
+  const legacyDriftProtocolPath = path.join(assistantDir, "instructions", "drift-protocol.md");
+  const driftProtocolPath = (await exists(canonicalDriftProtocolPath))
+    ? canonicalDriftProtocolPath
+    : legacyDriftProtocolPath;
   // Post-recut: test-layers.md is canonically located at
   // .qfai/assistant/catalog/test-layers.md. Fall back to the legacy
   // steering/ path during the compatibility window so projects that
@@ -33,9 +42,9 @@ export async function validateAssistantAssets(root: string, config: QfaiConfig):
     issues.push(
       issue(
         "QFAI-ASSETS-001",
-        "必須ファイル .qfai/assistant/instructions/drift-protocol.md が見つかりません。",
+        "必須ファイル .qfai/assistant/constitution/drift-protocol.md (legacy fallback: .qfai/assistant/instructions/drift-protocol.md) が見つかりません。",
         "error",
-        driftProtocolPath,
+        canonicalDriftProtocolPath,
         "assistantAssets.driftProtocol",
       ),
     );
