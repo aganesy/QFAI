@@ -19,6 +19,21 @@ export const PROJECT_STEERING_DIR = ".qfai/steering" as const;
 
 export const MIGRATIONS_SUBDIR = "migrations" as const;
 
+/**
+ * Pinned sunset for the legacy `.qfai/assistant/steering/` layout.
+ * SSOT shared by `qfai init` (sunset text in the migration memo and
+ * the D-DEPRECATED-PATH info line) AND by the
+ * `assistantTreeMigration` validator (severity escalation past the
+ * cutoff). Keeping these two surfaces in sync via a single constant
+ * prevents the migration helper from advertising one cutoff while
+ * the validator enforces a different one.
+ */
+export const LEGACY_STEERING_SUNSET = { major: 1, minor: 10 } as const;
+
+export function legacyAssistantSteeringSunsetLabel(): string {
+  return `${LEGACY_STEERING_SUNSET.major}.${LEGACY_STEERING_SUNSET.minor}.0`;
+}
+
 export function isAssistantLayer(value: string): value is AssistantLayer {
   return (ASSISTANT_LAYERS as readonly string[]).includes(value);
 }

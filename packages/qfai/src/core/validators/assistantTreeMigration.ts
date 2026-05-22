@@ -8,21 +8,20 @@ import {
   joinAssistantLayer,
   joinLegacyAssistantSteering,
   isAssistantLayer,
+  LEGACY_STEERING_SUNSET,
+  legacyAssistantSteeringSunsetLabel,
 } from "../paths/assistantPaths.js";
 import type { Issue } from "../types.js";
 import { resolveToolVersion } from "../version.js";
 import { exists, issue } from "./utils.js";
 
 /**
- * Pinned sunset for the legacy `.qfai/assistant/steering/` layout.
  * The validator compares the running tool version's major.minor against
- * this constant:
+ * LEGACY_STEERING_SUNSET (imported from assistantPaths.ts):
  *   - if current < sunset: emit warning (compatibility window)
  *   - if current >= sunset: emit error (post-sunset, cutoff enforced)
  * so legacy paths cannot survive past the announced cutoff release.
  */
-const LEGACY_STEERING_SUNSET = { major: 1, minor: 10 } as const;
-
 function parseSemver(value: string): { major: number; minor: number; patch: number } | null {
   const match = /^(\d+)\.(\d+)\.(\d+)/.exec(value);
   if (!match) return null;
@@ -39,10 +38,6 @@ function legacyDeprecationSeverity(current: string): "warning" | "error" {
   if (parsed.major < LEGACY_STEERING_SUNSET.major) return "warning";
   if (parsed.major > LEGACY_STEERING_SUNSET.major) return "error";
   return parsed.minor < LEGACY_STEERING_SUNSET.minor ? "warning" : "error";
-}
-
-function legacyDeprecationSunsetLabel(): string {
-  return `${LEGACY_STEERING_SUNSET.major}.${LEGACY_STEERING_SUNSET.minor}.0`;
 }
 
 export async function validateAssistantTreeMigration(
@@ -94,7 +89,7 @@ export async function validateAssistantTreeMigration(
   const legacyDir = joinLegacyAssistantSteering(root);
   if (await exists(legacyDir)) {
     const current = await resolveToolVersion();
-    const sunset = legacyDeprecationSunsetLabel();
+    const sunset = legacyAssistantSteeringSunsetLabel();
     const severity = legacyDeprecationSeverity(current);
     const headline =
       severity === "error"

@@ -30,6 +30,7 @@ import {
   joinLegacyAssistantSteering,
   joinMigrationMemo,
   joinProjectSteering,
+  legacyAssistantSteeringSunsetLabel,
   type AssistantLayer,
 } from "../../core/paths/assistantPaths.js";
 import { resolveToolVersion } from "../../core/version.js";
@@ -199,14 +200,6 @@ function assistantLayerGitkeepBody(layer: AssistantLayer): string {
     "Seeded by qfai init (4-layer assistant-tree recut, CHG-003).",
     "",
   ].join("\n");
-}
-
-function nextMinorVersion(current: string): string {
-  const match = /^(\d+)\.(\d+)\.(\d+)/.exec(current);
-  if (!match) return current;
-  const major = Number(match[1]);
-  const minor = Number(match[2]);
-  return `${major}.${minor + 1}.0`;
 }
 
 const PROJECT_STEERING_README_BODY = [
@@ -423,7 +416,12 @@ async function collectFilesRecursive(dir: string): Promise<string[]> {
 
 function buildMigrationMemo(version: string, legacyDetected: boolean): string {
   const stamp = new Date().toISOString();
-  const sunset = nextMinorVersion(version);
+  // Sunset is the pinned cutoff defined in assistantPaths.ts (SSOT
+  // shared with the assistantTreeMigration validator), NOT the running
+  // package's next-minor. Without this, post-sunset releases would
+  // advertise a contradictory sunset version while the validator already
+  // treats legacy steering/ as past-cutoff (PR #209 codex review).
+  const sunset = legacyAssistantSteeringSunsetLabel();
   return [
     `# qfai assistant-layer recut migration (v${version})`,
     "",
@@ -463,8 +461,9 @@ function buildMigrationMemo(version: string, legacyDetected: boolean): string {
 async function emitLegacyAssistantSteeringSunset(destRoot: string): Promise<void> {
   const legacyDir = joinLegacyAssistantSteering(destRoot);
   if (!(await pathExists(legacyDir))) return;
-  const current = await resolveToolVersion();
-  const sunset = nextMinorVersion(current);
+  // Sunset is the pinned cutoff (SSOT) so init's user-facing line stays
+  // consistent with the validator's severity escalation point.
+  const sunset = legacyAssistantSteeringSunsetLabel();
   info(
     `  D-DEPRECATED-PATH: .qfai/assistant/steering/ is read-compatible for the current minor release only. sunset: v${sunset}. Run \`qfai init --upgrade-assistant-tree\` to migrate.`,
   );

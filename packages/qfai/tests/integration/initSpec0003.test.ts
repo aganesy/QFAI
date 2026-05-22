@@ -234,9 +234,10 @@ describe("TC-0003-0024: migration memo authoring", () => {
     const content = await readFile(INIT_CLI, "utf-8");
     expect(content).toContain("buildMigrationMemo");
     expect(content).toContain("joinMigrationMemo");
-    // Sunset version is computed dynamically (nextMinorVersion) to avoid
-    // shipping a future-version literal into the distributed surface.
-    expect(content).toContain("nextMinorVersion");
+    // Sunset version is sourced from the pinned LEGACY_STEERING_SUNSET
+    // SSOT in assistantPaths.ts (shared with the validator's severity
+    // escalation point), NOT from a release-relative computation.
+    expect(content).toContain("legacyAssistantSteeringSunsetLabel");
   });
 });
 
@@ -255,13 +256,13 @@ describe("TC-0003-0025: assistantPaths.ts SSOT module", () => {
 });
 
 describe("TC-0003-0026: legacy backward-compat + sunset warning", () => {
-  it("init declares emitLegacyAssistantSteeringSunset emitting D-DEPRECATED-PATH (sunset computed at runtime)", async () => {
+  it("init declares emitLegacyAssistantSteeringSunset emitting D-DEPRECATED-PATH (sunset sourced from SSOT)", async () => {
     const content = await readFile(INIT_CLI, "utf-8");
     expect(content).toContain("D-DEPRECATED-PATH");
     expect(content).toContain("emitLegacyAssistantSteeringSunset");
-    // The actual `sunset: vX.Y.Z` literal is computed via nextMinorVersion
-    // from the resolved package version — runtime assertion lives in
-    // tests/cli/init.test.ts (TC-0003-0026).
+    // The actual `sunset: vX.Y.Z` literal is sourced from
+    // legacyAssistantSteeringSunsetLabel() (SSOT in assistantPaths.ts)
+    // — runtime assertion lives in tests/cli/init.test.ts (TC-0003-0026).
     expect(content).toMatch(/sunset:\s*v\$\{sunset\}/);
   });
 });
