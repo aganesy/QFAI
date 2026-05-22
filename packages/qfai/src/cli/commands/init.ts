@@ -24,6 +24,15 @@ import {
   QFAI_GITIGNORE_LEGACY_LINES,
   QFAI_GITIGNORE_REQUIRED_ENTRIES,
 } from "../../core/gitignore.js";
+import {
+  ASSISTANT_LAYERS,
+  joinAssistantLayer,
+  joinLegacyAssistantSteering,
+  joinMigrationMemo,
+  joinProjectSteering,
+  type AssistantLayer,
+} from "../../core/paths/assistantPaths.js";
+import { resolveToolVersion } from "../../core/version.js";
 
 const execAsync = promisify(execCb);
 
@@ -32,6 +41,7 @@ export type InitOptions = {
   force: boolean;
   dryRun: boolean;
   yes: boolean;
+  upgradeAssistantTree?: boolean;
 };
 
 export async function runInit(options: InitOptions): Promise<void> {
@@ -83,6 +93,21 @@ export async function runInit(options: InitOptions): Promise<void> {
     : [];
   const removed = [...removedLegacySkills, ...wrappersResult.removed];
 
+  // 4-layer assistant-tree seed + project-root steering surface seed.
+  const assistantTreeResult = await seedAssistantLayers(destRoot, options.dryRun);
+  const projectSteeringResult = await seedProjectSteering(destRoot, options.dryRun);
+  const upgradeResult = options.upgradeAssistantTree
+    ? await runUpgradeAssistantTree(destRoot, options.dryRun)
+    : { copied: [], skipped: [], removed: [], preservedNotes: [] as string[] };
+
+  // Legacy steering/ sunset warning (D-DEPRECATED-PATH). Skip when the
+  // user is currently running --upgrade-assistant-tree (the helper will
+  // move the directory itself); skip on dry-run; skip when no legacy
+  // dir exists.
+  if (!options.upgradeAssistantTree && !options.dryRun) {
+    await emitLegacyAssistantSteeringSunset(destRoot);
+  }
+
   // Activation guidance for newly created instructions files
   const expectedInstructionsDir = path.join(destRoot, ".github", "instructions");
   const instructionsCreated = wrappersResult.copied.some(
@@ -104,6 +129,9 @@ export async function runInit(options: InitOptions): Promise<void> {
       ...skillsResult.copied,
       ...wrappersResult.copied,
       ...gitignoreResult.copied,
+      ...assistantTreeResult.copied,
+      ...projectSteeringResult.copied,
+      ...upgradeResult.copied,
     ],
     [
       ...rootResult.skipped,
@@ -111,11 +139,327 @@ export async function runInit(options: InitOptions): Promise<void> {
       ...skillsResult.skipped,
       ...wrappersResult.skipped,
       ...gitignoreResult.skipped,
+      ...assistantTreeResult.skipped,
+      ...projectSteeringResult.skipped,
+      ...upgradeResult.skipped,
     ],
-    removed,
+    [...removed, ...upgradeResult.removed],
     options.dryRun,
     "init",
     destRoot,
+  );
+
+  for (const note of upgradeResult.preservedNotes) {
+    info(note);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// 4-layer assistant-tree seed + project-root steering surface seed
+// ---------------------------------------------------------------------------
+
+async function seedAssistantLayers(
+  destRoot: string,
+  dryRun: boolean,
+): Promise<{ copied: string[]; skipped: string[] }> {
+  const copied: string[] = [];
+  const skipped: string[] = [];
+
+  for (const layer of ASSISTANT_LAYERS) {
+    const layerDir = joinAssistantLayer(destRoot, layer);
+    const gitkeep = path.join(layerDir, ".gitkeep");
+    if (await pathExists(gitkeep)) {
+      skipped.push(gitkeep);
+      continue;
+    }
+    copied.push(gitkeep);
+    if (!dryRun) {
+      await mkdir(layerDir, { recursive: true });
+      await writeFile(gitkeep, assistantLayerGitkeepBody(layer), "utf-8");
+    }
+  }
+
+  return { copied, skipped };
+}
+
+function assistantLayerGitkeepBody(layer: AssistantLayer): string {
+  const purposes: Record<AssistantLayer, string> = {
+    constitution: "Foundational normative rules (constitution, drift-protocol, distributed-surface, quality).",
+    manifest: "Declarative manifests (agent-catalog.yml, agent-routing.yml, review-profiles.yml, spec_required_files.json).",
+    catalog: "Reference catalogs (test-layers.md, review-gate.rules.yml).",
+    process: "Workflow / process docs and migration memos (process/migrations/*).",
+  };
+  return [
+    `# .qfai/assistant/${layer}/`,
+    "",
+    purposes[layer],
+    "",
+    "Seeded by qfai init (4-layer assistant-tree recut, CHG-003).",
+    "",
+  ].join("\n");
+}
+
+function nextMinorVersion(current: string): string {
+  const match = /^(\d+)\.(\d+)\.(\d+)/.exec(current);
+  if (!match) return current;
+  const major = Number(match[1]);
+  const minor = Number(match[2]);
+  return `${major}.${minor + 1}.0`;
+}
+
+const PROJECT_STEERING_README_BODY = [
+  "# .qfai/steering/ — AI work-log surface",
+  "",
+  "This directory is the project-local work-log surface for AI coding",
+  "agents. Each entry is a small markdown file with YAML frontmatter",
+  "(`id`, `kind`, `status`, `created`, `updated`, optional `links`,",
+  "`promote-to`).",
+  "",
+  "Allowed `kind` values:",
+  "",
+  "- `decision` — A choice made during work; candidate for promotion to",
+  "  `07_Decisions.md` via the `promote-to:` frontmatter key.",
+  "- `risk` — A risk identified during work.",
+  "- `blocker` — Currently blocking progress; needs human input.",
+  "- `scope-down` / `scope-up` — Scope adjustments discovered during work.",
+  "- `handoff` — Handoff note when work is suspended or transferred.",
+  "- `unexpected` — An unforeseen condition encountered during work.",
+  "- `out-of-scope` — A finding outside the current task; left for follow-up.",
+  "- `consult` — A point where the agent paused to consult the user.",
+  "",
+  "See `_templates/entry.md` for the canonical entry shape.",
+  "Validators: `W-WORKLOG-SCHEMA`, `W-WORKLOG-BROKEN-LINK`,",
+  "`W-WORKLOG-STALE`, `W-PENDING-PROMOTION`, `R-HANDOFF-INCOMPLETE`.",
+  "",
+].join("\n");
+
+const PROJECT_STEERING_ENTRY_TEMPLATE = [
+  "---",
+  "id: entry-XXXX",
+  "kind: decision",
+  "status: active",
+  "created: YYYY-MM-DDTHH:MM:SSZ",
+  "updated: YYYY-MM-DDTHH:MM:SSZ",
+  "links: []",
+  "# promote-to: 07_Decisions.md   # uncomment when this entry should be",
+  "#                              # promoted into the formal Decision log",
+  "---",
+  "",
+  "# Title of the entry",
+  "",
+  "## Context",
+  "",
+  "What triggered this entry? Reference any spec, contract, or external",
+  "input that informs the decision/risk/blocker.",
+  "",
+  "## State",
+  "",
+  "What is the current state? (mandatory for `handoff` entries)",
+  "",
+  "## Constraints",
+  "",
+  "What constraints apply? (mandatory for `handoff` entries)",
+  "",
+  "## Next action",
+  "",
+  "What is the next action / what would unblock this? (mandatory for",
+  "`handoff` entries)",
+  "",
+  "## Open Questions",
+  "",
+  "Any open questions? (mandatory for `handoff` entries)",
+  "",
+  "## References",
+  "",
+  "Links, files, decisions. (mandatory for `handoff` entries)",
+  "",
+].join("\n");
+
+async function seedProjectSteering(
+  destRoot: string,
+  dryRun: boolean,
+): Promise<{ copied: string[]; skipped: string[] }> {
+  const copied: string[] = [];
+  const skipped: string[] = [];
+
+  const targets: Array<{ rel: string[]; body: string }> = [
+    { rel: ["README.md"], body: PROJECT_STEERING_README_BODY },
+    { rel: [".gitkeep"], body: "" },
+    { rel: ["_templates", "entry.md"], body: PROJECT_STEERING_ENTRY_TEMPLATE },
+  ];
+
+  for (const target of targets) {
+    const fullPath = joinProjectSteering(destRoot, ...target.rel);
+    if (await pathExists(fullPath)) {
+      skipped.push(fullPath);
+      continue;
+    }
+    copied.push(fullPath);
+    if (!dryRun) {
+      await mkdir(path.dirname(fullPath), { recursive: true });
+      await writeFile(fullPath, target.body, "utf-8");
+    }
+  }
+
+  return { copied, skipped };
+}
+
+// ---------------------------------------------------------------------------
+// --upgrade-assistant-tree migration helper
+// ---------------------------------------------------------------------------
+
+type UpgradeResult = {
+  copied: string[];
+  skipped: string[];
+  removed: string[];
+  preservedNotes: string[];
+};
+
+async function runUpgradeAssistantTree(
+  destRoot: string,
+  dryRun: boolean,
+): Promise<UpgradeResult> {
+  const copied: string[] = [];
+  const skipped: string[] = [];
+  const removed: string[] = [];
+  const preservedNotes: string[] = [];
+
+  const legacyDir = joinLegacyAssistantSteering(destRoot);
+  const legacyExists = await pathExists(legacyDir);
+
+  // Migration memo is always emitted by --upgrade-assistant-tree (REQ-0021).
+  const version = await resolveToolVersion();
+  const memoPath = joinMigrationMemo(destRoot, version);
+  if (await pathExists(memoPath)) {
+    // Memo is commit-immutable per OC-53 — do not touch.
+    skipped.push(memoPath);
+  } else {
+    copied.push(memoPath);
+    if (!dryRun) {
+      await mkdir(path.dirname(memoPath), { recursive: true });
+      await writeFile(memoPath, buildMigrationMemo(version, legacyExists), "utf-8");
+    }
+  }
+
+  if (!legacyExists) {
+    // Already-upgraded project: emit info-only note so the operator
+    // sees the migration helper ran (REQ-0020 + W-USER-EDIT-PRESERVED).
+    preservedNotes.push(
+      "  W-USER-EDIT-PRESERVED: legacy .qfai/assistant/steering/ not found; no migration was needed.",
+    );
+    return { copied, skipped, removed, preservedNotes };
+  }
+
+  // Walk the legacy directory and re-locate each file into the new
+  // 4-layer tree based on a conservative mapping. User edits are
+  // preserved by file copy (not overwrite); the legacy file is left in
+  // place AND a W-USER-EDIT-PRESERVED informational note is emitted so
+  // the operator can decide when to delete the original.
+  const legacyEntries = await collectFilesRecursive(legacyDir);
+  for (const legacyPath of legacyEntries) {
+    const rel = path.relative(legacyDir, legacyPath);
+    const target = classifyLegacySteeringEntry(rel);
+    const newPath = joinAssistantLayer(destRoot, target.layer, ...target.subpath.split("/"));
+    if (await pathExists(newPath)) {
+      // User has already authored / edited the new file — preserve it.
+      skipped.push(newPath);
+      preservedNotes.push(
+        `  W-USER-EDIT-PRESERVED: ${path.relative(destRoot, newPath).replace(/\\/g, "/")} kept (existing user edit detected).`,
+      );
+      continue;
+    }
+    copied.push(newPath);
+    if (!dryRun) {
+      const body = await readFile(legacyPath, "utf-8");
+      await mkdir(path.dirname(newPath), { recursive: true });
+      await writeFile(newPath, body, "utf-8");
+    }
+  }
+
+  return { copied, skipped, removed, preservedNotes };
+}
+
+function classifyLegacySteeringEntry(relPath: string): { layer: AssistantLayer; subpath: string } {
+  const normalized = relPath.replace(/\\/g, "/").toLowerCase();
+  if (normalized.includes("test-layers")) return { layer: "catalog", subpath: relPath };
+  if (
+    normalized.includes("agent-catalog") ||
+    normalized.includes("agent-routing") ||
+    normalized.includes("review-profiles") ||
+    normalized.includes("review-gate")
+  ) {
+    return { layer: "manifest", subpath: relPath };
+  }
+  if (normalized.includes("constitution") || normalized.includes("drift-protocol")) {
+    return { layer: "constitution", subpath: relPath };
+  }
+  if (normalized.includes("migration") || normalized.startsWith("process/")) {
+    return { layer: "process", subpath: relPath };
+  }
+  // Default: catalog (reference docs).
+  return { layer: "catalog", subpath: relPath };
+}
+
+async function collectFilesRecursive(dir: string): Promise<string[]> {
+  const entries = await readdir(dir, { withFileTypes: true });
+  const files: string[] = [];
+  for (const entry of entries) {
+    const full = path.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      files.push(...(await collectFilesRecursive(full)));
+    } else if (entry.isFile()) {
+      files.push(full);
+    }
+  }
+  return files;
+}
+
+function buildMigrationMemo(version: string, legacyDetected: boolean): string {
+  const stamp = new Date().toISOString();
+  const sunset = nextMinorVersion(version);
+  return [
+    `# qfai assistant-layer recut migration (v${version})`,
+    "",
+    `- Generated: ${stamp}`,
+    `- Source layout: .qfai/assistant/steering/ (single layer, legacy)`,
+    `- Target layout: .qfai/assistant/{constitution,manifest,catalog,process}/`,
+    "",
+    "## Status",
+    "",
+    legacyDetected
+      ? "- Legacy `.qfai/assistant/steering/` detected — files copied into the new 4-layer tree."
+      : "- No legacy `.qfai/assistant/steering/` found — fresh layout adopted.",
+    "",
+    "## Layer mapping",
+    "",
+    "| Layer        | Purpose                                                                   |",
+    "| ------------ | ------------------------------------------------------------------------- |",
+    "| constitution | Foundational normative rules (constitution, drift-protocol, quality).      |",
+    "| manifest     | Declarative manifests (agent-catalog, agent-routing, review-profiles).    |",
+    "| catalog      | Reference catalogs (test-layers, review-gate rules).                       |",
+    "| process      | Workflow / process docs and migration memos.                               |",
+    "",
+    "## Compatibility window",
+    "",
+    `Legacy \`.qfai/assistant/steering/\` is read-compatible for the current`,
+    `minor release window only; sunset: v${sunset} (D-DEPRECATED-PATH).`,
+    "",
+    "## Provenance",
+    "",
+    "This memo is generated by `qfai init --upgrade-assistant-tree` and is",
+    "commit-immutable per OC-53 — once committed, do not edit. Subsequent",
+    "runs of the helper detect this file and skip rewrite.",
+    "",
+  ].join("\n");
+}
+
+async function emitLegacyAssistantSteeringSunset(destRoot: string): Promise<void> {
+  const legacyDir = joinLegacyAssistantSteering(destRoot);
+  if (!(await pathExists(legacyDir))) return;
+  const current = await resolveToolVersion();
+  const sunset = nextMinorVersion(current);
+  info(
+    `  D-DEPRECATED-PATH: .qfai/assistant/steering/ is read-compatible for the current minor release only. sunset: v${sunset}. Run \`qfai init --upgrade-assistant-tree\` to migrate.`,
   );
 }
 

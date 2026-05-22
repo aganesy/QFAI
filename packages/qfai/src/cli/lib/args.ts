@@ -8,6 +8,7 @@ export type ParsedArgs = {
     force: boolean;
     yes: boolean;
     dryRun: boolean;
+    upgradeAssistantTree: boolean;
     reportFormat: "md" | "json";
     reportOut?: string;
     reportIn?: string;
@@ -43,6 +44,7 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
     force: false,
     yes: false,
     dryRun: false,
+    upgradeAssistantTree: false,
     reportFormat: "md",
     reportRunValidate: false,
     doctorFormat: "text",
@@ -136,6 +138,9 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         break;
       case "--dry-run":
         options.dryRun = true;
+        break;
+      case "--upgrade-assistant-tree":
+        options.upgradeAssistantTree = true;
         break;
       case "--format": {
         const next = readOptionValue(args, i);

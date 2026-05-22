@@ -25,6 +25,12 @@
 // QFAI:SPEC-0003:TC-0003-0018
 // QFAI:SPEC-0003:TC-0003-0019
 // QFAI:SPEC-0003:TC-0003-0020
+// QFAI:SPEC-0003:TC-0003-0021
+// QFAI:SPEC-0003:TC-0003-0022
+// QFAI:SPEC-0003:TC-0003-0023
+// QFAI:SPEC-0003:TC-0003-0024
+// QFAI:SPEC-0003:TC-0003-0025
+// QFAI:SPEC-0003:TC-0003-0026
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
@@ -189,5 +195,73 @@ describe("TC-0003-0020: review-*/ サブディレクトリが gitignore 対象",
     expect(QFAI_GITIGNORE_REQUIRED_ENTRIES).not.toContain("!.qfai/discussion/README.md");
     expect(QFAI_GITIGNORE_REQUIRED_ENTRIES).not.toContain("!.qfai/review/review-*/");
     expect(QFAI_GITIGNORE_REQUIRED_ENTRIES).not.toContain("!.qfai/review/review-*/**");
+  });
+});
+
+// TC-0003-0021..0026 (v1.9.0 assistant-tree recut). Runtime assertions live
+// in tests/cli/init.test.ts; here we keep the static-content checks that
+// pin the SSOT imports and the assistantPaths.ts helpers.
+
+describe("TC-0003-0021: 4-layer asset-tree seed", () => {
+  it("init imports assistantPaths.ts and uses ASSISTANT_LAYERS / joinAssistantLayer", async () => {
+    const content = await readFile(INIT_CLI, "utf-8");
+    expect(content).toContain("assistantPaths");
+    expect(content).toContain("ASSISTANT_LAYERS");
+    expect(content).toContain("joinAssistantLayer");
+  });
+});
+
+describe("TC-0003-0022: project-root steering surface seed", () => {
+  it("init declares seedProjectSteering and references _templates/entry.md", async () => {
+    const content = await readFile(INIT_CLI, "utf-8");
+    expect(content).toContain("seedProjectSteering");
+    expect(content).toContain("joinProjectSteering");
+    expect(content).toMatch(/entry\.md/);
+  });
+});
+
+describe("TC-0003-0023: --upgrade-assistant-tree migration", () => {
+  it("init wires --upgrade-assistant-tree to runUpgradeAssistantTree", async () => {
+    const content = await readFile(INIT_CLI, "utf-8");
+    expect(content).toContain("upgradeAssistantTree");
+    expect(content).toContain("runUpgradeAssistantTree");
+    expect(content).toContain("W-USER-EDIT-PRESERVED");
+  });
+});
+
+describe("TC-0003-0024: migration memo authoring", () => {
+  it("init authors the migration memo via buildMigrationMemo / joinMigrationMemo", async () => {
+    const content = await readFile(INIT_CLI, "utf-8");
+    expect(content).toContain("buildMigrationMemo");
+    expect(content).toContain("joinMigrationMemo");
+    // Sunset version is computed dynamically (nextMinorVersion) to avoid
+    // shipping a future-version literal into the distributed surface.
+    expect(content).toContain("nextMinorVersion");
+  });
+});
+
+describe("TC-0003-0025: assistantPaths.ts SSOT module", () => {
+  it("exports the canonical 4 layer names and helper functions", async () => {
+    const mod = await import("../../src/core/paths/assistantPaths.js");
+    expect(mod.ASSISTANT_LAYERS).toEqual(["constitution", "manifest", "catalog", "process"]);
+    expect(typeof mod.joinAssistantLayer).toBe("function");
+    expect(typeof mod.joinLegacyAssistantSteering).toBe("function");
+    expect(typeof mod.joinProjectSteering).toBe("function");
+    expect(typeof mod.joinMigrationMemo).toBe("function");
+    expect(mod.migrationMemoRelativePath("1.9.0")).toBe(
+      ".qfai/assistant/process/migrations/v1.9.0-assistant-layer-recut.md",
+    );
+  });
+});
+
+describe("TC-0003-0026: legacy backward-compat + sunset warning", () => {
+  it("init declares emitLegacyAssistantSteeringSunset emitting D-DEPRECATED-PATH (sunset computed at runtime)", async () => {
+    const content = await readFile(INIT_CLI, "utf-8");
+    expect(content).toContain("D-DEPRECATED-PATH");
+    expect(content).toContain("emitLegacyAssistantSteeringSunset");
+    // The actual `sunset: vX.Y.Z` literal is computed via nextMinorVersion
+    // from the resolved package version — runtime assertion lives in
+    // tests/cli/init.test.ts (TC-0003-0026).
+    expect(content).toMatch(/sunset:\s*v\$\{sunset\}/);
   });
 });

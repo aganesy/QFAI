@@ -27,6 +27,7 @@ export async function run(argv: string[], cwd: string): Promise<void> {
         force: options.force,
         dryRun: options.dryRun,
         yes: options.yes,
+        upgradeAssistantTree: options.upgradeAssistantTree,
       });
       return;
     case "validate":

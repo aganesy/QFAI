@@ -1203,4 +1203,208 @@ describe("qfai init", { timeout: 60000 }, () => {
       await rm(root, { recursive: true, force: true });
     }
   });
+
+  // QFAI:SPEC-0003:TC-0003-0021 (TDD-0021): 4-layer asset-tree seed
+  it("TC-0003-0021 (TDD-0021): seeds .qfai/assistant/{constitution,manifest,catalog,process}/.gitkeep on fresh init", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-tdd0021-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      for (const layer of ["constitution", "manifest", "catalog", "process"]) {
+        const gitkeep = path.join(root, ".qfai", "assistant", layer, ".gitkeep");
+        const stat = await lstat(gitkeep);
+        expect(stat.isFile()).toBe(true);
+        const body = await readFile(gitkeep, "utf-8");
+        expect(body).toContain(`.qfai/assistant/${layer}/`);
+      }
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  // QFAI:SPEC-0003:TC-0003-0022 (TDD-0022): project-root .qfai/steering/ seed
+  it("TC-0003-0022 (TDD-0022): seeds project-root .qfai/steering/ surface (README + .gitkeep + _templates/entry.md)", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-tdd0022-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      const readme = await readFile(path.join(root, ".qfai", "steering", "README.md"), "utf-8");
+      expect(readme).toContain("AI work-log surface");
+      expect(readme).toContain("decision");
+      expect(readme).toContain("handoff");
+      const gitkeepStat = await lstat(path.join(root, ".qfai", "steering", ".gitkeep"));
+      expect(gitkeepStat.isFile()).toBe(true);
+      const tplBody = await readFile(
+        path.join(root, ".qfai", "steering", "_templates", "entry.md"),
+        "utf-8",
+      );
+      expect(tplBody).toContain("id: entry-XXXX");
+      expect(tplBody).toContain("kind: decision");
+      expect(tplBody).toMatch(/promote-to:/);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  // QFAI:SPEC-0003:TC-0003-0022 (TDD-0022): re-init preserves user edits in .qfai/steering/
+  it("TC-0003-0022 (TDD-0022): re-init does not overwrite user edits in .qfai/steering/README.md", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-tdd0022b-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      const readmePath = path.join(root, ".qfai", "steering", "README.md");
+      const userEdit = "# my custom worklog notes\n";
+      await writeFile(readmePath, userEdit, "utf-8");
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      const after = await readFile(readmePath, "utf-8");
+      expect(after).toBe(userEdit);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  // QFAI:SPEC-0003:TC-0003-0023 (TDD-0023): --upgrade-assistant-tree migration
+  it("TC-0003-0023 (TDD-0023): --upgrade-assistant-tree copies legacy steering/ files into the 4-layer tree", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-tdd0023-"));
+    try {
+      // Simulate a legacy v1.8 layout: seed .qfai/assistant/steering/ with content
+      const legacy = path.join(root, ".qfai", "assistant", "steering");
+      await mkdir(legacy, { recursive: true });
+      await writeFile(path.join(legacy, "test-layers.md"), "# legacy test layers\n", "utf-8");
+      await writeFile(path.join(legacy, "agent-catalog.yml"), "agents: []\n", "utf-8");
+
+      await runInit({
+        dir: root,
+        force: false,
+        dryRun: false,
+        yes: true,
+        upgradeAssistantTree: true,
+      });
+
+      const newCatalog = await readFile(
+        path.join(root, ".qfai", "assistant", "catalog", "test-layers.md"),
+        "utf-8",
+      );
+      expect(newCatalog).toContain("legacy test layers");
+      const newManifest = await readFile(
+        path.join(root, ".qfai", "assistant", "manifest", "agent-catalog.yml"),
+        "utf-8",
+      );
+      expect(newManifest).toContain("agents: []");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  // QFAI:SPEC-0003:TC-0003-0023 (TDD-0023): upgrade on already-upgraded project is a no-op note
+  it("TC-0003-0023 (TDD-0023): --upgrade-assistant-tree on an already-upgraded project emits W-USER-EDIT-PRESERVED only", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-tdd0023b-"));
+    try {
+      // First, perform a migration so the new tree exists with content
+      // already in the 4 layers.
+      const legacy = path.join(root, ".qfai", "assistant", "steering");
+      await mkdir(legacy, { recursive: true });
+      await writeFile(path.join(legacy, "test-layers.md"), "legacy A\n", "utf-8");
+      await runInit({
+        dir: root,
+        force: false,
+        dryRun: false,
+        yes: true,
+        upgradeAssistantTree: true,
+      });
+      // Second --upgrade run: catalog/test-layers.md already exists; the
+      // helper must emit the W-USER-EDIT-PRESERVED note and NOT overwrite.
+      const stdout = await captureStdout(async () => {
+        await runInit({
+          dir: root,
+          force: false,
+          dryRun: false,
+          yes: true,
+          upgradeAssistantTree: true,
+        });
+      });
+      expect(stdout).toContain("W-USER-EDIT-PRESERVED");
+      // Existing file is preserved (not overwritten).
+      const preserved = await readFile(
+        path.join(root, ".qfai", "assistant", "catalog", "test-layers.md"),
+        "utf-8",
+      );
+      expect(preserved).toContain("legacy A");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  // QFAI:SPEC-0003:TC-0003-0024 (TDD-0024): migration memo authoring
+  it("TC-0003-0024 (TDD-0024): --upgrade-assistant-tree writes a migration memo and is idempotent on re-run", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-tdd0024-"));
+    try {
+      await runInit({
+        dir: root,
+        force: false,
+        dryRun: false,
+        yes: true,
+        upgradeAssistantTree: true,
+      });
+      const memoMatches = await fg(".qfai/assistant/process/migrations/v*-assistant-layer-recut.md", {
+        cwd: root,
+        dot: true,
+      });
+      expect(memoMatches.length).toBe(1);
+      const memoPath = path.join(root, memoMatches[0] ?? "");
+      const firstBody = await readFile(memoPath, "utf-8");
+      expect(firstBody).toContain("assistant-layer recut");
+      expect(firstBody).toContain("sunset: v1.10.0");
+
+      // Re-run: memo MUST NOT be modified (commit-immutable per OC-53).
+      await runInit({
+        dir: root,
+        force: false,
+        dryRun: false,
+        yes: true,
+        upgradeAssistantTree: true,
+      });
+      const secondBody = await readFile(memoPath, "utf-8");
+      expect(secondBody).toBe(firstBody);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  // QFAI:SPEC-0003:TC-0003-0025 (TDD-0025): assistantPaths.ts SSOT — init.ts routes new layers through the helper
+  it("TC-0003-0025 (TDD-0025): init.ts builds new 4-layer paths through assistantPaths.ts helpers", async () => {
+    const initSrc = await readFile(
+      path.join(__dirname, "..", "..", "src", "cli", "commands", "init.ts"),
+      "utf-8",
+    );
+    expect(initSrc).toMatch(/from "\.\.\/\.\.\/core\/paths\/assistantPaths\.js"/);
+    expect(initSrc).toContain("joinAssistantLayer");
+    expect(initSrc).toContain("joinProjectSteering");
+    expect(initSrc).toContain("joinMigrationMemo");
+    // Layer path strings in path-construction position (e.g. path.join with
+    // literal "constitution"/"manifest"/"catalog"/"process") should not
+    // appear inside init.ts — those go through the SSOT instead.
+    expect(initSrc).not.toMatch(/path\.join\([^)]*"\.qfai",\s*"assistant",\s*"(constitution|manifest|catalog|process)"/);
+  });
+
+  // QFAI:SPEC-0003:TC-0003-0026 (TDD-0026): legacy backward-compat + sunset warning
+  it("TC-0003-0026 (TDD-0026): qfai init (no flag) on a project with legacy steering/ retains it and prints D-DEPRECATED-PATH with sunset: v1.10.0", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-tdd0026-"));
+    try {
+      // Pre-seed legacy layout
+      const legacy = path.join(root, ".qfai", "assistant", "steering");
+      await mkdir(legacy, { recursive: true });
+      await writeFile(path.join(legacy, "test-layers.md"), "legacy content\n", "utf-8");
+
+      const stdout = await captureStdout(async () => {
+        await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      });
+
+      // Legacy directory is retained (NOT deleted).
+      const legacyAfter = await readFile(path.join(legacy, "test-layers.md"), "utf-8");
+      expect(legacyAfter).toBe("legacy content\n");
+      // Warning is emitted with the literal sunset version.
+      expect(stdout).toMatch(/D-DEPRECATED-PATH/);
+      expect(stdout).toMatch(/sunset: v1\.10\.0/);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
 });
