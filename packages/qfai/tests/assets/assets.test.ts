@@ -376,7 +376,10 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     );
     const content = await readFile(skillPath, "utf-8");
 
-    expect(content.split(/\r?\n/).length).toBeLessThanOrEqual(200);
+    // The cap is 210 (not 200) to allow room for the trailing
+    // project_memory: block that every core skill body MUST declare
+    // (W-WORKLOG-SCHEMA enforcement in skillDocReferences.ts).
+    expect(content.split(/\r?\n/).length).toBeLessThanOrEqual(210);
   });
 
   it("ensures ui contract guidance defines mockable prototype and copy-ready example", async () => {

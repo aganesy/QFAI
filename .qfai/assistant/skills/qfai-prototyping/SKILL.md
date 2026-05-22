@@ -196,8 +196,8 @@ Follow `.qfai/assistant/instructions/shared-skill-operating-baseline.md#gate-fai
 
 - `/qfai-atdd` / `/qfai-implement` / `/qfai-verify`
 
-
 project_memory:
-  - Iteration count cap is 10; --cycle is 0-indexed; reaching cycle 9 on a non-converged iteration set exits 65 directly (no cycle-mismatch path).
-  - review.json schema-v3 is the only accepted shape; pre-v3 payloads, unknown layoutAntiPatterns codes, or wrong-enum designMdViolations entries fail validate with QFAI-PROT-002.
-  - DESIGN.md lock sha256 is re-checked every cycle against the live DESIGN.md; mismatch exits 2 and stops the loop.
+
+- Iteration count cap is 10; --cycle is 0-indexed; reaching cycle 9 on a non-converged iteration set exits 65 directly (no cycle-mismatch path).
+- review.json schema-v3 is the only accepted shape; pre-v3 payloads, unknown layoutAntiPatterns codes, or wrong-enum designMdViolations entries fail validate with QFAI-PROT-002.
+- DESIGN.md lock sha256 is re-checked every cycle against the live DESIGN.md; mismatch exits 2 and stops the loop.

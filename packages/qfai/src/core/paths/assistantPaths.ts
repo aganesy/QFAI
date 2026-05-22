@@ -27,7 +27,11 @@ export function assistantLayerDir(layer: AssistantLayer): string {
   return `${ASSISTANT_DIR}/${layer}`;
 }
 
-export function joinAssistantLayer(destRoot: string, layer: AssistantLayer, ...rest: string[]): string {
+export function joinAssistantLayer(
+  destRoot: string,
+  layer: AssistantLayer,
+  ...rest: string[]
+): string {
   return path.join(destRoot, ASSISTANT_DIR, layer, ...rest);
 }
 

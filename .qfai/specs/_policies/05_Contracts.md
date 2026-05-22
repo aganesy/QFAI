@@ -51,12 +51,12 @@ QFAI 自体は外部公開 API を持たない。
 
 ### CLI Contracts
 
-| Short ID | Entity                 | File                                      | Purpose                                                                                                                                                           |
-| -------- | ---------------------- | ----------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| CLI-PROT | qfai prototyping (CLI) | `.qfai/contracts/cli/qfai-prototyping.md` | spec-0012 の CLI surface (`iterate` / `certify` / `show-spec`) — cycle-0 freeze, license-verify exit 66, multi-spec resolveAll、Reviewer-driven Playwright を記述 |
-| CLI-INIT | qfai init (CLI)        | `.qfai/contracts/cli/qfai-init.md`        | spec-0003 の CLI surface — assistant-tree seed, `--upgrade-assistant-tree`, work-log surface seed, deprecation window, path SSOT enforcement (CHG-003)            |
-| CLI-VAL  | qfai validate (CLI)    | `.qfai/contracts/cli/qfai-validate.md`    | spec-0004 の CLI surface delta — new finding codes (`W-WORKLOG-SCHEMA`, `R-WORKLOG-DRIFT`, `R-REJECTED-READOPT`, `W-PENDING-PROMOTION`, etc.), Reviewer-Gate input bundle, promote-gate (CHG-003) |
-| CLI-WLOG | worklog entry schema   | `.qfai/contracts/cli/worklog-entry.schema.md` | `.qfai/steering/*.md` frontmatter + body schema; `kind` enum SSOT; handoff-brief sections; parser unit-test obligations (CHG-003)                                |
+| Short ID | Entity                 | File                                          | Purpose                                                                                                                                                                                           |
+| -------- | ---------------------- | --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| CLI-PROT | qfai prototyping (CLI) | `.qfai/contracts/cli/qfai-prototyping.md`     | spec-0012 の CLI surface (`iterate` / `certify` / `show-spec`) — cycle-0 freeze, license-verify exit 66, multi-spec resolveAll、Reviewer-driven Playwright を記述                                 |
+| CLI-INIT | qfai init (CLI)        | `.qfai/contracts/cli/qfai-init.md`            | spec-0003 の CLI surface — assistant-tree seed, `--upgrade-assistant-tree`, work-log surface seed, deprecation window, path SSOT enforcement (CHG-003)                                            |
+| CLI-VAL  | qfai validate (CLI)    | `.qfai/contracts/cli/qfai-validate.md`        | spec-0004 の CLI surface delta — new finding codes (`W-WORKLOG-SCHEMA`, `R-WORKLOG-DRIFT`, `R-REJECTED-READOPT`, `W-PENDING-PROMOTION`, etc.), Reviewer-Gate input bundle, promote-gate (CHG-003) |
+| CLI-WLOG | worklog entry schema   | `.qfai/contracts/cli/worklog-entry.schema.md` | `.qfai/steering/*.md` frontmatter + body schema; `kind` enum SSOT; handoff-brief sections; parser unit-test obligations (CHG-003)                                                                 |
 
 ## Mapping Rules
 

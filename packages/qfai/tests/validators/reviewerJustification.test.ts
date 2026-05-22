@@ -50,7 +50,10 @@ describe("reviewerJustification validator", () => {
       await seedReviewerReport(root, {
         findings: [
           { code: "R-WORKLOG-DRIFT", justification: "" },
-          { code: "R-HANDOFF-INCOMPLETE", justification: "missing State and Constraints sections." },
+          {
+            code: "R-HANDOFF-INCOMPLETE",
+            justification: "missing State and Constraints sections.",
+          },
         ],
       });
       const issues = await validateReviewerJustification(root, await getConfig(root));

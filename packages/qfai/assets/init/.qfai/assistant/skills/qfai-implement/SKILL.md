@@ -349,8 +349,8 @@ When this skill is complete, provide a final user-facing completion message and 
 - Acceptance tests: `/qfai-atdd`.
   Action: ensure acceptance test coverage aligns with implementation.
 
-
 project_memory:
-  - One TDD item at a time from test-list.md; status lifecycle is forward-only (todo → red → green → refactor → done); exception requires DR-ID.
-  - Fresh RED + GREEN command/result evidence is mandatory per item; status-only evidence (e.g. "Status: PASS") is rejected.
-  - UI-affecting items require product-surface-reviewer prototype-parity PASS before the item can transition to done.
+
+- One TDD item at a time from test-list.md; status lifecycle is forward-only (todo → red → green → refactor → done); exception requires DR-ID.
+- Fresh RED + GREEN command/result evidence is mandatory per item; status-only evidence (e.g. "Status: PASS") is rejected.
+- UI-affecting items require product-surface-reviewer prototype-parity PASS before the item can transition to done.

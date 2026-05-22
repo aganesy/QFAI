@@ -47,7 +47,9 @@ describe("skillDocReferences validator", () => {
       await seedSkill(
         root,
         "qfai-implement",
-        ["## /qfai-implement", "", "body content without trailing project_memory block.", ""].join("\n"),
+        ["## /qfai-implement", "", "body content without trailing project_memory block.", ""].join(
+          "\n",
+        ),
       );
       const issues = await validateSkillDocReferences(root, await getConfig(root));
       const projMem = issues.filter((i) => i.rule === "skillDocReferences.projectMemory");

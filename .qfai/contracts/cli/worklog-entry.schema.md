@@ -19,19 +19,19 @@
 
 ```yaml
 ---
-id: 2026-05-22-recut-design-call         # required; string; kebab-case; matches filename stem
-status: active                            # required; enum: active | handoff | archived
-kind: decision                            # required; enum: see below
-created: 2026-05-22                       # required; ISO-8601 date (YYYY-MM-DD)
-updated: 2026-05-22                       # required; ISO-8601 date; >= created
-scope: spec-0003                          # required; "global" or "spec-NNNN"
-blocking: false                           # required; boolean
-promote-to: spec-0003/07_Decisions.md     # required; string (path) OR null
-links:                                    # required; array (may be empty)
+id: 2026-05-22-recut-design-call # required; string; kebab-case; matches filename stem
+status: active # required; enum: active | handoff | archived
+kind: decision # required; enum: see below
+created: 2026-05-22 # required; ISO-8601 date (YYYY-MM-DD)
+updated: 2026-05-22 # required; ISO-8601 date; >= created
+scope: spec-0003 # required; "global" or "spec-NNNN"
+blocking: false # required; boolean
+promote-to: spec-0003/07_Decisions.md # required; string (path) OR null
+links: # required; array (may be empty)
   - spec-0003
   - discussion-20260522081618995
-closure-rationale: null                   # required when status=archived AND no promote-to satisfied; else null/omitted
-promoted-to: null                         # required when status=archived AND promote-to was satisfied; references the appended Decisions row
+closure-rationale: null # required when status=archived AND no promote-to satisfied; else null/omitted
+promoted-to: null # required when status=archived AND promote-to was satisfied; references the appended Decisions row
 ---
 ```
 
@@ -39,25 +39,25 @@ promoted-to: null                         # required when status=archived AND pr
 
 The `kind` field MUST be exactly one of:
 
-| `kind`                  | Write trigger                                                            |
-| ----------------------- | ------------------------------------------------------------------------ |
-| `milestone`             | Task milestone reached                                                   |
-| `decision`              | A decision was made during work that needs durable capture               |
-| `risk`                  | A risk was identified                                                    |
-| `consultation-needed`   | The skill needs user input to proceed                                    |
-| `unexpected`            | An unexpected event occurred during work                                 |
-| `unscoped-discovery`    | Out-of-scope concern discovered; current task continues unblocked (REQ-0016) |
-| `handoff`               | Work needs to pause; another session/operator will resume                |
-| `blocker`               | The skill is stuck (e.g. root-cause hunt stalled)                        |
-| `scope-up`              | Work volume larger than expected                                         |
-| `scope-down`            | Planned work is no longer required                                       |
-| `spike`                 | Exploratory investigation logged                                         |
+| `kind`                | Write trigger                                                                |
+| --------------------- | ---------------------------------------------------------------------------- |
+| `milestone`           | Task milestone reached                                                       |
+| `decision`            | A decision was made during work that needs durable capture                   |
+| `risk`                | A risk was identified                                                        |
+| `consultation-needed` | The skill needs user input to proceed                                        |
+| `unexpected`          | An unexpected event occurred during work                                     |
+| `unscoped-discovery`  | Out-of-scope concern discovered; current task continues unblocked (REQ-0016) |
+| `handoff`             | Work needs to pause; another session/operator will resume                    |
+| `blocker`             | The skill is stuck (e.g. root-cause hunt stalled)                            |
+| `scope-up`            | Work volume larger than expected                                             |
+| `scope-down`          | Planned work is no longer required                                           |
+| `spike`               | Exploratory investigation logged                                             |
 
 ### `status` enum
 
-| `status`   | Meaning                                                                                      |
-| ---------- | -------------------------------------------------------------------------------------------- |
-| `active`   | Open; participates in drift/promote/stale checks                                             |
+| `status`   | Meaning                                                                                       |
+| ---------- | --------------------------------------------------------------------------------------------- |
+| `active`   | Open; participates in drift/promote/stale checks                                              |
 | `handoff`  | Open and awaiting resumption; body MUST satisfy the handoff-brief schema (REQ-0017)           |
 | `archived` | Closed; either promoted (`promoted-to` set) or closed-without-promotion (`closure-rationale`) |
 
@@ -89,18 +89,23 @@ The body (everything after the closing `---`) is free-form Markdown except for t
 
 ```markdown
 ## State of the task
+
 <one paragraph: where am I, what is done, what remains>
 
 ## Next single action
+
 <one bullet: the very next thing to do on resume>
 
 ## Constraints to preserve
+
 - <bulleted list of invariants that the next operator MUST preserve>
 
 ## Open questions
+
 - <bulleted list; may be empty>
 
 ## References to consult first
+
 - <bulleted list of entry IDs / spec IDs / discussion IDs>
 ```
 
@@ -110,18 +115,23 @@ Reviewer Gate emits `R-HANDOFF-INCOMPLETE` if any of the five sections is missin
 
 ```markdown
 ## Context
+
 <what triggered the decision>
 
 ## Decision
+
 <what was decided>
 
 ## Alternatives considered
+
 <bulleted; mark each as accepted | rejected | deferred>
 
 ## Rationale
+
 <why this option>
 
 ## Consequences
+
 <what changes downstream>
 ```
 

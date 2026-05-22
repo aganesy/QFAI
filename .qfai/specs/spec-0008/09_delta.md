@@ -32,9 +32,9 @@
 
 ## Triage
 
-| Source                                                    | Subject                                                                                                                                                                          | Existing Spec | Operation | Sub-op | Approved By | Rationale                                                                                                                                       |
-| --------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- | --------- | ------ | ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
-| REQ-0004, REQ-0005, REQ-0010, REQ-0016, REQ-0017 (CHG-003) | `/qfai-atdd` SKILL.md に `project_memory:` 宣言追加。author 前に open work-log entry を読む。kind 別 write-trigger に従う。handoff entry body を 5 セクション schema に従わせる。 | spec-0008     | UPDATE    | APPEND | pin-implied | Implementation-phase skill (REQ-0005 scope)。SKILL.md は配布物。subject-token overlap (`skill`, `atdd`)。新 CAP 不要。                            |
+| Source                                                     | Subject                                                                                                                                                                           | Existing Spec | Operation | Sub-op | Approved By | Rationale                                                                                                              |
+| ---------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- | --------- | ------ | ----------- | ---------------------------------------------------------------------------------------------------------------------- |
+| REQ-0004, REQ-0005, REQ-0010, REQ-0016, REQ-0017 (CHG-003) | `/qfai-atdd` SKILL.md に `project_memory:` 宣言追加。author 前に open work-log entry を読む。kind 別 write-trigger に従う。handoff entry body を 5 セクション schema に従わせる。 | spec-0008     | UPDATE    | APPEND | pin-implied | Implementation-phase skill (REQ-0005 scope)。SKILL.md は配布物。subject-token overlap (`skill`, `atdd`)。新 CAP 不要。 |
 
 ## CHG-003 (v1.9.0) — Work-log Read Contract + project_memory Declaration
 
@@ -45,4 +45,3 @@
 - Cascade: SKILL.md declaration is validated by spec-0004's `qfai validate` (companion spec-0004 row). Reviewer-Gate `R-WORKLOG-DRIFT` / `R-REJECTED-READOPT` runs on this skill's outputs (companion spec-0015 row).
 - Implementation-phase 詳細 US/AC/BR/EX/TC は次回の per-spec SDD pass で append される
 - Source: REQ-0004, REQ-0005, REQ-0010, REQ-0016, REQ-0017
-

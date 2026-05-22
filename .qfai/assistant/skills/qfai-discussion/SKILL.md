@@ -121,8 +121,8 @@ You MUST end the user-facing output with a handoff sentence to `/qfai-sdd` in th
 - Japanese output (use this exact sentence):
   ディスカッションが完了しました。他に要望などがあればご提示ください。問題なければ『/qfai-sdd』と入力してください。
 
-
 project_memory:
-  - 15-file mandatory output set is fixed; the UI-bearing sidecar family (40_screen_contracts.md + 50_review_input_bundle.md + root DESIGN.md) is required only when the target is UI-bearing.
-  - Discussion is planner-first: never pick a single visual winner; carry exploration references as deviate-from inputs, not imitate-this.
-  - Completion requires Disposition: open count = 0 in 11_OQ-Register.md; deferred items must move to 13_Deferred.md with full metadata.
+
+- 15-file mandatory output set is fixed; the UI-bearing sidecar family (40_screen_contracts.md + 50_review_input_bundle.md + root DESIGN.md) is required only when the target is UI-bearing.
+- Discussion is planner-first: never pick a single visual winner; carry exploration references as deviate-from inputs, not imitate-this.
+- Completion requires Disposition: open count = 0 in 11_OQ-Register.md; deferred items must move to 13_Deferred.md with full metadata.

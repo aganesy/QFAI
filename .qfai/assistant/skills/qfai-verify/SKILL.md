@@ -508,8 +508,8 @@ When this skill is complete, provide a final user-facing completion message and 
 - Need a report artifact:
   Action: run `qfai report` after validation outputs are up to date.
 
-
 project_memory:
-  - Verify is the full-scan approval gate; per-skill validate runs (sdd/atdd/tdd) are signals, the verify gate is the binding pass.
-  - Completion requires zero errors across all profiles AND zero leakage in the distributed-surface guard AND a clean branch version pin.
-  - Verify never rewrites artifacts; it only reads and reports. Drift fixes belong to /qfai-sdd / /qfai-implement / /qfai-atdd respectively.
+
+- Verify is the full-scan approval gate; per-skill validate runs (sdd/atdd/tdd) are signals, the verify gate is the binding pass.
+- Completion requires zero errors across all profiles AND zero leakage in the distributed-surface guard AND a clean branch version pin.
+- Verify never rewrites artifacts; it only reads and reports. Drift fixes belong to /qfai-sdd / /qfai-implement / /qfai-atdd respectively.

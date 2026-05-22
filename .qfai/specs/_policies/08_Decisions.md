@@ -1588,4 +1588,3 @@ Source: discussion-20260522081618995 OQ-0001..0012 (10 resolved, 2 deferred)。
 - Decision: AGENTS.md / `CLAUDE.md` symlink 議論は別 `/qfai-discussion` invocation に切り出す (target 2026-09-30)。`.qfai/steering/` 自動アーカイブは post-v1 dogfooding review (target 2026-12-31) まで `qfai validate` の `W-WORKLOG-STALE` surface で代用。
 - Rationale: 両者は独立した discovery scope を持つ。本 pack に bundle すると atomicity を超える。
 - Source: requirements-analyst, deferred row in `13_Deferred.md`。
-

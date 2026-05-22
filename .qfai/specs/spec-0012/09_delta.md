@@ -276,8 +276,8 @@ Late-review fixes on PR #208:
 
 ## Triage
 
-| Source                                                    | Subject                                                                                                                            | Existing Spec | Operation | Sub-op | Approved By | Rationale                                                                                     |
-| --------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- | ------------- | --------- | ------ | ----------- | --------------------------------------------------------------------------------------------- |
+| Source                                                     | Subject                                                                                                                            | Existing Spec | Operation | Sub-op | Approved By | Rationale                                                                                     |
+| ---------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- | ------------- | --------- | ------ | ----------- | --------------------------------------------------------------------------------------------- |
 | REQ-0004, REQ-0005, REQ-0010, REQ-0016, REQ-0017 (CHG-003) | `/qfai-prototyping` SKILL.md に `project_memory:` 宣言追加。author 前に open work-log entry を読み、kind 別 write-trigger に従う。 | spec-0012     | UPDATE    | APPEND | pin-implied | Implementation-phase skill (REQ-0005 scope)。subject-token overlap (`skill`, `prototyping`)。 |
 
 ## CHG-003 (v1.9.0) — Work-log Read Contract + project_memory Declaration
@@ -287,4 +287,3 @@ Late-review fixes on PR #208:
 - Obligation: `/qfai-prototyping` SKILL.md MUST gain a `project_memory:` block. The skill reads open work-log entries before each loop cycle and cites consulted entry IDs in completion report. Worklog-write triggers apply per REQ-0004; handoff schema per REQ-0017.
 - Cascade: SKILL.md declaration validated by spec-0004. Reviewer-Gate drift checks (spec-0015) run on prototyping outputs.
 - Source: REQ-0004, REQ-0005, REQ-0010, REQ-0016, REQ-0017
-

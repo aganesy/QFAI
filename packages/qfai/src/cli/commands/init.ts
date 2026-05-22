@@ -184,8 +184,10 @@ async function seedAssistantLayers(
 
 function assistantLayerGitkeepBody(layer: AssistantLayer): string {
   const purposes: Record<AssistantLayer, string> = {
-    constitution: "Foundational normative rules (constitution, drift-protocol, distributed-surface, quality).",
-    manifest: "Declarative manifests (agent-catalog.yml, agent-routing.yml, review-profiles.yml, spec_required_files.json).",
+    constitution:
+      "Foundational normative rules (constitution, drift-protocol, distributed-surface, quality).",
+    manifest:
+      "Declarative manifests (agent-catalog.yml, agent-routing.yml, review-profiles.yml, spec_required_files.json).",
     catalog: "Reference catalogs (test-layers.md, review-gate.rules.yml).",
     process: "Workflow / process docs and migration memos (process/migrations/*).",
   };
@@ -315,10 +317,7 @@ type UpgradeResult = {
   preservedNotes: string[];
 };
 
-async function runUpgradeAssistantTree(
-  destRoot: string,
-  dryRun: boolean,
-): Promise<UpgradeResult> {
+async function runUpgradeAssistantTree(destRoot: string, dryRun: boolean): Promise<UpgradeResult> {
   const copied: string[] = [];
   const skipped: string[] = [];
   const removed: string[] = [];

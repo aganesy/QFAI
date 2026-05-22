@@ -27,13 +27,14 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
           # Match the QFAI repo's CI baseline (Node 20 LTS) and the package
           # `engines: ">=18.0.0"`. Bump deliberately when QFAI raises its
           # supported floor.
           node-version: "20"
-          cache: npm
-      - run: npm ci
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
       - name: qfai validate
-        run: npx qfai validate --profile full --fail-on error
+        run: pnpm -C packages/qfai exec qfai validate --profile full --fail-on error --root ../..

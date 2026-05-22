@@ -374,8 +374,8 @@ When this skill is complete, provide a final user-facing completion message and 
 - Acceptance tests need fixes: rerun `/qfai-atdd`.
   Action: close uncovered `US` / `TC` / `CON-API` obligations and rerun validation.
 
-
 project_memory:
-  - Coverage obligations stay layer-pinned: tests/e2e/** must cover all required US; tests/integration/** all required TC; tests/api/** all required CON-API.
-  - Forbidden references guard the test-layer policy: tests/api/** must not carry QFAI:SPEC-XXXX:TC-YYYY annotations; tests/e2e/** likewise.
-  - Floor / ratio signals are planning hints, never gates; legacy scenario.feature / coverage ledger files remain optional inputs.
+
+- Coverage obligations stay layer-pinned: tests/e2e/** must cover all required US; tests/integration/** all required TC; tests/api/\*\* all required CON-API.
+- Forbidden references guard the test-layer policy: tests/api/** must not carry QFAI:SPEC-XXXX:TC-YYYY annotations; tests/e2e/** likewise.
+- Floor / ratio signals are planning hints, never gates; legacy scenario.feature / coverage ledger files remain optional inputs.

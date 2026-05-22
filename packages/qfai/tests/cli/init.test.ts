@@ -1343,10 +1343,13 @@ describe("qfai init", { timeout: 60000 }, () => {
         yes: true,
         upgradeAssistantTree: true,
       });
-      const memoMatches = await fg(".qfai/assistant/process/migrations/v*-assistant-layer-recut.md", {
-        cwd: root,
-        dot: true,
-      });
+      const memoMatches = await fg(
+        ".qfai/assistant/process/migrations/v*-assistant-layer-recut.md",
+        {
+          cwd: root,
+          dot: true,
+        },
+      );
       expect(memoMatches.length).toBe(1);
       const memoPath = path.join(root, memoMatches[0] ?? "");
       const firstBody = await readFile(memoPath, "utf-8");
@@ -1381,7 +1384,9 @@ describe("qfai init", { timeout: 60000 }, () => {
     // Layer path strings in path-construction position (e.g. path.join with
     // literal "constitution"/"manifest"/"catalog"/"process") should not
     // appear inside init.ts — those go through the SSOT instead.
-    expect(initSrc).not.toMatch(/path\.join\([^)]*"\.qfai",\s*"assistant",\s*"(constitution|manifest|catalog|process)"/);
+    expect(initSrc).not.toMatch(
+      /path\.join\([^)]*"\.qfai",\s*"assistant",\s*"(constitution|manifest|catalog|process)"/,
+    );
   });
 
   // QFAI:SPEC-0003:TC-0003-0026 (TDD-0026): legacy backward-compat + sunset warning

@@ -38,11 +38,11 @@ Reinit behavior (existing `.qfai/` present):
 
 Exit codes:
 
-| Code | Meaning                                                             |
-| ---- | ------------------------------------------------------------------- |
-| 0    | Success                                                             |
-| 2    | CLI-arg error (unknown flag, malformed value)                       |
-| 64   | I/O error (cannot read/write target tree)                           |
+| Code | Meaning                                                                                                                              |
+| ---- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| 0    | Success                                                                                                                              |
+| 2    | CLI-arg error (unknown flag, malformed value)                                                                                        |
+| 64   | I/O error (cannot read/write target tree)                                                                                            |
 | 65   | Conflict — old-layout files present and `--upgrade-assistant-tree` not supplied while running on a layout the validator would reject |
 
 #### `--upgrade-assistant-tree` (one-shot migration helper)
@@ -63,11 +63,11 @@ Required preconditions:
 
 Exit codes (additional):
 
-| Code | Meaning                                                                              |
-| ---- | ------------------------------------------------------------------------------------ |
+| Code | Meaning                                                                                   |
+| ---- | ----------------------------------------------------------------------------------------- |
 | 0    | All files relocated; user edits preserved with `W-USER-EDIT-PRESERVED` warnings as needed |
-| 64   | I/O error during relocation; pre-relocation state preserved                          |
-| 65   | Cannot resolve relocation — old-layout file path not in the canonical relocation table |
+| 64   | I/O error during relocation; pre-relocation state preserved                               |
+| 65   | Cannot resolve relocation — old-layout file path not in the canonical relocation table    |
 
 ## Path SSOT enforcement
 

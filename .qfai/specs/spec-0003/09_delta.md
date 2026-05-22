@@ -55,8 +55,8 @@ This spec consolidates the following archived specs:
 
 ## Triage
 
-| Source                                                                                              | Subject                                                                                                                                                                       | Existing Spec | Operation | Sub-op | Approved By | Rationale                                                                                                                                          |
-| --------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- | --------- | ------ | ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Source                                                                                                       | Subject                                                                                                                                                                        | Existing Spec | Operation | Sub-op | Approved By | Rationale                                                                                                                                           |
+| ------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------- | --------- | ------ | ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
 | REQ-0001, REQ-0002, REQ-0008, REQ-0009, REQ-0011, REQ-0012, REQ-0013, REQ-0018, NFR-0001, NFR-0002 (CHG-003) | `qfai init` で新 layer tree を seed、project-root `.qfai/steering/` を seed、`--upgrade-assistant-tree` flag を実装、migration memo を author、`assistantPaths.ts` SSOT を参照 | spec-0003     | UPDATE    | APPEND | pin-implied | Primary capability owner (CAP-0003)。subject-token overlap (`init`, `seed`, `assistant`)。`packages/qfai/src/cli/commands/init.ts` が直接実装する。 |
 
 ## CHG-003 (v1.9.0) — Assistant-layer Recut + Work-log Surface Seed
@@ -81,4 +81,3 @@ This spec consolidates the following archived specs:
 - Out-of-scope (this spec): validation of frontmatter schema (spec-0004); Reviewer-Gate findings (spec-0015); skill-side `project_memory:` block (each skill spec)
 - Implementation-phase 詳細 US/AC/BR/EX/TC は次回の per-spec SDD pass で append される (本 CHG では Triage + REQ 追加に留める)
 - Source: REQ-0001, REQ-0002, REQ-0008, REQ-0009, REQ-0011, REQ-0012, REQ-0013, REQ-0018, NFR-0001, NFR-0002
-

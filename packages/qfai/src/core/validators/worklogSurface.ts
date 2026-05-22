@@ -163,9 +163,7 @@ export async function validateWorklogSurface(
 
     // handoff requires the 5 sections
     if (kind === "handoff") {
-      const missing = REQUIRED_HANDOFF_SECTIONS.filter(
-        (header) => !entry.body.includes(header),
-      );
+      const missing = REQUIRED_HANDOFF_SECTIONS.filter((header) => !entry.body.includes(header));
       if (missing.length > 0) {
         issues.push(
           issue(
@@ -186,11 +184,7 @@ export async function validateWorklogSurface(
     }
 
     // staleness
-    if (
-      typeof fm.status === "string" &&
-      fm.status === "active" &&
-      typeof fm.updated === "string"
-    ) {
+    if (typeof fm.status === "string" && fm.status === "active" && typeof fm.updated === "string") {
       const updatedAt = Date.parse(fm.updated);
       if (!Number.isNaN(updatedAt)) {
         const ageMs = now.getTime() - updatedAt;
@@ -213,9 +207,7 @@ export async function validateWorklogSurface(
   for (const promo of promotionTargets) {
     const entryId =
       typeof promo.entry.frontmatter?.id === "string" ? promo.entry.frontmatter.id : "";
-    const referenced =
-      entryId.length > 0 &&
-      decisionRows.some((row) => row.includes(entryId));
+    const referenced = entryId.length > 0 && decisionRows.some((row) => row.includes(entryId));
     if (!referenced) {
       issues.push(
         issue(
@@ -259,9 +251,7 @@ async function collectEntries(dir: string): Promise<ParsedEntry[]> {
     const parsed = parseEntry(body);
     entries.push({
       filePath: full,
-      relativePath: path
-        .relative(path.resolve(dir, "..", ".."), full)
-        .replace(/\\/g, "/"),
+      relativePath: path.relative(path.resolve(dir, "..", ".."), full).replace(/\\/g, "/"),
       frontmatter: parsed.frontmatter,
       body: parsed.body,
     });

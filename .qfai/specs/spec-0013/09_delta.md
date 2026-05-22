@@ -71,9 +71,9 @@
 
 ## Triage
 
-| Source                                                                          | Subject                                                                                                                                                                | Existing Spec | Operation | Sub-op | Approved By | Rationale                                                                                       |
-| ------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- | --------- | ------ | ----------- | ----------------------------------------------------------------------------------------------- |
-| REQ-0005 (Stage 0 read), REQ-0007 (promote-gate surfacing), REQ-0010 (CHG-003)  | `/qfai-sdd` SKILL.md に `project_memory:` 宣言追加。Stage 0 で open work-log entry を読み (MAY)、`W-PENDING-PROMOTION` を preflight summary に surface する。            | spec-0013     | UPDATE    | APPEND | pin-implied | SDD skill は MAY-read (REQ-0005 Notes); promote-gate surfacing は MUST。                        |
+| Source                                                                         | Subject                                                                                                                                                       | Existing Spec | Operation | Sub-op | Approved By | Rationale                                                                |
+| ------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- | --------- | ------ | ----------- | ------------------------------------------------------------------------ |
+| REQ-0005 (Stage 0 read), REQ-0007 (promote-gate surfacing), REQ-0010 (CHG-003) | `/qfai-sdd` SKILL.md に `project_memory:` 宣言追加。Stage 0 で open work-log entry を読み (MAY)、`W-PENDING-PROMOTION` を preflight summary に surface する。 | spec-0013     | UPDATE    | APPEND | pin-implied | SDD skill は MAY-read (REQ-0005 Notes); promote-gate surfacing は MUST。 |
 
 ## CHG-003 (v1.9.0) — Stage 0 Worklog Read + Promote-gate Surfacing
 
@@ -82,4 +82,3 @@
 - Obligation: `/qfai-sdd` SKILL.md MUST gain a `project_memory:` block. Stage 0 preflight MAY read open work-log entries (`status` ∈ `{active, handoff}`); REQ-0005 Notes explicitly relaxes SDD's read contract from MUST to MAY. Stage 0 MUST however surface `W-PENDING-PROMOTION` findings from `qfai validate` in the preflight summary so the triage step can promote `kind: decision` entries to per-spec `07_Decisions.md` rows.
 - Cascade: SKILL.md `project_memory:` validated by spec-0004.
 - Source: REQ-0005, REQ-0007, REQ-0010
-

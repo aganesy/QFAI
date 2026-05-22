@@ -58,9 +58,9 @@
 
 ## Triage
 
-| Source                 | Subject                                                                                                                    | Existing Spec | Operation | Sub-op | Approved By  | Rationale                                                                                                                                          |
-| ---------------------- | -------------------------------------------------------------------------------------------------------------------------- | ------------- | --------- | ------ | ------------ | -------------------------------------------------------------------------------------------------------------------------------------------------- |
-| REQ-0001 (CHG-003)     | 4-layer assistant-tree (constitution / manifest / catalog / process + agents / skills) を structural definition に追加     | spec-0001     | UPDATE    | APPEND | pin-implied  | spec-pack structural definition の責務 (CAP-0001)。subject-token overlap (`asset`, `tree`, `assistant`). 新 CAP 不要。                              |
+| Source             | Subject                                                                                                                | Existing Spec | Operation | Sub-op | Approved By | Rationale                                                                                                              |
+| ------------------ | ---------------------------------------------------------------------------------------------------------------------- | ------------- | --------- | ------ | ----------- | ---------------------------------------------------------------------------------------------------------------------- |
+| REQ-0001 (CHG-003) | 4-layer assistant-tree (constitution / manifest / catalog / process + agents / skills) を structural definition に追加 | spec-0001     | UPDATE    | APPEND | pin-implied | spec-pack structural definition の責務 (CAP-0001)。subject-token overlap (`asset`, `tree`, `assistant`). 新 CAP 不要。 |
 
 ## CHG-003 (v1.9.0) — Assistant-layer Recut Structural Definition
 
@@ -73,4 +73,3 @@
 - Out-of-scope (this spec): 旧 layout の deprecation 受理は spec-0004 が記述。`assistantPaths.ts` SSOT module は spec-0003 / spec-0004 が記述
 - Implementation-phase 詳細 US/AC/BR/EX/TC は次回の per-spec SDD pass で append される
 - Source: REQ-0001
-

@@ -12,18 +12,15 @@ import { exists, issue } from "./utils.js";
 const NON_CANONICAL_REFS: Array<{ pattern: RegExp; reason: string }> = [
   {
     pattern: /\.qfai\/assistant\/steering\/agent-routing\.yml/,
-    reason:
-      "agent-routing.yml has moved to .qfai/assistant/manifest/agent-routing.yml.",
+    reason: "agent-routing.yml has moved to .qfai/assistant/manifest/agent-routing.yml.",
   },
   {
     pattern: /\.qfai\/assistant\/steering\/agent-catalog\.yml/,
-    reason:
-      "agent-catalog.yml has moved to .qfai/assistant/manifest/agent-catalog.yml.",
+    reason: "agent-catalog.yml has moved to .qfai/assistant/manifest/agent-catalog.yml.",
   },
   {
     pattern: /\.qfai\/assistant\/steering\/review-profiles\.yml/,
-    reason:
-      "review-profiles.yml has moved to .qfai/assistant/manifest/review-profiles.yml.",
+    reason: "review-profiles.yml has moved to .qfai/assistant/manifest/review-profiles.yml.",
   },
   {
     pattern: /\.qfai\/assistant\/steering\/test-layers\.md/,
