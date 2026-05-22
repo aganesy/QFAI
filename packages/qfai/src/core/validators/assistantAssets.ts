@@ -16,7 +16,16 @@ export async function validateAssistantAssets(root: string, config: QfaiConfig):
   const assistantDir = path.dirname(skillsDir);
 
   const driftProtocolPath = path.join(assistantDir, "instructions", "drift-protocol.md");
-  const testLayersPath = path.join(assistantDir, "steering", "test-layers.md");
+  // Post-recut: test-layers.md is canonically located at
+  // .qfai/assistant/catalog/test-layers.md. Fall back to the legacy
+  // steering/ path during the compatibility window so projects that
+  // have not yet run `qfai init --upgrade-assistant-tree` are not
+  // double-penalized (D-DEPRECATED-PATH + QFAI-ASSETS-002).
+  const canonicalTestLayersPath = path.join(assistantDir, "catalog", "test-layers.md");
+  const legacyTestLayersPath = path.join(assistantDir, "steering", "test-layers.md");
+  const testLayersPath = (await exists(canonicalTestLayersPath))
+    ? canonicalTestLayersPath
+    : legacyTestLayersPath;
 
   const issues: Issue[] = [];
 
@@ -36,9 +45,9 @@ export async function validateAssistantAssets(root: string, config: QfaiConfig):
     issues.push(
       issue(
         "QFAI-ASSETS-002",
-        "必須ファイル .qfai/assistant/steering/test-layers.md が見つかりません。",
+        "必須ファイル .qfai/assistant/catalog/test-layers.md (legacy fallback: .qfai/assistant/steering/test-layers.md) が見つかりません。",
         "error",
-        testLayersPath,
+        canonicalTestLayersPath,
         "assistantAssets.testLayers",
       ),
     );

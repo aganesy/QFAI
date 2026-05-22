@@ -29,32 +29,51 @@ type RoutingPhase = {
   parallel_groups?: unknown;
 };
 
+/**
+ * Resolve a manifest YAML file by checking the new canonical layer first
+ * (.qfai/assistant/manifest/) and falling back to the legacy
+ * steering/ path during the compatibility window. Returns the
+ * absolute path of the first location that exists, or the canonical
+ * (manifest/) path if neither exists so the error message points at
+ * the post-recut SSOT location.
+ */
+async function resolveManifestFile(root: string, fileName: string): Promise<string> {
+  const canonical = path.join(root, ".qfai", "assistant", "manifest", fileName);
+  if (await exists(canonical)) return canonical;
+  const legacy = path.join(root, ".qfai", "assistant", "steering", fileName);
+  if (await exists(legacy)) return legacy;
+  return canonical;
+}
+
+function manifestRelativePath(absolute: string, root: string): string {
+  return path.relative(root, absolute).replace(/\\/g, "/");
+}
+
 export async function validateAgentDefinition(root: string, _config: QfaiConfig): Promise<Issue[]> {
   const issues: Issue[] = [];
-  const steeringDir = path.join(root, ".qfai", "assistant", "steering");
   const agentsDir = path.join(root, ".qfai", "assistant", "agents");
-  const catalogPath = path.join(steeringDir, "agent-catalog.yml");
-  const routingPath = path.join(steeringDir, "agent-routing.yml");
-  const profilesPath = path.join(steeringDir, "review-profiles.yml");
+  const catalogPath = await resolveManifestFile(root, "agent-catalog.yml");
+  const routingPath = await resolveManifestFile(root, "agent-routing.yml");
+  const profilesPath = await resolveManifestFile(root, "review-profiles.yml");
 
   if (!(await exists(agentsDir)) && !(await exists(catalogPath))) {
     return [];
   }
 
-  for (const [fileName, code] of [
-    ["agent-catalog.yml", "QFAI-AGENT-001"],
-    ["agent-routing.yml", "QFAI-AGENT-002"],
-    ["review-profiles.yml", "QFAI-AGENT-003"],
+  for (const [fileName, code, resolved] of [
+    ["agent-catalog.yml", "QFAI-AGENT-001", catalogPath],
+    ["agent-routing.yml", "QFAI-AGENT-002", routingPath],
+    ["review-profiles.yml", "QFAI-AGENT-003", profilesPath],
   ] as const) {
-    const filePath = path.join(steeringDir, fileName);
-    if (!(await exists(filePath))) {
+    if (!(await exists(resolved))) {
+      const rel = manifestRelativePath(resolved, root);
       issues.push(
         issue(
           code,
-          `Required agent steering file missing: .qfai/assistant/steering/${fileName}`,
+          `Required agent manifest file missing: ${rel} (legacy fallback: .qfai/assistant/steering/${fileName})`,
           "error",
-          `.qfai/assistant/steering/${fileName}`,
-          "agentDefinition.missingSteeringFile",
+          rel,
+          "agentDefinition.missingManifestFile",
         ),
       );
     }
