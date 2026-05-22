@@ -57,6 +57,10 @@ import {
   validateTraceabilityIntegrity,
   validateUiEvidenceArtifacts,
   validateTestTodoStubs,
+  validateWorklogSurface,
+  validateAssistantTreeMigration,
+  validateSkillDocReferences,
+  validateReviewerJustification,
 } from "./validators/index.js";
 import { readSafe } from "./validators/utils.js";
 
@@ -165,6 +169,10 @@ async function runSddValidators(
     ...(await validateDefinedIds(root, config)),
     ...(await validateContracts(root, config)),
     ...(await validateNavigationFlow(root, config)),
+    ...(await validateWorklogSurface(root, config)),
+    ...(await validateAssistantTreeMigration(root, config)),
+    ...(await validateSkillDocReferences(root, config)),
+    ...(await validateReviewerJustification(root, config)),
   ];
 }
 
