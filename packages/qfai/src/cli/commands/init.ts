@@ -380,26 +380,31 @@ async function runUpgradeAssistantTree(destRoot: string, dryRun: boolean): Promi
 
 function classifyLegacySteeringEntry(relPath: string): { layer: AssistantLayer; subpath: string } {
   const normalized = relPath.replace(/\\/g, "/").toLowerCase();
+  const posix = relPath.replace(/\\/g, "/");
   // review-gate is a reference rules catalog (not a routing manifest) — keep
   // it in catalog/ so loaders that expect catalog placement find it.
   if (normalized.includes("test-layers") || normalized.includes("review-gate")) {
-    return { layer: "catalog", subpath: relPath };
+    return { layer: "catalog", subpath: posix };
   }
   if (
     normalized.includes("agent-catalog") ||
     normalized.includes("agent-routing") ||
     normalized.includes("review-profiles")
   ) {
-    return { layer: "manifest", subpath: relPath };
+    return { layer: "manifest", subpath: posix };
   }
   if (normalized.includes("constitution") || normalized.includes("drift-protocol")) {
-    return { layer: "constitution", subpath: relPath };
+    return { layer: "constitution", subpath: posix };
   }
   if (normalized.includes("migration") || normalized.startsWith("process/")) {
-    return { layer: "process", subpath: relPath };
+    // Strip a leading `process/` so legacy `steering/process/migrations/foo.md`
+    // lands at `.qfai/assistant/process/migrations/foo.md` rather than
+    // double-nesting to `.qfai/assistant/process/process/migrations/foo.md`.
+    const subpath = normalized.startsWith("process/") ? posix.slice("process/".length) : posix;
+    return { layer: "process", subpath };
   }
   // Default: catalog (reference docs).
-  return { layer: "catalog", subpath: relPath };
+  return { layer: "catalog", subpath: posix };
 }
 
 async function collectFilesRecursive(dir: string): Promise<string[]> {

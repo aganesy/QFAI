@@ -1293,6 +1293,65 @@ describe("qfai init", { timeout: 60000 }, () => {
     }
   });
 
+  // QFAI:SPEC-0003:TC-0003-0023 (TDD-0023): legacy process/migrations/ doesn't double-nest
+  it("TC-0003-0023 (TDD-0023): --upgrade-assistant-tree strips leading process/ so legacy process/migrations/foo.md lands at process/migrations/foo.md (no double nesting)", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-tdd0023-pp-"));
+    try {
+      const legacyProcess = path.join(
+        root,
+        ".qfai",
+        "assistant",
+        "steering",
+        "process",
+        "migrations",
+      );
+      await mkdir(legacyProcess, { recursive: true });
+      await writeFile(path.join(legacyProcess, "v1.5.0-foo.md"), "# old memo\n", "utf-8");
+
+      await runInit({
+        dir: root,
+        force: false,
+        dryRun: false,
+        yes: true,
+        upgradeAssistantTree: true,
+      });
+
+      // CORRECT destination
+      const correctDest = path.join(
+        root,
+        ".qfai",
+        "assistant",
+        "process",
+        "migrations",
+        "v1.5.0-foo.md",
+      );
+      const movedBody = await readFile(correctDest, "utf-8");
+      expect(movedBody).toContain("old memo");
+
+      // INCORRECT (double-nested) destination MUST NOT exist
+      let doubleNested = false;
+      try {
+        await access(
+          path.join(
+            root,
+            ".qfai",
+            "assistant",
+            "process",
+            "process",
+            "migrations",
+            "v1.5.0-foo.md",
+          ),
+        );
+        doubleNested = true;
+      } catch {
+        doubleNested = false;
+      }
+      expect(doubleNested).toBe(false);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   // QFAI:SPEC-0003:TC-0003-0023 (TDD-0023): review-gate.rules.yml maps to catalog layer (not manifest)
   it("TC-0003-0023 (TDD-0023): --upgrade-assistant-tree routes review-gate.rules.yml to catalog/ (not manifest/)", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-tdd0023-rg-"));

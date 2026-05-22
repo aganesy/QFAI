@@ -283,6 +283,32 @@ describe("worklogSurface validator", () => {
     }
   });
 
+  // TC-0004-0016 (nested-path): nested entries emit .qfai/steering/<sub>/<file> paths (not steering/<sub>/<file>)
+  it("TC-0004-0016 (nested-path): nested worklog entry surfaces a finding with .qfai/steering/<sub>/ prefix", async () => {
+    const root = await newRoot("worklog-nested");
+    try {
+      const subDir = path.join(root, ".qfai", "steering", "2026-Q2");
+      await mkdir(subDir, { recursive: true });
+      // Seed an entry with an invalid kind so we get a deterministic finding
+      // whose `file` field we can inspect.
+      await writeFile(
+        path.join(subDir, "entry-nested.md"),
+        ["---", "id: entry-nested", "kind: unknown", "status: active", "---", ""].join("\n"),
+        "utf-8",
+      );
+      const issues = await validateWorklogSurface(root, await getConfig(root));
+      const schemaIssues = issues.filter((i) => i.code === "W-WORKLOG-SCHEMA");
+      expect(schemaIssues.length).toBeGreaterThan(0);
+      // Must NOT regress to "steering/2026-Q2/entry-nested.md" (no .qfai/ prefix)
+      const filePath = schemaIssues[0]?.file ?? "";
+      expect(filePath.startsWith(".qfai/steering/")).toBe(true);
+      expect(filePath).toContain("2026-Q2");
+      expect(filePath).toContain("entry-nested");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   // TC-0004-0016 (CRLF): parses Windows-CRLF frontmatter without false W-WORKLOG-SCHEMA
   it("TC-0004-0016 (CRLF): parses CRLF-terminated frontmatter without firing schema-parse warning", async () => {
     const root = await newRoot("worklog-crlf");

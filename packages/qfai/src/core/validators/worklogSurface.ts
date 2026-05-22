@@ -60,7 +60,7 @@ export async function validateWorklogSurface(
   const dir = path.join(root, PROJECT_STEERING_DIR);
   if (!(await exists(dir))) return [];
 
-  const entries = await collectEntries(dir);
+  const entries = await collectEntries(dir, root);
   const issues: Issue[] = [];
 
   // Pre-build a Set of registered spec ids, discussion timestamps, and
@@ -253,7 +253,11 @@ function rowsReferenceEntryId(rows: string[], entryId: string): boolean {
   return rows.some((row) => pattern.test(row));
 }
 
-async function collectEntries(dir: string): Promise<ParsedEntry[]> {
+async function collectEntries(dir: string, baseRoot: string): Promise<ParsedEntry[]> {
+  // baseRoot is the project root (NOT `dir`) so that nested entries still
+  // produce `.qfai/steering/<sub>/<file>.md` style paths, not the
+  // recursion-depth-dependent `steering/<sub>/<file>.md` which broke
+  // finding-location traceability for users / tooling.
   const entries: ParsedEntry[] = [];
   let dirEntries: Dirent[];
   try {
@@ -267,7 +271,7 @@ async function collectEntries(dir: string): Promise<ParsedEntry[]> {
     if (dirEntry.isDirectory()) {
       if (dirEntry.name === PROJECT_STEERING_TEMPLATES_DIR) continue;
       const sub = path.join(dir, dirEntry.name);
-      const subEntries = await collectEntries(sub);
+      const subEntries = await collectEntries(sub, baseRoot);
       entries.push(...subEntries);
       continue;
     }
@@ -280,7 +284,7 @@ async function collectEntries(dir: string): Promise<ParsedEntry[]> {
     const parsed = parseEntry(body);
     entries.push({
       filePath: full,
-      relativePath: path.relative(path.resolve(dir, "..", ".."), full).replace(/\\/g, "/"),
+      relativePath: path.relative(baseRoot, full).replace(/\\/g, "/"),
       frontmatter: parsed.frontmatter,
       body: parsed.body,
     });
