@@ -1236,7 +1236,7 @@ describe("qfai init", { timeout: 60000 }, () => {
         path.join(root, ".qfai", "steering", "_templates", "entry.md"),
         "utf-8",
       );
-      expect(tplBody).toContain("id: entry-XXXX");
+      expect(tplBody).toContain("id: kebab-case-id");
       expect(tplBody).toContain("kind: decision");
       expect(tplBody).toMatch(/promote-to:/);
     } finally {
@@ -1288,6 +1288,61 @@ describe("qfai init", { timeout: 60000 }, () => {
         "utf-8",
       );
       expect(newManifest).toContain("agents: []");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  // QFAI:SPEC-0003:TC-0003-0023 (TDD-0023): --upgrade walks instructions/ AND manifest/ in addition to steering/
+  it("TC-0003-0023 (TDD-0023): --upgrade-assistant-tree relocates files from all 3 pre-recut surfaces (instructions/, steering/, manifest/)", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-tdd0023-3s-"));
+    try {
+      // legacy instructions/drift-protocol.md → constitution/drift-protocol.md
+      const legacyInstructions = path.join(root, ".qfai", "assistant", "instructions");
+      await mkdir(legacyInstructions, { recursive: true });
+      await writeFile(
+        path.join(legacyInstructions, "drift-protocol.md"),
+        "# legacy drift\n",
+        "utf-8",
+      );
+      // legacy steering/test-layers.md → catalog/test-layers.md
+      const legacyStg = path.join(root, ".qfai", "assistant", "steering");
+      await mkdir(legacyStg, { recursive: true });
+      await writeFile(path.join(legacyStg, "test-layers.md"), "# legacy layers\n", "utf-8");
+      // pre-existing manifest/spec_required_files.json (already at canonical
+      // location after upgrade — same-layer self-copy is a no-op).
+      const legacyManifest = path.join(root, ".qfai", "assistant", "manifest");
+      await mkdir(legacyManifest, { recursive: true });
+      await writeFile(
+        path.join(legacyManifest, "spec_required_files.json"),
+        '{"value": 1}\n',
+        "utf-8",
+      );
+
+      await runInit({
+        dir: root,
+        force: false,
+        dryRun: false,
+        yes: true,
+        upgradeAssistantTree: true,
+      });
+
+      const drift = await readFile(
+        path.join(root, ".qfai", "assistant", "constitution", "drift-protocol.md"),
+        "utf-8",
+      );
+      expect(drift).toContain("legacy drift");
+      const layers = await readFile(
+        path.join(root, ".qfai", "assistant", "catalog", "test-layers.md"),
+        "utf-8",
+      );
+      expect(layers).toContain("legacy layers");
+      // manifest/spec_required_files.json was already at canonical location.
+      const manifestFile = await readFile(
+        path.join(root, ".qfai", "assistant", "manifest", "spec_required_files.json"),
+        "utf-8",
+      );
+      expect(manifestFile).toContain('"value": 1');
     } finally {
       await rm(root, { recursive: true, force: true });
     }

@@ -1,0 +1,1 @@
+../../.qfai/assistant/agents/requirements-analyst.md

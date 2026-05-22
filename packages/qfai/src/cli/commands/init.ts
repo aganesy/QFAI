@@ -27,6 +27,7 @@ import {
 import {
   ASSISTANT_LAYERS,
   joinAssistantLayer,
+  joinLegacyAssistantInstructions,
   joinLegacyAssistantSteering,
   joinMigrationMemo,
   joinProjectSteering,
@@ -207,20 +208,25 @@ const PROJECT_STEERING_README_BODY = [
   "",
   "This directory is the project-local work-log surface for AI coding",
   "agents. Each entry is a small markdown file with YAML frontmatter",
-  "(`id`, `kind`, `status`, `created`, `updated`, optional `links`,",
-  "`promote-to`).",
+  "(`id`, `kind`, `status`, `created`, `updated`, `scope`, `blocking`,",
+  "`promote-to`, `links`). See the canonical schema at",
+  "`.qfai/contracts/cli/worklog-entry.schema.md`.",
   "",
-  "Allowed `kind` values:",
+  "Allowed `kind` values (REQ-0004 — contract is the SSOT):",
   "",
-  "- `decision` — A choice made during work; candidate for promotion to",
-  "  `07_Decisions.md` via the `promote-to:` frontmatter key.",
+  "- `milestone` — Task milestone reached.",
+  "- `decision` — A choice made during work that needs durable capture;",
+  "  candidate for promotion to `07_Decisions.md` via `promote-to:`.",
   "- `risk` — A risk identified during work.",
-  "- `blocker` — Currently blocking progress; needs human input.",
-  "- `scope-down` / `scope-up` — Scope adjustments discovered during work.",
-  "- `handoff` — Handoff note when work is suspended or transferred.",
-  "- `unexpected` — An unforeseen condition encountered during work.",
-  "- `out-of-scope` — A finding outside the current task; left for follow-up.",
-  "- `consult` — A point where the agent paused to consult the user.",
+  "- `consultation-needed` — The skill needs user input to proceed.",
+  "- `unexpected` — An unexpected event occurred during work.",
+  "- `unscoped-discovery` — Out-of-scope concern discovered; current task",
+  "  continues unblocked (REQ-0016).",
+  "- `handoff` — Work needs to pause; another session/operator will resume.",
+  "- `blocker` — The skill is stuck (e.g. root-cause hunt stalled).",
+  "- `scope-up` — Work volume larger than expected.",
+  "- `scope-down` — Planned work is no longer required.",
+  "- `spike` — Exploratory investigation logged.",
   "",
   "See `_templates/entry.md` for the canonical entry shape.",
   "Validators: `W-WORKLOG-SCHEMA`, `W-WORKLOG-BROKEN-LINK`,",
@@ -230,14 +236,15 @@ const PROJECT_STEERING_README_BODY = [
 
 const PROJECT_STEERING_ENTRY_TEMPLATE = [
   "---",
-  "id: entry-XXXX",
-  "kind: decision",
-  "status: active",
-  "created: YYYY-MM-DDTHH:MM:SSZ",
-  "updated: YYYY-MM-DDTHH:MM:SSZ",
-  "links: []",
-  "# promote-to: 07_Decisions.md   # uncomment when this entry should be",
-  "#                              # promoted into the formal Decision log",
+  "id: kebab-case-id           # required; matches filename stem",
+  "status: active              # required; enum: active | handoff | archived",
+  "kind: decision              # required; see worklog-entry.schema.md#kind enum",
+  "created: YYYY-MM-DD         # required; ISO-8601 date",
+  "updated: YYYY-MM-DD         # required; ISO-8601 date; >= created",
+  'scope: global               # required; "global" or "spec-NNNN"',
+  "blocking: false             # required; boolean",
+  'promote-to: null            # required; "spec-NNNN/07_Decisions.md" or null',
+  "links: []                   # required; array (may be empty)",
   "---",
   "",
   "# Title of the entry",
@@ -245,28 +252,30 @@ const PROJECT_STEERING_ENTRY_TEMPLATE = [
   "## Context",
   "",
   "What triggered this entry? Reference any spec, contract, or external",
-  "input that informs the decision/risk/blocker.",
+  "input that informs the entry.",
   "",
-  "## State",
+  "<!-- For `kind: handoff` entries, the 5 sections below are MANDATORY -->",
+  "<!-- (Reviewer Gate emits R-HANDOFF-INCOMPLETE on missing sections). -->",
   "",
-  "What is the current state? (mandatory for `handoff` entries)",
+  "## State of the task",
   "",
-  "## Constraints",
+  "One paragraph: where am I, what is done, what remains.",
   "",
-  "What constraints apply? (mandatory for `handoff` entries)",
+  "## Next single action",
   "",
-  "## Next action",
+  "One bullet: the very next thing to do on resume.",
   "",
-  "What is the next action / what would unblock this? (mandatory for",
-  "`handoff` entries)",
+  "## Constraints to preserve",
   "",
-  "## Open Questions",
+  "Bulleted invariants that the next operator MUST preserve.",
   "",
-  "Any open questions? (mandatory for `handoff` entries)",
+  "## Open questions",
   "",
-  "## References",
+  "Bulleted list (may be empty).",
   "",
-  "Links, files, decisions. (mandatory for `handoff` entries)",
+  "## References to consult first",
+  "",
+  "Bulleted list of entry IDs / spec IDs / discussion IDs.",
   "",
 ].join("\n");
 
@@ -316,8 +325,22 @@ async function runUpgradeAssistantTree(destRoot: string, dryRun: boolean): Promi
   const removed: string[] = [];
   const preservedNotes: string[] = [];
 
-  const legacyDir = joinLegacyAssistantSteering(destRoot);
-  const legacyExists = await pathExists(legacyDir);
+  // Per .qfai/contracts/cli/qfai-init.md#--upgrade-assistant-tree, the
+  // relocation covers 3 pre-recut surfaces: instructions/, steering/,
+  // and manifest/. Each is walked independently and routed into the new
+  // 4-layer tree via the classifier; the classifier is name-driven so
+  // it works regardless of which legacy surface a file lived in.
+  const legacySurfaces: Array<{ name: "steering" | "instructions" | "manifest"; dir: string }> = [
+    { name: "steering", dir: joinLegacyAssistantSteering(destRoot) },
+    { name: "instructions", dir: joinLegacyAssistantInstructions(destRoot) },
+    // Pre-recut manifest/ shared the same path as the canonical manifest
+    // layer; using the SSOT helper here keeps the lint-no-literal guard
+    // satisfied.
+    { name: "manifest", dir: joinAssistantLayer(destRoot, "manifest") },
+  ];
+  const surfaceExistence = await Promise.all(legacySurfaces.map((s) => pathExists(s.dir)));
+  const anyLegacyExists = surfaceExistence.some(Boolean);
+  const legacyExists = surfaceExistence[0] === true;
 
   // Migration memo is always emitted by --upgrade-assistant-tree (REQ-0021).
   const version = await resolveToolVersion();
@@ -333,38 +356,48 @@ async function runUpgradeAssistantTree(destRoot: string, dryRun: boolean): Promi
     }
   }
 
-  if (!legacyExists) {
+  if (!anyLegacyExists) {
     // Already-upgraded project: emit info-only note so the operator
     // sees the migration helper ran (REQ-0020 + W-USER-EDIT-PRESERVED).
     preservedNotes.push(
-      "  W-USER-EDIT-PRESERVED: legacy .qfai/assistant/steering/ not found; no migration was needed.",
+      "  W-USER-EDIT-PRESERVED: no pre-recut surfaces (.qfai/assistant/{steering,instructions,manifest}/) found; no migration was needed.",
     );
     return { copied, skipped, removed, preservedNotes };
   }
 
-  // Walk the legacy directory and re-locate each file into the new
-  // 4-layer tree based on a conservative mapping. User edits are
-  // preserved by file copy (not overwrite); the legacy file is left in
+  // Walk every legacy surface and re-locate each file into the new
+  // 4-layer tree based on the name-driven classifier. User edits are
+  // preserved by file copy (not overwrite); legacy files are left in
   // place AND a W-USER-EDIT-PRESERVED informational note is emitted so
-  // the operator can decide when to delete the original.
-  const legacyEntries = await collectFilesRecursive(legacyDir);
-  for (const legacyPath of legacyEntries) {
-    const rel = path.relative(legacyDir, legacyPath);
-    const target = classifyLegacySteeringEntry(rel);
-    const newPath = joinAssistantLayer(destRoot, target.layer, ...target.subpath.split("/"));
-    if (await pathExists(newPath)) {
-      // User has already authored / edited the new file — preserve it.
-      skipped.push(newPath);
-      preservedNotes.push(
-        `  W-USER-EDIT-PRESERVED: ${path.relative(destRoot, newPath).replace(/\\/g, "/")} kept (existing user edit detected).`,
-      );
-      continue;
-    }
-    copied.push(newPath);
-    if (!dryRun) {
-      const body = await readFile(legacyPath, "utf-8");
-      await mkdir(path.dirname(newPath), { recursive: true });
-      await writeFile(newPath, body, "utf-8");
+  // the operator can decide when to delete the originals.
+  for (let i = 0; i < legacySurfaces.length; i++) {
+    if (!surfaceExistence[i]) continue;
+    const surface = legacySurfaces[i];
+    if (!surface) continue;
+    const legacyEntries = await collectFilesRecursive(surface.dir);
+    for (const legacyPath of legacyEntries) {
+      const rel = path.relative(surface.dir, legacyPath);
+      const target = classifyLegacySteeringEntry(rel);
+      // Same-layer self-copy guard: if the target layer is identical to
+      // the surface we are already in (e.g. legacy manifest/agent-routing.yml
+      // → new manifest/agent-routing.yml), the file is already at the
+      // canonical location. Skip without W-USER-EDIT-PRESERVED noise.
+      if (target.layer === surface.name) continue;
+      const newPath = joinAssistantLayer(destRoot, target.layer, ...target.subpath.split("/"));
+      if (await pathExists(newPath)) {
+        // User has already authored / edited the new file — preserve it.
+        skipped.push(newPath);
+        preservedNotes.push(
+          `  W-USER-EDIT-PRESERVED: ${path.relative(destRoot, newPath).replace(/\\/g, "/")} kept (existing user edit detected).`,
+        );
+        continue;
+      }
+      copied.push(newPath);
+      if (!dryRun) {
+        const body = await readFile(legacyPath, "utf-8");
+        await mkdir(path.dirname(newPath), { recursive: true });
+        await writeFile(newPath, body, "utf-8");
+      }
     }
   }
 
@@ -382,11 +415,30 @@ function classifyLegacySteeringEntry(relPath: string): { layer: AssistantLayer; 
   if (
     normalized.includes("agent-catalog") ||
     normalized.includes("agent-routing") ||
-    normalized.includes("review-profiles")
+    normalized.includes("review-profiles") ||
+    normalized.includes("spec_required_files")
   ) {
     return { layer: "manifest", subpath: posix };
   }
-  if (normalized.includes("constitution") || normalized.includes("drift-protocol")) {
+  // Constitution — normative invariants (drift-protocol, constitution,
+  // quality, distributed-surface, workflow, agent-selection, change-
+  // classification, requirements-decomposition, communication, thinking,
+  // shared-skill-*-baseline). Migrated from legacy instructions/ surface.
+  const CONSTITUTION_NAMES = [
+    "constitution",
+    "drift-protocol",
+    "quality",
+    "distributed-surface",
+    "workflow",
+    "agent-selection",
+    "change-classification",
+    "requirements-decomposition",
+    "communication",
+    "thinking",
+    "shared-skill-delegation-baseline",
+    "shared-skill-operating-baseline",
+  ];
+  if (CONSTITUTION_NAMES.some((n) => normalized.includes(n))) {
     return { layer: "constitution", subpath: posix };
   }
   if (normalized.includes("migration") || normalized.startsWith("process/")) {

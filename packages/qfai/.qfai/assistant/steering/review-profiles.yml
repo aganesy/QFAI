@@ -1,0 +1,30 @@
+schema_version: "1.0"
+
+profiles:
+  default:
+    always_required: [completion-reviewer]
+    conditional_required: []
+  requirements-heavy:
+    always_required: [completion-reviewer, requirements-reviewer]
+    conditional_required: []
+  architecture-heavy:
+    always_required: [completion-reviewer, architecture-reviewer]
+    conditional_required: []
+  ui-bearing:
+    always_required: [completion-reviewer, product-surface-reviewer]
+    conditional_required: []
+  runtime-heavy:
+    always_required: [completion-reviewer, qa-gatekeeper]
+    conditional_required: [implementation-reviewer]
+
+optional_modes:
+  devils-advocate:
+    kind: advisory
+    description: Challenge assumptions aggressively, but do not block completion by default.
+    alternative_required: true
+    bare_negation_invalid: true
+  pattern-doubler:
+    kind: advisory
+    description: Demand additional ID-bearing patterns with rationale when pattern coverage is thin.
+    rationale_required: true
+    default_target: "2x current ID-bearing items"

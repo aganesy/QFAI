@@ -54,6 +54,18 @@ export function joinLegacyAssistantSteering(destRoot: string, ...rest: string[])
   return path.join(destRoot, LEGACY_ASSISTANT_STEERING_DIR, ...rest);
 }
 
+/**
+ * Legacy pre-recut `.qfai/assistant/instructions/` surface — relocated
+ * to constitution/ by `qfai init --upgrade-assistant-tree`. Helper kept
+ * so call sites do not embed the literal segments and remain consistent
+ * with the SSOT-style accessor used for the legacy steering surface.
+ */
+export const LEGACY_ASSISTANT_INSTRUCTIONS_DIR = ".qfai/assistant/instructions" as const;
+
+export function joinLegacyAssistantInstructions(destRoot: string, ...rest: string[]): string {
+  return path.join(destRoot, LEGACY_ASSISTANT_INSTRUCTIONS_DIR, ...rest);
+}
+
 export function joinProjectSteering(destRoot: string, ...rest: string[]): string {
   return path.join(destRoot, PROJECT_STEERING_DIR, ...rest);
 }

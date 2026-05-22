@@ -1,0 +1,16 @@
+# prototype-handoff.yaml.
+# Produced by /qfai-prototyping post-loop. Consumed by /qfai-implement.
+# The final artifact itself is the SSOT; this handoff yaml is a thin
+# pointer plus implementation notes. DESIGN.md (root) remains the
+# brand SSOT through handoff.
+finalIterIndex: 8
+finalArtifact: ".qfai/prototypes/final/index.html"
+designMdPath: "DESIGN.md"
+designMdSha256: "<hex from .qfai/contracts/design/DESIGN.md.lock.yaml>"
+designSystemMirror: ".qfai/contracts/design/design-system.yaml"
+implementationNotes: |
+  The final prototype invented a spatial gallery metaphor distinct from
+  the AI-default dashboard / card-grid pattern that earlier iterations
+  produced. /qfai-implement should reproduce the visual identity (color
+  tokens, type scale, spacing rhythm) faithfully; micro-interactions
+  may be re-engineered against the project's component framework.

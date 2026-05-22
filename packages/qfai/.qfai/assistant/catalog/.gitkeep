@@ -1,0 +1,5 @@
+# .qfai/assistant/catalog/
+
+Reference catalogs (test-layers.md, review-gate.rules.yml).
+
+Seeded by qfai init (4-layer assistant-tree recut, CHG-003).

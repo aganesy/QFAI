@@ -1,0 +1,8 @@
+prototyping:
+  # Single-thread evolution loop. Iteration count is fixed at 15 globally
+  # (no per-mode override).
+  # Replace `web` with one of the prototyping-supported surfaces if needed:
+  #   web | mobile | desktop | mixed
+  # (discussion classification also allows `cli` and `non-ui`, but those are
+  #  not valid prototyping execution surfaces.)
+  surface: web

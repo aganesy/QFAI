@@ -12,24 +12,31 @@ import { exists, issue } from "./utils.js";
 const PROJECT_STEERING_DIR = ".qfai/steering";
 const PROJECT_STEERING_TEMPLATES_DIR = "_templates";
 
+// MUST match `worklog-entry.schema.md#kind enum` exactly (REQ-0004).
+// Contract is the SSOT; do not localize names here.
 const ALLOWED_KINDS = new Set([
+  "milestone",
   "decision",
   "risk",
-  "blocker",
-  "scope-down",
-  "scope-up",
-  "handoff",
+  "consultation-needed",
   "unexpected",
-  "out-of-scope",
-  "consult",
+  "unscoped-discovery",
+  "handoff",
+  "blocker",
+  "scope-up",
+  "scope-down",
+  "spike",
 ]);
 
+// MUST match the 5 sections in `worklog-entry.schema.md#kind: handoff body`
+// exactly (REQ-0017). Reviewer Gate emits R-HANDOFF-INCOMPLETE if any of
+// these is missing or empty.
 const REQUIRED_HANDOFF_SECTIONS = [
-  "## State",
-  "## Constraints",
-  "## Next action",
-  "## Open Questions",
-  "## References",
+  "## State of the task",
+  "## Next single action",
+  "## Constraints to preserve",
+  "## Open questions",
+  "## References to consult first",
 ];
 
 const STALE_DAYS = 90;

@@ -43,6 +43,62 @@ describe("worklogSurface validator", () => {
     }
   });
 
+  // TC-0004-0016 (contract-kinds): the validator accepts every kind in the contract enum
+  it("TC-0004-0016 (contract-kinds): accepts every kind listed in worklog-entry.schema.md without firing W-WORKLOG-SCHEMA", async () => {
+    const root = await newRoot("worklog-contract-kinds");
+    try {
+      const contractKinds = [
+        "milestone",
+        "decision",
+        "risk",
+        "consultation-needed",
+        "unexpected",
+        "unscoped-discovery",
+        "handoff",
+        "blocker",
+        "scope-up",
+        "scope-down",
+        "spike",
+      ];
+      for (let i = 0; i < contractKinds.length; i++) {
+        const k = contractKinds[i];
+        if (k === undefined) continue;
+        // `handoff` has additional body requirements; satisfy them here so
+        // the only finding we'd ever see for this case is a kind-enum
+        // rejection, which is what we want to assert NEVER happens.
+        const body =
+          k === "handoff"
+            ? [
+                "## State of the task",
+                "stub",
+                "## Next single action",
+                "stub",
+                "## Constraints to preserve",
+                "stub",
+                "## Open questions",
+                "stub",
+                "## References to consult first",
+                "stub",
+              ].join("\n")
+            : "# body";
+        await seedWorklog(
+          root,
+          `entry-${k}-${i}.md`,
+          ["---", `id: entry-${k}-${i}`, `kind: ${k}`, "status: active", "---", "", body].join(
+            "\n",
+          ),
+        );
+      }
+      const issues = await validateWorklogSurface(root, await getConfig(root));
+      const kindIssues = issues.filter(
+        (i) => i.code === "W-WORKLOG-SCHEMA" && (i.rule ?? "").includes("kind"),
+      );
+      expect(kindIssues.length).toBe(0);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   // TC-0004-0016: W-WORKLOG-SCHEMA on invalid kind
   it("TC-0004-0016: emits W-WORKLOG-SCHEMA for entry with invalid kind", async () => {
     const root = await newRoot("worklog-schema");
@@ -112,11 +168,11 @@ describe("worklogSurface validator", () => {
           "",
           "# Handoff",
           "",
-          "## State",
+          "## State of the task",
           "",
           "we paused after step 3.",
           "",
-          "## Next action",
+          "## Next single action",
           "",
           "resume on step 4.",
         ].join("\n"),
@@ -124,9 +180,9 @@ describe("worklogSurface validator", () => {
       const issues = await validateWorklogSurface(root, await getConfig(root));
       const handoffIssues = issues.filter((i) => i.code === "R-HANDOFF-INCOMPLETE");
       expect(handoffIssues.length).toBe(1);
-      expect(handoffIssues[0]?.message).toContain("Constraints");
-      expect(handoffIssues[0]?.message).toContain("Open Questions");
-      expect(handoffIssues[0]?.message).toContain("References");
+      expect(handoffIssues[0]?.message).toContain("Constraints to preserve");
+      expect(handoffIssues[0]?.message).toContain("Open questions");
+      expect(handoffIssues[0]?.message).toContain("References to consult first");
     } finally {
       await rm(root, { recursive: true, force: true });
     }
