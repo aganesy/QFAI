@@ -242,7 +242,7 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     expect(routing).toContain("mandatory_agents: [delivery-planner, qa-strategist]");
 
     expect(configure).toContain(
-      "Use `.qfai/assistant/steering/agent-routing.yml` as the routing SSOT.",
+      "Use `.qfai/assistant/manifest/agent-routing.yml` as the routing SSOT.",
     );
     expect(configure).toContain(
       "First required delegation / Capability Probe: `delivery-planner` in the `analysis` phase.",
@@ -255,7 +255,7 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     );
 
     expect(verify).toContain(
-      "Use `.qfai/assistant/steering/agent-routing.yml` as the routing SSOT.",
+      "Use `.qfai/assistant/manifest/agent-routing.yml` as the routing SSOT.",
     );
     expect(verify).toContain(
       "First required delegation / Capability Probe: `delivery-planner` in the `plan` phase.",

@@ -36,5 +36,7 @@ jobs:
           node-version: "20"
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - name: build qfai
+        run: pnpm -C packages/qfai build
       - name: qfai validate
-        run: pnpm -C packages/qfai exec qfai validate --profile full --fail-on error --root ../..
+        run: node packages/qfai/dist/cli/index.mjs validate --profile full --fail-on error
