@@ -87,9 +87,9 @@ Approval-required ops in Stage 1 above MUST go through AskUserQuestion.
   - `.qfai/assistant/skills/qfai-sdd/references/contract-artifact-rules.md`
   - `.qfai/assistant/skills/qfai-sdd/references/sdd-triage.md`
   - `.qfai/assistant/skills/qfai-prototyping/references/evidence-requirements.md`
-  - `.qfai/assistant/steering/agent-catalog.yml`
-  - `.qfai/assistant/steering/agent-routing.yml`
-  - `.qfai/assistant/steering/review-profiles.yml`
+  - `.qfai/assistant/manifest/agent-catalog.yml`
+  - `.qfai/assistant/manifest/agent-routing.yml`
+  - `.qfai/assistant/manifest/review-profiles.yml`
 
 ## Inputs Priority
 
@@ -125,7 +125,7 @@ Stage minimum roles:
 - `orchestrator` integrates outputs and presents for confirmation; never drafts the primary artifact and never self-approves.
 - `completion-reviewer` is delegated independently. Required field: `Status (PASS/REVISE)`.
 
-Reviewer routing is fixed by `.qfai/assistant/steering/agent-routing.yml` and `.qfai/assistant/steering/review-profiles.yml`.
+Reviewer routing is fixed by `.qfai/assistant/manifest/agent-routing.yml` and `.qfai/assistant/manifest/review-profiles.yml`.
 
 ### Reviewer Gate (MUST)
 
@@ -268,3 +268,9 @@ When this skill completes, provide a final user-facing message enumerating next 
 - Test-first path: `/qfai-atdd`.
 - Spec pack needs correction: rerun `/qfai-sdd` and regenerate evidence.
 - Confirm contracts referenced by `_policies/05_Contracts.md` exist under `.qfai/contracts/**`.
+
+
+project_memory:
+  - Phase order is fixed: Stage 0 Preflight → Stage 1 Triage → Phase 0 Contracts-first → Phase 1 Outline → Phase 2 Slice → Phase 3 Plan finalize → Phase 4 Delta update; do not reorder.
+  - Append-first is the Stage 1 default: UPDATE on an active spec whose subject tokens overlap; CREATE only when there is zero overlap AND the REQ adds a new CAP-NNNN, registered before the CREATE row.
+  - Phase 0 DESIGN.md Freeze is mandatory for UI-bearing targets; .qfai/contracts/design/DESIGN.md.lock.yaml is the brand-lock SSOT.

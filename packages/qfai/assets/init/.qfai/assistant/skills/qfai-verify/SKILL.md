@@ -100,7 +100,7 @@ Use the shared schema.
   - Drift Protocol enforced;
   - test-layer policy enforced against `test-layers.md`.
   - gate counts and ratios are signals, not gates.
-- Route specialist reviewers from `.qfai/assistant/steering/agent-routing.yml`.
+- Route specialist reviewers from `.qfai/assistant/manifest/agent-routing.yml`.
 - Default verify review set:
   - `qa-gatekeeper`
   - `completion-reviewer`
@@ -162,7 +162,7 @@ Run quality gates and produce evidence that the change is correct and safe.
 - If failing, produce an actionable fix list (not vague).
 - Static policy checks:
   - `.qfai/assistant/instructions/drift-protocol.md` exists.
-  - `.qfai/assistant/steering/test-layers.md` exists.
+  - `.qfai/assistant/catalog/test-layers.md` exists.
   - all `.qfai/assistant/skills/*/SKILL.md` include `[DRIFT-PROTOCOL:MANDATORY]`.
   - reviewer-related agent docs include drift-protocol and test-layer review viewpoints.
 
@@ -216,7 +216,7 @@ Use the platform's native sub-agent delegation mechanism for Claude Code, GitHub
 
 ### Delegation order
 
-Use `.qfai/assistant/steering/agent-routing.yml` as the routing SSOT.
+Use `.qfai/assistant/manifest/agent-routing.yml` as the routing SSOT.
 
 - First required delegation / Capability Probe: `delivery-planner` in the `plan` phase.
 - Then follow routed phases in order: `plan` (`delivery-planner`, `qa-strategist`) -> `execution` (`devops-ci-engineer`) -> `review` (`qa-gatekeeper`, `completion-reviewer`, optional `implementation-reviewer` when code fixes are in scope).
@@ -507,3 +507,9 @@ When this skill is complete, provide a final user-facing completion message and 
   Action: return to the owning skill, fix the issue, then rerun `/qfai-verify`.
 - Need a report artifact:
   Action: run `qfai report` after validation outputs are up to date.
+
+
+project_memory:
+  - Verify is the full-scan approval gate; per-skill validate runs (sdd/atdd/tdd) are signals, the verify gate is the binding pass.
+  - Completion requires zero errors across all profiles AND zero leakage in the distributed-surface guard AND a clean branch version pin.
+  - Verify never rewrites artifacts; it only reads and reports. Drift fixes belong to /qfai-sdd / /qfai-implement / /qfai-atdd respectively.

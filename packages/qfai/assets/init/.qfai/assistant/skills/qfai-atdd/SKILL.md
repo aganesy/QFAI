@@ -115,10 +115,10 @@ Use the shared schema.
   - Coverage Depth Matrix is reviewed and no unjustified `X` cells remain;
   - validation evidence exists and `qfai validate --profile atdd --fail-on error` passes;
   - Drift Protocol is enforced;
-  - test-layer policy is checked against `.qfai/assistant/steering/test-layers.md`;
+  - test-layer policy is checked against `.qfai/assistant/catalog/test-layers.md`;
   - coverage floors and ratios are signals, not gates;
   - `scenario.feature` and coverage ledgers remain optional legacy inputs, not completion gates.
-- Route specialist reviewers from `.qfai/assistant/steering/agent-routing.yml`.
+- Route specialist reviewers from `.qfai/assistant/manifest/agent-routing.yml`.
 - Default ATDD review set:
   - `completion-reviewer`
   - `qa-gatekeeper`
@@ -373,3 +373,9 @@ When this skill is complete, provide a final user-facing completion message and 
   Action: run unified TDD micro-cycle (Red/Green/Refactor) one test at a time from test-list.md.
 - Acceptance tests need fixes: rerun `/qfai-atdd`.
   Action: close uncovered `US` / `TC` / `CON-API` obligations and rerun validation.
+
+
+project_memory:
+  - Coverage obligations stay layer-pinned: tests/e2e/** must cover all required US; tests/integration/** all required TC; tests/api/** all required CON-API.
+  - Forbidden references guard the test-layer policy: tests/api/** must not carry QFAI:SPEC-XXXX:TC-YYYY annotations; tests/e2e/** likewise.
+  - Floor / ratio signals are planning hints, never gates; legacy scenario.feature / coverage ledger files remain optional inputs.

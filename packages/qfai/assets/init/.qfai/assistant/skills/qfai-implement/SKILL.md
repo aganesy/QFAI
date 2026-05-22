@@ -162,7 +162,7 @@ Follow `.qfai/assistant/instructions/shared-skill-delegation-baseline.md`.
 
 ### Formal Sub-agent Roster
 
-This skill delegates through the centralized routing policy in `.qfai/assistant/steering/agent-routing.yml`.
+This skill delegates through the centralized routing policy in `.qfai/assistant/manifest/agent-routing.yml`.
 
 - `delivery-planner`
   - reads `test-list.md`, selects the next pending item, enforces Red-Green-Refactor ordering, and is the sole authority for parallel dispatch decisions
@@ -205,7 +205,7 @@ Use the shared schema (per-row `Status (PASS/REVISE)` column, reviewer response 
 
 - Delegate final completion gate to an independent Reviewer.
 - Reviewer response must include `Result: PASS | REVISE` (matching shared-skill-delegation-baseline.md#reviewer-response-template).
-- Reviewer checks Drift Protocol compliance and alignment with `.qfai/assistant/steering/test-layers.md`.
+- Reviewer checks Drift Protocol compliance and alignment with `.qfai/assistant/catalog/test-layers.md`.
 - Test volume floors/ratios are not gates; they are signals.
 - Do not declare DONE until Reviewer returns `PASS`; otherwise apply `REVISE`.
 
@@ -348,3 +348,9 @@ When this skill is complete, provide a final user-facing completion message and 
   Action: update spec artifacts if implementation revealed scope changes.
 - Acceptance tests: `/qfai-atdd`.
   Action: ensure acceptance test coverage aligns with implementation.
+
+
+project_memory:
+  - One TDD item at a time from test-list.md; status lifecycle is forward-only (todo → red → green → refactor → done); exception requires DR-ID.
+  - Fresh RED + GREEN command/result evidence is mandatory per item; status-only evidence (e.g. "Status: PASS") is rejected.
+  - UI-affecting items require product-surface-reviewer prototype-parity PASS before the item can transition to done.

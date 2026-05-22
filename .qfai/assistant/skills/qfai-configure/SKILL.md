@@ -90,9 +90,9 @@ Use the shared schema.
   - required roles were delegated;
   - doctor evidence exists: `qfai doctor --fail-on error` completed without failing checks;
   - Drift Protocol enforced;
-  - test-layer policy enforced against `.qfai/assistant/steering/test-layers.md`;
+  - test-layer policy enforced against `.qfai/assistant/catalog/test-layers.md`;
   - tool-count heuristics are signals, not gates.
-- Route specialist reviewers from `.qfai/assistant/steering/agent-routing.yml`.
+- Route specialist reviewers from `.qfai/assistant/manifest/agent-routing.yml`.
 - Default configure review set:
   - `completion-reviewer`
   - `qa-gatekeeper`
@@ -263,7 +263,7 @@ Use the platform's native sub-agent delegation mechanism for Claude Code, GitHub
 
 ### Delegation order
 
-Use `.qfai/assistant/steering/agent-routing.yml` as the routing SSOT.
+Use `.qfai/assistant/manifest/agent-routing.yml` as the routing SSOT.
 
 - First required delegation / Capability Probe: `delivery-planner` in the `analysis` phase.
 - Then follow routed phases in order: `analysis` (`delivery-planner`, `qa-strategist`) -> `config` (`devops-ci-engineer`) -> `review` (`completion-reviewer`, `qa-gatekeeper`).

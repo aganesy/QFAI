@@ -38,7 +38,14 @@ export async function validateAssistantTreeMigration(
     } catch {
       dirEntries = [];
     }
-    const PRE_RECUT_DIRS = new Set(["agents", "skills", "instructions"]);
+    const PRE_RECUT_DIRS = new Set([
+      "agents",
+      "skills",
+      "instructions",
+      // skills.local/ is the protected user-customization surface
+      // (REQ-0003 in spec-0003).
+      "skills.local",
+    ]);
     for (const entry of dirEntries) {
       if (!entry.isDirectory()) continue;
       if (isAssistantLayer(entry.name)) continue;
