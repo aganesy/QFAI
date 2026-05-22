@@ -4,8 +4,6 @@
 
 ## [Unreleased]
 
-## [1.9.0] - 2026-05-23
-
 ### Added (assistant-layer recut + steering work-log surface — CHG-003)
 
 - 4-layer assistant-tree: `.qfai/assistant/{constitution,manifest,catalog,process}/`
