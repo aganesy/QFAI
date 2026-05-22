@@ -70,6 +70,17 @@
 - REQ-0020: deterministic validators retained from v1.7.16 stay under validate when still present in code
 - REQ-0021: `validateDesignContractReadiness` checks `exploration-brief.yaml`, `evaluation-rubric.yaml`, `selected-direction.yaml`, `design-system.yaml`, and UI contract presence using `QFAI-DCON-*`
 - REQ-0022: `runCanonicalUixValidators` is limited to direct discussion-pack validation and is not the repo-root downstream primary path
+- REQ-0023: 4-layer asset-tree enforcement (v1.9.0) - `qfai validate` は `.qfai/assistant/` 直下の layer 名が `{constitution, manifest, catalog, process}` の 4 種類に限定されることを検証する。それ以外 (旧 `steering/` 等) は warning として surface する
+- REQ-0024: work-log frontmatter schema validation (v1.9.0) - プロジェクトルートの `.qfai/steering/*.md` (work-log entry) の YAML frontmatter を schema 検証。違反は `W-WORKLOG-SCHEMA` (severity warning, non-blocking)
+- REQ-0025: Reviewer-Gate drift findings (v1.9.0) - reviewer sub-agent 出力に `R-WORKLOG-DRIFT` / `R-REJECTED-READOPT` が含まれる場合、`justification:` field 非空を要求する (severity error, advisory-failing)
+- REQ-0026: decision-promotion gate (v1.9.0) - `W-PENDING-PROMOTION` finding + 専用 section を validate report に出力。`07_Decisions.md` row + entry archive + `promoted-to` back-ref のすべてが揃った時点で satisfied
+- REQ-0027: stale-entry surfacing (v1.9.0) - `.qfai/steering/*.md` で `status: active` かつ `updated` が 90 日以上前のエントリに `W-WORKLOG-STALE`
+- REQ-0028: link-integrity validation (v1.9.0) - work-log entry の `links: [spec-NNNN, discussion-*, entry-XXXX]` を resolve。未解決は `W-WORKLOG-BROKEN-LINK`
+- REQ-0029: `D-DEPRECATED-PATH` warning (v1.9.0) - 旧 `.qfai/assistant/steering/` レイアウト検出時に出力。本文で sunset minor version を明示。sunset 到達時に error に escalate
+- REQ-0030: SKILL.md `project_memory:` declaration enforcement (v1.9.0) - すべての `qfai-*` skill SKILL.md は `project_memory:` YAML block を宣言。未宣言 path への read は reject
+- REQ-0031: `R-HANDOFF-INCOMPLETE` finding (v1.9.0) - `kind: handoff` work-log entry の本文に 5 必須セクション (State / Next action / Constraints / OQs / References) のいずれかが欠落していれば error
+- REQ-0032: `W-SKILL-DOC-BROKEN-REF` (v1.9.0) - SKILL.md 内の reference が新 layout で解決しない場合の warning
+- REQ-0033: `W-USER-EDIT-PRESERVED` informational pass-through (v1.9.0) - `qfai init --upgrade-assistant-tree` がユーザー編集を preserve した際の informational note を validate 側でも認識可能にする
 - REQ-0023: `validateBreakthroughEvidence` checks `.qfai/evidence/breakthrough.json` and branch execution evidence when trigger=true
 - REQ-0024: downstream skill prompt checks use read order `spec -> exploration-brief -> reference-pool -> evaluation-rubric -> evaluator-calibration -> selected-direction -> design-system -> ui contracts`
 - REQ-0025: `qfai validate --fail-on error` の DCON-030 が root `DESIGN.md` の存在 / 構造 (color / typography / radius / shadow token tables) を検証する
@@ -82,10 +93,10 @@
 
 ## Entry points
 
-- US range in this spec: US-0004-0001..US-0004-0027
-- AC range: AC-0004-0001..AC-0004-0014
-- BR range: BR-0004-0001..BR-0004-0013
-- EX range: EX-0004-0001..EX-0004-0012
-- TC range: TC-0004-0001..TC-0004-0014
+- US range in this spec: US-0004-0001..US-0004-0033
+- AC range: AC-0004-0001..AC-0004-0025
+- BR range: BR-0004-0001..BR-0004-0024
+- EX range: EX-0004-0001..EX-0004-0023
+- TC range: TC-0004-0001..TC-0004-0025
 - Primary actors: QA engineer, AI agent, CI pipeline
 - Notes: validate is the machine gate for current skill-first, contract-first downstream
