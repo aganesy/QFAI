@@ -1508,3 +1508,84 @@ discussion-20260416023323603（v1.7.15 rev8 leaf-field ref grammar closure）、
 - Decision: full-harness の active evidence schema は `reviewerScores[]`、`allReviewerAxesPerfect100`、snapshot-based `scoringTrace[]`、`iterationBudget` とする
 - Decision: `weightedTotal` / `deltaFromPrevious` は historical wording とし、current convergence contract には使わない
 - Rationale: `packages/qfai/src/core/harness/history.ts` / `resultWriter.ts` / `types.ts` の current implementation に同期するため
+
+### DR-0250..0260: CHG-003 — Assistant-layer Recut + Work-log Surface (2026-05-22)
+
+Source: discussion-20260522081618995 OQ-0001..0012 (10 resolved, 2 deferred)。
+
+#### DR-0250: Promotion target は per-spec `07_Decisions.md` 単独 (OQ-0001 resolved)
+
+- Decision: `kind: decision` work-log entry の promote target は per-spec `07_Decisions.md` のみ。project-level MADR `decisions/` directory は採用しない。
+- Rationale: 単一 SSOT per spec を保つ。並列 decision register を増やさない。
+- Rejected option: project-level MADR `decisions/` 新設 (parallel SSOT を増やすため)。
+- Source: user via AskUserQuestion 2026-05-22。
+
+#### DR-0251: 4-conceptual-layer + Process partition 採用 (OQ-0002 resolved)
+
+- Decision: `.qfai/assistant/{constitution,manifest,catalog,process,agents,skills}/` の 6 entry に再分割。`steering/` は project-root に新設し work-log surface とする。
+- Rationale: Spec Kit (Constitution) + Kiro (Manifest/steering) + Cline (scratchpad) + AAIF の industry convergence。bulk-rename Option (current steering → manifest) は 12 files 中 8 を mis-classify するため reject。
+- Rejected options: (B) instructions/ + manifest/ の 2-directory bulk rename; (C) flat assistant/ no layers。
+- Source: requirements-analyst, SRC-0011W/0012W/0013W。
+
+#### DR-0252: Work-log scope は project-level 単独 (OQ-0003 resolved)
+
+- Decision: work-log surface は project-root `.qfai/steering/` 単独。per-spec scope は frontmatter `scope: spec-NNNN` で表現する。
+- Rationale: per-spec path proliferation を回避。cross-spec memos も frontmatter で表現可能。
+- Rejected option: per-spec `.qfai/specs/spec-NNNN/steering/` を併設 (path proliferation のため)。
+- Source: user via AskUserQuestion 2026-05-22。
+
+#### DR-0253: `spec_required_files.json` を catalog/ へ relocate (OQ-0004 resolved)
+
+- Decision: 既存 `.qfai/assistant/manifest/spec_required_files.json` を `.qfai/assistant/catalog/` へ移す。新 Manifest layer は project-spine 専用。
+- Rationale: registry artifact は Catalog の責務であり、Manifest (project-spine) と分離する。
+- Rejected option: 旧 `manifest/` に放置 (new Manifest 意味と衝突)。
+- Source: user via AskUserQuestion 2026-05-22。
+
+#### DR-0254: `.qfai/steering/` は `.gitignore` 既定 exclude (OQ-0005 resolved)
+
+- Decision: work-log surface は default untracked。project が opt-in する場合は `.gitignore` override で commit 可能。
+- Rationale: accidental secret commit に対する defense-in-depth。共有 resume context が欲しい team は opt-in できる。
+- Rejected option: default tracked (secret leak リスク)。
+- Source: requirements-analyst, SRC-0001。
+
+#### DR-0255: 旧 path の deprecation window は 1 minor release (OQ-0006 resolved)
+
+- Decision: validator は旧 layout と新 layout を 1 minor release の間並行受理し、`D-DEPRECATED-PATH` warning を発する。次 minor で旧 path 受理を削除し、warning を error に escalate。
+- Rationale: 過去 ATDD migration cadence (`process/migrations/v1.4.27-atdd-alignment.md`) と整合。
+- Rejected option: hard-cut (1 release 内に旧受理削除; consumer の breaking 大きい)。
+- Source: requirements-analyst, prior migration memo。
+
+#### DR-0256: Work-log entry は YAML frontmatter (OQ-0009 resolved)
+
+- Decision: `.qfai/steering/*.md` の metadata は YAML frontmatter。
+- Rationale: 既存 `qfai-*` SKILL.md convention と整合。`closure-rationale` のような prose field と相性良。
+- Rejected option: TOML (tool ecosystem が薄い)、JSON (prose body と分離が必要)。
+- Source: requirements-analyst, SRC-0009。
+
+#### DR-0257: Entry filename = `<id>.md` で `id` は kebab-case ASCII (OQ-0010 resolved)
+
+- Decision: filename stem と frontmatter `id` を match させる。
+- Rationale: `ls` で時系列順、unique-enough、人間可読。
+- Rejected option: UUID filename (人間可読性低)、`YYYY-MM-DD/<slug>.md` (per-day dir 増加)。
+- Source: requirements-analyst, SRC-0001。
+
+#### DR-0258: Reviewer drift findings は severity error + 必須 justification (advisory-failing) (OQ-0011 resolved)
+
+- Decision: `R-WORKLOG-DRIFT` / `R-REJECTED-READOPT` は severity error だが `justification:` field 非空を必須とする。`qfai validate` は justification 欠落の `R-*` finding を reject。
+- Rationale: 自然言語 heuristic な drift 検出を hard-block にすると false-positive で trust が崩れる。warning-only にすると無視される。advisory-failing で中庸を取る。
+- Rejected option: warning-only (無視される); hard-block (false-positive で trust 崩れる)。
+- Source: requirements-analyst, SRC-0001。
+
+#### DR-0259: `D-DEPRECATED-PATH` は window 中 warning / sunset 以降 error (OQ-0012 resolved)
+
+- Decision: window 中は warning、sunset version で error に escalate。warning text には sunset version を毎回名前で含める (NFR-0003)。
+- Rationale: day 1 error は installed copies を brick する。warning のみは無視される。version-aware 段階的移行が安全。
+- Rejected option: day 1 error (consumer の installed copies が動かなくなる)。
+- Source: requirements-analyst, SRC-0001。
+
+#### DR-0260: AGENTS.md 整合と auto-archival は deferred (OQ-0007 + OQ-0008 deferred)
+
+- Decision: AGENTS.md / `CLAUDE.md` symlink 議論は別 `/qfai-discussion` invocation に切り出す (target 2026-09-30)。`.qfai/steering/` 自動アーカイブは post-v1 dogfooding review (target 2026-12-31) まで `qfai validate` の `W-WORKLOG-STALE` surface で代用。
+- Rationale: 両者は独立した discovery scope を持つ。本 pack に bundle すると atomicity を超える。
+- Source: requirements-analyst, deferred row in `13_Deferred.md`。
+

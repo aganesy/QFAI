@@ -193,3 +193,18 @@ The v1.7.16 slice recorded a historical validator contract that made the legacy 
 
 - Approved By: yusuke_senaga
 - Notes: subjects originated from former spec-0017 (Prototyping v2.0 / UX-loop redesign decomposition). No new Test-Cases are added in this CHG per the parent plan; AC-level coverage will be paired with implementation-side test work in a downstream Phase. The validator-side enforcement of the new evidence layout is owned by spec-0004's evidence-schema validators.
+
+## Triage
+
+| Source                                                       | Subject                                                                                                                                       | Existing Spec | Operation | Sub-op | Approved By | Rationale                                                                                       |
+| ------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------- | ------------- | --------- | ------ | ----------- | ----------------------------------------------------------------------------------------------- |
+| REQ-0005, REQ-0010, REQ-0014, REQ-0015, REQ-0017 (CHG-003)   | `/qfai-verify` SKILL.md に `project_memory:` 宣言追加。verify report に open work-log 数 / stale 数 / broken-link 数を surface する。           | spec-0014     | UPDATE    | APPEND | pin-implied | Review-phase skill (REQ-0005 scope)。subject-token overlap (`skill`, `verify`)。                |
+
+## CHG-003 (v1.9.0) — Work-log Surfacing in Verify Report
+
+- Discussion pack: `.qfai/discussion/discussion-20260522081618995/`
+- Operation: UPDATE:APPEND
+- Obligation: `/qfai-verify` SKILL.md MUST gain a `project_memory:` block. Verify report MUST include a `## Work-log State` section enumerating: open entries (`status` ∈ `{active, handoff}`), stale entries (`W-WORKLOG-STALE` from REQ-0014), broken-link entries (`W-WORKLOG-BROKEN-LINK` from REQ-0015), and incomplete handoff entries (`R-HANDOFF-INCOMPLETE` from REQ-0017). Verify itself does not author work-log entries (REQ-0005 contract is read+cite).
+- Cascade: SKILL.md `project_memory:` validated by spec-0004.
+- Source: REQ-0005, REQ-0010, REQ-0014, REQ-0015, REQ-0017
+

@@ -52,3 +52,33 @@ This spec consolidates the following archived specs:
   - `_policies/06_Glossary.md` の Review Pack 定義に「default gitignore」の注記を追加
   - テストは `packages/qfai/tests/cli/init.test.ts` に 2 ケース追加済み（legacy migration, review-\*/ ignore）
 - migration: v1.7.17 以前の managed block を持つプロジェクトは `qfai init` 再実行で自動的に新形式へ移行。既コミット済みの `review-*/` を untrack したい場合は `git rm -r --cached .qfai/review/review-*/` を別途実行
+
+## Triage
+
+| Source                                                                                              | Subject                                                                                                                                                                       | Existing Spec | Operation | Sub-op | Approved By | Rationale                                                                                                                                          |
+| --------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- | --------- | ------ | ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| REQ-0001, REQ-0002, REQ-0008, REQ-0009, REQ-0011, REQ-0012, REQ-0013, REQ-0018, NFR-0001, NFR-0002 (CHG-003) | `qfai init` で新 layer tree を seed、project-root `.qfai/steering/` を seed、`--upgrade-assistant-tree` flag を実装、migration memo を author、`assistantPaths.ts` SSOT を参照 | spec-0003     | UPDATE    | APPEND | pin-implied | Primary capability owner (CAP-0003)。subject-token overlap (`init`, `seed`, `assistant`)。`packages/qfai/src/cli/commands/init.ts` が直接実装する。 |
+
+## CHG-003 (v1.9.0) — Assistant-layer Recut + Work-log Surface Seed
+
+- Discussion pack: `.qfai/discussion/discussion-20260522081618995/`
+- Contract: `.qfai/contracts/cli/qfai-init.md` (CLI-INIT、Contract Index)、`.qfai/contracts/cli/worklog-entry.schema.md` (CLI-WLOG)
+- Operation: UPDATE:APPEND
+- New REQs (to be appended to `01_Spec.md#Relevant Requirements` in this CHG):
+  - REQ-0018: 4-layer asset-tree seeding (`constitution/`, `manifest/`, `catalog/`, `process/`)
+  - REQ-0019: project-root `.qfai/steering/` seeding (`README.md` + `.gitkeep` + `_templates/entry.md`); user-authored entries preserved on reinit
+  - REQ-0020: `qfai init --upgrade-assistant-tree` one-shot migration helper; user edits preserved via `W-USER-EDIT-PRESERVED`
+  - REQ-0021: migration memo authored at `.qfai/assistant/process/migrations/v<X.Y.Z>-assistant-layer-recut.md` (immutable after commit per OC-53)
+  - REQ-0022: `assistantPaths.ts` SSOT module is the sole producer of distributed assistant-tree path strings consumed by `init`; hard-coded literals lint-rejected (NFR-0001)
+  - REQ-0023: backwards-compatibility — old-layout files remain readable for exactly one minor release window (NFR-0002); sunset version named in `D-DEPRECATED-PATH` warning text
+- New US (placeholder for next per-spec SDD pass):
+  - US-0003-0016: 4-layer asset-tree seed + work-log surface seed (REQ-0018, REQ-0019)
+  - US-0003-0017: `--upgrade-assistant-tree` migration helper (REQ-0020)
+  - US-0003-0018: migration memo authoring (REQ-0021)
+- Cascade:
+  - spec-0004 references `assistantPaths.ts` for validate-side path strings (companion row in spec-0004 09_delta)
+  - downstream skill specs (spec-0008/0010/0011/0012/0013/0014/0016) consume the new layer paths via `project_memory:` block (companion rows in each spec)
+- Out-of-scope (this spec): validation of frontmatter schema (spec-0004); Reviewer-Gate findings (spec-0015); skill-side `project_memory:` block (each skill spec)
+- Implementation-phase 詳細 US/AC/BR/EX/TC は次回の per-spec SDD pass で append される (本 CHG では Triage + REQ 追加に留める)
+- Source: REQ-0001, REQ-0002, REQ-0008, REQ-0009, REQ-0011, REQ-0012, REQ-0013, REQ-0018, NFR-0001, NFR-0002
+

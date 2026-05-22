@@ -15,13 +15,13 @@
 
 ### Triage
 
-| Source                       | Subject                                     | Existing Spec | Operation     | Approved By   | Rationale                                  |
-| ---------------------------- | ------------------------------------------- | ------------- | ------------- | ------------- | ------------------------------------------ |
-| spec-0017 REQ-0017-0015      | DCON-030 / 031 / 032 validators             | spec-0004     | UPDATE:APPEND | yusuke_senaga | DESIGN.md / lock / mirror gate is validate |
-| spec-0017 TC-0017-0015..0017 | prototypingEvidenceV3 schema validator      | spec-0004     | UPDATE:APPEND | yusuke_senaga | review.json schema gate is validate        |
-| spec-0017 AC-0017-0018       | layoutAntiPatternsDetected schema validator | spec-0004     | UPDATE:APPEND | yusuke_senaga | lap-\* whitelist enforcement is validate   |
-| spec-0017 AC-0017-0019       | designMdViolations schema validator         | spec-0004     | UPDATE:APPEND | yusuke_senaga | violation shape gate is validate           |
-| spec-0017 AC-0017-0020       | `findDesignMdViolations` purity contract    | spec-0004     | UPDATE:APPEND | yusuke_senaga | pure-fn determinism is validate            |
+| Source                       | Subject                                     | Existing Spec | Operation | Sub-op | Approved By   | Rationale                                  |
+| ---------------------------- | ------------------------------------------- | ------------- | --------- | ------ | ------------- | ------------------------------------------ |
+| spec-0017 REQ-0017-0015      | DCON-030 / 031 / 032 validators             | spec-0004     | UPDATE    | APPEND | yusuke_senaga | DESIGN.md / lock / mirror gate is validate |
+| spec-0017 TC-0017-0015..0017 | prototypingEvidenceV3 schema validator      | spec-0004     | UPDATE    | APPEND | yusuke_senaga | review.json schema gate is validate        |
+| spec-0017 AC-0017-0018       | layoutAntiPatternsDetected schema validator | spec-0004     | UPDATE    | APPEND | yusuke_senaga | lap-\* whitelist enforcement is validate   |
+| spec-0017 AC-0017-0019       | designMdViolations schema validator         | spec-0004     | UPDATE    | APPEND | yusuke_senaga | violation shape gate is validate           |
+| spec-0017 AC-0017-0020       | `findDesignMdViolations` purity contract    | spec-0004     | UPDATE    | APPEND | yusuke_senaga | pure-fn determinism is validate            |
 
 ### Operations
 
@@ -40,3 +40,36 @@
 - spec-0017 番号は永久 gap として予約 (`_policies/11_Slice-Policy.md` §ID 安定性ルール 5)。
 - 実装側 error code 整合: AC-0004-0011/0012/0013 は `QFAI-PROT-002` (per-iter shape) で発火 (実装は schema-v3-violation / lap-whitelist-violation / designMdViolations-shape-violation を 1 つの error code に集約)。
 - 残課題 (Phase 8): (a) 実装の `designMdViolations` shape は `{kind, found}`、spec 文面の `{category, expected, found, location}` と齟齬。(b) `findDesignMdViolations(html, designMd)` 関数は現実装に存在しない。両者は別 spec / 別 phase で migration 予定。
+
+## Triage
+
+| Source                                                                                                      | Subject                                                                                                                                                                                | Existing Spec | Operation | Sub-op | Approved By | Rationale                                                                                                                       |
+| ----------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- | --------- | ------ | ----------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| REQ-0001, REQ-0003, REQ-0006, REQ-0007, REQ-0008, REQ-0010, REQ-0014, REQ-0015, REQ-0018, NFR-0008 (CHG-003) | `qfai validate` が 4-layer asset-tree enforcement、work-log frontmatter schema、drift/promote/stale/link checks、SKILL.md `project_memory:` 宣言、deprecated-path warning を実装する        | spec-0004     | UPDATE    | APPEND | pin-implied | Primary capability owner (CAP-0004)。subject-token overlap (`validate`, `assistant`, `path`)。新 finding code 10+ を追加。       |
+| REQ-0009 (CHG-003)                                                                                          | `assistantPaths.ts` SSOT module を validate 側 reader が import する (companion of spec-0003 row)                                                                                       | spec-0004     | UPDATE    | APPEND | pin-implied | Cross-spec module consumer。                                                                                                    |
+
+## CHG-003 (v1.9.0) — Assistant-layer Recut + Work-log Schema Validation
+
+- Discussion pack: `.qfai/discussion/discussion-20260522081618995/`
+- Contract: `.qfai/contracts/cli/qfai-validate.md` (CLI-VAL、Contract Index)、`.qfai/contracts/cli/worklog-entry.schema.md` (CLI-WLOG)
+- Operation: UPDATE:APPEND
+- New REQs (to be appended to `01_Spec.md#Relevant Requirements` in this CHG):
+  - REQ-0023: 4-layer asset-tree enforcement (`constitution/`, `manifest/`, `catalog/`, `process/` 以外を reject)
+  - REQ-0024: work-log frontmatter schema validation (`W-WORKLOG-SCHEMA`、severity warning、non-blocking)
+  - REQ-0025: Reviewer-Gate drift findings (`R-WORKLOG-DRIFT`, `R-REJECTED-READOPT` — severity error, advisory-failing with mandatory non-empty `justification:` field)
+  - REQ-0026: decision-promotion gate (`W-PENDING-PROMOTION` + dedicated section in validate report; satisfied when `07_Decisions.md` row + entry archive + `promoted-to` back-ref all present)
+  - REQ-0027: stale-entry surfacing (`W-WORKLOG-STALE` for `status: active` entries with `updated` older than 90 days)
+  - REQ-0028: link-integrity validation (`W-WORKLOG-BROKEN-LINK` for unresolved `links: [spec-NNNN, discussion-*, entry-XXXX]`)
+  - REQ-0029: `D-DEPRECATED-PATH` warning during deprecation window; warning text MUST name sunset version (REQ-0018 of pack); escalates to error at sunset (REQ-0008)
+  - REQ-0030: SKILL.md `project_memory:` declaration enforcement (REQ-0010); read of un-declared path is rejected
+  - REQ-0031: `R-HANDOFF-INCOMPLETE` Reviewer-Gate finding for `kind: handoff` entries missing any of 5 required sections (REQ-0017)
+  - REQ-0032: `W-SKILL-DOC-BROKEN-REF` for SKILL.md references that do not resolve in current layout (NFR-0008)
+  - REQ-0033: `W-USER-EDIT-PRESERVED` informational pass-through when `qfai init --upgrade-assistant-tree` preserves user edits
+- Cascade:
+  - companion row in spec-0003 (init seed → validate enforce)
+  - companion row in spec-0015 (Reviewer-Gate input bundle + finding `justification:` schema)
+  - companion rows in all skill specs (SKILL.md `project_memory:` block presence)
+- Out-of-scope (this spec): seeding (spec-0003); agent implementation of drift heuristic (spec-0015)
+- Implementation-phase 詳細 US/AC/BR/EX/TC は次回の per-spec SDD pass で append される
+- Source: REQ-0001, REQ-0003, REQ-0006, REQ-0007, REQ-0008, REQ-0010, REQ-0014, REQ-0015, REQ-0018, NFR-0008
+

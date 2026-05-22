@@ -9,7 +9,7 @@
 | Key                | Value                                                           |
 | ------------------ | --------------------------------------------------------------- |
 | プロダクト名       | QFAI (Quality-First AI)                                         |
-| バージョン         | v1.8.0 実装進行中                                               |
+| バージョン         | v1.9.0 SDD 進行中（v1.8.x 実装進行中）                          |
 | カテゴリ           | CLI ツール / 品質第一開発キット                                 |
 | ターゲットユーザー | AI コーディングエージェント（Claude, GitHub Copilot, Codex 等） |
 | 技術スタック       | TypeScript 5.6.3, Node.js >=18.0.0, pnpm monorepo, tsup, Vitest |
@@ -61,6 +61,7 @@
 | v1.7.18 (SDD 進行中)                     | Skill-First Prototyping Convergence — `/qfai-prototyping` を唯一の public interface に固定し、機械ゲートを `qfai validate` / `/qfai-verify` に移管。declared screen ごとに screenshot + HTML snapshot を mandatory evidence とし、旧 CLI/runtime/mode posture を superseded history に明示整理                                                                                                                                                  |
 | v1.8.0 (実装進行中)                      | Web Research Enhancement — CLI エージェントの Web リサーチ強化（標準パイプライン・MCP 統合・セキュリティ・評価・HITL）                                                                                                                                                                                                                                                                                                                          |
 | v1.8.1 (SDD 進行中)                      | Prototyping Evidence Model Sync — discussion/preflight の prototyping side artifact requiredness を撤廃し、full-harness evidence を reviewerScores/allReviewerAxesPerfect100 + snapshot scoringTrace + iterationBudget に再同期                                                                                                                                                                                                                 |
+| v1.9.0 (SDD 進行中)                      | Assistant-layer Recut + Steering Work-log Surface — `.qfai/assistant/{instructions,steering,manifest}` を 4 conceptual layers (`constitution/` + `manifest/` + `catalog/` + Process partition `process/`) に再分割。AI 作業ログ用 surface `.qfai/steering/` を project-root に新設し、frontmatter-typed entry schema + 11 種 `kind` enum + drift-prevention contract + decision-promotion gate (→ per-spec `07_Decisions.md`) + Reviewer-Gate `R-WORKLOG-DRIFT` / `R-REJECTED-READOPT` / `R-HANDOFF-INCOMPLETE` を導入。centralized `assistantPaths.ts` SSOT + one-minor-release deprecation window + `qfai init --upgrade-assistant-tree` 付き。 |
 
 ## Historical Appendix: v1.7.15 Initiative — packages/qfai single-PR completion
 

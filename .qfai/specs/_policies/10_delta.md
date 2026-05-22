@@ -608,3 +608,45 @@
   - 15-cycle 予算 / 単一 prototype 選定 / `mode` 概念 / capture pipeline / PNG・HTML evidence / scripted interaction transcript / AC selector synthesis / quantitative AC-pass% / per-cycle stdin prompts
 - ID 安定性: 既存 CAP / DEC / DR / REQ / AC / BR / EX / TC / TDD ID は renumber しない。新 REQ は spec-0012 内の append-only 連番（REQ-0012-0042..0054）。
 - 配布物影響: なし。`.qfai/contracts/cli/qfai-prototyping.md` は authoring zone であり配布物には含まれない (`packages/qfai/package.json#files` 外)。
+
+## 2026-05-22 — CHG-003 — Assistant-layer Recut + Steering Work-log Surface (cross-spec UPDATE:APPEND/MODIFY)
+
+- Discussion pack: `.qfai/discussion/discussion-20260522081618995/` (REQ-0001..0018, NFR-0001..0010; Reviewer Result `PASS` cycle 2)
+- Stage 1 approval requirement: all operations are UPDATE:APPEND / UPDATE:MODIFY — no AskUserQuestion-gated rows. Append-first fan-out across active specs per `_policies/11_Slice-Policy.md` §APPEND vs CREATE.
+- No new CAP. The work-log surface and assistant-tree re-cut are realized through existing capabilities (CAP-0003 init, CAP-0004 validate, skill capabilities, CAP-0015 agents).
+
+### Triage Table
+
+| Source                                                | Subject                                                                                                | Existing Spec    | Operation | Sub-op | Approved By | Rationale                                                                                                                          |
+| ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------ | ---------------- | --------- | ------ | ----------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| REQ-0001                                              | 4-layer asset tree (constitution/manifest/catalog/process + agents/skills) — structural definition     | spec-0001        | UPDATE    | APPEND | pin-implied | Asset-tree structural definition (CAP-0001); subject-token overlap (`asset`, `tree`, `assistant`). Append, no new capability.      |
+| REQ-0001, REQ-0002, REQ-0008, REQ-0011, REQ-0012, REQ-0013, REQ-0018, NFR-0001, NFR-0002 | `qfai init` seeds new tree + project-root work-log + migration memo + `--upgrade-assistant-tree`     | spec-0003        | UPDATE    | APPEND | pin-implied | Primary capability owner (CAP-0003 init). Full subject overlap (`init`, `seed`, `assistant`, `tree`).                              |
+| REQ-0001, REQ-0003, REQ-0006, REQ-0007, REQ-0008, REQ-0010, REQ-0014, REQ-0015, REQ-0018, NFR-0008 | `qfai validate` enforces new layout, frontmatter schema, drift/promote/stale/link checks; new finding codes | spec-0004        | UPDATE    | APPEND | pin-implied | Primary capability owner (CAP-0004 validate). Adds 10+ new finding codes; backwards-compatible deprecation-warn path.              |
+| REQ-0009, NFR-0001                                    | Centralized `assistantPaths.ts` SSOT module; reject hard-coded `assistant/...` strings                 | spec-0003, spec-0004 | UPDATE    | APPEND | pin-implied | Module is consumed by both init reader and validate reader; companion-row in both spec deltas.                                     |
+| REQ-0004, REQ-0005, REQ-0010, REQ-0016, REQ-0017      | `qfai-atdd` reads work-log before authoring; writes triggers; project_memory declaration               | spec-0008        | UPDATE    | APPEND | pin-implied | Implementation-phase skill (REQ-0005 scope). Subject overlap (`skill`, `atdd`).                                                    |
+| REQ-0010                                              | `qfai-discussion` project_memory declaration                                                          | spec-0010        | UPDATE    | APPEND | pin-implied | REQ-0005 Notes explicitly excludes discussion from worklog-write contract, but REQ-0010 declaration still applies.                  |
+| REQ-0004, REQ-0005, REQ-0010, REQ-0016, REQ-0017      | `qfai-implement` primary worklog-writer/reader; project_memory declaration                            | spec-0011        | UPDATE    | APPEND | pin-implied | Implementation-phase skill (REQ-0005 scope); most write-trigger surface area.                                                      |
+| REQ-0004, REQ-0005, REQ-0010, REQ-0016, REQ-0017      | `qfai-prototyping` worklog read before authoring; project_memory declaration                          | spec-0012        | UPDATE    | APPEND | pin-implied | Implementation-phase skill (REQ-0005 scope).                                                                                       |
+| REQ-0005 (Stage 0), REQ-0007 (promote-gate surfacing), REQ-0010 | `qfai-sdd` reads work-log in Stage 0; surfaces promote-gate state; project_memory declaration       | spec-0013        | UPDATE    | APPEND | pin-implied | REQ-0005 Notes: SDD MAY read, surfacing is required.                                                                                |
+| REQ-0005, REQ-0010, REQ-0014, REQ-0015, REQ-0017      | `qfai-verify` surfaces work-log state in verify reports; project_memory declaration                   | spec-0014        | UPDATE    | APPEND | pin-implied | Review-phase skill (REQ-0005 scope).                                                                                                |
+| REQ-0006, REQ-0017                                    | Reviewer-Gate `R-WORKLOG-DRIFT` / `R-REJECTED-READOPT` / `R-HANDOFF-INCOMPLETE` findings              | spec-0015        | UPDATE    | APPEND | pin-implied | Agent collective spec owns reviewer-subagent contracts. Findings carry `justification:` non-empty per REQ-0006 advisory-failing.    |
+| REQ-0010                                              | `qfai-research` project_memory declaration                                                            | spec-0016        | UPDATE    | APPEND | pin-implied | Skill is research-phase; not primarily worklog-write; declaration still applies.                                                    |
+| REQ-0009                                              | Contract Index entry for `assistantPaths.ts` module + CLI contract updates                            | `_policies/05_Contracts.md` | UPDATE | APPEND | pin-implied | Cross-spec contract index addition.                                                                                                 |
+| (no source)                                           | CAP success-metrics tightening for CAP-0003 / CAP-0004 (new responsibilities)                         | `_policies/03_Capabilities.md` | UPDATE | MODIFY | pin-implied | Success-metric cells gain assistant-tree-recut + worklog enforcement language. No new CAP rows; APPEND-style modification only.    |
+
+### Impact-Cascade Verification
+
+- All companion rows above are derived from REQ/NFR Source IDs declared by the discussion pack's `06_REQ.md` and `07_NFR.md`. Cross-spec impact is intrinsic (e.g., REQ-0009 affects both init and validate spec rows).
+- No row is approval-gated (UPDATE:APPEND / UPDATE:MODIFY only). `_policies/11_Slice-Policy.md` §AskUserQuestion テンプレート is therefore not triggered.
+- Deferred OQs from the pack (`OQ-0007` AGENTS.md, `OQ-0008` auto-archival) are mirrored to the touched specs' `08_Open-questions.md` files referencing the deferred row in `13_Deferred.md`.
+
+### ID Stability
+
+- No CAP / spec / REQ / AC / BR / EX / TC ID is renumbered.
+- New spec-level append IDs follow the per-spec `09_delta.md` append rules.
+
+### Distributed-Surface Impact
+
+- `.qfai/steering/` (work-log surface, project-root) is NOT in `packages/qfai/package.json#files`. Only the seeded `assets/init/.qfai/steering/{README.md,.gitkeep,_templates/entry.md}` (generic content, no internal IDs) is shipped.
+- All relocation under `.qfai/assistant/**` continues to ship as today; the layer 1/2/3 leakage scan covers the new layout because `package.json#files` is the input.
+

@@ -1,85 +1,107 @@
-# Preflight Summary — SDD Run (CHG-002, 2026-05-18)
+# Preflight Summary — SDD Run (assistant-layer recut, 2026-05-22)
 
 ## Status: PASS
 
 ## Input Selection
 
-| Priority | Source | Selected | Notes |
-|----------|--------|----------|-------|
-| P1 | `.qfai/assistant/instructions/*` | ✅ | Read |
-| P2 | `.qfai/assistant/steering/*` | ✅ | Read |
-| P3 | `.qfai/specs/_policies/03_Capabilities.md` + spec-0012 active summary | ✅ | Stage 1 Triage input |
-| P4 | `.qfai/specs/spec-0012/**` | ✅ | Target spec to UPDATE |
-| P5 | `.qfai/discussion/discussion-20260516144141078/**` | ✅ | Latest discussion pack (15 files, Disposition: open count = 0) |
+| Priority | Source                                                              | Selected | Notes                                                                                                          |
+| -------- | ------------------------------------------------------------------- | -------- | -------------------------------------------------------------------------------------------------------------- |
+| P1       | `.qfai/assistant/instructions/*`                                    | ✅       | Read                                                                                                           |
+| P2       | `.qfai/assistant/steering/*`                                        | ✅       | Read                                                                                                           |
+| P3       | `.qfai/specs/_policies/03_Capabilities.md` + all active spec heads  | ✅       | Stage 1 Triage input (16 active specs)                                                                         |
+| P4       | `.qfai/specs/spec-0003..0016/**`                                    | ✅       | Multiple target specs (append-first fan-out)                                                                   |
+| P5       | `.qfai/discussion/discussion-20260522081618995/**`                  | ✅       | Latest pack (15 files, `Disposition: open` count = 0, Reviewer Result `PASS`)                                  |
 
 ## Discussion Pack Readiness
 
-| Check | Status | Notes |
-|-------|--------|-------|
-| All 15 required files present | ✅ PASS | `01_Context.md` through `99_delta.md` |
-| No blocking OQ (open=0) | ✅ PASS | `11_OQ-Register.md` Disposition: open count = 0; OQ-0003 deferred to `13_Deferred.md` only |
-| Surface classification | ✅ PASS | `ui_bearing: false`, `primary_surface: non-ui` (skill-redefinition, not a UI design) |
-| `prototyping.yaml` requiredness | ✅ PASS | non-UI pack のため不要 |
-| Reviewer gate | ✅ PASS | requirements-reviewer = PASS (recorded in discussion pack `14_Review-Request.md` Reviewer Response section) |
+| Check                              | Status  | Notes                                                                                                    |
+| ---------------------------------- | ------- | -------------------------------------------------------------------------------------------------------- |
+| All 15 required files present      | ✅ PASS | `01_Context.md` through `99_delta.md`                                                                    |
+| No blocking OQ (open=0)            | ✅ PASS | `11_OQ-Register.md` open=0; 2 deferred entries (OQ-0007 AGENTS.md, OQ-0008 auto-archival) in `13_Deferred.md` |
+| Surface classification             | ✅ PASS | `ui_bearing: false`; UI sidecar family intentionally absent                                              |
+| `prototyping.yaml` requiredness    | ✅ PASS | non-UI pack — not required                                                                               |
+| Reviewer gate                      | ✅ PASS | `requirements-reviewer` = PASS (cycle 2; recorded in `14_Review-Request.md`)                             |
 
 ## Deferred OQ Handling (SDD-gated)
 
-| OQ-ID | Title | Gate | SDD Action |
-|-------|-------|------|------------|
-| OQ-0003 (discussion) | Airgapped run support | ops | Deferred — mirrored to `spec-0012/08_Open-questions.md` OQ-0012-0001 with mitigation (deterministic exit 66 + error message) and next-decision point (ops gate post-v1 dogfooding) |
-| OQ-0012-0002 | `prototyping.json#iterations[]` shape under per-spec namespace | implement | Recommendation `B` (nested `iterationsBySpec[specId][]`); blocks code landing in `iteration.ts` / `prototypingIterate.ts` |
-| OQ-0012-0003 | `pivotDirective` retention vs supersede | implement | Recommendation `A` (retain as per-(spec, cycle) generator hint); blocks reviewer-prompt / generator-prompt reference cleanup |
-| OQ-0012-0004 | `critique` field cleanup under `*Feel` schema | implement | Recommendation `A` (drop entirely); blocks `evaluatorReview.ts` schema implementation |
-| OQ-0012-0005 | Capture role removal in steering / agent-routing | implement | Recommendation: keep in catalog, remove only prototyping routing entry — follow-up via spec-0015 / `_policies/02_routing.md` |
+| OQ-ID   | Title                                                       | Gate    | SDD Action                                                                                                                              |
+| ------- | ----------------------------------------------------------- | ------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| OQ-0007 | AGENTS.md alignment / `CLAUDE.md` symlink                   | ops     | Out of scope this pack; logged in target spec open-question file referencing the deferred row in `13_Deferred.md`                       |
+| OQ-0008 | Auto-archival of stale work-log entries                     | ops     | Out of scope this pack; logged in target spec open-question file referencing the deferred row in `13_Deferred.md`                       |
 
-## Slice Decision (Stage 1 Triage)
+## Slice Decision (Stage 1 Triage — preview)
 
-| Spec | Action | Category | REQs Covered | Rationale |
-|------|--------|----------|--------------|-----------|
-| spec-0012 | UPDATE (MODIFY + APPEND + REMOVE) | skill | REQ-0001..0013 | full subject-token overlap; `/qfai-prototyping` redefinition per CHG-002 |
-| _policies/03_Capabilities.md | UPDATE:MODIFY | policy | CAP-0012 success-metrics cell | new model wording (multi-spec, 10-cycle, reviewer-driven Playwright, qualitative-only, stock-photo license, per-spec iter-dir) |
+The pack introduces 18 REQs and 10 NFRs distributed across multiple existing
+active specs. No new CAP is required; the work-log surface and assistant-tree
+re-cut are realized via existing capabilities (init seeds, validate enforces,
+skills read/write, agents drift-check).
 
-Slice policy per `_policies/11_Slice-Policy.md`: append-first; all changes UPDATE within an existing active spec; no CREATE / SPLIT / MERGE / SUPERSEDE. UPDATE:REMOVE rows obtained batch approval `user@2026-05-18` via AskUserQuestion.
+| Spec      | Action          | Category   | REQs (primary)                                                                                  | Rationale                                                                                                 |
+| --------- | --------------- | ---------- | ----------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| spec-0001 | UPDATE:APPEND   | structural | REQ-0001 (4-layer asset tree definition)                                                        | Asset-tree structural definition lives here; receives the new layer enum                                  |
+| spec-0003 | UPDATE:APPEND   | cli        | REQ-0001, REQ-0002, REQ-0008, REQ-0009, REQ-0011, REQ-0012, REQ-0013, REQ-0018                  | `qfai init` seeds the new tree, work-log surface, migration memo, and upgrade flag                        |
+| spec-0004 | UPDATE:APPEND   | cli        | REQ-0001, REQ-0003, REQ-0006, REQ-0007, REQ-0008, REQ-0010, REQ-0014, REQ-0015, REQ-0018, NFR-0008 | `qfai validate` enforces the new layout, frontmatter schema, drift/promote/stale/link checks              |
+| spec-0008 | UPDATE:APPEND   | skill      | REQ-0004, REQ-0005, REQ-0010, REQ-0016, REQ-0017                                                | `qfai-atdd` reads work-log before authoring; declares `project_memory`                                    |
+| spec-0010 | UPDATE:APPEND   | skill      | REQ-0010                                                                                        | `qfai-discussion` declares `project_memory`; not a worklog-writer per REQ-0005 notes                      |
+| spec-0011 | UPDATE:APPEND   | skill      | REQ-0004, REQ-0005, REQ-0010, REQ-0016, REQ-0017                                                | `qfai-implement` is a primary worklog-writer/reader                                                       |
+| spec-0012 | UPDATE:APPEND   | skill      | REQ-0004, REQ-0005, REQ-0010, REQ-0016, REQ-0017                                                | `qfai-prototyping` reads work-log; declares `project_memory`                                              |
+| spec-0013 | UPDATE:APPEND   | skill      | REQ-0005 (Stage 0 read), REQ-0007 (promote-gate surfacing), REQ-0010                            | `qfai-sdd` reads work-log in Stage 0; surfaces promote-gate state                                         |
+| spec-0014 | UPDATE:APPEND   | skill      | REQ-0005, REQ-0010, REQ-0014, REQ-0015, REQ-0017                                                | `qfai-verify` surfaces work-log state in verify reports                                                   |
+| spec-0015 | UPDATE:APPEND   | agent      | REQ-0006, REQ-0017                                                                              | Reviewer-Gate emits `R-WORKLOG-DRIFT` / `R-REJECTED-READOPT` / `R-HANDOFF-INCOMPLETE`                     |
+| spec-0016 | UPDATE:APPEND   | skill      | REQ-0010                                                                                        | `qfai-research` declares `project_memory`                                                                 |
+| _policies/03_Capabilities.md | UPDATE:MODIFY | policy | none (no new CAP)                                                                              | Success-metrics tightening for CAP-0001/0003/0004/0015 if needed; otherwise no change                     |
+| _policies/05_Contracts.md    | UPDATE:APPEND | policy | REQ-0009 (path SSOT), REQ-0006 (Reviewer Gate inputs)                                          | Contract Index gains CLI contract for `qfai init --upgrade-assistant-tree`                                |
+| _policies/10_delta.md        | UPDATE:APPEND | policy | cross-spec append fan-out record                                                               | Records the cross-spec change set                                                                          |
+
+Slice policy per `_policies/11_Slice-Policy.md`: **append-first**. All operations
+are UPDATE:APPEND or UPDATE:MODIFY within existing active specs. No CREATE /
+DELETE / SPLIT / MERGE / SUPERSEDE / UPDATE:REMOVE rows. No approval-gated
+operation → AskUserQuestion not required at triage step.
 
 ## Contracts Posture (Phase 0)
 
-- DB Contracts: 0 items (none-rationale: QFAI is CLI, no DB)
-- API Contracts: 0 items (none-rationale: QFAI is CLI, no HTTP/gRPC)
-- UI Contracts: 0 items (none-rationale: QFAI has no GUI; target is non-UI-bearing)
-- **CLI Contracts (this delta): 1 new** — `.qfai/contracts/cli/qfai-prototyping.md` documenting `iterate` / `certify` / `show-spec` public sub-commands, exit codes `0/2/64/65/66`, cycle-0 frozen `specsCovered[]` + `licenseClassCatalog` inputs, per-spec iter-dir outputs, four hard-stop classes
+- DB Contracts: 0 items (QFAI is CLI, no DB)
+- API Contracts: 0 items (QFAI is CLI, no HTTP/gRPC)
+- UI Contracts: 0 items (non-UI-bearing pack)
+- **CLI Contracts (this delta): 1 update** — `.qfai/contracts/cli/qfai-init.md` MUST document
+  `--upgrade-assistant-tree` flag (exit codes `0/2/64/65`, side effects, collision policy).
+  `.qfai/contracts/cli/qfai-validate.md` MUST document new finding codes
+  (`W-WORKLOG-SCHEMA`, `R-WORKLOG-DRIFT`, `R-REJECTED-READOPT`, `W-PENDING-PROMOTION`,
+  `W-WORKLOG-STALE`, `W-WORKLOG-BROKEN-LINK`, `D-DEPRECATED-PATH`,
+  `R-HANDOFF-INCOMPLETE`, `W-SKILL-DOC-BROKEN-REF`, `W-USER-EDIT-PRESERVED`,
+  `E-WORKLOG-SECRET`).
 - DESIGN.md freeze: SKIPPED (non-UI-bearing target)
 
 ## Stage 0 Steering Refresh
 
-| File | Status | Action |
-|------|--------|--------|
-| manifest.md | No change | Current facts sufficient for this run |
-| product.md | No change | Current |
-| tech.md | No change | Current |
-| structure.md | No change | Current |
+| File         | Status    | Action                                                                                                  |
+| ------------ | --------- | ------------------------------------------------------------------------------------------------------- |
+| manifest.md  | No change | Current facts sufficient; assistant-tree recut is the SDD subject, not Stage 0 input                    |
+| product.md   | No change | Current                                                                                                 |
+| tech.md      | No change | Current                                                                                                 |
+| structure.md | No change | Current; new tree structure will be documented in spec artifacts, not in steering during this run       |
 
 ## Validate Baseline
 
 - Pre-edit: `pnpm exec qfai validate --profile sdd --fail-on error --format github` →
-  `error=0 warning=7 info=3 annotations=10/10 failOn=error result=PASS` (run-log `.qfai/report/run-20260518132742559`)
-- Post-edit: same command →
-  `error=0 warning=7 info=3 annotations=10/10 failOn=error result=PASS` (run-log `.qfai/report/run-20260518175405426`)
-- 7 warnings = pre-existing QFAI-TRIAGE-001 on `spec-0001/0002/0003/0005/0006/0007/0016` (out of scope this pass)
-- 3 notices = pre-existing QFAI-CONTRACT-000 on `.qfai/contracts/{ui,api,db}` (out of scope; this pass touches `.qfai/contracts/cli` only)
+  will be captured at start of Phase 0; baseline expected error=0 (no spec edits yet)
+- Post-edit: same command MUST return error=0 before the quality gate is declared
 
 ## Reviewer Routing (this delta)
 
-| Reviewer | Routed? | Rationale |
-|----------|---------|-----------|
-| completion-reviewer | ✅ default | Always required |
-| architecture-reviewer | ✅ | Structural / contract / CLI surface changed |
-| product-surface-reviewer | ❌ NOT routed | Target is non-UI-bearing |
-| qa-gatekeeper | ❌ NOT routed | No validate / coverage / runtime / prototyping evidence change in this SDD pass (the prototyping evidence schema is described in the spec but no actual evidence is written) |
+| Reviewer                 | Routed? | Rationale                                                                                                   |
+| ------------------------ | ------- | ----------------------------------------------------------------------------------------------------------- |
+| completion-reviewer      | ✅      | Always required                                                                                             |
+| architecture-reviewer    | ✅      | Structural / contract / CLI surface changed                                                                 |
+| product-surface-reviewer | ❌      | Target is non-UI-bearing                                                                                    |
+| qa-gatekeeper            | ✅      | Validator gains new finding codes (`W-WORKLOG-SCHEMA` family + `R-*` reviewer codes) — validate coverage scope |
 
 ## Open Gaps
 
-None blocking SDD. Five integration follow-ups (OQ-0012-0001..0005) tracked for the implementation phase.
+None blocking SDD. Two deferred OQs (`13_Deferred.md`) carry forward to
+implementation-time open-question files in the touched specs.
 
 ## Next Step
 
-Proceed to `/qfai-prototyping` (recommended) once the implementation phase resolves OQ-0012-0002..0005 and lands the code changes enumerated in `spec-0012/10_Plan.md` Next Maintenance Steps.
+Proceed through Phase 0 → Phase 1 → Phase 2 (parallel slice across the ~10
+targeted active specs) → Phase 3 → Phase 4 → quality gate.
