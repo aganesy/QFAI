@@ -4,6 +4,8 @@
 
 ## [Unreleased]
 
+## [1.9.0] - 2026-05-23
+
 ### Added (assistant-layer recut + steering work-log surface — CHG-003)
 
 - 4-layer assistant-tree: `.qfai/assistant/{constitution,manifest,catalog,process}/`
@@ -21,15 +23,26 @@
   REQ-0017 in spec-0015). Reviewer reports MUST carry non-empty
   `justification:` on these findings; empty values are rejected
   (advisory-failing).
-- `assistantPaths.ts` SSOT module produces every distributed
-  assistant-tree path string (REQ-0022 in spec-0003); hard-coded
-  literals are lint-rejected.
+- `assistantPaths.ts` SSOT module (`packages/qfai/src/core/paths/`)
+  produces every distributed assistant-tree path string (REQ-0022 in
+  spec-0003); hard-coded literals in `path.join(...)` position are
+  lint-rejected by the SSOT import test in
+  `tests/integration/initSpec0003.test.ts`.
 - Migration memo authored at
-  `.qfai/assistant/process/migrations/v1.9.0-assistant-layer-recut.md`
-  by the upgrade helper; commit-immutable per OC-53.
-- New CLI contracts: `.qfai/contracts/cli/qfai-init.md`,
-  `.qfai/contracts/cli/qfai-validate.md`,
-  `.qfai/contracts/cli/worklog-entry.schema.md`.
+  `.qfai/assistant/process/migrations/v<X.Y.Z>-assistant-layer-recut.md`
+  by `qfai init --upgrade-assistant-tree`; commit-immutable per OC-53.
+  Sunset version inside the memo is computed via
+  `nextMinorVersion(resolveToolVersion())` so no future-version
+  literal ships in `dist/`.
+- New validators wired into the SDD profile:
+  `validateWorklogSurface`, `validateAssistantTreeMigration`,
+  `validateSkillDocReferences`, `validateReviewerJustification`.
+  Implementations under `packages/qfai/src/core/validators/`.
+- New `--upgrade-assistant-tree` flag plumbed through `parseArgs`,
+  `runInit` → `runUpgradeAssistantTree`. Legacy steering content is
+  re-located into the appropriate new layer via
+  `classifyLegacySteeringEntry`; existing files at the destination are
+  preserved with a `W-USER-EDIT-PRESERVED` informational note.
 - `W-USER-EDIT-PRESERVED` informational pass-through emitted by the
   migration helper and recognized by `qfai validate` as info-only.
 - ATDD coverage closure for spec-0012 TC-0012-0396..0432 (PR #208
@@ -44,14 +57,18 @@
   the cross-AI rules under `.agents/rules/` (closing pre-existing
   drift caught by `agentsRulesSurface.test.ts`).
 - spec-0003 / spec-0004 per-spec SDD pass: REQ-0018..0023 (spec-0003)
-  and REQ-0023..0033 (spec-0004) fanned out into US/AC/BR/EX/TC.
+  and REQ-0023..0033 (spec-0004) fanned out into US/AC/BR/EX/TC, then
+  TDD-0021..0026 (spec-0003) and TDD-0015..0025 (spec-0004) landed
+  with full RED→GREEN evidence in `tdd/test-list.md`.
 
 ### Deprecated
 
 - Legacy `.qfai/assistant/steering/` layout is read-compatible for the
-  v1.9.x minor window only. `qfai validate` emits `D-DEPRECATED-PATH`
-  with body literally containing `sunset: v1.10.0`. The same condition
-  escalates to error in v1.10.0+.
+  current minor release window only. `qfai validate` emits
+  `D-DEPRECATED-PATH` whose body literally contains `sunset: vX.Y.Z`
+  computed via `nextMinorVersion(resolveToolVersion())` (resolves to
+  `sunset: v1.10.0` on this release). The same condition is expected
+  to escalate to error in the next minor.
 
 ## [1.8.10] - 2026-05-19
 
