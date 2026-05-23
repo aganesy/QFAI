@@ -1445,6 +1445,47 @@ describe("qfai init", { timeout: 60000 }, () => {
     }
   });
 
+  // QFAI:SPEC-0003:TC-0003-0023 (TDD-0023): non-top-level `migrations` segment falls through to catalog/
+  it("TC-0003-0023 (TDD-0023): --upgrade-assistant-tree leaves non-top-level migrations segments in catalog/, not process/", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-tdd0023-mig-"));
+    try {
+      const legacy = path.join(root, ".qfai", "assistant", "steering");
+      // `foo/migrations/bar.md` — `migrations` is NOT at segments[0].
+      const subDir = path.join(legacy, "foo", "migrations");
+      await mkdir(subDir, { recursive: true });
+      await writeFile(path.join(subDir, "bar.md"), "user note\n", "utf-8");
+
+      await runInit({
+        dir: root,
+        force: false,
+        dryRun: false,
+        yes: true,
+        upgradeAssistantTree: true,
+      });
+
+      // process/ MUST NOT contain it (the top-segment guard rejects this).
+      let processExists = false;
+      try {
+        await access(
+          path.join(root, ".qfai", "assistant", "process", "foo", "migrations", "bar.md"),
+        );
+        processExists = true;
+      } catch {
+        processExists = false;
+      }
+      expect(processExists).toBe(false);
+
+      // catalog/ (default fallback) MUST contain it under the same subpath.
+      const catalogCopy = await readFile(
+        path.join(root, ".qfai", "assistant", "catalog", "foo", "migrations", "bar.md"),
+        "utf-8",
+      );
+      expect(catalogCopy).toContain("user note");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   // QFAI:SPEC-0003:TC-0003-0023 (TDD-0023): upgrade on already-upgraded project is a no-op note
   it("TC-0003-0023 (TDD-0023): --upgrade-assistant-tree on an already-upgraded project emits W-USER-EDIT-PRESERVED only", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-tdd0023b-"));
