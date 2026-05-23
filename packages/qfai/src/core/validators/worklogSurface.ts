@@ -354,7 +354,22 @@ export async function validateWorklogSurface(
           continue;
         }
         const link = linkRaw.trim();
-        if (link.length === 0) continue;
+        // Empty / whitespace-only link items fail the contract
+        // (every element MUST resolve to a real reference). Surface
+        // as W-WORKLOG-SCHEMA so the malformed item doesn't silently
+        // pass both schema and broken-link checks.
+        if (link.length === 0) {
+          issues.push(
+            issue(
+              "W-WORKLOG-SCHEMA",
+              `${entry.relativePath}: links[] element is empty / whitespace-only; every element MUST be a non-empty reference (spec-NNNN, discussion-*, or registered entry id).`,
+              "warning",
+              entry.relativePath,
+              "worklogSurface.schema.linksElementEmpty",
+            ),
+          );
+          continue;
+        }
         if (link.startsWith("spec-")) {
           if (!specIds.has(link)) {
             issues.push(

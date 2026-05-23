@@ -418,6 +418,38 @@ describe("worklogSurface validator", () => {
     }
   });
 
+  // TC-0004-0017 (empty-link): empty/whitespace links element fires linksElementEmpty
+  it("TC-0004-0017 (empty-link): empty or whitespace-only links element fires worklogSurface.schema.linksElementEmpty", async () => {
+    const root = await newRoot("worklog-link-empty");
+    try {
+      await seedWorklog(
+        root,
+        "entry-EMPTY.md",
+        [
+          "---",
+          "id: entry-EMPTY",
+          "kind: decision",
+          "status: active",
+          "created: 2026-05-23",
+          "updated: 2026-05-23",
+          "scope: global",
+          "blocking: false",
+          "promote-to: null",
+          "links:",
+          '  - ""',
+          '  - "   "',
+          "---",
+          "",
+        ].join("\n"),
+      );
+      const issues = await validateWorklogSurface(root, await getConfig(root));
+      const empty = issues.filter((i) => i.rule === "worklogSurface.schema.linksElementEmpty");
+      expect(empty.length).toBe(2);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   // TC-0004-0020 (promote-to-format): non-canonical promote-to format fires schema warning
   it("TC-0004-0020 (promote-to-format): bare `07_Decisions.md` fires worklogSurface.schema.promoteToFormat", async () => {
     const root = await newRoot("worklog-promo-format");
