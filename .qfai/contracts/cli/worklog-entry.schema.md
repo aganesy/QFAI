@@ -31,7 +31,7 @@ links: # required; array (may be empty)
   - spec-0003
   - discussion-20260522081618995
 closure-rationale: null # required when status=archived AND no promote-to satisfied; else null/omitted
-promoted-to: null # required when status=archived AND promote-to was satisfied; references the appended Decisions row
+promoted-to: null # required when status=archived AND promote-to was satisfied; value is the DR-ID (Decision Row identifier, e.g. `DR-3`) of the appended row in the target `07_Decisions.md`
 ---
 ```
 
