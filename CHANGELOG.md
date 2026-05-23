@@ -73,8 +73,15 @@
   current minor release window only. `qfai validate` emits
   `D-DEPRECATED-PATH` whose body literally contains `sunset: vX.Y.Z`
   computed via `nextMinorVersion(resolveToolVersion())` (resolves to
-  `sunset: v1.10.0` on this release). The same condition is expected
-  to escalate to error in the next minor.
+  `sunset: v1.10.0` on this release). The same condition escalates
+  to error from `v1.10.0+`.
+- `W-SKILL-DOC-BROKEN-REF` (qfai-_ SKILL.md referencing a legacy
+  `.qfai/assistant/{instructions,steering}/<file>` path) follows the
+  same escalation timeline: warning during the v1.9.x window, error
+  from `v1.10.0+`. The headline shape branches with severity
+  ("Read-compatible only..." pre-sunset; "past the announced
+  sunset..." post-sunset) so consumers can disambiguate which mode
+  fired. User-defined (non-`qfai-_`) skills are NOT flagged.
 
 ## [1.8.10] - 2026-05-19
 

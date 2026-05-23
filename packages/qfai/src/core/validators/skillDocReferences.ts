@@ -16,7 +16,7 @@ import { exists, issue } from "./utils.js";
  * cutoff. Per qfai-validate.md contract: "warning (during window) /
  * error (after sunset)".
  */
-function brokenRefSeverity(version: string): "warning" | "error" {
+export function brokenRefSeverity(version: string): "warning" | "error" {
   const m = /^(\d+)\.(\d+)\.(\d+)/.exec(version);
   if (!m) return "warning";
   const major = Number.parseInt(m[1] ?? "0", 10);

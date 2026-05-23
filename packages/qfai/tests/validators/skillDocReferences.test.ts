@@ -11,7 +11,10 @@ import os from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 
-import { validateSkillDocReferences } from "../../src/core/validators/skillDocReferences.js";
+import {
+  brokenRefSeverity,
+  validateSkillDocReferences,
+} from "../../src/core/validators/skillDocReferences.js";
 import { loadConfig } from "../../src/core/config.js";
 
 async function newRoot(prefix: string): Promise<string> {
@@ -141,6 +144,20 @@ describe("skillDocReferences validator", () => {
     } finally {
       await rm(root, { recursive: true, force: true });
     }
+  });
+
+  // TC-0004-0024 (severity-helper): unit-level pre/post/boundary mode
+  it("TC-0004-0024 (severity-helper): brokenRefSeverity returns warning pre-sunset, error at-or-past sunset", () => {
+    // sunset is 1.10.0 (LEGACY_STEERING_SUNSET)
+    expect(brokenRefSeverity("1.9.0")).toBe("warning");
+    expect(brokenRefSeverity("1.9.99")).toBe("warning");
+    // boundary: sunset minor exactly
+    expect(brokenRefSeverity("1.10.0")).toBe("error");
+    expect(brokenRefSeverity("1.10.5")).toBe("error");
+    // major past sunset
+    expect(brokenRefSeverity("2.0.0")).toBe("error");
+    // malformed → warning (defensive default)
+    expect(brokenRefSeverity("not-a-version")).toBe("warning");
   });
 
   // TC-0004-0024 (qfai-scope): user-defined non-qfai-* skill is NOT flagged

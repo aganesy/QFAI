@@ -129,9 +129,9 @@
 ## AC-0004-0024
 
 - US-Refs: US-0004-0033
-- Given a SKILL.md whose body references a path that no longer resolves under the 4-layer layout (e.g., `.qfai/assistant/steering/agent-routing.yml`)
+- Given a `qfai-*` SKILL.md whose body references a path that no longer resolves under the 4-layer layout (e.g., `.qfai/assistant/steering/agent-routing.yml`)
 - When `qfai validate` runs
-- Then `W-SKILL-DOC-BROKEN-REF` is emitted at warning severity naming the SKILL.md file and the broken reference
+- Then `W-SKILL-DOC-BROKEN-REF` is emitted; severity is `warning` during the deprecation window (running tool version < `LEGACY_STEERING_SUNSET`) and escalates to `error` once the tool version reaches or passes the sunset minor. The message headline branches with the severity so consumers can distinguish "Read-compatible only" (pre-sunset) from "past the announced sunset" (post-sunset). User-defined (non-`qfai-*`) skills are NOT flagged.
 
 ## AC-0004-0025
 

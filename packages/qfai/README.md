@@ -374,6 +374,7 @@ Typical customizations.
 │   │   │   ├── delivery-planner.md
 │   │   │   ├── devops-ci-engineer.md
 │   │   │   ├── discovery-analyst.md
+│   │   │   ├── doc-steward.md
 │   │   │   ├── frontend-engineer.md
 │   │   │   ├── implementation-reviewer.md
 │   │   │   ├── orchestrator.md
