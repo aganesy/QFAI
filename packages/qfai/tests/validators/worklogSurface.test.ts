@@ -422,6 +422,101 @@ describe("worklogSurface validator", () => {
     }
   });
 
+  // TC-0004-0035 (date-format): non-ISO `created` / `updated` fires per-field format rule
+  it("TC-0004-0035 (date-format): non-ISO created/updated fires worklogSurface.schema.{created,updated}Format", async () => {
+    const root = await newRoot("worklog-date-format");
+    try {
+      await seedWorklog(
+        root,
+        "entry-baddate.md",
+        [
+          "---",
+          "id: entry-baddate",
+          "kind: decision",
+          "status: active",
+          "created: 2026/05/23",
+          "updated: May 23 2026",
+          "scope: global",
+          "blocking: false",
+          "promote-to: null",
+          "links: []",
+          "---",
+          "",
+        ].join("\n"),
+      );
+      const issues = await validateWorklogSurface(root, await getConfig(root));
+      const rules = issues.map((i) => i.rule);
+      expect(rules).toContain("worklogSurface.schema.createdFormat");
+      expect(rules).toContain("worklogSurface.schema.updatedFormat");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  // TC-0004-0036 (date-order): updated earlier than created fires updatedOrder
+  it("TC-0004-0036 (date-order): updated < created fires worklogSurface.schema.updatedOrder", async () => {
+    const root = await newRoot("worklog-date-order");
+    try {
+      await seedWorklog(
+        root,
+        "entry-order.md",
+        [
+          "---",
+          "id: entry-order",
+          "kind: decision",
+          "status: active",
+          "created: 2026-05-23",
+          "updated: 2026-05-22",
+          "scope: global",
+          "blocking: false",
+          "promote-to: null",
+          "links: []",
+          "---",
+          "",
+        ].join("\n"),
+      );
+      const issues = await validateWorklogSurface(root, await getConfig(root));
+      const order = issues.filter((i) => i.rule === "worklogSurface.schema.updatedOrder");
+      expect(order.length).toBe(1);
+      expect(order[0]?.message).toContain("earlier than");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  // TC-0004-0037 (links element type): non-string links element fires linksElementType
+  it("TC-0004-0037 (links element type): non-string links elements fire worklogSurface.schema.linksElementType", async () => {
+    const root = await newRoot("worklog-links-elem-type");
+    try {
+      // YAML allows mixed types in a list. Seed numeric + boolean entries.
+      await seedWorklog(
+        root,
+        "entry-mixedlinks.md",
+        [
+          "---",
+          "id: entry-mixedlinks",
+          "kind: decision",
+          "status: active",
+          "created: 2026-05-23",
+          "updated: 2026-05-23",
+          "scope: global",
+          "blocking: false",
+          "promote-to: null",
+          "links:",
+          "  - 123",
+          "  - true",
+          "---",
+          "",
+        ].join("\n"),
+      );
+      const issues = await validateWorklogSurface(root, await getConfig(root));
+      const elem = issues.filter((i) => i.rule === "worklogSurface.schema.linksElementType");
+      expect(elem.length).toBe(2);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   // TC-0004-0017 (date-style entry-id): date-prefixed entry id resolves against entryIds set
   it("TC-0004-0017 (date-style entry-id): date-prefixed link resolves to a date-style entry-id without firing W-WORKLOG-BROKEN-LINK", async () => {
     const root = await newRoot("worklog-date-entry");
