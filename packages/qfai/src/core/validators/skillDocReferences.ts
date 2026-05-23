@@ -117,9 +117,37 @@ export async function validateSkillDocReferences(
     }
 
     // project_memory enforcement (warning-only — opt-in convention).
+    // The block MUST be the trailing structure of the SKILL.md so the
+    // remembered-context declaration is the last thing the loader
+    // reads. Mid-file `project_memory:` lines followed by other
+    // sections are NOT compliant — the validator now finds the last
+    // `project_memory:` occurrence and asserts only whitespace, list
+    // items (`-`), or comments may follow.
     if (QFAI_SKILL_ID_RE.test(skillId)) {
+      const trailingBlockRe = /^\s*project_memory\s*:\s*([\s\S]*)$/m;
       const trailing = body.slice(-2_000);
-      if (!/^\s*project_memory\s*:/m.test(trailing)) {
+      const match = trailingBlockRe.exec(trailing);
+      const isTrailing = (() => {
+        if (!match) return false;
+        const after = match[1] ?? "";
+        // Reject if any non-list / non-comment / non-blank markdown
+        // heading appears after the block. Headings (^#) are the
+        // strongest "not trailing" signal; arbitrary prose is also
+        // disallowed.
+        const lines = after.split(/\r?\n/);
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (trimmed === "") continue;
+          if (trimmed.startsWith("-")) continue;
+          if (trimmed.startsWith("#")) return false;
+          if (trimmed.startsWith("<!--")) continue;
+          // Any other non-blank, non-list, non-comment line means the
+          // block isn't trailing.
+          return false;
+        }
+        return true;
+      })();
+      if (!isTrailing) {
         // Distinct code — `W-WORKLOG-SCHEMA` is reserved by contract
         // for worklog-entry frontmatter shape problems. The
         // SKILL.md project_memory enforcement is a separate concern.

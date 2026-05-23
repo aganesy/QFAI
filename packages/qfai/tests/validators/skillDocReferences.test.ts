@@ -146,6 +146,34 @@ describe("skillDocReferences validator", () => {
     }
   });
 
+  // TC-0004-0023 (mid-file project_memory): block not at SKILL.md tail still fires
+  it("TC-0004-0023 (mid-file): project_memory: block followed by another heading still fires the missing-trailing warning", async () => {
+    const root = await newRoot("skill-projmem-midfile");
+    try {
+      await seedSkill(
+        root,
+        "qfai-implement",
+        [
+          "## /qfai-implement",
+          "",
+          "body content here.",
+          "",
+          "project_memory:",
+          "  - one liner remembered context",
+          "",
+          "## Trailing Section After project_memory",
+          "",
+          "This breaks the trailing invariant; the block is no longer at the tail.",
+        ].join("\n"),
+      );
+      const issues = await validateSkillDocReferences(root, await getConfig(root));
+      const projMem = issues.filter((i) => i.rule === "skillDocReferences.projectMemory");
+      expect(projMem.length).toBe(1);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   // TC-0004-0024 (severity-helper): unit-level pre/post/boundary mode
   it("TC-0004-0024 (severity-helper): brokenRefSeverity returns warning pre-sunset, error at-or-past sunset", () => {
     // sunset is 1.10.0 (LEGACY_STEERING_SUNSET)
