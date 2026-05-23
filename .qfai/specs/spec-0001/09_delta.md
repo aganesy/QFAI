@@ -55,3 +55,21 @@
 
 - specLayout.ts の REQUIRED_LAYERED_SPEC_FILES_V1421 は 9 ファイル（10_Plan.md は含まない）。旧 spec-0009 は 10 ファイル（10_Plan 含む）と記載していたが、実装に合わせて 9 + optional 10_Plan.md に修正
 - 旧 spec-0007 の AskUserQuestion Protocol 関連 BR/EX/TC は Steering & Governance の一部として US-0001-0009 に包含
+
+## Triage
+
+| Source             | Subject                                                                                                                | Existing Spec | Operation | Sub-op | Approved By | Rationale                                                                                                              |
+| ------------------ | ---------------------------------------------------------------------------------------------------------------------- | ------------- | --------- | ------ | ----------- | ---------------------------------------------------------------------------------------------------------------------- |
+| REQ-0001 (CHG-003) | 4-layer assistant-tree (constitution / manifest / catalog / process + agents / skills) を structural definition に追加 | spec-0001     | UPDATE    | APPEND | pin-implied | spec-pack structural definition の責務 (CAP-0001)。subject-token overlap (`asset`, `tree`, `assistant`). 新 CAP 不要。 |
+
+## CHG-003 (v1.9.0) — Assistant-layer Recut Structural Definition
+
+- Discussion pack: `.qfai/discussion/discussion-20260522081618995/`
+- Operation: UPDATE:APPEND
+- Subject: `.qfai/assistant/` の top-level entry を 6 つに固定 (`constitution/`, `manifest/`, `catalog/`, `process/`, `agents/`, `skills/`) — `assistantAssets.ts` がこの enum を SSOT として参照する
+- Cascade:
+  - downstream spec-0003 (init) が新 layer 構造を seed
+  - downstream spec-0004 (validate) が新 layer 構造を enforce
+- Out-of-scope (this spec): 旧 layout の deprecation 受理は spec-0004 が記述。`assistantPaths.ts` SSOT module は spec-0003 / spec-0004 が記述
+- Implementation-phase 詳細 US/AC/BR/EX/TC は次回の per-spec SDD pass で append される
+- Source: REQ-0001

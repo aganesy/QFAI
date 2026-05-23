@@ -180,7 +180,7 @@ completion certificate against an unconverged iter-09.
 ### Reviewer Gate
 
 - Check Drift Protocol compliance before DONE.
-- Check `.qfai/assistant/steering/test-layers.md` alignment.
+- Check `.qfai/assistant/catalog/test-layers.md` alignment.
 - Treat reviewer findings as signals, not gates, unless
   certify/validate/verify fails.
 
@@ -190,8 +190,14 @@ DONE = `completion-certificate.json` exists AND
 `qfai prototyping certify --check` returns 0 AND `/qfai-verify` returns
 PASS.
 
-Follow `.qfai/assistant/instructions/shared-skill-operating-baseline.md#gate-failure-autorepair-protocol` for validate, doctor, and quality-gate failures.
+Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#gate-failure-autorepair-protocol` for validate, doctor, and quality-gate failures.
 
 ## Next
 
 - `/qfai-atdd` / `/qfai-implement` / `/qfai-verify`
+
+project_memory:
+
+- Iteration count cap is 10; --cycle is 0-indexed; reaching cycle 9 on a non-converged iteration set exits 65 directly (no cycle-mismatch path).
+- review.json schema-v3 is the only accepted shape; pre-v3 payloads, unknown layoutAntiPatterns codes, or wrong-enum designMdViolations entries fail validate with QFAI-PROT-002.
+- DESIGN.md lock sha256 is re-checked every cycle against the live DESIGN.md; mismatch exits 2 and stops the loop.

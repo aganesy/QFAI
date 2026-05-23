@@ -13,14 +13,17 @@ This repository uses QFAI (Quality-First AI) to improve the quality and consiste
   - These symlinks resolve to `.qfai/assistant/skills/<skill-name>/`.
 - Do not invent repository structure, tools, or frameworks. Inspect the repo first and align with what is already used.
 - Keep changes minimal and targeted. Update tests and docs when behavior changes.
-- Follow cross-AI rules in `.agents/rules/` (master). Notably:
-  - `version-discipline.md` — branch name pins
-    `packages/qfai/package.json#version`. On a pinned branch
-    (`feature/vX.Y.Z`) the pin acts as the user's release authorization: sync
-    `package.json`, rename `## [Unreleased]` to `## [X.Y.Z] - YYYY-MM-DD`,
-    re-insert an empty `## [Unreleased]`, and commit
-    `chore(release): qfai X.Y.Z`. On an unpinned branch all of those edits
-    require explicit instruction. Tag / publish / force-push / amend /
-    AI-merge always require explicit instruction.
-  - `distributed-surface.md`, `root-additions-policy.md`, `temporary-files.md`.
-  - The universal entrypoint is `AGENTS.md` at the repo root.
+
+## Cross-AI rules (master)
+
+The authoritative rule set shared across all AI coding agents (Claude
+Code / Codex / Copilot) lives under `.agents/rules/`. Tool-specific
+mirrors (`.claude/rules/`, etc.) reference these masters; the
+`.agents/rules/` files are SSOT.
+
+Key rules to follow:
+
+- `.agents/rules/temporary-files.md` — temporary files MUST go under `tmp/`.
+- `.agents/rules/root-additions-policy.md` — never add root-level files/dirs without explicit user approval.
+- `.agents/rules/distributed-surface.md` — no internal QFAI IDs or version markers in shipped files.
+- `.agents/rules/version-discipline.md` — branch name pins `packages/qfai/package.json#version`; never select version numbers independently.

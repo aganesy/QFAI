@@ -51,9 +51,12 @@ QFAI 自体は外部公開 API を持たない。
 
 ### CLI Contracts
 
-| Short ID | Entity                 | File                                      | Purpose                                                                                                                                                           |
-| -------- | ---------------------- | ----------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| CLI-PROT | qfai prototyping (CLI) | `.qfai/contracts/cli/qfai-prototyping.md` | spec-0012 の CLI surface (`iterate` / `certify` / `show-spec`) — cycle-0 freeze, license-verify exit 66, multi-spec resolveAll、Reviewer-driven Playwright を記述 |
+| Short ID | Entity                 | File                                          | Purpose                                                                                                                                                                                           |
+| -------- | ---------------------- | --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| CLI-PROT | qfai prototyping (CLI) | `.qfai/contracts/cli/qfai-prototyping.md`     | spec-0012 の CLI surface (`iterate` / `certify` / `show-spec`) — cycle-0 freeze, license-verify exit 66, multi-spec resolveAll、Reviewer-driven Playwright を記述                                 |
+| CLI-INIT | qfai init (CLI)        | `.qfai/contracts/cli/qfai-init.md`            | spec-0003 の CLI surface — assistant-tree seed, `--upgrade-assistant-tree`, work-log surface seed, deprecation window, path SSOT enforcement (CHG-003)                                            |
+| CLI-VAL  | qfai validate (CLI)    | `.qfai/contracts/cli/qfai-validate.md`        | spec-0004 の CLI surface delta — new finding codes (`W-WORKLOG-SCHEMA`, `R-WORKLOG-DRIFT`, `R-REJECTED-READOPT`, `W-PENDING-PROMOTION`, etc.), Reviewer-Gate input bundle, promote-gate (CHG-003) |
+| CLI-WLOG | worklog entry schema   | `.qfai/contracts/cli/worklog-entry.schema.md` | `.qfai/steering/*.md` frontmatter + body schema; `kind` enum SSOT; handoff-brief sections; parser unit-test obligations (CHG-003)                                                                 |
 
 ## Mapping Rules
 
@@ -83,3 +86,10 @@ QFAI 自体は外部公開 API を持たない。
 - 評価軸は code constants `packages/qfai/src/core/prototyping/iteration.ts#OrdinalScore` に固定 (UX-loop redesign 後: informationArchitecture / navigationFlow / usability / functionality)。
 - (UX-loop redesign) layout-anti-pattern (lap-001..008) は `qfai-prototyping/references/reviewer-prompt.md` に常駐（contract 化しない）。旧 anti-slop tokens (slop-\*) は廃止。
 - (UX-loop redesign) `DCON-030` (`DESIGN.md`), `DCON-031` (`DESIGN.md.lock.yaml`), `DCON-032` (mirror validator) を新設。
+
+## CHG-003 — Assistant-layer Recut + Work-log Surface (2026-05-22)
+
+- CLI-INIT / CLI-VAL / CLI-WLOG を新設。CHG-003 が導入する surface delta はこの 3 contract に集約される。
+- `packages/qfai/src/core/paths/assistantPaths.ts` は TS module 形式の SSOT であり、別途 yaml/md contract は不要。`assistantPaths.ts` をハードコード文字列で迂回することは NFR-0001 違反となる。
+- `.qfai/steering/` (work-log surface, project-root) は配布物 (`packages/qfai/package.json#files`) に含まれない。`assets/init/.qfai/steering/{README.md,.gitkeep,_templates/entry.md}` のみ配布される。
+- 旧 path layout は 1 minor release の deprecation window 中は受理されるが `D-DEPRECATED-PATH` warning を発する。sunset version は migration memo に明記される。

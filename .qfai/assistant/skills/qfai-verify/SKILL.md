@@ -30,7 +30,7 @@ QFAI Skill Body (SSOT)
 
 ## User Questions (AskUserQuestion Protocol)
 
-Follow `.qfai/assistant/instructions/shared-skill-operating-baseline.md#user-questions-askuserquestion-protocol`.
+Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#user-questions-askuserquestion-protocol`.
 
 Skill-specific examples:
 
@@ -39,7 +39,7 @@ Skill-specific examples:
 
 ## FORMAT SSOT (Mandatory)
 
-- Follow `.qfai/assistant/instructions/shared-skill-operating-baseline.md#format-ssot-mandatory`.
+- Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#format-ssot-mandatory`.
 
 - Before writing or editing any `.qfai/**` artifact, read the relevant skill-local reference or template:
   - `.qfai/assistant/skills/qfai-discussion/references/discussion-artifact-rules.md`
@@ -51,8 +51,8 @@ Skill-specific examples:
 
 When unsure, read inputs in this order:
 
-- P1: `.qfai/assistant/instructions/*`
-- P2: `.qfai/assistant/steering/*`
+- P1: `.qfai/assistant/constitution/*`
+- P2: `.qfai/assistant/manifest/*` + `.qfai/assistant/catalog/*`
 - P3: `.qfai/specs/<spec-id>/09_delta.md` (Decision Records; if no spec yet, state "not applicable")
 - P4: other artifacts (01_Spec.md, contracts, evidence, optional legacy `scenario.feature` / coverage ledgers)
 
@@ -64,7 +64,7 @@ When unsure, read inputs in this order:
 
 ## Sub-agent Delegation (MANDATORY)
 
-Follow `.qfai/assistant/instructions/shared-skill-delegation-baseline.md`.
+Follow `.qfai/assistant/constitution/shared-skill-delegation-baseline.md`.
 
 ### Orchestrator Protocol (MUST)
 
@@ -92,7 +92,7 @@ Use the shared schema.
 
 ### Reviewer Gate (MUST)
 
-- Follow `.qfai/assistant/instructions/shared-skill-delegation-baseline.md#reviewer-gate-baseline`.
+- Follow `.qfai/assistant/constitution/shared-skill-delegation-baseline.md#reviewer-gate-baseline`.
 - Reviewer checks:
   - required roles were delegated;
   - validate evidence exists: `qfai validate --profile verify --fail-on error` completed with `error=0`;
@@ -100,7 +100,7 @@ Use the shared schema.
   - Drift Protocol enforced;
   - test-layer policy enforced against `test-layers.md`.
   - gate counts and ratios are signals, not gates.
-- Route specialist reviewers from `.qfai/assistant/steering/agent-routing.yml`.
+- Route specialist reviewers from `.qfai/assistant/manifest/agent-routing.yml`.
 - Default verify review set:
   - `qa-gatekeeper`
   - `completion-reviewer`
@@ -119,11 +119,11 @@ Use the shared template.
 
 ## Stage 0 — Steering completion refresh (mandatory)
 
-Follow `.qfai/assistant/instructions/shared-skill-operating-baseline.md#stage-0---steering-completion-refresh-mandatory`.
+Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#stage-0---steering-completion-refresh-mandatory`.
 
 ## Delta Rejected Guard (Mandatory)
 
-Follow `.qfai/assistant/instructions/shared-skill-operating-baseline.md#delta-rejected-guard-mandatory`.
+Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#delta-rejected-guard-mandatory`.
 
 ## CRITICAL CONSTRAINTS (Read First)
 
@@ -139,8 +139,8 @@ Follow `.qfai/assistant/instructions/shared-skill-operating-baseline.md#delta-re
 
 ## Completion Contract (Shared)
 
-Follow `.qfai/assistant/instructions/shared-skill-operating-baseline.md#completion-contract-shared`.
-Follow `.qfai/assistant/instructions/shared-skill-operating-baseline.md#gate-failure-autorepair-protocol` for validate, doctor, and quality-gate failures.
+Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#completion-contract-shared`.
+Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#gate-failure-autorepair-protocol` for validate, doctor, and quality-gate failures.
 
 ## Goal
 
@@ -152,7 +152,7 @@ Run quality gates and produce evidence that the change is correct and safe.
 - QFAI checks PASS (at minimum: `qfai validate --profile verify`, and optionally `qfai report`).
 - Declared screens have mandatory screenshot and HTML evidence.
 - A concise evidence summary exists (copy‑paste for PR).
-- The PR-ready summary includes **Change Classification (Primary/Tags)** per `.qfai/assistant/instructions/change-classification.md`.
+- The PR-ready summary includes **Change Classification (Primary/Tags)** per `.qfai/assistant/constitution/change-classification.md`.
 - Evidence file exists: `.qfai/evidence/verify-<spec-id>.md`.
 - Completion is approved by a reviewer who did not run the gates.
 
@@ -161,8 +161,8 @@ Run quality gates and produce evidence that the change is correct and safe.
 - Run listed commands and record outputs.
 - If failing, produce an actionable fix list (not vague).
 - Static policy checks:
-  - `.qfai/assistant/instructions/drift-protocol.md` exists.
-  - `.qfai/assistant/steering/test-layers.md` exists.
+  - `.qfai/assistant/constitution/drift-protocol.md` exists.
+  - `.qfai/assistant/catalog/test-layers.md` exists.
   - all `.qfai/assistant/skills/*/SKILL.md` include `[DRIFT-PROTOCOL:MANDATORY]`.
   - reviewer-related agent docs include drift-protocol and test-layer review viewpoints.
 
@@ -216,7 +216,7 @@ Use the platform's native sub-agent delegation mechanism for Claude Code, GitHub
 
 ### Delegation order
 
-Use `.qfai/assistant/steering/agent-routing.yml` as the routing SSOT.
+Use `.qfai/assistant/manifest/agent-routing.yml` as the routing SSOT.
 
 - First required delegation / Capability Probe: `delivery-planner` in the `plan` phase.
 - Then follow routed phases in order: `plan` (`delivery-planner`, `qa-strategist`) -> `execution` (`devops-ci-engineer`) -> `review` (`qa-gatekeeper`, `completion-reviewer`, optional `implementation-reviewer` when code fixes are in scope).
@@ -259,14 +259,14 @@ Every 5 major actions, pause and restate:
 ## Step 0 — Load Context (always)
 
 1. Read relevant **project steering** (if present):
-   - `.qfai/assistant/steering/structure.md`
-   - `.qfai/assistant/steering/tech.md`
-   - `.qfai/assistant/steering/product.md`
-   - any additional files under `.qfai/assistant/steering/`
+   - `.qfai/assistant/catalog/structure.md`
+   - `.qfai/assistant/catalog/tech.md`
+   - `.qfai/assistant/catalog/product.md`
+   - any additional files under `.qfai/assistant/{manifest,catalog}/`
 
 2. Read **project constitution / instructions** (if present):
-   - `.qfai/assistant/instructions/constitution.md`
-   - `.qfai/assistant/instructions/workflow.md` (or equivalent)
+   - `.qfai/assistant/constitution/constitution.md`
+   - `.qfai/assistant/constitution/workflow.md` (or equivalent)
 
 3. Read existing artifacts for the current work item (if present):
    - `.qfai/specs/spec-*/`
@@ -301,9 +301,9 @@ QFAI expects `assistant/steering/` to contain **project‑specific facts** so al
 
 1. Open these files:
 
-- `.qfai/assistant/steering/product.md`
-- `.qfai/assistant/steering/tech.md`
-- `.qfai/assistant/steering/structure.md`
+- `.qfai/assistant/catalog/product.md`
+- `.qfai/assistant/catalog/tech.md`
+- `.qfai/assistant/catalog/structure.md`
 
 1. If they are missing, mostly empty, or still have placeholders (e.g., a lone `-`
    only), **populate them by analyzing the current repository**:
@@ -375,7 +375,7 @@ Output this format:
 
 ### Verification Evidence
 
-- Change classification (SSOT: `.qfai/assistant/instructions/change-classification.md`):
+- Change classification (SSOT: `.qfai/assistant/constitution/change-classification.md`):
   - Primary:
   - Tags:
   - rationale (1-3 lines):
@@ -507,3 +507,9 @@ When this skill is complete, provide a final user-facing completion message and 
   Action: return to the owning skill, fix the issue, then rerun `/qfai-verify`.
 - Need a report artifact:
   Action: run `qfai report` after validation outputs are up to date.
+
+project_memory:
+
+- Verify is the full-scan approval gate; per-skill validate runs (sdd/atdd/tdd) are signals, the verify gate is the binding pass.
+- Completion requires zero errors across all profiles AND zero leakage in the distributed-surface guard AND a clean branch version pin.
+- Verify never rewrites artifacts; it only reads and reports. Drift fixes belong to /qfai-sdd / /qfai-implement / /qfai-atdd respectively.

@@ -15,13 +15,13 @@
 
 ### Triage
 
-| Source                       | Subject                                     | Existing Spec | Operation     | Approved By   | Rationale                                  |
-| ---------------------------- | ------------------------------------------- | ------------- | ------------- | ------------- | ------------------------------------------ |
-| spec-0017 REQ-0017-0015      | DCON-030 / 031 / 032 validators             | spec-0004     | UPDATE:APPEND | yusuke_senaga | DESIGN.md / lock / mirror gate is validate |
-| spec-0017 TC-0017-0015..0017 | prototypingEvidenceV3 schema validator      | spec-0004     | UPDATE:APPEND | yusuke_senaga | review.json schema gate is validate        |
-| spec-0017 AC-0017-0018       | layoutAntiPatternsDetected schema validator | spec-0004     | UPDATE:APPEND | yusuke_senaga | lap-\* whitelist enforcement is validate   |
-| spec-0017 AC-0017-0019       | designMdViolations schema validator         | spec-0004     | UPDATE:APPEND | yusuke_senaga | violation shape gate is validate           |
-| spec-0017 AC-0017-0020       | `findDesignMdViolations` purity contract    | spec-0004     | UPDATE:APPEND | yusuke_senaga | pure-fn determinism is validate            |
+| Source                       | Subject                                     | Existing Spec | Operation | Sub-op | Approved By   | Rationale                                  |
+| ---------------------------- | ------------------------------------------- | ------------- | --------- | ------ | ------------- | ------------------------------------------ |
+| spec-0017 REQ-0017-0015      | DCON-030 / 031 / 032 validators             | spec-0004     | UPDATE    | APPEND | yusuke_senaga | DESIGN.md / lock / mirror gate is validate |
+| spec-0017 TC-0017-0015..0017 | prototypingEvidenceV3 schema validator      | spec-0004     | UPDATE    | APPEND | yusuke_senaga | review.json schema gate is validate        |
+| spec-0017 AC-0017-0018       | layoutAntiPatternsDetected schema validator | spec-0004     | UPDATE    | APPEND | yusuke_senaga | lap-\* whitelist enforcement is validate   |
+| spec-0017 AC-0017-0019       | designMdViolations schema validator         | spec-0004     | UPDATE    | APPEND | yusuke_senaga | violation shape gate is validate           |
+| spec-0017 AC-0017-0020       | `findDesignMdViolations` purity contract    | spec-0004     | UPDATE    | APPEND | yusuke_senaga | pure-fn determinism is validate            |
 
 ### Operations
 
@@ -40,3 +40,54 @@
 - spec-0017 番号は永久 gap として予約 (`_policies/11_Slice-Policy.md` §ID 安定性ルール 5)。
 - 実装側 error code 整合: AC-0004-0011/0012/0013 は `QFAI-PROT-002` (per-iter shape) で発火 (実装は schema-v3-violation / lap-whitelist-violation / designMdViolations-shape-violation を 1 つの error code に集約)。
 - 残課題 (Phase 8): (a) 実装の `designMdViolations` shape は `{kind, found}`、spec 文面の `{category, expected, found, location}` と齟齬。(b) `findDesignMdViolations(html, designMd)` 関数は現実装に存在しない。両者は別 spec / 別 phase で migration 予定。
+
+## Triage
+
+| Source                                                                                                       | Subject                                                                                                                                                                              | Existing Spec | Operation | Sub-op | Approved By | Rationale                                                                                                                  |
+| ------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------- | --------- | ------ | ----------- | -------------------------------------------------------------------------------------------------------------------------- |
+| REQ-0001, REQ-0003, REQ-0006, REQ-0007, REQ-0008, REQ-0010, REQ-0014, REQ-0015, REQ-0018, NFR-0008 (CHG-003) | `qfai validate` が 4-layer asset-tree enforcement、work-log frontmatter schema、drift/promote/stale/link checks、SKILL.md `project_memory:` 宣言、deprecated-path warning を実装する | spec-0004     | UPDATE    | APPEND | pin-implied | Primary capability owner (CAP-0004)。subject-token overlap (`validate`, `assistant`, `path`)。新 finding code 10+ を追加。 |
+| REQ-0009 (CHG-003)                                                                                           | `assistantPaths.ts` SSOT module を validate 側 reader が import する (companion of spec-0003 row)                                                                                    | spec-0004     | UPDATE    | APPEND | pin-implied | Cross-spec module consumer。                                                                                               |
+
+## CHG-003 (v1.9.0) — Assistant-layer Recut + Work-log Schema Validation
+
+- Discussion pack: `.qfai/discussion/discussion-20260522081618995/`
+- Contract: `.qfai/contracts/cli/qfai-validate.md` (CLI-VAL、Contract Index)、`.qfai/contracts/cli/worklog-entry.schema.md` (CLI-WLOG)
+- Operation: UPDATE:APPEND
+- New REQs (to be appended to `01_Spec.md#Relevant Requirements` in this CHG):
+  - REQ-0034: 4-layer asset-tree enforcement (`constitution/`, `manifest/`, `catalog/`, `process/` 以外を reject)
+  - REQ-0035: work-log frontmatter schema validation (`W-WORKLOG-SCHEMA`、severity warning、non-blocking)
+  - REQ-0036: Reviewer-Gate drift findings (`R-WORKLOG-DRIFT`, `R-REJECTED-READOPT` — severity error, advisory-failing with mandatory non-empty `justification:` field)
+  - REQ-0037: decision-promotion gate (`W-PENDING-PROMOTION` + dedicated section in validate report; satisfied when `07_Decisions.md` row + entry archive + `promoted-to` back-ref all present)
+  - REQ-0038: stale-entry surfacing (`W-WORKLOG-STALE` for `status: active` entries with `updated` older than 90 days)
+  - REQ-0039: link-integrity validation (`W-WORKLOG-BROKEN-LINK` for unresolved `links: [spec-NNNN, discussion-*, entry-XXXX]`)
+  - REQ-0040: `D-DEPRECATED-PATH` warning during deprecation window; warning text MUST name sunset version (REQ-0018 of pack); escalates to error at sunset (REQ-0008)
+  - REQ-0041: SKILL.md `project_memory:` declaration enforcement (REQ-0010); read of un-declared path is rejected
+  - REQ-0042: `R-HANDOFF-INCOMPLETE` Reviewer-Gate finding for `kind: handoff` entries missing any of 5 required sections (canonical reference: `.qfai/contracts/cli/worklog-entry.schema.md` under the "kind: handoff body — required sections" subsection)
+  - REQ-0043: `W-SKILL-DOC-BROKEN-REF` for SKILL.md references that do not resolve in current layout (NFR-0008)
+  - REQ-0044: `W-USER-EDIT-PRESERVED` informational pass-through when `qfai init --upgrade-assistant-tree` preserves user edits
+- Cascade:
+  - companion row in spec-0003 (init seed → validate enforce)
+  - companion row in spec-0015 (Reviewer-Gate input bundle + finding `justification:` schema)
+  - companion rows in all skill specs (SKILL.md `project_memory:` block presence)
+- Out-of-scope (this spec): seeding (spec-0003); agent implementation of drift heuristic (spec-0015)
+- Implementation-phase 詳細は本 PR で append 完了 (per-spec SDD pass landed in this PR):
+  - US: US-0004-0028..0033 (work-log surface + reviewer bundle + skill enforcement + upgrade-tree)
+  - AC: AC-0004-0015..0030 (no gaps; AC-0004-0026 is the ssot-guard SSOT-divergence acceptance)
+  - BR: BR-0004-0014..0024 (mirror layer for the new ACs)
+  - EX: EX-0004-0013..0031 (per-AC worked examples; gaps at EX-0004-0024..0025 only — see 05_Examples.md HTML comment)
+  - TC: TC-0004-0015..0031 (validator finding-emit checks + cross-spec ssot-guard + per-format calendar-validity guard)
+  - TDD: TDD-0015..0031 (RED→GREEN evidence in `tdd/test-list.md`)
+
+### CHG-003 Operations (this PR)
+
+| Op ID  | Op Type       | Target                                                                                   | Summary                                                                                                                        |
+| ------ | ------------- | ---------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| OP-006 | UPDATE:APPEND | 01_Spec.md (Relevant Requirements: REQ-0034..0044)                                       | 11 v1.9.0 finding-code / schema requirements appended                                                                          |
+| OP-007 | UPDATE:APPEND | 02_User-stories.md (US-0004-0028..0033)                                                  | new US for work-log surface + reviewer bundle + skill enforcement + upgrade-tree                                               |
+| OP-008 | UPDATE:APPEND | 03_Acceptance-Criteria.md (AC-0004-0015..0030; no gaps — AC-0004-0026 covers ssot-guard) | per-REQ acceptance criteria including per-field date/scope/blocking/id-format sub-criteria                                     |
+| OP-009 | UPDATE:APPEND | 04_Business-Rules.md (BR-0004-0014..0024)                                                | mirror BR layer for OP-008                                                                                                     |
+| OP-010 | UPDATE:APPEND | 05_Examples.md (EX-0004-0013..0031; gaps at 0024..0025 only)                             | worked examples per AC                                                                                                         |
+| OP-011 | UPDATE:APPEND | 06_Test-Cases.md (TC-0004-0015..0031; ssot-guard Level enum + TC-0004-0026)              | validator finding-emit + cross-spec ssot-guard + per-format calendar-validity guard; Level enum extended with `ssot-guard` row |
+| OP-012 | UPDATE:APPEND | tdd/test-list.md (TDD-0015..0031)                                                        | RED→GREEN evidence rows; layer covers validators / ssot-guard                                                                  |
+
+- Source: REQ-0001, REQ-0003, REQ-0006, REQ-0007, REQ-0008, REQ-0010, REQ-0014, REQ-0015, REQ-0018, NFR-0008

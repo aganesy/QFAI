@@ -47,7 +47,7 @@ npx qfai report
 
 - `npx qfai init`
   - Creates the QFAI workspace under `.qfai/` (requirements/specs/contracts/report) and installs the AI assistant kit
-    (`assistant/` with skills, instructions, agents, and steering templates), plus `qfai.config.yaml`.
+    (`assistant/` with the 4-layer tree — `constitution/`, `manifest/`, `catalog/`, `process/` — plus `agents/` and `skills/`), plus `qfai.config.yaml`.
 - `npx qfai validate`
   - Validates specs/contracts/scenarios/traceability and review artifacts
     (`.qfai/review/review-*/summary.json` + minimum schema), writes `.qfai/report/validate.json`,
@@ -158,7 +158,7 @@ participant R as Repo (codebase)
 
 U->>R: Create a repo (or open an existing one)
 U->>R: Run npx qfai init
-R-->>U: .qfai kit installed (skills, instructions, agents)
+R-->>U: .qfai kit installed (4-layer assistant tree + skills + agents)
 
 U->>AG: Run /qfai-configure
 AG->>Q: Read .qfai/assistant/skills/qfai-configure/SKILL.md
@@ -206,10 +206,10 @@ Operational notes.
 - Each custom skill must end with a completion message that enumerates all available next actions and clearly states what to do for each option.
 - Except `qfai-discussion`, each skill must analyze the project context (architecture, tech stack, test framework, repo structure) before generating artifacts or code.
 - Skills should delegate work to multiple role-based sub-agents (Planner, Architect, Contract Designer, QA, Code Reviewer, etc.) to emulate a real delivery flow.
-- Change classification (Primary/Tags) is required in `09_delta.md` and recommended in PRs. See `.qfai/assistant/instructions/change-classification.md`.
+- Change classification (Primary/Tags) is required in `09_delta.md` and recommended in PRs. See `.qfai/assistant/constitution/change-classification.md`.
 - Verification planning is recorded in `09_delta.md` (`Verification -> Plan`) and validated in CI (`VFY-*` rules).
-- Review gate policies (required/optional layers and reviewers) are defined in `.qfai/assistant/steering/review-gate.rules.yml`.
-- Agent taxonomy and invocation SSOT are defined in `.qfai/assistant/steering/agent-catalog.yml`, `.qfai/assistant/steering/agent-routing.yml`, and `.qfai/assistant/steering/review-profiles.yml`.
+- Review gate policies (required/optional layers and reviewers) are defined in `.qfai/assistant/catalog/review-gate.rules.yml`.
+- Agent taxonomy and invocation SSOT are defined in `.qfai/assistant/manifest/agent-catalog.yml`, `.qfai/assistant/manifest/agent-routing.yml`, and `.qfai/assistant/manifest/review-profiles.yml`.
 
 ## Configuration
 
@@ -355,7 +355,6 @@ Typical customizations.
 ├── .qfai
 │   ├── assistant
 │   │   ├── agents
-│   │   │   ├── README.md
 │   │   │   ├── acceptance-test-engineer.md
 │   │   │   ├── architecture-reviewer.md
 │   │   │   ├── backend-engineer.md
@@ -363,6 +362,7 @@ Typical customizations.
 │   │   │   ├── delivery-planner.md
 │   │   │   ├── devops-ci-engineer.md
 │   │   │   ├── discovery-analyst.md
+│   │   │   ├── doc-steward.md
 │   │   │   ├── frontend-engineer.md
 │   │   │   ├── implementation-reviewer.md
 │   │   │   ├── orchestrator.md
@@ -374,14 +374,26 @@ Typical customizations.
 │   │   │   ├── requirements-reviewer.md
 │   │   │   ├── solution-architect.md
 │   │   │   └── test-design-analyst.md
-│   │   ├── instructions
-│   │   │   ├── README.md
+│   │   ├── constitution
 │   │   │   ├── agent-selection.md
+│   │   │   ├── change-classification.md
 │   │   │   ├── communication.md
 │   │   │   ├── constitution.md
+│   │   │   ├── drift-protocol.md
 │   │   │   ├── quality.md
+│   │   │   ├── requirements-decomposition.md
+│   │   │   ├── research-first-protocol.md
+│   │   │   ├── shared-skill-delegation-baseline.md
+│   │   │   ├── shared-skill-operating-baseline.md
 │   │   │   ├── thinking.md
 │   │   │   └── workflow.md
+│   │   ├── manifest
+│   │   │   ├── agent-catalog.yml
+│   │   │   ├── agent-routing.yml
+│   │   │   └── review-profiles.yml
+│   │   ├── process
+│   │   │   └── migrations
+│   │   │       └── v<X.Y.Z>-<topic>.md
 │   │   ├── skills
 │   │   │   ├── qfai-configure
 │   │   │   │   └── SKILL.md
@@ -401,14 +413,16 @@ Typical customizations.
 │   │   │   │   └── SKILL.md
 │   │   │   └── qfai-verify
 │   │   │       └── SKILL.md
-│   │   ├── steering
-│   │   │   ├── agent-catalog.yml
-│   │   │   ├── agent-routing.yml
-│   │   │   ├── review-gate.rules.yml
-│   │   │   ├── review-profiles.yml
-│   │   │   ├── product.md
-│   │   │   ├── structure.md
-│   │   │   └── tech.md
+│   │   └── catalog
+│   │       ├── cli-ux-guidelines.md
+│   │       ├── manifest.md
+│   │       ├── product.md
+│   │       ├── review-gate.rules.yml
+│   │       ├── spec_required_files.json
+│   │       ├── structure.md
+│   │       ├── tech.md
+│   │       ├── test-layers.md
+│   │       └── ui-definition-protocol.md
 │   └── waivers.yml
 └── qfai.config.yaml
 ```

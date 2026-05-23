@@ -24,6 +24,19 @@ import {
   QFAI_GITIGNORE_LEGACY_LINES,
   QFAI_GITIGNORE_REQUIRED_ENTRIES,
 } from "../../core/gitignore.js";
+import {
+  ASSISTANT_LAYERS,
+  HANDOFF_REQUIRED_SECTIONS,
+  WORKLOG_ENTRY_KINDS,
+  joinAssistantLayer,
+  joinLegacyAssistantInstructions,
+  joinLegacyAssistantSteering,
+  joinMigrationMemo,
+  joinProjectSteering,
+  legacyAssistantSteeringSunsetLabel,
+  type AssistantLayer,
+} from "../../core/paths/assistantPaths.js";
+import { resolveToolVersion } from "../../core/version.js";
 
 const execAsync = promisify(execCb);
 
@@ -32,6 +45,7 @@ export type InitOptions = {
   force: boolean;
   dryRun: boolean;
   yes: boolean;
+  upgradeAssistantTree?: boolean;
 };
 
 export async function runInit(options: InitOptions): Promise<void> {
@@ -48,6 +62,16 @@ export async function runInit(options: InitOptions): Promise<void> {
       "NOTE: --force は .qfai/assistant/skills/** と symlink assets（.agents/.claude/.github/.codex）を再生成し、legacy 10_workflow.md と旧ラッパーを削除します（specs/contracts 等は上書きしません）。",
     );
   }
+
+  // If --upgrade-assistant-tree is supplied, run the migration FIRST.
+  // This relocates user-edited content from the legacy pre-recut
+  // surfaces (instructions/, steering/, manifest/) into the new 4-layer
+  // tree BEFORE copyTemplateTree fills the same destinations from the
+  // asset defaults. The subsequent copyTemplateTree uses
+  // conflictPolicy: "skip", so migrated user edits are preserved.
+  const upgradeResult = options.upgradeAssistantTree
+    ? await runUpgradeAssistantTree(destRoot, options.dryRun)
+    : { copied: [], skipped: [], removed: [], preservedNotes: [] as string[] };
 
   // root/ と .qfai/ は create-only（既存は skip）
   // assistant/skills のみ --force で上書きする
@@ -83,6 +107,13 @@ export async function runInit(options: InitOptions): Promise<void> {
     : [];
   const removed = [...removedLegacySkills, ...wrappersResult.removed];
 
+  // 4-layer assistant-tree seed + project-root steering surface seed.
+  // These run AFTER copyTemplateTree so they can detect when the
+  // asset templates already populated a layer (they fill in only
+  // missing .gitkeep / README placeholders).
+  const assistantTreeResult = await seedAssistantLayers(destRoot, options.dryRun);
+  const projectSteeringResult = await seedProjectSteering(destRoot, options.dryRun);
+
   // Activation guidance for newly created instructions files
   const expectedInstructionsDir = path.join(destRoot, ".github", "instructions");
   const instructionsCreated = wrappersResult.copied.some(
@@ -104,6 +135,9 @@ export async function runInit(options: InitOptions): Promise<void> {
       ...skillsResult.copied,
       ...wrappersResult.copied,
       ...gitignoreResult.copied,
+      ...assistantTreeResult.copied,
+      ...projectSteeringResult.copied,
+      ...upgradeResult.copied,
     ],
     [
       ...rootResult.skipped,
@@ -111,11 +145,434 @@ export async function runInit(options: InitOptions): Promise<void> {
       ...skillsResult.skipped,
       ...wrappersResult.skipped,
       ...gitignoreResult.skipped,
+      ...assistantTreeResult.skipped,
+      ...projectSteeringResult.skipped,
+      ...upgradeResult.skipped,
     ],
-    removed,
+    [...removed, ...upgradeResult.removed],
     options.dryRun,
     "init",
     destRoot,
+  );
+
+  for (const note of upgradeResult.preservedNotes) {
+    info(note);
+  }
+
+  // Legacy steering/ sunset warning (D-DEPRECATED-PATH). Emitted AFTER
+  // the report summary so the warning stays at the bottom of the
+  // terminal output and is not buried by the skipped-paths list (PR
+  // #209 review NIT). Skip when the user is currently running
+  // --upgrade-assistant-tree (the helper will move the directory
+  // itself); skip on dry-run; skip when no legacy dir exists.
+  if (!options.upgradeAssistantTree && !options.dryRun) {
+    await emitLegacyAssistantSteeringSunset(destRoot);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// 4-layer assistant-tree seed + project-root steering surface seed
+// ---------------------------------------------------------------------------
+
+async function seedAssistantLayers(
+  destRoot: string,
+  dryRun: boolean,
+): Promise<{ copied: string[]; skipped: string[] }> {
+  const copied: string[] = [];
+  const skipped: string[] = [];
+
+  for (const layer of ASSISTANT_LAYERS) {
+    const layerDir = joinAssistantLayer(destRoot, layer);
+    const gitkeep = path.join(layerDir, ".gitkeep");
+    if (await pathExists(gitkeep)) {
+      skipped.push(gitkeep);
+      continue;
+    }
+    copied.push(gitkeep);
+    if (!dryRun) {
+      await mkdir(layerDir, { recursive: true });
+      await writeFile(gitkeep, assistantLayerGitkeepBody(layer), "utf-8");
+    }
+  }
+
+  return { copied, skipped };
+}
+
+function assistantLayerGitkeepBody(layer: AssistantLayer): string {
+  const purposes: Record<AssistantLayer, string> = {
+    constitution:
+      "Foundational normative rules (constitution, drift-protocol, distributed-surface, quality).",
+    manifest: "Declarative manifests (agent-catalog.yml, agent-routing.yml, review-profiles.yml).",
+    catalog:
+      "Reference catalogs (test-layers.md, review-gate.rules.yml, spec_required_files.json).",
+    process: "Workflow / process docs and migration memos (process/migrations/*).",
+  };
+  return [
+    `# .qfai/assistant/${layer}/`,
+    "",
+    purposes[layer],
+    "",
+    "Seeded by qfai init (4-layer assistant-tree recut, CHG-003).",
+    "",
+  ].join("\n");
+}
+
+function buildProjectSteeringReadmeBody(): string {
+  // Kind enum is sourced from the SSOT in assistantPaths.ts so a contract
+  // change automatically updates the README without manual sync.
+  const kindLines = WORKLOG_ENTRY_KINDS.map((k) => `- \`${k}\``);
+  return [
+    "# .qfai/steering/ — AI work-log surface",
+    "",
+    "This directory is the project-local work-log surface for AI coding",
+    "agents. Each entry is a small markdown file with YAML frontmatter",
+    "(`id`, `kind`, `status`, `created`, `updated`, `scope`, `blocking`,",
+    "`promote-to`, `links`). See the canonical schema at",
+    "`.qfai/contracts/cli/worklog-entry.schema.md`.",
+    "",
+    "## Filename-id invariant (contract)",
+    "",
+    "Every entry file `.qfai/steering/<id>.md` MUST have a frontmatter",
+    "`id:` that exactly matches the filename stem. The validator emits",
+    "`W-WORKLOG-SCHEMA` when they diverge.",
+    "",
+    "## Running validation",
+    "",
+    "```sh",
+    "qfai validate --profile sdd --fail-on error",
+    "```",
+    "",
+    "Validators that scan this surface: `W-WORKLOG-SCHEMA`,",
+    "`W-WORKLOG-BROKEN-LINK`, `W-WORKLOG-STALE`, `W-PENDING-PROMOTION`,",
+    "`R-HANDOFF-INCOMPLETE`.",
+    "",
+    "## Allowed `kind` values",
+    "",
+    "See `.qfai/contracts/cli/worklog-entry.schema.md#kind enum` for the",
+    "authoritative list and per-kind write trigger. The enum is:",
+    "",
+    ...kindLines,
+    "",
+    "## Templates",
+    "",
+    "See `_templates/entry.md` for the canonical entry shape.",
+    "",
+  ].join("\n");
+}
+
+function buildProjectSteeringEntryTemplate(): string {
+  // Section headings are sourced from HANDOFF_REQUIRED_SECTIONS (SSOT)
+  // so the template cannot drift from the validator.
+  const handoffBodyLines = HANDOFF_REQUIRED_SECTIONS.flatMap((heading) => [
+    heading,
+    "",
+    "(Mandatory for kind: handoff. See contract for guidance.)",
+    "",
+  ]);
+  return [
+    "---",
+    "id: 2026-MM-DD-kebab-case-id   # required; kebab-case ASCII; matches filename stem",
+    "status: active                 # required; enum: active | handoff | archived",
+    "kind: decision                 # required; see worklog-entry.schema.md#kind enum",
+    "created: YYYY-MM-DD            # required; ISO-8601 date",
+    "updated: YYYY-MM-DD            # required; ISO-8601 date; >= created",
+    'scope: global                  # required; "global" or "spec-NNNN"',
+    "blocking: false                # required; boolean",
+    'promote-to: null               # required; "spec-NNNN/07_Decisions.md" or null',
+    "links: []                      # required; array (may be empty)",
+    "---",
+    "",
+    "# Title of the entry",
+    "",
+    "## Context",
+    "",
+    "What triggered this entry? Reference any spec, contract, or external",
+    "input that informs the entry.",
+    "",
+    "<!-- For `kind: handoff` entries, the 5 sections below are MANDATORY -->",
+    "<!-- (Reviewer Gate emits R-HANDOFF-INCOMPLETE on missing sections). -->",
+    "",
+    ...handoffBodyLines,
+  ].join("\n");
+}
+
+async function seedProjectSteering(
+  destRoot: string,
+  dryRun: boolean,
+): Promise<{ copied: string[]; skipped: string[] }> {
+  const copied: string[] = [];
+  const skipped: string[] = [];
+
+  const targets: Array<{ rel: string[]; body: string }> = [
+    { rel: ["README.md"], body: buildProjectSteeringReadmeBody() },
+    { rel: [".gitkeep"], body: "" },
+    { rel: ["_templates", "entry.md"], body: buildProjectSteeringEntryTemplate() },
+  ];
+
+  for (const target of targets) {
+    const fullPath = joinProjectSteering(destRoot, ...target.rel);
+    if (await pathExists(fullPath)) {
+      skipped.push(fullPath);
+      continue;
+    }
+    copied.push(fullPath);
+    if (!dryRun) {
+      await mkdir(path.dirname(fullPath), { recursive: true });
+      await writeFile(fullPath, target.body, "utf-8");
+    }
+  }
+
+  return { copied, skipped };
+}
+
+// ---------------------------------------------------------------------------
+// --upgrade-assistant-tree migration helper
+// ---------------------------------------------------------------------------
+
+type UpgradeResult = {
+  copied: string[];
+  skipped: string[];
+  removed: string[];
+  preservedNotes: string[];
+};
+
+async function runUpgradeAssistantTree(destRoot: string, dryRun: boolean): Promise<UpgradeResult> {
+  const copied: string[] = [];
+  const skipped: string[] = [];
+  const removed: string[] = [];
+  const preservedNotes: string[] = [];
+
+  // Per .qfai/contracts/cli/qfai-init.md#--upgrade-assistant-tree, the
+  // relocation covers 3 pre-recut surfaces: instructions/, steering/,
+  // and manifest/. Each is walked independently and routed into the new
+  // 4-layer tree via the classifier; the classifier is name-driven so
+  // it works regardless of which legacy surface a file lived in.
+  // Pre-recut legacy surfaces that the migration helper walks. The
+  // pre-recut `manifest/` layer is intentionally NOT included here:
+  // its path is identical to the canonical post-recut manifest/ layer,
+  // so walking it would mis-label freshly-seeded canonical files as
+  // "pre-recut surfaces" in the migration memo and emit spurious
+  // W-USER-EDIT-PRESERVED notes for normal post-init files.
+  const legacySurfaces: Array<{ name: "steering" | "instructions"; dir: string }> = [
+    { name: "steering", dir: joinLegacyAssistantSteering(destRoot) },
+    { name: "instructions", dir: joinLegacyAssistantInstructions(destRoot) },
+  ];
+  const surfaceExistence = await Promise.all(legacySurfaces.map((s) => pathExists(s.dir)));
+  const anyLegacyExists = surfaceExistence.some(Boolean);
+  // Detected surfaces list — passed to buildMigrationMemo so the memo's
+  // Status block reflects all 3 pre-recut surfaces (steering /
+  // instructions / manifest), not just steering[0].
+  const detectedSurfaces = legacySurfaces
+    .filter((_, i) => surfaceExistence[i] === true)
+    .map((s) => s.name);
+
+  // Migration memo is always emitted by --upgrade-assistant-tree (REQ-0021).
+  const version = await resolveToolVersion();
+  const memoPath = joinMigrationMemo(destRoot, version);
+  if (await pathExists(memoPath)) {
+    // Memo is commit-immutable per OC-53 — do not touch.
+    skipped.push(memoPath);
+  } else {
+    copied.push(memoPath);
+    if (!dryRun) {
+      await mkdir(path.dirname(memoPath), { recursive: true });
+      await writeFile(memoPath, buildMigrationMemo(version, detectedSurfaces), "utf-8");
+    }
+  }
+
+  if (!anyLegacyExists) {
+    // Already-upgraded project: emit info-only note so the operator
+    // sees the migration helper ran (REQ-0020 + W-USER-EDIT-PRESERVED).
+    preservedNotes.push(
+      "  W-USER-EDIT-PRESERVED: no pre-recut surfaces (.qfai/assistant/{steering,instructions,manifest}/) found; no migration was needed.",
+    );
+    return { copied, skipped, removed, preservedNotes };
+  }
+
+  // Walk every legacy surface and re-locate each file into the new
+  // 4-layer tree based on the name-driven classifier. User edits are
+  // preserved by file copy (not overwrite); legacy files are left in
+  // place AND a W-USER-EDIT-PRESERVED informational note is emitted so
+  // the operator can decide when to delete the originals.
+  for (let i = 0; i < legacySurfaces.length; i++) {
+    if (!surfaceExistence[i]) continue;
+    const surface = legacySurfaces[i];
+    if (!surface) continue;
+    const legacyEntries = await collectFilesRecursive(surface.dir);
+    for (const legacyPath of legacyEntries) {
+      const rel = path.relative(surface.dir, legacyPath);
+      const target = classifyLegacySteeringEntry(rel);
+      // Same-layer self-copy guard: if the target layer is identical to
+      // the surface we are already in (e.g. legacy manifest/agent-routing.yml
+      // → new manifest/agent-routing.yml), the file is already at the
+      // canonical location. Skip without W-USER-EDIT-PRESERVED noise.
+      // Same-layer self-copy guard. Currently legacySurfaces only contains
+      // pre-recut surfaces (steering, instructions) so this comparison
+      // never matches a canonical layer, but the guard is preserved
+      // defensively for future expansions.
+      if ((target.layer as string) === surface.name) continue;
+      const newPath = joinAssistantLayer(destRoot, target.layer, ...target.subpath.split("/"));
+      if (await pathExists(newPath)) {
+        // User has already authored / edited the new file — preserve it.
+        skipped.push(newPath);
+        preservedNotes.push(
+          `  W-USER-EDIT-PRESERVED: ${path.relative(destRoot, newPath).replace(/\\/g, "/")} kept (existing user edit detected).`,
+        );
+        continue;
+      }
+      copied.push(newPath);
+      if (!dryRun) {
+        const body = await readFile(legacyPath, "utf-8");
+        await mkdir(path.dirname(newPath), { recursive: true });
+        await writeFile(newPath, body, "utf-8");
+      }
+    }
+  }
+
+  return { copied, skipped, removed, preservedNotes };
+}
+
+function classifyLegacySteeringEntry(relPath: string): { layer: AssistantLayer; subpath: string } {
+  const normalized = relPath.replace(/\\/g, "/").toLowerCase();
+  const posix = relPath.replace(/\\/g, "/");
+  // Exact-basename routing (stem without extension) so user docs whose
+  // names happen to contain `agent-routing` or `review-gate` etc.
+  // (e.g. `agent-routing-notes.md`) are NOT misrouted to the canonical
+  // layer.
+  const stem = (normalized.split("/").pop() ?? "").replace(/\.[^.]+$/, "");
+  // review-gate is a reference rules catalog (not a routing manifest) — keep
+  // it in catalog/ so loaders that expect catalog placement find it.
+  // spec_required_files is a filename-list registry — also catalog.
+  const CATALOG_BASENAMES = new Set([
+    "test-layers",
+    "review-gate.rules",
+    "review-gate",
+    "spec_required_files",
+  ]);
+  if (CATALOG_BASENAMES.has(stem)) {
+    return { layer: "catalog", subpath: posix };
+  }
+  const MANIFEST_BASENAMES = new Set(["agent-catalog", "agent-routing", "review-profiles"]);
+  if (MANIFEST_BASENAMES.has(stem)) {
+    return { layer: "manifest", subpath: posix };
+  }
+  // Constitution — normative invariants (drift-protocol, constitution,
+  // quality, distributed-surface, workflow, agent-selection, change-
+  // classification, requirements-decomposition, communication, thinking,
+  // shared-skill-*-baseline). Migrated from legacy instructions/ surface.
+  // Match on exact basename stem (file without extension) so short
+  // tokens like "quality" / "workflow" / "thinking" / "communication"
+  // do NOT substring-match unrelated user-named files. `stem` is
+  // already computed above for the catalog/manifest checks; reuse it
+  // for the constitution check too (one canonical extraction point).
+  const CONSTITUTION_BASENAMES = new Set([
+    "constitution",
+    "drift-protocol",
+    "quality",
+    "distributed-surface",
+    "workflow",
+    "agent-selection",
+    "change-classification",
+    "requirements-decomposition",
+    "communication",
+    "thinking",
+    "shared-skill-delegation-baseline",
+    "shared-skill-operating-baseline",
+  ]);
+  if (CONSTITUTION_BASENAMES.has(stem)) {
+    return { layer: "constitution", subpath: posix };
+  }
+  // Process layer routing — matched on top-level path segment only.
+  // Recognized top-level inputs:
+  //   - `process/...` (canonical post-recut path; strip the leading
+  //     `process/` so it lands at `.qfai/assistant/process/...`
+  //     rather than double-nesting)
+  //   - `migrations/...` (legacy convention where the migration memos
+  //     lived directly under the steering surface; preserved as-is so
+  //     it lands at `.qfai/assistant/process/migrations/...`)
+  // Non-top-level `migrations` segments (e.g. `foo/migrations/bar.md`)
+  // are NOT routed here — they fall through to the default catalog
+  // layer so user docs are not pulled out from under their intended
+  // location.
+  const segments = normalized.split("/");
+  const isTopProcess = segments[0] === "process";
+  const isTopMigrations = segments[0] === "migrations";
+  if (isTopProcess || isTopMigrations) {
+    const subpath = isTopProcess ? posix.slice("process/".length) : posix;
+    return { layer: "process", subpath };
+  }
+  // Default: catalog (reference docs).
+  return { layer: "catalog", subpath: posix };
+}
+
+async function collectFilesRecursive(dir: string): Promise<string[]> {
+  const entries = await readdir(dir, { withFileTypes: true });
+  const files: string[] = [];
+  for (const entry of entries) {
+    const full = path.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      files.push(...(await collectFilesRecursive(full)));
+    } else if (entry.isFile()) {
+      files.push(full);
+    }
+  }
+  return files;
+}
+
+function buildMigrationMemo(version: string, detectedSurfaces: readonly string[]): string {
+  const stamp = new Date().toISOString();
+  const sunset = legacyAssistantSteeringSunsetLabel();
+  const surfacesLine =
+    detectedSurfaces.length > 0
+      ? `- Detected pre-recut surfaces: ${detectedSurfaces.map((s) => `\`.qfai/assistant/${s}/\``).join(", ")} — files copied into the new 4-layer tree.`
+      : "- No pre-recut surfaces (`.qfai/assistant/{steering,instructions,manifest}/`) found — fresh layout adopted.";
+  return [
+    `# qfai assistant-layer recut migration (v${version})`,
+    "",
+    `- Generated: ${stamp}`,
+    `- Source layout: .qfai/assistant/{steering, instructions, manifest}/ (pre-recut)`,
+    `- Target layout: .qfai/assistant/{constitution, manifest, catalog, process}/`,
+    "",
+    "## Status",
+    "",
+    surfacesLine,
+    "",
+    "## Layer mapping",
+    "",
+    "| Layer        | Purpose                                                                   |",
+    "| ------------ | ------------------------------------------------------------------------- |",
+    "| constitution | Foundational normative rules (constitution, drift-protocol, quality).      |",
+    "| manifest     | Declarative manifests (agent-catalog, agent-routing, review-profiles).    |",
+    "| catalog      | Reference catalogs (test-layers, review-gate rules, spec_required_files). |",
+    "| process      | Workflow / process docs and migration memos.                               |",
+    "",
+    "## Compatibility window",
+    "",
+    `Legacy \`.qfai/assistant/{steering,instructions}/\` are read-compatible for the current`,
+    `minor release window only; sunset: v${sunset} (D-DEPRECATED-PATH).`,
+    "",
+    "## Provenance",
+    "",
+    "This memo is generated by `qfai init --upgrade-assistant-tree` and is",
+    "commit-immutable — once committed, do not edit. Subsequent runs of",
+    "the helper detect this file and skip rewrite.",
+    "",
+  ].join("\n");
+}
+
+async function emitLegacyAssistantSteeringSunset(destRoot: string): Promise<void> {
+  // Both legacy pre-recut surfaces (steering/ AND instructions/) trigger
+  // a sunset warning per assistantTreeMigration validator symmetry.
+  // Sunset is the pinned cutoff (SSOT) so init's user-facing line stays
+  // consistent with the validator's severity escalation point.
+  const sunset = legacyAssistantSteeringSunsetLabel();
+  const detected: string[] = [];
+  if (await pathExists(joinLegacyAssistantSteering(destRoot))) detected.push("steering");
+  if (await pathExists(joinLegacyAssistantInstructions(destRoot))) detected.push("instructions");
+  if (detected.length === 0) return;
+  const surfaces = detected.map((s) => `.qfai/assistant/${s}/`).join(" + ");
+  info(
+    `  D-DEPRECATED-PATH: ${surfaces} read-compatible for the current minor release only. sunset: v${sunset}. Run \`qfai init --upgrade-assistant-tree\` to migrate.`,
   );
 }
 
@@ -817,8 +1274,14 @@ function buildCopilotInstructions(): string {
     "- Always match the user's language in your outputs.",
     "- Treat `.qfai/` as the canonical source of truth for the QFAI workflow:",
     "  - Skills (SSOT): `.qfai/assistant/skills/`",
-    "  - Instructions: `.qfai/assistant/instructions/`",
-    "  - Project steering: `.qfai/assistant/steering/`",
+    "  - Foundational rules: `.qfai/assistant/constitution/` (post-recut)",
+    "  - Declarative manifests: `.qfai/assistant/manifest/`",
+    "  - Reference catalogs: `.qfai/assistant/catalog/`",
+    "  - Process / migration memos: `.qfai/assistant/process/`",
+    "  - AI work-log surface (per-project): `.qfai/steering/` (entry frontmatter schema: `.qfai/contracts/cli/worklog-entry.schema.md`)",
+    "- Legacy `.qfai/assistant/steering/` is read-compatible only during",
+    "  the deprecation window (`D-DEPRECATED-PATH` warning fires when it",
+    "  is detected). Run `qfai init --upgrade-assistant-tree` to migrate.",
     "- When asked to perform QFAI workflow tasks, prefer using the QFAI skill symlinks in `.github/skills/`.",
     "  - These symlinks resolve to `.qfai/assistant/skills/<skill-name>/`.",
     "- Do not invent repository structure, tools, or frameworks. Inspect the repo first and align with what is already used.",

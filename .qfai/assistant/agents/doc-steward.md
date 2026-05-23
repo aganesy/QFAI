@@ -18,8 +18,8 @@ tools: [Read, Write, Edit, Glob, Grep, Bash]
 
 ## Inputs you must read
 
-- .qfai/assistant/instructions/\*
-- .qfai/assistant/steering/\*
+- .qfai/assistant/constitution/\*\*
+- .qfai/assistant/{manifest,catalog}/\*\*
 - CHANGELOG.md
 - README.md
 - docs/\*\*

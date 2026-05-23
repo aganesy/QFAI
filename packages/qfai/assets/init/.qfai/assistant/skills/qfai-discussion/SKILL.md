@@ -70,7 +70,7 @@ For UI-bearing targets, follow `references/design-dna-intake.md` while authoring
 
 ## Completion Contract (Shared)
 
-Follow `.qfai/assistant/instructions/shared-skill-operating-baseline.md#gate-failure-autorepair-protocol` for validate, doctor, and quality-gate failures.
+Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#gate-failure-autorepair-protocol` for validate, doctor, and quality-gate failures.
 
 Before declaring completion, you MUST:
 
@@ -89,13 +89,13 @@ Reviewer checks must confirm:
 - the 15-file discussion pack is complete; `Disposition: open` count is zero in `11_OQ-Register.md`;
 - the UI-bearing sidecar family is complete when the pack is UI-bearing;
 - discussion stayed planner-first and did not choose a single visual winner;
-- Drift Protocol is enforced; review policy is checked against `.qfai/assistant/steering/test-layers.md`;
+- Drift Protocol is enforced; review policy is checked against `.qfai/assistant/catalog/test-layers.md`;
 - planning and coverage heuristics are signals, not gates;
 - review findings end with `Status (PASS/REVISE)` and Reviewer result is explicit as `PASS` or `REVISE`.
 
 ## Sub-agent Delegation (MANDATORY)
 
-Follow `.qfai/assistant/instructions/shared-skill-delegation-baseline.md`.
+Follow `.qfai/assistant/constitution/shared-skill-delegation-baseline.md`.
 
 ### Orchestrator Protocol (MUST)
 
@@ -120,3 +120,9 @@ You MUST end the user-facing output with a handoff sentence to `/qfai-sdd` in th
 
 - Japanese output (use this exact sentence):
   ディスカッションが完了しました。他に要望などがあればご提示ください。問題なければ『/qfai-sdd』と入力してください。
+
+project_memory:
+
+- 15-file mandatory output set is fixed; the UI-bearing sidecar family (40_screen_contracts.md + 50_review_input_bundle.md + root DESIGN.md) is required only when the target is UI-bearing.
+- Discussion is planner-first: never pick a single visual winner; carry exploration references as deviate-from inputs, not imitate-this.
+- Completion requires Disposition: open count = 0 in 11_OQ-Register.md; deferred items must move to 13_Deferred.md with full metadata.

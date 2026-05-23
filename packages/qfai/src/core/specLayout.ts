@@ -4,6 +4,16 @@ import path from "node:path";
 import { isEnoent } from "./fs/errno.js";
 
 const SPEC_DIR_RE = /^spec-\d{4}$/i;
+// Canonical: catalog/ — registry artifacts (filename lists, lookup
+// tables) live in catalog, not manifest. Legacy fallback: manifest/
+// during the compatibility window so projects that haven't yet run
+// `qfai init --upgrade-assistant-tree` still resolve the filename
+// registry.
+const SPEC_REQUIRED_FILES_CATALOG_PATH = path.join(
+  "assistant",
+  "catalog",
+  "spec_required_files.json",
+);
 const SPEC_REQUIRED_FILES_MANIFEST_PATH = path.join(
   "assistant",
   "manifest",
@@ -587,12 +597,17 @@ async function resolveLayeredRequiredFileSets(specsRoot: string): Promise<Layere
   };
 
   const qfaiRoot = path.dirname(specsRoot);
-  const manifestPath = path.join(qfaiRoot, SPEC_REQUIRED_FILES_MANIFEST_PATH);
+  const catalogPath = path.join(qfaiRoot, SPEC_REQUIRED_FILES_CATALOG_PATH);
+  const legacyManifestPath = path.join(qfaiRoot, SPEC_REQUIRED_FILES_MANIFEST_PATH);
   let parsed: unknown;
   try {
-    parsed = JSON.parse(await readFile(manifestPath, "utf-8"));
+    parsed = JSON.parse(await readFile(catalogPath, "utf-8"));
   } catch {
-    return defaults;
+    try {
+      parsed = JSON.parse(await readFile(legacyManifestPath, "utf-8"));
+    } catch {
+      return defaults;
+    }
   }
 
   if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {

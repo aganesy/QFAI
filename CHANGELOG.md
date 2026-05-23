@@ -4,6 +4,85 @@
 
 ## [Unreleased]
 
+## [1.9.0] - 2026-05-23
+
+### Added (assistant-layer recut + steering work-log surface — CHG-003)
+
+- 4-layer assistant-tree: `.qfai/assistant/{constitution,manifest,catalog,process}/`
+  replaces the legacy single-layer `.qfai/assistant/steering/`. `qfai init`
+  seeds the new layout; `qfai init --upgrade-assistant-tree` migrates
+  existing projects (REQ-0018..0023 in spec-0003).
+- Project-root `.qfai/steering/` repurposed as the AI work-log surface
+  (entries with `kind: decision | risk | blocker | scope-down | …`).
+  Skill bodies are the writers; `qfai validate` enforces frontmatter
+  schema (`W-WORKLOG-SCHEMA`), link integrity (`W-WORKLOG-BROKEN-LINK`),
+  staleness (`W-WORKLOG-STALE` at 90 days), and decision-promotion gate
+  (`W-PENDING-PROMOTION`).
+- Reviewer-Gate drift findings: `R-WORKLOG-DRIFT`, `R-REJECTED-READOPT`,
+  `R-HANDOFF-INCOMPLETE` — finding-code implementation owned by
+  spec-0004 (REQ-0036 / REQ-0042) and reviewer-input-bundle / R-\*
+  schema obligation owned by spec-0015 CHG-003 (see
+  `.qfai/specs/spec-0015/09_delta.md` "CHG-003" block and
+  `.qfai/contracts/cli/qfai-validate.md` "New finding codes" table
+  for per-code Source REQ mapping). Reviewer reports MUST carry
+  non-empty `justification:` on these findings; empty values are
+  rejected (advisory-failing).
+- `assistantPaths.ts` SSOT module (`packages/qfai/src/core/paths/`)
+  produces every distributed assistant-tree path string (REQ-0022 in
+  spec-0003); hard-coded literals in `path.join(...)` position are
+  lint-rejected by the SSOT import test in
+  `tests/integration/initSpec0003.test.ts`.
+- Migration memo authored at
+  `.qfai/assistant/process/migrations/v<X.Y.Z>-assistant-layer-recut.md`
+  by `qfai init --upgrade-assistant-tree`; commit-immutable per OC-53.
+  Sunset version inside the memo is computed via
+  `nextMinorVersion(resolveToolVersion())` so no future-version
+  literal ships in `dist/`.
+- New validators wired into the SDD profile:
+  `validateWorklogSurface`, `validateAssistantTreeMigration`,
+  `validateSkillDocReferences`, `validateReviewerJustification`.
+  Implementations under `packages/qfai/src/core/validators/`.
+- New `--upgrade-assistant-tree` flag plumbed through `parseArgs`,
+  `runInit` → `runUpgradeAssistantTree`. Legacy steering content is
+  re-located into the appropriate new layer via
+  `classifyLegacySteeringEntry`; existing files at the destination are
+  preserved with a `W-USER-EDIT-PRESERVED` informational note.
+- `W-USER-EDIT-PRESERVED` informational pass-through emitted by the
+  migration helper and recognized by `qfai validate` as info-only.
+- ATDD coverage closure for spec-0012 TC-0012-0396..0432 (PR #208
+  late-review waves 11..50) appended to
+  `tests/integration/qfai-traceability.md`.
+- TC-0012-0416 / TDD-0436 cycle-9 idempotency regression test landed in
+  `packages/qfai/tests/cli/commands/prototypingIterate.test.ts`.
+
+### Changed
+
+- `.codex/README.md` and `.github/copilot-instructions.md` now reference
+  the cross-AI rules under `.agents/rules/` (closing pre-existing
+  drift caught by `agentsRulesSurface.test.ts`).
+- spec-0003 / spec-0004 per-spec SDD pass: REQ-0018..0023 (spec-0003)
+  and REQ-0034..0044 (spec-0004 — renumbered from initial REQ-0023..
+  0033 draft in wave-7 ce5a6613 to preserve pre-existing AC/TC refs
+  to REQ-0023..0031) fanned out into US/AC/BR/EX/TC, then
+  TDD-0021..0026 (spec-0003) and TDD-0015..0025 (spec-0004) landed
+  with full RED→GREEN evidence in `tdd/test-list.md`.
+
+### Deprecated
+
+- Legacy `.qfai/assistant/steering/` layout is read-compatible for the
+  current minor release window only. `qfai validate` emits
+  `D-DEPRECATED-PATH` whose body literally contains `sunset: vX.Y.Z`
+  computed via `nextMinorVersion(resolveToolVersion())` (resolves to
+  `sunset: v1.10.0` on this release). The same condition escalates
+  to error from `v1.10.0+`.
+- `W-SKILL-DOC-BROKEN-REF` (`qfai-*` SKILL.md referencing a legacy
+  `.qfai/assistant/{instructions,steering}/<file>` path) follows the
+  same escalation timeline: warning during the v1.9.x window, error
+  from `v1.10.0+`. The headline shape branches with severity
+  ("Read-compatible only..." pre-sunset; "past the announced
+  sunset..." post-sunset) so consumers can disambiguate which mode
+  fired. User-defined (non-`qfai-*`) skills are NOT flagged.
+
 ## [1.8.10] - 2026-05-19
 
 ### BREAKING CHANGES (PR #208 — `qfai prototyping show-spec` JSON schema reshape)

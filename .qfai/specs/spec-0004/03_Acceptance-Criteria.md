@@ -62,3 +62,115 @@
 
 - `findDesignMdViolations(html, designMd)` is pure (no I/O, no clock, no global state) and deterministic (same input bytes → same output array).
 - Property tests assert: (a) idempotence, (b) order-stability, (c) absence of `Date`, `process`, `fs`, network calls in the call graph.
+
+## AC-0004-0015
+
+- US-Refs: US-0004-0028
+- Given a project with a directory at `.qfai/assistant/steering/` (or any other non-canonical layer name)
+- When `qfai validate` runs
+- Then a finding is emitted naming the offending directory; the canonical layer enum (`constitution`, `manifest`, `catalog`, `process`) is enumerated in the finding text; severity is at least warning during the deprecation window (D-DEPRECATED-PATH co-fires per REQ-0040)
+
+## AC-0004-0016
+
+- US-Refs: US-0004-0029
+- Given a work-log entry file at `.qfai/steering/<name>.md` whose YAML frontmatter omits a required field, uses a wrong enum value for `kind`/`status`, or carries a malformed `created`/`updated` timestamp
+- When `qfai validate` runs
+- Then `W-WORKLOG-SCHEMA` is emitted at warning severity (non-blocking) naming the file and the offending field; valid entries do not trigger it
+
+## AC-0004-0017
+
+- US-Refs: US-0004-0029
+- Given a work-log entry whose `links: [spec-0099, discussion-99991231235959999, entry-XXXX-FAKE]` references resources that do not exist on disk
+- When `qfai validate` runs
+- Then `W-WORKLOG-BROKEN-LINK` is emitted at warning severity for each unresolved reference, naming the entry file and the unresolved token
+
+## AC-0004-0018
+
+- US-Refs: US-0004-0030
+- Given a reviewer report containing an `R-WORKLOG-DRIFT` or `R-REJECTED-READOPT` finding with an empty or missing `justification:` field
+- When `qfai validate` ingests the reviewer report
+- Then the validator rejects the run with severity error (advisory-failing). A correctly-justified finding (non-empty `justification:` naming the entry ID or Decisions row) passes
+
+## AC-0004-0019
+
+- US-Refs: US-0004-0030
+- Given a work-log entry with `kind: handoff` whose body is missing at least one of the 5 required sections (`## State of the task`, `## Next single action`, `## Constraints to preserve`, `## Open questions`, `## References to consult first` — canonical per `.qfai/contracts/cli/worklog-entry.schema.md`)
+- When `qfai validate` runs
+- Then `R-HANDOFF-INCOMPLETE` is emitted at error severity; the finding text names the missing section(s) and the entry file
+
+## AC-0004-0020
+
+- US-Refs: US-0004-0031
+- Given a work-log entry of `kind: decision` whose `promote-to: 07_Decisions.md` is set but `07_Decisions.md` does NOT yet contain a row referencing the entry AND no `promoted-to` back-ref exists in the entry's frontmatter
+- When `qfai validate` runs
+- Then `W-PENDING-PROMOTION` is emitted at warning severity AND a dedicated section "Pending Promotions" appears in the validate report
+
+## AC-0004-0021
+
+- US-Refs: US-0004-0031
+- Given a `status: active` work-log entry whose `updated` timestamp is older than 90 days from now
+- When `qfai validate` runs
+- Then `W-WORKLOG-STALE` is emitted at warning severity naming the entry and its age in days
+
+## AC-0004-0022
+
+- US-Refs: US-0004-0032
+- Given a project still carrying `.qfai/assistant/steering/` after the v1.9.0 release
+- When `qfai validate` runs in v1.9.x
+- Then `D-DEPRECATED-PATH` warning is emitted with the body string literally containing `sunset: v1.10.0`; in v1.10.0+ the same condition escalates to error per REQ-0008 (handled by spec-0003 sunset semantics + spec-0004 validator severity table)
+
+## AC-0004-0023
+
+- US-Refs: US-0004-0032
+- Given a `qfai-*` skill whose SKILL.md does not declare a top-level `project_memory:` YAML block
+- When `qfai validate` runs
+- Then an error finding is emitted (no specific code; uses `QFAI-SKILL-*` family) naming the skill and pointing at the missing block; read attempts of un-declared paths through the skill body are also rejected
+
+## AC-0004-0024
+
+- US-Refs: US-0004-0033
+- Given a `qfai-*` SKILL.md whose body references a path that no longer resolves under the 4-layer layout (e.g., `.qfai/assistant/steering/agent-routing.yml`)
+- When `qfai validate` runs
+- Then `W-SKILL-DOC-BROKEN-REF` is emitted; severity is `warning` during the deprecation window (running tool version < `LEGACY_STEERING_SUNSET`) and escalates to `error` once the tool version reaches or passes the sunset minor. The message headline branches with the severity so consumers can distinguish "Read-compatible only" (pre-sunset) from "past the announced sunset" (post-sunset). User-defined (non-`qfai-*`) skills are NOT flagged.
+
+## AC-0004-0025
+
+- US-Refs: US-0004-0033
+- Given a validate run on a project that just completed `qfai init --upgrade-assistant-tree`
+- When the migration emitted `W-USER-EDIT-PRESERVED` informational notes
+- Then the validator recognizes those notes as informational pass-throughs (`info` severity, not warning/error); they appear in the validate report under "Informational" without failing any gate
+
+## AC-0004-0026
+
+- US-Refs: US-0004-0029 (sub-criterion of REQ-0035 frontmatter schema; meta-validation of the manifest pipeline that surfaces agent SSOT divergence)
+- Given the `agent-catalog.yml` entry for any agent declares a `developer_instructions` field that diverges from the canonical `.qfai/assistant/agents/<name>.md` body (from `## Mission` onward, line-ending normalized)
+- When the SSOT-guard test (`tests/codex/agents.test.ts` ssot-guard test) runs
+- Then the test FAILS naming the diverging agent id so the 3-way SSOT (canonical MD ↔ codex TOML ↔ `agent-catalog.yml`) cannot silently drift
+
+## AC-0004-0027
+
+- US-Refs: US-0004-0029 (sub-criterion of REQ-0035 frontmatter schema)
+- Given a `.qfai/steering/<id>.md` entry whose `created` or `updated` field value either (a) does not match the surface regex `^\d{4}-\d{2}-\d{2}$` OR (b) matches the regex but is not a valid calendar date (e.g. `2026-02-30`, `2026-13-01`)
+- When `qfai validate` runs
+- Then `W-WORKLOG-SCHEMA` is emitted at warning severity per non-conformant field (rule: `worklogSurface.schema.createdFormat` / `updatedFormat`) — both branches are handled by `isValidCalendarDate()` round-trip detection so neither bad-syntax nor calendar-rollover dates can silently flow through schema validation
+
+## AC-0004-0028
+
+- US-Refs: US-0004-0029 (sub-criterion of REQ-0035 frontmatter schema)
+- Given a `.qfai/steering/<id>.md` entry whose `updated` ISO-8601 date is strictly earlier than its `created` ISO-8601 date
+- When `qfai validate` runs
+- Then `W-WORKLOG-SCHEMA` (rule: `worklogSurface.schema.updatedOrder`) is emitted at warning severity naming both dates, enforcing the worklog contract's `updated >= created` invariant
+
+## AC-0004-0029
+
+- US-Refs: US-0004-0029 (sub-criterion of REQ-0039 link integrity)
+- Given a `.qfai/steering/<id>.md` entry whose `links` array contains one or more non-string elements (e.g. `links: [123, true]`)
+- When `qfai validate` runs
+- Then `W-WORKLOG-SCHEMA` (rule: `worklogSurface.schema.linksElementType`) is emitted per non-string element so malformed link items cannot bypass schema and broken-link checks
+
+## AC-0004-0030
+
+- US-Refs: US-0004-0029 (sub-criterion of REQ-0035 frontmatter schema)
+- Given a `.qfai/steering/<id>.md` entry whose frontmatter `id` value does not match kebab-case ASCII (`^[a-z0-9]+(?:-[a-z0-9]+)*$`)
+- When `qfai validate` runs
+- Then `W-WORKLOG-SCHEMA` (rule: `worklogSurface.schema.idFormat`) is emitted at warning severity naming the offending id, enforcing the worklog-entry.schema.md Storage-model requirement that `<id>` is kebab-case ASCII

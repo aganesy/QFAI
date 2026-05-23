@@ -22,10 +22,10 @@ Skill files should reference this baseline and only restate skill-specific addit
 
 Refresh these files before or during the stage when facts are missing or stale:
 
-- `.qfai/assistant/steering/manifest.md`
-- `.qfai/assistant/steering/product.md`
-- `.qfai/assistant/steering/structure.md`
-- `.qfai/assistant/steering/tech.md`
+- `.qfai/assistant/catalog/manifest.md`
+- `.qfai/assistant/catalog/product.md`
+- `.qfai/assistant/catalog/structure.md`
+- `.qfai/assistant/catalog/tech.md`
 
 Rules:
 

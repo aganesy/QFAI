@@ -115,7 +115,7 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     const baselinePath = path.join(
       templateQfaiDir,
       "assistant",
-      "instructions",
+      "constitution",
       "shared-skill-delegation-baseline.md",
     );
     const baseline = await readFile(baselinePath, "utf-8");
@@ -140,7 +140,7 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     const baselinePath = path.join(
       templateQfaiDir,
       "assistant",
-      "instructions",
+      "constitution",
       "shared-skill-operating-baseline.md",
     );
     const baseline = await readFile(baselinePath, "utf-8");
@@ -220,7 +220,7 @@ describe("assets guardrails", { timeout: 30000 }, () => {
   });
 
   it("ensures configure and verify delegation order follows routing SSOT", async () => {
-    const routingPath = path.join(templateQfaiDir, "assistant", "steering", "agent-routing.yml");
+    const routingPath = path.join(templateQfaiDir, "assistant", "manifest", "agent-routing.yml");
     const configurePath = path.join(
       templateQfaiDir,
       "assistant",
@@ -242,7 +242,7 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     expect(routing).toContain("mandatory_agents: [delivery-planner, qa-strategist]");
 
     expect(configure).toContain(
-      "Use `.qfai/assistant/steering/agent-routing.yml` as the routing SSOT.",
+      "Use `.qfai/assistant/manifest/agent-routing.yml` as the routing SSOT.",
     );
     expect(configure).toContain(
       "First required delegation / Capability Probe: `delivery-planner` in the `analysis` phase.",
@@ -255,7 +255,7 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     );
 
     expect(verify).toContain(
-      "Use `.qfai/assistant/steering/agent-routing.yml` as the routing SSOT.",
+      "Use `.qfai/assistant/manifest/agent-routing.yml` as the routing SSOT.",
     );
     expect(verify).toContain(
       "First required delegation / Capability Probe: `delivery-planner` in the `plan` phase.",
@@ -376,7 +376,10 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     );
     const content = await readFile(skillPath, "utf-8");
 
-    expect(content.split(/\r?\n/).length).toBeLessThanOrEqual(200);
+    // The cap is 210 (not 200) to allow room for the trailing
+    // project_memory: block that every core skill body MUST declare
+    // (W-WORKLOG-SCHEMA enforcement in skillDocReferences.ts).
+    expect(content.split(/\r?\n/).length).toBeLessThanOrEqual(210);
   });
 
   it("ensures ui contract guidance defines mockable prototype and copy-ready example", async () => {
@@ -571,7 +574,7 @@ describe("assets guardrails", { timeout: 30000 }, () => {
   });
 
   it("ensures product.md has no backward compatibility posture", async () => {
-    const productPath = path.join(templateQfaiDir, "assistant", "steering", "product.md");
+    const productPath = path.join(templateQfaiDir, "assistant", "catalog", "product.md");
     const content = await readFile(productPath, "utf-8");
     const bannedPhrases = [
       "Maintain backward compatibility",
@@ -590,7 +593,7 @@ describe("assets guardrails", { timeout: 30000 }, () => {
   });
 
   it("ensures manifest.md has no v2.0 defer or migration guide posture", async () => {
-    const manifestPath = path.join(templateQfaiDir, "assistant", "steering", "manifest.md");
+    const manifestPath = path.join(templateQfaiDir, "assistant", "catalog", "manifest.md");
     const content = await readFile(manifestPath, "utf-8");
     const bannedPhrases = [
       "Breaking changes deferred until v2.0",
@@ -665,7 +668,7 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     });
     const versionPattern = /\b(?:v)?\d+\.\d+\.\d+\b/;
     const approvedVersionedDocs = new Set([
-      path.resolve(templateQfaiDir, "assistant", "instructions", "agent-selection.md"),
+      path.resolve(templateQfaiDir, "assistant", "constitution", "agent-selection.md"),
     ]);
 
     const matches: string[] = [];
@@ -714,7 +717,7 @@ describe("assets guardrails", { timeout: 30000 }, () => {
       "rcp_footer.md",
     );
     const approvedJapanesePaths = new Set([
-      path.resolve(templateQfaiDir, "assistant", "instructions", "agent-selection.md"),
+      path.resolve(templateQfaiDir, "assistant", "constitution", "agent-selection.md"),
       path.resolve(
         templateQfaiDir,
         "assistant",
@@ -723,9 +726,9 @@ describe("assets guardrails", { timeout: 30000 }, () => {
         "references",
         "test-case-depth-checklist.md",
       ),
-      path.resolve(templateQfaiDir, "assistant", "steering", "cli-ux-guidelines.md"),
-      path.resolve(templateQfaiDir, "assistant", "steering", "research-first-protocol.md"),
-      path.resolve(templateQfaiDir, "assistant", "steering", "ui-definition-protocol.md"),
+      path.resolve(templateQfaiDir, "assistant", "catalog", "cli-ux-guidelines.md"),
+      path.resolve(templateQfaiDir, "assistant", "constitution", "research-first-protocol.md"),
+      path.resolve(templateQfaiDir, "assistant", "catalog", "ui-definition-protocol.md"),
     ]);
     const matches: string[] = [];
     for (const filePath of markdownFiles) {
@@ -1129,7 +1132,7 @@ describe("assets guardrails", { timeout: 30000 }, () => {
   });
 
   it("ensures review gate rules and review templates exist", async () => {
-    const rulesPath = path.join(templateQfaiDir, "assistant", "steering", "review-gate.rules.yml");
+    const rulesPath = path.join(templateQfaiDir, "assistant", "catalog", "review-gate.rules.yml");
     const rules = await readFile(rulesPath, "utf-8");
     expect(rules).toContain("required:");
     expect(rules).toContain("optional:");
@@ -1137,9 +1140,9 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     expect(rules).toContain("agent-routing.yml");
     expect(rules).toContain("review-profiles.yml");
 
-    const catalogPath = path.join(templateQfaiDir, "assistant", "steering", "agent-catalog.yml");
-    const routingPath = path.join(templateQfaiDir, "assistant", "steering", "agent-routing.yml");
-    const profilesPath = path.join(templateQfaiDir, "assistant", "steering", "review-profiles.yml");
+    const catalogPath = path.join(templateQfaiDir, "assistant", "manifest", "agent-catalog.yml");
+    const routingPath = path.join(templateQfaiDir, "assistant", "manifest", "agent-routing.yml");
+    const profilesPath = path.join(templateQfaiDir, "assistant", "manifest", "review-profiles.yml");
     const [catalog, routing, profiles] = await Promise.all([
       readFile(catalogPath, "utf-8"),
       readFile(routingPath, "utf-8"),
@@ -1298,7 +1301,7 @@ describe("assets guardrails", { timeout: 30000 }, () => {
 
   it("ensures qfai-sdd no-argument mode uses all-spec batch delegation", async () => {
     const skillPath = path.join(templateQfaiDir, "assistant", "skills", "qfai-sdd", "SKILL.md");
-    const workflowPath = path.join(templateQfaiDir, "assistant", "instructions", "workflow.md");
+    const workflowPath = path.join(templateQfaiDir, "assistant", "constitution", "workflow.md");
     const [skill, workflow] = await Promise.all([
       readFile(skillPath, "utf-8"),
       readFile(workflowPath, "utf-8"),

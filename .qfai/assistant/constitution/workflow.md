@@ -32,13 +32,13 @@ Do not proceed without a declared Change Type.
 
 ## Drift Protocol (Mandatory)
 
-- Read and enforce `.qfai/assistant/instructions/drift-protocol.md`.
+- Read and enforce `.qfai/assistant/constitution/drift-protocol.md`.
 - Downstream phases must not edit upstream SSOT artifacts without explicit user approval.
 - If drift is required, STOP and raise a Change Request (3 options + recommendation), then wait for approval and rerun the owner skill.
 
 ## Test-layer policy (Mandatory)
 
-- Read and enforce `.qfai/assistant/steering/test-layers.md`.
+- Read and enforce `.qfai/assistant/catalog/test-layers.md`.
 - Treat floors/ratios as signals, not completion gates.
 - Completion gate is `qfai validate --fail-on error` with evidence.
 
@@ -83,10 +83,10 @@ Legacy note:
 At the beginning of each stage (`qfai-discussion`, `qfai-sdd`, `qfai-prototyping`, `qfai-atdd`, `qfai-verify`):
 
 1. Check these steering files:
-   - `.qfai/assistant/steering/manifest.md`
-   - `.qfai/assistant/steering/product.md`
-   - `.qfai/assistant/steering/structure.md`
-   - `.qfai/assistant/steering/tech.md`
+   - `.qfai/assistant/catalog/manifest.md`
+   - `.qfai/assistant/catalog/product.md`
+   - `.qfai/assistant/catalog/structure.md`
+   - `.qfai/assistant/catalog/tech.md`
 2. Detect incomplete content (empty sections, placeholder-only lines, `<...>`, `TBD`, outdated facts).
 3. If the current stage can fill missing facts from repository evidence, update the steering files immediately.
 4. If information cannot be verified, record Open Questions and ask the user.

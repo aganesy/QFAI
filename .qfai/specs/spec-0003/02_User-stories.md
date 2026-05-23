@@ -17,6 +17,46 @@
 - US-0003-0013: instructions アクティベーション案内 - 作成時にガイダンスメッセージ表示
 - US-0003-0014: README ファイル生成 - 各統合ディレクトリに README.md を通常ファイルとして配置
 - US-0003-0015: `.gitignore` 管理ブロック自動追記 (v1.7.18) - `qfai init` 時に QFAI 生成成果物（report/evidence/review-pack/discussion-pack）が自動で gitignore される
+- US-0003-0016: 4-layer asset-tree + work-log surface seeding (v1.9.0) - `qfai init` が `.qfai/assistant/{constitution,manifest,catalog,process}/` の 4 層およびプロジェクトルートに `.qfai/steering/` を seed
+- US-0003-0017: --upgrade-assistant-tree migration helper (v1.9.0) - 旧 `.qfai/assistant/steering/` レイアウトを 4-layer へ一括移行する flag。ユーザー編集を保全
+- US-0003-0018: migration memo authoring (v1.9.0) - migration 実行時に `.qfai/assistant/process/migrations/v<X.Y.Z>-assistant-layer-recut.md` を生成
+- US-0003-0019: assistantPaths.ts SSOT module (v1.9.0) - assistant-tree のパス文字列を単一の TypeScript module から供給し、hard-coded literal を排除
+- US-0003-0020: 旧 layout backwards-compatibility window (v1.9.0) - 旧 `.qfai/assistant/steering/` を 1 minor release window だけ読み取り可能とし、sunset version を `D-DEPRECATED-PATH` warning で明示
+
+## US-0003-0016: 4-layer asset-tree + work-log surface seeding
+
+- Parent: CAP-0003
+- Goal: `qfai init` が新規プロジェクトに対して assistant-tree の 4 層 (`constitution/`, `manifest/`, `catalog/`, `process/`) およびプロジェクトルートの `.qfai/steering/` (AI work-log surface) を seed することで、CHG-003 discussion pack で合意された新しいレイアウトを 1 コマンドで実体化する
+- Non-goals: validate-side enforcement (spec-0004 が担当)、frontmatter schema 検証 (spec-0004 担当)、Reviewer-Gate drift findings (spec-0015 担当)
+- Notes: REQ-0018 / REQ-0019 を実装する。`assistantPaths.ts` (REQ-0022) を経由してパス文字列を解決すること
+
+## US-0003-0017: --upgrade-assistant-tree migration helper
+
+- Parent: CAP-0003
+- Goal: 旧 `.qfai/assistant/steering/` レイアウトを使っているプロジェクトが `qfai init --upgrade-assistant-tree` 1 コマンドで 4-layer 構成へ移行できる。ユーザー編集が含まれるファイルは `W-USER-EDIT-PRESERVED` informational note 付きで保全する
+- Non-goals: rollback コマンドの提供、frontmatter schema validation
+- Notes: REQ-0020 を実装する。migration は idempotent（既に upgrade 済みの project に対しては no-op で W-USER-EDIT-PRESERVED のみを出す）
+
+## US-0003-0018: migration memo authoring
+
+- Parent: CAP-0003
+- Goal: `qfai init --upgrade-assistant-tree` が成功した時点で `.qfai/assistant/process/migrations/v<X.Y.Z>-assistant-layer-recut.md` を author し、移行内容の audit trail を残す
+- Non-goals: memo 内容のユーザー編集を許す (memo は OC-53 により commit 後 immutable)
+- Notes: REQ-0021 を実装する。memo は commit に含まれることで初めて confirmed 状態となる
+
+## US-0003-0019: assistantPaths.ts SSOT module
+
+- Parent: CAP-0003
+- Goal: init / validate / skill body が読む assistant-tree のパス文字列を `packages/qfai/src/core/paths/assistantPaths.ts` の 1 module に集約し、hard-coded string literal を package 全体から排除する。NFR-0001 (consistency) の構造的保証
+- Non-goals: 既存の `qfai.config.yaml#paths.*` フィールドの再設計
+- Notes: REQ-0022 を実装する。lint rule が assistantPaths import を強制する
+
+## US-0003-0020: 旧 layout backwards-compatibility window
+
+- Parent: CAP-0003
+- Goal: 旧 `.qfai/assistant/steering/` レイアウトを exactly 1 minor release window (v1.9.x) の間、読み取り可能なまま維持する。sunset version (v1.10.0) は `D-DEPRECATED-PATH` warning の本文に明示し、ユーザーに移行猶予を与える
+- Non-goals: write path で旧 layout に書き出すこと
+- Notes: REQ-0023 を実装する。NFR-0002 (predictable migration window)
 
 ## US-0003-0001: ワークスペース初期化
 

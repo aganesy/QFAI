@@ -472,6 +472,61 @@ describe("runPrototypingIterate max-iterations (exit 65)", () => {
     // Defense-in-depth: nothing matching candidates* either.
     expect(entries.some((e) => e.toLowerCase().startsWith("candidate"))).toBe(false);
   });
+
+  // QFAI:SPEC-0012:TC-0012-0416 (TDD-0436): cycle-9 idempotency — `--cycle 9`
+  // on a non-converged loop whose `iterations.length === 10` must surface
+  // exit 65 (max-iterations) directly without routing through the
+  // expectedNextCycle === 10 cycle-mismatch path. AC anchor: AC-0012-0038
+  // (10-cycle iteration budget — terminator index === 9; 19th-wave
+  // clarification per codex r3270052195 MINOR moved this clause here from
+  // AC-0012-0044). Pre-fix flow risk: the expectedNextCycle gate computed
+  // `expectedNextCycle = recordedIterations.length = 10`, `input.cycle = 9`
+  // → mismatch → exit 2. Implementation correctness relies on `shouldStop`
+  // (which inspects last.index >= MAX_ITERATION_INDEX) running BEFORE the
+  // expectedNextCycle gate; this regression test pins that ordering plus
+  // the stderr discriminator so any future refactor that flips the gate
+  // order is caught here, not at certify time.
+  it("TC-0012-0416 (TDD-0436): --cycle 9 on iterations.length === 10 non-converged → exit 65 directly (no cycle-mismatch path)", async () => {
+    const root = await newTempDir();
+    await seedMinimalProject(root);
+    // Non-converged 10-iter lineage: every iter "acceptable" (not all four
+    // axes "exceptional"), indices 0..9. shouldStop returns
+    // "max-iterations" because last.index === 9 (>= MAX_ITERATION_INDEX),
+    // not because axes-exceptional fired.
+    const acceptable = {
+      informationArchitecture: "acceptable",
+      navigationFlow: "acceptable",
+      usability: "acceptable",
+      functionality: "acceptable",
+    };
+    const iterations = Array.from({ length: 10 }, (_, i) => ({
+      index: i,
+      scores: acceptable,
+    }));
+    await seedPrototypingJson(root, iterations);
+
+    const logger = await import("../../../src/cli/lib/logger.js");
+    const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
+    const infoSpy = vi.spyOn(logger, "info").mockImplementation(() => {});
+    try {
+      const exit = await runPrototypingIterate({ root, cycle: 9 });
+      // 1. Exit 65 directly (max-iterations terminator), not 2 (cycle-mismatch).
+      expect(exit).toBe(65);
+
+      const errMessages = errorSpy.mock.calls.map((c) => String(c[0])).join("\n");
+      const infoMessages = infoSpy.mock.calls.map((c) => String(c[0])).join("\n");
+      const allMessages = `${errMessages}\n${infoMessages}`;
+
+      // 2. The expectedNextCycle gate did NOT fire — no cycle-mismatch in stderr.
+      //    Pre-fix the assertion would have caught `expected --cycle 10`.
+      expect(allMessages).not.toMatch(/expected --cycle 10/);
+      // 3. The max-iterations stop fired — info channel carries the terminator note.
+      expect(infoMessages).toMatch(/max iterations \(10\) reached/);
+    } finally {
+      errorSpy.mockRestore();
+      infoSpy.mockRestore();
+    }
+  });
 });
 
 // QFAI:SPEC-0012:TC-0012-0322 (alias — input validation shares cycle-0 entry path)

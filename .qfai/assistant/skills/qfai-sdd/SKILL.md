@@ -45,9 +45,9 @@ Stage 0 Preflight  -> Stage 1 Triage  -> Phase 0 Contracts-first
 
 ## Stage 0: Preflight (Mandatory)
 
-Follow `.qfai/assistant/instructions/shared-skill-operating-baseline.md#stage-0---steering-completion-refresh-mandatory`.
+Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#stage-0---steering-completion-refresh-mandatory`.
 Stop if the latest discussion-pack is missing, incomplete, or has blocking OQ.
-On validate / doctor / quality-gate failures, follow `.qfai/assistant/instructions/shared-skill-operating-baseline.md#gate-failure-autorepair-protocol`.
+On validate / doctor / quality-gate failures, follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#gate-failure-autorepair-protocol`.
 
 ## Stage 1: Triage (Mandatory)
 
@@ -75,34 +75,34 @@ Validators: `QFAI-STATUS-001..006`.
 
 ## User Questions (AskUserQuestion Protocol)
 
-Follow `.qfai/assistant/instructions/shared-skill-operating-baseline.md#user-questions-askuserquestion-protocol`.
+Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#user-questions-askuserquestion-protocol`.
 Approval-required ops in Stage 1 above MUST go through AskUserQuestion.
 
 ## FORMAT SSOT (Mandatory)
 
-- Follow `.qfai/assistant/instructions/shared-skill-operating-baseline.md#format-ssot-mandatory`.
+- Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#format-ssot-mandatory`.
 - Read before writing `.qfai/**`:
   - `.qfai/assistant/skills/qfai-discussion/references/discussion-artifact-rules.md`
   - `.qfai/assistant/skills/qfai-sdd/references/spec-traceability-rules.md`
   - `.qfai/assistant/skills/qfai-sdd/references/contract-artifact-rules.md`
   - `.qfai/assistant/skills/qfai-sdd/references/sdd-triage.md`
   - `.qfai/assistant/skills/qfai-prototyping/references/evidence-requirements.md`
-  - `.qfai/assistant/steering/agent-catalog.yml`
-  - `.qfai/assistant/steering/agent-routing.yml`
-  - `.qfai/assistant/steering/review-profiles.yml`
+  - `.qfai/assistant/manifest/agent-catalog.yml`
+  - `.qfai/assistant/manifest/agent-routing.yml`
+  - `.qfai/assistant/manifest/review-profiles.yml`
 
 ## Inputs Priority
 
 1. Latest `.qfai/discussion/discussion-*/` pack (lexicographically largest), validated by Stage 0.
-2. P1: `.qfai/assistant/instructions/*`
-3. P2: `.qfai/assistant/steering/*`
+2. P1: `.qfai/assistant/constitution/*` (post-recut: normative invariants — formerly `.qfai/assistant/constitution/*`)
+3. P2: `.qfai/assistant/manifest/*` + `.qfai/assistant/catalog/*` (post-recut routing manifests + reference catalogs — formerly `.qfai/assistant/manifest/*` + `.qfai/assistant/catalog/*`)
 4. P3: existing `.qfai/specs/_policies/03_Capabilities.md` + active spec summaries (Stage 1 input)
 5. P4: existing `.qfai/specs/<spec-id>/**` for the targeted specs
 6. P5: `.qfai/discussion/**`, `.qfai/contracts/**`
 
 ## Sub-agent Delegation (MANDATORY)
 
-Follow `.qfai/assistant/instructions/shared-skill-delegation-baseline.md`.
+Follow `.qfai/assistant/constitution/shared-skill-delegation-baseline.md`.
 
 ### Orchestrator Protocol (MUST)
 
@@ -125,12 +125,15 @@ Stage minimum roles:
 - `orchestrator` integrates outputs and presents for confirmation; never drafts the primary artifact and never self-approves.
 - `completion-reviewer` is delegated independently. Required field: `Status (PASS/REVISE)`.
 
-Reviewer routing is fixed by `.qfai/assistant/steering/agent-routing.yml` and `.qfai/assistant/steering/review-profiles.yml`.
+Reviewer routing is fixed by `.qfai/assistant/manifest/agent-routing.yml` and `.qfai/assistant/manifest/review-profiles.yml`.
 
 ### Reviewer Gate (MUST)
 
 - Default: `completion-reviewer`.
 - Conditional: `architecture-reviewer` (structural / contract / CLI), `product-surface-reviewer` (UI-bearing), `qa-gatekeeper` (validate / coverage / runtime / prototyping evidence affected).
+- Drift Protocol compliance is mandatory; reviewers MUST verify no rejected option was reintroduced and no drift from prior decisions.
+- Test-layer policy is checked against `.qfai/assistant/catalog/test-layers.md`; layer pinning is enforced (US→E2E, TC→Integration, CON-API→API).
+- Coverage floors / ratios are planning signals, not gates; reviewers must not block on them.
 - Do not declare DONE until all routed blocking reviewers return `PASS`.
 
 ### No-argument batch delegation (MUST)
@@ -160,7 +163,7 @@ Per-spec evidence at `.qfai/evidence/sdd-<spec-id>.md` is mandatory and MUST inc
 
 ## Delta Rejected Guard (Mandatory)
 
-Follow `.qfai/assistant/instructions/shared-skill-operating-baseline.md#delta-rejected-guard-mandatory`.
+Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#delta-rejected-guard-mandatory`.
 
 ## Slice Policy Protocol
 
@@ -268,3 +271,9 @@ When this skill completes, provide a final user-facing message enumerating next 
 - Test-first path: `/qfai-atdd`.
 - Spec pack needs correction: rerun `/qfai-sdd` and regenerate evidence.
 - Confirm contracts referenced by `_policies/05_Contracts.md` exist under `.qfai/contracts/**`.
+
+project_memory:
+
+- Phase order is fixed: Stage 0 Preflight → Stage 1 Triage → Phase 0 Contracts-first → Phase 1 Outline → Phase 2 Slice → Phase 3 Plan finalize → Phase 4 Delta update; do not reorder.
+- Append-first is the Stage 1 default: UPDATE on an active spec whose subject tokens overlap; CREATE only when there is zero overlap AND the REQ adds a new CAP-NNNN, registered before the CREATE row.
+- Phase 0 DESIGN.md Freeze is mandatory for UI-bearing targets; .qfai/contracts/design/DESIGN.md.lock.yaml is the brand-lock SSOT.

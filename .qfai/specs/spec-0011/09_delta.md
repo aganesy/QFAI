@@ -50,3 +50,23 @@
 
 - Approved By: yusuke_senaga
 - Notes: subjects originated from former spec-0017 (Prototyping v2.0 / UX-loop redesign decomposition). The mirror invariant for `design-system.yaml` is enforced by the design contract validator family owned by spec-0004; `/qfai-implement` only consumes the validated mirror.
+
+## Triage
+
+| Source                                                     | Subject                                                                                                                                                                                             | Existing Spec | Operation | Sub-op | Approved By | Rationale                                                                                                                                             |
+| ---------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- | --------- | ------ | ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| REQ-0004, REQ-0005, REQ-0010, REQ-0016, REQ-0017 (CHG-003) | `/qfai-implement` SKILL.md に `project_memory:` 宣言追加、author 前に open work-log entry を読み、kind 別 write-trigger に従い entry を書く。handoff entry body を 5 セクション schema に従わせる。 | spec-0011     | UPDATE    | APPEND | pin-implied | Primary worklog-writer (most write-trigger surface area)。implementation-phase skill (REQ-0005 scope)。subject-token overlap (`skill`, `implement`)。 |
+
+## CHG-003 (v1.9.0) — Primary Worklog-writer Contract
+
+- Discussion pack: `.qfai/discussion/discussion-20260522081618995/`
+- Contract: `.qfai/contracts/cli/worklog-entry.schema.md` (CLI-WLOG)
+- Operation: UPDATE:APPEND
+- Obligation: `/qfai-implement` is the **primary** worklog-writer. SKILL.md MUST:
+  1. Carry a `project_memory:` block enumerating layers it reads.
+  2. Read open work-log entries (`status` ∈ `{active, handoff}`, `scope` ∈ `{global, <current-spec>}`) before authoring; cite consulted entry IDs in completion report (REQ-0005).
+  3. Write entries at the 11 conditions listed in `_policies/10_Policy.md#work-log-write-triggers` (REQ-0004) — milestone, decision, risk, consultation-needed, unexpected, unscoped-discovery, handoff, blocker, scope-up, scope-down, spike.
+  4. Follow the handoff-brief body schema (REQ-0017) for `kind: handoff` entries.
+  5. Treat `kind: unscoped-discovery` as non-blocking (REQ-0016): record and continue, do not abort current scope.
+- Cascade: SKILL.md `project_memory:` validated by spec-0004. Reviewer-Gate drift checks (spec-0015) run on outputs.
+- Source: REQ-0004, REQ-0005, REQ-0010, REQ-0016, REQ-0017

@@ -11,7 +11,7 @@ const CODEX_DIR = join(REPO_ROOT, ".codex");
 const AGENTS_DIR = join(CODEX_DIR, "agents");
 const CONFIG_PATH = join(CODEX_DIR, "config.toml");
 const CANONICAL_DIR = join(REPO_ROOT, ".qfai", "assistant", "agents");
-const CATALOG_PATH = join(REPO_ROOT, ".qfai", "assistant", "steering", "agent-catalog.yml");
+const CATALOG_PATH = join(REPO_ROOT, ".qfai", "assistant", "manifest", "agent-catalog.yml");
 
 type CatalogAgent = {
   id: string;
@@ -266,6 +266,53 @@ describe("TC-0003-0003: developer_instructions 必須セクション含有", () 
       expect(instructions, `${name}: developer_instructions diverges from canonical MD`).toBe(
         canonicalBody,
       );
+    }
+  });
+});
+
+// QFAI:SPEC-0004:TC-0004-0026 — agent-catalog.yml#developer_instructions
+// MUST stay in lockstep with canonical .qfai/assistant/agents/<name>.md
+// bodies (3-way SSOT: canonical MD ↔ codex TOML ↔ agent-catalog.yml).
+// The codex side is already covered by TC-0003-0003 above; this test
+// closes the catalog side.
+describe("TC-0004-0026: agent-catalog.yml developer_instructions matches canonical MD", () => {
+  it("全 agent の developer_instructions が canonical MD と実質一致する", () => {
+    const normalize = (s: string) => s.replace(/\r\n/g, "\n").trim();
+    const catalog = parseYaml(readFileSync(CATALOG_PATH, "utf-8")) as Record<string, unknown>;
+    const agentsField = catalog["agents"];
+    if (!Array.isArray(agentsField)) {
+      throw new Error("agent-catalog.yml must contain agents array");
+    }
+    for (const raw of agentsField) {
+      if (!raw || typeof raw !== "object") continue;
+      const agent = raw as Record<string, unknown>;
+      const id = agent["id"];
+      const di = agent["developer_instructions"];
+      // expect.toBe throws on mismatch in Vitest; the type narrowing
+      // after the predicate runs only on the GREEN path and keeps `id`
+      // typed as string for the rest of the loop body.
+      expect(typeof id, `agent-catalog.yml agent.id must be string (got ${typeof id})`).toBe(
+        "string",
+      );
+      if (typeof id !== "string") continue; // unreachable; narrows TS type
+      const canonicalPath = join(CANONICAL_DIR, `${id}.md`);
+      expect(existsSync(canonicalPath), `${id}: canonical MD missing at ${canonicalPath}`).toBe(
+        true,
+      );
+      const canonicalContent = readFileSync(canonicalPath, "utf-8");
+      const missionIdx = canonicalContent.indexOf("## Mission");
+      expect(missionIdx, `${id}: canonical MD has no ## Mission section`).toBeGreaterThanOrEqual(0);
+      const canonicalBody = normalize(canonicalContent.slice(missionIdx));
+      // Same pattern as `id`: expect throws on mismatch; the if-narrow
+      // satisfies TS without adding reachable branches.
+      expect(typeof di, `${id}: agent-catalog.yml developer_instructions is not a string`).toBe(
+        "string",
+      );
+      if (typeof di !== "string") continue; // unreachable; narrows TS type
+      expect(
+        normalize(di),
+        `${id}: agent-catalog.yml developer_instructions diverges from canonical MD`,
+      ).toBe(canonicalBody);
     }
   });
 });

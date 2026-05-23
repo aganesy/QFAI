@@ -44,8 +44,8 @@ Do **not** guess file paths, existing commands, or project policies.
 
 Before producing deliverables, read **project memory**:
 
-1. `.qfai/assistant/instructions/*`
-2. `.qfai/assistant/steering/*`
+1. `.qfai/assistant/constitution/*`
+2. `.qfai/assistant/manifest/*` + `.qfai/assistant/catalog/*`
 3. discussion pack in `.qfai/discussion/` (if present)
 4. `.qfai/specs/spec-*/` (if relevant)
 5. repository config (package.json, CI, scripts)

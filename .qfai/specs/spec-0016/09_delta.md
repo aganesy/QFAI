@@ -63,3 +63,16 @@ discussion-20260328212829687 で Web Research Enhancement のディスカッシ�
 ## Rejected Visual Directions
 
 N/A — CLI-only pack, no visual directions.
+
+## Triage
+
+| Source             | Subject                                                   | Existing Spec | Operation | Sub-op | Approved By | Rationale                                                                                              |
+| ------------------ | --------------------------------------------------------- | ------------- | --------- | ------ | ----------- | ------------------------------------------------------------------------------------------------------ |
+| REQ-0010 (CHG-003) | `/qfai-research` SKILL.md に `project_memory:` 宣言を追加 | spec-0016     | UPDATE    | APPEND | pin-implied | Research skill は worklog write の primary target ではないが、`project_memory:` 宣言義務は適用される。 |
+
+## CHG-003 (v1.9.0) — project_memory Declaration (research skill)
+
+- Discussion pack: `.qfai/discussion/discussion-20260522081618995/`
+- Operation: UPDATE:APPEND
+- Obligation: `qfai-research` SKILL.md MUST gain a `project_memory:` YAML block. Research is not part of REQ-0005's worklog-writer enumeration (implementation/review-phase only), but the SKILL.md declaration of read-layers is required by REQ-0010 for all `qfai-*` skills.
+- Source: REQ-0010

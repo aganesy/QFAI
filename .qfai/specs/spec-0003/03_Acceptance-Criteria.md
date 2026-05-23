@@ -171,3 +171,67 @@ Scenario: レガシー管理ブロックからの自動移行
 | AC-0003-0014 | instructions アクティベーション | REQ-0014   | P2       |
 | AC-0003-0015 | gitignore 管理ブロック追記      | REQ-0016   | P1       |
 | AC-0003-0016 | レガシーブロック自動移行        | REQ-0017   | P1       |
+| AC-0003-0017 | 4-layer asset-tree seed         | REQ-0018   | P1       |
+| AC-0003-0018 | project-root steering seed      | REQ-0019   | P1       |
+| AC-0003-0019 | --upgrade-assistant-tree flag   | REQ-0020   | P1       |
+| AC-0003-0020 | W-USER-EDIT-PRESERVED 出力      | REQ-0020   | P1       |
+| AC-0003-0021 | migration memo authoring        | REQ-0021   | P1       |
+| AC-0003-0022 | assistantPaths.ts SSOT 経由     | REQ-0022   | P1       |
+| AC-0003-0023 | 旧 layout 読取 backward compat  | REQ-0023   | P1       |
+| AC-0003-0024 | D-DEPRECATED-PATH sunset 明示   | REQ-0023   | P1       |
+
+## AC-0003-0017: 4-layer asset-tree seed
+
+- US-Refs: US-0003-0016
+- Given クリーンな新規プロジェクトディレクトリ
+- When `qfai init` を実行する
+- Then `.qfai/assistant/{constitution,manifest,catalog,process}/` の 4 ディレクトリと初期 `.gitkeep` ファイルが生成される。`.qfai/assistant/steering/` (旧層) は生成されない
+
+## AC-0003-0018: project-root steering seed
+
+- US-Refs: US-0003-0016
+- Given クリーンな新規プロジェクトディレクトリ
+- When `qfai init` を実行する
+- Then プロジェクトルートに `.qfai/steering/README.md`, `.qfai/steering/.gitkeep`, `.qfai/steering/_templates/entry.md` が生成される。2 回目以降 `qfai init` を実行してもユーザー編集された entry ファイルは preserve される
+
+## AC-0003-0019: --upgrade-assistant-tree flag
+
+- US-Refs: US-0003-0017
+- Given `.qfai/assistant/steering/` のみが存在する旧 layout のプロジェクト
+- When `qfai init --upgrade-assistant-tree` を実行する
+- Then 4 つの新 layer ディレクトリが追加され、旧 `steering/` 配下の seed 済みテンプレートは新 layer の正しい場所へ移動される。exit code は 0
+
+## AC-0003-0020: W-USER-EDIT-PRESERVED 出力
+
+- US-Refs: US-0003-0017
+- Given 旧 `.qfai/assistant/steering/` 配下にユーザー編集のあるファイルが存在する
+- When `qfai init --upgrade-assistant-tree` を実行する
+- Then ユーザー編集ファイルは新 layer 側にコピーされ、ファイルパスを naming した `W-USER-EDIT-PRESERVED` informational note が stdout に少なくとも 1 件出力される
+
+## AC-0003-0021: migration memo authoring
+
+- US-Refs: US-0003-0018
+- Given `qfai init --upgrade-assistant-tree` が成功した直後
+- When migration completion を確認する
+- Then `.qfai/assistant/process/migrations/v<X.Y.Z>-assistant-layer-recut.md` が生成され、本文は (1) 移行前 layout、(2) 移行後 layout、(3) 影響ファイル一覧、(4) sunset 予定 minor version を含む
+
+## AC-0003-0022: assistantPaths.ts SSOT 経由
+
+- US-Refs: US-0003-0019
+- Given init 経路で使われるすべての assistant-tree パス文字列
+- When `packages/qfai/src` を `grep -E '"\.qfai/assistant/(constitution|manifest|catalog|process|steering)'` する
+- Then 戻り値 0 — `assistantPaths.ts` の export 経由でのみパスが構築されることを構造的に保証する
+
+## AC-0003-0023: 旧 layout 読取 backward compat
+
+- US-Refs: US-0003-0020
+- Given v1.8.x で作成された旧 `.qfai/assistant/steering/` レイアウトを残したプロジェクト
+- When v1.9.0 の `qfai init` (no flag) を実行する
+- Then 旧 layout ファイルは削除されずそのまま残り、`D-DEPRECATED-PATH` warning が stdout に出力される。exit code は 0
+
+## AC-0003-0024: D-DEPRECATED-PATH sunset 明示
+
+- US-Refs: US-0003-0020
+- Given 旧 layout が検出された init 実行
+- When `D-DEPRECATED-PATH` warning が出力される
+- Then warning 本文に sunset minor version (v1.10.0) が文字列として明示されている。曖昧な「次の release」「将来」等の表現は含まない

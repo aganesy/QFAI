@@ -34,7 +34,7 @@ UI-bearing discussion packs may include `prototyping.yaml` as an optional recomm
 - Discussion outputs are rationale and intake logs; do not duplicate `.qfai/specs/**` SSOT.
 - `03_Story-Workshop.md` must include at least one Mermaid diagram.
 - Use Mermaid fences only for diagrams.
-- `14_Review-Request.md` must reference `.qfai/assistant/steering/agent-routing.yml` and `review-profiles.yml`.
+- `14_Review-Request.md` must reference `.qfai/assistant/manifest/agent-routing.yml` and `review-profiles.yml`.
 
 ## UI/UX Exploration Family
 

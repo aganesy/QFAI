@@ -8,10 +8,9 @@
 # (you can opt out via `validation.testStrategy.forbidTestTodoStubs: false`
 # in qfai.config.yaml).
 #
-# If your project uses pnpm / yarn instead of npm, replace the `npm ci` step
-# with your package manager's install command (e.g. `pnpm install
-# --frozen-lockfile` + `pnpm/action-setup@v4`). `npx qfai` works with any
-# Node package manager.
+# Install step auto-detects the project's lockfile (pnpm / yarn /
+# npm) and runs the appropriate frozen-lockfile install. `npx qfai`
+# works with any Node package manager.
 
 name: qfai validate
 
@@ -27,13 +26,58 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
+      - name: Set up pnpm (if project uses pnpm)
+        if: ${{ hashFiles('pnpm-lock.yaml') != '' }}
+        # pnpm/action-setup@v4 resolves the pnpm version from
+        # `package.json#packageManager` when no `version:` input is
+        # provided. Setting `version:` would override the consumer's
+        # declared packageManager (e.g. forcing pnpm 9 on a pnpm 10
+        # project), so we leave it unset and require the consumer to
+        # declare `"packageManager": "pnpm@X.Y.Z"` in package.json —
+        # the most common pnpm-on-CI baseline.
+        uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
           # Match the QFAI repo's CI baseline (Node 20 LTS) and the package
           # `engines: ">=18.0.0"`. Bump deliberately when QFAI raises its
           # supported floor.
           node-version: "20"
-          cache: npm
-      - run: npm ci
+          # setup-node@v4's `cache:` accepts a single package-manager value.
+          # Pick the one matching the consumer's lockfile (or leave unset
+          # when none of the three is present). The conditional expression
+          # short-circuits left-to-right.
+          #
+          # NOTE: `cache: yarn` is built around Yarn Classic (v1)'s
+          # `yarn cache dir`. Yarn Berry (v2+) keeps deps under `.yarn/cache`
+          # so the built-in cache is best-effort there — but the install
+          # step below still picks the correct flag (`--immutable` for
+          # Berry, `--frozen-lockfile` for Classic) so functionality is
+          # preserved either way.
+          cache: ${{ hashFiles('pnpm-lock.yaml') != '' && 'pnpm' || (hashFiles('yarn.lock') != '' && 'yarn' || (hashFiles('package-lock.json') != '' && 'npm' || '')) }}
+      - name: Install dependencies (lockfile-aware)
+        shell: bash
+        run: |
+          if [ -f pnpm-lock.yaml ]; then
+            pnpm install --frozen-lockfile
+          elif [ -f yarn.lock ]; then
+            corepack enable
+            # Yarn Berry (v2+) uses `--immutable`; Yarn Classic (v1) uses
+            # `--frozen-lockfile`. Pick the right flag based on the
+            # version corepack resolves from `package.json#packageManager`
+            # (or the bundled Classic default).
+            yarn_major="$(yarn --version | cut -d . -f 1)"
+            if [ "$yarn_major" -ge 2 ]; then
+              yarn install --immutable
+            else
+              yarn install --frozen-lockfile
+            fi
+          elif [ -f package-lock.json ]; then
+            npm ci
+          else
+            # No lockfile yet — fall back to `npm install` so QFAI can run on
+            # freshly-initialized projects without forcing a package-manager
+            # choice on first CI run.
+            npm install --no-audit --no-fund
+          fi
       - name: qfai validate
         run: npx qfai validate --profile full --fail-on error

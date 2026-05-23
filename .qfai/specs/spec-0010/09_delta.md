@@ -20,3 +20,17 @@
 
 - Approved By: yusuke_senaga
 - Notes: subjects originated from former spec-0017 (Prototyping v2.0 / UX-loop redesign decomposition). Cross-spec downstream consumers (e.g. `/qfai-sdd` Phase 0 lock, `/qfai-implement` design-system input) are recorded in the receiving specs (spec-0013 / spec-0011) without back-references here, per editorial convention §15.
+
+## Triage
+
+| Source             | Subject                                                     | Existing Spec | Operation | Sub-op | Approved By | Rationale                                                                                                                                             |
+| ------------------ | ----------------------------------------------------------- | ------------- | --------- | ------ | ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| REQ-0010 (CHG-003) | `/qfai-discussion` SKILL.md に `project_memory:` 宣言を追加 | spec-0010     | UPDATE    | APPEND | pin-implied | Discussion skill は worklog-writer ではない (REQ-0005 Notes で明示除外) が、`project_memory:` 宣言義務は適用される。subject-token overlap (`skill`)。 |
+
+## CHG-003 (v1.9.0) — project_memory Declaration (discussion skill)
+
+- Discussion pack: `.qfai/discussion/discussion-20260522081618995/`
+- Operation: UPDATE:APPEND
+- Obligation: `qfai-discussion` SKILL.md MUST gain a `project_memory:` YAML block enumerating the layers it reads (typically `manifest/`, `catalog/`, `process/`; `constitution/` is implicitly always-loaded). Discussion is intentionally excluded from the worklog-write contract per REQ-0005 Notes (it authors a discussion pack and does not modify code).
+- Cascade: SKILL.md declaration is validated by spec-0004's `qfai validate`.
+- Source: REQ-0010

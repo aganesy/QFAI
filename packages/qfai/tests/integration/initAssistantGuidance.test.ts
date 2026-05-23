@@ -22,9 +22,10 @@ const instructionsDir = path.join(
   "init",
   ".qfai",
   "assistant",
-  "instructions",
+  "constitution",
 );
-const steeringDir = path.join(
+// Post-recut: agent-catalog.yml moved from steering/ to manifest/.
+const manifestDir = path.join(
   repoRoot,
   "packages",
   "qfai",
@@ -32,7 +33,7 @@ const steeringDir = path.join(
   "init",
   ".qfai",
   "assistant",
-  "steering",
+  "manifest",
 );
 
 describe("init assistant guidance: exploration-first alignment", () => {
@@ -57,7 +58,7 @@ describe("init assistant guidance: exploration-first alignment", () => {
   });
 
   it("agent-catalog.yml の frontend mission が selected direction ベースに更新されている", async () => {
-    const content = await readFile(path.join(steeringDir, "agent-catalog.yml"), "utf-8");
+    const content = await readFile(path.join(manifestDir, "agent-catalog.yml"), "utf-8");
     expect(content).toMatch(/selected direction|design system|screen contracts/i);
   });
 
