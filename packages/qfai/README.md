@@ -218,10 +218,10 @@ Operational notes.
 - Each custom skill must end with a completion message that enumerates all available next actions and clearly states what to do for each option.
 - Except `qfai-discussion`, each skill must analyze the project context (architecture, tech stack, test framework, repo structure) before generating artifacts or code.
 - Skills should delegate work to multiple role-based sub-agents (Planner, Architect, Contract Designer, QA, Code Reviewer, etc.) to emulate a real delivery flow.
-- Change classification (Primary/Tags) is required in `09_delta.md` and recommended in PRs. See `.qfai/assistant/instructions/change-classification.md`.
+- Change classification (Primary/Tags) is required in `09_delta.md` and recommended in PRs. See `.qfai/assistant/constitution/change-classification.md`.
 - Verification planning is recorded in `09_delta.md` (`Verification -> Plan`) and validated in CI (`VFY-*` rules).
-- Review gate policies (required/optional layers and reviewers) are defined in `.qfai/assistant/steering/review-gate.rules.yml`.
-- Agent taxonomy and invocation SSOT are defined in `.qfai/assistant/steering/agent-catalog.yml`, `.qfai/assistant/steering/agent-routing.yml`, and `.qfai/assistant/steering/review-profiles.yml`.
+- Review gate policies (required/optional layers and reviewers) are defined in `.qfai/assistant/catalog/review-gate.rules.yml`.
+- Agent taxonomy and invocation SSOT are defined in `.qfai/assistant/manifest/agent-catalog.yml`, `.qfai/assistant/manifest/agent-routing.yml`, and `.qfai/assistant/manifest/review-profiles.yml`.
 
 ## Configuration
 
