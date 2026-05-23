@@ -158,6 +158,14 @@
 - When `qfai validate` runs immediately afterwards
 - Then validate exits 0; `counts.info >= 1`; the report has an "Informational" section listing the preserved files
 
+<!--
+EX-0004-0024..0026 are reserved gaps. TC-0004-0026 is the ssot-guard
+catalog ↔ canonical MD ↔ codex TOML 3-way SSOT check; it has no
+example-bearing user story (cross-spec ssot-guard, no AC source —
+see 06_Test-Cases.md Level enum). EX-0004-0024..0026 stay empty for
+the same reason.
+-->
+
 ## EX-0004-0027
 
 - BR-Ref: BR-0004-0015 (frontmatter schema)

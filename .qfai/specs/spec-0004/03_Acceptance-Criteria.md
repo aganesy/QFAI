@@ -140,30 +140,39 @@
 - When the migration emitted `W-USER-EDIT-PRESERVED` informational notes
 - Then the validator recognizes those notes as informational pass-throughs (`info` severity, not warning/error); they appear in the validate report under "Informational" without failing any gate
 
+<!--
+AC-0004-0026 is a reserved gap. TC-0004-0026 is the ssot-guard catalog ↔
+canonical MD ↔ codex TOML 3-way SSOT check; it has no acceptance-
+criterion-bearing user story since it is a meta-validation of the
+manifest pipeline, not a behavior the AI agent observes (per
+06_Test-Cases.md Level enum: `ssot-guard` is explicitly cross-spec
+with no AC source).
+-->
+
 ## AC-0004-0027
 
-- US-Refs: US-0004-0028 (sub-criterion of REQ-0035 frontmatter schema)
+- US-Refs: US-0004-0029 (sub-criterion of REQ-0035 frontmatter schema)
 - Given a `.qfai/steering/<id>.md` entry whose `created` or `updated` field value does not match `^\d{4}-\d{2}-\d{2}$`
 - When `qfai validate` runs
 - Then `W-WORKLOG-SCHEMA` is emitted at warning severity per non-conformant field (rule: `worklogSurface.schema.createdFormat` / `updatedFormat`) so non-ISO-8601 date strings cannot silently flow through schema validation
 
 ## AC-0004-0028
 
-- US-Refs: US-0004-0028 (sub-criterion of REQ-0035 frontmatter schema)
+- US-Refs: US-0004-0029 (sub-criterion of REQ-0035 frontmatter schema)
 - Given a `.qfai/steering/<id>.md` entry whose `updated` ISO-8601 date is strictly earlier than its `created` ISO-8601 date
 - When `qfai validate` runs
 - Then `W-WORKLOG-SCHEMA` (rule: `worklogSurface.schema.updatedOrder`) is emitted at warning severity naming both dates, enforcing the worklog contract's `updated >= created` invariant
 
 ## AC-0004-0029
 
-- US-Refs: US-0004-0028 (sub-criterion of REQ-0039 link integrity)
+- US-Refs: US-0004-0029 (sub-criterion of REQ-0039 link integrity)
 - Given a `.qfai/steering/<id>.md` entry whose `links` array contains one or more non-string elements (e.g. `links: [123, true]`)
 - When `qfai validate` runs
 - Then `W-WORKLOG-SCHEMA` (rule: `worklogSurface.schema.linksElementType`) is emitted per non-string element so malformed link items cannot bypass schema and broken-link checks
 
 ## AC-0004-0030
 
-- US-Refs: US-0004-0028 (sub-criterion of REQ-0035 frontmatter schema)
+- US-Refs: US-0004-0029 (sub-criterion of REQ-0035 frontmatter schema)
 - Given a `.qfai/steering/<id>.md` entry whose frontmatter `id` value does not match kebab-case ASCII (`^[a-z0-9]+(?:-[a-z0-9]+)*$`)
 - When `qfai validate` runs
 - Then `W-WORKLOG-SCHEMA` (rule: `worklogSurface.schema.idFormat`) is emitted at warning severity naming the offending id, enforcing the worklog-entry.schema.md Storage-model requirement that `<id>` is kebab-case ASCII

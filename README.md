@@ -355,7 +355,6 @@ Typical customizations.
 ├── .qfai
 │   ├── assistant
 │   │   ├── agents
-│   │   │   ├── README.md
 │   │   │   ├── acceptance-test-engineer.md
 │   │   │   ├── architecture-reviewer.md
 │   │   │   ├── backend-engineer.md

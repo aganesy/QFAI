@@ -453,6 +453,38 @@ describe("worklogSurface validator", () => {
     }
   });
 
+  // TC-0004-0027 (calendar-rollover): syntactically valid but non-existent dates fire createdFormat
+  it("TC-0004-0027 (calendar-rollover): non-existent calendar date (2026-02-30) fires createdFormat", async () => {
+    const root = await newRoot("worklog-rollover");
+    try {
+      await seedWorklog(
+        root,
+        "entry-rollover.md",
+        [
+          "---",
+          "id: entry-rollover",
+          "kind: decision",
+          "status: active",
+          "created: 2026-02-30",
+          "updated: 2026-05-23",
+          "scope: global",
+          "blocking: false",
+          "promote-to: null",
+          "links: []",
+          "---",
+          "",
+        ].join("\n"),
+      );
+      const issues = await validateWorklogSurface(root, await getConfig(root));
+      const fmt = issues.filter((i) => i.rule === "worklogSurface.schema.createdFormat");
+      expect(fmt.length).toBe(1);
+      expect(fmt[0]?.message).toContain("2026-02-30");
+      expect(fmt[0]?.message).toContain("calendar date");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   // TC-0004-0028 (date-order): updated earlier than created fires updatedOrder
   it("TC-0004-0028 (date-order): updated < created fires worklogSurface.schema.updatedOrder", async () => {
     const root = await newRoot("worklog-date-order");

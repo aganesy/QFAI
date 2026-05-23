@@ -38,14 +38,22 @@ const ALLOWED_STATUS = new Set<string>(WORKLOG_ENTRY_STATUSES);
 const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 function isValidCalendarDate(s: string): boolean {
-  if (!ISO_DATE_RE.test(s)) return false;
-  const parts = s.split("-").map((p) => Number.parseInt(p, 10));
-  const [y, m, d] = parts;
-  if (y === undefined || m === undefined || d === undefined) return false;
-  // Date.UTC() accepts out-of-range fields and rolls them over (e.g.
-  // 2026-02-30 → 2026-03-02). Round-trip to detect rollover.
-  const dt = new Date(Date.UTC(y, m - 1, d));
-  return dt.getUTCFullYear() === y && dt.getUTCMonth() === m - 1 && dt.getUTCDate() === d;
+  // ISO_DATE_RE.exec() returns capture groups for the YYYY/MM/DD trio.
+  // Using exec (over String.split) keeps the types narrowed to string
+  // without defensive undefined-checks.
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s);
+  // Regex guarantees 3 numeric capture groups when it matches.
+  if (!m || m[1] === undefined || m[2] === undefined || m[3] === undefined) return false;
+  const y = Number.parseInt(m[1], 10);
+  const mo = Number.parseInt(m[2], 10);
+  const d = Number.parseInt(m[3], 10);
+  // Date.UTC() rolls over out-of-range fields (e.g. 2026-02-30 →
+  // 2026-03-02) AND maps two-digit years 0..99 to 1900..1999. Use
+  // setUTCFullYear() to bypass the legacy two-digit mapping and then
+  // round-trip to detect rollover.
+  const dt = new Date(0);
+  dt.setUTCFullYear(y, mo - 1, d);
+  return dt.getUTCFullYear() === y && dt.getUTCMonth() === mo - 1 && dt.getUTCDate() === d;
 }
 
 const STALE_DAYS = 90;
