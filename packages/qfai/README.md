@@ -170,7 +170,7 @@ participant R as Repo (codebase)
 
 U->>R: Create a repo (or open an existing one)
 U->>R: Run npx qfai init
-R-->>U: .qfai kit installed (skills, instructions, agents)
+R-->>U: .qfai kit installed (4-layer assistant tree + skills + agents)
 
 U->>AG: Run /qfai-configure
 AG->>Q: Read .qfai/assistant/skills/qfai-configure/SKILL.md
@@ -386,14 +386,21 @@ Typical customizations.
 │   │   │   ├── requirements-reviewer.md
 │   │   │   ├── solution-architect.md
 │   │   │   └── test-design-analyst.md
-│   │   ├── instructions
+│   │   ├── constitution
 │   │   │   ├── README.md
 │   │   │   ├── agent-selection.md
 │   │   │   ├── communication.md
 │   │   │   ├── constitution.md
+│   │   │   ├── drift-protocol.md
 │   │   │   ├── quality.md
 │   │   │   ├── thinking.md
 │   │   │   └── workflow.md
+│   │   ├── manifest
+│   │   │   ├── agent-catalog.yml
+│   │   │   ├── agent-routing.yml
+│   │   │   └── review-profiles.yml
+│   │   ├── process
+│   │   │   └── migrations/
 │   │   ├── skills
 │   │   │   ├── qfai-configure
 │   │   │   │   └── SKILL.md
@@ -413,14 +420,12 @@ Typical customizations.
 │   │   │   │   └── SKILL.md
 │   │   │   └── qfai-verify
 │   │   │       └── SKILL.md
-│   │   ├── steering
-│   │   │   ├── agent-catalog.yml
-│   │   │   ├── agent-routing.yml
-│   │   │   ├── review-gate.rules.yml
-│   │   │   ├── review-profiles.yml
-│   │   │   ├── product.md
-│   │   │   ├── structure.md
-│   │   │   └── tech.md
+│   │   └── catalog
+│   │       ├── review-gate.rules.yml
+│   │       ├── test-layers.md
+│   │       ├── product.md
+│   │       ├── structure.md
+│   │       └── tech.md
 │   └── waivers.yml
 └── qfai.config.yaml
 ```
