@@ -48,8 +48,8 @@
   - or build command plans via `buildPlaywrightCliCommandPlan` (still exported) and run them through the user's own Playwright CLI invocation.
   - rationale: spec-0017 retired the Node Playwright runtime + playwright-mcp residue in favor of a single Playwright CLI surface.
 - **runtime evidence schema**: V1 (`iterations[]`) records remain valid against the validator. Re-running `qfai init --force` only refreshes skill assets and the shipped `.github/workflows/qfai-validate.yml`; no data migration required.
-- **CI workflow**: the shipped `qfai-validate.yml` pins `node-version: "20"` and uses `npm ci`. Projects on pnpm/yarn keep the file but swap the install step (a comment in the file points to this).
-- **deferred** (tracked under PR Open Questions / Follow-ups): pnpm/yarn variants of the shipped workflow, full-removal timing for V1 lifecycle paths.
+- **CI workflow**: the shipped `qfai-validate.yml` pins `node-version: "20"` and auto-detects the consumer's lockfile (`pnpm-lock.yaml` → pnpm with pinned `version: 9`, `yarn.lock` → corepack-enabled yarn with Berry-vs-Classic flag detection, `package-lock.json` → `npm ci`, none → `npm install --no-audit --no-fund`). `actions/setup-node@v4` `cache:` and the `pnpm/action-setup@v4` step are both gated by `hashFiles()` expressions so consumers do not need to hand-edit the install step. The install step runs under explicit `shell: bash` so consumers extending `runs-on` to Windows / macOS matrices do not crash on PowerShell default. (Implemented in PR #209 wave-39 / wave-42; the v1.8 hand-swap comment was retired.)
+- **deferred** (tracked under PR Open Questions / Follow-ups): full-removal timing for V1 lifecycle paths.
 
 ## 2026-05-06 — CHG-001 — Absorb spec-0017 (CAP-0017 v2.0 / UX-loop) into CAP-0012; purge legacy v1.x AC/BR/EX/TC/DR
 

@@ -482,11 +482,18 @@ function classifyLegacySteeringEntry(relPath: string): { layer: AssistantLayer; 
   if (CONSTITUTION_BASENAMES.has(stem)) {
     return { layer: "constitution", subpath: posix };
   }
-  if (normalized.includes("migration") || normalized.startsWith("process/")) {
+  // Process layer routing — matched on path-segment boundaries rather
+  // than free substring so user docs named `foo-migration-notes.md`
+  // are NOT pulled into `process/` just because their filename
+  // contains the literal string "migration".
+  const segments = normalized.split("/");
+  const isInMigrationsSegment = segments.includes("migrations");
+  const isInProcessSegment = segments[0] === "process";
+  if (isInMigrationsSegment || isInProcessSegment) {
     // Strip a leading `process/` so legacy `steering/process/migrations/foo.md`
     // lands at `.qfai/assistant/process/migrations/foo.md` rather than
     // double-nesting to `.qfai/assistant/process/process/migrations/foo.md`.
-    const subpath = normalized.startsWith("process/") ? posix.slice("process/".length) : posix;
+    const subpath = isInProcessSegment ? posix.slice("process/".length) : posix;
     return { layer: "process", subpath };
   }
   // Default: catalog (reference docs).
