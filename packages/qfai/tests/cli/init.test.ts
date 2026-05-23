@@ -225,12 +225,12 @@ describe("qfai init", { timeout: 60000 }, () => {
       const expectedRegularFiles = [
         path.join(root, ".qfai", "assistant", "skills", "qfai-configure", "SKILL.md"),
         path.join(root, ".qfai", "assistant", "skills", "qfai-discussion", "SKILL.md"),
-        path.join(root, ".qfai", "assistant", "instructions", "constitution.md"),
+        path.join(root, ".qfai", "assistant", "constitution", "constitution.md"),
         path.join(root, ".qfai", "assistant", "agents", "delivery-planner.md"),
-        path.join(root, ".qfai", "assistant", "steering", "review-gate.rules.yml"),
-        path.join(root, ".qfai", "assistant", "steering", "agent-catalog.yml"),
-        path.join(root, ".qfai", "assistant", "steering", "agent-routing.yml"),
-        path.join(root, ".qfai", "assistant", "steering", "review-profiles.yml"),
+        path.join(root, ".qfai", "assistant", "catalog", "review-gate.rules.yml"),
+        path.join(root, ".qfai", "assistant", "manifest", "agent-catalog.yml"),
+        path.join(root, ".qfai", "assistant", "manifest", "agent-routing.yml"),
+        path.join(root, ".qfai", "assistant", "manifest", "review-profiles.yml"),
         path.join(
           root,
           ".qfai",
@@ -361,7 +361,7 @@ describe("qfai init", { timeout: 60000 }, () => {
         root,
         ".qfai",
         "assistant",
-        "instructions",
+        "constitution",
         "constitution.md",
       );
       await writeFile(existingConstitution, "custom constitution\n", "utf-8");
@@ -1004,7 +1004,7 @@ describe("qfai init", { timeout: 60000 }, () => {
       const expectedRegularFiles = [
         path.join(root, ".qfai", "assistant", "skills", "qfai-configure", "SKILL.md"),
         path.join(root, ".qfai", "assistant", "skills", "qfai-discussion", "SKILL.md"),
-        path.join(root, ".qfai", "assistant", "instructions", "constitution.md"),
+        path.join(root, ".qfai", "assistant", "constitution", "constitution.md"),
         path.join(root, ".qfai", "assistant", "agents", "delivery-planner.md"),
         path.join(root, ".github", "copilot-instructions.md"),
         path.join(root, ".codex", "README.md"),

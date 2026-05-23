@@ -63,6 +63,16 @@ export async function runInit(options: InitOptions): Promise<void> {
     );
   }
 
+  // If --upgrade-assistant-tree is supplied, run the migration FIRST.
+  // This relocates user-edited content from the legacy pre-recut
+  // surfaces (instructions/, steering/, manifest/) into the new 4-layer
+  // tree BEFORE copyTemplateTree fills the same destinations from the
+  // asset defaults. The subsequent copyTemplateTree uses
+  // conflictPolicy: "skip", so migrated user edits are preserved.
+  const upgradeResult = options.upgradeAssistantTree
+    ? await runUpgradeAssistantTree(destRoot, options.dryRun)
+    : { copied: [], skipped: [], removed: [], preservedNotes: [] as string[] };
+
   // root/ と .qfai/ は create-only（既存は skip）
   // assistant/skills のみ --force で上書きする
   const rootResult = await copyTemplateTree(rootAssets, destRoot, {
@@ -98,11 +108,11 @@ export async function runInit(options: InitOptions): Promise<void> {
   const removed = [...removedLegacySkills, ...wrappersResult.removed];
 
   // 4-layer assistant-tree seed + project-root steering surface seed.
+  // These run AFTER copyTemplateTree so they can detect when the
+  // asset templates already populated a layer (they fill in only
+  // missing .gitkeep / README placeholders).
   const assistantTreeResult = await seedAssistantLayers(destRoot, options.dryRun);
   const projectSteeringResult = await seedProjectSteering(destRoot, options.dryRun);
-  const upgradeResult = options.upgradeAssistantTree
-    ? await runUpgradeAssistantTree(destRoot, options.dryRun)
-    : { copied: [], skipped: [], removed: [], preservedNotes: [] as string[] };
 
   // Activation guidance for newly created instructions files
   const expectedInstructionsDir = path.join(destRoot, ".github", "instructions");
