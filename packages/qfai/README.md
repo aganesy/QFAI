@@ -387,12 +387,16 @@ Typical customizations.
 │   │   │   ├── solution-architect.md
 │   │   │   └── test-design-analyst.md
 │   │   ├── constitution
-│   │   │   ├── README.md
 │   │   │   ├── agent-selection.md
+│   │   │   ├── change-classification.md
 │   │   │   ├── communication.md
 │   │   │   ├── constitution.md
 │   │   │   ├── drift-protocol.md
 │   │   │   ├── quality.md
+│   │   │   ├── requirements-decomposition.md
+│   │   │   ├── research-first-protocol.md
+│   │   │   ├── shared-skill-delegation-baseline.md
+│   │   │   ├── shared-skill-operating-baseline.md
 │   │   │   ├── thinking.md
 │   │   │   └── workflow.md
 │   │   ├── manifest
@@ -400,7 +404,8 @@ Typical customizations.
 │   │   │   ├── agent-routing.yml
 │   │   │   └── review-profiles.yml
 │   │   ├── process
-│   │   │   └── migrations/
+│   │   │   └── migrations
+│   │   │       └── v1.4.27-atdd-alignment.md
 │   │   ├── skills
 │   │   │   ├── qfai-configure
 │   │   │   │   └── SKILL.md
@@ -421,11 +426,15 @@ Typical customizations.
 │   │   │   └── qfai-verify
 │   │   │       └── SKILL.md
 │   │   └── catalog
-│   │       ├── review-gate.rules.yml
-│   │       ├── test-layers.md
+│   │       ├── cli-ux-guidelines.md
+│   │       ├── manifest.md
 │   │       ├── product.md
+│   │       ├── review-gate.rules.yml
+│   │       ├── spec_required_files.json
 │   │       ├── structure.md
-│   │       └── tech.md
+│   │       ├── tech.md
+│   │       ├── test-layers.md
+│   │       └── ui-definition-protocol.md
 │   └── waivers.yml
 └── qfai.config.yaml
 ```

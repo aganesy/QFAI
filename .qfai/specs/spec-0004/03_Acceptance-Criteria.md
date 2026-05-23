@@ -139,3 +139,24 @@
 - Given a validate run on a project that just completed `qfai init --upgrade-assistant-tree`
 - When the migration emitted `W-USER-EDIT-PRESERVED` informational notes
 - Then the validator recognizes those notes as informational pass-throughs (`info` severity, not warning/error); they appear in the validate report under "Informational" without failing any gate
+
+## AC-0004-0027
+
+- US-Refs: US-0004-0028 (sub-criterion of REQ-0035 frontmatter schema)
+- Given a `.qfai/steering/<id>.md` entry whose `created` or `updated` field value does not match `^\d{4}-\d{2}-\d{2}$`
+- When `qfai validate` runs
+- Then `W-WORKLOG-SCHEMA` is emitted at warning severity per non-conformant field (rule: `worklogSurface.schema.createdFormat` / `updatedFormat`) so non-ISO-8601 date strings cannot silently flow through schema validation
+
+## AC-0004-0028
+
+- US-Refs: US-0004-0028 (sub-criterion of REQ-0035 frontmatter schema)
+- Given a `.qfai/steering/<id>.md` entry whose `updated` ISO-8601 date is strictly earlier than its `created` ISO-8601 date
+- When `qfai validate` runs
+- Then `W-WORKLOG-SCHEMA` (rule: `worklogSurface.schema.updatedOrder`) is emitted at warning severity naming both dates, enforcing the worklog contract's `updated >= created` invariant
+
+## AC-0004-0029
+
+- US-Refs: US-0004-0028 (sub-criterion of REQ-0039 link integrity)
+- Given a `.qfai/steering/<id>.md` entry whose `links` array contains one or more non-string elements (e.g. `links: [123, true]`)
+- When `qfai validate` runs
+- Then `W-WORKLOG-SCHEMA` (rule: `worklogSurface.schema.linksElementType`) is emitted per non-string element so malformed link items cannot bypass schema and broken-link checks

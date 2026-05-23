@@ -1,5 +1,12 @@
 # 06 Test Cases
 
+Level enum:
+
+- `unit` — pure function / module-local logic.
+- `integration` — module-to-module wiring exercised end-to-end.
+- `validators` — `qfai validate` finding-emit checks.
+- `ssot-guard` — SSOT 3-way sync guards (e.g. agent-catalog.yml ↔ canonical MD ↔ TOML) that have no per-AC source and trace as cross-spec.
+
 | TC-ID        | Level       | AC-Refs      | EX-Ref       | Steps                                                                   | Expected                                                        | Notes                    |
 | ------------ | ----------- | ------------ | ------------ | ----------------------------------------------------------------------- | --------------------------------------------------------------- | ------------------------ |
 | TC-0004-0001 | integration | AC-0004-0001 | EX-0004-0004 | run `qfai validate` on a repo with deterministic validator fixtures     | findings are aggregated through the machine gate                | validate entrypoint      |
@@ -27,7 +34,7 @@
 | TC-0004-0023 | validators  | AC-0004-0023 | EX-0004-0021 | remove `project_memory:` block from `qfai-implement/SKILL.md`           | error fires naming the skill                                    | project_memory required  |
 | TC-0004-0024 | validators  | AC-0004-0024 | EX-0004-0022 | embed `.qfai/assistant/steering/agent-routing.yml` ref in SKILL.md      | `W-SKILL-DOC-BROKEN-REF` fires                                  | skill doc broken-ref     |
 | TC-0004-0025 | validators  | AC-0004-0025 | EX-0004-0023 | run validate after `qfai init --upgrade-assistant-tree`                 | `W-USER-EDIT-PRESERVED` surfaces as info; validate exits 0      | info pass-through        |
-| TC-0004-0034 | ssot-guard  | (cross-spec) | (n/a)        | agent-catalog.yml `developer_instructions` differs from canonical MD    | dedicated test FAILS for the diverging agent id                 | catalog ↔ MD 3-way SSOT  |
-| TC-0004-0035 | validators  | AC-0004-0035 | EX-0004-0035 | `created` / `updated` value is not `YYYY-MM-DD`                         | `worklogSurface.schema.{created,updated}Format` fires per field | ISO-8601 date format     |
-| TC-0004-0036 | validators  | AC-0004-0036 | EX-0004-0036 | `updated` earlier than `created` in valid ISO-8601 form                 | `worklogSurface.schema.updatedOrder` fires                      | updated >= created       |
-| TC-0004-0037 | validators  | AC-0004-0037 | EX-0004-0037 | `links: [123, true]` non-string elements in array                       | `worklogSurface.schema.linksElementType` fires per element      | links element type guard |
+| TC-0004-0026 | ssot-guard  | (cross-spec) | (n/a)        | agent-catalog.yml `developer_instructions` differs from canonical MD    | dedicated test FAILS for the diverging agent id                 | catalog ↔ MD 3-way SSOT  |
+| TC-0004-0027 | validators  | AC-0004-0027 | EX-0004-0027 | `created` / `updated` value is not `YYYY-MM-DD`                         | `worklogSurface.schema.{created,updated}Format` fires per field | ISO-8601 date format     |
+| TC-0004-0028 | validators  | AC-0004-0028 | EX-0004-0028 | `updated` earlier than `created` in valid ISO-8601 form                 | `worklogSurface.schema.updatedOrder` fires                      | updated >= created       |
+| TC-0004-0029 | validators  | AC-0004-0029 | EX-0004-0029 | `links: [123, true]` non-string elements in array                       | `worklogSurface.schema.linksElementType` fires per element      | links element type guard |

@@ -270,12 +270,12 @@ describe("TC-0003-0003: developer_instructions 必須セクション含有", () 
   });
 });
 
-// QFAI:SPEC-0004:TC-0004-0034 — agent-catalog.yml#developer_instructions
+// QFAI:SPEC-0004:TC-0004-0026 — agent-catalog.yml#developer_instructions
 // MUST stay in lockstep with canonical .qfai/assistant/agents/<name>.md
 // bodies (3-way SSOT: canonical MD ↔ codex TOML ↔ agent-catalog.yml).
 // The codex side is already covered by TC-0003-0003 above; this test
 // closes the catalog side.
-describe("TC-0004-0034: agent-catalog.yml developer_instructions matches canonical MD", () => {
+describe("TC-0004-0026: agent-catalog.yml developer_instructions matches canonical MD", () => {
   it("全 agent の developer_instructions が canonical MD と実質一致する", () => {
     const normalize = (s: string) => s.replace(/\r\n/g, "\n").trim();
     const catalog = parseYaml(readFileSync(CATALOG_PATH, "utf-8")) as Record<string, unknown>;

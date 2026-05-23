@@ -422,8 +422,8 @@ describe("worklogSurface validator", () => {
     }
   });
 
-  // TC-0004-0035 (date-format): non-ISO `created` / `updated` fires per-field format rule
-  it("TC-0004-0035 (date-format): non-ISO created/updated fires worklogSurface.schema.{created,updated}Format", async () => {
+  // TC-0004-0027 (date-format): non-ISO `created` / `updated` fires per-field format rule
+  it("TC-0004-0027 (date-format): non-ISO created/updated fires worklogSurface.schema.{created,updated}Format", async () => {
     const root = await newRoot("worklog-date-format");
     try {
       await seedWorklog(
@@ -453,8 +453,8 @@ describe("worklogSurface validator", () => {
     }
   });
 
-  // TC-0004-0036 (date-order): updated earlier than created fires updatedOrder
-  it("TC-0004-0036 (date-order): updated < created fires worklogSurface.schema.updatedOrder", async () => {
+  // TC-0004-0028 (date-order): updated earlier than created fires updatedOrder
+  it("TC-0004-0028 (date-order): updated < created fires worklogSurface.schema.updatedOrder", async () => {
     const root = await newRoot("worklog-date-order");
     try {
       await seedWorklog(
@@ -484,8 +484,8 @@ describe("worklogSurface validator", () => {
     }
   });
 
-  // TC-0004-0037 (links element type): non-string links element fires linksElementType
-  it("TC-0004-0037 (links element type): non-string links elements fire worklogSurface.schema.linksElementType", async () => {
+  // TC-0004-0029 (links element type): non-string links element fires linksElementType
+  it("TC-0004-0029 (links element type): non-string links elements fire worklogSurface.schema.linksElementType", async () => {
     const root = await newRoot("worklog-links-elem-type");
     try {
       // YAML allows mixed types in a list. Seed numeric + boolean entries.

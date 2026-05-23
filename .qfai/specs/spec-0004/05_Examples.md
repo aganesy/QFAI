@@ -157,3 +157,24 @@
 - Given a validate run on a freshly-upgraded project where `qfai init --upgrade-assistant-tree` emitted `W-USER-EDIT-PRESERVED` notes
 - When `qfai validate` runs immediately afterwards
 - Then validate exits 0; `counts.info >= 1`; the report has an "Informational" section listing the preserved files
+
+## EX-0004-0027
+
+- BR-Ref: BR-0004-0015 (frontmatter schema)
+- Given a `.qfai/steering/foo.md` entry with `created: 2026/05/23` and `updated: May 23 2026` (both non-ISO-8601)
+- When `qfai validate` runs
+- Then `worklogSurface.schema.createdFormat` AND `worklogSurface.schema.updatedFormat` fire as separate `W-WORKLOG-SCHEMA` warnings
+
+## EX-0004-0028
+
+- BR-Ref: BR-0004-0015 (frontmatter schema)
+- Given an entry with `created: 2026-05-23` and `updated: 2026-05-22` (reversed order, both valid ISO-8601)
+- When `qfai validate` runs
+- Then `worklogSurface.schema.updatedOrder` fires naming both dates; the validator does NOT also report a format warning since dates are syntactically valid
+
+## EX-0004-0029
+
+- BR-Ref: BR-0004-0015 (frontmatter schema)
+- Given an entry whose `links` YAML is a mixed-type list: `- 123` (numeric), `- true` (boolean)
+- When `qfai validate` runs
+- Then 2 separate `worklogSurface.schema.linksElementType` warnings fire (one per non-string element); broken-link integrity check is skipped for those elements
