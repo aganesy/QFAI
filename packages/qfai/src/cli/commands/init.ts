@@ -347,13 +347,15 @@ async function runUpgradeAssistantTree(destRoot: string, dryRun: boolean): Promi
   // and manifest/. Each is walked independently and routed into the new
   // 4-layer tree via the classifier; the classifier is name-driven so
   // it works regardless of which legacy surface a file lived in.
-  const legacySurfaces: Array<{ name: "steering" | "instructions" | "manifest"; dir: string }> = [
+  // Pre-recut legacy surfaces that the migration helper walks. The
+  // pre-recut `manifest/` layer is intentionally NOT included here:
+  // its path is identical to the canonical post-recut manifest/ layer,
+  // so walking it would mis-label freshly-seeded canonical files as
+  // "pre-recut surfaces" in the migration memo and emit spurious
+  // W-USER-EDIT-PRESERVED notes for normal post-init files.
+  const legacySurfaces: Array<{ name: "steering" | "instructions"; dir: string }> = [
     { name: "steering", dir: joinLegacyAssistantSteering(destRoot) },
     { name: "instructions", dir: joinLegacyAssistantInstructions(destRoot) },
-    // Pre-recut manifest/ shared the same path as the canonical manifest
-    // layer; using the SSOT helper here keeps the lint-no-literal guard
-    // satisfied.
-    { name: "manifest", dir: joinAssistantLayer(destRoot, "manifest") },
   ];
   const surfaceExistence = await Promise.all(legacySurfaces.map((s) => pathExists(s.dir)));
   const anyLegacyExists = surfaceExistence.some(Boolean);
@@ -404,7 +406,11 @@ async function runUpgradeAssistantTree(destRoot: string, dryRun: boolean): Promi
       // the surface we are already in (e.g. legacy manifest/agent-routing.yml
       // → new manifest/agent-routing.yml), the file is already at the
       // canonical location. Skip without W-USER-EDIT-PRESERVED noise.
-      if (target.layer === surface.name) continue;
+      // Same-layer self-copy guard. Currently legacySurfaces only contains
+      // pre-recut surfaces (steering, instructions) so this comparison
+      // never matches a canonical layer, but the guard is preserved
+      // defensively for future expansions.
+      if ((target.layer as string) === surface.name) continue;
       const newPath = joinAssistantLayer(destRoot, target.layer, ...target.subpath.split("/"));
       if (await pathExists(newPath)) {
         // User has already authored / edited the new file — preserve it.

@@ -63,11 +63,11 @@ Required preconditions:
 
 Exit codes (additional):
 
-| Code | Meaning                                                                                   |
-| ---- | ----------------------------------------------------------------------------------------- |
-| 0    | All files relocated; user edits preserved with `W-USER-EDIT-PRESERVED` warnings as needed |
-| 64   | I/O error during relocation; pre-relocation state preserved                               |
-| 65   | Cannot resolve relocation — old-layout file path not in the canonical relocation table    |
+| Code | Meaning                                                                                                                                                                                                                                                    |
+| ---- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0    | All files relocated; user edits preserved with `W-USER-EDIT-PRESERVED` warnings as needed                                                                                                                                                                  |
+| 64   | I/O error during relocation; pre-relocation state preserved                                                                                                                                                                                                |
+| 65   | Cannot resolve relocation — old-layout file path not in the canonical relocation table. **NOT YET IMPLEMENTED in v1.9.0** — `classifyLegacySteeringEntry` currently has a `catalog` fallback for unknown files (does not exit 65). Scheduled for v1.10.0+. |
 
 ## Path SSOT enforcement
 
