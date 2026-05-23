@@ -478,7 +478,14 @@ export async function validateWorklogSurface(
     const targetRows = decisionRowsByTarget.get(targetKey) ?? [];
     const referenced = entryId.length > 0 && rowsReferenceEntryId(targetRows, entryId);
     const isArchived = status === "archived";
-    const hasBackRef = promotedToBackRef.length > 0 && promotedToBackRef === targetKey;
+    // `promoted-to:` back-ref semantics per BR-0004-0019: the value
+    // is the DR-ID (Decision Row id, e.g. `DR-3`) that was appended
+    // to the target file when the decision was promoted, NOT the
+    // file path. We only check that the back-ref is set; format
+    // validation of the DR-ID itself is left to spec-side gates so
+    // this validator doesn't need to know the per-spec DR
+    // numbering scheme.
+    const hasBackRef = promotedToBackRef.length > 0;
     const satisfied = referenced && isArchived && hasBackRef;
     if (!satisfied) {
       const reasons: string[] = [];
@@ -490,9 +497,7 @@ export async function validateWorklogSurface(
       }
       if (!hasBackRef) {
         reasons.push(
-          promotedToBackRef === ""
-            ? `\`promoted-to:\` back-ref is missing (must equal "${promo.target}")`
-            : `\`promoted-to:\` back-ref="${promotedToBackRef}" does not match the declared target "${promo.target}"`,
+          `\`promoted-to:\` back-ref is missing (must contain the DR-ID of the appended row in ${promo.target})`,
         );
       }
       const detail = reasons.join("; ");
