@@ -152,9 +152,9 @@ with no AC source).
 ## AC-0004-0027
 
 - US-Refs: US-0004-0029 (sub-criterion of REQ-0035 frontmatter schema)
-- Given a `.qfai/steering/<id>.md` entry whose `created` or `updated` field value does not match `^\d{4}-\d{2}-\d{2}$`
+- Given a `.qfai/steering/<id>.md` entry whose `created` or `updated` field value either (a) does not match the surface regex `^\d{4}-\d{2}-\d{2}$` OR (b) matches the regex but is not a valid calendar date (e.g. `2026-02-30`, `2026-13-01`)
 - When `qfai validate` runs
-- Then `W-WORKLOG-SCHEMA` is emitted at warning severity per non-conformant field (rule: `worklogSurface.schema.createdFormat` / `updatedFormat`) so non-ISO-8601 date strings cannot silently flow through schema validation
+- Then `W-WORKLOG-SCHEMA` is emitted at warning severity per non-conformant field (rule: `worklogSurface.schema.createdFormat` / `updatedFormat`) — both branches are handled by `isValidCalendarDate()` round-trip detection so neither bad-syntax nor calendar-rollover dates can silently flow through schema validation
 
 ## AC-0004-0028
 
