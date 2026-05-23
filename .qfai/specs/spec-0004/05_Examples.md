@@ -178,3 +178,10 @@
 - Given an entry whose `links` YAML is a mixed-type list: `- 123` (numeric), `- true` (boolean)
 - When `qfai validate` runs
 - Then 2 separate `worklogSurface.schema.linksElementType` warnings fire (one per non-string element); broken-link integrity check is skipped for those elements
+
+## EX-0004-0030
+
+- BR-Ref: BR-0004-0015 (frontmatter schema)
+- Given a `.qfai/steering/foo.md` entry with `id: Foo Bar` (uppercase + space; not kebab-case ASCII)
+- When `qfai validate` runs
+- Then `worklogSurface.schema.idFormat` fires as a `W-WORKLOG-SCHEMA` warning naming the bad id; date-style kebab ids like `2026-05-22-recut-design-call` still pass since they match the contract regex

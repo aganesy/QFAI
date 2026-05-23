@@ -517,6 +517,38 @@ describe("worklogSurface validator", () => {
     }
   });
 
+  // TC-0004-0030 (id-format): non-kebab-case id fires worklogSurface.schema.idFormat
+  it("TC-0004-0030 (id-format): non-kebab-case ASCII id fires worklogSurface.schema.idFormat", async () => {
+    const root = await newRoot("worklog-id-format");
+    try {
+      await seedWorklog(
+        root,
+        "FooBar.md",
+        [
+          "---",
+          "id: Foo Bar",
+          "kind: decision",
+          "status: active",
+          "created: 2026-05-23",
+          "updated: 2026-05-23",
+          "scope: global",
+          "blocking: false",
+          "promote-to: null",
+          "links: []",
+          "---",
+          "",
+        ].join("\n"),
+      );
+      const issues = await validateWorklogSurface(root, await getConfig(root));
+      const idFmt = issues.filter((i) => i.rule === "worklogSurface.schema.idFormat");
+      expect(idFmt.length).toBe(1);
+      expect(idFmt[0]?.message).toContain("Foo Bar");
+      expect(idFmt[0]?.message).toContain("kebab-case");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   // TC-0004-0017 (date-style entry-id): date-prefixed entry id resolves against entryIds set
   it("TC-0004-0017 (date-style entry-id): date-prefixed link resolves to a date-style entry-id without firing W-WORKLOG-BROKEN-LINK", async () => {
     const root = await newRoot("worklog-date-entry");

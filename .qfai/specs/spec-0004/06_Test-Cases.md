@@ -38,3 +38,4 @@ Level enum:
 | TC-0004-0027 | validators  | AC-0004-0027 | EX-0004-0027 | `created` / `updated` value is not `YYYY-MM-DD`                         | `worklogSurface.schema.{created,updated}Format` fires per field | ISO-8601 date format     |
 | TC-0004-0028 | validators  | AC-0004-0028 | EX-0004-0028 | `updated` earlier than `created` in valid ISO-8601 form                 | `worklogSurface.schema.updatedOrder` fires                      | updated >= created       |
 | TC-0004-0029 | validators  | AC-0004-0029 | EX-0004-0029 | `links: [123, true]` non-string elements in array                       | `worklogSurface.schema.linksElementType` fires per element      | links element type guard |
+| TC-0004-0030 | validators  | AC-0004-0030 | EX-0004-0030 | frontmatter `id` is not kebab-case ASCII (e.g. `Foo Bar`, `UPPERCASE`)  | `worklogSurface.schema.idFormat` fires naming the bad id        | id format guard          |
