@@ -174,6 +174,61 @@ describe("skillDocReferences validator", () => {
     }
   });
 
+  // TC-0004-0023 (prose-mention): mid-file prose mention does NOT shadow real trailing block
+  it("TC-0004-0023 (prose-mention): prose mentioning project_memory: earlier does NOT mis-flag a valid trailing block", async () => {
+    const root = await newRoot("skill-projmem-prose");
+    try {
+      await seedSkill(
+        root,
+        "qfai-implement",
+        [
+          "## /qfai-implement",
+          "",
+          "When you write a SKILL.md, declare project_memory: at the tail.",
+          "",
+          "## Other Section",
+          "",
+          "More body.",
+          "",
+          "project_memory:",
+          "  - real declaration line",
+          "",
+        ].join("\n"),
+      );
+      const issues = await validateSkillDocReferences(root, await getConfig(root));
+      const projMem = issues.filter((i) => i.rule === "skillDocReferences.projectMemory");
+      expect(projMem.length).toBe(0);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  // TC-0004-0023 (mapping-form): YAML mapping form is accepted as a valid trailing block
+  it("TC-0004-0023 (mapping-form): YAML mapping form trailing block does NOT fire the warning", async () => {
+    const root = await newRoot("skill-projmem-mapping");
+    try {
+      await seedSkill(
+        root,
+        "qfai-implement",
+        [
+          "## /qfai-implement",
+          "",
+          "body content.",
+          "",
+          "project_memory:",
+          "  scope: spec-0003",
+          "  notes: remembers the recut layer mapping",
+          "",
+        ].join("\n"),
+      );
+      const issues = await validateSkillDocReferences(root, await getConfig(root));
+      const projMem = issues.filter((i) => i.rule === "skillDocReferences.projectMemory");
+      expect(projMem.length).toBe(0);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   // TC-0004-0024 (severity-helper): unit-level pre/post/boundary mode
   it("TC-0004-0024 (severity-helper): brokenRefSeverity returns warning pre-sunset, error at-or-past sunset", () => {
     // sunset is 1.10.0 (LEGACY_STEERING_SUNSET)

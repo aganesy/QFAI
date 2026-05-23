@@ -120,29 +120,45 @@ export async function validateSkillDocReferences(
     // The block MUST be the trailing structure of the SKILL.md so the
     // remembered-context declaration is the last thing the loader
     // reads. Mid-file `project_memory:` lines followed by other
-    // sections are NOT compliant — the validator now finds the last
-    // `project_memory:` occurrence and asserts only whitespace, list
-    // items (`-`), or comments may follow.
+    // sections are NOT compliant.
+    //
+    // Algorithm:
+    //   1. Walk the full body line-by-line and remember the LAST
+    //      occurrence of `^\s*project_memory\s*:`. Using the last
+    //      occurrence avoids false-positives where the SKILL.md
+    //      prose merely mentions `project_memory:` earlier in the
+    //      doc and the real declaration block sits at the tail.
+    //   2. Walk every line after that last occurrence. Allow:
+    //        - blank lines
+    //        - top-level list items (`-`)
+    //        - HTML comments (`<!--`)
+    //        - indented YAML continuation lines (start with at least
+    //          one space — covers both list `-` items and mapping
+    //          `  key: value` form so the contract is YAML-shape-
+    //          agnostic)
+    //      Reject:
+    //        - any line starting with `#` (markdown heading) — the
+    //          strongest "not trailing" signal
+    //        - any other non-blank, top-level text (arbitrary prose
+    //          after the block also disqualifies)
     if (QFAI_SKILL_ID_RE.test(skillId)) {
-      const trailingBlockRe = /^\s*project_memory\s*:\s*([\s\S]*)$/m;
-      const trailing = body.slice(-2_000);
-      const match = trailingBlockRe.exec(trailing);
+      const lines = body.split(/\r?\n/);
+      const declRe = /^\s*project_memory\s*:/;
+      let lastDeclIdx = -1;
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        if (line !== undefined && declRe.test(line)) lastDeclIdx = i;
+      }
       const isTrailing = (() => {
-        if (!match) return false;
-        const after = match[1] ?? "";
-        // Reject if any non-list / non-comment / non-blank markdown
-        // heading appears after the block. Headings (^#) are the
-        // strongest "not trailing" signal; arbitrary prose is also
-        // disallowed.
-        const lines = after.split(/\r?\n/);
-        for (const line of lines) {
-          const trimmed = line.trim();
-          if (trimmed === "") continue;
-          if (trimmed.startsWith("-")) continue;
-          if (trimmed.startsWith("#")) return false;
-          if (trimmed.startsWith("<!--")) continue;
-          // Any other non-blank, non-list, non-comment line means the
-          // block isn't trailing.
+        if (lastDeclIdx === -1) return false;
+        for (let i = lastDeclIdx + 1; i < lines.length; i++) {
+          const line = lines[i] ?? "";
+          if (line.trim() === "") continue;
+          if (line.startsWith("-")) continue;
+          if (line.startsWith(" ") || line.startsWith("\t")) continue; // indented YAML continuation
+          if (line.startsWith("<!--")) continue;
+          if (line.startsWith("#")) return false;
+          // Any other non-blank top-level line means the block isn't trailing.
           return false;
         }
         return true;
