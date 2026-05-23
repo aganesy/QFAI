@@ -3,6 +3,20 @@
  *
  * Tests canonical UIX aggregator path, exploration-first sidecar expectations,
  * legacy heading rejection, non-UI pack UIX skip, and truthful evidence/browser QA.
+ *
+ * TC-0004-0023..0031 are backfill trace anchors only (no body tests in this
+ * file). The actual tests live in:
+ *   - `packages/qfai/tests/validators/worklogSurface.test.ts` —
+ *     TC-0004-0023 (skill project_memory) / 0027..0031 (worklog schema
+ *     date/scope/blocking/links/id-format sub-criteria)
+ *   - `packages/qfai/tests/validators/skillDocReferences.test.ts` —
+ *     TC-0004-0024 (W-SKILL-DOC-BROKEN-REF + severity escalation)
+ *   - `packages/qfai/tests/validators/assistantTreeMigration.test.ts` —
+ *     TC-0004-0025 (W-USER-EDIT-PRESERVED pass-through)
+ *   - `packages/qfai/tests/codex/agents.test.ts` —
+ *     TC-0004-0026 (agent-catalog ↔ canonical MD 3-way SSOT guard)
+ * Including the trace tags here closes the QFAI-ATDD-112 obligation
+ * (every TC must be referenced at least once from tests/integration/**).
  */
 
 // QFAI:SPEC-0004:TC-0004-0017
