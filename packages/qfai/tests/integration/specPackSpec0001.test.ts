@@ -54,7 +54,7 @@ const DRIFT_PROTOCOL = path.resolve(
   "init",
   ".qfai",
   "assistant",
-  "instructions",
+  "constitution",
   "drift-protocol.md",
 );
 const CONSTITUTION = path.resolve(
@@ -65,7 +65,7 @@ const CONSTITUTION = path.resolve(
   "init",
   ".qfai",
   "assistant",
-  "instructions",
+  "constitution",
   "constitution.md",
 );
 const SPEC_0001 = path.resolve(

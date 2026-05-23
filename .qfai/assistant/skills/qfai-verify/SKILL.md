@@ -262,7 +262,7 @@ Every 5 major actions, pause and restate:
    - `.qfai/assistant/catalog/structure.md`
    - `.qfai/assistant/catalog/tech.md`
    - `.qfai/assistant/catalog/product.md`
-   - any additional files under `.qfai/assistant/{manifest,catalog}/*`
+   - any additional files under `.qfai/assistant/{manifest,catalog}/`
 
 2. Read **project constitution / instructions** (if present):
    - `.qfai/assistant/constitution/constitution.md`

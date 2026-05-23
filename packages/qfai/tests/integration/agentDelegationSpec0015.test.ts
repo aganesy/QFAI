@@ -38,7 +38,10 @@ const AGENTS_DIR = path.resolve(
   "agents",
 );
 
-const STEERING_DIR = path.resolve(
+// Post-recut: agent-catalog.yml / agent-routing.yml / review-profiles.yml
+// live in manifest/, review-gate.rules.yml lives in catalog/. Tests
+// resolve per-file paths below.
+const MANIFEST_DIR = path.resolve(
   __dirname,
   "..",
   "..",
@@ -46,7 +49,17 @@ const STEERING_DIR = path.resolve(
   "init",
   ".qfai",
   "assistant",
-  "steering",
+  "manifest",
+);
+const CATALOG_DIR = path.resolve(
+  __dirname,
+  "..",
+  "..",
+  "assets",
+  "init",
+  ".qfai",
+  "assistant",
+  "catalog",
 );
 
 const AGENT_VALIDATOR = path.resolve(
@@ -77,7 +90,7 @@ const SHARED_DELEGATION_BASELINE = path.resolve(
   "init",
   ".qfai",
   "assistant",
-  "instructions",
+  "constitution",
   "shared-skill-delegation-baseline.md",
 );
 
@@ -102,7 +115,7 @@ const LIVE_SHARED_DELEGATION_BASELINE = path.resolve(
   "..",
   ".qfai",
   "assistant",
-  "instructions",
+  "constitution",
   "shared-skill-delegation-baseline.md",
 );
 
@@ -140,7 +153,7 @@ function getSection(content: string, heading: string) {
 // TC-0015-0001: Agent Catalog 19 Entries
 describe("TC-0015-0001: Agent Catalog 19 Entries", () => {
   it("agent-catalog.yml exists in steering", async () => {
-    const catalogPath = path.join(STEERING_DIR, "agent-catalog.yml");
+    const catalogPath = path.join(MANIFEST_DIR, "agent-catalog.yml");
     await expect(access(catalogPath)).resolves.toBeUndefined();
   });
 });
@@ -193,7 +206,7 @@ describe("TC-0015-0004: Devils-Advocate Concrete Alternative", () => {
 // TC-0015-0005: Devils-Advocate 3-FAIL Demotion
 describe("TC-0015-0005: Devils-Advocate 3-FAIL Demotion", () => {
   it("review-gate rules support devils-advocate review mode", async () => {
-    const rulesPath = path.join(STEERING_DIR, "review-gate.rules.yml");
+    const rulesPath = path.join(CATALOG_DIR, "review-gate.rules.yml");
     const content = await readFile(rulesPath, "utf-8");
     expect(content).toContain("devils-advocate");
   });
@@ -202,7 +215,7 @@ describe("TC-0015-0005: Devils-Advocate 3-FAIL Demotion", () => {
 // TC-0015-0006: Pattern-Doubler Rationale Required
 describe("TC-0015-0006: Pattern-Doubler Rationale Required", () => {
   it("review-profiles.yml exists", async () => {
-    const profilesPath = path.join(STEERING_DIR, "review-profiles.yml");
+    const profilesPath = path.join(MANIFEST_DIR, "review-profiles.yml");
     await expect(access(profilesPath)).resolves.toBeUndefined();
   });
 });
@@ -210,7 +223,7 @@ describe("TC-0015-0006: Pattern-Doubler Rationale Required", () => {
 // TC-0015-0007: Pattern-Doubler N/A Default
 describe("TC-0015-0007: Pattern-Doubler N/A Default", () => {
   it("review-profiles.yml defines pattern-doubler profile", async () => {
-    const profilesPath = path.join(STEERING_DIR, "review-profiles.yml");
+    const profilesPath = path.join(MANIFEST_DIR, "review-profiles.yml");
     const content = await readFile(profilesPath, "utf-8");
     expect(content).toMatch(/pattern-doubler/i);
   });
@@ -219,7 +232,7 @@ describe("TC-0015-0007: Pattern-Doubler N/A Default", () => {
 // TC-0015-0008: All-Reviewer FAIL Obligation
 describe("TC-0015-0008: All-Reviewer FAIL Obligation", () => {
   it("review-gate rules require completion-reviewer", async () => {
-    const rulesPath = path.join(STEERING_DIR, "review-gate.rules.yml");
+    const rulesPath = path.join(CATALOG_DIR, "review-gate.rules.yml");
     const content = await readFile(rulesPath, "utf-8");
     expect(content).toContain("completion-reviewer");
     expect(content).toContain("reviewers");
@@ -229,7 +242,7 @@ describe("TC-0015-0008: All-Reviewer FAIL Obligation", () => {
 // TC-0015-0009: Routing SSOT
 describe("TC-0015-0009: Routing SSOT", () => {
   it("agent-routing.yml exists and defines routing", async () => {
-    const routingPath = path.join(STEERING_DIR, "agent-routing.yml");
+    const routingPath = path.join(MANIFEST_DIR, "agent-routing.yml");
     const content = await readFile(routingPath, "utf-8");
     expect(content).toMatch(/routing|reviewer|skill/i);
   });
@@ -238,7 +251,7 @@ describe("TC-0015-0009: Routing SSOT", () => {
 // TC-0015-0010: Specialist Responsibilities Preserved
 describe("TC-0015-0010: Specialist Responsibilities Preserved", () => {
   it("agent-catalog.yml contains agent definitions", async () => {
-    const catalogPath = path.join(STEERING_DIR, "agent-catalog.yml");
+    const catalogPath = path.join(MANIFEST_DIR, "agent-catalog.yml");
     const content = await readFile(catalogPath, "utf-8");
     expect(content).toMatch(/agent|role|mission/i);
   });

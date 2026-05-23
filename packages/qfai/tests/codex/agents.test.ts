@@ -11,7 +11,7 @@ const CODEX_DIR = join(REPO_ROOT, ".codex");
 const AGENTS_DIR = join(CODEX_DIR, "agents");
 const CONFIG_PATH = join(CODEX_DIR, "config.toml");
 const CANONICAL_DIR = join(REPO_ROOT, ".qfai", "assistant", "agents");
-const CATALOG_PATH = join(REPO_ROOT, ".qfai", "assistant", "steering", "agent-catalog.yml");
+const CATALOG_PATH = join(REPO_ROOT, ".qfai", "assistant", "manifest", "agent-catalog.yml");
 
 type CatalogAgent = {
   id: string;

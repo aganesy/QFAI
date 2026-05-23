@@ -41,6 +41,8 @@ type Frontmatter = {
   status?: unknown;
   created?: unknown;
   updated?: unknown;
+  scope?: unknown;
+  blocking?: unknown;
   links?: unknown;
   "promote-to"?: unknown;
 };
@@ -121,6 +123,50 @@ export async function validateWorklogSurface(
           "warning",
           entry.relativePath,
           "worklogSurface.schema.id",
+        ),
+      );
+    }
+
+    // Other required fields per worklog-entry.schema.md: created, updated,
+    // scope, blocking, promote-to (already checked above for type when
+    // present). Missing → W-WORKLOG-SCHEMA warning each.
+    for (const field of ["created", "updated", "scope"] as const) {
+      const value = fm[field];
+      if (typeof value !== "string" || value.length === 0) {
+        issues.push(
+          issue(
+            "W-WORKLOG-SCHEMA",
+            `${entry.relativePath}: ${field} field is missing or empty.`,
+            "warning",
+            entry.relativePath,
+            `worklogSurface.schema.${field}Missing`,
+          ),
+        );
+      }
+    }
+    if (typeof (fm as Record<string, unknown>).blocking !== "boolean") {
+      const blockingPresent = (fm as Record<string, unknown>).blocking !== undefined;
+      issues.push(
+        issue(
+          "W-WORKLOG-SCHEMA",
+          blockingPresent
+            ? `${entry.relativePath}: blocking field MUST be a boolean.`
+            : `${entry.relativePath}: blocking field is missing.`,
+          "warning",
+          entry.relativePath,
+          "worklogSurface.schema.blocking",
+        ),
+      );
+    }
+    // promote-to: required key; value is string OR null
+    if (!("promote-to" in (fm as Record<string, unknown>))) {
+      issues.push(
+        issue(
+          "W-WORKLOG-SCHEMA",
+          `${entry.relativePath}: promote-to field is missing (use null when no promotion target).`,
+          "warning",
+          entry.relativePath,
+          "worklogSurface.schema.promoteToMissing",
         ),
       );
     }
@@ -226,6 +272,18 @@ export async function validateWorklogSurface(
               ),
             );
           }
+        } else {
+          // Per contract: each links[] item MUST resolve to spec-NNNN,
+          // discussion-*, or <entry-id>. Unknown prefix is a schema bug.
+          issues.push(
+            issue(
+              "W-WORKLOG-BROKEN-LINK",
+              `${entry.relativePath}: link "${link}" has an unsupported prefix (allowed: spec-/discussion-/entry-).`,
+              "warning",
+              entry.relativePath,
+              "worklogSurface.links.unsupportedPrefix",
+            ),
+          );
         }
       }
     }
