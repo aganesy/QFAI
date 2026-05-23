@@ -152,7 +152,7 @@ function getSection(content: string, heading: string) {
 
 // TC-0015-0001: Agent Catalog 19 Entries
 describe("TC-0015-0001: Agent Catalog 19 Entries", () => {
-  it("agent-catalog.yml exists in steering", async () => {
+  it("agent-catalog.yml exists in assistant/manifest", async () => {
     const catalogPath = path.join(MANIFEST_DIR, "agent-catalog.yml");
     await expect(access(catalogPath)).resolves.toBeUndefined();
   });

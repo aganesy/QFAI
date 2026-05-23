@@ -144,8 +144,8 @@ export async function validateWorklogSurface(
         );
       }
     }
-    if (typeof (fm as Record<string, unknown>).blocking !== "boolean") {
-      const blockingPresent = (fm as Record<string, unknown>).blocking !== undefined;
+    if (typeof fm.blocking !== "boolean") {
+      const blockingPresent = fm.blocking !== undefined;
       issues.push(
         issue(
           "W-WORKLOG-SCHEMA",
@@ -159,7 +159,7 @@ export async function validateWorklogSurface(
       );
     }
     // promote-to: required key; value is string OR null
-    if (!("promote-to" in (fm as Record<string, unknown>))) {
+    if (!("promote-to" in fm)) {
       issues.push(
         issue(
           "W-WORKLOG-SCHEMA",

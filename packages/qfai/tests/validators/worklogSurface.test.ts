@@ -368,6 +368,60 @@ describe("worklogSurface validator", () => {
     }
   });
 
+  // TC-0004-0016 (required-fields): missing created/updated/scope/blocking/promote-to all fire
+  it("TC-0004-0016 (required-fields): missing required worklog fields each fire dedicated W-WORKLOG-SCHEMA rules", async () => {
+    const root = await newRoot("worklog-required-fields");
+    try {
+      await seedWorklog(
+        root,
+        "entry-bare.md",
+        ["---", "id: entry-bare", "kind: decision", "status: active", "links: []", "---", ""].join(
+          "\n",
+        ),
+      );
+      const issues = await validateWorklogSurface(root, await getConfig(root));
+      const rules = issues.filter((i) => i.code === "W-WORKLOG-SCHEMA").map((i) => i.rule);
+      expect(rules).toContain("worklogSurface.schema.createdMissing");
+      expect(rules).toContain("worklogSurface.schema.updatedMissing");
+      expect(rules).toContain("worklogSurface.schema.scopeMissing");
+      expect(rules).toContain("worklogSurface.schema.blocking");
+      expect(rules).toContain("worklogSurface.schema.promoteToMissing");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  // TC-0004-0016 (blocking-type): non-boolean blocking fires worklogSurface.schema.blocking
+  it("TC-0004-0016 (blocking-type): non-boolean blocking fires worklogSurface.schema.blocking", async () => {
+    const root = await newRoot("worklog-blocking-type");
+    try {
+      await seedWorklog(
+        root,
+        "entry-bool.md",
+        [
+          "---",
+          "id: entry-bool",
+          "kind: decision",
+          "status: active",
+          "created: 2026-05-23",
+          "updated: 2026-05-23",
+          "scope: global",
+          'blocking: "false"',
+          "promote-to: null",
+          "links: []",
+          "---",
+          "",
+        ].join("\n"),
+      );
+      const issues = await validateWorklogSurface(root, await getConfig(root));
+      const blocking = issues.filter((i) => i.rule === "worklogSurface.schema.blocking");
+      expect(blocking.length).toBe(1);
+      expect(blocking[0]?.message).toContain("MUST be a boolean");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   // TC-0004-0016 (links-required): missing links field fires W-WORKLOG-SCHEMA
   it("TC-0004-0016 (links-required): missing links field fires worklogSurface.schema.linksMissing", async () => {
     const root = await newRoot("worklog-links-missing");

@@ -270,6 +270,42 @@ describe("TC-0003-0003: developer_instructions 必須セクション含有", () 
   });
 });
 
+// QFAI:SPEC-0004:TC-0004-0034 — agent-catalog.yml#developer_instructions
+// MUST stay in lockstep with canonical .qfai/assistant/agents/<name>.md
+// bodies (3-way SSOT: canonical MD ↔ codex TOML ↔ agent-catalog.yml).
+// The codex side is already covered by TC-0003-0003 above; this test
+// closes the catalog side.
+describe("TC-0004-0034: agent-catalog.yml developer_instructions matches canonical MD", () => {
+  it("全 agent の developer_instructions が canonical MD と実質一致する", () => {
+    const normalize = (s: string) => s.replace(/\r\n/g, "\n").trim();
+    const catalog = parseYaml(readFileSync(CATALOG_PATH, "utf-8")) as Record<string, unknown>;
+    const agentsField = catalog["agents"];
+    if (!Array.isArray(agentsField)) {
+      throw new Error("agent-catalog.yml must contain agents array");
+    }
+    for (const raw of agentsField) {
+      if (!raw || typeof raw !== "object") continue;
+      const agent = raw as Record<string, unknown>;
+      const id = agent["id"];
+      const di = agent["developer_instructions"];
+      if (typeof id !== "string") continue;
+      const canonicalPath = join(CANONICAL_DIR, `${id}.md`);
+      if (!existsSync(canonicalPath)) continue;
+      const canonicalContent = readFileSync(canonicalPath, "utf-8");
+      const missionIdx = canonicalContent.indexOf("## Mission");
+      if (missionIdx < 0) continue;
+      const canonicalBody = normalize(canonicalContent.slice(missionIdx));
+      expect(typeof di, `${id}: agent-catalog.yml developer_instructions is not a string`).toBe(
+        "string",
+      );
+      expect(
+        normalize(di as string),
+        `${id}: agent-catalog.yml developer_instructions diverges from canonical MD`,
+      ).toBe(canonicalBody);
+    }
+  });
+});
+
 // QFAI:SPEC-0003:TC-0003-0007
 describe("TC-0003-0007: model フィールド不在確認", () => {
   it("全 TOML に model キーが存在しない", () => {
