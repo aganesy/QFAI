@@ -151,13 +151,27 @@ export async function validateSkillDocReferences(
       }
       const isTrailing = (() => {
         if (lastDeclIdx === -1) return false;
+        // YAML-syntactic indented-continuation patterns:
+        //   - `^\s*-` indented list item (`  - foo`, `\t- bar`)
+        //   - `^\s+[A-Za-z_][\w-]*\s*:` indented mapping key
+        //     (`  scope:`, `  notes:`, `    sub_key:`)
+        // Anything else with leading whitespace (e.g. indented prose
+        // paragraph) is rejected so the block doesn't accidentally
+        // absorb non-YAML content following it.
+        const indentedListRe = /^\s*-/;
+        const indentedMappingKeyRe = /^\s+[A-Za-z_][\w-]*\s*:/;
         for (let i = lastDeclIdx + 1; i < lines.length; i++) {
           const line = lines[i] ?? "";
           if (line.trim() === "") continue;
-          if (line.startsWith("-")) continue;
-          if (line.startsWith(" ") || line.startsWith("\t")) continue; // indented YAML continuation
           if (line.startsWith("<!--")) continue;
           if (line.startsWith("#")) return false;
+          if (line.startsWith(" ") || line.startsWith("\t")) {
+            if (indentedListRe.test(line)) continue;
+            if (indentedMappingKeyRe.test(line)) continue;
+            // Indented but not a YAML structural line → reject.
+            return false;
+          }
+          if (line.startsWith("-")) continue; // top-level list (legacy form)
           // Any other non-blank top-level line means the block isn't trailing.
           return false;
         }

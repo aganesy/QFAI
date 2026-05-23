@@ -241,6 +241,32 @@ describe("skillDocReferences validator", () => {
     }
   });
 
+  // TC-0004-0023 (indented-prose): indented prose continuation is NOT accepted as YAML
+  it("TC-0004-0023 (indented-prose): indented prose paragraph after a list item still fires the warning", async () => {
+    const root = await newRoot("skill-projmem-indented-prose");
+    try {
+      await seedSkill(
+        root,
+        "qfai-implement",
+        [
+          "## /qfai-implement",
+          "",
+          "body content.",
+          "",
+          "project_memory:",
+          "  - real list item",
+          "  And a continuation paragraph that is actually prose, indented for readability.",
+          "",
+        ].join("\n"),
+      );
+      const issues = await validateSkillDocReferences(root, await getConfig(root));
+      const projMem = issues.filter((i) => i.rule === "skillDocReferences.projectMemory");
+      expect(projMem.length).toBe(1);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   // TC-0004-0024 (severity-helper): unit-level pre/post/boundary mode
   it("TC-0004-0024 (severity-helper): brokenRefSeverity returns warning pre-sunset, error at-or-past sunset", () => {
     // sunset is 1.10.0 (LEGACY_STEERING_SUNSET)
