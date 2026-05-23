@@ -393,7 +393,7 @@ Typical customizations.
 │   │   │   └── review-profiles.yml
 │   │   ├── process
 │   │   │   └── migrations
-│   │   │       └── v1.4.27-atdd-alignment.md
+│   │   │       └── v<X.Y.Z>-<topic>.md
 │   │   ├── skills
 │   │   │   ├── qfai-configure
 │   │   │   │   └── SKILL.md
