@@ -55,10 +55,11 @@ For each `kind: decision` entry with non-null `promote-to` that is not yet satis
 - The validate report includes a dedicated `## Pending Promotion` section listing entry ID, target spec, and one-line summary.
 - The same finding is emitted as `W-PENDING-PROMOTION` for `--fail-on warning` consumers.
 
-Promotion is satisfied when both conditions hold:
+Promotion is satisfied when all three conditions hold (canonical SSOT shared with `worklogSurface.ts` and spec-0004 BR-0004-0019):
 
-- A row exists in the target `07_Decisions.md` whose body cites the entry ID, AND
-- The entry transitions to `status: archived` with a `promoted-to: spec-NNNN/07_Decisions.md#<row-id>` field.
+- A row exists in the **declared target** file (`promote-to: spec-NNNN/07_Decisions.md`) whose body cites the entry ID as a whole token, AND
+- The entry transitions to `status: archived`, AND
+- The entry frontmatter carries a non-empty `promoted-to:` back-ref. The value is the DR-ID (Decision Row identifier, e.g. `DR-3`) of the appended row; format validation of the DR-ID itself is left to spec-side gates so the worklog validator does not need to know per-spec DR numbering schemes.
 
 ## Backwards-compatible adapter
 
