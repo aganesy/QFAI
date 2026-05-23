@@ -29,19 +29,40 @@ jobs:
       - name: Set up pnpm (if project uses pnpm)
         if: ${{ hashFiles('pnpm-lock.yaml') != '' }}
         uses: pnpm/action-setup@v4
+        with:
+          # Pinned default for projects that lack `package.json#packageManager`.
+          # pnpm/action-setup@v4 requires either an explicit `version` input
+          # or `packageManager` field; without one of these it fails on
+          # `qfai init`-just-bootstrapped projects.
+          version: 9
       - uses: actions/setup-node@v4
         with:
           # Match the QFAI repo's CI baseline (Node 20 LTS) and the package
           # `engines: ">=18.0.0"`. Bump deliberately when QFAI raises its
           # supported floor.
           node-version: "20"
+          # setup-node@v4's `cache:` accepts a single package-manager value.
+          # Pick the one matching the consumer's lockfile (or leave unset
+          # when none of the three is present). The conditional expression
+          # short-circuits left-to-right.
+          cache: ${{ hashFiles('pnpm-lock.yaml') != '' && 'pnpm' || (hashFiles('yarn.lock') != '' && 'yarn' || (hashFiles('package-lock.json') != '' && 'npm' || '')) }}
       - name: Install dependencies (lockfile-aware)
+        shell: bash
         run: |
           if [ -f pnpm-lock.yaml ]; then
             pnpm install --frozen-lockfile
           elif [ -f yarn.lock ]; then
             corepack enable
-            yarn install --frozen-lockfile
+            # Yarn Berry (v2+) uses `--immutable`; Yarn Classic (v1) uses
+            # `--frozen-lockfile`. Pick the right flag based on the
+            # version corepack resolves from `package.json#packageManager`
+            # (or the bundled Classic default).
+            yarn_major="$(yarn --version | cut -d . -f 1)"
+            if [ "$yarn_major" -ge 2 ]; then
+              yarn install --immutable
+            else
+              yarn install --frozen-lockfile
+            fi
           elif [ -f package-lock.json ]; then
             npm ci
           else

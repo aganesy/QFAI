@@ -462,7 +462,9 @@ function classifyLegacySteeringEntry(relPath: string): { layer: AssistantLayer; 
   // shared-skill-*-baseline). Migrated from legacy instructions/ surface.
   // Match on exact basename stem (file without extension) so short
   // tokens like "quality" / "workflow" / "thinking" / "communication"
-  // do NOT substring-match unrelated user-named files.
+  // do NOT substring-match unrelated user-named files. `stem` is
+  // already computed above for the catalog/manifest checks; reuse it
+  // for the constitution check too (one canonical extraction point).
   const CONSTITUTION_BASENAMES = new Set([
     "constitution",
     "drift-protocol",
@@ -477,8 +479,7 @@ function classifyLegacySteeringEntry(relPath: string): { layer: AssistantLayer; 
     "shared-skill-delegation-baseline",
     "shared-skill-operating-baseline",
   ]);
-  const basename = path.basename(normalized).replace(/\.[^.]+$/, "");
-  if (CONSTITUTION_BASENAMES.has(basename)) {
+  if (CONSTITUTION_BASENAMES.has(stem)) {
     return { layer: "constitution", subpath: posix };
   }
   if (normalized.includes("migration") || normalized.startsWith("process/")) {
