@@ -137,7 +137,7 @@ export async function validateSkillDocReferences(
     //          the YAML-syntactic patterns below)
     //        - indented YAML-syntactic continuation lines — narrowed
     //          to TWO specific shapes:
-    //            * `^\s*-` indented list item (`  - foo`)
+    //            * `^\s+-` indented list item (`  - foo`)
     //            * `^\s+[A-Za-z_][\w-]*\s*:` indented mapping key
     //              (`  scope:`, `  notes:`, `    sub_key:`)
     //          Any other indented content (e.g. indented prose
