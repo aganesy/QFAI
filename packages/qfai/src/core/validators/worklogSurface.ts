@@ -114,7 +114,8 @@ export async function validateWorklogSurface(
       );
     }
 
-    // id presence
+    // id presence + format (kebab-case ASCII per
+    // worklog-entry.schema.md Storage model).
     if (typeof fm.id !== "string" || fm.id.length === 0) {
       issues.push(
         issue(
@@ -123,6 +124,16 @@ export async function validateWorklogSurface(
           "warning",
           entry.relativePath,
           "worklogSurface.schema.id",
+        ),
+      );
+    } else if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(fm.id)) {
+      issues.push(
+        issue(
+          "W-WORKLOG-SCHEMA",
+          `${entry.relativePath}: id="${fm.id}" is not kebab-case ASCII (lowercase letters/digits separated by single hyphens).`,
+          "warning",
+          entry.relativePath,
+          "worklogSurface.schema.idFormat",
         ),
       );
     }
