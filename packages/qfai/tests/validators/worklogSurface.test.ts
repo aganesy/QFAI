@@ -341,6 +341,77 @@ describe("worklogSurface validator", () => {
     }
   });
 
+  // TC-0004-0020 (kind-restriction): W-PENDING-PROMOTION only fires on kind: decision
+  it("TC-0004-0020 (kind-restriction): kind: risk + promote-to does NOT fire W-PENDING-PROMOTION", async () => {
+    const root = await newRoot("worklog-promo-non-decision");
+    try {
+      await seedWorklog(
+        root,
+        "entry-risk-001.md",
+        [
+          "---",
+          "id: entry-risk-001",
+          "kind: risk",
+          "status: active",
+          "links: []",
+          "promote-to: 07_Decisions.md",
+          "---",
+          "",
+          "# risk that is NOT a decision",
+        ].join("\n"),
+      );
+      const issues = await validateWorklogSurface(root, await getConfig(root));
+      const promo = issues.filter((i) => i.code === "W-PENDING-PROMOTION");
+      expect(promo.length).toBe(0);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  // TC-0004-0016 (links-required): missing links field fires W-WORKLOG-SCHEMA
+  it("TC-0004-0016 (links-required): missing links field fires worklogSurface.schema.linksMissing", async () => {
+    const root = await newRoot("worklog-links-missing");
+    try {
+      await seedWorklog(
+        root,
+        "entry-nolinks.md",
+        ["---", "id: entry-nolinks", "kind: decision", "status: active", "---", ""].join("\n"),
+      );
+      const issues = await validateWorklogSurface(root, await getConfig(root));
+      const missing = issues.filter((i) => i.rule === "worklogSurface.schema.linksMissing");
+      expect(missing.length).toBe(1);
+      expect(missing[0]?.message).toContain("links field is missing");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  // TC-0004-0016 (links-type): non-array links field fires worklogSurface.schema.linksType
+  it("TC-0004-0016 (links-type): non-array links field fires worklogSurface.schema.linksType", async () => {
+    const root = await newRoot("worklog-links-type");
+    try {
+      await seedWorklog(
+        root,
+        "entry-strlinks.md",
+        [
+          "---",
+          "id: entry-strlinks",
+          "kind: decision",
+          "status: active",
+          "links: spec-0001",
+          "---",
+          "",
+        ].join("\n"),
+      );
+      const issues = await validateWorklogSurface(root, await getConfig(root));
+      const typeIssue = issues.filter((i) => i.rule === "worklogSurface.schema.linksType");
+      expect(typeIssue.length).toBe(1);
+      expect(typeIssue[0]?.message).toContain("MUST be an array");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   // TC-0004-0016 (nested-path): nested entries emit .qfai/steering/<sub>/<file> paths (not steering/<sub>/<file>)
   it("TC-0004-0016 (nested-path): nested worklog entry surfaces a finding with .qfai/steering/<sub>/ prefix", async () => {
     const root = await newRoot("worklog-nested");
