@@ -38,19 +38,24 @@ const ALLOWED_STATUS = new Set<string>(WORKLOG_ENTRY_STATUSES);
 // date checks share one source of truth.
 
 function isValidCalendarDate(s: string): boolean {
-  // ISO_DATE_RE.exec() returns capture groups for the YYYY/MM/DD trio.
-  // Using exec (over String.split) keeps the types narrowed to string
-  // without defensive undefined-checks.
+  // The regex enforces a 4-digit YYYY + 2-digit MM/DD trio; capture
+  // groups are always strings of fixed length when the match
+  // succeeds. The explicit `=== undefined` checks below are a
+  // TypeScript strict-mode concession (noUncheckedIndexedAccess
+  // treats `RegExpExecArray[n]` as `string | undefined`) — they are
+  // not runtime defenses against a real possibility.
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s);
-  // Regex guarantees 3 numeric capture groups when it matches.
   if (!m || m[1] === undefined || m[2] === undefined || m[3] === undefined) return false;
   const y = Number.parseInt(m[1], 10);
   const mo = Number.parseInt(m[2], 10);
   const d = Number.parseInt(m[3], 10);
-  // Date.UTC() rolls over out-of-range fields (e.g. 2026-02-30 →
-  // 2026-03-02) AND maps two-digit years 0..99 to 1900..1999. Use
-  // setUTCFullYear() to bypass the legacy two-digit mapping and then
-  // round-trip to detect rollover.
+  // Round-trip detection: Date.UTC() / setUTCFullYear() roll over
+  // out-of-range fields (e.g. 2026-02-30 → 2026-03-02). We compare
+  // the round-tripped getters against the input to catch this.
+  // `setUTCFullYear()` over `Date.UTC(y, m, d)` is defensive only —
+  // the 4-digit-year regex above already excludes the 0..99 legacy
+  // two-digit-year mapping, but using the setter keeps the helper
+  // safe if the regex ever loosens.
   const dt = new Date(0);
   dt.setUTCFullYear(y, mo - 1, d);
   return dt.getUTCFullYear() === y && dt.getUTCMonth() === mo - 1 && dt.getUTCDate() === d;

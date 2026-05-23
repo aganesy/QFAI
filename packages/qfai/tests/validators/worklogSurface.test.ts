@@ -453,8 +453,8 @@ describe("worklogSurface validator", () => {
     }
   });
 
-  // TC-0004-0027 (calendar-rollover): syntactically valid but non-existent dates fire createdFormat
-  it("TC-0004-0027 (calendar-rollover): non-existent calendar date (2026-02-30) fires createdFormat", async () => {
+  // TC-0004-0031 (calendar-rollover): syntactically valid but non-existent dates fire createdFormat
+  it("TC-0004-0031 (calendar-rollover): non-existent calendar date (2026-02-30) fires createdFormat", async () => {
     const root = await newRoot("worklog-rollover");
     try {
       await seedWorklog(
