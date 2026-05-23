@@ -19,8 +19,8 @@ tools: [Read, Write, Edit, Glob, Grep, Bash]
 
 ## Inputs you must read
 
-- .qfai/assistant/instructions/\*
-- .qfai/assistant/steering/\*
+- .qfai/assistant/constitution/\*\*
+- .qfai/assistant/{manifest,catalog}/\*\*
 - .qfai/specs/spec-\*/09_delta.md
 - Existing discussion records under `.qfai/discussion/`
 - .qfai/discussion/discussion-\*/04_Sources.md

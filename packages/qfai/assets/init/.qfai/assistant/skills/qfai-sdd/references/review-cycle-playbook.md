@@ -4,8 +4,8 @@ Use this file when you need the detailed review-cycle mechanics for `/qfai-sdd`.
 
 ## Inputs
 
-- `.qfai/assistant/steering/agent-routing.yml`
-- `.qfai/assistant/steering/review-profiles.yml`
+- `.qfai/assistant/manifest/agent-routing.yml`
+- `.qfai/assistant/manifest/review-profiles.yml`
 - `.qfai/assistant/skills/qfai-sdd/references/rcp_footer.md`
 
 ## Review Cycle

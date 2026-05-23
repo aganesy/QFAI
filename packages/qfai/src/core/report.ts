@@ -1570,7 +1570,7 @@ export function formatReportMarkdown(
   // 295..299) was retired with the UX-loop schema rewrite; no validator
   // emits those codes any more.
   lines.push("- 変更内容・受入観点は `.qfai/specs/*/18_delta.md` に記録します。");
-  lines.push("- 参照ルールの正本: `.qfai/assistant/instructions/constitution.md`");
+  lines.push("- 参照ルールの正本: `.qfai/assistant/constitution/constitution.md`");
 
   return lines.join("\n");
 }

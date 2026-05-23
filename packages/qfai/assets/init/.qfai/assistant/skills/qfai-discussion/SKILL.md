@@ -70,7 +70,7 @@ For UI-bearing targets, follow `references/design-dna-intake.md` while authoring
 
 ## Completion Contract (Shared)
 
-Follow `.qfai/assistant/instructions/shared-skill-operating-baseline.md#gate-failure-autorepair-protocol` for validate, doctor, and quality-gate failures.
+Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#gate-failure-autorepair-protocol` for validate, doctor, and quality-gate failures.
 
 Before declaring completion, you MUST:
 
@@ -95,7 +95,7 @@ Reviewer checks must confirm:
 
 ## Sub-agent Delegation (MANDATORY)
 
-Follow `.qfai/assistant/instructions/shared-skill-delegation-baseline.md`.
+Follow `.qfai/assistant/constitution/shared-skill-delegation-baseline.md`.
 
 ### Orchestrator Protocol (MUST)
 

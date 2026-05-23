@@ -19,9 +19,9 @@ tools: [Read, Write, Edit, Glob, Grep, Bash]
 
 ## Inputs you must read
 
-- .qfai/assistant/instructions/\*
-- .qfai/assistant/steering/\*
-- .qfai/assistant/steering/test-layers.md
+- .qfai/assistant/constitution/\*\*
+- .qfai/assistant/{manifest,catalog}/\*\*
+- .qfai/assistant/catalog/test-layers.md
 - .qfai/specs/spec-\*/09_delta.md
 - .qfai/specs/spec-\*/02_User-stories.md
 - .qfai/specs/spec-\*/06_Test-Cases.md

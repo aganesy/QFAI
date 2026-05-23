@@ -5,7 +5,10 @@ import path from "node:path";
 import type { QfaiConfig } from "../config.js";
 import {
   ASSISTANT_LAYERS,
+  LEGACY_ASSISTANT_INSTRUCTIONS_DIR,
+  LEGACY_ASSISTANT_STEERING_DIR,
   joinAssistantLayer,
+  joinLegacyAssistantInstructions,
   joinLegacyAssistantSteering,
   isAssistantLayer,
   LEGACY_STEERING_SUNSET,
@@ -96,10 +99,13 @@ export async function validateAssistantTreeMigration(
   const sunset = legacyAssistantSteeringSunsetLabel();
   const severity = legacyDeprecationSeverity(current);
   for (const legacySurface of [
-    { dir: joinLegacyAssistantSteering(root), label: ".qfai/assistant/steering/" },
     {
-      dir: path.join(root, ".qfai", "assistant", "instructions"),
-      label: ".qfai/assistant/instructions/",
+      dir: joinLegacyAssistantSteering(root),
+      label: `${LEGACY_ASSISTANT_STEERING_DIR}/`,
+    },
+    {
+      dir: joinLegacyAssistantInstructions(root),
+      label: `${LEGACY_ASSISTANT_INSTRUCTIONS_DIR}/`,
     },
   ]) {
     if (!(await exists(legacySurface.dir))) continue;

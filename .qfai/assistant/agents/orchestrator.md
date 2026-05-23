@@ -20,9 +20,9 @@ tools: [Read, Write, Edit, Glob, Grep, Bash]
 
 ## Inputs you must read
 
-- .qfai/assistant/instructions/\*
-- .qfai/assistant/steering/\*
-- .qfai/assistant/steering/test-layers.md (SSOT for hard coverage obligations)
+- .qfai/assistant/constitution/\*\*
+- .qfai/assistant/{manifest,catalog}/\*\*
+- .qfai/assistant/catalog/test-layers.md (SSOT for hard coverage obligations)
 - .qfai/specs/spec-\*/09_delta.md (Decision Records; check rejected)
 - Prompt-specific artifacts (traceability, validation evidence, optional legacy scenario/ledger artifacts)
 

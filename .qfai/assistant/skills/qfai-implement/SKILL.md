@@ -43,7 +43,7 @@ When no explicit argument is given, detect the candidate spec and constrain exec
 
 ## User Questions (AskUserQuestion Protocol)
 
-Follow `.qfai/assistant/instructions/shared-skill-operating-baseline.md#user-questions-askuserquestion-protocol`.
+Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#user-questions-askuserquestion-protocol`.
 
 Skill-specific examples:
 
@@ -151,7 +151,7 @@ When transitioning to `exception`:
 
 ## Sub-agent Delegation (MANDATORY)
 
-Follow `.qfai/assistant/instructions/shared-skill-delegation-baseline.md`.
+Follow `.qfai/assistant/constitution/shared-skill-delegation-baseline.md`.
 
 ### Orchestrator Protocol (MUST)
 
@@ -241,8 +241,8 @@ Use the shared schema (per-row `Status (PASS/REVISE)` column, reviewer response 
 
 ## Completion Contract (Shared)
 
-Follow `.qfai/assistant/instructions/shared-skill-operating-baseline.md#completion-contract-shared`.
-Follow `.qfai/assistant/instructions/shared-skill-operating-baseline.md#gate-failure-autorepair-protocol` for validate, doctor, and quality-gate failures.
+Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#completion-contract-shared`.
+Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#gate-failure-autorepair-protocol` for validate, doctor, and quality-gate failures.
 
 ### Item completion checklist (11-point gate)
 

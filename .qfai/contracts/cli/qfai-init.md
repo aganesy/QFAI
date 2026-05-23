@@ -20,9 +20,9 @@ Seeds a fresh consuming-project `.qfai/` tree from the embedded asset mirror.
 
 Required outputs (created if absent; merged or refreshed if present per the existing init policy):
 
-- `.qfai/assistant/constitution/**` — global invariants and protocols
-- `.qfai/assistant/manifest/**` — per-project spine (Kiro-style)
-- `.qfai/assistant/catalog/**` — registries (`agent-catalog.yml`, `agent-routing.yml`, `review-profiles.yml`, `review-gate.rules.yml`, `change-classification.md`, `spec_required_files.json`)
+- `.qfai/assistant/constitution/**` — global invariants and protocols (drift-protocol, constitution, quality, distributed-surface, workflow, agent-selection, change-classification, requirements-decomposition, communication, thinking, shared-skill-{delegation,operating}-baseline)
+- `.qfai/assistant/manifest/**` — machine-loaded routing/policy YAML configs (`agent-catalog.yml`, `agent-routing.yml`, `review-profiles.yml`)
+- `.qfai/assistant/catalog/**` — reference materials, rule lists, and registry artifacts that humans read (`test-layers.md`, `review-gate.rules.yml`, `spec_required_files.json`, `manifest.md` template, `product.md`, `structure.md`, `tech.md`, `cli-ux-guidelines.md`, `ui-definition-protocol.md`)
 - `.qfai/assistant/process/**` — workflow, methodology, `migrations/`
 - `.qfai/assistant/agents/**`, `.qfai/assistant/skills/**` — unchanged from prior layouts
 - `.qfai/steering/` (project-root work-log surface, NOT under `assistant/`) seeded with:

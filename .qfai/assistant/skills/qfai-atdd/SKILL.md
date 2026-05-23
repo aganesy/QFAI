@@ -30,7 +30,7 @@ QFAI Skill Body (SSOT)
 
 ## User Questions (AskUserQuestion Protocol)
 
-Follow `.qfai/assistant/instructions/shared-skill-operating-baseline.md#user-questions-askuserquestion-protocol`.
+Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#user-questions-askuserquestion-protocol`.
 
 Skill-specific examples:
 
@@ -39,14 +39,14 @@ Skill-specific examples:
 
 ## FORMAT SSOT (Mandatory)
 
-Follow `.qfai/assistant/instructions/shared-skill-operating-baseline.md#format-ssot-mandatory`.
+Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#format-ssot-mandatory`.
 
 ## Inputs Priority (Preflight)
 
 When unsure, read inputs in this order:
 
-- P1: `.qfai/assistant/instructions/*`
-- P2: `.qfai/assistant/steering/*`
+- P1: `.qfai/assistant/constitution/*`
+- P2: `.qfai/assistant/manifest/*` + `.qfai/assistant/catalog/*`
 - P3: `.qfai/specs/<spec-id>/01_Spec.md` (Primary SSOT / Consumer View)
 - P4: specs/contracts obligations
   - `.qfai/specs/<spec-id>/02_User-stories.md` (US)
@@ -76,7 +76,7 @@ Do not read discussion-pack UI/UX sidecars. UI-bearing acceptance tests consume 
 
 ## Sub-agent Delegation (MANDATORY)
 
-Follow `.qfai/assistant/instructions/shared-skill-delegation-baseline.md`.
+Follow `.qfai/assistant/constitution/shared-skill-delegation-baseline.md`.
 
 ### Orchestrator Protocol (MUST)
 
@@ -108,7 +108,7 @@ Use the shared schema.
 
 ### Reviewer Gate (MUST)
 
-- Follow `.qfai/assistant/instructions/shared-skill-delegation-baseline.md#reviewer-gate-baseline`.
+- Follow `.qfai/assistant/constitution/shared-skill-delegation-baseline.md#reviewer-gate-baseline`.
 - Final completion gate MUST be delegated to an independent `completion-reviewer`.
 - ATDD-specific reviewer checks:
   - coverage obligations met: E2E covers `US`, Integration covers `TC`, API covers `CON-API`;
@@ -137,11 +137,11 @@ Use the shared template.
 
 ## Stage 0 — Steering completion refresh (mandatory)
 
-Follow `.qfai/assistant/instructions/shared-skill-operating-baseline.md#stage-0---steering-completion-refresh-mandatory`.
+Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#stage-0---steering-completion-refresh-mandatory`.
 
 ## Delta Rejected Guard (Mandatory)
 
-Follow `.qfai/assistant/instructions/shared-skill-operating-baseline.md#delta-rejected-guard-mandatory`.
+Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#delta-rejected-guard-mandatory`.
 
 ## CRITICAL CONSTRAINTS (Read First)
 
@@ -163,8 +163,8 @@ Follow `.qfai/assistant/instructions/shared-skill-operating-baseline.md#delta-re
 
 ## Completion Contract (Shared)
 
-Follow `.qfai/assistant/instructions/shared-skill-operating-baseline.md#completion-contract-shared`.
-Follow `.qfai/assistant/instructions/shared-skill-operating-baseline.md#gate-failure-autorepair-protocol` for validate, doctor, and quality-gate failures.
+Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#completion-contract-shared`.
+Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#gate-failure-autorepair-protocol` for validate, doctor, and quality-gate failures.
 
 ## Goal
 

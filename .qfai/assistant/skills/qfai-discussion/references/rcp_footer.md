@@ -14,7 +14,7 @@
 
 ## Routing Rule（固定）
 
-- reviewer の選定は `.qfai/assistant/steering/agent-routing.yml` と `.qfai/assistant/steering/review-profiles.yml` を読む
+- reviewer の選定は `.qfai/assistant/manifest/agent-routing.yml` と `.qfai/assistant/manifest/review-profiles.yml` を読む
 - 常設 reviewer:
   - `completion-reviewer`
   - `requirements-reviewer`

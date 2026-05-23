@@ -81,6 +81,25 @@ describe("assistantTreeMigration validator", () => {
     }
   });
 
+  // TC-0004-0022 (symmetric): legacy instructions/ fires D-DEPRECATED-PATH symmetrically with steering/
+  it("TC-0004-0022 (symmetric): emits D-DEPRECATED-PATH for legacy .qfai/assistant/instructions/ in parallel with steering/", async () => {
+    const root = await newRoot("treemig-sunset-symmetric");
+    try {
+      await seed4LayerTree(root);
+      const legacyInstr = path.join(root, ".qfai", "assistant", "instructions");
+      await mkdir(legacyInstr, { recursive: true });
+      await writeFile(path.join(legacyInstr, "drift-protocol.md"), "old\n", "utf-8");
+      const issues = await validateAssistantTreeMigration(root, await getConfig(root));
+      const instrIssues = issues.filter(
+        (i) => i.code === "D-DEPRECATED-PATH" && i.file?.includes("instructions"),
+      );
+      expect(instrIssues.length).toBe(1);
+      expect(instrIssues[0]?.message).toMatch(/sunset:\s*v\d+\.\d+\.\d+/);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   // TC-0004-0022 (severity escalation): legacy steering/ still present at or past sunset minor escalates to error
   it("TC-0004-0022 (severity): D-DEPRECATED-PATH severity is computed from the running tool version vs pinned sunset", async () => {
     // We don't have an easy way to override resolveToolVersion at runtime

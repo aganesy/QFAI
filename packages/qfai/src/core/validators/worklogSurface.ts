@@ -26,6 +26,9 @@ const ALLOWED_KINDS = new Set<string>(WORKLOG_ENTRY_KINDS);
 // entry template.
 const REQUIRED_HANDOFF_SECTIONS: readonly string[] = HANDOFF_REQUIRED_SECTIONS;
 
+// MUST match `worklog-entry.schema.md#status enum` (REQ-0003).
+const ALLOWED_STATUS = new Set<string>(["active", "handoff", "archived"]);
+
 const STALE_DAYS = 90;
 const MS_PER_DAY = 86_400_000;
 
@@ -72,14 +75,20 @@ export async function validateWorklogSurface(
 
   for (const entry of entries) {
     if (entry.frontmatter === null) {
-      // Parse failure → emit schema finding.
+      // Parse failure → emit schema finding. If the body carries the
+      // <<unreadable: ...>> sentinel from collectEntries, surface the
+      // underlying read error message instead of the generic phrase.
+      const unreadableMatch = /^<<unreadable: ([\s\S]*?)>>$/.exec(entry.body);
+      const message = unreadableMatch
+        ? `${entry.relativePath}: entry could not be read — ${unreadableMatch[1]}`
+        : `${entry.relativePath}: YAML frontmatter is missing or unparseable.`;
       issues.push(
         issue(
           "W-WORKLOG-SCHEMA",
-          `${entry.relativePath}: YAML frontmatter is missing or unparseable.`,
+          message,
           "warning",
           entry.relativePath,
-          "worklogSurface.schema.parse",
+          unreadableMatch ? "worklogSurface.io.unreadable" : "worklogSurface.schema.parse",
         ),
       );
       continue;
@@ -113,7 +122,7 @@ export async function validateWorklogSurface(
       );
     }
 
-    // status presence
+    // status presence + enum
     if (typeof fm.status !== "string" || fm.status.length === 0) {
       issues.push(
         issue(
@@ -122,6 +131,30 @@ export async function validateWorklogSurface(
           "warning",
           entry.relativePath,
           "worklogSurface.schema.status",
+        ),
+      );
+    } else if (!ALLOWED_STATUS.has(fm.status)) {
+      issues.push(
+        issue(
+          "W-WORKLOG-SCHEMA",
+          `${entry.relativePath}: status="${fm.status}" is not in the allowed set (${[...ALLOWED_STATUS].join(", ")}).`,
+          "warning",
+          entry.relativePath,
+          "worklogSurface.schema.status",
+        ),
+      );
+    }
+
+    // filename = id invariant (contract: <id> MUST match filename stem)
+    const filenameStem = path.basename(entry.filePath).replace(/\.md$/, "");
+    if (typeof fm.id === "string" && fm.id.length > 0 && fm.id !== filenameStem) {
+      issues.push(
+        issue(
+          "W-WORKLOG-SCHEMA",
+          `${entry.relativePath}: frontmatter id="${fm.id}" does not match filename stem "${filenameStem}".`,
+          "warning",
+          entry.relativePath,
+          "worklogSurface.schema.idFilenameMismatch",
         ),
       );
     }

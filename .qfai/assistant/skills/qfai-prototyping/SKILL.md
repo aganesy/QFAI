@@ -190,7 +190,7 @@ DONE = `completion-certificate.json` exists AND
 `qfai prototyping certify --check` returns 0 AND `/qfai-verify` returns
 PASS.
 
-Follow `.qfai/assistant/instructions/shared-skill-operating-baseline.md#gate-failure-autorepair-protocol` for validate, doctor, and quality-gate failures.
+Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#gate-failure-autorepair-protocol` for validate, doctor, and quality-gate failures.
 
 ## Next
 

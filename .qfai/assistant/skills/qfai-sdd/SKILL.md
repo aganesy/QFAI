@@ -45,9 +45,9 @@ Stage 0 Preflight  -> Stage 1 Triage  -> Phase 0 Contracts-first
 
 ## Stage 0: Preflight (Mandatory)
 
-Follow `.qfai/assistant/instructions/shared-skill-operating-baseline.md#stage-0---steering-completion-refresh-mandatory`.
+Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#stage-0---steering-completion-refresh-mandatory`.
 Stop if the latest discussion-pack is missing, incomplete, or has blocking OQ.
-On validate / doctor / quality-gate failures, follow `.qfai/assistant/instructions/shared-skill-operating-baseline.md#gate-failure-autorepair-protocol`.
+On validate / doctor / quality-gate failures, follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#gate-failure-autorepair-protocol`.
 
 ## Stage 1: Triage (Mandatory)
 
@@ -75,12 +75,12 @@ Validators: `QFAI-STATUS-001..006`.
 
 ## User Questions (AskUserQuestion Protocol)
 
-Follow `.qfai/assistant/instructions/shared-skill-operating-baseline.md#user-questions-askuserquestion-protocol`.
+Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#user-questions-askuserquestion-protocol`.
 Approval-required ops in Stage 1 above MUST go through AskUserQuestion.
 
 ## FORMAT SSOT (Mandatory)
 
-- Follow `.qfai/assistant/instructions/shared-skill-operating-baseline.md#format-ssot-mandatory`.
+- Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#format-ssot-mandatory`.
 - Read before writing `.qfai/**`:
   - `.qfai/assistant/skills/qfai-discussion/references/discussion-artifact-rules.md`
   - `.qfai/assistant/skills/qfai-sdd/references/spec-traceability-rules.md`
@@ -94,15 +94,15 @@ Approval-required ops in Stage 1 above MUST go through AskUserQuestion.
 ## Inputs Priority
 
 1. Latest `.qfai/discussion/discussion-*/` pack (lexicographically largest), validated by Stage 0.
-2. P1: `.qfai/assistant/constitution/*` (post-recut: normative invariants — formerly `.qfai/assistant/instructions/*`)
-3. P2: `.qfai/assistant/manifest/*` + `.qfai/assistant/catalog/*` (post-recut routing manifests + reference catalogs — formerly `.qfai/assistant/steering/*`)
+2. P1: `.qfai/assistant/constitution/*` (post-recut: normative invariants — formerly `.qfai/assistant/constitution/*`)
+3. P2: `.qfai/assistant/manifest/*` + `.qfai/assistant/catalog/*` (post-recut routing manifests + reference catalogs — formerly `.qfai/assistant/manifest/*` + `.qfai/assistant/catalog/*`)
 4. P3: existing `.qfai/specs/_policies/03_Capabilities.md` + active spec summaries (Stage 1 input)
 5. P4: existing `.qfai/specs/<spec-id>/**` for the targeted specs
 6. P5: `.qfai/discussion/**`, `.qfai/contracts/**`
 
 ## Sub-agent Delegation (MANDATORY)
 
-Follow `.qfai/assistant/instructions/shared-skill-delegation-baseline.md`.
+Follow `.qfai/assistant/constitution/shared-skill-delegation-baseline.md`.
 
 ### Orchestrator Protocol (MUST)
 
@@ -163,7 +163,7 @@ Per-spec evidence at `.qfai/evidence/sdd-<spec-id>.md` is mandatory and MUST inc
 
 ## Delta Rejected Guard (Mandatory)
 
-Follow `.qfai/assistant/instructions/shared-skill-operating-baseline.md#delta-rejected-guard-mandatory`.
+Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#delta-rejected-guard-mandatory`.
 
 ## Slice Policy Protocol
 

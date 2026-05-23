@@ -18,8 +18,8 @@ tools: [Read, Write, Edit, Glob, Grep, Bash]
 
 ## Inputs you must read
 
-- .qfai/assistant/instructions/\*
-- .qfai/assistant/steering/\*
+- .qfai/assistant/constitution/\*\*
+- .qfai/assistant/{manifest,catalog}/\*\*
 - .qfai/specs/spec-\*/09_delta.md
 - package.json scripts, CI config, and runbooks
 - Evidence summaries under `.qfai/evidence/`

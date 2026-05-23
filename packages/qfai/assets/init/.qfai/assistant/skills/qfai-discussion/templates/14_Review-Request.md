@@ -63,7 +63,7 @@
 
 ## Required Reviewers
 
-- Resolve reviewers from `.qfai/assistant/steering/agent-routing.yml` and `.qfai/assistant/steering/review-profiles.yml`.
+- Resolve reviewers from `.qfai/assistant/manifest/agent-routing.yml` and `.qfai/assistant/manifest/review-profiles.yml`.
 - Always run reviewers listed in `profiles.<routing_profile>.always_required` in `review-profiles.yml`.
 - Add `architecture-reviewer` only when architecture-affecting decisions exist.
 - Add `product-surface-reviewer` only when the pack is UI-bearing.

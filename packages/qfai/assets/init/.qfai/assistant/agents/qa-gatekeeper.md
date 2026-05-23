@@ -30,10 +30,10 @@ In addition to traceability-based coverage (US/TC/CON-API existence), verify the
 
 ## Inputs you must read
 
-- .qfai/assistant/instructions/\*
-- .qfai/assistant/instructions/drift-protocol.md
-- .qfai/assistant/steering/\*
-- .qfai/assistant/steering/test-layers.md
+- .qfai/assistant/constitution/\*\*
+- .qfai/assistant/constitution/drift-protocol.md
+- .qfai/assistant/{manifest,catalog}/\*\*
+- .qfai/assistant/catalog/test-layers.md
 - .qfai/specs/spec-\*/09_delta.md
 - `.qfai/report/validate.log`
 - `.qfai/report/specs-coverage/spec-*.md`

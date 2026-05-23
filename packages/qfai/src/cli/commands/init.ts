@@ -538,13 +538,18 @@ function buildMigrationMemo(version: string, detectedSurfaces: readonly string[]
 }
 
 async function emitLegacyAssistantSteeringSunset(destRoot: string): Promise<void> {
-  const legacyDir = joinLegacyAssistantSteering(destRoot);
-  if (!(await pathExists(legacyDir))) return;
+  // Both legacy pre-recut surfaces (steering/ AND instructions/) trigger
+  // a sunset warning per assistantTreeMigration validator symmetry.
   // Sunset is the pinned cutoff (SSOT) so init's user-facing line stays
   // consistent with the validator's severity escalation point.
   const sunset = legacyAssistantSteeringSunsetLabel();
+  const detected: string[] = [];
+  if (await pathExists(joinLegacyAssistantSteering(destRoot))) detected.push("steering");
+  if (await pathExists(joinLegacyAssistantInstructions(destRoot))) detected.push("instructions");
+  if (detected.length === 0) return;
+  const surfaces = detected.map((s) => `.qfai/assistant/${s}/`).join(" + ");
   info(
-    `  D-DEPRECATED-PATH: .qfai/assistant/steering/ is read-compatible for the current minor release only. sunset: v${sunset}. Run \`qfai init --upgrade-assistant-tree\` to migrate.`,
+    `  D-DEPRECATED-PATH: ${surfaces} read-compatible for the current minor release only. sunset: v${sunset}. Run \`qfai init --upgrade-assistant-tree\` to migrate.`,
   );
 }
 
