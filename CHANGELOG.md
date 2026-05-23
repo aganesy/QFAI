@@ -19,9 +19,12 @@
   staleness (`W-WORKLOG-STALE` at 90 days), and decision-promotion gate
   (`W-PENDING-PROMOTION`).
 - Reviewer-Gate drift findings: `R-WORKLOG-DRIFT`, `R-REJECTED-READOPT`,
-  `R-HANDOFF-INCOMPLETE` (spec-0004 REQ-0036 / REQ-0042 — see
-  `.qfai/contracts/cli/qfai-validate.md` "New finding codes" table for
-  the per-code Source REQ mapping). Reviewer reports MUST carry
+  `R-HANDOFF-INCOMPLETE` — finding-code implementation owned by
+  spec-0004 (REQ-0036 / REQ-0042) and reviewer-input-bundle / R-\*
+  schema obligation owned by spec-0015 CHG-003 (see
+  `.qfai/specs/spec-0015/09_delta.md` "CHG-003" block and
+  `.qfai/contracts/cli/qfai-validate.md` "New finding codes" table
+  for per-code Source REQ mapping). Reviewer reports MUST carry
   non-empty `justification:` on these findings; empty values are
   rejected (advisory-failing).
 - `assistantPaths.ts` SSOT module (`packages/qfai/src/core/paths/`)

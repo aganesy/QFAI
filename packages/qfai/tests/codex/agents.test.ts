@@ -288,12 +288,20 @@ describe("TC-0004-0034: agent-catalog.yml developer_instructions matches canonic
       const agent = raw as Record<string, unknown>;
       const id = agent["id"];
       const di = agent["developer_instructions"];
-      if (typeof id !== "string") continue;
-      const canonicalPath = join(CANONICAL_DIR, `${id}.md`);
-      if (!existsSync(canonicalPath)) continue;
+      expect(typeof id, `agent-catalog.yml agent.id must be string (got ${typeof id})`).toBe(
+        "string",
+      );
+      const canonicalPath = join(CANONICAL_DIR, `${id as string}.md`);
+      expect(
+        existsSync(canonicalPath),
+        `${id as string}: canonical MD missing at ${canonicalPath}`,
+      ).toBe(true);
       const canonicalContent = readFileSync(canonicalPath, "utf-8");
       const missionIdx = canonicalContent.indexOf("## Mission");
-      if (missionIdx < 0) continue;
+      expect(
+        missionIdx,
+        `${id as string}: canonical MD has no ## Mission section`,
+      ).toBeGreaterThanOrEqual(0);
       const canonicalBody = normalize(canonicalContent.slice(missionIdx));
       expect(typeof di, `${id}: agent-catalog.yml developer_instructions is not a string`).toBe(
         "string",

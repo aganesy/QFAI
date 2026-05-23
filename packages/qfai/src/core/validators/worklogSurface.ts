@@ -144,6 +144,41 @@ export async function validateWorklogSurface(
         );
       }
     }
+    // created / updated date format (ISO-8601 YYYY-MM-DD) + ordering
+    // (updated >= created). Contract: worklog-entry.schema.md#date.
+    const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+    for (const field of ["created", "updated"] as const) {
+      const value = fm[field];
+      if (typeof value === "string" && value.length > 0 && !ISO_DATE_RE.test(value)) {
+        issues.push(
+          issue(
+            "W-WORKLOG-SCHEMA",
+            `${entry.relativePath}: ${field}="${value}" is not an ISO-8601 date (YYYY-MM-DD).`,
+            "warning",
+            entry.relativePath,
+            `worklogSurface.schema.${field}Format`,
+          ),
+        );
+      }
+    }
+    if (
+      typeof fm.created === "string" &&
+      typeof fm.updated === "string" &&
+      ISO_DATE_RE.test(fm.created) &&
+      ISO_DATE_RE.test(fm.updated) &&
+      fm.updated < fm.created
+    ) {
+      issues.push(
+        issue(
+          "W-WORKLOG-SCHEMA",
+          `${entry.relativePath}: updated="${fm.updated}" is earlier than created="${fm.created}".`,
+          "warning",
+          entry.relativePath,
+          "worklogSurface.schema.updatedOrder",
+        ),
+      );
+    }
+
     // scope: "global" OR "spec-NNNN" (kebab-case spec id). Contract:
     // worklog-entry.schema.md#scope enum.
     if (typeof fm.scope === "string" && fm.scope.length > 0) {
@@ -248,7 +283,18 @@ export async function validateWorklogSurface(
     // links integrity
     if (Array.isArray(fm.links)) {
       for (const linkRaw of fm.links) {
-        if (typeof linkRaw !== "string") continue;
+        if (typeof linkRaw !== "string") {
+          issues.push(
+            issue(
+              "W-WORKLOG-SCHEMA",
+              `${entry.relativePath}: links[] element is not a string (got ${typeof linkRaw}); each link MUST be a string id.`,
+              "warning",
+              entry.relativePath,
+              "worklogSurface.schema.linksElementType",
+            ),
+          );
+          continue;
+        }
         const link = linkRaw.trim();
         if (link.length === 0) continue;
         if (link.startsWith("spec-")) {

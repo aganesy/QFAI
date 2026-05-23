@@ -27,3 +27,4 @@
 | TC-0004-0023 | validators  | AC-0004-0023 | EX-0004-0021 | remove `project_memory:` block from `qfai-implement/SKILL.md`           | error fires naming the skill                                    | project_memory required  |
 | TC-0004-0024 | validators  | AC-0004-0024 | EX-0004-0022 | embed `.qfai/assistant/steering/agent-routing.yml` ref in SKILL.md      | `W-SKILL-DOC-BROKEN-REF` fires                                  | skill doc broken-ref     |
 | TC-0004-0025 | validators  | AC-0004-0025 | EX-0004-0023 | run validate after `qfai init --upgrade-assistant-tree`                 | `W-USER-EDIT-PRESERVED` surfaces as info; validate exits 0      | info pass-through        |
+| TC-0004-0034 | ssot-guard  | (cross-spec) | (n/a)        | agent-catalog.yml `developer_instructions` differs from canonical MD    | dedicated test FAILS for the diverging agent id                 | catalog ↔ MD 3-way SSOT  |
