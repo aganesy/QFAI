@@ -4,8 +4,29 @@ import path from "node:path";
 
 import type { QfaiConfig } from "../config.js";
 import { isEnoent } from "../fs/errno.js";
+import { resolveToolVersion } from "../version.js";
+import { LEGACY_STEERING_SUNSET } from "../paths/assistantPaths.js";
 import type { Issue } from "../types.js";
 import { exists, issue } from "./utils.js";
+
+/**
+ * Severity escalates to `error` once the running tool reaches or passes
+ * the LEGACY_STEERING_SUNSET minor. SSOT shared with the
+ * assistantTreeMigration validator so both surfaces flip at the same
+ * cutoff. Per qfai-validate.md contract: "warning (during window) /
+ * error (after sunset)".
+ */
+function brokenRefSeverity(version: string): "warning" | "error" {
+  const m = /^(\d+)\.(\d+)\.(\d+)/.exec(version);
+  if (!m) return "warning";
+  const major = Number.parseInt(m[1] ?? "0", 10);
+  const minor = Number.parseInt(m[2] ?? "0", 10);
+  if (major > LEGACY_STEERING_SUNSET.major) return "error";
+  if (major === LEGACY_STEERING_SUNSET.major && minor >= LEGACY_STEERING_SUNSET.minor) {
+    return "error";
+  }
+  return "warning";
+}
 
 // Paths that are legacy / non-canonical after the assistant-layer recut.
 // Any SKILL.md text that references these is flagged as broken.
@@ -44,6 +65,11 @@ export async function validateSkillDocReferences(
   const skillsDir = path.join(root, ".qfai", "assistant", "skills");
   if (!(await exists(skillsDir))) return issues;
 
+  // Resolve current tool version once so broken-ref severity escalates
+  // consistently across every skill scanned in this pass.
+  const toolVersion = await resolveToolVersion();
+  const refSeverity = brokenRefSeverity(toolVersion);
+
   let entries: Dirent[];
   try {
     entries = await readdir(skillsDir, { withFileTypes: true });
@@ -64,18 +90,25 @@ export async function validateSkillDocReferences(
       throw err;
     }
 
-    // W-SKILL-DOC-BROKEN-REF
-    for (const ref of NON_CANONICAL_REFS) {
-      if (ref.pattern.test(body)) {
-        issues.push(
-          issue(
-            "W-SKILL-DOC-BROKEN-REF",
-            `${skillId}/SKILL.md references a non-canonical path (post-recut). ${ref.reason}`,
-            "warning",
-            `.qfai/assistant/skills/${skillId}/SKILL.md`,
-            "skillDocReferences.brokenRef",
-          ),
-        );
+    // W-SKILL-DOC-BROKEN-REF — scoped to qfai-* skills per contract.
+    // User-defined non-qfai-* skills under .qfai/assistant/skills/ are
+    // intentionally NOT flagged so consumers can author their own
+    // SKILL.md without colliding with QFAI's path-migration finding.
+    // Severity escalates from warning to error at LEGACY_STEERING_SUNSET
+    // (matches qfai-validate.md contract).
+    if (QFAI_SKILL_ID_RE.test(skillId)) {
+      for (const ref of NON_CANONICAL_REFS) {
+        if (ref.pattern.test(body)) {
+          issues.push(
+            issue(
+              "W-SKILL-DOC-BROKEN-REF",
+              `${skillId}/SKILL.md references a non-canonical path (post-recut). ${ref.reason}`,
+              refSeverity,
+              `.qfai/assistant/skills/${skillId}/SKILL.md`,
+              "skillDocReferences.brokenRef",
+            ),
+          );
+        }
       }
     }
 
