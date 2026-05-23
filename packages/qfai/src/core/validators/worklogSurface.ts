@@ -260,30 +260,23 @@ export async function validateWorklogSurface(
               ),
             );
           }
-        } else if (link.startsWith("entry-")) {
+        } else {
+          // Otherwise treat as worklog entry-id (contract:
+          // "<entry-id>" is kebab-case ASCII, no specific prefix
+          // required — e.g. seeded date-style IDs like
+          // `2026-05-22-recut-design-call`). Check against the entryIds
+          // set built from this validate pass.
           if (!entryIds.has(link)) {
             issues.push(
               issue(
                 "W-WORKLOG-BROKEN-LINK",
-                `${entry.relativePath}: link "${link}" points to a non-existent worklog entry.`,
+                `${entry.relativePath}: link "${link}" does not resolve to a known spec-NNNN, discussion-*, or worklog entry id.`,
                 "warning",
                 entry.relativePath,
                 "worklogSurface.links.unresolved",
               ),
             );
           }
-        } else {
-          // Per contract: each links[] item MUST resolve to spec-NNNN,
-          // discussion-*, or <entry-id>. Unknown prefix is a schema bug.
-          issues.push(
-            issue(
-              "W-WORKLOG-BROKEN-LINK",
-              `${entry.relativePath}: link "${link}" has an unsupported prefix (allowed: spec-/discussion-/entry-).`,
-              "warning",
-              entry.relativePath,
-              "worklogSurface.links.unsupportedPrefix",
-            ),
-          );
         }
       }
     }
