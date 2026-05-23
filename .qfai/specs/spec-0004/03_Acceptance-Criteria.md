@@ -140,14 +140,12 @@
 - When the migration emitted `W-USER-EDIT-PRESERVED` informational notes
 - Then the validator recognizes those notes as informational pass-throughs (`info` severity, not warning/error); they appear in the validate report under "Informational" without failing any gate
 
-<!--
-AC-0004-0026 is a reserved gap. TC-0004-0026 is the ssot-guard catalog ↔
-canonical MD ↔ codex TOML 3-way SSOT check; it has no acceptance-
-criterion-bearing user story since it is a meta-validation of the
-manifest pipeline, not a behavior the AI agent observes (per
-06_Test-Cases.md Level enum: `ssot-guard` is explicitly cross-spec
-with no AC source).
--->
+## AC-0004-0026
+
+- US-Refs: US-0004-0029 (sub-criterion of REQ-0035 frontmatter schema; meta-validation of the manifest pipeline that surfaces agent SSOT divergence)
+- Given the `agent-catalog.yml` entry for any agent declares a `developer_instructions` field that diverges from the canonical `.qfai/assistant/agents/<name>.md` body (from `## Mission` onward, line-ending normalized)
+- When the SSOT-guard test (`tests/codex/agents.test.ts` ssot-guard test) runs
+- Then the test FAILS naming the diverging agent id so the 3-way SSOT (canonical MD ↔ codex TOML ↔ `agent-catalog.yml`) cannot silently drift
 
 ## AC-0004-0027
 

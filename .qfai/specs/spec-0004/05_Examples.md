@@ -159,12 +159,18 @@
 - Then validate exits 0; `counts.info >= 1`; the report has an "Informational" section listing the preserved files
 
 <!--
-EX-0004-0024..0026 are reserved gaps. TC-0004-0026 is the ssot-guard
-catalog ↔ canonical MD ↔ codex TOML 3-way SSOT check; it has no
-example-bearing user story (cross-spec ssot-guard, no AC source —
-see 06_Test-Cases.md Level enum). EX-0004-0024..0026 stay empty for
-the same reason.
+EX-0004-0024..0025 are reserved gaps. The TC-numbering jumped to
+0026..0029 in wave-26 to keep spec-local NNNN contiguous; the
+ssot-guard TC at 0026 has its own AC + EX pair (AC-0004-0026,
+EX-0004-0026) so only 0024..0025 stay empty.
 -->
+
+## EX-0004-0026
+
+- BR-Ref: BR-0004-0015 (frontmatter schema; meta-validation of the SSOT pipeline)
+- Given the `agent-catalog.yml` row for `acceptance-test-engineer` carries `developer_instructions: "## Mission\n- old body"` while the canonical `.qfai/assistant/agents/acceptance-test-engineer.md` body has changed to `"## Mission\n- new body"`
+- When the SSOT-guard test in `packages/qfai/tests/codex/agents.test.ts` runs
+- Then the test FAILS with `agent-catalog.yml developer_instructions diverges from canonical MD` so the 3-way SSOT cannot drift
 
 ## EX-0004-0027
 
