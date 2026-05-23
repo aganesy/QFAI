@@ -249,6 +249,23 @@ export async function validateWorklogSurface(
         ),
       );
     }
+    // promote-to format check: contract worklog-entry.schema.md#promote-to
+    // requires the non-null value to match `spec-NNNN/07_Decisions.md`
+    // (no legacy bare-filename, no arbitrary path). Garbage values
+    // would otherwise silently lookup-miss in the promotion gate.
+    if (typeof fm["promote-to"] === "string" && fm["promote-to"].length > 0) {
+      if (!/^spec-\d{4}\/07_Decisions\.md$/.test(fm["promote-to"])) {
+        issues.push(
+          issue(
+            "W-WORKLOG-SCHEMA",
+            `${entry.relativePath}: promote-to="${fm["promote-to"]}" must match \`spec-NNNN/07_Decisions.md\` (per worklog-entry.schema.md).`,
+            "warning",
+            entry.relativePath,
+            "worklogSurface.schema.promoteToFormat",
+          ),
+        );
+      }
+    }
     // promote-to: required key; value is string OR null
     if (!("promote-to" in fm)) {
       issues.push(

@@ -418,6 +418,37 @@ describe("worklogSurface validator", () => {
     }
   });
 
+  // TC-0004-0020 (promote-to-format): non-canonical promote-to format fires schema warning
+  it("TC-0004-0020 (promote-to-format): bare `07_Decisions.md` fires worklogSurface.schema.promoteToFormat", async () => {
+    const root = await newRoot("worklog-promo-format");
+    try {
+      await seedWorklog(
+        root,
+        "entry-FMT.md",
+        [
+          "---",
+          "id: entry-FMT",
+          "kind: decision",
+          "status: active",
+          "created: 2026-05-23",
+          "updated: 2026-05-23",
+          "scope: global",
+          "blocking: false",
+          "promote-to: 07_Decisions.md",
+          "links: []",
+          "---",
+          "",
+        ].join("\n"),
+      );
+      const issues = await validateWorklogSurface(root, await getConfig(root));
+      const fmt = issues.filter((i) => i.rule === "worklogSurface.schema.promoteToFormat");
+      expect(fmt.length).toBe(1);
+      expect(fmt[0]?.message).toContain("spec-NNNN/07_Decisions.md");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   // TC-0004-0020 (back-ref-required): row + archived but missing promoted-to → still pending
   it("TC-0004-0020 (back-ref-required): archived entry + row WITHOUT promoted-to back-ref still fires", async () => {
     const root = await newRoot("worklog-promo-backref");
