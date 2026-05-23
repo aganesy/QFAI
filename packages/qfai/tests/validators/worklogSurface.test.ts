@@ -310,7 +310,7 @@ describe("worklogSurface validator", () => {
     }
   });
 
-  it("TC-0004-0020 (exact-match): row containing exact entry-002 DOES satisfy promotion", async () => {
+  it("TC-0004-0020 (exact-match): archived entry with row in declared target file DOES satisfy promotion", async () => {
     const root = await newRoot("worklog-promo-ok");
     try {
       const specDir = path.join(root, ".qfai", "specs", "spec-0099");
@@ -327,8 +327,15 @@ describe("worklogSurface validator", () => {
           "---",
           "id: entry-002",
           "kind: decision",
-          "status: active",
-          "promote-to: 07_Decisions.md",
+          // Per the wave-56 promote-gate hardening, satisfaction
+          // requires `status: archived` AND a row in the DECLARED
+          // target file (spec-0099/07_Decisions.md here, not a bare
+          // 07_Decisions.md). The earlier fixture used `status:
+          // active` + bare path which we've kept as the negative
+          // (TC-0004-0020: emits) test; this positive variant uses
+          // the canonical satisfied shape.
+          "status: archived",
+          "promote-to: spec-0099/07_Decisions.md",
           "---",
           "",
         ].join("\n"),
@@ -336,6 +343,69 @@ describe("worklogSurface validator", () => {
       const issues = await validateWorklogSurface(root, await getConfig(root));
       const promo = issues.filter((i) => i.code === "W-PENDING-PROMOTION");
       expect(promo.length).toBe(0);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  // TC-0004-0020 (status-required): active entry with promote-to + row in target → still pending
+  it("TC-0004-0020 (status-required): active entry with row in target file STILL fires W-PENDING-PROMOTION (needs status: archived)", async () => {
+    const root = await newRoot("worklog-promo-active-needs-archive");
+    try {
+      const specDir = path.join(root, ".qfai", "specs", "spec-0099");
+      await mkdir(specDir, { recursive: true });
+      await writeFile(
+        path.join(specDir, "07_Decisions.md"),
+        "| DR-1 | Decision | from entry-NEW |\n",
+        "utf-8",
+      );
+      await seedWorklog(
+        root,
+        "entry-NEW.md",
+        [
+          "---",
+          "id: entry-NEW",
+          "kind: decision",
+          "status: active",
+          "promote-to: spec-0099/07_Decisions.md",
+          "---",
+          "",
+        ].join("\n"),
+      );
+      const issues = await validateWorklogSurface(root, await getConfig(root));
+      const promo = issues.filter((i) => i.code === "W-PENDING-PROMOTION");
+      expect(promo.length).toBe(1);
+      expect(promo[0]?.message).toContain('must be "archived"');
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  // TC-0004-0020 (target-scoped): archived entry but unrelated-spec row → still pending
+  it("TC-0004-0020 (target-scoped): row in UNRELATED spec does NOT satisfy the declared target", async () => {
+    const root = await newRoot("worklog-promo-wrong-target");
+    try {
+      // Decisions row lives in spec-0001 but promote-to targets spec-0099.
+      const spec1 = path.join(root, ".qfai", "specs", "spec-0001");
+      await mkdir(spec1, { recursive: true });
+      await writeFile(path.join(spec1, "07_Decisions.md"), "| DR-1 | from entry-XYZ |\n", "utf-8");
+      await seedWorklog(
+        root,
+        "entry-XYZ.md",
+        [
+          "---",
+          "id: entry-XYZ",
+          "kind: decision",
+          "status: archived",
+          "promote-to: spec-0099/07_Decisions.md",
+          "---",
+          "",
+        ].join("\n"),
+      );
+      const issues = await validateWorklogSurface(root, await getConfig(root));
+      const promo = issues.filter((i) => i.code === "W-PENDING-PROMOTION");
+      expect(promo.length).toBe(1);
+      expect(promo[0]?.message).toContain("spec-0099/07_Decisions.md");
     } finally {
       await rm(root, { recursive: true, force: true });
     }

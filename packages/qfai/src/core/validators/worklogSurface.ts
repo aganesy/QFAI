@@ -98,7 +98,7 @@ export async function validateWorklogSurface(
   // worklog entry ids for link-integrity checks.
   const specIds = await collectSpecIds(root);
   const discussionIds = await collectDiscussionIds(root);
-  const decisionRows = await readDecisionRows(root);
+  const decisionRowsByTarget = await readDecisionRowsByTarget(root);
   const entryIds = new Set<string>();
   for (const e of entries) {
     const fmId = e.frontmatter && typeof e.frontmatter.id === "string" ? e.frontmatter.id : "";
@@ -438,12 +438,30 @@ export async function validateWorklogSurface(
   for (const promo of promotionTargets) {
     const entryId =
       typeof promo.entry.frontmatter?.id === "string" ? promo.entry.frontmatter.id : "";
-    const referenced = entryId.length > 0 && rowsReferenceEntryId(decisionRows, entryId);
-    if (!referenced) {
+    const status =
+      typeof promo.entry.frontmatter?.status === "string" ? promo.entry.frontmatter.status : "";
+    // Promotion satisfaction MUST check the declared target file
+    // (`promote-to: spec-NNNN/07_Decisions.md` or legacy bare
+    // `07_Decisions.md`) — not every spec's decisions file — and
+    // MUST also require the entry to have transitioned to
+    // `status: archived`. Without the status check, an active
+    // decision stops emitting W-PENDING-PROMOTION as soon as any
+    // row references its id, violating the promote-gate contract
+    // ("satisfied when Decisions row + entry archive + promoted-to
+    // back-ref all present").
+    const targetKey = normalizePromoteTarget(promo.target);
+    const targetRows = decisionRowsByTarget.get(targetKey) ?? [];
+    const referenced = entryId.length > 0 && rowsReferenceEntryId(targetRows, entryId);
+    const isArchived = status === "archived";
+    const satisfied = referenced && isArchived;
+    if (!satisfied) {
+      const detail = !referenced
+        ? `${promo.target} has no row referencing ${entryId || "this entry"}`
+        : `${promo.target} has a row but entry status is "${status}" (must be "archived" to satisfy promotion)`;
       issues.push(
         issue(
           "W-PENDING-PROMOTION",
-          `${promo.entry.relativePath}: promote-to="${promo.target}" is set but ${promo.target} has no row referencing ${entryId || "this entry"}.`,
+          `${promo.entry.relativePath}: promote-to="${promo.target}" is set but ${detail}.`,
           "warning",
           promo.entry.relativePath,
           "worklogSurface.pendingPromotion",
@@ -584,27 +602,49 @@ async function collectDiscussionIds(root: string): Promise<Set<string>> {
   return ids;
 }
 
-async function readDecisionRows(root: string): Promise<string[]> {
-  const rows: string[] = [];
+/**
+ * Read every `<spec>/07_Decisions.md` under `.qfai/specs/` and index
+ * the rows by their normalized target key (`spec-NNNN/07_Decisions.md`).
+ * The promotion-gate check looks up each entry's `promote-to:` target
+ * against this map so a mention in an unrelated spec cannot
+ * incorrectly satisfy the gate (P2 r3292030149).
+ */
+async function readDecisionRowsByTarget(root: string): Promise<Map<string, string[]>> {
+  const byTarget = new Map<string, string[]>();
   const specsDir = path.join(root, ".qfai", "specs");
-  if (!(await exists(specsDir))) return rows;
+  if (!(await exists(specsDir))) return byTarget;
   let entries: Dirent[];
   try {
     entries = await readdir(specsDir, { withFileTypes: true });
   } catch {
-    return rows;
+    return byTarget;
   }
   for (const entry of entries) {
     if (!entry.isDirectory()) continue;
     const decisionFile = path.join(specsDir, entry.name, "07_Decisions.md");
     try {
       const body = await readFile(decisionFile, "utf-8");
-      rows.push(...body.split("\n"));
+      const rows = body.split("\n");
+      const targetKey = `${entry.name}/07_Decisions.md`;
+      byTarget.set(targetKey, rows);
     } catch (err: unknown) {
       if (!isEnoent(err)) throw err;
     }
   }
-  return rows;
+  return byTarget;
+}
+
+/**
+ * Normalize `promote-to:` values to the canonical
+ * `spec-NNNN/07_Decisions.md` form. Accepts both the canonical form
+ * and legacy bare `07_Decisions.md` (when the value lives inside a
+ * per-spec entry, the bare form implicitly targets that spec — but
+ * since the worklog entry is global by default, the bare form has no
+ * unambiguous spec; we return it as-is so the lookup misses and
+ * reports as pending, surfacing the ambiguous form for fix).
+ */
+function normalizePromoteTarget(value: string): string {
+  return value.trim();
 }
 
 // Side-channel for the test suite to surface a stable stat-aware "now"
