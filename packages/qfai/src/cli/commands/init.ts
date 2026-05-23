@@ -435,21 +435,25 @@ async function runUpgradeAssistantTree(destRoot: string, dryRun: boolean): Promi
 function classifyLegacySteeringEntry(relPath: string): { layer: AssistantLayer; subpath: string } {
   const normalized = relPath.replace(/\\/g, "/").toLowerCase();
   const posix = relPath.replace(/\\/g, "/");
+  // Exact-basename routing (stem without extension) so user docs whose
+  // names happen to contain `agent-routing` or `review-gate` etc.
+  // (e.g. `agent-routing-notes.md`) are NOT misrouted to the canonical
+  // layer.
+  const stem = (normalized.split("/").pop() ?? "").replace(/\.[^.]+$/, "");
   // review-gate is a reference rules catalog (not a routing manifest) — keep
   // it in catalog/ so loaders that expect catalog placement find it.
   // spec_required_files is a filename-list registry — also catalog.
-  if (
-    normalized.includes("test-layers") ||
-    normalized.includes("review-gate") ||
-    normalized.includes("spec_required_files")
-  ) {
+  const CATALOG_BASENAMES = new Set([
+    "test-layers",
+    "review-gate.rules",
+    "review-gate",
+    "spec_required_files",
+  ]);
+  if (CATALOG_BASENAMES.has(stem)) {
     return { layer: "catalog", subpath: posix };
   }
-  if (
-    normalized.includes("agent-catalog") ||
-    normalized.includes("agent-routing") ||
-    normalized.includes("review-profiles")
-  ) {
+  const MANIFEST_BASENAMES = new Set(["agent-catalog", "agent-routing", "review-profiles"]);
+  if (MANIFEST_BASENAMES.has(stem)) {
     return { layer: "manifest", subpath: posix };
   }
   // Constitution — normative invariants (drift-protocol, constitution,

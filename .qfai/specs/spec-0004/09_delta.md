@@ -72,22 +72,22 @@
 - Out-of-scope (this spec): seeding (spec-0003); agent implementation of drift heuristic (spec-0015)
 - Implementation-phase 詳細は本 PR で append 完了 (per-spec SDD pass landed in this PR):
   - US: US-0004-0028..0033 (work-log surface + reviewer bundle + skill enforcement + upgrade-tree)
-  - AC: AC-0004-0015..0030 (4-layer enum + worklog schema/links/handoff/promotion/stale/sunset/SKILL.md drift + upgrade pass-through + per-field date/scope/blocking/id-format sub-criteria; AC-0004-0026 reserved gap for ssot-guard TC, see 03_Acceptance-Criteria.md HTML comment)
+  - AC: AC-0004-0015..0030 (no gaps; AC-0004-0026 is the ssot-guard SSOT-divergence acceptance)
   - BR: BR-0004-0014..0024 (mirror layer for the new ACs)
-  - EX: EX-0004-0013..0031 (per-AC worked examples; EX-0004-0024..0026 reserved gaps for ssot-guard TC)
+  - EX: EX-0004-0013..0031 (per-AC worked examples; gaps at EX-0004-0024..0025 only — see 05_Examples.md HTML comment)
   - TC: TC-0004-0015..0031 (validator finding-emit checks + cross-spec ssot-guard + per-format calendar-validity guard)
   - TDD: TDD-0015..0031 (RED→GREEN evidence in `tdd/test-list.md`)
 
 ### CHG-003 Operations (this PR)
 
-| Op ID  | Op Type       | Target                                                                      | Summary                                                                                                                        |
-| ------ | ------------- | --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| OP-006 | UPDATE:APPEND | 01_Spec.md (Relevant Requirements: REQ-0034..0044)                          | 11 v1.9.0 finding-code / schema requirements appended                                                                          |
-| OP-007 | UPDATE:APPEND | 02_User-stories.md (US-0004-0028..0033)                                     | new US for work-log surface + reviewer bundle + skill enforcement + upgrade-tree                                               |
-| OP-008 | UPDATE:APPEND | 03_Acceptance-Criteria.md (AC-0004-0015..0030; gap at 0026)                 | per-REQ acceptance criteria including per-field date/scope/blocking/id-format sub-criteria                                     |
-| OP-009 | UPDATE:APPEND | 04_Business-Rules.md (BR-0004-0014..0024)                                   | mirror BR layer for OP-008                                                                                                     |
-| OP-010 | UPDATE:APPEND | 05_Examples.md (EX-0004-0013..0031; gaps at 0024..0026)                     | worked examples per AC                                                                                                         |
-| OP-011 | UPDATE:APPEND | 06_Test-Cases.md (TC-0004-0015..0031; ssot-guard Level enum + TC-0004-0026) | validator finding-emit + cross-spec ssot-guard + per-format calendar-validity guard; Level enum extended with `ssot-guard` row |
-| OP-012 | UPDATE:APPEND | tdd/test-list.md (TDD-0015..0031)                                           | RED→GREEN evidence rows; layer covers validators / ssot-guard                                                                  |
+| Op ID  | Op Type       | Target                                                                                   | Summary                                                                                                                        |
+| ------ | ------------- | ---------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| OP-006 | UPDATE:APPEND | 01_Spec.md (Relevant Requirements: REQ-0034..0044)                                       | 11 v1.9.0 finding-code / schema requirements appended                                                                          |
+| OP-007 | UPDATE:APPEND | 02_User-stories.md (US-0004-0028..0033)                                                  | new US for work-log surface + reviewer bundle + skill enforcement + upgrade-tree                                               |
+| OP-008 | UPDATE:APPEND | 03_Acceptance-Criteria.md (AC-0004-0015..0030; no gaps — AC-0004-0026 covers ssot-guard) | per-REQ acceptance criteria including per-field date/scope/blocking/id-format sub-criteria                                     |
+| OP-009 | UPDATE:APPEND | 04_Business-Rules.md (BR-0004-0014..0024)                                                | mirror BR layer for OP-008                                                                                                     |
+| OP-010 | UPDATE:APPEND | 05_Examples.md (EX-0004-0013..0031; gaps at 0024..0025 only)                             | worked examples per AC                                                                                                         |
+| OP-011 | UPDATE:APPEND | 06_Test-Cases.md (TC-0004-0015..0031; ssot-guard Level enum + TC-0004-0026)              | validator finding-emit + cross-spec ssot-guard + per-format calendar-validity guard; Level enum extended with `ssot-guard` row |
+| OP-012 | UPDATE:APPEND | tdd/test-list.md (TDD-0015..0031)                                                        | RED→GREEN evidence rows; layer covers validators / ssot-guard                                                                  |
 
 - Source: REQ-0001, REQ-0003, REQ-0006, REQ-0007, REQ-0008, REQ-0010, REQ-0014, REQ-0015, REQ-0018, NFR-0008
