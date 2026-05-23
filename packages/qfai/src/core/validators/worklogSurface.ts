@@ -74,6 +74,7 @@ type Frontmatter = {
   blocking?: unknown;
   links?: unknown;
   "promote-to"?: unknown;
+  "promoted-to"?: unknown;
 };
 
 type ParsedEntry = {
@@ -440,29 +441,44 @@ export async function validateWorklogSurface(
       typeof promo.entry.frontmatter?.id === "string" ? promo.entry.frontmatter.id : "";
     const status =
       typeof promo.entry.frontmatter?.status === "string" ? promo.entry.frontmatter.status : "";
-    // Promotion satisfaction MUST check the declared target file
-    // (`promote-to: spec-NNNN/07_Decisions.md` or legacy bare
-    // `07_Decisions.md`) — not every spec's decisions file — and
-    // MUST also require the entry to have transitioned to
-    // `status: archived`. Without the status check, an active
-    // decision stops emitting W-PENDING-PROMOTION as soon as any
-    // row references its id, violating the promote-gate contract
-    // ("satisfied when Decisions row + entry archive + promoted-to
-    // back-ref all present").
-    // Trim and use as-is for Map lookup. Legacy bare `07_Decisions.md`
-    // (without spec-NNNN prefix) intentionally does NOT match the
-    // canonical `spec-NNNN/07_Decisions.md` keys — the lookup miss
-    // surfaces ambiguous bare paths as W-PENDING-PROMOTION so users
-    // fix the promote-to value to a fully-qualified target.
+    const promotedToRaw = promo.entry.frontmatter?.["promoted-to"];
+    const promotedToBackRef = typeof promotedToRaw === "string" ? promotedToRaw.trim() : "";
+    // Promotion satisfaction (REQ-0037 / AC-0004-0020) requires ALL
+    // THREE of:
+    //   1. A row in the DECLARED target file references this entry's
+    //      id. The target is matched against per-spec
+    //      `07_Decisions.md` keys (`spec-NNNN/07_Decisions.md`); a
+    //      mention in an unrelated spec does NOT count.
+    //   2. `status: archived` — the entry has been closed.
+    //   3. A non-empty `promoted-to:` back-ref pointing at the same
+    //      target file — the entry records WHERE it was promoted to.
+    // Legacy bare `07_Decisions.md` (without spec-NNNN prefix)
+    // intentionally does NOT match the canonical map keys, so the
+    // lookup miss surfaces ambiguous bare paths as
+    // W-PENDING-PROMOTION so users fix the promote-to value to a
+    // fully-qualified target.
     const targetKey = promo.target.trim();
     const targetRows = decisionRowsByTarget.get(targetKey) ?? [];
     const referenced = entryId.length > 0 && rowsReferenceEntryId(targetRows, entryId);
     const isArchived = status === "archived";
-    const satisfied = referenced && isArchived;
+    const hasBackRef = promotedToBackRef.length > 0 && promotedToBackRef === targetKey;
+    const satisfied = referenced && isArchived && hasBackRef;
     if (!satisfied) {
-      const detail = !referenced
-        ? `${promo.target} has no row referencing ${entryId || "this entry"}`
-        : `${promo.target} has a row but entry status is "${status}" (must be "archived" to satisfy promotion)`;
+      const reasons: string[] = [];
+      if (!referenced) {
+        reasons.push(`${promo.target} has no row referencing ${entryId || "this entry"}`);
+      }
+      if (!isArchived) {
+        reasons.push(`entry status is "${status}" (must be "archived" to satisfy promotion)`);
+      }
+      if (!hasBackRef) {
+        reasons.push(
+          promotedToBackRef === ""
+            ? `\`promoted-to:\` back-ref is missing (must equal "${promo.target}")`
+            : `\`promoted-to:\` back-ref="${promotedToBackRef}" does not match the declared target "${promo.target}"`,
+        );
+      }
+      const detail = reasons.join("; ");
       issues.push(
         issue(
           "W-PENDING-PROMOTION",

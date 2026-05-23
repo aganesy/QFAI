@@ -276,7 +276,7 @@ describe("worklogSurface validator", () => {
   });
 
   // TC-0004-0020 (exact-match): promotion satisfied only by an exact entry-id reference
-  it("TC-0004-0020 (exact-match): row containing entry-010 does NOT satisfy promotion for entry-01", async () => {
+  it("TC-0004-0020 (exact-match): row containing entry-010 does NOT satisfy promotion for entry-01 (whole-token regex)", async () => {
     const root = await newRoot("worklog-promo-exact");
     try {
       // Pre-seed a Decisions row that mentions entry-010 (the longer id).
@@ -284,10 +284,13 @@ describe("worklogSurface validator", () => {
       await mkdir(specDir, { recursive: true });
       await writeFile(
         path.join(specDir, "07_Decisions.md"),
-        "| DR-1 | Decision A | linked via entry-010 |\n",
+        "| DR-1 | Decision A | linked via entry-010 | promoted-to: entry-010 |\n",
         "utf-8",
       );
-      // Entry-01 (shorter id) has promote-to: but no decisions row mentions it.
+      // Entry-01 (shorter id) is archived + promotes to the canonical
+      // target file. Without the whole-token boundary check the
+      // `entry-010` row would substring-match `entry-01` and falsely
+      // satisfy the gate; this fixture covers that exact regression.
       await seedWorklog(
         root,
         "entry-01.md",
@@ -295,8 +298,9 @@ describe("worklogSurface validator", () => {
           "---",
           "id: entry-01",
           "kind: decision",
-          "status: active",
-          "promote-to: 07_Decisions.md",
+          "status: archived",
+          "promote-to: spec-0099/07_Decisions.md",
+          "promoted-to: spec-0099/07_Decisions.md",
           "---",
           "",
         ].join("\n"),
@@ -327,15 +331,17 @@ describe("worklogSurface validator", () => {
           "---",
           "id: entry-002",
           "kind: decision",
-          // Per the wave-56 promote-gate hardening, satisfaction
-          // requires `status: archived` AND a row in the DECLARED
-          // target file (spec-0099/07_Decisions.md here, not a bare
-          // 07_Decisions.md). The earlier fixture used `status:
-          // active` + bare path which we've kept as the negative
+          // Per the promote-gate hardening (PR #209), satisfaction
+          // requires ALL of: `status: archived` + a row in the
+          // declared target file (spec-0099/07_Decisions.md here,
+          // not bare 07_Decisions.md) + a `promoted-to:` back-ref
+          // equal to the target. The earlier fixture used `status:
+          // active` + bare path which we keep as the negative
           // (TC-0004-0020: emits) test; this positive variant uses
-          // the canonical satisfied shape.
+          // the canonical 3-condition satisfied shape.
           "status: archived",
           "promote-to: spec-0099/07_Decisions.md",
+          "promoted-to: spec-0099/07_Decisions.md",
           "---",
           "",
         ].join("\n"),
@@ -398,6 +404,7 @@ describe("worklogSurface validator", () => {
           "kind: decision",
           "status: archived",
           "promote-to: spec-0099/07_Decisions.md",
+          "promoted-to: spec-0099/07_Decisions.md",
           "---",
           "",
         ].join("\n"),
@@ -406,6 +413,40 @@ describe("worklogSurface validator", () => {
       const promo = issues.filter((i) => i.code === "W-PENDING-PROMOTION");
       expect(promo.length).toBe(1);
       expect(promo[0]?.message).toContain("spec-0099/07_Decisions.md");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  // TC-0004-0020 (back-ref-required): row + archived but missing promoted-to → still pending
+  it("TC-0004-0020 (back-ref-required): archived entry + row WITHOUT promoted-to back-ref still fires", async () => {
+    const root = await newRoot("worklog-promo-backref");
+    try {
+      const specDir = path.join(root, ".qfai", "specs", "spec-0099");
+      await mkdir(specDir, { recursive: true });
+      await writeFile(
+        path.join(specDir, "07_Decisions.md"),
+        "| DR-3 | Decision C | from entry-ABC |\n",
+        "utf-8",
+      );
+      await seedWorklog(
+        root,
+        "entry-ABC.md",
+        [
+          "---",
+          "id: entry-ABC",
+          "kind: decision",
+          "status: archived",
+          "promote-to: spec-0099/07_Decisions.md",
+          // promoted-to: MISSING — the back-ref enforcement fires.
+          "---",
+          "",
+        ].join("\n"),
+      );
+      const issues = await validateWorklogSurface(root, await getConfig(root));
+      const promo = issues.filter((i) => i.code === "W-PENDING-PROMOTION");
+      expect(promo.length).toBe(1);
+      expect(promo[0]?.message).toContain("promoted-to");
     } finally {
       await rm(root, { recursive: true, force: true });
     }
