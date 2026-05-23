@@ -158,12 +158,7 @@
 - When `qfai validate` runs immediately afterwards
 - Then validate exits 0; `counts.info >= 1`; the report has an "Informational" section listing the preserved files
 
-<!--
-EX-0004-0024..0025 are reserved gaps. The TC-numbering jumped to
-0026..0029 in wave-26 to keep spec-local NNNN contiguous; the
-ssot-guard TC at 0026 has its own AC + EX pair (AC-0004-0026,
-EX-0004-0026) so only 0024..0025 stay empty.
--->
+<!-- EX-0004-0024..0025 reserved (NNNN gap; the next live row is EX-0004-0026, the ssot-guard worked example which pairs with AC-0004-0026). -->
 
 ## EX-0004-0026
 
