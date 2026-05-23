@@ -131,11 +131,19 @@ export async function validateSkillDocReferences(
     //   2. Walk every line after that last occurrence. Allow:
     //        - blank lines
     //        - top-level list items (`-`)
-    //        - HTML comments (`<!--`)
-    //        - indented YAML continuation lines (start with at least
-    //          one space — covers both list `-` items and mapping
-    //          `  key: value` form so the contract is YAML-shape-
-    //          agnostic)
+    //        - **top-level** HTML comments (`<!--` at column 0;
+    //          indented `  <!--` falls through to the indented-line
+    //          check and is rejected unless it also matches one of
+    //          the YAML-syntactic patterns below)
+    //        - indented YAML-syntactic continuation lines — narrowed
+    //          to TWO specific shapes:
+    //            * `^\s*-` indented list item (`  - foo`)
+    //            * `^\s+[A-Za-z_][\w-]*\s*:` indented mapping key
+    //              (`  scope:`, `  notes:`, `    sub_key:`)
+    //          Any other indented content (e.g. indented prose
+    //          paragraph, indented standalone value, indented HTML
+    //          comment) is rejected so the trailing block does not
+    //          silently absorb non-YAML text per BR-0004-0022.
     //      Reject:
     //        - any line starting with `#` (markdown heading) — the
     //          strongest "not trailing" signal
