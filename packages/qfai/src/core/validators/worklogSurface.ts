@@ -7,38 +7,24 @@ import { parse as parseYaml } from "yaml";
 import type { QfaiConfig } from "../config.js";
 import { isEnoent } from "../fs/errno.js";
 import {
+  HANDOFF_REQUIRED_SECTIONS,
   PROJECT_STEERING_DIR,
   PROJECT_STEERING_TEMPLATES_SUBDIR,
+  WORKLOG_ENTRY_KINDS,
 } from "../paths/assistantPaths.js";
 import type { Issue } from "../types.js";
 import { exists, issue } from "./utils.js";
 
 // MUST match `worklog-entry.schema.md#kind enum` exactly (REQ-0004).
-// Contract is the SSOT; do not localize names here.
-const ALLOWED_KINDS = new Set([
-  "milestone",
-  "decision",
-  "risk",
-  "consultation-needed",
-  "unexpected",
-  "unscoped-discovery",
-  "handoff",
-  "blocker",
-  "scope-up",
-  "scope-down",
-  "spike",
-]);
+// Sourced from a single SSOT (WORKLOG_ENTRY_KINDS in assistantPaths.ts)
+// so the enum cannot drift between the validator and the seeded
+// README / template.
+const ALLOWED_KINDS = new Set<string>(WORKLOG_ENTRY_KINDS);
 
-// MUST match the 5 sections in `worklog-entry.schema.md#kind: handoff body`
-// exactly (REQ-0017). Reviewer Gate emits R-HANDOFF-INCOMPLETE if any of
-// these is missing or empty.
-const REQUIRED_HANDOFF_SECTIONS = [
-  "## State of the task",
-  "## Next single action",
-  "## Constraints to preserve",
-  "## Open questions",
-  "## References to consult first",
-];
+// Sourced from HANDOFF_REQUIRED_SECTIONS (assistantPaths.ts SSOT) so
+// the heading list cannot drift between the validator and the seeded
+// entry template.
+const REQUIRED_HANDOFF_SECTIONS: readonly string[] = HANDOFF_REQUIRED_SECTIONS;
 
 const STALE_DAYS = 90;
 const MS_PER_DAY = 86_400_000;
@@ -294,7 +280,24 @@ async function collectEntries(dir: string, baseRoot: string): Promise<ParsedEntr
     if (dirEntry.name === "README.md") continue;
 
     const full = path.join(dir, dirEntry.name);
-    const body = await readFile(full, "utf-8");
+    // Resilient read: if a single entry file cannot be read (EACCES,
+    // EISDIR, unicode decode failure), surface a schema-parse finding
+    // for that file instead of throwing out of the entire validator
+    // chain. `.qfai/steering/` is user-authored markdown so one bad
+    // file should not abort the whole `qfai validate` run.
+    let body: string;
+    try {
+      body = await readFile(full, "utf-8");
+    } catch (err: unknown) {
+      const detail = err instanceof Error ? err.message : String(err);
+      entries.push({
+        filePath: full,
+        relativePath: path.relative(baseRoot, full).replace(/\\/g, "/"),
+        frontmatter: null,
+        body: `<<unreadable: ${detail}>>`,
+      });
+      continue;
+    }
     const parsed = parseEntry(body);
     entries.push({
       filePath: full,
@@ -308,11 +311,15 @@ async function collectEntries(dir: string, baseRoot: string): Promise<ParsedEntr
 }
 
 function parseEntry(text: string): { frontmatter: Frontmatter | null; body: string } {
+  // Strip an optional UTF-8 BOM (Windows editors commonly write it)
+  // before parsing; without this a valid frontmatter file saved with
+  // BOM is reported as W-WORKLOG-SCHEMA (P2 from PR #209 review).
+  const stripped = text.charCodeAt(0) === 0xfeff ? text.slice(1) : text;
   // Tolerate CRLF line endings (Windows-authored entries) by accepting
   // \r?\n at every delimiter position. Without this, frontmatter saved
   // with CRLF would be silently misparsed and reported as
   // W-WORKLOG-SCHEMA even when valid (P2 from PR #209 review).
-  const match = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?([\s\S]*)$/.exec(text);
+  const match = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?([\s\S]*)$/.exec(stripped);
   if (!match) {
     return { frontmatter: null, body: text };
   }

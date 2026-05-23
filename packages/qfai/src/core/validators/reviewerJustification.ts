@@ -25,11 +25,15 @@ type ReviewerReport = {
 };
 
 /**
- * Scans the .qfai/review/**\/report.json tree (plus any reviewer-output
- * JSON files under .qfai/review/**\/reviewer-*.json) for findings whose
- * code is on the advisory-failing list. Each finding with an empty
- * justification is surfaced as an error at the host code (so reviewer
- * drift can be caught by validate).
+ * Scans every `*.json` file under `.qfai/review/**` for findings whose
+ * code is on the advisory-failing list (R-WORKLOG-DRIFT,
+ * R-REJECTED-READOPT, R-HANDOFF-INCOMPLETE). Each finding with an
+ * empty `justification:` field is surfaced as an error at the host
+ * code so reviewer drift can be caught by `qfai validate --fail-on
+ * error`. The scan is unfiltered — any JSON file in the tree that
+ * parses to `{findings: [...]}` participates; this keeps the scan
+ * resilient to per-tool naming conventions (e.g. `report.json`,
+ * `reviewer-completion.json`, `reviewer-architecture.json`, etc.).
  */
 export async function validateReviewerJustification(
   root: string,

@@ -443,3 +443,8 @@ When this skill is complete, provide a final user-facing completion message and 
   Action: collect missing scope, constraints, and assumptions first.
 - Configuration needs refinement: rerun `/qfai-configure`.
   Action: provide additional include/exclude evidence and update `qfai.config.yaml`.
+
+project_memory:
+
+- qfai-configure is the user-facing entrypoint for editing `qfai.config.yaml` and the `.qfai/assistant/manifest/` declarative manifests; edits to those files MUST go through this skill so the agent-catalog / agent-routing / review-profiles SSOTs stay consistent.
+- Run after every major workflow change to refresh the consuming project to the current QFAI baseline. Do NOT edit `qfai.config.yaml` directly when the skill is available.

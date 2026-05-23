@@ -94,8 +94,8 @@ Approval-required ops in Stage 1 above MUST go through AskUserQuestion.
 ## Inputs Priority
 
 1. Latest `.qfai/discussion/discussion-*/` pack (lexicographically largest), validated by Stage 0.
-2. P1: `.qfai/assistant/instructions/*`
-3. P2: `.qfai/assistant/steering/*`
+2. P1: `.qfai/assistant/constitution/*` (post-recut: normative invariants — formerly `.qfai/assistant/instructions/*`)
+3. P2: `.qfai/assistant/manifest/*` + `.qfai/assistant/catalog/*` (post-recut routing manifests + reference catalogs — formerly `.qfai/assistant/steering/*`)
 4. P3: existing `.qfai/specs/_policies/03_Capabilities.md` + active spec summaries (Stage 1 input)
 5. P4: existing `.qfai/specs/<spec-id>/**` for the targeted specs
 6. P5: `.qfai/discussion/**`, `.qfai/contracts/**`

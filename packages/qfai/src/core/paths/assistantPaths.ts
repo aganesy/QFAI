@@ -79,3 +79,42 @@ export function migrationMemoRelativePath(version: string): string {
 export function joinMigrationMemo(destRoot: string, version: string): string {
   return path.join(destRoot, migrationMemoRelativePath(version));
 }
+
+/**
+ * SSOT for the work-log entry `kind` enum. MUST match
+ * `.qfai/contracts/cli/worklog-entry.schema.md#kind enum` exactly.
+ * Imported by:
+ *   - worklogSurface.ts (ALLOWED_KINDS check)
+ *   - init.ts (PROJECT_STEERING_README_BODY enumeration)
+ * so the enum cannot drift between the validator and the seeded README.
+ */
+export const WORKLOG_ENTRY_KINDS = [
+  "milestone",
+  "decision",
+  "risk",
+  "consultation-needed",
+  "unexpected",
+  "unscoped-discovery",
+  "handoff",
+  "blocker",
+  "scope-up",
+  "scope-down",
+  "spike",
+] as const;
+
+export type WorklogEntryKind = (typeof WORKLOG_ENTRY_KINDS)[number];
+
+/**
+ * SSOT for the handoff body required sections. MUST match
+ * `.qfai/contracts/cli/worklog-entry.schema.md#kind: handoff body`.
+ * Imported by:
+ *   - worklogSurface.ts (REQUIRED_HANDOFF_SECTIONS check)
+ *   - init.ts (PROJECT_STEERING_ENTRY_TEMPLATE)
+ */
+export const HANDOFF_REQUIRED_SECTIONS = [
+  "## State of the task",
+  "## Next single action",
+  "## Constraints to preserve",
+  "## Open questions",
+  "## References to consult first",
+] as const;

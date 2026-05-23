@@ -1236,7 +1236,7 @@ describe("qfai init", { timeout: 60000 }, () => {
         path.join(root, ".qfai", "steering", "_templates", "entry.md"),
         "utf-8",
       );
-      expect(tplBody).toContain("id: kebab-case-id");
+      expect(tplBody).toMatch(/id:\s*2026-MM-DD-kebab-case-id/);
       expect(tplBody).toContain("kind: decision");
       expect(tplBody).toMatch(/promote-to:/);
     } finally {

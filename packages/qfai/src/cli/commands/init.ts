@@ -26,6 +26,8 @@ import {
 } from "../../core/gitignore.js";
 import {
   ASSISTANT_LAYERS,
+  HANDOFF_REQUIRED_SECTIONS,
+  WORKLOG_ENTRY_KINDS,
   joinAssistantLayer,
   joinLegacyAssistantInstructions,
   joinLegacyAssistantSteering,
@@ -102,14 +104,6 @@ export async function runInit(options: InitOptions): Promise<void> {
     ? await runUpgradeAssistantTree(destRoot, options.dryRun)
     : { copied: [], skipped: [], removed: [], preservedNotes: [] as string[] };
 
-  // Legacy steering/ sunset warning (D-DEPRECATED-PATH). Skip when the
-  // user is currently running --upgrade-assistant-tree (the helper will
-  // move the directory itself); skip on dry-run; skip when no legacy
-  // dir exists.
-  if (!options.upgradeAssistantTree && !options.dryRun) {
-    await emitLegacyAssistantSteeringSunset(destRoot);
-  }
-
   // Activation guidance for newly created instructions files
   const expectedInstructionsDir = path.join(destRoot, ".github", "instructions");
   const instructionsCreated = wrappersResult.copied.some(
@@ -153,6 +147,16 @@ export async function runInit(options: InitOptions): Promise<void> {
 
   for (const note of upgradeResult.preservedNotes) {
     info(note);
+  }
+
+  // Legacy steering/ sunset warning (D-DEPRECATED-PATH). Emitted AFTER
+  // the report summary so the warning stays at the bottom of the
+  // terminal output and is not buried by the skipped-paths list (PR
+  // #209 review NIT). Skip when the user is currently running
+  // --upgrade-assistant-tree (the helper will move the directory
+  // itself); skip on dry-run; skip when no legacy dir exists.
+  if (!options.upgradeAssistantTree && !options.dryRun) {
+    await emitLegacyAssistantSteeringSunset(destRoot);
   }
 }
 
@@ -203,81 +207,84 @@ function assistantLayerGitkeepBody(layer: AssistantLayer): string {
   ].join("\n");
 }
 
-const PROJECT_STEERING_README_BODY = [
-  "# .qfai/steering/ — AI work-log surface",
-  "",
-  "This directory is the project-local work-log surface for AI coding",
-  "agents. Each entry is a small markdown file with YAML frontmatter",
-  "(`id`, `kind`, `status`, `created`, `updated`, `scope`, `blocking`,",
-  "`promote-to`, `links`). See the canonical schema at",
-  "`.qfai/contracts/cli/worklog-entry.schema.md`.",
-  "",
-  "Allowed `kind` values (REQ-0004 — contract is the SSOT):",
-  "",
-  "- `milestone` — Task milestone reached.",
-  "- `decision` — A choice made during work that needs durable capture;",
-  "  candidate for promotion to `07_Decisions.md` via `promote-to:`.",
-  "- `risk` — A risk identified during work.",
-  "- `consultation-needed` — The skill needs user input to proceed.",
-  "- `unexpected` — An unexpected event occurred during work.",
-  "- `unscoped-discovery` — Out-of-scope concern discovered; current task",
-  "  continues unblocked (REQ-0016).",
-  "- `handoff` — Work needs to pause; another session/operator will resume.",
-  "- `blocker` — The skill is stuck (e.g. root-cause hunt stalled).",
-  "- `scope-up` — Work volume larger than expected.",
-  "- `scope-down` — Planned work is no longer required.",
-  "- `spike` — Exploratory investigation logged.",
-  "",
-  "See `_templates/entry.md` for the canonical entry shape.",
-  "Validators: `W-WORKLOG-SCHEMA`, `W-WORKLOG-BROKEN-LINK`,",
-  "`W-WORKLOG-STALE`, `W-PENDING-PROMOTION`, `R-HANDOFF-INCOMPLETE`.",
-  "",
-].join("\n");
+function buildProjectSteeringReadmeBody(): string {
+  // Kind enum is sourced from the SSOT in assistantPaths.ts so a contract
+  // change automatically updates the README without manual sync.
+  const kindLines = WORKLOG_ENTRY_KINDS.map((k) => `- \`${k}\``);
+  return [
+    "# .qfai/steering/ — AI work-log surface",
+    "",
+    "This directory is the project-local work-log surface for AI coding",
+    "agents. Each entry is a small markdown file with YAML frontmatter",
+    "(`id`, `kind`, `status`, `created`, `updated`, `scope`, `blocking`,",
+    "`promote-to`, `links`). See the canonical schema at",
+    "`.qfai/contracts/cli/worklog-entry.schema.md`.",
+    "",
+    "## Filename-id invariant (contract)",
+    "",
+    "Every entry file `.qfai/steering/<id>.md` MUST have a frontmatter",
+    "`id:` that exactly matches the filename stem. The validator emits",
+    "`W-WORKLOG-SCHEMA` when they diverge.",
+    "",
+    "## Running validation",
+    "",
+    "```sh",
+    "qfai validate --profile sdd --fail-on error",
+    "```",
+    "",
+    "Validators that scan this surface: `W-WORKLOG-SCHEMA`,",
+    "`W-WORKLOG-BROKEN-LINK`, `W-WORKLOG-STALE`, `W-PENDING-PROMOTION`,",
+    "`R-HANDOFF-INCOMPLETE`.",
+    "",
+    "## Allowed `kind` values",
+    "",
+    "See `.qfai/contracts/cli/worklog-entry.schema.md#kind enum` for the",
+    "authoritative list and per-kind write trigger. The enum is:",
+    "",
+    ...kindLines,
+    "",
+    "## Templates",
+    "",
+    "See `_templates/entry.md` for the canonical entry shape.",
+    "",
+  ].join("\n");
+}
 
-const PROJECT_STEERING_ENTRY_TEMPLATE = [
-  "---",
-  "id: kebab-case-id           # required; matches filename stem",
-  "status: active              # required; enum: active | handoff | archived",
-  "kind: decision              # required; see worklog-entry.schema.md#kind enum",
-  "created: YYYY-MM-DD         # required; ISO-8601 date",
-  "updated: YYYY-MM-DD         # required; ISO-8601 date; >= created",
-  'scope: global               # required; "global" or "spec-NNNN"',
-  "blocking: false             # required; boolean",
-  'promote-to: null            # required; "spec-NNNN/07_Decisions.md" or null',
-  "links: []                   # required; array (may be empty)",
-  "---",
-  "",
-  "# Title of the entry",
-  "",
-  "## Context",
-  "",
-  "What triggered this entry? Reference any spec, contract, or external",
-  "input that informs the entry.",
-  "",
-  "<!-- For `kind: handoff` entries, the 5 sections below are MANDATORY -->",
-  "<!-- (Reviewer Gate emits R-HANDOFF-INCOMPLETE on missing sections). -->",
-  "",
-  "## State of the task",
-  "",
-  "One paragraph: where am I, what is done, what remains.",
-  "",
-  "## Next single action",
-  "",
-  "One bullet: the very next thing to do on resume.",
-  "",
-  "## Constraints to preserve",
-  "",
-  "Bulleted invariants that the next operator MUST preserve.",
-  "",
-  "## Open questions",
-  "",
-  "Bulleted list (may be empty).",
-  "",
-  "## References to consult first",
-  "",
-  "Bulleted list of entry IDs / spec IDs / discussion IDs.",
-  "",
-].join("\n");
+function buildProjectSteeringEntryTemplate(): string {
+  // Section headings are sourced from HANDOFF_REQUIRED_SECTIONS (SSOT)
+  // so the template cannot drift from the validator.
+  const handoffBodyLines = HANDOFF_REQUIRED_SECTIONS.flatMap((heading) => [
+    heading,
+    "",
+    "(Mandatory for kind: handoff. See contract for guidance.)",
+    "",
+  ]);
+  return [
+    "---",
+    "id: 2026-MM-DD-kebab-case-id   # required; kebab-case ASCII; matches filename stem",
+    "status: active                 # required; enum: active | handoff | archived",
+    "kind: decision                 # required; see worklog-entry.schema.md#kind enum",
+    "created: YYYY-MM-DD            # required; ISO-8601 date",
+    "updated: YYYY-MM-DD            # required; ISO-8601 date; >= created",
+    'scope: global                  # required; "global" or "spec-NNNN"',
+    "blocking: false                # required; boolean",
+    'promote-to: null               # required; "spec-NNNN/07_Decisions.md" or null',
+    "links: []                      # required; array (may be empty)",
+    "---",
+    "",
+    "# Title of the entry",
+    "",
+    "## Context",
+    "",
+    "What triggered this entry? Reference any spec, contract, or external",
+    "input that informs the entry.",
+    "",
+    "<!-- For `kind: handoff` entries, the 5 sections below are MANDATORY -->",
+    "<!-- (Reviewer Gate emits R-HANDOFF-INCOMPLETE on missing sections). -->",
+    "",
+    ...handoffBodyLines,
+  ].join("\n");
+}
 
 async function seedProjectSteering(
   destRoot: string,
@@ -287,9 +294,9 @@ async function seedProjectSteering(
   const skipped: string[] = [];
 
   const targets: Array<{ rel: string[]; body: string }> = [
-    { rel: ["README.md"], body: PROJECT_STEERING_README_BODY },
+    { rel: ["README.md"], body: buildProjectSteeringReadmeBody() },
     { rel: [".gitkeep"], body: "" },
-    { rel: ["_templates", "entry.md"], body: PROJECT_STEERING_ENTRY_TEMPLATE },
+    { rel: ["_templates", "entry.md"], body: buildProjectSteeringEntryTemplate() },
   ];
 
   for (const target of targets) {

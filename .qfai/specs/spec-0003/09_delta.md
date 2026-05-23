@@ -71,13 +71,15 @@ This spec consolidates the following archived specs:
   - REQ-0021: migration memo authored at `.qfai/assistant/process/migrations/v<X.Y.Z>-assistant-layer-recut.md` (immutable after commit per OC-53)
   - REQ-0022: `assistantPaths.ts` SSOT module is the sole producer of distributed assistant-tree path strings consumed by `init`; hard-coded literals lint-rejected (NFR-0001)
   - REQ-0023: backwards-compatibility — old-layout files remain readable for exactly one minor release window (NFR-0002); sunset version named in `D-DEPRECATED-PATH` warning text
-- New US (placeholder for next per-spec SDD pass):
+- New US (CHG-003 v1.9.0 — fully landed in 02_User-stories.md):
   - US-0003-0016: 4-layer asset-tree seed + work-log surface seed (REQ-0018, REQ-0019)
   - US-0003-0017: `--upgrade-assistant-tree` migration helper (REQ-0020)
   - US-0003-0018: migration memo authoring (REQ-0021)
+  - US-0003-0019: assistantPaths.ts SSOT module (REQ-0022)
+  - US-0003-0020: legacy layout backwards-compatibility window (REQ-0023)
 - Cascade:
   - spec-0004 references `assistantPaths.ts` for validate-side path strings (companion row in spec-0004 09_delta)
   - downstream skill specs (spec-0008/0010/0011/0012/0013/0014/0016) consume the new layer paths via `project_memory:` block (companion rows in each spec)
 - Out-of-scope (this spec): validation of frontmatter schema (spec-0004); Reviewer-Gate findings (spec-0015); skill-side `project_memory:` block (each skill spec)
-- Implementation-phase 詳細 US/AC/BR/EX/TC は次回の per-spec SDD pass で append される (本 CHG では Triage + REQ 追加に留める)
+- Implementation-phase 詳細 US/AC/BR/EX/TC は同じ v1.9.0 PR (#209) の per-spec SDD pass で append 済み — US-0003-0016..0020, AC-0003-0017..0024, BR-0003-0015..0020, EX-0003-0018..0023, TC-0003-0021..0026 すべて 02..06 に追加完了。
 - Source: REQ-0001, REQ-0002, REQ-0008, REQ-0009, REQ-0011, REQ-0012, REQ-0013, REQ-0018, NFR-0001, NFR-0002

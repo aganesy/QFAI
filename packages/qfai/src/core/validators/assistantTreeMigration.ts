@@ -60,17 +60,17 @@ export async function validateAssistantTreeMigration(
     const PRE_RECUT_DIRS = new Set([
       "agents",
       "skills",
-      "instructions",
-      // skills.local/ is the protected user-customization surface
-      // (REQ-0003 in spec-0003).
+      // skills.local/ is the protected user-customization surface.
       "skills.local",
     ]);
+    // instructions/ and steering/ are pre-recut layers that get their
+    // own D-DEPRECATED-PATH below (symmetric per qfai-init.md contract).
+    const PRE_RECUT_DEPRECATED_DIRS = new Set(["instructions", "steering"]);
     for (const entry of dirEntries) {
       if (!entry.isDirectory()) continue;
       if (isAssistantLayer(entry.name)) continue;
       if (PRE_RECUT_DIRS.has(entry.name)) continue;
-      // steering/ is the explicit legacy layer that gets its own D-DEPRECATED-PATH below.
-      if (entry.name === "steering") continue;
+      if (PRE_RECUT_DEPRECATED_DIRS.has(entry.name)) continue;
       // Distinct finding code — `W-WORKLOG-SCHEMA` is reserved by
       // contract for worklog-entry frontmatter shape problems. The
       // 4-layer enum guard is a separate concern and uses its own
@@ -87,24 +87,32 @@ export async function validateAssistantTreeMigration(
     }
   }
 
-  // 2. D-DEPRECATED-PATH — legacy .qfai/assistant/steering/ is read-compatible
-  // for the current minor window only; severity escalates to error from
-  // LEGACY_STEERING_SUNSET onwards.
-  const legacyDir = joinLegacyAssistantSteering(root);
-  if (await exists(legacyDir)) {
-    const current = await resolveToolVersion();
-    const sunset = legacyAssistantSteeringSunsetLabel();
-    const severity = legacyDeprecationSeverity(current);
+  // 2. D-DEPRECATED-PATH — pre-recut legacy layers (.qfai/assistant/
+  // steering/ AND .qfai/assistant/instructions/) are read-compatible
+  // for the current minor window only; severity escalates to error
+  // from LEGACY_STEERING_SUNSET onwards. Both surfaces fire symmetric
+  // findings per qfai-init.md contract line 50.
+  const current = await resolveToolVersion();
+  const sunset = legacyAssistantSteeringSunsetLabel();
+  const severity = legacyDeprecationSeverity(current);
+  for (const legacySurface of [
+    { dir: joinLegacyAssistantSteering(root), label: ".qfai/assistant/steering/" },
+    {
+      dir: path.join(root, ".qfai", "assistant", "instructions"),
+      label: ".qfai/assistant/instructions/",
+    },
+  ]) {
+    if (!(await exists(legacySurface.dir))) continue;
     const headline =
       severity === "error"
-        ? `.qfai/assistant/steering/ is past the announced sunset (v${sunset}).`
-        : `.qfai/assistant/steering/ is read-compatible only for the current minor release.`;
+        ? `${legacySurface.label} is past the announced sunset (v${sunset}).`
+        : `${legacySurface.label} is read-compatible only for the current minor release.`;
     issues.push(
       issue(
         "D-DEPRECATED-PATH",
         `${headline} sunset: v${sunset}. Run \`qfai init --upgrade-assistant-tree\` to migrate.`,
         severity,
-        ".qfai/assistant/steering/",
+        legacySurface.label,
         "assistantTreeMigration.deprecatedPath",
       ),
     );
