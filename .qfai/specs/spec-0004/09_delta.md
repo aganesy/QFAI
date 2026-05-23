@@ -62,7 +62,7 @@
   - REQ-0039: link-integrity validation (`W-WORKLOG-BROKEN-LINK` for unresolved `links: [spec-NNNN, discussion-*, entry-XXXX]`)
   - REQ-0040: `D-DEPRECATED-PATH` warning during deprecation window; warning text MUST name sunset version (REQ-0018 of pack); escalates to error at sunset (REQ-0008)
   - REQ-0041: SKILL.md `project_memory:` declaration enforcement (REQ-0010); read of un-declared path is rejected
-  - REQ-0042: `R-HANDOFF-INCOMPLETE` Reviewer-Gate finding for `kind: handoff` entries missing any of 5 required sections (canonical: `worklog-entry.schema.md#kind: handoff body`)
+  - REQ-0042: `R-HANDOFF-INCOMPLETE` Reviewer-Gate finding for `kind: handoff` entries missing any of 5 required sections (canonical reference: `.qfai/contracts/cli/worklog-entry.schema.md` under the "kind: handoff body — required sections" subsection)
   - REQ-0043: `W-SKILL-DOC-BROKEN-REF` for SKILL.md references that do not resolve in current layout (NFR-0008)
   - REQ-0044: `W-USER-EDIT-PRESERVED` informational pass-through when `qfai init --upgrade-assistant-tree` preserves user edits
 - Cascade:
