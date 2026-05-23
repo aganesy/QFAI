@@ -99,10 +99,14 @@ export async function validateSkillDocReferences(
     if (QFAI_SKILL_ID_RE.test(skillId)) {
       for (const ref of NON_CANONICAL_REFS) {
         if (ref.pattern.test(body)) {
+          const headline =
+            refSeverity === "error"
+              ? `${skillId}/SKILL.md references a non-canonical path (post-recut) past the announced sunset (v${LEGACY_STEERING_SUNSET.major}.${LEGACY_STEERING_SUNSET.minor}.0). Migrate the reference to fix.`
+              : `${skillId}/SKILL.md references a non-canonical path (post-recut). Read-compatible only for the current minor release; sunset: v${LEGACY_STEERING_SUNSET.major}.${LEGACY_STEERING_SUNSET.minor}.0.`;
           issues.push(
             issue(
               "W-SKILL-DOC-BROKEN-REF",
-              `${skillId}/SKILL.md references a non-canonical path (post-recut). ${ref.reason}`,
+              `${headline} ${ref.reason}`,
               refSeverity,
               `.qfai/assistant/skills/${skillId}/SKILL.md`,
               "skillDocReferences.brokenRef",

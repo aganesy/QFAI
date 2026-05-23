@@ -288,14 +288,13 @@ describe("TC-0004-0026: agent-catalog.yml developer_instructions matches canonic
       const agent = raw as Record<string, unknown>;
       const id = agent["id"];
       const di = agent["developer_instructions"];
-      if (typeof id !== "string") {
-        // Surfacing failure via expect produces a labeled assertion result;
-        // narrowing in the same `if` keeps the rest of the loop typed.
-        expect(typeof id, `agent-catalog.yml agent.id must be string (got ${typeof id})`).toBe(
-          "string",
-        );
-        continue;
-      }
+      // expect.toBe throws on mismatch in Vitest; the type narrowing
+      // after the predicate runs only on the GREEN path and keeps `id`
+      // typed as string for the rest of the loop body.
+      expect(typeof id, `agent-catalog.yml agent.id must be string (got ${typeof id})`).toBe(
+        "string",
+      );
+      if (typeof id !== "string") continue; // unreachable; narrows TS type
       const canonicalPath = join(CANONICAL_DIR, `${id}.md`);
       expect(existsSync(canonicalPath), `${id}: canonical MD missing at ${canonicalPath}`).toBe(
         true,
@@ -304,12 +303,12 @@ describe("TC-0004-0026: agent-catalog.yml developer_instructions matches canonic
       const missionIdx = canonicalContent.indexOf("## Mission");
       expect(missionIdx, `${id}: canonical MD has no ## Mission section`).toBeGreaterThanOrEqual(0);
       const canonicalBody = normalize(canonicalContent.slice(missionIdx));
-      if (typeof di !== "string") {
-        expect(typeof di, `${id}: agent-catalog.yml developer_instructions is not a string`).toBe(
-          "string",
-        );
-        continue;
-      }
+      // Same pattern as `id`: expect throws on mismatch; the if-narrow
+      // satisfies TS without adding reachable branches.
+      expect(typeof di, `${id}: agent-catalog.yml developer_instructions is not a string`).toBe(
+        "string",
+      );
+      if (typeof di !== "string") continue; // unreachable; narrows TS type
       expect(
         normalize(di),
         `${id}: agent-catalog.yml developer_instructions diverges from canonical MD`,

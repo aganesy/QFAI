@@ -550,15 +550,18 @@ describe("worklogSurface validator", () => {
   });
 
   // TC-0004-0030 (id-format): non-kebab-case id fires worklogSurface.schema.idFormat
-  it("TC-0004-0030 (id-format): non-kebab-case ASCII id fires worklogSurface.schema.idFormat", async () => {
+  it("TC-0004-0030 (id-format): non-kebab-case ASCII id fires worklogSurface.schema.idFormat (isolated from idFilenameMismatch)", async () => {
     const root = await newRoot("worklog-id-format");
     try {
+      // Filename stem matches the (non-kebab) id exactly so the
+      // idFilenameMismatch rule does NOT also fire — this isolates
+      // idFormat as the sole assertion target.
       await seedWorklog(
         root,
-        "FooBar.md",
+        "Foo_Bar.md",
         [
           "---",
-          "id: Foo Bar",
+          "id: Foo_Bar",
           "kind: decision",
           "status: active",
           "created: 2026-05-23",
@@ -574,8 +577,11 @@ describe("worklogSurface validator", () => {
       const issues = await validateWorklogSurface(root, await getConfig(root));
       const idFmt = issues.filter((i) => i.rule === "worklogSurface.schema.idFormat");
       expect(idFmt.length).toBe(1);
-      expect(idFmt[0]?.message).toContain("Foo Bar");
+      expect(idFmt[0]?.message).toContain("Foo_Bar");
       expect(idFmt[0]?.message).toContain("kebab-case");
+      // Make sure idFilenameMismatch is NOT firing (isolation).
+      const mismatch = issues.filter((i) => i.rule === "worklogSurface.schema.idFilenameMismatch");
+      expect(mismatch.length).toBe(0);
     } finally {
       await rm(root, { recursive: true, force: true });
     }

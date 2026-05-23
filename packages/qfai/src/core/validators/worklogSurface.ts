@@ -33,9 +33,9 @@ const REQUIRED_HANDOFF_SECTIONS: readonly string[] = HANDOFF_REQUIRED_SECTIONS;
 const ALLOWED_STATUS = new Set<string>(WORKLOG_ENTRY_STATUSES);
 
 // Contract: worklog-entry.schema.md#created/updated — ISO-8601 calendar
-// date (YYYY-MM-DD). Surface-syntax regex; calendar validity is
-// enforced separately by isValidCalendarDate().
-const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+// date (YYYY-MM-DD). Surface-syntax + calendar validity enforced
+// together by isValidCalendarDate(); kept as a single helper so all
+// date checks share one source of truth.
 
 function isValidCalendarDate(s: string): boolean {
   // ISO_DATE_RE.exec() returns capture groups for the YYYY/MM/DD trio.

@@ -109,4 +109,56 @@ describe("skillDocReferences validator", () => {
       await rm(root, { recursive: true, force: true });
     }
   });
+
+  // TC-0004-0024 (severity): W-SKILL-DOC-BROKEN-REF severity branches per running tool version
+  it("TC-0004-0024 (severity): W-SKILL-DOC-BROKEN-REF severity is warning|error and message branches with it", async () => {
+    const root = await newRoot("skill-brokenref-sev");
+    try {
+      await seedSkill(
+        root,
+        "qfai-sdd",
+        [
+          "## /qfai-sdd",
+          "",
+          "See `.qfai/assistant/steering/agent-catalog.yml`.",
+          "",
+          "project_memory:",
+          "  - none",
+        ].join("\n"),
+      );
+      const issues = await validateSkillDocReferences(root, await getConfig(root));
+      const broken = issues.filter((i) => i.code === "W-SKILL-DOC-BROKEN-REF");
+      expect(broken.length).toBe(1);
+      const severity = broken[0]?.severity;
+      expect(["warning", "error"]).toContain(severity);
+      // Headline shape MUST track the severity so consumers know which
+      // mode fired (warning during window, error past sunset).
+      if (severity === "error") {
+        expect(broken[0]?.message).toContain("past the announced sunset");
+      } else {
+        expect(broken[0]?.message).toContain("Read-compatible only");
+      }
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  // TC-0004-0024 (qfai-scope): user-defined non-qfai-* skill is NOT flagged
+  it("TC-0004-0024 (qfai-scope): non-qfai-* skill does NOT fire W-SKILL-DOC-BROKEN-REF", async () => {
+    const root = await newRoot("skill-brokenref-scope");
+    try {
+      await seedSkill(
+        root,
+        "my-custom-skill",
+        ["## /my-custom-skill", "", "Loads `.qfai/assistant/steering/agent-catalog.yml`.", ""].join(
+          "\n",
+        ),
+      );
+      const issues = await validateSkillDocReferences(root, await getConfig(root));
+      const broken = issues.filter((i) => i.code === "W-SKILL-DOC-BROKEN-REF");
+      expect(broken.length).toBe(0);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
 });
