@@ -174,8 +174,13 @@ describe("skillDocReferences validator", () => {
     }
   });
 
-  // TC-0004-0023 (prose-mention): mid-file prose mention does NOT shadow real trailing block
-  it("TC-0004-0023 (prose-mention): prose mentioning project_memory: earlier does NOT mis-flag a valid trailing block", async () => {
+  // TC-0004-0023 (prose-mention): mid-file project_memory: declaration line
+  // does NOT shadow the real trailing block. Use a fixture where the FIRST
+  // occurrence is itself at start-of-line (so it matches the regex), but a
+  // markdown heading appears AFTER it, AND a real `project_memory:` block
+  // follows at the tail. The "last occurrence" branch is the only thing
+  // that makes this case pass.
+  it("TC-0004-0023 (prose-mention): mid-file project_memory: line followed by heading + real trailing block does NOT mis-flag", async () => {
     const root = await newRoot("skill-projmem-prose");
     try {
       await seedSkill(
@@ -184,14 +189,21 @@ describe("skillDocReferences validator", () => {
         [
           "## /qfai-implement",
           "",
-          "When you write a SKILL.md, declare project_memory: at the tail.",
+          "Example of a project_memory: declaration:",
           "",
-          "## Other Section",
+          // First occurrence — mid-file, matches `^\s*project_memory:`.
+          // Without "last occurrence" logic, the post-block walk would
+          // hit the `## Real Body` heading below and false-fire.
+          "project_memory:",
+          "  - example placeholder",
+          "",
+          "## Real Body",
           "",
           "More body.",
           "",
+          // Real trailing block (must be picked by "last occurrence").
           "project_memory:",
-          "  - real declaration line",
+          "  - real declaration",
           "",
         ].join("\n"),
       );
