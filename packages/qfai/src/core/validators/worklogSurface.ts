@@ -32,6 +32,22 @@ const REQUIRED_HANDOFF_SECTIONS: readonly string[] = HANDOFF_REQUIRED_SECTIONS;
 // Contract: worklog-entry.schema.md#status enum (spec-0004 REQ-0035).
 const ALLOWED_STATUS = new Set<string>(WORKLOG_ENTRY_STATUSES);
 
+// Contract: worklog-entry.schema.md#created/updated — ISO-8601 calendar
+// date (YYYY-MM-DD). Surface-syntax regex; calendar validity is
+// enforced separately by isValidCalendarDate().
+const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+function isValidCalendarDate(s: string): boolean {
+  if (!ISO_DATE_RE.test(s)) return false;
+  const parts = s.split("-").map((p) => Number.parseInt(p, 10));
+  const [y, m, d] = parts;
+  if (y === undefined || m === undefined || d === undefined) return false;
+  // Date.UTC() accepts out-of-range fields and rolls them over (e.g.
+  // 2026-02-30 → 2026-03-02). Round-trip to detect rollover.
+  const dt = new Date(Date.UTC(y, m - 1, d));
+  return dt.getUTCFullYear() === y && dt.getUTCMonth() === m - 1 && dt.getUTCDate() === d;
+}
+
 const STALE_DAYS = 90;
 const MS_PER_DAY = 86_400_000;
 
@@ -155,16 +171,16 @@ export async function validateWorklogSurface(
         );
       }
     }
-    // created / updated date format (ISO-8601 YYYY-MM-DD) + ordering
-    // (updated >= created). Contract: worklog-entry.schema.md#date.
-    const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+    // created / updated date format (ISO-8601 YYYY-MM-DD calendar date)
+    // + ordering (updated >= created). Contract:
+    // worklog-entry.schema.md#date.
     for (const field of ["created", "updated"] as const) {
       const value = fm[field];
-      if (typeof value === "string" && value.length > 0 && !ISO_DATE_RE.test(value)) {
+      if (typeof value === "string" && value.length > 0 && !isValidCalendarDate(value)) {
         issues.push(
           issue(
             "W-WORKLOG-SCHEMA",
-            `${entry.relativePath}: ${field}="${value}" is not an ISO-8601 date (YYYY-MM-DD).`,
+            `${entry.relativePath}: ${field}="${value}" is not a valid ISO-8601 calendar date (YYYY-MM-DD).`,
             "warning",
             entry.relativePath,
             `worklogSurface.schema.${field}Format`,
@@ -175,8 +191,8 @@ export async function validateWorklogSurface(
     if (
       typeof fm.created === "string" &&
       typeof fm.updated === "string" &&
-      ISO_DATE_RE.test(fm.created) &&
-      ISO_DATE_RE.test(fm.updated) &&
+      isValidCalendarDate(fm.created) &&
+      isValidCalendarDate(fm.updated) &&
       fm.updated < fm.created
     ) {
       issues.push(

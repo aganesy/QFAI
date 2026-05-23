@@ -288,26 +288,30 @@ describe("TC-0004-0026: agent-catalog.yml developer_instructions matches canonic
       const agent = raw as Record<string, unknown>;
       const id = agent["id"];
       const di = agent["developer_instructions"];
-      expect(typeof id, `agent-catalog.yml agent.id must be string (got ${typeof id})`).toBe(
-        "string",
+      if (typeof id !== "string") {
+        // Surfacing failure via expect produces a labeled assertion result;
+        // narrowing in the same `if` keeps the rest of the loop typed.
+        expect(typeof id, `agent-catalog.yml agent.id must be string (got ${typeof id})`).toBe(
+          "string",
+        );
+        continue;
+      }
+      const canonicalPath = join(CANONICAL_DIR, `${id}.md`);
+      expect(existsSync(canonicalPath), `${id}: canonical MD missing at ${canonicalPath}`).toBe(
+        true,
       );
-      const canonicalPath = join(CANONICAL_DIR, `${id as string}.md`);
-      expect(
-        existsSync(canonicalPath),
-        `${id as string}: canonical MD missing at ${canonicalPath}`,
-      ).toBe(true);
       const canonicalContent = readFileSync(canonicalPath, "utf-8");
       const missionIdx = canonicalContent.indexOf("## Mission");
-      expect(
-        missionIdx,
-        `${id as string}: canonical MD has no ## Mission section`,
-      ).toBeGreaterThanOrEqual(0);
+      expect(missionIdx, `${id}: canonical MD has no ## Mission section`).toBeGreaterThanOrEqual(0);
       const canonicalBody = normalize(canonicalContent.slice(missionIdx));
-      expect(typeof di, `${id}: agent-catalog.yml developer_instructions is not a string`).toBe(
-        "string",
-      );
+      if (typeof di !== "string") {
+        expect(typeof di, `${id}: agent-catalog.yml developer_instructions is not a string`).toBe(
+          "string",
+        );
+        continue;
+      }
       expect(
-        normalize(di as string),
+        normalize(di),
         `${id}: agent-catalog.yml developer_instructions diverges from canonical MD`,
       ).toBe(canonicalBody);
     }
