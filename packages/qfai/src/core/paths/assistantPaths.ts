@@ -105,6 +105,17 @@ export const WORKLOG_ENTRY_KINDS = [
 export type WorklogEntryKind = (typeof WORKLOG_ENTRY_KINDS)[number];
 
 /**
+ * SSOT for the work-log entry `status` enum. MUST match
+ * `.qfai/contracts/cli/worklog-entry.schema.md#status enum` exactly.
+ * Imported by:
+ *   - worklogSurface.ts (ALLOWED_STATUS check)
+ * so the enum cannot drift between the validator and the contract.
+ */
+export const WORKLOG_ENTRY_STATUSES = ["active", "handoff", "archived"] as const;
+
+export type WorklogEntryStatus = (typeof WORKLOG_ENTRY_STATUSES)[number];
+
+/**
  * SSOT for the handoff body required sections. MUST match
  * `.qfai/contracts/cli/worklog-entry.schema.md#kind: handoff body`.
  * Imported by:

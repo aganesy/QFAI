@@ -11,6 +11,7 @@ import {
   PROJECT_STEERING_DIR,
   PROJECT_STEERING_TEMPLATES_SUBDIR,
   WORKLOG_ENTRY_KINDS,
+  WORKLOG_ENTRY_STATUSES,
 } from "../paths/assistantPaths.js";
 import type { Issue } from "../types.js";
 import { exists, issue } from "./utils.js";
@@ -26,8 +27,10 @@ const ALLOWED_KINDS = new Set<string>(WORKLOG_ENTRY_KINDS);
 // entry template.
 const REQUIRED_HANDOFF_SECTIONS: readonly string[] = HANDOFF_REQUIRED_SECTIONS;
 
-// MUST match `worklog-entry.schema.md#status enum` (REQ-0003).
-const ALLOWED_STATUS = new Set<string>(["active", "handoff", "archived"]);
+// Sourced from WORKLOG_ENTRY_STATUSES (assistantPaths.ts SSOT) so the
+// enum cannot drift between the validator and any seeded template.
+// Contract: worklog-entry.schema.md#status enum (spec-0004 REQ-0035).
+const ALLOWED_STATUS = new Set<string>(WORKLOG_ENTRY_STATUSES);
 
 const STALE_DAYS = 90;
 const MS_PER_DAY = 86_400_000;
