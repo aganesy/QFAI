@@ -159,14 +159,16 @@ export async function validateSkillDocReferences(
       }
       const isTrailing = (() => {
         if (lastDeclIdx === -1) return false;
-        // YAML-syntactic indented-continuation patterns:
-        //   - `^\s*-` indented list item (`  - foo`, `\t- bar`)
+        // YAML-syntactic indented-continuation patterns. Both
+        // regexes use `\s+` (one-or-more) to make the indent
+        // requirement explicit and symmetric:
+        //   - `^\s+-` indented list item (`  - foo`, `\t- bar`)
         //   - `^\s+[A-Za-z_][\w-]*\s*:` indented mapping key
         //     (`  scope:`, `  notes:`, `    sub_key:`)
         // Anything else with leading whitespace (e.g. indented prose
         // paragraph) is rejected so the block doesn't accidentally
         // absorb non-YAML content following it.
-        const indentedListRe = /^\s*-/;
+        const indentedListRe = /^\s+-/;
         const indentedMappingKeyRe = /^\s+[A-Za-z_][\w-]*\s*:/;
         for (let i = lastDeclIdx + 1; i < lines.length; i++) {
           const line = lines[i] ?? "";
