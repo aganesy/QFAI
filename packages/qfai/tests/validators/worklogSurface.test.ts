@@ -422,6 +422,89 @@ describe("worklogSurface validator", () => {
     }
   });
 
+  // TC-0004-0017 (date-style entry-id): date-prefixed entry id resolves against entryIds set
+  it("TC-0004-0017 (date-style entry-id): date-prefixed link resolves to a date-style entry-id without firing W-WORKLOG-BROKEN-LINK", async () => {
+    const root = await newRoot("worklog-date-entry");
+    try {
+      // Seed two entries: a target with date-style id, and a referrer
+      // that links to it. The validator must NOT flag the link as
+      // broken just because it lacks an `entry-` prefix.
+      await seedWorklog(
+        root,
+        "2026-05-22-recut-design-call.md",
+        [
+          "---",
+          "id: 2026-05-22-recut-design-call",
+          "kind: decision",
+          "status: active",
+          "created: 2026-05-22",
+          "updated: 2026-05-22",
+          "scope: global",
+          "blocking: false",
+          "promote-to: null",
+          "links: []",
+          "---",
+          "",
+        ].join("\n"),
+      );
+      await seedWorklog(
+        root,
+        "2026-05-23-followup.md",
+        [
+          "---",
+          "id: 2026-05-23-followup",
+          "kind: decision",
+          "status: active",
+          "created: 2026-05-23",
+          "updated: 2026-05-23",
+          "scope: global",
+          "blocking: false",
+          "promote-to: null",
+          "links:",
+          "  - 2026-05-22-recut-design-call",
+          "---",
+          "",
+        ].join("\n"),
+      );
+      const issues = await validateWorklogSurface(root, await getConfig(root));
+      const broken = issues.filter((i) => i.code === "W-WORKLOG-BROKEN-LINK");
+      expect(broken.length).toBe(0);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  // TC-0004-0016 (scope-format): scope must be "global" or "spec-NNNN"
+  it("TC-0004-0016 (scope-format): non-conformant scope fires worklogSurface.schema.scopeFormat", async () => {
+    const root = await newRoot("worklog-scope");
+    try {
+      await seedWorklog(
+        root,
+        "entry-scope.md",
+        [
+          "---",
+          "id: entry-scope",
+          "kind: decision",
+          "status: active",
+          "created: 2026-05-23",
+          "updated: 2026-05-23",
+          "scope: project-wide",
+          "blocking: false",
+          "promote-to: null",
+          "links: []",
+          "---",
+          "",
+        ].join("\n"),
+      );
+      const issues = await validateWorklogSurface(root, await getConfig(root));
+      const scopeIssues = issues.filter((i) => i.rule === "worklogSurface.schema.scopeFormat");
+      expect(scopeIssues.length).toBe(1);
+      expect(scopeIssues[0]?.message).toContain("project-wide");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   // TC-0004-0016 (links-required): missing links field fires W-WORKLOG-SCHEMA
   it("TC-0004-0016 (links-required): missing links field fires worklogSurface.schema.linksMissing", async () => {
     const root = await newRoot("worklog-links-missing");

@@ -79,7 +79,7 @@
 - REQ-0036: Reviewer-Gate drift findings (v1.9.0) - reviewer sub-agent 出力に `R-WORKLOG-DRIFT` / `R-REJECTED-READOPT` が含まれる場合、`justification:` field 非空を要求する (severity error, advisory-failing)
 - REQ-0037: decision-promotion gate (v1.9.0) - `W-PENDING-PROMOTION` finding + 専用 section を validate report に出力。`07_Decisions.md` row + entry archive + `promoted-to` back-ref のすべてが揃った時点で satisfied
 - REQ-0038: stale-entry surfacing (v1.9.0) - `.qfai/steering/*.md` で `status: active` かつ `updated` が 90 日以上前のエントリに `W-WORKLOG-STALE`
-- REQ-0039: link-integrity validation (v1.9.0) - work-log entry の `links: [spec-NNNN, discussion-*, entry-XXXX]` を resolve。未解決は `W-WORKLOG-BROKEN-LINK`
+- REQ-0039: link-integrity validation (v1.9.0) - work-log entry の `links: [...]` を resolve。各要素は `spec-NNNN` / `discussion-*` / `<entry-id>` (kebab-case ASCII、prefix 不要) のいずれかに解決必要 (canonical: `.qfai/contracts/cli/worklog-entry.schema.md` `links` セクション)。未解決は `W-WORKLOG-BROKEN-LINK`
 - REQ-0040: `D-DEPRECATED-PATH` warning (v1.9.0) - 旧 `.qfai/assistant/steering/` レイアウト検出時に出力。本文で sunset minor version を明示。sunset 到達時に error に escalate
 - REQ-0041: SKILL.md `project_memory:` declaration enforcement (v1.9.0) - すべての `qfai-*` skill SKILL.md は `project_memory:` YAML block を宣言。未宣言 path への read は reject
 - REQ-0042: `R-HANDOFF-INCOMPLETE` finding (v1.9.0) - `kind: handoff` work-log entry の本文に 5 必須セクション (`## State of the task` / `## Next single action` / `## Constraints to preserve` / `## Open questions` / `## References to consult first`) のいずれかが欠落していれば error (advisory-failing per qfai-validate.md contract)

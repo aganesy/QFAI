@@ -144,6 +144,21 @@ export async function validateWorklogSurface(
         );
       }
     }
+    // scope: "global" OR "spec-NNNN" (kebab-case spec id). Contract:
+    // worklog-entry.schema.md#scope enum.
+    if (typeof fm.scope === "string" && fm.scope.length > 0) {
+      if (fm.scope !== "global" && !/^spec-\d{4}$/.test(fm.scope)) {
+        issues.push(
+          issue(
+            "W-WORKLOG-SCHEMA",
+            `${entry.relativePath}: scope="${fm.scope}" is not "global" or a "spec-NNNN" id.`,
+            "warning",
+            entry.relativePath,
+            "worklogSurface.schema.scopeFormat",
+          ),
+        );
+      }
+    }
     if (typeof fm.blocking !== "boolean") {
       const blockingPresent = fm.blocking !== undefined;
       issues.push(

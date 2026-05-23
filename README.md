@@ -47,7 +47,7 @@ npx qfai report
 
 - `npx qfai init`
   - Creates the QFAI workspace under `.qfai/` (requirements/specs/contracts/report) and installs the AI assistant kit
-    (`assistant/` with skills, instructions, agents, and steering templates), plus `qfai.config.yaml`.
+    (`assistant/` with the 4-layer tree — `constitution/`, `manifest/`, `catalog/`, `process/` — plus `agents/` and `skills/`), plus `qfai.config.yaml`.
 - `npx qfai validate`
   - Validates specs/contracts/scenarios/traceability and review artifacts
     (`.qfai/review/review-*/summary.json` + minimum schema), writes `.qfai/report/validate.json`,
