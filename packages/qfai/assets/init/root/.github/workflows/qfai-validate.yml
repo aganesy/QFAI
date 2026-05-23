@@ -46,6 +46,13 @@ jobs:
           # Pick the one matching the consumer's lockfile (or leave unset
           # when none of the three is present). The conditional expression
           # short-circuits left-to-right.
+          #
+          # NOTE: `cache: yarn` is built around Yarn Classic (v1)'s
+          # `yarn cache dir`. Yarn Berry (v2+) keeps deps under `.yarn/cache`
+          # so the built-in cache is best-effort there — but the install
+          # step below still picks the correct flag (`--immutable` for
+          # Berry, `--frozen-lockfile` for Classic) so functionality is
+          # preserved either way.
           cache: ${{ hashFiles('pnpm-lock.yaml') != '' && 'pnpm' || (hashFiles('yarn.lock') != '' && 'yarn' || (hashFiles('package-lock.json') != '' && 'npm' || '')) }}
       - name: Install dependencies (lockfile-aware)
         shell: bash

@@ -482,18 +482,23 @@ function classifyLegacySteeringEntry(relPath: string): { layer: AssistantLayer; 
   if (CONSTITUTION_BASENAMES.has(stem)) {
     return { layer: "constitution", subpath: posix };
   }
-  // Process layer routing — matched on path-segment boundaries rather
-  // than free substring so user docs named `foo-migration-notes.md`
-  // are NOT pulled into `process/` just because their filename
-  // contains the literal string "migration".
+  // Process layer routing — matched on top-level path segment only.
+  // Recognized top-level inputs:
+  //   - `process/...` (canonical post-recut path; strip the leading
+  //     `process/` so it lands at `.qfai/assistant/process/...`
+  //     rather than double-nesting)
+  //   - `migrations/...` (legacy convention where the migration memos
+  //     lived directly under the steering surface; preserved as-is so
+  //     it lands at `.qfai/assistant/process/migrations/...`)
+  // Non-top-level `migrations` segments (e.g. `foo/migrations/bar.md`)
+  // are NOT routed here — they fall through to the default catalog
+  // layer so user docs are not pulled out from under their intended
+  // location.
   const segments = normalized.split("/");
-  const isInMigrationsSegment = segments.includes("migrations");
-  const isInProcessSegment = segments[0] === "process";
-  if (isInMigrationsSegment || isInProcessSegment) {
-    // Strip a leading `process/` so legacy `steering/process/migrations/foo.md`
-    // lands at `.qfai/assistant/process/migrations/foo.md` rather than
-    // double-nesting to `.qfai/assistant/process/process/migrations/foo.md`.
-    const subpath = isInProcessSegment ? posix.slice("process/".length) : posix;
+  const isTopProcess = segments[0] === "process";
+  const isTopMigrations = segments[0] === "migrations";
+  if (isTopProcess || isTopMigrations) {
+    const subpath = isTopProcess ? posix.slice("process/".length) : posix;
     return { layer: "process", subpath };
   }
   // Default: catalog (reference docs).
