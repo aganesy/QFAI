@@ -376,6 +376,7 @@ describe("worklogSurface validator", () => {
         "id: entry-300",
         "kind: decision",
         "status: active",
+        "links: []",
         "---",
         "",
         "# CRLF body",

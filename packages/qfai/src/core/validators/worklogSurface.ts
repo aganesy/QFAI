@@ -159,6 +159,28 @@ export async function validateWorklogSurface(
       );
     }
 
+    // links presence (required by contract, may be empty array)
+    if (fm.links === undefined) {
+      issues.push(
+        issue(
+          "W-WORKLOG-SCHEMA",
+          `${entry.relativePath}: links field is missing (contract requires \`links: []\` or non-empty array).`,
+          "warning",
+          entry.relativePath,
+          "worklogSurface.schema.linksMissing",
+        ),
+      );
+    } else if (!Array.isArray(fm.links)) {
+      issues.push(
+        issue(
+          "W-WORKLOG-SCHEMA",
+          `${entry.relativePath}: links field MUST be an array (got ${typeof fm.links}).`,
+          "warning",
+          entry.relativePath,
+          "worklogSurface.schema.linksType",
+        ),
+      );
+    }
     // links integrity
     if (Array.isArray(fm.links)) {
       for (const linkRaw of fm.links) {
@@ -227,9 +249,13 @@ export async function validateWorklogSurface(
       }
     }
 
-    // promote-to pending check (deferred to per-decision lookup below)
+    // promote-to pending check — restricted to kind: decision per
+    // worklog-entry.schema.md#promote-to semantics + qfai-validate.md
+    // contract (W-PENDING-PROMOTION is the decision-promotion gate).
+    // Non-decision entries with stray `promote-to` metadata do not
+    // generate false pending-promotion noise.
     const promoteTo = fm["promote-to"];
-    if (typeof promoteTo === "string" && promoteTo.length > 0) {
+    if (kind === "decision" && typeof promoteTo === "string" && promoteTo.length > 0) {
       promotionTargets.push({ entry, target: promoteTo });
     }
 
