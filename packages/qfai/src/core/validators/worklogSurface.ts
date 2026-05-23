@@ -449,7 +449,12 @@ export async function validateWorklogSurface(
     // row references its id, violating the promote-gate contract
     // ("satisfied when Decisions row + entry archive + promoted-to
     // back-ref all present").
-    const targetKey = normalizePromoteTarget(promo.target);
+    // Trim and use as-is for Map lookup. Legacy bare `07_Decisions.md`
+    // (without spec-NNNN prefix) intentionally does NOT match the
+    // canonical `spec-NNNN/07_Decisions.md` keys — the lookup miss
+    // surfaces ambiguous bare paths as W-PENDING-PROMOTION so users
+    // fix the promote-to value to a fully-qualified target.
+    const targetKey = promo.target.trim();
     const targetRows = decisionRowsByTarget.get(targetKey) ?? [];
     const referenced = entryId.length > 0 && rowsReferenceEntryId(targetRows, entryId);
     const isArchived = status === "archived";
@@ -632,19 +637,6 @@ async function readDecisionRowsByTarget(root: string): Promise<Map<string, strin
     }
   }
   return byTarget;
-}
-
-/**
- * Normalize `promote-to:` values to the canonical
- * `spec-NNNN/07_Decisions.md` form. Accepts both the canonical form
- * and legacy bare `07_Decisions.md` (when the value lives inside a
- * per-spec entry, the bare form implicitly targets that spec — but
- * since the worklog entry is global by default, the bare form has no
- * unambiguous spec; we return it as-is so the lookup misses and
- * reports as pending, surfacing the ambiguous form for fix).
- */
-function normalizePromoteTarget(value: string): string {
-  return value.trim();
 }
 
 // Side-channel for the test suite to surface a stable stat-aware "now"
