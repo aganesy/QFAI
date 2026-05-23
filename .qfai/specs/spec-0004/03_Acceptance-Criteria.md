@@ -94,7 +94,7 @@
 ## AC-0004-0019
 
 - US-Refs: US-0004-0030
-- Given a work-log entry with `kind: handoff` whose body is missing at least one of the 5 required sections (`State`, `Next action`, `Constraints`, `OQs`, `References`)
+- Given a work-log entry with `kind: handoff` whose body is missing at least one of the 5 required sections (`## State of the task`, `## Next single action`, `## Constraints to preserve`, `## Open questions`, `## References to consult first` — canonical per `.qfai/contracts/cli/worklog-entry.schema.md`)
 - When `qfai validate` runs
 - Then `R-HANDOFF-INCOMPLETE` is emitted at error severity; the finding text names the missing section(s) and the entry file
 

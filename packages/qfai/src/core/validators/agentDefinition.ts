@@ -292,6 +292,7 @@ async function validateRouting(
         }
         const phaseObj = phase as RoutingPhase;
         validateAgentRefs(
+          rel,
           phaseObj.mandatory_agents,
           catalogIds,
           issues,
@@ -301,6 +302,7 @@ async function validateRouting(
           "mandatory_agents",
         );
         validateAgentRefs(
+          rel,
           phaseObj.conditional_agents,
           catalogIds,
           issues,
@@ -310,6 +312,7 @@ async function validateRouting(
           "conditional_agents",
         );
         validateAgentRefs(
+          rel,
           phaseObj.blocking_agents,
           catalogIds,
           issues,
@@ -321,6 +324,7 @@ async function validateRouting(
         if (Array.isArray(phaseObj.parallel_groups)) {
           for (const group of phaseObj.parallel_groups) {
             validateAgentRefs(
+              rel,
               group,
               catalogIds,
               issues,
@@ -347,6 +351,7 @@ async function validateRouting(
 }
 
 function validateAgentRefs(
+  routingPathRel: string,
   value: unknown,
   catalogIds: Set<string>,
   issues: Issue[],
@@ -368,10 +373,10 @@ function validateAgentRefs(
           "QFAI-AGENT-008",
           `agent-routing.yml references unknown agent "${entry}" in ${skill} phase ${phaseIndex} field ${field}`,
           "error",
-          // routing rel is computed in validateRouting scope; for the
-          // sub-helpers we report a generic manifest path label since
-          // validateAgentRefs is called from multiple agent files.
-          ".qfai/assistant/manifest/agent-routing.yml",
+          // Sourced from the caller's resolved routing path (manifestPathRel)
+          // so the file: argument always points at the actual location read
+          // (manifest/ canonical or steering/ legacy fallback).
+          routingPathRel,
           "agentDefinition.unknownRoutingAgent",
         ),
       );

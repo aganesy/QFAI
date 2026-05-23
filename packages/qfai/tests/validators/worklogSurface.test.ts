@@ -180,6 +180,8 @@ describe("worklogSurface validator", () => {
       const issues = await validateWorklogSurface(root, await getConfig(root));
       const handoffIssues = issues.filter((i) => i.code === "R-HANDOFF-INCOMPLETE");
       expect(handoffIssues.length).toBe(1);
+      // Severity MUST be `error` (advisory-failing) per qfai-validate.md contract.
+      expect(handoffIssues[0]?.severity).toBe("error");
       expect(handoffIssues[0]?.message).toContain("Constraints to preserve");
       expect(handoffIssues[0]?.message).toContain("Open questions");
       expect(handoffIssues[0]?.message).toContain("References to consult first");

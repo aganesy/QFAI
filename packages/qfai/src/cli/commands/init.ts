@@ -357,7 +357,12 @@ async function runUpgradeAssistantTree(destRoot: string, dryRun: boolean): Promi
   ];
   const surfaceExistence = await Promise.all(legacySurfaces.map((s) => pathExists(s.dir)));
   const anyLegacyExists = surfaceExistence.some(Boolean);
-  const legacyExists = surfaceExistence[0] === true;
+  // Detected surfaces list — passed to buildMigrationMemo so the memo's
+  // Status block reflects all 3 pre-recut surfaces (steering /
+  // instructions / manifest), not just steering[0].
+  const detectedSurfaces = legacySurfaces
+    .filter((_, i) => surfaceExistence[i] === true)
+    .map((s) => s.name);
 
   // Migration memo is always emitted by --upgrade-assistant-tree (REQ-0021).
   const version = await resolveToolVersion();
@@ -369,7 +374,7 @@ async function runUpgradeAssistantTree(destRoot: string, dryRun: boolean): Promi
     copied.push(memoPath);
     if (!dryRun) {
       await mkdir(path.dirname(memoPath), { recursive: true });
-      await writeFile(memoPath, buildMigrationMemo(version, legacyExists), "utf-8");
+      await writeFile(memoPath, buildMigrationMemo(version, detectedSurfaces), "utf-8");
     }
   }
 
@@ -445,7 +450,10 @@ function classifyLegacySteeringEntry(relPath: string): { layer: AssistantLayer; 
   // quality, distributed-surface, workflow, agent-selection, change-
   // classification, requirements-decomposition, communication, thinking,
   // shared-skill-*-baseline). Migrated from legacy instructions/ surface.
-  const CONSTITUTION_NAMES = [
+  // Match on exact basename stem (file without extension) so short
+  // tokens like "quality" / "workflow" / "thinking" / "communication"
+  // do NOT substring-match unrelated user-named files.
+  const CONSTITUTION_BASENAMES = new Set([
     "constitution",
     "drift-protocol",
     "quality",
@@ -458,8 +466,9 @@ function classifyLegacySteeringEntry(relPath: string): { layer: AssistantLayer; 
     "thinking",
     "shared-skill-delegation-baseline",
     "shared-skill-operating-baseline",
-  ];
-  if (CONSTITUTION_NAMES.some((n) => normalized.includes(n))) {
+  ]);
+  const basename = path.basename(normalized).replace(/\.[^.]+$/, "");
+  if (CONSTITUTION_BASENAMES.has(basename)) {
     return { layer: "constitution", subpath: posix };
   }
   if (normalized.includes("migration") || normalized.startsWith("process/")) {
@@ -487,26 +496,23 @@ async function collectFilesRecursive(dir: string): Promise<string[]> {
   return files;
 }
 
-function buildMigrationMemo(version: string, legacyDetected: boolean): string {
+function buildMigrationMemo(version: string, detectedSurfaces: readonly string[]): string {
   const stamp = new Date().toISOString();
-  // Sunset is the pinned cutoff defined in assistantPaths.ts (SSOT
-  // shared with the assistantTreeMigration validator), NOT the running
-  // package's next-minor. Without this, post-sunset releases would
-  // advertise a contradictory sunset version while the validator already
-  // treats legacy steering/ as past-cutoff (PR #209 codex review).
   const sunset = legacyAssistantSteeringSunsetLabel();
+  const surfacesLine =
+    detectedSurfaces.length > 0
+      ? `- Detected pre-recut surfaces: ${detectedSurfaces.map((s) => `\`.qfai/assistant/${s}/\``).join(", ")} — files copied into the new 4-layer tree.`
+      : "- No pre-recut surfaces (`.qfai/assistant/{steering,instructions,manifest}/`) found — fresh layout adopted.";
   return [
     `# qfai assistant-layer recut migration (v${version})`,
     "",
     `- Generated: ${stamp}`,
-    `- Source layout: .qfai/assistant/steering/ (single layer, legacy)`,
-    `- Target layout: .qfai/assistant/{constitution,manifest,catalog,process}/`,
+    `- Source layout: .qfai/assistant/{steering, instructions, manifest}/ (pre-recut)`,
+    `- Target layout: .qfai/assistant/{constitution, manifest, catalog, process}/`,
     "",
     "## Status",
     "",
-    legacyDetected
-      ? "- Legacy `.qfai/assistant/steering/` detected — files copied into the new 4-layer tree."
-      : "- No legacy `.qfai/assistant/steering/` found — fresh layout adopted.",
+    surfacesLine,
     "",
     "## Layer mapping",
     "",
@@ -514,19 +520,19 @@ function buildMigrationMemo(version: string, legacyDetected: boolean): string {
     "| ------------ | ------------------------------------------------------------------------- |",
     "| constitution | Foundational normative rules (constitution, drift-protocol, quality).      |",
     "| manifest     | Declarative manifests (agent-catalog, agent-routing, review-profiles).    |",
-    "| catalog      | Reference catalogs (test-layers, review-gate rules).                       |",
+    "| catalog      | Reference catalogs (test-layers, review-gate rules, spec_required_files). |",
     "| process      | Workflow / process docs and migration memos.                               |",
     "",
     "## Compatibility window",
     "",
-    `Legacy \`.qfai/assistant/steering/\` is read-compatible for the current`,
+    `Legacy \`.qfai/assistant/{steering,instructions}/\` are read-compatible for the current`,
     `minor release window only; sunset: v${sunset} (D-DEPRECATED-PATH).`,
     "",
     "## Provenance",
     "",
     "This memo is generated by `qfai init --upgrade-assistant-tree` and is",
-    "commit-immutable per OC-53 — once committed, do not edit. Subsequent",
-    "runs of the helper detect this file and skip rewrite.",
+    "commit-immutable — once committed, do not edit. Subsequent runs of",
+    "the helper detect this file and skip rewrite.",
     "",
   ].join("\n");
 }

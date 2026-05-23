@@ -38,12 +38,12 @@ Reinit behavior (existing `.qfai/` present):
 
 Exit codes:
 
-| Code | Meaning                                                                                                                              |
-| ---- | ------------------------------------------------------------------------------------------------------------------------------------ |
-| 0    | Success                                                                                                                              |
-| 2    | CLI-arg error (unknown flag, malformed value)                                                                                        |
-| 64   | I/O error (cannot read/write target tree)                                                                                            |
-| 65   | Conflict — old-layout files present and `--upgrade-assistant-tree` not supplied while running on a layout the validator would reject |
+| Code | Meaning                                                                                                                                                                                                                                                                                                                                                                                                    |
+| ---- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0    | Success                                                                                                                                                                                                                                                                                                                                                                                                    |
+| 2    | CLI-arg error (unknown flag, malformed value)                                                                                                                                                                                                                                                                                                                                                              |
+| 64   | I/O error (cannot read/write target tree)                                                                                                                                                                                                                                                                                                                                                                  |
+| 65   | Conflict — old-layout files present and `--upgrade-assistant-tree` not supplied while running on a layout the validator would reject. **NOT YET IMPLEMENTED in v1.9.0** — currently a fresh `qfai init` does NOT exit 65 on legacy presence; it seeds the 4-layer tree alongside, emits `D-DEPRECATED-PATH` warning, and expects the user to opt in to `--upgrade-assistant-tree`. Scheduled for v1.10.0+. |
 
 #### `--upgrade-assistant-tree` (one-shot migration helper)
 
@@ -59,7 +59,7 @@ Behavior:
 Required preconditions:
 
 - `packages/qfai/package.json#version` is greater than the version that introduced the recut (referenced in `.qfai/assistant/process/migrations/v<X.Y.Z>-assistant-layer-recut.md`).
-- Working tree is clean OR `--allow-dirty` is supplied (recommended: clean working tree to allow simple rollback).
+- Working tree is clean OR `--allow-dirty` is supplied (recommended: clean working tree to allow simple rollback). **`--allow-dirty` NOT YET IMPLEMENTED in v1.9.0** — scheduled for v1.10.0+. Currently the helper proceeds without checking the working tree; users should ensure a clean state before invocation.
 
 Exit codes (additional):
 

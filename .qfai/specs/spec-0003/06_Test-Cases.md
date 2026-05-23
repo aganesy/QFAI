@@ -30,7 +30,7 @@
 | TC-0003-0020 | integration | AC-0003-0015               | EX-0003-0016 | review-\*/ サブディレクトリが gitignore 対象 |
 | TC-0003-0021 | integration | AC-0003-0017               | EX-0003-0018 | 4-layer asset-tree seed                      |
 | TC-0003-0022 | integration | AC-0003-0018               | EX-0003-0019 | project-root steering seed                   |
-| TC-0003-0023 | integration | AC-0003-0019               | EX-0003-0020 | --upgrade-assistant-tree migration           |
+| TC-0003-0023 | integration | AC-0003-0019, AC-0003-0020 | EX-0003-0020 | --upgrade-assistant-tree migration           |
 | TC-0003-0024 | integration | AC-0003-0021               | EX-0003-0021 | migration memo authoring                     |
 | TC-0003-0025 | unit        | AC-0003-0022               | EX-0003-0022 | assistantPaths.ts SSOT lint                  |
 | TC-0003-0026 | integration | AC-0003-0023, AC-0003-0024 | EX-0003-0023 | 旧 layout backward compat + sunset warning   |
