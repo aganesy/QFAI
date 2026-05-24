@@ -4,6 +4,102 @@
 
 ## [Unreleased]
 
+## [1.9.1] - 2026-05-24
+
+### Added (qfai-prototyping defect remediation — CHG-005)
+
+- Capture / serve as opt-in iterate flags: `qfai prototyping iterate --capture` and
+  `qfai prototyping iterate --auto-serve` re-introduce capture infrastructure as
+  **opt-in only** (default OFF). Formally amends `DR-0012-0029` ("no PNG / HTML /
+  interaction.json capture") via `DR-0012-0031`; default behavior unchanged.
+  Capture contract: per-screen `viewport`/`deviceScaleFactor`/`waitUntil`/
+  `htmlSourceCopy`. Auto-serve: tree-kill (Linux/macOS) / `taskkill /F /T`
+  (Windows), SIGINT teardown, foreign-process safety (refuse to kill non-iterate
+  port owners). (REQ-0109 / REQ-0110, AC-0012-0059..0060.)
+- `prototyping.json` validate-conformant schema: `iterations[i]` MUST carry
+  non-null `commitSha` (accepts `"uncommitted"` sentinel), non-empty
+  `proseCritique`, `scores`, `layoutAntiPatternsDetected`, `designMdViolations`,
+  `pivotDirective`, `reviewerId`, and `evidenceRefs[]` with
+  `{kind:"screenshot"|"html", path:"iter-NN/<screen-id>.<ext>"}` for every
+  declared `screens[].id`. On convergence: top-level `acceptedIterationIndex`
+  + `stopReason ∈ {"axes-exceptional","max-iterations","license-verify-fail","input-error"}`.
+  (REQ-0111, AC-0012-0061.)
+- Profile-suffixed validate output: `.qfai/report/validate-<profile>.json` per
+  profile + always-latest `.qfai/report/validate.json` with explicit `profile`
+  field. Legacy `.qfai/output/validate.json` accepted during the deprecation
+  window with `D-DEPRECATED-PATH` warning; sunset at qfai 1.10.0.
+  (REQ-0120, BR-0004-0025..0026.)
+- `qfai doctor` probe rebuild: `node_modules/.bin/playwright` (with Windows
+  `.cmd`/`.bat`/`.ps1` variants) is the primary launcher candidate;
+  `npx --no-install playwright --version` fallback; `playwright-cli`
+  accepted-with-warning during the deprecation window (sunset 1.10.0).
+  Failure-mode error text includes the install hint `npm i -D playwright`.
+  `skills.integrity` default severity downgraded to `warning`; doctor summary
+  groups findings into "errors blocking the active profile" vs "warnings
+  advisory of drift". (REQ-0107 / REQ-0122, AC-0006-0010..0014.)
+- Reviewer-Gate `R-CERTIFY-VERIFY-CIRCULAR` (severity error) emitted when a
+  future PR wires `certify` to read validator output requiring `/qfai-atdd`
+  or `/qfai-implement` artifacts at the prototyping phase. Resolution path:
+  `verify.json#scope: "prototyping" | "full" | "atdd"` discriminator;
+  `certify --check` accepts `scope: "prototyping"` as the phase-gate condition.
+  (REQ-0112 / REQ-0113, DR-0001-0004, BR-0015-0008.)
+- Reviewer-Gate `R-PROMPT-SCANNER-DRIFT` (severity error) emitted on
+  asymmetric modification of the
+  `findDesignMdViolations.ts` ↔ `generator-prompt.md` SSOT-sync pair.
+  Backed by a new `pnpm ci:lint` lane. Justification: 3-part required
+  text naming (a) modified file path, (b) un-paired counterpart path,
+  (c) unmatched contract clause. `qfai validate` rejects empty / whitespace-only
+  justifications as advisory-failing errors. (REQ-0102 / REQ-0125,
+  BR-0004-0027..0028, BR-0015-0009.)
+- Tailwind ↔ DESIGN.md scanner contract: hybrid β (preflight literal allowlist
+  for the 5 sentinels `#fff`, `#9ca3af`, `#e5e7eb`, `rgb(59 130 246 / 0.5)`,
+  `--tw-ring-*`) + γ (scanner gate scope narrowed to `<body>`-only) per
+  `DR-0001-0001`. `--*-shadow*:` custom-property declarations stripped per
+  `DR-0001-0002`. CSS-wide keywords (`inherit`, `initial`, `unset`, `revert`,
+  `currentColor`) accepted by all 4 scanners. `scanFonts` / `scanRadius` /
+  `scanShadow` import `unwrapVarReference` consistently with `scanColors`.
+  (REQ-0101 / REQ-0103..0105, AC-0012-0053..0056.)
+- CJK-aware `proseCritique` length validation: Intl.Segmenter (`word`
+  granularity) primary with OR-fallback (`200..500 words OR 600..2500 chars`)
+  per `DR-0001-0003`. Japanese-only 800–1500-char fixtures pass without
+  regression to English 200–500-word fixture acceptance. (REQ-0106,
+  AC-0012-0057.)
+- Iterate ergonomics: `--cycle 0 --force` moves prior `iter-00/` to a
+  timestamped backup (`iter-00.backup-<ISO>/`) before
+  `clearEvidenceIterDirs` runs; non-converged cycle prints a top-3
+  blocking-cause summary; md5-based duplicate-capture detection
+  (`lap-009`, advisory-failing) + missing-route detection
+  (`lap-010`, advisory-failing). (REQ-0117 / REQ-0118 / REQ-0121.)
+- SDD UI contract template carries `primary_tasks: []` per `screens[]`
+  entry; new validate lane (QFAI-AUD-001 aligned) blocks
+  `/qfai-prototyping` on empty `primary_tasks`. (REQ-0115, AC-0013-0018.)
+- Multi-spec posture: `/qfai-prototyping` SKILL.md realigned to single-spec
+  per `DR-0001-0005` (option A); `resolveSurfaceUnion()` retained as an
+  internal helper for validators / `show-spec` only. Full per-spec layout
+  migration deferred. (REQ-0114.)
+- Screen-id casing normalized to underscore end-to-end (iterate emit ↔
+  validator expectation ↔ aggregate-dir filename ↔ `screens[].id`) per
+  `DR-0001-0007`. Aggregate-dir mirror on convergence:
+  `.qfai/evidence/prototyping/screenshots/<screen-id>.png` +
+  `html/<screen-id>.html`. (REQ-0116.)
+- One-minor-release deprecation window (`OC-60`) for all path / probe /
+  schema changes; sunset = qfai 1.10.0. Migration memo
+  `.qfai/assistant/process/migrations/v1.9.1-prototyping-defect-remediation.md`
+  (immutable per `OC-61`). (REQ-0126 / REQ-0127.)
+
+### Changed (CHG-005)
+
+- spec-0012 `DR-0012-0031` formally amends `DR-0012-0029` ("no capture")
+  by introducing opt-in `--capture` / `--auto-serve` flags. Inner-loop
+  reviewer-driven Playwright posture from `DR-0012-0027` / `DR-0012-0029`
+  preserved as the default.
+- `_policies/05_Contracts.md` Contract Index gains `CLI-DOC` (new) and
+  `CLI-PITER` (new); `CLI-PROT` / `CLI-VAL` / `DCON-005` updated.
+- `_policies/06_Glossary.md` gains 9 finding-code / contract terms.
+- `_policies/07_Constraints.md` gains `OC-60` / `OC-61` / `OC-62`.
+- `_policies/08_Decisions.md` gains `DR-0001-0001..0009` resolving
+  9 deferred OQs (OQ-0103/0104/0105/0107/0108/0109/0110/0111/0112).
+
 ## [1.9.0] - 2026-05-23
 
 ### Added (assistant-layer recut + steering work-log surface — CHG-003)
