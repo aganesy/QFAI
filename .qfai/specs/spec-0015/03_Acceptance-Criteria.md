@@ -47,3 +47,17 @@ Given a skill stage starts, when the first required delegation is attempted, the
 ## AC-0015-0012: Delegation Failure Hard Stop
 
 Given the first required delegation fails, when the orchestrator handles the failure, then the stage stops immediately, no simulated or self-executed fallback is used, and the user receives failure reason, attempted role/task, remediation guidance, and retry condition.
+
+## AC-0015-0013: Reviewer-Gate emits `R-CERTIFY-VERIFY-CIRCULAR` on prototyping-phase certify/verify cycle
+
+- US-Refs: US-0015-0007
+- Given a future PR that wires `certify` to read validator output whose profile requires `/qfai-atdd` or `/qfai-implement` artifacts (i.e. reintroduces the cycle the option-B path was chosen to eliminate),
+- When the Reviewer Gate runs against that PR,
+- Then it emits `R-CERTIFY-VERIFY-CIRCULAR` at severity error; the finding names (a) the certify code path that reads the offending validator output, (b) the validator output file / profile whose artifact requirements include `/qfai-atdd` or `/qfai-implement`, (c) the option-B contract clause that is violated. A PR whose certify path reads no validator output requiring `/qfai-atdd`/`/qfai-implement` artifacts (i.e. holds the option-B path intact) passes without `R-CERTIFY-VERIFY-CIRCULAR`.
+
+## AC-0015-0014: Reviewer-Gate emits `R-PROMPT-SCANNER-DRIFT` with non-empty `justification:`
+
+- US-Refs: US-0015-0008
+- Given the upstream SSOT-sync-pair CI lane (owned by spec-0004) flags drift between `findDesignMdViolations.ts` and `generator-prompt.md` on a PR,
+- When the Reviewer Gate processes that signal,
+- Then it emits `R-PROMPT-SCANNER-DRIFT` at severity error with a non-empty `justification:` text naming (a) the modified file path, (b) the un-paired counterpart path, (c) the specific contract clause whose match cannot be confirmed. Empty / whitespace-only / missing `justification:` MUST be treated by spec-0004's validate ingestion as an advisory-failing error (mirror of the R-WORKLOG-DRIFT family pattern).

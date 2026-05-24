@@ -133,3 +133,41 @@
 
 - AC-Refs: AC-0004-0025
 - `W-USER-EDIT-PRESERVED` は info severity の pass-through。warning/error として escalation してはいけない。validate report の "Informational" section に表示し、`counts.info` に算入する。
+
+## BR-0004-0025: validate.json profile disambiguation
+
+- AC-Refs: AC-0004-0031
+- `qfai validate` の出力 path は次の SSOT 規約に従う:
+  - profile-suffixed: `.qfai/report/validate-<profile>.json` — profile 別に独立、上書き禁止
+  - always-latest: `.qfai/report/validate.json` — 直近 run を反映、top-level `profile: <string>` field を必須とする
+- profile が明示されない run では `profile: "default"` を採用する。並行する複数 profile 実行で profile-suffixed path が衝突しないことが保証される。
+
+## BR-0004-0026: legacy validate.json deprecation window
+
+- AC-Refs: AC-0004-0032
+- 旧 `.qfai/output/validate.json` への書き込みは deprecation window 中継続するが、書き込みと同時に `D-DEPRECATED-PATH` warning を fire する。warning 本文には sunset 版 `1.10.0` を文字列リテラルで含める (曖昧表現禁止、BR-0004-0021 の sunset-named パターンを再利用)。
+- 実行時の tool 版が sunset 以上に達した時点で同条件は error にエスカレートし、旧 path への書き込みは停止する。SSOT 定数は spec-0004 owned validator 側で参照する。
+
+## BR-0004-0027: SSOT-sync pair-changed CI lane
+
+- AC-Refs: AC-0004-0033, AC-0004-0034
+- 新 CI lane (`pnpm ci:lint` 配下) は次の pair-changed invariant を強制する:
+  - 片方のみ変更: `findDesignMdViolations.ts` または `generator-prompt.md` のうち一方のみが PR で変更された場合、lane は FAIL し `R-PROMPT-SCANNER-DRIFT` (severity error) を emit する
+  - 両方変更: 両ファイルが同一 PR で touched なら lane は pass する
+  - 両方未変更: lane は silently pass する (no finding)
+- pair の SSOT は本 BR (lane 設定は実装側で同 BR を参照)。lane は `.agents/rules/distributed-surface.md` の layer-1/2/3 mirror invariant pattern を再利用する。
+
+## BR-0004-0028: R-PROMPT-SCANNER-DRIFT justification 3-part contract
+
+- AC-Refs: AC-0004-0035
+- `R-PROMPT-SCANNER-DRIFT` finding object は `justification: <string>` (non-empty, trimmed length > 0) を必須とする。`justification:` 本文は次の 3 要素を含むこと:
+  1. 修正されたファイル path
+  2. 対応する修正が欠落しているカウンターパート path
+  3. match を確認できない契約条項 (clause text or anchor)
+- 3 要素のうち 1 つでも欠落した justification は schema 違反として advisory-failing error として扱う。`qfai validate` は empty / whitespace-only / undefined を即時 reject する (BR-0004-0017 の R-WORKLOG-DRIFT パターンと同形)。
+
+## BR-0004-0029: certify reads validate.json with profile awareness
+
+- AC-Refs: AC-0004-0031, AC-0004-0032
+- certify 系コマンドが `validate.json` を読む際は top-level `profile` field を必ず照合し、期待 profile と一致しない場合は読込を中断し再実行コマンドを operator に提示する。
+- 旧 `.qfai/output/validate.json` を読む下流は deprecation window 中は許容するが、`D-DEPRECATED-PATH` warning を伝搬する。sunset 後は読込自体を error として扱う。

@@ -165,3 +165,27 @@ that predates this PR. Tracked for separate implementation as OQ-0016
 - AC-Refs: AC-0013-0017
 - Type: normal
 - Verify the post-decomposition active design-contract entries are exactly `{design-system.yaml, prototype-handoff.yaml, DESIGN.md, DESIGN.md.lock.yaml, design-system mirror validator}` and that any extra active row triggers a contract-index validator finding.
+
+## TC-0013-0025: UI Contract Template Ships `primary_tasks: []` Slot
+
+- EX-Ref: EX-0013-0015
+- AC-Refs: AC-0013-0018
+- Type: normal
+- Level: integration
+- Verify that the shipped `packages/qfai/assets/init/.claude/skills/qfai-sdd/templates/contracts/ui-spec.yaml` template parses with every `screens[]` entry carrying a `primary_tasks: []` slot, and that the requirements-analyst agent guide contains the instruction "≥ 1 primary_task per screen" (or canonical equivalent). Implemented as a template-load + structural-assertion test under `packages/qfai/tests/integration/sddUiTemplate.test.ts`.
+
+## TC-0013-0026: Empty `primary_tasks` blocks `/qfai-prototyping` preflight
+
+- EX-Ref: EX-0013-0016
+- AC-Refs: AC-0013-0019
+- Type: error
+- Level: integration
+- Verify that the new QFAI-AUD-001 aligned validate lane FAILS at severity error when any `.qfai/contracts/ui/*.yaml` has `screens[].primary_tasks: []` on any entry, and that `/qfai-prototyping` preflight refuses to proceed. The finding message names the offending file path, the offending screen `id`, and the rule token. Implemented under `packages/qfai/tests/integration/sddPrimaryTasksLane.test.ts`.
+
+## TC-0013-0027: Non-empty `primary_tasks` passes validate lane
+
+- EX-Ref: EX-0013-0016
+- AC-Refs: AC-0013-0019
+- Type: normal
+- Level: integration
+- Verify that the QFAI-AUD-001 aligned lane passes silently when every `screens[].primary_tasks` is non-empty (≥ 1 entry), and that `/qfai-prototyping` preflight proceeds without a `primary_tasks`-related blocker. Pre-existing UI contracts that predate the slot are treated under deprecation-window semantics (informational, non-blocking) — covered as a boundary sub-case within the same test file.

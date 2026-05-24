@@ -68,3 +68,75 @@ During the one-minor-release deprecation window (NFR-0002), `qfai validate` acce
 ## Path SSOT enforcement
 
 `packages/qfai/src/core/paths/assistantPaths.ts` is the sole producer of the assistant-tree path strings consumed by validators. Hard-coded path string literals matching `assistant/(steering|manifest|instructions|catalog|constitution|process)/` outside the SSOT module are rejected by the lint lane (NFR-0001).
+
+## Profile-Suffixed Output (v1.9.1+)
+
+OQ-0111 is resolved by `DR-0001-0008` (option A) in
+`.qfai/specs/_policies/08_Decisions.md`. `qfai validate` writes a
+profile-suffixed report per profile AND keeps a non-suffixed
+`validate.json` pointer that always reflects the most recent run.
+
+### Output paths
+
+```
+.qfai/report/validate-<profile>.json   # one per profile; never overwritten by a different profile's run
+.qfai/report/validate.json             # always-latest pointer; explicit `profile: "<name>"` top-level field
+```
+
+- `qfai validate --profile prototyping` writes
+  `.qfai/report/validate-prototyping.json` AND updates
+  `.qfai/report/validate.json` with the prototyping run output (and
+  `profile: "prototyping"` at top level).
+- Subsequent `qfai validate --profile sdd` writes
+  `.qfai/report/validate-sdd.json` AND updates
+  `.qfai/report/validate.json` with the sdd run (and
+  `profile: "sdd"` at top level). The prior `validate-prototyping.json`
+  is **not** overwritten.
+
+### Consumer rule
+
+- Skills that scope by profile (e.g. `certify` scoping to
+  prototyping) MUST read the profile-suffixed file
+  (`validate-<profile>.json`) rather than `validate.json`. This
+  guarantees the read returns the consumer's profile output even when
+  a different profile was the most recent run.
+- Consumers that only need the most-recent-run snapshot MAY read
+  `validate.json` and inspect the explicit `profile` field to confirm
+  the expected profile.
+- `certify` MUST NOT silently re-run `qfai validate` to refresh the
+  pointer (option B was rejected by DR-0001-0008; silent re-run hides
+  upstream drift and obscures provenance).
+
+### Deprecation window for `.qfai/output/validate.json`
+
+The legacy path `.qfai/output/validate.json` (documented in pre-1.9.1
+skill references such as `handoff.md`) is replaced by
+`.qfai/report/validate.json`. During the deprecation window:
+
+- Validators emit `D-DEPRECATED-PATH` (severity: warning) when the
+  legacy path is read OR written by any caller; the warning text
+  names the sunset version per spec-0003 REQ-0023.
+- The current implementation writes only to `.qfai/report/`; readers
+  that still point at `.qfai/output/` see no file and SHOULD migrate.
+- **Sunset version**: qfai 1.10.0 (canonical npm `package.json#version`
+  pin). At sunset, the warning escalates to error; the legacy reader
+  / writer is removed in the following minor.
+
+## Reviewer-Gate finding codes for the prototyping defect-remediation pack
+
+In addition to the work-log Reviewer-Gate codes above, the
+prototyping defect-remediation pack introduces two CI-lane
+Reviewer-Gate finding codes per REQ-0102 / REQ-0113 / REQ-0125. Both
+are severity **error (advisory-failing)** per OQ-0109 resolution
+(DR-0001-0006) and mirror the `R-WORKLOG-DRIFT` / `R-REJECTED-READOPT`
+pattern (DR-0258).
+
+| Code                          | Severity                 | Surface                                                                                                                                                                                                                                                                                                                                                                                                                                                  | Source REQ                  |
+| ----------------------------- | ------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------- |
+| `R-PROMPT-SCANNER-DRIFT`      | error (advisory-failing) | Reviewer Gate finding: a PR changes `findDesignMdViolations.ts` without a matching change to `generator-prompt.md` (or vice versa). The SSOT-sync invariant pair must change together. Requires non-empty `justification:` text naming (a) the file modified, (b) the counterpart file that lacks a corresponding modification, (c) the specific Tailwind contract clause whose match cannot be confirmed.                                                | REQ-0102, REQ-0125          |
+| `R-CERTIFY-VERIFY-CIRCULAR`   | error (advisory-failing) | Reviewer Gate finding: a PR reintroduces the certify ↔ verify cycle ("certify requires full verify PASS AND full verify requires ATDD/implement artifacts that cannot exist at the prototyping phase"). The check is structural: it asserts that (a) `certify` reads no validator output whose profile requires `/qfai-atdd` or `/qfai-implement` artifacts, OR (b) the scoped-verify path (`verify.json#scope: "prototyping"` per DR-0001-0004) is used. | REQ-0113                    |
+
+`qfai validate` rejects Reviewer reports whose `R-PROMPT-SCANNER-DRIFT`
+or `R-CERTIFY-VERIFY-CIRCULAR` findings lack a non-empty
+`justification:`, mirroring the work-log Reviewer-Gate justification
+contract above.

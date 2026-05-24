@@ -31,3 +31,11 @@
 ## 3. Implementation Order
 
 All functionality is already implemented. This spec documents existing behavior.
+
+## CHG-005 (2026-05-24) — qfai-prototyping defect remediation
+
+- Implement REQ-0006-0010..0011 per AC-0006-0010..0014:
+  1. Playwright probe rebuild: `node_modules/.bin/playwright` primary, Windows shims (`playwright.cmd`/`.bat`/`.ps1`), then `npx --no-install playwright --version`, then `playwright-cli` family during the deprecation window, then install hint `npm i -D playwright`.
+  2. `D-DEPRECATED-PROBE` finding lifecycle (warning during 1.9.x; error at sunset 1.10.0).
+  3. `skills.integrity` default severity downgrade to `warning`; 2-group summary output ("errors blocking active profile" vs "warnings advisory of drift").
+- NFR-0112: fresh `qfai init` + `npm i -D playwright` MUST yield zero `[error]` lines from `qfai doctor --profile prototyping`.

@@ -201,3 +201,47 @@
 - Given a `.qfai/steering/foo.md` entry with `created: 2026-02-30` (syntactically valid `YYYY-MM-DD` but non-existent — Feb has 28 days in 2026)
 - When `qfai validate` runs
 - Then `worklogSurface.schema.createdFormat` fires; message contains "calendar date" so reviewers can distinguish syntax errors from calendar-validity errors. Internally enforced via `setUTCFullYear()` round-trip in `isValidCalendarDate()`.
+
+## EX-0004-0032
+
+- BR-Ref: BR-0004-0025
+- Given a working tree where `qfai validate --profile prototyping` ran first and `qfai validate --profile default` ran second
+- When the report directory `.qfai/report/` is listed
+- Then both `validate-prototyping.json` and `validate-default.json` exist with independent contents; `validate.json` exists with top-level `{"profile": "default", ...}` reflecting only the second (most recent) run
+
+## EX-0004-0033
+
+- BR-Ref: BR-0004-0026
+- Given a downstream consumer that still points at the legacy `.qfai/output/validate.json` path on `qfai@1.9.x`
+- When `qfai validate` runs
+- Then the legacy path is written AND `D-DEPRECATED-PATH` warning fires with body literally containing `sunset: 1.10.0`
+- And in `qfai@1.10.0+`, the same condition exits with error severity and the legacy path is no longer written
+
+## EX-0004-0034
+
+- BR-Ref: BR-0004-0027
+- Given a PR that edits `packages/qfai/src/core/validators/findDesignMdViolations.ts` to add a new Tailwind preflight literal exemption but does NOT touch `packages/qfai/assets/init/.claude/skills/qfai-prototyping/references/generator-prompt.md`
+- When the SSOT-sync-pair `pnpm ci:lint` lane runs
+- Then the lane FAILS emitting `R-PROMPT-SCANNER-DRIFT` (severity error) naming both the modified scanner path and the un-paired prompt path
+
+## EX-0004-0035
+
+- BR-Ref: BR-0004-0027
+- Given a PR that touches neither `findDesignMdViolations.ts` nor `generator-prompt.md` (e.g. README typo fix)
+- When the SSOT-sync-pair lane runs
+- Then the lane passes silently with no `R-PROMPT-SCANNER-DRIFT` emission and no exit-code regression
+
+## EX-0004-0036
+
+- BR-Ref: BR-0004-0028
+- Given a Reviewer-Gate report JSON containing `{"code": "R-PROMPT-SCANNER-DRIFT", "justification": "   "}` (whitespace-only)
+- When `qfai validate` ingests it
+- Then validate exits with severity error (advisory-failing); a corrected justification naming (a) `findDesignMdViolations.ts`, (b) `generator-prompt.md`, and (c) the Tailwind preflight clause whose match could not be confirmed passes
+
+## EX-0004-0037
+
+- BR-Ref: BR-0004-0029
+- Given a `certify` invocation that reads `.qfai/report/validate.json` whose top-level `profile` field is `"default"` but the certify gate expects `profile: "prototyping"`
+- When `certify` performs the read,
+- Then certify aborts the read, surfaces the mismatch with both the observed and expected profile names, and emits the recovery command `qfai validate --profile prototyping --fail-on error` so the operator can re-emit the correct profile-suffixed artifact
+- And in `qfai@1.10.0+`, a downstream consumer still reading the legacy `.qfai/output/validate.json` path receives an `error`-severity `D-DEPRECATED-PATH` finding instead of the deprecation-window warning

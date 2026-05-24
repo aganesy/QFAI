@@ -174,3 +174,39 @@
 - Given a `.qfai/steering/<id>.md` entry whose frontmatter `id` value does not match kebab-case ASCII (`^[a-z0-9]+(?:-[a-z0-9]+)*$`)
 - When `qfai validate` runs
 - Then `W-WORKLOG-SCHEMA` (rule: `worklogSurface.schema.idFormat`) is emitted at warning severity naming the offending id, enforcing the worklog-entry.schema.md Storage-model requirement that `<id>` is kebab-case ASCII
+
+## AC-0004-0031
+
+- US-Refs: US-0004-0034
+- Given a `qfai validate --profile prototyping` run immediately followed by a `qfai validate --profile default` run in the same working tree
+- When the two runs complete
+- Then `.qfai/report/validate-prototyping.json` AND `.qfai/report/validate-default.json` both exist with mutually independent contents (neither overwritten by the other); `.qfai/report/validate.json` reflects only the most recent run and carries an explicit top-level `profile` field naming that run's profile
+
+## AC-0004-0032
+
+- US-Refs: US-0004-0034
+- Given a downstream project that still reads from the legacy `.qfai/output/validate.json` path
+- When `qfai validate` runs during the deprecation window (current minor)
+- Then the legacy path continues to receive a copy of the latest validate JSON AND `D-DEPRECATED-PATH` is emitted at severity warning naming the sunset version `1.10.0` (literal string in the message body)
+- At sunset (when the running tool reaches the named version), the same condition escalates to severity error and the legacy path is no longer written
+
+## AC-0004-0033
+
+- US-Refs: US-0004-0035
+- Given a PR that modifies `packages/qfai/src/core/validators/findDesignMdViolations.ts` without a paired modification to the LLM prompt SSOT under `packages/qfai/assets/init/.claude/skills/qfai-prototyping/references/generator-prompt.md` (or vice versa)
+- When `pnpm ci:lint` runs as part of the new SSOT-sync-pair lane
+- Then the lane FAILS and a Reviewer-Gate finding `R-PROMPT-SCANNER-DRIFT` (severity error) is emitted naming both the modified file and the un-paired counterpart; a paired modification (both files touched in the same PR) passes the lane
+
+## AC-0004-0034
+
+- US-Refs: US-0004-0035
+- Given the SSOT-sync-pair lane runs on a PR with no changes to either file
+- When the lane evaluates pair-changed semantics
+- Then the lane passes silently (no `R-PROMPT-SCANNER-DRIFT` finding is emitted); the lane only fires when exactly one of the two paired files changes
+
+## AC-0004-0035
+
+- US-Refs: US-0004-0036
+- Given a Reviewer-Gate report containing an `R-PROMPT-SCANNER-DRIFT` finding whose `justification:` field is empty, missing, or whitespace-only
+- When `qfai validate` ingests the reviewer report
+- Then validate rejects the run with severity error (advisory-failing); a finding with a non-empty `justification:` naming (a) the modified file, (b) the un-paired counterpart, and (c) the specific contract clause whose match cannot be confirmed passes

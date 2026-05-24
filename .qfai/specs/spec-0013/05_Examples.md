@@ -97,3 +97,17 @@
 - Given the post-decomposition contract index
 - When the active design-contract entries are listed
 - Then the set is exactly `{design-system.yaml, prototype-handoff.yaml, DESIGN.md, DESIGN.md.lock.yaml, design-system mirror validator}`
+
+## EX-0013-0015: UI contract template ships `primary_tasks: []` slot
+
+- BR-Ref: BR-0013-0015
+- Given the shipped `packages/qfai/assets/init/.claude/skills/qfai-sdd/templates/contracts/ui-spec.yaml` template
+- When the template is parsed at `qfai init` time
+- Then every entry in `screens[]` carries a literal `primary_tasks: []` key/value pair; the requirements-analyst agent guide reads "Each screen MUST declare ≥ 1 primary_task" (or equivalent canonical wording)
+
+## EX-0013-0016: Empty `primary_tasks` blocks `/qfai-prototyping`
+
+- BR-Ref: BR-0013-0016
+- Given a newly authored `.qfai/contracts/ui/orders-dashboard.yaml` with `screens: [{ id: orders-dashboard, primary_tasks: [] }]`
+- When `qfai validate --fail-on error` runs (with the new QFAI-AUD-001 aligned lane active)
+- Then the lane FAILS at severity error naming `orders-dashboard` and the empty-`primary_tasks` violation; `/qfai-prototyping` preflight refuses to proceed; populating `primary_tasks: ["Review pending orders", "Mark order shipped"]` passes the lane and unblocks `/qfai-prototyping`

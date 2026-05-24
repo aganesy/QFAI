@@ -12,6 +12,11 @@
 | EX-0006-0006 | BR-0006-0005 | `qfai doctor --out /tmp/doctor.json --format json` | /tmp/doctor.json に出力、stdout は info メッセージのみ    |
 | EX-0006-0007 | BR-0006-0002 | `qfai doctor`（config 不在）                       | config.found = false、warning チェック出力                |
 | EX-0006-0008 | BR-0006-0002 | `qfai doctor`（specs/ 欠落）                       | ディレクトリ欠落が warning として報告                     |
+| EX-0006-0010 | BR-0006-0007 | `qfai doctor --profile prototyping` (node_modules/.bin/playwright が存在) | primary probe で playwright が検出される; 順序ログに primary→fallback の段が表示される |
+| EX-0006-0011 | BR-0006-0008 | `qfai doctor --profile prototyping` (playwright-cli のみが node_modules に存在) | playwright-cli が accepted; `D-DEPRECATED-PROBE` warning が fire; sunset 文字列 `1.10.0` が message body に含まれる |
+| EX-0006-0012 | BR-0006-0009 | `qfai doctor --profile prototyping` (playwright も playwright-cli も無い) | error text に `npm i -D playwright` が含まれる; severity error |
+| EX-0006-0013 | BR-0006-0010 | `qfai doctor` (skills.integrity drift あり、`--fail-on error`) | exit 0; skills.integrity finding が severity warning として出力される |
+| EX-0006-0014 | BR-0006-0011 | `qfai doctor --format text` (skills.integrity warning + ディレクトリ欠落 warning + config 不在 error が混在) | summary に "errors blocking the active profile" group が config 不在 error を含み、"warnings advisory of drift" group が skills.integrity + specs/ 欠落を含む |
 
 ## EX-0006-0009: Coverage Placeholder for BR-0006-0006
 

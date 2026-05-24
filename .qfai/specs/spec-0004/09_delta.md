@@ -91,3 +91,37 @@
 | OP-012 | UPDATE:APPEND | tdd/test-list.md (TDD-0015..0031)                                                        | RED→GREEN evidence rows; layer covers validators / ssot-guard                                                                  |
 
 - Source: REQ-0001, REQ-0003, REQ-0006, REQ-0007, REQ-0008, REQ-0010, REQ-0014, REQ-0015, REQ-0018, NFR-0008
+
+## 2026-05-24 — CHG-005 — qfai-prototyping defect remediation pack
+
+- Discussion pack: `.qfai/discussion/discussion-20260523221141355/`
+- Operation: UPDATE:APPEND
+- Posture: additive append; preserves all existing AC/BR/EX/TC numbering. NFR-0101 (SSOT-sync mirror) and NFR-0103 (validate warning names sunset version) absorbed into BR layer via BR-0004-0026 / BR-0004-0027.
+- Approved By: yusuke_senaga
+
+### Triage
+
+| Source                                   | Subject                                                                                                                       | Existing Spec | Operation | Sub-op | Approved By   | Rationale                                                                                          |
+| ---------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- | ------------- | --------- | ------ | ------------- | -------------------------------------------------------------------------------------------------- |
+| REQ-0120 (discussion-20260523221141355) | `validate.json` profile disambiguation (profile-suffixed + always-latest with explicit `profile` field; legacy path deprecated until `1.10.0`) | spec-0004     | UPDATE    | APPEND | yusuke_senaga | validate output path semantics are spec-0004 owned (CAP-0004); deprecation pattern reuses BR-0004-0021 sunset-named contract |
+| REQ-0102 (discussion-20260523221141355) | SSOT-sync invariant — `pnpm ci:lint` lane enforces pair-changed `findDesignMdViolations.ts` ↔ `generator-prompt.md`           | spec-0004     | UPDATE    | APPEND | yusuke_senaga | validate lane extension lives in spec-0004 territory; mirrors `.agents/rules/distributed-surface.md` layer-1/2/3 pattern |
+| REQ-0125 (discussion-20260523221141355) | `R-PROMPT-SCANNER-DRIFT` finding code with mandatory `justification:` 3-part contract                                          | spec-0004     | UPDATE    | APPEND | yusuke_senaga | Reviewer-Gate finding shape enforcement is spec-0004 (mirrors BR-0004-0017 R-WORKLOG-DRIFT pattern)                       |
+| NFR-0101 (SSOT-sync mirror enforced)    | absorbed into BR-0004-0027 (SSOT-sync pair-changed CI lane)                                                                   | spec-0004     | UPDATE    | APPEND | yusuke_senaga | NFR realized as BR-layer mechanical guarantee                                                       |
+| NFR-0103 (warning names sunset version) | absorbed into BR-0004-0026 (legacy validate.json deprecation window)                                                          | spec-0004     | UPDATE    | APPEND | yusuke_senaga | NFR realized through existing sunset-named-in-warning pattern (BR-0004-0021)                       |
+
+### CHG-005 Operations (this PR)
+
+| Op ID  | Op Type       | Target                                                       | Summary                                                                                                                |
+| ------ | ------------- | ------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------- |
+| OP-013 | UPDATE:APPEND | 01_Spec.md (Relevant Requirements: REQ-0120 / REQ-0102 / REQ-0125; Entry-points ranges) | 3 new REQs appended; range expanded to US-0036 / AC-0035 / BR-0029 / EX-0036 / TC-0064 |
+| OP-014 | UPDATE:APPEND | 02_User-stories.md (US-0004-0034..0036)                      | profile-suffixed validate output + SSOT-sync pair-changed lane + R-PROMPT-SCANNER-DRIFT justification user stories     |
+| OP-015 | UPDATE:APPEND | 03_Acceptance-Criteria.md (AC-0004-0031..0035)               | per-REQ acceptance criteria including pair-changed pass-cases (neither / both edited) and deprecation-window escalation |
+| OP-016 | UPDATE:APPEND | 04_Business-Rules.md (BR-0004-0025..0029)                    | mirror BR layer for OP-015; reuses BR-0004-0017 (justification non-empty) and BR-0004-0021 (sunset named) patterns      |
+| OP-017 | UPDATE:APPEND | 05_Examples.md (EX-0004-0032..0036)                          | worked examples per AC                                                                                                 |
+| OP-018 | UPDATE:APPEND | 06_Test-Cases.md (TC-0004-0055..0064)                        | test coverage per AC — TC level pinned `integration` (per spec-0004 catalog) for end-to-end profile-suffixed wiring and CI-lane behavior; `validators` for finding-emit checks |
+
+- Notes:
+  - Sunset version `1.10.0` is the next minor after the pinned branch (`feature/v1.9.1`); the literal string is the only versioned token allowed in spec text per `.agents/rules/distributed-surface.md` exception for npm-version markers.
+  - Parallel pack pieces: spec-0012 receives the iterate-side scanner/prompt implementation; spec-0006 receives the `qfai doctor` playwright probe rebuild; spec-0013 receives the SDD UI contract template `primary_tasks:` slot; spec-0015 receives the Reviewer-Gate cycle + drift finding emission.
+  - 9 deferred-OQ decisions made upstream by the orchestrator are reflected verbatim in REQ text (OQ-0111 = option A profile-suffixed path; legacy path sunset = `1.10.0`).
+- Source: REQ-0120, REQ-0102, REQ-0125 (discussion-20260523221141355); NFR-0101, NFR-0103

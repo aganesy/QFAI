@@ -53,8 +53,10 @@
 - REQ-0013: prototyping review profile is defined in terms of current skill-led evaluation/reviewer routing, not a removed runtime entrypoint
 - REQ-0014: prototyping evidence-phase routing may require `product-experience-architect` and related reviewers based on specs + contracts inputs
 - REQ-0015: delegation failure hard-stop output remains mandatory
+- REQ-0015-0013: Reviewer-Gate `R-CERTIFY-VERIFY-CIRCULAR` regression check — Reviewer Gate MUST emit finding `R-CERTIFY-VERIFY-CIRCULAR` (severity: error) when a future PR reintroduces the cycle where certify reads validator output requiring `/qfai-atdd` or `/qfai-implement` artifacts at the prototyping phase. The check is structural and asserts the option-B path (per upstream deferred-OQ decision): certify reads no validator output whose profile requires `/qfai-atdd` or `/qfai-implement` artifacts.
+- REQ-0015-0014: Reviewer-Gate `R-PROMPT-SCANNER-DRIFT` finding emission — Reviewer-Gate emits `R-PROMPT-SCANNER-DRIFT` (severity: error) with mandatory `justification:` text per the prior-pack contract from `.qfai/discussion/discussion-20260522081618995/` REQ-0006 (justification must name the modified file, the un-paired counterpart, and the unmatched contract clause; reuses the justification-text contract from NFR-0115 of the current pack).
 
 ## Entry points
 
-- US range in this spec: US-0015-0001..US-0015-0006
+- US range in this spec: US-0015-0001..US-0015-0008
 - Primary actors: QFAI maintainer, orchestrator, reviewer agents

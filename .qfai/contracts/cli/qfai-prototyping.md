@@ -368,3 +368,168 @@ without `EBADF` / `EINTR` on stdin reads (NFR autonomy boundary).
   (`<screen>.review.json` existence), `layoutAntiPatternsDetected`,
   `designMdViolations`, and `imageSources[]` are the stable contract
   surfaces.
+
+## Capture & Serve Flags (v1.9.1+)
+
+The opt-in capture / serve flags are introduced by REQ-0109 / REQ-0110 and
+amend DR-0012-0029 via DR-0012-0031 (`spec-0012/07_Decisions.md`). Absence
+of both flags preserves the DR-0012-0029 bit-default: per-iter output
+remains `<screen>.review.json` only.
+
+### `--capture`
+
+When passed, `iterate` drives Playwright per the Capture contract block
+emitted into `iter-NN/iterate-plan.json` and writes per-screen artifacts
+for every entry in the spec's UI contract `screens[]`.
+
+Per-screen capture contract block (emitted at cycle 0 freeze; one entry
+per `screens[].id`):
+
+```yaml
+capture:
+  <screen-id>: # snake_case per DR-0001-0007 (OQ-0110=A)
+    viewport:
+      width: integer # device-pixel CSS viewport width
+      height: integer # device-pixel CSS viewport height
+    deviceScaleFactor: number # Playwright deviceScaleFactor; typically 1 or 2
+    waitUntil: enum # Playwright waitUntil: "load" | "domcontentloaded" | "networkidle" | "commit"
+    htmlSourceCopy: boolean # true → copy source HTML; false → page.content()
+```
+
+Output paths (written when `--capture` is passed):
+
+- `iter-NN/<screen-id>.png` — full-page screenshot at the configured
+  viewport / deviceScaleFactor. Always written when `--capture` is on.
+- `iter-NN/<screen-id>.html` — HTML snapshot. When
+  `htmlSourceCopy: true`, the source HTML is copied byte-for-byte from
+  `.qfai/prototypes/iter-NN/<screen-id>.html` (the iterate-emitted
+  source) rather than calling `page.content()`. This avoids the runtime
+  style-block injection that Playwright would otherwise serialize into
+  the captured HTML.
+
+Capture failures surface as `lap-011: capture-failure` (per the
+`lap-009..012` extension introduced by REQ-0121 / OQ-0115=A); missing
+evidence after capture is requested surfaces as `lap-012:
+missing-evidence`. Both are advisory-failing per DR-0001-0006.
+
+### `--auto-serve`
+
+When passed, `iterate` manages a local HTTP server lifecycle bound to
+the configured port (or the port derived from `targetUrl`) for the
+duration of the cycle:
+
+- **Spawn** — iterate spawns the server before the first Playwright
+  navigation; the server roots at the project's prototype tree.
+- **Child-process management** — iterate manages the spawned process
+  tree via `tree-kill` (Linux/macOS) or `taskkill /F /T` (Windows). On
+  SIGINT, the entire process tree is torn down before iterate exits.
+- **Stale port recovery** — if the port is already bound by a **prior
+  iterate invocation** (PID file or pidcheck heuristic identifies the
+  owning process as iterate's prior child), iterate force-kills the
+  prior owner via the same `tree-kill` / `taskkill` path and proceeds.
+- **Foreign-process safety (NFR-0106)** — if the port is bound by a
+  process that is NOT a prior iterate child (any other command, any
+  other PID lineage, including but not limited to dev servers,
+  preview tools, manually-spawned `python -m http.server`, etc.),
+  iterate MUST NOT kill it. Iterate MUST report the offending PID +
+  owning command line (from `/proc` on Linux, `ps -o command=` on
+  macOS, `Get-Process | Select-Object Id, Path, CommandLine` on
+  Windows) to the operator and exit 2 with a recovery hint to either
+  free the port manually or change the configured port.
+
+The default (absence of `--auto-serve`) preserves the cycle-0 contract
+that the operator manages serving externally (e.g. via the
+orchestrator script). Existing orchestrator-managed flows are not
+broken.
+
+### Combined `--capture --auto-serve`
+
+Both flags compose: iterate spawns the local server, drives capture
+against it, and tears down the server before exit. The PNG / HTML
+artifacts above are written.
+
+## prototyping.json Schema (v1.9.1+)
+
+REQ-0111 makes `prototyping.json` validate-conformant without
+orchestrator post-processing. The `iterations[i]` block and the
+convergence-time top-level fields are specified below.
+
+### `iterations[i]` required fields (per-cycle)
+
+```yaml
+iterations:
+  - cycle: integer # 0..9
+    commitSha: string
+      # repo HEAD commit at iter emit time, OR the sentinel
+      # "uncommitted" when no HEAD commit is applicable
+      # (clean workspace before any commit, detached state,
+      # CI ephemeral checkout where HEAD is rewritten, etc.).
+      # Validators MUST accept "uncommitted" as canonical
+      # and MUST NOT fail prototyping-profile validate on it.
+    proseCritique: string # non-empty; reviewer-emitted prose summary
+    scores: # ordinal axes per DR-0012-0012 (preserved)
+      informationArchitecture: enum [weak, acceptable, strong, exceptional]
+      navigationFlow: enum [weak, acceptable, strong, exceptional]
+      usability: enum [weak, acceptable, strong, exceptional]
+      functionality: enum [weak, acceptable, strong, exceptional]
+    layoutAntiPatternsDetected: string[] # lap-001..lap-012; empty required for convergence
+    designMdViolations: object[] # findDesignMdViolations() output; empty required for convergence
+    pivotDirective: string # reviewer's next-cycle directive; empty allowed only at converged-cycle
+    reviewerId: string
+      # resolved reviewer sub-agent identity; placeholder
+      # values "qfai" / "default" / "auto" / "system" /
+      # "unknown" / "" are rejected per DR-0201 (preserved).
+    evidenceRefs: # one entry per evidence artifact at this iter
+      - kind: enum [screenshot, html]
+        path: string
+          # POSIX-form relative path under
+          # .qfai/evidence/prototyping/, e.g.
+          # "iter-NN/<screen-id>.png" or
+          # "iter-NN/<screen-id>.html". `<screen-id>` MUST be
+          # the underscore-normalized form per DR-0001-0007
+          # (OQ-0110=A).
+```
+
+When `--capture` is **not** passed for an iteration, `evidenceRefs[]`
+MAY be empty for that iteration (DR-0012-0029 default preserved).
+When `--capture` IS passed, `evidenceRefs[]` MUST contain at least one
+`kind: screenshot` entry per `screens[].id` (and a `kind: html` entry
+when `htmlSourceCopy: true` for that screen).
+
+### Convergence-time top-level fields
+
+On convergence (exit 64), `iterate` MUST set on the top-level
+`prototyping.json` record:
+
+```yaml
+acceptedIterationIndex: integer # 0..9; index into iterations[]
+stopReason: enum
+  - axes-exceptional # all (spec,screen) pairs reached exceptional + empty laps + empty designMdViolations
+  - max-iterations # exit 65 path (budget exhausted without convergence)
+  - license-verify-fail # exit 66 path
+  - input-error # exit 2 path
+```
+
+`qfai validate --profile prototyping --fail-on error` MUST PASS on a
+converged-iterate output WITHOUT orchestrator post-processing. This is
+the machine-checkable acceptance signal for REQ-0111.
+
+### Screen-id casing (OQ-0110=A, end-to-end underscore)
+
+Per DR-0001-0007, `screens[].id` is **snake_case** (underscore-separated)
+end-to-end:
+
+- UI contract authoring (`primary_tasks` slot per REQ-0115) uses
+  underscore form.
+- Iterate emit (`iter-NN/<screen-id>.{png,html,review.json}`) uses
+  underscore form.
+- Validator expectation matches underscore form.
+- Aggregate-dir mirror on convergence
+  (`.qfai/evidence/prototyping/screenshots/<screen-id>.png` and
+  `.qfai/evidence/prototyping/html/<screen-id>.html`) uses underscore
+  form.
+- The `evidenceRefs[].path` field uses underscore form.
+
+Existing hyphen-form iter outputs are accepted during the deprecation
+window (`D-DEPRECATED-PATH` warning); sunset is qfai 1.10.0 per
+`package.json#version`.

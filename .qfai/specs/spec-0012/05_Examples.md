@@ -453,3 +453,138 @@
 - Given a consumer project with a UI-only spec (no `surface_type: ui-bearing` marker, no legacy title marker, no `prototyping.primarySpecId` pin) AND a misauthored DIRECTORY at the canonical UI-contract path — e.g. `<contractsDir>/ui/0007.yaml/` is a directory rather than a file.
 - When `resolveAllUiBearingSpecs()` / `resolveSurfaceUnion()` evaluate the UI-contract signal via `hasMatchingUiContract()`.
 - Then the spec is NOT classified as UI-bearing — the resolver returns an empty union and iterate / drift gates take the documented no-op path. Pre-wave-50 the direct-match arm used `access()` which only checked existence (file OR directory), so a directory at that path would have falsely classified the spec as UI-bearing and driven the loop against a phantom surface. Post-wave-50 the direct-match arm uses `stat().isFile()`, consistent with the entries-walk branch's `entry.isFile()` filter for the spec-prefixed / ui-prefixed candidates.
+
+## v1.9.1 Defect Remediation Examples (CHG-005)
+
+## EX-0012-0162: Tailwind Preflight Literals Pass When Allowlisted + Body-Scoped
+
+- BR-Ref: BR-0012-0041
+- Given an iter HTML using Tailwind CDN preflight (e.g. `<style>*, ::before, ::after { box-sizing: border-box; } body { font-family: ui-sans-serif, system-ui, ...; }</style>`), internal `--tw-shadow: 0 1px 2px rgba(0,0,0,0.05)`, and alpha-modifier `bg-blue-500/80` (compiled to `rgba(...)`),
+- When `findDesignMdViolations(html, designMd)` runs with OQ-0103 = β + γ (preflight allowlist + body-scope),
+- Then `designMdViolations[]` is empty for all enumerated preflight literals. Pre-fix the gate scanned the entire document including Tailwind CDN preflight `<style>` block, surfacing `~1000+` violations on first load.
+
+## EX-0012-0163: `var(--font-sans)` Resolves Against `:root` Before Safety Judgment
+
+- BR-Ref: BR-0012-0042
+- Given a fixture `:root { --font-sans: system-ui; } body { font-family: var(--font-sans); }`,
+- When `scanFonts(rootDeclarations, bodyDeclarations)` runs,
+- Then the scanner calls `unwrapVarReference("var(--font-sans)", rootDeclarations)` → `"system-ui"`, judges `system-ui` against SAFE_LITERALS, returns no violation. Pre-fix only `scanColors` invoked `unwrapVarReference`; `scanFonts` / `scanRadius` / `scanShadow` saw raw `var(...)` text and either threw or produced spurious violations.
+
+## EX-0012-0164: CSS-wide Keywords Are Safe Across All Scanners
+
+- BR-Ref: BR-0012-0043
+- Given declarations `color: inherit`, `font-family: initial`, `border-radius: unset`, `box-shadow: revert`, `background-color: currentColor`,
+- When each of the four scanners evaluates its declaration,
+- Then `designMdViolations[]` is empty. Unit test matrix exercises `5 keywords × 4 scanners = 20` pass cells.
+
+## EX-0012-0165: `--card-shadow:` Custom Property With rgba() Is Stripped (OQ-0104 Option B)
+
+- BR-Ref: BR-0012-0044
+- Given `--card-shadow: 0 4px 8px rgba(0,0,0,0.1); --btn-shadow-hover: 0 2px 4px rgba(15,23,42,0.05);` in `:root`,
+- When `SHADOW_DECL_STRIP_RE` (matching `--*-shadow*:`) preprocesses the input,
+- Then both declarations are stripped before `scanColors` sees them; `designMdViolations[]` contains no entries naming those rgba values. Pre-fix the strip regex matched only `--shadow-*:`, leaving `--card-shadow:` / `--btn-shadow-hover:` color literals surfacing as violations.
+
+## EX-0012-0166: Japanese 1200-Character Critique Passes via Intl.Segmenter (OQ-0105)
+
+- BR-Ref: BR-0012-0045
+- Given a Japanese-only `proseCritique` of 1200 characters (no whitespace word boundaries),
+- When `countWords(prose)` runs with `Intl.Segmenter('ja', { granularity: 'word' })` and applies the OR-condition `200..500 words OR 600..2500 characters`,
+- Then the prose passes (1200 chars is inside the OR-fallback band). An English critique of 350 words also passes via the primary word-count band. Pre-fix `countWords` used `/\s+/`-split-and-count, returning `1` for a Japanese-only critique and emitting `QFAI-PROT-002 (count 1 below band 200..500 words)`.
+
+## EX-0012-0167: `browserTool: "playwright-cli"` Accepted with D-DEPRECATED-PROBE Warning
+
+- BR-Ref: BR-0012-0046
+- Given `prototyping.execution.browserTool: "playwright-cli"` in `qfai.config.yaml`,
+- When `qfai prototyping iterate` reads the config,
+- Then the value is accepted AND `D-DEPRECATED-PROBE` is emitted (severity: warning during deprecation window). A parallel config carrying `browserTool: "playwright"` is accepted with no warning.
+
+## EX-0012-0168: `iterate --capture` Opt-In Writes PNG / HTML; Default Preserves DR-0012-0029
+
+- BR-Ref: BR-0012-0047
+- Given `qfai prototyping iterate` invoked WITHOUT `--capture`,
+- When the loop runs,
+- Then `iter-NN/<screen-id>.png` / `.html` are NOT written (DR-0012-0029 default preserved; amendment pinned by `DR-0012-0031`). A second invocation WITH `--capture` writes both per `iterate-plan.json#screens[]`. When `htmlSourceCopy: true`, the .html mirrors `.qfai/prototypes/iter-NN/<screen-id>.html` byte-for-byte (no runtime style-block injection from `page.content()`).
+
+## EX-0012-0169: `iterate --auto-serve` Refuses to Kill Foreign Process
+
+- BR-Ref: BR-0012-0048
+- Given port 3000 occupied by a process whose owning command is `node /home/user/myapp/server.js` (not a prior iterate),
+- When `iterate --auto-serve` starts,
+- Then iterate detects the foreign owner, refuses to kill it, reports `PID=12345 owning command=node /home/user/myapp/server.js`, and exits with input-error status. A second test on a port owned by a prior iterate force-kills the prior owner cleanly via `tree-kill` / `taskkill /F /T`. NFR-0106 enforced.
+
+## EX-0012-0170: `prototyping.json` Passes validate Without Orchestrator Post-Processing
+
+- BR-Ref: BR-0012-0049
+- Given a converged `iterate` invocation,
+- When `iterate` writes `prototyping.json` with `iterations[0..N]` each carrying `commitSha: "abc123" | "uncommitted"`, non-empty `proseCritique`, `scores`, `layoutAntiPatternsDetected: []`, `designMdViolations: []`, `pivotDirective: "continue"`, `reviewerId: "rev-001"`, and `evidenceRefs[]` matching `screens[].id` set,
+- Then `qfai validate --profile prototyping --fail-on error` exits 0 without any orchestrator post-processing. Top-level carries `acceptedIterationIndex: N` and `stopReason: "axes-exceptional"`.
+
+## EX-0012-0171: `verify.json#scope: "prototyping"` Satisfies certify (OQ-0107 Option B)
+
+- BR-Ref: BR-0012-0050
+- Given `verify.json` carrying `scope: "prototyping"` with the prototyping-profile lanes PASS,
+- When `qfai prototyping certify --check` runs at HEAD with no `/qfai-atdd` or `/qfai-implement` artifacts present,
+- Then certify exits 0 and writes `completion-certificate.json` with `scope: "prototyping"`. A second invocation with `scope: "full"` requires the full ATDD + implement gates and is rejected when those artifacts are missing. Reviewer-Gate `R-CERTIFY-VERIFY-CIRCULAR` fires when a PR reintroduces the cycle.
+
+## EX-0012-0172: SKILL.md Single-Spec Realignment Removes Public `resolveSurfaceUnion()`
+
+- BR-Ref: BR-0012-0051
+- Given the v1.9.1 ship,
+- When the public skill surface is grep-scanned (`grep -rn "resolveSurfaceUnion" assets/init/.qfai/assistant/skills/qfai-prototyping/`),
+- Then zero hits in SKILL.md / references/; the helper remains as an internal `core/prototyping/specResolution.ts` export for the cycle ≥ 1 drift gate only. Documentation lint pins zero remaining multi-spec public-surface mentions at HEAD.
+
+## EX-0012-0173: Aggregate-Dir Mirror Uses Underscore Casing (OQ-0110 Option A)
+
+- BR-Ref: BR-0012-0052
+- Given a converged iter with declared `screens[].id = ["home_page", "settings_panel"]`,
+- When `iterate` mirrors accepted-iter content,
+- Then `.qfai/evidence/prototyping/screenshots/home_page.png`, `screenshots/settings_panel.png`, `html/home_page.html`, `html/settings_panel.html` all exist. Hyphen-form (`home-page.png`) is rejected at validate time.
+
+## EX-0012-0174: `--cycle 0 --force` Moves iter-00 to Timestamped Backup BEFORE Clear
+
+- BR-Ref: BR-0012-0053
+- Given `iter-00/` non-empty with prior content (e.g., `iter-00/home.review.json`),
+- When `qfai prototyping iterate --cycle 0 --force` runs at ISO timestamp `2026-05-24T12:00:00Z`,
+- Then `iter-00.backup-2026-05-24T12-00-00Z/` is created byte-equivalent to the pre-move `iter-00/`, THEN `clearEvidenceIterDirs` clears `iter-00/`, THEN cycle 0 re-seeds fresh. Without `--force`, iterate refuses with the recovery snippet `cp -r iter-00 iter-00.backup-<ISO> && qfai prototyping iterate --cycle 0 --force`. NFR-0114 byte-equivalence pinned by integration test.
+
+## EX-0012-0175: `[BLOCKED] exit-64` Summary Names Top-3 Categories
+
+- BR-Ref: BR-0012-0054
+- Given a non-converged cycle 3 with 1023 `designMdViolations`, 0 anti-patterns, 1 axis below exceptional,
+- When `iterate` emits its cycle-end summary,
+- Then stdout contains `[BLOCKED] exit-64 prevented by: 1023 designMdViolations (top: color=#fff at iter-03/scr_001.html:97), 0 anti-patterns, 1 axis below exceptional (aesthetics: passing).`. Category identifier names are stable additive-only (NFR-0103).
+
+## EX-0012-0176: `primarySpecId` Error Text + (SHOULD) Input Normalisation (OQ-0112)
+
+- BR-Ref: BR-0012-0055
+- Given inputs `"abc"` (unparseable) vs `1` / `"1"` / `"01"` / `"0001"` (normalisable),
+- When iterate validates each,
+- Then `"abc"` surfaces `primarySpecId must be a 4-digit zero-padded string (e.g. "0001"); received abc`. The SHOULD-shipped normaliser accepts `1` / `"1"` / `"01"` / `"0001"` and normalises internally to the canonical `0001` form; for those inputs no error is emitted.
+
+## EX-0012-0177: md5 Duplicate-Capture Surfaces lap-009 Advisory-Failing (OQ-0109)
+
+- BR-Ref: BR-0012-0056
+- Given a post-capture iter where `home.png` and `dashboard.png` share md5 `d41d8cd98f00b204e9800998ecf8427e`,
+- When iterate runs duplicate detection,
+- Then `layoutAntiPatternsDetected[]` contains `{code: "lap-009", category: "duplicate-capture", offenders: ["home", "dashboard"], md5: "d41d8cd..."}` with severity error. Override requires Reviewer `justification:` text. NFR-0113 determinism: re-running the same iter produces the identical finding.
+
+## EX-0012-0178: `--license-patch` Add-Only Patch Audit Row (SHOULD)
+
+- BR-Ref: BR-0012-0057
+- Given a frozen license catalog with sources `[unsplash, pexels]` AND an add-only patch adding `wikimedia-commons` (CC BY-SA tier),
+- When `qfai prototyping iterate --license-patch ./patch.yaml` runs,
+- Then the new frozen catalog is written with `[unsplash, pexels, wikimedia-commons]` AND `prototyping.json#licensePatchAudit[]` appends `{appliedAt: "2026-05-24T...", patchSha256: "abc...", addedSources: ["wikimedia-commons"]}`. A second invocation attempting to DELETE `pexels` is rejected with the hint to use the cycle-0-restart path. Async patch I/O failure surfaces `qfai prototyping iterate: license-patch read failed: ENOENT ./patch.yaml`.
+
+## EX-0012-0179: `iter-NN/iterate-context.json` Subagent Hint (SHOULD)
+
+- BR-Ref: BR-0012-0058
+- Given a finished cycle 3,
+- When iterate finalises,
+- Then `iter-03/iterate-context.json` is written with `{priorCycle: 3, priorScores: {informationArchitecture: "acceptable", ...}, openBlockers: ["lap-009 on home/dashboard"], priorTailwindContract: "β+γ"}`. The file is advisory; certify ignores its presence/absence.
+
+## EX-0012-0180: `--cycle 10` Error Recommends Peek Mode (SHOULD)
+
+- BR-Ref: BR-0012-0059
+- Given `qfai prototyping iterate --cycle 10`,
+- When iterate validates the arg,
+- Then stderr reads `--cycle accepts 0..9 (=10 cycles total). --cycle 10 would be the 11th cycle and is not supported.` and recommends `--cycle 9 --check-convergence`. A second invocation with `--cycle -1` surfaces the same error class.

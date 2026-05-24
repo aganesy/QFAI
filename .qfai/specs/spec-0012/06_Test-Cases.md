@@ -987,6 +987,312 @@
 - Test file: `packages/qfai/tests/core/prototyping/specResolution.test.ts`
 - Verify the 50th-wave `hasMatchingUiContract` file-vs-directory discrimination fix (codex r3271969283 P2 — chatgpt-codex-connector). Pre-fix the direct-match arm used `access(<uiDir>/<specId>.yaml)` to confirm existence, but `access` does NOT distinguish file from directory. A misauthored project that created `<contractsDir>/ui/0007.yaml/` (a DIRECTORY) would have falsely classified spec-0007 as UI-bearing, driving `resolveSurfaceUnion()` / `resolvePrimaryPrototypingSpec()` to report a phantom UI surface and the iterate / drift gates to run against it instead of taking the documented no-op path. Post-fix the direct-match arm uses `stat().isFile()`, consistent with the entries-walk branch's `entry.isFile()` filter for the spec-prefixed / ui-prefixed candidates. Fixture: UI-only spec (no surface marker, no title marker, no primarySpecId pin) + a directory named `0007.yaml` at the canonical UI-contract path. Assertion: `resolveAllUiBearingSpecs()` returns `[]`. AC anchor: AC-0012-0037 (cycle-0 zero-UI precheck input candidates).
 
+## v1.9.1 Defect Remediation Test Cases (CHG-005)
+
+## TC-0012-0433
+
+- EX-Ref: EX-0012-0162
+- AC-Refs: AC-0012-0053
+- Type: unit
+- Test file: `packages/qfai/tests/unit/core/prototyping/designMdViolations.tailwindAllowlist.test.ts`
+- Verify OQ-0103 = β + γ remedy: a fixture HTML loading Tailwind CDN preflight plus `--tw-*` properties and alpha-modifier `rgba()` literals produces `designMdViolations[]` length 0 after `findDesignMdViolations(html, designMd)` runs with body-scope. Async fixture-loading path uses `await fs.readFile(...).catch(throw)` to propagate read errors explicitly. Pinned to AC-0012-0053; preflight-allowlist + body-scope are the SSOT pair.
+
+## TC-0012-0434
+
+- EX-Ref: EX-0012-0162
+- AC-Refs: AC-0012-0053
+- Type: integration
+- Test file: `packages/qfai/tests/integration/prototyping/tailwindContractConvergence.test.ts`
+- Verify NFR-0102: with the v1.9.1 generator-prompt + scanner pair, the canonical fixture pack converges within 3 cycles on the p95 lane. Asserts `iterations.length ≤ 3 AND stopReason === "axes-exceptional"`. Integration-level because it spans iterate + scanner + generator-prompt SSOT pair.
+
+## TC-0012-0435
+
+- EX-Ref: EX-0012-0163
+- AC-Refs: AC-0012-0054
+- Type: unit
+- Test file: `packages/qfai/tests/unit/core/prototyping/scanners/unwrapVar.test.ts`
+- Verify REQ-0012-0056 / BR-0012-0042: parametrised across `scanFonts` / `scanRadius` / `scanShadow`, asserts each scanner calls `unwrapVarReference(declarationValue, rootDeclarations)` and yields the resolved value before SAFE_LITERALS judgment. Fixture matches source-pack §5 canonical `:root` block. Floors towards NFR-0110 (≥ 30 scanner unit tests).
+
+## TC-0012-0436
+
+- EX-Ref: EX-0012-0164
+- AC-Refs: AC-0012-0055
+- Type: unit
+- Test file: `packages/qfai/tests/unit/core/prototyping/scanners/safeLiterals.test.ts`
+- Verify REQ-0012-0057: `it.each` matrix across `5 keywords × 4 scanners = 20 cells`, asserts every cell produces `designMdViolations[] === []`. Failures emit `expected scanner=<name> keyword=<keyword> to pass; got violation=<entry>`.
+
+## TC-0012-0437
+
+- EX-Ref: EX-0012-0165
+- AC-Refs: AC-0012-0056
+- Type: unit
+- Test file: `packages/qfai/tests/unit/core/prototyping/scanners/shadowDeclStrip.test.ts`
+- Verify OQ-0104 Option B: `SHADOW_DECL_STRIP_RE` matches `--shadow-sm:`, `--card-shadow:`, `--btn-shadow-hover:`, `--ring-shadow-1:` (each carrying `rgba()` literals) and strips them before `scanColors` sees them. 6 `it` blocks cover `--*-shadow*:` × {`rgba` / `rgb`}. Asserts zero color violations naming the stripped values.
+
+## TC-0012-0438
+
+- EX-Ref: EX-0012-0166
+- AC-Refs: AC-0012-0057
+- Type: unit
+- Test file: `packages/qfai/tests/unit/core/prototyping/proseCritique/countWords.cjk.test.ts`
+- Verify OQ-0105 (Intl.Segmenter + OR-fallback): Japanese-only fixture (1200 chars, no whitespace) passes; English fixture (350 words) continues to pass with no regression; out-of-band Japanese (3000 chars) error text contains the count form ("characters"), band ("600..2500"), and actual count (3000). Uses `new Intl.Segmenter('ja', { granularity: 'word' })`; absence of the global is gracefully caught (Node ≥ 16 guarantees it; fallback diagnostic emitted otherwise).
+
+## TC-0012-0439
+
+- EX-Ref: EX-0012-0167
+- AC-Refs: AC-0012-0058
+- Type: integration
+- Test file: `packages/qfai/tests/integration/cli/commands/prototypingIterate.browserTool.test.ts`
+- Verify REQ-0012-0060: 2 `it` blocks — `browserTool: "playwright"` accepted with no warning; `browserTool: "playwright-cli"` accepted with `D-DEPRECATED-PROBE` warning emitted to stderr. Integration because it spans CLI arg parsing + config loader + doctor probe.
+
+## TC-0012-0440
+
+- EX-Ref: EX-0012-0168
+- AC-Refs: AC-0012-0059
+- Type: integration
+- Test file: `packages/qfai/tests/integration/cli/commands/prototypingIterate.capture.test.ts`
+- Verify REQ-0012-0061 / BR-0012-0047: 3 `it` blocks — (a) default invocation writes zero `.png` / `.html` (DR-0012-0029 preserved; `DR-0012-0031` amendment pinned), (b) `--capture` writes per `iterate-plan.json#screens[]`, (c) `htmlSourceCopy: true` produces byte-equivalent .html to `.qfai/prototypes/iter-NN/<screen-id>.html`. Async capture errors caught with `try/catch` and re-thrown with per-screen context.
+
+## TC-0012-0441
+
+- EX-Ref: EX-0012-0168
+- AC-Refs: AC-0012-0059
+- Type: integration
+- Test file: `packages/qfai/tests/integration/cli/commands/prototypingIterate.capture.budget.test.ts`
+- Verify NFR-0107: `--capture` per-screen budget 30s emits soft warning when exceeded; does NOT hard-fail the run. Uses a deliberately-slow Playwright fixture (4s delay) AND a fixture that exceeds the cap (forces 32s via fake timer).
+
+## TC-0012-0442
+
+- EX-Ref: EX-0012-0169
+- AC-Refs: AC-0012-0060
+- Type: integration
+- Test file: `packages/qfai/tests/integration/cli/commands/prototypingIterate.autoServe.test.ts`
+- Verify REQ-0012-0062 + NFR-0106: 4 `it` blocks — (a) default invocation spawns no server (DR-0012-0029 preserved), (b) `--auto-serve` spawns + tears down via `tree-kill` (Linux/macOS) / `taskkill /F /T` (Windows), (c) stale prior-iterate port owner force-killed cleanly, (d) foreign-process owner refused (PID + owning command reported; iterate exits with input-error status). SIGINT handler tested with explicit async cleanup error catch.
+
+## TC-0012-0443
+
+- EX-Ref: EX-0012-0170
+- AC-Refs: AC-0012-0061
+- Type: integration
+- Test file: `packages/qfai/tests/integration/cli/commands/prototypingIterate.validateConformant.test.ts`
+- Verify REQ-0012-0063: a converged iterate run writes `prototyping.json` and the test pipes the file directly to `qfai validate --profile prototyping --fail-on error` (subprocess), asserting exit 0 WITHOUT any orchestrator post-processing. Fixture asserts `commitSha === "uncommitted"` sentinel acceptance on a HEAD-less clone.
+
+## TC-0012-0444
+
+- EX-Ref: EX-0012-0170
+- AC-Refs: AC-0012-0061
+- Type: unit
+- Test file: `packages/qfai/tests/unit/core/prototyping/iteration.evidenceRefs.test.ts`
+- Verify REQ-0012-0063 evidenceRefs shape: every `iterations[i].evidenceRefs[]` entry matches `{ kind: "screenshot" | "html", path: "iter-NN/<screen-id>.<ext>" }` and the set is a bijection with `screens[].id`.
+
+## TC-0012-0445
+
+- EX-Ref: EX-0012-0171
+- AC-Refs: AC-0012-0062
+- Type: integration
+- Test file: `packages/qfai/tests/integration/cli/commands/prototypingCertify.scopePrototyping.test.ts`
+- Verify OQ-0107 Option B: 3 `it` blocks — (a) `verify.json#scope: "prototyping"` satisfies certify with no ATDD/implement artifacts present, (b) `scope: "full"` rejected when those artifacts are missing, (c) `completion-certificate.json#scope === "prototyping"` after certify exit 0. Reviewer-Gate `R-CERTIFY-VERIFY-CIRCULAR` regression check exercised in a separate test (TC-0012-0446).
+
+## TC-0012-0446
+
+- EX-Ref: EX-0012-0171
+- AC-Refs: AC-0012-0062
+- Type: integration
+- Test file: `packages/qfai/tests/integration/validators/reviewerGate.certifyVerifyCircular.test.ts`
+- Verify REQ-0012-0064 Reviewer-Gate `R-CERTIFY-VERIFY-CIRCULAR`: structural assertion that (a) certify reads no validator output whose profile requires `/qfai-atdd` or `/qfai-implement` artifacts OR (b) the scoped-verify path is used. Finding severity = error on violation.
+
+## TC-0012-0447
+
+- EX-Ref: EX-0012-0172
+- AC-Refs: AC-0012-0063
+- Type: integration
+- Test file: `packages/qfai/tests/integration/skills/qfaiPrototyping.singleSpecSurface.test.ts`
+- Verify OQ-0108 Option A: `grep -rn "resolveSurfaceUnion" assets/init/.qfai/assistant/skills/qfai-prototyping/` returns zero hits in SKILL.md / references/ at HEAD; the helper remains as `core/prototyping/specResolution.ts` internal export. Documentation lint also asserts zero remaining multi-spec public-surface mentions.
+
+## TC-0012-0448
+
+- EX-Ref: EX-0012-0173
+- AC-Refs: AC-0012-0064
+- Type: integration
+- Test file: `packages/qfai/tests/integration/cli/commands/prototypingIterate.aggregateMirror.test.ts`
+- Verify OQ-0110 Option A: converged iter with `screens[].id = ["home_page", "settings_panel"]` mirrors to `.qfai/evidence/prototyping/screenshots/<id>.png` and `html/<id>.html`. Hyphen-form variant fixture (`home-page`) rejected by validator with explicit naming error.
+
+## TC-0012-0449
+
+- EX-Ref: EX-0012-0174
+- AC-Refs: AC-0012-0065
+- Type: integration
+- Test file: `packages/qfai/tests/integration/cli/commands/prototypingIterate.cycle0Force.test.ts`
+- Verify REQ-0012-0067 + NFR-0114: 3 `it` blocks — (a) without `--force` and non-empty `iter-00/`, iterate refuses with recovery snippet text, (b) with `--force`, `iter-00/` → `iter-00.backup-<ISO>/` move happens BEFORE `clearEvidenceIterDirs`, (c) backup byte-equivalence verified (sha256 over file set matches pre-move set). Async I/O errors propagated.
+
+## TC-0012-0450
+
+- EX-Ref: EX-0012-0175
+- AC-Refs: AC-0012-0066
+- Type: unit
+- Test file: `packages/qfai/tests/unit/cli/commands/prototypingIterate.blockedSummary.test.ts`
+- Verify REQ-0012-0068 + NFR-0103: stdout contains the literal `[BLOCKED] exit-64 prevented by:` line with the top-3 category counts and first-offender details. Snapshot tests pin the stable category identifier set (additive-only invariant).
+
+## TC-0012-0451
+
+- EX-Ref: EX-0012-0176
+- AC-Refs: AC-0012-0067
+- Type: unit
+- Test file: `packages/qfai/tests/unit/cli/commands/prototypingIterate.primarySpecIdError.test.ts`
+- Verify REQ-0012-0069 base error: input `"abc"` produces literal `primarySpecId must be a 4-digit zero-padded string (e.g. "0001"); received abc`. Six `it.each` rows cover empty / whitespace / negative / float / hex / SQL-injection inputs.
+
+## TC-0012-0452
+
+- EX-Ref: EX-0012-0176
+- AC-Refs: AC-0012-0067
+- Type: unit
+- Test file: `packages/qfai/tests/unit/cli/commands/prototypingIterate.primarySpecIdNormalise.test.ts`
+- Verify OQ-0112 SHOULD normalisation: `1` / `"1"` / `"01"` / `"0001"` normalise to `spec-0001`; `10000` rejected (exceeds 9999); `0` rejected (positive-integer requirement). 7 `it.each` rows.
+
+## TC-0012-0453
+
+- EX-Ref: EX-0012-0177
+- AC-Refs: AC-0012-0068
+- Type: integration
+- Test file: `packages/qfai/tests/integration/cli/commands/prototypingIterate.lap009.test.ts`
+- Verify REQ-0012-0070 lap-009 + NFR-0113: 3 `it` blocks — (a) ≥ 2 distinct `screens[].id` with matching md5 surface `lap-009`, (b) override without Reviewer `justification:` rejected by validator, (c) determinism — re-running on the same screen set produces the identical finding set.
+
+## TC-0012-0454
+
+- EX-Ref: EX-0012-0177
+- AC-Refs: AC-0012-0068
+- Type: integration
+- Test file: `packages/qfai/tests/integration/cli/commands/prototypingIterate.lap010.test.ts`
+- Verify REQ-0012-0070 lap-010 missing-route: 3 `it` blocks — (a) SPA missing hashchange / path-based route for declared `screens[].id` surfaces `lap-010`, (b) `targetUrl#/<route>` form accepted, (c) `targetUrl/<route>` form accepted; missing override justification rejected.
+
+## TC-0012-0455
+
+- EX-Ref: EX-0012-0178
+- AC-Refs: AC-0012-0069
+- Type: integration
+- Test file: `packages/qfai/tests/integration/cli/commands/prototypingIterate.licensePatch.test.ts`
+- Verify REQ-0012-0071 SHOULD: 4 `it` blocks — (a) add-only patch applied successfully, (b) `licensePatchAudit[]` row written with `{appliedAt, patchSha256, addedSources[]}`, (c) deletion attempt rejected with cycle-0-restart hint, (d) modification attempt rejected. Async patch I/O errors surface explicit `ENOENT` text.
+
+## TC-0012-0456
+
+- EX-Ref: EX-0012-0179
+- AC-Refs: AC-0012-0070
+- Type: integration
+- Test file: `packages/qfai/tests/integration/cli/commands/prototypingIterate.iterContextHint.test.ts`
+- Verify REQ-0012-0072 SHOULD: `iter-03/iterate-context.json` written with `{priorCycle, priorScores, openBlockers, priorTailwindContract}`. Companion test asserts certify ignores presence/absence (advisory-only).
+
+## TC-0012-0457
+
+- EX-Ref: EX-0012-0180
+- AC-Refs: AC-0012-0071
+- Type: unit
+- Test file: `packages/qfai/tests/unit/cli/commands/prototypingIterate.cycleOutOfRange.test.ts`
+- Verify REQ-0012-0073 SHOULD: 4 `it.each` rows cover `--cycle 10` / `--cycle -1` / `--cycle 100` / `--cycle abc`; each produces the literal `--cycle accepts 0..9 (=10 cycles total). --cycle 10 would be the 11th cycle and is not supported.` (with the actual value substituted) AND recommends `--cycle 9 --check-convergence`.
+
+## TC-0012-0458
+
+- EX-Ref: EX-0012-0162
+- AC-Refs: AC-0012-0053
+- Type: integration
+- Test file: `packages/qfai/tests/integration/validators/reviewerGate.promptScannerDrift.test.ts`
+- Verify REQ-0012-0055 SSOT-sync invariant: structural assertion that any modification to `findDesignMdViolations.ts` MUST be accompanied by a matching modification to `generator-prompt.md` (Reviewer-Gate `R-PROMPT-SCANNER-DRIFT` severity: error on violation, with mandatory `justification:` text per source pack REQ-0125).
+
+## TC-0012-0459
+
+- EX-Ref: EX-0012-0163
+- AC-Refs: AC-0012-0054
+- Type: unit
+- Test file: `packages/qfai/tests/unit/core/prototyping/scanners/coverage.test.ts`
+- Verify NFR-0110 floor: scanner module statement-coverage ≥ 90% asserted via `c8`-reported summary; unit-test count across the scanner suite ≥ 30 (read from `vitest` collected-tests output).
+
+## TC-0012-0460
+
+- EX-Ref: EX-0012-0166
+- AC-Refs: AC-0012-0057
+- Type: unit
+- Test file: `packages/qfai/tests/unit/core/prototyping/proseCritique/countWords.boundary.test.ts`
+- Verify REQ-0012-0059 boundary: 4 `it.each` rows cover `199 words` (fail), `200 words` (pass), `500 words` (pass), `501 words` (fail) for English path AND `599 chars` (fail), `600 chars` (pass), `2500 chars` (pass), `2501 chars` (fail) for CJK path.
+
+## TC-0012-0461
+
+- EX-Ref: EX-0012-0168
+- AC-Refs: AC-0012-0059
+- Type: integration
+- Test file: `packages/qfai/tests/integration/cli/commands/prototypingIterate.captureHtmlSource.test.ts`
+- Verify REQ-0012-0061 htmlSourceCopy: when `htmlSourceCopy: true`, the written `iter-NN/<id>.html` is byte-equivalent (sha256-match) to `.qfai/prototypes/iter-NN/<id>.html` and contains zero runtime-injected style blocks (`<style>` count in source vs output equal).
+
+## TC-0012-0462
+
+- EX-Ref: EX-0012-0169
+- AC-Refs: AC-0012-0060
+- Type: integration
+- Test file: `packages/qfai/tests/integration/cli/commands/prototypingIterate.autoServe.sigint.test.ts`
+- Verify REQ-0012-0062 SIGINT path: spawning iterate + sending SIGINT triggers `tree-kill` / `taskkill /F /T` of all child server processes within 2s; async cleanup errors surfaced on stderr with explicit naming. Cross-platform (Linux/macOS/Windows matrix).
+
+## TC-0012-0463
+
+- EX-Ref: EX-0012-0170
+- AC-Refs: AC-0012-0061
+- Type: integration
+- Test file: `packages/qfai/tests/integration/cli/commands/prototypingIterate.stopReason.test.ts`
+- Verify REQ-0012-0063 stopReason coverage: 4 `it` blocks exercise each `stopReason` value (`axes-exceptional` / `max-iterations` / `license-verify-fail` / `input-error`); each fixture writes the corresponding top-level field and passes `qfai validate --profile prototyping`.
+
+## TC-0012-0464
+
+- EX-Ref: EX-0012-0173
+- AC-Refs: AC-0012-0064
+- Type: integration
+- Test file: `packages/qfai/tests/integration/validators/prototypingEvidence.screenIdCasing.test.ts`
+- Verify OQ-0110 Option A end-to-end: validator rejects hyphen-form `screens[].id` ("home-page"), accepts underscore-form ("home_page"). 2 `it.each` rows.
+
+## TC-0012-0465
+
+- EX-Ref: EX-0012-0174
+- AC-Refs: AC-0012-0065
+- Type: integration
+- Test file: `packages/qfai/tests/integration/cli/commands/prototypingIterate.cycle0BackupOrdering.test.ts`
+- Verify REQ-0012-0067 ordering: fixture uses `vi.spyOn(fs, "rename")` and `vi.spyOn(clearEvidenceIterDirs)` to assert the `rename(iter-00, iter-00.backup-<ISO>)` call resolves BEFORE the first `clearEvidenceIterDirs` call; failure path (move error) aborts the run without clearing.
+
+## TC-0012-0466
+
+- EX-Ref: EX-0012-0175
+- AC-Refs: AC-0012-0066
+- Type: unit
+- Test file: `packages/qfai/tests/unit/cli/commands/prototypingIterate.blockedSummary.categories.test.ts`
+- Verify NFR-0103 category-name stability: snapshot test pins the exact identifier set `["designMdViolations", "layoutAntiPatternsDetected", "axes-below-exceptional"]`; additive-only invariant enforced via the snapshot mismatch on accidental rename.
+
+## TC-0012-0467
+
+- EX-Ref: EX-0012-0177
+- AC-Refs: AC-0012-0068
+- Type: unit
+- Test file: `packages/qfai/tests/unit/core/prototyping/captureMd5.test.ts`
+- Verify NFR-0113 md5 determinism: pure-fn unit covering md5 computation over a fixed PNG byte buffer asserts identical output across 100 invocations. Independent of integration TC-0012-0453.
+
+## TC-0012-0468
+
+- EX-Ref: EX-0012-0178
+- AC-Refs: AC-0012-0069
+- Type: unit
+- Test file: `packages/qfai/tests/unit/core/prototyping/licensePatchAudit.test.ts`
+- Verify REQ-0012-0071 audit-row shape: pure-fn test on the patch-applier asserts the returned audit row carries exactly `{appliedAt, patchSha256, addedSources[]}` (no other fields) and `patchSha256` is the sha256 of the patch file bytes.
+
+## TC-0012-0469
+
+- EX-Ref: EX-0012-0179
+- AC-Refs: AC-0012-0070
+- Type: unit
+- Test file: `packages/qfai/tests/unit/core/prototyping/iterateContextJson.test.ts`
+- Verify REQ-0012-0072 SHOULD schema: pure-fn test on the context-writer asserts the JSON shape `{priorCycle: N, priorScores: {...}, openBlockers: [...], priorTailwindContract: "..."}` and that no other top-level keys leak in.
+
+## TC-0012-0470
+
+- EX-Ref: EX-0012-0180
+- AC-Refs: AC-0012-0071
+- Type: unit
+- Test file: `packages/qfai/tests/unit/cli/commands/prototypingIterate.cycleOutOfRange.peekMode.test.ts`
+- Verify REQ-0012-0073 SHOULD peek-mode recommendation: the rejection error text MUST end with the recommendation line `Hint: use --cycle 9 --check-convergence to peek the final cycle without re-running the loop.` Snapshot-pinned to prevent accidental wording drift.
+
 ## Legacy Coverage Continuity
 
 - The legacy baseline test-case identifier space remains reserved for existing implementation/test slices.

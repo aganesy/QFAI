@@ -81,10 +81,11 @@
 - REQ-0019: UI contract normalization — `uiux/40_screen_contracts.md` を `.qfai/contracts/ui/*.yaml` に正規化する
 - REQ-0020: Downstream boundary — `/qfai-sdd` 以降の skill は discussion pack を直接読まず、正規化済み specs/contracts を読む
 - REQ-0021: `selected-direction.yaml` と `design-system.yaml` は prototyping でさらに更新され得る downstream design contracts だが、UI-bearing flow では `/qfai-sdd` 完了時点で downstream validate readiness のために存在していなければならない
+- REQ-0115: UI contract template carries `primary_tasks: []` slot — `packages/qfai/assets/init/.claude/skills/qfai-sdd/templates/contracts/ui-spec.yaml` の `screens[]` 各エントリに `primary_tasks: []` slot を含める。requirements-analyst agent guide は各 screen に ≥ 1 primary_task を authoring するよう instruction を持つ。新 `qfai validate` lane (QFAI-AUD-001 aligned) は newly authored UI contracts の `primary_tasks` が non-empty であることを `/qfai-prototyping` 開始前に検証する
 
 ## Entry points
 
-- US range in this spec: US-0013-0001..US-0013-0010
+- US range in this spec: US-0013-0001..US-0013-0011
 - Primary actors: QFAI user (developer), AI Agent (requirements-analyst, solution-architect, test-design-analyst)
 - Notes: Receives discussion-pack as input; produces spec artifacts and downstream-ready contracts for later execution skills
 

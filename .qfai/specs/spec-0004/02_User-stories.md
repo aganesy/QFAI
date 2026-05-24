@@ -39,3 +39,15 @@ As a v1.9.0 migration adopter, I want `qfai validate` to emit `D-DEPRECATED-PATH
 ### US-0004-0033
 
 As a SKILL.md author and `qfai init --upgrade-assistant-tree` user, I want `qfai validate` to surface `W-SKILL-DOC-BROKEN-REF` for SKILL.md references that don't resolve in the new layout AND to recognize the `W-USER-EDIT-PRESERVED` informational note from the migration helper as a pass-through note (not an error), so that documentation drift is caught while migration progress is non-blocking (REQ-0043, REQ-0044).
+
+### US-0004-0034
+
+As a release operator running `qfai validate` across multiple profiles in sequence, I want each run to write to a profile-suffixed output path (`.qfai/report/validate-<profile>.json`) alongside an always-latest `validate.json` that names its `profile`, and I want the legacy `.qfai/output/validate.json` path to keep working with a `D-DEPRECATED-PATH` warning until sunset, so that profile outputs cannot silently overwrite each other and downstream certify reads the intended profile (REQ-0120).
+
+### US-0004-0035
+
+As a contributor changing either `findDesignMdViolations.ts` (scanner) or `generator-prompt.md` (LLM contract), I want CI to refuse merge when only one half of the SSOT-sync pair changed, so that the Tailwind contract embedded in the prompt and the contract enforced by the scanner cannot drift out of step (REQ-0102).
+
+### US-0004-0036
+
+As a Reviewer-Gate consumer ingesting `R-PROMPT-SCANNER-DRIFT` findings, I want `qfai validate` to reject any such finding whose `justification:` is empty (mirroring the existing `R-WORKLOG-DRIFT` justification contract), so that drift findings always name the modified file, the missing-counterpart file, and the unmatched contract clause (REQ-0125).

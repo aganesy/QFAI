@@ -45,3 +45,35 @@
 
 - Approved By: pin-implied (under feature/v1.9.0)
 - Notes: Field surfaces the agent Mission/Inputs/Deliverables/Stop Conditions/Sign-off contract directly inside the routing manifest so downstream loaders that read agent-catalog.yml (codex/copilot/claude wrappers, agent-routing.yml validators) do not need a second file-system read. The duplication is structurally guarded by TC-0004-0026 so drift fails CI.
+
+## 2026-05-24 — CHG-005 — qfai-prototyping defect remediation pack
+
+- Discussion pack: `.qfai/discussion/discussion-20260523221141355/`
+- Operation: UPDATE:APPEND
+- Posture: additive append; preserves existing AC/BR/EX/TC numbering. NFR-0115 (justification-text contract reuse) absorbed into BR-0015-0009 (SSOT shared with spec-0004 BR-0004-0028).
+- Approved By: yusuke_senaga
+
+### Triage (rows owned by this spec)
+
+| Source                                   | Subject                                                                                                                       | Existing Spec | Operation | Sub-op | Approved By   | Rationale                                                                                          |
+| ---------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- | ------------- | --------- | ------ | ------------- | -------------------------------------------------------------------------------------------------- |
+| REQ-0113 (discussion-20260523221141355) | Reviewer-Gate `R-CERTIFY-VERIFY-CIRCULAR` (severity error) on certify path that reads validator output requiring `/qfai-atdd` or `/qfai-implement` artifacts at the prototyping phase — structural check, option-B path (upstream deferred-OQ decision) | spec-0015     | UPDATE    | APPEND | yusuke_senaga | Reviewer-Gate finding emission is CAP-0015 (agent collective) territory                            |
+| REQ-0125 (discussion-20260523221141355) | Reviewer-Gate `R-PROMPT-SCANNER-DRIFT` (severity error) emission with mandatory `justification:` per discussion-20260522081618995 REQ-0006 contract | spec-0015     | UPDATE    | APPEND | yusuke_senaga | Reviewer-Gate is the emitter; spec-0004 BR-0004-0028 is the rejector (one contract, two enforcers) |
+| NFR-0115 (justification-text contract reuse) | absorbed into BR-0015-0009                                                                                              | spec-0015     | UPDATE    | APPEND | yusuke_senaga | NFR realized as BR-layer cross-spec SSOT (shared with BR-0004-0028)                                 |
+
+### CHG-005 Operations (this PR)
+
+| Op ID  | Op Type       | Target                                       | Summary                                                                                                                |
+| ------ | ------------- | -------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| OP-001 | UPDATE:APPEND | 01_Spec.md (Relevant Requirements: REQ-0015-0013 / REQ-0015-0014; Entry-points US range → 0008) | Reviewer-Gate cycle check + `R-PROMPT-SCANNER-DRIFT` emission registered as Relevant Requirements |
+| OP-002 | UPDATE:APPEND | 02_User-stories.md (US-0015-0007..0008)      | regression-check + drift-emission user stories                                                                         |
+| OP-003 | UPDATE:APPEND | 03_Acceptance-Criteria.md (AC-0015-0013..0014) | structural cycle check + 3-part justification ACs                                                                      |
+| OP-004 | UPDATE:APPEND | 04_Business-Rules.md (BR-0015-0008..0009)    | mirror BR layer (cycle check is structural / justification 3-part contract is shared SSOT with spec-0004 BR-0004-0028) |
+| OP-005 | UPDATE:APPEND | 05_Examples.md (EX-0015-0009..0010)          | worked examples per AC                                                                                                 |
+| OP-006 | UPDATE:APPEND | 06_Test-Cases.md (TC-0015-0017..0019)        | test coverage per AC; integration level for Reviewer-Gate fixture-driven assertions; control (Type=normal) + error case |
+
+- Notes:
+  - The option-B path text in REQ-0015-0013 corresponds to the orchestrator's upstream deferred-OQ resolution for OQ-0107 (path resolution recorded in the slice prompt, not duplicated here to avoid distributed-surface leakage).
+  - Parallel pack pieces: spec-0004 (validate.json profile path + SSOT-sync pair lane + R-PROMPT-SCANNER-DRIFT justification ingestion); spec-0006 (qfai doctor playwright probe rebuild); spec-0012 (iterate-side scanner / prompt + countWords pure-function); spec-0013 (UI contract template `primary_tasks:` slot + validate lane).
+  - The Reviewer-Gate emitter (spec-0015) and the validate rejector (spec-0004) share the 3-part justification contract; updating one without the other must be caught by the same SSOT-sync-pair discipline that this pack itself enforces (BR-0004-0027).
+- Source: REQ-0113, REQ-0125 (discussion-20260523221141355); NFR-0115
