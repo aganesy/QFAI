@@ -61,6 +61,7 @@ import {
   validateAssistantTreeMigration,
   validateSkillDocReferences,
   validateReviewerJustification,
+  validateReviewerGate,
 } from "./validators/index.js";
 import { readSafe } from "./validators/utils.js";
 
@@ -173,6 +174,7 @@ async function runSddValidators(
     ...(await validateAssistantTreeMigration(root, config)),
     ...(await validateSkillDocReferences(root, config)),
     ...(await validateReviewerJustification(root, config)),
+    ...(await validateReviewerGate(root, config)),
   ];
 }
 

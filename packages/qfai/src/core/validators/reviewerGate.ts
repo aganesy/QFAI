@@ -1,0 +1,149 @@
+/**
+ * Reviewer-Gate validators for CHG-005 findings:
+ *   - R-CERTIFY-VERIFY-CIRCULAR: emitted when a prototyping-phase
+ *     certify path reads a verify.json whose scope requires
+ *     `/qfai-atdd` or `/qfai-implement` artifacts (option-B violation).
+ *   - R-PROMPT-SCANNER-DRIFT: emitted when the
+ *     designMdViolations.ts ↔ generator-prompt.md SSOT-sync pair
+ *     drifts (a contract clause is present in one side but absent
+ *     from the other).
+ *
+ * Both findings carry a 3-part justification embedded directly in
+ * the issue `message` so downstream `qfai validate` ingestion can
+ * assert against BR-0004-0028's non-empty justification contract.
+ */
+import { readFile } from "node:fs/promises";
+import path from "node:path";
+
+import type { QfaiConfig } from "../config.js";
+import type { Issue } from "../types.js";
+import { exists, issue, readSafe } from "./utils.js";
+import { PROMPT_SCANNER_PAIRS } from "./promptScannerPairs.js";
+
+const VERIFY_JSON_REL = ".qfai/output/verify.json";
+const PROTOTYPING_JSON_REL = ".qfai/output/prototyping.json";
+
+const SCANNER_REL = "packages/qfai/src/core/prototyping/designMdViolations.ts";
+const PROMPT_REL =
+  "packages/qfai/assets/init/.qfai/assistant/skills/qfai-prototyping/references/generator-prompt.md";
+
+// Verify.json scopes that pull in /qfai-atdd or /qfai-implement
+// artifacts. Reading them at the prototyping phase forms the
+// circular-read pattern that option-B forbids.
+const NON_PROTOTYPING_SCOPES = new Set(["atdd", "full", "implement"]);
+
+type VerifyJson = {
+  status?: unknown;
+  scope?: unknown;
+};
+
+type PrototypingJson = {
+  phase?: unknown;
+};
+
+async function loadJson<T>(filePath: string): Promise<T | null> {
+  if (!(await exists(filePath))) return null;
+  try {
+    const raw = await readFile(filePath, "utf-8");
+    return JSON.parse(raw) as T;
+  } catch {
+    return null;
+  }
+}
+
+function isPrototypingPhase(proto: PrototypingJson | null): boolean {
+  if (!proto) return false;
+  // Phase signal: explicit "prototyping" marker. The prototyping.json
+  // produced by the iterate command always carries the phase string;
+  // legacy files without `phase` are treated as not-prototyping (no
+  // false positive against pre-CHG-005 fixtures).
+  return typeof proto.phase === "string" && proto.phase.trim().toLowerCase() === "prototyping";
+}
+
+async function detectCertifyVerifyCircular(root: string): Promise<Issue[]> {
+  const verifyAbs = path.join(root, VERIFY_JSON_REL);
+  const verify = await loadJson<VerifyJson>(verifyAbs);
+  if (!verify) return [];
+
+  const scopeRaw = typeof verify.scope === "string" ? verify.scope.trim().toLowerCase() : "";
+  if (!scopeRaw) return [];
+  if (!NON_PROTOTYPING_SCOPES.has(scopeRaw)) return [];
+
+  const proto = await loadJson<PrototypingJson>(path.join(root, PROTOTYPING_JSON_REL));
+  if (!isPrototypingPhase(proto)) return [];
+
+  // 3-part justification: (1) certify path / verify.json path,
+  // (2) offending validator-output profile (scope),
+  // (3) option-B contract clause violated.
+  const message =
+    `R-CERTIFY-VERIFY-CIRCULAR: certify path reads ${VERIFY_JSON_REL} ` +
+    `with scope="${scopeRaw}" while prototyping.json reports phase=prototyping. ` +
+    `Option-B forbids the prototyping certify gate from depending on /qfai-atdd or ` +
+    `/qfai-implement validator outputs (justification: certify=${VERIFY_JSON_REL}, ` +
+    `profile=${scopeRaw}, contract=option-B phase-isolation clause).`;
+
+  return [
+    issue(
+      "R-CERTIFY-VERIFY-CIRCULAR",
+      message,
+      "error",
+      VERIFY_JSON_REL,
+      "reviewerGate.certifyVerifyCircular",
+    ),
+  ];
+}
+
+async function detectPromptScannerDrift(root: string): Promise<Issue[]> {
+  const scannerAbs = path.join(root, SCANNER_REL);
+  const promptAbs = path.join(root, PROMPT_REL);
+
+  // Pair-sync check applies only when both files exist (consumer repos
+  // installing the QFAI npm package will not have the source-side
+  // scanner; in that case the contract cannot drift here).
+  if (!(await exists(scannerAbs))) return [];
+  if (!(await exists(promptAbs))) return [];
+
+  const scannerText = await readSafe(scannerAbs);
+  const promptText = await readSafe(promptAbs);
+
+  const issues: Issue[] = [];
+  for (const pair of PROMPT_SCANNER_PAIRS) {
+    const inScanner = pair.scannerTokens.every((token) => scannerText.includes(token));
+    const inPrompt = pair.promptTokens.every((token) => promptText.includes(token));
+
+    if (inScanner === inPrompt) continue;
+
+    const modifiedFile = inScanner ? SCANNER_REL : PROMPT_REL;
+    const unpaired = inScanner ? PROMPT_REL : SCANNER_REL;
+    const missingTokens = inScanner ? pair.promptTokens : pair.scannerTokens;
+
+    const message =
+      `R-PROMPT-SCANNER-DRIFT: SSOT-sync pair for clause "${pair.clause}" is asymmetric ` +
+      `(justification: modified=${modifiedFile}, un-paired=${unpaired}, ` +
+      `clause=${pair.clause} — missing tokens [${missingTokens.join(", ")}]).`;
+
+    issues.push(
+      issue(
+        "R-PROMPT-SCANNER-DRIFT",
+        message,
+        "error",
+        modifiedFile,
+        "reviewerGate.promptScannerDrift",
+      ),
+    );
+  }
+
+  return issues;
+}
+
+/**
+ * Composite Reviewer-Gate validator. Returns the union of all
+ * CHG-005 findings (R-CERTIFY-VERIFY-CIRCULAR + R-PROMPT-SCANNER-DRIFT).
+ */
+export async function validateReviewerGate(root: string, _config: QfaiConfig): Promise<Issue[]> {
+  const [circular, drift] = await Promise.all([
+    detectCertifyVerifyCircular(root),
+    detectPromptScannerDrift(root),
+  ]);
+  return [...circular, ...drift];
+}
