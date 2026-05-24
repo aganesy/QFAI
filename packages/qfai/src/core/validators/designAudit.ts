@@ -167,9 +167,9 @@ function checkContractsHierarchy(
         ruleId: "QFAI-AUD-001",
         dimension: "visualHierarchy",
         severityTier: 1,
-        message: `Screen '${screen.screenId}' has no primary task defined in screen contracts`,
+        message: `[QFAI-AUD-001] ${file}: screen '${screen.screenId}' has empty primary_tasks; add at least one primary_task entry`,
         why: "Each screen contract needs a clear primary task to anchor the core user action",
-        evidence: [],
+        evidence: [file, screen.screenId, "QFAI-AUD-001"],
         guidance: "Add at least one primary_tasks entry to the screen contract.",
         file,
       });
@@ -199,13 +199,17 @@ function checkContractHierarchyFromScreens(
   const findings: DesignFinding[] = [];
   for (const screen of screens) {
     if (screen.primaryTasks.length === 0) {
+      // sourceRef is `<rel-path>#<screenId>` — split so the message names
+      // the file path explicitly. Falls back gracefully when sourceRef is
+      // empty (e.g. directly-constructed screens with no source location).
+      const [filePath = "<unknown-file>"] = screen.sourceRef.split("#");
       findings.push({
         ruleId: "QFAI-AUD-001",
         dimension: "visualHierarchy",
         severityTier: 1,
-        message: `Screen '${screen.screenId}' has no primary task defined in screen contracts`,
+        message: `[QFAI-AUD-001] ${filePath}: screen '${screen.screenId}' has empty primary_tasks; add at least one primary_task entry`,
         why: "Each screen contract needs a clear primary task to anchor the core user action",
-        evidence: [],
+        evidence: [filePath, screen.screenId, "QFAI-AUD-001"],
         guidance: "Add at least one primary_tasks entry to the screen contract.",
         file: screen.sourceRef,
       });

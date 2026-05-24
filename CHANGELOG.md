@@ -70,9 +70,18 @@
   blocking-cause summary; md5-based duplicate-capture detection
   (`lap-009`, advisory-failing) + missing-route detection
   (`lap-010`, advisory-failing). (REQ-0117 / REQ-0118 / REQ-0121.)
-- SDD UI contract template carries `primary_tasks: []` per `screens[]`
-  entry; new validate lane (QFAI-AUD-001 aligned) blocks
-  `/qfai-prototyping` on empty `primary_tasks`. (REQ-0115, AC-0013-0018.)
+- SDD UI contract template carries a `primary_tasks` slot per `screens[]`
+  entry (shipped pre-populated with one example entry so the sample passes
+  its own validate); `requirements-analyst` agent guide instructs ≥ 1
+  primary_task per screen. QFAI-AUD-001 aligned validate lane blocks
+  `/qfai-prototyping` on empty `primary_tasks`, and the finding now names
+  the offending file path, the screen id, and the rule token in a single
+  user-facing message. (REQ-0115, AC-0013-0018.)
+  **Upgrade impact**: consuming projects whose UI contracts predate v1.9.1
+  do not carry the `primary_tasks` slot. On upgrade, `qfai validate` will
+  surface QFAI-AUD-001 (severity=error) for each affected screen. Recovery:
+  add at least one `primary_tasks` entry per screen contract. The finding
+  text is upgrade-path-aware ("add at least one primary_task entry").
 - Multi-spec posture: `/qfai-prototyping` SKILL.md realigned to single-spec
   per `DR-0001-0005` (option A); `resolveSurfaceUnion()` retained as an
   internal helper for validators / `show-spec` only. Full per-spec layout

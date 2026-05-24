@@ -33,6 +33,12 @@ tools: [Read, Write, Edit, Glob, Grep, Bash]
 - Option set with recommendation and rejected rationale
 - Open questions with owner, decision point, and safe deferral notes
 - Mapping from requirements to impacted artifacts
+- For UI-bearing surfaces: every entry in the UI contract `screens[]` must
+  carry at least one `primary_task` (≥ 1 primary_task per screen). The
+  shipped `ui-contract.sample.yaml` template exposes a `primary_tasks: []`
+  placeholder slot; populate it before handing the contract to the
+  prototyping phase. Empty `primary_tasks` arrays cause the
+  QFAI-AUD-001 aligned validate lane to block `/qfai-prototyping`.
 
 ## Stop conditions
 
