@@ -147,11 +147,20 @@ export async function resolvePlaywrightCliLauncher(
 }
 
 async function collectCandidates(root: string): Promise<PlaywrightLauncherCandidate[]> {
-  const candidates: PlaywrightLauncherCandidate[] = [];
   const scriptsDir = path.join(root, "scripts");
   const localBinDir = path.join(root, "node_modules", ".bin");
+  return [
+    ...(await collectPrimaryCandidates(scriptsDir, localBinDir)),
+    ...(await collectNpxCandidates()),
+    ...(await collectDeprecatedCandidates(scriptsDir, localBinDir)),
+  ];
+}
 
-  // Stage 1: primary (`playwright`)
+async function collectPrimaryCandidates(
+  scriptsDir: string,
+  localBinDir: string,
+): Promise<PlaywrightLauncherCandidate[]> {
+  const candidates: PlaywrightLauncherCandidate[] = [];
   for (const fileName of PROJECT_WRAPPER_CANDIDATES_PRIMARY) {
     const wrapperPath = path.join(scriptsDir, fileName);
     if (await exists(wrapperPath)) {
@@ -183,8 +192,11 @@ async function collectCandidates(root: string): Promise<PlaywrightLauncherCandid
       path: pathCandidate,
     });
   }
+  return candidates;
+}
 
-  // Stage 2: npx fallback (`npx --no-install playwright --version`)
+async function collectNpxCandidates(): Promise<PlaywrightLauncherCandidate[]> {
+  const candidates: PlaywrightLauncherCandidate[] = [];
   for (const npxCandidate of await findCommandsInPath("npx")) {
     candidates.push({
       stage: "npx-fallback",
@@ -194,8 +206,14 @@ async function collectCandidates(root: string): Promise<PlaywrightLauncherCandid
       path: npxCandidate,
     });
   }
+  return candidates;
+}
 
-  // Stage 3: deprecated (`playwright-cli`)
+async function collectDeprecatedCandidates(
+  scriptsDir: string,
+  localBinDir: string,
+): Promise<PlaywrightLauncherCandidate[]> {
+  const candidates: PlaywrightLauncherCandidate[] = [];
   for (const fileName of PROJECT_WRAPPER_CANDIDATES_DEPRECATED) {
     const wrapperPath = path.join(scriptsDir, fileName);
     if (await exists(wrapperPath)) {
@@ -236,7 +254,6 @@ async function collectCandidates(root: string): Promise<PlaywrightLauncherCandid
       path: npxCandidate,
     });
   }
-
   return candidates;
 }
 
@@ -245,102 +262,147 @@ async function probeCandidate(
   timeoutMs: number,
 ): Promise<PlaywrightLauncherProbe> {
   const startedAt = Date.now();
+  const args = buildProbeArgs(candidate);
+  return spawnProbe(candidate, args, timeoutMs, startedAt);
+}
+
+function buildProbeArgs(candidate: PlaywrightLauncherCandidate): string[] {
   // Primary/deprecated direct shims still accept `--help`; npx fallback already
   // bakes `--version` into args.
-  const args =
-    candidate.stage === "npx-fallback" ? [...candidate.args] : [...candidate.args, "--help"];
-  const useCmdShim =
-    process.platform === "win32" && /\.(cmd|bat|ps1)$/i.test(candidate.executable);
+  return candidate.stage === "npx-fallback"
+    ? [...candidate.args]
+    : [...candidate.args, "--help"];
+}
 
+function spawnProbe(
+  candidate: PlaywrightLauncherCandidate,
+  args: string[],
+  timeoutMs: number,
+  startedAt: number,
+): Promise<PlaywrightLauncherProbe> {
   return new Promise((resolve) => {
-    const child = useCmdShim
-      ? spawn(process.env.ComSpec ?? "cmd.exe", ["/d", "/s", "/c", toCmdCommand(candidate, args)], {
-          stdio: ["ignore", "pipe", "pipe"],
-          windowsHide: true,
-        })
-      : spawn(candidate.executable, args, {
-          stdio: ["ignore", "pipe", "pipe"],
-          windowsHide: true,
-        });
-    let stdout = "";
-    let stderr = "";
-    let settled = false;
-    let timedOut = false;
-    let closed = false;
-    let escalateTimeout: NodeJS.Timeout | undefined;
-
+    const child = spawnProbeChild(candidate, args);
+    const state: ProbeState = {
+      stdout: "",
+      stderr: "",
+      settled: false,
+      timedOut: false,
+      closed: false,
+    };
     const finish = (result: Omit<PlaywrightLauncherProbe, "durationMs">): void => {
-      if (settled) {
+      if (state.settled) {
         return;
       }
-      settled = true;
-      clearTimeout(timeout);
-      resolve({
-        ...result,
-        durationMs: Date.now() - startedAt,
-      });
-    };
-
-    const timeout = setTimeout(() => {
-      timedOut = true;
-      terminateTimedOutChild(child);
-      escalateTimeout = setTimeout(
-        () => {
-          if (closed) {
-            return;
-          }
-          terminateTimedOutChild(child, "SIGKILL");
-        },
-        Math.min(250, timeoutMs),
-      );
-      escalateTimeout.unref();
-      finish({
-        ok: false,
-        exitCode: null,
-        signal: null,
-        timedOut: true,
-        stdout,
-        stderr,
-        error: `timed out after ${timeoutMs}ms`,
-      });
-    }, timeoutMs);
-
-    child.stdout.on("data", (chunk: Buffer | string) => {
-      stdout = appendOutput(stdout, chunk);
-    });
-    child.stderr.on("data", (chunk: Buffer | string) => {
-      stderr = appendOutput(stderr, chunk);
-    });
-
-    child.on("error", (error) => {
-      finish({
-        ok: false,
-        exitCode: null,
-        signal: null,
-        timedOut: false,
-        stdout,
-        stderr,
-        error: error.message,
-      });
-    });
-
-    child.on("close", (exitCode, signal) => {
-      closed = true;
-      if (escalateTimeout) {
-        clearTimeout(escalateTimeout);
+      state.settled = true;
+      if (state.timeout) {
+        clearTimeout(state.timeout);
       }
-      finish({
-        ok: !timedOut && exitCode === 0,
-        exitCode,
-        signal,
-        timedOut,
-        stdout,
-        stderr,
-        ...(timedOut ? { error: `timed out after ${timeoutMs}ms` } : {}),
-      });
+      resolve({ ...result, durationMs: Date.now() - startedAt });
+    };
+    state.timeout = scheduleProbeTimeout(child, state, timeoutMs, finish);
+    wireProbeStreams(child, state, timeoutMs, finish);
+  });
+}
+
+function spawnProbeChild(
+  candidate: PlaywrightLauncherCandidate,
+  args: string[],
+): ReturnType<typeof spawn> {
+  const useCmdShim =
+    process.platform === "win32" && /\.(cmd|bat|ps1)$/i.test(candidate.executable);
+  if (useCmdShim) {
+    return spawn(
+      process.env.ComSpec ?? "cmd.exe",
+      ["/d", "/s", "/c", toCmdCommand(candidate, args)],
+      { stdio: ["ignore", "pipe", "pipe"], windowsHide: true },
+    );
+  }
+  return spawn(candidate.executable, args, {
+    stdio: ["ignore", "pipe", "pipe"],
+    windowsHide: true,
+  });
+}
+
+function scheduleProbeTimeout(
+  child: ReturnType<typeof spawn>,
+  state: ProbeState,
+  timeoutMs: number,
+  finish: (result: Omit<PlaywrightLauncherProbe, "durationMs">) => void,
+): NodeJS.Timeout {
+  return setTimeout(() => {
+    state.timedOut = true;
+    terminateTimedOutChild(child);
+    state.escalateTimeout = setTimeout(
+      () => {
+        if (state.closed) {
+          return;
+        }
+        terminateTimedOutChild(child, "SIGKILL");
+      },
+      Math.min(250, timeoutMs),
+    );
+    state.escalateTimeout.unref();
+    finish({
+      ok: false,
+      exitCode: null,
+      signal: null,
+      timedOut: true,
+      stdout: state.stdout,
+      stderr: state.stderr,
+      error: `timed out after ${timeoutMs}ms`,
+    });
+  }, timeoutMs);
+}
+
+function wireProbeStreams(
+  child: ReturnType<typeof spawn>,
+  state: ProbeState,
+  timeoutMs: number,
+  finish: (result: Omit<PlaywrightLauncherProbe, "durationMs">) => void,
+): void {
+  child.stdout?.on("data", (chunk: Buffer | string) => {
+    state.stdout = appendOutput(state.stdout, chunk);
+  });
+  child.stderr?.on("data", (chunk: Buffer | string) => {
+    state.stderr = appendOutput(state.stderr, chunk);
+  });
+  child.on("error", (error) => {
+    finish({
+      ok: false,
+      exitCode: null,
+      signal: null,
+      timedOut: false,
+      stdout: state.stdout,
+      stderr: state.stderr,
+      error: error.message,
+    });
+  });
+  child.on("close", (exitCode, signal) => {
+    state.closed = true;
+    if (state.escalateTimeout) {
+      clearTimeout(state.escalateTimeout);
+    }
+    finish({
+      ok: !state.timedOut && exitCode === 0,
+      exitCode,
+      signal,
+      timedOut: state.timedOut,
+      stdout: state.stdout,
+      stderr: state.stderr,
+      ...(state.timedOut ? { error: `timed out after ${timeoutMs}ms` } : {}),
     });
   });
 }
+
+type ProbeState = {
+  stdout: string;
+  stderr: string;
+  settled: boolean;
+  timedOut: boolean;
+  closed: boolean;
+  escalateTimeout?: NodeJS.Timeout;
+  timeout?: NodeJS.Timeout;
+};
 
 function quoteCmdArg(value: string): string {
   if (!/[\s"&<>|^]/.test(value)) {

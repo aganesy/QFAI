@@ -23,6 +23,7 @@ import {
 import {
   getProbeOrder as getPlaywrightProbeOrder,
   resolvePlaywrightLauncher,
+  type PlaywrightLauncherResolution,
 } from "./prototyping/playwrightLauncher.js";
 import { resolvePrimaryPrototypingSpec } from "./prototyping/specResolution.js";
 import { collectSpecEntries } from "./specLayout.js";
@@ -926,84 +927,108 @@ async function buildPlaywrightLauncherChecks(root: string): Promise<DoctorCheck[
   };
 
   if (resolution.status === "resolved" && resolution.resolved) {
-    const resolved = resolution.resolved;
-    const checks: DoctorCheck[] = [
-      {
-        id: "prototyping.playwrightCli",
-        severity: "ok",
-        title: "Playwright launcher",
-        message: `playwright launcher resolved via ${resolved.origin} (stage=${resolved.stage}) and passed bounded invocation probe`,
-        details: {
-          resolvedStage: resolved.stage,
-          deprecated: resolved.stage === "deprecated-cli",
-          origin: resolved.origin,
-          executable: relativizeMaybe(root, resolved.executable),
-          args: resolved.args,
-          displayCommand: resolved.displayCommand,
-          probe: resolved.probe,
-          probeOrder,
-          lookedIn: lookedInRelative,
-        },
-      },
-    ];
-    if (resolved.stage === "deprecated-cli") {
-      // Deprecation surface: still accepted during the deprecation window but
-      // flagged as warning. The literal `sunset: 1.10.0` substring is part of
-      // the public wire contract.
-      checks.push({
-        id: "D-DEPRECATED-PROBE",
-        severity: "warning",
-        title: "Deprecated playwright-cli probe",
-        message: `playwright-cli probe is deprecated (sunset: ${PLAYWRIGHT_SUNSET}); install playwright as the primary launcher (${PLAYWRIGHT_INSTALL_HINT})`,
-        details: {
-          sunset: PLAYWRIGHT_SUNSET,
-          installHint: PLAYWRIGHT_INSTALL_HINT,
-          resolvedVia: resolved.origin,
-          executable: relativizeMaybe(root, resolved.executable),
-          probeOrder,
-        },
-      });
-    }
-    return checks;
+    return buildResolvedChecks(root, resolution.resolved, lookedInRelative, probeOrder);
   }
-
   if (resolution.status === "not_runnable") {
-    return [
-      {
-        id: "prototyping.playwrightCli",
-        severity: "error",
-        title: "Playwright launcher",
-        message: `playwright launcher candidates were found but none passed the bounded invocation probe (install hint: ${PLAYWRIGHT_INSTALL_HINT})`,
-        details: {
-          installHint: PLAYWRIGHT_INSTALL_HINT,
-          probeOrder,
-          attempts: resolution.attempts.map((attempt) => ({
-            stage: attempt.stage,
-            origin: attempt.origin,
-            executable: relativizeMaybe(root, attempt.executable),
-            args: attempt.args,
-            displayCommand: attempt.displayCommand,
-            probe: attempt.probe,
-          })),
-          lookedIn: lookedInRelative,
-        },
-      },
-    ];
+    return [buildNotRunnableCheck(root, resolution.attempts, lookedInRelative, probeOrder)];
   }
+  return [buildNotFoundCheck(lookedInRelative, probeOrder)];
+}
 
-  return [
+type LauncherLookedIn = {
+  scriptsDir: string;
+  localBinDir: string;
+  path: string;
+};
+
+function buildResolvedChecks(
+  root: string,
+  resolved: PlaywrightLauncherResolution["attempts"][number],
+  lookedInRelative: LauncherLookedIn,
+  probeOrder: string[],
+): DoctorCheck[] {
+  const checks: DoctorCheck[] = [
     {
       id: "prototyping.playwrightCli",
-      severity: "error",
+      severity: "ok",
       title: "Playwright launcher",
-      message: `no runnable playwright launcher resolved (probe order: ${probeOrder.join(" -> ")}); install hint: ${PLAYWRIGHT_INSTALL_HINT}`,
+      message: `playwright launcher resolved via ${resolved.origin} (stage=${resolved.stage}) and passed bounded invocation probe`,
       details: {
-        installHint: PLAYWRIGHT_INSTALL_HINT,
+        resolvedStage: resolved.stage,
+        deprecated: resolved.stage === "deprecated-cli",
+        origin: resolved.origin,
+        executable: relativizeMaybe(root, resolved.executable),
+        args: resolved.args,
+        displayCommand: resolved.displayCommand,
+        probe: resolved.probe,
         probeOrder,
         lookedIn: lookedInRelative,
       },
     },
   ];
+  if (resolved.stage === "deprecated-cli") {
+    // Deprecation surface: still accepted during the deprecation window but
+    // flagged as warning. The literal `sunset: 1.10.0` substring is part of
+    // the public wire contract.
+    checks.push({
+      id: "D-DEPRECATED-PROBE",
+      severity: "warning",
+      title: "Deprecated playwright-cli probe",
+      message: `playwright-cli probe is deprecated (sunset: ${PLAYWRIGHT_SUNSET}); install playwright as the primary launcher (${PLAYWRIGHT_INSTALL_HINT})`,
+      details: {
+        sunset: PLAYWRIGHT_SUNSET,
+        installHint: PLAYWRIGHT_INSTALL_HINT,
+        resolvedVia: resolved.origin,
+        executable: relativizeMaybe(root, resolved.executable),
+        probeOrder,
+      },
+    });
+  }
+  return checks;
+}
+
+function buildNotRunnableCheck(
+  root: string,
+  attempts: PlaywrightLauncherResolution["attempts"],
+  lookedInRelative: LauncherLookedIn,
+  probeOrder: string[],
+): DoctorCheck {
+  return {
+    id: "prototyping.playwrightCli",
+    severity: "error",
+    title: "Playwright launcher",
+    message: `playwright launcher candidates were found but none passed the bounded invocation probe (install hint: ${PLAYWRIGHT_INSTALL_HINT})`,
+    details: {
+      installHint: PLAYWRIGHT_INSTALL_HINT,
+      probeOrder,
+      attempts: attempts.map((attempt) => ({
+        stage: attempt.stage,
+        origin: attempt.origin,
+        executable: relativizeMaybe(root, attempt.executable),
+        args: attempt.args,
+        displayCommand: attempt.displayCommand,
+        probe: attempt.probe,
+      })),
+      lookedIn: lookedInRelative,
+    },
+  };
+}
+
+function buildNotFoundCheck(
+  lookedInRelative: LauncherLookedIn,
+  probeOrder: string[],
+): DoctorCheck {
+  return {
+    id: "prototyping.playwrightCli",
+    severity: "error",
+    title: "Playwright launcher",
+    message: `no runnable playwright launcher resolved (probe order: ${probeOrder.join(" -> ")}); install hint: ${PLAYWRIGHT_INSTALL_HINT}`,
+    details: {
+      installHint: PLAYWRIGHT_INSTALL_HINT,
+      probeOrder,
+      lookedIn: lookedInRelative,
+    },
+  };
 }
 
 async function buildTargetUrlCheck(
