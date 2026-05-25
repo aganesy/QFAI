@@ -113,3 +113,11 @@
   - Parallel pack pieces: spec-0004 (validate.json profile path + SSOT-sync pair lane + R-PROMPT-SCANNER-DRIFT justification); spec-0006 (qfai doctor playwright probe rebuild + skills.integrity downgrade); spec-0012 (iterate-side scanner / prompt + countWords pure-function half of NFR-0110); spec-0015 (Reviewer-Gate cycle + drift findings).
   - 9 deferred-OQ decisions made upstream by the orchestrator are reflected verbatim where relevant; REQ-0115 itself does not depend on a deferred decision (its option set was already definite in the pack).
 - Source: REQ-0115 (discussion-20260523221141355); NFR-0110 (template / lane half)
+
+## CHG-005 Phase 1 follow-ups (2026-05-26)
+
+| Op            | Target spec | REQ / NFR | Rationale                                                                                                                                                                            | Approver |
+| ------------- | ----------- | --------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
+| UPDATE:APPEND | spec-0013   | REQ-0116  | CHG-005 cycle で `.claude → .qfai/assistant` migration 後の canonical UI 契約テンプレート path への prose 同期が 7 ファイル分 deferred。pure-documentation drift fix として登録。 | auto     |
+| UPDATE:APPEND | spec-0013   | REQ-0117  | CHG-005 cycle で QFAI-AUD-001 が key-absent / key-empty を同一 severity で扱う defect を 2-stage emission (info / error) として降格する follow-up が `sddPrimaryTasksLane.test.ts` 内 inline TODO で deferred。本 follow-up で OC-60 sunset window 配下の semantic を pin する。 | auto     |
+

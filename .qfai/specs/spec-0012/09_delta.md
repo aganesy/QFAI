@@ -336,3 +336,11 @@ Late-review fixes on PR #208:
 - The `DR-0012-0031` placeholder cited in AC-0012-0059 / AC-0012-0060 / BR-0012-0047 / BR-0012-0048 will be replaced with the concrete `DR-0012-NNNN` ID assigned by the parallel design-rationale agent. Orchestrator reconciles after merge.
 - REQ-0102 / REQ-0107 / REQ-0113 / REQ-0115 / REQ-0120 / REQ-0122 / REQ-0124 / REQ-0125 / REQ-0126 / REQ-0127 / REQ-0130 from the discussion pack are intentionally NOT absorbed into this spec-0012 slice — they cross other spec ownership boundaries (validate gate, doctor gate, contracts SDD, migration memo, R7 Japanese-particle whitelist) and are routed via separate CHG entries in their owning specs. See the discussion pack notes for the multi-spec triage.
 - TC-Ref counts in the Triage table are illustrative; the authoritative TC ↔ AC stitch is in `06_Test-Cases.md`.
+
+## CHG-005 Phase 1 follow-ups (2026-05-26)
+
+| Op            | Target spec | REQ / NFR                  | Rationale                                                                                                                                                                                                              | Approver |
+| ------------- | ----------- | -------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
+| UPDATE:APPEND | spec-0012   | NFR-0111                   | CHG-005 Phase 1 で TC-0012-0459 が test-count floor (>= 30) を in-process で pin したのみ。`designMdViolations.ts` の 90% statement-coverage 半分は CI lane 未配線で defer 済み。本 follow-up でこの半分を pin する。 | auto     |
+| UPDATE:APPEND | spec-0012   | REQ-0012-0074 (REQ-0128 follow-up) | CHG-005 Phase 1 で `tailwindContractConvergence.test.ts` を synthesised-iteration steady-state guard として landing したが、live-loop での `iterations.length <= 3` 測定は deferred。本 follow-up で dynamic-loop semantic を pin する。 | auto     |
+

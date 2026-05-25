@@ -97,6 +97,7 @@
 - REQ-0029: `layoutAntiPatternsDetected` 配列が `lap-001-orphan-page` から `lap-008-no-back-affordance` の whitelist 外トークンを含む場合、validator は `QFAI-PROT-002` を error 重大度で報告する
 - REQ-0030: `designMdViolations` 配列が `{category: "color"|"font"|"radius"|"shadow", expected: string, found: string, location: string}` 形状のみを許容する
 - REQ-0031: `findDesignMdViolations(html, designMd)` は I/O / clock 依存を持たず、同一入力に対し同一出力を返す pure function である
+- REQ-0150: lint-shipping ID-class guard expansion — `packages/qfai/scripts/lint-shipping.ts` の `src-comment` ルールセットを拡張し、`REQ-NNNN` / `REQ-NNNN-NNNN` / `AC-NNNN-NNNN` / `TC-NNNN-NNNN` / `US-NNNN-NNNN` / `BR-NNNN-NNNN` の composite ID class を `src/**/*.ts` のコメント行で catch する (現状は確立済みの forbidden class のみ scan)。CHG-005 cycle で spec-0006 doctor.ts にこれら ID が leak し、manual implementation-reviewer audit のみで検出された defect を automation 化する。layer-2 post-build guard (`packages/qfai/scripts/check-no-internal-version-leakage.sh`) と SSOT-sync invariant に従い同一の regex 集合をミラーする。Acceptance signal: `pnpm ci:lint` 実行時に `REQ-0001-0001` などの composite ID class を含む新規コメント行を含む変更が exit 1 で fail する。
 
 ## Entry points
 

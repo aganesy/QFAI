@@ -147,6 +147,7 @@ Absorbed from `.qfai/discussion/discussion-20260523221141355/06_REQ.md` (CHG-005
 - REQ-0012-0071 (REQ-0123, SHOULD): `qfai prototyping iterate --license-patch <file>` SHOULD accept an add-only diff to the frozen license catalog and write the result back as the new frozen catalog, with an audit row in `prototyping.json#licensePatchAudit[]`. Deletions and modifications MUST be rejected with the hint to use the cycle-0-restart path. Full unfreeze automation remains deferred.
 - REQ-0012-0072 (REQ-0128, SHOULD): `iterate` SHOULD write `iter-NN/iterate-context.json` summarizing the prior cycle's decisions for the next subagent invocation, schema `{ priorCycle: N, priorScores: {...}, openBlockers: [...], priorTailwindContract: "..." }`. The hint is advisory and orthogonal to `prototyping.json` (REQ-0012-0063).
 - REQ-0012-0073 (REQ-0129, SHOULD): When `iterate --cycle N` is invoked with N outside `0..9`, the error text MUST read literally `--cycle accepts 0..9 (=10 cycles total). --cycle 10 would be the 11th cycle and is not supported.` and SHOULD recommend `--cycle 9 --check-convergence` or the equivalent peek mode.
+- REQ-0012-0074 (REQ-0128 follow-up): `tailwindContractConvergence` live-loop measurement — `packages/qfai/tests/integration/prototyping/tailwindContractConvergence.test.ts` を Phase 1 で landing した synthesised-iteration steady-state guard から、実際の `qfai prototyping iterate` subprocess を canonical Tailwind-faithful fixture pack に対して spawn し、`iterations.length <= 3 AND stopReason === "axes-exceptional"` を live run から assert する dynamic-loop measurement へ昇格する。Phase 1 は post-fix steady state を pin し、本 REQ は loop-convergence semantic を pin する。Acceptance signal: 当該 integration test が child-process spawn 経由で iterate を実行し、再現可能な fixture pack で `iterations.length <= 3` を steady-state ではなく live-loop で assert して green になる。
 
 ### v1.9.1 NFR absorption (folded into BR-0012-0041..0059)
 
@@ -158,6 +159,7 @@ Absorbed from `.qfai/discussion/discussion-20260523221141355/06_REQ.md` (CHG-005
 - NFR-0110: Scanner unit-testability ≥ 30 unit tests across `scanFonts` / `scanRadius` / `scanShadow` / `scanColors` × `unwrapVarReference` / `SAFE_LITERALS` matrix; ≥ 90% statement coverage on the scanner module.
 - NFR-0113: md5 duplicate detection is deterministic across re-runs (same screen set → same `lap-009` finding set).
 - NFR-0114: `--cycle 0 --force` backup integrity verified by byte-equivalent pre/post comparison.
+- NFR-0111: scanner module statement-coverage ≥ 90% asserted by a CI lane — `pnpm ci:build-verify` (もしくは新規 `pnpm ci:coverage` script) から `c8` (または同等の V8 coverage 機構) を起動し、`coverage-summary.json` を生成。`packages/qfai/src/core/prototyping/designMdViolations.ts` の `statement < 90%` 時に CI を fail させる。Phase 1 (TC-0012-0459) は test-count floor (>= 30) を in-process で verify 済み。本 NFR は statement-coverage の半分を pin する。Acceptance signal: PR で scanner module を touch すると `scanner-coverage` 命名の required CI job が走り、`designMdViolations.ts` の statement coverage が 90% 未満なら fail する。
 
 ## Entry points
 

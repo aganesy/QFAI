@@ -125,3 +125,10 @@
   - Parallel pack pieces: spec-0012 receives the iterate-side scanner/prompt implementation; spec-0006 receives the `qfai doctor` playwright probe rebuild; spec-0013 receives the SDD UI contract template `primary_tasks:` slot; spec-0015 receives the Reviewer-Gate cycle + drift finding emission.
   - 9 deferred-OQ decisions made upstream by the orchestrator are reflected verbatim in REQ text (OQ-0111 = option A profile-suffixed path; legacy path sunset = `1.10.0`).
 - Source: REQ-0120, REQ-0102, REQ-0125 (discussion-20260523221141355); NFR-0101, NFR-0103
+
+## CHG-005 Phase 1 follow-ups (2026-05-26)
+
+| Op            | Target spec | REQ / NFR | Rationale                                                                                                                                                | Approver |
+| ------------- | ----------- | --------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
+| UPDATE:APPEND | spec-0004   | REQ-0150  | spec-0006 CHG-005 cycle で REQ/AC/TC composite ID が doctor.ts コメントに leak し manual reviewer audit でのみ検出された defect を lint-shipping `src-comment` lane で automation 化する。 | auto     |
+

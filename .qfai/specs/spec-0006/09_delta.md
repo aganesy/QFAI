@@ -60,3 +60,10 @@
   - Parallel pack pieces: spec-0004 (validate.json profile path + SSOT-sync pair lane + R-PROMPT-SCANNER-DRIFT justification); spec-0012 (iterate-side scanner / prompt implementation); spec-0013 (UI contract template `primary_tasks:` slot); spec-0015 (Reviewer-Gate cycle check + R-PROMPT-SCANNER-DRIFT emission).
   - 9 deferred-OQ decisions made upstream by the orchestrator are reflected verbatim in REQ text (playwright-cli sunset = `1.10.0`).
 - Source: REQ-0107, REQ-0122 (discussion-20260523221141355); NFR-0112
+
+## CHG-005 Phase 1 follow-ups (2026-05-26)
+
+| Op            | Target spec | REQ / NFR | Rationale                                                                                                                                                                  | Approver |
+| ------------- | ----------- | --------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
+| UPDATE:APPEND | spec-0006   | REQ-0123  | CHG-005 cycle (REQ-0107 / REQ-0122 実装) で `playwrightLauncher.ts` / `doctor.ts` の 3 関数が ~50 LOC を超えたまま着地。behavior-preserving extraction を follow-up として登録する。     | auto     |
+
