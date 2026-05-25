@@ -28,7 +28,27 @@
   profile + always-latest `.qfai/report/validate.json` with explicit `profile`
   field. Legacy `.qfai/output/validate.json` accepted during the deprecation
   window with `D-DEPRECATED-PATH` warning; sunset at qfai 1.10.0.
+  Post-sunset, the legacy file is no longer written and `D-DEPRECATED-PATH`
+  escalates to error severity, but only when on-disk evidence of a legacy
+  consumer is present (the stale legacy file exists) — clean projects that
+  never used the legacy surface see no finding. `qfai prototyping certify`
+  now reads `validate.json#profile` and refuses with the recovery command
+  `qfai validate --profile prototyping --fail-on error` on mismatch.
   (REQ-0120, BR-0004-0025..0026.)
+  **Upgrade impact**: consumers (CI scripts, agent prompts, dashboards)
+  reading `.qfai/output/validate.json` must migrate to
+  `.qfai/report/validate.json` (always-latest, carries `profile` field) or
+  `.qfai/report/validate-<profile>.json` (per-profile, independent files)
+  before upgrading past qfai 1.10.0. The legacy path is still written
+  during the v1.9.x window; at 1.10.0 it stops being written and the
+  finding escalates to error. Delete any stale `.qfai/output/validate.json`
+  after migrating to silence the post-sunset finding.
+- SSOT-sync pair-changed CI lane: new `scripts/check-prompt-scanner-pair.mjs`
+  wired into `pnpm ci:lint`. Rejects PRs that edit only one half of the
+  `findDesignMdViolations.ts` (scanner) ↔ `generator-prompt.md` (LLM contract)
+  pair with `R-PROMPT-SCANNER-DRIFT` (3-part justification: modified file,
+  un-paired counterpart, unmatched clause). Both-changed and neither-changed
+  PRs pass silently. (REQ-0102, BR-0004-0027..0028.)
 - `qfai doctor` probe rebuild: `node_modules/.bin/playwright` (with Windows
   `.cmd`/`.bat`/`.ps1` variants) is the primary launcher candidate;
   `npx --no-install playwright --version` fallback; `playwright-cli`

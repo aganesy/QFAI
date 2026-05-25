@@ -139,6 +139,23 @@ export async function runPrototypingCertify(
     );
     return 2;
   }
+  // Profile-mismatch gate: when the latest validate.json was produced by
+  // a profile OTHER than `prototyping`, certify refuses and prints both
+  // the observed and expected profile names plus the recovery command.
+  // The check runs before the counts.error check so the operator-facing
+  // diagnostic surfaces the real problem (wrong profile) instead of a
+  // downstream counts-could-not-be-asserted error.
+  const observedProfile = extractString(validateJson, "profile");
+  const EXPECTED_PROFILE = "prototyping" as const;
+  if (typeof observedProfile === "string" && observedProfile !== EXPECTED_PROFILE) {
+    error(
+      `qfai prototyping certify: ${validateJsonRel} was produced by profile="${observedProfile}" ` +
+        `but certify requires profile="${EXPECTED_PROFILE}". ` +
+        `Recovery: run \`qfai validate --profile ${EXPECTED_PROFILE} --fail-on error\` ` +
+        "and rerun certify.",
+    );
+    return 2;
+  }
   const errorCount = extractNumber(extractRecord(validateJson, "counts"), "error") ?? -1;
   if (errorCount !== 0) {
     error(
