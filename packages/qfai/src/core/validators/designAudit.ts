@@ -33,6 +33,13 @@ export type DesignFinding = {
   evidence: string[];
   guidance: string;
   file?: string;
+  /**
+   * Optional severity override that bypasses the standard tier-mapping
+   * path. Used by the QFAI-AUD-001 deprecation-window emission to surface
+   * legacy slot-less UI contracts at severity=info while preserving the
+   * default tier-mapping for the rest of the rule set.
+   */
+  severityOverride?: IssueSeverity;
 };
 
 // ---------------------------------------------------------------------------
@@ -81,7 +88,8 @@ export function findingToIssue(
   profile: string,
   rulePrefix = "audit",
 ): Issue {
-  const severity = mapSeverity(finding.severityTier, profile, finding.dimension);
+  const severity =
+    finding.severityOverride ?? mapSeverity(finding.severityTier, profile, finding.dimension);
   return issue(
     finding.ruleId,
     finding.message,
@@ -114,8 +122,14 @@ function _extractSection(content: string, heading: string): string | null {
 // Contracts / Selected Direction Checks
 // ---------------------------------------------------------------------------
 
-function parseScreenBlocks(content: string): Array<{ screenId: string; primaryTasks: string[] }> {
-  const blocks: Array<{ screenId: string; primaryTasks: string[] }> = [];
+function parseScreenBlocks(
+  content: string,
+): Array<{ screenId: string; primaryTasks: string[]; primaryTasksKeyPresent: boolean }> {
+  const blocks: Array<{
+    screenId: string;
+    primaryTasks: string[];
+    primaryTasksKeyPresent: boolean;
+  }> = [];
   const sections = content.split(/(?=^###\s+Screen:)/m);
   for (const section of sections) {
     if (!/^###\s+Screen:/m.test(section)) {
@@ -127,11 +141,13 @@ function parseScreenBlocks(content: string): Array<{ screenId: string; primaryTa
         .map((line) => /^\s*-\s+screen_id:\s*(.+)$/.exec(line)?.[1]?.trim() ?? "")
         .find(Boolean) ?? "unknown";
     const primaryTasks: string[] = [];
+    let primaryTasksKeyPresent = false;
 
     let inPrimaryTasks = false;
     for (const line of lines) {
       if (/^\s*-\s+primary_tasks:\s*$/i.test(line)) {
         inPrimaryTasks = true;
+        primaryTasksKeyPresent = true;
         continue;
       }
       if (!inPrimaryTasks) {
@@ -149,6 +165,7 @@ function parseScreenBlocks(content: string): Array<{ screenId: string; primaryTa
     blocks.push({
       screenId,
       primaryTasks,
+      primaryTasksKeyPresent,
     });
   }
   return blocks;
@@ -163,16 +180,35 @@ function checkContractsHierarchy(
   const screens = parseScreenBlocks(contractsContent);
   for (const screen of screens) {
     if (screen.primaryTasks.length === 0) {
-      findings.push({
-        ruleId: "QFAI-AUD-001",
-        dimension: "visualHierarchy",
-        severityTier: 1,
-        message: `[QFAI-AUD-001] ${file}: screen '${screen.screenId}' has empty primary_tasks; add at least one primary_task entry`,
-        why: "Each screen contract needs a clear primary task to anchor the core user action",
-        evidence: [file, screen.screenId, "QFAI-AUD-001"],
-        guidance: "Add at least one primary_tasks entry to the screen contract.",
-        file,
-      });
+      if (screen.primaryTasksKeyPresent) {
+        // key-empty: slot authored but left as `primary_tasks: []`. Treat as
+        // intentional violation, emit severity=error (blocking).
+        findings.push({
+          ruleId: "QFAI-AUD-001",
+          dimension: "visualHierarchy",
+          severityTier: 1,
+          message: `[QFAI-AUD-001] ${file}: screen '${screen.screenId}' has empty primary_tasks; add at least one primary_task entry`,
+          why: "Each screen contract needs a clear primary task to anchor the core user action",
+          evidence: [file, screen.screenId, "QFAI-AUD-001"],
+          guidance: "Add at least one primary_tasks entry to the screen contract.",
+          file,
+        });
+      } else {
+        // key-absent: legacy contract predates the primary_tasks slot.
+        // Emit severity=info under the deprecation window (sunset 1.10.0).
+        findings.push({
+          ruleId: "QFAI-AUD-001",
+          dimension: "visualHierarchy",
+          severityTier: 3,
+          severityOverride: "info",
+          message: `[QFAI-AUD-001] ${file}: screen '${screen.screenId}' uses a legacy UI contract that predates the primary_tasks slot; add the slot during your next \`/qfai-sdd\` cycle (sunset: qfai 1.10.0)`,
+          why: "Legacy contracts authored before the primary_tasks lane lack the slot; this is a deprecation-window signal, not a violation",
+          evidence: [file, screen.screenId, "QFAI-AUD-001"],
+          guidance:
+            "Add a `primary_tasks` slot (with at least one task) to the screen entry in the UI contract during your next `/qfai-sdd` cycle. Sunset: qfai 1.10.0.",
+          file,
+        });
+      }
       continue;
     }
     if (screen.primaryTasks.length > auditConfig.maxPrimaryCtas) {
@@ -203,16 +239,35 @@ function checkContractHierarchyFromScreens(
       // the file path explicitly. Falls back gracefully when sourceRef is
       // empty (e.g. directly-constructed screens with no source location).
       const [filePath = "<unknown-file>"] = screen.sourceRef.split("#");
-      findings.push({
-        ruleId: "QFAI-AUD-001",
-        dimension: "visualHierarchy",
-        severityTier: 1,
-        message: `[QFAI-AUD-001] ${filePath}: screen '${screen.screenId}' has empty primary_tasks; add at least one primary_task entry`,
-        why: "Each screen contract needs a clear primary task to anchor the core user action",
-        evidence: [filePath, screen.screenId, "QFAI-AUD-001"],
-        guidance: "Add at least one primary_tasks entry to the screen contract.",
-        file: screen.sourceRef,
-      });
+      if (screen.primaryTasksKeyPresent) {
+        // key-empty: slot authored but left as `primary_tasks: []`. Treat as
+        // intentional violation, emit severity=error (blocking).
+        findings.push({
+          ruleId: "QFAI-AUD-001",
+          dimension: "visualHierarchy",
+          severityTier: 1,
+          message: `[QFAI-AUD-001] ${filePath}: screen '${screen.screenId}' has empty primary_tasks; add at least one primary_task entry`,
+          why: "Each screen contract needs a clear primary task to anchor the core user action",
+          evidence: [filePath, screen.screenId, "QFAI-AUD-001"],
+          guidance: "Add at least one primary_tasks entry to the screen contract.",
+          file: screen.sourceRef,
+        });
+      } else {
+        // key-absent: legacy contract predates the primary_tasks slot.
+        // Emit severity=info under the deprecation window (sunset 1.10.0).
+        findings.push({
+          ruleId: "QFAI-AUD-001",
+          dimension: "visualHierarchy",
+          severityTier: 3,
+          severityOverride: "info",
+          message: `[QFAI-AUD-001] ${filePath}: screen '${screen.screenId}' uses a legacy UI contract that predates the primary_tasks slot; add the slot during your next \`/qfai-sdd\` cycle (sunset: qfai 1.10.0)`,
+          why: "Legacy contracts authored before the primary_tasks lane lack the slot; this is a deprecation-window signal, not a violation",
+          evidence: [filePath, screen.screenId, "QFAI-AUD-001"],
+          guidance:
+            "Add a `primary_tasks` slot (with at least one task) to the screen entry in the UI contract during your next `/qfai-sdd` cycle. Sunset: qfai 1.10.0.",
+          file: screen.sourceRef,
+        });
+      }
       continue;
     }
     if (screen.primaryTasks.length > auditConfig.maxPrimaryCtas) {

@@ -101,7 +101,7 @@
 ## EX-0013-0015: UI contract template ships `primary_tasks: []` slot
 
 - BR-Ref: BR-0013-0015
-- Given the shipped `packages/qfai/assets/init/.claude/skills/qfai-sdd/templates/contracts/ui-spec.yaml` template
+- Given the shipped `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/templates/contracts/ui-contract.sample.yaml` template
 - When the template is parsed at `qfai init` time
 - Then every entry in `screens[]` carries a literal `primary_tasks: []` key/value pair; the requirements-analyst agent guide reads "Each screen MUST declare ≥ 1 primary_task" (or equivalent canonical wording)
 

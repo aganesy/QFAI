@@ -99,15 +99,21 @@
 - SDD UI contract template carries a `primary_tasks` slot per `screens[]`
   entry (shipped pre-populated with one example entry so the sample passes
   its own validate); `requirements-analyst` agent guide instructs ≥ 1
-  primary_task per screen. QFAI-AUD-001 aligned validate lane blocks
-  `/qfai-prototyping` on empty `primary_tasks`, and the finding now names
-  the offending file path, the screen id, and the rule token in a single
-  user-facing message. (REQ-0115, AC-0013-0018.)
+  primary_task per screen. QFAI-AUD-001 aligned validate lane uses a
+  2-stage emission to distinguish slot-absent (legacy) contracts from
+  slot-empty (intentional violation) contracts: key-absent → severity=info
+  (non-blocking) under a one-minor-release deprecation window
+  (sunset: qfai 1.10.0); key-empty (`primary_tasks: []`) → severity=error
+  (blocking, intentional violation). All QFAI-AUD-001 findings name the
+  offending file path, the screen id, and the rule token in a single
+  user-facing message. (REQ-0115 / REQ-0117, AC-0013-0018.)
   **Upgrade impact**: consuming projects whose UI contracts predate v1.9.1
   do not carry the `primary_tasks` slot. On upgrade, `qfai validate` will
-  surface QFAI-AUD-001 (severity=error) for each affected screen. Recovery:
-  add at least one `primary_tasks` entry per screen contract. The finding
-  text is upgrade-path-aware ("add at least one primary_task entry").
+  surface QFAI-AUD-001 at severity=info (non-blocking) for each affected
+  screen during the deprecation window, with a remediation message naming
+  the sunset version. Recovery before sunset: add a `primary_tasks` slot
+  (with at least one task) to each screen contract; at qfai 1.10.0 the
+  slot becomes required and missing slots will block.
 - Multi-spec posture: `/qfai-prototyping` SKILL.md realigned to single-spec
   per `DR-0001-0005` (option A); `resolveSurfaceUnion()` retained as an
   internal helper for validators / `show-spec` only. Full per-spec layout

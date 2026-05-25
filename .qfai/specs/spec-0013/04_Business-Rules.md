@@ -107,7 +107,7 @@
 
 - AC-Refs: AC-0013-0018
 
-- The shipped UI contract template `packages/qfai/assets/init/.claude/skills/qfai-sdd/templates/contracts/ui-spec.yaml` MUST carry a `primary_tasks: []` slot on every entry in `screens[]`. The slot ships as an empty array (placeholder for authoring); the requirements-analyst agent guide MUST instruct authoring ≥ 1 primary_task per screen as part of `/qfai-sdd` UI contract authoring.
+- The shipped UI contract template `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/templates/contracts/ui-contract.sample.yaml` MUST carry a `primary_tasks: []` slot on every entry in `screens[]`. The slot ships as an empty array (placeholder for authoring); the requirements-analyst agent guide MUST instruct authoring ≥ 1 primary_task per screen as part of `/qfai-sdd` UI contract authoring.
 - Removing the slot or renaming it without an equivalent migration is a breaking change of the contract template and MUST go through an explicit slice change (CHG entry) in this spec.
 
 ## BR-0013-0016: validate lane gates `/qfai-prototyping` on non-empty `primary_tasks`

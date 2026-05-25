@@ -90,7 +90,7 @@ Given a traceability validator declared in `packages/qfai/src/core/validators/`,
 ## AC-0013-0018: UI contract template carries `primary_tasks: []` slot
 
 - US-Refs: US-0013-0011
-- Given the shipped UI contract template `packages/qfai/assets/init/.claude/skills/qfai-sdd/templates/contracts/ui-spec.yaml`,
+- Given the shipped UI contract template `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/templates/contracts/ui-contract.sample.yaml`,
 - When the template is read at `qfai init` time or by `/qfai-sdd` during contract authoring,
 - Then every entry in `screens[]` carries a `primary_tasks: []` slot AND the requirements-analyst agent guide (under `.qfai/assistant/agents/requirements-analyst.md` or equivalent) instructs authoring ≥ 1 primary_task per screen.
 

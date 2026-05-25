@@ -172,7 +172,7 @@ that predates this PR. Tracked for separate implementation as OQ-0016
 - AC-Refs: AC-0013-0018
 - Type: normal
 - Level: integration
-- Verify that the shipped `packages/qfai/assets/init/.claude/skills/qfai-sdd/templates/contracts/ui-spec.yaml` template parses with every `screens[]` entry carrying a `primary_tasks: []` slot, and that the requirements-analyst agent guide contains the instruction "≥ 1 primary_task per screen" (or canonical equivalent). Implemented as a template-load + structural-assertion test under `packages/qfai/tests/integration/sddUiTemplate.test.ts`.
+- Verify that the shipped `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/templates/contracts/ui-contract.sample.yaml` template parses with every `screens[]` entry carrying a `primary_tasks: []` slot, and that the requirements-analyst agent guide contains the instruction "≥ 1 primary_task per screen" (or canonical equivalent). Implemented as a template-load + structural-assertion test under `packages/qfai/tests/integration/sddUiTemplate.test.ts`.
 
 ## TC-0013-0026: Empty `primary_tasks` blocks `/qfai-prototyping` preflight
 

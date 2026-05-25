@@ -13,6 +13,15 @@ export type CanonicalScreenContract = {
   screenId: string;
   route: string;
   primaryTasks: string[];
+  /**
+   * True when the source contract authored a `primary_tasks` key on the
+   * screen entry (regardless of whether the resulting list is empty).
+   * False when the slot is entirely absent (legacy contracts predating the
+   * primary_tasks lane). Consumers use this flag to distinguish a
+   * deliberate empty-slot violation (severity=error) from a legacy
+   * slot-less contract (severity=info under deprecation window).
+   */
+  primaryTasksKeyPresent: boolean;
   sourceRef: string;
 };
 
@@ -124,6 +133,7 @@ export function parseCanonicalScreenContracts(content: string): CanonicalScreenC
         screenId: slugifyScreenId(name),
         route: "",
         primaryTasks: [],
+        primaryTasksKeyPresent: false,
         sourceRef: "",
       };
       inPrimaryTasks = false;
@@ -142,6 +152,8 @@ export function parseCanonicalScreenContracts(content: string): CanonicalScreenC
         current.screenId = value;
       } else if (key === "route" && value) {
         current.route = value;
+      } else if (key === "primary_tasks") {
+        current.primaryTasksKeyPresent = true;
       }
       inPrimaryTasks = key === "primary_tasks" && value.length === 0;
       continue;
@@ -243,6 +255,7 @@ export function extractUiScreens(parsed: unknown): CanonicalScreenContract[] {
       typeof record.title === "string" && record.title.trim().length > 0
         ? record.title.trim()
         : screenId;
+    const primaryTasksKeyPresent = Object.prototype.hasOwnProperty.call(record, "primary_tasks");
     const primaryTasks = Array.isArray(record.primary_tasks)
       ? record.primary_tasks
           .filter((entry): entry is string => typeof entry === "string" && entry.trim().length > 0)
@@ -255,6 +268,7 @@ export function extractUiScreens(parsed: unknown): CanonicalScreenContract[] {
         screenId,
         route,
         primaryTasks,
+        primaryTasksKeyPresent,
         sourceRef: "",
       },
     ];

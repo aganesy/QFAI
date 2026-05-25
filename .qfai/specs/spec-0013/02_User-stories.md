@@ -42,4 +42,4 @@ As a QFAI maintainer, I want `/qfai-sdd` to stop emitting the legacy design cont
 
 ## US-0013-0011: UI contract `primary_tasks` slot per screen
 
-As a requirements-analyst authoring UI contracts during `/qfai-sdd`, I want the shipped `ui-spec.yaml` template to include a `primary_tasks: []` slot on every `screens[]` entry AND the requirements-analyst agent guide to instruct me to fill ≥ 1 primary_task per screen, so that downstream `/qfai-prototyping` always has explicit primary-task semantics; the new validate lane (QFAI-AUD-001 aligned) blocks `/qfai-prototyping` from starting on UI contracts whose `primary_tasks` is empty (REQ-0115).
+As a requirements-analyst authoring UI contracts during `/qfai-sdd`, I want the shipped `ui-contract.sample.yaml` template to include a `primary_tasks: []` slot on every `screens[]` entry AND the requirements-analyst agent guide to instruct me to fill ≥ 1 primary_task per screen, so that downstream `/qfai-prototyping` always has explicit primary-task semantics; the new validate lane (QFAI-AUD-001 aligned) blocks `/qfai-prototyping` from starting on UI contracts whose `primary_tasks` is empty (REQ-0115).
