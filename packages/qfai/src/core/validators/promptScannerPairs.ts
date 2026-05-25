@@ -34,4 +34,25 @@ export const PROMPT_SCANNER_PAIRS: readonly PromptScannerPair[] = [
     // Prompt forbids hex / rgb / hsl literals outside DESIGN.md.
     promptTokens: ["#hex", "rgb("],
   },
+  {
+    clause: "font-family-ban",
+    // Scanner enumerates `"font"` as a DesignMdViolation kind.
+    scannerTokens: ['"font"'],
+    // Prompt forbids raw font-family declarations outside DESIGN.md.
+    promptTokens: ["font-family:"],
+  },
+  {
+    clause: "radius-literal-ban",
+    // Scanner enumerates `"radius"` as a DesignMdViolation kind.
+    scannerTokens: ['"radius"'],
+    // Prompt forbids raw border-radius values outside DESIGN.md.
+    promptTokens: ["border-radius:"],
+  },
+  {
+    clause: "shadow-rgba-ban",
+    // Scanner enumerates `"shadow"` as a DesignMdViolation kind.
+    scannerTokens: ['"shadow"'],
+    // Prompt forbids raw box-shadow declarations outside DESIGN.md.
+    promptTokens: ["box-shadow:"],
+  },
 ];

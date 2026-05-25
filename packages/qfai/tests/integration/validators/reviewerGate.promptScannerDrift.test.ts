@@ -38,6 +38,9 @@ const PROMPT_SCAFFOLD = `# Generator Iteration Prompt
 ## Hard constraints
 
 - No \`#hex\`, \`rgb(...)\`, \`rgba(...)\` value outside DESIGN.md.
+- No \`font-family:\` whose first token is outside DESIGN.md.typography.
+- No \`border-radius:\` outside DESIGN.md.visual.radius.
+- No \`box-shadow:\` outside DESIGN.md.visual.shadow.
 `;
 
 async function newRoot(prefix: string): Promise<string> {

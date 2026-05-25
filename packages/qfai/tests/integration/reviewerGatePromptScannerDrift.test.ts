@@ -23,6 +23,7 @@ import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { loadConfig } from "../../src/core/config.js";
+import { PROMPT_SCANNER_PAIRS } from "../../src/core/validators/promptScannerPairs.js";
 import { validateReviewerGate } from "../../src/core/validators/reviewerGate.js";
 import { validateReviewerJustification } from "../../src/core/validators/reviewerJustification.js";
 
@@ -42,6 +43,9 @@ const PROMPT_SCAFFOLD = `# Generator Iteration Prompt
 ## Hard constraints
 
 - No \`#hex\`, \`rgb(...)\`, \`rgba(...)\` value outside DESIGN.md.
+- No \`font-family:\` whose first token is outside DESIGN.md.typography.
+- No \`border-radius:\` outside DESIGN.md.visual.radius.
+- No \`box-shadow:\` outside DESIGN.md.visual.shadow.
 `;
 
 async function newRoot(prefix: string): Promise<string> {
@@ -119,6 +123,16 @@ describe("TC-0015-0019: Reviewer Gate emits R-PROMPT-SCANNER-DRIFT with 3-part j
     expect(findings[0]?.message).toMatch(/un-paired=/);
   });
 
+  it("PROMPT_SCANNER_PAIRS manifest enumerates all 4 prototyping compliance clauses (color/font/radius/shadow)", () => {
+    // CHG-005 Phase 1 follow-up: the manifest must cover every
+    // DesignMdViolation kind enumerated by the scanner (color / font /
+    // radius / shadow) — not only the proof-of-concept color clause.
+    const clauses = PROMPT_SCANNER_PAIRS.map((p) => p.clause).sort();
+    expect(clauses).toEqual(
+      ["color-literal-ban", "font-family-ban", "radius-literal-ban", "shadow-rgba-ban"].sort(),
+    );
+  });
+
   it("downstream qfai validate ingestion rejects empty justification variants (cross-spec assertion vs BR-0004-0028)", async () => {
     // Seed a reviewer-completion.json containing a R-PROMPT-SCANNER-DRIFT
     // finding with an empty justification. The reviewerJustification
@@ -141,4 +155,85 @@ describe("TC-0015-0019: Reviewer Gate emits R-PROMPT-SCANNER-DRIFT with 3-part j
     expect(drift.length).toBe(1);
     expect(drift[0]?.severity).toBe("error");
   });
+});
+
+/**
+ * Per-clause drift matrix: every clause in PROMPT_SCANNER_PAIRS must
+ * be exercised by both a scanner-only-missing and a prompt-only-missing
+ * fixture, with the resulting R-PROMPT-SCANNER-DRIFT message naming
+ * the clause. This is the CHG-005 Phase 1 follow-up acceptance signal.
+ */
+type ClauseFixture = {
+  readonly clause: string;
+  readonly scannerKindLiteral: string;
+  readonly promptLine: string;
+};
+
+const CLAUSE_FIXTURES: readonly ClauseFixture[] = [
+  {
+    clause: "color-literal-ban",
+    scannerKindLiteral: '"color"',
+    promptLine: "- No `#hex`, `rgb(...)` value outside DESIGN.md.",
+  },
+  {
+    clause: "font-family-ban",
+    scannerKindLiteral: '"font"',
+    promptLine: "- No `font-family:` outside DESIGN.md.typography.",
+  },
+  {
+    clause: "radius-literal-ban",
+    scannerKindLiteral: '"radius"',
+    promptLine: "- No `border-radius:` outside DESIGN.md.visual.radius.",
+  },
+  {
+    clause: "shadow-rgba-ban",
+    scannerKindLiteral: '"shadow"',
+    promptLine: "- No `box-shadow:` outside DESIGN.md.visual.shadow.",
+  },
+];
+
+function scannerWithout(missing: string): string {
+  // Construct a scanner file containing every clause's kind literal
+  // EXCEPT the one we want to omit, so drift fires only for `missing`.
+  // NOTE: the comment must NOT echo the omitted literal verbatim — the
+  // validator does a substring scan, and `// minus "radius"` would
+  // accidentally satisfy the scanner-side token presence check.
+  const kept = CLAUSE_FIXTURES.map((c) => c.scannerKindLiteral).filter((lit) => lit !== missing);
+  const union = kept.length > 0 ? kept.join(" | ") : '"none"';
+  return `// Scanner stub (omitted clause).\nexport type DesignMdViolation = { readonly kind: ${union}; };\n`;
+}
+
+function promptWithout(missingClause: string): string {
+  const lines = CLAUSE_FIXTURES.filter((c) => c.clause !== missingClause).map((c) => c.promptLine);
+  return `# Generator Iteration Prompt\n\n## Hard constraints\n\n${lines.join("\n")}\n`;
+}
+
+describe("TC-0015-0019: per-clause drift matrix covers all PROMPT_SCANNER_PAIRS entries", () => {
+  it.each(CLAUSE_FIXTURES)(
+    "emits R-PROMPT-SCANNER-DRIFT naming clause=$clause when scanner is missing the kind literal",
+    async ({ clause, scannerKindLiteral }) => {
+      await seedPair(root, { scanner: scannerWithout(scannerKindLiteral) });
+      const issues = await validateReviewerGate(root, await getConfig(root));
+      const findings = issues.filter((i) => i.code === "R-PROMPT-SCANNER-DRIFT");
+      const named = findings.find((f) => f.message.includes(`clause=${clause}`));
+      expect(named, `expected drift naming clause=${clause}`).toBeDefined();
+      expect(named?.severity).toBe("error");
+      // Scanner is the un-paired side here (prompt still mentions the clause).
+      expect(named?.message).toMatch(/un-paired=.*designMdViolations\.ts/);
+    },
+  );
+
+  it.each(CLAUSE_FIXTURES)(
+    "emits R-PROMPT-SCANNER-DRIFT naming clause=$clause when prompt is missing the clause line",
+    async ({ clause }) => {
+      await seedPair(root, { prompt: promptWithout(clause) });
+      const issues = await validateReviewerGate(root, await getConfig(root));
+      const findings = issues.filter((i) => i.code === "R-PROMPT-SCANNER-DRIFT");
+      const named = findings.find((f) => f.message.includes(`clause=${clause}`));
+      expect(named, `expected drift naming clause=${clause}`).toBeDefined();
+      expect(named?.severity).toBe("error");
+      // Prompt is the un-paired side here (scanner still mentions the clause).
+      expect(named?.message).toMatch(/un-paired=.*generator-prompt\.md/);
+    },
+  );
 });

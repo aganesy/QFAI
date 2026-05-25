@@ -36,9 +36,14 @@ const PROMPT_REL =
  * Manifest of the contract clauses that must drift-sync together. Kept
  * in lock-step with `packages/qfai/src/core/validators/promptScannerPairs.ts`
  * (PROMPT_SCANNER_PAIRS). The script does not require the source file
- * at runtime — it just names the clause for the operator.
+ * at runtime — it just names the clauses for the operator. The pair
+ * tracks every Tailwind compliance clause (color / font / radius /
+ * shadow); the path-pair semantics of this guard are clause-agnostic
+ * (touching either half without the other is drift regardless of
+ * which clause the diff actually modifies).
  */
-const TRACKED_CLAUSE = "color-literal-ban";
+const TRACKED_CLAUSES =
+  "color-literal-ban|font-family-ban|radius-literal-ban|shadow-rgba-ban";
 
 function parseArgs(argv) {
   const out = { base: undefined, changed: undefined };
@@ -142,7 +147,7 @@ function main() {
   const message =
     `R-PROMPT-SCANNER-DRIFT: SSOT-sync pair drift detected — only ${modified} ` +
     `was modified without the matching counterpart. justification: modified=${modified}, ` +
-    `un-paired=${unpaired}, clause=${TRACKED_CLAUSE} (Tailwind compliance contract; ` +
+    `un-paired=${unpaired}, clause=${TRACKED_CLAUSES} (Tailwind compliance contract; ` +
     "see packages/qfai/src/core/validators/promptScannerPairs.ts for the manifest).\n";
   stdout.write(message);
   return 1;
