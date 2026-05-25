@@ -83,11 +83,33 @@ const FONT_RE = new RegExp(
 const SAFE_LITERALS: ReadonlySet<string> = new Set([
   "transparent",
   "currentcolor",
+  "currentColor".toLowerCase(),
   "inherit",
   "initial",
   "unset",
+  "revert",
   "0",
   "none",
+]);
+
+// Tailwind preflight sentinel color literals. These four values appear
+// in the Tailwind CDN preflight stylesheet and on the rendered DOM of
+// any faithful Tailwind iter. They are intentionally allowlisted as
+// safe across `scanColors` regardless of DESIGN.md content — without
+// this allowlist, an iter that simply loads the Tailwind CDN script
+// produces spurious `designMdViolations[]` entries that block
+// convergence at certify.
+//
+// Members (lowercased for case-insensitive comparison):
+//   - `#fff`             — preflight `color: inherit` chain default
+//   - `#9ca3af`          — placeholder-color default (gray-400)
+//   - `#e5e7eb`          — border-color default (gray-200)
+//   - `rgb(59 130 246 / 0.5)` — focus ring default (blue-500 / 50%)
+const TAILWIND_PREFLIGHT_LITERALS: ReadonlySet<string> = new Set([
+  "#fff",
+  "#9ca3af",
+  "#e5e7eb",
+  "rgb(59 130 246 / 0.5)",
 ]);
 
 // Single-shot test variants of HEX / RGB / HSL regexes — `g`-flagged
@@ -327,7 +349,29 @@ function collectAllowedColors(dm: DesignMd): Set<string> {
 // matches the pre-fix posture: weak literal-only protection is
 // strictly more than no protection.) If a future spec adds a
 // `dm.visual.textShadow` token contract, this scope can widen.
-const SHADOW_DECL_STRIP_RE = /\bbox-shadow\s*:[^;}<>"']+/gi;
+// Strip declaration shapes whose value's color literals must NOT
+// surface as DESIGN.md drift before `scanColors` runs:
+//
+//   - `box-shadow: …`         (legacy CSS shadow declaration)
+//   - `--*-shadow*: …`        (Tailwind / custom-token shadow custom
+//                              properties, e.g. `--shadow-sm`,
+//                              `--card-shadow`, `--btn-shadow-hover`,
+//                              `--ring-shadow-1`)
+//   - `--tw-*: …`             (Tailwind internal custom-property
+//                              family, e.g. `--tw-shadow-color`,
+//                              `--tw-ring-color`; preflight emits
+//                              these regardless of DESIGN.md content)
+//
+// scanShadow validates registered `box-shadow` values independently
+// against `dm.visual.shadow`, so legitimate shadow drift still
+// surfaces through that channel.
+// `\b` anchors `box-shadow`; the two custom-property branches lead
+// with `--`, which is `\W\W` so the `\b` would not fire there. The
+// alternation pattern explicitly groups: `\bbox-shadow` (word-boundary
+// before letter) OR `--tw-…` (literal `--` start) OR `--…shadow…`
+// (literal `--` start). All three carry the `:` value-prefix sentinel.
+const SHADOW_DECL_STRIP_RE =
+  /(?:\bbox-shadow|--tw-[\w-]+|--[\w-]*shadow[\w-]*)\s*:[^;}<>"']+/gi;
 
 // Capture CSS-context regions so the color scanner does not flag
 // non-CSS hex / rgb / hsl substrings (e.g. `<a href="#deadbeef">`,
@@ -347,12 +391,32 @@ const SHADOW_DECL_STRIP_RE = /\bbox-shadow\s*:[^;}<>"']+/gi;
 const STYLE_BLOCK_RE = /<style\b[^>]*>([\s\S]*?)<\/style\s*>/gi;
 const INLINE_STYLE_RE = /\sstyle\s*=\s*(?:"([^"]*)"|'([^']*)')/gi;
 
+// Narrow `html` to the `<body>...</body>` region when present, so
+// scanner regexes only see CSS that participates in the rendered DOM
+// surface. Tailwind preflight `<style>` blocks live in `<head>` and
+// emit utility-class definitions / resets whose literal values are
+// not authored by the iter — they must not surface as DESIGN.md
+// drift.
+//
+// When no `<body>` element is present (e.g. a fragment under test),
+// fall back to scanning the full input so the legacy regression
+// surface (inline-style fragments without an outer body) keeps
+// behaving as before.
+const BODY_BLOCK_RE = /<body\b[^>]*>([\s\S]*?)<\/body\s*>/i;
+
+function narrowToBody(html: string): string {
+  const m = BODY_BLOCK_RE.exec(html);
+  if (!m) return html;
+  return m[1] ?? "";
+}
+
 function extractCssRegions(html: string): string {
+  const scoped = narrowToBody(html);
   const parts: string[] = [];
-  for (const match of html.matchAll(STYLE_BLOCK_RE)) {
+  for (const match of scoped.matchAll(STYLE_BLOCK_RE)) {
     if (match[1]) parts.push(match[1]);
   }
-  for (const match of html.matchAll(INLINE_STYLE_RE)) {
+  for (const match of scoped.matchAll(INLINE_STYLE_RE)) {
     const value = match[1] ?? match[2];
     if (value) parts.push(value);
   }
@@ -388,18 +452,21 @@ function scanColors(html: string, dm: DesignMd, out: DesignMdViolation[]): void 
   const cssText = extractCssRegions(html).replace(CSS_URL_RE, "").replace(SHADOW_DECL_STRIP_RE, "");
   for (const match of cssText.matchAll(HEX_RE)) {
     const literal = match[0].toLowerCase();
+    if (TAILWIND_PREFLIGHT_LITERALS.has(literal)) continue;
     if (!allowed.has(literal)) {
       out.push({ kind: "color", found: literal });
     }
   }
   for (const match of cssText.matchAll(RGB_RE)) {
     const literal = match[0].toLowerCase();
+    if (TAILWIND_PREFLIGHT_LITERALS.has(literal)) continue;
     if (!allowed.has(literal)) {
       out.push({ kind: "color", found: literal });
     }
   }
   for (const match of cssText.matchAll(HSL_RE)) {
     const literal = match[0].toLowerCase();
+    if (TAILWIND_PREFLIGHT_LITERALS.has(literal)) continue;
     if (!allowed.has(literal)) {
       out.push({ kind: "color", found: literal });
     }
@@ -477,11 +544,93 @@ function scanColors(html: string, dm: DesignMd, out: DesignMdViolation[]): void 
   }
 }
 
+/**
+ * Resolve a CSS value's `var(--token[, fallback])` reference against
+ * a previously-parsed `:root { --token: value; }` declaration map.
+ *
+ * Behaviour:
+ *   - `var(--name)` with `--name` in `rootDeclarations` → return the
+ *     declared value.
+ *   - `var(--name, fallback)` with `--name` not in the map → return
+ *     the fallback (trimmed).
+ *   - `var(--name)` with no match and no fallback → return the input
+ *     verbatim (no resolution possible; downstream judgment remains
+ *     unchanged).
+ *   - Non-`var(...)` input → returned verbatim.
+ *
+ * Pure function: zero I/O, single-pass regex, no recursion (nested
+ * `var()` is out of scope and resolves to the input verbatim).
+ */
+export function unwrapVarReference(
+  value: string,
+  rootDeclarations: ReadonlyMap<string, string>,
+): string {
+  const trimmed = value.trim();
+  const m = /^var\(\s*(--[^,)\s]+)\s*(?:,\s*([^)]+))?\)$/.exec(trimmed);
+  if (!m) return value;
+  const tokenName = (m[1] ?? "").trim();
+  const fallback = m[2]?.trim();
+  const resolved = rootDeclarations.get(tokenName);
+  if (resolved !== undefined) return resolved;
+  if (fallback !== undefined && fallback.length > 0) return fallback;
+  return value;
+}
+
+// Parse `:root { --token: value; ... }` blocks from CSS text into a
+// flat `Map<string, string>` keyed by token name (including the
+// leading `--`). Multiple `:root` blocks are merged in source order
+// — the last declaration wins (matches CSS cascade behaviour).
+//
+// Scope is intentionally narrow: only `:root` blocks are mined.
+// `html:root`, `[data-theme="dark"]:root`, and class-scoped tokens
+// require selector resolution at render time and are out of scope
+// for the regex-based scanner. The common case (a single `:root`
+// block in `<head>` or near the top of `<style>`) is fully covered.
+const ROOT_BLOCK_RE = /:root\s*\{([^}]*)\}/gi;
+const DECL_RE = /(--[\w-]+)\s*:\s*([^;]+)/g;
+
+function parseRootDeclarations(cssText: string): Map<string, string> {
+  const out = new Map<string, string>();
+  for (const block of cssText.matchAll(ROOT_BLOCK_RE)) {
+    const body = block[1] ?? "";
+    for (const decl of body.matchAll(DECL_RE)) {
+      const name = (decl[1] ?? "").trim();
+      const value = (decl[2] ?? "").trim();
+      if (name.length === 0 || value.length === 0) continue;
+      out.set(name, value);
+    }
+  }
+  return out;
+}
+
+// Collect ALL `<style>` block + inline-style content across the
+// document, NOT just the body-scoped slice. `:root` declarations
+// commonly live in `<head><style>`; the unwrap map must see them so
+// `font-family: var(--font-sans)` resolves correctly when the body
+// references a head-defined token. This is intentionally asymmetric
+// from `extractCssRegions` (body-scoped, drives violation surface):
+// declarations are trusted *inputs* to the unwrap step, not part of
+// the scan surface where drift can land.
+function allCssRegions(html: string): string {
+  const parts: string[] = [];
+  for (const match of html.matchAll(STYLE_BLOCK_RE)) {
+    if (match[1]) parts.push(match[1]);
+  }
+  for (const match of html.matchAll(INLINE_STYLE_RE)) {
+    const value = match[1] ?? match[2];
+    if (value) parts.push(value);
+  }
+  return parts.join("\n");
+}
+
 function scanRadius(html: string, dm: DesignMd, out: DesignMdViolation[]): void {
   const allowed = new Set<string>(Object.values(dm.visual.radius));
+  const rootDecls = parseRootDeclarations(allCssRegions(html));
   for (const match of html.matchAll(RADIUS_RE)) {
     const captured = match[1] ?? "";
-    const value = captured.trim();
+    const raw = captured.trim();
+    if (raw.length === 0) continue;
+    const value = unwrapVarReference(raw, rootDecls).trim();
     if (value.length === 0) continue;
     if (SAFE_LITERALS.has(value.toLowerCase())) continue;
     if (allowed.has(value)) continue;
@@ -491,9 +640,12 @@ function scanRadius(html: string, dm: DesignMd, out: DesignMdViolation[]): void 
 
 function scanShadow(html: string, dm: DesignMd, out: DesignMdViolation[]): void {
   const allowed = new Set<string>(Object.values(dm.visual.shadow));
+  const rootDecls = parseRootDeclarations(allCssRegions(html));
   for (const match of html.matchAll(SHADOW_RE)) {
     const captured = match[1] ?? "";
-    const value = captured.trim();
+    const raw = captured.trim();
+    if (raw.length === 0) continue;
+    const value = unwrapVarReference(raw, rootDecls).trim();
     if (value.length === 0) continue;
     if (SAFE_LITERALS.has(value.toLowerCase())) continue;
     if (allowed.has(value)) continue;
@@ -507,11 +659,18 @@ function scanFonts(html: string, dm: DesignMd, out: DesignMdViolation[]): void {
     dm.visual.typography.family_display,
     dm.visual.typography.family_mono,
   ];
+  const rootDecls = parseRootDeclarations(allCssRegions(html));
   for (const match of html.matchAll(FONT_RE)) {
     const captured = match[1] ?? "";
     const trimmed = captured.trim();
     if (trimmed.length === 0) continue;
-    const value = stripQuotes(trimmed);
+    const resolved = unwrapVarReference(trimmed, rootDecls).trim();
+    // CSS-wide keywords (`inherit`, `initial`, `unset`, `revert`,
+    // `currentColor`) are SAFE_LITERALS — never a font-family
+    // candidate to compare against DESIGN.md stacks. Without this
+    // gate, `font-family: inherit` surfaces as drift.
+    if (SAFE_LITERALS.has(resolved.toLowerCase())) continue;
+    const value = stripQuotes(resolved);
     if (!fontMatches(value, stacks)) {
       out.push({ kind: "font", found: value });
     }
