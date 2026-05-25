@@ -35,8 +35,14 @@
   accepted-with-warning during the deprecation window (sunset 1.10.0).
   Failure-mode error text includes the install hint `npm i -D playwright`.
   `skills.integrity` default severity downgraded to `warning`; doctor summary
-  groups findings into "errors blocking the active profile" vs "warnings
-  advisory of drift". (REQ-0107 / REQ-0122, AC-0006-0010..0014.)
+  groups findings into "errors blocking the active profile" vs
+  "advisory findings (drift, non-blocking by default)". (REQ-0107 / REQ-0122,
+  AC-0006-0010..0014.)
+  **Upgrade impact**: pipelines using `qfai doctor --fail-on error` will no
+  longer fail on `skills.integrity` drift (the severity now defaults to
+  `warning`). Use `--fail-on warning` to preserve the old gate, or accept the
+  new advisory semantics. The skills-integrity check itself is unchanged —
+  only its severity classification.
 - Reviewer-Gate `R-CERTIFY-VERIFY-CIRCULAR` (severity error) emitted when a
   future PR wires `certify` to read validator output requiring `/qfai-atdd`
   or `/qfai-implement` artifacts at the prototyping phase. Resolution path:

@@ -411,9 +411,15 @@ describe("doctor", { timeout: 60000 }, () => {
     }
   });
 
-  it("reports launcher probe failures when playwright-cli exists but is not runnable", async () => {
+  it("reports launcher probe failures when only a broken playwright-cli exists", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-doctor-"));
     const server = await startTestServer();
+    // Probe-order flip (spec-0006 CHG-005): playwright-cli is now the
+    // deprecated stage. To force the launcher check into the error path we
+    // must also suppress the stage-2 `npx --no-install playwright` fallback,
+    // which would otherwise resolve against any developer-host install.
+    const originalPath = process.env.PATH;
+    process.env.PATH = "";
     try {
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
       await seedPrototypingFixture(root, server.url);
@@ -422,6 +428,7 @@ describe("doctor", { timeout: 60000 }, () => {
       const parsed = await readDoctorData(root, { profile: "prototyping", targetUrl: server.url });
       expect(findCheck(parsed.checks, "prototyping.playwrightCli")?.severity).toBe("error");
     } finally {
+      process.env.PATH = originalPath;
       await stopTestServer(server.server);
       await rm(root, { recursive: true, force: true });
     }

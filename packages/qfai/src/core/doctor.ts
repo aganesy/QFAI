@@ -20,7 +20,10 @@ import {
   PROTOTYPING_REQUIRED_ROLE_IDS,
   PROTOTYPING_ROLE_WRAPPER_INTEGRATIONS,
 } from "./prototyping/policy.js";
-import { resolvePlaywrightCliLauncher } from "./prototyping/playwrightCliLauncher.js";
+import {
+  getProbeOrder as getPlaywrightProbeOrder,
+  resolvePlaywrightLauncher,
+} from "./prototyping/playwrightLauncher.js";
 import { resolvePrimaryPrototypingSpec } from "./prototyping/specResolution.js";
 import { collectSpecEntries } from "./specLayout.js";
 import { DEFAULT_TEST_FILE_EXCLUDE_GLOBS } from "./traceability.js";
@@ -200,9 +203,13 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
           details: { skillsDir: toRelativePath(root, diff.skillsDir) },
         });
       } else {
+        // skills.integrity defaults to `warning`: direct edits to
+        // .qfai/assistant/skills/** are advisory, not active-profile-blocking.
+        // The doctor 2-group renderer always routes this finding into the
+        // advisory group regardless of message wording.
         addCheck(checks, {
           id: "skills.integrity",
-          severity: "error",
+          severity: "warning",
           title: "Skills integrity (.qfai/assistant/skills)",
           message:
             "標準資産 '.qfai/assistant/skills/**' が改変されています。skills の直編集は非推奨です（アップデート/再 init で上書きされ得ます）。",
@@ -543,16 +550,33 @@ async function buildPrototypingDoctorChecks(
   targetUrlOverride?: string,
 ): Promise<DoctorCheck[]> {
   const targetUrl = targetUrlOverride ?? config.prototyping?.execution?.targetUrl ?? undefined;
-  const baseChecks = await Promise.all([
+  const [
+    primarySpec,
+    uiContracts,
+    designContracts,
+    requiredRoles,
+    launcherChecks,
+    targetUrlCheck,
+  ] = await Promise.all([
     buildPrototypingPrimarySpecCheck(root, config),
     buildPrototypingUiContractsCheck(root, config),
     buildPrototypingDesignContractsCheck(root, config),
     buildPrototypingRolesCheck(root),
-    buildPlaywrightCliCheck(root),
+    buildPlaywrightLauncherChecks(root),
     buildTargetUrlCheck(root, targetUrl, targetUrlOverride ? "cli" : "config"),
   ]);
   const designMdChecks = await buildPrototypingDesignMdChecks(root, config);
-  return [...baseChecks, ...designMdChecks];
+  // `launcherChecks` may yield 1 or 2 entries: the primary check plus an
+  // optional `D-DEPRECATED-PROBE` finding when the deprecated stage resolves.
+  return [
+    primarySpec,
+    uiContracts,
+    designContracts,
+    requiredRoles,
+    ...launcherChecks,
+    targetUrlCheck,
+    ...designMdChecks,
+  ];
 }
 
 async function buildPrototypingDesignMdChecks(
@@ -889,68 +913,97 @@ async function buildPrototypingRolesCheck(root: string): Promise<DoctorCheck> {
   };
 }
 
-async function buildPlaywrightCliCheck(root: string): Promise<DoctorCheck> {
-  const resolution = await resolvePlaywrightCliLauncher(root);
+const PLAYWRIGHT_SUNSET = "1.10.0";
+const PLAYWRIGHT_INSTALL_HINT = "npm i -D playwright";
+
+async function buildPlaywrightLauncherChecks(root: string): Promise<DoctorCheck[]> {
+  const resolution = await resolvePlaywrightLauncher(root);
+  const probeOrder = getPlaywrightProbeOrder();
+  const lookedInRelative = {
+    ...resolution.lookedIn,
+    scriptsDir: toRelativePath(root, resolution.lookedIn.scriptsDir),
+    localBinDir: toRelativePath(root, resolution.lookedIn.localBinDir),
+  };
+
   if (resolution.status === "resolved" && resolution.resolved) {
     const resolved = resolution.resolved;
-    return {
-      id: "prototyping.playwrightCli",
-      severity: "ok",
-      title: "Playwright CLI launcher",
-      message: `playwright-cli launcher resolved via ${resolved.origin} and passed bounded invocation probe`,
-      details: {
-        origin: resolved.origin,
-        executable: relativizeMaybe(root, resolved.executable),
-        args: resolved.args,
-        displayCommand: resolved.displayCommand,
-        probe: resolved.probe,
-        lookedIn: {
-          ...resolution.lookedIn,
-          scriptsDir: toRelativePath(root, resolution.lookedIn.scriptsDir),
-          localBinDir: toRelativePath(root, resolution.lookedIn.localBinDir),
+    const checks: DoctorCheck[] = [
+      {
+        id: "prototyping.playwrightCli",
+        severity: "ok",
+        title: "Playwright launcher",
+        message: `playwright launcher resolved via ${resolved.origin} (stage=${resolved.stage}) and passed bounded invocation probe`,
+        details: {
+          resolvedStage: resolved.stage,
+          deprecated: resolved.stage === "deprecated-cli",
+          origin: resolved.origin,
+          executable: relativizeMaybe(root, resolved.executable),
+          args: resolved.args,
+          displayCommand: resolved.displayCommand,
+          probe: resolved.probe,
+          probeOrder,
+          lookedIn: lookedInRelative,
         },
       },
-    };
+    ];
+    if (resolved.stage === "deprecated-cli") {
+      // Deprecation surface: still accepted during the deprecation window but
+      // flagged as warning. The literal `sunset: 1.10.0` substring is part of
+      // the public wire contract.
+      checks.push({
+        id: "D-DEPRECATED-PROBE",
+        severity: "warning",
+        title: "Deprecated playwright-cli probe",
+        message: `playwright-cli probe is deprecated (sunset: ${PLAYWRIGHT_SUNSET}); install playwright as the primary launcher (${PLAYWRIGHT_INSTALL_HINT})`,
+        details: {
+          sunset: PLAYWRIGHT_SUNSET,
+          installHint: PLAYWRIGHT_INSTALL_HINT,
+          resolvedVia: resolved.origin,
+          executable: relativizeMaybe(root, resolved.executable),
+          probeOrder,
+        },
+      });
+    }
+    return checks;
   }
 
   if (resolution.status === "not_runnable") {
-    return {
-      id: "prototyping.playwrightCli",
-      severity: "error",
-      title: "Playwright CLI launcher",
-      message:
-        "playwright-cli launcher candidates were found, but none passed the bounded invocation probe",
-      details: {
-        attempts: resolution.attempts.map((attempt) => ({
-          origin: attempt.origin,
-          executable: relativizeMaybe(root, attempt.executable),
-          args: attempt.args,
-          displayCommand: attempt.displayCommand,
-          probe: attempt.probe,
-        })),
-        lookedIn: {
-          ...resolution.lookedIn,
-          scriptsDir: toRelativePath(root, resolution.lookedIn.scriptsDir),
-          localBinDir: toRelativePath(root, resolution.lookedIn.localBinDir),
+    return [
+      {
+        id: "prototyping.playwrightCli",
+        severity: "error",
+        title: "Playwright launcher",
+        message: `playwright launcher candidates were found but none passed the bounded invocation probe (install hint: ${PLAYWRIGHT_INSTALL_HINT})`,
+        details: {
+          installHint: PLAYWRIGHT_INSTALL_HINT,
+          probeOrder,
+          attempts: resolution.attempts.map((attempt) => ({
+            stage: attempt.stage,
+            origin: attempt.origin,
+            executable: relativizeMaybe(root, attempt.executable),
+            args: attempt.args,
+            displayCommand: attempt.displayCommand,
+            probe: attempt.probe,
+          })),
+          lookedIn: lookedInRelative,
         },
       },
-    };
+    ];
   }
 
-  return {
-    id: "prototyping.playwrightCli",
-    severity: "error",
-    title: "Playwright CLI launcher",
-    message:
-      "no runnable playwright-cli launcher resolved (checked project wrapper, node_modules/.bin, PATH, and npx --no-install)",
-    details: {
-      lookedIn: {
-        ...resolution.lookedIn,
-        scriptsDir: toRelativePath(root, resolution.lookedIn.scriptsDir),
-        localBinDir: toRelativePath(root, resolution.lookedIn.localBinDir),
+  return [
+    {
+      id: "prototyping.playwrightCli",
+      severity: "error",
+      title: "Playwright launcher",
+      message: `no runnable playwright launcher resolved (probe order: ${probeOrder.join(" -> ")}); install hint: ${PLAYWRIGHT_INSTALL_HINT}`,
+      details: {
+        installHint: PLAYWRIGHT_INSTALL_HINT,
+        probeOrder,
+        lookedIn: lookedInRelative,
       },
     },
-  };
+  ];
 }
 
 async function buildTargetUrlCheck(
