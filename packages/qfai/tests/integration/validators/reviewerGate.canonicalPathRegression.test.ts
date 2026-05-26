@@ -21,10 +21,16 @@
  * Wave-18 refinement: presence-only was too loose — once a prior loop
  * left a `prototyping.json` behind, every subsequent verify.json with
  * scope=atdd|full|implement triggered the finding as a false-positive.
- * The active-loop signal is now structural: `stopReason === null` AND
- * `acceptedIterationIndex === null`. A completed loop populates both
- * slots, a never-started loop has neither, and the gate only fires
- * while the loop is mid-flight.
+ *
+ * Wave-19 refinement: the initial wave-18 predicate (`stopReason ===
+ * null` AND `acceptedIterationIndex === null`) was too strict —
+ * `writeSeedMetadata` persists `acceptedIterationIndex = 0` at cycle
+ * 0, so real in-flight runs were short-circuited as if they had
+ * completed. The active-loop signal is now `stopReason === null`
+ * alone: terminal cause is the only structural slot the iterate
+ * pipeline writes when (and only when) the loop actually finishes.
+ * Cycle-0 seed populating `acceptedIterationIndex` to a number is
+ * still an active loop while `stopReason` remains null.
  */
 
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
