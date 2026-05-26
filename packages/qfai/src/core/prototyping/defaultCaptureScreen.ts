@@ -115,8 +115,7 @@ export const defaultCaptureScreen = async (args: CaptureArgs): Promise<CaptureRe
       return {
         ok: false,
         durationMs: Date.now() - started,
-        reason:
-          `screen ${args.screenId} capture failed (page.goto returned no response for ${args.url}).`,
+        reason: `screen ${args.screenId} capture failed (page.goto returned no response for ${args.url}).`,
       };
     }
     const status = response.status();
@@ -171,10 +170,7 @@ type PlaywrightResponse = {
 };
 
 type PlaywrightPage = {
-  goto: (
-    url: string,
-    options?: { waitUntil?: string },
-  ) => Promise<PlaywrightResponse | null>;
+  goto: (url: string, options?: { waitUntil?: string }) => Promise<PlaywrightResponse | null>;
   screenshot: (options: { path: string; fullPage?: boolean }) => Promise<unknown>;
   content: () => Promise<string>;
 };
