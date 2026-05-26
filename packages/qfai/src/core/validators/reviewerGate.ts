@@ -16,12 +16,12 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 
 import type { QfaiConfig } from "../config.js";
+import { PROTOTYPING_JSON_REL } from "../prototyping/paths.js";
 import type { Issue } from "../types.js";
 import { exists, issue, readSafe } from "./utils.js";
 import { PROMPT_SCANNER_PAIRS } from "./promptScannerPairs.js";
 
 const VERIFY_JSON_REL = ".qfai/output/verify.json";
-const PROTOTYPING_JSON_REL = ".qfai/output/prototyping.json";
 
 const SCANNER_REL = "packages/qfai/src/core/prototyping/designMdViolations.ts";
 const PROMPT_REL =
@@ -37,27 +37,29 @@ type VerifyJson = {
   scope?: unknown;
 };
 
-type PrototypingJson = {
-  phase?: unknown;
-};
+type PrototypingJson = Record<string, unknown>;
 
 async function loadJson<T>(filePath: string): Promise<T | null> {
   if (!(await exists(filePath))) return null;
   try {
     const raw = await readFile(filePath, "utf-8");
-    return JSON.parse(raw) as T;
+    const parsed: unknown = JSON.parse(raw);
+    if (parsed === null || typeof parsed !== "object") return null;
+    return parsed as T;
   } catch {
     return null;
   }
 }
 
 function isPrototypingPhase(proto: PrototypingJson | null): boolean {
-  if (!proto) return false;
-  // Phase signal: explicit "prototyping" marker. The prototyping.json
-  // produced by the iterate command always carries the phase string;
-  // legacy files without `phase` are treated as not-prototyping (no
-  // false positive against pre-CHG-005 fixtures).
-  return typeof proto.phase === "string" && proto.phase.trim().toLowerCase() === "prototyping";
+  // Treat any well-formed prototyping.json (parsed object) at the
+  // canonical path as a "prototyping context" signal. The iterate
+  // pipeline deletes the legacy `phase` field on every cycle-0 reset
+  // (see writeSeedMetadata in prototypingIterate.ts), so we cannot
+  // gate on it; the presence of a parseable object at the canonical
+  // path is the structural indicator that the prototyping loop owns
+  // the working tree right now.
+  return proto !== null;
 }
 
 async function detectCertifyVerifyCircular(root: string): Promise<Issue[]> {
@@ -69,7 +71,8 @@ async function detectCertifyVerifyCircular(root: string): Promise<Issue[]> {
   if (!scopeRaw) return [];
   if (!NON_PROTOTYPING_SCOPES.has(scopeRaw)) return [];
 
-  const proto = await loadJson<PrototypingJson>(path.join(root, PROTOTYPING_JSON_REL));
+  const protoAbs = path.join(root, PROTOTYPING_JSON_REL);
+  const proto = await loadJson<PrototypingJson>(protoAbs);
   if (!isPrototypingPhase(proto)) return [];
 
   // 3-part justification: (1) certify path / verify.json path,
@@ -77,7 +80,8 @@ async function detectCertifyVerifyCircular(root: string): Promise<Issue[]> {
   // (3) option-B contract clause violated.
   const message =
     `R-CERTIFY-VERIFY-CIRCULAR: certify path reads ${VERIFY_JSON_REL} ` +
-    `with scope="${scopeRaw}" while prototyping.json reports phase=prototyping. ` +
+    `with scope="${scopeRaw}" while a prototyping run is active ` +
+    `(canonical ${PROTOTYPING_JSON_REL} present). ` +
     `Option-B forbids the prototyping certify gate from depending on /qfai-atdd or ` +
     `/qfai-implement validator outputs (justification: certify=${VERIFY_JSON_REL}, ` +
     `profile=${scopeRaw}, contract=option-B phase-isolation clause).`;

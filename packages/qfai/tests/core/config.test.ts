@@ -135,7 +135,11 @@ describe("spec-0012 prototyping.execution config", () => {
       expect(legacy, "expected legacy browserProvider rejection").toBeDefined();
       // Canonical default = "playwright" primary (REQ-0012-0060 / spec-0006
       // D-DEPRECATED-PROBE). "playwright-cli" is the deprecation window.
-      expect(legacy?.message).toContain("playwright");
+      // Match the replacement guidance literally — the regex ensures
+      // "playwright" is NOT followed by "-cli", which catches both the
+      // original drift AND any future regression back to "playwright-cli"
+      // as the canonical replacement target.
+      expect(legacy?.message).toMatch(/browserTool:\s*playwright(?!-cli)/);
     } finally {
       await rm(root, { recursive: true, force: true });
     }
@@ -211,8 +215,11 @@ describe("spec-0012 prototyping.execution config", () => {
 
       const { config, issues } = await loadConfig(root);
       expect(issues).toEqual([]);
-      // Canonical default = "playwright" primary (REQ-0012-0060). The legacy
-      // "playwright-cli" value is still accepted under the deprecation window.
+      // Canonical default = "playwright" primary (REQ-0012-0060). Use an
+      // exact equality check (not a substring match) to catch both the
+      // original drift AND any future regression to "playwright-cli" —
+      // the latter would still substring-match "playwright" but is not
+      // the canonical default.
       expect(config.prototyping?.execution?.browserTool).toBe("playwright");
       expect(config.prototyping?.execution?.targetUrl).toBe("http://localhost:5173");
     } finally {

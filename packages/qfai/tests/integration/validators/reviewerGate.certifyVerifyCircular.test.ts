@@ -44,24 +44,28 @@ const STUB_CONFIG = {
   paths: { contractsDir: ".qfai/contracts" },
 } as unknown as QfaiConfig;
 
-async function seedPair(root: string, scope: string, phase: string): Promise<void> {
+async function seedPair(root: string, scope: string): Promise<void> {
   await mkdir(path.join(root, ".qfai/output"), { recursive: true });
+  await mkdir(path.join(root, ".qfai/evidence/prototyping"), { recursive: true });
   await writeFile(
     path.join(root, ".qfai/output/verify.json"),
     JSON.stringify({ status: "PASS", scope }),
     "utf-8",
   );
+  // Canonical prototyping state path. The iterate pipeline writes here
+  // (see PROTOTYPING_JSON_REL in core/prototyping/paths.ts) and the
+  // reviewer-gate validator now reads from the same location.
   await writeFile(
-    path.join(root, ".qfai/output/prototyping.json"),
-    JSON.stringify({ phase }),
+    path.join(root, ".qfai/evidence/prototyping/prototyping.json"),
+    JSON.stringify({ runId: "anchor-run", iterations: [] }),
     "utf-8",
   );
 }
 
 describe("R-CERTIFY-VERIFY-CIRCULAR — spec-0012 anchor", () => {
-  it("emits the finding when verify.json#scope=atdd and prototyping.json#phase=prototyping", async () => {
+  it("emits the finding when verify.json#scope=atdd and canonical prototyping.json exists", async () => {
     const root = await newTempDir();
-    await seedPair(root, "atdd", "prototyping");
+    await seedPair(root, "atdd");
     const issues = await validateReviewerGate(root, STUB_CONFIG);
     const circular = issues.filter((i) => i.code === "R-CERTIFY-VERIFY-CIRCULAR");
     expect(circular).toHaveLength(1);
@@ -70,7 +74,7 @@ describe("R-CERTIFY-VERIFY-CIRCULAR — spec-0012 anchor", () => {
 
   it("does NOT emit when verify.json#scope=prototyping (positive case for Phase 3)", async () => {
     const root = await newTempDir();
-    await seedPair(root, "prototyping", "prototyping");
+    await seedPair(root, "prototyping");
     const issues = await validateReviewerGate(root, STUB_CONFIG);
     const circular = issues.filter((i) => i.code === "R-CERTIFY-VERIFY-CIRCULAR");
     expect(circular).toEqual([]);

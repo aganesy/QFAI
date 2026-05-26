@@ -37,7 +37,11 @@ async function seedVerifyJson(root: string, body: unknown): Promise<void> {
 }
 
 async function seedPrototypingJson(root: string, body: unknown): Promise<void> {
-  const dir = path.join(root, ".qfai", "output");
+  // Canonical prototyping state path: .qfai/evidence/prototyping/prototyping.json
+  // (see PROTOTYPING_JSON_REL in core/prototyping/paths.ts). The pre-PR
+  // legacy location (.qfai/output/prototyping.json) is no longer written
+  // by iterate, so tests must mirror the production write target.
+  const dir = path.join(root, ".qfai", "evidence", "prototyping");
   await mkdir(dir, { recursive: true });
   await writeFile(path.join(dir, "prototyping.json"), JSON.stringify(body, null, 2), "utf-8");
 }
@@ -55,7 +59,10 @@ afterEach(async () => {
 describe("TC-0015-0017: Reviewer Gate emits R-CERTIFY-VERIFY-CIRCULAR on regressed certify path", () => {
   it("emits R-CERTIFY-VERIFY-CIRCULAR at severity error with 3-part justification when verify.json scope=atdd is consumed at prototyping phase", async () => {
     await seedVerifyJson(root, { status: "PASS", scope: "atdd" });
-    await seedPrototypingJson(root, { phase: "prototyping", runId: "run-1" });
+    // No legacy `phase` field — current iterate output (writeSeedMetadata
+    // explicitly deletes it). The reviewer-gate identifies the prototyping
+    // context structurally (parseable object at canonical path).
+    await seedPrototypingJson(root, { runId: "run-1", iterations: [] });
 
     const issues = await validateReviewerGate(root, await getConfig(root));
     const findings = issues.filter((i) => i.code === "R-CERTIFY-VERIFY-CIRCULAR");
@@ -71,7 +78,7 @@ describe("TC-0015-0017: Reviewer Gate emits R-CERTIFY-VERIFY-CIRCULAR on regress
 
   it("emits R-CERTIFY-VERIFY-CIRCULAR when verify.json scope=full is consumed at prototyping phase", async () => {
     await seedVerifyJson(root, { status: "PASS", scope: "full" });
-    await seedPrototypingJson(root, { phase: "prototyping", runId: "run-1" });
+    await seedPrototypingJson(root, { runId: "run-1", iterations: [] });
 
     const issues = await validateReviewerGate(root, await getConfig(root));
     const findings = issues.filter((i) => i.code === "R-CERTIFY-VERIFY-CIRCULAR");
@@ -84,7 +91,7 @@ describe("TC-0015-0017: Reviewer Gate emits R-CERTIFY-VERIFY-CIRCULAR on regress
 describe("TC-0015-0018: Option-B compliant certify passes without R-CERTIFY-VERIFY-CIRCULAR (control)", () => {
   it("does NOT emit R-CERTIFY-VERIFY-CIRCULAR when verify.json scope=prototyping", async () => {
     await seedVerifyJson(root, { status: "PASS", scope: "prototyping" });
-    await seedPrototypingJson(root, { phase: "prototyping", runId: "run-1" });
+    await seedPrototypingJson(root, { runId: "run-1", iterations: [] });
 
     const issues = await validateReviewerGate(root, await getConfig(root));
     const findings = issues.filter((i) => i.code === "R-CERTIFY-VERIFY-CIRCULAR");
