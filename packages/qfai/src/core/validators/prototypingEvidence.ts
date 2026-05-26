@@ -433,7 +433,7 @@ export async function validateScreenIdCasing(root: string, contractsDir: string)
   const fg = (await import("fast-glob")).default;
   const yaml = await import("yaml");
   const uiDir = path.join(root, contractsDir, "ui");
-  const matches = await fg("**/*.yaml", { cwd: uiDir, absolute: true, onlyFiles: true });
+  const matches = await fg("**/*.{yaml,yml}", { cwd: uiDir, absolute: true, onlyFiles: true });
   const issues: Issue[] = [];
   for (const filePath of matches.sort()) {
     let raw: string;
