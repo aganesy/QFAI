@@ -33,6 +33,95 @@ export const PROSE_CRITIQUE_MIN_WORDS = 200;
 export const PROSE_CRITIQUE_MAX_WORDS = 500;
 
 /**
+ * QFAI-PROT-002 CJK character band. Japanese-only proseCritique
+ * (no whitespace) is accepted when its CJK character count falls in
+ * `600..2500`.
+ *
+ * The band is enforced via {@link validateProseCritiqueBand} as the
+ * OR-fallback half of the bilingual rule: a critique passes when EITHER
+ * its English word count is in `200..500` words OR its CJK character
+ * count is in `600..2500` characters.
+ */
+export const PROSE_CRITIQUE_MIN_CJK_CHARS = 600;
+export const PROSE_CRITIQUE_MAX_CJK_CHARS = 2500;
+
+// CJK Unified Ideographs (U+4E00..U+9FFF), Hiragana (U+3040..U+309F),
+// Katakana (U+30A0..U+30FF). Used to discriminate the CJK-only path
+// from whitespace-tokenised English in `validateProseCritiqueBand`.
+const CJK_CHAR_RE = /[぀-ヿ一-鿿]/u;
+
+function countCjkCharacters(text: string): number {
+  let n = 0;
+  for (const ch of text) {
+    if (CJK_CHAR_RE.test(ch)) n += 1;
+  }
+  return n;
+}
+
+export type ProseCritiqueValidationResult =
+  | {
+      readonly ok: true;
+      readonly measuredWords: number;
+      readonly measuredCharacters: number;
+    }
+  | {
+      readonly ok: false;
+      readonly measuredWords: number;
+      readonly measuredCharacters: number;
+      readonly error: string;
+    };
+
+/**
+ * Validate a proseCritique against the bilingual QFAI-PROT-002 band:
+ *   - English path: 200..500 whitespace-separated words.
+ *   - CJK path: 600..2500 CJK characters.
+ *
+ * Returns `ok: true` when EITHER band is satisfied. When neither is
+ * satisfied, returns `ok: false` with an error message that names:
+ *   - the count form measured (`characters` when the text contains CJK,
+ *     otherwise `words`),
+ *   - the band used (`600..2500` or `200..500`),
+ *   - the actual measured count.
+ *
+ * Uses `Intl.Segmenter('ja', { granularity: 'word' })` when available
+ * to obtain a more accurate Japanese word count for diagnostic
+ * purposes; the CJK character count is the authoritative band check.
+ */
+export function validateProseCritiqueBand(text: string): ProseCritiqueValidationResult {
+  const wordCount = countWords(text);
+  const cjkCount = countCjkCharacters(text);
+  const looksCjk = cjkCount > 0;
+
+  const wordInBand = wordCount >= PROSE_CRITIQUE_MIN_WORDS && wordCount <= PROSE_CRITIQUE_MAX_WORDS;
+  const cjkInBand =
+    cjkCount >= PROSE_CRITIQUE_MIN_CJK_CHARS && cjkCount <= PROSE_CRITIQUE_MAX_CJK_CHARS;
+
+  if (wordInBand || cjkInBand) {
+    return { ok: true, measuredWords: wordCount, measuredCharacters: cjkCount };
+  }
+
+  if (looksCjk) {
+    return {
+      ok: false,
+      measuredWords: wordCount,
+      measuredCharacters: cjkCount,
+      error:
+        `proseCritique ${cjkCount} characters outside band ` +
+        `${PROSE_CRITIQUE_MIN_CJK_CHARS}..${PROSE_CRITIQUE_MAX_CJK_CHARS}`,
+    };
+  }
+
+  return {
+    ok: false,
+    measuredWords: wordCount,
+    measuredCharacters: cjkCount,
+    error:
+      `proseCritique ${wordCount} words outside band ` +
+      `${PROSE_CRITIQUE_MIN_WORDS}..${PROSE_CRITIQUE_MAX_WORDS}`,
+  };
+}
+
+/**
  * Maximum word count per qualitative `*Feel` field on the
  * reviewer-driven per-spec / per-screen payload schema.
  *

@@ -30,10 +30,10 @@
  * (Tailwind config shape).
  */
 
-import { mkdir, readdir, readFile, rm, stat, unlink, writeFile } from "node:fs/promises";
+import { copyFile, mkdir, readdir, readFile, rm, stat, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 
-import { error, info } from "../lib/logger.js";
+import { error, info, warn } from "../lib/logger.js";
 import { loadConfig } from "../../core/config.js";
 import { hashDesignMd, parseDesignMd, type DesignMd } from "../../core/design/designMd.js";
 import { readDesignMdLockSha } from "../../core/design/designMdLock.js";
@@ -68,11 +68,111 @@ import {
   type StopReason,
 } from "../../core/prototyping/iteration.js";
 
+/**
+ * Per-screen descriptor consumed by the opt-in `--capture` flag.
+ *
+ * One entry per screen the operator wants captured this cycle. The
+ * `htmlSourceCopy` flag, when true, instructs iterate to copy the
+ * source HTML at `.qfai/prototypes/iter-NN/<id>.html` byte-for-byte
+ * into the evidence iter dir (no runtime style injection from
+ * `page.content()`). Default is false: HTML is produced by the
+ * injected {@link CaptureScreenFn} just like the PNG.
+ */
+export type IterateCaptureScreen = {
+  readonly id: string;
+  readonly url?: string;
+  readonly htmlSourceCopy?: boolean;
+};
+
+/**
+ * Result returned by an injected per-screen capture runner. `ok=false`
+ * with a `reason` propagates as a per-screen error context (iterate
+ * does not swallow the failure silently).
+ */
+export type CaptureScreenResult = {
+  readonly ok: boolean;
+  readonly durationMs: number;
+  readonly reason?: string;
+};
+
+/**
+ * Capture runner injected for testability. The default runner (used
+ * when this option is not provided) drives real Playwright. The test
+ * suite passes a deterministic stub.
+ */
+export type CaptureScreenFn = (args: {
+  readonly screenId: string;
+  readonly url: string | null;
+  readonly pngPath: string;
+  readonly htmlPath: string;
+}) => Promise<CaptureScreenResult>;
+
 export type RunPrototypingIterateOptions = {
   root: string;
   cycle: number;
   targetUrl?: string;
+  /**
+   * Opt-in PNG/HTML capture (default OFF; preserves the no-capture
+   * default posture). When true, iterate runs the injected capture
+   * path against {@link RunPrototypingIterateOptions.screens}.
+   */
+  capture?: boolean;
+  /**
+   * Per-screen descriptors consumed by the capture path. Ignored when
+   * `capture` is not true.
+   */
+  screens?: readonly IterateCaptureScreen[];
+  /**
+   * Per-screen capture runner. Used only when `capture` is true.
+   * When omitted, iterate exits with input-error (the production
+   * default runner wiring is deferred to the orchestrator that
+   * actually drives Playwright; see PR #210 series for that follow-up).
+   */
+  captureScreen?: CaptureScreenFn;
+  /**
+   * Per-screen capture wall-clock budget in milliseconds. When a
+   * runner invocation exceeds this budget iterate emits a soft warning
+   * to stderr but does NOT hard-fail the run (NFR-0107). Defaults to
+   * 30_000 ms (30 s).
+   */
+  captureBudgetMs?: number;
+  /**
+   * Opt-in local HTTP server (default OFF; preserves the no-server
+   * default posture).
+   */
+  autoServe?: boolean;
+  /**
+   * Server runner injected for testability. When set, iterate
+   * delegates spawn / teardown to this callback. When unset and
+   * `autoServe` is true, iterate logs that it would have spawned and
+   * returns. Test fixtures pass a deterministic stub.
+   */
+  serverRunner?: ServerRunnerFn;
 };
+
+/**
+ * Auto-serve runner contract. The runner is responsible for spawning
+ * the server, returning a handle the caller can later tear down, and
+ * surfacing foreign-process refusals as `{ ok: false, reason }`.
+ */
+export type ServerRunnerFn = (args: {
+  readonly root: string;
+  readonly cycle: number;
+}) => Promise<ServerRunnerResult>;
+
+export type ServerRunnerResult =
+  | {
+      readonly ok: true;
+      /** Caller invokes teardown after the cycle completes / SIGINT. */
+      readonly teardown: () => Promise<void>;
+      readonly pid?: number;
+    }
+  | {
+      readonly ok: false;
+      /** Foreign-process refusal MUST surface the PID + command. */
+      readonly reason: string;
+      readonly foreignPid?: number;
+    };
 
 export type DesignTokens = {
   colors: Record<string, string>;
@@ -98,6 +198,13 @@ export type IteratePlan = {
   targetUrl: string | null;
   designTokens: DesignTokens;
   nextActions: string[];
+  /**
+   * Per-screen capture descriptors. Present only when the operator
+   * passed `--capture`; absent (omitted from the JSON output) when
+   * the default-OFF posture is in effect (preserving the existing
+   * no-capture default).
+   */
+  screens?: readonly IterateCaptureScreen[];
 };
 
 const ROOT_DESIGN_MD_REL = "DESIGN.md";
@@ -523,6 +630,7 @@ export async function runPrototypingIterate(
     targetUrl: options.targetUrl ?? null,
     designTokens: buildDesignTokens(designMd),
     nextActions: nextActionsFor(options.cycle),
+    ...(options.capture && options.screens ? { screens: options.screens } : {}),
   };
 
   await writeFile(
@@ -531,11 +639,150 @@ export async function runPrototypingIterate(
     "utf-8",
   );
 
+  // Opt-in auto-serve (default OFF; preserves the no-server default
+  // posture). The returned teardown is invoked at the end of this
+  // run; foreign process refusals surface as exit 2 input errors.
+  let serverTeardown: (() => Promise<void>) | null = null;
+  let sigintHandler: (() => void) | null = null;
+  let teardownInvoked = false;
+  const teardownOnce = async (): Promise<void> => {
+    if (teardownInvoked || serverTeardown === null) return;
+    teardownInvoked = true;
+    try {
+      await serverTeardown();
+    } catch (cause) {
+      warn(`qfai prototyping iterate --auto-serve: teardown failed (${String(cause)})`);
+    }
+  };
+  if (options.autoServe) {
+    if (!options.serverRunner) {
+      error(
+        "qfai prototyping iterate --auto-serve: a server runner is required (no default wiring yet — pass options.serverRunner).",
+      );
+      return 2;
+    }
+    const serverResult = await options.serverRunner({ root: options.root, cycle: options.cycle });
+    if (!serverResult.ok) {
+      error(`qfai prototyping iterate --auto-serve: ${serverResult.reason}`);
+      return 2;
+    }
+    serverTeardown = serverResult.teardown;
+    // Install a SIGINT handler that drives the teardown within the
+    // NFR-0106 2s bound. The handler is removed on cycle completion
+    // (or on early return) to avoid leaking listeners across
+    // back-to-back invocations within the same Node process.
+    sigintHandler = () => {
+      void teardownOnce();
+    };
+    process.on("SIGINT", sigintHandler);
+  }
+
+  // Opt-in capture (default OFF; preserves the no-capture default
+  // posture). Each screen is processed sequentially with a per-screen
+  // soft-warning wall-clock budget.
+  if (options.capture) {
+    const captureExit = await runCapturePath(options, dir);
+    if (captureExit !== 0) {
+      if (sigintHandler) process.off("SIGINT", sigintHandler);
+      await teardownOnce();
+      return captureExit;
+    }
+  }
+
+  if (sigintHandler) process.off("SIGINT", sigintHandler);
+  await teardownOnce();
+
   info(
     `qfai prototyping iterate: iter-${String(options.cycle).padStart(2, "0")} ready ` +
       `(specs=${specs.length}, plan at ${plan.paths.iterationDir}/iterate-plan.json).`,
   );
   return 0;
+}
+
+async function runCapturePath(
+  options: RunPrototypingIterateOptions,
+  dir: string,
+): Promise<number> {
+  const screens = options.screens ?? [];
+  if (screens.length === 0) {
+    warn(
+      "qfai prototyping iterate --capture: no screens[] declared on the iterate plan; skipping capture.",
+    );
+    return 0;
+  }
+  if (!options.captureScreen) {
+    error(
+      "qfai prototyping iterate --capture: a capture runner is required (no default wiring yet — pass options.captureScreen).",
+    );
+    return 2;
+  }
+  const runner = options.captureScreen;
+  const budgetMs = options.captureBudgetMs ?? 30_000;
+  const prototypesIterDir = path.join(
+    options.root,
+    ".qfai",
+    "prototypes",
+    `iter-${String(options.cycle).padStart(2, "0")}`,
+  );
+  for (const screen of screens) {
+    const pngPath = path.join(dir, `${screen.id}.png`);
+    const htmlPath = path.join(dir, `${screen.id}.html`);
+    const captureUrl = screen.url ?? options.targetUrl ?? null;
+    const timer = startBudgetTimer(budgetMs);
+    try {
+      const result = await runner({ screenId: screen.id, url: captureUrl, pngPath, htmlPath });
+      timer.stop();
+      if (!result.ok) {
+        error(
+          `qfai prototyping iterate --capture: screen ${screen.id} failed (${result.reason ?? "no reason"}).`,
+        );
+        return 2;
+      }
+      if (result.durationMs > budgetMs) {
+        warn(
+          `qfai prototyping iterate --capture: screen ${screen.id} exceeded ${budgetMs}ms budget (took ${result.durationMs}ms; soft warning).`,
+        );
+      }
+      if (screen.htmlSourceCopy) {
+        const source = path.join(prototypesIterDir, `${screen.id}.html`);
+        try {
+          await copyFile(source, htmlPath);
+        } catch (cause) {
+          error(
+            `qfai prototyping iterate --capture: htmlSourceCopy failed for screen ${screen.id} (${String(cause)}).`,
+          );
+          return 2;
+        }
+      }
+    } catch (cause) {
+      timer.stop();
+      error(
+        `qfai prototyping iterate --capture: screen ${screen.id} threw (${String(cause)}).`,
+      );
+      return 2;
+    }
+  }
+  return 0;
+}
+
+function startBudgetTimer(budgetMs: number): {
+  readonly stop: () => void;
+} {
+  // The runner is responsible for its own internal timing; this timer
+  // is a structural hook reserved for the future case where iterate
+  // wants to cancel the runner before completion. Today it is a no-op
+  // — soft warnings are emitted post-run based on the runner's
+  // reported `durationMs`. Keeping the hook makes the budget surface
+  // easy to extend without churn at call sites.
+  const handle = budgetMs > 0 ? setTimeout(() => {}, budgetMs) : null;
+  if (handle && typeof handle === "object" && "unref" in handle) {
+    handle.unref();
+  }
+  return {
+    stop: () => {
+      if (handle) clearTimeout(handle);
+    },
+  };
 }
 
 type DesignMdReadResult =

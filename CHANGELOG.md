@@ -14,6 +14,16 @@
   interaction.json capture") via `DR-0012-0031`; default behavior unchanged.
   Capture contract: per-screen `viewport`/`deviceScaleFactor`/`waitUntil`/
   `htmlSourceCopy`. Auto-serve: tree-kill (Linux/macOS) / `taskkill /F /T`
+  **Phase 2 scope note**: v1.9.1 ships the `RunPrototypingIterateOptions` DI
+  surface (`capture`/`captureScreen`/`autoServe`/`serverRunner`) and the
+  per-screen 30s soft-warning budget + md5 capture determinism guarantees.
+  The operator-facing `cli/lib/args.ts` `--capture` / `--auto-serve` flag-
+  string parsing and the default Playwright / spawn+tree-kill runners
+  ship as **Phase 2 follow-ups** (tracked as REQ-0012-0075 / REQ-0012-0076
+  in `.qfai/specs/spec-0012/09_delta.md`). Programmatic consumers can
+  invoke the contract today via `runPrototypingIterate({capture: true,
+  captureScreen: <fn>})`; CLI operators will see `--capture` /
+  `--auto-serve` activated by the follow-up.
   (Windows), SIGINT teardown, foreign-process safety (refuse to kill non-iterate
   port owners). (REQ-0109 / REQ-0110, AC-0012-0059..0060.)
 - `prototyping.json` validate-conformant schema: `iterations[i]` MUST carry

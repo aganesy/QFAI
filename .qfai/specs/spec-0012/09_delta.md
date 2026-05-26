@@ -344,3 +344,10 @@ Late-review fixes on PR #208:
 | UPDATE:APPEND | spec-0012   | NFR-0111                   | CHG-005 Phase 1 で TC-0012-0459 が test-count floor (>= 30) を in-process で pin したのみ。`designMdViolations.ts` の 90% statement-coverage 半分は CI lane 未配線で defer 済み。本 follow-up でこの半分を pin する。 | auto     |
 | UPDATE:APPEND | spec-0012   | REQ-0012-0074 (REQ-0128 follow-up) | CHG-005 Phase 1 で `tailwindContractConvergence.test.ts` を synthesised-iteration steady-state guard として landing したが、live-loop での `iterations.length <= 3` 測定は deferred。本 follow-up で dynamic-loop semantic を pin する。 | auto     |
 
+## CHG-005 Phase 2 follow-ups (2026-05-26)
+
+| Op            | Target spec | REQ / NFR                          | Rationale                                                                                                                                                                                                              | Approver |
+| ------------- | ----------- | ---------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
+| UPDATE:APPEND | spec-0012   | REQ-0012-0075 (REQ-0109 follow-up) | CHG-005 Phase 2 で `--capture` opt-in を `RunPrototypingIterateOptions` の DI surface (`capture: boolean` + `captureScreen?: CaptureScreenFn`) として landing したが、operator-facing `cli/lib/args.ts` への flag-string parser wiring + default Playwright runner は deferred。本 follow-up で `qfai prototyping iterate --capture` を CLI から直接 invoke 可能な状態に揃える。 | auto     |
+| UPDATE:APPEND | spec-0012   | REQ-0012-0076 (REQ-0110 follow-up) | CHG-005 Phase 2 で `--auto-serve` opt-in を `RunPrototypingIterateOptions` の DI surface (`autoServe: boolean` + `serverRunner?: ServerRunnerFn`) として landing したが、operator-facing `cli/lib/args.ts` への flag-string parser wiring + default spawn/`tree-kill`/`taskkill` runner は deferred。本 follow-up で `qfai prototyping iterate --auto-serve` を CLI から直接 invoke 可能な状態に揃える。 | auto     |
+
