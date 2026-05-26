@@ -82,10 +82,48 @@ function printHelp() {
   );
 }
 
+function isBaseRefReachable(base) {
+  try {
+    execFileSync("git", ["rev-parse", "--verify", `${base}^{commit}`], { stdio: "ignore" });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function tryFetchBase(base) {
+  // Best-effort fetch of `origin/<branch>` when the ref isn't already
+  // present in the local clone (shallow CI checkouts). Failure is
+  // tolerated; the caller will soft-pass if the ref still can't be
+  // resolved after this call.
+  if (!base.startsWith("origin/")) return;
+  const branch = base.slice("origin/".length);
+  if (branch.length === 0) return;
+  try {
+    execFileSync("git", ["fetch", "--no-tags", "--depth=1", "origin", branch], { stdio: "ignore" });
+  } catch {
+    // ignore; the rev-parse retry below decides the outcome.
+  }
+}
+
 function computeChangedSetFromGit(base) {
   // `git diff --name-only <base>...HEAD` — the `...` form yields the
   // changes reachable from HEAD that are not reachable from base, which
   // is the most appropriate "what did this PR change" view.
+  if (!isBaseRefReachable(base)) {
+    tryFetchBase(base);
+  }
+  if (!isBaseRefReachable(base)) {
+    // Base ref still unreachable (e.g., shallow checkout in a fork PR
+    // where the runner cannot fetch origin/main). Soft-pass with a
+    // warning rather than hard-failing the lint gate; the canonical
+    // PR-level check on the merge target will re-run with full history.
+    stderr.write(
+      `check-prompt-scanner-pair: base ref '${base}' is not reachable in this clone; ` +
+        "skipping pair-changed drift check (soft-pass).\n",
+    );
+    return [];
+  }
   try {
     const out = execFileSync("git", ["diff", "--name-only", `${base}...HEAD`], {
       encoding: "utf-8",

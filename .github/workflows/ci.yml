@@ -30,6 +30,19 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
+        with:
+          # pair-changed CI lane (check-prompt-scanner-pair.mjs) needs
+          # `origin/main` reachable for `git diff --name-only
+          # origin/main...HEAD`. Default shallow checkout doesn't fetch
+          # base ref refs, so fetch full history here.
+          fetch-depth: 0
+      - name: Ensure base ref is fetched (for pair-changed CI lane)
+        run: |
+          # PR runs already have origin/main as a remote-tracking ref
+          # after fetch-depth: 0, but be defensive in case the workflow
+          # is invoked from a fork or a non-PR event.
+          git fetch --no-tags --depth=1 origin main || true
+        shell: bash
       - uses: pnpm/action-setup@v4
         with:
           version: 9.12.3

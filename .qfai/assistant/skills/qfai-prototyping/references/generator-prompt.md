@@ -50,12 +50,102 @@ tokens (e.g. `bg-primary`, `text-text`, `rounded-md`, `shadow-lg`,
 
 ## Hard constraints (enforced by the compliance gate)
 
-- No `#hex`, `rgb(...)`, `rgba(...)`, `hsl(...)`, `hsla(...)` value
-  outside `DESIGN.md.visual.colors`.
-- No `font-family:` whose first token is outside
-  `DESIGN.md.visual.typography.family_*`.
-- No `border-radius:` outside `DESIGN.md.visual.radius`.
-- No `box-shadow:` outside `DESIGN.md.visual.shadow`.
+The compliance gate scans rendered HTML — `<style>` blocks, inline
+`style="..."` attributes, AND Tailwind `class="..."` attributes — for
+four categories of forbidden literals. Findings are **advisory-failing**:
+the gate blocks convergence by default, but a Reviewer can override
+when a finding is a known false positive.
+
+### 1. color literal ban
+
+No raw color literals outside `DESIGN.md.visual.colors`. The scanner
+catches every authoring path:
+
+- `#hex` (3 / 4 / 6 / 8 nibbles): e.g. `color: #ff0000`,
+  `bg-[#ff0000]`.
+- `rgb(...)` / `rgba(...)`: e.g. `background: rgb(255 0 0)`,
+  `bg-[rgb(255_0_0)]`.
+- `hsl(...)` / `hsla(...)`: e.g. `color: hsl(0 100% 50%)`.
+- CSS named-color keywords (`red`, `white`, `blue`, …) when placed
+  on a color-bearing property (`color`, `background`, `border`,
+  `outline`, `fill`, `stroke`, `caret-color`, `text-decoration`,
+  `column-rule`, and their `-color` longhands / shorthand variants).
+- Tailwind palette utilities (`bg-blue-500`, `text-slate-900`,
+  `border-red-400`, etc.) — the CDN cannot read `DESIGN.md`, so
+  every palette class is by definition drift.
+
+### 2. font-family literal ban
+
+No `font-family:` whose first family token is outside
+`DESIGN.md.visual.typography.family_sans` / `family_display` /
+`family_mono`. Authored forms caught:
+
+- Inline `font-family: Inter, sans-serif` (quoted or unquoted).
+- Tailwind arbitrary `font-[Inter]`. Numeric / named font-weight
+  arbitraries (`font-[600]`, `font-[medium]`) are weight tokens —
+  not font-family drift — and pass through.
+
+### 3. border-radius literal ban
+
+No `border-radius:` value outside `DESIGN.md.visual.radius`. Authored
+forms caught:
+
+- Inline `border-radius: 12px` / `border-radius: 0.5rem`.
+- Tailwind arbitrary `rounded-[13px]`, `rounded-[0.5rem]`.
+- Tailwind scale aliases (`rounded`, `rounded-sm`, `rounded-md`,
+  `rounded-lg`, `rounded-xl`, `rounded-2xl`, `rounded-3xl`,
+  `rounded-full`, `rounded-none`) — all resolve to Tailwind defaults,
+  not `DESIGN.md` tokens.
+
+### 4. box-shadow literal ban (including rgba color slot)
+
+No `box-shadow:` declaration outside `DESIGN.md.visual.shadow`. The
+shadow value's embedded `rgba(...)` color slot is also covered.
+Authored forms caught:
+
+- Inline `box-shadow: 0 1px 2px rgba(15,23,42,0.05)`.
+- Tailwind arbitrary `shadow-[0_4px_6px_rgba(0,0,0,0.1)]`.
+- Tailwind scale aliases (`shadow`, `shadow-sm`, `shadow-md`,
+  `shadow-lg`, `shadow-xl`, `shadow-2xl`, `shadow-inner`,
+  `shadow-none`, `drop-shadow-*`).
+
+### Safelisted CSS-wide keywords
+
+The following values are **not** treated as drift by any of the four
+scanners above — they are CSS inheritance / system keywords with no
+visual identity:
+
+- `inherit`
+- `initial`
+- `unset`
+- `revert`
+- `currentColor` (case-insensitive)
+- `transparent`
+- `none`
+- `0` (dimensionless)
+
+Authoring `font-family: inherit`, `border-radius: 0`, or
+`box-shadow: none` passes the gate even when not present in
+`DESIGN.md`.
+
+### Allowed expression forms
+
+The generator MUST express every styled surface as one of:
+
+- A Tailwind utility class whose token resolves through the
+  `tailwind.config.theme.extend.*` injection above (e.g. `bg-primary`,
+  `text-text`, `rounded-md`, `shadow-lg`, `font-display`). These
+  utilities reference `DESIGN.md` tokens by name and never carry a
+  literal in the rendered DOM.
+- A CSS custom-property reference via `var(--token-name)` where the
+  `--token-name` is declared in a `:root { ... }` block inside the
+  iter's `<style>` head. The scanner resolves the `var()` against
+  the `:root` map and re-validates the resolved value against
+  `DESIGN.md`.
+- A `theme(...)` reference to the injected Tailwind theme.
+
+### Other envelope constraints
+
 - No component library beyond Tailwind + Lucide. No external CSS, no
   design-system imports.
 - One self-contained HTML file; embedded CSS / JS minimal.
