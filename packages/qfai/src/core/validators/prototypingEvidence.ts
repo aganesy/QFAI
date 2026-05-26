@@ -432,7 +432,12 @@ function countWords(value: string): number {
 export async function validateScreenIdCasing(root: string, contractsDir: string): Promise<Issue[]> {
   const fg = (await import("fast-glob")).default;
   const yaml = await import("yaml");
-  const uiDir = path.join(root, contractsDir, "ui");
+  // Use `path.resolve` (not `path.join`) so an absolute `paths.contractsDir`
+  // (e.g. `/tmp/abs/contracts`) is honored as-is. Node's `path.join`
+  // concatenates segments without recognizing absolute-path semantics on
+  // the second arg, which would produce `${root}/tmp/abs/contracts/ui` and
+  // silently scan the wrong directory, dropping every QFAI-PROT-008 hit.
+  const uiDir = path.resolve(root, contractsDir, "ui");
   const matches = await fg("**/*.{yaml,yml}", { cwd: uiDir, absolute: true, onlyFiles: true });
   const issues: Issue[] = [];
   for (const filePath of matches.sort()) {

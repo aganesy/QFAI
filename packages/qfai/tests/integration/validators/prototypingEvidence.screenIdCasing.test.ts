@@ -91,4 +91,41 @@ describe("screen-id casing validator", () => {
     expect(issues[0]?.code).toBe("QFAI-PROT-008");
     expect(issues[0]?.message).toMatch(/home-page/);
   });
+
+  // Regression: when `paths.contractsDir` is an ABSOLUTE path (e.g. the
+  // operator points it at an out-of-tree contracts checkout), the
+  // validator must honor that absolute path verbatim and NOT prepend
+  // `root` to it. The prior implementation used `path.join(root, abs)`
+  // which silently concatenated and scanned the wrong directory,
+  // dropping every QFAI-PROT-008 hit. The fix uses `path.resolve`,
+  // which correctly returns the absolute arg verbatim.
+  it("HONORS an absolute contractsDir (regression: path.resolve, not path.join)", async () => {
+    const root = await newTempDir();
+    const absContracts = await newTempDir();
+    // Seed hyphen-form ids under the ABSOLUTE contractsDir/ui dir.
+    await mkdir(path.join(absContracts, "ui"), { recursive: true });
+    const screensYaml = [
+      "screens:",
+      `  - id: home-page\n    route: "/home-page"`,
+      `  - id: settings-panel\n    route: "/settings-panel"`,
+    ].join("\n");
+    await writeFile(path.join(absContracts, "ui/main.yaml"), `${screensYaml}\n`, "utf-8");
+
+    expect(path.isAbsolute(absContracts)).toBe(true);
+    const issues = await validateScreenIdCasing(root, absContracts);
+    expect(issues.length).toBe(2);
+    expect(issues.every((i) => i.code === "QFAI-PROT-008")).toBe(true);
+    const messages = issues.map((i) => i.message).join("\n");
+    expect(messages).toMatch(/home-page/);
+    expect(messages).toMatch(/settings-panel/);
+
+    // Also confirm: the buggy code path (`path.join(root, absContracts)`)
+    // would have produced a directory that does not contain the seeded
+    // hyphen-form contracts. Spot-check by passing a deliberately wrong
+    // root: results must be identical because the absolute contractsDir
+    // is honored verbatim regardless of root.
+    const otherRoot = await newTempDir();
+    const issuesOtherRoot = await validateScreenIdCasing(otherRoot, absContracts);
+    expect(issuesOtherRoot.length).toBe(2);
+  });
 });
