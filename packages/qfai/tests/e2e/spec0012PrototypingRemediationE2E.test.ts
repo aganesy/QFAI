@@ -8,13 +8,10 @@
  * US-0012-0127/0128/0129/0130/0131/0137 (validate-conformant
  * prototyping.json + certify scope discriminator + single-spec
  * surface + screen-id casing + --cycle 0 --force backup +
- * --cycle out-of-range). The remaining 5 US blocks
- * (US-0012-0132..0136) are deferred to Phase 4; their annotation
- * comments are preserved at file head so the annotation-coverage
- * validator continues to resolve the traceability chain. `it.todo`
- * scaffolds for the deferred are intentionally removed
- * (QFAI-TEST-001 forbids `it.todo` on tracked files; the annotation
- * comment is the SSOT for coverage).
+ * --cycle out-of-range). Phase 4 adds US-0012-0132/0133/0134/0135/0136
+ * (Operator UX surface: [BLOCKED] summary + primarySpecId
+ * normalisation + lap-009/010 advisory + --license-patch + iter-NN/
+ * iterate-context.json).
  */
 // QFAI:SPEC-0012:US-0012-0119
 // QFAI:SPEC-0012:US-0012-0120
@@ -47,6 +44,17 @@ import { loadConfig } from "../../src/core/config.js";
 import type { DesignMd } from "../../src/core/design/designMd.js";
 import { findDesignMdViolations } from "../../src/core/prototyping/designMdViolations.js";
 import { validateProseCritiqueBand } from "../../src/core/prototyping/evaluatorReview.js";
+import {
+  BLOCKED_CATEGORIES,
+  buildBlockedSummary,
+} from "../../src/core/prototyping/blockedSummary.js";
+import { isIterateContext } from "../../src/core/prototyping/iterateContext.js";
+import {
+  findMd5DuplicateCaptures,
+  findMissingRoutes,
+} from "../../src/core/prototyping/layoutAntiPatternsAdvisory.js";
+import { isLicensePatchAuditRow } from "../../src/core/prototyping/licensePatchAudit.js";
+import { parsePrimarySpecId } from "../../src/core/prototyping/primarySpecIdParse.js";
 import {
   validatePrototypingEvidence,
   validateScreenIdCasing,
@@ -504,5 +512,128 @@ describe("US-0012-0137: --cycle out-of-range error + peek hint", () => {
     } finally {
       stderrSpy.mockRestore();
     }
+  });
+});
+
+// Phase 4 e2e blocks (US-0012-0132..0136).
+
+describe("US-0012-0132: [BLOCKED] top-3 exit-64 blockers + first-offender", () => {
+  it("emits a 4-line summary (header + 3 category lines) with first-offender details", () => {
+    const text = buildBlockedSummary({
+      designMdViolations: [{ kind: "color", found: "#fff" }],
+      layoutAntiPatternsDetected: ["lap-009"],
+      scores: {
+        informationArchitecture: "acceptable",
+        navigationFlow: "exceptional",
+        usability: "exceptional",
+        functionality: "exceptional",
+      },
+    });
+    const lines = text.split("\n");
+    expect(lines[0]).toBe("[BLOCKED] exit-64 prevented by:");
+    expect(lines.length).toBe(4);
+    expect(text).toContain("color=#fff");
+    expect(text).toContain("lap-009");
+    expect(text).toContain("informationArchitecture");
+    expect([...BLOCKED_CATEGORIES]).toEqual([
+      "designMdViolations",
+      "layoutAntiPatternsDetected",
+      "axes-below-exceptional",
+    ]);
+  });
+});
+
+describe("US-0012-0133: primarySpecId 4-digit error + SHOULD-normalisation", () => {
+  it('normalises 1/"1"/"01"/"0001" to "0001" and rejects "abc" with the canonical literal', () => {
+    expect(parsePrimarySpecId(1)).toEqual({ ok: true, normalised: "0001" });
+    expect(parsePrimarySpecId("1")).toEqual({ ok: true, normalised: "0001" });
+    expect(parsePrimarySpecId("01")).toEqual({ ok: true, normalised: "0001" });
+    expect(parsePrimarySpecId("0001")).toEqual({ ok: true, normalised: "0001" });
+    expect(parsePrimarySpecId("abc")).toEqual({
+      ok: false,
+      error:
+        'primarySpecId must be a 4-digit zero-padded string (e.g. "0001"); received abc',
+    });
+    expect(parsePrimarySpecId(10000).ok).toBe(false);
+    expect(parsePrimarySpecId(0).ok).toBe(false);
+  });
+});
+
+describe("US-0012-0134: lap-009 md5 dup + lap-010 missing-route", () => {
+  it("surfaces lap-009 for shared-md5 screens and lap-010 for SPA routes missing from html", () => {
+    const shared = Buffer.from([0x89, 0x50, 0x4e, 0x47]);
+    const lap009 = findMd5DuplicateCaptures(
+      new Map([
+        ["home", shared],
+        ["dashboard", shared],
+      ]),
+    );
+    expect(lap009.length).toBe(1);
+    expect(lap009[0]?.code).toBe("lap-009");
+    expect(lap009[0]?.offenders.sort()).toEqual(["dashboard", "home"]);
+    const lap010 = findMissingRoutes([
+      { screenId: "settings", route: "/settings", html: "<html></html>" },
+      {
+        screenId: "settings_hash",
+        route: "/about",
+        html: '<a href="#/about">about</a>',
+      },
+    ]);
+    expect(lap010.length).toBe(1);
+    expect(lap010[0]?.screenId).toBe("settings");
+  });
+});
+
+describe("US-0012-0135: --license-patch add-only + audit row", () => {
+  it("applies an add-only diff + appends a licensePatchAudit row with the locked shape", async () => {
+    const root = await p2TempDir();
+    await seedPhase2Project(root);
+    const patchPath = path.join(root, "patch.json");
+    await writeFile(
+      patchPath,
+      JSON.stringify({ addedSources: ["wikimedia-commons"] }),
+      "utf-8",
+    );
+    const exit = await runPrototypingIterate({
+      root,
+      cycle: 0,
+      targetUrl: "http://localhost:5173",
+      licensePatch: "patch.json",
+    });
+    expect(exit).toBe(0);
+    const proto = JSON.parse(
+      await readFile(path.join(root, ".qfai/evidence/prototyping/prototyping.json"), "utf-8"),
+    );
+    expect(proto.licensePatchAudit.length).toBe(1);
+    expect(isLicensePatchAuditRow(proto.licensePatchAudit[0])).toBe(true);
+    expect(proto.licensePatchAudit[0].addedSources).toEqual(["wikimedia-commons"]);
+    expect(proto.frozenLicenseCatalog.allowedSources).toContain("wikimedia-commons");
+  });
+});
+
+describe("US-0012-0136: iter-NN/iterate-context.json structured prior-cycle context", () => {
+  it("writes the 4-key advisory file on cycle >= 1; certify ignores it", async () => {
+    const root = await p2TempDir();
+    await seedPhase2Project(root);
+    const c0 = await runPrototypingIterate({
+      root,
+      cycle: 0,
+      targetUrl: "http://localhost:5173",
+    });
+    expect(c0).toBe(0);
+    const c1 = await runPrototypingIterate({
+      root,
+      cycle: 1,
+      targetUrl: "http://localhost:5173",
+    });
+    expect(c1).toBe(0);
+    const ctx = JSON.parse(
+      await readFile(
+        path.join(root, ".qfai/evidence/prototyping/iter-01/iterate-context.json"),
+        "utf-8",
+      ),
+    );
+    expect(isIterateContext(ctx)).toBe(true);
+    expect(ctx.priorCycle).toBe(0);
   });
 });

@@ -75,9 +75,29 @@ import {
   iterationReviewPath,
   iterationHtmlPath,
   iterationScreenshotPath,
+  isOrdinalScore,
   shouldStop,
+  type OrdinalScore,
   type StopReason,
 } from "../../core/prototyping/iteration.js";
+import {
+  applyLicensePatch,
+  parseLicensePatch,
+} from "../../core/prototyping/licensePatchAudit.js";
+import {
+  canonicalIterateContext,
+  type IterateContext,
+} from "../../core/prototyping/iterateContext.js";
+import {
+  buildBlockedSummary,
+  type BlockedSummaryInput,
+} from "../../core/prototyping/blockedSummary.js";
+import {
+  findMd5DuplicateCaptures,
+  findMissingRoutes,
+  type Lap010Input,
+} from "../../core/prototyping/layoutAntiPatternsAdvisory.js";
+import { parsePrimarySpecId } from "../../core/prototyping/primarySpecIdParse.js";
 
 /**
  * Per-screen descriptor consumed by the opt-in `--capture` flag.
@@ -167,6 +187,21 @@ export type RunPrototypingIterateOptions = {
    * `--force` the destructive path is refused with a recovery hint.
    */
   force?: boolean;
+  /**
+   * Absolute or root-relative path to an add-only license-patch file.
+   * When set, iterate applies the patch to the frozen license catalog
+   * BEFORE the runtime license verify, then appends a
+   * `licensePatchAudit[]` row to prototyping.json. Deletion /
+   * modification patches are rejected.
+   */
+  licensePatch?: string;
+  /**
+   * Operator-supplied primary spec id (`--primary-spec-id`). Normalised
+   * via {@link parsePrimarySpecId}; rejects unparseable / out-of-range
+   * input with exit 2 + the canonical error message. Overrides config
+   * + marker resolution when set.
+   */
+  primarySpecId?: string | number;
 };
 
 /**
@@ -309,7 +344,25 @@ export async function runPrototypingIterate(
     );
     error(`Received --cycle ${String(options.cycle)}.`);
     error(CYCLE_OUT_OF_RANGE_PEEK_HINT);
+    // Cycle out-of-range is an input-error class stop. The validator
+    // accepts the wider 4-value enum (Phase 4); persistence happens on
+    // the cycle-0 reset path so a CLI-only error before any state
+    // exists has no persistence target — the diagnostic + exit code is
+    // the operator-visible stopReason for this class.
     return 2;
+  }
+
+  // Normalise --primary-spec-id if provided. SHOULD-normalisation of
+  // `1 / '1' / '01' / '0001'` to canonical `"0001"`; rejection emits the
+  // canonical error message anchored by the unit ledger.
+  let normalisedPrimarySpecId: string | undefined;
+  if (options.primarySpecId !== undefined) {
+    const parsed = parsePrimarySpecId(options.primarySpecId);
+    if (!parsed.ok) {
+      error(`qfai prototyping iterate: ${parsed.error}`);
+      return 2;
+    }
+    normalisedPrimarySpecId = parsed.normalised;
   }
 
   // 0) Zero UI-bearing pre-check → deterministic no-op (exit 0) when
@@ -440,7 +493,21 @@ export async function runPrototypingIterate(
     return 2;
   }
 
-  const resolved = await resolvePrimaryPrototypingSpec(options.root, configResult.config);
+  // Operator-supplied `--primary-spec-id` overrides config + marker
+  // resolution when set. The override is normalised through
+  // `parsePrimarySpecId` (above), so any non-conformant input has
+  // already been rejected with exit 2 + the canonical error string.
+  const effectiveConfig =
+    normalisedPrimarySpecId !== undefined
+      ? {
+          ...configResult.config,
+          prototyping: {
+            ...(configResult.config.prototyping ?? {}),
+            primarySpecId: normalisedPrimarySpecId,
+          },
+        }
+      : configResult.config;
+  const resolved = await resolvePrimaryPrototypingSpec(options.root, effectiveConfig);
   if (!resolved) {
     error(
       "qfai prototyping iterate: no primary UI-bearing prototyping spec found. " +
@@ -670,12 +737,33 @@ export async function runPrototypingIterate(
       return 2;
     }
   }
+  // Optional --license-patch (add-only). Applied BEFORE license verify
+  // so the in-memory `effectiveCatalog` already includes any newly-added
+  // sources; the audit row is appended to prototyping.json. Deletion /
+  // modification patches are rejected with exit 2. The patch is applied
+  // against the FROZEN catalog SSOT (in-memory `DEFAULT_LICENSE_CATALOG`,
+  // which catalog-drift gate already pins to `frozenLicenseCatalog`).
+  let effectiveCatalog: LicenseCatalog = DEFAULT_LICENSE_CATALOG;
+  if (options.licensePatch !== undefined) {
+    const patchResult = await applyLicensePatchFromFile(
+      options.root,
+      options.licensePatch,
+      effectiveCatalog,
+      protoJsonAbs,
+    );
+    if (!patchResult.ok) {
+      error(`qfai prototyping iterate: ${patchResult.error}`);
+      return 2;
+    }
+    effectiveCatalog = patchResult.nextCatalog;
+  }
+
   const imageSources = collected.sources;
   if (imageSources !== null && imageSources.length > 0) {
     // Catalog drift is rejected above; the verifier authority is the
-    // in-memory SSOT (mirrored at cycle 0 into prototyping.json).
-    const catalog = DEFAULT_LICENSE_CATALOG;
-    const verifyResult = licenseVerify(imageSources, catalog);
+    // in-memory SSOT (mirrored at cycle 0 into prototyping.json) after
+    // any add-only license-patch has been applied.
+    const verifyResult = licenseVerify(imageSources, effectiveCatalog);
     if (!verifyResult.ok) {
       const offending = verifyResult.errors
         .map((e) => `${e.code} (source=${e.source}, url=${e.url})`)
@@ -686,6 +774,9 @@ export async function runPrototypingIterate(
           "Replace with allowlisted free stock-photo sources (see cycle-0 frozenLicenseCatalog) " +
           "or remove the entry.",
       );
+      // Persist the stopReason so validator + downstream consumers
+      // see the 4-value enum at face value (Phase 4 widening).
+      await persistStopReason(protoJsonAbs, "license-verify-fail");
       return 66;
     }
   }
@@ -768,11 +859,81 @@ export async function runPrototypingIterate(
   if (sigintHandler) process.off("SIGINT", sigintHandler);
   await teardownOnce();
 
+  // Advisory `iter-NN/iterate-context.json`: structured prior-cycle
+  // hint consumed by reviewer subagents. Best-effort, advisory-only;
+  // certify ignores presence/absence.
+  if (options.cycle >= 1) {
+    const protoForCtx = await readPrototypingJson(protoJsonAbs);
+    const ctx = buildIterateContextFromRecord(protoForCtx);
+    if (ctx !== null) {
+      await writeIterateContextFile(dir, ctx);
+    }
+  }
+
+  // [BLOCKED] exit-64 summary: when the latest iteration is recorded
+  // but did NOT converge (axes < exceptional OR lap[] non-empty OR
+  // designMdViolations[] non-empty), emit the top-3 blockers summary so
+  // the operator sees what is preventing exit-64. The literal header is
+  // anchored by the unit ledger.
+  if (options.cycle >= 1) {
+    const protoForBlocked = await readPrototypingJson(protoJsonAbs);
+    const blockedInput = buildBlockedSummaryInputFromRecord(protoForBlocked);
+    if (blockedInput !== null && !isConverged(blockedInput)) {
+      emitBlockedSummary(blockedInput);
+    }
+  }
+
   info(
     `qfai prototyping iterate: iter-${String(options.cycle).padStart(2, "0")} ready ` +
       `(specs=${specs.length}, plan at ${plan.paths.iterationDir}/iterate-plan.json).`,
   );
   return 0;
+}
+
+function isConverged(input: BlockedSummaryInput): boolean {
+  return (
+    input.designMdViolations.length === 0 &&
+    input.layoutAntiPatternsDetected.length === 0 &&
+    input.scores.informationArchitecture === "exceptional" &&
+    input.scores.navigationFlow === "exceptional" &&
+    input.scores.usability === "exceptional" &&
+    input.scores.functionality === "exceptional"
+  );
+}
+
+function buildBlockedSummaryInputFromRecord(
+  record: PrototypingJsonShape | null,
+): BlockedSummaryInput | null {
+  if (!record) return null;
+  const iterations = asIterations(record);
+  if (iterations.length === 0) return null;
+  const last = iterations[iterations.length - 1];
+  if (!isRecord(last) || !isRecord(last.scores)) return null;
+  const scores = {
+    informationArchitecture: String(last.scores.informationArchitecture ?? "weak"),
+    navigationFlow: String(last.scores.navigationFlow ?? "weak"),
+    usability: String(last.scores.usability ?? "weak"),
+    functionality: String(last.scores.functionality ?? "weak"),
+  };
+  const lap = Array.isArray(last.layoutAntiPatternsDetected)
+    ? last.layoutAntiPatternsDetected.filter((v): v is string => typeof v === "string")
+    : [];
+  const dmvRaw = Array.isArray(last.designMdViolations) ? last.designMdViolations : [];
+  const dmv: DesignMdViolation[] = [];
+  for (const v of dmvRaw) {
+    if (!isRecord(v)) continue;
+    const kind = v.kind;
+    if (kind !== "color" && kind !== "font" && kind !== "radius" && kind !== "shadow") {
+      continue;
+    }
+    const found = typeof v.found === "string" ? v.found : "";
+    dmv.push({ kind, found });
+  }
+  return {
+    designMdViolations: dmv,
+    layoutAntiPatternsDetected: lap,
+    scores,
+  };
 }
 
 async function runCapturePath(
@@ -837,6 +998,53 @@ async function runCapturePath(
       );
       return 2;
     }
+  }
+  // lap-009 md5 duplicate-capture detection: scan the just-captured
+  // PNGs and surface any two distinct screens sharing the same md5
+  // digest. Advisory-failing — the override path lives at the reviewer
+  // boundary (justification text required); here we only emit the
+  // finding so downstream consumers see it deterministically.
+  const pngsByScreen = new Map<string, Buffer>();
+  for (const screen of screens) {
+    const pngPath = path.join(dir, `${screen.id}.png`);
+    try {
+      const bytes = await readFile(pngPath);
+      pngsByScreen.set(screen.id, bytes);
+    } catch {
+      // Missing capture (already errored above on !result.ok); skip.
+    }
+  }
+  const lap009 = findMd5DuplicateCaptures(pngsByScreen);
+  for (const f of lap009) {
+    warn(
+      `qfai prototyping iterate --capture: ${f.code} ${f.category} — ` +
+        `screens [${f.offenders.join(", ")}] share md5 ${f.md5} (advisory-failing; ` +
+        "supply Reviewer justification to override).",
+    );
+  }
+  // lap-010 missing-route detection: when a screen entry carries a
+  // `url` (route), assert that the captured html contains that route
+  // literally. Both `target#/<route>` and `target/<route>` forms are
+  // accepted.
+  const lap010Inputs: Lap010Input[] = [];
+  for (const screen of screens) {
+    if (!screen.url) continue;
+    const htmlPath = path.join(dir, `${screen.id}.html`);
+    let html: string;
+    try {
+      html = await readFile(htmlPath, "utf-8");
+    } catch {
+      continue;
+    }
+    lap010Inputs.push({ screenId: screen.id, route: screen.url, html });
+  }
+  const lap010 = findMissingRoutes(lap010Inputs);
+  for (const f of lap010) {
+    warn(
+      `qfai prototyping iterate --capture: ${f.code} ${f.category} — ` +
+        `screen ${f.screenId} did not surface route ${f.route} (advisory-failing; ` +
+        "supply Reviewer justification to override).",
+    );
   }
   // Mirror the accepted iteration's per-screen evidence into the
   // project-wide aggregate dirs once the capture pass completes.
@@ -1605,11 +1813,188 @@ function emitStop(reason: StopReason): number {
     );
     return 64;
   }
+  if (reason === "license-verify-fail") {
+    // License verify failure already emits its own diagnostic upstream;
+    // this branch records the stop reason consistently with the enum.
+    return 66;
+  }
+  if (reason === "input-error") {
+    // Input-error class stops are emitted at the CLI boundary (cycle
+    // out-of-range, primarySpecId malformed, etc.); this branch is
+    // retained for completeness so the enum is exhaustive.
+    return 2;
+  }
   info(
     `qfai prototyping iterate: max iterations (${MAX_ITERATIONS}) reached. ` +
       "Run `qfai prototyping certify` to seal the run.",
   );
   return 65;
+}
+
+/**
+ * Persist a stop reason to prototyping.json. Best-effort: if the file
+ * does not exist yet (cycle 0 input-error before seed write, etc.), the
+ * call is a no-op and the operator-visible diagnostic + exit code is
+ * the canonical signal.
+ */
+async function persistStopReason(protoJsonAbs: string, reason: StopReason): Promise<void> {
+  const body = await readPrototypingJson(protoJsonAbs);
+  if (body === null) return;
+  body.stopReason = reason;
+  try {
+    await writeFile(protoJsonAbs, `${JSON.stringify(body, null, 2)}\n`, "utf-8");
+  } catch {
+    // Best-effort: a read-only filesystem / locked file should not
+    // mask the upstream license-verify diagnostic.
+  }
+}
+
+type ApplyLicensePatchFromFileResult =
+  | { ok: true; nextCatalog: LicenseCatalog }
+  | { ok: false; error: string };
+
+/**
+ * Read + apply an add-only license-patch file and append the audit row
+ * to prototyping.json#licensePatchAudit[]. The patch file is read as
+ * raw bytes; the bytes are sha256-hashed for the audit row + parsed
+ * with JSON or YAML based on file extension.
+ */
+async function applyLicensePatchFromFile(
+  root: string,
+  patchRelOrAbs: string,
+  liveCatalog: LicenseCatalog,
+  protoJsonAbs: string,
+): Promise<ApplyLicensePatchFromFileResult> {
+  const patchAbs = path.isAbsolute(patchRelOrAbs)
+    ? patchRelOrAbs
+    : path.join(root, patchRelOrAbs);
+  let bytes: Buffer;
+  try {
+    bytes = await readFile(patchAbs);
+  } catch (cause) {
+    const reason = cause instanceof Error ? cause.message : String(cause);
+    return { ok: false, error: `license-patch read failed: ${reason}` };
+  }
+  const text = bytes.toString("utf-8");
+  let parsed: unknown;
+  try {
+    if (patchAbs.toLowerCase().endsWith(".yaml") || patchAbs.toLowerCase().endsWith(".yml")) {
+      const yaml = await import("yaml");
+      parsed = yaml.parse(text);
+    } else {
+      parsed = JSON.parse(text);
+    }
+  } catch (cause) {
+    const reason = cause instanceof Error ? cause.message : String(cause);
+    return { ok: false, error: `license-patch parse failed: ${reason}` };
+  }
+  const validated = parseLicensePatch(parsed);
+  if (!validated.ok) {
+    return { ok: false, error: validated.error };
+  }
+  const nowIso = new Date().toISOString();
+  const applied = applyLicensePatch(liveCatalog, validated.patch, bytes, nowIso);
+  // Append the audit row to prototyping.json#licensePatchAudit[].
+  const body = (await readPrototypingJson(protoJsonAbs)) ?? {};
+  const existing = body.licensePatchAudit;
+  const audit: unknown[] = Array.isArray(existing) ? [...existing] : [];
+  audit.push(applied.auditRow);
+  body.licensePatchAudit = audit;
+  // Also persist the new frozen catalog inline so downstream cycles see
+  // the additions (already merged into `effectiveCatalog`).
+  body.frozenLicenseCatalog = {
+    allowedSources: [...applied.nextCatalog.allowedSources],
+    licenseTiers: Object.fromEntries(
+      Object.entries(applied.nextCatalog.licenseTiers).map(([k, v]) => [k, [...v]]),
+    ),
+    ...(applied.nextCatalog.sourceHosts !== undefined
+      ? {
+          sourceHosts: Object.fromEntries(
+            Object.entries(applied.nextCatalog.sourceHosts).map(([k, v]) => [k, [...v]]),
+          ),
+        }
+      : {}),
+  };
+  await mkdir(path.dirname(protoJsonAbs), { recursive: true });
+  await writeFile(protoJsonAbs, `${JSON.stringify(body, null, 2)}\n`, "utf-8");
+  return { ok: true, nextCatalog: applied.nextCatalog };
+}
+
+/**
+ * Write the advisory `iter-NN/iterate-context.json` file. The file is
+ * advisory-only (certify ignores its presence/absence); the call is
+ * best-effort and the cycle does not hard-fail if the write fails.
+ */
+async function writeIterateContextFile(
+  iterDirAbs: string,
+  context: IterateContext,
+): Promise<void> {
+  const canonical = canonicalIterateContext(context);
+  const target = path.join(iterDirAbs, "iterate-context.json");
+  try {
+    await mkdir(iterDirAbs, { recursive: true });
+    await writeFile(target, `${JSON.stringify(canonical, null, 2)}\n`, "utf-8");
+  } catch (cause) {
+    warn(
+      `qfai prototyping iterate: iterate-context.json write failed (${
+        cause instanceof Error ? cause.message : String(cause)
+      }); the file is advisory and the cycle continues.`,
+    );
+  }
+}
+
+/**
+ * Build the iterate-context payload from the prior cycle's accepted
+ * iteration (read from prototyping.json#iterations[]). Returns null
+ * when no prior iteration is recorded yet (cycle 0).
+ */
+function buildIterateContextFromRecord(
+  record: PrototypingJsonShape | null,
+): IterateContext | null {
+  if (!record) return null;
+  const iterations = asIterations(record);
+  if (iterations.length === 0) return null;
+  const last = iterations[iterations.length - 1];
+  if (!isRecord(last)) return null;
+  if (typeof last.index !== "number") return null;
+  if (!isRecord(last.scores)) return null;
+  const scores = last.scores;
+  const get = (k: string): OrdinalScore => {
+    const v = scores[k];
+    return isOrdinalScore(v) ? v : "weak";
+  };
+  const lap = Array.isArray(last.layoutAntiPatternsDetected)
+    ? last.layoutAntiPatternsDetected.filter((v): v is string => typeof v === "string")
+    : [];
+  return {
+    priorCycle: last.index,
+    priorScores: {
+      informationArchitecture: get("informationArchitecture"),
+      navigationFlow: get("navigationFlow"),
+      usability: get("usability"),
+      functionality: get("functionality"),
+    },
+    openBlockers: lap,
+    // Tailwind contract phase tag is informational; Phase 1 of the
+    // Tailwind scanner work shipped a multi-phase contract surface
+    // (preflight + var(--token) + Tailwind --*-shadow). The literal
+    // tag is advisory; downstream subagents can compare it to the
+    // current contract phase to detect drift.
+    priorTailwindContract: "phase-1",
+  };
+}
+
+/**
+ * Emit the `[BLOCKED] exit-64 prevented by:` summary using stdout.
+ * Pure passthrough to `buildBlockedSummary`; the literal header is the
+ * test anchor.
+ */
+function emitBlockedSummary(input: BlockedSummaryInput): void {
+  const text = buildBlockedSummary(input);
+  // info() routes to stdout via the shared logger; the summary is a
+  // single string so the literal header lives at the start of the
+  // emitted payload.
+  info(text);
 }
 
 function nextActionsFor(cycle: number): string[] {

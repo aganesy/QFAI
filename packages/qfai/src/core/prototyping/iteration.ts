@@ -48,7 +48,22 @@ export type Iteration = {
   };
 };
 
-export type StopReason = "axes-exceptional" | "max-iterations";
+export type StopReason =
+  | "axes-exceptional"
+  | "max-iterations"
+  | "license-verify-fail"
+  | "input-error";
+
+export const STOP_REASONS: readonly StopReason[] = [
+  "axes-exceptional",
+  "max-iterations",
+  "license-verify-fail",
+  "input-error",
+] as const;
+
+export function isStopReason(value: unknown): value is StopReason {
+  return typeof value === "string" && (STOP_REASONS as readonly string[]).includes(value);
+}
 
 /** Pure function. No I/O. Used by both validator and CLI. */
 export function shouldStop(iterations: readonly unknown[]): StopReason | null {

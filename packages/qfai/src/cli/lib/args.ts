@@ -31,6 +31,10 @@ export type ParsedArgs = {
     prototypingCycle?: number;
     /** --check flag for `qfai prototyping certify --check`. */
     prototypingCheckOnly?: boolean;
+    /** --license-patch <file> for `qfai prototyping iterate`. */
+    prototypingLicensePatch?: string;
+    /** --primary-spec-id <value> for `qfai prototyping iterate`. */
+    prototypingPrimarySpecId?: string;
     help: boolean;
     invalidExitCode: number;
   };
@@ -323,6 +327,26 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         // only used by `qfai prototyping certify --check`.
         // The flag takes no value; presence flips the boolean.
         options.prototypingCheckOnly = true;
+        break;
+      }
+      case "--license-patch": {
+        const next = readOptionValue(args, i);
+        if (next === null) {
+          markInvalid();
+          break;
+        }
+        options.prototypingLicensePatch = next;
+        i += 1;
+        break;
+      }
+      case "--primary-spec-id": {
+        const next = readOptionValue(args, i);
+        if (next === null) {
+          markInvalid();
+          break;
+        }
+        options.prototypingPrimarySpecId = next;
+        i += 1;
         break;
       }
       case "--help":

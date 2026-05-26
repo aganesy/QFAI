@@ -31,6 +31,7 @@ import {
   MAX_ITERATION_INDEX,
   isOrdinalScore,
   isPivotDirective,
+  isStopReason,
 } from "../prototyping/iteration.js";
 
 import { PROTOTYPING_JSON_REL } from "../prototyping/paths.js";
@@ -359,21 +360,17 @@ export async function validatePrototypingEvidence(
     issues.push(
       issue(
         "QFAI-PROT-005",
-        'stopReason field is required: set null while running, "axes-exceptional" or "max-iterations" once stopped.',
+        'stopReason field is required: set null while running, "axes-exceptional" | "max-iterations" | "license-verify-fail" | "input-error" once stopped.',
         "error",
         PROTO_JSON_REL,
         "prototypingEvidence.stopReasonRequired",
       ),
     );
-  } else if (
-    stopReason !== null &&
-    stopReason !== "axes-exceptional" &&
-    stopReason !== "max-iterations"
-  ) {
+  } else if (stopReason !== null && !isStopReason(stopReason)) {
     issues.push(
       issue(
         "QFAI-PROT-005",
-        `stopReason must be null | "axes-exceptional" | "max-iterations" (got ${JSON.stringify(stopReason)}).`,
+        `stopReason must be null | "axes-exceptional" | "max-iterations" | "license-verify-fail" | "input-error" (got ${JSON.stringify(stopReason)}).`,
         "error",
         PROTO_JSON_REL,
         "prototypingEvidence.stopReason",

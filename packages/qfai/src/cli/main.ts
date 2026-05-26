@@ -145,6 +145,12 @@ export async function run(argv: string[], cwd: string): Promise<void> {
           cycle: options.prototypingCycle,
           ...(options.prototypingTargetUrl ? { targetUrl: options.prototypingTargetUrl } : {}),
           ...(options.force ? { force: true } : {}),
+          ...(options.prototypingLicensePatch
+            ? { licensePatch: options.prototypingLicensePatch }
+            : {}),
+          ...(options.prototypingPrimarySpecId
+            ? { primarySpecId: options.prototypingPrimarySpecId }
+            : {}),
         });
       }
       return;
