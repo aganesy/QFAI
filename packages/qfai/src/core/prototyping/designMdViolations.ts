@@ -431,7 +431,7 @@ function narrowToBody(html: string): string {
 // single `--tw-ring-offset-width: 0px;` declaration into a head
 // stylesheet would otherwise mask color literals in the same block.
 // The `--tw-*: ...` declaration family is still stripped from the
-// scan surface by `SHADOW_DECL_STRIP_RE` (see line 373) so legitimate
+// scan surface by `SHADOW_DECL_STRIP_RE` so legitimate
 // Tailwind runtime values still don't surface as DESIGN.md drift —
 // the loss of `--tw-` as a block-level classifier is therefore
 // recovered at the declaration-level strip pass. See PR #210
