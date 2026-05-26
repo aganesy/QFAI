@@ -49,13 +49,29 @@ async function seedLegacyConfig(root: string): Promise<void> {
 }
 
 let root: string;
+let savedCiEnv: string | undefined;
+let savedGhaEnv: string | undefined;
 
 beforeEach(async () => {
   root = await mkdtemp(path.join(os.tmpdir(), "qfai-validate-legacycfg-"));
+  // runValidate's buildCiProfileIssue() reads process.env.CI /
+  // GITHUB_ACTIONS and rejects narrow profiles (prototyping, atdd,
+  // discussion) with QFAI-VALIDATE-017 when CI is set. These tests
+  // exercise the partial `prototyping` profile to scope the legacy
+  // validate-json deprecation surface, so we explicitly unset both
+  // env vars for the duration of each test and restore them in
+  // afterEach. Local runs are unaffected (CI is unset); CI runs no
+  // longer false-fire QFAI-VALIDATE-017 against this integration.
+  savedCiEnv = process.env.CI;
+  savedGhaEnv = process.env.GITHUB_ACTIONS;
+  delete process.env.CI;
+  delete process.env.GITHUB_ACTIONS;
 });
 
 afterEach(async () => {
   await rm(root, { recursive: true, force: true });
+  if (savedCiEnv !== undefined) process.env.CI = savedCiEnv;
+  if (savedGhaEnv !== undefined) process.env.GITHUB_ACTIONS = savedGhaEnv;
 });
 
 describe("config validateJsonPath = legacy literal — pre-sunset", () => {
