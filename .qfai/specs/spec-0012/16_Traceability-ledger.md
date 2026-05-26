@@ -229,26 +229,56 @@ TDD-0514 / TDD-0515. They share the same TDD-IDs as their entries in
 `tdd/test-list.md` and follow the 5-column form documented in the
 "Notes (v2.1 ledger)" section below.
 
-| TDD-ID   | TC-Ref        | Status | Owner           | Notes                                                                                                                                                                                                                                                                                                                                                                                                             |
-| -------- | ------------- | ------ | --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| TDD-0514 | REQ-0012-0075 | done   | prototyping-cli | `--capture` CLI flag wiring + default Playwright runner. PR #210 wave-8 expanded the binding to cover (a) auto-derive screens from UI contracts (Codex P1) and (b) `composeCaptureUrl` URL composition (Codex P2). PR #210 wave-10 further expanded to (c) `.yml` UI-contract extension parity and (d) direct unit tests for the exported `composeCaptureUrl` helper. Selector pinned in `tdd/test-list.md` L177. |
-| TDD-0515 | REQ-0012-0076 | done   | prototyping-cli | `--auto-serve` CLI flag wiring + default spawn runner; SIGINT teardown ≤2s (NFR-0106); foreign-process refusal exit 2. Selector pinned in `tdd/test-list.md` L178.                                                                                                                                                                                                                                                |
+| TDD-ID   | TC-Ref        | Status | Owner           | Notes                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| -------- | ------------- | ------ | --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| TDD-0514 | REQ-0012-0075 | done   | prototyping-cli | `--capture` CLI flag wiring + default Playwright runner. PR #210 wave-8 expanded the binding to cover (a) auto-derive screens from UI contracts (Codex P1) and (b) `composeCaptureUrl` URL composition (Codex P2). PR #210 wave-10 further expanded to (c) `.yml` UI-contract extension parity; direct unit-level coverage for `composeCaptureUrl` split off into TDD-0516 (Layer = unit) in PR #210 wave-12 to close a Layer mismatch in the SSOT. Selector pinned in `tdd/test-list.md` L177. |
+| TDD-0515 | REQ-0012-0076 | done   | prototyping-cli | `--auto-serve` CLI flag wiring + default spawn runner; SIGINT teardown ≤2s (NFR-0106); foreign-process refusal exit 2. Selector pinned in `tdd/test-list.md` L178.                                                                                                                                                                                                                                                                                                                              |
+| TDD-0516 | REQ-0012-0077 | done   | prototyping-cli | Direct unit-layer binding for `composeCaptureUrl` URL composition (7 it-blocks pinning all 5 composition branches + 2 boundary cases). Split from TDD-0514 in PR #210 wave-12 so the unit test file (`tests/unit/cli/commands/prototypingIterate.composeCaptureUrl.test.ts`) is bound to a `Layer = unit` ledger row rather than folded into the integration-layer TDD-0514 Evidence column. Selector pinned in `tdd/test-list.md` L179.                                                        |
 
 ## CHG-005 Phase 2 follow-up REQs (REQ-0012-0074..0078) — primary SUT mapping
 
 The follow-up REQ block was introduced in `09_delta.md` "CHG-005 Phase 2
 follow-ups" but its primary-SUT rows were missing from the requirement
-mapping table above. The remaining slice items (AC / BR / EX entries)
-are tracked in D-6 of `tmp/pr-fix/pr210-wave9-deferred.md`; this section
-closes the code-level binding only.
+mapping table above. The remaining slice items (AC / BR / EX entries
+for REQ-0012-0074..0078) are deferred to the next minor release window
+as a coordinated spec amendment requiring `/qfai-sdd` Phase 0 amendment
+flow (5 follow-up REQs across 4 specs is not a code defect — see the
+"Deferred slice closure" subsection below for the full follow-up list).
+This section closes the code-level binding only.
 
 | Requirement   | Primary SUT (Implementation)                                                                            | Primary SUT (Test)                                                                                                   |
 | ------------- | ------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
 | REQ-0012-0074 | `packages/qfai/src/cli/lib/args.ts` (`--capture` / `--auto-serve` / `--check-convergence` flag parsing) | `packages/qfai/tests/integration/cli/commands/prototypingIterate.cliCapture.test.ts` (cycle-0 wiring)                |
 | REQ-0012-0075 | `packages/qfai/src/cli/commands/prototypingIterate.ts` + `src/core/prototyping/defaultCaptureScreen.ts` | `packages/qfai/tests/integration/cli/commands/prototypingIterate.cliCapture.test.ts` (TDD-0514)                      |
 | REQ-0012-0076 | `packages/qfai/src/cli/commands/prototypingIterate.ts` + `src/core/prototyping/defaultServerRunner.ts`  | `packages/qfai/tests/integration/cli/commands/prototypingIterate.cliAutoServe.test.ts` (TDD-0515)                    |
-| REQ-0012-0077 | `packages/qfai/src/cli/commands/prototypingIterate.ts` (`composeCaptureUrl` URL composition policy)     | `packages/qfai/tests/unit/cli/commands/prototypingIterate.composeCaptureUrl.test.ts` (PR #210 wave-10)               |
+| REQ-0012-0077 | `packages/qfai/src/cli/commands/prototypingIterate.ts` (`composeCaptureUrl` URL composition policy)     | `packages/qfai/tests/unit/cli/commands/prototypingIterate.composeCaptureUrl.test.ts` (TDD-0516)                      |
 | REQ-0012-0078 | `packages/qfai/src/core/contracts/screenContracts.ts` (`readUiContractScreenContracts` `.yml` parity)   | `packages/qfai/tests/integration/cli/commands/prototypingIterate.cliCapture.test.ts` describe (10) (PR #210 wave-10) |
+
+### Deferred slice closure (next-minor follow-ups)
+
+The following spec-side rows are deferred to the next minor release window
+(coordinated `/qfai-sdd` Phase 0 amendment flow — 5 follow-up REQs across
+4 specs is not a code defect; this PR closes the code-level binding only):
+
+- [ ] REQ-0012-0074..0078 — AC-0012-NNNN / BR-0012-NNNN / EX-0012-NNNN
+      slice entries in spec-0012 `03_Acceptance-criteria.md`,
+      `04_Behavior-rules.md`, `05_Examples.md`.
+- [ ] REQ-0123 (spec-0006 `--license-patch` umbrella) — analogous AC / BR /
+      EX slice.
+- [ ] REQ-0117 (spec-0013 sunset window) — AC / BR / EX slice plus
+      `08_Open-questions.md` sunset-window OQ and the prerelease §11
+      boundary wording call-out (see thread row directly below).
+- [ ] REQ-0117 prerelease boundary — explicit call-out in spec-0013 that
+      the sunset gate applies AT the prerelease §11 boundary (the code-side
+      ordering is already implemented in `validate.ts` `parseFullSemver`).
+- [ ] REQ-0015-0015 — spec-0015 ledger slice for the reviewer-justification
+      surface (overlap with spec-0012 reviewer-gate; consolidation
+      candidate).
+
+Until landed, the affected specs surface `WARN` on the traceability ledger
+report; none surface `ERROR`. Tracking lives in the deferred ledger of the
+originating PR (PR #210). The deferral is operational, not silent — each
+item has an explicit owner and a code-side anchor.
 
 ## Notes (v2.1 ledger)
 

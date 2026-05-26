@@ -12,14 +12,19 @@
  * pinning the rules at the unit level removes the integration-only
  * coupling.
  *
- * Five cases cover every composition branch:
+ * Six branches cover every composition arm:
  *   1. absolute URL passthrough (`http://` / `https://`);
  *   2. route-relative URL + targetUrl (leading slash);
  *   3. route-relative URL + targetUrl (no leading slash, trailing
  *      slash on base — WHATWG URL semantics);
  *   4. route-relative URL + no targetUrl → `{ ok: false, reason }`
  *      with the operator-facing `--target-url` flag named;
- *   5. undefined screen URL → `targetUrl` (or `null`) fallback.
+ *   5. undefined screen URL → `targetUrl` (or `null`) fallback;
+ *   6. unparseable URL composition (`new URL(...)` throws inside the
+ *      try/catch) → `{ ok: false, reason }` with the operator-facing
+ *      `--target-url=` flag named (NOT the internal `targetUrl=`
+ *      field name). Added in PR #210 wave-12 to pin the operator
+ *      surface of the catch branch.
  */
 import { describe, expect, it } from "vitest";
 
@@ -54,8 +59,11 @@ describe("composeCaptureUrl — direct unit coverage", () => {
     const result = composeCaptureUrl("/orders/new", undefined);
     expect(result.ok).toBe(false);
     if (result.ok) {
-      // Type narrowing: result.ok === false past this point. The
-      // assert above guarantees we never reach this branch.
+      // Discriminant guard: this `if (result.ok) throw` structurally
+      // narrows `result` to the `ok: false` arm on the falling-through
+      // branch, so the subsequent `result.reason` access type-checks.
+      // The `expect` above guarantees we never actually throw at
+      // runtime; the guard exists for the TypeScript narrowing.
       throw new Error("expected ok=false");
     }
     expect(result.reason).toMatch(/route-relative URL/);
@@ -73,5 +81,26 @@ describe("composeCaptureUrl — direct unit coverage", () => {
   it("falls back to null when both screen URL and targetUrl are undefined", () => {
     const result = composeCaptureUrl(undefined, undefined);
     expect(result).toEqual({ ok: true, url: null });
+  });
+
+  it("returns ok=false with the operator-facing flag named when URL composition throws", () => {
+    // `new URL(":::", "not-a-base")` throws (`:::` is not a valid URL
+    // and `"not-a-base"` is not a valid absolute base) — the catch
+    // branch surfaces both args verbatim in the reason string. This
+    // pins the operator-facing flag rename of the catch branch
+    // (`--target-url=` instead of the internal `targetUrl=` field
+    // name), which is the part the wave-10 diff explicitly changed.
+    const result = composeCaptureUrl(":::", "not-a-base");
+    expect(result.ok).toBe(false);
+    if (result.ok) {
+      // Discriminant guard: narrows `result` to the `ok: false` arm
+      // so `result.reason` type-checks below. The expect above
+      // guarantees we never throw at runtime.
+      throw new Error("expected ok=false");
+    }
+    expect(result.reason).toMatch(/unparseable URL composition/);
+    expect(result.reason).toMatch(/--target-url=/);
+    // Internal field name MUST NOT leak.
+    expect(result.reason).not.toMatch(/targetUrl="/);
   });
 });

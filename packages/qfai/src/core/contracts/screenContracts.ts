@@ -84,8 +84,7 @@ export async function readUiContractScreenContracts(
   // with `readPerSpecScreens` and would otherwise produce divergent
   // contract-discovery behaviour between CLI paths.
   const uiDir = path.resolve(root, contractsDirRelative, "ui");
-  // Codex P2 (PR #210 wave-10): accept both `.yaml` and `.yml`
-  // extensions. Pre-fix the glob only matched `.yaml`, so repositories
+  // Accept both `.yaml` and `.yml` extensions. Pre-fix the glob only matched `.yaml`, so repositories
   // that author UI contracts with the `.yml` extension auto-derived
   // an empty screen list and the CLI capture path silently exited 0
   // with a "no screens" warning. Other contract-discovery surfaces in

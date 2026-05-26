@@ -70,7 +70,6 @@ import {
 import {
   MAX_ITERATIONS,
   MAX_ITERATION_INDEX,
-  buildEvidenceRefs,
   iterationDir,
   iterationReviewPath,
   iterationHtmlPath,
@@ -1020,7 +1019,7 @@ export async function runPrototypingIterate(
   // other than ENOENT) cannot leak the SIGINT listener or skip the
   // HTTP teardown. The previous explicit cleanup chain drained both
   // surfaces on the happy path and on `captureExit !== 0`, but the
-  // throw-from-helper path skipped both. Codex P2 wave-11.
+  // throw-from-helper path skipped both.
   try {
     if (options.capture) {
       const captureExit = await runCapturePath(options, dir, resolvedCaptureScreens ?? []);
@@ -1280,14 +1279,13 @@ async function runCapturePath(
 }
 
 // TODO(next-minor): extract composeCaptureUrl + collectScreensForCapture
-// into core/prototyping/captureUrlCompose.ts + captureScreensResolve.ts;
-// see PR #210 wave-9/10 reviewer feedback. Both helpers are pure
-// (no captured runPrototypingIterate state) and orthogonal to the
-// iterate driver's primary concerns (cycle gating / drift detection /
-// freeze / exit code dispatch). Extracting them lets the driver shrink
-// toward the CLAUDE.md ~50 LOC guidance and removes the export-without-
-// unit-test pressure on composeCaptureUrl by giving it a natural module
-// home with co-located tests.
+// into core/prototyping/captureUrlCompose.ts + captureScreensResolve.ts.
+// Both helpers are pure (no captured runPrototypingIterate state) and
+// orthogonal to the iterate driver's primary concerns (cycle gating /
+// drift detection / freeze / exit code dispatch). Extracting them lets
+// the driver shrink toward the CLAUDE.md ~50 LOC guidance and removes
+// the export-without-unit-test pressure on composeCaptureUrl by giving
+// it a natural module home with co-located tests.
 
 /**
  * Discriminated outcome of {@link composeCaptureUrl}. Mirrors the
@@ -1336,9 +1334,9 @@ export function composeCaptureUrl(
   if (targetUrl === undefined) {
     // Operator-facing diagnostic: name the public CLI flag
     // (`--target-url`) rather than the internal options field
-    // (`options.targetUrl`). PR #210 wave-10 reviewer NIT — surrounding
-    // `qfai prototyping iterate --capture:` warnings already use the
-    // public flag surface for consistency.
+    // (`options.targetUrl`). Surrounding `qfai prototyping iterate
+    // --capture:` warnings already use the public flag surface for
+    // consistency.
     return {
       ok: false,
       reason:
@@ -1848,11 +1846,38 @@ const SEED_PROSE_CRITIQUE_PLACEHOLDER = (() => {
 /**
  * Build the cycle-0 seed `iterations[]` array. Emits exactly one
  * iteration record whose shape passes `validatePrototypingEvidence`
- * out of the box. Scores are intentionally all `weak` so `shouldStop`
- * cannot accidentally classify the seed as `axes-exceptional`; the
- * reviewer overwrites scores on the first review pass.
+ * AND `validatePrototypingArtifactRefIntegrity` out of the box.
+ * Scores are intentionally all `weak` so `shouldStop` cannot
+ * accidentally classify the seed as `axes-exceptional`; the reviewer
+ * overwrites scores on the first review pass.
+ *
+ * `evidenceRefs` shape is the canonical `{ screenshot, html }` object
+ * form per the {@link Iteration} type, `buildEvaluatorReview`, and the
+ * ref-integrity validator (which reads `iter.evidenceRefs.screenshot`
+ * / `.html` directly). When multiple screens are declared, the seed
+ * uses the FIRST screen's paths as the iteration-level representative
+ * — the reviewer overwrites this with the actually-reviewed surface on
+ * the first review pass. When no screens are declared, the seed uses
+ * the default `iter-NN/index.{png,html}` placeholder so the validator
+ * has a concrete path to check.
  */
 function buildSeedIterations(declaredScreens: readonly string[]): unknown[] {
+  // Co-locate {screenshot, html} from the first declared screen; fall
+  // back to a deterministic placeholder when no screens are present so
+  // the seed always has non-empty fields. (refIntegrity treats empty
+  // fields as `QFAI-PROT-009` errors.)
+  //
+  // Paths are FULL repo-relative (e.g. `.qfai/evidence/prototyping/
+  // iter-00/<screen>.png`), matching the SSOT shape used by
+  // `buildEvaluatorReview` evidenceRefs and by `validatePrototyping
+  // ArtifactRefIntegrity` (which calls `path.resolve(root, value)`).
+  const firstScreen = declaredScreens[0];
+  const screenshotRef =
+    firstScreen !== undefined
+      ? iterationScreenshotPath(0, firstScreen)
+      : `${iterationDir(0)}/index.png`;
+  const htmlRef =
+    firstScreen !== undefined ? iterationHtmlPath(0, firstScreen) : `${iterationDir(0)}/index.html`;
   return [
     {
       index: 0,
@@ -1868,7 +1893,10 @@ function buildSeedIterations(declaredScreens: readonly string[]): unknown[] {
       designMdViolations: [],
       pivotDirective: "continue",
       reviewerId: "iterate-seed",
-      evidenceRefs: buildEvidenceRefs(0, declaredScreens),
+      evidenceRefs: {
+        screenshot: screenshotRef,
+        html: htmlRef,
+      },
     },
   ];
 }

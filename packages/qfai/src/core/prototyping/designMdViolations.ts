@@ -391,11 +391,13 @@ const STYLE_BLOCK_RE = /<style\b[^>]*>([\s\S]*?)<\/style\s*>/gi;
 const INLINE_STYLE_RE = /\sstyle\s*=\s*(?:"([^"]*)"|'([^']*)')/gi;
 
 // Narrow `html` to the `<body>...</body>` region when present, so
-// scanner regexes only see CSS that participates in the rendered DOM
-// surface. Tailwind preflight `<style>` blocks live in `<head>` and
-// emit utility-class definitions / resets whose literal values are
-// not authored by the iter — they must not surface as DESIGN.md
-// drift.
+// inline `style="..."` attributes only see CSS that participates in
+// the rendered DOM surface. `<style>` blocks (both in `<head>` and
+// `<body>`) are collected separately and filtered against Tailwind
+// preflight signatures so the operator's own stylesheet authored in
+// `<head><style>` is still scanned for non-DESIGN.md color literals
+// (previously the entire `<head>` region was skipped, allowing color
+// drift in head stylesheets to bypass `designMdViolations`).
 //
 // When no `<body>` element is present (e.g. a fragment under test),
 // fall back to scanning the full input so the legacy regression
@@ -409,13 +411,50 @@ function narrowToBody(html: string): string {
   return m[1] ?? "";
 }
 
-function extractCssRegions(html: string): string {
-  const scoped = narrowToBody(html);
-  const parts: string[] = [];
-  for (const match of scoped.matchAll(STYLE_BLOCK_RE)) {
-    if (match[1]) parts.push(match[1]);
+// Tailwind preflight `<style>` block signature heuristics. A faithful
+// Tailwind CDN preflight stylesheet always carries one of these
+// markers in its body, so a `<style>` block matching any of them can
+// be classified as preflight and excluded from drift scanning. An
+// operator-authored stylesheet (even when placed in `<head>`) will
+// not carry these markers and remains in scope.
+//
+// Markers (any one is sufficient):
+//   - `/* tailwindcss v` or `/*! tailwindcss v` — Tailwind banner
+//     comment (CDN + standalone CLI both emit this).
+//   - `--tw-` — Tailwind internal custom-property prefix.
+//   - `*, ::before, ::after` followed by `box-sizing` — the
+//     preflight universal-reset selector (signature unique to the
+//     preflight block).
+const TAILWIND_PREFLIGHT_BLOCK_SIGNATURES: readonly RegExp[] = [
+  /\/\*!?\s*tailwindcss\s+v/i,
+  /--tw-/,
+  /\*,\s*::before,\s*::after\s*\{[^}]*box-sizing/i,
+];
+
+function isTailwindPreflightBlock(css: string): boolean {
+  for (const sig of TAILWIND_PREFLIGHT_BLOCK_SIGNATURES) {
+    if (sig.test(css)) return true;
   }
-  for (const match of scoped.matchAll(INLINE_STYLE_RE)) {
+  return false;
+}
+
+function extractCssRegions(html: string): string {
+  const parts: string[] = [];
+  // Collect ALL `<style>` blocks (head + body) and filter out only
+  // Tailwind preflight signatures. Operator-authored stylesheets in
+  // `<head>` are kept in scope so color literals there surface as
+  // DESIGN.md drift instead of being silently allowed.
+  for (const match of html.matchAll(STYLE_BLOCK_RE)) {
+    const block = match[1];
+    if (!block) continue;
+    if (isTailwindPreflightBlock(block)) continue;
+    parts.push(block);
+  }
+  // Inline `style="..."` attributes are body-scoped: a head-only
+  // inline-style attr is structurally not on the rendered DOM. Mirror
+  // the previous behaviour for inline-style scanning.
+  const scopedBody = narrowToBody(html);
+  for (const match of scopedBody.matchAll(INLINE_STYLE_RE)) {
     const value = match[1] ?? match[2];
     if (value) parts.push(value);
   }
