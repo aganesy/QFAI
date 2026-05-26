@@ -61,8 +61,14 @@ describe("TC-0015-0017: Reviewer Gate emits R-CERTIFY-VERIFY-CIRCULAR on regress
     await seedVerifyJson(root, { status: "PASS", scope: "atdd" });
     // No legacy `phase` field — current iterate output (writeSeedMetadata
     // explicitly deletes it). The reviewer-gate identifies the prototyping
-    // context structurally (parseable object at canonical path).
-    await seedPrototypingJson(root, { runId: "run-1", iterations: [] });
+    // context structurally: `stopReason === null` AND
+    // `acceptedIterationIndex === null` (in-flight loop, wave-18 signal).
+    await seedPrototypingJson(root, {
+      runId: "run-1",
+      iterations: [],
+      stopReason: null,
+      acceptedIterationIndex: null,
+    });
 
     const issues = await validateReviewerGate(root, await getConfig(root));
     const findings = issues.filter((i) => i.code === "R-CERTIFY-VERIFY-CIRCULAR");
@@ -78,7 +84,12 @@ describe("TC-0015-0017: Reviewer Gate emits R-CERTIFY-VERIFY-CIRCULAR on regress
 
   it("emits R-CERTIFY-VERIFY-CIRCULAR when verify.json scope=full is consumed at prototyping phase", async () => {
     await seedVerifyJson(root, { status: "PASS", scope: "full" });
-    await seedPrototypingJson(root, { runId: "run-1", iterations: [] });
+    await seedPrototypingJson(root, {
+      runId: "run-1",
+      iterations: [],
+      stopReason: null,
+      acceptedIterationIndex: null,
+    });
 
     const issues = await validateReviewerGate(root, await getConfig(root));
     const findings = issues.filter((i) => i.code === "R-CERTIFY-VERIFY-CIRCULAR");
@@ -91,7 +102,12 @@ describe("TC-0015-0017: Reviewer Gate emits R-CERTIFY-VERIFY-CIRCULAR on regress
 describe("TC-0015-0018: Option-B compliant certify passes without R-CERTIFY-VERIFY-CIRCULAR (control)", () => {
   it("does NOT emit R-CERTIFY-VERIFY-CIRCULAR when verify.json scope=prototyping", async () => {
     await seedVerifyJson(root, { status: "PASS", scope: "prototyping" });
-    await seedPrototypingJson(root, { runId: "run-1", iterations: [] });
+    await seedPrototypingJson(root, {
+      runId: "run-1",
+      iterations: [],
+      stopReason: null,
+      acceptedIterationIndex: null,
+    });
 
     const issues = await validateReviewerGate(root, await getConfig(root));
     const findings = issues.filter((i) => i.code === "R-CERTIFY-VERIFY-CIRCULAR");

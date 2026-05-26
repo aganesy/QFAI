@@ -1,7 +1,8 @@
 /**
- * Regression coverage for PR #210 wave-2 C1+C2 fixes.
+ * Regression coverage for PR #210 wave-2 C1+C2 fixes plus wave-18
+ * active-loop signal refinement.
  *
- * Two paired defects in the prior implementation:
+ * Two paired defects in the original implementation:
  *   C1 — detectCertifyVerifyCircular read prototyping state from
  *        the legacy path `.qfai/output/prototyping.json`, but the
  *        iterate pipeline writes to the canonical path
@@ -14,11 +15,16 @@
  *        `body.phase`. No current writer restores it, so the
  *        guard was bypassed even when the canonical path was read.
  *
- * Fix: read from PROTOTYPING_JSON_REL and treat any well-formed
- * object at that path as a prototyping context (option (a) in the
- * review thread). These tests pin the new behavior so a future
- * regression on either path or the structural-signal rule fails
- * immediately.
+ * Wave-2 fix: read from PROTOTYPING_JSON_REL and treat any well-formed
+ * object at that path as a prototyping context.
+ *
+ * Wave-18 refinement: presence-only was too loose — once a prior loop
+ * left a `prototyping.json` behind, every subsequent verify.json with
+ * scope=atdd|full|implement triggered the finding as a false-positive.
+ * The active-loop signal is now structural: `stopReason === null` AND
+ * `acceptedIterationIndex === null`. A completed loop populates both
+ * slots, a never-started loop has neither, and the gate only fires
+ * while the loop is mid-flight.
  */
 
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
@@ -71,32 +77,48 @@ async function writeLegacyPrototyping(root: string, body: unknown): Promise<void
 }
 
 describe("R-CERTIFY-VERIFY-CIRCULAR — canonical-path regression coverage", () => {
-  it("emits the finding for scope=atdd when canonical prototyping.json exists WITHOUT a phase field (C1+C2 fix)", async () => {
+  it("emits the finding for scope=atdd when canonical prototyping.json marks an in-flight loop (stopReason=null, acceptedIterationIndex=null)", async () => {
     const root = await newTempDir();
     await writeVerify(root, "atdd");
     // No `phase` field — matches the real-world output of
     // writeSeedMetadata, which deletes body.phase on every cycle 0.
-    await writeCanonicalPrototyping(root, { runId: "regression-1", iterations: [] });
+    // Per-loop state slots both null = loop is iterating.
+    await writeCanonicalPrototyping(root, {
+      runId: "regression-1",
+      iterations: [],
+      stopReason: null,
+      acceptedIterationIndex: null,
+    });
     const issues = await validateReviewerGate(root, STUB_CONFIG);
     const circular = issues.filter((i) => i.code === "R-CERTIFY-VERIFY-CIRCULAR");
     expect(circular).toHaveLength(1);
     expect(circular[0]?.message).toMatch(/scope="atdd"/);
   });
 
-  it("emits the finding for scope=implement at canonical path (no phase field)", async () => {
+  it("emits the finding for scope=implement when the canonical state marks an in-flight loop", async () => {
     const root = await newTempDir();
     await writeVerify(root, "implement");
-    await writeCanonicalPrototyping(root, { runId: "regression-2", iterations: [] });
+    await writeCanonicalPrototyping(root, {
+      runId: "regression-2",
+      iterations: [],
+      stopReason: null,
+      acceptedIterationIndex: null,
+    });
     const issues = await validateReviewerGate(root, STUB_CONFIG);
     const circular = issues.filter((i) => i.code === "R-CERTIFY-VERIFY-CIRCULAR");
     expect(circular).toHaveLength(1);
     expect(circular[0]?.message).toMatch(/scope="implement"/);
   });
 
-  it("emits the finding for scope=full at canonical path (no phase field)", async () => {
+  it("emits the finding for scope=full when the canonical state marks an in-flight loop", async () => {
     const root = await newTempDir();
     await writeVerify(root, "full");
-    await writeCanonicalPrototyping(root, { runId: "regression-3", iterations: [] });
+    await writeCanonicalPrototyping(root, {
+      runId: "regression-3",
+      iterations: [],
+      stopReason: null,
+      acceptedIterationIndex: null,
+    });
     const issues = await validateReviewerGate(root, STUB_CONFIG);
     const circular = issues.filter((i) => i.code === "R-CERTIFY-VERIFY-CIRCULAR");
     expect(circular).toHaveLength(1);
@@ -109,6 +131,48 @@ describe("R-CERTIFY-VERIFY-CIRCULAR — canonical-path regression coverage", () 
     // Legacy-only seed should NOT trigger the finding now that the
     // validator reads exclusively from the canonical path.
     await writeLegacyPrototyping(root, { phase: "prototyping", runId: "legacy-only" });
+    const issues = await validateReviewerGate(root, STUB_CONFIG);
+    const circular = issues.filter((i) => i.code === "R-CERTIFY-VERIFY-CIRCULAR");
+    expect(circular).toEqual([]);
+  });
+
+  // Wave-18: presence-only was a persistent false-positive once a
+  // previous loop left prototyping.json on disk. The four cases below
+  // pin the active-loop signal so the gate fires for in-flight loops
+  // and stays silent for any terminal / absent state.
+
+  it("does NOT emit when the loop converged (stopReason=axes-exceptional, acceptedIterationIndex=3)", async () => {
+    const root = await newTempDir();
+    await writeVerify(root, "atdd");
+    await writeCanonicalPrototyping(root, {
+      runId: "completed-converged",
+      iterations: [{}, {}, {}, {}],
+      stopReason: "axes-exceptional",
+      acceptedIterationIndex: 3,
+    });
+    const issues = await validateReviewerGate(root, STUB_CONFIG);
+    const circular = issues.filter((i) => i.code === "R-CERTIFY-VERIFY-CIRCULAR");
+    expect(circular).toEqual([]);
+  });
+
+  it("does NOT emit when the loop hit a terminal stop without convergence (stopReason=max-iterations, acceptedIterationIndex=null)", async () => {
+    const root = await newTempDir();
+    await writeVerify(root, "atdd");
+    await writeCanonicalPrototyping(root, {
+      runId: "stopped-max-iterations",
+      iterations: [{}, {}, {}],
+      stopReason: "max-iterations",
+      acceptedIterationIndex: null,
+    });
+    const issues = await validateReviewerGate(root, STUB_CONFIG);
+    const circular = issues.filter((i) => i.code === "R-CERTIFY-VERIFY-CIRCULAR");
+    expect(circular).toEqual([]);
+  });
+
+  it("does NOT emit when prototyping.json is missing entirely (no loop ever started)", async () => {
+    const root = await newTempDir();
+    await writeVerify(root, "atdd");
+    // Intentionally no writeCanonicalPrototyping call.
     const issues = await validateReviewerGate(root, STUB_CONFIG);
     const circular = issues.filter((i) => i.code === "R-CERTIFY-VERIFY-CIRCULAR");
     expect(circular).toEqual([]);

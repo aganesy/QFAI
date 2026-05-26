@@ -56,16 +56,36 @@ async function loadJsonObject(filePath: string): Promise<Record<string, unknown>
 }
 
 /**
- * Presence-only signal for the canonical prototyping state file. Returns
- * `true` when `prototyping.json` parsed as an object at the canonical
- * path. The iterate pipeline deletes the legacy `phase` field on every
- * cycle-0 reset (see `writeSeedMetadata` in `prototypingIterate.ts`), so
- * we cannot gate on it; presence of a parseable object at the canonical
- * path is the structural indicator that the prototyping loop owns the
- * working tree right now.
+ * Active-loop signal for the canonical prototyping state file. Returns
+ * `true` only when a prototyping loop is currently iterating (i.e. has
+ * NOT reached a terminal state).
+ *
+ * Criteria — both must hold:
+ *   - `stopReason === null` (no terminal cause has been recorded; a
+ *     completed loop sets this to one of "axes-exceptional",
+ *     "max-iterations", "license-verify-fail", "input-error", etc.).
+ *   - `acceptedIterationIndex === null` or `undefined` (no iteration
+ *     has been accepted yet; a converged loop sets this to a number).
+ *
+ * Rationale: a presence-only check (the prior implementation) treated
+ * any parseable `prototyping.json` as an active loop, so once a file
+ * existed from a previous run the gate would emit
+ * `R-CERTIFY-VERIFY-CIRCULAR` against every subsequent verify.json
+ * with scope=atdd|full|implement — a persistent false-positive that
+ * blocked the `validate` profile after the loop had already completed.
+ *
+ * The iterate pipeline deletes the legacy `phase` field on every
+ * cycle-0 reset (see `writeSeedMetadata` in `prototypingIterate.ts`),
+ * so we cannot gate on `phase`. Instead we read the per-loop terminal
+ * slots that the pipeline writes when (and only when) the loop
+ * actually finishes.
  */
-function hasCanonicalPrototypingState(proto: Record<string, unknown> | null): boolean {
-  return proto !== null;
+function isPrototypingLoopActive(proto: Record<string, unknown> | null): boolean {
+  if (proto === null) return false;
+  const { stopReason, acceptedIterationIndex } = proto;
+  const stopReasonClear = stopReason === null;
+  const acceptedClear = acceptedIterationIndex === null || acceptedIterationIndex === undefined;
+  return stopReasonClear && acceptedClear;
 }
 
 async function detectCertifyVerifyCircular(root: string): Promise<Issue[]> {
@@ -80,15 +100,15 @@ async function detectCertifyVerifyCircular(root: string): Promise<Issue[]> {
 
   const protoAbs = path.join(root, PROTOTYPING_JSON_REL);
   const proto = await loadJsonObject(protoAbs);
-  if (!hasCanonicalPrototypingState(proto)) return [];
+  if (!isPrototypingLoopActive(proto)) return [];
 
   // 3-part justification: (1) certify path / verify.json path,
   // (2) offending validator-output profile (scope),
   // (3) option-B contract clause violated.
   const message =
     `R-CERTIFY-VERIFY-CIRCULAR: certify path reads ${VERIFY_JSON_REL} ` +
-    `with scope="${scopeRaw}" while a prototyping run is active ` +
-    `(canonical ${PROTOTYPING_JSON_REL} present). ` +
+    `with scope="${scopeRaw}" while a prototyping loop is iterating ` +
+    `(canonical ${PROTOTYPING_JSON_REL} has stopReason=null and acceptedIterationIndex=null). ` +
     `Option-B forbids the prototyping certify gate from depending on /qfai-atdd or ` +
     `/qfai-implement validator outputs (justification: certify=${VERIFY_JSON_REL}, ` +
     `profile=${scopeRaw}, contract=option-B phase-isolation clause).`;
