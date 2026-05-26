@@ -374,7 +374,8 @@ const CURRENT_TAILWIND_CONTRACT_PHASE = "phase-1";
 // minor housekeeping pass: verifyLicensesForCycle(options, protoRecord),
 // runCycle0Reset(options, ...), runOptionalCaptureAndServe(options, dir),
 // emitAdvisorySummaries(options, protoJsonAbs). Pure structural refactor;
-// no semantic change expected. Tracked in tmp/pr-fix/pr210-wave9-deferred.md.
+// no semantic change expected.
+// TODO(next-minor): split runPrototypingIterate into the extractions above.
 export async function runPrototypingIterate(
   options: RunPrototypingIterateOptions,
 ): Promise<number> {
@@ -835,7 +836,8 @@ export async function runPrototypingIterate(
   // additions on every cycle. The cycle-0 frozen catalog stays equal to
   // `DEFAULT_LICENSE_CATALOG` (the drift gate above continues to enforce
   // that), and the canonical record of operator-supplied additions lives
-  // in `licensePatchAudit[]` (3-key lockdown). Reading the effective
+  // in `licensePatchAudit[]` (canonical row shape: 3 required keys
+  // + optional `addedLicenseTiers` for tier replay). Reading the effective
   // catalog at verify-time means a cycle-0 `--license-patch` no longer
   // self-incompatibly stamps the frozen field with the post-patch
   // catalog (which would then trip the drift gate on cycle 1).
@@ -1013,25 +1015,23 @@ export async function runPrototypingIterate(
   // capture invocation never silently no-ops on a missing
   // `options.screens` when the operator drove `--capture` from the CLI.
   //
-  // TODO(next-minor): wrap capture + tail-cleanup in `try { ... } finally
-  // { sigint-off + teardownOnce() }` so that synchronous throws from
-  // `runCapturePath`'s `mirrorAcceptedIterToAggregateDirs` (readdir /
-  // mkdir failures other than ENOENT) cannot leak the SIGINT listener
-  // or skip the HTTP teardown. See pr210-wave9-deferred.md. Current
-  // explicit cleanup chain still drains both surfaces on the happy
-  // path and on captureExit !== 0; only the throw-from-helper path is
-  // affected.
-  if (options.capture) {
-    const captureExit = await runCapturePath(options, dir, resolvedCaptureScreens ?? []);
-    if (captureExit !== 0) {
-      if (sigintHandler) process.off("SIGINT", sigintHandler);
-      await teardownOnce();
-      return captureExit;
+  // try/finally so that synchronous throws from `runCapturePath`'s
+  // `mirrorAcceptedIterToAggregateDirs` (readdir / mkdir failures
+  // other than ENOENT) cannot leak the SIGINT listener or skip the
+  // HTTP teardown. The previous explicit cleanup chain drained both
+  // surfaces on the happy path and on `captureExit !== 0`, but the
+  // throw-from-helper path skipped both. Codex P2 wave-11.
+  try {
+    if (options.capture) {
+      const captureExit = await runCapturePath(options, dir, resolvedCaptureScreens ?? []);
+      if (captureExit !== 0) {
+        return captureExit;
+      }
     }
+  } finally {
+    if (sigintHandler) process.off("SIGINT", sigintHandler);
+    await teardownOnce();
   }
-
-  if (sigintHandler) process.off("SIGINT", sigintHandler);
-  await teardownOnce();
 
   // Advisory `iter-NN/iterate-context.json`: structured prior-cycle
   // hint consumed by reviewer subagents. Best-effort, advisory-only;
@@ -1623,32 +1623,18 @@ function readLicensePatchAuditRows(
  *
  * Option A (Codex P1 wave-4): the cycle-0 frozen catalog is the
  * immutable baseline (always equal to `DEFAULT_LICENSE_CATALOG`); the
- * canonical record of mid-loop additions lives in the audit ledger
- * (3-key lockdown: `{appliedAt, patchSha256, addedSources}`). Reads
- * union the audit rows' `addedSources` into the frozen
- * `allowedSources` so license-verify on cycle >= 1 accepts the same
- * sources the operator allow-listed via `--license-patch` on cycle 0.
+ * canonical record of mid-loop additions lives in the audit ledger.
+ * Reads union the audit rows' `addedSources` into the frozen
+ * `allowedSources` AND the rows' optional `addedLicenseTiers` into
+ * the frozen `licenseTiers` so license-verify on cycle >= 1 accepts
+ * the same sources / tier mappings the operator allow-listed via
+ * `--license-patch` on cycle 0.
  *
- * `licenseTiers` / `sourceHosts` are not replayed because the
- * audit-row schema does not persist them; the cycle-0 frozen tiers
- * already cover every baseline source, and any newly added source
- * must rely on the operator passing a fresh `--license-patch` if
- * tier/host pinning is needed on subsequent cycles.
- *
- * TODO(next-minor): the cycle-0 audit-row schema is the SSOT for the
- * replay path; it does not yet carry `addedLicenseTiers` /
- * `addedSourceHosts`. A patched-in source with no replayed tier /
- * host pinning can therefore pass cycle 0 (where the patch is
- * applied in-process and the verifier sees the union) yet fail
- * cycle 1+ (where the replay path reconstructs only the merged
- * `allowedSources`). Two follow-up options: (a) extend the audit-row
- * schema with the two missing fields and union them at replay time
- * (Open-Closed compliant), or (b) gate cycle 1+ on the patched
- * source having a tier already present in the frozen baseline and
- * fail-fast with exit 2 otherwise. (a) is the lower-surprise option
- * but requires a schema-version bump; (b) holds the contract surface
- * stable and is cheaper to ship. Tracked separately for the next
- * minor's housekeeping pass.
+ * `sourceHosts` is still not replayed (the audit-row schema does not
+ * persist it); operators who need host pinning on subsequent cycles
+ * must pass a fresh `--license-patch`. Legacy 3-key audit rows
+ * (without `addedLicenseTiers`) remain backward-compatible and replay
+ * source additions only.
  */
 export function effectiveLicenseCatalog(
   frozen: LicenseCatalog,
@@ -1656,6 +1642,9 @@ export function effectiveLicenseCatalog(
 ): LicenseCatalog {
   const seen = new Set(frozen.allowedSources);
   const merged: string[] = [...frozen.allowedSources];
+  const mergedTiers: Record<string, string[]> = Object.fromEntries(
+    Object.entries(frozen.licenseTiers).map(([k, v]) => [k, [...v]]),
+  );
   for (const row of auditRows) {
     for (const source of row.addedSources) {
       if (!seen.has(source)) {
@@ -1663,12 +1652,22 @@ export function effectiveLicenseCatalog(
         merged.push(source);
       }
     }
+    if (row.addedLicenseTiers !== undefined) {
+      for (const [source, tiers] of Object.entries(row.addedLicenseTiers)) {
+        const existing = mergedTiers[source];
+        if (existing === undefined) {
+          mergedTiers[source] = [...tiers];
+          continue;
+        }
+        for (const t of tiers) {
+          if (!existing.includes(t)) existing.push(t);
+        }
+      }
+    }
   }
   return {
     allowedSources: merged,
-    licenseTiers: Object.fromEntries(
-      Object.entries(frozen.licenseTiers).map(([k, v]) => [k, [...v]]),
-    ),
+    licenseTiers: mergedTiers,
     ...(frozen.sourceHosts !== undefined
       ? {
           sourceHosts: Object.fromEntries(

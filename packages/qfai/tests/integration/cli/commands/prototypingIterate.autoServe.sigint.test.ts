@@ -144,6 +144,54 @@ describe("iterate --auto-serve SIGINT teardown", () => {
     expect(process.listenerCount("SIGINT")).toBe(sigintListenersBefore);
   });
 
+  // Codex P2 wave-11 regression: if `runCapturePath` throws (e.g.,
+  // `mirrorAcceptedIterToAggregateDirs` hits a non-ENOENT readdir /
+  // mkdir failure), iterate must still tear down the auto-serve
+  // runner and detach the SIGINT handler. Before the try/finally
+  // wrap, the throw-from-helper path skipped both, leaking a live
+  // HTTP server + SIGINT listener into the parent process.
+  //
+  // We simulate the throw by planting a regular file at the path the
+  // aggregate mirror tries to create as a directory; `mkdir(...,
+  // { recursive: true })` then raises `EEXIST` / `ENOTDIR`, which
+  // bubbles up past `runCapturePath`.
+  it("auto-serve teardown + SIGINT detach happen even when the mirror helper throws", async () => {
+    const root = await newTempDir();
+    await seedMinimal(root);
+
+    // Plant a regular file at `.qfai/evidence/prototyping/screenshots`
+    // so the mirror's `mkdir(pngDir, { recursive: true })` raises.
+    const protoDir = path.join(root, ".qfai/evidence/prototyping");
+    await mkdir(protoDir, { recursive: true });
+    await writeFile(path.join(protoDir, "screenshots"), "not a directory", "utf-8");
+
+    const sigintListenersBefore = process.listenerCount("SIGINT");
+    const teardown = vi.fn(async () => {});
+    const runner = vi.fn(async () => ({ ok: true, teardown, pid: 33333 }) as const);
+
+    await expect(
+      runPrototypingIterate({
+        root,
+        cycle: 0,
+        targetUrl: "http://localhost:5173",
+        autoServe: true,
+        capture: true,
+        screens: [{ id: "home", url: "/" }],
+        captureScreen: async ({ pngPath, htmlPath }) => {
+          await writeFile(pngPath, Buffer.from([0x89, 0x50, 0x4e, 0x47]));
+          await writeFile(htmlPath, "<html></html>");
+          return { ok: true, durationMs: 5 };
+        },
+        serverRunner: runner,
+      }),
+    ).rejects.toBeDefined();
+
+    // Even though the mirror helper threw, teardown ran exactly once
+    // and the SIGINT handler was detached from `process`.
+    expect(teardown).toHaveBeenCalledTimes(1);
+    expect(process.listenerCount("SIGINT")).toBe(sigintListenersBefore);
+  });
+
   it("teardown executes within 2s when SIGINT is dispatched mid-run", async () => {
     const root = await newTempDir();
     await seedMinimal(root);

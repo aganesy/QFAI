@@ -11,10 +11,13 @@
  *   - Rejects any modification (a key present in both live and patch
  *     whose value differs).
  *   - Appends one audit row per successful apply:
- *       { appliedAt: ISO timestamp, patchSha256, addedSources[] }
+ *       { appliedAt, patchSha256, addedSources[], addedLicenseTiers? }
  *
  * `patchSha256` is computed over the raw patch bytes (sha256 hex digest)
- * so the audit row is reproducible.
+ * so the audit row is reproducible. `addedLicenseTiers` is OPTIONAL: it
+ * is omitted on rows produced by patches that only add sources without
+ * tier metadata, preserving backward compatibility with the legacy
+ * 3-key audit-row shape.
  */
 
 import { createHash } from "node:crypto";
@@ -30,6 +33,13 @@ export type LicensePatchAuditRow = {
   readonly appliedAt: string;
   readonly patchSha256: string;
   readonly addedSources: readonly string[];
+  /**
+   * Tier additions, persisted so the cycle >= 1 replay path can
+   * reconstruct `licenseTiers` (not just `allowedSources`). Optional
+   * to preserve backward-compat with legacy 3-key rows produced
+   * before this field was introduced.
+   */
+  readonly addedLicenseTiers?: Readonly<Record<string, readonly string[]>>;
 };
 
 export type ApplyLicensePatchResult = {
@@ -148,18 +158,30 @@ export function applyLicensePatch(
   const nextLicenseTiers: Record<string, string[]> = Object.fromEntries(
     Object.entries(live.licenseTiers).map(([k, v]) => [k, [...v]]),
   );
+  // Capture per-patch tier additions for the audit row so the cycle
+  // >= 1 replay path can rebuild `licenseTiers` (not just
+  // `allowedSources`). We record only the *delta* against `live`
+  // (i.e. tiers not already present for the source) so the audit
+  // shape stays minimal and idempotent.
+  const addedTiersDelta: Record<string, string[]> = {};
   for (const [source, tiers] of Object.entries(patch.addedLicenseTiers ?? {})) {
     const existing = nextLicenseTiers[source];
+    const deltaForSource: string[] = [];
     if (existing === undefined) {
       nextLicenseTiers[source] = [...tiers];
-      continue;
-    }
-    // Union new tiers into the existing list; existing entries survive
-    // unchanged.
-    for (const t of tiers) {
-      if (!existing.includes(t)) {
-        existing.push(t);
+      for (const t of tiers) deltaForSource.push(t);
+    } else {
+      // Union new tiers into the existing list; existing entries survive
+      // unchanged.
+      for (const t of tiers) {
+        if (!existing.includes(t)) {
+          existing.push(t);
+          deltaForSource.push(t);
+        }
       }
+    }
+    if (deltaForSource.length > 0) {
+      addedTiersDelta[source] = deltaForSource;
     }
   }
   const nextAllowed = [...live.allowedSources, ...addedThisPatch];
@@ -174,19 +196,24 @@ export function applyLicensePatch(
         }
       : {}),
   };
+  const hasTierDelta = Object.keys(addedTiersDelta).length > 0;
   const auditRow: LicensePatchAuditRow = {
     appliedAt: nowIso,
     patchSha256: computePatchSha256(patchBytes),
     addedSources: addedThisPatch,
+    ...(hasTierDelta ? { addedLicenseTiers: addedTiersDelta } : {}),
   };
   return { nextCatalog, auditRow };
 }
 
 /**
  * Canonical audit-row shape lockdown. Returns `true` when the value is
- * the exact `{appliedAt, patchSha256, addedSources}` shape with the
- * expected value types. Used by the unit test ledger to pin the shape
- * so additions to the row require an explicit spec amendment.
+ * the canonical 3-key shape `{appliedAt, patchSha256, addedSources}`
+ * OR the canonical 4-key shape that adds an optional
+ * `addedLicenseTiers: Record<string, string[]>` for tier replay
+ * (see {@link LicensePatchAuditRow}). The 4th key is OPTIONAL —
+ * legacy 3-key rows produced before tier replay was introduced
+ * still parse so back-fill is not required.
  *
  * `patchSha256` matches `^[a-f0-9]{64}$` — **lowercase canonical only**.
  * `computePatchSha256` uses Node's `createHash("sha256").digest("hex")`
@@ -200,15 +227,28 @@ export function applyLicensePatch(
 export function isLicensePatchAuditRow(value: unknown): value is LicensePatchAuditRow {
   if (!isRecord(value)) return false;
   const keys = Object.keys(value).sort();
-  const expected = ["addedSources", "appliedAt", "patchSha256"];
-  if (keys.length !== expected.length) return false;
-  for (let i = 0; i < keys.length; i += 1) {
-    if (keys[i] !== expected[i]) return false;
+  // Allow exactly the 3 required keys OR those plus `addedLicenseTiers`.
+  const required = new Set(["addedSources", "appliedAt", "patchSha256"]);
+  const optional = new Set(["addedLicenseTiers"]);
+  for (const k of required) {
+    if (!keys.includes(k)) return false;
+  }
+  for (const k of keys) {
+    if (!required.has(k) && !optional.has(k)) return false;
   }
   if (typeof value.appliedAt !== "string" || value.appliedAt.length === 0) return false;
   if (typeof value.patchSha256 !== "string" || !/^[a-f0-9]{64}$/u.test(value.patchSha256)) {
     return false;
   }
   if (!Array.isArray(value.addedSources)) return false;
-  return value.addedSources.every((v) => typeof v === "string");
+  if (!value.addedSources.every((v) => typeof v === "string")) return false;
+  if (value.addedLicenseTiers !== undefined) {
+    if (!isRecord(value.addedLicenseTiers)) return false;
+    for (const [source, tiers] of Object.entries(value.addedLicenseTiers)) {
+      if (typeof source !== "string" || source.length === 0) return false;
+      if (!Array.isArray(tiers)) return false;
+      if (!tiers.every((t) => typeof t === "string" && t.length > 0)) return false;
+    }
+  }
+  return true;
 }

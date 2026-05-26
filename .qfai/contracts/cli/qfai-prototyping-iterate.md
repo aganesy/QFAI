@@ -123,15 +123,28 @@ licensePatchAudit:
       # 64-hex sha256 of the raw patch bytes
       # (lowercase, matches /^[a-f0-9]{64}$/)
     addedSources: string[] # newly-allowed sources
+    addedLicenseTiers?: # OPTIONAL: tier additions, replayed
+      { [source: string]: string[] } # on cycle >= 1 by effectiveLicenseCatalog
 ```
 
 The runtime classifier (`isLicensePatchAuditRow` in
-`core/prototyping/licensePatchAudit.ts`) enforces this exact 3-key shape:
-unknown keys, missing keys, non-string values, or a non-64-hex
-`patchSha256` are rejected. Any future audit fields (e.g.
-`patchedFromFile`, `addedTiers`, `addedHosts`, `operator`) require a
-contract amendment and a matching classifier update — they MUST NOT be
-silently appended to rows produced by current implementations.
+`core/prototyping/licensePatchAudit.ts`) enforces this canonical shape:
+3 required keys (`appliedAt`, `patchSha256`, `addedSources`) plus an
+optional 4th key (`addedLicenseTiers`). Unknown extra keys, missing
+required keys, non-string values, or a non-64-hex `patchSha256` are
+rejected. `addedLicenseTiers` is OMITTED when the patch only adds
+sources without tier metadata, preserving backward-compat with legacy
+3-key rows. Any further audit fields (e.g. `patchedFromFile`,
+`addedHosts`, `operator`) require a contract amendment and a matching
+classifier update — they MUST NOT be silently appended to rows produced
+by current implementations.
+
+The cycle >= 1 replay path (`effectiveLicenseCatalog(frozen, auditRows)`)
+unions `addedSources` into the frozen `allowedSources` AND
+`addedLicenseTiers` into the frozen `licenseTiers`. Without the tier
+replay, a cycle-0 patch that introduces both a new source and its tier
+mapping would cause cycle-1 license-verify to raise
+`license-tier-unknown` on the previously-accepted entry.
 
 Deletions and modifications are REJECTED with a hint to use the
 cycle-0-restart path (re-seed via `--cycle 0`). The rejection error

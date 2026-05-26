@@ -255,6 +255,83 @@ describe("iterate --license-patch add-only diff", () => {
     expect(errorCodes).not.toContain("license-not-allowlisted");
   });
 
+  // Codex P1 wave-11: tier replay regression. Before the fix, an audit
+  // row produced by a `--license-patch` that added both a new source
+  // and its tier mapping persisted only the source addition. The
+  // cycle >= 1 replay (`effectiveLicenseCatalog`) then rebuilt
+  // `allowedSources` correctly but left `licenseTiers[source]`
+  // undefined, so `licenseVerify` raised `license-tier-unknown` for
+  // any image claiming the patched source. The fix extends the audit
+  // row with an optional `addedLicenseTiers` field that the replay
+  // path unions into the rebuilt `licenseTiers`.
+  it("cycle 0 --license-patch with addedLicenseTiers is replayed on cycle 1 via the audit ledger", async () => {
+    const root = await newTempDir();
+    await seedProject(root);
+    const patchPath = path.join(root, "patch.json");
+    await writeFile(
+      patchPath,
+      JSON.stringify({
+        addedSources: ["wikimedia-commons"],
+        addedLicenseTiers: { "wikimedia-commons": ["cc-by-sa-4.0"] },
+      }),
+      "utf-8",
+    );
+
+    const c0 = await runPrototypingIterate({
+      root,
+      cycle: 0,
+      targetUrl: "http://localhost:5173",
+      licensePatch: "patch.json",
+    });
+    expect(c0).toBe(0);
+
+    const c1 = await runPrototypingIterate({
+      root,
+      cycle: 1,
+      targetUrl: "http://localhost:5173",
+    });
+    expect(c1).toBe(0);
+
+    const proto = JSON.parse(
+      await readFile(path.join(root, ".qfai/evidence/prototyping/prototyping.json"), "utf-8"),
+    );
+    expect(Array.isArray(proto.licensePatchAudit)).toBe(true);
+    expect(proto.licensePatchAudit.length).toBe(1);
+    const row = proto.licensePatchAudit[0];
+    expect(isLicensePatchAuditRow(row)).toBe(true);
+    expect(row.addedLicenseTiers).toEqual({ "wikimedia-commons": ["cc-by-sa-4.0"] });
+
+    // Replay path now carries the tier mapping; license-verify accepts
+    // a wikimedia-commons-sourced image at the patched tier without
+    // raising `license-tier-unknown`.
+    const auditRows: LicensePatchAuditRow[] = [];
+    for (const rowEntry of proto.licensePatchAudit) {
+      if (isLicensePatchAuditRow(rowEntry)) auditRows.push(rowEntry);
+    }
+    const frozenRaw = proto.frozenLicenseCatalog;
+    const frozen: LicenseCatalog = {
+      allowedSources: frozenRaw.allowedSources,
+      licenseTiers: frozenRaw.licenseTiers,
+      ...(frozenRaw.sourceHosts !== undefined ? { sourceHosts: frozenRaw.sourceHosts } : {}),
+    };
+    const replayed = effectiveLicenseCatalog(frozen, auditRows);
+    expect(replayed.licenseTiers["wikimedia-commons"]).toEqual(["cc-by-sa-4.0"]);
+    const verifyResult = licenseVerify(
+      [
+        {
+          url: "https://upload.wikimedia.org/wikipedia/commons/0/0a/example.jpg",
+          source: "wikimedia-commons",
+          license: "cc-by-sa-4.0",
+          attribution: "Example contributor / Wikimedia Commons / CC BY-SA 4.0",
+        },
+      ],
+      replayed,
+    );
+    const errorCodes = verifyResult.ok ? [] : verifyResult.errors.map((e) => e.code);
+    expect(errorCodes).not.toContain("license-tier-unknown");
+    expect(errorCodes).not.toContain("license-not-allowlisted");
+  });
+
   it("cycle 0 --license-patch does NOT trigger the cycle-1 frozenLicenseCatalog drift gate", async () => {
     const root = await newTempDir();
     await seedProject(root);
