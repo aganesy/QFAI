@@ -412,30 +412,36 @@ function narrowToBody(html: string): string {
 }
 
 // Tailwind preflight `<style>` block signature heuristics. A faithful
-// Tailwind CDN preflight stylesheet always carries one of these
-// markers in its body, so a `<style>` block matching any of them can
-// be classified as preflight and excluded from drift scanning. An
-// operator-authored stylesheet (even when placed in `<head>`) will
-// not carry these markers and remains in scope.
+// Tailwind CDN preflight stylesheet always carries one of two strong
+// markers — the banner comment or the universal-reset selector — so a
+// `<style>` block matching either is classified as preflight and
+// excluded from drift scanning. An operator-authored stylesheet (even
+// when placed in `<head>`) will not carry these markers and remains
+// in scope.
 //
-// Markers (any one is sufficient):
+// Primary signatures (either alone is sufficient):
 //   - `/* tailwindcss v` or `/*! tailwindcss v` — Tailwind banner
 //     comment (CDN + standalone CLI both emit this).
-//   - `--tw-` — Tailwind internal custom-property prefix.
 //   - `*, ::before, ::after` followed by `box-sizing` — the
 //     preflight universal-reset selector (signature unique to the
 //     preflight block).
-const TAILWIND_PREFLIGHT_BLOCK_SIGNATURES: readonly RegExp[] = [
-  /\/\*!?\s*tailwindcss\s+v/i,
-  /--tw-/,
-  /\*,\s*::before,\s*::after\s*\{[^}]*box-sizing/i,
-];
+//
+// `--tw-` (Tailwind internal custom-property prefix) is intentionally
+// NOT a primary signature anymore. An operator who copy-pastes a
+// single `--tw-ring-offset-width: 0px;` declaration into a head
+// stylesheet would otherwise mask color literals in the same block.
+// The `--tw-*: ...` declaration family is still stripped from the
+// scan surface by `SHADOW_DECL_STRIP_RE` (see line 373) so legitimate
+// Tailwind runtime values still don't surface as DESIGN.md drift —
+// the loss of `--tw-` as a block-level classifier is therefore
+// recovered at the declaration-level strip pass. See PR #210
+// wave-14 architecture-reviewer thread for the false-negative
+// rationale (`--tw-` block-level alone is too broad).
+const TAILWIND_BANNER_RE = /\/\*!?\s*tailwindcss\s+v/i;
+const TAILWIND_UNIVERSAL_RESET_RE = /\*,\s*::before,\s*::after\s*\{[^}]*box-sizing/i;
 
 function isTailwindPreflightBlock(css: string): boolean {
-  for (const sig of TAILWIND_PREFLIGHT_BLOCK_SIGNATURES) {
-    if (sig.test(css)) return true;
-  }
-  return false;
+  return TAILWIND_BANNER_RE.test(css) || TAILWIND_UNIVERSAL_RESET_RE.test(css);
 }
 
 function extractCssRegions(html: string): string {
