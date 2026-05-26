@@ -43,9 +43,11 @@ jobs:
           # is invoked from a fork or a non-PR event.
           git fetch --no-tags --depth=1 origin main || true
         shell: bash
-      - uses: pnpm/action-setup@v6
-        with:
-          version: 9.12.3
+      - name: Activate pnpm via corepack
+        run: |
+          corepack enable
+          corepack prepare pnpm@9.12.3 --activate
+        shell: bash
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_LTS }}
@@ -65,9 +67,11 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v6
-        with:
-          version: 9.12.3
+      - name: Activate pnpm via corepack
+        run: |
+          corepack enable
+          corepack prepare pnpm@9.12.3 --activate
+        shell: bash
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_LTS }}
@@ -82,9 +86,11 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v6
-        with:
-          version: 9.12.3
+      - name: Activate pnpm via corepack
+        run: |
+          corepack enable
+          corepack prepare pnpm@9.12.3 --activate
+        shell: bash
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_LTS }}
@@ -103,9 +109,11 @@ jobs:
         slice: [core, validators, integration, e2e, cli, unit, scripts]
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v6
-        with:
-          version: 9.12.3
+      - name: Activate pnpm via corepack
+        run: |
+          corepack enable
+          corepack prepare pnpm@9.12.3 --activate
+        shell: bash
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_LTS }}
@@ -125,9 +133,11 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v6
-        with:
-          version: 9.12.3
+      - name: Activate pnpm via corepack
+        run: |
+          corepack enable
+          corepack prepare pnpm@9.12.3 --activate
+        shell: bash
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_LTS }}
@@ -142,9 +152,11 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v6
-        with:
-          version: 9.12.3
+      - name: Activate pnpm via corepack
+        run: |
+          corepack enable
+          corepack prepare pnpm@9.12.3 --activate
+        shell: bash
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_LTS }}

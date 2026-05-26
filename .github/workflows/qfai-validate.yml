@@ -10,7 +10,7 @@
 #
 # If your project uses pnpm / yarn instead of npm, replace the `npm ci` step
 # with your package manager's install command (e.g. `pnpm install
-# --frozen-lockfile` + `pnpm/action-setup@v6`). `npx qfai` works with any
+# --frozen-lockfile` + corepack-activated pnpm). `npx qfai` works with any
 # Node package manager.
 
 name: qfai validate
@@ -27,7 +27,11 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v6
+      - name: Activate pnpm via corepack
+        run: |
+          corepack enable
+          corepack prepare pnpm@9.12.3 --activate
+        shell: bash
       - uses: actions/setup-node@v4
         with:
           # Match the QFAI repo's CI baseline (Node 20 LTS) and the package
