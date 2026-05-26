@@ -177,4 +177,26 @@ describe("R-CERTIFY-VERIFY-CIRCULAR — canonical-path regression coverage", () 
     const circular = issues.filter((i) => i.code === "R-CERTIFY-VERIFY-CIRCULAR");
     expect(circular).toEqual([]);
   });
+
+  // Wave-19: writeSeedMetadata persists acceptedIterationIndex=0 at
+  // cycle 0 even while the loop is still iterating. The wave-18
+  // predicate (stopReason=null AND acceptedIterationIndex=null) was
+  // too strict and skipped real in-flight runs in this common state.
+  // The refined predicate is `stopReason === null` alone — terminal
+  // cause is the only structural signal the pipeline writes when (and
+  // only when) the loop actually finishes.
+  it("emits the finding when the cycle-0 seed has populated acceptedIterationIndex but stopReason is still null (wave-19 regression)", async () => {
+    const root = await newTempDir();
+    await writeVerify(root, "atdd");
+    await writeCanonicalPrototyping(root, {
+      runId: "active-seed",
+      iterations: [{ index: 0 }],
+      stopReason: null,
+      acceptedIterationIndex: 0,
+    });
+    const issues = await validateReviewerGate(root, STUB_CONFIG);
+    const circular = issues.filter((i) => i.code === "R-CERTIFY-VERIFY-CIRCULAR");
+    expect(circular).toHaveLength(1);
+    expect(circular[0]?.message).toMatch(/scope="atdd"/);
+  });
 });

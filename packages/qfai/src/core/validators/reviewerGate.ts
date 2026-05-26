@@ -60,32 +60,32 @@ async function loadJsonObject(filePath: string): Promise<Record<string, unknown>
  * `true` only when a prototyping loop is currently iterating (i.e. has
  * NOT reached a terminal state).
  *
- * Criteria — both must hold:
- *   - `stopReason === null` (no terminal cause has been recorded; a
- *     completed loop sets this to one of "axes-exceptional",
- *     "max-iterations", "license-verify-fail", "input-error", etc.).
- *   - `acceptedIterationIndex === null` or `undefined` (no iteration
- *     has been accepted yet; a converged loop sets this to a number).
+ * Sole criterion: `stopReason === null`.
  *
- * Rationale: a presence-only check (the prior implementation) treated
- * any parseable `prototyping.json` as an active loop, so once a file
- * existed from a previous run the gate would emit
+ * A completed loop sets `stopReason` to one of "axes-exceptional",
+ * "max-iterations", "license-verify-fail", "input-error", etc. While
+ * iterating (including cycle-0 seed where `writeSeedMetadata`
+ * persists `acceptedIterationIndex = 0` even though no real
+ * convergence has happened), `stopReason` stays `null`. Using
+ * `acceptedIterationIndex === null` as a secondary gate was too
+ * strict — it short-circuited real in-flight runs whose seed had
+ * already populated that slot.
+ *
+ * Rationale: a presence-only check (`proto !== null`) treats any
+ * parseable `prototyping.json` as an active loop, so once a file
+ * exists from a previous run the gate emits
  * `R-CERTIFY-VERIFY-CIRCULAR` against every subsequent verify.json
  * with scope=atdd|full|implement — a persistent false-positive that
- * blocked the `validate` profile after the loop had already completed.
- *
- * The iterate pipeline deletes the legacy `phase` field on every
- * cycle-0 reset (see `writeSeedMetadata` in `prototypingIterate.ts`),
- * so we cannot gate on `phase`. Instead we read the per-loop terminal
- * slots that the pipeline writes when (and only when) the loop
- * actually finishes.
+ * blocks the `validate` profile after the loop has already
+ * completed. The pipeline deletes the legacy `phase` field on every
+ * cycle-0 reset, so gating on `phase` is not viable; gating on the
+ * per-loop terminal slot `stopReason` (which the pipeline writes
+ * when, and only when, the loop actually finishes) is the
+ * structurally correct active-loop signal.
  */
 function isPrototypingLoopActive(proto: Record<string, unknown> | null): boolean {
   if (proto === null) return false;
-  const { stopReason, acceptedIterationIndex } = proto;
-  const stopReasonClear = stopReason === null;
-  const acceptedClear = acceptedIterationIndex === null || acceptedIterationIndex === undefined;
-  return stopReasonClear && acceptedClear;
+  return proto.stopReason === null;
 }
 
 async function detectCertifyVerifyCircular(root: string): Promise<Issue[]> {
@@ -108,7 +108,7 @@ async function detectCertifyVerifyCircular(root: string): Promise<Issue[]> {
   const message =
     `R-CERTIFY-VERIFY-CIRCULAR: certify path reads ${VERIFY_JSON_REL} ` +
     `with scope="${scopeRaw}" while a prototyping loop is iterating ` +
-    `(canonical ${PROTOTYPING_JSON_REL} has stopReason=null and acceptedIterationIndex=null). ` +
+    `(canonical ${PROTOTYPING_JSON_REL} has stopReason=null). ` +
     `Option-B forbids the prototyping certify gate from depending on /qfai-atdd or ` +
     `/qfai-implement validator outputs (justification: certify=${VERIFY_JSON_REL}, ` +
     `profile=${scopeRaw}, contract=option-B phase-isolation clause).`;
