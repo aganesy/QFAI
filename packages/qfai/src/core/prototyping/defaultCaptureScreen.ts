@@ -106,7 +106,29 @@ export const defaultCaptureScreen = async (args: CaptureArgs): Promise<CaptureRe
     // domain-specific wait helper). A future contract extension could
     // surface a `--capture-wait-until` flag; for now the DI hook
     // covers the SPA case without expanding the operator surface.
-    await page.goto(args.url, { waitUntil: "load" });
+    const response = await page.goto(args.url, { waitUntil: "load" });
+    // Playwright's page.goto does NOT throw on HTTP 4xx/5xx by default;
+    // it resolves with the Response object. Reject non-2xx (and null,
+    // which can surface for about:blank-style transitions) so error
+    // pages do not silently become "valid" capture evidence.
+    if (response === null) {
+      return {
+        ok: false,
+        durationMs: Date.now() - started,
+        reason:
+          `screen ${args.screenId} capture failed (page.goto returned no response for ${args.url}).`,
+      };
+    }
+    const status = response.status();
+    if (status >= 400) {
+      return {
+        ok: false,
+        durationMs: Date.now() - started,
+        reason:
+          `screen ${args.screenId} capture failed (HTTP ${status} from ${args.url}; ` +
+          `refusing to record error-page evidence).`,
+      };
+    }
     await page.screenshot({ path: args.pngPath, fullPage: true });
     const html = await page.content();
     await writeFile(args.htmlPath, html, "utf-8");
@@ -144,8 +166,15 @@ type PlaywrightBrowser = {
   close: () => Promise<void>;
 };
 
+type PlaywrightResponse = {
+  status: () => number;
+};
+
 type PlaywrightPage = {
-  goto: (url: string, options?: { waitUntil?: string }) => Promise<unknown>;
+  goto: (
+    url: string,
+    options?: { waitUntil?: string },
+  ) => Promise<PlaywrightResponse | null>;
   screenshot: (options: { path: string; fullPage?: boolean }) => Promise<unknown>;
   content: () => Promise<string>;
 };
