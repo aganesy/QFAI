@@ -175,6 +175,27 @@ export async function runPrototypingCertify(
     );
     return 2;
   }
+  // Scope discriminator: when `verify.json#scope` is present, certify
+  // recognises the `"prototyping"` value as satisfying the prototyping
+  // DONE condition without requiring ATDD / implement artefacts.
+  // Non-prototyping scopes (`atdd` / `implement` / `full`) are refused
+  // at the certify gate so the operator hits a single clear error
+  // before any downstream artifact is touched. The same circular-read
+  // class is enforced as a validator finding by
+  // `core/validators/reviewerGate.ts::detectCertifyVerifyCircular`
+  // (R-CERTIFY-VERIFY-CIRCULAR); this CLI-side gate keeps the certify
+  // command self-contained instead of relying on a downstream validate
+  // pass to surface the same condition.
+  const verifyScope = extractString(verifyJson, "scope");
+  if (verifyScope !== undefined && verifyScope !== "prototyping") {
+    error(
+      `qfai prototyping certify: verify.json scope is "${verifyScope}" but the ` +
+        "prototyping certify gate accepts only scope=\"prototyping\". " +
+        "Re-run `/qfai-verify` with the prototyping scope before certification " +
+        "(ATDD / implement / full scopes are forbidden by the option-B phase-isolation contract).",
+    );
+    return 2;
+  }
 
   const reviewerGate = extractRecord(protoJson, "reviewerGate");
   if (!reviewerGate || extractString(reviewerGate, "result") !== "PASS") {

@@ -144,6 +144,7 @@ export async function run(argv: string[], cwd: string): Promise<void> {
           root: resolvedRoot,
           cycle: options.prototypingCycle,
           ...(options.prototypingTargetUrl ? { targetUrl: options.prototypingTargetUrl } : {}),
+          ...(options.force ? { force: true } : {}),
         });
       }
       return;

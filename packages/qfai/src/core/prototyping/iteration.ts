@@ -132,6 +132,38 @@ export function iterationReviewPath(index: number): string {
   return `${iterationDir(index)}/review.json`;
 }
 
+/**
+ * Closed evidence-ref kind set for the per-iteration evidence refs.
+ */
+export const EVIDENCE_REF_KINDS = ["screenshot", "html"] as const;
+export type EvidenceRefKind = (typeof EVIDENCE_REF_KINDS)[number];
+
+export type EvidenceRef = {
+  readonly kind: EvidenceRefKind;
+  readonly path: string;
+};
+
+/**
+ * Build the per-iteration `evidenceRefs[]` array that bijects with the
+ * declared `screens[].id` list. Two refs are emitted per screen
+ * (`screenshot` + `html`); both use the zero-padded `iter-NN/<id>.<ext>`
+ * path template. The function is pure and case-preserving — callers
+ * pass already-underscored ids (the validator rejects hyphen casing at
+ * the UI contract surface).
+ */
+export function buildEvidenceRefs(
+  iterIndex: number,
+  screenIds: readonly string[],
+): EvidenceRef[] {
+  const dir = iterationDir(iterIndex).split("/").pop() ?? `iter-${String(iterIndex).padStart(2, "0")}`;
+  const out: EvidenceRef[] = [];
+  for (const id of screenIds) {
+    out.push({ kind: "screenshot", path: `${dir}/${id}.png` });
+    out.push({ kind: "html", path: `${dir}/${id}.html` });
+  }
+  return out;
+}
+
 export function isOrdinalScore(value: unknown): value is OrdinalScore {
   return typeof value === "string" && (ORDINAL_SCORES as readonly string[]).includes(value);
 }

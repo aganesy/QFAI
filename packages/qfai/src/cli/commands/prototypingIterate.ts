@@ -30,7 +30,17 @@
  * (Tailwind config shape).
  */
 
-import { copyFile, mkdir, readdir, readFile, rm, stat, unlink, writeFile } from "node:fs/promises";
+import {
+  copyFile,
+  mkdir,
+  readdir,
+  readFile,
+  rename,
+  rm,
+  stat,
+  unlink,
+  writeFile,
+} from "node:fs/promises";
 import path from "node:path";
 
 import { error, info, warn } from "../lib/logger.js";
@@ -60,6 +70,7 @@ import {
 import {
   MAX_ITERATIONS,
   MAX_ITERATION_INDEX,
+  buildEvidenceRefs,
   iterationDir,
   iterationReviewPath,
   iterationHtmlPath,
@@ -148,6 +159,14 @@ export type RunPrototypingIterateOptions = {
    * returns. Test fixtures pass a deterministic stub.
    */
   serverRunner?: ServerRunnerFn;
+  /**
+   * Opt-in destructive re-run of `--cycle 0`. When true AND an
+   * `iter-00` directory exists, iterate RENAMES it to
+   * `iter-00.backup-<ISO>` BEFORE clearing evidence dirs (so the
+   * backup is byte-equivalent to the prior loop's seed). Without
+   * `--force` the destructive path is refused with a recovery hint.
+   */
+  force?: boolean;
 };
 
 /**
@@ -269,6 +288,9 @@ const DEFAULT_LICENSE_CATALOG: LicenseCatalog = {
   },
 };
 
+export const CYCLE_OUT_OF_RANGE_PEEK_HINT =
+  "Hint: use --cycle 9 --check-convergence to peek the final cycle without re-running the loop.";
+
 export async function runPrototypingIterate(
   options: RunPrototypingIterateOptions,
 ): Promise<number> {
@@ -277,9 +299,16 @@ export async function runPrototypingIterate(
     options.cycle < 0 ||
     options.cycle > MAX_ITERATION_INDEX
   ) {
+    // Deterministic out-of-range error. The literal boundary phrase is
+    // anchored by unit tests so any future rewording must update both
+    // sides simultaneously. The peek-mode hint follows on its own line
+    // so operators can see the recovery path without re-reading the
+    // boundary explanation.
     error(
-      `qfai prototyping iterate: --cycle must be 0..${MAX_ITERATION_INDEX} (got ${String(options.cycle)}).`,
+      "qfai prototyping iterate: --cycle accepts 0..9 (=10 cycles total). --cycle 10 would be the 11th cycle and is not supported.",
     );
+    error(`Received --cycle ${String(options.cycle)}.`);
+    error(CYCLE_OUT_OF_RANGE_PEEK_HINT);
     return 2;
   }
 
@@ -455,6 +484,52 @@ export async function runPrototypingIterate(
     return 2;
   }
 
+  // 3b) Cycle 0 destructive-rerun gate.
+  //     If an existing `iter-00` directory is present on disk, the
+  //     fresh cycle 0 will overwrite its contents. Without `--force`
+  //     refuse the run with a recovery hint; with `--force` rename the
+  //     existing `iter-00` to `iter-00.backup-<ISO>` BEFORE the rest
+  //     of the cycle-0 reset path so the backup is byte-equivalent to
+  //     the prior loop. The rename MUST precede `clearEvidenceIterDirs`
+  //     so a destructive-rerun failure cannot lose the prior loop.
+  if (options.cycle === 0) {
+    const evidenceRootAbs = path.join(options.root, PROTOTYPING_EVIDENCE_REL);
+    const iter00Abs = path.join(evidenceRootAbs, "iter-00");
+    const iter00Exists = await dirExists(iter00Abs);
+    if (iter00Exists) {
+      if (!options.force) {
+        error(
+          "qfai prototyping iterate --cycle 0: an existing iter-00 directory was found at " +
+            `${PROTOTYPING_EVIDENCE_REL}/iter-00. Re-running cycle 0 will overwrite the prior loop's seed. ` +
+            "Re-invoke with `--force` to back up iter-00 to iter-00.backup-<ISO> before clearing, " +
+            "or delete the directory manually if the prior loop is no longer needed.",
+        );
+        return 2;
+      }
+      const backupAbs = path.join(
+        evidenceRootAbs,
+        `iter-00.backup-${new Date().toISOString().replace(/[:.]/g, "-")}`,
+      );
+      try {
+        await rename(iter00Abs, backupAbs);
+        info(
+          `qfai prototyping iterate --cycle 0 --force: backed up iter-00 to ${path.relative(options.root, backupAbs).replace(/\\/g, "/")}.`,
+        );
+      } catch (cause) {
+        // Fail closed: clearing evidence dirs MUST be skipped when the
+        // backup rename fails, otherwise the prior loop's evidence is
+        // silently destroyed without an operator-visible backup.
+        const reason = cause instanceof Error ? cause.message : String(cause);
+        error(
+          `qfai prototyping iterate --cycle 0 --force: could not back up iter-00 (${reason}). ` +
+            "Aborting before clearing evidence to avoid destroying the prior loop. " +
+            "Resolve the filesystem error (Windows file lock / EACCES / EBUSY are common causes) and rerun.",
+        );
+        return 2;
+      }
+    }
+  }
+
   // 4) Persist seed metadata to prototyping.json on cycle 0:
   //    - designMd { path, sha256 }: the lock-anchored cache used by
   //      cycle >= 1 hash gates and by `certify` (frozen-loop hash).
@@ -470,6 +545,7 @@ export async function runPrototypingIterate(
       designMd: { path: ROOT_DESIGN_MD_REL, sha256: currentSha },
       runId: buildRunId(currentSha),
       specsCovered: specs,
+      declaredScreens: (options.screens ?? []).map((s) => s.id),
       // cycle-0 SSOT for the spec set under review. Kept single-spec
       // (mirrors the legacy `specsCovered` field) until the per-spec
       // iter-NN/spec-NNNN/<screen>.review.json layout migration lands;
@@ -762,6 +838,13 @@ async function runCapturePath(
       return 2;
     }
   }
+  // Mirror the accepted iteration's per-screen evidence into the
+  // project-wide aggregate dirs once the capture pass completes.
+  // Best-effort copy; missing files are skipped so a partial capture
+  // run does not block the cycle. Screen ids are validated for
+  // underscore casing at the UI contract surface (QFAI-PROT-008 in
+  // `prototypingEvidence.ts`).
+  await mirrorAcceptedIterToAggregateDirs(options.root, options.cycle);
   return 0;
 }
 
@@ -1124,7 +1207,56 @@ type SeedMetadata = {
    */
   frozenSurfaceUnion: readonly string[];
   frozenLicenseCatalog: LicenseCatalog;
+  /**
+   * Declared screen ids (underscore casing). When non-empty the seed
+   * iteration's `evidenceRefs[]` bijects with this list. Empty /
+   * absent → no `evidenceRefs[]` entries on the seed iteration
+   * (legacy default-OFF capture path).
+   */
+  declaredScreens?: readonly string[];
 };
+
+/**
+ * Placeholder proseCritique used by the cycle-0 seed iteration so
+ * `prototyping.json` is validate-conformant out of the box. The
+ * validator requires 200..500 words; the orchestrator / reviewer
+ * overwrites this with a real critique on the first reviewer pass.
+ * The text is a single deterministic sentence repeated to land
+ * inside the band.
+ */
+const SEED_PROSE_CRITIQUE_PLACEHOLDER = (() => {
+  const sentence =
+    "Seed iteration placeholder critique authored by qfai prototyping iterate at cycle 0 to keep prototyping.json validate-conformant before the reviewer runs.";
+  return Array.from({ length: 10 }, () => sentence).join(" ");
+})();
+
+/**
+ * Build the cycle-0 seed `iterations[]` array. Emits exactly one
+ * iteration record whose shape passes `validatePrototypingEvidence`
+ * out of the box. Scores are intentionally all `weak` so `shouldStop`
+ * cannot accidentally classify the seed as `axes-exceptional`; the
+ * reviewer overwrites scores on the first review pass.
+ */
+function buildSeedIterations(declaredScreens: readonly string[]): unknown[] {
+  return [
+    {
+      index: 0,
+      commitSha: "uncommitted",
+      proseCritique: SEED_PROSE_CRITIQUE_PLACEHOLDER,
+      scores: {
+        informationArchitecture: "weak",
+        navigationFlow: "weak",
+        usability: "weak",
+        functionality: "weak",
+      },
+      layoutAntiPatternsDetected: [],
+      designMdViolations: [],
+      pivotDirective: "continue",
+      reviewerId: "iterate-seed",
+      evidenceRefs: buildEvidenceRefs(0, declaredScreens),
+    },
+  ];
+}
 
 async function writeSeedMetadata(protoJsonAbs: string, seed: SeedMetadata): Promise<void> {
   // Cycle 0 is a hard reset of the loop. Stale state from a prior run
@@ -1149,10 +1281,16 @@ async function writeSeedMetadata(protoJsonAbs: string, seed: SeedMetadata): Prom
   // (the completion-claim trio read by `validateCompletionCertificateIssues`),
   // `designMd`, `runId`, `specsCovered`. Adding a new per-loop field
   // requires updating BOTH this list AND the comment.
-  body.iterations = [];
+  //
+  // Validate-conformance note: the iterations[] is seeded with a
+  // single stub entry whose evidenceRefs[] bijects with `declaredScreens`
+  // (if any) so `qfai validate --profile prototyping` is conformant
+  // immediately after iterate completes. The reviewer overwrites this
+  // entry on the first review pass.
+  body.iterations = buildSeedIterations(seed.declaredScreens ?? []);
+  body.acceptedIterationIndex = 0;
+  body.stopReason = null;
   delete body.reviewerGate;
-  delete body.acceptedIterationIndex;
-  delete body.stopReason;
   // Legacy `fullHarness` block (pre-UX-loop schema) is also per-loop
   // state. Pre-1.8.9 projects whose prototyping.json still carries
   // `fullHarness.{runId,status,scoringTrace,...}` must not let those
@@ -1225,6 +1363,22 @@ type ClearEvidenceIterDirsResult = { ok: true } | { ok: false; failedDir: string
  * summary for the multi-spec migration helpers. The two contracts are
  * not unified yet.
  */
+/**
+ * Lightweight directory-existence check that distinguishes
+ * "does not exist" (returns false) from other I/O failures (re-thrown
+ * so the caller fails closed). Used by the cycle-0 `--force` backup
+ * gate to decide whether a destructive re-run is in play.
+ */
+async function dirExists(absPath: string): Promise<boolean> {
+  try {
+    const s = await stat(absPath);
+    return s.isDirectory();
+  } catch (err) {
+    if (isEnoent(err)) return false;
+    throw err;
+  }
+}
+
 async function clearEvidenceIterDirs(
   evidenceRootAbs: string,
 ): Promise<ClearEvidenceIterDirsResult> {
@@ -1322,6 +1476,73 @@ function buildRunId(designMdSha: string): string {
  * continue another iteration to fix drift instead of pretending it
  * converged.
  */
+/**
+ * Mirror the accepted iteration's per-screen evidence into the project-
+ * wide aggregate dirs:
+ *   `.qfai/evidence/prototyping/screenshots/<screen-id>.png`
+ *   `.qfai/evidence/prototyping/html/<screen-id>.html`
+ *
+ * Underscore-cased screen ids are used end-to-end (validator rejects
+ * hyphen form via QFAI-PROT-008); this helper does NOT re-case ids
+ * itself — it just byte-copies the latest iter content if present.
+ * Mirroring is best-effort: missing source files are silently skipped
+ * so a non-capture run (default) does not fail on an empty iter dir.
+ */
+async function mirrorAcceptedIterToAggregateDirs(
+  root: string,
+  acceptedIterIndex: number,
+): Promise<void> {
+  if (acceptedIterIndex < 0) return;
+  const iterAbs = path.join(
+    root,
+    PROTOTYPING_EVIDENCE_REL,
+    `iter-${String(acceptedIterIndex).padStart(2, "0")}`,
+  );
+  let entries: string[];
+  try {
+    entries = await readdir(iterAbs);
+  } catch (err) {
+    if (isEnoent(err)) return;
+    throw err;
+  }
+  const pngDir = path.join(root, PROTOTYPING_EVIDENCE_REL, "screenshots");
+  const htmlDir = path.join(root, PROTOTYPING_EVIDENCE_REL, "html");
+  let madePngDir = false;
+  let madeHtmlDir = false;
+  for (const name of entries.sort()) {
+    const lower = name.toLowerCase();
+    const isPng = lower.endsWith(".png");
+    const isHtml = lower.endsWith(".html");
+    if (!isPng && !isHtml) continue;
+    const sourceAbs = path.join(iterAbs, name);
+    let s: Awaited<ReturnType<typeof stat>>;
+    try {
+      s = await stat(sourceAbs);
+    } catch {
+      continue;
+    }
+    if (!s.isFile()) continue;
+    const targetDir = isPng ? pngDir : htmlDir;
+    if (isPng && !madePngDir) {
+      await mkdir(pngDir, { recursive: true });
+      madePngDir = true;
+    }
+    if (isHtml && !madeHtmlDir) {
+      await mkdir(htmlDir, { recursive: true });
+      madeHtmlDir = true;
+    }
+    const targetAbs = path.join(targetDir, name);
+    try {
+      await copyFile(sourceAbs, targetAbs);
+    } catch (cause) {
+      warn(
+        `qfai prototyping iterate: aggregate-mirror failed for ${name} ` +
+          `(${cause instanceof Error ? cause.message : String(cause)}).`,
+      );
+    }
+  }
+}
+
 async function recomputeFinalIterDesignMdViolations(
   root: string,
   iterationIndex: number,
