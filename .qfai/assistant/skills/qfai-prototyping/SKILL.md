@@ -15,14 +15,11 @@ mode: execution-focused
 
 This skill is static-first and file-based by default: it runs every
 UI-bearing spec resolved at cycle 0 through up to 10 iterations against
-a frozen brand SSOT (`DESIGN.md`) and a frozen spec set, with one
-prototype lineage per `spec × screen` pair, no parallel candidates
-within a pair, no mode, and a fixed 10-cycle budget. Visual identity
-is fixed for the whole run; every cycle improves information
-architecture, navigation flow, usability, and functionality. Supported
-UI prototyping surfaces are: web, mobile, desktop, mixed. cli is not a
-prototyping execution target and is rejected. ui_bearing: false specs
-are not prototyping execution targets and are excluded.
+a frozen brand SSOT (`DESIGN.md`) and a frozen spec set, one lineage per
+`spec × screen` pair, no parallel candidates, no mode, fixed 10-cycle
+budget. Supported surfaces: web, mobile, desktop, mixed. cli surface is
+rejected and `ui_bearing: false` specs are excluded from prototyping
+execution.
 
 ## Goal
 
@@ -58,20 +55,13 @@ current `DESIGN.md` hash does not match the lock.
 
 ### Step 2-A — Verify Contract Preconditions
 
-- The skill resolves **every UI-bearing spec in the consumer project in
-  one invocation** via `resolveAllUiBearingSpecs()`
-  (`core/prototyping/specResolution.ts`) — the strict
-  `surface_type: ui-bearing` frontmatter signal plus the matching
-  `.qfai/contracts/ui/<spec-id>*.yaml` contract fallback, with the
-  legacy `# … prototyping …` title-marker fallback and the
-  operator-pinned spec id from the `qfai.config.yaml` `prototyping`
-  section folded in by the CLI. Run
+- The skill resolves **every UI-bearing spec in one invocation** via
+  `resolveAllUiBearingSpecs()` (`core/prototyping/specResolution.ts`):
+  strict `surface_type: ui-bearing` frontmatter + matching
+  `.qfai/contracts/ui/<spec-id>*.yaml`, with legacy title-marker and
+  `qfai.config.yaml` `prototyping` pinning folded in. Run
   `qfai doctor --profile prototyping` to surface the resolved value.
-  Operators authoring CHG-002-shaped projects can rely on the strict
-  frontmatter alone; the broader composition covers legacy /
-  config-pinned consumers.
-  The operator is never prompted to pick a single spec; zero
-  UI-bearing specs at cycle 0 is a deterministic no-op exit `0`.
+  Zero UI-bearing specs at cycle 0 is a deterministic no-op exit `0`.
   Confirm each resolved spec has a supported `surface`.
 - Confirm root `DESIGN.md` and `.qfai/contracts/design/DESIGN.md.lock.yaml`
   both exist; confirm `.qfai/contracts/ui/*.yaml` exists.
@@ -84,34 +74,27 @@ current `DESIGN.md` hash does not match the lock.
 - Confirm a capture route exists for each declared screen.
 - Canonical launcher: `npx --no-install playwright` or
   `node_modules/.bin/playwright` when PATH reachability is uncertain.
-- Legacy fallback (deprecation window only, sunset at qfai 1.10.0;
-  emits `D-DEPRECATED-PROBE`): `npx --no-install playwright-cli` or
-  `node_modules/.bin/playwright-cli`.
+- Legacy fallback (deprecation window only, emits
+  `D-DEPRECATED-PROBE` and will be removed in a future minor release):
+  `npx --no-install playwright-cli` or `node_modules/.bin/playwright-cli`.
 
 ### Step 2-B.1 — Opt-in iterate flags
 
 Three flags extend `qfai prototyping iterate`; all default OFF so the
 prior invocation pattern is byte-equivalent when no flag is passed:
 
-- `--capture` — enable PNG / HTML capture per screen at every cycle.
-  Uses the default Playwright runner (dynamic `import("playwright")`;
-  Playwright is `optionalDependencies`). Use when you need durable
-  pixel / DOM evidence for downstream review, or when the
-  `iter-NN/<screen>.review.json` audit needs paired artifacts. Skip
-  for fast prose-only cycles.
+- `--capture` — enable PNG / HTML capture per screen each cycle via
+  the default Playwright runner (dynamic `import("playwright")`;
+  Playwright is `optionalDependencies`). Use for durable pixel / DOM
+  evidence; skip for fast prose-only cycles.
 - `--auto-serve` — start an in-process `node:http` server rooted at
-  the prototype tree for the duration of the cycle. SIGINT teardown
-  is bounded to 2 s; EADDRINUSE on a foreign owner exits 2 (the
-  runner refuses to kill non-iterate processes). Use when no
-  external dev server is running. Skip when the orchestrator already
-  manages serving (the cycle-0 default).
-- `--check-convergence` — read-only peek of
-  `.qfai/evidence/prototyping/prototyping.json`. Exits `0` when the
-  run converged (`stopReason === "axes-exceptional"` with
-  `acceptedIterationIndex` set), exits `2` otherwise. Performs no
-  writes, no Playwright launches, no commits. Use at cycle 9
-  before committing budget-exhaustion recovery (see "Cycle 9 budget
-  exhaustion" below).
+  the prototype tree for the cycle. SIGINT teardown <= 2 s;
+  EADDRINUSE on a foreign owner exits 2 (no foreign-process kill).
+  Use when no external dev server is running.
+- `--check-convergence` — read-only peek of `prototyping.json`.
+  Exits `0` when converged (`stopReason === "axes-exceptional"` with
+  `acceptedIterationIndex` set), exits `2` otherwise. No writes,
+  no Playwright launches. Use at cycle 9 before recovery.
 
 ### Step 2-C — Run the Loop
 
@@ -138,47 +121,38 @@ covers `frozenSurfaceUnion` / `frozenLicenseCatalog` drift on cycle ≥ 1).
 `prototyping.json` violates the cycle-0 frozen license catalog. The
 verifier rejects five distinct error codes:
 
-- `license-not-allowlisted` — `source` is not in
-  `frozenLicenseCatalog.allowedSources`
-- `license-tier-unknown` — `license` is not in
-  `frozenLicenseCatalog.licenseTiers[source]`
+- `license-not-allowlisted` — `source` not in `allowedSources`
+- `license-tier-unknown` — `license` not in `licenseTiers[source]`
 - `license-non-https-url` — `url` is not HTTPS
-- `license-host-mismatch` — the URL host is not in
-  `frozenLicenseCatalog.sourceHosts[source]`
-- `license-missing-attribution` — `attribution` is undefined / empty /
-  whitespace-only
+- `license-host-mismatch` — URL host not in `sourceHosts[source]`
+- `license-missing-attribution` — `attribution` empty / whitespace
 
 Recovery path (no in-loop retry — the verifier is fail-closed):
 
-1. Inspect `prototyping.json#frozenLicenseCatalog` to see the frozen
+1. Inspect `prototyping.json#frozenLicenseCatalog` for the frozen
    `allowedSources` / `licenseTiers` / `sourceHosts`.
 2. Edit the offending `imageSources[]` entry to use an allowlisted
-   source / known license tier / HTTPS URL / matching host / non-empty
-   attribution. **Do not** edit `frozenLicenseCatalog` mid-loop — that
-   triggers a separate exit-2 lock-drift class.
-3. If the legitimate fix requires a different allowlist (e.g. adding a
-   new source), the only path is to refreeze the catalog by restarting
-   from cycle 0 (`qfai prototyping iterate --cycle 0 --target-url <url>`)
-   with the updated stock-photo configuration.
+   source / known tier / HTTPS URL / matching host / non-empty
+   attribution. **Do not** edit `frozenLicenseCatalog` mid-loop
+   (separate exit-2 lock-drift class).
+3. To change the allowlist, refreeze the catalog by restarting from
+   cycle 0 with the updated stock-photo configuration.
 
 ### Cycle 9 budget exhaustion
 
-If convergence is not reached at iter-09, the certify gate will reject
-the run — H handoff artifacts (final mirror, `design-system.yaml`,
-`prototype-handoff.yaml`) and the `validate` / `/qfai-verify` gates can
-still be written / executed for inspection, but
-`qfai prototyping certify --check` will exit non-zero and prevent DONE.
+If convergence is not reached at iter-09, certify rejects the run; H
+handoff artifacts and `validate` / `/qfai-verify` can still execute for
+inspection, but `qfai prototyping certify --check` will exit non-zero
+and prevent DONE.
 
 Use `qfai prototyping iterate --cycle 9 --check-convergence` for a
-read-only peek of `prototyping.json` before deciding to refreeze:
-exit `0` confirms `stopReason === "axes-exceptional"` (no recovery
-needed), exit `2` confirms the run did not converge and the
-cycle-0 restart path below is the only path forward.
-The recovery path is to restart from cycle 0: review `DESIGN.md`, the
-pivot strategy in `references/reviewer-prompt.md`, and the latest
-`review.json` findings, then re-run `qfai prototyping iterate
---cycle 0 --target-url <url>` to refreeze the loop. Do not seal a
-completion certificate against an unconverged iter-09.
+read-only peek of `prototyping.json` before refreezing: exit `0`
+confirms convergence (no recovery needed), exit `2` confirms the run
+did not converge. Recovery: review `DESIGN.md`, the pivot strategy
+in `references/reviewer-prompt.md`, and the latest `review.json`
+findings, then re-run `qfai prototyping iterate --cycle 0
+--target-url <url>` to refreeze. Do not seal a certificate against
+an unconverged iter-09.
 
 ## Evaluator Inputs (Mandatory)
 
@@ -194,8 +168,8 @@ completion certificate against an unconverged iter-09.
   latest iter is always accepted.
 - `DESIGN.md` is frozen for the run; to change it, edit + rerun
   `/qfai-sdd` to refreeze + start cycle 0.
-- Token-only colors / fonts / radii / shadows — non-DESIGN.md hex / rgb /
-  rgba / hsl / font / radius / shadow values are recorded in
+- Token-only colors / fonts / radii / shadows — non-DESIGN.md hex /
+  rgb / rgba / hsl / font / radius / shadow values land in
   `designMdViolations[]` and block exit 64.
 - DONE only when `qfai prototyping certify --check` returns 0.
 - No `mode / round / polish / branch / concept-fit` artifacts.

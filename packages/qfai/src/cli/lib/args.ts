@@ -374,19 +374,31 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
       case "--check-convergence": {
         // Read-only peek of the canonical prototyping state file. No
         // value; presence flips the boolean. Only meaningful for
-        // `qfai prototyping iterate`.
+        // `qfai prototyping iterate`; main.ts wires it through only on
+        // the iterate path. Currently silently ignored for
+        // `preflight` / `certify` / `show-spec` (consistent with
+        // `--check` / `--license-patch` / `--primary-spec-id`); see
+        // .qfai/contracts/cli/qfai-prototyping-iterate.md and the
+        // wave-9 deferred list for the planned cross-subcommand
+        // `markInvalid()` follow-up.
         options.prototypingCheckConvergence = true;
         break;
       }
       case "--capture": {
         // Opt-in PNG/HTML capture. No value; presence flips the
-        // boolean. Only meaningful for `qfai prototyping iterate`.
+        // boolean. Only meaningful for `qfai prototyping iterate`;
+        // silently ignored on other prototyping subcommands today
+        // (see `--check-convergence` note above; tracked in
+        // pr210-wave9-deferred.md for the next minor).
         options.prototypingCapture = true;
         break;
       }
       case "--auto-serve": {
         // Opt-in local HTTP server spawn. No value; presence flips the
-        // boolean. Only meaningful for `qfai prototyping iterate`.
+        // boolean. Only meaningful for `qfai prototyping iterate`;
+        // silently ignored on other prototyping subcommands today
+        // (see `--check-convergence` note above; tracked in
+        // pr210-wave9-deferred.md for the next minor).
         options.prototypingAutoServe = true;
         break;
       }

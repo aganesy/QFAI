@@ -23,7 +23,10 @@ import {
   isLicensePatchAuditRow,
   type LicensePatchAuditRow,
 } from "../../../../src/core/prototyping/licensePatchAudit.js";
-import { licenseVerify, type LicenseCatalog } from "../../../../src/core/prototyping/licenseVerify.js";
+import {
+  licenseVerify,
+  type LicenseCatalog,
+} from "../../../../src/core/prototyping/licenseVerify.js";
 
 const DESIGN_MD = [
   "---",
@@ -177,11 +180,7 @@ describe("iterate --license-patch add-only diff", () => {
     const root = await newTempDir();
     await seedProject(root);
     const patchPath = path.join(root, "patch.json");
-    await writeFile(
-      patchPath,
-      JSON.stringify({ addedSources: ["wikimedia-commons"] }),
-      "utf-8",
-    );
+    await writeFile(patchPath, JSON.stringify({ addedSources: ["wikimedia-commons"] }), "utf-8");
 
     const c0 = await runPrototypingIterate({
       root,
@@ -260,11 +259,7 @@ describe("iterate --license-patch add-only diff", () => {
     const root = await newTempDir();
     await seedProject(root);
     const patchPath = path.join(root, "patch.json");
-    await writeFile(
-      patchPath,
-      JSON.stringify({ addedSources: ["wikimedia-commons"] }),
-      "utf-8",
-    );
+    await writeFile(patchPath, JSON.stringify({ addedSources: ["wikimedia-commons"] }), "utf-8");
 
     const c0 = await runPrototypingIterate({
       root,

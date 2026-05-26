@@ -421,7 +421,14 @@ and counted in `layoutAntiPatternsDetected[]`. Higher `lap-011` /
 
 When passed, `iterate` manages a local HTTP server lifecycle bound to
 the configured port (or the port derived from `targetUrl`) for the
-duration of the cycle. The **default runner** (`defaultServerRunner.ts`)
+duration of the cycle. **Default port: `4321`** (override by passing
+`--target-url <url>:<port>` with an explicit port component, or by
+supplying a custom `serverRunner` via the DI escape hatch below).
+4321 was picked because it does not collide with common dev-server
+defaults (Vite 5173, Next 3000, Vue CLI 8080, webpack-dev-server 9000,
+Storybook 6006). The SSOT for the literal is
+`DEFAULT_AUTO_SERVE_PORT` in `defaultServerRunner.ts`.
+The **default runner** (`defaultServerRunner.ts`)
 is an in-process `node:http` server — there is no subprocess spawn:
 
 - **Start** — iterate creates a `node:http` server before the first

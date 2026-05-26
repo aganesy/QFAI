@@ -12,9 +12,13 @@ import {
   runPrototypingIterate,
 } from "../../../../src/cli/commands/prototypingIterate.js";
 
+// Wave-9 fix: hint reworded to match the e2e expectation (US-0012-0137)
+// and the public peek-mode invocation pattern. The runtime hint and the
+// e2e fixture must read identically — the pre-wave-9 wording embedded
+// "(defaults to cycle 9; pass --cycle <n> ...)" detail that the e2e
+// ledger never asserted, so the runtime is the side that aligns.
 const EXPECTED_HINT =
-  "Hint: use --check-convergence to peek the converged loop state without re-running " +
-  "(defaults to cycle 9; pass --cycle <n> to peek a specific cycle).";
+  "Hint: use --cycle 9 --check-convergence to peek the final cycle without re-running the loop.";
 
 const stderrLines: string[] = [];
 

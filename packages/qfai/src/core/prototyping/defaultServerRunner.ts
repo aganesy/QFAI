@@ -35,10 +35,15 @@ import path from "node:path";
 /**
  * Arguments accepted by the default server runner. Mirrors the
  * `ServerRunnerFn` contract exported by the iterate command so callers
- * can pass the default directly without an adapter. `port` is an
- * optional override (mainly for tests that need to force EADDRINUSE on
- * a known port); production callers omit it and the runner picks the
- * documented default port.
+ * can pass the default directly without an adapter.
+ *
+ * `port` is a **test-only override**. Production callers (the iterate
+ * CLI command in `runPrototypingIterate`) never set it — the runner
+ * resolves the bind port from `args.targetUrl` (when it carries an
+ * explicit port) or falls back to {@link DEFAULT_AUTO_SERVE_PORT}. The
+ * field is retained on the public surface only so unit / integration
+ * tests can force EADDRINUSE on a known port without rebuilding the
+ * production resolution chain.
  */
 export type ServerRunnerArgs = {
   readonly root: string;
@@ -74,13 +79,15 @@ export type ServerRunnerResult =
  * the port is occupied by an unrelated service they intend to keep
  * running.
  *
- * Why 4321: not IANA-registered for a well-known service and does not
- * collide with the common dev-server defaults operators are likely to
- * have running alongside `qfai prototyping iterate --auto-serve`
- * (Vite 5173, Next 3000, Vue CLI 8080, webpack-dev-server 9000,
- * Storybook 6006). Picking an uncommon-but-memorable port keeps the
- * EADDRINUSE-refusal branch from firing on operators who happen to
- * already have one of those tools open.
+ * Why 4321: does not collide with the common dev-server defaults
+ * operators are likely to have running alongside
+ * `qfai prototyping iterate --auto-serve` (Vite 5173, Next 3000, Vue
+ * CLI 8080, webpack-dev-server 9000, Storybook 6006). IANA records
+ * 4321/tcp as `rwhois` (RFC 2167), but modern dev environments almost
+ * never run rwhois, so the empirical collision rate is near zero.
+ * Picking an uncommon-but-memorable port keeps the EADDRINUSE-refusal
+ * branch from firing on operators who happen to already have one of
+ * those tools open.
  */
 export const DEFAULT_AUTO_SERVE_PORT = 4321;
 
@@ -234,7 +241,17 @@ function handleRequest(req: IncomingMessage, res: ServerResponse, serveRoot: str
       res.end("bad request");
       return;
     }
-    const normalised = path.normalize(decoded).replace(/^[\\/]+/, "");
+    // Defense-in-depth: collapse backslashes to forward slashes BEFORE
+    // calling `path.normalize`. On POSIX `path.normalize("..\\..\\etc")`
+    // treats backslashes as literal filename characters, so a
+    // URL-encoded `..\..\etc\passwd` payload would normalize to a
+    // single literal filename inside `serveRoot` and slip past the
+    // `..` token check. The final `startsWith(rootWithSep)` guard
+    // already catches the traversal (the candidate stays inside
+    // serveRoot once resolved), but normalising slashes first keeps
+    // the platform-independent intent explicit.
+    const slashNormalised = decoded.replace(/\\/g, "/");
+    const normalised = path.normalize(slashNormalised).replace(/^[\\/]+/, "");
     const candidate = path.resolve(serveRoot, normalised);
     // Path-traversal guard: candidate MUST stay inside serveRoot.
     const rootWithSep = serveRoot.endsWith(path.sep) ? serveRoot : serveRoot + path.sep;

@@ -187,6 +187,15 @@ export function applyLicensePatch(
  * the exact `{appliedAt, patchSha256, addedSources}` shape with the
  * expected value types. Used by the unit test ledger to pin the shape
  * so additions to the row require an explicit spec amendment.
+ *
+ * `patchSha256` matches `^[a-f0-9]{64}$` — **lowercase canonical only**.
+ * `computePatchSha256` uses Node's `createHash("sha256").digest("hex")`
+ * which always returns lowercase hex, so production-written rows pass.
+ * Hand-edited or externally-generated rows containing uppercase hex are
+ * intentionally rejected to keep the canonical form unambiguous (avoids
+ * hash-string drift between case-different siblings). If a future
+ * consumer needs to ingest mixed-case rows, normalise to lowercase
+ * before validation rather than relaxing the regex with `/i`.
  */
 export function isLicensePatchAuditRow(value: unknown): value is LicensePatchAuditRow {
   if (!isRecord(value)) return false;

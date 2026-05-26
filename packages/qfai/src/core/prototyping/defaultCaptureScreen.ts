@@ -69,12 +69,27 @@ export const defaultCaptureScreen = async (args: CaptureArgs): Promise<CaptureRe
     }
     playwrightModule = mod;
   } catch (cause) {
+    // Distinguish "Playwright is genuinely absent" (the common case;
+    // Playwright is an optionalDependency) from "Playwright is present
+    // but the import itself is broken" (corrupt install, native binding
+    // mismatch, SyntaxError in a transitive ESM dep). Operators receive
+    // an actionable reason in either case; we no longer blanket-direct
+    // every failure to `npm i -D playwright`.
+    if (isModuleNotFoundError(cause)) {
+      return {
+        ok: false,
+        durationMs: Date.now() - started,
+        reason:
+          "playwright not installed. Install with `npm i -D playwright` " +
+          "(or pass options.captureScreen for programmatic use).",
+      };
+    }
     return {
       ok: false,
       durationMs: Date.now() - started,
-      reason: `playwright not installed. Install with \`npm i -D playwright\` (or pass options.captureScreen for programmatic use). Cause: ${String(
-        cause,
-      )}`,
+      reason:
+        `playwright failed to load (likely a corrupt install or native binding issue; ` +
+        `not a missing package). Cause: ${String(cause)}`,
     };
   }
 
@@ -82,6 +97,15 @@ export const defaultCaptureScreen = async (args: CaptureArgs): Promise<CaptureRe
   try {
     browser = await playwrightModule.chromium.launch();
     const page = await browser.newPage();
+    // `waitUntil: "load"` is tuned for the QFAI prototyping default
+    // posture: prototypes are static HTML emitted under
+    // `.qfai/prototypes/iter-NN/` (no client-side router, no
+    // hydration). For SPA prototypes that need hydration / route
+    // resolution before screenshot, operators pass their own
+    // `captureScreen` via DI (which may use `networkidle` or a
+    // domain-specific wait helper). A future contract extension could
+    // surface a `--capture-wait-until` flag; for now the DI hook
+    // covers the SPA case without expanding the operator surface.
     await page.goto(args.url, { waitUntil: "load" });
     await page.screenshot({ path: args.pngPath, fullPage: true });
     const html = await page.content();
@@ -125,6 +149,31 @@ type PlaywrightPage = {
   screenshot: (options: { path: string; fullPage?: boolean }) => Promise<unknown>;
   content: () => Promise<string>;
 };
+
+/**
+ * True when the dynamic import failure is the Node "module not found"
+ * class — i.e. Playwright is genuinely not installed in this tree.
+ * Errors that arise from a present-but-broken Playwright install
+ * (native binding mismatch, SyntaxError in a transitive ESM dep)
+ * surface a different code/message and are routed to the generic
+ * "failed to load" branch above.
+ */
+function isModuleNotFoundError(cause: unknown): boolean {
+  if (typeof cause !== "object" || cause === null) return false;
+  const rec = cause as Record<string, unknown>;
+  const code: unknown = rec.code;
+  if (
+    typeof code === "string" &&
+    (code === "MODULE_NOT_FOUND" || code === "ERR_MODULE_NOT_FOUND")
+  ) {
+    return true;
+  }
+  const message: unknown = rec.message;
+  if (typeof message !== "string") return false;
+  // Node's ESM loader emits "Cannot find package 'playwright'" or
+  // "Cannot find module 'playwright'" depending on resolver path.
+  return /cannot find (module|package) ['"]?playwright['"]?/i.test(message);
+}
 
 function isPlaywrightModule(mod: unknown): mod is { chromium: PlaywrightChromium } {
   if (typeof mod !== "object" || mod === null) return false;

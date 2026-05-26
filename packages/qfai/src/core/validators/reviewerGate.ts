@@ -32,48 +32,55 @@ const PROMPT_REL =
 // circular-read pattern that option-B forbids.
 const NON_PROTOTYPING_SCOPES = new Set(["atdd", "full", "implement"]);
 
-type VerifyJson = {
-  status?: unknown;
-  scope?: unknown;
-};
-
-type PrototypingJson = Record<string, unknown>;
-
-async function loadJson<T>(filePath: string): Promise<T | null> {
+/**
+ * Load a JSON file as a parsed object (`Record<string, unknown>`) or
+ * return `null` when the file is missing / unreadable / not an object.
+ *
+ * Callers re-narrow each field they read (e.g. `typeof scope === "string"`)
+ * so the loader does not need to ship a typed `T` parameter — that
+ * pattern previously required a bare `as T` cast after a runtime object
+ * check, which CLAUDE.md project rule prohibits.
+ */
+async function loadJsonObject(filePath: string): Promise<Record<string, unknown> | null> {
   if (!(await exists(filePath))) return null;
   try {
     const raw = await readFile(filePath, "utf-8");
     const parsed: unknown = JSON.parse(raw);
     if (parsed === null || typeof parsed !== "object") return null;
-    return parsed as T;
+    // `Record<string, unknown>` is the structural supertype of any parsed
+    // JSON object; callers further narrow each field they read.
+    return parsed as Record<string, unknown>;
   } catch {
     return null;
   }
 }
 
-function isPrototypingPhase(proto: PrototypingJson | null): boolean {
-  // Treat any well-formed prototyping.json (parsed object) at the
-  // canonical path as a "prototyping context" signal. The iterate
-  // pipeline deletes the legacy `phase` field on every cycle-0 reset
-  // (see writeSeedMetadata in prototypingIterate.ts), so we cannot
-  // gate on it; the presence of a parseable object at the canonical
-  // path is the structural indicator that the prototyping loop owns
-  // the working tree right now.
+/**
+ * Presence-only signal for the canonical prototyping state file. Returns
+ * `true` when `prototyping.json` parsed as an object at the canonical
+ * path. The iterate pipeline deletes the legacy `phase` field on every
+ * cycle-0 reset (see `writeSeedMetadata` in `prototypingIterate.ts`), so
+ * we cannot gate on it; presence of a parseable object at the canonical
+ * path is the structural indicator that the prototyping loop owns the
+ * working tree right now.
+ */
+function hasCanonicalPrototypingState(proto: Record<string, unknown> | null): boolean {
   return proto !== null;
 }
 
 async function detectCertifyVerifyCircular(root: string): Promise<Issue[]> {
   const verifyAbs = path.join(root, VERIFY_JSON_REL);
-  const verify = await loadJson<VerifyJson>(verifyAbs);
+  const verify = await loadJsonObject(verifyAbs);
   if (!verify) return [];
 
-  const scopeRaw = typeof verify.scope === "string" ? verify.scope.trim().toLowerCase() : "";
+  const scopeField = verify.scope;
+  const scopeRaw = typeof scopeField === "string" ? scopeField.trim().toLowerCase() : "";
   if (!scopeRaw) return [];
   if (!NON_PROTOTYPING_SCOPES.has(scopeRaw)) return [];
 
   const protoAbs = path.join(root, PROTOTYPING_JSON_REL);
-  const proto = await loadJson<PrototypingJson>(protoAbs);
-  if (!isPrototypingPhase(proto)) return [];
+  const proto = await loadJsonObject(protoAbs);
+  if (!hasCanonicalPrototypingState(proto)) return [];
 
   // 3-part justification: (1) certify path / verify.json path,
   // (2) offending validator-output profile (scope),

@@ -60,11 +60,7 @@ async function pathExists(p: string): Promise<boolean> {
  * fires identically on Windows + macOS + Linux configs.
  */
 function normalizeForLegacyMatch(p: string): string {
-  return p
-    .replace(/\\/g, "/")
-    .replace(/\/+/g, "/")
-    .replace(/^\.\//, "")
-    .toLowerCase();
+  return p.replace(/\\/g, "/").replace(/\/+/g, "/").replace(/^\.\//, "").toLowerCase();
 }
 
 /**
@@ -172,10 +168,7 @@ export async function runValidate(options: ValidateOptions): Promise<number> {
   if (!refuseConfiguredLegacyWrite) {
     await emitJson(normalized, root, configuredValidateJsonPath);
     const profileLabel = normalized.profile ?? options.profile ?? "full";
-    const profileSuffixedRel = profileSuffixedReportPath(
-      configuredValidateJsonPath,
-      profileLabel,
-    );
+    const profileSuffixedRel = profileSuffixedReportPath(configuredValidateJsonPath, profileLabel);
     await emitJson(normalized, root, profileSuffixedRel);
   }
   // Legacy path — written only during the deprecation window AND only
@@ -234,6 +227,16 @@ type FullSemver = {
  * Returns `null` for inputs that do not match — callers treat that as
  * "be conservative" (i.e. pre-sunset / warning mode).
  *
+ * Scope note: this is a **presence-only check**, not a full §9 / §11
+ * validator. The prerelease group `([0-9A-Za-z.-]+)` does NOT enforce
+ * SemVer §9 ("numeric identifiers MUST NOT include leading zeros"),
+ * so inputs like `1.10.0-01` parse with `prerelease="01"`. That is
+ * intentional: the legacy-path sunset gate only reads `prerelease ===
+ * undefined` to distinguish GA vs prerelease, never the prerelease
+ * contents themselves. If this helper grows into a general SemVer
+ * comparator (e.g. via the prerelease ordering follow-up below), the
+ * regex must be tightened to reject leading-zero numeric identifiers.
+ *
  * Build metadata (`+...`) is dropped per semver §10 (ignored for
  * precedence). Prerelease tag is retained but only its presence is
  * needed for the at-or-past-sunset decision below.
@@ -256,10 +259,15 @@ function parseFullSemver(value: string): FullSemver | null {
 /**
  * Returns `true` iff `currentVersion` is at or past the sunset.
  *
- * Prerelease rule (semver §11): a prerelease build at the sunset
- * `major.minor.patch` (e.g. `1.10.0-beta.1` when sunset is `1.10.0`)
- * is NOT yet at sunset — it precedes the clean GA release. Once the
- * GA `1.10.0` lands (no prerelease tag), the gate flips to error.
+ * GA-only sunset assumption: this comparator presumes the sunset
+ * literal is a clean GA release (no prerelease tag). When the sunset
+ * is `1.10.0`, a current prerelease at the same triple
+ * (`1.10.0-beta.1`) sorts BEFORE the GA (semver §11) and is therefore
+ * pre-sunset. We deliberately do NOT call `comparePrerelease(cur, sun)`
+ * here because `sun.prerelease` is always `undefined` in production
+ * (the SSOT is the clean `LEGACY_VALIDATE_JSON_SUNSET` literal). If a
+ * future migration ever pins sunset to a prerelease tag itself, this
+ * helper needs an additional prerelease-vs-prerelease comparator step.
  *
  * Conservative default: if either version fails to parse, we treat
  * the current version as pre-sunset (warning mode) — the legacy file

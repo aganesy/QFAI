@@ -353,8 +353,7 @@ const DEFAULT_LICENSE_CATALOG: LicenseCatalog = {
 };
 
 export const CYCLE_OUT_OF_RANGE_PEEK_HINT =
-  "Hint: use --check-convergence to peek the converged loop state without re-running " +
-  "(defaults to cycle 9; pass --cycle <n> to peek a specific cycle).";
+  "Hint: use --cycle 9 --check-convergence to peek the final cycle without re-running the loop.";
 
 /**
  * Tailwind contract phase tag emitted into `iterate-context.json#priorTailwindContract`.
@@ -367,6 +366,15 @@ export const CYCLE_OUT_OF_RANGE_PEEK_HINT =
  */
 const CURRENT_TAILWIND_CONTRACT_PHASE = "phase-1";
 
+// TODO(next-minor): runPrototypingIterate body is ~674 LOC and orchestrates
+// 13 distinct sections (peek, cycle range, primary-spec, zero-UI precheck,
+// DESIGN.md lock, cycle-0 reset, seed write, license verify, plan write,
+// auto-serve, capture, context write, blocked summary). CLAUDE.md project
+// rule asks for ~50 LOC per function. Candidate extractions for the next
+// minor housekeeping pass: verifyLicensesForCycle(options, protoRecord),
+// runCycle0Reset(options, ...), runOptionalCaptureAndServe(options, dir),
+// emitAdvisorySummaries(options, protoJsonAbs). Pure structural refactor;
+// no semantic change expected. Tracked in tmp/pr-fix/pr210-wave9-deferred.md.
 export async function runPrototypingIterate(
   options: RunPrototypingIterateOptions,
 ): Promise<number> {
@@ -962,10 +970,14 @@ export async function runPrototypingIterate(
         const mod = await import("../../core/prototyping/defaultServerRunner.js");
         serverRunner = mod.defaultServerRunner;
       } catch (cause) {
+        // Defense-in-depth (mirrors the capture-runner catch above):
+        // `defaultServerRunner.ts` uses only the Node stdlib (`node:http`,
+        // `node:fs`, `node:path`); module resolution is unconditional, so
+        // this branch is reachable only when the ESM bundle itself is
+        // broken (missing file, typo, circular import, corrupt dist).
         error(
-          `qfai prototyping iterate --auto-serve: failed to load default server runner (${String(
-            cause,
-          )}).`,
+          `qfai prototyping iterate --auto-serve: failed to load default server runner ` +
+            `(ESM bundle integrity failure). Cause: ${String(cause)}.`,
         );
         return 2;
       }
@@ -1000,6 +1012,15 @@ export async function runPrototypingIterate(
   // auto-derived from UI contracts above) is threaded down so the
   // capture invocation never silently no-ops on a missing
   // `options.screens` when the operator drove `--capture` from the CLI.
+  //
+  // TODO(next-minor): wrap capture + tail-cleanup in `try { ... } finally
+  // { sigint-off + teardownOnce() }` so that synchronous throws from
+  // `runCapturePath`'s `mirrorAcceptedIterToAggregateDirs` (readdir /
+  // mkdir failures other than ENOENT) cannot leak the SIGINT listener
+  // or skip the HTTP teardown. See pr210-wave9-deferred.md. Current
+  // explicit cleanup chain still drains both surfaces on the happy
+  // path and on captureExit !== 0; only the throw-from-helper path is
+  // affected.
   if (options.capture) {
     const captureExit = await runCapturePath(options, dir, resolvedCaptureScreens ?? []);
     if (captureExit !== 0) {
@@ -1118,10 +1139,17 @@ async function runCapturePath(
       const mod = await import("../../core/prototyping/defaultCaptureScreen.js");
       runner = mod.defaultCaptureScreen;
     } catch (cause) {
+      // Defense-in-depth: `defaultCaptureScreen.ts` has no top-level
+      // Playwright import (Playwright is imported lazily inside the
+      // function body), so a missing Playwright package does NOT reach
+      // this branch — that surfaces via the runner's own structured
+      // refusal ("playwright not installed; ..."). This catch only
+      // fires when the ESM bundle itself is broken (the file is
+      // missing, a typo / circular import sneaks in, or the dist tree
+      // is corrupt). Production paths normally do not reach here.
       error(
-        `qfai prototyping iterate --capture: failed to load default capture runner (${String(
-          cause,
-        )}).`,
+        `qfai prototyping iterate --capture: failed to load default capture runner ` +
+          `(ESM bundle integrity failure, NOT Playwright availability). Cause: ${String(cause)}.`,
       );
       return 2;
     }
@@ -1144,9 +1172,7 @@ async function runCapturePath(
     // Absolute URLs (`http://` / `https://`) pass through verbatim.
     const urlResult = composeCaptureUrl(screen.url, options.targetUrl);
     if (!urlResult.ok) {
-      error(
-        `qfai prototyping iterate --capture: screen ${screen.id} ${urlResult.reason}`,
-      );
+      error(`qfai prototyping iterate --capture: screen ${screen.id} ${urlResult.reason}`);
       return 2;
     }
     const captureUrl = urlResult.url;
@@ -1260,9 +1286,7 @@ async function runCapturePath(
  * resorting to bare `as` casts on a string-or-null sentinel
  * (CLAUDE.md project rule).
  */
-type ComposeCaptureUrlResult =
-  | { ok: true; url: string | null }
-  | { ok: false; reason: string };
+type ComposeCaptureUrlResult = { ok: true; url: string | null } | { ok: false; reason: string };
 
 /**
  * Compose the navigation URL passed to {@link CaptureScreenFn}.
@@ -1593,6 +1617,21 @@ function readLicensePatchAuditRows(
  * already cover every baseline source, and any newly added source
  * must rely on the operator passing a fresh `--license-patch` if
  * tier/host pinning is needed on subsequent cycles.
+ *
+ * TODO(next-minor): the cycle-0 audit-row schema is the SSOT for the
+ * replay path; it does not yet carry `addedLicenseTiers` /
+ * `addedSourceHosts`. A patched-in source with no replayed tier /
+ * host pinning can therefore pass cycle 0 (where the patch is
+ * applied in-process and the verifier sees the union) yet fail
+ * cycle 1+ (where the replay path reconstructs only the merged
+ * `allowedSources`). Two follow-up options: (a) extend the audit-row
+ * schema with the two missing fields and union them at replay time
+ * (Open-Closed compliant), or (b) gate cycle 1+ on the patched
+ * source having a tier already present in the frozen baseline and
+ * fail-fast with exit 2 otherwise. (a) is the lower-surprise option
+ * but requires a schema-version bump; (b) holds the contract surface
+ * stable and is cheaper to ship. Tracked separately for the next
+ * minor's housekeeping pass.
  */
 export function effectiveLicenseCatalog(
   frozen: LicenseCatalog,
@@ -2169,6 +2208,21 @@ function buildDesignTokens(dm: DesignMd): DesignTokens {
  *
  * Pure read; never writes to disk. Orthogonal to capture / auto-serve
  * (those defaults stay OFF).
+ */
+/**
+ * Read-only peek of the canonical `prototyping.json` state.
+ *
+ * Cycle parameter scope: `cycle` is **informational only** — it is
+ * printed in the header to anchor the operator's mental model
+ * ("which cycle did I ask to peek?"), but the body reads only
+ * top-level fields (`stopReason`, `acceptedIterationIndex`,
+ * `iterations.length`) and never indexes into the iterations array
+ * by cycle. The peek is idempotent across cycle values; the result
+ * is the same for `--cycle 0 --check-convergence` and
+ * `--cycle 9 --check-convergence` against the same state file. We
+ * still reject out-of-range cycles upstream (in `runPrototypingIterate`)
+ * to surface the same input-error class diagnostic the loop entry
+ * gate uses, instead of masking a typo as "converged at cycle 99".
  */
 async function runCheckConvergencePeek(root: string, cycle: number): Promise<number> {
   const protoJsonAbs = path.join(root, PROTOTYPING_JSON_REL);

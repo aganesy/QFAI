@@ -44,11 +44,7 @@ async function pathExists(p: string): Promise<boolean> {
 
 async function seedLegacyConfig(root: string): Promise<void> {
   // qfai.config.yaml with output.validateJsonPath pinned to the legacy SSOT.
-  const yaml = [
-    "output:",
-    "  validateJsonPath: .qfai/output/validate.json",
-    "",
-  ].join("\n");
+  const yaml = ["output:", "  validateJsonPath: .qfai/output/validate.json", ""].join("\n");
   await writeFile(path.join(root, "qfai.config.yaml"), yaml, "utf-8");
 }
 

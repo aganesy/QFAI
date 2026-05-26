@@ -213,8 +213,10 @@ Options:
   --target-url <url>            prototyping preflight/iterate: 評価対象の URL
   --cycle <number>              prototyping iterate: cycle index (0..9)
   --check-convergence           prototyping iterate: 収束済みループ状態を再実行なしで覗く (read-only peek; defaults to cycle 9; exit 0 = converged, exit 2 = not converged / missing state)
-  --capture                     prototyping iterate: opt-in PNG/HTML capture (default OFF; uses Playwright dynamic import)
-  --auto-serve                  prototyping iterate: opt-in in-process HTTP server (default OFF; node:http; SIGINT teardown <= 2s; EADDRINUSE refusal)
+  --capture                     prototyping iterate: opt-in な PNG/HTML キャプチャ (default OFF; Playwright を dynamic import)
+  --auto-serve                  prototyping iterate: opt-in なローカル HTTP サーバを in-process で起動 (default OFF; default port 4321; node:http; SIGINT teardown <= 2s; EADDRINUSE は refusal)
+  --license-patch <file>        prototyping iterate: cycle 0 ライセンス allowlist パッチを適用 (audit ledger に追記; replay 対応)
+  --primary-spec-id <value>     prototyping iterate: 複数 UI-bearing spec から primary を明示指定
   -h, --help      ヘルプ表示
 `;
 }

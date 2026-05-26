@@ -81,10 +81,7 @@ describe("screen-id casing validator", () => {
   it("REJECTS hyphen-form ids in .yml extension (not just .yaml)", async () => {
     const root = await newTempDir();
     await mkdir(path.join(root, ".qfai/contracts/ui"), { recursive: true });
-    const screensYaml = [
-      "screens:",
-      `  - id: home-page\n    route: "/home-page"`,
-    ].join("\n");
+    const screensYaml = ["screens:", `  - id: home-page\n    route: "/home-page"`].join("\n");
     await writeFile(path.join(root, ".qfai/contracts/ui/main.yml"), `${screensYaml}\n`, "utf-8");
     const issues = await validateScreenIdCasing(root, ".qfai/contracts");
     expect(issues.length).toBe(1);
