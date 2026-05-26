@@ -27,10 +27,8 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
-      - name: Activate pnpm via corepack
-        run: |
-          corepack enable
-          corepack prepare pnpm@9.12.3 --activate
+      - name: Enable corepack (provides pnpm for setup-node cache: pnpm)
+        run: corepack enable
         shell: bash
       - uses: actions/setup-node@v4
         with:
@@ -39,6 +37,9 @@ jobs:
           # supported floor.
           node-version: "20"
           cache: pnpm
+      - name: Re-shim pnpm against toolcache Node
+        run: corepack prepare pnpm@9.12.3 --activate
+        shell: bash
       - run: pnpm install --frozen-lockfile
       - name: build qfai
         run: pnpm -C packages/qfai build
