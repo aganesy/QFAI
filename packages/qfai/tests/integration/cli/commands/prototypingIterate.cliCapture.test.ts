@@ -374,3 +374,220 @@ describe("iterate --capture: (7) runner failure → exit 2", () => {
     }
   });
 });
+
+/**
+ * Helper: seed a minimal UI contract under `.qfai/contracts/ui/<file>.yaml`
+ * so `readUiContractScreenContracts` returns the listed screens. Matches
+ * the shape consumed by `extractUiScreens` in `core/contracts/screenContracts.ts`.
+ */
+async function seedUiContract(
+  root: string,
+  fileBase: string,
+  screens: Array<{ id: string; route: string; title?: string }>,
+): Promise<void> {
+  const uiDir = path.join(root, ".qfai/contracts/ui");
+  await mkdir(uiDir, { recursive: true });
+  const yamlBody = [
+    "screens:",
+    ...screens.flatMap((screen) => {
+      const lines = [`  - id: ${screen.id}`, `    route: ${screen.route}`];
+      if (screen.title !== undefined) {
+        lines.push(`    title: ${JSON.stringify(screen.title)}`);
+      }
+      return lines;
+    }),
+    "",
+  ].join("\n");
+  await writeFile(path.join(uiDir, `${fileBase}.yaml`), yamlBody, "utf-8");
+}
+
+describe("iterate --capture: (8) Codex P1 wave-8 — auto-derive screens from UI contracts", () => {
+  it("derives screens from UI contracts when CLI sets capture=true without DI screens", async () => {
+    const root = await newTempDir();
+    await seedMinimal(root);
+    // Two screens declared in a UI contract. The CLI invocation
+    // simulates `qfai prototyping iterate --cycle 0 --capture
+    // --target-url ...` — no DI `screens` / `captureScreen` overrides.
+    await seedUiContract(root, "spec-0001", [
+      { id: "home", route: "/", title: "Home" },
+      { id: "settings", route: "/settings", title: "Settings" },
+    ]);
+
+    const calls: string[] = [];
+    const exit = await runPrototypingIterate({
+      root,
+      cycle: 0,
+      targetUrl: "http://localhost:5173",
+      capture: true,
+      // No `screens` DI hook: auto-derivation from UI contracts is
+      // exercised. `captureScreen` is still injected to keep the test
+      // isolated from Playwright while the screens[] resolution path
+      // is the surface under test.
+      captureScreen: async ({ screenId, pngPath, htmlPath }) => {
+        calls.push(screenId);
+        await writeFile(pngPath, Buffer.from([0x89, 0x50, 0x4e, 0x47]));
+        await writeFile(htmlPath, `<html>${screenId}</html>`);
+        return { ok: true, durationMs: 4 };
+      },
+    });
+
+    expect(exit).toBe(0);
+    expect(calls.sort()).toEqual(["home", "settings"]);
+
+    // PNG / HTML bijection: one of each per derived screen.
+    const iterDir = path.join(root, ".qfai/evidence/prototyping/iter-00");
+    expect(await fileExists(path.join(iterDir, "home.png"))).toBe(true);
+    expect(await fileExists(path.join(iterDir, "home.html"))).toBe(true);
+    expect(await fileExists(path.join(iterDir, "settings.png"))).toBe(true);
+    expect(await fileExists(path.join(iterDir, "settings.html"))).toBe(true);
+  });
+
+  it("warns and exits 0 when capture=true is set but no UI contracts are present", async () => {
+    const root = await newTempDir();
+    await seedMinimal(root);
+    // Deliberately no UI contracts — the auto-derivation path returns
+    // an empty list, and `runCapturePath` surfaces the documented
+    // "no screens[] declared" warning + exit 0 (graceful no-op).
+    const writes: string[] = [];
+    const stdoutSpy = vi.spyOn(process.stdout, "write").mockImplementation((c) => {
+      writes.push(String(c));
+      return true;
+    });
+    const stderrSpy = vi.spyOn(process.stderr, "write").mockImplementation((c) => {
+      writes.push(String(c));
+      return true;
+    });
+    try {
+      const exit = await runPrototypingIterate({
+        root,
+        cycle: 0,
+        targetUrl: "http://localhost:5173",
+        capture: true,
+      });
+      expect(exit).toBe(0);
+      expect(writes.join("\n")).toMatch(/no screens\[\] declared/i);
+    } finally {
+      stdoutSpy.mockRestore();
+      stderrSpy.mockRestore();
+    }
+  });
+});
+
+describe("iterate --capture: (9) Codex P2 wave-8 — capture URL composition with targetUrl", () => {
+  it("passes absolute URLs verbatim (operator override wins over base targetUrl)", async () => {
+    const root = await newTempDir();
+    await seedMinimal(root);
+    const observedUrls: Array<string | null> = [];
+    const exit = await runPrototypingIterate({
+      root,
+      cycle: 0,
+      targetUrl: "http://localhost:5173",
+      capture: true,
+      screens: [{ id: "home", url: "https://example.com/page" }],
+      captureScreen: async ({ url, pngPath, htmlPath }) => {
+        observedUrls.push(url);
+        await writeFile(pngPath, Buffer.from([0x89, 0x50, 0x4e, 0x47]));
+        await writeFile(htmlPath, "<html></html>");
+        return { ok: true, durationMs: 1 };
+      },
+    });
+    expect(exit).toBe(0);
+    // Absolute URL is forwarded verbatim — the base targetUrl is NOT
+    // applied because the screen-level value is already navigable.
+    expect(observedUrls).toEqual(["https://example.com/page"]);
+  });
+
+  it("composes route-relative URLs (with leading slash) against targetUrl", async () => {
+    const root = await newTempDir();
+    await seedMinimal(root);
+    const observedUrls: Array<string | null> = [];
+    const exit = await runPrototypingIterate({
+      root,
+      cycle: 0,
+      targetUrl: "http://localhost:3000",
+      capture: true,
+      screens: [{ id: "new-order", url: "/orders/new" }],
+      captureScreen: async ({ url, pngPath, htmlPath }) => {
+        observedUrls.push(url);
+        await writeFile(pngPath, Buffer.from([0x89, 0x50, 0x4e, 0x47]));
+        await writeFile(htmlPath, "<html></html>");
+        return { ok: true, durationMs: 1 };
+      },
+    });
+    expect(exit).toBe(0);
+    expect(observedUrls).toEqual(["http://localhost:3000/orders/new"]);
+  });
+
+  it("returns exit 2 with an explanatory message when a route-relative URL has no targetUrl", async () => {
+    const root = await newTempDir();
+    await seedMinimal(root);
+    const writes: string[] = [];
+    const stdoutSpy = vi.spyOn(process.stdout, "write").mockImplementation((c) => {
+      writes.push(String(c));
+      return true;
+    });
+    const stderrSpy = vi.spyOn(process.stderr, "write").mockImplementation((c) => {
+      writes.push(String(c));
+      return true;
+    });
+    try {
+      // cycle 1 path so the `--target-url is required` cycle-0 input
+      // gate is not the failure mode under test. Seed prototyping.json
+      // / lock to satisfy the cycle ≥ 1 gates.
+      await mkdir(path.join(root, ".qfai/evidence/prototyping"), { recursive: true });
+      // Seed cycle 0 first (with target URL) so cycle 1 has frozen state.
+      const seedExit = await runPrototypingIterate({
+        root,
+        cycle: 0,
+        targetUrl: "http://localhost:3000",
+      });
+      expect(seedExit).toBe(0);
+      const exit = await runPrototypingIterate({
+        root,
+        cycle: 1,
+        // No targetUrl on cycle ≥ 1 — and the route-relative screen
+        // url cannot be composed against a missing base.
+        capture: true,
+        screens: [{ id: "orders", url: "/orders/new" }],
+        captureScreen: async ({ pngPath, htmlPath }) => {
+          await writeFile(pngPath, Buffer.from([0x89, 0x50, 0x4e, 0x47]));
+          await writeFile(htmlPath, "<html></html>");
+          return { ok: true, durationMs: 1 };
+        },
+      });
+      expect(exit).toBe(2);
+      const joined = writes.join("\n");
+      expect(joined).toMatch(/route-relative URL/i);
+      expect(joined).toMatch(/--target-url/i);
+    } finally {
+      stdoutSpy.mockRestore();
+      stderrSpy.mockRestore();
+    }
+  });
+
+  it("composes route-relative URLs WITHOUT leading slash against targetUrl", async () => {
+    const root = await newTempDir();
+    await seedMinimal(root);
+    const observedUrls: Array<string | null> = [];
+    const exit = await runPrototypingIterate({
+      root,
+      cycle: 0,
+      // targetUrl with trailing slash so `new URL("orders/new", base)`
+      // composes to the expected `http://localhost:3000/orders/new`.
+      // (Without a trailing slash on the base, WHATWG URL replaces the
+      // last path segment instead of appending; trailing slash is the
+      // intended operator-facing convention for prototype base URLs.)
+      targetUrl: "http://localhost:3000/",
+      capture: true,
+      screens: [{ id: "orders", url: "orders/new" }],
+      captureScreen: async ({ url, pngPath, htmlPath }) => {
+        observedUrls.push(url);
+        await writeFile(pngPath, Buffer.from([0x89, 0x50, 0x4e, 0x47]));
+        await writeFile(htmlPath, "<html></html>");
+        return { ok: true, durationMs: 1 };
+      },
+    });
+    expect(exit).toBe(0);
+    expect(observedUrls).toEqual(["http://localhost:3000/orders/new"]);
+  });
+});

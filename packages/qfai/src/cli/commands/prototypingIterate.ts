@@ -100,6 +100,7 @@ import {
   type Lap010Input,
 } from "../../core/prototyping/layoutAntiPatternsAdvisory.js";
 import { parsePrimarySpecId } from "../../core/prototyping/primarySpecIdParse.js";
+import { readUiContractScreenContracts } from "../../core/contracts/screenContracts.js";
 
 /**
  * Per-screen descriptor consumed by the opt-in `--capture` flag.
@@ -876,6 +877,31 @@ export async function runPrototypingIterate(
   const dir = path.join(options.root, iterationDir(options.cycle));
   await mkdir(dir, { recursive: true });
 
+  // Screen descriptor resolution for the opt-in capture path. The DI
+  // `options.screens` hook still wins (test isolation), but when the
+  // operator drives `--capture` from the CLI without DI, derive the
+  // screens list from the project's UI contracts via
+  // `collectScreensForCapture` so both the plan emission AND the
+  // capture invocation read from a single source of truth. Pre-fix
+  // (Codex P1) the CLI wiring only set `capture: true` and never
+  // populated `screens`, so `runCapturePath` short-circuited with a
+  // warning and produced zero PNG/HTML artifacts — the operator-facing
+  // flag was a silent no-op. Derivation is gated on
+  // `options.capture === true` so the default-OFF posture
+  // (no PNG/HTML written when --capture is absent) remains
+  // byte-equivalent.
+  let resolvedCaptureScreens: readonly IterateCaptureScreen[] | undefined;
+  if (options.capture === true) {
+    if (options.screens !== undefined) {
+      resolvedCaptureScreens = options.screens;
+    } else {
+      resolvedCaptureScreens = await collectScreensForCapture(
+        options.root,
+        configResult.config.paths.contractsDir,
+      );
+    }
+  }
+
   const plan: IteratePlan = {
     cycle: options.cycle,
     specs,
@@ -892,9 +918,11 @@ export async function runPrototypingIterate(
     // pre-fix shape would emit `screens: []` into iterate-plan.json
     // (a no-op key the downstream capture path then warns about).
     // Tighten to length > 0 so the absent-key shape stays the canonical
-    // "no screens declared" representation.
-    ...(options.capture && options.screens && options.screens.length > 0
-      ? { screens: options.screens }
+    // "no screens declared" representation. The resolved list above is
+    // the single SSOT — both the plan field and `runCapturePath` read
+    // from it so the two surfaces never diverge.
+    ...(options.capture && resolvedCaptureScreens && resolvedCaptureScreens.length > 0
+      ? { screens: resolvedCaptureScreens }
       : {}),
   };
 
@@ -968,9 +996,12 @@ export async function runPrototypingIterate(
 
   // Opt-in capture (default OFF; preserves the no-capture default
   // posture). Each screen is processed sequentially with a per-screen
-  // soft-warning wall-clock budget.
+  // soft-warning wall-clock budget. The resolved screen list (DI or
+  // auto-derived from UI contracts above) is threaded down so the
+  // capture invocation never silently no-ops on a missing
+  // `options.screens` when the operator drove `--capture` from the CLI.
   if (options.capture) {
-    const captureExit = await runCapturePath(options, dir);
+    const captureExit = await runCapturePath(options, dir, resolvedCaptureScreens ?? []);
     if (captureExit !== 0) {
       if (sigintHandler) process.off("SIGINT", sigintHandler);
       await teardownOnce();
@@ -1063,8 +1094,12 @@ function buildBlockedSummaryInputFromRecord(
   };
 }
 
-async function runCapturePath(options: RunPrototypingIterateOptions, dir: string): Promise<number> {
-  const screens = options.screens ?? [];
+async function runCapturePath(
+  options: RunPrototypingIterateOptions,
+  dir: string,
+  resolvedScreens: readonly IterateCaptureScreen[],
+): Promise<number> {
+  const screens = resolvedScreens;
   if (screens.length === 0) {
     warn(
       "qfai prototyping iterate --capture: no screens[] declared on the iterate plan; skipping capture.",
@@ -1101,7 +1136,20 @@ async function runCapturePath(options: RunPrototypingIterateOptions, dir: string
   for (const screen of screens) {
     const pngPath = path.join(dir, `${screen.id}.png`);
     const htmlPath = path.join(dir, `${screen.id}.html`);
-    const captureUrl = screen.url ?? options.targetUrl ?? null;
+    // Capture URL composition (Codex P2 wave-8): UI contracts store
+    // route-relative paths like `/orders/new`; the default Playwright
+    // runner calls `page.goto(args.url)` which rejects relative paths
+    // and aborts capture. Compose route-relative URLs against
+    // `options.targetUrl` so the operator-facing flow works end-to-end.
+    // Absolute URLs (`http://` / `https://`) pass through verbatim.
+    const urlResult = composeCaptureUrl(screen.url, options.targetUrl);
+    if (!urlResult.ok) {
+      error(
+        `qfai prototyping iterate --capture: screen ${screen.id} ${urlResult.reason}`,
+      );
+      return 2;
+    }
+    const captureUrl = urlResult.url;
     // Soft-warning budget enforcement is post-hoc on the runner's
     // reported `durationMs` (NFR-0107: warn, never hard-fail). The
     // prior `startBudgetTimer` setTimeout-with-noop-handler hook was
@@ -1203,6 +1251,103 @@ async function runCapturePath(options: RunPrototypingIterateOptions, dir: string
   // `prototypingEvidence.ts`).
   await mirrorAcceptedIterToAggregateDirs(options.root, options.cycle);
   return 0;
+}
+
+/**
+ * Discriminated outcome of {@link composeCaptureUrl}. Mirrors the
+ * `ok=true/false` shape used by other helpers in this module so the
+ * caller can short-circuit with the structured diagnostic without
+ * resorting to bare `as` casts on a string-or-null sentinel
+ * (CLAUDE.md project rule).
+ */
+type ComposeCaptureUrlResult =
+  | { ok: true; url: string | null }
+  | { ok: false; reason: string };
+
+/**
+ * Compose the navigation URL passed to {@link CaptureScreenFn}.
+ *
+ * Codex P2 wave-8 fix: UI contracts persist route-relative paths
+ * (e.g. `/orders/new`); the default Playwright runner forwards the
+ * value to `page.goto(args.url)`, which rejects non-absolute URLs
+ * with an `ERR_INVALID_URL`-class navigation error and aborts capture
+ * with exit 2. Pre-fix, `screen.url ?? options.targetUrl ?? null`
+ * preferred the route verbatim and dropped the operator-supplied
+ * base URL on the floor.
+ *
+ * Composition rules:
+ *   - `screen.url` is an absolute URL (`http://` / `https://`) →
+ *     forwarded verbatim. The base URL has no effect on absolute
+ *     overrides (operator wins).
+ *   - `screen.url` is route-relative AND `targetUrl` is set →
+ *     `new URL(screen.url, targetUrl).toString()`. Leading slash is
+ *     optional; `new URL` handles both `/orders/new` and `orders/new`.
+ *   - `screen.url` is route-relative AND `targetUrl` is unset →
+ *     `{ ok: false }` with an explanatory reason so the caller can
+ *     surface a per-screen exit 2 with the operator action.
+ *   - `screen.url` is undefined → fall back to `targetUrl` (verbatim)
+ *     or `null` (legacy "no URL" shape for runners that infer their
+ *     own target).
+ */
+export function composeCaptureUrl(
+  screenUrl: string | undefined,
+  targetUrl: string | undefined,
+): ComposeCaptureUrlResult {
+  if (screenUrl === undefined) {
+    return { ok: true, url: targetUrl ?? null };
+  }
+  if (/^https?:\/\//i.test(screenUrl)) {
+    return { ok: true, url: screenUrl };
+  }
+  if (targetUrl === undefined) {
+    return {
+      ok: false,
+      reason:
+        `has route-relative URL ${JSON.stringify(screenUrl)} but options.targetUrl is undefined; ` +
+        "provide --target-url <base> so the route can be composed against a navigable origin.",
+    };
+  }
+  try {
+    return { ok: true, url: new URL(screenUrl, targetUrl).toString() };
+  } catch (cause) {
+    return {
+      ok: false,
+      reason:
+        `has unparseable URL composition (screen.url=${JSON.stringify(screenUrl)}, ` +
+        `targetUrl=${JSON.stringify(targetUrl)}, cause=${String(cause)}).`,
+    };
+  }
+}
+
+/**
+ * Derive the per-screen capture descriptor list from the project's UI
+ * contracts when the operator drives `--capture` from the CLI without
+ * supplying a `screens[]` DI hook.
+ *
+ * Codex P1 wave-8 fix: pre-fix, `qfai prototyping iterate --capture`
+ * silently no-op'd because the CLI wiring only sets `capture: true`
+ * and never threaded the discovered UI contract screens into
+ * `options.screens`. The `runCapturePath` early-return on an empty
+ * screens list converted the operator-facing flag into a no-op (a
+ * warning + exit 0 with zero PNG/HTML written).
+ *
+ * Source of truth: `readUiContractScreenContracts` (the same reader
+ * used by certify's per-(spec × screen) gate). Each canonical
+ * `{ screenId, route }` becomes a `{ id, url }` entry — `htmlSourceCopy`
+ * is left unset (the default `false` posture; operators who need
+ * byte-equivalent HTML must still pass a DI screens[] hook).
+ *
+ * Returns an empty list when no UI contracts are present. The caller
+ * (`runCapturePath`) then surfaces the "no screens[] declared"
+ * warning and exits 0, preserving the documented "no screens to
+ * capture" graceful path.
+ */
+async function collectScreensForCapture(
+  root: string,
+  contractsDir: string,
+): Promise<readonly IterateCaptureScreen[]> {
+  const canonical = await readUiContractScreenContracts(root, contractsDir);
+  return canonical.map((entry) => ({ id: entry.screenId, url: entry.route }));
 }
 
 type DesignMdReadResult =
