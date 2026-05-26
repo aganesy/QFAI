@@ -21,7 +21,7 @@ import { chmod, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises
 import os from "node:os";
 import path from "node:path";
 
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 
 import { runDoctor } from "../../src/cli/commands/doctor.js";
 import { runInit } from "../../src/cli/commands/init.js";

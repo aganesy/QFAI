@@ -45,8 +45,8 @@ describe("isIterateContext: exact 4-key schema lockdown", () => {
 
   it("rejects records missing any of the 4 required keys", () => {
     for (const k of ITERATE_CONTEXT_KEYS) {
-      const copy = { ...canonical } as Record<string, unknown>;
-      delete copy[k];
+      const copy: Record<string, unknown> = { ...canonical };
+      Reflect.deleteProperty(copy, k);
       expect(isIterateContext(copy), `missing ${k}`).toBe(false);
     }
   });

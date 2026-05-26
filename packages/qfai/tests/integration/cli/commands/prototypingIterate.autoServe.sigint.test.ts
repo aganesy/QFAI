@@ -187,8 +187,10 @@ describe("iterate --auto-serve SIGINT teardown", () => {
     // resolved teardown — once via SIGINT, then a second time at
     // cycle end would be a double-close defect on real resources.
     expect(teardown).toHaveBeenCalledTimes(1);
-    if (sigintDispatchedAt.length > 0 && teardownEndedAt.length > 0) {
-      expect(teardownEndedAt[0]! - sigintDispatchedAt[0]!).toBeLessThan(2_000);
+    const teardownEnd = teardownEndedAt[0];
+    const sigintStart = sigintDispatchedAt[0];
+    if (typeof sigintStart === "number" && typeof teardownEnd === "number") {
+      expect(teardownEnd - sigintStart).toBeLessThan(2_000);
     }
   });
 });

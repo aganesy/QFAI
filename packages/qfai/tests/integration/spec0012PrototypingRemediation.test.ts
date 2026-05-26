@@ -62,3 +62,34 @@
 // QFAI:SPEC-0012:TC-0012-0468
 // QFAI:SPEC-0012:TC-0012-0469
 // QFAI:SPEC-0012:TC-0012-0470
+
+import { existsSync } from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+import { describe, expect, it } from "vitest";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+describe("spec-0012 CHG-005 layer-pinning anchor", () => {
+  it("anchors the spec-0012 09_delta closure artifact (CHG-005)", () => {
+    // The annotation comments above pin the ATDD layer for TC-0012-0433..0470.
+    // This assertion gives vitest a recognizable suite (avoiding the
+    // "No test suite found" failure) while binding the anchor to the
+    // spec-0012 closure artifact whose presence reflects CHG-005 landing
+    // status.
+    const deltaPath = path.resolve(
+      __dirname,
+      "..",
+      "..",
+      "..",
+      "..",
+      ".qfai",
+      "specs",
+      "spec-0012",
+      "09_delta.md",
+    );
+    expect(existsSync(deltaPath)).toBe(true);
+  });
+});

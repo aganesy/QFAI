@@ -133,7 +133,9 @@ describe("spec-0012 prototyping.execution config", () => {
         issue.message.includes("prototyping.execution.browserProvider"),
       );
       expect(legacy, "expected legacy browserProvider rejection").toBeDefined();
-      expect(legacy?.message).toContain("playwright-cli");
+      // Canonical default = "playwright" primary (REQ-0012-0060 / spec-0006
+      // D-DEPRECATED-PROBE). "playwright-cli" is the deprecation window.
+      expect(legacy?.message).toContain("playwright");
     } finally {
       await rm(root, { recursive: true, force: true });
     }
@@ -198,7 +200,7 @@ describe("spec-0012 prototyping.execution config", () => {
     }
   });
 
-  it("defaults browserTool to playwright-cli when execution section is empty", async () => {
+  it("defaults browserTool to playwright when execution section is empty", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-config-default-"));
     try {
       await writeFile(
@@ -209,7 +211,9 @@ describe("spec-0012 prototyping.execution config", () => {
 
       const { config, issues } = await loadConfig(root);
       expect(issues).toEqual([]);
-      expect(config.prototyping?.execution?.browserTool).toBe("playwright-cli");
+      // Canonical default = "playwright" primary (REQ-0012-0060). The legacy
+      // "playwright-cli" value is still accepted under the deprecation window.
+      expect(config.prototyping?.execution?.browserTool).toBe("playwright");
       expect(config.prototyping?.execution?.targetUrl).toBe("http://localhost:5173");
     } finally {
       await rm(root, { recursive: true, force: true });
