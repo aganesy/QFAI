@@ -169,10 +169,12 @@ export type RunPrototypingIterateOptions = {
    */
   screens?: readonly IterateCaptureScreen[];
   /**
-   * Per-screen capture runner. Used only when `capture` is true.
-   * When omitted, iterate exits with input-error (the production
-   * default runner wiring is deferred to the orchestrator that
-   * actually drives Playwright; see PR #210 series for that follow-up).
+   * Per-screen capture runner. Used only when `capture` is true. When
+   * omitted, iterate dynamically loads the default Playwright runner
+   * from `core/prototyping/defaultCaptureScreen.ts` so the operator
+   * can drive capture from the CLI without supplying a DI hook. Test
+   * fixtures pass a deterministic stub here to stay isolated from
+   * Playwright.
    */
   captureScreen?: CaptureScreenFn;
   /**
@@ -852,13 +854,29 @@ export async function runPrototypingIterate(
     }
   };
   if (options.autoServe) {
-    if (!options.serverRunner) {
-      error(
-        "qfai prototyping iterate --auto-serve: a server runner is required (no default wiring yet — pass options.serverRunner).",
-      );
-      return 2;
+    // DI serverRunner takes priority. When omitted, dynamically load
+    // the default in-process HTTP server runner so the operator can
+    // run `qfai prototyping iterate --auto-serve` without supplying a
+    // runner. The default ships an in-process node:http server with a
+    // <2s teardown bound; subprocess-based runners are operator-supplied
+    // via the DI hook.
+    let serverRunner: ServerRunnerFn;
+    if (options.serverRunner) {
+      serverRunner = options.serverRunner;
+    } else {
+      try {
+        const mod = await import("../../core/prototyping/defaultServerRunner.js");
+        serverRunner = mod.defaultServerRunner;
+      } catch (cause) {
+        error(
+          `qfai prototyping iterate --auto-serve: failed to load default server runner (${String(
+            cause,
+          )}).`,
+        );
+        return 2;
+      }
     }
-    const serverResult = await options.serverRunner({ root: options.root, cycle: options.cycle });
+    const serverResult = await serverRunner({ root: options.root, cycle: options.cycle });
     if (!serverResult.ok) {
       error(`qfai prototyping iterate --auto-serve: ${serverResult.reason}`);
       return 2;
@@ -977,13 +995,26 @@ async function runCapturePath(
     );
     return 0;
   }
-  if (!options.captureScreen) {
-    error(
-      "qfai prototyping iterate --capture: a capture runner is required (no default wiring yet — pass options.captureScreen).",
-    );
-    return 2;
+  // DI captureScreen takes priority over the default fallback so test
+  // fixtures stay isolated from Playwright. When omitted, dynamically
+  // load the default Playwright runner so the operator can run
+  // `qfai prototyping iterate --capture` without supplying a runner.
+  let runner: CaptureScreenFn;
+  if (options.captureScreen) {
+    runner = options.captureScreen;
+  } else {
+    try {
+      const mod = await import("../../core/prototyping/defaultCaptureScreen.js");
+      runner = mod.defaultCaptureScreen;
+    } catch (cause) {
+      error(
+        `qfai prototyping iterate --capture: failed to load default capture runner (${String(
+          cause,
+        )}).`,
+      );
+      return 2;
+    }
   }
-  const runner = options.captureScreen;
   const budgetMs = options.captureBudgetMs ?? 30_000;
   const prototypesIterDir = path.join(
     options.root,

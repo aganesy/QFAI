@@ -41,6 +41,22 @@ export type ParsedArgs = {
      * acceptedIterationIndex without re-running the iterate loop.
      */
     prototypingCheckConvergence?: boolean;
+    /**
+     * --capture for `qfai prototyping iterate`. Opt-in PNG/HTML capture
+     * (default OFF; preserves the no-capture default posture). When
+     * present, iterate threads `capture: true` into runPrototypingIterate
+     * and the default Playwright runner is loaded dynamically when no
+     * DI captureScreen is supplied.
+     */
+    prototypingCapture?: boolean;
+    /**
+     * --auto-serve for `qfai prototyping iterate`. Opt-in local HTTP
+     * server spawn (default OFF; preserves the no-server default
+     * posture). When present, iterate threads `autoServe: true` into
+     * runPrototypingIterate and the default in-process HTTP server
+     * runner is loaded dynamically when no DI serverRunner is supplied.
+     */
+    prototypingAutoServe?: boolean;
     help: boolean;
     invalidExitCode: number;
   };
@@ -360,6 +376,18 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         // value; presence flips the boolean. Only meaningful for
         // `qfai prototyping iterate`.
         options.prototypingCheckConvergence = true;
+        break;
+      }
+      case "--capture": {
+        // Opt-in PNG/HTML capture. No value; presence flips the
+        // boolean. Only meaningful for `qfai prototyping iterate`.
+        options.prototypingCapture = true;
+        break;
+      }
+      case "--auto-serve": {
+        // Opt-in local HTTP server spawn. No value; presence flips the
+        // boolean. Only meaningful for `qfai prototyping iterate`.
+        options.prototypingAutoServe = true;
         break;
       }
       case "--help":

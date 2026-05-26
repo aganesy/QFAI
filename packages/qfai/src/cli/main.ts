@@ -159,6 +159,8 @@ export async function run(argv: string[], cwd: string): Promise<void> {
             ? { primarySpecId: options.prototypingPrimarySpecId }
             : {}),
           ...(options.prototypingCheckConvergence ? { checkConvergence: true } : {}),
+          ...(options.prototypingCapture ? { capture: true } : {}),
+          ...(options.prototypingAutoServe ? { autoServe: true } : {}),
         });
       }
       return;
@@ -211,6 +213,8 @@ Options:
   --target-url <url>            prototyping preflight/iterate: 評価対象の URL
   --cycle <number>              prototyping iterate: cycle index (0..9)
   --check-convergence           prototyping iterate: read-only peek of the converged loop state (default cycle 9; exit 0 = converged, exit 2 = not converged / missing state)
+  --capture                     prototyping iterate: opt-in PNG/HTML capture (default OFF; default runner drives Playwright when installed)
+  --auto-serve                  prototyping iterate: opt-in local HTTP server spawn (default OFF; in-process node:http server; SIGINT teardown <=2s)
   -h, --help      ヘルプ表示
 `;
 }
