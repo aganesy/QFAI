@@ -133,7 +133,11 @@ export async function run(argv: string[], cwd: string): Promise<void> {
         }
 
         // iterate: single-thread evolution loop driver.
-        if (options.prototypingCycle === undefined) {
+        //
+        // --check-convergence bypasses the cycle-required guard because
+        // the read-only peek path defaults to cycle 9 (the final cycle
+        // per the peek-mode hint convention) when --cycle is omitted.
+        if (options.prototypingCycle === undefined && !options.prototypingCheckConvergence) {
           error("qfai prototyping iterate: --cycle <number> is required.");
           info(usage());
           process.exitCode = options.invalidExitCode;
@@ -142,7 +146,10 @@ export async function run(argv: string[], cwd: string): Promise<void> {
         const resolvedRoot = await resolveRoot(options);
         process.exitCode = await runPrototypingIterate({
           root: resolvedRoot,
-          cycle: options.prototypingCycle,
+          // When --check-convergence is set without --cycle, default to
+          // cycle 9 (the final cycle of the loop, matching the peek-mode
+          // hint string in `CYCLE_OUT_OF_RANGE_PEEK_HINT`).
+          cycle: options.prototypingCycle ?? 9,
           ...(options.prototypingTargetUrl ? { targetUrl: options.prototypingTargetUrl } : {}),
           ...(options.force ? { force: true } : {}),
           ...(options.prototypingLicensePatch
@@ -151,6 +158,7 @@ export async function run(argv: string[], cwd: string): Promise<void> {
           ...(options.prototypingPrimarySpecId
             ? { primarySpecId: options.prototypingPrimarySpecId }
             : {}),
+          ...(options.prototypingCheckConvergence ? { checkConvergence: true } : {}),
         });
       }
       return;
@@ -202,6 +210,7 @@ Options:
   --keyword <text>              guardrails list/extract: キーワードフィルタ
   --target-url <url>            prototyping preflight/iterate: 評価対象の URL
   --cycle <number>              prototyping iterate: cycle index (0..9)
+  --check-convergence           prototyping iterate: read-only peek of the converged loop state (default cycle 9; exit 0 = converged, exit 2 = not converged / missing state)
   -h, --help      ヘルプ表示
 `;
 }

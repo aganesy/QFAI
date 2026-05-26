@@ -143,6 +143,21 @@ export type RunPrototypingIterateOptions = {
   cycle: number;
   targetUrl?: string;
   /**
+   * Read-only peek of the canonical prototyping state file
+   * (`.qfai/evidence/prototyping/prototyping.json`). When true, iterate
+   * reads `stopReason` + `acceptedIterationIndex` from disk and reports
+   * convergence WITHOUT invoking the iterate loop, capture, serve,
+   * license-verify, or validate paths. Exit 0 when converged
+   * (`stopReason === "axes-exceptional"` AND `acceptedIterationIndex`
+   * is a non-null number); exit 2 otherwise (including when the state
+   * file is missing).
+   *
+   * Defaults to the final cycle (9) when invoked from the CLI without
+   * `--cycle`; orthogonal to capture / auto-serve defaults
+   * (preserved unchanged).
+   */
+  checkConvergence?: boolean;
+  /**
    * Opt-in PNG/HTML capture (default OFF; preserves the no-capture
    * default posture). When true, iterate runs the injected capture
    * path against {@link RunPrototypingIterateOptions.screens}.
@@ -329,6 +344,21 @@ export const CYCLE_OUT_OF_RANGE_PEEK_HINT =
 export async function runPrototypingIterate(
   options: RunPrototypingIterateOptions,
 ): Promise<number> {
+  // Read-only peek path. MUST precede every other gate so that:
+  //   1. The cycle range gate (0..9) does NOT trip when the operator
+  //      passes a deliberately out-of-range cycle to peek (though the
+  //      typical hint convention pins cycle 9, which is in range).
+  //   2. The DESIGN.md read, lock gate, spec resolution, license
+  //      verify, capture, serve, and validate paths are bypassed —
+  //      the peek is a pure read of the canonical prototyping state
+  //      file, never a re-run of the loop.
+  // Default cycle to 9 (final cycle of the loop, mirroring the
+  // peek-mode hint) when the caller omits it.
+  if (options.checkConvergence === true) {
+    const cycleForReport =
+      Number.isInteger(options.cycle) && options.cycle >= 0 ? options.cycle : 9;
+    return runCheckConvergencePeek(options.root, cycleForReport);
+  }
   if (
     !Number.isInteger(options.cycle) ||
     options.cycle < 0 ||
@@ -1802,6 +1832,70 @@ function buildDesignTokens(dm: DesignMd): DesignTokens {
     borderRadius: { ...dm.visual.radius },
     boxShadow: { ...dm.visual.shadow },
   };
+}
+
+/**
+ * Read-only peek of the canonical prototyping state file. Reads
+ * `stopReason` + `acceptedIterationIndex` (and the recorded
+ * `iterations[]` count) from `.qfai/evidence/prototyping/prototyping.json`
+ * and reports convergence WITHOUT invoking the iterate loop.
+ *
+ * Exit codes:
+ *   0  converged: `stopReason === "axes-exceptional"` AND
+ *      `acceptedIterationIndex` is a non-null number.
+ *   2  not converged (any other state, including missing state file).
+ *
+ * Pure read; never writes to disk. Orthogonal to capture / auto-serve
+ * (those defaults stay OFF).
+ */
+async function runCheckConvergencePeek(root: string, cycle: number): Promise<number> {
+  const protoJsonAbs = path.join(root, PROTOTYPING_JSON_REL);
+  const header = `qfai prototyping iterate --check-convergence (cycle ${cycle}):`;
+  const record = await readPrototypingJson(protoJsonAbs);
+  if (record === null) {
+    info(header);
+    info(
+      "  Not converged: prototyping.json missing or unreadable at " +
+        `${PROTOTYPING_JSON_REL}. Run \`qfai prototyping iterate --cycle 0 --target-url <url>\` ` +
+        "to seed the loop first.",
+    );
+    return 2;
+  }
+  const stopReasonRaw = record.stopReason;
+  const stopReason =
+    typeof stopReasonRaw === "string" || stopReasonRaw === null ? stopReasonRaw : undefined;
+  const acceptedRaw = record.acceptedIterationIndex;
+  const acceptedIterationIndex =
+    typeof acceptedRaw === "number" && Number.isInteger(acceptedRaw) ? acceptedRaw : null;
+  const iterations = asIterations(record);
+  info(header);
+  info(`  stopReason: ${stopReason === undefined ? "<missing>" : String(stopReason)}`);
+  info(
+    `  acceptedIterationIndex: ${acceptedIterationIndex === null ? "null" : String(acceptedIterationIndex)}`,
+  );
+  info(`  iterations: ${iterations.length}`);
+  if (stopReason === "axes-exceptional" && acceptedIterationIndex !== null) {
+    info("  Converged: axes-exceptional with accepted iteration recorded.");
+    return 0;
+  }
+  // Build a precise diagnostic for the not-converged branch so the
+  // operator can see WHY the loop did not converge.
+  let reason: string;
+  if (stopReason === "max-iterations") {
+    reason = "stopReason=\"max-iterations\" (loop exhausted the 10-cycle budget).";
+  } else if (stopReason === "license-verify-fail") {
+    reason =
+      "stopReason=\"license-verify-fail\" (runtime license-verify gate rejected an image source).";
+  } else if (stopReason === "input-error") {
+    reason = "stopReason=\"input-error\" (input gate rejected the invocation).";
+  } else if (stopReason === null || stopReason === undefined) {
+    reason =
+      "stopReason is null and no acceptedIterationIndex was recorded; the loop has not yet reached a terminal state.";
+  } else {
+    reason = `stopReason=${JSON.stringify(stopReason)} is not a converged state.`;
+  }
+  info(`  Not converged: ${reason}`);
+  return 2;
 }
 
 function emitStop(reason: StopReason): number {

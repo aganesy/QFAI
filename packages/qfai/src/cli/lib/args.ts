@@ -35,6 +35,12 @@ export type ParsedArgs = {
     prototypingLicensePatch?: string;
     /** --primary-spec-id <value> for `qfai prototyping iterate`. */
     prototypingPrimarySpecId?: string;
+    /**
+     * --check-convergence for `qfai prototyping iterate`. Read-only peek
+     * of the canonical prototyping state file; reports stopReason +
+     * acceptedIterationIndex without re-running the iterate loop.
+     */
+    prototypingCheckConvergence?: boolean;
     help: boolean;
     invalidExitCode: number;
   };
@@ -347,6 +353,13 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         }
         options.prototypingPrimarySpecId = next;
         i += 1;
+        break;
+      }
+      case "--check-convergence": {
+        // Read-only peek of the canonical prototyping state file. No
+        // value; presence flips the boolean. Only meaningful for
+        // `qfai prototyping iterate`.
+        options.prototypingCheckConvergence = true;
         break;
       }
       case "--help":
