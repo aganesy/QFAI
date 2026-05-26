@@ -269,9 +269,7 @@ async function probeCandidate(
 function buildProbeArgs(candidate: PlaywrightLauncherCandidate): string[] {
   // Primary/deprecated direct shims still accept `--help`; npx fallback already
   // bakes `--version` into args.
-  return candidate.stage === "npx-fallback"
-    ? [...candidate.args]
-    : [...candidate.args, "--help"];
+  return candidate.stage === "npx-fallback" ? [...candidate.args] : [...candidate.args, "--help"];
 }
 
 function spawnProbe(
@@ -308,8 +306,7 @@ function spawnProbeChild(
   candidate: PlaywrightLauncherCandidate,
   args: string[],
 ): ReturnType<typeof spawn> {
-  const useCmdShim =
-    process.platform === "win32" && /\.(cmd|bat|ps1)$/i.test(candidate.executable);
+  const useCmdShim = process.platform === "win32" && /\.(cmd|bat|ps1)$/i.test(candidate.executable);
   if (useCmdShim) {
     return spawn(
       process.env.ComSpec ?? "cmd.exe",
@@ -415,10 +412,7 @@ function toCmdCommand(candidate: PlaywrightLauncherCandidate, args: string[]): s
   return [quoteCmdArg(candidate.executable), ...args.map(quoteCmdArg)].join(" ");
 }
 
-function terminateTimedOutChild(
-  child: ReturnType<typeof spawn>,
-  signal?: NodeJS.Signals,
-): void {
+function terminateTimedOutChild(child: ReturnType<typeof spawn>, signal?: NodeJS.Signals): void {
   child.unref();
   child.stdout?.destroy();
   child.stderr?.destroy();

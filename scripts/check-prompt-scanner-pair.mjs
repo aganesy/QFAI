@@ -42,8 +42,7 @@ const PROMPT_REL =
  * (touching either half without the other is drift regardless of
  * which clause the diff actually modifies).
  */
-const TRACKED_CLAUSES =
-  "color-literal-ban|font-family-ban|radius-literal-ban|shadow-rgba-ban";
+const TRACKED_CLAUSES = "color-literal-ban|font-family-ban|radius-literal-ban|shadow-rgba-ban";
 
 function parseArgs(argv) {
   const out = { base: undefined, changed: undefined };

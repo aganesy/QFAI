@@ -370,8 +370,7 @@ function collectAllowedColors(dm: DesignMd): Set<string> {
 // alternation pattern explicitly groups: `\bbox-shadow` (word-boundary
 // before letter) OR `--tw-…` (literal `--` start) OR `--…shadow…`
 // (literal `--` start). All three carry the `:` value-prefix sentinel.
-const SHADOW_DECL_STRIP_RE =
-  /(?:\bbox-shadow|--tw-[\w-]+|--[\w-]*shadow[\w-]*)\s*:[^;}<>"']+/gi;
+const SHADOW_DECL_STRIP_RE = /(?:\bbox-shadow|--tw-[\w-]+|--[\w-]*shadow[\w-]*)\s*:[^;}<>"']+/gi;
 
 // Capture CSS-context regions so the color scanner does not flag
 // non-CSS hex / rgb / hsl substrings (e.g. `<a href="#deadbeef">`,

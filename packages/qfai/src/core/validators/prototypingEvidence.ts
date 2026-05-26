@@ -429,10 +429,7 @@ function countWords(value: string): number {
  * to be renamed. Empty / non-string ids are ignored here (they are
  * caught by `validateScreenContractSchema` instead).
  */
-export async function validateScreenIdCasing(
-  root: string,
-  contractsDir: string,
-): Promise<Issue[]> {
+export async function validateScreenIdCasing(root: string, contractsDir: string): Promise<Issue[]> {
   const fg = (await import("fast-glob")).default;
   const yaml = await import("yaml");
   const uiDir = path.join(root, contractsDir, "ui");

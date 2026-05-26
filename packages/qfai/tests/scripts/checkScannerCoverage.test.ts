@@ -61,10 +61,7 @@ async function newTempDir(): Promise<string> {
   return dir;
 }
 
-async function writeSummary(
-  dir: string,
-  entry: Record<string, unknown>,
-): Promise<string> {
+async function writeSummary(dir: string, entry: Record<string, unknown>): Promise<string> {
   const file = path.join(dir, "coverage-summary.json");
   await writeFile(file, JSON.stringify(entry, null, 2), "utf-8");
   return file;

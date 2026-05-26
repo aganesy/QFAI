@@ -53,10 +53,7 @@ function captureStdout(): { lines: string[]; restore: () => void } {
   };
 }
 
-async function seedPrototypingJson(
-  root: string,
-  body: Record<string, unknown>,
-): Promise<string> {
+async function seedPrototypingJson(root: string, body: Record<string, unknown>): Promise<string> {
   const protoDir = path.join(root, ".qfai/evidence/prototyping");
   await mkdir(protoDir, { recursive: true });
   const protoPath = path.join(protoDir, "prototyping.json");
@@ -70,12 +67,7 @@ describe("--check-convergence CLI flag wiring (REQ-0012-0078)", () => {
     await seedPrototypingJson(root, {
       stopReason: "axes-exceptional",
       acceptedIterationIndex: 3,
-      iterations: [
-        { index: 0 },
-        { index: 1 },
-        { index: 2 },
-        { index: 3 },
-      ],
+      iterations: [{ index: 0 }, { index: 1 }, { index: 2 }, { index: 3 }],
     });
     const captured = captureStdout();
     try {
@@ -191,10 +183,7 @@ describe("--check-convergence CLI flag wiring (REQ-0012-0078)", () => {
   it("Test 6: --check-convergence WITHOUT --cycle parses and defaults cycle to 9 via the CLI parser", async () => {
     // a) argparse must recognise --check-convergence as a known boolean
     //    flag (not an unknown-flag error).
-    const parsed = parseArgs(
-      ["prototyping", "iterate", "--check-convergence"],
-      "/tmp/fake",
-    );
+    const parsed = parseArgs(["prototyping", "iterate", "--check-convergence"], "/tmp/fake");
     expect(parsed.invalid).toBe(false);
     expect(parsed.options.prototypingCheckConvergence).toBe(true);
     expect(parsed.options.prototypingAction).toBe("iterate");

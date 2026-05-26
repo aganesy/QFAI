@@ -9,6 +9,9 @@
  */
 export {
   getProbeOrder,
+  // reason: this module IS the deprecation shim; re-exporting the deprecated
+  // symbol is intentional so legacy importers keep compiling until sunset.
+  // eslint-disable-next-line @typescript-eslint/no-deprecated
   resolvePlaywrightCliLauncher,
   resolvePlaywrightLauncher,
   type PlaywrightLauncherAttempt as PlaywrightCliLauncherAttempt,

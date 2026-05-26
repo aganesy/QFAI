@@ -131,12 +131,10 @@ describe("lap-009 md5-duplicate-capture advisory-failing", () => {
 
   it("override without Reviewer justification is rejected", () => {
     expect(isAdvisoryOverrideAccepted(undefined)).toBe(false);
-    expect(
-      isAdvisoryOverrideAccepted({ findingCode: "lap-009", justification: "" }),
-    ).toBe(false);
-    expect(
-      isAdvisoryOverrideAccepted({ findingCode: "lap-009", justification: "   " }),
-    ).toBe(false);
+    expect(isAdvisoryOverrideAccepted({ findingCode: "lap-009", justification: "" })).toBe(false);
+    expect(isAdvisoryOverrideAccepted({ findingCode: "lap-009", justification: "   " })).toBe(
+      false,
+    );
     expect(
       isAdvisoryOverrideAccepted({
         findingCode: "lap-009",

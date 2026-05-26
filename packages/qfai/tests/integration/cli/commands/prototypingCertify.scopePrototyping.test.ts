@@ -122,11 +122,7 @@ async function seedHappyPath(root: string, verifyJson: object): Promise<void> {
   });
   await writeFile(path.join(root, ".qfai/report/validate.json"), validateBody, "utf-8");
   await writeFile(path.join(root, ".qfai/output/validate.json"), validateBody, "utf-8");
-  await writeFile(
-    path.join(root, ".qfai/output/verify.json"),
-    JSON.stringify(verifyJson),
-    "utf-8",
-  );
+  await writeFile(path.join(root, ".qfai/output/verify.json"), JSON.stringify(verifyJson), "utf-8");
   const protoBody = {
     mode: { effective: "standard", source: "explicit-request", rationale: "test" },
     surface: "web",

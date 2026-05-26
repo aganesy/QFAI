@@ -40,10 +40,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 // scripts/ → repo root
 const REPO_ROOT = path.resolve(__dirname, "..");
-const DEFAULT_SUMMARY = path.join(
-  REPO_ROOT,
-  "packages/qfai/coverage/coverage-summary.json",
-);
+const DEFAULT_SUMMARY = path.join(REPO_ROOT, "packages/qfai/coverage/coverage-summary.json");
 const DEFAULT_THRESHOLD = 90;
 // The matcher locates the scanner entry by its trailing path so the
 // same coverage-summary works on Windows (`C:\...\packages\qfai\...`),
@@ -124,9 +121,7 @@ function main() {
   try {
     summary = JSON.parse(readFileSync(args.summary, "utf-8"));
   } catch (err) {
-    process.stderr.write(
-      `coverage-summary parse error at ${args.summary}: ${err.message}\n`,
-    );
+    process.stderr.write(`coverage-summary parse error at ${args.summary}: ${err.message}\n`);
     process.exit(1);
   }
 

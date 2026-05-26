@@ -23,7 +23,7 @@ describe("lap-010 missing-route advisory-failing", () => {
       {
         screenId: "settings",
         route: "/settings",
-        html: "<html><body><a href=\"/home\">Home</a></body></html>",
+        html: '<html><body><a href="/home">Home</a></body></html>',
       },
     ]);
     expect(findings.length).toBe(1);
@@ -47,9 +47,7 @@ describe("lap-010 missing-route advisory-failing", () => {
   });
 
   it("rejects override without Reviewer justification", () => {
-    expect(
-      isAdvisoryOverrideAccepted({ findingCode: "lap-010", justification: "" }),
-    ).toBe(false);
+    expect(isAdvisoryOverrideAccepted({ findingCode: "lap-010", justification: "" })).toBe(false);
     expect(
       isAdvisoryOverrideAccepted({
         findingCode: "lap-010",

@@ -147,10 +147,7 @@ describe("iterate --cycle 0 --force backup-before-clear ordering", () => {
     // engage.
     const root = await newTempDir();
     await seedProject(root);
-    const markerPath = path.join(
-      root,
-      ".qfai/evidence/prototyping/iter-00/prior-loop.marker",
-    );
+    const markerPath = path.join(root, ".qfai/evidence/prototyping/iter-00/prior-loop.marker");
 
     // Pin the ISO timestamp to a constant value so we can pre-create a
     // colliding backup directory whose contents are NON-empty

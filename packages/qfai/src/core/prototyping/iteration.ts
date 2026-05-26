@@ -166,11 +166,9 @@ export type EvidenceRef = {
  * pass already-underscored ids (the validator rejects hyphen casing at
  * the UI contract surface).
  */
-export function buildEvidenceRefs(
-  iterIndex: number,
-  screenIds: readonly string[],
-): EvidenceRef[] {
-  const dir = iterationDir(iterIndex).split("/").pop() ?? `iter-${String(iterIndex).padStart(2, "0")}`;
+export function buildEvidenceRefs(iterIndex: number, screenIds: readonly string[]): EvidenceRef[] {
+  const dir =
+    iterationDir(iterIndex).split("/").pop() ?? `iter-${String(iterIndex).padStart(2, "0")}`;
   const out: EvidenceRef[] = [];
   for (const id of screenIds) {
     out.push({ kind: "screenshot", path: `${dir}/${id}.png` });

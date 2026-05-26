@@ -78,22 +78,22 @@ Scenario: --out ファイル出力
 
 ## AC Catalog (optional)
 
-| AC_ID        | Title              | Notes    | Priority |
-| ------------ | ------------------ | -------- | -------- |
-| AC-0006-0001 | config found       | REQ-0030 | P1       |
-| AC-0006-0002 | config missing     | REQ-0030 | P1       |
-| AC-0006-0003 | ディレクトリ構造   | REQ-0030 | P1       |
-| AC-0006-0004 | パス解決           | REQ-0030 | P1       |
-| AC-0006-0005 | レガシー警告       | REQ-0030 | P2       |
-| AC-0006-0006 | JSON 出力          | REQ-0031 | P1       |
-| AC-0006-0007 | --fail-on error    | REQ-0032 | P1       |
-| AC-0006-0008 | --fail-on warning  | REQ-0032 | P1       |
-| AC-0006-0009 | --out ファイル出力 | REQ-0033 | P2       |
-| AC-0006-0010 | playwright primary probe | REQ-0107 | P1 |
-| AC-0006-0011 | playwright-cli deprecation surface | REQ-0107 | P1 |
-| AC-0006-0012 | fresh init + playwright install yields zero error lines | REQ-0107, NFR-0112 | P1 |
-| AC-0006-0013 | skills.integrity defaults to warning severity | REQ-0122 | P1 |
-| AC-0006-0014 | doctor summary groups errors vs warnings | REQ-0122 | P1 |
+| AC_ID        | Title                                                   | Notes              | Priority |
+| ------------ | ------------------------------------------------------- | ------------------ | -------- |
+| AC-0006-0001 | config found                                            | REQ-0030           | P1       |
+| AC-0006-0002 | config missing                                          | REQ-0030           | P1       |
+| AC-0006-0003 | ディレクトリ構造                                        | REQ-0030           | P1       |
+| AC-0006-0004 | パス解決                                                | REQ-0030           | P1       |
+| AC-0006-0005 | レガシー警告                                            | REQ-0030           | P2       |
+| AC-0006-0006 | JSON 出力                                               | REQ-0031           | P1       |
+| AC-0006-0007 | --fail-on error                                         | REQ-0032           | P1       |
+| AC-0006-0008 | --fail-on warning                                       | REQ-0032           | P1       |
+| AC-0006-0009 | --out ファイル出力                                      | REQ-0033           | P2       |
+| AC-0006-0010 | playwright primary probe                                | REQ-0107           | P1       |
+| AC-0006-0011 | playwright-cli deprecation surface                      | REQ-0107           | P1       |
+| AC-0006-0012 | fresh init + playwright install yields zero error lines | REQ-0107, NFR-0112 | P1       |
+| AC-0006-0013 | skills.integrity defaults to warning severity           | REQ-0122           | P1       |
+| AC-0006-0014 | doctor summary groups errors vs warnings                | REQ-0122           | P1       |
 
 ```gherkin
 # AC-0006-0010

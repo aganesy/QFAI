@@ -459,7 +459,8 @@ convergence-time top-level fields are specified below.
 ```yaml
 iterations:
   - cycle: integer # 0..9
-    commitSha: string
+    commitSha:
+      string
       # repo HEAD commit at iter emit time, OR the sentinel
       # "uncommitted" when no HEAD commit is applicable
       # (clean workspace before any commit, detached state,
@@ -475,13 +476,15 @@ iterations:
     layoutAntiPatternsDetected: string[] # lap-001..lap-012; empty required for convergence
     designMdViolations: object[] # findDesignMdViolations() output; empty required for convergence
     pivotDirective: string # reviewer's next-cycle directive; empty allowed only at converged-cycle
-    reviewerId: string
+    reviewerId:
+      string
       # resolved reviewer sub-agent identity; placeholder
       # values "qfai" / "default" / "auto" / "system" /
       # "unknown" / "" are rejected per DR-0201 (preserved).
     evidenceRefs: # one entry per evidence artifact at this iter
       - kind: enum [screenshot, html]
-        path: string
+        path:
+          string
           # POSIX-form relative path under
           # .qfai/evidence/prototyping/, e.g.
           # "iter-NN/<screen-id>.png" or

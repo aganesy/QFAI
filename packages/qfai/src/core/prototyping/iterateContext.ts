@@ -65,12 +65,7 @@ export function isIterateContext(value: unknown): value is IterateContext {
   }
   if (typeof value.priorCycle !== "number" || !Number.isInteger(value.priorCycle)) return false;
   if (!isRecord(value.priorScores)) return false;
-  const scoreKeys = [
-    "informationArchitecture",
-    "navigationFlow",
-    "usability",
-    "functionality",
-  ];
+  const scoreKeys = ["informationArchitecture", "navigationFlow", "usability", "functionality"];
   for (const k of scoreKeys) {
     if (typeof value.priorScores[k] !== "string") return false;
   }

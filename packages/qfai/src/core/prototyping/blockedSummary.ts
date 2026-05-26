@@ -42,7 +42,10 @@ export type BlockedCategoryLine = {
   readonly text: string;
 };
 
-const AXIS_LABELS: readonly { readonly key: keyof BlockedSummaryInput["scores"]; readonly label: string }[] = [
+const AXIS_LABELS: readonly {
+  readonly key: keyof BlockedSummaryInput["scores"];
+  readonly label: string;
+}[] = [
   { key: "informationArchitecture", label: "informationArchitecture" },
   { key: "navigationFlow", label: "navigationFlow" },
   { key: "usability", label: "usability" },

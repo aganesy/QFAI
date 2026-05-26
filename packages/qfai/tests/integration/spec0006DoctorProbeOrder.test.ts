@@ -137,11 +137,7 @@ describe("TC-0006-0013: playwright probe order documented and observable", () =>
     const mod = await import("../../src/core/prototyping/playwrightLauncher.js");
     expect(typeof mod.getProbeOrder).toBe("function");
     const order = mod.getProbeOrder();
-    expect(order).toEqual([
-      "playwright",
-      "npx fallback",
-      "playwright-cli (deprecated)",
-    ]);
+    expect(order).toEqual(["playwright", "npx fallback", "playwright-cli (deprecated)"]);
   });
 });
 

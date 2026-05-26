@@ -29,12 +29,7 @@
  */
 
 import { createReadStream, existsSync, statSync } from "node:fs";
-import {
-  createServer,
-  type IncomingMessage,
-  type Server,
-  type ServerResponse,
-} from "node:http";
+import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import path from "node:path";
 
 /**
@@ -74,9 +69,7 @@ export const DEFAULT_AUTO_SERVE_PORT = 4321;
  * Default server runner. Returns a teardown handle on success or a
  * structured refusal on EADDRINUSE / bind failure.
  */
-export const defaultServerRunner = async (
-  args: ServerRunnerArgs,
-): Promise<ServerRunnerResult> => {
+export const defaultServerRunner = async (args: ServerRunnerArgs): Promise<ServerRunnerResult> => {
   const port = args.port ?? DEFAULT_AUTO_SERVE_PORT;
   const iterDirName = `iter-${String(args.cycle).padStart(2, "0")}`;
   const serveRoot = path.resolve(args.root, ".qfai", "prototypes", iterDirName);
@@ -123,9 +116,7 @@ export const defaultServerRunner = async (
  * we don't ship a dead-code placeholder that future maintainers might
  * mistakenly rely on.
  */
-type BindResult =
-  | { readonly ok: true }
-  | { readonly ok: false; readonly reason: string };
+type BindResult = { readonly ok: true } | { readonly ok: false; readonly reason: string };
 
 // ---------------------------------------------------------------------------
 // internal helpers
@@ -174,11 +165,7 @@ function readErrorCode(err: unknown): string | null {
   return typeof code === "string" ? code : null;
 }
 
-function handleRequest(
-  req: IncomingMessage,
-  res: ServerResponse,
-  serveRoot: string,
-): void {
+function handleRequest(req: IncomingMessage, res: ServerResponse, serveRoot: string): void {
   try {
     const urlPath = (req.url ?? "/").split("?")[0] ?? "/";
     const requested = urlPath === "/" ? "/index.html" : urlPath;

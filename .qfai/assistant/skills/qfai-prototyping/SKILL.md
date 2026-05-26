@@ -59,17 +59,14 @@ current `DESIGN.md` hash does not match the lock.
 ### Step 2-A — Verify Contract Preconditions
 
 - The skill resolves **every UI-bearing spec in the consumer project in
-  one invocation** via `resolveSurfaceUnion()`
-  (`core/prototyping/specResolution.ts`) — the same resolver the
-  cycle ≥ 1 drift gate and `show-spec`'s live scope consume, so the
-  scope you read here is apples-to-apples with what iterate enforces
-  downstream. `resolveSurfaceUnion()` internally composes
-  `resolveAllUiBearingSpecs()` (the strict `surface_type: ui-bearing`
-  frontmatter signal + the matching `.qfai/contracts/ui/<spec-id>*.yaml`
-  contract fallback) and folds in the legacy `# … prototyping …`
-  title-marker fallback and the operator-pinned spec id from the
-  `qfai.config.yaml` `prototyping` section (run
-  `qfai doctor --profile prototyping` to surface the resolved value).
+  one invocation** via `resolveAllUiBearingSpecs()`
+  (`core/prototyping/specResolution.ts`) — the strict
+  `surface_type: ui-bearing` frontmatter signal plus the matching
+  `.qfai/contracts/ui/<spec-id>*.yaml` contract fallback, with the
+  legacy `# … prototyping …` title-marker fallback and the
+  operator-pinned spec id from the `qfai.config.yaml` `prototyping`
+  section folded in by the CLI. Run
+  `qfai doctor --profile prototyping` to surface the resolved value.
   Operators authoring CHG-002-shaped projects can rely on the strict
   frontmatter alone; the broader composition covers legacy /
   config-pinned consumers.

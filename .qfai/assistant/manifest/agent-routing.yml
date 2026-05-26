@@ -106,9 +106,11 @@ routing:
     review_profile: runtime-heavy
 
   - skill: qfai-prototyping
-    # Single-thread evolution loop: one prototype, 15 iter, 4 ordinal axes,
-    # prose critique, pivot directive. Routing is the 3 active roles plus
-    # completion-reviewer at handoff.
+    # Multi-spec evolution loop: every UI-bearing spec resolved at cycle 0,
+    # one prototype lineage per spec × screen pair, 10 iter (cycle 0..9),
+    # 4 ordinal axes + 6 *Feel impressions + layout anti-pattern detection
+    # + DESIGN.md token violation gates, prose critique, pivot directive.
+    # Routing is the 3 active roles plus completion-reviewer at handoff.
     phases:
       - id: seed
         mandatory_agents: [product-experience-architect]

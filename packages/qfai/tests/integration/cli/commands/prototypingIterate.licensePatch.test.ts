@@ -143,11 +143,7 @@ describe("iterate --license-patch add-only diff", () => {
     const root = await newTempDir();
     await seedProject(root);
     const patchPath = path.join(root, "patch.json");
-    await writeFile(
-      patchPath,
-      JSON.stringify({ modify: { unsplash: ["new-license"] } }),
-      "utf-8",
-    );
+    await writeFile(patchPath, JSON.stringify({ modify: { unsplash: ["new-license"] } }), "utf-8");
     const exit = await runPrototypingIterate({
       root,
       cycle: 0,

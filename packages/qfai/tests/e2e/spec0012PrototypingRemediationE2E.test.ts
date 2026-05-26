@@ -105,7 +105,9 @@ describe("US-0012-0120: scanners resolve var(--token) against :root before judgm
       box-shadow: var(--shadow-sm);
     }</style><div class="card"></div></body>`;
     const out = findDesignMdViolations(html, dm());
-    expect(out.filter((v) => v.kind === "font" || v.kind === "radius" || v.kind === "shadow")).toEqual([]);
+    expect(
+      out.filter((v) => v.kind === "font" || v.kind === "radius" || v.kind === "shadow"),
+    ).toEqual([]);
   });
 });
 
@@ -339,12 +341,13 @@ describe("US-0012-0126: --auto-serve opt-in (default OFF) + foreign-process refu
       return true;
     });
     try {
-      const foreignRunner = vi.fn(async () =>
-        ({
-          ok: false,
-          reason: "foreign process owns port 5173 (pid=9999, cmd=nginx)",
-          foreignPid: 9999,
-        }) as const,
+      const foreignRunner = vi.fn(
+        async () =>
+          ({
+            ok: false,
+            reason: "foreign process owns port 5173 (pid=9999, cmd=nginx)",
+            foreignPid: 9999,
+          }) as const,
       );
       const exitForeign = await runPrototypingIterate({
         root: rootForeign,
@@ -551,8 +554,7 @@ describe("US-0012-0133: primarySpecId 4-digit error + SHOULD-normalisation", () 
     expect(parsePrimarySpecId("0001")).toEqual({ ok: true, normalised: "0001" });
     expect(parsePrimarySpecId("abc")).toEqual({
       ok: false,
-      error:
-        'primarySpecId must be a 4-digit zero-padded string (e.g. "0001"); received abc',
+      error: 'primarySpecId must be a 4-digit zero-padded string (e.g. "0001"); received abc',
     });
     expect(parsePrimarySpecId(10000).ok).toBe(false);
     expect(parsePrimarySpecId(0).ok).toBe(false);
@@ -589,11 +591,7 @@ describe("US-0012-0135: --license-patch add-only + audit row", () => {
     const root = await p2TempDir();
     await seedPhase2Project(root);
     const patchPath = path.join(root, "patch.json");
-    await writeFile(
-      patchPath,
-      JSON.stringify({ addedSources: ["wikimedia-commons"] }),
-      "utf-8",
-    );
+    await writeFile(patchPath, JSON.stringify({ addedSources: ["wikimedia-commons"] }), "utf-8");
     const exit = await runPrototypingIterate({
       root,
       cycle: 0,

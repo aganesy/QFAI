@@ -49,10 +49,12 @@ function isRecord(value: unknown): value is Record<string, unknown> {
  * Validate a raw parsed patch object. Rejects any deletion / modification
  * intent. Returns a typed `LicensePatch` or an error message.
  */
-export function parseLicensePatch(raw: unknown): { ok: true; patch: LicensePatch } | {
-  ok: false;
-  error: string;
-} {
+export function parseLicensePatch(raw: unknown):
+  | { ok: true; patch: LicensePatch }
+  | {
+      ok: false;
+      error: string;
+    } {
   if (!isRecord(raw)) {
     return { ok: false, error: "license-patch must be a JSON/YAML object" };
   }

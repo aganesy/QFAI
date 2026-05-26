@@ -190,7 +190,7 @@ export async function runPrototypingCertify(
   if (verifyScope !== undefined && verifyScope !== "prototyping") {
     error(
       `qfai prototyping certify: verify.json scope is "${verifyScope}" but the ` +
-        "prototyping certify gate accepts only scope=\"prototyping\". " +
+        'prototyping certify gate accepts only scope="prototyping". ' +
         "Re-run `/qfai-verify` with the prototyping scope before certification " +
         "(ATDD / implement / full scopes are forbidden by the option-B phase-isolation contract).",
     );

@@ -124,10 +124,10 @@ Findings that surface drift without blocking the profile. Examples:
 
 ## Exit codes
 
-| Code | Meaning                                                                                                                                                            |
-| ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| 0    | All probes for the active profile passed; warnings (if any) are advisory only.                                                                                     |
-| 2    | At least one finding in the "errors blocking the active profile" bucket. The doctor summary names every blocking finding and the recovery hint per finding.       |
+| Code | Meaning                                                                                                                                                     |
+| ---- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0    | All probes for the active profile passed; warnings (if any) are advisory only.                                                                              |
+| 2    | At least one finding in the "errors blocking the active profile" bucket. The doctor summary names every blocking finding and the recovery hint per finding. |
 
 ## Non-goals
 

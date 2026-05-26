@@ -23,9 +23,7 @@ const SKILL_ROOT = path.resolve(
 async function listReferenceFiles(): Promise<string[]> {
   const refDir = path.join(SKILL_ROOT, "references");
   const entries = await readdir(refDir);
-  return entries
-    .filter((name) => name.endsWith(".md"))
-    .map((name) => path.join(refDir, name));
+  return entries.filter((name) => name.endsWith(".md")).map((name) => path.join(refDir, name));
 }
 
 describe("/qfai-prototyping public surface — single-spec alignment", () => {
@@ -51,10 +49,7 @@ describe("/qfai-prototyping public surface — single-spec alignment", () => {
     // The helper REMAINS for validators / show-spec. Removing it from
     // the public skill surface must not cascade into removing the core
     // export.
-    const sourcePath = path.resolve(
-      process.cwd(),
-      "src/core/prototyping/specResolution.ts",
-    );
+    const sourcePath = path.resolve(process.cwd(), "src/core/prototyping/specResolution.ts");
     const source = await readFile(sourcePath, "utf-8");
     expect(source).toMatch(/export\s+(?:async\s+)?function\s+resolveSurfaceUnion/);
   });

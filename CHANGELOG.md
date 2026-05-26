@@ -22,7 +22,7 @@
   ship as **Phase 2 follow-ups** (tracked as REQ-0012-0075 / REQ-0012-0076
   in `.qfai/specs/spec-0012/09_delta.md`). Programmatic consumers can
   invoke the contract today via `runPrototypingIterate({capture: true,
-  captureScreen: <fn>})`; CLI operators will see `--capture` /
+captureScreen: <fn>})`; CLI operators will see `--capture` /
   `--auto-serve` activated by the follow-up.
   (Windows), SIGINT teardown, foreign-process safety (refuse to kill non-iterate
   port owners). (REQ-0109 / REQ-0110, AC-0012-0059..0060.)
@@ -32,8 +32,8 @@
   `pivotDirective`, `reviewerId`, and `evidenceRefs[]` with
   `{kind:"screenshot"|"html", path:"iter-NN/<screen-id>.<ext>"}` for every
   declared `screens[].id`. On convergence: top-level `acceptedIterationIndex`
-  + `stopReason ∈ {"axes-exceptional","max-iterations","license-verify-fail","input-error"}`.
-  (REQ-0111, AC-0012-0061.)
+  - `stopReason ∈ {"axes-exceptional","max-iterations","license-verify-fail","input-error"}`.
+    (REQ-0111, AC-0012-0061.)
 - Profile-suffixed validate output: `.qfai/report/validate-<profile>.json` per
   profile + always-latest `.qfai/report/validate.json` with explicit `profile`
   field. Legacy `.qfai/output/validate.json` accepted during the deprecation

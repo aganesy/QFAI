@@ -95,11 +95,12 @@ scannerContract:
   # scanFonts, scanRadius, scanShadow). Each scanner MUST accept
   # every keyword in this list as a non-violation.
   cssWideKeywords:
-    - inherit
-    - initial
-    - unset
-    - revert
-    - currentColor
+    keywords:
+      - inherit
+      - initial
+      - unset
+      - revert
+      - currentColor
     scanners: [scanColors, scanFonts, scanRadius, scanShadow]
     rationale: |
       CSS-wide keywords are semantically inert with respect to

@@ -123,10 +123,7 @@ describe("iter-NN/iterate-context.json", () => {
     });
     expect(c1).toBe(0);
 
-    const ctxPath = path.join(
-      root,
-      ".qfai/evidence/prototyping/iter-01/iterate-context.json",
-    );
+    const ctxPath = path.join(root, ".qfai/evidence/prototyping/iter-01/iterate-context.json");
     const ctxText = await readFile(ctxPath, "utf-8");
     const ctx = JSON.parse(ctxText);
     expect(isIterateContext(ctx)).toBe(true);

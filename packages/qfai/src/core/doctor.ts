@@ -551,21 +551,15 @@ async function buildPrototypingDoctorChecks(
   targetUrlOverride?: string,
 ): Promise<DoctorCheck[]> {
   const targetUrl = targetUrlOverride ?? config.prototyping?.execution?.targetUrl ?? undefined;
-  const [
-    primarySpec,
-    uiContracts,
-    designContracts,
-    requiredRoles,
-    launcherChecks,
-    targetUrlCheck,
-  ] = await Promise.all([
-    buildPrototypingPrimarySpecCheck(root, config),
-    buildPrototypingUiContractsCheck(root, config),
-    buildPrototypingDesignContractsCheck(root, config),
-    buildPrototypingRolesCheck(root),
-    buildPlaywrightLauncherChecks(root),
-    buildTargetUrlCheck(root, targetUrl, targetUrlOverride ? "cli" : "config"),
-  ]);
+  const [primarySpec, uiContracts, designContracts, requiredRoles, launcherChecks, targetUrlCheck] =
+    await Promise.all([
+      buildPrototypingPrimarySpecCheck(root, config),
+      buildPrototypingUiContractsCheck(root, config),
+      buildPrototypingDesignContractsCheck(root, config),
+      buildPrototypingRolesCheck(root),
+      buildPlaywrightLauncherChecks(root),
+      buildTargetUrlCheck(root, targetUrl, targetUrlOverride ? "cli" : "config"),
+    ]);
   const designMdChecks = await buildPrototypingDesignMdChecks(root, config);
   // `launcherChecks` may yield 1 or 2 entries: the primary check plus an
   // optional `D-DEPRECATED-PROBE` finding when the deprecated stage resolves.
@@ -1014,10 +1008,7 @@ function buildNotRunnableCheck(
   };
 }
 
-function buildNotFoundCheck(
-  lookedInRelative: LauncherLookedIn,
-  probeOrder: string[],
-): DoctorCheck {
+function buildNotFoundCheck(lookedInRelative: LauncherLookedIn, probeOrder: string[]): DoctorCheck {
   return {
     id: "prototyping.playwrightCli",
     severity: "error",

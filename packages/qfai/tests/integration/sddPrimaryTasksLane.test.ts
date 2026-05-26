@@ -96,45 +96,39 @@ function uiContractWithoutPrimaryTasksKey(): string {
 
 describe("TC-0013-0026: QFAI-AUD-001 aligned lane fails when primary_tasks is empty", () => {
   it("returns a severity=error finding naming file path, screen id, and rule token", async () => {
-    await withWorkspace(
-      { uiContract: uiContractWithEmptyPrimaryTasks() },
-      async (root) => {
-        const issues = await validateDesignAudit(root, defaultConfig);
+    await withWorkspace({ uiContract: uiContractWithEmptyPrimaryTasks() }, async (root) => {
+      const issues = await validateDesignAudit(root, defaultConfig);
 
-        const audit001 = issues.filter((issue) => issue.code === "QFAI-AUD-001");
-        expect(audit001.length).toBeGreaterThan(0);
+      const audit001 = issues.filter((issue) => issue.code === "QFAI-AUD-001");
+      expect(audit001.length).toBeGreaterThan(0);
 
-        const blocker = audit001.find((issue) => issue.severity === "error");
-        expect(blocker, "expected at least one severity=error QFAI-AUD-001 issue").toBeDefined();
+      const blocker = audit001.find((issue) => issue.severity === "error");
+      expect(blocker, "expected at least one severity=error QFAI-AUD-001 issue").toBeDefined();
 
-        // The user-facing message body must name all three elements so that
-        // the orchestrator surface (which presents `message` first, not the
-        // separate `code` / `file` fields) is self-describing.
-        const message = blocker?.message ?? "";
+      // The user-facing message body must name all three elements so that
+      // the orchestrator surface (which presents `message` first, not the
+      // separate `code` / `file` fields) is self-describing.
+      const message = blocker?.message ?? "";
 
-        // 1. File path: contract path appears in the message.
-        expect(message).toMatch(/\.qfai\/contracts\/ui\/sample\.yaml/);
-        // 2. Screen id: order_create appears in the message.
-        expect(message).toMatch(/order_create/);
-        // 3. Rule token: QFAI-AUD-001 appears in the message.
-        expect(message).toMatch(/QFAI-AUD-001/);
-      },
-    );
+      // 1. File path: contract path appears in the message.
+      expect(message).toMatch(/\.qfai\/contracts\/ui\/sample\.yaml/);
+      // 2. Screen id: order_create appears in the message.
+      expect(message).toMatch(/order_create/);
+      // 3. Rule token: QFAI-AUD-001 appears in the message.
+      expect(message).toMatch(/QFAI-AUD-001/);
+    });
   });
 });
 
 describe("TC-0013-0027: QFAI-AUD-001 aligned lane passes when primary_tasks is non-empty", () => {
   it("returns zero QFAI-AUD-001 error issues when every screen has >=1 primary_task", async () => {
-    await withWorkspace(
-      { uiContract: uiContractWithPopulatedPrimaryTasks() },
-      async (root) => {
-        const issues = await validateDesignAudit(root, defaultConfig);
-        const audit001Errors = issues.filter(
-          (issue) => issue.code === "QFAI-AUD-001" && issue.severity === "error",
-        );
-        expect(audit001Errors).toEqual([]);
-      },
-    );
+    await withWorkspace({ uiContract: uiContractWithPopulatedPrimaryTasks() }, async (root) => {
+      const issues = await validateDesignAudit(root, defaultConfig);
+      const audit001Errors = issues.filter(
+        (issue) => issue.code === "QFAI-AUD-001" && issue.severity === "error",
+      );
+      expect(audit001Errors).toEqual([]);
+    });
   });
 
   // 2-stage emission: legacy UI contracts that pre-date the primary_tasks
@@ -142,38 +136,32 @@ describe("TC-0013-0027: QFAI-AUD-001 aligned lane passes when primary_tasks is n
   // release deprecation window (sunset: qfai 1.10.0). Key-empty (slot
   // authored but `primary_tasks: []`) remains severity=error.
   it("legacy slot-less contracts emit QFAI-AUD-001 at severity=info (deprecation window)", async () => {
-    await withWorkspace(
-      { uiContract: uiContractWithoutPrimaryTasksKey() },
-      async (root) => {
-        const issues = await validateDesignAudit(root, defaultConfig);
-        const audit001 = issues.filter((issue) => issue.code === "QFAI-AUD-001");
-        expect(audit001.length).toBeGreaterThan(0);
+    await withWorkspace({ uiContract: uiContractWithoutPrimaryTasksKey() }, async (root) => {
+      const issues = await validateDesignAudit(root, defaultConfig);
+      const audit001 = issues.filter((issue) => issue.code === "QFAI-AUD-001");
+      expect(audit001.length).toBeGreaterThan(0);
 
-        // Key-absent must NOT block: no error-severity emission.
-        const audit001Errors = audit001.filter((issue) => issue.severity === "error");
-        expect(audit001Errors).toEqual([]);
+      // Key-absent must NOT block: no error-severity emission.
+      const audit001Errors = audit001.filter((issue) => issue.severity === "error");
+      expect(audit001Errors).toEqual([]);
 
-        // Key-absent must surface as severity=info under the deprecation
-        // window, with a message that explains the sunset and remediation.
-        const info = audit001.find((issue) => issue.severity === "info");
-        expect(info, "expected severity=info QFAI-AUD-001 for legacy contract").toBeDefined();
-        const message = info?.message ?? "";
-        expect(message).toMatch(/legacy/i);
-        expect(message).toMatch(/1\.10\.0/);
-      },
-    );
+      // Key-absent must surface as severity=info under the deprecation
+      // window, with a message that explains the sunset and remediation.
+      const info = audit001.find((issue) => issue.severity === "info");
+      expect(info, "expected severity=info QFAI-AUD-001 for legacy contract").toBeDefined();
+      const message = info?.message ?? "";
+      expect(message).toMatch(/legacy/i);
+      expect(message).toMatch(/1\.10\.0/);
+    });
   });
 
   it("authored-but-empty primary_tasks remains severity=error (intentional violation)", async () => {
-    await withWorkspace(
-      { uiContract: uiContractWithEmptyPrimaryTasks() },
-      async (root) => {
-        const issues = await validateDesignAudit(root, defaultConfig);
-        const audit001Errors = issues.filter(
-          (issue) => issue.code === "QFAI-AUD-001" && issue.severity === "error",
-        );
-        expect(audit001Errors.length).toBeGreaterThan(0);
-      },
-    );
+    await withWorkspace({ uiContract: uiContractWithEmptyPrimaryTasks() }, async (root) => {
+      const issues = await validateDesignAudit(root, defaultConfig);
+      const audit001Errors = issues.filter(
+        (issue) => issue.code === "QFAI-AUD-001" && issue.severity === "error",
+      );
+      expect(audit001Errors.length).toBeGreaterThan(0);
+    });
   });
 });

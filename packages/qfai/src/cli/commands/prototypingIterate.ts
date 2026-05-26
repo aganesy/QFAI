@@ -80,10 +80,7 @@ import {
   type OrdinalScore,
   type StopReason,
 } from "../../core/prototyping/iteration.js";
-import {
-  applyLicensePatch,
-  parseLicensePatch,
-} from "../../core/prototyping/licensePatchAudit.js";
+import { applyLicensePatch, parseLicensePatch } from "../../core/prototyping/licensePatchAudit.js";
 import {
   canonicalIterateContext,
   type IterateContext,
@@ -957,11 +954,16 @@ function buildBlockedSummaryInputFromRecord(
   if (iterations.length === 0) return null;
   const last = iterations[iterations.length - 1];
   if (!isRecord(last) || !isRecord(last.scores)) return null;
+  const lastScores = last.scores;
+  const pickScore = (key: string): OrdinalScore => {
+    const v = lastScores[key];
+    return isOrdinalScore(v) ? v : "weak";
+  };
   const scores = {
-    informationArchitecture: String(last.scores.informationArchitecture ?? "weak"),
-    navigationFlow: String(last.scores.navigationFlow ?? "weak"),
-    usability: String(last.scores.usability ?? "weak"),
-    functionality: String(last.scores.functionality ?? "weak"),
+    informationArchitecture: pickScore("informationArchitecture"),
+    navigationFlow: pickScore("navigationFlow"),
+    usability: pickScore("usability"),
+    functionality: pickScore("functionality"),
   };
   const lap = Array.isArray(last.layoutAntiPatternsDetected)
     ? last.layoutAntiPatternsDetected.filter((v): v is string => typeof v === "string")
@@ -984,10 +986,7 @@ function buildBlockedSummaryInputFromRecord(
   };
 }
 
-async function runCapturePath(
-  options: RunPrototypingIterateOptions,
-  dir: string,
-): Promise<number> {
+async function runCapturePath(options: RunPrototypingIterateOptions, dir: string): Promise<number> {
   const screens = options.screens ?? [];
   if (screens.length === 0) {
     warn(
@@ -1054,9 +1053,7 @@ async function runCapturePath(
       }
     } catch (cause) {
       timer.stop();
-      error(
-        `qfai prototyping iterate --capture: screen ${screen.id} threw (${String(cause)}).`,
-      );
+      error(`qfai prototyping iterate --capture: screen ${screen.id} threw (${String(cause)}).`);
       return 2;
     }
   }
@@ -1218,6 +1215,15 @@ async function readDesignMdFile(absPath: string): Promise<DesignMdReadResult> {
  */
 function isPrototypingJsonShape(value: unknown): value is PrototypingJsonShape {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+// Narrow `unknown` to `readonly unknown[]` without triggering
+// `@typescript-eslint/no-unsafe-assignment`. The built-in
+// `Array.isArray(x: unknown)` narrows to `any[]`, which the typed-lint
+// pass treats as unsafe when spread. This user-defined predicate keeps
+// the spread on the safe `unknown[]` branch.
+function isUnknownArray(value: unknown): value is readonly unknown[] {
+  return Array.isArray(value);
 }
 
 async function readPrototypingJson(absPath: string): Promise<PrototypingJsonShape | null> {
@@ -1913,12 +1919,12 @@ async function runCheckConvergencePeek(root: string, cycle: number): Promise<num
   // operator can see WHY the loop did not converge.
   let reason: string;
   if (stopReason === "max-iterations") {
-    reason = "stopReason=\"max-iterations\" (loop exhausted the 10-cycle budget).";
+    reason = 'stopReason="max-iterations" (loop exhausted the 10-cycle budget).';
   } else if (stopReason === "license-verify-fail") {
     reason =
-      "stopReason=\"license-verify-fail\" (runtime license-verify gate rejected an image source).";
+      'stopReason="license-verify-fail" (runtime license-verify gate rejected an image source).';
   } else if (stopReason === "input-error") {
-    reason = "stopReason=\"input-error\" (input gate rejected the invocation).";
+    reason = 'stopReason="input-error" (input gate rejected the invocation).';
   } else if (stopReason === null || stopReason === undefined) {
     reason =
       "stopReason is null and no acceptedIterationIndex was recorded; the loop has not yet reached a terminal state.";
@@ -1990,9 +1996,7 @@ async function applyLicensePatchFromFile(
   liveCatalog: LicenseCatalog,
   protoJsonAbs: string,
 ): Promise<ApplyLicensePatchFromFileResult> {
-  const patchAbs = path.isAbsolute(patchRelOrAbs)
-    ? patchRelOrAbs
-    : path.join(root, patchRelOrAbs);
+  const patchAbs = path.isAbsolute(patchRelOrAbs) ? patchRelOrAbs : path.join(root, patchRelOrAbs);
   let bytes: Buffer;
   try {
     bytes = await readFile(patchAbs);
@@ -2021,8 +2025,8 @@ async function applyLicensePatchFromFile(
   const applied = applyLicensePatch(liveCatalog, validated.patch, bytes, nowIso);
   // Append the audit row to prototyping.json#licensePatchAudit[].
   const body = (await readPrototypingJson(protoJsonAbs)) ?? {};
-  const existing = body.licensePatchAudit;
-  const audit: unknown[] = Array.isArray(existing) ? [...existing] : [];
+  const existing: unknown = body.licensePatchAudit;
+  const audit: unknown[] = isUnknownArray(existing) ? [...existing] : [];
   audit.push(applied.auditRow);
   body.licensePatchAudit = audit;
   // Also persist the new frozen catalog inline so downstream cycles see
@@ -2050,10 +2054,7 @@ async function applyLicensePatchFromFile(
  * advisory-only (certify ignores its presence/absence); the call is
  * best-effort and the cycle does not hard-fail if the write fails.
  */
-async function writeIterateContextFile(
-  iterDirAbs: string,
-  context: IterateContext,
-): Promise<void> {
+async function writeIterateContextFile(iterDirAbs: string, context: IterateContext): Promise<void> {
   const canonical = canonicalIterateContext(context);
   const target = path.join(iterDirAbs, "iterate-context.json");
   try {
@@ -2073,9 +2074,7 @@ async function writeIterateContextFile(
  * iteration (read from prototyping.json#iterations[]). Returns null
  * when no prior iteration is recorded yet (cycle 0).
  */
-function buildIterateContextFromRecord(
-  record: PrototypingJsonShape | null,
-): IterateContext | null {
+function buildIterateContextFromRecord(record: PrototypingJsonShape | null): IterateContext | null {
   if (!record) return null;
   const iterations = asIterations(record);
   if (iterations.length === 0) return null;

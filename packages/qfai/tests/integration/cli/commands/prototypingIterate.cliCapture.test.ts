@@ -205,9 +205,7 @@ describe("iterate --capture: (3) default Playwright runner fallback when capture
       const joined = writes.join("\n");
       expect(joined).not.toMatch(/no default wiring yet/);
       // And the default runner module must be importable (smoke test).
-      const mod = await import(
-        "../../../../src/core/prototyping/defaultCaptureScreen.js"
-      );
+      const mod = await import("../../../../src/core/prototyping/defaultCaptureScreen.js");
       expect(typeof mod.defaultCaptureScreen).toBe("function");
       // Sanity: exit is a number (0 or 2 depending on env), not undefined.
       expect(typeof exit).toBe("number");

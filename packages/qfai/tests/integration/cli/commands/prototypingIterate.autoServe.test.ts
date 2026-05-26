@@ -172,12 +172,13 @@ describe("iterate --auto-serve foreign-process refusal", () => {
       return true;
     });
     try {
-      const runner = vi.fn(async () =>
-        ({
-          ok: false,
-          reason: "foreign process owns port 5173 (pid=4242, cmd=nginx)",
-          foreignPid: 4242,
-        }) as const,
+      const runner = vi.fn(
+        async () =>
+          ({
+            ok: false,
+            reason: "foreign process owns port 5173 (pid=4242, cmd=nginx)",
+            foreignPid: 4242,
+          }) as const,
       );
       const exit = await runPrototypingIterate({
         root,

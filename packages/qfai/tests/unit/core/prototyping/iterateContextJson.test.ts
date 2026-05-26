@@ -99,11 +99,6 @@ describe("canonicalIterateContext: stable key order", () => {
   it("produces a record whose JSON serialisation has the locked key order", () => {
     const ctx = canonicalIterateContext({ ...canonical });
     const keys = Object.keys(ctx);
-    expect(keys).toEqual([
-      "priorCycle",
-      "priorScores",
-      "openBlockers",
-      "priorTailwindContract",
-    ]);
+    expect(keys).toEqual(["priorCycle", "priorScores", "openBlockers", "priorTailwindContract"]);
   });
 });

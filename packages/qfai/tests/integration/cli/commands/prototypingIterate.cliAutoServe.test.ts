@@ -178,9 +178,7 @@ describe("iterate --auto-serve: (3) default runner fallback when serverRunner om
       // Sentinel string from the Phase 2 stub must be REPLACED.
       expect(joined).not.toMatch(/no default wiring yet/);
       // The default runner module must be importable (smoke test).
-      const mod = await import(
-        "../../../../src/core/prototyping/defaultServerRunner.js"
-      );
+      const mod = await import("../../../../src/core/prototyping/defaultServerRunner.js");
       expect(typeof mod.defaultServerRunner).toBe("function");
       // exit is a number (0 on successful spawn + teardown, 2 on
       // EADDRINUSE etc.).
@@ -234,9 +232,7 @@ describe("iterate --auto-serve: (6) 2-second teardown bound (NFR-0106)", () => {
   it("default runner teardown resolves within 2000ms", async () => {
     const root = await newTempDir();
     await seedMinimal(root);
-    const mod = await import(
-      "../../../../src/core/prototyping/defaultServerRunner.js"
-    );
+    const mod = await import("../../../../src/core/prototyping/defaultServerRunner.js");
     const result = await mod.defaultServerRunner({ root, cycle: 0 });
     expect(result.ok).toBe(true);
     if (!result.ok) return;
@@ -275,9 +271,7 @@ describe("iterate --auto-serve: (7) foreign-process refusal on EADDRINUSE", () =
       return true;
     });
     try {
-      const mod = await import(
-        "../../../../src/core/prototyping/defaultServerRunner.js"
-      );
+      const mod = await import("../../../../src/core/prototyping/defaultServerRunner.js");
       const result = await mod.defaultServerRunner({
         root,
         cycle: 0,

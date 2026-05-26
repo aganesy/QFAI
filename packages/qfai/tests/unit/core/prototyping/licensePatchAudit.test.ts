@@ -113,10 +113,6 @@ describe("applyLicensePatch: audit row uses sha256(patch bytes)", () => {
       Buffer.from("x"),
       "2026-05-25T00:00:00.000Z",
     );
-    expect(applied.nextCatalog.allowedSources).toEqual([
-      "unsplash",
-      "pexels",
-      "wikimedia-commons",
-    ]);
+    expect(applied.nextCatalog.allowedSources).toEqual(["unsplash", "pexels", "wikimedia-commons"]);
   });
 });
