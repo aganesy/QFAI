@@ -72,9 +72,9 @@ export const defaultCaptureScreen = async (args: CaptureArgs): Promise<CaptureRe
     return {
       ok: false,
       durationMs: Date.now() - started,
-      reason: `playwright not installed; install playwright or pass options.captureScreen (${String(
+      reason: `playwright not installed. Install with \`npm i -D playwright\` (or pass options.captureScreen for programmatic use). Cause: ${String(
         cause,
-      )}).`,
+      )}`,
     };
   }
 
@@ -128,7 +128,15 @@ type PlaywrightPage = {
 
 function isPlaywrightModule(mod: unknown): mod is { chromium: PlaywrightChromium } {
   if (typeof mod !== "object" || mod === null) return false;
-  const candidate = (mod as { chromium?: unknown }).chromium;
+  if (!("chromium" in mod)) return false;
+  // After `typeof === "object" && !== null` the value is a non-null
+  // object; reading through `Record<string, unknown>` lets us narrow
+  // each property explicitly without re-asserting the candidate's
+  // shape with a bare `as { launch?: unknown }` cast (CLAUDE.md
+  // "avoid bare `as` type assertions; prefer type narrowing").
+  const candidate: unknown = (mod as Record<string, unknown>).chromium;
   if (typeof candidate !== "object" || candidate === null) return false;
-  return typeof (candidate as { launch?: unknown }).launch === "function";
+  if (!("launch" in candidate)) return false;
+  const launch: unknown = (candidate as Record<string, unknown>).launch;
+  return typeof launch === "function";
 }

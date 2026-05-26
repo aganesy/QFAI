@@ -82,8 +82,36 @@ current `DESIGN.md` hash does not match the lock.
 ### Step 2-B — Verify Environment Preconditions
 
 - Confirm a capture route exists for each declared screen.
-- Use `npx --no-install playwright-cli` or
-  `node_modules/.bin/playwright-cli` when PATH reachability is uncertain.
+- Canonical launcher: `npx --no-install playwright` or
+  `node_modules/.bin/playwright` when PATH reachability is uncertain.
+- Legacy fallback (deprecation window only, sunset at qfai 1.10.0;
+  emits `D-DEPRECATED-PROBE`): `npx --no-install playwright-cli` or
+  `node_modules/.bin/playwright-cli`.
+
+### Step 2-B.1 — Opt-in iterate flags
+
+Three flags extend `qfai prototyping iterate`; all default OFF so the
+prior invocation pattern is byte-equivalent when no flag is passed:
+
+- `--capture` — enable PNG / HTML capture per screen at every cycle.
+  Uses the default Playwright runner (dynamic `import("playwright")`;
+  Playwright is `optionalDependencies`). Use when you need durable
+  pixel / DOM evidence for downstream review, or when the
+  `iter-NN/<screen>.review.json` audit needs paired artifacts. Skip
+  for fast prose-only cycles.
+- `--auto-serve` — start an in-process `node:http` server rooted at
+  the prototype tree for the duration of the cycle. SIGINT teardown
+  is bounded to 2 s; EADDRINUSE on a foreign owner exits 2 (the
+  runner refuses to kill non-iterate processes). Use when no
+  external dev server is running. Skip when the orchestrator already
+  manages serving (the cycle-0 default).
+- `--check-convergence` — read-only peek of
+  `.qfai/evidence/prototyping/prototyping.json`. Exits `0` when the
+  run converged (`stopReason === "axes-exceptional"` with
+  `acceptedIterationIndex` set), exits `2` otherwise. Performs no
+  writes, no Playwright launches, no commits. Use at cycle 9
+  before committing budget-exhaustion recovery (see "Cycle 9 budget
+  exhaustion" below).
 
 ### Step 2-C — Run the Loop
 
@@ -140,6 +168,12 @@ the run — H handoff artifacts (final mirror, `design-system.yaml`,
 `prototype-handoff.yaml`) and the `validate` / `/qfai-verify` gates can
 still be written / executed for inspection, but
 `qfai prototyping certify --check` will exit non-zero and prevent DONE.
+
+Use `qfai prototyping iterate --cycle 9 --check-convergence` for a
+read-only peek of `prototyping.json` before deciding to refreeze:
+exit `0` confirms `stopReason === "axes-exceptional"` (no recovery
+needed), exit `2` confirms the run did not converge and the
+cycle-0 restart path below is the only path forward.
 The recovery path is to restart from cycle 0: review `DESIGN.md`, the
 pivot strategy in `references/reviewer-prompt.md`, and the latest
 `review.json` findings, then re-run `qfai prototyping iterate

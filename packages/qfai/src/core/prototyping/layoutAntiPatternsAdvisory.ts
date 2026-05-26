@@ -74,10 +74,21 @@ export function findMd5DuplicateCaptures(
 /**
  * Decide whether a given declared route is reachable in the captured
  * HTML for a screen. Accepts both `<target>#/<route>` (hash routing)
- * and `<target>/<route>` (path routing) forms. The implementation
- * treats the HTML as text and looks for the route literally in any
- * `href=` / `to=` / `route=` attribute or `window.location.assign`
- * / `pushState` call.
+ * and `<target>/<route>` (path routing) forms.
+ *
+ * Implementation note: this is a simple literal substring search
+ * (`html.includes(candidate)`), NOT an attribute-aware parse. The
+ * route is therefore matched anywhere in the document — including
+ * inside HTML comments, `<script>` / `<style>` bodies, and free-text
+ * nodes. That can produce false-positives (route mentioned in a
+ * comment but no actual link), and the reverse — a route reachable
+ * via a templated `href` attribute that builds the path at runtime —
+ * can produce false-negatives. lap-010 findings are advisory-failing
+ * (Reviewer justification overrides), so this trade-off is acceptable
+ * for the cost of avoiding a full HTML parser dependency at the
+ * advisory layer. If precision becomes a recurring complaint, tighten
+ * to a regex that anchors on `(href|to|route)=["']…<route>` and route
+ * the looser substring check through a flag.
  */
 export function htmlReachesRoute(html: string, route: string): boolean {
   const normalised = route.startsWith("/") ? route : `/${route}`;

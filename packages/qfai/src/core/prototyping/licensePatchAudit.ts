@@ -139,9 +139,12 @@ export function applyLicensePatch(
       addedThisPatch.push(src);
     }
   }
-  // Modification gate for licenseTiers: if a key already exists, the
-  // patch must not change the tier set (we only accept ADDITIONS to the
-  // tier list as add-only semantics).
+  // Add-only at the tier level: existing entries are preserved
+  // unchanged; patch entries are unioned into the existing tier set.
+  // `parseLicensePatch` already rejects banned deletion/modification
+  // keys (`removeSources`, `modify`, etc.), so this path is reached
+  // only with additive intent — a tier present in `live[source]`
+  // cannot be dropped or rewritten here.
   const nextLicenseTiers: Record<string, string[]> = Object.fromEntries(
     Object.entries(live.licenseTiers).map(([k, v]) => [k, [...v]]),
   );
@@ -151,7 +154,8 @@ export function applyLicensePatch(
       nextLicenseTiers[source] = [...tiers];
       continue;
     }
-    // Add-only at the tier level: existing entries must all survive.
+    // Union new tiers into the existing list; existing entries survive
+    // unchanged.
     for (const t of tiers) {
       if (!existing.includes(t)) {
         existing.push(t);

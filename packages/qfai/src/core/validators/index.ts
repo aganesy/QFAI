@@ -12,7 +12,7 @@ export { validateMermaidEnforcement } from "./mermaidEnforcement.js";
 export { validateContractReferences } from "./contractReferences.js";
 export { validateAtddCodeTraceability } from "./atddCodeTraceability.js";
 export { validateOrphanProhibition } from "./orphanProhibition.js";
-export { validatePrototypingEvidence } from "./prototypingEvidence.js";
+export { validatePrototypingEvidence, validateScreenIdCasing } from "./prototypingEvidence.js";
 export { validateDelegationMapIssues } from "./prototyping/delegationMap.js";
 export { validateStateGate } from "./prototyping/stateGate.js";
 export { validateCompletionCertificateIssues } from "./prototyping/completionCertificate.js";

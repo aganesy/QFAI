@@ -44,6 +44,17 @@ export type ServerRunnerArgs = {
   readonly root: string;
   readonly cycle: number;
   readonly port?: number;
+  /**
+   * Optional operator-supplied target URL. When `port` is not given,
+   * the runner derives the bind port from this URL's `port` component
+   * (so `--target-url http://localhost:5173/` binds 5173 instead of
+   * silently falling back to {@link DEFAULT_AUTO_SERVE_PORT}). When the
+   * URL has no explicit port — bare `http://` / `https://` schemes
+   * imply privileged 80 / 443 — the runner still falls back to
+   * {@link DEFAULT_AUTO_SERVE_PORT} rather than attempt a privileged
+   * bind.
+   */
+  readonly targetUrl?: string;
 };
 
 export type ServerRunnerResult =
@@ -62,15 +73,48 @@ export type ServerRunnerResult =
  * Documented default port. Operators may override via the DI hook if
  * the port is occupied by an unrelated service they intend to keep
  * running.
+ *
+ * Why 4321: not IANA-registered for a well-known service and does not
+ * collide with the common dev-server defaults operators are likely to
+ * have running alongside `qfai prototyping iterate --auto-serve`
+ * (Vite 5173, Next 3000, Vue CLI 8080, webpack-dev-server 9000,
+ * Storybook 6006). Picking an uncommon-but-memorable port keeps the
+ * EADDRINUSE-refusal branch from firing on operators who happen to
+ * already have one of those tools open.
  */
 export const DEFAULT_AUTO_SERVE_PORT = 4321;
+
+/**
+ * Derive a bind port from an operator-supplied target URL. Returns
+ * `null` when the URL is missing, unparseable, or carries no explicit
+ * port — the caller falls back to {@link DEFAULT_AUTO_SERVE_PORT} in
+ * those cases (we never attempt the privileged 80 / 443 ports implied
+ * by a bare `http://` / `https://` URL).
+ */
+function derivePortFromTargetUrl(targetUrl: string | undefined): number | null {
+  if (targetUrl === undefined || targetUrl.length === 0) return null;
+  let parsed: URL;
+  try {
+    parsed = new URL(targetUrl);
+  } catch {
+    return null;
+  }
+  if (parsed.port.length === 0) return null;
+  const n = Number.parseInt(parsed.port, 10);
+  if (!Number.isInteger(n) || n <= 0 || n > 65535) return null;
+  return n;
+}
 
 /**
  * Default server runner. Returns a teardown handle on success or a
  * structured refusal on EADDRINUSE / bind failure.
  */
 export const defaultServerRunner = async (args: ServerRunnerArgs): Promise<ServerRunnerResult> => {
-  const port = args.port ?? DEFAULT_AUTO_SERVE_PORT;
+  // Port resolution precedence (operator contract): explicit `args.port`
+  // → port parsed from `args.targetUrl` (so `--target-url http://localhost:5173/`
+  // binds 5173 instead of silently re-binding 4321 against a foreign
+  // process the operator never asked for) → DEFAULT_AUTO_SERVE_PORT.
+  const port = args.port ?? derivePortFromTargetUrl(args.targetUrl) ?? DEFAULT_AUTO_SERVE_PORT;
   const iterDirName = `iter-${String(args.cycle).padStart(2, "0")}`;
   const serveRoot = path.resolve(args.root, ".qfai", "prototypes", iterDirName);
 
@@ -134,7 +178,12 @@ function bindServer(server: Server, port: number): Promise<BindResult> {
       if (code === "EADDRINUSE") {
         resolve({
           ok: false,
-          reason: `port ${port} already in use; refusing to attach to foreign process. Free the port or pass options.serverRunner.`,
+          reason:
+            `port ${port} already in use; refusing to attach to a foreign process. ` +
+            `Identify the owner (lsof -i :${port} on macOS/Linux, ` +
+            `netstat -ano | findstr :${port} on Windows) and free the port ` +
+            `before re-running. Programmatic consumers can pass ` +
+            `options.serverRunner to override.`,
         });
         return;
       }
@@ -161,7 +210,12 @@ function bindServer(server: Server, port: number): Promise<BindResult> {
 
 function readErrorCode(err: unknown): string | null {
   if (typeof err !== "object" || err === null) return null;
-  const code = (err as { code?: unknown }).code;
+  if (!("code" in err)) return null;
+  // After `typeof === "object" && !== null` the value is a non-null
+  // object; reading through `Record<string, unknown>` keeps the
+  // narrowing explicit instead of asserting `{ code?: unknown }`
+  // shape directly via a bare `as` cast (CLAUDE.md project rule).
+  const code: unknown = (err as Record<string, unknown>).code;
   return typeof code === "string" ? code : null;
 }
 

@@ -42,7 +42,11 @@ function formatDoctorText(data: Awaited<ReturnType<typeof createDoctorData>>): s
   lines.push("");
   lines.push("== errors blocking the active profile ==");
   if (errorGroup.length === 0) {
-    lines.push("(none)");
+    // Prefix the empty-bucket line with `[ok]` so the grep-by-severity
+    // pattern downstream tooling uses (`^\[(ok|warning|error|info)\]`)
+    // still catches the line. Pre-fix `(none)` had no prefix and slipped
+    // past severity-grep readers entirely.
+    lines.push("[ok] (no findings in this bucket)");
   } else {
     for (const check of errorGroup) {
       lines.push(`[${check.severity}] ${check.id}: ${check.message}`);
@@ -52,7 +56,7 @@ function formatDoctorText(data: Awaited<ReturnType<typeof createDoctorData>>): s
   lines.push("== advisory findings (drift, non-blocking by default) ==");
   const combinedAdvisory = [...advisoryGroup, ...skillsAdvisory];
   if (combinedAdvisory.length === 0) {
-    lines.push("(none)");
+    lines.push("[ok] (no findings in this bucket)");
   } else {
     for (const check of combinedAdvisory) {
       lines.push(`[${check.severity}] ${check.id}: ${check.message}`);

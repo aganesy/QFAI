@@ -48,6 +48,14 @@ export const PROSE_CRITIQUE_MAX_CJK_CHARS = 2500;
 // CJK Unified Ideographs (U+4E00..U+9FFF), Hiragana (U+3040..U+309F),
 // Katakana (U+30A0..U+30FF). Used to discriminate the CJK-only path
 // from whitespace-tokenised English in `validateProseCritiqueBand`.
+//
+// Coverage note: this regex covers Hiragana / Katakana / CJK Unified
+// Ideographs (BMP only). CJK Unified Ideographs Extension A
+// (U+3400..U+4DBF) and Extension B+ (surrogate-pair ideographs like
+// 𠮷 at U+20BB7) are intentionally out of scope for prototyping
+// critique heuristics — the bands target everyday Japanese prose,
+// which sits inside the BMP. Revisit if Japanese proseCritique
+// false-positives appear with rare-kanji-heavy text.
 const CJK_CHAR_RE = /[぀-ヿ一-鿿]/u;
 
 function countCjkCharacters(text: string): number {

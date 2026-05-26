@@ -10,13 +10,16 @@
 - Used-by: `spec-0012`, `/qfai-prototyping` skill, CI lanes that drive
   the autonomous loop
 - SSOT modules:
-  - `packages/qfai/src/cli/commands/prototypingIterate.ts`
+  - `packages/qfai/src/cli/commands/prototypingIterate.ts` (also hosts
+    the local `clearEvidenceIterDirs` helper used by the cycle-0
+    backup / clear path)
   - `packages/qfai/src/core/prototyping/iteration.ts` (cycle SSOT;
     `MAX_ITERATIONS = 10`, `MAX_ITERATION_INDEX = 9`)
-  - `packages/qfai/src/core/prototyping/clearEvidenceIterDirs.ts`
-    (cycle-0 backup / clear)
   - `packages/qfai/src/core/prototyping/licenseVerify.ts`
     (license catalog + add-only patch)
+  - `packages/qfai/src/core/prototyping/licensePatchAudit.ts`
+    (`LicensePatchAuditRow` shape lockdown + `isLicensePatchAuditRow`
+    classifier)
 
 ## Command shape
 
@@ -26,7 +29,25 @@ qfai prototyping iterate --cycle <0..9> [--target-url <url>]
                          [--capture]
                          [--auto-serve]
                          [--license-patch <file>]
+                         [--check-convergence]
+                         [--primary-spec-id <spec-id>]
 ```
+
+`--check-convergence` is a read-only peek path: it reads
+`.qfai/evidence/prototyping/prototyping.json`, exits `0` when
+`stopReason === "axes-exceptional"` with `acceptedIterationIndex`
+non-null (the run converged), and exits `2` otherwise. The peek
+performs no writes, no Playwright launches, and does not require
+`--target-url`. `--cycle` may be omitted under `--check-convergence`
+(defaults to `9`, the budget-exhaustion cycle); the normal
+cycle-required guard is short-circuited on this path.
+
+`--primary-spec-id <spec-id>` pins the primary UI-bearing spec at
+cycle 0 when multiple candidates resolve. Accepted forms: bare
+`NNNN` (e.g. `0012`) or fully-qualified `spec-NNNN` (e.g.
+`spec-0012`); any other shape is exit 2. Equivalent to the
+`qfai.config.yaml` `prototyping.primarySpecId` field; the CLI flag
+takes precedence when both are set.
 
 ## Cycle range and `--cycle N` validation (REQ-0117, REQ-0129)
 
@@ -56,13 +77,14 @@ passed. On refusal, the error MUST name:
 - the existing evidence path
   (`.qfai/evidence/prototyping/iter-00/`), AND
 - the recovery hint
-  `cp -r iter-00 iter-00.backup-<ISO> && qfai prototyping iterate --cycle 0 --force`.
+  `qfai prototyping iterate --cycle 0 --force`.
 
-When `--force` is passed, iterate MUST move the existing `iter-00/`
+When `--force` is passed, iterate itself moves the existing `iter-00/`
 to `iter-00.backup-<ISO>/` (`<ISO>` = `YYYY-MM-DDTHHMMSSZ`) BEFORE
-invoking `clearEvidenceIterDirs`, so evidence is recoverable. The
-backup directory is **outside** the `/^iter-\d{2,}$/` cleanup regex,
-so subsequent runs do not delete it.
+invoking the local `clearEvidenceIterDirs` helper, so evidence is
+recoverable automatically — the operator does NOT need to `cp -r`
+manually. The backup directory is **outside** the `/^iter-\d{2,}$/`
+cleanup regex, so subsequent runs do not delete it.
 
 ## `--capture` and `--auto-serve` (REQ-0109 / REQ-0110)
 
@@ -83,13 +105,21 @@ frozen catalog and an audit-log entry is appended to
 
 ```yaml
 licensePatchAudit:
-  - patchedAt: string # ISO 8601 timestamp
-    patchedFromFile: string # repo-root-relative path to <file>
+  - appliedAt: string # ISO 8601 timestamp; non-empty
+    patchSha256:
+      string
+      # 64-hex sha256 of the raw patch bytes
+      # (lowercase, matches /^[a-f0-9]{64}$/)
     addedSources: string[] # newly-allowed sources
-    addedTiers: string[] # newly-allowed license tiers
-    addedHosts: string[] # newly-allowed source hosts
-    operator: string # OS user / CI runner identity
 ```
+
+The runtime classifier (`isLicensePatchAuditRow` in
+`core/prototyping/licensePatchAudit.ts`) enforces this exact 3-key shape:
+unknown keys, missing keys, non-string values, or a non-64-hex
+`patchSha256` are rejected. Any future audit fields (e.g.
+`patchedFromFile`, `addedTiers`, `addedHosts`, `operator`) require a
+contract amendment and a matching classifier update — they MUST NOT be
+silently appended to rows produced by current implementations.
 
 Deletions and modifications are REJECTED with a hint to use the
 cycle-0-restart path (re-seed via `--cycle 0`). The rejection error

@@ -13,7 +13,8 @@ import {
 } from "../../../../src/cli/commands/prototypingIterate.js";
 
 const EXPECTED_HINT =
-  "Hint: use --cycle 9 --check-convergence to peek the final cycle without re-running the loop.";
+  "Hint: use --check-convergence to peek the converged loop state without re-running " +
+  "(defaults to cycle 9; pass --cycle <n> to peek a specific cycle).";
 
 const stderrLines: string[] = [];
 

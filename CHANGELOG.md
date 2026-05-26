@@ -8,32 +8,33 @@
 
 ### Added (qfai-prototyping defect remediation — CHG-005)
 
-- Capture / serve as opt-in iterate flags: `qfai prototyping iterate --capture` and
-  `qfai prototyping iterate --auto-serve` re-introduce capture infrastructure as
-  **opt-in only** (default OFF). Formally amends `DR-0012-0029` ("no PNG / HTML /
-  interaction.json capture") via `DR-0012-0031`; default behavior unchanged.
-  Capture contract: per-screen `viewport`/`deviceScaleFactor`/`waitUntil`/
-  `htmlSourceCopy`. Auto-serve: tree-kill (Linux/macOS) / `taskkill /F /T`
-  **Phase 2 scope note**: v1.9.1 ships the `RunPrototypingIterateOptions` DI
-  surface (`capture`/`captureScreen`/`autoServe`/`serverRunner`) and the
-  per-screen 30s soft-warning budget + md5 capture determinism guarantees.
-  The operator-facing `cli/lib/args.ts` `--capture` / `--auto-serve` flag-
-  string parsing and the default Playwright / spawn+tree-kill runners
-  ship as **Phase 2 follow-ups** (tracked as REQ-0012-0075 / REQ-0012-0076
-  in `.qfai/specs/spec-0012/09_delta.md`). Programmatic consumers can
-  invoke the contract today via `runPrototypingIterate({capture: true,
-captureScreen: <fn>})`; CLI operators will see `--capture` /
-  `--auto-serve` activated by the follow-up.
-  (Windows), SIGINT teardown, foreign-process safety (refuse to kill non-iterate
-  port owners). (REQ-0109 / REQ-0110, AC-0012-0059..0060.)
+- Capture / serve as opt-in iterate flags: `qfai prototyping iterate --capture`
+  and `qfai prototyping iterate --auto-serve` re-introduce capture infrastructure
+  as **opt-in only** (default OFF). Formally amends `DR-0012-0029` ("no PNG /
+  HTML / interaction.json capture") via `DR-0012-0031`; default behavior
+  unchanged. `--capture` ships with the default Playwright runner
+  (`defaultCaptureScreen.ts`, dynamic `await import("playwright")` so Playwright
+  stays in `optionalDependencies`; per-screen
+  `viewport`/`deviceScaleFactor`/`waitUntil`/`htmlSourceCopy` contract).
+  `--auto-serve` ships with the default in-process `node:http` server
+  (`defaultServerRunner.ts`) — no subprocess, `server.close()` with a 2s
+  SIGINT teardown bound, and EADDRINUSE on a foreign owner is refused
+  (exit 2 with the offending PID + command-line surfaced) rather than
+  killed. Operators that need subprocess-spawn semantics (tree-kill /
+  `taskkill /F /T`) supply their own `options.serverRunner` via the DI
+  escape hatch. A read-only `--check-convergence` peek path is also
+  shipped (TDD-0497): reads `.qfai/evidence/prototyping/prototyping.json`,
+  exits 0 when `stopReason === "axes-exceptional"` with
+  `acceptedIterationIndex` set, exits 2 otherwise. (REQ-0109 / REQ-0110,
+  AC-0012-0059..0060.)
 - `prototyping.json` validate-conformant schema: `iterations[i]` MUST carry
   non-null `commitSha` (accepts `"uncommitted"` sentinel), non-empty
   `proseCritique`, `scores`, `layoutAntiPatternsDetected`, `designMdViolations`,
   `pivotDirective`, `reviewerId`, and `evidenceRefs[]` with
   `{kind:"screenshot"|"html", path:"iter-NN/<screen-id>.<ext>"}` for every
   declared `screens[].id`. On convergence: top-level `acceptedIterationIndex`
-  - `stopReason ∈ {"axes-exceptional","max-iterations","license-verify-fail","input-error"}`.
-    (REQ-0111, AC-0012-0061.)
+  (number|null) and `stopReason ∈ {"axes-exceptional","max-iterations","license-verify-fail","input-error"}`.
+  (REQ-0111, AC-0012-0061.)
 - Profile-suffixed validate output: `.qfai/report/validate-<profile>.json` per
   profile + always-latest `.qfai/report/validate.json` with explicit `profile`
   field. Legacy `.qfai/output/validate.json` accepted during the deprecation

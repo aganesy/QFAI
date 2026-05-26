@@ -5,8 +5,13 @@
 - Used-by: `/qfai-prototyping` (precondition check), CI lanes that gate on environment readiness
 - SSOT modules:
   - `packages/qfai/src/cli/commands/doctor.ts`
-  - `packages/qfai/src/core/doctor/probePlaywright.ts` (Playwright launcher candidate probe)
-  - `packages/qfai/src/core/doctor/skillsIntegrity.ts` (skill / asset checksum diff)
+  - `packages/qfai/src/core/doctor.ts` (doctor probe orchestration;
+    single-file module — there is no `core/doctor/` directory)
+  - `packages/qfai/src/core/prototyping/playwrightLauncher.ts`
+    (Playwright launcher candidate probe via `resolvePlaywrightLauncher`
+    and the `getProbeOrder` candidate list)
+  - `packages/qfai/src/core/skillsIntegrity.ts` (skill / asset
+    checksum diff via `diffProjectSkillsAgainstInitAssets`)
 
 ## Public sub-commands
 
@@ -127,7 +132,7 @@ Findings that surface drift without blocking the profile. Examples:
 | Code | Meaning                                                                                                                                                     |
 | ---- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 0    | All probes for the active profile passed; warnings (if any) are advisory only.                                                                              |
-| 2    | At least one finding in the "errors blocking the active profile" bucket. The doctor summary names every blocking finding and the recovery hint per finding. |
+| 1    | At least one finding in the "errors blocking the active profile" bucket. The doctor summary names every blocking finding and the recovery hint per finding. |
 
 ## Non-goals
 

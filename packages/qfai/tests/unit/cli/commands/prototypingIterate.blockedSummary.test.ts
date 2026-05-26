@@ -75,7 +75,7 @@ describe("buildBlockedSummary: literal header + 3 category lines", () => {
       },
     });
     expect(lines[0]?.text).toBe("0 designMdViolations");
-    expect(lines[1]?.text).toBe("0 anti-patterns");
+    expect(lines[1]?.text).toBe("0 layoutAntiPatternsDetected");
     expect(lines[2]?.count).toBe(2);
   });
 });

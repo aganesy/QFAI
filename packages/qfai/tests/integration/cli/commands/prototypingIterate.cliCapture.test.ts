@@ -172,7 +172,37 @@ describe("iterate --capture: (2) threading via injected captureScreen", () => {
 });
 
 describe("iterate --capture: (3) default Playwright runner fallback when captureScreen omitted", () => {
-  it("dynamically loads defaultCaptureScreen and surfaces 'playwright not installed' when Playwright is unavailable", async () => {
+  // Determinism note (PR #210 wave-Batch-C):
+  //
+  // The Phase 2 follow-up landing carried a non-deterministic assertion
+  // (`expect(typeof exit).toBe("number")`) that passed regardless of
+  // whether Playwright was installed in the test environment — masking
+  // the missing-dep path CI is supposed to cover. Deterministic
+  // interception of `await import("playwright")` inside
+  // `defaultCaptureScreen` is not reliable across vitest versions
+  // (`vi.mock` / `vi.doMock` hoisting interacts poorly with the
+  // command's lazy dynamic import). Instead, this describe block is
+  // split into two deterministic surfaces:
+  //
+  //   (a) a SMOKE assertion that the default runner module is importable
+  //       and exports the documented `defaultCaptureScreen` function —
+  //       pins the wiring surface without depending on Playwright;
+  //   (b) a DI-driven runtime assertion that mimics the
+  //       Playwright-missing failure shape (`{ ok: false, reason:
+  //       /playwright not installed/i }`) and asserts iterate exits 2
+  //       with that reason surfaced to stderr — pins the operator-facing
+  //       diagnostic on the missing-dep path without requiring
+  //       Playwright to be (un)installed in CI.
+  //
+  // This satisfies the "missing-dep path is observable in CI" guarantee
+  // the original test was meant to provide.
+
+  it("exports defaultCaptureScreen as a function (smoke test on the default runner module)", async () => {
+    const mod = await import("../../../../src/core/prototyping/defaultCaptureScreen.js");
+    expect(typeof mod.defaultCaptureScreen).toBe("function");
+  });
+
+  it("surfaces 'playwright not installed' and exits 2 when the runner reports the missing-dep failure shape (DI-mimicked)", async () => {
     const root = await newTempDir();
     await seedMinimal(root);
     const writes: string[] = [];
@@ -185,30 +215,31 @@ describe("iterate --capture: (3) default Playwright runner fallback when capture
       return true;
     });
     try {
-      // No captureScreen injected → iterate must fall back to the
-      // default Playwright runner module. Playwright is in
-      // devDependencies and may or may not be installed at test time.
-      // The default runner is expected to return {ok:false, reason:/playwright/i}
-      // on missing-module; iterate then exits 2.
+      // Stub the captureScreen DI hook with the exact failure shape the
+      // default Playwright runner emits when `await import("playwright")`
+      // throws ERR_MODULE_NOT_FOUND. This pins the iterate-side handler:
+      // any runner result of {ok:false, reason:/playwright not
+      // installed/i} must surface the reason on stderr and exit 2.
       const exit = await runPrototypingIterate({
         root,
         cycle: 0,
         targetUrl: "http://localhost:5173",
         capture: true,
         screens: [{ id: "home", url: "/" }],
+        captureScreen: async () => ({
+          ok: false,
+          durationMs: 1,
+          reason: "playwright not installed",
+        }),
       });
-      // Exit can be 0 (playwright installed & succeeded against a
-      // localhost URL that may or may not be up) or 2 (any failure).
-      // Pin only that the deferred error message has been REPLACED:
-      // it must NOT contain the "no default wiring yet" sentinel from
-      // the Phase 2 stub.
+      expect(exit).toBe(2);
       const joined = writes.join("\n");
+      // Pin BOTH the deterministic exit AND the operator-facing reason:
+      // a future regression that swallows the reason on stderr would
+      // pass `exit === 2` alone but leave operators without diagnostics.
+      expect(joined).toMatch(/playwright not installed/i);
+      // Regression guard: the Phase 2 stub sentinel must stay GONE.
       expect(joined).not.toMatch(/no default wiring yet/);
-      // And the default runner module must be importable (smoke test).
-      const mod = await import("../../../../src/core/prototyping/defaultCaptureScreen.js");
-      expect(typeof mod.defaultCaptureScreen).toBe("function");
-      // Sanity: exit is a number (0 or 2 depending on env), not undefined.
-      expect(typeof exit).toBe("number");
     } finally {
       stdoutSpy.mockRestore();
       stderrSpy.mockRestore();

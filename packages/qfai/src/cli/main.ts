@@ -212,9 +212,9 @@ Options:
   --keyword <text>              guardrails list/extract: キーワードフィルタ
   --target-url <url>            prototyping preflight/iterate: 評価対象の URL
   --cycle <number>              prototyping iterate: cycle index (0..9)
-  --check-convergence           prototyping iterate: read-only peek of the converged loop state (default cycle 9; exit 0 = converged, exit 2 = not converged / missing state)
-  --capture                     prototyping iterate: opt-in PNG/HTML capture (default OFF; default runner drives Playwright when installed)
-  --auto-serve                  prototyping iterate: opt-in local HTTP server spawn (default OFF; in-process node:http server; SIGINT teardown <=2s)
+  --check-convergence           prototyping iterate: 収束済みループ状態を再実行なしで覗く (read-only peek; defaults to cycle 9; exit 0 = converged, exit 2 = not converged / missing state)
+  --capture                     prototyping iterate: opt-in PNG/HTML capture (default OFF; uses Playwright dynamic import)
+  --auto-serve                  prototyping iterate: opt-in in-process HTTP server (default OFF; node:http; SIGINT teardown <= 2s; EADDRINUSE refusal)
   -h, --help      ヘルプ表示
 `;
 }

@@ -407,35 +407,48 @@ Output paths (written when `--capture` is passed):
   style-block injection that Playwright would otherwise serialize into
   the captured HTML.
 
-Capture failures surface as `lap-011: capture-failure` (per the
-`lap-009..012` extension introduced by REQ-0121 / OQ-0115=A); missing
-evidence after capture is requested surfaces as `lap-012:
-missing-evidence`. Both are advisory-failing per DR-0001-0006.
+Capture failures surface via the iterate command itself rather than
+through layout anti-pattern codes: when the default
+`runCapturePath` runner cannot complete (Playwright not installed,
+navigation timeout, screenshot write failure, etc.) iterate exits `2`
+with the operator-actionable reason on stderr. The implemented
+advisory band is `lap-009` (md5 duplicate, REQ-0124) and `lap-010`
+(missing route, REQ-0124); both are advisory-failing per DR-0001-0006
+and counted in `layoutAntiPatternsDetected[]`. Higher `lap-011` /
+`lap-012` codes are reserved but not currently emitted.
 
 ### `--auto-serve`
 
 When passed, `iterate` manages a local HTTP server lifecycle bound to
 the configured port (or the port derived from `targetUrl`) for the
-duration of the cycle:
+duration of the cycle. The **default runner** (`defaultServerRunner.ts`)
+is an in-process `node:http` server — there is no subprocess spawn:
 
-- **Spawn** — iterate spawns the server before the first Playwright
-  navigation; the server roots at the project's prototype tree.
-- **Child-process management** — iterate manages the spawned process
-  tree via `tree-kill` (Linux/macOS) or `taskkill /F /T` (Windows). On
-  SIGINT, the entire process tree is torn down before iterate exits.
-- **Stale port recovery** — if the port is already bound by a **prior
-  iterate invocation** (PID file or pidcheck heuristic identifies the
-  owning process as iterate's prior child), iterate force-kills the
-  prior owner via the same `tree-kill` / `taskkill` path and proceeds.
-- **Foreign-process safety (NFR-0106)** — if the port is bound by a
-  process that is NOT a prior iterate child (any other command, any
-  other PID lineage, including but not limited to dev servers,
-  preview tools, manually-spawned `python -m http.server`, etc.),
-  iterate MUST NOT kill it. Iterate MUST report the offending PID +
-  owning command line (from `/proc` on Linux, `ps -o command=` on
-  macOS, `Get-Process | Select-Object Id, Path, CommandLine` on
-  Windows) to the operator and exit 2 with a recovery hint to either
-  free the port manually or change the configured port.
+- **Start** — iterate creates a `node:http` server before the first
+  Playwright navigation; the server roots at the project's prototype
+  tree with a path-traversal guard.
+- **Teardown** — on SIGINT (and on normal cycle completion), iterate
+  calls `server.close()` with a 2-second bound, then exits. Because
+  there is no child process, `tree-kill` / `taskkill /F /T` are not
+  used by the default runner.
+- **Foreign-process safety (NFR-0106)** — if `listen()` fails with
+  `EADDRINUSE`, iterate MUST NOT attempt to kill the owning process.
+  Iterate refuses to attach to the foreign owner, surfaces the
+  offending PID + owning command line (from `/proc` on Linux,
+  `ps -o command=` on macOS, `Get-Process | Select-Object Id, Path,
+CommandLine` on Windows) to the operator, and exits `2` with a
+  recovery hint to either free the port manually or change the
+  configured port.
+
+#### DI escape hatch (programmatic consumers only)
+
+Operators that need subprocess-spawn semantics — spawning an external
+dev server (`vite`, `next dev`, `python -m http.server`, etc.) and
+tearing it down with `tree-kill` (Linux/macOS) or `taskkill /F /T`
+(Windows) — supply their own runner via the `options.serverRunner`
+DI surface on `runPrototypingIterate(...)`. Custom runners are
+responsible for their own process-tree management and SIGINT
+teardown semantics; the CLI does not ship a subprocess-spawn default.
 
 The default (absence of `--auto-serve`) preserves the cycle-0 contract
 that the operator manages serving externally (e.g. via the
@@ -444,9 +457,10 @@ broken.
 
 ### Combined `--capture --auto-serve`
 
-Both flags compose: iterate spawns the local server, drives capture
-against it, and tears down the server before exit. The PNG / HTML
-artifacts above are written.
+Both flags compose: iterate starts the in-process `node:http` server,
+drives capture against it, and tears down the server via
+`server.close()` before exit. The PNG / HTML artifacts above are
+written.
 
 ## prototyping.json Schema (v1.9.1+)
 
@@ -473,7 +487,7 @@ iterations:
       navigationFlow: enum [weak, acceptable, strong, exceptional]
       usability: enum [weak, acceptable, strong, exceptional]
       functionality: enum [weak, acceptable, strong, exceptional]
-    layoutAntiPatternsDetected: string[] # lap-001..lap-012; empty required for convergence
+    layoutAntiPatternsDetected: string[] # lap-001..lap-010 (implemented band); empty required for convergence
     designMdViolations: object[] # findDesignMdViolations() output; empty required for convergence
     pivotDirective: string # reviewer's next-cycle directive; empty allowed only at converged-cycle
     reviewerId:

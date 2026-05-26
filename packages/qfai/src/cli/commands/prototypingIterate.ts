@@ -226,6 +226,15 @@ export type RunPrototypingIterateOptions = {
 export type ServerRunnerFn = (args: {
   readonly root: string;
   readonly cycle: number;
+  /**
+   * Operator-supplied target URL. Forwarded to the runner so it can
+   * derive the bind port from `new URL(targetUrl).port` instead of
+   * silently falling back to a default that mismatches the URL the
+   * operator typed (e.g. `--target-url http://localhost:5173/`
+   * binding 5173, not 4321). Optional: the runner falls back to its
+   * own documented default when missing.
+   */
+  readonly targetUrl?: string;
 }) => Promise<ServerRunnerResult>;
 
 export type ServerRunnerResult =
@@ -338,7 +347,19 @@ const DEFAULT_LICENSE_CATALOG: LicenseCatalog = {
 };
 
 export const CYCLE_OUT_OF_RANGE_PEEK_HINT =
-  "Hint: use --cycle 9 --check-convergence to peek the final cycle without re-running the loop.";
+  "Hint: use --check-convergence to peek the converged loop state without re-running " +
+  "(defaults to cycle 9; pass --cycle <n> to peek a specific cycle).";
+
+/**
+ * Tailwind contract phase tag emitted into `iterate-context.json#priorTailwindContract`.
+ *
+ * Single source for the literal; reviewer subagents read the tag and
+ * compare it to the current contract phase to detect drift. When a
+ * future migration (CHG-006 / Phase 5 / etc.) lands, update this
+ * constant in one place — the iterate-context payload picks it up
+ * automatically.
+ */
+const CURRENT_TAILWIND_CONTRACT_PHASE = "phase-1";
 
 export async function runPrototypingIterate(
   options: RunPrototypingIterateOptions,
@@ -354,9 +375,38 @@ export async function runPrototypingIterate(
   // Default cycle to 9 (final cycle of the loop, mirroring the
   // peek-mode hint) when the caller omits it.
   if (options.checkConvergence === true) {
-    const cycleForReport =
-      Number.isInteger(options.cycle) && options.cycle >= 0 ? options.cycle : 9;
-    return runCheckConvergencePeek(options.root, cycleForReport);
+    // Reject out-of-range --cycle even on the peek path. Pre-fix
+    // `--check-convergence --cycle 99` silently coerced to cycle 9
+    // and produced a misleading "converged at cycle 9" report. The
+    // Phase 4 `input-error` stopReason enum was introduced to catch
+    // this class; surface the same input-error diagnostic and exit 2
+    // instead of masking the malformed cycle.
+    //
+    // The CLI surface defaults `--cycle` to 9 when the operator
+    // omits it (see main.ts `prototypingCycle ?? 9`); the
+    // peek-without-cycle entry path (used by integration tests that
+    // bypass the CLI parser via `as unknown as ...`) is still routed
+    // to the same cycle-9 default. We read `options.cycle` through
+    // `unknown` so the "undefined sentinel" branch is reachable at
+    // runtime without tripping `@typescript-eslint/no-unnecessary-
+    // condition` on the statically-typed signature.
+    const rawCycle: unknown = options.cycle;
+    if (rawCycle === undefined) {
+      return runCheckConvergencePeek(options.root, 9);
+    }
+    if (
+      !Number.isInteger(options.cycle) ||
+      options.cycle < 0 ||
+      options.cycle > MAX_ITERATION_INDEX
+    ) {
+      error(
+        "qfai prototyping iterate --check-convergence: --cycle accepts 0..9 " +
+          `(=10 cycles total). Received --cycle ${String(options.cycle)} ` +
+          "(input-error class stop). Omit --cycle to peek the default cycle 9.",
+      );
+      return 2;
+    }
+    return runCheckConvergencePeek(options.root, options.cycle);
   }
   if (
     !Number.isInteger(options.cycle) ||
@@ -826,7 +876,14 @@ export async function runPrototypingIterate(
     targetUrl: options.targetUrl ?? null,
     designTokens: buildDesignTokens(designMd),
     nextActions: nextActionsFor(options.cycle),
-    ...(options.capture && options.screens ? { screens: options.screens } : {}),
+    // `options.screens = []` is truthy under `Array && Array` so the
+    // pre-fix shape would emit `screens: []` into iterate-plan.json
+    // (a no-op key the downstream capture path then warns about).
+    // Tighten to length > 0 so the absent-key shape stays the canonical
+    // "no screens declared" representation.
+    ...(options.capture && options.screens && options.screens.length > 0
+      ? { screens: options.screens }
+      : {}),
   };
 
   await writeFile(
@@ -873,7 +930,15 @@ export async function runPrototypingIterate(
         return 2;
       }
     }
-    const serverResult = await serverRunner({ root: options.root, cycle: options.cycle });
+    const serverResult = await serverRunner({
+      root: options.root,
+      cycle: options.cycle,
+      // Thread the operator-supplied URL so the default runner can
+      // derive its bind port from `new URL(targetUrl).port`. Tests
+      // pass an explicit serverRunner and ignore this; production
+      // operators get the port they typed.
+      ...(options.targetUrl !== undefined ? { targetUrl: options.targetUrl } : {}),
+    });
     if (!serverResult.ok) {
       error(`qfai prototyping iterate --auto-serve: ${serverResult.reason}`);
       return 2;
@@ -1025,10 +1090,15 @@ async function runCapturePath(options: RunPrototypingIterateOptions, dir: string
     const pngPath = path.join(dir, `${screen.id}.png`);
     const htmlPath = path.join(dir, `${screen.id}.html`);
     const captureUrl = screen.url ?? options.targetUrl ?? null;
-    const timer = startBudgetTimer(budgetMs);
+    // Soft-warning budget enforcement is post-hoc on the runner's
+    // reported `durationMs` (NFR-0107: warn, never hard-fail). The
+    // prior `startBudgetTimer` setTimeout-with-noop-handler hook was
+    // dead structural placeholder — removed (YAGNI). If a future
+    // requirement asks iterate to cancel the runner before completion,
+    // re-introduce a real timer with an `AbortController` plumbed into
+    // `CaptureScreenFn`; do not resurrect the noop placeholder.
     try {
       const result = await runner({ screenId: screen.id, url: captureUrl, pngPath, htmlPath });
-      timer.stop();
       if (!result.ok) {
         error(
           `qfai prototyping iterate --capture: screen ${screen.id} failed (${result.reason ?? "no reason"}).`,
@@ -1052,7 +1122,6 @@ async function runCapturePath(options: RunPrototypingIterateOptions, dir: string
         }
       }
     } catch (cause) {
-      timer.stop();
       error(`qfai prototyping iterate --capture: screen ${screen.id} threw (${String(cause)}).`);
       return 2;
     }
@@ -1068,8 +1137,18 @@ async function runCapturePath(options: RunPrototypingIterateOptions, dir: string
     try {
       const bytes = await readFile(pngPath);
       pngsByScreen.set(screen.id, bytes);
-    } catch {
-      // Missing capture (already errored above on !result.ok); skip.
+    } catch (err) {
+      // Pre-fix this bare-catch silently swallowed every readFile error
+      // including non-ENOENT classes (EACCES / EBUSY / Windows file
+      // lock). Surface a warning so the operator sees that lap-009
+      // duplicate detection skipped this screen and can diagnose the
+      // root cause — the cycle still proceeds because the upstream
+      // runner already validated `!result.ok` for true capture
+      // failures, but the lap-009 input set is now observably partial.
+      warn(
+        `qfai prototyping iterate --capture: failed to read post-capture PNG ${pngPath} ` +
+          `(${String(err)}); skipping lap-009 md5 input for screen ${screen.id}.`,
+      );
     }
   }
   const lap009 = findMd5DuplicateCaptures(pngsByScreen);
@@ -1112,26 +1191,6 @@ async function runCapturePath(options: RunPrototypingIterateOptions, dir: string
   // `prototypingEvidence.ts`).
   await mirrorAcceptedIterToAggregateDirs(options.root, options.cycle);
   return 0;
-}
-
-function startBudgetTimer(budgetMs: number): {
-  readonly stop: () => void;
-} {
-  // The runner is responsible for its own internal timing; this timer
-  // is a structural hook reserved for the future case where iterate
-  // wants to cancel the runner before completion. Today it is a no-op
-  // — soft warnings are emitted post-run based on the runner's
-  // reported `durationMs`. Keeping the hook makes the budget surface
-  // easy to extend without churn at call sites.
-  const handle = budgetMs > 0 ? setTimeout(() => {}, budgetMs) : null;
-  if (handle && typeof handle === "object" && "unref" in handle) {
-    handle.unref();
-  }
-  return {
-    stop: () => {
-      if (handle) clearTimeout(handle);
-    },
-  };
 }
 
 type DesignMdReadResult =
@@ -1906,6 +1965,11 @@ async function runCheckConvergencePeek(root: string, cycle: number): Promise<num
     typeof acceptedRaw === "number" && Number.isInteger(acceptedRaw) ? acceptedRaw : null;
   const iterations = asIterations(record);
   info(header);
+  // Asymmetry note: `stopReason` printed as `<missing>` indicates the
+  // field is absent from prototyping.json entirely (pre-cycle-0 / hand
+  // -edited state); `acceptedIterationIndex` printed as `null` is the
+  // canonical "pre-convergence" literal written by cycle 0. The two
+  // shapes are intentionally different — do not unify on `<missing>`.
   info(`  stopReason: ${stopReason === undefined ? "<missing>" : String(stopReason)}`);
   info(
     `  acceptedIterationIndex: ${acceptedIterationIndex === null ? "null" : String(acceptedIterationIndex)}`,
@@ -1974,9 +2038,16 @@ async function persistStopReason(protoJsonAbs: string, reason: StopReason): Prom
   body.stopReason = reason;
   try {
     await writeFile(protoJsonAbs, `${JSON.stringify(body, null, 2)}\n`, "utf-8");
-  } catch {
+  } catch (err) {
     // Best-effort: a read-only filesystem / locked file should not
-    // mask the upstream license-verify diagnostic.
+    // mask the upstream license-verify diagnostic. Surface a warning
+    // so operators can see the persistence skipped (pre-fix this was
+    // a bare-catch that silently dropped every write failure
+    // including transient OS conditions worth flagging).
+    warn(
+      `qfai prototyping iterate: could not persist stopReason '${reason}' to ` +
+        `prototyping.json (${String(err)}); the operator-visible exit code is the canonical signal.`,
+    );
   }
 }
 
@@ -2103,8 +2174,10 @@ function buildIterateContextFromRecord(record: PrototypingJsonShape | null): Ite
     // Tailwind scanner work shipped a multi-phase contract surface
     // (preflight + var(--token) + Tailwind --*-shadow). The literal
     // tag is advisory; downstream subagents can compare it to the
-    // current contract phase to detect drift.
-    priorTailwindContract: "phase-1",
+    // current contract phase to detect drift. Sourced from
+    // CURRENT_TAILWIND_CONTRACT_PHASE so a future Phase 5 / CHG-006
+    // migration updates the tag in a single place.
+    priorTailwindContract: CURRENT_TAILWIND_CONTRACT_PHASE,
   };
 }
 

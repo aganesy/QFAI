@@ -100,16 +100,16 @@ export function buildBlockedCategoryLines(
       count: lapCount,
       text:
         lapCount === 0
-          ? "0 anti-patterns"
-          : `${lapCount} anti-patterns (top: ${firstLayoutAntiPatternOffender(input.layoutAntiPatternsDetected)})`,
+          ? "0 layoutAntiPatternsDetected"
+          : `${lapCount} layoutAntiPatternsDetected (top: ${firstLayoutAntiPatternOffender(input.layoutAntiPatternsDetected)})`,
     },
     {
       category: "axes-below-exceptional",
       count: axes.count,
       text:
         axes.count === 0
-          ? "0 axes below exceptional"
-          : `${axes.count} ${axes.count === 1 ? "axis" : "axes"} below exceptional (${axes.first?.axis ?? "n/a"}: ${axes.first?.current ?? "n/a"})`,
+          ? "0 axesBelowExceptional"
+          : `${axes.count} axesBelowExceptional (${axes.first?.axis ?? "n/a"}: ${axes.first?.current ?? "n/a"})`,
     },
   ];
 }

@@ -114,8 +114,12 @@ skill references such as `handoff.md`) is replaced by
 `.qfai/report/validate.json`. During the deprecation window:
 
 - Validators emit `D-DEPRECATED-PATH` (severity: warning) when the
-  legacy path is read OR written by any caller; the warning text
-  names the sunset version per spec-0003 REQ-0023.
+  writer writes the legacy path during the deprecation window, OR
+  when a post-sunset stale legacy file is observed on disk; the
+  warning text names the sunset version per spec-0003 REQ-0023.
+  Read-side tracking (warning when a downstream consumer reads the
+  legacy path) is NOT implemented — consumers that still point at
+  the legacy path see no file and SHOULD migrate.
 - The current implementation writes only to `.qfai/report/`; readers
   that still point at `.qfai/output/` see no file and SHOULD migrate.
 - **Sunset version**: qfai 1.10.0 (canonical npm `package.json#version`

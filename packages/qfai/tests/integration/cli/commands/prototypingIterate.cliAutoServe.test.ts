@@ -248,6 +248,103 @@ describe("iterate --auto-serve: (6) 2-second teardown bound (NFR-0106)", () => {
   });
 });
 
+describe("iterate --auto-serve: (7a) defaultServerRunner path-traversal — Windows edge cases", () => {
+  // PR #210 wave-Batch-C — verifies that the path-traversal guard in
+  // `defaultServerRunner` correctly rejects platform-specific traversal
+  // shapes (Windows drive-letter `C:\...` and UNC `\\server\share\...`)
+  // in addition to the URL-decoded `../../etc/passwd` POSIX shape.
+  //
+  // Why test via HTTP rather than the function directly: the guard is
+  // applied inside `handleRequest`, which is only reachable via an HTTP
+  // request. `path.resolve` is platform-aware; on POSIX, drive-letter
+  // input is treated as a relative segment (`C:\Windows\system32\config\sam`
+  // becomes a literal file name) which the `startsWith` check still
+  // contains within `serveRoot` — that's the safety property we want to
+  // pin. On Windows, drive-letter input would absolutise and the guard
+  // would catch the escape. UNC input on POSIX is similarly contained.
+  // In all cases the request must NOT return 200 with the contents of a
+  // file outside the iter-NN dir; 403 / 404 are both acceptable
+  // (`existsSync` may legitimately return false for the contained path).
+
+  it("rejects URL-encoded Windows drive-letter traversal (C:\\Windows\\system32\\config\\sam)", async () => {
+    const root = await newTempDir();
+    await seedMinimal(root);
+    const mod = await import("../../../../src/core/prototyping/defaultServerRunner.js");
+    // Pre-create the serve dir so the runner can bind.
+    await mkdir(path.join(root, ".qfai", "prototypes", "iter-00"), { recursive: true });
+    await writeFile(
+      path.join(root, ".qfai", "prototypes", "iter-00", "index.html"),
+      "<html>iter-00</html>",
+      "utf-8",
+    );
+    const result = await mod.defaultServerRunner({ root, cycle: 0 });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    try {
+      const port = await (async (): Promise<number> => {
+        // The runner returns a teardown handle but not its port.
+        // DEFAULT_AUTO_SERVE_PORT is exported; use it.
+        return mod.DEFAULT_AUTO_SERVE_PORT;
+      })();
+      // URL-encode `C:\Windows\system32\config\sam` so it survives the
+      // HTTP URL parsing; `decodeURIComponent` inside the runner
+      // expands it before the path-traversal check.
+      const encoded = encodeURIComponent("C:\\Windows\\system32\\config\\sam");
+      const status = await new Promise<number>((resolve, reject) => {
+        import("node:http")
+          .then(({ get }) => {
+            const req = get(`http://127.0.0.1:${port}/${encoded}`, (res) => {
+              // Drain the body so the socket can close cleanly.
+              res.on("data", () => {});
+              res.on("end", () => resolve(res.statusCode ?? 0));
+            });
+            req.on("error", reject);
+          })
+          .catch(reject);
+      });
+      // Status MUST be one of the rejection codes (403 / 404 / 400).
+      // 200 would indicate the guard let a file outside serveRoot
+      // through.
+      expect([400, 403, 404]).toContain(status);
+    } finally {
+      await result.teardown();
+    }
+  });
+
+  it("rejects URL-encoded UNC path traversal (\\\\server\\share\\secret)", async () => {
+    const root = await newTempDir();
+    await seedMinimal(root);
+    const mod = await import("../../../../src/core/prototyping/defaultServerRunner.js");
+    await mkdir(path.join(root, ".qfai", "prototypes", "iter-00"), { recursive: true });
+    await writeFile(
+      path.join(root, ".qfai", "prototypes", "iter-00", "index.html"),
+      "<html>iter-00</html>",
+      "utf-8",
+    );
+    const result = await mod.defaultServerRunner({ root, cycle: 0 });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    try {
+      const port = mod.DEFAULT_AUTO_SERVE_PORT;
+      const encoded = encodeURIComponent("\\\\server\\share\\secret");
+      const status = await new Promise<number>((resolve, reject) => {
+        import("node:http")
+          .then(({ get }) => {
+            const req = get(`http://127.0.0.1:${port}/${encoded}`, (res) => {
+              res.on("data", () => {});
+              res.on("end", () => resolve(res.statusCode ?? 0));
+            });
+            req.on("error", reject);
+          })
+          .catch(reject);
+      });
+      expect([400, 403, 404]).toContain(status);
+    } finally {
+      await result.teardown();
+    }
+  });
+});
+
 describe("iterate --auto-serve: (7) foreign-process refusal on EADDRINUSE", () => {
   it("default runner returns {ok:false, reason:/already in use/i} when port is busy, iterate exits 2", async () => {
     const root = await newTempDir();
