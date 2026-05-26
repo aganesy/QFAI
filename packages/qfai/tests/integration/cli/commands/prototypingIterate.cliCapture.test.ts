@@ -384,6 +384,7 @@ async function seedUiContract(
   root: string,
   fileBase: string,
   screens: Array<{ id: string; route: string; title?: string }>,
+  extension: "yaml" | "yml" = "yaml",
 ): Promise<void> {
   const uiDir = path.join(root, ".qfai/contracts/ui");
   await mkdir(uiDir, { recursive: true });
@@ -398,7 +399,7 @@ async function seedUiContract(
     }),
     "",
   ].join("\n");
-  await writeFile(path.join(uiDir, `${fileBase}.yaml`), yamlBody, "utf-8");
+  await writeFile(path.join(uiDir, `${fileBase}.${extension}`), yamlBody, "utf-8");
 }
 
 describe("iterate --capture: (8) Codex P1 wave-8 — auto-derive screens from UI contracts", () => {
@@ -589,5 +590,49 @@ describe("iterate --capture: (9) Codex P2 wave-8 — capture URL composition wit
     });
     expect(exit).toBe(0);
     expect(observedUrls).toEqual(["http://localhost:3000/orders/new"]);
+  });
+});
+
+describe("iterate --capture: (10) Codex P2 wave-10 — auto-derive screens accepts `.yml` UI contracts", () => {
+  it("derives screens from `.yml` UI contracts (extension parity with `.yaml`)", async () => {
+    // Repos that author UI contracts as `.yml` (rather than `.yaml`)
+    // were silently producing an empty screens list under `--capture`,
+    // so the CLI exited 0 with a "no screens" warning without writing
+    // any PNG/HTML evidence. Pin the parity at the auto-derive entry
+    // point so future regressions in the glob are catchable.
+    const root = await newTempDir();
+    await seedMinimal(root);
+    await seedUiContract(
+      root,
+      "spec-0001",
+      [
+        { id: "home", route: "/", title: "Home" },
+        { id: "settings", route: "/settings", title: "Settings" },
+      ],
+      "yml",
+    );
+
+    const calls: string[] = [];
+    const exit = await runPrototypingIterate({
+      root,
+      cycle: 0,
+      targetUrl: "http://localhost:5173",
+      capture: true,
+      captureScreen: async ({ screenId, pngPath, htmlPath }) => {
+        calls.push(screenId);
+        await writeFile(pngPath, Buffer.from([0x89, 0x50, 0x4e, 0x47]));
+        await writeFile(htmlPath, `<html>${screenId}</html>`);
+        return { ok: true, durationMs: 3 };
+      },
+    });
+
+    expect(exit).toBe(0);
+    expect(calls.sort()).toEqual(["home", "settings"]);
+
+    const iterDir = path.join(root, ".qfai/evidence/prototyping/iter-00");
+    expect(await fileExists(path.join(iterDir, "home.png"))).toBe(true);
+    expect(await fileExists(path.join(iterDir, "home.html"))).toBe(true);
+    expect(await fileExists(path.join(iterDir, "settings.png"))).toBe(true);
+    expect(await fileExists(path.join(iterDir, "settings.html"))).toBe(true);
   });
 });

@@ -1279,6 +1279,16 @@ async function runCapturePath(
   return 0;
 }
 
+// TODO(next-minor): extract composeCaptureUrl + collectScreensForCapture
+// into core/prototyping/captureUrlCompose.ts + captureScreensResolve.ts;
+// see PR #210 wave-9/10 reviewer feedback. Both helpers are pure
+// (no captured runPrototypingIterate state) and orthogonal to the
+// iterate driver's primary concerns (cycle gating / drift detection /
+// freeze / exit code dispatch). Extracting them lets the driver shrink
+// toward the CLAUDE.md ~50 LOC guidance and removes the export-without-
+// unit-test pressure on composeCaptureUrl by giving it a natural module
+// home with co-located tests.
+
 /**
  * Discriminated outcome of {@link composeCaptureUrl}. Mirrors the
  * `ok=true/false` shape used by other helpers in this module so the
@@ -1324,21 +1334,28 @@ export function composeCaptureUrl(
     return { ok: true, url: screenUrl };
   }
   if (targetUrl === undefined) {
+    // Operator-facing diagnostic: name the public CLI flag
+    // (`--target-url`) rather than the internal options field
+    // (`options.targetUrl`). PR #210 wave-10 reviewer NIT — surrounding
+    // `qfai prototyping iterate --capture:` warnings already use the
+    // public flag surface for consistency.
     return {
       ok: false,
       reason:
-        `has route-relative URL ${JSON.stringify(screenUrl)} but options.targetUrl is undefined; ` +
+        `has route-relative URL ${JSON.stringify(screenUrl)} but no base URL is set; ` +
         "provide --target-url <base> so the route can be composed against a navigable origin.",
     };
   }
   try {
     return { ok: true, url: new URL(screenUrl, targetUrl).toString() };
   } catch (cause) {
+    // Operator-facing diagnostic: name the public CLI flag
+    // (`--target-url`) rather than the internal options field.
     return {
       ok: false,
       reason:
-        `has unparseable URL composition (screen.url=${JSON.stringify(screenUrl)}, ` +
-        `targetUrl=${JSON.stringify(targetUrl)}, cause=${String(cause)}).`,
+        `has unparseable URL composition (screen URL=${JSON.stringify(screenUrl)}, ` +
+        `--target-url=${JSON.stringify(targetUrl)}, cause=${String(cause)}).`,
     };
   }
 }

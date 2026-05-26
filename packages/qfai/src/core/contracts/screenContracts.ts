@@ -84,7 +84,15 @@ export async function readUiContractScreenContracts(
   // with `readPerSpecScreens` and would otherwise produce divergent
   // contract-discovery behaviour between CLI paths.
   const uiDir = path.resolve(root, contractsDirRelative, "ui");
-  const pattern = path.posix.join(uiDir.replace(/\\/g, "/"), "**/*.yaml");
+  // Codex P2 (PR #210 wave-10): accept both `.yaml` and `.yml`
+  // extensions. Pre-fix the glob only matched `.yaml`, so repositories
+  // that author UI contracts with the `.yml` extension auto-derived
+  // an empty screen list and the CLI capture path silently exited 0
+  // with a "no screens" warning. Other contract-discovery surfaces in
+  // the repo accept both extensions (e.g. fast-glob brace expansion in
+  // validators/uiEvidenceArtifacts.ts), so harmonising here closes a
+  // least-astonishment gap rather than expanding surface.
+  const pattern = path.posix.join(uiDir.replace(/\\/g, "/"), "**/*.{yaml,yml}");
   const files = await fg(pattern, { absolute: true });
   const screens: CanonicalScreenContract[] = [];
 

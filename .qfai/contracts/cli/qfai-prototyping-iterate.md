@@ -49,6 +49,18 @@ cycle 0 when multiple candidates resolve. Accepted forms: bare
 `qfai.config.yaml` `prototyping.primarySpecId` field; the CLI flag
 takes precedence when both are set.
 
+`--target-url` is REQUIRED at cycle 0 (input-shape gate). At cycle ≥ 1
+it is OPTIONAL by default — but when `--capture` is also set AND any
+resolved `screens[].url` is route-relative (no `http://` / `https://`
+scheme), `--target-url` becomes REQUIRED on that invocation too, so the
+capture path can compose a navigable URL from the route. The route is
+joined against `--target-url` via WHATWG `new URL(route, base)`;
+absolute screen URLs pass through verbatim. Failure to provide
+`--target-url` in this composition class returns exit 2 with the
+operator-facing error text naming the screen id and the missing flag.
+See the exit-code matrix below and `qfai-prototyping.md` §
+"Exit-2 drift classes" for the canonical class enumeration.
+
 ## Cycle range and `--cycle N` validation (REQ-0117, REQ-0129)
 
 `--cycle` accepts integer values in the closed range `0..9` (= 10
@@ -129,12 +141,12 @@ add-only path only).
 
 ## Exit codes (canonical matrix)
 
-| Code | Meaning                                                                                                                                                                                                                                                                                                                                                                                    |
-| ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| 0    | Continue: cycle accepted, paths assigned, loop should advance.                                                                                                                                                                                                                                                                                                                             |
-| 2    | Input / lock-drift error. Drift classes enumerated in `qfai-prototyping.md` § "Exit-2 drift classes"; the cycle-range out-of-range path (REQ-0129), cycle-0 refusal without `--force` (REQ-0117), foreign-process port conflict under `--auto-serve` (NFR-0106), and `--license-patch` rejection (delete / modify) ALSO map to exit 2 with the explicit error text named in this contract. |
-| 64   | STOP: converged OR Reviewer-Playwright hard-stop (distinguishable via `iter-NN/spec-NNNN/<screen>.review.json#sessionStatus`). On convergence, top-level `acceptedIterationIndex` and `stopReason` (per REQ-0111) MUST be set.                                                                                                                                                             |
-| 66   | STOP: license-verify failure. `imageSources[]` resolved to non-allowlisted source / unknown license tier / non-HTTPS URL / per-source host mismatch / missing attribution. `frozenLicenseCatalog` SSOT was frozen at cycle 0 (and possibly extended via `--license-patch` add-only).                                                                                                       |
+| Code | Meaning                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0    | Continue: cycle accepted, paths assigned, loop should advance.                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| 2    | Input / lock-drift error. Drift classes enumerated in `qfai-prototyping.md` § "Exit-2 drift classes"; the cycle-range out-of-range path (REQ-0129), cycle-0 refusal without `--force` (REQ-0117), foreign-process port conflict under `--auto-serve` (NFR-0106), `--license-patch` rejection (delete / modify), AND the capture URL composition path (route-relative `screens[].url` with no `--target-url` at any cycle when `--capture` is set) ALSO map to exit 2 with the explicit error text named in this contract. |
+| 64   | STOP: converged OR Reviewer-Playwright hard-stop (distinguishable via `iter-NN/spec-NNNN/<screen>.review.json#sessionStatus`). On convergence, top-level `acceptedIterationIndex` and `stopReason` (per REQ-0111) MUST be set.                                                                                                                                                                                                                                                                                            |
+| 66   | STOP: license-verify failure. `imageSources[]` resolved to non-allowlisted source / unknown license tier / non-HTTPS URL / per-source host mismatch / missing attribution. `frozenLicenseCatalog` SSOT was frozen at cycle 0 (and possibly extended via `--license-patch` add-only).                                                                                                                                                                                                                                      |
 
 Note: exit 65 ("budget exhausted") is described in
 `qfai-prototyping.md` § exit-code table for completeness; the

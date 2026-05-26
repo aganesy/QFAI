@@ -219,6 +219,37 @@ Evidence`). For these rows, `tdd/test-list.md` is the SSOT and this
 | TDD-0489 | TC-0012-0457 | planned | prototyping-cli  | CHG-005 wave-19 (SHOULD). `--cycle N` out-of-range error literal-string. Unit. AC-Ref: `AC-0012-0071`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
 | TDD-0490 | TC-0012-0470 | planned | prototyping-cli  | CHG-005 wave-19 (SHOULD). `--cycle N` peek-mode recommendation tail. Unit. AC-Ref: `AC-0012-0071`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
 
+## CHG-005 Phase 2 follow-ups (cross-ref with `tdd/test-list.md` L177-178)
+
+The following two rows close the 2-way binding gap between
+`16_Traceability-ledger.md` (this file, the ledger SSOT) and
+`tdd/test-list.md` (the 8-column TDD selector list) that was opened
+when the Phase 2 deferred CLI-wiring tests landed under renumbered
+TDD-0514 / TDD-0515. They share the same TDD-IDs as their entries in
+`tdd/test-list.md` and follow the 5-column form documented in the
+"Notes (v2.1 ledger)" section below.
+
+| TDD-ID   | TC-Ref        | Status | Owner           | Notes                                                                                                                                                                                                                                                                                                                                                                                                             |
+| -------- | ------------- | ------ | --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| TDD-0514 | REQ-0012-0075 | done   | prototyping-cli | `--capture` CLI flag wiring + default Playwright runner. PR #210 wave-8 expanded the binding to cover (a) auto-derive screens from UI contracts (Codex P1) and (b) `composeCaptureUrl` URL composition (Codex P2). PR #210 wave-10 further expanded to (c) `.yml` UI-contract extension parity and (d) direct unit tests for the exported `composeCaptureUrl` helper. Selector pinned in `tdd/test-list.md` L177. |
+| TDD-0515 | REQ-0012-0076 | done   | prototyping-cli | `--auto-serve` CLI flag wiring + default spawn runner; SIGINT teardown ≤2s (NFR-0106); foreign-process refusal exit 2. Selector pinned in `tdd/test-list.md` L178.                                                                                                                                                                                                                                                |
+
+## CHG-005 Phase 2 follow-up REQs (REQ-0012-0074..0078) — primary SUT mapping
+
+The follow-up REQ block was introduced in `09_delta.md` "CHG-005 Phase 2
+follow-ups" but its primary-SUT rows were missing from the requirement
+mapping table above. The remaining slice items (AC / BR / EX entries)
+are tracked in D-6 of `tmp/pr-fix/pr210-wave9-deferred.md`; this section
+closes the code-level binding only.
+
+| Requirement   | Primary SUT (Implementation)                                                                            | Primary SUT (Test)                                                                                                   |
+| ------------- | ------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| REQ-0012-0074 | `packages/qfai/src/cli/lib/args.ts` (`--capture` / `--auto-serve` / `--check-convergence` flag parsing) | `packages/qfai/tests/integration/cli/commands/prototypingIterate.cliCapture.test.ts` (cycle-0 wiring)                |
+| REQ-0012-0075 | `packages/qfai/src/cli/commands/prototypingIterate.ts` + `src/core/prototyping/defaultCaptureScreen.ts` | `packages/qfai/tests/integration/cli/commands/prototypingIterate.cliCapture.test.ts` (TDD-0514)                      |
+| REQ-0012-0076 | `packages/qfai/src/cli/commands/prototypingIterate.ts` + `src/core/prototyping/defaultServerRunner.ts`  | `packages/qfai/tests/integration/cli/commands/prototypingIterate.cliAutoServe.test.ts` (TDD-0515)                    |
+| REQ-0012-0077 | `packages/qfai/src/cli/commands/prototypingIterate.ts` (`composeCaptureUrl` URL composition policy)     | `packages/qfai/tests/unit/cli/commands/prototypingIterate.composeCaptureUrl.test.ts` (PR #210 wave-10)               |
+| REQ-0012-0078 | `packages/qfai/src/core/contracts/screenContracts.ts` (`readUiContractScreenContracts` `.yml` parity)   | `packages/qfai/tests/integration/cli/commands/prototypingIterate.cliCapture.test.ts` describe (10) (PR #210 wave-10) |
+
 ## Notes (v2.1 ledger)
 
 - TDD rows here use a 5-column form (`TDD-ID | TC-Ref | Status | Owner |

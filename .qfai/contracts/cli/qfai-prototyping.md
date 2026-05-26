@@ -144,6 +144,7 @@ Exit-2 drift classes (the `2` row above expands to):
 - **Mid-run spec-set drift** — cycle ≥ 1 `resolveSurfaceUnion()` live UNION differs from the cycle-0 `prototyping.json#frozenSurfaceUnion` snapshot. Drifted spec(s) are deferred to the next `--cycle 0`.
 - **`prototyping.json#frozenSurfaceUnion` missing or malformed on cycle ≥ 1** — legacy / unseeded record. The gate hard-fails rather than silently falling back to `frozenSpecsCovered` (the silent fallback would compare a single-spec frozen scope against a multi-spec live union and false-positive-fire on any project with ≥ 2 UI-bearing specs — that is the failure mode this hard-fail prevents).
 - **`prototyping.json#frozenLicenseCatalog` drift** vs the in-memory `DEFAULT_LICENSE_CATALOG` SSOT — set-equality semantic (byte permutations OK; semantic differences exit 2).
+- **Capture URL composition failure** — `--capture` is set, the resolved `screens[].url` is route-relative (no `http://` / `https://` scheme), and `--target-url` is unset. The per-screen exit names the operator action (`provide --target-url <base>`). Applies at any cycle; cycle 0 also requires `--target-url` for the upstream input-shape gate, so this composition class is the cycle ≥ 1 manifestation of the same operator-contract requirement.
 
 Recovery for every exit-2 drift class is the same: restart from cycle 0
 (`qfai prototyping iterate --cycle 0 --target-url <url>`) to refreeze
