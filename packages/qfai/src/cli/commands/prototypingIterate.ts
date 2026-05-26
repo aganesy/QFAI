@@ -80,7 +80,12 @@ import {
   type OrdinalScore,
   type StopReason,
 } from "../../core/prototyping/iteration.js";
-import { applyLicensePatch, parseLicensePatch } from "../../core/prototyping/licensePatchAudit.js";
+import {
+  applyLicensePatch,
+  isLicensePatchAuditRow,
+  parseLicensePatch,
+  type LicensePatchAuditRow,
+} from "../../core/prototyping/licensePatchAudit.js";
 import {
   canonicalIterateContext,
   type IterateContext,
@@ -816,13 +821,20 @@ export async function runPrototypingIterate(
       return 2;
     }
   }
-  // Optional --license-patch (add-only). Applied BEFORE license verify
-  // so the in-memory `effectiveCatalog` already includes any newly-added
-  // sources; the audit row is appended to prototyping.json. Deletion /
-  // modification patches are rejected with exit 2. The patch is applied
-  // against the FROZEN catalog SSOT (in-memory `DEFAULT_LICENSE_CATALOG`,
-  // which catalog-drift gate already pins to `frozenLicenseCatalog`).
-  let effectiveCatalog: LicenseCatalog = DEFAULT_LICENSE_CATALOG;
+  // Option A (Codex P1 wave-4): the in-memory effective catalog is
+  // derived from the frozen DEFAULT baseline + accumulated audit-ledger
+  // additions on every cycle. The cycle-0 frozen catalog stays equal to
+  // `DEFAULT_LICENSE_CATALOG` (the drift gate above continues to enforce
+  // that), and the canonical record of operator-supplied additions lives
+  // in `licensePatchAudit[]` (3-key lockdown). Reading the effective
+  // catalog at verify-time means a cycle-0 `--license-patch` no longer
+  // self-incompatibly stamps the frozen field with the post-patch
+  // catalog (which would then trip the drift gate on cycle 1).
+  const priorAuditRows = readLicensePatchAuditRows(protoRecordForLicense);
+  let effectiveCatalog: LicenseCatalog = effectiveLicenseCatalog(
+    DEFAULT_LICENSE_CATALOG,
+    priorAuditRows,
+  );
   if (options.licensePatch !== undefined) {
     const patchResult = await applyLicensePatchFromFile(
       options.root,
@@ -1395,6 +1407,75 @@ function stringArraysSetEqual(a: readonly string[], b: readonly string[]): boole
     if (sortedA[i] !== sortedB[i]) return false;
   }
   return true;
+}
+
+/**
+ * Read `licensePatchAudit[]` from prototyping.json and narrow each row
+ * to {@link LicensePatchAuditRow}. Malformed rows are silently skipped
+ * so a partially-corrupted audit ledger still surfaces the valid
+ * additions. Returns an empty array when the field is absent or not
+ * an array.
+ */
+function readLicensePatchAuditRows(
+  record: PrototypingJsonShape | null,
+): readonly LicensePatchAuditRow[] {
+  if (!record) return [];
+  const raw = record.licensePatchAudit;
+  if (!isUnknownArray(raw)) return [];
+  const out: LicensePatchAuditRow[] = [];
+  for (const entry of raw) {
+    if (isLicensePatchAuditRow(entry)) {
+      out.push(entry);
+    }
+  }
+  return out;
+}
+
+/**
+ * Derive the runtime license catalog from a frozen baseline plus the
+ * accumulated `licensePatchAudit[]` rows.
+ *
+ * Option A (Codex P1 wave-4): the cycle-0 frozen catalog is the
+ * immutable baseline (always equal to `DEFAULT_LICENSE_CATALOG`); the
+ * canonical record of mid-loop additions lives in the audit ledger
+ * (3-key lockdown: `{appliedAt, patchSha256, addedSources}`). Reads
+ * union the audit rows' `addedSources` into the frozen
+ * `allowedSources` so license-verify on cycle >= 1 accepts the same
+ * sources the operator allow-listed via `--license-patch` on cycle 0.
+ *
+ * `licenseTiers` / `sourceHosts` are not replayed because the
+ * audit-row schema does not persist them; the cycle-0 frozen tiers
+ * already cover every baseline source, and any newly added source
+ * must rely on the operator passing a fresh `--license-patch` if
+ * tier/host pinning is needed on subsequent cycles.
+ */
+export function effectiveLicenseCatalog(
+  frozen: LicenseCatalog,
+  auditRows: readonly LicensePatchAuditRow[],
+): LicenseCatalog {
+  const seen = new Set(frozen.allowedSources);
+  const merged: string[] = [...frozen.allowedSources];
+  for (const row of auditRows) {
+    for (const source of row.addedSources) {
+      if (!seen.has(source)) {
+        seen.add(source);
+        merged.push(source);
+      }
+    }
+  }
+  return {
+    allowedSources: merged,
+    licenseTiers: Object.fromEntries(
+      Object.entries(frozen.licenseTiers).map(([k, v]) => [k, [...v]]),
+    ),
+    ...(frozen.sourceHosts !== undefined
+      ? {
+          sourceHosts: Object.fromEntries(
+            Object.entries(frozen.sourceHosts).map(([k, v]) => [k, [...v]]),
+          ),
+        }
+      : {}),
+  };
 }
 
 function readFrozenLicenseCatalog(record: PrototypingJsonShape | null): LicenseCatalog | null {
@@ -2100,21 +2181,14 @@ async function applyLicensePatchFromFile(
   const audit: unknown[] = isUnknownArray(existing) ? [...existing] : [];
   audit.push(applied.auditRow);
   body.licensePatchAudit = audit;
-  // Also persist the new frozen catalog inline so downstream cycles see
-  // the additions (already merged into `effectiveCatalog`).
-  body.frozenLicenseCatalog = {
-    allowedSources: [...applied.nextCatalog.allowedSources],
-    licenseTiers: Object.fromEntries(
-      Object.entries(applied.nextCatalog.licenseTiers).map(([k, v]) => [k, [...v]]),
-    ),
-    ...(applied.nextCatalog.sourceHosts !== undefined
-      ? {
-          sourceHosts: Object.fromEntries(
-            Object.entries(applied.nextCatalog.sourceHosts).map(([k, v]) => [k, [...v]]),
-          ),
-        }
-      : {}),
-  };
+  // Option A (Codex P1 wave-4): `frozenLicenseCatalog` is NOT rewritten
+  // here. The frozen field is the immutable cycle-0 baseline (equal to
+  // `DEFAULT_LICENSE_CATALOG`); the drift gate at cycle >= 1 compares
+  // it against `DEFAULT_LICENSE_CATALOG` and would exit 2 if we mutated
+  // it. The runtime license catalog used by verify is reconstructed at
+  // read-time via `effectiveLicenseCatalog(frozen, auditRows)` —
+  // `applied.auditRow` (just appended above) is the canonical record
+  // that downstream cycles replay.
   await mkdir(path.dirname(protoJsonAbs), { recursive: true });
   await writeFile(protoJsonAbs, `${JSON.stringify(body, null, 2)}\n`, "utf-8");
   return { ok: true, nextCatalog: applied.nextCatalog };

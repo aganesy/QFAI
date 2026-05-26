@@ -605,7 +605,15 @@ describe("US-0012-0135: --license-patch add-only + audit row", () => {
     expect(proto.licensePatchAudit.length).toBe(1);
     expect(isLicensePatchAuditRow(proto.licensePatchAudit[0])).toBe(true);
     expect(proto.licensePatchAudit[0].addedSources).toEqual(["wikimedia-commons"]);
-    expect(proto.frozenLicenseCatalog.allowedSources).toContain("wikimedia-commons");
+    // Codex P1 wave-4 (Option A): `frozenLicenseCatalog` is the
+    // immutable cycle-0 baseline (drift gate compares it against
+    // DEFAULT_LICENSE_CATALOG). Patched sources live in the audit
+    // ledger only; the runtime catalog used for license-verify is
+    // reconstructed by `effectiveLicenseCatalog(frozen, auditRows)`.
+    expect(proto.frozenLicenseCatalog.allowedSources).not.toContain("wikimedia-commons");
+    expect(proto.frozenLicenseCatalog.allowedSources).toEqual(
+      expect.arrayContaining(["unsplash", "pexels"]),
+    );
   });
 });
 
