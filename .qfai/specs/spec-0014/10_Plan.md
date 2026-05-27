@@ -24,3 +24,11 @@
 
 - historical validator wording に `full-harness` や discussion-side 用語が残る可能性
 - mitigation: active path と historical vocabulary を区別し、public guidance では contract-first posture のみを説明する
+
+## SaaS-Package Certify Scope (REQ-0166 certify side, v1.9.2)
+
+- How: `qfai prototyping certify --scope saas-package` writes `completion-certificate.json` with `scope: "saas-package"` and a non-empty `notes:` field enumerating each skipped gate (the ATDD / implement-class gates that the spec-0004 validate profile skips).
+- How: the certify path withholds any field that would assert full DONE while scope is `saas-package`.
+- How: `--upgrade-scope full` re-checks every gate named in `notes:`; it rejects with a message naming still-missing gates and upgrades the sealed certificate to full scope only once all PASS.
+- How: `/qfai-prototyping` SKILL.md documents `--scope saas-package` as a SaaS-tenant delivery mode.
+- Test strategy: integration test for the seal (`scope` + `notes:`, no full-DONE claim) and the `--upgrade-scope full` reject-then-allow boundary; both assert CLI shape (flags, certificate field shape).

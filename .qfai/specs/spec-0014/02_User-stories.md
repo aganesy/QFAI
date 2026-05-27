@@ -15,3 +15,7 @@ As a maintainer, I want verify to depend on contract-first validate gates rather
 ### US-0014-0019
 
 As a maintainer, I want legacy compatibility namespaces to remain removed, so that verify guidance matches the actual package surface.
+
+### US-0014-0020
+
+As a delivery lead shipping a SaaS-tenant project, I want `qfai prototyping certify --scope saas-package` to seal a `completion-certificate.json` that explicitly carries `scope: "saas-package"` and a `notes:` field naming every skipped gate, so that the certificate never overstates completion as full DONE and an `--upgrade-scope full` path exists once the missing gates land.

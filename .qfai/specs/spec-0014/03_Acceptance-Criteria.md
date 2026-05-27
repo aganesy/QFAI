@@ -29,3 +29,9 @@
 - Given a `prototyping.json` that carries a legacy `fullHarness` block from a prior pre-1.8.9 run,
 - When `prototyping iterate` runs cycle 0,
 - Then the cycle-0 hard reset removes the `fullHarness` block from the live `prototyping.json` so the post-1.8.9 evolution loop never re-reads stale `full-harness` / `perfect-100` / `weighted-total` runtime state.
+
+## AC-0014-0022: SaaS-Package Certify Scope Seal
+
+- Given a UI-bearing SaaS-tenant project whose prototyping evidence is complete but whose ATDD / implement-class gates were intentionally skipped,
+- When `qfai prototyping certify --scope saas-package` is run,
+- Then the sealed `completion-certificate.json` MUST carry `scope: "saas-package"` and a non-empty `notes:` field that names each skipped gate, MUST NOT claim full DONE, and `--upgrade-scope full` MUST be rejected until the missing gates land — at which point it may upgrade the existing certificate to full scope.
