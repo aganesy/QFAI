@@ -1,14 +1,13 @@
-qfai validate summary: error=0 warning=7 info=3 annotations=10/10 failOn=error result=PASS
+qfai validate summary: error=0 warning=6 info=3 annotations=9/9 failOn=error result=PASS
 qfai validate note: 詳細は .qfai/report/validate.json または --format text を参照してください。
-qfai validate note: run-log は .qfai/report/run-20260518180053085 を参照してください。
+qfai validate note: run-log は .qfai/report/run-20260527190448858 を参照してください。
 qfai validate note: 次は qfai report で report.md を生成できます（例: qfai report）。
-::warning file=.qfai/specs/spec-0001/09_delta.md::QFAI-TRIAGE-001: delta.md に `## Change Summary` があるが `## Triage` セクションがありません。
 ::warning file=.qfai/specs/spec-0002/09_delta.md::QFAI-TRIAGE-001: delta.md に `## Change Summary` があるが `## Triage` セクションがありません。
-::warning file=.qfai/specs/spec-0003/09_delta.md::QFAI-TRIAGE-001: delta.md に `## Change Summary` があるが `## Triage` セクションがありません。
 ::warning file=.qfai/specs/spec-0005/09_delta.md::QFAI-TRIAGE-001: delta.md に `## Change Summary` があるが `## Triage` セクションがありません。
 ::warning file=.qfai/specs/spec-0006/09_delta.md::QFAI-TRIAGE-001: delta.md に `## Change Summary` があるが `## Triage` セクションがありません。
 ::warning file=.qfai/specs/spec-0007/09_delta.md::QFAI-TRIAGE-001: delta.md に `## Change Summary` があるが `## Triage` セクションがありません。
-::warning file=.qfai/specs/spec-0016/09_delta.md::QFAI-TRIAGE-001: delta.md に `## Change Summary` があるが `## Triage` セクションがありません。
 ::notice file=.qfai/contracts/ui::QFAI-CONTRACT-000: UI 契約ファイルが見つかりません。
 ::notice file=.qfai/contracts/api::QFAI-CONTRACT-000: API 契約ファイルが見つかりません。
 ::notice file=.qfai/contracts/db::QFAI-CONTRACT-000: DB 契約ファイルが見つかりません。
+::warning file=.qfai/assistant/steering/::D-DEPRECATED-PATH: .qfai/assistant/steering/ is read-compatible only for the current minor release. sunset: v1.10.0. Run `qfai init --upgrade-assistant-tree` to migrate.
+::warning file=.qfai/output/validate.json::D-DEPRECATED-PATH: Legacy validate output path .qfai/output/validate.json is still being written for backward compatibility; sunset: 1.10.0. Read .qfai/report/validate.json (always-latest) or .qfai/report/validate-<profile>.json instead.
