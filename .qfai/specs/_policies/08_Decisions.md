@@ -1699,3 +1699,162 @@ These rows resolve the 9 OQ rows the requirements-analyst left `deferred` for th
   - DO NOT: promote the SHOULD to MUST in this pack. Temptation: "be lenient on input" feels user-friendly.
 - Source REQ: REQ-0119.
 - Trace: discussion-20260523221141355 OQ-0112 (deferred → resolved here).
+
+### DR-0261..0273: Second-Wave Defect-Remediation pack — deferred OQ resolutions (2026-05-27)
+
+Source: discussion-20260527075558258 OQ-0152/0153/0154/0155/0156/0157/0158/0159/0160/0162/0163 + the REQ-0157 scaffold-escalate residual + OQ-0167 (`/qfai-sdd` slice-time resolutions).
+These rows pin the specific implementation contract the per-spec slices (Spec A–K) cite. The acceptance signals for the underlying REQs (REQ-0150..0173) are invariant across each option set; the choices below select one option so downstream implementation, validation, and reviewer-gate code can be written against a single resolution. ID note: the next free plain `DR-NNNN` at authoring time was `DR-0261` (DR-0258/0259/0260 were consumed by CHG-003), so this family begins at DR-0261. OQ-0161 (memory schema), OQ-0164 (per-rule `proseCritique` configurability) and OQ-0165 (`/proposal` family) remain `deferred` (ops-owned) and are NOT decided here.
+
+#### DR-0261: Cycle-0 skeleton emission UX shape — token-driven placeholder (OQ-0152 resolved)
+
+- Date: 2026-05-27
+- Statement: `qfai prototyping iterate --cycle 0 --emit-skeletons` emits one placeholder HTML per `screens[].id` in `frozenSurfaceUnion` by consuming the `DESIGN.md` tokens (color / font / radius / shadow) for default styling — option B (token-driven placeholder). No per-screen LLM generation call is made at cycle 0; subsequent cycles refine. The runtime-tunable `--skeleton-mode` flag (OQ-0166 register row → DR-0272) lets a project escalate to higher-fidelity modes later. Acceptance signal (every `frozenSurfaceUnion` screen has `evidenceRefs[]` of both kinds after convergence) is unchanged.
+- Chosen option: B (token-driven placeholder).
+- Rejected option A — full generation per declared screen: spends cycle-0 LLM budget on screens that the operator may never prioritize; highest cost for the union sizes typical of 7-spec projects; regresses the v1.9.1 cost posture.
+  - DO NOT: make cycle-0 emit a full per-screen generation. Temptation: highest fidelity feels best.
+- Rejected option C — minimal HTML stub (`<main>`/`<header>`/`<footer>`, no token-driven content): produces shallow evidence that does not exercise the DESIGN.md token mirror; reviewers cannot judge brand compliance from an unstyled stub.
+  - DO NOT: ship a token-blind stub. Temptation: cheapest to implement.
+- Source REQ: REQ-0150. Trace: discussion-20260527075558258 OQ-0152 (Spec A).
+
+#### DR-0262: DESIGN.md patch-zone shape — front-matter `patch_zone:` block (OQ-0153 resolved)
+
+- Date: 2026-05-27
+- Statement: DESIGN.md gains a front-matter `patch_zone:` block (option a) listing the line ranges or token names that may be edited without invalidating `frozenDesignMdHash#majorHash`. Edits whose diff is fully contained in the patch zone update only a new `patchHash` field; `majorHash` (and therefore prototyping evidence validity) is unchanged. Edits touching any line/token outside the zone (or removing the `patch_zone:` block itself) invalidate evidence as today. No new lock-file artifact is introduced. Reviewer Gate emits `R-DESIGN-MD-PATCH-OUT-OF-ZONE` (severity warning) on out-of-zone edits.
+- Chosen option: a (front-matter `patch_zone:` block).
+- Rejected option b — generationally-versioned `DESIGN.md.lock.yaml` with `major.minor.patch`: introduces a second SSOT file and new lock-generation semantics (more ceremony) for the same invariant; the front-matter block keeps brand SSOT in one file (consistent with DCON-030 single-file posture).
+  - DO NOT: add a generational lock-file for patch-zone semantics. Temptation: "versioned lock feels more disciplined".
+- Rejected option c — hybrid (front-matter + lock-file marker): combines both costs with no additional safety.
+  - DO NOT: ship both surfaces. Temptation: cover every preference.
+- Source REQ: REQ-0151. Trace: discussion-20260527075558258 OQ-0153 (Spec B).
+
+#### DR-0263: exploration-mode gate-relaxation table — medium (OQ-0154 resolved)
+
+- Date: 2026-05-27
+- Statement: Under `prototyping.mode: exploration`, downgrade `QFAI-CRIT-008` (axes-exceptional) AND the design-compliance error (DESIGN.md compliance / `designMdViolations`) from error → warning. Structural gates (schema / required-field / path) and license gates (exit 66) remain hard error. This is the medium relaxation between option A (only `QFAI-CRIT-008`) and option C (entire `QFAI-CRIT-*` family). `certify` rejects sealing any iteration produced under exploration mode regardless of the table (`R-EXPLORATION-CERTIFY-ATTEMPT`).
+- Chosen option: medium (`QFAI-CRIT-008` + design-compliance → warning; structural/license hard).
+- Rejected option A — only `QFAI-CRIT-008`: design-compliance error still blocks shallow exploration loops, which is the second-most-cited blocker; too narrow to make exploration usable.
+  - DO NOT: relax only the axes gate. Temptation: safest minimal step.
+- Rejected option C — whole `QFAI-CRIT-*` family + advisory-failing findings: relaxes structural/license gates that protect evidence integrity; an exploration run could then produce structurally invalid artifacts that leak into later convergence.
+  - DO NOT: relax structural or license gates in exploration mode. Temptation: maximum flexibility.
+- Source REQ: REQ-0152. Trace: discussion-20260527075558258 OQ-0154 (Spec C).
+
+#### DR-0264: Stale review-pack TTL default — 14d, project-configurable (OQ-0155 resolved)
+
+- Date: 2026-05-27
+- Statement: `qfai doctor --clean` archives `.qfai/review/<ts>/` directories older than a TTL of 14 days by default, configurable via `qfai.config.yaml#review.staleTtlDays`. Archival moves to `.qfai/review/_archive/<ts>/` and never deletes; restore is a manual `mv` back. `qfai validate --profile review` treats `_archive/` as out-of-scope. 14d sits between the high-churn (SRC-0020, 4 packs in 4 days) and low-churn (SRC-0025, weeks) extremes; the config key lets either churn profile tune it.
+- Chosen option: 14d default + `review.staleTtlDays` config.
+- Rejected option — 7d fixed: too aggressive for low-churn projects that revisit packs across weeks; would archive packs still in active review.
+  - DO NOT: hard-code a 7-day TTL. Temptation: keep the review dir small.
+- Rejected option — 30d fixed: high-churn projects accumulate a dozen stale packs before archival fires (the exact `QFAI-REVIEW-003/004/005` storm SRC-0020 reported).
+  - DO NOT: hard-code a 30-day TTL. Temptation: safest long default with no churn signal.
+- Rejected option — config-only with no default: forces every project to set the key before archival works; breaks zero-config UX.
+  - DO NOT: ship without a default. Temptation: avoid choosing a number.
+- Source REQ: REQ-0153. Trace: discussion-20260527075558258 OQ-0155 (Spec D).
+
+#### DR-0265: `QFAI-MOCK-010` direction — anchor-form template default + strict validator (OQ-0156 resolved)
+
+- Date: 2026-05-27
+- Statement: Option b — the `qfai-discussion` template emits anchor-form (`<a href="#<name>">`) by default and SKILL.md instructs authors to use anchors in `03_Story-Workshop.md` HTML mocks. The `QFAI-MOCK-010` validator continues to PASS anchor URLs (`#name`) and external URLs (`http(s)://...`) and continues to FAIL same-origin absolute paths (`<a href="/products/">`) — it is NOT broadened. Template ↔ validator form a new SSOT-sync pair (Pair V) mirroring the v1.9.1 `R-PROMPT-SCANNER-DRIFT` precedent; asymmetric edits emit `R-MOCK-HREF-DRIFT`.
+- Chosen option: b (template anchor default; validator stays strict).
+- Rejected option a — broaden validator to accept same-origin absolute hrefs: relaxes a deterministic gate; mocks would then encode routes that the prototype reality cannot serve, re-introducing the "looks navigable but is not" mock drift.
+  - DO NOT: accept `/<path>/` same-origin absolute hrefs in the validator. Temptation: most natural for web-URL-familiar authors.
+- Rejected option c — hybrid (validator accepts both + template emits anchor): the permissive validator silently masks template drift; the SSOT-sync pair loses teeth.
+  - DO NOT: make the validator permissive while the template is strict. Temptation: reduce author friction maximally.
+- Source REQ: REQ-0154. Trace: discussion-20260527075558258 OQ-0156 (Spec E).
+
+#### DR-0266: Active discussion session pointer — `state.json#discussion.currentId` SSOT (OQ-0157 resolved)
+
+- Date: 2026-05-27
+- Statement: Option B — `.qfai/state.json#discussion.currentId` is the single SSOT for the active discussion session. `qfai discussion list --active` is a READ view over it (not an independent source). All downstream skills read the pointer through one helper. Multiple-active ambiguity (no `currentId`, or `currentId` resolving to a missing/duplicate pack) is rejected with an error naming the candidate dirs and the recovery command (`qfai discussion use <id>`).
+- Chosen option: B (state.json SSOT) with A as a read view.
+- Rejected option A-alone — `qfai discussion list --active` derives from filesystem timestamps: timestamp inference is non-deterministic across multi-session / multi-user clones and gives no place to record an explicit operator choice.
+  - DO NOT: infer the active pointer from mtime. Temptation: zero-config.
+- Rejected option C — `qfai.config.yaml#discussion.currentId`: config is committed/shared project policy, but the active session is per-runtime ephemeral state; `state.json` is already the runtime-state surface and is the correct home.
+  - DO NOT: put ephemeral session state in committed config. Temptation: one config file for everything.
+- Source REQ: REQ-0155. Trace: discussion-20260527075558258 OQ-0157 (Spec E).
+
+#### DR-0267: `primary_tasks` recommended count band — 3..7 (OQ-0158 resolved)
+
+- Date: 2026-05-27
+- Statement: The `QFAI-AUD-020` recommended `primary_tasks` count band is **3..7 tasks** per screen. Documented in the `ui-spec.yaml` template comments and `references/ui-contract-guide.md`; the warning text names the band. Below 3 risks under-specified screens; above 7 risks an unfocused screen. 3..7 is the permissive-but-bounded band (register option C) appropriate for the multi-screen SaaS surfaces the reporter projects build.
+- Chosen option: 3..7 (permissive).
+- Rejected option — 2..5: the lower floor of 2 admits screens that barely justify a UI contract; the reporter projects routinely declared 5–6 primary tasks on dashboard screens that 2..5 would flag as "too many".
+  - DO NOT: cap the recommended ceiling at 5. Temptation: tighter discipline.
+- Rejected option — 1..3 (minimal): floor of 1 defeats the purpose of the band; too strict for real dashboards.
+  - DO NOT: use a 1..3 band. Temptation: minimal surface.
+- Source REQ: REQ-0164. Trace: discussion-20260527075558258 OQ-0158 (Spec I).
+
+#### DR-0268: `primary_tasks` structured shape JSON Schema — `{id,label,acceptance}` all required (OQ-0159 resolved)
+
+- Date: 2026-05-27
+- Statement: The structured `primary_tasks[]` item schema is `{ id: string, label: string, acceptance: string }` with all three required and `additionalProperties: false`. `auditProfile.ts` accepts BOTH this structured form AND the legacy string-only form during the deprecation window (`D-DEPRECATED-*` warn on string-only at sunset). The closed schema matches the existing US/TC `{id, label, acceptance}` convention so downstream coverage/atdd tooling can consume it without per-project shape negotiation.
+- Chosen option: `{id, label, acceptance}` all-required, closed.
+- Rejected option — minimal `{id, label}`: drops the `acceptance` field that makes a task testable; downstream atdd scaffolding (REQ-0157) would have nothing to anchor a TODO assertion to.
+  - DO NOT: omit `acceptance`. Temptation: smallest schema.
+- Rejected option — full `{id, label, acceptance, priority?, owner?}` with `additionalProperties: true`: open shape invites per-project field sprawl that breaks cross-project tooling; `priority`/`owner` are speculative (YAGNI).
+  - DO NOT: open the schema or add speculative fields. Temptation: future-proofing.
+- Source REQ: REQ-0164. Trace: discussion-20260527075558258 OQ-0159 (Spec I).
+
+#### DR-0269: SKILL.md Default Autopilot Policy template — 3 named buckets (OQ-0160 resolved)
+
+- Date: 2026-05-27
+- Statement: Every SKILL.md `## Default Autopilot Policy` section uses three named buckets. (a) **auto-decide** (named defaults, AI decides without prompting): output formatting, ID / sequence numbering, append-vs-create when subject overlaps an existing artifact, and option-pick among demonstrably-equivalent alternatives. (b) **ask-user** (AI prompts via AskUserQuestion): approval-required triage ops (CREATE / DELETE / SPLIT / MERGE / SUPERSEDE / UPDATE:REMOVE), destructive operations, version-pin changes, and scope expansions. (c) **hard-required** (no default possible; must be supplied before proceeding): `companyName`, brand intent, `primarySpecId` when absent. `/qfai-sdd` MAY narrow the auto-decide set per skill but MUST NOT widen it. Reviewer Gate emits `R-AUTOPILOT-POLICY-MISSING` (error) when the section is absent.
+- Chosen option: per-category opinionated template (register option C) with the three buckets above as the prototype.
+- Rejected option A — conservative (most decisions ask user): preserves the 3–6 avoidable `AskUserQuestion` per session that this pack exists to remove.
+  - DO NOT: default to asking on procedural decisions. Temptation: maximize governance.
+- Rejected option B — aggressive (most decisions auto-decide): erodes governance by auto-deciding triage / destructive / scope / version operations that require human authorization.
+  - DO NOT: auto-decide approval-required or destructive operations. Temptation: maximize autopilot.
+- Source REQ: REQ-0160. Trace: discussion-20260527075558258 OQ-0160 (Spec H).
+
+#### DR-0270: Envelope-deviation `AskUserQuestion` audit trigger taxonomy (OQ-0162 resolved)
+
+- Date: 2026-05-27
+- Statement: The audit-log write (REQ-0158) triggers when an `AskUserQuestion` template names any of the four envelope-deviation contexts: "skill envelope", "architectural decision", "rejected-option re-adoption", or "scope expansion". On trigger, the skill body writes `.qfai/evidence/decisions/<ISO8601-ts>.json` `{question, answer, scope, operatorIdentity, timestamp, envelopeContractClause}`. (This is the register's option C — a per-skill declared list of envelope contexts — pinned to a fixed four-context taxonomy so the trigger is deterministic and reviewable rather than a heuristic regex.) `.qfai/evidence/decisions/` is git-ignored by default.
+- Chosen option: fixed four-context declared taxonomy (register option C, pinned).
+- Rejected option A — explicit `AskUserQuestion({envelopeDeviation: true})` parameter: requires every skill author to remember to set the flag; a missed flag silently drops the audit record (fail-open).
+  - DO NOT: depend on a per-call boolean flag. Temptation: most explicit.
+- Rejected option B — question-text regex heuristic: brittle; false-positives on routine prompts, false-negatives on reworded ones.
+  - DO NOT: use a free-text regex trigger. Temptation: zero author burden.
+- Source REQ: REQ-0158. Trace: discussion-20260527075558258 OQ-0162 (Spec G).
+
+#### DR-0271: `qfai audit log` CLI shape (OQ-0163 resolved)
+
+- Date: 2026-05-27
+- Statement: `qfai audit log` (SHOULD-level, REQ-0171) lists `.qfai/evidence/decisions/<ts>.json` records newest-first with filters `--scope`, `--operator`, `--clause` (filters on `envelopeContractClause`) and `--format table|json` defaulting to `table`. This is register option B (filtered query) with a default human-readable table view; it ships the filter surface up front because ops audit is the primary use case named in REQ-0171.
+- Chosen option: B (filtered query) + `--format table|json`, table default.
+- Rejected option A — simple newest-first JSON list, no filters: ships fastest but forces operators to pipe through external `jq` for the scope/operator/clause queries REQ-0171 explicitly calls out.
+  - DO NOT: ship list-only with no filters. Temptation: fastest to build.
+- Rejected option C — tree / decision-graph rendering: over-engineered for an advisory ergonomic surface (YAGNI); the records are flat JSON.
+  - DO NOT: build graph rendering. Temptation: richest UX.
+- Source REQ: REQ-0171. Trace: discussion-20260527075558258 OQ-0163 (Spec G).
+
+#### DR-0272: `D-SCAFFOLD-PLACEHOLDER` escalate cycle count — error after 3 validate cycles (REQ-0157 escalate residual resolved)
+
+- Date: 2026-05-27
+- Statement: `qfai validate` emits `D-SCAFFOLD-PLACEHOLDER` (severity warning) for an atdd-scaffold skeleton whose `// TODO: implement assertion for <TC-ID>` is still present; the warning escalates to **error after 3 validate cycles** with the placeholder unremoved, configurable via `qfai.config.yaml#atdd.scaffoldEscalateCycles`. Three cycles gives an operator a normal red→green TDD turnaround before the placeholder hard-blocks completion-claim, while preventing indefinite placeholder accumulation. (This resolves the escalate-count that REQ-0157 left "default deferred to /qfai-sdd"; the `--skeleton-mode` runtime-tunability of register OQ-0166 is recorded separately at DR-0273.)
+- Chosen option: error after 3 cycles, configurable.
+- Rejected option — never escalate (warning-only): placeholders accumulate silently; an operator can claim TC coverage with empty assertions indefinitely.
+  - DO NOT: leave the placeholder a permanent warning. Temptation: avoid blocking.
+- Rejected option — escalate after 1 cycle: too aggressive; blocks the very next validate before the operator has had a TDD cycle to fill the assertion.
+  - DO NOT: escalate on the first cycle. Temptation: strictest signal.
+- Source REQ: REQ-0157. Trace: discussion-20260527075558258 (REQ-0157 escalate residual; Spec F).
+
+#### DR-0273: Cycle-0 skeleton mode runtime control — `--skeleton-mode` flag (OQ-0166 resolved)
+
+- Date: 2026-05-27
+- Statement: The skeleton emission mode is exposed as a CLI flag `qfai prototyping iterate --skeleton-mode full|placeholder|stub` (register option A), defaulting to `placeholder` per DR-0261. Config-key form is not added. The flag lets a project that wants higher-fidelity cycle-0 evidence escalate per-run without a config edit, while the default keeps the DR-0261 cost posture.
+- Chosen option: A (CLI flag, default `placeholder`).
+- Rejected option B — config-driven `qfai.config.yaml#prototyping.skeletonMode`: a per-run cost trade-off is better expressed as a per-invocation flag than committed project policy.
+  - DO NOT: bury skeleton-mode in config. Temptation: one config for all knobs.
+- Rejected option C — hardcoded per DR-0261 with no override: removes operator control that some union sizes legitimately need.
+  - DO NOT: hardcode with no escape hatch. Temptation: fewest surfaces.
+- Source REQ: REQ-0150. Trace: discussion-20260527075558258 OQ-0166 (Spec A).
+
+#### DR-0274: Pack-location lint scope — staged/changed dirs vs allowed roots (OQ-0167 resolved)
+
+- Date: 2026-05-27
+- Statement: `packages/qfai/scripts/check-pack-locations.mjs` scans staged / changed directories for `review-*/` or `discussion-*/` directories that fall outside the allowed roots (`tmp/`, `.qfai/review/<ts>/`, `.qfai/discussion/<ts>/`) and emits `R-PACK-LOCATION-DRIFT` referencing `.agents/rules/root-additions-policy.md` and the corrected path. Wired into `pnpm ci:lint`. Scanning staged/changed dirs (not a full-tree walk) keeps the lane fast and scoped to the PR's actual additions. (This resolves OQ-0167's lint-scope dimension for REQ-0167; the register's OQ-0167 `sdd lint --fix` autofix question for `surface_type` remains separately deferred — see note below.)
+- Chosen option: staged/changed-dir scope against the three allowed roots.
+- Rejected option — full-tree walk every run: re-flags pre-existing legacy packs on unrelated PRs; noisy and slow.
+  - DO NOT: full-walk on every lint. Temptation: catch everything.
+- Source REQ: REQ-0167. Trace: discussion-20260527075558258 (REQ-0167 lint scope; Spec K). NOTE: the register row OQ-0167 (`qfai sdd lint --fix` autofix for `surface_type`-absent specs, Spec I) is a distinct question and remains `deferred` per `13_Deferred.md`.
