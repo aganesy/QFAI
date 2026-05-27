@@ -9,3 +9,7 @@
 ## Empty State
 
 - 0 open questions in spec-0006 scope.
+
+## Resolved (v1.9.2 Second-Wave)
+
+- OQ-0155 (stale review-pack TTL default) — RESOLVED by DR-0264: 14d default, `review.staleTtlDays` configurable (see DR-0006-0003). No open residual in spec-0006 scope.
