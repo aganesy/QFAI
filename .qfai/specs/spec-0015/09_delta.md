@@ -83,3 +83,22 @@
 | Op            | Target spec | REQ / NFR     | Rationale                                                                                                                                                                                                                                 | Approver |
 | ------------- | ----------- | ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
 | UPDATE:APPEND | spec-0015   | REQ-0015-0015 | CHG-005 cycle で REQ-0015-0014 (`R-PROMPT-SCANNER-DRIFT` emission) を実装した `promptScannerPairs.ts` は proof-of-concept として 1 clause のみ。残り 3 violation kinds (font / radius / shadow) の manifest 拡張を follow-up として登録。 | auto     |
+
+## 2026-05-27 — v1.9.2 Second-Wave (spec-0015)
+
+Pack: `.qfai/discussion/discussion-20260527075558258/` (CHG-006). Wave A scaffold (DR-0261..DR-0274) in `_policies/08_Decisions.md`. Posture: append-first `UPDATE:APPEND` only; continued local IDs from true max +1 (US 0009-0015, AC 0015-0021, BR 0010-0016, EX 0011-0017, TC 0020-0033).
+
+| Operation     | Sub-op | Target                                                | Source (REQ) | Rationale         | DR-Ref  | Status |
+| ------------- | ------ | ----------------------------------------------------- | ------------ | ----------------- | ------- | ------ |
+| UPDATE:APPEND | APPEND | US-0015-0009 / AC-0015-0015 / BR-0015-0010 / EX-0015-0011 / TC-0015-0020..0021 | REQ-0160     | cascade verified  | DR-0269 | PASS   |
+| UPDATE:APPEND | APPEND | US-0015-0010 / AC-0015-0016 / BR-0015-0011 / EX-0015-0012 / TC-0015-0022..0023 | REQ-0158     | cascade verified  | DR-0270 | PASS   |
+| UPDATE:APPEND | APPEND | US-0015-0011 / AC-0015-0017 / BR-0015-0012 / EX-0015-0013 / TC-0015-0024..0025 | REQ-0161     | cascade verified  | CLI-HANDOFF | PASS |
+| UPDATE:APPEND | APPEND | US-0015-0012 / AC-0015-0018 / BR-0015-0013 / EX-0015-0014 / TC-0015-0026..0027 | REQ-0168     | cascade verified  | OQ-0119 carry-fwd | PASS |
+| UPDATE:APPEND | APPEND | US-0015-0013 / AC-0015-0019 / BR-0015-0014 / EX-0015-0015 / TC-0015-0028..0029 | REQ-0171     | cascade verified  | DR-0271 | PASS   |
+| UPDATE:APPEND | APPEND | US-0015-0014 / AC-0015-0020 / BR-0015-0015 / EX-0015-0016 / TC-0015-0030..0031 | REQ-0172     | cascade verified  | (SHOULD; CLI-HANDOFF) | PASS |
+| UPDATE:APPEND | APPEND | US-0015-0015 / AC-0015-0021 / BR-0015-0016 / EX-0015-0017 / TC-0015-0032..0033 | REQ-0173     | cascade verified  | (doc governance) | PASS |
+
+- Decisions: 07_Decisions.md reference rows DR-0015-0003→DR-0269, DR-0015-0004→DR-0270, DR-0015-0005→DR-0271.
+- Open questions: OQ-0160 / OQ-0162 / OQ-0163 resolved by the cited DRs; OQ-0119 remains carry-forward deferred (prompt-augmentation timing not resolved).
+- 01_Spec.md: Status remains `active`; governance behavior copied down to Consumer View; Relevant Requirements + US range (→0015) updated.
+- Approved By: yusuke_senaga (pin-implied under feature/v1.9.2)

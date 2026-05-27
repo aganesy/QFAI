@@ -61,3 +61,52 @@ Given the first required delegation fails, when the orchestrator handles the fai
 - Given the upstream SSOT-sync-pair CI lane (owned by spec-0004) flags drift between `findDesignMdViolations.ts` and `generator-prompt.md` on a PR,
 - When the Reviewer Gate processes that signal,
 - Then it emits `R-PROMPT-SCANNER-DRIFT` at severity error with a non-empty `justification:` text naming (a) the modified file path, (b) the un-paired counterpart path, (c) the specific contract clause whose match cannot be confirmed. Empty / whitespace-only / missing `justification:` MUST be treated by spec-0004's validate ingestion as an advisory-failing error (mirror of the R-WORKLOG-DRIFT family pattern).
+
+## AC-0015-0015: SKILL.md `## Default Autopilot Policy` present with 3 named buckets
+
+- US-Refs: US-0015-0009
+- Given a SKILL.md,
+- When the Reviewer Gate checks it,
+- Then a `## Default Autopilot Policy` section MUST be present listing three named buckets per DR-0269: (a) auto-decide (named defaults — output formatting, ID / sequence numbering, append-vs-create on subject overlap, equivalent-option pick), (b) ask-user (approval-required triage ops CREATE / DELETE / SPLIT / MERGE / SUPERSEDE / UPDATE:REMOVE, destructive operations, version-pin changes, scope expansions — each with its prompt template), (c) hard-required (`companyName`, brand intent, `primarySpecId` when absent). When the section is absent, the gate emits `R-AUTOPILOT-POLICY-MISSING` at severity error with a non-empty `justification:`. A SKILL.md MAY narrow the auto-decide set but MUST NOT widen it.
+
+## AC-0015-0016: Envelope-deviation `AskUserQuestion` writes a decision record
+
+- US-Refs: US-0015-0010
+- Given an `AskUserQuestion` whose template names one of the four envelope-deviation contexts (skill-envelope / architectural-decision / rejected-option re-adoption / scope-expansion),
+- When the skill body resolves the answer,
+- Then it MUST write `.qfai/evidence/decisions/<ISO8601-ts>.json` shaped `{question, answer, scope, operatorIdentity, timestamp, envelopeContractClause}` per DR-0270; `.qfai/evidence/decisions/` MUST be git-ignored by default (mirrors `.qfai/evidence/prototyping/`). An `AskUserQuestion` that names none of the four contexts MUST NOT write a record (no fail-open false-positive).
+
+## AC-0015-0017: Cross-skill handoff schema is the single canonical writer/reader
+
+- US-Refs: US-0015-0011
+- Given any skill that produces or consumes handoff state,
+- When it writes a handoff file,
+- Then the file MUST conform to the canonical CLI-HANDOFF schema in `packages/qfai/src/core/schemas/handoff.ts` (documented in `references/handoff.md`) whose minimum field set is `companyName?` / `primarySpecId?` / `startDate?` / `signature?` / `entryPattern?` / `productScope?` with `additionalProperties: true`. A legacy ad-hoc file (e.g. `session-handoff.yaml`) is accepted during the deprecation window with a `D-HANDOFF-LEGACY-FORMAT` warning. A non-conforming write, or an asymmetric edit of the SSOT-sync Pair IV (schema ↔ all skill writers), emits `R-HANDOFF-SCHEMA-DRIFT` at severity error with a non-empty `justification:`.
+
+## AC-0015-0018: New Reviewer-Gate finding-code catalog enforced with mandatory justification
+
+- US-Refs: US-0015-0012
+- Given the Reviewer Gate,
+- When it evaluates a PR,
+- Then the eight catalog codes `R-AUTOPILOT-POLICY-MISSING`, `R-HANDOFF-SCHEMA-DRIFT`, `R-EVIDENCE-MUTATION-UNLOGGED`, `R-DESIGN-MD-PATCH-OUT-OF-ZONE`, `R-PACK-LOCATION-DRIFT`, `R-SKILL-MANIFEST-DRIFT`, `R-EXPLORATION-CERTIFY-ATTEMPT`, `R-MOCK-HREF-DRIFT` MUST be available, each at severity error and each carrying a mandatory non-empty `justification:` (per the prior-pack OQ-0109 Option A / TC-71 advisory-failing posture). A finding emitted with empty / whitespace-only `justification:` MUST be rejected by `qfai validate` ingestion (advisory-failing). The Reviewer subagent prompt / tool-augmentation timing for these codes inherits the OQ-0119 carry-forward deferral and is NOT resolved here.
+
+## AC-0015-0019: `qfai audit log` lists and filters decision records
+
+- US-Refs: US-0015-0013
+- Given `.qfai/evidence/decisions/<ts>.json` records exist,
+- When `qfai audit log` runs,
+- Then it lists the records newest-first and supports `--scope`, `--operator`, and `--clause` (filtering on `envelopeContractClause`) plus `--format table|json` defaulting to `table`, per DR-0271 (CLI-AUDIT). Because `.qfai/evidence/decisions/` is human-readable JSON, the CLI is SHOULD-level (ergonomic, not a hard requirement).
+
+## AC-0015-0020: `qfai handoff upgrade` emits a conforming handoff losslessly
+
+- US-Refs: US-0015-0014
+- Given a legacy handoff file (e.g. `session-handoff.yaml`),
+- When `qfai handoff upgrade <legacy-file>` runs,
+- Then it emits a conforming `handoff.yaml` (CLI-HANDOFF) at the canonical path and preserves all original fields under a `legacy:` key so no data is lost. SHOULD-level per the v1.9.1 `qfai prototyping upgrade-{config,json}` precedent (closed OQ-0120 / 0121).
+
+## AC-0015-0021: Cross-skill docs realigned to implementation with zero stale references
+
+- US-Refs: US-0015-0015
+- Given the OQ-0152..0157 outcomes are implemented,
+- When the implementing PR lands,
+- Then `references/iteration-loop.md`, `references/generator-prompt.md`, `references/handoff.md`, `references/evidence-requirements.md`, and each affected SKILL.md MUST be rewritten in the same atomic PR to match the chosen implementations, and `qfai validate --report` MUST verify zero remaining stale references at HEAD after sunset (warnings during the deprecation window). spec-0015 owns this cross-skill documentation-governance obligation.

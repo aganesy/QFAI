@@ -33,3 +33,14 @@
   1. Reviewer-Gate adds `R-CERTIFY-VERIFY-CIRCULAR` (severity error) structural check: if a future PR wires `certify` to read a validator output whose profile requires `/qfai-atdd` or `/qfai-implement` artifacts, the gate fires with a 3-part justification (offending certify code path, offending validator-output file/profile, option-B contract clause violated).
   2. Reviewer-Gate emits `R-PROMPT-SCANNER-DRIFT` with the 3-part justification SSOT shared with spec-0004's validate ingestion (one contract, two enforcers).
 - Pair with spec-0004 wave: the validate-ingestion gate in spec-0004 is the rejector; this spec defines the emitter shape.
+
+## CHG-006 (2026-05-27) — second-wave agent-collective + cross-skill governance
+
+- Implement REQ-0158 / 0160 / 0161 / 0168 / 0171 / 0172 / 0173 per AC-0015-0015..0021:
+  1. Add a `R-AUTOPILOT-POLICY-MISSING` Reviewer-Gate check that asserts every SKILL.md carries the `## Default Autopilot Policy` section with the three DR-0269 buckets (auto-decide / ask-user / hard-required); fail at severity error with a non-empty justification when absent.
+  2. In the skill body, write an envelope-deviation decision record to `.qfai/evidence/decisions/<ISO8601-ts>.json` when an `AskUserQuestion` names one of the four DR-0270 contexts; add the path to the default git-ignore (mirror `.qfai/evidence/prototyping/`).
+  3. Reference the canonical CLI-HANDOFF schema (`packages/qfai/src/core/schemas/handoff.ts`, doc `references/handoff.md`) from every handoff writer; add the `R-HANDOFF-SCHEMA-DRIFT` check covering non-conforming writes and asymmetric SSOT-sync Pair IV edits; accept legacy files with `D-HANDOFF-LEGACY-FORMAT` during the window.
+  4. Register the eight-code catalog (BR-0015-0013) at severity error with mandatory non-empty `justification:`; rely on the shared `qfai validate` advisory-failing ingestion. Do not touch the OQ-0119-deferred prompt-augmentation timing.
+  5. Wire `qfai audit log` (CLI-AUDIT) per DR-0271 filters + `--format table|json`; wire `qfai handoff upgrade` to emit a conforming handoff preserving originals under `legacy:`.
+  6. Realign `references/*.md` + each SKILL.md in the same atomic PR as the OQ-0152..0157 implementation; rely on `qfai validate --report` for the zero-stale-reference obligation (warning in window, error at sunset).
+- Cross-spec: the new finding-code catalog severity/justification SSOT and the doc-realignment rule are recorded in `_policies` (REQ-0168 / REQ-0173); spec-0015 owns the cross-skill governance surface. CLI surfaces (`qfai-audit.md`, `references/handoff.md`) and the handoff TS-module SSOT live under authoring zones (not distributed).
