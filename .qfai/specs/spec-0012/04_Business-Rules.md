@@ -361,3 +361,41 @@ No other path triggers stop. LLM subjective DONE is forbidden.
 
 - AC-Refs: AC-0012-0071
 - Error text MUST read literally `--cycle accepts 0..9 (=10 cycles total). --cycle 10 would be the 11th cycle and is not supported.` and SHOULD recommend the peek-mode equivalent.
+
+## BR-0012-0060: Cycle-0 skeleton emission contract (DR-0261, DR-0273)
+
+- AC-Refs: AC-0012-0072, AC-0012-0073
+- `iterate --cycle 0 --emit-skeletons` MUST emit one placeholder HTML per `screens[].id` in `frozenSurfaceUnion`, styled from DESIGN.md tokens, with NO per-screen LLM generation call at cycle 0 (token-driven placeholder, DR-0261 chosen option B).
+- Skeleton mode is `--skeleton-mode full|placeholder|stub` (DR-0273), default `placeholder`; no config key is added.
+- Post-convergence invariant: every `frozenSurfaceUnion` screen carries ≥ 1 `evidenceRefs[]` entry per kind (`screenshot` AND `html`) cross-spec.
+- `--emit-skeletons` is opt-in during the deprecation window; absence preserves v1.9.1 behavior with no regression.
+
+## BR-0012-0061: DESIGN.md patch-zone semantic (DR-0262)
+
+- AC-Refs: AC-0012-0074, AC-0012-0075
+- DESIGN.md MUST support a front-matter `patch_zone:` block listing editable line ranges / token names (DR-0262 chosen option a; no new lock-file artifact).
+- An edit whose diff is fully contained in the patch zone updates only a new `patchHash` field; `frozenDesignMdHash#majorHash` and prototyping evidence remain valid.
+- An edit touching any line / token outside the zone — or removing the `patch_zone:` block itself — invalidates evidence and surfaces `R-DESIGN-MD-PATCH-OUT-OF-ZONE` (severity warning).
+
+## BR-0012-0062: `prototyping.mode` discriminator + exploration gate relaxation (DR-0263)
+
+- AC-Refs: AC-0012-0076, AC-0012-0077
+- `qfai.config.yaml#prototyping.mode` and `iterate --mode <convergence|exploration>` are both supported; `--mode` overrides config; default is `convergence`.
+- `prototyping.json#mode` records the per-iteration mode; `acceptedIterationIndex` references a convergence-mode iteration only.
+- Under `mode: exploration` the gate-relaxation table (DR-0263 medium) downgrades `QFAI-CRIT-008` AND the design-compliance error → warning; structural / schema / path gates and the license gate (exit 66) remain hard error.
+- `qfai prototyping certify` rejects sealing any iteration produced under `mode: exploration` with `R-EXPLORATION-CERTIFY-ATTEMPT`.
+
+## BR-0012-0063: `taskFidelity` required-keyword surface (REQ-0162)
+
+- AC-Refs: AC-0012-0078, AC-0012-0079
+- `QFAI-CRIT-009` error text MUST name every required `taskFidelity` keyword (`cta_visibility`, `four_state_check`, plus any others surfaced by the current implementation) and the expected document section.
+- `references/evidence-requirements.md` MUST enumerate the keywords with example markdown structure (SSOT for the keyword set).
+- `iterate --capture` MUST emit an evidence template skeleton that includes the required keywords as placeholders.
+
+## BR-0012-0064: iter-NN evidence-mutation audit-log (REQ-0165)
+
+- AC-Refs: AC-0012-0080, AC-0012-0081
+- `iterate` and `certify` MUST append a `.qfai/evidence/prototyping/mutation-log.jsonl` JSON-Lines entry shaped `{ ts, caller, path, action, priorSize, newSize }` for every destructive mutation (delete / overwrite) under `.qfai/evidence/prototyping/iter-NN/*`.
+- `iterate --cycle 0 --force` MUST emit a mutation-log entry naming each moved file (mirrors REQ-0117 backup discipline).
+- The mutation-log MUST be git-ignored by default.
+- A code path mutating iter-NN evidence without a mutation-log call surfaces `R-EVIDENCE-MUTATION-UNLOGGED` (severity error).

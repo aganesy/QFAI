@@ -1293,6 +1293,86 @@
 - Test file: `packages/qfai/tests/unit/cli/commands/prototypingIterate.cycleOutOfRange.peekMode.test.ts`
 - Verify REQ-0012-0073 SHOULD peek-mode recommendation: the rejection error text MUST end with the recommendation line `Hint: use --cycle 9 --check-convergence to peek the final cycle without re-running the loop.` Snapshot-pinned to prevent accidental wording drift.
 
+## TC-0012-0471
+
+- EX-Ref: EX-0012-0181
+- AC-Refs: AC-0012-0072, AC-0012-0073
+- Type: integration
+- Test file: `packages/qfai/tests/integration/prototyping/emitSkeletonsCoverage.test.ts`
+- Verify REQ-0150 normal path: `iterate --cycle 0 --emit-skeletons` over a multi-spec `frozenSurfaceUnion` writes one DESIGN.md-token-styled placeholder HTML per `screens[].id` with no per-screen LLM generation call (DR-0261), and after convergence every union screen carries both `{kind:"screenshot"}` and `{kind:"html"}` in `evidenceRefs[]` cross-spec.
+
+## TC-0012-0472
+
+- EX-Ref: EX-0012-0181
+- AC-Refs: AC-0012-0073
+- Type: integration
+- Test file: `packages/qfai/tests/integration/prototyping/emitSkeletonsCoverage.test.ts`
+- Verify REQ-0150 boundary: `iterate --cycle 0` WITHOUT `--emit-skeletons` emits zero skeleton files and matches v1.9.1 behavior (no regression); `--skeleton-mode full` (DR-0273) escalates to per-screen generation while default `placeholder` does not.
+
+## TC-0012-0473
+
+- EX-Ref: EX-0012-0182
+- AC-Refs: AC-0012-0074
+- Type: unit
+- Test file: `packages/qfai/tests/unit/core/prototyping/designMdPatchZone.test.ts`
+- Verify REQ-0151 normal path: an edit fully contained in the front-matter `patch_zone:` block updates only `patchHash`; `majorHash` is byte-stable and prototyping evidence stays valid (DR-0262).
+
+## TC-0012-0474
+
+- EX-Ref: EX-0012-0182
+- AC-Refs: AC-0012-0075
+- Type: unit
+- Test file: `packages/qfai/tests/unit/core/prototyping/designMdPatchZone.test.ts`
+- Verify REQ-0151 error path: an out-of-zone edit (or removal of the `patch_zone:` block) invalidates evidence and emits `R-DESIGN-MD-PATCH-OUT-OF-ZONE` (severity warning).
+
+## TC-0012-0475
+
+- EX-Ref: EX-0012-0183
+- AC-Refs: AC-0012-0076
+- Type: unit
+- Test file: `packages/qfai/tests/unit/cli/commands/prototypingIterate.modeDiscriminator.test.ts`
+- Verify REQ-0152 normal path: `--mode exploration` overrides `qfai.config.yaml#prototyping.mode: convergence`; absence of both defaults to `convergence`; `prototyping.json#mode` records the per-iteration mode; under exploration `QFAI-CRIT-008` + design-compliance error downgrade to warning while schema / path / license (exit 66) gates stay hard error (DR-0263 medium).
+
+## TC-0012-0476
+
+- EX-Ref: EX-0012-0183
+- AC-Refs: AC-0012-0077
+- Type: unit
+- Test file: `packages/qfai/tests/unit/cli/commands/prototypingCertify.explorationReject.test.ts`
+- Verify REQ-0152 error path: `certify` against a loop containing an exploration-mode iteration rejects with `R-EXPLORATION-CERTIFY-ATTEMPT`; `acceptedIterationIndex` resolves only to a convergence-mode iteration.
+
+## TC-0012-0477
+
+- EX-Ref: EX-0012-0184
+- AC-Refs: AC-0012-0078
+- Type: unit
+- Test file: `packages/qfai/tests/unit/core/validators/taskFidelityKeywords.test.ts`
+- Verify REQ-0162 normal path: `QFAI-CRIT-009` error text names every required keyword (`cta_visibility`, `four_state_check`, plus any others surfaced by the implementation) and the expected document section; `references/evidence-requirements.md` enumerates the same keywords.
+
+## TC-0012-0478
+
+- EX-Ref: EX-0012-0184
+- AC-Refs: AC-0012-0079
+- Type: unit
+- Test file: `packages/qfai/tests/unit/cli/commands/prototypingIterate.captureTemplate.test.ts`
+- Verify REQ-0162 template emission: `iterate --capture` emits an evidence template skeleton whose placeholders include every required `taskFidelity` keyword.
+
+## TC-0012-0479
+
+- EX-Ref: EX-0012-0185
+- AC-Refs: AC-0012-0080
+- Type: integration
+- Test file: `packages/qfai/tests/integration/prototyping/mutationLog.test.ts`
+- Verify REQ-0165 normal path: a destructive mutation under `iter-NN/*` (including each file moved by `--cycle 0 --force`) appends a `.qfai/evidence/prototyping/mutation-log.jsonl` line shaped `{ts,caller,path,action,priorSize,newSize}`; the log is git-ignored.
+
+## TC-0012-0480
+
+- EX-Ref: EX-0012-0185
+- AC-Refs: AC-0012-0081
+- Type: unit
+- Test file: `packages/qfai/tests/unit/core/validators/evidenceMutationUnlogged.test.ts`
+- Verify REQ-0165 error path: a code path mutating iter-NN evidence without a mutation-log call surfaces `R-EVIDENCE-MUTATION-UNLOGGED` (severity error).
+
 ## Legacy Coverage Continuity
 
 - The legacy baseline test-case identifier space remains reserved for existing implementation/test slices.

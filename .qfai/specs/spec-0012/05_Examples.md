@@ -588,3 +588,38 @@
 - Given `qfai prototyping iterate --cycle 10`,
 - When iterate validates the arg,
 - Then stderr reads `--cycle accepts 0..9 (=10 cycles total). --cycle 10 would be the 11th cycle and is not supported.` and recommends `--cycle 9 --check-convergence`. A second invocation with `--cycle -1` surfaces the same error class.
+
+## EX-0012-0181: Cycle-0 `--emit-skeletons` Token-Driven Placeholder Coverage (DR-0261, DR-0273)
+
+- BR-Ref: BR-0012-0060
+- Given a `frozenSurfaceUnion` resolved from two UI-bearing specs — `<spec-A>` (`home`, `dashboard`) and `<spec-B>` (`settings`) — and DESIGN.md tokens `--color-primary: #2563eb`, `--radius-md: 8px`,
+- When `qfai prototyping iterate --cycle 0 --emit-skeletons` runs (default `--skeleton-mode placeholder`),
+- Then iterate writes 3 placeholder HTML files (`home`, `dashboard`, `settings`), each styled from the DESIGN.md tokens with NO per-screen LLM generation call, and after convergence each of the 3 screens carries `evidenceRefs[]` containing both `{kind: "screenshot"}` and `{kind: "html"}`. Re-running WITHOUT `--emit-skeletons` produces no skeleton files (v1.9.1 behavior preserved). Passing `--skeleton-mode full` instead escalates to per-screen generation.
+
+## EX-0012-0182: DESIGN.md In-Zone vs Out-Of-Zone Edit (DR-0262)
+
+- BR-Ref: BR-0012-0061
+- Given DESIGN.md whose front-matter declares `patch_zone:\n  tokens: [--color-accent, --radius-md]` and a frozen `majorHash: "a1b2c3"`,
+- When an operator edits `--radius-md: 8px` → `10px` (in-zone),
+- Then only `patchHash` changes; `majorHash` stays `a1b2c3` and prototyping evidence stays valid (no Reviewer-Gate finding). When the operator instead edits `--font-sans` (not in the zone) OR deletes the `patch_zone:` block, evidence is invalidated and Reviewer Gate emits `R-DESIGN-MD-PATCH-OUT-OF-ZONE` (warning).
+
+## EX-0012-0183: `--mode exploration` Relaxation + Certify Rejection (DR-0263)
+
+- BR-Ref: BR-0012-0062
+- Given `qfai.config.yaml#prototyping.mode: convergence` overridden by `qfai prototyping iterate --mode exploration`,
+- When an exploration iteration fails `QFAI-CRIT-008` (axes below exceptional) and has a `designMdViolations[]` entry,
+- Then both findings downgrade error → warning (medium relaxation) while a missing required schema field still hard-errors and a non-allowlisted image source still exits 66; `prototyping.json#mode` records `"exploration"`. When `qfai prototyping certify` later runs against a loop containing that iteration, certify rejects with `R-EXPLORATION-CERTIFY-ATTEMPT` and `acceptedIterationIndex` resolves only to a convergence-mode iteration.
+
+## EX-0012-0184: `QFAI-CRIT-009` Keyword Text + `--capture` Template Skeleton (REQ-0162)
+
+- BR-Ref: BR-0012-0063
+- Given `taskFidelity` evidence missing the `four_state_check` section,
+- When `qfai validate` runs,
+- Then `QFAI-CRIT-009` error text names every required keyword (e.g. `cta_visibility`, `four_state_check`) and the expected document section, and `references/evidence-requirements.md` shows the same keywords with example markdown. Running `qfai prototyping iterate --capture` emits a template skeleton containing `## cta_visibility\n<!-- TODO -->\n## four_state_check\n<!-- TODO -->` placeholders for the full keyword set.
+
+## EX-0012-0185: iter-NN Mutation-Log Entry on `--cycle 0 --force` (REQ-0165)
+
+- BR-Ref: BR-0012-0064
+- Given an existing non-empty `iter-00/<spec-id>/home.review.json` (2048 bytes),
+- When `qfai prototyping iterate --cycle 0 --force` moves it into `iter-00.backup-<ISO>/` before clearing,
+- Then `.qfai/evidence/prototyping/mutation-log.jsonl` gains a line `{"ts":"2026-05-27T...","caller":"iterate","path":"iter-00/<spec-id>/home.review.json","action":"move","priorSize":2048,"newSize":0}` for that file; the log is git-ignored. A reviewer who finds a code path overwriting `iter-03/<spec-id>/settings.review.json` without calling the mutation-log writer surfaces `R-EVIDENCE-MUTATION-UNLOGGED` (error).

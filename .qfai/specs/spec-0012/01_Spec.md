@@ -11,6 +11,14 @@
 - Public interface: `/qfai-prototyping`
 - `_policies` is read-only escalation context and must not be read by default
 
+### v1.9.2 Second-Wave behavior (copied down for implementers)
+
+- **Cycle-0 skeleton emission (REQ-0150, DR-0261 / DR-0273):** `qfai prototyping iterate --cycle 0 --emit-skeletons` (opt-in; default behavior unchanged, no v1.9.1 regression) emits one DESIGN.md-token-styled placeholder HTML per `screens[].id` in `frozenSurfaceUnion`, with NO per-screen LLM call at cycle 0. `--skeleton-mode full|placeholder|stub` (default `placeholder`) tunes fidelity per-run. Acceptance signal: after convergence every `frozenSurfaceUnion` screen carries ≥ 1 `evidenceRefs[]` entry per kind (`screenshot` AND `html`) cross-spec.
+- **DESIGN.md patch-zone (REQ-0151, DR-0262):** DESIGN.md gains a front-matter `patch_zone:` block. In-zone edits update only `patchHash`; `majorHash` stays stable and prototyping evidence stays valid. Out-of-zone edits (or removing the block) invalidate evidence and emit `R-DESIGN-MD-PATCH-OUT-OF-ZONE` (warning). No new lock-file artifact.
+- **`prototyping.mode` discriminator (REQ-0152, DR-0263):** `qfai.config.yaml#prototyping.mode` (convergence|exploration); `qfai prototyping iterate --mode <mode>` overrides config; default `convergence`. Under `exploration`, `QFAI-CRIT-008` + design-compliance error downgrade to warning (medium relaxation); structural / path / license (exit 66) gates stay hard error. `prototyping.json#mode` records per-iteration mode; `certify` rejects sealing any exploration-mode iteration (`R-EXPLORATION-CERTIFY-ATTEMPT`); `acceptedIterationIndex` references a convergence-mode iteration only.
+- **`taskFidelity` keywords (REQ-0162):** `QFAI-CRIT-009` error text names every required keyword (`cta_visibility`, `four_state_check`, plus any others surfaced by the implementation) and the expected section; `references/evidence-requirements.md` enumerates them with example markdown; `iterate --capture` emits an evidence template skeleton with the keywords as placeholders.
+- **iter-NN mutation-log (REQ-0165):** `iterate` / `certify` append a `.qfai/evidence/prototyping/mutation-log.jsonl` JSON-Lines entry `{ ts, caller, path, action, priorSize, newSize }` for every destructive mutation (delete / overwrite) under `iter-NN/*`, including each file moved by `--cycle 0 --force`. The log is git-ignored by default; an unlogged iter-NN mutation path surfaces `R-EVIDENCE-MUTATION-UNLOGGED` (error).
+
 ## Scope
 
 - In:

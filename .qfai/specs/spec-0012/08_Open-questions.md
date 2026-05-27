@@ -1,6 +1,7 @@
 # 08 Open Questions
 
 - Historical runtime/mode questions are superseded by [07_Decisions.md](./07_Decisions.md).
+- v1.9.2 Second-Wave: OQ-0152 (cycle-0 skeleton UX shape), OQ-0153 (DESIGN.md patch-zone shape), and OQ-0154 (exploration-mode gate-relaxation scope) are RESOLVED by `_policies/08_Decisions.md` DR-0261 (+ DR-0273), DR-0262, and DR-0263 respectively. No open items are added for REQ-0150 / REQ-0151 / REQ-0152; REQ-0162 / REQ-0165 are straight MUSTs with no deferred decision. See `09_delta.md` § 2026-05-27 — v1.9.2 Second-Wave (spec-0012).
 
 ## OQ-0012-0002: `prototyping.json#iterations[]` shape under per-spec namespacing
 
