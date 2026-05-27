@@ -171,3 +171,29 @@
 - AC-Refs: AC-0004-0031, AC-0004-0032
 - certify 系コマンドが `validate.json` を読む際は top-level `profile` field を必ず照合し、期待 profile と一致しない場合は読込を中断し再実行コマンドを operator に提示する。
 - 旧 `.qfai/output/validate.json` を読む下流は deprecation window 中は許容するが、`D-DEPRECATED-PATH` warning を伝搬する。sunset 後は読込自体を error として扱う。
+
+## BR-0004-0030: SaaS-package validate profile (REQ-0166 validate side)
+
+- AC-Refs: AC-0004-0036
+- `qfai validate --profile saas-package` PASSes only when ALL three conditions hold: (a) the prototyping-profile validate PASSes, (b) a DCON-005 design-system attestation is present at `.qfai/contracts/design/design-system.yaml`, and (c) the CLI-HANDOFF cross-skill handoff schema PASSes (per `_policies/05_Contracts.md` §CHG-006).
+- ATDD-class and implement-class gates MUST be SKIPPED under this profile, and each skip MUST be surfaced as a `D-SAAS-PACKAGE-VERIFY-SKIPPED` (severity info) finding naming the skipped gate.
+- This is the validate side of REQ-0166; the certify side (`qfai prototyping certify --scope saas-package`) is owned by spec-0014 (same Source REQ, file-local IDs). The skipped gates named here MUST match what the certify-side `notes:` field reports.
+
+## BR-0004-0031: `primary_tasks` shape acceptance + count band (REQ-0164)
+
+- AC-Refs: AC-0004-0037
+- `auditProfile.ts` MUST accept BOTH the legacy string-only `primary_tasks` form AND the structured form `{ id: string, label: string, acceptance: string }` with all three required and `additionalProperties: false` (per DR-0268).
+- String-only items MUST continue to PASS during the deprecation window (one-minor window per OC-63); a `D-DEPRECATED-*` warning may fire on string-only at sunset.
+- The `QFAI-AUD-020` warning text MUST name the recommended count band `3..7` (per DR-0267).
+
+## BR-0004-0032: pack-location lint lane emits R-PACK-LOCATION-DRIFT (REQ-0167)
+
+- AC-Refs: AC-0004-0038
+- `packages/qfai/scripts/check-pack-locations.mjs` MUST scan staged / changed directories (not a full-tree walk, per DR-0274) for `review-*/` or `discussion-*/` directories outside the allowed roots (`tmp/`, `.qfai/review/<ts>/`, `.qfai/discussion/<ts>/`) and be wired into `pnpm ci:lint`.
+- On a misplaced directory the lane MUST emit `R-PACK-LOCATION-DRIFT` (severity error, advisory-failing) referencing `.agents/rules/root-additions-policy.md` and proposing the correct allowed-root path.
+
+## BR-0004-0033: pack-location lane is scoped and non-flagging on clean PRs (REQ-0167)
+
+- AC-Refs: AC-0004-0039
+- The lane MUST pass silently (no `R-PACK-LOCATION-DRIFT`) when pack directories are added only under allowed roots or when no pack directory is touched.
+- Pre-existing legacy packs on unrelated PRs MUST NOT be re-flagged — scope is staged/changed dirs only (per DR-0274).

@@ -78,3 +78,12 @@
 - Decision: quantitative proxy check は `uix/scoringReady.ts` に追加する
 - Rationale: `score_anchors` は scoring-ready schema の一部であり、新規 top-level validator より責務境界が明確
 - Status: Adopted
+
+### DR-0004-0014: v1.9.2 second-wave shared decisions referenced (REQ-0166 / REQ-0164 / REQ-0167)
+
+- Decision: the v1.9.2 second-wave validate-side behavior follows shared `_policies/08_Decisions.md` decisions verbatim:
+  - DR-0267 — `QFAI-AUD-020` recommended `primary_tasks` count band is `3..7` (OQ-0158 resolved); cited by BR-0004-0031 / AC-0004-0037.
+  - DR-0268 — structured `primary_tasks` shape is the closed `{id, label, acceptance}` schema (`additionalProperties: false`, all required) accepted alongside string-only during the deprecation window (OQ-0159 resolved); cited by BR-0004-0031.
+  - DR-0274 — pack-location lint scope is staged/changed dirs against the three allowed roots (OQ-0167 lint-scope dimension resolved); cited by BR-0004-0032 / BR-0004-0033.
+- Decision: the SaaS-package validate profile (REQ-0166 validate side) gates on prototyping-profile PASS + DCON-005 attestation + CLI-HANDOFF schema, skips ATDD / implement-class gates with `D-SAAS-PACKAGE-VERIFY-SKIPPED` (info) per `_policies/05_Contracts.md` §CHG-006 (DCON-005 / CLI-VAL). Certify side owned by spec-0014.
+- Status: Adopted

@@ -210,3 +210,33 @@
 - Given a Reviewer-Gate report containing an `R-PROMPT-SCANNER-DRIFT` finding whose `justification:` field is empty, missing, or whitespace-only
 - When `qfai validate` ingests the reviewer report
 - Then validate rejects the run with severity error (advisory-failing); a finding with a non-empty `justification:` naming (a) the modified file, (b) the un-paired counterpart, and (c) the specific contract clause whose match cannot be confirmed passes
+
+## AC-0004-0036
+
+- US-Refs: US-0004-0037
+- Given a SaaS-tenant repo whose prototyping-profile validate PASSes, with a DCON-005 design-system attestation present at `.qfai/contracts/design/design-system.yaml` and a conforming CLI-HANDOFF cross-skill handoff
+- When `qfai validate --profile saas-package` runs
+- Then validate PASSes; the ATDD / implement-class gates are SKIPPED and each skip is surfaced as a `D-SAAS-PACKAGE-VERIFY-SKIPPED` (severity info) finding naming the skipped gate
+- And when any of the three required conditions fails (prototyping-profile fails, DCON-005 attestation absent, or CLI-HANDOFF schema fails), `qfai validate --profile saas-package` does NOT PASS
+
+## AC-0004-0037
+
+- US-Refs: US-0004-0038
+- Given a UI contract whose `primary_tasks` items use the legacy string-only form
+- When `auditProfile.ts` evaluates the contract
+- Then the string-only items continue to PASS during the deprecation window, AND a structured `{id, label, acceptance}` (all three required, `additionalProperties: false` per DR-0268) form is also accepted
+- And the `QFAI-AUD-020` warning text names the recommended count band `3..7` (per DR-0267)
+
+## AC-0004-0038
+
+- US-Refs: US-0004-0039
+- Given a PR that introduces a `review-*/` or `discussion-*/` directory outside the allowed roots (`tmp/`, `.qfai/review/<ts>/`, `.qfai/discussion/<ts>/`)
+- When the `check-pack-locations.mjs` lane (wired into `pnpm ci:lint`, scanning staged / changed dirs per DR-0274) runs
+- Then the lane FAILS emitting `R-PACK-LOCATION-DRIFT` that references `.agents/rules/root-additions-policy.md` and proposes the correct allowed-root path for the misplaced directory
+
+## AC-0004-0039
+
+- US-Refs: US-0004-0039
+- Given a PR that adds `review-*/` or `discussion-*/` directories only under allowed roots (or touches no pack directories at all)
+- When the `check-pack-locations.mjs` lane runs
+- Then the lane passes silently with no `R-PACK-LOCATION-DRIFT` finding; pre-existing legacy packs on unrelated PRs are not re-flagged (staged/changed-dir scope, not a full-tree walk, per DR-0274)
