@@ -34,3 +34,28 @@
 - Obligation: `qfai-discussion` SKILL.md MUST gain a `project_memory:` YAML block enumerating the layers it reads (typically `manifest/`, `catalog/`, `process/`; `constitution/` is implicitly always-loaded). Discussion is intentionally excluded from the worklog-write contract per REQ-0005 Notes (it authors a discussion pack and does not modify code).
 - Cascade: SKILL.md declaration is validated by spec-0004's `qfai validate`.
 - Source: REQ-0010
+
+## 2026-05-27 — v1.9.2 Second-Wave (spec-0010)
+
+- Discussion pack: `.qfai/discussion/discussion-20260527075558258/`
+- Operation: UPDATE:APPEND
+- Posture: additive append; preserves existing US/AC/BR/EX/TC numbering. New local IDs: US-0010-0011..0012, AC-0010-0009..0012, BR-0010-0009..0012, EX-0010-0009..0013, TC-0010-0009..0013, TDD-0013..0017, DR-0010-0005..0006.
+- Approved By: pin-implied (feature/v1.9.2)
+
+| Operation     | Sub-op | Target                                         | Source (REQ) | Rationale          | DR-Ref   | Status |
+| ------------- | ------ | ---------------------------------------------- | ------------ | ------------------ | -------- | ------ |
+| UPDATE        | APPEND | 01_Spec.md (Relevant Reqs, Consumer View, US range → 0012) | REQ-0154, REQ-0155 | cascade verified | DR-0265, DR-0266 | PASS |
+| UPDATE        | APPEND | 02_User-stories.md (US-0010-0011..0012)        | REQ-0154, REQ-0155 | cascade verified | DR-0265, DR-0266 | PASS |
+| UPDATE        | APPEND | 03_Acceptance-Criteria.md (AC-0010-0009..0012) | REQ-0154, REQ-0155 | cascade verified | DR-0265, DR-0266 | PASS |
+| UPDATE        | APPEND | 04_Business-Rules.md (BR-0010-0009..0012)      | REQ-0154, REQ-0155 | cascade verified | DR-0265, DR-0266 | PASS |
+| UPDATE        | APPEND | 05_Examples.md (EX-0010-0009..0013)            | REQ-0154, REQ-0155 | cascade verified | DR-0265, DR-0266 | PASS |
+| UPDATE        | APPEND | 06_Test-Cases.md (TC-0010-0009..0013, Type-classified) | REQ-0154, REQ-0155 | cascade verified | DR-0265, DR-0266 | PASS |
+| UPDATE        | APPEND | 07_Decisions.md (DR-0010-0005..0006)           | REQ-0154, REQ-0155 | cascade verified | DR-0265, DR-0266 | PASS |
+| UPDATE        | APPEND | 08_Open-questions.md (OQ-0156/0157 resolved)   | REQ-0154, REQ-0155 | cascade verified | DR-0265, DR-0266 | PASS |
+| UPDATE        | APPEND | 10_Plan.md (Second-Wave How)                   | REQ-0154, REQ-0155 | cascade verified | DR-0265, DR-0266 | PASS |
+| UPDATE        | APPEND | tdd/test-list.md (TDD-0013..0017)              | REQ-0154, REQ-0155 | cascade verified | DR-0265, DR-0266 | PASS |
+
+- Notes:
+  - REQ-0155 spans spec-0010 (writer) and spec-0013 (reader) — same Source REQ, file-local IDs per spec. Reader side declared in spec-0013.
+  - `R-MOCK-HREF-DRIFT` (template ↔ `QFAI-MOCK-010` SSOT-sync) and `QFAI-MOCK-010` validator implementation enforcement route through spec-0004; this slice owns the discussion-side template + SKILL.md authoring surface and the pointer-writer behavior.
+- Source: REQ-0154, REQ-0155 (discussion-20260527075558258)

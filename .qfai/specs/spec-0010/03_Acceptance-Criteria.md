@@ -35,3 +35,31 @@ Given a UI-bearing discussion pack, when inspected, then it does not declare a f
 - Given a fresh `/qfai-discussion` UI-bearing run,
 - When the produced sidecars are listed,
 - Then `33_exploration_rubric.md`, `34_evaluator_calibration.md`, `30_exploration_brief.md`, `31_reference_pool.md`, `32_design_anti_goals.md` are NOT created. Producing them is a regression and triggers the skill validator under this spec.
+
+## AC-0010-0009: Mock template default + strict validator (anchor-form)
+
+- US-Refs: US-0010-0011
+- Given the shipped `qfai-discussion` mock template and SKILL.md authoring guidance,
+- When an HTML mock is authored in `03_Story-Workshop.md`,
+- Then the template-emitted links are anchor-form (`<a href="#<name>">`) and SKILL.md instructs anchor-form authoring; `QFAI-MOCK-010` continues to PASS anchor hrefs (`#name`) and external `http(s)://` hrefs, and same-origin absolute hrefs (`/path/`) are NOT emitted by the template.
+
+## AC-0010-0010: Mock template ↔ validator SSOT-sync (`R-MOCK-HREF-DRIFT`)
+
+- US-Refs: US-0010-0011
+- Given the template ↔ `QFAI-MOCK-010` validator SSOT-sync pair (Pair V),
+- When one side is edited without the matching update to the other,
+- Then the Reviewer-Gate finding `R-MOCK-HREF-DRIFT` (severity error) fires naming the asymmetric edit.
+
+## AC-0010-0011: `/qfai-discussion` writes the active session pointer
+
+- US-Refs: US-0010-0012
+- Given a `/qfai-discussion` run finalizing a pack,
+- When the pack is finalized,
+- Then `.qfai/state.json#discussion.currentId` is set to the just-authored pack ID (the single SSOT for the active session); `qfai discussion list --active` reads this value rather than inferring from filesystem timestamps.
+
+## AC-0010-0012: Multiple-active ambiguity rejected with recovery guidance
+
+- US-Refs: US-0010-0012
+- Given `.qfai/state.json#discussion.currentId` is absent OR resolves to a missing/duplicate pack,
+- When the active pointer is resolved,
+- Then an error is raised naming the candidate `discussion-*` dirs and the recovery command (`qfai discussion use <id>`); the active session is NOT inferred from mtime.

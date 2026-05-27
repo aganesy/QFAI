@@ -56,6 +56,35 @@ Decision: discussion は `34_evaluator_calibration.md` を必須出力とし、g
 
 Rationale: 現行 prototyping は generator と evaluator を分離し、calibration artifact を current-active input として読むため。
 
+## DR-0010-0005: `QFAI-MOCK-010` direction — anchor-form template default (cites _policies DR-0265)
+
+- Date: 2026-05-27
+- Status: Adopted
+
+Decision: REQ-0154 の direction は _policies **DR-0265** に従い、option b（template が anchor-form `<a href="#name">` を default emit + SKILL.md が指示、validator は strict 維持）を採用する。anchor (`#name`) と external (`http(s)://`) は引き続き PASS。template ↔ validator は新 SSOT-sync pair で `R-MOCK-HREF-DRIFT` が drift を検出する。
+
+Rejected:
+
+- DO NOT: validator を `/path/` same-origin absolute href を accept するよう緩めない（option a）。
+  - Temptation: web-URL に慣れた author には最も自然。
+  - Reason: deterministic gate を緩め、prototype が serve できない route を mock が encode する drift を再導入する（DR-0265）。
+
+## DR-0010-0006: Active discussion session pointer — `state.json#discussion.currentId` SSOT (cites _policies DR-0266)
+
+- Date: 2026-05-27
+- Status: Adopted
+
+Decision: REQ-0155 の surface は _policies **DR-0266** に従い option B（`.qfai/state.json#discussion.currentId` を単一 SSOT）を採用。`/qfai-discussion` が writer。`qfai discussion list --active` は read view。multiple-active ambiguity は candidate dirs と recovery command を名指しした error で reject する。
+
+Rejected:
+
+- DO NOT: active pointer を filesystem mtime から推論しない（option A-alone）。
+  - Temptation: zero-config。
+  - Reason: multi-session / multi-user clone で非決定的になり、operator の明示選択を記録する場所が無い（DR-0266）。
+- DO NOT: ephemeral session state を committed `qfai.config.yaml` に置かない（option C）。
+  - Temptation: 設定を 1 ファイルに集約したい。
+  - Reason: active session は per-runtime ephemeral state であり `state.json` が正しい home（DR-0266）。
+
 ## Historical Notes
 
 - 旧 archetype-driven customization / discussion-time design-system generation / legacy trend-derived scoring file は superseded であり、active contract ではない。

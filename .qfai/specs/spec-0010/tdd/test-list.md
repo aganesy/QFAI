@@ -14,6 +14,11 @@
 | TDD-0010 | TC-0010-0006 | integration | —                                                                          | init 後 skill/template が exploration-first wording  | todo   | DR-NOTE-1    | pending — test file to be authored (CHG-001 follow-up) |
 | TDD-0011 | TC-0010-0007 | integration | —                                                                          | DESIGN.md draft as discussion phase output           | todo   | DR-NOTE-1    | pending — new TC introduced 2026-05-06 (CHG-001)       |
 | TDD-0012 | TC-0010-0008 | integration | —                                                                          | legacy sidecars not emitted (regression guard)       | todo   | DR-NOTE-1    | pending — new TC introduced 2026-05-06 (CHG-001)       |
+| TDD-0013 | TC-0010-0009 | integration | —                                                                          | anchor + external href PASS QFAI-MOCK-010            | todo   | DR-0010-0005 | pending — new TC introduced 2026-05-27 (v1.9.2 second-wave) |
+| TDD-0014 | TC-0010-0010 | integration | —                                                                          | same-origin `/path/` href fails (validator strict)   | todo   | DR-0010-0005 | pending — new TC introduced 2026-05-27 (v1.9.2 second-wave) |
+| TDD-0015 | TC-0010-0011 | integration | —                                                                          | asymmetric template/validator edit → R-MOCK-HREF-DRIFT | todo | DR-0010-0005 | pending — new TC introduced 2026-05-27 (v1.9.2 second-wave) |
+| TDD-0016 | TC-0010-0012 | integration | —                                                                          | discussion writes state.json#discussion.currentId    | todo   | DR-0010-0006 | pending — new TC introduced 2026-05-27 (v1.9.2 second-wave) |
+| TDD-0017 | TC-0010-0013 | integration | —                                                                          | ambiguous active pointer → error names candidates + recovery | todo | DR-0010-0006 | pending — new TC introduced 2026-05-27 (v1.9.2 second-wave) |
 
 ## Notes
 
