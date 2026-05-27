@@ -73,3 +73,17 @@
 - AC-Refs: AC-0008-0009
 - Type: error
 - Verify that a US/TC with only normal-path test cases is flagged as incomplete in the Coverage Depth Matrix and triggers REVISE.
+
+## TC-0008-0013: Scaffold Emits Per-TC Skeleton with TODO and Refs
+
+- EX-Ref: EX-0008-0009
+- AC-Refs: AC-0008-0010
+- Type: normal
+- Verify that `qfai atdd scaffold --spec spec-NNNN` against an empty target dir emits `tests/atdd/spec-NNNN/<TC-ID>.test.*` per TC, each importing the test framework, containing `// TODO: implement assertion for <TC-ID>`, and referencing related US-* / CON-API-* in comments; and that `qfai validate` emits `D-SCAFFOLD-PLACEHOLDER` (warning) for each unfilled file.
+
+## TC-0008-0014: Scaffold Idempotency and 3-Cycle Escalation
+
+- EX-Ref: EX-0008-0010
+- AC-Refs: AC-0008-0011
+- Type: error
+- Verify that re-running scaffold does NOT overwrite a skeleton whose TODO was replaced with a real assertion (idempotent boundary), and that a skeleton retaining its `// TODO: implement assertion for <TC-ID>` marker across 3 `qfai validate` cycles (default `atdd.scaffoldEscalateCycles: 3` per DR-0272) escalates `D-SCAFFOLD-PLACEHOLDER` from warning to error on the 3rd cycle.

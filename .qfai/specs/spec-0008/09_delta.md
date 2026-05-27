@@ -45,3 +45,23 @@
 - Cascade: SKILL.md declaration is validated by spec-0004's `qfai validate` (companion spec-0004 row). Reviewer-Gate `R-WORKLOG-DRIFT` / `R-REJECTED-READOPT` runs on this skill's outputs (companion spec-0015 row).
 - Implementation-phase 詳細 US/AC/BR/EX/TC は次回の per-spec SDD pass で append される
 - Source: REQ-0004, REQ-0005, REQ-0010, REQ-0016, REQ-0017
+
+## 2026-05-27 — v1.9.2 Second-Wave (spec-0008)
+
+- Discussion pack: `.qfai/discussion/discussion-20260527075558258/`
+- Operation: UPDATE:APPEND (additive; preserves existing US/AC/BR/EX/TC numbering)
+- Local ID ranges added: US-0008-0007, AC-0008-0010..0011, BR-0008-0008..0009, EX-0008-0009..0010, TC-0008-0013..0014
+
+### Triage (rows owned by this spec)
+
+| Operation     | Sub-op | Target                                                                                    | Source (REQ) | Rationale                                                | DR-Ref  | Status |
+| ------------- | ------ | ----------------------------------------------------------------------------------------- | ------------ | -------------------------------------------------------- | ------- | ------ |
+| UPDATE:APPEND | APPEND | 01_Spec.md (Relevant Requirements + US range→0007 + Consumer-View copy-down)              | REQ-0157     | atdd scaffold bulk skeleton gen; cascade verified        | DR-0272 | PASS   |
+| UPDATE:APPEND | APPEND | 02_User-stories.md (US-0008-0007)                                                         | REQ-0157     | scaffold user story; cascade verified                    | DR-0272 | PASS   |
+| UPDATE:APPEND | APPEND | 03..06 (AC-0008-0010,0011 / BR-0008-0008,0009 / EX-0008-0009,0010 / TC-0008-0013,0014)    | REQ-0157     | skeleton shape + idempotency + escalation; cascade verified | DR-0272 | PASS   |
+| UPDATE:APPEND | APPEND | 07_Decisions.md (DR-0008-0002 cites DR-0272) + 08_Open-questions (OQ-0166)                | REQ-0157     | escalate-count resolved by DR-0272; cascade verified     | DR-0272 | PASS   |
+
+- Notes:
+  - REQ-0157 が "default deferred to /qfai-sdd" としていた escalate-cycle count は DR-0272 (既定 3, `atdd.scaffoldEscalateCycles` 可変) で確定。
+  - Required edges US-0008-0007 → AC-0008-0010/0011 → BR-0008-0008/0009 → EX-0008-0009/0010 → TC-0008-0013/0014; TC は normal (0013) AND error/boundary (0014) を両方カバー。
+- Source: REQ-0157 (discussion-20260527075558258)

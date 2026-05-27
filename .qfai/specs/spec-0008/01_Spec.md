@@ -55,12 +55,14 @@
 - REQ-0006: Stage gates (P0-P8) -- sequential gate enforcement from plan preparation through reviewer confirmation
 - REQ-0007: Sub-agent delegation -- mandatory delegation to TestVolumeEstimator, layer implementers, Reviewer, RuntimeGatekeeper
 - REQ-0008: Evidence production -- mandatory evidence file with coverage matrix, work orders, execution logs
+- REQ-0157: `qfai atdd scaffold --spec spec-NNNN` -- spec test_cases を読み `tests/atdd/spec-NNNN/<TC-ID>.test.*` skeleton を emit する。各 skeleton は test-framework primitives を import し `// TODO: implement assertion for <TC-ID>` + 関連 US-* / CON-API-* への comment 参照を含む。`qfai validate` は TODO 残存中 `D-SCAFFOLD-PLACEHOLDER` (severity warning) を emit し、3 validate cycle 後に error へエスカレート (既定; `qfai.config.yaml#atdd.scaffoldEscalateCycles` で設定可能 / DR-0272)。idempotent: 再実行で non-TODO content を上書きしない。
 
 ## Entry points
 
-- US range in this spec: US-0008-0001..US-0008-0005
+- US range in this spec: US-0008-0001..US-0008-0007
 - Primary actors: QA Engineer, AI Agent (Orchestrator), CI/CD pipeline
 - Notes: ATDD skill produces acceptance tests only; unit/component tests belong to `/qfai-implement`
+- v1.9.2 Second-Wave (copy-down for execution): `qfai atdd scaffold --spec spec-NNNN` は spec の test_cases から `tests/atdd/spec-NNNN/<TC-ID>.test.*` skeleton (TODO marker + US-*/CON-API-* comment 参照) を idempotent に生成する。TODO 残存は `D-SCAFFOLD-PLACEHOLDER` (warning) で、3 validate cycle 後に error へエスカレート (`atdd.scaffoldEscalateCycles` 既定 3 / DR-0272)。
 
 ## Escalation Hook (Read \_policies only when needed)
 

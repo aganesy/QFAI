@@ -48,3 +48,18 @@
 - A US/TC that has only normal-path (happy-path) test cases is considered incomplete.
 - Each US/TC MUST have at minimum one normal-path AND one error/boundary/edge test case.
 - The Coverage Depth Matrix MUST be produced by `test-design-analyst` and verified by `qa-gatekeeper`.
+
+## BR-0008-0008: ATDD Scaffold Skeleton Shape and Placeholder Lifecycle
+
+- AC-Refs: AC-0008-0010
+
+- `qfai atdd scaffold --spec spec-NNNN` MUST read the spec test_cases and emit one `tests/atdd/spec-NNNN/<TC-ID>.test.*` file per TC (framework path appropriate to the project).
+- Each emitted skeleton MUST import the test-framework primitives, contain `// TODO: implement assertion for <TC-ID>`, and reference the related US-* / CON-API-* via comments.
+- `qfai validate` MUST emit `D-SCAFFOLD-PLACEHOLDER` (severity warning) for any skeleton whose `// TODO: implement assertion for <TC-ID>` is still present.
+
+## BR-0008-0009: ATDD Scaffold Idempotency and Warning→Error Escalation
+
+- AC-Refs: AC-0008-0011
+
+- Re-running scaffold MUST NOT overwrite existing non-TODO content (idempotent); only files still carrying the TODO marker (or absent files) may be (re)written.
+- `D-SCAFFOLD-PLACEHOLDER` escalates from warning to error after 3 `qfai validate` cycles with the placeholder unremoved (DR-0272), configurable via `qfai.config.yaml#atdd.scaffoldEscalateCycles`. The default of 3 gives an operator a normal red→green TDD turnaround before the placeholder hard-blocks completion-claim.
